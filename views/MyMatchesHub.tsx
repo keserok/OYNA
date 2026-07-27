@@ -15,6 +15,7 @@ import {
   type MyBooking, type CancelResult, type CancelPreview,
 } from '../services/playerBookingService';
 import { formatTRY } from '../utils/formatTRY';
+import { formatCapacityRange } from '../shared/pitchShowcaseMapper';
 import SegmentedTabs from '../components/ui/SegmentedTabs';
 import SkeletonList from '../components/ui/SkeletonList';
 import { MODAL_BACKDROP, MODAL_CARD } from '../components/common/motion';
@@ -342,13 +343,15 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onBack, onNavigate }) => {
       catch { return b.booking_date; }
     })();
     const timeText = `${shortTime(b.start_time)}${b.end_time ? ` - ${shortTime(b.end_time)}` : ''}`.trim();
+    // Kort format aralığı rozeti ("6v6–8v8") — null ise kort adı yalın kalır.
+    const courtRange = formatCapacityRange(b.courts?.min_capacity, b.courts?.max_capacity, b.courts?.capacity);
     store.setPaymentContext({
       kind: 'BOOKING_DEPOSIT',
       badge: 'SAHA KİRALAMA',
       title: b.pitches?.name || 'Saha Rezervasyonu',
       subtitle: `${b.courts?.name ? `${b.courts.name} · ` : ''}${b.booking_date} · ${shortTime(b.start_time)}`,
       details: [
-        ...(b.courts?.name ? [{ icon: 'court' as const, text: b.courts.name }] : []),
+        ...(b.courts?.name ? [{ icon: 'court' as const, text: `${b.courts.name}${courtRange ? ` · ${courtRange}` : ''}` }] : []),
         { icon: 'calendar' as const, text: prettyDate },
         ...(timeText ? [{ icon: 'clock' as const, text: timeText }] : []),
       ],

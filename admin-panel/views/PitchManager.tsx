@@ -7,27 +7,19 @@ import { supabase } from '../../supabaseClient';
 import PhotoManager from '../../components/pitch-editor/PhotoManager';
 import { COURT_FEATURES, normalizeCourtFeatures } from '../../shared/courtFeatures';
 import { SURFACE_LABELS, SURFACE_OPTIONS } from '../../shared/courtSurface';
+import { formatCapacityRange } from '../../shared/pitchShowcaseMapper';
 import { useConfirmSheet } from '../../views/owner/components/useConfirmSheet';
 
-// Format aralığı: takım başına oyuncu (3..11) — kort maç formatı daraltmasını besler.
+// Format aralığı: min/max_capacity TAKIM BAŞI oyuncu tutar ("6v6" → 6).
+// DB CHECK kuralı 3–11 aralığını zorunlu kılar; rozetler formatCapacityRange ile üretilir.
 const FORMAT_RANGE_OPTIONS = Array.from({ length: 9 }, (_, i) => i + 3); // 3v3..11v11
 
-// DB'de mevcut olup PitchCourt tipinde henüz tanımlı olmayan kort format alanları.
+// PitchCourt tipinde bulunmayan (yalnız DB'de duran) kort rozeti alanı.
 type CourtFormatExtras = {
     min_capacity?: number | null;
     max_capacity?: number | null;
     size_label?: string | null;
 };
-
-// Kapasite: "5v5" → toplam oyuncu (10). Oyuncu tarafı formatCapacity ile geri çevirir.
-const CAPACITY_OPTIONS = [
-    { label: '5v5', value: 10 },
-    { label: '6v6', value: 12 },
-    { label: '7v7', value: 14 },
-    { label: '8v8', value: 16 },
-    { label: '9v9', value: 18 },
-    { label: '11v11', value: 22 },
-];
 
 /** "30x50" → {w:'30', l:'50'} (Türkçe 'x'/'X'/'*' ayraçlarını hoş görür). */
 function parseSize(size?: string | null): { w: string; l: string } {
@@ -344,7 +336,7 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 gap-4">
                             <div className="space-y-2">
                                 <label className="text-xs font-bold text-gray-400 uppercase">Saatlik Ücret (₺)</label>
                                 <input
@@ -356,57 +348,10 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
                                 />
                                 <p className="text-[10px] text-gray-600">Kaba fiyat. Saat/gün bazlı tarife: Fiyatlandırma Politikası.</p>
                             </div>
-                            <div className="space-y-2">
-                                <label className="text-xs font-bold text-gray-400 uppercase">Format Aralığı (kaça kaç)</label>
-                                {/* Min/Maks oynanabilir format — vitrinde kort satırında aralık
-                                    rozeti olur (6v6–8v8) ve maç oluşturma akışı bu aralığı temel
-                                    alır. Min > Maks seçilemez: diğer uç otomatik hizalanır. */}
-                                <div className="grid grid-cols-2 gap-2">
-                                    <select
-                                        value={editingPitch.min_capacity ?? ''}
-                                        onChange={(e) => {
-                                            const v = e.target.value ? Number(e.target.value) : null;
-                                            setEditingPitch({
-                                                ...editingPitch,
-                                                min_capacity: v,
-                                                max_capacity: v !== null && editingPitch.max_capacity != null && editingPitch.max_capacity < v
-                                                    ? v : editingPitch.max_capacity,
-                                            });
-                                        }}
-                                        className="w-full bg-[#0A0E14] border border-white/10 rounded-xl p-3 text-white font-bold focus:border-[#FACC15]/50 outline-none transition-colors appearance-none"
-                                    >
-                                        <option value="">Min —</option>
-                                        {CAPACITY_OPTIONS.map((o) => (
-                                            <option key={o.value} value={o.value}>Min {o.label}</option>
-                                        ))}
-                                    </select>
-                                    <select
-                                        value={editingPitch.max_capacity ?? ''}
-                                        onChange={(e) => {
-                                            const v = e.target.value ? Number(e.target.value) : null;
-                                            setEditingPitch({
-                                                ...editingPitch,
-                                                max_capacity: v,
-                                                min_capacity: v !== null && editingPitch.min_capacity != null && editingPitch.min_capacity > v
-                                                    ? v : editingPitch.min_capacity,
-                                            });
-                                        }}
-                                        className="w-full bg-[#0A0E14] border border-white/10 rounded-xl p-3 text-white font-bold focus:border-[#FACC15]/50 outline-none transition-colors appearance-none"
-                                    >
-                                        <option value="">Maks —</option>
-                                        {CAPACITY_OPTIONS.map((o) => (
-                                            <option key={o.value} value={o.value}>Maks {o.label}</option>
-                                        ))}
-                                    </select>
-                                </div>
-                                <p className="text-[10px] text-gray-600">
-                                    Örn. Min 6v6 + Maks 8v8 → vitrinde "6v6–8v8". Boş bırakılırsa tek format varsayılır
-                                    {editingPitch.capacity ? ` (${editingPitch.capacity / 2}v${editingPitch.capacity / 2})` : ''}.
-                                </p>
-                            </div>
                         </div>
 
-                        {/* Format aralığı: maç oluştururken kort seçilince format listesi bu aralığa daralır */}
+                        {/* Format aralığı (TEK kaynak): vitrinde kort rozetini (6v6–8v8) üretir ve
+                            maç oluştururken kort seçilince format listesi bu aralığa daralır. */}
                         <div className="grid grid-cols-3 gap-4">
                             <div className="space-y-2">
                                 <label className="text-xs font-bold text-gray-400 uppercase">En Küçük Format</label>
@@ -670,6 +615,11 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
                                         <p className="text-xs text-gray-300 font-medium">
                                             {pitch.court_type === 'CLOSED' ? 'Kapalı' : 'Açık'} • {SURFACE_LABELS[pitch.surface ?? 'TURF'] ?? pitch.surface}
                                             {pitch.size ? ` • ${pitch.size}` : ''}
+                                            {(() => {
+                                                // Format aralığı rozeti — vitrindeki kort satırıyla aynı yardımcı
+                                                const r = formatCapacityRange(pitch.min_capacity, pitch.max_capacity, pitch.capacity);
+                                                return r ? ` • ${r}` : '';
+                                            })()}
                                             {pitch.price ? ` • ₺${pitch.price}/Saat` : ''}
                                         </p>
                                     </div>

@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import type { MyBooking } from '../services/playerBookingService';
 import { canCancel, shortTime } from '../services/playerBookingService';
+import { formatCapacityRange } from '../shared/pitchShowcaseMapper';
 
 // Maçlarım hub'ındaki rezervasyon kartı — MatchJoinCard'ın cam diliyle uyumlu.
 // Para = altın (#FACC15) kuralı; rakamlar Space Grotesk (.font-numeric).
@@ -48,6 +49,8 @@ export const BookingCard: React.FC<BookingCardProps> = ({
   const depositRemaining = Math.max((b.deposit_amount || 0) - (b.paid_amount || 0), 0);
   const depositPaid = b.deposit_amount > 0 && b.paid_amount >= b.deposit_amount;
   const paying = payingId === b.id;
+  // Kort format aralığı rozeti ("6v6–8v8") — TEK KAYNAK yardımcıdan; null ise gösterilmez.
+  const courtRange = formatCapacityRange(b.courts?.min_capacity, b.courts?.max_capacity, b.courts?.capacity);
 
   return (
     <div className={`bg-[#161B22] rounded-[24px] border border-white/5 overflow-hidden ${isCancelled ? 'opacity-80' : ''}`}>
@@ -67,7 +70,7 @@ export const BookingCard: React.FC<BookingCardProps> = ({
               <p className="text-xs text-gray-400 flex items-center gap-1 mt-1 truncate">
                 <MapPin size={12} className="shrink-0" />
                 <span className="truncate">
-                  {b.pitches?.district ?? ''}{b.pitches?.district && b.courts?.name ? ' · ' : ''}{b.courts?.name ?? ''}
+                  {b.pitches?.district ?? ''}{b.pitches?.district && b.courts?.name ? ' · ' : ''}{b.courts?.name ?? ''}{b.courts?.name && courtRange ? ` · ${courtRange}` : ''}
                 </span>
               </p>
             )}

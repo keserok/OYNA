@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Trash2, Scale, Users2, Trophy, CreditCard, Bell, ScrollText, MessageSquare } from 'lucide-react';
 import { useAppStore } from '../../../store';
@@ -32,6 +32,8 @@ import { useAdminToast } from '../context/AdminToastContext';
 import { ActionConfirmModal, type ActionConfirmOptions } from './ActionConfirmModal';
 import { MatchLobbyPitch } from './MatchLobbyPitch';
 import { MatchLobbyHeader } from './MatchLobbyHeader';
+import { supabase } from '../../../supabaseClient';
+import { allowedSquadSizesForCourts, formatCapacityRangeForCourts } from '../../../shared/pitchShowcaseMapper';
 import type { MatchListing } from '../../../types';
 
 interface Props {
@@ -117,6 +119,35 @@ export const MatchDetailDrawer: React.FC<Props> = ({ match, onClose, onUpdated, 
       .catch(() => { /* liste verisiyle devam — kokpit yine çalışır */ });
     return () => { alive = false; };
   }, [match?.id]);
+
+  // Sahanın kort format aralıkları → Lobi Aynası'ndaki format düzenleyicisi
+  // yalnız EN AZ BİR kortun aralığına giren formatları sunar.
+  const [courtRanges, setCourtRanges] = useState<Array<{ minCapacity: number | null; maxCapacity: number | null; capacity: number | null }>>([]);
+  useEffect(() => {
+    const pid = local?.pitchId;
+    if (!pid) { setCourtRanges([]); return; }
+    let alive = true;
+    void supabase
+      .from('courts')
+      .select('capacity, min_capacity, max_capacity')
+      .eq('pitch_id', pid)
+      .eq('is_active', true)
+      .then(({ data }) => {
+        if (!alive) return;
+        setCourtRanges(((data ?? []) as Array<{ capacity: number | null; min_capacity: number | null; max_capacity: number | null }>)
+          .map((c) => ({ minCapacity: c.min_capacity, maxCapacity: c.max_capacity, capacity: c.capacity })));
+      });
+    return () => { alive = false; };
+  }, [local?.pitchId]);
+
+  const allowedFormats = useMemo(
+    () => (courtRanges.length ? allowedSquadSizesForCourts(courtRanges).filter((s) => s !== '2v2') : undefined),
+    [courtRanges],
+  );
+  const formatRangeHint = useMemo(
+    () => (courtRanges.length ? formatCapacityRangeForCourts(courtRanges) : null),
+    [courtRanges],
+  );
 
   // Atanmış kalecileri (ev sahibi + deplasman) matches'ten tazele.
   useEffect(() => {
@@ -515,7 +546,7 @@ export const MatchDetailDrawer: React.FC<Props> = ({ match, onClose, onUpdated, 
             {tab === 'kadro' && (
               <>
                 {/* Lobi Aynası: kullanıcı lobisi başlığının düzenlenebilir birebir kopyası */}
-                <MatchLobbyHeader match={local} busy={busy} onSave={handleInfoSave} />
+                <MatchLobbyHeader match={local} busy={busy} onSave={handleInfoSave} allowedFormats={allowedFormats} formatRangeHint={formatRangeHint} />
                 {local.status === 'DRAFT' && (
                   <button
                     type="button"

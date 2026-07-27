@@ -89,6 +89,36 @@ Test: `tests/integration/f1_para_guvenligi.sql` (26 assert).
   benzersizlik kısıtı, `require_admin_write`, sağlayıcı koruma trigger'ının
   `matchCount`'u engellemediği ve `player_ratings`'in boş olduğu.
 
+## Üretime uygulama (2026-07-27, oturum sonu)
+
+**12 migration üretime UYGULANDI ve defter (`schema_migrations`) kayıtları repo
+dosya adlarıyla birebir eşitlendi** — `20260816000001` … `20260816000012`.
+Her biri kendi defter kaydıyla aynı transaction içinde uygulandı; hata olsaydı
+hiçbiri yarım kalmazdı.
+
+> **Neden elle uygulandı:** Depoda migration deploy eden bir CI işi yok ve
+> Supabase–GitHub entegrasyonu `MIGRATIONS_FAILED` durumunda (Mayıs'tan beri).
+> Bu projede migration'lar fiilen elle uygulanıyor. Playbook'un "yalnız otomatik
+> deploy" kuralı çalışan bir hat varsayıyor; kuralın acil durum maddesi gereği
+> defter sürümleri dosya adlarıyla eşitlenerek uygulandı, böylece yeni sürüklenme
+> oluşmadı.
+
+Uygulama sonrası doğrulananlar: `player_ratings` CHECK 1-10 ✓ · FK `matches` ✓ ·
+`service_requests.live_status` ✓ · 8 yeni RPC ✓ · 4 MFA RPC'si ✓ · `match_motm`
+görünümü ✓ · kurtarma kodu tablosu ✓ · saatlik oto-serbest cron'u (`0 * * * *`) ✓ ·
+5 yeni ayar anahtarı ✓ · gün eşleşmesi "Pzt"→Pazartesi `true` ✓ ·
+değerlendirme bildirim şablonu ✓ · `owner_new_booking` zorunlu ✓.
+
+## ⚠️ Bilinen sürüklenme (bu oturumun dışında)
+
+`20260817000000_mac_format_kort_araligi_dogrulama` **canlıda uygulanmış ama
+depoda yok.** Paralel bir çalışma uygulamış; defterdeki `statements` alanında
+yalnız bir not var, SQL metni saklanmamış — bu yüzden dosya buradan yeniden
+üretilemez. **Yapılması gereken:** o çalışmayı yapan kişi/oturum dosyayı
+`supabase/migrations/20260817000000_mac_format_kort_araligi_dogrulama.sql`
+olarak depoya eklemeli. Aksi halde sıfırdan kurulan bir ortam (preview/yeni
+proje) bu değişiklik olmadan ayağa kalkar.
+
 ## Açık kalan / karar bekleyen
 - **`admin_mfa_required` bayrağı** — açmadan önce en az bir SUPER_ADMIN enroll olup kurtarma kodlarını indirmeli. Ayrıca `isAdminMfaRequired()` bugün *fail-open* (config okunamazsa MFA atlanır); bayrak açılırken bu davranış gözden geçirilmeli.
 - **`wallet_cashout_enabled`** — kod hazır, otomatik havale yok (iyzico payout hiç yazılmadı). Açılış iyzico KYC + manuel havale SOP'una bağlı.

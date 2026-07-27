@@ -5,6 +5,12 @@ import { useImageUpload } from '../../../hooks/useImageUpload';
 import { useAppStore } from '../../../store';
 import { supabase } from '../../../supabaseClient';
 import type { MatchPayloadSource } from '../../utils/matchMapper';
+import {
+  allowedSquadSizesForCourt,
+  allowedSquadSizesForCourts,
+  formatCapacityRange,
+  formatCapacityRangeForCourts,
+} from '../../../shared/pitchShowcaseMapper';
 import type { MatchListing } from '../../../types';
 
 const DIFFICULTIES = ['Rahat', 'Taktiksel', 'Ciddi'] as const;
@@ -184,18 +190,30 @@ export const MatchFormModal: React.FC<Props> = ({ open, mode, match, onClose, on
     return () => { cancelled = true; };
   }, [open, f.pitchId, adminPitches]);
 
-  // Kort seçiliyse format listesi kortun takım-başına kapasite aralığına daralır.
+  // Format listesi tek kaynaktan daralır (shared/pitchShowcaseMapper):
+  //   kort seçili → o kortun aralığı; yalnız saha seçili → kortların birleşimi;
+  //   hiçbiri → tam yelpaze. Aralık bilinmiyorsa kısıt uygulanmaz.
   const selectedCourt = courts.find((c) => c.id === f.courtId);
-  const formatOptions = useMemo(() => {
-    const min = selectedCourt?.min_capacity;
-    const max = selectedCourt?.max_capacity;
-    if (min == null || max == null) return [...FORMATS];
-    const narrowed = FORMATS.filter((v) => {
-      const n = parseInt(v, 10);
-      return n >= min && n <= max;
-    });
-    return narrowed.length ? narrowed : [...FORMATS];
-  }, [selectedCourt]);
+  const formatOptions = useMemo<string[]>(() => {
+    const narrowed = selectedCourt
+      ? allowedSquadSizesForCourt(selectedCourt.min_capacity, selectedCourt.max_capacity)
+      : courts.length
+        ? allowedSquadSizesForCourts(
+            courts.map((c) => ({ minCapacity: c.min_capacity, maxCapacity: c.max_capacity })),
+          )
+        : FORMATS;
+    const list = narrowed.filter((v) => v !== '2v2');
+    return list.length ? list : [...FORMATS];
+  }, [selectedCourt, courts]);
+
+  // Format alanı etiketinde geçerli aralık rozeti (kort → kort aralığı, saha → birleşim).
+  const rangeLabel = useMemo(() => {
+    if (selectedCourt) return formatCapacityRange(selectedCourt.min_capacity, selectedCourt.max_capacity);
+    if (!courts.length) return null;
+    return formatCapacityRangeForCourts(
+      courts.map((c) => ({ minCapacity: c.min_capacity, maxCapacity: c.max_capacity })),
+    );
+  }, [selectedCourt, courts]);
 
   // Aralık dışında kalan formatı ilk uygun değere çek.
   useEffect(() => {
@@ -327,7 +345,7 @@ export const MatchFormModal: React.FC<Props> = ({ open, mode, match, onClose, on
                   {DIFFICULTIES.map((d) => <option key={d} value={d}>{d}</option>)}
                 </select>
               </Field>
-              <Field label="Format">
+              <Field label={`Format${rangeLabel ? ` (${selectedCourt ? 'kort' : 'saha'}: ${rangeLabel})` : ''}`}>
                 <select value={f.format} onChange={(e) => setF({ ...f, format: e.target.value })} className={inputCls}>
                   {formatOptions.map((v) => <option key={v} value={v}>{v}</option>)}
                 </select>

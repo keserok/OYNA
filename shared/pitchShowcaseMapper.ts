@@ -6,6 +6,7 @@
  */
 import { Pitch, Court } from '../types';
 import { getAverageTariffPrice, mapDbTariffsToPitchTariffs } from '../services/tariffService';
+import { SQUAD_SIZES, squadSizeToCount, type SquadSize } from '../utils/formations';
 
 // ── Owner module: canlı saha verisini UI Pitch tipine dönüştürme ──────────────
 export interface DbTariff {
@@ -101,13 +102,11 @@ export const formatCapacity = (capacity?: number): string | null => {
 };
 
 /**
- * Kortun oynanabilir format aralığı rozeti: min 6 & maks 8 → "6v6–8v8";
+ * Kortun oynanabilir format aralığı rozeti. min/max TAKIM BAŞI oyuncu tutar
+ * (DB modeli: min_capacity=6 → "6v6"): min 6 & maks 8 → "6v6–8v8";
  * min=maks → tek format ("7v7"); yalnız biri varsa "6v6+" / "≤8v8";
- * aralık yoksa legacy capacity'ye düşer.
- *
- * BİRİM: min/max TAKIM BAŞINA oyuncudur (7 → 7v7) — courts.min_capacity /
- * max_capacity SSOT'u budur. Yalnız fallback 'capacity' TOPLAM kişidir
- * (14 → 7v7), o yüzden ona formatCapacity uygulanır.
+ * aralık yoksa legacy capacity'ye (TOPLAM oyuncu, 14 → "7v7") düşer.
+ * Vitrin kort satırları ve maç oluşturma akışı TEK bu yardımcıdan okur.
  */
 export const formatCapacityRange = (
   min?: number | null,
@@ -119,6 +118,69 @@ export const formatCapacityRange = (
   if (min) return `${f(min)}+`;
   if (max) return `≤${f(max)}`;
   return formatCapacity(fallbackCapacity ?? undefined);
+};
+
+/**
+ * Kortun aralığına giren oynanabilir formatlar — maç oluşturma (oyuncu),
+ * admin maç formu ve her kort seçicisi TEK bu yardımcıdan okur.
+ * Kurallar: min/max TAKIM BAŞI oyuncudur (min=6 → 6v6). min+maks → [min,maks];
+ * yalnız min → ≥min; yalnız maks → ≤maks; açık aralık YOKSA → tüm formatlar
+ * (kısıt bilinmiyor).
+ * DİKKAT: legacy `capacity` (TOPLAM oyuncu) KISIT SAYILMAZ — canlıda tüm eski
+ * kortlar varsayılan 14 ile duruyor; kısıt sayılsaydı her kortta 8v8+
+ * yanlışlıkla engellenirdi. capacity yalnız rozet gösteriminde
+ * (formatCapacityRange) bilgi olarak kullanılır; sunucu tetikleyicisi de
+ * aynı kuralı uygular.
+ */
+export const allowedSquadSizesForCourt = (
+  min?: number | null,
+  max?: number | null,
+  _legacyCapacity?: number | null,
+): SquadSize[] => {
+  const lo = min ?? null;
+  const hi = max ?? null;
+  return SQUAD_SIZES.filter((s) => {
+    const n = squadSizeToCount(s); // XvX → takım başı oyuncu
+    if (lo !== null && n < lo) return false;
+    if (hi !== null && n > hi) return false;
+    return true;
+  });
+};
+
+/** Tek format uygunluk kontrolü (ör. maç kaydetmeden önce son doğrulama). */
+export const isSquadSizeAllowedForCourt = (
+  size: SquadSize,
+  min?: number | null,
+  max?: number | null,
+  fallbackCapacity?: number | null,
+): boolean => allowedSquadSizesForCourt(min, max, fallbackCapacity).includes(size);
+
+/**
+ * Tesis düzeyinde (kort SEÇİLMEMİŞKEN) izinli formatlar: EN AZ BİR kortun
+ * aralığına sığan format oynanabilirdir — aralıkların ham birleşimi DEĞİL
+ * (örn. kortlar 6v6–8v8 ve 10v10–11v11 ise 9v9 HİÇBİR kortta oynanamaz).
+ * Kort listesi boşsa tüm formatlar (kısıt bilinmiyor).
+ */
+export const allowedSquadSizesForCourts = (
+  courts: Array<{ minCapacity?: number | null; maxCapacity?: number | null; capacity?: number | null }>,
+): SquadSize[] => {
+  if (!courts.length) return [...SQUAD_SIZES];
+  const union = new Set<SquadSize>();
+  for (const c of courts) {
+    for (const s of allowedSquadSizesForCourt(c.minCapacity, c.maxCapacity, c.capacity)) union.add(s);
+  }
+  return SQUAD_SIZES.filter((s) => union.has(s));
+};
+
+/** Tesis kortlarının toplu aralık rozeti (örn. "6v6–11v11"); kort yoksa null. */
+export const formatCapacityRangeForCourts = (
+  courts: Array<{ minCapacity?: number | null; maxCapacity?: number | null; capacity?: number | null }>,
+): string | null => {
+  const sizes = courts.length ? allowedSquadSizesForCourts(courts) : [];
+  if (!sizes.length || sizes.length === SQUAD_SIZES.length) return null; // kısıt yok → rozet gösterme
+  const lo = squadSizeToCount(sizes[0]);
+  const hi = squadSizeToCount(sizes[sizes.length - 1]);
+  return formatCapacityRange(lo, hi);
 };
 
 export const mapDbPitchToUiPitch = (
