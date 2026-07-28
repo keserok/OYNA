@@ -7,6 +7,26 @@ import { test, expect } from '@playwright/test';
  * bu spec'te navigation + ekran render doğrulaması yapılır.
  * Seed data ile test ortamı kurulduğunda tam akış genişletilebilir.
  */
+/**
+ * Misafir girişi: splash → TANITIM → giriş formu → "önce göz at".
+ * Tanıtım perdesi giriş akışının kapısıdır; form alanları ancak ok düğmesine
+ * basınca gelir. Misafir düğmesi KVKK onayı işaretlenene dek pasiftir.
+ */
+async function enterAsGuest(page: import('@playwright/test').Page) {
+  const intro = page.locator('#intro-continue-button');
+  await expect(intro).toBeVisible({ timeout: 20000 });
+  await intro.click();
+
+  const consent = page.locator('#agreement-checkbox');
+  await expect(consent).toBeVisible({ timeout: 15000 });
+  await consent.click();
+
+  const guestBtn = page.locator('#guest-login-button');
+  await guestBtn.scrollIntoViewIfNeeded();
+  await expect(guestBtn).toBeEnabled({ timeout: 15000 });
+  await guestBtn.click();
+}
+
 test.describe('Oyuncu yolculuğu — Maç keşfet', () => {
   test.beforeEach(async ({ page }) => {
     page.on('pageerror', err => console.error('BROWSER ERROR:', err.message));
@@ -20,34 +40,20 @@ test.describe('Oyuncu yolculuğu — Maç keşfet', () => {
     await page.waitForLoadState('networkidle');
   });
 
-  test('Rol seçimi → Misafir girişi → Dashboard görünür', async ({ page }) => {
+  test('Tanıtım → Misafir girişi → Dashboard görünür', async ({ page }) => {
     test.setTimeout(60000);
 
-    // 1. Rol seçimi ekranı
-    const playerCard = page.getByRole('heading', { name: 'OYUNCU', exact: true });
-    await expect(playerCard).toBeVisible({ timeout: 15000 });
-    await playerCard.click({ force: true });
+    await enterAsGuest(page);
 
-    // 2. Misafir girişi
-    const guestBtn = page.locator('#guest-login-button');
-    await expect(guestBtn).toBeVisible({ timeout: 15000 });
-    await guestBtn.click({ force: true });
-
-    // 3. Dashboard yüklenmiş
+    // Dashboard yüklenmiş
     await expect(page.locator('body')).toContainText('Ana Sayfa', { timeout: 15000 });
   });
 
   test('Dashboard → Maç Keşfet ekranı açılır ve yüklenir', async ({ page }) => {
     test.setTimeout(60000);
 
-    // Ortak setup: rol seçimi + misafir girişi
-    const playerCard = page.getByRole('heading', { name: 'OYUNCU', exact: true });
-    await expect(playerCard).toBeVisible({ timeout: 15000 });
-    await playerCard.click({ force: true });
-
-    const guestBtn = page.locator('#guest-login-button');
-    await expect(guestBtn).toBeVisible({ timeout: 15000 });
-    await guestBtn.click({ force: true });
+    // Ortak setup: tanıtım → misafir girişi
+    await enterAsGuest(page);
 
     await expect(page.locator('body')).toContainText('Ana Sayfa', { timeout: 15000 });
 
@@ -63,13 +69,7 @@ test.describe('Oyuncu yolculuğu — Maç keşfet', () => {
   test('Dashboard → Maç Keşfet → Maç varsa detay ekranı açılır', async ({ page }) => {
     test.setTimeout(90000);
 
-    const playerCard = page.getByRole('heading', { name: 'OYUNCU', exact: true });
-    await expect(playerCard).toBeVisible({ timeout: 15000 });
-    await playerCard.click({ force: true });
-
-    const guestBtn = page.locator('#guest-login-button');
-    await expect(guestBtn).toBeVisible({ timeout: 15000 });
-    await guestBtn.click({ force: true });
+    await enterAsGuest(page);
 
     await expect(page.locator('body')).toContainText('Ana Sayfa', { timeout: 15000 });
 

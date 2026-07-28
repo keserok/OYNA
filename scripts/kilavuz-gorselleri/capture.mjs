@@ -45,6 +45,13 @@ export async function loginApp(page, role) {
   const acc = ACCOUNTS[role];
   await page.goto(APP, { waitUntil: 'domcontentloaded' });
 
+  // Giriş akışı splash → TANITIM → form şeklinde ilerler; form alanları ancak
+  // tanıtımdaki ok düğmesine basınca gelir. (Oturum zaten varsa ikisi de gelmez.)
+  const intro = page.locator('#intro-continue-button');
+  if (await intro.waitFor({ timeout: 20000 }).then(() => true).catch(() => false)) {
+    await intro.click();
+  }
+
   // Oturum zaten varsa auth ekranı gelmez
   const emailBox = page.locator('input[type="email"]').first();
   try {
