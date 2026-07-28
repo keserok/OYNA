@@ -9,6 +9,8 @@
     "test:unit": "vitest run tests/unit --config vitest.config.ts",
     "test:integration": "bash tests/integration/run.sh",
     "test:e2e:studio": "playwright test --config playwright.hermetic.config.ts",
+    "test:visual": "playwright test --config playwright.visual.config.ts",
+    "test:visual:update": "playwright test --config playwright.visual.config.ts --update-snapshots",
     "test:admin": "playwright test tests/admin.spec.ts",
     "admin:verify": "node admin-panel/scripts/admin-panel-verify.mjs",
     "admin:deploy": "node admin-panel/scripts/admin-supabase-deploy.mjs",
