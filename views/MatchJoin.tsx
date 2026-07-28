@@ -1,12 +1,15 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Spinner } from '../components/ui/Spinner';
 import {
   ArrowLeft, MapPin, Clock, Calendar, Zap, Hand, Scale,
   X, Loader2, ChevronRight, UserPlus,
   Plus, CheckCircle2, Users, Star,
   AlertCircle, Shield, Layers, Award,
-  DollarSign, Info, KeyRound, Copy, Ruler, Activity, Wallet, CreditCard, Lock
+  DollarSign, Info, KeyRound, Copy, Ruler, Activity, Wallet, CreditCard, Lock,
+  Megaphone
 } from 'lucide-react';
+import { broadcastOpenSlot } from '../services/socialService';
+import { isOnline, OFFLINE_JOIN } from '../shared/submitGuard';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MatchListing, PositionSlot, UserRole, Player, Team, ProviderType, ProviderSuggestion, ServiceRequest } from '../types';
 import { useAppStore } from '../store';
@@ -203,6 +206,13 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
   // Çoklu slot satın alma seçimi — HERKES için tek akış (kurucu dahil). Ödeme = adet × ücret.
   const [selectedSlotIds, setSelectedSlotIds] = useState<string[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
+  // SENKRON kilit. isProcessing bir React STATE'i: ikinci dokunuş commit'ten
+  // önce gelirse hâlâ eski (false) değeri okur ve handler ikinci kez çalışır
+  // (BULGU-050). writeBusyRef commit beklemez.
+  const writeBusyRef = useRef(false);
+  // IP-06: "Eksik oyuncu ilanı ver" gönderimi sürerken buton kilitli.
+  const [broadcasting, setBroadcasting] = useState(false);
+  const broadcastBusyRef = useRef(false);
   const [showInfoModal, setShowInfoModal] = useState(false);
 
   // Aksiyon hatası/başarı toast'ı
@@ -216,6 +226,15 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
     setActionSuccess(msg);
     setTimeout(() => setActionSuccess(null), 4000);
   };
+
+  /** Yazma handler'ları için tek giriş kapısı: senkron kilit + çevrimiçi kontrolü. */
+  const beginWrite = (): boolean => {
+    if (writeBusyRef.current) return false;
+    if (!isOnline()) { showActionError(OFFLINE_JOIN); return false; }
+    writeBusyRef.current = true;
+    return true;
+  };
+  const endWrite = () => { writeBusyRef.current = false; };
 
   // Taktik Kenarı — saha tarafı + ilk açılışta otomatik taraf seçimi (bir kez)
   const [pitchSide, setPitchSide] = useState<'home' | 'away'>('home');
@@ -442,7 +461,57 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [match?.slots, match?.awaySlots, hasAutoSelectedSide]);
 
-  if (!match) return null;
+  // BULGU-016: eskiden `return null` idi — başlıksız/geri oksuz siyah ekran
+  // kalıyordu (MATCH_JOIN alt menüde de yok). İkinci kat emniyet: çıkışı olan
+  // hata ekranı.
+  if (!match) {
+    return (
+      <div className="h-full w-full bg-[#0A0E14] flex flex-col items-center justify-center px-8 text-center">
+        <div className="w-20 h-20 rounded-3xl bg-[#F87171]/10 border border-[#F87171]/30 flex items-center justify-center mb-5">
+          <AlertCircle size={32} className="text-[#F87171]" />
+        </div>
+        <h2 className="text-[20px] font-bold text-white mb-2">Maç açılamadı</h2>
+        <p className="text-[15px] text-[#A9B4C0] leading-relaxed mb-6">
+          Bu maç artık mevcut değil ya da yüklenemedi.
+        </p>
+        <button
+          onClick={onBack}
+          className="min-h-[44px] px-6 rounded-2xl bg-[#39FF14] text-[#0A0E14] text-[15px] font-bold active:scale-[0.98] transition-transform"
+        >
+          Geri Dön
+        </button>
+      </div>
+    );
+  }
+
+  // ── IP-06 / BULGU-078: eksik oyuncu ilanı ────────────────────────────────
+  const openSlotCount =
+    (match.slots || []).filter((s: any) => (s?.status ?? 'OPEN') === 'OPEN').length +
+    (match.awaySlots || []).filter((s: any) => (s?.status ?? 'OPEN') === 'OPEN').length;
+
+  const handleBroadcastOpenSlot = async () => {
+    if (broadcastBusyRef.current) return;
+    if (!isOnline()) { showActionError(OFFLINE_JOIN); return; }
+    broadcastBusyRef.current = true;
+    setBroadcasting(true);
+    try {
+      const sent = await broadcastOpenSlot(match.id);
+      showActionSuccess(sent > 0 ? `${sent} kişiye ilan gitti.` : 'Şu an yakında bildirime açık oyuncu yok.');
+    } catch (e: any) {
+      const msg = String(e?.message || '');
+      showActionError(
+        msg.includes('TOO_SOON')     ? 'Bu maç için ilanı 2 saatte bir verebilirsin.' :
+        msg.includes('NO_OPEN_SLOT') ? 'Kadroda boş yer yok.' :
+        msg.includes('TOO_EARLY')    ? 'İlan yalnız maça 24 saatten az kala verilebilir.' :
+        msg.includes('NO_LOCATION')  ? 'Sahanın konumu kayıtlı değil, ilan verilemiyor.' :
+        msg.includes('NOT_PUBLIC')   ? 'Özel maça ilan verilemez — kodu paylaş.' :
+                                       'İlan gönderilemedi. Bağlantını kontrol edip tekrar dene.',
+      );
+    } finally {
+      broadcastBusyRef.current = false;
+      setBroadcasting(false);
+    }
+  };
 
   // (Tek lobi P4) fallbackPitch + isim-eşleşmesi + rozet-türetmeli kural tahminleri
   // KALDIRILDI: kurallar yalnız gerçek kolonlardan gelir, yoksa 'Belirtilmedi'.
@@ -587,7 +656,8 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
   // kurucu dahil herkes slot satın alır; ücretsiz maçta aynı RPC 0₺ ile çalışır.
 
   const handleBuySlots = async () => {
-    if (selectedSlotIds.length === 0 || isProcessing) return;
+    if (selectedSlotIds.length === 0) return;
+    if (!beginWrite()) return;
     const total = (match.price || 0) * selectedSlotIds.length;
 
     // Ücretli slot → birleşik ödeme ekranı (bakiye + kart bölüşümü, tasarım 1b).
@@ -614,6 +684,10 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
         slotIds: [...selectedSlotIds],
       });
       setSelectedSlotIds([]);
+      // Bu dal try/finally'ye GİRMEDEN dönüyor: kilidi elle bırakmazsak
+      // kullanıcı ödemeden vazgeçip geri geldiğinde buton sonsuza kadar
+      // kilitli kalır (BULGU-050 telafisi).
+      endWrite();
       store.navigateTo('PAYMENT');
       return;
     }
@@ -648,7 +722,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
         ? `Bu maç minimum ${match.minRating || "belirli bir"} puan istiyor — puanın henüz yetmiyor.`
         : msg.includes('Yetersiz') ? 'Cüzdan bakiyen yetersiz.' : 'Slot satın alınamadı. Lütfen tekrar dene.');
     } finally {
-      setIsProcessing(false);
+      setIsProcessing(false); endWrite();
     }
   };
 
@@ -673,7 +747,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
         ? `Bu maç minimum ${match.minRating || "belirli bir"} puan istiyor — puanın henüz yetmiyor.`
         : 'Yedek olarak katılırken bir hata oluştu.');
     } finally {
-      setIsProcessing(false);
+      setIsProcessing(false); endWrite();
     }
   };
 
@@ -697,13 +771,13 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
       console.error('Leave reserves error:', e);
       showActionError('Yedek listesinden çıkarken bir hata oluştu.');
     } finally {
-      setIsProcessing(false);
+      setIsProcessing(false); endWrite();
     }
   };
 
   // ── Rezerve slot doldurma aksiyonları (MANAGE — yalnız satın alan) ─────────
   const handleSelfAssign = async (slotId: string) => {
-    if (isProcessing) return;
+    if (!beginWrite()) return;
     setIsProcessing(true);
     try {
       await selfAssignSlot(match.id, slotId);
@@ -714,7 +788,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
     } catch (e: any) {
       showActionError((e?.message || '').includes('ALREADY_ON_FIELD')
         ? 'Zaten sahada bir slotun var.' : 'Slota eklenemedin. Lütfen tekrar dene.');
-    } finally { setIsProcessing(false); }
+    } finally { setIsProcessing(false); endWrite(); }
   };
 
   // Seçilen arkadaşlar, tıklanan slottan başlayarak REZERVE slotlarıma sırayla
@@ -745,7 +819,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
   };
 
   const handleUnassign = async (slotId: string) => {
-    if (isProcessing) return;
+    if (!beginWrite()) return;
     setIsProcessing(true);
     try {
       await unassignSlot(match.id, slotId);
@@ -754,11 +828,11 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
       setActivePlayerSlotId(null);
       showActionSuccess('Slot yeniden rezervine döndü.');
     } catch { showActionError('İşlem tamamlanamadı. Lütfen tekrar dene.'); }
-    finally { setIsProcessing(false); }
+    finally { setIsProcessing(false); endWrite(); }
   };
 
   const handleRelease = async (slotId: string) => {
-    if (isProcessing) return;
+    if (!beginWrite()) return;
     setIsProcessing(true);
     try {
       const refunded = await releaseSlot(match.id, slotId);
@@ -766,10 +840,10 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
       if (fresh) applyMatchLocal(fresh);
       setFillSlot(null);
       showActionSuccess(refunded > 0
-        ? `Slot iade edildi — ${refunded.toLocaleString('tr-TR')}₺ iade kredisi cüzdanına döndü.`
+        ? `Slot iade edildi — ${refunded.toLocaleString('tr-TR')}₺ cüzdanına iade edildi.`
         : 'Slot vitrine iade edildi.');
     } catch { showActionError('Slot iade edilemedi.'); }
-    finally { setIsProcessing(false); }
+    finally { setIsProcessing(false); endWrite(); }
   };
 
   const handleProposeTactic = async (tacticId: string) => {
@@ -798,7 +872,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
 
   // Davet edilen arkadaş slotu kabul eder → slotta arkadaş görünür
   const handleAcceptSlot = async (slotId: string) => {
-    if (isProcessing) return;
+    if (!beginWrite()) return;
     setIsProcessing(true);
     try {
       const { error } = await supabase.rpc('player_accept_slot', { p_match_id: match.id, p_slot_id: slotId });
@@ -811,7 +885,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
       console.error('accept slot error', e);
       showActionError('Kabul edilemedi. Lütfen tekrar dene.');
     } finally {
-      setIsProcessing(false);
+      setIsProcessing(false); endWrite();
     }
   };
 
@@ -865,14 +939,14 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
       console.error('Leave match error:', e);
       showActionError('Maçtan ayrılırken bir hata oluştu.');
     } finally {
-      setIsProcessing(false);
+      setIsProcessing(false); endWrite();
     }
   };
 
   // B4: Kurucu maçı iptal eder — sunucu 24s kuralını uygular
   // (≥24s: katılımcı ödemeleri iade / <24s: no-show politikası).
   const handleCancelMatch = async () => {
-    if (isProcessing) return;
+    if (!beginWrite()) return;
     setIsProcessing(true);
     try {
       const res = await cancelMatchByCaptain(match.id);
@@ -891,7 +965,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
         ? 'Bu maçı yalnız kurucusu iptal edebilir.'
         : 'Maç iptal edilemedi. Lütfen tekrar dene.');
     } finally {
-      setIsProcessing(false);
+      setIsProcessing(false); endWrite();
     }
   };
 
@@ -1024,7 +1098,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
     } catch (e: any) {
       showActionError(e?.message || 'No-show bildirilemedi.');
     } finally {
-      setIsProcessing(false);
+      setIsProcessing(false); endWrite();
     }
   };
 
@@ -1214,7 +1288,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                 <div className="mb-6 bg-[#39FF14]/8 border border-[#39FF14]/25 rounded-2xl px-4 py-3">
                   <p className="text-[12.5px] text-gray-200 leading-relaxed">
                     Ödediğin <span className="text-[#39FF14] font-black">{leaveRefund.toLocaleString('tr-TR')}₺</span> ayrılınca
-                    {' '}<span className="text-white font-semibold">iade kredisi</span> olarak cüzdanına eksiksiz döner.
+                    {' '}<span className="text-white font-semibold">cüzdanına eksiksiz döner</span>.
                   </p>
                 </div>
               )}
@@ -1314,7 +1388,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                     setIsProcessing(true);
                     await handleRemovePlayer(removeConfirmSlot.id);
                     setRemoveConfirmSlot(null);
-                    setIsProcessing(false);
+                    setIsProcessing(false); endWrite();
                   }}
                   disabled={isProcessing}
                   className="flex-1 py-3 rounded-2xl font-black text-sm uppercase tracking-widest text-white bg-red-600 shadow-[0_0_20px_rgba(239,68,68,0.4)] hover:bg-red-500 transition-colors flex items-center justify-center">
@@ -1851,6 +1925,20 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
           )}
         </div>
 
+        {/* ── IP-06 / BULGU-078: eksik oyuncu ilanı — yakındaki oyunculara tek
+            dokunuş çağrı. Olumlu aksiyon, yıkıcı aksiyonun ÜSTÜNDE durur. ── */}
+        {isManageMode && isCaptain && (match.status === 'OPEN' || match.status === 'ACTIVE') && openSlotCount > 0 && (
+          <div className="px-4 pb-3">
+            <button
+              onClick={handleBroadcastOpenSlot}
+              disabled={broadcasting}
+              className="w-full min-h-[44px] flex items-center justify-center gap-2 px-4 rounded-2xl bg-[#39FF14]/10 border border-[#39FF14]/30 text-[#39FF14] text-[13px] font-bold active:scale-[0.98] transition-transform disabled:opacity-60"
+            >
+              <Megaphone size={16} /> {broadcasting ? 'İlan gönderiliyor…' : 'Eksik oyuncu ilanı ver'}
+            </button>
+          </div>
+        )}
+
         {/* ── B4: Maçı İptal Et (yalnız kurucu, yönetim lobisi) ── */}
         {isManageMode && isCaptain && match.status !== 'CANCELLED' && match.status !== 'COMPLETED' && (
           <div className="px-4 pb-3">
@@ -2377,7 +2465,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                         console.error(err);
                         showActionError('Diziliş güncellenemedi. Lütfen tekrar dene.');
                       } finally {
-                        setIsProcessing(false);
+                        setIsProcessing(false); endWrite();
                       }
                     }}
                     className="px-3 py-1.5 rounded-xl bg-black/40 border border-white/10 hover:border-[#39FF14]/40 text-white hover:text-[#39FF14] text-[10px] font-black uppercase tracking-wider shrink-0 transition-all active:scale-95 cursor-pointer"
@@ -2950,7 +3038,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                   </div>
                   <div className="flex items-center justify-between px-4 py-4">
                     <span className="text-[11px] font-black text-white/40 uppercase tracking-wider">KATILIM ÜCRETİ</span>
-                    <span className={`text-sm font-black uppercase italic ${match.price > 0 ? 'text-[#39FF14]' : 'text-white/50'}`}>
+                    <span className={`text-sm font-black uppercase ${match.price > 0 ? 'text-[#39FF14]' : 'text-white/50'}`}>
                       {match.price > 0 ? `${match.price} ₺` : 'ÜCRETSİZ'}
                     </span>
                   </div>

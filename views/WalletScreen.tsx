@@ -13,7 +13,10 @@ import {
   getWalletSummary, listSavedCards, deleteSavedCard, setDefaultSavedCard,
   getOwnerEarningsSummary, EarningsSummary, WalletSummary, SavedCard,
   previewWalletCashout, requestWalletCashout, getPayoutMethods, addPayoutMethod,
+  cancelWalletCashout,
 } from '../services/walletService';
+import { validateTrIban } from '../utils/iban';
+import { showToast } from '../components/common/GlobalToast';
 import { startInAppCardPayment, getCardFeePct, computeCardFee } from '../services/paymentService';
 import AddCardScreen from '../components/payment/AddCardScreen';
 import CardBrandMark, { brandGradient } from '../components/payment/CardBrandMark';
@@ -21,10 +24,11 @@ import ThreeDSSheet, { ThreeDSOutcome } from '../components/payment/ThreeDSSheet
 
 /**
  * CÜZDAN — role göre iki yapı (tasarım 2a + kaleci/hakem):
- *   • Oyuncu: Yüklenen Bakiye (hero) + İade Kredisi chip'i, Para Yükle /
- *     Kart Yönet / Geçmiş, kayıtlı kart karuseli, son işlemler. Kazanç
- *     bakiyesi > 0 ise (ör. referral) koşullu küçük kazanç satırı görünür —
- *     para mahsur kalmaz.
+ *   • Oyuncu: Cüzdan Bakiyesi (hero = yüklenen + iade), Para Yükle /
+ *     Kart Yönet / Geçmiş, "Paramı Hesabıma Çek", kayıtlı kart karuseli,
+ *     son işlemler. Kazanç bakiyesi > 0 ise (ör. referral) koşullu küçük
+ *     kazanç satırı görünür — para mahsur kalmaz.
+ *     K1: "İade kredisi" ayrı bir para türü DEĞİLDİR; tek isim, tek sayı.
  *   • Kaleci & Hakem & Tesis: Çekilebilir Kazanç (altın hero) + IBAN'a Çek.
  *     Para yükleme YOKTUR.
  * Hata: başarısız ödeme cüzdanda kırmızı banner + 'Tekrar dene' olarak görünür.
@@ -54,6 +58,12 @@ interface PayoutRequest {
   iban_holder_name: string;
   status: string;
   created_at: string;
+  // K1: cüzdan çekiminde brüt ≠ net. Kullanıcıya hesabına GEÇECEK tutarı
+  // göstermek için net gerekir; iptal yalnız WALLET_CASHOUT'ta mümkün.
+  fee_amount: number | null;
+  net_amount: number | null;
+  payout_type: string | null;
+  reject_reason: string | null;
 }
 
 type View = 'MAIN' | 'TOPUP' | 'CARDS' | 'ADD_CARD' | 'HISTORY' | 'PAYOUT_FORM' | 'CASHOUT';
@@ -72,10 +82,10 @@ const formatIBAN = (raw: string): string => {
   const clean = raw.replace(/[^A-Z0-9]/gi, '').toUpperCase().slice(0, 26);
   return clean.replace(/(.{4})/g, '$1 ').trim();
 };
-const validateIBAN = (raw: string): boolean => {
-  const clean = raw.replace(/\s/g, '');
-  return clean.length === 26 && clean.startsWith('TR');
-};
+// Eski hali yalnız "TR ile başlasın, 26 karakter olsun" bakıyordu; basamağı
+// yanlış IBAN geçiyor, para gönderilemeyip talep FAILED'a düşüyordu. Artık
+// tek kaynak utils/iban (ISO 7064 mod-97) — sunucudaki is_valid_tr_iban ile aynı kural.
+const validateIBAN = (raw: string): boolean => validateTrIban(raw).valid;
 
 const txMeta = (tx: WalletTx): { icon: React.ReactNode; bg: string; color: string; income: boolean } => {
   switch (tx.type) {
@@ -154,6 +164,9 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
   const [cashoutError, setCashoutError] = useState('');
   const [cashoutDone, setCashoutDone] = useState<{ net: number; iban_last4: string } | null>(null);
   const [cashoutPreview, setCashoutPreview] = useState<import('../services/walletService').CashoutPreview | null>(null);
+  // K1 — bekleyen talebin kullanıcı tarafından iptali
+  const [cancelConfirm, setCancelConfirm] = useState<string | null>(null);
+  const [cancelBusy, setCancelBusy] = useState(false);
   const cashoutBusyRef = useRef(false);
 
   // Geçmiş filtresi
@@ -170,7 +183,7 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
           .select('id,amount,type,balance_type,status,description,created_at')
           .order('created_at', { ascending: false }).limit(100),
         supabase.from('payout_requests')
-          .select('id,amount,iban,iban_holder_name,status,created_at')
+          .select('id,amount,iban,iban_holder_name,status,created_at,fee_amount,net_amount,payout_type,reject_reason')
           .order('created_at', { ascending: false }).limit(20),
         isEarningsRole ? getOwnerEarningsSummary().catch(() => null) : Promise.resolve(null),
       ]);
@@ -211,6 +224,10 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
   const refundBalance = summary?.refundCreditBalance ?? 0;
   const earningsBalance = summary?.earningsBalance ?? 0;
   const reservedBalance = summary?.reservedBalance ?? 0;
+  // K1: "İade kredisi" ayrı bir para türü değil. Kullanıcıya tek isim, tek
+  // sayı gösterilir: Cüzdan Bakiyesi = yüklenen + iade. Tamamı harcanabilir
+  // ve tamamı %5 hizmet bedeliyle çekilebilir.
+  const walletBalance = topupBalance + refundBalance;
 
   const effectiveTopup = isCustom ? Number(customAmount) || 0 : topupAmount;
   // Kart işlem bedeli (app_config.card_fee_pct; 0 = kapalı) — sunucudaki
@@ -328,6 +345,15 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
 
   const retryPayment = () => {
     setLastPaymentError(null);
+    // BULGU-028 (geri tuşu İLERİ götürüyor) burada DEĞİL, store.navigateTo'daki
+    // döngü kırıcıda çözülür: yığın tepesi zaten PAYMENT ise ikinci kopya
+    // eklenmez, mevcut olan tüketilir.
+    //
+    // Plandaki `goBack('PAYMENT')` önerisi UYGULANMADI çünkü sessizce kırıyor:
+    // Cüzdan'a Profil'den de girilebiliyor (ProfileScreen.tsx:154) ve
+    // paymentContext donanım geri tuşuyla PAYMENT'ten çıkıldığında
+    // temizlenmiyor. O durumda yığın [DASHBOARD, PROFILE] olur ve goBack
+    // kullanıcıyı ödeme ekranına değil PROFİL'e atardı.
     if (paymentContext) useAppStore.getState().navigateTo('PAYMENT');
   };
 
@@ -348,9 +374,16 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
     const g = parseFloat(cashoutAmount);
     const pv = cashoutPreview;
     if (!g || g <= 0) { setCashoutError('Geçerli bir tutar girin.'); return; }
-    if (pv && g < pv.min) { setCashoutError(`En az ${fmtInt(pv.min)}₺ çekebilirsin.`); return; }
-    if (pv && g > pv.topup_balance) { setCashoutError('Çekilebilir bakiyeni aşıyor.'); return; }
-    if (!validateIBAN(cashoutIban)) { setCashoutError('Geçerli bir IBAN girin (TR + 24 hane).'); return; }
+    if (pv && g > pv.withdrawable_balance) { setCashoutError('Çekilebilir bakiyeni aşıyor.'); return; }
+    // Bakiyenin tamamı çekiliyorsa minimum eşik aranmaz — yoksa eşik altındaki
+    // bakiye kilitlenir (ne çekilebilir ne hesap silinebilir).
+    if (pv && g < pv.min && !pv.min_waived) {
+      setCashoutError(`En az ${fmtInt(pv.min)}₺ çekebilirsin (ya da bakiyenin tamamını).`); return;
+    }
+    // mod-97 checksum'lı doğrulama: eski kontrol yalnız "TR + 26 karakter"
+    // bakıyordu, basamağı yanlış IBAN geçiyor ve talep bankada FAILED'a düşüyordu.
+    const ibanCheck = validateTrIban(cashoutIban);
+    if (!ibanCheck.valid) { setCashoutError(ibanCheck.reason || 'Geçerli bir IBAN girin.'); return; }
     if (!cashoutHolder.trim()) { setCashoutError('IBAN sahibi adı zorunludur.'); return; }
     cashoutBusyRef.current = true;
     setCashoutBusy(true);
@@ -375,6 +408,28 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
     } finally {
       cashoutBusyRef.current = false;
       setCashoutBusy(false);
+    }
+  };
+
+  /**
+   * K1 — bekleyen çekim talebini iptal et. Brüt tutar kova bazında cüzdana
+   * geri döner ve hizmet bedeli alınmaz. Admin aynı anda onaylamış olabilir;
+   * o durumda sunucu ALREADY_PROCESSING verir ve dürüst hata gösterilir.
+   */
+  const handleCancelCashout = async (payoutId: string) => {
+    if (cancelBusy) return;
+    setCancelBusy(true);
+    try {
+      const res = await cancelWalletCashout(payoutId);
+      setCancelConfirm(null);
+      showToast(`Çekim talebin iptal edildi. ${fmt(res.restored)}₺ cüzdanına geri yüklendi.`, 'success');
+      fetchData();
+    } catch (e) {
+      setCancelConfirm(null);
+      showToast((e instanceof Error ? e.message : 'Talep iptal edilemedi.').replace(/^[A-Z_]+: /, ''));
+      fetchData();
+    } finally {
+      setCancelBusy(false);
     }
   };
 
@@ -793,11 +848,11 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
     const blockedByIdentity = !!pv && pv.identity_required && !pv.identity_ok;
     const disabled = !!pv && !pv.enabled;
     const canSubmit = !cashoutBusy && !blockedByIdentity && !disabled
-      && g > 0 && (!pv || (g >= pv.min && g <= pv.topup_balance))
+      && g > 0 && (!pv || ((g >= pv.min || pv.min_waived) && g <= pv.withdrawable_balance))
       && validateIBAN(cashoutIban) && !!cashoutHolder.trim();
     return (
       <div lang="tr" className="min-h-screen bg-[#0A0E14] flex flex-col font-sans">
-        <SubHeader title="Bakiyeni Çek" subtitle="Yüklediğin bakiyeyi hesabına aktar"
+        <SubHeader title="Paranı Çek" subtitle="Cüzdan bakiyeni banka hesabına aktar"
           onBack={() => { setView('MAIN'); setCashoutError(''); setCashoutDone(null); }} />
         <main className="flex-1 overflow-y-auto p-5 space-y-4">
           {cashoutDone ? (
@@ -826,16 +881,22 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
           ) : (
             <>
               <div className="text-center py-2">
-                <p className="text-[11px] text-gray-400 font-bold uppercase tracking-[0.1em] mb-1.5">Çekilebilir (Yüklenen) Bakiye</p>
-                <p className="text-[38px] font-black leading-none text-white font-numeric">{fmt(pv?.topup_balance ?? topupBalance)}₺</p>
-                <p className="text-[10.5px] text-gray-500 mt-2">İade kredisi ve kazanç bu tutara dahil değildir.</p>
+                <p className="text-[11px] text-gray-400 font-bold uppercase tracking-[0.1em] mb-1.5">Çekilebilir Bakiye</p>
+                <p className="text-[38px] font-black leading-none text-white font-numeric">{fmt(pv?.withdrawable_balance ?? walletBalance)}₺</p>
+                <p className="text-[10.5px] text-gray-500 mt-2">
+                  Yüklediğin ve iade aldığın tutarların tamamı. Kazancın ayrı çekilir.
+                </p>
               </div>
 
               {blockedByIdentity && (
                 <div className="bg-[#0f1419] border border-blue-400/25 rounded-2xl p-3.5 flex gap-2.5">
                   <Shield size={15} className="text-blue-400 shrink-0 mt-0.5" />
+                  {/* Bu ekran daha önce "Profil ayarlarından doğrulayabilirsin"
+                      diyordu ama oyuncu için böyle bir ekran YOK — yanlış
+                      yönlendirmektense dürüst ol. */}
                   <p className="text-[12px] text-gray-300 leading-relaxed">
-                    Güvenliğin için para çekmeden önce bir kez <span className="text-white font-semibold">TC kimlik doğrulaması</span> gerekir. Profil ayarlarından kimliğini doğrulayabilirsin.
+                    Güvenliğin için para çekmeden önce bir kez <span className="text-white font-semibold">TC kimlik doğrulaması</span> gerekiyor.
+                    Bu adım henüz açılmadı; destek ekibiyle iletişime geçebilirsin.
                   </p>
                 </div>
               )}
@@ -854,7 +915,7 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
               {g > 0 && pv && (
                 <div className="bg-[#161B22] border border-white/8 rounded-[14px] p-4 space-y-2">
                   <div className="flex justify-between text-[13px]"><span className="text-gray-500">Çekilecek</span><span className="text-white font-bold font-numeric">{fmt(pv.gross)}₺</span></div>
-                  <div className="flex justify-between text-[13px]"><span className="text-gray-500">Kesinti (%{pv.fee_pct})</span><span className="text-red-300 font-bold font-numeric">−{fmt(pv.fee)}₺</span></div>
+                  <div className="flex justify-between text-[13px]"><span className="text-gray-500">Hizmet bedeli (%{pv.fee_pct})</span><span className="text-red-300 font-bold font-numeric">−{fmt(pv.fee)}₺</span></div>
                   <div className="h-px bg-white/8" />
                   <div className="flex justify-between text-[14px]"><span className="text-gray-300 font-semibold">Hesabına geçecek</span><span className="text-[#39FF14] font-black font-numeric">{fmt(pv.net)}₺</span></div>
                 </div>
@@ -1044,23 +1105,25 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
               <div className="absolute -top-10 -right-8 w-44 h-44 bg-[#39FF14]/14 blur-[60px] rounded-full" />
               <div className="relative flex justify-between items-start">
                 <div>
-                  <p className="text-[11px] font-extrabold uppercase tracking-[0.14em] text-[#8fe87a]">Yüklenen Bakiye</p>
+                  <p className="text-[11px] font-extrabold uppercase tracking-[0.14em] text-[#8fe87a]">Cüzdan Bakiyesi</p>
                   {loading ? (
                     <div className="h-10 w-40 bg-white/5 rounded-lg animate-pulse mt-3" />
                   ) : (
-                    <p className="text-[40px] font-black leading-none mt-3 text-white font-numeric">{fmt(topupBalance)}₺</p>
+                    <p className="text-[40px] font-black leading-none mt-3 text-white font-numeric">{fmt(walletBalance)}₺</p>
                   )}
                 </div>
                 <span className="font-numeric font-bold text-[13px] tracking-[0.08em] text-[#39FF14] border border-[#39FF14]/40 rounded-lg px-2 py-1">
                   OYNA
                 </span>
               </div>
-              <div className="relative mt-5 inline-flex items-center gap-2 bg-blue-400/12 border border-blue-400/25 rounded-xl px-3 py-2">
-                <Gift size={14} className="text-blue-400" />
-                <span className="text-xs font-bold text-blue-300">
-                  İade Kredisi <span className="text-white">{fmt(refundBalance)}₺</span>
-                </span>
-              </div>
+              {/* Ayrı "İade Kredisi" çipi kaldırıldı: farklı bir para türüymüş
+                  ve harcanamaz/çekilemezmiş izlenimi veriyordu. Yalnız bilgi
+                  amaçlı tek satır mikro-not kalır. */}
+              {refundBalance > 0 && (
+                <p className="relative mt-4 text-[11px] font-semibold text-[#8fe87a]/70">
+                  Bu tutarın {fmt(refundBalance)}₺ kadarı iadelerden geldi.
+                </p>
+              )}
             </div>
 
             {/* Eylem hapları: Para Yükle · Kart Yönet · Geçmiş */}
@@ -1079,12 +1142,53 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
               </button>
             </div>
 
-            {/* S2.1 — düşük görünürlüklü çekim girişi (yalnız yüklenen bakiyesi olan oyuncu) */}
-            {topupBalance > 0 && (
+            {/* K1 — çekim artık gerçek bir eylem: gri metin bağlantı değil,
+                tam genişlikte ikincil buton. Kullanıcı parasını çekebildiğini
+                görmeden cüzdana para yüklemeye ikna olmuyor. */}
+            {walletBalance > 0 && !pendingPayout && (
               <button onClick={() => { setCashoutError(''); setCashoutDone(null); setCashoutAmount(''); setView('CASHOUT'); }}
-                className="w-full text-center text-[11px] text-gray-500 hover:text-gray-300 font-semibold py-0.5 transition-colors">
-                Bakiyeni geri çek
+                className="w-full py-3.5 bg-[#161B22] text-white border border-white/12 rounded-2xl font-extrabold text-[13px] flex items-center justify-center gap-2 active:scale-[0.98] transition-all hover:border-white/25">
+                <ArrowUpRight size={18} /> Paramı Hesabıma Çek
               </button>
+            )}
+
+            {/* K1 — bekleyen çekim talebi kartı. Oyuncu dalında hiç yoktu;
+                para bakiyeden anında düştüğü için kullanıcı "param nerede"
+                diye soruyordu. */}
+            {pendingPayout && (
+              <div className={`rounded-2xl p-4 border ${
+                pendingPayout.status === 'PENDING'
+                  ? 'bg-[#FACC15]/8 border-[#FACC15]/30'
+                  : 'bg-blue-400/8 border-blue-400/30'
+              }`}>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className={`text-[12px] font-black ${pendingPayout.status === 'PENDING' ? 'text-[#FACC15]' : 'text-blue-300'}`}>
+                      {pendingPayout.status === 'PENDING' ? 'Çekim talebin onay bekliyor' : 'Çekim talebin onaylandı'}
+                    </p>
+                    <p className="text-[11px] font-bold text-white mt-1">
+                      {fmt(pendingPayout.net_amount ?? pendingPayout.amount)}₺ · •••• {pendingPayout.iban.slice(-4)} hesabına
+                    </p>
+                    <p className="text-[10.5px] text-gray-400 mt-1 leading-relaxed">
+                      {pendingPayout.status === 'PENDING'
+                        ? `${fmt(pendingPayout.amount)}₺ cüzdanından düşüldü. Genellikle 1–2 iş günü sürer.`
+                        : 'Hesabına geçmesi bankana göre birkaç saat sürebilir.'}
+                    </p>
+                  </div>
+                  <Clock size={16} className={`shrink-0 mt-0.5 ${pendingPayout.status === 'PENDING' ? 'text-[#FACC15]' : 'text-blue-300'}`} />
+                </div>
+                {/* İptal yalnız cüzdan çekiminde ve yalnız PENDING'te. Admin
+                    işleme aldıysa sunucu ALREADY_PROCESSING verir. */}
+                {pendingPayout.status === 'PENDING' && pendingPayout.payout_type === 'WALLET_CASHOUT' && (
+                  <button
+                    disabled={cancelBusy}
+                    onClick={() => setCancelConfirm(pendingPayout.id)}
+                    className="mt-3 w-full py-2.5 rounded-xl bg-white/5 border border-white/10 text-[11px] font-bold text-gray-300 hover:text-white transition-colors disabled:opacity-50"
+                  >
+                    {cancelBusy ? 'İptal ediliyor…' : 'Talebi iptal et'}
+                  </button>
+                )}
+              </div>
             )}
 
             {/* Koşullu kazanç satırı — tasarım geliştirmesi: referral vb. kazanç
@@ -1164,9 +1268,48 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
         <p className="text-[10px] text-gray-600 leading-relaxed px-0.5 pb-2">
           {isEarningsRole
             ? 'Kazançlar hizmet tamamlandıkça birikir ve IBAN talebiyle hesabına aktarılır.'
-            : 'Bakiye yalnızca OYNA içindeki saha, maç ve hizmet ödemelerinde kullanılır; dijital ürün satın alımında kullanılamaz.'}
+            : 'Cüzdan bakiyeni OYNA içindeki saha, maç ve hizmet ödemelerinde kullanabilir veya hizmet bedeliyle banka hesabına çekebilirsin; dijital ürün satın alımında kullanılamaz.'}
         </p>
       </main>
+
+      {/* K1 — çekim talebi iptal onayı */}
+      <AnimatePresence>
+        {cancelConfirm && (
+          <div className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={() => !cancelBusy && setCancelConfirm(null)}
+              className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 24 }}
+              className="relative z-10 bg-[#161B22] border border-white/10 rounded-[26px] p-6 w-full max-w-sm"
+            >
+              <h3 className="text-white font-black text-lg">Çekim talebini iptal et?</h3>
+              <p className="text-[12.5px] text-gray-400 mt-2 leading-relaxed">
+                {fmt(pendingPayout?.amount ?? 0)}₺ cüzdanına geri döner ve hizmet bedeli alınmaz.
+                İstediğin zaman yeniden talep açabilirsin.
+              </p>
+              <div className="flex gap-2.5 mt-5">
+                <button
+                  disabled={cancelBusy}
+                  onClick={() => setCancelConfirm(null)}
+                  className="flex-1 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-[12px] font-bold disabled:opacity-50"
+                >
+                  Vazgeç
+                </button>
+                <button
+                  disabled={cancelBusy}
+                  onClick={() => handleCancelCashout(cancelConfirm)}
+                  className="flex-1 py-3 rounded-xl bg-red-500 text-white text-[12px] font-black disabled:opacity-50"
+                >
+                  {cancelBusy ? 'İptal ediliyor…' : 'Talebi iptal et'}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
