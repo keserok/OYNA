@@ -150,6 +150,13 @@ export interface AtomicCreateParams {
   /** [{ type: 'GOALKEEPER'|'REFEREE', providerIds?: string[] }] — boş liste = otomatik öneri */
   deferredProviders?: { type: string; providerIds?: string[] }[];
   seedBookingId?: string | null; // rezervasyondan çevirme: saha/saat rezervasyondan alınır
+  /**
+   * İdempotency anahtarı (shared/submitGuard safeUuid). AYNI yayın denemesi
+   * boyunca sabit kalır; timeout sonrası tekrar deneme AYNI anahtarla gider ve
+   * sunucu ikinci maç/rezervasyon/kapora üretmez, ilk sonucu döner.
+   * Verilmezse sunucu bugünkü davranışı aynen sürdürür (geriye dönük uyum).
+   */
+  clientRequestId?: string | null;
 }
 
 export interface AtomicCreateResult {
@@ -161,20 +168,22 @@ export interface AtomicCreateResult {
   privateCode: string | null;
   minPlayers: number;
   depositStatus: string;
+  /** Sunucunun tarifeden (pitch_tariffs.slot_minutes) türettiği maç süresi. */
+  durationMinutes: number;
 }
 
 /** Sunucunun isimli hatalarını akışın anlayacağı koda çevirir. */
 export type CreateMatchErrorCode =
   | 'SLOT_TAKEN' | 'INSUFFICIENT_BALANCE' | 'FORMAT_OUT_OF_RANGE' | 'NO_TARIFF'
   | 'PAST_TIME' | 'COURT_NOT_FOUND' | 'SEED_NOT_FOUND' | 'SEED_NOT_READY'
-  | 'BOOKING_DISABLED' | 'SLOT_UNAVAILABLE' | 'UNKNOWN';
+  | 'BOOKING_DISABLED' | 'SLOT_UNAVAILABLE' | 'DUPLICATE_IN_FLIGHT' | 'UNKNOWN';
 
 export function parseCreateMatchError(err: unknown): { code: CreateMatchErrorCode; message: string } {
   const msg = err instanceof Error ? err.message : String((err as { message?: string })?.message ?? err ?? '');
   const codes: CreateMatchErrorCode[] = [
     'SLOT_TAKEN', 'INSUFFICIENT_BALANCE', 'FORMAT_OUT_OF_RANGE', 'NO_TARIFF',
     'PAST_TIME', 'COURT_NOT_FOUND', 'SEED_NOT_READY', 'SEED_NOT_FOUND',
-    'BOOKING_DISABLED', 'SLOT_UNAVAILABLE',
+    'BOOKING_DISABLED', 'SLOT_UNAVAILABLE', 'DUPLICATE_IN_FLIGHT',
   ];
   for (const c of codes) {
     if (msg.includes(c)) return { code: c, message: msg };
@@ -198,6 +207,7 @@ export async function createMatchAtomic(params: AtomicCreateParams): Promise<Ato
     p_visibility: params.visibility,
     p_payload: payload,
     p_seed_booking_id: params.seedBookingId ?? null,
+    p_client_request_id: params.clientRequestId ?? null,
   });
   if (error) throw error;
   const r = data as Record<string, unknown>;
@@ -210,6 +220,7 @@ export async function createMatchAtomic(params: AtomicCreateParams): Promise<Ato
     privateCode: r.private_code ? String(r.private_code) : null,
     minPlayers: Number(r.min_players ?? 0),
     depositStatus: String(r.deposit_status ?? 'NONE'),
+    durationMinutes: Number(r.duration_minutes ?? 60),
   };
 }
 

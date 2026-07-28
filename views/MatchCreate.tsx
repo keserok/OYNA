@@ -28,6 +28,7 @@ import { getFriends, type FriendRow } from '../services/socialService';
 import { getMyTeams, getTeamSquad, type MyTeamRow } from '../services/teamSocialService';
 import { getMatchDetails } from '../services/matchService';
 import { fetchMyFavoritePitchIds } from '../services/pitchFavoritesService';
+import { safeUuid } from '../shared/submitGuard';
 
 // Cüzdan yükleme overlay'i — form kaybolmadan bakiye tamamlanır (gerçek akış).
 const WalletScreen = lazy(() => import('./WalletScreen'));
@@ -130,6 +131,12 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
   const trackRef = useRef<HTMLDivElement | null>(null);
   const publishRef = useRef<() => void>(() => {});
   const publishBusyRef = useRef(false);
+  // İdempotency anahtarı: AYNI yayın denemesi boyunca sabit kalır. Sunucudan
+  // yanıt gelmeden kesilen (timeout/kopma) bir istekten sonra tekrar deneme
+  // AYNI anahtarla gider → çift maç/rezervasyon/kapora imkânsız. Yalnız YAYIN
+  // BAŞARIYLA tamamlanınca sıfırlanır; hata dalında sıfırlanmaz (sunucuda
+  // işlem gerçekten düştüyse claim satırı da geri alınmıştır, anahtar temizdir).
+  const publishIdemRef = useRef<string | null>(null);
   const slideValRef = useRef(0);
   const [result, setResult] = useState<AtomicCreateResult | null>(null);
   const [conflict, setConflict] = useState<{ time: string; next: string | null } | null>(null);
@@ -373,6 +380,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
     const t2 = setTimeout(() => setPubStep(2), 1100);
     try {
       const effVisibility = teamInvite ? 'PRIVATE' : visibility;
+      if (!publishIdemRef.current) publishIdemRef.current = safeUuid();
       const res = await createMatchAtomic({
         courtId: seeded ? null : selCourtId,
         dateISO: seeded ? null : dateISO,
@@ -387,7 +395,10 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
         // ve sunucu en uygun sağlayıcıyı kendisi seçer.
         deferredProviders: offers.map(o => ({ type: o.type, providerIds: o.all ? [] : o.providerIds })),
         seedBookingId: seeded ? seed?.bookingId : null,
+        clientRequestId: publishIdemRef.current,
       });
+      // Yayın tamam: anahtar tüketildi, bir sonraki maç yeni anahtarla kurulur.
+      publishIdemRef.current = null;
       setPubStep(3);
       buzz([18, 40, 30]);
 
@@ -436,6 +447,9 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
         showToast(code === 'SEED_NOT_READY'
           ? 'Rezervasyon onaylanmadan/kaporası ödenmeden maça çevrilemiyor.'
           : 'Rezervasyon bulunamadı; normal kurulum akışına dönüldü.', 'error');
+      } else if (code === 'DUPLICATE_IN_FLIGHT') {
+        // Önceki gönderim hâlâ sunucuda işleniyor — İKİNCİ maç açılmadı.
+        showToast('Önceki yayın isteğin hâlâ işleniyor — birkaç saniye sonra Maçlarım’a bak.', 'error');
       } else {
         showToast('Maç yayınlanamadı. Lütfen tekrar dene.', 'error');
         console.error('create_match_atomic:', message);
