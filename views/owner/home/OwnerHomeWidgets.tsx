@@ -42,7 +42,7 @@ export const MatchCountdownItem: React.FC<{
                 {request.status === 'PENDING' && (
                     // FAZ1: butonlar süre bitse de görünür (talep sunucuda hâlâ beklemede);
                     // istemci sayacı 0'a inince aksiyon kaybolmaz. İşlenirken kilitli + spinner.
-                    <div className="flex gap-2 shrink-0">
+                    <div className="flex gap-3 shrink-0">
                         <button
                             onClick={onApprove}
                             disabled={isProcessing}
@@ -53,7 +53,9 @@ export const MatchCountdownItem: React.FC<{
                         <button
                             onClick={onReject}
                             disabled={isProcessing}
-                            className="px-3.5 py-2 min-h-11 bg-red-500/20 text-red-400 text-[0.6875rem] font-bold rounded-lg hover:bg-red-500/30 active:scale-95 transition-all disabled:opacity-50"
+                            // BULGU-121: yıkıcı aksiyon dolu blok olmamalı — çerçeveli/dolgusuz,
+                            // onaydan 12px uzakta (yanlış dokunuş azalsın).
+                            className="px-3.5 py-2 min-h-11 bg-transparent border border-[#F87171]/30 text-[#F87171] text-[0.6875rem] font-bold rounded-lg hover:bg-[#F87171]/10 active:scale-95 transition-all disabled:opacity-50"
                         >
                             Reddet
                         </button>

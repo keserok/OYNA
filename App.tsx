@@ -442,7 +442,7 @@ const App: React.FC = () => {
         // Deep link handler — tüm oyna:// kaynakları tek yöneticiden (tek makine)
         (deepLink) => {
           const s = useAppStore.getState();
-          handleDeepLink(deepLink, (v) => s.navigateTo(v as AppView), {
+          void handleDeepLink(deepLink, (v) => s.navigateTo(v as AppView), {
             setSelectedMatch: (m) => s.setSelectedMatch(m),
             setSelectedTeamId: s.setSelectedTeamId,
             setStudioContext: s.setStudioContext,
@@ -450,6 +450,7 @@ const App: React.FC = () => {
             setSelectedConversationId: s.setSelectedConversationId,
             setSelectedTeamChatId: s.setSelectedTeamChatId,
             setTeamInitialTab: s.setTeamInitialTab,
+            showToast, // IP-06: maç çekilemezse sessiz kalma, kullanıcıya söyle
           });
         },
       );
@@ -506,7 +507,7 @@ const App: React.FC = () => {
           // navigasyonu onAuthStateChanged üstlenir. Diğer deep link'lere gitmez.
           if (await handleAuthCallbackUrl(url)) return;
           const s = useAppStore.getState();
-          handleDeepLink(url, (v) => s.navigateTo(v as AppView), {
+          void handleDeepLink(url, (v) => s.navigateTo(v as AppView), {
             setSelectedMatch: (m) => s.setSelectedMatch(m),
             setSelectedTeamId: s.setSelectedTeamId,
             setStudioContext: s.setStudioContext,
@@ -514,6 +515,7 @@ const App: React.FC = () => {
             setSelectedConversationId: s.setSelectedConversationId,
             setSelectedTeamChatId: s.setSelectedTeamChatId,
             setTeamInitialTab: s.setTeamInitialTab,
+            showToast, // IP-06: maç çekilemezse sessiz kalma, kullanıcıya söyle
           });
         })();
       }).then((handle) => { remove = () => handle.remove(); });
@@ -522,19 +524,26 @@ const App: React.FC = () => {
   }, []);
 
   // ─── Android donanım geri tuşu ─────────────────────────────────────────────
-  // Yığında ekran varsa geri git; kök ekrandaysa uygulamayı arka plana al
-  // (kapatmak yerine) — Play incelemesinin beklediği davranış.
+  // Donanım geri tuşu TEK bir öncelik sırası izler (IP-01):
+  //   1) Banka doğrulaması açık → hiçbir şey yapma
+  //   2) Açık overlay varsa → yalnız onu kapat, ekranı değiştirme
+  //   3) Yığında ekran varsa → geri git
+  //   4) Kök ekran → uygulamayı arka plana al (Play incelemesinin beklediği davranış)
   useEffect(() => {
     if (Capacitor.getPlatform() !== 'android') return;
     let remove: (() => void) | undefined;
     import('@capacitor/app').then(({ App: CapApp }) => {
       CapApp.addListener('backButton', () => {
-        const { navigationStack, goBack } = useAppStore.getState();
-        if (navigationStack.length > 0) {
-          goBack();
-        } else {
-          CapApp.minimizeApp();
-        }
+        const s = useAppStore.getState();
+        // 1) Banka doğrulaması (3DS) açık — geri tuşu hiçbir şey yapmaz.
+        //    PaymentScreen unmount olursa 3DS sonucu bir daha okunamaz (BULGU-084).
+        if (s.paymentLockActive) return;
+        // 2) Açık overlay varsa yalnız onu kapat, ekranı DEĞİŞTİRME (BULGU-020/021/132).
+        if (s.closeTopOverlay()) return;
+        // 3) Yığında ekran varsa geri git.
+        if (s.navigationStack.length > 0) { s.goBack(); return; }
+        // 4) Kök ekran → uygulamayı arka plana al (kapatmak yerine).
+        CapApp.minimizeApp();
       }).then((handle) => { remove = () => handle.remove(); });
     });
     return () => { if (remove) remove(); };
@@ -853,7 +862,7 @@ const App: React.FC = () => {
 
       <AnimatePresence>
         {showBottomNav && (
-          <BottomNav currentView={view} onNavigate={resetNavigation} hidden={navHidden || navOverlayOpen} />
+          <BottomNav currentView={view} onNavigate={(v) => useAppStore.getState().switchTab(v)} hidden={navHidden || navOverlayOpen} />
         )}
       </AnimatePresence>
 

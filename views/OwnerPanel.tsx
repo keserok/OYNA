@@ -103,12 +103,14 @@ import { MatchCountdownItem, PitchOccupancyGrid } from './owner/home/OwnerHomeWi
 import { OwnerSetupProgress, type SetupStep } from './owner/home/OwnerSetupProgress';
 import { PendingActionsView } from './owner/PendingActionsView';
 import { OwnerBottomSheet } from './owner/components/OwnerBottomSheet';
+import { useConfirmSheet } from './owner/components/useConfirmSheet';
 import { todayISO, bookingToPendingRequest, INITIAL_PENDING_REQUESTS } from './owner/ownerPanelShared';
 
 type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACTIONS' | 'PITCHES';
 
  const OwnerPanelInner: React.FC<OwnerPanelProps> = ({ onBack, onNavigate, onNeedOnboarding, onLogout }) => {
   const notify = useOwnerToast();
+  const { confirm, confirmElement } = useConfirmSheet();
   const { setIsNotificationsOpen, setIsRoleSwitcherOpen, myRoles, setStaffPanelContext } = useAppStore();
   // STAFF-3: panel erişim seviyesi. staffPanelContext varsa personel/müdür,
   // yoksa sahip (kendi paneli). Mount anında BİR KEZ yakalanır — StrictMode
@@ -284,8 +286,11 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
       pricingPolicy: (pitch.pitch_tariffs ?? []).map((t: PitchTariff) => ({
         startTime: String(t.start_time ?? '08:00'),
         endTime: String(t.end_time ?? '17:00'),
-        price: Number(t.price_per_hour ?? 0),
-        price_per_hour: Number(t.price_per_hour ?? 0),
+        price: Number(t.slot_price ?? 0),
+        slot_price: Number(t.slot_price ?? 0),
+        slot_minutes: Number(t.slot_minutes ?? 60),
+        // BULGU-123: takvim kapora varsayılanını tarifeden okur — kopyalanmazsa uydurma orana düşer.
+        deposit_amount: Number(t.deposit_amount ?? 0),
         court_id: t.court_id ?? null,
         applies_to_days: t.applies_to_days ?? null,
         tariff_type: t.tariff_type ?? undefined,
@@ -685,6 +690,21 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
 
   const handleProcessRequest = async (id: string, action: 'APPROVE' | 'REJECT') => {
       if (!effGuardWrite()) return;
+      // BULGU-121: Reddet geri alınamaz + müşteriye ret bildirimi gider. Onay,
+      // iyimser işaretlemeden ÖNCE sorulur — "Vazgeç" kartı hiç bozmasın.
+      // PendingActionsView ile AYNI onay kalıbı.
+      if (action === 'REJECT') {
+          const req = pendingRequests.find((r: any) => r.id === id);
+          const ok = await confirm({
+              title: 'Rezervasyonu reddet?',
+              message: req?.subtitle
+                  ? `${req.subtitle} talebi reddedilecek. Bu işlem geri alınamaz.`
+                  : 'Bu rezervasyon talebi geri alınamaz şekilde reddedilecek.',
+              confirmLabel: 'Reddet',
+              destructive: true,
+          });
+          if (!ok) return;
+      }
       // FAZ1: aynı talep zaten işleniyorsa ikinci dokunuşu yok say (çift onay/ret = para kaybı).
       if (processingRequestIds.has(id)) return;
       setProcessingRequestIds((prev) => { const n = new Set(prev); n.add(id); return n; });
@@ -772,8 +792,8 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
                   </div>
               </div>
               <div className="flex items-center gap-2">
-                  {/* P-OFFLINE: bekleyen kasa işlemleri (kuyruk boşken görünmez) */}
-                  <OutboxBadge />
+                  {/* BULGU-125: rozet başlıktan alındı — Takvim/Menü'de başlık hiç
+                      render edilmiyordu; şerit artık alt barın üstünde, tüm sekmelerde. */}
                   <button
                     onClick={() => setIsNotificationsOpen(true)}
                     aria-label={pendingCount > 0 ? `Bildirimler (${pendingCount} bekleyen)` : 'Bildirimler'}
@@ -796,7 +816,8 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
       {activeTab === 'HOME' && isLoading && <OwnerHomeSkeleton />}
 
       {activeTab === 'HOME' && !isLoading && (
-          <main className="flex-1 px-6 pt-6 overflow-y-auto custom-scrollbar pb-32">
+          // pb-40: çevrimdışı kuyruk şeridi (44px) + alt bar son kartı örtmesin.
+          <main className="flex-1 px-6 pt-6 overflow-y-auto custom-scrollbar pb-40">
               <OwnerCommandStrip
                 pendingCount={pendingCount}
                 isFacilityOpen={isFacilityOpen}
@@ -906,8 +927,11 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
                 pricingPolicy: (pitch.pitch_tariffs ?? []).map((t: PitchTariff) => ({
                   startTime: String(t.start_time ?? '08:00'),
                   endTime: String(t.end_time ?? '17:00'),
-                  price: Number(t.price_per_hour ?? 0),
-                  price_per_hour: Number(t.price_per_hour ?? 0),
+                  price: Number(t.slot_price ?? 0),
+                  slot_price: Number(t.slot_price ?? 0),
+                  slot_minutes: Number(t.slot_minutes ?? 60),
+                  // Tarife düzenlendikten sonra da kapora varsayılanı kaybolmasın.
+                  deposit_amount: Number(t.deposit_amount ?? 0),
                   court_id: t.court_id ?? null,
                   applies_to_days: t.applies_to_days ?? null,
                   tariff_type: t.tariff_type ?? undefined,
@@ -1155,6 +1179,9 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
       </OwnerBottomSheet>
 
 
+      {/* BULGU-125: bekleyen kasa işlemleri HER sekmede görünür (kuyruk boşken render olmaz). */}
+      <OutboxBadge variant="strip" />
+
       <OwnerBottomNav
         activeTab={activeTab}
         pendingCount={pendingCount}
@@ -1166,6 +1193,7 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
           else handleTabSelect(tab);
         }}
       />
+      {confirmElement}
     </div>
   );
 };

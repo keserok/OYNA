@@ -15,7 +15,7 @@ interface DiaryMatchView {
     pitchName: string;
     date: string;
     formation: string;
-    result: 'WIN' | 'LOSS' | 'DRAW';
+    result: 'WIN' | 'LOSS' | 'DRAW' | 'NONE';
     rosterSnapshot: { name: string; avatar: string; x: number; y: number; isMe: boolean }[];
 }
 
@@ -23,14 +23,20 @@ const buildDiaryView = (listing: MatchListing, uid?: string): DiaryMatchView => 
     const homeSlots = listing.slots || [];
     const awaySlots = listing.awaySlots || [];
     const isAwayPlayer = awaySlots.some(s => s.player?.id === uid);
-    const homeScore = listing.homeScore ?? 0;
-    const awayScore = listing.awayScore ?? 0;
-    const result: 'WIN' | 'LOSS' | 'DRAW' = homeScore === awayScore
+    // Skor girilmemiş maçı 0-0 saymayız: eskiden `?? 0` yedeği yüzünden skorsuz
+    // her maç oyuncunun günlüğünde BERABERLİK olarak görünüyordu. Skoru yalnız
+    // hakem veya saha sahibi girer; girilmediyse dürüst olan "girilmedi"dir.
+    const homeScore = listing.homeScore ?? null;
+    const awayScore = listing.awayScore ?? null;
+    const hasScore = homeScore !== null && awayScore !== null;
+    const result: 'WIN' | 'LOSS' | 'DRAW' | 'NONE' = !hasScore
+        ? 'NONE'
+        : homeScore === awayScore
         ? 'DRAW'
         : (isAwayPlayer ? awayScore > homeScore : homeScore > awayScore) ? 'WIN' : 'LOSS';
 
     return {
-        score: `${homeScore} - ${awayScore}`,
+        score: hasScore ? `${homeScore} - ${awayScore}` : '–',
         pitchName: listing.pitchName || listing.location,
         date: listing.date,
         formation: listing.format || '—',
@@ -151,10 +157,12 @@ const MatchDiaryDetail: React.FC<MatchDiaryDetailProps> = ({ diaryId, onBack }) 
 
     const isWin = match.result === 'WIN';
     const isLoss = match.result === 'LOSS';
+    const noScore = match.result === 'NONE';
     const glowColor = isWin ? 'rgba(34,197,94,0.15)' : isLoss ? 'rgba(239,68,68,0.15)' : 'rgba(156,163,175,0.15)';
     const badgeBg = isWin ? 'bg-green-500/10' : isLoss ? 'bg-red-500/10' : 'bg-gray-500/10';
     const badgeText = isWin ? 'text-green-400' : isLoss ? 'text-red-400' : 'text-gray-400';
     const badgeBorder = isWin ? 'border-green-500/20' : isLoss ? 'border-red-500/20' : 'border-gray-500/20';
+    const badgeLabel = noScore ? 'SKOR GİRİLMEDİ' : isWin ? 'GALİBİYET' : isLoss ? 'MAĞLUBİYET' : 'BERABERLİK';
 
     return (
         <div className="min-h-screen bg-[#0A0E14] flex flex-col relative font-sans">
@@ -170,10 +178,17 @@ const MatchDiaryDetail: React.FC<MatchDiaryDetailProps> = ({ diaryId, onBack }) 
                     {/* Content */}
                     <div className="relative z-10 flex flex-col items-center w-full">
                         <div className={`px-5 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest mb-6 border ${badgeBg} ${badgeText} ${badgeBorder}`}>
-                            {isWin ? 'GALİBİYET' : isLoss ? 'MAĞLUBİYET' : 'BERABERLİK'}
+                            {badgeLabel}
                         </div>
 
                         <h2 className="text-7xl font-black text-white mb-4 tracking-tighter leading-none italic">{match.score}</h2>
+
+                        {noScore && (
+                            <p className="text-xs font-semibold text-gray-500 -mt-2 mb-4 max-w-[240px] leading-relaxed">
+                                Bu maçın skoru girilmedi. Skoru maçın hakemi veya tesis sahibi girer;
+                                girilmeyen maç istatistiklerine sayılmaz.
+                            </p>
+                        )}
 
                         <div className="w-16 h-1 bg-white/10 rounded-full mb-6"></div>
 

@@ -1,4 +1,5 @@
 import type { PitchTariff } from '../types';
+import { normalizeSlotMinutes } from '../shared/slotGrid';
 
 export interface TariffLike {
   id?: string;
@@ -7,7 +8,12 @@ export interface TariffLike {
   applies_to_days: number[] | null;
   start_time: string;
   end_time: string;
-  price_per_hour: number;
+  /** Slot başına fiyat. Sunucudaki pitch_tariffs.slot_price. */
+  slot_price?: number | null;
+  /** @deprecated Eski ad; slot_price yoksa buradan okunur (geriye dönük uyum). */
+  price_per_hour?: number | null;
+  /** Slot süresi (dakika): 60 | 90 | 120. Yoksa 60 varsayılır. */
+  slot_minutes?: number | null;
   deposit_amount?: number | null;
   is_active?: boolean | null;
   sort_order?: number | null;
@@ -52,14 +58,22 @@ function timeMatchesTariff(startTime: string, tariff: TariffLike): boolean {
 export function getAverageTariffPrice(tariffs: TariffLike[] | null | undefined): number | null {
   const active = (tariffs ?? []).filter((t) => t.is_active !== false && t.valid_on == null);
   if (active.length === 0) return null;
-  const sum = active.reduce((acc, t) => acc + Number(t.price_per_hour), 0);
+  const sum = active.reduce((acc, t) => acc + tariffSlotPrice(t), 0);
   return Math.round(sum / active.length);
 }
 
 export interface SlotTariffQuote {
+  /** Slot başına fiyat (saatlik değil). */
   price: number;
   deposit: number;
   tariffId?: string;
+  /** Bu tarifenin slot süresi (dakika). Maçın süresi buradan gelir. */
+  slotMinutes: number;
+}
+
+/** slot_price yoksa eski price_per_hour alanından okur. */
+export function tariffSlotPrice(t: TariffLike): number {
+  return Number(t.slot_price ?? t.price_per_hour ?? 0) || 0;
 }
 
 /**
@@ -102,9 +116,10 @@ export function resolveTariffForSlot(
   if (matches.length === 0) return null;
   const hit = matches[0];
   return {
-    price: Number(hit.price_per_hour),
+    price: tariffSlotPrice(hit),
     deposit: Number(hit.deposit_amount ?? 0),
     tariffId: hit.id,
+    slotMinutes: normalizeSlotMinutes(hit.slot_minutes),
   };
 }
 
@@ -118,7 +133,8 @@ export function mapDbTariffsToPitchTariffs(rows: TariffLike[] | null | undefined
     applies_to_days: t.applies_to_days ?? [],
     start_time: t.start_time,
     end_time: t.end_time,
-    price_per_hour: Number(t.price_per_hour),
+    slot_price: tariffSlotPrice(t),
+    slot_minutes: normalizeSlotMinutes(t.slot_minutes),
     deposit_amount: Number(t.deposit_amount ?? 0),
     is_active: t.is_active !== false,
     sort_order: t.sort_order ?? idx,

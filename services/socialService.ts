@@ -275,6 +275,15 @@ export const declineMatchListInvite = async (inviteId: string): Promise<void> =>
   if (error) throw error;
 };
 
+/** IP-06: kaptanın "eksik oyuncu ilanı". Sunucu kapıları: kaptan, maça <24 saat,
+ *  boş slot, maç başına 2 saatte 1, kişi başına günde 1, en fazla 50 kişi.
+ *  Dönen değer: bildirim gönderilen kişi sayısı. */
+export const broadcastOpenSlot = async (matchId: string): Promise<number> => {
+  const { data, error } = await supabase.rpc('broadcast_open_slot', { p_match_id: matchId });
+  if (error) throw error;
+  return Number((data as { sent?: number } | null)?.sent ?? 0);
+};
+
 /** Tekil "Maça Çağır" — mevcut send_match_invite makinesi (D23; tek makine ilkesi). */
 export const inviteFriendToMatch = async (
   matchId: string, targetUserId: string, senderId: string,

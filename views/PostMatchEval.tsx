@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { ArrowLeft, Star, ShieldCheck, Crown, Users, Trophy, MessageSquare, Scale, Droplets, Hand, Gavel } from 'lucide-react';
+import { ArrowLeft, Star, ShieldCheck, Users, Trophy, MessageSquare, Droplets, Hand, Gavel, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAppStore } from '../store';
 import { supabase } from '../supabaseClient';
@@ -34,12 +34,14 @@ const MOCK_PLAYERS: EvalPlayer[] = [
 const initialsOf = (name: string) =>
   name.split(' ').filter(Boolean).slice(0, 2).map(w => w[0]?.toUpperCase() ?? '').join('') || '?';
 
-const FAIR_PLAY_TAGS = [
-  { id: 'fair', label: '🤝 Centilmendi', positive: true },
-  { id: 'rough', label: '💪 Agresif / Sertti', positive: false },
-  { id: 'spirit', label: '⭐️ Lider Ruhlu', positive: true },
-  { id: 'argue', label: '😤 İtirazcıydı', positive: false },
-];
+// Oyuncu başına centilmenlik. Değerler player_ratings.fair_play_score
+// CHECK (1..5) aralığına birebir oturur; seçim yapılmazsa 3 (nötr) gider.
+const FAIR_PLAY_CHOICES = [
+  { value: 5, label: 'Centilmendi' },
+  { value: 3, label: 'Normal' },
+  { value: 1, label: 'Sert oynadı' },
+] as const;
+const FAIR_PLAY_NEUTRAL = 3;
 
 // Sparkle Particle Component
 const Sparkle: React.FC<{ x: number; y: number; delay: number }> = ({ x, y, delay }) => (
@@ -84,13 +86,13 @@ const ServiceRatingCard: React.FC<{
             : <Icon size={20} className={accent} />}
         </div>
         <div className="min-w-0">
-          <p className="text-[9px] font-black uppercase tracking-widest text-gray-500">
-            {isGk ? 'Kaleci Değerlendirmesi' : 'Hakem Değerlendirmesi'}
+          <p className="text-[12px] font-semibold text-[#8B949E]">
+            {isGk ? 'Kaleci değerlendirmesi' : 'Hakem değerlendirmesi'}
           </p>
           <p className="text-sm font-black text-white uppercase tracking-tight italic truncate">{info.name}</p>
         </div>
         {score > 0 && (
-          <span className={`ml-auto text-lg font-black italic tracking-tighter ${accent}`}>{score}<span className="text-gray-600 text-xs">/10</span></span>
+          <span className={`ml-auto text-lg font-black italic tracking-tighter ${accent}`}>{score}<span className="text-[#8B949E] text-xs">/10</span></span>
         )}
       </div>
 
@@ -112,7 +114,7 @@ const ServiceRatingCard: React.FC<{
                   ? isGk
                     ? 'bg-[#FACC15] text-black border-[#FACC15] shadow-[0_0_8px_rgba(250,204,21,0.3)]'
                     : 'bg-blue-500 text-white border-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.3)]'
-                  : 'bg-black/30 border-white/5 text-gray-600 hover:text-white hover:border-white/10'
+                  : 'bg-black/30 border-white/5 text-[#8B949E] hover:text-white hover:border-white/10'
               }`}
             >
               {val}
@@ -126,7 +128,7 @@ const ServiceRatingCard: React.FC<{
         value={comment}
         onChange={(e) => onComment(e.target.value)}
         placeholder={isGk ? 'Kaleci hakkında not (isteğe bağlı)…' : 'Hakem hakkında not (isteğe bağlı)…'}
-        className="w-full bg-black/40 border border-white/8 rounded-2xl p-3.5 text-xs text-white focus:outline-none focus:border-white/20 min-h-[60px] resize-none placeholder-gray-700 font-bold transition-all"
+        className="w-full bg-black/40 border border-white/8 rounded-2xl p-3.5 text-[15px] leading-[22px] text-white focus:outline-none focus:border-white/20 min-h-[60px] resize-none placeholder-[#8B949E] font-normal transition-all"
       />
     </div>
   );
@@ -168,21 +170,22 @@ const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => 
   const [showHandshake, setShowHandshake] = useState(false);
   const [scoreProposal, setScoreProposal] = useState<ScoreProposal | null>(null);
   const [approvingScore, setApprovingScore] = useState(false);
-  // G3: organizasyon yorumu artık YAKALANIR (eskiden state'e bağlı değildi,
-  // sessizce yok oluyordu). Kalıcı depolama backend follow-up (submit_match_
-  // evaluation'a p_note kolonu) — plan §6.6.
+  // BULGU-097: saha notu artık gerçekten kaydediliyor — submit_pitch_rating'in
+  // mevcut p_comment parametresiyle gider (eskiden yalnız state'te durup yok oluyordu).
   const [orgComment, setOrgComment] = useState('');
   const [playerCardIdx, setPlayerCardIdx] = useState(0);
-  const [fairPlay, setFairPlay] = useState(0);
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [playerRatings, setPlayerRatings] = useState<Record<string, number>>({});
+  // BULGU-096: centilmenlik artık oyuncu başına. Tek global değer, puanlanan
+  // HERKESE (kendi takım arkadaşların dahil) aynı fair_play_score olarak gidiyordu.
+  const [playerFairPlay, setPlayerFairPlay] = useState<Record<string, number>>({});
   // F2.2: MOTM seçimi kaldırıldı — ayrı oy saklanmaz; MVP, player_ratings
   // ortalamasından TÜRETİLİR (match_motm görünümü + get_player_motm_count).
   // Eski buton kullanıcıya seçim yaptırıp hiçbir yere yazmıyordu (sessiz kayıp).
-  const [refRating, setRefRating] = useState(0);
   const [pitchRating, setPitchRating] = useState(0);
   const [showResult, setShowResult] = useState(false);
   const [infoToast, setInfoToast] = useState<string | null>(null);
+  // BULGU-097: sonuç ekranı yalnız GERÇEKTEN kaydedilen veriyi anlatır.
+  const [saveErrors, setSaveErrors] = useState<string[]>([]);
 
   // FAZ 5: Maça atanmış kaleci/hakem değerlendirmesi (1-10 + opsiyonel yorum)
   const [providers, setProviders] = useState<ServiceProviderInfo[]>([]);
@@ -261,6 +264,9 @@ const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => 
       return;
     }
     setSubmitting(true);
+    setSaveErrors([]);
+    // Kaydedilemeyen parçaların adları; sonuç ekranı bu listeyi okur.
+    const failed: string[] = [];
 
     // Bug C: Oyuncu-değerlendirmesi başarısız olsa bile servis (kaleci/hakem)
     // puanlaması ÇALIŞMALI — aksi halde sağlayıcı ödemesi serbest bırakılmaz.
@@ -269,7 +275,8 @@ const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => 
       const ratings = Object.entries(playerRatings).map(([ratee_id, stars]) => ({
         ratee_id,
         skill_score: Math.max(1, Math.min(10, Math.round((stars as number) * 2))),
-        fair_play_score: Math.max(1, Math.min(5, fairPlay || 3)),
+        // BULGU-096: her oyuncunun KENDİ centilmenlik seçimi; seçilmediyse nötr 3.
+        fair_play_score: playerFairPlay[ratee_id] ?? FAIR_PLAY_NEUTRAL,
       }));
       if (ratings.length > 0) {
         const { error: evalErr } = await supabase.rpc('submit_match_evaluation', {
@@ -277,36 +284,47 @@ const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => 
         });
         if (evalErr) throw evalErr;
       }
-      // finalize yalnız maç sahibi/kaptan için yetkili; değilse otomatik cron sonlandırır
+    } catch (err) {
+      // Oyuncu-değerlendirme başarısız → kullanıcıyı bilgilendir ama
+      // servis puanlamasını engelleme (return etme).
+      console.warn('[PostMatchEval] Oyuncu değerlendirmesi kaydedilemedi:', err);
+      const em = String((err as any)?.message || '');
+      if (/already|zaten|duplicate/i.test(em)) {
+        showInfo('Bu maçı zaten değerlendirdin.');
+      } else {
+        failed.push('Oyuncu puanların');
+        showInfo('Oyuncu puanların kaydedilemedi. Tekrar dene.');
+      }
+    }
+
+    // finalize yalnız maç sahibi/kaptan için yetkili; değilse otomatik cron
+    // sonlandırır. Ayrı try/catch: bu bir yaşam-döngüsü adımı, kullanıcının
+    // girdiği bir veri değil — hatası "puanın kaydedilemedi" diye raporlanmaz.
+    try {
       const uid = auth.currentUser?.uid;
-      const canFinalize = uid && (selectedMatch.creatorId === uid);
-      if (canFinalize) {
+      if (uid && selectedMatch.creatorId === uid) {
         const { error: finErr } = await supabase.rpc('finalize_match', { p_match_id: selectedMatch.id });
         if (finErr) throw finErr;
       }
     } catch (err) {
-      // Oyuncu-değerlendirme/finalize başarısız → kullanıcıyı bilgilendir ama
-      // servis puanlamasını engelleme (return etme).
-      console.warn('[PostMatchEval] Oyuncu değerlendirmesi kaydedilemedi:', err);
-      const em = String((err as any)?.message || '');
-      showInfo(/already|zaten|duplicate/i.test(em)
-        ? 'Bu maçı zaten değerlendirdin.'
-        : 'Değerlendirme kaydedilemedi, tekrar deneyin.');
+      console.warn('[PostMatchEval] Maç sonlandırılamadı (cron devralır):', err);
     }
 
-    // SAHA PUANI: "SAHA / ZEMİN KALİTESİ" yıldızı ekranda toplanıyordu ama
-    // hiçbir yere yazılmıyordu — submit_pitch_rating RPC'si (katılımcı doğrulamalı,
-    // upsert'li, pitches.rating'i yeniden hesaplar) bağlandı. Bağımsız try/catch:
-    // saha puanı düşse de oyuncu/servis değerlendirmesi etkilenmez.
+    // SAHA PUANI + SAHA NOTU: yıldız submit_pitch_rating ile kaydedilir; BULGU-097
+    // gereği not da aynı çağrıda p_comment ile gider. Not yalnız yıldızla birlikte
+    // gönderilir: p_score 1..5 zorunlu olduğu için yıldızsız not sahaya sahte
+    // 1 yıldız yazardı. Bağımsız try/catch: saha düşse de oyuncu/servis etkilenmez.
     if (pitchRating > 0) {
       try {
         const { error: prErr } = await supabase.rpc('submit_pitch_rating', {
           p_match_id: selectedMatch.id,
           p_score: Math.max(1, Math.min(5, Math.round(pitchRating))),
+          p_comment: orgComment.trim() || null,
         });
         if (prErr) throw prErr;
       } catch (e) {
         console.warn('[PostMatchEval] Saha puanı kaydedilemedi:', e);
+        failed.push('Saha puanın');
       }
     }
 
@@ -320,6 +338,7 @@ const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => 
         await submitServiceRating(selectedMatch.id, p.id, p.type, score, serviceComments[p.id]?.trim() || undefined);
       } catch (e) {
         console.warn(`[PostMatchEval] ${p.type} puanlaması kaydedilemedi:`, e);
+        failed.push(p.type === 'GK' ? 'Kaleci puanın' : 'Hakem puanın');
       }
     }
 
@@ -341,17 +360,14 @@ const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => 
     } catch (e) {
       console.warn('[PostMatchEval] hizmet onayı adımı atlandı:', e);
     }
+    // İki kaleci varsa aynı etiket iki kez düşmesin.
+    setSaveErrors(Array.from(new Set(failed)));
     setSubmitting(false);
     setShowResult(true);
   };
 
   // Sparkle burst coordinates
   const [sparkles, setSparkles] = useState<{ id: number; x: number; y: number; delay: number }[]>([]);
-
-  const toggleTag = (id: string) => {
-    if (navigator.vibrate) navigator.vibrate(15);
-    setSelectedTags(prev => prev.includes(id) ? prev.filter(t => t !== id) : [...prev, id]);
-  };
 
   const setPlayerRating = (pid: string, val: number, e: React.MouseEvent) => {
     if (navigator.vibrate) navigator.vibrate(20);
@@ -401,44 +417,64 @@ const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => 
           transition={{ type: 'spring', damping: 20, stiffness: 150 }}
           className="flex flex-col items-center gap-6 w-full max-w-sm relative z-10"
         >
-          <motion.div 
-            animate={{ 
-              rotate: [0, -10, 10, -10, 0],
-              scale: [1, 1.05, 1] 
-            }} 
-            transition={{ duration: 0.8, ease: "easeInOut", repeat: 0, delay: 0.2 }}
-            className="w-24 h-24 rounded-full bg-gradient-to-br from-[#FACC15] to-amber-500 flex items-center justify-center shadow-[0_0_50px_rgba(250,204,21,0.5)] border border-[#FACC15]/40"
-          >
-            <Trophy size={42} className="text-black" />
-          </motion.div>
+          {/* Kısmi hatada kutlama rozeti gösterilmez — ekran ne olduğunu dürüstçe anlatır. */}
+          {saveErrors.length === 0 ? (
+            <motion.div
+              animate={{
+                rotate: [0, -10, 10, -10, 0],
+                scale: [1, 1.05, 1]
+              }}
+              transition={{ duration: 0.8, ease: "easeInOut", repeat: 0, delay: 0.2 }}
+              className="w-24 h-24 rounded-full bg-gradient-to-br from-[#FACC15] to-amber-500 flex items-center justify-center shadow-[0_0_50px_rgba(250,204,21,0.5)] border border-[#FACC15]/40"
+            >
+              <Trophy size={42} className="text-black" />
+            </motion.div>
+          ) : (
+            <div className="w-24 h-24 rounded-full bg-[rgba(248,113,113,0.12)] border border-[rgba(248,113,113,0.35)] flex items-center justify-center">
+              <AlertTriangle size={42} className="text-[#F87171]" />
+            </div>
+          )}
 
+          {/* BULGU-097: "başarıyla yüklendi" artık koşulsuz değil; ne kaydedilemediyse adıyla yazılır. */}
           <div className="text-center space-y-1">
-            <h2 className="text-2xl font-black uppercase tracking-tighter italic leading-none">DEĞERLENDİRME TAMAM!</h2>
-            <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">Puanların veri merkezine başarıyla yüklendi.</p>
+            <h2 className="text-2xl font-black uppercase tracking-tighter italic leading-none">
+              {saveErrors.length === 0 ? 'DEĞERLENDİRMEN KAYDEDİLDİ' : 'DEĞERLENDİRME YARIM KALDI'}
+            </h2>
+            <p className="text-[13px] font-semibold text-[#A9B4C0]">
+              {saveErrors.length === 0
+                ? 'Puanların kaydedildi.'
+                : `Şunlar kaydedilemedi: ${saveErrors.join(', ')}.`}
+            </p>
           </div>
 
           <div className="grid grid-cols-2 gap-3 w-full">
-            <div className="bg-[#121620]/50 border border-white/5 rounded-2xl p-4 text-center">
-              <p className="text-[9px] text-gray-500 font-bold uppercase tracking-widest mb-2">Rakip Centilmenliği</p>
-              <div className="flex justify-center gap-1">
-                {[1,2,3,4,5].map(s => (
-                  <Star key={s} size={11} className={s <= fairPlay ? 'text-[#FACC15] fill-[#FACC15] drop-shadow-[0_0_6px_rgba(250,204,21,0.4)]' : 'text-gray-800'} />
-                ))}
-              </div>
+            <div className="bg-[#121620]/50 border border-white/5 rounded-2xl p-4 text-center flex flex-col justify-center">
+              <p className="text-[12px] text-[#8B949E] font-bold mb-1.5">Puanladığın oyuncu</p>
+              <p className="text-xl font-black text-white italic tracking-tighter leading-none">{Object.keys(playerRatings).length}</p>
             </div>
             <div className="bg-[#121620]/50 border border-white/5 rounded-2xl p-4 text-center flex flex-col justify-center">
-              <p className="text-[9px] text-gray-500 font-bold uppercase tracking-widest mb-1.5">Ort. Oyuncu Puanı</p>
+              <p className="text-[12px] text-[#8B949E] font-bold mb-1.5">Ortalama puanın</p>
               <p className="text-xl font-black text-[#39FF14] italic tracking-tighter leading-none">{avgPlayerRating}</p>
             </div>
           </div>
 
-          <motion.button 
-            whileHover={{ scale: 1.02 }} 
-            whileTap={{ scale: 0.98 }} 
+          {/* Tekrar güvenli: tüm yazma yolları upsert (ON CONFLICT DO UPDATE). */}
+          {saveErrors.length > 0 && (
+            <motion.button
+              whileTap={{ scale: 0.98 }}
+              onClick={() => { setShowResult(false); persistEvaluation(); }}
+              className="w-full h-14 bg-white/5 border border-white/10 text-white font-black rounded-2xl text-xs uppercase tracking-widest"
+            >
+              Tekrar dene
+            </motion.button>
+          )}
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
             onClick={onComplete}
-            className="w-full h-14 bg-[#39FF14] text-black font-black rounded-2xl text-xs uppercase tracking-[0.2em] shadow-[0_0_30px_rgba(57,255,20,0.25)] hover:shadow-[0_0_40px_rgba(57,255,20,0.4)] active:scale-95 transition-all"
+            className="w-full h-14 bg-[#39FF14] text-[#0A0E14] font-bold rounded-2xl text-[15px] shadow-[0_0_30px_rgba(57,255,20,0.25)] hover:shadow-[0_0_40px_rgba(57,255,20,0.4)] active:scale-95 transition-all"
           >
-            Lobiye Geri Dön
+            Maçlarıma dön
           </motion.button>
         </motion.div>
       </div>
@@ -464,12 +500,12 @@ const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => 
 
           <div className="flex items-center justify-center gap-6 mb-8 w-full">
             <div className="text-center flex-1">
-              <span className="text-[10px] text-gray-500 font-bold uppercase block mb-2">EV</span>
+              <span className="text-[12px] text-[#8B949E] font-bold uppercase block mb-2">EV</span>
               <div className="text-5xl font-black text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]">{scoreProposal?.homeScore ?? 0}</div>
             </div>
-            <div className="text-3xl font-black text-gray-700">-</div>
+            <div className="text-3xl font-black text-white/25">-</div>
             <div className="text-center flex-1">
-              <span className="text-[10px] text-gray-500 font-bold uppercase block mb-2">DEP</span>
+              <span className="text-[12px] text-[#8B949E] font-bold uppercase block mb-2">DEP</span>
               <div className="text-5xl font-black text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]">{scoreProposal?.awayScore ?? 0}</div>
             </div>
           </div>
@@ -518,17 +554,25 @@ const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => 
           
           <div className="text-center flex-1 mx-4">
             <h1 className="text-sm font-black uppercase tracking-[0.2em] italic text-white truncate leading-none">MAÇ DEĞERLENDİRME</h1>
-            <p className="text-[9px] text-[#39FF14] font-black uppercase tracking-widest mt-1.5">Güney Kampüs SK • Bugün 21:00</p>
+            {/* BULGU-101: hangi maçın puanlandığı sabit metinden değil, maçın kendisinden okunur. */}
+            {selectedMatch && (
+              <p className="text-[12px] font-bold text-[#8B949E] truncate mt-1">
+                {[
+                  selectedMatch.courtName || selectedMatch.pitchName || selectedMatch.location,
+                  [selectedMatch.date, selectedMatch.time].filter(Boolean).join(' '),
+                ].filter(Boolean).join(' · ')}
+              </p>
+            )}
           </div>
-          
+
           <div className="w-11 h-11 bg-white/5 border border-white/10 rounded-full flex items-center justify-center">
-            <span className="text-[10px] font-black text-white/50">{step}/3</span>
+            <span className="text-[10px] font-black text-white/50">{step}/2</span>
           </div>
         </div>
 
         {/* Progress Bar */}
         <div className="flex gap-1.5 px-1">
-          {[1,2,3].map(s => (
+          {[1,2].map(s => (
             <div key={s} className="flex-1 h-1 bg-white/5 rounded-full overflow-hidden">
               <motion.div 
                 initial={{ width: 0 }} 
@@ -545,120 +589,22 @@ const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => 
       <div className="flex-1 overflow-y-auto pt-32 pb-12 px-5 custom-scrollbar">
         <AnimatePresence mode="wait">
 
-          {/* ─ STEP 1: FAIR PLAY ─ */}
-          {step === 1 && (
-            <motion.div 
-              key="s1" 
-              initial={{ opacity: 0, x: 25 }} 
-              animate={{ opacity: 1, x: 0 }} 
-              exit={{ opacity: 0, x: -25 }} 
-              transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              className="space-y-6"
-            >
-              <div className="text-center py-4 bg-[#121620]/40 rounded-[32px] border border-white/5 p-5 relative overflow-hidden">
-                <div className="absolute -top-12 left-1/2 -translate-x-1/2 w-24 h-24 bg-blue-500/10 rounded-full blur-2xl pointer-events-none" />
-                <div className="w-14 h-14 bg-blue-500/10 border border-blue-500/20 rounded-2xl flex items-center justify-center mx-auto mb-3.5 shadow-[inset_0_2px_8px_rgba(59,130,246,0.15)]">
-                  <ShieldCheck size={26} className="text-blue-400" />
-                </div>
-                <h2 className="text-base font-black uppercase tracking-tight italic">Rakip Takım Centilmenliği</h2>
-                <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1">Rakibinizin centilmence davranışlarını derecelendirin</p>
-              </div>
-
-              {/* Large Star Rating */}
-              <div className="bg-[#121620]/60 backdrop-blur-xl border border-white/5 rounded-[32px] p-6 flex flex-col items-center gap-1 shadow-inner relative overflow-visible">
-                <div className="flex justify-center gap-2">
-                  {[1,2,3,4,5].map(star => (
-                    <motion.button 
-                      key={star} 
-                      whileHover={{ scale: 1.18 }} 
-                      whileTap={{ scale: 0.88 }}
-                      onClick={(e) => {
-                        if (navigator.vibrate) navigator.vibrate(20);
-                        setFairPlay(star);
-                        triggerSparkles(e);
-                      }}
-                      className="p-1 relative overflow-visible"
-                    >
-                      <Star 
-                        size={38} 
-                        className={`transition-all duration-300 ${
-                          star <= fairPlay 
-                            ? 'text-[#FACC15] fill-[#FACC15] drop-shadow-[0_0_12px_rgba(250,204,21,0.5)] scale-105' 
-                            : 'text-gray-800 hover:text-white/40'
-                        }`} 
-                      />
-                    </motion.button>
-                  ))}
-                </div>
-                {/* Local Sparkles burst wrapper */}
-                <div className="absolute inset-0 pointer-events-none overflow-visible">
-                  {sparkles.map(s => (
-                    <Sparkle key={s.id} x={s.x} y={s.y} delay={s.delay} />
-                  ))}
-                </div>
-                {fairPlay > 0 && (
-                  <span className="text-[9px] font-black uppercase tracking-widest mt-2.5 text-[#FACC15]">
-                    {fairPlay === 5 ? 'Kusursuz / Mükemmel Centilmenlik' : fairPlay === 4 ? 'Çok İyi Centilmenlik' : fairPlay === 3 ? 'Normal Centilmenlik' : fairPlay === 2 ? 'Kötü Davranışlar' : 'Sert ve Centilmenlik Dışı'}
-                  </span>
-                )}
-              </div>
-
-              {/* Tags Grid */}
-              <div className="space-y-3">
-                <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest block ml-1">ÖNE ÇIKAN DAVRANIŞLAR</span>
-                <div className="grid grid-cols-2 gap-3">
-                  {FAIR_PLAY_TAGS.map(tag => {
-                    const isSelected = selectedTags.includes(tag.id);
-                    return (
-                      <motion.button 
-                        key={tag.id} 
-                        whileTap={{ scale: 0.96 }}
-                        onClick={() => toggleTag(tag.id)}
-                        className={`p-4 rounded-[20px] border text-[11px] font-black uppercase tracking-wider transition-all text-left flex items-center justify-between ${
-                          isSelected
-                            ? tag.positive 
-                              ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.15)]' 
-                              : 'bg-rose-500/10 border-rose-500/30 text-rose-400 shadow-[0_0_15px_rgba(239,68,68,0.15)]'
-                            : 'bg-black/30 border-white/5 text-gray-500 hover:border-white/10'
-                        }`}
-                      >
-                        <span>{tag.label}</span>
-                        {isSelected && <div className={`w-1.5 h-1.5 rounded-full ${tag.positive ? 'bg-emerald-400' : 'bg-rose-400'}`} />}
-                      </motion.button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Action Button */}
-              <motion.button 
-                whileHover={{ scale: 1.01 }} 
-                whileTap={{ scale: 0.99 }}
-                disabled={fairPlay === 0}
-                onClick={() => setStep(2)}
-                className="w-full h-14 bg-gradient-to-r from-[#39FF14] to-emerald-400 disabled:from-white/5 disabled:to-white/5 text-black disabled:text-white/30 font-black rounded-2xl uppercase tracking-[0.2em] text-xs transition-all flex items-center justify-center gap-1"
-              >
-                KADRO DEĞERLENDİRMESİNE GEÇ →
-              </motion.button>
-            </motion.div>
-          )}
-
-          {/* ─ STEP 2: PLAYER RATINGS — kart kart hızlı puanla ─ */}
-          {step === 2 && (() => {
+          {/* ─ ADIM 1: OYUNCU PUANLARI — kart kart hızlı puanla ─ */}
+          {step === 1 && (() => {
             // G2: gerçek maçta değerlendirilecek katılımcı yoksa boş-durum +
             // devam (mock oyuncu göstermek yerine dürüst atlama).
             if (PLAYERS.length === 0) {
               return (
-                <motion.div key="s2-empty" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="space-y-5 text-center py-8">
+                <motion.div key="s1-empty" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="space-y-5 text-center py-8">
                   <div className="w-16 h-16 rounded-full bg-white/5 border border-white/10 flex items-center justify-center mx-auto">
-                    <Users size={28} className="text-gray-500" />
+                    <Users size={28} className="text-[#8B949E]" />
                   </div>
-                  <p className="text-sm font-bold text-gray-400 max-w-xs mx-auto">
-                    Bu maçta değerlendirilecek başka bir oyuncu yok. Yorum ve hizmet puanlarına geçebilirsin.
+                  <p className="text-[15px] leading-[22px] font-medium text-[#A9B4C0] max-w-xs mx-auto">
+                    Bu maçta puanlayacağın başka oyuncu yok. Saha ve görevli puanına geçebilirsin.
                   </p>
-                  <button onClick={() => setStep(3)}
-                    className="px-6 py-3 rounded-2xl bg-[#39FF14] text-black font-black text-xs uppercase tracking-widest active:scale-95 transition-all">
-                    Devam Et →
+                  <button onClick={() => setStep(2)}
+                    className="px-6 py-3 rounded-2xl bg-[#39FF14] text-[#0A0E14] font-bold text-[15px] active:scale-95 transition-all">
+                    Devam et
                   </button>
                 </motion.div>
               );
@@ -668,22 +614,29 @@ const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => 
             const currentRating = playerRatings[p.id] ?? 0;
             const isLast = playerCardIdx === PLAYERS.length - 1;
             const advanceCard = () => {
-              if (isLast) setStep(3);
+              if (isLast) setStep(2);
               else { setPlayerCardIdx(i => i + 1); if (navigator.vibrate) navigator.vibrate(12); }
             };
             return (
               <motion.div
-                key={`s2-${playerCardIdx}`}
+                key={`s1-${playerCardIdx}`}
                 initial={{ opacity: 0, x: 30 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -30 }}
                 transition={{ type: 'spring', damping: 25, stiffness: 220 }}
                 className="space-y-5"
               >
+                {/* BULGU-106: puanlamanın anonim olduğu sözü ekranda verilir (RLS ile de karşılanır). */}
+                <p className="text-[12px] font-medium text-[#8B949E] leading-[16px]">
+                  Puanların gizli. Kimin kaç yıldız verdiği hiç kimseye gösterilmez.
+                </p>
+
                 {/* Progress */}
                 <div className="flex items-center gap-3">
-                  <button onClick={() => { if (playerCardIdx === 0) setStep(1); else setPlayerCardIdx(i => i - 1); }}
-                    className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-gray-400 active:scale-95 transition-all">
+                  {/* Artık geri gidilecek bir adım yok; ekrandan çıkış üstteki ok ile yapılır. */}
+                  <button onClick={() => setPlayerCardIdx(i => Math.max(0, i - 1))}
+                    disabled={playerCardIdx === 0}
+                    className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-[#A9B4C0] active:scale-95 transition-all disabled:opacity-30">
                     ←
                   </button>
                   <div className="flex-1 flex gap-1">
@@ -691,7 +644,7 @@ const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => 
                       <div key={i} className={`flex-1 h-1.5 rounded-full transition-all ${i < playerCardIdx ? 'bg-[#39FF14]' : i === playerCardIdx ? 'bg-[#FACC15]' : 'bg-white/10'}`} />
                     ))}
                   </div>
-                  <span className="text-[11px] font-black text-gray-500">{playerCardIdx + 1}/{PLAYERS.length}</span>
+                  <span className="text-[12px] font-bold text-[#8B949E]">{playerCardIdx + 1}/{PLAYERS.length}</span>
                 </div>
 
                 {/* Player card */}
@@ -724,6 +677,44 @@ const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => 
                       {currentRating === 5 ? 'Mükemmel' : currentRating >= 4 ? 'Çok İyi' : currentRating >= 3 ? 'İyi' : currentRating >= 2 ? 'Orta' : 'Zayıf'}
                     </p>
                   )}
+
+                  {/* BULGU-096: centilmenlik oyuncu başına. Seçim yapılmazsa nötr 3 gider. */}
+                  <div className="space-y-2">
+                    <span className="block text-[13px] font-semibold text-[#8B949E]">Centilmenlik</span>
+                    <div className="grid grid-cols-3 gap-2">
+                      {FAIR_PLAY_CHOICES.map(c => {
+                        const active = playerFairPlay[p.id] === c.value;
+                        const tone = c.value === 5
+                          ? 'bg-[rgba(57,255,20,0.12)] border-[rgba(57,255,20,0.35)] text-[#39FF14]'
+                          : c.value === 1
+                            ? 'bg-[rgba(248,113,113,0.12)] border-[rgba(248,113,113,0.35)] text-[#F87171]'
+                            : 'bg-white/10 border-white/25 text-white';
+                        return (
+                          <button
+                            key={c.value}
+                            type="button"
+                            aria-pressed={active}
+                            disabled={currentRating === 0}
+                            onClick={() => {
+                              if (navigator.vibrate) navigator.vibrate(15);
+                              setPlayerFairPlay(prev => ({ ...prev, [p.id]: c.value }));
+                            }}
+                            className={`h-11 rounded-2xl border text-[13px] font-semibold flex items-center justify-center gap-1.5 transition-all active:scale-[0.97] disabled:opacity-40 ${
+                              active ? tone : 'bg-black/30 border-white/8 text-[#8B949E]'
+                            }`}
+                          >
+                            {active && c.value === 5 && <CheckCircle2 size={14} />}
+                            {c.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {/* Centilmenlik yalnız yıldızla birlikte gönderiliyor; yıldızsız seçim
+                        sessizce kaybolmasın diye kapalı tutulur. */}
+                    {currentRating === 0 && (
+                      <p className="text-[12px] font-medium text-[#8B949E]">Centilmenlik notu için önce yıldız ver.</p>
+                    )}
+                  </div>
                 </div>
 
                 {/* Actions */}
@@ -734,7 +725,7 @@ const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => 
                   </motion.button>
                   <motion.button whileTap={{ scale: 0.98 }} onClick={advanceCard}
                     disabled={currentRating === 0}
-                    className={`flex-1 h-14 font-black rounded-2xl text-xs uppercase tracking-widest flex items-center justify-center gap-2 transition-all ${currentRating > 0 ? 'bg-gradient-to-r from-[#39FF14] to-emerald-400 text-black shadow-[0_0_20px_rgba(57,255,20,0.2)]' : 'bg-white/5 border border-white/10 text-gray-500'}`}>
+                    className={`flex-1 h-14 font-black rounded-2xl text-xs uppercase tracking-widest flex items-center justify-center gap-2 transition-all ${currentRating > 0 ? 'bg-gradient-to-r from-[#39FF14] to-emerald-400 text-black shadow-[0_0_20px_rgba(57,255,20,0.2)]' : 'bg-white/5 border border-white/10 text-[#8B949E]'}`}>
                     {isLast ? 'TAMAMLA →' : 'SONRAKI →'}
                   </motion.button>
                 </div>
@@ -742,10 +733,10 @@ const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => 
             );
           })()}
 
-          {/* ─ STEP 3: REFEREE & COURT ─ */}
-          {step === 3 && (
+          {/* ─ ADIM 2: SAHA VE GÖREVLİLER ─ */}
+          {step === 2 && (
             <motion.div 
-              key="s3" 
+              key="s2" 
               initial={{ opacity: 0, x: 25 }} 
               animate={{ opacity: 1, x: 0 }} 
               exit={{ opacity: 0, x: -25 }} 
@@ -757,17 +748,18 @@ const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => 
                 <div className="w-14 h-14 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex items-center justify-center mx-auto mb-3.5 shadow-[inset_0_2px_8px_rgba(16,185,129,0.15)]">
                   <Star size={26} className="text-emerald-400" />
                 </div>
-                <h2 className="text-base font-black uppercase tracking-tight italic">Hakem & Saha Değerlendirmesi</h2>
-                <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1">Organizasyon kalitesini oylayın</p>
+                <h2 className="text-base font-black uppercase tracking-tight italic">Saha ve görevliler</h2>
+                <p className="text-[13px] font-semibold text-[#8B949E] mt-1">Sahayı ve maça gelen görevlileri puanla</p>
               </div>
 
+              {/* BULGU-097: 1-5 yıldızlı "HAKEM PERFORMANSI" kalktı — hiçbir yere yazılmıyordu.
+                  Hakem puanı tek yerde, aşağıdaki ServiceRatingCard (1-10) ile toplanır. */}
               {[
-                { label: 'HAKEM PERFORMANSI', val: refRating, set: setRefRating, icon: Scale, color: 'text-blue-400' },
-                { label: 'SAHA / ZEMİN KALİTESİ', val: pitchRating, set: setPitchRating, icon: Droplets, color: 'text-[#39FF14]' },
+                { label: 'Saha / zemin kalitesi', val: pitchRating, set: setPitchRating, icon: Droplets, color: 'text-[#39FF14]' },
               ].map(({ label, val, set, icon: Icon, color }) => (
                 <div key={label} className="bg-[#121620]/50 border border-white/5 rounded-[24px] p-5 flex flex-col gap-3.5 relative overflow-visible">
                   <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">{label}</span>
+                    <span className="text-[13px] font-semibold text-[#8B949E]">{label}</span>
                     <Icon size={16} className={color} />
                   </div>
                   <div className="flex gap-2 justify-center relative overflow-visible">
@@ -797,6 +789,26 @@ const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => 
                 </div>
               ))}
 
+              {/* Saha notu: yıldızla aynı çağrıda (submit_pitch_rating p_comment) gider,
+                  bu yüzden saha kartının hemen altında ve yıldıza bağlı. */}
+              <div className="bg-[#121620]/50 border border-white/5 rounded-[24px] p-5 space-y-3">
+                <div className="flex items-center gap-2">
+                  <MessageSquare size={14} className="text-[#8B949E]" />
+                  <span className="text-[13px] font-semibold text-[#8B949E]">Saha hakkında not (isteğe bağlı)</span>
+                </div>
+                <textarea
+                  value={orgComment}
+                  onChange={(e) => setOrgComment(e.target.value)}
+                  maxLength={500}
+                  disabled={pitchRating === 0}
+                  className="w-full bg-black/40 border border-white/8 rounded-2xl p-4 text-[15px] leading-[22px] text-white focus:outline-none focus:border-[#39FF14]/50 min-h-[96px] resize-none placeholder-[#8B949E] font-normal disabled:opacity-50 transition-all"
+                  placeholder="Zemin, soyunma odası, ışık… sahayla ilgili notun"
+                />
+                {pitchRating === 0 && (
+                  <p className="text-[12px] font-medium text-[#8B949E]">Not bırakmak için önce sahaya yıldız ver.</p>
+                )}
+              </div>
+
               {/* Sparkle burst layer */}
               <div className="absolute inset-0 pointer-events-none overflow-visible">
                 {sparkles.map(s => (
@@ -807,8 +819,8 @@ const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => 
               {/* FAZ 5: Atanmış Kaleci / Hakem 1-10 değerlendirmesi (varsa, atlanabilir) */}
               {providers.length > 0 && (
                 <div className="space-y-3">
-                  <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest block ml-1">
-                    GÖREVLİ DEĞERLENDİRMESİ <span className="text-gray-700">(İSTEĞE BAĞLI)</span>
+                  <span className="text-[13px] font-semibold text-[#8B949E] block ml-1">
+                    Görevli puanı (isteğe bağlı)
                   </span>
                   {providers.map(p => (
                     <ServiceRatingCard
@@ -823,26 +835,11 @@ const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => 
                 </div>
               )}
 
-              {/* Feedback Textarea */}
-              <div className="bg-[#121620]/50 border border-white/5 rounded-[24px] p-5 space-y-3">
-                <div className="flex items-center gap-2">
-                  <MessageSquare size={14} className="text-gray-500" />
-                  <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">ORGANİZASYON YORUMU (İSTEĞE BAĞLI)</span>
-                </div>
-                <textarea
-                  value={orgComment}
-                  onChange={(e) => setOrgComment(e.target.value)}
-                  maxLength={500}
-                  className="w-full bg-black/40 border border-white/8 rounded-2xl p-4 text-xs text-white focus:outline-none focus:border-[#39FF14]/50 min-h-[96px] resize-none placeholder-gray-700 font-bold focus:shadow-[0_0_15px_rgba(57,255,20,0.05)] transition-all"
-                  placeholder="Hakem kararları veya saha detayları hakkında eklemek istedikleriniz..."
-                />
-              </div>
-
               {/* Actions */}
               <div className="flex gap-3">
                 <motion.button 
                   whileTap={{ scale: 0.98 }} 
-                  onClick={() => setStep(2)}
+                  onClick={() => setStep(1)}
                   className="flex-1 h-14 bg-white/5 border border-white/10 text-white font-black rounded-2xl text-xs uppercase tracking-widest flex items-center justify-center hover:bg-white/10"
                 >
                   ← GERİ
@@ -851,9 +848,9 @@ const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => 
                   whileTap={{ scale: 0.98 }}
                   onClick={persistEvaluation}
                   disabled={submitting}
-                  className="flex-[2] h-14 bg-gradient-to-r from-emerald-600 to-[#39FF14] text-black font-black rounded-2xl text-xs uppercase tracking-[0.2em] flex items-center justify-center shadow-[0_0_20px_rgba(57,255,20,0.2)] hover:shadow-[0_0_30px_rgba(57,255,20,0.3)] transition-all disabled:opacity-60"
+                  className="flex-[2] h-14 bg-gradient-to-r from-emerald-600 to-[#39FF14] text-[#0A0E14] font-bold rounded-2xl text-[15px] flex items-center justify-center shadow-[0_0_20px_rgba(57,255,20,0.2)] hover:shadow-[0_0_30px_rgba(57,255,20,0.3)] transition-all disabled:opacity-60"
                 >
-                  {submitting ? 'KAYDEDİLİYOR...' : 'DEĞERLENDİRMEYİ TAMAMLA ✓'}
+                  {submitting ? 'Gönderiliyor…' : 'Değerlendirmeyi gönder'}
                 </motion.button>
               </div>
             </motion.div>

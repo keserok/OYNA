@@ -142,7 +142,7 @@ export const OwnerMenuView: React.FC<OwnerMenuViewProps> = ({
         : 'warning';
 
   return (
-    <div className="p-6 pb-32 pt-safe-6 overflow-y-auto custom-scrollbar animate-in slide-in-from-right-10 duration-500">
+    <div className="p-6 pb-40 pt-safe-6 overflow-y-auto custom-scrollbar animate-in slide-in-from-right-10 duration-500">
       <div className="flex items-center gap-4 mb-8">
         <div className="relative">
           {facilityImage ? (
@@ -213,17 +213,6 @@ export const OwnerMenuView: React.FC<OwnerMenuViewProps> = ({
               onClick={onPitches}
             />
             <MenuRow
-              icon={<Clock size={18} />}
-              label="Çalışma Saatleri"
-              badge={
-                <StatusBadge
-                  label={stats.isFacilityOpen ? 'Açık' : 'Kapalı'}
-                  tone={stats.isFacilityOpen ? 'success' : 'danger'}
-                />
-              }
-              onClick={onWorkingHours}
-            />
-            <MenuRow
               icon={<Settings size={18} />}
               label="Rezervasyon İşlemleri"
               badge={
@@ -280,10 +269,17 @@ export const OwnerMenuView: React.FC<OwnerMenuViewProps> = ({
                 onClick={onWithdrawals}
               />
             )}
+            {/* Çalışma saatleri ayrı ekran DEĞİL: tesisin açık saatleri
+                tarifelerden türetiliyor, ikisi tek ekranda yönetiliyor. */}
             <MenuRow
-              icon={<Tag size={18} />}
-              label="Fiyatlandırma Politikası"
-              badge={<StatusBadge label={`${stats.tariffCount} tarife`} tone="info" />}
+              icon={<Clock size={18} />}
+              label="Aktif Saatler ve Ücretler"
+              badge={
+                <StatusBadge
+                  label={stats.tariffCount > 0 ? `${stats.tariffCount} tarife` : 'Kurulmadı'}
+                  tone={stats.tariffCount > 0 ? 'info' : 'danger'}
+                />
+              }
               onClick={onPricingPolicy}
             />
             <MenuRow

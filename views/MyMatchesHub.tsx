@@ -19,6 +19,7 @@ import { formatCapacityRange } from '../shared/pitchShowcaseMapper';
 import SegmentedTabs from '../components/ui/SegmentedTabs';
 import SkeletonList from '../components/ui/SkeletonList';
 import { MODAL_BACKDROP, MODAL_CARD } from '../components/common/motion';
+import { writeTicketCache } from '../utils/ticketCache';
 
 // ═════════════════════════════════════════════════════════════════════════════
 // MAÇLARIM HUB — "bilet kartı" tasarımı (Tur 3 · 2b nihai)
@@ -693,6 +694,10 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onBack, onNavigate }) => {
                 <button
                   onClick={() => {
                     const id = sheetBooking.id;
+                    // Çevrimdışı ilk açılış için anlık görüntüyü şimdi yaz:
+                    // kullanıcı sahada bağlantısız kalsa da bilet çizilebilsin
+                    // (IP-20 · BULGU-109).
+                    writeTicketCache(sheetBooking);
                     setSheet(null);
                     useAppStore.getState().setTicketBookingId(id);
                     navigateTo('MATCH_TICKET');
@@ -835,7 +840,7 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onBack, onNavigate }) => {
               </p>
               <p className="text-xs text-gray-500 mb-6">
                 {leaveRefund != null && leaveRefund > 0 ? (
-                  <>Ödediğin <span className="font-numeric text-[#39FF14] font-bold">₺{leaveRefund.toLocaleString('tr-TR')}</span> iade kredisi olarak cüzdanına döner. Arkadaşlarına atadığın slotlar korunur.</>
+                  <>Ödediğin <span className="font-numeric text-[#39FF14] font-bold">₺{leaveRefund.toLocaleString('tr-TR')}</span> cüzdanına döner. Arkadaşlarına atadığın slotlar korunur.</>
                 ) : (
                   <>Kadrodaki yerin ve doldurulmamış rezerve slotların serbest bırakılır. Arkadaşlarına atadığın slotlar korunur.</>
                 )}
@@ -890,7 +895,7 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onBack, onNavigate }) => {
                 ) : cancelPreview.refund_amount > 0 ? (
                   <>Ödediğin tutarın <span className="text-[#39FF14] font-bold">%{cancelPreview.refund_percent}</span>'i
                     {' '}(<span className="font-numeric text-[#39FF14] font-bold">₺{formatTRY(cancelPreview.refund_amount)}</span>){' '}
-                    iade kredisi olarak cüzdanına döner
+                    cüzdanına döner
                     {cancelPreview.psp_fee > 0 && <> (ödeme altyapısı kesintisi −<span className="font-numeric">{formatTRY(cancelPreview.psp_fee)}</span>₺)</>}.</>
                 ) : (
                   <>Rezervasyon saatine az kaldığı için <span className="text-red-400 font-bold">iade yapılmayacak</span>.</>
@@ -939,7 +944,7 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onBack, onNavigate }) => {
               <p className="text-sm text-gray-400 leading-relaxed mb-6">
                 Rezervasyonun iptal edildi.
                 {cancelResult.refund_amount > 0
-                  ? <> <span className="font-numeric text-[#39FF14] font-bold">₺{formatTRY(cancelResult.refund_amount)}</span> (%{cancelResult.refund_percent}) iade kredisi olarak cüzdanına eklendi.</>
+                  ? <> <span className="font-numeric text-[#39FF14] font-bold">₺{formatTRY(cancelResult.refund_amount)}</span> (%{cancelResult.refund_percent}) cüzdanına eklendi.</>
                   : ' İade edilecek ödeme bulunmuyor.'}
               </p>
               <button onClick={() => setCancelResult(null)} className="w-full py-3.5 bg-[#FACC15] text-black font-black rounded-2xl text-sm uppercase tracking-wide active:scale-95 transition-transform">

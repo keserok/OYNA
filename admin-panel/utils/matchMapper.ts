@@ -26,6 +26,7 @@ export interface AdminMatchRow {
   visibility?: string | null;
   private_code?: string | null;
   pitch_id?: string | null;
+  court_id?: string | null;
   is_successful?: boolean | null;
   confirmed_at?: string | null;
   starts_at?: string | null;
@@ -127,6 +128,7 @@ export function mapAdminMatchRowToListing(row: AdminMatchRow | Record<string, un
     visibility: (r.visibility === 'PRIVATE' ? 'PRIVATE' : 'OPEN'),
     privateCode: r.private_code || undefined,
     pitchId: r.pitch_id || undefined,
+    courtId: r.court_id || undefined,
     isSuccessful: r.is_successful || undefined,
     confirmedAt: r.confirmed_at || undefined,
     startsAt: r.starts_at || undefined,
@@ -211,6 +213,14 @@ export function listingToMatchPayload(match: MatchPayloadSource): Record<string,
     ...(match.isDemo !== undefined ? { isDemo: match.isDemo } : {}),
     ...(match.isPlatform !== undefined ? { is_platform: match.isPlatform } : {}),
     pitch_id: match.pitchId || null,
+    court_id: match.courtId || null,
+    // Maçın süresi slottan gelir; sunucu metin ayrıştırmasına güvenmek yerine
+    // sayıyı doğrudan alsın (skor zaman kapısı bu süreye bağlı).
+    duration_minutes: match.durationMinutes ?? null,
+    // IP-02: player_create_match idempotency anahtarı (owner_client_ops claim'i).
+    // listingToMatchPayload AÇIK BEYAZ LİSTE — buraya eklenmezse anahtar
+    // sunucuya HİÇ ulaşmaz ve istemci kilidi tek başına kalır.
+    idempotencyKey: (match as { idempotencyKey?: string }).idempotencyKey || null,
   };
 }
 

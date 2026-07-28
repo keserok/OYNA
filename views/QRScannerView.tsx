@@ -148,6 +148,8 @@ const QRScannerView: React.FC<QRScannerViewProps> = ({ onBack, onResult, pitchId
       let msg = 'Skor kaydedilemedi. Lütfen tekrar deneyin.';
       if (raw.includes('INVALID_TOKEN')) msg = 'Kod geçersiz veya süresi dolmuş.';
       else if (raw.includes('INVALID_SCORE')) msg = 'Girilen skor geçersiz.';
+      // Tekrar denemek çözmez — maç bitene kadar sunucu her seferinde reddeder.
+      else if (raw.includes('TOO_EARLY')) msg = 'Skor ancak maç bittikten sonra girilebilir.';
       else if (raw.includes('Failed to fetch')) msg = 'Bağlantı hatası. İnternetinizi kontrol edin.';
       setError(msg);
       setTimeout(() => setError(null), 4000);

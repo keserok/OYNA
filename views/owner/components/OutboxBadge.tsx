@@ -16,7 +16,9 @@ const timeOf = (iso: string): string => {
   } catch { return ''; }
 };
 
-export const OutboxBadge: React.FC = () => {
+/** `chip` = başlık içi küçük rozet. `strip` = alt barın üstünde tam genişlik şerit
+ *  (BULGU-125: nakit tahsilat Takvim'den yapılıyor, orada başlık hiç yok). */
+export const OutboxBadge: React.FC<{ variant?: 'chip' | 'strip' }> = ({ variant = 'chip' }) => {
   const [items, setItems] = useState<OutboxItem[]>([]);
   const [open, setOpen] = useState(false);
   const [flushing, setFlushing] = useState(false);
@@ -39,10 +41,16 @@ export const OutboxBadge: React.FC = () => {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-300 text-[10px] font-black uppercase whitespace-nowrap active:scale-95 transition-transform"
+        className={
+          variant === 'strip'
+            ? 'fixed left-4 right-4 z-40 flex items-center justify-center gap-2 h-11 rounded-2xl bg-amber-500/15 border border-amber-500/40 backdrop-blur-md text-amber-300 text-[13px] font-black uppercase max-w-lg mx-auto active:scale-[0.99] transition-transform'
+            : 'flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-300 text-[10px] font-black uppercase whitespace-nowrap active:scale-95 transition-transform'
+        }
+        // 72px = OwnerBottomNav yüksekliği (8+48+8) + 8px boşluk.
+        style={variant === 'strip' ? { bottom: 'calc(var(--safe-bottom) + 72px)' } : undefined}
       >
-        <CloudOff size={12} />
-        {items.length} bekleyen
+        <CloudOff size={variant === 'strip' ? 15 : 12} />
+        {variant === 'strip' ? `${items.length} kasa işlemi gönderilmedi` : `${items.length} bekleyen`}
       </button>
 
       <AnimatePresence>

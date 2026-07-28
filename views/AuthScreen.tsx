@@ -12,6 +12,7 @@ import { getHasAccount } from '../supabaseClient';
 import { PageLayout } from '../components/common/PageLayout';
 import { useAppStore } from '../store';
 import { AnimatedButton } from '../components/AnimatedButton';
+import { validateFullName, normalizeNameInput } from '../shared/personName';
 
 interface AuthScreenProps {
   onSuccess: () => void;
@@ -307,13 +308,16 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess, onBack, role }) => {
 
   // ─── E-posta + Şifre ile kayıt ─────────────────────────────────────────────
   const handleRegister = async () => {
-    if (!agreed || !isValidEmail(email) || !name.trim() || !password || isLoading) return;
+    if (!agreed || !isValidEmail(email) || !password || isLoading) return;
+    // S8: ad soyad zorunlu — soyadsız ya da harf dışı karakterli kayıt kabul edilmez.
+    const nameCheck = validateFullName(name);
+    if (!nameCheck.valid) { setError(nameCheck.reason ?? 'Ad soyad zorunlu.'); return; }
     if (password.length < 6) { setError('Şifre en az 6 karakter olmalı.'); return; }
     setError(null);
     setInfo(null);
     setIsLoading('register');
     try {
-      const res = await signUpWithPassword(email.trim(), password, name.trim());
+      const res = await signUpWithPassword(email.trim(), password, normalizeNameInput(name));
       if (res?.session) {
         // Oturum açıldı → navigasyonu App'teki onAuthStateChanged dinleyicisine bırak:
         // yeni kullanıcıda profili oluşturup LOCATION_PROMPT'a (onboarding) yönlendirir.
@@ -478,7 +482,9 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess, onBack, role }) => {
   const sendDisabled = !agreed || !contactValid || isLoading !== null;
   const guestDisabled = !agreed || isLoading !== null;
   const passwordLoginDisabled = !agreed || !contactValid || !password || isLoading !== null;
-  const registerDisabled = !agreed || !isValidEmail(email) || !name.trim() || password.length < 6 || isLoading !== null;
+  // S8: ad soyad zorunlu — buton, geçerli bir ad soyad girilene kadar kapalı kalır.
+  const nameCheck = validateFullName(name);
+  const registerDisabled = !agreed || !isValidEmail(email) || !nameCheck.valid || password.length < 6 || isLoading !== null;
 
   return (
     <PageLayout
@@ -589,19 +595,24 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess, onBack, role }) => {
                   <div className="flex-1 h-px bg-white/5" />
                 </div>
 
-                {/* Ad Soyad — yalnız kayıt akışında */}
+                {/* Ad Soyad — yalnız kayıt akışında, S8 gereği zorunlu */}
                 {isRegister && (
-                  <div className="bg-[#0A0E14] border border-gray-800 p-4 rounded-2xl flex items-center gap-3 focus-within:border-white/40 transition-colors mb-3">
-                    <User size={20} className="text-gray-500 shrink-0" />
-                    <input
-                      type="text"
-                      autoComplete="name"
-                      value={name}
-                      onChange={(e) => { setName(e.target.value); setError(null); }}
-                      className="bg-transparent w-full outline-none text-white font-bold placeholder:text-gray-700 text-sm"
-                      placeholder="Ad Soyad"
-                      aria-label="Ad Soyad"
-                    />
+                  <div className="mb-3">
+                    <div className="bg-[#0A0E14] border border-gray-800 p-4 rounded-2xl flex items-center gap-3 focus-within:border-white/40 transition-colors">
+                      <User size={20} className="text-gray-500 shrink-0" />
+                      <input
+                        type="text"
+                        autoComplete="name"
+                        value={name}
+                        onChange={(e) => { setName(e.target.value); setError(null); }}
+                        className="bg-transparent w-full outline-none text-white font-bold placeholder:text-gray-700 text-sm"
+                        placeholder="Ad Soyad"
+                        aria-label="Ad Soyad"
+                      />
+                    </div>
+                    {name.trim().length > 0 && !nameCheck.valid && (
+                      <p className="mt-1.5 px-1 text-[10px] font-bold text-amber-400">{nameCheck.reason}</p>
+                    )}
                   </div>
                 )}
 

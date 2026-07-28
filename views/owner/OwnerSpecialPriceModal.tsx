@@ -37,7 +37,7 @@ export const OwnerSpecialPriceModal: React.FC<OwnerSpecialPriceModalProps> = ({
 
   const handleSave = async () => {
     if (standardPrice <= 0) {
-      setError('Bu saat için önce standart tarife tanımlayın (Fiyatlandırma Politikası). Özel fiyat standarda göre belirlenir.');
+      setError('Bu saat için önce standart tarife tanımlayın (Aktif Saatler ve Ücretler). Özel fiyat standarda göre belirlenir.');
       return;
     }
     if (newPrice <= standardPrice) {

@@ -6,6 +6,7 @@ import { useAppStore } from '../store';
 import { auth } from '../supabaseAuth';
 import { setActiveRole } from '../services/userService';
 import { MODAL_BACKDROP, MODAL_CARD } from './common/motion';
+import { useBackDismiss } from '../hooks/useBackDismiss';
 // Rol → açılış ekranı + geçilebilir rol ayıklama tek kaynaktan (App.tsx ile ortak; drift yok).
 import { roleToLandingView, switchableRoles } from '../shared/roles';
 
@@ -33,6 +34,8 @@ interface RoleSwitcherProps {
 }
 
 const RoleSwitcher: React.FC<RoleSwitcherProps> = ({ roles, onClose, onSwitched }) => {
+  // App.tsx yalnız isRoleSwitcherOpen iken mount ediyor → open sabit true (BULGU-020).
+  useBackDismiss(true, onClose, 'role-switcher');
   const activeRole = useAppStore(s => s.role);
   const setRole = useAppStore(s => s.setRole);
 

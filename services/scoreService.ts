@@ -81,6 +81,8 @@ export const submitRefereeMatchScore = async (
     const msg = error.message || '';
     if (msg.includes('UNAUTHORIZED')) throw new Error('Bu maçın skorunu yalnızca atanmış hakem girebilir.');
     if (msg.includes('NOT_FOUND')) throw new Error('Maç bulunamadı.');
+    // Tekrar denemek çözmez — maç bitene kadar sunucu her seferinde reddeder.
+    if (msg.includes('TOO_EARLY')) throw new Error('Skor ancak maç bittikten sonra girilebilir.');
     throw new Error('Skor kaydedilemedi. Lütfen tekrar dene.');
   }
   return { status: data?.status ?? 'COMPLETED', homeScore: home, awayScore: away };

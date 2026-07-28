@@ -122,18 +122,18 @@ export const OwnerFinanceView: React.FC<OwnerFinanceViewProps> = ({ pitchId, isD
   const nextLocked = isMonthAfter(shiftMonth(month, 1), currentMonth);
 
   if (isLoading) {
-    return <div className="p-6 pb-32"><LoadingState message="Finans verileri yükleniyor…" /></div>;
+    return <div className="p-6 pb-40"><LoadingState message="Finans verileri yükleniyor…" /></div>;
   }
   if (isMock) {
     return (
-      <div className="p-6 pb-32 text-center text-gray-500">
+      <div className="p-6 pb-40 text-center text-gray-500">
         <p className="text-sm">Finans modülü için tesisinizi oluşturun veya demo modunu başlatın.</p>
       </div>
     );
   }
   if (!summary) {
     return (
-      <div className="p-6 pb-32 text-center">
+      <div className="p-6 pb-40 text-center">
         <p className="text-sm text-red-400 font-bold mb-3">{error ?? 'Finans özeti yüklenemedi.'}</p>
         <button onClick={load} className="text-xs text-blue-400 font-bold">Tekrar dene</button>
       </div>
@@ -141,7 +141,7 @@ export const OwnerFinanceView: React.FC<OwnerFinanceViewProps> = ({ pitchId, isD
   }
 
   return (
-    <div className="p-4 sm:p-6 pb-32 overflow-y-auto custom-scrollbar bg-[#0A0E14]">
+    <div className="p-4 sm:p-6 pb-40 overflow-y-auto custom-scrollbar bg-[#0A0E14]">
       <div className="max-w-5xl mx-auto w-full">
         <OwnerDemoDataBar pitchId={pitchId} onChanged={load} hasDemo={hasDemoData} />
         {isDemoMode && (

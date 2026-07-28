@@ -4,12 +4,23 @@ import { getTariffs, saveTariffs, toTurkishError, type TariffInput } from '../..
 import { useOwnerToast } from '../components/useOwnerToast';
 import { OwnerFullscreenModal } from './OwnerModalFrame';
 import type { PitchCourt, PitchTariff } from '../../../types';
+import { ALLOWED_SLOT_MINUTES, buildSlotGrid, slotLabel } from '../../../shared/slotGrid';
 
 // Kapora saatlik ücretin %10–%50'si aralığında olmalı (Karar #34).
 const DEPOSIT_MIN_PCT = 0.1;
 const DEPOSIT_MAX_PCT = 0.5;
 
-type DayType = 'WEEKDAY' | 'WEEKEND';
+/** ISO gün numaraları: 1 = Pazartesi … 7 = Pazar. Hafta içi/hafta sonu ikilisi
+ *  kalktı; sahip günleri tek tek seçiyor. */
+const DAY_LABELS: { iso: number; short: string; long: string }[] = [
+  { iso: 1, short: 'Pzt', long: 'Pazartesi' },
+  { iso: 2, short: 'Sal', long: 'Salı' },
+  { iso: 3, short: 'Çar', long: 'Çarşamba' },
+  { iso: 4, short: 'Per', long: 'Perşembe' },
+  { iso: 5, short: 'Cum', long: 'Cuma' },
+  { iso: 6, short: 'Cmt', long: 'Cumartesi' },
+  { iso: 7, short: 'Paz', long: 'Pazar' },
+];
 
 interface EditRow {
   id: string;
@@ -17,8 +28,11 @@ interface EditRow {
   startTime: string;
   endTime: string;
   price: number;
+  /** Slot süresi (dakika): 60 | 90 | 120 — sahibin seçtiği maç/kiralama süresi. */
+  slotMinutes: number;
   deposit: number;
-  dayType: DayType;
+  /** Bu tarifenin geçerli olduğu günler (ISO 1-7). Boş olamaz. */
+  days: number[];
 }
 
 interface Props {
@@ -27,7 +41,7 @@ interface Props {
   courts?: PitchCourt[];
   readOnly?: boolean;
   /** Kaydedince takvimin anında güncellenmesi için saha-farkında politika verilir. */
-  onSave: (pricingPolicy: { startTime: string; endTime: string; price: number; price_per_hour: number; court_id: string | null }[]) => void;
+  onSave: (pricingPolicy: { startTime: string; endTime: string; price: number; slot_price: number; slot_minutes: number; court_id: string | null }[]) => void;
 }
 
 const ALL_SCOPE = 'ALL';
@@ -39,12 +53,15 @@ const clampDeposit = (deposit: number, price: number): number => {
   return Math.min(max, Math.max(min, Math.round(deposit)));
 };
 
-const dayTypeFromTariff = (t: PitchTariff): DayType =>
-  t.tariff_type === 'WEEKEND' || (t.applies_to_days ?? []).some((d) => d === 6 || d === 7) ? 'WEEKEND' : 'WEEKDAY';
+/** Tarifenin günleri; eksikse tüm hafta varsayılır (veri kaybı olmasın). */
+const daysFromTariff = (t: PitchTariff): number[] => {
+  const raw = (t.applies_to_days ?? []).filter((d) => d >= 1 && d <= 7);
+  return raw.length > 0 ? [...raw].sort((a, b) => a - b) : [1, 2, 3, 4, 5, 6, 7];
+};
 
 const defaultRows = (): EditRow[] => [
-  { id: 'def-1', name: 'Gündüz', startTime: '09:00', endTime: '17:00', price: 2000, deposit: 600, dayType: 'WEEKDAY' },
-  { id: 'def-2', name: 'Akşam', startTime: '17:00', endTime: '00:00', price: 3200, deposit: 960, dayType: 'WEEKDAY' },
+  { id: 'def-1', name: 'Gündüz', startTime: '09:00', endTime: '17:00', price: 2000, slotMinutes: 60, deposit: 600, days: [1,2,3,4,5,6,7] },
+  { id: 'def-2', name: 'Akşam', startTime: '17:00', endTime: '00:00', price: 3200, slotMinutes: 60, deposit: 960, days: [1,2,3,4,5,6,7] },
 ];
 
 export const OwnerPricingPolicyModal: React.FC<Props> = ({ onClose, facilityId, courts = [], readOnly = false, onSave }) => {
@@ -85,9 +102,10 @@ export const OwnerPricingPolicyModal: React.FC<Props> = ({ onClose, facilityId, 
             name: t.name,
             startTime: String(t.start_time ?? '09:00').slice(0, 5),
             endTime: String(t.end_time ?? '00:00').slice(0, 5),
-            price: Number(t.price_per_hour ?? 0),
+            price: Number(t.slot_price ?? 0),
+            slotMinutes: Number(t.slot_minutes ?? 60),
             deposit: Number(t.deposit_amount ?? 0),
-            dayType: dayTypeFromTariff(t),
+            days: daysFromTariff(t),
           });
         });
         // Varsayılan tarifeler YALNIZ tamamen boş tesiste önerilir; saha-özel
@@ -116,6 +134,18 @@ export const OwnerPricingPolicyModal: React.FC<Props> = ({ onClose, facilityId, 
   const clampRowDeposit = (id: string) => {
     setRows((prev) => prev.map((r) => (r.id === id ? { ...r, deposit: clampDeposit(r.deposit, r.price) } : r)));
   };
+  /** Gün aç/kapat — sıralı tutulur ki sunucuya hep aynı biçimde gitsin. */
+  const toggleDay = (id: string, iso: number) => {
+    setRows((prev) =>
+      prev.map((r) => {
+        if (r.id !== id) return r;
+        const next = r.days.includes(iso)
+          ? r.days.filter((d) => d !== iso)
+          : [...r.days, iso].sort((a, b) => a - b);
+        return { ...r, days: next };
+      }),
+    );
+  };
 
   const scopeCourtId = scope === ALL_SCOPE ? null : scope;
 
@@ -127,11 +157,14 @@ export const OwnerPricingPolicyModal: React.FC<Props> = ({ onClose, facilityId, 
       scopeRows.forEach((r, idx) => {
         out.push({
           name: r.name,
-          tariff_type: r.dayType,
-          applies_to_days: r.dayType === 'WEEKEND' ? [6, 7] : [1, 2, 3, 4, 5],
+          // Gün seçimi TEK mekanizma; tariff_type yalnız tarih-özel/tatil
+          // ayrımı için şemada duruyor, gün belirlemiyor.
+          tariff_type: 'WEEKDAY',
+          applies_to_days: r.days,
           start_time: r.startTime,
           end_time: r.endTime,
-          price_per_hour: Number(r.price) || 0,
+          slot_price: Number(r.price) || 0,
+          slot_minutes: Number(r.slotMinutes) || 60,
           deposit_amount: clampDeposit(Number(r.deposit) || 0, Number(r.price) || 0),
           sort_order: idx,
           court_id: courtId,
@@ -147,7 +180,8 @@ export const OwnerPricingPolicyModal: React.FC<Props> = ({ onClose, facilityId, 
         applies_to_days: t.applies_to_days ?? [],
         start_time: String(t.start_time ?? '09:00').slice(0, 5),
         end_time: String(t.end_time ?? '00:00').slice(0, 5),
-        price_per_hour: Number(t.price_per_hour) || 0,
+        slot_price: Number(t.slot_price) || 0,
+        slot_minutes: Number(t.slot_minutes ?? 60),
         deposit_amount: Number(t.deposit_amount ?? 0),
         sort_order: 1000 + idx,
         is_active: t.is_active,
@@ -160,6 +194,13 @@ export const OwnerPricingPolicyModal: React.FC<Props> = ({ onClose, facilityId, 
 
   const handleSave = async () => {
     if (!facilityId || readOnly) return;
+    // Günsüz tarife ne slot üretir ne çalışma saati açar; sunucu da CHECK ile
+    // reddediyor. Kullanıcıyı sunucu hatasına düşürmeden burada durdur.
+    const emptyDays = Object.values(rowsByScope).flat().filter((r) => r.days.length === 0);
+    if (emptyDays.length > 0) {
+      notify(`"${emptyDays[0].name || 'Tarife'}" için en az bir gün seçmelisin.`, 'error');
+      return;
+    }
     setIsSaving(true);
     try {
       const fullSet = buildFullTariffSet();
@@ -172,8 +213,9 @@ export const OwnerPricingPolicyModal: React.FC<Props> = ({ onClose, facilityId, 
         .map((t) => ({
           startTime: t.start_time,
           endTime: t.end_time,
-          price: t.price_per_hour,
-          price_per_hour: t.price_per_hour,
+          price: t.slot_price,
+          slot_price: t.slot_price,
+          slot_minutes: t.slot_minutes ?? 60,
           court_id: t.court_id ?? null,
         }));
       onSave(policy);
@@ -189,9 +231,55 @@ export const OwnerPricingPolicyModal: React.FC<Props> = ({ onClose, facilityId, 
   const depositRange = (price: number) =>
     price > 0 ? `₺${Math.round(price * DEPOSIT_MIN_PCT)}–₺${Math.round(price * DEPOSIT_MAX_PCT)}` : '';
 
+  /**
+   * TÜRETİLMİŞ ÇALIŞMA SAATLERİ — sunucudaki derive_pitch_working_hours ile
+   * aynı kural: bir günün penceresi, o güne uygulanan aktif tarifelerin en
+   * erken başlangıcı .. en geç bitişi. Tarifesi olmayan gün KAPALI.
+   *
+   * Ayrı bir "Çalışma Saatleri" ekranı yok; sahip tarifeyi kurar, tesisin
+   * saatleri ondan doğar. Burada anında görsün diye özetliyoruz.
+   */
+  const derivedHours = useMemo(() => {
+    const all = Object.values(rowsByScope).flat();
+    return DAY_LABELS.map((d) => {
+      const forDay = all.filter((r) => r.days.includes(d.iso));
+      if (forDay.length === 0) return { ...d, closed: true, open: '', close: '' };
+      const open = forDay.reduce((min, r) => (r.startTime < min ? r.startTime : min), forDay[0].startTime);
+      // '00:00' bitiş = gün sonu, en geç bitiş odur.
+      const hasMidnight = forDay.some((r) => r.endTime === '00:00');
+      const close = hasMidnight
+        ? '00:00'
+        : forDay.reduce((max, r) => (r.endTime > max ? r.endTime : max), forDay[0].endTime);
+      return { ...d, closed: false, open, close };
+    });
+  }, [rowsByScope]);
+
+  /**
+   * Sahip süreyi seçtiği anda hangi saatlerin oluşacağını gösterir. Izgara
+   * kullanıcıya görünenle AYNI kaynaktan (shared/slotGrid) üretilir; sahip
+   * "kaydettim ama ne olduğunu görmedim" durumuna düşmez.
+   */
+  const slotPreview = (row: EditRow): string => {
+    const grid = buildSlotGrid(
+      [{
+        start_time: row.startTime,
+        end_time: row.endTime,
+        slot_minutes: row.slotMinutes,
+        applies_to_days: [1, 2, 3, 4, 5, 6, 7],
+        tariff_type: 'WEEKDAY',
+        slot_price: row.price,
+      }],
+      // Izgara güne değil süreye bağlı; sabit bir referans gün yeterli.
+      '2026-01-05',
+    );
+    if (grid.length === 0) return '';
+    const shown = grid.slice(0, 3).map(slotLabel).join(' · ');
+    return grid.length > 3 ? `${shown} … (${grid.length} slot)` : `${shown} (${grid.length} slot)`;
+  };
+
   return (
     <OwnerFullscreenModal
-      title="Fiyatlandırma Politikası"
+      title="Aktif Saatler ve Ücretler"
       onClose={onClose}
       onSave={readOnly ? undefined : handleSave}
       isSaving={isSaving}
@@ -200,9 +288,37 @@ export const OwnerPricingPolicyModal: React.FC<Props> = ({ onClose, facilityId, 
         <div className="bg-blue-500/10 border border-blue-500/20 p-4 rounded-2xl flex items-start gap-3">
           <AlertCircle size={18} className="text-blue-400 shrink-0 mt-0.5" />
           <p className="text-xs text-blue-200">
-            Fiyat değişiklikleri mevcut rezervasyonları etkilemez. Bir sahaya özel tarife
-            tanımlarsan o saha için <b>saha tarifesi</b>, tanımlamazsan <b>Tüm Sahalar</b> tarifesi
-            geçerli olur. Kapora saatlik ücretin %10–%50'si aralığındadır.
+            Burada kurduğun plan tesisin <b>açık saatlerini</b> de belirler — ayrı bir çalışma
+            saati ayarı yoktur. Bir sahaya özel tarife tanımlarsan o saha için <b>saha tarifesi</b>,
+            tanımlamazsan <b>Tüm Sahalar</b> tarifesi geçerli olur. Fiyat değişiklikleri mevcut
+            rezervasyonları etkilemez; kapora slot ücretinin %10–%50'si aralığındadır.
+          </p>
+        </div>
+
+        {/* TÜRETİLMİŞ ÇALIŞMA SAATLERİ — tarifelerden doğar, elle girilmez.
+            Sahip hangi günün hangi saatte açık olacağını burada anında görür. */}
+        <div className="bg-[#0A0E14] border border-white/8 rounded-2xl p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Clock size={14} className="text-[#39FF14]" />
+            <h4 className="text-[11px] font-black uppercase tracking-wider text-white">Tesisin Açık Saatleri</h4>
+          </div>
+          <div className="space-y-1.5">
+            {derivedHours.map((d) => (
+              <div key={d.iso} className="flex items-center justify-between text-[12px]">
+                <span className={d.closed ? 'text-gray-600 font-semibold' : 'text-gray-300 font-semibold'}>
+                  {d.long}
+                </span>
+                {d.closed ? (
+                  <span className="text-gray-600 font-bold">Kapalı</span>
+                ) : (
+                  <span className="text-white font-black font-mono">{d.open} – {d.close}</span>
+                )}
+              </div>
+            ))}
+          </div>
+          <p className="text-[10.5px] text-gray-500 mt-3 leading-relaxed">
+            Bu saatler tarifelerinden hesaplanır ve kullanıcıya böyle görünür.
+            Bir günü kapatmak için o güne ait tarifeyi kaldır.
           </p>
         </div>
 
@@ -269,23 +385,38 @@ export const OwnerPricingPolicyModal: React.FC<Props> = ({ onClose, facilityId, 
                     className="bg-transparent text-sm font-black uppercase text-white outline-none w-full"
                   />
                 </div>
-                {/* Gün tipi: isimden tahmin yerine açık seçim */}
-                <div className="flex gap-2">
-                  {(['WEEKDAY', 'WEEKEND'] as const).map((dt) => (
-                    <button
-                      key={dt}
-                      type="button"
-                      disabled={readOnly}
-                      onClick={() => updateRow(tariff.id, 'dayType', dt)}
-                      className={`flex-1 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider border transition-colors ${
-                        tariff.dayType === dt
-                          ? 'bg-blue-500/15 border-blue-500/40 text-blue-300'
-                          : 'bg-[#0A0E14] border-white/5 text-gray-500'
-                      }`}
-                    >
-                      {dt === 'WEEKDAY' ? 'Hafta İçi' : 'Hafta Sonu'}
-                    </button>
-                  ))}
+                {/* GÜNLER — hafta içi/hafta sonu ikilisi kalktı; her gün tek tek
+                    seçilir. Seçilen günler aynı zamanda tesisin o günkü çalışma
+                    saatini belirler (pencere = tarifelerin en erken başlangıcı
+                    .. en geç bitişi). Hiç gün seçilmemiş tarife kaydedilemez. */}
+                <div className="space-y-2">
+                  <label className="text-[10px] text-gray-500 font-bold uppercase">Geçerli Günler</label>
+                  <div className="flex gap-1.5">
+                    {DAY_LABELS.map((d) => {
+                      const on = tariff.days.includes(d.iso);
+                      return (
+                        <button
+                          key={d.iso}
+                          type="button"
+                          disabled={readOnly}
+                          title={d.long}
+                          onClick={() => toggleDay(tariff.id, d.iso)}
+                          className={`flex-1 py-2 rounded-xl text-[11px] font-black border transition-colors disabled:opacity-50 ${
+                            on
+                              ? 'bg-[#39FF14]/15 border-[#39FF14]/40 text-[#39FF14]'
+                              : 'bg-[#0A0E14] border-white/5 text-gray-600 hover:text-gray-400'
+                          }`}
+                        >
+                          {d.short}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {tariff.days.length === 0 && (
+                    <p className="text-[10.5px] text-red-400 font-semibold">
+                      En az bir gün seçmelisin — günsüz tarife ne saat açar ne fiyat verir.
+                    </p>
+                  )}
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
@@ -315,9 +446,38 @@ export const OwnerPricingPolicyModal: React.FC<Props> = ({ onClose, facilityId, 
                     </div>
                   </div>
                 </div>
+                {/* SLOT SÜRESİ — ızgarayı bu belirler. Sahip 90 seçince kullanıcı
+                    ekranında saatler 20:00-21:30, 21:30-23:00 diye görünür. */}
+                <div className="space-y-2">
+                  <label className="text-[10px] text-gray-500 font-bold uppercase">Maç / Kiralama Süresi</label>
+                  <div className="flex gap-2">
+                    {ALLOWED_SLOT_MINUTES.map((m) => (
+                      <button
+                        key={m}
+                        type="button"
+                        disabled={readOnly}
+                        onClick={() => updateRow(tariff.id, 'slotMinutes', m)}
+                        className={`flex-1 py-2.5 rounded-xl text-[12px] font-black transition-colors disabled:opacity-50 ${
+                          tariff.slotMinutes === m
+                            ? 'bg-[#39FF14] text-[#0A0E14]'
+                            : 'bg-[#0A0E14] border border-white/8 text-gray-400 hover:text-white'
+                        }`}
+                      >
+                        {m} dk
+                      </button>
+                    ))}
+                  </div>
+                  {slotPreview(tariff) && (
+                    <p className="text-[10.5px] text-gray-500 leading-relaxed">
+                      Oluşacak saatler: <span className="text-gray-300 font-semibold">{slotPreview(tariff)}</span>
+                    </p>
+                  )}
+                </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <label className="text-[10px] text-gray-500 font-bold uppercase">Saatlik Ücret</label>
+                    <label className="text-[10px] text-gray-500 font-bold uppercase">
+                      {tariff.slotMinutes} Dakikalık Ücret
+                    </label>
                     <input
                       type="number"
                       value={tariff.price}
@@ -354,8 +514,9 @@ export const OwnerPricingPolicyModal: React.FC<Props> = ({ onClose, facilityId, 
                       startTime: '09:00',
                       endTime: '00:00',
                       price: 0,
+                      slotMinutes: 60,
                       deposit: 0,
-                      dayType: 'WEEKDAY',
+                      days: [1, 2, 3, 4, 5, 6, 7],
                     },
                   ])
                 }

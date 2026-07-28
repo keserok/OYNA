@@ -36,6 +36,46 @@ export const blockMatchDeposit = async (
   return (data ?? { ok: false }) as any;
 };
 
+/**
+ * Ertelenmiş kaleci/hakem tekliflerini KAPORA OLMADAN gönderir.
+ *
+ * Kaporalı akışta bu iş sunucuda `match_block_deposit` içinde yapılır: seçimler
+ * `deferred_providers` alanına yazılır ve oradaki döngü teklifleri dağıtır.
+ * Kaporasız maçta (ücretsiz/fiyatsız saha) ödeme ekranı hiç açılmadığı için o
+ * döngüye HİÇ girilmiyordu — kullanıcı "hakem çağırdım" sanıyor, sunucuda tek
+ * bir talep bile oluşmuyordu. Burada aynı döngü istemciden koşturulur.
+ *
+ * Yetki sunucuda: `send_match_service_offers` yalnız maçı kuran kaptana (veya
+ * admin'e) izin verir. Tek bir tipin başarısız olması diğerini engellemesin
+ * diye hatalar sunucudaki `RAISE WARNING` davranışıyla aynı şekilde yutulur.
+ */
+export const sendDeferredProviderOffers = async (
+  matchId: string,
+  providers: DeferredProvider[],
+): Promise<{ sent: number; failed: number }> => {
+  let sent = 0;
+  let failed = 0;
+  for (const prov of providers) {
+    if (prov.type !== 'GK' && prov.type !== 'REF') continue;
+    // all=true → sunucu uygun tüm sağlayıcıları kendi bulur (p_provider_ids NULL).
+    const ids = prov.all ? null : (prov.providerIds ?? []);
+    if (ids !== null && ids.length === 0) continue;
+    try {
+      const { error } = await supabase.rpc('send_match_service_offers', {
+        p_match_id: matchId,
+        p_provider_type: prov.type,
+        p_provider_ids: ids,
+      });
+      if (error) throw error;
+      sent += 1;
+    } catch (err) {
+      console.error('sendDeferredProviderOffers:', prov.type, err);
+      failed += 1;
+    }
+  }
+  return { sent, failed };
+};
+
 /** Katılım/ayrılış sonrası eşiği kontrol eder; dolduysa maç LIVE + kapora capture. */
 export const checkMatchThreshold = async (
   matchId: string,

@@ -21,4 +21,10 @@ Uygulamaya erişemiyorsanız, kayıtlı e-posta adresinizden destek@oyna.app adr
 - Kimlik/iletişim bilgileri, konum verisi, profil fotoğrafı ve cihaz token'ları silinir.
 - Yasal yükümlülük gerektiren kayıtlar (ör. ödeme/fatura kayıtları) mevzuatın öngördüğü süre boyunca, yalnızca bu amaçla saklanabilir.
 
+### Cüzdanımdaki para ne olur?
+
+- Cüzdanınızda bakiye varsa veya sonuçlanmamış bir çekim talebiniz varsa, **hesabınız silinemez**. Bu, paranızın kaybolmaması için konulmuş bir korumadır.
+- Silme talebinden önce bakiyenizi OYNA içinde harcayabilir veya banka hesabınıza çekebilirsiniz. Çekim koşulları Kullanım Şartları madde 6.5'te düzenlenmiştir.
+- Bakiyeniz sıfırlandığında ve açık çekim talebiniz kalmadığında silme talebiniz işleme alınır.
+
 Detaylar için [Gizlilik Politikamıza](02-gizlilik-politikasi.md) bakabilirsiniz.

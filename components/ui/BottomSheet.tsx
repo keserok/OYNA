@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MODAL_BACKDROP } from '../common/motion';
+import { useBackDismiss } from '../../hooks/useBackDismiss';
 
 // Alt-sayfa (bottom sheet) tabanı — profil önizleme, liste seçici,
 // maç seçici gibi tüm sosyal sheet'lerin ortak kabuğu (Spec §4).
@@ -23,7 +24,11 @@ const SHEET_MOTION = {
 
 const BottomSheet: React.FC<BottomSheetProps> = ({
   open, onClose, children, maxHeightClass = 'max-h-[85vh]', ariaLabel,
-}) => (
+}) => {
+  // Android geri tuşu + Esc bu sheet'i kapatır; arkadaki ekran DEĞİŞMEZ (BULGU-020).
+  // Bu tek satır, BottomSheet'i kullanan 20 dosyanın tamamına uygulanır.
+  useBackDismiss(open, onClose, 'bottom-sheet');
+  return (
   <AnimatePresence>
     {open && (
       // z-[55]: alt navigasyonun (z-50) üstünde — SOCIAL'de sheet'in birincil
@@ -57,6 +62,7 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
       </div>
     )}
   </AnimatePresence>
-);
+  );
+};
 
 export default BottomSheet;

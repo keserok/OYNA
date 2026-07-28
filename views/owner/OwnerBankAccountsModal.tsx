@@ -8,6 +8,7 @@ import {
 } from '../../services/pitchOwnerService';
 import { validateTrIban, normalizeIban } from '../../utils/iban';
 import { useConfirmSheet } from './components/useConfirmSheet';
+import { useBackDismiss } from '../../hooks/useBackDismiss';
 import type { PitchBankAccount } from '../../types';
 
 interface OwnerBankAccountsModalProps {
@@ -23,6 +24,8 @@ export const OwnerBankAccountsModal: React.FC<OwnerBankAccountsModalProps> = ({
   onUpdated,
   readOnly = false,
 }) => {
+  // Android geri tuşu + Esc bu modalı kapatır (BULGU-132).
+  useBackDismiss(true, onClose, 'owner-bank-accounts-modal');
   const { confirm, confirmElement } = useConfirmSheet();
   const [accounts, setAccounts] = useState<PitchBankAccount[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -129,7 +132,7 @@ export const OwnerBankAccountsModal: React.FC<OwnerBankAccountsModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex flex-col">
       <div className="bg-[#161B22] p-4 flex justify-between items-center border-b border-white/5 safe-area-top">
-        <button type="button" onClick={onClose} className="p-2 rounded-full bg-white/5 text-white">
+        <button type="button" onClick={onClose} aria-label="Kapat" className="w-11 h-11 flex items-center justify-center rounded-full bg-white/5 text-white">
           <X size={20} />
         </button>
         <h2 className="text-white font-black text-lg italic uppercase">Banka Hesapları</h2>

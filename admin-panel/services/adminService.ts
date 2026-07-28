@@ -1861,22 +1861,71 @@ export async function createRefereeAccountAdmin(
 export interface OwnerCandidate {
   id: string;
   full_name: string | null;
+  name: string | null;
   email: string | null;
+  phone: string | null;
+  is_owner: boolean;
 }
 
-/** Saha sahibi (OWNER) adaylarını listeler — PitchStudio owner seçici için. */
-export async function listOwnerCandidatesAdmin(): Promise<OwnerCandidate[]> {
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('id, full_name, email')
-    .or('role.eq.OWNER,roles.cs.["OWNER"]')
-    .order('full_name', { ascending: true })
-    .limit(200);
+const OWNER_CANDIDATE_COLS = 'id, full_name, name, email, phone, role, roles, is_banned';
+
+type OwnerCandidateRow = {
+  id: string;
+  full_name: string | null;
+  name: string | null;
+  email: string | null;
+  phone: string | null;
+  role: string | null;
+  roles: unknown;
+};
+
+const toOwnerCandidate = (r: OwnerCandidateRow): OwnerCandidate => ({
+  id: r.id,
+  full_name: r.full_name,
+  name: r.name,
+  email: r.email,
+  phone: r.phone,
+  is_owner: r.role === 'OWNER' || (Array.isArray(r.roles) && r.roles.includes('OWNER')),
+});
+
+/** Zaten OWNER yetkisi olanlar listenin başında gelsin. */
+const byOwnerFirst = (a: OwnerCandidate, b: OwnerCandidate) => {
+  if (a.is_owner !== b.is_owner) return a.is_owner ? -1 : 1;
+  return (a.full_name || a.name || a.email || '').localeCompare(b.full_name || b.name || b.email || '', 'tr');
+};
+
+/**
+ * Saha sahibi adayları — PitchStudio owner seçici için.
+ *
+ * Aday havuzu TÜM kullanıcılardır, yalnız OWNER rollüler değil: tesis sahibi
+ * atandığında `trg_pitches_owner_guard` (migration 20260728172422) seçilen
+ * kullanıcıya OWNER yetkisini zaten veriyor. Böylece admin, sahayı devredeceği
+ * kişiyi önce elle "OWNER yap" adımından geçirmek zorunda kalmıyor.
+ *
+ * Arama boşsa yalnız mevcut OWNER'lar döner (kısa, anlamlı varsayılan liste);
+ * arama yazıldıkça ad/e-posta/telefon üzerinden tüm kullanıcılarda aranır.
+ */
+export async function listOwnerCandidatesAdmin(query = ''): Promise<OwnerCandidate[]> {
+  const q = query.trim();
+  let req = supabase.from('profiles').select(OWNER_CANDIDATE_COLS).limit(q ? 30 : 50);
+
+  if (q) {
+    const safe = q.replace(/[%,()]/g, ' ').trim();
+    if (!safe) return [];
+    req = req.or(`full_name.ilike.%${safe}%,name.ilike.%${safe}%,email.ilike.%${safe}%,phone.ilike.%${safe}%`);
+  } else {
+    req = req.or('role.eq.OWNER,roles.cs.["OWNER"]');
+  }
+
+  const { data, error } = await req;
   if (error) {
     if (isRpcFallback(error) || (error.message || '').includes('row-level security')) return [];
     throw new Error(error.message);
   }
-  return (data || []) as OwnerCandidate[];
+  return ((data || []) as (OwnerCandidateRow & { is_banned?: boolean | null })[])
+    .filter((r) => r.is_banned !== true)
+    .map(toOwnerCandidate)
+    .sort(byOwnerFirst);
 }
 
 export async function fetchProfileById(userId: string): Promise<AdminUser | null> {

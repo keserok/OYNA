@@ -205,7 +205,8 @@ export const ShowcasePreview: React.FC<{ pitchId: string; onClose: () => void }>
               <div className="mt-5 flex items-center gap-3 p-3 rounded-2xl bg-white/[0.03] border border-white/[0.06]">
                 <div className="flex-1">
                   <div className="text-[9px] font-black uppercase tracking-wider text-white/40">Kapora · örnek</div>
-                  <div className="text-base font-black italic text-white">₺{Math.round((activeCourts[0]?.price ?? data.total_price ?? 0) * 0.3 / 10) * 10}</div>
+                  {/* S17: tutarda italik yok — italik yalnız skorda kalır. */}
+                  <div className="text-base font-black text-white">₺{Math.round((activeCourts[0]?.price ?? data.total_price ?? 0) * 0.3 / 10) * 10}</div>
                 </div>
                 <div className="px-4 py-3 rounded-xl bg-[#FFFF00] text-black text-[11px] font-black italic uppercase opacity-70">
                   Kaporayı Öde

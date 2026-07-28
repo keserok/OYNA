@@ -3,6 +3,7 @@ import { AlertCircle, Banknote, Clock, Lock, Wallet, X } from 'lucide-react';
 import { getOwnerBalance, getBankAccounts, requestWithdrawal, getCashoutStatus, toTurkishError } from '../../../services/pitchOwnerService';
 import { useOwnerToast } from '../components/useOwnerToast';
 import { validateTrIban } from '../../../utils/iban';
+import { useBackDismiss } from '../../../hooks/useBackDismiss';
 
 interface Props {
   onClose: () => void;
@@ -15,6 +16,8 @@ export const OwnerWithdrawalsModal: React.FC<Props> = ({
   facilityId,
   readOnly = false,
 }) => {
+  // Android geri tuşu + Esc bu modalı kapatır (BULGU-132).
+  useBackDismiss(true, onClose, 'owner-withdrawals-modal');
   const notify = useOwnerToast();
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [iban, setIban] = useState('');
@@ -106,7 +109,7 @@ export const OwnerWithdrawalsModal: React.FC<Props> = ({
     <div className="fixed inset-0 z-50 bg-[#0A0D14] flex flex-col animate-in slide-in-from-bottom-4 duration-300">
       <div className="bg-[#161B22] p-4 flex justify-between items-center border-b border-white/5 safe-area-top">
         <div className="flex items-center gap-3">
-          <button type="button" onClick={onClose} className="p-2 rounded-full bg-white/5 text-white">
+          <button type="button" onClick={onClose} aria-label="Kapat" className="w-11 h-11 flex items-center justify-center rounded-full bg-white/5 text-white">
             <X size={20} />
           </button>
           <h2 className="text-white font-bold text-lg">Para Çekme</h2>

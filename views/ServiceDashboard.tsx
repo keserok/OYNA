@@ -1,10 +1,11 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { UserRole, AppView, JobListing, GkStyle, DirectOffer, Equipment, ServiceRequest, MatchListing } from '../types';
-import { MapPin, Navigation, Star, DollarSign, Calendar, Shield, Scale, Power, Bell, Wallet, List, User, Check, X, ChevronRight, Clock, Trophy, Search, MessageSquare, Send, ArrowRight, Hand, Briefcase, PlusCircle, Sparkles, Zap, Activity, Coins, Tag, Flame, RefreshCcw, Eye, Gauge, Flag, CreditCard, Banknote, Users, Settings, Award, AlertTriangle, CheckCircle2, BadgeCheck, Inbox } from 'lucide-react';
+import { MapPin, Navigation, Star, DollarSign, Calendar, Shield, Scale, Power, Bell, Wallet, List, User, Check, X, ChevronRight, Clock, Trophy, Search, MessageSquare, Send, ArrowRight, Hand, Briefcase, PlusCircle, Sparkles, Zap, Activity, Coins, Tag, Flame, RefreshCcw, Eye, Gauge, Flag, CreditCard, Banknote, Users, Settings, Award, AlertTriangle, CheckCircle2, BadgeCheck, Inbox, PenLine } from 'lucide-react';
 import { getWalletHistory, WalletHistoryItem } from '../services/userService';
 import { formatTRYWithSymbol } from '../utils/formatTRY';
 import { parseMatchDateTime } from '../utils/matchDateTime';
+import { matchEndMs } from '../shared/matchTiming';
 import {
   getIncomingRequests,
   respondServiceRequest,
@@ -104,6 +105,10 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
   // UX Enhancements States
   const [matchLiveStatus, setMatchLiveStatus] = useState<Record<string, 'ON_THE_WAY' | 'ARRIVED' | 'FINISHED'>>({});
   const [showPostMatchReport, setShowPostMatchReport] = useState(false);
+  // Skoru girilen maç modal AÇILIRKEN sabitlenir. Eskiden gönderim anında
+  // myUpcomingMatches[0] okunuyordu; maç bittiğinde liste kayınca skor BİR
+  // SONRAKİ maça yazılabiliyordu.
+  const [scoreTargetMatch, setScoreTargetMatch] = useState<any | null>(null);
   // F2.3: kaleci 5 yıldız formu kaldırıldı — hiçbir tabloya yazmıyordu (ölü
   // form + sahte başarı). Modal artık yalnız hakem skor girişi içindir;
   // kalecinin gerçek maç-sonu aksiyonu "Maçı Oynadım · Onayla" (Gelen Talepler).
@@ -162,9 +167,15 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
 
   const [timeLeft, setTimeLeft] = useState('--:--:--');
 
-  const myUpcomingMatches = useMemo(() => {
+  // Maçın bitiş anı: başlangıç + süre (shared/matchTiming — sunucudaki
+  // duration_minutes/ends_at ile aynı kural).
+  const endMsOf = (m: any): number | null =>
+      matchEndMs(parseMatchDateTime(m.date, m.time)?.getTime() ?? null, m.duration_minutes ?? m.duration);
+
+  // Bana atanmış, iptal/tamamlanmamış maçlar — başlangıca göre sıralı.
+  const myAssignedMatches = useMemo(() => {
       if (!userProfile) return [];
-      const upcoming = adminMatches.filter((m: any) => {
+      return adminMatches.filter((m: any) => {
           const isMyMatch = isRef
               ? m.refereeId === userProfile.id
               : (m.gkId === userProfile.id || m.gk_id === userProfile.id
@@ -175,12 +186,21 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
       }).sort((a: any, b: any) =>
           (parseMatchDateTime(a.date, a.time)?.getTime() ?? Infinity) -
           (parseMatchDateTime(b.date, b.time)?.getTime() ?? Infinity));
-
-      return upcoming.filter((m: any) => {
-          const mt = parseMatchDateTime(m.date, m.time)?.getTime();
-          return mt == null ? true : mt > Date.now(); // ayrıştırılamıyorsa şimdilik tut
-      });
   }, [adminMatches, userProfile, isRef]);
+
+  // Henüz BİTMEMİŞ maçlar. Eskiden sınır maç BAŞLANGICIydı; maç saati gelince
+  // maç listeden düşüyor, hakem skoru girecekken kartı kaybediyordu.
+  const myUpcomingMatches = useMemo(() => myAssignedMatches.filter((m: any) => {
+      const end = endMsOf(m);
+      return end == null ? true : end > Date.now(); // ayrıştırılamıyorsa şimdilik tut
+  }), [myAssignedMatches]);
+
+  // Bitmiş ama skoru girilmemiş maçlar — skor girişinin ASIL yeri burasıdır.
+  const myMatchesAwaitingScore = useMemo(() => myAssignedMatches.filter((m: any) => {
+      const end = endMsOf(m);
+      if (end == null || end > Date.now()) return false;
+      return m.homeScore == null || m.awayScore == null;
+  }).reverse(), [myAssignedMatches]);
 
   useEffect(() => {
       const timer = setInterval(() => {
@@ -1545,6 +1565,42 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
               </div>
           </div>
 
+          {/* SKOR BEKLEYEN MAÇLAR — bitmiş ama skoru girilmemiş maçlar.
+              K2: skoru yalnız hakem veya tesis sahibi girer. Bitmiş maça skor
+              girmenin başka yolu yoktu; maç saati gelince kart listeden düşüyor,
+              hakem skoru bir daha giremiyordu. */}
+          {isRef && myMatchesAwaitingScore.length > 0 && (
+              <div className="px-6 mb-6">
+                  <div className="flex items-center gap-2 mb-3">
+                      <PenLine size={16} className="text-[#FACC15]" />
+                      <h3 className="font-black text-white text-sm tracking-wide uppercase">SKOR BEKLİYOR</h3>
+                      <span className="px-2 py-0.5 rounded-full bg-[#FACC15]/15 text-[#FACC15] text-[10px] font-black">
+                          {myMatchesAwaitingScore.length}
+                      </span>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                      {myMatchesAwaitingScore.map((m: any) => (
+                          <div key={m.id} className="bg-[#161B22] border border-[#FACC15]/25 rounded-[20px] p-4 flex items-center justify-between gap-3">
+                              <div className="min-w-0">
+                                  <h4 className="font-black text-white text-sm truncate">
+                                      {m.pitchName || m.location || 'Saha bilinmiyor'}
+                                  </h4>
+                                  <p className="text-[11px] text-gray-400 font-bold truncate">
+                                      {m.title || 'Maç'} • {m.date} {m.time}
+                                  </p>
+                              </div>
+                              <button
+                                  onClick={() => { setScoreTargetMatch(m); setRefScore({ home: '', away: '' }); setShowPostMatchReport(true); }}
+                                  className="shrink-0 px-4 py-2 rounded-xl bg-[#FACC15] text-black text-[10px] font-black uppercase hover:brightness-110 transition-all"
+                              >
+                                  SKOR GİR
+                              </button>
+                          </div>
+                      ))}
+                  </div>
+              </div>
+          )}
+
           {/* Sıradaki Maçlarım Section */}
           <div className="px-6">
               <div className="flex items-center justify-between mb-3">
@@ -1590,7 +1646,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                                   </button>
                                   <button
                                     onClick={() => {
-                                      if (isRef) { setShowPostMatchReport(true); return; }
+                                      if (isRef) { setScoreTargetMatch(myUpcomingMatches[0]); setShowPostMatchReport(true); return; }
                                       // F2.3: kaleci için modal yok — dürüst yerel işaretleme + doğru CTA.
                                       const mid = myUpcomingMatches[0]?.id;
                                       if (mid) setMatchLiveStatus(prev => ({ ...prev, [mid]: 'FINISHED' }));
@@ -2484,6 +2540,12 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                 </div>
                 <h3 className="text-xl font-black text-white uppercase italic">MAÇ SONU RAPORU</h3>
                 <p className="text-[10px] text-gray-400 uppercase tracking-widest mt-1">Resmi Maç Skorunu Gir</p>
+                {/* Skorun HANGİ maça yazılacağı açıkça görünsün. */}
+                {scoreTargetMatch && (
+                  <p className="text-[11px] text-white font-bold mt-2 px-3 py-1.5 rounded-lg bg-white/5 inline-block">
+                    {scoreTargetMatch.pitchName || scoreTargetMatch.location || 'Saha'} · {scoreTargetMatch.date} {scoreTargetMatch.time}
+                  </p>
+                )}
               </div>
 
               <div className="space-y-4 mb-6">
@@ -2525,11 +2587,12 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
               <button
                 disabled={submittingScore}
                 onClick={async () => {
-                  const matchId = myUpcomingMatches[0]?.id;
+                  // Modal açılırken sabitlenen maç — liste kaysa bile skor doğru maça gider.
+                  const matchId = scoreTargetMatch?.id;
                   {
                       // HR-A: hakem skoru GERÇEKTEN yazılır (finalize_match). Başarısızsa
                       // modal açık kalır ve dürüst hata gösterilir — sahte başarı YOK.
-                      if (!matchId) { showActionError('Atanmış bir maç bulunamadı.'); return; }
+                      if (!matchId) { showActionError('Skor girilecek maç seçilmedi.'); return; }
                       const home = refScore.home === '' ? 0 : parseInt(refScore.home, 10);
                       const away = refScore.away === '' ? 0 : parseInt(refScore.away, 10);
                       if (!Number.isFinite(home) || !Number.isFinite(away)) {
@@ -2545,6 +2608,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                         } catch { /* görsel tazeleme başarısızsa akış bozulmaz */ }
                         setMatchLiveStatus(prev => ({ ...prev, [matchId]: 'FINISHED' }));
                         setShowPostMatchReport(false);
+                        setScoreTargetMatch(null);
                         setRefScore({ home: '', away: '' });
                         showActionSuccess(`Maç skoru resmi olarak kaydedildi: ${home}–${away}.`);
                       } catch (e: any) {

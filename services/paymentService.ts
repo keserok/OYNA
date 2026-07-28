@@ -214,3 +214,24 @@ export function decodeBase64Utf8(b64: string): string {
   const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
   return new TextDecoder().decode(bytes);
 }
+
+/**
+ * Sunucu/sağlayıcı hata öneklerini kırpar.
+ * Eski regex yalnız BÜYÜK harfli önekleri (`INSUFFICIENT_FUNDS:`) yakalıyordu;
+ * edge fonksiyonu hatayı `iyzico: …` diye döndürdüğü için SAĞLAYICI ADI ve ham
+ * sağlayıcı metni kullanıcıya olduğu gibi basılıyordu (BULGU-092).
+ * Artık büyük/küçük fark etmeksizin bilinen önekler kırpılıyor.
+ */
+export const stripServerErrorPrefix = (msg: string): string => {
+  let out = String(msg ?? '').trim();
+  // Zincirlenmiş önekleri soldan soyar: "iyzico: PAYMENT_FAILED: ..." gibi.
+  for (let i = 0; i < 4; i += 1) {
+    const next = out
+      .replace(/^(iyzico|iyzipay|stripe|paytr|param|provider|edge|supabase|postgrest)\s*[:\-]\s*/i, '')
+      .replace(/^[A-Z][A-Z0-9_]{2,}\s*:\s*/, '')
+      .trim();
+    if (next === out) break;
+    out = next;
+  }
+  return out;
+};

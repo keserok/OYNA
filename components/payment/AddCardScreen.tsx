@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ArrowLeft, Check, Plus, Shield, Wifi } from 'lucide-react';
 import { detectCardBrand, pickCardGradient, SavedCard, listSavedCards } from '../../services/walletService';
-import { registerCardInApp } from '../../services/paymentService';
+import { registerCardInApp, stripServerErrorPrefix } from '../../services/paymentService';
 import CardBrandMark, { brandGradient, normalizeBrand } from './CardBrandMark';
 
 /**
@@ -115,7 +115,7 @@ const AddCardScreen: React.FC<AddCardScreenProps> = ({ onBack, onSaved, collectM
       onSaved?.(created);
     } catch (e) {
       const raw = e instanceof Error ? e.message : 'Kart kaydedilemedi.';
-      setError(raw.replace(/^[A-Z_]+:\s*/, '') || 'Kart kaydedilemedi.');
+      setError(stripServerErrorPrefix(raw) || 'Kart kaydedilemedi.');
     } finally {
       setBusy(false);
     }

@@ -88,6 +88,38 @@ let mockStoreState = {
     mockStoreState.view = view;
   }),
   goBack: vi.fn(),
+  // IP-01 — overlay kaydı + ödeme kilidi. hooks/useBackDismiss.ts bunları
+  // getState() üzerinden çağırıyor; eksik olurlarsa overlay kullanan HER
+  // bileşen testte "pushOverlay is not a function" ile patlar.
+  overlayStack: [] as { id: string; priority: number; close: () => void }[],
+  paymentLockActive: false,
+  pushOverlay: vi.fn((id: string, close: () => void, priority = 0) => {
+    mockStoreState.overlayStack = [
+      ...mockStoreState.overlayStack.filter((o) => o.id !== id),
+      { id, priority, close },
+    ];
+  }),
+  popOverlay: vi.fn((id: string) => {
+    mockStoreState.overlayStack = mockStoreState.overlayStack.filter((o) => o.id !== id);
+  }),
+  closeTopOverlay: vi.fn(() => {
+    const stack = mockStoreState.overlayStack;
+    if (stack.length === 0) return false;
+    let top = stack[0];
+    for (const o of stack) if (o.priority >= top.priority) top = o;
+    mockStoreState.overlayStack = stack.filter((o) => o.id !== top.id);
+    top.close();
+    return true;
+  }),
+  setPaymentLockActive: vi.fn((v: boolean) => {
+    mockStoreState.paymentLockActive = v;
+  }),
+  switchTab: vi.fn((view: string) => {
+    mockStoreState.view = view;
+  }),
+  resetUnderHome: vi.fn((view: string) => {
+    mockStoreState.view = view;
+  }),
 };
 
 const useAppStoreMock = (selector?: (s: typeof mockStoreState) => any) => {

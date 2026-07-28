@@ -1,12 +1,16 @@
 import React from 'react';
 import { LogOut } from 'lucide-react';
+import { useBackDismiss } from '../../../hooks/useBackDismiss';
 
 interface Props {
   onClose: () => void;
   onConfirm: () => void;
 }
 
-export const OwnerLogoutModal: React.FC<Props> = ({ onClose, onConfirm }) => (
+export const OwnerLogoutModal: React.FC<Props> = ({ onClose, onConfirm }) => {
+  // priority 10: yikici onay, altindaki modalin ustunde kapanir (BULGU-132).
+  useBackDismiss(true, onClose, 'owner-logout-modal', 10);
+  return (
   <div className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-md flex items-center justify-center p-6 animate-in fade-in duration-300">
     <div className="bg-[#161B22] w-full max-w-sm rounded-[32px] border border-white/10 p-8 text-center animate-in zoom-in duration-300">
       <div className="w-20 h-20 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-6 text-red-500">
@@ -34,4 +38,5 @@ export const OwnerLogoutModal: React.FC<Props> = ({ onClose, onConfirm }) => (
       </div>
     </div>
   </div>
-);
+  );
+};

@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ShieldCheck, X } from 'lucide-react';
 import { decodeBase64Utf8, getIntentStatus } from '../../services/paymentService';
+import ConfirmDialog from '../ui/ConfirmDialog';
 
 /**
  * 3D SECURE SAYFASI — banka SMS doğrulaması UYGULAMA İÇİNDE açılır
@@ -35,6 +36,7 @@ const TIMEOUT_MS = 5 * 60 * 1000; // 5 dk — banka SMS'i için bol süre
 
 const ThreeDSSheet: React.FC<ThreeDSSheetProps> = ({ htmlBase64, intentId, onDone, onCancel }) => {
   const [failed, setFailed] = useState<string | null>(null); // reason — hata sayfası görünür kalır
+  const [confirmCancel, setConfirmCancel] = useState(false);
   const doneRef = useRef(false);
   const html = useRef<string>('');
   if (!html.current) {
@@ -95,11 +97,20 @@ const ThreeDSSheet: React.FC<ThreeDSSheetProps> = ({ htmlBase64, intentId, onDon
     };
   }, [intentId, onDone]);
 
+  // Hata sayfası görünürken X doğrudan kapatır (ödeme zaten bitmiş).
+  // Doğrulama sürüyorsa önce onay iste — yarıda kesmek paranın akıbetini
+  // belirsiz bırakır (BULGU-084).
   const handleClose = () => {
     if (doneRef.current) return;
+    if (failed) { doneRef.current = true; onDone({ ok: false, reason: failed }); return; }
+    setConfirmCancel(true);
+  };
+
+  const confirmAndCancel = () => {
+    setConfirmCancel(false);
+    if (doneRef.current) return;
     doneRef.current = true;
-    if (failed) onDone({ ok: false, reason: failed });
-    else onCancel();
+    onCancel();
   };
 
   return (
@@ -131,6 +142,17 @@ const ThreeDSSheet: React.FC<ThreeDSSheetProps> = ({ htmlBase64, intentId, onDon
           Bankanın gönderdiği SMS kodunu bu sayfada gir. Onaylanmayan tutar kartına yansımaz.
         </p>
       </div>
+
+      <ConfirmDialog
+        open={confirmCancel}
+        title="Banka doğrulamasından çık?"
+        description="Ödeme yarıda kalır. Onaylanmayan tutar kartına yansımaz."
+        confirmLabel="Çık"
+        cancelLabel="Devam et"
+        danger
+        onConfirm={confirmAndCancel}
+        onCancel={() => setConfirmCancel(false)}
+      />
     </div>
   );
 };

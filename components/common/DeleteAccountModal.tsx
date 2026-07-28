@@ -11,8 +11,10 @@ import { MODAL_BACKDROP, MODAL_CARD } from './motion';
 //
 // [S4] Silme öncesi sunucudan durum (preview_account_deletion) alınır: açık
 // rezervasyon/maç, ÇEKİLEBİLİR BAKİYE veya bekleyen çekim varsa silme engellenir
-// ve NET yönlendirme gösterilir (para kaybı olmasın). İade kredisi çekilemez →
-// yalnız "kaybolur" uyarısıyla bildirilir.
+// ve NET yönlendirme gösterilir (para kaybı olmasın).
+//
+// K1: iade bakiyesi artık çekilebilir olduğu için "kaybolur" uyarısı kaldırıldı;
+// o tutar da çekilebilir bakiyeye dahil ve aynı engelin kapsamında.
 
 interface DeletionItem { code: string; message: string; amount?: number }
 interface DeletionPreview {

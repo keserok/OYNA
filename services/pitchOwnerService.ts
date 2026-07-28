@@ -54,7 +54,10 @@ export interface TariffInput {
   applies_to_days: number[];
   start_time: string;
   end_time: string;
-  price_per_hour: number;
+  /** Bir SLOTUN fiyatı (saatlik değil). */
+  slot_price: number;
+  /** Slot süresi: 60 | 90 | 120. Izgara start_time'dan başlar. */
+  slot_minutes?: number;
   deposit_amount?: number;
   sort_order?: number;
   is_active?: boolean;
@@ -140,6 +143,8 @@ export function toTurkishError(error: unknown): string {
   if (raw.includes('SLOT_UNAVAILABLE')) return 'Bu saat dilimi kapalı.';
   if (raw.includes('INVALID_TOKEN')) return 'QR kodu geçersiz veya süresi dolmuş.';
   if (raw.includes('INVALID_SCORE')) return 'Girilen skor geçersiz.';
+  // Tekrar denemek çözmez — maç bitene kadar sunucu her seferinde reddeder.
+  if (raw.includes('TOO_EARLY')) return 'Skor ancak maç bittikten sonra girilebilir.';
   if (raw.includes('INVALID_SOURCE')) return 'Geçersiz rezervasyon kaynağı.';
   if (raw.includes('UNAUTHORIZED')) return 'Bu işlem için yetkiniz yok.';
   if (raw.includes('FORBIDDEN')) return 'Yalnız kendi sahanızın raporunu görebilirsiniz.';
@@ -482,7 +487,8 @@ export async function saveTariffs(pitchId: string, tariffs: TariffInput[]): Prom
       applies_to_days: t.applies_to_days,
       start_time: t.start_time,
       end_time: t.end_time,
-      price_per_hour: t.price_per_hour,
+      slot_price: t.slot_price,
+      slot_minutes: t.slot_minutes ?? 60,
       deposit_amount: t.deposit_amount ?? 0,
       sort_order: t.sort_order ?? idx,
       is_active: t.is_active ?? true,
@@ -568,7 +574,7 @@ export async function upsertSpecialSlotTariff(
       applies_to_days: t.applies_to_days ?? [1, 2, 3, 4, 5],
       start_time: (t.start_time ?? '08:00').slice(0, 5),
       end_time: (t.end_time ?? '23:00').slice(0, 5),
-      price_per_hour: t.price_per_hour,
+      slot_price: t.slot_price,
       deposit_amount: t.deposit_amount ?? 0,
       sort_order: t.sort_order ?? idx,
       is_active: t.is_active !== false,
@@ -582,7 +588,8 @@ export async function upsertSpecialSlotTariff(
       applies_to_days: [weekday],
       start_time: params.startTime.slice(0, 5),
       end_time: params.endTime.slice(0, 5),
-      price_per_hour: params.pricePerHour,
+      slot_price: params.pricePerHour,
+      slot_minutes: standard?.slotMinutes ?? 60,
       deposit_amount: standard?.deposit ?? 0,
       sort_order: rows.length,
       court_id: params.courtId ?? null,
@@ -2026,9 +2033,10 @@ export async function getPitchScoreMatches(pitchId: string): Promise<OwnerScoreM
 }
 
 /**
- * Manuel skor girişi için: oturum açmış owner'ın tesislerindeki maçları getirir
- * (yakın tarihli, APP_MATCH). Owner get_or_create_match_score_token ile token
- * üretmeye yetkilidir (RLS + RPC owner kontrolü). Owner değilse boş döner.
+ * Manuel skor girişi için: oturum açmış owner'ın TÜM tesislerindeki maçları
+ * getirir (tesis seçilmemişken kullanılan genel liste; tek tesis için
+ * getPitchScoreMatches). Owner get_or_create_match_score_token ile token
+ * üretmeye yetkilidir. Owner değilse boş döner.
  */
 export async function getOwnerScoreMatches(): Promise<OwnerScoreMatch[]> {
   try {
@@ -2040,35 +2048,48 @@ export async function getOwnerScoreMatches(): Promise<OwnerScoreMatch[]> {
     if (pErr) throw pErr;
     const pitchIds = ((pitchRows ?? []) as { id: string }[]).map((p) => p.id);
     if (pitchIds.length === 0) return [];
+    // Maçlar tesise matches.pitch_id ile bağlıdır, rezervasyona DEĞİL.
+    // Eski sorgu pitch_bookings'i source='APP_MATCH' + match_id dolu koşuluyla
+    // süzüyordu; match_id'yi hiçbir kod yazmadığı için bu liste HER ZAMAN boştu
+    // (canlıda 27 rezervasyonun 0'ında dolu). Artık maçın kendi tesis bağını
+    // kullanıyoruz — get_or_create_match_score_token'daki yetki dalıyla aynı temel.
     const { data, error } = await supabase
-      .from('pitch_bookings')
-      .select('match_id, booking_date, start_time, courts(name), matches(id, title, status, date, time, "homeScore", "awayScore")')
+      .from('matches')
+      .select('id, title, status, date, time, starts_at, court_id, pitch_id, "homeScore", "awayScore"')
       .in('pitch_id', pitchIds)
-      .eq('source', 'APP_MATCH')
-      .not('match_id', 'is', null)
-      .order('booking_date', { ascending: false })
-      .limit(40);
+      .neq('status', 'CANCELLED')
+      .order('starts_at', { ascending: false, nullsFirst: false })
+      .limit(60);
     if (error) throw error;
-    const seen = new Set<string>();
-    const rows: OwnerScoreMatch[] = [];
-    for (const r of (data ?? []) as Record<string, unknown>[]) {
-      const m = r.matches as Record<string, unknown> | null;
-      const matchId = String((m?.id as string) ?? (r.match_id as string) ?? '');
-      if (!matchId || seen.has(matchId)) continue;
-      seen.add(matchId);
-      const bookingDate = String(r.booking_date ?? '');
-      const startTime = String(r.start_time ?? '').slice(0, 5);
-      const hasScore = m?.homeScore != null && m?.awayScore != null;
-      rows.push({
-        matchId,
-        title: String((m?.title as string) ?? 'Oyuncu Maçı'),
-        when: `${String((m?.date as string) ?? bookingDate)} ${String((m?.time as string) ?? startTime)}`.trim(),
-        status: String((m?.status as string) ?? 'ACTIVE'),
-        courtName: String((r.courts as { name?: string } | null)?.name ?? 'Saha'),
-        hasScore,
-      });
+    const rows = (data ?? []) as Record<string, unknown>[];
+    // Saha adlarını tek sorguda çöz (matches.court_id → courts.name).
+    const courtIds = Array.from(
+      new Set(rows.map((r) => r.court_id).filter((v): v is string => typeof v === 'string')),
+    );
+    const courtNames = new Map<string, string>();
+    if (courtIds.length) {
+      const { data: courts } = await supabase.from('courts').select('id, name').in('id', courtIds);
+      (courts ?? []).forEach((c: { id: string; name: string }) => courtNames.set(c.id, c.name));
     }
-    return rows;
+    return rows.map((m) => {
+      const homeScore = (m.homeScore as number | null | undefined) ?? null;
+      const awayScore = (m.awayScore as number | null | undefined) ?? null;
+      const startsAt = m.starts_at ? new Date(String(m.starts_at)) : null;
+      const when = startsAt
+        ? startsAt.toLocaleString('tr-TR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+        : `${String(m.date ?? '')} ${String(m.time ?? '')}`.trim();
+      const courtId = typeof m.court_id === 'string' ? m.court_id : null;
+      return {
+        matchId: String(m.id),
+        title: String((m.title as string) ?? 'Oyuncu Maçı'),
+        when,
+        status: String((m.status as string) ?? 'ACTIVE'),
+        courtName: courtId ? (courtNames.get(courtId) ?? 'Saha') : 'Tesis geneli',
+        hasScore: homeScore != null && awayScore != null,
+        homeScore,
+        awayScore,
+      };
+    });
   } catch (error) {
     console.error('getOwnerScoreMatches:', error);
     throw new Error(toTurkishError(error));

@@ -117,6 +117,9 @@ export async function markDebtorReminded(debtorId: string): Promise<void> {
 function mapDebtorError(msg: string): string {
   const m = msg || '';
   if (m.includes('OVER_PAYMENT')) return 'Bakiyeden fazla ödeme alınamaz.';
+  // uq_debtor_entries_booking_debt: aynı rezervasyon iki kez veresiyeye yazılamaz.
+  if (m.includes('duplicate key') || m.includes('uq_debtor_entries_booking_debt') || m.includes('23505'))
+    return 'Bu rezervasyon zaten veresiye defterine yazılmış.';
   if (m.includes('NO_BALANCE')) return 'Bu rezervasyonda bekleyen tutar yok.';
   if (m.includes('UNAUTHORIZED')) return 'Bu işlem için yetkin yok.';
   if (m.includes('INVALID_AMOUNT')) return 'Geçersiz tutar.';

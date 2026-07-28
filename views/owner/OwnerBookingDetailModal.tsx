@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Banknote, MessageSquare, QrCode, XCircle } from 'lucide-react';
+import { Banknote, MessageSquare, QrCode, UserX, XCircle } from 'lucide-react';
 import { cancelConfirmedBooking, recordBookingPayment, type PaymentMethod, toTurkishError } from '../../services/pitchOwnerService';
+import { bookingToDebtor } from '../../services/financeService';
 import { parseTRYAmount } from '../../shared/financeModel';
 import { useOwnerToast } from './components/useOwnerToast';
 import { useConfirmSheet } from './components/useConfirmSheet';
@@ -92,7 +93,41 @@ export const OwnerBookingDetailModal: React.FC<OwnerBookingDetailModalProps> = (
     setBusy(true);
     try {
       const { queued } = await recordBookingPayment(booking.id, amount, method, 'Takvimden tahsilat');
-      notify(queued ? 'Tahsilat kuyruğa alındı (çevrimdışı).' : 'Tahsilat kaydedildi.', 'success');
+      // BULGU-125: çevrimdışı kayıt "kaydedildi" DEĞİL — para henüz sunucuda yok.
+      notify(
+        queued
+          ? `İnternet yok — ${amount}₺ henüz kaydedilmedi. Bağlantı gelince otomatik gönderilecek.`
+          : 'Tahsilat kaydedildi.',
+        queued ? 'warning' : 'success',
+      );
+      onChanged();
+      onClose();
+    } catch (err) {
+      notify(toTurkishError(err), 'error');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // BULGU-124: gelmeyen müşteri. İptal DEĞİL (iade tetiklemez) — kalan bakiye
+  // veresiye defterine taşınır; Finans'ın "Bekleyen" toplamı şişmez
+  // (get_pitch_finance_summary DEBT bağlı rezervasyonu pending'ten düşer).
+  const handleNoShow = async () => {
+    if (balance <= 0) {
+      notify('Bu rezervasyonun bekleyen tutarı yok — veresiyeye yazılacak bakiye bulunmuyor.', 'warning');
+      return;
+    }
+    const ok = await confirm({
+      title: 'Gelmedi olarak işaretle?',
+      message: `${booking.user} · ${booking.time} — kalan ${balance}₺ veresiye defterine yazılacak. Tahsil edilen tutar iade edilmez.`,
+      confirmLabel: 'Gelmedi',
+      destructive: true,
+    });
+    if (!ok) return;
+    setBusy(true);
+    try {
+      await bookingToDebtor(booking.id, booking.user);
+      notify(`Gelmedi olarak işaretlendi. ${balance}₺ veresiyeye yazıldı — Finans → Veresiye'den takip et.`, 'success');
       onChanged();
       onClose();
     } catch (err) {
@@ -125,15 +160,23 @@ export const OwnerBookingDetailModal: React.FC<OwnerBookingDetailModalProps> = (
       </button>
     </div>
   ) : (
-    <div className="flex gap-3">
-      <button type="button" onClick={() => setMode('cancel')}
-        className="flex-1 h-12 rounded-2xl bg-red-500/10 border border-red-500/30 text-red-400 font-black flex items-center justify-center gap-2 active:scale-[0.98] transition-transform">
+    // BULGU-124: bakiye varken üç aksiyon var — eşit ızgara, hepsi 48px yüksek.
+    // Bakiye 0 ise "Gelmedi" ve "Tahsilat Al" hiç çizilmez, tek buton kalır.
+    <div className={balance > 0 ? 'grid grid-cols-3 gap-2' : 'flex gap-3'}>
+      <button type="button" onClick={() => setMode('cancel')} disabled={busy}
+        className="flex-1 h-12 rounded-2xl bg-red-500/10 border border-red-500/30 text-red-400 font-black text-[11px] flex items-center justify-center gap-1.5 active:scale-[0.98] transition-transform disabled:opacity-50">
         <XCircle size={16} /> İptal Et
       </button>
       {balance > 0 && (
-        <button type="button" onClick={() => setMode('collect')}
-          className="flex-[1.5] h-12 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black flex items-center justify-center gap-2 active:scale-[0.98] transition-transform">
-          <Banknote size={18} /> Tahsilat Al
+        <button type="button" onClick={handleNoShow} disabled={busy}
+          className="h-12 rounded-2xl bg-[#FACC15]/10 border border-[#FACC15]/30 text-[#FACC15] font-black text-[11px] flex items-center justify-center gap-1.5 active:scale-[0.98] transition-transform disabled:opacity-50">
+          {busy ? <Spinner size={16} color="currentColor" glow={false} /> : <><UserX size={16} /> Gelmedi</>}
+        </button>
+      )}
+      {balance > 0 && (
+        <button type="button" onClick={() => setMode('collect')} disabled={busy}
+          className="h-12 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-[11px] flex items-center justify-center gap-1.5 active:scale-[0.98] transition-transform disabled:opacity-50">
+          <Banknote size={16} /> Tahsilat Al
         </button>
       )}
     </div>

@@ -2,6 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { UserPlus, X, Zap } from 'lucide-react';
 import { useAppStore } from '../../store';
+import { useBackDismiss } from '../../hooks/useBackDismiss';
 
 // Değer kapısı: misafir bir yazma aksiyonu denediğinde (maça katıl, rezervasyon
 // vb.) açılır. Amaç ceza değil davet — tek dokunuşla kayıt ekranına götürür.
@@ -10,6 +11,9 @@ const SignupGate: React.FC = () => {
   const setOpen = useAppStore(s => s.setIsSignupGateOpen);
   const setIsGuest = useAppStore(s => s.setIsGuest);
   const resetNavigation = useAppStore(s => s.resetNavigation);
+
+  // Hook, erken dönüşten ÖNCE çağrılmalı — koşullu hook React kuralını bozar.
+  useBackDismiss(isOpen, () => setOpen(false), 'signup-gate');
 
   if (!isOpen) return null;
 

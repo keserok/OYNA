@@ -30,6 +30,10 @@ import {
   type PitchSortOrder,
 } from '../services/pitchFilterService';
 import { resolveTariffForSlot } from '../services/tariffService';
+import {
+  DEFAULT_SLOT_MINUTES, activeTariffsFor, normalizeSlotMinutes,
+  slotMinutesFromLabel, slotPriceUnitLabel,
+} from '../shared/slotGrid';
 import { fetchMyFavoritePitchIds, togglePitchFavorite } from '../services/pitchFavoritesService';
 import { recordPitchView } from '../services/pitchShowcaseService';
 import { reportPitchContent } from '../services/pitchMediaService';
@@ -963,6 +967,29 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
     return { price, deposit };
   }, [selectedPitch, selectedSlot, selectedDateISO, courtSlots, selectedCourt]);
 
+  /** Seçili slotun fiyat birimi ('/ saat', '/ 1,5 saat'…) — etiketin kendisinden. */
+  const selectedSlotPriceUnit = useMemo(
+    () => slotPriceUnitLabel(selectedSlot ? slotMinutesFromLabel(selectedSlot) : DEFAULT_SLOT_MINUTES),
+    [selectedSlot],
+  );
+
+  /**
+   * Saha listesindeki fiyatın birimi, saha başına. O sahanın seçili gündeki
+   * etkin tarifelerinden gelir; tarifeler farklı süreler taşıyorsa (ör. sabah
+   * 60, akşam 90) birim yazılmaz — yanlış tek bir süre göstermektense hiç
+   * göstermemek doğrudur.
+   */
+  const courtPriceUnits = useMemo(() => {
+    const out: Record<string, string> = {};
+    if (!selectedPitch) return out;
+    for (const court of detailCourts) {
+      const active = activeTariffsFor(selectedPitch.tariffs ?? [], selectedDateISO, court.id);
+      const mins = new Set(active.map((t) => normalizeSlotMinutes(t.slot_minutes)));
+      out[court.id] = mins.size === 1 ? slotPriceUnitLabel([...mins][0]) : '';
+    }
+    return out;
+  }, [selectedPitch, detailCourts, selectedDateISO]);
+
   // Faz 5: seçili gün çalışma saatlerine göre kapalı mı (oyuncuya net durum).
   const selectedDayClosed = useMemo(() => {
     if (!selectedPitch) return false;
@@ -1740,7 +1767,9 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
                           </div>
                           <div className="text-right flex-shrink-0 pl-3">
                             <div className={`text-base font-black ${isSel ? 'text-[#39FF14]' : 'text-white'}`}>₺{price}</div>
-                            <div className="text-[9px] font-extrabold uppercase tracking-[0.1em] text-white/40">/ saat</div>
+                            {courtPriceUnits[court.id] && (
+                              <div className="text-[9px] font-extrabold uppercase tracking-[0.1em] text-white/40">{courtPriceUnits[court.id]}</div>
+                            )}
                           </div>
                         </button>
                       );
@@ -1972,9 +2001,12 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
                     {!isSelectionMode ? ' · Kapora' : ''}
                   </div>
                   {selectedSlotQuote ? (
-                    <div className="text-xl font-black italic mt-0.5">
+                    /* S17: tutarlarda italik yok — italik yalnız skorda kalır.
+                       Fiyat birimi slotun GERÇEK süresinden gelir; 90 dakikalık
+                       tarifede "/ saat" yazmak yanlış olurdu. */
+                    <div className="text-xl font-black mt-0.5">
                       {isSelectionMode ? (
-                        <>₺{selectedSlotQuote.price}<span className="text-xs font-semibold text-white/50"> / saat</span></>
+                        <>₺{selectedSlotQuote.price}<span className="text-xs font-semibold text-white/50"> {selectedSlotPriceUnit}</span></>
                       ) : (
                         <>₺{selectedSlotQuote.deposit}<span className="text-xs font-semibold text-white/50"> / ₺{selectedSlotQuote.price}</span></>
                       )}

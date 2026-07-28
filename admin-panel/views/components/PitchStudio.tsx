@@ -7,6 +7,7 @@
  * ShowcasePreview, saveTariffs, upsertCourt) paylaşır — iki ayrı model yok.
  */
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { ALLOWED_SLOT_MINUTES, buildSlotGrid, slotLabel } from '../../../shared/slotGrid';
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -23,7 +24,7 @@ import { getPitchFinanceSummary, type FinanceSummary } from '../../../services/f
 import { monthLabel, shiftMonth, isMonthAfter, methodLabel } from '../../../shared/financeModel';
 import { money, BreakdownList } from '../../../views/owner/finance/financeUi';
 import { localDateISO } from '../../../views/owner/ownerCalendarHelpers';
-import { createPitchAdmin, updatePitchAdmin, listOwnerCandidatesAdmin, toTurkishAdminError, type OwnerCandidate } from '../../services/adminService';
+import { createPitchAdmin, updatePitchAdmin, listOwnerCandidatesAdmin, fetchProfileById, toTurkishAdminError, type OwnerCandidate } from '../../services/adminService';
 import { getTariffs, saveTariffs, getPitchRefundPolicy, setPitchRefundPolicy, type TariffInput } from '../../../services/pitchOwnerService';
 import { setPitchPublished, setPitchShowcaseFlags, type PitchShowcaseFlags } from '../../../services/pitchContentService';
 import { AMENITY_CATALOG, normalizeAmenity } from '../../../shared/amenities';
@@ -52,6 +53,10 @@ type StudioTab = 'identity' | 'amenities' | 'hours' | 'courts' | 'tariffs' | 'ph
 
 const DESC_MIN = 40;
 const DESC_MAX = 500;
+
+/** Saha sahibi adayı için görünen ad — ad yoksa e-posta, o da yoksa kısa id. */
+const ownerLabel = (o: OwnerCandidate) =>
+  o.full_name?.trim() || o.name?.trim() || o.email?.trim() || o.id.slice(0, 8);
 const MAX_COURTS = 10;
 
 const DAY_LABELS = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
@@ -85,6 +90,27 @@ interface TariffRow extends TariffInput {
   key: string;
 }
 
+/**
+ * Admin de sahip gibi hangi saatlerin oluşacağını görsün (A3a). Izgara sahip
+ * paneli ve kullanıcı ekranıyla AYNI kaynaktan (shared/slotGrid) üretilir.
+ */
+const tariffSlotPreview = (t: TariffRow): string => {
+  const grid = buildSlotGrid(
+    [{
+      start_time: t.start_time,
+      end_time: t.end_time,
+      slot_minutes: t.slot_minutes ?? 60,
+      applies_to_days: [1, 2, 3, 4, 5, 6, 7],
+      tariff_type: t.tariff_type,
+      slot_price: t.slot_price,
+    }],
+    '2026-01-05',
+  );
+  if (grid.length === 0) return '';
+  const shown = grid.slice(0, 3).map(slotLabel).join(' · ');
+  return grid.length > 3 ? `${shown} … (${grid.length} slot)` : `${shown} (${grid.length} slot)`;
+};
+
 const newTariffRow = (idx: number): TariffRow => ({
   key: `t_${Date.now()}_${idx}`,
   name: idx === 0 ? 'Standart' : `Tarife ${idx + 1}`,
@@ -92,7 +118,8 @@ const newTariffRow = (idx: number): TariffRow => ({
   applies_to_days: [1, 2, 3, 4, 5],
   start_time: '08:00',
   end_time: '23:00',
-  price_per_hour: 0,
+  slot_price: 0,
+  slot_minutes: 60,
   deposit_amount: 0,
   is_active: true,
   court_id: null,
@@ -122,6 +149,8 @@ export const PitchStudio: React.FC<PitchStudioProps> = ({ pitchId, onClose, onSa
   const [ownerId, setOwnerId] = useState('');
   const [initialOwnerId, setInitialOwnerId] = useState('');
   const [ownerCandidates, setOwnerCandidates] = useState<OwnerCandidate[]>([]);
+  const [ownerQuery, setOwnerQuery] = useState('');
+  const [ownerSearching, setOwnerSearching] = useState(false);
 
   // ── Olanaklar ──
   const [amenities, setAmenities] = useState<string[]>([]);
@@ -230,19 +259,42 @@ export const PitchStudio: React.FC<PitchStudioProps> = ({ pitchId, onClose, onSa
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pitchId]);
 
-  // Saha sahibi adaylarını (OWNER rollü profiller) bir kez yükle.
+  // Saha sahibi adayları. Arama boşken mevcut OWNER'lar, yazıldıkça tüm
+  // kullanıcılar içinde ad/e-posta/telefon araması (ülke geneli ölçek).
   useEffect(() => {
     let alive = true;
+    const t = setTimeout(() => {
+      void (async () => {
+        setOwnerSearching(true);
+        try {
+          const owners = await listOwnerCandidatesAdmin(ownerQuery);
+          if (alive) setOwnerCandidates(owners);
+        } catch {
+          /* sessiz geç — arama başarısızsa liste boş kalır */
+        } finally {
+          if (alive) setOwnerSearching(false);
+        }
+      })();
+    }, ownerQuery.trim() ? 300 : 0);
+    return () => { alive = false; clearTimeout(t); };
+  }, [ownerQuery]);
+
+  // Seçili sahibin adı listede yoksa (düzenleme modunda arama sıfırlanınca)
+  // ayrıca çekilir ki "Seçili: —" gibi yalan bir görüntü çıkmasın.
+  useEffect(() => {
+    if (!ownerId || ownerCandidates.some((o) => o.id === ownerId)) return;
+    let alive = true;
     void (async () => {
-      try {
-        const owners = await listOwnerCandidatesAdmin();
-        if (alive) setOwnerCandidates(owners);
-      } catch {
-        /* sessiz geç — owner seçici opsiyonel */
+      const p = await fetchProfileById(ownerId).catch(() => null);
+      if (alive && p) {
+        setOwnerCandidates((prev) => prev.some((o) => o.id === p.id) ? prev : [
+          { id: p.id, full_name: p.name, name: p.name, email: p.email, phone: p.phone ?? null, is_owner: true },
+          ...prev,
+        ]);
       }
     })();
     return () => { alive = false; };
-  }, []);
+  }, [ownerId, ownerCandidates]);
 
   const loadCourts = useCallback(async () => {
     if (!id) return;
@@ -266,7 +318,8 @@ export const PitchStudio: React.FC<PitchStudioProps> = ({ pitchId, onClose, onSa
         applies_to_days: t.applies_to_days ?? [1, 2, 3, 4, 5],
         start_time: (t.start_time ?? '08:00').slice(0, 5),
         end_time: (t.end_time ?? '23:00').slice(0, 5),
-        price_per_hour: t.price_per_hour,
+        slot_price: t.slot_price,
+        slot_minutes: t.slot_minutes ?? 60,
         deposit_amount: t.deposit_amount ?? 0,
         is_active: t.is_active !== false,
         court_id: t.court_id ?? null,
@@ -403,7 +456,16 @@ export const PitchStudio: React.FC<PitchStudioProps> = ({ pitchId, onClose, onSa
   }, [scheduleDateISO]);
 
   const descLen = description.trim().length;
-  const identityValid = name.trim().length >= 3 && district.trim().length >= 2 && address.trim().length >= 5;
+  // Sahipsiz tesis yok: OLUŞTURMADA sahip seçimi de zorunlu.
+  // Düzenlemede zorunlu tutulmaz — sahiplik devri SUPER_ADMIN'e kilitli olduğu için
+  // MODERATOR eski sahipsiz bir kaydı hiç kaydedemez hale gelirdi. O kayıtları
+  // vitrinden `pitches_published_needs_owner` kısıtı zaten dışarıda tutuyor.
+  const identityValid = name.trim().length >= 3 && district.trim().length >= 2
+    && address.trim().length >= 5 && (!isCreateMode || ownerId.trim().length > 0);
+  const selectedOwner = useMemo(
+    () => ownerCandidates.find((o) => o.id === ownerId) ?? null,
+    [ownerCandidates, ownerId],
+  );
 
   const buildProfilePayload = () => ({
     name: name.trim(),
@@ -424,7 +486,11 @@ export const PitchStudio: React.FC<PitchStudioProps> = ({ pitchId, onClose, onSa
 
   const validateProfile = (): boolean => {
     if (!identityValid) {
-      toastError('Tesis adı, ilçe ve adres zorunludur.');
+      toastError(
+        isCreateMode && ownerId.trim().length === 0
+          ? 'Tesis sahibi zorunludur — sahipsiz tesis oluşturulamaz.'
+          : 'Tesis adı, ilçe ve adres zorunludur.',
+      );
       setActiveTab('identity');
       return false;
     }
@@ -475,7 +541,7 @@ export const PitchStudio: React.FC<PitchStudioProps> = ({ pitchId, onClose, onSa
     for (const t of tariffs) {
       if (!t.name.trim()) { toastError('Her tarifenin bir adı olmalı.'); return; }
       if (t.applies_to_days.length === 0) { toastError(`"${t.name}" tarifesi için en az bir gün seçin.`); return; }
-      if (!(t.price_per_hour > 0)) { toastError(`"${t.name}" tarifesinde saatlik ücret 0'dan büyük olmalı.`); return; }
+      if (!(t.slot_price > 0)) { toastError(`"${t.name}" tarifesinde slot ücreti 0'dan büyük olmalı.`); return; }
       if ((t.deposit_amount ?? 0) < 0) { toastError(`"${t.name}" tarifesinde kapora negatif olamaz.`); return; }
     }
     setSavingTariffs(true);
@@ -496,6 +562,13 @@ export const PitchStudio: React.FC<PitchStudioProps> = ({ pitchId, onClose, onSa
   const handleTogglePublished = async () => {
     if (!id) return;
     const next = !isPublished;
+    // Sahipsiz tesis vitrine çıkamaz (DB'de pitches_published_needs_owner kısıtı
+    // zaten engelliyor; burada kullanıcıya sebebini önden söylüyoruz).
+    if (next && !ownerId) {
+      toastError('Bu tesisin sahibi yok. Vitrine çıkarmadan önce Kimlik sekmesinden sahip ata.');
+      setActiveTab('identity');
+      return;
+    }
     setIsPublished(next);
     try {
       await setPitchPublished(id, next);
@@ -684,15 +757,65 @@ export const PitchStudio: React.FC<PitchStudioProps> = ({ pitchId, onClose, onSa
                     <input value={address} onChange={(e) => setAddress(e.target.value)} className={inputCls} placeholder="Mahalle, cadde, no" />
                   </div>
                   <div>
-                    <label className={labelCls}>Saha Sahibi</label>
-                    <select value={ownerId} onChange={(e) => setOwnerId(e.target.value)} className={inputCls}>
-                      <option value="">Sahipsiz (atanmadı)</option>
-                      {ownerCandidates.map((o) => (
-                        <option key={o.id} value={o.id}>{o.full_name || o.email || o.id.slice(0, 8)}</option>
-                      ))}
-                    </select>
+                    <label className={labelCls}>Saha Sahibi *</label>
+                    {selectedOwner ? (
+                      <div className="flex items-center justify-between gap-2 rounded-lg border border-green-500/30 bg-green-500/10 px-3 py-2">
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-bold text-white">{ownerLabel(selectedOwner)}</p>
+                          <p className="truncate text-[10px] text-gray-400">{selectedOwner.email || selectedOwner.phone || selectedOwner.id.slice(0, 8)}</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => { setOwnerId(''); setOwnerQuery(''); }}
+                          className="shrink-0 text-[10px] font-bold text-gray-400 hover:text-white"
+                        >
+                          Değiştir
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <input
+                          value={ownerQuery}
+                          onChange={(e) => setOwnerQuery(e.target.value)}
+                          className={inputCls}
+                          placeholder="Ad, e-posta veya telefon ile ara…"
+                        />
+                        <div className="mt-1 max-h-44 overflow-y-auto rounded-lg border border-white/10 bg-black/20">
+                          {ownerSearching && <p className="px-3 py-2 text-[11px] text-gray-500">Aranıyor…</p>}
+                          {!ownerSearching && ownerCandidates.length === 0 && (
+                            <p className="px-3 py-2 text-[11px] text-gray-500">
+                              {ownerQuery.trim()
+                                ? 'Eşleşen kullanıcı yok. Tesis sahibinin önce uygulamaya kayıt olması gerekir.'
+                                : 'Henüz tesis sahibi rolünde kullanıcı yok — yukarıdan arayarak herhangi bir kullanıcıyı seçebilirsin.'}
+                            </p>
+                          )}
+                          {!ownerSearching && ownerCandidates.map((o) => (
+                            <button
+                              key={o.id}
+                              type="button"
+                              onClick={() => { setOwnerId(o.id); setOwnerQuery(''); }}
+                              className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left hover:bg-white/5"
+                            >
+                              <span className="min-w-0">
+                                <span className="block truncate text-xs font-bold text-white">{ownerLabel(o)}</span>
+                                <span className="block truncate text-[10px] text-gray-500">{o.email || o.phone || o.id.slice(0, 8)}</span>
+                              </span>
+                              {o.is_owner && <span className="shrink-0 rounded bg-green-500/20 px-1.5 py-0.5 text-[9px] font-bold text-green-400">TESİS SAHİBİ</span>}
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                    <p className="mt-1 text-[10px] text-gray-500">
+                      Sahipsiz tesis oluşturulamaz. Seçilen kullanıcıya tesis sahibi yetkisi otomatik verilir.
+                    </p>
                     {!isCreateMode && ownerId !== initialOwnerId && (
                       <p className="mt-1 text-[10px] font-bold text-amber-400">Sahiplik devri yalnız SUPER_ADMIN tarafından kaydedilebilir.</p>
+                    )}
+                    {!isCreateMode && !ownerId && (
+                      <p className="mt-1 text-[10px] font-bold text-red-400">
+                        Bu tesisin sahibi yok; sahip atanana kadar vitrinde görünmez.
+                      </p>
                     )}
                   </div>
                   <div>
@@ -945,13 +1068,41 @@ export const PitchStudio: React.FC<PitchStudioProps> = ({ pitchId, onClose, onSa
                             <input type="time" value={t.end_time} onChange={(e) => patchTariff(t.key, { end_time: e.target.value })} className="w-full bg-black/40 border border-white/10 rounded-lg px-2 py-2 text-xs text-white" />
                           </div>
                           <div>
-                            <label className={labelCls}>Saatlik Ücret (₺)</label>
-                            <input type="number" min={0} value={t.price_per_hour || ''} onChange={(e) => patchTariff(t.key, { price_per_hour: Number(e.target.value) })} className="w-full bg-black/40 border border-white/10 rounded-lg px-2 py-2 text-xs text-white font-mono" placeholder="2000" />
+                            <label className={labelCls}>{t.slot_minutes ?? 60} Dakikalık Ücret (₺)</label>
+                            <input type="number" min={0} value={t.slot_price || ''} onChange={(e) => patchTariff(t.key, { slot_price: Number(e.target.value) })} className="w-full bg-black/40 border border-white/10 rounded-lg px-2 py-2 text-xs text-white font-mono" placeholder="2000" />
                           </div>
                           <div>
                             <label className={labelCls}>Kapora (₺)</label>
                             <input type="number" min={0} value={t.deposit_amount ?? 0} onChange={(e) => patchTariff(t.key, { deposit_amount: Number(e.target.value) })} className="w-full bg-black/40 border border-white/10 rounded-lg px-2 py-2 text-xs text-white font-mono" placeholder="0" />
                           </div>
+                        </div>
+
+                        {/* SLOT SÜRESİ — ızgarayı bu belirler; sahip panelindeki
+                            seçicinin aynısı. Rezervasyon bulunan saatte sunucu
+                            değişikliği SLOT_MINUTES_LOCKED ile reddeder (A2a). */}
+                        <div className="mt-3">
+                          <label className={labelCls}>Maç / Kiralama Süresi</label>
+                          <div className="flex gap-2 mt-1">
+                            {ALLOWED_SLOT_MINUTES.map((m) => (
+                              <button
+                                key={m}
+                                type="button"
+                                onClick={() => patchTariff(t.key, { slot_minutes: m })}
+                                className={`flex-1 py-2 rounded-lg text-[11px] font-black transition-colors ${
+                                  (t.slot_minutes ?? 60) === m
+                                    ? 'bg-emerald-500 text-black'
+                                    : 'bg-black/40 border border-white/10 text-gray-400 hover:text-white'
+                                }`}
+                              >
+                                {m} dk
+                              </button>
+                            ))}
+                          </div>
+                          {tariffSlotPreview(t) && (
+                            <p className="text-[10.5px] text-gray-500 mt-2 leading-relaxed">
+                              Oluşacak saatler: <span className="text-gray-300 font-semibold">{tariffSlotPreview(t)}</span>
+                            </p>
+                          )}
                         </div>
                       </div>
                     ))}

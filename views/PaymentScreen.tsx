@@ -20,21 +20,11 @@ import AddCardScreen, { CollectedCard } from '../components/payment/AddCardScree
 import ThreeDSSheet, { ThreeDSOutcome } from '../components/payment/ThreeDSSheet';
 import type { PaymentContext } from '../types';
 import { formatTRY } from '../utils/formatTRY';
-
-// C1 — idempotency anahtarı üretici. crypto.randomUUID modern webview'de var;
-// eski WebView'ler için güvenli yedek (RFC4122 v4 benzeri).
-const safeUuid = (): string => {
-  try {
-    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-      return crypto.randomUUID();
-    }
-  } catch { /* fallback below */ }
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-    const r = (Math.random() * 16) | 0;
-    const v = c === 'x' ? r : (r & 0x3) | 0x8;
-    return v.toString(16);
-  });
-};
+import { stripServerErrorPrefix } from '../services/paymentService';
+import {
+  safeUuid, isOnline, withSubmitTimeout, SubmitTimeoutError,
+  CARD_TIMEOUT_MS, OFFLINE_PAY, TIMEOUT_PAY,
+} from '../shared/submitGuard';
 
 /**
  * TEK ÖDEME EKRANI — üç bağlam (tasarım 1b):
@@ -67,7 +57,9 @@ interface PayResult {
 // C10 — para biçimi tek kaynaktan ("1.500,00₺"). Ekranlar arası tutarlılık.
 const fmt = formatTRY;
 
-const stripRpcPrefix = (msg: string) => msg.replace(/^[A-Z_]+:\s*/, '');
+// Sağlayıcı/sunucu öneki kırpma TEK kaynaktan gelir (BULGU-092): eski yerel
+// regex yalnız BÜYÜK harfli önekleri yakalıyor, `iyzico: …` sızıyordu.
+const stripRpcPrefix = stripServerErrorPrefix;
 
 const delay = (ms: number) => new Promise<void>(r => setTimeout(r, ms));
 
@@ -101,9 +93,9 @@ const humanizePaymentError = (err: unknown): string => {
   if (has('NO_CARD_AMOUNT'))
     return 'Bakiyen bu tutarın tamamını karşılıyor — kart gerekmiyor. OYNA Bakiyesi seçiliyken tekrar dene.';
   if (has('SLOT_TAKEN_REFUNDED'))
-    return 'Sen doğrulama yaparken maçtaki yer doldu. Ödediğin tutar cüzdanına iade kredisi olarak eklendi — istediğin ödemede kullanabilirsin.';
+    return 'Sen doğrulama yaparken maçtaki yer doldu. Ödediğin tutar cüzdanına eklendi — istediğin ödemede kullanabilir veya hesabına çekebilirsin.';
   if (has('BOOKING_CLOSED_REFUNDED'))
-    return 'Rezervasyon bu sırada kapandı. Ödediğin tutar cüzdanına iade kredisi olarak eklendi — istediğin ödemede kullanabilirsin.';
+    return 'Rezervasyon bu sırada kapandı. Ödediğin tutar cüzdanına eklendi — istediğin ödemede kullanabilir veya hesabına çekebilirsin.';
   if (has('INSUFFICIENT_BALANCE'))
     return stripRpcPrefix(raw) || 'Cüzdan bakiyen bu ödeme için yetersiz. Cüzdanına yükleme yapıp tekrar dene.';
   if (has('YETERSIZ BAKIYE', 'INSUFFICIENT'))
@@ -157,6 +149,9 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
   const [tempCard, setTempCard] = useState<CollectedCard | null>(null);
   const [inlineError, setInlineError] = useState('');
+  // Hata şeridinin BAŞLIĞI duruma göre değişir: gönderilmemiş bir isteği
+  // "Ödeme başarısız" diye etiketlemek yalan olur.
+  const [inlineErrorKind, setInlineErrorKind] = useState<'FAIL' | 'OFFLINE' | 'TIMEOUT'>('FAIL');
   const [result, setResult] = useState<PayResult | null>(null);
   // C3 — cüzdan özeti çekilemezse bakiye 0 VARSAYILMAZ; kullanıcı yanlışlıkla
   // "yetersiz bakiye"ye/tam kart çekimine itilmesin. Hata + Yeniden Dene gösterilir,
@@ -183,6 +178,20 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
   // 3DS sonrası "tekrar dene" ikinci bir kart çekimi yaratmasın; sunucu aynı
   // anahtarlı niyeti yeniden kullanır. Başarıda sıfırlanır (yeni ödeme = yeni anahtar).
   const idemKeyRef = useRef<string | null>(null);
+
+  // Emniyet: ekran hangi yoldan giderse gitsin 3DS kilidi asılı kalmasın.
+  // Kilit true kalırsa geri tuşu tamamen ölür ve kullanıcı uygulamada sıkışır.
+  const mountedRef = useRef(true);
+  useEffect(() => () => {
+    mountedRef.current = false;
+    useAppStore.getState().setPaymentLockActive(false);
+  }, []);
+  /** Kilidi YALNIZ ekran hâlâ ayaktayken açar. Ödeme yanıtı ekran kapandıktan
+   *  SONRA dönerse (yavaş şebeke + kullanıcı çıktı) unmount temizleyicisi zaten
+   *  çalışmış olur; koruma olmadan kilit sonsuza kadar true kalırdı. */
+  const lockPaymentIfMounted = () => {
+    if (mountedRef.current) useAppStore.getState().setPaymentLockActive(true);
+  };
 
   // Cüzdan özeti + kayıtlı kartlar (C3: hata yutulmaz — yeniden yüklenebilir)
   const loadWallet = useRef<() => void>(() => {});
@@ -224,8 +233,11 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
 
   // S3 — kapora akışında tesis iptal/iade kademesini SUNUCUDAN çek (göster).
   useEffect(() => {
-    const pid = (bookingPitch as any)?.id as string | undefined;
-    if (!ctx?.isDeposit || !pid) { setRefundPolicy(null); return; }
+    // Tesis kimliği ödeme BAĞLAMINDAN gelir; store.bookingPitch yalnız yedek.
+    // Maçlarım'dan gelen kapora akışında bookingPitch ya boş ya da önceki
+    // gezinmeden kalan BAŞKA tesisin verisiydi (BULGU-088).
+    const pid = ctx?.pitchId || ((bookingPitch as any)?.id as string | undefined);
+    if (!pid) { setRefundPolicy(null); return; }
     let alive = true;
     (async () => {
       try {
@@ -238,7 +250,7 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
       } catch { if (alive) setRefundPolicy(null); }
     })();
     return () => { alive = false; };
-  }, [ctx?.isDeposit, (bookingPitch as any)?.id]);
+  }, [ctx?.pitchId, (bookingPitch as any)?.id]);
 
   // İptal kademesi kullanıcı-dostu metin (tesis politikasıyla birebir).
   const refundTierText = refundPolicy
@@ -299,7 +311,7 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
   const noteText = balanceOnly
     ? (insufficientBalance
         ? `Bu kapora cüzdan bakiyesinden ödenir. Bakiyen ${fmt(spendable)}₺ — ${fmt(amount - spendable)}₺ daha yüklemen gerekiyor.`
-        : 'Kapora cüzdan bakiyenden güvenceye alınır. Maç dolmazsa veya iptal olursa tutar anında iade kredisi olarak cüzdanına döner.')
+        : 'Kapora cüzdan bakiyenden güvenceye alınır. Maç dolmazsa veya iptal olursa tutar anında cüzdanına döner.')
     : !allowBalance
     ? 'Bakiye bu ödemede kullanılamaz.'
     : balanceApplied > 0 && needsCard
@@ -380,6 +392,10 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
         balanceApplied: res.balanceApplied,
         cardAmount: res.cardAmount,
       });
+      // Geri tuşu bu ekranı unmount ederse 3DS sonucu bir daha okunamaz:
+      // dinleyici, 3 sn'lik yoklama ve 5 dk'lık timeout ölür, kart bankada
+      // çekilmiş olabilir (BULGU-084). Kilit açıkken geri tuşu hiçbir şey yapmaz.
+      lockPaymentIfMounted();
       return {
         balanceApplied: res.balanceApplied, cardAmount: res.cardAmount,
         intentId: res.intentId, pendingThreeDS: true,
@@ -535,6 +551,15 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
     // commit'inden önceki senkron ikinci tık bu ref ile engellenir.
     if (payBusyRef.current) return;
     payBusyRef.current = true;
+    // IP-02 — gönderim öncesi bağlantı kapısı: çevrimdışıyken istek HİÇ gitmez.
+    // Eskiden istek yola çıkıyor, ekran PROCESSING'e geçiyor ve süresiz asılı
+    // kalıyordu; kullanıcı dönüşü olmayan bir spinner'da bekliyordu.
+    if (!isOnline()) {
+      setInlineErrorKind('OFFLINE');
+      setInlineError(OFFLINE_PAY);
+      payBusyRef.current = false;
+      return;
+    }
     if (!auth.currentUser) {
       useAppStore.getState().setIsSignupGateOpen(true);
       payBusyRef.current = false;
@@ -556,7 +581,7 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
     setInlineError('');
     setScreen('PROCESSING');
     try {
-      const res = await executePayment();
+      const res = await withSubmitTimeout(executePayment(), CARD_TIMEOUT_MS);
       // Banka doğrulaması (3DS) açıldıysa BAŞARI EKRANI GÖSTERME — sonuç
       // ThreeDSSheet üzerinden handleThreeDSDone'a gelecek.
       if (res.pendingThreeDS) return;
@@ -568,7 +593,17 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
       idemKeyRef.current = null; // başarı → yeni ödeme yeni anahtar alsın
       setScreen('SUCCESS');
     } catch (err) {
+      // Zaman aşımı ≠ başarısızlık: istek İPTAL EDİLMEDİ, sunucuda tamamlanmış
+      // olabilir. Bu yüzden idemKeyRef SIFIRLANMAZ — tekrar deneme aynı
+      // anahtarla gider ve çift çekim olmaz.
+      if (err instanceof SubmitTimeoutError) {
+        setInlineErrorKind('TIMEOUT');
+        setInlineError(TIMEOUT_PAY);
+        setScreen('PAY');
+        return;
+      }
       const msg = humanizePaymentError(err);
+      setInlineErrorKind('FAIL');
       setInlineError(msg);
       if (ctx) {
         setLastPaymentError({
@@ -590,6 +625,7 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
   const handleThreeDSDone = async (outcome: ThreeDSOutcome) => {
     const ds = threeDS;
     setThreeDS(null);
+    useAppStore.getState().setPaymentLockActive(false);
     if (!ds) return;
 
     if (outcome.ok && !outcome.reason) {
@@ -606,7 +642,9 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
     const msg = outcome.ok
       ? humanizePaymentError(outcome.reason ?? '')
       : outcome.reason === 'TIMEOUT'
-        ? 'Banka doğrulaması zaman aşımına uğradı. Ödeme alınmadıysa tekrar deneyebilirsin; alındıysa bakiyen birazdan güncellenir.'
+        // Eski metin "bakiyen birazdan güncellenir" diyordu; bunu yapacak süpürücü
+        // KAPALI doğuyor ve ekranda durumu sorgulayan buton yoktu (BULGU-093).
+        ? 'Banka doğrulaması zaman aşımına uğradı. Ödemenin alınıp alınmadığını şimdi kontrol edebilirsin.'
         : 'Banka doğrulaması tamamlanamadı. Onaylanmayan tutar kartına yansımaz — tekrar deneyebilir veya bankanla iletişime geçebilirsin.';
     setInlineError(msg);
     if (ctx) {
@@ -622,6 +660,7 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
 
   const handleThreeDSCancel = () => {
     setThreeDS(null);
+    useAppStore.getState().setPaymentLockActive(false);
     setInlineError('Banka doğrulaması yarıda kaldı — ödeme alınmadı. Hazır olduğunda tekrar deneyebilirsin.');
     setScreen('PAY');
   };
@@ -646,19 +685,19 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
         break;
       }
       case 'MATCH_CREATE_DEPOSIT':
-        store.resetNavigation(store.selectedMatch ? 'MATCH_JOIN' : 'MATCH_DISCOVERY');
+        store.resetUnderHome(store.selectedMatch ? 'MATCH_JOIN' : 'MATCH_DISCOVERY');
         break;
       case 'PITCH_DEPOSIT':
       case 'BOOKING_DEPOSIT':
         // Maçlarım hub'ı Rezervasyonlar segmentiyle açılır (ödenen kapora görünür olsun).
         store.setMyMatchesInitialSegment('BOOKINGS');
-        store.resetNavigation('MY_MATCHES');
+        store.resetUnderHome('MY_MATCHES');
         break;
       default:
         // F4.1: bu dal ULAŞILAMAZDI (PaymentContextKind'in 4 üyesi de yukarıda) —
         // bilete giden tek navigate burada saklıydı; bilet artık Maçlarım'daki
         // rezervasyon kartından açılır. Güvenli varsayılan: Maçlarım.
-        store.resetNavigation('MY_MATCHES');
+        store.resetUnderHome('MY_MATCHES');
     }
   };
 
@@ -868,7 +907,11 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-[13px] font-extrabold text-red-400">
-                {ctx.isDeposit ? 'Kapora ödemesi başarısız' : 'Ödeme başarısız'}
+                {inlineErrorKind === 'OFFLINE'
+                  ? 'Gönderilmedi — bağlantı yok'
+                  : inlineErrorKind === 'TIMEOUT'
+                    ? 'Yanıt gelmedi'
+                    : ctx.isDeposit ? 'Kapora ödemesi başarısız' : 'Ödeme başarısız'}
               </p>
               <p className="text-[11.5px] text-gray-300 mt-0.5 leading-relaxed">{inlineError}</p>
               <button
@@ -1070,7 +1113,9 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
         </div>
 
         {/* Kapora güven notu */}
-        {ctx.isDeposit && ctx.infoNote && (
+        {/* İade/iptal koşulu HER bağlamda görünür: maça katılımda da para
+            hareketi var, koşulu yalnız kapora akışında göstermek eksikti (BULGU-083). */}
+        {ctx.infoNote && (
           <div className="mx-5 flex gap-2.5 items-start px-1">
             <Shield size={15} className="text-[#FACC15] shrink-0 mt-0.5" />
             <p className="text-[11.5px] text-gray-400 leading-relaxed">{ctx.infoNote}</p>
