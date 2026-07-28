@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { SlidersHorizontal } from 'lucide-react';
 import { PageShell } from '../components/PageShell';
 import { PageLoadingSkeleton } from '../components/PageLoadingSkeleton';
+import { PaymentModePanel } from '../components/PaymentModePanel';
 import { useAdminToast } from '../context/AdminToastContext';
 import {
   fetchAppConfig,
@@ -24,6 +25,23 @@ const CATEGORY_LABELS: Record<string, string> = {
   GUVENLIK: 'Güvenlik',
   HIZMET: 'Hizmet (Kaleci/Hakem)',
   GENEL: 'Genel',
+};
+
+/**
+ * Sabit seçenekli (enum) metin anahtarları. Serbest metin kutusunda yazım hatası
+ * yapmak sessizce geçersiz bir değer yazardı; bunlar açılır liste olarak render
+ * edilir. Sunucu tarafı yine de bilinmeyen değerde güvenli tarafa düşer.
+ */
+const ENUM_OPTIONS: Record<string, { value: string; label: string }[]> = {
+  payment_mode_global: [
+    { value: 'CASH_ONLY', label: 'Sahada Ödeme (uygulama içinde para alınmaz)' },
+    { value: 'ONLINE_ONLY', label: 'Online Ödeme (uygulama içinden zorunlu)' },
+    { value: 'HYBRID', label: 'Hibrit (her tesis kendi modunu seçer)' },
+  ],
+  payment_provider: [
+    { value: 'SIMULATION', label: 'SIMULATION (gerçek para çekilmez)' },
+    { value: 'IYZICO', label: 'IYZICO (canlı tahsilat)' },
+  ],
 };
 
 /**
@@ -157,6 +175,19 @@ export const SystemParamsPage: React.FC<{ onRefresh?: () => Promise<void> }> = (
                       >
                         {row.value ? 'AÇIK' : 'KAPALI'}
                       </button>
+                    ) : ENUM_OPTIONS[row.key] ? (
+                      <select
+                        value={String(row.value ?? '')}
+                        disabled={savingKey === row.key}
+                        onChange={(e) => void saveConfig(row, e.target.value)}
+                        className="w-full h-10 bg-black/40 border border-white/10 rounded-lg px-3 text-sm text-white focus:border-cyan-500/40 focus:outline-none disabled:opacity-40"
+                      >
+                        {ENUM_OPTIONS[row.key].map((opt) => (
+                          <option key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </option>
+                        ))}
+                      </select>
                     ) : (
                       <div className="flex items-center gap-2">
                         <input
@@ -182,6 +213,8 @@ export const SystemParamsPage: React.FC<{ onRefresh?: () => Promise<void> }> = (
               </div>
             </section>
           ))}
+
+          <PaymentModePanel />
 
           {flags.length > 0 && (
             <section className="bg-[#161B22]/60 border border-white/[0.06] rounded-2xl p-5">
