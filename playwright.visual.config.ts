@@ -47,7 +47,8 @@ export default defineConfig({
     locale: 'tr-TR',
     timezoneId: 'Europe/Istanbul',
     colorScheme: 'dark',
-    reducedMotion: 'reduce',
+    // reducedMotion bu Playwright sürümünde yalnız contextOptions altında geçerli.
+    contextOptions: { reducedMotion: 'reduce' },
     deviceScaleFactor: 1,
     trace: 'retain-on-failure',
   },

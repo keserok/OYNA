@@ -89,3 +89,4 @@ scratchpad/
 
 # Ajan gecici sinama dosyalari
 *.tmp.mjs
+playwright-report/
