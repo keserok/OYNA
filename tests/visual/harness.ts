@@ -183,6 +183,12 @@ export async function hazirla(page: Page, opts: HazirlaSecenekler = {}) {
     // beklenen ekran. authResolved=false olduğundan SplashScreen'in 1200 ms'lik
     // otomatik geçiş sayacı HİÇ kurulmaz → ekran süresiz olarak sabit kalır.
     await page.waitForTimeout(4000);
+    // "Bağlantı zayıf" afişi bizim auth'u askıda bırakmamızın YAN ÜRÜNÜ, ürünün
+    // gerçek splash hâli değil. Referans temsil edici olsun diye bastırılır.
+    await page.evaluate(async () => {
+      const m = await import('/store.ts');
+      (m as any).useAppStore.setState({ loadDegraded: false });
+    });
   } else {
     await hidrasyonuBekle(page);
   }
