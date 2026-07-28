@@ -21,7 +21,10 @@ export const AdminPermissionsProvider: React.FC<{
   session: AdminSession | null | undefined;
   children: React.ReactNode;
 }> = ({ session, children }) => {
-  const role = (session?.adminRole ?? 'SUPPORT') as AdminRole;
+  // Rol okunamazsa ADMIN varsayılır — panel açık kalır, yalnız süper admine
+  // özel ekranlar gizlenir. Panele girişin kendisi resolveAdminSession'da
+  // ayrıca doğrulanır; sunucu tarafı guard'lar her hâlükârda geçerlidir.
+  const role = (session?.adminRole ?? 'ADMIN') as AdminRole;
   const value = useMemo<AdminPermissionsContextValue>(() => ({
     role,
     canAccess: (route) => canAccessRoute(role, route),

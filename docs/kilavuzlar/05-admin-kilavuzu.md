@@ -2,7 +2,7 @@
 
 _Son güncelleme: 26 Temmuz 2026 · Uygulama sürümü 3.0.0_
 
-> Bu kılavuz, OYNA yönetim ekibi içindir: kurucu ve panel erişimi verilen tüm admin alt rolleri (Süper Admin, Admin, Moderatör, Finans, Destek). Kökteki eski `admin_panel_kullanim_kilavuzu.md` belgesinin yerini alır.
+> Bu kılavuz, OYNA yönetim ekibi içindir: kurucu (Süper Admin) ve panel erişimi verilen adminler. Kökteki eski `admin_panel_kullanim_kilavuzu.md` belgesinin yerini alır.
 
 ## 1. Giriş
 
@@ -57,18 +57,29 @@ _Şekil: Admin paneli giriş ekranı._
 
 ## 3. Admin Rolleri: kim neyi görür?
 
-Panelde beş rol vardır. Menünde bir modül görünmüyorsa, rolünün o modüle yetkisi yok demektir (yetkisiz grup başlıkları tamamen gizlenir).
+Panelde **iki rol** vardır.
 
-| Rol | Kısaca | Görebildiği alanlar |
+| Rol | Kısaca | Yapabildikleri |
 |---|---|---|
-| **Süper Admin** | Sınırsız | Her şey |
-| **Admin** | Sınırsız | Her şey |
-| **Moderatör** | Operasyon | Komuta Merkezi, Sahalar, Kullanıcılar, Doğrulama ailesi, Tesis Onayları, Silme Kuyruğu, Maçlar, Takımlar, itirazlar, Denetim Günlüğü |
-| **Finans** | Para | Genel Bakış, Finans, SaaS Hesapları, Komisyon dışı finans ekranları, itirazlar, Denetim Günlüğü |
-| **Destek** | Kullanıcı yardımı | Genel Bakış, Komuta Merkezi, Kullanıcılar, Doğrulama ailesi, Maçlar, Skor İhtilafları, Denetim Günlüğü |
+| **Süper Admin** | Platformun sahibi | **Her şey.** Ekip ve yetki yönetimi yalnız onda: admin atama/çıkarma, rol değiştirme, 2FA sıfırlama. |
+| **Admin** | Yetkilendirilmiş yönetici | Günlük operasyonun tamamı: finans, moderasyon, destek, doğrulama, içerik, bildirim, ayarlar, sistem parametreleri. **Ekipler & Yetkiler dışında her şey.** |
 
-- Bildirim/Kampanya, CMS, Ayarlar, Sistem Parametreleri ve **Ekipler & Yetkiler** yalnız Süper Admin ve Admin'e açıktır.
-- Yetkiler yalnız menüyü gizlemekle kalmaz; kritik işlemler sunucu tarafında da rol kontrolünden geçer.
+Tek fark budur: **Ekipler & Yetkiler** modülü yalnız Süper Admin'de görünür. Admin'in menüsünde bu modül hiç yer almaz; sunucu tarafında da (`require_super_admin`) reddedilir — arayüz baypas edilse bile işlem geçmez.
+
+**Süper Admin'e özel işlemler:**
+
+- Yeni admin ekleme, rolünü değiştirme, yetkisini kaldırma
+- Bir adminin 2FA'sını (MFA) sıfırlama
+- Başka bir Süper Admin'in e-posta/telefon bilgisini görme
+
+**Süper Admin hesabının korumaları:**
+
+- Süper Admin'in e-posta ve telefonu diğer adminlere **kapalıdır** — kullanıcı listesinde `•••` görünür, "göster" işlemi reddedilir, kullanıcı aramasıyla da yoklanamaz.
+- Süper Admin'in profil kaydı normal bir Admin tarafından okunamaz, güncellenemez, silinemez.
+- Süper Admin hesabı ana uygulamanın oyuncu tarafında **görünmez**: oyuncu aramasında, arkadaş önerilerinde, "birlikte oynadıkların" listesinde ve rehber eşleştirmesinde çıkmaz.
+- Son Süper Admin düşürülemez veya yetkisi kaldırılamaz (kilitlenme önleme); kimse kendi yetkisini kaldıramaz.
+
+> Yetkiler yalnız menüyü gizlemekle kalmaz; kritik işlemler sunucu tarafında da kontrolden geçer.
 
 **Rol atama:** **Ekipler & Yetkiler** modülünde kullanıcıyı ara → rolü seç → **Ekle/Güncelle**. Yetki kaldırma aynı ekrandan yapılır; **kendi yetkini kaldıramazsın**.
 
@@ -269,7 +280,11 @@ Aynı sayfadaki **Modül Anahtarları** bölümünden kapsam dışı modülleri 
 
 _Şekil: Admin rolü atama._
 
-Kullanıcı ara → rol seç (**Süper Admin / Admin / Moderatör / Finans / Destek**) → **Ekle/Güncelle**. Platform admin yetkisi verme kutusu, hesabı tam admin yapar. **Yetkiyi Kaldır** aynı ekrandadır; güvenlik gereği kendi yetkini kaldıramazsın.
+Bu modül yalnız **Süper Admin**'de görünür.
+
+Kullanıcı ara → rol seç (**Admin** veya **Süper Admin**) → **Ekle/Güncelle**. **Yetkiyi Kaldır** aynı ekrandadır; güvenlik gereği kendi yetkini kaldıramazsın ve son Süper Admin düşürülemez.
+
+Rol vermek kişinin oyuncu/saha sahibi kimliğini **değiştirmez** — yalnız panel yetkisi ekler. Aynı kişi ana uygulamada oyuncu olarak kalmaya devam eder (Süper Admin hariç: o hesap oyuncu tarafında görünmez olur).
 
 ### 8.5 Acil durum anahtarları
 
@@ -313,7 +328,7 @@ Kullanıcı ara → rol seç (**Süper Admin / Admin / Moderatör / Finans / Des
 Panel ayrı bir web sayfasıdır: `/admin.html`. Oyuncu uygulamasındaki menülerden ulaşılmaz.
 
 **2. Menümde Finans (veya başka bir modül) görünmüyor.**
-Rolünün o modüle yetkisi yok. Yetki gerekiyorsa bir Süper Admin, Ekipler & Yetkiler'den rolünü güncellemeli.
+Modül, Ayarlar → Modüller'den kapatılmış olabilir. **Ekipler & Yetkiler** görünmüyorsa sebebi rolündür: o modül yalnız Süper Admin'e açıktır.
 
 **3. Doğrulama fotoğrafı açılmıyor / "süresi doldu" diyor.**
 Kimlik fotoğrafı bağlantıları güvenlik gereği 120 saniyelik üretilir; kartı kapatıp yeniden açman yeterli.

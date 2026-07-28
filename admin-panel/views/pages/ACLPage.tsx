@@ -8,16 +8,25 @@ import { fetchAdminTeam, revokePlatformRole, setPlatformRole, toTurkishAdminErro
 import { PageShell } from '../components/PageShell';
 import { useAdminToast } from '../context/AdminToastContext';
 import { Lock, UserPlus, RefreshCw, UserMinus } from 'lucide-react';
+import { roleLabel, type AdminRole } from '../auth/adminPermissions';
 
-const ROLES = ['SUPER_ADMIN', 'ADMIN', 'MODERATOR', 'FINANCE', 'SUPPORT'] as const;
+/**
+ * İki rol modeli. Bu sayfa yalnız SUPER_ADMIN'e açıktır (adminPermissions →
+ * SUPER_ADMIN_ONLY) ve sunucuda `require_super_admin()` ile de kilitlidir.
+ */
+const ROLES = [
+  { value: 'ADMIN', label: 'Admin', hint: 'Günlük operasyonun tamamı: finans, moderasyon, destek, içerik, ayarlar. Ekip ve yetki yönetimine erişemez.' },
+  { value: 'SUPER_ADMIN', label: 'Süper Admin', hint: 'Her şey — bu sayfa dahil. Yeni admin atayabilir, yetki kaldırabilir, 2FA sıfırlayabilir.' },
+] as const;
+
+type RoleValue = (typeof ROLES)[number]['value'];
 
 export const ACLPage: React.FC = () => {
   const { adminUsers, adminSession } = useAppStore();
   const [team, setTeam] = useState<AdminTeamMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedUserId, setSelectedUserId] = useState('');
-  const [selectedRole, setSelectedRole] = useState<typeof ROLES[number]>('MODERATOR');
-  const [grantAdmin, setGrantAdmin] = useState(false);
+  const [selectedRole, setSelectedRole] = useState<RoleValue>('ADMIN');
   const [revokeTarget, setRevokeTarget] = useState<{ id: string; name: string } | null>(null);
   const { success, error: toastError } = useAdminToast();
 
@@ -43,7 +52,7 @@ export const ACLPage: React.FC = () => {
   const handleAdd = async () => {
     if (!selectedUserId) return;
     try {
-      await setPlatformRole(selectedUserId, selectedRole, grantAdmin);
+      await setPlatformRole(selectedUserId, selectedRole);
       setSelectedUserId('');
       setUserQuery('');
       success('Ekip üyesi güncellendi');
@@ -101,13 +110,12 @@ export const ACLPage: React.FC = () => {
             </button>
           ))}
         </div>
-        <select value={selectedRole} onChange={(e) => setSelectedRole(e.target.value as typeof selectedRole)} className="w-full h-10 bg-black/40 border border-white/10 rounded-xl px-3 text-sm text-white">
-          {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
+        <select value={selectedRole} onChange={(e) => setSelectedRole(e.target.value as RoleValue)} className="w-full h-10 bg-black/40 border border-white/10 rounded-xl px-3 text-sm text-white">
+          {ROLES.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
         </select>
-        <label className="flex items-center gap-2 text-xs text-gray-400">
-          <input type="checkbox" checked={grantAdmin} onChange={(e) => setGrantAdmin(e.target.checked)} />
-          Platform admin yetkisi ver (is_admin + role=ADMIN)
-        </label>
+        <p className="text-[11px] text-gray-500 leading-relaxed">
+          {ROLES.find((r) => r.value === selectedRole)?.hint}
+        </p>
         <button type="button" onClick={() => void handleAdd()} disabled={!selectedUserId} className="flex items-center gap-2 px-5 py-2.5 bg-orange-600 hover:bg-orange-500 disabled:opacity-40 text-white font-bold text-xs rounded-xl transition-colors">
           <UserPlus size={14} /> Ekle / Güncelle
         </button>
@@ -117,7 +125,7 @@ export const ACLPage: React.FC = () => {
         columns={[
           { header: 'İsim', render: (r: AdminTeamMember) => <span className="text-white font-semibold text-sm">{r.userName}</span> },
           { header: 'E-posta', render: (r: AdminTeamMember) => <span className="text-[11px] font-mono text-gray-400">{r.userEmail}</span> },
-          { header: 'Rol', render: (r: AdminTeamMember) => <span className="text-[11px] font-bold text-orange-400">{r.admin_role}</span> },
+          { header: 'Rol', render: (r: AdminTeamMember) => <span className="text-[11px] font-bold text-orange-400">{roleLabel(r.admin_role as AdminRole)}</span> },
           { header: 'Eklenme', render: (r: AdminTeamMember) => <span className="text-[11px] text-gray-500">{new Date(r.created_at).toLocaleDateString('tr-TR')}</span> },
           {
             header: 'Aksiyon',

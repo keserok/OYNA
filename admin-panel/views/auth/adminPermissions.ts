@@ -1,64 +1,43 @@
 import type { GodViewSubRoute } from '../GodViewPanel';
 
-export type AdminRole = 'SUPER_ADMIN' | 'ADMIN' | 'MODERATOR' | 'FINANCE' | 'SUPPORT';
+/**
+ * İki rol modeli:
+ *   SUPER_ADMIN → platformun sahibi. Her şeyi yapar; ekip ve yetki yönetimi
+ *                 (Ekipler & Yetkiler) yalnız onda.
+ *   ADMIN       → panelden yetkilendirilen yönetici. Günlük operasyonun
+ *                 tamamını yürütür; ekip/yetki yönetimine dokunamaz.
+ *
+ * Not: bu dosya yalnız ARAYÜZ görünürlüğünü belirler. Asıl yetki sunucuda,
+ * RPC guard'larında (`require_super_admin`, `is_platform_admin`) zorlanır.
+ */
+export type AdminRole = 'SUPER_ADMIN' | 'ADMIN';
 
-const FULL_ACCESS: AdminRole[] = ['SUPER_ADMIN', 'ADMIN'];
+/** Yalnız SUPER_ADMIN'e açık rotalar. */
+const SUPER_ADMIN_ONLY: readonly GodViewSubRoute[] = ['ACL'];
 
-const ROUTE_ROLES: Partial<Record<GodViewSubRoute, AdminRole[]>> = {
-  GENEL: [...FULL_ACCESS, 'MODERATOR', 'FINANCE', 'SUPPORT'],
-  CONTROL: [...FULL_ACCESS, 'MODERATOR', 'SUPPORT'],
-  SAHALAR: [...FULL_ACCESS, 'MODERATOR'],
-  KULLANICILAR: [...FULL_ACCESS, 'MODERATOR', 'SUPPORT'],
-  KALECİLER: [...FULL_ACCESS, 'MODERATOR', 'SUPPORT'],
-  HAKEMLER: [...FULL_ACCESS, 'MODERATOR', 'SUPPORT'],
-  PENDING_VERIFICATIONS: [...FULL_ACCESS, 'MODERATOR', 'SUPPORT'],
-  PROVIDER_IDENTITIES: [...FULL_ACCESS, 'MODERATOR', 'SUPPORT'],
-  MODERATION: [...FULL_ACCESS, 'MODERATOR'],
-  DELETION_QUEUE: [...FULL_ACCESS, 'MODERATOR'],
-  // Destek Merkezi: SUPPORT rolünün ana çalışma alanı (moderatör de görür).
-  SUPPORT_TICKETS: [...FULL_ACCESS, 'MODERATOR', 'SUPPORT'],
-  OWNER_ACCOUNTS: [...FULL_ACCESS, 'FINANCE'],
-  MATCHES: [...FULL_ACCESS, 'MODERATOR', 'SUPPORT'],
-  TOPLULUKLAR: [...FULL_ACCESS, 'MODERATOR'],
-  TAKIMLAR: [...FULL_ACCESS, 'MODERATOR'],
-  TURNUVALAR: [...FULL_ACCESS, 'MODERATOR'],
-  NOTIFICATIONS: [...FULL_ACCESS],
-  NOTIFICATION_TEMPLATES: [...FULL_ACCESS],
-  VERIFICATION: [...FULL_ACCESS, 'MODERATOR', 'SUPPORT'],
-  PROMO_CODES: [...FULL_ACCESS],
-  FINANCE: [...FULL_ACCESS, 'FINANCE'],
-  DISPUTES: [...FULL_ACCESS, 'MODERATOR', 'FINANCE', 'SUPPORT'],
-  SERVICE_DISPUTES: [...FULL_ACCESS, 'MODERATOR', 'FINANCE'],
-  AUDIT_LOG: [...FULL_ACCESS, 'MODERATOR', 'FINANCE', 'SUPPORT'],
-  CONTENT: [...FULL_ACCESS],
-  SETTINGS: [...FULL_ACCESS],
-  SYSTEM_PARAMS: [...FULL_ACCESS],
-  ACL: FULL_ACCESS,
-};
+/**
+ * Rol okunamadığında ADMIN varsayılır: panel açık kalır, yalnız süper admine
+ * özel ekranlar gizlenir. (Önceki 'SUPPORT' varsayımı, geçici bir ağ hatasında
+ * süper admini bile Destek rolüne düşürüp menülerin çoğunu gizliyordu.)
+ * Panele girişin kendisi ayrıca `resolveAdminSession` tarafından doğrulanır.
+ */
+const DEFAULT_ROLE: AdminRole = 'ADMIN';
 
 export function canAccessRoute(role: AdminRole | undefined, route: GodViewSubRoute): boolean {
-  const r = role || 'SUPPORT';
-  if (FULL_ACCESS.includes(r)) return true;
-  const allowed = ROUTE_ROLES[route];
-  if (!allowed) return false;
-  return allowed.includes(r);
+  const r = role || DEFAULT_ROLE;
+  if (SUPER_ADMIN_ONLY.includes(route)) return r === 'SUPER_ADMIN';
+  return true;
 }
 
 export function firstAllowedRoute(role: AdminRole | undefined): GodViewSubRoute {
-  const routes = Object.keys(ROUTE_ROLES) as GodViewSubRoute[];
-  for (const route of ['GENEL', 'CONTROL', 'KULLANICILAR', 'FINANCE', ...routes] as GodViewSubRoute[]) {
-    if (canAccessRoute(role, route)) return route;
-  }
-  return 'GENEL';
+  // Genel Bakış her iki role de açıktır.
+  return canAccessRoute(role, 'GENEL') ? 'GENEL' : 'CONTROL';
 }
 
 export function roleLabel(role: AdminRole): string {
   const labels: Record<AdminRole, string> = {
     SUPER_ADMIN: 'Süper Admin',
     ADMIN: 'Admin',
-    MODERATOR: 'Moderatör',
-    FINANCE: 'Finans',
-    SUPPORT: 'Destek',
   };
   return labels[role] || role;
 }

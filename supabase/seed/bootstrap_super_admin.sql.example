@@ -10,7 +10,10 @@
 --   2. O e-posta(lar)la uygulamaya EN AZ BİR KEZ giriş yapılmış olmalı
 --      (auth.users + profiles satırı oluşsun).
 --   3. Bu bloğu Supabase SQL Editor'de (veya psql ile) BİR KEZ çalıştır.
---   4. Sonrasında yeni adminler panelden atanır (Ekipler & Yetkiler → SUPER_ADMIN).
+--   4. Sonrasında yeni adminler panelden atanır (Ekipler & Yetkiler).
+--
+-- İki rol modeli: SUPER_ADMIN (ekip yönetimi dahil her şey) ve ADMIN (ekip
+-- yönetimi hariç her şey). Bu şablon yalnız ilk SUPER_ADMIN'i kurar.
 --
 -- Idempotent: tekrar çalıştırmak güvenli (ON CONFLICT + koşullu).
 -- Bu işlem denetime yazılmaz (henüz admin yok); ilk atama sonrası tüm rol
@@ -44,10 +47,15 @@ BEGIN
     VALUES (v_uid, 'SUPER_ADMIN', v_uid)
     ON CONFLICT (user_id) DO UPDATE SET admin_role = 'SUPER_ADMIN';
 
-    -- profiles bayrakları (türetilir)
+    -- profiles: yalnız admin bayrağı. `role` alanına DOKUNULMAZ — kişinin
+    -- oyuncu/saha sahibi kimliği korunur (shared/roles.ts 'SUPER_ADMIN'i
+    -- geçilebilir rol saymaz; yazılırsa ana uygulamada rol geçişi bozulur).
+    -- Süper adminin oyuncu tarafında görünmemesi ayrı bir mekanizmadır:
+    -- keşif RPC'leri SUPER_ADMIN hesaplarını yapısal olarak dışlar.
     UPDATE public.profiles
        SET is_admin = true,
-           role = 'SUPER_ADMIN'
+           is_searchable = false,
+           discoverable_by_phone = false
      WHERE id = v_uid;
 
     v_count := v_count + 1;

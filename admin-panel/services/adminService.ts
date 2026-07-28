@@ -44,7 +44,7 @@ export interface AdminSession {
   email: string;
   name: string;
   isAdmin: boolean;
-  adminRole?: 'SUPER_ADMIN' | 'ADMIN' | 'MODERATOR' | 'FINANCE' | 'SUPPORT';
+  adminRole?: 'SUPER_ADMIN' | 'ADMIN';
 }
 
 export interface AdminDashboardStats {
@@ -358,7 +358,9 @@ export async function fetchAdminRole(userId: string): Promise<AdminSession['admi
     .select('admin_role')
     .eq('user_id', userId)
     .maybeSingle();
-  return (row?.admin_role as AdminSession['adminRole']) || 'SUPPORT';
+  // Rol satırı okunamazsa ADMIN'e düşülür: operasyon ekranları açık kalır,
+  // yalnız süper admine özel olanlar gizlenir.
+  return (row?.admin_role as AdminSession['adminRole']) || 'ADMIN';
 }
 
 export async function resolveAdminSession(userId: string, email: string): Promise<AdminSession> {
@@ -395,7 +397,7 @@ export async function resolveAdminSession(userId: string, email: string): Promis
     email,
     name: (data?.full_name as string) || (data?.name as string) || email,
     isAdmin,
-    adminRole: isAdmin ? await fetchAdminRole(userId).catch(() => 'SUPPORT' as const) : undefined,
+    adminRole: isAdmin ? await fetchAdminRole(userId).catch(() => 'ADMIN' as const) : undefined,
   };
 }
 
@@ -1583,15 +1585,17 @@ export async function fetchAdminTeam(): Promise<AdminTeamMember[]> {
   }));
 }
 
+/**
+ * Ekip üyesine rol atar/günceller. Yalnız SUPER_ADMIN çağırabilir
+ * (`admin_set_platform_role` → `require_super_admin`).
+ */
 export async function setPlatformRole(
   userId: string,
-  adminRole: 'SUPER_ADMIN' | 'ADMIN' | 'MODERATOR' | 'FINANCE' | 'SUPPORT',
-  grantPlatformAdmin = false,
+  adminRole: 'SUPER_ADMIN' | 'ADMIN',
 ): Promise<void> {
   const { error } = await supabase.rpc('admin_set_platform_role', {
     p_user_id: userId,
     p_admin_role: adminRole,
-    p_grant_platform_admin: grantPlatformAdmin,
   });
   if (error) throw new Error(error.message);
 }

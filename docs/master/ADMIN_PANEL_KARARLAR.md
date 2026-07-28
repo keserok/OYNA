@@ -468,3 +468,67 @@
 - Sonra Parti E'nin test/izleme kısmı → Parti C → Parti D (para — onay bekler).
 
 > Her karar uygulandıkça bu belgedeki **Durum** etiketleri ✅'e döner. Para (Parti D) ve hesap/sözleşme gerektiren 🙋 maddeler senin onayını bekler.
+
+---
+
+## 🔄 REVİZYON — 2026-07-28: Beş rol → İki rol
+
+**Bağlam:** Soru 22/23'te tanımlanan beş rollü model (SUPER_ADMIN / ADMIN /
+MODERATOR / FINANCE / SUPPORT) pratikte hiç kullanılmadı — `admin_team_members`
+tablosunda bu üç rolde tek bir satır bile açılmadı. Kurucu kararı: model ikiye
+insin.
+
+**Yeni model:**
+
+| Rol | Kapsam |
+|---|---|
+| `SUPER_ADMIN` | Her şey. **Ekip ve yetki yönetimi yalnız onda.** |
+| `ADMIN` | Ekipler & Yetkiler hariç her şey (finans, moderasyon, destek, içerik, ayarlar dahil). |
+
+**Uygulama** (`20260828000003_admin_iki_rol_modeli.sql`):
+
+1. `admin_team_members` CHECK kısıtı iki değere indi; kalkan rollerdeki satırlar
+   (varsa) `ADMIN`'e devredildi.
+2. `is_moderator()` / `is_finance_admin()` → `is_platform_admin()` diğer adı
+   oldu. İmzalar korundu: 60+ RPC bunları çağırıyor ve SUPER_ADMIN/ADMIN zaten
+   her iki listede de vardı, dolayısıyla çağrı davranışı değişmedi.
+3. `require_admin_role(text[])` sadeleşti — iki rollü modelde liste anlamsız.
+
+**Bu arada kapatılan üç güvenlik açığı** (hepsi mevcut koddaydı):
+
+- `require_admin_role()` ADMIN'i **her listede** erken dönüşle geçiriyordu.
+  Bu yüzden `admin_reset_mfa` (`ARRAY['SUPER_ADMIN']` çağırmasına rağmen) ve
+  `admin_revoke_platform_role` ADMIN'e açıktı: atanan bir admin, süper adminin
+  2FA'sını sıfırlayıp hesabını devralabilir ya da yetkisini kaldırabilirdi.
+  → Yeni `require_super_admin()` eklendi; ikisi de ona bağlandı.
+- `profiles_update` RLS politikasının admin dalında yetki alanı koruması yoktu:
+  bir ADMIN doğrudan `update profiles set role='SUPER_ADMIN' where id=auth.uid()`
+  ile kendini yükseltebiliyordu (`is_super_admin()` `profiles.role`'e de bakar).
+  → Admin dalına `profile_privileges_unchanged` şartı eklendi. Panelin rol yazan
+  tüm akışları SECURITY DEFINER RPC'lerinden geçtiği için ekranlar etkilenmedi.
+- RPC'lerdeki e-posta maskelemesi doğrudan tablo okumasıyla baypas edilebiliyordu.
+  → `profiles` SELECT/UPDATE/DELETE politikaları süper admin satırlarını normal
+  ADMIN'e kapattı.
+
+**Süper admin gizliliği (kurucu kararı):**
+
+- `admin_reveal_pii` süper admin hedefini reddeder (hesabın sahibi hariç).
+- `admin_fetch_profiles` süper admin satırlarında e-posta/telefonu `•••` döndürür
+  ve e-posta araması bu satırları eşleştirmez.
+- Süper admin hesabı oyuncu tarafındaki dört keşif yüzeyinden yapısal olarak
+  çıkarıldı: `search_users`, `get_friend_suggestions`, `get_recent_teammates`,
+  `match_contacts`. Yalnız gizlilik bayrağına güvenilmedi — bayrak ayarlar
+  ekranından geri açılabilir; dışlama fonksiyonun içindedir.
+
+**Ayrıca:** `admin_set_platform_role` artık `profiles.role`'ü ezmiyor, yalnız
+`is_admin` bayrağını işaretliyor. Eskiden rolü `ADMIN`/`SUPER_ADMIN` yazıyor ve
+kişinin oyuncu/saha sahibi kimliğini yok ediyordu (`shared/roles.ts` bu iki
+değeri geçilebilir rol saymadığı için rol geçişi bozuluyordu).
+
+**Panel tarafı:** `AdminRole` iki değere indi; `ACL` rotası `SUPER_ADMIN_ONLY`.
+Rol okunamadığında varsayılan `SUPPORT` → **`ADMIN`** oldu: geçici bir okuma
+hatası süper admini Destek rolüne düşürüp menülerinin çoğunu gizliyordu.
+ACL ekranındaki "Platform admin yetkisi ver" kutusu kaldırıldı — ilgili RPC
+parametresi (`p_grant_platform_admin`) hiçbir zaman okunmuyordu, ölü arayüzdü.
+
+**Durum:** ✅ Uygulandı · canlı (OYNA prod)
