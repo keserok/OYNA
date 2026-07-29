@@ -362,9 +362,13 @@ export interface MatchListing {
 
 export interface PositionSlot {
   id: string;
-  role: string; // 'LB', 'CB', 'CM', etc.
-  x: number;
-  y: number;
+  /** 'LB', 'CB', 'CM'… — POZİSYONSUZ (Rahat) maçta 'OYUNCU'. */
+  role: string;
+  /** Sahadaki yüzde koordinatı. Rahat maçta slot pozisyonsuzdur; sunucu bu
+   *  anahtarları HİÇ yazmaz (uydurma 0,0 basılmaz). Diziliş çizen kod yalnız
+   *  Ciddi/Taktiksel yolda çalışır ve orada değer garantidir. */
+  x?: number;
+  y?: number;
   status: 'OPEN' | 'TAKEN' | 'LOCKED';
   player?: Player; // If taken
   // Tek lobi slot makinesi (P2): satın alma + atama yaşam döngüsü.
