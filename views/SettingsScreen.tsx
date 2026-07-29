@@ -233,7 +233,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
         >
           <ArrowLeft size={20} />
         </button>
-        <h1 className="text-xl font-black text-white">Ayarlar</h1>
+        <h1 className="text-xl font-extrabold text-white">Ayarlar</h1>
       </header>
 
       <main className="p-6 space-y-8">
@@ -249,7 +249,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
               <Repeat size={19} />
             </div>
             <div className="text-left">
-              <span className="text-sm font-black text-white block">Sahada Rolün</span>
+              <span className="text-sm font-extrabold text-white block">Sahada Rolün</span>
               <span className="text-[11px] text-gray-400">
                 {hasMultipleRoles ? 'Rol değiştir veya yeni role başvur' : 'Kaleci, hakem veya tesis için başvur'}
               </span>
@@ -360,7 +360,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
             <div className="pt-1">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs font-bold text-gray-300">Arama Yarıçapı</span>
-                <span className="text-sm font-black text-[#39FF14]">{searchRadius} KM</span>
+                <span className="text-sm font-extrabold text-[#39FF14]">{searchRadius} KM</span>
               </div>
               <input
                 type="range"
@@ -381,7 +381,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
           <section className="bg-[#161B22] border border-white/5 rounded-2xl p-5 space-y-3">
             <div className="flex items-center gap-2 text-[#39FF14]">
               <Download size={16} />
-              <h3 className="text-xs font-black uppercase tracking-wider">Tesis Verilerim (KVKK)</h3>
+              <h3 className="text-xs font-extrabold uppercase tracking-wider">Tesis Verilerim (KVKK)</h3>
             </div>
             <p className="text-[11px] text-gray-400 leading-relaxed">
               Tesisinize ait son 1 yıllık rezervasyon, gider, veresiye ve abonelik kayıtlarını JSON formatında indirin. Tüm verileriniz size aittir.
@@ -514,7 +514,7 @@ const JoinFacilityModal: React.FC<{ onClose: () => void; onJoined: (pitchName: s
     <div className="fixed inset-0 z-[60] bg-black/80 flex items-end justify-center p-4" onClick={onClose} role="presentation">
       <div className="bg-[#161B22] w-full max-w-sm rounded-3xl p-6 pb-safe-6 border border-white/10" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Tesise Katıl">
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-black text-white">Tesise Katıl</h3>
+          <h3 className="text-lg font-extrabold text-white">Tesise Katıl</h3>
           <button type="button" onClick={onClose} aria-label="Kapat"><X size={20} className="text-gray-400" /></button>
         </div>
         <div className="mx-auto w-14 h-14 rounded-2xl bg-indigo-500/15 flex items-center justify-center mb-3"><KeyRound size={26} className="text-indigo-400" /></div>
@@ -525,14 +525,14 @@ const JoinFacilityModal: React.FC<{ onClose: () => void; onJoined: (pitchName: s
           inputMode="numeric"
           placeholder="______"
           autoFocus
-          className="w-full text-center text-3xl font-black tracking-[0.4em] font-mono bg-[#0A0E14] border border-white/10 rounded-2xl p-4 text-white placeholder:text-gray-700"
+          className="w-full text-center text-3xl font-extrabold tracking-[0.4em] font-mono bg-[#0A0E14] border border-white/10 rounded-2xl p-4 text-white placeholder:text-gray-700"
         />
         {error && <p className="text-xs text-red-400 mt-2 text-center">{error}</p>}
         <button
           type="button"
           disabled={busy || clean.length !== 6}
           onClick={submit}
-          className="w-full mt-4 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-black rounded-2xl disabled:opacity-50 flex items-center justify-center gap-2"
+          className="w-full mt-4 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-extrabold rounded-2xl disabled:opacity-50 flex items-center justify-center gap-2"
         >
           {busy ? 'Katılınıyor…' : <><Check size={16} /> Katıl</>}
         </button>

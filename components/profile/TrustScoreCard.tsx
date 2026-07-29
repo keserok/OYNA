@@ -36,10 +36,10 @@ export const TrustScoreCard: React.FC<TrustScoreCardProps> = ({ score, note }) =
                             strokeDashoffset={RING_C * (1 - clamped / 100)}
                         />
                     </svg>
-                    <span className="relative text-base font-black text-white">{clamped}</span>
+                    <span className="relative text-base font-extrabold text-white">{clamped}</span>
                 </div>
                 <div className="flex-1 text-left min-w-0">
-                    <p className="text-[8px] font-black tracking-[0.14em] uppercase text-white/45 mb-1">Güven Puanı</p>
+                    <p className="text-[8px] font-extrabold tracking-[0.14em] uppercase text-white/45 mb-1">Güven Puanı</p>
                     <p className="text-[11px] font-semibold text-white/50 leading-[1.4]">
                         {note || 'Fair-play geçmişin ve katılım disiplininle hesaplanır.'}
                     </p>
@@ -54,7 +54,7 @@ export const TrustScoreCard: React.FC<TrustScoreCardProps> = ({ score, note }) =
                     <div onClick={(e) => e.stopPropagation()} className="w-full max-w-lg bg-bg-main border-t border-white/10 rounded-t-[28px] p-6 pb-10 space-y-4">
                         <div className="w-10 h-1 rounded-full bg-white/20 mx-auto" />
                         <div className="flex items-center justify-between">
-                            <h3 className="text-base font-black text-white uppercase tracking-wider flex items-center gap-2">
+                            <h3 className="text-base font-extrabold text-white uppercase tracking-wider flex items-center gap-2">
                                 <ShieldCheck size={18} className="text-primary" /> Güven Puanı
                             </h3>
                             <button onClick={() => setSheetOpen(false)} aria-label="Kapat" className="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/60">
@@ -73,7 +73,7 @@ export const TrustScoreCard: React.FC<TrustScoreCardProps> = ({ score, note }) =
                                 ['Değerlendirmeleri önemse', 'Maç sonu takım arkadaşlarının oyları puana işlenir.'],
                             ].map(([title, sub]) => (
                                 <div key={title} className="rounded-2xl p-3.5 bg-white/[0.03] border border-white/[0.08]">
-                                    <p className="text-[12px] font-black text-white">{title}</p>
+                                    <p className="text-[12px] font-extrabold text-white">{title}</p>
                                     <p className="text-[11px] text-gray-500 mt-0.5">{sub}</p>
                                 </div>
                             ))}

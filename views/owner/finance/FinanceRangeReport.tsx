@@ -61,7 +61,7 @@ export const FinanceRangeReport: React.FC<{
 
   return (
     <div className="bg-[#161B22] border border-emerald-500/15 rounded-[32px] p-6">
-      <h3 className="text-xs font-black text-gray-400 uppercase mb-1 flex items-center gap-2">
+      <h3 className="text-xs font-extrabold text-gray-400 uppercase mb-1 flex items-center gap-2">
         <Calendar size={16} className="text-emerald-400" /> TARİH ARALIKLI FİNANS RAPORU
       </h3>
       <p className="text-[11px] text-gray-500 mb-4">
@@ -69,7 +69,7 @@ export const FinanceRangeReport: React.FC<{
       </p>
       <div className="grid grid-cols-2 gap-3 mb-3">
         <div>
-          <label className="block text-[10px] font-black text-gray-500 uppercase mb-1">Başlangıç</label>
+          <label className="block text-[10px] font-extrabold text-gray-500 uppercase mb-1">Başlangıç</label>
           <input
             type="date"
             value={reportFrom}
@@ -79,7 +79,7 @@ export const FinanceRangeReport: React.FC<{
           />
         </div>
         <div>
-          <label className="block text-[10px] font-black text-gray-500 uppercase mb-1">Bitiş</label>
+          <label className="block text-[10px] font-extrabold text-gray-500 uppercase mb-1">Bitiş</label>
           <input
             type="date"
             value={reportTo}
@@ -93,7 +93,7 @@ export const FinanceRangeReport: React.FC<{
         type="button"
         onClick={handleRunReport}
         disabled={reportLoading}
-        className="w-full py-3 bg-emerald-500/15 text-emerald-300 border border-emerald-500/25 font-black rounded-2xl text-sm disabled:opacity-50"
+        className="w-full py-3 bg-emerald-500/15 text-emerald-300 border border-emerald-500/25 font-extrabold rounded-2xl text-sm disabled:opacity-50"
       >
         {reportLoading ? 'Rapor hazırlanıyor…' : 'RAPORU GÖSTER'}
       </button>
@@ -102,20 +102,20 @@ export const FinanceRangeReport: React.FC<{
         <div className="mt-5">
           <div className="grid grid-cols-2 gap-2 mb-4">
             <div className="bg-white/5 p-3 rounded-xl border border-white/5">
-              <p className="text-[9px] text-gray-500 font-black uppercase mb-1">Brüt Tahsilat</p>
-              <p className="text-base font-black text-white">{report.totals.gross_captured.toLocaleString('tr-TR')}₺</p>
+              <p className="text-[9px] text-gray-500 font-extrabold uppercase mb-1">Brüt Tahsilat</p>
+              <p className="text-base font-extrabold text-white">{report.totals.gross_captured.toLocaleString('tr-TR')}₺</p>
             </div>
             <div className="bg-white/5 p-3 rounded-xl border border-white/5">
-              <p className="text-[9px] text-gray-500 font-black uppercase mb-1">Net Kazanç</p>
-              <p className="text-base font-black text-emerald-400">{report.totals.owner_net.toLocaleString('tr-TR')}₺</p>
+              <p className="text-[9px] text-gray-500 font-extrabold uppercase mb-1">Net Kazanç</p>
+              <p className="text-base font-extrabold text-emerald-400">{report.totals.owner_net.toLocaleString('tr-TR')}₺</p>
             </div>
             <div className="bg-white/5 p-3 rounded-xl border border-white/5">
-              <p className="text-[9px] text-gray-500 font-black uppercase mb-1">OYNA Komisyonu</p>
-              <p className="text-base font-black text-red-300">−{report.totals.commission.toLocaleString('tr-TR')}₺</p>
+              <p className="text-[9px] text-gray-500 font-extrabold uppercase mb-1">OYNA Komisyonu</p>
+              <p className="text-base font-extrabold text-red-300">−{report.totals.commission.toLocaleString('tr-TR')}₺</p>
             </div>
             <div className="bg-white/5 p-3 rounded-xl border border-white/5">
-              <p className="text-[9px] text-gray-500 font-black uppercase mb-1">İade Edilen</p>
-              <p className="text-base font-black text-yellow-300">{report.totals.refunded.toLocaleString('tr-TR')}₺</p>
+              <p className="text-[9px] text-gray-500 font-extrabold uppercase mb-1">İade Edilen</p>
+              <p className="text-base font-extrabold text-yellow-300">{report.totals.refunded.toLocaleString('tr-TR')}₺</p>
             </div>
           </div>
           <p className="text-[11px] text-gray-500 mb-3">
@@ -126,7 +126,7 @@ export const FinanceRangeReport: React.FC<{
             <div className="overflow-x-auto -mx-2 px-2">
               <table className="w-full text-[11px] min-w-[420px]">
                 <thead>
-                  <tr className="text-gray-500 uppercase text-[9px] font-black border-b border-white/10">
+                  <tr className="text-gray-500 uppercase text-[9px] font-extrabold border-b border-white/10">
                     <th className="text-left py-2 pr-2">Gün</th>
                     <th className="text-right py-2 px-1">Adet</th>
                     <th className="text-right py-2 px-1">Brüt</th>
@@ -158,7 +158,7 @@ export const FinanceRangeReport: React.FC<{
           <button
             type="button"
             onClick={handleDownloadCsv}
-            className="mt-4 w-full py-3 bg-white/5 hover:bg-white/10 text-white border border-white/10 font-black rounded-2xl text-sm flex items-center justify-center gap-2 transition-colors"
+            className="mt-4 w-full py-3 bg-white/5 hover:bg-white/10 text-white border border-white/10 font-extrabold rounded-2xl text-sm flex items-center justify-center gap-2 transition-colors"
           >
             <Download size={16} /> CSV İNDİR
           </button>

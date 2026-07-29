@@ -359,7 +359,7 @@ export const OwnerPricingPolicyModal: React.FC<Props> = ({
         <div className="bg-[#0A0E14] border border-white/8 rounded-2xl p-4">
           <div className="flex items-center gap-2 mb-3">
             <Clock size={14} className="text-[#39FF14]" />
-            <h4 className="text-[11px] font-black uppercase tracking-wider text-white">
+            <h4 className="text-[11px] font-extrabold uppercase tracking-wider text-white">
               {isCourtScoped ? 'Bu Sahanın Açık Saatleri' : 'Tesisin Açık Saatleri'}
             </h4>
           </div>
@@ -372,7 +372,7 @@ export const OwnerPricingPolicyModal: React.FC<Props> = ({
                 {d.closed ? (
                   <span className="text-gray-600 font-bold">Kapalı</span>
                 ) : (
-                  <span className="text-white font-black font-mono">{d.open} – {d.close}</span>
+                  <span className="text-white font-extrabold font-mono">{d.open} – {d.close}</span>
                 )}
               </div>
             ))}
@@ -396,7 +396,7 @@ export const OwnerPricingPolicyModal: React.FC<Props> = ({
                     key={s.key}
                     type="button"
                     onClick={() => setScope(s.key)}
-                    className={`flex-shrink-0 px-4 py-2 rounded-xl text-xs font-black transition-all border ${
+                    className={`flex-shrink-0 px-4 py-2 rounded-xl text-xs font-extrabold transition-all border ${
                       isSel ? 'bg-white/10 text-white border-white/25' : 'bg-[#161B22] text-gray-400 border-white/5'
                     }`}
                   >
@@ -455,7 +455,7 @@ export const OwnerPricingPolicyModal: React.FC<Props> = ({
                     value={tariff.name}
                     disabled={readOnly}
                     onChange={(e) => updateRow(tariff.id, 'name', e.target.value)}
-                    className="bg-transparent text-sm font-black uppercase text-white outline-none w-full"
+                    className="bg-transparent text-sm font-extrabold uppercase text-white outline-none w-full"
                   />
                 </div>
                 {/* GÜNLER — hafta içi/hafta sonu ikilisi kalktı; her gün tek tek
@@ -474,7 +474,7 @@ export const OwnerPricingPolicyModal: React.FC<Props> = ({
                           disabled={readOnly}
                           title={d.long}
                           onClick={() => toggleDay(tariff.id, d.iso)}
-                          className={`flex-1 py-2 rounded-xl text-[11px] font-black border transition-colors disabled:opacity-50 ${
+                          className={`flex-1 py-2 rounded-xl text-[11px] font-extrabold border transition-colors disabled:opacity-50 ${
                             on
                               ? 'bg-[#39FF14]/15 border-[#39FF14]/40 text-[#39FF14]'
                               : 'bg-[#0A0E14] border-white/5 text-gray-600 hover:text-gray-400'
@@ -530,7 +530,7 @@ export const OwnerPricingPolicyModal: React.FC<Props> = ({
                         type="button"
                         disabled={readOnly}
                         onClick={() => updateRow(tariff.id, 'slotMinutes', m)}
-                        className={`flex-1 py-2.5 rounded-xl text-[12px] font-black transition-colors disabled:opacity-50 ${
+                        className={`flex-1 py-2.5 rounded-xl text-[12px] font-extrabold transition-colors disabled:opacity-50 ${
                           tariff.slotMinutes === m
                             ? 'bg-[#39FF14] text-[#0A0E14]'
                             : 'bg-[#0A0E14] border border-white/8 text-gray-400 hover:text-white'
@@ -556,7 +556,7 @@ export const OwnerPricingPolicyModal: React.FC<Props> = ({
                       value={tariff.price}
                       disabled={readOnly}
                       onChange={(e) => updateRow(tariff.id, 'price', parseInt(e.target.value, 10) || 0)}
-                      className="w-full bg-[#0A0E14] border border-white/5 p-3 rounded-xl text-white text-lg font-black outline-none"
+                      className="w-full bg-[#0A0E14] border border-white/5 p-3 rounded-xl text-white text-lg font-extrabold outline-none"
                     />
                   </div>
                   <div className="space-y-2">
@@ -569,7 +569,7 @@ export const OwnerPricingPolicyModal: React.FC<Props> = ({
                       disabled={readOnly}
                       onChange={(e) => updateRow(tariff.id, 'deposit', parseInt(e.target.value, 10) || 0)}
                       onBlur={() => clampRowDeposit(tariff.id)}
-                      className="w-full bg-[#0A0E14] border border-white/5 p-3 rounded-xl text-white text-lg font-black outline-none"
+                      className="w-full bg-[#0A0E14] border border-white/5 p-3 rounded-xl text-white text-lg font-extrabold outline-none"
                     />
                   </div>
                 </div>

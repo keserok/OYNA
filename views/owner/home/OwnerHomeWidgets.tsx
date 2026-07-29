@@ -74,22 +74,22 @@ export const MatchCountdownItem: React.FC<{
                         {isPending ? (timerActive ? 'Maçın onaylanması için kalan süre' : 'Otomatik onay bekleniyor') : 'Talep Durumu'}
                     </span>
                     {timerActive ? (
-                        <span className="text-sm font-black text-orange-400 flex items-center gap-1 tabular-nums">
+                        <span className="text-sm font-extrabold text-orange-400 flex items-center gap-1 tabular-nums">
                             <Clock size={14} className="animate-pulse" />
                             {minutes.toString().padStart(2, '0')}:{seconds.toString().padStart(2, '0')}
                         </span>
                     ) : isApproved ? (
-                        <span className="text-sm font-black text-emerald-400 flex items-center gap-1">
+                        <span className="text-sm font-extrabold text-emerald-400 flex items-center gap-1">
                             <Check size={14} /> Onaylandı
                         </span>
                     ) : isRejected ? (
-                        <span className="text-sm font-black text-red-400 flex items-center gap-1">
+                        <span className="text-sm font-extrabold text-red-400 flex items-center gap-1">
                             <X size={14} /> Reddedildi
                         </span>
                     ) : (
                         // FAZ1: istemci sayacı bitti ama talep hâlâ PENDING — sunucu otomatik onayını
                         // bekliyor. Eskiden yanlışlıkla "Reddedildi" gösteriliyordu (para kaybı).
-                        <span className="text-sm font-black text-blue-300 flex items-center gap-1">
+                        <span className="text-sm font-extrabold text-blue-300 flex items-center gap-1">
                             <Clock size={14} className="animate-pulse" /> Onay bekleniyor
                         </span>
                     )}
@@ -183,7 +183,7 @@ export const PitchOccupancyGrid: React.FC<{
                     <div className="min-w-0 flex-1 px-3 py-2 rounded-xl bg-white/5 border border-white/10 animate-in fade-in duration-200">
                         <div className="flex items-center justify-between gap-2">
                             <span className="text-xs font-bold text-white truncate">{selected.label}</span>
-                            <span className={`shrink-0 text-[10px] font-black px-2 py-0.5 rounded-md ${selected.type === 'ABONMAN' ? 'bg-blue-500/20 text-blue-300' : selected.type === 'GÜNLÜK' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-white/10 text-gray-400'}`}>{selected.type}</span>
+                            <span className={`shrink-0 text-[10px] font-extrabold px-2 py-0.5 rounded-md ${selected.type === 'ABONMAN' ? 'bg-blue-500/20 text-blue-300' : selected.type === 'GÜNLÜK' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-white/10 text-gray-400'}`}>{selected.type}</span>
                         </div>
                         <p className="mt-1 text-[11px] font-bold text-gray-300 truncate">
                             <span className="text-gray-500 font-medium">Süre: </span>{selected.sure} dakika
@@ -201,7 +201,7 @@ export const PitchOccupancyGrid: React.FC<{
                 <button
                     type="button"
                     onClick={() => { setShowAll((v) => !v); setSelected(null); }}
-                    className={`shrink-0 px-2.5 py-1.5 rounded-full border text-[9px] font-black uppercase tracking-wider transition-colors ${showAll ? 'bg-white/10 text-white border-white/20' : 'bg-[#0A0E14] text-gray-500 border-white/10 hover:text-gray-300'}`}
+                    className={`shrink-0 px-2.5 py-1.5 rounded-full border text-[9px] font-extrabold uppercase tracking-wider transition-colors ${showAll ? 'bg-white/10 text-white border-white/20' : 'bg-[#0A0E14] text-gray-500 border-white/10 hover:text-gray-300'}`}
                 >
                     {showAll ? 'Tüm saatler' : 'Aktif saatler'}
                 </button>
@@ -228,7 +228,7 @@ export const PitchOccupancyGrid: React.FC<{
                                     return (
                                         <span
                                             key={dk}
-                                            className="absolute bottom-0 text-[10px] font-black text-gray-500 tabular-nums leading-none"
+                                            className="absolute bottom-0 text-[10px] font-extrabold text-gray-500 tabular-nums leading-none"
                                             // Etiket, temsil ettiği ANIN tam üstünde durur; dilim de
                                             // aynı noktadan başlar. Sıfır noktasında sola taşmasın diye
                                             // yalnız ilk etiket ortalanmaz.
@@ -247,7 +247,7 @@ export const PitchOccupancyGrid: React.FC<{
                                 <div key={row.courtId} className="flex gap-[2px] items-stretch group">
                                     <div className={`${nameColCls} flex flex-col justify-center pr-2`}>
                                         <p className="text-[11px] font-bold text-gray-300 truncate leading-tight group-hover:text-white transition-colors">{row.courtName}</p>
-                                        <p className={`text-[9px] font-black tabular-nums leading-tight ${row.occupancyPercent >= 50 ? 'text-emerald-400' : row.occupancyPercent > 0 ? 'text-gray-400' : 'text-gray-600'}`}>%{row.occupancyPercent}</p>
+                                        <p className={`text-[9px] font-extrabold tabular-nums leading-tight ${row.occupancyPercent >= 50 ? 'text-emerald-400' : row.occupancyPercent > 0 ? 'text-gray-400' : 'text-gray-600'}`}>%{row.occupancyPercent}</p>
                                     </div>
                                     <div
                                         className={`${seritCls} relative rounded-[4px] bg-white/[0.015]`}

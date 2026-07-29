@@ -94,7 +94,7 @@ export const FinanceReportPanel: React.FC = () => {
             <CalendarRange size={18} className="text-cyan-400" />
           </div>
           <div className="min-w-0">
-            <h3 className="text-sm font-black text-white">Tarih Aralıklı Finans Raporu</h3>
+            <h3 className="text-sm font-extrabold text-white">Tarih Aralıklı Finans Raporu</h3>
             <p className="text-[11px] text-gray-500 mt-0.5 leading-relaxed">
               Seçtiğiniz aralıktaki tüm platform tahsilatlarını gün-gün analiz edin, muhasebe/vergi için CSV indirin.
             </p>
@@ -126,7 +126,7 @@ export const FinanceReportPanel: React.FC = () => {
             type="button"
             onClick={() => void run()}
             disabled={loading}
-            className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-xs font-black bg-cyan-500/15 text-cyan-300 border border-cyan-500/25 hover:bg-cyan-500/25 disabled:opacity-40"
+            className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-xs font-extrabold bg-cyan-500/15 text-cyan-300 border border-cyan-500/25 hover:bg-cyan-500/25 disabled:opacity-40"
           >
             <BarChart3 size={14} /> {loading ? 'Hazırlanıyor…' : 'Raporu Göster'}
           </button>
@@ -140,7 +140,7 @@ export const FinanceReportPanel: React.FC = () => {
             {summaryCards.map((c) => (
               <div key={c.label} className="bg-[#161B22]/60 border border-white/[0.06] rounded-xl p-4">
                 <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">{c.label}</p>
-                <p className={`text-base font-black mt-1 ${c.tone}`}>{c.value}</p>
+                <p className={`text-base font-extrabold mt-1 ${c.tone}`}>{c.value}</p>
               </div>
             ))}
           </section>
@@ -149,7 +149,7 @@ export const FinanceReportPanel: React.FC = () => {
           <section className="bg-[#161B22]/60 border border-white/[0.06] rounded-2xl p-5">
             <div className="flex items-center justify-between gap-3 mb-4">
               <div className="min-w-0">
-                <h3 className="text-sm font-black text-white">Gün Kırılımı</h3>
+                <h3 className="text-sm font-extrabold text-white">Gün Kırılımı</h3>
                 <p className="text-[11px] text-gray-500 mt-0.5">
                   {report.from} – {report.to} · {report.totals.count} ödeme
                 </p>
@@ -169,7 +169,7 @@ export const FinanceReportPanel: React.FC = () => {
               <div className="overflow-x-auto">
                 <table className="w-full text-[11px] min-w-[560px]">
                   <thead>
-                    <tr className="text-gray-500 uppercase text-[9px] font-black border-b border-white/10">
+                    <tr className="text-gray-500 uppercase text-[9px] font-extrabold border-b border-white/10">
                       <th className="text-left py-2 pr-2">Gün</th>
                       <th className="text-right py-2 px-2">Adet</th>
                       <th className="text-right py-2 px-2">Brüt</th>
@@ -193,7 +193,7 @@ export const FinanceReportPanel: React.FC = () => {
                     ))}
                   </tbody>
                   <tfoot>
-                    <tr className="border-t border-white/15 font-black">
+                    <tr className="border-t border-white/15 font-extrabold">
                       <td className="text-left py-2 pr-2 text-white">TOPLAM</td>
                       <td className="text-right py-2 px-2 text-gray-300">{report.totals.count}</td>
                       <td className="text-right py-2 px-2 text-white">{fmtTry(report.totals.gross_captured)}</td>

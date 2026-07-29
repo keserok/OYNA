@@ -134,7 +134,7 @@ const FriendProfileSheet: React.FC<FriendProfileSheetProps> = ({
               <Avatar name={friend.full_name} src={friend.avatar_url} size="xl" online={online} />
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1.5">
-                  <h2 className="text-lg font-black truncate">{friend.full_name}</h2>
+                  <h2 className="text-lg font-extrabold truncate">{friend.full_name}</h2>
                   {isFav && <Star size={14} className="text-amber-400 fill-amber-400 shrink-0" />}
                 </div>
                 <div className="text-xs text-white/40">
@@ -166,7 +166,7 @@ const FriendProfileSheet: React.FC<FriendProfileSheetProps> = ({
             {/* BİRİNCİL: Maça Çağır (D23 — çekirdek döngü) */}
             <button
               onClick={() => setPanel('MATCH_PICKER')}
-              className="mt-5 w-full min-h-[52px] rounded-2xl bg-[#39FF14] text-[#0A0E14] font-black text-sm flex items-center justify-center gap-2 active:scale-[0.98]"
+              className="mt-5 w-full min-h-[52px] rounded-2xl bg-[#39FF14] text-[#0A0E14] font-extrabold text-sm flex items-center justify-center gap-2 active:scale-[0.98]"
             >
               ⚽ MAÇA ÇAĞIR
             </button>
@@ -206,7 +206,7 @@ const FriendProfileSheet: React.FC<FriendProfileSheetProps> = ({
             <button onClick={() => setPanel('NONE')} className="flex items-center gap-1 text-xs font-bold text-white/50 min-h-[44px]">
               <ChevronLeft size={14} /> Profil
             </button>
-            <h3 className="text-base font-black mb-3">Hangi maça çağırıyorsun?</h3>
+            <h3 className="text-base font-extrabold mb-3">Hangi maça çağırıyorsun?</h3>
             {upcoming.length === 0 ? (
               <p className="text-sm text-white/40 py-6 text-center">
                 Yaklaşan maçın yok. Önce Top Oyna'dan bir maç kur veya katıl.
@@ -234,7 +234,7 @@ const FriendProfileSheet: React.FC<FriendProfileSheetProps> = ({
                       </div>
                       {busy === m.id
                         ? <Loader2 size={16} className="animate-spin text-[#39FF14]" />
-                        : <span className="text-[11px] font-black text-[#39FF14]">ÇAĞIR</span>}
+                        : <span className="text-[11px] font-extrabold text-[#39FF14]">ÇAĞIR</span>}
                     </button>
                   );
                 })}
@@ -249,7 +249,7 @@ const FriendProfileSheet: React.FC<FriendProfileSheetProps> = ({
             <button onClick={() => setPanel('NONE')} className="flex items-center gap-1 text-xs font-bold text-white/50 min-h-[44px]">
               <ChevronLeft size={14} /> Profil
             </button>
-            <h3 className="text-base font-black mb-3">Listelere ekle</h3>
+            <h3 className="text-base font-extrabold mb-3">Listelere ekle</h3>
             {lists.length === 0 ? (
               <p className="text-sm text-white/40 py-4">
                 Henüz listen yok. Arkadaşlar sekmesindeki “+ Yeni” çipiyle oluşturabilirsin.
@@ -312,7 +312,7 @@ const FriendProfileSheet: React.FC<FriendProfileSheetProps> = ({
             <button onClick={() => setPanel('OVERFLOW')} className="flex items-center gap-1 text-xs font-bold text-white/50 min-h-[44px]">
               <ChevronLeft size={14} /> Geri
             </button>
-            <h3 className="text-base font-black mb-3">Neden şikâyet ediyorsun?</h3>
+            <h3 className="text-base font-extrabold mb-3">Neden şikâyet ediyorsun?</h3>
             <div className="space-y-2">
               {REPORT_REASONS.map(r => (
                 <button
@@ -340,7 +340,7 @@ const FriendProfileSheet: React.FC<FriendProfileSheetProps> = ({
             <button
               disabled={!reportReason || busy === 'report'}
               onClick={doReport}
-              className="mt-3 w-full min-h-[48px] rounded-2xl bg-[#FF4D4D] text-white font-black text-sm disabled:opacity-40 active:scale-[0.98]"
+              className="mt-3 w-full min-h-[48px] rounded-2xl bg-[#FF4D4D] text-white font-extrabold text-sm disabled:opacity-40 active:scale-[0.98]"
             >
               {busy === 'report' ? 'Gönderiliyor…' : 'Şikâyeti Gönder'}
             </button>

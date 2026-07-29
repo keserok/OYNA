@@ -135,9 +135,9 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onRefresh, onNavig
                 <div className="absolute -right-8 -top-8 w-40 h-40 rounded-full bg-[#39FF14]/10 blur-3xl pointer-events-none" />
                 <div className="relative flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
                     <div>
-                        <p className="text-[11px] font-black text-[#39FF14] uppercase tracking-[0.2em] mb-1">★ Kuzey Yıldızı — Başarılı Maç</p>
+                        <p className="text-[11px] font-extrabold text-[#39FF14] uppercase tracking-[0.2em] mb-1">★ Kuzey Yıldızı — Başarılı Maç</p>
                         <div className="flex items-end gap-3">
-                            <span className="text-5xl md:text-6xl font-black text-white leading-none tabular-nums">
+                            <span className="text-5xl md:text-6xl font-extrabold text-white leading-none tabular-nums">
                                 {Number(stats?.successful_matches ?? 0).toLocaleString('tr')}
                             </span>
                             <span className="text-xs text-gray-400 mb-1.5 max-w-[220px] leading-snug">
@@ -148,11 +148,11 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onRefresh, onNavig
                     <div className="flex gap-5 text-right shrink-0">
                         <div>
                             <p className="text-[10px] text-gray-500 uppercase font-bold">Tamamlanan</p>
-                            <p className="text-xl font-black text-white tabular-nums">{Number(stats?.completed_matches ?? 0).toLocaleString('tr')}</p>
+                            <p className="text-xl font-extrabold text-white tabular-nums">{Number(stats?.completed_matches ?? 0).toLocaleString('tr')}</p>
                         </div>
                         <div>
                             <p className="text-[10px] text-gray-500 uppercase font-bold">Toplam Maç</p>
-                            <p className="text-xl font-black text-gray-300 tabular-nums">{Number(stats?.total_matches ?? recentMatches.length).toLocaleString('tr')}</p>
+                            <p className="text-xl font-extrabold text-gray-300 tabular-nums">{Number(stats?.total_matches ?? recentMatches.length).toLocaleString('tr')}</p>
                         </div>
                     </div>
                 </div>
@@ -167,15 +167,15 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onRefresh, onNavig
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="bg-purple-500/10 border border-purple-500/20 rounded-2xl p-4">
-                    <p className="text-[10px] font-black text-purple-400 uppercase tracking-widest mb-1">Para Çekme Kuyruğu</p>
+                    <p className="text-[10px] font-extrabold text-purple-400 uppercase tracking-widest mb-1">Para Çekme Kuyruğu</p>
                     <p className="text-2xl font-bold text-white">{Number(stats?.pending_withdrawals ?? 0)}</p>
                 </div>
                 <div className="bg-cyan-500/10 border border-cyan-500/20 rounded-2xl p-4">
-                    <p className="text-[10px] font-black text-cyan-400 uppercase tracking-widest mb-1">Aktif Hizmet Sağlayıcı</p>
+                    <p className="text-[10px] font-extrabold text-cyan-400 uppercase tracking-widest mb-1">Aktif Hizmet Sağlayıcı</p>
                     <p className="text-2xl font-bold text-white">{Number(stats?.active_goalkeepers ?? 0) + Number(stats?.active_referees ?? 0)}</p>
                 </div>
                 <div className="bg-orange-500/10 border border-orange-500/20 rounded-2xl p-4">
-                    <p className="text-[10px] font-black text-orange-400 uppercase tracking-widest mb-1">Banlı Kullanıcı</p>
+                    <p className="text-[10px] font-extrabold text-orange-400 uppercase tracking-widest mb-1">Banlı Kullanıcı</p>
                     <p className="text-2xl font-bold text-white">{Number(stats?.banned_users ?? 0)}</p>
                 </div>
             </div>
@@ -184,7 +184,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onRefresh, onNavig
                 <div className="lg:col-span-2 bg-[#161B22]/60 backdrop-blur-md border border-white/5 rounded-2xl p-5 shadow-xl">
                     <div className="flex items-center gap-2 mb-6">
                         <TrendingUp size={16} className="text-[#39FF14]" />
-                        <h3 className="text-xs font-black uppercase tracking-widest text-white">Gelir Trendi (Rezervasyon)</h3>
+                        <h3 className="text-xs font-extrabold uppercase tracking-widest text-white">Gelir Trendi (Rezervasyon)</h3>
                     </div>
                     {financeLoading ? (
                         <div className="h-64 flex items-center justify-center">
@@ -221,22 +221,22 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onRefresh, onNavig
                 <div className="bg-[#161B22]/60 backdrop-blur-md border border-white/5 rounded-2xl p-5 flex flex-col shadow-xl">
                     <div className="flex items-center gap-2 mb-6">
                         <Activity size={16} className="text-blue-400" />
-                        <h3 className="text-xs font-black uppercase tracking-widest text-white">Operasyon Kuyruğu</h3>
+                        <h3 className="text-xs font-extrabold uppercase tracking-widest text-white">Operasyon Kuyruğu</h3>
                     </div>
                     <div className="space-y-4 flex-1">
                         <div className="bg-black/20 border border-white/5 rounded-xl p-3 flex items-center justify-between">
                             <span className="text-[10px] font-bold text-gray-400 uppercase">EKSİK KADRO</span>
-                            <span className="text-[10px] font-black text-yellow-400">{missingAlerts}</span>
+                            <span className="text-[10px] font-extrabold text-yellow-400">{missingAlerts}</span>
                         </div>
                         <div className="bg-black/20 border border-white/5 rounded-xl p-3 flex items-center justify-between">
                             <span className="text-[10px] font-bold text-gray-400 uppercase">BAKIM MODU</span>
-                            <span className={`text-[9px] font-black px-2 py-1 rounded border uppercase ${appSettings.maintenanceMode ? 'bg-red-500/20 text-red-400 border-red-500/30' : 'bg-green-500/20 text-[#39FF14] border-[#39FF14]/30'}`}>
+                            <span className={`text-[9px] font-extrabold px-2 py-1 rounded border uppercase ${appSettings.maintenanceMode ? 'bg-red-500/20 text-red-400 border-red-500/30' : 'bg-green-500/20 text-[#39FF14] border-[#39FF14]/30'}`}>
                                 {appSettings.maintenanceMode ? 'AKTİF' : 'PASİF'}
                             </span>
                         </div>
                         <div className="bg-black/20 border border-white/5 rounded-xl p-3 flex items-center justify-between">
                             <span className="text-[10px] font-bold text-gray-400 uppercase">KOMİSYON</span>
-                            <span className="text-[10px] font-black text-yellow-400">%{commissionRate}</span>
+                            <span className="text-[10px] font-extrabold text-yellow-400">%{commissionRate}</span>
                         </div>
                     </div>
                 </div>
@@ -245,7 +245,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onRefresh, onNavig
             <div>
                 <div className="flex items-center gap-2 mb-3 px-1">
                     <Play size={14} className="text-red-500" />
-                    <h3 className="text-xs font-black uppercase tracking-widest text-white">Son Maçlar</h3>
+                    <h3 className="text-xs font-extrabold uppercase tracking-widest text-white">Son Maçlar</h3>
                 </div>
                 <DataTable
                     columns={[
@@ -254,7 +254,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onRefresh, onNavig
                         { header: 'ZAMAN', key: 'time', className: 'font-mono' },
                         { header: 'KİŞİ BAŞI ₺', key: 'rev', className: 'text-green-400 font-mono font-bold' },
                         { header: 'DURUM', render: (row) => (
-                            <span className={`text-[9px] font-black px-2 py-1 rounded border uppercase ${row.status === 'EKSİK KADRO' ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/30' : 'bg-green-500/10 text-[#39FF14] border-[#39FF14]/30'}`}>
+                            <span className={`text-[9px] font-extrabold px-2 py-1 rounded border uppercase ${row.status === 'EKSİK KADRO' ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/30' : 'bg-green-500/10 text-[#39FF14] border-[#39FF14]/30'}`}>
                                 {row.status}
                             </span>
                         )},

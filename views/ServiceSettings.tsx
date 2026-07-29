@@ -184,7 +184,7 @@ const ServiceSettings: React.FC<ServiceSettingsProps> = ({ role, onBack, onLogou
               {icon}
             </div>
             <div className="text-left">
-              <p className="font-black text-sm text-white">{title}</p>
+              <p className="font-extrabold text-sm text-white">{title}</p>
               <p className="text-[10px] text-gray-500 font-medium">{subtitle}</p>
             </div>
           </div>
@@ -222,7 +222,7 @@ const ServiceSettings: React.FC<ServiceSettingsProps> = ({ role, onBack, onLogou
           <ArrowLeft size={20} />
         </button>
         <div>
-          <h1 className="text-lg font-black">Ayarlar</h1>
+          <h1 className="text-lg font-extrabold">Ayarlar</h1>
           <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: accentColor }}>
             {isRef ? 'Hakem' : 'Kaleci'} Hesabı
           </p>
@@ -238,18 +238,18 @@ const ServiceSettings: React.FC<ServiceSettingsProps> = ({ role, onBack, onLogou
           className={`rounded-[24px] p-5 flex items-center gap-4 border border-white/8`}
           style={{ background: accentBg }}
         >
-          <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-black font-black text-xl"
+          <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-black font-extrabold text-xl"
             style={{ background: accentColor }}>
             {isRef ? '⚖️' : '🧤'}
           </div>
           <div className="flex-1">
-            <p className="font-black">{me?.name || (isRef ? 'Hakem' : 'Kaleci')}</p>
+            <p className="font-extrabold">{me?.name || (isRef ? 'Hakem' : 'Kaleci')}</p>
             <p className="text-[10px] text-gray-400 font-medium">
               {isRef ? 'Hakem' : 'Kaleci'} Hesabı
             </p>
             <div className="flex items-center gap-1 mt-1">
               <Star size={10} className="text-yellow-400" fill="currentColor" />
-              <span className="text-[10px] font-black">{typeof me?.rating === 'number' ? me.rating.toFixed(1) : '—'}</span>
+              <span className="text-[10px] font-extrabold">{typeof me?.rating === 'number' ? me.rating.toFixed(1) : '—'}</span>
               <span className="text-[10px] text-gray-500">• {me?.matchCount ?? 0} maç</span>
             </div>
           </div>
@@ -269,7 +269,7 @@ const ServiceSettings: React.FC<ServiceSettingsProps> = ({ role, onBack, onLogou
               <RefreshCw size={22} />
             </div>
             <div className="flex-1">
-              <p className="font-black text-white text-sm">Oyuncu Moduna Geç</p>
+              <p className="font-extrabold text-white text-sm">Oyuncu Moduna Geç</p>
               <p className="text-[10px] text-blue-300/70 font-medium mt-0.5">Oyuncu arayüzüne / maçlara geç</p>
             </div>
             <ChevronRight size={18} className="text-blue-400 shrink-0" />
@@ -371,7 +371,7 @@ const ServiceSettings: React.FC<ServiceSettingsProps> = ({ role, onBack, onLogou
               <button
                 onClick={handlePasswordChange}
                 disabled={isSavingPassword || !newPassword || !confirmPassword}
-                className="w-full py-3 rounded-2xl font-black text-sm text-white disabled:opacity-50"
+                className="w-full py-3 rounded-2xl font-extrabold text-sm text-white disabled:opacity-50"
                 style={{ background: '#3b82f6' }}
               >
                 {isSavingPassword ? 'Güncelleniyor...' : 'Şifreyi Güncelle'}
@@ -433,11 +433,11 @@ const ServiceSettings: React.FC<ServiceSettingsProps> = ({ role, onBack, onLogou
               <p className="font-bold">Çıkış yapmak istediğinden emin misin?</p>
               <div className="flex gap-3">
                 <button onClick={() => setConfirmLogout(false)}
-                  className="flex-1 py-3 rounded-2xl border border-white/10 font-black text-sm text-gray-400">
+                  className="flex-1 py-3 rounded-2xl border border-white/10 font-extrabold text-sm text-gray-400">
                   İPTAL
                 </button>
                 <button onClick={onLogout}
-                  className="flex-1 py-3 rounded-2xl bg-red-500 font-black text-sm text-white">
+                  className="flex-1 py-3 rounded-2xl bg-red-500 font-extrabold text-sm text-white">
                   ÇIKIŞ YAP
                 </button>
               </div>
@@ -445,7 +445,7 @@ const ServiceSettings: React.FC<ServiceSettingsProps> = ({ role, onBack, onLogou
           ) : (
             <button
               onClick={() => setConfirmLogout(true)}
-              className="w-full py-4 rounded-[24px] border border-red-500/20 flex items-center justify-center gap-3 text-red-400 font-black text-sm"
+              className="w-full py-4 rounded-[24px] border border-red-500/20 flex items-center justify-center gap-3 text-red-400 font-extrabold text-sm"
               style={{ background: 'rgba(239,68,68,0.06)' }}
             >
               <LogOut size={18} />

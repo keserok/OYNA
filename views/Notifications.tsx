@@ -324,12 +324,12 @@ const Notifications: React.FC<NotificationsProps> = ({ onBack, role }) => {
 
           <div className="flex-1">
             <div className="flex items-center gap-2">
-              <h1 className="text-xl font-black text-white tracking-tight">Bildirimler</h1>
+              <h1 className="text-xl font-extrabold text-white tracking-tight">Bildirimler</h1>
               {unread > 0 && (
                 <motion.span
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
-                  className="w-5 h-5 rounded-full text-[10px] font-black text-black flex items-center justify-center"
+                  className="w-5 h-5 rounded-full text-[10px] font-extrabold text-black flex items-center justify-center"
                   style={{ background: accentColor }}
                 >
                   {unread}
@@ -342,7 +342,7 @@ const Notifications: React.FC<NotificationsProps> = ({ onBack, role }) => {
             <motion.button
               whileTap={{ scale: 0.95 }}
               onClick={handleMarkAll}
-              className="px-3 py-2 rounded-xl text-[10px] font-black border border-white/10 text-gray-400"
+              className="px-3 py-2 rounded-xl text-[10px] font-extrabold border border-white/10 text-gray-400"
               style={{ background: 'rgba(255,255,255,0.04)' }}
             >
               Tümünü Oku
@@ -359,7 +359,7 @@ const Notifications: React.FC<NotificationsProps> = ({ onBack, role }) => {
                 <button
                   key={c.key}
                   onClick={() => setActiveCat(c.key)}
-                  className="px-3.5 py-1.5 rounded-full text-[11px] font-black whitespace-nowrap transition-all border"
+                  className="px-3.5 py-1.5 rounded-full text-[11px] font-extrabold whitespace-nowrap transition-all border"
                   style={{
                     background: active ? accentColor : 'rgba(255,255,255,0.04)',
                     color: active ? '#000' : 'rgba(255,255,255,0.6)',
@@ -388,12 +388,12 @@ const Notifications: React.FC<NotificationsProps> = ({ onBack, role }) => {
               >
                 <AlertTriangle size={32} style={{ color: '#ef4444' }} />
               </div>
-              <h3 className="text-lg font-black text-white mb-1">Bir şeyler ters gitti</h3>
+              <h3 className="text-lg font-extrabold text-white mb-1">Bir şeyler ters gitti</h3>
               <p className="text-sm text-gray-500 mb-5">{error}</p>
               <motion.button
                 whileTap={{ scale: 0.95 }}
                 onClick={load}
-                className="px-5 py-2.5 rounded-xl text-xs font-black text-black"
+                className="px-5 py-2.5 rounded-xl text-xs font-extrabold text-black"
                 style={{ background: accentColor }}
               >
                 Tekrar Dene
@@ -412,7 +412,7 @@ const Notifications: React.FC<NotificationsProps> = ({ onBack, role }) => {
               >
                 <Bell size={32} style={{ color: accentColor }} />
               </div>
-              <h3 className="text-lg font-black text-white mb-1">Henüz bildirimin yok</h3>
+              <h3 className="text-lg font-extrabold text-white mb-1">Henüz bildirimin yok</h3>
               <p className="text-sm text-gray-500">Yeni bir şey olduğunda burada göreceksin.</p>
             </motion.div>
           ) : visibleNotifs.length === 0 ? (
@@ -463,7 +463,7 @@ const Notifications: React.FC<NotificationsProps> = ({ onBack, role }) => {
                         {/* Content */}
                         <div className="flex-1 min-w-0">
                           <div className="flex items-start justify-between gap-2 mb-1 pr-6">
-                            <h4 className="font-black text-white text-sm leading-snug">{n.title}</h4>
+                            <h4 className="font-extrabold text-white text-sm leading-snug">{n.title}</h4>
                             <div className="flex items-center gap-2 shrink-0 mt-0.5">
                               {isUnread && (
                                 <div
@@ -477,11 +477,11 @@ const Notifications: React.FC<NotificationsProps> = ({ onBack, role }) => {
                           {n.body && <p className="text-[11px] text-gray-400 leading-relaxed">{n.body}</p>}
 
                           {isInvite ? (
-                            <div className="mt-3 flex items-center gap-1 text-[11px] font-black uppercase text-[#39FF14] bg-[#39FF14]/10 w-max px-3 py-1.5 rounded-xl border border-[#39FF14]/20">
+                            <div className="mt-3 flex items-center gap-1 text-[11px] font-extrabold uppercase text-[#39FF14] bg-[#39FF14]/10 w-max px-3 py-1.5 rounded-xl border border-[#39FF14]/20">
                               Daveti İncele <ChevronRight size={14} />
                             </div>
                           ) : (n.deepLink || n.matchId) ? (
-                            <div className="mt-2 flex items-center gap-1 text-[11px] font-black" style={{ color }}>
+                            <div className="mt-2 flex items-center gap-1 text-[11px] font-extrabold" style={{ color }}>
                               Görüntüle <ChevronRight size={12} />
                             </div>
                           ) : null}
@@ -521,10 +521,10 @@ const Notifications: React.FC<NotificationsProps> = ({ onBack, role }) => {
                 </button>
 
                 <div className="absolute bottom-6 left-6 right-6">
-                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#39FF14]/20 border border-[#39FF14]/30 text-[#39FF14] text-[10px] font-black uppercase tracking-widest mb-3">
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#39FF14]/20 border border-[#39FF14]/30 text-[#39FF14] text-[10px] font-extrabold uppercase tracking-widest mb-3">
                     <CheckCircle size={12} /> Davet Edildin
                   </div>
-                  <h2 className="text-2xl font-black text-white italic tracking-tighter uppercase drop-shadow-lg">
+                  <h2 className="text-2xl font-extrabold text-white italic tracking-tighter uppercase drop-shadow-lg">
                     {selectedInvite.title}
                   </h2>
                   <div className="flex items-center gap-4 mt-2">

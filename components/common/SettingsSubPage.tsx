@@ -40,7 +40,7 @@ const SettingsSubPage: React.FC<SettingsSubPageProps> = ({ open, onClose, title,
             <ArrowLeft size={20} />
           </button>
           <div className="min-w-0">
-            <h1 className="text-lg font-black text-white truncate">{title}</h1>
+            <h1 className="text-lg font-extrabold text-white truncate">{title}</h1>
             {subtitle && <p className="text-[11px] text-gray-500 font-medium truncate">{subtitle}</p>}
           </div>
         </header>

@@ -181,10 +181,10 @@ const QRScannerView: React.FC<QRScannerViewProps> = ({ onBack, onResult, pitchId
             >
               {/* Sekmeler: Manuel (varsayılan) | Kod ile */}
               <div className="flex p-1 bg-white/5 rounded-2xl border border-white/10 mb-6">
-                <button type="button" onClick={() => setMode('MANUAL')} className={`flex-1 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all ${mode === 'MANUAL' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white'}`}>
+                <button type="button" onClick={() => setMode('MANUAL')} className={`flex-1 py-2.5 rounded-xl text-[11px] font-extrabold uppercase tracking-widest flex items-center justify-center gap-2 transition-all ${mode === 'MANUAL' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white'}`}>
                   <ListChecks size={15} /> Manuel
                 </button>
-                <button type="button" onClick={() => setMode('CODE')} className={`flex-1 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all ${mode === 'CODE' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white'}`}>
+                <button type="button" onClick={() => setMode('CODE')} className={`flex-1 py-2.5 rounded-xl text-[11px] font-extrabold uppercase tracking-widest flex items-center justify-center gap-2 transition-all ${mode === 'CODE' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white'}`}>
                   <KeyRound size={15} /> Kod ile
                 </button>
               </div>
@@ -197,7 +197,7 @@ const QRScannerView: React.FC<QRScannerViewProps> = ({ onBack, onResult, pitchId
                 >
                   <div className="text-center mb-6">
                     <div className="inline-flex p-4 rounded-3xl bg-blue-500/10 text-blue-400 mb-4"><KeyRound size={28} /></div>
-                    <h2 className="text-2xl font-black italic mb-1 uppercase">MAÇ KODU GİR</h2>
+                    <h2 className="text-2xl font-extrabold italic mb-1 uppercase">MAÇ KODU GİR</h2>
                     <p className="text-gray-400 text-xs">Oyuncunun maç biletindeki kodu girin.</p>
                   </div>
                   <form onSubmit={handleManualSubmit} className="space-y-4">
@@ -207,7 +207,7 @@ const QRScannerView: React.FC<QRScannerViewProps> = ({ onBack, onResult, pitchId
                         value={manualCode}
                         onChange={(e) => setManualCode(e.target.value.toUpperCase())}
                         placeholder="MAÇ KODUNU GİRİN"
-                        className="w-full h-16 bg-white/5 border border-white/10 rounded-2xl px-6 font-black text-xl tracking-[0.2em] text-center focus:border-blue-500 focus:bg-white/10 transition-all outline-none"
+                        className="w-full h-16 bg-white/5 border border-white/10 rounded-2xl px-6 font-extrabold text-xl tracking-[0.2em] text-center focus:border-blue-500 focus:bg-white/10 transition-all outline-none"
                         autoFocus
                       />
                       {error && (
@@ -217,7 +217,7 @@ const QRScannerView: React.FC<QRScannerViewProps> = ({ onBack, onResult, pitchId
                     <button
                       type="submit"
                       disabled={isValidating}
-                      className="w-full h-16 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-800 text-white rounded-2xl font-black text-lg shadow-xl shadow-blue-900/20 transition-all flex items-center justify-center gap-2"
+                      className="w-full h-16 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-800 text-white rounded-2xl font-extrabold text-lg shadow-xl shadow-blue-900/20 transition-all flex items-center justify-center gap-2"
                     >
                       {isValidating ? <RefreshCw size={22} className="animate-spin" /> : 'KODU DOĞRULA'}
                     </button>
@@ -233,7 +233,7 @@ const QRScannerView: React.FC<QRScannerViewProps> = ({ onBack, onResult, pitchId
                 <div className="space-y-3">
                   <div className="text-center mb-6">
                     <div className="inline-flex p-4 rounded-3xl bg-blue-500/10 text-blue-400 mb-4"><ListChecks size={28} /></div>
-                    <h2 className="text-2xl font-black italic mb-1 uppercase">Maç Seç</h2>
+                    <h2 className="text-2xl font-extrabold italic mb-1 uppercase">Maç Seç</h2>
                     <p className="text-gray-400 text-xs">Tesisinde oynanan maçı seç, skoru doğrudan gir.</p>
                   </div>
                   {matchesLoading ? (
@@ -247,12 +247,12 @@ const QRScannerView: React.FC<QRScannerViewProps> = ({ onBack, onResult, pitchId
                     ownerMatches.map((m) => (
                       <button key={m.matchId} type="button" disabled={!!pickingId} onClick={() => handlePickMatch(m)} className="w-full bg-[#161B22] border border-white/5 rounded-2xl p-4 flex items-center justify-between gap-3 hover:border-blue-500/30 transition-all disabled:opacity-50 text-left">
                         <div className="min-w-0">
-                          <p className="text-sm font-black text-white truncate">{m.title}</p>
+                          <p className="text-sm font-extrabold text-white truncate">{m.title}</p>
                           <p className="text-[10px] text-gray-500 font-bold uppercase truncate">{m.courtName} · {m.when}</p>
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
                           {m.hasScore && (
-                            <span className="text-[10px] font-black text-emerald-400 uppercase tabular-nums">
+                            <span className="text-[10px] font-extrabold text-emerald-400 uppercase tabular-nums">
                               {m.homeScore != null && m.awayScore != null ? `${m.homeScore}-${m.awayScore}` : 'Skor girildi'}
                             </span>
                           )}
@@ -276,13 +276,13 @@ const QRScannerView: React.FC<QRScannerViewProps> = ({ onBack, onResult, pitchId
                 <div className="inline-flex p-4 rounded-3xl bg-green-500/10 text-green-400 mb-4">
                   <Trophy size={32} />
                 </div>
-                <h2 className="text-2xl font-black italic mb-1 uppercase">MAÇ SONUCU</h2>
+                <h2 className="text-2xl font-extrabold italic mb-1 uppercase">MAÇ SONUCU</h2>
                 <p className="text-gray-400 text-xs uppercase tracking-widest font-bold">{matchInfo?.title || 'Maç'}</p>
               </div>
 
               <div className="flex items-center justify-between gap-4 mb-10">
                 <div className="flex-1 flex flex-col items-center gap-4">
-                  <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest text-center h-8 flex items-center">{scoreEntry.teamAName}</span>
+                  <span className="text-[10px] font-extrabold text-gray-500 uppercase tracking-widest text-center h-8 flex items-center">{scoreEntry.teamAName}</span>
                   <div className="flex items-center gap-4">
                     <button
                       aria-label="Ev sahibi skorunu azalt"
@@ -291,7 +291,7 @@ const QRScannerView: React.FC<QRScannerViewProps> = ({ onBack, onResult, pitchId
                     >
                       -
                     </button>
-                    <span className="text-5xl font-black italic tabular-nums w-14 text-center">{scoreEntry.teamA}</span>
+                    <span className="text-5xl font-extrabold italic tabular-nums w-14 text-center">{scoreEntry.teamA}</span>
                     <button
                       aria-label="Ev sahibi skorunu artır"
                       onClick={() => setScoreEntry(prev => ({ ...prev, teamA: Math.min(20, prev.teamA + 1) }))}
@@ -302,10 +302,10 @@ const QRScannerView: React.FC<QRScannerViewProps> = ({ onBack, onResult, pitchId
                   </div>
                 </div>
 
-                <div className="text-2xl font-black text-gray-700 italic">VS</div>
+                <div className="text-2xl font-extrabold text-gray-700 italic">VS</div>
 
                 <div className="flex-1 flex flex-col items-center gap-4">
-                  <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest text-center h-8 flex items-center">{scoreEntry.teamBName}</span>
+                  <span className="text-[10px] font-extrabold text-gray-500 uppercase tracking-widest text-center h-8 flex items-center">{scoreEntry.teamBName}</span>
                   <div className="flex items-center gap-4">
                     <button
                       aria-label="Deplasman skorunu azalt"
@@ -314,7 +314,7 @@ const QRScannerView: React.FC<QRScannerViewProps> = ({ onBack, onResult, pitchId
                     >
                       -
                     </button>
-                    <span className="text-5xl font-black italic tabular-nums w-14 text-center">{scoreEntry.teamB}</span>
+                    <span className="text-5xl font-extrabold italic tabular-nums w-14 text-center">{scoreEntry.teamB}</span>
                     <button
                       aria-label="Deplasman skorunu artır"
                       onClick={() => setScoreEntry(prev => ({ ...prev, teamB: Math.min(20, prev.teamB + 1) }))}
@@ -333,7 +333,7 @@ const QRScannerView: React.FC<QRScannerViewProps> = ({ onBack, onResult, pitchId
               <button
                 onClick={handleSubmitScore}
                 disabled={isSubmitting}
-                className="w-full h-16 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-800 text-white rounded-2xl font-black text-lg shadow-xl shadow-blue-900/20 transition-all flex items-center justify-center gap-3"
+                className="w-full h-16 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-800 text-white rounded-2xl font-extrabold text-lg shadow-xl shadow-blue-900/20 transition-all flex items-center justify-center gap-3"
               >
                 {isSubmitting ? (
                   <RefreshCw size={24} className="animate-spin" />
@@ -365,7 +365,7 @@ const QRScannerView: React.FC<QRScannerViewProps> = ({ onBack, onResult, pitchId
               <div className="w-24 h-24 rounded-full bg-green-500 flex items-center justify-center mx-auto mb-6 shadow-2xl shadow-green-900/40">
                 <CheckCircle2 size={48} className="text-white" />
               </div>
-              <h2 className="text-3xl font-black italic mb-2 uppercase">BAŞARILI!</h2>
+              <h2 className="text-3xl font-extrabold italic mb-2 uppercase">BAŞARILI!</h2>
               <p className="text-gray-400">Maç sonucu sisteme işlendi ve Maçlar bölümüne eklendi.</p>
             </motion.div>
           )}

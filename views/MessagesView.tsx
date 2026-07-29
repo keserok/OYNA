@@ -72,7 +72,7 @@ const Avatar: React.FC<{ name: string | null; url: string | null; size?: number 
   return (
     <div style={{ width: s, height: s }}
       className="rounded-2xl bg-gradient-to-br from-emerald-700 to-emerald-900 flex items-center justify-center flex-shrink-0">
-      <span className="text-white font-black" style={{ fontSize: size * 0.33 }}>
+      <span className="text-white font-extrabold" style={{ fontSize: size * 0.33 }}>
         {getInitials(name)}
       </span>
     </div>
@@ -99,10 +99,10 @@ const TacticCard: React.FC<{ tacticId: string; label: string; mine: boolean }> =
         <ClipboardList size={16} className="text-[#39FF14]" />
       </span>
       <span className="flex-1 min-w-0">
-        <span className="block text-[10px] font-black uppercase tracking-widest text-white/50">Taktik</span>
+        <span className="block text-[10px] font-extrabold uppercase tracking-widest text-white/50">Taktik</span>
         <span className="block text-sm font-bold text-white truncate">{label}</span>
       </span>
-      <span className="text-[10px] font-black text-[#39FF14] shrink-0 flex items-center">
+      <span className="text-[10px] font-extrabold text-[#39FF14] shrink-0 flex items-center">
         Stüdyo'da Aç <ChevronRight size={12} />
       </span>
     </button>
@@ -159,7 +159,7 @@ const InboxList: React.FC<{
                     {c.lastMessagePreview || 'Konuşmaya başla'}
                   </span>
                   {c.unreadCount > 0 && (
-                    <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-emerald-500 flex items-center justify-center text-[10px] font-black text-white flex-shrink-0">
+                    <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-emerald-500 flex items-center justify-center text-[10px] font-extrabold text-white flex-shrink-0">
                       {c.unreadCount}
                     </span>
                   )}
@@ -204,7 +204,7 @@ const InboxList: React.FC<{
                   {preview}
                 </span>
                 {t.unread_count > 0 && (
-                  <span className={`min-w-[20px] h-5 px-1.5 rounded-full flex items-center justify-center text-[10px] font-black flex-shrink-0 ${
+                  <span className={`min-w-[20px] h-5 px-1.5 rounded-full flex items-center justify-center text-[10px] font-extrabold flex-shrink-0 ${
                     t.muted ? 'bg-white/10 text-gray-400' : 'bg-emerald-500 text-white'
                   }`}>
                     {t.unread_count}
@@ -868,7 +868,7 @@ const MessagesView: React.FC<MessagesViewProps> = ({
           >
             <ArrowLeft size={18} className="text-gray-300" />
           </button>
-          <h1 className="text-2xl font-black tracking-tight">Mesajlar</h1>
+          <h1 className="text-2xl font-extrabold tracking-tight">Mesajlar</h1>
         </div>
       </div>
 

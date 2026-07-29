@@ -413,7 +413,7 @@ const LegalScreen: React.FC<LegalScreenProps> = ({ onBack, initialDoc }) => {
           <button onClick={() => setDoc(null)} className="w-11 h-11 flex items-center justify-center bg-[#161B22] rounded-full border border-white/5 text-white hover:bg-white/10 active:scale-95 transition-all">
             <ArrowLeft size={20} />
           </button>
-          <h1 className="text-lg font-black italic tracking-tight">{d.title.toUpperCase()}</h1>
+          <h1 className="text-lg font-extrabold italic tracking-tight">{d.title.toUpperCase()}</h1>
         </header>
         <main className="p-6 max-w-2xl mx-auto">
           <div className="bg-[#161B22] border border-white/5 rounded-3xl p-6">
@@ -434,7 +434,7 @@ const LegalScreen: React.FC<LegalScreenProps> = ({ onBack, initialDoc }) => {
           <ArrowLeft size={20} />
         </button>
         <div>
-          <h1 className="text-xl font-black italic tracking-tight">YASAL</h1>
+          <h1 className="text-xl font-extrabold italic tracking-tight">YASAL</h1>
           <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Sözleşmeler ve politikalar</p>
         </div>
       </header>

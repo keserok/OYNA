@@ -237,7 +237,7 @@ export const FinanceGoLivePanel: React.FC = () => {
               <Rocket size={18} className="text-cyan-400" />
             </div>
             <div className="min-w-0">
-              <h3 className="text-sm font-black text-white">Gerçek Ödemeye Geçiş — Ön-Uçuş</h3>
+              <h3 className="text-sm font-extrabold text-white">Gerçek Ödemeye Geçiş — Ön-Uçuş</h3>
               <p className="text-[11px] text-gray-500 mt-0.5 leading-relaxed">
                 Gerçek para çekmeye başlamadan önce tamamlanması gereken hazırlık adımları.
               </p>
@@ -267,7 +267,7 @@ export const FinanceGoLivePanel: React.FC = () => {
           ) : (
             <ShieldAlert size={16} className="text-amber-400 shrink-0" />
           )}
-          <p className={`text-xs font-black ${allOk ? 'text-green-400' : 'text-amber-400'}`}>
+          <p className={`text-xs font-extrabold ${allOk ? 'text-green-400' : 'text-amber-400'}`}>
             {okCount}/{totalCount} hazır
           </p>
           <p className="text-[11px] text-gray-500">
@@ -287,11 +287,11 @@ export const FinanceGoLivePanel: React.FC = () => {
                 className="flex items-start gap-3 bg-black/30 border border-white/[0.06] rounded-xl px-4 py-3"
               >
                 {c.ok ? (
-                  <span className="shrink-0 w-5 h-5 rounded-full bg-green-500/20 text-green-400 flex items-center justify-center text-xs font-black mt-0.5">
+                  <span className="shrink-0 w-5 h-5 rounded-full bg-green-500/20 text-green-400 flex items-center justify-center text-xs font-extrabold mt-0.5">
                     ✓
                   </span>
                 ) : (
-                  <span className="shrink-0 w-5 h-5 rounded-full bg-red-500/20 text-red-400 flex items-center justify-center text-xs font-black mt-0.5">
+                  <span className="shrink-0 w-5 h-5 rounded-full bg-red-500/20 text-red-400 flex items-center justify-center text-xs font-extrabold mt-0.5">
                     ✗
                   </span>
                 )}
@@ -316,7 +316,7 @@ export const FinanceGoLivePanel: React.FC = () => {
             <CreditCard size={18} className="text-cyan-400" />
           </div>
           <div className="min-w-0">
-            <h3 className="text-sm font-black text-white">Ödeme Sağlayıcısı</h3>
+            <h3 className="text-sm font-extrabold text-white">Ödeme Sağlayıcısı</h3>
             <p className="text-[11px] text-gray-500 mt-0.5 leading-relaxed">
               Uygulamanın ödeme altyapısını test (SIMULATION) ve gerçek (IYZICO) modu arasında değiştirir.
             </p>
@@ -333,7 +333,7 @@ export const FinanceGoLivePanel: React.FC = () => {
             <div className="flex items-center justify-between gap-4 bg-black/30 border border-white/[0.06] rounded-xl px-4 py-3 mb-3">
               <span className="text-xs font-bold text-gray-400">Aktif sağlayıcı</span>
               <span
-                className={`px-3 py-1 rounded-lg text-xs font-black ${
+                className={`px-3 py-1 rounded-lg text-xs font-extrabold ${
                   isLive ? 'bg-green-500/20 text-green-400' : 'bg-amber-500/20 text-amber-400'
                 }`}
               >
@@ -369,7 +369,7 @@ export const FinanceGoLivePanel: React.FC = () => {
                 type="button"
                 disabled={!canSwitch || savingProvider}
                 onClick={() => setPendingTarget(targetProvider)}
-                className={`w-full px-4 py-3 rounded-xl text-xs font-black disabled:opacity-40 disabled:cursor-not-allowed ${
+                className={`w-full px-4 py-3 rounded-xl text-xs font-extrabold disabled:opacity-40 disabled:cursor-not-allowed ${
                   targetProvider === 'IYZICO'
                     ? 'bg-green-500/15 text-green-400 border border-green-500/25 hover:bg-green-500/25'
                     : 'bg-amber-500/15 text-amber-400 border border-amber-500/25 hover:bg-amber-500/25'
@@ -392,7 +392,7 @@ export const FinanceGoLivePanel: React.FC = () => {
                     type="button"
                     disabled={savingProvider}
                     onClick={() => void applyProvider(pendingTarget)}
-                    className={`flex-1 px-4 py-2.5 rounded-lg text-xs font-black disabled:opacity-40 ${
+                    className={`flex-1 px-4 py-2.5 rounded-lg text-xs font-extrabold disabled:opacity-40 ${
                       pendingTarget === 'IYZICO'
                         ? 'bg-green-500/20 text-green-400 hover:bg-green-500/30'
                         : 'bg-amber-500/20 text-amber-400 hover:bg-amber-500/30'
@@ -422,7 +422,7 @@ export const FinanceGoLivePanel: React.FC = () => {
             <Banknote size={18} className="text-emerald-400" />
           </div>
           <div className="min-w-0">
-            <h3 className="text-sm font-black text-white">Para Çekme (Cashout) Hazırlığı</h3>
+            <h3 className="text-sm font-extrabold text-white">Para Çekme (Cashout) Hazırlığı</h3>
             <p className="text-[11px] text-gray-500 mt-0.5 leading-relaxed">
               Otomatik havale entegrasyonu yoktur: talep onaylandığında transferi banka üzerinden
               ELLE yapıp referansı Payout Talepleri ekranına girersiniz.
@@ -437,21 +437,21 @@ export const FinanceGoLivePanel: React.FC = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="flex items-center justify-between gap-4 bg-black/30 border border-white/[0.06] rounded-xl px-4 py-3">
                 <span className="text-xs font-bold text-gray-400">Durum</span>
-                <span className={`text-sm font-black ${cashoutCfg.enabled ? 'text-green-400' : 'text-amber-400'}`}>
+                <span className={`text-sm font-extrabold ${cashoutCfg.enabled ? 'text-green-400' : 'text-amber-400'}`}>
                   {cashoutCfg.enabled ? 'AÇIK' : 'KAPALI'}
                 </span>
               </div>
               <div className="flex items-center justify-between gap-4 bg-black/30 border border-white/[0.06] rounded-xl px-4 py-3">
                 <span className="text-xs font-bold text-gray-400">Kesinti / asgari</span>
-                <span className="text-sm font-black text-white">%{cashoutCfg.feePct} · ₺{cashoutCfg.min}</span>
+                <span className="text-sm font-extrabold text-white">%{cashoutCfg.feePct} · ₺{cashoutCfg.min}</span>
               </div>
               <div className="flex items-center justify-between gap-4 bg-black/30 border border-white/[0.06] rounded-xl px-4 py-3">
                 <span className="text-xs font-bold text-gray-400">Bekleyen çekim talebi</span>
-                <span className={`text-sm font-black ${cashoutPending > 0 ? 'text-amber-400' : 'text-white'}`}>{cashoutPending}</span>
+                <span className={`text-sm font-extrabold ${cashoutPending > 0 ? 'text-amber-400' : 'text-white'}`}>{cashoutPending}</span>
               </div>
               <div className="flex items-center justify-between gap-4 bg-black/30 border border-white/[0.06] rounded-xl px-4 py-3">
                 <span className="text-xs font-bold text-gray-400">Kimlik/isim uyuşmazlığı</span>
-                <span className={`text-sm font-black ${cashoutIdentityGaps > 0 ? 'text-red-400' : 'text-green-400'}`}>{cashoutIdentityGaps}</span>
+                <span className={`text-sm font-extrabold ${cashoutIdentityGaps > 0 ? 'text-red-400' : 'text-green-400'}`}>{cashoutIdentityGaps}</span>
               </div>
             </div>
 
@@ -475,7 +475,7 @@ export const FinanceGoLivePanel: React.FC = () => {
             <Scale size={18} className="text-cyan-400" />
           </div>
           <div className="min-w-0">
-            <h3 className="text-sm font-black text-white">Mutabakat (Son 30 gün)</h3>
+            <h3 className="text-sm font-extrabold text-white">Mutabakat (Son 30 gün)</h3>
             <p className="text-[11px] text-gray-500 mt-0.5 leading-relaxed">
               {recon
                 ? `Dönem: ${recon.from} – ${recon.to}. Tahsilat, komisyon, saha sahibi payı, iade ve ödemeler.`
@@ -495,7 +495,7 @@ export const FinanceGoLivePanel: React.FC = () => {
               >
                 <span className="text-xs font-bold text-gray-400 min-w-0 truncate">{row.label}</span>
                 <span className="text-right shrink-0">
-                  <span className={`text-sm font-black ${toneClass(row.tone)}`}>{row.value}</span>
+                  <span className={`text-sm font-extrabold ${toneClass(row.tone)}`}>{row.value}</span>
                   {row.hint && <span className="block text-[10px] text-gray-600">{row.hint}</span>}
                 </span>
               </div>

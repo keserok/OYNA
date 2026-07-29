@@ -134,7 +134,7 @@ const SupportPage: React.FC<Props> = ({ open, onClose }) => {
                 <div className="flex flex-col min-h-full">
                     <div className="flex-1 space-y-3 pb-4">
                         <div className="flex items-center justify-between gap-2">
-                            <span className={`text-[10px] font-black uppercase px-2 py-1 rounded-lg border ${STATUS_TONE[active.status]}`}>
+                            <span className={`text-[10px] font-extrabold uppercase px-2 py-1 rounded-lg border ${STATUS_TONE[active.status]}`}>
                                 {SUPPORT_STATUS_LABEL[active.status]}
                             </span>
                             <span className="text-[10px] text-gray-600">{fmtDate(active.created_at)}</span>
@@ -146,7 +146,7 @@ const SupportPage: React.FC<Props> = ({ open, onClose }) => {
                                         ? 'bg-primary/10 border-primary/25 rounded-br-md'
                                         : 'bg-[#161B22] border-white/10 rounded-bl-md'
                                 }`}>
-                                    <p className="text-[10px] font-black uppercase tracking-wider mb-1 text-gray-500">
+                                    <p className="text-[10px] font-extrabold uppercase tracking-wider mb-1 text-gray-500">
                                         {m.sender_role === 'USER' ? 'Sen' : (m.sender_name || 'OYNA Destek')}
                                     </p>
                                     <p className="text-[13px] text-white leading-relaxed whitespace-pre-wrap break-words">{m.body}</p>
@@ -210,7 +210,7 @@ const SupportPage: React.FC<Props> = ({ open, onClose }) => {
                                     key={c.key}
                                     type="button"
                                     onClick={() => setCategory(c.key)}
-                                    className={`px-3 py-2 rounded-2xl text-[11px] font-black border transition-all active:scale-95 ${
+                                    className={`px-3 py-2 rounded-2xl text-[11px] font-extrabold border transition-all active:scale-95 ${
                                         category === c.key
                                             ? 'bg-primary text-black border-primary'
                                             : 'bg-[#161B22] text-white/60 border-white/10 hover:bg-white/5'
@@ -241,7 +241,7 @@ const SupportPage: React.FC<Props> = ({ open, onClose }) => {
                         type="button"
                         disabled={sending || subject.trim().length < 3 || body.trim().length < 10}
                         onClick={() => void submitNew()}
-                        className="w-full h-12 rounded-2xl bg-primary text-black font-black text-xs uppercase tracking-widest active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                        className="w-full h-12 rounded-2xl bg-primary text-black font-extrabold text-xs uppercase tracking-widest active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                     >
                         {sending ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} />} Talebi Gönder
                     </button>
@@ -252,7 +252,7 @@ const SupportPage: React.FC<Props> = ({ open, onClose }) => {
                     <button
                         type="button"
                         onClick={() => setMode('new')}
-                        className="w-full h-12 rounded-2xl bg-primary text-black font-black text-xs uppercase tracking-widest active:scale-95 transition-all flex items-center justify-center gap-2"
+                        className="w-full h-12 rounded-2xl bg-primary text-black font-extrabold text-xs uppercase tracking-widest active:scale-95 transition-all flex items-center justify-center gap-2"
                     >
                         <Plus size={16} /> Yeni Destek Talebi
                     </button>
@@ -284,7 +284,7 @@ const SupportPage: React.FC<Props> = ({ open, onClose }) => {
                                         {t.unread_for_user && <span className="w-2 h-2 rounded-full bg-primary shrink-0 animate-pulse" />}
                                         <span className="truncate">{t.subject || 'Destek Talebi'}</span>
                                     </p>
-                                    <span className={`text-[9px] font-black uppercase px-1.5 py-0.5 rounded-md border shrink-0 ${STATUS_TONE[t.status]}`}>
+                                    <span className={`text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded-md border shrink-0 ${STATUS_TONE[t.status]}`}>
                                         {SUPPORT_STATUS_LABEL[t.status]}
                                     </span>
                                 </div>

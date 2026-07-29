@@ -144,9 +144,9 @@ export const User360Drawer: React.FC<Props> = ({ user, onClose, onBanToggle, onV
               />
               <div className="min-w-0">
                 <p className="text-[10px] text-gray-500 font-mono uppercase">Kullanıcı 360</p>
-                <h2 className="text-sm font-black text-white truncate">{user.name}</h2>
+                <h2 className="text-sm font-extrabold text-white truncate">{user.name}</h2>
                 <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                  <span className="text-[9px] font-black text-blue-400 bg-blue-500/10 border border-blue-500/20 px-1.5 py-0.5 rounded">{user.role || 'PLAYER'}</span>
+                  <span className="text-[9px] font-extrabold text-blue-400 bg-blue-500/10 border border-blue-500/20 px-1.5 py-0.5 rounded">{user.role || 'PLAYER'}</span>
                   {user.isBanned ? <StatusBadge tone="danger">BANLI</StatusBadge> : <StatusBadge tone="success">AKTİF</StatusBadge>}
                   {user.isVerified && <StatusBadge tone="info">DOĞRULANMIŞ</StatusBadge>}
                   {user.cardActive && <StatusBadge tone="info">{(user.cardTier || 'bronze').toUpperCase()} KART</StatusBadge>}
@@ -168,7 +168,7 @@ export const User360Drawer: React.FC<Props> = ({ user, onClose, onBanToggle, onV
                 key={key}
                 type="button"
                 onClick={() => setTab(key)}
-                className={`flex-1 px-3 py-2.5 text-[10px] font-black uppercase tracking-wide border-b-2 transition-colors ${
+                className={`flex-1 px-3 py-2.5 text-[10px] font-extrabold uppercase tracking-wide border-b-2 transition-colors ${
                   tab === key ? 'border-[#39FF14] text-white' : 'border-transparent text-gray-500 hover:text-gray-300'
                 }`}
               >
@@ -186,7 +186,7 @@ export const User360Drawer: React.FC<Props> = ({ user, onClose, onBanToggle, onV
           <div className={`flex-1 overflow-y-auto custom-scrollbar p-5 space-y-4 ${tab !== 'operasyon' ? 'hidden' : ''}`}>
             {/* İletişim (PII — maskeli) */}
             <div className="bg-[#161B22]/60 border border-white/[0.06] rounded-2xl p-4 space-y-2.5">
-              <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider">İletişim (KVKK — görüntüleme kayıt altına alınır)</p>
+              <p className="text-[10px] font-extrabold text-gray-400 uppercase tracking-wider">İletişim (KVKK — görüntüleme kayıt altına alınır)</p>
               <div className="flex items-center justify-between gap-2">
                 <span className="flex items-center gap-2 text-xs text-gray-300 font-mono min-w-0">
                   <Mail size={12} className="text-gray-500 shrink-0" />
@@ -215,27 +215,27 @@ export const User360Drawer: React.FC<Props> = ({ user, onClose, onBanToggle, onV
             <div className="grid grid-cols-3 gap-2">
               <div className="bg-black/30 border border-white/[0.06] rounded-xl p-3 text-center">
                 <p className="text-[9px] text-gray-500 uppercase font-bold">Güvenilirlik</p>
-                <p className={`text-lg font-black font-mono ${reliability >= 80 ? 'text-green-400' : reliability >= 60 ? 'text-amber-400' : 'text-red-400'}`}>{reliability}</p>
+                <p className={`text-lg font-extrabold font-mono ${reliability >= 80 ? 'text-green-400' : reliability >= 60 ? 'text-amber-400' : 'text-red-400'}`}>{reliability}</p>
               </div>
               <div className="bg-black/30 border border-white/[0.06] rounded-xl p-3 text-center">
                 <p className="text-[9px] text-gray-500 uppercase font-bold">Puan</p>
-                <p className="text-lg font-black font-mono text-white flex items-center justify-center gap-1">
+                <p className="text-lg font-extrabold font-mono text-white flex items-center justify-center gap-1">
                   {(user.rating ?? 5).toFixed(1)} <Star size={12} className="text-[#FFFF00] fill-current" />
                 </p>
               </div>
               <div className="bg-black/30 border border-white/[0.06] rounded-xl p-3 text-center">
                 <p className="text-[9px] text-gray-500 uppercase font-bold">Maç</p>
-                <p className="text-lg font-black font-mono text-white">{user.matchCount ?? 0}</p>
+                <p className="text-lg font-extrabold font-mono text-white">{user.matchCount ?? 0}</p>
               </div>
             </div>
 
             {/* Cüzdan */}
             <div className="bg-[#161B22]/60 border border-white/[0.06] rounded-2xl p-4 space-y-3">
               <div className="flex items-center justify-between">
-                <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
+                <p className="text-[10px] font-extrabold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
                   <Wallet size={12} /> Cüzdan
                 </p>
-                <span className="text-sm font-black font-mono text-[#39FF14]">
+                <span className="text-sm font-extrabold font-mono text-[#39FF14]">
                   {walletBalance !== null ? fmtMoney(walletBalance) : '—'}
                 </span>
               </div>
@@ -254,7 +254,7 @@ export const User360Drawer: React.FC<Props> = ({ user, onClose, onBanToggle, onV
                         </p>
                         <p className="text-[9px] text-gray-600 font-mono">{new Date(w.created_at).toLocaleString('tr-TR')}</p>
                       </div>
-                      <span className={`text-xs font-black font-mono shrink-0 ${Number(w.amount) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                      <span className={`text-xs font-extrabold font-mono shrink-0 ${Number(w.amount) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                         {Number(w.amount) >= 0 ? '+' : ''}{fmtMoney(Number(w.amount))}
                       </span>
                     </div>
@@ -265,7 +265,7 @@ export const User360Drawer: React.FC<Props> = ({ user, onClose, onBanToggle, onV
 
             {/* Bu kullanıcıya dokunan admin işlemleri */}
             <div className="bg-[#161B22]/60 border border-white/[0.06] rounded-2xl p-4 space-y-2">
-              <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
+              <p className="text-[10px] font-extrabold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
                 <ScrollText size={12} /> Admin İşlem Geçmişi (bu kullanıcı)
               </p>
               {audit.length === 0 ? (
@@ -286,17 +286,17 @@ export const User360Drawer: React.FC<Props> = ({ user, onClose, onBanToggle, onV
 
           {/* Aksiyon barı — mevcut onaylı akışlara delege */}
           <div className="shrink-0 p-4 border-t border-white/10 grid grid-cols-4 gap-2">
-            <button type="button" onClick={() => onEdit(user)} className="flex flex-col items-center gap-1 py-2.5 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-300 text-[9px] font-black uppercase">
+            <button type="button" onClick={() => onEdit(user)} className="flex flex-col items-center gap-1 py-2.5 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-300 text-[9px] font-extrabold uppercase">
               <Edit3 size={14} /> Düzenle
             </button>
-            <button type="button" onClick={() => onBanToggle(user)} className={`flex flex-col items-center gap-1 py-2.5 rounded-xl text-[9px] font-black uppercase border ${user.isBanned ? 'bg-green-500/10 border-green-500/20 text-green-300' : 'bg-red-500/10 border-red-500/20 text-red-300'}`}>
+            <button type="button" onClick={() => onBanToggle(user)} className={`flex flex-col items-center gap-1 py-2.5 rounded-xl text-[9px] font-extrabold uppercase border ${user.isBanned ? 'bg-green-500/10 border-green-500/20 text-green-300' : 'bg-red-500/10 border-red-500/20 text-red-300'}`}>
               {user.isBanned ? <ShieldCheck size={14} /> : <Ban size={14} />}
               {user.isBanned ? 'Unban' : 'Banla'}
             </button>
-            <button type="button" disabled={user.isVerified} onClick={() => onVerify(user)} className="flex flex-col items-center gap-1 py-2.5 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-300 text-[9px] font-black uppercase disabled:opacity-30">
+            <button type="button" disabled={user.isVerified} onClick={() => onVerify(user)} className="flex flex-col items-center gap-1 py-2.5 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-300 text-[9px] font-extrabold uppercase disabled:opacity-30">
               <BadgeCheck size={14} /> Doğrula
             </button>
-            <button type="button" onClick={() => onGhost(user)} className="flex flex-col items-center gap-1 py-2.5 rounded-xl bg-white/5 border border-white/10 text-gray-300 text-[9px] font-black uppercase">
+            <button type="button" onClick={() => onGhost(user)} className="flex flex-col items-center gap-1 py-2.5 rounded-xl bg-white/5 border border-white/10 text-gray-300 text-[9px] font-extrabold uppercase">
               <PlayCircle size={14} /> Ghost
             </button>
           </div>

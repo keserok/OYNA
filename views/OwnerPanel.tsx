@@ -797,13 +797,13 @@ const tariffRowToPolicy = (t: PitchTariff) => ({
     return (
       <div className="min-h-dvh flex flex-col items-center justify-center bg-[#0A0E14] text-white p-8 text-center safe-top safe-bottom">
         <Building2 size={64} className="text-[#FACC15] mb-6" />
-        <h1 className="text-2xl font-black mb-3">Tesisinizi OYNA&apos;ya Ekleyin</h1>
+        <h1 className="text-2xl font-extrabold mb-3">Tesisinizi OYNA&apos;ya Ekleyin</h1>
         <p className="text-gray-400 text-sm max-w-sm mb-8">
           Ücretli işletme paneline erişmek için tesis kaydını tamamlayın. Demo verisi kaldırıldıysa gerçek tesisinizi oluşturun.
         </p>
         <button
           onClick={() => onNeedOnboarding?.()}
-          className="px-8 py-4 bg-[#FACC15] text-black font-black rounded-2xl mb-4"
+          className="px-8 py-4 bg-[#FACC15] text-black font-extrabold rounded-2xl mb-4"
         >
           TESİS KAYDI BAŞLAT
         </button>
@@ -872,7 +872,7 @@ const tariffRowToPolicy = (t: PitchTariff) => ({
       {/* Simplified Header for Menu View */}
       {activeTab === 'MORE' && (
           <header className={`px-6 py-4 ${statusBanners.length ? '' : 'pt-safe'} bg-[#0A0E14] border-b border-white/5 flex items-center sticky top-0 z-30`}>
-              <h1 className="text-lg font-black text-white tracking-wide">MENÜ & AYARLAR</h1>
+              <h1 className="text-lg font-extrabold text-white tracking-wide">MENÜ & AYARLAR</h1>
           </header>
       )}
 
@@ -907,7 +907,7 @@ const tariffRowToPolicy = (t: PitchTariff) => ({
                       <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
                         <Trophy size={24} className="text-white" />
                       </div>
-                      <span className="text-sm font-black italic text-white">SKOR GİR</span>
+                      <span className="text-sm font-extrabold italic text-white">SKOR GİR</span>
                       <span className="text-[10px] font-bold text-blue-100 mt-1 uppercase tracking-widest">Maç seç veya kod gir</span>
                     </button>
                     <button 
@@ -917,7 +917,7 @@ const tariffRowToPolicy = (t: PitchTariff) => ({
                       <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
                         <Plus size={24} className="text-white" />
                       </div>
-                      <span className="text-sm font-black italic text-white">YENİ KAYIT</span>
+                      <span className="text-sm font-extrabold italic text-white">YENİ KAYIT</span>
                       <span className="text-[10px] font-bold text-gray-500 mt-1 uppercase tracking-widest">Rezervasyon</span>
                     </button>
                   </div>
@@ -1179,12 +1179,12 @@ const tariffRowToPolicy = (t: PitchTariff) => ({
               ) : courtStats.map((item) => (
                   <div key={item.courtId} className="bg-[#0A0E14] p-4 rounded-2xl border border-white/5 flex justify-between items-center">
                       <span className="text-sm font-bold text-gray-400">{item.courtName}</span>
-                      <span className="text-lg font-black text-emerald-400 tabular-nums">{item.collected.toLocaleString('tr-TR')}₺</span>
+                      <span className="text-lg font-extrabold text-emerald-400 tabular-nums">{item.collected.toLocaleString('tr-TR')}₺</span>
                   </div>
               ))}
               <div className="pt-4 border-t border-white/10 flex justify-between items-center">
-                  <span className="text-base font-black text-white">TOPLAM TAHSİLAT</span>
-                  <span className="text-2xl font-black text-emerald-500 tabular-nums">{dynamicTotalRevenue.toLocaleString('tr-TR')}₺</span>
+                  <span className="text-base font-extrabold text-white">TOPLAM TAHSİLAT</span>
+                  <span className="text-2xl font-extrabold text-emerald-500 tabular-nums">{dynamicTotalRevenue.toLocaleString('tr-TR')}₺</span>
               </div>
           </div>
       </OwnerBottomSheet>
@@ -1202,7 +1202,7 @@ const tariffRowToPolicy = (t: PitchTariff) => ({
                   <div key={item.courtId} className="space-y-2">
                       <div className="flex justify-between items-end">
                           <span className="text-sm font-bold text-white">{item.courtName}</span>
-                          <span className={`text-sm font-black tabular-nums ${item.occupancyPercent < 50 ? 'text-red-500' : 'text-emerald-500'}`}>%{item.occupancyPercent}</span>
+                          <span className={`text-sm font-extrabold tabular-nums ${item.occupancyPercent < 50 ? 'text-red-500' : 'text-emerald-500'}`}>%{item.occupancyPercent}</span>
                       </div>
                       <div className="h-3 w-full bg-white/5 rounded-full overflow-hidden">
                           <div className={`h-full rounded-full transition-all duration-500 ${item.occupancyPercent < 50 ? 'bg-red-500' : 'bg-emerald-500'}`} style={{ width: `${item.occupancyPercent}%` }}></div>

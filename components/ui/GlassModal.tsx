@@ -73,7 +73,7 @@ const GlassModal: React.FC<GlassModalProps> = ({
 
           {title ? (
             <div className="relative shrink-0 flex items-center gap-3 px-5 pt-5 pb-3">
-              <h3 className="flex-1 text-base font-black text-white truncate">{title}</h3>
+              <h3 className="flex-1 text-base font-extrabold text-white truncate">{title}</h3>
               <button
                 onClick={onClose}
                 aria-label="Kapat"

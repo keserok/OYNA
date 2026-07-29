@@ -71,7 +71,7 @@ export const RegionCoveragePage: React.FC = () => {
     <div className="p-6 max-w-4xl mx-auto">
       <div className="flex items-start justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-black text-white flex items-center gap-2"><Globe2 size={22} className="text-yellow-400" /> Bölge Kapsama</h1>
+          <h1 className="text-2xl font-extrabold text-white flex items-center gap-2"><Globe2 size={22} className="text-yellow-400" /> Bölge Kapsama</h1>
           <p className="text-sm text-gray-400 mt-1">
             Hizmet kapsamındaki il/ilçeler. Aktif bölgeler keşif haritasında sarı sınırla çizilir ve kullanıcının bölge seçiminde görünür.
           </p>
@@ -92,7 +92,7 @@ export const RegionCoveragePage: React.FC = () => {
         <div className="space-y-6">
           {Object.entries(byCity).map(([city, items]) => (
             <div key={city}>
-              <h2 className="text-xs font-black text-gray-500 uppercase tracking-widest mb-2 flex items-center gap-1.5"><MapPin size={12} /> {city}</h2>
+              <h2 className="text-xs font-extrabold text-gray-500 uppercase tracking-widest mb-2 flex items-center gap-1.5"><MapPin size={12} /> {city}</h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {items.map((r) => (
                   <div key={r.id} className={`flex items-center justify-between p-3 rounded-xl border ${r.is_active ? 'bg-[#161B22] border-white/10' : 'bg-[#0D1117] border-white/5 opacity-70'}`}>
@@ -105,7 +105,7 @@ export const RegionCoveragePage: React.FC = () => {
                     <button
                       onClick={() => toggle(r)}
                       disabled={savingId === r.id}
-                      className={`shrink-0 flex items-center gap-1 px-3 h-8 rounded-lg text-[11px] font-black uppercase tracking-wide transition-colors ${r.is_active ? 'bg-green-500/15 text-green-400 border border-green-500/30' : 'bg-white/5 text-gray-400 border border-white/10'}`}
+                      className={`shrink-0 flex items-center gap-1 px-3 h-8 rounded-lg text-[11px] font-extrabold uppercase tracking-wide transition-colors ${r.is_active ? 'bg-green-500/15 text-green-400 border border-green-500/30' : 'bg-white/5 text-gray-400 border border-white/10'}`}
                     >
                       {r.is_active ? <><Check size={12} /> Aktif</> : <><X size={12} /> Kapalı</>}
                     </button>

@@ -904,7 +904,7 @@ const App: React.FC = () => {
             <div className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping" />
               <span className="w-2.5 h-2.5 rounded-full bg-red-500 absolute" />
-              <p className="text-[11px] font-black uppercase tracking-wider text-white">
+              <p className="text-[11px] font-extrabold uppercase tracking-wider text-white">
                 GHOST MODE: <span className="text-red-400">{impersonatedUser.name}</span> TAKLİT EDİLİYOR
               </p>
             </div>
@@ -918,7 +918,7 @@ const App: React.FC = () => {
                 setOriginalRole(null);
                 resetNavigation('ADMIN_PANEL');
               }}
-              className="px-3.5 py-1.5 bg-red-500 hover:bg-red-600 text-white text-[10px] font-black tracking-widest uppercase rounded-full transition-all"
+              className="px-3.5 py-1.5 bg-red-500 hover:bg-red-600 text-white text-[10px] font-extrabold tracking-widest uppercase rounded-full transition-all"
             >
               Taklidi Bitir
             </button>

@@ -56,18 +56,18 @@ export const StatCard: React.FC<StatCardProps> = ({
             }`}
         >
             <div className="flex items-center justify-between w-full">
-                <span className="text-[9px] text-gray-500 font-black uppercase tracking-widest">
+                <span className="text-[9px] text-gray-500 font-extrabold uppercase tracking-widest">
                     {label}
                 </span>
                 {badge && (
-                    <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-lg border uppercase tracking-wider ${badgeColor}`}>
+                    <span className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded-lg border uppercase tracking-wider ${badgeColor}`}>
                         {badge}
                     </span>
                 )}
             </div>
             
             <div className="my-2.5">
-                <span className="text-2xl font-black text-white tracking-tight">{value}</span>
+                <span className="text-2xl font-extrabold text-white tracking-tight">{value}</span>
             </div>
 
             <div className="flex items-end justify-between w-full mt-1">

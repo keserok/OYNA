@@ -15,7 +15,7 @@ export const money = (n: number | null | undefined): string => {
 /** Kıyas rozeti: ▲%12 (yeşil) / ▼%8 (kırmızı) / "Yeni" (prev 0) / "—" (eşit). */
 export const GrowthBadge: React.FC<{ growth: GrowthResult; label?: string }> = ({ growth, label }) => {
   if (growth.pct === null) {
-    return <span className="text-[11px] font-black text-emerald-400">Yeni{label ? ` ${label}` : ''}</span>;
+    return <span className="text-[11px] font-extrabold text-emerald-400">Yeni{label ? ` ${label}` : ''}</span>;
   }
   if (growth.direction === 'flat') {
     return <span className="text-[11px] font-bold text-gray-500">Değişim yok</span>;
@@ -23,7 +23,7 @@ export const GrowthBadge: React.FC<{ growth: GrowthResult; label?: string }> = (
   const up = growth.direction === 'up';
   const Icon = up ? TrendingUp : TrendingDown;
   return (
-    <span className={`inline-flex items-center gap-1 text-[11px] font-black ${up ? 'text-emerald-400' : 'text-red-400'}`}>
+    <span className={`inline-flex items-center gap-1 text-[11px] font-extrabold ${up ? 'text-emerald-400' : 'text-red-400'}`}>
       <Icon size={12} /> %{Math.abs(growth.pct)}{label ? ` ${label}` : ''}
     </span>
   );
@@ -34,9 +34,9 @@ export const StatTile: React.FC<{ label: string; value: string; accent?: string;
   label, value, accent = 'text-white', sub,
 }) => (
   <div className="bg-white/5 p-3 rounded-2xl border border-white/5 min-w-0">
-    <p className="text-[10px] text-gray-500 font-black uppercase mb-1">{label}</p>
+    <p className="text-[10px] text-gray-500 font-extrabold uppercase mb-1">{label}</p>
     {/* MOB-M7: dar sütunda büyük tutar taşmasın — küçük ekranda ufalt + kırp. */}
-    <p className={`text-lg font-black tabular-nums truncate ${accent}`} title={value}>{value}</p>
+    <p className={`text-lg font-extrabold tabular-nums truncate ${accent}`} title={value}>{value}</p>
     {sub && <p className="text-[10px] text-gray-500 mt-1 truncate">{sub}</p>}
   </div>
 );
@@ -67,7 +67,7 @@ export const BreakdownList: React.FC<{
               <span className={`text-xs font-bold ${active ? 'text-white' : 'text-gray-300'}`}>
                 {r.label}{typeof r.count === 'number' && r.count > 0 ? <span className="text-gray-600"> · {r.count}</span> : ''}
               </span>
-              <span className="text-sm font-black text-white tabular-nums">{money(r.amount)}</span>
+              <span className="text-sm font-extrabold text-white tabular-nums">{money(r.amount)}</span>
             </div>
             <div className="h-1.5 rounded-full bg-white/8 overflow-hidden">
               <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: color, opacity: active ? 1 : 0.65 }} />
@@ -89,12 +89,12 @@ export const DailyBars: React.FC<{ series: DayBar[]; monthLabelText: string }> =
   return (
     <div>
       <div className="flex items-baseline justify-between mb-3">
-        <h3 className="text-xs font-black text-gray-400 uppercase flex items-center gap-2">
+        <h3 className="text-xs font-extrabold text-gray-400 uppercase flex items-center gap-2">
           <TrendingUp size={16} className="text-emerald-400" /> Günlük Tahsilat
         </h3>
         {shown ? (
           <span className="text-[11px] font-bold text-gray-400">
-            {String(shown.day).padStart(2, '0')} {monthLabelText.split(' ')[0]} · <span className="text-emerald-400 font-black">{money(shown.collected)}</span>
+            {String(shown.day).padStart(2, '0')} {monthLabelText.split(' ')[0]} · <span className="text-emerald-400 font-extrabold">{money(shown.collected)}</span>
           </span>
         ) : (
           <span className="text-[11px] text-gray-600">Bu ay tahsilat yok</span>

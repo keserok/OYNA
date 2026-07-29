@@ -105,7 +105,7 @@ const PersonRow: React.FC<{
       <div className="flex items-center gap-1.5">
         <span className="text-sm font-bold text-white truncate">{person.full_name}</span>
         {person.pos && (
-          <span className="shrink-0 text-[9px] font-black px-1.5 py-0.5 rounded bg-white/8 text-white/50">
+          <span className="shrink-0 text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-white/8 text-white/50">
             {person.pos}
           </span>
         )}
@@ -297,7 +297,7 @@ const FriendAddView: React.FC<FriendAddViewProps> = ({ onBack, onNavigate }) => 
         >
           <ArrowLeft size={22} />
         </button>
-        <h1 className="text-xl font-black">Arkadaş Ekle</h1>
+        <h1 className="text-xl font-extrabold">Arkadaş Ekle</h1>
       </div>
 
       <div className="flex-1 overflow-y-auto px-5 pb-safe">
@@ -380,7 +380,7 @@ const FriendAddView: React.FC<FriendAddViewProps> = ({ onBack, onNavigate }) => 
             {/* Rehber eşleşmeleri */}
             {contactResults && (
               <div className="mt-5">
-                <h3 className="text-[10px] font-black uppercase tracking-widest text-white/40 mb-2.5">
+                <h3 className="text-[10px] font-extrabold uppercase tracking-widest text-white/40 mb-2.5">
                   Rehberinden · {contactResults.matched.length} kişi OYNA'da
                 </h3>
                 <div className="space-y-2.5">
@@ -407,7 +407,7 @@ const FriendAddView: React.FC<FriendAddViewProps> = ({ onBack, onNavigate }) => 
 
             {/* Birlikte oynadıkların */}
             <div className="mt-6">
-              <h3 className="text-[10px] font-black uppercase tracking-widest text-white/40 mb-2.5 flex items-center gap-1.5">
+              <h3 className="text-[10px] font-extrabold uppercase tracking-widest text-white/40 mb-2.5 flex items-center gap-1.5">
                 <Clock size={11} /> Birlikte Oynadıkların
               </h3>
               {loadingChannels ? (
@@ -479,7 +479,7 @@ const FriendAddView: React.FC<FriendAddViewProps> = ({ onBack, onNavigate }) => 
             <div className="flex justify-between items-center mb-4">
               <div className="flex items-center gap-2">
                 <BookUser size={18} className="text-[#39FF14]" />
-                <h3 className="font-black text-white text-base">Rehberini Bağla</h3>
+                <h3 className="font-extrabold text-white text-base">Rehberini Bağla</h3>
               </div>
               <button onClick={() => setShowContactsConsent(false)} className="text-gray-500 hover:text-white p-1" aria-label="Kapat">
                 <X size={18} />
@@ -496,13 +496,13 @@ const FriendAddView: React.FC<FriendAddViewProps> = ({ onBack, onNavigate }) => 
             <div className="space-y-3">
               <button
                 onClick={runContactsSync}
-                className="w-full h-12 rounded-2xl font-black text-sm bg-[#39FF14] text-black active:scale-95 transition-all"
+                className="w-full h-12 rounded-2xl font-extrabold text-sm bg-[#39FF14] text-black active:scale-95 transition-all"
               >
                 İzin Ver ve Devam Et
               </button>
               <button
                 onClick={() => setShowContactsConsent(false)}
-                className="w-full h-12 rounded-2xl font-black text-sm text-gray-400 border border-white/10"
+                className="w-full h-12 rounded-2xl font-extrabold text-sm text-gray-400 border border-white/10"
               >
                 Vazgeç
               </button>

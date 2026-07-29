@@ -51,7 +51,7 @@ export const PageLayout: React.FC<PageLayoutProps> = ({
 
           {/* Center — title absolutely centered in header */}
           {title && (
-            <h1 className="absolute left-1/2 -translate-x-1/2 text-lg font-black tracking-tight select-none pointer-events-none max-w-[60%] truncate text-center">
+            <h1 className="absolute left-1/2 -translate-x-1/2 text-lg font-extrabold tracking-tight select-none pointer-events-none max-w-[60%] truncate text-center">
               {title}
             </h1>
           )}

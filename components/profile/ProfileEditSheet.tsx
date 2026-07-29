@@ -83,7 +83,7 @@ export const ProfileEditSheet: React.FC<ProfileEditSheetProps> = ({ open, initia
         <div className="fixed inset-0 z-[260] flex items-end justify-center bg-black/70 backdrop-blur-sm" onClick={onClose}>
             <div onClick={(e) => e.stopPropagation()} className="w-full max-w-lg max-h-[88vh] overflow-y-auto custom-scrollbar bg-bg-main border-t border-white/10 rounded-t-[28px] p-6 pb-10 space-y-4">
                 <div className="w-10 h-1 rounded-full bg-white/20 mx-auto" />
-                <h3 className="text-base font-black text-white uppercase tracking-wider">{title || 'Profili Düzenle'}</h3>
+                <h3 className="text-base font-extrabold text-white uppercase tracking-wider">{title || 'Profili Düzenle'}</h3>
                 {/* Profil fotoğrafı */}
                 <div className="flex flex-col items-center gap-3">
                     <button
@@ -103,11 +103,11 @@ export const ProfileEditSheet: React.FC<ProfileEditSheetProps> = ({ open, initia
                         </div>
                         {uploading && (
                             <div className="absolute inset-0 rounded-3xl bg-black/70 flex items-center justify-center">
-                                <span className="text-[10px] font-black text-primary uppercase tracking-widest">Yükleniyor…</span>
+                                <span className="text-[10px] font-extrabold text-primary uppercase tracking-widest">Yükleniyor…</span>
                             </div>
                         )}
                     </button>
-                    <button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploading} className="text-[10px] font-black text-primary uppercase tracking-widest disabled:opacity-60">
+                    <button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploading} className="text-[10px] font-extrabold text-primary uppercase tracking-widest disabled:opacity-60">
                         Fotoğrafı Değiştir
                     </button>
                     {photoError && (
@@ -132,7 +132,7 @@ export const ProfileEditSheet: React.FC<ProfileEditSheetProps> = ({ open, initia
                                         sel ? 'bg-primary text-black border-primary' : 'bg-[#161B22] text-white/60 border-white/10 hover:bg-white/5'
                                     }`}
                                 >
-                                    <span className="text-[13px] font-black">{POSITION_ABBR[code]}</span>
+                                    <span className="text-[13px] font-extrabold">{POSITION_ABBR[code]}</span>
                                     <span className="text-[8px] font-bold opacity-80">{label}</span>
                                 </button>
                             );
@@ -159,7 +159,7 @@ export const ProfileEditSheet: React.FC<ProfileEditSheetProps> = ({ open, initia
                                     key={g}
                                     type="button"
                                     onClick={() => setGender(sel ? '' : g)}
-                                    className={`flex-1 py-3 rounded-2xl text-[11px] font-black uppercase tracking-widest border transition-all active:scale-95 ${
+                                    className={`flex-1 py-3 rounded-2xl text-[11px] font-extrabold uppercase tracking-widest border transition-all active:scale-95 ${
                                         sel ? 'bg-primary text-black border-primary' : 'bg-[#161B22] text-white/60 border-white/10 hover:bg-white/5'
                                     }`}
                                 >
@@ -182,7 +182,7 @@ export const ProfileEditSheet: React.FC<ProfileEditSheetProps> = ({ open, initia
                                     key={s}
                                     type="button"
                                     onClick={() => setStyle(sel ? '' : s)}
-                                    className="py-3 rounded-2xl text-[11px] font-black uppercase tracking-widest border transition-all active:scale-95"
+                                    className="py-3 rounded-2xl text-[11px] font-extrabold uppercase tracking-widest border transition-all active:scale-95"
                                     style={sel
                                         ? { color: '#000', backgroundColor: meta.color, borderColor: meta.color, boxShadow: `0 0 14px ${meta.color}40` }
                                         : { color: meta.color, backgroundColor: `${meta.color}12`, borderColor: `${meta.color}45` }}
@@ -200,7 +200,7 @@ export const ProfileEditSheet: React.FC<ProfileEditSheetProps> = ({ open, initia
                 <button
                     onClick={() => void onSave({ position: pos.trim(), bio: bio.trim(), birthdate, gender, playStyle: style, avatarUrl: avatar })}
                     disabled={saving || uploading}
-                    className="w-full h-12 rounded-2xl bg-primary text-black font-black text-xs uppercase tracking-widest active:scale-95 transition-all disabled:opacity-50"
+                    className="w-full h-12 rounded-2xl bg-primary text-black font-extrabold text-xs uppercase tracking-widest active:scale-95 transition-all disabled:opacity-50"
                 >
                     {saving ? 'Kaydediliyor...' : 'Kaydet'}
                 </button>

@@ -111,7 +111,7 @@ const AdminAuthGate: React.FC<Props> = ({ onAuthenticated, bootError }) => {
           <div className="w-20 h-20 mx-auto bg-gradient-to-br from-red-500 to-purple-900 rounded-2xl flex items-center justify-center shadow-[0_0_50px_rgba(239,68,68,0.3)] mb-6 border border-red-500/30">
             <Lock size={32} className="text-white" />
           </div>
-          <h1 className="text-3xl font-black text-white uppercase tracking-[0.3em]">OYNA OS</h1>
+          <h1 className="text-3xl font-extrabold text-white uppercase tracking-[0.3em]">OYNA OS</h1>
           <p className="text-xs text-red-400 font-mono tracking-widest mt-2 uppercase">Platform Operasyon Merkezi</p>
         </div>
 
@@ -129,7 +129,7 @@ const AdminAuthGate: React.FC<Props> = ({ onAuthenticated, bootError }) => {
 
         <form onSubmit={submit} className="space-y-4">
           <div>
-            <label htmlFor="admin-email" className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 block">Admin E-posta</label>
+            <label htmlFor="admin-email" className="text-[10px] font-extrabold text-gray-500 uppercase tracking-widest mb-2 block">Admin E-posta</label>
             <div className="relative">
               <Mail size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
               <input
@@ -147,7 +147,7 @@ const AdminAuthGate: React.FC<Props> = ({ onAuthenticated, bootError }) => {
           </div>
 
           <div>
-            <label htmlFor="admin-password" className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 block">Şifre</label>
+            <label htmlFor="admin-password" className="text-[10px] font-extrabold text-gray-500 uppercase tracking-widest mb-2 block">Şifre</label>
             <div className="relative">
               <input
                 id="admin-password"
@@ -183,7 +183,7 @@ const AdminAuthGate: React.FC<Props> = ({ onAuthenticated, bootError }) => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full h-14 mt-2 bg-gradient-to-r from-red-600 to-purple-800 rounded-2xl text-white font-black text-sm tracking-widest uppercase hover:shadow-[0_0_30px_rgba(239,68,68,0.4)] transition-all flex items-center justify-center gap-2 disabled:opacity-60"
+            className="w-full h-14 mt-2 bg-gradient-to-r from-red-600 to-purple-800 rounded-2xl text-white font-extrabold text-sm tracking-widest uppercase hover:shadow-[0_0_30px_rgba(239,68,68,0.4)] transition-all flex items-center justify-center gap-2 disabled:opacity-60"
           >
             {loading ? (
               <>

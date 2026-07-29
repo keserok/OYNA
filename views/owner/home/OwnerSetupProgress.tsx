@@ -26,7 +26,7 @@ export const OwnerSetupProgress: React.FC<{ steps: SetupStep[] }> = ({ steps }) 
     <div className="bg-gradient-to-br from-[#12203a] to-[#161B22] border border-blue-500/20 rounded-3xl p-5 mb-6 shadow-xl">
       <div className="flex items-center justify-between mb-3">
         <div>
-          <h3 className="text-sm font-black text-white">Tesisini yayına hazırla</h3>
+          <h3 className="text-sm font-extrabold text-white">Tesisini yayına hazırla</h3>
           <p className="text-[11px] text-blue-200/70 mt-0.5">
             %{pct} tamamlandı · {steps.length - doneCount} adım kaldı
           </p>
@@ -39,7 +39,7 @@ export const OwnerSetupProgress: React.FC<{ steps: SetupStep[] }> = ({ steps }) 
               strokeDasharray={`${(pct / 100) * 94.2} 94.2`} strokeLinecap="round"
             />
           </svg>
-          <span className="absolute inset-0 flex items-center justify-center text-[11px] font-black text-white">%{pct}</span>
+          <span className="absolute inset-0 flex items-center justify-center text-[11px] font-extrabold text-white">%{pct}</span>
         </div>
       </div>
 
@@ -72,7 +72,7 @@ export const OwnerSetupProgress: React.FC<{ steps: SetupStep[] }> = ({ steps }) 
         <button
           type="button"
           onClick={nextStep.onFix}
-          className="mt-3 w-full py-3 rounded-2xl bg-blue-600 text-white text-xs font-black uppercase tracking-wider hover:bg-blue-500 transition-colors"
+          className="mt-3 w-full py-3 rounded-2xl bg-blue-600 text-white text-xs font-extrabold uppercase tracking-wider hover:bg-blue-500 transition-colors"
         >
           Sıradaki: {nextStep.label}
         </button>

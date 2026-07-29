@@ -154,7 +154,7 @@ export const PitchesPage: React.FC<PitchesPageProps> = ({ onRefresh }) => {
             B: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
             C: 'bg-red-500/20 text-red-400 border-red-500/30',
         };
-        return <span className={`px-2 py-0.5 rounded border text-[9px] font-black ${colors[g]}`}>{g}</span>;
+        return <span className={`px-2 py-0.5 rounded border text-[9px] font-extrabold ${colors[g]}`}>{g}</span>;
     };
 
     const pitchColumns = [

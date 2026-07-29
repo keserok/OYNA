@@ -81,7 +81,7 @@ const RoleSwitcher: React.FC<RoleSwitcherProps> = ({ roles, onClose, onSwitched 
         onClick={e => e.stopPropagation()}
       >
         <div className="flex justify-between items-center mb-1">
-          <h3 className="font-black text-white text-lg">Rol Değiştir</h3>
+          <h3 className="font-extrabold text-white text-lg">Rol Değiştir</h3>
           <button onClick={onClose} className="text-gray-500 hover:text-white p-1" aria-label="Kapat">
             <X size={18} />
           </button>
@@ -118,15 +118,15 @@ const RoleSwitcher: React.FC<RoleSwitcherProps> = ({ roles, onClose, onSwitched 
                   {meta.icon}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-black text-white">{meta.label}</p>
+                  <p className="text-sm font-extrabold text-white">{meta.label}</p>
                   <p className="text-[11px] text-gray-400 truncate">{meta.sub}</p>
                 </div>
                 {isActive ? (
-                  <span className="flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-[#39FF14] shrink-0">
+                  <span className="flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-widest text-[#39FF14] shrink-0">
                     <Check size={12} /> Aktif
                   </span>
                 ) : (
-                  <span className="text-[10px] font-black uppercase tracking-widest text-gray-500 shrink-0">Geç</span>
+                  <span className="text-[10px] font-extrabold uppercase tracking-widest text-gray-500 shrink-0">Geç</span>
                 )}
               </button>
             );
@@ -154,15 +154,15 @@ const RoleSwitcher: React.FC<RoleSwitcherProps> = ({ roles, onClose, onSwitched 
               >
                 {ROLE_META[pending].icon}
               </div>
-              <h3 className="text-base font-black text-white mb-1.5">Rol Değişikliği</h3>
+              <h3 className="text-base font-extrabold text-white mb-1.5">Rol Değişikliği</h3>
               <p className="text-sm text-gray-300 mb-6 leading-relaxed">
-                <span className="font-black text-white">'{ROLE_META[pending].label}'</span> rolüne geçmek istediğine emin misin?
+                <span className="font-extrabold text-white">'{ROLE_META[pending].label}'</span> rolüne geçmek istediğine emin misin?
               </p>
               <div className="space-y-2.5">
                 <button
                   onClick={handleConfirm}
                   disabled={loading}
-                  className="w-full h-12 rounded-2xl font-black text-sm text-black flex items-center justify-center gap-2 disabled:opacity-60 transition-all"
+                  className="w-full h-12 rounded-2xl font-extrabold text-sm text-black flex items-center justify-center gap-2 disabled:opacity-60 transition-all"
                   style={{ background: ROLE_META[pending].color }}
                 >
                   {loading ? (<><RefreshCw size={15} className="animate-spin" /> Geçiliyor...</>) : 'Evet, Geç'}
@@ -170,7 +170,7 @@ const RoleSwitcher: React.FC<RoleSwitcherProps> = ({ roles, onClose, onSwitched 
                 <button
                   onClick={() => setPending(null)}
                   disabled={loading}
-                  className="w-full h-12 rounded-2xl font-black text-sm text-gray-400 border border-white/10 disabled:opacity-60"
+                  className="w-full h-12 rounded-2xl font-extrabold text-sm text-gray-400 border border-white/10 disabled:opacity-60"
                 >
                   Vazgeç
                 </button>

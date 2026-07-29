@@ -62,25 +62,25 @@ const MatchesView: React.FC<MatchesViewProps> = ({ onBack, matches }) => {
                     <Clock size={12} />
                     {match.time}
                   </div>
-                  <div className="px-2 py-1 rounded-lg bg-green-500/10 text-green-400 text-[10px] font-black uppercase tracking-tighter">
+                  <div className="px-2 py-1 rounded-lg bg-green-500/10 text-green-400 text-[10px] font-extrabold uppercase tracking-tighter">
                     TAMAMLANDI
                   </div>
                 </div>
 
                 <div className="flex items-center justify-between gap-4">
                   <div className="flex-1 text-center">
-                    <div className="text-sm font-black italic mb-1 truncate">{match.teamA}</div>
+                    <div className="text-sm font-extrabold italic mb-1 truncate">{match.teamA}</div>
                     <div className="text-[10px] font-bold text-gray-500 uppercase">EV SAHİBİ</div>
                   </div>
 
                   <div className="flex items-center gap-4">
-                    <span className="text-3xl font-black italic text-white">{match.scoreA}</span>
+                    <span className="text-3xl font-extrabold italic text-white">{match.scoreA}</span>
                     <div className="w-px h-8 bg-white/10"></div>
-                    <span className="text-3xl font-black italic text-white">{match.scoreB}</span>
+                    <span className="text-3xl font-extrabold italic text-white">{match.scoreB}</span>
                   </div>
 
                   <div className="flex-1 text-center">
-                    <div className="text-sm font-black italic mb-1 truncate">{match.teamB}</div>
+                    <div className="text-sm font-extrabold italic mb-1 truncate">{match.teamB}</div>
                     <div className="text-[10px] font-bold text-gray-500 uppercase">DEPLASMAN</div>
                   </div>
                 </div>

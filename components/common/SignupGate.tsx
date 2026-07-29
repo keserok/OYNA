@@ -42,13 +42,13 @@ const SignupGate: React.FC = () => {
         <div className="w-14 h-14 rounded-2xl bg-[#FACC15]/15 flex items-center justify-center mb-4">
           <Zap size={26} className="text-[#FACC15]" />
         </div>
-        <h3 className="text-white font-black text-xl mb-2">Sahaya çıkmaya hazır mısın?</h3>
+        <h3 className="text-white font-extrabold text-xl mb-2">Sahaya çıkmaya hazır mısın?</h3>
         <p className="text-sm text-gray-400 leading-relaxed mb-6">
           Maça katılmak, saha kiralamak ve oyuncu kartını oluşturmak için ücretsiz bir hesap yeterli. 30 saniyeni alır.
         </p>
         <button
           onClick={goSignup}
-          className="w-full py-4 bg-[#FACC15] text-black font-black text-base rounded-2xl flex items-center justify-center gap-2 active:scale-95 transition-all"
+          className="w-full py-4 bg-[#FACC15] text-black font-extrabold text-base rounded-2xl flex items-center justify-center gap-2 active:scale-95 transition-all"
         >
           <UserPlus size={18} /> ÜCRETSİZ KAYDOL / GİRİŞ YAP
         </button>

@@ -2,6 +2,12 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Home, Calendar, Users, User, MapPin } from 'lucide-react';
 import { AppView } from '../types';
+// IP-08: Gezinti etiketleri 12px'ti ve gerçek Inter metrikleriyle 360px'lik
+// ekranda "Ana Sayfa" İKİ SATIRA kırılıyordu (görsel testler yedek fontla
+// çalıştığı için bunu hiç yakalamamıştı — canlıda kırılıyor). Etiket ölçeğin
+// caption basamağına (11px) indi ve `whitespace-nowrap` ile kırılma yasaklandı:
+// birincil gezinti çubuğu asla iki satıra taşmaz.
+import { type_ } from '../ui/type';
 
 interface BottomNavProps {
   currentView: AppView;
@@ -57,7 +63,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({ currentView, onNavigate, h
                 >
                   <Icon size={24} strokeWidth={isActive ? 3 : 2} />
                 </motion.div>
-                <span className={`text-xs font-black tracking-wide mt-1 transition-colors ${isActive ? 'text-[#39FF14]' : 'text-gray-500'}`}>
+                <span className={`${type_.caption} font-extrabold tracking-wide mt-1 whitespace-nowrap transition-colors ${isActive ? 'text-[#39FF14]' : 'text-gray-500'}`}>
                   {item.label}
                 </span>
               </button>
@@ -86,7 +92,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({ currentView, onNavigate, h
                   className={`transition-colors duration-300 ${isActive ? 'text-white' : 'text-gray-500 group-hover:text-gray-300'}`} 
                   strokeWidth={isActive ? 2.5 : 2}
                 />
-                <span className={`text-xs font-bold tracking-wide transition-colors duration-300 ${isActive ? 'text-white' : 'text-gray-500 group-hover:text-gray-300'}`}>
+                <span className={`${type_.caption} font-bold tracking-wide whitespace-nowrap transition-colors duration-300 ${isActive ? 'text-white' : 'text-gray-500 group-hover:text-gray-300'}`}>
                   {item.label}
                 </span>
               </div>

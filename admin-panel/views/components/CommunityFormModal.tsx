@@ -75,7 +75,7 @@ export const CommunityFormModal: React.FC<Props> = ({ open, mode, community, onC
             className="relative w-full max-w-lg bg-[#0D1117] border border-white/10 rounded-2xl shadow-2xl overflow-hidden"
           >
             <div className="flex items-center justify-between px-5 py-4 border-b border-white/10">
-              <h2 className="text-sm font-black text-white uppercase">
+              <h2 className="text-sm font-extrabold text-white uppercase">
                 {mode === 'create' ? 'Yeni Topluluk' : 'Topluluğu Düzenle'}
               </h2>
               <button type="button" onClick={onClose} className="w-8 h-8 rounded-lg bg-white/5 text-gray-400 hover:text-white flex items-center justify-center">

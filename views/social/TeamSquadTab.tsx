@@ -157,7 +157,7 @@ const TeamSquadTab: React.FC<TeamSquadTabProps> = ({
       {/* ── Bekleyenler (yalnız yönetici — Spec §3.8 Kadro) ── */}
       {isAdmin && (requests.length > 0 || outgoing.length > 0) && (
         <div className="rounded-2xl bg-[#39FF14]/6 border border-[#39FF14]/20 p-3.5">
-          <div className="text-[10px] font-black uppercase tracking-widest text-[#39FF14]/80 mb-2.5">
+          <div className="text-[10px] font-extrabold uppercase tracking-widest text-[#39FF14]/80 mb-2.5">
             Bekleyenler ({requests.length + outgoing.length})
           </div>
           <div className="space-y-2">
@@ -186,7 +186,7 @@ const TeamSquadTab: React.FC<TeamSquadTabProps> = ({
                     </button>
                     <button
                       onClick={() => handleRequest(req, true)}
-                      className="h-9 px-3 rounded-xl bg-[#39FF14] text-[#0A0E14] text-[11px] font-black flex items-center gap-1 active:scale-95"
+                      className="h-9 px-3 rounded-xl bg-[#39FF14] text-[#0A0E14] text-[11px] font-extrabold flex items-center gap-1 active:scale-95"
                     >
                       <Check size={12} /> Onayla
                     </button>
@@ -217,13 +217,13 @@ const TeamSquadTab: React.FC<TeamSquadTabProps> = ({
       {/* ── Kadro listesi ── */}
       <div>
         <div className="flex items-center justify-between mb-2.5">
-          <h3 className="text-[10px] font-black uppercase tracking-widest text-white/40">
+          <h3 className="text-[10px] font-extrabold uppercase tracking-widest text-white/40">
             Kadro ({squad.length}/20)
           </h3>
           {isAdmin && (
             <button
               onClick={onOpenInvite}
-              className="h-9 px-3 rounded-xl bg-[#39FF14] text-[#0A0E14] text-[11px] font-black flex items-center gap-1.5 active:scale-95"
+              className="h-9 px-3 rounded-xl bg-[#39FF14] text-[#0A0E14] text-[11px] font-extrabold flex items-center gap-1.5 active:scale-95"
             >
               <UserPlus size={13} /> Davet Et
             </button>
@@ -254,12 +254,12 @@ const TeamSquadTab: React.FC<TeamSquadTabProps> = ({
                         {m.full_name}{self ? ' (sen)' : ''}
                       </span>
                       {m.role === 'CAPTAIN' && (
-                        <span className="shrink-0 text-[9px] font-black px-1.5 py-0.5 rounded bg-[#F2C500]/12 text-[#F2C500] flex items-center gap-0.5">
+                        <span className="shrink-0 text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-[#F2C500]/12 text-[#F2C500] flex items-center gap-0.5">
                           <Crown size={9} /> Kaptan
                         </span>
                       )}
                       {m.role === 'ADMIN' && (
-                        <span className="shrink-0 text-[9px] font-black px-1.5 py-0.5 rounded bg-white/8 text-white/55 flex items-center gap-0.5">
+                        <span className="shrink-0 text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-white/8 text-white/55 flex items-center gap-0.5">
                           <ShieldCheck size={9} /> Yönetici
                         </span>
                       )}
@@ -271,7 +271,7 @@ const TeamSquadTab: React.FC<TeamSquadTabProps> = ({
                   </div>
                   {m.jersey_number != null && (
                     <span
-                      className="shrink-0 w-9 h-9 rounded-xl flex items-center justify-center text-sm font-black border border-white/10"
+                      className="shrink-0 w-9 h-9 rounded-xl flex items-center justify-center text-sm font-extrabold border border-white/10"
                       style={{ backgroundColor: `${team.color1 || '#39FF14'}1f`, color: team.color1 || '#39FF14' }}
                     >
                       {m.jersey_number}
@@ -291,7 +291,7 @@ const TeamSquadTab: React.FC<TeamSquadTabProps> = ({
             <div className="flex items-center gap-3">
               <Avatar name={member.full_name} src={member.avatar_url} size="lg" />
               <div className="min-w-0">
-                <div className="text-base font-black truncate">{member.full_name}</div>
+                <div className="text-base font-extrabold truncate">{member.full_name}</div>
                 <div className="text-[11px] text-white/40">
                   {member.role === 'CAPTAIN' ? 'Kaptan' : member.role === 'ADMIN' ? 'Yönetici' : 'Oyuncu'}
                   {member.oyna_id ? ` · @${member.oyna_id}` : ''}
@@ -302,7 +302,7 @@ const TeamSquadTab: React.FC<TeamSquadTabProps> = ({
             {/* Forma no — RLS gereği yalnız kaptan yazar (tm_update_captain) */}
             {isCaptain && (
               <div className="mt-4">
-                <label className="text-[10px] font-black uppercase tracking-widest text-white/40">
+                <label className="text-[10px] font-extrabold uppercase tracking-widest text-white/40">
                   Forma Numarası
                 </label>
                 <div className="flex gap-2 mt-1.5">
@@ -311,12 +311,12 @@ const TeamSquadTab: React.FC<TeamSquadTabProps> = ({
                     value={jersey}
                     onChange={e => setJersey(e.target.value.replace(/\D/g, '').slice(0, 2))}
                     placeholder="—"
-                    className="w-20 h-11 rounded-xl bg-white/5 border border-white/10 text-center text-base font-black tabular-nums placeholder:text-white/20 focus:outline-none focus:border-[#39FF14]/50"
+                    className="w-20 h-11 rounded-xl bg-white/5 border border-white/10 text-center text-base font-extrabold tabular-nums placeholder:text-white/20 focus:outline-none focus:border-[#39FF14]/50"
                   />
                   <button
                     onClick={saveJersey}
                     disabled={sheetBusy}
-                    className="h-11 px-4 rounded-xl bg-white/8 border border-white/12 text-xs font-black active:scale-95 disabled:opacity-50"
+                    className="h-11 px-4 rounded-xl bg-white/8 border border-white/12 text-xs font-extrabold active:scale-95 disabled:opacity-50"
                   >
                     Kaydet
                   </button>

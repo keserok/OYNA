@@ -64,7 +64,7 @@ export const ConfirmSheet: React.FC<ConfirmSheetProps> = ({
             type="button"
             onClick={handleConfirm}
             disabled={busy}
-            className={`flex-1 h-12 rounded-2xl font-black text-white flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-60 outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0D1219] ${
+            className={`flex-1 h-12 rounded-2xl font-extrabold text-white flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-60 outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0D1219] ${
               destructive
                 ? 'bg-red-600 hover:bg-red-500 focus-visible:ring-red-400'
                 : 'bg-blue-600 hover:bg-blue-500 focus-visible:ring-blue-400'
@@ -83,7 +83,7 @@ export const ConfirmSheet: React.FC<ConfirmSheetProps> = ({
         >
           {icon ?? <AlertTriangle size={26} />}
         </div>
-        <h3 className="text-lg font-black text-white mb-1.5">{title}</h3>
+        <h3 className="text-lg font-extrabold text-white mb-1.5">{title}</h3>
         {message && (
           <p className="text-sm text-slate-400 leading-relaxed max-w-[300px]">{message}</p>
         )}

@@ -169,7 +169,7 @@ export const MatchesPage: React.FC<MatchesPageProps> = ({ onRefresh, onNavigate 
           <div className="min-w-0">
             <p className="font-bold text-white text-sm truncate flex items-center gap-1.5">
               {m.title}
-              {m.isDemo && <span className="shrink-0 text-[8px] font-black px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-400 border border-amber-500/30 uppercase tracking-wide">Demo</span>}
+              {m.isDemo && <span className="shrink-0 text-[8px] font-extrabold px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-400 border border-amber-500/30 uppercase tracking-wide">Demo</span>}
             </p>
             <p className="text-[10px] text-gray-500 font-mono">{m.id.slice(0, 8)}…</p>
           </div>

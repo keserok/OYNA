@@ -45,7 +45,7 @@ export const PageShell: React.FC<PageShellProps> = ({
             {meta?.group && (
               <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-500 mb-1">{meta.group}</p>
             )}
-            <h1 className="text-xl md:text-2xl font-black text-white tracking-tight truncate">{resolvedTitle}</h1>
+            <h1 className="text-xl md:text-2xl font-extrabold text-white tracking-tight truncate">{resolvedTitle}</h1>
             {resolvedDesc && (
               <p className="text-sm text-gray-500 mt-1 max-w-2xl leading-relaxed">{resolvedDesc}</p>
             )}

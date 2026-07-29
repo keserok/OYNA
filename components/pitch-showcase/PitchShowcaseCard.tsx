@@ -58,12 +58,12 @@ export const PitchShowcaseCard: React.FC<{
         {/* Rozetler: indirim + öne çıkan */}
         <div className="absolute top-3 left-3 flex gap-1.5">
           {pitch.flashDiscount ? (
-            <span className="flex items-center gap-1 px-2 py-1 rounded-lg bg-red-600 text-[10px] font-black text-white shadow-md">
+            <span className="flex items-center gap-1 px-2 py-1 rounded-lg bg-red-600 text-[10px] font-extrabold text-white shadow-md">
               🔥 %{pitch.flashDiscount} İNDİRİM
             </span>
           ) : null}
           {pitch.isFeatured && (
-            <span className="px-2 py-1 rounded-lg bg-[#FFFF00] text-[10px] font-black text-black shadow-md uppercase">Öne Çıkan</span>
+            <span className="px-2 py-1 rounded-lg bg-[#FFFF00] text-[10px] font-extrabold text-black shadow-md uppercase">Öne Çıkan</span>
           )}
         </div>
 
@@ -88,7 +88,7 @@ export const PitchShowcaseCard: React.FC<{
       </div>
 
       <div className="flex items-start justify-between mt-3 gap-3">
-        <h3 className="text-lg font-black italic uppercase tracking-tight leading-none text-white">{pitch.name}</h3>
+        <h3 className="text-lg font-extrabold italic uppercase tracking-tight leading-none text-white">{pitch.name}</h3>
         <div className="flex items-center gap-1 shrink-0">
           {/* V-2: gerçek değerlendirme (platform veya Google) yoksa "5.0" değil "Yeni". */}
           {(pitch.ratingCount > 0 || pitch.googleReviews > 0) ? (
@@ -100,7 +100,7 @@ export const PitchShowcaseCard: React.FC<{
               )}
             </>
           ) : (
-            <span className="text-[11px] font-black uppercase tracking-wide text-white/40">Yeni</span>
+            <span className="text-[11px] font-extrabold uppercase tracking-wide text-white/40">Yeni</span>
           )}
         </div>
       </div>
@@ -108,9 +108,9 @@ export const PitchShowcaseCard: React.FC<{
 
       <div className="mt-2.5 flex items-end justify-between">
         <div>
-          <span className="block text-[9px] font-black uppercase tracking-[0.12em] text-white/40 mb-0.5">Ort. Saatlik</span>
+          <span className="block text-[9px] font-extrabold uppercase tracking-[0.12em] text-white/40 mb-0.5">Ort. Saatlik</span>
           <span className="flex items-baseline gap-2">
-            <span className={`text-lg font-black ${pitch.originalPrice ? 'text-[#39FF14]' : 'text-white'}`}>~₺{pitch.totalPrice}</span>
+            <span className={`text-lg font-extrabold ${pitch.originalPrice ? 'text-[#39FF14]' : 'text-white'}`}>~₺{pitch.totalPrice}</span>
             {pitch.originalPrice && (
               <span className="text-[13px] font-semibold text-white/35 line-through">₺{pitch.originalPrice}</span>
             )}
@@ -119,11 +119,11 @@ export const PitchShowcaseCard: React.FC<{
         {/* Müsaitlik rozeti: yalnız admin show_availability_badge açtıysa gösterilir */}
         {pitch.showAvailabilityBadge && pitch.todayAvailableCount !== undefined && (
           pitch.todayAvailableCount > 0 ? (
-            <span className="px-3 py-2 rounded-xl bg-[#39FF14]/10 border border-[#39FF14]/35 text-[#39FF14] text-[11px] font-black">
+            <span className="px-3 py-2 rounded-xl bg-[#39FF14]/10 border border-[#39FF14]/35 text-[#39FF14] text-[11px] font-extrabold">
               Bugün {pitch.todayAvailableCount} saat müsait
             </span>
           ) : (
-            <span className="px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white/60 text-[11px] font-black">
+            <span className="px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white/60 text-[11px] font-extrabold">
               Bugün dolu
             </span>
           )

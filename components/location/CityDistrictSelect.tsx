@@ -37,7 +37,7 @@ const CityDistrictSelect: React.FC<CityDistrictSelectProps> = ({
     <div className={`grid ${showDistrict ? 'grid-cols-2' : 'grid-cols-1'} gap-2.5 ${className}`}>
       <div>
         {labels && (
-          <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 block mb-1.5 ml-0.5">
+          <label className="text-[10px] font-extrabold uppercase tracking-widest text-gray-500 block mb-1.5 ml-0.5">
             İl
           </label>
         )}
@@ -61,7 +61,7 @@ const CityDistrictSelect: React.FC<CityDistrictSelectProps> = ({
       {showDistrict && (
         <div>
           {labels && (
-            <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 block mb-1.5 ml-0.5">
+            <label className="text-[10px] font-extrabold uppercase tracking-widest text-gray-500 block mb-1.5 ml-0.5">
               İlçe
             </label>
           )}

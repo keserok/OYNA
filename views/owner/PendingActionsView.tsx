@@ -94,7 +94,7 @@ const RealPendingBookings: React.FC<{ pitchId: string | null }> = ({ pitchId }) 
     return (
         <div className="mb-6">
             <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-black text-white uppercase tracking-widest flex items-center gap-2">
+                <h3 className="text-sm font-extrabold text-white uppercase tracking-widest flex items-center gap-2">
                     <Clock size={16} className="text-[#FACC15]" /> Uygulama Talepleri
                     {rows.length > 0 && <span className="bg-[#FACC15] text-black text-[10px] px-2 py-0.5 rounded-full">{rows.length}</span>}
                 </h3>
@@ -114,23 +114,23 @@ const RealPendingBookings: React.FC<{ pitchId: string | null }> = ({ pitchId }) 
                         <div key={b.id} className="bg-[#161B22] border border-orange-500/20 rounded-2xl p-4">
                             <div className="flex items-center justify-between mb-3">
                                 <div>
-                                    <p className="text-sm font-black text-white">{b.courts?.name ?? 'Saha'} · {b.start_time.slice(0,5)}-{b.end_time.slice(0,5)}</p>
+                                    <p className="text-sm font-extrabold text-white">{b.courts?.name ?? 'Saha'} · {b.start_time.slice(0,5)}-{b.end_time.slice(0,5)}</p>
                                     <p className="text-[11px] text-gray-400 mt-0.5">{new Date(b.booking_date + 'T00:00:00').toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', weekday: 'short' })}{b.price > 0 ? ` · ₺${b.price}` : ''}</p>
                                 </div>
-                                <span className="text-[9px] font-black px-2 py-1 rounded-full bg-orange-500/15 text-orange-400 uppercase">Bekliyor</span>
+                                <span className="text-[9px] font-extrabold px-2 py-1 rounded-full bg-orange-500/15 text-orange-400 uppercase">Bekliyor</span>
                             </div>
                             <div className="grid grid-cols-2 gap-2">
                                 <button
                                     disabled={busyId === b.id}
                                     onClick={() => handle(b.id, 'REJECT')}
-                                    className="min-h-[44px] py-2.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-black uppercase hover:bg-red-500/20 active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                                    className="min-h-[44px] py-2.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-extrabold uppercase hover:bg-red-500/20 active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                                 >
                                     {busyId === b.id ? <Loader2 size={15} className="animate-spin" /> : 'Reddet'}
                                 </button>
                                 <button
                                     disabled={busyId === b.id}
                                     onClick={() => handle(b.id, 'APPROVE')}
-                                    className="min-h-[44px] py-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-black uppercase hover:bg-emerald-500/20 active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                                    className="min-h-[44px] py-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-extrabold uppercase hover:bg-emerald-500/20 active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                                 >
                                     {busyId === b.id ? <Loader2 size={15} className="animate-spin" /> : 'Onayla'}
                                 </button>
@@ -200,7 +200,7 @@ export const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingR
             {/* Header — geri oku kaldırıldı; alt navigasyondaki Özet sekmesi dönüşü sağlar. */}
             <div className="px-6 py-4 bg-[#161B22] border-b border-white/5 flex items-center gap-3">
                 <div>
-                    <h2 className="text-base font-black text-white italic uppercase tracking-tight">TALEPLER & AÇIK MAÇLAR</h2>
+                    <h2 className="text-base font-extrabold text-white italic uppercase tracking-tight">TALEPLER & AÇIK MAÇLAR</h2>
                     <p className="text-[10px] text-gray-500 font-bold uppercase">Sahada oluşturulan organizasyonlar</p>
                 </div>
             </div>
@@ -209,7 +209,7 @@ export const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingR
             <div className="flex p-1.5 bg-[#161B22] m-4 rounded-2xl border border-white/5 shadow-inner">
                 <button
                     onClick={() => setSubTab('REQUESTS')}
-                    className={`flex-1 py-3 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-2 ${
+                    className={`flex-1 py-3 rounded-xl text-[11px] font-extrabold uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-2 ${
                         subTab === 'REQUESTS' 
                         ? 'bg-[#FACC15] text-black shadow-lg scale-[1.02]' 
                         : 'text-gray-500 hover:text-white'
@@ -219,7 +219,7 @@ export const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingR
                 </button>
                 <button
                     onClick={() => setSubTab('PUBLIC_MATCHES')}
-                    className={`flex-1 py-3 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-2 ${
+                    className={`flex-1 py-3 rounded-xl text-[11px] font-extrabold uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-2 ${
                         subTab === 'PUBLIC_MATCHES' 
                         ? 'bg-[#FACC15] text-black shadow-lg scale-[1.02]' 
                         : 'text-gray-500 hover:text-white'
@@ -234,7 +234,7 @@ export const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingR
                 {subTab === 'REQUESTS' && realPitchId && onToggleAutoApprove && (
                     <div className="bg-[#161B22] border border-white/5 rounded-2xl p-4 mb-4 flex items-center justify-between gap-3">
                         <div className="min-w-0">
-                            <p className="text-sm font-black text-white">Otomatik Onay</p>
+                            <p className="text-sm font-extrabold text-white">Otomatik Onay</p>
                             <p className="text-[11px] text-gray-400 mt-0.5 leading-snug">
                                 {autoApprove
                                     ? 'Açık: talepler süre sonunda otomatik onaylanır.'
@@ -259,7 +259,7 @@ export const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingR
                                     <div className="absolute top-0 left-0 w-1 bg-yellow-500 h-full"></div>
                                     <div className="flex justify-between items-start mb-4 pl-2">
                                         <div>
-                                            <h4 className="text-base font-black text-white">{req.title}</h4>
+                                            <h4 className="text-base font-extrabold text-white">{req.title}</h4>
                                             <p className="text-xs text-gray-400 mt-1 uppercase font-semibold">{req.subtitle}</p>
                                         </div>
                                         <div className="bg-yellow-500/10 border border-yellow-500/20 px-3 py-1 rounded-xl text-[10px] text-yellow-400 font-bold uppercase tracking-wider flex items-center gap-1.5">
@@ -271,7 +271,7 @@ export const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingR
                                         <button
                                             onClick={() => onApprove(req.id)}
                                             disabled={processingIds?.has(req.id)}
-                                            className="flex-1 min-h-[48px] py-3 bg-green-500 text-black font-black text-xs rounded-xl hover:bg-green-400 active:scale-95 transition-all shadow-lg shadow-green-900/10 disabled:opacity-60 flex items-center justify-center gap-2"
+                                            className="flex-1 min-h-[48px] py-3 bg-green-500 text-black font-extrabold text-xs rounded-xl hover:bg-green-400 active:scale-95 transition-all shadow-lg shadow-green-900/10 disabled:opacity-60 flex items-center justify-center gap-2"
                                         >
                                             {processingIds?.has(req.id) ? <Loader2 size={16} className="animate-spin" /> : 'REZERVE ET & ONAYLA'}
                                         </button>
@@ -320,11 +320,11 @@ export const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingR
                                     
                                     <div className="flex justify-between items-start mb-4 pl-2">
                                         <div>
-                                            <span className="text-[9px] font-black uppercase bg-white/5 border border-white/10 px-2 py-0.5 rounded text-gray-400 tracking-widest">{match.pitchName}</span>
-                                            <h4 className="text-base font-black text-white mt-2 leading-tight">{match.title}</h4>
+                                            <span className="text-[9px] font-extrabold uppercase bg-white/5 border border-white/10 px-2 py-0.5 rounded text-gray-400 tracking-widest">{match.pitchName}</span>
+                                            <h4 className="text-base font-extrabold text-white mt-2 leading-tight">{match.title}</h4>
                                             <p className="text-[10px] text-gray-400 font-bold mt-1 uppercase">{match.time}</p>
                                         </div>
-                                        <div className={`px-2.5 py-1 rounded-lg text-[9px] font-black uppercase ${
+                                        <div className={`px-2.5 py-1 rounded-lg text-[9px] font-extrabold uppercase ${
                                             match.status === 'COMPLETED' || match.status === 'READY'
                                             ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400' 
                                             : 'bg-yellow-500/10 border border-yellow-500/20 text-yellow-400'
@@ -334,7 +334,7 @@ export const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingR
                                     </div>
 
                                     <div className="mb-2 pl-2 space-y-1.5">
-                                        <div className="flex justify-between text-[10px] font-black uppercase">
+                                        <div className="flex justify-between text-[10px] font-extrabold uppercase">
                                             <span className="text-gray-500">Kadro Doluluk</span>
                                             <span className={isFull ? 'text-emerald-400' : 'text-white'}>{match.joinedPlayers} / {match.maxPlayers || '—'} OYUNCU</span>
                                         </div>
@@ -349,12 +349,12 @@ export const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingR
                                     </div>
 
                                     <div className="flex justify-between items-center pl-2 pt-4 border-t border-white/5">
-                                        <span className="text-sm font-black text-emerald-400 font-mono">
+                                        <span className="text-sm font-extrabold text-emerald-400 font-mono">
                                             {match.price > 0 ? `₺${match.price.toLocaleString('tr-TR')}` : 'Ücretsiz'}
                                         </span>
                                         <button 
                                             onClick={() => setSelectedMatch(match)}
-                                            className="px-4 py-2 bg-white/5 border border-white/10 hover:bg-white/10 text-white text-[10px] font-black rounded-xl transition-all uppercase tracking-wider"
+                                            className="px-4 py-2 bg-white/5 border border-white/10 hover:bg-white/10 text-white text-[10px] font-extrabold rounded-xl transition-all uppercase tracking-wider"
                                         >
                                             DETAY
                                         </button>
@@ -376,7 +376,7 @@ export const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingR
                 footer={
                     <button
                         onClick={() => setSelectedMatch(null)}
-                        className="w-full py-3.5 min-h-[48px] bg-[#FACC15] text-black font-black text-sm rounded-2xl hover:bg-yellow-300 active:scale-[0.98] transition-all uppercase tracking-wider text-center"
+                        className="w-full py-3.5 min-h-[48px] bg-[#FACC15] text-black font-extrabold text-sm rounded-2xl hover:bg-yellow-300 active:scale-[0.98] transition-all uppercase tracking-wider text-center"
                     >
                         KAPAT
                     </button>
@@ -386,15 +386,15 @@ export const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingR
                     <div className="bg-[#0A0E14] border border-white/5 p-4 rounded-2xl space-y-3">
                         <div className="flex justify-between text-sm">
                             <span className="text-gray-500 font-bold uppercase text-[0.6875rem]">Durum</span>
-                            <span className="text-white font-black">{selectedMatch.status}</span>
+                            <span className="text-white font-extrabold">{selectedMatch.status}</span>
                         </div>
                         <div className="flex justify-between text-sm">
                             <span className="text-gray-500 font-bold uppercase text-[0.6875rem]">Oyuncu</span>
-                            <span className="text-white font-black tabular-nums">{selectedMatch.joinedPlayers} / {selectedMatch.maxPlayers || '—'}</span>
+                            <span className="text-white font-extrabold tabular-nums">{selectedMatch.joinedPlayers} / {selectedMatch.maxPlayers || '—'}</span>
                         </div>
                         <div className="flex justify-between text-sm">
                             <span className="text-gray-500 font-bold uppercase text-[0.6875rem]">Ücret</span>
-                            <span className="text-emerald-400 font-black font-mono tabular-nums">₺{Number(selectedMatch.price || 0).toLocaleString('tr-TR')}</span>
+                            <span className="text-emerald-400 font-extrabold font-mono tabular-nums">₺{Number(selectedMatch.price || 0).toLocaleString('tr-TR')}</span>
                         </div>
                     </div>
                 )}

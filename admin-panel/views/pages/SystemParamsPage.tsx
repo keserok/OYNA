@@ -136,7 +136,7 @@ export const SystemParamsPage: React.FC<{ onRefresh?: () => Promise<void> }> = (
 
           {Object.entries(grouped).map(([cat, rows]) => (
             <section key={cat} className="bg-[#161B22]/60 border border-white/[0.06] rounded-2xl p-5">
-              <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-wider mb-4">
+              <h3 className="text-[10px] font-extrabold text-gray-400 uppercase tracking-wider mb-4">
                 {CATEGORY_LABELS[cat] ?? cat}
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -151,7 +151,7 @@ export const SystemParamsPage: React.FC<{ onRefresh?: () => Promise<void> }> = (
                         type="button"
                         disabled={savingKey === row.key}
                         onClick={() => void saveConfig(row, !(row.value as boolean))}
-                        className={`px-4 py-2 rounded-xl text-xs font-black disabled:opacity-40 ${
+                        className={`px-4 py-2 rounded-xl text-xs font-extrabold disabled:opacity-40 ${
                           row.value ? 'bg-green-500/20 text-green-400' : 'bg-white/10 text-gray-400'
                         }`}
                       >
@@ -185,7 +185,7 @@ export const SystemParamsPage: React.FC<{ onRefresh?: () => Promise<void> }> = (
 
           {flags.length > 0 && (
             <section className="bg-[#161B22]/60 border border-white/[0.06] rounded-2xl p-5">
-              <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-wider mb-1">
+              <h3 className="text-[10px] font-extrabold text-gray-400 uppercase tracking-wider mb-1">
                 Modül Anahtarları
               </h3>
               <p className="text-[11px] text-gray-500 mb-4">
@@ -205,7 +205,7 @@ export const SystemParamsPage: React.FC<{ onRefresh?: () => Promise<void> }> = (
                       type="button"
                       disabled={savingKey === row.key}
                       onClick={() => void toggleFlag(row)}
-                      className={`px-4 py-2 rounded-xl text-xs font-black shrink-0 disabled:opacity-40 ${
+                      className={`px-4 py-2 rounded-xl text-xs font-extrabold shrink-0 disabled:opacity-40 ${
                         row.enabled ? 'bg-green-500/20 text-green-400' : 'bg-white/10 text-gray-400'
                       }`}
                     >

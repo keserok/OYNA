@@ -159,11 +159,11 @@ export const FifaCard: React.FC<FifaCardProps> = ({
                     {/* Top Half */}
                     <div className="flex justify-between items-start h-[45%]">
                         <div className="flex flex-col items-center mt-1 ml-1">
-                            <span className="text-4xl font-black leading-none tracking-tighter drop-shadow">{displayRating}</span>
-                            <span className="text-[10px] font-black mt-0.5 tracking-wider uppercase opacity-90">{getRoleAbbr()}</span>
+                            <span className="text-4xl font-extrabold leading-none tracking-tighter drop-shadow">{displayRating}</span>
+                            <span className="text-[10px] font-extrabold mt-0.5 tracking-wider uppercase opacity-90">{getRoleAbbr()}</span>
                             <img src="https://flagcdn.com/w40/tr.png" alt="TR" className="w-5 h-3.5 mt-1.5 shadow-sm rounded-sm border border-black/10" />
                             {isElite && (
-                                <div className={`px-1 py-0.5 rounded text-[8px] font-black mt-2 uppercase shadow-sm ${theme.accentBg}`}>
+                                <div className={`px-1 py-0.5 rounded text-[8px] font-extrabold mt-2 uppercase shadow-sm ${theme.accentBg}`}>
                                     ELITE
                                 </div>
                             )}
@@ -186,34 +186,34 @@ export const FifaCard: React.FC<FifaCardProps> = ({
 
                     {/* Bottom Half */}
                     <div className="flex-1 flex flex-col items-center justify-end pb-3">
-                        <h3 className="text-xl font-black uppercase tracking-wider mb-1 drop-shadow-sm truncate max-w-full text-center">
+                        <h3 className="text-xl font-extrabold uppercase tracking-wider mb-1 drop-shadow-sm truncate max-w-full text-center">
                             {name.split(' ')[0] || 'OYUNCU'}
                         </h3>
                         <div className="w-4/5 h-[1px] bg-current opacity-30 mb-2"></div>
                         
                         {/* Stats Grid */}
                         <div className="grid grid-cols-2 gap-x-6 gap-y-0.5 w-full px-4 text-[11px] leading-tight">
-                            <div className="flex justify-between font-black">
+                            <div className="flex justify-between font-extrabold">
                                 <span>{stats.val1}</span><span className={`font-bold text-[9px] opacity-75 ${theme.labelColor}`}>{stats.label1}</span>
                             </div>
-                            <div className="flex justify-between font-black">
+                            <div className="flex justify-between font-extrabold">
                                 <span>{stats.val2}</span><span className={`font-bold text-[9px] opacity-75 ${theme.labelColor}`}>{stats.label2}</span>
                             </div>
-                            <div className="flex justify-between font-black">
+                            <div className="flex justify-between font-extrabold">
                                 <span>{stats.val3}</span><span className={`font-bold text-[9px] opacity-75 ${theme.labelColor}`}>{stats.label3}</span>
                             </div>
-                            <div className="flex justify-between font-black">
+                            <div className="flex justify-between font-extrabold">
                                 <span>{stats.val4}</span><span className={`font-bold text-[9px] opacity-75 ${theme.labelColor}`}>{stats.label4}</span>
                             </div>
-                            <div className="flex justify-between font-black">
+                            <div className="flex justify-between font-extrabold">
                                 <span>{stats.val5}</span><span className={`font-bold text-[9px] opacity-75 ${theme.labelColor}`}>{stats.label5}</span>
                             </div>
-                            <div className="flex justify-between font-black">
+                            <div className="flex justify-between font-extrabold">
                                 <span>{stats.val6}</span><span className={`font-bold text-[9px] opacity-75 ${theme.labelColor}`}>{stats.label6}</span>
                             </div>
                         </div>
                         <div className="w-10 h-[1px] bg-current opacity-20 mt-2 mb-1"></div>
-                        <span className="text-[7px] font-black tracking-[0.3em] opacity-80">{clubName}</span>
+                        <span className="text-[7px] font-extrabold tracking-[0.3em] opacity-80">{clubName}</span>
                     </div>
                 </div>
             </motion.div>

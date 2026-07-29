@@ -155,7 +155,7 @@ export const OwnerCancellationPolicyModal: React.FC<Props> = ({ onClose, facilit
               type="button"
               onClick={handleSave}
               disabled={isSaving}
-              className="w-full py-4 bg-blue-600 text-white font-black rounded-2xl hover:bg-blue-500 disabled:opacity-50 flex items-center justify-center gap-2"
+              className="w-full py-4 bg-blue-600 text-white font-extrabold rounded-2xl hover:bg-blue-500 disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {!custom && <RotateCcw size={16} />}
               {isSaving ? 'Kaydediliyor...' : custom ? 'Kaydet' : 'Global Varsayılanı Kullan'}

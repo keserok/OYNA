@@ -44,14 +44,14 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
       className="flex flex-col items-center justify-center p-8 text-center min-h-[250px] bg-red-950/10 border border-red-500/10 rounded-2xl max-w-sm mx-auto my-6"
     >
       <AlertCircle className="text-red-500 mb-3 w-12 h-12" strokeWidth={1.5} />
-      <h3 className="text-base font-black text-white mb-1">{title}</h3>
+      <h3 className="text-base font-extrabold text-white mb-1">{title}</h3>
       <p className="text-xs text-gray-400 mb-4 leading-relaxed max-w-[280px]">
         {message}
       </p>
       {onRetry && (
         <button
           onClick={onRetry}
-          className="flex items-center gap-2 px-4 py-2 bg-red-500/15 hover:bg-red-500/20 active:scale-95 border border-red-500/30 text-red-200 text-xs font-black uppercase rounded-xl transition-all outline-none focus-visible:ring-2 focus-visible:ring-red-500"
+          className="flex items-center gap-2 px-4 py-2 bg-red-500/15 hover:bg-red-500/20 active:scale-95 border border-red-500/30 text-red-200 text-xs font-extrabold uppercase rounded-xl transition-all outline-none focus-visible:ring-2 focus-visible:ring-red-500"
         >
           <RefreshCw size={14} />
           {retryLabel}
@@ -83,7 +83,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
       ) : (
         <Inbox className="text-gray-500 mb-3 w-12 h-12" strokeWidth={1.5} />
       )}
-      <h3 className="text-sm font-black text-gray-300 mb-1">{title}</h3>
+      <h3 className="text-sm font-extrabold text-gray-300 mb-1">{title}</h3>
       <p className="text-xs text-gray-500 leading-relaxed max-w-[260px]">
         {message}
       </p>

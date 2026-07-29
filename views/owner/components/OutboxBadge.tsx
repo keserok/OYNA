@@ -43,8 +43,8 @@ export const OutboxBadge: React.FC<{ variant?: 'chip' | 'strip' }> = ({ variant 
         onClick={() => setOpen(true)}
         className={
           variant === 'strip'
-            ? 'fixed left-4 right-4 z-40 flex items-center justify-center gap-2 h-11 rounded-2xl bg-amber-500/15 border border-amber-500/40 backdrop-blur-md text-amber-300 text-[13px] font-black uppercase max-w-lg mx-auto active:scale-[0.99] transition-transform'
-            : 'flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-300 text-[10px] font-black uppercase whitespace-nowrap active:scale-95 transition-transform'
+            ? 'fixed left-4 right-4 z-40 flex items-center justify-center gap-2 h-11 rounded-2xl bg-amber-500/15 border border-amber-500/40 backdrop-blur-md text-amber-300 text-[13px] font-extrabold uppercase max-w-lg mx-auto active:scale-[0.99] transition-transform'
+            : 'flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-300 text-[10px] font-extrabold uppercase whitespace-nowrap active:scale-95 transition-transform'
         }
         // 72px = OwnerBottomNav yüksekliği (8+48+8) + 8px boşluk.
         style={variant === 'strip' ? { bottom: 'calc(var(--safe-bottom) + 72px)' } : undefined}
@@ -72,7 +72,7 @@ export const OutboxBadge: React.FC<{ variant?: 'chip' | 'strip' }> = ({ variant 
             >
               <div className="w-12 h-1.5 bg-gray-800 rounded-full mx-auto mb-4" />
               <div className="flex items-center justify-between mb-1">
-                <h2 className="text-lg font-black text-white italic tracking-tight uppercase flex items-center gap-2">
+                <h2 className="text-lg font-extrabold text-white italic tracking-tight uppercase flex items-center gap-2">
                   <CloudOff size={18} className="text-amber-400" /> Bekleyen İşlemler
                 </h2>
                 <button
@@ -113,7 +113,7 @@ export const OutboxBadge: React.FC<{ variant?: 'chip' | 'strip' }> = ({ variant 
                 type="button"
                 onClick={sendAll}
                 disabled={flushing}
-                className="w-full py-3.5 rounded-2xl bg-amber-400 text-black text-[14px] font-black flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-60"
+                className="w-full py-3.5 rounded-2xl bg-amber-400 text-black text-[14px] font-extrabold flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-60"
               >
                 {flushing ? <RefreshCw size={16} className="animate-spin" /> : <Send size={16} />}
                 {flushing ? 'Gönderiliyor…' : 'Tümünü Gönder'}

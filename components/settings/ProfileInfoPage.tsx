@@ -217,7 +217,7 @@ const ProfileInfoPage: React.FC<ProfileInfoPageProps> = ({ open, onClose }) => {
 
           {/* İsim */}
           <div className="bg-[#161B22] border border-white/8 rounded-2xl p-4">
-            <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 flex items-center gap-1.5 mb-2">
+            <label className="text-[10px] font-extrabold uppercase tracking-widest text-gray-500 flex items-center gap-1.5 mb-2">
               <User size={12} /> Ad Soyad
             </label>
             <div className="flex gap-2">
@@ -230,7 +230,7 @@ const ProfileInfoPage: React.FC<ProfileInfoPageProps> = ({ open, onClose }) => {
               <button
                 onClick={handleSaveName}
                 disabled={!nameDirty || savingName}
-                className="px-4 h-11 rounded-xl font-black text-sm bg-[#39FF14] text-black disabled:opacity-40"
+                className="px-4 h-11 rounded-xl font-extrabold text-sm bg-[#39FF14] text-black disabled:opacity-40"
               >
                 {savingName ? '...' : 'Kaydet'}
               </button>
@@ -240,7 +240,7 @@ const ProfileInfoPage: React.FC<ProfileInfoPageProps> = ({ open, onClose }) => {
 
           {/* Doğum Tarihi / Yaş */}
           <div className="bg-[#161B22] border border-white/8 rounded-2xl p-4">
-            <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 flex items-center gap-1.5 mb-2">
+            <label className="text-[10px] font-extrabold uppercase tracking-widest text-gray-500 flex items-center gap-1.5 mb-2">
               <Calendar size={12} /> Doğum Tarihi {age !== null && <span className="text-[#39FF14] normal-case tracking-normal">· {age} yaşında</span>}
             </label>
             <div className="flex gap-2">
@@ -254,7 +254,7 @@ const ProfileInfoPage: React.FC<ProfileInfoPageProps> = ({ open, onClose }) => {
               <button
                 onClick={handleSaveBirth}
                 disabled={!birthDirty || savingBirth}
-                className="px-4 h-11 rounded-xl font-black text-sm bg-[#39FF14] text-black disabled:opacity-40"
+                className="px-4 h-11 rounded-xl font-extrabold text-sm bg-[#39FF14] text-black disabled:opacity-40"
               >
                 {savingBirth ? '...' : 'Kaydet'}
               </button>
@@ -265,17 +265,17 @@ const ProfileInfoPage: React.FC<ProfileInfoPageProps> = ({ open, onClose }) => {
           {/* Kayıt Yöntemi (salt-okunur) */}
           <div className="bg-[#161B22] border border-white/8 rounded-2xl p-4 flex items-center justify-between">
             <div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-1">Kayıt Yöntemi</p>
+              <p className="text-[10px] font-extrabold uppercase tracking-widest text-gray-500 mb-1">Kayıt Yöntemi</p>
               <p className="text-sm font-bold text-white">{PROVIDER_LABEL[identity?.primaryProvider ?? 'unknown']}</p>
             </div>
-            <span className="text-[9px] font-black uppercase tracking-wide text-gray-400 bg-white/5 border border-white/10 px-2 py-1 rounded">
+            <span className="text-[9px] font-extrabold uppercase tracking-wide text-gray-400 bg-white/5 border border-white/10 px-2 py-1 rounded">
               Değiştirilemez
             </span>
           </div>
 
           {/* E-posta */}
           <div className="bg-[#161B22] border border-white/8 rounded-2xl p-4">
-            <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 flex items-center gap-1.5 mb-2">
+            <label className="text-[10px] font-extrabold uppercase tracking-widest text-gray-500 flex items-center gap-1.5 mb-2">
               <Mail size={12} /> E-posta
             </label>
             {isOAuthEmail ? (
@@ -301,7 +301,7 @@ const ProfileInfoPage: React.FC<ProfileInfoPageProps> = ({ open, onClose }) => {
                   <button
                     onClick={handleSaveEmail}
                     disabled={!emailDirty || savingEmail}
-                    className="px-4 h-11 rounded-xl font-black text-sm bg-[#39FF14] text-black disabled:opacity-40"
+                    className="px-4 h-11 rounded-xl font-extrabold text-sm bg-[#39FF14] text-black disabled:opacity-40"
                   >
                     {savingEmail ? '...' : 'Kaydet'}
                   </button>
@@ -314,7 +314,7 @@ const ProfileInfoPage: React.FC<ProfileInfoPageProps> = ({ open, onClose }) => {
 
           {/* Şifre */}
           <div className="bg-[#161B22] border border-white/8 rounded-2xl p-4">
-            <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 flex items-center gap-1.5 mb-2">
+            <label className="text-[10px] font-extrabold uppercase tracking-widest text-gray-500 flex items-center gap-1.5 mb-2">
               <KeyRound size={12} /> {hasPassword ? 'Şifre Değiştir' : 'Şifre Oluştur'}
             </label>
             {!hasPassword && (
@@ -340,7 +340,7 @@ const ProfileInfoPage: React.FC<ProfileInfoPageProps> = ({ open, onClose }) => {
               <button
                 onClick={handleSavePassword}
                 disabled={savingPass || !newPassword || !confirmPassword}
-                className="w-full h-11 rounded-xl font-black text-sm bg-[#3b82f6] text-white disabled:opacity-40"
+                className="w-full h-11 rounded-xl font-extrabold text-sm bg-[#3b82f6] text-white disabled:opacity-40"
               >
                 {savingPass ? 'Kaydediliyor...' : (hasPassword ? 'Şifreyi Güncelle' : 'Şifre Oluştur')}
               </button>

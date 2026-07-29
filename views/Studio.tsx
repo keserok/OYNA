@@ -1722,14 +1722,14 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                 <div className="min-w-0">
                                     {presentMode ? (
                                         <>
-                                            <h1 className="text-lg font-black text-white truncate">{activeTactic.name}</h1>
+                                            <h1 className="text-lg font-extrabold text-white truncate">{activeTactic.name}</h1>
                                             <p className="text-[10px] text-[#39FF14] font-mono uppercase truncate tracking-widest">Sunum · Sadece Hareket</p>
                                         </>
                                     ) : (
                                         <>
                                             {/* Düzenlenebilir taktik adı (S43) */}
                                             <button onClick={() => handleRenamePlan(activePlanIndex)} className="flex items-center gap-1.5 group max-w-full">
-                                                <h1 className="text-lg font-black text-white truncate">{activeTactic.name}</h1>
+                                                <h1 className="text-lg font-extrabold text-white truncate">{activeTactic.name}</h1>
                                                 <PenTool size={12} className="text-gray-500 group-hover:text-[#39FF14] transition-colors shrink-0" />
                                             </button>
                                             <p className="text-[10px] text-[#39FF14] font-mono uppercase truncate">{activeTactic.formation} · {activeTactic.size}</p>
@@ -1741,7 +1741,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                 <button
                                     onClick={exitPresent}
                                     aria-label="Sunumdan çık"
-                                    className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 border border-white/15 text-white font-black text-[11px] tracking-widest shrink-0 hover:bg-white/15 active:scale-95 transition-all"
+                                    className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 border border-white/15 text-white font-extrabold text-[11px] tracking-widest shrink-0 hover:bg-white/15 active:scale-95 transition-all"
                                 >
                                     <X size={15} /> ÇIKIŞ
                                 </button>
@@ -1760,7 +1760,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                     <button
                                         onClick={() => setShowExportModal(true)}
                                         aria-label="Paylaş"
-                                        className="flex items-center gap-2 px-4 py-2 rounded-full bg-[#39FF14] text-black font-black text-[11px] tracking-widest hover:brightness-110 active:scale-95 transition-all shadow-[0_0_18px_rgba(57,255,20,0.25)]"
+                                        className="flex items-center gap-2 px-4 py-2 rounded-full bg-[#39FF14] text-black font-extrabold text-[11px] tracking-widest hover:brightness-110 active:scale-95 transition-all shadow-[0_0_18px_rgba(57,255,20,0.25)]"
                                     >
                                         <Share2 size={15} /> PAYLAŞ
                                     </button>
@@ -1859,14 +1859,14 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                         onChange={(e) => setEditingPlanName(e.target.value)}
                                         onBlur={savePlanName}
                                         onKeyDown={(e) => e.key === 'Enter' && savePlanName()}
-                                        className={`text-center text-sm font-black bg-transparent outline-none w-full uppercase tracking-tighter text-[#39FF14]`}
+                                        className={`text-center text-sm font-extrabold bg-transparent outline-none w-full uppercase tracking-tighter text-[#39FF14]`}
                                         placeholder="PLAN İSMİ"
                                     />
                                 ) : (
                                     <button
                                         onClick={() => handlePlanClick(index)}
                                         onDoubleClick={() => isActive && handleRenamePlan(index)}
-                                        className={`text-center text-sm font-black uppercase tracking-tighter truncate w-full transition-all ${getTextColorStyles(effColor, isActive)}`}
+                                        className={`text-center text-sm font-extrabold uppercase tracking-tighter truncate w-full transition-all ${getTextColorStyles(effColor, isActive)}`}
                                     >
                                         {plan.name}
                                     </button>
@@ -1882,7 +1882,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                             title="Yeni plan (kadro & diziliş korunur)"
                         >
                             <Plus size={20} className="group-hover:scale-110 transition-transform" />
-                            <span className="text-[9px] font-black tracking-widest uppercase">Ekle</span>
+                            <span className="text-[9px] font-extrabold tracking-widest uppercase">Ekle</span>
                         </button>
                     )}
                 </Reorder.Group>
@@ -1895,7 +1895,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                     <div className="relative shrink-0">
                         <button
                             onClick={() => setOpenSelector(openSelector === 'size' ? null : 'size')}
-                            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-xs font-black tracking-widest hover:bg-white/10 transition-all"
+                            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-xs font-extrabold tracking-widest hover:bg-white/10 transition-all"
                         >
                             <Users size={14} className="text-[#39FF14]" /> {activeTactic.size}
                             <ChevronDown size={14} className={`transition-transform ${openSelector === 'size' ? 'rotate-180' : ''}`} />
@@ -1920,7 +1920,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                     <div className="relative flex-1 min-w-0">
                         <button
                             onClick={() => setOpenSelector(openSelector === 'formation' ? null : 'formation')}
-                            className="w-full flex items-center justify-between gap-2 px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-xs font-black tracking-widest hover:bg-white/10 transition-all"
+                            className="w-full flex items-center justify-between gap-2 px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-xs font-extrabold tracking-widest hover:bg-white/10 transition-all"
                         >
                             <span className="flex items-center gap-2 min-w-0"><Layout size={14} className="text-[#39FF14] shrink-0" /><span className="truncate">{activeTactic.formation}</span></span>
                             <ChevronDown size={14} className={`shrink-0 transition-transform ${openSelector === 'formation' ? 'rotate-180' : ''}`} />
@@ -1939,7 +1939,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                     ))}
                                 </div>
                                 <div className="mt-2 pt-2 border-t border-white/10">
-                                    <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest px-1 mb-1.5">Yeni formasyon (satır sayısı)</p>
+                                    <p className="text-[10px] text-gray-500 font-extrabold uppercase tracking-widest px-1 mb-1.5">Yeni formasyon (satır sayısı)</p>
                                     <div className="flex gap-2">
                                         <input
                                             value={customPattern}
@@ -1951,7 +1951,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                         />
                                         <button
                                             onClick={handleCustomFormation}
-                                            className="px-3 py-2 rounded-xl bg-[#39FF14] text-black text-[10px] font-black tracking-widest hover:scale-[1.02] active:scale-[0.98] transition-all shrink-0"
+                                            className="px-3 py-2 rounded-xl bg-[#39FF14] text-black text-[10px] font-extrabold tracking-widest hover:scale-[1.02] active:scale-[0.98] transition-all shrink-0"
                                         >
                                             UYGULA
                                         </button>
@@ -2003,26 +2003,26 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                         <button
                             onClick={() => { setDrawSide('US'); setSelectedEl(null); setNamingOpp(null); setSelectedSeqBadge(null); }}
                             title="Bizim takımı düzenle"
-                            className={`px-3 py-1.5 rounded-full text-[11px] font-black tracking-widest transition-all ${drawSide === 'US' ? 'bg-[#39FF14] text-black' : 'text-gray-400 hover:text-white'}`}
+                            className={`px-3 py-1.5 rounded-full text-[11px] font-extrabold tracking-widest transition-all ${drawSide === 'US' ? 'bg-[#39FF14] text-black' : 'text-gray-400 hover:text-white'}`}
                         >BİZ</button>
                         <button
                             onClick={() => { setDrawSide('OPP'); setSelectedEl(null); setHeldSub(null); setSelectedSeqBadge(null); }}
                             title="Rakibi düzenle"
-                            className={`px-3 py-1.5 rounded-full text-[11px] font-black tracking-widest transition-all ${drawSide === 'OPP' ? 'bg-red-500 text-white' : 'text-gray-400 hover:text-white'}`}
+                            className={`px-3 py-1.5 rounded-full text-[11px] font-extrabold tracking-widest transition-all ${drawSide === 'OPP' ? 'bg-red-500 text-white' : 'text-gray-400 hover:text-white'}`}
                         >RAKİP</button>
                     </div>
                     {/* Tempo — plana özel oynatma hızı (1-10); dokununca ayar sayfası açılır */}
                     <button
                         onClick={() => setShowTempoSheet(true)}
                         title="Oynatma temposu (plana özel, 1-10)"
-                        className="flex items-center gap-2 px-4 py-2 rounded-full text-xs font-black transition-all whitespace-nowrap shadow-lg bg-blue-500/15 text-blue-300 border border-blue-400/30 hover:bg-blue-500/25"
+                        className="flex items-center gap-2 px-4 py-2 rounded-full text-xs font-extrabold transition-all whitespace-nowrap shadow-lg bg-blue-500/15 text-blue-300 border border-blue-400/30 hover:bg-blue-500/25"
                     >
                         <Gauge size={14} /> TEMPO {normalizeTempo(activeTactic.tempo)}
                     </button>
                     {/* Oynatma kontrolleri — kapı butonu yok; modül açılışta arka planda yüklenir */}
                     {drawings.length > 0 && (
                         <Suspense fallback={
-                            <div className="flex items-center gap-2 px-4 py-2 rounded-full text-xs font-black bg-white/5 text-gray-400 whitespace-nowrap">
+                            <div className="flex items-center gap-2 px-4 py-2 rounded-full text-xs font-extrabold bg-white/5 text-gray-400 whitespace-nowrap">
                                 <Loader2 size={14} className="animate-spin" /> Oynatma kontrolleri yükleniyor...
                             </div>
                         }>
@@ -2080,12 +2080,12 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                     <div className="flex items-center gap-3 bg-red-500/10 border border-red-500/30 rounded-2xl p-3">
                         <ShieldAlert size={18} className="text-red-400 shrink-0" />
                         <div className="flex-1 min-w-0">
-                            <div className="text-[12px] font-black text-red-300">{staleSlotIds.size} oyuncu artık kadroda değil</div>
+                            <div className="text-[12px] font-extrabold text-red-300">{staleSlotIds.size} oyuncu artık kadroda değil</div>
                             <div className="text-[10px] text-red-400/80">Bu oyuncular takımdan ayrılmış olabilir.</div>
                         </div>
                         <button
                             onClick={() => void syncWithSquad()}
-                            className="text-[10px] font-black text-black uppercase tracking-widest px-3 py-2 rounded-xl bg-red-400 hover:bg-red-300 active:scale-95 transition-all shrink-0"
+                            className="text-[10px] font-extrabold text-black uppercase tracking-widest px-3 py-2 rounded-xl bg-red-400 hover:bg-red-300 active:scale-95 transition-all shrink-0"
                         >Kadroyla eşitle</button>
                     </div>
                 </div>
@@ -2103,7 +2103,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                     >
                         <span className="w-10 h-10 rounded-xl bg-[#39FF14]/15 border border-[#39FF14]/30 flex items-center justify-center text-[#39FF14] shrink-0"><Sparkles size={18} /></span>
                         <span className="min-w-0">
-                            <span className="block text-sm font-black text-white">Örnek taktiği yükle</span>
+                            <span className="block text-sm font-extrabold text-white">Örnek taktiği yükle</span>
                             <span className="block text-[11px] text-gray-500">Hazır bir taktik gör — OYNAT ile nasıl çalıştığını izle.</span>
                         </span>
                     </button>
@@ -2136,7 +2136,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                     <button
                         onClick={replayPresent}
                         aria-label="Tekrar oynat"
-                        className="absolute left-1/2 -translate-x-1/2 bottom-4 z-40 flex items-center gap-2 px-5 py-2.5 rounded-full bg-[#39FF14] text-black font-black text-[11px] tracking-widest hover:brightness-110 active:scale-95 transition-all shadow-[0_6px_24px_rgba(57,255,20,0.35)]"
+                        className="absolute left-1/2 -translate-x-1/2 bottom-4 z-40 flex items-center gap-2 px-5 py-2.5 rounded-full bg-[#39FF14] text-black font-extrabold text-[11px] tracking-widest hover:brightness-110 active:scale-95 transition-all shadow-[0_6px_24px_rgba(57,255,20,0.35)]"
                     >
                         <RotateCcw size={15} /> TEKRAR OYNAT
                     </button>
@@ -2156,7 +2156,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                     <div className="absolute inset-0 pointer-events-none z-[1]" style={{ boxShadow: 'inset 0 0 90px rgba(0,0,0,0.55)' }} />
                     {/* S46 — yakınlaştırma göstergesi */}
                     {zoom > 1 && (
-                        <div className="absolute top-2 right-2 z-30 px-2 py-0.5 rounded-full bg-black/60 text-[#39FF14] text-[10px] font-black font-mono pointer-events-none">
+                        <div className="absolute top-2 right-2 z-30 px-2 py-0.5 rounded-full bg-black/60 text-[#39FF14] text-[10px] font-extrabold font-mono pointer-events-none">
                             {Math.round(zoom * 100)}%
                         </div>
                     )}
@@ -2310,10 +2310,10 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                     whileTap={{ scale: 0.9 }}
                                     className={`relative w-full h-full rounded-full border-2 flex items-center justify-center ${liteGate(perfTier, 'shadow-[0_4px_15px_rgba(0,0,0,0.5)]')} ${slot.role === 'GK' ? 'bg-gradient-to-br from-orange-400 to-orange-600 border-orange-300' : 'bg-gradient-to-br from-[#1e2532] to-[#11151c] border-white/30'} ${staleSlotIds.has(slot.id) ? 'ring-2 ring-red-500 ring-offset-1 ring-offset-black/50' : ''}`}
                                 >
-                                    <span className="text-white font-black text-sm drop-shadow-md">{slot.player.name.charAt(0)}</span>
+                                    <span className="text-white font-extrabold text-sm drop-shadow-md">{slot.player.name.charAt(0)}</span>
                                     {/* Forma numarası (takım kadrosundan) — sol üst rozet */}
                                     {slot.player.jersey != null && (
-                                        <div className="absolute -top-1.5 -left-1.5 min-w-[16px] h-4 px-1 bg-black/80 rounded-full flex items-center justify-center text-white text-[9px] font-black border border-white/25 shadow-sm tabular-nums">
+                                        <div className="absolute -top-1.5 -left-1.5 min-w-[16px] h-4 px-1 bg-black/80 rounded-full flex items-center justify-center text-white text-[9px] font-extrabold border border-white/25 shadow-sm tabular-nums">
                                             {slot.player.jersey}
                                         </div>
                                     )}
@@ -2324,7 +2324,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                         </div>
                                     )}
                                     {activeTactic.captainId === slot.player.id && (
-                                        <div className="absolute -top-2 -right-2 w-5 h-5 bg-gradient-to-br from-yellow-300 to-yellow-500 rounded-full flex items-center justify-center text-black text-[10px] font-black border-2 border-[#161B22] shadow-sm">
+                                        <div className="absolute -top-2 -right-2 w-5 h-5 bg-gradient-to-br from-yellow-300 to-yellow-500 rounded-full flex items-center justify-center text-black text-[10px] font-extrabold border-2 border-[#161B22] shadow-sm">
                                             K
                                         </div>
                                     )}
@@ -2412,7 +2412,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
             <div className="px-6 pb-6 mt-4">
                 <div className="bg-[#161B22] rounded-[32px] border border-white/5 p-5 shadow-[0_4px_40px_rgba(0,0,0,0.5)]">
                     <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-[10px] font-black text-white uppercase tracking-widest flex items-center gap-2">
+                        <h3 className="text-[10px] font-extrabold text-white uppercase tracking-widest flex items-center gap-2">
                             <Users size={14} className="text-[#39FF14]" /> TAKIM SEÇİMİ
                         </h3>
                     </div>
@@ -2434,7 +2434,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                 }`}
                             >
                                 <div className="flex items-center gap-2 mb-1.5">
-                                    <span className="w-6 h-6 rounded-lg flex items-center justify-center text-[10px] font-black text-black shrink-0" style={{ background: team.color1 || '#39FF14' }}>{(team.short_name || team.name || '?').slice(0, 2).toUpperCase()}</span>
+                                    <span className="w-6 h-6 rounded-lg flex items-center justify-center text-[10px] font-extrabold text-black shrink-0" style={{ background: team.color1 || '#39FF14' }}>{(team.short_name || team.name || '?').slice(0, 2).toUpperCase()}</span>
                                     <h4 className="text-white font-bold text-xs truncate flex-1">{team.name}</h4>
                                 </div>
                                 <div className="flex items-center justify-between">
@@ -2443,7 +2443,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                     </div>
                                     <div className="text-[9px] text-gray-600 font-mono tabular-nums">{team.wins}G {team.draws}B {team.losses}M</div>
                                 </div>
-                                {!enough && <div className="mt-1 text-[8px] font-black text-amber-400 uppercase tracking-widest">Eksik kadro</div>}
+                                {!enough && <div className="mt-1 text-[8px] font-extrabold text-amber-400 uppercase tracking-widest">Eksik kadro</div>}
                             </button>
                         );})}
                     </div>
@@ -2469,7 +2469,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                         }
                                     })();
                                 }}
-                                className="w-full h-12 bg-gradient-to-r from-[#39FF14] to-emerald-600 rounded-2xl flex items-center justify-center gap-2 text-black font-black text-[10px] tracking-widest uppercase hover:scale-[1.02] active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(57,255,20,0.3)] animate-pulse"
+                                className="w-full h-12 bg-gradient-to-r from-[#39FF14] to-emerald-600 rounded-2xl flex items-center justify-center gap-2 text-black font-extrabold text-[10px] tracking-widest uppercase hover:scale-[1.02] active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(57,255,20,0.3)] animate-pulse"
                             >
                                 <Users size={16} />
                                 SEÇİLİ TAKIMI ONAYLA
@@ -2479,7 +2479,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                         {isSquadComplete && (
                             <button
                                 onClick={() => setIsTeamConfirmed(true)}
-                                className="w-full h-12 bg-gradient-to-r from-[#39FF14] to-emerald-600 rounded-2xl flex items-center justify-center gap-2 text-black font-black text-[10px] tracking-widest uppercase hover:scale-[1.02] active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(57,255,20,0.3)] animate-pulse"
+                                className="w-full h-12 bg-gradient-to-r from-[#39FF14] to-emerald-600 rounded-2xl flex items-center justify-center gap-2 text-black font-extrabold text-[10px] tracking-widest uppercase hover:scale-[1.02] active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(57,255,20,0.3)] animate-pulse"
                             >
                                 <Users size={16} />
                                 KADROYU ONAYLA
@@ -2488,7 +2488,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
 
                         <button
                             onClick={() => setShowPlayerSelect({ type: 'any' })}
-                            className="w-full h-12 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center gap-2 text-white font-black text-[10px] tracking-widest uppercase hover:bg-white/10 hover:border-[#39FF14]/40 active:scale-[0.98] transition-all"
+                            className="w-full h-12 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center gap-2 text-white font-extrabold text-[10px] tracking-widest uppercase hover:bg-white/10 hover:border-[#39FF14]/40 active:scale-[0.98] transition-all"
                         >
                             <UserPlus size={16} className="text-[#39FF14]" />
                             ARKADAŞ / OYUNCU EKLE
@@ -2502,19 +2502,19 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
             {isTeamConfirmed && (
                 <div className="px-6 pb-3 mt-4">
                     <div className="flex items-center gap-3 bg-[#161B22] rounded-2xl border border-white/5 p-3">
-                        <span className="w-9 h-9 rounded-xl flex items-center justify-center text-xs font-black text-black shrink-0" style={{ background: confirmedTeam?.color1 || '#39FF14' }}>
+                        <span className="w-9 h-9 rounded-xl flex items-center justify-center text-xs font-extrabold text-black shrink-0" style={{ background: confirmedTeam?.color1 || '#39FF14' }}>
                             {(confirmedTeam?.short_name || activeTactic.teamName || '?').slice(0, 2).toUpperCase()}
                         </span>
                         <div className="flex-1 min-w-0">
-                            <div className="text-sm font-black text-white truncate">{activeTactic.teamName || 'Takımım'}</div>
+                            <div className="text-sm font-extrabold text-white truncate">{activeTactic.teamName || 'Takımım'}</div>
                             <div className="text-[10px] font-bold text-gray-500">
                                 <span className={missingCount === 0 ? 'text-[#39FF14]' : 'text-amber-400'}>{filledCount}/{activeTactic.slots.length}</span> dizili
-                                {missingCount > 0 && <span className="ml-2 text-amber-400 font-black uppercase tracking-widest">· {missingCount} eksik</span>}
+                                {missingCount > 0 && <span className="ml-2 text-amber-400 font-extrabold uppercase tracking-widest">· {missingCount} eksik</span>}
                             </div>
                         </div>
                         <button
                             onClick={() => setIsTeamConfirmed(false)}
-                            className="text-[10px] font-black text-[#39FF14] uppercase tracking-widest px-3 py-2 rounded-xl bg-[#39FF14]/10 hover:bg-[#39FF14]/20 transition-all"
+                            className="text-[10px] font-extrabold text-[#39FF14] uppercase tracking-widest px-3 py-2 rounded-xl bg-[#39FF14]/10 hover:bg-[#39FF14]/20 transition-all"
                         >Değiştir</button>
                     </div>
                 </div>
@@ -2525,9 +2525,9 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
             <div className="px-6 pb-4">
                 <div className="flex items-center gap-2 mb-2">
                     <List size={12} className="text-gray-500" />
-                    <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Yedekler ({activeTactic.subs.length})</span>
+                    <span className="text-[10px] font-extrabold text-gray-500 uppercase tracking-widest">Yedekler ({activeTactic.subs.length})</span>
                     {heldSub && (
-                        <span className="text-[10px] font-black text-[#39FF14] uppercase tracking-widest flex items-center gap-1 animate-pulse">
+                        <span className="text-[10px] font-extrabold text-[#39FF14] uppercase tracking-widest flex items-center gap-1 animate-pulse">
                             · bir mevkiye dokun
                             <button onClick={() => setHeldSub(null)} className="ml-1 text-gray-400 hover:text-white" aria-label="Vazgeç"><X size={11} /></button>
                         </span>
@@ -2544,7 +2544,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                 title={drawSide === 'OPP' ? 'Yedekler bizim takıma ait — BİZ moduna geç' : (held ? 'Bir mevkiye dokunarak yerleştir' : 'Sahaya yerleştir / takas et')}
                                 className="flex items-center gap-2 min-h-[36px] disabled:opacity-40 disabled:cursor-not-allowed"
                             >
-                                <span className="w-6 h-6 rounded-full bg-gradient-to-br from-[#1e2532] to-[#11151c] border border-white/20 flex items-center justify-center text-[10px] font-black text-white">{sub.name.charAt(0)}</span>
+                                <span className="w-6 h-6 rounded-full bg-gradient-to-br from-[#1e2532] to-[#11151c] border border-white/20 flex items-center justify-center text-[10px] font-extrabold text-white">{sub.name.charAt(0)}</span>
                                 <span className={`text-[11px] font-bold max-w-[90px] truncate ${held ? 'text-[#39FF14]' : 'text-white'}`}>{sub.name}</span>
                             </button>
                             <button onClick={() => handleRemoveSub(sub.id)} className="text-gray-500 hover:text-red-400 transition-colors" aria-label={`${sub.name} yedeği sil`}><X size={12} /></button>
@@ -2569,7 +2569,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                 <div className="px-6 mt-6">
                     <div className="bg-[#161B22] rounded-2xl border border-white/10 overflow-hidden">
                         <div className="p-4 border-b border-white/5 bg-white/5 flex items-center justify-between">
-                            <h3 className="text-sm font-black text-white uppercase tracking-widest flex items-center gap-2">
+                            <h3 className="text-sm font-extrabold text-white uppercase tracking-widest flex items-center gap-2">
                                 <Users size={16} className={'text-[#39FF14]'} /> 
                                 Oyuncular
                             </h3>
@@ -2584,7 +2584,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                             {allPlayersOnPitch.map((item) => (
                                 <div key={item.id} className="p-4 flex items-center justify-between hover:bg-white/5 transition-colors">
                                     <div className="flex items-center gap-3">
-                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center font-black text-white ${item.type === 'opponent' ? 'bg-red-500' : (item.role === 'GK' ? 'bg-orange-500' : 'bg-[#39FF14] text-black')}`}>
+                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center font-extrabold text-white ${item.type === 'opponent' ? 'bg-red-500' : (item.role === 'GK' ? 'bg-orange-500' : 'bg-[#39FF14] text-black')}`}>
                                             {item.type === 'opponent' ? <Swords size={16} /> : item.player?.name.charAt(0)}
                                         </div>
                                         <div>
@@ -2656,14 +2656,14 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                         className="w-16 shrink-0 min-h-[56px] rounded-2xl bg-[#161B22] border border-white/10 flex flex-col items-center justify-center gap-1 text-gray-400 hover:text-white hover:bg-white/5 transition-all"
                     >
                         <List size={18} />
-                        <span className="font-black text-[8px] tracking-widest">TAKTİKLER</span>
+                        <span className="font-extrabold text-[8px] tracking-widest">TAKTİKLER</span>
                     </button>
 
                     <div className="flex-1 relative group">
                         <button
                             disabled={!canSave}
                             onClick={() => { setSaveTacticName(activeTactic.name || ''); setShowSaveModal(true); }}
-                            className="w-full h-full min-h-[56px] rounded-2xl flex flex-col items-center justify-center text-black font-black disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.01] active:scale-[0.98] transition-all bg-[#39FF14] shadow-[0_0_24px_rgba(57,255,20,0.25)] px-2 text-center"
+                            className="w-full h-full min-h-[56px] rounded-2xl flex flex-col items-center justify-center text-black font-extrabold disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.01] active:scale-[0.98] transition-all bg-[#39FF14] shadow-[0_0_24px_rgba(57,255,20,0.25)] px-2 text-center"
                         >
                             <span className="text-[11px] tracking-widest leading-tight">{primaryLabel}</span>
                             <span className="text-[8px] font-bold text-black/55 tracking-wide mt-0.5">→ {primaryTarget}</span>
@@ -2696,7 +2696,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                             onClick={e => e.stopPropagation()}
                         >
                         <div className="flex justify-between items-center mb-6">
-                            <h3 className="text-lg font-black text-white uppercase tracking-widest flex items-center gap-2">
+                            <h3 className="text-lg font-extrabold text-white uppercase tracking-widest flex items-center gap-2">
                                 <Brain size={20} className="text-purple-400" /> ROL ATA
                             </h3>
                             <button onClick={() => setSelectedSlotForArchetype(null)} className="p-2 text-gray-400 hover:text-white"><X size={20} /></button>
@@ -2749,7 +2749,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                             className="bg-[#161B22] border border-white/10 rounded-2xl p-6 w-full max-w-sm"
                         >
                             <div className="flex justify-between items-center mb-6">
-                                <h3 className="text-lg font-black text-white uppercase tracking-widest">Görev Ver</h3>
+                                <h3 className="text-lg font-extrabold text-white uppercase tracking-widest">Görev Ver</h3>
                                 <button onClick={() => setInstructionModal(null)} className="text-gray-400 hover:text-white">
                                     <X size={20} />
                                 </button>
@@ -2790,7 +2790,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                         <div className="pt-safe px-6 pb-3 max-w-md mx-auto w-full shrink-0">
                             <div className="flex justify-between items-center mb-4 pt-4 gap-3">
                                 <div className="min-w-0">
-                                    <h2 className="text-xl font-black text-white uppercase tracking-widest italic">Oyuncu Seç</h2>
+                                    <h2 className="text-xl font-extrabold text-white uppercase tracking-widest italic">Oyuncu Seç</h2>
                                     <p className="text-[10px] font-bold uppercase tracking-widest text-[#39FF14] truncate">{pickContextLabel}</p>
                                 </div>
                                 <button
@@ -2829,7 +2829,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                         <button
                                             key={group}
                                             onClick={() => setSelectedGroup(group)}
-                                            className={`whitespace-nowrap px-3.5 py-2 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all flex items-center gap-1.5 shrink-0 ${sel ? 'bg-[#39FF14] text-black border-[#39FF14] shadow-[0_0_15px_rgba(57,255,20,0.25)]' : 'bg-white/5 text-gray-400 border-white/10 hover:border-white/30 hover:text-white'}`}
+                                            className={`whitespace-nowrap px-3.5 py-2 rounded-full text-[10px] font-extrabold uppercase tracking-widest border transition-all flex items-center gap-1.5 shrink-0 ${sel ? 'bg-[#39FF14] text-black border-[#39FF14] shadow-[0_0_15px_rgba(57,255,20,0.25)]' : 'bg-white/5 text-gray-400 border-white/10 hover:border-white/30 hover:text-white'}`}
                                         >
                                             {group === 'Favorilerim' && <Star size={11} fill={sel ? 'black' : 'currentColor'} className={sel ? 'text-black' : 'text-[#FACC15]'} />}
                                             {emoji && <span className="text-[11px] leading-none">{emoji}</span>}
@@ -2845,9 +2845,9 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                         <button
                                             key={key}
                                             onClick={() => setSelectedGroup(sel ? 'Tümü' : key)}
-                                            className={`whitespace-nowrap px-3.5 py-2 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all flex items-center gap-1.5 shrink-0 ${sel ? 'bg-[#39FF14] text-black border-[#39FF14] shadow-[0_0_15px_rgba(57,255,20,0.25)]' : 'bg-white/5 text-gray-400 border-white/10 hover:border-white/30 hover:text-white'}`}
+                                            className={`whitespace-nowrap px-3.5 py-2 rounded-full text-[10px] font-extrabold uppercase tracking-widest border transition-all flex items-center gap-1.5 shrink-0 ${sel ? 'bg-[#39FF14] text-black border-[#39FF14] shadow-[0_0_15px_rgba(57,255,20,0.25)]' : 'bg-white/5 text-gray-400 border-white/10 hover:border-white/30 hover:text-white'}`}
                                         >
-                                            <span className="w-3.5 h-3.5 rounded-[4px] flex items-center justify-center text-[8px] font-black text-black leading-none" style={{ background: team.color1 || '#39FF14' }}>
+                                            <span className="w-3.5 h-3.5 rounded-[4px] flex items-center justify-center text-[8px] font-extrabold text-black leading-none" style={{ background: team.color1 || '#39FF14' }}>
                                                 {(team.short_name || team.name).charAt(0).toUpperCase()}
                                             </span>
                                             {team.short_name || team.name}
@@ -2883,7 +2883,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                         >
                                             <div className="flex items-center gap-3 min-w-0 pointer-events-none">
                                                 <div className="relative w-11 h-11 shrink-0">
-                                                    <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-[#1e2532] to-[#11151c] flex items-center justify-center font-black text-base text-white border border-white/10 shadow-lg group-hover:text-[#39FF14] transition-colors">
+                                                    <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-[#1e2532] to-[#11151c] flex items-center justify-center font-extrabold text-base text-white border border-white/10 shadow-lg group-hover:text-[#39FF14] transition-colors">
                                                         {friend.full_name.charAt(0).toUpperCase()}
                                                     </div>
                                                     {friend.avatar_url && (
@@ -2891,12 +2891,12 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                                     )}
                                                 </div>
                                                 <div className="min-w-0">
-                                                    <h4 className="text-sm font-black text-white tracking-tight flex items-center gap-1.5 truncate group-hover:text-[#39FF14] transition-colors">
+                                                    <h4 className="text-sm font-extrabold text-white tracking-tight flex items-center gap-1.5 truncate group-hover:text-[#39FF14] transition-colors">
                                                         {friend.full_name}
                                                         {friend.is_favorite && <Star size={12} className="text-[#FACC15] shrink-0" fill="#FACC15" />}
                                                     </h4>
                                                     <div className="flex items-center gap-2 mt-0.5">
-                                                        {friend.pos && <span className="text-[9px] font-black text-[#39FF14] bg-[#39FF14]/10 border border-[#39FF14]/20 rounded px-1.5 py-0.5 uppercase tracking-widest">{friend.pos}</span>}
+                                                        {friend.pos && <span className="text-[9px] font-extrabold text-[#39FF14] bg-[#39FF14]/10 border border-[#39FF14]/20 rounded px-1.5 py-0.5 uppercase tracking-widest">{friend.pos}</span>}
                                                         <span className="text-[10px] font-bold text-gray-500 flex items-center gap-1">
                                                             <Users size={10} /> {friend.matches_together} maç birlikte
                                                         </span>
@@ -2904,7 +2904,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                                 </div>
                                             </div>
                                             {inSquad ? (
-                                                <span className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-[#39FF14] bg-[#39FF14]/10 border border-[#39FF14]/30 rounded-full px-2.5 py-1 shrink-0 ml-2 pointer-events-none"><Check size={11} /> Kadroda</span>
+                                                <span className="flex items-center gap-1.5 text-[9px] font-extrabold uppercase tracking-widest text-[#39FF14] bg-[#39FF14]/10 border border-[#39FF14]/30 rounded-full px-2.5 py-1 shrink-0 ml-2 pointer-events-none"><Check size={11} /> Kadroda</span>
                                             ) : (
                                                 <div className="w-8 h-8 rounded-full border border-white/20 flex items-center justify-center text-white/50 group-hover:border-[#39FF14] group-hover:text-[#39FF14] group-hover:bg-[#39FF14]/10 transition-all shrink-0 ml-2 pointer-events-none">
                                                     <Plus size={16} />
@@ -2919,8 +2919,8 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                             {pickTeamGroups.map(({ team, loaded, members }) => (
                                 (loaded && members.length === 0) ? null : (
                                     <div key={team.team_id} className="mt-4">
-                                        <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest flex items-center gap-2 mb-2">
-                                            <span className="w-4 h-4 rounded-md flex items-center justify-center text-[8px] font-black text-black leading-none" style={{ background: team.color1 || '#39FF14' }}>
+                                        <h4 className="text-[10px] font-extrabold text-gray-500 uppercase tracking-widest flex items-center gap-2 mb-2">
+                                            <span className="w-4 h-4 rounded-md flex items-center justify-center text-[8px] font-extrabold text-black leading-none" style={{ background: team.color1 || '#39FF14' }}>
                                                 {(team.short_name || team.name).charAt(0).toUpperCase()}
                                             </span>
                                             {team.name}
@@ -2939,19 +2939,19 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                                             className="w-full bg-[#161B22] border border-white/5 rounded-2xl p-3 flex items-center justify-between transition-all text-left group enabled:hover:border-[#39FF14]/50 enabled:hover:bg-[#39FF14]/[0.04] disabled:opacity-45 disabled:cursor-not-allowed"
                                                         >
                                                             <div className="flex items-center gap-3 min-w-0 pointer-events-none">
-                                                                <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-[#1e2532] to-[#11151c] flex items-center justify-center font-black text-base text-white border border-white/10 shadow-lg group-hover:text-[#39FF14] transition-colors shrink-0">
+                                                                <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-[#1e2532] to-[#11151c] flex items-center justify-center font-extrabold text-base text-white border border-white/10 shadow-lg group-hover:text-[#39FF14] transition-colors shrink-0">
                                                                     {m.full_name.charAt(0).toUpperCase()}
                                                                 </div>
                                                                 <div className="min-w-0">
-                                                                    <h4 className="text-sm font-black text-white tracking-tight truncate group-hover:text-[#39FF14] transition-colors">{m.full_name}</h4>
+                                                                    <h4 className="text-sm font-extrabold text-white tracking-tight truncate group-hover:text-[#39FF14] transition-colors">{m.full_name}</h4>
                                                                     <div className="flex items-center gap-2 mt-0.5">
-                                                                        {m.pos && <span className="text-[9px] font-black text-[#39FF14] bg-[#39FF14]/10 border border-[#39FF14]/20 rounded px-1.5 py-0.5 uppercase tracking-widest">{m.pos}</span>}
+                                                                        {m.pos && <span className="text-[9px] font-extrabold text-[#39FF14] bg-[#39FF14]/10 border border-[#39FF14]/20 rounded px-1.5 py-0.5 uppercase tracking-widest">{m.pos}</span>}
                                                                         {m.jersey_number != null && <span className="text-[10px] font-bold text-gray-500 font-mono">#{m.jersey_number}</span>}
                                                                     </div>
                                                                 </div>
                                                             </div>
                                                             {inSquad ? (
-                                                                <span className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-[#39FF14] bg-[#39FF14]/10 border border-[#39FF14]/30 rounded-full px-2.5 py-1 shrink-0 ml-2 pointer-events-none"><Check size={11} /> Kadroda</span>
+                                                                <span className="flex items-center gap-1.5 text-[9px] font-extrabold uppercase tracking-widest text-[#39FF14] bg-[#39FF14]/10 border border-[#39FF14]/30 rounded-full px-2.5 py-1 shrink-0 ml-2 pointer-events-none"><Check size={11} /> Kadroda</span>
                                                             ) : (
                                                                 <div className="w-8 h-8 rounded-full border border-white/20 flex items-center justify-center text-white/50 group-hover:border-[#39FF14] group-hover:text-[#39FF14] group-hover:bg-[#39FF14]/10 transition-all shrink-0 ml-2 pointer-events-none">
                                                                     <Plus size={16} />
@@ -3022,7 +3022,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                     <ChevronLeft size={24} />
                                 </button>
                                 <div className="text-right">
-                                    <h3 className="text-lg font-black text-white uppercase tracking-tighter italic">TAKTİK PAYLAŞ</h3>
+                                    <h3 className="text-lg font-extrabold text-white uppercase tracking-tighter italic">TAKTİK PAYLAŞ</h3>
                                     <p className="text-[10px] text-[#39FF14] font-bold uppercase tracking-widest">Maç Günü Kartı</p>
                                 </div>
                             </div>
@@ -3036,18 +3036,18 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                 {/* Header */}
                                 <div className="p-8 text-center border-b border-white/10 bg-black/40 relative overflow-hidden">
                                     <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#39FF14] to-transparent opacity-50"></div>
-                                    <div className="absolute top-6 left-6 text-[9px] font-black text-white/30 tracking-[0.2em] uppercase">OFFICIAL LINEUP</div>
-                                    <div className="absolute top-6 right-6 text-[9px] font-black text-white/30 tracking-[0.2em] uppercase">MATCH DAY</div>
+                                    <div className="absolute top-6 left-6 text-[9px] font-extrabold text-white/30 tracking-[0.2em] uppercase">OFFICIAL LINEUP</div>
+                                    <div className="absolute top-6 right-6 text-[9px] font-extrabold text-white/30 tracking-[0.2em] uppercase">MATCH DAY</div>
                                     
                                     <div className="w-20 h-20 mx-auto bg-gradient-to-br from-[#39FF14] to-emerald-600 rounded-[24px] flex items-center justify-center shadow-[0_10px_30px_rgba(57,255,20,0.3)] mb-4 relative group-hover:scale-110 transition-transform duration-500">
                                         <Shield size={40} className="text-black" />
                                         <div className="absolute inset-0 rounded-[24px] border-2 border-white/20"></div>
                                     </div>
                                     
-                                    <h2 className="text-3xl font-black text-white uppercase tracking-tighter italic leading-none">{activeTactic.name}</h2>
+                                    <h2 className="text-3xl font-extrabold text-white uppercase tracking-tighter italic leading-none">{activeTactic.name}</h2>
                                     <div className="inline-flex items-center gap-2 mt-3 px-3 py-1 bg-[#39FF14]/10 rounded-full border border-[#39FF14]/20">
                                         <div className="w-1.5 h-1.5 rounded-full bg-[#39FF14] animate-pulse"></div>
-                                        <span className="text-[10px] text-[#39FF14] font-black uppercase tracking-widest">{activeTactic.formation} SİSTEMİ</span>
+                                        <span className="text-[10px] text-[#39FF14] font-extrabold uppercase tracking-widest">{activeTactic.formation} SİSTEMİ</span>
                                     </div>
                                 </div>
 
@@ -3085,9 +3085,9 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                         >
                                             {slot.player ? (
                                                 <div className={`relative w-full h-full rounded-full border-2 flex items-center justify-center shadow-[0_4px_15px_rgba(0,0,0,0.5)] ${slot.role === 'GK' ? 'bg-gradient-to-br from-orange-400 to-orange-600 border-orange-300' : 'bg-gradient-to-br from-[#1e2532] to-[#11151c] border-white/30'}`}>
-                                                    <span className="text-white font-black text-sm drop-shadow-md">{slot.player.name.charAt(0)}</span>
+                                                    <span className="text-white font-extrabold text-sm drop-shadow-md">{slot.player.name.charAt(0)}</span>
                                                     {activeTactic.captainId === slot.player.id && (
-                                                        <div className="absolute -top-2 -right-2 w-5 h-5 bg-gradient-to-br from-yellow-300 to-yellow-500 rounded-full flex items-center justify-center text-black text-[10px] font-black border-2 border-[#161B22] shadow-sm">
+                                                        <div className="absolute -top-2 -right-2 w-5 h-5 bg-gradient-to-br from-yellow-300 to-yellow-500 rounded-full flex items-center justify-center text-black text-[10px] font-extrabold border-2 border-[#161B22] shadow-sm">
                                                             K
                                                         </div>
                                                     )}
@@ -3115,7 +3115,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                 <div className="p-6 bg-black/60 border-t border-white/10">
                                     <div className="text-center mb-4">
                                         <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">OYUN KİMLİĞİ</div>
-                                        <div className={`text-xl font-black italic uppercase ${
+                                        <div className={`text-xl font-extrabold italic uppercase ${
                                             activeTactic.identity === 'HIGH_PRESS' ? 'text-red-500' :
                                             activeTactic.identity === 'PARK_BUS' ? 'text-blue-500' :
                                             activeTactic.identity === 'COUNTER_ATTACK' ? 'text-yellow-500' : 'text-white'
@@ -3145,7 +3145,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                 {/* BİRİNCİL: görsel (+ varsa link) → cihazın paylaş menüsü (WhatsApp/Instagram/…) */}
                                 <button
                                     onClick={handleShareTactic}
-                                    className="w-full py-5 bg-[#39FF14] text-black font-black rounded-[24px] text-sm tracking-widest uppercase hover:scale-[1.02] active:scale-[0.98] transition-all shadow-[0_10px_30px_rgba(57,255,20,0.3)] flex items-center justify-center gap-3"
+                                    className="w-full py-5 bg-[#39FF14] text-black font-extrabold rounded-[24px] text-sm tracking-widest uppercase hover:scale-[1.02] active:scale-[0.98] transition-all shadow-[0_10px_30px_rgba(57,255,20,0.3)] flex items-center justify-center gap-3"
                                 >
                                     <Share2 size={20} /> PAYLAŞ
                                 </button>
@@ -3153,7 +3153,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                 {/* Sadece hareket sunumu (OYNAT'ın halefi) */}
                                 <button
                                     onClick={enterPresentMovement}
-                                    className="w-full py-4 bg-white/8 border border-white/12 text-white font-black rounded-[20px] text-xs tracking-widest uppercase hover:bg-white/12 transition-all flex items-center justify-center gap-2"
+                                    className="w-full py-4 bg-white/8 border border-white/12 text-white font-extrabold rounded-[20px] text-xs tracking-widest uppercase hover:bg-white/12 transition-all flex items-center justify-center gap-2"
                                 >
                                     <Eye size={16} className="text-[#39FF14]" /> SADECE HAREKETLE OYNAT
                                 </button>
@@ -3162,13 +3162,13 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                 <div className="grid grid-cols-2 gap-3">
                                     <button
                                         onClick={handleDownloadImage}
-                                        className="py-4 bg-white/5 border border-white/10 text-white font-black rounded-[20px] text-xs tracking-widest uppercase hover:bg-white/10 transition-all flex items-center justify-center gap-2"
+                                        className="py-4 bg-white/5 border border-white/10 text-white font-extrabold rounded-[20px] text-xs tracking-widest uppercase hover:bg-white/10 transition-all flex items-center justify-center gap-2"
                                     >
                                         <SaveAll size={16} className="text-[#39FF14]" /> GÖRSELİ İNDİR
                                     </button>
                                     <button
                                         onClick={handleCopyLink}
-                                        className="py-4 bg-white/5 border border-white/10 text-white font-black rounded-[20px] text-xs tracking-widest uppercase hover:bg-white/10 transition-all flex items-center justify-center gap-2"
+                                        className="py-4 bg-white/5 border border-white/10 text-white font-extrabold rounded-[20px] text-xs tracking-widest uppercase hover:bg-white/10 transition-all flex items-center justify-center gap-2"
                                     >
                                         <Layers size={16} className="text-[#39FF14]" /> LİNKİ KOPYALA
                                     </button>
@@ -3194,7 +3194,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                                 showToast((e as Error)?.message || 'Gönderilemedi.', 'error');
                                             }
                                         }}
-                                        className="w-full py-4 bg-white/8 border border-white/12 text-white font-black rounded-[20px] text-xs tracking-widest uppercase hover:bg-white/12 transition-all flex items-center justify-center gap-2"
+                                        className="w-full py-4 bg-white/8 border border-white/12 text-white font-extrabold rounded-[20px] text-xs tracking-widest uppercase hover:bg-white/12 transition-all flex items-center justify-center gap-2"
                                     >
                                         <MessageSquare size={16} className="text-[#39FF14]" /> TAKIM SOHBETİNE GÖNDER
                                     </button>
@@ -3231,7 +3231,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                         >
                             <div className="p-5 border-b border-white/5 bg-[#0A0E14]/50">
                                 <div className="flex justify-between items-center mb-4">
-                                    <h3 className="text-lg font-black text-white uppercase tracking-widest flex items-center gap-2.5">
+                                    <h3 className="text-lg font-extrabold text-white uppercase tracking-widest flex items-center gap-2.5">
                                         <List size={20} className="text-[#39FF14]" /> TAKTİK KÜTÜPHANESİ
                                     </h3>
                                     <button onClick={() => setShowTacticsModal(false)} aria-label="Kapat" className="p-2 text-gray-400 hover:text-white transition-colors bg-white/5 rounded-full"><X size={18} /></button>
@@ -3240,16 +3240,16 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                 <div className="flex gap-2 overflow-x-auto no-scrollbar mb-3">
                                     <button
                                         onClick={() => setLibraryTab('MINE')}
-                                        className={`whitespace-nowrap px-3.5 py-2 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all shrink-0 ${libraryTab === 'MINE' ? 'bg-[#39FF14] text-black border-[#39FF14]' : 'bg-white/5 text-gray-400 border-white/10 hover:text-white'}`}
+                                        className={`whitespace-nowrap px-3.5 py-2 rounded-full text-[10px] font-extrabold uppercase tracking-widest border transition-all shrink-0 ${libraryTab === 'MINE' ? 'bg-[#39FF14] text-black border-[#39FF14]' : 'bg-white/5 text-gray-400 border-white/10 hover:text-white'}`}
                                     >Kütüphanem</button>
                                     {studioTeams.map(team => (
                                         <button
                                             key={team.team_id}
                                             onClick={() => setLibraryTab(team.team_id)}
                                             title={`Takım kütüphanesi: ${team.name}`}
-                                            className={`whitespace-nowrap px-3.5 py-2 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all flex items-center gap-1.5 shrink-0 ${libraryTab === team.team_id ? 'bg-[#39FF14] text-black border-[#39FF14]' : 'bg-white/5 text-gray-400 border-white/10 hover:text-white'}`}
+                                            className={`whitespace-nowrap px-3.5 py-2 rounded-full text-[10px] font-extrabold uppercase tracking-widest border transition-all flex items-center gap-1.5 shrink-0 ${libraryTab === team.team_id ? 'bg-[#39FF14] text-black border-[#39FF14]' : 'bg-white/5 text-gray-400 border-white/10 hover:text-white'}`}
                                         >
-                                            <span className="w-3.5 h-3.5 rounded-[4px] flex items-center justify-center text-[8px] font-black text-black leading-none" style={{ background: team.color1 || '#39FF14' }}>
+                                            <span className="w-3.5 h-3.5 rounded-[4px] flex items-center justify-center text-[8px] font-extrabold text-black leading-none" style={{ background: team.color1 || '#39FF14' }}>
                                                 {(team.short_name || team.name).charAt(0).toUpperCase()}
                                             </span>
                                             {team.short_name || team.name}
@@ -3309,7 +3309,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                                     <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                                                         <span className="text-[10px] font-mono text-gray-500 uppercase">{entry.formation || '—'} · {entry.size || '—'}</span>
                                                         {sm.tone !== 'none' && (
-                                                            <span className={`text-[9px] font-black uppercase tracking-widest border rounded-full px-2 py-0.5 ${toneClass[sm.tone]}`}>{sm.label}</span>
+                                                            <span className={`text-[9px] font-extrabold uppercase tracking-widest border rounded-full px-2 py-0.5 ${toneClass[sm.tone]}`}>{sm.label}</span>
                                                         )}
                                                     </div>
                                                 </div>
@@ -3344,7 +3344,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                             onClick={e => e.stopPropagation()}
                         >
                             <div className="flex justify-between items-center mb-6">
-                                <h3 className="text-lg font-black text-white uppercase tracking-widest flex items-center gap-2">
+                                <h3 className="text-lg font-extrabold text-white uppercase tracking-widest flex items-center gap-2">
                                     <Save size={20} className="text-[#39FF14]" /> TAKTİĞİ KAYDET
                                 </h3>
                                 <button onClick={() => setShowSaveModal(false)} className="p-2 text-gray-400 hover:text-white transition-colors"><X size={20} /></button>
@@ -3352,7 +3352,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                             
                             <div className="space-y-4 mb-8">
                                 <div>
-                                    <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-2">Taktik İsmi</label>
+                                    <label className="block text-[10px] font-extrabold text-gray-400 uppercase tracking-widest mb-2 ml-2">Taktik İsmi</label>
                                     <input
                                         type="text"
                                         value={saveTacticName}
@@ -3386,7 +3386,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                             {assignToMatch && <Check size={13} className="text-black" />}
                                         </span>
                                         <span className="min-w-0 flex-1">
-                                            <span className="block text-[12px] font-black text-white">Yaklaşan maça ata</span>
+                                            <span className="block text-[12px] font-extrabold text-white">Yaklaşan maça ata</span>
                                             <span className="block text-[10px] text-gray-500 truncate">
                                                 {nextMatch.opponentName} · {nextMatch.date}{nextMatch.time ? ` ${nextMatch.time}` : ''}
                                             </span>
@@ -3399,7 +3399,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                             <button
                                 onClick={handleSaveTactic}
                                 disabled={!saveTacticName.trim()}
-                                className="w-full h-14 bg-[#39FF14] text-black font-black text-xs tracking-widest uppercase rounded-2xl hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_20px_rgba(57,255,20,0.2)]"
+                                className="w-full h-14 bg-[#39FF14] text-black font-extrabold text-xs tracking-widest uppercase rounded-2xl hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_20px_rgba(57,255,20,0.2)]"
                             >
                                 {(() => {
                                     const teamRow = studioTeams.find(t => t.team_id === selectedTeamId);
@@ -3433,7 +3433,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                             <div className="w-16 h-16 rounded-full bg-red-500/10 text-red-500 flex items-center justify-center mx-auto mb-4 border border-red-500/20">
                                 <RotateCw size={24} />
                             </div>
-                            <h3 className="text-xl font-black text-white uppercase tracking-widest mb-2">
+                            <h3 className="text-xl font-extrabold text-white uppercase tracking-widest mb-2">
                                 SAYFAYI YENİLE
                             </h3>
                             <p className="text-gray-400 text-sm mb-6">
@@ -3472,7 +3472,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                         exit={{ opacity: 0, y: 40 }}
                         className="fixed bottom-20 left-1/2 -translate-x-1/2 z-[90] w-[calc(100%-2.5rem)] max-w-md rounded-3xl bg-[#161B22] border border-amber-400/30 shadow-[0_8px_40px_rgba(0,0,0,0.6)] p-4"
                     >
-                        <div className="text-[10px] font-black uppercase tracking-widest text-amber-400 mb-1">
+                        <div className="text-[10px] font-extrabold uppercase tracking-widest text-amber-400 mb-1">
                             Onay Bekleyen Öneri
                         </div>
                         <p className="text-xs text-white/60 mb-3">
@@ -3489,7 +3489,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                             <button
                                 onClick={() => decideProposal(true)}
                                 disabled={decidingProposal}
-                                className="flex-1 min-h-[44px] rounded-2xl bg-[#39FF14] text-[#0A0E14] text-sm font-black active:scale-[0.97] disabled:opacity-50"
+                                className="flex-1 min-h-[44px] rounded-2xl bg-[#39FF14] text-[#0A0E14] text-sm font-extrabold active:scale-[0.97] disabled:opacity-50"
                             >
                                 {decidingProposal ? '…' : 'Onayla'}
                             </button>
@@ -3516,12 +3516,12 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                             >
                                 <div className="flex items-center gap-2 mb-5">
                                     <div className="w-9 h-9 rounded-full bg-red-900/80 border-2 border-red-500 flex items-center justify-center"><Swords size={15} className="text-white" /></div>
-                                    <h3 className="text-sm font-black text-white uppercase tracking-widest">Rakip Oyuncu</h3>
+                                    <h3 className="text-sm font-extrabold text-white uppercase tracking-widest">Rakip Oyuncu</h3>
                                 </div>
 
                                 {/* İsim */}
                                 <div className="flex items-center justify-between mb-1.5 px-1">
-                                    <label className="text-[10px] text-gray-400 font-black uppercase tracking-widest">İsim</label>
+                                    <label className="text-[10px] text-gray-400 font-extrabold uppercase tracking-widest">İsim</label>
                                     <span className="text-[10px] text-gray-600 font-mono">{(opp.player?.name || '').length}/14</span>
                                 </div>
                                 <input
@@ -3535,7 +3535,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
 
                                 {/* Not */}
                                 <div className="flex items-center justify-between mb-1.5 px-1">
-                                    <label className="text-[10px] text-gray-400 font-black uppercase tracking-widest">Not</label>
+                                    <label className="text-[10px] text-gray-400 font-extrabold uppercase tracking-widest">Not</label>
                                     <span className="text-[10px] text-gray-600 font-mono">{(opp.instruction || '').length}/10</span>
                                 </div>
                                 <input
@@ -3550,11 +3550,11 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                 <div className="flex gap-2">
                                     <button
                                         onClick={() => { handleRemoveOpponent(opp.id); setNamingOpp(null); }}
-                                        className="flex items-center gap-2 px-4 py-3 rounded-2xl bg-red-500/15 text-red-400 text-xs font-black hover:bg-red-500/25 transition-all border border-red-500/30"
+                                        className="flex items-center gap-2 px-4 py-3 rounded-2xl bg-red-500/15 text-red-400 text-xs font-extrabold hover:bg-red-500/25 transition-all border border-red-500/30"
                                     ><Trash2 size={14} /> Sil</button>
                                     <button
                                         onClick={() => setNamingOpp(null)}
-                                        className="flex-1 py-3 rounded-2xl bg-[#39FF14] text-black text-xs font-black uppercase tracking-widest hover:scale-[1.02] active:scale-[0.98] transition-all"
+                                        className="flex-1 py-3 rounded-2xl bg-[#39FF14] text-black text-xs font-extrabold uppercase tracking-widest hover:scale-[1.02] active:scale-[0.98] transition-all"
                                     >Tamam</button>
                                 </div>
                             </motion.div>
@@ -3578,7 +3578,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                         >
                             <div className="flex items-center gap-2 mb-4">
                                 <Trash2 size={18} className="text-red-400" />
-                                <h3 className="text-sm font-black text-white uppercase tracking-widest">Neyi temizleyelim?</h3>
+                                <h3 className="text-sm font-extrabold text-white uppercase tracking-widest">Neyi temizleyelim?</h3>
                             </div>
                             <div className="space-y-2">
                                 <button onClick={clearDrawingsOnly} disabled={drawings.length === 0}
@@ -3598,7 +3598,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                     </button>
                                 )}
                                 <button onClick={clearAllScene}
-                                    className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl bg-red-500/15 text-red-400 text-sm font-black hover:bg-red-500/25 transition-all border border-red-500/30">
+                                    className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl bg-red-500/15 text-red-400 text-sm font-extrabold hover:bg-red-500/25 transition-all border border-red-500/30">
                                     <Trash2 size={16} /> Hepsini sil
                                 </button>
                             </div>
@@ -3626,11 +3626,11 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                             className="w-full max-w-sm bg-[#0E1420] border border-white/10 rounded-[24px] p-5 shadow-2xl"
                         >
                             <div className="flex items-center justify-between mb-4">
-                                <h3 className="text-sm font-black text-white uppercase tracking-widest flex items-center gap-2">
+                                <h3 className="text-sm font-extrabold text-white uppercase tracking-widest flex items-center gap-2">
                                     <Gauge size={16} className="text-blue-400" /> TEMPO
                                 </h3>
                                 <div className="flex items-baseline gap-0.5">
-                                    <span className="text-xl font-black text-blue-400 tabular-nums leading-none">{normalizeTempo(activeTactic.tempo)}</span>
+                                    <span className="text-xl font-extrabold text-blue-400 tabular-nums leading-none">{normalizeTempo(activeTactic.tempo)}</span>
                                     <span className="text-[10px] font-bold text-gray-500">/10</span>
                                 </div>
                             </div>
@@ -3694,7 +3694,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                             <div className="w-12 h-12 rounded-2xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center mb-4">
                                 <ShieldAlert size={22} className="text-amber-400" />
                             </div>
-                            <h3 className="text-white text-lg font-black mb-1">Taktik bu arada değişti</h3>
+                            <h3 className="text-white text-lg font-extrabold mb-1">Taktik bu arada değişti</h3>
                             <p className="text-gray-400 text-[13px] leading-relaxed mb-5">
                                 Bu taktik sen açtıktan sonra (başka bir yönetici tarafından) güncellenmiş. Ne yapmak istersin?
                             </p>
@@ -3702,14 +3702,14 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                 <button
                                     onClick={() => void reloadConflict()}
                                     disabled={reloadingConflict}
-                                    className="w-full py-3 rounded-2xl bg-[#39FF14] text-black font-black text-sm hover:brightness-110 transition flex items-center justify-center gap-2 disabled:opacity-60"
+                                    className="w-full py-3 rounded-2xl bg-[#39FF14] text-black font-extrabold text-sm hover:brightness-110 transition flex items-center justify-center gap-2 disabled:opacity-60"
                                 >
                                     {reloadingConflict ? <Loader2 size={16} className="animate-spin" /> : <RotateCcw size={16} />} Güncel sürümü getir
                                 </button>
                                 <button
                                     onClick={() => void overwriteConflict()}
                                     disabled={reloadingConflict}
-                                    className="w-full py-3 rounded-2xl bg-white/5 text-amber-300 font-black text-sm hover:bg-white/10 transition"
+                                    className="w-full py-3 rounded-2xl bg-white/5 text-amber-300 font-extrabold text-sm hover:bg-white/10 transition"
                                 >
                                     Yine de üzerine yaz
                                 </button>
@@ -3751,7 +3751,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                     <div className="w-12 h-12 rounded-2xl bg-[#39FF14]/12 border border-[#39FF14]/25 flex items-center justify-center mb-3">
                                         <Sparkles size={22} className="text-[#39FF14]" />
                                     </div>
-                                    <h3 className="text-white text-xl font-black leading-tight">Taktik Stüdyo</h3>
+                                    <h3 className="text-white text-xl font-extrabold leading-tight">Taktik Stüdyo</h3>
                                     <p className="text-gray-400 text-[12px] leading-relaxed mt-1">Sahayı diz, hareketleri çiz, izle ve paylaş. Araçların tamamı:</p>
                                 </div>
                                 <div className="flex-1 overflow-y-auto overscroll-contain px-6 space-y-2.5 custom-scrollbar">
@@ -3759,14 +3759,14 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                         <div key={k} className="flex gap-3 rounded-2xl border border-white/8 bg-white/[0.03] p-3">
                                             <div className="w-9 h-9 rounded-xl bg-[#39FF14]/10 border border-[#39FF14]/25 flex items-center justify-center shrink-0">{r.icon}</div>
                                             <div className="min-w-0">
-                                                <p className="text-[13px] font-black text-white leading-tight">{r.title}</p>
+                                                <p className="text-[13px] font-extrabold text-white leading-tight">{r.title}</p>
                                                 <p className="text-[11px] text-gray-400 leading-relaxed mt-0.5">{r.body}</p>
                                             </div>
                                         </div>
                                     ))}
                                 </div>
                                 <div className="p-5 pt-4 shrink-0">
-                                    <button onClick={dismissOnboarding} className="w-full py-3.5 rounded-2xl bg-[#39FF14] text-black font-black text-sm hover:brightness-110 transition">
+                                    <button onClick={dismissOnboarding} className="w-full py-3.5 rounded-2xl bg-[#39FF14] text-black font-extrabold text-sm hover:brightness-110 transition">
                                         Başla
                                     </button>
                                 </div>
@@ -3790,15 +3790,15 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                             <div className="w-12 h-12 rounded-2xl bg-[#39FF14]/15 border border-[#39FF14]/30 flex items-center justify-center mb-4">
                                 <RotateCcw size={22} className="text-[#39FF14]" />
                             </div>
-                            <h3 className="text-white text-lg font-black mb-1">Kaldığın yerden devam?</h3>
+                            <h3 className="text-white text-lg font-extrabold mb-1">Kaldığın yerden devam?</h3>
                             <p className="text-gray-400 text-[13px] leading-relaxed mb-5">
                                 Yarım kalan bir taktik taslağın var{resumeDraft.plans.length > 1 ? ` (${resumeDraft.plans.length} plan)` : ''}. Geri yüklemek ister misin?
                             </p>
                             <div className="flex gap-3">
-                                <button onClick={discardResumeDraft} className="flex-1 py-3 rounded-2xl bg-white/5 text-gray-300 font-black text-sm hover:bg-white/10 transition">
+                                <button onClick={discardResumeDraft} className="flex-1 py-3 rounded-2xl bg-white/5 text-gray-300 font-extrabold text-sm hover:bg-white/10 transition">
                                     Yeni Başla
                                 </button>
-                                <button onClick={applyResumeDraft} className="flex-1 py-3 rounded-2xl bg-[#39FF14] text-black font-black text-sm hover:brightness-110 transition flex items-center justify-center gap-2">
+                                <button onClick={applyResumeDraft} className="flex-1 py-3 rounded-2xl bg-[#39FF14] text-black font-extrabold text-sm hover:brightness-110 transition flex items-center justify-center gap-2">
                                     <RotateCcw size={16} /> Devam Et
                                 </button>
                             </div>

@@ -120,7 +120,7 @@ const ThreeDSSheet: React.FC<ThreeDSSheetProps> = ({ htmlBase64, intentId, onDon
           <ShieldCheck size={18} />
         </span>
         <div className="flex-1 min-w-0">
-          <h1 className="text-[15px] font-black text-white leading-tight">Banka Doğrulaması</h1>
+          <h1 className="text-[15px] font-extrabold text-white leading-tight">Banka Doğrulaması</h1>
           <p className="text-[10.5px] text-gray-500 font-semibold">3D Secure · SMS ile onayla</p>
         </div>
         <button

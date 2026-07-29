@@ -193,7 +193,7 @@ const MatchTicket: React.FC<MatchTicketProps> = ({ onBack }) => {
 
       <div className="w-full max-w-md animate-in slide-in-from-bottom duration-700">
         <div className="text-center mb-6">
-          <h1 className="text-2xl font-black text-white tracking-tight">MAÇ KARTINIZ</h1>
+          <h1 className="text-2xl font-extrabold text-white tracking-tight">MAÇ KARTINIZ</h1>
           <p className="text-gray-400 text-sm">
             {/* F4.1 dürüstlük: turnike/okuyucu sistemi YOK — bilet tesiste
                 gösterilen rezervasyon referansıdır. */}
@@ -207,14 +207,14 @@ const MatchTicket: React.FC<MatchTicketProps> = ({ onBack }) => {
           {/* Üst — durum GERÇEK ödemeye göre */}
           <div className="p-6 pb-12 relative" style={{ background: style.bg }}>
             <div className="flex justify-between items-start relative z-10">
-              <div className="px-3 py-1 rounded-lg text-xs font-black uppercase tracking-wider"
+              <div className="px-3 py-1 rounded-lg text-xs font-extrabold uppercase tracking-wider"
                 style={{ background: style.text, color: style.bg }}>
                 {loading ? 'YÜKLENİYOR…' : style.label}
               </div>
               <ShieldCheck size={24} style={{ color: style.text }} className="opacity-50" />
             </div>
             <div className="mt-4">
-              <h2 className="text-3xl font-black leading-none uppercase" style={{ color: style.text }}>
+              <h2 className="text-3xl font-extrabold leading-none uppercase" style={{ color: style.text }}>
                 {pitchNameParts[0]}
                 {pitchNameParts.length > 1 && <><br />{pitchNameParts.slice(1).join(' ')}</>}
               </h2>
@@ -247,7 +247,7 @@ const MatchTicket: React.FC<MatchTicketProps> = ({ onBack }) => {
                 <span className="text-gray-600 font-bold">
                   {payState === 'PARTIAL' ? 'Ödenen kapora' : payState === 'PAID' ? 'Ödendi' : 'Ödenen'}
                 </span>
-                <span className="text-black font-black font-numeric">
+                <span className="text-black font-extrabold font-numeric">
                   {formatTRY(Number(booking.paid_amount) || 0)}₺
                   {Number(booking.price) > 0 && <span className="text-gray-600"> / {formatTRY(Number(booking.price))}₺</span>}
                 </span>
@@ -273,7 +273,7 @@ const MatchTicket: React.FC<MatchTicketProps> = ({ onBack }) => {
                   {loadError ? (
                     <button
                       onClick={() => setReloadKey(k => k + 1)}
-                      className="mt-2 h-11 px-4 rounded-xl bg-[#0A0E14] text-white text-[13px] font-black active:scale-95 transition-transform">
+                      className="mt-2 h-11 px-4 rounded-xl bg-[#0A0E14] text-white text-[13px] font-extrabold active:scale-95 transition-transform">
                       Tekrar Dene
                     </button>
                   ) : booking ? (
@@ -290,7 +290,7 @@ const MatchTicket: React.FC<MatchTicketProps> = ({ onBack }) => {
                   {new Date(fromCache).toLocaleString('tr-TR', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}
                 </p>
                 <button onClick={() => setReloadKey(k => k + 1)}
-                  className="shrink-0 h-9 px-3 rounded-lg bg-[#0A0E14] text-white text-[11px] font-black active:scale-95 transition-transform">
+                  className="shrink-0 h-9 px-3 rounded-lg bg-[#0A0E14] text-white text-[11px] font-extrabold active:scale-95 transition-transform">
                   Yenile
                 </button>
               </div>
@@ -305,7 +305,7 @@ const MatchTicket: React.FC<MatchTicketProps> = ({ onBack }) => {
             <Share2 size={18} /> Paylaş
           </button>
           <button onClick={handleSaveImage} disabled={!qrDataUrl}
-            className={`flex-1 py-4 rounded-2xl font-black text-sm flex items-center justify-center gap-2 transition-colors ${
+            className={`flex-1 py-4 rounded-2xl font-extrabold text-sm flex items-center justify-center gap-2 transition-colors ${
               qrDataUrl ? 'bg-[#FACC15] text-black hover:bg-yellow-300 shadow-lg shadow-yellow-900/20' : 'bg-gray-700 text-gray-400'
             }`}>
             <Download size={18} /> QR'ı Kaydet
@@ -327,7 +327,7 @@ const MatchTicket: React.FC<MatchTicketProps> = ({ onBack }) => {
 const Detail: React.FC<{ icon?: React.ReactNode; label: string; value: string }> = ({ icon, label, value }) => (
   <div>
     <p className="text-[10px] text-gray-600 font-bold uppercase mb-1 flex items-center gap-1">{icon}{label}</p>
-    <p className="text-lg font-black text-black truncate">{value}</p>
+    <p className="text-lg font-extrabold text-black truncate">{value}</p>
   </div>
 );
 

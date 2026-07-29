@@ -32,7 +32,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
               <AlertTriangle size={18} className={destructive ? 'text-red-400' : 'text-blue-400'} />
             </div>
             <div>
-              <h3 className="text-sm font-black text-white">{title}</h3>
+              <h3 className="text-sm font-extrabold text-white">{title}</h3>
               <p className="text-xs text-gray-500 mt-1 leading-relaxed">{description}</p>
             </div>
           </div>
@@ -42,7 +42,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
             </button>
             <button
               onClick={onConfirm}
-              className={`px-4 py-2 text-xs font-black rounded-xl text-white ${destructive ? 'bg-red-600 hover:bg-red-500' : 'bg-red-600 hover:bg-red-500'}`}
+              className={`px-4 py-2 text-xs font-extrabold rounded-xl text-white ${destructive ? 'bg-red-600 hover:bg-red-500' : 'bg-red-600 hover:bg-red-500'}`}
             >
               {confirmLabel}
             </button>

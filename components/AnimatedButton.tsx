@@ -66,7 +66,7 @@ export const AnimatedButton = <T extends React.ElementType = 'button'>({
   };
 
   // Base theme classes
-  const baseClasses = 'relative overflow-hidden font-black uppercase tracking-wider transition-all duration-200 outline-none flex items-center justify-center select-none active:scale-[0.98]';
+  const baseClasses = 'relative overflow-hidden font-extrabold uppercase tracking-wider transition-all duration-200 outline-none flex items-center justify-center select-none active:scale-[0.98]';
   
   // Accessibility focus styling
   const focusClasses = 'focus-visible:ring-2 focus-visible:ring-[#39FF14] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0A0E14]';

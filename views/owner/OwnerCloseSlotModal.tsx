@@ -69,7 +69,7 @@ export const OwnerCloseSlotModal: React.FC<OwnerCloseSlotModalProps> = ({
       <div className="bg-[#161B22] w-full max-w-md rounded-t-[32px] border-t border-white/10 p-6 animate-in slide-in-from-bottom duration-300">
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h3 className="text-lg font-black text-white flex items-center gap-2">
+            <h3 className="text-lg font-extrabold text-white flex items-center gap-2">
               <Lock size={20} className="text-red-400" /> Slot Kapat
             </h3>
             <p className="text-xs text-gray-400 mt-1">
@@ -83,7 +83,7 @@ export const OwnerCloseSlotModal: React.FC<OwnerCloseSlotModalProps> = ({
 
         <div className="space-y-4 mb-6">
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Kapanma nedeni</label>
+            <label className="text-[10px] font-extrabold text-gray-500 uppercase tracking-widest ml-1">Kapanma nedeni</label>
             <div className="bg-[#0A0E14] border border-white/5 p-4 rounded-2xl">
               <select
                 value={exceptionType}
@@ -100,7 +100,7 @@ export const OwnerCloseSlotModal: React.FC<OwnerCloseSlotModalProps> = ({
           </div>
 
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Not (opsiyonel)</label>
+            <label className="text-[10px] font-extrabold text-gray-500 uppercase tracking-widest ml-1">Not (opsiyonel)</label>
             <textarea
               value={reason}
               onChange={(e) => setReason(e.target.value)}
@@ -112,7 +112,7 @@ export const OwnerCloseSlotModal: React.FC<OwnerCloseSlotModalProps> = ({
 
           <div className="flex items-center justify-between bg-[#0A0E14] p-4 rounded-2xl border border-white/5">
             <div>
-              <p className="text-xs font-black text-white uppercase">Tüm günü kapat</p>
+              <p className="text-xs font-extrabold text-white uppercase">Tüm günü kapat</p>
               <p className="text-[9px] text-gray-500 font-bold mt-1">Seçili saha için gün boyunca rezervasyon alınmaz</p>
             </div>
             <button
@@ -131,7 +131,7 @@ export const OwnerCloseSlotModal: React.FC<OwnerCloseSlotModalProps> = ({
           type="button"
           onClick={handleSubmit}
           disabled={saving}
-          className="w-full py-4 bg-red-600 text-white font-black text-lg rounded-2xl hover:bg-red-500 active:scale-95 transition-all disabled:opacity-50"
+          className="w-full py-4 bg-red-600 text-white font-extrabold text-lg rounded-2xl hover:bg-red-500 active:scale-95 transition-all disabled:opacity-50"
         >
           {saving ? 'KAPATILIYOR...' : 'SLOTU KAPAT'}
         </button>

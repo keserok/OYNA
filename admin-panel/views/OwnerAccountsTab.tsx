@@ -147,7 +147,7 @@ const OwnerAccountsTab: React.FC = () => {
     <div className="p-6 max-w-6xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-black text-white flex items-center gap-2">
+          <h2 className="text-xl font-extrabold text-white flex items-center gap-2">
             <Shield size={22} className="text-emerald-400" />
             Saha Sahibi SaaS Hesapları
           </h2>
@@ -184,7 +184,7 @@ const OwnerAccountsTab: React.FC = () => {
               >
                 <div className="flex flex-wrap items-start justify-between gap-4">
                   <div>
-                    <p className="text-sm font-black text-white">
+                    <p className="text-sm font-extrabold text-white">
                       {row.owner_name ?? 'İsimsiz Owner'}
                     </p>
                     <p className="text-xs text-gray-500">{row.owner_email ?? row.owner_user_id}</p>
@@ -260,7 +260,7 @@ const OwnerAccountsTab: React.FC = () => {
                   type="button"
                   onClick={() => handleSave(row.owner_user_id)}
                   disabled={savingId === row.owner_user_id}
-                  className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white text-xs font-black rounded-xl hover:bg-emerald-500 disabled:opacity-50"
+                  className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white text-xs font-extrabold rounded-xl hover:bg-emerald-500 disabled:opacity-50"
                 >
                   <Save size={14} />
                   {savingId === row.owner_user_id ? 'Kaydediliyor…' : 'Kaydet'}
@@ -277,7 +277,7 @@ const OwnerAccountsTab: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => setCredDraft(row.owner_user_id, { open: !cred.open })}
-                        className="flex items-center gap-2 text-[11px] font-black uppercase tracking-wider text-gray-400 hover:text-white"
+                        className="flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-wider text-gray-400 hover:text-white"
                       >
                         <KeyRound size={13} className="text-amber-400" />
                         Hesap Güvenliği (E-posta / Şifre)
@@ -309,7 +309,7 @@ const OwnerAccountsTab: React.FC = () => {
                                   'E-posta güncellendi — yeni adres giriş için hemen geçerli',
                                 )
                               }
-                              className="w-full px-3 py-2 bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-black rounded-lg disabled:opacity-40"
+                              className="w-full px-3 py-2 bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-extrabold rounded-lg disabled:opacity-40"
                             >
                               {busyFor('set_email') ? 'Güncelleniyor…' : 'E-postayı Güncelle'}
                             </button>
@@ -348,7 +348,7 @@ const OwnerAccountsTab: React.FC = () => {
                                   'Şifre güncellendi — yeni şifreyi tesise güvenli bir kanaldan iletin',
                                 )
                               }
-                              className="w-full px-3 py-2 bg-amber-600 hover:bg-amber-500 text-white text-[11px] font-black rounded-lg disabled:opacity-40"
+                              className="w-full px-3 py-2 bg-amber-600 hover:bg-amber-500 text-white text-[11px] font-extrabold rounded-lg disabled:opacity-40"
                             >
                               {busyFor('set_password') ? 'Kaydediliyor…' : 'Şifreyi Kaydet'}
                             </button>
@@ -370,7 +370,7 @@ const OwnerAccountsTab: React.FC = () => {
                                   'Sıfırlama kodu e-postaya gönderildi',
                                 )
                               }
-                              className="flex items-center gap-1.5 px-3 py-2 bg-white/5 border border-white/10 hover:bg-white/10 text-gray-200 text-[11px] font-black rounded-lg disabled:opacity-40"
+                              className="flex items-center gap-1.5 px-3 py-2 bg-white/5 border border-white/10 hover:bg-white/10 text-gray-200 text-[11px] font-extrabold rounded-lg disabled:opacity-40"
                             >
                               <Send size={12} />
                               {busyFor('send_reset_code') ? 'Gönderiliyor…' : 'Sıfırlama Kodu Gönder'}

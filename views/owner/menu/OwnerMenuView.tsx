@@ -155,7 +155,7 @@ export const OwnerMenuView: React.FC<OwnerMenuViewProps> = ({
           )}
         </div>
         <div>
-          <h2 className="text-xl font-black text-white">{facilityName}</h2>
+          <h2 className="text-xl font-extrabold text-white">{facilityName}</h2>
           <p className="text-xs text-gray-400 font-medium">
             {facilityDistrict || 'Konum belirtilmedi'}
           </p>

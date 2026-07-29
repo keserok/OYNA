@@ -94,7 +94,7 @@ const ProviderOfferPicker: React.FC<ProviderOfferPickerProps> = ({ onClose, onCo
       <div className="pt-safe px-5 pt-5 pb-3 border-b border-white/8 shrink-0">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h2 className="text-xl font-black text-white italic tracking-tight uppercase">Kaleci &amp; Hakem</h2>
+            <h2 className="text-xl font-extrabold text-white italic tracking-tight uppercase">Kaleci &amp; Hakem</h2>
             <p className="text-[11px] font-bold uppercase tracking-widest mt-0.5" style={{ color: accent }}>
               Çoklu teklif · ilk kabul eden alır
             </p>
@@ -107,11 +107,11 @@ const ProviderOfferPicker: React.FC<ProviderOfferPickerProps> = ({ onClose, onCo
         {/* Sekmeler */}
         <div className="bg-[#161B22] p-1.5 rounded-2xl flex border border-white/5">
           <button onClick={() => setTab('GK')}
-            className={`flex-1 py-2.5 text-[11px] font-black rounded-xl transition-all flex items-center justify-center gap-2 ${tab === 'GK' ? 'bg-[#39FF14] text-[#0A0E14]' : 'text-gray-500'}`}>
+            className={`flex-1 py-2.5 text-[11px] font-extrabold rounded-xl transition-all flex items-center justify-center gap-2 ${tab === 'GK' ? 'bg-[#39FF14] text-[#0A0E14]' : 'text-gray-500'}`}>
             <Shield size={14} /> KALECİ{totalSelected.g > 0 ? ` · ${allGK ? 'Tümü' : selGK.size}` : ''}
           </button>
           <button onClick={() => setTab('REF')}
-            className={`flex-1 py-2.5 text-[11px] font-black rounded-xl transition-all flex items-center justify-center gap-2 ${tab === 'REF' ? 'bg-[#FACC15] text-[#0A0E14]' : 'text-gray-500'}`}>
+            className={`flex-1 py-2.5 text-[11px] font-extrabold rounded-xl transition-all flex items-center justify-center gap-2 ${tab === 'REF' ? 'bg-[#FACC15] text-[#0A0E14]' : 'text-gray-500'}`}>
             <Scale size={14} /> HAKEM{totalSelected.r > 0 ? ` · ${allREF ? 'Tümü' : selREF.size}` : ''}
           </button>
         </div>
@@ -131,7 +131,7 @@ const ProviderOfferPicker: React.FC<ProviderOfferPickerProps> = ({ onClose, onCo
                 <Users size={18} />
               </div>
               <div className="text-left">
-                <p className="text-sm font-black text-white uppercase italic">Tümüne Gönder</p>
+                <p className="text-sm font-extrabold text-white uppercase italic">Tümüne Gönder</p>
                 <p className="text-[10px] text-white/45">Uygun tüm {tab === 'GK' ? 'kalecilere' : 'hakemlere'} teklif</p>
               </div>
             </div>
@@ -151,7 +151,7 @@ const ProviderOfferPicker: React.FC<ProviderOfferPickerProps> = ({ onClose, onCo
                  style={{ background: `${accent}1a`, color: accent }}>
               {tab === 'GK' ? <Shield size={24} /> : <Scale size={24} />}
             </div>
-            <p className="text-sm font-black text-white mb-1.5">
+            <p className="text-sm font-extrabold text-white mb-1.5">
               Bu bölgede {tab === 'GK' ? 'kaleci' : 'hakem'} sayısı az
             </p>
             <p className="text-[12px] leading-relaxed text-white/50 mb-5">
@@ -162,7 +162,7 @@ const ProviderOfferPicker: React.FC<ProviderOfferPickerProps> = ({ onClose, onCo
               {/* Davet paylaşımı yerinde çalışır, maç kurulumundan çıkarmaz. */}
               <button
                 onClick={shareProviderInvite}
-                className="w-full py-3 rounded-2xl text-[13px] font-black uppercase tracking-wide"
+                className="w-full py-3 rounded-2xl text-[13px] font-extrabold uppercase tracking-wide"
                 style={{ background: accent, color: '#0A0E14' }}
               >
                 Tanıdığını Davet Et
@@ -170,7 +170,7 @@ const ProviderOfferPicker: React.FC<ProviderOfferPickerProps> = ({ onClose, onCo
               {onApplyAsProvider && (
                 <button
                   onClick={() => onApplyAsProvider(tab === 'GK' ? UserRole.GOALKEEPER : UserRole.REFEREE)}
-                  className="w-full py-3 rounded-2xl text-[13px] font-black uppercase tracking-wide bg-white/[0.06] border border-white/10 text-white/80"
+                  className="w-full py-3 rounded-2xl text-[13px] font-extrabold uppercase tracking-wide bg-white/[0.06] border border-white/10 text-white/80"
                 >
                   {tab === 'GK' ? 'Kaleci Olarak Başvur' : 'Hakem Olarak Başvur'}
                 </button>
@@ -199,7 +199,7 @@ const ProviderOfferPicker: React.FC<ProviderOfferPickerProps> = ({ onClose, onCo
                     </div>
                   </div>
                   <div className="text-right shrink-0">
-                    <div className="text-sm font-black" style={{ color: accent }}>{p.fee}₺</div>
+                    <div className="text-sm font-extrabold" style={{ color: accent }}>{p.fee}₺</div>
                     <div className="text-[8px] font-bold uppercase text-white/30 tracking-widest">bedel</div>
                   </div>
                   <span className={`w-6 h-6 shrink-0 rounded-full border-2 flex items-center justify-center`}
@@ -221,7 +221,7 @@ const ProviderOfferPicker: React.FC<ProviderOfferPickerProps> = ({ onClose, onCo
           </p>
         )}
         <button onClick={confirm} disabled={!totalSelected.any}
-          className="w-full min-h-[54px] rounded-2xl bg-[#39FF14] text-[#0A0E14] font-black text-sm uppercase tracking-widest active:scale-[0.98] disabled:opacity-40 disabled:bg-white/10 disabled:text-white/40 flex items-center justify-center gap-2 shadow-[0_0_30px_rgba(57,255,20,0.25)]">
+          className="w-full min-h-[54px] rounded-2xl bg-[#39FF14] text-[#0A0E14] font-extrabold text-sm uppercase tracking-widest active:scale-[0.98] disabled:opacity-40 disabled:bg-white/10 disabled:text-white/40 flex items-center justify-center gap-2 shadow-[0_0_30px_rgba(57,255,20,0.25)]">
           <Zap size={16} />
           {totalSelected.any ? 'Kaporayı Ödediğinde Teklif Gönder' : 'Kaleci veya hakem seç'}
         </button>

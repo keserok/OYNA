@@ -199,7 +199,7 @@ const NotificationSettingsPage: React.FC<NotificationSettingsPageProps> = ({ ope
 
       {/* Hızlı ön ayarlar */}
       <div className="mb-5">
-        <p className="text-[11px] font-black uppercase tracking-widest text-gray-500 mb-2 ml-1 flex items-center gap-1.5">
+        <p className="text-[11px] font-extrabold uppercase tracking-widest text-gray-500 mb-2 ml-1 flex items-center gap-1.5">
           <Zap size={12} className="text-[#39FF14]" /> Hızlı Ayar
         </p>
         <div className="grid grid-cols-3 gap-2">
@@ -274,7 +274,7 @@ const NotificationSettingsPage: React.FC<NotificationSettingsPageProps> = ({ ope
       </div>
 
       {/* Kategori ana anahtarları */}
-      <p className="text-[11px] font-black uppercase tracking-widest text-gray-500 mb-2 ml-1 flex items-center gap-1.5">
+      <p className="text-[11px] font-extrabold uppercase tracking-widest text-gray-500 mb-2 ml-1 flex items-center gap-1.5">
         <Bell size={12} className="text-[#39FF14]" /> Kategoriler
       </p>
 

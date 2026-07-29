@@ -235,10 +235,10 @@ const PartnerOnboarding: React.FC<PartnerOnboardingProps> = ({ onComplete, onClo
           <div className="relative z-10 animate-in slide-in-from-bottom-20 duration-1000">
               {/* Logo */}
               <div className="w-16 h-16 bg-[#FACC15] rounded-2xl rotate-45 flex items-center justify-center shadow-[0_0_30px_rgba(250,204,21,0.4)] mb-8 ml-4">
-                  <div className="-rotate-45 font-black text-black text-2xl">O</div>
+                  <div className="-rotate-45 font-extrabold text-black text-2xl">O</div>
               </div>
 
-              <h1 className="text-4xl font-black text-white leading-tight mb-4">
+              <h1 className="text-4xl font-extrabold text-white leading-tight mb-4">
                   Hoş Geldiniz,<br/>
                   <span className="text-[#FACC15]">Efsane Yönetici.</span>
               </h1>
@@ -265,7 +265,7 @@ const PartnerOnboarding: React.FC<PartnerOnboardingProps> = ({ onComplete, onClo
 
               <button 
                 onClick={() => setStep('SETUP_1')}
-                className="w-full h-16 bg-[#FACC15] text-black font-black text-lg rounded-2xl flex items-center justify-center gap-2 hover:bg-yellow-300 transition-all shadow-[0_0_30px_rgba(250,204,21,0.2)]"
+                className="w-full h-16 bg-[#FACC15] text-black font-extrabold text-lg rounded-2xl flex items-center justify-center gap-2 hover:bg-yellow-300 transition-all shadow-[0_0_30px_rgba(250,204,21,0.2)]"
               >
                   MACERAYA BAŞLA <ArrowRight size={20} />
               </button>
@@ -286,7 +286,7 @@ const PartnerOnboarding: React.FC<PartnerOnboardingProps> = ({ onComplete, onClo
               <div className="flex-1">
                   {step === 'SETUP_1' && (
                       <div className="animate-in slide-in-from-right-10 duration-500">
-                          <h2 className="text-3xl font-black text-white mb-2">Tesisin Kimliği</h2>
+                          <h2 className="text-3xl font-extrabold text-white mb-2">Tesisin Kimliği</h2>
                           <p className="text-gray-400 text-sm mb-8">Oyuncular sizi nasıl tanıyacak?</p>
                           
                           <div className="space-y-6">
@@ -347,20 +347,20 @@ const PartnerOnboarding: React.FC<PartnerOnboardingProps> = ({ onComplete, onClo
 
                   {step === 'SETUP_2' && (
                       <div className="animate-in slide-in-from-right-10 duration-500">
-                          <h2 className="text-3xl font-black text-white mb-2">Saha Değeri</h2>
+                          <h2 className="text-3xl font-extrabold text-white mb-2">Saha Değeri</h2>
                           <p className="text-gray-400 text-sm mb-8">Kalitenizin karşılığını belirleyin.</p>
                           
                           <div className="space-y-6">
                               <div className="space-y-2">
                                   <label className="text-xs font-bold text-gray-500 uppercase">Saatlik Ücret (TL)</label>
                                   <div className="flex items-center gap-2">
-                                      <span className="text-3xl font-black text-[#FACC15]">₺</span>
+                                      <span className="text-3xl font-extrabold text-[#FACC15]">₺</span>
                                       <input 
                                         type="number" 
                                         value={price}
                                         onChange={(e) => setPrice(e.target.value)}
                                         placeholder="0" 
-                                        className="w-full bg-transparent border-b-2 border-white/20 py-3 text-4xl font-black text-white focus:border-[#FACC15] outline-none placeholder:text-gray-700 transition-colors"
+                                        className="w-full bg-transparent border-b-2 border-white/20 py-3 text-4xl font-extrabold text-white focus:border-[#FACC15] outline-none placeholder:text-gray-700 transition-colors"
                                       />
                                   </div>
                               </div>
@@ -370,7 +370,7 @@ const PartnerOnboarding: React.FC<PartnerOnboardingProps> = ({ onComplete, onClo
 
                   {step === 'SETUP_3' && (
                       <div className="animate-in slide-in-from-right-10 duration-500">
-                          <h2 className="text-3xl font-black text-white mb-2">Kazanç Rotası</h2>
+                          <h2 className="text-3xl font-extrabold text-white mb-2">Kazanç Rotası</h2>
                           <p className="text-gray-400 text-sm mb-8">Ödemeleri nereye gönderelim?</p>
                           
                           <div className="space-y-6">
@@ -416,7 +416,7 @@ const PartnerOnboarding: React.FC<PartnerOnboardingProps> = ({ onComplete, onClo
                   </button>
                   <button 
                     onClick={handleNext}
-                    className="flex-1 ml-4 h-16 bg-[#FACC15] text-black font-black text-lg rounded-2xl flex items-center justify-center gap-2 hover:bg-yellow-300 transition-all shadow-lg shadow-yellow-900/20"
+                    className="flex-1 ml-4 h-16 bg-[#FACC15] text-black font-extrabold text-lg rounded-2xl flex items-center justify-center gap-2 hover:bg-yellow-300 transition-all shadow-lg shadow-yellow-900/20"
                   >
                       {step === 'SETUP_3' ? 'KURULUMU TAMAMLA' : 'DEVAM ET'} <ArrowRight size={20} />
                   </button>
@@ -433,7 +433,7 @@ const PartnerOnboarding: React.FC<PartnerOnboardingProps> = ({ onComplete, onClo
               {!onboardError ? (
                   <div className="relative z-10 text-center w-full max-w-sm">
                       <Spinner size={96} thickness={5} color="#FACC15" className="mx-auto mb-8" style={{ filter: 'drop-shadow(0 0 24px rgba(250,204,21,0.35))' }} />
-                      <h2 className="text-2xl font-black text-white mb-6">SAHANIZ DÜNYAYA AÇILIYOR...</h2>
+                      <h2 className="text-2xl font-extrabold text-white mb-6">SAHANIZ DÜNYAYA AÇILIYOR...</h2>
                       <div className="space-y-3 text-left">
                           {LOADING_STEPS.map((label, idx) => {
                               const done = idx < loadingStep;
@@ -458,11 +458,11 @@ const PartnerOnboarding: React.FC<PartnerOnboardingProps> = ({ onComplete, onClo
                       <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center mx-auto mb-4">
                           <AlertTriangle className="text-red-400" size={28} />
                       </div>
-                      <h2 className="text-xl font-black text-white mb-2">Bir şeyler ters gitti</h2>
+                      <h2 className="text-xl font-extrabold text-white mb-2">Bir şeyler ters gitti</h2>
                       <p className="text-sm text-gray-400 mb-6">{onboardError}</p>
                       <div className="flex gap-3">
                           <button onClick={() => { setOnboardError(null); setStep('SETUP_3'); }} className="flex-1 h-12 rounded-xl bg-[#0A0E14] border border-white/10 text-gray-300 font-bold">Geri Dön</button>
-                          <button onClick={retryOnboard} className="flex-1 h-12 rounded-xl bg-[#FACC15] text-black font-black">Tekrar Dene</button>
+                          <button onClick={retryOnboard} className="flex-1 h-12 rounded-xl bg-[#FACC15] text-black font-extrabold">Tekrar Dene</button>
                       </div>
                   </div>
               )}
@@ -475,7 +475,7 @@ const PartnerOnboarding: React.FC<PartnerOnboardingProps> = ({ onComplete, onClo
           {/* Header */}
           <header className="px-6 pt-safe pb-4 flex justify-between items-center bg-[#161B22]/50 backdrop-blur-md">
               <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white font-black text-lg">A</div>
+                  <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white font-extrabold text-lg">A</div>
                   <div>
                       <h1 className="font-bold text-white text-sm">{facilityName || 'Arena Sport'}</h1>
                       <div className="flex items-center gap-1">
@@ -503,7 +503,7 @@ const PartnerOnboarding: React.FC<PartnerOnboardingProps> = ({ onComplete, onClo
               {giftOpen && (
                   <div className="bg-gradient-to-r from-yellow-900/30 to-[#161B22] border border-[#FACC15]/30 rounded-[32px] p-6 animate-in zoom-in duration-300 relative overflow-hidden">
                       <div className="absolute top-0 right-0 p-6 opacity-10"><Crown size={100} /></div>
-                      <h3 className="text-xl font-black text-white mb-4 flex items-center gap-2">
+                      <h3 className="text-xl font-extrabold text-white mb-4 flex items-center gap-2">
                           <Gift className="text-[#FACC15]" /> HEDİYE PAKETİNİZ
                       </h3>
                       <div className="space-y-3 relative z-10">
@@ -543,19 +543,19 @@ const PartnerOnboarding: React.FC<PartnerOnboardingProps> = ({ onComplete, onClo
                   <div className="bg-[#161B22] p-4 rounded-2xl border border-[#39FF14]/20">
                       <TrendingUp className="text-[#39FF14] mb-2" size={20} />
                       <p className="text-[10px] text-gray-500 uppercase font-bold">Tahmini Aylık Ek Gelir</p>
-                      <p className="text-xl font-black text-[#39FF14]">₺{estimatedRevenue.toLocaleString('tr-TR')}</p>
+                      <p className="text-xl font-extrabold text-[#39FF14]">₺{estimatedRevenue.toLocaleString('tr-TR')}</p>
                   </div>
                   <div className="bg-[#161B22] p-4 rounded-2xl border border-white/5">
                       <MapPin className="text-[#FACC15] mb-2" size={20} />
                       <p className="text-[10px] text-gray-500 uppercase font-bold">Bölgenizde OYNA'da</p>
-                      <p className="text-xl font-black text-white">{nearbyCount} tesis</p>
+                      <p className="text-xl font-extrabold text-white">{nearbyCount} tesis</p>
                   </div>
                   <div className="col-span-2 bg-[#161B22] p-4 rounded-2xl border border-white/5 flex items-center justify-between">
                       <div>
                           <p className="text-[10px] text-gray-500 uppercase font-bold">İlk rezervasyona tahmini</p>
                           <p className="text-[11px] text-gray-400">Onay sonrası ilk talep beklentisi</p>
                       </div>
-                      <p className="text-2xl font-black text-[#FACC15] font-mono tabular-nums">{fmtCountdown(firstBookingSeconds)}</p>
+                      <p className="text-2xl font-extrabold text-[#FACC15] font-mono tabular-nums">{fmtCountdown(firstBookingSeconds)}</p>
                   </div>
               </div>
 
@@ -565,7 +565,7 @@ const PartnerOnboarding: React.FC<PartnerOnboardingProps> = ({ onComplete, onClo
                       <div className="bg-black text-[#FACC15] p-2 rounded-full group-hover:rotate-90 transition-transform">
                           <Activity size={24} />
                       </div>
-                      <span className="text-black font-black text-lg">PANELE GİT</span>
+                      <span className="text-black font-extrabold text-lg">PANELE GİT</span>
                   </button>
 
                   <button onClick={() => { window.location.href = 'mailto:destek@oyna.app?subject=OYNA%20Tesis%20Ba%C5%9Fvurusu%20Destek'; }} className="bg-[#161B22] h-24 rounded-2xl flex flex-col items-center justify-center gap-2 border border-white/5 hover:bg-white/5 transition-colors">

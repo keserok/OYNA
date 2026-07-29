@@ -293,10 +293,10 @@ const ServiceApplication: React.FC<ServiceApplicationProps> = ({ role, onSubmitt
             <HeaderIcon size={26} style={{ color }} />
           </div>
           <div>
-            <span className="text-[10px] font-black tracking-widest uppercase" style={{ color }}>
+            <span className="text-[10px] font-extrabold tracking-widest uppercase" style={{ color }}>
               {theme.label} KAYDI
             </span>
-            <h1 className="text-2xl font-black text-white italic tracking-tight leading-tight">{theme.title}</h1>
+            <h1 className="text-2xl font-extrabold text-white italic tracking-tight leading-tight">{theme.title}</h1>
             <p className="text-[11px] text-gray-400 mt-0.5">{theme.tagline}</p>
           </div>
         </motion.div>
@@ -327,7 +327,7 @@ const ServiceApplication: React.FC<ServiceApplicationProps> = ({ role, onSubmitt
           >
             <XCircle size={16} className="text-red-400 mt-0.5 shrink-0" />
             <div>
-              <p className="text-[11px] font-black text-red-400 uppercase tracking-wider mb-1">
+              <p className="text-[11px] font-extrabold text-red-400 uppercase tracking-wider mb-1">
                 Önceki başvurun onaylanmadı
               </p>
               <p className="text-[11px] text-gray-300 leading-relaxed">{rejectionNote}</p>
@@ -459,7 +459,7 @@ const ServiceApplication: React.FC<ServiceApplicationProps> = ({ role, onSubmitt
                       key={lv}
                       type="button"
                       onClick={() => { setLevel(lv); markTouched('level'); }}
-                      className="h-12 rounded-2xl text-xs font-black border transition-all flex items-center justify-center gap-1.5"
+                      className="h-12 rounded-2xl text-xs font-extrabold border transition-all flex items-center justify-center gap-1.5"
                       style={{
                         background: level === lv ? color : 'transparent',
                         color: level === lv ? '#000' : 'rgba(255,255,255,0.6)',
@@ -512,7 +512,7 @@ const ServiceApplication: React.FC<ServiceApplicationProps> = ({ role, onSubmitt
                   key={s}
                   type="button"
                   onClick={() => { setStyle(s); markTouched('style'); }}
-                  className="px-4 h-10 rounded-full text-xs font-black border transition-all"
+                  className="px-4 h-10 rounded-full text-xs font-extrabold border transition-all"
                   style={{
                     background: style === s ? color : 'transparent',
                     color: style === s ? '#000' : 'rgba(255,255,255,0.6)',
@@ -691,7 +691,7 @@ const ServiceApplication: React.FC<ServiceApplicationProps> = ({ role, onSubmitt
         {/* ─── KA-5/KA-6 engel bandı ─── */}
         {preflight?.alreadyApproved && (
           <div className="mt-5 rounded-2xl border border-emerald-500/30 bg-emerald-500/8 p-4">
-            <p className="text-[13px] font-black text-emerald-300">Zaten onaylısın 🎉</p>
+            <p className="text-[13px] font-extrabold text-emerald-300">Zaten onaylısın 🎉</p>
             <p className="text-[11px] text-white/60 mt-1 leading-relaxed">
               Bu rol için başvurun onaylanmış durumda — yeniden başvurman gerekmiyor.
             </p>
@@ -699,7 +699,7 @@ const ServiceApplication: React.FC<ServiceApplicationProps> = ({ role, onSubmitt
         )}
         {preflight?.minorBlocked && (
           <div className="mt-5 rounded-2xl border border-amber-500/30 bg-amber-500/8 p-4">
-            <p className="text-[13px] font-black text-amber-300">Önce veli onayı gerekiyor</p>
+            <p className="text-[13px] font-extrabold text-amber-300">Önce veli onayı gerekiyor</p>
             <p className="text-[11px] text-white/60 mt-1 leading-relaxed">
               18 yaşından küçük hesaplar sağlayıcı (kaleci/hakem) olmadan önce veli onayı
               tamamlamalı. Onay verildikten sonra başvurabilirsin.
@@ -707,7 +707,7 @@ const ServiceApplication: React.FC<ServiceApplicationProps> = ({ role, onSubmitt
             <button
               type="button"
               onClick={() => useAppStore.getState().navigateTo('GUARDIAN_CHILD')}
-              className="mt-3 h-10 px-4 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-200 text-[12px] font-black active:scale-95 transition-transform"
+              className="mt-3 h-10 px-4 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-200 text-[12px] font-extrabold active:scale-95 transition-transform"
             >
               Veli Onayına Git
             </button>

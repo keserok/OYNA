@@ -87,7 +87,7 @@ const SectionTitle: React.FC<{ icon: React.ReactNode; title: string; right?: Rea
     <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
             <span className="text-white/35">{icon}</span>
-            <h3 className="text-[13px] font-black text-white uppercase tracking-widest">{title}</h3>
+            <h3 className="text-[13px] font-extrabold text-white uppercase tracking-widest">{title}</h3>
         </div>
         {right}
     </div>
@@ -97,7 +97,7 @@ const SkillBar: React.FC<{ label: string; value: number; color: string }> = ({ l
     <div className="space-y-1.5">
         <div className="flex justify-between items-center">
             <span className="text-[11px] font-bold text-white/50">{label}</span>
-            <span className="text-[11px] font-black text-white font-numeric tabular-nums">{value}</span>
+            <span className="text-[11px] font-extrabold text-white font-numeric tabular-nums">{value}</span>
         </div>
         <div className="h-1.5 bg-white/[0.06] rounded-full overflow-hidden">
             <motion.div
@@ -125,15 +125,15 @@ const SafeAvatar: React.FC<{ src?: string | null; name: string; className?: stri
         />
     ) : (
         <div className={`${className} bg-white/[0.06] border border-white/10 flex items-center justify-center`}>
-            <span className="text-[11px] font-black text-white/70">{getInitials(name)}</span>
+            <span className="text-[11px] font-extrabold text-white/70">{getInitials(name)}</span>
         </div>
     );
 };
 
 const StatTile: React.FC<{ label: string; value: React.ReactNode; sub?: string }> = ({ label, value, sub }) => (
     <div className="flex-1 min-w-0 bg-[#11161F] border border-white/[0.06] rounded-2xl px-3 py-3.5 text-center">
-        <div className="text-lg font-black text-white font-numeric leading-none truncate">{value}</div>
-        <div className="text-[9px] font-black text-white/35 uppercase tracking-widest mt-1.5">{label}</div>
+        <div className="text-lg font-extrabold text-white font-numeric leading-none truncate">{value}</div>
+        <div className="text-[9px] font-extrabold text-white/35 uppercase tracking-widest mt-1.5">{label}</div>
         {sub && <div className="text-[9px] font-bold text-white/45 mt-0.5 truncate">{sub}</div>}
     </div>
 );
@@ -445,7 +445,7 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect, onCre
                     <ChevronLeft size={20} />
                 </button>
                 <div className="flex-1 min-w-0">
-                    <h1 className="text-base font-black tracking-tight text-white uppercase leading-tight">
+                    <h1 className="text-base font-extrabold tracking-tight text-white uppercase leading-tight">
                         {type === 'GK' ? 'Kaleci Bul' : 'Hakem Kirala'}
                     </h1>
                     <div className="flex items-center gap-1.5 mt-0.5">
@@ -494,7 +494,7 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect, onCre
                     <SlidersHorizontal size={16} />
                     {activeFilterCount > 0 && (
                         <span
-                            className="absolute -top-1 -right-1 w-4.5 h-4.5 min-w-[18px] px-0.5 rounded-full text-[9px] font-black flex items-center justify-center text-black"
+                            className="absolute -top-1 -right-1 w-4.5 h-4.5 min-w-[18px] px-0.5 rounded-full text-[9px] font-extrabold flex items-center justify-center text-black"
                             style={{ backgroundColor: theme.accent }}
                         >
                             {activeFilterCount}
@@ -517,13 +517,13 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect, onCre
 
             {/* 4. Sonuç sayacı */}
             <div className="px-5 pt-2 pb-1 flex items-center justify-between">
-                <span className="text-[10px] font-black text-white/30 uppercase tracking-widest">
+                <span className="text-[10px] font-extrabold text-white/30 uppercase tracking-widest">
                     {isLoading ? ' ' : `${sortedProfiles.length} sonuç`}
                 </span>
                 {(activeFilterCount > 0 || search) && (
                     <button
                         onClick={clearAll}
-                        className="text-[10px] font-black uppercase tracking-widest transition-colors"
+                        className="text-[10px] font-extrabold uppercase tracking-widest transition-colors"
                         style={{ color: theme.accent }}
                     >
                         Filtreleri Temizle
@@ -549,7 +549,7 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect, onCre
                                 <div className="flex justify-center">
                                     <button
                                         onClick={clearAll}
-                                        className="px-5 h-10 rounded-full text-[11px] font-black uppercase tracking-wider text-black active:scale-95 transition-transform"
+                                        className="px-5 h-10 rounded-full text-[11px] font-extrabold uppercase tracking-wider text-black active:scale-95 transition-transform"
                                         style={{ backgroundColor: theme.accent }}
                                     >
                                         Filtreleri Temizle
@@ -577,10 +577,10 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect, onCre
             <BottomSheet open={showFilterSheet} onClose={() => setShowFilterSheet(false)} ariaLabel="Filtreler">
                 <div className="pb-2">
                     <div className="flex items-center justify-between mb-4">
-                        <h2 className="text-base font-black text-white uppercase tracking-tight">Filtreler</h2>
+                        <h2 className="text-base font-extrabold text-white uppercase tracking-tight">Filtreler</h2>
                         <button
                             onClick={() => setDraftFilters(EMPTY_FILTERS)}
-                            className="text-[10px] font-black text-white/40 hover:text-white uppercase tracking-widest transition-colors"
+                            className="text-[10px] font-extrabold text-white/40 hover:text-white uppercase tracking-widest transition-colors"
                         >
                             Sıfırla
                         </button>
@@ -588,7 +588,7 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect, onCre
 
                     <div className="space-y-5">
                         <div>
-                            <p className="text-[10px] font-black text-white/35 uppercase tracking-widest mb-2">Hizmet Bölgesi</p>
+                            <p className="text-[10px] font-extrabold text-white/35 uppercase tracking-widest mb-2">Hizmet Bölgesi</p>
                             <div className="flex flex-wrap gap-2">
                                 <Chip label="Tümü" selected={draftFilters.district === 'Tümü'} onClick={() => setDraftFilters(f => ({ ...f, district: 'Tümü' }))} />
                                 {cityDistricts.map(d => (
@@ -598,7 +598,7 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect, onCre
                         </div>
 
                         <div>
-                            <p className="text-[10px] font-black text-white/35 uppercase tracking-widest mb-2">Gün</p>
+                            <p className="text-[10px] font-extrabold text-white/35 uppercase tracking-widest mb-2">Gün</p>
                             <div className="flex flex-wrap gap-2">
                                 <Chip label="Tümü" selected={draftFilters.day === 'Tümü'} onClick={() => setDraftFilters(f => ({ ...f, day: 'Tümü' }))} />
                                 {DAY_OPTIONS.map(d => (
@@ -608,7 +608,7 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect, onCre
                         </div>
 
                         <div>
-                            <p className="text-[10px] font-black text-white/35 uppercase tracking-widest mb-2">Maç Saati</p>
+                            <p className="text-[10px] font-extrabold text-white/35 uppercase tracking-widest mb-2">Maç Saati</p>
                             <div className="flex flex-wrap gap-2">
                                 <Chip label="Tümü" selected={draftFilters.time === 'Tümü'} onClick={() => setDraftFilters(f => ({ ...f, time: 'Tümü' }))} />
                                 {HOUR_OPTIONS.map(h => (
@@ -620,7 +620,7 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect, onCre
 
                     <button
                         onClick={applyDraftFilters}
-                        className="w-full h-13 min-h-[52px] rounded-2xl mt-6 text-xs font-black uppercase tracking-widest text-black active:scale-[0.98] transition-transform"
+                        className="w-full h-13 min-h-[52px] rounded-2xl mt-6 text-xs font-extrabold uppercase tracking-widest text-black active:scale-[0.98] transition-transform"
                         style={{ backgroundColor: theme.accent }}
                     >
                         {draftResultCount} Sonucu Göster
@@ -658,7 +658,7 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect, onCre
                                     </div>
 
                                     <div className="space-y-1">
-                                        <h3 className="text-2xl font-black uppercase tracking-tight text-white">Talep Gönderildi</h3>
+                                        <h3 className="text-2xl font-extrabold uppercase tracking-tight text-white">Talep Gönderildi</h3>
                                         <p className="text-[11px] font-bold text-white/40">
                                             {detail.name} onaylayınca bildirim alacaksın
                                         </p>
@@ -676,7 +676,7 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect, onCre
                                         <div className="h-px bg-white/[0.06]" />
 
                                         <div className="space-y-1">
-                                            <p className="text-[9px] font-black text-white/30 uppercase tracking-widest">Maç</p>
+                                            <p className="text-[9px] font-extrabold text-white/30 uppercase tracking-widest">Maç</p>
                                             <p className="text-[13px] font-bold text-white">{selectedMatchForHire?.location}</p>
                                             <p className="text-[11px] font-semibold text-white/45">{selectedMatchForHire?.date} · {selectedMatchForHire?.time}</p>
                                         </div>
@@ -685,14 +685,14 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect, onCre
 
                                         <div className="space-y-1.5">
                                             <div className="flex justify-between items-center">
-                                                <span className="text-[10px] font-black text-white/35 uppercase tracking-widest">Emanete Alınan Ücret</span>
-                                                <span className="text-base font-black font-numeric tabular-nums" style={{ color: theme.accent }}>
+                                                <span className="text-[10px] font-extrabold text-white/35 uppercase tracking-widest">Emanete Alınan Ücret</span>
+                                                <span className="text-base font-extrabold font-numeric tabular-nums" style={{ color: theme.accent }}>
                                                     {hireResult?.fee ?? detail.fee} ₺
                                                 </span>
                                             </div>
                                             {hireResult && (
                                                 <div className="flex justify-between items-center">
-                                                    <span className="text-[10px] font-black text-white/35 uppercase tracking-widest">{roleLabel} Net Kazancı</span>
+                                                    <span className="text-[10px] font-extrabold text-white/35 uppercase tracking-widest">{roleLabel} Net Kazancı</span>
                                                     <span className="text-xs font-bold text-white/60 font-numeric tabular-nums">{hireResult.providerAmount} ₺</span>
                                                 </div>
                                             )}
@@ -729,7 +729,7 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect, onCre
 
                                     <button
                                         onClick={finishSuccess}
-                                        className="w-full h-13 min-h-[52px] rounded-2xl text-xs font-black uppercase tracking-widest text-black active:scale-[0.98] transition-transform"
+                                        className="w-full h-13 min-h-[52px] rounded-2xl text-xs font-extrabold uppercase tracking-widest text-black active:scale-[0.98] transition-transform"
                                         style={{ backgroundColor: theme.accent }}
                                     >
                                         Tamam
@@ -742,7 +742,7 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect, onCre
                                 <div className="flex-1 flex flex-col overflow-hidden">
                                     <div className="px-5 pt-6 pb-4 flex items-start justify-between gap-3 border-b border-white/5">
                                         <div className="min-w-0">
-                                            <h2 className="text-lg font-black uppercase tracking-tight text-white">Talebi Onayla</h2>
+                                            <h2 className="text-lg font-extrabold uppercase tracking-tight text-white">Talebi Onayla</h2>
                                             <p className="text-[11px] font-bold text-white/40 mt-0.5">
                                                 Göndermeden önce son kontrol
                                             </p>
@@ -765,7 +765,7 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect, onCre
                                                 <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: theme.accent }}>{roleLabel}</p>
                                             </div>
                                             {detail.rating > 0 && (
-                                                <span className="inline-flex items-center gap-1 text-[12px] font-black text-amber-400 shrink-0">
+                                                <span className="inline-flex items-center gap-1 text-[12px] font-extrabold text-amber-400 shrink-0">
                                                     <Star size={12} className="fill-amber-400" /> {detail.rating.toFixed(1)}
                                                 </span>
                                             )}
@@ -773,18 +773,18 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect, onCre
 
                                         {/* Maç */}
                                         <div className="p-3.5 rounded-2xl bg-[#11161F] border border-white/[0.06]">
-                                            <p className="text-[9px] font-black text-white/30 uppercase tracking-widest mb-1.5">Maç</p>
+                                            <p className="text-[9px] font-extrabold text-white/30 uppercase tracking-widest mb-1.5">Maç</p>
                                             <p className="text-[13px] font-extrabold text-white">{matchPendingConfirm.location}</p>
                                             <p className="text-[11px] font-semibold text-white/40 mt-0.5">
                                                 {matchPendingConfirm.date} · {matchPendingConfirm.time}
                                             </p>
                                             <div className="flex gap-1.5 mt-2">
                                                 {matchPendingConfirm.format && (
-                                                    <span className="text-[9px] font-black bg-white/[0.05] border border-white/10 px-1.5 py-0.5 rounded text-white/55">
+                                                    <span className="text-[9px] font-extrabold bg-white/[0.05] border border-white/10 px-1.5 py-0.5 rounded text-white/55">
                                                         {matchPendingConfirm.format}
                                                     </span>
                                                 )}
-                                                <span className="text-[9px] font-black bg-white/[0.05] border border-white/10 px-1.5 py-0.5 rounded text-white/55">
+                                                <span className="text-[9px] font-extrabold bg-white/[0.05] border border-white/10 px-1.5 py-0.5 rounded text-white/55">
                                                     {getNormalizedDifficulty(matchPendingConfirm.difficulty)}
                                                 </span>
                                             </div>
@@ -793,8 +793,8 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect, onCre
                                         {/* Ücret dökümü */}
                                         <div className="p-4 rounded-2xl border" style={{ backgroundColor: theme.soft, borderColor: theme.border }}>
                                             <div className="flex items-center justify-between">
-                                                <span className="text-[10px] font-black text-white/60 uppercase tracking-widest">Hizmet Bedeli</span>
-                                                <span className="text-xl font-black font-numeric tabular-nums text-white">{detail.fee}₺</span>
+                                                <span className="text-[10px] font-extrabold text-white/60 uppercase tracking-widest">Hizmet Bedeli</span>
+                                                <span className="text-xl font-extrabold font-numeric tabular-nums text-white">{detail.fee}₺</span>
                                             </div>
                                             <p className="text-[10px] font-semibold text-white/45 mt-2 leading-relaxed">
                                                 Onaylayınca <span className="text-white font-bold">emanete alınır</span> — {roleLabel.toLocaleLowerCase('tr-TR')} kabul edip
@@ -811,7 +811,7 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect, onCre
                                                     <button
                                                         type="button"
                                                         onClick={goToTopup}
-                                                        className="w-full h-10 rounded-xl bg-[#39FF14] text-[#0A0E14] text-[11px] font-black uppercase tracking-wider active:scale-95 transition-transform"
+                                                        className="w-full h-10 rounded-xl bg-[#39FF14] text-[#0A0E14] text-[11px] font-extrabold uppercase tracking-wider active:scale-95 transition-transform"
                                                     >
                                                         Cüzdana Yükle
                                                     </button>
@@ -824,7 +824,7 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect, onCre
                                         <button
                                             onClick={() => handleConfirmMatch(matchPendingConfirm)}
                                             disabled={isHiring}
-                                            className="w-full h-14 rounded-2xl text-xs font-black uppercase tracking-widest text-black flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-60"
+                                            className="w-full h-14 rounded-2xl text-xs font-extrabold uppercase tracking-widest text-black flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-60"
                                             style={{ backgroundColor: theme.accent, boxShadow: `0 8px 24px ${theme.accent}30` }}
                                         >
                                             {isHiring ? (
@@ -836,7 +836,7 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect, onCre
                                         <button
                                             onClick={() => setMatchPendingConfirm(null)}
                                             disabled={isHiring}
-                                            className="w-full h-11 rounded-2xl text-[11px] font-black uppercase tracking-widest text-white/50 bg-white/[0.04] border border-white/10 active:scale-[0.98] transition-transform disabled:opacity-40"
+                                            className="w-full h-11 rounded-2xl text-[11px] font-extrabold uppercase tracking-widest text-white/50 bg-white/[0.04] border border-white/10 active:scale-[0.98] transition-transform disabled:opacity-40"
                                         >
                                             Farklı Maç Seç
                                         </button>
@@ -847,7 +847,7 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect, onCre
                                 <div className="flex-1 flex flex-col overflow-hidden">
                                     <div className="px-5 pt-6 pb-4 flex items-start justify-between gap-3 border-b border-white/5">
                                         <div className="min-w-0">
-                                            <h2 className="text-lg font-black uppercase tracking-tight text-white">Maçını Seç</h2>
+                                            <h2 className="text-lg font-extrabold uppercase tracking-tight text-white">Maçını Seç</h2>
                                             <p className="text-[11px] font-bold text-white/40 mt-0.5">
                                                 Talep hangi maç için gönderilsin?
                                             </p>
@@ -869,7 +869,7 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect, onCre
                                             <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: theme.accent }}>{roleLabel}</p>
                                         </div>
                                         <div className="text-right shrink-0">
-                                            <p className="text-base font-black text-white font-numeric tabular-nums">{detail.fee}₺</p>
+                                            <p className="text-base font-extrabold text-white font-numeric tabular-nums">{detail.fee}₺</p>
                                             <p className="text-[9px] font-bold text-white/35 uppercase">maç başı</p>
                                         </div>
                                     </div>
@@ -884,14 +884,14 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect, onCre
                                         {sortedMatches.length === 0 ? (
                                             <div className="flex flex-col items-center justify-center text-center py-16 gap-3">
                                                 <CalendarX size={40} strokeWidth={1.2} className="text-white/20" />
-                                                <p className="text-sm font-black text-white/70">Planlanmış maçın yok</p>
+                                                <p className="text-sm font-extrabold text-white/70">Planlanmış maçın yok</p>
                                                 <p className="text-[11px] font-semibold text-white/35 max-w-[240px] leading-relaxed">
                                                     {roleLabel} kiralamak için önce bir maç oluşturmalısın.
                                                 </p>
                                                 {onCreateMatch && (
                                                     <button
                                                         onClick={onCreateMatch}
-                                                        className="mt-2 px-6 h-11 rounded-full text-[11px] font-black uppercase tracking-wider text-black active:scale-95 transition-transform"
+                                                        className="mt-2 px-6 h-11 rounded-full text-[11px] font-extrabold uppercase tracking-wider text-black active:scale-95 transition-transform"
                                                         style={{ backgroundColor: theme.accent }}
                                                     >
                                                         Maç Oluştur
@@ -916,7 +916,7 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect, onCre
                                                             <div className="min-w-0 flex-1">
                                                                 {needsThisRole && (
                                                                     <span
-                                                                        className="inline-block mb-1.5 px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-widest text-black"
+                                                                        className="inline-block mb-1.5 px-2 py-0.5 rounded-md text-[8px] font-extrabold uppercase tracking-widest text-black"
                                                                         style={{ backgroundColor: theme.accent }}
                                                                     >
                                                                         {type === 'GK' ? 'Kaleci Aranıyor' : 'Hakem Eksik'}
@@ -926,11 +926,11 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect, onCre
                                                                 <p className="text-[11px] font-semibold text-white/40 mt-0.5">{m.date} · {m.time}</p>
                                                                 <div className="flex gap-1.5 mt-2">
                                                                     {m.format && (
-                                                                        <span className="text-[9px] font-black bg-white/[0.05] border border-white/10 px-1.5 py-0.5 rounded text-white/55">
+                                                                        <span className="text-[9px] font-extrabold bg-white/[0.05] border border-white/10 px-1.5 py-0.5 rounded text-white/55">
                                                                             {m.format}
                                                                         </span>
                                                                     )}
-                                                                    <span className="text-[9px] font-black bg-white/[0.05] border border-white/10 px-1.5 py-0.5 rounded text-white/55">
+                                                                    <span className="text-[9px] font-extrabold bg-white/[0.05] border border-white/10 px-1.5 py-0.5 rounded text-white/55">
                                                                         {getNormalizedDifficulty(m.difficulty)}
                                                                     </span>
                                                                 </div>
@@ -985,7 +985,7 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect, onCre
                                                     style={{ backgroundColor: theme.accent, opacity: 0.07 }}
                                                 />
                                                 <div
-                                                    className="w-28 h-28 rounded-3xl flex items-center justify-center border text-3xl font-black relative"
+                                                    className="w-28 h-28 rounded-3xl flex items-center justify-center border text-3xl font-extrabold relative"
                                                     style={{ backgroundColor: theme.soft, borderColor: theme.border, color: theme.accent }}
                                                 >
                                                     {getInitials(detail.name)}
@@ -999,7 +999,7 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect, onCre
                                     <div className="px-5 -mt-16 relative z-10">
                                         <div className="flex items-center gap-2 mb-2">
                                             <span
-                                                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[9px] font-black uppercase tracking-widest"
+                                                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[9px] font-extrabold uppercase tracking-widest"
                                                 style={detailUnavailable
                                                     ? { backgroundColor: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.45)' }
                                                     : { backgroundColor: 'rgba(34,197,94,0.10)', borderColor: 'rgba(34,197,94,0.35)', color: '#4ADE80' }}
@@ -1009,7 +1009,7 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect, onCre
                                             </span>
                                             {detail.isElite && (
                                                 <span
-                                                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full border text-[9px] font-black uppercase tracking-widest"
+                                                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full border text-[9px] font-extrabold uppercase tracking-widest"
                                                     style={{ backgroundColor: theme.soft, borderColor: theme.border, color: theme.accent }}
                                                 >
                                                     <BadgeCheck size={11} /> Elite
@@ -1017,7 +1017,7 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect, onCre
                                             )}
                                         </div>
 
-                                        <h1 className="text-[28px] font-black text-white leading-tight tracking-tight">{detail.name}</h1>
+                                        <h1 className="text-[28px] font-extrabold text-white leading-tight tracking-tight">{detail.name}</h1>
                                         <p className="text-sm font-bold mt-0.5">
                                             <span style={{ color: theme.accent }}>{roleLabel}</span>
                                             {typeof detail.style === 'string' && detail.style && (
@@ -1091,8 +1091,8 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect, onCre
                                                 <div className="flex gap-2.5 mb-5">
                                                     {factRows.map(f => (
                                                         <div key={f.label} className="flex-1 min-w-0 bg-[#11161F] border border-white/[0.06] rounded-2xl px-2 py-3 text-center">
-                                                            <div className="text-[13px] font-black text-white font-numeric truncate">{f.value}</div>
-                                                            <div className="text-[8.5px] font-black text-white/35 uppercase tracking-wider mt-1">{f.label}</div>
+                                                            <div className="text-[13px] font-extrabold text-white font-numeric truncate">{f.value}</div>
+                                                            <div className="text-[8.5px] font-extrabold text-white/35 uppercase tracking-wider mt-1">{f.label}</div>
                                                         </div>
                                                     ))}
                                                 </div>
@@ -1132,7 +1132,7 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect, onCre
                                                         return (
                                                             <span
                                                                 key={d.id}
-                                                                className="flex-1 py-2 rounded-xl text-center text-[10px] font-black border"
+                                                                className="flex-1 py-2 rounded-xl text-center text-[10px] font-extrabold border"
                                                                 style={active
                                                                     ? { backgroundColor: theme.soft, borderColor: theme.border, color: theme.accent }
                                                                     : { backgroundColor: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.25)' }}
@@ -1157,14 +1157,14 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect, onCre
                                             <SectionTitle
                                                 icon={<MessageSquare size={14} />}
                                                 title="Değerlendirmeler"
-                                                right={<span className="text-[10px] font-black text-white/30">{detailReviews.length}</span>}
+                                                right={<span className="text-[10px] font-extrabold text-white/30">{detailReviews.length}</span>}
                                             />
                                             <div className="space-y-2.5">
                                                 {detailReviews.map(r => (
                                                     <div key={r.id} className="bg-[#11161F] border border-white/[0.06] rounded-2xl p-4">
                                                         <div className="flex items-center justify-between gap-2 mb-1.5">
                                                             <span className="text-[12px] font-extrabold text-white truncate">{r.author}</span>
-                                                            <span className="inline-flex items-center gap-1 text-[11px] font-black text-amber-400 shrink-0">
+                                                            <span className="inline-flex items-center gap-1 text-[11px] font-extrabold text-amber-400 shrink-0">
                                                                 <Star size={11} className="fill-amber-400" /> {r.rating}
                                                             </span>
                                                         </div>
@@ -1181,7 +1181,7 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect, onCre
                                         <div className="rounded-3xl border border-white/[0.07] bg-[#11161F] p-5">
                                             <div className="flex items-center gap-2 mb-3.5">
                                                 <ShieldCheck size={16} style={{ color: theme.accent }} />
-                                                <h3 className="text-[13px] font-black text-white uppercase tracking-widest">Güvenli Kiralama</h3>
+                                                <h3 className="text-[13px] font-extrabold text-white uppercase tracking-widest">Güvenli Kiralama</h3>
                                             </div>
                                             <div className="space-y-3">
                                                 {[
@@ -1205,14 +1205,14 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect, onCre
                                 {/* Alt aksiyon çubuğu — tek yol: sabit ücretle talep gönder (Prensipler §4.3) */}
                                 <div className="absolute bottom-0 left-0 w-full px-5 pt-4 pb-safe bg-[#0A0E14]/95 backdrop-blur-md border-t border-white/5 flex gap-3 items-center z-20">
                                     <div className="flex flex-col items-start pr-1 shrink-0">
-                                        <span className="text-[9px] font-black text-white/35 uppercase tracking-widest">Hizmet Bedeli</span>
-                                        <span className="text-xl font-black text-white font-numeric tabular-nums leading-tight">{detail.fee}₺</span>
+                                        <span className="text-[9px] font-extrabold text-white/35 uppercase tracking-widest">Hizmet Bedeli</span>
+                                        <span className="text-xl font-extrabold text-white font-numeric tabular-nums leading-tight">{detail.fee}₺</span>
                                         <span className="text-[9px] font-bold text-white/30">maç başı</span>
                                     </div>
                                     <button
                                         onClick={openHireFlow}
                                         disabled={detailUnavailable}
-                                        className="flex-1 h-14 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-1.5 transition-all active:scale-[0.97] disabled:active:scale-100"
+                                        className="flex-1 h-14 rounded-2xl font-extrabold text-xs uppercase tracking-widest flex items-center justify-center gap-1.5 transition-all active:scale-[0.97] disabled:active:scale-100"
                                         style={detailUnavailable
                                             ? { backgroundColor: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.3)' }
                                             : { backgroundColor: theme.accent, color: '#0A0E14', boxShadow: `0 8px 24px ${theme.accent}30` }}

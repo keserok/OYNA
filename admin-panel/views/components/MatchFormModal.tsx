@@ -278,7 +278,7 @@ export const MatchFormModal: React.FC<Props> = ({ open, mode, match, onClose, on
           onClick={(e) => e.stopPropagation()}
         >
           <div className="flex justify-between items-center mb-4">
-            <h3 className="text-sm font-black text-white uppercase tracking-widest">
+            <h3 className="text-sm font-extrabold text-white uppercase tracking-widest">
               {mode === 'create' ? 'Yeni Maç' : 'Maç Düzenle'}
             </h3>
             <button type="button" onClick={onClose} className="w-8 h-8 rounded-lg bg-white/5 text-gray-400 hover:text-white flex items-center justify-center">
@@ -446,7 +446,7 @@ export const MatchFormModal: React.FC<Props> = ({ open, mode, match, onClose, on
             type="button"
             disabled={saving || uploading}
             onClick={() => void submit()}
-            className="w-full h-12 mt-4 bg-gradient-to-r from-red-600 to-purple-700 rounded-xl text-white font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 disabled:opacity-50"
+            className="w-full h-12 mt-4 bg-gradient-to-r from-red-600 to-purple-700 rounded-xl text-white font-extrabold text-xs uppercase tracking-widest flex items-center justify-center gap-2 disabled:opacity-50"
           >
             <Check size={16} /> {saving ? 'Kaydediliyor...' : 'Kaydet'}
           </button>

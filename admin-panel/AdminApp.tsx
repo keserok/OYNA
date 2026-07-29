@@ -207,7 +207,7 @@ const AdminApp: React.FC = () => {
             {!dataSyncing && bootWarnings.length > 1 && (
               <button
                 onClick={() => setWarningsExpanded(e => !e)}
-                className="shrink-0 text-amber-400 hover:text-amber-200 font-black"
+                className="shrink-0 text-amber-400 hover:text-amber-200 font-extrabold"
               >
                 {warningsExpanded ? '▲' : `+${bootWarnings.length - 1}`}
               </button>
@@ -215,7 +215,7 @@ const AdminApp: React.FC = () => {
             {!dataSyncing && (
               <button
                 onClick={() => { setBootWarnings([]); setWarningsExpanded(false); }}
-                className="shrink-0 text-amber-400 hover:text-amber-200 font-black"
+                className="shrink-0 text-amber-400 hover:text-amber-200 font-extrabold"
               >
                 ✕
               </button>

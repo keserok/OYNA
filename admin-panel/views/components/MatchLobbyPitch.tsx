@@ -60,7 +60,7 @@ const PlayerPicker: React.FC<PlayerPickerProps> = ({ users, assignedIds, busy, o
                 <p className="text-xs font-bold text-white truncate">{u.name}</p>
                 <p className="text-[9px] text-gray-500 truncate">{u.email}</p>
               </div>
-              <span className="flex items-center gap-0.5 text-[10px] font-black text-yellow-400 shrink-0"><Star size={10} />{Number(u.rating).toFixed(1)}</span>
+              <span className="flex items-center gap-0.5 text-[10px] font-extrabold text-yellow-400 shrink-0"><Star size={10} />{Number(u.rating).toFixed(1)}</span>
               {assigned && <span className="text-[8px] font-bold text-amber-400 border border-amber-500/30 rounded px-1 py-0.5 shrink-0">Kadroda</span>}
             </button>
           );
@@ -139,16 +139,16 @@ export const MatchLobbyPitch: React.FC<MatchLobbyPitchProps> = ({ slots, awaySlo
                 key={s}
                 type="button"
                 onClick={() => { setSide(s); setActiveSlotId(null); setSwapSource(null); }}
-                className={`px-3 py-1 text-[10px] font-black uppercase rounded-lg transition-colors ${side === s ? 'bg-[#39FF14]/20 text-[#39FF14]' : 'text-gray-500 hover:text-white'}`}
+                className={`px-3 py-1 text-[10px] font-extrabold uppercase rounded-lg transition-colors ${side === s ? 'bg-[#39FF14]/20 text-[#39FF14]' : 'text-gray-500 hover:text-white'}`}
               >
                 {s === 'home' ? 'Ev Sahibi' : 'Deplasman'}
               </button>
             ))}
           </div>
-        ) : <div className="text-[10px] font-black uppercase tracking-widest text-gray-500">Sahaya Tıkla → Oyuncu Ata</div>}
+        ) : <div className="text-[10px] font-extrabold uppercase tracking-widest text-gray-500">Sahaya Tıkla → Oyuncu Ata</div>}
         <div className="flex items-center gap-1.5">
           <span className="text-[10px] font-bold px-2 py-1 rounded-lg border bg-emerald-500/10 text-emerald-300 border-emerald-500/25">{paidCount} ödedi</span>
-          <span className={`text-[11px] font-black px-2 py-1 rounded-lg border ${filled >= total ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30' : 'bg-amber-500/15 text-amber-300 border-amber-500/30'}`}>
+          <span className={`text-[11px] font-extrabold px-2 py-1 rounded-lg border ${filled >= total ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30' : 'bg-amber-500/15 text-amber-300 border-amber-500/30'}`}>
             {filled}/{total} dolu
           </span>
         </div>
@@ -168,7 +168,7 @@ export const MatchLobbyPitch: React.FC<MatchLobbyPitchProps> = ({ slots, awaySlo
         <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="bg-[#0D1117] border border-[#39FF14]/30 rounded-2xl p-3 space-y-3">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 min-w-0">
-              <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-white/5 text-gray-300 uppercase">{normalizeRole(activeSlot.role)}</span>
+              <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-white/5 text-gray-300 uppercase">{normalizeRole(activeSlot.role)}</span>
               {activeSlot.player ? (
                 <span className="text-xs font-bold text-white truncate">
                   {activeSlot.player.name}

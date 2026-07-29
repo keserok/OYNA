@@ -87,7 +87,7 @@ const DeleteAccountModal: React.FC<{
         }}
       >
         <div className="flex justify-between items-center mb-4">
-          <h3 className="font-black text-white text-lg">
+          <h3 className="font-extrabold text-white text-lg">
             {blocked ? 'Hesap Silinemiyor' : step === 1 ? 'Hesabı Sil' : 'Son Adım'}
           </h3>
           <button onClick={onClose} className="text-gray-500 hover:text-white p-1" aria-label="Kapat">
@@ -124,7 +124,7 @@ const DeleteAccountModal: React.FC<{
             </div>
             <button
               onClick={onClose}
-              className="w-full h-12 rounded-2xl font-black text-sm bg-white/5 text-gray-300 border border-white/10 hover:bg-white/10 transition-colors"
+              className="w-full h-12 rounded-2xl font-extrabold text-sm bg-white/5 text-gray-300 border border-white/10 hover:bg-white/10 transition-colors"
             >
               Anladım
             </button>
@@ -148,13 +148,13 @@ const DeleteAccountModal: React.FC<{
             <div className="space-y-3">
               <button
                 onClick={() => setStep(2)}
-                className="w-full h-12 rounded-2xl font-black text-sm bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30 transition-colors"
+                className="w-full h-12 rounded-2xl font-extrabold text-sm bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30 transition-colors"
               >
                 Evet, Devam Et
               </button>
               <button
                 onClick={onClose}
-                className="w-full h-12 rounded-2xl font-black text-sm text-gray-400 border border-white/10"
+                className="w-full h-12 rounded-2xl font-extrabold text-sm text-gray-400 border border-white/10"
               >
                 İptal
               </button>
@@ -176,13 +176,13 @@ const DeleteAccountModal: React.FC<{
               <button
                 onClick={handleConfirm}
                 disabled={confirmText !== 'HESABIMI SİL' || loading}
-                className="w-full h-12 rounded-2xl font-black text-sm bg-red-600 text-white disabled:opacity-40 transition-opacity"
+                className="w-full h-12 rounded-2xl font-extrabold text-sm bg-red-600 text-white disabled:opacity-40 transition-opacity"
               >
                 {loading ? 'İŞLENİYOR...' : 'Hesabımı Kalıcı Olarak Sil'}
               </button>
               <button
                 onClick={onClose}
-                className="w-full h-12 rounded-2xl font-black text-sm text-gray-400 border border-white/10"
+                className="w-full h-12 rounded-2xl font-extrabold text-sm text-gray-400 border border-white/10"
               >
                 İptal
               </button>

@@ -41,11 +41,11 @@ const AdminBootShell: React.FC<Props> = ({ mode, phase = 'session', message, onR
           <div className="relative">
             <Spinner size={56} thickness={4} color="#EF4444" />
             <div className="absolute inset-0 flex items-center justify-center">
-              <span className="text-[10px] font-black text-red-400">OS</span>
+              <span className="text-[10px] font-extrabold text-red-400">OS</span>
             </div>
           </div>
           <div className="text-center space-y-2">
-            <p className="text-xs font-mono font-black tracking-widest uppercase text-gray-400">
+            <p className="text-xs font-mono font-extrabold tracking-widest uppercase text-gray-400">
               OYNA OS Başlatılıyor
             </p>
             <p className="text-[10px] font-mono text-gray-600 uppercase tracking-wider">
@@ -86,7 +86,7 @@ const AdminBootShell: React.FC<Props> = ({ mode, phase = 'session', message, onR
               <button
                 type="button"
                 onClick={onEscape}
-                className="flex items-center gap-2 px-5 py-2.5 bg-white/5 border border-white/10 rounded-xl text-gray-300 text-[11px] font-black uppercase tracking-widest hover:bg-white/10 transition-colors"
+                className="flex items-center gap-2 px-5 py-2.5 bg-white/5 border border-white/10 rounded-xl text-gray-300 text-[11px] font-extrabold uppercase tracking-widest hover:bg-white/10 transition-colors"
               >
                 <RefreshCw size={13} />
                 Giriş ekranına dön
@@ -100,7 +100,7 @@ const AdminBootShell: React.FC<Props> = ({ mode, phase = 'session', message, onR
             <AlertTriangle size={28} className="text-red-400" />
           </div>
           <div className="text-center max-w-md">
-            <h2 className="text-lg font-black uppercase tracking-widest text-red-400 mb-2">
+            <h2 className="text-lg font-extrabold uppercase tracking-widest text-red-400 mb-2">
               Veri Yüklenemedi
             </h2>
             <p className="text-sm text-gray-400 leading-relaxed">
@@ -111,7 +111,7 @@ const AdminBootShell: React.FC<Props> = ({ mode, phase = 'session', message, onR
             <button
               type="button"
               onClick={onRetry}
-              className="flex items-center gap-2 px-6 py-3 bg-red-600/20 border border-red-500/40 rounded-xl text-red-300 text-xs font-black uppercase tracking-widest hover:bg-red-600/30 transition-colors"
+              className="flex items-center gap-2 px-6 py-3 bg-red-600/20 border border-red-500/40 rounded-xl text-red-300 text-xs font-extrabold uppercase tracking-widest hover:bg-red-600/30 transition-colors"
             >
               <RefreshCw size={14} />
               Yeniden Dene

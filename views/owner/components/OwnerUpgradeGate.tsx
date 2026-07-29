@@ -23,7 +23,7 @@ export const OwnerUpgradeGate: React.FC<OwnerUpgradeGateProps> = ({
       <div className="w-14 h-14 rounded-2xl bg-amber-500/15 border border-amber-500/25 flex items-center justify-center mx-auto mb-5">
         <Lock size={26} className="text-amber-400" />
       </div>
-      <h2 className="text-lg font-black text-white mb-2">{title}</h2>
+      <h2 className="text-lg font-extrabold text-white mb-2">{title}</h2>
       <p className="text-sm text-slate-400 leading-relaxed mb-6">{description}</p>
       {features.length > 0 && (
         <ul className="text-left space-y-2 mb-6">
@@ -38,7 +38,7 @@ export const OwnerUpgradeGate: React.FC<OwnerUpgradeGateProps> = ({
       <button
         type="button"
         onClick={onUpgrade}
-        className="w-full py-3.5 bg-gradient-to-r from-amber-500 to-amber-600 text-black font-black rounded-xl text-sm flex items-center justify-center gap-2 hover:from-amber-400 hover:to-amber-500 transition-all active:scale-[0.98]"
+        className="w-full py-3.5 bg-gradient-to-r from-amber-500 to-amber-600 text-black font-extrabold rounded-xl text-sm flex items-center justify-center gap-2 hover:from-amber-400 hover:to-amber-500 transition-all active:scale-[0.98]"
       >
         Planı Yükselt
         <ArrowRight size={16} />

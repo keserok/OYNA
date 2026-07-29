@@ -149,9 +149,9 @@ const TeamsDirectoryPanel: React.FC<TeamsDirectoryPanelProps> = ({ onOpenTeam, o
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-black italic truncate">{t.name}</span>
+                    <span className="text-sm font-extrabold italic truncate">{t.name}</span>
                     {t.city && (
-                      <span className="shrink-0 text-[9px] font-black px-1.5 py-0.5 rounded bg-white/8 text-white/50 uppercase">
+                      <span className="shrink-0 text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-white/8 text-white/50 uppercase">
                         {t.city}
                       </span>
                     )}
@@ -173,13 +173,13 @@ const TeamsDirectoryPanel: React.FC<TeamsDirectoryPanelProps> = ({ onOpenTeam, o
                   </div>
                 </div>
                 {t.my_state === 'MEMBER' ? (
-                  <span className="shrink-0 text-[10px] font-black text-white/40">ÜYESİN</span>
+                  <span className="shrink-0 text-[10px] font-extrabold text-white/40">ÜYESİN</span>
                 ) : t.my_state === 'REQUEST_PENDING' ? (
-                  <span className="shrink-0 text-[10px] font-black text-amber-400/80 flex items-center gap-1">
+                  <span className="shrink-0 text-[10px] font-extrabold text-amber-400/80 flex items-center gap-1">
                     <Clock size={11} /> BEKLİYOR
                   </span>
                 ) : (
-                  <span className="shrink-0 text-[11px] font-black text-[#39FF14]">İncele ›</span>
+                  <span className="shrink-0 text-[11px] font-extrabold text-[#39FF14]">İncele ›</span>
                 )}
               </button>
             );
@@ -222,7 +222,7 @@ const TeamsDirectoryPanel: React.FC<TeamsDirectoryPanelProps> = ({ onOpenTeam, o
                 size={72}
               />
               <div className="min-w-0">
-                <h2 className="text-xl font-black italic truncate">{profile.name}</h2>
+                <h2 className="text-xl font-extrabold italic truncate">{profile.name}</h2>
                 <div className="text-xs text-white/45 mt-0.5 flex items-center gap-1.5 flex-wrap">
                   {profile.city && (<span className="flex items-center gap-0.5"><MapPin size={11} /> {profile.city}</span>)}
                   <span>{formatLabel(profile.format)}</span>
@@ -256,7 +256,7 @@ const TeamsDirectoryPanel: React.FC<TeamsDirectoryPanelProps> = ({ onOpenTeam, o
             {profile.is_member ? (
               <button
                 onClick={() => { onOpenTeam(profile.team_id); setProfile(null); }}
-                className="mt-5 w-full min-h-[50px] rounded-2xl bg-[#39FF14] text-[#0A0E14] font-black text-sm active:scale-[0.98]"
+                className="mt-5 w-full min-h-[50px] rounded-2xl bg-[#39FF14] text-[#0A0E14] font-extrabold text-sm active:scale-[0.98]"
               >
                 Takımına Git
               </button>
@@ -283,7 +283,7 @@ const TeamsDirectoryPanel: React.FC<TeamsDirectoryPanelProps> = ({ onOpenTeam, o
                 <button
                   onClick={sendRequest}
                   disabled={requesting}
-                  className="mt-2.5 w-full min-h-[50px] rounded-2xl bg-[#39FF14] text-[#0A0E14] font-black text-sm flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-50"
+                  className="mt-2.5 w-full min-h-[50px] rounded-2xl bg-[#39FF14] text-[#0A0E14] font-extrabold text-sm flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-50"
                 >
                   {requesting ? <Loader2 size={16} className="animate-spin" /> : <Send size={15} />}
                   Katılma İsteği Gönder

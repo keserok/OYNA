@@ -89,7 +89,7 @@ export const OwnerCenteredModal: React.FC<OwnerCenteredModalProps> = ({
           >
             <X size={20} />
           </button>
-          <h3 className="text-xl font-black text-white tracking-tight text-center truncate min-w-0">{title}</h3>
+          <h3 className="text-xl font-extrabold text-white tracking-tight text-center truncate min-w-0">{title}</h3>
           <div className="w-11" />
         </div>
         <div className="flex-1 overflow-y-auto custom-scrollbar pr-1">{children}</div>

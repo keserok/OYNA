@@ -604,7 +604,7 @@ export const OwnerFacilitySettingsModal: React.FC<Props> = ({
             <button
               type="button"
               onClick={() => setShowPreview(true)}
-              className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-[#FACC15]/10 border border-[#FACC15]/40 text-[#FACC15] text-xs font-black uppercase tracking-wider"
+              className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-[#FACC15]/10 border border-[#FACC15]/40 text-[#FACC15] text-xs font-extrabold uppercase tracking-wider"
             >
               <Eye size={15} /> Vitrinde Önizle
             </button>

@@ -82,7 +82,7 @@ const RegionPickerPage: React.FC<RegionPickerPageProps> = ({ open, onClose }) =>
       {/* Seçili bölgeler (chip) */}
       {selectedRegions.length > 0 && (
         <div className="mb-4">
-          <p className="text-[11px] font-black uppercase tracking-widest text-gray-500 mb-2 ml-1">
+          <p className="text-[11px] font-extrabold uppercase tracking-widest text-gray-500 mb-2 ml-1">
             Seçili Bölgeler ({selectedRegions.length})
           </p>
           <div className="flex flex-wrap gap-2">
@@ -141,17 +141,17 @@ const RegionPickerPage: React.FC<RegionPickerPageProps> = ({ open, onClose }) =>
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  <span className="w-8 h-8 rounded-xl bg-white/5 flex items-center justify-center text-[11px] font-black text-gray-400 tabular-nums">
+                  <span className="w-8 h-8 rounded-xl bg-white/5 flex items-center justify-center text-[11px] font-extrabold text-gray-400 tabular-nums">
                     {region.plate}
                   </span>
                   <span className="text-sm font-bold text-white">{region.city}</span>
                   {covered && (
-                    <span className="text-[9px] font-black uppercase tracking-wide text-[#39FF14] bg-[#39FF14]/12 px-1.5 py-0.5 rounded">
+                    <span className="text-[9px] font-extrabold uppercase tracking-wide text-[#39FF14] bg-[#39FF14]/12 px-1.5 py-0.5 rounded">
                       Aktif
                     </span>
                   )}
                   {cityHasSelection && (
-                    <span className="text-[9px] font-black uppercase tracking-wide text-gray-400 bg-white/5 px-1.5 py-0.5 rounded">
+                    <span className="text-[9px] font-extrabold uppercase tracking-wide text-gray-400 bg-white/5 px-1.5 py-0.5 rounded">
                       Seçili
                     </span>
                   )}
@@ -214,7 +214,7 @@ const RegionPickerPage: React.FC<RegionPickerPageProps> = ({ open, onClose }) =>
       {/* Bitti */}
       <button
         onClick={() => { setSelectedCity(null); setQuery(''); onClose(); }}
-        className="w-full h-12 mt-5 rounded-2xl font-black text-sm bg-[#39FF14] text-black active:scale-[0.99] transition-transform"
+        className="w-full h-12 mt-5 rounded-2xl font-extrabold text-sm bg-[#39FF14] text-black active:scale-[0.99] transition-transform"
       >
         Bitti{selectedRegions.length > 0 ? ` (${selectedRegions.length} bölge)` : ''}
       </button>

@@ -93,7 +93,7 @@ export const MarketplaceCard: React.FC<MarketplaceCardProps> = ({ item, type, on
             />
           ) : (
             <div className="w-full h-full rounded-[14px] bg-gradient-to-br from-white/10 to-white/[0.03] flex items-center justify-center">
-              <span className="text-sm font-black text-white/80">{getInitials(item.name)}</span>
+              <span className="text-sm font-extrabold text-white/80">{getInitials(item.name)}</span>
             </div>
           )}
         </div>
@@ -147,16 +147,16 @@ export const MarketplaceCard: React.FC<MarketplaceCardProps> = ({ item, type, on
       {/* Ücret + profil oku */}
       <div className="shrink-0 self-stretch flex flex-col items-end justify-between pl-3 border-l border-white/[0.06] py-0.5">
         <div className="text-right">
-          <span className="block text-lg font-black text-white font-numeric leading-none tabular-nums">
+          <span className="block text-lg font-extrabold text-white font-numeric leading-none tabular-nums">
             {item.fee}<span className="text-[13px] font-bold text-white/60">₺</span>
           </span>
           <span className="block text-[9px] font-bold text-white/35 uppercase tracking-wider mt-1">maç başı</span>
         </div>
         {unavailable ? (
-          <span className="text-[9px] font-black uppercase tracking-wider text-white/35">Müsait Değil</span>
+          <span className="text-[9px] font-extrabold uppercase tracking-wider text-white/35">Müsait Değil</span>
         ) : (
           <span
-            className="inline-flex items-center gap-0.5 text-[10px] font-black uppercase tracking-wider"
+            className="inline-flex items-center gap-0.5 text-[10px] font-extrabold uppercase tracking-wider"
             style={{ color: theme.accent }}
           >
             Profil <ChevronRight size={12} />

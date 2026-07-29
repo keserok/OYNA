@@ -55,10 +55,10 @@ const LocationBadge: React.FC<LocationBadgeProps> = ({ region, onClick, classNam
         )}
       </span>
       <span className="flex flex-col min-w-0 leading-tight text-left">
-        <span className="text-[8px] font-black tracking-[0.18em] uppercase" style={{ color: s.color }}>
+        <span className="text-[8px] font-extrabold tracking-[0.18em] uppercase" style={{ color: s.color }}>
           {s.live && '● '}{s.label}
         </span>
-        <span className="text-sm font-black text-white truncate max-w-[150px]">
+        <span className="text-sm font-extrabold text-white truncate max-w-[150px]">
           {region ? region.label : 'Bölge seç'}
         </span>
       </span>

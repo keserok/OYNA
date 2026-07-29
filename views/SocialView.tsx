@@ -164,7 +164,7 @@ const SocialView: React.FC<SocialViewProps> = ({ onNavigate }) => {
 
         <div className="flex items-start justify-between pt-5 mb-1 relative z-10">
           <div>
-            <h1 className="text-3xl font-black tracking-tight">Sosyal</h1>
+            <h1 className="text-3xl font-extrabold tracking-tight">Sosyal</h1>
             {/* Sekme-başına bağlamsal özet (G41) */}
             <p className="text-sm text-gray-500 mt-0.5">
               {tab === 'TEAMS'
@@ -189,7 +189,7 @@ const SocialView: React.FC<SocialViewProps> = ({ onNavigate }) => {
             >
               {t.label}
               {t.count > 0 && (
-                <span className={`min-w-[20px] h-5 px-1.5 rounded-full flex items-center justify-center text-[10px] font-black ${
+                <span className={`min-w-[20px] h-5 px-1.5 rounded-full flex items-center justify-center text-[10px] font-extrabold ${
                   tab === t.id ? 'bg-[#39FF14] text-[#0A0E14]' : 'bg-white/10 text-gray-400'
                 }`}>
                   {t.count}

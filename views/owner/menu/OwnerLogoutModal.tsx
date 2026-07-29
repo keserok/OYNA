@@ -16,7 +16,7 @@ export const OwnerLogoutModal: React.FC<Props> = ({ onClose, onConfirm }) => {
       <div className="w-20 h-20 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-6 text-red-500">
         <LogOut size={40} />
       </div>
-      <h3 className="text-2xl font-black text-white mb-2">Güvenli Çıkış</h3>
+      <h3 className="text-2xl font-extrabold text-white mb-2">Güvenli Çıkış</h3>
       <p className="text-gray-400 text-sm mb-8 leading-relaxed">
         Oturumunuzu sonlandırmak istediğinize emin misiniz?
       </p>
@@ -31,7 +31,7 @@ export const OwnerLogoutModal: React.FC<Props> = ({ onClose, onConfirm }) => {
         <button
           type="button"
           onClick={onConfirm}
-          className="py-4 bg-red-500 text-white font-black rounded-2xl hover:bg-red-400"
+          className="py-4 bg-red-500 text-white font-extrabold rounded-2xl hover:bg-red-400"
         >
           Çıkış Yap
         </button>

@@ -36,7 +36,7 @@ const TeamPlanBanner: React.FC<{ matchId: string }> = ({ matchId }) => {
     >
       <ClipboardList size={18} className="text-[#39FF14] shrink-0" />
       <div className="flex-1 min-w-0">
-        <div className="text-[10px] font-black uppercase tracking-widest text-[#39FF14]/80">
+        <div className="text-[10px] font-extrabold uppercase tracking-widest text-[#39FF14]/80">
           Takım Planı Hazır
         </div>
         <div className="text-sm font-bold truncate text-white">

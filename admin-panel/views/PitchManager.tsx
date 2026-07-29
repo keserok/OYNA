@@ -323,7 +323,7 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
                     <button
                         onClick={handleSave}
                         disabled={isSaving || !editingPitch.name.trim()}
-                        className="p-2 px-5 rounded-xl bg-[#FACC15] text-black font-black text-xs flex items-center gap-2 hover:bg-yellow-300 disabled:opacity-50 transition-all shadow-[0_0_15px_rgba(255,255,0,0.3)]"
+                        className="p-2 px-5 rounded-xl bg-[#FACC15] text-black font-extrabold text-xs flex items-center gap-2 hover:bg-yellow-300 disabled:opacity-50 transition-all shadow-[0_0_15px_rgba(255,255,0,0.3)]"
                     >
                         {isSaving ? '...' : <><Save size={16} /> KAYDET</>}
                     </button>
@@ -337,7 +337,7 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
                     )}
                     
                     <div className="bg-[#161B22] p-6 rounded-[24px] border border-white/5 space-y-4 shadow-sm">
-                        <h3 className="text-sm font-black text-white italic uppercase tracking-wider mb-4 border-b border-white/10 pb-2">Genel Bilgiler</h3>
+                        <h3 className="text-sm font-extrabold text-white italic uppercase tracking-wider mb-4 border-b border-white/10 pb-2">Genel Bilgiler</h3>
 
                         <div className="space-y-2">
                             <label className="text-xs font-bold text-gray-400 uppercase">Saha Adı</label>
@@ -386,7 +386,7 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
                                     className="flex-1 bg-[#0A0E14] border border-white/10 rounded-xl p-3 text-white font-bold focus:border-[#FACC15]/50 outline-none transition-colors text-center"
                                     placeholder="En (30)"
                                 />
-                                <span className="text-gray-500 font-black">×</span>
+                                <span className="text-gray-500 font-extrabold">×</span>
                                 <input
                                     type="number"
                                     value={editSize.l}
@@ -499,9 +499,9 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
                         aynı ekranı kullanır (A1a). */}
                     <div className="bg-[#161B22] p-6 rounded-[24px] border border-white/5 space-y-4 shadow-sm">
                         <div className="flex items-center justify-between border-b border-white/10 pb-2 mb-4">
-                            <h3 className="text-sm font-black text-white italic uppercase tracking-wider">Aktif Saatler ve Ücretler</h3>
+                            <h3 className="text-sm font-extrabold text-white italic uppercase tracking-wider">Aktif Saatler ve Ücretler</h3>
                             {isRealFacility && editingPitch.id && (
-                                <span className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase border ${
+                                <span className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-extrabold uppercase border ${
                                     hasOwnTariff(editingPitch.id)
                                         ? 'bg-[#10B981]/10 border-[#10B981]/30 text-[#10B981]'
                                         : 'bg-amber-500/10 border-amber-500/30 text-amber-300'
@@ -535,7 +535,7 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
                                     type="button"
                                     onClick={() => setPricingCourt(editingPitch)}
                                     disabled={readOnly || !isRealFacility}
-                                    className="w-full py-3 rounded-xl bg-[#39FF14]/10 border border-[#39FF14]/30 text-[#39FF14] font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 disabled:opacity-40"
+                                    className="w-full py-3 rounded-xl bg-[#39FF14]/10 border border-[#39FF14]/30 text-[#39FF14] font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-2 disabled:opacity-40"
                                 >
                                     <Clock size={16} />
                                     {hasOwnTariff(editingPitch.id) ? 'Fiyat Politikasını Düzenle' : 'Fiyat Politikası Gir'}
@@ -588,24 +588,24 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
 
                     <div className="bg-[#161B22] p-6 rounded-[24px] border border-white/5 space-y-4 shadow-sm">
                         <div className="flex items-center justify-between border-b border-white/10 pb-2 mb-4">
-                            <h3 className="text-sm font-black text-white italic uppercase tracking-wider">Kalite Standartları</h3>
+                            <h3 className="text-sm font-extrabold text-white italic uppercase tracking-wider">Kalite Standartları</h3>
                             {editingPitch.grades_status === 'pending' && (
                                 isAdmin ? (
                                     <button
                                         type="button"
                                         onClick={handleApproveGrades}
-                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#10B981]/15 border border-[#10B981]/40 text-[#10B981] text-[10px] font-black uppercase"
+                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#10B981]/15 border border-[#10B981]/40 text-[#10B981] text-[10px] font-extrabold uppercase"
                                     >
                                         <BadgeCheck size={13} /> Notları Onayla
                                     </button>
                                 ) : (
-                                    <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-300 text-[10px] font-black uppercase">
+                                    <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-300 text-[10px] font-extrabold uppercase">
                                         <Clock size={12} /> Değerlendiriliyor
                                     </span>
                                 )
                             )}
                             {editingPitch.grades_status === 'approved' && (editingPitch.lighting_grade || editingPitch.grass_grade) && (
-                                <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#10B981]/10 border border-[#10B981]/30 text-[#10B981] text-[10px] font-black uppercase">
+                                <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#10B981]/10 border border-[#10B981]/30 text-[#10B981] text-[10px] font-extrabold uppercase">
                                     <BadgeCheck size={12} /> Onaylı
                                 </span>
                             )}
@@ -666,7 +666,7 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
                                     ] as const).map(([label, grade]) => (
                                         <div key={label} className="space-y-2">
                                             <span className="text-xs font-bold text-gray-400 uppercase block">{label}</span>
-                                            <div className={`w-full rounded-xl p-3 text-center font-black border ${grade ? 'bg-[#10B981]/10 border-[#10B981]/30 text-[#10B981]' : 'bg-[#0A0E14] border-white/10 text-gray-600'}`}>
+                                            <div className={`w-full rounded-xl p-3 text-center font-extrabold border ${grade ? 'bg-[#10B981]/10 border-[#10B981]/30 text-[#10B981]' : 'bg-[#0A0E14] border-white/10 text-gray-600'}`}>
                                                 {grade || '—'}
                                             </div>
                                         </div>
@@ -680,7 +680,7 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
                     </div>
 
                     <div className="bg-[#161B22] p-6 rounded-[24px] border border-white/5 space-y-4 shadow-sm">
-                        <h3 className="text-sm font-black text-white italic uppercase tracking-wider mb-4 border-b border-white/10 pb-2">Saha Fotoğrafları</h3>
+                        <h3 className="text-sm font-extrabold text-white italic uppercase tracking-wider mb-4 border-b border-white/10 pb-2">Saha Fotoğrafları</h3>
 
                         {isRealFacility && editingPitch.id ? (
                             /* Kayıtlı kort: pitch_media hattı — sıkıştırma, kapak, etiket, sıralama (Karar #19) */
@@ -765,12 +765,12 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
                                             className="w-full h-full flex flex-col items-center justify-center gap-1 bg-black/30 text-gray-500 hover:text-[#FACC15] transition-colors"
                                         >
                                             <Camera size={28} />
-                                            <span className="text-[10px] font-black uppercase tracking-wider">Fotoğraf ekle</span>
+                                            <span className="text-[10px] font-extrabold uppercase tracking-wider">Fotoğraf ekle</span>
                                         </button>
                                     )}
                                     <div className="absolute inset-0 bg-gradient-to-t from-[#161B22] via-[#161B22]/60 to-transparent"></div>
                                     <div className="absolute bottom-4 left-4 right-4">
-                                        <h3 className="text-xl font-black text-white italic drop-shadow-md">{pitch.name}</h3>
+                                        <h3 className="text-xl font-extrabold text-white italic drop-shadow-md">{pitch.name}</h3>
                                         <p className="text-xs text-gray-300 font-medium">
                                             {pitch.court_type === 'CLOSED' ? 'Kapalı' : 'Açık'} • {SURFACE_LABELS[pitch.surface ?? 'TURF'] ?? pitch.surface}
                                             {pitch.size ? ` • ${pitch.size}` : ''}
@@ -820,7 +820,7 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
                     doğrudan fiyat politikası ekranına götürülür (sessiz hata YOK). */}
                 {!readOnly && inactiveCourts.length > 0 && (
                     <div className="mt-8">
-                        <h3 className="text-[11px] font-black text-gray-500 uppercase tracking-widest mb-3">Yayında Olmayan Sahalar</h3>
+                        <h3 className="text-[11px] font-extrabold text-gray-500 uppercase tracking-widest mb-3">Yayında Olmayan Sahalar</h3>
                         <div className="space-y-2">
                             {inactiveCourts.map((court) => {
                                 const ready = hasOwnTariff(court.id);
@@ -840,14 +840,14 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
                                         {ready ? (
                                             <button
                                                 onClick={() => handleReactivate(court)}
-                                                className="shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-[11px] font-black uppercase"
+                                                className="shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-[11px] font-extrabold uppercase"
                                             >
                                                 <RotateCcw size={13} /> Yayına Al
                                             </button>
                                         ) : (
                                             <button
                                                 onClick={() => setPricingCourt(court)}
-                                                className="shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-[11px] font-black uppercase"
+                                                className="shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-[11px] font-extrabold uppercase"
                                             >
                                                 <Tag size={13} /> Fiyat Politikası Gir
                                             </button>

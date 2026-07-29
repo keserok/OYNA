@@ -81,7 +81,7 @@ export const OwnerKpiGrid: React.FC<OwnerKpiGridProps> = ({ items, columns = 2 }
               {item.label}
               {item.onClick ? <ArrowUpRight size={10} /> : null}
             </p>
-            <p className={`text-2xl font-black mt-1 tracking-tight transition-colors ${accent.value}`}>
+            <p className={`text-2xl font-extrabold mt-1 tracking-tight transition-colors ${accent.value}`}>
               {item.value}
             </p>
             {(item.sublabel || item.trendLabel) && (
@@ -125,7 +125,7 @@ export const OwnerCommandStrip: React.FC<OwnerCommandStripProps> = ({
       <button
         type="button"
         onClick={onPendingClick}
-        className="shrink-0 px-3 py-1.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-[10px] font-black text-amber-200 flex items-center gap-1"
+        className="shrink-0 px-3 py-1.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-[10px] font-extrabold text-amber-200 flex items-center gap-1"
       >
         <Clock size={11} />
         {pendingCount} onay bekliyor

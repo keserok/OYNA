@@ -144,7 +144,7 @@ export const OwnerBookingDetailModal: React.FC<OwnerBookingDetailModalProps> = (
         Vazgeç
       </button>
       <button type="button" onClick={handleCollect} disabled={busy || !validPay}
-        className="flex-[1.5] h-12 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-50">
+        className="flex-[1.5] h-12 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-50">
         {busy ? <Spinner size={18} color="currentColor" glow={false} /> : <>Tahsil Et · {amount > 0 ? amount : 0}₺</>}
       </button>
     </div>
@@ -155,7 +155,7 @@ export const OwnerBookingDetailModal: React.FC<OwnerBookingDetailModalProps> = (
         Vazgeç
       </button>
       <button type="button" onClick={handleCancel} disabled={busy}
-        className="flex-[1.5] h-12 rounded-2xl bg-red-600 hover:bg-red-500 text-white font-black flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-50">
+        className="flex-[1.5] h-12 rounded-2xl bg-red-600 hover:bg-red-500 text-white font-extrabold flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-50">
         {busy ? <Spinner size={18} color="currentColor" glow={false} /> : 'İptali Onayla'}
       </button>
     </div>
@@ -164,18 +164,18 @@ export const OwnerBookingDetailModal: React.FC<OwnerBookingDetailModalProps> = (
     // Bakiye 0 ise "Gelmedi" ve "Tahsilat Al" hiç çizilmez, tek buton kalır.
     <div className={balance > 0 ? 'grid grid-cols-3 gap-2' : 'flex gap-3'}>
       <button type="button" onClick={() => setMode('cancel')} disabled={busy}
-        className="flex-1 h-12 rounded-2xl bg-red-500/10 border border-red-500/30 text-red-400 font-black text-[11px] flex items-center justify-center gap-1.5 active:scale-[0.98] transition-transform disabled:opacity-50">
+        className="flex-1 h-12 rounded-2xl bg-red-500/10 border border-red-500/30 text-red-400 font-extrabold text-[11px] flex items-center justify-center gap-1.5 active:scale-[0.98] transition-transform disabled:opacity-50">
         <XCircle size={16} /> İptal Et
       </button>
       {balance > 0 && (
         <button type="button" onClick={handleNoShow} disabled={busy}
-          className="h-12 rounded-2xl bg-[#FACC15]/10 border border-[#FACC15]/30 text-[#FACC15] font-black text-[11px] flex items-center justify-center gap-1.5 active:scale-[0.98] transition-transform disabled:opacity-50">
+          className="h-12 rounded-2xl bg-[#FACC15]/10 border border-[#FACC15]/30 text-[#FACC15] font-extrabold text-[11px] flex items-center justify-center gap-1.5 active:scale-[0.98] transition-transform disabled:opacity-50">
           {busy ? <Spinner size={16} color="currentColor" glow={false} /> : <><UserX size={16} /> Gelmedi</>}
         </button>
       )}
       {balance > 0 && (
         <button type="button" onClick={() => setMode('collect')} disabled={busy}
-          className="h-12 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-[11px] flex items-center justify-center gap-1.5 active:scale-[0.98] transition-transform disabled:opacity-50">
+          className="h-12 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-[11px] flex items-center justify-center gap-1.5 active:scale-[0.98] transition-transform disabled:opacity-50">
           <Banknote size={16} /> Tahsilat Al
         </button>
       )}
@@ -194,22 +194,22 @@ export const OwnerBookingDetailModal: React.FC<OwnerBookingDetailModalProps> = (
       <div className="bg-[#0A0E14] p-4 rounded-2xl border border-white/5 space-y-3">
         <div className="flex justify-between items-center">
           <span className="text-[0.6875rem] text-gray-500 font-bold uppercase">Durum</span>
-          <span className={`text-[0.6875rem] font-black px-2 py-1 rounded ${statusCls}`}>{statusLabel}</span>
+          <span className={`text-[0.6875rem] font-extrabold px-2 py-1 rounded ${statusCls}`}>{statusLabel}</span>
         </div>
         <div className="flex justify-between items-center">
           <span className="text-[0.6875rem] text-gray-500 font-bold uppercase">Tutar</span>
-          <span className="text-lg font-black text-white font-mono tabular-nums">{booking.price}₺</span>
+          <span className="text-lg font-extrabold text-white font-mono tabular-nums">{booking.price}₺</span>
         </div>
         {booking.paid > 0 && (
           <div className="flex justify-between items-center">
             <span className="text-[0.6875rem] text-gray-500 font-bold uppercase">Tahsil edilen</span>
-            <span className="text-sm font-black text-emerald-400 font-mono tabular-nums">{booking.paid}₺</span>
+            <span className="text-sm font-extrabold text-emerald-400 font-mono tabular-nums">{booking.paid}₺</span>
           </div>
         )}
         {balance > 0 && (
           <div className="flex justify-between items-center border-t border-white/5 pt-2">
             <span className="text-[0.6875rem] text-amber-400 font-bold uppercase">Bekleyen</span>
-            <span className="text-sm font-black text-amber-400 font-mono tabular-nums">{balance}₺</span>
+            <span className="text-sm font-extrabold text-amber-400 font-mono tabular-nums">{balance}₺</span>
           </div>
         )}
         {booking.note && (
@@ -220,7 +220,7 @@ export const OwnerBookingDetailModal: React.FC<OwnerBookingDetailModalProps> = (
       {/* COLLECT modu: tutar + yöntem */}
       {mode === 'collect' && (
         <div className="mt-4 space-y-3">
-          <label className="text-[0.6875rem] font-black text-gray-500 uppercase tracking-widest">Tahsil edilecek tutar</label>
+          <label className="text-[0.6875rem] font-extrabold text-gray-500 uppercase tracking-widest">Tahsil edilecek tutar</label>
           <div className="flex gap-2">
             <div className="flex-1 bg-[#0A0E14] border border-white/10 rounded-2xl px-4 flex items-center focus-within:border-emerald-500/50">
               <input
@@ -228,20 +228,20 @@ export const OwnerBookingDetailModal: React.FC<OwnerBookingDetailModalProps> = (
                 inputMode="decimal"
                 value={amountStr}
                 onChange={(e) => setAmountStr(e.target.value)}
-                className="w-full bg-transparent text-white font-black text-xl py-3 outline-none tabular-nums"
+                className="w-full bg-transparent text-white font-extrabold text-xl py-3 outline-none tabular-nums"
                 autoFocus
               />
               <span className="text-gray-500 font-bold">₺</span>
             </div>
             <button type="button" onClick={() => setAmountStr(String(balance))}
-              className="px-4 rounded-2xl bg-white/5 border border-white/10 text-white text-xs font-black uppercase active:scale-95">
+              className="px-4 rounded-2xl bg-white/5 border border-white/10 text-white text-xs font-extrabold uppercase active:scale-95">
               Tümü
             </button>
           </div>
           <div className="grid grid-cols-3 gap-2">
             {METHODS.map((m) => (
               <button key={m.id} type="button" onClick={() => setMethod(m.id)}
-                className={`min-h-[44px] py-2.5 rounded-xl border text-xs font-black transition-colors ${method === m.id ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300' : 'bg-[#0A0E14] border-white/5 text-gray-400 hover:text-white'}`}>
+                className={`min-h-[44px] py-2.5 rounded-xl border text-xs font-extrabold transition-colors ${method === m.id ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300' : 'bg-[#0A0E14] border-white/5 text-gray-400 hover:text-white'}`}>
                 {m.label}
               </button>
             ))}
@@ -253,7 +253,7 @@ export const OwnerBookingDetailModal: React.FC<OwnerBookingDetailModalProps> = (
       {/* CANCEL modu: neden */}
       {mode === 'cancel' && (
         <div className="mt-4 space-y-2">
-          <label className="text-[0.6875rem] font-black text-gray-500 uppercase tracking-widest">İptal nedeni</label>
+          <label className="text-[0.6875rem] font-extrabold text-gray-500 uppercase tracking-widest">İptal nedeni</label>
           <textarea
             value={cancelReason}
             onChange={(e) => setCancelReason(e.target.value)}
@@ -271,14 +271,14 @@ export const OwnerBookingDetailModal: React.FC<OwnerBookingDetailModalProps> = (
           <button
             type="button"
             onClick={() => notify('Kaptan mesajlaşması yakında aktif olacak.', 'info')}
-            className="min-h-[52px] py-3 bg-blue-500/10 border border-blue-500/30 text-blue-400 rounded-xl text-[0.6875rem] font-black hover:bg-blue-500/20 transition-colors flex flex-col items-center gap-1.5 uppercase"
+            className="min-h-[52px] py-3 bg-blue-500/10 border border-blue-500/30 text-blue-400 rounded-xl text-[0.6875rem] font-extrabold hover:bg-blue-500/20 transition-colors flex flex-col items-center gap-1.5 uppercase"
           >
             <MessageSquare size={16} /> Kaptana Mesaj
           </button>
           <button
             type="button"
             onClick={() => { onClose(); onNavigateQr?.(); }}
-            className="min-h-[52px] py-3 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 rounded-xl text-[0.6875rem] font-black hover:bg-emerald-500/20 transition-colors flex flex-col items-center gap-1.5 uppercase"
+            className="min-h-[52px] py-3 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 rounded-xl text-[0.6875rem] font-extrabold hover:bg-emerald-500/20 transition-colors flex flex-col items-center gap-1.5 uppercase"
           >
             <QrCode size={16} /> QR Check-in
           </button>

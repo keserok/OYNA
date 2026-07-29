@@ -49,7 +49,7 @@ const AdminChip: React.FC<{ label: string; onClick: () => void; icon?: React.Rea
   <button
     type="button"
     onClick={onClick}
-    className="flex items-center gap-1 px-2 py-1 rounded-lg bg-purple-500/10 border border-purple-500/25 text-purple-300 text-[9px] font-black uppercase tracking-wider hover:bg-purple-500/20 transition-colors shrink-0"
+    className="flex items-center gap-1 px-2 py-1 rounded-lg bg-purple-500/10 border border-purple-500/25 text-purple-300 text-[9px] font-extrabold uppercase tracking-wider hover:bg-purple-500/20 transition-colors shrink-0"
   >
     {icon ?? <Pencil size={10} />} {label}
   </button>
@@ -208,7 +208,7 @@ export const UserProfileMirror: React.FC<Props> = ({ userId, onUpdated }) => {
       <div className="py-12 flex flex-col items-center gap-3 text-center px-6">
         <ShieldAlert size={20} className="text-amber-400" />
         <p className="text-[12px] text-gray-400 leading-relaxed">{loadError || 'Profil bulunamadı.'}</p>
-        <button type="button" onClick={() => void load()} className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-white/15 text-[10px] font-black uppercase text-gray-300 hover:text-white">
+        <button type="button" onClick={() => void load()} className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-white/15 text-[10px] font-extrabold uppercase text-gray-300 hover:text-white">
           <RefreshCw size={11} /> Yeniden Dene
         </button>
       </div>
@@ -243,7 +243,7 @@ export const UserProfileMirror: React.FC<Props> = ({ userId, onUpdated }) => {
       {/* Ayna şeridi — bu bir uygulama ekranı, admin krom değil */}
       <div className="flex items-center justify-between gap-2 px-1">
         <p className="text-[10px] text-gray-500 leading-relaxed">
-          <span className="text-[#39FF14] font-black">CANLI AYNA</span> — kullanıcı profilini uygulamada böyle görüyor.
+          <span className="text-[#39FF14] font-extrabold">CANLI AYNA</span> — kullanıcı profilini uygulamada böyle görüyor.
           Kalem simgeleri admin düzenlemesidir; her kayıt denetime düşer.
         </p>
         <button type="button" onClick={() => void load()} aria-label="Aynayı yenile" className="w-7 h-7 rounded-lg bg-white/5 text-gray-500 hover:text-white flex items-center justify-center shrink-0">
@@ -258,7 +258,7 @@ export const UserProfileMirror: React.FC<Props> = ({ userId, onUpdated }) => {
           {/* Profil tamamlanmadı sinyali (uygulamadaki şeridin bilgilendirme hâli) */}
           {profile.hasCompletedOnboarding === false && (
             <div className="bg-[#FACC15]/[0.07] border border-[#FACC15]/30 rounded-2xl px-3.5 py-2.5">
-              <p className="text-[10px] font-black text-[#FACC15] uppercase tracking-wider">Profil tamamlanmadı</p>
+              <p className="text-[10px] font-extrabold text-[#FACC15] uppercase tracking-wider">Profil tamamlanmadı</p>
               <p className="text-[10px] text-gray-400 mt-0.5">Kullanıcı onboarding'i bitirmemiş — rozetler eksik görünebilir.</p>
             </div>
           )}
@@ -286,7 +286,7 @@ export const UserProfileMirror: React.FC<Props> = ({ userId, onUpdated }) => {
             <p className={`flex-1 text-[12px] leading-relaxed ${profile.bio ? 'text-gray-400' : 'text-gray-600 italic'}`}>
               {profile.bio || 'Henüz bir tanıtım eklenmemiş.'}
             </p>
-            <button type="button" onClick={() => setSheetOpen(true)} className="shrink-0 px-3.5 py-2 rounded-full bg-white/5 border border-white/15 text-white text-[10px] font-black uppercase tracking-widest hover:bg-white/10 active:scale-95 transition-all flex items-center gap-1.5">
+            <button type="button" onClick={() => setSheetOpen(true)} className="shrink-0 px-3.5 py-2 rounded-full bg-white/5 border border-white/15 text-white text-[10px] font-extrabold uppercase tracking-widest hover:bg-white/10 active:scale-95 transition-all flex items-center gap-1.5">
               <Pencil size={11} /> Düzenle
             </button>
           </div>
@@ -308,10 +308,10 @@ export const UserProfileMirror: React.FC<Props> = ({ userId, onUpdated }) => {
       {/* ═══ YÖNETİCİ ALANLARI — uygulamada görünmeyen admin yüzeyi ═══ */}
       <div className="bg-[#161B22]/60 border border-purple-500/15 rounded-2xl p-4 space-y-3">
         <button type="button" onClick={() => setAdminOpen((o) => !o)} className="w-full flex items-center justify-between gap-2">
-          <p className="text-[10px] font-black text-purple-300 uppercase tracking-wider flex items-center gap-1.5">
+          <p className="text-[10px] font-extrabold text-purple-300 uppercase tracking-wider flex items-center gap-1.5">
             <Sparkles size={12} /> Yönetici Alanları (kullanıcı görmez)
           </p>
-          <span className="text-[10px] text-gray-500 font-black">{adminOpen ? '▲' : '▼'}</span>
+          <span className="text-[10px] text-gray-500 font-extrabold">{adminOpen ? '▲' : '▼'}</span>
         </button>
 
         {adminOpen && (
@@ -329,7 +329,7 @@ export const UserProfileMirror: React.FC<Props> = ({ userId, onUpdated }) => {
               <div>
                 <div className="flex items-center justify-between">
                   <label className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Güven Puanı</label>
-                  <span className={`text-xs font-black font-mono ${trustDraft >= 80 ? 'text-green-400' : trustDraft >= 60 ? 'text-amber-400' : 'text-red-400'}`}>{trustDraft}/100</span>
+                  <span className={`text-xs font-extrabold font-mono ${trustDraft >= 80 ? 'text-green-400' : trustDraft >= 60 ? 'text-amber-400' : 'text-red-400'}`}>{trustDraft}/100</span>
                 </div>
                 <input
                   type="range" min={0} max={100} step={1}
@@ -356,7 +356,7 @@ export const UserProfileMirror: React.FC<Props> = ({ userId, onUpdated }) => {
               type="button"
               disabled={adminSaving}
               onClick={() => void handleAdminSave()}
-              className="w-full h-11 rounded-xl bg-purple-500/15 border border-purple-500/40 text-purple-200 text-[11px] font-black uppercase tracking-widest hover:bg-purple-500/25 disabled:opacity-40 flex items-center justify-center gap-2"
+              className="w-full h-11 rounded-xl bg-purple-500/15 border border-purple-500/40 text-purple-200 text-[11px] font-extrabold uppercase tracking-widest hover:bg-purple-500/25 disabled:opacity-40 flex items-center justify-center gap-2"
             >
               {adminSaving ? <Loader2 size={13} className="animate-spin" /> : null} Yönetici Alanlarını Kaydet
             </button>
@@ -364,12 +364,12 @@ export const UserProfileMirror: React.FC<Props> = ({ userId, onUpdated }) => {
             {/* Premium kart yönetimi (Q24) */}
             <div className="border-t border-white/[0.06] pt-3 space-y-2">
               <div className="flex items-center justify-between">
-                <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider">Premium Kart (Q24)</p>
+                <p className="text-[10px] font-extrabold text-gray-400 uppercase tracking-wider">Premium Kart (Q24)</p>
                 <button
                   type="button"
                   disabled={cardBusy}
                   onClick={() => void handleCard(!profile.cardActive, (profile.cardTier || 'bronze'))}
-                  className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase border transition-colors disabled:opacity-40 ${
+                  className={`px-3 py-1.5 rounded-lg text-[10px] font-extrabold uppercase border transition-colors disabled:opacity-40 ${
                     profile.cardActive
                       ? 'bg-[#39FF14]/15 border-[#39FF14]/40 text-[#39FF14]'
                       : 'bg-white/5 border-white/15 text-gray-400 hover:text-white'
@@ -385,7 +385,7 @@ export const UserProfileMirror: React.FC<Props> = ({ userId, onUpdated }) => {
                     type="button"
                     disabled={cardBusy || !profile.cardActive}
                     onClick={() => void handleCard(true, t)}
-                    className={`flex-1 py-2 rounded-lg text-[10px] font-black uppercase border transition-colors disabled:opacity-30 ${
+                    className={`flex-1 py-2 rounded-lg text-[10px] font-extrabold uppercase border transition-colors disabled:opacity-30 ${
                       profile.cardTier === t
                         ? t === 'gold'
                           ? 'bg-yellow-500/20 border-yellow-500/50 text-yellow-300'
@@ -427,16 +427,16 @@ export const UserProfileMirror: React.FC<Props> = ({ userId, onUpdated }) => {
         <div className="fixed inset-0 z-[260] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setWalletOpen(false)}>
           <div onClick={(e) => e.stopPropagation()} className="bg-[#161B22] border border-white/10 rounded-2xl w-full max-w-sm p-5 space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-black text-white uppercase flex items-center gap-2"><Wallet size={14} /> Bakiye Düzeltme</h3>
+              <h3 className="text-sm font-extrabold text-white uppercase flex items-center gap-2"><Wallet size={14} /> Bakiye Düzeltme</h3>
               <button type="button" onClick={() => setWalletOpen(false)} className="w-7 h-7 rounded-lg bg-white/5 text-gray-400 hover:text-white flex items-center justify-center"><X size={14} /></button>
             </div>
             <p className="text-[11px] text-gray-400 leading-relaxed">
-              Mevcut bakiye: <span className="font-black text-[#39FF14] font-mono">{fmtMoney(profile.walletBalance ?? 0)}</span>.
+              Mevcut bakiye: <span className="font-extrabold text-[#39FF14] font-mono">{fmtMoney(profile.walletBalance ?? 0)}</span>.
               Düzeltme <span className="text-white font-bold">wallet_transactions</span>'a ADMIN_ADJUST olarak işlenir — profil bakiyesi elle ezilmez, finans raporları bozulmaz. FINANCE yetkisi gerekir.
             </p>
             <div className="flex gap-1.5">
               {[100, 500, -100].map((v) => (
-                <button key={v} type="button" onClick={() => setWalletAmount(String(v))} className="flex-1 py-1.5 rounded-lg border border-white/10 text-[10px] font-black text-gray-300 hover:text-white">
+                <button key={v} type="button" onClick={() => setWalletAmount(String(v))} className="flex-1 py-1.5 rounded-lg border border-white/10 text-[10px] font-extrabold text-gray-300 hover:text-white">
                   {v > 0 ? `+${v}` : v} ₺
                 </button>
               ))}
@@ -459,7 +459,7 @@ export const UserProfileMirror: React.FC<Props> = ({ userId, onUpdated }) => {
               type="button"
               disabled={walletBusy}
               onClick={() => void handleWallet()}
-              className="w-full h-11 rounded-xl bg-[#39FF14]/15 border border-[#39FF14]/40 text-[#39FF14] text-[11px] font-black uppercase tracking-widest hover:bg-[#39FF14]/25 disabled:opacity-40 flex items-center justify-center gap-2"
+              className="w-full h-11 rounded-xl bg-[#39FF14]/15 border border-[#39FF14]/40 text-[#39FF14] text-[11px] font-extrabold uppercase tracking-widest hover:bg-[#39FF14]/25 disabled:opacity-40 flex items-center justify-center gap-2"
             >
               {walletBusy ? <Loader2 size={13} className="animate-spin" /> : null} Düzeltmeyi İşle
             </button>

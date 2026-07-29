@@ -133,7 +133,7 @@ const PrivacySection: React.FC<PrivacySectionProps> = ({ embedded = false }) => 
 
       <BottomSheet open={blockedOpen} onClose={() => setBlockedOpen(false)} ariaLabel="Engellenenler">
         <div className="pb-4">
-          <h3 className="text-base font-black mb-4">Engellenenler</h3>
+          <h3 className="text-base font-extrabold mb-4">Engellenenler</h3>
           {blocked === null ? (
             <div className="py-8 flex justify-center"><Spinner size={20} color="rgba(255,255,255,0.4)" glow={false} /></div>
           ) : blocked.length === 0 ? (

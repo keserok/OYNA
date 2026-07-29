@@ -58,8 +58,8 @@ const TeamCard: React.FC<{
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <span className="text-[15px] font-black italic truncate">{team.name}</span>
-          <span className="shrink-0 text-[9px] font-black px-1.5 py-0.5 rounded bg-white/8 text-white/50">
+          <span className="text-[15px] font-extrabold italic truncate">{team.name}</span>
+          <span className="shrink-0 text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-white/8 text-white/50">
             {formatLabel(team.format)}
           </span>
         </div>
@@ -175,7 +175,7 @@ const MyTeamsPanel: React.FC<MyTeamsPanelProps> = ({
       {/* Davetlerin şeridi (K69) */}
       {invites.length > 0 && (
         <div className="rounded-2xl bg-[#39FF14]/6 border border-[#39FF14]/20 p-3.5">
-          <div className="text-[10px] font-black uppercase tracking-widest text-[#39FF14]/80 mb-2.5 flex items-center gap-1.5">
+          <div className="text-[10px] font-extrabold uppercase tracking-widest text-[#39FF14]/80 mb-2.5 flex items-center gap-1.5">
             <Mail size={11} /> Davetlerin ({invites.length})
           </div>
           <div className="space-y-2">
@@ -201,7 +201,7 @@ const MyTeamsPanel: React.FC<MyTeamsPanelProps> = ({
                     </button>
                     <button
                       onClick={() => handleInvite(inv, true)}
-                      className="h-9 px-3 rounded-xl bg-[#39FF14] text-[#0A0E14] text-[11px] font-black flex items-center gap-1 active:scale-95"
+                      className="h-9 px-3 rounded-xl bg-[#39FF14] text-[#0A0E14] text-[11px] font-extrabold flex items-center gap-1 active:scale-95"
                     >
                       <Check size={12} /> Katıl
                     </button>
@@ -227,7 +227,7 @@ const MyTeamsPanel: React.FC<MyTeamsPanelProps> = ({
         <>
           {orderedCaptain.length > 0 && (
             <div>
-              <h3 className="text-[10px] font-black uppercase tracking-widest text-white/40 mb-2.5">
+              <h3 className="text-[10px] font-extrabold uppercase tracking-widest text-white/40 mb-2.5">
                 Kaptanlıklarım
               </h3>
               <Reorder.Group
@@ -246,7 +246,7 @@ const MyTeamsPanel: React.FC<MyTeamsPanelProps> = ({
 
           {orderedMember.length > 0 && (
             <div>
-              <h3 className="text-[10px] font-black uppercase tracking-widest text-white/40 mb-2.5">
+              <h3 className="text-[10px] font-extrabold uppercase tracking-widest text-white/40 mb-2.5">
                 Üyeliklerim
               </h3>
               <Reorder.Group

@@ -26,7 +26,7 @@ import {
 const FORMATS: TeamFormat[] = ['3v3', '4v4', '5v5', '6v6', '7v7', '8v8', '9v9', '10v10', '11v11'];
 
 const SectionTitle: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <h4 className="text-[10px] font-black uppercase tracking-widest text-white/40 mb-2 mt-5 first:mt-0">
+  <h4 className="text-[10px] font-extrabold uppercase tracking-widest text-white/40 mb-2 mt-5 first:mt-0">
     {children}
   </h4>
 );
@@ -205,7 +205,7 @@ const TeamSettingsSheet: React.FC<TeamSettingsSheetProps> = ({
     <>
       <BottomSheet open={open} onClose={onClose} maxHeightClass="max-h-[92vh]" ariaLabel="Takım ayarları">
         <div className="pb-8">
-          <h3 className="text-base font-black">Takım Ayarları</h3>
+          <h3 className="text-base font-extrabold">Takım Ayarları</h3>
 
           {/* ═══ KİMLİK ═══ */}
           <SectionTitle>Kimlik</SectionTitle>
@@ -221,7 +221,7 @@ const TeamSettingsSheet: React.FC<TeamSettingsSheetProps> = ({
                 value={shortName}
                 onChange={e => setShortName(e.target.value.slice(0, 4))}
                 placeholder="KISA"
-                className="w-24 h-12 px-3 rounded-2xl bg-white/5 border border-white/10 text-sm font-black text-center uppercase placeholder:text-white/25 focus:outline-none focus:border-white/25"
+                className="w-24 h-12 px-3 rounded-2xl bg-white/5 border border-white/10 text-sm font-extrabold text-center uppercase placeholder:text-white/25 focus:outline-none focus:border-white/25"
               />
               <button
                 onClick={() => setCrestOpen(v => !v)}
@@ -258,7 +258,7 @@ const TeamSettingsSheet: React.FC<TeamSettingsSheetProps> = ({
                 <button
                   key={f}
                   onClick={() => setFormat(f)}
-                  className={`min-h-[40px] rounded-xl text-xs font-black border ${
+                  className={`min-h-[40px] rounded-xl text-xs font-extrabold border ${
                     format === f
                       ? 'bg-[#39FF14] text-[#0A0E14] border-[#39FF14]'
                       : 'bg-white/5 text-white/60 border-white/10'
@@ -377,7 +377,7 @@ const TeamSettingsSheet: React.FC<TeamSettingsSheetProps> = ({
           <button
             onClick={save}
             disabled={saving || name.trim().length < 2}
-            className="w-full mt-5 min-h-[50px] rounded-2xl bg-[#39FF14] text-[#0A0E14] font-black text-sm flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-40"
+            className="w-full mt-5 min-h-[50px] rounded-2xl bg-[#39FF14] text-[#0A0E14] font-extrabold text-sm flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-40"
           >
             {saving ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />} Kaydet
           </button>

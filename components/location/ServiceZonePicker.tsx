@@ -33,7 +33,7 @@ const ServiceZonePicker: React.FC<ServiceZonePickerProps> = ({
   return (
     <div className={className}>
       {/* İl seçimi */}
-      <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 block mb-1.5 ml-0.5">
+      <label className="text-[10px] font-extrabold uppercase tracking-widest text-gray-500 block mb-1.5 ml-0.5">
         Hizmet İli
       </label>
       <div className="relative mb-4">
@@ -55,10 +55,10 @@ const ServiceZonePicker: React.FC<ServiceZonePickerProps> = ({
 
       {/* Bölge (ilçe) chip'leri */}
       <div className="flex items-center justify-between mb-2.5 ml-0.5">
-        <label className="text-[10px] font-black uppercase tracking-widest text-gray-500">
+        <label className="text-[10px] font-extrabold uppercase tracking-widest text-gray-500">
           Hizmet Bölgeleri
         </label>
-        <span className={`text-[10px] font-black ${atMax ? 'text-[#FFAA00]' : 'text-gray-500'}`}>
+        <span className={`text-[10px] font-extrabold ${atMax ? 'text-[#FFAA00]' : 'text-gray-500'}`}>
           {selectedZones.length}/{maxZones}
         </span>
       </div>

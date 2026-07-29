@@ -125,7 +125,7 @@ const MatchSquadPicker: React.FC<MatchSquadPickerProps> = ({
       <div className="pt-safe px-5 pt-5 pb-3 border-b border-white/8 shrink-0">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h2 className="text-xl font-black text-white italic tracking-tight uppercase">Kadroyu Kur</h2>
+            <h2 className="text-xl font-extrabold text-white italic tracking-tight uppercase">Kadroyu Kur</h2>
             <p className="text-[11px] text-[#39FF14] font-bold uppercase tracking-widest mt-0.5">Arkadaş çağır · takım diz</p>
           </div>
           <button
@@ -253,8 +253,8 @@ const MatchSquadPicker: React.FC<MatchSquadPickerProps> = ({
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
-                            <span className="text-[15px] font-black italic text-white truncate">{t.name}</span>
-                            <span className="shrink-0 text-[9px] font-black px-1.5 py-0.5 rounded bg-white/8 text-white/50">
+                            <span className="text-[15px] font-extrabold italic text-white truncate">{t.name}</span>
+                            <span className="shrink-0 text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-white/8 text-white/50">
                               {formatLabel(t.format)}
                             </span>
                           </div>
@@ -282,7 +282,7 @@ const MatchSquadPicker: React.FC<MatchSquadPickerProps> = ({
         <div className="absolute bottom-0 inset-x-0 p-5 pb-safe bg-gradient-to-t from-[#0A0E14] via-[#0A0E14]/95 to-transparent">
           <button
             onClick={confirmFriends}
-            className="w-full min-h-[54px] rounded-2xl bg-[#39FF14] text-[#0A0E14] font-black text-base uppercase tracking-widest active:scale-[0.98] flex items-center justify-center gap-2 shadow-[0_0_30px_rgba(57,255,20,0.3)]"
+            className="w-full min-h-[54px] rounded-2xl bg-[#39FF14] text-[#0A0E14] font-extrabold text-base uppercase tracking-widest active:scale-[0.98] flex items-center justify-center gap-2 shadow-[0_0_30px_rgba(57,255,20,0.3)]"
           >
             Seçili {selected.length} Oyuncuyu Ekle
             {typeof openSlotCount === 'number' && (

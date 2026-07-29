@@ -99,7 +99,7 @@ export default function SplashScreen({ onStart, ready = true }: SplashScreenProp
                 variants={letterVariants}
                 initial="hidden"
                 animate="show"
-                className="text-4xl font-black text-white tracking-[0.3em] drop-shadow-[0_0_12px_rgba(255,255,255,0.3)]"
+                className="text-4xl font-extrabold text-white tracking-[0.3em] drop-shadow-[0_0_12px_rgba(255,255,255,0.3)]"
               >
                 {letter}
               </motion.span>

@@ -136,7 +136,7 @@ const ScoreSheet: React.FC<{
     <BottomSheet open={!!match} onClose={onClose} ariaLabel="Skor girişi">
       {match && (
         <div className="pb-6">
-          <h3 className="text-base font-black">Maç Skoru</h3>
+          <h3 className="text-base font-extrabold">Maç Skoru</h3>
           <p className="text-[11px] text-white/45 mt-0.5">
             vs {match.opponentName} · {formatDateTR(match.date)}
           </p>
@@ -148,10 +148,10 @@ const ScoreSheet: React.FC<{
           ) : proposal ? (
             <div className="mt-4">
               <div className="rounded-2xl bg-white/4 border border-white/8 p-4 text-center">
-                <div className="text-[10px] font-black uppercase tracking-widest text-white/40">
+                <div className="text-[10px] font-extrabold uppercase tracking-widest text-white/40">
                   Önerilen Skor
                 </div>
-                <div className="text-3xl font-black mt-1 tabular-nums">{propUs} - {propThem}</div>
+                <div className="text-3xl font-extrabold mt-1 tabular-nums">{propUs} - {propThem}</div>
                 <div className="text-[10px] text-white/35 mt-1">({teamShort} - Rakip)</div>
               </div>
               {proposal.proposedBy === userId ? (
@@ -162,7 +162,7 @@ const ScoreSheet: React.FC<{
                 <button
                   onClick={approve}
                   disabled={busy}
-                  className="w-full mt-3 min-h-[48px] rounded-2xl bg-[#39FF14] text-[#0A0E14] font-black text-sm flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-50"
+                  className="w-full mt-3 min-h-[48px] rounded-2xl bg-[#39FF14] text-[#0A0E14] font-extrabold text-sm flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-50"
                 >
                   {busy ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />} Skoru Onayla
                 </button>
@@ -176,9 +176,9 @@ const ScoreSheet: React.FC<{
                   { label: 'Rakip', value: them, set: setThem },
                 ] as const).map((f, i) => (
                   <React.Fragment key={f.label}>
-                    {i === 1 && <span className="text-xl font-black text-white/30 pb-3">-</span>}
+                    {i === 1 && <span className="text-xl font-extrabold text-white/30 pb-3">-</span>}
                     <div className="flex-1">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-white/40">
+                      <label className="text-[10px] font-extrabold uppercase tracking-widest text-white/40">
                         {f.label}
                       </label>
                       <input
@@ -186,7 +186,7 @@ const ScoreSheet: React.FC<{
                         value={f.value}
                         onChange={e => f.set(e.target.value.replace(/\D/g, '').slice(0, 2))}
                         placeholder="0"
-                        className="w-full h-14 mt-1.5 rounded-2xl bg-white/5 border border-white/10 text-center text-2xl font-black tabular-nums placeholder:text-white/20 focus:outline-none focus:border-[#39FF14]/50"
+                        className="w-full h-14 mt-1.5 rounded-2xl bg-white/5 border border-white/10 text-center text-2xl font-extrabold tabular-nums placeholder:text-white/20 focus:outline-none focus:border-[#39FF14]/50"
                       />
                     </div>
                   </React.Fragment>
@@ -198,7 +198,7 @@ const ScoreSheet: React.FC<{
               <button
                 onClick={submit}
                 disabled={busy || us === '' || them === ''}
-                className="w-full mt-3 min-h-[48px] rounded-2xl bg-[#39FF14] text-[#0A0E14] font-black text-sm flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-40"
+                className="w-full mt-3 min-h-[48px] rounded-2xl bg-[#39FF14] text-[#0A0E14] font-extrabold text-sm flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-40"
               >
                 {busy ? <Loader2 size={15} className="animate-spin" /> : null} Skor Öner
               </button>
@@ -275,7 +275,7 @@ const InviteSheet: React.FC<{
     <BottomSheet open={open} onClose={onClose} ariaLabel="Takıma davet et">
       <div className="pb-6">
         <div className="flex items-baseline justify-between">
-          <h3 className="text-base font-black">Kadroya Davet Et</h3>
+          <h3 className="text-base font-extrabold">Kadroya Davet Et</h3>
           <span className="text-[10px] font-bold text-white/40">{openSlots} yer kaldı</span>
         </div>
 
@@ -289,7 +289,7 @@ const InviteSheet: React.FC<{
           Davet Linkini Paylaş
         </button>
 
-        <div className="text-[10px] font-black uppercase tracking-widest text-white/40 mt-4 mb-2">
+        <div className="text-[10px] font-extrabold uppercase tracking-widest text-white/40 mt-4 mb-2">
           Arkadaşların
         </div>
         {friends === null ? (
@@ -317,7 +317,7 @@ const InviteSheet: React.FC<{
                     <button
                       onClick={() => invite(f.friend_id)}
                       disabled={busyId === f.friend_id || openSlots === 0}
-                      className="h-9 px-3 rounded-xl bg-[#39FF14] text-[#0A0E14] text-[11px] font-black active:scale-95 disabled:opacity-40"
+                      className="h-9 px-3 rounded-xl bg-[#39FF14] text-[#0A0E14] text-[11px] font-extrabold active:scale-95 disabled:opacity-40"
                     >
                       {busyId === f.friend_id ? '…' : 'Davet Et'}
                     </button>
@@ -543,7 +543,7 @@ const TeamDetailView: React.FC<TeamDetailViewProps> = ({ onBack, onNavigate }) =
             <>
               <TeamCrest config={team.crest_config} color1={team.color1} color2={team.color2} size={44} />
               <div className="flex-1 min-w-0 ml-1">
-                <h1 className="text-xl font-black italic truncate">{team.name}</h1>
+                <h1 className="text-xl font-extrabold italic truncate">{team.name}</h1>
                 <p className="text-[11px] text-white/45 truncate">
                   {teamShort} · {formatLabel(team.format)}
                   {team.city ? ` · ${team.city}` : ''} · {team.member_count} oyuncu
@@ -614,19 +614,19 @@ const TeamDetailView: React.FC<TeamDetailViewProps> = ({ onBack, onNavigate }) =
                       style={{ background: `linear-gradient(135deg, ${c1}1f, transparent 60%)` }}
                     >
                       <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-black uppercase tracking-widest text-white/40">
+                        <span className="text-[10px] font-extrabold uppercase tracking-widest text-white/40">
                           Sıradaki Maç
                         </span>
-                        <span className="text-[10px] font-black px-2 py-1 rounded-full bg-[#39FF14]/10 text-[#39FF14]">
+                        <span className="text-[10px] font-extrabold px-2 py-1 rounded-full bg-[#39FF14]/10 text-[#39FF14]">
                           ⏱ {countdownLabel(nextMatch.date)}
                         </span>
                       </div>
                       <div className="flex items-center gap-2.5 mt-3">
                         <TeamCrest config={team.crest_config} color1={team.color1} color2={team.color2} size={34} />
-                        <span className="text-sm font-black italic">{teamShort}</span>
-                        <span className="text-white/30 text-xs font-black px-1">vs</span>
+                        <span className="text-sm font-extrabold italic">{teamShort}</span>
+                        <span className="text-white/30 text-xs font-extrabold px-1">vs</span>
                         <span
-                          className="w-9 h-9 rounded-xl flex items-center justify-center font-black text-[10px] border border-white/10"
+                          className="w-9 h-9 rounded-xl flex items-center justify-center font-extrabold text-[10px] border border-white/10"
                           style={{ backgroundColor: `${nextMatch.opponentColor}33` }}
                         >
                           {nextMatch.opponentShort}
@@ -656,7 +656,7 @@ const TeamDetailView: React.FC<TeamDetailViewProps> = ({ onBack, onNavigate }) =
                   {/* Mini istatistik + form */}
                   <div>
                     <div className="flex items-center justify-between mb-2">
-                      <h3 className="text-[10px] font-black uppercase tracking-widest text-white/40">
+                      <h3 className="text-[10px] font-extrabold uppercase tracking-widest text-white/40">
                         {team.wins}G · {team.draws}B · {team.losses}M
                       </h3>
                       <FormBadge form={form} winColor={c1} />
@@ -694,7 +694,7 @@ const TeamDetailView: React.FC<TeamDetailViewProps> = ({ onBack, onNavigate }) =
                   {/* Yeni takım: sıradaki adımlar (Spec §3.8 Genel) */}
                   {team.member_count <= 2 && (history?.length ?? 0) === 0 && (
                     <div className="rounded-2xl bg-white/4 border border-white/8 p-4">
-                      <h3 className="text-[10px] font-black uppercase tracking-widest text-white/40 mb-2.5">
+                      <h3 className="text-[10px] font-extrabold uppercase tracking-widest text-white/40 mb-2.5">
                         Sıradaki Adımlar
                       </h3>
                       <div className="space-y-2">
@@ -751,16 +751,16 @@ const TeamDetailView: React.FC<TeamDetailViewProps> = ({ onBack, onNavigate }) =
                       return (
                         <div key={t.id} className="rounded-2xl bg-white/4 border border-white/6 p-3.5">
                           <div className="flex items-center gap-2">
-                            <span className="text-sm font-black truncate flex-1">
+                            <span className="text-sm font-extrabold truncate flex-1">
                               {t.name || 'Adsız Taktik'}
                             </span>
                             {t.is_active && (
-                              <span className="shrink-0 text-[9px] font-black px-2 py-0.5 rounded-full bg-[#39FF14]/12 text-[#39FF14]">
+                              <span className="shrink-0 text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-[#39FF14]/12 text-[#39FF14]">
                                 AKTİF
                               </span>
                             )}
                             {pending && (
-                              <span className="shrink-0 text-[9px] font-black px-2 py-0.5 rounded-full bg-amber-400/10 text-amber-400">
+                              <span className="shrink-0 text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-amber-400/10 text-amber-400">
                                 Onay bekliyor
                               </span>
                             )}
@@ -769,7 +769,7 @@ const TeamDetailView: React.FC<TeamDetailViewProps> = ({ onBack, onNavigate }) =
                             {t.formation && <span className="font-semibold">{t.formation}</span>}
                             {/* Taktik kendi boyunu korur — format rozeti (Spec §3.8) */}
                             {t.size && (
-                              <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-white/8 text-white/50">
+                              <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-white/8 text-white/50">
                                 {formatLabel(t.size)}
                               </span>
                             )}
@@ -780,7 +780,7 @@ const TeamDetailView: React.FC<TeamDetailViewProps> = ({ onBack, onNavigate }) =
                             <div className="mt-2.5">
                               <div className="flex items-center justify-between text-[10px] mb-1">
                                 <span className="text-white/45 font-bold uppercase tracking-widest">Güven</span>
-                                <span className="font-black text-[#39FF14]">%{Math.round(t.avg_vote)} · {t.vote_count} oy</span>
+                                <span className="font-extrabold text-[#39FF14]">%{Math.round(t.avg_vote)} · {t.vote_count} oy</span>
                               </div>
                               <div className="h-1.5 rounded-full bg-white/8 overflow-hidden">
                                 <div className="h-full bg-[#39FF14] rounded-full transition-all" style={{ width: `${Math.min(100, Math.max(3, Math.round(t.avg_vote)))}%` }} />
@@ -795,7 +795,7 @@ const TeamDetailView: React.FC<TeamDetailViewProps> = ({ onBack, onNavigate }) =
                                 <button
                                   key={o.v}
                                   onClick={() => voteOnTactic(t, o.v)}
-                                  className={`flex-1 h-8 rounded-lg text-[11px] font-black transition-all active:scale-95 ${t.my_vote === o.v ? 'bg-[#39FF14] text-black' : 'bg-white/6 text-white/55 hover:bg-white/10'}`}
+                                  className={`flex-1 h-8 rounded-lg text-[11px] font-extrabold transition-all active:scale-95 ${t.my_vote === o.v ? 'bg-[#39FF14] text-black' : 'bg-white/6 text-white/55 hover:bg-white/10'}`}
                                 >
                                   {o.l}
                                 </button>
@@ -810,14 +810,14 @@ const TeamDetailView: React.FC<TeamDetailViewProps> = ({ onBack, onNavigate }) =
                                 <button
                                   onClick={() => approveT(t)}
                                   disabled={tacticBusy === t.id}
-                                  className="flex-1 h-10 rounded-xl bg-[#39FF14]/12 border border-[#39FF14]/30 text-[#39FF14] text-xs font-black active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-1.5"
+                                  className="flex-1 h-10 rounded-xl bg-[#39FF14]/12 border border-[#39FF14]/30 text-[#39FF14] text-xs font-extrabold active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-1.5"
                                 >
                                   <Check size={14} /> {tacticBusy === t.id ? '…' : 'Onayla'}
                                 </button>
                                 <button
                                   onClick={() => rejectT(t)}
                                   disabled={tacticBusy === t.id}
-                                  className="h-10 px-4 rounded-xl bg-red-500/10 border border-red-500/25 text-red-400 text-xs font-black active:scale-95 disabled:opacity-50"
+                                  className="h-10 px-4 rounded-xl bg-red-500/10 border border-red-500/25 text-red-400 text-xs font-extrabold active:scale-95 disabled:opacity-50"
                                 >
                                   Reddet
                                 </button>
@@ -840,7 +840,7 @@ const TeamDetailView: React.FC<TeamDetailViewProps> = ({ onBack, onNavigate }) =
                                   <button
                                     onClick={() => activateTactic(t)}
                                     disabled={tacticBusy === t.id}
-                                    className="h-10 px-3 rounded-xl bg-[#39FF14]/10 border border-[#39FF14]/25 text-[#39FF14] text-xs font-black active:scale-95 disabled:opacity-50"
+                                    className="h-10 px-3 rounded-xl bg-[#39FF14]/10 border border-[#39FF14]/25 text-[#39FF14] text-xs font-extrabold active:scale-95 disabled:opacity-50"
                                   >
                                     {tacticBusy === t.id ? '…' : 'Aktif Yap'}
                                   </button>
@@ -875,13 +875,13 @@ const TeamDetailView: React.FC<TeamDetailViewProps> = ({ onBack, onNavigate }) =
                   <div className="space-y-4">
                     {nextMatch && (
                       <div>
-                        <h3 className="text-[10px] font-black uppercase tracking-widest text-white/40 mb-2">
+                        <h3 className="text-[10px] font-extrabold uppercase tracking-widest text-white/40 mb-2">
                           Yaklaşan
                         </h3>
                         <div className="rounded-2xl bg-white/4 border border-white/6 p-3">
                           <div className="flex items-center gap-3">
                             <span
-                              className="w-9 h-9 rounded-xl flex items-center justify-center font-black text-[10px] border border-white/10 shrink-0"
+                              className="w-9 h-9 rounded-xl flex items-center justify-center font-extrabold text-[10px] border border-white/10 shrink-0"
                               style={{ backgroundColor: `${nextMatch.opponentColor}33` }}
                             >
                               {nextMatch.opponentShort}
@@ -893,7 +893,7 @@ const TeamDetailView: React.FC<TeamDetailViewProps> = ({ onBack, onNavigate }) =
                                 {nextMatch.location ? ` · ${nextMatch.location}` : ''}
                               </div>
                             </div>
-                            <span className="text-[10px] font-black px-2 py-1 rounded-full bg-[#39FF14]/10 text-[#39FF14] shrink-0">
+                            <span className="text-[10px] font-extrabold px-2 py-1 rounded-full bg-[#39FF14]/10 text-[#39FF14] shrink-0">
                               {countdownLabel(nextMatch.date)}
                             </span>
                           </div>
@@ -917,7 +917,7 @@ const TeamDetailView: React.FC<TeamDetailViewProps> = ({ onBack, onNavigate }) =
                               {isAdmin && (
                                 <button
                                   onClick={() => setAssignOpen(true)}
-                                  className="h-8 px-2.5 rounded-lg bg-white/6 border border-white/10 text-[10px] font-black text-white/70 active:scale-95 shrink-0"
+                                  className="h-8 px-2.5 rounded-lg bg-white/6 border border-white/10 text-[10px] font-extrabold text-white/70 active:scale-95 shrink-0"
                                 >
                                   {assignedPlan ? 'Değiştir' : 'Taktik Ata'}
                                 </button>
@@ -937,7 +937,7 @@ const TeamDetailView: React.FC<TeamDetailViewProps> = ({ onBack, onNavigate }) =
                       />
                     ) : (
                       <div>
-                        <h3 className="text-[10px] font-black uppercase tracking-widest text-white/40 mb-2">
+                        <h3 className="text-[10px] font-extrabold uppercase tracking-widest text-white/40 mb-2">
                           Geçmiş
                         </h3>
                         <div className="space-y-2">
@@ -954,7 +954,7 @@ const TeamDetailView: React.FC<TeamDetailViewProps> = ({ onBack, onNavigate }) =
                                 )}
                                 <div className="flex items-center gap-3 rounded-2xl bg-white/4 border border-white/6 p-3">
                                   <span
-                                    className="w-8 h-8 rounded-xl flex items-center justify-center text-xs font-black shrink-0"
+                                    className="w-8 h-8 rounded-xl flex items-center justify-center text-xs font-extrabold shrink-0"
                                     style={
                                       unscored
                                         ? { backgroundColor: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.4)' }
@@ -977,12 +977,12 @@ const TeamDetailView: React.FC<TeamDetailViewProps> = ({ onBack, onNavigate }) =
                                   {unscored ? (
                                     <button
                                       onClick={() => setScoreMatch(m)}
-                                      className="h-9 px-3 rounded-xl bg-[#39FF14] text-[#0A0E14] text-[11px] font-black active:scale-95 shrink-0"
+                                      className="h-9 px-3 rounded-xl bg-[#39FF14] text-[#0A0E14] text-[11px] font-extrabold active:scale-95 shrink-0"
                                     >
                                       Skoru Gir
                                     </button>
                                   ) : (
-                                    <span className="text-base font-black tabular-nums shrink-0">
+                                    <span className="text-base font-extrabold tabular-nums shrink-0">
                                       {m.myScore} - {m.theirScore}
                                     </span>
                                   )}
@@ -1031,7 +1031,7 @@ const TeamDetailView: React.FC<TeamDetailViewProps> = ({ onBack, onNavigate }) =
           {/* Taktik atama sayfası — yalnız ONAYLI taktikler (sunucu da doğrular) */}
           <BottomSheet open={assignOpen} onClose={() => setAssignOpen(false)} ariaLabel="Maça taktik ata">
             <div className="pb-6">
-              <h3 className="text-base font-black">Maç Planını Seç</h3>
+              <h3 className="text-base font-extrabold">Maç Planını Seç</h3>
               <p className="text-[11px] text-white/45 mt-0.5">
                 {nextMatch ? `vs ${nextMatch.opponentName} · ${formatDateTR(nextMatch.date)}` : ''}
               </p>

@@ -649,7 +649,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
             className="w-11 h-11 rounded-full bg-white/5 border border-white/5 flex items-center justify-center active:scale-95 transition-transform">
             <ChevronLeft size={20} />
           </button>
-          <h1 className="absolute left-1/2 -translate-x-1/2 text-base font-black uppercase tracking-[0.16em]">Maç Kur</h1>
+          <h1 className="absolute left-1/2 -translate-x-1/2 text-base font-extrabold uppercase tracking-[0.16em]">Maç Kur</h1>
         </div>
       </header>
 
@@ -662,12 +662,12 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
               <Info size={15} />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-[11.5px] font-black leading-tight">{banner.title}</p>
+              <p className="text-[11.5px] font-extrabold leading-tight">{banner.title}</p>
               <p className="text-[10px] font-bold mt-0.5" style={{ color: banner.tone }}>{banner.sub}</p>
             </div>
             {banner.btn && (
               <button onClick={banner.act}
-                className="shrink-0 min-h-[36px] px-3.5 rounded-[10px] bg-[#39FF14] text-[#0A0E14] text-[11px] font-black active:scale-95 transition-transform">
+                className="shrink-0 min-h-[36px] px-3.5 rounded-[10px] bg-[#39FF14] text-[#0A0E14] text-[11px] font-extrabold active:scale-95 transition-transform">
                 {banner.btn}
               </button>
             )}
@@ -705,7 +705,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
             <div className="flex flex-col items-center gap-3.5 text-center px-4 py-7 rounded-3xl border border-dashed border-white/[0.14] bg-white/[0.02]">
               <div className="w-14 h-14 rounded-[18px] bg-white/5 text-white/35 flex items-center justify-center"><MapPin size={26} /></div>
               <div>
-                <h2 className="text-[19px] font-black tracking-tight">Bölgende henüz onaylı saha yok</h2>
+                <h2 className="text-[19px] font-extrabold tracking-tight">Bölgende henüz onaylı saha yok</h2>
                 <p className="mt-2 text-[12.5px] font-semibold leading-relaxed text-white/45">Burada onaylı saha olduğunda ilk sen bil. İstersen bildiğin bir sahayı öner — ekip iletişime geçsin.</p>
               </div>
             </div>
@@ -719,7 +719,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
               className={`flex items-center gap-3 rounded-[20px] border p-4 text-left min-h-[56px] active:scale-[0.99] transition-all ${notified ? 'border-[#39FF14]/40 bg-[#39FF14]/[0.07]' : 'border-white/10 bg-white/[0.025]'}`}>
               <div className={`w-[38px] h-[38px] rounded-[13px] shrink-0 flex items-center justify-center ${notified ? 'bg-[#39FF14]/15 text-[#39FF14]' : 'bg-white/5 text-white/40'}`}><Bell size={17} /></div>
               <div className="flex-1 min-w-0">
-                <p className="text-[12.5px] font-black">{notified ? 'Haber listesindesin' : 'Saha açılınca haber ver'}</p>
+                <p className="text-[12.5px] font-extrabold">{notified ? 'Haber listesindesin' : 'Saha açılınca haber ver'}</p>
                 <p className={`mt-0.5 text-[10.5px] font-bold ${notified ? 'text-[#39FF14]' : 'text-white/40'}`}>{notified ? 'Kaydedildi — ilk onaylı sahada bildirim gelir' : 'Tek dokunuş · istediğinde çıkarsın'}</p>
               </div>
             </button>
@@ -727,7 +727,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
               className="flex items-center gap-3 rounded-[20px] border border-white/10 bg-white/[0.025] p-4 text-left min-h-[56px] active:scale-[0.99] transition-transform">
               <div className="w-[38px] h-[38px] rounded-[13px] shrink-0 flex items-center justify-center bg-white/5 text-white/50"><Plus size={17} /></div>
               <div className="flex-1 min-w-0">
-                <p className="text-[12.5px] font-black">Bildiğin bir sahayı öner</p>
+                <p className="text-[12.5px] font-extrabold">Bildiğin bir sahayı öner</p>
                 <p className="mt-0.5 text-[10.5px] font-bold text-white/40">Saha adı + iletişim yeter · ekip arar</p>
               </div>
             </button>
@@ -746,7 +746,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                       showToast('Önerin alındı — teşekkürler! ⚽', 'success');
                     } catch { showToast('Gönderilemedi, tekrar dene.', 'error'); }
                   }}
-                  className="h-12 rounded-xl bg-[#39FF14] text-[#0A0E14] text-xs font-black uppercase tracking-widest active:scale-95 transition-transform">
+                  className="h-12 rounded-xl bg-[#39FF14] text-[#0A0E14] text-xs font-extrabold uppercase tracking-widest active:scale-95 transition-transform">
                   Gönder
                 </button>
               </div>
@@ -762,17 +762,17 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-baseline gap-2">
-                    <span className="text-[23px] font-black italic tracking-tight">{format}</span>
-                    <span className="text-[10.5px] font-black text-[#FACC15]">{per * 2} oyuncu</span>
+                    <span className="text-[23px] font-extrabold italic tracking-tight">{format}</span>
+                    <span className="text-[10.5px] font-extrabold text-[#FACC15]">{per * 2} oyuncu</span>
                   </div>
                   <p className="mt-1 text-[12.5px] font-extrabold truncate">{venueTxt}</p>
                   <p className="mt-0.5 text-[11.5px] font-semibold text-white/45">{whenTxt}</p>
                 </div>
                 <button onClick={() => { buzz(8); setPriceOpen(v => !v); }} className="shrink-0 text-right flex flex-col items-end gap-1">
-                  <span className="font-numeric text-[26px] font-black leading-none text-[#39FF14]">
+                  <span className="font-numeric text-[26px] font-extrabold leading-none text-[#39FF14]">
                     {perPerson != null ? `${fmtTL(perPerson)}₺` : '—'}
                   </span>
-                  <span className="flex items-center gap-1 text-[9.5px] font-black uppercase tracking-[0.12em] text-white/[0.38]">
+                  <span className="flex items-center gap-1 text-[9.5px] font-extrabold uppercase tracking-[0.12em] text-white/[0.38]">
                     Kişi başı <ChevronDown size={11} className={`transition-transform ${priceOpen ? 'rotate-180' : ''}`} />
                   </span>
                 </button>
@@ -799,7 +799,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
             <section className="flex flex-col gap-3">
               <div className="flex items-center gap-2.5">
                 <span className="w-5 h-5 rounded-full bg-[#39FF14]/[0.12] border border-[#39FF14]/30 text-[#39FF14] text-[10px] font-bold font-numeric flex items-center justify-center">1</span>
-                <span className="text-[11px] font-black uppercase tracking-[0.14em] text-gray-500">Saha</span>
+                <span className="text-[11px] font-extrabold uppercase tracking-[0.14em] text-gray-500">Saha</span>
                 <span className="ml-auto text-[10px] font-bold text-white/30">
                   {q.trim() ? `${filtered.length} sonuç` : `${Math.min(facilities.length, MAX_FACILITIES)} tesis${facilities.length > MAX_FACILITIES ? ' · gerisi aramada' : ''}`}
                 </span>
@@ -812,11 +812,11 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                     {fac?.image ? <img src={fac.image} alt="" className="w-full h-full object-cover" /> : <Lock size={18} className="text-[#39FF14]/60" />}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-[13px] font-black truncate">{venueTxt}</p>
+                    <p className="text-[13px] font-extrabold truncate">{venueTxt}</p>
                     <p className="mt-0.5 text-[10.5px] font-bold text-[#39FF14]">Rezervasyonundan kilitlendi · {whenTxt}</p>
                   </div>
                   <button onClick={() => { setSeed(null); setSelTime(null); }}
-                    className="shrink-0 min-h-[36px] px-3 rounded-[10px] border border-white/[0.14] text-white/60 text-[10.5px] font-black active:scale-95 transition-transform">
+                    className="shrink-0 min-h-[36px] px-3 rounded-[10px] border border-white/[0.14] text-white/60 text-[10.5px] font-extrabold active:scale-95 transition-transform">
                     Değiştir
                   </button>
                 </div>
@@ -845,11 +845,11 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                               </span>
                             )}
                             {!f.hasTariff && (
-                              <span className="absolute bottom-1.5 left-1.5 text-[8px] font-black uppercase tracking-wider bg-black/70 text-[#FACC15] rounded-md px-1.5 py-0.5">Tarife yok</span>
+                              <span className="absolute bottom-1.5 left-1.5 text-[8px] font-extrabold uppercase tracking-wider bg-black/70 text-[#FACC15] rounded-md px-1.5 py-0.5">Tarife yok</span>
                             )}
                           </div>
                           <div className="px-2.5 pt-2.5 pb-3">
-                            <p className="text-[12.5px] font-black truncate">{f.name}</p>
+                            <p className="text-[12.5px] font-extrabold truncate">{f.name}</p>
                             <p className="mt-0.5 text-[10px] font-bold text-white/[0.42] truncate">{[f.city, f.district].filter(Boolean).join(' · ') || '—'}</p>
                             <p className={`mt-1.5 text-[10px] font-extrabold ${on ? 'text-[#39FF14]' : 'text-white/[0.32]'}`}>
                               {f.courts.length} saha{f.courts.some(c => c.basePrice > 0) ? ` · ${fmtTL(Math.min(...f.courts.filter(c => c.basePrice > 0).map(c => c.basePrice)))}₺'den` : ''}
@@ -861,7 +861,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                     <button onClick={() => searchRef.current?.focus()}
                       className="shrink-0 w-[72px] rounded-[20px] border border-dashed border-white/[0.14] text-white/45 flex flex-col items-center justify-center gap-2 px-2 active:scale-95 transition-transform">
                       <Search size={17} />
-                      <span className="text-[9.5px] font-black leading-tight text-center">Tümünü<br />ara</span>
+                      <span className="text-[9.5px] font-extrabold leading-tight text-center">Tümünü<br />ara</span>
                     </button>
                   </div>
 
@@ -882,11 +882,11 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                             </span>
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2">
-                                <span className={`text-[12.5px] font-black truncate ${on ? 'text-[#39FF14]' : ''}`}>{c.name}</span>
-                                <span className={`shrink-0 text-[8.5px] font-black uppercase tracking-wider rounded-md px-1.5 py-0.5 ${c.courtType === 'CLOSED' ? 'bg-blue-400/[0.14] text-blue-400' : 'bg-[#39FF14]/[0.12] text-[#39FF14]'}`}>
+                                <span className={`text-[12.5px] font-extrabold truncate ${on ? 'text-[#39FF14]' : ''}`}>{c.name}</span>
+                                <span className={`shrink-0 text-[8.5px] font-extrabold uppercase tracking-wider rounded-md px-1.5 py-0.5 ${c.courtType === 'CLOSED' ? 'bg-blue-400/[0.14] text-blue-400' : 'bg-[#39FF14]/[0.12] text-[#39FF14]'}`}>
                                   {c.courtType === 'CLOSED' ? 'Kapalı' : 'Açık'}
                                 </span>
-                                {c.sizeLabel && <span className="shrink-0 text-[8.5px] font-black uppercase tracking-wider rounded-md px-1.5 py-0.5 bg-white/[0.06] text-white/50">{c.sizeLabel.slice(0, 8)}</span>}
+                                {c.sizeLabel && <span className="shrink-0 text-[8.5px] font-extrabold uppercase tracking-wider rounded-md px-1.5 py-0.5 bg-white/[0.06] text-white/50">{c.sizeLabel.slice(0, 8)}</span>}
                               </div>
                               <p className="mt-1 text-[10px] font-bold text-white/40">
                                 {c.minCapacity === c.maxCapacity
@@ -895,7 +895,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                               </p>
                             </div>
                             {c.basePrice > 0 && (
-                              <span className={`font-numeric shrink-0 text-xs font-black ${on ? 'text-[#39FF14]' : 'text-white/50'}`}>{fmtTL(c.basePrice)}₺</span>
+                              <span className={`font-numeric shrink-0 text-xs font-extrabold ${on ? 'text-[#39FF14]' : 'text-white/50'}`}>{fmtTL(c.basePrice)}₺</span>
                             )}
                           </button>
                         );
@@ -911,7 +911,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
               <section className="flex flex-col gap-3">
                 <div className="flex items-center gap-2.5">
                   <span className="w-5 h-5 rounded-full bg-[#39FF14]/[0.12] border border-[#39FF14]/30 text-[#39FF14] text-[10px] font-bold font-numeric flex items-center justify-center">2</span>
-                  <span className="text-[11px] font-black uppercase tracking-[0.14em] text-gray-500">Ne zaman</span>
+                  <span className="text-[11px] font-extrabold uppercase tracking-[0.14em] text-gray-500">Ne zaman</span>
                   <span className="ml-auto text-[10px] font-bold text-white/30 font-numeric">{MO_LONG[dayDate.getMonth()]} {dayDate.getFullYear()}</span>
                 </div>
 
@@ -923,7 +923,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                     return (
                       <button key={i} onClick={() => pickDay(i)}
                         className={`shrink-0 w-[54px] h-[60px] rounded-2xl border flex flex-col items-center justify-center gap-0.5 transition-colors ${on ? 'bg-[#39FF14] border-[#39FF14]' : 'bg-white/[0.03] border-white/[0.09]'}`}>
-                        <span className={`text-[9px] font-black uppercase tracking-wide ${on ? 'text-[#0A0E14]/70' : 'text-white/50'}`}>
+                        <span className={`text-[9px] font-extrabold uppercase tracking-wide ${on ? 'text-[#0A0E14]/70' : 'text-white/50'}`}>
                           {i === 0 ? 'Bugün' : i === 1 ? 'Yarın' : WD[d.getDay()]}
                         </span>
                         <span className={`font-numeric text-base font-bold leading-tight ${on ? 'text-[#0A0E14]' : 'text-white'}`}>{d.getDate()}</span>
@@ -934,7 +934,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                   {daysLoaded < DAY_MAX && (
                     <button onClick={() => { buzz(10); setDaysLoaded(DAY_MAX); }}
                       className="shrink-0 w-16 h-[60px] rounded-2xl border border-dashed border-white/[0.14] text-white/45 flex flex-col items-center justify-center gap-0.5 active:scale-95 transition-transform">
-                      <span className="font-numeric text-xs font-black">+{DAY_MAX - daysLoaded}</span>
+                      <span className="font-numeric text-xs font-extrabold">+{DAY_MAX - daysLoaded}</span>
                       <span className="text-[8.5px] font-extrabold">gün daha</span>
                     </button>
                   )}
@@ -958,12 +958,12 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                           : 'bg-white/[0.03] border-white/[0.09] text-white/[0.78]'}`}>
                         {blocked && h.tariffOk ? 'Dolu' : h.time}
                         {h.deal && !on && !blocked && h.basePrice != null && h.total != null && h.basePrice > 0 && (
-                          <span className="absolute -top-[7px] -right-1 text-[8.5px] font-black text-[#0A0E14] bg-[#FACC15] rounded-md px-1 py-px">
+                          <span className="absolute -top-[7px] -right-1 text-[8.5px] font-extrabold text-[#0A0E14] bg-[#FACC15] rounded-md px-1 py-px">
                             −%{Math.round((1 - h.total / h.basePrice) * 100)}
                           </span>
                         )}
                         {h.night && !blocked && (
-                          <span className="absolute -top-[7px] -left-[3px] text-[8px] font-black uppercase tracking-wide text-[#0A0E14] bg-blue-400 rounded-md px-1 py-px">gece</span>
+                          <span className="absolute -top-[7px] -left-[3px] text-[8px] font-extrabold uppercase tracking-wide text-[#0A0E14] bg-blue-400 rounded-md px-1 py-px">gece</span>
                         )}
                       </button>
                     );
@@ -983,7 +983,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
             <section className="flex flex-col gap-3">
               <div className="flex items-center gap-2.5">
                 <span className="w-5 h-5 rounded-full bg-[#39FF14]/[0.12] border border-[#39FF14]/30 text-[#39FF14] text-[10px] font-bold font-numeric flex items-center justify-center">3</span>
-                <span className="text-[11px] font-black uppercase tracking-[0.14em] text-gray-500">Kaç kişi</span>
+                <span className="text-[11px] font-extrabold uppercase tracking-[0.14em] text-gray-500">Kaç kişi</span>
               </div>
               <div className="flex gap-2.5 overflow-x-auto -mx-4 px-4 pt-2 pb-1" style={{ scrollbarWidth: 'none' }}>
                 {court && Array.from({ length: Math.max(0, court.maxCapacity - court.minCapacity + 1) }, (_, i) => court.minCapacity + i).map(n => {
@@ -993,11 +993,11 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                   return (
                     <button key={val} onClick={() => { buzz(12); setFormat(val); }}
                       className={`relative shrink-0 w-[84px] h-[72px] rounded-[18px] border flex flex-col items-center justify-center gap-0.5 transition-colors ${on ? 'bg-[#39FF14]/[0.09] border-[#39FF14]/50' : 'bg-white/[0.03] border-white/[0.09]'}`}>
-                      <span className={`text-base font-black italic ${on ? 'text-[#39FF14]' : 'text-white'}`}>{val}</span>
+                      <span className={`text-base font-extrabold italic ${on ? 'text-[#39FF14]' : 'text-white'}`}>{val}</span>
                       <span className="text-[9px] font-bold text-white/[0.38]">{n * 2} oyuncu</span>
                       <span className={`font-numeric text-[10.5px] font-extrabold ${on ? 'text-[#39FF14]' : 'text-white/45'}`}>{p != null ? `${fmtTL(p)}₺` : '—'}</span>
                       {n === court.minCapacity && (
-                        <span className="absolute -top-2 left-1/2 -translate-x-1/2 text-[8px] font-black uppercase tracking-wide text-[#0A0E14] bg-[#FACC15] rounded-md px-1.5 py-0.5 whitespace-nowrap">Önerilen</span>
+                        <span className="absolute -top-2 left-1/2 -translate-x-1/2 text-[8px] font-extrabold uppercase tracking-wide text-[#0A0E14] bg-[#FACC15] rounded-md px-1.5 py-0.5 whitespace-nowrap">Önerilen</span>
                       )}
                     </button>
                   );
@@ -1012,14 +1012,14 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
 
             {/* Kimler katılabilir */}
             <section className="flex flex-col gap-3">
-              <span className="text-[11px] font-black uppercase tracking-[0.14em] text-gray-500">Kimler katılabilir</span>
+              <span className="text-[11px] font-extrabold uppercase tracking-[0.14em] text-gray-500">Kimler katılabilir</span>
               <div className="grid grid-cols-2 gap-2.5">
                 {([['OPEN', 'Herkese açık', 'Vitrinde görünür, boş kontenjan dolar'], ['PRIVATE', 'Kod ile', 'Sadece kodu paylaştığın kişiler']] as const).map(([id, label, sub]) => {
                   const on = (teamInvite ? 'PRIVATE' : visibility) === id;
                   return (
                     <button key={id} onClick={() => { buzz(10); setVisibility(id); if (id === 'OPEN') setTeamInvite(false); }}
                       className={`flex flex-col items-start gap-1.5 p-3.5 rounded-2xl border text-left min-h-[64px] transition-colors ${on ? 'bg-[#39FF14]/[0.08] border-[#39FF14]/[0.45]' : 'bg-white/[0.025] border-white/10'}`}>
-                      <span className={`text-xs font-black uppercase ${on ? 'text-[#39FF14]' : ''}`}>{label}</span>
+                      <span className={`text-xs font-extrabold uppercase ${on ? 'text-[#39FF14]' : ''}`}>{label}</span>
                       <span className="text-[9.5px] font-bold leading-snug text-white/40">{sub}</span>
                     </button>
                   );
@@ -1033,17 +1033,17 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
             {/* Kadro (opsiyonel) */}
             <section className="flex flex-col gap-3">
               <div className="flex items-center gap-2.5">
-                <span className="text-[11px] font-black uppercase tracking-[0.14em] text-gray-500">Kadro</span>
+                <span className="text-[11px] font-extrabold uppercase tracking-[0.14em] text-gray-500">Kadro</span>
                 <span className="text-[10px] font-bold text-white/[0.28]">opsiyonel</span>
               </div>
               <button onClick={() => setSheet('FRIENDS')}
                 className="flex items-center gap-3 rounded-[20px] border border-white/10 bg-white/[0.025] p-3.5 text-left min-h-[60px] active:scale-[0.99] transition-transform">
                 <div className="flex items-center">
-                  <div className="w-[34px] h-[34px] rounded-full bg-gradient-to-br from-[#1e2532] to-[#11151c] border-2 border-[#39FF14] flex items-center justify-center text-xs font-black">
+                  <div className="w-[34px] h-[34px] rounded-full bg-gradient-to-br from-[#1e2532] to-[#11151c] border-2 border-[#39FF14] flex items-center justify-center text-xs font-extrabold">
                     {(currentUserProfile?.name ?? 'S').charAt(0).toUpperCase()}
                   </div>
                   {invited.slice(0, 3).map(p => (
-                    <div key={p.id} className="w-[34px] h-[34px] -ml-2.5 rounded-full bg-gradient-to-br from-[#1e2532] to-[#11151c] border-2 border-[#0A0E14] flex items-center justify-center text-xs font-black text-white/80">
+                    <div key={p.id} className="w-[34px] h-[34px] -ml-2.5 rounded-full bg-gradient-to-br from-[#1e2532] to-[#11151c] border-2 border-[#0A0E14] flex items-center justify-center text-xs font-extrabold text-white/80">
                       {p.name.charAt(0).toUpperCase()}
                     </div>
                   ))}
@@ -1052,7 +1052,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                   </div>
                 </div>
                 <div className="flex-1 min-w-0 ml-1">
-                  <p className="text-xs font-black">{invited.length > 0 ? `Sen + ${invited.length} kişi çağrıldı` : 'Kadroya kimseyi çağırmadın'}</p>
+                  <p className="text-xs font-extrabold">{invited.length > 0 ? `Sen + ${invited.length} kişi çağrıldı` : 'Kadroya kimseyi çağırmadın'}</p>
                   <p className="mt-0.5 text-[10.5px] font-bold text-white/[0.42]">
                     {(teamInvite || visibility === 'PRIVATE')
                       ? `Kalan ${Math.max(0, per * 2 - 1 - invited.length)} kişi sadece kodla katılabilir`
@@ -1069,7 +1069,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                 className="flex items-center gap-3 rounded-[20px] border border-white/10 bg-white/[0.025] p-3.5 text-left min-h-[56px] active:scale-[0.99] transition-transform">
                 <div className="w-9 h-9 rounded-xl shrink-0 flex items-center justify-center bg-white/5 text-white/55"><ShieldCheck size={16} /></div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-black">
+                  <p className="text-xs font-extrabold">
                     {offers.length > 0
                       ? [offerCount('GK') ? `${offerOf('GK')?.all ? 'Tüm kaleciler' : `${offerCount('GK')} kaleci`}` : null,
                          offerCount('REF') ? `${offerOf('REF')?.all ? 'Tüm hakemler' : `${offerCount('REF')} hakem`}` : null]
@@ -1089,10 +1089,10 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
               className="flex items-center gap-3 rounded-[20px] border border-[#39FF14]/[0.18] bg-[#39FF14]/[0.04] p-3.5 text-left min-h-[56px] active:scale-[0.99] transition-transform">
               <Sparkles size={17} className="text-[#39FF14] shrink-0" />
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-black">Gerisi profilinden ayarlandı</p>
+                <p className="text-xs font-extrabold">Gerisi profilinden ayarlandı</p>
                 <p className="mt-1 text-[10.5px] font-bold text-white/[0.42] truncate">{age} · {gender} · {mental} · {selHour?.minutes ?? dayQuote?.slotDuration ?? 60} dk{title ? ` · "${title}"` : ''}</p>
               </div>
-              <span className="text-[11px] font-black text-[#39FF14] shrink-0">Değiştir</span>
+              <span className="text-[11px] font-extrabold text-[#39FF14] shrink-0">Değiştir</span>
             </button>
 
             {/* Kapora kuralı */}
@@ -1105,7 +1105,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                 <Lock size={17} />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-[12.5px] font-black">
+                <p className="text-[12.5px] font-extrabold">
                   {seeded ? 'Kapora yok — rezervasyon güvencesi zaten ödendi'
                     : deposit != null
                       ? missing > 0
@@ -1135,11 +1135,11 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
             <div className="rounded-[20px] border border-[#39FF14]/25 bg-[#39FF14]/[0.06] p-3.5 flex flex-col gap-2.5">
               <div className="flex items-center gap-2.5">
                 <span className="w-4 h-4 rounded-full border-2 border-[#39FF14]/25 border-t-[#39FF14] animate-spin shrink-0" />
-                <span className="text-xs font-black uppercase tracking-widest text-[#39FF14]">Yayınlanıyor</span>
+                <span className="text-xs font-extrabold uppercase tracking-widest text-[#39FF14]">Yayınlanıyor</span>
               </div>
               {[['Maç oluşturuldu', 'matches'], ['Saha kilitlendi', 'pitch_bookings'], ['Kapora bloke ediliyor', 'payment_intents']].map(([t, src], i) => (
                 <div key={src} className="flex items-center gap-2.5">
-                  <span className={`w-3 text-[11px] font-black shrink-0 ${pubStep > i ? 'text-[#39FF14]' : 'text-white/40'}`}>{pubStep > i ? '✓' : '⟳'}</span>
+                  <span className={`w-3 text-[11px] font-extrabold shrink-0 ${pubStep > i ? 'text-[#39FF14]' : 'text-white/40'}`}>{pubStep > i ? '✓' : '⟳'}</span>
                   <span className={`flex-1 text-[11px] font-bold ${pubStep > i ? 'text-[#39FF14]' : 'text-white/55'}`}>{t}</span>
                   <span className="font-numeric text-[8.5px] font-bold text-white/[0.28]">{src}</span>
                 </div>
@@ -1184,11 +1184,11 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
               </div>
               {/* Metin */}
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none px-16">
-                <span className="text-[12.5px] font-black uppercase tracking-[0.11em] text-[#39FF14] text-center"
+                <span className="text-[12.5px] font-extrabold uppercase tracking-[0.11em] text-[#39FF14] text-center"
                   style={{ opacity: Math.max(0, 1 - slide * 2.4) }}>
                   Kaydır → yayınla{deposit ? ' & kapora' : ''}
                 </span>
-                <span className="absolute text-[12.5px] font-black uppercase tracking-[0.14em] text-[#39FF14]"
+                <span className="absolute text-[12.5px] font-extrabold uppercase tracking-[0.14em] text-[#39FF14]"
                   style={{ opacity: slide >= 0.88 ? 1 : 0, transition: 'opacity .15s' }}>
                   Bırak ve yayınla
                 </span>
@@ -1214,7 +1214,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
             </div>
           ) : (
             <div className="h-16 rounded-[20px] border border-white/[0.07] bg-white/[0.02] flex items-center justify-center">
-              <span className="text-xs font-black uppercase tracking-[0.11em] text-white/25">
+              <span className="text-xs font-extrabold uppercase tracking-[0.11em] text-white/25">
                 {!selCourtId ? 'Önce saha seç' : !selTime ? 'Saat seç' : 'Bu saat kullanılamıyor'}
               </span>
             </div>
@@ -1235,7 +1235,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
             className="absolute inset-0 z-[60] bg-[#0A0E14] flex flex-col">
             <header className="shrink-0 pt-safe border-b border-white/5">
               <div className="px-5 py-4 flex items-center justify-between">
-                <h2 className="text-[17px] font-black italic uppercase tracking-tight">Tercihe Bağlı Detaylar</h2>
+                <h2 className="text-[17px] font-extrabold italic uppercase tracking-tight">Tercihe Bağlı Detaylar</h2>
                 <button onClick={() => setSheet(null)} aria-label="Kapat" className="w-[42px] h-[42px] rounded-full bg-white/5 border border-white/5 flex items-center justify-center"><X size={18} /></button>
               </div>
             </header>
@@ -1247,16 +1247,16 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                 </div>
 
                 <div className="flex flex-col gap-3">
-                  <p className="text-[10px] font-black uppercase tracking-[0.16em] text-gray-500">Görünürlük</p>
+                  <p className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-gray-500">Görünürlük</p>
                   <div className="grid grid-cols-2 gap-2.5">
                     <button onClick={() => { setVisibility('OPEN'); setTeamInvite(false); }}
                       className={`flex flex-col items-start gap-1.5 p-3.5 rounded-2xl border text-left ${(teamInvite ? 'PRIVATE' : visibility) === 'OPEN' ? 'bg-[#39FF14]/[0.09] border-[#39FF14]/50 text-[#39FF14]' : 'bg-white/[0.02] border-white/10'}`}>
-                      <span className="text-xs font-black uppercase">Herkese açık</span>
+                      <span className="text-xs font-extrabold uppercase">Herkese açık</span>
                       <span className="text-[9.5px] font-bold text-white/40">Vitrinde herkes görür ve katılabilir</span>
                     </button>
                     <button onClick={() => setVisibility('PRIVATE')}
                       className={`flex flex-col items-start gap-1.5 p-3.5 rounded-2xl border text-left ${(teamInvite ? 'PRIVATE' : visibility) === 'PRIVATE' ? 'bg-[#FACC15]/[0.09] border-[#FACC15]/50 text-[#FACC15]' : 'bg-white/[0.02] border-white/10'}`}>
-                      <span className="text-xs font-black uppercase">Kod ile</span>
+                      <span className="text-xs font-extrabold uppercase">Kod ile</span>
                       <span className="text-[9.5px] font-bold text-white/40">Sadece paylaştığın kodla katılım</span>
                     </button>
                   </div>
@@ -1264,8 +1264,8 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
 
                 <div className="flex flex-col gap-3">
                   <div className="flex items-center justify-between">
-                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-gray-500">Oyun sertliği</p>
-                    <span className="text-[9px] font-black uppercase tracking-widest text-[#39FF14] bg-[#39FF14]/10 border border-[#39FF14]/25 rounded-full px-2 py-1">Profilinden</span>
+                    <p className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-gray-500">Oyun sertliği</p>
+                    <span className="text-[9px] font-extrabold uppercase tracking-widest text-[#39FF14] bg-[#39FF14]/10 border border-[#39FF14]/25 rounded-full px-2 py-1">Profilinden</span>
                   </div>
                   <div className="flex gap-2.5">
                     {MENTALS.map(m => {
@@ -1277,7 +1277,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                             background: on ? `${m.color}26` : `${m.color}0D`,
                             borderColor: on ? `${m.color}AA` : `${m.color}33`,
                           }}>
-                          <span className="text-xs font-black italic uppercase" style={{ color: on ? '#fff' : m.color }}>{m.id}</span>
+                          <span className="text-xs font-extrabold italic uppercase" style={{ color: on ? '#fff' : m.color }}>{m.id}</span>
                           <span className="text-[9px] font-bold text-white/35">{m.sub}</span>
                         </button>
                       );
@@ -1287,29 +1287,29 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
 
                 <div className="flex flex-col gap-3">
                   <div className="flex items-center justify-between">
-                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-gray-500">Kimler katılabilir</p>
-                    <span className="text-[9px] font-black uppercase tracking-widest text-[#39FF14] bg-[#39FF14]/10 border border-[#39FF14]/25 rounded-full px-2 py-1">Otomatik</span>
+                    <p className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-gray-500">Kimler katılabilir</p>
+                    <span className="text-[9px] font-extrabold uppercase tracking-widest text-[#39FF14] bg-[#39FF14]/10 border border-[#39FF14]/25 rounded-full px-2 py-1">Otomatik</span>
                   </div>
                   <div className="flex gap-2">
                     {GENDERS.map(g => (
-                      <button key={g} onClick={() => setGender(g)} className={`flex-1 h-11 rounded-[14px] border text-[11px] font-black ${chip(gender === g)}`}>{g}</button>
+                      <button key={g} onClick={() => setGender(g)} className={`flex-1 h-11 rounded-[14px] border text-[11px] font-extrabold ${chip(gender === g)}`}>{g}</button>
                     ))}
                   </div>
                   <div className="flex gap-2 overflow-x-auto pb-0.5" style={{ scrollbarWidth: 'none' }}>
                     {AGES.map(a => (
-                      <button key={a} onClick={() => setAge(a)} className={`shrink-0 px-4 py-2.5 rounded-[14px] border text-[11px] font-black whitespace-nowrap font-numeric ${chip(age === a)}`}>{a}</button>
+                      <button key={a} onClick={() => setAge(a)} className={`shrink-0 px-4 py-2.5 rounded-[14px] border text-[11px] font-extrabold whitespace-nowrap font-numeric ${chip(age === a)}`}>{a}</button>
                     ))}
                   </div>
                 </div>
 
                 <div className="flex flex-col gap-3">
-                  <p className="text-[10px] font-black uppercase tracking-[0.16em] text-gray-500">Rakip taraf</p>
+                  <p className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-gray-500">Rakip taraf</p>
                   <button onClick={() => setTeamInvite(v => !v)}
                     className={`flex items-center justify-between gap-3 p-3.5 rounded-[18px] border text-left ${teamInvite ? 'bg-[#FF4D4D]/10 border-[#FF4D4D]/50' : 'bg-white/[0.03] border-white/10'}`}>
                     <div className="flex items-center gap-3 min-w-0">
                       <div className="w-10 h-10 rounded-[13px] bg-[#FF4D4D]/[0.12] text-[#FF4D4D] flex items-center justify-center shrink-0"><Users size={19} /></div>
                       <div className="min-w-0">
-                        <p className="text-[13px] font-black">Rakip takımı ben davet edeceğim</p>
+                        <p className="text-[13px] font-extrabold">Rakip takımı ben davet edeceğim</p>
                         <p className="mt-0.5 text-[10px] font-bold text-white/40">Maç kod ile kapalı hale gelir</p>
                       </div>
                     </div>
@@ -1320,7 +1320,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                 </div>
 
                 <div className="flex flex-col gap-3">
-                  <p className="text-[10px] font-black uppercase tracking-[0.16em] text-gray-500">
+                  <p className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-gray-500">
                     Maç adı <span className="normal-case tracking-normal font-medium text-white/25">(opsiyonel)</span>
                   </p>
                   <input value={title} onChange={e => setTitle(e.target.value.slice(0, 40))} placeholder="Perşembe Derbisi…"
@@ -1328,7 +1328,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                 </div>
 
                 <button onClick={() => setSheet(null)}
-                  className="w-full h-14 rounded-[18px] bg-[#FACC15] text-[#0A0E14] text-[15px] font-black italic uppercase shadow-[0_0_26px_rgba(250,204,21,0.28)] active:scale-[0.98] transition-transform">
+                  className="w-full h-14 rounded-[18px] bg-[#FACC15] text-[#0A0E14] text-[15px] font-extrabold italic uppercase shadow-[0_0_26px_rgba(250,204,21,0.28)] active:scale-[0.98] transition-transform">
                   Onayla
                 </button>
               </div>
@@ -1342,7 +1342,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
             className="absolute inset-0 z-[60] bg-[#0A0E14] flex flex-col">
             <header className="shrink-0 pt-safe border-b border-white/5">
               <div className="px-5 py-4 flex items-center justify-between">
-                <h2 className="text-[17px] font-black italic uppercase tracking-tight">Kadronu Çağır</h2>
+                <h2 className="text-[17px] font-extrabold italic uppercase tracking-tight">Kadronu Çağır</h2>
                 <button onClick={() => setSheet(null)} aria-label="Kapat" className="w-[42px] h-[42px] rounded-full bg-white/5 border border-white/5 flex items-center justify-center"><X size={18} /></button>
               </div>
             </header>
@@ -1352,11 +1352,11 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
               <div className="flex-1 flex flex-col items-center justify-center gap-4 px-8 text-center">
                 <div className="w-[78px] h-[78px] rounded-full border border-dashed border-white/[0.16] flex items-center justify-center text-white/30"><Users size={30} /></div>
                 <div>
-                  <p className="text-[17px] font-black">Henüz arkadaşın ya da takımın yok</p>
+                  <p className="text-[17px] font-extrabold">Henüz arkadaşın ya da takımın yok</p>
                   <p className="mt-2 text-[12.5px] leading-relaxed text-white/45">Sorun değil — maçı şimdi kur, boş kontenjanlar Top Oyna vitrininde yayınlansın. Yayın sonrası bağlantıyı paylaşarak da çağırabilirsin.</p>
                 </div>
                 <button onClick={() => setSheet(null)}
-                  className="w-full h-[52px] rounded-2xl bg-[#39FF14] text-[#0A0E14] text-[13px] font-black uppercase tracking-wide shadow-[0_0_24px_rgba(57,255,20,0.24)] active:scale-95 transition-transform">
+                  className="w-full h-[52px] rounded-2xl bg-[#39FF14] text-[#0A0E14] text-[13px] font-extrabold uppercase tracking-wide shadow-[0_0_24px_rgba(57,255,20,0.24)] active:scale-95 transition-transform">
                   Vitrinde yayınla, sonra çağır
                 </button>
               </div>
@@ -1368,7 +1368,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                     {([['FRIENDS', `Arkadaşlar${friends.length ? ` · ${friends.length}` : ''}`],
                        ['TEAMS', `Takımlarım${teams.length ? ` · ${teams.length}` : ''}`]] as const).map(([id, label]) => (
                       <button key={id} onClick={() => { buzz(8); setSquadTab(id); }}
-                        className={`flex-1 h-[38px] rounded-xl text-[11px] font-black uppercase tracking-[0.06em] border transition-colors ${
+                        className={`flex-1 h-[38px] rounded-xl text-[11px] font-extrabold uppercase tracking-[0.06em] border transition-colors ${
                           squadTab === id ? 'bg-[#39FF14] border-[#39FF14] text-[#0A0E14]' : 'bg-white/[0.03] border-white/10 text-white/60'}`}>
                         {label}
                       </button>
@@ -1399,7 +1399,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                               source: 'FRIEND',
                             })}
                             className={`flex items-center gap-3 p-3 rounded-2xl border text-left ${on ? 'bg-[#39FF14]/[0.07] border-[#39FF14]/40' : 'bg-white/[0.025] border-white/[0.07]'}`}>
-                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#1e2532] to-[#11151c] border border-white/10 flex items-center justify-center text-sm font-black shrink-0 overflow-hidden">
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#1e2532] to-[#11151c] border border-white/10 flex items-center justify-center text-sm font-extrabold shrink-0 overflow-hidden">
                               {f.avatar_url ? <img src={f.avatar_url} alt="" className="w-full h-full object-cover" /> : (f.full_name ?? '?').charAt(0).toUpperCase()}
                             </div>
                             <div className="flex-1 min-w-0">
@@ -1427,7 +1427,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                         <div key={t.team_id} className="rounded-2xl border border-white/[0.07] bg-white/[0.02] overflow-hidden">
                           <button onClick={() => void toggleTeam(t.team_id)}
                             className="w-full flex items-center gap-3 p-3 text-left">
-                            <div className="w-10 h-10 rounded-xl flex items-center justify-center text-sm font-black shrink-0 border border-white/10"
+                            <div className="w-10 h-10 rounded-xl flex items-center justify-center text-sm font-extrabold shrink-0 border border-white/10"
                               style={{ background: `linear-gradient(135deg, ${t.color1 || '#1e2532'}, ${t.color2 || '#11151c'})` }}>
                               {(t.short_name || t.name || '?').charAt(0).toUpperCase()}
                             </div>
@@ -1450,7 +1450,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                                 return (
                                   <button key={m.id} onClick={() => toggleInvite(m)}
                                     className={`flex items-center gap-3 p-2.5 rounded-xl border text-left ${on ? 'bg-[#39FF14]/[0.07] border-[#39FF14]/40' : 'bg-white/[0.03] border-white/[0.06]'}`}>
-                                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#1e2532] to-[#11151c] border border-white/10 flex items-center justify-center text-xs font-black shrink-0">
+                                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#1e2532] to-[#11151c] border border-white/10 flex items-center justify-center text-xs font-extrabold shrink-0">
                                       {m.name.charAt(0).toUpperCase()}
                                     </div>
                                     <div className="flex-1 min-w-0">
@@ -1473,7 +1473,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
 
                 <div className="shrink-0 px-5 pt-3.5 pb-safe border-t border-white/5 bg-[#0A0E14]">
                   <button onClick={() => setSheet(null)}
-                    className="w-full h-14 rounded-[18px] bg-[#39FF14] text-[#0A0E14] text-sm font-black uppercase tracking-wide shadow-[0_0_26px_rgba(57,255,20,0.26)] active:scale-[0.98] transition-transform">
+                    className="w-full h-14 rounded-[18px] bg-[#39FF14] text-[#0A0E14] text-sm font-extrabold uppercase tracking-wide shadow-[0_0_26px_rgba(57,255,20,0.26)] active:scale-[0.98] transition-transform">
                     {invited.length > 0 ? `${invited.length} kişiyi çağır` : 'Kimseyi çağırma'}
                   </button>
                   <p className="mt-2 mb-1 text-center text-[10px] font-bold text-white/30">Davetler maç yayınlanınca bildirim olarak gider · slotlar satın almayla dolar</p>
@@ -1491,7 +1491,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
             <header className="shrink-0 pt-safe border-b border-white/5">
               <div className="px-5 py-4 flex items-center justify-between">
                 <div>
-                  <h2 className="text-[17px] font-black italic uppercase tracking-tight">Kaleci &amp; Hakem</h2>
+                  <h2 className="text-[17px] font-extrabold italic uppercase tracking-tight">Kaleci &amp; Hakem</h2>
                   <p className="mt-0.5 text-[10px] font-bold uppercase tracking-widest" style={{ color: providerTab === 'GK' ? '#39FF14' : '#FACC15' }}>
                     Çoklu teklif · ilk kabul eden alır
                   </p>
@@ -1505,7 +1505,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                     const n = offerCount(id);
                     return (
                       <button key={id} onClick={() => { buzz(8); setProviderTab(id); }}
-                        className={`flex-1 py-2.5 text-[11px] font-black rounded-xl transition-all flex items-center justify-center gap-2 ${on ? 'text-[#0A0E14]' : 'text-gray-500'}`}
+                        className={`flex-1 py-2.5 text-[11px] font-extrabold rounded-xl transition-all flex items-center justify-center gap-2 ${on ? 'text-[#0A0E14]' : 'text-gray-500'}`}
                         style={on ? { background: color } : {}}>
                         <Icon size={14} /> {label.toUpperCase()}{n > 0 ? ` · ${offerOf(id)?.all ? 'Tümü' : n}` : ''}
                       </button>
@@ -1531,7 +1531,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                           <Users size={18} />
                         </div>
                         <div className="text-left">
-                          <p className="text-sm font-black uppercase italic">Tümüne Gönder</p>
+                          <p className="text-sm font-extrabold uppercase italic">Tümüne Gönder</p>
                           <p className="text-[10px] text-white/45">Uygun tüm {providerTab === 'GK' ? 'kalecilere' : 'hakemlere'} teklif</p>
                         </div>
                       </div>
@@ -1555,7 +1555,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                             <button key={p.id} onClick={() => toggleProvider(providerTab, p.id)}
                               className="w-full flex items-center gap-3 rounded-2xl border p-3 text-left transition-all active:scale-[0.99]"
                               style={on ? { background: `${accent}12`, borderColor: `${accent}80` } : { background: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.06)' }}>
-                              <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 shrink-0 overflow-hidden flex items-center justify-center text-base font-black">
+                              <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 shrink-0 overflow-hidden flex items-center justify-center text-base font-extrabold">
                                 {p.avatar ? <img src={p.avatar} alt="" referrerPolicy="no-referrer" className="w-full h-full object-cover" /> : p.name.charAt(0).toUpperCase()}
                               </div>
                               <div className="flex-1 min-w-0">
@@ -1569,7 +1569,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                                 </div>
                               </div>
                               <div className="text-right shrink-0">
-                                <div className="font-numeric text-sm font-black" style={{ color: accent }}>{fmtTL(p.fee)}₺</div>
+                                <div className="font-numeric text-sm font-extrabold" style={{ color: accent }}>{fmtTL(p.fee)}₺</div>
                                 <div className="text-[8px] font-bold uppercase text-white/30 tracking-widest">bedel</div>
                               </div>
                               <span className="w-6 h-6 shrink-0 rounded-full border-2 flex items-center justify-center"
@@ -1593,7 +1593,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                 </p>
               )}
               <button onClick={() => setSheet(null)}
-                className="w-full h-14 rounded-[18px] bg-[#39FF14] text-[#0A0E14] text-sm font-black uppercase tracking-wide shadow-[0_0_26px_rgba(57,255,20,0.26)] active:scale-[0.98] transition-transform flex items-center justify-center gap-2">
+                className="w-full h-14 rounded-[18px] bg-[#39FF14] text-[#0A0E14] text-sm font-extrabold uppercase tracking-wide shadow-[0_0_26px_rgba(57,255,20,0.26)] active:scale-[0.98] transition-transform flex items-center justify-center gap-2">
                 <Zap size={16} />{offers.length > 0 ? 'Seçimi Onayla' : 'Hizmet Ekleme'}
               </button>
               <p className="mt-2 mb-1 text-center text-[10px] font-bold text-white/30">{offerFeeText}</p>
@@ -1607,19 +1607,19 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
             className="absolute inset-0 z-[60] bg-[#0A0E14] flex flex-col">
             <header className="shrink-0 pt-safe border-b border-white/5">
               <div className="px-5 py-4 flex items-center justify-between">
-                <h2 className="text-[17px] font-black italic uppercase tracking-tight">Kapora &amp; İade</h2>
+                <h2 className="text-[17px] font-extrabold italic uppercase tracking-tight">Kapora &amp; İade</h2>
                 <button onClick={() => setSheet(null)} aria-label="Kapat" className="w-[42px] h-[42px] rounded-full bg-white/5 border border-white/5 flex items-center justify-center"><X size={18} /></button>
               </div>
             </header>
             <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-5 pb-10 flex flex-col gap-3">
               <div className="rounded-[20px] border border-[#FACC15]/25 bg-[#FACC15]/5 p-[18px] flex items-center justify-between gap-3.5">
                 <div>
-                  <p className="text-[9.5px] font-black uppercase tracking-[0.16em] text-[#FACC15]/70">Bu maçın kaporası</p>
-                  <p className="font-numeric mt-1 text-3xl font-black text-[#FACC15]">{seeded ? '0₺' : deposit != null ? `${fmtTL(deposit)}₺` : '—'}</p>
+                  <p className="text-[9.5px] font-extrabold uppercase tracking-[0.16em] text-[#FACC15]/70">Bu maçın kaporası</p>
+                  <p className="font-numeric mt-1 text-3xl font-extrabold text-[#FACC15]">{seeded ? '0₺' : deposit != null ? `${fmtTL(deposit)}₺` : '—'}</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-[9.5px] font-black uppercase tracking-[0.16em] text-white/40">Cüzdan bakiyen</p>
-                  <p className={`font-numeric mt-1 text-[19px] font-black ${missing > 0 && !seeded ? 'text-red-400' : 'text-[#39FF14]'}`}>{fmtTL(spendable)}₺</p>
+                  <p className="text-[9.5px] font-extrabold uppercase tracking-[0.16em] text-white/40">Cüzdan bakiyen</p>
+                  <p className={`font-numeric mt-1 text-[19px] font-extrabold ${missing > 0 && !seeded ? 'text-red-400' : 'text-[#39FF14]'}`}>{fmtTL(spendable)}₺</p>
                   <p className={`mt-0.5 text-[9.5px] font-extrabold ${missing > 0 && !seeded ? 'text-red-400' : 'text-[#39FF14]'}`}>
                     {seeded ? 'Gerekmiyor' : missing > 0 ? `${fmtTL(missing)}₺ eksik` : 'Yeterli ✓'}
                   </p>
@@ -1635,15 +1635,15 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                 { n: '5', t: 'Oyuncu ayrılması — iade kademesi', b: 'Kadrodaki bir oyuncu maça 24 saatten fazla varken ayrılırsa ödediği tutar cüzdanına döner. 6–24 saat kala %50 iade edilir, 6 saatten az kala iade yapılmaz. Tam iade penceresi kapandıktan sonra ayrılanın güvenilirlik puanı düşer; sana bildirim gider, boşalan yer vitrine açılır.' },
               ].map(r => (
                 <div key={r.n} className="flex gap-3 rounded-[18px] border border-white/[0.08] bg-white/[0.03] p-4">
-                  <div className="font-numeric w-9 h-9 rounded-xl bg-[#39FF14]/10 border border-[#39FF14]/25 text-[#39FF14] text-sm font-black flex items-center justify-center shrink-0">{r.n}</div>
+                  <div className="font-numeric w-9 h-9 rounded-xl bg-[#39FF14]/10 border border-[#39FF14]/25 text-[#39FF14] text-sm font-extrabold flex items-center justify-center shrink-0">{r.n}</div>
                   <div className="min-w-0">
-                    <p className="text-[13px] font-black leading-tight">{r.t}</p>
+                    <p className="text-[13px] font-extrabold leading-tight">{r.t}</p>
                     <p className="mt-1.5 text-[11px] leading-relaxed text-white/55">{r.b}</p>
                   </div>
                 </div>
               ))}
               <button onClick={() => setSheet(null)}
-                className="mt-1 w-full h-[52px] rounded-2xl bg-[#FACC15] text-[#0A0E14] text-sm font-black italic uppercase active:scale-[0.98] transition-transform">
+                className="mt-1 w-full h-[52px] rounded-2xl bg-[#FACC15] text-[#0A0E14] text-sm font-extrabold italic uppercase active:scale-[0.98] transition-transform">
                 Anladım
               </button>
             </div>
@@ -1661,14 +1661,14 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                 <Check size={42} strokeWidth={2.4} />
               </motion.div>
               <div className="text-center">
-                <h2 className="text-[26px] font-black italic uppercase tracking-tight">Maç yayında!</h2>
+                <h2 className="text-[26px] font-extrabold italic uppercase tracking-tight">Maç yayında!</h2>
                 <p className="mt-2 text-[13px] font-semibold text-white/50">{venueTxt} · {whenTxt}</p>
                 {invited.length > 0 && <p className="mt-1 text-[11px] font-bold text-[#39FF14]">{invited.length} arkadaşına davet gönderildi</p>}
               </div>
               <div className="w-full rounded-[22px] border border-white/[0.08] bg-white/[0.03] p-[18px] flex flex-col gap-3.5">
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-black uppercase tracking-[0.14em] text-gray-500">Kapora</span>
-                  <span className="font-numeric text-[15px] font-black text-[#FACC15]">
+                  <span className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-gray-500">Kapora</span>
+                  <span className="font-numeric text-[15px] font-extrabold text-[#FACC15]">
                     {result.deposit > 0 ? `${fmtTL(result.deposit)}₺ bloke` : 'Gerekmedi'}
                   </span>
                 </div>
@@ -1686,7 +1686,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                 <div className="w-full">
                   <div className="w-full rounded-[22px] border border-dashed border-[#FACC15]/40 bg-[#FACC15]/5 px-[18px] py-4 flex items-center justify-between gap-3">
                     <div>
-                      <p className="text-[9.5px] font-black uppercase tracking-[0.16em] text-[#FACC15]/70">Davet kodu</p>
+                      <p className="text-[9.5px] font-extrabold uppercase tracking-[0.16em] text-[#FACC15]/70">Davet kodu</p>
                       <p className="font-numeric mt-1 text-[23px] font-bold tracking-[0.16em] text-[#FACC15]">{result.privateCode}</p>
                     </div>
                     <button onClick={copyCode} aria-label="Kodu kopyala"
@@ -1702,11 +1702,11 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
             </div>
             <div className="shrink-0 flex flex-col gap-2.5 py-4">
               <button onClick={shareInvite}
-                className="w-full h-14 rounded-[18px] bg-[#39FF14] text-[#0A0E14] text-sm font-black uppercase tracking-wide shadow-[0_0_28px_rgba(57,255,20,0.28)] flex items-center justify-center gap-2 active:scale-[0.98] transition-transform">
+                className="w-full h-14 rounded-[18px] bg-[#39FF14] text-[#0A0E14] text-sm font-extrabold uppercase tracking-wide shadow-[0_0_28px_rgba(57,255,20,0.28)] flex items-center justify-center gap-2 active:scale-[0.98] transition-transform">
                 <Share2 size={16} strokeWidth={2.2} /> Davet bağlantısını paylaş
               </button>
               <button onClick={goLobby}
-                className="w-full h-[52px] rounded-2xl border border-white/[0.12] bg-white/[0.04] text-[13px] font-black uppercase tracking-wide active:scale-[0.98] transition-transform">
+                className="w-full h-[52px] rounded-2xl border border-white/[0.12] bg-white/[0.04] text-[13px] font-extrabold uppercase tracking-wide active:scale-[0.98] transition-transform">
                 Maç lobisine git
               </button>
             </div>

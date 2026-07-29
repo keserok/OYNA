@@ -117,7 +117,7 @@ export const OwnerOperationsSettingsModal: React.FC<Props> = ({
             type="button"
             onClick={handleSave}
             disabled={isSaving}
-            className="w-full py-4 bg-blue-600 text-white font-black rounded-2xl hover:bg-blue-500 disabled:opacity-50"
+            className="w-full py-4 bg-blue-600 text-white font-extrabold rounded-2xl hover:bg-blue-500 disabled:opacity-50"
           >
             {isSaving ? 'Kaydediliyor...' : 'Kaydet'}
           </button>

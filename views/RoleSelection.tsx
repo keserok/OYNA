@@ -176,11 +176,11 @@ const RoleHeroCard: React.FC<{
 
         {/* Text */}
         <div className="flex-1 min-w-0">
-          <p className="text-[8.5px] font-black uppercase tracking-[0.25em] mb-0.5" style={{ color: glowColor, opacity: 0.75 }}>{getRoleLabel(role)}</p>
+          <p className="text-[8.5px] font-extrabold uppercase tracking-[0.25em] mb-0.5" style={{ color: glowColor, opacity: 0.75 }}>{getRoleLabel(role)}</p>
           <motion.h2
             animate={{ x: isEntering ? 6 : 0 }}
             transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-            className="text-[22px] font-black text-white italic tracking-tight leading-none mb-1"
+            className="text-[22px] font-extrabold text-white italic tracking-tight leading-none mb-1"
           >{title}</motion.h2>
           <p className="text-[10.5px] text-gray-300 font-medium leading-snug" style={{ maxWidth: 200 }}>{subtitle}</p>
         </div>
@@ -255,13 +255,13 @@ const RoleSelection: React.FC<RoleSelectionProps> = ({ onSelect, onNavigate }) =
             initial={{ opacity: 0, letterSpacing: '0.5em' }}
             animate={{ opacity: 1, letterSpacing: '0.35em' }}
             transition={{ delay: 0.2, duration: 0.8 }}
-            className="text-[9px] font-black uppercase text-white/30 mb-3 tracking-[0.35em]"
+            className="text-[9px] font-extrabold uppercase text-white/30 mb-3 tracking-[0.35em]"
           >OYNA — ROL SEÇİMİ</motion.p>
           <motion.h1
             initial={{ opacity: 0, scale: 0.85 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.1, type: 'spring', stiffness: 260, damping: 22 }}
-            className="text-[34px] font-black text-white leading-tight tracking-tight"
+            className="text-[34px] font-extrabold text-white leading-tight tracking-tight"
             style={{ textShadow: '0 2px 8px rgba(255,255,255,0.2)' }}
           >
             Kim olarak<br />sahaya çıkıyorsun?

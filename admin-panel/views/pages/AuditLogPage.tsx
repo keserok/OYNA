@@ -25,7 +25,7 @@ const AuditDiff: React.FC<{ log: AdminLog; onClose: () => void }> = ({ log, onCl
         <div className="flex items-center justify-between px-5 py-4 border-b border-white/10 shrink-0">
           <div className="min-w-0">
             <p className="text-[10px] text-gray-500 font-mono uppercase">Denetim Diff</p>
-            <h3 className="text-sm font-black text-white truncate">{log.action} · {log.targetName}</h3>
+            <h3 className="text-sm font-extrabold text-white truncate">{log.action} · {log.targetName}</h3>
             <p className="text-[10px] text-gray-500 mt-0.5">{new Date(log.timestamp).toLocaleString('tr-TR')} · {log.adminName || log.adminId.slice(0, 8)}</p>
           </div>
           <button type="button" onClick={onClose} className="w-8 h-8 rounded-lg bg-white/5 text-gray-400 hover:text-white flex items-center justify-center shrink-0"><X size={16} /></button>
@@ -35,7 +35,7 @@ const AuditDiff: React.FC<{ log: AdminLog; onClose: () => void }> = ({ log, onCl
             <p className="text-xs text-gray-500 text-center py-6">Bu kayıtta alan bazlı eski/yeni değer yok (yalnız aksiyon kaydı).</p>
           ) : (
             <div className="space-y-2">
-              <div className="grid grid-cols-[1fr_1fr_1fr] gap-2 text-[9px] font-black text-gray-600 uppercase tracking-wider px-1">
+              <div className="grid grid-cols-[1fr_1fr_1fr] gap-2 text-[9px] font-extrabold text-gray-600 uppercase tracking-wider px-1">
                 <span>Alan</span><span className="text-red-400/70">Eski</span><span className="text-green-400/70">Yeni</span>
               </div>
               {changed.map((k) => (

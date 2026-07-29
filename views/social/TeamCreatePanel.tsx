@@ -130,7 +130,7 @@ const TeamCreatePanel: React.FC<TeamCreatePanelProps> = ({ friends, onCreated, o
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
-          className="mt-5 text-xl font-black italic"
+          className="mt-5 text-xl font-extrabold italic"
         >
           {draft.name} kuruldu! 🎉
         </motion.h2>
@@ -148,7 +148,7 @@ const TeamCreatePanel: React.FC<TeamCreatePanelProps> = ({ friends, onCreated, o
         <span className="absolute left-0 top-0 bottom-0 w-1" style={{ backgroundColor: draft.color1 }} />
         <TeamCrest config={draft.crest} color1={draft.color1} color2={draft.color2} size={56} />
         <div className="min-w-0">
-          <div className="text-lg font-black italic truncate">
+          <div className="text-lg font-extrabold italic truncate">
             {draft.name.trim() || 'Takımının Adı'}
           </div>
           <div className="text-[11px] text-white/45">
@@ -162,7 +162,7 @@ const TeamCreatePanel: React.FC<TeamCreatePanelProps> = ({ friends, onCreated, o
       <div className="flex items-center gap-1.5 mb-4">
         {STEP_TITLES.map((t, i) => (
           <React.Fragment key={t}>
-            <span className={`text-[10px] font-black uppercase tracking-wide ${
+            <span className={`text-[10px] font-extrabold uppercase tracking-wide ${
               draft.step === i + 1 ? 'text-[#39FF14]' : 'text-white/30'
             }`}>
               {i + 1}. {t}
@@ -194,7 +194,7 @@ const TeamCreatePanel: React.FC<TeamCreatePanelProps> = ({ friends, onCreated, o
                   value={draft.shortName}
                   onChange={e => setDraft({ shortName: e.target.value.slice(0, 4) })}
                   placeholder={autoShort || 'KISA'}
-                  className="w-24 h-12 px-3 rounded-2xl bg-white/5 border border-white/10 text-sm font-black text-center uppercase placeholder:text-white/25 focus:outline-none focus:border-white/25"
+                  className="w-24 h-12 px-3 rounded-2xl bg-white/5 border border-white/10 text-sm font-extrabold text-center uppercase placeholder:text-white/25 focus:outline-none focus:border-white/25"
                 />
                 <input
                   value={draft.city}
@@ -204,7 +204,7 @@ const TeamCreatePanel: React.FC<TeamCreatePanelProps> = ({ friends, onCreated, o
                 />
               </div>
               <div>
-                <div className="text-[10px] font-black uppercase tracking-widest text-white/40 mb-2">
+                <div className="text-[10px] font-extrabold uppercase tracking-widest text-white/40 mb-2">
                   Format <span className="text-white/25 normal-case font-semibold">(sonradan değiştirilebilir)</span>
                 </div>
                 <div className="grid grid-cols-5 gap-1.5">
@@ -212,7 +212,7 @@ const TeamCreatePanel: React.FC<TeamCreatePanelProps> = ({ friends, onCreated, o
                     <button
                       key={f}
                       onClick={() => setDraft({ format: f })}
-                      className={`min-h-[40px] rounded-xl text-xs font-black border ${
+                      className={`min-h-[40px] rounded-xl text-xs font-extrabold border ${
                         draft.format === f
                           ? 'bg-[#39FF14] text-[#0A0E14] border-[#39FF14]'
                           : 'bg-white/5 text-white/60 border-white/10'
@@ -279,7 +279,7 @@ const TeamCreatePanel: React.FC<TeamCreatePanelProps> = ({ friends, onCreated, o
               </label>
 
               <div>
-                <div className="text-[10px] font-black uppercase tracking-widest text-white/40 mb-2">
+                <div className="text-[10px] font-extrabold uppercase tracking-widest text-white/40 mb-2">
                   Kurucu Kadro Davetleri ({draft.inviteIds.length})
                   <span className="text-white/25 normal-case font-semibold"> — gerçek davet gider, kabul eden katılır</span>
                 </div>
@@ -332,7 +332,7 @@ const TeamCreatePanel: React.FC<TeamCreatePanelProps> = ({ friends, onCreated, o
               <button
                 onClick={create}
                 disabled={creating}
-                className="w-full min-h-[52px] rounded-2xl bg-[#39FF14] text-[#0A0E14] font-black text-sm flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-50"
+                className="w-full min-h-[52px] rounded-2xl bg-[#39FF14] text-[#0A0E14] font-extrabold text-sm flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-50"
               >
                 {creating ? <Loader2 size={16} className="animate-spin" /> : '🛡️'} Takımı Kur
               </button>
@@ -355,7 +355,7 @@ const TeamCreatePanel: React.FC<TeamCreatePanelProps> = ({ friends, onCreated, o
           <button
             onClick={() => go(1)}
             disabled={!canNext}
-            className="flex-1 min-h-[46px] rounded-2xl bg-white/8 border border-white/12 text-sm font-black text-white flex items-center justify-center gap-1 active:scale-[0.97] disabled:opacity-40"
+            className="flex-1 min-h-[46px] rounded-2xl bg-white/8 border border-white/12 text-sm font-extrabold text-white flex items-center justify-center gap-1 active:scale-[0.97] disabled:opacity-40"
           >
             İleri <ChevronRight size={15} />
           </button>

@@ -62,13 +62,13 @@ export const FilterDropdown: React.FC<FilterDropdownProps> = ({
       >
         <span className="flex flex-col items-start min-w-0 text-left">
           <span
-            className="text-[8px] font-black uppercase tracking-[0.18em] leading-none mb-1"
+            className="text-[8px] font-extrabold uppercase tracking-[0.18em] leading-none mb-1"
             style={{ color: !disabled && hasSelection ? accent : 'rgba(255,255,255,0.45)' }}
           >
             {label}
           </span>
           <span
-            className={`max-w-full text-[11px] font-black uppercase tracking-wider leading-none truncate ${
+            className={`max-w-full text-[11px] font-extrabold uppercase tracking-wider leading-none truncate ${
               hasSelection ? 'text-white' : 'text-white/60'
             }`}
           >
@@ -112,7 +112,7 @@ export const FilterDropdown: React.FC<FilterDropdownProps> = ({
                     style={isSelected ? { backgroundColor: `${accent}14` } : undefined}
                   >
                     <span
-                      className={`text-[11px] font-black uppercase tracking-wider truncate ${
+                      className={`text-[11px] font-extrabold uppercase tracking-wider truncate ${
                         isSelected ? '' : 'text-white/80'
                       }`}
                       style={isSelected ? { color: accent } : undefined}

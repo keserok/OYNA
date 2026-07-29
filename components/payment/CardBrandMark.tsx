@@ -103,7 +103,7 @@ const Visa: React.FC<{ h: number; onLight?: boolean }> = ({ h, onLight }) => {
 const Troy: React.FC<{ h: number; onLight?: boolean }> = ({ h, onLight }) => (
   <span
     style={{ fontSize: h * 0.9, letterSpacing: '-0.02em' }}
-    className={`font-black lowercase inline-flex items-baseline leading-none ${onLight ? 'text-[#00B9A9]' : 'text-white'}`}
+    className={`font-extrabold lowercase inline-flex items-baseline leading-none ${onLight ? 'text-[#00B9A9]' : 'text-white'}`}
     aria-label="troy"
   >
     troy
@@ -115,7 +115,7 @@ const Troy: React.FC<{ h: number; onLight?: boolean }> = ({ h, onLight }) => (
 const Amex: React.FC<{ h: number }> = ({ h }) => (
   <span
     style={{ height: h * 1.05, paddingInline: h * 0.28, fontSize: h * 0.42, letterSpacing: '0.02em' }}
-    className="inline-flex items-center justify-center rounded-[4px] bg-[#2E77BC] text-white font-black uppercase"
+    className="inline-flex items-center justify-center rounded-[4px] bg-[#2E77BC] text-white font-extrabold uppercase"
     aria-label="American Express"
   >
     Amex

@@ -95,7 +95,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         <div className="w-7 h-7 bg-red-600 rounded-lg flex items-center justify-center shadow-lg shadow-red-600/30">
                             <Zap size={14} className="text-white" />
                         </div>
-                        <span className="text-xs font-black tracking-widest text-white uppercase italic">
+                        <span className="text-xs font-extrabold tracking-widest text-white uppercase italic">
                             OYNA OS
                         </span>
                     </div>
@@ -114,7 +114,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 {visibleGroups.map((group) => (
                     <div key={group.label} className="space-y-0.5">
                         {!collapsed && (
-                            <p className="px-3 py-1.5 text-[8.5px] text-gray-600 font-black uppercase tracking-wider">
+                            <p className="px-3 py-1.5 text-[8.5px] text-gray-600 font-extrabold uppercase tracking-wider">
                                 {group.label}
                             </p>
                         )}
@@ -151,7 +151,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                             }`} />
                                         ) : (
                                             <span
-                                                className={`text-[8px] font-black px-1.5 py-0.5 rounded-md border ${
+                                                className={`text-[8px] font-extrabold px-1.5 py-0.5 rounded-md border ${
                                                     badge.tone === 'warn'
                                                         ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20 animate-pulse'
                                                         : badge.tone === 'alert'
@@ -179,8 +179,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 />
                 {!collapsed && (
                     <div className="flex-1 min-w-0">
-                        <p className="text-xs font-black text-white truncate leading-tight">{adminSession?.name || 'Admin'}</p>
-                        <span className="inline-block text-[8px] px-1.5 py-0.5 mt-0.5 bg-red-600/20 text-red-400 font-black rounded-md border border-red-500/10 uppercase tracking-widest scale-90 origin-left">
+                        <p className="text-xs font-extrabold text-white truncate leading-tight">{adminSession?.name || 'Admin'}</p>
+                        <span className="inline-block text-[8px] px-1.5 py-0.5 mt-0.5 bg-red-600/20 text-red-400 font-extrabold rounded-md border border-red-500/10 uppercase tracking-widest scale-90 origin-left">
                             {mode === 'standalone' ? roleLabel : 'PATRON'}
                         </span>
                     </div>

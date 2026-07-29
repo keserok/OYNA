@@ -131,7 +131,7 @@ const AddCardScreen: React.FC<AddCardScreenProps> = ({ onBack, onSaved, collectM
           <ArrowLeft size={20} />
         </button>
         <div>
-          <h1 className="text-[17px] font-black text-white uppercase">Yeni Kart Ekle</h1>
+          <h1 className="text-[17px] font-extrabold text-white uppercase">Yeni Kart Ekle</h1>
           <p className="text-[11px] text-gray-500 font-semibold">Kart bilgilerini gir</p>
         </div>
       </header>
@@ -164,11 +164,11 @@ const AddCardScreen: React.FC<AddCardScreenProps> = ({ onBack, onSaved, collectM
             </p>
             <div className="flex justify-between items-end mt-3.5 gap-3">
               <div className="min-w-0">
-                <span className="block text-[8px] text-white/50 font-black uppercase tracking-[0.15em]">Kart Sahibi</span>
+                <span className="block text-[8px] text-white/50 font-extrabold uppercase tracking-[0.15em]">Kart Sahibi</span>
                 <span className="block text-[12px] text-white font-semibold font-numeric truncate uppercase">{holder || 'AD SOYAD'}</span>
               </div>
               <div className="text-right shrink-0">
-                <span className="block text-[8px] text-white/50 font-black uppercase tracking-[0.15em]">Son Kul.</span>
+                <span className="block text-[8px] text-white/50 font-extrabold uppercase tracking-[0.15em]">Son Kul.</span>
                 <span className="block text-[12px] text-white font-semibold font-numeric">{exp || 'AA/YY'}</span>
               </div>
             </div>
@@ -263,7 +263,7 @@ const AddCardScreen: React.FC<AddCardScreenProps> = ({ onBack, onSaved, collectM
         <button
           disabled={!valid || busy}
           onClick={handleSubmit}
-          className={`w-full py-4 font-black text-base rounded-2xl flex items-center justify-center gap-2 transition-all active:scale-[0.98] ${
+          className={`w-full py-4 font-extrabold text-base rounded-2xl flex items-center justify-center gap-2 transition-all active:scale-[0.98] ${
             valid && !busy ? 'bg-[#39FF14] text-[#0A0E14]' : 'bg-gray-800 text-gray-500'
           }`}
         >

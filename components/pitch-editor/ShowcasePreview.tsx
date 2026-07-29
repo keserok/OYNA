@@ -69,7 +69,7 @@ export const ShowcasePreview: React.FC<{ pitchId: string; onClose: () => void }>
     <div className="fixed inset-0 z-[120] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
       <div className="relative w-full max-w-sm max-h-[90vh] bg-[#0A0E14] border border-white/10 rounded-[32px] overflow-hidden flex flex-col">
         <div className="absolute top-3 left-0 right-0 z-10 flex items-center justify-between px-4">
-          <span className="px-2.5 py-1 rounded-full bg-[#FFFF00] text-black text-[9px] font-black uppercase tracking-wider">
+          <span className="px-2.5 py-1 rounded-full bg-[#FFFF00] text-black text-[9px] font-extrabold uppercase tracking-wider">
             Oyuncu Gözüyle Önizleme
           </span>
           <button onClick={onClose} className="w-9 h-9 rounded-full bg-black/60 border border-white/15 flex items-center justify-center text-white">
@@ -100,7 +100,7 @@ export const ShowcasePreview: React.FC<{ pitchId: string; onClose: () => void }>
             </div>
 
             <div className="px-5 -mt-4 relative pb-6">
-              <h2 className="text-xl font-black italic uppercase tracking-[-0.03em] text-white leading-none">{data.name}</h2>
+              <h2 className="text-xl font-extrabold italic uppercase tracking-[-0.03em] text-white leading-none">{data.name}</h2>
               <div className="flex items-center gap-1.5 mt-2 text-xs text-white/60 font-medium">
                 {/* V-2: gerçek değerlendirme yoksa sahte 5.0 değil "Yeni". */}
                 {((data.rating_count ?? 0) > 0 || (data.google_review_count ?? 0) > 0) ? (
@@ -178,7 +178,7 @@ export const ShowcasePreview: React.FC<{ pitchId: string; onClose: () => void }>
                             </div>
                           </div>
                           <div className="text-right flex-shrink-0 pl-2">
-                            <div className="text-sm font-black text-white">₺{court.price ?? data.total_price ?? '—'}</div>
+                            <div className="text-sm font-extrabold text-white">₺{court.price ?? data.total_price ?? '—'}</div>
                             <div className="text-[8px] font-extrabold uppercase text-white/40">/saat</div>
                           </div>
                         </div>
@@ -191,24 +191,24 @@ export const ShowcasePreview: React.FC<{ pitchId: string; onClose: () => void }>
               {graded && (
                 <div className="mt-4 flex items-center justify-around bg-[#0D111A] border border-white/[0.06] rounded-2xl p-3.5">
                   <div className="text-center">
-                    <div className="text-[8px] font-black uppercase tracking-widest text-white/40">Aydınlatma</div>
-                    <div className="text-lg font-black text-[#39FF14] mt-0.5">{graded.lighting_grade ?? '—'}</div>
+                    <div className="text-[8px] font-extrabold uppercase tracking-widest text-white/40">Aydınlatma</div>
+                    <div className="text-lg font-extrabold text-[#39FF14] mt-0.5">{graded.lighting_grade ?? '—'}</div>
                   </div>
                   <div className="w-px h-7 bg-white/10" />
                   <div className="text-center">
-                    <div className="text-[8px] font-black uppercase tracking-widest text-white/40">Zemin</div>
-                    <div className="text-lg font-black text-[#39FF14] mt-0.5">{graded.grass_grade ?? '—'}</div>
+                    <div className="text-[8px] font-extrabold uppercase tracking-widest text-white/40">Zemin</div>
+                    <div className="text-lg font-extrabold text-[#39FF14] mt-0.5">{graded.grass_grade ?? '—'}</div>
                   </div>
                 </div>
               )}
 
               <div className="mt-5 flex items-center gap-3 p-3 rounded-2xl bg-white/[0.03] border border-white/[0.06]">
                 <div className="flex-1">
-                  <div className="text-[9px] font-black uppercase tracking-wider text-white/40">Kapora · örnek</div>
+                  <div className="text-[9px] font-extrabold uppercase tracking-wider text-white/40">Kapora · örnek</div>
                   {/* S17: tutarda italik yok — italik yalnız skorda kalır. */}
-                  <div className="text-base font-black text-white">₺{Math.round((activeCourts[0]?.price ?? data.total_price ?? 0) * 0.3 / 10) * 10}</div>
+                  <div className="text-base font-extrabold text-white">₺{Math.round((activeCourts[0]?.price ?? data.total_price ?? 0) * 0.3 / 10) * 10}</div>
                 </div>
-                <div className="px-4 py-3 rounded-xl bg-[#FFFF00] text-black text-[11px] font-black italic uppercase opacity-70">
+                <div className="px-4 py-3 rounded-xl bg-[#FFFF00] text-black text-[11px] font-extrabold italic uppercase opacity-70">
                   Kaporayı Öde
                 </div>
               </div>

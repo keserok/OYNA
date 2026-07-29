@@ -266,8 +266,8 @@ export const TeamLineupBoard: React.FC<TeamLineupBoardProps> = () => {
                 )}
               </div>
               <div>
-                <span className="text-[9px] font-black text-red-500 uppercase tracking-widest block mb-0.5">EV SAHİBİ</span>
-                <h3 className="text-xl font-black text-white italic uppercase tracking-tighter leading-none truncate max-w-[160px]">{teamA.name}</h3>
+                <span className="text-[9px] font-extrabold text-red-500 uppercase tracking-widest block mb-0.5">EV SAHİBİ</span>
+                <h3 className="text-xl font-extrabold text-white italic uppercase tracking-tighter leading-none truncate max-w-[160px]">{teamA.name}</h3>
                 <span className="text-[10px] text-gray-500 font-bold block mt-1 uppercase tracking-widest">{teamA.isRegistered ? 'Kayıtlı Kadro' : 'Bireysel Katılım'}</span>
               </div>
             </div>
@@ -277,7 +277,7 @@ export const TeamLineupBoard: React.FC<TeamLineupBoardProps> = () => {
               <div className="relative">
                 <button
                   onClick={() => setShowFormationMenu(showFormationMenu === 'A' ? null : 'A')}
-                  className="bg-black/40 border border-white/10 hover:border-red-500/30 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase text-white flex items-center gap-1.5 transition-all"
+                  className="bg-black/40 border border-white/10 hover:border-red-500/30 px-3 py-1.5 rounded-xl text-[10px] font-extrabold uppercase text-white flex items-center gap-1.5 transition-all"
                 >
                   <Layers size={11} className="text-red-500" />
                   {teamA.formation}
@@ -296,7 +296,7 @@ export const TeamLineupBoard: React.FC<TeamLineupBoardProps> = () => {
                         <button
                           key={form}
                           onClick={() => handleUpdateFormation('A', form)}
-                          className={`w-full text-left px-3 py-2 text-xs font-black uppercase tracking-widest rounded-lg transition-colors ${teamA.formation === form ? 'bg-red-600 text-white' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+                          className={`w-full text-left px-3 py-2 text-xs font-extrabold uppercase tracking-widest rounded-lg transition-colors ${teamA.formation === form ? 'bg-red-600 text-white' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
                         >
                           {form}
                         </button>
@@ -310,14 +310,14 @@ export const TeamLineupBoard: React.FC<TeamLineupBoardProps> = () => {
               {teamA.isRegistered ? (
                 <button
                   onClick={() => handleResetToIndividual('A')}
-                  className="text-[9px] font-black uppercase tracking-widest text-red-400 hover:text-red-300 transition-colors flex items-center gap-1"
+                  className="text-[9px] font-extrabold uppercase tracking-widest text-red-400 hover:text-red-300 transition-colors flex items-center gap-1"
                 >
                   <Trash2 size={11} /> Bireysele Dön
                 </button>
               ) : (
                 <button
                   onClick={() => setActiveImportSide('A')}
-                  className="bg-red-600 hover:bg-red-500 text-white text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-xl flex items-center gap-1 shadow-[0_0_15px_rgba(239,68,68,0.2)] active:scale-95 transition-all"
+                  className="bg-red-600 hover:bg-red-500 text-white text-[9px] font-extrabold uppercase tracking-widest px-3 py-1.5 rounded-xl flex items-center gap-1 shadow-[0_0_15px_rgba(239,68,68,0.2)] active:scale-95 transition-all"
                 >
                   <Plus size={11} /> Takım Yükle
                 </button>
@@ -340,8 +340,8 @@ export const TeamLineupBoard: React.FC<TeamLineupBoardProps> = () => {
                 )}
               </div>
               <div>
-                <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-0.5">DEPLASMAN</span>
-                <h3 className="text-xl font-black text-white italic uppercase tracking-tighter leading-none truncate max-w-[160px]">{teamB.name}</h3>
+                <span className="text-[9px] font-extrabold text-gray-400 uppercase tracking-widest block mb-0.5">DEPLASMAN</span>
+                <h3 className="text-xl font-extrabold text-white italic uppercase tracking-tighter leading-none truncate max-w-[160px]">{teamB.name}</h3>
                 <span className="text-[10px] text-gray-500 font-bold block mt-1 uppercase tracking-widest">{teamB.isRegistered ? 'Kayıtlı Kadro' : 'Bireysel Katılım'}</span>
               </div>
             </div>
@@ -351,7 +351,7 @@ export const TeamLineupBoard: React.FC<TeamLineupBoardProps> = () => {
               <div className="relative">
                 <button
                   onClick={() => setShowFormationMenu(showFormationMenu === 'B' ? null : 'B')}
-                  className="bg-black/40 border border-white/10 hover:border-white/30 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase text-white flex items-center gap-1.5 transition-all"
+                  className="bg-black/40 border border-white/10 hover:border-white/30 px-3 py-1.5 rounded-xl text-[10px] font-extrabold uppercase text-white flex items-center gap-1.5 transition-all"
                 >
                   <Layers size={11} className="text-gray-400" />
                   {teamB.formation}
@@ -370,7 +370,7 @@ export const TeamLineupBoard: React.FC<TeamLineupBoardProps> = () => {
                         <button
                           key={form}
                           onClick={() => handleUpdateFormation('B', form)}
-                          className={`w-full text-left px-3 py-2 text-xs font-black uppercase tracking-widest rounded-lg transition-colors ${teamB.formation === form ? 'bg-white text-black' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+                          className={`w-full text-left px-3 py-2 text-xs font-extrabold uppercase tracking-widest rounded-lg transition-colors ${teamB.formation === form ? 'bg-white text-black' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
                         >
                           {form}
                         </button>
@@ -384,14 +384,14 @@ export const TeamLineupBoard: React.FC<TeamLineupBoardProps> = () => {
               {teamB.isRegistered ? (
                 <button
                   onClick={() => handleResetToIndividual('B')}
-                  className="text-[9px] font-black uppercase tracking-widest text-red-400 hover:text-red-300 transition-colors flex items-center gap-1"
+                  className="text-[9px] font-extrabold uppercase tracking-widest text-red-400 hover:text-red-300 transition-colors flex items-center gap-1"
                 >
                   <Trash2 size={11} /> Bireysele Dön
                 </button>
               ) : (
                 <button
                   onClick={() => setActiveImportSide('B')}
-                  className="bg-white/10 hover:bg-white/20 text-white text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-xl border border-white/15 flex items-center gap-1 shadow-md active:scale-95 transition-all"
+                  className="bg-white/10 hover:bg-white/20 text-white text-[9px] font-extrabold uppercase tracking-widest px-3 py-1.5 rounded-xl border border-white/15 flex items-center gap-1 shadow-md active:scale-95 transition-all"
                 >
                   <Plus size={11} /> Takım Yükle
                 </button>
@@ -433,8 +433,8 @@ export const TeamLineupBoard: React.FC<TeamLineupBoardProps> = () => {
 
         {/* Center Grid Header Indicator */}
         <div className="absolute top-[390px] left-0 right-0 h-[20px] flex justify-between items-center px-4 pointer-events-none z-10">
-          <span className="text-[9px] font-black tracking-widest text-red-500/50 uppercase italic leading-none">{teamA.name}</span>
-          <span className="text-[9px] font-black tracking-widest text-white/40 uppercase italic leading-none">{teamB.name}</span>
+          <span className="text-[9px] font-extrabold tracking-widest text-red-500/50 uppercase italic leading-none">{teamA.name}</span>
+          <span className="text-[9px] font-extrabold tracking-widest text-white/40 uppercase italic leading-none">{teamB.name}</span>
         </div>
 
         {/* Player Circles */}
@@ -476,14 +476,14 @@ export const TeamLineupBoard: React.FC<TeamLineupBoardProps> = () => {
                     <img src={slot.player.avatar} className="w-full h-full rounded-full object-cover" alt={slot.player.name} />
                   ) : (
                     <div className="w-full h-full rounded-full bg-gray-800 flex items-center justify-center">
-                      <span className="text-gray-500 text-[10px] font-black uppercase tracking-wider">{slot.role}</span>
+                      <span className="text-gray-500 text-[10px] font-extrabold uppercase tracking-wider">{slot.role}</span>
                     </div>
                   )}
 
                   {/* Rating Small Badge */}
                   {hasPlayer && (
                     <div 
-                      className={`absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full border border-black/80 flex items-center justify-center text-[8px] font-black text-black`}
+                      className={`absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full border border-black/80 flex items-center justify-center text-[8px] font-extrabold text-black`}
                       style={{ backgroundColor: borderColor }}
                     >
                       {Math.round(slot.player.rating * 20)}
@@ -494,7 +494,7 @@ export const TeamLineupBoard: React.FC<TeamLineupBoardProps> = () => {
                 {/* Player Name Badge */}
                 {slot.player && slot.player.name !== 'Boş Slot' && (
                   <div className="absolute top-full mt-1.5 pointer-events-none">
-                    <span className="text-[8px] font-black px-2 py-0.5 rounded bg-black/80 text-white border border-white/5 shadow-md whitespace-nowrap">
+                    <span className="text-[8px] font-extrabold px-2 py-0.5 rounded bg-black/80 text-white border border-white/5 shadow-md whitespace-nowrap">
                       {slot.player.name.split(' ')[0]}
                     </span>
                   </div>
@@ -528,8 +528,8 @@ export const TeamLineupBoard: React.FC<TeamLineupBoardProps> = () => {
               
               <div className="flex justify-between items-center mb-6">
                 <div>
-                  <h3 className="text-xl font-black text-white italic uppercase tracking-tighter">Takım İçe Aktar</h3>
-                  <p className="text-[9px] text-gray-500 uppercase tracking-widest font-black mt-0.5">
+                  <h3 className="text-xl font-extrabold text-white italic uppercase tracking-tighter">Takım İçe Aktar</h3>
+                  <p className="text-[9px] text-gray-500 uppercase tracking-widest font-extrabold mt-0.5">
                     {activeImportSide === 'A' ? 'Ev Sahibi' : 'Deplasman'} Kadrosunu Doldur
                   </p>
                 </div>
@@ -558,7 +558,7 @@ export const TeamLineupBoard: React.FC<TeamLineupBoardProps> = () => {
                         {t.logo || '🛡️'}
                       </div>
                       <div className="flex-1">
-                        <h4 className="text-sm font-black text-white uppercase tracking-tight">{t.name}</h4>
+                        <h4 className="text-sm font-extrabold text-white uppercase tracking-tight">{t.name}</h4>
                         <span className="text-[10px] text-gray-500 font-bold block">{t.roster?.length || 0} Oyuncu · {t.wins || 0}G {t.losses || 0}M</span>
                       </div>
                       <div className="w-7 h-7 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/60">
@@ -611,7 +611,7 @@ export const TeamLineupBoard: React.FC<TeamLineupBoardProps> = () => {
 
                 {/* Card Title Header */}
                 <div className="w-full flex justify-between items-center mb-4">
-                  <span className="text-[8px] font-black text-gray-500 uppercase tracking-[0.25em]">OYNA PLAYER CARD</span>
+                  <span className="text-[8px] font-extrabold text-gray-500 uppercase tracking-[0.25em]">OYNA PLAYER CARD</span>
                   <button onClick={() => setSelectedPlayer(null)} className="w-6 h-6 rounded-full bg-white/5 flex items-center justify-center text-white/40 hover:text-white">
                     <X size={12} />
                   </button>
@@ -619,10 +619,10 @@ export const TeamLineupBoard: React.FC<TeamLineupBoardProps> = () => {
 
                 {/* Rating & Position Left Float */}
                 <div className="absolute left-6 top-16 flex flex-col items-center">
-                  <span className="text-4xl font-black italic tracking-tighter leading-none text-white">
+                  <span className="text-4xl font-extrabold italic tracking-tighter leading-none text-white">
                     {Math.round(selectedPlayer.rating * 20)}
                   </span>
-                  <span className="text-[9px] font-black uppercase text-gray-400 mt-1 tracking-widest">
+                  <span className="text-[9px] font-extrabold uppercase text-gray-400 mt-1 tracking-widest">
                     {selectedPlayer.position}
                   </span>
                 </div>
@@ -642,13 +642,13 @@ export const TeamLineupBoard: React.FC<TeamLineupBoardProps> = () => {
                 </div>
 
                 {/* Player Name */}
-                <h3 className="text-xl font-black text-white italic uppercase tracking-tighter mb-1 text-center drop-shadow-md">
+                <h3 className="text-xl font-extrabold text-white italic uppercase tracking-tighter mb-1 text-center drop-shadow-md">
                   {selectedPlayer.name}
                 </h3>
 
                 {/* Archetype / Style Badge */}
                 <div 
-                  className="px-3.5 py-1 rounded-full text-[8px] font-black uppercase tracking-widest mb-5 flex items-center gap-1.5 border"
+                  className="px-3.5 py-1 rounded-full text-[8px] font-extrabold uppercase tracking-widest mb-5 flex items-center gap-1.5 border"
                   style={{ 
                     backgroundColor: selectedPlayer.teamColor === 'RED' ? 'rgba(239,68,68,0.1)' : 'rgba(255,255,255,0.05)',
                     borderColor: selectedPlayer.teamColor === 'RED' ? 'rgba(239,68,68,0.3)' : 'rgba(255,255,255,0.15)',
@@ -667,8 +667,8 @@ export const TeamLineupBoard: React.FC<TeamLineupBoardProps> = () => {
                     { label: 'ŞUT', score: Math.round(selectedPlayer.rating * 17 + 8) }
                   ].map(stat => (
                     <div key={stat.label} className="bg-white/[0.02] border border-white/5 rounded-2xl p-2 text-center">
-                      <span className="block text-[7px] font-black text-gray-500 uppercase tracking-wider mb-0.5">{stat.label}</span>
-                      <span className="text-xs font-black text-white">{stat.score}</span>
+                      <span className="block text-[7px] font-extrabold text-gray-500 uppercase tracking-wider mb-0.5">{stat.label}</span>
+                      <span className="text-xs font-extrabold text-white">{stat.score}</span>
                     </div>
                   ))}
                 </div>

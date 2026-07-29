@@ -48,7 +48,7 @@ export const OwnerBillingSettingsModal: React.FC<Props> = ({
       <div className="space-y-5">
         <div className="p-4 bg-[#0A0E14] rounded-2xl border border-white/5">
           <p className="text-[10px] text-gray-500 uppercase font-bold">Mevcut Plan</p>
-          <p className="text-lg font-black text-white mt-1">{planTier}</p>
+          <p className="text-lg font-extrabold text-white mt-1">{planTier}</p>
         </div>
         <div className="space-y-2">
           <label className="text-[10px] font-bold text-gray-500 uppercase flex items-center gap-1">
@@ -69,7 +69,7 @@ export const OwnerBillingSettingsModal: React.FC<Props> = ({
           type="button"
           onClick={handleSave}
           disabled={isSaving}
-          className="w-full py-4 bg-blue-600 text-white font-black rounded-2xl hover:bg-blue-500 disabled:opacity-50"
+          className="w-full py-4 bg-blue-600 text-white font-extrabold rounded-2xl hover:bg-blue-500 disabled:opacity-50"
         >
           {isSaving ? 'Kaydediliyor...' : 'Kaydet'}
         </button>

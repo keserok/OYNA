@@ -48,7 +48,7 @@ const Avatar: React.FC<AvatarProps> = ({ name, src, size = 'md', online, classNa
         <div
           className={`${s.box} flex items-center justify-center bg-gradient-to-br from-white/10 to-white/5 border border-white/10`}
         >
-          <span className={`${s.text} font-black text-white/80`}>{getInitials(name)}</span>
+          <span className={`${s.text} font-extrabold text-white/80`}>{getInitials(name)}</span>
         </div>
       )}
       {online === true && (

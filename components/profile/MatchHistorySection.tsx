@@ -37,7 +37,7 @@ export const MatchHistorySection: React.FC<MatchHistorySectionProps> = ({ matche
     return (
         <div>
             <div className="flex items-center mt-[22px] mb-0.5">
-                <span className="text-[11px] font-black tracking-[0.12em] uppercase text-white/50">Maç Geçmişi</span>
+                <span className="text-[11px] font-extrabold tracking-[0.12em] uppercase text-white/50">Maç Geçmişi</span>
             </div>
             <div className="flex mt-2.5 border-b border-white/10">
                 {tabs.map(([id, label]) => (
@@ -58,10 +58,10 @@ export const MatchHistorySection: React.FC<MatchHistorySectionProps> = ({ matche
                         const rowContent = (
                             <>
                                 <div className="flex-1 min-w-0">
-                                    <span className="text-[10px] font-black tracking-[0.1em] uppercase text-white/40">{m.date}</span>
+                                    <span className="text-[10px] font-extrabold tracking-[0.1em] uppercase text-white/40">{m.date}</span>
                                     <h4 className="text-base font-bold text-white mt-1 uppercase tracking-[0.01em] truncate">{m.pitchName}</h4>
                                 </div>
-                                <span className={`text-[19px] font-black italic tracking-tight shrink-0 ${SCORE_COLOR[m.result]}`}>{m.score}</span>
+                                <span className={`text-[19px] font-extrabold italic tracking-tight shrink-0 ${SCORE_COLOR[m.result]}`}>{m.score}</span>
                                 {onOpen && <ChevronRight size={15} className="text-white/30 shrink-0" strokeWidth={2.4} />}
                             </>
                         );

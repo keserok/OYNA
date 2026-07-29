@@ -89,10 +89,10 @@ const ServiceRatingCard: React.FC<{
           <p className="text-[12px] font-semibold text-[#8B949E]">
             {isGk ? 'Kaleci değerlendirmesi' : 'Hakem değerlendirmesi'}
           </p>
-          <p className="text-sm font-black text-white uppercase tracking-tight italic truncate">{info.name}</p>
+          <p className="text-sm font-extrabold text-white uppercase tracking-tight italic truncate">{info.name}</p>
         </div>
         {score > 0 && (
-          <span className={`ml-auto text-lg font-black italic tracking-tighter ${accent}`}>{score}<span className="text-[#8B949E] text-xs">/10</span></span>
+          <span className={`ml-auto text-lg font-extrabold italic tracking-tighter ${accent}`}>{score}<span className="text-[#8B949E] text-xs">/10</span></span>
         )}
       </div>
 
@@ -109,7 +109,7 @@ const ServiceRatingCard: React.FC<{
                 if (navigator.vibrate) navigator.vibrate(15);
                 onScore(score === val ? 0 : val);
               }}
-              className={`h-9 rounded-lg border text-[11px] font-black transition-all ${
+              className={`h-9 rounded-lg border text-[11px] font-extrabold transition-all ${
                 active
                   ? isGk
                     ? 'bg-[#FACC15] text-black border-[#FACC15] shadow-[0_0_8px_rgba(250,204,21,0.3)]'
@@ -437,7 +437,7 @@ const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => 
 
           {/* BULGU-097: "başarıyla yüklendi" artık koşulsuz değil; ne kaydedilemediyse adıyla yazılır. */}
           <div className="text-center space-y-1">
-            <h2 className="text-2xl font-black uppercase tracking-tighter italic leading-none">
+            <h2 className="text-2xl font-extrabold uppercase tracking-tighter italic leading-none">
               {saveErrors.length === 0 ? 'DEĞERLENDİRMEN KAYDEDİLDİ' : 'DEĞERLENDİRME YARIM KALDI'}
             </h2>
             <p className="text-[13px] font-semibold text-[#A9B4C0]">
@@ -450,11 +450,11 @@ const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => 
           <div className="grid grid-cols-2 gap-3 w-full">
             <div className="bg-[#121620]/50 border border-white/5 rounded-2xl p-4 text-center flex flex-col justify-center">
               <p className="text-[12px] text-[#8B949E] font-bold mb-1.5">Puanladığın oyuncu</p>
-              <p className="text-xl font-black text-white italic tracking-tighter leading-none">{Object.keys(playerRatings).length}</p>
+              <p className="text-xl font-extrabold text-white italic tracking-tighter leading-none">{Object.keys(playerRatings).length}</p>
             </div>
             <div className="bg-[#121620]/50 border border-white/5 rounded-2xl p-4 text-center flex flex-col justify-center">
               <p className="text-[12px] text-[#8B949E] font-bold mb-1.5">Ortalama puanın</p>
-              <p className="text-xl font-black text-[#39FF14] italic tracking-tighter leading-none">{avgPlayerRating}</p>
+              <p className="text-xl font-extrabold text-[#39FF14] italic tracking-tighter leading-none">{avgPlayerRating}</p>
             </div>
           </div>
 
@@ -463,7 +463,7 @@ const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => 
             <motion.button
               whileTap={{ scale: 0.98 }}
               onClick={() => { setShowResult(false); persistEvaluation(); }}
-              className="w-full h-14 bg-white/5 border border-white/10 text-white font-black rounded-2xl text-xs uppercase tracking-widest"
+              className="w-full h-14 bg-white/5 border border-white/10 text-white font-extrabold rounded-2xl text-xs uppercase tracking-widest"
             >
               Tekrar dene
             </motion.button>
@@ -495,18 +495,18 @@ const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => 
           <div className="w-16 h-16 rounded-full bg-blue-500/20 border border-blue-500/40 flex items-center justify-center mb-4">
             <Trophy size={32} className="text-blue-400" />
           </div>
-          <h2 className="text-2xl font-black uppercase italic tracking-tight text-white mb-2">SKOR ONAYI</h2>
+          <h2 className="text-2xl font-extrabold uppercase italic tracking-tight text-white mb-2">SKOR ONAYI</h2>
           <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mb-6">Maç Skoru Girildi — Onayla</p>
 
           <div className="flex items-center justify-center gap-6 mb-8 w-full">
             <div className="text-center flex-1">
               <span className="text-[12px] text-[#8B949E] font-bold uppercase block mb-2">EV</span>
-              <div className="text-5xl font-black text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]">{scoreProposal?.homeScore ?? 0}</div>
+              <div className="text-5xl font-extrabold text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]">{scoreProposal?.homeScore ?? 0}</div>
             </div>
-            <div className="text-3xl font-black text-white/25">-</div>
+            <div className="text-3xl font-extrabold text-white/25">-</div>
             <div className="text-center flex-1">
               <span className="text-[12px] text-[#8B949E] font-bold uppercase block mb-2">DEP</span>
-              <div className="text-5xl font-black text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]">{scoreProposal?.awayScore ?? 0}</div>
+              <div className="text-5xl font-extrabold text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]">{scoreProposal?.awayScore ?? 0}</div>
             </div>
           </div>
 
@@ -515,7 +515,7 @@ const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => 
               whileTap={{ scale: 0.96 }}
               disabled={approvingScore}
               onClick={handleApproveScore}
-              className="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-500 text-white font-black text-sm rounded-2xl uppercase tracking-widest shadow-[0_0_20px_rgba(59,130,246,0.3)] flex items-center justify-center gap-2 disabled:opacity-60"
+              className="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-500 text-white font-extrabold text-sm rounded-2xl uppercase tracking-widest shadow-[0_0_20px_rgba(59,130,246,0.3)] flex items-center justify-center gap-2 disabled:opacity-60"
             >
               <ShieldCheck size={18} /> {approvingScore ? 'ONAYLANIYOR…' : 'SKORU ONAYLA'}
             </motion.button>
@@ -528,7 +528,7 @@ const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => 
                 showInfo('Hakemin girdiği skor resmîdir. İtirazın varsa maç detayından "Sorun Bildir"i kullan.');
                 setShowHandshake(false);
               }}
-              className="w-full py-4 bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 font-black text-xs rounded-2xl uppercase tracking-widest transition-all"
+              className="w-full py-4 bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 font-extrabold text-xs rounded-2xl uppercase tracking-widest transition-all"
             >
               KATILMIYORUM
             </motion.button>
@@ -553,7 +553,7 @@ const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => 
           </button>
           
           <div className="text-center flex-1 mx-4">
-            <h1 className="text-sm font-black uppercase tracking-[0.2em] italic text-white truncate leading-none">MAÇ DEĞERLENDİRME</h1>
+            <h1 className="text-sm font-extrabold uppercase tracking-[0.2em] italic text-white truncate leading-none">MAÇ DEĞERLENDİRME</h1>
             {/* BULGU-101: hangi maçın puanlandığı sabit metinden değil, maçın kendisinden okunur. */}
             {selectedMatch && (
               <p className="text-[12px] font-bold text-[#8B949E] truncate mt-1">
@@ -566,7 +566,7 @@ const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => 
           </div>
 
           <div className="w-11 h-11 bg-white/5 border border-white/10 rounded-full flex items-center justify-center">
-            <span className="text-[10px] font-black text-white/50">{step}/2</span>
+            <span className="text-[10px] font-extrabold text-white/50">{step}/2</span>
           </div>
         </div>
 
@@ -651,12 +651,12 @@ const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => 
                 <div className="rounded-[32px] border p-7 flex flex-col gap-6 relative overflow-hidden transition-all bg-[#121620]/70 border-white/8">
                   <div className="absolute -top-10 left-1/2 -translate-x-1/2 w-32 h-32 bg-amber-500/6 rounded-full blur-2xl pointer-events-none" />
                   <div className="flex items-center gap-4">
-                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center font-black text-base border ${getTierBadgeClass(p.tier)}`}>
+                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center font-extrabold text-base border ${getTierBadgeClass(p.tier)}`}>
                       {p.initials}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-base font-black text-white uppercase tracking-tight italic">{p.name}</p>
-                      <span className="px-2 py-0.5 bg-white/5 border border-white/10 rounded text-[8px] font-black text-gray-400 tracking-wider uppercase">{p.pos}</span>
+                      <p className="text-base font-extrabold text-white uppercase tracking-tight italic">{p.name}</p>
+                      <span className="px-2 py-0.5 bg-white/5 border border-white/10 rounded text-[8px] font-extrabold text-gray-400 tracking-wider uppercase">{p.pos}</span>
                     </div>
                   </div>
 
@@ -673,7 +673,7 @@ const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => 
                     </div>
                   </div>
                   {currentRating > 0 && (
-                    <p className="text-center text-[9px] font-black uppercase tracking-widest text-[#FACC15]/70 -mt-3">
+                    <p className="text-center text-[9px] font-extrabold uppercase tracking-widest text-[#FACC15]/70 -mt-3">
                       {currentRating === 5 ? 'Mükemmel' : currentRating >= 4 ? 'Çok İyi' : currentRating >= 3 ? 'İyi' : currentRating >= 2 ? 'Orta' : 'Zayıf'}
                     </p>
                   )}
@@ -720,12 +720,12 @@ const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => 
                 {/* Actions */}
                 <div className="flex gap-3">
                   <motion.button whileTap={{ scale: 0.97 }} onClick={advanceCard}
-                    className="w-14 h-14 bg-white/5 border border-white/10 text-gray-400 rounded-2xl text-[10px] font-black uppercase flex items-center justify-center hover:bg-white/8 transition-all">
+                    className="w-14 h-14 bg-white/5 border border-white/10 text-gray-400 rounded-2xl text-[10px] font-extrabold uppercase flex items-center justify-center hover:bg-white/8 transition-all">
                     Atla
                   </motion.button>
                   <motion.button whileTap={{ scale: 0.98 }} onClick={advanceCard}
                     disabled={currentRating === 0}
-                    className={`flex-1 h-14 font-black rounded-2xl text-xs uppercase tracking-widest flex items-center justify-center gap-2 transition-all ${currentRating > 0 ? 'bg-gradient-to-r from-[#39FF14] to-emerald-400 text-black shadow-[0_0_20px_rgba(57,255,20,0.2)]' : 'bg-white/5 border border-white/10 text-[#8B949E]'}`}>
+                    className={`flex-1 h-14 font-extrabold rounded-2xl text-xs uppercase tracking-widest flex items-center justify-center gap-2 transition-all ${currentRating > 0 ? 'bg-gradient-to-r from-[#39FF14] to-emerald-400 text-black shadow-[0_0_20px_rgba(57,255,20,0.2)]' : 'bg-white/5 border border-white/10 text-[#8B949E]'}`}>
                     {isLast ? 'TAMAMLA →' : 'SONRAKI →'}
                   </motion.button>
                 </div>
@@ -748,7 +748,7 @@ const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => 
                 <div className="w-14 h-14 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex items-center justify-center mx-auto mb-3.5 shadow-[inset_0_2px_8px_rgba(16,185,129,0.15)]">
                   <Star size={26} className="text-emerald-400" />
                 </div>
-                <h2 className="text-base font-black uppercase tracking-tight italic">Saha ve görevliler</h2>
+                <h2 className="text-base font-extrabold uppercase tracking-tight italic">Saha ve görevliler</h2>
                 <p className="text-[13px] font-semibold text-[#8B949E] mt-1">Sahayı ve maça gelen görevlileri puanla</p>
               </div>
 
@@ -840,7 +840,7 @@ const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => 
                 <motion.button 
                   whileTap={{ scale: 0.98 }} 
                   onClick={() => setStep(1)}
-                  className="flex-1 h-14 bg-white/5 border border-white/10 text-white font-black rounded-2xl text-xs uppercase tracking-widest flex items-center justify-center hover:bg-white/10"
+                  className="flex-1 h-14 bg-white/5 border border-white/10 text-white font-extrabold rounded-2xl text-xs uppercase tracking-widest flex items-center justify-center hover:bg-white/10"
                 >
                   ← GERİ
                 </motion.button>

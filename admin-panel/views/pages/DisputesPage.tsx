@@ -136,7 +136,7 @@ export const DisputesPage: React.FC<DisputesPageProps> = ({ onNavigate }) => {
               onClick={(e) => e.stopPropagation()}
               className="w-full max-w-md bg-[#161B22] border border-white/10 rounded-2xl p-6 shadow-2xl"
             >
-              <h3 className="text-sm font-black text-white mb-1">
+              <h3 className="text-sm font-extrabold text-white mb-1">
                 {resolveTarget.status === 'RESOLVED' ? 'İhtilafı çöz' : 'İhtilafı reddet'}
               </h3>
               <p className="text-xs text-gray-500 mb-4">Karar notu zorunludur — denetim kaydına yazılır.</p>
@@ -152,7 +152,7 @@ export const DisputesPage: React.FC<DisputesPageProps> = ({ onNavigate }) => {
                 <button
                   onClick={() => void confirmResolve()}
                   disabled={!notes.trim() || actioningId === resolveTarget.id}
-                  className="px-4 py-2 text-xs font-black rounded-xl text-white bg-red-600 hover:bg-red-500 disabled:opacity-50"
+                  className="px-4 py-2 text-xs font-extrabold rounded-xl text-white bg-red-600 hover:bg-red-500 disabled:opacity-50"
                 >
                   Onayla
                 </button>

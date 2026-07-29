@@ -139,7 +139,7 @@ export const OwnerBottomSheet: React.FC<OwnerBottomSheetProps> = ({
               <div className="shrink-0 px-5 pt-2 pb-3 flex items-start justify-between gap-3 border-b border-white/5">
                 <div className="min-w-0">
                   {title && (
-                    <h2 className="text-lg font-black text-white truncate">{title}</h2>
+                    <h2 className="text-lg font-extrabold text-white truncate">{title}</h2>
                   )}
                   {subtitle && <p className="text-xs text-slate-400 mt-0.5">{subtitle}</p>}
                 </div>
