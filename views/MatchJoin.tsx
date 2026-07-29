@@ -15,13 +15,14 @@ import { MatchListing, PositionSlot, UserRole, Player, Team, ProviderType, Provi
 import { useAppStore } from '../store';
 import { auth } from '../supabaseAuth';
 import { supabase } from '../supabaseClient';
-import { subscribeToMatchUpdates, getMatchDetails, getPitchCoordinates, getMatchLobbyParticipants, getFriendPlayerCard, getMatchProviders, getMyMatchPrivateCode, selfAssignSlot, assignSlotToFriend, unassignSlot, releaseSlot, kickSlot, updateFormationRpc, type LobbyParticipant, type FriendPlayerCard, type MatchProvider } from '../services/matchService';
+import { subscribeToMatchUpdates, getMatchDetails, getPitchCoordinates, getMatchLobbyParticipants, getFriendPlayerCard, getMatchProviders, getMyMatchPrivateCode, selfAssignSlot, assignSlotToFriend, unassignSlot, releaseSlot, kickSlot, updateFormationRpc, previewLeaveMatch, leaveMatchSlot, leaveQuoteMessage, type LobbyParticipant, type FriendPlayerCard, type MatchProvider, type LeaveMatchQuote } from '../services/matchService';
 import { sendFriendRequest } from '../services/friendService';
 import MatchSquadPicker, { type PickedPlayer } from '../components/social/MatchSquadPicker';
 import { getMatchTacticProposals, proposeMatchTactic, listMyTacticsLite, type MatchTacticProposal, type MyTacticLite } from '../services/tacticSocialService';
 import { findProvidersForMatch, createServiceRequest, getMatchServiceRequests, acceptProviderApplication, declineProviderApplication, captainConfirmService, fundServiceRequest, captainReportNoShow } from '../services/serviceRequestService';
 import { checkMatchThreshold, cancelMatchByCaptain } from '../services/matchLifecycleService';
 import { formatTRYWithSymbol } from '../utils/formatTRY';
+import { showToast } from '../components/common/GlobalToast';
 import { FORMATIONS as FORMATIONS_SSOT, type SquadSize } from '../utils/formations';
 import TeamPlanBanner from '../components/social/TeamPlanBanner';
 // Tek kaynak lobi mantığı — admin paneli (MatchLobbyPitch) ile AYNI fonksiyonlar (drift yok).
@@ -266,8 +267,11 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   // B4: Kaptanın maçı iptali (yalnız MANAGE lobisinde görünür)
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
-  // S2.4 — ayrılınca iade edilecek tutar (SUNUCUDAN; leave_public_match_slot ile birebir)
-  const [leaveRefund, setLeaveRefund] = useState<number | null>(null);
+  // IP-04 — ayrılma sözleşmesi (SUNUCUDAN; gerçek iadeyle birebir aynı kaynak).
+  // Tek sayı değil nesne: "0 iade" ile "hesaplanamadı" ayrı sonuçlar, ikisi de
+  // sessiz kalmamalı (BULGU-087).
+  const [leaveQuote, setLeaveQuote] = useState<LeaveMatchQuote | null>(null);
+  const [leaveQuoteLoading, setLeaveQuoteLoading] = useState(false);
 
   // (Rakip davet/katıl modalları kaldırıldı — lobi sadeleştirmesi)
 
@@ -591,16 +595,16 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
     ? findHiredGkSlotId(pitchSide === 'home' ? enrichedSlots : enrichedAwaySlots)
     : null;
 
-  // S2.4 — ayrılma modalı açılınca iade tutarını SUNUCUDAN çek (yedeklikte 0 döner).
+  // IP-04 — ayrılma modalı açılınca sözleşmeyi SUNUCUDAN çek. Hata ile "iade
+  // yok" artık ayrı sonuçlar: hata durumunda quote null kalır ve AYRIL pasifleşir.
   useEffect(() => {
-    if (!showLeaveConfirm || !match?.id) { setLeaveRefund(null); return; }
+    if (!showLeaveConfirm || !match?.id) { setLeaveQuote(null); setLeaveQuoteLoading(false); return; }
     let alive = true;
-    (async () => {
-      try {
-        const { data } = await supabase.rpc('preview_leave_match', { p_match_id: match.id });
-        if (alive) setLeaveRefund(Number((data as any)?.refundable) || 0);
-      } catch { if (alive) setLeaveRefund(null); }
-    })();
+    setLeaveQuoteLoading(true);
+    previewLeaveMatch(match.id)
+      .then(q => { if (alive) setLeaveQuote(q); })
+      .catch(e => { console.error('[MatchJoin] ayrılma önizlemesi alınamadı:', e); if (alive) setLeaveQuote(null); })
+      .finally(() => { if (alive) setLeaveQuoteLoading(false); });
     return () => { alive = false; };
   }, [showLeaveConfirm, match?.id]);
 
@@ -693,7 +697,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
         // Metin sunucunun gerçek davranışıyla birebir: leave_public_match_slot /
         // process_match_at_deadline zaman kademesi UYGULAMADAN kalanı iade eder.
         // Cüzdanda tek bakiye var — "iade kredisi" DENMEZ (karar defteri S6/K-0.3).
-        infoNote: 'Kadro dolmazsa veya maç iptal olursa ödediğin tutarın tamamı cüzdanına döner. Maçtan kendin ayrılırsan da kendi yerin için ödediğin tutar cüzdanına döner. Cüzdanındaki tutar OYNA içindeki saha, maç ve hizmet ödemelerinde kullanılır.',
+        infoNote: 'Kadro dolmazsa veya maç iptal olursa ödediğin tutarın tamamı cüzdanına döner. Maçtan kendin ayrılırsan iade kademeye tabidir: maça 24 saatten fazla varsa tamamı, 6–24 saat kala %50\u2019si cüzdanına döner; 6 saatten az kala iade yapılmaz. Tam iade penceresi kapandıktan sonra ayrılırsan güvenilirlik puanın da düşer. Cüzdanındaki tutar OYNA içindeki saha, maç ve hizmet ödemelerinde kullanılır.',
       });
       setSelectedSlotIds([]);
       // Bu dal try/finally'ye GİRMEDEN dönüyor: kilidi elle bırakmazsak
@@ -768,20 +772,16 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
     setIsProcessing(true);
 
     try {
-      const { error } = await supabase.rpc('leave_public_match_slot', {
-        p_match_id: match.id,
-        p_user_id: currentUserProfile.id
-      });
-
-      if (error) throw error;
+      await leaveMatchSlot(match.id, currentUserProfile.id);
 
       // KN-3b: sunucu çıkardı; taze çek, yerel uygula.
       const fresh = await getMatchDetails(match.id);
       if (fresh) applyMatchLocal(fresh);
       setShowLeaveConfirm(false);
+      showActionSuccess('Yedek listesinden çıktın.');
     } catch (e: any) {
       console.error('Leave reserves error:', e);
-      showActionError('Yedek listesinden çıkarken bir hata oluştu.');
+      showActionError('Yedek listesinden çıkamadın. İnternetin zayıf olabilir, tekrar dene.');
     } finally {
       setIsProcessing(false); endWrite();
     }
@@ -912,7 +912,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
       const fresh = await getMatchDetails(match.id);
       if (fresh) applyMatchLocal(fresh); // KN-3b: taze veri DB'ye GERİ yazılmaz
       setActivePlayerSlotId(null);
-      showActionSuccess(refunded > 0 ? `Oyuncu çıkarıldı — ${refunded}₺ iade kredisi işlendi.` : 'Oyuncu kadrodan çıkarıldı.');
+      showActionSuccess(refunded > 0 ? `Oyuncu çıkarıldı — ${refunded}₺ cüzdanına iade edildi.` : 'Oyuncu kadrodan çıkarıldı.');
     } catch (e: any) {
       console.error(e);
       const msg = String(e?.message || '');
@@ -929,27 +929,36 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
     setIsProcessing(true);
 
     try {
-      const { error } = await supabase.rpc('leave_public_match_slot', {
-        p_match_id: match.id,
-        p_user_id: currentUserProfile.id
-      });
-
-      if (error) throw error;
+      await leaveMatchSlot(match.id, currentUserProfile.id);
 
       // KN-3b (kritik silme): leave_public_match_slot SUNUCUDA zaten her şeyi
-      // yapıyor — slotu boşaltma, ilk yedeği terfi ettirme, kaptan ayrılıyorsa
-      // yeni kaptan atama (migration 20260717000003). Buradaki eski client
-      // kopyası (fillVacatedSlot + reliabilityScore halef hesabı, hiç
-      // yüklenmeyen adminUsers ile herkes=100) sunucunun DOĞRU sonucunu bayat
-      // tam-dizi yazımıyla eziyordu. Taze çek, yerel uygula, çık.
+      // yapıyor — slotu boşaltma, iadeyi yazma, geç ayrılmada güvenilirlik
+      // cezası, kaptana bildirim, kaptan ayrılıyorsa yeni kaptan atama
+      // (20260829000000). Buradaki eski client kopyası (fillVacatedSlot +
+      // reliabilityScore halef hesabı, hiç yüklenmeyen adminUsers ile
+      // herkes=100) sunucunun DOĞRU sonucunu bayat tam-dizi yazımıyla
+      // eziyordu. Taze çek, yerel uygula, çık.
       const fresh = await getMatchDetails(match.id);
       if (fresh) applyMatchLocal(fresh);
 
       setShowLeaveConfirm(false);
+      // IP-04 — ayrılmanın parasal sonucu sessiz kalmaz. onBack() bu ekranı
+      // söktüğü için YEREL toast görünmez; sonucu GLOBAL kanaldan söylüyoruz.
+      if (leaveQuote?.late) {
+        const geri = leaveQuote.refundable > 0
+          ? `${formatTRYWithSymbol(leaveQuote.refundable)} cüzdanına döndü, ` : '';
+        const yanan = leaveQuote.forfeited > 0
+          ? `${formatTRYWithSymbol(leaveQuote.forfeited)} iade edilmedi, ` : '';
+        showToast(`Maçtan ayrıldın. ${geri}${yanan}güvenilirlik puanın ${leaveQuote.penalty} düştü.`, 'error');
+      } else if ((leaveQuote?.refundable ?? 0) > 0) {
+        showToast(`Maçtan ayrıldın. ${formatTRYWithSymbol(leaveQuote!.refundable)} cüzdanına geri döndü.`, 'success');
+      } else {
+        showToast('Maçtan ayrıldın.', 'success');
+      }
       onBack();
     } catch (e: any) {
       console.error('Leave match error:', e);
-      showActionError('Maçtan ayrılırken bir hata oluştu.');
+      showActionError('Maçtan ayrılamadın. İnternetin zayıf olabilir, tekrar dene.');
     } finally {
       setIsProcessing(false); endWrite();
     }
@@ -1290,20 +1299,34 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                 {isAlreadyJoinedReserve ? 'Yedeklikten Ayrıl' : 'Maçtan Ayrıl'}
               </h3>
               
-              <p className="text-sm text-gray-400 mb-4">
+              <p className="text-sm mb-4" style={{ color: '#A9B4C0' }}>
                 {isAlreadyJoinedReserve
-                  ? 'Yedek listesinden çıkmak istediğinize emin misiniz?'
-                  : 'Maçtan ayrılmak istediğinize emin misiniz? Kadrodaki yeriniz boşaltılacaktır.'}
+                  ? 'Yedek listesinden çıkarsan bu maç için sıran silinir.'
+                  : 'Maçtan ayrılırsan kadrodaki yerin boşalır ve yerin vitrine açılır.'}
               </p>
-              {/* S2.4 — iade önizlemesi (SUNUCUDAN; gerçek iadeyle birebir) */}
-              {leaveRefund != null && leaveRefund > 0 && (
-                <div className="mb-6 bg-[#39FF14]/8 border border-[#39FF14]/25 rounded-2xl px-4 py-3">
-                  <p className="text-[12.5px] text-gray-200 leading-relaxed">
-                    Ödediğin <span className="text-[#39FF14] font-black">{leaveRefund.toLocaleString('tr-TR')}₺</span> ayrılınca
-                    {' '}<span className="text-white font-semibold">cüzdanına eksiksiz döner</span>.
-                  </p>
-                </div>
-              )}
+
+              {/* IP-04 — ayrılmanın para/puan sonucu. Altı durumun HİÇBİRİ sessiz
+                  değil; renk tek başına anlam taşımasın diye her dal ikon +
+                  Türkçe kelime taşır. */}
+              {(() => {
+                const msg = leaveQuoteMessage(leaveQuote, leaveQuoteLoading, isAlreadyJoinedReserve);
+                const skin = msg.tone === 'late'
+                  ? { bg: 'rgba(248,113,113,0.12)', line: 'rgba(248,113,113,0.35)', ink: '#F87171', Icon: AlertCircle }
+                  : msg.tone === 'refund'
+                  ? { bg: 'rgba(57,255,20,0.12)', line: 'rgba(57,255,20,0.35)', ink: '#A9B4C0', Icon: CheckCircle2 }
+                  : { bg: 'rgba(255,255,255,0.04)', line: 'rgba(255,255,255,0.16)', ink: '#A9B4C0', Icon: msg.tone === 'loading' ? Loader2 : Info };
+                return (
+                  <div className="mb-6 rounded-2xl px-4 py-3 border flex items-start gap-2 text-left"
+                       style={{ background: skin.bg, borderColor: skin.line }}>
+                    <skin.Icon size={15}
+                      className={`shrink-0 mt-0.5 ${msg.tone === 'loading' ? 'animate-spin' : ''}`}
+                      style={{ color: msg.tone === 'refund' ? '#39FF14' : skin.ink }} />
+                    <p className="text-[13px] font-semibold leading-[18px]" style={{ color: skin.ink }}>
+                      {msg.text}
+                    </p>
+                  </div>
+                );
+              })()}
               
               <div className="flex gap-3">
                 <button 
@@ -1312,10 +1335,12 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                   className="flex-1 py-3 rounded-2xl font-black text-sm uppercase tracking-widest text-white bg-white/5 border border-white/10 hover:bg-white/10 transition-colors">
                   İPTAL
                 </button>
-                <button 
+                {/* IP-04 — para sonucu bilinmeden yıkıcı aksiyon yapılamaz:
+                    önizleme yüklenirken veya alınamadığında AYRIL pasiftir. */}
+                <button
                   onClick={isAlreadyJoinedReserve ? handleLeaveReserves : handleLeaveMatch}
-                  disabled={isProcessing}
-                  className="flex-1 py-3 rounded-2xl font-black text-sm uppercase tracking-widest text-white bg-red-600 shadow-[0_0_20px_rgba(239,68,68,0.4)] hover:bg-red-500 transition-colors flex items-center justify-center">
+                  disabled={isProcessing || (!isAlreadyJoinedReserve && (leaveQuoteLoading || leaveQuote == null))}
+                  className="flex-1 py-3 rounded-2xl font-black text-sm uppercase tracking-widest text-white bg-red-600 shadow-[0_0_20px_rgba(239,68,68,0.4)] hover:bg-red-500 transition-colors flex items-center justify-center disabled:opacity-40 disabled:pointer-events-none">
                   {isProcessing ? <Loader2 size={18} className="animate-spin" /> : 'AYRIL'}
                 </button>
               </div>

@@ -1,5 +1,6 @@
 import { supabase } from '../supabaseClient';
 import { MatchListing, PositionSlot } from '../types';
+import { formatTRYWithSymbol } from '../utils/formatTRY';
 
 export interface Match {
   id?: string;
@@ -464,4 +465,110 @@ export const toPrivateMatchErrorMessage = (err: unknown): string => {
   if (code.includes('NOT_FOUND')) return 'Bu koda ait özel maç bulunamadı. Kodu doğru girdiğinden emin ol.';
   if (code.includes('UNAUTHORIZED') || code.includes('JWT')) return 'Bu işlem için giriş yapman gerekiyor.';
   return 'Maç bulunamadı. Lütfen kodu kontrol edip tekrar dene.';
+};
+
+// ─── IP-04 — Maçtan ayrılma sözleşmesi ──────────────────────────────────────
+// Sunucudaki `_leave_match_quote` çıktısıyla BİREBİR. Ayrılma ekranlarının
+// tamamı (MatchJoin lobisi + Maçlarım) bu tek tipten beslenir; "modalda yazan
+// rakam" ile "cüzdana düşen rakam" ayrı yerlerden hesaplanamaz.
+
+/** Ayrılınca ne olacağının sunucu tarafından hesaplanmış tam cevabı. */
+export interface LeaveMatchQuote {
+  refundable: number;       // ayrılınca cüzdana dönecek tutar (₺) — kademe uygulanmış
+  paid: number;             // bu maça bugüne dek ödenen tutar (₺)
+  alreadyRefunded: boolean; // daha önce iade alınmış mı
+  inSquad: boolean;         // sahada mı (false = yedek kulübesi / slotu arkadaşında)
+  hoursToStart: number;     // maç başlangıcına kalan saat
+  refundPct: number;        // uygulanan iade yüzdesi (100 / half_pct / 0)
+  fullHours: number;        // tam iade eşiği (saat) — tesis kademesinden
+  halfHours: number;        // yarım iade eşiği (saat)
+  halfPct: number;          // yarım kademe yüzdesi (varsayılan 50)
+  late: boolean;            // tam iade penceresi kapandı mı → güvenilirlik cezası
+  penalty: number;          // düşecek güvenilirlik puanı
+  forfeited: number;        // kademe nedeniyle iade EDİLMEYEN tutar (₺)
+}
+
+/**
+ * Ayrılma önizlemesi. **Hata FIRLATIR** — çağıran "hesaplanamadı" dalını
+ * çizmeli ve ayrılmayı engellemeli. Sessizce 0 dönmek, kullanıcının parasını
+ * uyarısız kaybetmesi demektir (BULGU-087).
+ */
+export const previewLeaveMatch = async (matchId: string): Promise<LeaveMatchQuote> => {
+  const { data, error } = await supabase.rpc('preview_leave_match', { p_match_id: matchId });
+  if (error) throw error;
+  const d = (data ?? {}) as Record<string, unknown>;
+  return {
+    refundable: Number(d.refundable) || 0,
+    paid: Number(d.paid) || 0,
+    alreadyRefunded: !!d.already_refunded,
+    inSquad: !!d.in_squad,
+    hoursToStart: Number(d.hours_to_start) || 0,
+    refundPct: Number(d.refund_pct) || 0,
+    fullHours: Number(d.full_hours) || 24,
+    halfHours: Number(d.half_hours) || 6,
+    halfPct: Number(d.half_pct) || 50,
+    late: !!d.late,
+    penalty: Number(d.penalty) || 0,
+    forfeited: Number(d.forfeited) || 0,
+  };
+};
+
+/** Maçtan/yedeklikten ayrıl. İadeyi, cezayı ve bildirimleri sunucu yapar. */
+export const leaveMatchSlot = async (matchId: string, userId: string): Promise<void> => {
+  const { error } = await supabase.rpc('leave_public_match_slot', {
+    p_match_id: matchId,
+    p_user_id: userId,
+  });
+  if (error) throw error;
+};
+
+/**
+ * Ayrılma modalının gövde metni — altı durumun TEK kaynağı.
+ * Lobi (MatchJoin) ve Maçlarım (MyMatchesHub) aynı metni kullanır; iki ekran
+ * ayrı cümle kurup birbiriyle çelişemez.
+ */
+export const leaveQuoteMessage = (
+  quote: LeaveMatchQuote | null,
+  loading: boolean,
+  isReserve: boolean,
+): { tone: 'reserve' | 'loading' | 'unknown' | 'late' | 'refund' | 'none'; text: string } => {
+  if (isReserve) {
+    return { tone: 'reserve', text: 'Yedeklikte ödeme alınmadığı için iade veya puan kaybı yok.' };
+  }
+  if (loading) return { tone: 'loading', text: 'İade tutarı hesaplanıyor…' };
+  if (quote == null) {
+    return {
+      tone: 'unknown',
+      text: 'İade tutarı hesaplanamadı. İnternetin zayıf olabilir — ayrılmadan önce tekrar dene.',
+    };
+  }
+
+  // Tam iade penceresi kapandı: kademe ve/veya güvenilirlik cezası devrede.
+  if (quote.late) {
+    const esik = quote.refundPct > 0
+      ? `Maça ${quote.fullHours} saatten az kaldı`
+      : `Maça ${quote.halfHours} saatten az kaldı`;
+    const para =
+      quote.forfeited <= 0 ? ''
+      : quote.refundable > 0
+        ? ` Ödediğinin %${quote.refundPct}'i (${formatTRYWithSymbol(quote.refundable)}) cüzdanına döner, ${formatTRYWithSymbol(quote.forfeited)} iade edilmez.`
+        : ` Ödediğin ${formatTRYWithSymbol(quote.forfeited)} iade edilmez.`;
+    return {
+      tone: 'late',
+      text: `${esik}.${para} Güvenilirlik puanın ${quote.penalty} düşer ve kaptana haber verilecek.`,
+    };
+  }
+
+  if (quote.refundable > 0) {
+    return {
+      tone: 'refund',
+      text: `Ödediğin ${formatTRYWithSymbol(quote.refundable)} ayrılınca cüzdanına döner.`,
+    };
+  }
+  return {
+    tone: 'none',
+    text: quote.alreadyRefunded
+      ? 'Bu maçın ödemesi zaten iade edilmişti; yeni iade yapılmayacak.'
+      : 'Bu maç için iade edilecek tutar yok.',
+  };
 };

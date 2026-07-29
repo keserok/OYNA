@@ -1630,6 +1630,9 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                 { n: '2', t: `Maç ${threshold} oyuncuda kesinleşir`, b: 'Toplam kadronun 2 eksiği kadar oyuncu katıldığında maç aktifleşir ve kapora tahsil edilir.' },
                 { n: '3', t: 'Maç dolunca payın dışındaki tutar döner', b: deposit != null && perPerson != null ? `${fmtTL(deposit)}₺ − ${fmtTL(perPerson)}₺ = ${fmtTL(Math.max(0, deposit - perPerson))}₺ cüzdanına iade edilir; sen de herkes gibi yalnız kendi payını ödersin.` : 'Sen de herkes gibi yalnız kendi payını ödersin; kalanı iade edilir.' },
                 { n: '4', t: 'Maç dolmazsa tam iade', b: 'Kadro eşiğe ulaşmazsa maç iptal olur ve blokaj kesintisiz çözülür. 24 saatten az kala kaptan iptalinde iade yapılmaz.' },
+                // IP-04 — sunucu karşılığı: app_config.match_leave_free_hours (24).
+                // Kaptan iptali kuralıyla bilerek aynı sayı.
+                { n: '5', t: 'Oyuncu ayrılması — iade kademesi', b: 'Kadrodaki bir oyuncu maça 24 saatten fazla varken ayrılırsa ödediği tutar cüzdanına döner. 6–24 saat kala %50 iade edilir, 6 saatten az kala iade yapılmaz. Tam iade penceresi kapandıktan sonra ayrılanın güvenilirlik puanı düşer; sana bildirim gider, boşalan yer vitrine açılır.' },
               ].map(r => (
                 <div key={r.n} className="flex gap-3 rounded-[18px] border border-white/[0.08] bg-white/[0.03] p-4">
                   <div className="font-numeric w-9 h-9 rounded-xl bg-[#39FF14]/10 border border-[#39FF14]/25 text-[#39FF14] text-sm font-black flex items-center justify-center shrink-0">{r.n}</div>

@@ -3,18 +3,23 @@ import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import {
   ArrowLeft, RefreshCw, Calendar, Clock, ChevronDown, ChevronRight, AlertTriangle,
   CheckCircle2, XCircle, Loader2, MapPin, Swords, Navigation, Repeat, LogOut, QrCode,
+  AlertCircle, Info,
 } from 'lucide-react';
 import { AppView } from '../types';
 import { useAppStore } from '../store';
 import { supabase } from '../supabaseClient';
 import { useMyAgenda, type MyAgendaItem } from '../hooks/useMyAgenda';
 import { useCountdown } from '../hooks/useCountdown';
-import { getMatchDetails } from '../services/matchService';
+import {
+  getMatchDetails, previewLeaveMatch, leaveMatchSlot, leaveQuoteMessage,
+  type LeaveMatchQuote,
+} from '../services/matchService';
 import {
   cancelMyBooking, previewBookingCancel, shortTime, toPlayerErrorMessage,
   type MyBooking, type CancelResult, type CancelPreview,
 } from '../services/playerBookingService';
-import { formatTRY } from '../utils/formatTRY';
+import { formatTRY, formatTRYWithSymbol } from '../utils/formatTRY';
+import { showToast } from '../components/common/GlobalToast';
 import { formatCapacityRange } from '../shared/pitchShowcaseMapper';
 import { formatMatchDuration } from '../shared/matchTiming';
 import SegmentedTabs from '../components/ui/SegmentedTabs';
@@ -301,18 +306,23 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onBack, onNavigate }) => {
     }
   };
 
-  // ── Maçtan ayrılma — iade önizlemesi + leave_public_match_slot ────────────
+  // ── Maçtan ayrılma — IP-04 sözleşmesi (MatchJoin lobisiyle AYNI kaynak) ───
   const [leaveTarget, setLeaveTarget] = useState<MyAgendaItem | null>(null);
-  const [leaveRefund, setLeaveRefund] = useState<number | null>(null);
+  const [leaveQuote, setLeaveQuote] = useState<LeaveMatchQuote | null>(null);
+  const [leaveQuoteLoading, setLeaveQuoteLoading] = useState(false);
   const [leaving, setLeaving] = useState(false);
   const [leaveError, setLeaveError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!leaveTarget || leaveTarget.kind !== 'MATCH') { setLeaveRefund(null); return; }
+    if (!leaveTarget || leaveTarget.kind !== 'MATCH') {
+      setLeaveQuote(null); setLeaveQuoteLoading(false); return;
+    }
     let alive = true;
-    supabase.rpc('preview_leave_match', { p_match_id: leaveTarget.match.id })
-      .then(({ data }) => { if (alive) setLeaveRefund(Number((data as { refundable?: number } | null)?.refundable) || 0); })
-      .then(undefined, () => { if (alive) setLeaveRefund(null); });
+    setLeaveQuoteLoading(true);
+    previewLeaveMatch(leaveTarget.match.id)
+      .then(q => { if (alive) setLeaveQuote(q); })
+      .catch(e => { console.error('[MyMatchesHub] ayrılma önizlemesi alınamadı:', e); if (alive) setLeaveQuote(null); })
+      .finally(() => { if (alive) setLeaveQuoteLoading(false); });
     return () => { alive = false; };
   }, [leaveTarget]);
 
@@ -321,18 +331,26 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onBack, onNavigate }) => {
     setLeaving(true);
     setLeaveError(null);
     try {
-      const { error } = await supabase.rpc('leave_public_match_slot', {
-        p_match_id: leaveTarget.match.id,
-        p_user_id: currentUserUid,
-      });
-      if (error) throw error;
+      await leaveMatchSlot(leaveTarget.match.id, currentUserUid);
       const fresh = await getMatchDetails(leaveTarget.match.id);
       if (fresh) applyMatchLocal(fresh);
+      // IP-04 — sonuç sessiz kalmaz: ne yandı, ne döndü, kullanıcı görsün.
+      if (leaveQuote?.late) {
+        const geri = leaveQuote.refundable > 0
+          ? `${formatTRYWithSymbol(leaveQuote.refundable)} cüzdanına döndü, ` : '';
+        const yanan = leaveQuote.forfeited > 0
+          ? `${formatTRYWithSymbol(leaveQuote.forfeited)} iade edilmedi, ` : '';
+        showToast(`Maçtan ayrıldın. ${geri}${yanan}güvenilirlik puanın ${leaveQuote.penalty} düştü.`, 'error');
+      } else if ((leaveQuote?.refundable ?? 0) > 0) {
+        showToast(`Maçtan ayrıldın. ${formatTRYWithSymbol(leaveQuote!.refundable)} cüzdanına geri döndü.`, 'success');
+      } else {
+        showToast('Maçtan ayrıldın.', 'success');
+      }
       setLeaveTarget(null);
     } catch (e) {
       setLeaveError(e instanceof Error && e.message.includes('kayıtlı değil')
         ? 'Bu maçta ayrılabileceğin bir kaydın yok.'
-        : 'Maçtan ayrılırken bir hata oluştu. Lütfen tekrar dene.');
+        : 'Maçtan ayrılamadın. İnternetin zayıf olabilir, tekrar dene.');
     } finally {
       setLeaving(false);
     }
@@ -853,21 +871,40 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onBack, onNavigate }) => {
               <p className="text-sm text-gray-400 leading-relaxed mb-1">
                 {leaveTarget.match.title} — {leaveTarget.match.time}
               </p>
-              <p className="text-xs text-gray-500 mb-6">
-                {leaveRefund != null && leaveRefund > 0 ? (
-                  <>Ödediğin <span className="font-numeric text-[#39FF14] font-bold">₺{leaveRefund.toLocaleString('tr-TR')}</span> cüzdanına döner. Arkadaşlarına atadığın slotlar korunur.</>
-                ) : (
-                  <>Kadrodaki yerin ve doldurulmamış rezerve slotların serbest bırakılır. Arkadaşlarına atadığın slotlar korunur.</>
-                )}
+              <p className="text-xs text-gray-500 mb-3">
+                Kadrodaki yerin ve doldurulmamış rezerve slotların serbest bırakılır. Arkadaşlarına atadığın slotlar korunur.
               </p>
+
+              {/* IP-04 — ayrılmanın para/puan sonucu; lobi modalıyla AYNI metin
+                  kaynağı (leaveQuoteMessage). Hiçbir dal sessiz değil. */}
+              {(() => {
+                const msg = leaveQuoteMessage(leaveQuote, leaveQuoteLoading, false);
+                const skin = msg.tone === 'late'
+                  ? { bg: 'rgba(248,113,113,0.12)', line: 'rgba(248,113,113,0.35)', ink: '#F87171', Icon: AlertCircle }
+                  : msg.tone === 'refund'
+                  ? { bg: 'rgba(57,255,20,0.12)', line: 'rgba(57,255,20,0.35)', ink: '#A9B4C0', Icon: CheckCircle2 }
+                  : { bg: 'rgba(255,255,255,0.04)', line: 'rgba(255,255,255,0.16)', ink: '#A9B4C0', Icon: msg.tone === 'loading' ? Loader2 : Info };
+                return (
+                  <div className="mb-6 rounded-2xl px-4 py-3 border flex items-start gap-2 text-left"
+                       style={{ background: skin.bg, borderColor: skin.line }}>
+                    <skin.Icon size={15}
+                      className={`shrink-0 mt-0.5 ${msg.tone === 'loading' ? 'animate-spin' : ''}`}
+                      style={{ color: msg.tone === 'refund' ? '#39FF14' : skin.ink }} />
+                    <p className="text-[13px] font-semibold leading-[18px]" style={{ color: skin.ink }}>
+                      {msg.text}
+                    </p>
+                  </div>
+                );
+              })()}
               {leaveError && (
                 <p className="text-xs text-red-400 bg-red-950/40 border border-red-500/20 rounded-xl px-3 py-2 mb-4">{leaveError}</p>
               )}
               <div className="flex flex-col gap-3">
+                {/* IP-04 — para sonucu bilinmeden yıkıcı aksiyon yapılamaz. */}
                 <button
                   onClick={handleLeaveMatch}
-                  disabled={leaving}
-                  className={`w-full py-3.5 bg-red-500 text-white font-black rounded-2xl text-sm uppercase tracking-wide transition-transform flex items-center justify-center gap-2 ${leaving ? 'opacity-60 cursor-wait' : 'active:scale-95 hover:bg-red-600'}`}
+                  disabled={leaving || leaveQuoteLoading || leaveQuote == null}
+                  className={`w-full py-3.5 bg-red-500 text-white font-black rounded-2xl text-sm uppercase tracking-wide transition-transform flex items-center justify-center gap-2 disabled:opacity-40 disabled:pointer-events-none ${leaving ? 'opacity-60 cursor-wait' : 'active:scale-95 hover:bg-red-600'}`}
                 >
                   {leaving ? <><Loader2 size={16} className="animate-spin" /> Ayrılıyor...</> : 'Evet, Ayrıl'}
                 </button>
