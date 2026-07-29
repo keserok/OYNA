@@ -807,7 +807,7 @@ const tariffRowToPolicy = (t: PitchTariff) => ({
         >
           TESİS KAYDI BAŞLAT
         </button>
-        <button onClick={onBack} className="text-gray-500 text-sm font-bold">Geri Dön</button>
+        <button onClick={onBack} className="text-ink-4 text-sm font-bold">Geri Dön</button>
       </div>
     );
   }
@@ -829,12 +829,12 @@ const tariffRowToPolicy = (t: PitchTariff) => ({
                         >
                           <h1 className="text-sm font-bold text-white tracking-wide">OYNA İŞLETME</h1>
                           <ChevronDown size={14} className="text-gray-400" />
-                          <p className="text-[10px] text-emerald-400 font-medium">{facilityData?.name ?? 'Tesisim'}</p>
+                          <p className="text-[0.6875rem] text-emerald-400 font-medium">{facilityData?.name ?? 'Tesisim'}</p>
                         </button>
                       ) : (
                         <>
                           <h1 className="text-sm font-bold text-white tracking-wide text-shadow">OYNA İŞLETME</h1>
-                          <p className="text-[10px] text-gray-500 font-medium">{facilityData?.name ?? 'Tesisim'}</p>
+                          <p className="text-[0.6875rem] text-ink-4 font-medium">{facilityData?.name ?? 'Tesisim'}</p>
                         </>
                       )}
                       {showFacilityPicker && ownedFacilities.length > 1 && (
@@ -847,7 +847,7 @@ const tariffRowToPolicy = (t: PitchTariff) => ({
                               className={`w-full text-left px-4 py-3 text-xs font-bold hover:bg-white/5 ${f.id === realPitchId ? 'text-emerald-400' : 'text-white'}`}
                             >
                               {f.name}
-                              {f.district ? <span className="block text-[10px] text-gray-500 font-normal">{f.district}</span> : null}
+                              {f.district ? <span className="block text-[0.6875rem] text-ink-4 font-normal">{f.district}</span> : null}
                             </button>
                           ))}
                         </div>
@@ -908,7 +908,7 @@ const tariffRowToPolicy = (t: PitchTariff) => ({
                         <Trophy size={24} className="text-white" />
                       </div>
                       <span className="text-sm font-extrabold italic text-white">SKOR GİR</span>
-                      <span className="text-[10px] font-bold text-blue-100 mt-1 uppercase tracking-widest">Maç seç veya kod gir</span>
+                      <span className="text-[0.625rem] font-bold text-blue-100 mt-1 uppercase tracking-widest">Maç seç veya kod gir</span>
                     </button>
                     <button 
                       onClick={() => setActiveTab('CALENDAR')}
@@ -918,7 +918,7 @@ const tariffRowToPolicy = (t: PitchTariff) => ({
                         <Plus size={24} className="text-white" />
                       </div>
                       <span className="text-sm font-extrabold italic text-white">YENİ KAYIT</span>
-                      <span className="text-[10px] font-bold text-gray-500 mt-1 uppercase tracking-widest">Rezervasyon</span>
+                      <span className="text-[0.625rem] font-bold text-ink-4 mt-1 uppercase tracking-widest">Rezervasyon</span>
                     </button>
                   </div>
               )}
@@ -930,7 +930,7 @@ const tariffRowToPolicy = (t: PitchTariff) => ({
                       className="w-full font-bold text-white text-base flex items-center justify-between mb-6 group"
                     >
                         <span className="flex items-center gap-2"><BarChartIcon size={18} className="text-indigo-500" /> Saha Doluluk Analizi</span>
-                        <span className="text-[10px] font-bold text-gray-500 group-hover:text-white uppercase tracking-wider flex items-center gap-1">Takvim <ChevronRight size={13} /></span>
+                        <span className="text-[0.625rem] font-bold text-ink-4 group-hover:text-white uppercase tracking-wider flex items-center gap-1">Takvim <ChevronRight size={13} /></span>
                     </button>
                     <PitchOccupancyGrid grid={occupancyGrid} />
                   </div>
@@ -957,7 +957,7 @@ const tariffRowToPolicy = (t: PitchTariff) => ({
                               )}
                           </div>
                       ) : (
-                          <p className="text-sm text-gray-500 text-center py-4">Bekleyen talep bulunmuyor.</p>
+                          <p className="text-sm text-ink-4 text-center py-4">Bekleyen talep bulunmuyor.</p>
                       )}
                   </div>
               )}
@@ -1175,7 +1175,7 @@ const tariffRowToPolicy = (t: PitchTariff) => ({
       >
           <div className="space-y-3">
               {courtStats.length === 0 ? (
-                  <p className="text-sm text-gray-500 text-center py-6">Bugün için saha bazlı ciro verisi yok.</p>
+                  <p className="text-sm text-ink-4 text-center py-6">Bugün için saha bazlı ciro verisi yok.</p>
               ) : courtStats.map((item) => (
                   <div key={item.courtId} className="bg-[#0A0E14] p-4 rounded-2xl border border-white/5 flex justify-between items-center">
                       <span className="text-sm font-bold text-gray-400">{item.courtName}</span>
@@ -1197,7 +1197,7 @@ const tariffRowToPolicy = (t: PitchTariff) => ({
       >
           <div className="space-y-6">
               {courtStats.length === 0 ? (
-                  <p className="text-sm text-gray-500 text-center py-6">Bugün için doluluk verisi yok.</p>
+                  <p className="text-sm text-ink-4 text-center py-6">Bugün için doluluk verisi yok.</p>
               ) : courtStats.map((item) => (
                   <div key={item.courtId} className="space-y-2">
                       <div className="flex justify-between items-end">
@@ -1207,7 +1207,7 @@ const tariffRowToPolicy = (t: PitchTariff) => ({
                       <div className="h-3 w-full bg-white/5 rounded-full overflow-hidden">
                           <div className={`h-full rounded-full transition-all duration-500 ${item.occupancyPercent < 50 ? 'bg-red-500' : 'bg-emerald-500'}`} style={{ width: `${item.occupancyPercent}%` }}></div>
                       </div>
-                      <p className="text-[0.6875rem] text-gray-500">{item.bookedHours}/{item.totalHours} saat dolu</p>
+                      <p className="text-[0.6875rem] text-ink-4">{item.bookedHours}/{item.totalHours} saat dolu</p>
                   </div>
               ))}
           </div>

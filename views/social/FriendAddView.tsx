@@ -60,7 +60,7 @@ const RelationButton: React.FC<{
   switch (person.relationship) {
     case 'FRIENDS':
       return (
-        <span className="h-9 px-3 rounded-xl bg-white/5 border border-white/10 flex items-center gap-1 text-[11px] font-bold text-white/50">
+        <span className="h-9 px-3 rounded-xl bg-white/5 border border-white/10 flex items-center gap-1 text-[0.6875rem] font-bold text-white/50">
           <Check size={12} /> Arkadaşsınız
         </span>
       );
@@ -68,7 +68,7 @@ const RelationButton: React.FC<{
       return (
         <button
           onClick={onCancel}
-          className="h-9 px-3 rounded-xl bg-white/5 border border-white/10 text-[11px] font-bold text-white/60 active:scale-[0.96]"
+          className="h-9 px-3 rounded-xl bg-white/5 border border-white/10 text-[0.6875rem] font-bold text-white/60 active:scale-[0.96]"
         >
           Geri Al
         </button>
@@ -77,7 +77,7 @@ const RelationButton: React.FC<{
       return (
         <button
           onClick={onAccept}
-          className="h-9 px-3 rounded-xl bg-[#39FF14] text-[#0A0E14] text-[11px] font-bold active:scale-[0.96]"
+          className="h-9 px-3 rounded-xl bg-[#39FF14] text-[#0A0E14] text-[0.6875rem] font-bold active:scale-[0.96]"
         >
           Kabul Et
         </button>
@@ -86,7 +86,7 @@ const RelationButton: React.FC<{
       return (
         <button
           onClick={onAdd}
-          className="h-9 px-3.5 rounded-xl bg-[#39FF14] text-[#0A0E14] text-[11px] font-bold flex items-center gap-1 active:scale-[0.96]"
+          className="h-9 px-3.5 rounded-xl bg-[#39FF14] text-[#0A0E14] text-[0.6875rem] font-bold flex items-center gap-1 active:scale-[0.96]"
         >
           <UserPlus size={12} /> Ekle
         </button>
@@ -105,12 +105,12 @@ const PersonRow: React.FC<{
       <div className="flex items-center gap-1.5">
         <span className="text-sm font-bold text-white truncate">{person.full_name}</span>
         {person.pos && (
-          <span className="shrink-0 text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-white/8 text-white/50">
+          <span className="shrink-0 text-[0.6875rem] font-extrabold px-1.5 py-0.5 rounded bg-white/8 text-white/50">
             {person.pos}
           </span>
         )}
       </div>
-      <div className="text-[11px] text-white/40 truncate">
+      <div className="text-[0.6875rem] text-ink-4 truncate">
         {person.oyna_id ? `@${person.oyna_id}` : 'OYNA oyuncusu'}
         {person.meta ? ` · ${person.meta}` : ''}
       </div>
@@ -303,31 +303,31 @@ const FriendAddView: React.FC<FriendAddViewProps> = ({ onBack, onNavigate }) => 
       <div className="flex-1 overflow-y-auto px-5 pb-safe">
         {/* KAHRAMAN: büyük arama (Spec B7 — yazıyla ekleme belirgin) */}
         <div className="relative mt-2">
-          <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40" />
+          <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-ink-4" />
           <input
             autoFocus
             value={query}
             onChange={e => setQuery(e.target.value)}
             placeholder="OYNA-ID veya isimle ara…"
-            className="w-full h-14 pl-11 pr-4 rounded-2xl bg-white/6 border border-white/10 text-[15px] font-semibold placeholder:text-white/30 focus:outline-none focus:border-[#39FF14]/50"
+            className="w-full h-14 pl-11 pr-4 rounded-2xl bg-white/6 border border-white/10 text-[0.9375rem] font-semibold placeholder:text-ink-4 focus:outline-none focus:border-[#39FF14]/50"
           />
         </div>
 
         {/* Kendi ID'in + davet paylaş */}
         <div className="flex items-center gap-2 mt-3 px-1">
-          <span className="text-xs text-white/40">
+          <span className="text-xs text-ink-4">
             Senin ID'in: <span className="text-white/80 font-bold">{myOynaId ? `@${myOynaId}` : '…'}</span>
           </span>
           <button
             onClick={copyMyId}
-            className="ml-auto h-8 px-2.5 rounded-lg bg-white/5 border border-white/10 text-[11px] font-bold text-white/60 flex items-center gap-1 active:scale-95"
+            className="ml-auto h-8 px-2.5 rounded-lg bg-white/5 border border-white/10 text-[0.6875rem] font-bold text-white/60 flex items-center gap-1 active:scale-95"
           >
             {copied ? <Check size={11} className="text-[#39FF14]" /> : <Copy size={11} />}
             {copied ? 'Kopyalandı' : 'Kopyala'}
           </button>
           <button
             onClick={shareInvite}
-            className="h-8 px-2.5 rounded-lg bg-white/5 border border-white/10 text-[11px] font-bold text-white/60 flex items-center gap-1 active:scale-95"
+            className="h-8 px-2.5 rounded-lg bg-white/5 border border-white/10 text-[0.6875rem] font-bold text-white/60 flex items-center gap-1 active:scale-95"
           >
             <Share2 size={11} /> Paylaş
           </button>
@@ -363,7 +363,7 @@ const FriendAddView: React.FC<FriendAddViewProps> = ({ onBack, onNavigate }) => 
                   ? <Spinner size={20} />
                   : <BookUser size={20} className="text-[#39FF14]" />}
                 <div className="text-sm font-bold mt-2">Rehberini Bağla</div>
-                <div className="text-[11px] text-white/40 mt-0.5">
+                <div className="text-[0.6875rem] text-ink-4 mt-0.5">
                   {isContactsAvailable() ? 'OYNA\'daki tanıdıklarını bul' : 'Yalnız uygulamada kullanılabilir'}
                 </div>
               </button>
@@ -373,14 +373,14 @@ const FriendAddView: React.FC<FriendAddViewProps> = ({ onBack, onNavigate }) => 
               >
                 <QrCode size={20} className="text-[#39FF14]" />
                 <div className="text-sm font-bold mt-2">QR ile Ekle</div>
-                <div className="text-[11px] text-white/40 mt-0.5">Yan yanaysanız en hızlısı</div>
+                <div className="text-[0.6875rem] text-ink-4 mt-0.5">Yan yanaysanız en hızlısı</div>
               </button>
             </div>
 
             {/* Rehber eşleşmeleri */}
             {contactResults && (
               <div className="mt-5">
-                <h3 className="text-[10px] font-extrabold uppercase tracking-widest text-white/40 mb-2.5">
+                <h3 className="text-[0.625rem] font-extrabold uppercase tracking-widest text-ink-4 mb-2.5">
                   Rehberinden · {contactResults.matched.length} kişi OYNA'da
                 </h3>
                 <div className="space-y-2.5">
@@ -407,13 +407,13 @@ const FriendAddView: React.FC<FriendAddViewProps> = ({ onBack, onNavigate }) => 
 
             {/* Birlikte oynadıkların */}
             <div className="mt-6">
-              <h3 className="text-[10px] font-extrabold uppercase tracking-widest text-white/40 mb-2.5 flex items-center gap-1.5">
+              <h3 className="text-[0.625rem] font-extrabold uppercase tracking-widest text-ink-4 mb-2.5 flex items-center gap-1.5">
                 <Clock size={11} /> Birlikte Oynadıkların
               </h3>
               {loadingChannels ? (
                 <SkeletonList rows={2} />
               ) : teammates.length === 0 ? (
-                <p className="text-xs text-white/30 px-1">
+                <p className="text-xs text-ink-4 px-1">
                   Maç yaptıkça birlikte oynadığın oyuncular burada belirecek.
                 </p>
               ) : (
@@ -430,7 +430,7 @@ const FriendAddView: React.FC<FriendAddViewProps> = ({ onBack, onNavigate }) => 
               <div className="mt-6">
                 <button
                   onClick={() => setShowSuggestions(v => !v)}
-                  className="flex items-center gap-1 text-xs font-bold text-white/40 min-h-[44px] px-1"
+                  className="flex items-center gap-1 text-xs font-bold text-ink-4 min-h-[44px] px-1"
                 >
                   <Users size={12} />
                   Tanıyor olabilirsin ({suggestions.length})
@@ -481,7 +481,7 @@ const FriendAddView: React.FC<FriendAddViewProps> = ({ onBack, onNavigate }) => 
                 <BookUser size={18} className="text-[#39FF14]" />
                 <h3 className="font-extrabold text-white text-base">Rehberini Bağla</h3>
               </div>
-              <button onClick={() => setShowContactsConsent(false)} className="text-gray-500 hover:text-white p-1" aria-label="Kapat">
+              <button onClick={() => setShowContactsConsent(false)} className="text-ink-4 hover:text-white p-1" aria-label="Kapat">
                 <X size={18} />
               </button>
             </div>

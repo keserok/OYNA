@@ -72,15 +72,15 @@ const formatPhoneDisplay = (digits: string) => {
 // ─── Ortak alan sarmalayıcı ──────────────────────────────────────────────────
 const Field: React.FC<{ label: string; icon: React.ReactNode; children: React.ReactNode; color: string; error?: string | null }> = ({ label, icon, children, color, error }) => (
   <div className="group">
-    <label className="text-[10px] text-gray-500 font-bold uppercase mb-2 block ml-1 tracking-wider">{label}</label>
+    <label className="text-[0.625rem] text-ink-4 font-bold uppercase mb-2 block ml-1 tracking-wider">{label}</label>
     <div
       className={`bg-[#0A0E14] border p-4 rounded-2xl flex items-center gap-3 transition-colors focus-within:border-white/40 ${error ? 'border-red-500/50' : 'border-gray-800'}`}
       style={{ ['--tw-ring-color' as any]: color }}
     >
-      <span className="shrink-0 text-gray-500">{icon}</span>
+      <span className="shrink-0 text-ink-4">{icon}</span>
       {children}
     </div>
-    {error && <p className="text-[10px] text-red-400 font-bold mt-1.5 ml-1">{error}</p>}
+    {error && <p className="text-[0.6875rem] text-red-400 font-bold mt-1.5 ml-1">{error}</p>}
   </div>
 );
 
@@ -293,11 +293,11 @@ const ServiceApplication: React.FC<ServiceApplicationProps> = ({ role, onSubmitt
             <HeaderIcon size={26} style={{ color }} />
           </div>
           <div>
-            <span className="text-[10px] font-extrabold tracking-widest uppercase" style={{ color }}>
+            <span className="text-[0.625rem] font-extrabold tracking-widest uppercase" style={{ color }}>
               {theme.label} KAYDI
             </span>
             <h1 className="text-2xl font-extrabold text-white italic tracking-tight leading-tight">{theme.title}</h1>
-            <p className="text-[11px] text-gray-400 mt-0.5">{theme.tagline}</p>
+            <p className="text-[0.6875rem] text-gray-400 mt-0.5">{theme.tagline}</p>
           </div>
         </motion.div>
 
@@ -310,7 +310,7 @@ const ServiceApplication: React.FC<ServiceApplicationProps> = ({ role, onSubmitt
           style={{ background: `${color}0d`, border: `1px solid ${color}26` }}
         >
           <Sparkles size={16} style={{ color }} className="mt-0.5 shrink-0" />
-          <p className="text-[11px] text-gray-300 leading-relaxed">
+          <p className="text-[0.6875rem] text-gray-300 leading-relaxed">
             Başvurun ekibimiz tarafından <span className="font-bold" style={{ color }}>24 saat</span> içinde incelenir.
             Onaylandığında pazaryerinde listelenir ve maç tekliflerini almaya başlarsın.
           </p>
@@ -327,11 +327,11 @@ const ServiceApplication: React.FC<ServiceApplicationProps> = ({ role, onSubmitt
           >
             <XCircle size={16} className="text-red-400 mt-0.5 shrink-0" />
             <div>
-              <p className="text-[11px] font-extrabold text-red-400 uppercase tracking-wider mb-1">
+              <p className="text-[0.6875rem] font-extrabold text-red-400 uppercase tracking-wider mb-1">
                 Önceki başvurun onaylanmadı
               </p>
-              <p className="text-[11px] text-gray-300 leading-relaxed">{rejectionNote}</p>
-              <p className="text-[10px] text-gray-500 mt-1">Bilgilerini güncelleyip tekrar gönderebilirsin.</p>
+              <p className="text-[0.6875rem] text-gray-300 leading-relaxed">{rejectionNote}</p>
+              <p className="text-[0.6875rem] text-ink-4 mt-1">Bilgilerini güncelleyip tekrar gönderebilirsin.</p>
             </div>
           </motion.div>
         )}
@@ -350,7 +350,7 @@ const ServiceApplication: React.FC<ServiceApplicationProps> = ({ role, onSubmitt
               value={fullName}
               onChange={(e) => { setFullName(e.target.value); setError(null); }}
               onBlur={() => markTouched('fullName')}
-              className="bg-transparent w-full outline-none text-white font-bold placeholder:text-gray-700 text-sm"
+              className="bg-transparent w-full outline-none text-white font-bold placeholder:text-ink-4 text-sm"
               placeholder="Örn: Uğurcan Çakır"
             />
           </Field>
@@ -396,19 +396,19 @@ const ServiceApplication: React.FC<ServiceApplicationProps> = ({ role, onSubmitt
               value={formatPhoneDisplay(phoneDigits)}
               onChange={(e) => { setPhoneDigits(e.target.value.replace(/\D/g, '').slice(0, 10)); setError(null); }}
               onBlur={() => markTouched('phone')}
-              className="bg-transparent w-full outline-none text-white font-bold placeholder:text-gray-700 tracking-wide text-sm"
+              className="bg-transparent w-full outline-none text-white font-bold placeholder:text-ink-4 tracking-wide text-sm"
               placeholder="5XX XXX XX XX"
             />
           </Field>
 
           {/* Kimlik Fotoğrafı */}
           <div className="group">
-            <label className="text-[10px] text-gray-500 font-bold uppercase mb-2 block ml-1 tracking-wider">Kimlik Fotoğrafı</label>
+            <label className="text-[0.625rem] text-ink-4 font-bold uppercase mb-2 block ml-1 tracking-wider">Kimlik Fotoğrafı</label>
             <label
               className={`bg-[#0A0E14] border p-4 rounded-2xl flex items-center gap-3 cursor-pointer transition-colors hover:border-white/40 ${visibleError('idPhoto') ? 'border-red-500/50' : 'border-gray-800'}`}
             >
-              <CreditCard size={20} className="shrink-0 text-gray-500" />
-              <span className={`text-sm font-bold truncate ${idPhoto ? 'text-white' : 'text-gray-700'}`}>
+              <CreditCard size={20} className="shrink-0 text-ink-4" />
+              <span className={`text-sm font-bold truncate ${idPhoto ? 'text-white' : 'text-ink-4'}`}>
                 {idPhoto ? idPhoto.name : 'Kimlik fotoğrafı seç (ön yüz)'}
               </span>
               {idPhoto && <Check size={16} className="shrink-0 ml-auto" style={{ color }} />}
@@ -419,7 +419,7 @@ const ServiceApplication: React.FC<ServiceApplicationProps> = ({ role, onSubmitt
                 onChange={(e) => { setIdPhoto(e.target.files?.[0] ?? null); markTouched('idPhoto'); setError(null); }}
               />
             </label>
-            {visibleError('idPhoto') && <p className="text-[10px] text-red-400 font-bold mt-1.5 ml-1">{fieldErrors.idPhoto}</p>}
+            {visibleError('idPhoto') && <p className="text-[0.6875rem] text-red-400 font-bold mt-1.5 ml-1">{fieldErrors.idPhoto}</p>}
           </div>
 
           {/* Role-specific */}
@@ -432,10 +432,10 @@ const ServiceApplication: React.FC<ServiceApplicationProps> = ({ role, onSubmitt
                   value={height}
                   onChange={(e) => setHeight(e.target.value)}
                   onBlur={() => markTouched('height')}
-                  className="bg-transparent w-full outline-none text-white font-bold placeholder:text-gray-700 text-sm"
+                  className="bg-transparent w-full outline-none text-white font-bold placeholder:text-ink-4 text-sm"
                   placeholder="188"
                 />
-                <span className="text-[10px] text-gray-500 font-bold shrink-0">cm</span>
+                <span className="text-[0.6875rem] text-ink-4 font-bold shrink-0">cm</span>
               </Field>
               <Field label="Yaş" icon={<Calendar size={20} />} color={color} error={visibleError('age')}>
                 <input
@@ -444,7 +444,7 @@ const ServiceApplication: React.FC<ServiceApplicationProps> = ({ role, onSubmitt
                   value={age}
                   onChange={(e) => setAge(e.target.value)}
                   onBlur={() => markTouched('age')}
-                  className="bg-transparent w-full outline-none text-white font-bold placeholder:text-gray-700 text-sm"
+                  className="bg-transparent w-full outline-none text-white font-bold placeholder:text-ink-4 text-sm"
                   placeholder="25"
                 />
               </Field>
@@ -452,7 +452,7 @@ const ServiceApplication: React.FC<ServiceApplicationProps> = ({ role, onSubmitt
           ) : (
             <>
               <div>
-                <label className="text-[10px] text-gray-500 font-bold uppercase mb-2 block ml-1 tracking-wider">Lisans Seviyesi</label>
+                <label className="text-[0.625rem] text-ink-4 font-bold uppercase mb-2 block ml-1 tracking-wider">Lisans Seviyesi</label>
                 <div className="grid grid-cols-2 gap-2">
                   {REF_LEVELS.map((lv) => (
                     <button
@@ -470,7 +470,7 @@ const ServiceApplication: React.FC<ServiceApplicationProps> = ({ role, onSubmitt
                     </button>
                   ))}
                 </div>
-                {visibleError('level') && <p className="text-[10px] text-red-400 font-bold mt-1.5 ml-1">{fieldErrors.level}</p>}
+                {visibleError('level') && <p className="text-[0.6875rem] text-red-400 font-bold mt-1.5 ml-1">{fieldErrors.level}</p>}
               </div>
               <Field label="Deneyim (Yıl)" icon={<Calendar size={20} />} color={color} error={visibleError('experience')}>
                 <input
@@ -481,11 +481,11 @@ const ServiceApplication: React.FC<ServiceApplicationProps> = ({ role, onSubmitt
                   value={experienceYears}
                   onChange={(e) => setExperienceYears(e.target.value.replace(/[^0-9]/g, '').slice(0, 2))}
                   onBlur={() => markTouched('experience')}
-                  className="bg-transparent w-full outline-none text-white font-bold placeholder:text-gray-700 text-sm"
+                  className="bg-transparent w-full outline-none text-white font-bold placeholder:text-ink-4 text-sm"
                   placeholder="5"
                 />
               </Field>
-              {visibleError('experience') && <p className="text-[10px] text-red-400 font-bold mt-1.5 ml-1">{fieldErrors.experience}</p>}
+              {visibleError('experience') && <p className="text-[0.6875rem] text-red-400 font-bold mt-1.5 ml-1">{fieldErrors.experience}</p>}
             </>
           )}
 
@@ -498,14 +498,14 @@ const ServiceApplication: React.FC<ServiceApplicationProps> = ({ role, onSubmitt
               value={fee}
               onChange={(e) => { setFee(e.target.value); setError(null); }}
               onBlur={() => markTouched('fee')}
-              className="bg-transparent w-full outline-none text-white font-bold placeholder:text-gray-700 text-sm"
+              className="bg-transparent w-full outline-none text-white font-bold placeholder:text-ink-4 text-sm"
               placeholder={isGk ? '250' : '350'}
             />
           </Field>
 
           {/* Stil */}
           <div>
-            <label className="text-[10px] text-gray-500 font-bold uppercase mb-2 block ml-1 tracking-wider">{theme.styleLabel}</label>
+            <label className="text-[0.625rem] text-ink-4 font-bold uppercase mb-2 block ml-1 tracking-wider">{theme.styleLabel}</label>
             <div className="flex flex-wrap gap-2">
               {theme.styles.map((s) => (
                 <button
@@ -523,12 +523,12 @@ const ServiceApplication: React.FC<ServiceApplicationProps> = ({ role, onSubmitt
                 </button>
               ))}
             </div>
-            {visibleError('style') && <p className="text-[10px] text-red-400 font-bold mt-1.5 ml-1">{fieldErrors.style}</p>}
+            {visibleError('style') && <p className="text-[0.6875rem] text-red-400 font-bold mt-1.5 ml-1">{fieldErrors.style}</p>}
           </div>
 
           {/* Tercih edilen bölgeler */}
           <div>
-            <label className="text-[10px] text-gray-500 font-bold uppercase mb-2 block ml-1 tracking-wider flex items-center gap-1.5">
+            <label className="text-[0.625rem] text-ink-4 font-bold uppercase mb-2 block ml-1 tracking-wider flex items-center gap-1.5">
               <MapPin size={12} style={{ color }} /> Tercih Edilen Bölgeler
             </label>
             {/* Şehir seçici (aranabilir — 81 il) */}
@@ -541,7 +541,7 @@ const ServiceApplication: React.FC<ServiceApplicationProps> = ({ role, onSubmitt
                 <span className="flex items-center gap-2">
                   <MapPin size={14} style={{ color }} /> {activeCity}
                 </span>
-                <ChevronDown size={14} className={`text-gray-500 transition-transform ${showCityList ? 'rotate-180' : ''}`} />
+                <ChevronDown size={14} className={`text-ink-4 transition-transform ${showCityList ? 'rotate-180' : ''}`} />
               </button>
               <AnimatePresence>
                 {showCityList && (
@@ -554,19 +554,19 @@ const ServiceApplication: React.FC<ServiceApplicationProps> = ({ role, onSubmitt
                   >
                     <div className="p-2 border-b border-white/5">
                       <div className="flex items-center gap-2 bg-[#0A0E14] rounded-xl px-3 h-9 border border-gray-800">
-                        <Search size={14} className="text-gray-500 shrink-0" />
+                        <Search size={14} className="text-ink-4 shrink-0" />
                         <input
                           autoFocus
                           value={citySearch}
                           onChange={(e) => setCitySearch(e.target.value)}
                           placeholder="İl ara…"
-                          className="bg-transparent w-full outline-none text-white text-sm placeholder:text-gray-600"
+                          className="bg-transparent w-full outline-none text-white text-sm placeholder:text-ink-4"
                         />
                       </div>
                     </div>
                     <div className="max-h-56 overflow-y-auto">
                       {filteredCities.length === 0 ? (
-                        <p className="text-xs text-gray-500 text-center py-4">İl bulunamadı</p>
+                        <p className="text-xs text-ink-4 text-center py-4">İl bulunamadı</p>
                       ) : (
                         filteredCities.map((r) => (
                           <button
@@ -595,7 +595,7 @@ const ServiceApplication: React.FC<ServiceApplicationProps> = ({ role, onSubmitt
                     key={key}
                     type="button"
                     onClick={() => toggleZone(key)}
-                    className="px-3 h-9 rounded-full text-[11px] font-bold border transition-all flex items-center gap-1"
+                    className="px-3 h-9 rounded-full text-[0.6875rem] font-bold border transition-all flex items-center gap-1"
                     style={{
                       background: active ? `${color}1a` : 'transparent',
                       color: active ? color : 'rgba(255,255,255,0.5)',
@@ -608,23 +608,23 @@ const ServiceApplication: React.FC<ServiceApplicationProps> = ({ role, onSubmitt
               })}
             </div>
             {zones.length > 0 && (
-              <p className="text-[10px] text-gray-500 mt-2 ml-1">{zones.length} bölge seçildi</p>
+              <p className="text-[0.6875rem] text-ink-4 mt-2 ml-1">{zones.length} bölge seçildi</p>
             )}
-            {visibleError('zones') && <p className="text-[10px] text-red-400 font-bold mt-1.5 ml-1">{fieldErrors.zones}</p>}
+            {visibleError('zones') && <p className="text-[0.6875rem] text-red-400 font-bold mt-1.5 ml-1">{fieldErrors.zones}</p>}
           </div>
 
           {/* Bio */}
           <div className="group">
-            <label className="text-[10px] text-gray-500 font-bold uppercase mb-2 block ml-1 tracking-wider">Kısa Tanıtım</label>
+            <label className="text-[0.625rem] text-ink-4 font-bold uppercase mb-2 block ml-1 tracking-wider">Kısa Tanıtım</label>
             <div className={`bg-[#0A0E14] border p-4 rounded-2xl flex items-start gap-3 focus-within:border-white/40 transition-colors ${visibleError('bio') ? 'border-red-500/50' : 'border-gray-800'}`}>
-              <FileText size={20} className="text-gray-500 shrink-0 mt-0.5" />
+              <FileText size={20} className="text-ink-4 shrink-0 mt-0.5" />
               <textarea
                 value={bio}
                 onChange={(e) => { setBio(e.target.value); setError(null); }}
                 onBlur={() => markTouched('bio')}
                 rows={3}
                 maxLength={280}
-                className="bg-transparent w-full outline-none text-white font-medium placeholder:text-gray-700 text-sm resize-none"
+                className="bg-transparent w-full outline-none text-white font-medium placeholder:text-ink-4 text-sm resize-none"
                 placeholder={isGk
                   ? 'Refleks ve pozisyon almada uzmanım. Penaltı kurtarma oranım %40...'
                   : 'FIFA lisanslı hakem. 150+ maç deneyimi. Diyalog temelli yaklaşım...'}
@@ -632,24 +632,24 @@ const ServiceApplication: React.FC<ServiceApplicationProps> = ({ role, onSubmitt
             </div>
             <div className="flex items-center justify-between mt-1 ml-1">
               {visibleError('bio') ? (
-                <p className="text-[10px] text-red-400 font-bold">{fieldErrors.bio}</p>
+                <p className="text-[0.6875rem] text-red-400 font-bold">{fieldErrors.bio}</p>
               ) : <span />}
-              <p className="text-[10px] text-gray-600 text-right">{bio.length}/280</p>
+              <p className="text-[0.6875rem] text-ink-4 text-right">{bio.length}/280</p>
             </div>
           </div>
 
           {/* Niyet Mektubu */}
           <div className="group">
-            <label className="text-[10px] text-gray-500 font-bold uppercase mb-2 block ml-1 tracking-wider">Niyet Mektubu</label>
+            <label className="text-[0.625rem] text-ink-4 font-bold uppercase mb-2 block ml-1 tracking-wider">Niyet Mektubu</label>
             <div className={`bg-[#0A0E14] border p-4 rounded-2xl flex items-start gap-3 focus-within:border-white/40 transition-colors ${visibleError('intentLetter') ? 'border-red-500/50' : 'border-gray-800'}`}>
-              <Mail size={20} className="text-gray-500 shrink-0 mt-0.5" />
+              <Mail size={20} className="text-ink-4 shrink-0 mt-0.5" />
               <textarea
                 value={intentLetter}
                 onChange={(e) => { setIntentLetter(e.target.value); setError(null); }}
                 onBlur={() => markTouched('intentLetter')}
                 rows={3}
                 maxLength={500}
-                className="bg-transparent w-full outline-none text-white font-medium placeholder:text-gray-700 text-sm resize-none"
+                className="bg-transparent w-full outline-none text-white font-medium placeholder:text-ink-4 text-sm resize-none"
                 placeholder={isGk
                   ? 'Neden kaleci olmak istiyorsun? Kısaca anlat...'
                   : 'Neden hakem olmak istiyorsun? Kısaca anlat...'}
@@ -657,9 +657,9 @@ const ServiceApplication: React.FC<ServiceApplicationProps> = ({ role, onSubmitt
             </div>
             <div className="flex items-center justify-between mt-1 ml-1">
               {visibleError('intentLetter') ? (
-                <p className="text-[10px] text-red-400 font-bold">{fieldErrors.intentLetter}</p>
+                <p className="text-[0.6875rem] text-red-400 font-bold">{fieldErrors.intentLetter}</p>
               ) : <span />}
-              <p className="text-[10px] text-gray-600 text-right">{intentLetter.length}/500</p>
+              <p className="text-[0.6875rem] text-ink-4 text-right">{intentLetter.length}/500</p>
             </div>
           </div>
 
@@ -678,36 +678,36 @@ const ServiceApplication: React.FC<ServiceApplicationProps> = ({ role, onSubmitt
               >
                 {agreed && <Check size={12} className="text-black" />}
               </button>
-              <p className="text-[10px] text-gray-400 leading-relaxed font-bold tracking-wide">
+              <p className="text-[0.6875rem] text-gray-400 leading-relaxed font-bold tracking-wide">
                 Verdiğim bilgilerin doğru olduğunu ve iletişim ile lisans bilgilerimin doğrulama amacıyla işlenmesini (KVKK) onaylıyorum.
               </p>
             </div>
-            {visibleError('agreed') && <p className="text-[10px] text-red-400 font-bold mt-1.5 ml-1">{fieldErrors.agreed}</p>}
+            {visibleError('agreed') && <p className="text-[0.6875rem] text-red-400 font-bold mt-1.5 ml-1">{fieldErrors.agreed}</p>}
           </div>
 
-          {error && <p className="text-[11px] text-red-400 font-bold px-1">{error}</p>}
+          {error && <p className="text-[0.6875rem] text-red-400 font-bold px-1">{error}</p>}
         </motion.div>
 
         {/* ─── KA-5/KA-6 engel bandı ─── */}
         {preflight?.alreadyApproved && (
           <div className="mt-5 rounded-2xl border border-emerald-500/30 bg-emerald-500/8 p-4">
-            <p className="text-[13px] font-extrabold text-emerald-300">Zaten onaylısın 🎉</p>
-            <p className="text-[11px] text-white/60 mt-1 leading-relaxed">
+            <p className="text-[0.8125rem] font-extrabold text-emerald-300">Zaten onaylısın 🎉</p>
+            <p className="text-[0.6875rem] text-white/60 mt-1 leading-relaxed">
               Bu rol için başvurun onaylanmış durumda — yeniden başvurman gerekmiyor.
             </p>
           </div>
         )}
         {preflight?.minorBlocked && (
           <div className="mt-5 rounded-2xl border border-amber-500/30 bg-amber-500/8 p-4">
-            <p className="text-[13px] font-extrabold text-amber-300">Önce veli onayı gerekiyor</p>
-            <p className="text-[11px] text-white/60 mt-1 leading-relaxed">
+            <p className="text-[0.8125rem] font-extrabold text-amber-300">Önce veli onayı gerekiyor</p>
+            <p className="text-[0.6875rem] text-white/60 mt-1 leading-relaxed">
               18 yaşından küçük hesaplar sağlayıcı (kaleci/hakem) olmadan önce veli onayı
               tamamlamalı. Onay verildikten sonra başvurabilirsin.
             </p>
             <button
               type="button"
               onClick={() => useAppStore.getState().navigateTo('GUARDIAN_CHILD')}
-              className="mt-3 h-10 px-4 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-200 text-[12px] font-extrabold active:scale-95 transition-transform"
+              className="mt-3 h-10 px-4 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-200 text-[0.75rem] font-extrabold active:scale-95 transition-transform"
             >
               Veli Onayına Git
             </button>
@@ -717,7 +717,7 @@ const ServiceApplication: React.FC<ServiceApplicationProps> = ({ role, onSubmitt
         {/* ─── Gönder ─── */}
         <div className="pt-5">
           {submitAttempted && !canSubmit && (
-            <p className="text-[11px] text-red-400 font-bold text-center mb-3">
+            <p className="text-[0.6875rem] text-red-400 font-bold text-center mb-3">
               {Object.values(fieldErrors).filter(Boolean).length} alanı tamamlamalısın
             </p>
           )}

@@ -58,23 +58,23 @@ const TeamCard: React.FC<{
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <span className="text-[15px] font-extrabold italic truncate">{team.name}</span>
-          <span className="shrink-0 text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-white/8 text-white/50">
+          <span className="text-[0.9375rem] font-extrabold italic truncate">{team.name}</span>
+          <span className="shrink-0 text-[0.6875rem] font-extrabold px-1.5 py-0.5 rounded bg-white/8 text-white/50">
             {formatLabel(team.format)}
           </span>
         </div>
-        <div className="text-[11px] text-white/45 mt-0.5">
+        <div className="text-[0.6875rem] text-ink-4 mt-0.5">
           {team.wins}G {team.draws}B {team.losses}M · {team.member_count} oyuncu
           {team.pending_invites > 0 ? ` · ${team.pending_invites} davet bekliyor` : ''}
         </div>
-        <div className="text-[11px] mt-1 flex items-center gap-1 truncate">
+        <div className="text-[0.6875rem] mt-1 flex items-center gap-1 truncate">
           {nextLine ? (
             <>
               <Calendar size={11} style={{ color: c1 }} />
               <span className="text-white/70 font-semibold truncate">{nextLine}</span>
             </>
           ) : (
-            <span className="text-white/35 flex items-center gap-1">
+            <span className="text-ink-4 flex items-center gap-1">
               Maç planla <ChevronRight size={11} />
             </span>
           )}
@@ -84,7 +84,7 @@ const TeamCard: React.FC<{
         <span
           onPointerDown={e => { e.stopPropagation(); controls.start(e); }}
           onClick={e => e.stopPropagation()}
-          className="shrink-0 w-9 h-9 rounded-xl flex items-center justify-center text-white/25 touch-none cursor-grab active:cursor-grabbing"
+          className="shrink-0 w-9 h-9 rounded-xl flex items-center justify-center text-ink-4 touch-none cursor-grab active:cursor-grabbing"
           aria-label="Sırala"
         >
           <GripVertical size={16} />
@@ -175,21 +175,21 @@ const MyTeamsPanel: React.FC<MyTeamsPanelProps> = ({
       {/* Davetlerin şeridi (K69) */}
       {invites.length > 0 && (
         <div className="rounded-2xl bg-[#39FF14]/6 border border-[#39FF14]/20 p-3.5">
-          <div className="text-[10px] font-extrabold uppercase tracking-widest text-[#39FF14]/80 mb-2.5 flex items-center gap-1.5">
+          <div className="text-[0.625rem] font-extrabold uppercase tracking-widest text-[#39FF14]/80 mb-2.5 flex items-center gap-1.5">
             <Mail size={11} /> Davetlerin ({invites.length})
           </div>
           <div className="space-y-2">
             {invites.map(inv => (
               <div key={inv.id} className="flex items-center gap-2.5">
                 <Avatar name={inv.full_name} src={inv.avatar_url} size="sm" />
-                <div className="flex-1 min-w-0 text-[12px]">
+                <div className="flex-1 min-w-0 text-[0.75rem]">
                   <b>{inv.full_name}</b>
                   <span className="text-white/50"> seni </span>
                   <b>{inv.team_name}</b>
                   <span className="text-white/50"> kadrosuna davet etti</span>
                 </div>
                 {busyInvite === inv.id ? (
-                  <Loader2 size={15} className="animate-spin text-white/40" />
+                  <Loader2 size={15} className="animate-spin text-ink-4" />
                 ) : (
                   <>
                     <button
@@ -201,7 +201,7 @@ const MyTeamsPanel: React.FC<MyTeamsPanelProps> = ({
                     </button>
                     <button
                       onClick={() => handleInvite(inv, true)}
-                      className="h-9 px-3 rounded-xl bg-[#39FF14] text-[#0A0E14] text-[11px] font-extrabold flex items-center gap-1 active:scale-95"
+                      className="h-9 px-3 rounded-xl bg-[#39FF14] text-[#0A0E14] text-[0.6875rem] font-extrabold flex items-center gap-1 active:scale-95"
                     >
                       <Check size={12} /> Katıl
                     </button>
@@ -227,7 +227,7 @@ const MyTeamsPanel: React.FC<MyTeamsPanelProps> = ({
         <>
           {orderedCaptain.length > 0 && (
             <div>
-              <h3 className="text-[10px] font-extrabold uppercase tracking-widest text-white/40 mb-2.5">
+              <h3 className="text-[0.625rem] font-extrabold uppercase tracking-widest text-ink-4 mb-2.5">
                 Kaptanlıklarım
               </h3>
               <Reorder.Group
@@ -246,7 +246,7 @@ const MyTeamsPanel: React.FC<MyTeamsPanelProps> = ({
 
           {orderedMember.length > 0 && (
             <div>
-              <h3 className="text-[10px] font-extrabold uppercase tracking-widest text-white/40 mb-2.5">
+              <h3 className="text-[0.625rem] font-extrabold uppercase tracking-widest text-ink-4 mb-2.5">
                 Üyeliklerim
               </h3>
               <Reorder.Group
@@ -270,7 +270,7 @@ const MyTeamsPanel: React.FC<MyTeamsPanelProps> = ({
         <div>
           <button
             onClick={() => setArchiveOpen(v => !v)}
-            className="flex items-center gap-1.5 text-xs font-bold text-white/35 min-h-[44px] px-1"
+            className="flex items-center gap-1.5 text-xs font-bold text-ink-4 min-h-[44px] px-1"
           >
             <Archive size={12} /> Arşiv ({archived.length})
             <ChevronRight size={13} className={`transition-transform ${archiveOpen ? 'rotate-90' : ''}`} />
@@ -284,7 +284,7 @@ const MyTeamsPanel: React.FC<MyTeamsPanelProps> = ({
                   <button
                     disabled={busyRestore === t.team_id}
                     onClick={() => handleRestore(t.team_id)}
-                    className="h-9 px-3 rounded-xl bg-white/5 border border-white/10 text-[11px] font-bold text-white/70 active:scale-95"
+                    className="h-9 px-3 rounded-xl bg-white/5 border border-white/10 text-[0.6875rem] font-bold text-white/70 active:scale-95"
                   >
                     {busyRestore === t.team_id ? '…' : 'Geri Aç'}
                   </button>

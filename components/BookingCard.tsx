@@ -61,7 +61,7 @@ export const BookingCard: React.FC<BookingCardProps> = ({
             {b.pitches?.image ? (
               <img src={b.pitches.image} alt={b.pitches?.name ?? 'Saha'} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
             ) : (
-              <MapPin size={20} className="text-white/25" />
+              <MapPin size={20} className="text-ink-4" />
             )}
           </div>
           <div className="min-w-0 flex-1">
@@ -75,7 +75,7 @@ export const BookingCard: React.FC<BookingCardProps> = ({
               </p>
             )}
           </div>
-          <span className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-[10px] font-extrabold uppercase ${meta.bg} ${meta.color}`}>
+          <span className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-[0.6875rem] font-extrabold uppercase ${meta.bg} ${meta.color}`}>
             <StatusIcon size={12} /> {meta.label}
           </span>
         </div>
@@ -93,18 +93,18 @@ export const BookingCard: React.FC<BookingCardProps> = ({
         {/* Para satırı — altın */}
         {b.price > 0 && (
           <div className="flex items-center justify-between mt-3 text-xs">
-            <span className="text-gray-500 font-bold uppercase tracking-wide">Tutar</span>
+            <span className="text-ink-4 font-bold uppercase tracking-wide">Tutar</span>
             <span className="text-[#FACC15] font-extrabold font-numeric">
               ₺{b.price.toLocaleString('tr-TR')}
               {b.deposit_amount > 0 && (
-                <span className="text-gray-500 font-bold"> · Kapora ₺{b.deposit_amount.toLocaleString('tr-TR')}</span>
+                <span className="text-ink-4 font-bold"> · Kapora ₺{b.deposit_amount.toLocaleString('tr-TR')}</span>
               )}
             </span>
           </div>
         )}
         {!isCancelled && b.deposit_amount > 0 && (
           <div className="flex items-center justify-between mt-2 text-xs">
-            <span className="text-gray-500 font-bold uppercase tracking-wide">Kapora durumu</span>
+            <span className="text-ink-4 font-bold uppercase tracking-wide">Kapora durumu</span>
             {depositPaid ? (
               <span className="text-[#39FF14] font-bold flex items-center gap-1"><CheckCircle2 size={12} /> Ödendi</span>
             ) : (
@@ -113,7 +113,7 @@ export const BookingCard: React.FC<BookingCardProps> = ({
           </div>
         )}
         {isCancelled && b.cancellation_reason && (
-          <p className="text-[11px] text-red-400/80 mt-3 italic">{b.cancellation_reason}</p>
+          <p className="text-[0.6875rem] text-red-400/80 mt-3 italic">{b.cancellation_reason}</p>
         )}
       </div>
 
@@ -142,7 +142,7 @@ export const BookingCard: React.FC<BookingCardProps> = ({
             className="flex flex-col items-center justify-center gap-1 min-h-[44px] py-2 rounded-xl bg-[#FACC15]/[0.06] border border-[#FACC15]/25 text-[#FACC15] hover:bg-[#FACC15]/12 active:scale-95 transition-all"
           >
             <QrCode size={15} />
-            <span className="text-[8px] font-extrabold uppercase tracking-wider">Bilet</span>
+            <span className="text-[0.625rem] font-extrabold uppercase tracking-wider">Bilet</span>
           </button>
         )}
         {!isCancelled && (
@@ -151,7 +151,7 @@ export const BookingCard: React.FC<BookingCardProps> = ({
             className="flex flex-col items-center justify-center gap-1 min-h-[44px] py-2 rounded-xl bg-[#39FF14]/[0.06] border border-[#39FF14]/20 text-[#39FF14] hover:bg-[#39FF14]/12 active:scale-95 transition-all"
           >
             <Swords size={15} />
-            <span className="text-[8px] font-extrabold uppercase tracking-wider">Maça Çevir</span>
+            <span className="text-[0.625rem] font-extrabold uppercase tracking-wider">Maça Çevir</span>
           </button>
         )}
         <button
@@ -159,14 +159,14 @@ export const BookingCard: React.FC<BookingCardProps> = ({
           className="flex flex-col items-center justify-center gap-1 min-h-[44px] py-2 rounded-xl bg-white/[0.03] border border-white/10 text-white/80 hover:bg-white/[0.07] active:scale-95 transition-all"
         >
           <Navigation size={15} />
-          <span className="text-[8px] font-extrabold uppercase tracking-wider">Yol Tarifi</span>
+          <span className="text-[0.625rem] font-extrabold uppercase tracking-wider">Yol Tarifi</span>
         </button>
         <button
           onClick={onRebook}
           className="flex flex-col items-center justify-center gap-1 min-h-[44px] py-2 rounded-xl bg-white/[0.03] border border-white/10 text-white/80 hover:bg-white/[0.07] active:scale-95 transition-all"
         >
           <Repeat size={15} />
-          <span className="text-[8px] font-extrabold uppercase tracking-wider">Tekrar Rezerve</span>
+          <span className="text-[0.625rem] font-extrabold uppercase tracking-wider">Tekrar Rezerve</span>
         </button>
       </div>
 
@@ -181,7 +181,7 @@ export const BookingCard: React.FC<BookingCardProps> = ({
               İptal Et
             </button>
           ) : (
-            <p className="text-center text-[10px] text-gray-600 font-bold uppercase tracking-wide py-3">
+            <p className="text-center text-[0.625rem] text-ink-4 font-bold uppercase tracking-wide py-3">
               Rezervasyon başladı · iptal kapalı
             </p>
           )}

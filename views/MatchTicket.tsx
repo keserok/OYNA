@@ -243,7 +243,7 @@ const MatchTicket: React.FC<MatchTicketProps> = ({ onBack }) => {
 
             {/* Ödeme özeti — gerçek tutarlar */}
             {booking && (
-              <div className="mb-5 rounded-2xl bg-gray-50 border border-gray-200 p-3 flex justify-between text-[12px]">
+              <div className="mb-5 rounded-2xl bg-gray-50 border border-gray-200 p-3 flex justify-between text-[0.75rem]">
                 <span className="text-gray-600 font-bold">
                   {payState === 'PARTIAL' ? 'Ödenen kapora' : payState === 'PAID' ? 'Ödendi' : 'Ödenen'}
                 </span>
@@ -258,26 +258,30 @@ const MatchTicket: React.FC<MatchTicketProps> = ({ onBack }) => {
             <div className="rounded-2xl flex flex-col items-center justify-center relative overflow-hidden p-4"
               style={{ background: canEnter ? '#0A0E14' : '#F3F4F6' }}>
               {loading ? (
-                <div className="py-10 flex flex-col items-center gap-2 text-gray-600">
-                  <Loader2 size={28} className="animate-spin" /><span className="text-[11px] font-bold">Bilet hazırlanıyor…</span>
+                // IP-08: bu kutunun zemini KOŞULLU (canEnter → #0A0E14 koyu,
+                // değilse #F3F4F6 açık). Sabit gray-600 koyu zeminde 2.56:1'e
+                // düşüyordu — "Bilet hazırlanıyor…" okunmuyordu. Metin artık
+                // zeminle birlikte dönüyor.
+                <div className={`py-10 flex flex-col items-center gap-2 ${canEnter ? 'text-gray-300' : 'text-gray-600'}`}>
+                  <Loader2 size={28} className="animate-spin" /><span className="text-[0.6875rem] font-bold">Bilet hazırlanıyor…</span>
                 </div>
               ) : canEnter && qrDataUrl ? (
                 <>
                   <img src={qrDataUrl} alt="Rezervasyon QR kodu" className="w-[150px] h-[150px]" />
-                  <p className="text-[10px] text-gray-400 mt-2 font-mono">REF: {refShort || '—'}</p>
+                  <p className="text-[0.6875rem] text-gray-400 mt-2 font-mono">REF: {refShort || '—'}</p>
                 </>
               ) : (
                 <div className="py-8 flex flex-col items-center gap-2 text-center px-4">
                   <AlertTriangle size={26} className="text-gray-600" />
-                  <p className="text-[12px] font-bold text-gray-600">{emptyNote}</p>
+                  <p className="text-[0.75rem] font-bold text-gray-600">{emptyNote}</p>
                   {loadError ? (
                     <button
                       onClick={() => setReloadKey(k => k + 1)}
-                      className="mt-2 h-11 px-4 rounded-xl bg-[#0A0E14] text-white text-[13px] font-extrabold active:scale-95 transition-transform">
+                      className="mt-2 h-11 px-4 rounded-xl bg-[#0A0E14] text-white text-[0.8125rem] font-extrabold active:scale-95 transition-transform">
                       Tekrar Dene
                     </button>
                   ) : booking ? (
-                    <p className="text-[10px] text-gray-600">Giriş QR kodu yalnız ödeme tamamlanınca oluşur.</p>
+                    <p className="text-[0.6875rem] text-gray-600">Giriş QR kodu yalnız ödeme tamamlanınca oluşur.</p>
                   ) : null}
                 </div>
               )}
@@ -285,12 +289,12 @@ const MatchTicket: React.FC<MatchTicketProps> = ({ onBack }) => {
 
             {fromCache !== null && (
               <div className="mt-3 flex items-center justify-between gap-2">
-                <p className="text-[10px] font-bold text-gray-600">
+                <p className="text-[0.6875rem] font-bold text-gray-600">
                   Çevrimdışı kopya — son güncelleme{' '}
                   {new Date(fromCache).toLocaleString('tr-TR', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}
                 </p>
                 <button onClick={() => setReloadKey(k => k + 1)}
-                  className="shrink-0 h-9 px-3 rounded-lg bg-[#0A0E14] text-white text-[11px] font-extrabold active:scale-95 transition-transform">
+                  className="shrink-0 h-9 px-3 rounded-lg bg-[#0A0E14] text-white text-[0.6875rem] font-extrabold active:scale-95 transition-transform">
                   Yenile
                 </button>
               </div>
@@ -318,7 +322,7 @@ const MatchTicket: React.FC<MatchTicketProps> = ({ onBack }) => {
           className="w-full mt-3 py-4 rounded-2xl bg-[#161B22] border border-white/10 text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-95 transition-transform">
           <ArrowLeft size={18} /> Maçlarım'a Dön
         </button>
-        {shareMsg && <p className="text-center text-[11px] text-[#39FF14] mt-3">{shareMsg}</p>}
+        {shareMsg && <p className="text-center text-[0.6875rem] text-[#39FF14] mt-3">{shareMsg}</p>}
       </div>
     </div>
   );
@@ -326,7 +330,7 @@ const MatchTicket: React.FC<MatchTicketProps> = ({ onBack }) => {
 
 const Detail: React.FC<{ icon?: React.ReactNode; label: string; value: string }> = ({ icon, label, value }) => (
   <div>
-    <p className="text-[10px] text-gray-600 font-bold uppercase mb-1 flex items-center gap-1">{icon}{label}</p>
+    <p className="text-[0.6875rem] text-gray-600 font-bold uppercase mb-1 flex items-center gap-1">{icon}{label}</p>
     <p className="text-lg font-extrabold text-black truncate">{value}</p>
   </div>
 );

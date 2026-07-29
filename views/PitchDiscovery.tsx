@@ -274,9 +274,9 @@ const MapViewComponent = ({
   if (!webglOk) {
     return (
       <div className="absolute inset-0 z-0 flex flex-col items-center justify-center gap-3 px-8 text-center bg-[#0A0E14]">
-        <MapPin size={30} className="text-white/20" />
+        <MapPin size={30} className="text-ink-4" />
         <p className="text-white/70 text-xs font-extrabold uppercase tracking-wide">Harita bu cihazda desteklenmiyor</p>
-        <p className="text-white/40 text-[11px] leading-relaxed">Sahaları liste görünümünde inceleyebilirsin.</p>
+        <p className="text-ink-4 text-[0.6875rem] leading-relaxed">Sahaları liste görünümünde inceleyebilirsin.</p>
       </div>
     );
   }
@@ -369,15 +369,15 @@ const MapViewComponent = ({
                       <div className="w-[64px] h-[64px] rounded-2xl overflow-hidden shrink-0 relative">
                         <SafeImage src={p.image} alt={p.name} variant="thumb" className="w-full h-full object-cover" />
                         {p.flashDiscount ? (
-                          <div className="absolute top-1 left-1 bg-[#FF3B30] text-white text-[8px] font-extrabold px-1.5 py-0.5 rounded-full">🔥 %{p.flashDiscount}</div>
+                          <div className="absolute top-1 left-1 bg-[#FF3B30] text-white text-[0.6875rem] font-extrabold px-1.5 py-0.5 rounded-full">🔥 %{p.flashDiscount}</div>
                         ) : null}
                       </div>
                       <div className="flex-1 min-w-0 py-0.5">
                         <div className="flex items-start justify-between gap-2">
-                          <h4 className="text-[12px] font-extrabold italic uppercase text-white truncate">{p.name}</h4>
-                          <span className="flex items-center gap-0.5 text-[10px] font-extrabold text-[#FACC15] shrink-0">★ {p.rating}</span>
+                          <h4 className="text-[0.75rem] font-extrabold italic uppercase text-white truncate">{p.name}</h4>
+                          <span className="flex items-center gap-0.5 text-[0.6875rem] font-extrabold text-[#FACC15] shrink-0">★ {p.rating}</span>
                         </div>
-                        <div className="flex items-center gap-2 mt-1 text-[10px] font-bold text-white/50">
+                        <div className="flex items-center gap-2 mt-1 text-[0.6875rem] font-bold text-white/50">
                           <span className="truncate">{p.district}</span>
                           {dist && (
                             <span className="flex items-center gap-0.5 shrink-0 text-[#00D8FF]">
@@ -390,9 +390,9 @@ const MapViewComponent = ({
                     {/* Aksiyon satırı kartın TAM genişliğinde — kırpılma yok */}
                     <div className="flex items-center justify-between gap-2 px-3 pb-3">
                       {p.totalPrice > 0 ? (
-                        <span className="text-[14px] font-extrabold text-[#39FF14] shrink-0">~{p.totalPrice}₺</span>
+                        <span className="text-[0.875rem] font-extrabold text-[#39FF14] shrink-0">~{p.totalPrice}₺</span>
                       ) : (
-                        <span className="text-[9px] font-bold text-white/35 shrink-0">Fiyat bilgisi yok</span>
+                        <span className="text-[0.6875rem] font-bold text-ink-4 shrink-0">Fiyat bilgisi yok</span>
                       )}
                       <div className="flex items-center gap-1.5 shrink-0">
                         <button
@@ -404,7 +404,7 @@ const MapViewComponent = ({
                         </button>
                         <button
                           onClick={(e) => { e.stopPropagation(); onOpenDetail(p); }}
-                          className="px-3 h-7 rounded-xl bg-[#39FF14]/15 border border-[#39FF14]/40 text-[#39FF14] text-[9px] font-extrabold uppercase tracking-wide flex items-center gap-1 active:scale-95 whitespace-nowrap"
+                          className="px-3 h-7 rounded-xl bg-[#39FF14]/15 border border-[#39FF14]/40 text-[#39FF14] text-[0.625rem] font-extrabold uppercase tracking-wide flex items-center gap-1 active:scale-95 whitespace-nowrap"
                         >
                           İncele <ChevronRight size={10} />
                         </button>
@@ -438,12 +438,12 @@ const MapViewComponent = ({
               onClick={(e) => e.stopPropagation()}
             >
               <div className="w-10 h-1 bg-white/15 rounded-full mx-auto mb-4" />
-              <p className="text-[11px] font-extrabold uppercase tracking-widest text-white/50 mb-3">Yol Tarifi — {directionsFor.name}</p>
+              <p className="text-[0.6875rem] font-extrabold uppercase tracking-widest text-white/50 mb-3">Yol Tarifi — {directionsFor.name}</p>
               <a
                 href={appleMapsDirectionsUrl(directionsFor.coordinates.lat, directionsFor.coordinates.lng, directionsFor.name)}
                 target="_blank" rel="noreferrer"
                 onClick={() => setDirectionsFor(null)}
-                className="flex items-center gap-3 h-13 px-4 py-3.5 rounded-2xl bg-white/5 border border-white/10 text-white text-[12px] font-extrabold mb-2 active:scale-[0.98]"
+                className="flex items-center gap-3 h-13 px-4 py-3.5 rounded-2xl bg-white/5 border border-white/10 text-white text-[0.75rem] font-extrabold mb-2 active:scale-[0.98]"
               >
                  Apple Haritalar
               </a>
@@ -451,7 +451,7 @@ const MapViewComponent = ({
                 href={googleMapsDirectionsUrl(directionsFor.coordinates.lat, directionsFor.coordinates.lng)}
                 target="_blank" rel="noreferrer"
                 onClick={() => setDirectionsFor(null)}
-                className="flex items-center gap-3 h-13 px-4 py-3.5 rounded-2xl bg-white/5 border border-white/10 text-white text-[12px] font-extrabold active:scale-[0.98]"
+                className="flex items-center gap-3 h-13 px-4 py-3.5 rounded-2xl bg-white/5 border border-white/10 text-white text-[0.75rem] font-extrabold active:scale-[0.98]"
               >
                 <MapIcon size={16} className="text-[#39FF14]" /> Google Haritalar
               </a>
@@ -1181,7 +1181,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
                 <ArrowLeft size={20} />
               </button>
             )}
-            <h1 className="mt-1 text-[32px] font-extrabold italic uppercase tracking-[-0.04em] leading-[0.9]">
+            <h1 className="mt-1 text-[2rem] font-extrabold italic uppercase tracking-[-0.04em] leading-[0.9]">
               Saha<br />Vitrini
             </h1>
           </div>
@@ -1190,13 +1190,13 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
             <div className="flex items-center bg-white/5 border border-white/10 rounded-[13px] p-[3px]">
               <button
                 onClick={() => setViewMode('LIST')}
-                className={`px-3 py-[7px] rounded-[10px] text-[10px] font-extrabold flex items-center gap-1 transition-all ${viewMode === 'LIST' ? 'bg-[#FFFF00] text-black' : 'text-white/50'}`}
+                className={`px-3 py-[7px] rounded-[10px] text-[0.6875rem] font-extrabold flex items-center gap-1 transition-all ${viewMode === 'LIST' ? 'bg-[#FFFF00] text-black' : 'text-white/50'}`}
               >
                 <LayoutGrid size={11} /> Liste
               </button>
               <button
                 onClick={() => setViewMode('MAP')}
-                className={`px-3 py-[7px] rounded-[10px] text-[10px] font-extrabold flex items-center gap-1 transition-all ${viewMode === 'MAP' ? 'bg-[#FFFF00] text-black' : 'text-white/50'}`}
+                className={`px-3 py-[7px] rounded-[10px] text-[0.6875rem] font-extrabold flex items-center gap-1 transition-all ${viewMode === 'MAP' ? 'bg-[#FFFF00] text-black' : 'text-white/50'}`}
               >
                 <MapIcon size={11} /> Harita
               </button>
@@ -1219,7 +1219,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
                   className={`transition-colors ${favOnly ? 'fill-[#FFFF00] text-[#FFFF00]' : 'fill-transparent text-[#FFFF00]/80'}`}
                 />
                 {favorites.size > 0 && (
-                  <span className="absolute -top-1.5 -right-1.5 min-w-4 h-4 px-1 rounded-lg bg-[#39FF14] text-black text-[9px] font-extrabold flex items-center justify-center border-2 border-[#0A0E14]">
+                  <span className="absolute -top-1.5 -right-1.5 min-w-4 h-4 px-1 rounded-lg bg-[#39FF14] text-black text-[0.6875rem] font-extrabold flex items-center justify-center border-2 border-[#0A0E14]">
                     {favorites.size}
                   </span>
                 )}
@@ -1233,7 +1233,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
               >
                 <Filter size={17} />
                 {activeFilterCount > 0 && (
-                  <span className="absolute -top-1.5 -right-1.5 min-w-4 h-4 px-1 rounded-lg bg-[#FFFF00] text-black text-[9px] font-extrabold flex items-center justify-center border-2 border-[#0A0E14]">
+                  <span className="absolute -top-1.5 -right-1.5 min-w-4 h-4 px-1 rounded-lg bg-[#FFFF00] text-black text-[0.6875rem] font-extrabold flex items-center justify-center border-2 border-[#0A0E14]">
                     {activeFilterCount}
                   </span>
                 )}
@@ -1244,7 +1244,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
 
         {/* Search Bar */}
         <div className="relative group mt-4">
-          <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none text-gray-500 group-focus-within:text-[#FFFF00] transition-colors">
+          <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none text-ink-4 group-focus-within:text-[#FFFF00] transition-colors">
             <Search size={17} />
           </div>
           <input
@@ -1263,11 +1263,11 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
         {viewMode === 'LIST' ? (
           <div>
             <div className="flex justify-between items-center mb-5 mt-1">
-              <h2 className="text-xs font-extrabold text-gray-500 uppercase tracking-[0.2em]">
+              <h2 className="text-xs font-extrabold text-ink-4 uppercase tracking-[0.2em]">
                 {favOnly ? `${filteredPitches.length} FAVORİ SAHA` : `${filteredPitches.length} TESİS BULUNDU`}
               </h2>
               {filters.district !== 'Tümü' && (
-                <span className="text-[10px] font-extrabold text-[#FFFF00] bg-[#FFFF00]/10 px-2 py-1 rounded-lg">
+                <span className="text-[0.6875rem] font-extrabold text-[#FFFF00] bg-[#FFFF00]/10 px-2 py-1 rounded-lg">
                   {filters.district}
                 </span>
               )}
@@ -1299,10 +1299,10 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
                    yerine gerçek talep sinyali (haberdar et / saha öner). */
                 <div className="flex flex-col items-center justify-center py-16 text-center px-6">
                   <div className="w-20 h-20 bg-[#161B22] rounded-full flex items-center justify-center mb-4 border border-white/5">
-                    <MapPinOff size={32} className="text-gray-500" />
+                    <MapPinOff size={32} className="text-ink-4" />
                   </div>
                   <h3 className="text-lg font-extrabold italic text-white">BÖLGENDE HENÜZ SAHA YOK</h3>
-                  <p className="text-gray-400 text-[12.5px] mt-2 leading-relaxed max-w-xs">
+                  <p className="text-gray-400 text-[0.8125rem] mt-2 leading-relaxed max-w-xs">
                     Yeni açılıyoruz — bölgende saha eklenince ilk sen haberdar ol.
                     İyi bir halı saha biliyorsan öner; ekibimiz iletişime geçsin.
                   </p>
@@ -1310,7 +1310,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
                   {demandDone && (
                     <div className="mt-6 w-full max-w-xs bg-[#0F1A12] border border-[#39FF14]/25 rounded-2xl px-4 py-4 flex items-start gap-3 text-left">
                       <Check size={18} className="text-[#39FF14] shrink-0 mt-0.5" />
-                      <p className="text-[12.5px] text-white/85 leading-relaxed">
+                      <p className="text-[0.8125rem] text-white/85 leading-relaxed">
                         {demandDone.type === 'NOTIFY'
                           ? (demandDone.duplicate
                               ? 'Zaten haberdar listesindesin — bölgende saha açılınca sana bildireceğiz.'
@@ -1324,13 +1324,13 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
                   <div className="mt-4 flex flex-col gap-3 w-full max-w-xs">
                     <button
                       onClick={() => openDemandModal('NOTIFY')}
-                      className="flex items-center justify-center gap-2 h-12 rounded-2xl bg-[#FFFF00] text-black text-[13px] font-extrabold active:scale-[0.98] transition-transform"
+                      className="flex items-center justify-center gap-2 h-12 rounded-2xl bg-[#FFFF00] text-black text-[0.8125rem] font-extrabold active:scale-[0.98] transition-transform"
                     >
                       <Bell size={16} /> Beni haberdar et
                     </button>
                     <button
                       onClick={() => openDemandModal('SUGGEST')}
-                      className="flex items-center justify-center gap-2 h-12 rounded-2xl bg-[#161B22] border border-white/10 text-white text-[13px] font-bold active:scale-[0.98] transition-transform"
+                      className="flex items-center justify-center gap-2 h-12 rounded-2xl bg-[#161B22] border border-white/10 text-white text-[0.8125rem] font-bold active:scale-[0.98] transition-transform"
                     >
                       <Plus size={16} /> Saha öner
                     </button>
@@ -1339,14 +1339,14 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
               ) : favOnly && favorites.size === 0 ? (
                 /* Boş favori durumu (tasarım 1a) */
                 <div className="flex flex-col items-center justify-center py-20 text-center px-6">
-                  <Star size={40} strokeWidth={1.6} className="text-white/25" />
-                  <h3 className="mt-4 text-[15px] font-extrabold text-white/70">Henüz favori saha yok</h3>
-                  <p className="mt-1.5 text-[12.5px] leading-relaxed text-white/40 max-w-xs">
+                  <Star size={40} strokeWidth={1.6} className="text-ink-4" />
+                  <h3 className="mt-4 text-[0.9375rem] font-extrabold text-white/70">Henüz favori saha yok</h3>
+                  <p className="mt-1.5 text-[0.8125rem] leading-relaxed text-ink-4 max-w-xs">
                     Kartların üstündeki yıldıza dokunarak sahaları favorilerine ekle, sonra buradan hızlıca ulaş.
                   </p>
                   <button
                     onClick={() => setFavOnly(false)}
-                    className="mt-6 text-[#FFFF00] text-[10px] font-extrabold uppercase tracking-widest underline"
+                    className="mt-6 text-[#FFFF00] text-[0.625rem] font-extrabold uppercase tracking-widest underline"
                   >
                     TÜM SAHALARI GÖSTER
                   </button>
@@ -1354,17 +1354,17 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
               ) : (
                 <div className="flex flex-col items-center justify-center py-20 text-center">
                   <div className="w-20 h-20 bg-[#161B22] rounded-full flex items-center justify-center mb-4 border border-white/5">
-                    <Search size={32} className="text-gray-600" />
+                    <Search size={32} className="text-ink-4" />
                   </div>
                   <h3 className="text-lg font-extrabold italic text-white">SONUÇ BULUNAMADI</h3>
-                  <p className="text-gray-500 text-xs mt-2">Filtreleri temizleyip tekrar dene.</p>
+                  <p className="text-ink-4 text-xs mt-2">Filtreleri temizleyip tekrar dene.</p>
                   <button
                     onClick={() => {
                       resetAllFilters();
                       setSearchQuery('');
                       setFavOnly(false);
                     }}
-                    className="mt-6 text-[#FFFF00] text-[10px] font-extrabold uppercase tracking-widest underline"
+                    className="mt-6 text-[#FFFF00] text-[0.625rem] font-extrabold uppercase tracking-widest underline"
                   >
                     FİLTRELERİ SIFIRLA
                   </button>
@@ -1416,7 +1416,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
                     {(activeFilterCount > 0 || sortOrder !== 'DEFAULT') && (
                       <button
                         onClick={resetAllFilters}
-                        className="px-3 h-9 rounded-full bg-white/5 border border-white/10 text-[10px] font-extrabold uppercase tracking-widest text-white/70 active:scale-95 transition-transform"
+                        className="px-3 h-9 rounded-full bg-white/5 border border-white/10 text-[0.625rem] font-extrabold uppercase tracking-widest text-white/70 active:scale-95 transition-transform"
                       >
                         Temizle
                       </button>
@@ -1435,7 +1435,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
               <div className="flex-1 overflow-y-auto custom-scrollbar px-7 pt-5 pb-6 space-y-8">
                 {/* Sıralama */}
                 <div>
-                  <p className="text-[10px] font-extrabold text-gray-500 uppercase tracking-widest mb-3">SIRALAMA</p>
+                  <p className="text-[0.625rem] font-extrabold text-ink-4 uppercase tracking-widest mb-3">SIRALAMA</p>
                   <div className="grid grid-cols-2 gap-2">
                     {([
                       ['DEFAULT', 'Önerilen'],
@@ -1446,7 +1446,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
                       <button
                         key={key}
                         onClick={() => setSortOrder(key)}
-                        className={`py-3 rounded-xl text-[10px] font-extrabold uppercase tracking-wide transition-all border ${sortOrder === key ? 'bg-[#FFFF00] text-black border-[#FFFF00]' : 'bg-[#0A0E14] text-gray-400 border-white/5'}`}
+                        className={`py-3 rounded-xl text-[0.625rem] font-extrabold uppercase tracking-wide transition-all border ${sortOrder === key ? 'bg-[#FFFF00] text-black border-[#FFFF00]' : 'bg-[#0A0E14] text-gray-400 border-white/5'}`}
                       >
                         {label}
                       </button>
@@ -1457,10 +1457,10 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
                 {/* Fırsat: indirimli sahalar (sayaç gerçek veriden; 0 ise devre dışı) */}
                 {discountCount > 0 && (
                   <div>
-                    <p className="text-[10px] font-extrabold text-gray-500 uppercase tracking-widest mb-3">FIRSAT</p>
+                    <p className="text-[0.625rem] font-extrabold text-ink-4 uppercase tracking-widest mb-3">FIRSAT</p>
                     <button
                       onClick={() => setOnlyDiscounted(v => !v)}
-                      className={`w-full py-3 px-3 rounded-xl text-[11px] font-extrabold uppercase tracking-wide transition-all border ${onlyDiscounted ? 'bg-[#FF3B30] text-white border-[#FF3B30]' : 'bg-[#0A0E14] text-gray-400 border-white/5'}`}
+                      className={`w-full py-3 px-3 rounded-xl text-[0.6875rem] font-extrabold uppercase tracking-wide transition-all border ${onlyDiscounted ? 'bg-[#FF3B30] text-white border-[#FF3B30]' : 'bg-[#0A0E14] text-gray-400 border-white/5'}`}
                     >
                       🔥 Yalnızca İndirimli · {discountCount}
                     </button>
@@ -1470,11 +1470,11 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
                 {/* Bölge — vitrindeki gerçek ilçeler + tesis sayısı */}
                 {districtOptions.length > 1 && (
                   <div>
-                    <p className="text-[10px] font-extrabold text-gray-500 uppercase tracking-widest mb-3">BÖLGE</p>
+                    <p className="text-[0.625rem] font-extrabold text-ink-4 uppercase tracking-widest mb-3">BÖLGE</p>
                     <div className="flex flex-wrap gap-2">
                       <button
                         onClick={() => setFilters({ ...filters, district: 'Tümü' })}
-                        className={`px-4 py-2.5 rounded-xl text-[10px] font-extrabold transition-all border ${filters.district === 'Tümü' ? 'bg-[#FFFF00] text-black border-[#FFFF00]' : 'bg-[#0A0E14] text-gray-400 border-white/5'}`}
+                        className={`px-4 py-2.5 rounded-xl text-[0.6875rem] font-extrabold transition-all border ${filters.district === 'Tümü' ? 'bg-[#FFFF00] text-black border-[#FFFF00]' : 'bg-[#0A0E14] text-gray-400 border-white/5'}`}
                       >
                         TÜMÜ · {sourcePitches.length}
                       </button>
@@ -1482,7 +1482,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
                         <button
                           key={d}
                           onClick={() => setFilters({ ...filters, district: filters.district === d ? 'Tümü' : d })}
-                          className={`px-4 py-2.5 rounded-xl text-[10px] font-extrabold transition-all border ${filters.district === d ? 'bg-[#FFFF00] text-black border-[#FFFF00]' : 'bg-[#0A0E14] text-gray-400 border-white/5'}`}
+                          className={`px-4 py-2.5 rounded-xl text-[0.6875rem] font-extrabold transition-all border ${filters.district === d ? 'bg-[#FFFF00] text-black border-[#FFFF00]' : 'bg-[#0A0E14] text-gray-400 border-white/5'}`}
                         >
                           {d.toUpperCase()} · {count}
                         </button>
@@ -1493,7 +1493,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
 
                 {/* Saha tipi — gerçek kort sayılarıyla; hiç yoksa devre dışı */}
                 <div>
-                  <p className="text-[10px] font-extrabold text-gray-500 uppercase tracking-widest mb-3">SAHA TİPİ</p>
+                  <p className="text-[0.625rem] font-extrabold text-ink-4 uppercase tracking-widest mb-3">SAHA TİPİ</p>
                   <div className="flex gap-2">
                     {(['Tümü', 'Kapalı', 'Açık'] as const).map(t => {
                       const count = t === 'Tümü' ? sourcePitches.length : typeCounts[t];
@@ -1505,8 +1505,8 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
                           onClick={() => setFilters({ ...filters, type: filters.type === t ? 'Tümü' : t })}
                           className={`flex-1 py-3 rounded-xl transition-all border disabled:opacity-35 ${filters.type === t ? 'bg-[#FFFF00] border-[#FFFF00]' : 'bg-[#0A0E14] border-white/5'}`}
                         >
-                          <span className={`block text-[10px] font-extrabold uppercase ${filters.type === t ? 'text-black' : 'text-gray-400'}`}>{t}</span>
-                          <span className={`block text-[9px] font-bold mt-0.5 ${filters.type === t ? 'text-black/60' : 'text-gray-600'}`}>{count} tesis</span>
+                          <span className={`block text-[0.6875rem] font-extrabold uppercase ${filters.type === t ? 'text-black' : 'text-gray-400'}`}>{t}</span>
+                          <span className={`block text-[0.6875rem] font-bold mt-0.5 ${filters.type === t ? 'text-black/60' : 'text-ink-4'}`}>{count} tesis</span>
                         </button>
                       );
                     })}
@@ -1517,7 +1517,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
                 {priceBounds && (
                   <div>
                     <div className="flex justify-between items-center mb-3">
-                      <p className="text-[10px] font-extrabold text-gray-500 uppercase tracking-widest">ORT. SAATLİK FİYAT</p>
+                      <p className="text-[0.625rem] font-extrabold text-ink-4 uppercase tracking-widest">ORT. SAATLİK FİYAT</p>
                       <span className="text-sm font-extrabold text-[#FFFF00]">
                         {filters.maxPrice == null ? 'Tümü' : `≤ ${filters.maxPrice}₺`}
                       </span>
@@ -1534,7 +1534,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
                       }}
                       className="w-full h-2 bg-[#0A0E14] rounded-lg appearance-none cursor-pointer accent-[#FFFF00]"
                     />
-                    <div className="flex justify-between mt-1.5 text-[9px] font-bold text-white/30">
+                    <div className="flex justify-between mt-1.5 text-[0.6875rem] font-bold text-ink-4">
                       <span>₺{priceBounds.min}</span>
                       <span>₺{priceBounds.max}+</span>
                     </div>
@@ -1543,13 +1543,13 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
 
                 {/* Puan */}
                 <div>
-                  <p className="text-[10px] font-extrabold text-gray-500 uppercase tracking-widest mb-3">MİNİMUM PUAN</p>
+                  <p className="text-[0.625rem] font-extrabold text-ink-4 uppercase tracking-widest mb-3">MİNİMUM PUAN</p>
                   <div className="flex gap-2">
                     {[0, 3.5, 4.0, 4.5].map(r => (
                       <button
                         key={r}
                         onClick={() => setFilters({ ...filters, minRating: r })}
-                        className={`flex-1 py-3 rounded-xl text-[10px] font-extrabold transition-all border flex items-center justify-center gap-1 ${filters.minRating === r ? 'bg-[#FFFF00] text-black border-[#FFFF00]' : 'bg-[#0A0E14] text-gray-400 border-white/5'}`}
+                        className={`flex-1 py-3 rounded-xl text-[0.6875rem] font-extrabold transition-all border flex items-center justify-center gap-1 ${filters.minRating === r ? 'bg-[#FFFF00] text-black border-[#FFFF00]' : 'bg-[#0A0E14] text-gray-400 border-white/5'}`}
                       >
                         {r === 0 ? 'HEPSİ' : <><Star size={10} fill="currentColor" /> {r}+</>}
                       </button>
@@ -1560,7 +1560,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
                 {/* Olanaklar — vitrindeki tesislerde gerçekten bulunanlar */}
                 {amenityOptions.length > 0 && (
                   <div>
-                    <p className="text-[10px] font-extrabold text-gray-500 uppercase tracking-widest mb-3">TESİS OLANAKLARI</p>
+                    <p className="text-[0.625rem] font-extrabold text-ink-4 uppercase tracking-widest mb-3">TESİS OLANAKLARI</p>
                     <div className="flex flex-wrap gap-2">
                       {amenityOptions.map(({ value, count, icon: Icon }) => {
                         const active = filters.hasAmenities.includes(value);
@@ -1573,11 +1573,11 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
                                 ? f.hasAmenities.filter(a => a !== value)
                                 : [...f.hasAmenities, value],
                             }))}
-                            className={`flex items-center gap-1.5 px-3 py-2.5 rounded-xl text-[10px] font-extrabold transition-all border ${active ? 'bg-[#FFFF00] text-black border-[#FFFF00]' : 'bg-[#0A0E14] text-gray-400 border-white/5'}`}
+                            className={`flex items-center gap-1.5 px-3 py-2.5 rounded-xl text-[0.6875rem] font-extrabold transition-all border ${active ? 'bg-[#FFFF00] text-black border-[#FFFF00]' : 'bg-[#0A0E14] text-gray-400 border-white/5'}`}
                           >
                             {Icon && <Icon size={13} className={active ? 'text-black' : 'text-[#39FF14]'} />}
                             {value}
-                            <span className={active ? 'text-black/50' : 'text-gray-600'}>{count}</span>
+                            <span className={active ? 'text-black/50' : 'text-ink-4'}>{count}</span>
                           </button>
                         );
                       })}
@@ -1648,7 +1648,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
                 </div>
                 <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-[#0A0E14] to-transparent pointer-events-none"></div>
                 {(selectedCourt?.images ?? []).filter(Boolean).length > 0 && (
-                  <span className="absolute top-[calc(env(safe-area-inset-top)+64px)] right-4 z-10 px-2.5 py-1 rounded-full bg-black/50 backdrop-blur-md border border-white/15 text-[10px] font-extrabold text-white/85">
+                  <span className="absolute top-[calc(env(safe-area-inset-top)+64px)] right-4 z-10 px-2.5 py-1 rounded-full bg-black/50 backdrop-blur-md border border-white/15 text-[0.6875rem] font-extrabold text-white/85">
                     {selectedCourt?.name}
                   </span>
                 )}
@@ -1663,8 +1663,8 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
 
               {/* Başlık + puan */}
               <div className="px-6 -mt-6 relative z-10">
-                <h1 className="text-[26px] font-extrabold italic uppercase tracking-[-0.03em] leading-[0.95] text-white pr-4">{selectedPitch.name}</h1>
-                <div className="flex items-center gap-1.5 mt-2.5 text-[13.5px] text-white/65 font-medium">
+                <h1 className="text-[1.625rem] font-extrabold italic uppercase tracking-[-0.03em] leading-[0.95] text-white pr-4">{selectedPitch.name}</h1>
+                <div className="flex items-center gap-1.5 mt-2.5 text-[0.875rem] text-white/65 font-medium">
                   {/* V-2: gerçek değerlendirme yoksa sahte puan yerine "Yeni". */}
                   {(selectedPitch.ratingCount > 0 || selectedPitch.googleReviews > 0) ? (
                     <>
@@ -1751,26 +1751,26 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
                               )}
                             </div>
                             <div className="min-w-0">
-                              <div className="text-[15px] font-extrabold text-white truncate">{court.name}</div>
-                              <div className="text-[11px] font-semibold text-white/50 mt-0.5 truncate">{meta}</div>
+                              <div className="text-[0.9375rem] font-extrabold text-white truncate">{court.name}</div>
+                              <div className="text-[0.6875rem] font-semibold text-white/50 mt-0.5 truncate">{meta}</div>
                               {normalizeCourtFeatures(court.features).length > 0 && (
                                 <div className="flex flex-wrap gap-1 mt-1">
                                   {normalizeCourtFeatures(court.features).slice(0, 4).map((fv) => (
-                                    <span key={fv} className="px-1.5 py-0.5 rounded-md bg-[#39FF14]/10 text-[9px] font-bold text-[#39FF14]/90">
+                                    <span key={fv} className="px-1.5 py-0.5 rounded-md bg-[#39FF14]/10 text-[0.6875rem] font-bold text-[#39FF14]/90">
                                       {courtFeatureLabel(fv)}
                                     </span>
                                   ))}
                                 </div>
                               )}
                               {court.description?.trim() && (
-                                <div className="text-[10px] font-medium text-white/35 mt-0.5 truncate">{court.description.trim()}</div>
+                                <div className="text-[0.6875rem] font-medium text-ink-4 mt-0.5 truncate">{court.description.trim()}</div>
                               )}
                             </div>
                           </div>
                           <div className="text-right flex-shrink-0 pl-3">
                             <div className={`text-base font-extrabold ${isSel ? 'text-[#39FF14]' : 'text-white'}`}>₺{price}</div>
                             {courtPriceUnits[court.id] && (
-                              <div className="text-[9px] font-extrabold uppercase tracking-[0.1em] text-white/40">{courtPriceUnits[court.id]}</div>
+                              <div className="text-[0.625rem] font-extrabold uppercase tracking-[0.1em] text-ink-4">{courtPriceUnits[court.id]}</div>
                             )}
                           </div>
                         </button>
@@ -1782,12 +1782,12 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
                   {approvedGrades && (
                     <div className="mt-5 flex items-center justify-around bg-[#0D111A] border border-white/[0.06] rounded-[20px] p-4">
                       <div className="text-center">
-                        <div className="text-[9px] font-extrabold uppercase tracking-[0.1em] text-white/40">Aydınlatma</div>
+                        <div className="text-[0.625rem] font-extrabold uppercase tracking-[0.1em] text-ink-4">Aydınlatma</div>
                         <div className="text-xl font-extrabold text-[#39FF14] mt-1">{approvedGrades.lighting ?? '—'}</div>
                       </div>
                       <div className="w-px h-8 bg-white/10" />
                       <div className="text-center">
-                        <div className="text-[9px] font-extrabold uppercase tracking-[0.1em] text-white/40">Zemin</div>
+                        <div className="text-[0.625rem] font-extrabold uppercase tracking-[0.1em] text-ink-4">Zemin</div>
                         <div className="text-xl font-extrabold text-[#39FF14] mt-1">{approvedGrades.grass ?? '—'}</div>
                       </div>
                     </div>
@@ -1798,8 +1798,8 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
               {/* Admin rezervasyon kapatması: net bilgilendirme (Saat Seç kilitli) */}
               {bookingDisabled && (
                 <div className="mx-6 mt-7 p-4 rounded-[18px] bg-amber-500/[0.08] border border-amber-500/25">
-                  <p className="text-[13px] font-extrabold text-amber-300">Online rezervasyon geçici olarak kapalı</p>
-                  <p className="text-[11px] font-medium text-amber-200/70 mt-1 leading-relaxed">
+                  <p className="text-[0.8125rem] font-extrabold text-amber-300">Online rezervasyon geçici olarak kapalı</p>
+                  <p className="text-[0.6875rem] font-medium text-amber-200/70 mt-1 leading-relaxed">
                     Bu tesis için uygulama üzerinden rezervasyon şu an alınamıyor. Tesisle iletişime geçebilir veya daha sonra tekrar deneyebilirsin.
                   </p>
                 </div>
@@ -1811,7 +1811,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
                   <h3 className="text-base font-extrabold tracking-tight">Tarih Seç</h3>
                   <button
                     onClick={() => setCalendarOpen(v => !v)}
-                    className="flex items-center gap-1.5 px-3 py-[7px] rounded-full bg-white/5 border border-white/10 text-[11px] font-extrabold text-white/80"
+                    className="flex items-center gap-1.5 px-3 py-[7px] rounded-full bg-white/5 border border-white/10 text-[0.6875rem] font-extrabold text-white/80"
                   >
                     <CalendarIcon size={13} />
                     {calendarOpen ? 'Takvimi kapat' : 'Tüm tarihler'}
@@ -1833,7 +1833,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
                             : 'bg-white/[0.03] border-white/[0.07] text-white/60'
                         }`}
                       >
-                        <span className="text-[10px] font-extrabold uppercase">{d === 0 ? 'Bugün' : dayName}</span>
+                        <span className="text-[0.6875rem] font-extrabold uppercase">{d === 0 ? 'Bugün' : dayName}</span>
                         <span className="text-xl font-extrabold mt-0.5">{String(date.getDate()).padStart(2, '0')}</span>
                       </button>
                     );
@@ -1877,7 +1877,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
                         </div>
                         <div className="grid grid-cols-7 gap-1.5 mb-2">
                           {WEEKDAY_HEADERS.map(w => (
-                            <div key={w} className="text-center text-[10px] font-extrabold text-white/35 uppercase">{w}</div>
+                            <div key={w} className="text-center text-[0.6875rem] font-extrabold text-ink-4 uppercase">{w}</div>
                           ))}
                         </div>
                         {calendarWeeks.map((week, wi) => (
@@ -1890,7 +1890,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
                                   key={di}
                                   disabled={disabled}
                                   onClick={() => { setSelectedDate(day.offset); setSelectedSlot(null); }}
-                                  className={`h-[38px] rounded-[11px] flex items-center justify-center text-[13px] font-bold transition-all ${
+                                  className={`h-[38px] rounded-[11px] flex items-center justify-center text-[0.8125rem] font-bold transition-all ${
                                     isSel
                                       ? 'bg-[#39FF14] text-[#05070b]'
                                       : disabled
@@ -1923,7 +1923,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
                       <button
                         key={key}
                         onClick={() => setTimeFilter(key)}
-                        className={`px-3 py-1.5 rounded-full border text-[10px] font-extrabold transition-all ${
+                        className={`px-3 py-1.5 rounded-full border text-[0.6875rem] font-extrabold transition-all ${
                           timeFilter === key
                             ? 'bg-[#39FF14]/[0.14] border-[#39FF14]/50 text-[#39FF14]'
                             : 'bg-white/[0.04] border-white/10 text-white/50'
@@ -1961,10 +1961,10 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
                                 : 'bg-white/[0.03] border-white/[0.07]'
                         }`}
                       >
-                        <span className={`text-sm ${isSelected ? 'font-extrabold text-[#05070b]' : isBooked ? 'font-extrabold text-red-400 line-through' : isOwnerClosed ? 'font-extrabold text-white/40 line-through' : 'font-extrabold text-white'}`}>
+                        <span className={`text-sm ${isSelected ? 'font-extrabold text-[#05070b]' : isBooked ? 'font-extrabold text-red-400 line-through' : isOwnerClosed ? 'font-extrabold text-ink-4 line-through' : 'font-extrabold text-white'}`}>
                           {slot.startTime}
                         </span>
-                        <span className={`${isBooked || isOwnerClosed ? 'text-[9px] tracking-[0.1em]' : 'text-[10px]'} font-extrabold ${isSelected ? 'text-[#05070b]/70' : isBooked ? 'text-red-400' : isOwnerClosed ? 'text-white/35' : 'text-[#39FF14]'}`}>
+                        <span className={`${isBooked || isOwnerClosed ? 'text-[0.6875rem] tracking-[0.1em]' : 'text-[0.6875rem]'} font-extrabold ${isSelected ? 'text-[#05070b]/70' : isBooked ? 'text-red-400' : isOwnerClosed ? 'text-ink-4' : 'text-[#39FF14]'}`}>
                           {isBooked ? 'DOLU' : isOwnerClosed ? 'KAPALI' : slot.price != null ? `₺${slot.price}` : ''}
                         </span>
                       </button>
@@ -1974,16 +1974,16 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
                 {selectedDayClosed ? (
                   <div className="text-center py-8">
                     <p className="text-sm font-extrabold text-white/70">Bu gün kapalı</p>
-                    <p className="text-xs text-white/40 mt-1">Tesis bu gün çalışma saatlerinde hizmet vermiyor. Başka bir gün seçebilirsin.</p>
+                    <p className="text-xs text-ink-4 mt-1">Tesis bu gün çalışma saatlerinde hizmet vermiyor. Başka bir gün seçebilirsin.</p>
                   </div>
                 ) : filteredSlots.filter(s => s.status !== 'closed').length === 0 && (
-                  <p className="text-center text-xs text-white/40 py-6">Bu gün için uygun saat bulunmuyor.</p>
+                  <p className="text-center text-xs text-ink-4 py-6">Bu gün için uygun saat bulunmuyor.</p>
                 )}
 
                 {/* İçerik bildir (Karar #12 moderasyon) */}
                 <button
                   onClick={handleReportContent}
-                  className="mt-8 mx-auto flex items-center gap-1.5 text-[10px] font-bold text-white/30 uppercase tracking-widest"
+                  className="mt-8 mx-auto flex items-center gap-1.5 text-[0.625rem] font-bold text-ink-4 uppercase tracking-widest"
                 >
                   <Flag size={11} /> İçeriği bildir
                 </button>
@@ -1994,7 +1994,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
             <div className="absolute bottom-0 left-0 w-full bg-[#0A0E14]/95 backdrop-blur-xl border-t border-white/[0.07] z-20">
               <div className="px-6 py-4 pb-safe flex items-center gap-4">
                 <div className="flex-1 min-w-0">
-                  <div className="text-[10px] font-extrabold uppercase tracking-[0.08em] text-white/45 truncate">
+                  <div className="text-[0.625rem] font-extrabold uppercase tracking-[0.08em] text-ink-4 truncate">
                     {selectedCourt
                       ? [selectedCourt.name, formatCapacityRange(selectedCourt.minCapacity, selectedCourt.maxCapacity, selectedCourt.capacity)].filter(Boolean).join(' · ')
                       : (selectedPlacement === 'CLOSED' ? 'Kapalı' : 'Açık')}
@@ -2027,7 +2027,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
                         onSelectTime(selectedPitch, selectedCourt, date.toLocaleDateString('tr-TR'), selectedSlot);
                       }
                     }}
-                    className={`px-6 h-14 rounded-2xl bg-[#FFFF00] text-black text-[13px] font-extrabold italic uppercase tracking-wide whitespace-nowrap transition-all ${
+                    className={`px-6 h-14 rounded-2xl bg-[#FFFF00] text-black text-[0.8125rem] font-extrabold italic uppercase tracking-wide whitespace-nowrap transition-all ${
                       selectedSlot && selectedCourtId
                         ? 'shadow-[0_0_30px_rgba(255,255,0,0.3)] active:scale-95'
                         : 'opacity-60 cursor-not-allowed'
@@ -2039,7 +2039,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
                   <button
                     disabled={!selectedSlot || !selectedCourtId || bookingDisabled}
                     onClick={handlePayDeposit}
-                    className={`px-6 h-14 rounded-2xl bg-[#FFFF00] text-black text-[13px] font-extrabold italic uppercase tracking-wide whitespace-nowrap transition-all ${
+                    className={`px-6 h-14 rounded-2xl bg-[#FFFF00] text-black text-[0.8125rem] font-extrabold italic uppercase tracking-wide whitespace-nowrap transition-all ${
                       selectedSlot && selectedCourtId
                         ? 'shadow-[0_0_30px_rgba(255,255,0,0.3)] active:scale-95'
                         : 'opacity-60 cursor-not-allowed'
@@ -2050,7 +2050,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
                 )}
               </div>
               {selectedSlotQuote && !isSelectionMode && (
-                <p className="px-6 pb-3 -mt-1 text-[9px] text-white/35 leading-relaxed">
+                <p className="px-6 pb-3 -mt-1 text-[0.6875rem] text-ink-4 leading-relaxed">
                   Kapora rezervasyon güvencesidir; kalan ₺{selectedSlotQuote.price - selectedSlotQuote.deposit} maç günü tesiste ödenir. İptalde tesis politikasına göre iade edilir.
                 </p>
               )}
@@ -2086,7 +2086,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
                   {demandModal === 'NOTIFY' ? 'HABERDAR OL' : 'SAHA ÖNER'}
                 </h2>
               </div>
-              <p className="text-[12.5px] text-gray-400 leading-relaxed mb-5">
+              <p className="text-[0.8125rem] text-gray-400 leading-relaxed mb-5">
                 {demandModal === 'NOTIFY'
                   ? 'Bölgende saha açılınca sana bildirelim. Şehir/ilçe yazman, doğru bölgeye eklememizi sağlar.'
                   : 'İyi bir halı saha biliyorsan yaz; ekibimiz iletişime geçip OYNA’ya davet etsin.'}
@@ -2098,13 +2098,13 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
                     value={demandCity}
                     onChange={(e) => setDemandCity(e.target.value)}
                     placeholder="Şehir (ör. Ordu)"
-                    className="flex-1 h-12 px-4 rounded-2xl bg-[#0A0E14] border border-white/10 text-white text-sm placeholder:text-gray-600 focus:border-[#FFFF00]/40 outline-none"
+                    className="flex-1 h-12 px-4 rounded-2xl bg-[#0A0E14] border border-white/10 text-white text-sm placeholder:text-ink-4 focus:border-[#FFFF00]/40 outline-none"
                   />
                   <input
                     value={demandDistrict}
                     onChange={(e) => setDemandDistrict(e.target.value)}
                     placeholder="İlçe (ops.)"
-                    className="flex-1 h-12 px-4 rounded-2xl bg-[#0A0E14] border border-white/10 text-white text-sm placeholder:text-gray-600 focus:border-[#FFFF00]/40 outline-none"
+                    className="flex-1 h-12 px-4 rounded-2xl bg-[#0A0E14] border border-white/10 text-white text-sm placeholder:text-ink-4 focus:border-[#FFFF00]/40 outline-none"
                   />
                 </div>
                 {demandModal === 'SUGGEST' && (
@@ -2113,26 +2113,26 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
                       value={demandPitchName}
                       onChange={(e) => setDemandPitchName(e.target.value)}
                       placeholder="Saha adı (zorunlu)"
-                      className="h-12 px-4 rounded-2xl bg-[#0A0E14] border border-white/10 text-white text-sm placeholder:text-gray-600 focus:border-[#FFFF00]/40 outline-none"
+                      className="h-12 px-4 rounded-2xl bg-[#0A0E14] border border-white/10 text-white text-sm placeholder:text-ink-4 focus:border-[#FFFF00]/40 outline-none"
                     />
                     <input
                       value={demandContact}
                       onChange={(e) => setDemandContact(e.target.value)}
                       placeholder="Sahanın telefonu/iletişimi (ops.)"
-                      className="h-12 px-4 rounded-2xl bg-[#0A0E14] border border-white/10 text-white text-sm placeholder:text-gray-600 focus:border-[#FFFF00]/40 outline-none"
+                      className="h-12 px-4 rounded-2xl bg-[#0A0E14] border border-white/10 text-white text-sm placeholder:text-ink-4 focus:border-[#FFFF00]/40 outline-none"
                     />
                   </>
                 )}
               </div>
 
               {demandError && (
-                <p className="text-[12px] text-red-400 mt-3 font-semibold">{demandError}</p>
+                <p className="text-[0.75rem] text-red-400 mt-3 font-semibold">{demandError}</p>
               )}
 
               <button
                 onClick={submitDemand}
                 disabled={demandSending}
-                className="mt-6 w-full py-3.5 rounded-2xl bg-[#FFFF00] text-black text-[14px] font-extrabold flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-60"
+                className="mt-6 w-full py-3.5 rounded-2xl bg-[#FFFF00] text-black text-[0.875rem] font-extrabold flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-60"
               >
                 {demandSending
                   ? <Loader2 size={17} className="animate-spin" />

@@ -42,13 +42,13 @@ const Chip: React.FC<{ children: React.ReactNode; accent?: boolean; color?: stri
     if (color) {
         // Özel vurgu rengi (ör. oyun stili) — inline stil.
         return (
-            <span className="px-2.5 py-1 rounded-lg text-[9px] font-extrabold border" style={{ color, backgroundColor: `${color}1A`, borderColor: `${color}66` }}>
+            <span className="px-2.5 py-1 rounded-lg text-[0.6875rem] font-extrabold border" style={{ color, backgroundColor: `${color}1A`, borderColor: `${color}66` }}>
                 {children}
             </span>
         );
     }
     return (
-        <span className={`px-2.5 py-1 rounded-lg text-[9px] font-bold border ${
+        <span className={`px-2.5 py-1 rounded-lg text-[0.6875rem] font-bold border ${
             accent
                 ? 'font-extrabold text-primary bg-primary/10 border-primary/40'
                 : 'text-white/55 bg-white/5 border-white/10'
@@ -110,7 +110,7 @@ export const ProfileHero: React.FC<ProfileHeroProps> = ({
                     /* ── Sade görünüm ── */
                     <div className="flex items-center gap-3 xs:gap-4">
                         <div className="flex-1 min-w-0">
-                            <h1 className="text-[22px] xs:text-[27px] font-extrabold italic uppercase leading-[1.05] tracking-tight text-white flex items-center gap-2 min-w-0">
+                            <h1 className="text-[1.375rem] xs:text-[1.6875rem] font-extrabold italic uppercase leading-[1.05] tracking-tight text-white flex items-center gap-2 min-w-0">
                                 <span className="truncate">{name}</span>
                                 {verified && (
                                     <svg width="16" height="16" viewBox="0 0 24 24" className="shrink-0" aria-label="Doğrulanmış">
@@ -136,7 +136,7 @@ export const ProfileHero: React.FC<ProfileHeroProps> = ({
                                     className="w-[84px] h-[84px] rounded-full object-cover border-2 border-primary/50 bg-[#0d1712]"
                                 />
                             ) : (
-                                <div className="w-[84px] h-[84px] rounded-full flex items-center justify-center text-[28px] font-extrabold italic text-primary bg-[#0d1712] border-2 border-primary/50">
+                                <div className="w-[84px] h-[84px] rounded-full flex items-center justify-center text-[1.75rem] font-extrabold italic text-primary bg-[#0d1712] border-2 border-primary/50">
                                     {initialsOf(name)}
                                 </div>
                             )}
@@ -183,19 +183,19 @@ export const ProfileHero: React.FC<ProfileHeroProps> = ({
                 <div className="flex bg-black/35 border border-white/10 rounded-[14px] overflow-hidden mt-[18px]">
                     <div className="flex-1 py-3 px-1.5 flex flex-col items-center gap-1">
                         <span className="text-xl font-extrabold text-white leading-none">{matches}</span>
-                        <span className="text-[8px] font-extrabold tracking-[0.1em] text-white/40 uppercase">Maç</span>
+                        <span className="text-[0.625rem] font-extrabold tracking-[0.1em] text-ink-4 uppercase">Maç</span>
                     </div>
                     <div className="w-px bg-white/10" />
                     <div className="flex-1 py-3 px-1.5 flex flex-col items-center gap-1">
                         <span className="text-xl font-extrabold text-primary leading-none">%{winRate}</span>
-                        <span className="text-[8px] font-extrabold tracking-[0.1em] text-white/40 uppercase">Galibiyet</span>
+                        <span className="text-[0.625rem] font-extrabold tracking-[0.1em] text-ink-4 uppercase">Galibiyet</span>
                     </div>
                     {mvp != null && (
                         <>
                             <div className="w-px bg-white/10" />
                             <div className="flex-1 py-3 px-1.5 flex flex-col items-center gap-1">
                                 <span className="text-xl font-extrabold text-white leading-none">{mvp}</span>
-                                <span className="text-[8px] font-extrabold tracking-[0.1em] text-white/40 uppercase">MVP</span>
+                                <span className="text-[0.625rem] font-extrabold tracking-[0.1em] text-ink-4 uppercase">MVP</span>
                             </div>
                         </>
                     )}

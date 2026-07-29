@@ -82,7 +82,7 @@ const RoleSwitcher: React.FC<RoleSwitcherProps> = ({ roles, onClose, onSwitched 
       >
         <div className="flex justify-between items-center mb-1">
           <h3 className="font-extrabold text-white text-lg">Rol Değiştir</h3>
-          <button onClick={onClose} className="text-gray-500 hover:text-white p-1" aria-label="Kapat">
+          <button onClick={onClose} className="text-ink-4 hover:text-white p-1" aria-label="Kapat">
             <X size={18} />
           </button>
         </div>
@@ -119,14 +119,14 @@ const RoleSwitcher: React.FC<RoleSwitcherProps> = ({ roles, onClose, onSwitched 
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-extrabold text-white">{meta.label}</p>
-                  <p className="text-[11px] text-gray-400 truncate">{meta.sub}</p>
+                  <p className="text-[0.6875rem] text-gray-400 truncate">{meta.sub}</p>
                 </div>
                 {isActive ? (
-                  <span className="flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-widest text-[#39FF14] shrink-0">
+                  <span className="flex items-center gap-1 text-[0.625rem] font-extrabold uppercase tracking-widest text-[#39FF14] shrink-0">
                     <Check size={12} /> Aktif
                   </span>
                 ) : (
-                  <span className="text-[10px] font-extrabold uppercase tracking-widest text-gray-500 shrink-0">Geç</span>
+                  <span className="text-[0.625rem] font-extrabold uppercase tracking-widest text-ink-4 shrink-0">Geç</span>
                 )}
               </button>
             );

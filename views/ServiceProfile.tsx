@@ -258,7 +258,7 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
 
         {saveError && (
           <div className="p-3 rounded-2xl bg-red-500/10 border border-red-500/30">
-            <p className="text-[11px] font-bold text-red-400">{saveError}</p>
+            <p className="text-[0.6875rem] font-bold text-red-400">{saveError}</p>
           </div>
         )}
 
@@ -337,7 +337,7 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
                   ) : (
                     <div className="flex items-center gap-2">
                       <h2 className="text-2xl font-extrabold text-white tracking-tight">{displayName}</h2>
-                      <button onClick={() => setEditingName(true)} className="text-gray-500 hover:text-white">
+                      <button onClick={() => setEditingName(true)} className="text-ink-4 hover:text-white">
                         <Edit3 size={14} />
                       </button>
                     </div>
@@ -347,13 +347,13 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
                         herkese "ELİT KALECİ" demek dürüst değil (KS0). */}
                     {userProfile?.isElite && (
                       <span
-                        className="text-[10px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider text-black"
+                        className="text-[0.625rem] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider text-black"
                         style={{ background: accentColor }}
                       >
                         {isRef ? 'FIFA LİSANSLI' : 'ELİT KALECİ'}
                       </span>
                     )}
-                    <span className="text-[10px] text-gray-400 font-bold flex items-center gap-1">
+                    <span className="text-[0.6875rem] text-gray-400 font-bold flex items-center gap-1">
                       <Star size={9} className="text-yellow-400" fill="currentColor" /> {ratingDisplay}
                     </span>
                   </div>
@@ -370,7 +370,7 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
                   >
                     <span style={{ color: accentColor }}>{stat.icon}</span>
                     <span className="text-base font-extrabold text-white">{stat.value}</span>
-                    <span className="text-[8px] text-gray-400 font-bold uppercase tracking-wider text-center leading-tight">{stat.label}</span>
+                    <span className="text-[0.625rem] text-gray-400 font-bold uppercase tracking-wider text-center leading-tight">{stat.label}</span>
                   </div>
                 ))}
               </div>
@@ -386,10 +386,10 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
           className="rounded-[24px] p-5 border border-white/8 bg-[#0d1420]"
         >
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-[10px] font-extrabold uppercase tracking-widest" style={{ color: accentColor }}>
+            <h3 className="text-[0.625rem] font-extrabold uppercase tracking-widest" style={{ color: accentColor }}>
               Hakkımda
             </h3>
-            <button onClick={() => { setTempBio(bio); setEditingBio(true); }} className="text-gray-500 hover:text-white p-1">
+            <button onClick={() => { setTempBio(bio); setEditingBio(true); }} className="text-ink-4 hover:text-white p-1">
               <Edit3 size={14} />
             </button>
           </div>
@@ -435,7 +435,7 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
         >
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-[10px] font-extrabold uppercase tracking-widest mb-1" style={{ color: accentColor }}>
+              <p className="text-[0.625rem] font-extrabold uppercase tracking-widest mb-1" style={{ color: accentColor }}>
                 Maç Başı Standart Ücret
               </p>
               {editingFee ? (
@@ -459,7 +459,7 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
               ) : (
                 <div className="flex items-center gap-2">
                   <span className="text-4xl font-extrabold text-white">{fee}₺</span>
-                  <button onClick={() => setEditingFee(true)} className="text-gray-500 hover:text-white p-1">
+                  <button onClick={() => setEditingFee(true)} className="text-ink-4 hover:text-white p-1">
                     <Edit3 size={14} />
                   </button>
                 </div>
@@ -491,7 +491,7 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
           transition={{ delay: 0.17 }}
           className="rounded-[24px] p-5 border border-white/8 bg-[#0d1420]"
         >
-          <h3 className="text-[10px] font-extrabold uppercase tracking-widest mb-3" style={{ color: accentColor }}>
+          <h3 className="text-[0.625rem] font-extrabold uppercase tracking-widest mb-3" style={{ color: accentColor }}>
             {isRef ? 'Yönetim Tarzı' : 'Oyun Tarzı'}
           </h3>
           <div className="flex flex-wrap gap-2">
@@ -524,7 +524,7 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <MapPin size={14} style={{ color: accentColor }} />
-              <h3 className="text-[10px] font-extrabold uppercase tracking-widest" style={{ color: accentColor }}>
+              <h3 className="text-[0.625rem] font-extrabold uppercase tracking-widest" style={{ color: accentColor }}>
                 Çalışma Alanı (Yarıçap)
               </h3>
             </div>
@@ -540,7 +540,7 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
               className="w-full h-1 bg-white/20 rounded-full appearance-none outline-none"
               style={{ accentColor: accentColor }}
             />
-            <div className="flex justify-between text-[9px] text-gray-500 font-bold mt-1">
+            <div className="flex justify-between text-[0.6875rem] text-ink-4 font-bold mt-1">
               <span>5 km</span>
               <span>50 km</span>
             </div>
@@ -562,7 +562,7 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
             <div className="absolute inset-0 z-[400] flex items-center justify-center pointer-events-none">
                 <div className="w-4 h-4 rounded-full border-2 border-white bg-transparent pointer-events-none opacity-50" />
             </div>
-            <p className="absolute bottom-2 left-2 text-[10px] bg-black/60 px-2 py-1 rounded-md text-gray-300 z-[400] font-bold">
+            <p className="absolute bottom-2 left-2 text-[0.6875rem] bg-black/60 px-2 py-1 rounded-md text-gray-300 z-[400] font-bold">
               Haritayı hareket ettirerek merkezi belirle
             </p>
           </div>
@@ -618,7 +618,7 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
               <div className="flex justify-between items-center mb-5">
                 <div>
                   <h3 className="font-extrabold text-white text-lg">Profil Fotoğrafı</h3>
-                  <p className="text-[10px] text-gray-500 mt-0.5">Bir fotoğraf seç veya cihazından yükle</p>
+                  <p className="text-[0.6875rem] text-ink-4 mt-0.5">Bir fotoğraf seç veya cihazından yükle</p>
                 </div>
                 <button onClick={() => setShowPhotoPicker(false)} className="p-2 bg-white/5 rounded-xl text-gray-400">
                   <X size={18} />

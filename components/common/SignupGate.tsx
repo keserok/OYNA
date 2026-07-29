@@ -54,7 +54,7 @@ const SignupGate: React.FC = () => {
         </button>
         <button
           onClick={() => setOpen(false)}
-          className="w-full py-3 mt-2 text-gray-500 font-bold text-sm"
+          className="w-full py-3 mt-2 text-ink-4 font-bold text-sm"
         >
           Şimdilik gezinmeye devam et
         </button>

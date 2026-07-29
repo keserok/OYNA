@@ -463,10 +463,10 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
         <SubHeader title="Para Yükle" subtitle="OYNA bakiyene ekle" onBack={() => setView('MAIN')} />
         <main className="flex-1 overflow-y-auto p-5 space-y-5">
           <div className="text-center py-1">
-            <p className="text-[11px] text-gray-400 font-bold uppercase tracking-[0.1em] mb-1.5">Yüklenecek Tutar</p>
-            <p className="text-[46px] font-extrabold leading-none text-white font-numeric">{fmtInt(effectiveTopup)}₺</p>
+            <p className="text-[0.6875rem] text-gray-400 font-bold uppercase tracking-[0.1em] mb-1.5">Yüklenecek Tutar</p>
+            <p className="text-[2.875rem] font-extrabold leading-none text-white font-numeric">{fmtInt(effectiveTopup)}₺</p>
             {effectiveTopup >= TOPUP_MIN && (
-              <p className="text-[11px] text-[#39FF14] mt-2 font-semibold">
+              <p className="text-[0.6875rem] text-[#39FF14] mt-2 font-semibold">
                 Yeni bakiye: {fmt(topupBalance + refundBalance + effectiveTopup)}₺
               </p>
             )}
@@ -475,15 +475,15 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
                 bedel yalnız karttan çekilen toplamı büyütür. */}
             {effectiveTopup >= TOPUP_MIN && topupFee > 0 && (
               <div className="mt-3 mx-auto max-w-[300px] rounded-2xl border border-white/8 bg-white/[0.03] px-4 py-2.5 space-y-1">
-                <div className="flex items-center justify-between text-[11.5px]">
+                <div className="flex items-center justify-between text-[0.75rem]">
                   <span className="text-gray-400 font-semibold">Kart işlem bedeli (%{cardFeePct})</span>
                   <span className="text-[#FACC15] font-bold font-numeric">+{fmt(topupFee)}₺</span>
                 </div>
-                <div className="flex items-center justify-between text-[12px]">
+                <div className="flex items-center justify-between text-[0.75rem]">
                   <span className="text-white font-extrabold">Karttan çekilecek</span>
                   <span className="text-white font-extrabold font-numeric">{fmt(effectiveTopup + topupFee)}₺</span>
                 </div>
-                <p className="text-[10px] text-gray-500 pt-0.5">
+                <p className="text-[0.6875rem] text-ink-4 pt-0.5">
                   Bakiyene {fmtInt(effectiveTopup)}₺ geçer; bedel ödeme altyapısı komisyonudur.
                   Bakiyeden yaptığın ödemelerde ek bedel alınmaz.
                 </p>
@@ -496,7 +496,7 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
               const active = !isCustom && topupAmount === v;
               return (
                 <button key={v} onClick={() => { setIsCustom(false); setTopupAmount(v); }}
-                  className={`py-4 rounded-[14px] text-center font-extrabold text-[15px] font-numeric transition-all ${
+                  className={`py-4 rounded-[14px] text-center font-extrabold text-[0.9375rem] font-numeric transition-all ${
                     active
                       ? 'bg-[#39FF14]/12 border-2 border-[#39FF14] text-[#39FF14] shadow-[0_0_18px_rgba(57,255,20,0.15)]'
                       : 'bg-[#161B22] border border-white/8 text-white'
@@ -506,7 +506,7 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
               );
             })}
             <button onClick={() => setIsCustom(true)}
-              className={`py-4 rounded-[14px] text-center font-extrabold text-[13px] flex items-center justify-center gap-1 transition-all ${
+              className={`py-4 rounded-[14px] text-center font-extrabold text-[0.8125rem] flex items-center justify-center gap-1 transition-all ${
                 isCustom ? 'bg-[#39FF14]/12 border-2 border-[#39FF14] text-[#39FF14]' : 'bg-[#161B22] border border-dashed border-white/16 text-gray-400'
               }`}>
               <Pencil size={13} /> Özel
@@ -520,22 +520,22 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
               placeholder={`En az ${TOPUP_MIN}`}
               inputMode="numeric"
               autoFocus
-              className="w-full bg-[#161B22] border border-[#39FF14]/30 rounded-[14px] px-4 py-4 text-white font-extrabold text-2xl font-numeric outline-none placeholder:text-gray-600 text-center"
+              className="w-full bg-[#161B22] border border-[#39FF14]/30 rounded-[14px] px-4 py-4 text-white font-extrabold text-2xl font-numeric outline-none placeholder:text-ink-4 text-center"
             />
           )}
 
           <div className="flex gap-2 items-center px-0.5">
-            <Info size={13} className="text-gray-500 shrink-0" />
-            <p className="text-[11px] text-gray-500">Minimum yükleme tutarı {TOPUP_MIN}₺'dir.</p>
+            <Info size={13} className="text-ink-4 shrink-0" />
+            <p className="text-[0.6875rem] text-ink-4">Minimum yükleme tutarı {TOPUP_MIN}₺'dir.</p>
           </div>
 
           <div>
-            <p className="text-[11px] font-extrabold uppercase tracking-[0.14em] text-gray-500 mb-3">Ödeme Yöntemi</p>
+            <p className="text-[0.6875rem] font-extrabold uppercase tracking-[0.14em] text-ink-4 mb-3">Ödeme Yöntemi</p>
             {savedCards.length === 0 ? (
               <button onClick={() => { setAddCardReturn('TOPUP'); setView('ADD_CARD'); }}
                 className="w-full flex items-center gap-3 border-[1.5px] border-dashed border-white/16 rounded-2xl p-4 text-gray-300">
                 <span className="w-11 h-[30px] rounded-md bg-white/5 flex items-center justify-center text-gray-400"><Plus size={18} /></span>
-                <span className="text-[13px] font-bold">Yeni kart ekle</span>
+                <span className="text-[0.8125rem] font-bold">Yeni kart ekle</span>
               </button>
             ) : (
               <div className="space-y-2.5">
@@ -551,7 +551,7 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
                       </span>
                       <span className="flex-1">
                         <span className="block text-sm font-extrabold text-white font-numeric">•••• {card.last4}</span>
-                        <span className="block text-[10px] text-gray-500 mt-0.5">{card.isDefault ? 'Varsayılan kart' : ''}</span>
+                        <span className="block text-[0.6875rem] text-ink-4 mt-0.5">{card.isDefault ? 'Varsayılan kart' : ''}</span>
                       </span>
                       {active && (
                         <span className="w-[22px] h-[22px] rounded-full bg-[#39FF14] flex items-center justify-center shrink-0">
@@ -580,8 +580,8 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
 
           {/* BULGU-086 — çıkış maliyeti ÖDEMEDEN ÖNCE yazılır. Rakamlar sunucudan
               (preview_wallet_cashout); hiçbiri sabit yazılmaz. Kontrast: bu bir
-              para bilgilendirmesi, text-gray-600 (2.56:1) okunamazdı → gray-400. */}
-          <p className="text-[10px] text-gray-400 leading-relaxed px-0.5">
+              para bilgilendirmesi, text-ink-4 (2.56:1) okunamazdı → gray-400. */}
+          <p className="text-[0.6875rem] text-gray-400 leading-relaxed px-0.5">
             Bakiye yalnızca OYNA içindeki saha, maç ve kaleci/hakem hizmet ödemelerinde kullanılır;
             dijital ürün satın alımında kullanılamaz. Yüklemelerde bonus verilmez.
             {cashoutPreview && (cashoutPreview.enabled
@@ -595,7 +595,7 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
             onClick={handleTopup}
             className={`w-full py-4 font-extrabold text-base rounded-2xl flex items-center justify-center gap-2 transition-all active:scale-[0.98] ${
               !topupBusy && effectiveTopup >= TOPUP_MIN && savedCards.length > 0
-                ? 'bg-[#39FF14] text-[#0A0E14]' : 'bg-gray-800 text-gray-500'
+                ? 'bg-[#39FF14] text-[#0A0E14]' : 'bg-gray-800 text-ink-4'
             }`}>
             {topupBusy ? <RefreshCw size={18} className="animate-spin" /> : <Plus size={18} />}
             {topupBusy
@@ -605,7 +605,7 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
                 : `${fmtInt(effectiveTopup)}₺ YÜKLE`}
           </button>
           {savedCards.length === 0 && !selectedCard && (
-            <p className="text-center text-[10px] text-gray-500 mt-2">Yükleme için önce bir kart ekle.</p>
+            <p className="text-center text-[0.6875rem] text-ink-4 mt-2">Yükleme için önce bir kart ekle.</p>
           )}
         </div>
         {/* Banka SMS doğrulaması — uygulama içinde tam ekran */}
@@ -638,14 +638,14 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
                   <span className="absolute inset-x-1 top-1/2 -translate-y-1/2 h-[1px] bg-black/25" />
                   <span className="absolute inset-y-1 left-1/2 -translate-x-1/2 w-[1px] bg-black/25" />
                 </span>
-                <span className="text-[9px] font-extrabold uppercase tracking-[0.08em] text-[#0A0E14] bg-[#39FF14] px-2 py-1 rounded-md">
+                <span className="text-[0.625rem] font-extrabold uppercase tracking-[0.08em] text-[#0A0E14] bg-[#39FF14] px-2 py-1 rounded-md">
                   Varsayılan
                 </span>
               </div>
               <div className="relative">
-                <p className="text-[19px] font-bold tracking-[0.14em] text-white font-numeric drop-shadow-[0_1px_2px_rgba(0,0,0,0.35)]">•••• •••• •••• {defaultCard.last4}</p>
+                <p className="text-[1.1875rem] font-bold tracking-[0.14em] text-white font-numeric drop-shadow-[0_1px_2px_rgba(0,0,0,0.35)]">•••• •••• •••• {defaultCard.last4}</p>
                 <div className="flex justify-between items-end mt-3.5 gap-3">
-                  <span className="text-[11px] text-white/85 font-numeric truncate">
+                  <span className="text-[0.6875rem] text-white/85 font-numeric truncate">
                     {(defaultCard.holderName ?? 'OYNA KULLANICI').toLocaleUpperCase('tr-TR')}
                     {defaultCard.expMonth && defaultCard.expYear ? ` · ${String(defaultCard.expMonth).padStart(2, '0')}/${String(defaultCard.expYear).slice(-2)}` : ''}
                   </span>
@@ -662,7 +662,7 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
                 </span>
                 <div className="min-w-0">
                   <p className="font-extrabold text-sm text-white font-numeric">•••• {card.last4}</p>
-                  <p className="text-gray-500 text-[10px] mt-0.5">
+                  <p className="text-ink-4 text-[0.6875rem] mt-0.5">
                     {card.expMonth && card.expYear ? `${String(card.expMonth).padStart(2, '0')}/${String(card.expYear).slice(-2)}` : ''}
                   </p>
                 </div>
@@ -670,7 +670,7 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
               <div className="flex gap-1.5 shrink-0">
                 <button
                   onClick={async () => { await setDefaultSavedCard(card.id).catch(() => {}); setSavedCards(await listSavedCards()); }}
-                  className="px-2.5 py-2 bg-white/5 border border-white/8 rounded-[10px] text-gray-400 text-[10px] font-bold">
+                  className="px-2.5 py-2 bg-white/5 border border-white/8 rounded-[10px] text-gray-400 text-[0.6875rem] font-bold">
                   Varsayılan yap
                 </button>
                 <button
@@ -683,14 +683,14 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
           ))}
           {savedCards.length === 0 && (
             <div className="py-16 text-center">
-              <CreditCard size={32} className="text-gray-700 mx-auto mb-3" />
-              <p className="text-gray-600 text-sm">Kayıtlı kartın yok.</p>
+              <CreditCard size={32} className="text-ink-4 mx-auto mb-3" />
+              <p className="text-ink-4 text-sm">Kayıtlı kartın yok.</p>
             </div>
           )}
           {savedCards.length > 0 && defaultCard && (
             <div className="flex gap-2 items-center px-1 pt-1">
-              <Shield size={12} className="text-gray-600 shrink-0" />
-              <p className="text-[10px] text-gray-600">Kart numarası ve CVV OYNA'da saklanmaz; yalnız maskeli bilgi tutulur.</p>
+              <Shield size={12} className="text-ink-4 shrink-0" />
+              <p className="text-[0.6875rem] text-ink-4">Kart numarası ve CVV OYNA'da saklanmaz; yalnız maskeli bilgi tutulur.</p>
             </div>
           )}
         </main>
@@ -747,13 +747,13 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
         <main className="flex-1 overflow-y-auto px-5 py-4 pb-safe">
           {groups.length === 0 && (
             <div className="py-16 text-center">
-              <History size={32} className="text-gray-700 mx-auto mb-3" />
-              <p className="text-gray-600 text-sm">Bu filtrede işlem yok.</p>
+              <History size={32} className="text-ink-4 mx-auto mb-3" />
+              <p className="text-ink-4 text-sm">Bu filtrede işlem yok.</p>
             </div>
           )}
           {groups.map(g => (
             <div key={g.label} className="mb-5">
-              <p className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-gray-600 mb-2.5">{g.label}</p>
+              <p className="text-[0.625rem] font-extrabold uppercase tracking-[0.14em] text-ink-4 mb-2.5">{g.label}</p>
               <div className="space-y-2">
                 {g.rows.map(tx => <TxRow key={tx.id} tx={tx} />)}
               </div>
@@ -772,21 +772,21 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
         <SubHeader title="IBAN'a Çek" subtitle="Kazancını hesabına aktar" onBack={() => { setView('MAIN'); setPayoutError(''); }} />
         <main className="flex-1 overflow-y-auto p-5 space-y-[18px]">
           <div className="text-center py-2">
-            <p className="text-[11px] text-gray-400 font-bold uppercase tracking-[0.1em] mb-1.5">Çekilebilir Kazanç</p>
-            <p className="text-[40px] font-extrabold leading-none text-white font-numeric">{fmt(earningsBalance)}₺</p>
+            <p className="text-[0.6875rem] text-gray-400 font-bold uppercase tracking-[0.1em] mb-1.5">Çekilebilir Kazanç</p>
+            <p className="text-[2.5rem] font-extrabold leading-none text-white font-numeric">{fmt(earningsBalance)}₺</p>
             {reservedBalance > 0 && (
-              <p className="text-[11px] text-yellow-400 mt-2 flex items-center justify-center gap-1">
+              <p className="text-[0.6875rem] text-yellow-400 mt-2 flex items-center justify-center gap-1">
                 <Clock size={11} /> {fmt(reservedBalance)}₺ bekleyen çekimde rezerve
               </p>
             )}
           </div>
           <div>
-            <label className="text-[10px] text-gray-500 font-extrabold uppercase tracking-wider block mb-2">Çekilecek Tutar</label>
+            <label className="text-[0.625rem] text-ink-4 font-extrabold uppercase tracking-wider block mb-2">Çekilecek Tutar</label>
             <div className="bg-[#161B22] border border-[#39FF14]/30 rounded-[14px] px-4 py-4 flex items-center justify-between">
               <input value={payoutAmount} onChange={e => setPayoutAmount(e.target.value.replace(/[^\d.,]/g, ''))}
                 inputMode="decimal" placeholder="0"
-                className="bg-transparent text-white font-extrabold text-[26px] font-numeric outline-none w-full placeholder:text-gray-600" />
-              <span className="text-xl font-extrabold text-gray-500">₺</span>
+                className="bg-transparent text-white font-extrabold text-[1.625rem] font-numeric outline-none w-full placeholder:text-ink-4" />
+              <span className="text-xl font-extrabold text-ink-4">₺</span>
             </div>
             <div className="flex gap-2 mt-2.5">
               {quick.map(q => (
@@ -802,7 +802,7 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
             </div>
           </div>
           <div>
-            <label className="text-[10px] text-gray-500 font-extrabold uppercase tracking-wider block mb-2">Hedef IBAN</label>
+            <label className="text-[0.625rem] text-ink-4 font-extrabold uppercase tracking-wider block mb-2">Hedef IBAN</label>
             <div className="bg-[#161B22] border border-white/8 rounded-[14px] p-3.5 flex items-center gap-3">
               <span className="w-[34px] h-[34px] rounded-[10px] bg-[#39FF14]/10 flex items-center justify-center text-[#39FF14] shrink-0">
                 <Landmark size={16} />
@@ -812,16 +812,16 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
                 onChange={e => setPayoutIban(formatIBAN(e.target.value))}
                 placeholder="TR00 0000 0000 0000 0000 0000 00"
                 autoCapitalize="characters"
-                className="flex-1 bg-transparent text-white font-bold font-numeric text-[13px] tracking-wider outline-none placeholder:text-gray-600 min-w-0" />
+                className="flex-1 bg-transparent text-white font-bold font-numeric text-[0.8125rem] tracking-wider outline-none placeholder:text-ink-4 min-w-0" />
               {validateIBAN(payoutIban) && <Check size={16} className="text-[#39FF14] shrink-0" />}
             </div>
             <input value={payoutHolder} onChange={e => setPayoutHolder(e.target.value.toLocaleUpperCase('tr-TR'))}
               placeholder="IBAN SAHİBİ AD SOYAD"
-              className="mt-2.5 w-full bg-[#161B22] border border-white/8 rounded-[14px] px-4 py-3.5 text-white font-bold text-sm outline-none placeholder:text-gray-600" />
+              className="mt-2.5 w-full bg-[#161B22] border border-white/8 rounded-[14px] px-4 py-3.5 text-white font-bold text-sm outline-none placeholder:text-ink-4" />
           </div>
           <div className="bg-[#0f1419] border border-blue-400/20 rounded-[14px] p-3.5 flex gap-2.5">
             <Info size={15} className="text-blue-400 shrink-0 mt-0.5" />
-            <p className="text-[11.5px] text-gray-400 leading-relaxed">
+            <p className="text-[0.75rem] text-gray-400 leading-relaxed">
               Talepler <span className="text-white font-semibold">1–2 iş günü</span> içinde işleme alınır. İşlem ücreti yoktur.
             </p>
           </div>
@@ -844,7 +844,7 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
             onClick={handleRequestPayout}
             className={`w-full py-4 font-extrabold text-base rounded-2xl flex items-center justify-center gap-2 transition-all active:scale-[0.98] ${
               !payoutBusy && validateIBAN(payoutIban) && parseFloat(payoutAmount) > 0
-                ? 'bg-[#39FF14] text-[#0A0E14]' : 'bg-gray-800 text-gray-500'
+                ? 'bg-[#39FF14] text-[#0A0E14]' : 'bg-gray-800 text-ink-4'
             }`}>
             {payoutBusy ? <RefreshCw size={18} className="animate-spin" /> : <ArrowUpRight size={18} />}
             {payoutBusy ? 'GÖNDERİLİYOR...' : `${payoutAmount ? fmtInt(Number(payoutAmount)) : '0'}₺ ÇEKİM TALEP ET`}
@@ -887,16 +887,16 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
           ) : disabled ? (
             <div className="bg-[#0f1419] border border-yellow-400/20 rounded-2xl p-4 flex gap-2.5">
               <Info size={16} className="text-yellow-400 shrink-0 mt-0.5" />
-              <p className="text-[12.5px] text-gray-300 leading-relaxed">
+              <p className="text-[0.8125rem] text-gray-300 leading-relaxed">
                 Bakiye çekme şu anda geçici olarak kapalı. Yüklediğin bakiyeyi uygulama içi ödemelerde kullanmaya devam edebilirsin.
               </p>
             </div>
           ) : (
             <>
               <div className="text-center py-2">
-                <p className="text-[11px] text-gray-400 font-bold uppercase tracking-[0.1em] mb-1.5">Çekilebilir Bakiye</p>
-                <p className="text-[38px] font-extrabold leading-none text-white font-numeric">{fmt(pv?.withdrawable_balance ?? walletBalance)}₺</p>
-                <p className="text-[10.5px] text-gray-500 mt-2">
+                <p className="text-[0.6875rem] text-gray-400 font-bold uppercase tracking-[0.1em] mb-1.5">Çekilebilir Bakiye</p>
+                <p className="text-[2.375rem] font-extrabold leading-none text-white font-numeric">{fmt(pv?.withdrawable_balance ?? walletBalance)}₺</p>
+                <p className="text-[0.6875rem] text-ink-4 mt-2">
                   Yüklediğin ve iade aldığın tutarların tamamı. Kazancın ayrı çekilir.
                 </p>
               </div>
@@ -907,7 +907,7 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
                   {/* Bu ekran daha önce "Profil ayarlarından doğrulayabilirsin"
                       diyordu ama oyuncu için böyle bir ekran YOK — yanlış
                       yönlendirmektense dürüst ol. */}
-                  <p className="text-[12px] text-gray-300 leading-relaxed">
+                  <p className="text-[0.75rem] text-gray-300 leading-relaxed">
                     Güvenliğin için para çekmeden önce bir kez <span className="text-white font-semibold">TC kimlik doğrulaması</span> gerekiyor.
                     Bu adım henüz açılmadı; destek ekibiyle iletişime geçebilirsin.
                   </p>
@@ -915,37 +915,37 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
               )}
 
               <div>
-                <label className="text-[10px] text-gray-500 font-extrabold uppercase tracking-wider block mb-2">Çekilecek Tutar</label>
+                <label className="text-[0.625rem] text-ink-4 font-extrabold uppercase tracking-wider block mb-2">Çekilecek Tutar</label>
                 <div className="bg-[#161B22] border border-white/12 rounded-[14px] px-4 py-4 flex items-center justify-between">
                   <input value={cashoutAmount} onChange={e => setCashoutAmount(e.target.value.replace(/[^\d.,]/g, '').replace(',', '.'))}
                     inputMode="decimal" placeholder="0" disabled={blockedByIdentity}
-                    className="bg-transparent text-white font-extrabold text-[26px] font-numeric outline-none w-full placeholder:text-gray-600 disabled:opacity-50" />
-                  <span className="text-xl font-extrabold text-gray-500">₺</span>
+                    className="bg-transparent text-white font-extrabold text-[1.625rem] font-numeric outline-none w-full placeholder:text-ink-4 disabled:opacity-50" />
+                  <span className="text-xl font-extrabold text-ink-4">₺</span>
                 </div>
               </div>
 
               {/* ŞEFFAF kesinti/net — rakam SUNUCUDAN (preview_wallet_cashout) */}
               {g > 0 && pv && (
                 <div className="bg-[#161B22] border border-white/8 rounded-[14px] p-4 space-y-2">
-                  <div className="flex justify-between text-[13px]"><span className="text-gray-500">Çekilecek</span><span className="text-white font-bold font-numeric">{fmt(pv.gross)}₺</span></div>
-                  <div className="flex justify-between text-[13px]"><span className="text-gray-500">Hizmet bedeli (%{pv.fee_pct})</span><span className="text-red-300 font-bold font-numeric">−{fmt(pv.fee)}₺</span></div>
+                  <div className="flex justify-between text-[0.8125rem]"><span className="text-ink-4">Çekilecek</span><span className="text-white font-bold font-numeric">{fmt(pv.gross)}₺</span></div>
+                  <div className="flex justify-between text-[0.8125rem]"><span className="text-ink-4">Hizmet bedeli (%{pv.fee_pct})</span><span className="text-red-300 font-bold font-numeric">−{fmt(pv.fee)}₺</span></div>
                   <div className="h-px bg-white/8" />
-                  <div className="flex justify-between text-[14px]"><span className="text-gray-300 font-semibold">Hesabına geçecek</span><span className="text-[#39FF14] font-extrabold font-numeric">{fmt(pv.net)}₺</span></div>
+                  <div className="flex justify-between text-[0.875rem]"><span className="text-gray-300 font-semibold">Hesabına geçecek</span><span className="text-[#39FF14] font-extrabold font-numeric">{fmt(pv.net)}₺</span></div>
                 </div>
               )}
 
               <div>
-                <label className="text-[10px] text-gray-500 font-extrabold uppercase tracking-wider block mb-2">Hedef IBAN (kendi adına)</label>
+                <label className="text-[0.625rem] text-ink-4 font-extrabold uppercase tracking-wider block mb-2">Hedef IBAN (kendi adına)</label>
                 <div className="bg-[#161B22] border border-white/8 rounded-[14px] p-3.5 flex items-center gap-3">
                   <span className="w-[34px] h-[34px] rounded-[10px] bg-white/5 flex items-center justify-center text-gray-300 shrink-0"><Landmark size={16} /></span>
                   <input value={cashoutIban} onChange={e => setCashoutIban(formatIBAN(e.target.value))}
                     placeholder="TR00 0000 0000 0000 0000 0000 00" autoCapitalize="characters"
-                    className="flex-1 bg-transparent text-white font-bold font-numeric text-[13px] tracking-wider outline-none placeholder:text-gray-600 min-w-0" />
+                    className="flex-1 bg-transparent text-white font-bold font-numeric text-[0.8125rem] tracking-wider outline-none placeholder:text-ink-4 min-w-0" />
                   {validateIBAN(cashoutIban) && <Check size={16} className="text-[#39FF14] shrink-0" />}
                 </div>
                 <input value={cashoutHolder} onChange={e => setCashoutHolder(e.target.value.toLocaleUpperCase('tr-TR'))}
                   placeholder="IBAN SAHİBİ AD SOYAD"
-                  className="mt-2.5 w-full bg-[#161B22] border border-white/8 rounded-[14px] px-4 py-3.5 text-white font-bold text-sm outline-none placeholder:text-gray-600" />
+                  className="mt-2.5 w-full bg-[#161B22] border border-white/8 rounded-[14px] px-4 py-3.5 text-white font-bold text-sm outline-none placeholder:text-ink-4" />
               </div>
 
               {cashoutError && (
@@ -961,7 +961,7 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
           <div className="p-5 pb-safe border-t border-white/5">
             <button disabled={!canSubmit} onClick={handleRequestCashout}
               className={`w-full py-4 font-extrabold text-base rounded-2xl flex items-center justify-center gap-2 transition-all active:scale-[0.98] ${
-                canSubmit ? 'bg-[#39FF14] text-[#0A0E14]' : 'bg-gray-800 text-gray-500'
+                canSubmit ? 'bg-[#39FF14] text-[#0A0E14]' : 'bg-gray-800 text-ink-4'
               }`}>
               {cashoutBusy ? <RefreshCw size={18} className="animate-spin" /> : <ArrowUpRight size={18} />}
               {cashoutBusy ? 'GÖNDERİLİYOR...' : (g > 0 && pv ? `${fmt(pv.net)}₺ AL` : 'ÇEKİM TALEP ET')}
@@ -989,7 +989,7 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
         <div className="flex flex-col items-center">
           <h1 className="text-base font-extrabold text-white tracking-[0.16em] uppercase">Cüzdan</h1>
           {roleBadge && (
-            <span className="text-[9px] font-extrabold uppercase tracking-[0.1em] text-[#FACC15] bg-yellow-400/12 px-2 py-0.5 rounded-md mt-1">
+            <span className="text-[0.625rem] font-extrabold uppercase tracking-[0.1em] text-[#FACC15] bg-yellow-400/12 px-2 py-0.5 rounded-md mt-1">
               {roleBadge}
             </span>
           )}
@@ -1008,16 +1008,16 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
               <AlertTriangle size={18} />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-[13px] font-extrabold text-red-400">{lastPaymentError.title}</p>
-              <p className="text-[11.5px] text-gray-300 mt-1 leading-relaxed">{lastPaymentError.message}</p>
+              <p className="text-[0.8125rem] font-extrabold text-red-400">{lastPaymentError.title}</p>
+              <p className="text-[0.75rem] text-gray-300 mt-1 leading-relaxed">{lastPaymentError.message}</p>
               {paymentContext && (
                 <button onClick={retryPayment}
-                  className="mt-2.5 text-[11px] font-extrabold text-[#0A0E14] bg-red-400 rounded-[9px] px-3 py-[7px]">
+                  className="mt-2.5 text-[0.6875rem] font-extrabold text-[#0A0E14] bg-red-400 rounded-[9px] px-3 py-[7px]">
                   Tekrar dene
                 </button>
               )}
             </div>
-            <button onClick={() => setLastPaymentError(null)} className="text-gray-500 shrink-0 self-start"><X size={15} /></button>
+            <button onClick={() => setLastPaymentError(null)} className="text-ink-4 shrink-0 self-start"><X size={15} /></button>
           </div>
         )}
 
@@ -1028,12 +1028,12 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
               <AlertTriangle size={18} />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-[13px] font-extrabold text-amber-400">Bakiye yüklenemedi</p>
-              <p className="text-[11.5px] text-gray-300 mt-1 leading-relaxed">
+              <p className="text-[0.8125rem] font-extrabold text-amber-400">Bakiye yüklenemedi</p>
+              <p className="text-[0.75rem] text-gray-300 mt-1 leading-relaxed">
                 Bağlantı sorunu nedeniyle bakiyen alınamadı. Gösterilen tutar güncel olmayabilir.
               </p>
               <button onClick={() => fetchData()} disabled={refreshing}
-                className="mt-2.5 text-[11px] font-extrabold text-[#0A0E14] bg-amber-400 rounded-[9px] px-3 py-[7px] disabled:opacity-60">
+                className="mt-2.5 text-[0.6875rem] font-extrabold text-[#0A0E14] bg-amber-400 rounded-[9px] px-3 py-[7px] disabled:opacity-60">
                 Tekrar dene
               </button>
             </div>
@@ -1047,25 +1047,25 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
               style={{ background: 'linear-gradient(140deg,#3d3400,#0a1712 75%)' }}>
               <div className="absolute -top-10 -right-8 w-44 h-44 bg-yellow-400/14 blur-[60px] rounded-full" />
               <div className="relative">
-                <p className="text-[11px] font-extrabold uppercase tracking-[0.14em] text-yellow-200/80">Çekilebilir Kazanç</p>
+                <p className="text-[0.6875rem] font-extrabold uppercase tracking-[0.14em] text-yellow-200/80">Çekilebilir Kazanç</p>
                 {loading ? (
                   <div className="h-10 w-40 bg-white/5 rounded-lg animate-pulse mt-3" />
                 ) : (
-                  <p className="text-[40px] font-extrabold leading-none mt-3 text-white font-numeric">{fmt(earningsBalance)}₺</p>
+                  <p className="text-[2.5rem] font-extrabold leading-none mt-3 text-white font-numeric">{fmt(earningsBalance)}₺</p>
                 )}
                 <div className="flex gap-2 mt-4">
                   <div className="bg-black/30 border border-white/6 rounded-xl px-3 py-2">
-                    <p className="text-[9px] text-gray-400 uppercase tracking-[0.08em]">Bu ay</p>
-                    <p className="text-[13px] font-extrabold text-white mt-0.5">{monthStats.count} maç</p>
+                    <p className="text-[0.625rem] text-gray-400 uppercase tracking-[0.08em]">Bu ay</p>
+                    <p className="text-[0.8125rem] font-extrabold text-white mt-0.5">{monthStats.count} maç</p>
                   </div>
                   <div className="bg-black/30 border border-white/6 rounded-xl px-3 py-2">
-                    <p className="text-[9px] text-gray-400 uppercase tracking-[0.08em]">Kazanç</p>
-                    <p className="text-[13px] font-extrabold text-[#FACC15] mt-0.5">+{fmtInt(monthStats.total)}₺</p>
+                    <p className="text-[0.625rem] text-gray-400 uppercase tracking-[0.08em]">Kazanç</p>
+                    <p className="text-[0.8125rem] font-extrabold text-[#FACC15] mt-0.5">+{fmtInt(monthStats.total)}₺</p>
                   </div>
                   {reservedBalance > 0 && (
                     <div className="bg-black/30 border border-yellow-400/20 rounded-xl px-3 py-2">
-                      <p className="text-[9px] text-yellow-400/80 uppercase tracking-[0.08em]">Bekleyen çekim</p>
-                      <p className="text-[13px] font-extrabold text-yellow-300 mt-0.5">{fmtInt(reservedBalance)}₺</p>
+                      <p className="text-[0.625rem] text-yellow-400/80 uppercase tracking-[0.08em]">Bekleyen çekim</p>
+                      <p className="text-[0.8125rem] font-extrabold text-yellow-300 mt-0.5">{fmtInt(reservedBalance)}₺</p>
                     </div>
                   )}
                 </div>
@@ -1073,7 +1073,7 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
                 {(earnSummary?.pending ?? 0) > 0 && (
                   <div className="mt-3 inline-flex items-center gap-2 bg-blue-400/12 border border-blue-400/25 rounded-xl px-3 py-2">
                     <Clock size={13} className="text-blue-300" />
-                    <span className="text-[11px] font-bold text-blue-200">
+                    <span className="text-[0.6875rem] font-bold text-blue-200">
                       Güvence beklemesinde <span className="text-white">{fmt(earnSummary!.pending)}₺</span>
                       <span className="text-blue-300/70"> · 2 hafta sonra çekilebilir</span>
                     </span>
@@ -1089,7 +1089,7 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
                 <ArrowUpRight size={19} /> IBAN'A ÇEK
               </button>
               <button onClick={() => setView('HISTORY')}
-                className="flex-1 py-[15px] bg-[#161B22] text-white border border-white/8 rounded-2xl font-extrabold text-[13px] flex flex-col items-center gap-1 active:scale-[0.98] transition-all">
+                className="flex-1 py-[15px] bg-[#161B22] text-white border border-white/8 rounded-2xl font-extrabold text-[0.8125rem] flex flex-col items-center gap-1 active:scale-[0.98] transition-all">
                 <List size={18} /> Geçmiş
               </button>
             </div>
@@ -1102,7 +1102,7 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
                 </span>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-extrabold text-white">Bekleyen çekim talebi</p>
-                  <p className="text-[10px] text-gray-500 font-numeric mt-0.5">
+                  <p className="text-[0.6875rem] text-ink-4 font-numeric mt-0.5">
                     {pendingPayout.iban.slice(0, 4)}•• •••• {pendingPayout.iban.slice(-4)}
                   </p>
                 </div>
@@ -1118,14 +1118,14 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
               <div className="absolute -top-10 -right-8 w-44 h-44 bg-[#39FF14]/14 blur-[60px] rounded-full" />
               <div className="relative flex justify-between items-start">
                 <div>
-                  <p className="text-[11px] font-extrabold uppercase tracking-[0.14em] text-[#8fe87a]">Cüzdan Bakiyesi</p>
+                  <p className="text-[0.6875rem] font-extrabold uppercase tracking-[0.14em] text-[#8fe87a]">Cüzdan Bakiyesi</p>
                   {loading ? (
                     <div className="h-10 w-40 bg-white/5 rounded-lg animate-pulse mt-3" />
                   ) : (
-                    <p className="text-[40px] font-extrabold leading-none mt-3 text-white font-numeric">{fmt(walletBalance)}₺</p>
+                    <p className="text-[2.5rem] font-extrabold leading-none mt-3 text-white font-numeric">{fmt(walletBalance)}₺</p>
                   )}
                 </div>
-                <span className="font-numeric font-bold text-[13px] tracking-[0.08em] text-[#39FF14] border border-[#39FF14]/40 rounded-lg px-2 py-1">
+                <span className="font-numeric font-bold text-[0.8125rem] tracking-[0.08em] text-[#39FF14] border border-[#39FF14]/40 rounded-lg px-2 py-1">
                   OYNA
                 </span>
               </div>
@@ -1133,7 +1133,7 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
                   ve harcanamaz/çekilemezmiş izlenimi veriyordu. Yalnız bilgi
                   amaçlı tek satır mikro-not kalır. */}
               {refundBalance > 0 && (
-                <p className="relative mt-4 text-[11px] font-semibold text-[#8fe87a]/70">
+                <p className="relative mt-4 text-[0.6875rem] font-semibold text-[#8fe87a]/70">
                   Bu tutarın {fmt(refundBalance)}₺ kadarı iadelerden geldi.
                 </p>
               )}
@@ -1142,15 +1142,15 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
             {/* Eylem hapları: Para Yükle · Kart Yönet · Geçmiş */}
             <div className="flex gap-2.5">
               <button onClick={() => setView('TOPUP')}
-                className="flex-1 py-3.5 bg-[#39FF14] text-[#0A0E14] rounded-2xl font-extrabold text-[13px] flex flex-col items-center gap-1.5 shadow-[0_0_24px_rgba(57,255,20,0.22)] active:scale-[0.98] transition-all">
+                className="flex-1 py-3.5 bg-[#39FF14] text-[#0A0E14] rounded-2xl font-extrabold text-[0.8125rem] flex flex-col items-center gap-1.5 shadow-[0_0_24px_rgba(57,255,20,0.22)] active:scale-[0.98] transition-all">
                 <Plus size={20} /> Para Yükle
               </button>
               <button onClick={() => setView('CARDS')}
-                className="flex-1 py-3.5 bg-[#161B22] text-white border border-white/8 rounded-2xl font-extrabold text-[13px] flex flex-col items-center gap-1.5 active:scale-[0.98] transition-all">
+                className="flex-1 py-3.5 bg-[#161B22] text-white border border-white/8 rounded-2xl font-extrabold text-[0.8125rem] flex flex-col items-center gap-1.5 active:scale-[0.98] transition-all">
                 <CreditCard size={20} /> Kart Yönet
               </button>
               <button onClick={() => setView('HISTORY')}
-                className="flex-1 py-3.5 bg-[#161B22] text-white border border-white/8 rounded-2xl font-extrabold text-[13px] flex flex-col items-center gap-1.5 active:scale-[0.98] transition-all">
+                className="flex-1 py-3.5 bg-[#161B22] text-white border border-white/8 rounded-2xl font-extrabold text-[0.8125rem] flex flex-col items-center gap-1.5 active:scale-[0.98] transition-all">
                 <List size={20} /> Geçmiş
               </button>
             </div>
@@ -1160,7 +1160,7 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
                 görmeden cüzdana para yüklemeye ikna olmuyor. */}
             {walletBalance > 0 && !pendingPayout && (
               <button onClick={() => { setCashoutError(''); setCashoutDone(null); setCashoutAmount(''); setView('CASHOUT'); }}
-                className="w-full py-3.5 bg-[#161B22] text-white border border-white/12 rounded-2xl font-extrabold text-[13px] flex items-center justify-center gap-2 active:scale-[0.98] transition-all hover:border-white/25">
+                className="w-full py-3.5 bg-[#161B22] text-white border border-white/12 rounded-2xl font-extrabold text-[0.8125rem] flex items-center justify-center gap-2 active:scale-[0.98] transition-all hover:border-white/25">
                 <ArrowUpRight size={18} /> Paramı Hesabıma Çek
               </button>
             )}
@@ -1176,13 +1176,13 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
               }`}>
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <p className={`text-[12px] font-extrabold ${pendingPayout.status === 'PENDING' ? 'text-[#FACC15]' : 'text-blue-300'}`}>
+                    <p className={`text-[0.75rem] font-extrabold ${pendingPayout.status === 'PENDING' ? 'text-[#FACC15]' : 'text-blue-300'}`}>
                       {pendingPayout.status === 'PENDING' ? 'Çekim talebin onay bekliyor' : 'Çekim talebin onaylandı'}
                     </p>
-                    <p className="text-[11px] font-bold text-white mt-1">
+                    <p className="text-[0.6875rem] font-bold text-white mt-1">
                       {fmt(pendingPayout.net_amount ?? pendingPayout.amount)}₺ · •••• {pendingPayout.iban.slice(-4)} hesabına
                     </p>
-                    <p className="text-[10.5px] text-gray-400 mt-1 leading-relaxed">
+                    <p className="text-[0.6875rem] text-gray-400 mt-1 leading-relaxed">
                       {pendingPayout.status === 'PENDING'
                         ? `${fmt(pendingPayout.amount)}₺ cüzdanından düşüldü. Genellikle 1–2 iş günü sürer.`
                         : 'Hesabına geçmesi bankana göre birkaç saat sürebilir.'}
@@ -1196,7 +1196,7 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
                   <button
                     disabled={cancelBusy}
                     onClick={() => setCancelConfirm(pendingPayout.id)}
-                    className="mt-3 w-full py-2.5 rounded-xl bg-white/5 border border-white/10 text-[11px] font-bold text-gray-300 hover:text-white transition-colors disabled:opacity-50"
+                    className="mt-3 w-full py-2.5 rounded-xl bg-white/5 border border-white/10 text-[0.6875rem] font-bold text-gray-300 hover:text-white transition-colors disabled:opacity-50"
                   >
                     {cancelBusy ? 'İptal ediliyor…' : 'Talebi iptal et'}
                   </button>
@@ -1213,19 +1213,19 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
                 </span>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-extrabold text-white">Kazanç bakiyen var</p>
-                  <p className="text-[10px] text-gray-500 mt-0.5">IBAN'a çekilebilir</p>
+                  <p className="text-[0.6875rem] text-ink-4 mt-0.5">IBAN'a çekilebilir</p>
                 </div>
                 <span className="text-sm font-extrabold text-[#FACC15] font-numeric">{fmt(earningsBalance)}₺</span>
                 <button onClick={() => setView('PAYOUT_FORM')}
-                  className="text-[11px] font-extrabold text-[#39FF14] shrink-0">Çek</button>
+                  className="text-[0.6875rem] font-extrabold text-[#39FF14] shrink-0">Çek</button>
               </div>
             )}
 
             {/* Kayıtlı kartlar mini karuseli */}
             <div>
               <div className="flex items-center justify-between mb-3">
-                <p className="text-[11px] font-extrabold uppercase tracking-[0.14em] text-gray-500">Kayıtlı Kartlar</p>
-                <button onClick={() => setView('CARDS')} className="text-[11px] text-[#39FF14] font-bold">Tümü</button>
+                <p className="text-[0.6875rem] font-extrabold uppercase tracking-[0.14em] text-ink-4">Kayıtlı Kartlar</p>
+                <button onClick={() => setView('CARDS')} className="text-[0.6875rem] text-[#39FF14] font-bold">Tümü</button>
               </div>
               <div className="oy-carousel flex gap-3 overflow-x-auto pb-1">
                 {savedCards.map(card => (
@@ -1239,8 +1239,8 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
                       <CardBrandMark brand={card.brand} size={17} variant="onCard" />
                     </div>
                     <div className="relative">
-                      <p className="text-[15px] font-bold tracking-[0.12em] text-white font-numeric drop-shadow-[0_1px_2px_rgba(0,0,0,0.3)]">•••• {card.last4}</p>
-                      <p className="text-[9px] text-white/70 uppercase mt-1 tracking-wide">
+                      <p className="text-[0.9375rem] font-bold tracking-[0.12em] text-white font-numeric drop-shadow-[0_1px_2px_rgba(0,0,0,0.3)]">•••• {card.last4}</p>
+                      <p className="text-[0.625rem] text-white/70 uppercase mt-1 tracking-wide">
                         {card.isDefault ? 'Varsayılan' : ''}
                         {card.expMonth && card.expYear ? `${card.isDefault ? ' · ' : ''}${String(card.expMonth).padStart(2, '0')}/${String(card.expYear).slice(-2)}` : ''}
                       </p>
@@ -1259,18 +1259,18 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
         {/* Son işlemler / Kazanç geçmişi */}
         <div>
           <div className="flex items-center justify-between mb-3">
-            <p className="text-[11px] font-extrabold uppercase tracking-[0.14em] text-gray-500">
+            <p className="text-[0.6875rem] font-extrabold uppercase tracking-[0.14em] text-ink-4">
               {isEarningsRole ? 'Kazanç Geçmişi' : 'Son İşlemler'}
             </p>
-            <button onClick={() => setView('HISTORY')} className="text-[11px] text-[#39FF14] font-bold">Tümü</button>
+            <button onClick={() => setView('HISTORY')} className="text-[0.6875rem] text-[#39FF14] font-bold">Tümü</button>
           </div>
           <AnimatePresence mode="wait">
             <motion.div key={isEarningsRole ? 'earn' : 'player'}
               initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-2">
               {recentTx.length === 0 ? (
                 <div className="py-12 text-center">
-                  <Wallet size={32} className="text-gray-700 mx-auto mb-3" />
-                  <p className="text-gray-600 text-sm">Henüz işlem geçmişin yok.</p>
+                  <Wallet size={32} className="text-ink-4 mx-auto mb-3" />
+                  <p className="text-ink-4 text-sm">Henüz işlem geçmişin yok.</p>
                 </div>
               ) : recentTx.map(tx => <TxRow key={tx.id} tx={tx} />)}
             </motion.div>
@@ -1278,7 +1278,7 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
         </div>
 
         {/* Store uyum mikro-notu */}
-        <p className="text-[10px] text-gray-600 leading-relaxed px-0.5 pb-2">
+        <p className="text-[0.6875rem] text-ink-4 leading-relaxed px-0.5 pb-2">
           {isEarningsRole
             ? 'Kazançlar hizmet tamamlandıkça birikir ve IBAN talebiyle hesabına aktarılır.'
             : 'Cüzdan bakiyeni OYNA içindeki saha, maç ve hizmet ödemelerinde kullanabilir veya hizmet bedeliyle banka hesabına çekebilirsin; dijital ürün satın alımında kullanılamaz.'}
@@ -1299,7 +1299,7 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
               className="relative z-10 bg-[#161B22] border border-white/10 rounded-[26px] p-6 w-full max-w-sm"
             >
               <h3 className="text-white font-extrabold text-lg">Çekim talebini iptal et?</h3>
-              <p className="text-[12.5px] text-gray-400 mt-2 leading-relaxed">
+              <p className="text-[0.8125rem] text-gray-400 mt-2 leading-relaxed">
                 {fmt(pendingPayout?.amount ?? 0)}₺ cüzdanına geri döner ve hizmet bedeli alınmaz.
                 İstediğin zaman yeniden talep açabilirsin.
               </p>
@@ -1307,14 +1307,14 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
                 <button
                   disabled={cancelBusy}
                   onClick={() => setCancelConfirm(null)}
-                  className="flex-1 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-[12px] font-bold disabled:opacity-50"
+                  className="flex-1 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-[0.75rem] font-bold disabled:opacity-50"
                 >
                   Vazgeç
                 </button>
                 <button
                   disabled={cancelBusy}
                   onClick={() => handleCancelCashout(cancelConfirm)}
-                  className="flex-1 py-3 rounded-xl bg-red-500 text-white text-[12px] font-extrabold disabled:opacity-50"
+                  className="flex-1 py-3 rounded-xl bg-red-500 text-white text-[0.75rem] font-extrabold disabled:opacity-50"
                 >
                   {cancelBusy ? 'İptal ediliyor…' : 'Talebi iptal et'}
                 </button>
@@ -1336,8 +1336,8 @@ const SubHeader = ({ title, subtitle, onBack }: { title: string; subtitle: strin
       <ArrowLeft size={20} />
     </button>
     <div>
-      <h1 className="text-[17px] font-extrabold text-white uppercase">{title}</h1>
-      <p className="text-[11px] text-gray-500 font-semibold">{subtitle}</p>
+      <h1 className="text-[1.0625rem] font-extrabold text-white uppercase">{title}</h1>
+      <p className="text-[0.6875rem] text-ink-4 font-semibold">{subtitle}</p>
     </div>
   </header>
 );
@@ -1355,21 +1355,21 @@ const TxRow = ({ tx }: { tx: { id: string; amount: number; type: string; status:
           {meta.icon}
         </span>
         <div className="min-w-0">
-          <p className="font-bold text-[13px] text-white truncate">{tx.description ?? tx.type}</p>
+          <p className="font-bold text-[0.8125rem] text-white truncate">{tx.description ?? tx.type}</p>
           <div className="flex items-center gap-1.5 mt-0.5">
-            <p className="text-gray-600 text-[10px]">{dateStr}</p>
+            <p className="text-ink-4 text-[0.6875rem]">{dateStr}</p>
             {isPending && (
-              <span className="text-[8.5px] text-[#FACC15] bg-yellow-400/12 px-1.5 py-px rounded-full font-bold">Beklemede</span>
+              <span className="text-[0.6875rem] text-[#FACC15] bg-yellow-400/12 px-1.5 py-px rounded-full font-bold">Beklemede</span>
             )}
             {isFailed && (
-              <span className="text-[8.5px] text-red-400 bg-red-400/10 px-1.5 py-px rounded-full font-bold">
+              <span className="text-[0.6875rem] text-red-400 bg-red-400/10 px-1.5 py-px rounded-full font-bold">
                 {tx.status === 'FAILED' ? 'Başarısız' : 'İptal'}
               </span>
             )}
           </div>
         </div>
       </div>
-      <p className={`font-extrabold text-sm shrink-0 font-numeric ${isFailed ? 'text-gray-600 line-through' : meta.income ? meta.color : 'text-white'}`}>
+      <p className={`font-extrabold text-sm shrink-0 font-numeric ${isFailed ? 'text-ink-4 line-through' : meta.income ? meta.color : 'text-white'}`}>
         {meta.income ? '+' : '−'}{Math.abs(tx.amount).toLocaleString('tr-TR', { maximumFractionDigits: 2 })}₺
       </p>
     </div>

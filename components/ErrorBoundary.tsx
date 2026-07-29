@@ -83,7 +83,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
             <h1 className="text-2xl font-extrabold tracking-tight mb-2">{title}</h1>
             <p className="text-sm text-gray-400 leading-relaxed mb-1">{message}</p>
-            <p className="text-xs text-gray-600 mb-8">
+            <p className="text-xs text-ink-4 mb-8">
               En kısa sürede çözülecek. Bu ekrandan geri dönebilirsin.
             </p>
 

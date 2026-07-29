@@ -111,7 +111,7 @@ export default function SplashScreen({ onStart, ready = true }: SplashScreenProp
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 1.2, duration: 0.5 }}
-            className="mt-3 text-[10px] font-bold tracking-[0.4em] text-[#39FF14]/70 uppercase"
+            className="mt-3 text-[0.625rem] font-bold tracking-[0.4em] text-[#39FF14]/70 uppercase"
           >
             Potansiyel zaferler için
           </motion.p>

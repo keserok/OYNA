@@ -97,12 +97,12 @@ const TeamsDirectoryPanel: React.FC<TeamsDirectoryPanelProps> = ({ onOpenTeam, o
     <div className="pb-safe-nav">
       {/* Arama + filtreler (I52: üç filtre, fazlası değil) */}
       <div className="relative mb-3">
-        <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/30" />
+        <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-4" />
         <input
           value={q}
           onChange={e => setQ(e.target.value)}
           placeholder="Takım ara…"
-          className="w-full h-11 pl-9 pr-3 rounded-2xl bg-white/5 border border-white/8 text-sm placeholder:text-white/25 focus:outline-none focus:border-white/20"
+          className="w-full h-11 pl-9 pr-3 rounded-2xl bg-white/5 border border-white/8 text-sm placeholder:text-ink-4 focus:outline-none focus:border-white/20"
         />
       </div>
       <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1 mb-4">
@@ -151,35 +151,35 @@ const TeamsDirectoryPanel: React.FC<TeamsDirectoryPanelProps> = ({ onOpenTeam, o
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-extrabold italic truncate">{t.name}</span>
                     {t.city && (
-                      <span className="shrink-0 text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-white/8 text-white/50 uppercase">
+                      <span className="shrink-0 text-[0.6875rem] font-extrabold px-1.5 py-0.5 rounded bg-white/8 text-white/50 uppercase">
                         {t.city}
                       </span>
                     )}
                   </div>
-                  <div className="text-[11px] text-white/45 mt-0.5">
+                  <div className="text-[0.6875rem] text-ink-4 mt-0.5">
                     {formatLabel(t.format)} · {t.member_count}/{t.roster_max} oyuncu
                     · {t.wins}G {t.draws}B {t.losses}M
                   </div>
-                  <div className="text-[11px] mt-0.5">
+                  <div className="text-[0.6875rem] mt-0.5">
                     {full ? (
-                      <span className="text-white/35">Kadro dolu · {t.member_count}/{t.roster_max}</span>
+                      <span className="text-ink-4">Kadro dolu · {t.member_count}/{t.roster_max}</span>
                     ) : t.is_recruiting ? (
                       <span className="text-[#39FF14] font-bold flex items-center gap-1">
                         <Zap size={10} /> Oyuncu arıyor
                       </span>
                     ) : (
-                      <span className="text-white/35">Kadro kapalı</span>
+                      <span className="text-ink-4">Kadro kapalı</span>
                     )}
                   </div>
                 </div>
                 {t.my_state === 'MEMBER' ? (
-                  <span className="shrink-0 text-[10px] font-extrabold text-white/40">ÜYESİN</span>
+                  <span className="shrink-0 text-[0.6875rem] font-extrabold text-ink-4">ÜYESİN</span>
                 ) : t.my_state === 'REQUEST_PENDING' ? (
-                  <span className="shrink-0 text-[10px] font-extrabold text-amber-400/80 flex items-center gap-1">
+                  <span className="shrink-0 text-[0.6875rem] font-extrabold text-amber-400/80 flex items-center gap-1">
                     <Clock size={11} /> BEKLİYOR
                   </span>
                 ) : (
-                  <span className="shrink-0 text-[11px] font-extrabold text-[#39FF14]">İncele ›</span>
+                  <span className="shrink-0 text-[0.6875rem] font-extrabold text-[#39FF14]">İncele ›</span>
                 )}
               </button>
             );
@@ -223,12 +223,12 @@ const TeamsDirectoryPanel: React.FC<TeamsDirectoryPanelProps> = ({ onOpenTeam, o
               />
               <div className="min-w-0">
                 <h2 className="text-xl font-extrabold italic truncate">{profile.name}</h2>
-                <div className="text-xs text-white/45 mt-0.5 flex items-center gap-1.5 flex-wrap">
+                <div className="text-xs text-ink-4 mt-0.5 flex items-center gap-1.5 flex-wrap">
                   {profile.city && (<span className="flex items-center gap-0.5"><MapPin size={11} /> {profile.city}</span>)}
                   <span>{formatLabel(profile.format)}</span>
                   {profile.play_style && <span>· ⚔️ {profile.play_style}</span>}
                 </div>
-                <div className="text-[11px] text-white/40 mt-1 flex items-center gap-1">
+                <div className="text-[0.6875rem] text-ink-4 mt-1 flex items-center gap-1">
                   <Users size={11} /> {profile.member_count}/{profile.roster_max} oyuncu
                   {profile.captain_name && <span>· Kaptan: {profile.captain_name}</span>}
                 </div>
@@ -248,7 +248,7 @@ const TeamsDirectoryPanel: React.FC<TeamsDirectoryPanelProps> = ({ onOpenTeam, o
                 <b className="text-white">
                   {profile.h2h.wins}G · {profile.h2h.draws}B · {profile.h2h.played - profile.h2h.wins - profile.h2h.draws}M
                 </b>
-                <span className="text-white/35"> (onların gözünden)</span>
+                <span className="text-ink-4"> (onların gözünden)</span>
               </div>
             )}
 
@@ -278,7 +278,7 @@ const TeamsDirectoryPanel: React.FC<TeamsDirectoryPanelProps> = ({ onOpenTeam, o
                   value={requestMsg}
                   onChange={e => setRequestMsg(e.target.value.slice(0, 200))}
                   placeholder="Kısa not (isteğe bağlı): 'Kaleci arıyorsanız buradayım'"
-                  className="mt-5 w-full h-12 px-4 rounded-2xl bg-white/5 border border-white/10 text-sm placeholder:text-white/25 focus:outline-none focus:border-white/20"
+                  className="mt-5 w-full h-12 px-4 rounded-2xl bg-white/5 border border-white/10 text-sm placeholder:text-ink-4 focus:outline-none focus:border-white/20"
                 />
                 <button
                   onClick={sendRequest}

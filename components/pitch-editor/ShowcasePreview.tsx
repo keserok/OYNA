@@ -69,7 +69,7 @@ export const ShowcasePreview: React.FC<{ pitchId: string; onClose: () => void }>
     <div className="fixed inset-0 z-[120] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
       <div className="relative w-full max-w-sm max-h-[90vh] bg-[#0A0E14] border border-white/10 rounded-[32px] overflow-hidden flex flex-col">
         <div className="absolute top-3 left-0 right-0 z-10 flex items-center justify-between px-4">
-          <span className="px-2.5 py-1 rounded-full bg-[#FFFF00] text-black text-[9px] font-extrabold uppercase tracking-wider">
+          <span className="px-2.5 py-1 rounded-full bg-[#FFFF00] text-black text-[0.625rem] font-extrabold uppercase tracking-wider">
             Oyuncu Gözüyle Önizleme
           </span>
           <button onClick={onClose} className="w-9 h-9 rounded-full bg-black/60 border border-white/15 flex items-center justify-center text-white">
@@ -78,7 +78,7 @@ export const ShowcasePreview: React.FC<{ pitchId: string; onClose: () => void }>
         </div>
 
         {!data ? (
-          <div className="h-64 flex items-center justify-center text-sm text-gray-500">Yükleniyor…</div>
+          <div className="h-64 flex items-center justify-center text-sm text-ink-4">Yükleniyor…</div>
         ) : (
           <div className="overflow-y-auto custom-scrollbar">
             <div className="relative h-52 bg-[linear-gradient(160deg,#143a22_0%,#0b1f14_55%,#05080c_100%)]">
@@ -116,7 +116,7 @@ export const ShowcasePreview: React.FC<{ pitchId: string; onClose: () => void }>
                 {data.total_price ? (<><span className="opacity-50">·</span><span>~₺{data.total_price}/saat</span></>) : null}
               </div>
               {data.description && (
-                <p className="mt-3 text-[13px] leading-relaxed text-white/70 font-medium">{data.description}</p>
+                <p className="mt-3 text-[0.8125rem] leading-relaxed text-white/70 font-medium">{data.description}</p>
               )}
 
               {(amenitySplit.known.length > 0 || amenitySplit.other.length > 0) && (
@@ -126,13 +126,13 @@ export const ShowcasePreview: React.FC<{ pitchId: string; onClose: () => void }>
                     {amenitySplit.known.map(a => {
                       const Icon = a.icon;
                       return (
-                        <span key={a.value} className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white/[0.04] border border-white/10 text-[11px] font-semibold text-white/80">
+                        <span key={a.value} className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white/[0.04] border border-white/10 text-[0.6875rem] font-semibold text-white/80">
                           <Icon size={12} className="text-[#39FF14]" /> {a.value}
                         </span>
                       );
                     })}
                     {amenitySplit.other.map(a => (
-                      <span key={a} className="px-2.5 py-1.5 rounded-lg bg-white/[0.03] border border-white/5 text-[11px] text-white/50">{a}</span>
+                      <span key={a} className="px-2.5 py-1.5 rounded-lg bg-white/[0.03] border border-white/5 text-[0.6875rem] text-white/50">{a}</span>
                     ))}
                   </div>
                 </>
@@ -164,12 +164,12 @@ export const ShowcasePreview: React.FC<{ pitchId: string; onClose: () => void }>
                               )}
                             </div>
                             <div className="min-w-0">
-                              <div className="text-[13px] font-extrabold text-white truncate">{court.name}</div>
-                              <div className="text-[10px] text-white/50 truncate">{meta}</div>
+                              <div className="text-[0.8125rem] font-extrabold text-white truncate">{court.name}</div>
+                              <div className="text-[0.6875rem] text-white/50 truncate">{meta}</div>
                               {normalizeCourtFeatures(court.features).length > 0 && (
                                 <div className="flex flex-wrap gap-1 mt-1">
                                   {normalizeCourtFeatures(court.features).slice(0, 4).map((fv) => (
-                                    <span key={fv} className="px-1.5 py-0.5 rounded-md bg-[#39FF14]/10 text-[9px] font-bold text-[#39FF14]/90">
+                                    <span key={fv} className="px-1.5 py-0.5 rounded-md bg-[#39FF14]/10 text-[0.6875rem] font-bold text-[#39FF14]/90">
                                       {courtFeatureLabel(fv)}
                                     </span>
                                   ))}
@@ -179,7 +179,7 @@ export const ShowcasePreview: React.FC<{ pitchId: string; onClose: () => void }>
                           </div>
                           <div className="text-right flex-shrink-0 pl-2">
                             <div className="text-sm font-extrabold text-white">₺{court.price ?? data.total_price ?? '—'}</div>
-                            <div className="text-[8px] font-extrabold uppercase text-white/40">/saat</div>
+                            <div className="text-[0.6875rem] font-extrabold uppercase text-ink-4">/saat</div>
                           </div>
                         </div>
                       );
@@ -191,12 +191,12 @@ export const ShowcasePreview: React.FC<{ pitchId: string; onClose: () => void }>
               {graded && (
                 <div className="mt-4 flex items-center justify-around bg-[#0D111A] border border-white/[0.06] rounded-2xl p-3.5">
                   <div className="text-center">
-                    <div className="text-[8px] font-extrabold uppercase tracking-widest text-white/40">Aydınlatma</div>
+                    <div className="text-[0.625rem] font-extrabold uppercase tracking-widest text-ink-4">Aydınlatma</div>
                     <div className="text-lg font-extrabold text-[#39FF14] mt-0.5">{graded.lighting_grade ?? '—'}</div>
                   </div>
                   <div className="w-px h-7 bg-white/10" />
                   <div className="text-center">
-                    <div className="text-[8px] font-extrabold uppercase tracking-widest text-white/40">Zemin</div>
+                    <div className="text-[0.625rem] font-extrabold uppercase tracking-widest text-ink-4">Zemin</div>
                     <div className="text-lg font-extrabold text-[#39FF14] mt-0.5">{graded.grass_grade ?? '—'}</div>
                   </div>
                 </div>
@@ -204,11 +204,11 @@ export const ShowcasePreview: React.FC<{ pitchId: string; onClose: () => void }>
 
               <div className="mt-5 flex items-center gap-3 p-3 rounded-2xl bg-white/[0.03] border border-white/[0.06]">
                 <div className="flex-1">
-                  <div className="text-[9px] font-extrabold uppercase tracking-wider text-white/40">Kapora · örnek</div>
+                  <div className="text-[0.625rem] font-extrabold uppercase tracking-wider text-ink-4">Kapora · örnek</div>
                   {/* S17: tutarda italik yok — italik yalnız skorda kalır. */}
                   <div className="text-base font-extrabold text-white">₺{Math.round((activeCourts[0]?.price ?? data.total_price ?? 0) * 0.3 / 10) * 10}</div>
                 </div>
-                <div className="px-4 py-3 rounded-xl bg-[#FFFF00] text-black text-[11px] font-extrabold italic uppercase opacity-70">
+                <div className="px-4 py-3 rounded-xl bg-[#FFFF00] text-black text-[0.6875rem] font-extrabold italic uppercase opacity-70">
                   Kaporayı Öde
                 </div>
               </div>

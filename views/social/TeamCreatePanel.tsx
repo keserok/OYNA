@@ -151,7 +151,7 @@ const TeamCreatePanel: React.FC<TeamCreatePanelProps> = ({ friends, onCreated, o
           <div className="text-lg font-extrabold italic truncate">
             {draft.name.trim() || 'Takımının Adı'}
           </div>
-          <div className="text-[11px] text-white/45">
+          <div className="text-[0.6875rem] text-ink-4">
             {autoShort || 'KISA'} · {formatLabel(draft.format)}
             {draft.city.trim() ? ` · ${draft.city.trim()}` : ''}
           </div>
@@ -162,8 +162,8 @@ const TeamCreatePanel: React.FC<TeamCreatePanelProps> = ({ friends, onCreated, o
       <div className="flex items-center gap-1.5 mb-4">
         {STEP_TITLES.map((t, i) => (
           <React.Fragment key={t}>
-            <span className={`text-[10px] font-extrabold uppercase tracking-wide ${
-              draft.step === i + 1 ? 'text-[#39FF14]' : 'text-white/30'
+            <span className={`text-[0.625rem] font-extrabold uppercase tracking-wide ${
+              draft.step === i + 1 ? 'text-[#39FF14]' : 'text-ink-4'
             }`}>
               {i + 1}. {t}
             </span>
@@ -187,25 +187,25 @@ const TeamCreatePanel: React.FC<TeamCreatePanelProps> = ({ friends, onCreated, o
                 value={draft.name}
                 onChange={e => setDraft({ name: e.target.value.slice(0, 32) })}
                 placeholder="Takım adı *"
-                className="w-full h-12 px-4 rounded-2xl bg-white/5 border border-white/10 text-sm font-semibold placeholder:text-white/25 focus:outline-none focus:border-[#39FF14]/50"
+                className="w-full h-12 px-4 rounded-2xl bg-white/5 border border-white/10 text-sm font-semibold placeholder:text-ink-4 focus:outline-none focus:border-[#39FF14]/50"
               />
               <div className="flex gap-2">
                 <input
                   value={draft.shortName}
                   onChange={e => setDraft({ shortName: e.target.value.slice(0, 4) })}
                   placeholder={autoShort || 'KISA'}
-                  className="w-24 h-12 px-3 rounded-2xl bg-white/5 border border-white/10 text-sm font-extrabold text-center uppercase placeholder:text-white/25 focus:outline-none focus:border-white/25"
+                  className="w-24 h-12 px-3 rounded-2xl bg-white/5 border border-white/10 text-sm font-extrabold text-center uppercase placeholder:text-ink-4 focus:outline-none focus:border-white/25"
                 />
                 <input
                   value={draft.city}
                   onChange={e => setDraft({ city: e.target.value.slice(0, 32) })}
                   placeholder="Şehir / ilçe *"
-                  className="flex-1 h-12 px-4 rounded-2xl bg-white/5 border border-white/10 text-sm font-semibold placeholder:text-white/25 focus:outline-none focus:border-white/25"
+                  className="flex-1 h-12 px-4 rounded-2xl bg-white/5 border border-white/10 text-sm font-semibold placeholder:text-ink-4 focus:outline-none focus:border-white/25"
                 />
               </div>
               <div>
-                <div className="text-[10px] font-extrabold uppercase tracking-widest text-white/40 mb-2">
-                  Format <span className="text-white/25 normal-case font-semibold">(sonradan değiştirilebilir)</span>
+                <div className="text-[0.625rem] font-extrabold uppercase tracking-widest text-ink-4 mb-2">
+                  Format <span className="text-ink-4 normal-case font-semibold">(sonradan değiştirilebilir)</span>
                 </div>
                 <div className="grid grid-cols-5 gap-1.5">
                   {FORMATS.map(f => (
@@ -248,7 +248,7 @@ const TeamCreatePanel: React.FC<TeamCreatePanelProps> = ({ friends, onCreated, o
                 >
                   <Globe2 size={17} className="text-[#39FF14]" />
                   <div className="text-sm font-bold mt-1.5">Herkese Açık</div>
-                  <div className="text-[10px] text-white/40">Dizinde görünür, istek alır</div>
+                  <div className="text-[0.6875rem] text-ink-4">Dizinde görünür, istek alır</div>
                 </button>
                 <button
                   onClick={() => setDraft({ visibility: 'PRIVATE' })}
@@ -258,7 +258,7 @@ const TeamCreatePanel: React.FC<TeamCreatePanelProps> = ({ friends, onCreated, o
                 >
                   <Lock size={17} className="text-white/60" />
                   <div className="text-sm font-bold mt-1.5">Gizli</div>
-                  <div className="text-[10px] text-white/40">Yalnız davetle katılım</div>
+                  <div className="text-[0.6875rem] text-ink-4">Yalnız davetle katılım</div>
                 </button>
               </div>
 
@@ -266,7 +266,7 @@ const TeamCreatePanel: React.FC<TeamCreatePanelProps> = ({ friends, onCreated, o
                 <Zap size={16} className="text-[#39FF14]" />
                 <div className="flex-1">
                   <div className="text-sm font-bold">Oyuncu Arıyoruz</div>
-                  <div className="text-[10px] text-white/40">Dizinde ⚡ rozetiyle görünür</div>
+                  <div className="text-[0.6875rem] text-ink-4">Dizinde ⚡ rozetiyle görünür</div>
                 </div>
                 <button
                   role="switch"
@@ -279,12 +279,12 @@ const TeamCreatePanel: React.FC<TeamCreatePanelProps> = ({ friends, onCreated, o
               </label>
 
               <div>
-                <div className="text-[10px] font-extrabold uppercase tracking-widest text-white/40 mb-2">
+                <div className="text-[0.625rem] font-extrabold uppercase tracking-widest text-ink-4 mb-2">
                   Kurucu Kadro Davetleri ({draft.inviteIds.length})
-                  <span className="text-white/25 normal-case font-semibold"> — gerçek davet gider, kabul eden katılır</span>
+                  <span className="text-ink-4 normal-case font-semibold"> — gerçek davet gider, kabul eden katılır</span>
                 </div>
                 {friends.length === 0 ? (
-                  <p className="text-xs text-white/30">
+                  <p className="text-xs text-ink-4">
                     Henüz arkadaşın yok — takımı kur, davet linkiyle çağır.
                   </p>
                 ) : (
@@ -300,7 +300,7 @@ const TeamCreatePanel: React.FC<TeamCreatePanelProps> = ({ friends, onCreated, o
                           }`}
                         >
                           <Avatar name={f.full_name} src={f.avatar_url} size="sm" />
-                          <span className="flex-1 text-left text-[13px] font-bold truncate">{f.full_name}</span>
+                          <span className="flex-1 text-left text-[0.8125rem] font-bold truncate">{f.full_name}</span>
                           {sel && <Check size={14} className="text-[#39FF14]" />}
                         </button>
                       );
@@ -324,7 +324,7 @@ const TeamCreatePanel: React.FC<TeamCreatePanelProps> = ({ friends, onCreated, o
                   ['Kurucu davet', `${draft.inviteIds.length} kişi`],
                 ].map(([k, v]) => (
                   <div key={k} className="flex justify-between gap-3">
-                    <span className="text-white/40">{k}</span>
+                    <span className="text-ink-4">{k}</span>
                     <span className="font-bold text-right">{v}</span>
                   </div>
                 ))}

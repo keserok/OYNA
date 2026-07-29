@@ -104,7 +104,7 @@ const StatRow: React.FC<StatRowProps> = ({ label, value, theme }) => {
   return (
     <div className="flex items-center gap-2">
       {/* Label */}
-      <span className="text-[9px] font-extrabold uppercase tracking-widest w-7 shrink-0" style={{ color: theme.label }}>
+      <span className="text-[0.625rem] font-extrabold uppercase tracking-widest w-7 shrink-0" style={{ color: theme.label }}>
         {label}
       </span>
       {/* Bar */}
@@ -120,7 +120,7 @@ const StatRow: React.FC<StatRowProps> = ({ label, value, theme }) => {
       </div>
       {/* Value */}
       <div className="flex items-center gap-0.5 w-7 justify-end shrink-0">
-        <span className="text-[13px] font-extrabold leading-none" style={{ color }}>{value}</span>
+        <span className="text-[0.8125rem] font-extrabold leading-none" style={{ color }}>{value}</span>
       </div>
     </div>
   );
@@ -239,7 +239,7 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({ name, photo, position = 
             <div className="absolute top-4 left-4 z-40 flex flex-col items-center">
               {/* Overall */}
               <span
-                className="text-[46px] font-extrabold leading-none tabular-nums"
+                className="text-[2.875rem] font-extrabold leading-none tabular-nums"
                 style={{ color: t.overall, textShadow: `0 0 20px ${t.border}80` }}
               >
                 {overall}
@@ -247,7 +247,7 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({ name, photo, position = 
               {/* Position badge */}
               <div className="mt-1 px-2 py-[2px] rounded-md"
                 style={{ background: t.posTag, border: `1px solid ${t.border}44` }}>
-                <span className="text-[10px] font-extrabold uppercase tracking-widest" style={{ color: t.pos }}>{position}</span>
+                <span className="text-[0.625rem] font-extrabold uppercase tracking-widest" style={{ color: t.pos }}>{position}</span>
               </div>
               {/* Small divider */}
               <div className="my-2 w-4 h-px rounded" style={{ background: t.sep }} />
@@ -264,7 +264,7 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({ name, photo, position = 
                 style={{ background: t.posTag, border: `1px solid ${t.border}44` }}>
                 <Trophy size={14} fill="currentColor" style={{ color: t.pos }} />
               </div>
-              <span className="text-[7px] font-extrabold uppercase tracking-[0.3em]" style={{ color: t.label }}>OYNA</span>
+              <span className="text-[0.625rem] font-extrabold uppercase tracking-[0.3em]" style={{ color: t.label }}>OYNA</span>
             </div>
 
             {/* ═══════════════════════════════════ */}
@@ -290,7 +290,7 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({ name, photo, position = 
                     >
                       {name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
                     </span>
-                    <span className="text-[7px] font-extrabold uppercase tracking-[0.25em] mt-1.5 opacity-55" style={{ color: t.pos }}>
+                    <span className="text-[0.625rem] font-extrabold uppercase tracking-[0.25em] mt-1.5 opacity-55" style={{ color: t.pos }}>
                       SİLÜET YOK
                     </span>
                   </motion.div>
@@ -317,7 +317,7 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({ name, photo, position = 
                   <div className="flex-1 h-px" style={{ background: `linear-gradient(to left, transparent, ${t.sep})` }} />
                 </div>
                 <h2
-                  className="text-[14px] font-extrabold uppercase tracking-[0.18em] leading-tight truncate"
+                  className="text-[0.875rem] font-extrabold uppercase tracking-[0.18em] leading-tight truncate"
                   style={{ color: t.name, textShadow: `0 1px 12px ${t.border}60` }}
                 >
                   {name}
@@ -364,7 +364,7 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({ name, photo, position = 
             animate={{ opacity: 1, y: 0 }}
             whileHover={{ scale: 1.04 }}
             whileTap={{ scale: 0.97 }}
-            className="mt-5 mx-auto flex items-center gap-2 px-5 py-2 rounded-full text-[11px] font-extrabold uppercase tracking-wide"
+            className="mt-5 mx-auto flex items-center gap-2 px-5 py-2 rounded-full text-[0.6875rem] font-extrabold uppercase tracking-wide"
             style={{ background: t.posTag, border: `1px solid ${t.border}44`, color: t.name }}
           >
             <Share2 size={12} />

@@ -182,7 +182,7 @@ const ProfileInfoPage: React.FC<ProfileInfoPageProps> = ({ open, onClose }) => {
   };
 
   const MsgLine: React.FC<{ msg: Msg }> = ({ msg }) => msg ? (
-    <p className={`text-[11px] font-bold flex items-center gap-1 mt-1 ${msg.variant === 'success' ? 'text-green-400' : 'text-red-400'}`}>
+    <p className={`text-[0.6875rem] font-bold flex items-center gap-1 mt-1 ${msg.variant === 'success' ? 'text-green-400' : 'text-red-400'}`}>
       {msg.variant === 'success' ? <Check size={12} /> : <AlertCircle size={12} />} {msg.text}
     </p>
   ) : null;
@@ -195,7 +195,7 @@ const ProfileInfoPage: React.FC<ProfileInfoPageProps> = ({ open, onClose }) => {
   return (
     <SettingsSubPage open={open} onClose={onClose} title="Profil Bilgileri" subtitle="Hesabını ve kimlik bilgilerini yönet">
       {loading ? (
-        <div className="py-16 flex justify-center"><RefreshCw size={20} className="animate-spin text-gray-500" /></div>
+        <div className="py-16 flex justify-center"><RefreshCw size={20} className="animate-spin text-ink-4" /></div>
       ) : (
         <div className="space-y-5">
           {/* Avatar */}
@@ -217,7 +217,7 @@ const ProfileInfoPage: React.FC<ProfileInfoPageProps> = ({ open, onClose }) => {
 
           {/* İsim */}
           <div className="bg-[#161B22] border border-white/8 rounded-2xl p-4">
-            <label className="text-[10px] font-extrabold uppercase tracking-widest text-gray-500 flex items-center gap-1.5 mb-2">
+            <label className="text-[0.625rem] font-extrabold uppercase tracking-widest text-ink-4 flex items-center gap-1.5 mb-2">
               <User size={12} /> Ad Soyad
             </label>
             <div className="flex gap-2">
@@ -240,7 +240,7 @@ const ProfileInfoPage: React.FC<ProfileInfoPageProps> = ({ open, onClose }) => {
 
           {/* Doğum Tarihi / Yaş */}
           <div className="bg-[#161B22] border border-white/8 rounded-2xl p-4">
-            <label className="text-[10px] font-extrabold uppercase tracking-widest text-gray-500 flex items-center gap-1.5 mb-2">
+            <label className="text-[0.625rem] font-extrabold uppercase tracking-widest text-ink-4 flex items-center gap-1.5 mb-2">
               <Calendar size={12} /> Doğum Tarihi {age !== null && <span className="text-[#39FF14] normal-case tracking-normal">· {age} yaşında</span>}
             </label>
             <div className="flex gap-2">
@@ -265,26 +265,26 @@ const ProfileInfoPage: React.FC<ProfileInfoPageProps> = ({ open, onClose }) => {
           {/* Kayıt Yöntemi (salt-okunur) */}
           <div className="bg-[#161B22] border border-white/8 rounded-2xl p-4 flex items-center justify-between">
             <div>
-              <p className="text-[10px] font-extrabold uppercase tracking-widest text-gray-500 mb-1">Kayıt Yöntemi</p>
+              <p className="text-[0.625rem] font-extrabold uppercase tracking-widest text-ink-4 mb-1">Kayıt Yöntemi</p>
               <p className="text-sm font-bold text-white">{PROVIDER_LABEL[identity?.primaryProvider ?? 'unknown']}</p>
             </div>
-            <span className="text-[9px] font-extrabold uppercase tracking-wide text-gray-400 bg-white/5 border border-white/10 px-2 py-1 rounded">
+            <span className="text-[0.625rem] font-extrabold uppercase tracking-wide text-gray-400 bg-white/5 border border-white/10 px-2 py-1 rounded">
               Değiştirilemez
             </span>
           </div>
 
           {/* E-posta */}
           <div className="bg-[#161B22] border border-white/8 rounded-2xl p-4">
-            <label className="text-[10px] font-extrabold uppercase tracking-widest text-gray-500 flex items-center gap-1.5 mb-2">
+            <label className="text-[0.625rem] font-extrabold uppercase tracking-widest text-ink-4 flex items-center gap-1.5 mb-2">
               <Mail size={12} /> E-posta
             </label>
             {isOAuthEmail ? (
               <>
                 <div className="flex items-center gap-2 h-11 bg-black/20 border border-white/5 rounded-xl px-3">
-                  <Lock size={14} className="text-gray-500 shrink-0" />
+                  <Lock size={14} className="text-ink-4 shrink-0" />
                   <span className="text-sm font-bold text-gray-300 truncate">{email || '—'}</span>
                 </div>
-                <p className="text-[11px] text-gray-500 mt-1.5 leading-relaxed">
+                <p className="text-[0.6875rem] text-ink-4 mt-1.5 leading-relaxed">
                   {PROVIDER_LABEL[identity?.primaryProvider ?? 'unknown'].replace(' ile kayıt', '')} hesabınla giriş yaptığın için e-postan oradan yönetilir ve buradan değiştirilemez.
                 </p>
               </>
@@ -306,7 +306,7 @@ const ProfileInfoPage: React.FC<ProfileInfoPageProps> = ({ open, onClose }) => {
                     {savingEmail ? '...' : 'Kaydet'}
                   </button>
                 </div>
-                <p className="text-[11px] text-gray-500 mt-1.5">Ayara göre e-postan anında değişir ya da yeni adresine bir onay linki gönderilir.</p>
+                <p className="text-[0.6875rem] text-ink-4 mt-1.5">Ayara göre e-postan anında değişir ya da yeni adresine bir onay linki gönderilir.</p>
                 <MsgLine msg={emailMsg} />
               </>
             )}
@@ -314,11 +314,11 @@ const ProfileInfoPage: React.FC<ProfileInfoPageProps> = ({ open, onClose }) => {
 
           {/* Şifre */}
           <div className="bg-[#161B22] border border-white/8 rounded-2xl p-4">
-            <label className="text-[10px] font-extrabold uppercase tracking-widest text-gray-500 flex items-center gap-1.5 mb-2">
+            <label className="text-[0.625rem] font-extrabold uppercase tracking-widest text-ink-4 flex items-center gap-1.5 mb-2">
               <KeyRound size={12} /> {hasPassword ? 'Şifre Değiştir' : 'Şifre Oluştur'}
             </label>
             {!hasPassword && (
-              <p className="text-[11px] text-gray-500 mb-2 leading-relaxed">
+              <p className="text-[0.6875rem] text-ink-4 mb-2 leading-relaxed">
                 Şu an sadece {PROVIDER_LABEL[identity?.primaryProvider ?? 'unknown'].replace(' ile kayıt', '')} ile giriş yapıyorsun. Bir şifre oluşturursan e-posta + şifre ile de girebilirsin.
               </p>
             )}

@@ -4,7 +4,7 @@ import React from 'react';
 // SocialView/MessagesView/MyTeam'deki kopyaların yerine tek bileşen.
 
 const SIZES = {
-  sm: { box: 'w-8 h-8 rounded-xl', text: 'text-[11px]', dot: 'w-2 h-2 border' },
+  sm: { box: 'w-8 h-8 rounded-xl', text: 'text-[0.6875rem]', dot: 'w-2 h-2 border' },
   md: { box: 'w-10 h-10 rounded-xl', text: 'text-xs', dot: 'w-2.5 h-2.5 border-2' },
   lg: { box: 'w-[50px] h-[50px] rounded-2xl', text: 'text-sm', dot: 'w-3 h-3 border-2' },
   xl: { box: 'w-20 h-20 rounded-3xl', text: 'text-2xl', dot: 'w-4 h-4 border-2' },

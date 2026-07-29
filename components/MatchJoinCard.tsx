@@ -134,7 +134,7 @@ const MiniPitch: React.FC<MiniPitchProps> = ({ slots, currentUserUid }) => (
                   ? 'bg-[#39FF14]/90 border-[#39FF14] text-black'
                   : 'bg-black/80 border-white/10 text-white'
               }`}>
-                <span className="text-[7px] font-extrabold whitespace-nowrap uppercase block leading-none">
+                <span className="text-[0.6875rem] font-extrabold whitespace-nowrap uppercase block leading-none">
                   {isMe ? 'SEN' : (slot.player.name || '').split(' ')[0]}
                 </span>
               </div>
@@ -147,17 +147,17 @@ const MiniPitch: React.FC<MiniPitchProps> = ({ slots, currentUserUid }) => (
                   ? 'border-[#39FF14]/60 bg-[#39FF14]/15 text-[#39FF14]'
                   : 'border-emerald-500/30 bg-emerald-950/70 text-emerald-400/70'
               }`}>
-                <span className="text-[8px] font-extrabold leading-none">●</span>
+                <span className="text-[0.6875rem] font-extrabold leading-none">●</span>
               </div>
               <div className="mt-1 px-1.5 py-px rounded-full border bg-emerald-950/85 border-emerald-500/35 shadow-sm">
-                <span className="text-[6px] font-extrabold text-emerald-300 uppercase whitespace-nowrap block leading-none">
+                <span className="text-[0.6875rem] font-extrabold text-emerald-300 uppercase whitespace-nowrap block leading-none">
                   {(slot as any).purchasedBy === currentUserUid ? 'SENİN' : 'DOLU'}
                 </span>
               </div>
             </>
           ) : (
             <div className="w-7 h-7 rounded-full border-2 border-dashed border-white/15 bg-white/4 flex items-center justify-center">
-              <span className="text-[6px] font-bold text-white/25 uppercase">
+              <span className="text-[0.6875rem] font-bold text-ink-4 uppercase">
                 {ROLE_TR[roleNorm] || '?'}
               </span>
             </div>
@@ -223,7 +223,7 @@ export const MatchJoinCard: React.FC<MatchJoinCardProps> = ({ match, currentUser
             : 'bg-transparent border-white/5 opacity-60'
         }`}>
           <div className={`w-2 h-2 rounded-full shrink-0 ${homeTeam ? 'bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)]' : 'bg-white shadow-[0_0_5px_rgba(255,255,255,0.5)]'}`} />
-          <p className="text-[11px] font-extrabold text-white uppercase italic truncate leading-tight flex-1 min-w-0">
+          <p className="text-[0.6875rem] font-extrabold text-white uppercase italic truncate leading-tight flex-1 min-w-0">
             {match.homeTeamName || homeTeam?.name || 'TAKIM'}
           </p>
           {homeTeam?.logo && (
@@ -253,7 +253,7 @@ export const MatchJoinCard: React.FC<MatchJoinCardProps> = ({ match, currentUser
                 : <span className="text-sm">{awayTeam.logo}</span>}
             </div>
           )}
-          <p className={`text-[11px] font-extrabold uppercase italic truncate leading-tight flex-1 min-w-0 text-right ${
+          <p className={`text-[0.6875rem] font-extrabold uppercase italic truncate leading-tight flex-1 min-w-0 text-right ${
             (match.awayTeamName || awayTeam?.name) ? 'text-white' : 'text-red-400'
           }`}>
             {match.awayTeamName || awayTeam?.name || 'TAKIM'}
@@ -269,13 +269,13 @@ export const MatchJoinCard: React.FC<MatchJoinCardProps> = ({ match, currentUser
           <MiniPitch slots={displaySlots} currentUserUid={currentUserUid} />
           {/* Side label */}
           <div className="absolute top-2 left-2 bg-black/65 backdrop-blur-sm px-2 py-0.5 rounded-full border border-white/8">
-            <span className="text-[7px] font-extrabold text-white/50 uppercase tracking-wider">
+            <span className="text-[0.625rem] font-extrabold text-white/50 uppercase tracking-wider">
               {isOnAwayTeam ? 'DEPLASMAN' : 'EV SAHİBİ'}
             </span>
           </div>
           {/* Slot fill indicator */}
           <div className="absolute bottom-2 left-2 bg-black/65 backdrop-blur-sm px-2 py-0.5 rounded-full border border-white/8">
-            <span className="text-[8px] font-extrabold text-white/60 tabular-nums">
+            <span className="text-[0.6875rem] font-extrabold text-white/60 tabular-nums">
               {isOnAwayTeam ? filledAway : filledHome}/{isOnAwayTeam ? totalAway : totalHome}
             </span>
           </div>
@@ -285,21 +285,21 @@ export const MatchJoinCard: React.FC<MatchJoinCardProps> = ({ match, currentUser
         <div className="w-[118px] flex flex-col justify-between py-0.5">
           {/* Match name & location */}
           <div>
-            <p className="text-[12px] font-extrabold text-white italic uppercase leading-tight tracking-tight line-clamp-2 mb-2">
+            <p className="text-[0.75rem] font-extrabold text-white italic uppercase leading-tight tracking-tight line-clamp-2 mb-2">
               {match.title || match.location}
             </p>
             <div className="space-y-1.5">
               <div className="flex items-start gap-1.5">
                 <MapPin size={9} className="text-[#39FF14] mt-0.5 shrink-0" />
-                <span className="text-[9px] font-bold text-white/55 leading-tight">{match.location}</span>
+                <span className="text-[0.6875rem] font-bold text-white/55 leading-tight">{match.location}</span>
               </div>
               <div className="flex items-center gap-1.5">
-                <Clock size={9} className="text-white/30 shrink-0" />
-                <span className="text-[9px] font-bold text-white/45">{match.time}</span>
+                <Clock size={9} className="text-ink-4 shrink-0" />
+                <span className="text-[0.6875rem] font-bold text-ink-4">{match.time}</span>
               </div>
               <div className="flex items-center gap-1.5">
-                <Calendar size={9} className="text-white/30 shrink-0" />
-                <span className="text-[9px] font-bold text-white/45">{match.date}</span>
+                <Calendar size={9} className="text-ink-4 shrink-0" />
+                <span className="text-[0.6875rem] font-bold text-ink-4">{match.date}</span>
               </div>
             </div>
           </div>
@@ -307,22 +307,22 @@ export const MatchJoinCard: React.FC<MatchJoinCardProps> = ({ match, currentUser
           {/* Badges */}
           <div className="flex flex-wrap gap-1 mt-2">
             <span
-              className="text-[8px] font-extrabold uppercase tracking-wide px-2 py-0.5 rounded-md border"
+              className="text-[0.625rem] font-extrabold uppercase tracking-wide px-2 py-0.5 rounded-md border"
               style={{ color: diffConf.color, borderColor: diffConf.color + '40', background: diffConf.color + '10' }}
             >
               {diffConf.label}
             </span>
-            <span className="text-[8px] font-extrabold uppercase px-2 py-0.5 rounded-md bg-white/5 border border-white/8 text-white/45">
+            <span className="text-[0.6875rem] font-extrabold uppercase px-2 py-0.5 rounded-md bg-white/5 border border-white/8 text-ink-4">
               {match.format || inferSquadSize((match.slots || []).length)}
             </span>
             {/* MAÇ SÜRESİ — gerçek veri (matches.duration_minutes). Yoksa çizilmez. */}
             {durationLabel && (
-              <span className="text-[8px] font-extrabold uppercase px-2 py-0.5 rounded-md bg-[#39FF14]/8 border border-[#39FF14]/20 text-[#39FF14]/90">
+              <span className="text-[0.6875rem] font-extrabold uppercase px-2 py-0.5 rounded-md bg-[#39FF14]/8 border border-[#39FF14]/20 text-[#39FF14]/90">
                 {durationLabel}
               </span>
             )}
             {match.price ? (
-              <span className="text-[8px] font-extrabold uppercase px-2 py-0.5 rounded-md bg-[#FACC15]/8 border border-[#FACC15]/15 text-[#FACC15]">
+              <span className="text-[0.6875rem] font-extrabold uppercase px-2 py-0.5 rounded-md bg-[#FACC15]/8 border border-[#FACC15]/15 text-[#FACC15]">
                 ₺{match.price}
               </span>
             ) : null}
@@ -331,14 +331,14 @@ export const MatchJoinCard: React.FC<MatchJoinCardProps> = ({ match, currentUser
           {/* Countdown */}
           {!isCancelled && countdown && (
             <div className="mt-2.5 pt-2 border-t border-white/5">
-              <p className="text-[7px] font-extrabold text-[#FACC15] tracking-widest uppercase">KALAN SÜRE</p>
-              <p className="text-[12px] font-extrabold text-white tabular-nums mt-0.5 leading-none">{countdown}</p>
+              <p className="text-[0.625rem] font-extrabold text-[#FACC15] tracking-widest uppercase">KALAN SÜRE</p>
+              <p className="text-[0.75rem] font-extrabold text-white tabular-nums mt-0.5 leading-none">{countdown}</p>
             </div>
           )}
           {isCancelled && (
             <div className="mt-2.5 pt-2 border-t border-red-500/10">
-              <p className="text-[7px] font-extrabold text-red-500 tracking-widest uppercase">MAÇ İPTAL</p>
-              <p className="text-[9px] font-bold text-white/40 mt-0.5 leading-tight">
+              <p className="text-[0.625rem] font-extrabold text-red-500 tracking-widest uppercase">MAÇ İPTAL</p>
+              <p className="text-[0.6875rem] font-bold text-ink-4 mt-0.5 leading-tight">
                 {match.refundStatus || 'Ücret alınmadı'}
               </p>
             </div>
@@ -350,7 +350,7 @@ export const MatchJoinCard: React.FC<MatchJoinCardProps> = ({ match, currentUser
       {!isCancelled && (
         <div className="px-3 pb-3 pt-0">
           <div className="w-full flex items-center justify-between px-4 py-2.5 rounded-xl bg-[#39FF14]/8 border border-[#39FF14]/18 hover:bg-[#39FF14]/14 transition-all">
-            <span className="text-[10px] font-extrabold uppercase tracking-widest text-[#39FF14]">LOBİYE GİT</span>
+            <span className="text-[0.625rem] font-extrabold uppercase tracking-widest text-[#39FF14]">LOBİYE GİT</span>
             <ChevronRight size={13} className="text-[#39FF14]" />
           </div>
         </div>

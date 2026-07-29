@@ -181,10 +181,10 @@ const QRScannerView: React.FC<QRScannerViewProps> = ({ onBack, onResult, pitchId
             >
               {/* Sekmeler: Manuel (varsayılan) | Kod ile */}
               <div className="flex p-1 bg-white/5 rounded-2xl border border-white/10 mb-6">
-                <button type="button" onClick={() => setMode('MANUAL')} className={`flex-1 py-2.5 rounded-xl text-[11px] font-extrabold uppercase tracking-widest flex items-center justify-center gap-2 transition-all ${mode === 'MANUAL' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white'}`}>
+                <button type="button" onClick={() => setMode('MANUAL')} className={`flex-1 py-2.5 rounded-xl text-[0.6875rem] font-extrabold uppercase tracking-widest flex items-center justify-center gap-2 transition-all ${mode === 'MANUAL' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white'}`}>
                   <ListChecks size={15} /> Manuel
                 </button>
-                <button type="button" onClick={() => setMode('CODE')} className={`flex-1 py-2.5 rounded-xl text-[11px] font-extrabold uppercase tracking-widest flex items-center justify-center gap-2 transition-all ${mode === 'CODE' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white'}`}>
+                <button type="button" onClick={() => setMode('CODE')} className={`flex-1 py-2.5 rounded-xl text-[0.6875rem] font-extrabold uppercase tracking-widest flex items-center justify-center gap-2 transition-all ${mode === 'CODE' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white'}`}>
                   <KeyRound size={15} /> Kod ile
                 </button>
               </div>
@@ -211,7 +211,7 @@ const QRScannerView: React.FC<QRScannerViewProps> = ({ onBack, onResult, pitchId
                         autoFocus
                       />
                       {error && (
-                        <p className="text-red-400 text-[10px] font-bold mt-2 text-center uppercase tracking-widest">{error}</p>
+                        <p className="text-red-400 text-[0.625rem] font-bold mt-2 text-center uppercase tracking-widest">{error}</p>
                       )}
                     </div>
                     <button
@@ -239,29 +239,29 @@ const QRScannerView: React.FC<QRScannerViewProps> = ({ onBack, onResult, pitchId
                   {matchesLoading ? (
                     <div className="text-center py-10 text-blue-400"><RefreshCw size={24} className="animate-spin inline" /></div>
                   ) : ownerMatches.length === 0 ? (
-                    <div className="text-center py-12 text-gray-500 text-sm">
+                    <div className="text-center py-12 text-ink-4 text-sm">
                       Skor girilebilecek maç bulunamadı.
-                      <p className="text-[11px] text-gray-600 mt-2">Uygulama üzerinden sahanda kurulan maçlar burada listelenir.</p>
+                      <p className="text-[0.6875rem] text-ink-4 mt-2">Uygulama üzerinden sahanda kurulan maçlar burada listelenir.</p>
                     </div>
                   ) : (
                     ownerMatches.map((m) => (
                       <button key={m.matchId} type="button" disabled={!!pickingId} onClick={() => handlePickMatch(m)} className="w-full bg-[#161B22] border border-white/5 rounded-2xl p-4 flex items-center justify-between gap-3 hover:border-blue-500/30 transition-all disabled:opacity-50 text-left">
                         <div className="min-w-0">
                           <p className="text-sm font-extrabold text-white truncate">{m.title}</p>
-                          <p className="text-[10px] text-gray-500 font-bold uppercase truncate">{m.courtName} · {m.when}</p>
+                          <p className="text-[0.6875rem] text-ink-4 font-bold uppercase truncate">{m.courtName} · {m.when}</p>
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
                           {m.hasScore && (
-                            <span className="text-[10px] font-extrabold text-emerald-400 uppercase tabular-nums">
+                            <span className="text-[0.6875rem] font-extrabold text-emerald-400 uppercase tabular-nums">
                               {m.homeScore != null && m.awayScore != null ? `${m.homeScore}-${m.awayScore}` : 'Skor girildi'}
                             </span>
                           )}
-                          {pickingId === m.matchId ? <RefreshCw size={16} className="animate-spin text-blue-400" /> : <ChevronRight size={18} className="text-gray-600" />}
+                          {pickingId === m.matchId ? <RefreshCw size={16} className="animate-spin text-blue-400" /> : <ChevronRight size={18} className="text-ink-4" />}
                         </div>
                       </button>
                     ))
                   )}
-                  {error && <p className="text-red-400 text-[10px] font-bold mt-2 text-center uppercase tracking-widest">{error}</p>}
+                  {error && <p className="text-red-400 text-[0.625rem] font-bold mt-2 text-center uppercase tracking-widest">{error}</p>}
                 </div>
               )}
             </motion.div>
@@ -282,7 +282,7 @@ const QRScannerView: React.FC<QRScannerViewProps> = ({ onBack, onResult, pitchId
 
               <div className="flex items-center justify-between gap-4 mb-10">
                 <div className="flex-1 flex flex-col items-center gap-4">
-                  <span className="text-[10px] font-extrabold text-gray-500 uppercase tracking-widest text-center h-8 flex items-center">{scoreEntry.teamAName}</span>
+                  <span className="text-[0.625rem] font-extrabold text-ink-4 uppercase tracking-widest text-center h-8 flex items-center">{scoreEntry.teamAName}</span>
                   <div className="flex items-center gap-4">
                     <button
                       aria-label="Ev sahibi skorunu azalt"
@@ -302,10 +302,10 @@ const QRScannerView: React.FC<QRScannerViewProps> = ({ onBack, onResult, pitchId
                   </div>
                 </div>
 
-                <div className="text-2xl font-extrabold text-gray-700 italic">VS</div>
+                <div className="text-2xl font-extrabold text-ink-4 italic">VS</div>
 
                 <div className="flex-1 flex flex-col items-center gap-4">
-                  <span className="text-[10px] font-extrabold text-gray-500 uppercase tracking-widest text-center h-8 flex items-center">{scoreEntry.teamBName}</span>
+                  <span className="text-[0.625rem] font-extrabold text-ink-4 uppercase tracking-widest text-center h-8 flex items-center">{scoreEntry.teamBName}</span>
                   <div className="flex items-center gap-4">
                     <button
                       aria-label="Deplasman skorunu azalt"
@@ -350,7 +350,7 @@ const QRScannerView: React.FC<QRScannerViewProps> = ({ onBack, onResult, pitchId
                   setError(null);
                   setScoreEntry({ teamA: 0, teamB: 0, teamAName: 'Ev Sahibi', teamBName: 'Deplasman' });
                 }}
-                className="w-full mt-4 text-gray-500 text-sm font-bold uppercase tracking-widest hover:text-white transition-colors"
+                className="w-full mt-4 text-ink-4 text-sm font-bold uppercase tracking-widest hover:text-white transition-colors"
               >
                 BAŞKA MAÇ SEÇ
               </button>

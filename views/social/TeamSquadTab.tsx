@@ -157,7 +157,7 @@ const TeamSquadTab: React.FC<TeamSquadTabProps> = ({
       {/* ── Bekleyenler (yalnız yönetici — Spec §3.8 Kadro) ── */}
       {isAdmin && (requests.length > 0 || outgoing.length > 0) && (
         <div className="rounded-2xl bg-[#39FF14]/6 border border-[#39FF14]/20 p-3.5">
-          <div className="text-[10px] font-extrabold uppercase tracking-widest text-[#39FF14]/80 mb-2.5">
+          <div className="text-[0.625rem] font-extrabold uppercase tracking-widest text-[#39FF14]/80 mb-2.5">
             Bekleyenler ({requests.length + outgoing.length})
           </div>
           <div className="space-y-2">
@@ -165,16 +165,16 @@ const TeamSquadTab: React.FC<TeamSquadTabProps> = ({
               <div key={req.id} className="flex items-center gap-2.5">
                 <Avatar name={req.full_name} src={req.avatar_url} size="sm" />
                 <div className="flex-1 min-w-0">
-                  <div className="text-[12px]">
+                  <div className="text-[0.75rem]">
                     <b>{req.full_name}</b>
                     <span className="text-white/50"> katılmak istiyor</span>
                   </div>
                   {req.message && (
-                    <div className="text-[11px] text-white/40 italic truncate">“{req.message}”</div>
+                    <div className="text-[0.6875rem] text-ink-4 italic truncate">“{req.message}”</div>
                   )}
                 </div>
                 {busyId === req.id ? (
-                  <Loader2 size={15} className="animate-spin text-white/40" />
+                  <Loader2 size={15} className="animate-spin text-ink-4" />
                 ) : (
                   <>
                     <button
@@ -186,7 +186,7 @@ const TeamSquadTab: React.FC<TeamSquadTabProps> = ({
                     </button>
                     <button
                       onClick={() => handleRequest(req, true)}
-                      className="h-9 px-3 rounded-xl bg-[#39FF14] text-[#0A0E14] text-[11px] font-extrabold flex items-center gap-1 active:scale-95"
+                      className="h-9 px-3 rounded-xl bg-[#39FF14] text-[#0A0E14] text-[0.6875rem] font-extrabold flex items-center gap-1 active:scale-95"
                     >
                       <Check size={12} /> Onayla
                     </button>
@@ -197,14 +197,14 @@ const TeamSquadTab: React.FC<TeamSquadTabProps> = ({
             {outgoing.map(inv => (
               <div key={inv.id} className="flex items-center gap-2.5">
                 <Avatar name={inv.full_name} src={inv.avatar_url} size="sm" />
-                <div className="flex-1 min-w-0 text-[12px]">
+                <div className="flex-1 min-w-0 text-[0.75rem]">
                   <b>{inv.full_name}</b>
                   <span className="text-white/50"> davet edildi</span>
                 </div>
                 <button
                   onClick={() => handleCancelInvite(inv)}
                   disabled={busyId === inv.id}
-                  className="h-9 px-3 rounded-xl bg-white/5 border border-white/10 text-[11px] font-bold text-white/60 active:scale-95 disabled:opacity-50"
+                  className="h-9 px-3 rounded-xl bg-white/5 border border-white/10 text-[0.6875rem] font-bold text-white/60 active:scale-95 disabled:opacity-50"
                 >
                   {busyId === inv.id ? '…' : 'Geri Çek'}
                 </button>
@@ -217,13 +217,13 @@ const TeamSquadTab: React.FC<TeamSquadTabProps> = ({
       {/* ── Kadro listesi ── */}
       <div>
         <div className="flex items-center justify-between mb-2.5">
-          <h3 className="text-[10px] font-extrabold uppercase tracking-widest text-white/40">
+          <h3 className="text-[0.625rem] font-extrabold uppercase tracking-widest text-ink-4">
             Kadro ({squad.length}/20)
           </h3>
           {isAdmin && (
             <button
               onClick={onOpenInvite}
-              className="h-9 px-3 rounded-xl bg-[#39FF14] text-[#0A0E14] text-[11px] font-extrabold flex items-center gap-1.5 active:scale-95"
+              className="h-9 px-3 rounded-xl bg-[#39FF14] text-[#0A0E14] text-[0.6875rem] font-extrabold flex items-center gap-1.5 active:scale-95"
             >
               <UserPlus size={13} /> Davet Et
             </button>
@@ -250,21 +250,21 @@ const TeamSquadTab: React.FC<TeamSquadTabProps> = ({
                   <Avatar name={m.full_name} src={m.avatar_url} size="md" />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5">
-                      <span className="text-[13px] font-bold truncate">
+                      <span className="text-[0.8125rem] font-bold truncate">
                         {m.full_name}{self ? ' (sen)' : ''}
                       </span>
                       {m.role === 'CAPTAIN' && (
-                        <span className="shrink-0 text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-[#F2C500]/12 text-[#F2C500] flex items-center gap-0.5">
+                        <span className="shrink-0 text-[0.6875rem] font-extrabold px-1.5 py-0.5 rounded bg-[#F2C500]/12 text-[#F2C500] flex items-center gap-0.5">
                           <Crown size={9} /> Kaptan
                         </span>
                       )}
                       {m.role === 'ADMIN' && (
-                        <span className="shrink-0 text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-white/8 text-white/55 flex items-center gap-0.5">
+                        <span className="shrink-0 text-[0.6875rem] font-extrabold px-1.5 py-0.5 rounded bg-white/8 text-white/55 flex items-center gap-0.5">
                           <ShieldCheck size={9} /> Yönetici
                         </span>
                       )}
                     </div>
-                    <div className="text-[10px] text-white/35 truncate">
+                    <div className="text-[0.6875rem] text-ink-4 truncate">
                       {m.oyna_id ? `@${m.oyna_id}` : ''}
                       {m.pos ? `${m.oyna_id ? ' · ' : ''}${m.pos}` : ''}
                     </div>
@@ -292,7 +292,7 @@ const TeamSquadTab: React.FC<TeamSquadTabProps> = ({
               <Avatar name={member.full_name} src={member.avatar_url} size="lg" />
               <div className="min-w-0">
                 <div className="text-base font-extrabold truncate">{member.full_name}</div>
-                <div className="text-[11px] text-white/40">
+                <div className="text-[0.6875rem] text-ink-4">
                   {member.role === 'CAPTAIN' ? 'Kaptan' : member.role === 'ADMIN' ? 'Yönetici' : 'Oyuncu'}
                   {member.oyna_id ? ` · @${member.oyna_id}` : ''}
                 </div>
@@ -302,7 +302,7 @@ const TeamSquadTab: React.FC<TeamSquadTabProps> = ({
             {/* Forma no — RLS gereği yalnız kaptan yazar (tm_update_captain) */}
             {isCaptain && (
               <div className="mt-4">
-                <label className="text-[10px] font-extrabold uppercase tracking-widest text-white/40">
+                <label className="text-[0.625rem] font-extrabold uppercase tracking-widest text-ink-4">
                   Forma Numarası
                 </label>
                 <div className="flex gap-2 mt-1.5">
@@ -311,7 +311,7 @@ const TeamSquadTab: React.FC<TeamSquadTabProps> = ({
                     value={jersey}
                     onChange={e => setJersey(e.target.value.replace(/\D/g, '').slice(0, 2))}
                     placeholder="—"
-                    className="w-20 h-11 rounded-xl bg-white/5 border border-white/10 text-center text-base font-extrabold tabular-nums placeholder:text-white/20 focus:outline-none focus:border-[#39FF14]/50"
+                    className="w-20 h-11 rounded-xl bg-white/5 border border-white/10 text-center text-base font-extrabold tabular-nums placeholder:text-ink-4 focus:outline-none focus:border-[#39FF14]/50"
                   />
                   <button
                     onClick={saveJersey}

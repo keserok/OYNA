@@ -79,12 +79,12 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
       className="flex flex-col items-center justify-center p-8 text-center min-h-[200px]"
     >
       {icon ? (
-        <div className="text-gray-600 mb-3">{icon}</div>
+        <div className="text-ink-4 mb-3">{icon}</div>
       ) : (
-        <Inbox className="text-gray-500 mb-3 w-12 h-12" strokeWidth={1.5} />
+        <Inbox className="text-ink-4 mb-3 w-12 h-12" strokeWidth={1.5} />
       )}
       <h3 className="text-sm font-extrabold text-gray-300 mb-1">{title}</h3>
-      <p className="text-xs text-gray-500 leading-relaxed max-w-[260px]">
+      <p className="text-xs text-ink-4 leading-relaxed max-w-[260px]">
         {message}
       </p>
     </motion.div>

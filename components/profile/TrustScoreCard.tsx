@@ -39,12 +39,12 @@ export const TrustScoreCard: React.FC<TrustScoreCardProps> = ({ score, note }) =
                     <span className="relative text-base font-extrabold text-white">{clamped}</span>
                 </div>
                 <div className="flex-1 text-left min-w-0">
-                    <p className="text-[8px] font-extrabold tracking-[0.14em] uppercase text-white/45 mb-1">Güven Puanı</p>
-                    <p className="text-[11px] font-semibold text-white/50 leading-[1.4]">
+                    <p className="text-[0.625rem] font-extrabold tracking-[0.14em] uppercase text-ink-4 mb-1">Güven Puanı</p>
+                    <p className="text-[0.6875rem] font-semibold text-white/50 leading-[1.4]">
                         {note || 'Fair-play geçmişin ve katılım disiplininle hesaplanır.'}
                     </p>
                 </div>
-                <ChevronRight size={16} className="text-white/30 shrink-0" strokeWidth={2.4} />
+                <ChevronRight size={16} className="text-ink-4 shrink-0" strokeWidth={2.4} />
             </button>
 
             {/* Açıklama bottom-sheet'i — portal: üst motion sarmalayıcıların stacking
@@ -61,7 +61,7 @@ export const TrustScoreCard: React.FC<TrustScoreCardProps> = ({ score, note }) =
                                 <X size={15} />
                             </button>
                         </div>
-                        <p className="text-[12px] text-gray-400 leading-relaxed">
+                        <p className="text-[0.75rem] text-gray-400 leading-relaxed">
                             Güven puanın 0–100 arasındadır ve sahadaki güvenilirliğini özetler. Maç sonu
                             değerlendirmeleri, fair-play geçmişin (kartlar, olaysız maçlar) ve katılım
                             disiplinin (maça gelme, zamanında iptal) puanını belirler.
@@ -73,8 +73,8 @@ export const TrustScoreCard: React.FC<TrustScoreCardProps> = ({ score, note }) =
                                 ['Değerlendirmeleri önemse', 'Maç sonu takım arkadaşlarının oyları puana işlenir.'],
                             ].map(([title, sub]) => (
                                 <div key={title} className="rounded-2xl p-3.5 bg-white/[0.03] border border-white/[0.08]">
-                                    <p className="text-[12px] font-extrabold text-white">{title}</p>
-                                    <p className="text-[11px] text-gray-500 mt-0.5">{sub}</p>
+                                    <p className="text-[0.75rem] font-extrabold text-white">{title}</p>
+                                    <p className="text-[0.6875rem] text-ink-4 mt-0.5">{sub}</p>
                                 </div>
                             ))}
                         </div>

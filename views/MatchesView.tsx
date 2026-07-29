@@ -34,10 +34,10 @@ const MatchesView: React.FC<MatchesViewProps> = ({ onBack, matches }) => {
         {matches.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-[60vh] text-center">
             <div className="w-20 h-20 rounded-full bg-white/5 flex items-center justify-center mb-4">
-              <Trophy size={40} className="text-gray-600" />
+              <Trophy size={40} className="text-ink-4" />
             </div>
             <h3 className="text-xl font-bold mb-2">Henüz Maç Yok</h3>
-            <p className="text-gray-500 text-sm max-w-[250px]">
+            <p className="text-ink-4 text-sm max-w-[250px]">
               Skor girildiğinde tamamlanan maçlar burada listelenecektir.
             </p>
           </div>
@@ -55,14 +55,14 @@ const MatchesView: React.FC<MatchesViewProps> = ({ onBack, matches }) => {
                 <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 blur-3xl rounded-full -mr-16 -mt-16 group-hover:bg-blue-500/10 transition-colors"></div>
 
                 <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2 text-[10px] font-bold text-gray-500 uppercase tracking-widest">
+                  <div className="flex items-center gap-2 text-[0.625rem] font-bold text-ink-4 uppercase tracking-widest">
                     <Calendar size={12} />
                     {match.date}
                     <span className="mx-1">•</span>
                     <Clock size={12} />
                     {match.time}
                   </div>
-                  <div className="px-2 py-1 rounded-lg bg-green-500/10 text-green-400 text-[10px] font-extrabold uppercase tracking-tighter">
+                  <div className="px-2 py-1 rounded-lg bg-green-500/10 text-green-400 text-[0.625rem] font-extrabold uppercase tracking-tighter">
                     TAMAMLANDI
                   </div>
                 </div>
@@ -70,7 +70,7 @@ const MatchesView: React.FC<MatchesViewProps> = ({ onBack, matches }) => {
                 <div className="flex items-center justify-between gap-4">
                   <div className="flex-1 text-center">
                     <div className="text-sm font-extrabold italic mb-1 truncate">{match.teamA}</div>
-                    <div className="text-[10px] font-bold text-gray-500 uppercase">EV SAHİBİ</div>
+                    <div className="text-[0.6875rem] font-bold text-ink-4 uppercase">EV SAHİBİ</div>
                   </div>
 
                   <div className="flex items-center gap-4">
@@ -81,11 +81,11 @@ const MatchesView: React.FC<MatchesViewProps> = ({ onBack, matches }) => {
 
                   <div className="flex-1 text-center">
                     <div className="text-sm font-extrabold italic mb-1 truncate">{match.teamB}</div>
-                    <div className="text-[10px] font-bold text-gray-500 uppercase">DEPLASMAN</div>
+                    <div className="text-[0.6875rem] font-bold text-ink-4 uppercase">DEPLASMAN</div>
                   </div>
                 </div>
 
-                <div className="mt-4 pt-4 border-t border-white/5 flex items-center gap-2 text-[10px] font-bold text-gray-500 uppercase">
+                <div className="mt-4 pt-4 border-t border-white/5 flex items-center gap-2 text-[0.6875rem] font-bold text-ink-4 uppercase">
                   <MapPin size={12} className="text-blue-400" />
                   {match.pitch}
                 </div>

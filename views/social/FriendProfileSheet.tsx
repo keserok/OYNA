@@ -137,11 +137,11 @@ const FriendProfileSheet: React.FC<FriendProfileSheetProps> = ({
                   <h2 className="text-lg font-extrabold truncate">{friend.full_name}</h2>
                   {isFav && <Star size={14} className="text-amber-400 fill-amber-400 shrink-0" />}
                 </div>
-                <div className="text-xs text-white/40">
+                <div className="text-xs text-ink-4">
                   {friend.oyna_id ? `@${friend.oyna_id}` : 'OYNA oyuncusu'}
                   {friend.pos ? ` · ${friend.pos}` : ''}
                 </div>
-                <div className={`text-xs mt-0.5 ${online ? 'text-[#39FF14]' : 'text-white/30'}`}>
+                <div className={`text-xs mt-0.5 ${online ? 'text-[#39FF14]' : 'text-ink-4'}`}>
                   {friend.last_active_at
                     ? (online ? 'Şimdi aktif' : `Son görülme: ${formatLastSeen(friend.last_active_at)}`)
                     : ' '}
@@ -208,7 +208,7 @@ const FriendProfileSheet: React.FC<FriendProfileSheetProps> = ({
             </button>
             <h3 className="text-base font-extrabold mb-3">Hangi maça çağırıyorsun?</h3>
             {upcoming.length === 0 ? (
-              <p className="text-sm text-white/40 py-6 text-center">
+              <p className="text-sm text-ink-4 py-6 text-center">
                 Yaklaşan maçın yok. Önce Top Oyna'dan bir maç kur veya katıl.
               </p>
             ) : (
@@ -225,16 +225,16 @@ const FriendProfileSheet: React.FC<FriendProfileSheetProps> = ({
                     >
                       <div className="flex-1 min-w-0">
                         <div className="text-sm font-bold flex items-center gap-1.5">
-                          <Calendar size={13} className="text-white/40" />
+                          <Calendar size={13} className="text-ink-4" />
                           {m.date} · {m.time}
                         </div>
-                        <div className="text-[11px] text-white/40 flex items-center gap-1 mt-0.5 truncate">
+                        <div className="text-[0.6875rem] text-ink-4 flex items-center gap-1 mt-0.5 truncate">
                           <MapPin size={11} /> {m.location} · {open} boş slot
                         </div>
                       </div>
                       {busy === m.id
                         ? <Loader2 size={16} className="animate-spin text-[#39FF14]" />
-                        : <span className="text-[11px] font-extrabold text-[#39FF14]">ÇAĞIR</span>}
+                        : <span className="text-[0.6875rem] font-extrabold text-[#39FF14]">ÇAĞIR</span>}
                     </button>
                   );
                 })}
@@ -251,7 +251,7 @@ const FriendProfileSheet: React.FC<FriendProfileSheetProps> = ({
             </button>
             <h3 className="text-base font-extrabold mb-3">Listelere ekle</h3>
             {lists.length === 0 ? (
-              <p className="text-sm text-white/40 py-4">
+              <p className="text-sm text-ink-4 py-4">
                 Henüz listen yok. Arkadaşlar sekmesindeki “+ Yeni” çipiyle oluşturabilirsin.
               </p>
             ) : (

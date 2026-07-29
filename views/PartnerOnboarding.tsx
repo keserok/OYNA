@@ -259,7 +259,7 @@ const PartnerOnboarding: React.FC<PartnerOnboardingProps> = ({ onComplete, onClo
                       {/* OP-P2-13 + F0: oranlar commission_config'ten (canlı teyit 2026-07-27):
                           kapora (Model A) %15; sahibinin OYNA-organize maçında Model B %5 + %20 markup.
                           Buradaki "%10" yanlıştı — kaleci/hakem hizmet oranıyla karışmış. */}
-                      <p className="text-[10px] text-gray-400">Abonelik/sabit ücret yok — kapora işlemlerinde %15 komisyon; OYNA-organize maçlarda %5 + fiyat farkı</p>
+                      <p className="text-[0.6875rem] text-gray-400">Abonelik/sabit ücret yok — kapora işlemlerinde %15 komisyon; OYNA-organize maçlarda %5 + fiyat farkı</p>
                   </div>
               </div>
 
@@ -291,19 +291,19 @@ const PartnerOnboarding: React.FC<PartnerOnboardingProps> = ({ onComplete, onClo
                           
                           <div className="space-y-6">
                               <div className="space-y-2">
-                                  <label className="text-xs font-bold text-gray-500 uppercase">Tesis Adı</label>
+                                  <label className="text-xs font-bold text-ink-4 uppercase">Tesis Adı</label>
                                   <input 
                                     type="text" 
                                     value={facilityName}
                                     onChange={(e) => setFacilityName(e.target.value)}
                                     placeholder="Örn: Arena Sport Center" 
-                                    className="w-full bg-transparent border-b-2 border-white/20 py-3 text-2xl font-bold text-white focus:border-[#FACC15] outline-none placeholder:text-gray-700 transition-colors"
+                                    className="w-full bg-transparent border-b-2 border-white/20 py-3 text-2xl font-bold text-white focus:border-[#FACC15] outline-none placeholder:text-ink-4 transition-colors"
                                     autoFocus
                                   />
                               </div>
                               <div className="grid grid-cols-2 gap-4">
                                   <div className="space-y-2">
-                                      <label className="text-xs font-bold text-gray-500 uppercase">İl</label>
+                                      <label className="text-xs font-bold text-ink-4 uppercase">İl</label>
                                       <select
                                         value={city}
                                         onChange={(e) => { setCity(e.target.value); setDistrict(''); }}
@@ -316,7 +316,7 @@ const PartnerOnboarding: React.FC<PartnerOnboardingProps> = ({ onComplete, onClo
                                       </select>
                                   </div>
                                   <div className="space-y-2">
-                                      <label className="text-xs font-bold text-gray-500 uppercase">İlçe</label>
+                                      <label className="text-xs font-bold text-ink-4 uppercase">İlçe</label>
                                       <select
                                         value={district}
                                         onChange={(e) => setDistrict(e.target.value)}
@@ -331,15 +331,15 @@ const PartnerOnboarding: React.FC<PartnerOnboardingProps> = ({ onComplete, onClo
                                   </div>
                               </div>
                               <div className="space-y-2">
-                                  <label className="text-xs font-bold text-gray-500 uppercase">Açık Adres <span className="text-gray-600 normal-case">(opsiyonel)</span></label>
+                                  <label className="text-xs font-bold text-ink-4 uppercase">Açık Adres <span className="text-ink-4 normal-case">(opsiyonel)</span></label>
                                   <input
                                     type="text"
                                     value={addressLine}
                                     onChange={(e) => setAddressLine(e.target.value)}
                                     placeholder="Mahalle, sokak, no"
-                                    className="w-full bg-transparent border-b-2 border-white/20 py-3 text-lg font-bold text-white focus:border-[#FACC15] outline-none placeholder:text-gray-700 transition-colors"
+                                    className="w-full bg-transparent border-b-2 border-white/20 py-3 text-lg font-bold text-white focus:border-[#FACC15] outline-none placeholder:text-ink-4 transition-colors"
                                   />
-                                  <p className="text-[11px] text-gray-600">Haritadaki kesin konumu kayıttan sonra Tesis Ayarları → Konum'dan işaretleyebilirsin.</p>
+                                  <p className="text-[0.6875rem] text-ink-4">Haritadaki kesin konumu kayıttan sonra Tesis Ayarları → Konum'dan işaretleyebilirsin.</p>
                               </div>
                           </div>
                       </div>
@@ -352,7 +352,7 @@ const PartnerOnboarding: React.FC<PartnerOnboardingProps> = ({ onComplete, onClo
                           
                           <div className="space-y-6">
                               <div className="space-y-2">
-                                  <label className="text-xs font-bold text-gray-500 uppercase">Saatlik Ücret (TL)</label>
+                                  <label className="text-xs font-bold text-ink-4 uppercase">Saatlik Ücret (TL)</label>
                                   <div className="flex items-center gap-2">
                                       <span className="text-3xl font-extrabold text-[#FACC15]">₺</span>
                                       <input 
@@ -360,7 +360,7 @@ const PartnerOnboarding: React.FC<PartnerOnboardingProps> = ({ onComplete, onClo
                                         value={price}
                                         onChange={(e) => setPrice(e.target.value)}
                                         placeholder="0" 
-                                        className="w-full bg-transparent border-b-2 border-white/20 py-3 text-4xl font-extrabold text-white focus:border-[#FACC15] outline-none placeholder:text-gray-700 transition-colors"
+                                        className="w-full bg-transparent border-b-2 border-white/20 py-3 text-4xl font-extrabold text-white focus:border-[#FACC15] outline-none placeholder:text-ink-4 transition-colors"
                                       />
                                   </div>
                               </div>
@@ -375,13 +375,13 @@ const PartnerOnboarding: React.FC<PartnerOnboardingProps> = ({ onComplete, onClo
                           
                           <div className="space-y-6">
                               <div className="space-y-2">
-                                  <label className="text-xs font-bold text-gray-500 uppercase">IBAN</label>
+                                  <label className="text-xs font-bold text-ink-4 uppercase">IBAN</label>
                                   <input 
                                     type="text" 
                                     value={iban}
                                     onChange={(e) => setIban(e.target.value)}
                                     placeholder="TR00 0000..." 
-                                    className="w-full bg-transparent border-b-2 border-white/20 py-3 text-xl font-mono font-bold text-white focus:border-[#FACC15] outline-none placeholder:text-gray-700 transition-colors"
+                                    className="w-full bg-transparent border-b-2 border-white/20 py-3 text-xl font-mono font-bold text-white focus:border-[#FACC15] outline-none placeholder:text-ink-4 transition-colors"
                                   />
                               </div>
                               <div className="bg-green-900/20 border border-green-500/30 p-4 rounded-2xl flex items-start gap-3">
@@ -447,7 +447,7 @@ const PartnerOnboarding: React.FC<PartnerOnboardingProps> = ({ onComplete, onClo
                                       ) : (
                                           <span className="w-6 h-6 rounded-full border-2 border-white/10" />
                                       )}
-                                      <span className={`text-sm font-bold ${done ? 'text-green-300' : active ? 'text-white' : 'text-gray-600'}`}>{label}</span>
+                                      <span className={`text-sm font-bold ${done ? 'text-green-300' : active ? 'text-white' : 'text-ink-4'}`}>{label}</span>
                                   </div>
                               );
                           })}
@@ -480,7 +480,7 @@ const PartnerOnboarding: React.FC<PartnerOnboardingProps> = ({ onComplete, onClo
                       <h1 className="font-bold text-white text-sm">{facilityName || 'Arena Sport'}</h1>
                       <div className="flex items-center gap-1">
                           <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                          <span className="text-[10px] text-green-400 font-bold">CANLI</span>
+                          <span className="text-[0.6875rem] text-green-400 font-bold">CANLI</span>
                       </div>
                   </div>
               </div>
@@ -511,14 +511,14 @@ const PartnerOnboarding: React.FC<PartnerOnboardingProps> = ({ onComplete, onClo
                               <Zap className="text-[#FACC15]" size={20} />
                               <div>
                                   <p className="font-bold text-white text-sm">Öncelikli Sıralama</p>
-                                  <p className="text-[10px] text-gray-400">7 gün boyunca listenin en tepesindesiniz.</p>
+                                  <p className="text-[0.6875rem] text-gray-400">7 gün boyunca listenin en tepesindesiniz.</p>
                               </div>
                           </div>
                           <div className="bg-black/40 p-3 rounded-xl flex items-center gap-3 border border-white/5">
                               <Award className="text-blue-400" size={20} />
                               <div>
                                   <p className="font-bold text-white text-sm">Dijital OYNA Afişi</p>
-                                  <p className="text-[10px] text-gray-400">QR kodlu afişiniz hazır. <button className="text-[#FACC15] hover:underline">İndir (PDF)</button></p>
+                                  <p className="text-[0.6875rem] text-gray-400">QR kodlu afişiniz hazır. <button className="text-[#FACC15] hover:underline">İndir (PDF)</button></p>
                               </div>
                           </div>
                       </div>
@@ -532,7 +532,7 @@ const PartnerOnboarding: React.FC<PartnerOnboardingProps> = ({ onComplete, onClo
                   </div>
                   <div>
                       <h4 className="font-bold text-white text-sm">Tesisiniz incelemeye alındı</h4>
-                      <p className="text-[11px] text-gray-400 leading-relaxed mt-1">
+                      <p className="text-[0.6875rem] text-gray-400 leading-relaxed mt-1">
                           Ekibimiz tesisinizi 24 saat içinde onaylar. Onaylandığında size anlık bildirim göndereceğiz ve tesisiniz oyunculara görünür olacak.
                       </p>
                   </div>
@@ -542,18 +542,18 @@ const PartnerOnboarding: React.FC<PartnerOnboardingProps> = ({ onComplete, onClo
               <div className="grid grid-cols-2 gap-4">
                   <div className="bg-[#161B22] p-4 rounded-2xl border border-[#39FF14]/20">
                       <TrendingUp className="text-[#39FF14] mb-2" size={20} />
-                      <p className="text-[10px] text-gray-500 uppercase font-bold">Tahmini Aylık Ek Gelir</p>
+                      <p className="text-[0.6875rem] text-ink-4 uppercase font-bold">Tahmini Aylık Ek Gelir</p>
                       <p className="text-xl font-extrabold text-[#39FF14]">₺{estimatedRevenue.toLocaleString('tr-TR')}</p>
                   </div>
                   <div className="bg-[#161B22] p-4 rounded-2xl border border-white/5">
                       <MapPin className="text-[#FACC15] mb-2" size={20} />
-                      <p className="text-[10px] text-gray-500 uppercase font-bold">Bölgenizde OYNA'da</p>
+                      <p className="text-[0.6875rem] text-ink-4 uppercase font-bold">Bölgenizde OYNA'da</p>
                       <p className="text-xl font-extrabold text-white">{nearbyCount} tesis</p>
                   </div>
                   <div className="col-span-2 bg-[#161B22] p-4 rounded-2xl border border-white/5 flex items-center justify-between">
                       <div>
-                          <p className="text-[10px] text-gray-500 uppercase font-bold">İlk rezervasyona tahmini</p>
-                          <p className="text-[11px] text-gray-400">Onay sonrası ilk talep beklentisi</p>
+                          <p className="text-[0.6875rem] text-ink-4 uppercase font-bold">İlk rezervasyona tahmini</p>
+                          <p className="text-[0.6875rem] text-gray-400">Onay sonrası ilk talep beklentisi</p>
                       </div>
                       <p className="text-2xl font-extrabold text-[#FACC15] font-mono tabular-nums">{fmtCountdown(firstBookingSeconds)}</p>
                   </div>

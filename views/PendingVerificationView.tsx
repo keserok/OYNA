@@ -200,7 +200,7 @@ const PendingVerificationView: React.FC<PendingVerificationViewProps> = ({ onApp
           transition={{ delay: 0.15, duration: 0.5 }}
           className="text-center mb-2"
         >
-          <p className="text-[10px] font-extrabold tracking-[0.3em] text-gray-500 uppercase mb-3">
+          <p className="text-[0.625rem] font-extrabold tracking-[0.3em] text-ink-4 uppercase mb-3">
             Kaleci / Hakem
           </p>
           <h1
@@ -235,7 +235,7 @@ const PendingVerificationView: React.FC<PendingVerificationViewProps> = ({ onApp
           <button
             onClick={() => checkStatus(true)}
             disabled={checking}
-            className="flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-widest text-gray-400 hover:text-white transition-colors disabled:opacity-50 py-1"
+            className="flex items-center gap-2 text-[0.6875rem] font-extrabold uppercase tracking-widest text-gray-400 hover:text-white transition-colors disabled:opacity-50 py-1"
           >
             <RefreshCw size={13} className={checking ? 'animate-spin' : ''} />
             {checking ? 'Kontrol ediliyor…' : 'Durumu Yenile'}
@@ -277,7 +277,7 @@ const PendingVerificationView: React.FC<PendingVerificationViewProps> = ({ onApp
             border: '1px solid rgba(250,204,21,0.1)',
           }}
         >
-          <p className="text-[10px] font-extrabold uppercase tracking-widest text-[#FACC15] mb-4">
+          <p className="text-[0.625rem] font-extrabold uppercase tracking-widest text-[#FACC15] mb-4">
             İnceleme Adımları
           </p>
           <div className="space-y-3">
@@ -287,7 +287,7 @@ const PendingVerificationView: React.FC<PendingVerificationViewProps> = ({ onApp
               { done: false, text: 'Sonuç bu ekrana düşecek' },
             ].map((item, i) => (
               <div key={i} className="flex items-center gap-3 text-gray-300 text-sm">
-                <span className={item.done ? 'text-[#39FF14]' : 'text-white/30'}>
+                <span className={item.done ? 'text-[#39FF14]' : 'text-ink-4'}>
                   {item.done ? <CheckCircle2 size={16} /> : <Clock size={16} />}
                 </span>
                 <span className={item.done ? 'text-white' : 'text-gray-400'}>{item.text}</span>
@@ -305,7 +305,7 @@ const PendingVerificationView: React.FC<PendingVerificationViewProps> = ({ onApp
         >
           <button
             onClick={handleLogout}
-            className="flex items-center gap-2 mx-auto text-sm text-gray-500 hover:text-gray-300 transition-colors py-2"
+            className="flex items-center gap-2 mx-auto text-sm text-ink-4 hover:text-gray-300 transition-colors py-2"
           >
             <LogOut size={14} />
             Başka bir hesapla giriş yap
@@ -344,7 +344,7 @@ const PendingVerificationView: React.FC<PendingVerificationViewProps> = ({ onApp
                   {rejectionNotes}
                 </p>
               )}
-              <p className="text-xs text-gray-500 text-center mb-6">
+              <p className="text-xs text-ink-4 text-center mb-6">
                 Profilini güncelleyerek tekrar başvurabilirsin.
               </p>
               <div className="space-y-3">

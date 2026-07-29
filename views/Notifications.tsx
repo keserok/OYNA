@@ -329,7 +329,7 @@ const Notifications: React.FC<NotificationsProps> = ({ onBack, role }) => {
                 <motion.span
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
-                  className="w-5 h-5 rounded-full text-[10px] font-extrabold text-black flex items-center justify-center"
+                  className="w-5 h-5 rounded-full text-[0.6875rem] font-extrabold text-black flex items-center justify-center"
                   style={{ background: accentColor }}
                 >
                   {unread}
@@ -342,7 +342,7 @@ const Notifications: React.FC<NotificationsProps> = ({ onBack, role }) => {
             <motion.button
               whileTap={{ scale: 0.95 }}
               onClick={handleMarkAll}
-              className="px-3 py-2 rounded-xl text-[10px] font-extrabold border border-white/10 text-gray-400"
+              className="px-3 py-2 rounded-xl text-[0.6875rem] font-extrabold border border-white/10 text-gray-400"
               style={{ background: 'rgba(255,255,255,0.04)' }}
             >
               Tümünü Oku
@@ -359,7 +359,7 @@ const Notifications: React.FC<NotificationsProps> = ({ onBack, role }) => {
                 <button
                   key={c.key}
                   onClick={() => setActiveCat(c.key)}
-                  className="px-3.5 py-1.5 rounded-full text-[11px] font-extrabold whitespace-nowrap transition-all border"
+                  className="px-3.5 py-1.5 rounded-full text-[0.6875rem] font-extrabold whitespace-nowrap transition-all border"
                   style={{
                     background: active ? accentColor : 'rgba(255,255,255,0.04)',
                     color: active ? '#000' : 'rgba(255,255,255,0.6)',
@@ -378,7 +378,7 @@ const Notifications: React.FC<NotificationsProps> = ({ onBack, role }) => {
           {loading ? (
             <div className="flex flex-col items-center justify-center py-28 text-center">
               <Spinner size={32} color={accentColor} className="mb-4" />
-              <p className="text-sm text-gray-500">Bildirimler yükleniyor…</p>
+              <p className="text-sm text-ink-4">Bildirimler yükleniyor…</p>
             </div>
           ) : error ? (
             <div className="flex flex-col items-center justify-center py-28 text-center">
@@ -389,7 +389,7 @@ const Notifications: React.FC<NotificationsProps> = ({ onBack, role }) => {
                 <AlertTriangle size={32} style={{ color: '#ef4444' }} />
               </div>
               <h3 className="text-lg font-extrabold text-white mb-1">Bir şeyler ters gitti</h3>
-              <p className="text-sm text-gray-500 mb-5">{error}</p>
+              <p className="text-sm text-ink-4 mb-5">{error}</p>
               <motion.button
                 whileTap={{ scale: 0.95 }}
                 onClick={load}
@@ -413,12 +413,12 @@ const Notifications: React.FC<NotificationsProps> = ({ onBack, role }) => {
                 <Bell size={32} style={{ color: accentColor }} />
               </div>
               <h3 className="text-lg font-extrabold text-white mb-1">Henüz bildirimin yok</h3>
-              <p className="text-sm text-gray-500">Yeni bir şey olduğunda burada göreceksin.</p>
+              <p className="text-sm text-ink-4">Yeni bir şey olduğunda burada göreceksin.</p>
             </motion.div>
           ) : visibleNotifs.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-24 text-center">
               <Bell size={28} className="mb-3" style={{ color: accentColor, opacity: 0.5 }} />
-              <p className="text-sm text-gray-500">Bu kategoride bildirim yok.</p>
+              <p className="text-sm text-ink-4">Bu kategoride bildirim yok.</p>
             </div>
           ) : (
             <motion.div variants={container} initial="hidden" animate="show" className="space-y-3">
@@ -471,17 +471,17 @@ const Notifications: React.FC<NotificationsProps> = ({ onBack, role }) => {
                                   style={{ background: accentColor, boxShadow: `0 0 8px ${accentColor}` }}
                                 />
                               )}
-                              <span className="text-[10px] text-gray-500 font-medium">{relativeTime(n.createdAt)}</span>
+                              <span className="text-[0.6875rem] text-ink-4 font-medium">{relativeTime(n.createdAt)}</span>
                             </div>
                           </div>
-                          {n.body && <p className="text-[11px] text-gray-400 leading-relaxed">{n.body}</p>}
+                          {n.body && <p className="text-[0.6875rem] text-gray-400 leading-relaxed">{n.body}</p>}
 
                           {isInvite ? (
-                            <div className="mt-3 flex items-center gap-1 text-[11px] font-extrabold uppercase text-[#39FF14] bg-[#39FF14]/10 w-max px-3 py-1.5 rounded-xl border border-[#39FF14]/20">
+                            <div className="mt-3 flex items-center gap-1 text-[0.6875rem] font-extrabold uppercase text-[#39FF14] bg-[#39FF14]/10 w-max px-3 py-1.5 rounded-xl border border-[#39FF14]/20">
                               Daveti İncele <ChevronRight size={14} />
                             </div>
                           ) : (n.deepLink || n.matchId) ? (
-                            <div className="mt-2 flex items-center gap-1 text-[11px] font-extrabold" style={{ color }}>
+                            <div className="mt-2 flex items-center gap-1 text-[0.6875rem] font-extrabold" style={{ color }}>
                               Görüntüle <ChevronRight size={12} />
                             </div>
                           ) : null}
@@ -521,7 +521,7 @@ const Notifications: React.FC<NotificationsProps> = ({ onBack, role }) => {
                 </button>
 
                 <div className="absolute bottom-6 left-6 right-6">
-                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#39FF14]/20 border border-[#39FF14]/30 text-[#39FF14] text-[10px] font-extrabold uppercase tracking-widest mb-3">
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#39FF14]/20 border border-[#39FF14]/30 text-[#39FF14] text-[0.625rem] font-extrabold uppercase tracking-widest mb-3">
                     <CheckCircle size={12} /> Davet Edildin
                   </div>
                   <h2 className="text-2xl font-extrabold text-white italic tracking-tighter uppercase drop-shadow-lg">
@@ -547,7 +547,7 @@ const Notifications: React.FC<NotificationsProps> = ({ onBack, role }) => {
                   </div>
                 )}
 
-                <p className="text-[13px] text-[#8B949E] text-center px-4 leading-relaxed mt-auto">
+                <p className="text-[0.8125rem] text-[#8B949E] text-center px-4 leading-relaxed mt-auto">
                   Geliyorum dersen maç lobisine gidersin. Yerin, ödemeni tamamlayınca kesinleşir.
                 </p>
               </div>
@@ -558,7 +558,7 @@ const Notifications: React.FC<NotificationsProps> = ({ onBack, role }) => {
                   <button
                     onClick={() => { const inv = selectedInvite; setSelectedInvite(null); void routeTo(inv); }}
                     disabled={inviteBusy}
-                    className="w-full h-14 rounded-2xl bg-[#39FF14] text-[#0A0E14] text-[15px] font-bold uppercase flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-60"
+                    className="w-full h-14 rounded-2xl bg-[#39FF14] text-[#0A0E14] text-[0.9375rem] font-bold uppercase flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-60"
                   >
                     <CheckCircle size={20} /> Geliyorum
                   </button>
@@ -566,14 +566,14 @@ const Notifications: React.FC<NotificationsProps> = ({ onBack, role }) => {
                     <button
                       onClick={handleDeclineInvite}
                       disabled={inviteBusy}
-                      className="flex-1 h-14 rounded-2xl bg-[#F87171]/10 border border-[#F87171]/40 text-[#F87171] text-[15px] font-bold flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-60"
+                      className="flex-1 h-14 rounded-2xl bg-[#F87171]/10 border border-[#F87171]/40 text-[#F87171] text-[0.9375rem] font-bold flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-60"
                     >
                       {inviteBusy ? <Spinner size={18} color="#F87171" /> : <><X size={18} /> Gelemem</>}
                     </button>
                     <button
                       onClick={() => setSelectedInvite(null)}
                       disabled={inviteBusy}
-                      className="flex-1 h-14 rounded-2xl bg-white/5 border border-white/10 text-[#A9B4C0] text-[15px] font-bold active:scale-[0.98] transition-transform disabled:opacity-60"
+                      className="flex-1 h-14 rounded-2xl bg-white/5 border border-white/10 text-[#A9B4C0] text-[0.9375rem] font-bold active:scale-[0.98] transition-transform disabled:opacity-60"
                     >
                       Sonra Bakarım
                     </button>

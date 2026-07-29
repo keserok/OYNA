@@ -47,12 +47,12 @@ export const ShowcaseScoreCard: React.FC<Props> = ({ pitchId, onTaskClick, refre
       <div className="bg-[#0A0E14] border border-white/5 rounded-2xl p-5">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-[10px] font-extrabold text-gray-500 uppercase tracking-widest">Vitrin Skoru</p>
-            <p className="text-[11px] text-gray-500 mt-1 max-w-[200px] leading-relaxed">
+            <p className="text-[0.625rem] font-extrabold text-ink-4 uppercase tracking-widest">Vitrin Skoru</p>
+            <p className="text-[0.6875rem] text-ink-4 mt-1 max-w-[200px] leading-relaxed">
               Eksiksiz profiller vitrinde daha üstte listelenir ve daha çok rezervasyon alır.
             </p>
           </div>
-          <div className={`text-4xl font-extrabold italic ${tone}`}>{score.score}<span className="text-sm text-gray-600">/100</span></div>
+          <div className={`text-4xl font-extrabold italic ${tone}`}>{score.score}<span className="text-sm text-ink-4">/100</span></div>
         </div>
         <div className="mt-3 h-2 bg-white/5 rounded-full overflow-hidden">
           <div
@@ -66,13 +66,13 @@ export const ShowcaseScoreCard: React.FC<Props> = ({ pitchId, onTaskClick, refre
               key={t.key}
               type="button"
               onClick={() => !t.done && onTaskClick?.(t.key)}
-              className={`w-full flex items-center gap-2.5 text-left text-xs font-semibold ${t.done ? 'text-gray-500' : 'text-white'}`}
+              className={`w-full flex items-center gap-2.5 text-left text-xs font-semibold ${t.done ? 'text-ink-4' : 'text-white'}`}
             >
               {t.done
                 ? <CheckCircle2 size={15} className="text-[#39FF14] shrink-0" />
-                : <Circle size={15} className="text-gray-600 shrink-0" />}
+                : <Circle size={15} className="text-ink-4 shrink-0" />}
               <span className={t.done ? 'line-through' : ''}>{t.label}</span>
-              <span className="ml-auto text-[10px] font-extrabold text-gray-600">+{t.points}</span>
+              <span className="ml-auto text-[0.6875rem] font-extrabold text-ink-4">+{t.points}</span>
             </button>
           ))}
         </div>
@@ -88,8 +88,8 @@ export const ShowcaseScoreCard: React.FC<Props> = ({ pitchId, onTaskClick, refre
             <div key={label} className="bg-[#0A0E14] border border-white/5 rounded-2xl p-3.5 text-center">
               <Icon size={15} className="mx-auto text-[#39FF14]" />
               <div className="text-xl font-extrabold text-white mt-1.5">{value}</div>
-              <div className="text-[9px] font-bold text-gray-500 uppercase tracking-wider">{label}</div>
-              <div className="text-[8px] text-gray-600">{sub}</div>
+              <div className="text-[0.625rem] font-bold text-ink-4 uppercase tracking-wider">{label}</div>
+              <div className="text-[0.6875rem] text-ink-4">{sub}</div>
             </div>
           ))}
         </div>

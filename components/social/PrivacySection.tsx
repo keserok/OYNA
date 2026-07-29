@@ -94,7 +94,7 @@ const PrivacySection: React.FC<PrivacySectionProps> = ({ embedded = false }) => 
   return (
     <section>
       {!embedded && (
-        <h3 className="text-xs font-bold text-gray-500 uppercase mb-3 ml-2 flex items-center gap-2">
+        <h3 className="text-xs font-bold text-ink-4 uppercase mb-3 ml-2 flex items-center gap-2">
           <Lock size={12} className="text-[#39FF14]" /> Gizlilik
         </h3>
       )}
@@ -104,7 +104,7 @@ const PrivacySection: React.FC<PrivacySectionProps> = ({ embedded = false }) => 
             <span className="text-white/50">{r.icon}</span>
             <div className="flex-1 min-w-0">
               <div className="text-sm font-bold text-white">{r.title}</div>
-              <div className="text-[11px] text-white/40">{r.desc}</div>
+              <div className="text-[0.6875rem] text-ink-4">{r.desc}</div>
             </div>
             <button
               role="switch"
@@ -127,7 +127,7 @@ const PrivacySection: React.FC<PrivacySectionProps> = ({ embedded = false }) => 
         >
           <Ban size={18} className="text-[#FF4D4D]" />
           <span className="flex-1 text-sm font-bold text-white">Engellenenler</span>
-          <span className="text-xs text-white/40">Yönet</span>
+          <span className="text-xs text-ink-4">Yönet</span>
         </button>
       </div>
 
@@ -137,7 +137,7 @@ const PrivacySection: React.FC<PrivacySectionProps> = ({ embedded = false }) => 
           {blocked === null ? (
             <div className="py-8 flex justify-center"><Spinner size={20} color="rgba(255,255,255,0.4)" glow={false} /></div>
           ) : blocked.length === 0 ? (
-            <p className="text-sm text-white/40 py-6 text-center">Engellediğin kimse yok.</p>
+            <p className="text-sm text-ink-4 py-6 text-center">Engellediğin kimse yok.</p>
           ) : (
             <div className="space-y-2">
               {blocked.map(b => (
@@ -145,12 +145,12 @@ const PrivacySection: React.FC<PrivacySectionProps> = ({ embedded = false }) => 
                   <Avatar name={b.full_name} src={b.avatar_url} size="md" />
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-bold truncate">{b.full_name}</div>
-                    <div className="text-[11px] text-white/35">{b.oyna_id ? `@${b.oyna_id}` : ''}</div>
+                    <div className="text-[0.6875rem] text-ink-4">{b.oyna_id ? `@${b.oyna_id}` : ''}</div>
                   </div>
                   <button
                     disabled={busyId === b.blocked_id}
                     onClick={() => doUnblock(b.blocked_id)}
-                    className="h-9 px-3 rounded-xl bg-white/5 border border-white/10 text-[11px] font-bold text-white/70 active:scale-95"
+                    className="h-9 px-3 rounded-xl bg-white/5 border border-white/10 text-[0.6875rem] font-bold text-white/70 active:scale-95"
                   >
                     {busyId === b.blocked_id ? '…' : 'Engeli Kaldır'}
                   </button>

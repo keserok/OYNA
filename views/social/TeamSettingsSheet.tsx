@@ -26,7 +26,7 @@ import {
 const FORMATS: TeamFormat[] = ['3v3', '4v4', '5v5', '6v6', '7v7', '8v8', '9v9', '10v10', '11v11'];
 
 const SectionTitle: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <h4 className="text-[10px] font-extrabold uppercase tracking-widest text-white/40 mb-2 mt-5 first:mt-0">
+  <h4 className="text-[0.625rem] font-extrabold uppercase tracking-widest text-ink-4 mb-2 mt-5 first:mt-0">
     {children}
   </h4>
 );
@@ -214,14 +214,14 @@ const TeamSettingsSheet: React.FC<TeamSettingsSheetProps> = ({
               value={name}
               onChange={e => setName(e.target.value.slice(0, 32))}
               placeholder="Takım adı"
-              className="w-full h-12 px-4 rounded-2xl bg-white/5 border border-white/10 text-sm font-semibold placeholder:text-white/25 focus:outline-none focus:border-[#39FF14]/50"
+              className="w-full h-12 px-4 rounded-2xl bg-white/5 border border-white/10 text-sm font-semibold placeholder:text-ink-4 focus:outline-none focus:border-[#39FF14]/50"
             />
             <div className="flex gap-2">
               <input
                 value={shortName}
                 onChange={e => setShortName(e.target.value.slice(0, 4))}
                 placeholder="KISA"
-                className="w-24 h-12 px-3 rounded-2xl bg-white/5 border border-white/10 text-sm font-extrabold text-center uppercase placeholder:text-white/25 focus:outline-none focus:border-white/25"
+                className="w-24 h-12 px-3 rounded-2xl bg-white/5 border border-white/10 text-sm font-extrabold text-center uppercase placeholder:text-ink-4 focus:outline-none focus:border-white/25"
               />
               <button
                 onClick={() => setCrestOpen(v => !v)}
@@ -229,7 +229,7 @@ const TeamSettingsSheet: React.FC<TeamSettingsSheetProps> = ({
               >
                 <TeamCrest config={crest} color1={color1} color2={color2} size={28} />
                 <span className="flex-1 text-left text-sm font-bold text-white/80">Arma & Renkler</span>
-                <ChevronRight size={15} className={`text-white/40 transition-transform ${crestOpen ? 'rotate-90' : ''}`} />
+                <ChevronRight size={15} className={`text-ink-4 transition-transform ${crestOpen ? 'rotate-90' : ''}`} />
               </button>
             </div>
             {crestOpen && (
@@ -272,7 +272,7 @@ const TeamSettingsSheet: React.FC<TeamSettingsSheetProps> = ({
               value={city}
               onChange={e => setCity(e.target.value.slice(0, 32))}
               placeholder="Şehir / ilçe"
-              className="w-full h-12 px-4 rounded-2xl bg-white/5 border border-white/10 text-sm font-semibold placeholder:text-white/25 focus:outline-none focus:border-white/25"
+              className="w-full h-12 px-4 rounded-2xl bg-white/5 border border-white/10 text-sm font-semibold placeholder:text-ink-4 focus:outline-none focus:border-white/25"
             />
           </div>
 
@@ -287,8 +287,8 @@ const TeamSettingsSheet: React.FC<TeamSettingsSheetProps> = ({
                 }`}
               >
                 <Globe2 size={15} className="text-[#39FF14]" />
-                <div className="text-[13px] font-bold mt-1">Herkese Açık</div>
-                <div className="text-[10px] text-white/40">Dizinde görünür</div>
+                <div className="text-[0.8125rem] font-bold mt-1">Herkese Açık</div>
+                <div className="text-[0.6875rem] text-ink-4">Dizinde görünür</div>
               </button>
               <button
                 onClick={() => setVisibility('PRIVATE')}
@@ -297,16 +297,16 @@ const TeamSettingsSheet: React.FC<TeamSettingsSheetProps> = ({
                 }`}
               >
                 <Lock size={15} className="text-white/60" />
-                <div className="text-[13px] font-bold mt-1">Gizli</div>
-                <div className="text-[10px] text-white/40">Yalnız davetle</div>
+                <div className="text-[0.8125rem] font-bold mt-1">Gizli</div>
+                <div className="text-[0.6875rem] text-ink-4">Yalnız davetle</div>
               </button>
             </div>
 
             <label className="flex items-center gap-3 rounded-2xl bg-white/4 border border-white/8 p-3">
               <Zap size={15} className="text-[#39FF14]" />
               <div className="flex-1">
-                <div className="text-[13px] font-bold">Oyuncu Arıyoruz</div>
-                <div className="text-[10px] text-white/40">Dizinde ⚡ rozetiyle görünür</div>
+                <div className="text-[0.8125rem] font-bold">Oyuncu Arıyoruz</div>
+                <div className="text-[0.6875rem] text-ink-4">Dizinde ⚡ rozetiyle görünür</div>
               </div>
               <button
                 role="switch"
@@ -322,32 +322,32 @@ const TeamSettingsSheet: React.FC<TeamSettingsSheetProps> = ({
             <div className="rounded-2xl bg-white/4 border border-white/8 p-3">
               <div className="flex items-center gap-2">
                 <Link2 size={14} className="text-[#39FF14]" />
-                <span className="text-[13px] font-bold flex-1">Davet Linki</span>
-                {linkLoading && <Loader2 size={13} className="animate-spin text-white/40" />}
+                <span className="text-[0.8125rem] font-bold flex-1">Davet Linki</span>
+                {linkLoading && <Loader2 size={13} className="animate-spin text-ink-4" />}
               </div>
               {link ? (
                 <>
-                  <div className="text-[11px] text-white/45 font-mono truncate mt-2">
+                  <div className="text-[0.6875rem] text-ink-4 font-mono truncate mt-2">
                     {inviteLinkUrl(link)}
                   </div>
                   <div className="flex gap-2 mt-2.5">
                     <button
                       onClick={copyLink}
-                      className="flex-1 h-9 rounded-xl bg-white/6 border border-white/10 text-[11px] font-bold flex items-center justify-center gap-1.5 active:scale-95"
+                      className="flex-1 h-9 rounded-xl bg-white/6 border border-white/10 text-[0.6875rem] font-bold flex items-center justify-center gap-1.5 active:scale-95"
                     >
                       <Copy size={12} /> Kopyala
                     </button>
                     <button
                       onClick={() => linkAction('RENEW')}
                       disabled={linkBusy}
-                      className="flex-1 h-9 rounded-xl bg-white/6 border border-white/10 text-[11px] font-bold flex items-center justify-center gap-1.5 active:scale-95 disabled:opacity-50"
+                      className="flex-1 h-9 rounded-xl bg-white/6 border border-white/10 text-[0.6875rem] font-bold flex items-center justify-center gap-1.5 active:scale-95 disabled:opacity-50"
                     >
                       <RefreshCw size={12} /> Yenile
                     </button>
                     <button
                       onClick={() => linkAction('DISABLE')}
                       disabled={linkBusy}
-                      className="h-9 px-3 rounded-xl bg-[#FF4D4D]/8 border border-[#FF4D4D]/25 text-[11px] font-bold text-[#FF4D4D] active:scale-95 disabled:opacity-50"
+                      className="h-9 px-3 rounded-xl bg-[#FF4D4D]/8 border border-[#FF4D4D]/25 text-[0.6875rem] font-bold text-[#FF4D4D] active:scale-95 disabled:opacity-50"
                     >
                       Kapat
                     </button>
@@ -371,7 +371,7 @@ const TeamSettingsSheet: React.FC<TeamSettingsSheetProps> = ({
             value={playStyle}
             onChange={e => setPlayStyle(e.target.value.slice(0, 24))}
             placeholder="Oyun stili — ör. Tiki-taka, Kontra"
-            className="w-full h-12 px-4 rounded-2xl bg-white/5 border border-white/10 text-sm font-semibold placeholder:text-white/25 focus:outline-none focus:border-white/25"
+            className="w-full h-12 px-4 rounded-2xl bg-white/5 border border-white/10 text-sm font-semibold placeholder:text-ink-4 focus:outline-none focus:border-white/25"
           />
 
           <button
@@ -393,7 +393,7 @@ const TeamSettingsSheet: React.FC<TeamSettingsSheetProps> = ({
                 >
                   <ArrowRightLeft size={15} className="text-[#F2C500]" />
                   <span className="flex-1 text-left">Kaptanlığı Devret</span>
-                  <ChevronRight size={15} className={`text-white/40 transition-transform ${transferOpen ? 'rotate-90' : ''}`} />
+                  <ChevronRight size={15} className={`text-ink-4 transition-transform ${transferOpen ? 'rotate-90' : ''}`} />
                 </button>
                 {transferOpen && (
                   <div className="px-3 pb-3 space-y-1.5 max-h-48 overflow-y-auto custom-scrollbar">
@@ -404,8 +404,8 @@ const TeamSettingsSheet: React.FC<TeamSettingsSheetProps> = ({
                         className="w-full flex items-center gap-2.5 rounded-xl bg-white/4 border border-white/8 p-2.5 active:scale-[0.98]"
                       >
                         <Avatar name={m.full_name} src={m.avatar_url} size="sm" />
-                        <span className="flex-1 text-left text-[13px] font-bold truncate">{m.full_name}</span>
-                        <span className="text-[10px] text-white/35">
+                        <span className="flex-1 text-left text-[0.8125rem] font-bold truncate">{m.full_name}</span>
+                        <span className="text-[0.6875rem] text-ink-4">
                           {m.role === 'ADMIN' ? 'Yönetici' : 'Oyuncu'}
                         </span>
                       </button>

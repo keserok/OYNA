@@ -798,7 +798,7 @@ const App: React.FC = () => {
     <div className="h-full bg-[#0A0E14] text-white font-['Inter'] relative overflow-hidden">
       <OfflineBanner />
       {loadDegraded && (
-        <div className="fixed top-0 inset-x-0 z-[60] bg-amber-500/90 backdrop-blur-sm text-[#0A0E14] text-[12px] font-bold px-4 py-2 pt-safe-2 flex items-center justify-between gap-3">
+        <div className="fixed top-0 inset-x-0 z-[60] bg-amber-500/90 backdrop-blur-sm text-[#0A0E14] text-[0.75rem] font-bold px-4 py-2 pt-safe-2 flex items-center justify-between gap-3">
           <span className="min-w-0 truncate">Bağlantı zayıf — bazı veriler yüklenemedi.</span>
           <button
             onClick={() => useAppStore.getState().retryInitialLoad()}
@@ -904,7 +904,7 @@ const App: React.FC = () => {
             <div className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping" />
               <span className="w-2.5 h-2.5 rounded-full bg-red-500 absolute" />
-              <p className="text-[11px] font-extrabold uppercase tracking-wider text-white">
+              <p className="text-[0.6875rem] font-extrabold uppercase tracking-wider text-white">
                 GHOST MODE: <span className="text-red-400">{impersonatedUser.name}</span> TAKLİT EDİLİYOR
               </p>
             </div>
@@ -918,7 +918,7 @@ const App: React.FC = () => {
                 setOriginalRole(null);
                 resetNavigation('ADMIN_PANEL');
               }}
-              className="px-3.5 py-1.5 bg-red-500 hover:bg-red-600 text-white text-[10px] font-extrabold tracking-widest uppercase rounded-full transition-all"
+              className="px-3.5 py-1.5 bg-red-500 hover:bg-red-600 text-white text-[0.625rem] font-extrabold tracking-widest uppercase rounded-full transition-all"
             >
               Taklidi Bitir
             </button>

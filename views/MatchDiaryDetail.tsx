@@ -177,14 +177,14 @@ const MatchDiaryDetail: React.FC<MatchDiaryDetailProps> = ({ diaryId, onBack }) 
 
                     {/* Content */}
                     <div className="relative z-10 flex flex-col items-center w-full">
-                        <div className={`px-5 py-1.5 rounded-full text-[10px] font-extrabold uppercase tracking-widest mb-6 border ${badgeBg} ${badgeText} ${badgeBorder}`}>
+                        <div className={`px-5 py-1.5 rounded-full text-[0.625rem] font-extrabold uppercase tracking-widest mb-6 border ${badgeBg} ${badgeText} ${badgeBorder}`}>
                             {badgeLabel}
                         </div>
 
                         <h2 className="text-7xl font-extrabold text-white mb-4 tracking-tighter leading-none italic">{match.score}</h2>
 
                         {noScore && (
-                            <p className="text-xs font-semibold text-gray-500 -mt-2 mb-4 max-w-[240px] leading-relaxed">
+                            <p className="text-xs font-semibold text-ink-4 -mt-2 mb-4 max-w-[240px] leading-relaxed">
                                 Bu maçın skoru girilmedi. Skoru maçın hakemi veya tesis sahibi girer;
                                 girilmeyen maç istatistiklerine sayılmaz.
                             </p>
@@ -193,7 +193,7 @@ const MatchDiaryDetail: React.FC<MatchDiaryDetailProps> = ({ diaryId, onBack }) 
                         <div className="w-16 h-1 bg-white/10 rounded-full mb-6"></div>
 
                         <h3 className="text-lg font-bold text-white mb-2">{match.pitchName}</h3>
-                        <div className="flex items-center justify-center gap-4 text-xs font-bold text-gray-500 uppercase tracking-widest">
+                        <div className="flex items-center justify-center gap-4 text-xs font-bold text-ink-4 uppercase tracking-widest">
                             <span>{match.date}</span>
                             <div className="w-1 h-1 bg-gray-600 rounded-full"></div>
                             <span className="flex items-center gap-1"><Layout size={12}/> {match.formation}</span>
@@ -205,7 +205,7 @@ const MatchDiaryDetail: React.FC<MatchDiaryDetailProps> = ({ diaryId, onBack }) 
                 <section className="w-full max-w-sm flex flex-col items-center">
                     <div className="flex items-center justify-center gap-2 mb-6">
                         <div className="h-px w-12 bg-white/10"></div>
-                        <h3 className="text-xs font-extrabold text-gray-500 uppercase tracking-widest flex items-center gap-2">
+                        <h3 className="text-xs font-extrabold text-ink-4 uppercase tracking-widest flex items-center gap-2">
                             <Users size={14} /> SAHADAKİ DİZİLİŞ
                         </h3>
                         <div className="h-px w-12 bg-white/10"></div>
@@ -274,7 +274,7 @@ const MatchDiaryDetail: React.FC<MatchDiaryDetailProps> = ({ diaryId, onBack }) 
                                     <div className={`relative w-11 h-11 rounded-full border-2 shadow-2xl overflow-hidden ${isMe ? 'border-[#FACC15] ring-4 ring-[#FACC15]/30 scale-110 z-10' : 'border-white'}`}>
                                         <img src={player.avatar} alt={player.name} className="w-full h-full object-cover" />
                                     </div>
-                                    <div className={`px-2.5 py-1 rounded-md text-[9px] font-extrabold text-center whitespace-nowrap shadow-lg ${isMe ? 'bg-[#FACC15] text-black' : 'bg-[#161B22]/90 backdrop-blur-md text-white border border-white/10'}`}>
+                                    <div className={`px-2.5 py-1 rounded-md text-[0.6875rem] font-extrabold text-center whitespace-nowrap shadow-lg ${isMe ? 'bg-[#FACC15] text-black' : 'bg-[#161B22]/90 backdrop-blur-md text-white border border-white/10'}`}>
                                         {player.name}
                                     </div>
                                 </div>
@@ -287,7 +287,7 @@ const MatchDiaryDetail: React.FC<MatchDiaryDetailProps> = ({ diaryId, onBack }) 
                 <section className="w-full max-w-sm animate-in slide-in-from-bottom-10 duration-500 pb-10">
                     <div className="flex items-center justify-center gap-2 mb-6">
                         <div className="h-px w-12 bg-white/10"></div>
-                        <h3 className="text-xs font-extrabold text-gray-500 uppercase tracking-widest flex items-center gap-2">
+                        <h3 className="text-xs font-extrabold text-ink-4 uppercase tracking-widest flex items-center gap-2">
                             <PenLine size={14} /> MAÇ GÜNLÜĞÜ
                         </h3>
                         <div className="h-px w-12 bg-white/10"></div>
@@ -299,7 +299,7 @@ const MatchDiaryDetail: React.FC<MatchDiaryDetailProps> = ({ diaryId, onBack }) 
                                 <>
                                     <div className="absolute top-4 left-6 text-6xl text-[#FACC15]/5 font-serif pointer-events-none">"</div>
                                     <div className="absolute bottom-[-10px] right-6 text-6xl text-[#FACC15]/5 font-serif pointer-events-none">"</div>
-                                    <p className="text-[10px] font-extrabold text-[#FACC15] uppercase tracking-widest mb-4">KİŞİSEL NOTUN</p>
+                                    <p className="text-[0.625rem] font-extrabold text-[#FACC15] uppercase tracking-widest mb-4">KİŞİSEL NOTUN</p>
                                     <p className="text-gray-300 font-serif text-sm italic leading-relaxed px-4 whitespace-pre-wrap">
                                         "{note}"
                                     </p>
@@ -310,12 +310,12 @@ const MatchDiaryDetail: React.FC<MatchDiaryDetailProps> = ({ diaryId, onBack }) 
                                         <PenLine size={22} />
                                     </div>
                                     <p className="text-sm font-bold text-white mb-1">Bu maç için not almadın</p>
-                                    <p className="text-xs text-gray-500">Taktik, performans ya da unutmak istemediğin anları yaz.</p>
+                                    <p className="text-xs text-ink-4">Taktik, performans ya da unutmak istemediğin anları yaz.</p>
                                 </>
                             )}
                             <button
                                 onClick={() => { setDraftNote(note); setIsEditingNote(true); }}
-                                className="mt-6 px-5 py-2.5 rounded-full bg-white/5 border border-white/15 text-white text-[11px] font-extrabold uppercase tracking-widest hover:bg-white/10 active:scale-95 transition-all flex items-center gap-2"
+                                className="mt-6 px-5 py-2.5 rounded-full bg-white/5 border border-white/15 text-white text-[0.6875rem] font-extrabold uppercase tracking-widest hover:bg-white/10 active:scale-95 transition-all flex items-center gap-2"
                             >
                                 {justSaved ? <><Check size={13} className="text-[#39FF14]" /> Kaydedildi</> : <><PenLine size={13} /> {note ? 'Notu Düzenle' : 'Not Ekle'}</>}
                             </button>
@@ -323,11 +323,11 @@ const MatchDiaryDetail: React.FC<MatchDiaryDetailProps> = ({ diaryId, onBack }) 
                     ) : (
                         <div className="bg-[#161B22] border border-white/10 rounded-[32px] p-6 flex flex-col">
                             <div className="flex justify-between items-center mb-4">
-                                <p className="text-[10px] font-extrabold text-[#FACC15] uppercase tracking-widest">KİŞİSEL NOTUN</p>
-                                <span className="flex items-center gap-1 text-[10px] text-gray-600"><Shield size={12} /> Sadece sen görürsün</span>
+                                <p className="text-[0.625rem] font-extrabold text-[#FACC15] uppercase tracking-widest">KİŞİSEL NOTUN</p>
+                                <span className="flex items-center gap-1 text-[0.6875rem] text-ink-4"><Shield size={12} /> Sadece sen görürsün</span>
                             </div>
                             <textarea
-                                className="min-h-[140px] bg-transparent text-base text-white placeholder:text-gray-600 outline-none resize-none font-serif leading-relaxed"
+                                className="min-h-[140px] bg-transparent text-base text-white placeholder:text-ink-4 outline-none resize-none font-serif leading-relaxed"
                                 placeholder="Bugünkü maç nasıldı? Taktik işe yaradı mı? Kimi tutmakta zorlandın? Kendine notlar al..."
                                 value={draftNote}
                                 onChange={(e) => setDraftNote(e.target.value)}

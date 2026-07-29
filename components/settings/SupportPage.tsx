@@ -125,7 +125,7 @@ const SupportPage: React.FC<Props> = ({ open, onClose }) => {
             subtitle={active ? SUPPORT_STATUS_LABEL[active.status] : 'Sorununu yaz, ekibimiz uygulama içinden yanıtlasın'}
         >
             {loading ? (
-                <div className="py-16 flex flex-col items-center gap-3 text-gray-500">
+                <div className="py-16 flex flex-col items-center gap-3 text-ink-4">
                     <Loader2 size={20} className="animate-spin" />
                     <p className="text-xs">Talepler yükleniyor…</p>
                 </div>
@@ -134,10 +134,10 @@ const SupportPage: React.FC<Props> = ({ open, onClose }) => {
                 <div className="flex flex-col min-h-full">
                     <div className="flex-1 space-y-3 pb-4">
                         <div className="flex items-center justify-between gap-2">
-                            <span className={`text-[10px] font-extrabold uppercase px-2 py-1 rounded-lg border ${STATUS_TONE[active.status]}`}>
+                            <span className={`text-[0.6875rem] font-extrabold uppercase px-2 py-1 rounded-lg border ${STATUS_TONE[active.status]}`}>
                                 {SUPPORT_STATUS_LABEL[active.status]}
                             </span>
-                            <span className="text-[10px] text-gray-600">{fmtDate(active.created_at)}</span>
+                            <span className="text-[0.6875rem] text-ink-4">{fmtDate(active.created_at)}</span>
                         </div>
                         {active.messages.map((m) => (
                             <div key={m.id} className={`flex ${m.sender_role === 'USER' ? 'justify-end' : 'justify-start'}`}>
@@ -146,11 +146,11 @@ const SupportPage: React.FC<Props> = ({ open, onClose }) => {
                                         ? 'bg-primary/10 border-primary/25 rounded-br-md'
                                         : 'bg-[#161B22] border-white/10 rounded-bl-md'
                                 }`}>
-                                    <p className="text-[10px] font-extrabold uppercase tracking-wider mb-1 text-gray-500">
+                                    <p className="text-[0.625rem] font-extrabold uppercase tracking-wider mb-1 text-ink-4">
                                         {m.sender_role === 'USER' ? 'Sen' : (m.sender_name || 'OYNA Destek')}
                                     </p>
-                                    <p className="text-[13px] text-white leading-relaxed whitespace-pre-wrap break-words">{m.body}</p>
-                                    <p className="text-[9px] text-gray-600 mt-1.5 text-right">{fmtDate(m.created_at)}</p>
+                                    <p className="text-[0.8125rem] text-white leading-relaxed whitespace-pre-wrap break-words">{m.body}</p>
+                                    <p className="text-[0.6875rem] text-ink-4 mt-1.5 text-right">{fmtDate(m.created_at)}</p>
                                 </div>
                             </div>
                         ))}
@@ -158,13 +158,13 @@ const SupportPage: React.FC<Props> = ({ open, onClose }) => {
                     </div>
 
                     {active.status === 'CLOSED' ? (
-                        <p className="text-[11px] text-gray-500 text-center py-3 bg-white/[0.03] border border-white/10 rounded-2xl">
+                        <p className="text-[0.6875rem] text-ink-4 text-center py-3 bg-white/[0.03] border border-white/10 rounded-2xl">
                             Bu talep kapatıldı. Yeni bir sorun için yeni talep açabilirsin.
                         </p>
                     ) : (
                         <div className="sticky bottom-0 bg-[#0A0E14] pt-2 space-y-2">
                         {replyError && (
-                            <p className="text-[11px] font-bold text-red-400 bg-red-500/10 border border-red-500/20 rounded-2xl px-4 py-2.5">
+                            <p className="text-[0.6875rem] font-bold text-red-400 bg-red-500/10 border border-red-500/20 rounded-2xl px-4 py-2.5">
                                 {replyError}
                             </p>
                         )}
@@ -193,7 +193,7 @@ const SupportPage: React.FC<Props> = ({ open, onClose }) => {
                 /* ── Yeni talep formu ── */
                 <div className="space-y-4">
                     <div>
-                        <label className="text-[10px] text-gray-500 font-bold uppercase tracking-wider ml-1">Konu</label>
+                        <label className="text-[0.625rem] text-ink-4 font-bold uppercase tracking-wider ml-1">Konu</label>
                         <input
                             value={subject}
                             onChange={(e) => setSubject(e.target.value)}
@@ -203,14 +203,14 @@ const SupportPage: React.FC<Props> = ({ open, onClose }) => {
                         />
                     </div>
                     <div>
-                        <label className="text-[10px] text-gray-500 font-bold uppercase tracking-wider ml-1">Kategori</label>
+                        <label className="text-[0.625rem] text-ink-4 font-bold uppercase tracking-wider ml-1">Kategori</label>
                         <div className="mt-1.5 flex flex-wrap gap-2">
                             {SUPPORT_CATEGORIES.map((c) => (
                                 <button
                                     key={c.key}
                                     type="button"
                                     onClick={() => setCategory(c.key)}
-                                    className={`px-3 py-2 rounded-2xl text-[11px] font-extrabold border transition-all active:scale-95 ${
+                                    className={`px-3 py-2 rounded-2xl text-[0.6875rem] font-extrabold border transition-all active:scale-95 ${
                                         category === c.key
                                             ? 'bg-primary text-black border-primary'
                                             : 'bg-[#161B22] text-white/60 border-white/10 hover:bg-white/5'
@@ -222,7 +222,7 @@ const SupportPage: React.FC<Props> = ({ open, onClose }) => {
                         </div>
                     </div>
                     <div>
-                        <label className="text-[10px] text-gray-500 font-bold uppercase tracking-wider ml-1">Sorunun</label>
+                        <label className="text-[0.625rem] text-ink-4 font-bold uppercase tracking-wider ml-1">Sorunun</label>
                         <textarea
                             value={body}
                             onChange={(e) => setBody(e.target.value)}
@@ -233,7 +233,7 @@ const SupportPage: React.FC<Props> = ({ open, onClose }) => {
                         />
                     </div>
                     {formError && (
-                        <p className="text-[11px] font-bold text-red-400 bg-red-500/10 border border-red-500/20 rounded-2xl px-4 py-3 leading-relaxed">
+                        <p className="text-[0.6875rem] font-bold text-red-400 bg-red-500/10 border border-red-500/20 rounded-2xl px-4 py-3 leading-relaxed">
                             {formError}
                         </p>
                     )}
@@ -258,16 +258,16 @@ const SupportPage: React.FC<Props> = ({ open, onClose }) => {
                     </button>
 
                     {loadError && (
-                        <button type="button" onClick={() => void load()} className="w-full flex items-center justify-center gap-2 text-[11px] font-bold text-red-400 bg-red-500/10 border border-red-500/20 rounded-2xl px-3 py-3">
+                        <button type="button" onClick={() => void load()} className="w-full flex items-center justify-center gap-2 text-[0.6875rem] font-bold text-red-400 bg-red-500/10 border border-red-500/20 rounded-2xl px-3 py-3">
                             <RefreshCw size={12} /> {loadError}
                         </button>
                     )}
 
                     {tickets.length === 0 && !loadError ? (
                         <div className="py-12 flex flex-col items-center gap-3 text-center">
-                            <HelpCircle size={28} className="text-gray-600" />
+                            <HelpCircle size={28} className="text-ink-4" />
                             <p className="text-sm font-bold text-gray-400">Henüz destek talebin yok</p>
-                            <p className="text-[11px] text-gray-600 max-w-[240px] leading-relaxed">
+                            <p className="text-[0.6875rem] text-ink-4 max-w-[240px] leading-relaxed">
                                 Bir sorun yaşarsan buradan talep aç — ekibimiz uygulama içinden yanıtlar.
                             </p>
                         </div>
@@ -280,28 +280,28 @@ const SupportPage: React.FC<Props> = ({ open, onClose }) => {
                                 className="w-full text-left bg-[#161B22] border border-white/10 rounded-2xl p-4 hover:bg-white/5 active:scale-[0.99] transition-all"
                             >
                                 <div className="flex items-center justify-between gap-2 mb-1.5">
-                                    <p className="text-[13px] font-bold text-white truncate flex items-center gap-2 min-w-0">
+                                    <p className="text-[0.8125rem] font-bold text-white truncate flex items-center gap-2 min-w-0">
                                         {t.unread_for_user && <span className="w-2 h-2 rounded-full bg-primary shrink-0 animate-pulse" />}
                                         <span className="truncate">{t.subject || 'Destek Talebi'}</span>
                                     </p>
-                                    <span className={`text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded-md border shrink-0 ${STATUS_TONE[t.status]}`}>
+                                    <span className={`text-[0.6875rem] font-extrabold uppercase px-1.5 py-0.5 rounded-md border shrink-0 ${STATUS_TONE[t.status]}`}>
                                         {SUPPORT_STATUS_LABEL[t.status]}
                                     </span>
                                 </div>
                                 {t.messages.length > 0 && (
-                                    <p className="text-[11px] text-gray-500 truncate">
+                                    <p className="text-[0.6875rem] text-ink-4 truncate">
                                         {t.messages[t.messages.length - 1].sender_role === 'ADMIN' ? 'Destek: ' : 'Sen: '}
                                         {t.messages[t.messages.length - 1].body}
                                     </p>
                                 )}
-                                <p className="text-[9px] text-gray-600 mt-1.5">{fmtDate(t.last_message_at)}</p>
+                                <p className="text-[0.6875rem] text-ink-4 mt-1.5">{fmtDate(t.last_message_at)}</p>
                             </button>
                         ))
                     )}
 
                     <a
                         href={`mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent('OYNA — Yardım Talebi')}`}
-                        className="w-full flex items-center justify-center gap-2 text-[11px] font-bold text-gray-500 hover:text-white py-3"
+                        className="w-full flex items-center justify-center gap-2 text-[0.6875rem] font-bold text-ink-4 hover:text-white py-3"
                     >
                         <Mail size={12} /> E-posta ile yazmayı tercih edersen: {CONTACT_EMAIL}
                     </a>

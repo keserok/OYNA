@@ -149,10 +149,10 @@ export const PhotoManager: React.FC<Props> = ({ pitchId, courtId = null, readOnl
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <label className="text-[10px] font-bold text-gray-500 uppercase">
-          Fotoğraflar <span className="text-gray-600">({items.length}/{maxPhotos})</span>
+        <label className="text-[0.6875rem] font-bold text-ink-4 uppercase">
+          Fotoğraflar <span className="text-ink-4">({items.length}/{maxPhotos})</span>
         </label>
-        {busy && <span className="text-[10px] font-bold text-[#39FF14] animate-pulse">YÜKLENİYOR…</span>}
+        {busy && <span className="text-[0.6875rem] font-bold text-[#39FF14] animate-pulse">YÜKLENİYOR…</span>}
       </div>
 
       <input
@@ -170,26 +170,26 @@ export const PhotoManager: React.FC<Props> = ({ pitchId, courtId = null, readOnl
             type="button"
             disabled={busy}
             onClick={() => fileInputRef.current?.click()}
-            className="shrink-0 w-28 h-36 bg-[#161B22] border-2 border-dashed border-white/10 rounded-2xl flex flex-col items-center justify-center gap-2 text-gray-500 hover:text-white hover:border-white/30 disabled:opacity-50"
+            className="shrink-0 w-28 h-36 bg-[#161B22] border-2 border-dashed border-white/10 rounded-2xl flex flex-col items-center justify-center gap-2 text-ink-4 hover:text-white hover:border-white/30 disabled:opacity-50"
           >
             <ImagePlus size={22} />
-            <span className="text-[10px] font-bold">EKLE</span>
+            <span className="text-[0.6875rem] font-bold">EKLE</span>
           </button>
         )}
 
         {loading ? (
-          <div className="h-36 flex items-center text-xs text-gray-500 px-4">Yükleniyor…</div>
+          <div className="h-36 flex items-center text-xs text-ink-4 px-4">Yükleniyor…</div>
         ) : items.map((item, idx) => (
           <div key={item.id} className="relative shrink-0 w-28 h-36 rounded-2xl overflow-hidden border border-white/10 group">
             <img src={transformedImageUrl(item.url, 'thumb')} alt="" className="w-full h-full object-cover" />
 
             {idx === 0 && (
-              <span className="absolute bottom-2 left-2 text-[9px] font-bold bg-[#FFFF00] text-black px-2 py-0.5 rounded">
+              <span className="absolute bottom-2 left-2 text-[0.6875rem] font-bold bg-[#FFFF00] text-black px-2 py-0.5 rounded">
                 KAPAK
               </span>
             )}
             {item.label && (
-              <span className="absolute top-2 left-2 text-[8px] font-bold bg-black/70 text-white px-1.5 py-0.5 rounded">
+              <span className="absolute top-2 left-2 text-[0.6875rem] font-bold bg-black/70 text-white px-1.5 py-0.5 rounded">
                 {MEDIA_LABELS.find((l) => l.value === item.label)?.label}
               </span>
             )}
@@ -250,7 +250,7 @@ export const PhotoManager: React.FC<Props> = ({ pitchId, courtId = null, readOnl
                         key={l.value}
                         type="button"
                         onClick={() => void applyLabel(item, l.value)}
-                        className={`text-[10px] font-bold py-1 rounded ${item.label === l.value ? 'bg-[#39FF14] text-black' : 'bg-white/10 text-white'}`}
+                        className={`text-[0.6875rem] font-bold py-1 rounded ${item.label === l.value ? 'bg-[#39FF14] text-black' : 'bg-white/10 text-white'}`}
                       >
                         {l.label}
                       </button>
@@ -258,7 +258,7 @@ export const PhotoManager: React.FC<Props> = ({ pitchId, courtId = null, readOnl
                     <button
                       type="button"
                       onClick={() => void applyLabel(item, null)}
-                      className="text-[10px] font-bold py-1 rounded bg-white/5 text-gray-400"
+                      className="text-[0.6875rem] font-bold py-1 rounded bg-white/5 text-gray-400"
                     >
                       Etiketsiz
                     </button>
@@ -270,12 +270,12 @@ export const PhotoManager: React.FC<Props> = ({ pitchId, courtId = null, readOnl
         ))}
 
         {!loading && items.length === 0 && readOnly && (
-          <div className="h-36 flex items-center text-xs text-gray-500 px-4">Henüz fotoğraf yok.</div>
+          <div className="h-36 flex items-center text-xs text-ink-4 px-4">Henüz fotoğraf yok.</div>
         )}
       </div>
 
       {!readOnly && (
-        <p className="text-[10px] text-gray-600 leading-relaxed">
+        <p className="text-[0.6875rem] text-ink-4 leading-relaxed">
           İlk fotoğraf vitrindeki kapak görselidir. Görseller 16:9 kırpılır (sürükleyerek konumlandır),
           otomatik sıkıştırılır (max 10MB, min 1280px önerilir). En az 1 “Saha İçi” etiketli fotoğraf önerilir.
         </p>

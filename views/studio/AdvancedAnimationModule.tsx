@@ -218,7 +218,7 @@ const AdvancedAnimationModule: React.FC<AdvancedAnimationModuleProps> = ({
                     <style>{`@keyframes oyBallChain{${ballKeyframes}}`}</style>
                     <div
                         key={`ball-chain-${passChain.length}-${chainPoints.length}`}
-                        className="absolute w-4 h-4 z-[60] bg-white rounded-full flex items-center justify-center text-[10px] shadow-[0_0_15px_rgba(255,255,255,0.8)]"
+                        className="absolute w-4 h-4 z-[60] bg-white rounded-full flex items-center justify-center text-[0.6875rem] shadow-[0_0_15px_rgba(255,255,255,0.8)]"
                         style={{
                             transform: 'translate(-50%, -50%)',
                             left: `${chainPoints[0].x}%`,

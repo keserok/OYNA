@@ -64,7 +64,7 @@ const CrestKitEditor: React.FC<CrestKitEditorProps> = ({ crest, color1, color2, 
       </button>
 
       <div>
-        <div className="text-[10px] font-extrabold uppercase tracking-widest text-white/40 mb-2">Şekil</div>
+        <div className="text-[0.625rem] font-extrabold uppercase tracking-widest text-ink-4 mb-2">Şekil</div>
         <div className="grid grid-cols-8 gap-1.5">
           {(Object.keys(CREST_SHAPES) as CrestShape[]).map(s => (
             <button
@@ -84,7 +84,7 @@ const CrestKitEditor: React.FC<CrestKitEditorProps> = ({ crest, color1, color2, 
       </div>
 
       <div>
-        <div className="text-[10px] font-extrabold uppercase tracking-widest text-white/40 mb-2">Desen</div>
+        <div className="text-[0.625rem] font-extrabold uppercase tracking-widest text-ink-4 mb-2">Desen</div>
         <div className="grid grid-cols-5 gap-1.5">
           {CREST_PATTERNS.map(p => (
             <button
@@ -104,7 +104,7 @@ const CrestKitEditor: React.FC<CrestKitEditorProps> = ({ crest, color1, color2, 
       </div>
 
       <div>
-        <div className="text-[10px] font-extrabold uppercase tracking-widest text-white/40 mb-2">Sembol</div>
+        <div className="text-[0.625rem] font-extrabold uppercase tracking-widest text-ink-4 mb-2">Sembol</div>
         <div className="grid grid-cols-7 gap-1.5">
           {Object.entries(CREST_SYMBOLS).map(([key, { icon: Icon, label }]) => (
             <button
@@ -122,7 +122,7 @@ const CrestKitEditor: React.FC<CrestKitEditorProps> = ({ crest, color1, color2, 
       </div>
 
       <div>
-        <div className="text-[10px] font-extrabold uppercase tracking-widest text-white/40 mb-2">Hazır İkililer</div>
+        <div className="text-[0.625rem] font-extrabold uppercase tracking-widest text-ink-4 mb-2">Hazır İkililer</div>
         <div className="flex gap-1.5 overflow-x-auto no-scrollbar pb-1">
           {KIT_PAIRS.map(([a, b], i) => (
             <button
@@ -142,7 +142,7 @@ const CrestKitEditor: React.FC<CrestKitEditorProps> = ({ crest, color1, color2, 
       <div className="grid grid-cols-2 gap-3">
         {(['color1', 'color2'] as const).map(ck => (
           <div key={ck}>
-            <div className="text-[10px] font-extrabold uppercase tracking-widest text-white/40 mb-2">
+            <div className="text-[0.625rem] font-extrabold uppercase tracking-widest text-ink-4 mb-2">
               {ck === 'color1' ? 'Ana Renk' : 'İkincil Renk'}
             </div>
             <div className="grid grid-cols-8 gap-1">
@@ -162,7 +162,7 @@ const CrestKitEditor: React.FC<CrestKitEditorProps> = ({ crest, color1, color2, 
         ))}
       </div>
       {contrastWarn && (
-        <p className="text-[11px] text-amber-400/90">
+        <p className="text-[0.6875rem] text-amber-400/90">
           ⚠️ Renkler birbirine çok yakın — arma zor okunur. Farklı bir ikili dene.
         </p>
       )}

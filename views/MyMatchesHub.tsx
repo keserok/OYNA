@@ -88,55 +88,55 @@ const TicketCard: React.FC<{ item: MyAgendaItem; currentUserUid: string; onOpen:
     const m = item.match;
     const st = matchStats(item as MyAgendaItem & { kind: 'MATCH' });
     const isCaptain = m.creatorId === currentUserUid;
-    typeLabel = <span className="text-[8px] font-extrabold uppercase tracking-[0.18em] text-[#39FF14]">{isCaptain ? 'Maç · Kaptan' : 'Maç'}</span>;
+    typeLabel = <span className="text-[0.625rem] font-extrabold uppercase tracking-[0.18em] text-[#39FF14]">{isCaptain ? 'Maç · Kaptan' : 'Maç'}</span>;
     if (m.status === 'CANCELLED') {
       rail = '#F87171';
-      statusNode = <span className="flex items-center gap-1 text-[9px] font-extrabold uppercase tracking-[0.08em] text-[#F87171]"><XCircle size={11} />İptal Edildi</span>;
+      statusNode = <span className="flex items-center gap-1 text-[0.625rem] font-extrabold uppercase tracking-[0.08em] text-[#F87171]"><XCircle size={11} />İptal Edildi</span>;
     } else if (m.status === 'COMPLETED') {
-      statusNode = <span className="flex items-center gap-1 text-[9px] font-extrabold uppercase tracking-[0.08em] text-white/45"><CheckCircle2 size={11} />Oynandı</span>;
+      statusNode = <span className="flex items-center gap-1 text-[0.625rem] font-extrabold uppercase tracking-[0.08em] text-ink-4"><CheckCircle2 size={11} />Oynandı</span>;
     } else {
       // Kaleci uyarısı BİLEREK yok: boş kaleci slotu bir sorun değildir —
       // profesyonel kaleci isteyen kaptan Kaleci Kiralama'dan teklif gönderir.
       // Bu köşe her maçta aynı bilgiyi verir: kadro doluluğu.
-      statusNode = <span className="font-numeric text-[9px] font-extrabold uppercase tracking-[0.08em] text-white/45">{st.taken}/{st.total} oyuncu</span>;
+      statusNode = <span className="font-numeric text-[0.625rem] font-extrabold uppercase tracking-[0.08em] text-ink-4">{st.taken}/{st.total} oyuncu</span>;
     }
     time = m.time || '—';
     timeNote = formatMatchDuration(m);
     title = m.title || 'Maç';
     venue = [m.location, (m as { courtName?: string }).courtName].filter(Boolean).join(' · ') || '—';
     footLeft = st.open > 0 ? (
-      <span className="flex items-center gap-[7px] text-[10px] font-bold text-white/45">
+      <span className="flex items-center gap-[7px] text-[0.6875rem] font-bold text-ink-4">
         {st.open} kişi eksik
         <span className="inline-block w-[52px] h-[3px] rounded-full bg-white/10 overflow-hidden relative">
           <span className="absolute inset-0 rounded-full bg-[#39FF14]" style={{ width: `${st.total ? Math.round((st.taken / st.total) * 100) : 0}%` }} />
         </span>
       </span>
     ) : (
-      <span className="flex items-center gap-[5px] text-[10px] font-bold text-white/45"><CheckCircle2 size={11} className="text-[#39FF14]" />Kadro tamam</span>
+      <span className="flex items-center gap-[5px] text-[0.6875rem] font-bold text-ink-4"><CheckCircle2 size={11} className="text-[#39FF14]" />Kadro tamam</span>
     );
-    footRight = <span className="font-numeric text-[12px] font-bold text-[#FACC15]">{Number(m.price) > 0 ? `₺${Number(m.price).toLocaleString('tr-TR')}` : 'Ücretsiz'}</span>;
+    footRight = <span className="font-numeric text-[0.75rem] font-bold text-[#FACC15]">{Number(m.price) > 0 ? `₺${Number(m.price).toLocaleString('tr-TR')}` : 'Ücretsiz'}</span>;
   } else {
     const b = item.booking;
     if (b.status === 'CANCELLED') {
       rail = '#F87171';
-      statusNode = <span className="flex items-center gap-1 text-[9px] font-extrabold uppercase tracking-[0.08em] text-[#F87171]"><XCircle size={11} />İptal Edildi</span>;
+      statusNode = <span className="flex items-center gap-1 text-[0.625rem] font-extrabold uppercase tracking-[0.08em] text-[#F87171]"><XCircle size={11} />İptal Edildi</span>;
       cancelNote = b.cancellation_reason;
     } else if (b.status === 'CONFIRMED') {
-      statusNode = <span className="flex items-center gap-[5px] text-[9px] font-extrabold uppercase tracking-[0.08em] text-[#39FF14]"><span className="w-[5px] h-[5px] rounded-full bg-[#39FF14]" />Onaylandı</span>;
+      statusNode = <span className="flex items-center gap-[5px] text-[0.625rem] font-extrabold uppercase tracking-[0.08em] text-[#39FF14]"><span className="w-[5px] h-[5px] rounded-full bg-[#39FF14]" />Onaylandı</span>;
     } else {
-      statusNode = <span className="flex items-center gap-1 text-[9px] font-extrabold uppercase tracking-[0.08em] text-[#FACC15]"><Clock size={11} />Onay bekliyor</span>;
+      statusNode = <span className="flex items-center gap-1 text-[0.625rem] font-extrabold uppercase tracking-[0.08em] text-[#FACC15]"><Clock size={11} />Onay bekliyor</span>;
     }
-    typeLabel = <span className="text-[8px] font-extrabold uppercase tracking-[0.18em] text-[#FACC15]">Rezervasyon</span>;
+    typeLabel = <span className="text-[0.625rem] font-extrabold uppercase tracking-[0.18em] text-[#FACC15]">Rezervasyon</span>;
     time = `${shortTime(b.start_time)}${b.end_time ? ` – ${shortTime(b.end_time)}` : ''}`;
     title = b.pitches?.name || 'Saha Rezervasyonu';
     venue = [b.pitches?.district, b.courts?.name].filter(Boolean).join(' · ') || '—';
     const remaining = Math.max((b.deposit_amount || 0) - (b.paid_amount || 0), 0);
     footLeft = b.status === 'CANCELLED' ? null : remaining <= 0 && (b.deposit_amount || 0) > 0 ? (
-      <span className="flex items-center gap-[5px] text-[10px] font-bold text-white/45"><CheckCircle2 size={11} className="text-[#39FF14]" />Kapora ödendi</span>
+      <span className="flex items-center gap-[5px] text-[0.6875rem] font-bold text-ink-4"><CheckCircle2 size={11} className="text-[#39FF14]" />Kapora ödendi</span>
     ) : remaining > 0 ? (
-      <span className="flex items-center gap-[5px] text-[10px] font-bold text-[#FACC15]"><AlertTriangle size={11} />Kapora bekliyor</span>
+      <span className="flex items-center gap-[5px] text-[0.6875rem] font-bold text-[#FACC15]"><AlertTriangle size={11} />Kapora bekliyor</span>
     ) : null;
-    footRight = b.price ? <span className="font-numeric text-[12px] font-bold text-[#FACC15]">₺{Number(b.price).toLocaleString('tr-TR')}</span> : null;
+    footRight = b.price ? <span className="font-numeric text-[0.75rem] font-bold text-[#FACC15]">₺{Number(b.price).toLocaleString('tr-TR')}</span> : null;
   }
 
   return (
@@ -145,20 +145,20 @@ const TicketCard: React.FC<{ item: MyAgendaItem; currentUserUid: string; onOpen:
       className={`relative overflow-hidden block w-full text-left bg-[#161B22] border border-white/[0.06] rounded-[20px] pl-6 pr-10 pt-4 pb-3.5 text-white active:scale-[0.985] transition-transform ${dim ? 'opacity-60' : ''}`}
     >
       <div className="absolute left-0 top-0 bottom-0 w-[3px]" style={{ background: rail, opacity: 0.8 }} />
-      <ChevronRight size={18} className="absolute right-3.5 top-1/2 -mt-[9px] text-white/20" />
+      <ChevronRight size={18} className="absolute right-3.5 top-1/2 -mt-[9px] text-ink-4" />
       <div className="flex items-center justify-between gap-2.5 h-[18px]">
         {typeLabel}
         {statusNode}
       </div>
-      <p className="font-numeric mt-2.5 text-[20px] font-bold tracking-[-0.02em] leading-none">
+      <p className="font-numeric mt-2.5 text-[1.25rem] font-bold tracking-[-0.02em] leading-none">
         {time}
         {timeNote && (
-          <span className="ml-2 text-[11px] font-bold tracking-normal text-white/40">{timeNote}</span>
+          <span className="ml-2 text-[0.6875rem] font-bold tracking-normal text-ink-4">{timeNote}</span>
         )}
       </p>
-      <p className="mt-2.5 text-[15px] font-extrabold leading-tight truncate">{title}</p>
-      <p className="mt-1 text-[12px] text-gray-400 flex items-center gap-[5px] truncate"><MapPin size={12} className="shrink-0" />{venue}</p>
-      {cancelNote && <p className="mt-3 text-[11px] italic text-red-300/80">{cancelNote}</p>}
+      <p className="mt-2.5 text-[0.9375rem] font-extrabold leading-tight truncate">{title}</p>
+      <p className="mt-1 text-[0.75rem] text-gray-400 flex items-center gap-[5px] truncate"><MapPin size={12} className="shrink-0" />{venue}</p>
+      {cancelNote && <p className="mt-3 text-[0.6875rem] italic text-red-300/80">{cancelNote}</p>}
       {(footLeft || footRight) && (
         <div className="mt-3.5 pt-[11px] border-t border-white/[0.06] flex items-center justify-between gap-2.5 min-h-[16px]">
           {footLeft ?? <span />}
@@ -191,15 +191,15 @@ const NextEventHero: React.FC<{ item: MyAgendaItem; currentUserUid: string; onOp
   if (isMatch) {
     const st = matchStats(item as MyAgendaItem & { kind: 'MATCH' });
     chip = st.open === 0 ? (
-      <span className="flex items-center gap-[5px] px-2.5 py-1 rounded-full border border-[#39FF14]/30 bg-[#39FF14]/10 text-[#39FF14] text-[9px] font-extrabold uppercase tracking-[0.08em]"><CheckCircle2 size={11} />Kadro Tamam</span>
+      <span className="flex items-center gap-[5px] px-2.5 py-1 rounded-full border border-[#39FF14]/30 bg-[#39FF14]/10 text-[#39FF14] text-[0.625rem] font-extrabold uppercase tracking-[0.08em]"><CheckCircle2 size={11} />Kadro Tamam</span>
     ) : (
-      <span className="font-numeric px-2.5 py-1 rounded-full border border-white/12 bg-white/[0.06] text-white/70 text-[9px] font-extrabold uppercase tracking-[0.08em]">{st.taken}/{st.total} oyuncu</span>
+      <span className="font-numeric px-2.5 py-1 rounded-full border border-white/12 bg-white/[0.06] text-white/70 text-[0.625rem] font-extrabold uppercase tracking-[0.08em]">{st.taken}/{st.total} oyuncu</span>
     );
   } else {
     chip = item.booking.status === 'CONFIRMED' ? (
-      <span className="flex items-center gap-[5px] px-2.5 py-1 rounded-full border border-[#39FF14]/30 bg-[#39FF14]/10 text-[#39FF14] text-[9px] font-extrabold uppercase tracking-[0.08em]"><CheckCircle2 size={11} />Onaylandı</span>
+      <span className="flex items-center gap-[5px] px-2.5 py-1 rounded-full border border-[#39FF14]/30 bg-[#39FF14]/10 text-[#39FF14] text-[0.625rem] font-extrabold uppercase tracking-[0.08em]"><CheckCircle2 size={11} />Onaylandı</span>
     ) : (
-      <span className="flex items-center gap-[5px] px-2.5 py-1 rounded-full border border-[#FACC15]/30 bg-[#FACC15]/10 text-[#FACC15] text-[9px] font-extrabold uppercase tracking-[0.08em]"><Clock size={11} />Onay bekliyor</span>
+      <span className="flex items-center gap-[5px] px-2.5 py-1 rounded-full border border-[#FACC15]/30 bg-[#FACC15]/10 text-[#FACC15] text-[0.625rem] font-extrabold uppercase tracking-[0.08em]"><Clock size={11} />Onay bekliyor</span>
     );
   }
 
@@ -213,19 +213,19 @@ const NextEventHero: React.FC<{ item: MyAgendaItem; currentUserUid: string; onOp
       <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#FACC15]" />
       <div className="absolute -top-14 -right-11 w-[200px] h-[200px] rounded-full bg-[#FACC15] opacity-[0.11] blur-[54px] pointer-events-none" />
       <div className="relative flex items-center justify-between gap-3 h-[22px]">
-        <span className="text-[9px] font-extrabold uppercase tracking-[0.22em] text-[#FACC15]">Sıradaki Etkinlik</span>
+        <span className="text-[0.625rem] font-extrabold uppercase tracking-[0.22em] text-[#FACC15]">Sıradaki Etkinlik</span>
         {chip}
       </div>
-      <p className="relative mt-3.5 text-[22px] font-extrabold italic uppercase tracking-[-0.03em] leading-[1.05] truncate">{title}</p>
-      <p className="relative mt-1.5 text-[12px] text-white/50 font-semibold flex items-center gap-[5px] truncate"><MapPin size={12} className="shrink-0" />{venue || '—'}</p>
+      <p className="relative mt-3.5 text-[1.375rem] font-extrabold italic uppercase tracking-[-0.03em] leading-[1.05] truncate">{title}</p>
+      <p className="relative mt-1.5 text-[0.75rem] text-white/50 font-semibold flex items-center gap-[5px] truncate"><MapPin size={12} className="shrink-0" />{venue || '—'}</p>
       <div className="relative mt-[18px] pt-4 border-t border-dashed border-white/12 flex items-end justify-between gap-3">
         <div>
-          <p className="font-numeric m-0 text-[15px] font-bold leading-[1.25]">{heading.primary === 'Bugün' || heading.primary === 'Yarın' ? `${heading.secondary} · ${heading.primary}` : heading.primary}</p>
-          <p className="font-numeric m-0 text-[15px] font-bold leading-[1.25] text-white/55">{timeRange}</p>
+          <p className="font-numeric m-0 text-[0.9375rem] font-bold leading-[1.25]">{heading.primary === 'Bugün' || heading.primary === 'Yarın' ? `${heading.secondary} · ${heading.primary}` : heading.primary}</p>
+          <p className="font-numeric m-0 text-[0.9375rem] font-bold leading-[1.25] text-white/55">{timeRange}</p>
         </div>
         <div className="text-right">
-          <p className="m-0 text-[8px] font-extrabold uppercase tracking-[0.2em] text-white/35">Kalan süre</p>
-          <p className="font-numeric mt-[5px] mb-0 text-[30px] font-bold leading-[0.85] tracking-[-0.02em]">{countdown || '—'}</p>
+          <p className="m-0 text-[0.625rem] font-extrabold uppercase tracking-[0.2em] text-ink-4">Kalan süre</p>
+          <p className="font-numeric mt-[5px] mb-0 text-[1.875rem] font-bold leading-[0.85] tracking-[-0.02em]">{countdown || '—'}</p>
         </div>
       </div>
     </motion.button>
@@ -483,8 +483,8 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onBack, onNavigate }) => {
             <ArrowLeft size={20} />
           </button>
           <div className="text-center flex-1 min-w-0">
-            <h1 className="text-lg font-extrabold text-white italic uppercase tracking-tighter leading-none truncate">Maçlarım</h1>
-            <p className="font-numeric text-[9px] text-gray-500 uppercase tracking-widest mt-1 truncate">
+            <h1 className="text-lg font-extrabold text-white italic uppercase tracking-tighter leading-[1.2] truncate">Maçlarım</h1>
+            <p className="font-numeric text-[0.625rem] text-ink-4 uppercase tracking-widest mt-1 truncate">
               {counts.matches} maç · {counts.bookings} rezervasyon
             </p>
           </div>
@@ -516,12 +516,12 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onBack, onNavigate }) => {
       <main className="flex-1 min-h-0 px-4 pt-4 overflow-y-auto overscroll-contain custom-scrollbar pb-36 relative z-10">
         {bookingsError && (
           <div className="mb-4 flex items-center justify-between gap-3 px-4 py-3 rounded-2xl bg-red-950/30 border border-red-500/20">
-            <p className="text-[11px] text-red-300 font-bold leading-snug">
+            <p className="text-[0.6875rem] text-red-300 font-bold leading-snug">
               Rezervasyonlar yüklenemedi — maçların yine de listeleniyor.
             </p>
             <button
               onClick={() => { void refetchBookings(); }}
-              className="shrink-0 px-3 py-2 min-h-[36px] rounded-xl bg-red-500/15 border border-red-500/30 text-red-200 text-[10px] font-extrabold uppercase tracking-widest active:scale-95 transition-all"
+              className="shrink-0 px-3 py-2 min-h-[36px] rounded-xl bg-red-500/15 border border-red-500/30 text-red-200 text-[0.625rem] font-extrabold uppercase tracking-widest active:scale-95 transition-all"
             >
               Tekrar Dene
             </button>
@@ -539,8 +539,8 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onBack, onNavigate }) => {
               <div className="relative w-[52px] h-[52px] mx-auto mb-4 rounded-2xl bg-[#39FF14]/[0.08] border border-[#39FF14]/25 flex items-center justify-center">
                 <Calendar size={22} className="text-[#39FF14]" />
               </div>
-              <h3 className="relative m-0 text-[19px] font-extrabold italic uppercase tracking-[-0.025em]">Henüz Etkinliğin Yok</h3>
-              <p className="relative mt-2 mx-auto mb-0 text-[13px] text-white/50 leading-relaxed max-w-[252px]">
+              <h3 className="relative m-0 text-[1.1875rem] font-extrabold italic uppercase tracking-[-0.025em]">Henüz Etkinliğin Yok</h3>
+              <p className="relative mt-2 mx-auto mb-0 text-[0.8125rem] text-white/50 leading-relaxed max-w-[252px]">
                 Bir maça katıl ya da saha kirala — ajandan burada canlanır.
               </p>
               <div className="relative mt-5 pt-[18px] border-t border-dashed border-white/12 flex flex-col gap-2.5">
@@ -561,7 +561,7 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onBack, onNavigate }) => {
 
             {/* Önizleme iskeletleri — maçların böyle görünecek */}
             <div className="pt-[26px] pb-3 flex items-center gap-2.5">
-              <span className="text-[10px] font-extrabold uppercase tracking-[0.22em] text-white/[0.28]">Maçların böyle görünecek</span>
+              <span className="text-[0.625rem] font-extrabold uppercase tracking-[0.22em] text-white/[0.28]">Maçların böyle görünecek</span>
               <span className="flex-1 h-px bg-white/5" />
             </div>
             <div className="flex flex-col gap-3">
@@ -593,8 +593,8 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onBack, onNavigate }) => {
                   {dayGroups.map((g, gi) => (
                     <div key={`${segment}-g${gi}`}>
                       <div className="sticky top-0 z-[5] bg-[#0A0E14] pt-[22px] pb-2.5 flex items-center gap-2.5">
-                        <span className="text-[10px] font-extrabold uppercase tracking-[0.22em] text-white/90">{g.heading.primary}</span>
-                        <span className="font-numeric text-[10px] font-bold tracking-[0.06em] text-white/30">{g.heading.secondary}</span>
+                        <span className="text-[0.625rem] font-extrabold uppercase tracking-[0.22em] text-white/90">{g.heading.primary}</span>
+                        <span className="font-numeric text-[0.6875rem] font-bold tracking-[0.06em] text-ink-4">{g.heading.secondary}</span>
                         <span className="flex-1 h-px bg-white/[0.07]" />
                       </div>
                       <div className="flex flex-col gap-3">
@@ -615,11 +615,11 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onBack, onNavigate }) => {
               ) : (
                 <motion.div key={`empty-${segment}`} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }} className="pt-6">
                   <div className="rounded-[20px] border border-dashed border-white/10 bg-white/[0.02] px-5 py-8 text-center">
-                    {segment === 'BOOKINGS' ? <Calendar size={28} className="mx-auto mb-3 text-white/25" /> : <Clock size={28} className="mx-auto mb-3 text-white/25" />}
+                    {segment === 'BOOKINGS' ? <Calendar size={28} className="mx-auto mb-3 text-ink-4" /> : <Clock size={28} className="mx-auto mb-3 text-ink-4" />}
                     <p className="text-sm font-extrabold uppercase tracking-wide text-white/70">
                       {segment === 'BOOKINGS' ? 'Yaklaşan Rezervasyon Yok' : 'Yaklaşan Maç Yok'}
                     </p>
-                    <p className="mt-1.5 text-xs text-white/40">
+                    <p className="mt-1.5 text-xs text-ink-4">
                       {segment === 'BOOKINGS' ? "Saha Vitrini'nden yeni bir rezervasyon oluşturabilirsin." : 'Top Oyna ekranından açık maçlara katılabilirsin.'}
                     </p>
                   </div>
@@ -632,7 +632,7 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onBack, onNavigate }) => {
               <div className="pt-[22px]">
                 <button
                   onClick={() => setShowPast(v => !v)}
-                  className="w-full min-h-[44px] flex items-center justify-center gap-2 rounded-2xl border border-white/5 bg-white/[0.02] text-white/50 text-[10px] font-extrabold uppercase tracking-[0.2em] hover:bg-white/5 active:scale-[0.99] transition-all"
+                  className="w-full min-h-[44px] flex items-center justify-center gap-2 rounded-2xl border border-white/5 bg-white/[0.02] text-white/50 text-[0.625rem] font-extrabold uppercase tracking-[0.2em] hover:bg-white/5 active:scale-[0.99] transition-all"
                 >
                   Geçmiş & İptaller ({visiblePast.length})
                   <ChevronDown size={14} className={`transition-transform duration-200 ${showPast ? 'rotate-180' : ''}`} />
@@ -677,39 +677,39 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onBack, onNavigate }) => {
             >
               <div className="w-10 h-1 rounded-full bg-white/15 mx-auto mb-[18px]" />
               <div className="flex items-center justify-between gap-2.5 h-5">
-                <span className="text-[8px] font-extrabold uppercase tracking-[0.18em] text-[#FACC15]">Rezervasyon</span>
+                <span className="text-[0.625rem] font-extrabold uppercase tracking-[0.18em] text-[#FACC15]">Rezervasyon</span>
                 {sheetBooking.status === 'CANCELLED' ? (
-                  <span className="flex items-center gap-[5px] px-2.5 py-1 rounded-full border border-red-400/30 bg-red-400/10 text-red-300 text-[9px] font-extrabold uppercase tracking-[0.08em]"><XCircle size={11} />İptal Edildi</span>
+                  <span className="flex items-center gap-[5px] px-2.5 py-1 rounded-full border border-red-400/30 bg-red-400/10 text-red-300 text-[0.625rem] font-extrabold uppercase tracking-[0.08em]"><XCircle size={11} />İptal Edildi</span>
                 ) : sheetBooking.status === 'CONFIRMED' ? (
-                  <span className="flex items-center gap-[5px] px-2.5 py-1 rounded-full border border-[#39FF14]/30 bg-[#39FF14]/10 text-[#39FF14] text-[9px] font-extrabold uppercase tracking-[0.08em]"><CheckCircle2 size={11} />Onaylandı</span>
+                  <span className="flex items-center gap-[5px] px-2.5 py-1 rounded-full border border-[#39FF14]/30 bg-[#39FF14]/10 text-[#39FF14] text-[0.625rem] font-extrabold uppercase tracking-[0.08em]"><CheckCircle2 size={11} />Onaylandı</span>
                 ) : (
-                  <span className="flex items-center gap-[5px] px-2.5 py-1 rounded-full border border-[#FACC15]/30 bg-[#FACC15]/10 text-[#FACC15] text-[9px] font-extrabold uppercase tracking-[0.08em]"><Clock size={11} />Onay bekliyor</span>
+                  <span className="flex items-center gap-[5px] px-2.5 py-1 rounded-full border border-[#FACC15]/30 bg-[#FACC15]/10 text-[#FACC15] text-[0.625rem] font-extrabold uppercase tracking-[0.08em]"><Clock size={11} />Onay bekliyor</span>
                 )}
               </div>
               <p className="mt-3.5 mb-0 text-xl font-extrabold italic uppercase tracking-[-0.03em] truncate">{sheetBooking.pitches?.name || 'Saha Rezervasyonu'}</p>
-              <p className="mt-[5px] mb-0 text-[12px] text-white/50 font-semibold flex items-center gap-[5px] truncate">
+              <p className="mt-[5px] mb-0 text-[0.75rem] text-white/50 font-semibold flex items-center gap-[5px] truncate">
                 <MapPin size={12} className="shrink-0" />
                 {[sheetBooking.pitches?.district, sheetBooking.courts?.name].filter(Boolean).join(' · ') || '—'}
               </p>
               <div className="flex items-center gap-4 mt-4 bg-black/30 border border-white/5 rounded-2xl px-4 py-3">
-                <span className="font-numeric flex items-center gap-1.5 text-[13px] font-bold text-gray-300"><Calendar size={14} className="text-[#39FF14]" />{sheetHeading?.primary === 'Bugün' || sheetHeading?.primary === 'Yarın' ? `${sheetHeading?.secondary} · ${sheetHeading?.primary}` : sheetHeading?.primary}</span>
-                <span className="font-numeric flex items-center gap-1.5 text-[13px] font-bold text-gray-300"><Clock size={14} className="text-[#39FF14]" />{shortTime(sheetBooking.start_time)}–{shortTime(sheetBooking.end_time)}</span>
+                <span className="font-numeric flex items-center gap-1.5 text-[0.8125rem] font-bold text-gray-300"><Calendar size={14} className="text-[#39FF14]" />{sheetHeading?.primary === 'Bugün' || sheetHeading?.primary === 'Yarın' ? `${sheetHeading?.secondary} · ${sheetHeading?.primary}` : sheetHeading?.primary}</span>
+                <span className="font-numeric flex items-center gap-1.5 text-[0.8125rem] font-bold text-gray-300"><Clock size={14} className="text-[#39FF14]" />{shortTime(sheetBooking.start_time)}–{shortTime(sheetBooking.end_time)}</span>
               </div>
-              <div className="flex items-center justify-between mt-3.5 text-[12px]">
-                <span className="text-gray-500 font-bold uppercase tracking-[0.03em]">Tutar</span>
+              <div className="flex items-center justify-between mt-3.5 text-[0.75rem]">
+                <span className="text-ink-4 font-bold uppercase tracking-[0.03em]">Tutar</span>
                 <span className="font-numeric text-[#FACC15] font-extrabold">
                   ₺{Number(sheetBooking.price || 0).toLocaleString('tr-TR')}
-                  {sheetBooking.deposit_amount > 0 && <span className="text-gray-500 font-bold"> · Kapora ₺{Number(sheetBooking.deposit_amount).toLocaleString('tr-TR')}</span>}
+                  {sheetBooking.deposit_amount > 0 && <span className="text-ink-4 font-bold"> · Kapora ₺{Number(sheetBooking.deposit_amount).toLocaleString('tr-TR')}</span>}
                 </span>
               </div>
-              <div className="flex items-center justify-between mt-2 text-[12px]">
-                <span className="text-gray-500 font-bold uppercase tracking-[0.03em]">Kapora durumu</span>
+              <div className="flex items-center justify-between mt-2 text-[0.75rem]">
+                <span className="text-ink-4 font-bold uppercase tracking-[0.03em]">Kapora durumu</span>
                 {bookingRemaining <= 0 && (sheetBooking.deposit_amount || 0) > 0 ? (
                   <span className="text-[#39FF14] font-bold flex items-center gap-1"><CheckCircle2 size={12} />Ödendi</span>
                 ) : bookingRemaining > 0 ? (
                   <span className="font-numeric text-[#FACC15] font-bold">₺{bookingRemaining.toLocaleString('tr-TR')} bekliyor</span>
                 ) : (
-                  <span className="text-gray-500 font-bold">—</span>
+                  <span className="text-ink-4 font-bold">—</span>
                 )}
               </div>
 
@@ -746,25 +746,25 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onBack, onNavigate }) => {
                   onClick={() => { const b = sheetBooking; setSheet(null); handleConvertToMatch(b); }}
                   className="flex flex-col items-center justify-center gap-[5px] min-h-[56px] rounded-[14px] bg-[#39FF14]/[0.06] border border-[#39FF14]/20 text-[#39FF14] active:scale-[0.97] transition-transform"
                 >
-                  <Swords size={16} /><span className="text-[9px] font-extrabold uppercase tracking-[0.06em]">Maça Çevir</span>
+                  <Swords size={16} /><span className="text-[0.625rem] font-extrabold uppercase tracking-[0.06em]">Maça Çevir</span>
                 </button>
                 <button
                   onClick={() => handleDirections([sheetBooking.pitches?.name, sheetBooking.pitches?.district, 'Ordu'].filter(Boolean).join(' '))}
                   className="flex flex-col items-center justify-center gap-[5px] min-h-[56px] rounded-[14px] bg-white/[0.03] border border-white/10 text-white/80 active:scale-[0.97] transition-transform"
                 >
-                  <Navigation size={16} /><span className="text-[9px] font-extrabold uppercase tracking-[0.06em]">Yol Tarifi</span>
+                  <Navigation size={16} /><span className="text-[0.625rem] font-extrabold uppercase tracking-[0.06em]">Yol Tarifi</span>
                 </button>
                 <button
                   onClick={() => { setSheet(null); navigateTo('PITCH_DISCOVERY'); }}
                   className="flex flex-col items-center justify-center gap-[5px] min-h-[56px] rounded-[14px] bg-white/[0.03] border border-white/10 text-white/80 active:scale-[0.97] transition-transform"
                 >
-                  <Repeat size={16} /><span className="text-[9px] font-extrabold uppercase tracking-[0.06em]">Tekrar Rezerve</span>
+                  <Repeat size={16} /><span className="text-[0.625rem] font-extrabold uppercase tracking-[0.06em]">Tekrar Rezerve</span>
                 </button>
               </div>
               {sheetBooking.status !== 'CANCELLED' && (
                 <button
                   onClick={() => { const b = sheetBooking; setSheet(null); setCancelTarget(b); setCancelError(null); }}
-                  className="w-full min-h-[48px] mt-2.5 rounded-[14px] border border-red-300/20 bg-red-300/[0.06] text-red-300 text-[11px] font-extrabold uppercase tracking-[0.14em] active:scale-[0.98] transition-transform"
+                  className="w-full min-h-[48px] mt-2.5 rounded-[14px] border border-red-300/20 bg-red-300/[0.06] text-red-300 text-[0.6875rem] font-extrabold uppercase tracking-[0.14em] active:scale-[0.98] transition-transform"
                 >
                   İptal Et
                 </button>
@@ -790,24 +790,24 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onBack, onNavigate }) => {
             >
               <div className="w-10 h-1 rounded-full bg-white/15 mx-auto mb-[18px]" />
               <div className="flex items-center justify-between gap-2.5 h-5">
-                <span className="text-[8px] font-extrabold uppercase tracking-[0.18em] text-[#39FF14]">
+                <span className="text-[0.625rem] font-extrabold uppercase tracking-[0.18em] text-[#39FF14]">
                   {sheetMatch.creatorId === currentUserUid ? 'Maç · Kaptan' : 'Maç'}
                 </span>
-                <span className="font-numeric text-[9px] font-extrabold uppercase tracking-[0.08em] text-white/45">
+                <span className="font-numeric text-[0.625rem] font-extrabold uppercase tracking-[0.08em] text-ink-4">
                   {sheetMatchStats ? `${sheetMatchStats.taken}/${sheetMatchStats.total} oyuncu` : ''}
                 </span>
               </div>
               <p className="mt-3.5 mb-0 text-xl font-extrabold italic uppercase tracking-[-0.03em] truncate">{sheetMatch.title || 'Maç'}</p>
-              <p className="mt-[5px] mb-0 text-[12px] text-white/50 font-semibold flex items-center gap-[5px] truncate">
+              <p className="mt-[5px] mb-0 text-[0.75rem] text-white/50 font-semibold flex items-center gap-[5px] truncate">
                 <MapPin size={12} className="shrink-0" />
                 {[sheetMatch.location, (sheetMatch as { courtName?: string }).courtName].filter(Boolean).join(' · ') || '—'}
               </p>
               <div className="flex items-center gap-4 mt-4 bg-black/30 border border-white/5 rounded-2xl px-4 py-3">
-                <span className="font-numeric flex items-center gap-1.5 text-[13px] font-bold text-gray-300"><Calendar size={14} className="text-[#39FF14]" />{sheetHeading?.primary === 'Bugün' || sheetHeading?.primary === 'Yarın' ? `${sheetHeading?.secondary} · ${sheetHeading?.primary}` : sheetHeading?.primary}</span>
-                <span className="font-numeric flex items-center gap-1.5 text-[13px] font-bold text-gray-300"><Clock size={14} className="text-[#39FF14]" />{sheetMatch.time || '—'}</span>
+                <span className="font-numeric flex items-center gap-1.5 text-[0.8125rem] font-bold text-gray-300"><Calendar size={14} className="text-[#39FF14]" />{sheetHeading?.primary === 'Bugün' || sheetHeading?.primary === 'Yarın' ? `${sheetHeading?.secondary} · ${sheetHeading?.primary}` : sheetHeading?.primary}</span>
+                <span className="font-numeric flex items-center gap-1.5 text-[0.8125rem] font-bold text-gray-300"><Clock size={14} className="text-[#39FF14]" />{sheetMatch.time || '—'}</span>
               </div>
-              <div className="flex items-center justify-between mt-3.5 text-[12px]">
-                <span className="text-gray-500 font-bold uppercase tracking-[0.03em]">Kişi başı</span>
+              <div className="flex items-center justify-between mt-3.5 text-[0.75rem]">
+                <span className="text-ink-4 font-bold uppercase tracking-[0.03em]">Kişi başı</span>
                 <span className="font-numeric text-[#FACC15] font-extrabold">
                   {Number(sheetMatch.price) > 0 ? `₺${Number(sheetMatch.price).toLocaleString('tr-TR')}` : 'Ücretsiz'}
                 </span>
@@ -825,8 +825,8 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onBack, onNavigate }) => {
                   className="w-full min-h-[52px] mt-2.5 rounded-2xl bg-[#FACC15]/10 border border-[#FACC15]/30 flex items-center justify-between px-4 text-left active:scale-[0.98] transition-transform"
                 >
                   <span>
-                    <span className="block text-[11px] font-extrabold text-[#FACC15] uppercase tracking-wider">Maçı Değerlendir</span>
-                    <span className="block text-[9px] text-white/40 font-bold">Takım arkadaşlarını ve kaleci/hakemi puanla</span>
+                    <span className="block text-[0.6875rem] font-extrabold text-[#FACC15] uppercase tracking-wider">Maçı Değerlendir</span>
+                    <span className="block text-[0.6875rem] text-ink-4 font-bold">Takım arkadaşlarını ve kaleci/hakemi puanla</span>
                   </span>
                   <span className="text-[#FACC15] font-extrabold">→</span>
                 </button>
@@ -834,14 +834,14 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onBack, onNavigate }) => {
               <div className="grid grid-cols-2 gap-2 mt-2.5">
                 <button
                   onClick={() => handleDirections([sheetMatch.location, 'Ordu'].filter(Boolean).join(' '))}
-                  className="flex items-center justify-center gap-[7px] min-h-[48px] rounded-[14px] bg-white/[0.03] border border-white/10 text-white/80 text-[10px] font-extrabold uppercase tracking-[0.08em] active:scale-[0.97] transition-transform"
+                  className="flex items-center justify-center gap-[7px] min-h-[48px] rounded-[14px] bg-white/[0.03] border border-white/10 text-white/80 text-[0.625rem] font-extrabold uppercase tracking-[0.08em] active:scale-[0.97] transition-transform"
                 >
                   <Navigation size={15} />Yol Tarifi
                 </button>
                 <button
                   disabled={!sheetMatchLeaveable}
                   onClick={() => { if (sheet) { setLeaveError(null); setLeaveTarget(sheet); setSheet(null); } }}
-                  className="flex items-center justify-center gap-[7px] min-h-[48px] rounded-[14px] bg-red-300/[0.06] border border-red-300/20 text-red-300 text-[10px] font-extrabold uppercase tracking-[0.08em] active:scale-[0.97] transition-transform disabled:opacity-35"
+                  className="flex items-center justify-center gap-[7px] min-h-[48px] rounded-[14px] bg-red-300/[0.06] border border-red-300/20 text-red-300 text-[0.625rem] font-extrabold uppercase tracking-[0.08em] active:scale-[0.97] transition-transform disabled:opacity-35"
                 >
                   <LogOut size={15} />Maçtan Ayrıl
                 </button>
@@ -871,7 +871,7 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onBack, onNavigate }) => {
               <p className="text-sm text-gray-400 leading-relaxed mb-1">
                 {leaveTarget.match.title} — {leaveTarget.match.time}
               </p>
-              <p className="text-xs text-gray-500 mb-3">
+              <p className="text-xs text-ink-4 mb-3">
                 Kadrodaki yerin ve doldurulmamış rezerve slotların serbest bırakılır. Arkadaşlarına atadığın slotlar korunur.
               </p>
 
@@ -890,7 +890,7 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onBack, onNavigate }) => {
                     <skin.Icon size={15}
                       className={`shrink-0 mt-0.5 ${msg.tone === 'loading' ? 'animate-spin' : ''}`}
                       style={{ color: msg.tone === 'refund' ? '#39FF14' : skin.ink }} />
-                    <p className="text-[13px] font-semibold leading-[18px]" style={{ color: skin.ink }}>
+                    <p className="text-[0.8125rem] font-semibold leading-[18px]" style={{ color: skin.ink }}>
                       {msg.text}
                     </p>
                   </div>
@@ -937,7 +937,7 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onBack, onNavigate }) => {
               <p className="text-sm text-gray-400 leading-relaxed mb-1">
                 {cancelTarget.pitches?.name} — {cancelTarget.booking_date} {shortTime(cancelTarget.start_time)}
               </p>
-              <p className="text-xs text-gray-500 mb-6">
+              <p className="text-xs text-ink-4 mb-6">
                 {previewLoading ? (
                   <span className="inline-flex items-center gap-1.5"><Loader2 size={12} className="animate-spin" /> İade koşulları hesaplanıyor…</span>
                 ) : previewError || !cancelPreview ? (

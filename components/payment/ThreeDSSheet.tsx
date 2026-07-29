@@ -120,12 +120,12 @@ const ThreeDSSheet: React.FC<ThreeDSSheetProps> = ({ htmlBase64, intentId, onDon
           <ShieldCheck size={18} />
         </span>
         <div className="flex-1 min-w-0">
-          <h1 className="text-[15px] font-extrabold text-white leading-tight">Banka Doğrulaması</h1>
-          <p className="text-[10.5px] text-gray-500 font-semibold">3D Secure · SMS ile onayla</p>
+          <h1 className="text-[0.9375rem] font-extrabold text-white leading-tight">Banka Doğrulaması</h1>
+          <p className="text-[0.6875rem] text-ink-4 font-semibold">3D Secure · SMS ile onayla</p>
         </div>
         <button
           onClick={handleClose}
-          className={`h-9 px-3.5 rounded-full text-[12px] font-extrabold flex items-center gap-1.5 active:scale-95 transition-all ${
+          className={`h-9 px-3.5 rounded-full text-[0.75rem] font-extrabold flex items-center gap-1.5 active:scale-95 transition-all ${
             failed ? 'bg-red-400 text-[#0A0E14]' : 'bg-[#161B22] border border-white/8 text-gray-300'
           }`}
         >
@@ -138,7 +138,7 @@ const ThreeDSSheet: React.FC<ThreeDSSheetProps> = ({ htmlBase64, intentId, onDon
         className="flex-1 w-full border-0 bg-white"
       />
       <div className="px-5 py-2.5 pb-safe border-t border-white/8 bg-[#0A0E14] shrink-0">
-        <p className="text-[10.5px] text-gray-500 text-center leading-relaxed">
+        <p className="text-[0.6875rem] text-ink-4 text-center leading-relaxed">
           Bankanın gönderdiği SMS kodunu bu sayfada gir. Onaylanmayan tutar kartına yansımaz.
         </p>
       </div>

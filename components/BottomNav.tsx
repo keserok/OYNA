@@ -63,7 +63,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({ currentView, onNavigate, h
                 >
                   <Icon size={24} strokeWidth={isActive ? 3 : 2} />
                 </motion.div>
-                <span className={`${type_.caption} font-extrabold tracking-wide mt-1 whitespace-nowrap transition-colors ${isActive ? 'text-[#39FF14]' : 'text-gray-500'}`}>
+                <span className={`${type_.caption} font-extrabold tracking-wide mt-1 whitespace-nowrap transition-colors ${isActive ? 'text-[#39FF14]' : 'text-ink-4'}`}>
                   {item.label}
                 </span>
               </button>
@@ -89,10 +89,10 @@ export const BottomNav: React.FC<BottomNavProps> = ({ currentView, onNavigate, h
               <div className="relative z-10 flex flex-col items-center gap-1">
                 <Icon 
                   size={20} 
-                  className={`transition-colors duration-300 ${isActive ? 'text-white' : 'text-gray-500 group-hover:text-gray-300'}`} 
+                  className={`transition-colors duration-300 ${isActive ? 'text-white' : 'text-ink-4 group-hover:text-gray-300'}`} 
                   strokeWidth={isActive ? 2.5 : 2}
                 />
-                <span className={`${type_.caption} font-bold tracking-wide whitespace-nowrap transition-colors duration-300 ${isActive ? 'text-white' : 'text-gray-500 group-hover:text-gray-300'}`}>
+                <span className={`${type_.caption} font-bold tracking-wide whitespace-nowrap transition-colors duration-300 ${isActive ? 'text-white' : 'text-ink-4 group-hover:text-gray-300'}`}>
                   {item.label}
                 </span>
               </div>

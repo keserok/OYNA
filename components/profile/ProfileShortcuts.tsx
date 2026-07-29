@@ -19,7 +19,7 @@ export const ProfileShortcuts: React.FC<{ items: ShortcutItem[] }> = ({ items })
                     <div className="w-[34px] h-[34px] rounded-[10px] bg-white/[0.06] border border-white/[0.12] flex items-center justify-center text-white/85">
                         {item.icon}
                     </div>
-                    <span className="text-[9px] font-extrabold text-white/55 leading-[1.2] text-center truncate max-w-full">{item.label}</span>
+                    <span className="text-[0.6875rem] font-extrabold text-white/55 leading-[1.2] text-center truncate max-w-full">{item.label}</span>
                     <span className="text-sm font-extrabold text-white truncate max-w-full">{item.value}</span>
                 </>
             );

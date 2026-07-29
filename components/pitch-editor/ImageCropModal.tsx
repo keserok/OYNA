@@ -87,7 +87,7 @@ export const ImageCropModal: React.FC<Props> = ({ file, index, total, onConfirm,
             <div className="absolute top-2/3 left-0 right-0 h-px bg-white/20" />
           </div>
         </div>
-        <p className="text-[11px] text-gray-400 flex items-center gap-1.5">
+        <p className="text-[0.6875rem] text-gray-400 flex items-center gap-1.5">
           <Move size={13} /> Sürükleyerek konumlandır · vitrinde 16:9 görünür
         </p>
       </div>

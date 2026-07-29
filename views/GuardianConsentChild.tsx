@@ -108,7 +108,7 @@ const GuardianConsentChild: React.FC<GuardianConsentChildProps> = ({ onBack, onG
 
             {/* Kod */}
             <div className="bg-gradient-to-b from-[#39FF14]/10 to-transparent border border-[#39FF14]/25 rounded-3xl p-6 mb-4 text-center">
-              <div className="text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2">Veli Bağlantı Kodun</div>
+              <div className="text-[0.6875rem] font-bold uppercase tracking-widest text-gray-400 mb-2">Veli Bağlantı Kodun</div>
               <div className="text-4xl font-extrabold tracking-[0.25em] text-[#39FF14] mb-4" style={{ textShadow: '0 0 24px rgba(57,255,20,0.4)' }}>
                 {code ?? '—'}
               </div>

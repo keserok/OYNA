@@ -59,7 +59,7 @@ export const TeamDashboard: React.FC<TeamDashboardProps> = ({ team, onBack, onNa
             </button>
             <div className="px-4 py-2 rounded-full backdrop-blur-xl border flex items-center gap-2" style={{ backgroundColor: `${team.color1}10`, borderColor: `${team.color1}30` }}>
                 <span className="w-2 h-2 rounded-full animate-pulse shadow-[0_0_10px_currentColor]" style={{ backgroundColor: team.color1 }} />
-                <span className="text-[10px] font-extrabold uppercase tracking-widest text-white">Aktif</span>
+                <span className="text-[0.625rem] font-extrabold uppercase tracking-widest text-white">Aktif</span>
             </div>
         </div>
 
@@ -79,7 +79,7 @@ export const TeamDashboard: React.FC<TeamDashboardProps> = ({ team, onBack, onNa
             </h1>
             
             <div className="flex items-center justify-center gap-3 mt-2">
-                <span className="px-3 py-1 rounded-lg uppercase text-[11px] font-extrabold tracking-[0.2em] text-white backdrop-blur-md border" style={{ backgroundColor: `${team.color1}20`, borderColor: `${team.color1}40` }}>
+                <span className="px-3 py-1 rounded-lg uppercase text-[0.6875rem] font-extrabold tracking-[0.2em] text-white backdrop-blur-md border" style={{ backgroundColor: `${team.color1}20`, borderColor: `${team.color1}40` }}>
                     {team.shortName}
                 </span>
                 {team.location && (
@@ -92,20 +92,20 @@ export const TeamDashboard: React.FC<TeamDashboardProps> = ({ team, onBack, onNa
             <div className="mt-8 flex gap-4 w-full">
                 <div className="flex-1 backdrop-blur-xl border rounded-3xl p-5 flex flex-col items-center shadow-2xl" style={{ backgroundColor: `${team.color1}10`, borderColor: `${team.color1}30` }}>
                     <span className="text-2xl font-extrabold text-white drop-shadow-md">{teamPlayers.length}</span>
-                    <span className="text-[9px] font-bold uppercase tracking-widest mt-1 opacity-80" style={{ color: team.color1 }}>Kadro</span>
+                    <span className="text-[0.625rem] font-bold uppercase tracking-widest mt-1 opacity-80" style={{ color: team.color1 }}>Kadro</span>
                 </div>
                 <div className="flex-1 backdrop-blur-xl border rounded-3xl p-5 flex flex-col items-center shadow-2xl relative overflow-hidden" style={{ backgroundColor: `${team.color1}20`, borderColor: `${team.color1}50` }}>
                     <div className="absolute inset-0 opacity-30" style={{ background: `linear-gradient(45deg, transparent, ${team.color1}, transparent)` }} />
                     <span className="text-xl font-extrabold text-white drop-shadow-md relative z-10">{Number(team.teamValue || 0).toLocaleString('tr-TR')} 💎</span>
-                    <span className="text-[9px] font-bold uppercase tracking-widest mt-1 opacity-90 relative z-10" style={{ color: team.color1 }}>Takım Değeri</span>
+                    <span className="text-[0.625rem] font-bold uppercase tracking-widest mt-1 opacity-90 relative z-10" style={{ color: team.color1 }}>Takım Değeri</span>
                 </div>
                 <div className="flex-1 backdrop-blur-xl border rounded-3xl p-5 flex flex-col items-center shadow-2xl" style={{ backgroundColor: `${team.color1}10`, borderColor: `${team.color1}30` }}>
                     <div className="flex gap-1.5 mt-1">
-                        <span className="w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-extrabold" style={{ backgroundColor: `${team.color1}40` }}>-</span>
-                        <span className="w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-extrabold" style={{ backgroundColor: `${team.color1}40` }}>-</span>
-                        <span className="w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-extrabold" style={{ backgroundColor: `${team.color1}40` }}>-</span>
+                        <span className="w-4 h-4 rounded-full flex items-center justify-center text-[0.6875rem] font-extrabold" style={{ backgroundColor: `${team.color1}40` }}>-</span>
+                        <span className="w-4 h-4 rounded-full flex items-center justify-center text-[0.6875rem] font-extrabold" style={{ backgroundColor: `${team.color1}40` }}>-</span>
+                        <span className="w-4 h-4 rounded-full flex items-center justify-center text-[0.6875rem] font-extrabold" style={{ backgroundColor: `${team.color1}40` }}>-</span>
                     </div>
-                    <span className="text-[9px] font-bold uppercase tracking-widest mt-2 opacity-80" style={{ color: team.color1 }}>Form</span>
+                    <span className="text-[0.625rem] font-bold uppercase tracking-widest mt-2 opacity-80" style={{ color: team.color1 }}>Form</span>
                 </div>
             </div>
         </div>
@@ -130,7 +130,7 @@ export const TeamDashboard: React.FC<TeamDashboardProps> = ({ team, onBack, onNa
                     <div className="text-left">
                         <div className="flex items-center gap-2 mb-2">
                             <span className="w-2 h-2 rounded-full animate-pulse shadow-[0_0_10px_currentColor]" style={{ backgroundColor: team.color1 }} />
-                            <span className="text-[10px] font-extrabold uppercase tracking-widest" style={{ color: team.color1 }}>Strateji Odası</span>
+                            <span className="text-[0.625rem] font-extrabold uppercase tracking-widest" style={{ color: team.color1 }}>Strateji Odası</span>
                         </div>
                         <h2 className="text-3xl font-extrabold italic uppercase tracking-tighter text-white mb-2 drop-shadow-md">Taktik Stüdyosu</h2>
                         <p className="text-xs font-bold text-white/70">Dizilişini belirle, ilk 11'i sahaya sür.</p>
@@ -174,19 +174,19 @@ export const TeamDashboard: React.FC<TeamDashboardProps> = ({ team, onBack, onNa
                                         <div className="flex items-center gap-2">
                                             <h4 className="text-base font-extrabold text-white">{player.name}</h4>
                                             {isCaptain && (
-                                                <div className="bg-[#FACC15] text-black text-[9px] font-extrabold px-2 py-0.5 rounded flex items-center gap-1 shadow-[0_0_15px_rgba(250,204,21,0.4)]">
+                                                <div className="bg-[#FACC15] text-black text-[0.6875rem] font-extrabold px-2 py-0.5 rounded flex items-center gap-1 shadow-[0_0_15px_rgba(250,204,21,0.4)]">
                                                     <Award size={10} /> KAPTAN
                                                 </div>
                                             )}
                                         </div>
                                         <div className="flex items-center gap-2 mt-1">
-                                            <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: team.color1 }}>{player.pos}</span>
+                                            <span className="text-[0.625rem] font-bold uppercase tracking-widest" style={{ color: team.color1 }}>{player.pos}</span>
                                             <span className="w-1 h-1 rounded-full bg-white/30" />
-                                            <span className="text-[9px] font-bold text-white/60 uppercase tracking-widest">{player.wins} Galibiyet</span>
+                                            <span className="text-[0.625rem] font-bold text-white/60 uppercase tracking-widest">{player.wins} Galibiyet</span>
                                         </div>
                                     </div>
                                 </div>
-                                <ChevronRight size={18} className="text-white/30 group-hover:text-white transition-colors" />
+                                <ChevronRight size={18} className="text-ink-4 group-hover:text-white transition-colors" />
                             </motion.div>
                         );
                     })
@@ -230,12 +230,12 @@ export const TeamDashboard: React.FC<TeamDashboardProps> = ({ team, onBack, onNa
                                 <div className="bg-white/5 border border-white/10 rounded-2xl p-4 flex flex-col items-center justify-center">
                                     <Activity size={20} className="mb-2" style={{ color: team.color1 }} />
                                     <span className="text-2xl font-extrabold text-white">{selectedPlayer.wins}</span>
-                                    <span className="text-[9px] font-bold uppercase tracking-widest text-white/40 mt-1">Galibiyet</span>
+                                    <span className="text-[0.625rem] font-bold uppercase tracking-widest text-ink-4 mt-1">Galibiyet</span>
                                 </div>
                                 <div className="bg-white/5 border border-white/10 rounded-2xl p-4 flex flex-col items-center justify-center">
                                     <Zap size={20} className="mb-2 text-amber-400" />
                                     <span className="text-2xl font-extrabold text-white">{selectedPlayer.losses}</span>
-                                    <span className="text-[9px] font-bold uppercase tracking-widest text-white/40 mt-1">Mağlubiyet</span>
+                                    <span className="text-[0.625rem] font-bold uppercase tracking-widest text-ink-4 mt-1">Mağlubiyet</span>
                                 </div>
                             </div>
 

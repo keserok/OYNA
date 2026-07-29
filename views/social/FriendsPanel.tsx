@@ -160,12 +160,12 @@ const FriendsPanel: React.FC<FriendsPanelProps> = ({
       {/* Arama (mevcut arkadaşlarda) + Arkadaş Ekle kapısı (B7) */}
       <div className="flex gap-2 mb-4">
         <div className="relative flex-1">
-          <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/30" />
+          <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-4" />
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Arkadaşlarında ara…"
-            className="w-full h-11 pl-9 pr-3 rounded-2xl bg-white/5 border border-white/8 text-sm placeholder:text-white/25 focus:outline-none focus:border-white/20"
+            className="w-full h-11 pl-9 pr-3 rounded-2xl bg-white/5 border border-white/8 text-sm placeholder:text-ink-4 focus:outline-none focus:border-white/20"
           />
         </div>
         <button
@@ -181,7 +181,7 @@ const FriendsPanel: React.FC<FriendsPanelProps> = ({
       {requests.length > 0 && (
         <div className="mb-5 rounded-2xl bg-white/4 border border-white/8 p-3.5">
           <div className="flex items-center gap-3 mb-3">
-            <span className="text-[10px] font-extrabold uppercase tracking-widest text-white/40">
+            <span className="text-[0.625rem] font-extrabold uppercase tracking-widest text-ink-4">
               İstekler · {requests.length}
             </span>
             <div className="flex gap-1 ml-auto">
@@ -189,8 +189,8 @@ const FriendsPanel: React.FC<FriendsPanelProps> = ({
                 <button
                   key={id}
                   onClick={() => setReqTab(id)}
-                  className={`h-7 px-2.5 rounded-lg text-[11px] font-bold ${
-                    reqTab === id ? 'bg-white/10 text-white' : 'text-white/40'
+                  className={`h-7 px-2.5 rounded-lg text-[0.6875rem] font-bold ${
+                    reqTab === id ? 'bg-white/10 text-white' : 'text-ink-4'
                   }`}
                 >
                   {label}
@@ -203,7 +203,7 @@ const FriendsPanel: React.FC<FriendsPanelProps> = ({
             <button
               onClick={acceptAll}
               disabled={busyReq === 'ALL'}
-              className="mb-2.5 text-[11px] font-bold text-[#39FF14] min-h-[32px]"
+              className="mb-2.5 text-[0.6875rem] font-bold text-[#39FF14] min-h-[32px]"
             >
               {busyReq === 'ALL' ? 'Kabul ediliyor…' : 'Tümünü Kabul Et'}
             </button>
@@ -214,13 +214,13 @@ const FriendsPanel: React.FC<FriendsPanelProps> = ({
               <div key={r.request_id} className="flex items-center gap-2.5">
                 <Avatar name={r.full_name} src={r.avatar_url} size="sm" />
                 <div className="flex-1 min-w-0">
-                  <div className="text-[13px] font-bold truncate">{r.full_name}</div>
-                  <div className="text-[10px] text-white/35 truncate">
+                  <div className="text-[0.8125rem] font-bold truncate">{r.full_name}</div>
+                  <div className="text-[0.6875rem] text-ink-4 truncate">
                     {r.oyna_id ? `@${r.oyna_id}` : 'OYNA oyuncusu'}
                   </div>
                 </div>
                 {busyReq === r.request_id ? (
-                  <Loader2 size={15} className="animate-spin text-white/40" />
+                  <Loader2 size={15} className="animate-spin text-ink-4" />
                 ) : reqTab === 'IN' ? (
                   <>
                     <button
@@ -232,7 +232,7 @@ const FriendsPanel: React.FC<FriendsPanelProps> = ({
                     </button>
                     <button
                       onClick={() => handleRespond(r, true)}
-                      className="h-9 px-3 rounded-xl bg-[#39FF14] text-[#0A0E14] text-[11px] font-extrabold flex items-center gap-1 active:scale-95"
+                      className="h-9 px-3 rounded-xl bg-[#39FF14] text-[#0A0E14] text-[0.6875rem] font-extrabold flex items-center gap-1 active:scale-95"
                     >
                       <Check size={12} /> Kabul Et
                     </button>
@@ -240,7 +240,7 @@ const FriendsPanel: React.FC<FriendsPanelProps> = ({
                 ) : (
                   <button
                     onClick={() => handleCancel(r)}
-                    className="h-9 px-3 rounded-xl bg-white/5 border border-white/10 text-[11px] font-bold text-white/60 active:scale-95"
+                    className="h-9 px-3 rounded-xl bg-white/5 border border-white/10 text-[0.6875rem] font-bold text-white/60 active:scale-95"
                   >
                     Geri Çek
                   </button>
@@ -248,7 +248,7 @@ const FriendsPanel: React.FC<FriendsPanelProps> = ({
               </div>
             ))}
             {reqTab === 'OUT' && outgoing.length === 0 && (
-              <p className="text-[11px] text-white/30 py-1">Bekleyen gönderilmiş isteğin yok.</p>
+              <p className="text-[0.6875rem] text-ink-4 py-1">Bekleyen gönderilmiş isteğin yok.</p>
             )}
           </div>
         </div>
@@ -326,7 +326,7 @@ const FriendsPanel: React.FC<FriendsPanelProps> = ({
                       <span className="text-sm font-bold truncate">{f.full_name}</span>
                       {f.is_favorite && <Star size={12} className="text-amber-400 fill-amber-400 shrink-0" />}
                     </div>
-                    <div className="text-[11px] text-white/40 truncate mt-0.5">
+                    <div className="text-[0.6875rem] text-ink-4 truncate mt-0.5">
                       {f.pos || 'OS'}
                       {f.matches_together > 0
                         ? ` · ${f.matches_together} maç birlikte`
@@ -383,7 +383,7 @@ const FriendsPanel: React.FC<FriendsPanelProps> = ({
               onChange={e => setListName(e.target.value.slice(0, 30))}
               placeholder="Liste adı (ör. Halı Saha Tayfası)"
               autoFocus
-              className="flex-1 h-12 px-4 rounded-2xl bg-white/5 border border-white/10 text-sm font-semibold placeholder:text-white/25 focus:outline-none focus:border-[#39FF14]/50"
+              className="flex-1 h-12 px-4 rounded-2xl bg-white/5 border border-white/10 text-sm font-semibold placeholder:text-ink-4 focus:outline-none focus:border-[#39FF14]/50"
             />
           </div>
           <button
@@ -412,11 +412,11 @@ const FriendsPanel: React.FC<FriendsPanelProps> = ({
         title="Hangi maça?"
       >
         <div className="pb-1">
-          <p className="text-[11px] text-white/40 mb-3">
+          <p className="text-[0.6875rem] text-ink-4 mb-3">
             {activeList?.name} listesindekilere davet gider · boş slota <b>ilk ödeyen katılır</b>.
           </p>
           {upcoming.length === 0 ? (
-            <p className="text-sm text-white/40 py-6 text-center">Yaklaşan maçın yok. Önce bir maç kur.</p>
+            <p className="text-sm text-ink-4 py-6 text-center">Yaklaşan maçın yok. Önce bir maç kur.</p>
           ) : (
             <div className="space-y-2">
               {upcoming.slice(0, 8).map(m => {
@@ -431,15 +431,15 @@ const FriendsPanel: React.FC<FriendsPanelProps> = ({
                   >
                     <div className="flex-1 min-w-0">
                       <div className="text-sm font-bold flex items-center gap-1.5">
-                        <Calendar size={13} className="text-white/40" /> {m.date} · {m.time}
+                        <Calendar size={13} className="text-ink-4" /> {m.date} · {m.time}
                       </div>
-                      <div className="text-[11px] text-white/40 flex items-center gap-1 mt-0.5 truncate">
+                      <div className="text-[0.6875rem] text-ink-4 flex items-center gap-1 mt-0.5 truncate">
                         <MapPin size={11} /> {m.location} · {open} boş slot
                       </div>
                     </div>
                     {inviteBusy === m.id
                       ? <Loader2 size={16} className="animate-spin text-[#39FF14]" />
-                      : <span className="text-[11px] font-extrabold text-[#39FF14]">DAVET ET</span>}
+                      : <span className="text-[0.6875rem] font-extrabold text-[#39FF14]">DAVET ET</span>}
                   </button>
                 );
               })}

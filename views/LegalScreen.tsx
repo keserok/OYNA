@@ -419,7 +419,7 @@ const LegalScreen: React.FC<LegalScreenProps> = ({ onBack, initialDoc }) => {
           <div className="bg-[#161B22] border border-white/5 rounded-3xl p-6">
             <pre className="whitespace-pre-wrap font-sans text-sm text-gray-300 leading-relaxed">{d.body}</pre>
           </div>
-          <p className="text-[10px] text-gray-600 text-center mt-6 leading-relaxed">
+          <p className="text-[0.6875rem] text-ink-4 text-center mt-6 leading-relaxed">
             Bu belgeler hakkında sorularınız için {CONTACT_EMAIL} adresinden bize ulaşabilirsiniz.
           </p>
         </main>
@@ -435,7 +435,7 @@ const LegalScreen: React.FC<LegalScreenProps> = ({ onBack, initialDoc }) => {
         </button>
         <div>
           <h1 className="text-xl font-extrabold italic tracking-tight">YASAL</h1>
-          <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Sözleşmeler ve politikalar</p>
+          <p className="text-[0.625rem] text-gray-400 font-bold uppercase tracking-widest">Sözleşmeler ve politikalar</p>
         </div>
       </header>
       <main className="p-6 max-w-2xl mx-auto">
@@ -453,7 +453,7 @@ const LegalScreen: React.FC<LegalScreenProps> = ({ onBack, initialDoc }) => {
                   <div className="text-gray-400"><Icon size={20} /></div>
                   <span className="text-sm font-bold text-white">{d.title}</span>
                 </div>
-                <ChevronRight size={16} className="text-gray-600" />
+                <ChevronRight size={16} className="text-ink-4" />
               </button>
             );
           })}

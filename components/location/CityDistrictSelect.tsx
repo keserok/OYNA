@@ -37,7 +37,7 @@ const CityDistrictSelect: React.FC<CityDistrictSelectProps> = ({
     <div className={`grid ${showDistrict ? 'grid-cols-2' : 'grid-cols-1'} gap-2.5 ${className}`}>
       <div>
         {labels && (
-          <label className="text-[10px] font-extrabold uppercase tracking-widest text-gray-500 block mb-1.5 ml-0.5">
+          <label className="text-[0.625rem] font-extrabold uppercase tracking-widest text-ink-4 block mb-1.5 ml-0.5">
             İl
           </label>
         )}
@@ -54,14 +54,14 @@ const CityDistrictSelect: React.FC<CityDistrictSelectProps> = ({
               </option>
             ))}
           </select>
-          <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
+          <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-4 pointer-events-none" />
         </div>
       </div>
 
       {showDistrict && (
         <div>
           {labels && (
-            <label className="text-[10px] font-extrabold uppercase tracking-widest text-gray-500 block mb-1.5 ml-0.5">
+            <label className="text-[0.625rem] font-extrabold uppercase tracking-widest text-ink-4 block mb-1.5 ml-0.5">
               İlçe
             </label>
           )}
@@ -81,7 +81,7 @@ const CityDistrictSelect: React.FC<CityDistrictSelectProps> = ({
                 </option>
               ))}
             </select>
-            <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
+            <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-4 pointer-events-none" />
           </div>
         </div>
       )}

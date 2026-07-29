@@ -205,21 +205,21 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate,
                         <div className="relative z-10 flex flex-col gap-3">
                             <div className="flex items-center gap-2">
                                 <span className="w-2 h-2 rounded-full bg-[#FACC15] animate-pulse" />
-                                <p className="text-[11px] font-extrabold uppercase tracking-widest text-[#FACC15]">Misafir Modundasın</p>
+                                <p className="text-[0.6875rem] font-extrabold uppercase tracking-widest text-[#FACC15]">Misafir Modundasın</p>
                             </div>
-                            <p className="text-[11px] text-gray-400 leading-relaxed">
+                            <p className="text-[0.6875rem] text-gray-400 leading-relaxed">
                                 Profilini oluşturmak, maçlara katılmak ve istatistiklerini biriktirmek için giriş yap.
                             </p>
                             <div className="flex gap-2.5">
                                 <button
                                     onClick={() => onNavigate && onNavigate('AUTH')}
-                                    className="flex-1 h-11 rounded-2xl bg-[#FACC15] text-black font-extrabold text-[11px] uppercase tracking-widest active:scale-95 transition-all shadow-[0_0_15px_rgba(250,204,21,0.3)] hover:bg-yellow-300"
+                                    className="flex-1 h-11 rounded-2xl bg-[#FACC15] text-black font-extrabold text-[0.6875rem] uppercase tracking-widest active:scale-95 transition-all shadow-[0_0_15px_rgba(250,204,21,0.3)] hover:bg-yellow-300"
                                 >
                                     Giriş Yap
                                 </button>
                                 <button
                                     onClick={() => onNavigate && onNavigate('AUTH')}
-                                    className="flex-1 h-11 rounded-2xl bg-white/5 border border-white/15 text-white font-extrabold text-[11px] uppercase tracking-widest active:scale-95 transition-all hover:bg-white/10"
+                                    className="flex-1 h-11 rounded-2xl bg-white/5 border border-white/15 text-white font-extrabold text-[0.6875rem] uppercase tracking-widest active:scale-95 transition-all hover:bg-white/10"
                                 >
                                     Kaydol
                                 </button>
@@ -238,10 +238,10 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate,
                             <AlertCircle size={20} className="text-[#FACC15]" />
                         </div>
                         <div className="flex-1 min-w-0">
-                            <p className="text-[13px] font-extrabold text-white">Profil tamamlanmadı</p>
-                            <p className="text-[11px] text-gray-400 leading-snug">Birkaç bilgi eksik. Tamamla, sana uygun maçları önerelim.</p>
+                            <p className="text-[0.8125rem] font-extrabold text-white">Profil tamamlanmadı</p>
+                            <p className="text-[0.6875rem] text-gray-400 leading-snug">Birkaç bilgi eksik. Tamamla, sana uygun maçları önerelim.</p>
                         </div>
-                        <span className="text-[11px] font-extrabold text-[#FACC15] uppercase tracking-wider shrink-0">Tamamla →</span>
+                        <span className="text-[0.6875rem] font-extrabold text-[#FACC15] uppercase tracking-wider shrink-0">Tamamla →</span>
                     </button>
                 )}
 
@@ -272,10 +272,10 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate,
                 {/* Bio + Profili Düzenle — sade tutuldu, hero'nun hemen altında */}
                 {!isGuest && (
                     <div className="mt-3 flex items-center gap-3 px-1">
-                        <p className={`flex-1 text-[12px] leading-relaxed ${profile?.bio ? 'text-gray-400' : 'text-gray-600 italic'}`}>
+                        <p className={`flex-1 text-[0.75rem] leading-relaxed ${profile?.bio ? 'text-gray-400' : 'text-ink-4 italic'}`}>
                             {profile?.bio || 'Henüz bir tanıtım eklemedin.'}
                         </p>
-                        <button onClick={openEdit} className="shrink-0 px-3.5 py-2 rounded-full bg-white/5 border border-white/15 text-white text-[10px] font-extrabold uppercase tracking-widest hover:bg-white/10 active:scale-95 transition-all flex items-center gap-1.5">
+                        <button onClick={openEdit} className="shrink-0 px-3.5 py-2 rounded-full bg-white/5 border border-white/15 text-white text-[0.625rem] font-extrabold uppercase tracking-widest hover:bg-white/10 active:scale-95 transition-all flex items-center gap-1.5">
                             <Pencil size={11} /> Düzenle
                         </button>
                     </div>

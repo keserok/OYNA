@@ -90,7 +90,7 @@ const DeleteAccountModal: React.FC<{
           <h3 className="font-extrabold text-white text-lg">
             {blocked ? 'Hesap Silinemiyor' : step === 1 ? 'Hesabı Sil' : 'Son Adım'}
           </h3>
-          <button onClick={onClose} className="text-gray-500 hover:text-white p-1" aria-label="Kapat">
+          <button onClick={onClose} className="text-ink-4 hover:text-white p-1" aria-label="Kapat">
             <X size={18} />
           </button>
         </div>
@@ -106,7 +106,7 @@ const DeleteAccountModal: React.FC<{
         )}
 
         {previewLoading ? (
-          <div className="py-8 text-center text-sm text-gray-500">Durum kontrol ediliyor…</div>
+          <div className="py-8 text-center text-sm text-ink-4">Durum kontrol ediliyor…</div>
         ) : blocked ? (
           <>
             <p className="text-sm text-gray-300 mb-4 leading-relaxed">
@@ -118,7 +118,7 @@ const DeleteAccountModal: React.FC<{
                   {b.code === 'CASHABLE_BALANCE' || b.code === 'PENDING_PAYOUT'
                     ? <Wallet size={16} className="text-red-400 shrink-0 mt-0.5" />
                     : <ShieldAlert size={16} className="text-red-400 shrink-0 mt-0.5" />}
-                  <p className="text-[13px] text-red-200 leading-snug">{b.message}</p>
+                  <p className="text-[0.8125rem] text-red-200 leading-snug">{b.message}</p>
                 </div>
               ))}
             </div>
@@ -139,7 +139,7 @@ const DeleteAccountModal: React.FC<{
                 {warnings.map((w) => (
                   <div key={w.code} className="flex items-start gap-2.5 p-3 rounded-xl bg-amber-500/10 border border-amber-500/25">
                     <AlertTriangle size={16} className="text-amber-400 shrink-0 mt-0.5" />
-                    <p className="text-[13px] text-amber-200 leading-snug">{w.message}</p>
+                    <p className="text-[0.8125rem] text-amber-200 leading-snug">{w.message}</p>
                   </div>
                 ))}
               </div>
