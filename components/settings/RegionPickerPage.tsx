@@ -8,6 +8,7 @@ import { auth } from '../../supabaseAuth';
 import { fbUpdateUserLocation } from '../../supabaseMutations';
 import type { OynaLocation } from '../../types';
 import SettingsSubPage from '../common/SettingsSubPage';
+import { select } from '../../utils/haptics';
 
 // ─── Bölge seçici — çoklu il/ilçe seçimi ──────────────────────────────────────
 // Kullanıcı birden fazla il/ilçe ekleyebilir; keşif (maç + saha) seçili
@@ -50,7 +51,7 @@ const RegionPickerPage: React.FC<RegionPickerPageProps> = ({ open, onClose }) =>
         fbUpdateUserLocation(auth.currentUser.uid, loc.coordinates.lat, loc.coordinates.lng).catch(() => {});
       }
     }
-    if (navigator.vibrate) navigator.vibrate(20);
+    select(); // bolge secildi
   };
 
   const toggleRegion = (city: string, district: string | null) => {

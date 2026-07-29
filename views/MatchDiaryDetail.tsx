@@ -4,6 +4,7 @@ import { MatchListing } from '../types';
 import { auth } from '../supabaseAuth';
 import { getMatchDetails, getMatchNote, saveMatchNote } from '../services/matchService';
 import { LoadingState, ErrorState } from '../components/common/StatusState';
+import { success } from '../utils/haptics';
 
 interface MatchDiaryDetailProps {
     diaryId: string | null;
@@ -107,7 +108,7 @@ const MatchDiaryDetail: React.FC<MatchDiaryDetailProps> = ({ diaryId, onBack }) 
             setNote(draftNote.trim());
             setIsEditingNote(false);
             setJustSaved(true);
-            if (navigator.vibrate) navigator.vibrate(40);
+            success(); // not kaydedildi
             setTimeout(() => setJustSaved(false), 2000);
         } catch (err) {
             console.error('Maç notu kaydedilemedi:', err);
@@ -120,6 +121,7 @@ const MatchDiaryDetail: React.FC<MatchDiaryDetailProps> = ({ diaryId, onBack }) 
         <header className="px-6 py-6 sticky top-0 bg-[#0A0E14]/90 backdrop-blur-xl z-30 border-b border-white/5 flex items-center justify-center">
             <button
                 onClick={onBack}
+                aria-label="Geri"
                 className="absolute left-6 w-11 h-11 flex items-center justify-center bg-[#161B22] rounded-full border border-white/5 text-white hover:bg-white/10 active:scale-95 transition-all"
             >
                 <ArrowLeft size={20} />
@@ -127,7 +129,7 @@ const MatchDiaryDetail: React.FC<MatchDiaryDetailProps> = ({ diaryId, onBack }) 
             <div className="text-center">
                 <h1 className="text-sm font-extrabold text-white tracking-widest uppercase">MAÇ RAPORU</h1>
             </div>
-            <button className="absolute right-6 w-11 h-11 flex items-center justify-center bg-[#161B22] rounded-full border border-white/5 text-white hover:bg-white/10 active:scale-95 transition-all">
+            <button aria-label="Paylaş" className="absolute right-6 w-11 h-11 flex items-center justify-center bg-[#161B22] rounded-full border border-white/5 text-white hover:bg-white/10 active:scale-95 transition-all">
                 <Share2 size={20} />
             </button>
         </header>

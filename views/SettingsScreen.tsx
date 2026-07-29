@@ -22,6 +22,7 @@ import FieldRolePage from '../components/settings/FieldRolePage';
 import SupportPage from '../components/settings/SupportPage';
 import { APP_VERSION } from '../utils/appVersion';
 import { getMyStaffPitches, staffAcceptInvite, type StaffPitch } from '../services/staffService';
+import { success } from '../utils/haptics';
 
 interface SettingsScreenProps {
   onBack: () => void;
@@ -170,7 +171,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
       if (auth.currentUser && loc.coordinates) {
         await fbUpdateUserLocation(auth.currentUser.uid, loc.coordinates.lat, loc.coordinates.lng).catch(() => {});
       }
-      if (navigator.vibrate) navigator.vibrate(50);
+      success(); // konum güncellendi
     } catch (err) {
       console.error(err);
       showToast('Konum alınamadı. Elle bölge seçebilir veya cihaz ayarlarından izin verebilirsin.');

@@ -77,18 +77,18 @@ const GlassModal: React.FC<GlassModalProps> = ({
               <button
                 onClick={onClose}
                 aria-label="Kapat"
-                className="w-9 h-9 -mr-1 rounded-xl bg-white/[0.06] border border-white/10 flex items-center justify-center text-white/60 active:scale-95"
+                className="w-11 h-11 -mr-1 rounded-xl bg-white/[0.06] border border-white/10 flex items-center justify-center text-white/60 active:scale-95"
               >
-                <X size={16} />
+                <X size={18} />
               </button>
             </div>
           ) : showClose ? (
             <button
               onClick={onClose}
               aria-label="Kapat"
-              className="absolute top-4 right-4 z-10 w-9 h-9 rounded-xl bg-white/[0.06] border border-white/10 flex items-center justify-center text-white/60 active:scale-95"
+              className="absolute top-4 right-4 z-10 w-11 h-11 rounded-xl bg-white/[0.06] border border-white/10 flex items-center justify-center text-white/60 active:scale-95"
             >
-              <X size={16} />
+              <X size={18} />
             </button>
           ) : null}
 

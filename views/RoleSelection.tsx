@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { UserRole, AppView } from '../types';
 import { Shield, Scale, Building2, ArrowRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { success } from '../utils/haptics';
 
 // ─── Custom Football SVG Icon (Perfected Geometry)
 const FootballIcon = ({ size = 24, className = '' }: { size?: number; className?: string }) => (
@@ -86,13 +87,12 @@ const RoleHeroCard: React.FC<{
   const handleEntry = () => {
     if (isEntering) return;
     setIsEntering(true);
-    if (navigator.vibrate) navigator.vibrate(15);
     let p = 0;
     const iv = setInterval(() => {
       p += Math.random() * 22 + 12;
       if (p >= 100) {
         p = 100; clearInterval(iv); setProgress(100);
-        if (navigator.vibrate) navigator.vibrate([40, 80, 180]);
+        success(); // rol girisi tamamlandi
         setTimeout(onComplete, 280);
       } else { setProgress(p); }
     }, 35);

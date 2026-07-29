@@ -177,14 +177,14 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate,
             {/* ═══ FIXED TOP BAR ═══ */}
             <div className="px-6 pb-3 pt-safe flex justify-between items-center shrink-0 z-50">
                 <div className="flex items-center justify-between w-full pt-4">
-                    <button onClick={onBack} className="w-[42px] h-[42px] flex items-center justify-center bg-[#161B22]/80 rounded-full text-white border border-white/[0.08] hover:bg-white/10 active:scale-95 transition-all">
+                    <button onClick={onBack} aria-label="Geri" className="w-11 h-11 flex items-center justify-center bg-[#161B22]/80 rounded-full text-white border border-white/[0.08] hover:bg-white/10 active:scale-95 transition-all">
                         <ArrowLeft size={19} strokeWidth={2.3} />
                     </button>
                     <div className="flex items-center gap-2">
                         <OynaLogo width={20} height={20} className="text-primary" />
                         <span className="text-base font-extrabold text-white tracking-[0.05em] uppercase italic">Profil</span>
                     </div>
-                    <button onClick={() => onNavigate && onNavigate('SETTINGS')} className="w-[42px] h-[42px] flex items-center justify-center bg-[#161B22]/80 rounded-full text-white/75 hover:text-white border border-white/[0.08] hover:bg-white/10 active:scale-95 transition-all">
+                    <button onClick={() => onNavigate && onNavigate('SETTINGS')} aria-label="Ayarlar" className="w-11 h-11 flex items-center justify-center bg-[#161B22]/80 rounded-full text-white/75 hover:text-white border border-white/[0.08] hover:bg-white/10 active:scale-95 transition-all">
                         <Settings size={17} />
                     </button>
                 </div>

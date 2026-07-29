@@ -34,6 +34,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { OYNA_TILE_URL, oynaTileProps, oynaMapProps, OYNA_MAP_CSS } from '../components/map/mapBase';
 import { Toast } from '../components/common/Toast';
+import { success, error } from '../utils/haptics';
 
 // Fix leaflet default icon path issues
 if (typeof window !== 'undefined') {
@@ -653,7 +654,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
       if (isManageMode && slot.purchasedBy === currentUserProfile?.id) {
         setFillSlot(slot);
       } else {
-        if (navigator.vibrate) navigator.vibrate(15);
+        error(); // slot alinamadi / rezerve
         showActionError('Bu slot rezerve edildi — satın alan kişi dolduracak.');
       }
       return;
@@ -1274,7 +1275,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
               })()}
 
               <button onClick={() => setActivePlayerSlotId(null)}
-                className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-white/70 hover:bg-white/20 transition-colors backdrop-blur-md z-10">
+                aria-label="Kapat" className="absolute top-4 right-4 w-11 h-11 rounded-full bg-white/10 flex items-center justify-center text-white/70 hover:bg-white/20 transition-colors backdrop-blur-md z-10">
                 <X size={16} />
               </button>
             </motion.div>
@@ -1782,7 +1783,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                 );
               })()}
               <button onClick={() => { if (!providerSubmittingId) setMarketDetailProvider(null); }}
-                className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-white/70 hover:bg-white/20 transition-colors backdrop-blur-md z-10">
+                aria-label="Kapat" className="absolute top-4 right-4 w-11 h-11 rounded-full bg-white/10 flex items-center justify-center text-white/70 hover:bg-white/20 transition-colors backdrop-blur-md z-10">
                 <X size={16} />
               </button>
             </motion.div>
@@ -1888,7 +1889,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                     )}
                   </div>
               <button onClick={() => setProviderDetail(null)}
-                className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-white/70 hover:bg-white/20 transition-colors backdrop-blur-md z-10">
+                aria-label="Kapat" className="absolute top-4 right-4 w-11 h-11 rounded-full bg-white/10 flex items-center justify-center text-white/70 hover:bg-white/20 transition-colors backdrop-blur-md z-10">
                 <X size={16} />
               </button>
             </motion.div>
@@ -1938,8 +1939,9 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
         {/* Navigasyon Satırı */}
         <div className="flex items-center gap-3 px-5 pt-safe pt-2 pb-3">
           <button onClick={onBack}
-            className="w-9 h-9 flex items-center justify-center bg-white/5 rounded-full border border-white/10 text-white hover:bg-white/10 active:scale-90 transition-all">
-            <ArrowLeft size={17} />
+            aria-label="Geri"
+            className="w-11 h-11 flex items-center justify-center bg-white/5 rounded-full border border-white/10 text-white hover:bg-white/10 active:scale-95 transition-all">
+            <ArrowLeft size={20} />
           </button>
           <div className="flex-1 min-w-0">
             <h1 className="text-[0.9375rem] font-extrabold text-white italic uppercase tracking-tighter leading-tight truncate">
@@ -2498,7 +2500,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                           await updateFormationRpc(match.id, pitchSide, payload);
                           const fresh = await getMatchDetails(match.id);
                           if (fresh) applyMatchLocal(fresh);
-                          if (navigator.vibrate) navigator.vibrate(30);
+                          success(); // dizilis kaydedildi
                         }
                       } catch (err) {
                         console.error(err);
@@ -3046,6 +3048,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                   <h2 className="text-base font-extrabold text-white uppercase italic tracking-tight">MAÇ ÖZELLİKLERİ</h2>
                 </div>
                 <button
+                  aria-label="Kapat"
                   onClick={() => setShowInfoModal(false)}
                   className="w-9 h-9 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/50 hover:text-white transition-colors"
                 >

@@ -7,6 +7,7 @@ import { auth } from '../supabaseAuth';
 import { submitServiceRating, getMatchServiceRequests, captainConfirmService } from '../services/serviceRequestService';
 import { getPendingScoreProposal, approveMatchScore, type ScoreProposal } from '../services/scoreService';
 import type { PositionSlot } from '../types';
+import { select } from '../utils/haptics';
 
 // FAZ 5: Maça atanmış kaleci/hakem hakkında değerlendirme ekranında gösterilecek bilgi
 interface ServiceProviderInfo {
@@ -106,7 +107,7 @@ const ServiceRatingCard: React.FC<{
               key={val}
               whileTap={{ scale: 0.88 }}
               onClick={() => {
-                if (navigator.vibrate) navigator.vibrate(15);
+                select(); // puan secildi
                 onScore(score === val ? 0 : val);
               }}
               className={`h-9 rounded-lg border text-[0.6875rem] font-extrabold transition-all ${
@@ -370,7 +371,7 @@ const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => 
   const [sparkles, setSparkles] = useState<{ id: number; x: number; y: number; delay: number }[]>([]);
 
   const setPlayerRating = (pid: string, val: number, e: React.MouseEvent) => {
-    if (navigator.vibrate) navigator.vibrate(20);
+    select(); // oyuncuya puan verildi
     setPlayerRatings(prev => ({ ...prev, [pid]: val }));
     triggerSparkles(e);
   };
@@ -548,7 +549,7 @@ const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => 
       {/* ── HEADER (Glassmorphic & safe area top) ── */}
       <header className="fixed top-0 left-0 right-0 z-40 bg-[#0E131F]/80 backdrop-blur-xl border-b border-white/5 pb-4 pt-safe px-5">
         <div className="flex items-center justify-between pt-3 mb-3">
-          <button onClick={onBack} className="w-11 h-11 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 active:scale-95 transition-all shadow-md">
+          <button onClick={onBack} aria-label="Geri" className="w-11 h-11 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 active:scale-95 transition-all shadow-md">
             <ArrowLeft size={20} className="text-white" />
           </button>
           
@@ -615,7 +616,7 @@ const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => 
             const isLast = playerCardIdx === PLAYERS.length - 1;
             const advanceCard = () => {
               if (isLast) setStep(2);
-              else { setPlayerCardIdx(i => i + 1); if (navigator.vibrate) navigator.vibrate(12); }
+              else { setPlayerCardIdx(i => i + 1); }
             };
             return (
               <motion.div
@@ -664,7 +665,7 @@ const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => 
                   <div className="flex gap-3 justify-center relative overflow-visible">
                     {[1,2,3,4,5].map(s => (
                       <motion.button key={s} whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.85 }}
-                        onClick={(e) => setPlayerRating(p.id, s, e)} className="p-1 relative overflow-visible">
+                        onClick={(e) => setPlayerRating(p.id, s, e)} className="w-11 h-11 flex items-center justify-center relative overflow-visible">
                         <Star size={34} className={`transition-all duration-200 ${s <= currentRating ? 'text-[#FACC15] fill-[#FACC15] drop-shadow-[0_0_10px_rgba(250,204,21,0.5)]' : 'text-gray-800 hover:text-ink-4'}`} />
                       </motion.button>
                     ))}
@@ -696,7 +697,7 @@ const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => 
                             aria-pressed={active}
                             disabled={currentRating === 0}
                             onClick={() => {
-                              if (navigator.vibrate) navigator.vibrate(15);
+                              select(); // fair-play secildi
                               setPlayerFairPlay(prev => ({ ...prev, [p.id]: c.value }));
                             }}
                             className={`h-11 rounded-2xl border text-[0.8125rem] font-semibold flex items-center justify-center gap-1.5 transition-all active:scale-[0.97] disabled:opacity-40 ${
@@ -769,11 +770,11 @@ const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => 
                         whileHover={{ scale: 1.15 }} 
                         whileTap={{ scale: 0.9 }} 
                         onClick={(e) => {
-                          if (navigator.vibrate) navigator.vibrate(20);
+                          select(); // yildiz secildi
                           set(s);
                           triggerSparkles(e);
                         }}
-                        className="p-1 relative overflow-visible"
+                        className="w-11 h-11 flex items-center justify-center relative overflow-visible"
                       >
                         <Star 
                           size={28} 

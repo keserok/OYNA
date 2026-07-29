@@ -29,6 +29,7 @@ import { getMyTeams, getTeamSquad, type MyTeamRow } from '../services/teamSocial
 import { getMatchDetails } from '../services/matchService';
 import { fetchMyFavoritePitchIds } from '../services/pitchFavoritesService';
 import { safeUuid } from '../shared/submitGuard';
+import { select, success, error } from '../utils/haptics';
 
 // Cüzdan yükleme overlay'i — form kaybolmadan bakiye tamamlanır (gerçek akış).
 const WalletScreen = lazy(() => import('./WalletScreen'));
@@ -53,9 +54,6 @@ const DAY_MAX = 30;
 const DAY_PREFETCH = 7;
 const MAX_FACILITIES = 6;
 
-function buzz(pattern: number | number[]) {
-  try { if (navigator.vibrate) navigator.vibrate(pattern); } catch { /* desteklenmiyor */ }
-}
 const trLower = (s: string) => s.toLocaleLowerCase('tr-TR');
 const fmtTL = (n: number) => Math.round(n).toLocaleString('tr-TR');
 
@@ -354,7 +352,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
   // ── Seçim eylemleri ───────────────────────────────────────────────────────
   const pickFacility = (f: CreateFacility) => {
     if (f.id === selFacId) return;
-    buzz(12);
+    select(); // tesis seçildi
     setSelFacId(f.id);
     const c0 = f.courts[0];
     setSelCourtId(c0?.id ?? null);
@@ -362,13 +360,13 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
     setConflict(null);
   };
   const pickCourt = (c: CreateCourt) => {
-    buzz(12);
+    select(); // kort seçildi
     setSelCourtId(c.id);
     setFormat(`${c.minCapacity}v${c.minCapacity}`);
     setConflict(null);
   };
-  const pickDay = (i: number) => { buzz(12); setSelDay(i); setConflict(null); };
-  const pickTime = (t: string) => { buzz(12); setSelTime(t); setConflict(null); };
+  const pickDay = (i: number) => { select(); setSelDay(i); setConflict(null); };
+  const pickTime = (t: string) => { select(); setSelTime(t); setConflict(null); };
 
   // ── YAYINLA — atomik ─────────────────────────────────────────────────────
   const publish = useCallback(async () => {
@@ -402,7 +400,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
       // Yayın tamam: anahtar tüketildi, bir sonraki maç yeni anahtarla kurulur.
       publishIdemRef.current = null;
       setPubStep(3);
-      buzz([18, 40, 30]);
+      success(); // maç yayınlandı
 
       // Davetler (arkadaş VEYA takım arkadaşı; başarısızlık yayını bozmaz)
       if (invited.length > 0) {
@@ -426,7 +424,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
         // Saat "Dolu"ya döner, banner en yakın saati önerir — form korunur.
         setLocalBusy(prev => new Set(prev).add(`${selCourtId}|${dateISO}|${selTime}`));
         setConflict({ time: selTime, next: firstFree(selTime) });
-        buzz(30);
+        error(); // saat çakıştı
       } else if (code === 'INSUFFICIENT_BALANCE') {
         setMissingTL(deposit != null ? Math.max(1, Math.ceil(deposit - spendable)) : 1);
         showToast('Kapora için bakiyen yetersiz — formun korundu.', 'error');
@@ -515,7 +513,6 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
 
   // Takım kadrosu ilk açılışta çekilir, sonra önbellekten
   const toggleTeam = useCallback(async (teamId: string) => {
-    buzz(10);
     if (openTeamId === teamId) { setOpenTeamId(null); return; }
     setOpenTeamId(teamId);
     if (teamSquads[teamId]) return;
@@ -553,7 +550,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
   }, [sheet, providers]);
 
   const toggleInvite = (p: InvitedPerson) => {
-    buzz(10);
+    select(); // oyuncu davet listesine alındı/çıkarıldı
     setInvited(prev => prev.some(x => x.id === p.id) ? prev.filter(x => x.id !== p.id) : [...prev, p]);
   };
 
@@ -563,7 +560,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
     return o ? (o.all ? 1 : o.providerIds.length) : 0;
   };
   const toggleProvider = (t: 'GK' | 'REF', id: string) => {
-    buzz(10);
+    select(); // sağlayıcı seçildi
     setOffers(prev => {
       const cur = prev.find(o => o.type === t);
       if (!cur) return [...prev, { type: t, providerIds: [id], all: false }];
@@ -574,7 +571,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
     });
   };
   const toggleProviderAll = (t: 'GK' | 'REF') => {
-    buzz(10);
+    select(); // tüm sağlayıcılar seçildi
     setOffers(prev => {
       const cur = prev.find(o => o.type === t);
       if (cur?.all) return prev.filter(o => o.type !== t);
@@ -712,7 +709,6 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
             <button
               onClick={async () => {
                 if (notified) return;
-                buzz(12);
                 try { await recordDemandSignal('NOTIFY', 'Ordu', 'Altınordu'); setNotified(true); }
                 catch { showToast('Kaydedilemedi, tekrar dene.', 'error'); }
               }}
@@ -768,7 +764,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                   <p className="mt-1 text-[0.8125rem] font-extrabold truncate">{venueTxt}</p>
                   <p className="mt-0.5 text-[0.75rem] font-semibold text-ink-4">{whenTxt}</p>
                 </div>
-                <button onClick={() => { buzz(8); setPriceOpen(v => !v); }} className="shrink-0 text-right flex flex-col items-end gap-1">
+                <button onClick={() => { setPriceOpen(v => !v); }} className="shrink-0 text-right flex flex-col items-end gap-1">
                   <span className="font-numeric text-[1.625rem] font-extrabold leading-none text-[#39FF14]">
                     {perPerson != null ? `${fmtTL(perPerson)}₺` : '—'}
                   </span>
@@ -932,7 +928,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                     );
                   })}
                   {daysLoaded < DAY_MAX && (
-                    <button onClick={() => { buzz(10); setDaysLoaded(DAY_MAX); }}
+                    <button onClick={() => { setDaysLoaded(DAY_MAX); }}
                       className="shrink-0 w-16 h-[60px] rounded-2xl border border-dashed border-white/[0.14] text-ink-4 flex flex-col items-center justify-center gap-0.5 active:scale-95 transition-transform">
                       <span className="font-numeric text-xs font-extrabold">+{DAY_MAX - daysLoaded}</span>
                       <span className="text-[0.6875rem] font-extrabold">gün daha</span>
@@ -991,7 +987,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                   const on = format === val;
                   const p = total != null ? Math.ceil((total / (n * 2)) * 1.05) : null;
                   return (
-                    <button key={val} onClick={() => { buzz(12); setFormat(val); }}
+                    <button key={val} onClick={() => { select(); setFormat(val); }}
                       className={`relative shrink-0 w-[84px] h-[72px] rounded-[18px] border flex flex-col items-center justify-center gap-0.5 transition-colors ${on ? 'bg-[#39FF14]/[0.09] border-[#39FF14]/50' : 'bg-white/[0.03] border-white/[0.09]'}`}>
                       <span className={`text-base font-extrabold italic ${on ? 'text-[#39FF14]' : 'text-white'}`}>{val}</span>
                       <span className="text-[0.6875rem] font-bold text-white/[0.38]">{n * 2} oyuncu</span>
@@ -1017,7 +1013,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                 {([['OPEN', 'Herkese açık', 'Vitrinde görünür, boş kontenjan dolar'], ['PRIVATE', 'Kod ile', 'Sadece kodu paylaştığın kişiler']] as const).map(([id, label, sub]) => {
                   const on = (teamInvite ? 'PRIVATE' : visibility) === id;
                   return (
-                    <button key={id} onClick={() => { buzz(10); setVisibility(id); if (id === 'OPEN') setTeamInvite(false); }}
+                    <button key={id} onClick={() => { select(); setVisibility(id); if (id === 'OPEN') setTeamInvite(false); }}
                       className={`flex flex-col items-start gap-1.5 p-3.5 rounded-2xl border text-left min-h-[64px] transition-colors ${on ? 'bg-[#39FF14]/[0.08] border-[#39FF14]/[0.45]' : 'bg-white/[0.025] border-white/10'}`}>
                       <span className={`text-xs font-extrabold uppercase ${on ? 'text-[#39FF14]' : ''}`}>{label}</span>
                       <span className="text-[0.6875rem] font-bold leading-snug text-ink-4">{sub}</span>
@@ -1065,7 +1061,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
 
             {/* Kaleci / hakem — gerçek sağlayıcı seçimi */}
             <section className="flex flex-col gap-2.5">
-              <button onClick={() => { buzz(8); setSheet('PROVIDERS'); }}
+              <button onClick={() => { setSheet('PROVIDERS'); }}
                 className="flex items-center gap-3 rounded-[20px] border border-white/10 bg-white/[0.025] p-3.5 text-left min-h-[56px] active:scale-[0.99] transition-transform">
                 <div className="w-9 h-9 rounded-xl shrink-0 flex items-center justify-center bg-white/5 text-white/55"><ShieldCheck size={16} /></div>
                 <div className="flex-1 min-w-0">
@@ -1367,7 +1363,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                   <div className="flex gap-2">
                     {([['FRIENDS', `Arkadaşlar${friends.length ? ` · ${friends.length}` : ''}`],
                        ['TEAMS', `Takımlarım${teams.length ? ` · ${teams.length}` : ''}`]] as const).map(([id, label]) => (
-                      <button key={id} onClick={() => { buzz(8); setSquadTab(id); }}
+                      <button key={id} onClick={() => { setSquadTab(id); }}
                         className={`flex-1 h-[38px] rounded-xl text-[0.6875rem] font-extrabold uppercase tracking-[0.06em] border transition-colors ${
                           squadTab === id ? 'bg-[#39FF14] border-[#39FF14] text-[#0A0E14]' : 'bg-white/[0.03] border-white/10 text-white/60'}`}>
                         {label}
@@ -1504,7 +1500,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                     const on = providerTab === id;
                     const n = offerCount(id);
                     return (
-                      <button key={id} onClick={() => { buzz(8); setProviderTab(id); }}
+                      <button key={id} onClick={() => { setProviderTab(id); }}
                         className={`flex-1 py-2.5 text-[0.6875rem] font-extrabold rounded-xl transition-all flex items-center justify-center gap-2 ${on ? 'text-[#0A0E14]' : 'text-ink-4'}`}
                         style={on ? { background: color } : {}}>
                         <Icon size={14} /> {label.toUpperCase()}{n > 0 ? ` · ${offerOf(id)?.all ? 'Tümü' : n}` : ''}

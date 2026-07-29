@@ -15,6 +15,8 @@ import { useAppStore } from '../store';
 import { PageLayout } from '../components/common/PageLayout';
 import { AnimatedButton } from '../components/AnimatedButton';
 import { TURKEY_REGIONS, districtsOfCity } from '../data/turkeyRegions';
+// `error` adı bu dosyada yerel bir değişkene ait — takma adla alınıyor.
+import { success, error as hapticError } from '../utils/haptics';
 
 interface ServiceApplicationProps {
   role: UserRole.GOALKEEPER | UserRole.REFEREE;
@@ -195,7 +197,7 @@ const ServiceApplication: React.FC<ServiceApplicationProps> = ({ role, onSubmitt
     }
     if (!canSubmit) {
       setSubmitAttempted(true);
-      if (navigator.vibrate) navigator.vibrate(80);
+      hapticError(); // form eksik
       return;
     }
     setError(null);
@@ -242,7 +244,7 @@ const ServiceApplication: React.FC<ServiceApplicationProps> = ({ role, onSubmitt
       }
       if (queueErr) throw queueErr;
 
-      if (navigator.vibrate) navigator.vibrate([40, 60, 120]);
+      success(); // basvuru gonderildi
       onSubmitted();
     } catch (err: any) {
       console.error('[ServiceApplication] başvuru hatası:', err);

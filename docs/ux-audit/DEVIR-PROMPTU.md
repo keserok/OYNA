@@ -56,7 +56,7 @@ gerekmiyor; bugün main'e sorunsuz akar.
 | Komut | Beklenen |
 |---|---|
 | `npx tsc --noEmit` | 0 hata |
-| `npx vitest run` | 810 test / 72 dosya, sıfır başarısız |
+| `npx vitest run` | 859 test / 74 dosya, sıfır başarısız |
 | `npm run test:visual` | 24/24 |
 | `npm run build` | başarılı |
 
@@ -71,16 +71,15 @@ IP-01 (navigasyon/geri tuşu/overlay) · IP-02 (çift gönderim + idempotency) �
 IP-03 (ödeme şeffaflığı + 3DS kurtarma) · IP-04 (ayrılma sözleşmesi) ·
 IP-05 (değerlendirme gizliliği) · IP-06 (bildirim merkezi) ·
 IP-07 (tesis sahibi para dürüstlüğü) · IP-08 (tipografi/kontrast/font) ·
-**IP-09 (renk sistemi, tek aksan)** · IP-20 (bilet çevrimdışı) ·
-S-serisi kararların tamamı.
+**IP-09 (renk sistemi, tek aksan)** · **IP-10 (dokunma hedefi, titreşim,
+erişilebilirlik)** · IP-20 (bilet çevrimdışı) · S-serisi kararların tamamı.
 
 ### Kalan paketler — önerilen sıra
 
 | Sıra | Paket | Not |
 |---|---|---|
-| 1 | **IP-10** — dokunma hedefi, basma geri bildirimi | Kararlar aşağıda |
-| 2 | **IP-14** — bilgi mimarisi, ölü ekranlar | Ekran taşıdığı için erken |
-| 3+ | IP-11, 12, 13, 15, 16, 17, 18, 19, 21, 22, 23 | |
+| 1 | **IP-14** — bilgi mimarisi, ölü ekranlar | Ekran taşıdığı için erken |
+| 2+ | IP-11, 12, 13, 15, 16, 17, 18, 19, 21, 22, 23 | |
 
 ### ⚠️ IP-09'un GERİ ALINAN parçası — ana sayfa kartları (kullanıcı kararı)
 
@@ -128,7 +127,33 @@ kullanıcıya sor.** Renk-rol tablosu diğer tüm oyuncu ekranlarında geçerlid
 
 ---
 
-## IP-10 İÇİN VERİLMİŞ KARARLAR (yeniden sorma)
+## IP-10 — UYGULANDI. Verilen kararlar ve sapmalar
+
+**Titreşim kararı (kullanıcı, bu oturumda):** yalnız **sonuç (success/error)**
+ve **seçim (select)**. Sıradan buton dokunuşu titreşmez. `utils/haptics.ts`
+bilerek `tap()` DIŞA VERMEZ — politika API yüzeyiyle zorlanıyor.
+Ayarlar → Titreşim anahtarı **varsayılan açık**, cihaza özel (localStorage).
+
+**Uygulanmayan madde — BULGU-114 GEÇERSİZ.** Plan "kaptanın skor ± butonları
+28px" diyor; o kod `0f1874d` (27 Tem) ile silindi. Planın verdiği 4 satır bugün
+başka içeriğe denk geliyor. Hayatta kalan skor giriş noktalarının hepsi zaten
+standardı geçiyor: hakem 64px + etiketli, tesis 44px + etiketli, takım 56px.
+
+**Plan harfiyen uygulanamazdı — punto maddeleri.** IP-10 `text-[12px]` /
+`text-[13px]` (sabit piksel) öneriyor; IP-08 rem-only kuralı koydu ve
+`tests/unit/typographyGuard.test.ts` sabit px'i kırmızıya düşürüyor. Rem
+karşılıkları kullanıldı (`text-[0.8125rem]` = 13px).
+
+**Plan 11 etiketsiz buton atlamış.** 13 sayıyordu; gerçekte 23 vardı (Ayarlar,
+Paylaş, 6 modal kapatma, 2 menü). Hepsi etiketlendi: `aria-label` 144 → 174.
+
+**Açık soru — kullanıcıya sorulacak:** Devir belgesi "skoru yalnız hakem ve saha
+çalışanları girer" (karar S1) diyor, ama `views/social/TeamDetailView.tsx:982`'de
+oyuncu tarafında **"Skoru Gir"** var. Bu kaptan girişi değil; takım maçları için
+ayrı bir *öneri + karşılıklı onay* mekanizması (`propose_match_score`, sunucu
+yetkisi maça katılan herkese açık). S1 bu yolu kapsıyor mu?
+
+## IP-10 İÇİN VERİLMİŞ KARARLAR (arşiv — yukarısı geçerli)
 
 - Küçük yazılar: **yalnız bu paketin dokunduğu ~15 yer**. 904'lük süpürme IP-08'in işi.
 - Buton boyutu: **kritik/para butonları 44px; yoğun listelerde 40px serbest.**

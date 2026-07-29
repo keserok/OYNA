@@ -48,6 +48,7 @@ import {
   type DbPitchRow,
 } from '../shared/pitchShowcaseMapper';
 import { PitchShowcaseCard, SafeImage, FavStar } from '../components/pitch-showcase/PitchShowcaseCard';
+import { select } from '../utils/haptics';
 
 interface MapViewProps {
   pitches: Pitch[];
@@ -398,13 +399,13 @@ const MapViewComponent = ({
                         <button
                           onClick={(e) => { e.stopPropagation(); handleDirections(p); }}
                           aria-label="Yol tarifi"
-                          className="w-7 h-7 rounded-xl bg-white/5 border border-white/15 text-white/70 flex items-center justify-center active:scale-95"
+                          className="w-11 h-11 rounded-2xl bg-white/5 border border-white/15 text-white/70 flex items-center justify-center active:scale-95"
                         >
-                          <Navigation2 size={12} />
+                          <Navigation2 size={18} />
                         </button>
                         <button
                           onClick={(e) => { e.stopPropagation(); onOpenDetail(p); }}
-                          className="px-3 h-7 rounded-xl bg-[#39FF14]/15 border border-[#39FF14]/40 text-[#39FF14] text-[0.625rem] font-extrabold uppercase tracking-wide flex items-center gap-1 active:scale-95 whitespace-nowrap"
+                          className="px-4 h-11 rounded-2xl bg-[#39FF14]/15 border border-[#39FF14]/40 text-[#39FF14] text-[0.625rem] font-extrabold uppercase tracking-wide flex items-center gap-1 active:scale-95 whitespace-nowrap"
                         >
                           İncele <ChevronRight size={10} />
                         </button>
@@ -791,7 +792,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
       if (wasFavorite) n.delete(pitch.id); else n.add(pitch.id);
       return n;
     });
-    if (navigator.vibrate) navigator.vibrate(18);
+    select(); // favori degistirildi
     try {
       await togglePitchFavorite(pitch.id, wasFavorite);
     } catch (e) {
@@ -891,7 +892,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
     setSelectedCourtId(court.id);
     setSelectedPlacement(court.type);
     setSelectedSlot(null);
-    if (navigator.vibrate) navigator.vibrate(8);
+    select(); // kort secildi
   };
 
   const selectedDateISO = useMemo(() => {
@@ -1176,7 +1177,8 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
             {isSelectionMode && (
               <button
                 onClick={onBack}
-                className="mb-2 w-10 h-10 rounded-full bg-[#161B22] border border-white/5 flex items-center justify-center text-white"
+                aria-label="Geri"
+                className="mb-2 w-11 h-11 rounded-full bg-[#161B22] border border-white/5 flex items-center justify-center text-white"
               >
                 <ArrowLeft size={20} />
               </button>
@@ -1422,6 +1424,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
                       </button>
                     )}
                     <button
+                      aria-label="Kapat"
                       onClick={() => setShowFilters(false)}
                       className="w-9 h-9 bg-[#0A0E14] rounded-full flex items-center justify-center text-gray-400"
                     >
@@ -1623,13 +1626,15 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
             <div className="absolute top-0 left-0 w-full p-4 pt-safe flex justify-between items-center z-20">
               <button
                 onClick={() => setIsDetailOpen(false)}
-                className="w-10 h-10 bg-black/40 backdrop-blur-md rounded-full flex items-center justify-center text-white border border-white/15"
+                aria-label="Geri"
+                className="w-11 h-11 bg-black/40 backdrop-blur-md rounded-full flex items-center justify-center text-white border border-white/15"
               >
                 <ChevronLeft size={20} />
               </button>
               <button
                 onClick={() => toggleFavorite(selectedPitch)}
-                className="w-10 h-10 bg-black/40 backdrop-blur-md rounded-full flex items-center justify-center border border-white/15"
+                aria-label="Favorilere ekle"
+                className="w-11 h-11 bg-black/40 backdrop-blur-md rounded-full flex items-center justify-center border border-white/15"
               >
                 <FavStar active={favorites.has(selectedPitch.id)} size={19} />
               </button>
@@ -1949,7 +1954,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
                         disabled={isBooked || isOwnerClosed || bookingDisabled}
                         onClick={() => {
                           setSelectedSlot(slot.label);
-                          if (navigator.vibrate) navigator.vibrate(12);
+                          select(); // saat kutusu secildi
                         }}
                         className={`h-14 rounded-[14px] border flex flex-col items-center justify-center gap-0.5 transition-all ${
                           isSelected

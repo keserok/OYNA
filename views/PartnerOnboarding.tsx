@@ -63,7 +63,6 @@ const PartnerOnboarding: React.FC<PartnerOnboardingProps> = ({ onComplete, onClo
   }, []);
 
   const handleNext = () => {
-      if (navigator.vibrate) navigator.vibrate(50);
       if (step === 'SETUP_1') {
           if (!facilityName.trim()) { setOnboardError('Lütfen tesis adını girin.'); return; }
           if (!city.trim() || !district.trim()) { setOnboardError('Lütfen il ve ilçe seçin.'); return; }

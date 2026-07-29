@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { useAppStore } from '../store';
 import { Player } from '../types';
+import { success, select } from '../utils/haptics';
 
 // ─── TYPES ───────────────────────────────────────────────────────────────────
 interface LineupTeam {
@@ -212,7 +213,7 @@ export const TeamLineupBoard: React.FC<TeamLineupBoardProps> = () => {
     }
 
     setActiveImportSide(null);
-    if (navigator.vibrate) navigator.vibrate(30);
+    success(); // kadro ice aktarildi
   };
 
   const handleResetToIndividual = (side: 'A' | 'B') => {
@@ -233,7 +234,7 @@ export const TeamLineupBoard: React.FC<TeamLineupBoardProps> = () => {
         players: [...DEFAULT_AWAY_PLAYERS]
       });
     }
-    if (navigator.vibrate) navigator.vibrate(15);
+    select(); // bireysel kadroya donuldu
   };
 
   const handleUpdateFormation = (side: 'A' | 'B', f: string) => {
@@ -243,7 +244,7 @@ export const TeamLineupBoard: React.FC<TeamLineupBoardProps> = () => {
       setTeamB({ ...teamB, formation: f });
     }
     setShowFormationMenu(null);
-    if (navigator.vibrate) navigator.vibrate(20);
+    select(); // formasyon secildi
   };
 
   return (

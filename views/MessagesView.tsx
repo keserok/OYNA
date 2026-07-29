@@ -345,7 +345,7 @@ const ChatView: React.FC<{
       <div className="flex-shrink-0 px-4 py-3 border-b border-white/8 flex items-center gap-3 relative bg-[#070B10]/80 backdrop-blur-xl">
         <button
           onClick={onBack}
-          className="w-9 h-9 rounded-xl bg-white/6 border border-white/10 flex items-center justify-center hover:bg-white/12 transition-colors flex-shrink-0"
+          aria-label="Geri" className="w-11 h-11 rounded-xl bg-white/6 border border-white/10 flex items-center justify-center hover:bg-white/12 transition-colors flex-shrink-0"
         >
           <ArrowLeft size={18} className="text-gray-300" />
         </button>
@@ -358,7 +358,7 @@ const ChatView: React.FC<{
         </div>
         <button
           onClick={() => setMenuOpen(v => !v)}
-          className="w-9 h-9 rounded-xl bg-white/6 border border-white/10 flex items-center justify-center hover:bg-white/12 transition-colors flex-shrink-0"
+          aria-label="Menü" className="w-11 h-11 rounded-xl bg-white/6 border border-white/10 flex items-center justify-center hover:bg-white/12 transition-colors flex-shrink-0"
         >
           <MoreVertical size={18} className="text-gray-300" />
         </button>
@@ -610,7 +610,7 @@ const TeamChatView: React.FC<{
       <div className="flex-shrink-0 px-4 py-3 border-b border-white/8 flex items-center gap-3 relative bg-[#070B10]/80 backdrop-blur-xl">
         <button
           onClick={onBack}
-          className="w-9 h-9 rounded-xl bg-white/6 border border-white/10 flex items-center justify-center hover:bg-white/12 transition-colors flex-shrink-0"
+          aria-label="Geri" className="w-11 h-11 rounded-xl bg-white/6 border border-white/10 flex items-center justify-center hover:bg-white/12 transition-colors flex-shrink-0"
         >
           <ArrowLeft size={18} className="text-gray-300" />
         </button>
@@ -631,7 +631,7 @@ const TeamChatView: React.FC<{
         </button>
         <button
           onClick={() => setMenuOpen(v => !v)}
-          className="w-9 h-9 rounded-xl bg-white/6 border border-white/10 flex items-center justify-center hover:bg-white/12 transition-colors flex-shrink-0"
+          aria-label="Menü" className="w-11 h-11 rounded-xl bg-white/6 border border-white/10 flex items-center justify-center hover:bg-white/12 transition-colors flex-shrink-0"
         >
           <MoreVertical size={18} className="text-gray-300" />
         </button>
@@ -864,7 +864,7 @@ const MessagesView: React.FC<MessagesViewProps> = ({
         <div className="flex items-center gap-3 pt-5 pb-4">
           <button
             onClick={onBack}
-            className="w-9 h-9 rounded-xl bg-white/6 border border-white/10 flex items-center justify-center hover:bg-white/12 transition-colors flex-shrink-0"
+            aria-label="Geri" className="w-11 h-11 rounded-xl bg-white/6 border border-white/10 flex items-center justify-center hover:bg-white/12 transition-colors flex-shrink-0"
           >
             <ArrowLeft size={18} className="text-gray-300" />
           </button>

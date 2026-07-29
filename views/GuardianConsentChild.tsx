@@ -54,7 +54,7 @@ const GuardianConsentChild: React.FC<GuardianConsentChildProps> = ({ onBack, onG
   return (
     <div className="min-h-screen bg-[#0A0E14] text-white font-sans">
       <header className="sticky top-0 z-20 bg-[#0A0E14]/90 backdrop-blur-xl border-b border-white/5 px-6 py-5 flex items-center gap-4">
-        <button onClick={onBack} className="w-11 h-11 flex items-center justify-center bg-[#161B22] rounded-full border border-white/5 text-white hover:bg-white/10 active:scale-95 transition-all">
+        <button onClick={onBack} aria-label="Geri" className="w-11 h-11 flex items-center justify-center bg-[#161B22] rounded-full border border-white/5 text-white hover:bg-white/10 active:scale-95 transition-all">
           <ArrowLeft size={20} />
         </button>
         <h1 className="text-lg font-extrabold italic tracking-tight">VELİ ONAYI</h1>

@@ -56,6 +56,7 @@ import type { LibraryEntry, StatusTone } from './studio/tacticLibrary';
 import { perfTierFrom, readDeviceSignals, liteGate } from './studio/perf';
 // İlk kullanım — "Örnek taktiği yükle" içeriği (saf üretici)
 import { buildSampleTactic } from './studio/sampleTactic';
+import { select } from '../utils/haptics';
 
 // ⚡ ANİMASYON MODÜLÜ — ayrı chunk olarak lazy tutulur (ilk boya hafif kalır)
 // ama stüdyo açılır açılmaz arka planda otomatik indirilir: oynatma kontrolleri
@@ -853,7 +854,6 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
         const tempo = normalizeTempo(value);
         if (tempo === normalizeTempo(activeTactic.tempo)) return;
         setActiveTactic({ ...activeTactic, tempo });
-        if (navigator.vibrate) navigator.vibrate(8);
     };
 
     // ── Birleşik kütüphane: takım oyun defterini tembel yükle (vitrin RPC) ──
@@ -1012,7 +1012,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
         });
         setHeldSub(null);
         setSelectedEl(null);
-        if (navigator.vibrate) navigator.vibrate(12);
+        select(); // oyuncu slota yerlesti
         showToast(displaced ? `${incoming.name} ↔ ${displaced.name} takas edildi` : `${incoming.name} sahaya yerleşti`);
     };
 
@@ -1398,7 +1398,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
             player: { id: `opp_p_${stamp}`, name: `Rakip ${activeTactic.opponents.length + 1}`, role: 'OPP', rating: 0, isOpponent: true },
         };
         setActiveTactic({ ...activeTactic, opponents: [...activeTactic.opponents, newOpponent] });
-        if (navigator.vibrate) navigator.vibrate(15);
+        select(); // rakip eklendi (uzun basis)
     };
 
     // Rakip takımını sahaya diz: mevcut dizilişi rakip yarısına AYNALA (S20).
@@ -1554,7 +1554,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                         setActiveTactic({ ...activeTactic, slots: activeTactic.slots.map(s => s.id === draggedItem.id ? { ...s, x: sx, y: sy } : s) });
                     else
                         setActiveTactic({ ...activeTactic, opponents: activeTactic.opponents.map(o => o.id === draggedItem.id ? { ...o, x: sx, y: sy } : o) });
-                    if (navigator.vibrate) navigator.vibrate(8);
+                    select(); // surukleme birakildi
                 }
                 const snap = dragStartRef.current.snap;
                 setUndoStack(prev => [...prev.slice(-29), snap]);
@@ -1592,7 +1592,6 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
 
         dragStartRef.current = { x: currentX, y: currentY, snap: sceneSnapshot() };
         setDraggedItem({ type, id, offsetX: pointerX - currentX, offsetY: pointerY - currentY });
-        if (navigator.vibrate) navigator.vibrate(10);
     };
 
     const handleRemoveOpponent = (id: string) => {

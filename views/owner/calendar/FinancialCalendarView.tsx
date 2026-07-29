@@ -562,7 +562,7 @@ export const FinancialCalendarView: React.FC<{
                                 <div className="flex items-center gap-2">
                                     <button
                                         onClick={() => setMonthCursor(({ y, m }) => m === 0 ? { y: y - 1, m: 11 } : { y, m: m - 1 })}
-                                        className="w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-gray-400 hover:text-white"
+                                        className="w-11 h-11 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-gray-400 hover:text-white"
                                     >
                                         <ChevronLeft size={16} />
                                     </button>
@@ -571,14 +571,14 @@ export const FinancialCalendarView: React.FC<{
                                     </h3>
                                     <button
                                         onClick={() => setMonthCursor(({ y, m }) => m === 11 ? { y: y + 1, m: 0 } : { y, m: m + 1 })}
-                                        className="w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-gray-400 hover:text-white"
+                                        className="w-11 h-11 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-gray-400 hover:text-white"
                                     >
                                         <ChevronRight size={16} />
                                     </button>
                                     {/* Takvim 2: aylık gezinirken hızlı bugüne dönüş — bugünün gün ekranını açar. */}
                                     <button
                                         onClick={() => { const now = new Date(); setMonthCursor({ y: now.getFullYear(), m: now.getMonth() }); selectDay(todayISO()); }}
-                                        className="ml-1 px-2.5 h-8 rounded-lg bg-[#FACC15]/10 border border-[#FACC15]/25 text-[#FACC15] text-[10px] font-extrabold uppercase tracking-wide hover:bg-[#FACC15]/20 transition-colors"
+                                        className="ml-1 px-4 h-11 rounded-xl bg-[#FACC15]/10 border border-[#FACC15]/25 text-[#FACC15] text-[10px] font-extrabold uppercase tracking-wide hover:bg-[#FACC15]/20 transition-colors"
                                     >
                                         Bugün
                                     </button>
@@ -661,7 +661,7 @@ export const FinancialCalendarView: React.FC<{
                                     <div className="relative shrink-0">
                                         <button
                                             onClick={() => setSubMenuId(subMenuId === sub.id ? null : sub.id)}
-                                            className="p-2 text-gray-600 hover:text-white transition-colors"
+                                            aria-label="Abonman işlemleri" className="w-11 h-11 flex items-center justify-center rounded-full text-gray-400 hover:text-white transition-colors active:scale-95"
                                         >
                                             <MoreHorizontal size={20} />
                                         </button>
@@ -713,7 +713,7 @@ export const FinancialCalendarView: React.FC<{
                         </div>
                         <button
                             onClick={() => setShowAllHours(v => !v)}
-                            className={`px-2.5 py-1 rounded-full border text-[9px] font-extrabold uppercase tracking-wider transition-colors ${showAllHours ? 'bg-white/10 text-white border-white/20' : 'bg-[#161B22] text-gray-500 border-white/5 hover:text-gray-300'}`}
+                            className={`min-h-[44px] px-4 rounded-full border text-[0.75rem] font-extrabold uppercase tracking-wider transition-colors ${showAllHours ? 'bg-white/10 text-white border-white/20' : 'bg-[#161B22] text-gray-500 border-white/5 hover:text-gray-300'}`}
                         >
                             {showAllHours ? 'Aktif saatler' : 'Tüm saatler'}
                         </button>

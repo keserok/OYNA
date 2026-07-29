@@ -351,7 +351,7 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
           >
             {/* 1. ÜST BAR */}
             <div className="px-5 pt-safe pb-4 flex items-center justify-between shrink-0 border-b border-white/5 bg-black/20 backdrop-blur-lg">
-              <button onClick={() => setShowWizard(false)} className="w-10 h-10 rounded-full bg-white/[0.03] backdrop-blur-md border border-white/10 flex items-center justify-center hover:bg-white/10 hover:border-white/20 transition-all shadow-[0_0_15px_rgba(255,255,255,0.05)]">
+              <button onClick={() => setShowWizard(false)} aria-label="Kapat" className="w-11 h-11 rounded-full bg-white/[0.03] backdrop-blur-md border border-white/10 flex items-center justify-center hover:bg-white/10 hover:border-white/20 transition-all shadow-[0_0_15px_rgba(255,255,255,0.05)]">
                 <ArrowLeft size={18} className="text-white drop-shadow-md" />
               </button>
               <h1 className="text-[1.0625rem] font-extrabold italic uppercase tracking-tighter text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.5)]">
@@ -532,8 +532,8 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
           <header className="sticky top-0 z-50 bg-black/40 backdrop-blur-2xl border-b border-white/5 px-5 pt-safe pb-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <button onClick={onBack} className="w-10 h-10 rounded-full bg-white/[0.03] backdrop-blur-md border border-white/10 flex items-center justify-center text-white active:scale-90 transition-all hover:bg-white/10">
-                  <ArrowLeft size={18} />
+                <button onClick={onBack} aria-label="Geri" className="w-11 h-11 rounded-full bg-white/[0.03] backdrop-blur-md border border-white/10 flex items-center justify-center text-white active:scale-90 transition-all hover:bg-white/10">
+                  <ArrowLeft size={20} />
                 </button>
                 <div>
                   <h1 className="text-xl font-extrabold text-white italic uppercase tracking-tight leading-none drop-shadow-lg">Top Oyna</h1>
