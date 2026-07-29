@@ -491,23 +491,23 @@ body.kb-open .pb-safe-6 {
 }
 
 /* Ripple Effect */
-.ripple-container {
-  position: relative;
-  overflow: hidden;
-}
-
+/* IP-10: `.ripple-container` silindi — repoda 0 kullanımı vardı (ölü kural). */
 .ripple {
   position: absolute;
   border-radius: 50%;
   transform: scale(0);
   animation: ripple-animation 600ms linear;
-  background-color: rgba(255, 255, 255, 0.3);
+  /* IP-10: sabit beyaz, birincil (#39FF14) zeminli butonda görünmüyordu.
+     currentColor butonun kendi metin rengini alır → her varyantta okunur. */
+  background-color: currentColor;
+  opacity: 0.28;
   pointer-events: none;
 }
 
 @keyframes ripple-animation {
   to {
-    transform: scale(4);
+    /* 20px'lik tohum × 4 = 80px; tam genişlikli butonu kaplamıyordu. */
+    transform: scale(12);
     opacity: 0;
   }
 }
@@ -606,6 +606,21 @@ body.kb-open .pb-safe-6 {
 button, a {
   -webkit-tap-highlight-color: transparent;
   user-select: none;
+}
+
+/* IP-10 — BASMA GERİ BİLDİRİMİ.
+   Yukarıdaki kural WebView'in kendi gri parlamasını kapatıyor ama yerine hiçbir
+   şey koymuyordu: 1052 butonun çoğunda dokunuşun görsel karşılığı yoktu.
+   `filter` seçildi çünkü Tailwind v4 `active:scale-*` bağımsız `scale`
+   özelliğini yazar — ikisi çakışmaz, üst üste biner. Ayrıca bu bir HAREKET
+   değil parlaklık değişimi olduğu için `prefers-reduced-motion` altında da
+   çalışır; o kullanıcı için tek geri bildirim buydu. */
+@layer base {
+  button:active:not(:disabled),
+  a:active,
+  [role="button"]:active:not([aria-disabled="true"]) {
+    filter: brightness(0.78);
+  }
 }
 
 /* Input base polish */
