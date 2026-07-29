@@ -9,36 +9,53 @@ ALTER TABLE public.courts DROP CONSTRAINT IF EXISTS courts_capacity_range_check;
 -- Bu dosya normalde DEĞİŞMEZ (MIGRATION_PLAYBOOK Altın Kural 2). İstisna şu
 -- somut kırılma için verildi:
 --
---   `courts.min_capacity` / `max_capacity` kolonlarını 20260812000008
---   ekliyor; bu dosya (20260727124350) ise onlardan ÖNCEKİ sürüm numarasına
---   sahip olmasına rağmen aynı kolonları GÜNCELLİYOR. `courts` tablosu
---   20260530090000'de bu kolonlar olmadan yaratılıyor.
+--   Aşağıdaki blok `courts.min_capacity` / `max_capacity` kolonlarını
+--   GÜNCELLİYOR, ama o kolonları 20260812000008 EKLİYOR — yani sürüm numarası
+--   daha BÜYÜK bir dosya. `courts` tablosu 20260530090000'de bu kolonlar
+--   olmadan yaratılıyor. Canlıda patlamadı çünkü gerçek uygulama sırası sürüm
+--   sırasından farklıydı; sıfırdan replay dosyaları sürüm sırasına göre
+--   çalıştırınca "column min_capacity does not exist" veriyordu.
 --
--- Canlıda patlamadı çünkü gerçek uygulama sırası sürüm sırasından farklıydı
--- (20260812000008 fiilen önce çalışmış). Ama sıfırdan replay dosyaları sürüm
--- sırasına göre çalıştırdığı için Supabase Preview burada düşüyordu:
---   ERROR: column "min_capacity" does not exist (SQLSTATE 42703)
+-- Neden kolonu burada EKLEMİYORUZ (ilk denenen ve TERK EDİLEN yol): kolonları
+-- erkenden eklemek UPDATE'in çalışmasına yol açıyor, o da TAKIM BAŞINA modelin
+-- değerlerini (5, 7 gibi TEK sayılar) yazıyor. Oysa o tarihte hâlâ TOPLAM
+-- KAPASİTE modeli geçerli ve 20260812000008 hemen ardından
+-- "4–22 arası ve ÇİFT" kısıtını koyuyor → satırlar kısıtı ihlal ediyor:
+--   ERROR: check constraint "courts_capacity_range_check" is violated
+-- Yani kolonu eklemek hatayı çözmüyor, bir sonrakine taşıyor.
 --
--- Neden yeni bir migration ile çözülemez: hata GEÇMİŞİN ORTASINDA oluşuyor;
--- sonraki hiçbir dosya kendinden önce patlayan bir ifadeyi önleyemez.
---
--- Bu ekleme idempotenttir ve CANLIDA HİÇBİR ŞEYİ DEĞİŞTİRMEZ: kolonlar orada
--- zaten var, `IF NOT EXISTS` sessizce geçer. Yalnız sıfırdan replay'i onarır.
-ALTER TABLE public.courts
-  ADD COLUMN IF NOT EXISTS min_capacity integer,
-  ADD COLUMN IF NOT EXISTS max_capacity integer;
+-- DOĞRU DAVRANIŞ: kolonlar henüz yoksa bu blok BÜTÜNÜYLE ATLANIR. Model zaten
+-- 20260812000008 (toplam) ve 20260818000000 (takım başına) tarafından sırasıyla
+-- kuruluyor; bu dosyanın erken müdahalesine gerek yok. Canlıda kolonlar mevcut
+-- olduğu için blok eskisi gibi çalışır — üretim davranışı DEĞİŞMEZ.
+DO $guard$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+     WHERE table_schema = 'public' AND table_name = 'courts'
+       AND column_name = 'min_capacity'
+  ) THEN
+    RAISE NOTICE 'courts.min_capacity henüz yok — kapasite bloğu atlandı (sıfırdan replay).';
+    RETURN;
+  END IF;
 
-UPDATE public.courts
-   SET min_capacity = GREATEST(3, CEIL(COALESCE(capacity, 14) / 2.0)::int - 2),
-       max_capacity = LEAST(11, CEIL(COALESCE(capacity, 14) / 2.0)::int)
- WHERE min_capacity IS NULL OR max_capacity IS NULL
-    OR min_capacity > 11 OR max_capacity > 11;
+  UPDATE public.courts
+     SET min_capacity = GREATEST(3, CEIL(COALESCE(capacity, 14) / 2.0)::int - 2),
+         max_capacity = LEAST(11, CEIL(COALESCE(capacity, 14) / 2.0)::int)
+   WHERE min_capacity IS NULL OR max_capacity IS NULL
+      OR min_capacity > 11 OR max_capacity > 11;
 
-ALTER TABLE public.courts
-  ALTER COLUMN min_capacity SET DEFAULT 5,
-  ALTER COLUMN max_capacity SET DEFAULT 7;
+  ALTER TABLE public.courts
+    ALTER COLUMN min_capacity SET DEFAULT 5,
+    ALTER COLUMN max_capacity SET DEFAULT 7;
+END
+$guard$;
 
 DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+     WHERE table_schema = 'public' AND table_name = 'courts' AND column_name = 'min_capacity'
+  ) THEN RETURN; END IF;
   ALTER TABLE public.courts
     ADD CONSTRAINT courts_capacity_range_chk
     CHECK (min_capacity IS NULL OR max_capacity IS NULL
