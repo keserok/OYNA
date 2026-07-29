@@ -5,6 +5,29 @@
 -- sırasının doğru olması için bu dosya olduğu gibi korunur.
 ALTER TABLE public.courts DROP CONSTRAINT IF EXISTS courts_capacity_range_check;
 
+-- ── SIFIRDAN REPLAY GUARD'I (2026-07-29, depo sahibi onayıyla) ──────────────
+-- Bu dosya normalde DEĞİŞMEZ (MIGRATION_PLAYBOOK Altın Kural 2). İstisna şu
+-- somut kırılma için verildi:
+--
+--   `courts.min_capacity` / `max_capacity` kolonlarını 20260812000008
+--   ekliyor; bu dosya (20260727124350) ise onlardan ÖNCEKİ sürüm numarasına
+--   sahip olmasına rağmen aynı kolonları GÜNCELLİYOR. `courts` tablosu
+--   20260530090000'de bu kolonlar olmadan yaratılıyor.
+--
+-- Canlıda patlamadı çünkü gerçek uygulama sırası sürüm sırasından farklıydı
+-- (20260812000008 fiilen önce çalışmış). Ama sıfırdan replay dosyaları sürüm
+-- sırasına göre çalıştırdığı için Supabase Preview burada düşüyordu:
+--   ERROR: column "min_capacity" does not exist (SQLSTATE 42703)
+--
+-- Neden yeni bir migration ile çözülemez: hata GEÇMİŞİN ORTASINDA oluşuyor;
+-- sonraki hiçbir dosya kendinden önce patlayan bir ifadeyi önleyemez.
+--
+-- Bu ekleme idempotenttir ve CANLIDA HİÇBİR ŞEYİ DEĞİŞTİRMEZ: kolonlar orada
+-- zaten var, `IF NOT EXISTS` sessizce geçer. Yalnız sıfırdan replay'i onarır.
+ALTER TABLE public.courts
+  ADD COLUMN IF NOT EXISTS min_capacity integer,
+  ADD COLUMN IF NOT EXISTS max_capacity integer;
+
 UPDATE public.courts
    SET min_capacity = GREATEST(3, CEIL(COALESCE(capacity, 14) / 2.0)::int - 2),
        max_capacity = LEAST(11, CEIL(COALESCE(capacity, 14) / 2.0)::int)
