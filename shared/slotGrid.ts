@@ -17,8 +17,12 @@
 //      90 dakikayla 3 slot üretir (18:00-19:30, 19:30-21:00, 21:00-22:30);
 //      kalan 30 dakika slot olmaz.
 //   3. Aynı saati birden çok tarife kapsıyorsa öncelik: tarih-özel > saha-özel
-//      > tarife tipi (HOLIDAY > WEEKEND > WEEKDAY > SPECIAL). Kazanan tarifenin
-//      ürettiği slot, daha düşük öncelikli tarifenin slotunu ezer.
+//      > tarife tipi (HOLIDAY > WEEKEND > WEEKDAY > SPECIAL). Kazanan tarife
+//      KENDİ PENCERESİNİN TAMAMINA sahiptir: düşük öncelikli bir tarife, o
+//      pencerenin içinde kalan hiçbir başlangıçta slot üretemez. Kazananın
+//      ızgarasına denk gelmeyen saatler BOŞ kalır — doldurulmaz.
+//      (Doldurulsaydı şeritte 60 dakikalık görünen bir dilim, sunucuda 90
+//      dakikalık tarifeden fiyatlanıp o süreyle kurulurdu.)
 //   4. Tarife hiç yoksa çalışma saatlerinden 60 dakikalık ızgara kurulur
 //      (eski davranış — tarifesiz tesis boş ekran görmesin).
 // ════════════════════════════════════════════════════════════════════════════
@@ -171,22 +175,34 @@ export function buildSlotGrid(
     return out;
   }
 
-  // Öncelik sırasına göre üret; daha önce doldurulmuş başlangıç saatini ezme.
-  const byStart = new Map<number, GridSlot>();
-  for (const t of sortTariffs(active, courtId)) {
-    const startM = hmToMinutes(t.start_time);
+  // Öncelik sırasına göre üret. Her tarifenin penceresi önce çıkarılır: bir
+  // dilim, başlangıcını kapsayan EN ÖNCELİKLİ tarifeye aittir (Kural 3).
+  const sorted = sortTariffs(active, courtId);
+  const windows = sorted.map((t) => {
+    const s = hmToMinutes(t.start_time);
     const endRaw = normalizeHM(t.end_time);
     // '00:00' bitiş = gün sonu (24:00). Gece yarısını aşan pencere desteklenir.
-    let endM = endRaw === '00:00' ? 1440 : hmToMinutes(endRaw);
-    if (endM <= startM) endM += 1440;
+    let e = endRaw === '00:00' ? 1440 : hmToMinutes(endRaw);
+    if (e <= s) e += 1440;
+    return { s, e };
+  });
 
+  const byStart = new Map<number, GridSlot>();
+  sorted.forEach((t, i) => {
+    const { s: startM, e: endM } = windows[i];
     const step = normalizeSlotMinutes(t.slot_minutes);
     const price = tariffPrice(t);
     const deposit = Number(t.deposit_amount ?? 0) || 0;
 
     // Kural 2: yalnız TAMAMI pencereye sığan slot üretilir.
     for (let m = startM; m + step <= endM; m += step) {
-      if (byStart.has(m)) continue; // yüksek öncelikli tarife burayı zaten aldı
+      // Kural 3 (PENCERE SAHİPLİĞİ): daha öncelikli bir tarifenin penceresi bu
+      // başlangıcı kapsıyorsa burada slot üretilemez — o pencerenin ızgarasına
+      // denk gelmeyen saatler BOŞ kalır, düşük öncelikli tarifeden doldurulmaz.
+      // Aksi halde şeritte 60 dakikalık görünen bir dilim, sunucuda 90 dakikalık
+      // tarifeden fiyatlanıp o süreyle kurulurdu (sunucu ikizi: get_pitch_slots).
+      if (windows.some((w, j) => j < i && m >= w.s && m < w.e)) continue;
+      if (byStart.has(m)) continue; // emniyet ağı
       byStart.set(m, {
         startTime: minutesToHM(m),
         endTime: minutesToHM(m + step),
@@ -197,7 +213,7 @@ export function buildSlotGrid(
         crossesMidnight: m + step >= 1440,
       });
     }
-  }
+  });
 
   return [...byStart.entries()].sort((a, b) => a[0] - b[0]).map(([, s]) => s);
 }

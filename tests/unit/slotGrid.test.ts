@@ -187,6 +187,57 @@ describe('slotCountForDate — doluluk paydasi', () => {
   });
 });
 
+// E12a — PENCERE SAHİPLİĞİ (Kural 3).
+// Yüksek öncelikli tarife kendi penceresinin TAMAMINA sahiptir; düşük öncelikli
+// tarife o pencerenin içinde slot üretemez. Aksi halde şeritte 60 dakikalık
+// görünen bir dilim sunucuda 90 dakikalık tarifeden fiyatlanıp o süreyle
+// kurulurdu (sunucu ikizi: get_pitch_slots).
+describe('buildSlotGrid — pencere sahipligi', () => {
+  it('korta ozel 90dk penceresi icinde tesis geneli 60dk slot URETEMEZ', () => {
+    const KORT = 'court-1';
+    const g = buildSlotGrid(
+      [
+        // Tesis geneli: gun boyu 60 dakika
+        tarife({ start_time: '09:00', end_time: '23:00', slot_minutes: 60, slot_price: 1200, court_id: null }),
+        // Korta ozel: 15:00-23:00 arasi 90 dakika (daha oncelikli)
+        tarife({ start_time: '15:00', end_time: '23:00', slot_minutes: 90, slot_price: 1800, court_id: KORT }),
+      ],
+      CARSAMBA,
+      KORT,
+    );
+    const etiketler = g.map(slotLabel);
+    // 09:00-14:00 tesis geneli 60dk; 15:00 sonrasi YALNIZ 90dk izgarasi
+    expect(etiketler).toEqual([
+      '09:00 - 10:00', '10:00 - 11:00', '11:00 - 12:00',
+      '12:00 - 13:00', '13:00 - 14:00', '14:00 - 15:00',
+      '15:00 - 16:30', '16:30 - 18:00', '18:00 - 19:30',
+      '19:30 - 21:00', '21:00 - 22:30',
+    ]);
+    // 90dk penceresine denk gelmeyen saatler (16:00, 17:00, 19:00...) SIZMAZ
+    expect(etiketler.some(e => e.startsWith('16:00'))).toBe(false);
+    expect(etiketler.some(e => e.startsWith('19:00'))).toBe(false);
+    // Artik 30 dakika (22:30-23:00) bos kalir — doldurulmaz
+    expect(etiketler.some(e => e.startsWith('22:30'))).toBe(false);
+  });
+
+  it('pencere disinda kalan dusuk oncelikli tarife calismaya devam eder', () => {
+    const KORT = 'court-1';
+    const g = buildSlotGrid(
+      [
+        tarife({ start_time: '17:00', end_time: '00:00', slot_minutes: 60, slot_price: 3000, court_id: null }),
+        tarife({ start_time: '15:00', end_time: '23:00', slot_minutes: 90, slot_price: 1800, court_id: KORT }),
+      ],
+      CARSAMBA,
+      KORT,
+    );
+    // 23:00 korta ozel pencerenin DISINDA (bitis haric) → 60dk tarife alir
+    const son = g[g.length - 1];
+    expect(slotLabel(son)).toBe('23:00 - 00:00');
+    expect(son.minutes).toBe(60);
+    expect(son.price).toBe(3000);
+  });
+});
+
 describe('bookingCoversSlot', () => {
   const slot = { startTime: '20:00', endTime: '21:30' };
 

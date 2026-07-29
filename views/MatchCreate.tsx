@@ -22,7 +22,7 @@ import {
   type CreateFacility, type CreateCourt, type DayQuote, type AtomicCreateResult,
   type BookableProvider,
 } from '../services/matchCreateService';
-import { fetchPitchAvailability, buildBusyMap, isSlotBusy, toISODate } from '../services/playerBookingService';
+import { fetchPitchAvailability, buildBusyMap, isSlotBusy, toISODate, type BusyMap } from '../services/playerBookingService';
 import { getWalletSummary, type WalletSummary } from '../services/walletService';
 import { getFriends, type FriendRow } from '../services/socialService';
 import { getMyTeams, getTeamSquad, type MyTeamRow } from '../services/teamSocialService';
@@ -88,7 +88,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
   const [loading, setLoading] = useState(true);
   const [facilities, setFacilities] = useState<CreateFacility[]>([]);
   const [wallet, setWallet] = useState<WalletSummary | null>(null);
-  const [busyMaps, setBusyMaps] = useState<Record<string, Record<string, 'PENDING' | 'CONFIRMED'>>>({});
+  const [busyMaps, setBusyMaps] = useState<Record<string, BusyMap>>({});
   const [quotes, setQuotes] = useState<Record<string, DayQuote>>({});
   const [localBusy, setLocalBusy] = useState<Set<string>>(new Set()); // SLOT_TAKEN sonrası anlık işaret
 
@@ -188,11 +188,13 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
   const dayQuote = quoteKey ? quotes[quoteKey] : undefined;
 
   const nowHour = istNow.getHours();
-  const hourBlocked = useCallback((time: string) => {
+  // Dilimin GERÇEK bitişi geçilir: 90 dakikalık bir dilimi kapatan rezervasyon
+  // saat başı işaretlemeyle görünmüyordu (bkz. playerBookingService.isSlotBusy).
+  const hourBlocked = useCallback((time: string, endTime?: string) => {
     if (!selCourtId || !fac) return true;
     if (localBusy.has(`${selCourtId}|${dateISO}|${time}`)) return true;
     const map = busyMaps[fac.id];
-    return !!map && isSlotBusy(map, selCourtId, dateISO, time) !== null;
+    return !!map && isSlotBusy(map, selCourtId, dateISO, time, endTime) !== null;
   }, [selCourtId, fac, busyMaps, dateISO, localBusy]);
 
   const visibleHours = useMemo(() => {
@@ -216,7 +218,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
   const threshold = per * 2 - 2;
 
   const canPublish = !loading && !publishing && !!format
-    && (seeded || (!!selCourtId && !!selTime && !!selHour?.tariffOk && !hourBlocked(selTime ?? '')));
+    && (seeded || (!!selCourtId && !!selTime && !!selHour?.tariffOk && !hourBlocked(selTime ?? '', selHour?.endTime)));
 
   // ── Yükleme: tesisler + cüzdan + sıralama ─────────────────────────────────
   useEffect(() => {
@@ -320,7 +322,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
 
   // ── Onarım: saha/gün değişince dolu saate düşme ───────────────────────────
   const firstFree = useCallback((after?: string): string | null => {
-    const list = visibleHours.filter(h => h.tariffOk && !hourBlocked(h.time));
+    const list = visibleHours.filter(h => h.tariffOk && !hourBlocked(h.time, h.endTime));
     if (list.length === 0) return null;
     if (after) {
       const later = list.find(h => h.time > after);
@@ -334,7 +336,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
     // Çakışma banner'ı açıkken otomatik seçim YAPILMAZ: kullanıcı "X'e geç"
     // önerisini görür; sessizce günün ilk saatine kaydırılmaz.
     if (conflict) return;
-    if (!selTime || !visibleHours.some(h => h.time === selTime && h.tariffOk && !hourBlocked(h.time))) {
+    if (!selTime || !visibleHours.some(h => h.time === selTime && h.tariffOk && !hourBlocked(h.time, h.endTime))) {
       setSelTime(firstFree() ?? null);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -779,7 +781,8 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                 {priceOpen && total != null && (
                   <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
                     <div className="mt-3.5 pt-3 border-t border-white/[0.07] flex flex-col gap-1.5 text-[11px] font-bold">
-                      <div className="flex justify-between text-white/50"><span>{court?.name ?? 'Saha'} · {dayQuote?.slotDuration ?? 60} dk</span><span className="font-numeric text-white">{fmtTL(selHour?.basePrice ?? total)}₺</span></div>
+                      {/* Süre SEÇİLEN dilimden okunur: gündüz 60, akşam 90 olabilir. */}
+                      <div className="flex justify-between text-white/50"><span>{court?.name ?? 'Saha'} · {selHour?.minutes ?? dayQuote?.slotDuration ?? 60} dk</span><span className="font-numeric text-white">{fmtTL(selHour?.basePrice ?? total)}₺</span></div>
                       {selHour?.deal && selHour.basePrice != null && selHour.total != null && (
                         <div className="flex justify-between text-[#FACC15]"><span>Son dakika indirimi</span><span className="font-numeric">−{fmtTL(selHour.basePrice - selHour.total)}₺</span></div>
                       )}
@@ -944,7 +947,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                   ) : visibleHours.length === 0 ? (
                     <p className="text-xs font-semibold text-white/35 py-3">Bu gün için müsait saat yok.</p>
                   ) : visibleHours.map(h => {
-                    const blocked = hourBlocked(h.time) || !h.tariffOk;
+                    const blocked = hourBlocked(h.time, h.endTime) || !h.tariffOk;
                     const on = selTime === h.time && !blocked;
                     return (
                       <button key={h.time} disabled={blocked} onClick={() => pickTime(h.time)}
@@ -968,7 +971,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                 </div>
                 {dayQuote && (
                   <p className="text-[10px] font-bold leading-normal text-white/30">
-                    {court?.name} · {dayDate.getDate()} {MO[dayDate.getMonth()]} için {visibleHours.filter(h => h.tariffOk && !hourBlocked(h.time)).length} saat müsait.
+                    {court?.name} · {dayDate.getDate()} {MO[dayDate.getMonth()]} için {visibleHours.filter(h => h.tariffOk && !hourBlocked(h.time, h.endTime)).length} saat müsait.
                     {visibleHours.some(h => h.night) ? ' 00:00 ve 01:00 bu günün gecesidir.' : ''}
                     {selHour?.deal ? ' Seçili saat indirimli.' : ''}
                   </p>
@@ -1087,7 +1090,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
               <Sparkles size={17} className="text-[#39FF14] shrink-0" />
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-black">Gerisi profilinden ayarlandı</p>
-                <p className="mt-1 text-[10.5px] font-bold text-white/[0.42] truncate">{age} · {gender} · {mental} · {dayQuote?.slotDuration ?? 60} dk{title ? ` · "${title}"` : ''}</p>
+                <p className="mt-1 text-[10.5px] font-bold text-white/[0.42] truncate">{age} · {gender} · {mental} · {selHour?.minutes ?? dayQuote?.slotDuration ?? 60} dk{title ? ` · "${title}"` : ''}</p>
               </div>
               <span className="text-[11px] font-black text-[#39FF14] shrink-0">Değiştir</span>
             </button>

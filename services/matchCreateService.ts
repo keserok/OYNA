@@ -97,6 +97,13 @@ export async function fetchCreateFacilities(): Promise<CreateFacility[]> {
 
 export interface DayQuoteHour {
   time: string; // 'HH:MM'
+  /** Dilim bitişi 'HH:MM' — gece yarısını aşarsa ertesi günün saati. */
+  endTime: string;
+  /**
+   * Bu dilimin GERÇEK süresi (dakika). Tarife satırından gelir; gündüz 60,
+   * akşam 90 olabilir. Süreyi gösteren her yer BURAYI okumalıdır.
+   */
+  minutes: number;
   night: boolean;
   tariffOk: boolean;
   total: number | null;
@@ -108,6 +115,11 @@ export interface DayQuoteHour {
 export interface DayQuote {
   courtId: string;
   date: string;
+  /**
+   * @deprecated Yalnız geriye dönük uyum. Gün içinde süre tarifeye göre
+   * değişebildiği için tek başına ANLAMSIZDIR (ilk dilimin süresidir).
+   * Süre için `hours[].minutes` kullanın.
+   */
   slotDuration: number;
   hours: DayQuoteHour[];
 }
@@ -125,6 +137,8 @@ export async function getCourtDayQuote(courtId: string, dateISO: string): Promis
     slotDuration: Number(raw.slotDuration ?? 60),
     hours: (raw.hours ?? []).map(h => ({
       time: String(h.time),
+      endTime: String(h.endTime ?? ''),
+      minutes: Number(h.minutes ?? raw.slotDuration ?? 60),
       night: !!h.night,
       tariffOk: !!h.tariffOk,
       total: h.total == null ? null : Number(h.total),
