@@ -156,10 +156,84 @@ Hepsi geçmişin ORTASINDA oluşuyordu; sonraki hiçbir migration önleyemezdi.
 yansıtmıyor. Üretimde dosyalar farklı sırayla uygulandığı için bu bağımlılıklar
 görünmüyordu; sıfırdan replay sürüm sırasına uyduğu anda ortaya çıktılar.
 
-## 6. Bilinen repo ↔ üretim şema sapması (AÇIK)
+## 6. Supabase Preview — sıfırdan replay SONUCU (2026-07-29, YEŞİL)
 
-Replay'in ürettiği şema üretimle **birebir değil**: 115 tablonun ikisinde de
-aynı, ama 4 tabloda 7 kolon farkı var. Replay'i engellemiyor; ayrı iş.
+PR #137 kapatılıp yeniden açıldı; Supabase yeni bir Preview projesi
+(`odbeaddfkcsrefgdtjmv`) yarattı ve **374 migration'ın tamamını boş bir
+veritabanına sıfırdan uyguladı.**
+
+| Ölçüm | Preview | Üretim | Sonuç |
+|---|---|---|---|
+| Uygulanan migration | **374** | 373 | ✅ (fark = IP-04, henüz deploy edilmedi) |
+| Defter son sürüm | `20260829000000` | `20260828000009` | ✅ |
+| Defter md5 | `69f5b705d865233b85c05cc84dcf9ea0` | — | ✅ **repo md5 ile birebir aynı** |
+| `public` tablo (pg_tables) | 111 | 111 | ✅ |
+| RLS kapalı tablo | YOK | YOK | ✅ |
+| Para yolu RPC (9 adet) | hepsi yerinde | hepsi yerinde | ✅ |
+| Silinmiş özellik dirilmesi | YOK | YOK | ✅ |
+
+> Not: §2'deki "115 tablo" ifadesi `list_tables` sayımından geliyordu (view'ları
+> da kapsıyor). `pg_tables` ile ölçülen gerçek tablo sayısı **iki tarafta da 111**.
+
+### Fonksiyon yüzeyi karşılaştırması
+
+Ham sayılar yanıltıcı: üretim 823, Preview 637. Fark tümüyle **eklentilerden**
+geliyor — üretimde `btree_gist` (188 fonksiyon) `public` şemasına kurulmuş,
+Preview'da değil. Eklenti fonksiyonları (`pg_depend.deptype='e'`) dışlandığında:
+
+| | Üretim | Preview |
+|---|---|---|
+| Gerçek uygulama fonksiyonu | 586 | **588** |
+
+Adlar ilk harfe göre 22 kovaya bölünüp md5'lendiğinde **21 kova birebir aynı**.
+Yalnız `_` kovası farklı (72 ↔ 74). Fark tam olarak iki addan ibaret:
+
+| Ad | Durum |
+|---|---|
+| `_leave_match_quote` | ✅ **Beklenen** — IP-04'ün getirdiği yeni fonksiyon |
+| `_validate_tariff_days` | ⚠️ Aşağıya bakınız |
+
+**Kritik yön BOŞ:** üretimde olup repo zincirinin üretemediği **hiçbir fonksiyon
+yok.** Yani repo zinciri üretimin tüm fonksiyon yüzeyini yeniden kurabiliyor.
+
+### `_validate_tariff_days` — ölü yardımcı, üretimde yok
+
+`20260728163234` üretim defterinde **var**, aynı dosyanın kurduğu
+`pitch_tariffs_days_not_empty` kısıtı üretimde **var**, ama fonksiyon **yok**.
+Yani dosya üretime uygulandıktan *sonra* içeriği genişletilmiş. Fonksiyonu
+repoda da uygulamada da **çağıran hiç kimse yok** (ölü yardımcı), bu yüzden
+zararsız. Yine de sapmanın kaydı burada duruyor.
+
+### Merge üretime NE uygulayacak — ölçüldü
+
+Bu dal main'e 33 yeni migration dosyası ekliyor. Sürümleri üretim defteriyle
+karşılaştırıldığında:
+
+| Durum | Adet |
+|---|---|
+| **ATLANACAK** — sürüm defterde zaten var | **32** |
+| **ÇALIŞACAK** — defterde yok | **1** → `20260829000000` (IP-04) |
+
+Bunun iki sonucu var:
+
+1. Merge üretime **tek bir migration** uygulayacak: IP-04. En küçük olası
+   üretim değişikliği.
+2. Sıfırdan replay için onarılan beş dosyanın hepsi bu 32'nin içinde →
+   **üretimde çalışmayacaklar → üretim davranışı değişmeyecek.** Bu artık
+   varsayım değil, ölçüm.
+
+Ana dal (main) 341 migration dosyası taşıyor, üretim defteri ise 373 kayıt.
+Yani üretim main'in **önünde**: aradaki 32 dosya geçmişte doğrudan üretime
+uygulanmış, repo dosyaları sonradan *belgelemek* için yazılmış (dosya
+başlıklarındaki "ÜRETİMDEN GERİ ÇEKİLDİ" notları bunu söylüyor). Bu dal o
+belgelemeyi main'e taşıyor ve zinciri sıfırdan çalışır hâle getiriyor.
+
+---
+
+## 7. Bilinen repo ↔ üretim şema sapması (AÇIK)
+
+Replay'in ürettiği şema üretimle **birebir değil**: tablo sayısı iki tarafta da
+111, ama 4 tabloda 7 kolon farkı var. Replay'i engellemiyor; ayrı iş.
 
 | Tablo | Üretimde var, replay'de yok | Replay'de var, üretimde yok |
 |---|---|---|
@@ -167,6 +241,32 @@ aynı, ama 4 tabloda 7 kolon farkı var. Replay'i engellemiyor; ayrı iş.
 | `pitches` | `created_at` | `courts`, `is_approved` |
 | `pitch_bookings` | — | `metadata` |
 | `service_offers` | — | `offered_by`, `provider_type` |
+
+### GitHub Actions — kod kaynaklı DEĞİL (2026-07-29)
+
+Actions işleri kırmızı, ama sebep depoda değil:
+
+| Kanıt | Ölçüm |
+|---|---|
+| İş süresi | 2–14 sn (örn. `immutability` 10 sn) |
+| `runner_id` / `runner_name` | `0` / boş → **koşucu hiç atanmamış** |
+| `steps` dizisi | yok → tek adım bile başlamamış |
+| İş günlükleri | HTTP **404** (üretilmemiş) |
+| Check `output` | `title`/`summary`/`text` üçü de boş |
+| Bozulma penceresi | `.github/` ve `package.json`'da **hiçbir değişiklik yok** |
+| main'in durumu | 2026-07-26'dan beri 30 koşunun 26'sı düşüyor |
+
+Her kontrolün gerçek komutu **yerelde geçiyor**: `npx tsc --noEmit` 0 hata,
+`npx vitest run` 779/779, `npm run build` başarılı, immutability bekçisi
+PR'ın kendi `BASE`/`HEAD` sha'larına karşı yerelde çalıştırıldığında **GEÇTİ**.
+
+Bu imza hesap düzeyi bir engeli gösterir (Actions harcama limiti / kota).
+**Kodla düzeltilemez** — depo sahibinin GitHub Billing → Actions ayarını
+kontrol etmesi gerekir. Supabase ve Vercel dağıtımları Actions'tan geçmediği
+için (kendi GitHub App'leri) bu durum dağıtımı engellemiyor; Preview'ın
+yeşil olması bunun kanıtı.
+
+---
 
 `goalkeepers`/`referees` satırı önemli: uygulama camelCase sorguluyor
 (`services/matchService.ts:279` → `"matchCount"`, `"isElite"`). Yani **üretim
