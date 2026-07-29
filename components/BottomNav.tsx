@@ -2,6 +2,12 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Home, Calendar, Users, User, MapPin } from 'lucide-react';
 import { AppView } from '../types';
+// IP-08: Gezinti etiketleri 12px'ti ve gerçek Inter metrikleriyle 360px'lik
+// ekranda "Ana Sayfa" İKİ SATIRA kırılıyordu (görsel testler yedek fontla
+// çalıştığı için bunu hiç yakalamamıştı — canlıda kırılıyor). Etiket ölçeğin
+// caption basamağına (11px) indi ve `whitespace-nowrap` ile kırılma yasaklandı:
+// birincil gezinti çubuğu asla iki satıra taşmaz.
+import { type_ } from '../ui/type';
 
 interface BottomNavProps {
   currentView: AppView;
@@ -27,13 +33,16 @@ export const BottomNav: React.FC<BottomNavProps> = ({ currentView, onNavigate, h
       animate={{ y: hidden ? '130%' : 0 }}
       exit={{ y: '130%' }}
       transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-      className="fixed bottom-0 left-0 right-0 z-50 px-4 pt-2 pb-safe max-w-lg md:max-w-2xl mx-auto"
+      className="fixed bottom-0 left-0 right-0 z-50 px-4 pt-2 pb-safe max-w-lg mx-auto"
     >
       <div
         className="bg-[#161B22]/80 backdrop-blur-xl border border-white/10 rounded-[32px] px-2 py-2 flex items-center justify-between shadow-[0_-10px_40px_rgba(0,0,0,0.5)]"
       >
         {navItems.map((item) => {
-          const isActive = currentView === item.id;
+          // MY_MATCHES ve STUDIO sekme DEĞİL ama alt menü çiziliyor; kullanıcı
+          // "neredeyim" sorusunu cevapsız bırakmasın diye Ana Sayfa aktif görünür.
+          const isActive = currentView === item.id
+            || (item.id === 'DASHBOARD' && (currentView === 'MY_MATCHES' || currentView === 'STUDIO'));
           const Icon = item.icon;
 
           if (item.isCenter) {
@@ -54,7 +63,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({ currentView, onNavigate, h
                 >
                   <Icon size={24} strokeWidth={isActive ? 3 : 2} />
                 </motion.div>
-                <span className={`text-xs font-black tracking-wide mt-1 transition-colors ${isActive ? 'text-[#39FF14]' : 'text-gray-500'}`}>
+                <span className={`${type_.caption} font-extrabold tracking-wide mt-1 whitespace-nowrap transition-colors ${isActive ? 'text-[#39FF14]' : 'text-ink-4'}`}>
                   {item.label}
                 </span>
               </button>
@@ -80,10 +89,10 @@ export const BottomNav: React.FC<BottomNavProps> = ({ currentView, onNavigate, h
               <div className="relative z-10 flex flex-col items-center gap-1">
                 <Icon 
                   size={20} 
-                  className={`transition-colors duration-300 ${isActive ? 'text-white' : 'text-gray-500 group-hover:text-gray-300'}`} 
+                  className={`transition-colors duration-300 ${isActive ? 'text-white' : 'text-ink-4 group-hover:text-gray-300'}`} 
                   strokeWidth={isActive ? 2.5 : 2}
                 />
-                <span className={`text-xs font-bold tracking-wide transition-colors duration-300 ${isActive ? 'text-white' : 'text-gray-500 group-hover:text-gray-300'}`}>
+                <span className={`${type_.caption} font-bold tracking-wide whitespace-nowrap transition-colors duration-300 ${isActive ? 'text-white' : 'text-ink-4 group-hover:text-gray-300'}`}>
                   {item.label}
                 </span>
               </div>

@@ -136,7 +136,7 @@ export const AnimationToolbar: React.FC<AnimationToolbarProps> = ({
             onClick={onPlayPause}
             title={title}
             aria-label={title}
-            className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-black transition-all whitespace-nowrap shadow-lg ${playing ? 'bg-red-500 text-white shadow-red-500/30' : 'bg-[#FACC15] text-black shadow-[#FACC15]/30 hover:scale-105'}`}
+            className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-extrabold transition-all whitespace-nowrap shadow-lg ${playing ? 'bg-red-500 text-white shadow-red-500/30' : 'bg-[#FACC15] text-black shadow-[#FACC15]/30 hover:scale-105'}`}
         >
             {playing ? (
                 <><Square size={14} className="fill-current" /> {label}</>
@@ -149,20 +149,20 @@ export const AnimationToolbar: React.FC<AnimationToolbarProps> = ({
                 onClick={onExit}
                 title="Düzenlemeye dön"
                 aria-label="Düzenlemeye dön"
-                className="flex items-center gap-2 px-3.5 py-2 rounded-full text-xs font-black transition-all whitespace-nowrap bg-white/5 text-gray-300 hover:bg-white/10"
+                className="flex items-center gap-2 px-3.5 py-2 rounded-full text-xs font-extrabold transition-all whitespace-nowrap bg-white/5 text-gray-300 hover:bg-white/10"
             >
                 <X size={14} /> Düzenle
             </button>
         )}
         <button
             onClick={() => setShowBall(!showBall)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-black transition-all whitespace-nowrap shadow-lg ${showBall ? 'bg-orange-500 text-white shadow-orange-500/30' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}
+            className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-extrabold transition-all whitespace-nowrap shadow-lg ${showBall ? 'bg-orange-500 text-white shadow-orange-500/30' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}
         >
             ⚽ TOPU {showBall ? 'GİZLE' : 'GÖSTER'}
         </button>
         <button
             onClick={() => setPlayMode(p => p === 'SYNC' ? 'SEQ' : 'SYNC')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-black transition-all whitespace-nowrap shadow-lg ${playMode === 'SEQ' ? 'bg-indigo-500 text-white shadow-indigo-500/30' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}
+            className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-extrabold transition-all whitespace-nowrap shadow-lg ${playMode === 'SEQ' ? 'bg-indigo-500 text-white shadow-indigo-500/30' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}
             title="Sıralı veya Eşzamanlı Simülasyon"
         >
             {playMode === 'SEQ' ? '🔄 SIRALI OYNAT' : '👥 EŞZAMANLI OYNAT'}
@@ -218,7 +218,7 @@ const AdvancedAnimationModule: React.FC<AdvancedAnimationModuleProps> = ({
                     <style>{`@keyframes oyBallChain{${ballKeyframes}}`}</style>
                     <div
                         key={`ball-chain-${passChain.length}-${chainPoints.length}`}
-                        className="absolute w-4 h-4 z-[60] bg-white rounded-full flex items-center justify-center text-[10px] shadow-[0_0_15px_rgba(255,255,255,0.8)]"
+                        className="absolute w-4 h-4 z-[60] bg-white rounded-full flex items-center justify-center text-[0.6875rem] shadow-[0_0_15px_rgba(255,255,255,0.8)]"
                         style={{
                             transform: 'translate(-50%, -50%)',
                             left: `${chainPoints[0].x}%`,
@@ -254,7 +254,7 @@ const AdvancedAnimationModule: React.FC<AdvancedAnimationModuleProps> = ({
                                 setSelectedSeqBadge(isSelected ? null : line.id);
                                 setIsCustomSeqInputOpen(false);
                             }}
-                            className={`bg-indigo-500 text-white font-black rounded-full w-6 h-6 flex items-center justify-center text-xs border-2 border-indigo-900 shadow-[0_0_10px_rgba(99,102,241,0.8)] transition-all ${isMuted ? 'pointer-events-none' : `cursor-pointer pointer-events-auto ${isSelected ? 'scale-125 bg-white text-indigo-500' : 'hover:bg-white hover:text-indigo-500 hover:scale-110'}`}`}
+                            className={`bg-indigo-500 text-white font-extrabold rounded-full w-6 h-6 flex items-center justify-center text-xs border-2 border-indigo-900 shadow-[0_0_10px_rgba(99,102,241,0.8)] transition-all ${isMuted ? 'pointer-events-none' : `cursor-pointer pointer-events-auto ${isSelected ? 'scale-125 bg-white text-indigo-500' : 'hover:bg-white hover:text-indigo-500 hover:scale-110'}`}`}
                             title={isMuted ? undefined : 'Sırayı Ayarla'}
                         >
                             {line.seqStep || 1}

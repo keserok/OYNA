@@ -39,7 +39,7 @@ export const OwnerStatusBar: React.FC<OwnerStatusBarProps> = ({ banners }) => {
         {primary.icon ?? defaultIcons[primary.tone]}
         <span className="leading-tight">{primary.message}</span>
         {restCount > 0 && (
-          <span className="opacity-80 text-[10px] font-black">+{restCount}</span>
+          <span className="opacity-80 text-[10px] font-extrabold">+{restCount}</span>
         )}
       </div>
       {restCount > 0 && (

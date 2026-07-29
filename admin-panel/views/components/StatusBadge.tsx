@@ -13,7 +13,7 @@ const TONES: Record<BadgeTone, string> = {
 };
 
 export const StatusBadge: React.FC<{ children: React.ReactNode; tone?: BadgeTone }> = ({ children, tone = 'neutral' }) => (
-  <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider border ${TONES[tone]}`}>
+  <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[9px] font-extrabold uppercase tracking-wider border ${TONES[tone]}`}>
     {children}
   </span>
 );

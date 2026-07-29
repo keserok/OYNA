@@ -164,7 +164,7 @@ const OwnerModerationTab: React.FC<OwnerModerationTabProps> = ({ onBadgeCount })
   return (
     <div className="flex-1 h-full overflow-y-auto custom-scrollbar bg-black/20 p-4 rounded-xl border border-white/5 space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-black uppercase tracking-widest text-white flex items-center gap-2">
+        <h2 className="text-sm font-extrabold uppercase tracking-widest text-white flex items-center gap-2">
           <Building2 size={16} className="text-[#FFFF00]" /> Tesis Onayları
         </h2>
         <button onClick={() => void fetchData()} disabled={loading} className="flex items-center gap-2 text-xs font-bold text-gray-400 hover:text-white px-3 py-2 rounded-lg bg-white/5 border border-white/10 disabled:opacity-50">
@@ -213,7 +213,7 @@ const OwnerModerationTab: React.FC<OwnerModerationTabProps> = ({ onBadgeCount })
                   </div>
                   {/* Vitrin hazırlık kontrol listesi (Karar #20) */}
                   <div className="mt-3 flex items-center flex-wrap gap-1.5">
-                    <span className={`flex items-center gap-1 text-[10px] font-black uppercase px-2 py-1 rounded-md border ${ready ? 'text-green-400 border-green-500/30 bg-green-500/10' : 'text-amber-300 border-amber-500/30 bg-amber-500/10'}`}>
+                    <span className={`flex items-center gap-1 text-[10px] font-extrabold uppercase px-2 py-1 rounded-md border ${ready ? 'text-green-400 border-green-500/30 bg-green-500/10' : 'text-amber-300 border-amber-500/30 bg-amber-500/10'}`}>
                       <ListChecks size={11} /> {ready ? 'Vitrine hazır' : `${blockers.length} eksik`}
                     </span>
                     {blockers.map((b) => (
@@ -276,7 +276,7 @@ const OwnerModerationTab: React.FC<OwnerModerationTabProps> = ({ onBadgeCount })
       {rejectTarget && (
         <div className="fixed inset-0 z-[200] bg-black/70 backdrop-blur-sm flex items-center justify-center p-6" onClick={() => setRejectTarget(null)}>
           <div className="w-full max-w-md bg-[#161B22] border border-white/10 rounded-3xl p-6" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-lg font-black text-white mb-1">Red Sebebi</h3>
+            <h3 className="text-lg font-extrabold text-white mb-1">Red Sebebi</h3>
             <p className="text-xs text-gray-400 mb-4">{rejectTarget.name} — sebep sahibe bildirilecek.</p>
             <textarea
               value={rejectReason}
@@ -288,7 +288,7 @@ const OwnerModerationTab: React.FC<OwnerModerationTabProps> = ({ onBadgeCount })
             />
             <div className="flex gap-3 mt-4">
               <button onClick={() => setRejectTarget(null)} className="flex-1 h-12 rounded-xl bg-[#0A0E14] border border-white/10 text-gray-300 font-bold">Vazgeç</button>
-              <button onClick={submitReject} disabled={actioningId === rejectTarget.id} className="flex-1 h-12 rounded-xl bg-red-600 hover:bg-red-500 text-white font-black disabled:opacity-50 flex items-center justify-center gap-2">
+              <button onClick={submitReject} disabled={actioningId === rejectTarget.id} className="flex-1 h-12 rounded-xl bg-red-600 hover:bg-red-500 text-white font-extrabold disabled:opacity-50 flex items-center justify-center gap-2">
                 {actioningId === rejectTarget.id ? <RefreshCw size={16} className="animate-spin" /> : 'Reddet ve Bildir'}
               </button>
             </div>

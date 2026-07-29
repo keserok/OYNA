@@ -26,7 +26,7 @@ const STATUS_LABELS: Record<string, { label: string; cls: string }> = {
 
 const ScoreStepper: React.FC<{ value: number; onChange: (v: number) => void; label: string }> = ({ value, onChange, label }) => (
   <div className="flex-1 bg-[#0A0E14] border border-white/10 rounded-2xl p-3 text-center">
-    <p className="text-[9px] font-black uppercase tracking-wider text-gray-500 truncate">{label}</p>
+    <p className="text-[9px] font-extrabold uppercase tracking-wider text-gray-500 truncate">{label}</p>
     <div className="flex items-center justify-center gap-3 mt-2">
       <button
         type="button"
@@ -36,7 +36,7 @@ const ScoreStepper: React.FC<{ value: number; onChange: (v: number) => void; lab
       >
         <Minus size={16} />
       </button>
-      <span className="text-2xl font-black text-white font-mono w-8 tabular-nums">{value}</span>
+      <span className="text-2xl font-extrabold text-white font-mono w-8 tabular-nums">{value}</span>
       <button
         type="button"
         aria-label={`${label} skorunu artır`}
@@ -111,7 +111,7 @@ export const OwnerMatchesModal: React.FC<{
                 <button
                   key={key}
                   onClick={() => setFilter(key)}
-                  className={`px-3 py-1.5 rounded-full text-[11px] font-black uppercase tracking-wider border transition-colors ${
+                  className={`px-3 py-1.5 rounded-full text-[11px] font-extrabold uppercase tracking-wider border transition-colors ${
                     filter === key ? 'bg-white/10 text-white border-white/20' : 'bg-[#161B22] text-gray-500 border-white/5'
                   }`}
                 >
@@ -151,21 +151,21 @@ export const OwnerMatchesModal: React.FC<{
               <div key={m.matchId} className="bg-[#161B22] border border-white/5 rounded-3xl p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="text-sm font-black text-white truncate">{m.title}</p>
+                    <p className="text-sm font-extrabold text-white truncate">{m.title}</p>
                     <p className="text-[11px] text-gray-500 font-bold mt-0.5">
                       {m.when} · {m.courtName}
                     </p>
                   </div>
-                  <span className={`shrink-0 text-[9px] font-black uppercase tracking-wider px-2 py-1 rounded-lg border ${st.cls}`}>
+                  <span className={`shrink-0 text-[9px] font-extrabold uppercase tracking-wider px-2 py-1 rounded-lg border ${st.cls}`}>
                     {st.label}
                   </span>
                 </div>
 
                 {m.hasScore ? (
                   <div className="mt-3 flex items-center justify-center gap-3 bg-[#0A0E14] border border-white/10 rounded-2xl py-3">
-                    <span className="text-2xl font-black text-white font-mono">{m.homeScore}</span>
-                    <span className="text-sm font-black text-gray-600">—</span>
-                    <span className="text-2xl font-black text-white font-mono">{m.awayScore}</span>
+                    <span className="text-2xl font-extrabold text-white font-mono">{m.homeScore}</span>
+                    <span className="text-sm font-extrabold text-gray-600">—</span>
+                    <span className="text-2xl font-extrabold text-white font-mono">{m.awayScore}</span>
                   </div>
                 ) : isEntering ? (
                   <div className="mt-3 space-y-3">
@@ -183,7 +183,7 @@ export const OwnerMatchesModal: React.FC<{
                       <button
                         onClick={() => submitScore(m.matchId)}
                         disabled={submitting}
-                        className="flex-1 py-3 rounded-xl bg-[#FACC15] text-black text-xs font-black disabled:opacity-50"
+                        className="flex-1 py-3 rounded-xl bg-[#FACC15] text-black text-xs font-extrabold disabled:opacity-50"
                       >
                         {submitting ? 'KAYDEDİLİYOR…' : 'SKORU KAYDET'}
                       </button>
@@ -192,7 +192,7 @@ export const OwnerMatchesModal: React.FC<{
                 ) : !readOnly ? (
                   <button
                     onClick={() => { setScoreEntryId(m.matchId); setHomeScore(0); setAwayScore(0); }}
-                    className="mt-3 w-full py-3 rounded-xl border border-dashed border-white/15 text-xs font-black text-gray-400 hover:text-white hover:border-white/30 transition-colors"
+                    className="mt-3 w-full py-3 rounded-xl border border-dashed border-white/15 text-xs font-extrabold text-gray-400 hover:text-white hover:border-white/30 transition-colors"
                   >
                     SKOR GİR
                   </button>

@@ -290,7 +290,7 @@ export const UsersPage: React.FC<UsersPageProps> = ({ subRoute, mode = 'embedded
             render: (u: any) => (
                 <div>
                     <div className="font-bold text-white flex items-center gap-1.5">{u.name} <span className="text-[10px] text-gray-500 font-mono">({u.rating?.toFixed(1) || '5.0'}★)</span></div>
-                    <div className={`text-[9px] bg-white/5 border border-white/10 px-1.5 py-0.5 rounded inline-block mt-1 font-black ${rowIconColor}`}>
+                    <div className={`text-[9px] bg-white/5 border border-white/10 px-1.5 py-0.5 rounded inline-block mt-1 font-extrabold ${rowIconColor}`}>
                         {subRoute === 'KULLANICILAR' ? (u.role || 'PLAYER') :
                          subRoute === 'KALECİLER' ? (u.style || 'KALECİ') :
                          (u.level || 'HAKEM')}
@@ -337,14 +337,14 @@ export const UsersPage: React.FC<UsersPageProps> = ({ subRoute, mode = 'embedded
                             <button
                                 onClick={() => setDetailProvider({ item: u, type: subRoute === 'KALECİLER' ? 'GK' : 'REF' })}
                                 title="Detay"
-                                className="flex items-center gap-1 px-2.5 py-1 bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 rounded-lg border border-blue-500/20 text-[9px] font-black uppercase"
+                                className="flex items-center gap-1 px-2.5 py-1 bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 rounded-lg border border-blue-500/20 text-[9px] font-extrabold uppercase"
                             >
                                 <Eye size={12} /> Detay
                             </button>
                             <button
                                 onClick={() => setEditProvider({ item: u, type: subRoute === 'KALECİLER' ? 'GK' : 'REF' })}
                                 title="Düzenle"
-                                className="flex items-center gap-1 px-2.5 py-1 bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 rounded-lg border border-purple-500/20 text-[9px] font-black uppercase"
+                                className="flex items-center gap-1 px-2.5 py-1 bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 rounded-lg border border-purple-500/20 text-[9px] font-extrabold uppercase"
                             >
                                 <Edit3 size={12} /> Düzenle
                             </button>
@@ -355,21 +355,21 @@ export const UsersPage: React.FC<UsersPageProps> = ({ subRoute, mode = 'embedded
                         <button
                             onClick={() => setUser360(u)}
                             title="Kullanıcı 360 — profil, cüzdan, geçmiş"
-                            className="flex items-center gap-1 px-2.5 py-1 bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20 rounded-lg border border-cyan-500/20 text-[9px] font-black uppercase"
+                            className="flex items-center gap-1 px-2.5 py-1 bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20 rounded-lg border border-cyan-500/20 text-[9px] font-extrabold uppercase"
                         >
                             <Eye size={12} /> 360
                         </button>
                         <button
                             onClick={() => setEditUser(u)}
                             title="Düzenle"
-                            className="flex items-center gap-1 px-2.5 py-1 bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 rounded-lg border border-purple-500/20 text-[9px] font-black uppercase"
+                            className="flex items-center gap-1 px-2.5 py-1 bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 rounded-lg border border-purple-500/20 text-[9px] font-extrabold uppercase"
                         >
                             <Edit3 size={12} /> Düzenle
                         </button>
                         <button
                             onClick={() => handleBanToggle(u)}
                             title={u.isBanned ? 'Banı kaldır' : 'Banla'}
-                            className={`flex items-center gap-1 px-2.5 py-1 rounded-lg border text-[9px] font-black uppercase ${u.isBanned ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'}`}
+                            className={`flex items-center gap-1 px-2.5 py-1 rounded-lg border text-[9px] font-extrabold uppercase ${u.isBanned ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'}`}
                         >
                             {u.isBanned ? <ShieldCheck size={12} /> : <Ban size={12} />}
                             {u.isBanned ? 'UNBAN' : 'BAN'}
@@ -379,14 +379,14 @@ export const UsersPage: React.FC<UsersPageProps> = ({ subRoute, mode = 'embedded
                                 type="button"
                                 title="Doğrula"
                                 onClick={async () => { try { await verifyUser(u.id); success('Hesap doğrulandı'); if (subRoute === 'KULLANICILAR') await loadServerUsers(); } catch (err) { toastError(err instanceof Error ? err.message : 'İşlem başarısız'); } }}
-                                className="flex items-center gap-1 px-2 py-1 rounded-lg border text-[9px] font-black bg-blue-500/10 text-blue-400 border-blue-500/30"
+                                className="flex items-center gap-1 px-2 py-1 rounded-lg border text-[9px] font-extrabold bg-blue-500/10 text-blue-400 border-blue-500/30"
                             >
                                 <BadgeCheck size={11} /> DOĞRULA
                             </button>
                         )}
                         <div
                             title="Premium kart durumu / tier"
-                            className={`flex items-center gap-1 px-2 py-1 rounded-lg border text-[9px] font-black ${u.cardActive ? 'bg-cyan-500/10 text-cyan-300 border-cyan-500/30' : 'bg-white/5 text-gray-400 border-white/10'}`}
+                            className={`flex items-center gap-1 px-2 py-1 rounded-lg border text-[9px] font-extrabold ${u.cardActive ? 'bg-cyan-500/10 text-cyan-300 border-cyan-500/30' : 'bg-white/5 text-gray-400 border-white/10'}`}
                         >
                             <CreditCard size={11} />
                             <select
@@ -400,7 +400,7 @@ export const UsersPage: React.FC<UsersPageProps> = ({ subRoute, mode = 'embedded
                                         if (subRoute === 'KULLANICILAR') await loadServerUsers();
                                     } catch (err) { toastError(err instanceof Error ? err.message : 'İşlem başarısız'); }
                                 }}
-                                className="bg-transparent outline-none cursor-pointer text-[9px] font-black uppercase [&>option]:bg-gray-900 [&>option]:text-white"
+                                className="bg-transparent outline-none cursor-pointer text-[9px] font-extrabold uppercase [&>option]:bg-gray-900 [&>option]:text-white"
                             >
                                 <option value="">KART KAPALI</option>
                                 <option value="bronze">BRONZE</option>
@@ -413,7 +413,7 @@ export const UsersPage: React.FC<UsersPageProps> = ({ subRoute, mode = 'embedded
                     <button 
                         onClick={() => handleImpersonateRequest(u.id)}
                         title="Ghost Mode (Giriş Yap)" 
-                        className="flex items-center gap-1.5 px-2.5 py-1 bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white rounded-lg border border-white/10 transition-all text-[9px] font-black tracking-widest uppercase"
+                        className="flex items-center gap-1.5 px-2.5 py-1 bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white rounded-lg border border-white/10 transition-all text-[9px] font-extrabold tracking-widest uppercase"
                     >
                         <PlayCircle size={12} className={buttonIconColor} /> GHOST
                     </button>
@@ -450,11 +450,11 @@ export const UsersPage: React.FC<UsersPageProps> = ({ subRoute, mode = 'embedded
                 {roleChips.length > 0 && (
                     <div className="space-y-2.5">
                         <div>
-                            <p className="text-[9px] font-black text-gray-600 uppercase tracking-widest mb-1.5">Rol</p>
+                            <p className="text-[9px] font-extrabold text-gray-600 uppercase tracking-widest mb-1.5">Rol</p>
                             <AdminFilterChips chips={roleChips} active={roleFilter} onChange={(id) => setRoleFilter(id as typeof roleFilter)} />
                         </div>
                         <div>
-                            <p className="text-[9px] font-black text-gray-600 uppercase tracking-widest mb-1.5">Durum</p>
+                            <p className="text-[9px] font-extrabold text-gray-600 uppercase tracking-widest mb-1.5">Durum</p>
                             <AdminFilterChips chips={statusChips} active={statusFilter} onChange={(id) => setStatusFilter(id as typeof statusFilter)} />
                         </div>
                     </div>
@@ -533,7 +533,7 @@ export const UsersPage: React.FC<UsersPageProps> = ({ subRoute, mode = 'embedded
                 <div className="fixed inset-0 z-[200] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
                     <div className="bg-[#161B22] border border-red-500/30 rounded-2xl w-full max-w-sm p-5 space-y-4">
                         <div>
-                            <h3 className="text-sm font-black text-white uppercase">Ghost Mode Girişi</h3>
+                            <h3 className="text-sm font-extrabold text-white uppercase">Ghost Mode Girişi</h3>
                             <p className="text-[11px] text-gray-400 mt-1">
                                 <span className="text-white font-bold">{ghostTarget.name}</span> hesabını görüntüleyeceksiniz.
                                 Sebep zorunludur; oturum 30 dk sonra sunucuda sona erer ve denetime yazılır.
@@ -558,7 +558,7 @@ export const UsersPage: React.FC<UsersPageProps> = ({ subRoute, mode = 'embedded
                                 type="button"
                                 disabled={ghostBusy || ghostReason.trim().length < 5}
                                 onClick={() => void confirmGhost()}
-                                className="flex-1 py-2.5 rounded-xl bg-red-500 hover:bg-red-600 text-white text-xs font-black disabled:opacity-40"
+                                className="flex-1 py-2.5 rounded-xl bg-red-500 hover:bg-red-600 text-white text-xs font-extrabold disabled:opacity-40"
                             >
                                 Ghost Başlat
                             </button>

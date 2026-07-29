@@ -24,7 +24,8 @@ export const NOTIFICATION_CATEGORIES: NotificationCategory[] = [
     key: 'MATCH',
     label: 'Maç Bildirimleri',
     description: 'Katıldığın maçlarla ilgili anlık güncellemeler',
-    preferences: ['match_joined', 'match_cancelled', 'match_invite', 'team_invite'],
+    // IP-06: davetine "gelemem" cevabı gelince kaptanı haberdar eden anahtar.
+    preferences: ['match_joined', 'match_cancelled', 'match_invite', 'team_invite', 'match_invite_declined'],
   },
   {
     key: 'STAFF',

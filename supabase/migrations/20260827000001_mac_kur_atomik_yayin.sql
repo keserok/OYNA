@@ -434,6 +434,12 @@ REVOKE ALL ON FUNCTION public.create_match_atomic(uuid, date, time, text, text, 
 GRANT EXECUTE ON FUNCTION public.create_match_atomic(uuid, date, time, text, text, jsonb, uuid) TO authenticated;
 
 -- ── 5 · Kadro daveti: bildirim gider, slotlar satın almayla dolar ───────────
+-- [2026-07-29 sıfırdan replay guard'ı] Bu tanım `integer` döndürüyor, ama
+-- 20260727160543 aynı imzayı `jsonb` olarak bırakıyor. CREATE OR REPLACE dönüş
+-- tipini değiştiremez → "cannot change return type of existing function".
+-- Canlıda etkisiz (fonksiyon zaten bu şekilde), yalnız replay'i onarır.
+DROP FUNCTION IF EXISTS public.invite_friends_to_match(uuid, uuid[]);
+
 CREATE OR REPLACE FUNCTION public.invite_friends_to_match(p_match_id uuid, p_friend_ids uuid[])
 RETURNS integer
 LANGUAGE plpgsql SECURITY DEFINER

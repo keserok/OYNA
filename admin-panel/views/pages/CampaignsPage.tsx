@@ -128,7 +128,7 @@ export const CampaignsPage: React.FC<{ route?: 'NOTIFICATIONS' }> = ({ route = '
           <div className="flex items-center justify-between">
             <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Önizleme & Gönder</p>
             {count !== null && (
-              <span className="text-2xl font-black text-pink-400">
+              <span className="text-2xl font-extrabold text-pink-400">
                 {previewLoading ? '…' : count}
                 <span className="text-xs text-gray-500 font-normal ml-1">kişi</span>
               </span>
@@ -169,7 +169,7 @@ export const CampaignsPage: React.FC<{ route?: 'NOTIFICATIONS' }> = ({ route = '
                   </p>
                 </div>
                 <span
-                  className={`shrink-0 text-[9px] font-black px-2 py-1 rounded-md ${
+                  className={`shrink-0 text-[9px] font-extrabold px-2 py-1 rounded-md ${
                     c.is_simulation ? 'text-amber-400 bg-amber-500/10' : 'text-green-400 bg-green-500/10'
                   }`}
                 >

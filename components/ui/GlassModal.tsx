@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
+import { useBackDismiss } from '../../hooks/useBackDismiss';
 
 // ================================================================
 // GlassModal — ekran ortasında duran buzlu cam pencere (Arkadaşlar).
@@ -34,7 +35,10 @@ const PANEL_MOTION = {
 const GlassModal: React.FC<GlassModalProps> = ({
   open, onClose, children, ariaLabel, title,
   showClose = true, maxWidthClass = 'max-w-sm',
-}) => (
+}) => {
+  // Android geri tuşu + Esc bu camı kapatır; arkadaki ekran DEĞİŞMEZ (BULGU-020).
+  useBackDismiss(open, onClose, 'glass-modal');
+  return (
   <AnimatePresence>
     {open && (
       <div className="fixed inset-0 z-[58] flex items-center justify-center px-5">
@@ -69,7 +73,7 @@ const GlassModal: React.FC<GlassModalProps> = ({
 
           {title ? (
             <div className="relative shrink-0 flex items-center gap-3 px-5 pt-5 pb-3">
-              <h3 className="flex-1 text-base font-black text-white truncate">{title}</h3>
+              <h3 className="flex-1 text-base font-extrabold text-white truncate">{title}</h3>
               <button
                 onClick={onClose}
                 aria-label="Kapat"
@@ -95,6 +99,7 @@ const GlassModal: React.FC<GlassModalProps> = ({
       </div>
     )}
   </AnimatePresence>
-);
+  );
+};
 
 export default GlassModal;

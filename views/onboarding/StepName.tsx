@@ -10,6 +10,8 @@ interface StepNameProps {
   onLast: (v: string) => void;
   onGender: (g: Gender) => void;
   onPosition: (p: OnboardingPosition) => void;
+  /** S8 doğrulama mesajı — ad/soyad geçersizken gösterilir. */
+  error?: string | null;
 }
 
 const SPHERE = 'radial-gradient(circle at 32% 28%, #C8FFB0, #4DFF2A 45%, #17B356 72%, #075B2C)';
@@ -33,7 +35,7 @@ const inputBase: React.CSSProperties = {
 
 /** Adım 2 · İsim ("Sahne senin."): ad/soyad + soyadı halkası + küre avatar
  *  + opsiyonel cinsiyet ve pozisyon. */
-const StepName: React.FC<StepNameProps> = ({ firstName, lastName, gender, position, onFirst, onLast, onGender, onPosition }) => {
+const StepName: React.FC<StepNameProps> = ({ firstName, lastName, gender, position, onFirst, onLast, onGender, onPosition, error }) => {
   const lastUpper = trUpper(lastName.trim());
   const letters = lastUpper.split('');
   const initials = (trUpper(firstName.trim()).charAt(0) || '') + (lastUpper.charAt(0) || '');
@@ -73,9 +75,12 @@ const StepName: React.FC<StepNameProps> = ({ firstName, lastName, gender, positi
         </div>
       </div>
 
-      {/* Girişler */}
-      <input style={inputBase} placeholder="Adın" value={firstName} maxLength={24} onChange={(e) => onFirst(e.target.value)} />
-      <input style={inputBase} placeholder="Soyadın" value={lastName} maxLength={24} onChange={(e) => onLast(e.target.value)} />
+      {/* Girişler — ad ve soyad zorunludur (S8) */}
+      <input style={inputBase} placeholder="Adın *" value={firstName} maxLength={24} onChange={(e) => onFirst(e.target.value)} />
+      <input style={inputBase} placeholder="Soyadın *" value={lastName} maxLength={24} onChange={(e) => onLast(e.target.value)} />
+      {error && (
+        <div style={{ marginTop: -6, fontSize: 11, fontWeight: 700, color: '#FBBF24' }}>{error}</div>
+      )}
 
       {/* Cinsiyet (opsiyonel) */}
       <div>

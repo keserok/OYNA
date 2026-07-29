@@ -7,6 +7,10 @@
 import { PushNotifications, Token, PushNotificationSchema, ActionPerformed } from '@capacitor/push-notifications';
 import { Capacitor } from '@capacitor/core';
 import { supabase } from '../supabaseClient';
+// Derin bağlantı maçı HAM satır değil, map'lenmiş MatchListing olarak taşır
+// (BULGU-100). matchService yalnız supabaseClient + types import ettiği için
+// döngü riski yok.
+import { getMatchDetails } from '../services/matchService';
 
 // ─── Bildirim Tercih Tipleri ──────────────────────────────────────
 export interface NotificationPreference {
@@ -40,6 +44,7 @@ export type NotificationPreferenceKey =
   | 'team_member_removed'
   | 'team_captain_transferred'
   | 'match_invite_joined'
+  | 'match_invite_declined'
   | 'match_tactic_assigned'
   | 'tactic_proposed'
   | 'tactic_approved'
@@ -65,7 +70,9 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
   ref_rejected:       { enabled: true,  mandatory: true  },
   match_reminder_1h:  { enabled: true,  mandatory: true  },
   match_reminder_24h: { enabled: true,  mandatory: false },
-  nearby_match:       { enabled: false, mandatory: false },
+  // IP-06/BULGU-078: yakındaki maç ilanı artık gerçek bir üreticiye sahip
+  // (broadcast_open_slot) — varsayılan açık; sınırlar sunucuda.
+  nearby_match:       { enabled: true,  mandatory: false },
   promo_offers:       { enabled: false, mandatory: false },
   weekly_summary:     { enabled: true,  mandatory: false },
   // Sosyal — varsayılan açık, hepsi kapatılabilir
@@ -80,6 +87,7 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
   team_member_removed:      { enabled: true, mandatory: false },
   team_captain_transferred: { enabled: true, mandatory: false },
   match_invite_joined:      { enabled: true, mandatory: false },
+  match_invite_declined:    { enabled: true, mandatory: false },
   match_tactic_assigned:    { enabled: true, mandatory: false },
   tactic_proposed:          { enabled: true, mandatory: false },
   tactic_approved:          { enabled: true, mandatory: false },
@@ -128,6 +136,10 @@ export interface DeepLinkActions {
   setSelectedConversationId?: (id: string | null) => void;
   setSelectedTeamChatId?: (id: string | null) => void;
   setTeamInitialTab?: (t: 'GENEL' | 'KADRO' | 'TAKTIK' | 'MACLAR' | null) => void;
+  /** Sessiz hata yerine kullanıcıya geri bildirim. GlobalToast'ı buraya import
+   *  etmek yerine enjekte ediyoruz — store/supabaseAuth bu modülü import ettiği
+   *  için yeni React bağımlılığı sokulmaz. */
+  showToast?: (message: string, variant?: 'error' | 'success') => void;
 }
 
 // ─── UUID v4 format doğrulayıcı ──────────────────────────────────────────────
@@ -141,12 +153,14 @@ function isValidUuid(value: string | undefined): boolean {
 // İzin verilen kaynak türleri (whitelist) — bilinmeyen kaynaklar DASHBOARD'a düşer.
 const ALLOWED_RESOURCES = new Set(['match', 'profile', 'team', 'messages', 'tactic', 'social']);
 
-export const handleDeepLink = (
+/** Dönüş `true` = görünüm GERÇEKTEN değişti. Çağıran (bildirim sheet'i) buna
+ *  bakarak kendini kapatır; başarısızlıkta açık kalır (BULGU-016). */
+export const handleDeepLink = async (
   deepLink: string,
   setView: (v: string) => void,
   actions: DeepLinkActions = {},
-) => {
-  if (!deepLink) return;
+): Promise<boolean> => {
+  if (!deepLink) return false;
 
   // ─── Scheme Doğrulaması ─────────────────────────────────────────────────────
   // Yalnızca 'oyna://' scheme'ine izin ver. 'javascript:', 'file://' vb.
@@ -155,7 +169,7 @@ export const handleDeepLink = (
   const ALLOWED_SCHEME = 'oyna://';
   if (!deepLink.startsWith(ALLOWED_SCHEME)) {
     console.warn('[DeepLink] Bilinmeyen/izinsiz scheme engellendi:', deepLink.split('://')[0]);
-    return;
+    return false;
   }
 
   let url: URL;
@@ -163,7 +177,7 @@ export const handleDeepLink = (
     url = new URL(deepLink.replace(ALLOWED_SCHEME, 'https://oyna.app/'));
   } catch {
     console.warn('[DeepLink] Geçersiz URL formatı engellendi:', deepLink);
-    return;
+    return false;
   }
 
   const [resource, id, sub] = url.pathname.split('/').filter(Boolean);
@@ -172,33 +186,29 @@ export const handleDeepLink = (
   if (resource && !ALLOWED_RESOURCES.has(resource)) {
     console.warn('[DeepLink] İzin verilmeyen kaynak tipi engellendi:', resource);
     setView('DASHBOARD');
-    return;
+    return true;
   }
 
   switch (resource) {
-    case 'match':
+    case 'match': {
       // UUID doğrulaması: geçersiz formatlı ID'ler Supabase sorgusuna gönderilmez.
-      if (actions.setSelectedMatch && isValidUuid(id)) {
-        // Maç verisini Supabase'den çek; alt yol 'eval' ise değerlendirme
-        // ekranına (F2.1 — match_completed_evaluate bildirimi), yoksa lobiye git.
-        supabase.from('matches').select('*').eq('id', id).maybeSingle().then(
-          ({ data, error }) => {
-            if (error || !data) {
-              console.warn('[DeepLink] Maç bulunamadı veya çekilemedi:', error?.message ?? id);
-              return;
-            }
-            actions.setSelectedMatch!(data);
-            setView(sub === 'eval' ? 'POST_MATCH_EVAL' : 'MATCH_JOIN');
-          },
-          (e: unknown) => {
-            console.warn('[DeepLink] Maç sorgusu başarısız:', e);
-          },
-        );
+      if (!isValidUuid(id)) return false;
+      // BULGU-100: ham satır DEĞİL, map'lenmiş maç. getMatchDetails
+      // gk_id→gkId, away_gk_id→awayGkId, ref_id→refereeId dönüşümünü yapar;
+      // ham satırla gidilirse PostMatchEval kaleci kartlarını hiç çizmez.
+      const m = await getMatchDetails(id!);
+      if (!m) {
+        actions.showToast?.('Maç açılamadı. Bağlantını kontrol edip tekrar dene.', 'error');
+        return false;
       }
-      break;
+      actions.setSelectedMatch?.(m);
+      // Alt yol 'eval' ise değerlendirme ekranı (F2.1), yoksa lobi.
+      setView(sub === 'eval' ? 'POST_MATCH_EVAL' : 'MATCH_JOIN');
+      return true;
+    }
     case 'profile':
       setView('PROFILE');
-      break;
+      return true;
     case 'team':
       if (isValidUuid(id) && sub === 'chat' && actions.setSelectedTeamChatId) {
         actions.setSelectedTeamChatId(id!); // birleşik kutu → takım sohbeti
@@ -212,19 +222,19 @@ export const handleDeepLink = (
       } else {
         setView('SOCIAL');
       }
-      break;
+      return true;
     case 'messages':
       if (isValidUuid(id) && actions.setSelectedConversationId) {
         actions.setSelectedConversationId(id!); // DM push'u → doğrudan sohbet
       }
       setView('MESSAGES');
-      break;
+      return true;
     case 'tactic':
       if (isValidUuid(id) && actions.setStudioContext) {
         actions.setStudioContext({ tacticId: id! }); // Stüdyo tam hidre açılır
       }
       setView('STUDIO');
-      break;
+      return true;
     case 'social':
       if (actions.setSocialTarget) {
         // Tab değerini whitelist ile sınırla — XSS / injection'a karşı
@@ -237,9 +247,10 @@ export const handleDeepLink = (
         });
       }
       setView('SOCIAL');
-      break;
+      return true;
     default:
       setView('DASHBOARD');
+      return true;
   }
 };
 

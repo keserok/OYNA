@@ -10,6 +10,7 @@ import {
 import { useAppStore } from '../store';
 import { hasMultipleSwitchableRoles } from '../shared/roles';
 import { resolveWorkingHoursForDate, isHourWithinWorkingHours, openHourCount } from '../shared/workingHours';
+import { courtsMissingTariff } from '../shared/courtTariffGate';
 import { PitchManager } from '../admin-panel/views/PitchManager';
 import { OwnerFinanceView } from './owner/OwnerFinanceView';
 import { LoadingState, EmptyState } from '../components/common/StatusState';
@@ -32,7 +33,6 @@ import {
   OwnerMenuView,
   OwnerFacilitySettingsModal,
   OwnerWorkingHoursModal,
-  OwnerPricingPolicyModal,
   OwnerCancellationPolicyModal,
   OwnerWithdrawalsModal,
   OwnerWidgetSettingsModal,
@@ -71,8 +71,9 @@ import {
   updateSubscriptionStatus,
   setSubscriptionAutoRenew,
   subscribeToOwnerBookings,
-  buildHourlyOccupancyGrid,
-  buildEmptyHourlyGrid,
+  getTariffs,
+  buildDayOccupancyGrid,
+  EMPTY_DAY_OCCUPANCY,
   computeCourtDailyStats,
   computeOverallOccupancy,
   getPaymentSettings,
@@ -83,8 +84,8 @@ import {
   updatePitchOperationsSettings,
   toTurkishError,
   type CourtDailyStats,
-  type HourlyOccupancyCell,
 } from '../services/pitchOwnerService';
+import type { SlotTariffInput } from '../shared/slotGrid';
 import { getOwnerDemoPitchId, seedOwnerDemo } from '../services/ownerDemoService';
 import type { PitchCourt, PitchBookingFull, OwnerDailySummary, OwnerPitch, FlashDeal, PitchAvailabilityException, PitchTariff } from '../types';
 
@@ -103,12 +104,35 @@ import { MatchCountdownItem, PitchOccupancyGrid } from './owner/home/OwnerHomeWi
 import { OwnerSetupProgress, type SetupStep } from './owner/home/OwnerSetupProgress';
 import { PendingActionsView } from './owner/PendingActionsView';
 import { OwnerBottomSheet } from './owner/components/OwnerBottomSheet';
+import { useConfirmSheet } from './owner/components/useConfirmSheet';
 import { todayISO, bookingToPendingRequest, INITIAL_PENDING_REQUESTS } from './owner/ownerPanelShared';
 
 type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACTIONS' | 'PITCHES';
 
+/**
+ * pitch_tariffs satırı → panelin `pricingPolicy` biçimi.
+ *
+ * TEK KOPYA: takvim, doluluk şeridi ve tüketici ekranı aynı alanlardan beslenir.
+ * `applies_to_days` / `tariff_type` / `valid_on` kopyalanmazsa ızgara yanlış
+ * güne düşer; `deposit_amount` kopyalanmazsa takvim uydurma kaporaya düşer
+ * (BULGU-123).
+ */
+const tariffRowToPolicy = (t: PitchTariff) => ({
+  startTime: String(t.start_time ?? '08:00'),
+  endTime: String(t.end_time ?? '17:00'),
+  price: Number(t.slot_price ?? 0),
+  slot_price: Number(t.slot_price ?? 0),
+  slot_minutes: Number(t.slot_minutes ?? 60),
+  deposit_amount: Number(t.deposit_amount ?? 0),
+  court_id: t.court_id ?? null,
+  applies_to_days: t.applies_to_days ?? null,
+  tariff_type: t.tariff_type ?? undefined,
+  valid_on: t.valid_on ?? null,
+});
+
  const OwnerPanelInner: React.FC<OwnerPanelProps> = ({ onBack, onNavigate, onNeedOnboarding, onLogout }) => {
   const notify = useOwnerToast();
+  const { confirm, confirmElement } = useConfirmSheet();
   const { setIsNotificationsOpen, setIsRoleSwitcherOpen, myRoles, setStaffPanelContext } = useAppStore();
   // STAFF-3: panel erişim seviyesi. staffPanelContext varsa personel/müdür,
   // yoksa sahip (kendi paneli). Mount anında BİR KEZ yakalanır — StrictMode
@@ -126,7 +150,6 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
   const [dailySummary, setDailySummary] = useState<OwnerDailySummary | null>(null);
   const [todayBookings, setTodayBookings] = useState<PitchBookingFull[]>([]);
   const [courtStats, setCourtStats] = useState<CourtDailyStats[]>([]);
-  const [hourlyOccupancy, setHourlyOccupancy] = useState<HourlyOccupancyCell[]>(() => buildEmptyHourlyGrid());
   const [autoApproveMinutes, setAutoApproveMinutes] = useState(35);
   const [isDemoMode, setIsDemoMode] = useState(false);
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
@@ -182,7 +205,6 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
     }
     setActiveTab(tab);
   };
-  const [showPricingPolicy, setShowPricingPolicy] = useState(false);
   const [showCancellationPolicy, setShowCancellationPolicy] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [activeWidgets, setActiveWidgets] = useState<WidgetType[]>(() => {
@@ -226,16 +248,64 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
     todayOpenHoursRef.current = wh.closed ? 0 : openHourCount(wh.open, wh.close);
   }, [facilityData]);
 
-  // Doluluk analizi görünür saat penceresi (mobil grid varsayılanı). Kapanış
-  // 00:00 → 24. Geçersiz/kapalı günde 08–24 güvenli varsayılan.
-  const todayHourWindow = useMemo(() => {
+  // SLOT-3 — Doluluk analizi şeridi. Sabit 24 saatlik ızgara YOK: tarifelerden
+  // (pitch_tariffs.slot_minutes) türetilir, dikdörtgenler süreyle orantılıdır.
+  const tariffsForOccupancy = useMemo<SlotTariffInput[]>(
+    () => ((facilityData?.pricingPolicy ?? []) as any[]).map((p) => ({
+      id: p.id,
+      tariff_type: p.tariff_type ?? 'WEEKDAY',
+      applies_to_days: p.applies_to_days ?? null,
+      start_time: String(p.start_time ?? p.startTime ?? '09:00'),
+      end_time: String(p.end_time ?? p.endTime ?? '00:00'),
+      slot_price: Number(p.slot_price ?? p.price ?? 0),
+      slot_minutes: Number(p.slot_minutes ?? 60),
+      deposit_amount: Number(p.deposit_amount ?? 0),
+      is_active: p.is_active,
+      court_id: p.court_id ?? null,
+      valid_on: p.valid_on ?? null,
+    })),
+    [facilityData],
+  );
+
+  const occupancyGrid = useMemo(() => {
+    const activeCourts = courts.filter((c) => c.is_active !== false);
+    if (activeCourts.length === 0) return EMPTY_DAY_OCCUPANCY;
     const wh = resolveWorkingHoursForDate(facilityData?.workingHours as any, todayISO());
-    const openH = parseInt(String(wh.open ?? '08:00').slice(0, 2), 10);
-    let closeH = parseInt(String(wh.close ?? '00:00').slice(0, 2), 10);
-    if (!Number.isFinite(openH)) return { open: 8, close: 24 };
-    if (!Number.isFinite(closeH) || closeH <= openH) closeH = 24;
-    return { open: openH, close: closeH };
-  }, [facilityData]);
+    return buildDayOccupancyGrid(
+      todayBookings,
+      activeCourts.map((c) => ({ id: c.id, name: c.name })),
+      tariffsForOccupancy,
+      todayISO(),
+      // Tarifesiz tesis boş şerit görmesin (slotGrid Kural 4). Kapalı günde yedek yok.
+      wh.closed ? null : wh,
+    );
+  }, [todayBookings, courts, tariffsForOccupancy, facilityData]);
+
+  // SLOT-3 (4. madde) — sahip tarifeyi değiştirince ŞERİT ANINDA doğru çizmeli.
+  // Tarife modalının onSave yükü ekran için YETERLİ DEĞİL: gün listesini
+  // (applies_to_days) ve tarife tipini taşımıyor, SPECIAL satırlarını da eliyor.
+  // O yükle çizersek hafta sonu tarifesi cumartesi günü şeritten düşerdi.
+  // Bu yüzden modal kapanınca tarifeler GERÇEK KAYNAKTAN yeniden çekilir.
+  // Fiyat politikası artık Sahalarım (PITCHES) sekmesinde, saha bazlı giriliyor.
+  // O sekmeden çıkıldığında tarifeler gerçek kaynaktan yeniden çekilir.
+  const pricingWasOpenRef = useRef(false);
+  useEffect(() => {
+    const wasOpen = pricingWasOpenRef.current;
+    const isOpen = activeTab === 'PITCHES';
+    pricingWasOpenRef.current = isOpen;
+    if (!wasOpen || isOpen || !realPitchId) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const rows = await getTariffs(realPitchId);
+        if (cancelled) return;
+        setFacilityData((prev: any) => (prev ? { ...prev, pricingPolicy: rows.map(tariffRowToPolicy) } : prev));
+      } catch {
+        // Sessiz: şerit son bilinen tarifeyle çizmeye devam eder, yanlış veri basmaz.
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [activeTab, realPitchId]);
 
   const refreshDashboard = React.useCallback(async (pitchId: string, approveMins: number, courtList?: PitchCourt[]) => {
     try {
@@ -249,7 +319,6 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
       const activeCourtRows = (courtList ?? courts).filter((c) => c.is_active !== false);
       const courtMeta = activeCourtRows.map((c) => ({ id: c.id, name: c.name }));
       setCourtStats(computeCourtDailyStats(bookings, courtMeta, todayOpenHoursRef.current));
-      setHourlyOccupancy(buildHourlyOccupancyGrid(bookings, courtMeta));
       setPendingRequests(pending.map((b) => bookingToPendingRequest(b, approveMins)));
     } catch (err) {
       notify(toTurkishError(err), 'error');
@@ -281,16 +350,7 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
       isFacilityOpen: pitch.is_open ?? true,
       latitude: (pitch as { latitude?: number | null }).latitude ?? null,
       longitude: (pitch as { longitude?: number | null }).longitude ?? null,
-      pricingPolicy: (pitch.pitch_tariffs ?? []).map((t: PitchTariff) => ({
-        startTime: String(t.start_time ?? '08:00'),
-        endTime: String(t.end_time ?? '17:00'),
-        price: Number(t.price_per_hour ?? 0),
-        price_per_hour: Number(t.price_per_hour ?? 0),
-        court_id: t.court_id ?? null,
-        applies_to_days: t.applies_to_days ?? null,
-        tariff_type: t.tariff_type ?? undefined,
-        valid_on: t.valid_on ?? null,
-      })),
+      pricingPolicy: (pitch.pitch_tariffs ?? []).map(tariffRowToPolicy),
       bankAccounts: [],
       workingHours: Array.isArray(pitch.working_hours) && pitch.working_hours.length ? pitch.working_hours : [],
       district: pitch.district,
@@ -628,7 +688,6 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
       isFacilityOpen,
       verificationStatus: facilityData?.verificationStatus ?? 'pending',
       bankAccountCount: facilityData?.bankAccounts?.length ?? 0,
-      tariffCount: facilityData?.pricingPolicy?.length ?? 0,
       autoApproveEnabled: autoApprove,
       autoApproveMinutes,
       availableBalance: menuBalance,
@@ -638,6 +697,13 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
           facilityData?.paramClientId,
       ),
       courtCount: courts.filter((c) => c.is_active !== false).length,
+      // Kendi tarifesi (court_id = kort) olmayan AKTİF saha sayısı. Kural
+      // shared/courtTariffGate'te tek yerde durur; sunucu ikizi
+      // trg_enforce_court_tariff_before_activate.
+      courtsWithoutTariff: courtsMissingTariff(
+        courts,
+        (facilityData?.pricingPolicy ?? []) as { court_id?: string | null }[],
+      ).length,
     }),
     [
       isFacilityOpen,
@@ -662,13 +728,15 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
         onFix: () => openProfile('location') },
       { key: 'photo', label: 'Fotoğraf yükle', hint: 'Tesis ve saha görselleri', done: (fd?.images?.length ?? 0) > 0,
         onFix: () => openProfile('general') },
-      { key: 'tariff', label: 'Fiyat tarifesi', hint: 'Saat/gün bazlı ücret', done: menuStats.tariffCount > 0,
-        onFix: () => { if (managerGuard()) setShowPricingPolicy(true); } },
+      // Her saha kendi tarifesini girer: adım, tarifesiz saha kalmayınca tamamlanır.
+      { key: 'tariff', label: 'Saha fiyat politikası', hint: 'Her saha için saat/gün bazlı ücret',
+        done: menuStats.courtCount > 0 && menuStats.courtsWithoutTariff === 0,
+        onFix: () => { if (managerGuard()) setActiveTab('PITCHES'); } },
       { key: 'hours', label: 'Çalışma saatleri', hint: 'Açık/kapalı saatler', done: (fd?.workingHours?.length ?? 0) > 0,
         onFix: () => { if (managerGuard()) setShowWorkingHours(true); } },
     ];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [facilityData, menuStats.courtCount, menuStats.tariffCount]);
+  }, [facilityData, menuStats.courtCount, menuStats.courtsWithoutTariff]);
 
   const toggleAutoApprove = async () => {
     if (!effGuardWrite()) return;
@@ -685,6 +753,21 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
 
   const handleProcessRequest = async (id: string, action: 'APPROVE' | 'REJECT') => {
       if (!effGuardWrite()) return;
+      // BULGU-121: Reddet geri alınamaz + müşteriye ret bildirimi gider. Onay,
+      // iyimser işaretlemeden ÖNCE sorulur — "Vazgeç" kartı hiç bozmasın.
+      // PendingActionsView ile AYNI onay kalıbı.
+      if (action === 'REJECT') {
+          const req = pendingRequests.find((r: any) => r.id === id);
+          const ok = await confirm({
+              title: 'Rezervasyonu reddet?',
+              message: req?.subtitle
+                  ? `${req.subtitle} talebi reddedilecek. Bu işlem geri alınamaz.`
+                  : 'Bu rezervasyon talebi geri alınamaz şekilde reddedilecek.',
+              confirmLabel: 'Reddet',
+              destructive: true,
+          });
+          if (!ok) return;
+      }
       // FAZ1: aynı talep zaten işleniyorsa ikinci dokunuşu yok say (çift onay/ret = para kaybı).
       if (processingRequestIds.has(id)) return;
       setProcessingRequestIds((prev) => { const n = new Set(prev); n.add(id); return n; });
@@ -714,17 +797,17 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
     return (
       <div className="min-h-dvh flex flex-col items-center justify-center bg-[#0A0E14] text-white p-8 text-center safe-top safe-bottom">
         <Building2 size={64} className="text-[#FACC15] mb-6" />
-        <h1 className="text-2xl font-black mb-3">Tesisinizi OYNA&apos;ya Ekleyin</h1>
+        <h1 className="text-2xl font-extrabold mb-3">Tesisinizi OYNA&apos;ya Ekleyin</h1>
         <p className="text-gray-400 text-sm max-w-sm mb-8">
           Ücretli işletme paneline erişmek için tesis kaydını tamamlayın. Demo verisi kaldırıldıysa gerçek tesisinizi oluşturun.
         </p>
         <button
           onClick={() => onNeedOnboarding?.()}
-          className="px-8 py-4 bg-[#FACC15] text-black font-black rounded-2xl mb-4"
+          className="px-8 py-4 bg-[#FACC15] text-black font-extrabold rounded-2xl mb-4"
         >
           TESİS KAYDI BAŞLAT
         </button>
-        <button onClick={onBack} className="text-gray-500 text-sm font-bold">Geri Dön</button>
+        <button onClick={onBack} className="text-ink-4 text-sm font-bold">Geri Dön</button>
       </div>
     );
   }
@@ -746,12 +829,12 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
                         >
                           <h1 className="text-sm font-bold text-white tracking-wide">OYNA İŞLETME</h1>
                           <ChevronDown size={14} className="text-gray-400" />
-                          <p className="text-[10px] text-emerald-400 font-medium">{facilityData?.name ?? 'Tesisim'}</p>
+                          <p className="text-[0.6875rem] text-emerald-400 font-medium">{facilityData?.name ?? 'Tesisim'}</p>
                         </button>
                       ) : (
                         <>
                           <h1 className="text-sm font-bold text-white tracking-wide text-shadow">OYNA İŞLETME</h1>
-                          <p className="text-[10px] text-gray-500 font-medium">{facilityData?.name ?? 'Tesisim'}</p>
+                          <p className="text-[0.6875rem] text-ink-4 font-medium">{facilityData?.name ?? 'Tesisim'}</p>
                         </>
                       )}
                       {showFacilityPicker && ownedFacilities.length > 1 && (
@@ -764,7 +847,7 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
                               className={`w-full text-left px-4 py-3 text-xs font-bold hover:bg-white/5 ${f.id === realPitchId ? 'text-emerald-400' : 'text-white'}`}
                             >
                               {f.name}
-                              {f.district ? <span className="block text-[10px] text-gray-500 font-normal">{f.district}</span> : null}
+                              {f.district ? <span className="block text-[0.6875rem] text-ink-4 font-normal">{f.district}</span> : null}
                             </button>
                           ))}
                         </div>
@@ -772,8 +855,8 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
                   </div>
               </div>
               <div className="flex items-center gap-2">
-                  {/* P-OFFLINE: bekleyen kasa işlemleri (kuyruk boşken görünmez) */}
-                  <OutboxBadge />
+                  {/* BULGU-125: rozet başlıktan alındı — Takvim/Menü'de başlık hiç
+                      render edilmiyordu; şerit artık alt barın üstünde, tüm sekmelerde. */}
                   <button
                     onClick={() => setIsNotificationsOpen(true)}
                     aria-label={pendingCount > 0 ? `Bildirimler (${pendingCount} bekleyen)` : 'Bildirimler'}
@@ -789,14 +872,15 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
       {/* Simplified Header for Menu View */}
       {activeTab === 'MORE' && (
           <header className={`px-6 py-4 ${statusBanners.length ? '' : 'pt-safe'} bg-[#0A0E14] border-b border-white/5 flex items-center sticky top-0 z-30`}>
-              <h1 className="text-lg font-black text-white tracking-wide">MENÜ & AYARLAR</h1>
+              <h1 className="text-lg font-extrabold text-white tracking-wide">MENÜ & AYARLAR</h1>
           </header>
       )}
 
       {activeTab === 'HOME' && isLoading && <OwnerHomeSkeleton />}
 
       {activeTab === 'HOME' && !isLoading && (
-          <main className="flex-1 px-6 pt-6 overflow-y-auto custom-scrollbar pb-32">
+          // pb-40: çevrimdışı kuyruk şeridi (44px) + alt bar son kartı örtmesin.
+          <main className="flex-1 px-6 pt-6 overflow-y-auto custom-scrollbar pb-40">
               <OwnerCommandStrip
                 pendingCount={pendingCount}
                 isFacilityOpen={isFacilityOpen}
@@ -823,8 +907,8 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
                       <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
                         <Trophy size={24} className="text-white" />
                       </div>
-                      <span className="text-sm font-black italic text-white">SKOR GİR</span>
-                      <span className="text-[10px] font-bold text-blue-100 mt-1 uppercase tracking-widest">Maç seç veya kod gir</span>
+                      <span className="text-sm font-extrabold italic text-white">SKOR GİR</span>
+                      <span className="text-[0.625rem] font-bold text-blue-100 mt-1 uppercase tracking-widest">Maç seç veya kod gir</span>
                     </button>
                     <button 
                       onClick={() => setActiveTab('CALENDAR')}
@@ -833,8 +917,8 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
                       <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
                         <Plus size={24} className="text-white" />
                       </div>
-                      <span className="text-sm font-black italic text-white">YENİ KAYIT</span>
-                      <span className="text-[10px] font-bold text-gray-500 mt-1 uppercase tracking-widest">Rezervasyon</span>
+                      <span className="text-sm font-extrabold italic text-white">YENİ KAYIT</span>
+                      <span className="text-[0.625rem] font-bold text-ink-4 mt-1 uppercase tracking-widest">Rezervasyon</span>
                     </button>
                   </div>
               )}
@@ -846,14 +930,9 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
                       className="w-full font-bold text-white text-base flex items-center justify-between mb-6 group"
                     >
                         <span className="flex items-center gap-2"><BarChartIcon size={18} className="text-indigo-500" /> Saha Doluluk Analizi</span>
-                        <span className="text-[10px] font-bold text-gray-500 group-hover:text-white uppercase tracking-wider flex items-center gap-1">Takvim <ChevronRight size={13} /></span>
+                        <span className="text-[0.625rem] font-bold text-ink-4 group-hover:text-white uppercase tracking-wider flex items-center gap-1">Takvim <ChevronRight size={13} /></span>
                     </button>
-                    <PitchOccupancyGrid
-                      data={hourlyOccupancy}
-                      courtNames={courts.map(c => c.name)}
-                      openHour={todayHourWindow.open}
-                      closeHour={todayHourWindow.close}
-                    />
+                    <PitchOccupancyGrid grid={occupancyGrid} />
                   </div>
               )}
 
@@ -878,7 +957,7 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
                               )}
                           </div>
                       ) : (
-                          <p className="text-sm text-gray-500 text-center py-4">Bekleyen talep bulunmuyor.</p>
+                          <p className="text-sm text-ink-4 text-center py-4">Bekleyen talep bulunmuyor.</p>
                       )}
                   </div>
               )}
@@ -903,16 +982,7 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
             if (pitch) {
               setFacilityData((prev: any) => ({
                 ...prev,
-                pricingPolicy: (pitch.pitch_tariffs ?? []).map((t: PitchTariff) => ({
-                  startTime: String(t.start_time ?? '08:00'),
-                  endTime: String(t.end_time ?? '17:00'),
-                  price: Number(t.price_per_hour ?? 0),
-                  price_per_hour: Number(t.price_per_hour ?? 0),
-                  court_id: t.court_id ?? null,
-                  applies_to_days: t.applies_to_days ?? null,
-                  tariff_type: t.tariff_type ?? undefined,
-                  valid_on: t.valid_on ?? null,
-                })),
+                pricingPolicy: (pitch.pitch_tariffs ?? []).map(tariffRowToPolicy),
               }));
             }
           }}
@@ -985,9 +1055,6 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
             if (ownerOnlyGuard()) setShowBankAccountList(true);
           }}
           onWithdrawals={() => { if (ownerOnlyGuard()) setShowWithdrawals(true); }}
-          onPricingPolicy={() => {
-            if (managerGuard()) setShowPricingPolicy(true);
-          }}
           onCancellationPolicy={() => {
             // Karar: iade politikası yönetim ayarı — sahip + müdür düzenler.
             if (managerGuard()) setShowCancellationPolicy(true);
@@ -1021,7 +1088,8 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
           }}
           onOpenPricing={() => {
             setShowEditProfile(false);
-            if (effGuardWrite()) setShowPricingPolicy(true);
+            // Fiyat politikası saha bazlı: Sahalarım listesine götür.
+            if (effGuardWrite()) setActiveTab('PITCHES');
           }}
           onOpenHours={() => {
             setShowEditProfile(false);
@@ -1077,15 +1145,6 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
           readOnly={effReadOnly}
         />
       )}
-      {showPricingPolicy && (
-        <OwnerPricingPolicyModal
-          onClose={() => setShowPricingPolicy(false)}
-          facilityId={facilityData?.id}
-          courts={courts}
-          readOnly={effReadOnly}
-          onSave={(policy) => setFacilityData((prev: any) => ({ ...prev, pricingPolicy: policy }))}
-        />
-      )}
       {showCancellationPolicy && (
         <OwnerCancellationPolicyModal
           onClose={() => setShowCancellationPolicy(false)}
@@ -1116,16 +1175,16 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
       >
           <div className="space-y-3">
               {courtStats.length === 0 ? (
-                  <p className="text-sm text-gray-500 text-center py-6">Bugün için saha bazlı ciro verisi yok.</p>
+                  <p className="text-sm text-ink-4 text-center py-6">Bugün için saha bazlı ciro verisi yok.</p>
               ) : courtStats.map((item) => (
                   <div key={item.courtId} className="bg-[#0A0E14] p-4 rounded-2xl border border-white/5 flex justify-between items-center">
                       <span className="text-sm font-bold text-gray-400">{item.courtName}</span>
-                      <span className="text-lg font-black text-emerald-400 tabular-nums">{item.collected.toLocaleString('tr-TR')}₺</span>
+                      <span className="text-lg font-extrabold text-emerald-400 tabular-nums">{item.collected.toLocaleString('tr-TR')}₺</span>
                   </div>
               ))}
               <div className="pt-4 border-t border-white/10 flex justify-between items-center">
-                  <span className="text-base font-black text-white">TOPLAM TAHSİLAT</span>
-                  <span className="text-2xl font-black text-emerald-500 tabular-nums">{dynamicTotalRevenue.toLocaleString('tr-TR')}₺</span>
+                  <span className="text-base font-extrabold text-white">TOPLAM TAHSİLAT</span>
+                  <span className="text-2xl font-extrabold text-emerald-500 tabular-nums">{dynamicTotalRevenue.toLocaleString('tr-TR')}₺</span>
               </div>
           </div>
       </OwnerBottomSheet>
@@ -1138,22 +1197,25 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
       >
           <div className="space-y-6">
               {courtStats.length === 0 ? (
-                  <p className="text-sm text-gray-500 text-center py-6">Bugün için doluluk verisi yok.</p>
+                  <p className="text-sm text-ink-4 text-center py-6">Bugün için doluluk verisi yok.</p>
               ) : courtStats.map((item) => (
                   <div key={item.courtId} className="space-y-2">
                       <div className="flex justify-between items-end">
                           <span className="text-sm font-bold text-white">{item.courtName}</span>
-                          <span className={`text-sm font-black tabular-nums ${item.occupancyPercent < 50 ? 'text-red-500' : 'text-emerald-500'}`}>%{item.occupancyPercent}</span>
+                          <span className={`text-sm font-extrabold tabular-nums ${item.occupancyPercent < 50 ? 'text-red-500' : 'text-emerald-500'}`}>%{item.occupancyPercent}</span>
                       </div>
                       <div className="h-3 w-full bg-white/5 rounded-full overflow-hidden">
                           <div className={`h-full rounded-full transition-all duration-500 ${item.occupancyPercent < 50 ? 'bg-red-500' : 'bg-emerald-500'}`} style={{ width: `${item.occupancyPercent}%` }}></div>
                       </div>
-                      <p className="text-[0.6875rem] text-gray-500">{item.bookedHours}/{item.totalHours} saat dolu</p>
+                      <p className="text-[0.6875rem] text-ink-4">{item.bookedHours}/{item.totalHours} saat dolu</p>
                   </div>
               ))}
           </div>
       </OwnerBottomSheet>
 
+
+      {/* BULGU-125: bekleyen kasa işlemleri HER sekmede görünür (kuyruk boşken render olmaz). */}
+      <OutboxBadge variant="strip" />
 
       <OwnerBottomNav
         activeTab={activeTab}
@@ -1166,6 +1228,7 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
           else handleTabSelect(tab);
         }}
       />
+      {confirmElement}
     </div>
   );
 };

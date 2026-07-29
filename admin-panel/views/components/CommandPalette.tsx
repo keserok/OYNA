@@ -154,7 +154,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
                     <div className="max-h-[400px] overflow-y-auto custom-scrollbar p-2 space-y-3">
                         {filteredActions.length > 0 && (
                             <div>
-                                <p className="px-3 py-1 text-[9px] font-black text-red-400/70 uppercase tracking-widest">Hızlı Aksiyon</p>
+                                <p className="px-3 py-1 text-[9px] font-extrabold text-red-400/70 uppercase tracking-widest">Hızlı Aksiyon</p>
                                 <div className="space-y-0.5 mt-1">
                                     {filteredActions.map((a) => {
                                         const Icon = a.icon;
@@ -181,7 +181,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
 
                         {Array.from(routesByCategory.entries()).map(([category, routes]) => (
                             <div key={category}>
-                                <p className="px-3 py-1 text-[9px] font-black text-gray-500 uppercase tracking-widest">{category}</p>
+                                <p className="px-3 py-1 text-[9px] font-extrabold text-gray-500 uppercase tracking-widest">{category}</p>
                                 <div className="space-y-0.5 mt-1">
                                     {routes.map((r) => (
                                         <button
@@ -202,7 +202,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
 
                         {filteredPitches.length > 0 && (
                             <div>
-                                <p className="px-3 py-1 text-[9px] font-black text-gray-500 uppercase tracking-widest">Sahalar</p>
+                                <p className="px-3 py-1 text-[9px] font-extrabold text-gray-500 uppercase tracking-widest">Sahalar</p>
                                 <div className="space-y-0.5 mt-1">
                                     {filteredPitches.map((p) => (
                                         <button
@@ -220,7 +220,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
                                                 <span className="font-bold">{p.name}</span>
                                                 <span className="text-[9px] text-gray-500 font-mono">({p.district || '—'})</span>
                                             </div>
-                                            <span className="text-[9px] font-mono font-black text-red-400">₺{p.pricePerPerson}</span>
+                                            <span className="text-[9px] font-mono font-extrabold text-red-400">₺{p.pricePerPerson}</span>
                                         </button>
                                     ))}
                                 </div>
@@ -229,7 +229,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
 
                         {filteredUsers.length > 0 && (
                             <div>
-                                <p className="px-3 py-1 text-[9px] font-black text-gray-500 uppercase tracking-widest">Kullanıcılar</p>
+                                <p className="px-3 py-1 text-[9px] font-extrabold text-gray-500 uppercase tracking-widest">Kullanıcılar</p>
                                 <div className="space-y-0.5 mt-1">
                                     {filteredUsers.map((u) => (
                                         <button

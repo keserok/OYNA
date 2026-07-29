@@ -131,7 +131,7 @@ export const DeletionQueuePage: React.FC<{ onRefresh?: () => Promise<void> }> = 
             type="button"
             disabled={busy === r.user_id}
             onClick={() => askDelete(r, true)}
-            className="flex items-center gap-1 px-2.5 py-1 rounded-lg border text-[9px] font-black uppercase bg-amber-500/10 text-amber-300 border-amber-500/25 disabled:opacity-40"
+            className="flex items-center gap-1 px-2.5 py-1 rounded-lg border text-[9px] font-extrabold uppercase bg-amber-500/10 text-amber-300 border-amber-500/25 disabled:opacity-40"
             title="Anonimleştir (istatistik korunur)"
           >
             <ShieldCheck size={11} /> Anonimleştir
@@ -140,7 +140,7 @@ export const DeletionQueuePage: React.FC<{ onRefresh?: () => Promise<void> }> = 
             type="button"
             disabled={busy === r.user_id}
             onClick={() => askDelete(r, false)}
-            className="flex items-center gap-1 px-2.5 py-1 rounded-lg border text-[9px] font-black uppercase bg-red-500/10 text-red-400 border-red-500/25 disabled:opacity-40"
+            className="flex items-center gap-1 px-2.5 py-1 rounded-lg border text-[9px] font-extrabold uppercase bg-red-500/10 text-red-400 border-red-500/25 disabled:opacity-40"
             title="Kalıcı sil"
           >
             <Trash2 size={11} /> Sil
@@ -149,7 +149,7 @@ export const DeletionQueuePage: React.FC<{ onRefresh?: () => Promise<void> }> = 
             type="button"
             disabled={busy === r.user_id}
             onClick={() => void runCancelRequest(r)}
-            className="flex items-center gap-1 px-2.5 py-1 rounded-lg border text-[9px] font-black uppercase bg-white/5 text-gray-300 border-white/15 hover:text-white disabled:opacity-40"
+            className="flex items-center gap-1 px-2.5 py-1 rounded-lg border text-[9px] font-extrabold uppercase bg-white/5 text-gray-300 border-white/15 hover:text-white disabled:opacity-40"
             title="Kullanıcı vazgeçti — talebi kuyruktan çıkar"
           >
             <RefreshCw size={11} /> Talebi İptal Et

@@ -48,7 +48,7 @@ const Chip: React.FC<ChipProps> = ({
       {emoji && <span className="mr-1">{emoji}</span>}
       {label}
       {typeof count === 'number' && (
-        <span className={`ml-1.5 ${selected ? 'text-black/50' : 'text-white/40'}`}>{count}</span>
+        <span className={`ml-1.5 ${selected ? 'text-black/50' : 'text-ink-4'}`}>{count}</span>
       )}
     </button>
   );

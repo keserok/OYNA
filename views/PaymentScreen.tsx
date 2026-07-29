@@ -12,7 +12,10 @@ import { parseSlotLabel } from '../services/availabilityService';
 import {
   getWalletSummary, listSavedCards, WalletSummary, SavedCard,
 } from '../services/walletService';
-import { startInAppCardPayment, InAppPayInput, getCardFeePct, computeCardFee, cardFeeOf } from '../services/paymentService';
+import {
+  startInAppCardPayment, InAppPayInput, getCardFeePct, computeCardFee, cardFeeOf,
+  getIntentStatus, rawErrorMessage, humanizePaymentError,
+} from '../services/paymentService';
 import { getMyGuardianState } from '../services/guardianService';
 import { blockMatchDeposit } from '../services/matchLifecycleService';
 import { getMatchDetails } from '../services/matchService';
@@ -20,21 +23,10 @@ import AddCardScreen, { CollectedCard } from '../components/payment/AddCardScree
 import ThreeDSSheet, { ThreeDSOutcome } from '../components/payment/ThreeDSSheet';
 import type { PaymentContext } from '../types';
 import { formatTRY } from '../utils/formatTRY';
-
-// C1 — idempotency anahtarı üretici. crypto.randomUUID modern webview'de var;
-// eski WebView'ler için güvenli yedek (RFC4122 v4 benzeri).
-const safeUuid = (): string => {
-  try {
-    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-      return crypto.randomUUID();
-    }
-  } catch { /* fallback below */ }
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-    const r = (Math.random() * 16) | 0;
-    const v = c === 'x' ? r : (r & 0x3) | 0x8;
-    return v.toString(16);
-  });
-};
+import {
+  safeUuid, isOnline, withSubmitTimeout, SubmitTimeoutError,
+  CARD_TIMEOUT_MS, OFFLINE_PAY, TIMEOUT_PAY,
+} from '../shared/submitGuard';
 
 /**
  * TEK ÖDEME EKRANI — üç bağlam (tasarım 1b):
@@ -67,59 +59,7 @@ interface PayResult {
 // C10 — para biçimi tek kaynaktan ("1.500,00₺"). Ekranlar arası tutarlılık.
 const fmt = formatTRY;
 
-const stripRpcPrefix = (msg: string) => msg.replace(/^[A-Z_]+:\s*/, '');
-
 const delay = (ms: number) => new Promise<void>(r => setTimeout(r, ms));
-
-// Supabase RPC/edge hataları Error DEĞİL — PostgrestError/FunctionsError düz
-// nesnedir. Her şekilden ham mesajı çıkar (aksi halde "Beklenmeyen hata"ya düşer).
-const rawErrorMessage = (err: unknown): string => {
-  if (!err) return '';
-  if (typeof err === 'string') return err;
-  const e = err as { message?: string; error?: string; details?: string; hint?: string };
-  return e.message || e.error || e.details || e.hint || '';
-};
-
-// Ham hata → kullanıcı dostu Türkçe + gerektiğinde banka/kart yönlendirmesi.
-const humanizePaymentError = (err: unknown): string => {
-  const raw = rawErrorMessage(err);
-  const up = raw.toUpperCase();
-  const has = (...keys: string[]) => keys.some(k => up.includes(k));
-
-  if (has('SLOT_TAKEN', 'SLOT_UNAVAILABLE', 'ZATEN REZERVE', 'DOLU'))
-    return 'Bu saat dilimi az önce dolmuş. Lütfen geri dönüp başka bir saat seç.';
-  if (has('ALREADY_PAID', 'ZATEN'))
-    return 'Bu rezervasyonun kaporası zaten ödenmiş.';
-  if (has('AMOUNT_EXCEEDS_PRICE'))
-    return 'Ödeme tutarı saha ücretini aşıyor. Lütfen tutarı kontrol et.';
-  if (has('NO_TARIFF'))
-    return 'Bu saha için fiyat tanımlı değil; şimdilik uygulamadan ödeme alınamıyor.';
-  if (has('CARD_NOT_FOUND'))
-    return 'Seçtiğin kart bulunamadı. Lütfen kartı yeniden seç veya yeni kart ekle.';
-  if (has('CARD_NEEDS_REVALIDATION'))
-    return 'Bu kart eski sistemden kalma; güvenlik için kart bilgilerini bir kez daha girmen gerekiyor. "Yeni kart ekle" ile aynı kartı girip kaydedebilirsin.';
-  if (has('NO_CARD_AMOUNT'))
-    return 'Bakiyen bu tutarın tamamını karşılıyor — kart gerekmiyor. OYNA Bakiyesi seçiliyken tekrar dene.';
-  if (has('SLOT_TAKEN_REFUNDED'))
-    return 'Sen doğrulama yaparken maçtaki yer doldu. Ödediğin tutar cüzdanına iade kredisi olarak eklendi — istediğin ödemede kullanabilirsin.';
-  if (has('BOOKING_CLOSED_REFUNDED'))
-    return 'Rezervasyon bu sırada kapandı. Ödediğin tutar cüzdanına iade kredisi olarak eklendi — istediğin ödemede kullanabilirsin.';
-  if (has('INSUFFICIENT_BALANCE'))
-    return stripRpcPrefix(raw) || 'Cüzdan bakiyen bu ödeme için yetersiz. Cüzdanına yükleme yapıp tekrar dene.';
-  if (has('YETERSIZ BAKIYE', 'INSUFFICIENT'))
-    return 'Cüzdan bakiyen yetersiz. Bakiye yükleyebilir veya kartla ödeyebilirsin.';
-  if (has('UNAUTHORIZED', 'GIRIŞ'))
-    return 'Bu işlem için giriş yapman gerekiyor.';
-  // iyzico / banka kaynaklı kart hataları
-  if (has('IYZICO', 'LIMIT', 'DECLINE', 'DO_NOT_HONOUR', 'INSUFFICIENT_FUNDS',
-          'INVALID', 'FRAUD', '3D', 'CARD', 'KART', 'BANKA'))
-    return `${stripRpcPrefix(raw) || 'Kart ödemesi tamamlanamadı.'} — Farklı bir kart deneyebilir veya kartının internetten ödemeye açık olup olmadığını bankandan öğrenebilirsin.`;
-  if (has('PROVIDER_FLOW_REQUIRED', 'PROVIDER_NOT_CONFIGURED'))
-    return 'Ödeme sağlayıcısına ulaşılamadı. Lütfen birazdan tekrar dene.';
-
-  const clean = stripRpcPrefix(raw).trim();
-  return clean || 'Ödeme tamamlanamadı. Lütfen tekrar dene; sorun sürerse farklı bir kart deneyebilir veya bankanla iletişime geçebilirsin.';
-};
 
 const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
   const {
@@ -136,6 +76,9 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
       return {
         kind: 'PITCH_DEPOSIT',
         badge: 'SAHA KİRALAMA',
+        // Yedek akış da tesisini AÇIKÇA taşır; iade kademesi bookingPitch'e
+        // gizli bağımlılıkla değil, bağlamdan okunur (BULGU-088).
+        pitchId: bookingPitch.id,
         title: bookingPitch.name,
         subtitle: `${bookingCourt.name} · ${bookingDate} · ${bookingSlot}`,
         amount: deposit,
@@ -157,6 +100,11 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
   const [tempCard, setTempCard] = useState<CollectedCard | null>(null);
   const [inlineError, setInlineError] = useState('');
+  // Hata şeridinin BAŞLIĞI duruma göre değişir: gönderilmemiş bir isteği
+  // "Ödeme başarısız" diye etiketlemek yalan olur.
+  // PENDING = sonuç GERÇEKTEN bilinmiyor (3DS yarıda kaldı, niyet sunucuda
+  // hâlâ askıda). Bu durumu "başarısız" diye etiketlemek yalan olurdu.
+  const [inlineErrorKind, setInlineErrorKind] = useState<'FAIL' | 'OFFLINE' | 'TIMEOUT' | 'PENDING'>('FAIL');
   const [result, setResult] = useState<PayResult | null>(null);
   // C3 — cüzdan özeti çekilemezse bakiye 0 VARSAYILMAZ; kullanıcı yanlışlıkla
   // "yetersiz bakiye"ye/tam kart çekimine itilmesin. Hata + Yeniden Dene gösterilir,
@@ -174,6 +122,14 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
   const [threeDS, setThreeDS] = useState<{
     html: string; intentId: string; balanceApplied: number; cardAmount: number;
   } | null>(null);
+  // BULGU-093 — 3DS zaman aşımı/kesintisinde ASKIDA KALAN niyet. Dolu olduğu
+  // sürece hata şeridinde "Durumu Kontrol Et" çıkar; buton payment_intents
+  // durumunu SUNUCUDAN sorgular. Uydurma durum gösterilmez: PAID/FAILED/PENDING
+  // üç ayrı sonuç verir. (Bayat niyeti kapatacak süpürücü app_config'te KAPALI.)
+  const [pendingPay, setPendingPay] = useState<{
+    intentId: string; balanceApplied: number; cardAmount: number;
+  } | null>(null);
+  const [statusChecking, setStatusChecking] = useState(false);
   // Saha vitrini kaporasında rezervasyon yalnız bir kez oluşturulur; tekrar
   // denemede aynı slot yeniden rezerve edilmesin (SLOT_TAKEN önlenir).
   const pitchBookingIdRef = useRef<string | null>(null);
@@ -183,6 +139,20 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
   // 3DS sonrası "tekrar dene" ikinci bir kart çekimi yaratmasın; sunucu aynı
   // anahtarlı niyeti yeniden kullanır. Başarıda sıfırlanır (yeni ödeme = yeni anahtar).
   const idemKeyRef = useRef<string | null>(null);
+
+  // Emniyet: ekran hangi yoldan giderse gitsin 3DS kilidi asılı kalmasın.
+  // Kilit true kalırsa geri tuşu tamamen ölür ve kullanıcı uygulamada sıkışır.
+  const mountedRef = useRef(true);
+  useEffect(() => () => {
+    mountedRef.current = false;
+    useAppStore.getState().setPaymentLockActive(false);
+  }, []);
+  /** Kilidi YALNIZ ekran hâlâ ayaktayken açar. Ödeme yanıtı ekran kapandıktan
+   *  SONRA dönerse (yavaş şebeke + kullanıcı çıktı) unmount temizleyicisi zaten
+   *  çalışmış olur; koruma olmadan kilit sonsuza kadar true kalırdı. */
+  const lockPaymentIfMounted = () => {
+    if (mountedRef.current) useAppStore.getState().setPaymentLockActive(true);
+  };
 
   // Cüzdan özeti + kayıtlı kartlar (C3: hata yutulmaz — yeniden yüklenebilir)
   const loadWallet = useRef<() => void>(() => {});
@@ -224,7 +194,13 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
 
   // S3 — kapora akışında tesis iptal/iade kademesini SUNUCUDAN çek (göster).
   useEffect(() => {
-    const pid = (bookingPitch as any)?.id as string | undefined;
+    // Tesis kimliği ödeme BAĞLAMINDAN gelir; store.bookingPitch yalnız yedek.
+    // Maçlarım'dan gelen kapora akışında bookingPitch ya boş ya da önceki
+    // gezinmeden kalan BAŞKA tesisin verisiydi (BULGU-088).
+    const pid = ctx?.pitchId || ((bookingPitch as any)?.id as string | undefined);
+    // Tesis kademesi YALNIZ kapora bağlamlarında geçerlidir (maça katılımda
+    // sunucu zaman kademesi uygulamaz). Tesis bilinmiyorsa kademe GÖSTERİLMEZ —
+    // yanlış tesisin kademesini göstermektense hiç gösterme.
     if (!ctx?.isDeposit || !pid) { setRefundPolicy(null); return; }
     let alive = true;
     (async () => {
@@ -238,7 +214,7 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
       } catch { if (alive) setRefundPolicy(null); }
     })();
     return () => { alive = false; };
-  }, [ctx?.isDeposit, (bookingPitch as any)?.id]);
+  }, [ctx?.isDeposit, ctx?.pitchId, (bookingPitch as any)?.id]);
 
   // İptal kademesi kullanıcı-dostu metin (tesis politikasıyla birebir).
   const refundTierText = refundPolicy
@@ -299,7 +275,7 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
   const noteText = balanceOnly
     ? (insufficientBalance
         ? `Bu kapora cüzdan bakiyesinden ödenir. Bakiyen ${fmt(spendable)}₺ — ${fmt(amount - spendable)}₺ daha yüklemen gerekiyor.`
-        : 'Kapora cüzdan bakiyenden güvenceye alınır. Maç dolmazsa veya iptal olursa tutar anında iade kredisi olarak cüzdanına döner.')
+        : 'Kapora cüzdan bakiyenden güvenceye alınır. Maç dolmazsa veya iptal olursa tutar anında cüzdanına döner.')
     : !allowBalance
     ? 'Bakiye bu ödemede kullanılamaz.'
     : balanceApplied > 0 && needsCard
@@ -380,6 +356,10 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
         balanceApplied: res.balanceApplied,
         cardAmount: res.cardAmount,
       });
+      // Geri tuşu bu ekranı unmount ederse 3DS sonucu bir daha okunamaz:
+      // dinleyici, 3 sn'lik yoklama ve 5 dk'lık timeout ölür, kart bankada
+      // çekilmiş olabilir (BULGU-084). Kilit açıkken geri tuşu hiçbir şey yapmaz.
+      lockPaymentIfMounted();
       return {
         balanceApplied: res.balanceApplied, cardAmount: res.cardAmount,
         intentId: res.intentId, pendingThreeDS: true,
@@ -535,6 +515,15 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
     // commit'inden önceki senkron ikinci tık bu ref ile engellenir.
     if (payBusyRef.current) return;
     payBusyRef.current = true;
+    // IP-02 — gönderim öncesi bağlantı kapısı: çevrimdışıyken istek HİÇ gitmez.
+    // Eskiden istek yola çıkıyor, ekran PROCESSING'e geçiyor ve süresiz asılı
+    // kalıyordu; kullanıcı dönüşü olmayan bir spinner'da bekliyordu.
+    if (!isOnline()) {
+      setInlineErrorKind('OFFLINE');
+      setInlineError(OFFLINE_PAY);
+      payBusyRef.current = false;
+      return;
+    }
     if (!auth.currentUser) {
       useAppStore.getState().setIsSignupGateOpen(true);
       payBusyRef.current = false;
@@ -556,7 +545,7 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
     setInlineError('');
     setScreen('PROCESSING');
     try {
-      const res = await executePayment();
+      const res = await withSubmitTimeout(executePayment(), CARD_TIMEOUT_MS);
       // Banka doğrulaması (3DS) açıldıysa BAŞARI EKRANI GÖSTERME — sonuç
       // ThreeDSSheet üzerinden handleThreeDSDone'a gelecek.
       if (res.pendingThreeDS) return;
@@ -566,9 +555,23 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
       recordTicketBooking(); // C4 — dürüst bilet için gerçek rezervasyon id'si
       setLastPaymentError(null);
       idemKeyRef.current = null; // başarı → yeni ödeme yeni anahtar alsın
+      setPendingPay(null); // askıda kalan 3DS niyeti kapandı
       setScreen('SUCCESS');
     } catch (err) {
+      // Zaman aşımı ≠ başarısızlık: istek İPTAL EDİLMEDİ, sunucuda tamamlanmış
+      // olabilir. Bu yüzden idemKeyRef SIFIRLANMAZ — tekrar deneme aynı
+      // anahtarla gider ve çift çekim olmaz.
+      if (err instanceof SubmitTimeoutError) {
+        setInlineErrorKind('TIMEOUT');
+        setInlineError(TIMEOUT_PAY);
+        setScreen('PAY');
+        return;
+      }
+      // Kullanıcıya sabit Türkçe metin gösteriliyor; ham sağlayıcı metni
+      // destek için console'da (ve payment_intents.raw'da) kalır.
+      console.warn('[payment] ham sunucu hatası:', rawErrorMessage(err));
       const msg = humanizePaymentError(err);
+      setInlineErrorKind('FAIL');
       setInlineError(msg);
       if (ctx) {
         setLastPaymentError({
@@ -590,6 +593,7 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
   const handleThreeDSDone = async (outcome: ThreeDSOutcome) => {
     const ds = threeDS;
     setThreeDS(null);
+    useAppStore.getState().setPaymentLockActive(false);
     if (!ds) return;
 
     if (outcome.ok && !outcome.reason) {
@@ -598,22 +602,38 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
       setResult({ balanceApplied: ds.balanceApplied, cardAmount: ds.cardAmount, intentId: ds.intentId });
       recordTicketBooking(); // C4 — dürüst bilet için gerçek rezervasyon id'si
       setLastPaymentError(null);
+      setPendingPay(null); // askıda niyet kalmadı
+      idemKeyRef.current = null;
       setScreen('SUCCESS');
       return;
+    }
+
+    // TIMEOUT = 5 dk boyunca niyet PAID görülmedi, yani hâlâ PENDING olabilir.
+    // Bayat niyeti kapatacak süpürücü app_config'te KAPALI; bu yüzden kullanıcıya
+    // "birazdan güncellenir" DENMEZ, sorgulama düğmesi verilir (BULGU-093).
+    if (!outcome.ok && outcome.reason === 'TIMEOUT') {
+      setPendingPay({ intentId: ds.intentId, balanceApplied: ds.balanceApplied, cardAmount: ds.cardAmount });
+      setInlineErrorKind('PENDING');
+    } else {
+      setInlineErrorKind('FAIL');
     }
 
     // İade-krediye dönüş (yer doldu / rezervasyon kapandı) veya doğrulama hatası
     const msg = outcome.ok
       ? humanizePaymentError(outcome.reason ?? '')
       : outcome.reason === 'TIMEOUT'
-        ? 'Banka doğrulaması zaman aşımına uğradı. Ödeme alınmadıysa tekrar deneyebilirsin; alındıysa bakiyen birazdan güncellenir.'
+        ? 'Banka doğrulaması 5 dakikada tamamlanmadı. Kartından tahsilat yapıldı mı, şimdi kontrol edelim.'
         : 'Banka doğrulaması tamamlanamadı. Onaylanmayan tutar kartına yansımaz — tekrar deneyebilir veya bankanla iletişime geçebilirsin.';
     setInlineError(msg);
     if (ctx) {
       setLastPaymentError({
         message: msg,
         contextKind: ctx.kind,
-        title: ctx.isDeposit ? 'Kapora ödemesi başarısız' : 'Ödeme tamamlanamadı',
+        // Zaman aşımında sonuç BİLİNMİYOR; cüzdan afişinde "başarısız" demek
+        // uydurma durum göstermek olur.
+        title: !outcome.ok && outcome.reason === 'TIMEOUT'
+          ? 'Ödemenin durumu belirsiz'
+          : ctx.isDeposit ? 'Kapora ödemesi başarısız' : 'Ödeme tamamlanamadı',
         at: Date.now(),
       });
     }
@@ -621,9 +641,69 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
   };
 
   const handleThreeDSCancel = () => {
+    const ds = threeDS;
     setThreeDS(null);
-    setInlineError('Banka doğrulaması yarıda kaldı — ödeme alınmadı. Hazır olduğunda tekrar deneyebilirsin.');
+    useAppStore.getState().setPaymentLockActive(false);
+    // Kullanıcı bankadan KOPTU. SMS'i girdikten sonra çıkmış olabilir; niyet
+    // sunucuda hâlâ PENDING veya PAID olabilir. "Ödeme alınmadı" demek uydurma
+    // durum göstermek olur — sorgulama düğmesi verilir (BULGU-093).
+    if (ds) setPendingPay({ intentId: ds.intentId, balanceApplied: ds.balanceApplied, cardAmount: ds.cardAmount });
+    setInlineError(ds
+      ? 'Banka doğrulamasından çıktın. Kartından tahsilat yapıldı mı, şimdi kontrol edelim.'
+      : 'Banka doğrulaması yarıda kaldı — ödeme alınmadı. Hazır olduğunda tekrar deneyebilirsin.');
+    setInlineErrorKind(ds ? 'PENDING' : 'FAIL');
     setScreen('PAY');
+  };
+
+  /**
+   * BULGU-093 — 3DS kesintisinden sonra paranın akıbetini SUNUCUDAN öğren.
+   * Tek otorite `payment_intents.status`; ekran hiçbir durumu tahmin etmez.
+   *   PAID (+resultReason yok) → gerçek başarı ekranı (bilet/lobi güncellenir)
+   *   PAID (+resultReason var) → tahsil edildi ama cüzdana geri yazıldı
+   *   FAILED                   → tahsilat yok, tekrar denenebilir
+   *   PENDING                  → hâlâ bankada; işlem numarasıyla destek yolu
+   */
+  const handleCheckIntentStatus = async () => {
+    if (!pendingPay || statusChecking) return;
+    setStatusChecking(true);
+    try {
+      const s = await getIntentStatus(pendingPay.intentId);
+      // PAID + resultReason = tahsilat oldu AMA sunucu tutarı cüzdana geri yazdı
+      // (yer doldu / rezervasyon kapandı). Bunu "başarı" saymak uydurma durum
+      // göstermek olurdu — ThreeDSSheet yolundaki dalın aynısı uygulanır.
+      if (s?.status === 'PAID' && s.resultReason) {
+        setPendingPay(null);
+        setInlineErrorKind('FAIL');
+        setInlineError(humanizePaymentError(s.resultReason));
+        if (ctx?.kind === 'MATCH_JOIN') await refreshMatch(ctx.matchId);
+      } else if (s?.status === 'PAID') {
+        if (ctx?.kind === 'MATCH_JOIN') await refreshMatch(ctx.matchId);
+        setResult({
+          balanceApplied: pendingPay.balanceApplied,
+          cardAmount: pendingPay.cardAmount,
+          intentId: pendingPay.intentId,
+        });
+        recordTicketBooking();
+        setLastPaymentError(null);
+        idemKeyRef.current = null; // başarı → yeni ödeme yeni anahtar alsın
+        setPendingPay(null);
+        setInlineError('');
+        setScreen('SUCCESS');
+      } else if (s?.status === 'FAILED') {
+        setPendingPay(null);
+        setInlineErrorKind('FAIL');
+        setInlineError('Kartından tahsilat yapılmamış. Ödeme alınmadı — tekrar deneyebilirsin.');
+      } else {
+        // PENDING veya okunamayan durum: sonucu UYDURMA, dürüst bekleme metni ver.
+        setInlineErrorKind('PENDING');
+        setInlineError(`İşlem hâlâ bankada sürüyor. 10 dakika sonra "Durumu Kontrol Et" ile tekrar bak. Kartından para çekildiği hâlde cüzdanına geçmediyse ${pendingPay.intentId.slice(0, 8).toUpperCase()} işlem numarasıyla destek@oyna.app adresine yaz.`);
+      }
+    } catch {
+      setInlineErrorKind('PENDING');
+      setInlineError('Durum sorgulanamadı. Bağlantını kontrol edip tekrar dene.');
+    } finally {
+      setStatusChecking(false);
+    }
   };
 
   const handleSuccessPrimary = () => {
@@ -646,19 +726,19 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
         break;
       }
       case 'MATCH_CREATE_DEPOSIT':
-        store.resetNavigation(store.selectedMatch ? 'MATCH_JOIN' : 'MATCH_DISCOVERY');
+        store.resetUnderHome(store.selectedMatch ? 'MATCH_JOIN' : 'MATCH_DISCOVERY');
         break;
       case 'PITCH_DEPOSIT':
       case 'BOOKING_DEPOSIT':
         // Maçlarım hub'ı Rezervasyonlar segmentiyle açılır (ödenen kapora görünür olsun).
         store.setMyMatchesInitialSegment('BOOKINGS');
-        store.resetNavigation('MY_MATCHES');
+        store.resetUnderHome('MY_MATCHES');
         break;
       default:
         // F4.1: bu dal ULAŞILAMAZDI (PaymentContextKind'in 4 üyesi de yukarıda) —
         // bilete giden tek navigate burada saklıydı; bilet artık Maçlarım'daki
         // rezervasyon kartından açılır. Güvenli varsayılan: Maçlarım.
-        store.resetNavigation('MY_MATCHES');
+        store.resetUnderHome('MY_MATCHES');
     }
   };
 
@@ -711,15 +791,15 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
                 ? <CardBrandMark brand={selectedCard.brand} size={18} />
                 : <Wallet size={22} />}
             </div>
-            <p className="text-[10px] font-numeric text-gray-400">
+            <p className="text-[0.6875rem] font-numeric text-gray-400">
               {selectedCard && needsCard ? `•••• ${selectedCard.last4}` : 'OYNA Bakiyesi'}
             </p>
           </div>
         </div>
-        <p className="text-lg font-black uppercase tracking-[0.16em] text-white">
+        <p className="text-lg font-extrabold uppercase tracking-[0.16em] text-white">
           {ctx.isDeposit ? 'Kapora İşleniyor' : 'Ödeme İşleniyor'}
         </p>
-        <p className="text-[13px] text-gray-500 mt-2.5 flex items-center gap-1.5">
+        <p className="text-[0.8125rem] text-ink-4 mt-2.5 flex items-center gap-1.5">
           <Shield size={13} className="text-[#39FF14] animate-pulse" />
           {needsCard ? 'Banka doğrulaması hazırlanıyor…' : 'OYNA bakiyenden ödeme alınıyor…'}
         </p>
@@ -751,11 +831,11 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
             <Check size={52} strokeWidth={3} />
           </motion.div>
           <motion.h2 initial={{ y: 14, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.12 }}
-            className="text-[27px] font-black text-white text-center">
+            className="text-[1.6875rem] font-extrabold text-white text-center">
             {ctx.successTitle}
           </motion.h2>
           <motion.p initial={{ y: 14, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.18 }}
-            className="text-[13px] text-[#39FF14] font-bold mt-2 uppercase tracking-[0.14em]">
+            className="text-[0.8125rem] text-[#39FF14] font-bold mt-2 uppercase tracking-[0.14em]">
             {fmt(amount)}₺ · {ctx.successSubtitle}
           </motion.p>
           <motion.div initial={{ y: 14, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.24 }}
@@ -783,26 +863,26 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
             <motion.div initial={{ y: 14, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.28 }}
               className="w-full mt-3.5 bg-yellow-400/6 border border-yellow-400/20 rounded-2xl p-3.5 flex gap-2.5">
               <Shield size={15} className="text-[#FACC15] shrink-0 mt-0.5" />
-              <p className="text-[11.5px] text-gray-400 leading-relaxed">{refundTierText}</p>
+              <p className="text-[0.75rem] text-gray-400 leading-relaxed">{refundTierText}</p>
             </motion.div>
           )}
           {ctx.infoNote && (
             <motion.div initial={{ y: 14, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.3 }}
               className="w-full mt-3.5 bg-blue-500/8 border border-blue-400/20 rounded-2xl p-3.5 flex gap-2.5">
               <Info size={15} className="text-blue-400 shrink-0 mt-0.5" />
-              <p className="text-[11.5px] text-gray-400 leading-relaxed">{ctx.infoNote}</p>
+              <p className="text-[0.75rem] text-gray-400 leading-relaxed">{ctx.infoNote}</p>
             </motion.div>
           )}
         </main>
         <div className="shrink-0 px-5 pb-safe pt-3 flex flex-col gap-2.5">
           <button onClick={handleSuccessPrimary}
-            className="w-full py-4 bg-[#39FF14] text-[#0A0E14] font-black text-[15px] rounded-2xl active:scale-[0.98] transition-all">
+            className="w-full py-4 bg-[#39FF14] text-[#0A0E14] font-extrabold text-[0.9375rem] rounded-2xl active:scale-[0.98] transition-all">
             {ctx.kind === 'MATCH_JOIN' ? 'SLOTLARINI DOLDUR → MAÇLARIM'
               : ctx.kind === 'MATCH_CREATE_DEPOSIT' ? 'MAÇ LOBİSİNE GİT'
               : 'REZERVASYONLARIMA GİT'}
           </button>
           <button onClick={handleSuccessSecondary}
-            className="w-full py-3 text-gray-500 font-bold text-sm">
+            className="w-full py-3 text-ink-4 font-bold text-sm">
             Ana sayfaya dön
           </button>
         </div>
@@ -819,10 +899,10 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
           <ArrowLeft size={20} />
         </button>
         <div>
-          <h1 className="text-[17px] font-black text-white uppercase tracking-[0.01em]">
+          <h1 className="text-[1.0625rem] font-extrabold text-white uppercase tracking-[0.01em]">
             {ctx.isDeposit ? 'Kapora Ödemesi' : 'Ödeme'}
           </h1>
-          <p className="text-[11px] text-gray-500 font-semibold">
+          <p className="text-[0.6875rem] text-ink-4 font-semibold">
             {ctx.isDeposit ? 'Rezervasyonu güvenceye al' : 'Maça katılımını tamamla'}
           </p>
         </div>
@@ -836,14 +916,14 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
               <AlertTriangle size={16} />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-[13px] font-extrabold text-yellow-400">Cüzdan bakiyesi okunamadı</p>
-              <p className="text-[11.5px] text-gray-300 mt-0.5 leading-relaxed">
+              <p className="text-[0.8125rem] font-extrabold text-yellow-400">Cüzdan bakiyesi okunamadı</p>
+              <p className="text-[0.75rem] text-gray-300 mt-0.5 leading-relaxed">
                 Güvenlik için bakiyeni görmeden ödeme almıyoruz. Bağlantını kontrol edip tekrar dene.
               </p>
               <button
                 onClick={() => loadWallet.current()}
                 disabled={summaryLoading}
-                className="mt-2.5 inline-flex items-center gap-1.5 text-[11px] font-extrabold text-[#0A0E14] bg-yellow-400 disabled:opacity-50 rounded-[9px] px-3 py-[7px] active:scale-95 transition-transform">
+                className="mt-2.5 inline-flex items-center gap-1.5 text-[0.6875rem] font-extrabold text-[#0A0E14] bg-yellow-400 disabled:opacity-50 rounded-[9px] px-3 py-[7px] active:scale-95 transition-transform">
                 <RefreshCw size={12} className={summaryLoading ? 'animate-spin' : ''} /> Yeniden Dene
               </button>
             </div>
@@ -854,7 +934,7 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
         {sessionRefreshed && !balanceUnknown && (
           <div className="mx-5 bg-[#39FF14]/8 border border-[#39FF14]/25 rounded-2xl p-3 flex items-center gap-2.5">
             <RefreshCw size={14} className="text-[#39FF14] shrink-0" />
-            <p className="text-[11.5px] text-gray-300 leading-relaxed">
+            <p className="text-[0.75rem] text-gray-300 leading-relaxed">
               Güncel bilgilerle tazelendi — bakiye ve uygunluk şu an geçerli.
             </p>
           </div>
@@ -867,18 +947,36 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
               <AlertTriangle size={16} />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-[13px] font-extrabold text-red-400">
-                {ctx.isDeposit ? 'Kapora ödemesi başarısız' : 'Ödeme başarısız'}
+              <p className="text-[0.8125rem] font-extrabold text-red-400">
+                {inlineErrorKind === 'OFFLINE'
+                  ? 'Gönderilmedi — bağlantı yok'
+                  : inlineErrorKind === 'PENDING'
+                    ? 'Ödemenin durumu belirsiz'
+                    : inlineErrorKind === 'TIMEOUT'
+                      ? 'Yanıt gelmedi'
+                      : ctx.isDeposit ? 'Kapora ödemesi başarısız' : 'Ödeme başarısız'}
               </p>
-              <p className="text-[11.5px] text-gray-300 mt-0.5 leading-relaxed">{inlineError}</p>
-              <button
-                onClick={handlePay}
-                disabled={!canPay}
-                className="mt-2.5 inline-flex items-center gap-1.5 text-[11px] font-extrabold text-[#0A0E14] bg-red-400 disabled:opacity-50 rounded-[9px] px-3 py-[7px] active:scale-95 transition-transform">
-                <RefreshCw size={12} /> Tekrar Dene
-              </button>
+              <p className="text-[0.75rem] text-gray-300 mt-0.5 leading-relaxed">{inlineError}</p>
+              {/* İkisi de PARA aksiyonu → IP10-2(b) gereği en az 44px dokunma hedefi. */}
+              <div className="mt-2.5 flex flex-wrap gap-2">
+                <button
+                  onClick={handlePay}
+                  disabled={!canPay}
+                  className="min-h-[44px] inline-flex items-center gap-1.5 text-[0.6875rem] font-extrabold text-[#0A0E14] bg-red-400 disabled:opacity-50 rounded-[11px] px-4 active:scale-95 transition-transform">
+                  <RefreshCw size={12} /> Tekrar Dene
+                </button>
+                {/* BULGU-093 — 3DS kesildiyse paranın akıbeti SUNUCUDAN sorulur. */}
+                {pendingPay && (
+                  <button
+                    onClick={handleCheckIntentStatus}
+                    disabled={statusChecking}
+                    className="min-h-[44px] inline-flex items-center gap-1.5 text-[0.6875rem] font-extrabold text-[#0A0E14] bg-[#39FF14] disabled:opacity-50 rounded-[11px] px-4 active:scale-95 transition-transform">
+                    <RefreshCw size={12} className={statusChecking ? 'animate-spin' : ''} /> Durumu Kontrol Et
+                  </button>
+                )}
+              </div>
             </div>
-            <button onClick={() => setInlineError('')} className="text-gray-500 shrink-0 self-start"><X size={15} /></button>
+            <button onClick={() => setInlineError('')} className="text-ink-4 shrink-0 self-start"><X size={15} /></button>
           </div>
         )}
 
@@ -894,13 +992,13 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
             }`}>
               {ctx.kind === 'MATCH_JOIN' ? <Users size={24} /> : <MapPin size={24} />}
             </div>
-            <span className={`inline-flex items-center text-[10px] font-black uppercase tracking-[0.12em] px-2.5 py-1 rounded-lg ${
+            <span className={`inline-flex items-center text-[0.625rem] font-extrabold uppercase tracking-[0.12em] px-2.5 py-1 rounded-lg ${
               ctx.isDeposit ? 'text-[#FACC15] bg-yellow-400/12' : 'text-[#39FF14] bg-[#39FF14]/12'
             }`}>
               {ctx.badge}
             </span>
           </div>
-          <p className="text-[21px] font-black text-white leading-tight">{ctx.title}</p>
+          <p className="text-[1.3125rem] font-extrabold text-white leading-tight">{ctx.title}</p>
           {ctx.details && ctx.details.length > 0 ? (
             <div className="mt-3.5 flex flex-col gap-2.5">
               {ctx.details.map((d, i) => (
@@ -908,41 +1006,41 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
                   <span className={`shrink-0 ${ctx.isDeposit ? 'text-[#FACC15]/80' : 'text-[#39FF14]/80'}`}>
                     {detailIcon(d.icon)}
                   </span>
-                  <span className="text-[13.5px] text-gray-100 font-semibold">{d.text}</span>
+                  <span className="text-[0.875rem] text-gray-100 font-semibold">{d.text}</span>
                 </div>
               ))}
             </div>
           ) : (
-            <p className="text-[12px] text-gray-400 font-semibold mt-2">{ctx.subtitle}</p>
+            <p className="text-[0.75rem] text-gray-400 font-semibold mt-2">{ctx.subtitle}</p>
           )}
         </div>
 
         {/* Tutar */}
         <div className="text-center px-5 py-0.5">
-          <p className="text-[11px] text-gray-400 font-bold uppercase tracking-[0.1em] mb-1.5">{ctx.amountLabel}</p>
-          <p className={`text-[44px] font-black leading-none font-numeric ${ctx.isDeposit ? 'text-[#FACC15]' : 'text-white'}`}>
+          <p className="text-[0.6875rem] text-gray-400 font-bold uppercase tracking-[0.1em] mb-1.5">{ctx.amountLabel}</p>
+          <p className={`text-[2.75rem] font-extrabold leading-none font-numeric ${ctx.isDeposit ? 'text-[#FACC15]' : 'text-white'}`}>
             {fmt(amount)}₺
           </p>
-          {ctx.amountHint && <p className="text-[11px] text-gray-500 mt-2">{ctx.amountHint}</p>}
+          {ctx.amountHint && <p className="text-[0.6875rem] text-ink-4 mt-2">{ctx.amountHint}</p>}
           {/* Kart işlem bedeli — yalnız kart kısmı varsa ve oran > 0 iken çıkar.
               Cüzdana geçildiği anda bu blok kaybolur; fark böyle görünür olur. */}
           {cardFee > 0 && (
             <div className="mt-3 mx-auto max-w-[320px] rounded-2xl border border-white/8 bg-white/[0.03] px-4 py-3 space-y-1.5">
-              <div className="flex items-center justify-between text-[11.5px]">
+              <div className="flex items-center justify-between text-[0.75rem]">
                 <span className="text-gray-400 font-semibold">Hizmet tutarı</span>
                 <span className="text-white font-bold font-numeric">{fmt(amount)}₺</span>
               </div>
-              <div className="flex items-center justify-between text-[11.5px]">
+              <div className="flex items-center justify-between text-[0.75rem]">
                 <span className="text-gray-400 font-semibold">Kart işlem bedeli (%{cardFeePct})</span>
                 <span className="text-[#FACC15] font-bold font-numeric">+{fmt(cardFee)}₺</span>
               </div>
               <div className="h-px bg-white/8" />
-              <div className="flex items-center justify-between text-[12.5px]">
+              <div className="flex items-center justify-between text-[0.8125rem]">
                 <span className="text-white font-extrabold">Karttan çekilecek</span>
-                <span className="text-white font-black font-numeric">{fmt(grandTotal)}₺</span>
+                <span className="text-white font-extrabold font-numeric">{fmt(grandTotal)}₺</span>
               </div>
               {allowBalance && !balanceOnly && (
-                <p className="text-[10px] text-[#39FF14]/80 font-semibold pt-0.5">
+                <p className="text-[0.6875rem] text-[#39FF14]/80 font-semibold pt-0.5">
                   OYNA bakiyenden ödersen bu bedel alınmaz.
                 </p>
               )}
@@ -952,7 +1050,7 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
 
         {/* Ödeme yöntemi karuseli */}
         <div>
-          <p className="text-[11px] font-black uppercase tracking-[0.14em] text-gray-500 mb-3 px-5">Ödeme Yöntemi</p>
+          <p className="text-[0.6875rem] font-extrabold uppercase tracking-[0.14em] text-ink-4 mb-3 px-5">Ödeme Yöntemi</p>
           <div className="oy-carousel flex gap-3 overflow-x-auto px-5 pb-1.5" style={{ scrollSnapType: 'x mandatory' }}>
             {/* OYNA bakiyesi toggle (cüzdan-öncelikli akışta tek yöntem) */}
             <button
@@ -973,14 +1071,14 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
                 </span>
               )}
               {!allowBalance && (
-                <span className="absolute top-3 right-3 text-gray-500"><Lock size={14} /></span>
+                <span className="absolute top-3 right-3 text-ink-4"><Lock size={14} /></span>
               )}
               <span className="w-10 h-10 rounded-xl bg-[#39FF14]/14 flex items-center justify-center text-[#39FF14] mb-8 block">
                 <Wallet size={20} />
               </span>
               <p className="text-xs font-extrabold text-white">OYNA Bakiyesi</p>
-              <p className="text-xl font-black text-[#39FF14] mt-1 font-numeric">{fmt(spendable)}₺</p>
-              <p className="text-[9.5px] text-gray-500 mt-0.5">
+              <p className="text-xl font-extrabold text-[#39FF14] mt-1 font-numeric">{fmt(spendable)}₺</p>
+              <p className="text-[0.6875rem] text-ink-4 mt-0.5">
                 {!allowBalance ? 'Bu ödemede kullanılamaz'
                   : spendable >= amount ? 'Tamamını karşılar'
                   : spendable > 0 ? 'Kısmen karşılar' : 'Bakiye yok'}
@@ -989,7 +1087,7 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
               {allowBalance && spendable < amount && (
                 <span
                   onClick={(e) => { e.stopPropagation(); goToTopup(); }}
-                  className="mt-2 inline-flex items-center gap-1 text-[10px] font-extrabold text-[#0A0E14] bg-[#39FF14] rounded-lg px-2.5 py-1.5 active:scale-95 transition-transform"
+                  className="mt-2 inline-flex items-center gap-1 text-[0.6875rem] font-extrabold text-[#0A0E14] bg-[#39FF14] rounded-lg px-2.5 py-1.5 active:scale-95 transition-transform"
                 >
                   <Plus size={11} strokeWidth={3} /> Yükle
                 </span>
@@ -1015,7 +1113,7 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
                     <CardBrandMark brand={card.brand} size={13} />
                   </span>
                   <p className="text-xs font-extrabold text-white font-numeric">•••• {card.last4}</p>
-                  <p className="text-[9.5px] text-gray-500 mt-1">
+                  <p className="text-[0.6875rem] text-ink-4 mt-1">
                     {card.expMonth && card.expYear
                       ? `Son kullanma ${String(card.expMonth).padStart(2, '0')}/${String(card.expYear).slice(-2)}`
                       : card.isDefault ? 'Varsayılan kart' : ''}
@@ -1041,7 +1139,7 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
                   <CardBrandMark brand={tempCard.brand} size={13} />
                 </span>
                 <p className="text-xs font-extrabold text-white font-numeric">•••• {tempCard.last4}</p>
-                <p className="text-[9.5px] text-gray-500 mt-1">
+                <p className="text-[0.6875rem] text-ink-4 mt-1">
                   {tempCard.save ? 'Ödemeyle birlikte kaydedilecek' : 'Tek seferlik · kaydedilmez'}
                 </p>
               </button>
@@ -1053,7 +1151,7 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
                 style={{ scrollSnapAlign: 'start' }}
                 className="shrink-0 w-[120px] rounded-[20px] p-4 border-[1.5px] border-dashed border-white/16 flex flex-col items-center justify-center gap-2.5 text-gray-400">
                 <span className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center"><Plus size={20} /></span>
-                <p className="text-[11px] font-bold text-center leading-tight">Yeni<br />kart ekle</p>
+                <p className="text-[0.6875rem] font-bold text-center leading-tight">Yeni<br />kart ekle</p>
               </button>
             )}
           </div>
@@ -1066,14 +1164,16 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
           <span className={`shrink-0 mt-0.5 ${!allowBalance ? 'text-[#FACC15]' : 'text-[#39FF14]'}`}>
             {!allowBalance ? <Shield size={15} /> : <Info size={15} />}
           </span>
-          <p className="text-[11.5px] text-gray-300 leading-relaxed">{noteText}</p>
+          <p className="text-[0.75rem] text-gray-300 leading-relaxed">{noteText}</p>
         </div>
 
         {/* Kapora güven notu */}
-        {ctx.isDeposit && ctx.infoNote && (
-          <div className="mx-5 flex gap-2.5 items-start px-1">
+        {/* İade/iptal koşulu HER bağlamda görünür: maça katılımda da para
+            hareketi var, koşulu yalnız kapora akışında göstermek eksikti (BULGU-083). */}
+        {ctx.infoNote && (
+          <div className="mx-5 bg-[#161B22] border border-white/8 rounded-2xl p-3.5 flex gap-2.5 items-start">
             <Shield size={15} className="text-[#FACC15] shrink-0 mt-0.5" />
-            <p className="text-[11.5px] text-gray-400 leading-relaxed">{ctx.infoNote}</p>
+            <p className="text-[0.75rem] text-gray-300 leading-relaxed">{ctx.infoNote}</p>
           </div>
         )}
 
@@ -1081,7 +1181,7 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
         {ctx.isDeposit && refundTierText && (
           <div className="mx-5 bg-[#161B22] border border-white/8 rounded-2xl p-3.5 flex gap-2.5 items-start">
             <Info size={15} className="text-blue-400 shrink-0 mt-0.5" />
-            <p className="text-[11.5px] text-gray-300 leading-relaxed">{refundTierText}</p>
+            <p className="text-[0.75rem] text-gray-300 leading-relaxed">{refundTierText}</p>
           </div>
         )}
 
@@ -1089,7 +1189,7 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
         {needsCard && (
           <div className="mx-5 flex items-center gap-2 px-1">
             <ShieldCheck size={14} className="text-[#39FF14] shrink-0" />
-            <p className="text-[11px] text-gray-400 leading-relaxed">
+            <p className="text-[0.6875rem] text-gray-400 leading-relaxed">
               <span className="text-gray-200 font-semibold">3D Secure</span> ile güvenli doğrulama · banka SMS onayı uygulama içinde açılır
             </p>
           </div>
@@ -1098,25 +1198,25 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
         {/* Uyum notu: fiziksel hizmet + iptal/iade koşulları */}
         <button onClick={() => useAppStore.getState().navigateTo('LEGAL')}
           className="mx-5 text-left flex gap-2 items-center px-1">
-          <Info size={12} className="text-gray-600 shrink-0" />
-          <p className="text-[10px] text-gray-600 leading-relaxed">
+          <Info size={12} className="text-ink-4 shrink-0" />
+          <p className="text-[0.6875rem] text-ink-4 leading-relaxed">
             Ödemeler saha/maç/hizmet bedeli içindir. <span className="underline">Mesafeli satış ve iptal/iade koşulları</span>
           </p>
         </button>
       </main>
 
       {/* Sabit footer */}
-      <div className="fixed bottom-0 inset-x-0 max-w-lg md:max-w-2xl mx-auto px-5 pb-safe pt-4 bg-gradient-to-t from-[#0A0E14] via-[#0A0E14]/95 to-transparent border-t border-white/5 z-20">
+      <div className="fixed bottom-0 inset-x-0 max-w-lg mx-auto px-5 pb-safe pt-4 bg-gradient-to-t from-[#0A0E14] via-[#0A0E14]/95 to-transparent border-t border-white/5 z-20">
         <div className="flex items-center justify-between mb-3 px-0.5">
-          <span className="text-[11px] text-gray-500 font-semibold">{breakdown}</span>
-          <span className="text-[13px] font-extrabold text-white">
+          <span className="text-[0.6875rem] text-ink-4 font-semibold">{breakdown}</span>
+          <span className="text-[0.8125rem] font-extrabold text-white">
             Toplam <span className={ctx.isDeposit ? 'text-[#FACC15]' : 'text-[#39FF14]'}>{fmt(grandTotal)}₺</span>
           </span>
         </div>
         {insufficientBalance ? (
           <button
             onClick={goToTopup}
-            className="w-full py-4 font-black text-base rounded-2xl flex items-center justify-center gap-2 transition-all active:scale-[0.98] bg-[#39FF14] text-[#0A0E14] shadow-[0_0_30px_rgba(57,255,20,0.28)]"
+            className="w-full py-4 font-extrabold text-base rounded-2xl flex items-center justify-center gap-2 transition-all active:scale-[0.98] bg-[#39FF14] text-[#0A0E14] shadow-[0_0_30px_rgba(57,255,20,0.28)]"
           >
             <Wallet size={17} /> CÜZDANA YÜKLE
           </button>
@@ -1124,22 +1224,22 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
           <button
             disabled={!canPay}
             onClick={handlePay}
-            className={`w-full py-4 font-black text-base rounded-2xl flex items-center justify-center gap-2 transition-all active:scale-[0.98] ${
+            className={`w-full py-4 font-extrabold text-base rounded-2xl flex items-center justify-center gap-2 transition-all active:scale-[0.98] ${
               canPay
                 ? 'bg-[#39FF14] text-[#0A0E14] shadow-[0_0_30px_rgba(57,255,20,0.28)]'
-                : 'bg-gray-800 text-gray-500'
+                : 'bg-gray-800 text-ink-4'
             }`}
           >
             <Lock size={17} /> {fmt(grandTotal)}₺ {ctx.isDeposit ? 'KAPORA ÖDE' : 'ÖDE'}
           </button>
         )}
         {insufficientBalance && (
-          <p className="text-center text-[10px] text-gray-500 mt-2">
+          <p className="text-center text-[0.6875rem] text-ink-4 mt-2">
             Bu kapora cüzdandan ödenir — {fmt(amount - spendable)}₺ daha yüklemen yeterli.
           </p>
         )}
         {needsCard && !selectedCard && (
-          <p className="text-center text-[10px] text-gray-500 mt-2">
+          <p className="text-center text-[0.6875rem] text-ink-4 mt-2">
             Devam etmek için bir kart seç, yeni kart ekle
             {allowBalance && (
               <> veya <button onClick={goToTopup} className="text-[#39FF14] font-bold underline">cüzdanına yükle</button></>
@@ -1166,9 +1266,9 @@ const detailIcon = (kind: 'pin' | 'court' | 'calendar' | 'clock' | 'users') => {
 };
 
 const SummaryRow = ({ label, value, dim, mono }: { label: string; value: string; dim?: boolean; mono?: boolean }) => (
-  <div className="flex justify-between items-center gap-4 text-[13px]">
-    <span className="text-gray-500 shrink-0">{label}</span>
-    <span className={`font-bold text-right truncate ${dim ? 'text-gray-600' : 'text-white'} ${mono ? 'font-numeric text-[11px]' : ''}`}>
+  <div className="flex justify-between items-center gap-4 text-[0.8125rem]">
+    <span className="text-ink-4 shrink-0">{label}</span>
+    <span className={`font-bold text-right truncate ${dim ? 'text-ink-4' : 'text-white'} ${mono ? 'font-numeric text-[0.6875rem]' : ''}`}>
       {value}
     </span>
   </div>

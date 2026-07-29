@@ -17,6 +17,8 @@ export interface AppNotification {
   senderId: string | null;
   deepLink: string | null;
   actionRequired: boolean;
+  /** IP-06: match_list_invites.id — "Gelemem" bunu respond_match_list_invite'a verir. */
+  inviteId: string | null;
 }
 
 const mapNotification = (r: any): AppNotification => ({
@@ -33,6 +35,7 @@ const mapNotification = (r: any): AppNotification => ({
   senderId: r.sender_id ?? null,
   deepLink: r.deep_link ?? null,
   actionRequired: r.action_required ?? false,
+  inviteId: (r.payload && (r.payload as any).invite_id) ?? null,
 });
 
 /** Kullanıcının son bildirimlerini getir (yeniden eskiye). */
@@ -118,4 +121,24 @@ export const subscribeToNotifications = (
     .subscribe();
 
   return () => { void supabase.removeChannel(channel); };
+};
+
+/** IP-06 yedeği: payload.invite_id taşımayan ESKİ davet satırları için, maç
+ *  üzerinden bekleyen daveti bul. RLS (mli_select) yalnız invited_id = auth.uid()
+ *  satırını okutur, ek kapı gerekmez. */
+export const findPendingMatchInvite = async (matchId: string): Promise<string | null> => {
+  const uid = auth.currentUser?.uid;
+  if (!uid) return null;
+  const { data, error } = await supabase
+    .from('match_list_invites')
+    .select('id')
+    .eq('match_id', matchId)
+    .eq('invited_id', uid)
+    .eq('status', 'PENDING')
+    .maybeSingle();
+  if (error) {
+    console.warn('[notification] davet kaydı okunamadı:', error.message);
+    return null;
+  }
+  return (data as { id: string } | null)?.id ?? null;
 };

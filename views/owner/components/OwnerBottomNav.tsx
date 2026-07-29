@@ -62,7 +62,7 @@ export const OwnerBottomNav: React.FC<OwnerBottomNavProps> = ({
               <span className={`relative ${isActive ? 'scale-110' : ''} transition-transform`}>
                 {tab.icon}
                 {showBadge && (
-                  <span className="absolute -top-1 -right-2 min-w-[16px] h-4 px-1 bg-amber-500 text-black text-[9px] font-black rounded-full flex items-center justify-center">
+                  <span className="absolute -top-1 -right-2 min-w-[16px] h-4 px-1 bg-amber-500 text-black text-[9px] font-extrabold rounded-full flex items-center justify-center">
                     {pendingCount > 9 ? '9+' : pendingCount}
                   </span>
                 )}

@@ -23,7 +23,7 @@ const EmptyState: React.FC<EmptyStateProps> = ({
 }) => (
   <div className={`flex flex-col items-center text-center py-14 px-6 ${className}`}>
     <div className="w-16 h-16 rounded-3xl bg-white/5 border border-white/8 flex items-center justify-center mb-4">
-      <Icon size={28} className="text-white/40" />
+      <Icon size={28} className="text-ink-4" />
     </div>
     <h3 className="text-white font-bold text-base">{title}</h3>
     {description && (

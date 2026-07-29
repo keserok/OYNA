@@ -321,6 +321,10 @@ export const mapFromSnakeCase = (obj: any) => {
     else if (key === 'locker_room_grade') newKey = 'lockerRoomGrade';
     else if (key === 'owner_id') newKey = 'ownerId';
     else if (key === 'pricing_policy') newKey = 'pricingPolicy';
+    // Maç süresi (E6): kartlar ve maç kuralları GERÇEK veriden beslenir.
+    // Eşlenmezse `durationMinutes` undefined kalır ve kart süreyi hiç gösteremez
+    // (ya da daha kötüsü serbest metin `duration`a düşerdi).
+    else if (key === 'duration_minutes') newKey = 'durationMinutes';
     mapped[newKey] = obj[key];
   }
   return mapped;

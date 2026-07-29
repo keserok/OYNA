@@ -5,6 +5,8 @@ export interface TariffLike {
   endTime: string;
   price?: number;
   price_per_hour?: number;
+  /** Tarifedeki kapora TUTARI (TL). OwnerPricingPolicyModal fiyatın %10–%50'sine sıkıştırır. */
+  deposit_amount?: number | null;
   /** null/undefined = tesis geneli; dolu = yalnız o sahaya özel tarife. */
   court_id?: string | null;
   /** ISO gün listesi (1=Pzt … 7=Paz). Verilmezse gün filtresi uygulanmaz. */
@@ -58,6 +60,32 @@ export function resolveHourlyPrice(
   courtId?: string | null,
   dateISO?: string | null,
 ): number | null {
+  const matched = matchTariffForHour(hour, pricingPolicy, courtId, dateISO);
+  if (!matched) return null;
+  return matched.price ?? matched.price_per_hour ?? null;
+}
+
+/** Saatin GEÇERLİ tarifesindeki kapora tutarı (TL). Tarife yoksa veya kapora
+ *  tanımlı değilse null — arayüz uydurma varsayılan doldurmaz. */
+export function resolveHourlyDeposit(
+  hour: number,
+  pricingPolicy?: TariffLike[],
+  courtId?: string | null,
+  dateISO?: string | null,
+): number | null {
+  const matched = matchTariffForHour(hour, pricingPolicy, courtId, dateISO);
+  const d = matched?.deposit_amount;
+  return d != null && Number(d) > 0 ? Number(d) : null;
+}
+
+/** Fiyat ve kapora AYNI tarifeden okunsun diye eşleşme mantığı tek yerde.
+ *  Öncelik zinciri yukarıdaki resolveHourlyPrice yorumunda anlatıldığı gibi. */
+function matchTariffForHour(
+  hour: number,
+  pricingPolicy?: TariffLike[],
+  courtId?: string | null,
+  dateISO?: string | null,
+): TariffLike | null {
   if (!pricingPolicy?.length) return null;
   const dow = dateISO ? isoDow(dateISO) : null;
   const inWindow = (p: TariffLike) => {
@@ -87,9 +115,7 @@ export function resolveHourlyPrice(
       if (courtRank !== 0) return courtRank;
       return (TARIFF_TYPE_PRIORITY[a.tariff_type ?? ''] ?? 9) - (TARIFF_TYPE_PRIORITY[b.tariff_type ?? ''] ?? 9);
     });
-  const matched = candidates[0];
-  if (!matched) return null;
-  return matched.price ?? matched.price_per_hour ?? null;
+  return candidates[0] ?? null;
 }
 
 export function findFlashDealForSlot(
@@ -105,14 +131,21 @@ export function findFlashDealForSlot(
   );
 }
 
+/**
+ * Slot kapalı mı. Slot süresi artık tarife bazlı (60/90/120) olduğu için
+ * `minutes` parametresi zorunlu hâle geldi — sabit 60 varsayımı 90 dakikalık
+ * slotta kapanışın son yarım saatini görmezden geliyordu.
+ */
 export function isSlotClosed(
   timeKey: string,
   courtId: string,
   exceptions: PitchAvailabilityException[],
+  minutes: number = 60,
 ): boolean {
-  const hour = parseInt(timeKey.split('.')[0], 10);
-  const slotStart = hour * 60;
-  const slotEnd = slotStart + 60;
+  const t = normalizeTime(slotKeyToTime(timeKey));
+  const [h, m] = t.split(':').map(Number);
+  const slotStart = (Number.isFinite(h) ? h : 0) * 60 + (Number.isFinite(m) ? m : 0);
+  const slotEnd = slotStart + (minutes > 0 ? minutes : 60);
 
   return exceptions.some((ex) => {
     if (ex.court_id && ex.court_id !== courtId) return false;

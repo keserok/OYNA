@@ -100,7 +100,7 @@ const LocationPickerSheet: React.FC<LocationPickerSheetProps> = ({
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }}
           onClick={close}
-          className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm"
+          className="fixed inset-0 z-[80] flex items-end justify-center bg-black/70 backdrop-blur-sm"
         >
           <motion.div
             key="loc-sheet"
@@ -109,14 +109,14 @@ const LocationPickerSheet: React.FC<LocationPickerSheetProps> = ({
             exit={{ y: 60, opacity: 0 }}
             transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
             onClick={(e) => e.stopPropagation()}
-            className="w-full sm:max-w-md flex flex-col max-h-[85vh]
+            className="w-full flex flex-col max-h-[85vh]
                        bg-gradient-to-b from-[#161B22] to-[#0A0E14]
-                       border border-white/10 border-b-0 sm:border-b
-                       rounded-t-[28px] sm:rounded-[28px]
+                       border border-white/10 border-b-0
+                       rounded-t-[28px]
                        shadow-[0_-10px_60px_rgba(0,0,0,0.6)] overflow-hidden"
           >
             {/* grip */}
-            <div className="pt-3 pb-1 flex justify-center sm:hidden">
+            <div className="pt-3 pb-1 flex justify-center">
               <div className="w-11 h-1.5 rounded-full bg-white/20" />
             </div>
 
@@ -136,10 +136,10 @@ const LocationPickerSheet: React.FC<LocationPickerSheetProps> = ({
                 </div>
               )}
               <div className="flex-1 min-w-0">
-                <h3 className="text-lg font-black italic uppercase tracking-tight text-white leading-none">
+                <h3 className="text-lg font-extrabold italic uppercase tracking-tight text-white leading-none">
                   {step === 'district' ? selectedCity : title}
                 </h3>
-                <p className="text-[11px] font-semibold text-gray-500 mt-1">
+                <p className="text-[0.6875rem] font-semibold text-ink-4 mt-1">
                   {step === 'district' ? 'İlçeni seç' : 'GPS ile bul ya da elle seç'}
                 </p>
               </div>
@@ -168,36 +168,36 @@ const LocationPickerSheet: React.FC<LocationPickerSheetProps> = ({
                       {gpsLoading ? <Loader2 size={20} className="animate-spin" /> : <Navigation size={20} />}
                     </span>
                     <span className="flex-1 min-w-0">
-                      <span className="block text-sm font-black text-white">
+                      <span className="block text-sm font-extrabold text-white">
                         {gpsLoading ? 'Konum aranıyor…' : 'Konumumu Kullan'}
                       </span>
-                      <span className="block text-[11px] text-gray-400">GPS ile otomatik & en isabetli</span>
+                      <span className="block text-[0.6875rem] text-gray-400">GPS ile otomatik & en isabetli</span>
                     </span>
                   </button>
                   {gpsError && (
-                    <p className="text-[11px] text-[#FFAA00] font-semibold mt-2 px-1">{gpsError}</p>
+                    <p className="text-[0.6875rem] text-[#FFAA00] font-semibold mt-2 px-1">{gpsError}</p>
                   )}
                 </div>
 
                 {/* divider */}
                 <div className="flex items-center gap-3 px-5 pb-3">
                   <div className="h-px flex-1 bg-white/8" />
-                  <span className="text-[10px] font-black uppercase tracking-widest text-gray-600">veya elle seç</span>
+                  <span className="text-[0.625rem] font-extrabold uppercase tracking-widest text-ink-4">veya elle seç</span>
                   <div className="h-px flex-1 bg-white/8" />
                 </div>
 
                 {/* search */}
                 <div className="px-5 pb-3">
                   <div className="flex items-center gap-2.5 px-3.5 h-12 rounded-2xl bg-[#0A0E14] border border-white/10 focus-within:border-[#39FF14]/40 transition-colors">
-                    <Search size={18} className="text-gray-500 flex-shrink-0" />
+                    <Search size={18} className="text-ink-4 flex-shrink-0" />
                     <input
                       value={search}
                       onChange={(e) => setSearch(e.target.value)}
                       placeholder="İl ara (81 il)…"
-                      className="flex-1 bg-transparent outline-none text-white text-sm font-semibold placeholder:text-gray-600"
+                      className="flex-1 bg-transparent outline-none text-white text-sm font-semibold placeholder:text-ink-4"
                     />
                     {search && (
-                      <button onClick={() => setSearch('')} className="text-gray-500 hover:text-white">
+                      <button onClick={() => setSearch('')} className="text-ink-4 hover:text-white">
                         <X size={16} />
                       </button>
                     )}
@@ -214,17 +214,17 @@ const LocationPickerSheet: React.FC<LocationPickerSheetProps> = ({
                         onClick={() => pickCity(r.city)}
                         className="w-full flex items-center gap-3 p-2.5 rounded-xl hover:bg-white/5 transition-colors text-left"
                       >
-                        <span className="w-9 h-9 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-[11px] font-black text-gray-400 flex-shrink-0">
+                        <span className="w-9 h-9 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-[0.6875rem] font-extrabold text-gray-400 flex-shrink-0">
                           {String(r.plate).padStart(2, '0')}
                         </span>
                         <span className="flex-1 text-sm font-bold text-white">{r.city}</span>
                         {covered ? (
-                          <span className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wide text-[#39FF14]">
+                          <span className="flex items-center gap-1.5 text-[0.625rem] font-extrabold uppercase tracking-wide text-[#39FF14]">
                             <span className="w-1.5 h-1.5 rounded-full bg-[#39FF14] shadow-[0_0_8px_#39FF14]" />
                             Aktif
                           </span>
                         ) : (
-                          <span className="text-[9px] font-black uppercase tracking-wide text-[#FFAA00]/70 px-2 py-0.5 rounded-full bg-[#FFAA00]/8 border border-[#FFAA00]/20">
+                          <span className="text-[0.625rem] font-extrabold uppercase tracking-wide text-[#FFAA00]/70 px-2 py-0.5 rounded-full bg-[#FFAA00]/8 border border-[#FFAA00]/20">
                             yakında
                           </span>
                         )}
@@ -232,7 +232,7 @@ const LocationPickerSheet: React.FC<LocationPickerSheetProps> = ({
                     );
                   })}
                   {filteredCities.length === 0 && (
-                    <p className="text-center text-sm text-gray-500 py-8">"{search}" için il bulunamadı.</p>
+                    <p className="text-center text-sm text-ink-4 py-8">"{search}" için il bulunamadı.</p>
                   )}
                 </div>
               </div>
@@ -244,7 +244,7 @@ const LocationPickerSheet: React.FC<LocationPickerSheetProps> = ({
                 {!isCoveredCity(selectedCity) && (
                   <div className="mx-5 mb-3 flex items-start gap-2.5 p-3 rounded-2xl bg-[#FFAA00]/8 border border-[#FFAA00]/25">
                     <Sparkles size={16} className="text-[#FFAA00] flex-shrink-0 mt-0.5" />
-                    <p className="text-[11px] font-semibold text-gray-300 leading-relaxed">
+                    <p className="text-[0.6875rem] font-semibold text-gray-300 leading-relaxed">
                       <b className="text-[#FFAA00]">{selectedCity}</b> yakında açılıyor. Şimdiden seçebilirsin;
                       bölge listeleri şehir aktif olunca dolar.
                     </p>
@@ -259,12 +259,12 @@ const LocationPickerSheet: React.FC<LocationPickerSheetProps> = ({
                   >
                     <span className="flex items-center gap-2.5">
                       <MapPin size={16} className="text-[#39FF14]" />
-                      <span className="text-sm font-black text-white">Tüm {selectedCity}</span>
+                      <span className="text-sm font-extrabold text-white">Tüm {selectedCity}</span>
                     </span>
-                    <span className="text-[11px] font-bold text-gray-400">il geneli</span>
+                    <span className="text-[0.6875rem] font-bold text-gray-400">il geneli</span>
                   </button>
 
-                  <p className="text-[10px] font-black uppercase tracking-widest text-gray-600 mb-3 ml-1">
+                  <p className="text-[0.625rem] font-extrabold uppercase tracking-widest text-ink-4 mb-3 ml-1">
                     {selectedCity} İlçeleri
                   </p>
                   <div className="flex flex-wrap gap-2">
@@ -272,7 +272,7 @@ const LocationPickerSheet: React.FC<LocationPickerSheetProps> = ({
                       <button
                         key={d}
                         onClick={() => pickDistrict(d)}
-                        className="min-h-[38px] px-4 rounded-xl bg-white/4 border border-white/10 text-[13px] font-bold text-gray-200
+                        className="min-h-[38px] px-4 rounded-xl bg-white/4 border border-white/10 text-[0.8125rem] font-bold text-gray-200
                                    hover:bg-[#39FF14]/12 hover:border-[#39FF14]/40 hover:text-[#39FF14] active:scale-95 transition-all
                                    inline-flex items-center gap-1.5"
                       >

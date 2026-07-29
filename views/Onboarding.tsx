@@ -16,6 +16,7 @@ import { auth } from '../supabaseAuth';
 import { getFullUserProfile } from '../services/userService';
 import { fbUpdateUserLocation } from '../supabaseMutations';
 import { showToast } from '../components/common/GlobalToast';
+import { validateFirstLast } from '../shared/personName';
 
 interface OnboardingProps {
   /** Onboarding bitti (TAMAMLANDI veya ATLANDI) → çağıran uygulamaya/profile döner. */
@@ -136,11 +137,15 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
 
   const goStep1FromSkip = useCallback(() => setStep(1), []);
 
+  // S8: ad soyad zorunlu. Kural shared/personName.ts'te tek kaynaktan gelir;
+  // aynı kural kayıt formunda ve sunucudaki apply_onboarding'de de uygulanır.
+  const nameCheck = validateFirstLast(firstName, lastName);
+
   const ctaEnabled = (() => {
     switch (step) {
       case 0: return phase === 'idle';
       case 1: return ageTouched;
-      case 2: return firstName.trim().length > 0 && lastName.trim().length > 0;
+      case 2: return nameCheck.valid;
       case 3: return playStyle !== '';
       default: return false;
     }
@@ -198,8 +203,16 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
   };
 
   // ─── ATLA: girilen kısmi veriyi yazar ama "tamamlandı" işaretlemez ───
+  // S8 istisnası: ad soyad atlanamaz. Geçerli ad soyad yoksa "Atla" kullanıcıyı
+  // uygulamaya sokmaz, ad/soyad adımına götürür. Diğer adımlar (yaş, cinsiyet,
+  // pozisyon, oyun stili, konum) opsiyonel kalır.
   const handleSkip = async () => {
     if (saving) return;
+    if (!nameCheck.valid) {
+      setStep(2);
+      showToast(nameCheck.reason ?? 'Devam etmek için ad ve soyadını gir.');
+      return;
+    }
     setSaving(true);
     try {
       // best-effort kısmi kayıt: boş alanlar sunucuda mevcut değeri silmez.
@@ -258,7 +271,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
         <div style={{ flex: 1, minHeight: 0, position: 'relative', display: 'flex', flexDirection: 'column' }}>
           {step === 0 && <StepLocation phase={phase} onScan={startScan} onSkip={goStep1FromSkip} />}
           {step === 1 && <StepAge index={ageIndex} onChange={setAgeIndex} onFirstTouch={() => setAgeTouched(true)} />}
-          {step === 2 && <StepName firstName={firstName} lastName={lastName} gender={gender} position={position} onFirst={setFirstName} onLast={setLastName} onGender={setGender} onPosition={setPosition} />}
+          {step === 2 && <StepName firstName={firstName} lastName={lastName} gender={gender} position={position} onFirst={setFirstName} onLast={setLastName} onGender={setGender} onPosition={setPosition} error={(firstName.trim() || lastName.trim()) && !nameCheck.valid ? nameCheck.reason ?? null : null} />}
           {step === 3 && <StepStyle style={playStyle} onChange={setPlayStyle} />}
         </div>
 

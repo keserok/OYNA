@@ -1,6 +1,7 @@
 import type { Pitch } from '../types';
 import { resolveTariffForSlot } from './tariffService';
 import { resolveWorkingHoursForDate } from '../shared/workingHours';
+import { buildSlotGrid, type SlotTariffInput } from '../shared/slotGrid';
 
 export type SlotAvailabilityStatus = 'available' | 'booked' | 'closed' | 'pending';
 
@@ -102,6 +103,12 @@ function isWithinWorkingHours(
   return slotM >= openM && slotM < closeM;
 }
 
+/**
+ * @deprecated Tek-süreli ızgara. Slot süresi artık TARİFE bazlı (60/90/120) ve
+ * ızgara `shared/slotGrid.buildSlotGrid` ile üretilir — sunucudaki
+ * `get_pitch_slots` ile aynı kural. Bu fonksiyon yalnız tarifesiz tesisler için
+ * yedek yol olarak duruyor.
+ */
 export function generateSlotRanges(
   workingHours?: { open?: string; close?: string; slotDuration?: number }
 ): { startTime: string; endTime: string }[] {
@@ -148,7 +155,13 @@ export function buildAvailabilitySlots(
   );
   const wh = resolved.closed ? { open: resolved.open, close: resolved.open, slotDuration: resolved.slotDuration } : resolved;
   // Gün tamamen kapalıysa hiç bookable slot yok.
-  const ranges = resolved.closed ? [] : generateSlotRanges(wh);
+  // IZGARA TEK KAYNAK: slot süresi tarife bazlıdır (60/90/120) ve ızgara
+  // sunucudaki get_pitch_slots ile aynı kuralla kurulur. Tarifesiz tesiste
+  // çalışma saatinden 60'lık yedek ızgara üretilir.
+  const grid = resolved.closed
+    ? []
+    : buildSlotGrid(pitch.tariffs as SlotTariffInput[] | undefined, bookingDate, courtId, wh);
+  const ranges = grid.map((g) => ({ startTime: g.startTime, endTime: g.endTime }));
   const pitchBookings = bookings.filter(
     b =>
       b.pitch_id === pitch.id &&

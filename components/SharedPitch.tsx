@@ -179,7 +179,7 @@ const SharedPitch: React.FC<SharedPitchProps> = ({ mode, slots, orientation = 'v
                     {slot.player.avatar ? (
                         <img src={slot.player.avatar} className="w-full h-full rounded-full object-cover" alt={slot.player.name}/>
                     ) : (
-                        <span className="text-white font-black text-sm drop-shadow-md">{slot.player.name.charAt(0)}</span>
+                        <span className="text-white font-extrabold text-sm drop-shadow-md">{slot.player.name.charAt(0)}</span>
                     )}
                 </motion.div>
               ) : (
@@ -194,13 +194,13 @@ const SharedPitch: React.FC<SharedPitchProps> = ({ mode, slots, orientation = 'v
 
               {slot.player ? (
                  <div className="absolute top-full mt-1 flex flex-col items-center pointer-events-none">
-                    <span className={`text-[9px] font-bold px-2 py-0.5 rounded ${slot.status === 'PENDING' ? 'bg-[#FACC15]/20 text-[#FACC15] border-[#FACC15]/50' : 'bg-black/80 text-white border-white/10'} whitespace-nowrap border shadow-sm`}>
+                    <span className={`text-[0.6875rem] font-bold px-2 py-0.5 rounded ${slot.status === 'PENDING' ? 'bg-[#FACC15]/20 text-[#FACC15] border-[#FACC15]/50' : 'bg-black/80 text-white border-white/10'} whitespace-nowrap border shadow-sm`}>
                         {slot.status === 'PENDING' ? '⏳ ' : ''}{slot.player.name.split(' ')[0]}
                     </span>
                  </div>
               ) : (
                  <div className="absolute top-full mt-1 flex flex-col items-center pointer-events-none">
-                    <span className="text-[8px] font-black tracking-widest px-1.5 py-0.5 rounded bg-black/50 text-gray-400 whitespace-nowrap">
+                    <span className="text-[0.6875rem] font-extrabold tracking-widest px-1.5 py-0.5 rounded bg-black/50 text-gray-400 whitespace-nowrap">
                         {slot.role}
                     </span>
                  </div>

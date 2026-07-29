@@ -186,7 +186,7 @@ export const OwnerSecurityModal: React.FC<Props> = ({ onClose }) => {
           type="button"
           onClick={handleSave}
           disabled={isSaving || !currentPassword || !policyOk || !matchOk}
-          className="w-full py-4 bg-blue-600 text-white font-black rounded-2xl hover:bg-blue-500 disabled:opacity-50 flex items-center justify-center gap-2"
+          className="w-full py-4 bg-blue-600 text-white font-extrabold rounded-2xl hover:bg-blue-500 disabled:opacity-50 flex items-center justify-center gap-2"
         >
           <Lock size={18} /> {isSaving ? 'Güncelleniyor...' : 'Şifreyi Güncelle'}
         </button>

@@ -40,7 +40,8 @@ interface Props {
   onSave: (data: OwnerFacilityFormData) => void;
   /** Vitrin sekmesinden kort yönetimine köprü (Sahalarım ekranı) */
   onOpenCourts?: () => void;
-  /** Vitrin sekmesinden tarife & kapora editörüne köprü */
+  /** Vitrin sekmesinden saha bazlı tarife girişine köprü (Sahalarım listesi).
+   *  Tesis geneli tek fiyat ekranı kaldırıldı; her saha kendi politikasını girer. */
   onOpenPricing?: () => void;
   /** Vitrin sekmesinden çalışma saatleri editörüne köprü */
   onOpenHours?: () => void;
@@ -603,7 +604,7 @@ export const OwnerFacilitySettingsModal: React.FC<Props> = ({
             <button
               type="button"
               onClick={() => setShowPreview(true)}
-              className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-[#FACC15]/10 border border-[#FACC15]/40 text-[#FACC15] text-xs font-black uppercase tracking-wider"
+              className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-[#FACC15]/10 border border-[#FACC15]/40 text-[#FACC15] text-xs font-extrabold uppercase tracking-wider"
             >
               <Eye size={15} /> Vitrinde Önizle
             </button>
@@ -626,7 +627,7 @@ export const OwnerFacilitySettingsModal: React.FC<Props> = ({
                     onClick={onOpenPricing}
                     className="py-3 rounded-2xl bg-[#161B22] border border-white/5 text-gray-300 text-[11px] font-bold hover:border-white/20 transition-colors"
                   >
-                    Tarife & Kapora
+                    Saha Tarifeleri
                   </button>
                 )}
                 {onOpenHours && (

@@ -99,7 +99,7 @@ export const OwnerFlashDealModal: React.FC<OwnerFlashDealModalProps> = ({
       <div className="bg-[#161B22] w-full max-w-md rounded-t-[32px] border-t border-white/10 p-6 animate-in slide-in-from-bottom duration-300">
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h3 className="text-lg font-black text-white">Flash Deal</h3>
+            <h3 className="text-lg font-extrabold text-white">Flash Deal</h3>
             <p className="text-xs text-gray-400 mt-1">
               {timeKey} • Standart: ₺{standardPrice}
             </p>
@@ -112,12 +112,12 @@ export const OwnerFlashDealModal: React.FC<OwnerFlashDealModalProps> = ({
         <div className="bg-[#0A0E14] p-6 rounded-3xl border border-white/10 mb-6 text-center">
           <label className="text-xs text-gray-500 font-bold uppercase mb-2 block">İndirimli Fiyat</label>
           <div className="flex items-center justify-center gap-2">
-            <span className="text-2xl font-black text-gray-500">₺</span>
+            <span className="text-2xl font-extrabold text-gray-500">₺</span>
             <input
               type="number"
               value={customPrice}
               onChange={(e) => setCustomPrice(e.target.value)}
-              className="bg-transparent text-5xl font-black text-white outline-none w-40 text-center border-b border-white/20 focus:border-[#FACC15] transition-colors"
+              className="bg-transparent text-5xl font-extrabold text-white outline-none w-40 text-center border-b border-white/20 focus:border-[#FACC15] transition-colors"
             />
           </div>
           {discountPercent >= 5 && discountPercent <= 80 && (
@@ -161,7 +161,7 @@ export const OwnerFlashDealModal: React.FC<OwnerFlashDealModalProps> = ({
               type="button"
               onClick={handleRemove}
               disabled={saving}
-              className="flex-1 py-4 bg-red-500/10 border border-red-500/30 text-red-400 font-black rounded-2xl hover:bg-red-500/20 disabled:opacity-50"
+              className="flex-1 py-4 bg-red-500/10 border border-red-500/30 text-red-400 font-extrabold rounded-2xl hover:bg-red-500/20 disabled:opacity-50"
             >
               KALDIR
             </button>
@@ -170,7 +170,7 @@ export const OwnerFlashDealModal: React.FC<OwnerFlashDealModalProps> = ({
             type="button"
             onClick={handleSave}
             disabled={saving}
-            className="flex-[2] py-4 bg-[#FACC15] text-black font-black text-lg rounded-2xl hover:bg-yellow-300 active:scale-95 transition-all disabled:opacity-50"
+            className="flex-[2] py-4 bg-[#FACC15] text-black font-extrabold text-lg rounded-2xl hover:bg-yellow-300 active:scale-95 transition-all disabled:opacity-50"
           >
             {saving ? 'KAYDEDİLİYOR...' : 'FLASH DEAL OLUŞTUR'}
           </button>

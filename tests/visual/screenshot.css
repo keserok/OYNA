@@ -1,0 +1,27 @@
+/* Görsel regresyon: ekran görüntüsü anında sayfaya enjekte edilen stil.
+   playwright.visual.config.ts → expect.toHaveScreenshot.stylePath ile bağlanır.
+
+   Amaç: piksel karşılaştırmasını kırılgan yapan HER ŞEYİ susturmak.
+   (framer-motion gibi JS ile sürülen animasyonlar CSS ile durdurulamaz;
+   onlar harness.ts içindeki MotionGlobalConfig.skipAnimations ile kapatılır.) */
+
+*,
+*::before,
+*::after {
+  animation-duration: 0s !important;
+  animation-delay: 0s !important;
+  animation-iteration-count: 1 !important;
+  animation-play-state: paused !important;
+  transition-duration: 0s !important;
+  transition-delay: 0s !important;
+  scroll-behavior: auto !important;
+  /* Metin girişlerinde yanıp sönen imleç kareyi kirletmesin. */
+  caret-color: transparent !important;
+}
+
+/* Kaydırma çubukları platforma göre değişir — hiç çizilmesinler. */
+::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}

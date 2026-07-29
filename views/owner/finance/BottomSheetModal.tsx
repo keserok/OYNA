@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
+import { useBackDismiss } from '../../../hooks/useBackDismiss';
 
 // ─── FI-1 — Ortak alt-sayfa modalı (erişilebilir) ────────────────────────────
 // Tek kaynak: veresiye/gider ekleme modalları bunu kullanır (kopya + drift biter).
@@ -13,13 +14,15 @@ interface Props {
 }
 
 export const BottomSheetModal: React.FC<Props> = ({ title, onClose, children }) => {
+  // Kosullu mount ediliyor -> open sabit true.
+  useBackDismiss(true, onClose, 'owner-finance-sheet');
   const panelRef = useRef<HTMLDivElement>(null);
   // FAZ2: klavye-farkındalık — tutar/veresiye inputu klavye açınca sheet klavye üstüne kalkar.
   const [kbInset, setKbInset] = React.useState(0);
 
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
-    document.addEventListener('keydown', onKey);
+    // KENDİ Esc dinleyicisi KALDIRILDI — useBackDismiss (yukarıda) Esc'yi
+    // merkezî kayıttan yönetiyor, yalnız en üstteki katman cevap veriyor.
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     // ilk odaklanabilir öğeye odaklan
@@ -31,7 +34,6 @@ export const BottomSheetModal: React.FC<Props> = ({ title, onClose, children }) 
     vv?.addEventListener('scroll', onResize);
     onResize();
     return () => {
-      document.removeEventListener('keydown', onKey);
       document.body.style.overflow = prevOverflow;
       vv?.removeEventListener('resize', onResize);
       vv?.removeEventListener('scroll', onResize);
@@ -40,7 +42,7 @@ export const BottomSheetModal: React.FC<Props> = ({ title, onClose, children }) 
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-black/80 flex items-end justify-center p-4 pb-0 sm:pb-4"
+      className="fixed inset-0 z-50 bg-black/80 flex items-end justify-center p-4 pb-0"
       style={{ paddingBottom: kbInset }}
       onClick={onClose}
       role="presentation"
@@ -55,7 +57,7 @@ export const BottomSheetModal: React.FC<Props> = ({ title, onClose, children }) 
         className="bg-[#161B22] w-full max-w-md rounded-t-3xl p-6 pb-safe-6 border border-white/10 max-h-[85dvh] overflow-y-auto custom-scrollbar"
       >
         <div className="flex justify-between mb-4">
-          <h3 className="text-lg font-black text-white">{title}</h3>
+          <h3 className="text-lg font-extrabold text-white">{title}</h3>
           <button type="button" onClick={onClose} aria-label="Kapat"><X size={20} className="text-gray-400" /></button>
         </div>
         {children}

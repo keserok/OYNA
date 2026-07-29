@@ -1,17 +1,22 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
-import { X, Bell, Clock, Star, CheckCircle, AlertTriangle, Calendar, ChevronRight, ArrowLeft, MapPin, CreditCard, MessageCircle, Users, Shield, DollarSign, MapPinned, Megaphone } from 'lucide-react';
+import { X, Bell, Clock, Star, CheckCircle, AlertTriangle, Calendar, ChevronRight, ArrowLeft, MapPin, MessageCircle, Users, Shield, DollarSign, MapPinned, Megaphone } from 'lucide-react';
 import { Spinner } from '../components/ui/Spinner';
 import { motion, AnimatePresence } from 'framer-motion';
 import { UserRole, AppView } from '../types';
 import { useAppStore } from '../store';
+import { useBackDismiss } from '../hooks/useBackDismiss';
 import {
   AppNotification,
   fetchNotifications,
   markNotificationRead,
   markAllNotificationsRead,
   subscribeToNotifications,
+  findPendingMatchInvite,
 } from '../services/notificationService';
 import { handleDeepLink } from '../notifications/pushService';
+import { getMatchDetails } from '../services/matchService';
+import { declineMatchListInvite } from '../services/socialService';
+import { showToast } from '../components/common/GlobalToast';
 
 interface NotificationsProps {
   onBack: () => void;
@@ -32,6 +37,9 @@ const ICON_MAP: Record<string, { icon: React.ElementType; color: string }> = {
   match_reminder_1h: { icon: Clock, color: '#f59e0b' },
   match_reminder_24h: { icon: Clock, color: '#f59e0b' },
   nearby_match: { icon: MapPinned, color: '#3b82f6' },
+  // IP-06: ikisi de bugüne kadar match_ prefix'inden Calendar'a düşüyordu.
+  match_completed_evaluate: { icon: Star, color: '#FACC15' },
+  match_invite_declined: { icon: X, color: '#F87171' },
   // Kadro / hizmet
   team_invite: { icon: Users, color: '#8b5cf6' },
   gk_accepted: { icon: Shield, color: '#22c55e' },
@@ -123,6 +131,9 @@ const item = {
 };
 
 const Notifications: React.FC<NotificationsProps> = ({ onBack, role }) => {
+  // App.tsx yalnız isNotificationsOpen iken mount ediyor → open sabit true.
+  // Geri tuşu yalnız bu sheet'i kapatır, arkadaki ekran DEĞİŞMEZ (BULGU-020).
+  useBackDismiss(true, onBack, 'notifications');
   const isGK = role === UserRole.GOALKEEPER;
   const isRef = role === UserRole.REFEREE;
 
@@ -135,6 +146,9 @@ const Notifications: React.FC<NotificationsProps> = ({ onBack, role }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedInvite, setSelectedInvite] = useState<AppNotification | null>(null);
+  // Yönlendirme/davet cevabı sırasında çift dokunuş kilidi.
+  const [routing, setRouting] = useState(false);
+  const [inviteBusy, setInviteBusy] = useState(false);
 
   const unread = notifs.filter((n) => !n.isRead).length;
   const [activeCat, setActiveCat] = useState<'ALL' | NotifCategory>('ALL');
@@ -171,26 +185,43 @@ const Notifications: React.FC<NotificationsProps> = ({ onBack, role }) => {
 
   // ─── Okundu işaretleme + yönlendirme ──────────────────────────────────────
   const routeTo = useCallback(
-    (n: AppNotification) => {
-      if (n.deepLink) {
+    async (n: AppNotification) => {
+      if (routing) return;
+      setRouting(true);
+      try {
         const s = useAppStore.getState();
-        handleDeepLink(n.deepLink, (v) => navigateTo(v as AppView), {
-          setSelectedMatch,
-          setSelectedTeamId: s.setSelectedTeamId,
-          setStudioContext: s.setStudioContext,
-          setSocialTarget: s.setSocialTarget,
-          setSelectedConversationId: s.setSelectedConversationId,
-          setSelectedTeamChatId: s.setSelectedTeamChatId,
-          setTeamInitialTab: s.setTeamInitialTab,
-        });
-        onBack();
-      } else if (n.matchId) {
-        useAppStore.getState().setLobbyMode('DISCOVER');
-        navigateTo('MATCH_JOIN' as AppView);
-        onBack();
+        if (n.deepLink) {
+          const ok = await handleDeepLink(n.deepLink, (v) => navigateTo(v as AppView), {
+            setSelectedMatch,
+            setSelectedTeamId: s.setSelectedTeamId,
+            setStudioContext: s.setStudioContext,
+            setSocialTarget: s.setSocialTarget,
+            setSelectedConversationId: s.setSelectedConversationId,
+            setSelectedTeamChatId: s.setSelectedTeamChatId,
+            setTeamInitialTab: s.setTeamInitialTab,
+            showToast,
+          });
+          if (ok) onBack(); // BULGU-016: başarısızsa sheet AÇIK kalır
+          return;
+        }
+        if (n.matchId) {
+          // BULGU-016: önce maçı yükle, SONRA görünümü değiştir. Aksi hâlde
+          // MATCH_JOIN match=null ile açılır ve çıkışsız boş ekran kalır.
+          const match = await getMatchDetails(n.matchId);
+          if (!match) {
+            showToast('Bu maç artık mevcut değil.', 'error');
+            return;
+          }
+          s.setLobbyMode('DISCOVER');
+          setSelectedMatch(match);
+          navigateTo('MATCH_JOIN' as AppView);
+          onBack();
+        }
+      } finally {
+        setRouting(false);
       }
     },
-    [navigateTo, setSelectedMatch, onBack],
+    [navigateTo, setSelectedMatch, onBack, routing],
   );
 
   const handleCardClick = useCallback(
@@ -209,10 +240,35 @@ const Notifications: React.FC<NotificationsProps> = ({ onBack, role }) => {
         setNotifs((prev) => prev.map((x) => (x.id === n.id ? { ...x, isRead: true } : x)));
         void markNotificationRead(n.id);
       }
-      routeTo(n);
+      void routeTo(n);
     },
     [routeTo],
   );
+
+  // BULGU-070: "Gelemem" sunucuya gerçekten yazılır — davet edene de haber gider.
+  const handleDeclineInvite = useCallback(async () => {
+    const n = selectedInvite;
+    if (!n || inviteBusy) return;
+    setInviteBusy(true);
+    try {
+      let inviteId = n.inviteId;
+      // payload.invite_id taşımayan ESKİ davet satırları için yedek arama.
+      if (!inviteId && n.matchId) inviteId = await findPendingMatchInvite(n.matchId);
+      if (!inviteId) {
+        showToast('Bu davet artık geçerli değil.', 'error');
+        setSelectedInvite(null);
+        return;
+      }
+      await declineMatchListInvite(inviteId);
+      setNotifs((prev) => prev.filter((x) => x.id !== n.id));
+      setSelectedInvite(null);
+      showToast('Kaptana ilettik: gelemiyorsun.', 'success');
+    } catch {
+      showToast('Cevabın gönderilemedi. Bağlantını kontrol edip tekrar dene.', 'error');
+    } finally {
+      setInviteBusy(false);
+    }
+  }, [selectedInvite, inviteBusy]);
 
   const handleMarkAll = useCallback(() => {
     setNotifs((prev) => prev.map((n) => ({ ...n, isRead: true })));
@@ -268,12 +324,12 @@ const Notifications: React.FC<NotificationsProps> = ({ onBack, role }) => {
 
           <div className="flex-1">
             <div className="flex items-center gap-2">
-              <h1 className="text-xl font-black text-white tracking-tight">Bildirimler</h1>
+              <h1 className="text-xl font-extrabold text-white tracking-tight">Bildirimler</h1>
               {unread > 0 && (
                 <motion.span
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
-                  className="w-5 h-5 rounded-full text-[10px] font-black text-black flex items-center justify-center"
+                  className="w-5 h-5 rounded-full text-[0.6875rem] font-extrabold text-black flex items-center justify-center"
                   style={{ background: accentColor }}
                 >
                   {unread}
@@ -286,7 +342,7 @@ const Notifications: React.FC<NotificationsProps> = ({ onBack, role }) => {
             <motion.button
               whileTap={{ scale: 0.95 }}
               onClick={handleMarkAll}
-              className="px-3 py-2 rounded-xl text-[10px] font-black border border-white/10 text-gray-400"
+              className="px-3 py-2 rounded-xl text-[0.6875rem] font-extrabold border border-white/10 text-gray-400"
               style={{ background: 'rgba(255,255,255,0.04)' }}
             >
               Tümünü Oku
@@ -303,7 +359,7 @@ const Notifications: React.FC<NotificationsProps> = ({ onBack, role }) => {
                 <button
                   key={c.key}
                   onClick={() => setActiveCat(c.key)}
-                  className="px-3.5 py-1.5 rounded-full text-[11px] font-black whitespace-nowrap transition-all border"
+                  className="px-3.5 py-1.5 rounded-full text-[0.6875rem] font-extrabold whitespace-nowrap transition-all border"
                   style={{
                     background: active ? accentColor : 'rgba(255,255,255,0.04)',
                     color: active ? '#000' : 'rgba(255,255,255,0.6)',
@@ -322,7 +378,7 @@ const Notifications: React.FC<NotificationsProps> = ({ onBack, role }) => {
           {loading ? (
             <div className="flex flex-col items-center justify-center py-28 text-center">
               <Spinner size={32} color={accentColor} className="mb-4" />
-              <p className="text-sm text-gray-500">Bildirimler yükleniyor…</p>
+              <p className="text-sm text-ink-4">Bildirimler yükleniyor…</p>
             </div>
           ) : error ? (
             <div className="flex flex-col items-center justify-center py-28 text-center">
@@ -332,12 +388,12 @@ const Notifications: React.FC<NotificationsProps> = ({ onBack, role }) => {
               >
                 <AlertTriangle size={32} style={{ color: '#ef4444' }} />
               </div>
-              <h3 className="text-lg font-black text-white mb-1">Bir şeyler ters gitti</h3>
-              <p className="text-sm text-gray-500 mb-5">{error}</p>
+              <h3 className="text-lg font-extrabold text-white mb-1">Bir şeyler ters gitti</h3>
+              <p className="text-sm text-ink-4 mb-5">{error}</p>
               <motion.button
                 whileTap={{ scale: 0.95 }}
                 onClick={load}
-                className="px-5 py-2.5 rounded-xl text-xs font-black text-black"
+                className="px-5 py-2.5 rounded-xl text-xs font-extrabold text-black"
                 style={{ background: accentColor }}
               >
                 Tekrar Dene
@@ -356,13 +412,13 @@ const Notifications: React.FC<NotificationsProps> = ({ onBack, role }) => {
               >
                 <Bell size={32} style={{ color: accentColor }} />
               </div>
-              <h3 className="text-lg font-black text-white mb-1">Henüz bildirimin yok</h3>
-              <p className="text-sm text-gray-500">Yeni bir şey olduğunda burada göreceksin.</p>
+              <h3 className="text-lg font-extrabold text-white mb-1">Henüz bildirimin yok</h3>
+              <p className="text-sm text-ink-4">Yeni bir şey olduğunda burada göreceksin.</p>
             </motion.div>
           ) : visibleNotifs.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-24 text-center">
               <Bell size={28} className="mb-3" style={{ color: accentColor, opacity: 0.5 }} />
-              <p className="text-sm text-gray-500">Bu kategoride bildirim yok.</p>
+              <p className="text-sm text-ink-4">Bu kategoride bildirim yok.</p>
             </div>
           ) : (
             <motion.div variants={container} initial="hidden" animate="show" className="space-y-3">
@@ -407,7 +463,7 @@ const Notifications: React.FC<NotificationsProps> = ({ onBack, role }) => {
                         {/* Content */}
                         <div className="flex-1 min-w-0">
                           <div className="flex items-start justify-between gap-2 mb-1 pr-6">
-                            <h4 className="font-black text-white text-sm leading-snug">{n.title}</h4>
+                            <h4 className="font-extrabold text-white text-sm leading-snug">{n.title}</h4>
                             <div className="flex items-center gap-2 shrink-0 mt-0.5">
                               {isUnread && (
                                 <div
@@ -415,17 +471,17 @@ const Notifications: React.FC<NotificationsProps> = ({ onBack, role }) => {
                                   style={{ background: accentColor, boxShadow: `0 0 8px ${accentColor}` }}
                                 />
                               )}
-                              <span className="text-[10px] text-gray-500 font-medium">{relativeTime(n.createdAt)}</span>
+                              <span className="text-[0.6875rem] text-ink-4 font-medium">{relativeTime(n.createdAt)}</span>
                             </div>
                           </div>
-                          {n.body && <p className="text-[11px] text-gray-400 leading-relaxed">{n.body}</p>}
+                          {n.body && <p className="text-[0.6875rem] text-gray-400 leading-relaxed">{n.body}</p>}
 
                           {isInvite ? (
-                            <div className="mt-3 flex items-center gap-1 text-[11px] font-black uppercase text-[#39FF14] bg-[#39FF14]/10 w-max px-3 py-1.5 rounded-xl border border-[#39FF14]/20">
+                            <div className="mt-3 flex items-center gap-1 text-[0.6875rem] font-extrabold uppercase text-[#39FF14] bg-[#39FF14]/10 w-max px-3 py-1.5 rounded-xl border border-[#39FF14]/20">
                               Daveti İncele <ChevronRight size={14} />
                             </div>
                           ) : (n.deepLink || n.matchId) ? (
-                            <div className="mt-2 flex items-center gap-1 text-[11px] font-black" style={{ color }}>
+                            <div className="mt-2 flex items-center gap-1 text-[0.6875rem] font-extrabold" style={{ color }}>
                               Görüntüle <ChevronRight size={12} />
                             </div>
                           ) : null}
@@ -449,7 +505,9 @@ const Notifications: React.FC<NotificationsProps> = ({ onBack, role }) => {
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-[110] bg-black/90 backdrop-blur-2xl flex flex-col"
           >
-            <div className="flex-1 overflow-y-auto flex flex-col relative pb-32">
+            {/* Alt bar tek satırdan iki satıra çıktı (Geliyorum + Gelemem/Sonra
+                Bakarım) — kaydırma boşluğu buna göre büyütüldü. */}
+            <div className="flex-1 overflow-y-auto flex flex-col relative pb-48">
               <div className="w-full h-64 relative shrink-0">
                 {/* F3d: stok Unsplash hero kaldırıldı — davet gerçek maç görseli
                     taşımıyor; nötr gradient zemin kullanılır. */}
@@ -463,10 +521,10 @@ const Notifications: React.FC<NotificationsProps> = ({ onBack, role }) => {
                 </button>
 
                 <div className="absolute bottom-6 left-6 right-6">
-                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#39FF14]/20 border border-[#39FF14]/30 text-[#39FF14] text-[10px] font-black uppercase tracking-widest mb-3">
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#39FF14]/20 border border-[#39FF14]/30 text-[#39FF14] text-[0.625rem] font-extrabold uppercase tracking-widest mb-3">
                     <CheckCircle size={12} /> Davet Edildin
                   </div>
-                  <h2 className="text-2xl font-black text-white italic tracking-tighter uppercase drop-shadow-lg">
+                  <h2 className="text-2xl font-extrabold text-white italic tracking-tighter uppercase drop-shadow-lg">
                     {selectedInvite.title}
                   </h2>
                   <div className="flex items-center gap-4 mt-2">
@@ -489,29 +547,37 @@ const Notifications: React.FC<NotificationsProps> = ({ onBack, role }) => {
                   </div>
                 )}
 
-                <p className="text-[11px] text-gray-500 text-center px-4 leading-relaxed mt-auto">
-                  Bu daveti açarak ilgili ekrana yönlendirileceksin.
+                <p className="text-[0.8125rem] text-[#8B949E] text-center px-4 leading-relaxed mt-auto">
+                  Geliyorum dersen maç lobisine gidersin. Yerin, ödemeni tamamlayınca kesinleşir.
                 </p>
               </div>
 
               <div className="fixed bottom-0 left-0 right-0 px-6 pt-6 pb-safe bg-gradient-to-t from-[#0A0E14] via-[#0A0E14]/95 to-transparent z-20">
-                <div className="flex gap-3">
+                {/* BULGU-070: üç gerçek aksiyon — "Gelemem" sunucuya yazılır. */}
+                <div className="flex flex-col gap-2.5">
                   <button
-                    onClick={() => setSelectedInvite(null)}
-                    className="w-16 h-[64px] rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white/50 hover:bg-red-500/10 hover:text-red-400 transition-all shrink-0"
+                    onClick={() => { const inv = selectedInvite; setSelectedInvite(null); void routeTo(inv); }}
+                    disabled={inviteBusy}
+                    className="w-full h-14 rounded-2xl bg-[#39FF14] text-[#0A0E14] text-[0.9375rem] font-bold uppercase flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-60"
                   >
-                    <X size={24} />
+                    <CheckCircle size={20} /> Geliyorum
                   </button>
-                  <button
-                    onClick={() => {
-                      const inv = selectedInvite;
-                      setSelectedInvite(null);
-                      routeTo(inv);
-                    }}
-                    className="flex-1 h-[64px] rounded-2xl font-black italic uppercase tracking-tighter transition-all flex items-center justify-center gap-2 bg-[#39FF14] text-black shadow-[0_0_30px_rgba(57,255,20,0.3)] hover:shadow-[0_0_40px_rgba(57,255,20,0.5)]"
-                  >
-                    <CreditCard size={20} /> DAVETİ AÇ
-                  </button>
+                  <div className="flex gap-2.5">
+                    <button
+                      onClick={handleDeclineInvite}
+                      disabled={inviteBusy}
+                      className="flex-1 h-14 rounded-2xl bg-[#F87171]/10 border border-[#F87171]/40 text-[#F87171] text-[0.9375rem] font-bold flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-60"
+                    >
+                      {inviteBusy ? <Spinner size={18} color="#F87171" /> : <><X size={18} /> Gelemem</>}
+                    </button>
+                    <button
+                      onClick={() => setSelectedInvite(null)}
+                      disabled={inviteBusy}
+                      className="flex-1 h-14 rounded-2xl bg-white/5 border border-white/10 text-[#A9B4C0] text-[0.9375rem] font-bold active:scale-[0.98] transition-transform disabled:opacity-60"
+                    >
+                      Sonra Bakarım
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>

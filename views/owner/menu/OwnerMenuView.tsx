@@ -4,7 +4,6 @@ import {
   Bell,
   Building2,
   ChevronRight,
-  Clock,
   Globe,
   HelpCircle,
   LayoutDashboard,
@@ -33,7 +32,6 @@ export interface OwnerMenuViewProps {
   onMatches: () => void;
   onBankAccounts: () => void;
   onWithdrawals: () => void;
-  onPricingPolicy: () => void;
   onCancellationPolicy: () => void;
   onLogout: () => void;
   onSecurity: () => void;
@@ -113,7 +111,6 @@ export const OwnerMenuView: React.FC<OwnerMenuViewProps> = ({
   onMatches,
   onBankAccounts,
   onWithdrawals,
-  onPricingPolicy,
   onCancellationPolicy,
   onLogout,
   onSecurity,
@@ -142,7 +139,7 @@ export const OwnerMenuView: React.FC<OwnerMenuViewProps> = ({
         : 'warning';
 
   return (
-    <div className="p-6 pb-32 pt-safe-6 overflow-y-auto custom-scrollbar animate-in slide-in-from-right-10 duration-500">
+    <div className="p-6 pb-40 pt-safe-6 overflow-y-auto custom-scrollbar animate-in slide-in-from-right-10 duration-500">
       <div className="flex items-center gap-4 mb-8">
         <div className="relative">
           {facilityImage ? (
@@ -158,7 +155,7 @@ export const OwnerMenuView: React.FC<OwnerMenuViewProps> = ({
           )}
         </div>
         <div>
-          <h2 className="text-xl font-black text-white">{facilityName}</h2>
+          <h2 className="text-xl font-extrabold text-white">{facilityName}</h2>
           <p className="text-xs text-gray-400 font-medium">
             {facilityDistrict || 'Konum belirtilmedi'}
           </p>
@@ -206,22 +203,20 @@ export const OwnerMenuView: React.FC<OwnerMenuViewProps> = ({
               badge={<StatusBadge label={verificationLabel} tone={verificationTone} />}
               onClick={onEditProfile}
             />
+            {/* Fiyat/süre politikası artık BURADA: Sahalarım → saha → "Aktif
+                Saatler ve Ücretler". Tarifesi olmayan saha yayına alınamadığı
+                için rozet bunu menüde de dürüstçe söyler. */}
             <MenuRow
               icon={<LayoutDashboard size={18} />}
               label="Sahalarım"
-              badge={<StatusBadge label={`${stats.courtCount} saha`} tone="info" />}
-              onClick={onPitches}
-            />
-            <MenuRow
-              icon={<Clock size={18} />}
-              label="Çalışma Saatleri"
               badge={
-                <StatusBadge
-                  label={stats.isFacilityOpen ? 'Açık' : 'Kapalı'}
-                  tone={stats.isFacilityOpen ? 'success' : 'danger'}
-                />
+                stats.courtsWithoutTariff > 0 ? (
+                  <StatusBadge label={`${stats.courtsWithoutTariff} saha tarifesiz`} tone="danger" />
+                ) : (
+                  <StatusBadge label={`${stats.courtCount} saha`} tone="info" />
+                )
               }
-              onClick={onWorkingHours}
+              onClick={onPitches}
             />
             <MenuRow
               icon={<Settings size={18} />}
@@ -280,12 +275,10 @@ export const OwnerMenuView: React.FC<OwnerMenuViewProps> = ({
                 onClick={onWithdrawals}
               />
             )}
-            <MenuRow
-              icon={<Tag size={18} />}
-              label="Fiyatlandırma Politikası"
-              badge={<StatusBadge label={`${stats.tariffCount} tarife`} tone="info" />}
-              onClick={onPricingPolicy}
-            />
+            {/* GENEL FİYATLANDIRMA KALDIRILDI: tesis geneli tek politika yerine
+                her saha kendi fiyat/süre politikasını girer (E1a/E5a/E12a).
+                Giriş noktası: Sahalarım → saha → "Aktif Saatler ve Ücretler".
+                Çalışma saatleri ayrı ekran değildir; o tarifelerden türetilir. */}
             <MenuRow
               icon={<RotateCcw size={18} />}
               label="İptal / İade Politikası"

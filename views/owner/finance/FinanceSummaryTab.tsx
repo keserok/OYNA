@@ -34,7 +34,7 @@ export const FinanceSummaryTab: React.FC<Props> = ({ summary, onOpenCalendarWeek
 
       {/* Ödeme yöntemi kırılımı — tıkla → o yöntemin ödemeleri */}
       <div className="bg-[#161B22] border border-white/5 rounded-[32px] p-6">
-        <h3 className="text-xs font-black text-gray-400 uppercase mb-4 flex items-center gap-2">
+        <h3 className="text-xs font-extrabold text-gray-400 uppercase mb-4 flex items-center gap-2">
           <Wallet size={16} className="text-blue-400" /> Ödeme Yöntemi
         </h3>
         <BreakdownList
@@ -47,7 +47,7 @@ export const FinanceSummaryTab: React.FC<Props> = ({ summary, onOpenCalendarWeek
         />
         {activeMethod && (
           <div className="mt-4 pt-4 border-t border-white/5 space-y-2 animate-in fade-in duration-300">
-            <p className="text-[10px] font-black text-gray-500 uppercase">{methodLabel(activeMethod)} işlemleri</p>
+            <p className="text-[10px] font-extrabold text-gray-500 uppercase">{methodLabel(activeMethod)} işlemleri</p>
             {methodPayments.length === 0 ? (
               <p className="text-xs text-gray-600">
                 {activeMethod === 'UNSPECIFIED'
@@ -66,7 +66,7 @@ export const FinanceSummaryTab: React.FC<Props> = ({ summary, onOpenCalendarWeek
 
       {/* Gelir kaynağı (tutar bazlı — D4) */}
       <div className="bg-[#161B22] border border-white/5 rounded-[32px] p-6">
-        <h3 className="text-xs font-black text-gray-400 uppercase mb-4 flex items-center gap-2">
+        <h3 className="text-xs font-extrabold text-gray-400 uppercase mb-4 flex items-center gap-2">
           <Users size={16} className="text-emerald-400" /> Gelir Kaynağı
         </h3>
         <BreakdownList rows={sourceRows} total={income.collected_total} color="#10B981" emptyText="Bu ay tahsilat kaydı yok." />
@@ -74,7 +74,7 @@ export const FinanceSummaryTab: React.FC<Props> = ({ summary, onOpenCalendarWeek
 
       {/* Gider dağılımı */}
       <div className="bg-[#161B22] border border-white/5 rounded-[32px] p-6">
-        <h3 className="text-xs font-black text-gray-400 uppercase mb-4 flex items-center gap-2">
+        <h3 className="text-xs font-extrabold text-gray-400 uppercase mb-4 flex items-center gap-2">
           <PieChart size={16} className="text-fuchsia-400" /> Gider Dağılımı
         </h3>
         <BreakdownList rows={catRows} total={expenses.total} color="#D946EF" emptyText="Bu ay gider kaydı yok." />
@@ -85,7 +85,7 @@ export const FinanceSummaryTab: React.FC<Props> = ({ summary, onOpenCalendarWeek
         <div className="bg-amber-500/10 border border-amber-500/25 rounded-2xl p-4 flex items-start gap-3">
           <AlertTriangle size={16} className="text-amber-400 shrink-0 mt-0.5" />
           <div>
-            <p className="text-xs font-black text-amber-300">{income.mismatch_count} rezervasyonda tahsilat–ödeme kaydı uyuşmuyor</p>
+            <p className="text-xs font-extrabold text-amber-300">{income.mismatch_count} rezervasyonda tahsilat–ödeme kaydı uyuşmuyor</p>
             <p className="text-[11px] text-amber-200/70 mt-1 leading-relaxed">
               Bu rezervasyonların "ödendi" tutarı, girilen ödeme kayıtlarının toplamıyla eşleşmiyor.
               Yöntemi belirtilmemiş tahsilatlar "Ödeme Yöntemi"nde ayrı gösterilir.

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ArrowLeft, Check, Plus, Shield, Wifi } from 'lucide-react';
 import { detectCardBrand, pickCardGradient, SavedCard, listSavedCards } from '../../services/walletService';
-import { registerCardInApp } from '../../services/paymentService';
+import { registerCardInApp, stripServerErrorPrefix } from '../../services/paymentService';
 import CardBrandMark, { brandGradient, normalizeBrand } from './CardBrandMark';
 
 /**
@@ -115,7 +115,9 @@ const AddCardScreen: React.FC<AddCardScreenProps> = ({ onBack, onSaved, collectM
       onSaved?.(created);
     } catch (e) {
       const raw = e instanceof Error ? e.message : 'Kart kaydedilemedi.';
-      setError(raw.replace(/^[A-Z_]+:\s*/, '') || 'Kart kaydedilemedi.');
+      // Ham metin destek için console'da kalır; kullanıcı sağlayıcı adını görmez.
+      console.warn('[card] ham sunucu hatası:', raw);
+      setError(stripServerErrorPrefix(raw) || 'Kart kaydedilemedi.');
     } finally {
       setBusy(false);
     }
@@ -129,8 +131,8 @@ const AddCardScreen: React.FC<AddCardScreenProps> = ({ onBack, onSaved, collectM
           <ArrowLeft size={20} />
         </button>
         <div>
-          <h1 className="text-[17px] font-black text-white uppercase">Yeni Kart Ekle</h1>
-          <p className="text-[11px] text-gray-500 font-semibold">Kart bilgilerini gir</p>
+          <h1 className="text-[1.0625rem] font-extrabold text-white uppercase">Yeni Kart Ekle</h1>
+          <p className="text-[0.6875rem] text-ink-4 font-semibold">Kart bilgilerini gir</p>
         </div>
       </header>
 
@@ -157,17 +159,17 @@ const AddCardScreen: React.FC<AddCardScreenProps> = ({ onBack, onSaved, collectM
             </div>
           </div>
           <div className="relative">
-            <p className="text-[20px] font-bold tracking-[0.14em] text-white font-numeric drop-shadow-[0_1px_2px_rgba(0,0,0,0.35)]">
+            <p className="text-[1.25rem] font-bold tracking-[0.14em] text-white font-numeric drop-shadow-[0_1px_2px_rgba(0,0,0,0.35)]">
               {num || '•••• •••• •••• ••••'}
             </p>
             <div className="flex justify-between items-end mt-3.5 gap-3">
               <div className="min-w-0">
-                <span className="block text-[8px] text-white/50 font-black uppercase tracking-[0.15em]">Kart Sahibi</span>
-                <span className="block text-[12px] text-white font-semibold font-numeric truncate uppercase">{holder || 'AD SOYAD'}</span>
+                <span className="block text-[0.625rem] text-white/50 font-extrabold uppercase tracking-[0.15em]">Kart Sahibi</span>
+                <span className="block text-[0.75rem] text-white font-semibold font-numeric truncate uppercase">{holder || 'AD SOYAD'}</span>
               </div>
               <div className="text-right shrink-0">
-                <span className="block text-[8px] text-white/50 font-black uppercase tracking-[0.15em]">Son Kul.</span>
-                <span className="block text-[12px] text-white font-semibold font-numeric">{exp || 'AA/YY'}</span>
+                <span className="block text-[0.625rem] text-white/50 font-extrabold uppercase tracking-[0.15em]">Son Kul.</span>
+                <span className="block text-[0.75rem] text-white font-semibold font-numeric">{exp || 'AA/YY'}</span>
               </div>
             </div>
           </div>
@@ -176,32 +178,32 @@ const AddCardScreen: React.FC<AddCardScreenProps> = ({ onBack, onSaved, collectM
         {/* Form */}
         <div className="space-y-4">
           <div>
-            <label className="text-[10px] text-gray-500 font-extrabold uppercase tracking-wider block mb-2">Kart Numarası</label>
+            <label className="text-[0.625rem] text-ink-4 font-extrabold uppercase tracking-wider block mb-2">Kart Numarası</label>
             <input
               value={num}
               onChange={e => setNum(e.target.value.replace(/\D/g, '').slice(0, 16).replace(/(.{4})/g, '$1 ').trim())}
               placeholder="1234 5678 9012 3456"
               inputMode="numeric"
               autoComplete="cc-number"
-              className="w-full bg-[#161B22] border border-white/8 rounded-xl px-4 py-3.5 text-white font-bold tracking-[0.08em] font-numeric text-[15px] outline-none focus:border-[#39FF14]/40 transition-colors placeholder:text-gray-600"
+              className="w-full bg-[#161B22] border border-white/8 rounded-xl px-4 py-3.5 text-white font-bold tracking-[0.08em] font-numeric text-[0.9375rem] outline-none focus:border-[#39FF14]/40 transition-colors placeholder:text-ink-4"
             />
             {clean.length >= 15 && !numberOk && (
               <p className="text-xs text-red-400 font-bold mt-1.5">Kart numarası geçersiz görünüyor.</p>
             )}
           </div>
           <div>
-            <label className="text-[10px] text-gray-500 font-extrabold uppercase tracking-wider block mb-2">Kart Sahibi</label>
+            <label className="text-[0.625rem] text-ink-4 font-extrabold uppercase tracking-wider block mb-2">Kart Sahibi</label>
             <input
               value={holder}
               onChange={e => setHolder(e.target.value.toLocaleUpperCase('tr-TR'))}
               placeholder="AD SOYAD"
               autoComplete="cc-name"
-              className="w-full bg-[#161B22] border border-white/8 rounded-xl px-4 py-3.5 text-white font-bold text-[15px] outline-none focus:border-[#39FF14]/40 transition-colors placeholder:text-gray-600"
+              className="w-full bg-[#161B22] border border-white/8 rounded-xl px-4 py-3.5 text-white font-bold text-[0.9375rem] outline-none focus:border-[#39FF14]/40 transition-colors placeholder:text-ink-4"
             />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-[10px] text-gray-500 font-extrabold uppercase tracking-wider block mb-2">Son Kullanma</label>
+              <label className="text-[0.625rem] text-ink-4 font-extrabold uppercase tracking-wider block mb-2">Son Kullanma</label>
               <input
                 value={exp}
                 onChange={e => {
@@ -211,11 +213,11 @@ const AddCardScreen: React.FC<AddCardScreenProps> = ({ onBack, onSaved, collectM
                 placeholder="AA/YY"
                 inputMode="numeric"
                 autoComplete="cc-exp"
-                className="w-full bg-[#161B22] border border-white/8 rounded-xl px-4 py-3.5 text-white font-bold font-numeric text-[15px] outline-none focus:border-[#39FF14]/40 transition-colors placeholder:text-gray-600"
+                className="w-full bg-[#161B22] border border-white/8 rounded-xl px-4 py-3.5 text-white font-bold font-numeric text-[0.9375rem] outline-none focus:border-[#39FF14]/40 transition-colors placeholder:text-ink-4"
               />
             </div>
             <div>
-              <label className="text-[10px] text-gray-500 font-extrabold uppercase tracking-wider block mb-2">CVV</label>
+              <label className="text-[0.625rem] text-ink-4 font-extrabold uppercase tracking-wider block mb-2">CVV</label>
               <input
                 value={cvv}
                 onChange={e => setCvv(e.target.value.replace(/\D/g, '').slice(0, 4))}
@@ -223,7 +225,7 @@ const AddCardScreen: React.FC<AddCardScreenProps> = ({ onBack, onSaved, collectM
                 inputMode="numeric"
                 type="password"
                 autoComplete="cc-csc"
-                className="w-full bg-[#161B22] border border-white/8 rounded-xl px-4 py-3.5 text-white font-bold font-numeric text-[15px] outline-none focus:border-[#39FF14]/40 transition-colors placeholder:text-gray-600"
+                className="w-full bg-[#161B22] border border-white/8 rounded-xl px-4 py-3.5 text-white font-bold font-numeric text-[0.9375rem] outline-none focus:border-[#39FF14]/40 transition-colors placeholder:text-ink-4"
               />
             </div>
           </div>
@@ -243,7 +245,7 @@ const AddCardScreen: React.FC<AddCardScreenProps> = ({ onBack, onSaved, collectM
 
         <div className="flex items-center gap-2 px-0.5">
           <Shield size={14} className="text-[#39FF14]" />
-          <p className="text-[11px] text-gray-500">
+          <p className="text-[0.6875rem] text-ink-4">
             {collectMode
               ? 'Kart bilgilerin şifreli iletilir; banka doğrulaması (3D Secure) ile tahsil edilir.'
               : 'Kart güvenli ödeme altyapısında saklanır; OYNA yalnız son 4 haneyi görür.'}
@@ -261,8 +263,8 @@ const AddCardScreen: React.FC<AddCardScreenProps> = ({ onBack, onSaved, collectM
         <button
           disabled={!valid || busy}
           onClick={handleSubmit}
-          className={`w-full py-4 font-black text-base rounded-2xl flex items-center justify-center gap-2 transition-all active:scale-[0.98] ${
-            valid && !busy ? 'bg-[#39FF14] text-[#0A0E14]' : 'bg-gray-800 text-gray-500'
+          className={`w-full py-4 font-extrabold text-base rounded-2xl flex items-center justify-center gap-2 transition-all active:scale-[0.98] ${
+            valid && !busy ? 'bg-[#39FF14] text-[#0A0E14]' : 'bg-gray-800 text-ink-4'
           }`}
         >
           <Plus size={18} />

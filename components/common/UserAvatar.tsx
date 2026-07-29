@@ -39,7 +39,7 @@ export const UserAvatar: React.FC<UserAvatarProps> = ({
   return (
     <div
       aria-label={name || 'Profil'}
-      className={`flex items-center justify-center font-black italic text-primary bg-[#0d1712] ${textClassName} ${className}`}
+      className={`flex items-center justify-center font-extrabold italic text-primary bg-[#0d1712] ${textClassName} ${className}`}
     >
       {initialsOf(name || '')}
     </div>

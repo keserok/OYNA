@@ -215,7 +215,7 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
       <div className="min-h-screen bg-[#060A12] text-white flex flex-col items-center justify-center px-6 text-center">
         <div className="w-12 h-12 rounded-full border-2 border-white/10 border-t-[#22c55e] animate-spin mb-4" />
         <p className="text-sm text-gray-400 font-bold">Profilin yükleniyor…</p>
-        <button onClick={onBack} className="mt-6 h-11 px-5 rounded-2xl bg-white/5 border border-white/10 text-sm font-black text-white/80 active:scale-95">
+        <button onClick={onBack} className="mt-6 h-11 px-5 rounded-2xl bg-white/5 border border-white/10 text-sm font-extrabold text-white/80 active:scale-95">
           Geri Dön
         </button>
       </div>
@@ -238,13 +238,13 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
         <button onClick={onBack} className="p-2.5 rounded-2xl bg-white/5 border border-white/10">
           <ArrowLeft size={20} />
         </button>
-        <h1 className="text-sm font-black uppercase tracking-widest" style={{ color: accentColor }}>
+        <h1 className="text-sm font-extrabold uppercase tracking-widest" style={{ color: accentColor }}>
           {isRef ? 'HAKEM' : 'KALECİ'} PROFİLİ
         </h1>
         <motion.button
           whileTap={{ scale: 0.92 }}
           onClick={handleSave}
-          className="px-4 py-2 rounded-2xl font-black text-xs uppercase tracking-wider text-black flex items-center gap-1.5"
+          className="px-4 py-2 rounded-2xl font-extrabold text-xs uppercase tracking-wider text-black flex items-center gap-1.5"
           style={{ background: saving ? '#22c55e' : accentColor, minWidth: 72 }}
           disabled={saving}
         >
@@ -258,7 +258,7 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
 
         {saveError && (
           <div className="p-3 rounded-2xl bg-red-500/10 border border-red-500/30">
-            <p className="text-[11px] font-bold text-red-400">{saveError}</p>
+            <p className="text-[0.6875rem] font-bold text-red-400">{saveError}</p>
           </div>
         )}
 
@@ -302,14 +302,14 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
                         alt="profile"
                       />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center text-3xl font-black text-white/80" style={{ background: accentBg }}>
+                      <div className="w-full h-full flex items-center justify-center text-3xl font-extrabold text-white/80" style={{ background: accentBg }}>
                         {(displayName || '?').trim().charAt(0).toLocaleUpperCase('tr-TR')}
                       </div>
                     )}
                   </div>
                   <button
                     onClick={() => setShowPhotoPicker(true)}
-                    className="absolute -bottom-2 -right-2 w-8 h-8 rounded-full flex items-center justify-center text-black font-black shadow-lg"
+                    className="absolute -bottom-2 -right-2 w-8 h-8 rounded-full flex items-center justify-center text-black font-extrabold shadow-lg"
                     style={{ background: accentColor }}
                   >
                     <Camera size={14} />
@@ -324,7 +324,7 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
                         autoFocus
                         value={tempName}
                         onChange={e => setTempName(e.target.value)}
-                        className="bg-white/10 border border-white/20 rounded-lg px-3 py-1.5 text-white font-black text-lg w-full outline-none"
+                        className="bg-white/10 border border-white/20 rounded-lg px-3 py-1.5 text-white font-extrabold text-lg w-full outline-none"
                       />
                       <button
                         onClick={() => { setDisplayName(tempName); setEditingName(false); }}
@@ -336,8 +336,8 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
                     </div>
                   ) : (
                     <div className="flex items-center gap-2">
-                      <h2 className="text-2xl font-black text-white tracking-tight">{displayName}</h2>
-                      <button onClick={() => setEditingName(true)} className="text-gray-500 hover:text-white">
+                      <h2 className="text-2xl font-extrabold text-white tracking-tight">{displayName}</h2>
+                      <button onClick={() => setEditingName(true)} className="text-ink-4 hover:text-white">
                         <Edit3 size={14} />
                       </button>
                     </div>
@@ -347,13 +347,13 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
                         herkese "ELİT KALECİ" demek dürüst değil (KS0). */}
                     {userProfile?.isElite && (
                       <span
-                        className="text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider text-black"
+                        className="text-[0.625rem] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider text-black"
                         style={{ background: accentColor }}
                       >
                         {isRef ? 'FIFA LİSANSLI' : 'ELİT KALECİ'}
                       </span>
                     )}
-                    <span className="text-[10px] text-gray-400 font-bold flex items-center gap-1">
+                    <span className="text-[0.6875rem] text-gray-400 font-bold flex items-center gap-1">
                       <Star size={9} className="text-yellow-400" fill="currentColor" /> {ratingDisplay}
                     </span>
                   </div>
@@ -369,8 +369,8 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
                     style={{ background: accentBg }}
                   >
                     <span style={{ color: accentColor }}>{stat.icon}</span>
-                    <span className="text-base font-black text-white">{stat.value}</span>
-                    <span className="text-[8px] text-gray-400 font-bold uppercase tracking-wider text-center leading-tight">{stat.label}</span>
+                    <span className="text-base font-extrabold text-white">{stat.value}</span>
+                    <span className="text-[0.625rem] text-gray-400 font-bold uppercase tracking-wider text-center leading-tight">{stat.label}</span>
                   </div>
                 ))}
               </div>
@@ -386,10 +386,10 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
           className="rounded-[24px] p-5 border border-white/8 bg-[#0d1420]"
         >
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-[10px] font-black uppercase tracking-widest" style={{ color: accentColor }}>
+            <h3 className="text-[0.625rem] font-extrabold uppercase tracking-widest" style={{ color: accentColor }}>
               Hakkımda
             </h3>
-            <button onClick={() => { setTempBio(bio); setEditingBio(true); }} className="text-gray-500 hover:text-white p-1">
+            <button onClick={() => { setTempBio(bio); setEditingBio(true); }} className="text-ink-4 hover:text-white p-1">
               <Edit3 size={14} />
             </button>
           </div>
@@ -406,13 +406,13 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
               <div className="flex gap-2">
                 <button
                   onClick={() => setEditingBio(false)}
-                  className="flex-1 py-2.5 rounded-xl border border-white/10 text-gray-400 text-xs font-black"
+                  className="flex-1 py-2.5 rounded-xl border border-white/10 text-gray-400 text-xs font-extrabold"
                 >
                   İPTAL
                 </button>
                 <button
                   onClick={() => { setBio(tempBio); setEditingBio(false); }}
-                  className="flex-1 py-2.5 rounded-xl text-black text-xs font-black"
+                  className="flex-1 py-2.5 rounded-xl text-black text-xs font-extrabold"
                   style={{ background: accentColor }}
                 >
                   {/* KD-7: bu buton yalnız düzenlemeyi onaylar; DB'ye yazan üstteki
@@ -435,18 +435,18 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
         >
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-[10px] font-black uppercase tracking-widest mb-1" style={{ color: accentColor }}>
+              <p className="text-[0.625rem] font-extrabold uppercase tracking-widest mb-1" style={{ color: accentColor }}>
                 Maç Başı Standart Ücret
               </p>
               {editingFee ? (
                 <div className="flex items-center gap-2">
-                  <span className="text-3xl font-black" style={{ color: accentColor }}>₺</span>
+                  <span className="text-3xl font-extrabold" style={{ color: accentColor }}>₺</span>
                   <input
                     autoFocus
                     type="number"
                     value={fee}
                     onChange={e => setFee(Number(e.target.value))}
-                    className="bg-transparent text-4xl font-black text-white w-28 outline-none border-b-2 border-white/20 focus:border-white/60 transition-colors"
+                    className="bg-transparent text-4xl font-extrabold text-white w-28 outline-none border-b-2 border-white/20 focus:border-white/60 transition-colors"
                   />
                   <button
                     onClick={() => setEditingFee(false)}
@@ -458,8 +458,8 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
                 </div>
               ) : (
                 <div className="flex items-center gap-2">
-                  <span className="text-4xl font-black text-white">{fee}₺</span>
-                  <button onClick={() => setEditingFee(true)} className="text-gray-500 hover:text-white p-1">
+                  <span className="text-4xl font-extrabold text-white">{fee}₺</span>
+                  <button onClick={() => setEditingFee(true)} className="text-ink-4 hover:text-white p-1">
                     <Edit3 size={14} />
                   </button>
                 </div>
@@ -470,7 +470,7 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
                 <button
                   key={v}
                   onClick={() => setFee(v)}
-                  className="px-3 py-1 rounded-lg text-xs font-black transition-all"
+                  className="px-3 py-1 rounded-lg text-xs font-extrabold transition-all"
                   style={{
                     background: fee === v ? accentColor : 'rgba(255,255,255,0.05)',
                     color: fee === v ? '#000' : '#9ca3af',
@@ -491,7 +491,7 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
           transition={{ delay: 0.17 }}
           className="rounded-[24px] p-5 border border-white/8 bg-[#0d1420]"
         >
-          <h3 className="text-[10px] font-black uppercase tracking-widest mb-3" style={{ color: accentColor }}>
+          <h3 className="text-[0.625rem] font-extrabold uppercase tracking-widest mb-3" style={{ color: accentColor }}>
             {isRef ? 'Yönetim Tarzı' : 'Oyun Tarzı'}
           </h3>
           <div className="flex flex-wrap gap-2">
@@ -500,7 +500,7 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
                 key={style}
                 whileTap={{ scale: 0.94 }}
                 onClick={() => setSelectedStyle(style)}
-                className="px-4 py-2 rounded-2xl text-xs font-black transition-all border"
+                className="px-4 py-2 rounded-2xl text-xs font-extrabold transition-all border"
                 style={{
                   background: selectedStyle === style ? accentColor : 'rgba(255,255,255,0.04)',
                   color: selectedStyle === style ? '#000' : '#9ca3af',
@@ -524,11 +524,11 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <MapPin size={14} style={{ color: accentColor }} />
-              <h3 className="text-[10px] font-black uppercase tracking-widest" style={{ color: accentColor }}>
+              <h3 className="text-[0.625rem] font-extrabold uppercase tracking-widest" style={{ color: accentColor }}>
                 Çalışma Alanı (Yarıçap)
               </h3>
             </div>
-            <span className="text-xs font-black text-white">{radiusKm} km</span>
+            <span className="text-xs font-extrabold text-white">{radiusKm} km</span>
           </div>
 
           <div className="mb-4">
@@ -540,7 +540,7 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
               className="w-full h-1 bg-white/20 rounded-full appearance-none outline-none"
               style={{ accentColor: accentColor }}
             />
-            <div className="flex justify-between text-[9px] text-gray-500 font-bold mt-1">
+            <div className="flex justify-between text-[0.6875rem] text-ink-4 font-bold mt-1">
               <span>5 km</span>
               <span>50 km</span>
             </div>
@@ -562,13 +562,13 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
             <div className="absolute inset-0 z-[400] flex items-center justify-center pointer-events-none">
                 <div className="w-4 h-4 rounded-full border-2 border-white bg-transparent pointer-events-none opacity-50" />
             </div>
-            <p className="absolute bottom-2 left-2 text-[10px] bg-black/60 px-2 py-1 rounded-md text-gray-300 z-[400] font-bold">
+            <p className="absolute bottom-2 left-2 text-[0.6875rem] bg-black/60 px-2 py-1 rounded-md text-gray-300 z-[400] font-bold">
               Haritayı hareket ettirerek merkezi belirle
             </p>
           </div>
           
           <button 
-            className="w-full mt-4 py-3 rounded-xl font-black text-sm text-black transition-colors"
+            className="w-full mt-4 py-3 rounded-xl font-extrabold text-sm text-black transition-colors"
             style={{ background: accentColor }}
             onClick={async () => {
                 if (userProfile?.id) {
@@ -617,8 +617,8 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
 
               <div className="flex justify-between items-center mb-5">
                 <div>
-                  <h3 className="font-black text-white text-lg">Profil Fotoğrafı</h3>
-                  <p className="text-[10px] text-gray-500 mt-0.5">Bir fotoğraf seç veya cihazından yükle</p>
+                  <h3 className="font-extrabold text-white text-lg">Profil Fotoğrafı</h3>
+                  <p className="text-[0.6875rem] text-ink-4 mt-0.5">Bir fotoğraf seç veya cihazından yükle</p>
                 </div>
                 <button onClick={() => setShowPhotoPicker(false)} className="p-2 bg-white/5 rounded-xl text-gray-400">
                   <X size={18} />
@@ -630,7 +630,7 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
                 whileTap={{ scale: 0.97 }}
                 onClick={() => fileInputRef.current?.click()}
                 disabled={photoUploading}
-                className="w-full mb-4 py-4 rounded-2xl border-2 border-dashed flex items-center justify-center gap-3 font-black text-sm transition-all disabled:opacity-60"
+                className="w-full mb-4 py-4 rounded-2xl border-2 border-dashed flex items-center justify-center gap-3 font-extrabold text-sm transition-all disabled:opacity-60"
                 style={{ borderColor: accentColor + '60', background: accentBg, color: accentColor }}
               >
                 <Upload size={20} />
@@ -643,7 +643,7 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
               {customPhoto && (
                 <button
                   onClick={() => { setCustomPhoto(null); setShowPhotoPicker(false); }}
-                  className="w-full py-3 rounded-2xl border border-red-500/30 text-red-400 font-black text-xs flex items-center justify-center gap-2"
+                  className="w-full py-3 rounded-2xl border border-red-500/30 text-red-400 font-extrabold text-xs flex items-center justify-center gap-2"
                 >
                   <Trash2 size={14} /> Yüklenen Fotoğrafı Kaldır
                 </button>

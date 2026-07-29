@@ -18,6 +18,22 @@ export default defineConfig({
   },
   test: {
     globals: true,
+    // KAPSAM — yalnızca birim testleri.
+    // Playwright spec'leri (tests/e2e/**, tests/visual/**, tests/*.spec.ts)
+    // vitest tarafından TOPLANMAMALI: @playwright/test'in `test.describe()`
+    // çağrısı vitest runner'ı içinde "did not expect test.describe() to be
+    // called here" hatasıyla patlar. Onlar `playwright test` ile çalışır.
+    include: ['tests/unit/**/*.{test,spec}.{ts,tsx}'],
+    exclude: [
+      '**/node_modules/**',
+      '**/dist/**',
+      'tests/e2e/**',
+      'tests/visual/**',
+      'tests/*.spec.ts',
+      'admin-panel/**',
+      'android/**',
+      'ios/**',
+    ],
     // Tüm testler jsdom ortamında çalışır
     // (bileşen testleri için gereklidir; saf birim testleri de uyumludur)
     environment: 'jsdom',

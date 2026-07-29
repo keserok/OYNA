@@ -155,7 +155,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ subRoute, onRefresh 
                                       success(appSettings.registrationOpen ? 'Kayıt kapatıldı' : 'Kayıt açıldı')
                                     );
                                 }}
-                                className={`px-4 py-2 rounded-xl text-xs font-black ${appSettings.registrationOpen !== false ? 'bg-green-500/20 text-green-400' : 'bg-white/10 text-gray-400'}`}
+                                className={`px-4 py-2 rounded-xl text-xs font-extrabold ${appSettings.registrationOpen !== false ? 'bg-green-500/20 text-green-400' : 'bg-white/10 text-gray-400'}`}
                             >
                                 {appSettings.registrationOpen !== false ? 'AÇIK' : 'KAPALI'}
                             </button>
@@ -204,7 +204,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ subRoute, onRefresh 
                                           success(appSettings.showAnnouncementBanner ? 'Duyuru bandı gizlendi' : 'Duyuru bandı açıldı')
                                         );
                                     }}
-                                    className={`px-4 py-2 rounded-xl text-xs font-black ${appSettings.showAnnouncementBanner !== false ? 'bg-green-500/20 text-green-400' : 'bg-white/10 text-gray-400'}`}
+                                    className={`px-4 py-2 rounded-xl text-xs font-extrabold ${appSettings.showAnnouncementBanner !== false ? 'bg-green-500/20 text-green-400' : 'bg-white/10 text-gray-400'}`}
                                 >
                                     {appSettings.showAnnouncementBanner !== false ? 'GÖSTERİLİYOR' : 'GİZLİ'}
                                 </button>
@@ -225,7 +225,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ subRoute, onRefresh 
                             </div>
                             <button
                                 onClick={requestMaintenanceToggle}
-                                className={`px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all shrink-0 ${
+                                className={`px-6 py-2.5 rounded-xl text-xs font-extrabold uppercase tracking-wider transition-all shrink-0 ${
                                     appSettings.maintenanceMode
                                         ? 'bg-red-500 text-white shadow-[0_0_15px_rgba(239,68,68,0.3)]'
                                         : 'bg-white/10 text-gray-400 hover:bg-white/20'

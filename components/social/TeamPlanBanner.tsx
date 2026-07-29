@@ -36,18 +36,18 @@ const TeamPlanBanner: React.FC<{ matchId: string }> = ({ matchId }) => {
     >
       <ClipboardList size={18} className="text-[#39FF14] shrink-0" />
       <div className="flex-1 min-w-0">
-        <div className="text-[10px] font-black uppercase tracking-widest text-[#39FF14]/80">
+        <div className="text-[0.625rem] font-extrabold uppercase tracking-widest text-[#39FF14]/80">
           Takım Planı Hazır
         </div>
         <div className="text-sm font-bold truncate text-white">
           {plan.name || 'Taktik'}
-          <span className="text-white/40 font-semibold">
+          <span className="text-ink-4 font-semibold">
             {plan.formation ? ` · ${plan.formation}` : ''}
             {plan.size ? ` · ${formatLabel(plan.size)}` : ''}
           </span>
         </div>
       </div>
-      <ChevronRight size={16} className="text-white/40 shrink-0" />
+      <ChevronRight size={16} className="text-ink-4 shrink-0" />
     </button>
   );
 };

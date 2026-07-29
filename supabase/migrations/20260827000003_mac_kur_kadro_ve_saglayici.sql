@@ -13,6 +13,11 @@
 -- ============================================================================
 
 -- ── 1 · Davet: arkadaş VEYA takım arkadaşı ─────────────────────────────────
+-- [2026-07-29 sıfırdan replay guard'ı] Bu tanım `jsonb` döndürüyor, önceki
+-- (20260827000001) `integer` bırakıyor. CREATE OR REPLACE dönüş tipini
+-- değiştiremez. Canlıda etkisiz; yalnız sıfırdan replay'i onarır.
+DROP FUNCTION IF EXISTS public.invite_friends_to_match(uuid, uuid[]);
+
 CREATE OR REPLACE FUNCTION public.invite_friends_to_match(p_match_id uuid, p_friend_ids uuid[])
 RETURNS jsonb
 LANGUAGE plpgsql SECURITY DEFINER

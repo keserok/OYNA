@@ -174,7 +174,7 @@ export const SupportTicketsPage: React.FC = () => {
                 key={c.value}
                 type="button"
                 onClick={() => setChannel(c.value)}
-                className={`h-8 px-4 rounded-lg text-[11px] font-black uppercase tracking-wider transition-colors ${
+                className={`h-8 px-4 rounded-lg text-[11px] font-extrabold uppercase tracking-wider transition-colors ${
                   channel === c.value ? 'bg-[#39FF14]/10 text-[#39FF14]' : 'text-gray-500 hover:text-white'
                 }`}
               >
@@ -186,7 +186,7 @@ export const SupportTicketsPage: React.FC = () => {
             <button
               type="button"
               onClick={() => setStatusFilter(null)}
-              className={`h-8 px-3 rounded-lg text-[10px] font-black uppercase tracking-wider border transition-colors ${
+              className={`h-8 px-3 rounded-lg text-[10px] font-extrabold uppercase tracking-wider border transition-colors ${
                 statusFilter === null ? 'bg-white/10 text-white border-white/20' : 'text-gray-500 border-white/10 hover:text-white'
               }`}
             >
@@ -197,7 +197,7 @@ export const SupportTicketsPage: React.FC = () => {
                 key={s}
                 type="button"
                 onClick={() => setStatusFilter(s)}
-                className={`h-8 px-3 rounded-lg text-[10px] font-black uppercase tracking-wider border transition-colors ${
+                className={`h-8 px-3 rounded-lg text-[10px] font-extrabold uppercase tracking-wider border transition-colors ${
                   statusFilter === s ? 'bg-white/10 text-white border-white/20' : 'text-gray-500 border-white/10 hover:text-white'
                 }`}
               >
@@ -226,7 +226,7 @@ export const SupportTicketsPage: React.FC = () => {
           ) : rows.length === 0 ? (
             <div className="bg-[#161B22]/60 border border-white/10 rounded-2xl p-8 text-center">
               <Inbox size={24} className="mx-auto text-gray-600 mb-3" />
-              <p className="text-sm font-black text-white">Bu kanalda talep yok</p>
+              <p className="text-sm font-extrabold text-white">Bu kanalda talep yok</p>
               <p className="text-[11px] text-gray-500 mt-2 leading-relaxed">
                 Kullanıcılar Ayarlar → Yardım Merkezi üzerinden destek talebi açar (Oyuncular kanalı). Yeni talepler burada listelenir.
               </p>
@@ -277,7 +277,7 @@ export const SupportTicketsPage: React.FC = () => {
           {!selectedId ? (
             <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
               <LifeBuoy size={24} className="text-gray-600 mb-3" />
-              <p className="text-sm font-black text-white">Soldan talep seç</p>
+              <p className="text-sm font-extrabold text-white">Soldan talep seç</p>
               <p className="text-[11px] text-gray-500 mt-1">Diziyi görüntülemek ve yanıtlamak için listeden bir talep seçin.</p>
             </div>
           ) : threadLoading || !thread ? (
@@ -291,7 +291,7 @@ export const SupportTicketsPage: React.FC = () => {
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 min-w-0">
-                      <h3 className="text-sm font-black text-white truncate">{thread.subject || 'Konu yok'}</h3>
+                      <h3 className="text-sm font-extrabold text-white truncate">{thread.subject || 'Konu yok'}</h3>
                       {isHighPriority(thread.priority) && (
                         <StatusBadge tone="danger">{priorityLabel(thread.priority)}</StatusBadge>
                       )}
@@ -302,7 +302,7 @@ export const SupportTicketsPage: React.FC = () => {
                   </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-1.5 mt-2.5">
-                  <span className="text-[10px] font-black uppercase tracking-wider text-gray-600 mr-1">Durum</span>
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-gray-600 mr-1">Durum</span>
                   {STATUS_ORDER.map((s) => {
                     const active = thread.status === s;
                     return (
@@ -311,7 +311,7 @@ export const SupportTicketsPage: React.FC = () => {
                         type="button"
                         onClick={() => void changeStatus(s)}
                         disabled={statusSaving !== null}
-                        className={`h-7 px-2.5 rounded-lg text-[10px] font-black uppercase tracking-wider border transition-colors disabled:opacity-50 ${
+                        className={`h-7 px-2.5 rounded-lg text-[10px] font-extrabold uppercase tracking-wider border transition-colors disabled:opacity-50 ${
                           active ? 'bg-white/10 text-white border-white/25' : 'text-gray-500 border-white/10 hover:text-white'
                         }`}
                       >
@@ -336,7 +336,7 @@ export const SupportTicketsPage: React.FC = () => {
                         }`}
                       >
                         <div className="flex items-center gap-2 mb-1">
-                          <span className={`text-[10px] font-black uppercase tracking-wider ${isAdmin ? 'text-purple-400' : 'text-gray-400'}`}>
+                          <span className={`text-[10px] font-extrabold uppercase tracking-wider ${isAdmin ? 'text-purple-400' : 'text-gray-400'}`}>
                             {m.sender_name ?? (isAdmin ? 'Yönetici' : 'Kullanıcı')}
                           </span>
                           <span className="text-[10px] font-mono text-gray-600 tabular-nums">{formatDateTime(m.created_at)}</span>
@@ -362,14 +362,14 @@ export const SupportTicketsPage: React.FC = () => {
                   <button
                     onClick={() => void sendReply(false)}
                     disabled={!reply.trim() || sending !== null}
-                    className="flex items-center gap-1.5 px-4 py-2 text-xs font-black rounded-xl text-white bg-purple-600 hover:bg-purple-500 disabled:opacity-50"
+                    className="flex items-center gap-1.5 px-4 py-2 text-xs font-extrabold rounded-xl text-white bg-purple-600 hover:bg-purple-500 disabled:opacity-50"
                   >
                     {sending === 'REPLY' ? <Loader2 size={12} className="animate-spin" /> : <Send size={12} />} Yanıtla
                   </button>
                   <button
                     onClick={() => void sendReply(true)}
                     disabled={!reply.trim() || sending !== null}
-                    className="flex items-center gap-1.5 px-4 py-2 text-xs font-black rounded-xl text-green-400 border border-green-500/30 hover:bg-green-500/10 disabled:opacity-50"
+                    className="flex items-center gap-1.5 px-4 py-2 text-xs font-extrabold rounded-xl text-green-400 border border-green-500/30 hover:bg-green-500/10 disabled:opacity-50"
                   >
                     {sending === 'RESOLVE' ? <Loader2 size={12} className="animate-spin" /> : <CheckCheck size={12} />} Yanıtla &amp; Çöz
                   </button>

@@ -1,0 +1,99 @@
+// ════════════════════════════════════════════════════════════════════════════
+// IP-08 — TİPOGRAFİ ÖLÇEĞİ · TEK KAYNAK
+// ════════════════════════════════════════════════════════════════════════════
+//
+// NEDEN VAR: Bu dosyadan önce uygulamada punto ölçeği YOKTU. 33 ayrı arbitrary
+// punto (`text-[6px]`'ten `text-[46px]`'e) 1764 yerde serpiştirilmişti; aynı
+// hiyerarşideki iki etiket bir ekranda 9px, diğerinde 11px çiziliyordu.
+//
+// NEDEN rem, px DEĞİL: `text-[10px]` sabit pikseldir — kullanıcı telefonunun
+// yazı boyutunu büyüttüğünde (iOS Dynamic Type / Android font-scale / tarayıcı
+// zoom) DEĞİŞMEZ. Gözü iyi görmeyen kullanıcı ayarı büyütür, uygulama aynı
+// kalır. rem kök punto ile ölçeklenir → WCAG 1.4.4 (Resize Text) karşılanır.
+// Aşağıdaki px karşılıkları 16px kök içindir; kullanıcı ayarını büyütürse
+// hepsi orantılı büyür.
+//
+// TABAN KURALI (ürün kararı): En küçük OKUNUR metin 11px (`caption`).
+// 10px (`microLabel`) YALNIZ büyük harf + harf aralıklı etiketler içindir —
+// büyük harf x-yüksekliği olmadığı ve tracking harfleri ayırdığı için o
+// bağlamda okunur kalır. Cümle içinde ASLA kullanılmaz.
+//
+// SATIR ARALIĞI: Punto büyüdükçe oransal satır aralığı KÜÇÜLÜR (28px başlıkta
+// 1.07, 11px metinde 1.36). Büyük puntoda geniş aralık başlığı dağıtır, küçük
+// puntoda dar aralık okumayı zorlaştırır.
+//
+// HARF ARALIĞI: Büyük puntolarda negatif (harfler zaten geniş görünür),
+// büyük harf etiketlerde pozitif (bitişik büyük harfler ayrışmalı).
+//
+// KULLANIM:
+//   import { type_ } from '../ui/type';
+//   <p className={`${type_.body} text-ink-3`}>…</p>
+//
+// RENK: Bu dosya punto/aralık tanımlar, RENK TANIMLAMAZ. Metin renkleri
+// `index.css` @theme içindeki mürekkep merdivenidir (`text-ink` … `text-ink-4`);
+// dördü de kart zemininde AA geçer.
+// ════════════════════════════════════════════════════════════════════════════
+
+export const type_ = {
+  /**
+   * 10px — YALNIZ `uppercase` + tracking ile. Rozet, birim etiketi (GÜN/SAAT),
+   * bölüm üst başlığı. Cümle metni için KULLANILMAZ; onun tabanı `caption`.
+   */
+  microLabel: 'text-[0.625rem] leading-[0.75rem] tracking-[0.08em] uppercase',
+
+  /** 11px — okunur metnin ALT SINIRI. Yardım satırı, ikincil rozet metni. */
+  caption: 'text-[0.6875rem] leading-[0.9375rem]',
+
+  /** 12px — dipnot, meta bilgi, liste alt satırı. */
+  footnote: 'text-[0.75rem] leading-[1rem]',
+
+  /** 13px — yoğun listelerde gövde metni. */
+  body: 'text-[0.8125rem] leading-[1.125rem]',
+
+  /** 14px — birincil gövde metni. Uzun açıklamaların varsayılanı. */
+  bodyLg: 'text-[0.875rem] leading-[1.25rem]',
+
+  /** 16px — kart başlığı, satır başlığı. */
+  title: 'text-[1rem] leading-[1.375rem] tracking-[-0.01em]',
+
+  /** 18px — bölüm başlığı. */
+  titleLg: 'text-[1.125rem] leading-[1.5rem] tracking-[-0.01em]',
+
+  /** 22px — ekran başlığı. */
+  headline: 'text-[1.375rem] leading-[1.625rem] tracking-[-0.02em]',
+
+  /** 28px — vurgulanan tutar/rakam, boş durum başlığı. */
+  display: 'text-[1.75rem] leading-[1.875rem] tracking-[-0.03em]',
+
+  /** 40px — geri sayım rakamı, skor. Ekranda tek başına durur. */
+  displayLg: 'text-[2.5rem] leading-[2.5rem] tracking-[-0.04em]',
+} as const;
+
+export type TypeStep = keyof typeof type_;
+
+/**
+ * Bölüm üst başlığı — tasarımda tekrar eden bileşik desen.
+ * (Punto + aralık + ağırlık + renk bir arada; her ekranda elle kurulmasın.)
+ */
+export const sectionLabel = `${type_.microLabel} font-extrabold text-ink-4`;
+
+/**
+ * Ölçeğin px karşılıkları — testler ve denetim içindir, className DEĞİLDİR.
+ * Bir basamağı değiştirirsen burayı da güncelle; birim testi ikisini eşler.
+ */
+export const TYPE_PX: Record<TypeStep, number> = {
+  microLabel: 10,
+  caption: 11,
+  footnote: 12,
+  body: 13,
+  bodyLg: 14,
+  title: 16,
+  titleLg: 18,
+  headline: 22,
+  display: 28,
+  displayLg: 40,
+};
+
+/** Okunur metnin alt sınırı (px). `microLabel` bunun altındadır ve YALNIZ
+ *  büyük harf + tracking bağlamında meşrudur. */
+export const READABLE_MIN_PX = 11;

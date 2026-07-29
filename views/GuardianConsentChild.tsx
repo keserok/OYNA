@@ -57,7 +57,7 @@ const GuardianConsentChild: React.FC<GuardianConsentChildProps> = ({ onBack, onG
         <button onClick={onBack} className="w-11 h-11 flex items-center justify-center bg-[#161B22] rounded-full border border-white/5 text-white hover:bg-white/10 active:scale-95 transition-all">
           <ArrowLeft size={20} />
         </button>
-        <h1 className="text-lg font-black italic tracking-tight">VELİ ONAYI</h1>
+        <h1 className="text-lg font-extrabold italic tracking-tight">VELİ ONAYI</h1>
       </header>
 
       <main className="p-6 max-w-md mx-auto">
@@ -70,7 +70,7 @@ const GuardianConsentChild: React.FC<GuardianConsentChildProps> = ({ onBack, onG
             <div className="w-16 h-16 mx-auto rounded-full bg-[#39FF14]/15 flex items-center justify-center mb-4">
               <ShieldCheck size={32} className="text-[#39FF14]" />
             </div>
-            <h2 className="text-xl font-black mb-2">Veli onayın tamamlandı</h2>
+            <h2 className="text-xl font-extrabold mb-2">Veli onayın tamamlandı</h2>
             <p className="text-sm text-gray-400 leading-relaxed">
               Artık ödeme yapabilir ve maçlara katılabilirsin. İyi oyunlar!
             </p>
@@ -81,12 +81,12 @@ const GuardianConsentChild: React.FC<GuardianConsentChildProps> = ({ onBack, onG
             <div className="w-16 h-16 mx-auto rounded-full bg-white/5 flex items-center justify-center mb-4">
               <ShieldCheck size={32} className="text-gray-400" />
             </div>
-            <h2 className="text-xl font-black mb-2">Bu hesap için veli onayı gerekmiyor</h2>
+            <h2 className="text-xl font-extrabold mb-2">Bu hesap için veli onayı gerekmiyor</h2>
             <p className="text-sm text-gray-400 leading-relaxed mb-6">
               Hesabın reşit görünüyor. 18 yaşından küçük bir çocuğu onaylamak istiyorsanız
               aşağıdan devam edebilirsiniz.
             </p>
-            <button onClick={onGoVeliForm} className="px-6 py-3 rounded-xl bg-[#39FF14] text-[#06210A] font-black text-sm active:scale-95 transition">
+            <button onClick={onGoVeliForm} className="px-6 py-3 rounded-xl bg-[#39FF14] text-[#06210A] font-extrabold text-sm active:scale-95 transition">
               Çocuğumu Onayla →
             </button>
           </div>
@@ -108,8 +108,8 @@ const GuardianConsentChild: React.FC<GuardianConsentChildProps> = ({ onBack, onG
 
             {/* Kod */}
             <div className="bg-gradient-to-b from-[#39FF14]/10 to-transparent border border-[#39FF14]/25 rounded-3xl p-6 mb-4 text-center">
-              <div className="text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2">Veli Bağlantı Kodun</div>
-              <div className="text-4xl font-black tracking-[0.25em] text-[#39FF14] mb-4" style={{ textShadow: '0 0 24px rgba(57,255,20,0.4)' }}>
+              <div className="text-[0.6875rem] font-bold uppercase tracking-widest text-gray-400 mb-2">Veli Bağlantı Kodun</div>
+              <div className="text-4xl font-extrabold tracking-[0.25em] text-[#39FF14] mb-4" style={{ textShadow: '0 0 24px rgba(57,255,20,0.4)' }}>
                 {code ?? '—'}
               </div>
               <button
@@ -134,7 +134,7 @@ const GuardianConsentChild: React.FC<GuardianConsentChildProps> = ({ onBack, onG
                   'Kimlik bilgilerini doldurup onaylasın — hesabın anında açılır.',
                 ].map((s, i) => (
                   <li key={i} className="flex gap-3 items-start">
-                    <span className="shrink-0 w-6 h-6 rounded-full bg-[#39FF14]/15 text-[#39FF14] text-xs font-black flex items-center justify-center">{i + 1}</span>
+                    <span className="shrink-0 w-6 h-6 rounded-full bg-[#39FF14]/15 text-[#39FF14] text-xs font-extrabold flex items-center justify-center">{i + 1}</span>
                     <span className="text-sm text-gray-300 leading-relaxed">{s}</span>
                   </li>
                 ))}

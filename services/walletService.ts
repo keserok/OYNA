@@ -43,6 +43,14 @@ export interface PayoutRequestRow {
   methodKind: 'IBAN' | 'CARD' | null;
   createdAt: string;
   processedAt: string | null;
+  /** Hizmet bedeli — yalnız WALLET_CASHOUT'ta dolu, kazanç çekiminde null. */
+  feeAmount: number | null;
+  /** Hesaba geçecek net tutar. Kazanç çekiminde null (kesinti yok → brüt). */
+  netAmount: number | null;
+  /** WALLET_CASHOUT | PROVIDER_INSTANT | MANUAL — iptal yalnız ilkinde mümkün. */
+  payoutType: string | null;
+  /** Reddedilen/iptal edilen talepte kullanıcıya gösterilecek sebep. */
+  rejectReason: string | null;
 }
 
 const mapMethod = (r: any): PayoutMethod => ({
@@ -66,6 +74,10 @@ const mapPayout = (r: any): PayoutRequestRow => ({
   methodKind: r.method_kind ?? null,
   createdAt: r.created_at,
   processedAt: r.processed_at ?? null,
+  feeAmount: r.fee_amount != null ? Number(r.fee_amount) : null,
+  netAmount: r.net_amount != null ? Number(r.net_amount) : null,
+  payoutType: r.payout_type ?? null,
+  rejectReason: r.reject_reason ?? null,
 });
 
 // RPC RAISE EXCEPTION 'KOD: açıklama' → kullanıcıya açıklamayı göster
@@ -258,7 +270,9 @@ export const requestPayoutWithMethod = async (
   return mapPayout(data);
 };
 
-// ─── Cüzdandan çekim (S2.1: yalnız yüklenen bakiye, %10 kesinti) ─────────────
+// ─── Cüzdandan çekim (K1: yüklenen + iade bakiyesi, %5 hizmet bedeli) ────────
+// Çekilebilir bakiye artık TOP_UP + REFUND_CREDIT. "İade kredisi" ayrı bir
+// para türü değildir; kullanıcıya tek isim gösterilir: Cüzdan Bakiyesi.
 export interface CashoutPreview {
   gross: number;
   fee_pct: number;
@@ -266,10 +280,41 @@ export interface CashoutPreview {
   net: number;
   enabled: boolean;
   min: number;
-  topup_balance: number;   // çekilebilir (yüklenen) bakiye
+  /** Çekilebilir toplam (yüklenen + iade). */
+  withdrawable_balance: number;
+  /** @deprecated K1 öncesi ad; withdrawable_balance ile aynı değeri taşır. */
+  topup_balance: number;
   identity_ok: boolean;
   identity_required: boolean;
   has_pending: boolean;
+  /** Bakiyenin tamamı çekiliyor: minimum eşik aranmıyor. */
+  min_waived: boolean;
+}
+
+/** Cüzdan ekranının çekim bölümü için tek çağrılık durum. */
+export interface WalletCashoutState {
+  enabled: boolean;
+  fee_pct: number;
+  min: number;
+  allow_full_balance: boolean;
+  /** Çekilebilir toplam (yüklenen + iade). */
+  withdrawable: number;
+  topup_balance: number;
+  refund_credit_balance: number;
+  identity_required: boolean;
+  identity_ok: boolean;
+  /** Profilde ad soyad dolu mu — IBAN sahibi eşleşmesi için gerekli. */
+  profile_name_ok: boolean;
+  pending_request: {
+    id: string;
+    gross: number;
+    fee: number;
+    net: number;
+    status: 'PENDING' | 'PROCESSING';
+    iban_last4: string;
+    created_at: string;
+    can_cancel: boolean;
+  } | null;
 }
 
 /** İptal-önizleme deseni: sunucunun KENDİ kesinti/net rakamı (asla FE'de hesaplama). */
@@ -277,19 +322,56 @@ export const previewWalletCashout = async (gross: number): Promise<CashoutPrevie
   const { data, error } = await supabase.rpc('preview_wallet_cashout', { p_gross: gross });
   if (error) throw new Error(parseRpcError(error.message) || 'Çekim önizlemesi alınamadı.');
   const d = data as any;
+  const withdrawable = Number(d.withdrawable_balance ?? d.topup_balance) || 0;
   return {
     gross: Number(d.gross) || 0, fee_pct: Number(d.fee_pct) || 0, fee: Number(d.fee) || 0,
     net: Number(d.net) || 0, enabled: !!d.enabled, min: Number(d.min) || 0,
-    topup_balance: Number(d.topup_balance) || 0, identity_ok: !!d.identity_ok,
-    identity_required: !!d.identity_required, has_pending: !!d.has_pending,
+    withdrawable_balance: withdrawable, topup_balance: withdrawable,
+    identity_ok: !!d.identity_ok, identity_required: !!d.identity_required,
+    has_pending: !!d.has_pending, min_waived: !!d.min_waived,
   };
 };
 
-/** Çekim talebi — yalnız kayıtlı IBAN'a; TOP_UP anında düşülür; %10 kesinti sunucuda. */
+/** Ekranın çekim bölümü için tek çağrı — bakiye, kapılar ve bekleyen talep. */
+export const getWalletCashoutState = async (): Promise<WalletCashoutState> => {
+  const { data, error } = await supabase.rpc('get_wallet_cashout_state');
+  if (error) throw new Error(parseRpcError(error.message) || 'Çekim durumu alınamadı.');
+  const d = data as any;
+  const p = d?.pending_request;
+  return {
+    enabled: !!d.enabled,
+    fee_pct: Number(d.fee_pct) || 0,
+    min: Number(d.min) || 0,
+    allow_full_balance: !!d.allow_full_balance,
+    withdrawable: Number(d.withdrawable) || 0,
+    topup_balance: Number(d.topup_balance) || 0,
+    refund_credit_balance: Number(d.refund_credit_balance) || 0,
+    identity_required: !!d.identity_required,
+    identity_ok: !!d.identity_ok,
+    profile_name_ok: !!d.profile_name_ok,
+    pending_request: p
+      ? {
+          id: String(p.id),
+          gross: Number(p.gross) || 0,
+          fee: Number(p.fee) || 0,
+          net: Number(p.net) || 0,
+          status: p.status === 'PROCESSING' ? 'PROCESSING' : 'PENDING',
+          iban_last4: String(p.iban_last4 ?? ''),
+          created_at: String(p.created_at ?? ''),
+          can_cancel: !!p.can_cancel,
+        }
+      : null,
+  };
+};
+
+/** Çekim talebi — yalnız kayıtlı IBAN'a; brüt anında düşülür; %5 bedel sunucuda. */
 export const requestWalletCashout = async (
   gross: number,
   methodId: string,
-): Promise<{ payout_id: string; gross: number; fee: number; net: number; iban_last4: string }> => {
+): Promise<{
+  payout_id: string; gross: number; fee: number; net: number; iban_last4: string;
+  from_topup: number; from_refund_credit: number;
+}> => {
   const { data, error } = await supabase.rpc('request_wallet_cashout', {
     p_gross: gross, p_method_id: methodId,
   });
@@ -298,7 +380,23 @@ export const requestWalletCashout = async (
   return {
     payout_id: d.payout_id, gross: Number(d.gross) || 0, fee: Number(d.fee) || 0,
     net: Number(d.net) || 0, iban_last4: String(d.iban_last4 ?? ''),
+    from_topup: Number(d.from_topup) || 0,
+    from_refund_credit: Number(d.from_refund_credit) || 0,
   };
+};
+
+/**
+ * Kullanıcı kendi BEKLEYEN çekim talebini iptal eder. Brüt tutar kova bazında
+ * cüzdana geri döner ve hizmet bedeli alınmaz. Admin talebi işleme aldıysa
+ * sunucu ALREADY_PROCESSING verir — yarış durumu satır kilidiyle çözülür.
+ */
+export const cancelWalletCashout = async (
+  payoutId: string,
+): Promise<{ payout_id: string; status: string; restored: number }> => {
+  const { data, error } = await supabase.rpc('cancel_wallet_cashout', { p_payout_id: payoutId });
+  if (error) throw new Error(parseRpcError(error.message) || 'Çekim talebi iptal edilemedi.');
+  const d = data as any;
+  return { payout_id: d.payout_id, status: String(d.status ?? ''), restored: Number(d.restored) || 0 };
 };
 
 // ─── Çekim geçmişi (RLS: kullanıcı kendi satırlarını görür) ──────────────────

@@ -82,7 +82,7 @@ const RegionPickerPage: React.FC<RegionPickerPageProps> = ({ open, onClose }) =>
       {/* Seçili bölgeler (chip) */}
       {selectedRegions.length > 0 && (
         <div className="mb-4">
-          <p className="text-[11px] font-black uppercase tracking-widest text-gray-500 mb-2 ml-1">
+          <p className="text-[0.6875rem] font-extrabold uppercase tracking-widest text-ink-4 mb-2 ml-1">
             Seçili Bölgeler ({selectedRegions.length})
           </p>
           <div className="flex flex-wrap gap-2">
@@ -108,7 +108,7 @@ const RegionPickerPage: React.FC<RegionPickerPageProps> = ({ open, onClose }) =>
 
       {/* Arama */}
       <div className="relative mb-4">
-        <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
+        <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-ink-4" />
         <input
           value={query}
           onChange={e => setQuery(e.target.value)}
@@ -118,7 +118,7 @@ const RegionPickerPage: React.FC<RegionPickerPageProps> = ({ open, onClose }) =>
         {query && (
           <button
             onClick={() => setQuery('')}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white p-1"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-4 hover:text-white p-1"
             aria-label="Aramayı temizle"
           >
             <X size={16} />
@@ -141,27 +141,27 @@ const RegionPickerPage: React.FC<RegionPickerPageProps> = ({ open, onClose }) =>
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  <span className="w-8 h-8 rounded-xl bg-white/5 flex items-center justify-center text-[11px] font-black text-gray-400 tabular-nums">
+                  <span className="w-8 h-8 rounded-xl bg-white/5 flex items-center justify-center text-[0.6875rem] font-extrabold text-gray-400 tabular-nums">
                     {region.plate}
                   </span>
                   <span className="text-sm font-bold text-white">{region.city}</span>
                   {covered && (
-                    <span className="text-[9px] font-black uppercase tracking-wide text-[#39FF14] bg-[#39FF14]/12 px-1.5 py-0.5 rounded">
+                    <span className="text-[0.625rem] font-extrabold uppercase tracking-wide text-[#39FF14] bg-[#39FF14]/12 px-1.5 py-0.5 rounded">
                       Aktif
                     </span>
                   )}
                   {cityHasSelection && (
-                    <span className="text-[9px] font-black uppercase tracking-wide text-gray-400 bg-white/5 px-1.5 py-0.5 rounded">
+                    <span className="text-[0.625rem] font-extrabold uppercase tracking-wide text-gray-400 bg-white/5 px-1.5 py-0.5 rounded">
                       Seçili
                     </span>
                   )}
                 </div>
-                <ChevronRight size={16} className="text-gray-600" />
+                <ChevronRight size={16} className="text-ink-4" />
               </button>
             );
           })}
           {cities.length === 0 && (
-            <p className="text-center text-sm text-gray-500 py-8">"{query}" ile eşleşen il yok.</p>
+            <p className="text-center text-sm text-ink-4 py-8">"{query}" ile eşleşen il yok.</p>
           )}
         </div>
       ) : (
@@ -183,7 +183,7 @@ const RegionPickerPage: React.FC<RegionPickerPageProps> = ({ open, onClose }) =>
                   </span>
                   <div className="text-left">
                     <span className="text-sm font-bold text-white block">{selectedCity} geneli</span>
-                    <span className="text-[11px] text-gray-400">İlçe belirtmeden tüm ili ekle</span>
+                    <span className="text-[0.6875rem] text-gray-400">İlçe belirtmeden tüm ili ekle</span>
                   </div>
                 </div>
                 {on ? <Check size={18} className="text-[#00B0FF]" /> : <Plus size={18} className="text-[#00B0FF]" />}
@@ -201,12 +201,12 @@ const RegionPickerPage: React.FC<RegionPickerPageProps> = ({ open, onClose }) =>
                 }`}
               >
                 <span className="text-sm font-bold text-white">{district}</span>
-                {on ? <Check size={16} className="text-[#39FF14]" /> : <Plus size={16} className="text-gray-500" />}
+                {on ? <Check size={16} className="text-[#39FF14]" /> : <Plus size={16} className="text-ink-4" />}
               </button>
             );
           })}
           {districts.length === 0 && (
-            <p className="text-center text-sm text-gray-500 py-8">"{query}" ile eşleşen ilçe yok.</p>
+            <p className="text-center text-sm text-ink-4 py-8">"{query}" ile eşleşen ilçe yok.</p>
           )}
         </div>
       )}
@@ -214,7 +214,7 @@ const RegionPickerPage: React.FC<RegionPickerPageProps> = ({ open, onClose }) =>
       {/* Bitti */}
       <button
         onClick={() => { setSelectedCity(null); setQuery(''); onClose(); }}
-        className="w-full h-12 mt-5 rounded-2xl font-black text-sm bg-[#39FF14] text-black active:scale-[0.99] transition-transform"
+        className="w-full h-12 mt-5 rounded-2xl font-extrabold text-sm bg-[#39FF14] text-black active:scale-[0.99] transition-transform"
       >
         Bitti{selectedRegions.length > 0 ? ` (${selectedRegions.length} bölge)` : ''}
       </button>

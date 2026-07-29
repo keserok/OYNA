@@ -14,8 +14,10 @@ import { OwnerFlashDealModal } from '../OwnerFlashDealModal';
 import { OwnerCloseSlotModal } from '../OwnerCloseSlotModal';
 import { OwnerBookingDetailModal } from '../OwnerBookingDetailModal';
 import { OwnerSpecialPriceModal } from '../OwnerSpecialPriceModal';
-import { findFlashDealForSlot, isSlotClosed, localDateISO, resolveHourlyPrice } from '../ownerCalendarHelpers';
+import { findFlashDealForSlot, isSlotClosed, localDateISO, resolveHourlyPrice, resolveHourlyDeposit } from '../ownerCalendarHelpers';
+import { parseTRYAmount } from '../../../shared/financeModel';
 import { resolveWorkingHoursForDate, isHourWithinWorkingHours, openHourCount } from '../../../shared/workingHours';
+import { buildSlotGrid, sellableMinutesForDate, type SlotTariffInput } from '../../../shared/slotGrid';
 import { formatCapacityRange } from '../../../shared/pitchShowcaseMapper';
 import {
   getPitchBookings, ownerCreateManualBooking, getSubscriptions, updateSubscriptionStatus,
@@ -145,6 +147,8 @@ export const FinancialCalendarView: React.FC<{
     const [customerName, setCustomerName] = useState('');
     const [customerPhone, setCustomerPhone] = useState('');
     const [paymentStatus, setPaymentStatus] = useState<'PAID' | 'PARTIAL' | 'PENDING'>('PENDING');
+    // BULGU-123: elden alınan kapora TUTARI — sahibi girer, uydurulmaz.
+    const [depositStr, setDepositStr] = useState('');
 
     const isRealPitch = !!pitchId && !pitchId.startsWith('mock-');
 
@@ -177,6 +181,24 @@ export const FinancialCalendarView: React.FC<{
     const dayHours = useMemo(
         () => resolveWorkingHoursForDate(workingHours as any, selectedDateISO),
         [workingHours, selectedDateISO],
+    );
+    // Izgara TEK KAYNAK: pricingPolicy satırları shared/slotGrid'in beklediği
+    // biçime çevrilir; takvim, doluluk ve tüketici ekranı aynı kuralı kullanır.
+    const tariffsForGrid = useMemo<SlotTariffInput[]>(
+        () => (pricingPolicy ?? []).map((p: any) => ({
+            id: p.id,
+            tariff_type: p.tariff_type ?? 'WEEKDAY',
+            applies_to_days: p.applies_to_days ?? null,
+            start_time: String(p.start_time ?? p.startTime ?? '09:00'),
+            end_time: String(p.end_time ?? p.endTime ?? '00:00'),
+            slot_price: Number(p.slot_price ?? p.price ?? 0),
+            slot_minutes: Number(p.slot_minutes ?? 60),
+            deposit_amount: Number(p.deposit_amount ?? 0),
+            is_active: p.is_active,
+            court_id: p.court_id ?? null,
+            valid_on: p.valid_on ?? null,
+        })),
+        [pricingPolicy],
     );
     const activeCourts = courts.filter((c) => c.is_active !== false);
 
@@ -306,6 +328,17 @@ export const FinancialCalendarView: React.FC<{
         return deal ? deal.deal_price : defaultPrice;
     };
 
+    // BULGU-123: kapora varsayılanı GERÇEK tarifeden gelir (uydurma %25 yok).
+    const getSlotDeposit = (time: string): number | null =>
+        resolveHourlyDeposit(parseInt(time.split('.')[0], 10), pricingPolicy, selectedCourtId || null, selectedDateISO);
+
+    // Kapora doğrulaması tek yerde: KAYDET kilidi ve alan altındaki uyarı aynı sonucu kullanır.
+    const quickSlotRate = isQuickCreateOpen ? getSlotPrice(isQuickCreateOpen) : null;
+    const quickTariffDeposit = isQuickCreateOpen ? getSlotDeposit(isQuickCreateOpen) : null;
+    const quickDepositVal = parseTRYAmount(depositStr);
+    const isDepositTooBig = quickSlotRate != null && Number.isFinite(quickDepositVal) && quickDepositVal > quickSlotRate;
+    const isDepositValid = Number.isFinite(quickDepositVal) && quickDepositVal > 0 && !isDepositTooBig;
+
     const days = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
     const allTimeSlots = Array.from({ length: 24 }, (_, i) => `${i.toString().padStart(2, '0')}.00`);
 
@@ -319,7 +352,20 @@ export const FinancialCalendarView: React.FC<{
     // OP-P1-6 + WP6: rezervasyon SAYISI değil kapladığı SAAT toplamı; payda = GERÇEK
     // çalışma penceresi (owner'ın o güne ayarladığı açık saat sayısı).
     const bookedHours = currentBookings.reduce((acc, curr) => acc + (curr.duration || 1), 0);
-    const openHours = dayHours.closed ? 0 : openHourCount(dayHours.open, dayHours.close);
+    // Payda SATILABİLİR süre — açık saat DEĞİL. 18:00-23:00 penceresi 5 saat
+    // açıktır ama 90 dakikalık slotlarla yalnız 4.5 saati satılabilir; payda
+    // açık saat kalırsa tesis her slotu doldursa bile doluluk %90'da takılırdı.
+    const sellableMin = dayHours.closed
+      ? 0
+      : sellableMinutesForDate(
+          tariffsForGrid,
+          selectedDateISO,
+          selectedCourtId || null,
+          dayHours,
+        );
+    const openHours = sellableMin > 0
+      ? sellableMin / 60
+      : (dayHours.closed ? 0 : openHourCount(dayHours.open, dayHours.close));
     const occupancyRate = openHours > 0 ? Math.min(100, Math.round((bookedHours / openHours) * 100)) : 0;
 
     // OP-P1-7: bir saat dilimini hangi rezervasyonun kapsadığını + başlangıç mı olduğunu döndürür.
@@ -340,6 +386,47 @@ export const FinancialCalendarView: React.FC<{
      * (pencere içi) + pencere dışına taşan mevcut rezervasyon/kapanışlar.
      * "Tümünü göster" ile 24 saat açılır.
      */
+    /**
+     * GÜN EKRANI SLOT IZGARASI — sabit 24 saat DEĞİL, gerçek tarife ızgarası.
+     * Sahip 90 dakika seçtiyse satırlar 18:00-19:30, 19:30-21:00 diye gelir ve
+     * yükseklikleri süreyle orantılıdır. Kaynak kullanıcıya görünenle aynı
+     * (shared/slotGrid = sunucudaki get_pitch_slots).
+     */
+    const daySlots = useMemo(
+        () => buildSlotGrid(tariffsForGrid, selectedDateISO, selectedCourtId || null, dayHours),
+        [tariffsForGrid, selectedDateISO, selectedCourtId, dayHours],
+    );
+
+    /** Izgara dışı saatler ("Tümünü göster") — yalnız 60'lık dolgu satırları. */
+    const fallbackHourSlots = useMemo(() => {
+        const taken = new Set(daySlots.map((s) => s.startTime));
+        return Array.from({ length: 24 }, (_, h) => `${String(h).padStart(2, '0')}:00`)
+            .filter((t) => !taken.has(t))
+            .map((t) => ({
+                startTime: t,
+                endTime: `${String((parseInt(t, 10) + 1) % 24).padStart(2, '0')}:00`,
+                minutes: 60,
+                price: 0,
+                deposit: 0,
+                crossesMidnight: false,
+            }));
+    }, [daySlots]);
+
+    const visibleSlots = useMemo(() => {
+        const base = showAllHours
+            ? [...daySlots, ...fallbackHourSlots].sort((a, b) =>
+                a.startTime.localeCompare(b.startTime))
+            : daySlots;
+        if (showAllHours) return base;
+        // Izgara dışına taşan gerçek kayıtlar (ör. gece 03:00 manuel rezervasyon)
+        // gizlenmez — sahip parasını göremez duruma düşmesin.
+        const extra = fallbackHourSlots.filter((s) => {
+            const key = s.startTime.replace(':', '.');
+            return !!getSlotCoverage(key) || isSlotClosed(key, selectedCourtId, closedSlots, s.minutes);
+        });
+        return [...base, ...extra].sort((a, b) => a.startTime.localeCompare(b.startTime));
+    }, [daySlots, fallbackHourSlots, showAllHours, currentBookings, selectedCourtId, closedSlots]);
+
     const visibleTimeSlots = useMemo(() => {
         const openH = parseInt(String(dayHours.open ?? '09:00').split(':')[0], 10) || 0;
         const rotated = Array.from({ length: 24 }, (_, i) => {
@@ -361,6 +448,9 @@ export const FinancialCalendarView: React.FC<{
         setCustomerName('');
         setCustomerPhone('');
         setPaymentStatus('PENDING');
+        // Alan tarife değeriyle DOLU açılsın; tarifede kapora yoksa boş kalır.
+        const d = getSlotDeposit(time);
+        setDepositStr(d != null ? String(d) : '');
     };
 
     const getStatusStyles = (status: string) => {
@@ -378,15 +468,15 @@ export const FinancialCalendarView: React.FC<{
                 <div className="grid grid-cols-3 gap-2 p-4 pb-2 pt-safe border-b border-white/5 bg-[#161B22]">
                     <div className="flex flex-col">
                         <span className="text-[10px] text-gray-500 font-bold uppercase">Tahsilat</span>
-                        <span className="text-lg font-black text-emerald-400 tracking-tight font-mono">{dailyCollected}₺</span>
+                        <span className="text-lg font-extrabold text-emerald-400 tracking-tight font-mono">{dailyCollected}₺</span>
                     </div>
                     <div className="flex flex-col border-l border-white/10 pl-4">
                         <span className="text-[10px] text-gray-500 font-bold uppercase">Bekleyen</span>
-                        <span className="text-lg font-black text-red-400 tracking-tight font-mono">{dailyPending}₺</span>
+                        <span className="text-lg font-extrabold text-red-400 tracking-tight font-mono">{dailyPending}₺</span>
                     </div>
                     <div className="flex flex-col border-l border-white/10 pl-4">
                         <span className="text-[10px] text-gray-500 font-bold uppercase">Doluluk</span>
-                        <span className="text-lg font-black text-white tracking-tight font-mono">%{occupancyRate}</span>
+                        <span className="text-lg font-extrabold text-white tracking-tight font-mono">%{occupancyRate}</span>
                     </div>
                 </div>
 
@@ -417,7 +507,7 @@ export const FinancialCalendarView: React.FC<{
                                         onClick={() => selectDay(iso)}
                                         className={`flex-shrink-0 w-[52px] py-2 rounded-xl flex flex-col items-center gap-0.5 transition-all border snap-start ${isSel ? 'bg-white/10 text-white border-white/25 shadow-lg' : 'bg-[#161B22] border-transparent text-gray-500 hover:bg-white/5'}`}
                                     >
-                                        <span className={`text-[9px] font-black uppercase ${isToday && !isSel ? 'text-[#FACC15]' : ''}`}>
+                                        <span className={`text-[9px] font-extrabold uppercase ${isToday && !isSel ? 'text-[#FACC15]' : ''}`}>
                                             {isToday ? 'Bugün' : d.toLocaleDateString('tr-TR', { weekday: 'short' })}
                                         </span>
                                         <span className="text-sm font-bold">{d.getDate()}</span>
@@ -457,13 +547,14 @@ export const FinancialCalendarView: React.FC<{
                             className={`h-full px-3 py-2 border rounded-xl transition-colors flex items-center justify-center gap-2 ${isMonthlyView ? 'bg-[#FACC15] text-black border-[#FACC15]' : 'bg-[#161B22] border-white/5 text-gray-400 hover:text-white hover:bg-white/5'}`}
                         >
                             <CalendarDays size={20} />
-                            {isMonthlyView && <span className="text-[10px] font-black uppercase">Aylık</span>}
+                            {isMonthlyView && <span className="text-[10px] font-extrabold uppercase">Aylık</span>}
                         </button>
                     </div>
                 </div>
             </div>
 
-            <div ref={dayScrollRef} className="flex-1 overflow-y-auto custom-scrollbar px-4 py-4 space-y-2 pb-32">
+            {/* pb-40: çevrimdışı kuyruk şeridi (44px) + alt bar son saati örtmesin. */}
+            <div ref={dayScrollRef} className="flex-1 overflow-y-auto custom-scrollbar px-4 py-4 space-y-2 pb-40">
                 {isMonthlyView ? (
                     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
                         <div className="bg-[#161B22] rounded-3xl border border-white/10 p-6 mb-6">
@@ -475,7 +566,7 @@ export const FinancialCalendarView: React.FC<{
                                     >
                                         <ChevronLeft size={16} />
                                     </button>
-                                    <h3 className="text-base font-black text-white italic min-w-[130px] text-center">
+                                    <h3 className="text-base font-extrabold text-white italic min-w-[130px] text-center">
                                         {new Date(monthCursor.y, monthCursor.m, 1).toLocaleDateString('tr-TR', { month: 'long', year: 'numeric' }).toUpperCase()}
                                     </h3>
                                     <button
@@ -487,7 +578,7 @@ export const FinancialCalendarView: React.FC<{
                                     {/* Takvim 2: aylık gezinirken hızlı bugüne dönüş — bugünün gün ekranını açar. */}
                                     <button
                                         onClick={() => { const now = new Date(); setMonthCursor({ y: now.getFullYear(), m: now.getMonth() }); selectDay(todayISO()); }}
-                                        className="ml-1 px-2.5 h-8 rounded-lg bg-[#FACC15]/10 border border-[#FACC15]/25 text-[#FACC15] text-[10px] font-black uppercase tracking-wide hover:bg-[#FACC15]/20 transition-colors"
+                                        className="ml-1 px-2.5 h-8 rounded-lg bg-[#FACC15]/10 border border-[#FACC15]/25 text-[#FACC15] text-[10px] font-extrabold uppercase tracking-wide hover:bg-[#FACC15]/20 transition-colors"
                                     >
                                         Bugün
                                     </button>
@@ -501,13 +592,13 @@ export const FinancialCalendarView: React.FC<{
                                       setIsSubscriptionModalOpen(true);
                                     }}
                                     disabled={readOnly}
-                                    className="px-4 py-2 bg-blue-600 text-white text-[10px] font-black rounded-xl hover:bg-blue-500 transition-colors flex items-center gap-2 shadow-lg shadow-blue-900/20 disabled:opacity-40"
+                                    className="px-4 py-2 bg-blue-600 text-white text-[10px] font-extrabold rounded-xl hover:bg-blue-500 transition-colors flex items-center gap-2 shadow-lg shadow-blue-900/20 disabled:opacity-40"
                                 >
                                     <Plus size={14} /> YENİ ABONMAN
                                 </button>
                             </div>
                             <div className="grid grid-cols-7 gap-2 text-center mb-4">
-                                {days.map(d => <span key={d} className="text-[10px] font-black text-gray-600 uppercase">{d}</span>)}
+                                {days.map(d => <span key={d} className="text-[10px] font-extrabold text-gray-600 uppercase">{d}</span>)}
                             </div>
                             {/* Gerçek ay grid'i: gün seçilince DOĞRUDAN o günün saat ekranı açılır. */}
                             {buildMonthWeeks(monthCursor.y, monthCursor.m).map((week, wi) => (
@@ -542,7 +633,7 @@ export const FinancialCalendarView: React.FC<{
                         </div>
 
                         <div className="space-y-4">
-                            <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest px-2">AKTİF ABONMANLAR</h4>
+                            <h4 className="text-[10px] font-extrabold text-gray-500 uppercase tracking-widest px-2">AKTİF ABONMANLAR</h4>
                             {subscriptions.length === 0 ? (
                                 <p className="text-sm text-gray-500 text-center py-4">Abonman bulunmuyor.</p>
                             ) : subscriptions.map(sub => {
@@ -558,8 +649,8 @@ export const FinancialCalendarView: React.FC<{
                                         </div>
                                         <div className="min-w-0">
                                             <div className="flex items-center gap-2">
-                                                <p className="text-sm font-black text-white truncate">{sub.customer_name}</p>
-                                                {isPaused && <span className="text-[9px] font-black uppercase tracking-wider text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded">Duraklatıldı</span>}
+                                                <p className="text-sm font-extrabold text-white truncate">{sub.customer_name}</p>
+                                                {isPaused && <span className="text-[9px] font-extrabold uppercase tracking-wider text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded">Duraklatıldı</span>}
                                             </div>
                                             <p className="text-[10px] text-gray-500 font-bold uppercase">{dayNames[sub.weekday] ?? ''} • {(sub.start_time ?? '').slice(0,5).replace(':','.')} • {courtName}</p>
                                             <p className={`text-[9px] font-bold mt-0.5 flex items-center gap-1 ${autoRenew ? 'text-blue-400/80' : 'text-gray-600'}`}>
@@ -614,7 +705,7 @@ export const FinancialCalendarView: React.FC<{
                     <>
                     {/* Gün başlığı: seçili tarih + pencere bilgisi + tüm saatler anahtarı */}
                     <div className="flex items-center justify-between px-1 pb-1">
-                        <div className="text-[11px] font-black uppercase tracking-wider text-gray-500">
+                        <div className="text-[11px] font-extrabold uppercase tracking-wider text-gray-500">
                             {new Date(`${selectedDateISO}T12:00:00`).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', weekday: 'long' })}
                             {dayHours.closed
                                 ? ' · Bugün kapalı'
@@ -622,7 +713,7 @@ export const FinancialCalendarView: React.FC<{
                         </div>
                         <button
                             onClick={() => setShowAllHours(v => !v)}
-                            className={`px-2.5 py-1 rounded-full border text-[9px] font-black uppercase tracking-wider transition-colors ${showAllHours ? 'bg-white/10 text-white border-white/20' : 'bg-[#161B22] text-gray-500 border-white/5 hover:text-gray-300'}`}
+                            className={`px-2.5 py-1 rounded-full border text-[9px] font-extrabold uppercase tracking-wider transition-colors ${showAllHours ? 'bg-white/10 text-white border-white/20' : 'bg-[#161B22] text-gray-500 border-white/5 hover:text-gray-300'}`}
                         >
                             {showAllHours ? 'Aktif saatler' : 'Tüm saatler'}
                         </button>
@@ -630,10 +721,12 @@ export const FinancialCalendarView: React.FC<{
                     {dayHours.closed && visibleTimeSlots.length === 0 && (
                         <div className="rounded-2xl border border-white/10 bg-[#161B22] p-6 text-center">
                             <p className="text-sm font-bold text-gray-400">Bu gün çalışma saatlerinde kapalı.</p>
-                            <p className="text-[11px] text-gray-600 mt-1">Menü → Çalışma Saatleri'nden düzenleyebilirsin.</p>
+                            <p className="text-[11px] text-gray-600 mt-1">Sahalarım → saha → Aktif Saatler ve Ücretler'den bu güne tarife ekleyerek açabilirsin.</p>
                         </div>
                     )}
-                    {visibleTimeSlots.map((time) => {
+                    {visibleSlots.map((slot) => {
+                        // Eski yardımcılar 'HH.MM' anahtar bekliyor.
+                        const time = slot.startTime.replace(':', '.');
                         const coverage = getSlotCoverage(time);
                         const booking = coverage?.booking ?? null;
                         const isContinuation = !!coverage && !coverage.isStart;
@@ -641,30 +734,43 @@ export const FinancialCalendarView: React.FC<{
                         const subStyles = { bg: 'bg-blue-900/30', border: 'border-blue-500/50', text: 'text-blue-400', bar: 'bg-blue-500' };
                         const styles = booking ? (isSub ? subStyles : getStatusStyles(booking.status)) : null;
 
-                        const currentPrice = getSlotPrice(time);
-                        const standardPrice = resolveHourlyPrice(parseInt(time.split('.')[0], 10), pricingPolicy, selectedCourtId || null, selectedDateISO);
+                        // Fiyat ARTIK IZGARADAN gelir (tarifenin slot fiyatı); yalnız
+                        // flaş indirim varsa o ezer. Saatlik çarpım yapılmaz.
+                        const standardPrice = slot.price > 0
+                            ? slot.price
+                            : resolveHourlyPrice(parseInt(time.split('.')[0], 10), pricingPolicy, selectedCourtId || null, selectedDateISO);
+                        const deal = findFlashDealForSlot(time, selectedCourtId, flashDeals);
+                        const currentPrice = deal ? deal.deal_price : standardPrice;
                         const hasFlashDeal = currentPrice != null && standardPrice != null && currentPrice < standardPrice;
-                        const slotClosed = isSlotClosed(time, selectedCourtId, closedSlots);
-                        const nextTime = `${((parseInt(time.split('.')[0]) + 1) % 24).toString().padStart(2, '0')}.00`;
-                        // WP6: bu saat çalışma penceresi içinde mi (owner ayarı).
-                        const withinHours = !dayHours.closed && isHourWithinWorkingHours(parseInt(time.split('.')[0], 10), dayHours.open, dayHours.close);
+                        const slotClosed = isSlotClosed(time, selectedCourtId, closedSlots, slot.minutes);
+                        const nextTime = slot.endTime.replace(':', '.');
+                        // Izgaradan gelen her slot zaten çalışma penceresi içindedir
+                        // (pencere tarifeden türetiliyor). Yalnız "Tümünü göster"
+                        // dolgu satırları pencere dışı olabilir.
+                        const withinHours = slot.price > 0
+                            || (!dayHours.closed && isHourWithinWorkingHours(parseInt(time.split('.')[0], 10), dayHours.open, dayHours.close));
+                        // YÜKSEKLİK SÜREYLE ORANTILI: 60dk = 64px, 90dk = 96px, 120dk = 128px.
+                        const rowHeight = Math.round((slot.minutes / 60) * 64);
 
                         return (
-                            <div key={time} data-hour={time} className="flex gap-4 group scroll-mt-40">
+                            <div key={`${slot.startTime}-${slot.minutes}`} data-hour={time} className="flex gap-4 group scroll-mt-40">
                                 <div className="w-20 pt-4 flex flex-col items-center">
-                                    <span className={`text-[11px] font-mono font-black tracking-tighter ${booking || slotClosed ? 'text-white' : withinHours ? 'text-gray-600' : 'text-gray-700'}`}>
-                                        {time} - {nextTime}
+                                    <span className={`text-[11px] font-mono font-extrabold tracking-tighter ${booking || slotClosed ? 'text-white' : withinHours ? 'text-gray-600' : 'text-gray-700'}`}>
+                                        {slot.startTime} - {slot.endTime}
                                     </span>
+                                    {slot.minutes !== 60 && (
+                                        <span className="text-[9px] font-extrabold text-[#39FF14]/70 mt-0.5">{slot.minutes} dk</span>
+                                    )}
                                 </div>
 
                             <div className="flex-1">
                                 {slotClosed && !booking ? (
-                                    <div className="h-16 rounded-xl border border-red-500/30 bg-red-950/30 flex items-center justify-center gap-2 text-red-400">
+                                    <div style={{ height: rowHeight }} className="rounded-xl border border-red-500/30 bg-red-950/30 flex items-center justify-center gap-2 text-red-400">
                                         <Lock size={16} />
-                                        <span className="text-xs font-black uppercase tracking-wider">Kapalı</span>
+                                        <span className="text-xs font-extrabold uppercase tracking-wider">Kapalı</span>
                                     </div>
                                 ) : !withinHours && !booking ? (
-                                    <div className="h-16 rounded-xl border border-white/5 bg-white/[0.015] flex items-center justify-center gap-2 text-gray-600">
+                                    <div style={{ height: rowHeight }} className="rounded-xl border border-white/5 bg-white/[0.015] flex items-center justify-center gap-2 text-gray-600">
                                         <Clock size={14} />
                                         <span className="text-[10px] font-bold uppercase tracking-wider">Çalışma saati dışı</span>
                                     </div>
@@ -672,7 +778,7 @@ export const FinancialCalendarView: React.FC<{
                                     isContinuation ? (
                                     <button
                                         onClick={() => setSelectedBooking(booking)}
-                                        className={`w-full h-16 rounded-xl border ${styles?.border} ${styles?.bg} flex items-center gap-3 px-4 text-left opacity-75 active:scale-[0.98]`}
+                                        style={{ height: rowHeight }} className={`w-full rounded-xl border ${styles?.border} ${styles?.bg} flex items-center gap-3 px-4 text-left opacity-75 active:scale-[0.98]`}
                                         title="Çok saatlik rezervasyonun devamı"
                                     >
                                         <div className={`w-1.5 h-8 rounded ${styles?.bar}`}></div>
@@ -688,11 +794,11 @@ export const FinancialCalendarView: React.FC<{
                                             <div>
                                                 <p className="text-sm font-bold text-white leading-tight">{booking.user}</p>
                                                 <div className="flex items-center gap-2 mt-1 flex-wrap">
-                                                    <span className={`text-[10px] font-black px-1.5 py-0.5 rounded ${styles?.text} bg-black/20`}>
+                                                    <span className={`text-[10px] font-extrabold px-1.5 py-0.5 rounded ${styles?.text} bg-black/20`}>
                                                         {booking.status === 'PAID' ? 'ÖDENDİ' : 'BEKLEYEN'}
                                                     </span>
                                                     {booking.type === 'APP' && (
-                                                        <span className="text-[10px] font-black px-1.5 py-0.5 rounded text-indigo-400 bg-indigo-500/20 border border-indigo-500/30 flex items-center gap-1 shadow-[0_0_8px_rgba(99,102,241,0.2)]">
+                                                        <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded text-indigo-400 bg-indigo-500/20 border border-indigo-500/30 flex items-center gap-1 shadow-[0_0_8px_rgba(99,102,241,0.2)]">
                                                             <Shield size={10} /> OYNA HAKEMİ ATANDI
                                                         </span>
                                                     )}
@@ -700,7 +806,7 @@ export const FinancialCalendarView: React.FC<{
                                                 </div>
                                             </div>
                                             <div className="text-right">
-                                                <p className="text-sm font-black text-white font-mono">{booking.price}₺</p>
+                                                <p className="text-sm font-extrabold text-white font-mono">{booking.price}₺</p>
                                                 {booking.duration > 1 && (
                                                     <p className="text-[9px] font-bold text-gray-400 mt-0.5">{booking.duration} saat</p>
                                                 )}
@@ -709,7 +815,7 @@ export const FinancialCalendarView: React.FC<{
                                     </button>
                                     )
                                 ) : (
-                                    <div className="flex gap-2 h-16 w-full">
+                                    <div style={{ height: rowHeight }} className="flex gap-2 w-full">
                                         <button 
                                             onClick={() => {
                                               if (readOnly) {
@@ -809,13 +915,21 @@ export const FinancialCalendarView: React.FC<{
                                 // Fiyat GERÇEK tarifeden; tarife yoksa kayıt engellenir (uydurma tutar yazılmaz).
                                 const rateVal = isQuickCreateOpen ? getSlotPrice(isQuickCreateOpen) : null;
                                 if (rateVal == null) {
-                                    notify('Bu saat için tarife tanımlı değil. Menü → Fiyatlandırma Politikası\'ndan tarife ekleyin.', 'warning');
+                                    notify('Bu saat için tarife tanımlı değil. Sahalarım → saha → Aktif Saatler ve Ücretler\'den tarife ekleyin.', 'warning');
+                                    setIsAddingSlot(false);
+                                    return;
+                                }
+                                // BULGU-123: kapora sahibin ELDEN aldığı tutardır; oranla
+                                // uydurulmaz. Saat ücretini aşan tutar deftere yazılamaz.
+                                const depositVal = quickDepositVal;
+                                if (paymentStatus === 'PARTIAL' && (!Number.isFinite(depositVal) || depositVal <= 0 || depositVal > rateVal)) {
+                                    notify('Alınan kapora tutarını gir (0 ile saat ücreti arasında).', 'warning');
                                     setIsAddingSlot(false);
                                     return;
                                 }
                                 const paidAmount =
                                     paymentStatus === 'PAID' ? rateVal
-                                    : paymentStatus === 'PARTIAL' ? Math.floor(rateVal * 0.25)
+                                    : paymentStatus === 'PARTIAL' ? depositVal
                                     : 0;
                                 // OP-P0-1: rezervasyon + nakit ödeme TEK atomik/idempotent RPC —
                                 // "rezervasyon var ama tahsilat yok" tutarsızlığı biter. Telefon
@@ -837,14 +951,15 @@ export const FinancialCalendarView: React.FC<{
                                 setCustomerName('');
                                 setCustomerPhone('');
                                 setPaymentStatus('PENDING');
+                                setDepositStr('');
                             } catch (err) {
                                 notify(toTurkishError(err), 'error');
                             } finally {
                                 setIsAddingSlot(false);
                             }
                         }}
-                        disabled={isAddingSlot}
-                        className="w-full py-4 min-h-[52px] bg-[#FACC15] text-black font-black text-lg rounded-2xl hover:bg-yellow-300 active:scale-[0.98] transition-all disabled:opacity-50"
+                        disabled={isAddingSlot || (paymentStatus === 'PARTIAL' && !isDepositValid)}
+                        className="w-full py-4 min-h-[52px] bg-[#FACC15] text-black font-extrabold text-lg rounded-2xl hover:bg-yellow-300 active:scale-[0.98] transition-all disabled:opacity-50"
                     >
                         {isAddingSlot ? 'KAYDEDİLİYOR...' : 'KAYDET'}
                     </button>
@@ -852,13 +967,13 @@ export const FinancialCalendarView: React.FC<{
             >
                 <div className="bg-[#0A0E14] p-4 rounded-2xl border border-white/5 mb-6 text-center">
                     <p className="text-xs text-gray-500 uppercase font-bold">Seçilen Saat</p>
-                    <p className="text-3xl font-black text-white mt-1 font-mono tabular-nums">{isQuickCreateOpen}</p>
+                    <p className="text-3xl font-extrabold text-white mt-1 font-mono tabular-nums">{isQuickCreateOpen}</p>
                     {(() => {
                         const rate = isQuickCreateOpen ? getSlotPrice(isQuickCreateOpen) : null;
                         return rate != null ? (
                             <p className="text-sm font-bold text-gray-400 mt-2">Tutar: {rate}₺</p>
                         ) : (
-                            <p className="text-xs font-bold text-amber-400 mt-2">Bu saat için tarife tanımlı değil — Menü → Fiyatlandırma Politikası'ndan ekleyin.</p>
+                            <p className="text-xs font-bold text-amber-400 mt-2">Bu saat için tarife tanımlı değil — Sahalarım → saha → Aktif Saatler ve Ücretler'den ekleyin.</p>
                         );
                     })()}
                 </div>
@@ -892,25 +1007,61 @@ export const FinancialCalendarView: React.FC<{
                         <button
                             type="button"
                             onClick={() => setPaymentStatus('PAID')}
-                            className={`flex-1 min-h-[44px] py-3 border rounded-xl text-xs font-bold transition-colors ${paymentStatus === 'PAID' ? 'bg-emerald-500 text-black border-emerald-500 font-black' : 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20 hover:bg-emerald-500/20'}`}
+                            className={`flex-1 min-h-[44px] py-3 border rounded-xl text-xs font-bold transition-colors ${paymentStatus === 'PAID' ? 'bg-emerald-500 text-black border-emerald-500 font-extrabold' : 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20 hover:bg-emerald-500/20'}`}
                         >
                             Tam Ödendi
                         </button>
                         <button
                             type="button"
                             onClick={() => setPaymentStatus('PARTIAL')}
-                            className={`flex-1 min-h-[44px] py-3 border rounded-xl text-xs font-bold transition-colors ${paymentStatus === 'PARTIAL' ? 'bg-yellow-500 text-black border-yellow-500 font-black' : 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20 hover:bg-yellow-500/20'}`}
+                            className={`flex-1 min-h-[44px] py-3 border rounded-xl text-xs font-bold transition-colors ${paymentStatus === 'PARTIAL' ? 'bg-yellow-500 text-black border-yellow-500 font-extrabold' : 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20 hover:bg-yellow-500/20'}`}
                         >
                             Kapora
                         </button>
                         <button
                             type="button"
                             onClick={() => setPaymentStatus('PENDING')}
-                            className={`flex-1 min-h-[44px] py-3 border rounded-xl text-xs font-bold transition-colors ${paymentStatus === 'PENDING' ? 'bg-red-500 text-white border-red-500 font-black' : 'bg-red-500/10 text-red-500 border-red-500/20 hover:bg-red-500/20'}`}
+                            className={`flex-1 min-h-[44px] py-3 border rounded-xl text-xs font-bold transition-colors ${paymentStatus === 'PENDING' ? 'bg-red-500 text-white border-red-500 font-extrabold' : 'bg-red-500/10 text-red-500 border-red-500/20 hover:bg-red-500/20'}`}
                         >
                             Ödeme Bekliyor
                         </button>
                     </div>
+                    {/* BULGU-123: kapora = elden alınan GERÇEK tutar. Tarifedeki değer
+                        varsayılan gelir, sahibi değiştirebilir; ücreti aşarsa KAYDET kilitli. */}
+                    {paymentStatus === 'PARTIAL' && (
+                        <div className="space-y-2">
+                            <label className="text-[11px] font-bold text-[#9CA3AF] uppercase tracking-wider">
+                                Elden alınan kapora
+                            </label>
+                            <div className="flex gap-2">
+                                <div className="flex-1 bg-[#0A0E14] border border-white/10 rounded-xl px-4 flex items-center focus-within:border-[#FACC15]">
+                                    <input
+                                        type="text"
+                                        inputMode="decimal"
+                                        value={depositStr}
+                                        onChange={(e) => setDepositStr(e.target.value)}
+                                        placeholder="0"
+                                        className="w-full bg-transparent text-white font-extrabold text-xl py-3 outline-none tabular-nums"
+                                    />
+                                    <span className="text-[#9CA3AF] font-bold">₺</span>
+                                </div>
+                                {quickTariffDeposit != null && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setDepositStr(String(quickTariffDeposit))}
+                                        className="px-4 min-h-[44px] rounded-xl bg-white/5 border border-white/10 text-white text-[11px] font-extrabold uppercase active:scale-95"
+                                    >
+                                        Tarife: {quickTariffDeposit}₺
+                                    </button>
+                                )}
+                            </div>
+                            {isDepositTooBig ? (
+                                <p className="text-[11px] font-bold text-[#F87171]">Kapora, saat ücretinden ({quickSlotRate}₺) fazla olamaz.</p>
+                            ) : (
+                                <p className="text-[11px] text-[#9CA3AF]">Deftere bu tutar yazılır. Kalanı sonra &quot;Tahsilat Al&quot; ile alırsın.</p>
+                            )}
+                        </div>
+                    )}
                 </div>
             </OwnerBottomSheet>
 

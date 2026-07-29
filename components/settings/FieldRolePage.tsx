@@ -64,15 +64,15 @@ const FieldRolePage: React.FC<FieldRolePageProps> = ({ open, onClose, onNavigate
   return (
     <SettingsSubPage open={open} onClose={onClose} title="Sahada Rolün" subtitle="Oyunculuğun her zaman açık — ek rol için başvur">
       {loading ? (
-        <div className="py-16 flex justify-center"><RefreshCw size={20} className="animate-spin text-gray-500" /></div>
+        <div className="py-16 flex justify-center"><RefreshCw size={20} className="animate-spin text-ink-4" /></div>
       ) : (
         <div className="space-y-4">
-          <p className="text-[13px] text-gray-400 leading-relaxed">
+          <p className="text-[0.8125rem] text-gray-400 leading-relaxed">
             Oyunculuğun her zaman açık. İstersen ek bir rol için başvur; onaylanınca uygulamayı açtığında doğrudan o panele yönlendirilirsin.
           </p>
 
           {pending && (
-            <div className="rounded-2xl px-3.5 py-3 text-[12px] font-bold flex items-center gap-2" style={{ background: 'rgba(255,170,0,0.1)', border: '1px solid rgba(255,170,0,0.35)', color: '#FFAA00' }}>
+            <div className="rounded-2xl px-3.5 py-3 text-[0.75rem] font-bold flex items-center gap-2" style={{ background: 'rgba(255,170,0,0.1)', border: '1px solid rgba(255,170,0,0.35)', color: '#FFAA00' }}>
               <Activity size={15} className="shrink-0" /> Başvurun inceleniyor — oyuncu olarak oynamaya devam edebilirsin.
             </div>
           )}
@@ -91,13 +91,13 @@ const FieldRolePage: React.FC<FieldRolePageProps> = ({ open, onClose, onNavigate
                     {opt.icon}
                   </div>
                   <div className="text-left flex-1 min-w-0">
-                    <p className="text-sm font-black text-white leading-tight">{opt.label}</p>
-                    <p className="text-[11px] text-gray-400 truncate">{opt.sub}</p>
+                    <p className="text-sm font-extrabold text-white leading-tight">{opt.label}</p>
+                    <p className="text-[0.6875rem] text-gray-400 truncate">{opt.sub}</p>
                   </div>
                   {owned ? (
-                    <span className="text-[10px] font-black px-3 py-1.5 rounded-full shrink-0" style={{ color: opt.color, background: `${opt.color}1a`, border: `1px solid ${opt.color}40` }}>SAHİP</span>
+                    <span className="text-[0.6875rem] font-extrabold px-3 py-1.5 rounded-full shrink-0" style={{ color: opt.color, background: `${opt.color}1a`, border: `1px solid ${opt.color}40` }}>SAHİP</span>
                   ) : (
-                    <span className="text-[11px] font-black px-3 py-1.5 rounded-full shrink-0 text-[#39FF14] bg-[#39FF14]/10 border border-[#39FF14]/40">Başvur →</span>
+                    <span className="text-[0.6875rem] font-extrabold px-3 py-1.5 rounded-full shrink-0 text-[#39FF14] bg-[#39FF14]/10 border border-[#39FF14]/40">Başvur →</span>
                   )}
                 </button>
               );

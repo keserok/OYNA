@@ -3,6 +3,7 @@ import { AlertCircle, Banknote, Clock, Lock, Wallet, X } from 'lucide-react';
 import { getOwnerBalance, getBankAccounts, requestWithdrawal, getCashoutStatus, toTurkishError } from '../../../services/pitchOwnerService';
 import { useOwnerToast } from '../components/useOwnerToast';
 import { validateTrIban } from '../../../utils/iban';
+import { useBackDismiss } from '../../../hooks/useBackDismiss';
 
 interface Props {
   onClose: () => void;
@@ -15,6 +16,8 @@ export const OwnerWithdrawalsModal: React.FC<Props> = ({
   facilityId,
   readOnly = false,
 }) => {
+  // Android geri tuşu + Esc bu modalı kapatır (BULGU-132).
+  useBackDismiss(true, onClose, 'owner-withdrawals-modal');
   const notify = useOwnerToast();
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [iban, setIban] = useState('');
@@ -106,7 +109,7 @@ export const OwnerWithdrawalsModal: React.FC<Props> = ({
     <div className="fixed inset-0 z-50 bg-[#0A0D14] flex flex-col animate-in slide-in-from-bottom-4 duration-300">
       <div className="bg-[#161B22] p-4 flex justify-between items-center border-b border-white/5 safe-area-top">
         <div className="flex items-center gap-3">
-          <button type="button" onClick={onClose} className="p-2 rounded-full bg-white/5 text-white">
+          <button type="button" onClick={onClose} aria-label="Kapat" className="w-11 h-11 flex items-center justify-center rounded-full bg-white/5 text-white">
             <X size={20} />
           </button>
           <h2 className="text-white font-bold text-lg">Para Çekme</h2>
@@ -117,7 +120,7 @@ export const OwnerWithdrawalsModal: React.FC<Props> = ({
         <div className="bg-gradient-to-br from-blue-900/40 to-emerald-900/30 p-6 rounded-3xl border border-blue-500/20 relative overflow-hidden">
           <Wallet size={64} className="absolute top-0 right-0 p-4 opacity-10 text-white" />
           <p className="text-blue-200 text-sm font-bold mb-1">Çekilebilir Bakiye</p>
-          <h3 className="text-4xl font-black text-white">
+          <h3 className="text-4xl font-extrabold text-white">
             ₺{availableBalance.toLocaleString('tr-TR')}
           </h3>
           {reservedBalance > 0 && (
@@ -201,7 +204,7 @@ export const OwnerWithdrawalsModal: React.FC<Props> = ({
             Number(withdrawAmount) <= 0 ||
             Number(withdrawAmount) > availableBalance
           }
-          className="w-full py-4 rounded-2xl bg-blue-600 text-white font-black text-lg flex items-center justify-center gap-2 hover:bg-blue-500 disabled:opacity-50"
+          className="w-full py-4 rounded-2xl bg-blue-600 text-white font-extrabold text-lg flex items-center justify-center gap-2 hover:bg-blue-500 disabled:opacity-50"
         >
           {!cashout.enabled ? (
             <><Lock size={20} /> Çekim Yakında Açılacak</>

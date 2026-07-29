@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
 import { MODAL_BACKDROP } from '../../../components/common/motion';
 import { IconButton } from './IconButton';
+import { useBackDismiss } from '../../../hooks/useBackDismiss';
 
 /**
  * FAZ0: Owner panelinin TEK kanonik alt-sayfası (bottom sheet).
@@ -44,6 +45,8 @@ export const OwnerBottomSheet: React.FC<OwnerBottomSheetProps> = ({
   hideHandle,
   bodyClassName = '',
 }) => {
+  // Android geri tusu kaydi. Mevcut Esc dinleyicisi kalabilir: onClose idempotent.
+  useBackDismiss(open, onClose, 'owner-bottom-sheet');
   const panelRef = useRef<HTMLDivElement>(null);
   const [kbInset, setKbInset] = useState(0);
 
@@ -63,25 +66,21 @@ export const OwnerBottomSheet: React.FC<OwnerBottomSheetProps> = ({
     };
   }, [open]);
 
-  // Esc ile kapat + body scroll kilidi + odağı sheet'e taşı.
+  // Body scroll kilidi + odağı sheet'e taşı.
+  // KENDİ Esc dinleyicisi KALDIRILDI: useBackDismiss (yukarıda) Esc'yi merkezî
+  // kayıttan yönetiyor ve YALNIZ en üstteki katmanın cevap vermesini sağlıyor.
+  // İkisi birden dururken iç içe iki sheet'te tek Esc İKİSİNİ birden kapatıyordu
+  // (stopPropagation aynı düğümdeki diğer dinleyicileri durdurmaz).
   useEffect(() => {
     if (!open) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.stopPropagation();
-        onClose();
-      }
-    };
-    document.addEventListener('keydown', onKey);
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     const t = window.setTimeout(() => panelRef.current?.focus(), 60);
     return () => {
-      document.removeEventListener('keydown', onKey);
       document.body.style.overflow = prevOverflow;
       window.clearTimeout(t);
     };
-  }, [open, onClose]);
+  }, [open]);
 
   // Basit focus-trap: Tab sheet dışına çıkmasın.
   const onPanelKeyDown = (e: React.KeyboardEvent) => {
@@ -140,7 +139,7 @@ export const OwnerBottomSheet: React.FC<OwnerBottomSheetProps> = ({
               <div className="shrink-0 px-5 pt-2 pb-3 flex items-start justify-between gap-3 border-b border-white/5">
                 <div className="min-w-0">
                   {title && (
-                    <h2 className="text-lg font-black text-white truncate">{title}</h2>
+                    <h2 className="text-lg font-extrabold text-white truncate">{title}</h2>
                   )}
                   {subtitle && <p className="text-xs text-slate-400 mt-0.5">{subtitle}</p>}
                 </div>

@@ -186,7 +186,7 @@ export const NotificationTemplatesPage: React.FC<{ onRefresh?: () => Promise<voi
           ) : (
             Object.entries(grouped).map(([cat, rows]) => (
               <section key={cat} className="bg-[#161B22]/60 border border-white/[0.06] rounded-2xl p-5">
-                <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-wider mb-4">
+                <h3 className="text-[10px] font-extrabold text-gray-400 uppercase tracking-wider mb-4">
                   {CATEGORY_LABELS[cat] ?? cat}
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -201,12 +201,12 @@ export const NotificationTemplatesPage: React.FC<{ onRefresh?: () => Promise<voi
                         </div>
                         <div className="flex flex-wrap gap-1 shrink-0 justify-end">
                           {row.is_mandatory && (
-                            <span className="text-[9px] font-black px-1.5 py-0.5 rounded text-amber-400 bg-amber-500/15">
+                            <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded text-amber-400 bg-amber-500/15">
                               Zorunlu
                             </span>
                           )}
                           {!row.can_user_disable && (
-                            <span className="inline-flex items-center gap-1 text-[9px] font-black px-1.5 py-0.5 rounded text-red-400 bg-red-500/20">
+                            <span className="inline-flex items-center gap-1 text-[9px] font-extrabold px-1.5 py-0.5 rounded text-red-400 bg-red-500/20">
                               <Lock size={9} /> Kapatılamaz
                             </span>
                           )}
@@ -260,7 +260,7 @@ export const NotificationTemplatesPage: React.FC<{ onRefresh?: () => Promise<voi
           >
             <div className="sticky top-0 z-10 flex items-center justify-between gap-3 px-5 py-4 bg-[#161B22] border-b border-white/[0.06]">
               <div className="min-w-0">
-                <h2 className="text-sm font-black text-white truncate">Şablonu Düzenle</h2>
+                <h2 className="text-sm font-extrabold text-white truncate">Şablonu Düzenle</h2>
                 <p className="text-[10px] font-mono text-gray-500 mt-0.5">{draft.type_key}</p>
               </div>
               <button
@@ -304,7 +304,7 @@ export const NotificationTemplatesPage: React.FC<{ onRefresh?: () => Promise<voi
               />
 
               <div className="bg-cyan-500/[0.04] border border-cyan-500/15 rounded-xl p-3">
-                <p className="text-[9px] font-black text-cyan-300/70 uppercase tracking-wider mb-2">Canlı Önizleme</p>
+                <p className="text-[9px] font-extrabold text-cyan-300/70 uppercase tracking-wider mb-2">Canlı Önizleme</p>
                 <div className="bg-black/40 border border-white/[0.06] rounded-lg p-3 space-y-1">
                   <p className="text-[11px] font-bold text-white leading-snug">
                     {replacePreviewVars(draft.title_tr) || 'Başlık önizlemesi'}
@@ -329,7 +329,7 @@ export const NotificationTemplatesPage: React.FC<{ onRefresh?: () => Promise<voi
                 type="button"
                 disabled={saving}
                 onClick={() => void save()}
-                className="px-4 py-2 bg-green-500/20 text-green-400 border border-green-500/30 rounded-lg text-xs font-black hover:bg-green-500/30 disabled:opacity-40"
+                className="px-4 py-2 bg-green-500/20 text-green-400 border border-green-500/30 rounded-lg text-xs font-extrabold hover:bg-green-500/30 disabled:opacity-40"
               >
                 {saving ? 'Kaydediliyor…' : 'Kaydet'}
               </button>

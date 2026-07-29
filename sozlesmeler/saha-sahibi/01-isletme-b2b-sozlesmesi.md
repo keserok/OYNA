@@ -304,7 +304,7 @@ b) İşletme'nin madde 2.5 kapsamında **esnaf** sıfatıyla hareket ettiği hâ
 
 ### 2. Onaylanmış Rezervasyonlara Uyma
 
-Platform üzerinden onaylanan rezervasyonlar, mücbir sebep veya haklı teknik/altyapısal arıza hâlleri hariç, İşletme tarafından tek taraflı olarak iptal edilemez veya değiştirilemez. Zorunlu iptallerde oyuncuya en az **24 (yirmidört) saat** önceden haber verilir ve durum OYNA'ya bildirilir. Bu süre, OYNA'nın oyuncularla akdettiği Mesafeli Satış ve İptal/İade Koşulları'nda düzenlenen tam iade eşiğiyle (rezervasyon saatinden en az 24 saat önce) uyumlu olup, madde 2.3'te atıf yapılan iptal/iade kademelerinin İşletme kaynaklı iptallerde de gözetilmesini sağlar; İşletme kaynaklı iptallerde oyuncuya her hâlükârda tam iade yapılır ve bu tutar İşletme hakedişinden mahsup edilir.
+Platform üzerinden onaylanan rezervasyonlar, mücbir sebep veya haklı teknik/altyapısal arıza hâlleri hariç, İşletme tarafından tek taraflı olarak iptal edilemez veya değiştirilemez. Zorunlu iptallerde oyuncuya en az **24 (yirmidört) saat** önceden haber verilir ve durum OYNA'ya bildirilir. Bu süre, OYNA'nın oyuncularla akdettiği Mesafeli Satış ve İptal/İade Koşulları'nda düzenlenen tam iade eşiğiyle (rezervasyon saatinden en az 24 saat önce) uyumlu olup, madde 2.3'te atıf yapılan iptal/iade kademelerinin İşletme kaynaklı iptallerde de gözetilmesini sağlar; İşletme kaynaklı iptallerde oyuncuya her hâlükârda tam iade yapılır; bu iade oyuncunun OYNA cüzdanına işlenir ve oyuncu bu tutarı Kullanım Şartları madde 6.5'teki koşullarla banka hesabına çekebilir. İade tutarı İşletme hakedişinden mahsup edilir.
 
 ### 3. Temel Güvenlik Ekipmanı
 

@@ -86,3 +86,7 @@ preview-*.tsx
 
 # Yerel doğrulama/sürüş harness'i (Playwright scriptleri, sb-shim, screenshot'lar; commit edilmez)
 scratchpad/
+
+# Ajan gecici sinama dosyalari
+*.tmp.mjs
+playwright-report/

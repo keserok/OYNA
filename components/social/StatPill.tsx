@@ -15,8 +15,8 @@ const StatPill: React.FC<StatPillProps> = ({ value, label, accent = false, class
       accent ? 'bg-[#39FF14]/8 border-[#39FF14]/25' : 'bg-white/4 border-white/8'
     } ${className}`}
   >
-    <div className={`text-lg font-black ${accent ? 'text-[#39FF14]' : 'text-white'}`}>{value}</div>
-    <div className="text-[10px] font-bold uppercase tracking-widest text-white/40 mt-0.5">{label}</div>
+    <div className={`text-lg font-extrabold ${accent ? 'text-[#39FF14]' : 'text-white'}`}>{value}</div>
+    <div className="text-[0.625rem] font-bold uppercase tracking-widest text-ink-4 mt-0.5">{label}</div>
   </div>
 );
 

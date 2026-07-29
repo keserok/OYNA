@@ -59,10 +59,10 @@ export const CollectModal: React.FC<Props> = ({ booking, onClose, onChanged, not
     <BottomSheetModal title={`Tahsilat — ${booking.customer_name ?? 'Müşteri'}`} onClose={onClose}>
       <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-3 mb-4 text-[11px] text-gray-400">
         {booking.date} · {booking.time} · {booking.court ?? 'Saha'} · Ödenen {money(booking.paid)} / {money(booking.price)}
-        <div className="text-amber-400 font-black text-sm mt-1">Bekleyen {money(booking.balance)}</div>
+        <div className="text-amber-400 font-extrabold text-sm mt-1">Bekleyen {money(booking.balance)}</div>
       </div>
 
-      <label className="text-[10px] font-black text-gray-500 uppercase block mb-1.5">Tahsil edilecek tutar</label>
+      <label className="text-[10px] font-extrabold text-gray-500 uppercase block mb-1.5">Tahsil edilecek tutar</label>
       <input
         inputMode="decimal"
         className="w-full bg-[#0A0E14] border border-white/10 rounded-xl p-3 text-white mb-3"
@@ -75,7 +75,7 @@ export const CollectModal: React.FC<Props> = ({ booking, onClose, onChanged, not
             key={m.id}
             type="button"
             onClick={() => setMethod(m.id)}
-            className={`flex-1 py-2.5 rounded-xl text-xs font-black border transition-colors ${
+            className={`flex-1 py-2.5 rounded-xl text-xs font-extrabold border transition-colors ${
               method === m.id ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300' : 'bg-white/[0.03] border-white/10 text-gray-400'
             }`}
           >
@@ -88,7 +88,7 @@ export const CollectModal: React.FC<Props> = ({ booking, onClose, onChanged, not
         type="button"
         onClick={collect}
         disabled={busy !== null || !validPay}
-        className="w-full py-4 bg-emerald-600 text-white font-black rounded-2xl disabled:opacity-40 mb-2"
+        className="w-full py-4 bg-emerald-600 text-white font-extrabold rounded-2xl disabled:opacity-40 mb-2"
       >
         {busy === 'pay' ? 'KAYDEDİLİYOR…' : 'TAHSİL ET'}
       </button>
@@ -96,7 +96,7 @@ export const CollectModal: React.FC<Props> = ({ booking, onClose, onChanged, not
         type="button"
         onClick={toDebt}
         disabled={busy !== null}
-        className="w-full py-3 bg-red-500/10 border border-red-500/25 text-red-300 font-black rounded-2xl disabled:opacity-40 inline-flex items-center justify-center gap-2"
+        className="w-full py-3 bg-red-500/10 border border-red-500/25 text-red-300 font-extrabold rounded-2xl disabled:opacity-40 inline-flex items-center justify-center gap-2"
       >
         <HandCoins size={15} /> {busy === 'debt' ? 'YAZILIYOR…' : 'VERESİYEYE YAZ'}
       </button>

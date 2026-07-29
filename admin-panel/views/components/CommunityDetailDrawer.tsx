@@ -148,7 +148,7 @@ export const CommunityDetailDrawer: React.FC<Props> = ({ communityId, onClose, o
           <div className="flex items-center justify-between px-5 py-4 border-b border-white/10 shrink-0">
             <div>
               <p className="text-[10px] text-gray-500 font-mono uppercase">Topluluk Kontrol</p>
-              <h2 className="text-sm font-black text-white uppercase">{c?.name ?? '…'}</h2>
+              <h2 className="text-sm font-extrabold text-white uppercase">{c?.name ?? '…'}</h2>
             </div>
             <div className="flex items-center gap-2">
               <button type="button" disabled={!c} onClick={() => setEditOpen(true)} className="w-8 h-8 rounded-lg bg-white/5 text-gray-400 hover:text-white flex items-center justify-center">
@@ -331,5 +331,5 @@ const Badge: React.FC<{ text: string; color: 'blue' | 'amber' | 'yellow' | 'gray
     yellow: 'text-yellow-400 border-yellow-500/20 bg-yellow-500/10',
     gray: 'text-gray-400 border-white/10 bg-white/5',
   }[color];
-  return <span className={`text-[8px] font-black px-2 py-0.5 rounded border ${cls}`}>{text}</span>;
+  return <span className={`text-[8px] font-extrabold px-2 py-0.5 rounded border ${cls}`}>{text}</span>;
 };

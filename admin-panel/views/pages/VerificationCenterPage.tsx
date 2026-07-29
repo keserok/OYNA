@@ -66,7 +66,7 @@ export const VerificationCenterPage: React.FC<VerificationCenterPageProps> = ({ 
       actions={
         <div className="flex items-center gap-3">
           {totalBadge > 0 && (
-            <span className="flex items-center gap-1.5 h-9 px-3 rounded-xl bg-amber-500/15 border border-amber-500/20 text-[11px] font-black text-amber-400">
+            <span className="flex items-center gap-1.5 h-9 px-3 rounded-xl bg-amber-500/15 border border-amber-500/20 text-[11px] font-extrabold text-amber-400">
               {totalBadge} bekleyen
             </span>
           )}
@@ -105,7 +105,7 @@ export const VerificationCenterPage: React.FC<VerificationCenterPageProps> = ({ 
               <span>{seg.label}</span>
               {seg.hasBadge && badge != null && badge > 0 && (
                 <span
-                  className={`min-w-[18px] h-[18px] px-1.5 inline-flex items-center justify-center rounded-full text-[10px] font-black ${
+                  className={`min-w-[18px] h-[18px] px-1.5 inline-flex items-center justify-center rounded-full text-[10px] font-extrabold ${
                     isActive ? 'bg-amber-500/20 text-amber-400' : 'bg-amber-500/20 text-amber-400'
                   }`}
                 >

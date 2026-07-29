@@ -174,6 +174,13 @@ interface AppState {
   retryInitialLoad: () => Promise<void>;
   view: AppView;
   navigationStack: AppView[];
+  /** Açık overlay'ler (sheet, modal, tam ekran katman) — LIFO.
+   *  Donanım geri tuşu ekranı değiştirmeden ÖNCE buradaki en üsttekini kapatır.
+   *  Kayıt hooks/useBackDismiss.ts üzerinden yapılır, elle push/pop ÇAĞIRMA. */
+  overlayStack: { id: string; priority: number; close: () => void }[];
+  /** Banka doğrulaması (3DS) ekranı açıkken true. true iken donanım geri tuşu
+   *  HİÇBİR ŞEY yapmaz — kart bankada çekilirken ekranın unmount olmasını engeller. */
+  paymentLockActive: boolean;
   role: UserRole | null;
   isAuthReady: boolean;
   selectedMatch: MatchListing | null;
@@ -283,6 +290,17 @@ interface AppState {
   goBack: (fallback?: AppView) => void;
   /** Geçmiş yığınını temizleyip verilen ekranı yeni kök olarak ayarlar. */
   resetNavigation: (view: AppView) => void;
+  /** Alt menü sekme geçişi. Yığını boşaltmaz: DASHBOARD dışı sekmelerde
+   *  ['DASHBOARD'] kökü bırakır → geri tuşu sekmeden Ana Sayfa'ya döner. */
+  switchTab: (view: AppView) => void;
+  /** Yığını ['DASHBOARD'] köküne sabitleyip verilen ekranı açar.
+   *  resetNavigation'ın aksine yığın BOŞ KALMAZ → geri tuşu minimizeApp'e düşmez. */
+  resetUnderHome: (view: AppView) => void;
+  pushOverlay: (id: string, close: () => void, priority?: number) => void;
+  popOverlay: (id: string) => void;
+  /** En üstteki overlay'i kapatır. Kapatacak overlay varsa true döner. */
+  closeTopOverlay: () => boolean;
+  setPaymentLockActive: (v: boolean) => void;
   setRole: (role: UserRole | null) => void;
   /** Profil'den sağlayıcı başvurusu için hedef rol (SERVICE_APPLICATION'a taşınır). */
   serviceAppRole: UserRole | null;
@@ -556,6 +574,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
   view: 'SPLASH',
   navigationStack: [],
+  overlayStack: [],
+  paymentLockActive: false,
   role: UserRole.PLAYER,
   serviceAppRole: null,
   isAuthReady: true,
@@ -734,14 +754,61 @@ export const useAppStore = create<AppState>((set, get) => ({
   setView: (view) => set({ view }),
   navigateTo: (newView) => set((state) => {
     if (state.view === newView) return {};
-    return { navigationStack: [...state.navigationStack, state.view], view: newView };
+    const stack = state.navigationStack;
+    // Döngü kırıcı (BULGU-028): A → B → A gidildiğinde yığına ikinci bir A
+    // eklenmez, yığındaki A tüketilir. Geri tuşu ASLA ileri götürmez.
+    // Örn. [MATCH_JOIN, PAYMENT] + view=WALLET → navigateTo('PAYMENT')
+    //      sonuç: [MATCH_JOIN], view=PAYMENT.
+    if (stack.length > 0 && stack[stack.length - 1] === newView) {
+      return { navigationStack: stack.slice(0, -1), view: newView };
+    }
+    return { navigationStack: [...stack, state.view], view: newView };
   }),
   goBack: (fallback) => set((state) => {
     const stack = [...state.navigationStack];
     const previous = stack.pop();
     return { navigationStack: stack, view: previous ?? fallback ?? state.view };
   }),
-  resetNavigation: (newView) => set({ navigationStack: [], view: newView }),
+  // Kök sıfırlaması: yığın boşalır, geri tuşu minimizeApp'e düşer. Yalnız
+  // gerçek kök geçişlerinde kullanılır (çıkış, rol değişimi, hayalet mod).
+  // paymentLockActive burada da düşürülür — kilit hiçbir yolda asılı kalmasın.
+  resetNavigation: (newView) => set({ navigationStack: [], view: newView, paymentLockActive: false }),
+  switchTab: (newView) => set((state) => {
+    // Aynı sekmeye basmak gezinme açısından no-op ama kilidi YİNE de düşürür:
+    // emniyet ağının amacı 3DS kilidinin hiçbir yolda asılı kalmaması.
+    if (state.view === newView) return { paymentLockActive: false };
+    return {
+      navigationStack: newView === 'DASHBOARD' ? [] : ['DASHBOARD'],
+      view: newView,
+      paymentLockActive: false,
+    };
+  }),
+  resetUnderHome: (newView) => set({
+    navigationStack: ['DASHBOARD'],
+    view: newView,
+    paymentLockActive: false,
+  }),
+  pushOverlay: (id, close, priority = 0) => set((state) => ({
+    overlayStack: [...state.overlayStack.filter((o) => o.id !== id), { id, priority, close }],
+  })),
+  popOverlay: (id) => set((state) => ({
+    overlayStack: state.overlayStack.filter((o) => o.id !== id),
+  })),
+  closeTopOverlay: () => {
+    const stack = get().overlayStack;
+    if (stack.length === 0) return false;
+    // En yüksek priority; eşitlikte en son kaydedilen (LIFO).
+    let top = stack[0];
+    for (const o of stack) if (o.priority >= top.priority) top = o;
+    // Kaydı ELLE SİLMİYORUZ. close() bazı katmanlarda korumalı bir no-op olabilir
+    // (ör. kayıt sürerken kapanmayı reddeden sheet). Kaydı önden silseydik o katman
+    // geri-yığınından kalıcı olarak düşer ve sonraki geri tuşu ALTINDAKİ ekranı
+    // kapatırdı. Katman gerçekten kapanırsa useBackDismiss'in cleanup'ı popOverlay
+    // çağırıp kaydı zaten siler.
+    top.close();
+    return true;
+  },
+  setPaymentLockActive: (v) => set({ paymentLockActive: v }),
   setRole: (role) => set({ role }),
   setServiceAppRole: (serviceAppRole) => set({ serviceAppRole }),
   setIsAuthReady: (isAuthReady) => set({ isAuthReady }),

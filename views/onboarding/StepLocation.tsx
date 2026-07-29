@@ -88,7 +88,7 @@ const StepLocation: React.FC<StepLocationProps> = ({ phase, onSkip }) => {
       {phase === 'idle' && (
         <button
           onClick={onSkip}
-          className="text-[13px]"
+          className="text-[0.8125rem]"
           style={{ color: 'rgba(255,255,255,0.45)', textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer' }}
         >
           Konumsuz devam et

@@ -187,7 +187,7 @@ export const ServiceDisputesPage: React.FC = () => {
               onClick={(e) => e.stopPropagation()}
               className="w-full max-w-md bg-[#161B22] border border-white/10 rounded-2xl p-6 shadow-2xl"
             >
-              <h3 className="text-sm font-black text-white mb-1">
+              <h3 className="text-sm font-extrabold text-white mb-1">
                 {resolveTarget.uphold ? 'Cezayı onayla (kaptan haklı)' : 'İtirazı kabul et (sağlayıcı haklı)'}
               </h3>
               <p className="text-xs text-gray-500 mb-3">
@@ -212,7 +212,7 @@ export const ServiceDisputesPage: React.FC = () => {
                 <button
                   onClick={() => void confirmResolve()}
                   disabled={actioningId === resolveTarget.row.id}
-                  className={`px-4 py-2 text-xs font-black rounded-xl text-white disabled:opacity-50 ${resolveTarget.uphold ? 'bg-red-600 hover:bg-red-500' : 'bg-green-600 hover:bg-green-500'}`}
+                  className={`px-4 py-2 text-xs font-extrabold rounded-xl text-white disabled:opacity-50 ${resolveTarget.uphold ? 'bg-red-600 hover:bg-red-500' : 'bg-green-600 hover:bg-green-500'}`}
                 >
                   {resolveTarget.uphold ? 'Cezayı Onayla' : 'İtirazı Kabul Et'}
                 </button>
@@ -229,7 +229,7 @@ export const ServiceDisputesPage: React.FC = () => {
               onClick={(e) => e.stopPropagation()}
               className="w-full max-w-md bg-[#161B22] border border-white/10 rounded-2xl p-6 shadow-2xl"
             >
-              <h3 className="text-sm font-black text-white mb-1">Ödemeyi serbest bırak</h3>
+              <h3 className="text-sm font-extrabold text-white mb-1">Ödemeyi serbest bırak</h3>
               <p className="text-xs text-gray-500 mb-4">
                 {releaseTarget.provider_name ?? 'Sağlayıcı'} için <span className="text-green-400 font-bold">₺{releaseTarget.provider_amount ?? releaseTarget.fee ?? 0}</span> tutarındaki ödeme serbest bırakılacak. Bu işlem denetim kaydına yazılır.
               </p>
@@ -238,7 +238,7 @@ export const ServiceDisputesPage: React.FC = () => {
                 <button
                   onClick={() => void confirmRelease()}
                   disabled={actioningId === releaseTarget.id}
-                  className="px-4 py-2 text-xs font-black rounded-xl text-white bg-green-600 hover:bg-green-500 disabled:opacity-50"
+                  className="px-4 py-2 text-xs font-extrabold rounded-xl text-white bg-green-600 hover:bg-green-500 disabled:opacity-50"
                 >
                   Serbest Bırak
                 </button>

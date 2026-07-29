@@ -199,7 +199,7 @@ const NotificationSettingsPage: React.FC<NotificationSettingsPageProps> = ({ ope
 
       {/* Hızlı ön ayarlar */}
       <div className="mb-5">
-        <p className="text-[11px] font-black uppercase tracking-widest text-gray-500 mb-2 ml-1 flex items-center gap-1.5">
+        <p className="text-[0.6875rem] font-extrabold uppercase tracking-widest text-ink-4 mb-2 ml-1 flex items-center gap-1.5">
           <Zap size={12} className="text-[#39FF14]" /> Hızlı Ayar
         </p>
         <div className="grid grid-cols-3 gap-2">
@@ -226,7 +226,7 @@ const NotificationSettingsPage: React.FC<NotificationSettingsPageProps> = ({ ope
             </span>
             <div>
               <span className="text-sm font-bold text-white block">Sessiz Saatler</span>
-              <span className="text-[11px] text-gray-400">Bu aralıkta bildirim gelmez (acil olanlar hariç)</span>
+              <span className="text-[0.6875rem] text-gray-400">Bu aralıkta bildirim gelmez (acil olanlar hariç)</span>
             </div>
           </div>
           <button
@@ -250,7 +250,7 @@ const NotificationSettingsPage: React.FC<NotificationSettingsPageProps> = ({ ope
             >
               <div className="flex items-center gap-3 p-4">
                 <label className="flex-1">
-                  <span className="text-[10px] font-bold uppercase text-gray-500 block mb-1">Başlangıç</span>
+                  <span className="text-[0.6875rem] font-bold uppercase text-ink-4 block mb-1">Başlangıç</span>
                   <input
                     type="time"
                     value={quietStart}
@@ -259,7 +259,7 @@ const NotificationSettingsPage: React.FC<NotificationSettingsPageProps> = ({ ope
                   />
                 </label>
                 <label className="flex-1">
-                  <span className="text-[10px] font-bold uppercase text-gray-500 block mb-1">Bitiş</span>
+                  <span className="text-[0.6875rem] font-bold uppercase text-ink-4 block mb-1">Bitiş</span>
                   <input
                     type="time"
                     value={quietEnd}
@@ -274,13 +274,13 @@ const NotificationSettingsPage: React.FC<NotificationSettingsPageProps> = ({ ope
       </div>
 
       {/* Kategori ana anahtarları */}
-      <p className="text-[11px] font-black uppercase tracking-widest text-gray-500 mb-2 ml-1 flex items-center gap-1.5">
+      <p className="text-[0.6875rem] font-extrabold uppercase tracking-widest text-ink-4 mb-2 ml-1 flex items-center gap-1.5">
         <Bell size={12} className="text-[#39FF14]" /> Kategoriler
       </p>
 
       {groups.length === 0 ? (
         <div className="py-10 flex justify-center">
-          <RefreshCw size={20} className="animate-spin text-gray-500" />
+          <RefreshCw size={20} className="animate-spin text-ink-4" />
         </div>
       ) : (
         <div className="space-y-2">
@@ -298,7 +298,7 @@ const NotificationSettingsPage: React.FC<NotificationSettingsPageProps> = ({ ope
                   >
                     <span className="text-lg">{CATEGORY_ICONS[group.key] ?? <span>🔔</span>}</span>
                     <span className="text-sm font-bold text-white truncate">{group.label}</span>
-                    <ChevronDown size={15} className={`text-gray-500 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                    <ChevronDown size={15} className={`text-ink-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
                   </button>
                   {optional ? (
                     <button
@@ -312,7 +312,7 @@ const NotificationSettingsPage: React.FC<NotificationSettingsPageProps> = ({ ope
                       <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-all duration-200 ${on ? 'translate-x-5' : 'translate-x-0'}`} />
                     </button>
                   ) : (
-                    <Lock size={14} className="text-gray-500 shrink-0" />
+                    <Lock size={14} className="text-ink-4 shrink-0" />
                   )}
                 </div>
 
@@ -335,10 +335,10 @@ const NotificationSettingsPage: React.FC<NotificationSettingsPageProps> = ({ ope
                             className={`flex items-center justify-between px-4 py-3 ${idx < group.items.length - 1 ? 'border-b border-white/[0.04]' : ''}`}
                           >
                             <div className="flex items-center gap-2.5 flex-1 pr-3 min-w-0">
-                              {mandatory && <Lock size={12} className="text-gray-500 shrink-0" />}
+                              {mandatory && <Lock size={12} className="text-ink-4 shrink-0" />}
                               <div className="min-w-0">
-                                <span className="text-[13px] font-semibold text-white block truncate">{t.label_tr}</span>
-                                {mandatory && <span className="text-[10px] text-gray-500">Zorunlu — kapatılamaz</span>}
+                                <span className="text-[0.8125rem] font-semibold text-white block truncate">{t.label_tr}</span>
+                                {mandatory && <span className="text-[0.6875rem] text-ink-4">Zorunlu — kapatılamaz</span>}
                               </div>
                             </div>
                             <button
@@ -366,8 +366,8 @@ const NotificationSettingsPage: React.FC<NotificationSettingsPageProps> = ({ ope
       )}
 
       <div className="flex items-start gap-2 px-2 mt-4">
-        <Lock size={12} className="text-gray-500 shrink-0 mt-0.5" />
-        <p className="text-[11px] text-gray-500 leading-relaxed">
+        <Lock size={12} className="text-ink-4 shrink-0 mt-0.5" />
+        <p className="text-[0.6875rem] text-ink-4 leading-relaxed">
           Kilit ikonlu bildirimler güvenlik ve hizmet kalitesi için zorunludur; sessiz saatlerde bile iletilebilir.
         </p>
       </div>

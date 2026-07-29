@@ -66,22 +66,24 @@ export const AnimatedButton = <T extends React.ElementType = 'button'>({
   };
 
   // Base theme classes
-  const baseClasses = 'relative overflow-hidden font-black uppercase tracking-wider transition-all duration-200 outline-none flex items-center justify-center select-none active:scale-[0.98]';
+  const baseClasses = 'relative overflow-hidden font-extrabold uppercase tracking-wider transition-all duration-200 outline-none flex items-center justify-center select-none active:scale-[0.98]';
   
   // Accessibility focus styling
   const focusClasses = 'focus-visible:ring-2 focus-visible:ring-[#39FF14] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0A0E14]';
 
   // Variant design systems
   const variantClasses = {
-    primary: 'bg-[#39FF14] text-[#0A0E14] hover:bg-[#70ff56] disabled:bg-gray-800 disabled:text-gray-500 disabled:border-transparent button-neon-glow-green',
-    secondary: 'bg-white/5 border border-white/10 text-white hover:bg-white/10 hover:border-white/20 disabled:bg-white/2 disabled:text-gray-600 disabled:border-white/5',
+    primary: 'bg-[#39FF14] text-[#0A0E14] hover:bg-[#70ff56] disabled:bg-gray-800 disabled:text-ink-4 disabled:border-transparent button-neon-glow-green',
+    secondary: 'bg-white/5 border border-white/10 text-white hover:bg-white/10 hover:border-white/20 disabled:bg-white/2 disabled:text-ink-4 disabled:border-white/5',
     danger: 'bg-red-500/10 border border-red-500/30 text-red-400 hover:bg-red-500/20 hover:border-red-500/50 disabled:bg-red-950/5 disabled:text-red-900 disabled:border-red-950/20',
-    ghost: 'bg-transparent text-gray-400 hover:text-white hover:bg-white/5 disabled:bg-transparent disabled:text-gray-700'
+    ghost: 'bg-transparent text-gray-400 hover:text-white hover:bg-white/5 disabled:bg-transparent disabled:text-ink-4'
   };
 
   // Safe hitbox sizing (minimum 44px height for touch screens)
   const sizeClasses = {
-    sm: 'px-3 py-1.5 text-[10px] rounded-lg min-h-[36px]',
+    // IP-08: buton etiketi okunur metindir → 11px taban (10px yalnız BÜYÜK HARF
+    // + harf aralıklı etiketlerde meşru, burada metin serbest geliyor).
+    sm: 'px-3 py-1.5 text-[0.6875rem] rounded-lg min-h-[36px]',
     md: 'px-5 py-3 text-xs rounded-xl min-h-[44px] min-w-[44px]',
     lg: 'px-8 py-4 text-sm rounded-2xl min-h-[52px] min-w-[52px]',
     custom: ''

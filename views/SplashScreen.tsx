@@ -99,7 +99,7 @@ export default function SplashScreen({ onStart, ready = true }: SplashScreenProp
                 variants={letterVariants}
                 initial="hidden"
                 animate="show"
-                className="text-4xl font-black text-white tracking-[0.3em] drop-shadow-[0_0_12px_rgba(255,255,255,0.3)]"
+                className="text-4xl font-extrabold text-white tracking-[0.3em] drop-shadow-[0_0_12px_rgba(255,255,255,0.3)]"
               >
                 {letter}
               </motion.span>
@@ -111,7 +111,7 @@ export default function SplashScreen({ onStart, ready = true }: SplashScreenProp
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 1.2, duration: 0.5 }}
-            className="mt-3 text-[10px] font-bold tracking-[0.4em] text-[#39FF14]/70 uppercase"
+            className="mt-3 text-[0.625rem] font-bold tracking-[0.4em] text-[#39FF14]/70 uppercase"
           >
             Potansiyel zaferler için
           </motion.p>

@@ -72,7 +72,7 @@ const Avatar: React.FC<{ name: string | null; url: string | null; size?: number 
   return (
     <div style={{ width: s, height: s }}
       className="rounded-2xl bg-gradient-to-br from-emerald-700 to-emerald-900 flex items-center justify-center flex-shrink-0">
-      <span className="text-white font-black" style={{ fontSize: size * 0.33 }}>
+      <span className="text-white font-extrabold" style={{ fontSize: size * 0.33 }}>
         {getInitials(name)}
       </span>
     </div>
@@ -99,10 +99,10 @@ const TacticCard: React.FC<{ tacticId: string; label: string; mine: boolean }> =
         <ClipboardList size={16} className="text-[#39FF14]" />
       </span>
       <span className="flex-1 min-w-0">
-        <span className="block text-[10px] font-black uppercase tracking-widest text-white/50">Taktik</span>
+        <span className="block text-[0.625rem] font-extrabold uppercase tracking-widest text-white/50">Taktik</span>
         <span className="block text-sm font-bold text-white truncate">{label}</span>
       </span>
-      <span className="text-[10px] font-black text-[#39FF14] shrink-0 flex items-center">
+      <span className="text-[0.6875rem] font-extrabold text-[#39FF14] shrink-0 flex items-center">
         Stüdyo'da Aç <ChevronRight size={12} />
       </span>
     </button>
@@ -128,8 +128,8 @@ const InboxList: React.FC<{
 
   if (items.length === 0) return (
     <div className="text-center py-16">
-      <MessageCircle size={40} className="mx-auto mb-3 text-gray-700" />
-      <p className="text-sm text-gray-500">Henüz mesajın yok</p>
+      <MessageCircle size={40} className="mx-auto mb-3 text-ink-4" />
+      <p className="text-sm text-ink-4">Henüz mesajın yok</p>
     </div>
   );
 
@@ -152,14 +152,14 @@ const InboxList: React.FC<{
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between gap-2">
                   <span className="font-bold text-white truncate">{name}</span>
-                  <span className="text-[10px] text-gray-500 flex-shrink-0">{timeAgo(c.lastMessageAt)}</span>
+                  <span className="text-[0.6875rem] text-ink-4 flex-shrink-0">{timeAgo(c.lastMessageAt)}</span>
                 </div>
                 <div className="flex items-center justify-between gap-2 mt-0.5">
-                  <span className={`text-xs truncate ${c.unreadCount > 0 ? 'text-gray-200 font-semibold' : 'text-gray-500'}`}>
+                  <span className={`text-xs truncate ${c.unreadCount > 0 ? 'text-gray-200 font-semibold' : 'text-ink-4'}`}>
                     {c.lastMessagePreview || 'Konuşmaya başla'}
                   </span>
                   {c.unreadCount > 0 && (
-                    <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-emerald-500 flex items-center justify-center text-[10px] font-black text-white flex-shrink-0">
+                    <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-emerald-500 flex items-center justify-center text-[0.6875rem] font-extrabold text-white flex-shrink-0">
                       {c.unreadCount}
                     </span>
                   )}
@@ -193,18 +193,18 @@ const InboxList: React.FC<{
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between gap-2">
                 <span className="font-bold text-white truncate flex items-center gap-1.5">
-                  <Shield size={12} className="text-white/35 shrink-0" />
+                  <Shield size={12} className="text-ink-4 shrink-0" />
                   {t.team_name}
-                  {t.muted && <BellOff size={11} className="text-gray-500 shrink-0" />}
+                  {t.muted && <BellOff size={11} className="text-ink-4 shrink-0" />}
                 </span>
-                <span className="text-[10px] text-gray-500 flex-shrink-0">{timeAgo(t.last_at)}</span>
+                <span className="text-[0.6875rem] text-ink-4 flex-shrink-0">{timeAgo(t.last_at)}</span>
               </div>
               <div className="flex items-center justify-between gap-2 mt-0.5">
-                <span className={`text-xs truncate ${t.unread_count > 0 && !t.muted ? 'text-gray-200 font-semibold' : 'text-gray-500'}`}>
+                <span className={`text-xs truncate ${t.unread_count > 0 && !t.muted ? 'text-gray-200 font-semibold' : 'text-ink-4'}`}>
                   {preview}
                 </span>
                 {t.unread_count > 0 && (
-                  <span className={`min-w-[20px] h-5 px-1.5 rounded-full flex items-center justify-center text-[10px] font-black flex-shrink-0 ${
+                  <span className={`min-w-[20px] h-5 px-1.5 rounded-full flex items-center justify-center text-[0.6875rem] font-extrabold flex-shrink-0 ${
                     t.muted ? 'bg-white/10 text-gray-400' : 'bg-emerald-500 text-white'
                   }`}>
                     {t.unread_count}
@@ -353,7 +353,7 @@ const ChatView: React.FC<{
         <div className="flex-1 min-w-0">
           <div className="font-bold text-white truncate">{name}</div>
           {conversation.otherOynaId && (
-            <div className="text-[11px] text-gray-500 truncate">{conversation.otherOynaId}</div>
+            <div className="text-[0.6875rem] text-ink-4 truncate">{conversation.otherOynaId}</div>
           )}
         </div>
         <button
@@ -401,7 +401,7 @@ const ChatView: React.FC<{
             <Spinner size={24} color="#34D399" />
           </div>
         ) : messages.length === 0 ? (
-          <div className="text-center py-16 text-gray-500 text-sm">
+          <div className="text-center py-16 text-ink-4 text-sm">
             Henüz mesaj yok. İlk mesajı sen yaz.
           </div>
         ) : (
@@ -424,7 +424,7 @@ const ChatView: React.FC<{
                   >
                     <p className="text-sm leading-snug whitespace-pre-wrap break-words">{m.body}</p>
                     <div className={`flex items-center gap-1 mt-1 ${mine ? 'justify-end' : 'justify-start'}`}>
-                      <span className={`text-[10px] ${mine ? 'text-emerald-100/80' : 'text-gray-500'}`}>
+                      <span className={`text-[0.6875rem] ${mine ? 'text-emerald-100/80' : 'text-ink-4'}`}>
                         {clockTime(m.createdAt)}
                       </span>
                       {mine && (
@@ -462,7 +462,7 @@ const ChatView: React.FC<{
       {/* ── Mesaj Girişi (F1: engellendiyse kompozer kilitli) ── */}
       {blocked ? (
         <div className="flex-shrink-0 px-4 py-4 border-t border-white/8 bg-[#070B10]/80 backdrop-blur-xl pb-safe text-center">
-          <p className="text-[12px] font-bold text-gray-400">
+          <p className="text-[0.75rem] font-bold text-gray-400">
             Bu kullanıcıyı engelledin — mesajlaşma kapalı.
           </p>
         </div>
@@ -479,7 +479,7 @@ const ChatView: React.FC<{
           }}
           rows={1}
           placeholder="Mesaj yaz..."
-          className="flex-1 resize-none max-h-28 bg-white/6 border border-white/10 rounded-2xl px-4 py-3 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-emerald-500/50"
+          className="flex-1 resize-none max-h-28 bg-white/6 border border-white/10 rounded-2xl px-4 py-3 text-sm text-white placeholder:text-ink-4 focus:outline-none focus:border-emerald-500/50"
         />
         <button
           onClick={handleSend}
@@ -624,9 +624,9 @@ const TeamChatView: React.FC<{
           <div className="flex-1 min-w-0">
             <div className="font-bold text-white truncate flex items-center gap-1.5">
               {team.team_name}
-              {muted && <BellOff size={12} className="text-gray-500" />}
+              {muted && <BellOff size={12} className="text-ink-4" />}
             </div>
-            <div className="text-[11px] text-gray-500 truncate">Takım sohbeti · Takıma git ›</div>
+            <div className="text-[0.6875rem] text-ink-4 truncate">Takım sohbeti · Takıma git ›</div>
           </div>
         </button>
         <button
@@ -674,7 +674,7 @@ const TeamChatView: React.FC<{
             <Spinner size={24} color="#34D399" />
           </div>
         ) : messages.length === 0 ? (
-          <div className="text-center py-16 text-gray-500 text-sm">
+          <div className="text-center py-16 text-ink-4 text-sm">
             Takım sohbetine ilk mesajı sen yaz. ⚽
           </div>
         ) : (
@@ -698,7 +698,7 @@ const TeamChatView: React.FC<{
                   )}
                   <div className={`max-w-[78%] ${tactic ? 'w-[78%]' : ''}`}>
                     {showHeader && (
-                      <div className="text-[10px] font-bold text-white/45 mb-0.5 ml-1">{m.senderName}</div>
+                      <div className="text-[0.6875rem] font-bold text-ink-4 mb-0.5 ml-1">{m.senderName}</div>
                     )}
                     {tactic ? (
                       <TacticCard tacticId={tactic.tacticId} label={tactic.label} mine={mine} />
@@ -712,7 +712,7 @@ const TeamChatView: React.FC<{
                       >
                         <p className="text-sm leading-snug whitespace-pre-wrap break-words">{m.body}</p>
                         <div className={`mt-1 ${mine ? 'text-right' : 'text-left'}`}>
-                          <span className={`text-[10px] ${mine ? 'text-emerald-100/80' : 'text-gray-500'}`}>
+                          <span className={`text-[0.6875rem] ${mine ? 'text-emerald-100/80' : 'text-ink-4'}`}>
                             {clockTime(m.createdAt)}
                           </span>
                         </div>
@@ -753,7 +753,7 @@ const TeamChatView: React.FC<{
           }}
           rows={1}
           placeholder={`${team.team_name} sohbetine yaz...`}
-          className="flex-1 resize-none max-h-28 bg-white/6 border border-white/10 rounded-2xl px-4 py-3 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-emerald-500/50"
+          className="flex-1 resize-none max-h-28 bg-white/6 border border-white/10 rounded-2xl px-4 py-3 text-sm text-white placeholder:text-ink-4 focus:outline-none focus:border-emerald-500/50"
         />
         <button
           onClick={handleSend}
@@ -868,7 +868,7 @@ const MessagesView: React.FC<MessagesViewProps> = ({
           >
             <ArrowLeft size={18} className="text-gray-300" />
           </button>
-          <h1 className="text-2xl font-black tracking-tight">Mesajlar</h1>
+          <h1 className="text-2xl font-extrabold tracking-tight">Mesajlar</h1>
         </div>
       </div>
 

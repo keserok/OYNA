@@ -116,19 +116,29 @@ Fatura düzenleme yükümlülüğü, hizmeti fiilen sunan tarafa (Tesis) veya ka
 6. İPTAL VE İADE
 
 6.1 Genel Kurallar (Kullanıcı Kaynaklı İptaller)
-- Rezervasyon/maç saatine 24 saat ve üzerinde kala yapılan iptallerde: ödenen tutarın tamamı iade edilir (yalnızca ödeme altyapısı işlem bedeli hariç).
-- 6-24 saat arasında (6. saat dahil, 24. saat hariç) kala yapılan iptallerde: %50 iade edilir.
+- Rezervasyon/maç saatine 24 saat ve üzerinde kala yapılan iptallerde: ödenen tutarın tamamı OYNA cüzdanına iade edilir (yalnızca ödeme altyapısı işlem bedeli hariç).
+- 6-24 saat arasında (6. saat dahil, 24. saat hariç) kala yapılan iptallerde: %50 OYNA cüzdanına iade edilir.
 - 6 saatten az kala yapılan iptallerde: iade yapılmaz.
+İadenin yapılacağı yer: Bu maddedeki tüm iadeler, ödemenin yapıldığı karta değil, Kullanıcının OYNA cüzdanına işlenir. Cüzdandaki tutar Platform içindeki tüm ödemelerde kullanılabilir; para çekimi özelliği açıldığında ayrıca madde 6.5'teki koşullarla banka hesabına çekilebilir.
 Bu kademeli yapı yalnızca Kullanıcı kaynaklı iptallere uygulanır.
 
 6.2 Ayrıntılı Düzenleme
-İptal/iade süreçlerine ilişkin ayrıntılı hükümler Mesafeli Satış ve İptal/İade Koşulları belgesinde düzenlenmiştir; çelişki hâlinde o belge esas alınır.
+İptal/iade süreçlerine ve iade tutarının OYNA cüzdanına işlenmesine ilişkin ayrıntılı hükümler Mesafeli Satış ve İptal/İade Koşulları belgesinde; cüzdanın kullanımı ve cüzdandan para çekimine ilişkin hükümler ise madde 6.5'te düzenlenmiştir. Çelişki hâlinde iptal/iade konusunda Mesafeli Satış ve İptal/İade Koşulları esas alınır.
 
 6.3 Mücbir Sebep ile Bağlantı
 Mücbir sebep hâllerinde iptal/iade esasları madde 12.3'e göre uygulanır; mücbir sebep iade yükümlülüğünü ortadan kaldırmaz.
 
 6.4 Tesis veya OYNA Kaynaklı İptal — Simetrik Telafi
-Rezervasyonun, Kullanıcıdan kaynaklanmayan bir sebeple ve mücbir sebep dışında Tesis veya OYNA inisiyatifiyle iptal edilmesi hâlinde Kullanıcıya: (a) ödediği bedelin tamamı derhal iade edilir; VE (b) bildirim anı ile rezervasyon saati arasındaki süreye göre simetrik bir telafi bedeli ayrıca ödenir — 24 saat öncesinde bildirimde ek telafi aranmaz; 24 saatten az kala %50; 6 saatten az kala veya bildirimsiz gerçekleşen iptalde %100 telafi bedeli.
+Rezervasyonun, Kullanıcıdan kaynaklanmayan bir sebeple ve mücbir sebep dışında Tesis veya OYNA inisiyatifiyle iptal edilmesi hâlinde Kullanıcıya: (a) ödediği bedelin tamamı derhal OYNA cüzdanına iade edilir; VE (b) bildirim anı ile rezervasyon saati arasındaki süreye göre simetrik bir telafi bedeli ayrıca OYNA cüzdanına ödenir — 24 saat öncesinde bildirimde ek telafi aranmaz; 24 saatten az kala %50; 6 saatten az kala veya bildirimsiz gerçekleşen iptalde %100 telafi bedeli.
+
+6.5 Cüzdan ve Para Çekimi
+Cüzdan nedir? OYNA cüzdanı, Platform içindeki ödemeleriniz için tutulan bakiyedir ve iki kaynaktan oluşur: kartla yaptığınız para yüklemeleri ve size geri ödenen iade tutarları. Bu iki kaynak size tek bir bakiye olarak gösterilir; aralarında kullanım farkı yoktur.
+Nerede kullanılır? Cüzdan bakiyesi OYNA üzerindeki saha kiralama, maç katılım, kapora ve kaleci/hakem hizmet ödemelerinde kullanılabilir. Cüzdan bakiyesi elektronik para veya ödeme aracı niteliğinde değildir; üçüncü kişilere devredilemez ve Platform dışındaki alışverişlerde kullanılamaz. Yüklemelerde bonus, faiz veya ek menfaat sağlanmaz.
+Para çekimi: Bu özellik lansman döneminde AÇIK DEĞİLDİR; cüzdan bakiyenizi bu dönemde Platform içi ödemelerde kullanabilirsiniz. Özellik açıldığında size bildirim yapılır ve aşağıdaki koşullar o tarihten itibaren uygulanır. Özellik açıldığında cüzdan bakiyenizi kendi adınıza kayıtlı banka hesabına çekebilirsiniz. Çekilen brüt tutar üzerinden %5 hizmet bedeli kesilir; kalan net tutar hesabınıza gönderilir. Tek seferde en az 100 ₺ çekilebilir; bakiyenizin tamamını çekiyorsanız bu alt sınır aranmaz. Para yalnızca kendi adınıza kayıtlı hesaba gönderilir — IBAN sahibinin adı OYNA hesabınızdaki ad soyadla eşleşmelidir. İlk çekimden önce kimlik doğrulaması istenebilir. Aynı anda yalnızca bir çekim talebi açık olabilir. Çekim talebi oluşturulduğu anda brüt tutar bakiyenizden düşülür ve Platform içi ödemelerde kullanılamaz.
+Talebin iptali: Henüz onaylanmamış çekim talebinizi uygulama üzerinden iptal edebilirsiniz. Talebin iptal edilmesi, reddedilmesi veya banka transferinin gerçekleşmemesi hâllerinde brüt tutarın tamamı cüzdanınıza geri yüklenir ve hizmet bedeli alınmaz. Hizmet bedeli yalnızca fiilen tamamlanan çekimlerde doğar.
+Kazanç bakiyesi: Kaleci, hakem ve tesis işletmecisi olarak hizmet veren kullanıcıların hakedişleri ayrı bir kazanç bakiyesinde tutulur. Kazanç bakiyesinden yapılan çekimlerde hizmet bedeli alınmaz; komisyon hakediş hesaplanırken zaten düşülmüştür.
+Değişiklik: OYNA hizmet bedeli oranını, alt sınırı ve çekim koşullarını ileriye etkili olmak üzere değiştirebilir; değişiklikler madde 15 uyarınca bildirilir. Teknik zorunluluk, mevzuat değişikliği veya suistimal şüphesi hâlinde çekim geçici olarak durdurulabilir; bu hâlde bakiye Platform içi ödemelerde kullanılmaya devam eder.
+Hesap kapatma: Cüzdanında bakiye bulunan veya açık çekim talebi olan hesap, bakiye çekilene veya talep sonuçlanana kadar kapatılamaz. Bu, paranızın kaybolmaması için konulmuş bir korumadır.
 
 7. KULLANICI YÜKÜMLÜLÜKLERİ VE PLATFORM KULLANIM KURALLARI
 Kullanıcı; kayıt/profil bilgilerinin doğru olduğunu ve başkasını taklit etmeyeceğini; Platformu yasa dışı, dolandırıcılık amaçlı veya üçüncü kişi haklarını ihlal edecek şekilde kullanmayacağını; nefret söylemi, taciz, tehdit veya şiddet içeren içerik paylaşmayacağını; sahada/maçta diğer kullanıcılara, Tesis personeline veya Hizmet Sağlayıcılara karşı şiddet, hakaret veya tehdit içeren davranışta bulunmayacağını; Tesisin kurallarına ve hakem kararlarına uyacağını; Platformu tanımlanan amaçlar dışında (spam, izinsiz tanıtım, scraping, teknik müdahale) kullanmayacağını kabul ve taahhüt eder. İhlalleri ${CONTACT_EMAIL} üzerinden bildirebilir.
@@ -146,7 +156,7 @@ OYNA'nın aracı platform sorumluluğu, makul özen ve dikkat yükümlülüğü 
 Kullanıcının Platformu kötüye kullanması veya kusurlu fiiliyle başkasına zarar vermesi nedeniyle üçüncü kişilerin OYNA'ya yönelttiği taleplerde, OYNA'nın ödediği tazminat ve makul giderler için Kullanıcıya rücu hakkı saklıdır; bu sorumluluk yalnızca Kullanıcının kendi kusurundan kaynaklanan taleplerle sınırlıdır ve OYNA'nın kendi kusurundan doğan zararları kapsamaz. OYNA, rücu talebinden önce Kullanıcıyı bilgilendirir ve itiraz imkânı tanır.
 
 12. MÜCBİR SEBEP
-Doğal afet, yangın, salgın, savaş, terör, genel grev, siber saldırı, bağlayıcı kamu otoritesi kararları ve OYNA'nın makul kontrolü dışında öngörülemez/karşı konulamaz nitelikteki üçüncü taraf altyapı kesintileri mücbir sebep sayılır; ancak bu, OYNA'nın tedarikçi seçiminde özen göstermemesinden veya ağır kusurundan kaynaklanan kesintileri kapsamaz. Mücbir sebep, ağır kusur/kast istisnası ve ölüm/yaralanma istisnası saklı kalmak kaydıyla tazminat sorumluluğunu sınırlar veya ortadan kaldırır; ancak madde 6'daki iade yükümlülüğünü ortadan kaldırmaz — mücbir sebep nedeniyle rezervasyon gerçekleşemezse, Kullanıcının ödediği tutarın tamamı, öğrenilmesinden itibaren en geç 14 gün içinde, kesintisiz iade edilir.
+Doğal afet, yangın, salgın, savaş, terör, genel grev, siber saldırı, bağlayıcı kamu otoritesi kararları ve OYNA'nın makul kontrolü dışında öngörülemez/karşı konulamaz nitelikteki üçüncü taraf altyapı kesintileri mücbir sebep sayılır; ancak bu, OYNA'nın tedarikçi seçiminde özen göstermemesinden veya ağır kusurundan kaynaklanan kesintileri kapsamaz. Mücbir sebep, ağır kusur/kast istisnası ve ölüm/yaralanma istisnası saklı kalmak kaydıyla tazminat sorumluluğunu sınırlar veya ortadan kaldırır; ancak madde 6'daki iade yükümlülüğünü ortadan kaldırmaz — mücbir sebep nedeniyle rezervasyon gerçekleşemezse, Kullanıcının ödediği tutarın tamamı, öğrenilmesinden itibaren en geç 14 gün içinde, kesintisiz olarak OYNA cüzdanına iade edilir; Kullanıcı bu tutarı Platform içinde harcayabilir; para çekimi özelliği açıldığında madde 6.5 uyarınca banka hesabına da çekebilir.
 
 13. İHLALLER, HESABIN ASKIYA ALINMASI VE SONLANDIRILMASI
 OYNA; dolandırıcılık şüphesi, platform/kullanıcı güvenliğini tehdit eden davranış, yasa dışı faaliyet, küçüklerin güvenliğini tehlikeye atan davranış veya şiddet tehdidi hâllerinde hesabı bildirimsiz ve derhal, ihtiyati tedbir niteliğinde askıya alabilir; değerlendirme sürecini gecikmeksizin başlatır ve nihai kararını madde 14 uyarınca verir. Diğer ihlallerde Kullanıcıya bildirim yapılır ve en az 7 gün itiraz süresi tanınır. Askı/sonlandırma, önceden onaylanmış rezervasyon/ödeme işlemlerinin geçerliliğini etkilemez. Kullanıcı, dilediği zaman ${CONTACT_EMAIL} üzerinden hesabının silinmesini talep edebilir; hesap ve veriler talep tarihinden itibaren 7 gün içinde kalıcı olarak silinir.
@@ -373,7 +383,14 @@ Kapora, uygulama üzerinden güvenli ödeme altyapısı ile tahsil edilir. Kalan
 - Rezervasyon/maç saatine 24 SAATTEN FAZLA süre kala yapılan iptallerde: ödenen tutarın tamamına yakını iade edilir (yalnızca ödeme altyapısı sağlayıcısının kestiği işlem bedeli hariç).
 - Rezervasyon/maç saatine 6-24 SAAT kala yapılan iptallerde: ödenen tutarın %50'si iade edilir.
 - Rezervasyon/maç saatine 6 SAATTEN AZ kala yapılan iptallerde: iade yapılmaz.
-- İade, ödemenin yapıldığı karta yansıtılır; bankanıza yansıma süresi bankanızın işlem sürelerine tabidir.
+
+4.1 İADE NEREYE YAPILIR?
+- İade, ödemenin yapıldığı karta değil, OYNA cüzdanınıza yapılır. Tutar, iptal işlemi tamamlandığı anda cüzdanınıza geçer.
+- Cüzdanınızdaki tutarı OYNA içindeki tüm saha, maç ve kaleci/hakem ödemelerinde harcayabilirsiniz.
+- Para çekimi lansman döneminde açık değildir; cüzdanınızdaki tutarı bu dönemde Platform içi ödemelerde kullanabilirsiniz. Özellik açıldığında bildirim yapılır.
+- Özellik açıldığında cüzdanınızdaki tutar için para çekme talebi oluşturabilirsiniz. Çekimde %5 hizmet bedeli kesilir; kalan tutar kendi adınıza kayıtlı banka hesabına gönderilir.
+- Minimum çekim tutarı 100 ₺'dir. Bakiyenizin tamamını çekiyorsanız bu alt sınır aranmaz.
+- Çekim koşullarının tamamı Kullanım Şartları madde 6.5'te ("Cüzdan ve Para Çekimi") düzenlenmiştir.
 
 5. CAYMA HAKKI İSTİSNASI
 Belirli bir tarih/saat için yapılan rezervasyonlar, Mesafeli Sözleşmeler Yönetmeliği m.15/1-ğ kapsamında "boş zamanın değerlendirilmesine ilişkin hizmetler" istisnasına tabidir; bu nedenle 14 günlük cayma hakkı uygulanmaz, iptal koşulları yukarıdaki kurallara tabidir.
@@ -396,13 +413,13 @@ const LegalScreen: React.FC<LegalScreenProps> = ({ onBack, initialDoc }) => {
           <button onClick={() => setDoc(null)} className="w-11 h-11 flex items-center justify-center bg-[#161B22] rounded-full border border-white/5 text-white hover:bg-white/10 active:scale-95 transition-all">
             <ArrowLeft size={20} />
           </button>
-          <h1 className="text-lg font-black italic tracking-tight">{d.title.toUpperCase()}</h1>
+          <h1 className="text-lg font-extrabold italic tracking-tight">{d.title.toUpperCase()}</h1>
         </header>
         <main className="p-6 max-w-2xl mx-auto">
           <div className="bg-[#161B22] border border-white/5 rounded-3xl p-6">
             <pre className="whitespace-pre-wrap font-sans text-sm text-gray-300 leading-relaxed">{d.body}</pre>
           </div>
-          <p className="text-[10px] text-gray-600 text-center mt-6 leading-relaxed">
+          <p className="text-[0.6875rem] text-ink-4 text-center mt-6 leading-relaxed">
             Bu belgeler hakkında sorularınız için {CONTACT_EMAIL} adresinden bize ulaşabilirsiniz.
           </p>
         </main>
@@ -417,8 +434,8 @@ const LegalScreen: React.FC<LegalScreenProps> = ({ onBack, initialDoc }) => {
           <ArrowLeft size={20} />
         </button>
         <div>
-          <h1 className="text-xl font-black italic tracking-tight">YASAL</h1>
-          <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Sözleşmeler ve politikalar</p>
+          <h1 className="text-xl font-extrabold italic tracking-tight">YASAL</h1>
+          <p className="text-[0.625rem] text-gray-400 font-bold uppercase tracking-widest">Sözleşmeler ve politikalar</p>
         </div>
       </header>
       <main className="p-6 max-w-2xl mx-auto">
@@ -436,7 +453,7 @@ const LegalScreen: React.FC<LegalScreenProps> = ({ onBack, initialDoc }) => {
                   <div className="text-gray-400"><Icon size={20} /></div>
                   <span className="text-sm font-bold text-white">{d.title}</span>
                 </div>
-                <ChevronRight size={16} className="text-gray-600" />
+                <ChevronRight size={16} className="text-ink-4" />
               </button>
             );
           })}

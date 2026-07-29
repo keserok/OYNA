@@ -3,22 +3,29 @@ import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import {
   ArrowLeft, RefreshCw, Calendar, Clock, ChevronDown, ChevronRight, AlertTriangle,
   CheckCircle2, XCircle, Loader2, MapPin, Swords, Navigation, Repeat, LogOut, QrCode,
+  AlertCircle, Info,
 } from 'lucide-react';
 import { AppView } from '../types';
 import { useAppStore } from '../store';
 import { supabase } from '../supabaseClient';
 import { useMyAgenda, type MyAgendaItem } from '../hooks/useMyAgenda';
 import { useCountdown } from '../hooks/useCountdown';
-import { getMatchDetails } from '../services/matchService';
+import {
+  getMatchDetails, previewLeaveMatch, leaveMatchSlot, leaveQuoteMessage,
+  type LeaveMatchQuote,
+} from '../services/matchService';
 import {
   cancelMyBooking, previewBookingCancel, shortTime, toPlayerErrorMessage,
   type MyBooking, type CancelResult, type CancelPreview,
 } from '../services/playerBookingService';
-import { formatTRY } from '../utils/formatTRY';
+import { formatTRY, formatTRYWithSymbol } from '../utils/formatTRY';
+import { showToast } from '../components/common/GlobalToast';
 import { formatCapacityRange } from '../shared/pitchShowcaseMapper';
+import { formatMatchDuration } from '../shared/matchTiming';
 import SegmentedTabs from '../components/ui/SegmentedTabs';
 import SkeletonList from '../components/ui/SkeletonList';
 import { MODAL_BACKDROP, MODAL_CARD } from '../components/common/motion';
+import { writeTicketCache } from '../utils/ticketCache';
 
 // ═════════════════════════════════════════════════════════════════════════════
 // MAÇLARIM HUB — "bilet kartı" tasarımı (Tur 3 · 2b nihai)
@@ -73,59 +80,63 @@ const TicketCard: React.FC<{ item: MyAgendaItem; currentUserUid: string; onOpen:
   let footLeft: React.ReactNode = null;
   let footRight: React.ReactNode = null;
   let cancelNote: string | null = null;
+  // Saatin yanındaki süre notu. Rezervasyonda gereksiz (başlangıç–bitiş zaten
+  // süreyi gösterir); maçta GERÇEK veriden gelir (matches.duration_minutes).
+  let timeNote: string | null = null;
 
   if (isMatch) {
     const m = item.match;
     const st = matchStats(item as MyAgendaItem & { kind: 'MATCH' });
     const isCaptain = m.creatorId === currentUserUid;
-    typeLabel = <span className="text-[8px] font-black uppercase tracking-[0.18em] text-[#39FF14]">{isCaptain ? 'Maç · Kaptan' : 'Maç'}</span>;
+    typeLabel = <span className="text-[0.625rem] font-extrabold uppercase tracking-[0.18em] text-[#39FF14]">{isCaptain ? 'Maç · Kaptan' : 'Maç'}</span>;
     if (m.status === 'CANCELLED') {
       rail = '#F87171';
-      statusNode = <span className="flex items-center gap-1 text-[9px] font-black uppercase tracking-[0.08em] text-[#F87171]"><XCircle size={11} />İptal Edildi</span>;
+      statusNode = <span className="flex items-center gap-1 text-[0.625rem] font-extrabold uppercase tracking-[0.08em] text-[#F87171]"><XCircle size={11} />İptal Edildi</span>;
     } else if (m.status === 'COMPLETED') {
-      statusNode = <span className="flex items-center gap-1 text-[9px] font-black uppercase tracking-[0.08em] text-white/45"><CheckCircle2 size={11} />Oynandı</span>;
+      statusNode = <span className="flex items-center gap-1 text-[0.625rem] font-extrabold uppercase tracking-[0.08em] text-ink-4"><CheckCircle2 size={11} />Oynandı</span>;
     } else {
       // Kaleci uyarısı BİLEREK yok: boş kaleci slotu bir sorun değildir —
       // profesyonel kaleci isteyen kaptan Kaleci Kiralama'dan teklif gönderir.
       // Bu köşe her maçta aynı bilgiyi verir: kadro doluluğu.
-      statusNode = <span className="font-numeric text-[9px] font-black uppercase tracking-[0.08em] text-white/45">{st.taken}/{st.total} oyuncu</span>;
+      statusNode = <span className="font-numeric text-[0.625rem] font-extrabold uppercase tracking-[0.08em] text-ink-4">{st.taken}/{st.total} oyuncu</span>;
     }
     time = m.time || '—';
+    timeNote = formatMatchDuration(m);
     title = m.title || 'Maç';
     venue = [m.location, (m as { courtName?: string }).courtName].filter(Boolean).join(' · ') || '—';
     footLeft = st.open > 0 ? (
-      <span className="flex items-center gap-[7px] text-[10px] font-bold text-white/45">
+      <span className="flex items-center gap-[7px] text-[0.6875rem] font-bold text-ink-4">
         {st.open} kişi eksik
         <span className="inline-block w-[52px] h-[3px] rounded-full bg-white/10 overflow-hidden relative">
           <span className="absolute inset-0 rounded-full bg-[#39FF14]" style={{ width: `${st.total ? Math.round((st.taken / st.total) * 100) : 0}%` }} />
         </span>
       </span>
     ) : (
-      <span className="flex items-center gap-[5px] text-[10px] font-bold text-white/45"><CheckCircle2 size={11} className="text-[#39FF14]" />Kadro tamam</span>
+      <span className="flex items-center gap-[5px] text-[0.6875rem] font-bold text-ink-4"><CheckCircle2 size={11} className="text-[#39FF14]" />Kadro tamam</span>
     );
-    footRight = <span className="font-numeric text-[12px] font-bold text-[#FACC15]">{Number(m.price) > 0 ? `₺${Number(m.price).toLocaleString('tr-TR')}` : 'Ücretsiz'}</span>;
+    footRight = <span className="font-numeric text-[0.75rem] font-bold text-[#FACC15]">{Number(m.price) > 0 ? `₺${Number(m.price).toLocaleString('tr-TR')}` : 'Ücretsiz'}</span>;
   } else {
     const b = item.booking;
     if (b.status === 'CANCELLED') {
       rail = '#F87171';
-      statusNode = <span className="flex items-center gap-1 text-[9px] font-black uppercase tracking-[0.08em] text-[#F87171]"><XCircle size={11} />İptal Edildi</span>;
+      statusNode = <span className="flex items-center gap-1 text-[0.625rem] font-extrabold uppercase tracking-[0.08em] text-[#F87171]"><XCircle size={11} />İptal Edildi</span>;
       cancelNote = b.cancellation_reason;
     } else if (b.status === 'CONFIRMED') {
-      statusNode = <span className="flex items-center gap-[5px] text-[9px] font-black uppercase tracking-[0.08em] text-[#39FF14]"><span className="w-[5px] h-[5px] rounded-full bg-[#39FF14]" />Onaylandı</span>;
+      statusNode = <span className="flex items-center gap-[5px] text-[0.625rem] font-extrabold uppercase tracking-[0.08em] text-[#39FF14]"><span className="w-[5px] h-[5px] rounded-full bg-[#39FF14]" />Onaylandı</span>;
     } else {
-      statusNode = <span className="flex items-center gap-1 text-[9px] font-black uppercase tracking-[0.08em] text-[#FACC15]"><Clock size={11} />Onay bekliyor</span>;
+      statusNode = <span className="flex items-center gap-1 text-[0.625rem] font-extrabold uppercase tracking-[0.08em] text-[#FACC15]"><Clock size={11} />Onay bekliyor</span>;
     }
-    typeLabel = <span className="text-[8px] font-black uppercase tracking-[0.18em] text-[#FACC15]">Rezervasyon</span>;
+    typeLabel = <span className="text-[0.625rem] font-extrabold uppercase tracking-[0.18em] text-[#FACC15]">Rezervasyon</span>;
     time = `${shortTime(b.start_time)}${b.end_time ? ` – ${shortTime(b.end_time)}` : ''}`;
     title = b.pitches?.name || 'Saha Rezervasyonu';
     venue = [b.pitches?.district, b.courts?.name].filter(Boolean).join(' · ') || '—';
     const remaining = Math.max((b.deposit_amount || 0) - (b.paid_amount || 0), 0);
     footLeft = b.status === 'CANCELLED' ? null : remaining <= 0 && (b.deposit_amount || 0) > 0 ? (
-      <span className="flex items-center gap-[5px] text-[10px] font-bold text-white/45"><CheckCircle2 size={11} className="text-[#39FF14]" />Kapora ödendi</span>
+      <span className="flex items-center gap-[5px] text-[0.6875rem] font-bold text-ink-4"><CheckCircle2 size={11} className="text-[#39FF14]" />Kapora ödendi</span>
     ) : remaining > 0 ? (
-      <span className="flex items-center gap-[5px] text-[10px] font-bold text-[#FACC15]"><AlertTriangle size={11} />Kapora bekliyor</span>
+      <span className="flex items-center gap-[5px] text-[0.6875rem] font-bold text-[#FACC15]"><AlertTriangle size={11} />Kapora bekliyor</span>
     ) : null;
-    footRight = b.price ? <span className="font-numeric text-[12px] font-bold text-[#FACC15]">₺{Number(b.price).toLocaleString('tr-TR')}</span> : null;
+    footRight = b.price ? <span className="font-numeric text-[0.75rem] font-bold text-[#FACC15]">₺{Number(b.price).toLocaleString('tr-TR')}</span> : null;
   }
 
   return (
@@ -134,15 +145,20 @@ const TicketCard: React.FC<{ item: MyAgendaItem; currentUserUid: string; onOpen:
       className={`relative overflow-hidden block w-full text-left bg-[#161B22] border border-white/[0.06] rounded-[20px] pl-6 pr-10 pt-4 pb-3.5 text-white active:scale-[0.985] transition-transform ${dim ? 'opacity-60' : ''}`}
     >
       <div className="absolute left-0 top-0 bottom-0 w-[3px]" style={{ background: rail, opacity: 0.8 }} />
-      <ChevronRight size={18} className="absolute right-3.5 top-1/2 -mt-[9px] text-white/20" />
+      <ChevronRight size={18} className="absolute right-3.5 top-1/2 -mt-[9px] text-ink-4" />
       <div className="flex items-center justify-between gap-2.5 h-[18px]">
         {typeLabel}
         {statusNode}
       </div>
-      <p className="font-numeric mt-2.5 text-[20px] font-bold tracking-[-0.02em] leading-none">{time}</p>
-      <p className="mt-2.5 text-[15px] font-extrabold leading-tight truncate">{title}</p>
-      <p className="mt-1 text-[12px] text-gray-400 flex items-center gap-[5px] truncate"><MapPin size={12} className="shrink-0" />{venue}</p>
-      {cancelNote && <p className="mt-3 text-[11px] italic text-red-300/80">{cancelNote}</p>}
+      <p className="font-numeric mt-2.5 text-[1.25rem] font-bold tracking-[-0.02em] leading-none">
+        {time}
+        {timeNote && (
+          <span className="ml-2 text-[0.6875rem] font-bold tracking-normal text-ink-4">{timeNote}</span>
+        )}
+      </p>
+      <p className="mt-2.5 text-[0.9375rem] font-extrabold leading-tight truncate">{title}</p>
+      <p className="mt-1 text-[0.75rem] text-gray-400 flex items-center gap-[5px] truncate"><MapPin size={12} className="shrink-0" />{venue}</p>
+      {cancelNote && <p className="mt-3 text-[0.6875rem] italic text-red-300/80">{cancelNote}</p>}
       {(footLeft || footRight) && (
         <div className="mt-3.5 pt-[11px] border-t border-white/[0.06] flex items-center justify-between gap-2.5 min-h-[16px]">
           {footLeft ?? <span />}
@@ -165,23 +181,25 @@ const NextEventHero: React.FC<{ item: MyAgendaItem; currentUserUid: string; onOp
     ? [item.match.location, (item.match as { courtName?: string }).courtName].filter(Boolean).join(' · ')
     : [item.booking.pitches?.district, item.booking.courts?.name].filter(Boolean).join(' · ');
   const heading = dayHeading(item.when);
+  // Maçta saatin yanına GERÇEK süre (duration_minutes) eklenir; rezervasyonda
+  // başlangıç–bitiş aralığı zaten süreyi anlatır.
   const timeRange = isMatch
-    ? item.match.time
+    ? [item.match.time, formatMatchDuration(item.match)].filter(Boolean).join(' · ')
     : `${shortTime(item.booking.start_time)} – ${shortTime(item.booking.end_time)}`;
 
   let chip: React.ReactNode;
   if (isMatch) {
     const st = matchStats(item as MyAgendaItem & { kind: 'MATCH' });
     chip = st.open === 0 ? (
-      <span className="flex items-center gap-[5px] px-2.5 py-1 rounded-full border border-[#39FF14]/30 bg-[#39FF14]/10 text-[#39FF14] text-[9px] font-black uppercase tracking-[0.08em]"><CheckCircle2 size={11} />Kadro Tamam</span>
+      <span className="flex items-center gap-[5px] px-2.5 py-1 rounded-full border border-[#39FF14]/30 bg-[#39FF14]/10 text-[#39FF14] text-[0.625rem] font-extrabold uppercase tracking-[0.08em]"><CheckCircle2 size={11} />Kadro Tamam</span>
     ) : (
-      <span className="font-numeric px-2.5 py-1 rounded-full border border-white/12 bg-white/[0.06] text-white/70 text-[9px] font-black uppercase tracking-[0.08em]">{st.taken}/{st.total} oyuncu</span>
+      <span className="font-numeric px-2.5 py-1 rounded-full border border-white/12 bg-white/[0.06] text-white/70 text-[0.625rem] font-extrabold uppercase tracking-[0.08em]">{st.taken}/{st.total} oyuncu</span>
     );
   } else {
     chip = item.booking.status === 'CONFIRMED' ? (
-      <span className="flex items-center gap-[5px] px-2.5 py-1 rounded-full border border-[#39FF14]/30 bg-[#39FF14]/10 text-[#39FF14] text-[9px] font-black uppercase tracking-[0.08em]"><CheckCircle2 size={11} />Onaylandı</span>
+      <span className="flex items-center gap-[5px] px-2.5 py-1 rounded-full border border-[#39FF14]/30 bg-[#39FF14]/10 text-[#39FF14] text-[0.625rem] font-extrabold uppercase tracking-[0.08em]"><CheckCircle2 size={11} />Onaylandı</span>
     ) : (
-      <span className="flex items-center gap-[5px] px-2.5 py-1 rounded-full border border-[#FACC15]/30 bg-[#FACC15]/10 text-[#FACC15] text-[9px] font-black uppercase tracking-[0.08em]"><Clock size={11} />Onay bekliyor</span>
+      <span className="flex items-center gap-[5px] px-2.5 py-1 rounded-full border border-[#FACC15]/30 bg-[#FACC15]/10 text-[#FACC15] text-[0.625rem] font-extrabold uppercase tracking-[0.08em]"><Clock size={11} />Onay bekliyor</span>
     );
   }
 
@@ -195,19 +213,19 @@ const NextEventHero: React.FC<{ item: MyAgendaItem; currentUserUid: string; onOp
       <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#FACC15]" />
       <div className="absolute -top-14 -right-11 w-[200px] h-[200px] rounded-full bg-[#FACC15] opacity-[0.11] blur-[54px] pointer-events-none" />
       <div className="relative flex items-center justify-between gap-3 h-[22px]">
-        <span className="text-[9px] font-black uppercase tracking-[0.22em] text-[#FACC15]">Sıradaki Etkinlik</span>
+        <span className="text-[0.625rem] font-extrabold uppercase tracking-[0.22em] text-[#FACC15]">Sıradaki Etkinlik</span>
         {chip}
       </div>
-      <p className="relative mt-3.5 text-[22px] font-black italic uppercase tracking-[-0.03em] leading-[1.05] truncate">{title}</p>
-      <p className="relative mt-1.5 text-[12px] text-white/50 font-semibold flex items-center gap-[5px] truncate"><MapPin size={12} className="shrink-0" />{venue || '—'}</p>
+      <p className="relative mt-3.5 text-[1.375rem] font-extrabold italic uppercase tracking-[-0.03em] leading-[1.05] truncate">{title}</p>
+      <p className="relative mt-1.5 text-[0.75rem] text-white/50 font-semibold flex items-center gap-[5px] truncate"><MapPin size={12} className="shrink-0" />{venue || '—'}</p>
       <div className="relative mt-[18px] pt-4 border-t border-dashed border-white/12 flex items-end justify-between gap-3">
         <div>
-          <p className="font-numeric m-0 text-[15px] font-bold leading-[1.25]">{heading.primary === 'Bugün' || heading.primary === 'Yarın' ? `${heading.secondary} · ${heading.primary}` : heading.primary}</p>
-          <p className="font-numeric m-0 text-[15px] font-bold leading-[1.25] text-white/55">{timeRange}</p>
+          <p className="font-numeric m-0 text-[0.9375rem] font-bold leading-[1.25]">{heading.primary === 'Bugün' || heading.primary === 'Yarın' ? `${heading.secondary} · ${heading.primary}` : heading.primary}</p>
+          <p className="font-numeric m-0 text-[0.9375rem] font-bold leading-[1.25] text-white/55">{timeRange}</p>
         </div>
         <div className="text-right">
-          <p className="m-0 text-[8px] font-black uppercase tracking-[0.2em] text-white/35">Kalan süre</p>
-          <p className="font-numeric mt-[5px] mb-0 text-[30px] font-bold leading-[0.85] tracking-[-0.02em]">{countdown || '—'}</p>
+          <p className="m-0 text-[0.625rem] font-extrabold uppercase tracking-[0.2em] text-ink-4">Kalan süre</p>
+          <p className="font-numeric mt-[5px] mb-0 text-[1.875rem] font-bold leading-[0.85] tracking-[-0.02em]">{countdown || '—'}</p>
         </div>
       </div>
     </motion.button>
@@ -288,18 +306,23 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onBack, onNavigate }) => {
     }
   };
 
-  // ── Maçtan ayrılma — iade önizlemesi + leave_public_match_slot ────────────
+  // ── Maçtan ayrılma — IP-04 sözleşmesi (MatchJoin lobisiyle AYNI kaynak) ───
   const [leaveTarget, setLeaveTarget] = useState<MyAgendaItem | null>(null);
-  const [leaveRefund, setLeaveRefund] = useState<number | null>(null);
+  const [leaveQuote, setLeaveQuote] = useState<LeaveMatchQuote | null>(null);
+  const [leaveQuoteLoading, setLeaveQuoteLoading] = useState(false);
   const [leaving, setLeaving] = useState(false);
   const [leaveError, setLeaveError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!leaveTarget || leaveTarget.kind !== 'MATCH') { setLeaveRefund(null); return; }
+    if (!leaveTarget || leaveTarget.kind !== 'MATCH') {
+      setLeaveQuote(null); setLeaveQuoteLoading(false); return;
+    }
     let alive = true;
-    supabase.rpc('preview_leave_match', { p_match_id: leaveTarget.match.id })
-      .then(({ data }) => { if (alive) setLeaveRefund(Number((data as { refundable?: number } | null)?.refundable) || 0); })
-      .then(undefined, () => { if (alive) setLeaveRefund(null); });
+    setLeaveQuoteLoading(true);
+    previewLeaveMatch(leaveTarget.match.id)
+      .then(q => { if (alive) setLeaveQuote(q); })
+      .catch(e => { console.error('[MyMatchesHub] ayrılma önizlemesi alınamadı:', e); if (alive) setLeaveQuote(null); })
+      .finally(() => { if (alive) setLeaveQuoteLoading(false); });
     return () => { alive = false; };
   }, [leaveTarget]);
 
@@ -308,18 +331,26 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onBack, onNavigate }) => {
     setLeaving(true);
     setLeaveError(null);
     try {
-      const { error } = await supabase.rpc('leave_public_match_slot', {
-        p_match_id: leaveTarget.match.id,
-        p_user_id: currentUserUid,
-      });
-      if (error) throw error;
+      await leaveMatchSlot(leaveTarget.match.id, currentUserUid);
       const fresh = await getMatchDetails(leaveTarget.match.id);
       if (fresh) applyMatchLocal(fresh);
+      // IP-04 — sonuç sessiz kalmaz: ne yandı, ne döndü, kullanıcı görsün.
+      if (leaveQuote?.late) {
+        const geri = leaveQuote.refundable > 0
+          ? `${formatTRYWithSymbol(leaveQuote.refundable)} cüzdanına döndü, ` : '';
+        const yanan = leaveQuote.forfeited > 0
+          ? `${formatTRYWithSymbol(leaveQuote.forfeited)} iade edilmedi, ` : '';
+        showToast(`Maçtan ayrıldın. ${geri}${yanan}güvenilirlik puanın ${leaveQuote.penalty} düştü.`, 'error');
+      } else if ((leaveQuote?.refundable ?? 0) > 0) {
+        showToast(`Maçtan ayrıldın. ${formatTRYWithSymbol(leaveQuote!.refundable)} cüzdanına geri döndü.`, 'success');
+      } else {
+        showToast('Maçtan ayrıldın.', 'success');
+      }
       setLeaveTarget(null);
     } catch (e) {
       setLeaveError(e instanceof Error && e.message.includes('kayıtlı değil')
         ? 'Bu maçta ayrılabileceğin bir kaydın yok.'
-        : 'Maçtan ayrılırken bir hata oluştu. Lütfen tekrar dene.');
+        : 'Maçtan ayrılamadın. İnternetin zayıf olabilir, tekrar dene.');
     } finally {
       setLeaving(false);
     }
@@ -348,6 +379,9 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onBack, onNavigate }) => {
     store.setPaymentContext({
       kind: 'BOOKING_DEPOSIT',
       badge: 'SAHA KİRALAMA',
+      // BULGU-088 — kademe bu rezervasyonun KENDİ tesisinden gelir; store'daki
+      // bookingPitch bu akışta ya boş ya da Sahalar'da bakılan BAŞKA tesisti.
+      pitchId: b.pitch_id,
       title: b.pitches?.name || 'Saha Rezervasyonu',
       subtitle: `${b.courts?.name ? `${b.courts.name} · ` : ''}${b.booking_date} · ${shortTime(b.start_time)}`,
       details: [
@@ -449,8 +483,8 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onBack, onNavigate }) => {
             <ArrowLeft size={20} />
           </button>
           <div className="text-center flex-1 min-w-0">
-            <h1 className="text-lg font-black text-white italic uppercase tracking-tighter leading-none truncate">Maçlarım</h1>
-            <p className="font-numeric text-[9px] text-gray-500 uppercase tracking-widest mt-1 truncate">
+            <h1 className="text-lg font-extrabold text-white italic uppercase tracking-tighter leading-[1.2] truncate">Maçlarım</h1>
+            <p className="font-numeric text-[0.625rem] text-ink-4 uppercase tracking-widest mt-1 truncate">
               {counts.matches} maç · {counts.bookings} rezervasyon
             </p>
           </div>
@@ -482,12 +516,12 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onBack, onNavigate }) => {
       <main className="flex-1 min-h-0 px-4 pt-4 overflow-y-auto overscroll-contain custom-scrollbar pb-36 relative z-10">
         {bookingsError && (
           <div className="mb-4 flex items-center justify-between gap-3 px-4 py-3 rounded-2xl bg-red-950/30 border border-red-500/20">
-            <p className="text-[11px] text-red-300 font-bold leading-snug">
+            <p className="text-[0.6875rem] text-red-300 font-bold leading-snug">
               Rezervasyonlar yüklenemedi — maçların yine de listeleniyor.
             </p>
             <button
               onClick={() => { void refetchBookings(); }}
-              className="shrink-0 px-3 py-2 min-h-[36px] rounded-xl bg-red-500/15 border border-red-500/30 text-red-200 text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all"
+              className="shrink-0 px-3 py-2 min-h-[36px] rounded-xl bg-red-500/15 border border-red-500/30 text-red-200 text-[0.625rem] font-extrabold uppercase tracking-widest active:scale-95 transition-all"
             >
               Tekrar Dene
             </button>
@@ -505,20 +539,20 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onBack, onNavigate }) => {
               <div className="relative w-[52px] h-[52px] mx-auto mb-4 rounded-2xl bg-[#39FF14]/[0.08] border border-[#39FF14]/25 flex items-center justify-center">
                 <Calendar size={22} className="text-[#39FF14]" />
               </div>
-              <h3 className="relative m-0 text-[19px] font-black italic uppercase tracking-[-0.025em]">Henüz Etkinliğin Yok</h3>
-              <p className="relative mt-2 mx-auto mb-0 text-[13px] text-white/50 leading-relaxed max-w-[252px]">
+              <h3 className="relative m-0 text-[1.1875rem] font-extrabold italic uppercase tracking-[-0.025em]">Henüz Etkinliğin Yok</h3>
+              <p className="relative mt-2 mx-auto mb-0 text-[0.8125rem] text-white/50 leading-relaxed max-w-[252px]">
                 Bir maça katıl ya da saha kirala — ajandan burada canlanır.
               </p>
               <div className="relative mt-5 pt-[18px] border-t border-dashed border-white/12 flex flex-col gap-2.5">
                 <button
                   onClick={() => onNavigate('MATCH_DISCOVERY')}
-                  className="w-full h-12 rounded-2xl bg-[#39FF14] text-[#0A0E14] text-xs font-black uppercase tracking-[0.12em] shadow-[0_0_22px_rgba(57,255,20,0.22)] active:scale-95 transition-transform"
+                  className="w-full h-12 rounded-2xl bg-[#39FF14] text-[#0A0E14] text-xs font-extrabold uppercase tracking-[0.12em] shadow-[0_0_22px_rgba(57,255,20,0.22)] active:scale-95 transition-transform"
                 >
                   Açık Maçlara Göz At
                 </button>
                 <button
                   onClick={() => onNavigate('PITCH_DISCOVERY')}
-                  className="w-full h-12 rounded-2xl border border-white/10 text-white/70 text-xs font-black uppercase tracking-[0.12em] hover:bg-white/5 active:scale-95 transition-all"
+                  className="w-full h-12 rounded-2xl border border-white/10 text-white/70 text-xs font-extrabold uppercase tracking-[0.12em] hover:bg-white/5 active:scale-95 transition-all"
                 >
                   Saha Kirala
                 </button>
@@ -527,7 +561,7 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onBack, onNavigate }) => {
 
             {/* Önizleme iskeletleri — maçların böyle görünecek */}
             <div className="pt-[26px] pb-3 flex items-center gap-2.5">
-              <span className="text-[10px] font-black uppercase tracking-[0.22em] text-white/[0.28]">Maçların böyle görünecek</span>
+              <span className="text-[0.625rem] font-extrabold uppercase tracking-[0.22em] text-white/[0.28]">Maçların böyle görünecek</span>
               <span className="flex-1 h-px bg-white/5" />
             </div>
             <div className="flex flex-col gap-3">
@@ -559,8 +593,8 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onBack, onNavigate }) => {
                   {dayGroups.map((g, gi) => (
                     <div key={`${segment}-g${gi}`}>
                       <div className="sticky top-0 z-[5] bg-[#0A0E14] pt-[22px] pb-2.5 flex items-center gap-2.5">
-                        <span className="text-[10px] font-black uppercase tracking-[0.22em] text-white/90">{g.heading.primary}</span>
-                        <span className="font-numeric text-[10px] font-bold tracking-[0.06em] text-white/30">{g.heading.secondary}</span>
+                        <span className="text-[0.625rem] font-extrabold uppercase tracking-[0.22em] text-white/90">{g.heading.primary}</span>
+                        <span className="font-numeric text-[0.6875rem] font-bold tracking-[0.06em] text-ink-4">{g.heading.secondary}</span>
                         <span className="flex-1 h-px bg-white/[0.07]" />
                       </div>
                       <div className="flex flex-col gap-3">
@@ -581,11 +615,11 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onBack, onNavigate }) => {
               ) : (
                 <motion.div key={`empty-${segment}`} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }} className="pt-6">
                   <div className="rounded-[20px] border border-dashed border-white/10 bg-white/[0.02] px-5 py-8 text-center">
-                    {segment === 'BOOKINGS' ? <Calendar size={28} className="mx-auto mb-3 text-white/25" /> : <Clock size={28} className="mx-auto mb-3 text-white/25" />}
-                    <p className="text-sm font-black uppercase tracking-wide text-white/70">
+                    {segment === 'BOOKINGS' ? <Calendar size={28} className="mx-auto mb-3 text-ink-4" /> : <Clock size={28} className="mx-auto mb-3 text-ink-4" />}
+                    <p className="text-sm font-extrabold uppercase tracking-wide text-white/70">
                       {segment === 'BOOKINGS' ? 'Yaklaşan Rezervasyon Yok' : 'Yaklaşan Maç Yok'}
                     </p>
-                    <p className="mt-1.5 text-xs text-white/40">
+                    <p className="mt-1.5 text-xs text-ink-4">
                       {segment === 'BOOKINGS' ? "Saha Vitrini'nden yeni bir rezervasyon oluşturabilirsin." : 'Top Oyna ekranından açık maçlara katılabilirsin.'}
                     </p>
                   </div>
@@ -598,7 +632,7 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onBack, onNavigate }) => {
               <div className="pt-[22px]">
                 <button
                   onClick={() => setShowPast(v => !v)}
-                  className="w-full min-h-[44px] flex items-center justify-center gap-2 rounded-2xl border border-white/5 bg-white/[0.02] text-white/50 text-[10px] font-black uppercase tracking-[0.2em] hover:bg-white/5 active:scale-[0.99] transition-all"
+                  className="w-full min-h-[44px] flex items-center justify-center gap-2 rounded-2xl border border-white/5 bg-white/[0.02] text-white/50 text-[0.625rem] font-extrabold uppercase tracking-[0.2em] hover:bg-white/5 active:scale-[0.99] transition-all"
                 >
                   Geçmiş & İptaller ({visiblePast.length})
                   <ChevronDown size={14} className={`transition-transform duration-200 ${showPast ? 'rotate-180' : ''}`} />
@@ -643,46 +677,46 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onBack, onNavigate }) => {
             >
               <div className="w-10 h-1 rounded-full bg-white/15 mx-auto mb-[18px]" />
               <div className="flex items-center justify-between gap-2.5 h-5">
-                <span className="text-[8px] font-black uppercase tracking-[0.18em] text-[#FACC15]">Rezervasyon</span>
+                <span className="text-[0.625rem] font-extrabold uppercase tracking-[0.18em] text-[#FACC15]">Rezervasyon</span>
                 {sheetBooking.status === 'CANCELLED' ? (
-                  <span className="flex items-center gap-[5px] px-2.5 py-1 rounded-full border border-red-400/30 bg-red-400/10 text-red-300 text-[9px] font-black uppercase tracking-[0.08em]"><XCircle size={11} />İptal Edildi</span>
+                  <span className="flex items-center gap-[5px] px-2.5 py-1 rounded-full border border-red-400/30 bg-red-400/10 text-red-300 text-[0.625rem] font-extrabold uppercase tracking-[0.08em]"><XCircle size={11} />İptal Edildi</span>
                 ) : sheetBooking.status === 'CONFIRMED' ? (
-                  <span className="flex items-center gap-[5px] px-2.5 py-1 rounded-full border border-[#39FF14]/30 bg-[#39FF14]/10 text-[#39FF14] text-[9px] font-black uppercase tracking-[0.08em]"><CheckCircle2 size={11} />Onaylandı</span>
+                  <span className="flex items-center gap-[5px] px-2.5 py-1 rounded-full border border-[#39FF14]/30 bg-[#39FF14]/10 text-[#39FF14] text-[0.625rem] font-extrabold uppercase tracking-[0.08em]"><CheckCircle2 size={11} />Onaylandı</span>
                 ) : (
-                  <span className="flex items-center gap-[5px] px-2.5 py-1 rounded-full border border-[#FACC15]/30 bg-[#FACC15]/10 text-[#FACC15] text-[9px] font-black uppercase tracking-[0.08em]"><Clock size={11} />Onay bekliyor</span>
+                  <span className="flex items-center gap-[5px] px-2.5 py-1 rounded-full border border-[#FACC15]/30 bg-[#FACC15]/10 text-[#FACC15] text-[0.625rem] font-extrabold uppercase tracking-[0.08em]"><Clock size={11} />Onay bekliyor</span>
                 )}
               </div>
-              <p className="mt-3.5 mb-0 text-xl font-black italic uppercase tracking-[-0.03em] truncate">{sheetBooking.pitches?.name || 'Saha Rezervasyonu'}</p>
-              <p className="mt-[5px] mb-0 text-[12px] text-white/50 font-semibold flex items-center gap-[5px] truncate">
+              <p className="mt-3.5 mb-0 text-xl font-extrabold italic uppercase tracking-[-0.03em] truncate">{sheetBooking.pitches?.name || 'Saha Rezervasyonu'}</p>
+              <p className="mt-[5px] mb-0 text-[0.75rem] text-white/50 font-semibold flex items-center gap-[5px] truncate">
                 <MapPin size={12} className="shrink-0" />
                 {[sheetBooking.pitches?.district, sheetBooking.courts?.name].filter(Boolean).join(' · ') || '—'}
               </p>
               <div className="flex items-center gap-4 mt-4 bg-black/30 border border-white/5 rounded-2xl px-4 py-3">
-                <span className="font-numeric flex items-center gap-1.5 text-[13px] font-bold text-gray-300"><Calendar size={14} className="text-[#39FF14]" />{sheetHeading?.primary === 'Bugün' || sheetHeading?.primary === 'Yarın' ? `${sheetHeading?.secondary} · ${sheetHeading?.primary}` : sheetHeading?.primary}</span>
-                <span className="font-numeric flex items-center gap-1.5 text-[13px] font-bold text-gray-300"><Clock size={14} className="text-[#39FF14]" />{shortTime(sheetBooking.start_time)}–{shortTime(sheetBooking.end_time)}</span>
+                <span className="font-numeric flex items-center gap-1.5 text-[0.8125rem] font-bold text-gray-300"><Calendar size={14} className="text-[#39FF14]" />{sheetHeading?.primary === 'Bugün' || sheetHeading?.primary === 'Yarın' ? `${sheetHeading?.secondary} · ${sheetHeading?.primary}` : sheetHeading?.primary}</span>
+                <span className="font-numeric flex items-center gap-1.5 text-[0.8125rem] font-bold text-gray-300"><Clock size={14} className="text-[#39FF14]" />{shortTime(sheetBooking.start_time)}–{shortTime(sheetBooking.end_time)}</span>
               </div>
-              <div className="flex items-center justify-between mt-3.5 text-[12px]">
-                <span className="text-gray-500 font-bold uppercase tracking-[0.03em]">Tutar</span>
-                <span className="font-numeric text-[#FACC15] font-black">
+              <div className="flex items-center justify-between mt-3.5 text-[0.75rem]">
+                <span className="text-ink-4 font-bold uppercase tracking-[0.03em]">Tutar</span>
+                <span className="font-numeric text-[#FACC15] font-extrabold">
                   ₺{Number(sheetBooking.price || 0).toLocaleString('tr-TR')}
-                  {sheetBooking.deposit_amount > 0 && <span className="text-gray-500 font-bold"> · Kapora ₺{Number(sheetBooking.deposit_amount).toLocaleString('tr-TR')}</span>}
+                  {sheetBooking.deposit_amount > 0 && <span className="text-ink-4 font-bold"> · Kapora ₺{Number(sheetBooking.deposit_amount).toLocaleString('tr-TR')}</span>}
                 </span>
               </div>
-              <div className="flex items-center justify-between mt-2 text-[12px]">
-                <span className="text-gray-500 font-bold uppercase tracking-[0.03em]">Kapora durumu</span>
+              <div className="flex items-center justify-between mt-2 text-[0.75rem]">
+                <span className="text-ink-4 font-bold uppercase tracking-[0.03em]">Kapora durumu</span>
                 {bookingRemaining <= 0 && (sheetBooking.deposit_amount || 0) > 0 ? (
                   <span className="text-[#39FF14] font-bold flex items-center gap-1"><CheckCircle2 size={12} />Ödendi</span>
                 ) : bookingRemaining > 0 ? (
                   <span className="font-numeric text-[#FACC15] font-bold">₺{bookingRemaining.toLocaleString('tr-TR')} bekliyor</span>
                 ) : (
-                  <span className="text-gray-500 font-bold">—</span>
+                  <span className="text-ink-4 font-bold">—</span>
                 )}
               </div>
 
               {bookingRemaining > 0 && sheetBooking.status !== 'CANCELLED' && (
                 <button
                   onClick={() => { const b = sheetBooking; setSheet(null); handlePayDeposit(b); }}
-                  className="w-full h-[52px] mt-5 rounded-2xl bg-[#39FF14] text-[#0A0E14] text-xs font-black uppercase tracking-[0.12em] shadow-[0_0_22px_rgba(57,255,20,0.22)] active:scale-[0.98] transition-transform"
+                  className="w-full h-[52px] mt-5 rounded-2xl bg-[#39FF14] text-[#0A0E14] text-xs font-extrabold uppercase tracking-[0.12em] shadow-[0_0_22px_rgba(57,255,20,0.22)] active:scale-[0.98] transition-transform"
                 >
                   Kapora Öde · ₺{bookingRemaining.toLocaleString('tr-TR')}
                 </button>
@@ -693,11 +727,15 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onBack, onNavigate }) => {
                 <button
                   onClick={() => {
                     const id = sheetBooking.id;
+                    // Çevrimdışı ilk açılış için anlık görüntüyü şimdi yaz:
+                    // kullanıcı sahada bağlantısız kalsa da bilet çizilebilsin
+                    // (IP-20 · BULGU-109).
+                    writeTicketCache(sheetBooking);
                     setSheet(null);
                     useAppStore.getState().setTicketBookingId(id);
                     navigateTo('MATCH_TICKET');
                   }}
-                  className={`w-full h-[52px] rounded-2xl border border-[#FACC15]/30 bg-[#FACC15]/10 text-[#FACC15] text-xs font-black uppercase tracking-[0.12em] active:scale-[0.98] transition-transform flex items-center justify-center gap-2 ${bookingRemaining > 0 ? 'mt-2.5' : 'mt-5'}`}
+                  className={`w-full h-[52px] rounded-2xl border border-[#FACC15]/30 bg-[#FACC15]/10 text-[#FACC15] text-xs font-extrabold uppercase tracking-[0.12em] active:scale-[0.98] transition-transform flex items-center justify-center gap-2 ${bookingRemaining > 0 ? 'mt-2.5' : 'mt-5'}`}
                 >
                   <QrCode size={16} /> Bileti Göster
                 </button>
@@ -708,25 +746,25 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onBack, onNavigate }) => {
                   onClick={() => { const b = sheetBooking; setSheet(null); handleConvertToMatch(b); }}
                   className="flex flex-col items-center justify-center gap-[5px] min-h-[56px] rounded-[14px] bg-[#39FF14]/[0.06] border border-[#39FF14]/20 text-[#39FF14] active:scale-[0.97] transition-transform"
                 >
-                  <Swords size={16} /><span className="text-[9px] font-black uppercase tracking-[0.06em]">Maça Çevir</span>
+                  <Swords size={16} /><span className="text-[0.625rem] font-extrabold uppercase tracking-[0.06em]">Maça Çevir</span>
                 </button>
                 <button
                   onClick={() => handleDirections([sheetBooking.pitches?.name, sheetBooking.pitches?.district, 'Ordu'].filter(Boolean).join(' '))}
                   className="flex flex-col items-center justify-center gap-[5px] min-h-[56px] rounded-[14px] bg-white/[0.03] border border-white/10 text-white/80 active:scale-[0.97] transition-transform"
                 >
-                  <Navigation size={16} /><span className="text-[9px] font-black uppercase tracking-[0.06em]">Yol Tarifi</span>
+                  <Navigation size={16} /><span className="text-[0.625rem] font-extrabold uppercase tracking-[0.06em]">Yol Tarifi</span>
                 </button>
                 <button
                   onClick={() => { setSheet(null); navigateTo('PITCH_DISCOVERY'); }}
                   className="flex flex-col items-center justify-center gap-[5px] min-h-[56px] rounded-[14px] bg-white/[0.03] border border-white/10 text-white/80 active:scale-[0.97] transition-transform"
                 >
-                  <Repeat size={16} /><span className="text-[9px] font-black uppercase tracking-[0.06em]">Tekrar Rezerve</span>
+                  <Repeat size={16} /><span className="text-[0.625rem] font-extrabold uppercase tracking-[0.06em]">Tekrar Rezerve</span>
                 </button>
               </div>
               {sheetBooking.status !== 'CANCELLED' && (
                 <button
                   onClick={() => { const b = sheetBooking; setSheet(null); setCancelTarget(b); setCancelError(null); }}
-                  className="w-full min-h-[48px] mt-2.5 rounded-[14px] border border-red-300/20 bg-red-300/[0.06] text-red-300 text-[11px] font-black uppercase tracking-[0.14em] active:scale-[0.98] transition-transform"
+                  className="w-full min-h-[48px] mt-2.5 rounded-[14px] border border-red-300/20 bg-red-300/[0.06] text-red-300 text-[0.6875rem] font-extrabold uppercase tracking-[0.14em] active:scale-[0.98] transition-transform"
                 >
                   İptal Et
                 </button>
@@ -752,31 +790,31 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onBack, onNavigate }) => {
             >
               <div className="w-10 h-1 rounded-full bg-white/15 mx-auto mb-[18px]" />
               <div className="flex items-center justify-between gap-2.5 h-5">
-                <span className="text-[8px] font-black uppercase tracking-[0.18em] text-[#39FF14]">
+                <span className="text-[0.625rem] font-extrabold uppercase tracking-[0.18em] text-[#39FF14]">
                   {sheetMatch.creatorId === currentUserUid ? 'Maç · Kaptan' : 'Maç'}
                 </span>
-                <span className="font-numeric text-[9px] font-black uppercase tracking-[0.08em] text-white/45">
+                <span className="font-numeric text-[0.625rem] font-extrabold uppercase tracking-[0.08em] text-ink-4">
                   {sheetMatchStats ? `${sheetMatchStats.taken}/${sheetMatchStats.total} oyuncu` : ''}
                 </span>
               </div>
-              <p className="mt-3.5 mb-0 text-xl font-black italic uppercase tracking-[-0.03em] truncate">{sheetMatch.title || 'Maç'}</p>
-              <p className="mt-[5px] mb-0 text-[12px] text-white/50 font-semibold flex items-center gap-[5px] truncate">
+              <p className="mt-3.5 mb-0 text-xl font-extrabold italic uppercase tracking-[-0.03em] truncate">{sheetMatch.title || 'Maç'}</p>
+              <p className="mt-[5px] mb-0 text-[0.75rem] text-white/50 font-semibold flex items-center gap-[5px] truncate">
                 <MapPin size={12} className="shrink-0" />
                 {[sheetMatch.location, (sheetMatch as { courtName?: string }).courtName].filter(Boolean).join(' · ') || '—'}
               </p>
               <div className="flex items-center gap-4 mt-4 bg-black/30 border border-white/5 rounded-2xl px-4 py-3">
-                <span className="font-numeric flex items-center gap-1.5 text-[13px] font-bold text-gray-300"><Calendar size={14} className="text-[#39FF14]" />{sheetHeading?.primary === 'Bugün' || sheetHeading?.primary === 'Yarın' ? `${sheetHeading?.secondary} · ${sheetHeading?.primary}` : sheetHeading?.primary}</span>
-                <span className="font-numeric flex items-center gap-1.5 text-[13px] font-bold text-gray-300"><Clock size={14} className="text-[#39FF14]" />{sheetMatch.time || '—'}</span>
+                <span className="font-numeric flex items-center gap-1.5 text-[0.8125rem] font-bold text-gray-300"><Calendar size={14} className="text-[#39FF14]" />{sheetHeading?.primary === 'Bugün' || sheetHeading?.primary === 'Yarın' ? `${sheetHeading?.secondary} · ${sheetHeading?.primary}` : sheetHeading?.primary}</span>
+                <span className="font-numeric flex items-center gap-1.5 text-[0.8125rem] font-bold text-gray-300"><Clock size={14} className="text-[#39FF14]" />{sheetMatch.time || '—'}</span>
               </div>
-              <div className="flex items-center justify-between mt-3.5 text-[12px]">
-                <span className="text-gray-500 font-bold uppercase tracking-[0.03em]">Kişi başı</span>
-                <span className="font-numeric text-[#FACC15] font-black">
+              <div className="flex items-center justify-between mt-3.5 text-[0.75rem]">
+                <span className="text-ink-4 font-bold uppercase tracking-[0.03em]">Kişi başı</span>
+                <span className="font-numeric text-[#FACC15] font-extrabold">
                   {Number(sheetMatch.price) > 0 ? `₺${Number(sheetMatch.price).toLocaleString('tr-TR')}` : 'Ücretsiz'}
                 </span>
               </div>
               <button
                 onClick={() => sheet && openMatchLobby(sheet)}
-                className="w-full h-[52px] mt-5 rounded-2xl bg-[#39FF14] text-[#0A0E14] text-xs font-black uppercase tracking-[0.12em] shadow-[0_0_22px_rgba(57,255,20,0.22)] active:scale-[0.98] transition-transform"
+                className="w-full h-[52px] mt-5 rounded-2xl bg-[#39FF14] text-[#0A0E14] text-xs font-extrabold uppercase tracking-[0.12em] shadow-[0_0_22px_rgba(57,255,20,0.22)] active:scale-[0.98] transition-transform"
               >
                 Lobiyi Aç
               </button>
@@ -787,23 +825,23 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onBack, onNavigate }) => {
                   className="w-full min-h-[52px] mt-2.5 rounded-2xl bg-[#FACC15]/10 border border-[#FACC15]/30 flex items-center justify-between px-4 text-left active:scale-[0.98] transition-transform"
                 >
                   <span>
-                    <span className="block text-[11px] font-black text-[#FACC15] uppercase tracking-wider">Maçı Değerlendir</span>
-                    <span className="block text-[9px] text-white/40 font-bold">Takım arkadaşlarını ve kaleci/hakemi puanla</span>
+                    <span className="block text-[0.6875rem] font-extrabold text-[#FACC15] uppercase tracking-wider">Maçı Değerlendir</span>
+                    <span className="block text-[0.6875rem] text-ink-4 font-bold">Takım arkadaşlarını ve kaleci/hakemi puanla</span>
                   </span>
-                  <span className="text-[#FACC15] font-black">→</span>
+                  <span className="text-[#FACC15] font-extrabold">→</span>
                 </button>
               )}
               <div className="grid grid-cols-2 gap-2 mt-2.5">
                 <button
                   onClick={() => handleDirections([sheetMatch.location, 'Ordu'].filter(Boolean).join(' '))}
-                  className="flex items-center justify-center gap-[7px] min-h-[48px] rounded-[14px] bg-white/[0.03] border border-white/10 text-white/80 text-[10px] font-black uppercase tracking-[0.08em] active:scale-[0.97] transition-transform"
+                  className="flex items-center justify-center gap-[7px] min-h-[48px] rounded-[14px] bg-white/[0.03] border border-white/10 text-white/80 text-[0.625rem] font-extrabold uppercase tracking-[0.08em] active:scale-[0.97] transition-transform"
                 >
                   <Navigation size={15} />Yol Tarifi
                 </button>
                 <button
                   disabled={!sheetMatchLeaveable}
                   onClick={() => { if (sheet) { setLeaveError(null); setLeaveTarget(sheet); setSheet(null); } }}
-                  className="flex items-center justify-center gap-[7px] min-h-[48px] rounded-[14px] bg-red-300/[0.06] border border-red-300/20 text-red-300 text-[10px] font-black uppercase tracking-[0.08em] active:scale-[0.97] transition-transform disabled:opacity-35"
+                  className="flex items-center justify-center gap-[7px] min-h-[48px] rounded-[14px] bg-red-300/[0.06] border border-red-300/20 text-red-300 text-[0.625rem] font-extrabold uppercase tracking-[0.08em] active:scale-[0.97] transition-transform disabled:opacity-35"
                 >
                   <LogOut size={15} />Maçtan Ayrıl
                 </button>
@@ -829,25 +867,44 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onBack, onNavigate }) => {
               <div className="w-16 h-16 mx-auto rounded-full bg-red-500/15 border-2 border-red-500/40 flex items-center justify-center mb-5">
                 <LogOut size={26} className="text-red-400" />
               </div>
-              <h2 className="text-xl font-black text-white mb-2">Maçtan Ayrıl</h2>
+              <h2 className="text-xl font-extrabold text-white mb-2">Maçtan Ayrıl</h2>
               <p className="text-sm text-gray-400 leading-relaxed mb-1">
                 {leaveTarget.match.title} — {leaveTarget.match.time}
               </p>
-              <p className="text-xs text-gray-500 mb-6">
-                {leaveRefund != null && leaveRefund > 0 ? (
-                  <>Ödediğin <span className="font-numeric text-[#39FF14] font-bold">₺{leaveRefund.toLocaleString('tr-TR')}</span> iade kredisi olarak cüzdanına döner. Arkadaşlarına atadığın slotlar korunur.</>
-                ) : (
-                  <>Kadrodaki yerin ve doldurulmamış rezerve slotların serbest bırakılır. Arkadaşlarına atadığın slotlar korunur.</>
-                )}
+              <p className="text-xs text-ink-4 mb-3">
+                Kadrodaki yerin ve doldurulmamış rezerve slotların serbest bırakılır. Arkadaşlarına atadığın slotlar korunur.
               </p>
+
+              {/* IP-04 — ayrılmanın para/puan sonucu; lobi modalıyla AYNI metin
+                  kaynağı (leaveQuoteMessage). Hiçbir dal sessiz değil. */}
+              {(() => {
+                const msg = leaveQuoteMessage(leaveQuote, leaveQuoteLoading, false);
+                const skin = msg.tone === 'late'
+                  ? { bg: 'rgba(248,113,113,0.12)', line: 'rgba(248,113,113,0.35)', ink: '#F87171', Icon: AlertCircle }
+                  : msg.tone === 'refund'
+                  ? { bg: 'rgba(57,255,20,0.12)', line: 'rgba(57,255,20,0.35)', ink: '#A9B4C0', Icon: CheckCircle2 }
+                  : { bg: 'rgba(255,255,255,0.04)', line: 'rgba(255,255,255,0.16)', ink: '#A9B4C0', Icon: msg.tone === 'loading' ? Loader2 : Info };
+                return (
+                  <div className="mb-6 rounded-2xl px-4 py-3 border flex items-start gap-2 text-left"
+                       style={{ background: skin.bg, borderColor: skin.line }}>
+                    <skin.Icon size={15}
+                      className={`shrink-0 mt-0.5 ${msg.tone === 'loading' ? 'animate-spin' : ''}`}
+                      style={{ color: msg.tone === 'refund' ? '#39FF14' : skin.ink }} />
+                    <p className="text-[0.8125rem] font-semibold leading-[18px]" style={{ color: skin.ink }}>
+                      {msg.text}
+                    </p>
+                  </div>
+                );
+              })()}
               {leaveError && (
                 <p className="text-xs text-red-400 bg-red-950/40 border border-red-500/20 rounded-xl px-3 py-2 mb-4">{leaveError}</p>
               )}
               <div className="flex flex-col gap-3">
+                {/* IP-04 — para sonucu bilinmeden yıkıcı aksiyon yapılamaz. */}
                 <button
                   onClick={handleLeaveMatch}
-                  disabled={leaving}
-                  className={`w-full py-3.5 bg-red-500 text-white font-black rounded-2xl text-sm uppercase tracking-wide transition-transform flex items-center justify-center gap-2 ${leaving ? 'opacity-60 cursor-wait' : 'active:scale-95 hover:bg-red-600'}`}
+                  disabled={leaving || leaveQuoteLoading || leaveQuote == null}
+                  className={`w-full py-3.5 bg-red-500 text-white font-extrabold rounded-2xl text-sm uppercase tracking-wide transition-transform flex items-center justify-center gap-2 disabled:opacity-40 disabled:pointer-events-none ${leaving ? 'opacity-60 cursor-wait' : 'active:scale-95 hover:bg-red-600'}`}
                 >
                   {leaving ? <><Loader2 size={16} className="animate-spin" /> Ayrılıyor...</> : 'Evet, Ayrıl'}
                 </button>
@@ -876,11 +933,11 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onBack, onNavigate }) => {
               <div className="w-16 h-16 mx-auto rounded-full bg-red-500/15 border-2 border-red-500/40 flex items-center justify-center mb-5">
                 <AlertTriangle size={28} className="text-red-400" />
               </div>
-              <h2 className="text-xl font-black text-white mb-2">Rezervasyonu İptal Et</h2>
+              <h2 className="text-xl font-extrabold text-white mb-2">Rezervasyonu İptal Et</h2>
               <p className="text-sm text-gray-400 leading-relaxed mb-1">
                 {cancelTarget.pitches?.name} — {cancelTarget.booking_date} {shortTime(cancelTarget.start_time)}
               </p>
-              <p className="text-xs text-gray-500 mb-6">
+              <p className="text-xs text-ink-4 mb-6">
                 {previewLoading ? (
                   <span className="inline-flex items-center gap-1.5"><Loader2 size={12} className="animate-spin" /> İade koşulları hesaplanıyor…</span>
                 ) : previewError || !cancelPreview ? (
@@ -890,7 +947,7 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onBack, onNavigate }) => {
                 ) : cancelPreview.refund_amount > 0 ? (
                   <>Ödediğin tutarın <span className="text-[#39FF14] font-bold">%{cancelPreview.refund_percent}</span>'i
                     {' '}(<span className="font-numeric text-[#39FF14] font-bold">₺{formatTRY(cancelPreview.refund_amount)}</span>){' '}
-                    iade kredisi olarak cüzdanına döner
+                    cüzdanına döner
                     {cancelPreview.psp_fee > 0 && <> (ödeme altyapısı kesintisi −<span className="font-numeric">{formatTRY(cancelPreview.psp_fee)}</span>₺)</>}.</>
                 ) : (
                   <>Rezervasyon saatine az kaldığı için <span className="text-red-400 font-bold">iade yapılmayacak</span>.</>
@@ -906,7 +963,7 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onBack, onNavigate }) => {
                 <button
                   onClick={handleCancel}
                   disabled={cancelling}
-                  className={`w-full py-3.5 bg-red-500 text-white font-black rounded-2xl text-sm uppercase tracking-wide transition-transform flex items-center justify-center gap-2 ${cancelling ? 'opacity-60 cursor-wait' : 'active:scale-95 hover:bg-red-600'}`}
+                  className={`w-full py-3.5 bg-red-500 text-white font-extrabold rounded-2xl text-sm uppercase tracking-wide transition-transform flex items-center justify-center gap-2 ${cancelling ? 'opacity-60 cursor-wait' : 'active:scale-95 hover:bg-red-600'}`}
                 >
                   {cancelling ? <><Loader2 size={16} className="animate-spin" /> İptal ediliyor...</> : 'Evet, İptal Et'}
                 </button>
@@ -935,14 +992,14 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onBack, onNavigate }) => {
               <div className="w-16 h-16 mx-auto rounded-full bg-[#39FF14]/15 border-2 border-[#39FF14]/40 flex items-center justify-center mb-5">
                 <CheckCircle2 size={28} className="text-[#39FF14]" />
               </div>
-              <h2 className="text-xl font-black text-white mb-2">İptal Edildi</h2>
+              <h2 className="text-xl font-extrabold text-white mb-2">İptal Edildi</h2>
               <p className="text-sm text-gray-400 leading-relaxed mb-6">
                 Rezervasyonun iptal edildi.
                 {cancelResult.refund_amount > 0
-                  ? <> <span className="font-numeric text-[#39FF14] font-bold">₺{formatTRY(cancelResult.refund_amount)}</span> (%{cancelResult.refund_percent}) iade kredisi olarak cüzdanına eklendi.</>
+                  ? <> <span className="font-numeric text-[#39FF14] font-bold">₺{formatTRY(cancelResult.refund_amount)}</span> (%{cancelResult.refund_percent}) cüzdanına eklendi.</>
                   : ' İade edilecek ödeme bulunmuyor.'}
               </p>
-              <button onClick={() => setCancelResult(null)} className="w-full py-3.5 bg-[#FACC15] text-black font-black rounded-2xl text-sm uppercase tracking-wide active:scale-95 transition-transform">
+              <button onClick={() => setCancelResult(null)} className="w-full py-3.5 bg-[#FACC15] text-black font-extrabold rounded-2xl text-sm uppercase tracking-wide active:scale-95 transition-transform">
                 Tamam
               </button>
             </motion.div>

@@ -7,7 +7,11 @@ CREATE TABLE IF NOT EXISTS public.goalkeepers (
   age INTEGER,
   rating NUMERIC DEFAULT 0,
   fee INTEGER DEFAULT 0,
-  match_count INTEGER DEFAULT 0,
+  -- [2026-07-29 onarım] Üretimde ve uygulama kodunda bu kolon "matchCount"
+  -- (camelCase, tırnaklı). Repo burada snake_case yaratıyordu; sıfırdan
+  -- replay'de 20260816000001 ve 20260627000001 bu kolonu bulamıyordu.
+  -- Doğru olan üretim: services/matchService.ts:279 "matchCount" sorguluyor.
+  "matchCount" INTEGER DEFAULT 0,
   avatar TEXT,
   recent_awards TEXT,
   style TEXT,
@@ -29,7 +33,11 @@ CREATE TABLE IF NOT EXISTS public.referees (
   auth_uid UUID,
   name TEXT NOT NULL,
   level TEXT,
-  match_count INTEGER DEFAULT 0,
+  -- [2026-07-29 onarım] Üretimde ve uygulama kodunda bu kolon "matchCount"
+  -- (camelCase, tırnaklı). Repo burada snake_case yaratıyordu; sıfırdan
+  -- replay'de 20260816000001 ve 20260627000001 bu kolonu bulamıyordu.
+  -- Doğru olan üretim: services/matchService.ts:279 "matchCount" sorguluyor.
+  "matchCount" INTEGER DEFAULT 0,
   fee INTEGER DEFAULT 0,
   avatar TEXT,
   rating NUMERIC DEFAULT 0,

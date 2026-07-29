@@ -86,7 +86,9 @@ export interface OwnerMenuStats {
   isFacilityOpen: boolean;
   verificationStatus: 'pending' | 'approved' | 'rejected';
   bankAccountCount: number;
-  tariffCount: number;
+  /** Kendi fiyat politikası olmayan AKTİF saha sayısı — menüde dürüst uyarı.
+   *  Genel (tesis geneli) fiyatlandırma ekranı kaldırıldı; sayaç saha bazlıdır. */
+  courtsWithoutTariff: number;
   autoApproveEnabled: boolean;
   autoApproveMinutes: number;
   availableBalance?: number;

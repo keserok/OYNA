@@ -14,7 +14,7 @@ interface ModalProps { onClose: () => void; }
 // ── Shared components ────────────────────────────────────────────────────────
 const FI: React.FC<{ label: string; children: React.ReactNode; hint?: string }> = ({ label, children, hint }) => (
     <div>
-        <label className="block text-[10px] font-black text-gray-400 mb-1.5 uppercase tracking-widest">{label}</label>
+        <label className="block text-[10px] font-extrabold text-gray-400 mb-1.5 uppercase tracking-widest">{label}</label>
         {children}
         {hint && <p className="text-[9px] text-gray-600 mt-1">{hint}</p>}
     </div>
@@ -62,7 +62,7 @@ const PhotoUploadZone: React.FC<{ currentUrl: string; onChanged: (url: string) =
                 {uploading ? (
                     <div className="flex flex-col items-center gap-2">
                         <Loader2 size={22} className="text-red-400 animate-spin" />
-                        <span className="text-xs font-black text-red-400">% {Math.round(progress)} Yükleniyor...</span>
+                        <span className="text-xs font-extrabold text-red-400">% {Math.round(progress)} Yükleniyor...</span>
                     </div>
                 ) : (
                     <div className="flex flex-col items-center gap-1 text-center px-4">
@@ -90,7 +90,7 @@ const useToast = () => {
         <AnimatePresence>
             {msg && (
                 <motion.div initial={{ opacity: 0, y: 20, x: '-50%' }} animate={{ opacity: 1, y: 0, x: '-50%' }} exit={{ opacity: 0 }}
-                    className="fixed bottom-6 left-1/2 z-[400] px-5 py-3 bg-green-900/90 border border-green-500/30 rounded-xl text-green-300 text-sm font-black backdrop-blur-sm flex items-center gap-2 shadow-2xl">
+                    className="fixed bottom-6 left-1/2 z-[400] px-5 py-3 bg-green-900/90 border border-green-500/30 rounded-xl text-green-300 text-sm font-extrabold backdrop-blur-sm flex items-center gap-2 shadow-2xl">
                     <Check size={14} /> {msg}
                 </motion.div>
             )}
@@ -112,7 +112,7 @@ const Shell: React.FC<{ title: string; onClose: () => void; children: React.Reac
             initial={{ y: 40, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 40, opacity: 0 }}
             onClick={e => e.stopPropagation()}>
             <div className="p-5 border-b border-white/10 flex justify-between items-center bg-[#121820] rounded-t-3xl shrink-0">
-                <h2 className="text-sm font-black text-white tracking-widest uppercase">{title}</h2>
+                <h2 className="text-sm font-extrabold text-white tracking-widest uppercase">{title}</h2>
                 <button onClick={onClose} className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white flex items-center justify-center transition-all"><X size={15} /></button>
             </div>
             <div className="p-6 overflow-y-auto custom-scrollbar flex-1 min-h-0 space-y-5">{children}</div>
@@ -135,12 +135,12 @@ const GRADE_ACTIVE: Record<string, string> = {
 };
 const GradePicker: React.FC<{ label: string; desc?: string; value?: 'A' | 'B' | 'C'; onChange: (g: 'A' | 'B' | 'C') => void }> = ({ label, desc, value, onChange }) => (
     <div>
-        <label className="block text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest">{label}</label>
+        <label className="block text-[10px] font-extrabold text-gray-400 mb-2 uppercase tracking-widest">{label}</label>
         {desc && <p className="text-[9px] text-gray-600 mb-2">{desc}</p>}
         <div className="flex gap-2">
             {(['A', 'B', 'C'] as const).map(g => (
                 <button key={g} onClick={() => onChange(g)}
-                    className={`flex-1 h-10 rounded-xl font-black text-xs border-2 transition-all ${
+                    className={`flex-1 h-10 rounded-xl font-extrabold text-xs border-2 transition-all ${
                         value === g ? GRADE_ACTIVE[g] : (GRADE_COLORS[g] + ' border-opacity-30')
                     }`}>
                     {g}
@@ -237,7 +237,7 @@ export const DeepEditUserModal: React.FC<ModalProps & { user: AdminUser }> = ({ 
                     <p className="text-[9px] text-gray-600 font-mono">ID: {user.id}</p>
                     <div className="flex gap-2">
                         <button onClick={onClose} className="px-4 py-2 rounded-xl text-xs font-bold text-gray-400 hover:text-white border border-white/10 hover:bg-white/5 transition-all">İptal</button>
-                        <button onClick={handleSave} disabled={saving} className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-red-600 to-purple-700 text-white rounded-xl text-xs font-black transition-all disabled:opacity-50 hover:opacity-90">
+                        <button onClick={handleSave} disabled={saving} className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-red-600 to-purple-700 text-white rounded-xl text-xs font-extrabold transition-all disabled:opacity-50 hover:opacity-90">
                             {saving ? <><Loader2 size={13} className="animate-spin" /> Kaydediliyor...</> : <><Save size={13} /> GÜNCELLE</>}
                         </button>
                     </div>
@@ -277,7 +277,7 @@ export const DeepEditUserModal: React.FC<ModalProps & { user: AdminUser }> = ({ 
 
                         {/* Sliders for FifaCard stats */}
                         <div className="p-4 bg-black/30 rounded-2xl border border-purple-500/20 space-y-3">
-                            <p className="text-[10px] font-black text-purple-400 uppercase tracking-widest flex items-center gap-1.5"><Zap size={11} /> TEKNİK KART YETENEK SÜRGÜLERİ (0-100)</p>
+                            <p className="text-[10px] font-extrabold text-purple-400 uppercase tracking-widest flex items-center gap-1.5"><Zap size={11} /> TEKNİK KART YETENEK SÜRGÜLERİ (0-100)</p>
                             
                             {[
                                 { key: 'pace', label: 'Hız (PAC)', color: 'text-yellow-400' },
@@ -297,7 +297,7 @@ export const DeepEditUserModal: React.FC<ModalProps & { user: AdminUser }> = ({ 
                                         onChange={e => handleStatChange(item.key, parseInt(e.target.value))}
                                         className="flex-1 accent-red-500 cursor-pointer"
                                     />
-                                    <span className={`text-xs font-black w-8 text-right ${item.color}`}>
+                                    <span className={`text-xs font-extrabold w-8 text-right ${item.color}`}>
                                         {stats[item.key as keyof typeof stats].value}
                                     </span>
                                 </div>
@@ -305,7 +305,7 @@ export const DeepEditUserModal: React.FC<ModalProps & { user: AdminUser }> = ({ 
 
                             {/* Kart seviyesi (tier) seçici */}
                             <div className="pt-3 mt-1 border-t border-white/5">
-                                <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2">KART SEVİYESİ</p>
+                                <p className="text-[9px] font-extrabold text-gray-400 uppercase tracking-widest mb-2">KART SEVİYESİ</p>
                                 <div className="grid grid-cols-3 gap-2">
                                     {([
                                         { key: 'gold', label: 'ALTIN', cls: 'from-yellow-500/20 to-amber-600/20 text-yellow-300 border-yellow-500/40' },
@@ -319,7 +319,7 @@ export const DeepEditUserModal: React.FC<ModalProps & { user: AdminUser }> = ({ 
                                                     ...prev,
                                                     playerCard: { ...(prev.playerCard || {} as any), tier: t.key },
                                                 }))}
-                                                className={`h-9 rounded-xl text-[10px] font-black border transition-all bg-gradient-to-br ${t.cls} ${active ? 'ring-2 ring-white/30 opacity-100' : 'opacity-50 hover:opacity-80'}`}>
+                                                className={`h-9 rounded-xl text-[10px] font-extrabold border transition-all bg-gradient-to-br ${t.cls} ${active ? 'ring-2 ring-white/30 opacity-100' : 'opacity-50 hover:opacity-80'}`}>
                                                 {t.label}
                                             </button>
                                         );
@@ -333,9 +333,9 @@ export const DeepEditUserModal: React.FC<ModalProps & { user: AdminUser }> = ({ 
                             admin_adjust_wallet_balance yolundan: Kullanıcı 360 → Profil
                             Aynası → Cüzdan kısayolu. */}
                         <div className="p-4 bg-black/30 rounded-2xl border border-yellow-500/20">
-                            <p className="text-[9px] font-black text-yellow-400 uppercase tracking-widest mb-3 flex items-center gap-2"><Wallet size={11} /> CÜZDAN</p>
+                            <p className="text-[9px] font-extrabold text-yellow-400 uppercase tracking-widest mb-3 flex items-center gap-2"><Wallet size={11} /> CÜZDAN</p>
                             <div className="flex items-center justify-between gap-3">
-                                <p className="text-lg font-black font-mono text-yellow-400">{Number(edit.wallet || 0).toLocaleString('tr-TR')} ₺</p>
+                                <p className="text-lg font-extrabold font-mono text-yellow-400">{Number(edit.wallet || 0).toLocaleString('tr-TR')} ₺</p>
                                 <p className="text-[10px] text-gray-500 leading-relaxed text-right max-w-[260px]">
                                     Bakiye düzeltmesi ledger'a işlenir: <span className="text-gray-300 font-bold">360 → Profil Aynası → Cüzdan</span> (sebep zorunlu, FINANCE yetkisi).
                                 </p>
@@ -344,7 +344,7 @@ export const DeepEditUserModal: React.FC<ModalProps & { user: AdminUser }> = ({ 
 
                         {/* Status toggles */}
                         <div className="space-y-2">
-                            <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2 flex items-center gap-2"><Shield size={11} /> HESAP DURUMLARI</p>
+                            <p className="text-[9px] font-extrabold text-gray-400 uppercase tracking-widest mb-2 flex items-center gap-2"><Shield size={11} /> HESAP DURUMLARI</p>
                             <Toggle label="Oyuncu Kartı Aktif" desc="Kart uygulamada (Top Oyna) görünsün — kapatılırsa gizlenir" value={edit.cardActive ?? true} onChange={() => setEdit(prev => ({ ...prev, cardActive: !(prev.cardActive ?? true) }))} />
                             <Toggle label="Doğrulanmış Hesap" desc="Mavi tik göster" value={edit.isVerified} onChange={() => setEdit(prev => ({ ...prev, isVerified: !prev.isVerified }))} />
                             <Toggle label="Hesabı Banla" desc="Kullanıcı sisteme giremez, aktif rezervasyonları iptal edilir" value={edit.isBanned} onChange={() => setEdit(prev => ({ ...prev, isBanned: !prev.isBanned }))} danger />
@@ -353,7 +353,7 @@ export const DeepEditUserModal: React.FC<ModalProps & { user: AdminUser }> = ({ 
 
                     {/* Right Column - FifaCard Interactive Preview */}
                     <div className="w-full lg:w-80 flex flex-col items-center justify-start py-4 bg-[#121820] rounded-3xl border border-white/5 relative overflow-hidden self-start">
-                        <p className="text-[9px] font-black text-purple-400 uppercase tracking-widest mb-3">CANLI KART ÖNİZLEMESİ</p>
+                        <p className="text-[9px] font-extrabold text-purple-400 uppercase tracking-widest mb-3">CANLI KART ÖNİZLEMESİ</p>
                         <FifaCard 
                             rating={edit.rating}
                             role={edit.role}
@@ -486,7 +486,7 @@ export const DeepEditProviderModal: React.FC<ModalProps & { item: Goalkeeper | R
                     <p className="text-[9px] text-gray-600 font-mono">ID: {item.id} | {label}</p>
                     <div className="flex gap-2">
                         <button onClick={onClose} className="px-4 py-2 rounded-xl text-xs font-bold text-gray-400 hover:text-white border border-white/10 hover:bg-white/5 transition-all">İptal</button>
-                        <button onClick={handleSave} disabled={saving} className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-red-600 to-purple-700 text-white rounded-xl text-xs font-black transition-all disabled:opacity-50 hover:opacity-90">
+                        <button onClick={handleSave} disabled={saving} className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-red-600 to-purple-700 text-white rounded-xl text-xs font-extrabold transition-all disabled:opacity-50 hover:opacity-90">
                             {saving ? <><Loader2 size={13} className="animate-spin" /> Kaydediliyor...</> : <><Save size={13} /> DEĞİŞİKLİKLERİ YAYINLA</>}
                         </button>
                     </div>
@@ -509,7 +509,7 @@ export const DeepEditProviderModal: React.FC<ModalProps & { item: Goalkeeper | R
 
                         {/* Pricing & Rating */}
                         <div className="p-4 bg-black/30 rounded-2xl border border-green-500/20">
-                            <p className="text-[9px] font-black text-green-400 uppercase tracking-widest mb-3 flex items-center gap-2"><Wallet size={11} /> ÜCRET & PERFORMANS</p>
+                            <p className="text-[9px] font-extrabold text-green-400 uppercase tracking-widest mb-3 flex items-center gap-2"><Wallet size={11} /> ÜCRET & PERFORMANS</p>
                             <div className="grid grid-cols-2 gap-4">
                                 <FI label="Maç Başı Ücret (₺)" hint="Net gelir">
                                     <I type="number" value={edit.fee} onChange={e => setEdit({ ...edit, fee: +e.target.value })} className="text-green-400 font-mono" />
@@ -548,7 +548,7 @@ export const DeepEditProviderModal: React.FC<ModalProps & { item: Goalkeeper | R
                         {/* Interactive Sliders for Goalkeeper or Referee */}
                         {typeParam === 'GK' && (
                             <div className="p-4 bg-[#161B22]/80 border border-emerald-500/20 rounded-2xl space-y-3">
-                                <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest flex items-center gap-1.5"><Zap size={11} /> KALECİ YETENEK KONTROLLERİ</p>
+                                <p className="text-[10px] font-extrabold text-emerald-400 uppercase tracking-widest flex items-center gap-1.5"><Zap size={11} /> KALECİ YETENEK KONTROLLERİ</p>
                                 {[
                                     { key: 'reflexes', label: 'Refleksler (REF)', color: 'text-emerald-400' },
                                     { key: 'diving', label: 'Dalış (DIV)', color: 'text-teal-400' },
@@ -570,7 +570,7 @@ export const DeepEditProviderModal: React.FC<ModalProps & { item: Goalkeeper | R
                                                 onChange={e => handleGkStatChange(realKey, parseInt(e.target.value))}
                                                 className="flex-1 accent-emerald-500 cursor-pointer"
                                             />
-                                            <span className={`text-xs font-black w-8 text-right ${item.color}`}>{val}</span>
+                                            <span className={`text-xs font-extrabold w-8 text-right ${item.color}`}>{val}</span>
                                         </div>
                                     );
                                 })}
@@ -589,7 +589,7 @@ export const DeepEditProviderModal: React.FC<ModalProps & { item: Goalkeeper | R
 
                         {typeParam === 'REF' && (
                             <div className="p-4 bg-[#161B22]/80 border border-blue-500/20 rounded-2xl space-y-3">
-                                <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest flex items-center gap-1.5"><Zap size={11} /> HAKEM YETENEK KONTROLLERİ</p>
+                                <p className="text-[10px] font-extrabold text-blue-400 uppercase tracking-widest flex items-center gap-1.5"><Zap size={11} /> HAKEM YETENEK KONTROLLERİ</p>
                                 {[
                                     { key: 'authority', label: 'Otorite (OTO)', color: 'text-red-400' },
                                     { key: 'fitness', label: 'Kondisyon (KON)', color: 'text-emerald-400' },
@@ -607,7 +607,7 @@ export const DeepEditProviderModal: React.FC<ModalProps & { item: Goalkeeper | R
                                                 onChange={e => handleRefStatChange(item.key, parseInt(e.target.value))}
                                                 className="flex-1 accent-blue-500 cursor-pointer"
                                             />
-                                            <span className={`text-xs font-black w-8 text-right ${item.color}`}>{val}</span>
+                                            <span className={`text-xs font-extrabold w-8 text-right ${item.color}`}>{val}</span>
                                         </div>
                                     );
                                 })}
@@ -628,7 +628,7 @@ export const DeepEditProviderModal: React.FC<ModalProps & { item: Goalkeeper | R
 
                         {/* Status */}
                         <div className="space-y-2">
-                            <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2">STATÜ</p>
+                            <p className="text-[9px] font-extrabold text-gray-400 uppercase tracking-widest mb-2">STATÜ</p>
                             <Toggle label="ELITE Statüsü" desc="Altın rozet göster, listedeki sıralamasını yükselt" value={!!edit.isElite} onChange={() => setEdit((prev: any) => ({ ...prev, isElite: !prev.isElite }))} />
                             {/* Doğrulama SALT OKUNUR: kimlik doğrulama Doğrulama Merkezi'nin
                                 belge akışından geçer — buradaki eski toggle hiçbir yere yazmıyordu. */}
@@ -637,7 +637,7 @@ export const DeepEditProviderModal: React.FC<ModalProps & { item: Goalkeeper | R
                                     <p className="text-xs font-bold text-white">Doğrulama Durumu</p>
                                     <p className="text-[10px] text-gray-500">Belge onayı: Doğrulama Merkezi → Kimlik Doğrulama</p>
                                 </div>
-                                <span className={`text-[10px] font-black px-2 py-1 rounded-lg border ${
+                                <span className={`text-[10px] font-extrabold px-2 py-1 rounded-lg border ${
                                     ops?.verificationStatus === 'approved'
                                         ? 'text-green-300 bg-green-500/10 border-green-500/30'
                                         : ops?.verificationStatus
@@ -658,7 +658,7 @@ export const DeepEditProviderModal: React.FC<ModalProps & { item: Goalkeeper | R
                             ) : opsError ? (
                                 <div className="flex items-center justify-between gap-2 p-3 bg-red-500/5 border border-red-500/20 rounded-2xl">
                                     <p className="text-[10px] text-red-400 leading-relaxed min-w-0">Müsaitlik bilgisi okunamadı: {opsError}</p>
-                                    <button type="button" onClick={() => setOpsReloadKey((k) => k + 1)} className="shrink-0 text-[10px] font-black uppercase text-gray-300 border border-white/15 rounded-lg px-2.5 py-1.5 hover:text-white">
+                                    <button type="button" onClick={() => setOpsReloadKey((k) => k + 1)} className="shrink-0 text-[10px] font-extrabold uppercase text-gray-300 border border-white/15 rounded-lg px-2.5 py-1.5 hover:text-white">
                                         Tekrar Dene
                                     </button>
                                 </div>
@@ -670,7 +670,7 @@ export const DeepEditProviderModal: React.FC<ModalProps & { item: Goalkeeper | R
 
                     {/* Right Column - FifaCard Interactive Preview */}
                     <div className="w-full lg:w-80 flex flex-col items-center justify-start py-4 bg-[#121820] rounded-3xl border border-white/5 self-start">
-                        <p className="text-[9px] font-black text-purple-400 uppercase tracking-widest mb-3">CANLI KART ÖNİZLEMESİ</p>
+                        <p className="text-[9px] font-extrabold text-purple-400 uppercase tracking-widest mb-3">CANLI KART ÖNİZLEMESİ</p>
                         {typeParam === 'GK' ? (
                             <FifaCard
                                 rating={edit.rating}

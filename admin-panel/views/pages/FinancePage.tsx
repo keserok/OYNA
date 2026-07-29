@@ -428,7 +428,7 @@ export const FinancePage: React.FC<{ onNavigate?: AdminNavigateFn }> = ({ onNavi
       stats={statCards?.map((k) => (
         <div key={k.label} className="bg-[#161B22]/60 border border-white/[0.06] rounded-xl p-4">
           <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">{k.label}</p>
-          <p className={`text-lg font-black mt-1 ${k.color}`}>{k.value}</p>
+          <p className={`text-lg font-extrabold mt-1 ${k.color}`}>{k.value}</p>
         </div>
       ))}
     >
@@ -545,7 +545,7 @@ export const FinancePage: React.FC<{ onNavigate?: AdminNavigateFn }> = ({ onNavi
               { header: 'Durum', render: (r: PaymentIntentRow) => (
                 <div className="flex flex-col gap-0.5">
                   <span className="text-[11px] font-bold text-gray-300">{r.status}</span>
-                  {r.chargeback_at && <span className="text-[9px] font-black text-red-400 uppercase">⚠ Chargeback</span>}
+                  {r.chargeback_at && <span className="text-[9px] font-extrabold text-red-400 uppercase">⚠ Chargeback</span>}
                 </div>
               ) },
               { header: 'Müdahale', render: (r: PaymentIntentRow) => {
@@ -587,9 +587,9 @@ export const FinancePage: React.FC<{ onNavigate?: AdminNavigateFn }> = ({ onNavi
                   <span className="text-[10px] text-gray-400">Kayıtlı: <span className="text-gray-200">{c.requester_name || '—'}</span></span>
                   <div className="flex items-center gap-2">
                     {c.name_match === true
-                      ? <span className="text-[10px] font-black text-green-400">İsim ✓</span>
+                      ? <span className="text-[10px] font-extrabold text-green-400">İsim ✓</span>
                       : c.name_match === false
-                        ? <span className="text-[10px] font-black text-red-400">⚠ İsim farklı</span>
+                        ? <span className="text-[10px] font-extrabold text-red-400">⚠ İsim farklı</span>
                         : <span className="text-[10px] text-gray-500">İsim ?</span>}
                     <span className={`text-[10px] font-bold ${idTone}`}>{idLabel}</span>
                   </div>

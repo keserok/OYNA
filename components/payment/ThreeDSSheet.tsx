@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ShieldCheck, X } from 'lucide-react';
 import { decodeBase64Utf8, getIntentStatus } from '../../services/paymentService';
+import ConfirmDialog from '../ui/ConfirmDialog';
 
 /**
  * 3D SECURE SAYFASI — banka SMS doğrulaması UYGULAMA İÇİNDE açılır
@@ -35,6 +36,7 @@ const TIMEOUT_MS = 5 * 60 * 1000; // 5 dk — banka SMS'i için bol süre
 
 const ThreeDSSheet: React.FC<ThreeDSSheetProps> = ({ htmlBase64, intentId, onDone, onCancel }) => {
   const [failed, setFailed] = useState<string | null>(null); // reason — hata sayfası görünür kalır
+  const [confirmCancel, setConfirmCancel] = useState(false);
   const doneRef = useRef(false);
   const html = useRef<string>('');
   if (!html.current) {
@@ -95,11 +97,20 @@ const ThreeDSSheet: React.FC<ThreeDSSheetProps> = ({ htmlBase64, intentId, onDon
     };
   }, [intentId, onDone]);
 
+  // Hata sayfası görünürken X doğrudan kapatır (ödeme zaten bitmiş).
+  // Doğrulama sürüyorsa önce onay iste — yarıda kesmek paranın akıbetini
+  // belirsiz bırakır (BULGU-084).
   const handleClose = () => {
     if (doneRef.current) return;
+    if (failed) { doneRef.current = true; onDone({ ok: false, reason: failed }); return; }
+    setConfirmCancel(true);
+  };
+
+  const confirmAndCancel = () => {
+    setConfirmCancel(false);
+    if (doneRef.current) return;
     doneRef.current = true;
-    if (failed) onDone({ ok: false, reason: failed });
-    else onCancel();
+    onCancel();
   };
 
   return (
@@ -109,12 +120,12 @@ const ThreeDSSheet: React.FC<ThreeDSSheetProps> = ({ htmlBase64, intentId, onDon
           <ShieldCheck size={18} />
         </span>
         <div className="flex-1 min-w-0">
-          <h1 className="text-[15px] font-black text-white leading-tight">Banka Doğrulaması</h1>
-          <p className="text-[10.5px] text-gray-500 font-semibold">3D Secure · SMS ile onayla</p>
+          <h1 className="text-[0.9375rem] font-extrabold text-white leading-tight">Banka Doğrulaması</h1>
+          <p className="text-[0.6875rem] text-ink-4 font-semibold">3D Secure · SMS ile onayla</p>
         </div>
         <button
           onClick={handleClose}
-          className={`h-9 px-3.5 rounded-full text-[12px] font-extrabold flex items-center gap-1.5 active:scale-95 transition-all ${
+          className={`h-9 px-3.5 rounded-full text-[0.75rem] font-extrabold flex items-center gap-1.5 active:scale-95 transition-all ${
             failed ? 'bg-red-400 text-[#0A0E14]' : 'bg-[#161B22] border border-white/8 text-gray-300'
           }`}
         >
@@ -127,10 +138,21 @@ const ThreeDSSheet: React.FC<ThreeDSSheetProps> = ({ htmlBase64, intentId, onDon
         className="flex-1 w-full border-0 bg-white"
       />
       <div className="px-5 py-2.5 pb-safe border-t border-white/8 bg-[#0A0E14] shrink-0">
-        <p className="text-[10.5px] text-gray-500 text-center leading-relaxed">
+        <p className="text-[0.6875rem] text-ink-4 text-center leading-relaxed">
           Bankanın gönderdiği SMS kodunu bu sayfada gir. Onaylanmayan tutar kartına yansımaz.
         </p>
       </div>
+
+      <ConfirmDialog
+        open={confirmCancel}
+        title="Banka doğrulamasından çık?"
+        description="Ödeme yarıda kalır. Onaylanmayan tutar kartına yansımaz."
+        confirmLabel="Çık"
+        cancelLabel="Devam et"
+        danger
+        onConfirm={confirmAndCancel}
+        onCancel={() => setConfirmCancel(false)}
+      />
     </div>
   );
 };

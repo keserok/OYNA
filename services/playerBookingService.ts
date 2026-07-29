@@ -5,6 +5,8 @@
 // doğrudan tablo yazma RLS ile kapalıdır.
 
 import { supabase } from '../supabaseClient';
+// Çakışma kuralı tek kaynaktan: ızgara ile aynı modül.
+import { bookingCoversSlot, hmToMinutes, minutesToHM } from '../shared/slotGrid';
 
 export interface AvailabilityRow {
   court_id: string | null;
@@ -105,35 +107,66 @@ export async function fetchPitchAvailability(
 }
 
 /**
- * Müsaitlik satırlarını hızlı arama için map'e çevirir.
- * Anahtar: `${courtId}|${dateISO}|${HH:MM}` — court_id NULL ise tesis geneli
- * kabul edilir ve `*|${dateISO}|${HH:MM}` anahtarına yazılır.
+ * Gün + kort bazında rezervasyon ARALIKLARI.
+ *
+ * Anahtar: `${courtId}|${dateISO}` — court_id NULL ise tesis geneli sayılır ve
+ * `*|${dateISO}` anahtarına yazılır.
  */
-export function buildBusyMap(rows: AvailabilityRow[]): Record<string, 'PENDING' | 'CONFIRMED'> {
-  const map: Record<string, 'PENDING' | 'CONFIRMED'> = {};
+export type BusyMap = Record<
+  string,
+  { start: string; end: string; status: 'PENDING' | 'CONFIRMED' }[]
+>;
+
+/**
+ * Müsaitlik satırlarını aralık listesine çevirir.
+ *
+ * ÖNCESİ: rezervasyon SAAT BAŞI işaretleniyordu (`for h = startH; h < endH`).
+ * Izgara artık tarifeden geldiği için dilimler 19:30 gibi yarım saatli
+ * başlayabiliyor; saat başı işaretleme, 19:00-20:00'lik bir rezervasyonun
+ * 19:30-21:00 dilimini kapattığını GÖREMİYORDU. Dilim boş görünüp gönderimde
+ * veritabanının `pitch_bookings_no_overlap` (GiST EXCLUDE) kısıtına takılıyordu.
+ * Artık aralık kesişimine bakılır; kural tek yerde: bookingCoversSlot.
+ */
+export function buildBusyMap(rows: AvailabilityRow[]): BusyMap {
+  const map: BusyMap = {};
   for (const r of rows) {
-    // Bir rezervasyon birden fazla saati kapsayabilir (örn. 20:00-22:00) →
-    // başlangıçtan bitişe saat başı işaretle.
-    const startH = parseInt(r.start_time.slice(0, 2), 10);
-    let endH = parseInt(r.end_time.slice(0, 2), 10);
-    if (endH <= startH) endH += 24; // gece yarısını aşan rezervasyon
-    for (let h = startH; h < endH; h++) {
-      const hh = String(h % 24).padStart(2, '0') + ':' + r.start_time.slice(3, 5);
-      const key = `${r.court_id ?? '*'}|${r.booking_date}|${hh}`;
-      // CONFIRMED, PENDING'i ezer (daha kesin durum)
-      if (map[key] !== 'CONFIRMED') map[key] = r.status;
-    }
+    const key = `${r.court_id ?? '*'}|${r.booking_date}`;
+    (map[key] ??= []).push({
+      start: r.start_time.slice(0, 5),
+      end: r.end_time.slice(0, 5),
+      status: r.status,
+    });
   }
   return map;
 }
 
+/**
+ * Dilim dolu mu? Kısmi çakışma da doludur.
+ *
+ * `endHHMM` verilmezse 60 dakika varsayılır (eski çağrı biçimiyle uyum);
+ * doğrusu dilimin gerçek bitişini geçmektir: `hours[].endTime`.
+ */
 export function isSlotBusy(
-  busyMap: Record<string, 'PENDING' | 'CONFIRMED'>,
+  busyMap: BusyMap,
   courtId: string,
   dateISO: string,
-  startHHMM: string
+  startHHMM: string,
+  endHHMM?: string
 ): 'PENDING' | 'CONFIRMED' | null {
-  return busyMap[`${courtId}|${dateISO}|${startHHMM}`] ?? busyMap[`*|${dateISO}|${startHHMM}`] ?? null;
+  const slot = {
+    startTime: startHHMM,
+    endTime: endHHMM || minutesToHM(hmToMinutes(startHHMM) + 60),
+  };
+  let sonuc: 'PENDING' | 'CONFIRMED' | null = null;
+  for (const key of [`${courtId}|${dateISO}`, `*|${dateISO}`]) {
+    for (const b of busyMap[key] ?? []) {
+      if (!bookingCoversSlot(b.start, b.end, slot)) continue;
+      // CONFIRMED, PENDING'i ezer (daha kesin durum)
+      if (b.status === 'CONFIRMED') return 'CONFIRMED';
+      sonuc = 'PENDING';
+    }
+  }
+  return sonuc;
 }
 
 export interface CreateBookingParams {

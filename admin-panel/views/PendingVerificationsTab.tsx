@@ -43,7 +43,7 @@ const RejectModal: React.FC<{
         exit={{ scale: 0.95, y: 12 }}
         className="w-full max-w-sm bg-[#0D1117] border border-red-500/20 rounded-3xl p-6"
       >
-        <h3 className="text-lg font-black text-white mb-1">Reddetme Notu</h3>
+        <h3 className="text-lg font-extrabold text-white mb-1">Reddetme Notu</h3>
         <p className="text-xs text-gray-400 mb-4">{userName} için reddetme sebebi</p>
         <textarea
           value={notes}
@@ -53,8 +53,8 @@ const RejectModal: React.FC<{
           className="w-full bg-black/50 border border-white/10 rounded-xl p-3 text-sm text-white outline-none focus:border-red-500/50 resize-none mb-4"
         />
         <div className="flex gap-3">
-          <button type="button" onClick={onCancel} className="flex-1 h-10 rounded-xl text-xs font-black text-gray-400 border border-white/10">İptal</button>
-          <button type="button" onClick={() => onConfirm(notes)} className="flex-1 h-10 rounded-xl text-xs font-black bg-red-600/80 text-white">Reddet</button>
+          <button type="button" onClick={onCancel} className="flex-1 h-10 rounded-xl text-xs font-extrabold text-gray-400 border border-white/10">İptal</button>
+          <button type="button" onClick={() => onConfirm(notes)} className="flex-1 h-10 rounded-xl text-xs font-extrabold bg-red-600/80 text-white">Reddet</button>
         </div>
       </motion.div>
     </motion.div>
@@ -108,7 +108,7 @@ const ApplicationDetails: React.FC<{ userId: string }> = ({ userId }) => {
         )}
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest flex items-center gap-1 mb-1">
+        <p className="text-[9px] font-extrabold text-gray-500 uppercase tracking-widest flex items-center gap-1 mb-1">
           <FileText size={10} /> Niyet Mektubu
         </p>
         {app.intent_letter ? (
@@ -146,7 +146,7 @@ const PendingCard = memo<{
           {v.avatar_url ? (
             <img src={v.avatar_url} className="w-full h-full object-cover" referrerPolicy="no-referrer" alt="" loading="lazy" />
           ) : (
-            <div className="w-full h-full flex items-center justify-center text-gray-600 font-black text-lg">
+            <div className="w-full h-full flex items-center justify-center text-gray-600 font-extrabold text-lg">
               {(v.full_name ?? '?')[0]}
             </div>
           )}
@@ -154,16 +154,16 @@ const PendingCard = memo<{
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap mb-0.5">
-            <span className="text-sm font-black text-white">{v.full_name ?? 'İsimsiz'}</span>
-            <span className="px-1.5 py-0.5 text-[8px] font-black rounded uppercase bg-yellow-500/15 text-yellow-400 border border-yellow-500/20">
+            <span className="text-sm font-extrabold text-white">{v.full_name ?? 'İsimsiz'}</span>
+            <span className="px-1.5 py-0.5 text-[8px] font-extrabold rounded uppercase bg-yellow-500/15 text-yellow-400 border border-yellow-500/20">
               {roleLabel(v)}
             </span>
             {slaBreached ? (
-              <span className="flex items-center gap-0.5 px-1.5 py-0.5 text-[8px] font-black rounded bg-red-500/20 text-red-300 border border-red-500/30 animate-pulse">
+              <span className="flex items-center gap-0.5 px-1.5 py-0.5 text-[8px] font-extrabold rounded bg-red-500/20 text-red-300 border border-red-500/30 animate-pulse">
                 <Clock size={8} /> SLA AŞILDI · {ageLabel}
               </span>
             ) : (
-              <span className="flex items-center gap-0.5 px-1.5 py-0.5 text-[8px] font-black rounded bg-orange-500/15 text-orange-400 border border-orange-500/20">
+              <span className="flex items-center gap-0.5 px-1.5 py-0.5 text-[8px] font-extrabold rounded bg-orange-500/15 text-orange-400 border border-orange-500/20">
                 <Clock size={8} /> Bekliyor · {ageLabel}
               </span>
             )}
@@ -183,7 +183,7 @@ const PendingCard = memo<{
           type="button"
           onClick={onApprove}
           disabled={isProcessing}
-          className="flex-1 h-9 rounded-xl text-xs font-black bg-green-500/15 text-green-400 border border-green-500/20 hover:bg-green-500/25 transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50"
+          className="flex-1 h-9 rounded-xl text-xs font-extrabold bg-green-500/15 text-green-400 border border-green-500/20 hover:bg-green-500/25 transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50"
         >
           {isProcessing ? <RefreshCw size={11} className="animate-spin" /> : <Check size={11} />}
           Onayla
@@ -192,7 +192,7 @@ const PendingCard = memo<{
           type="button"
           onClick={onReject}
           disabled={isProcessing}
-          className="flex-1 h-9 rounded-xl text-xs font-black bg-red-500/15 text-red-400 border border-red-500/20 hover:bg-red-500/25 transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50"
+          className="flex-1 h-9 rounded-xl text-xs font-extrabold bg-red-500/15 text-red-400 border border-red-500/20 hover:bg-red-500/25 transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50"
         >
           <X size={11} />
           Reddet
@@ -332,10 +332,10 @@ export const PendingVerificationsTab: React.FC<PendingVerificationsTabProps> = (
     <div>
       {error && <p className="text-red-400 text-xs mb-3">{error}</p>}
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-black uppercase tracking-tighter">
+        <h2 className="text-xl font-extrabold uppercase tracking-tighter">
           Onay Bekleyenler
           {verifications.length > 0 && (
-            <span className="ml-2 px-2 py-0.5 text-xs bg-red-500/20 text-red-400 border border-red-500/30 rounded-full font-black">
+            <span className="ml-2 px-2 py-0.5 text-xs bg-red-500/20 text-red-400 border border-red-500/30 rounded-full font-extrabold">
               {verifications.length}
             </span>
           )}

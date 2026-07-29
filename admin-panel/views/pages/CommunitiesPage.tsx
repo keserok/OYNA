@@ -260,7 +260,7 @@ export const CommunitiesPage: React.FC<CommunitiesPageProps> = ({
 
       {requests.length > 0 && (
         <section className="space-y-2 mb-6">
-          <h3 className="text-[10px] font-black text-yellow-400 uppercase tracking-widest">Oluşturma Talepleri ({requests.length})</h3>
+          <h3 className="text-[10px] font-extrabold text-yellow-400 uppercase tracking-widest">Oluşturma Talepleri ({requests.length})</h3>
           {requests.map((req) => (
             <div key={req.id} className="bg-[#161B22] border border-yellow-500/20 rounded-xl p-4 flex items-center justify-between gap-3">
               <div>
@@ -286,8 +286,8 @@ export const CommunitiesPage: React.FC<CommunitiesPageProps> = ({
             <button type="button" onClick={() => setDetailId(c.id)} className="text-left group">
               <div className="flex items-center gap-2">
                 <span className="font-semibold text-white group-hover:text-blue-300">{c.name}</span>
-                {c.is_verified && <span className="text-[8px] font-black text-blue-400 border border-blue-500/20 px-1.5 py-0.5 rounded">DOĞRULANMIŞ</span>}
-                {c.is_demo && <span className="text-[8px] font-black text-amber-400 border border-amber-500/20 px-1.5 py-0.5 rounded">DEMO</span>}
+                {c.is_verified && <span className="text-[8px] font-extrabold text-blue-400 border border-blue-500/20 px-1.5 py-0.5 rounded">DOĞRULANMIŞ</span>}
+                {c.is_demo && <span className="text-[8px] font-extrabold text-amber-400 border border-amber-500/20 px-1.5 py-0.5 rounded">DEMO</span>}
               </div>
               <p className="text-[10px] text-gray-500 mt-0.5">{c.type} • {c.member_count} üye</p>
             </button>

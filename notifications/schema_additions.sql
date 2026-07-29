@@ -1,6 +1,10 @@
 -- ═══════════════════════════════════════════════════════════════════
 -- OYNA APP — Push Notification Veritabanı Şema Eklemeleri (v2 — Düzeltilmiş)
 -- Supabase Dashboard → SQL Editor → RUN
+--
+-- NOT (IP-06): Canlı kaynak artık
+-- supabase/migrations/20260728210000_ip06_bildirim_merkezi.sql; bu dosya yalnız
+-- referans. Çakışma olursa migration doğrudur.
 -- ═══════════════════════════════════════════════════════════════════
 
 -- ─────────────────────────────────────────────────────────────────
@@ -22,7 +26,7 @@ ALTER TABLE public.profiles
     "ref_rejected":       { "enabled": true,  "mandatory": true  },
     "match_reminder_1h":  { "enabled": true,  "mandatory": false },
     "match_reminder_24h": { "enabled": true,  "mandatory": false },
-    "nearby_match":       { "enabled": false, "mandatory": false },
+    "nearby_match":       { "enabled": true,  "mandatory": false },
     "promo_offers":       { "enabled": false, "mandatory": false },
     "weekly_summary":     { "enabled": true,  "mandatory": false }
   }'::jsonb;

@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MODAL_BACKDROP, MODAL_CARD } from '../common/motion';
+import { useBackDismiss } from '../../hooks/useBackDismiss';
 
 // Yıkıcı işlem onayı — arkadaşlıktan çıkar, engelle, takımı dağıt (Spec D25).
 // Kural: yıkıcı işlemler onay ister; geri-alınabilirler toast ile geçer.
@@ -20,7 +21,11 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   open, title, description,
   confirmLabel = 'Onayla', cancelLabel = 'Vazgeç',
   danger = true, onConfirm, onCancel,
-}) => (
+}) => {
+  // priority 10: bir BottomSheet'in ÜSTÜNDE açıldığında geri tuşu önce bunu
+  // kapatır, alttaki sheet açık kalır (planın Regresyon Riski 2).
+  useBackDismiss(open, onCancel, 'confirm-dialog', 10);
+  return (
   <AnimatePresence>
     {open && (
       <div className="fixed inset-0 z-[60] flex items-center justify-center px-8">
@@ -60,6 +65,7 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
       </div>
     )}
   </AnimatePresence>
-);
+  );
+};
 
 export default ConfirmDialog;

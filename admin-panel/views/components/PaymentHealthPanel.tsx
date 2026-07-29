@@ -102,7 +102,7 @@ export const PaymentHealthPanel: React.FC = () => {
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 {tone.icon}
-                <h3 className={`text-sm font-black ${tone.text}`}>Ödeme Sağlığı — {tone.label}</h3>
+                <h3 className={`text-sm font-extrabold ${tone.text}`}>Ödeme Sağlığı — {tone.label}</h3>
               </div>
               <p className="text-[11px] text-gray-500 mt-0.5 leading-relaxed">
                 Son {health.window_hours} saatlik ödeme akışının sağlık göstergeleri ve para değişmezleri.
@@ -160,7 +160,7 @@ export const PaymentHealthPanel: React.FC = () => {
         {metricCards.map((c) => (
           <div key={c.label} className="bg-[#161B22]/60 border border-white/[0.06] rounded-xl p-4">
             <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider leading-tight">{c.label}</p>
-            <p className={`text-xl font-black mt-1 ${c.tone}`}>{c.value}</p>
+            <p className={`text-xl font-extrabold mt-1 ${c.tone}`}>{c.value}</p>
             <p className="text-[10px] text-gray-600 mt-0.5">{c.hint}</p>
           </div>
         ))}
@@ -173,7 +173,7 @@ export const PaymentHealthPanel: React.FC = () => {
             <ShieldCheck size={18} className="text-cyan-400" />
           </div>
           <div className="min-w-0">
-            <h3 className="text-sm font-black text-white">Para Değişmezleri (G1)</h3>
+            <h3 className="text-sm font-extrabold text-white">Para Değişmezleri (G1)</h3>
             <p className="text-[11px] text-gray-500 mt-0.5 leading-relaxed">
               Cüzdan aynası, idempotency, çift kredi, negatif kova, yetim iade ve çekim kesintisi denetimi.
             </p>
@@ -189,7 +189,7 @@ export const PaymentHealthPanel: React.FC = () => {
             {failedInvariants.map(([key, v]) => (
               <div key={key} className="flex items-center justify-between gap-3 rounded-xl px-4 py-3 bg-red-500/[0.05] border border-red-500/20">
                 <span className="text-xs font-bold text-red-400">{INVARIANT_LABELS[key] ?? key}</span>
-                <span className="text-xs font-black text-red-400">{String(v)} kayıt</span>
+                <span className="text-xs font-extrabold text-red-400">{String(v)} kayıt</span>
               </div>
             ))}
           </div>

@@ -8,6 +8,9 @@
 @source "./admin-panel/**/*.{ts,tsx}";
 @source "./admin-panel/admin.html";
 @source "./index.html";
+/* IP-08: tipografi ölçeğinin TEK kaynağı — burada taranmazsa ui/type.ts
+   içindeki arbitrary sınıflar (text-[0.6875rem] vb.) hiç üretilmez. */
+@source "./ui/**/*.{ts,tsx}";
 
 
 @source not "./node_modules_local/**";
@@ -16,6 +19,83 @@
 @source not "./ios/**";
 @source not "./arsiv/**";
 @source not "./dist/**";
+
+/* ══════════════════════════════════════════════════════════════════════════
+   IP-08 — YAZI TİPLERİ (kendi sunucumuzdan, değişken eksenli)
+   ─────────────────────────────────────────────────────────────────────────
+   Önceden Google CDN'den çekiliyordu (index.html + admin.html). Üç sorunu vardı:
+     1. Çevrimdışıyken font hiç gelmiyor → TÜM arayüz sistem fontuna düşüyordu.
+        Uygulama telefonda (Capacitor) çalışıyor; metroda, sahada, kötü şebekede
+        arayüzün baştan aşağı değişmesi kabul edilemez. Artık dosyalar
+        uygulamanın içinde.
+     2. Yalnız 300–800 ağırlık yükleniyordu; kod 900 istiyordu → tarayıcı sessizce
+        800'e düşürüyordu. Değişken eksen 100–900'ün tamamını taşıyor.
+     3. İtalik ekseni HİÇ yüklenmiyordu; 160 italik kullanımı tarayıcının
+        ürettiği SAHTE eğimdi (harfler algoritmik yatırılıyordu). Artık gerçek
+        italik çizimi var.
+
+   Neden `opsz` (optik boyut) sürümü: Inter'in optik boyut ekseni küçük
+   puntolarda harf açıklıklarını genişletir, boşlukları açar. Bu arayüzde
+   metnin çoğu 10–14px arası; okunabilirlik kazancının en büyük kaldıracı bu.
+   `font-optical-sizing: auto` (tarayıcı varsayılanı) punto ile ekseni
+   otomatik eşler.
+
+   Türkçe kapsama: `ı` (U+0131) latin altkümesinde; `İ ğ Ğ ş Ş` ve `₺` (U+20BA)
+   latin-ext'te. İKİSİ de zorunlu — biri eksik kalırsa Türkçe metin bozulur.
+   `unicode-range` sayesinde tarayıcı yalnız gerçekten gereken dosyayı indirir.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('/fonts/inter-latin-opsz-normal.woff2') format('woff2-variations');
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('/fonts/inter-latin-ext-opsz-normal.woff2') format('woff2-variations');
+  unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Inter';
+  font-style: italic;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('/fonts/inter-latin-opsz-italic.woff2') format('woff2-variations');
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
+@font-face {
+  font-family: 'Inter';
+  font-style: italic;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('/fonts/inter-latin-ext-opsz-italic.woff2') format('woff2-variations');
+  unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;
+}
+
+/* Space Grotesk — tutar/kart/IBAN rakamları. İtalik yüzü YOKTUR (üretici
+   böyle çiziyor); bu yüzden hiçbir yerde italik ile birlikte kullanılmamalı. */
+@font-face {
+  font-family: 'Space Grotesk';
+  font-style: normal;
+  font-weight: 300 700;
+  font-display: swap;
+  src: url('/fonts/space-grotesk-latin-wght-normal.woff2') format('woff2-variations');
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
+@font-face {
+  font-family: 'Space Grotesk';
+  font-style: normal;
+  font-weight: 300 700;
+  font-display: swap;
+  src: url('/fonts/space-grotesk-latin-ext-wght-normal.woff2') format('woff2-variations');
+  unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;
+}
 
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
@@ -30,6 +110,17 @@
   --color-bg-card: rgba(22, 27, 34, 0.4);
   --color-text-main: #FFFFFF;
   --color-text-muted: #8B949E;
+
+  /* ─── IP-08 · Mürekkep merdiveni (metin renkleri) ─────────────────────────
+     Dört basamağın TAMAMI, en zor zemin olan kart yüzeyinde (#161B22) WCAG AA
+     eşiğini (4.5:1) geçer — ölçülmüş değerler yanlarında. Daha soluk bir ton
+     EKLENMEYECEK: `text-gray-500` (4.00:1), `text-white/40` (3.79:1),
+     `text-gray-600` (2.56:1) gibi sınıflar tam da bu yüzden kaldırılıyor.
+     Metin rengi seçerken bu dörtlünün dışına çıkma.                          */
+  --color-ink:   #FFFFFF; /* 17.30:1 — başlık, birincil metin, rakam        */
+  --color-ink-2: #C9D1D9; /* 11.21:1 — ikincil metin, açıklama              */
+  --color-ink-3: #A9B4C0; /*  8.22:1 — üçüncül, yardım metni, birim etiketi */
+  --color-ink-4: #8B949E; /*  5.62:1 — EN SOLUK İZİNLİ; altına inilmez      */
   
   /* Semantic states */
   --color-error: #FF4D4D;
@@ -69,14 +160,32 @@
    `safe-area-top` kullanıyordu ama TANIMSIZDI → çentikli cihazda modal başlığı
    Dynamic Island altına giriyordu. (Unlayered kural, Tailwind p-4'ü ezer.) */
 .safe-area-top { padding-top: calc(var(--safe-top) + 1rem); }
+
+/* ─── Çevrimdışı şeridi yer kaplar (components/OfflineBanner.tsx) ──────────
+   Şerit `fixed top-0 z-[100]` çizilir; kabuk yer açmazsa üstteki geri/kapat
+   düğmelerini örter. Yükseklik şeridin KENDİ dolgusuyla aynı formülden gelir:
+   üst dolgu + text-xs satır yüksekliği (1rem) + py-2'nin alt yarısı (0.5rem). */
+:root { --offline-banner-h: 0px; }
+body.offline-banner-on { --offline-banner-h: calc(max(var(--safe-top), 0.5rem) + 1.5rem); }
+body.offline-banner-on .safe-top      { padding-top: calc(var(--safe-top) + var(--offline-banner-h)); }
+body.offline-banner-on .pt-safe       { padding-top: calc(var(--safe-top) + 1rem   + var(--offline-banner-h)); }
+body.offline-banner-on .pt-safe-2     { padding-top: calc(var(--safe-top) + 0.5rem + var(--offline-banner-h)); }
+body.offline-banner-on .pt-safe-6     { padding-top: calc(var(--safe-top) + 1.5rem + var(--offline-banner-h)); }
+body.offline-banner-on .safe-area-top { padding-top: calc(var(--safe-top) + 1rem   + var(--offline-banner-h)); }
 /* FAZ0: hayalet sınıf — OwnerKpiGrid vb. `scrollbar-hide` kullanıyordu; `.no-scrollbar` ile aynı. */
 .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
 .scrollbar-hide::-webkit-scrollbar { display: none; }
 /* FAZ0: hayalet sınıf — OwnerPanel başlık ("OYNA İŞLETME") legiblik için `text-shadow` kullanıyor. */
 .text-shadow { text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35); }
 
-/* Tutar / kart no / IBAN rakamları — tasarım tokenı (Space Grotesk index.html'de yüklü) */
-.font-numeric { font-family: "Space Grotesk", "Inter", ui-monospace, monospace; }
+/* Tutar / kart no / IBAN rakamları — tasarım tokenı (Space Grotesk yerel @font-face).
+   IP-08: `tabular-nums` eklendi — rakamlar eşit genişlikte olur, alt alta gelen
+   tutarlar birbiriyle hizalanır ve sayaç değişirken yatay zıplama olmaz.
+   İtalik EKLEME: Space Grotesk'in italik yüzü yok. */
+.font-numeric {
+  font-family: "Space Grotesk", "Inter", ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+}
 
 /* Ödeme "işleniyor" halkası (PaymentScreen SVG inline animasyonu) */
 @keyframes oy-spin { to { transform: rotate(360deg); } }
@@ -171,7 +280,16 @@ html {
   background-color: #0A0E14;
 }
 body {
-  font-family: 'Inter', sans-serif;
+  font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  /* IP-08: punto ile optik boyut eksenini eşle (küçük metinde harf açıklıkları
+     genişler). `auto` tarayıcı varsayılanı; niyeti belgelemek için açık yazıldı. */
+  font-optical-sizing: auto;
+  /* IP-08: SAHTE yüz yasak. Gerçek italik ve 100–900 ağırlık artık yüklü;
+     tarayıcının kalın/eğik uydurmasına gerek yok. Bir gün eksik bir yüz
+     istenirse metin sahte çizilmek yerine düz kalır — hata GÖRÜNÜR olur. */
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   background-color: #0A0E14;
   color: white;
   margin: 0;
@@ -181,6 +299,42 @@ body {
 }
 #root {
   height: 100%;
+}
+
+/* ─── Web'de telefon çerçevesi ────────────────────────────────────────────────
+   OYNA bir mobil uygulama; masaüstü tarayıcıda tam genişlikte açılınca kartlar
+   1440px'e yayılıyor ve tasarım dağılıyordu. Geniş pencerede kabuk ortada
+   telefon genişliğinde bir sütuna alınır.
+
+   `contain: paint` DEKORATİF DEĞİL, bu işin çalışmasının tek sebebi: kaynakta
+   77 dosya `position: fixed` kullanıyor (modallar, alt sayfalar, alt menü,
+   toast'lar). Fixed öğeler üstteki genişlik sınırlarını dinlemez; kapsayıcı
+   blok kurulmazsa ilk modalde çerçeve sızar ve overlay tüm pencereye yayılır.
+   Ölçüldü: en geniş fixed öğe 1440px → 448px.
+
+   Eşik 520px: gerçek telefonlar (en geniş ~430px CSS) ve Capacitor native
+   webview bu kuralın ALTINDA kalır — mobilde hiçbir şey değişmez. ────────── */
+@media (min-width: 520px) {
+  html { background-color: #05070b; }
+  #root {
+    max-width: 448px;
+    margin: 0 auto;
+    contain: paint;
+    box-shadow: 0 0 0 1px rgb(255 255 255 / 0.06), 0 24px 80px rgb(0 0 0 / 0.6);
+  }
+  /* Aşağıdaki "iOS yakınlaştırmasını engelle" kuralı `max-width: 768px` ile
+     sınırlı olduğu için masaüstünde alanlar 14px kalıyordu; çerçeve içinde
+     telefonla aynı 16px olsun. Yalnız #root — admin paneli (#admin-root) hariç. */
+  #root input[type="text"],
+  #root input[type="number"],
+  #root input[type="email"],
+  #root input[type="tel"],
+  #root input[type="search"],
+  #root input[type="password"],
+  #root select,
+  #root textarea {
+    font-size: 16px;
+  }
 }
 
 /* Kaydırma zincirlemesini kes: bir liste ucuna gelince hareket komşuya/belgeye
@@ -212,18 +366,22 @@ body.kb-open .pb-safe-6 {
   .team-pulse-active { animation: none !important; }
 }
 
-/* Mesh Gradient Background */
+/* Mesh Gradient Background
+   Genişlik 100vw DEĞİL 100%: vw pencereyi ölçer, telefon çerçevesini değil —
+   masaüstünde arka plan çerçevenin dışına taşardı. */
 .mesh-bg {
   position: fixed;
   top: 0;
   left: 0;
-  width: 100vw;
-  height: 100vh;
+  width: 100%;
+  height: 100%;
   z-index: -1;
   background-color: #0A0E14;
   overflow: hidden;
 }
 
+/* Ölçüler vw DEĞİL kapsayıcı yüzdesi: vw pencereyi ölçer, telefon çerçevesini
+   değil — masaüstünde küreler telefondakinden 3 kat büyük çiziliyordu. */
 .mesh-blob {
   position: absolute;
   opacity: 0.5;
@@ -236,8 +394,8 @@ body.kb-open .pb-safe-6 {
 .mesh-blob-1 {
   top: -10%;
   left: -10%;
-  width: 50vw;
-  height: 50vw;
+  width: 50%;
+  aspect-ratio: 1;
   background: radial-gradient(circle, rgba(20, 30, 60, 0.8) 0%, rgba(10, 14, 20, 0) 70%);
   animation-delay: 0s;
 }
@@ -245,8 +403,8 @@ body.kb-open .pb-safe-6 {
 .mesh-blob-2 {
   bottom: -20%;
   right: -10%;
-  width: 60vw;
-  height: 60vw;
+  width: 60%;
+  aspect-ratio: 1;
   background: radial-gradient(circle, rgba(40, 10, 60, 0.6) 0%, rgba(10, 14, 20, 0) 70%);
   animation-delay: -5s;
 }
@@ -254,8 +412,8 @@ body.kb-open .pb-safe-6 {
 .mesh-blob-3 {
   top: 40%;
   left: 60%;
-  width: 40vw;
-  height: 40vw;
+  width: 40%;
+  aspect-ratio: 1;
   background: radial-gradient(circle, rgba(10, 60, 40, 0.5) 0%, rgba(10, 14, 20, 0) 70%);
   animation-delay: -10s;
 }
@@ -382,12 +540,6 @@ body.kb-open .pb-safe-6 {
 .card-lift:active { transform: scale(0.97); }
 
 /* Glow pulse for CTA buttons */
-@keyframes glow-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(255,255,255,0.15); }
-  50%       { box-shadow: 0 0 20px 4px rgba(255,255,255,0.06); }
-}
-.cta-glow { animation: glow-pulse 2.5s ease-in-out infinite; }
-
 /* Text reveal (char by char simulation with clip) */
 @keyframes text-reveal {
   from { clip-path: inset(0 100% 0 0); }
@@ -440,17 +592,6 @@ input:-webkit-autofill:focus {
   }
 }
 
-/* Premium Glassmorphism Card Style */
-.premium-glass-card {
-  background: rgba(22, 27, 34, 0.4);
-  backdrop-filter: blur(24px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.25);
-  border-radius: 1rem;
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  corner-shape: squircle; /* Progressive enhancement for round corners */
-}
-
 /* OKLCH-based Smooth Neon Glow Shadows (Premium Gamut & Color Space) */
 .button-neon-glow-yellow {
   --neon-color: oklch(85% 0.18 85 / 0.25);
@@ -483,17 +624,6 @@ input:-webkit-autofill:focus {
 .button-neon-glow-blue:hover {
   box-shadow: 0 0 35px 2px var(--neon-hover), inset 0 1px 0 rgba(255, 255, 255, 0.2);
   transform: translateY(-2px) scale(1.01);
-}
-
-/* Card hover scaling and border highlights */
-.premium-glass-card-hover {
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-}
-.premium-glass-card-hover:hover {
-  background: rgba(22, 27, 34, 0.55);
-  border-color: rgba(255, 255, 255, 0.15);
-  box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.4);
-  transform: translateY(-2px);
 }
 
 /* S50 – prefers-reduced-motion: hareket hassasiyeti olan kullanıcılar için

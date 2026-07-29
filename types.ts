@@ -114,6 +114,10 @@ export interface PaymentContext {
   kind: PaymentContextKind;
   /** Bağlam rozeti: 'MAÇA KATILIM · 2 SLOT' / 'SAHA KİRALAMA' / 'MAÇ OLUŞTUR' */
   badge: string;
+  /** İptal/iade kademesi bu tesisten okunur. Eskiden store.bookingPitch'ten
+   *  okunuyordu; Maçlarım'dan gelen akışta o alan ya boş ya da önceki
+   *  gezinmeden kalan BAŞKA tesisin verisiydi (BULGU-088). */
+  pitchId?: string;
   title: string;
   subtitle: string;
   /** Dikey ayrıntı satırları (varsa subtitle yerine bunlar gösterilir). */
@@ -317,7 +321,11 @@ export interface MatchListing {
   gender?: string;
   ageGroup?: string;
   // Hakem ve Skor Otoritesi
-  refereeId?: string; // Appointed referee (FAZ 5: capture sonrası atanır)
+  refereeId?: string;
+  /** Maçın oynandığı kort — skor ekranı ve doluluk hesabı için. */
+  courtId?: string;
+  /** Maç süresi (dakika) — slottan gelir; skorun ne zaman girilebileceğini belirler. */
+  durationMinutes?: number; // Appointed referee (FAZ 5: capture sonrası atanır)
   gkId?: string;      // Ev sahibi kalecisi (FAZ 5: capture sonrası atanır)
   awayGkId?: string;  // Deplasman kalecisi (iki taraflı kaleci: her takım kendi kalecisini kiralar)
   refereeStatus?: 'PENDING' | 'ON_THE_WAY' | 'ARRIVED'; // Canlı hakem takibi
@@ -347,6 +355,9 @@ export interface MatchListing {
   depositStatus?: 'NONE' | 'BLOCKED' | 'CAPTURED' | 'VOIDED' | 'REFUNDED';
   depositAmount?: number;     // bloke edilen/tahsil edilen kapora
   minPlayers?: number;        // maçın LIVE olması için gereken eşik (toplam − 2)
+  /** Yalnız oluşturma isteğinde taşınır — DB kolonu DEĞİL. Sunucu bu anahtarla
+   *  çift gönderimi eler (owner_client_ops.client_request_id). */
+  idempotencyKey?: string;
 }
 
 export interface PositionSlot {
@@ -974,7 +985,10 @@ export interface PitchTariff {
   applies_to_days: number[];
   start_time: string;
   end_time: string;
-  price_per_hour: number;
+  /** Bir SLOTUN fiyatı (saatlik DEĞİL). 90 dakikalık slotta 90 dakikanın bedeli. */
+  slot_price: number;
+  /** Bu tarifenin ürettiği slot süresi: 60 | 90 | 120. Izgara start_time'dan başlar. */
+  slot_minutes: number;
   deposit_amount: number;
   is_active: boolean;
   sort_order: number;

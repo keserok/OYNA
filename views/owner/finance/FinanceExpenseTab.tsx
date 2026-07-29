@@ -123,8 +123,8 @@ export const FinanceExpenseTab: React.FC<Props> = ({
       {/* Kategori özeti */}
       <div className="bg-[#161B22] border border-white/5 rounded-[32px] p-6">
         <div className="flex justify-between items-baseline mb-4">
-          <h3 className="text-xs font-black text-gray-400 uppercase">Bu Ay Gider</h3>
-          <span className="text-lg font-black text-red-400">{money(summary.expenses.total)}</span>
+          <h3 className="text-xs font-extrabold text-gray-400 uppercase">Bu Ay Gider</h3>
+          <span className="text-lg font-extrabold text-red-400">{money(summary.expenses.total)}</span>
         </div>
         <BreakdownList rows={catRows} total={summary.expenses.total} color="#EF4444" emptyText="Bu ay gider kaydı yok." />
       </div>
@@ -133,12 +133,12 @@ export const FinanceExpenseTab: React.FC<Props> = ({
       {templates.length > 0 && (
         <div className="bg-[#161B22] border border-white/5 rounded-2xl p-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-xs font-black text-gray-300">
+            <div className="flex items-center gap-2 text-xs font-extrabold text-gray-300">
               <Repeat size={14} className="text-blue-400" />
               Sabit giderler: {templates.length - unapplied.length}/{templates.length} eklendi
             </div>
             {!readOnly && (
-              <button type="button" onClick={() => setTplOpen(true)} className="text-[10px] font-black text-gray-500 hover:text-gray-300">Yönet</button>
+              <button type="button" onClick={() => setTplOpen(true)} className="text-[10px] font-extrabold text-gray-500 hover:text-gray-300">Yönet</button>
             )}
           </div>
           {unapplied.length > 0 && !readOnly && (
@@ -151,7 +151,7 @@ export const FinanceExpenseTab: React.FC<Props> = ({
               ))}
               {unapplied.length > 1 && (
                 <button type="button" onClick={applyAll} disabled={busy}
-                  className="text-[11px] font-black bg-blue-500/20 border border-blue-500/40 text-blue-200 px-2.5 py-1 rounded-lg disabled:opacity-40">
+                  className="text-[11px] font-extrabold bg-blue-500/20 border border-blue-500/40 text-blue-200 px-2.5 py-1 rounded-lg disabled:opacity-40">
                   Kalanları Ekle
                 </button>
               )}
@@ -163,7 +163,7 @@ export const FinanceExpenseTab: React.FC<Props> = ({
       {/* Gider kayıtları */}
       <div className="space-y-3">
         <div className="flex justify-between items-center px-1">
-          <h3 className="text-[10px] font-black text-gray-500 uppercase">Gider Kayıtları</h3>
+          <h3 className="text-[10px] font-extrabold text-gray-500 uppercase">Gider Kayıtları</h3>
           <button type="button" onClick={openAdd} disabled={readOnly} className="p-2 bg-white/5 rounded-xl text-white disabled:opacity-40">
             <Plus size={18} />
           </button>
@@ -178,12 +178,12 @@ export const FinanceExpenseTab: React.FC<Props> = ({
                   <p className="text-sm font-bold text-white flex items-center gap-2">
                     <span className="truncate">{e.title}</span>
                     {e.template_id && <Repeat size={11} className="text-blue-400 shrink-0" />}
-                    {e.is_demo && <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/25 shrink-0">DEMO</span>}
+                    {e.is_demo && <span className="text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/25 shrink-0">DEMO</span>}
                   </p>
                   <p className="text-[10px] text-gray-500">{e.category} • {e.expense_date}</p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
-                  <span className="text-red-400 font-black tabular-nums">{money(e.amount ?? 0)}</span>
+                  <span className="text-red-400 font-extrabold tabular-nums">{money(e.amount ?? 0)}</span>
                   {!readOnly && (
                     <>
                       <button type="button" onClick={() => openEdit(e)} className="p-1.5 text-gray-400 hover:text-white"><Pencil size={14} /></button>
@@ -208,7 +208,7 @@ export const FinanceExpenseTab: React.FC<Props> = ({
             </select>
             <input type="date" className="bg-[#0A0E14] border border-white/10 rounded-xl p-3 text-white" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
           </div>
-          <button type="button" onClick={saveExpense} disabled={busy || !canSave} className="w-full py-4 bg-emerald-600 text-white font-black rounded-2xl disabled:opacity-40">
+          <button type="button" onClick={saveExpense} disabled={busy || !canSave} className="w-full py-4 bg-emerald-600 text-white font-extrabold rounded-2xl disabled:opacity-40">
             {busy ? 'KAYDEDİLİYOR…' : editing ? 'GÜNCELLE' : 'GİDERİ KAYDET'}
           </button>
         </BottomSheetModal>
@@ -228,7 +228,7 @@ export const FinanceExpenseTab: React.FC<Props> = ({
             ))}
           </div>
           <div className="border-t border-white/5 pt-3">
-            <p className="text-[10px] font-black text-gray-500 uppercase mb-2">Yeni sabit gider</p>
+            <p className="text-[10px] font-extrabold text-gray-500 uppercase mb-2">Yeni sabit gider</p>
             <input className="w-full bg-[#0A0E14] border border-white/10 rounded-xl p-2.5 text-white mb-2 text-sm" placeholder="Başlık (ör. Kira)" value={tplForm.title} onChange={(e) => setTplForm({ ...tplForm, title: e.target.value })} />
             <div className="grid grid-cols-2 gap-2 mb-3">
               <input inputMode="decimal" className="bg-[#0A0E14] border border-white/10 rounded-xl p-2.5 text-white text-sm" placeholder="Tutar" value={tplForm.amount} onChange={(e) => setTplForm({ ...tplForm, amount: e.target.value })} />
@@ -236,7 +236,7 @@ export const FinanceExpenseTab: React.FC<Props> = ({
                 {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
-            <button type="button" onClick={addTemplate} disabled={busy || !tplForm.title.trim() || !(tplAmt > 0)} className="w-full py-2.5 bg-blue-600 text-white font-black rounded-xl text-sm disabled:opacity-40 inline-flex items-center justify-center gap-2">
+            <button type="button" onClick={addTemplate} disabled={busy || !tplForm.title.trim() || !(tplAmt > 0)} className="w-full py-2.5 bg-blue-600 text-white font-extrabold rounded-xl text-sm disabled:opacity-40 inline-flex items-center justify-center gap-2">
               <Check size={15} /> Şablon Ekle
             </button>
           </div>

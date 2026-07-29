@@ -8,6 +8,7 @@ import {
 } from '../../services/pitchOwnerService';
 import { validateTrIban, normalizeIban } from '../../utils/iban';
 import { useConfirmSheet } from './components/useConfirmSheet';
+import { useBackDismiss } from '../../hooks/useBackDismiss';
 import type { PitchBankAccount } from '../../types';
 
 interface OwnerBankAccountsModalProps {
@@ -23,6 +24,8 @@ export const OwnerBankAccountsModal: React.FC<OwnerBankAccountsModalProps> = ({
   onUpdated,
   readOnly = false,
 }) => {
+  // Android geri tuşu + Esc bu modalı kapatır (BULGU-132).
+  useBackDismiss(true, onClose, 'owner-bank-accounts-modal');
   const { confirm, confirmElement } = useConfirmSheet();
   const [accounts, setAccounts] = useState<PitchBankAccount[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -129,10 +132,10 @@ export const OwnerBankAccountsModal: React.FC<OwnerBankAccountsModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex flex-col">
       <div className="bg-[#161B22] p-4 flex justify-between items-center border-b border-white/5 safe-area-top">
-        <button type="button" onClick={onClose} className="p-2 rounded-full bg-white/5 text-white">
+        <button type="button" onClick={onClose} aria-label="Kapat" className="w-11 h-11 flex items-center justify-center rounded-full bg-white/5 text-white">
           <X size={20} />
         </button>
-        <h2 className="text-white font-black text-lg italic uppercase">Banka Hesapları</h2>
+        <h2 className="text-white font-extrabold text-lg italic uppercase">Banka Hesapları</h2>
         <div className="w-10" />
       </div>
 
@@ -161,11 +164,11 @@ export const OwnerBankAccountsModal: React.FC<OwnerBankAccountsModalProps> = ({
                 <div className="flex items-start gap-3 min-w-0">
                   <Banknote size={20} className="text-emerald-400 shrink-0 mt-0.5" />
                   <div className="min-w-0">
-                    <p className="text-sm font-black text-white">{acc.bank_name}</p>
+                    <p className="text-sm font-extrabold text-white">{acc.bank_name}</p>
                     <p className="text-xs text-gray-400">{acc.account_holder}</p>
                     <p className="text-[10px] font-mono text-gray-500 mt-1 break-all">{acc.iban}</p>
                     {acc.is_primary && (
-                      <span className="inline-flex items-center gap-1 text-[10px] font-black text-amber-400 mt-2">
+                      <span className="inline-flex items-center gap-1 text-[10px] font-extrabold text-amber-400 mt-2">
                         <Star size={10} fill="currentColor" /> Birincil hesap
                       </span>
                     )}
@@ -199,7 +202,7 @@ export const OwnerBankAccountsModal: React.FC<OwnerBankAccountsModalProps> = ({
 
         {canUseDb && !readOnly && (
           <div className="bg-[#161B22] p-5 rounded-3xl border border-white/5 space-y-3">
-            <h3 className="text-xs font-black text-gray-500 uppercase tracking-widest">Yeni Hesap</h3>
+            <h3 className="text-xs font-extrabold text-gray-500 uppercase tracking-widest">Yeni Hesap</h3>
             <input
               className="w-full bg-[#0A0E14] border border-white/5 rounded-xl p-3 text-white text-sm"
               placeholder="Banka adı"
@@ -230,7 +233,7 @@ export const OwnerBankAccountsModal: React.FC<OwnerBankAccountsModalProps> = ({
               type="button"
               disabled={isSaving}
               onClick={handleAdd}
-              className="w-full py-3 bg-emerald-600 text-white font-black rounded-xl flex items-center justify-center gap-2 disabled:opacity-50"
+              className="w-full py-3 bg-emerald-600 text-white font-extrabold rounded-xl flex items-center justify-center gap-2 disabled:opacity-50"
             >
               {isSaving ? 'Kaydediliyor…' : <><Plus size={16} /> HESAP EKLE</>}
             </button>

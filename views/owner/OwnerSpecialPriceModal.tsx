@@ -37,7 +37,7 @@ export const OwnerSpecialPriceModal: React.FC<OwnerSpecialPriceModalProps> = ({
 
   const handleSave = async () => {
     if (standardPrice <= 0) {
-      setError('Bu saat için önce standart tarife tanımlayın (Fiyatlandırma Politikası). Özel fiyat standarda göre belirlenir.');
+      setError('Bu saat için önce bu sahanın standart tarifesini tanımlayın (Sahalarım → saha → Aktif Saatler ve Ücretler). Özel fiyat standarda göre belirlenir.');
       return;
     }
     if (newPrice <= standardPrice) {
@@ -72,7 +72,7 @@ export const OwnerSpecialPriceModal: React.FC<OwnerSpecialPriceModalProps> = ({
       <div className="bg-[#161B22] w-full max-w-md rounded-t-[32px] border-t border-white/10 p-6 animate-in slide-in-from-bottom duration-300">
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h3 className="text-lg font-black text-white flex items-center gap-2">
+            <h3 className="text-lg font-extrabold text-white flex items-center gap-2">
               <TrendingUp size={20} className="text-amber-400" /> Özel Fiyat
             </h3>
             <p className="text-xs text-gray-400 mt-1">
@@ -87,12 +87,12 @@ export const OwnerSpecialPriceModal: React.FC<OwnerSpecialPriceModalProps> = ({
         <div className="bg-[#0A0E14] p-6 rounded-3xl border border-white/10 mb-6 text-center">
           <label className="text-xs text-gray-500 font-bold uppercase mb-2 block">Prime Time Fiyatı</label>
           <div className="flex items-center justify-center gap-2">
-            <span className="text-2xl font-black text-gray-500">₺</span>
+            <span className="text-2xl font-extrabold text-gray-500">₺</span>
             <input
               type="number"
               value={customPrice}
               onChange={(e) => setCustomPrice(e.target.value)}
-              className="bg-transparent text-5xl font-black text-white outline-none w-40 text-center border-b border-white/20 focus:border-amber-400 transition-colors"
+              className="bg-transparent text-5xl font-extrabold text-white outline-none w-40 text-center border-b border-white/20 focus:border-amber-400 transition-colors"
             />
           </div>
           {newPrice > standardPrice && standardPrice > 0 && (
@@ -112,7 +112,7 @@ export const OwnerSpecialPriceModal: React.FC<OwnerSpecialPriceModalProps> = ({
           type="button"
           onClick={handleSave}
           disabled={saving}
-          className="w-full py-4 bg-amber-500 text-black font-black text-lg rounded-2xl hover:bg-amber-400 active:scale-95 transition-all disabled:opacity-50"
+          className="w-full py-4 bg-amber-500 text-black font-extrabold text-lg rounded-2xl hover:bg-amber-400 active:scale-95 transition-all disabled:opacity-50"
         >
           {saving ? 'KAYDEDİLİYOR...' : 'ÖZEL FİYATI KAYDET'}
         </button>

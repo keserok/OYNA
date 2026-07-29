@@ -34,7 +34,7 @@ interface MarketplaceCardProps {
 }
 
 const InfoPill: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className = '' }) => (
-  <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-white/[0.04] border border-white/[0.07] text-[10px] font-bold text-white/70 leading-none whitespace-nowrap ${className}`}>
+  <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-white/[0.04] border border-white/[0.07] text-[0.6875rem] font-bold text-white/70 leading-none whitespace-nowrap ${className}`}>
     {children}
   </span>
 );
@@ -93,7 +93,7 @@ export const MarketplaceCard: React.FC<MarketplaceCardProps> = ({ item, type, on
             />
           ) : (
             <div className="w-full h-full rounded-[14px] bg-gradient-to-br from-white/10 to-white/[0.03] flex items-center justify-center">
-              <span className="text-sm font-black text-white/80">{getInitials(item.name)}</span>
+              <span className="text-sm font-extrabold text-white/80">{getInitials(item.name)}</span>
             </div>
           )}
         </div>
@@ -108,10 +108,10 @@ export const MarketplaceCard: React.FC<MarketplaceCardProps> = ({ item, type, on
       {/* Kimlik + gerçek veri rozetleri */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5">
-          <h3 className="text-[15px] font-extrabold text-white tracking-tight truncate">{item.name}</h3>
+          <h3 className="text-[0.9375rem] font-extrabold text-white tracking-tight truncate">{item.name}</h3>
           {item.isElite && <BadgeCheck size={15} className="shrink-0" style={{ color: theme.accent }} />}
         </div>
-        <p className="text-[11px] font-semibold text-white/40 truncate mt-0.5">
+        <p className="text-[0.6875rem] font-semibold text-ink-4 truncate mt-0.5">
           <span style={{ color: theme.accent }}>{theme.label}</span>
           {styleLabel && <> · {styleLabel}</>}
           {subMeta && <> · {subMeta}</>}
@@ -119,11 +119,11 @@ export const MarketplaceCard: React.FC<MarketplaceCardProps> = ({ item, type, on
 
         <div className="flex flex-wrap gap-1.5 mt-2.5">
           <InfoPill>
-            <Star size={10} className={hasRating ? 'fill-amber-400 text-amber-400' : 'text-white/30'} />
+            <Star size={10} className={hasRating ? 'fill-amber-400 text-amber-400' : 'text-ink-4'} />
             {hasRating ? (
               <>
                 <span className="text-white font-numeric">{item.rating.toFixed(1)}</span>
-                {reviewCount > 0 && <span className="text-white/40">({reviewCount})</span>}
+                {reviewCount > 0 && <span className="text-ink-4">({reviewCount})</span>}
               </>
             ) : (
               <span className="text-white/55">Yeni</span>
@@ -136,7 +136,7 @@ export const MarketplaceCard: React.FC<MarketplaceCardProps> = ({ item, type, on
           )}
           {distanceKm != null && (
             <InfoPill>
-              <MapPin size={10} className="text-white/40" />
+              <MapPin size={10} className="text-ink-4" />
               <span className="font-numeric text-white">{distanceKm.toFixed(1)}</span> km
             </InfoPill>
           )}
@@ -147,16 +147,16 @@ export const MarketplaceCard: React.FC<MarketplaceCardProps> = ({ item, type, on
       {/* Ücret + profil oku */}
       <div className="shrink-0 self-stretch flex flex-col items-end justify-between pl-3 border-l border-white/[0.06] py-0.5">
         <div className="text-right">
-          <span className="block text-lg font-black text-white font-numeric leading-none tabular-nums">
-            {item.fee}<span className="text-[13px] font-bold text-white/60">₺</span>
+          <span className="block text-lg font-extrabold text-white font-numeric leading-none tabular-nums">
+            {item.fee}<span className="text-[0.8125rem] font-bold text-white/60">₺</span>
           </span>
-          <span className="block text-[9px] font-bold text-white/35 uppercase tracking-wider mt-1">maç başı</span>
+          <span className="block text-[0.625rem] font-bold text-ink-4 uppercase tracking-wider mt-1">maç başı</span>
         </div>
         {unavailable ? (
-          <span className="text-[9px] font-black uppercase tracking-wider text-white/35">Müsait Değil</span>
+          <span className="text-[0.625rem] font-extrabold uppercase tracking-wider text-ink-4">Müsait Değil</span>
         ) : (
           <span
-            className="inline-flex items-center gap-0.5 text-[10px] font-black uppercase tracking-wider"
+            className="inline-flex items-center gap-0.5 text-[0.625rem] font-extrabold uppercase tracking-wider"
             style={{ color: theme.accent }}
           >
             Profil <ChevronRight size={12} />

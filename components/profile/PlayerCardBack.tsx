@@ -26,15 +26,15 @@ export const PlayerCardBack: React.FC<{ tier: 'gold' | 'silver' | 'bronze'; matc
                 <div className="text-center">
                     <div className="flex items-center justify-center gap-2 mb-1">
                         <div className="flex-1 h-px" style={{ background: `linear-gradient(to right, transparent, ${colors.border}66)` }} />
-                        <span className="text-[8px] font-black uppercase tracking-[0.3em]" style={{ color: colors.label }}>Performans Raporu</span>
+                        <span className="text-[0.625rem] font-extrabold uppercase tracking-[0.3em]" style={{ color: colors.label }}>Performans Raporu</span>
                         <div className="flex-1 h-px" style={{ background: `linear-gradient(to left, transparent, ${colors.border}66)` }} />
                     </div>
                 </div>
                 <div>
-                    <p className="text-[8px] font-black uppercase tracking-widest mb-2" style={{ color: colors.label }}>Son 5 Maç</p>
+                    <p className="text-[0.625rem] font-extrabold uppercase tracking-widest mb-2" style={{ color: colors.label }}>Son 5 Maç</p>
                     <div className="flex gap-2 justify-center">
                         {last5.map((m, i) => (
-                            <div key={i} className={`w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-black border ${m.result === 'WIN' ? 'bg-green-500/20 text-green-400 border-green-500/30' : m.result === 'LOSS' ? 'bg-red-500/20 text-red-400 border-red-500/30' : 'bg-gray-500/20 text-gray-400 border-gray-500/30'}`}>
+                            <div key={i} className={`w-8 h-8 rounded-lg flex items-center justify-center text-[0.6875rem] font-extrabold border ${m.result === 'WIN' ? 'bg-green-500/20 text-green-400 border-green-500/30' : m.result === 'LOSS' ? 'bg-red-500/20 text-red-400 border-red-500/30' : 'bg-gray-500/20 text-gray-400 border-gray-500/30'}`}>
                                 {m.result === 'WIN' ? 'G' : m.result === 'LOSS' ? 'M' : 'B'}
                             </div>
                         ))}
@@ -42,24 +42,24 @@ export const PlayerCardBack: React.FC<{ tier: 'gold' | 'silver' | 'bronze'; matc
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                     <div className="bg-black/40 rounded-xl p-2.5 border border-white/5 text-center">
-                        <span className="text-lg font-black" style={{ color: colors.text }}>18</span>
-                        <p className="text-[7px] font-black uppercase tracking-widest" style={{ color: colors.label }}>Gol</p>
+                        <span className="text-lg font-extrabold" style={{ color: colors.text }}>18</span>
+                        <p className="text-[0.625rem] font-extrabold uppercase tracking-widest" style={{ color: colors.label }}>Gol</p>
                     </div>
                     <div className="bg-black/40 rounded-xl p-2.5 border border-white/5 text-center">
-                        <span className="text-lg font-black" style={{ color: colors.text }}>12</span>
-                        <p className="text-[7px] font-black uppercase tracking-widest" style={{ color: colors.label }}>Asist</p>
+                        <span className="text-lg font-extrabold" style={{ color: colors.text }}>12</span>
+                        <p className="text-[0.625rem] font-extrabold uppercase tracking-widest" style={{ color: colors.label }}>Asist</p>
                     </div>
                     <div className="bg-black/40 rounded-xl p-2.5 border border-white/5 text-center">
-                        <span className="text-lg font-black" style={{ color: colors.text }}>9.2</span>
-                        <p className="text-[7px] font-black uppercase tracking-widest" style={{ color: colors.label }}>En İyi Puan</p>
+                        <span className="text-lg font-extrabold" style={{ color: colors.text }}>9.2</span>
+                        <p className="text-[0.625rem] font-extrabold uppercase tracking-widest" style={{ color: colors.label }}>En İyi Puan</p>
                     </div>
                     <div className="bg-black/40 rounded-xl p-2.5 border border-white/5 text-center">
-                        <span className="text-lg font-black" style={{ color: colors.text }}>{winRate}%</span>
-                        <p className="text-[7px] font-black uppercase tracking-widest" style={{ color: colors.label }}>Galibiyet</p>
+                        <span className="text-lg font-extrabold" style={{ color: colors.text }}>{winRate}%</span>
+                        <p className="text-[0.625rem] font-extrabold uppercase tracking-widest" style={{ color: colors.label }}>Galibiyet</p>
                     </div>
                 </div>
                 <div>
-                    <p className="text-[8px] font-black uppercase tracking-widest mb-1.5" style={{ color: colors.label }}>Performans Trendi</p>
+                    <p className="text-[0.625rem] font-extrabold uppercase tracking-widest mb-1.5" style={{ color: colors.label }}>Performans Trendi</p>
                     <div className="flex items-end gap-[3px] h-8 justify-center">
                         {[7.2, 8.1, 6.5, 8.8, 9.2, 7.8, 8.5, 9.0, 7.5, 8.2].map((v, i) => (
                             <div key={i} className="w-3 rounded-sm" style={{ height: `${(v / 10) * 100}%`, background: v >= 8 ? 'linear-gradient(to top, #22c55e, #4ade80)' : v >= 7 ? 'linear-gradient(to top, #eab308, #facc15)' : 'linear-gradient(to top, #ef4444, #f87171)' }} />
@@ -68,7 +68,7 @@ export const PlayerCardBack: React.FC<{ tier: 'gold' | 'silver' | 'bronze'; matc
                 </div>
                 <div className="flex items-center justify-center gap-2">
                     <div className="flex-1 h-px" style={{ background: `linear-gradient(to right, transparent, ${colors.border}44)` }} />
-                    <span className="text-[7px] font-black uppercase tracking-[0.2em]" style={{ color: `${colors.label}80` }}>OYNA</span>
+                    <span className="text-[0.625rem] font-extrabold uppercase tracking-[0.2em]" style={{ color: `${colors.label}80` }}>OYNA</span>
                     <div className="flex-1 h-px" style={{ background: `linear-gradient(to left, transparent, ${colors.border}44)` }} />
                 </div>
             </div>

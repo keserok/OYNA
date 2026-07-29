@@ -75,7 +75,7 @@ export const OwnerWorkingHoursModal: React.FC<Props> = ({
       <div className="max-w-xl mx-auto space-y-6">
         <div className="bg-[#161B22] p-6 rounded-[32px] border border-white/5 flex items-center justify-between">
           <div>
-            <h3 className="text-lg font-black text-white">Tesis Durumu</h3>
+            <h3 className="text-lg font-extrabold text-white">Tesis Durumu</h3>
             <p className="text-[10px] text-gray-500 font-bold uppercase">Anlık açık / kapalı</p>
           </div>
           <button

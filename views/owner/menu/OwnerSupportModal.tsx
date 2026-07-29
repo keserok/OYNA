@@ -147,7 +147,7 @@ export const OwnerSupportModal: React.FC<Props> = ({ onClose }) => {
                   >
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-sm font-bold text-white truncate">{t.subject}</span>
-                      <span className="text-[10px] font-black uppercase tracking-wider text-gray-500 shrink-0">
+                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-gray-500 shrink-0">
                         {SUPPORT_STATUS_LABEL[t.status] ?? t.status}
                       </span>
                     </div>
@@ -186,7 +186,7 @@ export const OwnerSupportModal: React.FC<Props> = ({ onClose }) => {
           <>
             <div className="space-y-3">
               <div>
-                <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 block mb-1.5">Konu</label>
+                <label className="text-[10px] font-extrabold uppercase tracking-widest text-gray-500 block mb-1.5">Konu</label>
                 <input
                   value={subject}
                   onChange={(e) => setSubject(e.target.value)}
@@ -195,7 +195,7 @@ export const OwnerSupportModal: React.FC<Props> = ({ onClose }) => {
                 />
               </div>
               <div>
-                <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 block mb-1.5">Kategori</label>
+                <label className="text-[10px] font-extrabold uppercase tracking-widest text-gray-500 block mb-1.5">Kategori</label>
                 <select
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
@@ -207,7 +207,7 @@ export const OwnerSupportModal: React.FC<Props> = ({ onClose }) => {
                 </select>
               </div>
               <div>
-                <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 block mb-1.5">Mesaj</label>
+                <label className="text-[10px] font-extrabold uppercase tracking-widest text-gray-500 block mb-1.5">Mesaj</label>
                 <textarea
                   value={body}
                   onChange={(e) => setBody(e.target.value)}
@@ -230,7 +230,7 @@ export const OwnerSupportModal: React.FC<Props> = ({ onClose }) => {
                 type="button"
                 disabled={sending}
                 onClick={() => void submitNew()}
-                className="flex-1 py-3 bg-emerald-500 text-black font-black rounded-2xl hover:bg-emerald-400 disabled:opacity-50 flex items-center justify-center gap-2"
+                className="flex-1 py-3 bg-emerald-500 text-black font-extrabold rounded-2xl hover:bg-emerald-400 disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 {sending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />} Gönder
               </button>
@@ -263,7 +263,7 @@ export const OwnerSupportModal: React.FC<Props> = ({ onClose }) => {
                       : 'bg-white/[0.04] border border-white/10 text-white'
                   }`}
                 >
-                  <p className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">
+                  <p className="text-[10px] font-extrabold uppercase tracking-wider text-gray-500 mb-1">
                     {m.sender_role === 'ADMIN' ? 'OYNA Destek' : 'Sen'} · {new Date(m.created_at).toLocaleString('tr-TR')}
                   </p>
                   <p className="whitespace-pre-wrap leading-relaxed">{m.body}</p>
@@ -286,7 +286,7 @@ export const OwnerSupportModal: React.FC<Props> = ({ onClose }) => {
                   type="button"
                   disabled={sending || reply.trim().length < 2}
                   onClick={() => void submitReply()}
-                  className="w-full py-3 bg-emerald-500 text-black font-black rounded-2xl hover:bg-emerald-400 disabled:opacity-50 flex items-center justify-center gap-2"
+                  className="w-full py-3 bg-emerald-500 text-black font-extrabold rounded-2xl hover:bg-emerald-400 disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   {sending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />} Gönder
                 </button>

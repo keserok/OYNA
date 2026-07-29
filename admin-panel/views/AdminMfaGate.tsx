@@ -176,7 +176,7 @@ const AdminMfaGate: React.FC<Props> = ({ mode, session, factorId, onVerified, on
           <div className="w-20 h-20 mx-auto bg-gradient-to-br from-red-500 to-purple-900 rounded-2xl flex items-center justify-center shadow-[0_0_50px_rgba(239,68,68,0.3)] mb-6 border border-red-500/30">
             <ShieldCheck size={32} className="text-white" />
           </div>
-          <h1 className="text-2xl font-black text-white uppercase tracking-[0.2em]">{title}</h1>
+          <h1 className="text-2xl font-extrabold text-white uppercase tracking-[0.2em]">{title}</h1>
           <p className="text-xs text-red-400 font-mono tracking-widest mt-2 uppercase">{subtitle}</p>
         </div>
 
@@ -223,7 +223,7 @@ const AdminMfaGate: React.FC<Props> = ({ mode, session, factorId, onVerified, on
               type="button"
               disabled={!recoveryAck}
               onClick={() => onVerified(session)}
-              className="w-full h-14 bg-gradient-to-r from-red-600 to-purple-800 rounded-2xl text-white font-black text-sm tracking-widest uppercase disabled:opacity-50"
+              className="w-full h-14 bg-gradient-to-r from-red-600 to-purple-800 rounded-2xl text-white font-extrabold text-sm tracking-widest uppercase disabled:opacity-50"
             >
               Panele Gir
             </button>
@@ -242,7 +242,7 @@ const AdminMfaGate: React.FC<Props> = ({ mode, session, factorId, onVerified, on
             <button
               type="button"
               onClick={onCancel}
-              className="w-full h-14 bg-gradient-to-r from-red-600 to-purple-800 rounded-2xl text-white font-black text-sm tracking-widest uppercase"
+              className="w-full h-14 bg-gradient-to-r from-red-600 to-purple-800 rounded-2xl text-white font-extrabold text-sm tracking-widest uppercase"
             >
               Giriş ekranına dön
             </button>
@@ -269,7 +269,7 @@ const AdminMfaGate: React.FC<Props> = ({ mode, session, factorId, onVerified, on
               )}
               {secret && (
                 <div className="w-full">
-                  <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 block">
+                  <label className="text-[10px] font-extrabold text-gray-500 uppercase tracking-widest mb-2 block">
                     Kurulum anahtarı (manuel)
                   </label>
                   <div className="flex items-center gap-2">
@@ -308,7 +308,7 @@ const AdminMfaGate: React.FC<Props> = ({ mode, session, factorId, onVerified, on
               type="button"
               disabled={loading}
               onClick={() => void submitRecovery()}
-              className="w-full h-14 bg-gradient-to-r from-red-600 to-purple-800 rounded-2xl text-white font-black text-sm tracking-widest uppercase disabled:opacity-60 flex items-center justify-center gap-2"
+              className="w-full h-14 bg-gradient-to-r from-red-600 to-purple-800 rounded-2xl text-white font-extrabold text-sm tracking-widest uppercase disabled:opacity-60 flex items-center justify-center gap-2"
             >
               {loading ? <><Spinner size={16} color="#ffffff" glow={false} /> Doğrulanıyor…</> : <>Kurtarma kodunu doğrula</>}
             </button>
@@ -325,7 +325,7 @@ const AdminMfaGate: React.FC<Props> = ({ mode, session, factorId, onVerified, on
         {!recoveryCodes && !recoveryDone && !useRecovery && (
         <form onSubmit={submit} className="space-y-4">
           <div>
-            <label htmlFor="mfa-code" className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 block">
+            <label htmlFor="mfa-code" className="text-[10px] font-extrabold text-gray-500 uppercase tracking-widest mb-2 block">
               {mode === 'enroll' ? 'Uygulamadaki 6 haneli kod' : 'Authenticator kodu'}
             </label>
             <div className="relative">
@@ -353,7 +353,7 @@ const AdminMfaGate: React.FC<Props> = ({ mode, session, factorId, onVerified, on
           <button
             type="submit"
             disabled={loading || enrolling || code.length !== CODE_LEN}
-            className="w-full h-14 mt-2 bg-gradient-to-r from-red-600 to-purple-800 rounded-2xl text-white font-black text-sm tracking-widest uppercase hover:shadow-[0_0_30px_rgba(239,68,68,0.4)] transition-all flex items-center justify-center gap-2 disabled:opacity-60"
+            className="w-full h-14 mt-2 bg-gradient-to-r from-red-600 to-purple-800 rounded-2xl text-white font-extrabold text-sm tracking-widest uppercase hover:shadow-[0_0_30px_rgba(239,68,68,0.4)] transition-all flex items-center justify-center gap-2 disabled:opacity-60"
           >
             {loading ? (
               <>

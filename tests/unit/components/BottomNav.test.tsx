@@ -48,3 +48,23 @@ describe('BottomNav Component', () => {
     expect(handleNavigate).toHaveBeenCalledWith('SOCIAL');
   });
 });
+
+// IP-01 · BULGU-019: MY_MATCHES ve STUDIO sekme DEĞİL ama alt menü çiziliyor.
+// Hiçbir sekme aktif görünmezse kullanıcı "neredeyim" sorusunu cevaplayamıyor.
+describe('BottomNav — sekme olmayan görünümlerde aktif işaret', () => {
+  it('MY_MATCHES görünümünde Ana Sayfa aktif görünür', () => {
+    render(<BottomNav currentView={'MY_MATCHES' as never} onNavigate={vi.fn()} />);
+    expect(screen.getByLabelText('Ana Sayfa')).toHaveAttribute('aria-current', 'page');
+  });
+
+  it('STUDIO görünümünde Ana Sayfa aktif görünür', () => {
+    render(<BottomNav currentView={'STUDIO' as never} onNavigate={vi.fn()} />);
+    expect(screen.getByLabelText('Ana Sayfa')).toHaveAttribute('aria-current', 'page');
+  });
+
+  it('gerçek bir sekmedeyken Ana Sayfa aktif DEĞİL', () => {
+    render(<BottomNav currentView={'PROFILE' as never} onNavigate={vi.fn()} />);
+    expect(screen.getByLabelText('Ana Sayfa')).not.toHaveAttribute('aria-current');
+    expect(screen.getByLabelText('Profil')).toHaveAttribute('aria-current', 'page');
+  });
+});

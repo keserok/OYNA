@@ -122,10 +122,10 @@ export const CommissionPage: React.FC = () => {
         return global ? (
           <div className="mb-6 bg-[#1a2000] border border-[#39FF14]/20 rounded-2xl p-5 flex items-center gap-4">
             <div className="w-14 h-14 bg-[#39FF14]/10 rounded-2xl flex items-center justify-center shrink-0">
-              <span className="text-[#39FF14] font-black text-xl">%{global.rate_pct}</span>
+              <span className="text-[#39FF14] font-extrabold text-xl">%{global.rate_pct}</span>
             </div>
             <div>
-              <p className="text-white font-black">Aktif Global Oran</p>
+              <p className="text-white font-extrabold">Aktif Global Oran</p>
               <p className="text-gray-400 text-sm">{MODEL_LABELS[global.model]} · {global.notes ?? ''}</p>
             </div>
           </div>
@@ -138,7 +138,7 @@ export const CommissionPage: React.FC = () => {
           <thead>
             <tr className="border-b border-white/5 bg-white/[0.02]">
               {['Kapsam','Model','Oran (%)','Markup (%)','Notlar','Durum',''].map(h => (
-                <th key={h} className="px-4 py-3 text-left text-[11px] font-black text-gray-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
+                <th key={h} className="px-4 py-3 text-left text-[11px] font-extrabold text-gray-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
               ))}
             </tr>
           </thead>
@@ -157,11 +157,11 @@ export const CommissionPage: React.FC = () => {
               <tr key={row.id} className={`border-b border-white/5 hover:bg-white/[0.02] transition-colors ${!row.is_active ? 'opacity-50' : ''}`}>
                 <td className="px-4 py-3 font-bold text-white whitespace-nowrap">{SCOPE_LABELS[row.scope] ?? row.scope}</td>
                 <td className="px-4 py-3 text-gray-400 whitespace-nowrap">{MODEL_LABELS[row.model] ?? row.model}</td>
-                <td className="px-4 py-3 text-[#39FF14] font-black">{row.rate_pct}%</td>
+                <td className="px-4 py-3 text-[#39FF14] font-extrabold">{row.rate_pct}%</td>
                 <td className="px-4 py-3 text-gray-400">{row.markup_pct > 0 ? `${row.markup_pct}%` : '—'}</td>
                 <td className="px-4 py-3 text-gray-500 max-w-[200px] truncate">{row.notes ?? '—'}</td>
                 <td className="px-4 py-3">
-                  <span className={`text-[10px] font-black px-2 py-1 rounded-full ${row.is_active ? 'text-green-400 bg-green-400/10' : 'text-gray-500 bg-gray-500/10'}`}>
+                  <span className={`text-[10px] font-extrabold px-2 py-1 rounded-full ${row.is_active ? 'text-green-400 bg-green-400/10' : 'text-gray-500 bg-gray-500/10'}`}>
                     {row.is_active ? 'Aktif' : 'Pasif'}
                   </span>
                 </td>
@@ -188,7 +188,7 @@ export const CommissionPage: React.FC = () => {
         <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-6">
           <div className="bg-[#161B22] border border-white/10 rounded-[28px] p-6 w-full max-w-md space-y-5">
             <div className="flex items-center justify-between">
-              <h2 className="text-white font-black text-lg">{editRow._isNew ? 'Yeni Komisyon Kuralı' : 'Kuralı Düzenle'}</h2>
+              <h2 className="text-white font-extrabold text-lg">{editRow._isNew ? 'Yeni Komisyon Kuralı' : 'Kuralı Düzenle'}</h2>
               <button onClick={() => setEditRow(null)} className="text-gray-500 hover:text-white"><X size={20} /></button>
             </div>
 
@@ -254,7 +254,7 @@ export const CommissionPage: React.FC = () => {
                 İptal
               </button>
               <button onClick={handleSave} disabled={saving}
-                className="flex-1 py-3 bg-[#39FF14] text-black font-black rounded-xl hover:brightness-110 active:scale-95 transition-all text-sm disabled:opacity-50 flex items-center justify-center gap-2">
+                className="flex-1 py-3 bg-[#39FF14] text-black font-extrabold rounded-xl hover:brightness-110 active:scale-95 transition-all text-sm disabled:opacity-50 flex items-center justify-center gap-2">
                 {saving ? <RefreshCw size={14} className="animate-spin" /> : <Check size={14} />}
                 {saving ? 'Kaydediliyor...' : 'Kaydet'}
               </button>
@@ -268,7 +268,7 @@ export const CommissionPage: React.FC = () => {
 
 const Field = ({ label, children }: { label: string; children: React.ReactNode }) => (
   <div>
-    <label className="text-[11px] text-gray-500 font-black uppercase tracking-wider block mb-2">{label}</label>
+    <label className="text-[11px] text-gray-500 font-extrabold uppercase tracking-wider block mb-2">{label}</label>
     {children}
   </div>
 );

@@ -157,11 +157,11 @@ export const ProviderDetailPanel: React.FC<ProviderDetailPanelProps> = ({ provid
           />
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <h3 className="text-lg font-black text-white">{provider.name}</h3>
-              {isDemo && <span className="text-[8px] font-black px-2 py-0.5 rounded bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">DEMO</span>}
-              {provider.isElite && <span className="text-[8px] font-black px-2 py-0.5 rounded bg-purple-500/20 text-purple-300">ELITE</span>}
+              <h3 className="text-lg font-extrabold text-white">{provider.name}</h3>
+              {isDemo && <span className="text-[8px] font-extrabold px-2 py-0.5 rounded bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">DEMO</span>}
+              {provider.isElite && <span className="text-[8px] font-extrabold px-2 py-0.5 rounded bg-purple-500/20 text-purple-300">ELITE</span>}
               {!opsLoading && (
-                <span className={`text-[8px] font-black px-2 py-0.5 rounded border ${verifTone.cls}`}>{verifTone.label}</span>
+                <span className={`text-[8px] font-extrabold px-2 py-0.5 rounded border ${verifTone.cls}`}>{verifTone.label}</span>
               )}
             </div>
             <p className="text-xs text-gray-400 mt-1 flex items-center gap-1">
@@ -170,7 +170,7 @@ export const ProviderDetailPanel: React.FC<ProviderDetailPanelProps> = ({ provid
             </p>
             <p className="text-[10px] font-mono text-gray-600 mt-1">ID: {provider.id.slice(0, 8)}…</p>
           </div>
-          <button onClick={onEdit} className="flex items-center gap-1.5 px-4 py-2 bg-red-600 hover:bg-red-500 text-white text-xs font-black rounded-xl uppercase">
+          <button onClick={onEdit} className="flex items-center gap-1.5 px-4 py-2 bg-red-600 hover:bg-red-500 text-white text-xs font-extrabold rounded-xl uppercase">
             <Edit3 size={12} /> Düzenle
           </button>
         </div>
@@ -179,7 +179,7 @@ export const ProviderDetailPanel: React.FC<ProviderDetailPanelProps> = ({ provid
           {/* ── Sol: Uygulama önizlemesi — kaptanın Marketplace'te gördüğü GERÇEK kart ── */}
           <div className="space-y-5">
             <section>
-              <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-3 flex items-center gap-1">
+              <h4 className="text-[10px] font-extrabold text-gray-500 uppercase tracking-widest mb-3 flex items-center gap-1">
                 <Smartphone size={12} /> Uygulama Önizlemesi — kaptanın gördüğü
               </h4>
               <div className="mx-auto max-w-[360px] bg-[#0A0E14] rounded-[28px] border border-white/10 p-4 shadow-inner">
@@ -188,27 +188,27 @@ export const ProviderDetailPanel: React.FC<ProviderDetailPanelProps> = ({ provid
             </section>
 
             <section>
-              <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 flex items-center gap-1"><Eye size={12} /> Profil Metni</h4>
+              <h4 className="text-[10px] font-extrabold text-gray-500 uppercase tracking-widest mb-2 flex items-center gap-1"><Eye size={12} /> Profil Metni</h4>
               <p className="text-sm text-gray-300 leading-relaxed">{provider.bio || '—'}</p>
               <div className="grid grid-cols-3 gap-2 mt-3">
                 <div className="bg-black/30 rounded-xl p-3 border border-white/5 text-center">
                   <p className="text-[9px] text-gray-500 uppercase">Ücret</p>
-                  <p className="text-green-400 font-black">₺{provider.fee || 0}</p>
+                  <p className="text-green-400 font-extrabold">₺{provider.fee || 0}</p>
                 </div>
                 <div className="bg-black/30 rounded-xl p-3 border border-white/5 text-center">
                   <p className="text-[9px] text-gray-500 uppercase">Maç</p>
-                  <p className="text-white font-black">{provider.matchCount || 0}</p>
+                  <p className="text-white font-extrabold">{provider.matchCount || 0}</p>
                 </div>
                 <div className="bg-black/30 rounded-xl p-3 border border-white/5 text-center">
                   <p className="text-[9px] text-gray-500 uppercase">Puan</p>
-                  <p className="text-yellow-400 font-black">{Number(provider.rating || 0).toFixed(1)}</p>
+                  <p className="text-yellow-400 font-extrabold">{Number(provider.rating || 0).toFixed(1)}</p>
                 </div>
               </div>
             </section>
 
             {zones.length > 0 && (
               <section>
-                <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 flex items-center gap-1"><MapPin size={12} /> Bölgeler</h4>
+                <h4 className="text-[10px] font-extrabold text-gray-500 uppercase tracking-widest mb-2 flex items-center gap-1"><MapPin size={12} /> Bölgeler</h4>
                 <div className="flex flex-wrap gap-1.5">
                   {zones.map((z: string) => (
                     <span key={z} className="text-[10px] px-2 py-1 rounded-lg bg-white/5 text-gray-300 border border-white/10">{z}</span>
@@ -218,7 +218,7 @@ export const ProviderDetailPanel: React.FC<ProviderDetailPanelProps> = ({ provid
             )}
 
             <section>
-              <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-3 flex items-center gap-1"><Award size={12} /> İstatistikler</h4>
+              <h4 className="text-[10px] font-extrabold text-gray-500 uppercase tracking-widest mb-3 flex items-center gap-1"><Award size={12} /> İstatistikler</h4>
               <div className="space-y-2">
                 {isGk ? (
                   <>
@@ -243,7 +243,7 @@ export const ProviderDetailPanel: React.FC<ProviderDetailPanelProps> = ({ provid
           <div className="space-y-5">
             <section className="bg-black/25 rounded-xl p-4 border border-white/5">
               <div className="flex items-center justify-between mb-1">
-                <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest flex items-center gap-1">
+                <h4 className="text-[10px] font-extrabold text-gray-500 uppercase tracking-widest flex items-center gap-1">
                   <Power size={12} /> Müsaitlik (eşleştirme motoru)
                 </h4>
                 <button
@@ -266,7 +266,7 @@ export const ProviderDetailPanel: React.FC<ProviderDetailPanelProps> = ({ provid
                   <button
                     onClick={() => void toggleAvailability()}
                     disabled={busy}
-                    className={`shrink-0 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase border transition-all disabled:opacity-40 ${
+                    className={`shrink-0 px-3 py-1.5 rounded-lg text-[10px] font-extrabold uppercase border transition-all disabled:opacity-40 ${
                       ops?.isAvailable
                         ? 'bg-green-500/15 text-green-400 border-green-500/30 hover:bg-red-500/15 hover:text-red-400 hover:border-red-500/30'
                         : 'bg-red-500/15 text-red-400 border-red-500/30 hover:bg-green-500/15 hover:text-green-400 hover:border-green-500/30'
@@ -279,7 +279,7 @@ export const ProviderDetailPanel: React.FC<ProviderDetailPanelProps> = ({ provid
             </section>
 
             <section className="bg-black/25 rounded-xl p-4 border border-white/5">
-              <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-3 flex items-center gap-1">
+              <h4 className="text-[10px] font-extrabold text-gray-500 uppercase tracking-widest mb-3 flex items-center gap-1">
                 <Clock size={12} /> Çalışma Saatleri (uygulamadaki filtreyi besler)
               </h4>
               <div className="flex flex-wrap gap-1.5 mb-3">
@@ -287,7 +287,7 @@ export const ProviderDetailPanel: React.FC<ProviderDetailPanelProps> = ({ provid
                   <button
                     key={d}
                     onClick={() => setWhDays((prev) => prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d])}
-                    className={`px-2.5 py-1.5 rounded-lg text-[10px] font-black border transition-all ${
+                    className={`px-2.5 py-1.5 rounded-lg text-[10px] font-extrabold border transition-all ${
                       whDays.includes(d)
                         ? 'bg-red-600/20 text-red-300 border-red-500/40'
                         : 'bg-white/5 text-gray-500 border-white/10 hover:text-gray-300'
@@ -311,14 +311,14 @@ export const ProviderDetailPanel: React.FC<ProviderDetailPanelProps> = ({ provid
               <button
                 onClick={() => void saveWorkingHours()}
                 disabled={busy || opsLoading}
-                className="w-full py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white text-[10px] font-black uppercase disabled:opacity-40"
+                className="w-full py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white text-[10px] font-extrabold uppercase disabled:opacity-40"
               >
                 Saatleri Kaydet
               </button>
             </section>
 
             <section className="bg-black/25 rounded-xl p-4 border border-white/5">
-              <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-3 flex items-center gap-1">
+              <h4 className="text-[10px] font-extrabold text-gray-500 uppercase tracking-widest mb-3 flex items-center gap-1">
                 <Wallet size={12} /> Son Çekim Talepleri
               </h4>
               {opsLoading ? (
@@ -335,7 +335,7 @@ export const ProviderDetailPanel: React.FC<ProviderDetailPanelProps> = ({ provid
                           <span className="text-white font-bold">₺{p.amount}</span>
                           <span className="text-gray-500 ml-2 font-mono text-[10px] truncate">{p.iban}</span>
                         </div>
-                        <span className={`font-black text-[9px] uppercase ${st.cls}`}>{st.label}</span>
+                        <span className={`font-extrabold text-[9px] uppercase ${st.cls}`}>{st.label}</span>
                       </div>
                     );
                   })}
@@ -345,7 +345,7 @@ export const ProviderDetailPanel: React.FC<ProviderDetailPanelProps> = ({ provid
             </section>
 
             <section>
-              <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 flex items-center gap-1"><Zap size={12} /> Uygulama Yetenekleri</h4>
+              <h4 className="text-[10px] font-extrabold text-gray-500 uppercase tracking-widest mb-2 flex items-center gap-1"><Zap size={12} /> Uygulama Yetenekleri</h4>
               <ul className="space-y-1.5">
                 {consumerCapabilities.map((cap) => (
                   <li key={cap} className="text-xs text-gray-400 flex items-start gap-2">
@@ -356,7 +356,7 @@ export const ProviderDetailPanel: React.FC<ProviderDetailPanelProps> = ({ provid
             </section>
 
             <section className="bg-black/25 rounded-xl p-4 border border-white/5">
-              <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 flex items-center gap-1"><BadgeCheck size={12} /> Admin Notu</h4>
+              <h4 className="text-[10px] font-extrabold text-gray-500 uppercase tracking-widest mb-2 flex items-center gap-1"><BadgeCheck size={12} /> Admin Notu</h4>
               <p className="text-[11px] text-gray-500">
                 Bu paneldeki müsaitlik/saat değişiklikleri <strong className="text-white">anında</strong> uygulamadaki
                 eşleştirme ve filtrelere yansır; katalog alanları (ad/ücret/bio/stat) için "Düzenle"yi kullanın.

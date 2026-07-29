@@ -442,7 +442,7 @@ const App: React.FC = () => {
         // Deep link handler — tüm oyna:// kaynakları tek yöneticiden (tek makine)
         (deepLink) => {
           const s = useAppStore.getState();
-          handleDeepLink(deepLink, (v) => s.navigateTo(v as AppView), {
+          void handleDeepLink(deepLink, (v) => s.navigateTo(v as AppView), {
             setSelectedMatch: (m) => s.setSelectedMatch(m),
             setSelectedTeamId: s.setSelectedTeamId,
             setStudioContext: s.setStudioContext,
@@ -450,6 +450,7 @@ const App: React.FC = () => {
             setSelectedConversationId: s.setSelectedConversationId,
             setSelectedTeamChatId: s.setSelectedTeamChatId,
             setTeamInitialTab: s.setTeamInitialTab,
+            showToast, // IP-06: maç çekilemezse sessiz kalma, kullanıcıya söyle
           });
         },
       );
@@ -506,7 +507,7 @@ const App: React.FC = () => {
           // navigasyonu onAuthStateChanged üstlenir. Diğer deep link'lere gitmez.
           if (await handleAuthCallbackUrl(url)) return;
           const s = useAppStore.getState();
-          handleDeepLink(url, (v) => s.navigateTo(v as AppView), {
+          void handleDeepLink(url, (v) => s.navigateTo(v as AppView), {
             setSelectedMatch: (m) => s.setSelectedMatch(m),
             setSelectedTeamId: s.setSelectedTeamId,
             setStudioContext: s.setStudioContext,
@@ -514,6 +515,7 @@ const App: React.FC = () => {
             setSelectedConversationId: s.setSelectedConversationId,
             setSelectedTeamChatId: s.setSelectedTeamChatId,
             setTeamInitialTab: s.setTeamInitialTab,
+            showToast, // IP-06: maç çekilemezse sessiz kalma, kullanıcıya söyle
           });
         })();
       }).then((handle) => { remove = () => handle.remove(); });
@@ -522,19 +524,26 @@ const App: React.FC = () => {
   }, []);
 
   // ─── Android donanım geri tuşu ─────────────────────────────────────────────
-  // Yığında ekran varsa geri git; kök ekrandaysa uygulamayı arka plana al
-  // (kapatmak yerine) — Play incelemesinin beklediği davranış.
+  // Donanım geri tuşu TEK bir öncelik sırası izler (IP-01):
+  //   1) Banka doğrulaması açık → hiçbir şey yapma
+  //   2) Açık overlay varsa → yalnız onu kapat, ekranı değiştirme
+  //   3) Yığında ekran varsa → geri git
+  //   4) Kök ekran → uygulamayı arka plana al (Play incelemesinin beklediği davranış)
   useEffect(() => {
     if (Capacitor.getPlatform() !== 'android') return;
     let remove: (() => void) | undefined;
     import('@capacitor/app').then(({ App: CapApp }) => {
       CapApp.addListener('backButton', () => {
-        const { navigationStack, goBack } = useAppStore.getState();
-        if (navigationStack.length > 0) {
-          goBack();
-        } else {
-          CapApp.minimizeApp();
-        }
+        const s = useAppStore.getState();
+        // 1) Banka doğrulaması (3DS) açık — geri tuşu hiçbir şey yapmaz.
+        //    PaymentScreen unmount olursa 3DS sonucu bir daha okunamaz (BULGU-084).
+        if (s.paymentLockActive) return;
+        // 2) Açık overlay varsa yalnız onu kapat, ekranı DEĞİŞTİRME (BULGU-020/021/132).
+        if (s.closeTopOverlay()) return;
+        // 3) Yığında ekran varsa geri git.
+        if (s.navigationStack.length > 0) { s.goBack(); return; }
+        // 4) Kök ekran → uygulamayı arka plana al (kapatmak yerine).
+        CapApp.minimizeApp();
       }).then((handle) => { remove = () => handle.remove(); });
     });
     return () => { if (remove) remove(); };
@@ -789,7 +798,7 @@ const App: React.FC = () => {
     <div className="h-full bg-[#0A0E14] text-white font-['Inter'] relative overflow-hidden">
       <OfflineBanner />
       {loadDegraded && (
-        <div className="fixed top-0 inset-x-0 z-[60] bg-amber-500/90 backdrop-blur-sm text-[#0A0E14] text-[12px] font-bold px-4 py-2 pt-safe-2 flex items-center justify-between gap-3">
+        <div className="fixed top-0 inset-x-0 z-[60] bg-amber-500/90 backdrop-blur-sm text-[#0A0E14] text-[0.75rem] font-bold px-4 py-2 pt-safe-2 flex items-center justify-between gap-3">
           <span className="min-w-0 truncate">Bağlantı zayıf — bazı veriler yüklenemedi.</span>
           <button
             onClick={() => useAppStore.getState().retryInitialLoad()}
@@ -853,7 +862,7 @@ const App: React.FC = () => {
 
       <AnimatePresence>
         {showBottomNav && (
-          <BottomNav currentView={view} onNavigate={resetNavigation} hidden={navHidden || navOverlayOpen} />
+          <BottomNav currentView={view} onNavigate={(v) => useAppStore.getState().switchTab(v)} hidden={navHidden || navOverlayOpen} />
         )}
       </AnimatePresence>
 
@@ -895,7 +904,7 @@ const App: React.FC = () => {
             <div className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping" />
               <span className="w-2.5 h-2.5 rounded-full bg-red-500 absolute" />
-              <p className="text-[11px] font-black uppercase tracking-wider text-white">
+              <p className="text-[0.6875rem] font-extrabold uppercase tracking-wider text-white">
                 GHOST MODE: <span className="text-red-400">{impersonatedUser.name}</span> TAKLİT EDİLİYOR
               </p>
             </div>
@@ -909,7 +918,7 @@ const App: React.FC = () => {
                 setOriginalRole(null);
                 resetNavigation('ADMIN_PANEL');
               }}
-              className="px-3.5 py-1.5 bg-red-500 hover:bg-red-600 text-white text-[10px] font-black tracking-widest uppercase rounded-full transition-all"
+              className="px-3.5 py-1.5 bg-red-500 hover:bg-red-600 text-white text-[0.625rem] font-extrabold tracking-widest uppercase rounded-full transition-all"
             >
               Taklidi Bitir
             </button>

@@ -100,7 +100,7 @@ const MatchCountdown: React.FC<MatchCountdownProps> = ({ onClick, matchTitle, ma
   const themeColor = isCancelled 
     ? 'text-red-500 font-extrabold animate-pulse' 
     : isLive 
-      ? 'text-[#39FF14] font-black drop-shadow-[0_0_8px_rgba(57,255,20,0.5)] animate-pulse' 
+      ? 'text-[#39FF14] font-extrabold drop-shadow-[0_0_8px_rgba(57,255,20,0.5)] animate-pulse' 
       : isDraft 
         ? 'text-amber-400' 
         : hasDays 
@@ -116,12 +116,12 @@ const MatchCountdown: React.FC<MatchCountdownProps> = ({ onClick, matchTitle, ma
        <motion.span 
           animate={pulse || isDraft || isLive ? { opacity: [1, 0.6, 1], scale: [1, 1.03, 1] } : {}} 
           transition={pulse || isDraft || isLive ? { duration: 1.5, repeat: Infinity, ease: 'easeInOut' } : {}}
-          className="font-black text-[26px] sm:text-[32px] leading-none tabular-nums tracking-tighter" 
+          className="font-extrabold text-[1.625rem] leading-none tabular-nums tracking-tighter"
           style={{ color, textShadow: pulse || isDraft || isLive ? `0 0 15px ${color}80` : 'none' }}
        >
           {value}
        </motion.span>
-       <span className="text-[8px] sm:text-[9px] text-gray-500 font-black uppercase mt-1.5 tracking-[0.2em]">{label}</span>
+       <span className="text-[0.625rem] text-ink-4 font-extrabold uppercase mt-1.5 tracking-[0.2em]">{label}</span>
     </div>
   );
 
@@ -205,7 +205,7 @@ const MatchCountdown: React.FC<MatchCountdownProps> = ({ onClick, matchTitle, ma
                  transition={{ duration: 1.5, repeat: Infinity }}
                  className={`w-2.5 h-2.5 rounded-full ${isCancelled ? 'bg-red-500 shadow-[0_0_12px_rgba(239,68,68,0.9)]' : isLive ? 'bg-[#39FF14] shadow-[0_0_12px_rgba(57,255,20,0.9)] animate-pulse' : isDraft ? 'bg-amber-500 shadow-[0_0_12px_rgba(245,158,11,0.9)]' : hasDays ? 'bg-green-500' : 'bg-red-500 shadow-[0_0_12px_rgba(239,68,68,0.9)]'}`}
                />
-               <span className={`text-[10px] sm:text-[12px] font-black uppercase tracking-[0.25em] ${themeColor}`}>
+               <span className={`text-[0.625rem] font-extrabold uppercase tracking-[0.25em] ${themeColor}`}>
                  {isCancelled ? 'MAÇ İPTAL EDİLDİ' : isLive ? 'MAÇ ONAYLANDI - LIVE' : isDraft ? 'DRAFT MAÇIN VAR - KADROYU KUR' : hasDays ? 'SIRADAKİ MAÇ' : 'BAŞLIYOR'}
                </span>
              </div>
@@ -213,7 +213,7 @@ const MatchCountdown: React.FC<MatchCountdownProps> = ({ onClick, matchTitle, ma
              {!isCancelled && (
                <div className="px-3 py-1.5 rounded-full bg-white/10 border border-white/10 backdrop-blur-md flex items-center gap-1.5 shadow-inner">
                  <Clock size={13} className="text-[#FFB800]" />
-                 <span className="text-white text-[11px] sm:text-[12px] font-black tracking-widest">{matchTime}</span>
+                 <span className="text-white text-[0.6875rem] font-extrabold tracking-widest">{matchTime}</span>
                </div>
              )}
           </div>
@@ -222,35 +222,35 @@ const MatchCountdown: React.FC<MatchCountdownProps> = ({ onClick, matchTitle, ma
           {isCancelled ? (
             <div className="flex flex-col gap-1.5 py-3.5 px-4 bg-red-950/20 border border-red-500/10 rounded-2xl relative overflow-hidden">
               <div className="absolute left-0 top-0 bottom-0 w-1 bg-red-500 opacity-80" />
-              <h3 className="text-white font-black text-[16px] sm:text-[18px] tracking-tight uppercase italic leading-none pl-2">{matchTitle}</h3>
-              <p className="text-gray-400 font-bold text-[10px] sm:text-[11px] pl-2 uppercase tracking-wide">
+              <h3 className="text-white font-extrabold text-[1rem] tracking-tight uppercase italic leading-none pl-2">{matchTitle}</h3>
+              <p className="text-gray-400 font-bold text-[0.625rem] pl-2 uppercase tracking-wide">
                 {matchLocation}
               </p>
-              <p className="text-red-400 font-bold text-[11px] sm:text-xs pl-2">
+              <p className="text-red-400 font-bold text-[0.6875rem] pl-2">
                 Bu maç için yeterli doluluk sağlanamadı.
               </p>
               <div className="flex items-center gap-1.5 mt-1 pl-2">
                 <Shield size={12} className="text-red-500" />
-                <span className="text-gray-300 font-black text-[10px] sm:text-[11px] uppercase tracking-wider">
+                <span className="text-gray-300 font-extrabold text-[0.625rem] uppercase tracking-wider">
                   Ücret alınmadı
                 </span>
               </div>
             </div>
           ) : (
             <>
-              <div className="flex items-center justify-center gap-2 sm:gap-4 w-full pt-1">
+              <div className="flex items-center justify-center gap-2 w-full pt-1">
                  <TimerBox value={format(timeLeft.days)} label="GÜN" color={isLive ? '#39FF14' : isDraft ? '#FFB800' : hasDays ? '#22c55e' : '#fff'} />
-                 <span className="text-white/20 font-black text-2xl mb-4">:</span>
+                 <span className="text-ink-4 font-extrabold text-2xl mb-4">:</span>
                  <TimerBox value={format(timeLeft.hours)} label="SAAT" color={isLive ? '#39FF14' : isDraft ? '#fff' : hasDays ? '#fff' : '#ef4444'} pulse={isLive || !hasDays || isDraft} />
-                 <span className="text-white/20 font-black text-2xl mb-4">:</span>
+                 <span className="text-ink-4 font-extrabold text-2xl mb-4">:</span>
                  <TimerBox value={format(timeLeft.minutes)} label="DAKİKA" color={isLive ? '#39FF14' : isDraft ? '#fff' : hasDays ? '#fff' : '#ef4444'} pulse={isLive || !hasDays || isDraft} />
               </div>
 
               {/* Match Info Footer */}
               <div className="mt-1 w-full bg-black/40 backdrop-blur-md border border-white/10 rounded-2xl p-4 flex flex-col gap-1 relative overflow-hidden group-hover:bg-white/5 transition-colors">
                  <div className={`absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b ${isCancelled ? 'from-red-500' : isLive ? 'from-[#39FF14]' : isDraft ? 'from-amber-500' : 'from-[#FFB800]'} to-transparent opacity-80`} />
-                 <h3 className="text-white font-black text-[15px] sm:text-[17px] tracking-tight leading-none truncate pl-3">{matchTitle}</h3>
-                 <p className="text-gray-400 font-bold text-[10px] sm:text-[11px] truncate pl-3">
+                 <h3 className="text-white font-extrabold text-[0.9375rem] tracking-tight leading-[1.2] truncate pl-3">{matchTitle}</h3>
+                 <p className="text-gray-400 font-bold text-[0.6875rem] truncate pl-3">
                    {isLive ? `✓ Tüm ödemeler yapıldı, maç yayında!` : isDraft ? `⚡ ${matchLocation} • Eksik mevkileri seçip davet gönder!` : matchLocation}
                  </p>
               </div>
@@ -376,7 +376,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack }) => {
             />
           </motion.button>
           <div>
-            <h1 className="text-xl font-black text-white italic tracking-tighter leading-none uppercase">{globalTexts?.dashboardTitle || 'ANA SAYFA'}</h1>
+            <h1 className="text-xl font-extrabold text-white italic tracking-tighter leading-none uppercase">{globalTexts?.dashboardTitle || 'ANA SAYFA'}</h1>
 
           </div>
         </div>
@@ -403,7 +403,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack }) => {
           >
             <Bell size={20} />
             {unreadNotificationsCount > 0 ? (
-              <span className="absolute -top-1 -right-1 min-w-[20px] h-[20px] px-1 bg-red-500 rounded-full shadow-[0_0_15px_rgba(239,68,68,0.6)] border-[3px] border-[#0A0E14] flex items-center justify-center text-[10px] font-black text-white">
+              <span className="absolute -top-1 -right-1 min-w-[20px] h-[20px] px-1 bg-red-500 rounded-full shadow-[0_0_15px_rgba(239,68,68,0.6)] border-[3px] border-[#0A0E14] flex items-center justify-center text-[0.6875rem] font-extrabold text-white">
                 +{unreadNotificationsCount}
               </span>
             ) : (
@@ -505,10 +505,10 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack }) => {
                 )}
 
                 <div className="flex flex-col">
-                  <h3 className={`font-black text-lg sm:text-xl tracking-tighter italic uppercase leading-none ${userMatches.length > 0 ? 'text-white' : 'text-white/60'}`}>
+                  <h3 className={`font-extrabold text-lg tracking-tighter italic uppercase leading-none ${userMatches.length > 0 ?'text-white' :'text-white/60'}`}>
                     MAÇLARIM
                   </h3>
-                  <span className={`text-xs sm:text-sm font-medium uppercase tracking-wider mt-2 leading-none ${userMatches.length > 0 ? 'text-gray-300' : 'text-white/35'}`}>
+                  <span className={`text-xs font-medium uppercase tracking-wider mt-2 leading-none ${userMatches.length > 0 ?'text-gray-300' :'text-ink-4'}`}>
                     {buttonSubtitle}
                   </span>
                 </div>
@@ -519,7 +519,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack }) => {
                   <motion.span
                     animate={{ scale: [1, 1.05, 1] }}
                     transition={{ duration: 0.8, repeat: Infinity }}
-                    className="px-3 py-1.5 text-[10px] font-black tracking-widest text-[#0A0E14] bg-[#FACC15] rounded-xl shadow-[0_0_15px_rgba(250,204,21,0.6)] uppercase italic shrink-0"
+                    className="px-3 py-1.5 text-[0.625rem] font-extrabold tracking-widest text-[#0A0E14] bg-[#FACC15] rounded-xl shadow-[0_0_15px_rgba(250,204,21,0.6)] uppercase italic shrink-0"
                   >
                     YENİ MAÇ EKLENDİ
                   </motion.span>
@@ -582,10 +582,10 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack }) => {
                 <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ duration: 1.5, repeat: Infinity }}>
                   <Flame size={16} className="text-black fill-black drop-shadow-[0_0_6px_rgba(0,0,0,0.6)]" />
                 </motion.div>
-                <span className="text-black text-[10px] font-black uppercase tracking-[0.3em]">MAÇ BUL</span>
+                <span className="text-black text-[0.625rem] font-extrabold uppercase tracking-[0.3em]">MAÇ BUL</span>
               </div>
-              <h2 className="text-4xl font-black text-black italic uppercase leading-[0.85] tracking-tighter" style={{ textShadow: '0 2px 8px rgba(250,204,21,0.3)' }}>Top<br />Oyna</h2>
-              <p className="text-[10px] text-black/60 mt-2 font-bold">Hemen bir maça katıl ve oynamaya başla.</p>
+              <h2 className="text-4xl font-extrabold text-black italic uppercase leading-[0.85] tracking-tighter" style={{ textShadow: '0 2px 8px rgba(250,204,21,0.3)' }}>Top<br />Oyna</h2>
+              <p className="text-[0.6875rem] text-black/60 mt-2 font-bold">Hemen bir maça katıl ve oynamaya başla.</p>
             </div>
 
             {/* OYNA LOGO — sağ taraf, siyah zemin üzerinde parlak sarı */}
@@ -688,10 +688,10 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack }) => {
                 <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ duration: 1.5, repeat: Infinity }}>
                   <MapPin size={16} className="text-white fill-none drop-shadow-[0_0_6px_rgba(255,255,255,0.4)]" />
                 </motion.div>
-                <span className="text-white/95 text-[10px] font-black uppercase tracking-[0.3em]">REZERVASYON</span>
+                <span className="text-white/95 text-[0.625rem] font-extrabold uppercase tracking-[0.3em]">REZERVASYON</span>
               </div>
-              <h2 className="text-4xl font-black text-white italic uppercase leading-[1.05] tracking-tighter" style={{ textShadow: '0 2px 8px rgba(16,185,129,0.3)' }}>Saha<br />Vitrini</h2>
-              <p className="text-[10px] text-emerald-200/90 mt-2 font-bold">Çevrendeki müsait halı sahaları incele.</p>
+              <h2 className="text-4xl font-extrabold text-white italic uppercase leading-[1.05] tracking-tighter" style={{ textShadow: '0 2px 8px rgba(16,185,129,0.3)' }}>Saha<br />Vitrini</h2>
+              <p className="text-[0.6875rem] text-emerald-200/90 mt-2 font-bold">Çevrendeki müsait halı sahaları incele.</p>
             </div>
 
             {/* Neon Harita Diski — sağ taraf, siyah zemin üzerinde parlak yeşil MapPin */}
@@ -769,10 +769,10 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack }) => {
                 <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ duration: 1.5, repeat: Infinity }}>
                   <Calendar size={16} className="text-black drop-shadow-[0_0_6px_rgba(0,0,0,0.4)]" />
                 </motion.div>
-                <span className="text-black text-[10px] font-black uppercase tracking-[0.3em]">ORGANİZASYON</span>
+                <span className="text-black text-[0.625rem] font-extrabold uppercase tracking-[0.3em]">ORGANİZASYON</span>
               </div>
-              <h2 className="text-4xl font-black text-black italic uppercase leading-[1.05] tracking-tighter" style={{ textShadow: '0 2px 8px rgba(255,122,0,0.3)' }}>Maç<br />Oluştur</h2>
-              <p className="text-[10px] text-black/60 mt-2 font-bold">Maçı organize et.</p>
+              <h2 className="text-4xl font-extrabold text-black italic uppercase leading-[1.05] tracking-tighter" style={{ textShadow: '0 2px 8px rgba(255,122,0,0.3)' }}>Maç<br />Oluştur</h2>
+              <p className="text-[0.6875rem] text-black/60 mt-2 font-bold">Maçı organize et.</p>
             </div>
 
             {/* Organizasyon Diski — sağ taraf, siyah zemin üzerinde parlak turuncu takvim + kalem */}
@@ -867,8 +867,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack }) => {
                 <Swords size={18} className="text-amber-400" />
                 <span className="text-amber-400 text-xs font-bold uppercase tracking-widest">Kaptan Modu</span>
               </div>
-              <h2 className="text-3xl font-black text-white italic uppercase leading-none drop-shadow-md">Maç<br />Oluştur</h2>
-              <p className="text-[10px] text-amber-300/80 mt-1 font-bold">Takımını kur, sahayı seç, oyna.</p>
+              <h2 className="text-3xl font-extrabold text-white italic uppercase leading-none drop-shadow-md">Maç<br />Oluştur</h2>
+              <p className="text-[0.6875rem] text-amber-300/80 mt-1 font-bold">Takımını kur, sahayı seç, oyna.</p>
             </div>
             <div className="w-24 h-24 bg-amber-500/10 rounded-full flex items-center justify-center backdrop-blur-sm border-4 border-amber-500/30 group-hover:scale-110 group-hover:border-amber-400/60 transition-all">
               <Swords size={40} className="text-amber-400" />
@@ -899,8 +899,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack }) => {
                 <Swords size={18} className="text-gray-900" />
                 <span className="text-gray-900 text-xs font-bold uppercase tracking-widest">Kaptan Modu</span>
               </div>
-              <h2 className="text-3xl font-black text-gray-900 italic uppercase leading-none">Maç<br />Oluştur</h2>
-              <p className="text-[10px] text-gray-500 mt-1 font-bold">Takımını kur, sahayı seç, oyna.</p>
+              <h2 className="text-3xl font-extrabold text-gray-900 italic uppercase leading-none">Maç<br />Oluştur</h2>
+              <p className="text-[0.6875rem] text-ink-4 mt-1 font-bold">Takımını kur, sahayı seç, oyna.</p>
             </div>
             <div className="w-24 h-24 bg-gray-900/5 rounded-full flex items-center justify-center border-4 border-gray-900/10 group-hover:scale-110 group-hover:bg-gray-900/10 transition-all">
               <Swords size={40} className="text-gray-900" />
@@ -939,8 +939,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack }) => {
           />
           <div className="absolute inset-0 p-4 flex items-center justify-between">
             <div className="flex flex-col justify-center h-full gap-2">
-              <h3 className="text-[26px] font-black italic leading-[.92] tracking-tighter uppercase text-white">Kaleci<br />Bul</h3>
-              <span className="text-[9px] font-bold text-white/40">Kaleni sağlama al.</span>
+              <h3 className="text-[1.625rem] font-extrabold italic leading-[.92] tracking-tighter uppercase text-white">Kaleci<br />Bul</h3>
+              <span className="text-[0.6875rem] font-bold text-ink-4">Kaleni sağlama al.</span>
             </div>
             <div className="w-[90px] h-[90px] rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(57,255,20,.1)', border: '1.5px solid rgba(57,255,20,.35)' }}>
               <div className="w-[60px] h-[60px] rounded-full flex items-center justify-center" style={{ background: 'rgba(57,255,20,.15)', border: '1px solid rgba(57,255,20,.5)', color: '#39FF14' }}>
@@ -976,8 +976,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack }) => {
           />
           <div className="absolute inset-0 p-4 flex items-center justify-between">
             <div className="flex flex-col justify-center h-full gap-2">
-              <h3 className="text-[26px] font-black italic leading-[.92] tracking-tighter uppercase text-white">Hakem<br />Kirala</h3>
-              <span className="text-[9px] font-bold text-white/40">Adil oyna.</span>
+              <h3 className="text-[1.625rem] font-extrabold italic leading-[.92] tracking-tighter uppercase text-white">Hakem<br />Kirala</h3>
+              <span className="text-[0.6875rem] font-bold text-ink-4">Adil oyna.</span>
             </div>
             <div className="w-[90px] h-[90px] rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(59,130,246,.1)', border: '1.5px solid rgba(59,130,246,.35)' }}>
               <div className="w-[60px] h-[60px] rounded-full flex items-center justify-center" style={{ background: 'rgba(59,130,246,.15)', border: '1px solid rgba(99,179,255,.5)', color: '#60a5fa' }}>
@@ -1126,7 +1126,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack }) => {
                     <img src={`https://i.pravatar.cc/100?u=player${i}`} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                   </div>
                 ))}
-                <div className="w-8 h-8 rounded-full border-2 border-[#060b1b] flex items-center justify-center text-[10px] font-black text-white" style={{ background: '#FF3232', boxShadow: '0 0 12px rgba(255,50,50,0.4)' }}>
+                <div className="w-8 h-8 rounded-full border-2 border-[#060b1b] flex items-center justify-center text-[0.6875rem] font-extrabold text-white" style={{ background: '#FF3232', boxShadow: '0 0 12px rgba(255,50,50,0.4)' }}>
                   +8
                 </div>
               </div>
@@ -1142,10 +1142,10 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack }) => {
                   >
                     <Sparkles size={14} style={{ color: '#FF3232', filter: 'drop-shadow(0 0 4px rgba(255,50,50,0.5))' }} />
                   </motion.div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: '#FF3232', textShadow: '0 0 10px rgba(255,50,50,0.25)' }}>STRATEJİ & ANALİZ</p>
+                  <p className="text-[0.625rem] font-extrabold uppercase tracking-[0.2em]" style={{ color: '#FF3232', textShadow: '0 0 10px rgba(255,50,50,0.25)' }}>STRATEJİ & ANALİZ</p>
                 </div>
-                <h2 className="text-3xl font-black text-white italic leading-none tracking-tight" style={{ textShadow: '0 0 30px rgba(255,50,50,0.12)' }}>TAKTİK STÜDYO</h2>
-                <p className="text-[10px] text-gray-400/75 font-bold mt-1.5">Maç analizleri ve oyuncu istatistikleri.</p>
+                <h2 className="text-3xl font-extrabold text-white italic leading-none tracking-tight" style={{ textShadow: '0 0 30px rgba(255,50,50,0.12)' }}>TAKTİK STÜDYO</h2>
+                <p className="text-[0.6875rem] text-gray-400/75 font-bold mt-1.5">Maç analizleri ve oyuncu istatistikleri.</p>
               </div>
               <motion.div
                 animate={{ x: [0, 5, 0] }}

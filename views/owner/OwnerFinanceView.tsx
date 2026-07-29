@@ -122,18 +122,18 @@ export const OwnerFinanceView: React.FC<OwnerFinanceViewProps> = ({ pitchId, isD
   const nextLocked = isMonthAfter(shiftMonth(month, 1), currentMonth);
 
   if (isLoading) {
-    return <div className="p-6 pb-32"><LoadingState message="Finans verileri yükleniyor…" /></div>;
+    return <div className="p-6 pb-40"><LoadingState message="Finans verileri yükleniyor…" /></div>;
   }
   if (isMock) {
     return (
-      <div className="p-6 pb-32 text-center text-gray-500">
+      <div className="p-6 pb-40 text-center text-gray-500">
         <p className="text-sm">Finans modülü için tesisinizi oluşturun veya demo modunu başlatın.</p>
       </div>
     );
   }
   if (!summary) {
     return (
-      <div className="p-6 pb-32 text-center">
+      <div className="p-6 pb-40 text-center">
         <p className="text-sm text-red-400 font-bold mb-3">{error ?? 'Finans özeti yüklenemedi.'}</p>
         <button onClick={load} className="text-xs text-blue-400 font-bold">Tekrar dene</button>
       </div>
@@ -141,7 +141,7 @@ export const OwnerFinanceView: React.FC<OwnerFinanceViewProps> = ({ pitchId, isD
   }
 
   return (
-    <div className="p-4 sm:p-6 pb-32 overflow-y-auto custom-scrollbar bg-[#0A0E14]">
+    <div className="p-4 pb-40 overflow-y-auto custom-scrollbar bg-[#0A0E14]">
       <div className="max-w-5xl mx-auto w-full">
         <OwnerDemoDataBar pitchId={pitchId} onChanged={load} hasDemo={hasDemoData} />
         {isDemoMode && (
@@ -166,7 +166,7 @@ export const OwnerFinanceView: React.FC<OwnerFinanceViewProps> = ({ pitchId, isD
             <ChevronLeft size={18} />
           </button>
           <div className="text-center">
-            <p className="text-sm font-black text-white flex items-center justify-center gap-1.5">
+            <p className="text-sm font-extrabold text-white flex items-center justify-center gap-1.5">
               {monthLabel(month)}
               {refreshing && <Loader2 size={12} className="animate-spin text-gray-400" />}
             </p>
@@ -193,7 +193,7 @@ export const OwnerFinanceView: React.FC<OwnerFinanceViewProps> = ({ pitchId, isD
             type="button"
             onClick={exportCsv}
             disabled={exporting}
-            className="inline-flex items-center gap-1.5 text-[10px] font-black text-gray-400 hover:text-white bg-[#161B22] border border-white/5 px-3 py-1.5 rounded-lg disabled:opacity-40"
+            className="inline-flex items-center gap-1.5 text-[10px] font-extrabold text-gray-400 hover:text-white bg-[#161B22] border border-white/5 px-3 py-1.5 rounded-lg disabled:opacity-40"
           >
             {exporting ? <Loader2 size={12} className="animate-spin" /> : <Download size={12} />} CSV indir
           </button>
@@ -203,7 +203,7 @@ export const OwnerFinanceView: React.FC<OwnerFinanceViewProps> = ({ pitchId, isD
           <div className="bg-red-500/10 border border-red-500/25 rounded-2xl p-5 flex flex-col items-center gap-3 text-center">
             <AlertTriangle size={20} className="text-red-400" />
             <p className="text-sm text-red-300 font-bold">{monthLabel(month)} yüklenemedi.<br /><span className="font-normal text-red-200/70">{error}</span></p>
-            <button onClick={load} className="text-xs font-black text-blue-400">Tekrar dene</button>
+            <button onClick={load} className="text-xs font-extrabold text-blue-400">Tekrar dene</button>
           </div>
         ) : (
         <>
@@ -212,28 +212,28 @@ export const OwnerFinanceView: React.FC<OwnerFinanceViewProps> = ({ pitchId, isD
             olabildiği için OYNA komisyonu bu rakamdan düşülmez (aşağıda ayrı gösterilir). */}
         <div className="bg-[#161B22] border border-white/10 rounded-[32px] p-6 shadow-2xl mb-6">
           <div className="flex items-center justify-between mb-1">
-            <p className="text-[10px] font-black text-emerald-400 uppercase tracking-[0.2em]">DÖNEM BAKİYESİ</p>
+            <p className="text-[10px] font-extrabold text-emerald-400 uppercase tracking-[0.2em]">DÖNEM BAKİYESİ</p>
             <GrowthBadge growth={growth} label="geçen aya göre" />
           </div>
-          <h2 className={`text-3xl sm:text-4xl font-black tracking-tight tabular-nums ${net >= 0 ? 'text-white' : 'text-red-400'}`}>{money(net)}</h2>
+          <h2 className={`text-3xl font-extrabold tracking-tight tabular-nums ${net >= 0 ?'text-white' :'text-red-400'}`}>{money(net)}</h2>
           <p className="text-[10px] text-gray-500 mt-1">Tahsilat − Gider · OYNA komisyonu hariç</p>
           {/* sm+: 3'lü kutu. Mobil: satır listesi — dar sütunda PARA ASLA KIRPILMAZ. */}
-          <div className="hidden sm:grid grid-cols-3 gap-3 mt-6">
+          <div className="hidden grid-cols-3 gap-3 mt-6">
             <StatTile label="Tahsilat" value={money(summary.income.collected_total)} accent="text-emerald-400" />
             <StatTile label="Gider" value={money(summary.expenses.total)} accent="text-red-400" />
             <StatTile label="Bu Ay Bekleyen" value={money(summary.income.pending_total)} accent="text-amber-400" sub={`${summary.income.pending_bookings.length} rezervasyon`} />
           </div>
-          <div className="sm:hidden mt-5 rounded-2xl border border-white/5 bg-white/5 divide-y divide-white/5">
+          <div className="mt-5 rounded-2xl border border-white/5 bg-white/5 divide-y divide-white/5">
             {[
               { label: 'Tahsilat', value: money(summary.income.collected_total), cls: 'text-emerald-400' },
               { label: 'Gider', value: money(summary.expenses.total), cls: 'text-red-400' },
               { label: 'Bu ay bekleyen', value: money(summary.income.pending_total), cls: 'text-amber-400', sub: `${summary.income.pending_bookings.length} rez.` },
             ].map((r) => (
               <div key={r.label} className="flex items-center justify-between px-4 py-2.5 gap-3">
-                <span className="text-[11px] font-black uppercase text-gray-500 truncate">
+                <span className="text-[11px] font-extrabold uppercase text-gray-500 truncate">
                   {r.label}{r.sub ? <span className="normal-case font-bold text-gray-600"> · {r.sub}</span> : null}
                 </span>
-                <span className={`text-base font-black tabular-nums shrink-0 ${r.cls}`}>{r.value}</span>
+                <span className={`text-base font-extrabold tabular-nums shrink-0 ${r.cls}`}>{r.value}</span>
               </div>
             ))}
           </div>
@@ -243,14 +243,14 @@ export const OwnerFinanceView: React.FC<OwnerFinanceViewProps> = ({ pitchId, isD
         {oynaEarn && (
           <div className="bg-[#161B22] border border-emerald-500/15 rounded-[32px] p-6 mb-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xs font-black text-gray-400 uppercase flex items-center gap-2">
+              <h3 className="text-xs font-extrabold text-gray-400 uppercase flex items-center gap-2">
                 <Coins size={16} className="text-emerald-400" /> OYNA KAZANÇLARIN
               </h3>
               <button
                 type="button"
                 onClick={() => { if (!readOnly) setWithdrawalOpen(true); }}
                 disabled={readOnly || oynaEarn.available <= 0}
-                className="inline-flex items-center gap-1 text-[10px] font-black text-emerald-400 bg-emerald-500/10 border border-emerald-500/25 px-3 py-1.5 rounded-lg disabled:opacity-40"
+                className="inline-flex items-center gap-1 text-[10px] font-extrabold text-emerald-400 bg-emerald-500/10 border border-emerald-500/25 px-3 py-1.5 rounded-lg disabled:opacity-40"
               >
                 ÇEKİM TALEBİ <ArrowUpRight size={12} />
               </button>
@@ -263,14 +263,14 @@ export const OwnerFinanceView: React.FC<OwnerFinanceViewProps> = ({ pitchId, isD
                 owner_earnings_summary güncel-ay döner). Geçmiş aya bakınca yanıltmasın. */}
             {month === currentMonth ? (
               <div className="mt-4 bg-white/[0.03] border border-white/5 rounded-2xl p-4">
-                <p className="text-[10px] text-gray-500 font-black uppercase mb-3">
+                <p className="text-[10px] text-gray-500 font-extrabold uppercase mb-3">
                   Bu Ay Uygulama Tahsilatı{oynaEarn.monthCount > 0 ? ` · ${oynaEarn.monthCount} ödeme` : ''}
                 </p>
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between"><span className="text-gray-400">Brüt tahsilat</span><span className="text-white font-bold">{money(oynaEarn.monthGross)}</span></div>
                   <div className="flex justify-between"><span className="text-gray-400">OYNA komisyonu</span><span className="text-red-300 font-bold">−{money(oynaEarn.monthCommission)}</span></div>
                   <div className="h-px bg-white/8 my-1" />
-                  <div className="flex justify-between"><span className="text-gray-300 font-bold">Net kazanç</span><span className="text-emerald-400 font-black">{money(oynaEarn.monthNet)}</span></div>
+                  <div className="flex justify-between"><span className="text-gray-300 font-bold">Net kazanç</span><span className="text-emerald-400 font-extrabold">{money(oynaEarn.monthNet)}</span></div>
                 </div>
               </div>
             ) : (
@@ -288,7 +288,7 @@ export const OwnerFinanceView: React.FC<OwnerFinanceViewProps> = ({ pitchId, isD
             <button
               key={id}
               onClick={() => setTab(id)}
-              className={`flex-1 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-colors ${
+              className={`flex-1 py-2.5 rounded-xl text-[11px] font-extrabold uppercase tracking-widest transition-colors ${
                 tab === id ? 'bg-blue-500/15 text-blue-300 border border-blue-500/20' : 'text-gray-500 hover:text-gray-300'
               }`}
             >

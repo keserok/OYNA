@@ -65,7 +65,7 @@ export const GuardianConsentsPage: React.FC = () => {
 
       {/* Bekleyen küçükler */}
       <section className="mb-8">
-        <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+        <h3 className="text-xs font-extrabold text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-2">
           <Clock size={14} className="text-yellow-400" /> Veli Onayı Bekleyen Küçükler
         </h3>
         <div className="rounded-2xl border border-white/10 overflow-hidden bg-[#0D1117]">
@@ -96,7 +96,7 @@ export const GuardianConsentsPage: React.FC = () => {
 
       {/* Verilmiş muvafakatler */}
       <section>
-        <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+        <h3 className="text-xs font-extrabold text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-2">
           <ShieldCheck size={14} className="text-green-400" /> Verilmiş Veli Muvafakatleri
           <span className="text-[10px] text-gray-600 normal-case font-normal">(T.C. bilgileri hash'li; panelde gösterilmez)</span>
         </h3>

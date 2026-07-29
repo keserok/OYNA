@@ -137,13 +137,13 @@ Taraflar aşağıdaki hüküm ve koşullar üzerinde anlaşmışlardır:
 
 9.2. **Kullanıcı/Oyuncu Tarafının Geç İptali:** Kullanıcı/Oyuncu'nun rezervasyon/maç saatine ilişkin geç iptal yapması hâlinde, aşağıdaki iade kademeleri uygulanır:
 
-&nbsp;&nbsp;a) Maç/rezervasyon saatine 24 (yirmi dört) saat veya daha fazla kala yapılan iptallerde: Kullanıcı'ya, yalnızca Ödeme Altyapısı Sağlayıcısı'nın tahsil ettiği işlem bedeli hariç olmak üzere, ödemenin tamamı iade edilir.
+&nbsp;&nbsp;a) Maç/rezervasyon saatine 24 (yirmi dört) saat veya daha fazla kala yapılan iptallerde: Kullanıcı'ya, yalnızca Ödeme Altyapısı Sağlayıcısı'nın tahsil ettiği işlem bedeli hariç olmak üzere, ödemenin tamamı Kullanıcı'nın OYNA cüzdanına iade edilir.
 
-&nbsp;&nbsp;b) Maç/rezervasyon saatine 6 (altı) saatten fazla ancak 24 (yirmi dört) saatten az kala yapılan iptallerde: Ödemenin %50'si (yüzde elli) Kullanıcı'ya iade edilir.
+&nbsp;&nbsp;b) Maç/rezervasyon saatine 6 (altı) saatten fazla ancak 24 (yirmi dört) saatten az kala yapılan iptallerde: Ödemenin %50'si (yüzde elli), Kullanıcı'nın OYNA cüzdanına iade edilir.
 
 &nbsp;&nbsp;c) Maç/rezervasyon saatine 6 (altı) saatten az kala yapılan iptallerde: İade yapılmaz.
 
-Bu kademeler, OYNA'nın Mesafeli Satış Sözleşmesi'nde düzenlenen iade rejimiyle birebir örtüşür; iki metin arasında çelişki olması hâlinde işbu madde 9.2 hükümleri esas alınır. Kullanıcı'ya iade edilmeyen tutarın, madde 8.1'de tanımlanan Hizmet Sağlayıcı Payı'na isabet eden kısmı, ayrılan zaman için hazır bulunma karşılığı olarak Hizmet Sağlayıcı'ya ödenir.
+Bu kademeler, OYNA'nın Mesafeli Satış ve İptal/İade Koşulları'nda düzenlenen iade rejimiyle birebir örtüşür. Kullanıcı (tüketici) ile OYNA arasındaki ilişkide, iki metin arasında çelişki olması hâlinde her hâlükârda Mesafeli Satış ve İptal/İade Koşulları esas alınır; işbu madde 9.2 yalnızca OYNA ile Hizmet Sağlayıcı arasındaki hakediş ve mahsup ilişkisini düzenler. Kullanıcı'ya iade edilmeyen tutarın, madde 8.1'de tanımlanan Hizmet Sağlayıcı Payı'na isabet eden kısmı, ayrılan zaman için hazır bulunma karşılığı olarak Hizmet Sağlayıcı'ya ödenir.
 
 ## 10. Puanlama, Askıya Alma ve Kalıcı Çıkarma
 

@@ -1,10 +1,11 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { UserRole, AppView, JobListing, GkStyle, DirectOffer, Equipment, ServiceRequest, MatchListing } from '../types';
-import { MapPin, Navigation, Star, DollarSign, Calendar, Shield, Scale, Power, Bell, Wallet, List, User, Check, X, ChevronRight, Clock, Trophy, Search, MessageSquare, Send, ArrowRight, Hand, Briefcase, PlusCircle, Sparkles, Zap, Activity, Coins, Tag, Flame, RefreshCcw, Eye, Gauge, Flag, CreditCard, Banknote, Users, Settings, Award, AlertTriangle, CheckCircle2, BadgeCheck, Inbox } from 'lucide-react';
+import { MapPin, Navigation, Star, DollarSign, Calendar, Shield, Scale, Power, Bell, Wallet, List, User, Check, X, ChevronRight, Clock, Trophy, Search, MessageSquare, Send, ArrowRight, Hand, Briefcase, PlusCircle, Sparkles, Zap, Activity, Coins, Tag, Flame, RefreshCcw, Eye, Gauge, Flag, CreditCard, Banknote, Users, Settings, Award, AlertTriangle, CheckCircle2, BadgeCheck, Inbox, PenLine } from 'lucide-react';
 import { getWalletHistory, WalletHistoryItem } from '../services/userService';
 import { formatTRYWithSymbol } from '../utils/formatTRY';
 import { parseMatchDateTime } from '../utils/matchDateTime';
+import { matchEndMs } from '../shared/matchTiming';
 import {
   getIncomingRequests,
   respondServiceRequest,
@@ -104,6 +105,10 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
   // UX Enhancements States
   const [matchLiveStatus, setMatchLiveStatus] = useState<Record<string, 'ON_THE_WAY' | 'ARRIVED' | 'FINISHED'>>({});
   const [showPostMatchReport, setShowPostMatchReport] = useState(false);
+  // Skoru girilen maç modal AÇILIRKEN sabitlenir. Eskiden gönderim anında
+  // myUpcomingMatches[0] okunuyordu; maç bittiğinde liste kayınca skor BİR
+  // SONRAKİ maça yazılabiliyordu.
+  const [scoreTargetMatch, setScoreTargetMatch] = useState<any | null>(null);
   // F2.3: kaleci 5 yıldız formu kaldırıldı — hiçbir tabloya yazmıyordu (ölü
   // form + sahte başarı). Modal artık yalnız hakem skor girişi içindir;
   // kalecinin gerçek maç-sonu aksiyonu "Maçı Oynadım · Onayla" (Gelen Talepler).
@@ -162,9 +167,15 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
 
   const [timeLeft, setTimeLeft] = useState('--:--:--');
 
-  const myUpcomingMatches = useMemo(() => {
+  // Maçın bitiş anı: başlangıç + süre (shared/matchTiming — sunucudaki
+  // duration_minutes/ends_at ile aynı kural).
+  const endMsOf = (m: any): number | null =>
+      matchEndMs(parseMatchDateTime(m.date, m.time)?.getTime() ?? null, m.duration_minutes ?? m.duration);
+
+  // Bana atanmış, iptal/tamamlanmamış maçlar — başlangıca göre sıralı.
+  const myAssignedMatches = useMemo(() => {
       if (!userProfile) return [];
-      const upcoming = adminMatches.filter((m: any) => {
+      return adminMatches.filter((m: any) => {
           const isMyMatch = isRef
               ? m.refereeId === userProfile.id
               : (m.gkId === userProfile.id || m.gk_id === userProfile.id
@@ -175,12 +186,21 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
       }).sort((a: any, b: any) =>
           (parseMatchDateTime(a.date, a.time)?.getTime() ?? Infinity) -
           (parseMatchDateTime(b.date, b.time)?.getTime() ?? Infinity));
-
-      return upcoming.filter((m: any) => {
-          const mt = parseMatchDateTime(m.date, m.time)?.getTime();
-          return mt == null ? true : mt > Date.now(); // ayrıştırılamıyorsa şimdilik tut
-      });
   }, [adminMatches, userProfile, isRef]);
+
+  // Henüz BİTMEMİŞ maçlar. Eskiden sınır maç BAŞLANGICIydı; maç saati gelince
+  // maç listeden düşüyor, hakem skoru girecekken kartı kaybediyordu.
+  const myUpcomingMatches = useMemo(() => myAssignedMatches.filter((m: any) => {
+      const end = endMsOf(m);
+      return end == null ? true : end > Date.now(); // ayrıştırılamıyorsa şimdilik tut
+  }), [myAssignedMatches]);
+
+  // Bitmiş ama skoru girilmemiş maçlar — skor girişinin ASIL yeri burasıdır.
+  const myMatchesAwaitingScore = useMemo(() => myAssignedMatches.filter((m: any) => {
+      const end = endMsOf(m);
+      if (end == null || end > Date.now()) return false;
+      return m.homeScore == null || m.awayScore == null;
+  }).reverse(), [myAssignedMatches]);
 
   useEffect(() => {
       const timer = setInterval(() => {
@@ -918,7 +938,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
               <div className="absolute inset-0 backface-hidden rounded-[32px] bg-[#161B22]/90 backdrop-blur-xl border border-green-500/30 shadow-2xl p-5 overflow-hidden">
                   {/* Background FX */}
                   <div className="absolute -right-10 -top-10 w-40 h-40 bg-green-500/20 blur-[50px] rounded-full pointer-events-none"></div>
-                  <div className="absolute top-4 right-4 bg-black/40 px-2 py-1 rounded-lg border border-white/10 text-[10px] text-gray-400 flex items-center gap-1">
+                  <div className="absolute top-4 right-4 bg-black/40 px-2 py-1 rounded-lg border border-white/10 text-[0.6875rem] text-gray-400 flex items-center gap-1">
                       <RefreshCcw size={10} /> Çevir
                   </div>
 
@@ -931,11 +951,11 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                           </div>
                       </div>
                       <div className="flex-1">
-                          <h2 className="text-3xl font-black text-white leading-none mb-1 truncate max-w-[150px]">{idFirstName}</h2>
+                          <h2 className="text-3xl font-extrabold text-white leading-[1.2] mb-1 truncate max-w-[150px]">{idFirstName}</h2>
                           {/* Sabit "PANTER / Altınordu" yerine gerçek stil (varsa). */}
                           {idStyle && (
                             <div className="flex items-center gap-2 mb-3">
-                              <span className="bg-green-500 text-black text-[10px] font-black px-2 py-0.5 rounded flex items-center gap-1">
+                              <span className="bg-green-500 text-black text-[0.6875rem] font-extrabold px-2 py-0.5 rounded flex items-center gap-1">
                                   <Shield size={10} fill="black" /> {idStyle.toLocaleUpperCase('tr-TR')}
                               </span>
                             </div>
@@ -944,16 +964,16 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                           {/* Stats Grid */}
                           <div className="grid grid-cols-3 gap-2 mt-2">
                               <div className="bg-[#0A0E14] rounded-xl p-2 text-center border border-white/5">
-                                  <p className="text-[9px] text-gray-500 font-bold">MAÇ</p>
-                                  <p className="text-sm font-black text-white">{idNum(userProfile?.matchesPlayed)}</p>
+                                  <p className="text-[0.6875rem] text-ink-4 font-bold">MAÇ</p>
+                                  <p className="text-sm font-extrabold text-white">{idNum(userProfile?.matchesPlayed)}</p>
                               </div>
                               <div className="bg-[#0A0E14] rounded-xl p-2 text-center border border-white/5">
-                                  <p className="text-[9px] text-gray-500 font-bold">REAKSİYON</p>
-                                  <p className="text-sm font-black text-white">{idNum(gkCardStats.reflexes)}</p>
+                                  <p className="text-[0.6875rem] text-ink-4 font-bold">REAKSİYON</p>
+                                  <p className="text-sm font-extrabold text-white">{idNum(gkCardStats.reflexes)}</p>
                               </div>
                               <div className="bg-[#0A0E14] rounded-xl p-2 text-center border border-white/5">
-                                  <p className="text-[9px] text-gray-500 font-bold">PUAN</p>
-                                  <p className="text-sm font-black text-green-400">{idRatingText}</p>
+                                  <p className="text-[0.6875rem] text-ink-4 font-bold">PUAN</p>
+                                  <p className="text-sm font-extrabold text-green-400">{idRatingText}</p>
                               </div>
                           </div>
                       </div>
@@ -988,11 +1008,11 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                       <div className="w-6 h-6 rounded-lg bg-green-500 flex items-center justify-center text-black">
                         <Shield size={12} fill="black" />
                       </div>
-                      <span className="text-[10px] font-black text-green-400 uppercase tracking-widest">Kariyer Kartı</span>
+                      <span className="text-[0.625rem] font-extrabold text-green-400 uppercase tracking-widest">Kariyer Kartı</span>
                     </div>
                     <div className="flex items-center gap-1.5 bg-green-500/20 border border-green-400/40 px-2.5 py-1 rounded-lg">
                       <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-                      <span className="text-[10px] font-black text-green-300">{idClass}</span>
+                      <span className="text-[0.6875rem] font-extrabold text-green-300">{idClass}</span>
                     </div>
                   </div>
 
@@ -1000,8 +1020,8 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                   <div className="flex-1 flex items-center justify-center">
                     <div className="text-center relative">
                       <div className="absolute inset-0 blur-2xl rounded-full" style={{ background: 'rgba(34,197,94,0.3)' }} />
-                      <div className="text-[10px] text-gray-400 font-black uppercase tracking-[0.3em] mb-0.5">Genel Reyting</div>
-                      <div className="text-6xl font-black leading-none relative"
+                      <div className="text-[0.625rem] text-gray-400 font-extrabold uppercase tracking-[0.3em] mb-0.5">Genel Reyting</div>
+                      <div className="text-6xl font-extrabold leading-none relative"
                         style={{ color: '#22c55e', textShadow: '0 0 30px rgba(34,197,94,0.8), 0 0 60px rgba(34,197,94,0.4)' }}>
                         {idRatingText}
                       </div>
@@ -1022,8 +1042,8 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                     ].map(s => (
                       <div key={s.label} className="rounded-xl py-2 px-1 text-center border border-white/8"
                         style={{ background: 'rgba(0,0,0,0.5)' }}>
-                        <div className="text-lg font-black" style={{ color: s.glow, textShadow: `0 0 12px ${s.glow}80` }}>{s.value}</div>
-                        <div className="text-[8px] text-gray-500 font-bold uppercase">{s.label}</div>
+                        <div className="text-lg font-extrabold" style={{ color: s.glow, textShadow: `0 0 12px ${s.glow}80` }}>{s.value}</div>
+                        <div className="text-[0.6875rem] text-ink-4 font-bold uppercase">{s.label}</div>
                       </div>
                     ))}
                   </div>
@@ -1046,7 +1066,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
               <div className="absolute inset-0 backface-hidden rounded-[32px] bg-[#161B22]/90 backdrop-blur-xl border border-red-500/30 shadow-2xl p-5 overflow-hidden">
                   {/* Background FX */}
                   <div className="absolute -right-10 -top-10 w-40 h-40 bg-red-500/20 blur-[50px] rounded-full pointer-events-none"></div>
-                  <div className="absolute top-4 right-4 bg-black/40 px-2 py-1 rounded-lg border border-white/10 text-[10px] text-gray-400 flex items-center gap-1">
+                  <div className="absolute top-4 right-4 bg-black/40 px-2 py-1 rounded-lg border border-white/10 text-[0.6875rem] text-gray-400 flex items-center gap-1">
                       <RefreshCcw size={10} /> Çevir
                   </div>
 
@@ -1060,17 +1080,17 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                           </div>
                           {/* Sabit "FIFA" yerine gerçek seviye (varsa). */}
                           {idLevel && (
-                            <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-[#FACC15] text-black text-[10px] font-black px-3 py-1 rounded-full shadow-lg whitespace-nowrap border-2 border-[#161B22]">
+                            <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-[#FACC15] text-black text-[0.6875rem] font-extrabold px-3 py-1 rounded-full shadow-lg whitespace-nowrap border-2 border-[#161B22]">
                                 {idLevel.toLocaleUpperCase('tr-TR')}
                             </div>
                           )}
                       </div>
                       <div className="flex-1">
-                          <h2 className="text-3xl font-black text-white leading-none mb-1 truncate max-w-[150px]">{idFirstName}</h2>
+                          <h2 className="text-3xl font-extrabold text-white leading-[1.2] mb-1 truncate max-w-[150px]">{idFirstName}</h2>
                           {/* Sabit "OTORİTER / Ordu" yerine gerçek stil (varsa). */}
                           {idStyle && (
                             <div className="flex items-center gap-2 mb-3">
-                              <span className="bg-red-600 text-white text-[10px] font-black px-2 py-0.5 rounded flex items-center gap-1">
+                              <span className="bg-red-600 text-white text-[0.6875rem] font-extrabold px-2 py-0.5 rounded flex items-center gap-1">
                                   <Scale size={10} /> {idStyle.toLocaleUpperCase('tr-TR')}
                               </span>
                             </div>
@@ -1079,16 +1099,16 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                           {/* Stats Grid — gerçek veri / "—" (sabit 150/%98/4.9 değil) */}
                           <div className="grid grid-cols-3 gap-2 mt-2">
                               <div className="bg-[#0A0E14] rounded-xl p-2 text-center border border-white/5">
-                                  <p className="text-[9px] text-gray-500 font-bold">YÖNETİM</p>
-                                  <p className="text-sm font-black text-white">{idNum(gkCardStats.authority)}</p>
+                                  <p className="text-[0.6875rem] text-ink-4 font-bold">YÖNETİM</p>
+                                  <p className="text-sm font-extrabold text-white">{idNum(gkCardStats.authority)}</p>
                               </div>
                               <div className="bg-[#0A0E14] rounded-xl p-2 text-center border border-white/5">
-                                  <p className="text-[9px] text-gray-500 font-bold">VAR</p>
-                                  <p className="text-sm font-black text-white">{idVar}</p>
+                                  <p className="text-[0.6875rem] text-ink-4 font-bold">VAR</p>
+                                  <p className="text-sm font-extrabold text-white">{idVar}</p>
                               </div>
                               <div className="bg-[#0A0E14] rounded-xl p-2 text-center border border-white/5">
-                                  <p className="text-[9px] text-gray-500 font-bold">PUAN</p>
-                                  <p className="text-sm font-black text-red-400">{idRatingText}</p>
+                                  <p className="text-[0.6875rem] text-ink-4 font-bold">PUAN</p>
+                                  <p className="text-sm font-extrabold text-red-400">{idRatingText}</p>
                               </div>
                           </div>
                       </div>
@@ -1102,10 +1122,10 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                   <div className="absolute -left-20 -bottom-20 w-64 h-64 bg-orange-500/10 blur-[60px] rounded-full pointer-events-none animate-float-y"></div>
                   
                   <div className="relative z-10 flex items-center justify-between border-b border-red-500/30 pb-3">
-                      <h3 className="font-black text-orange-400 uppercase tracking-widest text-xs flex items-center gap-2">
+                      <h3 className="font-extrabold text-orange-400 uppercase tracking-widest text-xs flex items-center gap-2">
                           <Activity size={14} /> KARİYER PERFORMANSI
                       </h3>
-                      <div className="bg-red-500 text-white text-[10px] font-black px-2 py-1 rounded shadow-[0_0_10px_rgba(239,68,68,0.6)] animate-pulse">
+                      <div className="bg-red-500 text-white text-[0.6875rem] font-extrabold px-2 py-1 rounded shadow-[0_0_10px_rgba(239,68,68,0.6)] animate-pulse">
                           {idClass}
                       </div>
                   </div>
@@ -1113,23 +1133,23 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                   <div className="relative z-10 flex-1 flex flex-col justify-center items-center py-4">
                       <div className="text-center relative">
                           <div className="absolute inset-0 bg-red-500 blur-2xl opacity-20 rounded-full animate-breathe"></div>
-                          <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest absolute -top-5 w-full text-center">Genel Reyting</span>
-                          <span className="text-6xl font-black text-transparent bg-clip-text bg-gradient-to-b from-white to-gray-400 drop-shadow-[0_0_15px_rgba(255,255,255,0.4)]">
+                          <span className="text-[0.625rem] text-gray-400 font-bold uppercase tracking-widest absolute -top-5 w-full text-center">Genel Reyting</span>
+                          <span className="text-6xl font-extrabold text-transparent bg-clip-text bg-gradient-to-b from-white to-gray-400 drop-shadow-[0_0_15px_rgba(255,255,255,0.4)]">
                               {idRatingText}
                           </span>
                       </div>
                   </div>
 
                   <div className="relative z-10 grid grid-cols-2 gap-3">
-                      <div className="bg-black/40 backdrop-blur lg:hover:-translate-y-1 transition-transform border border-white/10 rounded-xl p-3 flex flex-col items-center justify-center relative overflow-hidden group">
+                      <div className="bg-black/40 backdrop-blur transition-transform border border-white/10 rounded-xl p-3 flex flex-col items-center justify-center relative overflow-hidden group">
                           <div className="absolute w-full h-1 top-0 left-0 bg-gradient-to-r from-transparent via-red-400 to-transparent translate-x-[-100%] group-hover:animate-shimmer"></div>
-                          <span className="text-[9px] text-gray-400 font-bold uppercase tracking-wider mb-1 text-center">Maç Puanı Ort.</span>
-                          <span className="text-2xl font-black text-red-400 drop-shadow-[0_0_5px_rgba(239,68,68,0.6)] z-10 relative">{idRatingText}</span>
+                          <span className="text-[0.625rem] text-gray-400 font-bold uppercase tracking-wider mb-1 text-center">Maç Puanı Ort.</span>
+                          <span className="text-2xl font-extrabold text-red-400 drop-shadow-[0_0_5px_rgba(239,68,68,0.6)] z-10 relative">{idRatingText}</span>
                       </div>
-                      <div className="bg-black/40 backdrop-blur lg:hover:-translate-y-1 transition-transform border border-white/10 rounded-xl p-3 flex flex-col items-center justify-center relative overflow-hidden group">
+                      <div className="bg-black/40 backdrop-blur transition-transform border border-white/10 rounded-xl p-3 flex flex-col items-center justify-center relative overflow-hidden group">
                           <div className="absolute w-full h-1 top-0 left-0 bg-gradient-to-r from-transparent via-orange-400 to-transparent translate-x-[-100%] group-hover:animate-shimmer"></div>
-                          <span className="text-[9px] text-gray-400 font-bold uppercase tracking-wider mb-1 text-center text-balance leading-tight">Yönetim Değeri</span>
-                          <span className="text-2xl font-black text-orange-400 drop-shadow-[0_0_5px_rgba(249,115,22,0.6)] z-10 relative">{idClass}</span>
+                          <span className="text-[0.625rem] text-gray-400 font-bold uppercase tracking-wider mb-1 text-center text-balance leading-tight">Yönetim Değeri</span>
+                          <span className="text-2xl font-extrabold text-orange-400 drop-shadow-[0_0_5px_rgba(249,115,22,0.6)] z-10 relative">{idClass}</span>
                       </div>
                   </div>
               </div>
@@ -1147,8 +1167,8 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                       <BadgeCheck size={18} />
                   </div>
                   <div>
-                      <p className="text-sm font-black text-green-400">Kimlik doğrulandı</p>
-                      <p className="text-[10px] text-gray-400 font-bold">Ödemelerini alabilirsin.</p>
+                      <p className="text-sm font-extrabold text-green-400">Kimlik doğrulandı</p>
+                      <p className="text-[0.6875rem] text-gray-400 font-bold">Ödemelerini alabilirsin.</p>
                   </div>
               </div>
           ) : (
@@ -1158,10 +1178,10 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                           <AlertTriangle size={18} />
                       </div>
                       <div className="flex-1">
-                          <p className="text-sm font-black text-white">
+                          <p className="text-sm font-extrabold text-white">
                               {identityStatus === 'PENDING' ? 'Kimlik doğrulaması inceleniyor' : identityStatus === 'REJECTED' ? 'Kimlik doğrulaması reddedildi' : 'Kimlik doğrulaması gerekli'}
                           </p>
-                          <p className="text-[11px] text-gray-300 font-bold mt-0.5">
+                          <p className="text-[0.6875rem] text-gray-300 font-bold mt-0.5">
                               Ödemelerini alabilmek için TC kimlik doğrulaması gerekli.
                           </p>
                       </div>
@@ -1169,7 +1189,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                   {identityStatus !== 'PENDING' && (
                       <button
                           onClick={() => { if (!guardGuest()) return; setIdentityName(userProfile?.fullName || ''); setIdentityFormError(null); setShowIdentityModal(true); }}
-                          className="w-full mt-3 py-2.5 rounded-xl bg-yellow-500 hover:bg-yellow-400 text-black text-xs font-black uppercase tracking-wider transition-colors"
+                          className="w-full mt-3 py-2.5 rounded-xl bg-yellow-500 hover:bg-yellow-400 text-black text-xs font-extrabold uppercase tracking-wider transition-colors"
                       >
                           Kimlik Doğrula
                       </button>
@@ -1185,12 +1205,12 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
           <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                   <Inbox size={16} className={theme.primary} />
-                  <h3 className="font-black text-white text-sm tracking-wide uppercase">GELEN TALEPLER</h3>
+                  <h3 className="font-extrabold text-white text-sm tracking-wide uppercase">GELEN TALEPLER</h3>
                   {newRequests.length > 0 && (
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${isRef ? 'bg-red-500/15 border-red-500/30 text-red-400' : 'bg-green-500/15 border-green-500/30 text-green-400'}`}>{newRequests.length}</span>
+                      <span className={`text-[0.6875rem] font-bold px-2 py-0.5 rounded-full border ${isRef ? 'bg-red-500/15 border-red-500/30 text-red-400' : 'bg-green-500/15 border-green-500/30 text-green-400'}`}>{newRequests.length}</span>
                   )}
               </div>
-              <button onClick={fetchIncomingRequests} className="text-gray-500 hover:text-white transition-colors">
+              <button onClick={fetchIncomingRequests} className="text-ink-4 hover:text-white transition-colors">
                   <RefreshCcw size={14} />
               </button>
           </div>
@@ -1202,7 +1222,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
           ) : (newRequests.length === 0 && activeRequests.length === 0) ? (
               <div className="bg-[#161B22] border border-dashed border-white/10 rounded-[24px] p-8 text-center">
                   <div className="w-12 h-12 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-3">
-                      <Inbox size={24} className="text-gray-600" />
+                      <Inbox size={24} className="text-ink-4" />
                   </div>
                   <p className="text-gray-400 text-sm font-bold">Henüz gelen talebin yok.</p>
               </div>
@@ -1211,32 +1231,32 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                   {/* Yeni Talepler */}
                   {newRequests.length > 0 && (
                       <div className="space-y-3">
-                          <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Yeni Talepler</p>
+                          <p className="text-[0.625rem] font-extrabold text-ink-4 uppercase tracking-widest">Yeni Talepler</p>
                           {newRequests.map(req => (
                               <div key={req.id} className={`bg-gradient-to-r to-[#161B22] border rounded-[24px] p-4 ${isRef ? 'from-red-900/30 border-red-500/30' : 'from-green-900/30 border-green-500/30'}`}>
                                   <div className="flex items-start justify-between">
                                       <div>
-                                          <h4 className="font-black text-white text-sm">{req.providerType === 'REF' ? 'Hakemlik Talebi' : 'Kalecilik Talebi'}</h4>
-                                          <p className="text-[10px] text-gray-400 font-bold mt-0.5">Maç: {req.matchId.slice(0, 8)}</p>
+                                          <h4 className="font-extrabold text-white text-sm">{req.providerType === 'REF' ? 'Hakemlik Talebi' : 'Kalecilik Talebi'}</h4>
+                                          <p className="text-[0.6875rem] text-gray-400 font-bold mt-0.5">Maç: {req.matchId.slice(0, 8)}</p>
                                       </div>
                                       <div className="text-right">
-                                          <p className="text-[9px] text-gray-500 font-bold uppercase">Eline geçecek</p>
-                                          <p className="text-lg font-black text-green-400">{req.providerAmount}₺</p>
-                                          <p className="text-[9px] text-gray-500 font-bold">Brüt {req.fee}₺</p>
+                                          <p className="text-[0.6875rem] text-ink-4 font-bold uppercase">Eline geçecek</p>
+                                          <p className="text-lg font-extrabold text-green-400">{req.providerAmount}₺</p>
+                                          <p className="text-[0.6875rem] text-ink-4 font-bold">Brüt {req.fee}₺</p>
                                       </div>
                                   </div>
                                   <div className="mt-4 flex gap-2">
                                       <button
                                           onClick={() => handleRespondRequest(req.id, false)}
                                           disabled={respondingId === req.id}
-                                          className="flex-1 py-2.5 rounded-xl bg-white/5 border border-white/10 text-gray-300 text-xs font-black uppercase hover:bg-white/10 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
+                                          className="flex-1 py-2.5 rounded-xl bg-white/5 border border-white/10 text-gray-300 text-xs font-extrabold uppercase hover:bg-white/10 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
                                       >
                                           <X size={14} /> Reddet
                                       </button>
                                       <button
                                           onClick={() => handleAcceptClick(req)}
                                           disabled={respondingId === req.id}
-                                          className={`flex-1 py-2.5 rounded-xl text-white text-xs font-black uppercase transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5 ${isRef ? 'bg-red-500 hover:bg-red-400 shadow-[0_0_12px_rgba(239,68,68,0.3)]' : 'bg-green-500 hover:bg-green-400 shadow-[0_0_12px_rgba(34,197,94,0.3)]'}`}
+                                          className={`flex-1 py-2.5 rounded-xl text-white text-xs font-extrabold uppercase transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5 ${isRef ? 'bg-red-500 hover:bg-red-400 shadow-[0_0_12px_rgba(239,68,68,0.3)]' : 'bg-green-500 hover:bg-green-400 shadow-[0_0_12px_rgba(34,197,94,0.3)]'}`}
                                       >
                                           {respondingId === req.id ? <RefreshCcw size={14} className="animate-spin" /> : <Check size={14} />}
                                           Kabul Et
@@ -1250,36 +1270,36 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                   {/* FAZ 4: No-show bildirilen talepler → 48s içinde itiraz */}
                   {noShowRequests.length > 0 && (
                       <div className="space-y-3">
-                          <p className="text-[10px] font-black text-red-400 uppercase tracking-widest">No-show Bildirimi</p>
+                          <p className="text-[0.625rem] font-extrabold text-red-400 uppercase tracking-widest">No-show Bildirimi</p>
                           {noShowRequests.map(req => (
                               <div key={req.id} className="bg-red-950/20 border border-red-500/25 rounded-[24px] p-4">
                                   <div className="flex items-start justify-between">
                                       <div>
-                                          <h4 className="font-black text-white text-sm">{req.providerType === 'REF' ? 'Hakemlik' : 'Kalecilik'} — Katılmadın</h4>
-                                          <p className="text-[10px] text-gray-400 font-bold mt-0.5">Maç: {req.matchId.slice(0, 8)}</p>
+                                          <h4 className="font-extrabold text-white text-sm">{req.providerType === 'REF' ? 'Hakemlik' : 'Kalecilik'} — Katılmadın</h4>
+                                          <p className="text-[0.6875rem] text-gray-400 font-bold mt-0.5">Maç: {req.matchId.slice(0, 8)}</p>
                                       </div>
                                       <div className="text-right">
-                                          <p className="text-[9px] text-gray-500 font-bold uppercase">Ceza</p>
-                                          <p className="text-lg font-black text-red-400">{req.penaltyAmount ?? '—'}₺</p>
+                                          <p className="text-[0.6875rem] text-ink-4 font-bold uppercase">Ceza</p>
+                                          <p className="text-lg font-extrabold text-red-400">{req.penaltyAmount ?? '—'}₺</p>
                                       </div>
                                   </div>
                                   {(req.status as string) === 'DISPUTED' ? (
                                       // KB-3: İtiraz zaten yapıldı — tekrar itiraz butonu değil, durum bilgisi.
                                       <div className="mt-2 flex items-center gap-2 rounded-xl bg-amber-500/8 border border-amber-500/25 px-3 py-2.5">
                                           <AlertTriangle size={14} className="text-amber-300 shrink-0" />
-                                          <p className="text-[10px] text-amber-200/90 font-bold leading-relaxed">
+                                          <p className="text-[0.6875rem] text-amber-200/90 font-bold leading-relaxed">
                                               İtirazın alındı — durum yönetim tarafından inceleniyor. Sonuç bu ekrana düşecek.
                                           </p>
                                       </div>
                                   ) : (
                                       <>
-                                          <p className="text-[10px] text-white/45 mt-2 leading-relaxed">
+                                          <p className="text-[0.6875rem] text-ink-4 mt-2 leading-relaxed">
                                               Kaptan maça gelmediğini bildirdi; ceza teminatından tahsil edildi. Haksız olduğunu düşünüyorsan itiraz et — durum yönetim tarafından incelenir.
                                           </p>
                                           <button
                                               onClick={() => handleDisputeNoShow(req.id)}
                                               disabled={respondingId === req.id}
-                                              className="w-full mt-3 py-2.5 rounded-xl bg-white/5 border border-red-500/25 text-red-300 text-xs font-black uppercase hover:bg-red-500/10 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5">
+                                              className="w-full mt-3 py-2.5 rounded-xl bg-white/5 border border-red-500/25 text-red-300 text-xs font-extrabold uppercase hover:bg-red-500/10 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5">
                                               {respondingId === req.id ? <RefreshCcw size={14} className="animate-spin" /> : <AlertTriangle size={14} />} İtiraz Et
                                           </button>
                                       </>
@@ -1292,19 +1312,19 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                   {/* Yaklaşan (ACCEPTED / payout serbest olmayan CAPTURED) */}
                   {activeRequests.length > 0 && (
                       <div className="space-y-3">
-                          <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Yaklaşan</p>
+                          <p className="text-[0.625rem] font-extrabold text-ink-4 uppercase tracking-widest">Yaklaşan</p>
                           {activeRequests.map(req => (
                               <div key={req.id} className="bg-[#161B22] border border-white/6 rounded-[24px] p-4">
                                   <div className="flex items-start justify-between">
                                       <div>
-                                          <h4 className="font-black text-white text-sm">{req.providerType === 'REF' ? 'Hakemlik' : 'Kalecilik'}</h4>
-                                          <p className="text-[10px] text-gray-400 font-bold mt-0.5">Maç: {req.matchId.slice(0, 8)}</p>
+                                          <h4 className="font-extrabold text-white text-sm">{req.providerType === 'REF' ? 'Hakemlik' : 'Kalecilik'}</h4>
+                                          <p className="text-[0.6875rem] text-gray-400 font-bold mt-0.5">Maç: {req.matchId.slice(0, 8)}</p>
                                       </div>
                                       <div className="text-right">
-                                          <span className={`text-[9px] font-black px-2 py-1 rounded-md uppercase tracking-wider ${req.status === 'CAPTURED' ? 'bg-blue-500/20 text-blue-400' : 'bg-green-500/20 text-green-400'}`}>
+                                          <span className={`text-[0.625rem] font-extrabold px-2 py-1 rounded-md uppercase tracking-wider ${req.status === 'CAPTURED' ? 'bg-blue-500/20 text-blue-400' : 'bg-green-500/20 text-green-400'}`}>
                                               {req.status === 'CAPTURED' ? 'Ödeme Bekliyor' : 'Onaylandı'}
                                           </span>
-                                          <p className="text-sm font-black text-green-400 mt-1">{req.providerAmount}₺</p>
+                                          <p className="text-sm font-extrabold text-green-400 mt-1">{req.providerAmount}₺</p>
                                       </div>
                                   </div>
                                   {/* KB-1: İki-taraflı onay TÜM CAPTURED taleplerde gösterilir.
@@ -1315,7 +1335,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                                       sonsuza dek PENDING kalıyordu. Artık initiator'dan bağımsız. */}
                                   {req.status === 'CAPTURED' && !req.payoutReleased && (
                                     req.providerConfirmed ? (
-                                      <div className="w-full mt-3 py-2 rounded-xl bg-green-500/10 border border-green-500/25 text-green-400 text-[11px] font-black uppercase tracking-wider flex items-center justify-center gap-1.5">
+                                      <div className="w-full mt-3 py-2 rounded-xl bg-green-500/10 border border-green-500/25 text-green-400 text-[0.6875rem] font-extrabold uppercase tracking-wider flex items-center justify-center gap-1.5">
                                           {/* F1.2: kaptan onaylamazsa maç bitişi+48s'te otomatik serbest bırakılır */}
                                           <Check size={13} /> Onayladın · Kaptan onayı bekleniyor (48s içinde otomatik)
                                       </div>
@@ -1323,7 +1343,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                                       <button
                                           onClick={() => handleProviderConfirm(req.id)}
                                           disabled={confirmingId === req.id}
-                                          className="w-full mt-3 py-2 rounded-xl bg-green-500 hover:bg-green-400 text-white text-[11px] font-black uppercase tracking-wider transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5 shadow-[0_0_12px_rgba(34,197,94,0.3)]"
+                                          className="w-full mt-3 py-2 rounded-xl bg-green-500 hover:bg-green-400 text-white text-[0.6875rem] font-extrabold uppercase tracking-wider transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5 shadow-[0_0_12px_rgba(34,197,94,0.3)]"
                                       >
                                           {confirmingId === req.id ? <RefreshCcw size={13} className="animate-spin" /> : <Check size={13} />}
                                           Maçı Oynadım · Onayla
@@ -1335,7 +1355,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                                       <button
                                           onClick={() => handleReportAttendance(req.id)}
                                           disabled={reportingId === req.id}
-                                          className="w-full mt-2 py-2 rounded-xl bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 text-[11px] font-black uppercase tracking-wider hover:bg-yellow-500/20 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
+                                          className="w-full mt-2 py-2 rounded-xl bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 text-[0.6875rem] font-extrabold uppercase tracking-wider hover:bg-yellow-500/20 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
                                       >
                                           {reportingId === req.id ? <RefreshCcw size={13} className="animate-spin" /> : <Flag size={13} />}
                                           Sorun Bildir
@@ -1345,7 +1365,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                                   <button
                                       onClick={() => handleOpenCancelPreview(req.id)}
                                       disabled={cancellingId === req.id}
-                                      className="w-full mt-2 py-2 rounded-xl bg-red-500/10 border border-red-500/25 text-red-400 text-[11px] font-black uppercase tracking-wider hover:bg-red-500/20 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
+                                      className="w-full mt-2 py-2 rounded-xl bg-red-500/10 border border-red-500/25 text-red-400 text-[0.6875rem] font-extrabold uppercase tracking-wider hover:bg-red-500/20 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
                                   >
                                       {cancellingId === req.id ? <RefreshCcw size={13} className="animate-spin" /> : <X size={13} />}
                                       İşi Bırak
@@ -1358,19 +1378,19 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                   {/* Bug D: Tamamlanan talepler (COMPLETED / payout serbest) — sağlayıcı tamamlanan işini görsün */}
                   {completedRequests.length > 0 && (
                       <div className="space-y-3">
-                          <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Tamamlanan</p>
+                          <p className="text-[0.625rem] font-extrabold text-ink-4 uppercase tracking-widest">Tamamlanan</p>
                           {completedRequests.map(req => (
                               <div key={req.id} className="bg-[#161B22] border border-white/6 rounded-[24px] p-4">
                                   <div className="flex items-start justify-between">
                                       <div>
-                                          <h4 className="font-black text-white text-sm">{req.providerType === 'REF' ? 'Hakemlik' : 'Kalecilik'}</h4>
-                                          <p className="text-[10px] text-gray-400 font-bold mt-0.5">Maç: {req.matchId.slice(0, 8)}</p>
+                                          <h4 className="font-extrabold text-white text-sm">{req.providerType === 'REF' ? 'Hakemlik' : 'Kalecilik'}</h4>
+                                          <p className="text-[0.6875rem] text-gray-400 font-bold mt-0.5">Maç: {req.matchId.slice(0, 8)}</p>
                                       </div>
                                       <div className="text-right">
-                                          <span className="text-[9px] font-black px-2 py-1 rounded-md uppercase tracking-wider bg-green-500/20 text-green-400 inline-flex items-center gap-1">
+                                          <span className="text-[0.625rem] font-extrabold px-2 py-1 rounded-md uppercase tracking-wider bg-green-500/20 text-green-400 inline-flex items-center gap-1">
                                               <CheckCircle2 size={11} /> Ödendi
                                           </span>
-                                          <p className="text-sm font-black text-green-400 mt-1">{req.providerAmount}₺</p>
+                                          <p className="text-sm font-extrabold text-green-400 mt-1">{req.providerAmount}₺</p>
                                       </div>
                                   </div>
                               </div>
@@ -1445,12 +1465,12 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
 
                 <div className="text-left">
                   <p
-                    className="font-black text-base tracking-wide"
+                    className="font-extrabold text-base tracking-wide"
                     style={{ color: isAvailable ? (isRef ? '#ef4444' : '#22c55e') : '#6b7280' }}
                   >
                     {isAvailable ? 'SİSTEMDE AKTİF' : 'ŞU AN MEŞGUL'}
                   </p>
-                  <p className="text-[10px] font-bold mt-0.5" style={{ color: isAvailable ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.2)' }}>
+                  <p className="text-[0.6875rem] font-bold mt-0.5" style={{ color: isAvailable ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.2)' }}>
                     {isAvailable ? 'Kaptanlar seni görüyor ve teklif gönderebilir' : 'Yeni tekliflere kapalısın'}
                   </p>
                 </div>
@@ -1484,8 +1504,8 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
             <div className="mb-6">
               <div className="flex items-center gap-2 mb-3 px-1">
                 <Inbox size={16} className={isRef ? 'text-red-400' : 'text-[#39FF14]'} />
-                <h3 className="text-sm font-black text-white uppercase tracking-wide">Gelen Teklifler</h3>
-                <span className={`text-[10px] font-black rounded-full px-2 py-0.5 ${isRef ? 'text-white bg-red-500' : 'text-[#0A0E14] bg-[#39FF14]'}`}>{matchOffers.length}</span>
+                <h3 className="text-sm font-extrabold text-white uppercase tracking-wide">Gelen Teklifler</h3>
+                <span className={`text-[0.6875rem] font-extrabold rounded-full px-2 py-0.5 ${isRef ? 'text-white bg-red-500' : 'text-[#0A0E14] bg-[#39FF14]'}`}>{matchOffers.length}</span>
               </div>
               <div className="space-y-3">
                 {matchOffers.map(o => {
@@ -1494,13 +1514,13 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                     <div key={o.id} className={`rounded-[24px] p-4 bg-gradient-to-br to-[#161B22] border ${isRef ? 'from-red-900/30 border-red-500/30' : 'from-green-900/30 border-green-500/30'}`}>
                       <div className="flex items-start justify-between mb-3">
                         <div className="min-w-0">
-                          <p className="text-sm font-black text-white uppercase italic">{o.provider_type === 'GK' ? 'Kalecilik' : 'Hakemlik'} Teklifi</p>
-                          <p className="text-[11px] text-white/50 truncate mt-0.5">{o.location || o.match_title || 'Maç'}{o.date ? ` · ${o.date}` : ''}{o.time ? ` ${o.time}` : ''}</p>
-                          <p className={`text-[10px] font-bold mt-1 ${isRef ? 'text-red-400' : 'text-[#39FF14]'}`}>İlk kabul eden işi alır</p>
+                          <p className="text-sm font-extrabold text-white uppercase italic">{o.provider_type === 'GK' ? 'Kalecilik' : 'Hakemlik'} Teklifi</p>
+                          <p className="text-[0.6875rem] text-white/50 truncate mt-0.5">{o.location || o.match_title || 'Maç'}{o.date ? ` · ${o.date}` : ''}{o.time ? ` ${o.time}` : ''}</p>
+                          <p className={`text-[0.6875rem] font-bold mt-1 ${isRef ? 'text-red-400' : 'text-[#39FF14]'}`}>İlk kabul eden işi alır</p>
                         </div>
                         <div className="text-right shrink-0 pl-3">
-                          <p className="text-[8px] font-black uppercase text-white/40 tracking-widest">Bedel</p>
-                          <p className={`text-lg font-black ${isRef ? 'text-red-400' : 'text-[#39FF14]'}`}>{o.fee}₺</p>
+                          <p className="text-[0.625rem] font-extrabold uppercase text-ink-4 tracking-widest">Bedel</p>
+                          <p className={`text-lg font-extrabold ${isRef ? 'text-red-400' : 'text-[#39FF14]'}`}>{o.fee}₺</p>
                         </div>
                       </div>
                       <div className="flex gap-2">
@@ -1509,7 +1529,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                           <X size={14} /> Reddet
                         </button>
                         <button disabled={busy} onClick={() => handleRespondMatchOffer(o.id, true)}
-                          className={`flex-[1.5] h-11 rounded-xl text-xs font-black flex items-center justify-center gap-1.5 active:scale-95 disabled:opacity-40 ${isRef ? 'bg-red-500 text-white' : 'bg-[#39FF14] text-[#0A0E14]'}`}>
+                          className={`flex-[1.5] h-11 rounded-xl text-xs font-extrabold flex items-center justify-center gap-1.5 active:scale-95 disabled:opacity-40 ${isRef ? 'bg-red-500 text-white' : 'bg-[#39FF14] text-[#0A0E14]'}`}>
                           {busy ? <Activity size={14} className="animate-spin" /> : <Check size={14} />} Kabul Et
                         </button>
                       </div>
@@ -1529,28 +1549,64 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                     className="absolute -right-4 -bottom-4 w-24 h-24 bg-blue-500/10 blur-3xl rounded-full group-hover:bg-blue-500/20 transition-colors"
                   />
                   <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest">GÜNLÜK ÖZET</h3>
+                      <h3 className="text-xs font-bold text-ink-4 uppercase tracking-widest">GÜNLÜK ÖZET</h3>
                       <Activity size={16} className="text-blue-400" />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                       <div>
-                          <p className="text-[10px] text-gray-500 font-bold uppercase">Kazanç</p>
-                          <p className="text-2xl font-black text-white">{earningsBalance}₺</p>
+                          <p className="text-[0.6875rem] text-ink-4 font-bold uppercase">Kazanç</p>
+                          <p className="text-2xl font-extrabold text-white">{earningsBalance}₺</p>
                       </div>
                       <div className="text-right">
-                          <p className="text-[10px] text-gray-500 font-bold uppercase">Sıradaki Maç</p>
-                          <p className="text-lg font-black text-[#FACC15]">{myUpcomingMatches[0]?.time || '--:--'}</p>
+                          <p className="text-[0.6875rem] text-ink-4 font-bold uppercase">Sıradaki Maç</p>
+                          <p className="text-lg font-extrabold text-[#FACC15]">{myUpcomingMatches[0]?.time || '--:--'}</p>
                       </div>
                   </div>
               </div>
           </div>
+
+          {/* SKOR BEKLEYEN MAÇLAR — bitmiş ama skoru girilmemiş maçlar.
+              K2: skoru yalnız hakem veya tesis sahibi girer. Bitmiş maça skor
+              girmenin başka yolu yoktu; maç saati gelince kart listeden düşüyor,
+              hakem skoru bir daha giremiyordu. */}
+          {isRef && myMatchesAwaitingScore.length > 0 && (
+              <div className="px-6 mb-6">
+                  <div className="flex items-center gap-2 mb-3">
+                      <PenLine size={16} className="text-[#FACC15]" />
+                      <h3 className="font-extrabold text-white text-sm tracking-wide uppercase">SKOR BEKLİYOR</h3>
+                      <span className="px-2 py-0.5 rounded-full bg-[#FACC15]/15 text-[#FACC15] text-[0.6875rem] font-extrabold">
+                          {myMatchesAwaitingScore.length}
+                      </span>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                      {myMatchesAwaitingScore.map((m: any) => (
+                          <div key={m.id} className="bg-[#161B22] border border-[#FACC15]/25 rounded-[20px] p-4 flex items-center justify-between gap-3">
+                              <div className="min-w-0">
+                                  <h4 className="font-extrabold text-white text-sm truncate">
+                                      {m.pitchName || m.location || 'Saha bilinmiyor'}
+                                  </h4>
+                                  <p className="text-[0.6875rem] text-gray-400 font-bold truncate">
+                                      {m.title || 'Maç'} • {m.date} {m.time}
+                                  </p>
+                              </div>
+                              <button
+                                  onClick={() => { setScoreTargetMatch(m); setRefScore({ home: '', away: '' }); setShowPostMatchReport(true); }}
+                                  className="shrink-0 px-4 py-2 rounded-xl bg-[#FACC15] text-black text-[0.6875rem] font-extrabold uppercase hover:brightness-110 transition-all"
+                              >
+                                  SKOR GİR
+                              </button>
+                          </div>
+                      ))}
+                  </div>
+              </div>
+          )}
 
           {/* Sıradaki Maçlarım Section */}
           <div className="px-6">
               <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
                       <Calendar size={16} className={theme.primary} />
-                      <h3 className="font-black text-white text-sm tracking-wide uppercase">SIRADAKİ MAÇLARIM</h3>
+                      <h3 className="font-extrabold text-white text-sm tracking-wide uppercase">SIRADAKİ MAÇLARIM</h3>
                   </div>
               </div>
               
@@ -1558,23 +1614,23 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                   <div className={`bg-gradient-to-r to-[#161B22] border rounded-[24px] p-5 relative overflow-hidden ${isRef ? 'from-red-900/40 border-red-500/30' : 'from-green-900/40 border-green-500/30'}`}>
                       <div className="flex justify-between items-start">
                           <div>
-                              <h4 className="font-black text-white text-lg">{myUpcomingMatches[0].pitchName || myUpcomingMatches[0].location || 'Saha Bilinmiyor'}</h4>
+                              <h4 className="font-extrabold text-white text-lg">{myUpcomingMatches[0].pitchName || myUpcomingMatches[0].location || 'Saha Bilinmiyor'}</h4>
                               <p className="text-xs text-gray-400 font-bold">{myUpcomingMatches[0].title || 'Rakip Aranıyor'} • {myUpcomingMatches[0].time}</p>
                           </div>
                           <div className="text-right">
-                              <p className="text-[10px] text-gray-500 font-bold uppercase">KALAN SÜRE</p>
-                              <p className="text-xl font-black text-[#FACC15] font-mono">{timeLeft}</p>
+                              <p className="text-[0.6875rem] text-ink-4 font-bold uppercase">KALAN SÜRE</p>
+                              <p className="text-xl font-extrabold text-[#FACC15] font-mono">{timeLeft}</p>
                           </div>
                       </div>
                       <div className="mt-4 pt-4 border-t border-white/5 flex flex-col gap-3">
                           <div className="flex justify-between items-center w-full">
                             <div className="flex items-center gap-2">
-                                <MapPin size={12} className="text-gray-500" />
-                                <span className="text-[10px] text-gray-400 font-bold">{myUpcomingMatches[0].location}</span>
+                                <MapPin size={12} className="text-ink-4" />
+                                <span className="text-[0.6875rem] text-gray-400 font-bold">{myUpcomingMatches[0].location}</span>
                             </div>
                             <button 
                               onClick={() => setSelectedUpcomingJob(myUpcomingMatches[0])}
-                              className={`text-[10px] font-black hover:text-white transition-colors ${isRef ? 'text-red-400' : 'text-green-400'}`}
+                              className={`text-[0.6875rem] font-extrabold hover:text-white transition-colors ${isRef ? 'text-red-400' : 'text-green-400'}`}
                             >
                                 DETAYLAR
                             </button>
@@ -1584,19 +1640,19 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                           <div className="flex flex-col gap-2">
                             {matchLiveStatus[myUpcomingMatches[0].id] === 'ARRIVED' ? (
                                 <div className="flex gap-2">
-                                  <button disabled className="flex-1 py-2 rounded-xl bg-white/10 text-white/50 text-[10px] font-black uppercase flex items-center justify-center gap-1">
+                                  <button disabled className="flex-1 py-2 rounded-xl bg-white/10 text-white/50 text-[0.6875rem] font-extrabold uppercase flex items-center justify-center gap-1">
                                     {/* F3c: durum artık sunucuya yazılıyor ve kaptana bildirim gidiyor. */}
                                     <CheckCircle2 size={12} /> TESİSTEYİM ✓
                                   </button>
                                   <button
                                     onClick={() => {
-                                      if (isRef) { setShowPostMatchReport(true); return; }
+                                      if (isRef) { setScoreTargetMatch(myUpcomingMatches[0]); setShowPostMatchReport(true); return; }
                                       // F2.3: kaleci için modal yok — dürüst yerel işaretleme + doğru CTA.
                                       const mid = myUpcomingMatches[0]?.id;
                                       if (mid) setMatchLiveStatus(prev => ({ ...prev, [mid]: 'FINISHED' }));
                                       showActionSuccess('Maçı bitirdin. Ücretin için "Gelen Talepler"deki Maçı Oynadım · Onayla adımını tamamla.');
                                     }}
-                                    className="flex-1 py-2 rounded-xl bg-blue-500 text-white text-[10px] font-black uppercase shadow-[0_0_15px_rgba(59,130,246,0.4)]"
+                                    className="flex-1 py-2 rounded-xl bg-blue-500 text-white text-[0.6875rem] font-extrabold uppercase shadow-[0_0_15px_rgba(59,130,246,0.4)]"
                                   >
                                     MAÇI BİTİR
                                   </button>
@@ -1604,14 +1660,14 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                             ) : matchLiveStatus[myUpcomingMatches[0].id] === 'ON_THE_WAY' ? (
                                 <button
                                   onClick={() => handleLiveStatus(myUpcomingMatches[0].id, 'ARRIVED')}
-                                  className={`w-full py-2.5 rounded-xl text-white text-xs font-black uppercase flex items-center justify-center gap-2 transition-colors ${isRef ? 'bg-red-500 hover:bg-red-400 shadow-[0_0_15px_rgba(239,68,68,0.3)]' : 'bg-green-500 hover:bg-green-400 shadow-[0_0_15px_rgba(34,197,94,0.3)]'}`}
+                                  className={`w-full py-2.5 rounded-xl text-white text-xs font-extrabold uppercase flex items-center justify-center gap-2 transition-colors ${isRef ? 'bg-red-500 hover:bg-red-400 shadow-[0_0_15px_rgba(239,68,68,0.3)]' : 'bg-green-500 hover:bg-green-400 shadow-[0_0_15px_rgba(34,197,94,0.3)]'}`}
                                 >
                                   <MapPin size={14} /> TESİSE VARDIM
                                 </button>
                             ) : (
                                 <button
                                   onClick={() => handleLiveStatus(myUpcomingMatches[0].id, 'ON_THE_WAY')}
-                                  className="w-full py-2.5 rounded-xl bg-blue-500 text-white text-xs font-black uppercase shadow-[0_0_15px_rgba(59,130,246,0.3)] flex items-center justify-center gap-2 hover:bg-blue-400 transition-colors"
+                                  className="w-full py-2.5 rounded-xl bg-blue-500 text-white text-xs font-extrabold uppercase shadow-[0_0_15px_rgba(59,130,246,0.3)] flex items-center justify-center gap-2 hover:bg-blue-400 transition-colors"
                                 >
                                   <Navigation size={14} /> YOLA ÇIKTIM
                                 </button>
@@ -1622,13 +1678,13 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
               ) : (
                   <div className="bg-[#161B22] border border-dashed border-white/10 rounded-[24px] p-8 text-center">
                       <div className="w-12 h-12 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-3">
-                          <Calendar size={24} className="text-gray-600" />
+                          <Calendar size={24} className="text-ink-4" />
                       </div>
                       <p className="text-gray-400 text-sm font-bold mb-4">Henüz onaylanmış bir maçın yok.</p>
                       <motion.button 
                         whileTap={{ scale: 0.95 }}
                         onClick={() => setActiveTab('JOBS')}
-                        className={`text-white px-6 py-2 rounded-xl text-xs font-black shadow-lg transition-all ${isRef ? 'bg-red-600 hover:bg-red-500 shadow-red-900/20' : 'bg-green-600 hover:bg-green-500 shadow-green-900/20'}`}
+                        className={`text-white px-6 py-2 rounded-xl text-xs font-extrabold shadow-lg transition-all ${isRef ? 'bg-red-600 hover:bg-red-500 shadow-red-900/20' : 'bg-green-600 hover:bg-green-500 shadow-green-900/20'}`}
                       >
                           MAÇ BUL
                       </motion.button>
@@ -1643,7 +1699,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
           <div className="px-6">
               <div className="flex items-center gap-2 mb-3">
                   <Sparkles size={16} className="text-[#FACC15]" />
-                  <h3 className="font-black text-white text-sm tracking-wide uppercase">ÖZEL TEKLİFLER</h3>
+                  <h3 className="font-extrabold text-white text-sm tracking-wide uppercase">ÖZEL TEKLİFLER</h3>
               </div>
               <div className="flex gap-3 overflow-x-auto pb-4 custom-scrollbar snap-x">
                   {offersLoading ? (
@@ -1656,17 +1712,17 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                         whileHover={{ y: -5 }}
                         className="snap-center shrink-0 w-72 bg-gradient-to-br from-yellow-900/40 to-[#161B22] border border-[#FACC15]/30 rounded-[24px] p-4 relative overflow-hidden"
                       >
-                          <div className="absolute top-0 right-0 px-2 py-1 bg-[#FACC15] text-black text-[9px] font-black rounded-bl-xl">
+                          <div className="absolute top-0 right-0 px-2 py-1 bg-[#FACC15] text-black text-[0.6875rem] font-extrabold rounded-bl-xl">
                               {offer.expiresIn} KALDI
                           </div>
                           
                           <div className="flex gap-3 mb-3">
-                              <div className="w-10 h-10 bg-[#FACC15]/10 rounded-full flex items-center justify-center text-[#FACC15] font-black border border-[#FACC15]/20">
+                              <div className="w-10 h-10 bg-[#FACC15]/10 rounded-full flex items-center justify-center text-[#FACC15] font-extrabold border border-[#FACC15]/20">
                                   {offer.captainName.charAt(0)}
                               </div>
                               <div>
                                   <h4 className="font-bold text-white text-sm">{offer.pitchName}</h4>
-                                  <p className="text-[10px] text-gray-400">{offer.teamName} • {offer.time}</p>
+                                  <p className="text-[0.6875rem] text-gray-400">{offer.teamName} • {offer.time}</p>
                                   {/* Not: sahte "centilmenlik puanı" rozeti kaldırıldı — offer nesnesinde
                                       gerçek fairplay verisi yok; uydurma güven sinyali yanıltıcıydı. */}
                               </div>
@@ -1678,19 +1734,19 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
 
                           <div className="flex items-center justify-between">
                               <div className="flex flex-col">
-                                  <span className="text-[10px] text-gray-500 uppercase font-bold">Teklif</span>
-                                  <span className="text-xl font-black text-[#FACC15]">{offer.offerAmount}₺</span>
+                                  <span className="text-[0.6875rem] text-ink-4 uppercase font-bold">Teklif</span>
+                                  <span className="text-xl font-extrabold text-[#FACC15]">{offer.offerAmount}₺</span>
                               </div>
                               <button 
                                 onClick={() => handleOpenOffer(offer)}
-                                className="bg-[#FACC15] text-black px-4 py-2 rounded-xl text-xs font-black hover:scale-105 transition-transform"
+                                className="bg-[#FACC15] text-black px-4 py-2 rounded-xl text-xs font-extrabold hover:scale-105 transition-transform"
                               >
                                   İNCELE
                               </button>
                           </div>
                       </motion.div>
                   )) : (
-                    <div className="text-gray-500 text-[10px] uppercase font-bold italic w-full text-center py-4">Bekleyen özel teklifiniz yok</div>
+                    <div className="text-ink-4 text-[0.6875rem] uppercase font-bold italic w-full text-center py-4">Bekleyen özel teklifiniz yok</div>
                   )}
               </div>
           </div>
@@ -1704,18 +1760,18 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
          {/* Header */}
          <div className="px-6 mb-2 mt-4">
             <div>
-              <h3 className="font-black text-white text-sm flex items-center gap-2">
+              <h3 className="font-extrabold text-white text-sm flex items-center gap-2">
                 {isRef ? '⚖️ HAKEM' : '🧤 KALECİ'} ARAYAN MAÇLAR
-                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${isRef ? 'bg-red-500/15 border-red-500/30 text-red-400' : 'bg-green-500/15 border-green-500/30 text-green-400'}`}>{openMatches.length}</span>
+                <span className={`text-[0.6875rem] font-bold px-2 py-0.5 rounded-full border ${isRef ? 'bg-red-500/15 border-red-500/30 text-red-400' : 'bg-green-500/15 border-green-500/30 text-green-400'}`}>{openMatches.length}</span>
               </h3>
-              <p className="text-[10px] text-gray-500 mt-0.5">Bölgendeki maçlar — başvur, oyna, kazan</p>
+              <p className="text-[0.6875rem] text-ink-4 mt-0.5">Bölgendeki maçlar — başvur, oyna, kazan</p>
             </div>
          </div>
 
          {/* Pending Applications Section */}
          {pendingApplications.length > 0 && (
              <div className="px-6 space-y-3 mb-6">
-                 <h3 className="font-black text-gray-400 text-xs flex items-center gap-2 uppercase tracking-widest">
+                 <h3 className="font-extrabold text-gray-400 text-xs flex items-center gap-2 uppercase tracking-widest">
                      <Activity size={12} className="text-yellow-500" /> BEKLEYEN BAŞVURULARIM
                  </h3>
                  {pendingApplications.map(job => (
@@ -1725,17 +1781,17 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                      >
                          <div className="p-4 flex items-center justify-between">
                              <div>
-                                 <h4 className="font-black text-white text-sm">{job.pitchName || job.location || 'Saha'}</h4>
-                                 <p className="text-[10px] text-gray-400">{[job.date, job.time].filter(Boolean).join(' • ') || 'Maç'}{job.fee != null ? ` · ${formatTRYWithSymbol(job.fee)}` : ''}</p>
+                                 <h4 className="font-extrabold text-white text-sm">{job.pitchName || job.location || 'Saha'}</h4>
+                                 <p className="text-[0.6875rem] text-gray-400">{[job.date, job.time].filter(Boolean).join(' • ') || 'Maç'}{job.fee != null ? ` · ${formatTRYWithSymbol(job.fee)}` : ''}</p>
                              </div>
                              <div className="flex items-center gap-2">
-                                 <span className="bg-yellow-500/20 text-yellow-500 text-[9px] font-black px-2 py-1 rounded-md uppercase tracking-wider">
+                                 <span className="bg-yellow-500/20 text-yellow-500 text-[0.625rem] font-extrabold px-2 py-1 rounded-md uppercase tracking-wider">
                                      Kaptan Onayı Bekleniyor
                                  </span>
                                  <button
                                      onClick={() => handleWithdrawApplication(job.requestId)}
                                      disabled={withdrawingId === job.requestId}
-                                     className="text-[9px] font-black uppercase tracking-wider text-gray-400 border border-white/10 rounded-md px-2 py-1 hover:bg-white/5 disabled:opacity-50"
+                                     className="text-[0.625rem] font-extrabold uppercase tracking-wider text-gray-400 border border-white/10 rounded-md px-2 py-1 hover:bg-white/5 disabled:opacity-50"
                                  >
                                      {withdrawingId === job.requestId ? '...' : 'Geri Çek'}
                                  </button>
@@ -1754,10 +1810,10 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
             {openMatches.length === 0 && (
               <div className="bg-[#161B22] border border-dashed border-white/10 rounded-[24px] p-8 text-center">
                 <div className="w-12 h-12 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-3">
-                  <Search size={22} className="text-gray-600" />
+                  <Search size={22} className="text-ink-4" />
                 </div>
                 <p className="text-gray-400 text-sm font-bold">Şu an {isRef ? 'hakem' : 'kaleci'} arayan açık maç yok.</p>
-                <p className="text-gray-600 text-[11px] mt-1">Yeni maçlar açıldığında burada listelenecek.</p>
+                <p className="text-ink-4 text-[0.6875rem] mt-1">Yeni maçlar açıldığında burada listelenecek.</p>
               </div>
             )}
             {openMatches.map(job => (
@@ -1772,18 +1828,18 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                         <div className="flex items-center gap-3">
                           {/* Date box */}
                           <div className="w-12 shrink-0 bg-[#0A0E14] rounded-xl py-2 text-center border border-white/5">
-                            <p className="text-[8px] text-gray-500 font-bold uppercase">{job.date ? (job.date.includes('-') ? job.date.slice(5).replace('-', '/') : job.date) : '—'}</p>
-                            <p className="text-xs font-black text-white">{job.time || '—'}</p>
+                            <p className="text-[0.6875rem] text-ink-4 font-bold uppercase">{job.date ? (job.date.includes('-') ? job.date.slice(5).replace('-', '/') : job.date) : '—'}</p>
+                            <p className="text-xs font-extrabold text-white">{job.time || '—'}</p>
                           </div>
                           <div>
-                            <h4 className="font-black text-white text-sm">{job.pitchName}</h4>
-                            <p className="text-[10px] text-gray-400 mt-0.5">{job.captainName ? `Kpt: ${job.captainName} • ` : ''}<span className={isRef ? 'text-red-400' : 'text-green-400'}>{job.players} oyuncu</span></p>
+                            <h4 className="font-extrabold text-white text-sm">{job.pitchName}</h4>
+                            <p className="text-[0.6875rem] text-gray-400 mt-0.5">{job.captainName ? `Kpt: ${job.captainName} • ` : ''}<span className={isRef ? 'text-red-400' : 'text-green-400'}>{job.players} oyuncu</span></p>
                           </div>
                         </div>
                         <div className="text-right shrink-0">
                           {/* Gerçek fiyat yoksa uydurma 250/350 değil "Standart ücret". */}
-                          <p className="text-lg font-black text-white">{job.fee != null ? formatTRYWithSymbol(job.fee) : 'Standart'}</p>
-                          <p className="text-[9px] text-gray-500">maç başı</p>
+                          <p className="text-lg font-extrabold text-white">{job.fee != null ? formatTRYWithSymbol(job.fee) : 'Standart'}</p>
+                          <p className="text-[0.6875rem] text-ink-4">maç başı</p>
                         </div>
                       </div>
 
@@ -1791,21 +1847,21 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                         <div className="flex items-center gap-2">
                           <div className={`flex items-center gap-1 px-2 py-1 rounded-lg border ${isRef ? 'bg-red-500/10 border-red-500/20' : 'bg-green-500/10 border-green-500/20'}`}>
                             <div className={`w-1.5 h-1.5 rounded-full animate-pulse ${isRef ? 'bg-red-400' : 'bg-green-400'}`} />
-                            <span className={`text-[9px] font-black ${isRef ? 'text-red-400' : 'text-green-400'}`}>{job.missing} Aranıyor</span>
+                            <span className={`text-[0.6875rem] font-extrabold ${isRef ? 'text-red-400' : 'text-green-400'}`}>{job.missing} Aranıyor</span>
                           </div>
-                          <div className="flex items-center gap-1 text-[9px] text-gray-500">
+                          <div className="flex items-center gap-1 text-[0.6875rem] text-ink-4">
                             <MapPin size={9} /> {job.location}
                           </div>
                         </div>
                         {appliedMatchIds.has(job.id) ? (
-                          <span className={`px-4 py-1.5 rounded-xl text-[10px] font-black flex items-center gap-1 border ${isRef ? 'text-red-400 bg-red-500/10 border-red-500/30' : 'text-green-400 bg-green-500/10 border-green-500/30'}`}>
+                          <span className={`px-4 py-1.5 rounded-xl text-[0.6875rem] font-extrabold flex items-center gap-1 border ${isRef ? 'text-red-400 bg-red-500/10 border-red-500/30' : 'text-green-400 bg-green-500/10 border-green-500/30'}`}>
                             <Check size={11} /> Başvuruldu
                           </span>
                         ) : (
                           <motion.button
                             whileTap={{ scale: 0.94 }}
                             onClick={() => handleOpenBid(job as any)}
-                            className={`px-4 py-1.5 rounded-xl text-[10px] font-black transition-colors ${isRef ? 'text-white bg-red-500 hover:bg-red-400 shadow-[0_0_12px_rgba(239,68,68,0.4)]' : 'text-black bg-green-400 hover:bg-green-300 shadow-[0_0_12px_rgba(34,197,94,0.4)]'}`}
+                            className={`px-4 py-1.5 rounded-xl text-[0.6875rem] font-extrabold transition-colors ${isRef ? 'text-white bg-red-500 hover:bg-red-400 shadow-[0_0_12px_rgba(239,68,68,0.4)]' : 'text-black bg-green-400 hover:bg-green-300 shadow-[0_0_12px_rgba(34,197,94,0.4)]'}`}
                           >
                             BAŞVUR
                           </motion.button>
@@ -1830,22 +1886,22 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
           <div className="bg-gradient-to-br from-gray-800 to-[#161B22] p-6 rounded-[32px] border border-white/10 relative overflow-hidden">
               <div className="absolute top-0 right-0 p-6 opacity-5"><Wallet size={120} /></div>
               <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Toplam Kazanç</p>
-              <h2 className="text-4xl font-black text-white mt-2">{earningsBalance + reservedBalance}₺</h2>
+              <h2 className="text-4xl font-extrabold text-white mt-2">{earningsBalance + reservedBalance}₺</h2>
 
               <div className="mt-6 flex gap-4">
                   <div className="flex-1">
-                      <p className="text-[10px] text-gray-500 uppercase font-bold">Çekilebilir</p>
+                      <p className="text-[0.6875rem] text-ink-4 uppercase font-bold">Çekilebilir</p>
                       <p className="text-xl font-bold text-green-400">{earningsBalance}₺</p>
                   </div>
                   <div className="flex-1 border-l border-white/10 pl-4">
-                      <p className="text-[10px] text-gray-500 uppercase font-bold">Çekim Bekleyen</p>
+                      <p className="text-[0.6875rem] text-ink-4 uppercase font-bold">Çekim Bekleyen</p>
                       <p className="text-xl font-bold text-gray-300">{reservedBalance}₺</p>
                   </div>
               </div>
 
               {pendingPayout && (
                   <div className="mt-4 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-xl">
-                      <p className="text-[10px] text-yellow-400 font-bold">
+                      <p className="text-[0.6875rem] text-yellow-400 font-bold">
                           {pendingPayout.amount}₺ tutarındaki çekim talebin işleniyor ({pendingPayout.iban}).
                           Sonuçlanınca bildirim alacaksın.
                       </p>
@@ -1864,14 +1920,14 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                           <div className="flex gap-2">
                               <button
                                   onClick={() => { if (!guardGuest()) return; setShowCardOptions(true); }}
-                                  className="flex-1 py-3 bg-[#161B22] border border-white/10 text-white rounded-2xl font-black text-sm shadow-lg hover:bg-white/5 transition-all active:scale-95 flex items-center justify-center gap-2"
+                                  className="flex-1 py-3 bg-[#161B22] border border-white/10 text-white rounded-2xl font-extrabold text-sm shadow-lg hover:bg-white/5 transition-all active:scale-95 flex items-center justify-center gap-2"
                               >
                                   <CreditCard size={18} /> {methodLabel}
                               </button>
                               <button
                                 onClick={handleTransfer}
                                 disabled={isTransferring || !!pendingPayout || earningsBalance <= 0}
-                                className={`flex-1 py-3 ${isTransferring || !!pendingPayout || earningsBalance <= 0 ? 'bg-gray-600 opacity-50 cursor-not-allowed' : 'bg-[#34C759] hover:bg-[#2dbb4f]'} text-white rounded-2xl font-black text-sm shadow-lg shadow-green-900/20 transition-all active:scale-95 flex items-center justify-center gap-2`}
+                                className={`flex-1 py-3 ${isTransferring || !!pendingPayout || earningsBalance <= 0 ? 'bg-gray-600 opacity-50 cursor-not-allowed' : 'bg-[#34C759] hover:bg-[#2dbb4f]'} text-white rounded-2xl font-extrabold text-sm shadow-lg shadow-green-900/20 transition-all active:scale-95 flex items-center justify-center gap-2`}
                               >
                                   {isTransferring ? (
                                       <RefreshCcw size={18} className="animate-spin" />
@@ -1886,7 +1942,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                       );
                   })()}
                   {identityStatus !== 'VERIFIED' && (
-                      <p className="text-center text-[9px] font-bold text-yellow-500/80 uppercase tracking-widest">
+                      <p className="text-center text-[0.625rem] font-bold text-yellow-500/80 uppercase tracking-widest">
                           İlk çekim öncesi TC kimlik doğrulaması gerekir
                       </p>
                   )}
@@ -1900,7 +1956,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                         exit={{ opacity: 0, y: -10 }}
                         className="mt-4 p-3 bg-green-500/10 border border-green-500/30 rounded-xl text-center"
                       >
-                          <p className="text-[10px] text-green-400 font-bold">Çekim talebin alındı — finans onayından sonra hesabına geçecek.</p>
+                          <p className="text-[0.6875rem] text-green-400 font-bold">Çekim talebin alındı — finans onayından sonra hesabına geçecek.</p>
                       </motion.div>
                   )}
               </AnimatePresence>
@@ -1913,18 +1969,18 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
               ) : walletHistoryError ? (
                   <ErrorState message={walletHistoryError} onRetry={fetchWalletHistory} />
               ) : walletHistory.length === 0 ? (
-                  <div className="text-center py-6 text-gray-500 text-xs font-bold uppercase tracking-widest">Henüz işlem yok</div>
+                  <div className="text-center py-6 text-ink-4 text-xs font-bold uppercase tracking-widest">Henüz işlem yok</div>
               ) : (
               <div className="space-y-3">
                   {walletHistory.map((tx) => (
                       <div key={tx.id} className="bg-[#161B22] border border-white/5 p-4 rounded-2xl flex items-center justify-between">
                           <div>
                               <p className="font-bold text-sm text-white">{tx.description}</p>
-                              <p className="text-[10px] text-gray-500">{tx.date}</p>
+                              <p className="text-[0.6875rem] text-ink-4">{tx.date}</p>
                           </div>
                           <div className={`text-right ${tx.amount > 0 ? 'text-white' : 'text-red-400'}`}>
-                              <p className="font-black text-sm">{tx.amount > 0 ? '+' : ''}{tx.amount}₺</p>
-                              <p className={`text-[9px] font-bold ${tx.status === 'CLEARED' ? 'text-green-500' : 'text-yellow-500'}`}>
+                              <p className="font-extrabold text-sm">{tx.amount > 0 ? '+' : ''}{tx.amount}₺</p>
+                              <p className={`text-[0.6875rem] font-bold ${tx.status === 'CLEARED' ? 'text-green-500' : 'text-yellow-500'}`}>
                                   {tx.status === 'CLEARED' ? 'Onaylandı' : 'Bekliyor'}
                               </p>
                           </div>
@@ -1951,20 +2007,20 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                   <div className="w-10 h-10 bg-white/5 rounded-full flex items-center justify-center text-gray-400 group-hover:text-[#FACC15] transition-colors"><User size={20} /></div>
                   <div className="text-left">
                     <span className="font-bold text-white block">Profilim</span>
-                    <span className="text-[10px] text-gray-500">Fotoğraf, açıklama ve tercihler</span>
+                    <span className="text-[0.6875rem] text-ink-4">Fotoğraf, açıklama ve tercihler</span>
                   </div>
               </div>
-              <ChevronRight size={20} className="text-gray-600 group-hover:translate-x-1 transition-transform" />
+              <ChevronRight size={20} className="text-ink-4 group-hover:translate-x-1 transition-transform" />
           </button>
           <button onClick={() => setActiveTab('SETTINGS_VIEW')} className="w-full bg-[#161B22] border border-white/5 p-4 rounded-2xl flex items-center justify-between group hover:border-[#FACC15]/30 transition-all">
               <div className="flex items-center gap-4">
                   <div className="w-10 h-10 bg-white/5 rounded-full flex items-center justify-center text-gray-400 group-hover:text-[#FACC15] transition-colors"><Settings size={20} /></div>
                   <div className="text-left">
                     <span className="font-bold text-white block">Ayarlar</span>
-                    <span className="text-[10px] text-gray-500">Bildirim, gizlilik ve hesap</span>
+                    <span className="text-[0.6875rem] text-ink-4">Bildirim, gizlilik ve hesap</span>
                   </div>
               </div>
-              <ChevronRight size={20} className="text-gray-600 group-hover:translate-x-1 transition-transform" />
+              <ChevronRight size={20} className="text-ink-4 group-hover:translate-x-1 transition-transform" />
           </button>
           {/* F3e: alert() yerine gerçek kanal — Ayarlar'daki çalışan Destek
               bölümüne (SSS / Canlı Destek / Hata Bildir, mailto) yönlendirir. */}
@@ -1973,10 +2029,10 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                   <div className="w-10 h-10 bg-white/5 rounded-full flex items-center justify-center text-gray-400 group-hover:text-[#FACC15] transition-colors"><MessageSquare size={20} /></div>
                   <div className="text-left">
                     <span className="font-bold text-white block">Destek</span>
-                    <span className="text-[10px] text-gray-500">SSS, canlı destek ve hata bildirimi</span>
+                    <span className="text-[0.6875rem] text-ink-4">SSS, canlı destek ve hata bildirimi</span>
                   </div>
               </div>
-              <ChevronRight size={20} className="text-gray-600 group-hover:translate-x-1 transition-transform" />
+              <ChevronRight size={20} className="text-ink-4 group-hover:translate-x-1 transition-transform" />
           </button>
           <button onClick={() => (onLogout ?? onBack)()} className="w-full bg-red-500/10 border border-red-500/20 p-4 rounded-2xl flex items-center justify-between group hover:bg-red-500/20 transition-all mt-8">
               <div className="flex items-center gap-4">
@@ -1986,7 +2042,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
               <ChevronRight size={20} className="text-red-500 group-hover:translate-x-1 transition-transform" />
           </button>
           <div className="pt-8 text-center">
-              <p className="text-[10px] text-gray-600 font-bold uppercase tracking-widest">OYNA v{APP_VERSION}</p>
+              <p className="text-[0.625rem] text-ink-4 font-bold uppercase tracking-widest">OYNA v{APP_VERSION}</p>
           </div>
       </motion.div>
   );
@@ -2017,8 +2073,8 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
              (Profil/Ayarlar) bulunur; onlar kendi başlıklarında taşır. */}
          <div className="flex items-center gap-3">
              <div>
-                 <h1 className="font-black text-white text-lg leading-none">{isRef ? 'HAKEM' : 'KALECİ'}</h1>
-                 <p className="text-[10px] text-gray-400 font-bold tracking-widest uppercase mt-1">
+                 <h1 className="font-extrabold text-white text-lg leading-none">{isRef ? 'HAKEM' : 'KALECİ'}</h1>
+                 <p className="text-[0.625rem] text-gray-400 font-bold tracking-widest uppercase mt-1">
                     {activeTab === 'HOME' && 'Ana Sayfa'}
                     {activeTab === 'JOBS' && 'Maç Bul'}
                     {activeTab === 'WALLET' && 'Cüzdan'}
@@ -2049,74 +2105,74 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
       <nav className="fixed bottom-0 left-0 w-full bg-[#0A0E14]/95 backdrop-blur-2xl border-t border-white/5 pb-8 pt-4 px-4 flex justify-between items-center z-30">
          <button 
             onClick={() => setActiveTab('HOME')}
-            className={`flex flex-col items-center gap-1.5 transition-all ${activeTab === 'HOME' ? 'text-[#FACC15] scale-110' : 'text-gray-500 hover:text-gray-300'}`}
+            className={`flex flex-col items-center gap-1.5 transition-all ${activeTab === 'HOME' ? 'text-[#FACC15] scale-110' : 'text-ink-4 hover:text-gray-300'}`}
          >
             <div className={`p-1 rounded-lg ${activeTab === 'HOME' ? 'bg-[#FACC15]/10' : ''}`}>
                 <List size={20} />
             </div>
-            <span className="text-[9px] font-black uppercase tracking-tighter">Ana Sayfa</span>
+            <span className="text-[0.625rem] font-extrabold uppercase tracking-tighter">Ana Sayfa</span>
          </button>
 
          <button
             onClick={() => setActiveTab('JOBS')}
-            className={`flex flex-col items-center gap-1.5 transition-all ${activeTab === 'JOBS' ? 'text-[#FACC15] scale-110' : 'text-gray-500 hover:text-gray-300'}`}
+            className={`flex flex-col items-center gap-1.5 transition-all ${activeTab === 'JOBS' ? 'text-[#FACC15] scale-110' : 'text-ink-4 hover:text-gray-300'}`}
          >
             <div className={`p-1 rounded-lg ${activeTab === 'JOBS' ? 'bg-[#FACC15]/10' : ''}`}>
                 <Search size={20} />
             </div>
-            <span className="text-[9px] font-black uppercase tracking-tighter">Maç Bul</span>
+            <span className="text-[0.625rem] font-extrabold uppercase tracking-tighter">Maç Bul</span>
          </button>
 
          <button
             onClick={() => setActiveTab('WALLET')}
-            className={`flex flex-col items-center gap-1.5 transition-all ${activeTab === 'WALLET' ? 'text-[#FACC15] scale-110' : 'text-gray-500 hover:text-gray-300'}`}
+            className={`flex flex-col items-center gap-1.5 transition-all ${activeTab === 'WALLET' ? 'text-[#FACC15] scale-110' : 'text-ink-4 hover:text-gray-300'}`}
          >
             <div className={`p-1 rounded-lg ${activeTab === 'WALLET' ? 'bg-[#FACC15]/10' : ''}`}>
                 <Wallet size={20} />
             </div>
-            <span className="text-[9px] font-black uppercase tracking-tighter">Cüzdan</span>
+            <span className="text-[0.625rem] font-extrabold uppercase tracking-tighter">Cüzdan</span>
          </button>
 
          <button
             onClick={() => setActiveTab('MENU')}
-            className={`flex flex-col items-center gap-1.5 transition-all ${activeTab === 'MENU' ? 'text-[#FACC15] scale-110' : 'text-gray-500 hover:text-gray-300'}`}
+            className={`flex flex-col items-center gap-1.5 transition-all ${activeTab === 'MENU' ? 'text-[#FACC15] scale-110' : 'text-ink-4 hover:text-gray-300'}`}
          >
             <div className={`p-1 rounded-lg ${activeTab === 'MENU' ? 'bg-[#FACC15]/10' : ''}`}>
                 <PlusCircle size={20} />
             </div>
-            <span className="text-[9px] font-black uppercase tracking-tighter">Menü</span>
+            <span className="text-[0.625rem] font-extrabold uppercase tracking-tighter">Menü</span>
          </button>
       </nav>
 
       {/* BID / OFFER MODAL */}
       {(selectedJob || selectedOffer) && (
-          <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center animate-in fade-in duration-200">
-              <div className="bg-[#161B22] w-full max-w-md rounded-t-[32px] sm:rounded-[32px] border-t sm:border border-white/10 p-6 shadow-2xl relative animate-in slide-in-from-bottom duration-300">
+          <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-end justify-center animate-in fade-in duration-200">
+              <div className="bg-[#161B22] w-full max-w-md rounded-t-[32px] border-t border-white/10 p-6 shadow-2xl relative animate-in slide-in-from-bottom duration-300">
                    {showBidSuccess ? (
                        <div className="py-12 flex flex-col items-center text-center">
                            <div className="w-20 h-20 bg-green-500 rounded-full flex items-center justify-center mb-6 shadow-[0_0_40px_rgba(34,197,94,0.4)]">
                                <Check size={40} className="text-white" />
                            </div>
-                           <h3 className="text-2xl font-black text-white">TEKLİF GÖNDERİLDİ!</h3>
+                           <h3 className="text-2xl font-extrabold text-white">TEKLİF GÖNDERİLDİ!</h3>
                            <p className="text-gray-400 mt-2">Kaptan onayladığında bildirim alacaksın.</p>
                        </div>
                    ) : (
                        <>
                            <button 
                             onClick={() => { setSelectedJob(null); setSelectedOffer(null); }}
-                            className="absolute top-4 right-4 text-gray-500 hover:text-white"
+                            className="absolute top-4 right-4 text-ink-4 hover:text-white"
                            >
                                <X size={20} />
                            </button>
 
                            <div className="text-center mb-6">
                                <p className="text-xs font-bold text-blue-400 uppercase tracking-widest mb-1">{selectedOffer ? 'ÖZEL DAVET' : (isRef ? 'HAKEMLİK FIRSATI' : 'KALECİLİK FIRSATI')}</p>
-                               <h3 className="text-xl font-black text-white">{selectedOffer ? selectedOffer.pitchName : selectedJob?.pitchName}</h3>
+                               <h3 className="text-xl font-extrabold text-white">{selectedOffer ? selectedOffer.pitchName : selectedJob?.pitchName}</h3>
                                <p className="text-gray-400 text-sm mt-1">{selectedOffer ? selectedOffer.time : selectedJob?.time}</p>
                            </div>
 
                            <div className="bg-[#0A0E14] border border-white/5 rounded-2xl p-4 mb-4">
-                               <h4 className="text-xs font-bold text-gray-500 uppercase mb-2">Kaptana Gidecek Kartın</h4>
+                               <h4 className="text-xs font-bold text-ink-4 uppercase mb-2">Kaptana Gidecek Kartın</h4>
                                {/* HR-E: kaptana gidecek kart artık GERÇEK kimlik — sabit
                                    "Cüneyt (FIFA) 4.9/150" / "Volkan (Panter)" ve yabancı
                                    stok foto değil. Veri yoksa "—". */}
@@ -2130,7 +2186,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                                        <p className="text-sm font-bold text-white">
                                          {idFirstName || '—'}{(isRef ? idLevel : idStyle) ? ` (${(isRef ? idLevel : idStyle)!.toLocaleUpperCase('tr-TR')})` : ''}
                                        </p>
-                                       <p className={`text-[10px] ${isRef ? 'text-red-400' : 'text-green-400'}`}>
+                                       <p className={`text-[0.6875rem] ${isRef ? 'text-red-400' : 'text-green-400'}`}>
                                          Puan: {idRatingText} • Maç: {typeof userProfile?.matchesPlayed === 'number' ? userProfile.matchesPlayed : '—'}
                                        </p>
                                    </div>
@@ -2141,19 +2197,19 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                                {/* F3b: "Karşı Teklifin" alanı kaldırıldı — değeri hiçbir payload'a
                                    girmiyordu ve model pazarlıksız sabit ücret. Tutar salt-okunur. */}
                                <div className="bg-[#0A0E14] p-4 rounded-2xl border border-white/5">
-                                   <label className="text-xs text-gray-500 font-bold uppercase block mb-2">Hizmet Ücreti</label>
+                                   <label className="text-xs text-ink-4 font-bold uppercase block mb-2">Hizmet Ücreti</label>
                                    <div className="flex items-center gap-2">
-                                       <span className="text-2xl font-black text-[#FACC15]">₺</span>
-                                       <span className="text-3xl font-black text-white">
+                                       <span className="text-2xl font-extrabold text-[#FACC15]">₺</span>
+                                       <span className="text-3xl font-extrabold text-white">
                                            {selectedOffer ? selectedOffer.offerAmount : (selectedJob?.offeredFee ?? '—')}
                                        </span>
                                    </div>
-                                   <p className="text-[10px] text-gray-500 font-bold mt-2">Sabit ücret · pazarlık yok · %10 platform komisyonu bedele dahildir</p>
+                                   <p className="text-[0.6875rem] text-ink-4 font-bold mt-2">Sabit ücret · pazarlık yok · %10 platform komisyonu bedele dahildir</p>
                                </div>
 
                                <button 
                                 onClick={submitBid}
-                                className="w-full py-4 bg-[#FACC15] text-black font-black text-lg rounded-2xl hover:bg-yellow-300 transition-colors shadow-lg shadow-yellow-900/20"
+                                className="w-full py-4 bg-[#FACC15] text-black font-extrabold text-lg rounded-2xl hover:bg-yellow-300 transition-colors shadow-lg shadow-yellow-900/20"
                                >
                                    {selectedOffer ? 'DAVETİ KABUL ET' : 'TEKLİFİ GÖNDER'}
                                </button>
@@ -2169,11 +2225,11 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
 
       {/* UPCOMING MATCH DETAIL MODAL */}
       {selectedUpcomingJob && (
-          <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-sm flex items-end sm:items-center justify-center animate-in fade-in duration-200">
-              <div className="bg-[#161B22] w-full max-w-md h-[85vh] sm:h-auto rounded-t-[32px] sm:rounded-[32px] border-t sm:border border-white/10 p-0 shadow-2xl relative flex flex-col overflow-hidden animate-in slide-in-from-bottom duration-300">
+          <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-sm flex items-end justify-center animate-in fade-in duration-200">
+              <div className="bg-[#161B22] w-full max-w-md h-[85vh] rounded-t-[32px] border-t border-white/10 p-0 shadow-2xl relative flex flex-col overflow-hidden animate-in slide-in-from-bottom duration-300">
                   {/* Header */}
                   <div className="p-6 border-b border-white/5 flex justify-between items-center bg-[#0A0E14]">
-                      <h3 className="text-lg font-black text-white uppercase tracking-wide">Maç Detayı</h3>
+                      <h3 className="text-lg font-extrabold text-white uppercase tracking-wide">Maç Detayı</h3>
                       <button onClick={() => setSelectedUpcomingJob(null)} className="p-2 bg-white/5 rounded-full text-gray-400 hover:text-white">
                           <X size={20} />
                       </button>
@@ -2186,7 +2242,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                           "Takım Dizilişi (2-3-1)" maketi vardı — üçü de kaldırıldı.
                           Yol tarifi artık gerçekten açılır (adres sorgulu harita linki). */}
                       <div className="text-center">
-                          <h2 className="text-2xl font-black text-white mb-1">{selectedUpcomingJob.title || 'Maç'}</h2>
+                          <h2 className="text-2xl font-extrabold text-white mb-1">{selectedUpcomingJob.title || 'Maç'}</h2>
                           <p className="text-gray-400 text-sm">{selectedUpcomingJob.date} • {selectedUpcomingJob.time}</p>
                       </div>
 
@@ -2201,12 +2257,12 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                           {selectedUpcomingJob.location ? (
                             <button
                               onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selectedUpcomingJob.location!)}`, '_blank', 'noopener')}
-                              className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-black text-xs flex items-center justify-center gap-2 transition-colors"
+                              className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-extrabold text-xs flex items-center justify-center gap-2 transition-colors"
                             >
                               <Navigation size={16} /> YOL TARİFİ AL
                             </button>
                           ) : (
-                            <button disabled className="w-full py-3 bg-white/5 text-gray-500 rounded-xl font-black text-xs flex items-center justify-center gap-2">
+                            <button disabled className="w-full py-3 bg-white/5 text-ink-4 rounded-xl font-extrabold text-xs flex items-center justify-center gap-2">
                               <Navigation size={16} /> KONUM GİRİLMEMİŞ
                             </button>
                           )}
@@ -2218,16 +2274,16 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
 
       {/* HOURS SETTING MODAL */}
       {showOnlineSetupModal && (
-          <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center animate-in fade-in duration-200">
-              <div className="bg-[#161B22] w-full max-w-md rounded-t-[32px] sm:rounded-[32px] border-t sm:border border-white/10 p-6 shadow-2xl relative animate-in slide-in-from-bottom duration-300 max-h-[90vh] overflow-y-auto custom-scrollbar">
+          <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-end justify-center animate-in fade-in duration-200">
+              <div className="bg-[#161B22] w-full max-w-md rounded-t-[32px] border-t border-white/10 p-6 shadow-2xl relative animate-in slide-in-from-bottom duration-300 max-h-[90vh] overflow-y-auto custom-scrollbar">
                   <div className="flex justify-between items-center mb-6">
-                      <h3 className="text-xl font-black text-white uppercase tracking-wide">AKTİFLİK AYARLARI</h3>
+                      <h3 className="text-xl font-extrabold text-white uppercase tracking-wide">AKTİFLİK AYARLARI</h3>
                       <button onClick={() => setShowOnlineSetupModal(false)} className="p-2 bg-white/5 rounded-full text-gray-400 hover:text-white"><X size={20} /></button>
                   </div>
                   
                   <div className="space-y-6 mb-8">
                       <div>
-                          <p className="text-[10px] text-gray-400 font-bold uppercase mb-3">Hangi Günler Aktifsin?</p>
+                          <p className="text-[0.6875rem] text-gray-400 font-bold uppercase mb-3">Hangi Günler Aktifsin?</p>
                           <div className="flex flex-wrap gap-2">
                               {DAYS.map(day => (
                                   <button 
@@ -2248,10 +2304,10 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                       </div>
                       <div>
                           <div className="flex items-center justify-between mb-3">
-                              <p className="text-[10px] text-gray-400 font-bold uppercase">Hangi Saat Aralığı?</p>
+                              <p className="text-[0.6875rem] text-gray-400 font-bold uppercase">Hangi Saat Aralığı?</p>
                               <button
                                 onClick={() => setSetupHours(setupHours.length === 24 ? [] : ALL_HOURS)}
-                                className="text-[10px] font-black px-2 py-1 rounded-lg border transition-all bg-white/5 text-gray-400 border-white/10"
+                                className="text-[0.6875rem] font-extrabold px-2 py-1 rounded-lg border transition-all bg-white/5 text-gray-400 border-white/10"
                               >
                                 {setupHours.length === 24 ? 'Temizle' : 'Tümü'}
                               </button>
@@ -2281,7 +2337,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
 
                   <button 
                     onClick={handleSaveOnlineSetup}
-                    className="w-full py-4 text-black font-black text-sm rounded-2xl transition-colors shadow-lg uppercase tracking-wider flex items-center justify-center gap-2"
+                    className="w-full py-4 text-black font-extrabold text-sm rounded-2xl transition-colors shadow-lg uppercase tracking-wider flex items-center justify-center gap-2"
                     style={{ background: isRef ? '#ef4444' : '#22c55e' }}
                   >
                       Sistemde Aktif Ol
@@ -2301,14 +2357,14 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                   <div className="w-10 h-1 bg-white/20 rounded-full mx-auto mb-5" />
                   <div className="flex justify-between items-center mb-5">
                       <div>
-                          <h3 className="text-xl font-black text-white">Ödeme Yöntemlerim</h3>
-                          <p className="text-[10px] text-gray-500 mt-0.5">Kazancın varsayılan yönteme aktarılır</p>
+                          <h3 className="text-xl font-extrabold text-white">Ödeme Yöntemlerim</h3>
+                          <p className="text-[0.6875rem] text-ink-4 mt-0.5">Kazancın varsayılan yönteme aktarılır</p>
                       </div>
                       <button onClick={() => setShowCardOptions(false)} className="p-2 bg-white/5 rounded-xl text-gray-400"><X size={18} /></button>
                   </div>
                   <div className="space-y-3 mb-4 max-h-[40vh] overflow-y-auto">
                       {payoutMethods.length === 0 ? (
-                          <p className="text-center py-6 text-gray-500 text-xs font-bold uppercase tracking-widest">
+                          <p className="text-center py-6 text-ink-4 text-xs font-bold uppercase tracking-widest">
                               Henüz kayıtlı yöntem yok
                           </p>
                       ) : payoutMethods.map(m => (
@@ -2324,14 +2380,14 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                                   <p className="font-mono text-sm text-white">
                                       {m.kind === 'IBAN' ? `${m.iban?.slice(0, 4)} •••• ${m.iban?.slice(-4)}` : `${m.cardBrand ?? 'KART'} **** ${m.cardLast4}`}
                                   </p>
-                                  <p className="text-[10px] text-gray-500">{m.holderName}{m.isDefault ? ' · Varsayılan' : ' · Varsayılan yap'}</p>
+                                  <p className="text-[0.6875rem] text-ink-4">{m.holderName}{m.isDefault ? ' · Varsayılan' : ' · Varsayılan yap'}</p>
                               </button>
                               <button
                                   onClick={async () => {
                                       try { await deletePayoutMethod(m.id); await fetchPayoutData(); }
                                       catch (err: any) { showActionError(err?.message || 'Yöntem silinemedi.'); }
                                   }}
-                                  className="p-2 bg-white/5 rounded-xl text-gray-500 hover:text-red-400 transition-colors"
+                                  className="p-2 bg-white/5 rounded-xl text-ink-4 hover:text-red-400 transition-colors"
                               >
                                   <X size={14} />
                               </button>
@@ -2340,7 +2396,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                   </div>
                   <button
                       onClick={() => { setShowCardOptions(false); setShowAddCard(true); }}
-                      className="w-full py-4 rounded-2xl border border-green-500/30 bg-green-500/10 text-green-400 font-black text-sm flex items-center justify-center gap-2 hover:bg-green-500/15 transition-all"
+                      className="w-full py-4 rounded-2xl border border-green-500/30 bg-green-500/10 text-green-400 font-extrabold text-sm flex items-center justify-center gap-2 hover:bg-green-500/15 transition-all"
                   >
                       <PlusCircle size={20} />
                       YENİ YÖNTEM EKLE (IBAN / KART)
@@ -2359,26 +2415,26 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
               >
                   <div className="w-10 h-1 bg-white/20 rounded-full mx-auto" />
                   <div className="flex justify-between items-center">
-                      <h3 className="text-xl font-black text-white">Yeni Ödeme Yöntemi</h3>
+                      <h3 className="text-xl font-extrabold text-white">Yeni Ödeme Yöntemi</h3>
                       <button onClick={() => setShowAddCard(false)} className="p-2 bg-white/5 rounded-xl text-gray-400"><X size={18} /></button>
                   </div>
                   <div className="bg-[#0A0E14] p-1.5 rounded-2xl flex border border-white/5">
                       <button
                           onClick={() => setNewMethodKind('IBAN')}
-                          className={`flex-1 py-3 text-[11px] font-black rounded-xl transition-all ${newMethodKind === 'IBAN' ? 'bg-green-500 text-black' : 'text-gray-500'}`}
+                          className={`flex-1 py-3 text-[0.6875rem] font-extrabold rounded-xl transition-all ${newMethodKind === 'IBAN' ? 'bg-green-500 text-black' : 'text-ink-4'}`}
                       >
                           IBAN
                       </button>
                       <button
                           onClick={() => setNewMethodKind('CARD')}
-                          className={`flex-1 py-3 text-[11px] font-black rounded-xl transition-all ${newMethodKind === 'CARD' ? 'bg-blue-500 text-white' : 'text-gray-500'}`}
+                          className={`flex-1 py-3 text-[0.6875rem] font-extrabold rounded-xl transition-all ${newMethodKind === 'CARD' ? 'bg-blue-500 text-white' : 'text-ink-4'}`}
                       >
                           BANKA KARTI
                       </button>
                   </div>
                   {newMethodKind === 'IBAN' ? (
                       <div>
-                          <p className="text-[10px] font-black uppercase tracking-widest text-green-400 mb-1.5">IBAN</p>
+                          <p className="text-[0.625rem] font-extrabold uppercase tracking-widest text-green-400 mb-1.5">IBAN</p>
                           <input
                               value={newIban}
                               onChange={e => setNewIban(e.target.value)}
@@ -2388,7 +2444,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                       </div>
                   ) : (
                       <div>
-                          <p className="text-[10px] font-black uppercase tracking-widest text-blue-400 mb-1.5">Kart Numarası</p>
+                          <p className="text-[0.625rem] font-extrabold uppercase tracking-widest text-blue-400 mb-1.5">Kart Numarası</p>
                           <input
                               value={newCardNo}
                               onChange={e => setNewCardNo(e.target.value)}
@@ -2396,11 +2452,11 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                               inputMode="numeric"
                               className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white font-mono text-sm outline-none focus:border-blue-500/50 transition-colors"
                           />
-                          <p className="text-[9px] text-gray-500 mt-1">Güvenlik: yalnız son 4 hane saklanır.</p>
+                          <p className="text-[0.6875rem] text-ink-4 mt-1">Güvenlik: yalnız son 4 hane saklanır.</p>
                       </div>
                   )}
                   <div>
-                      <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1.5">Hesap / Kart Sahibi</p>
+                      <p className="text-[0.625rem] font-extrabold uppercase tracking-widest text-gray-400 mb-1.5">Hesap / Kart Sahibi</p>
                       <input
                           value={newCardHolder}
                           onChange={e => setNewCardHolder(e.target.value)}
@@ -2429,7 +2485,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                               setAddingMethod(false);
                           }
                       }}
-                      className="w-full py-4 rounded-2xl font-black text-white text-sm disabled:opacity-40 bg-blue-600 hover:bg-blue-500 transition-colors"
+                      className="w-full py-4 rounded-2xl font-extrabold text-white text-sm disabled:opacity-40 bg-blue-600 hover:bg-blue-500 transition-colors"
                   >
                       {addingMethod ? 'KAYDEDİLİYOR...' : 'YÖNTEMİ KAYDET'}
                   </button>
@@ -2443,22 +2499,22 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
         {cancelPreview && (
             <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-6" onClick={() => setCancelPreview(null)}>
                 <div className="bg-[#161B22] border border-white/10 rounded-[24px] p-6 w-full max-w-sm" onClick={e => e.stopPropagation()}>
-                    <h3 className="text-white font-black text-base mb-2">İşi bırakmak üzeresin</h3>
+                    <h3 className="text-white font-extrabold text-base mb-2">İşi bırakmak üzeresin</h3>
                     <p className="text-xs text-gray-400 leading-relaxed mb-4">
                         {cancelPreview.penalty > 0 ? (
                             <>Maça {cancelPreview.hoursLeft != null ? `${cancelPreview.hoursLeft} saat` : 'az süre'} kaldığı için{' '}
-                            <span className="text-red-400 font-black">{cancelPreview.penalty}₺ geç iptal cezası</span> kesilecek
+                            <span className="text-red-400 font-extrabold">{cancelPreview.penalty}₺ geç iptal cezası</span> kesilecek
                             ve kaptana tazminat olarak aktarılacak. Kaptanın ödemesi iade edilir.</>
                         ) : (
-                            <>Maça 24 saatten fazla var — <span className="text-green-400 font-black">ceza kesilmeyecek</span>.
+                            <>Maça 24 saatten fazla var — <span className="text-green-400 font-extrabold">ceza kesilmeyecek</span>.
                             Kaptanın ödemesi iade edilir ve kendisine haber verilir.</>
                         )}
                     </p>
                     <div className="flex gap-2">
                         <button onClick={() => setCancelPreview(null)}
-                            className="flex-1 py-3 rounded-xl bg-white/5 text-white text-xs font-black uppercase">Vazgeç</button>
+                            className="flex-1 py-3 rounded-xl bg-white/5 text-white text-xs font-extrabold uppercase">Vazgeç</button>
                         <button onClick={handleConfirmCancelAssignment} disabled={cancellingId === cancelPreview.reqId}
-                            className="flex-1 py-3 rounded-xl bg-red-500 text-white text-xs font-black uppercase disabled:opacity-50">
+                            className="flex-1 py-3 rounded-xl bg-red-500 text-white text-xs font-extrabold uppercase disabled:opacity-50">
                             {cancelPreview.penalty > 0 ? `Bırak (${cancelPreview.penalty}₺ ceza)` : 'İşi Bırak'}
                         </button>
                     </div>
@@ -2482,8 +2538,14 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                 <div className={`w-16 h-16 rounded-full mx-auto flex items-center justify-center mb-3 ${theme.secondaryBg} ${theme.primary}`}>
                   <Award size={32} />
                 </div>
-                <h3 className="text-xl font-black text-white uppercase italic">MAÇ SONU RAPORU</h3>
-                <p className="text-[10px] text-gray-400 uppercase tracking-widest mt-1">Resmi Maç Skorunu Gir</p>
+                <h3 className="text-xl font-extrabold text-white uppercase italic">MAÇ SONU RAPORU</h3>
+                <p className="text-[0.625rem] text-gray-400 uppercase tracking-widest mt-1">Resmi Maç Skorunu Gir</p>
+                {/* Skorun HANGİ maça yazılacağı açıkça görünsün. */}
+                {scoreTargetMatch && (
+                  <p className="text-[0.6875rem] text-white font-bold mt-2 px-3 py-1.5 rounded-lg bg-white/5 inline-block">
+                    {scoreTargetMatch.pitchName || scoreTargetMatch.location || 'Saha'} · {scoreTargetMatch.date} {scoreTargetMatch.time}
+                  </p>
+                )}
               </div>
 
               <div className="space-y-4 mb-6">
@@ -2500,9 +2562,9 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                           setRefScore(p => ({ ...p, home: v }));
                         }}
                         aria-label="Ev sahibi skoru"
-                        className="w-16 h-16 bg-[#161B22] border border-white/10 rounded-xl text-center text-3xl font-black text-white outline-none focus:border-red-500/50 transition-colors"
+                        className="w-16 h-16 bg-[#161B22] border border-white/10 rounded-xl text-center text-3xl font-extrabold text-white outline-none focus:border-red-500/50 transition-colors"
                       />
-                      <span className="text-xl font-black text-gray-600">-</span>
+                      <span className="text-xl font-extrabold text-ink-4">-</span>
                       <input
                         type="number" inputMode="numeric" min={0} max={99} placeholder="0"
                         value={refScore.away}
@@ -2511,10 +2573,10 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                           setRefScore(p => ({ ...p, away: v }));
                         }}
                         aria-label="Deplasman skoru"
-                        className="w-16 h-16 bg-[#161B22] border border-white/10 rounded-xl text-center text-3xl font-black text-white outline-none focus:border-red-500/50 transition-colors"
+                        className="w-16 h-16 bg-[#161B22] border border-white/10 rounded-xl text-center text-3xl font-extrabold text-white outline-none focus:border-red-500/50 transition-colors"
                       />
                     </div>
-                    <p className="text-[9px] text-gray-500 font-bold uppercase text-center mt-3">Resmi hakem skoru — maç bu skorla tamamlanır</p>
+                    <p className="text-[0.6875rem] text-ink-4 font-bold uppercase text-center mt-3">Resmi hakem skoru — maç bu skorla tamamlanır</p>
                   </div>
                 )}
                 {/* F2.3: 'Centilmenlik' 5 yıldız bloğu kaldırıldı — hiçbir tabloya
@@ -2525,11 +2587,12 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
               <button
                 disabled={submittingScore}
                 onClick={async () => {
-                  const matchId = myUpcomingMatches[0]?.id;
+                  // Modal açılırken sabitlenen maç — liste kaysa bile skor doğru maça gider.
+                  const matchId = scoreTargetMatch?.id;
                   {
                       // HR-A: hakem skoru GERÇEKTEN yazılır (finalize_match). Başarısızsa
                       // modal açık kalır ve dürüst hata gösterilir — sahte başarı YOK.
-                      if (!matchId) { showActionError('Atanmış bir maç bulunamadı.'); return; }
+                      if (!matchId) { showActionError('Skor girilecek maç seçilmedi.'); return; }
                       const home = refScore.home === '' ? 0 : parseInt(refScore.home, 10);
                       const away = refScore.away === '' ? 0 : parseInt(refScore.away, 10);
                       if (!Number.isFinite(home) || !Number.isFinite(away)) {
@@ -2545,6 +2608,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                         } catch { /* görsel tazeleme başarısızsa akış bozulmaz */ }
                         setMatchLiveStatus(prev => ({ ...prev, [matchId]: 'FINISHED' }));
                         setShowPostMatchReport(false);
+                        setScoreTargetMatch(null);
                         setRefScore({ home: '', away: '' });
                         showActionSuccess(`Maç skoru resmi olarak kaydedildi: ${home}–${away}.`);
                       } catch (e: any) {
@@ -2554,7 +2618,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                       }
                   }
                 }}
-                className={`w-full py-3.5 rounded-xl font-black text-white text-sm ${theme.bg} hover:brightness-110 transition-all uppercase shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2`}
+                className={`w-full py-3.5 rounded-xl font-extrabold text-white text-sm ${theme.bg} hover:brightness-110 transition-all uppercase shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2`}
               >
                 {submittingScore && <RefreshCcw size={14} className="animate-spin" />}
                 {submittingScore ? 'KAYDEDİLİYOR...' : 'SKORU KAYDET VE BİTİR'}
@@ -2566,17 +2630,17 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
 
       {/* FAZ 5 — TC KİMLİK DOĞRULAMA MODAL */}
       {showIdentityModal && (
-          <div className="fixed inset-0 z-[60] bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center animate-in fade-in duration-200">
-              <div className="bg-[#161B22] w-full max-w-md rounded-t-[32px] sm:rounded-[32px] border-t sm:border border-white/10 p-6 shadow-2xl relative animate-in slide-in-from-bottom duration-300">
+          <div className="fixed inset-0 z-[60] bg-black/80 backdrop-blur-sm flex items-end justify-center animate-in fade-in duration-200">
+              <div className="bg-[#161B22] w-full max-w-md rounded-t-[32px] border-t border-white/10 p-6 shadow-2xl relative animate-in slide-in-from-bottom duration-300">
                   <div className="flex justify-between items-center mb-2">
-                      <h3 className="text-xl font-black text-white uppercase tracking-wide">KİMLİK DOĞRULA</h3>
+                      <h3 className="text-xl font-extrabold text-white uppercase tracking-wide">KİMLİK DOĞRULA</h3>
                       <button onClick={() => setShowIdentityModal(false)} className="p-2 bg-white/5 rounded-full text-gray-400 hover:text-white"><X size={20} /></button>
                   </div>
-                  <p className="text-[11px] text-gray-400 font-bold mb-6">Ödemelerini alabilmek için TC kimlik doğrulaması gerekli.</p>
+                  <p className="text-[0.6875rem] text-gray-400 font-bold mb-6">Ödemelerini alabilmek için TC kimlik doğrulaması gerekli.</p>
 
                   <div className="space-y-4">
                       <div>
-                          <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1.5">TC Kimlik No</p>
+                          <p className="text-[0.625rem] font-extrabold uppercase tracking-widest text-gray-400 mb-1.5">TC Kimlik No</p>
                           <input
                               value={identityTc}
                               onChange={e => setIdentityTc(e.target.value.replace(/\D/g, '').slice(0, 11))}
@@ -2586,7 +2650,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                           />
                       </div>
                       <div>
-                          <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1.5">Ad Soyad</p>
+                          <p className="text-[0.625rem] font-extrabold uppercase tracking-widest text-gray-400 mb-1.5">Ad Soyad</p>
                           <input
                               value={identityName}
                               onChange={e => setIdentityName(e.target.value)}
@@ -2595,7 +2659,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                           />
                       </div>
                       <div>
-                          <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1.5">Doğum Yılı (opsiyonel)</p>
+                          <p className="text-[0.625rem] font-extrabold uppercase tracking-widest text-gray-400 mb-1.5">Doğum Yılı (opsiyonel)</p>
                           <input
                               value={identityBirthYear}
                               onChange={e => setIdentityBirthYear(e.target.value.replace(/\D/g, '').slice(0, 4))}
@@ -2606,13 +2670,13 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                       </div>
 
                       {identityFormError && (
-                          <p className="text-[11px] text-red-400 font-bold">{identityFormError}</p>
+                          <p className="text-[0.6875rem] text-red-400 font-bold">{identityFormError}</p>
                       )}
 
                       <button
                           onClick={handleSubmitIdentity}
                           disabled={identitySubmitting}
-                          className="w-full py-4 bg-yellow-500 hover:bg-yellow-400 text-black font-black text-sm rounded-2xl transition-colors shadow-lg disabled:opacity-50 flex items-center justify-center gap-2 uppercase tracking-wider"
+                          className="w-full py-4 bg-yellow-500 hover:bg-yellow-400 text-black font-extrabold text-sm rounded-2xl transition-colors shadow-lg disabled:opacity-50 flex items-center justify-center gap-2 uppercase tracking-wider"
                       >
                           {identitySubmitting ? <RefreshCcw size={16} className="animate-spin" /> : <BadgeCheck size={16} />}
                           {identitySubmitting ? 'Gönderiliyor...' : 'Doğrulamayı Gönder'}
@@ -2652,22 +2716,22 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
               <div className="relative z-10 flex flex-col gap-3">
                 <div className="flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-[#FACC15] animate-pulse" />
-                  <p className="text-[11px] font-black uppercase tracking-widest text-[#FACC15]">Misafir Modundasın</p>
+                  <p className="text-[0.6875rem] font-extrabold uppercase tracking-widest text-[#FACC15]">Misafir Modundasın</p>
                 </div>
-                <p className="text-[11px] text-gray-400 leading-relaxed">
+                <p className="text-[0.6875rem] text-gray-400 leading-relaxed">
                   Para çekme, ödeme yöntemi ekleme, kimlik doğrulama ve maç başvuruları için
                   hesabınla giriş yapmalısın. Demo veriler yalnızca görüntüleme amaçlıdır.
                 </p>
                 <div className="flex gap-2.5 mt-1">
                   <button
                     onClick={() => onNavigate('AUTH')}
-                    className="flex-1 h-11 rounded-2xl bg-[#FACC15] text-black font-black text-[11px] uppercase tracking-widest active:scale-95 transition-all shadow-[0_0_15px_rgba(250,204,21,0.3)] hover:bg-yellow-300"
+                    className="flex-1 h-11 rounded-2xl bg-[#FACC15] text-black font-extrabold text-[0.6875rem] uppercase tracking-widest active:scale-95 transition-all shadow-[0_0_15px_rgba(250,204,21,0.3)] hover:bg-yellow-300"
                   >
                     Giriş Yap
                   </button>
                   <button
                     onClick={() => setShowGuestGate(false)}
-                    className="flex-1 h-11 rounded-2xl bg-white/5 border border-white/15 text-white font-black text-[11px] uppercase tracking-widest active:scale-95 transition-all hover:bg-white/10"
+                    className="flex-1 h-11 rounded-2xl bg-white/5 border border-white/15 text-white font-extrabold text-[0.6875rem] uppercase tracking-widest active:scale-95 transition-all hover:bg-white/10"
                   >
                     Vazgeç
                   </button>
@@ -2691,13 +2755,13 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
               className="w-full max-w-sm rounded-[28px] bg-gradient-to-b from-[#161B22] to-[#0d1117] border border-green-500/25 shadow-[0_30px_70px_rgba(0,0,0,0.85)] p-6">
               <div className="flex items-center gap-2.5 mb-3">
                 <div className="p-2 rounded-xl bg-green-500/12 border border-green-500/25 text-green-400"><Shield size={18} /></div>
-                <h3 className="text-base font-black text-white tracking-tight">Kaleci Hizmet Sözleşmesi</h3>
+                <h3 className="text-base font-extrabold text-white tracking-tight">Kaleci Hizmet Sözleşmesi</h3>
               </div>
-              <div className="rounded-2xl bg-black/30 border border-white/8 p-3.5 text-[11px] text-white/60 leading-relaxed max-h-52 overflow-y-auto custom-scrollbar space-y-2">
+              <div className="rounded-2xl bg-black/30 border border-white/8 p-3.5 text-[0.6875rem] text-white/60 leading-relaxed max-h-52 overflow-y-auto custom-scrollbar space-y-2">
                 <p>Kabul ettiğin maça ilan edilen saatte katılmayı taahhüt edersin.</p>
-                <p><span className="text-red-400 font-black">No-show (mazeretsiz katılmama)</span> durumunda, maçın kaleci slot ücreti hesabından otomatik tahsil edilip maç kaptanına tazminat olarak aktarılır.</p>
+                <p><span className="text-red-400 font-extrabold">No-show (mazeretsiz katılmama)</span> durumunda, maçın kaleci slot ücreti hesabından otomatik tahsil edilip maç kaptanına tazminat olarak aktarılır.</p>
                 <p>Bu tahsilata karşı <span className="text-white font-bold">48 saat</span> içinde itiraz edebilirsin; itiraz halinde durum OYNA yönetimi tarafından incelenir.</p>
-                <p>Hizmet verebilmek için hesabında en az <span className="text-green-400 font-black">500₺ teminat</span> bulundurmalısın — bu bakiye ceza tahsilatının güvencesidir.</p>
+                <p>Hizmet verebilmek için hesabında en az <span className="text-green-400 font-extrabold">500₺ teminat</span> bulundurmalısın — bu bakiye ceza tahsilatının güvencesidir.</p>
                 <p className="text-white/80 font-bold pt-1">Eline geçecek: {contractModalReq.providerAmount}₺ (brüt {contractModalReq.fee}₺)</p>
               </div>
               <label className="flex items-start gap-2.5 mt-4 cursor-pointer select-none">
@@ -2705,14 +2769,14 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                   className={`mt-0.5 w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-colors ${contractChecked ? 'bg-green-500 border-green-500' : 'border-white/25 bg-white/5'}`}>
                   {contractChecked && <Check size={13} className="text-black" strokeWidth={3} />}
                 </button>
-                <span className="text-[11px] text-white/70 leading-relaxed">Sözleşmeyi okudum, no-show cezasını ve 500₺ teminat şartını kabul ediyorum.</span>
+                <span className="text-[0.6875rem] text-white/70 leading-relaxed">Sözleşmeyi okudum, no-show cezasını ve 500₺ teminat şartını kabul ediyorum.</span>
               </label>
               <div className="flex gap-2 mt-5">
                 <button disabled={!!respondingId} onClick={() => setContractModalReq(null)}
-                  className="flex-1 py-3 rounded-2xl font-black text-[11px] uppercase tracking-widest text-white/70 bg-white/5 border border-white/10 disabled:opacity-50">Vazgeç</button>
+                  className="flex-1 py-3 rounded-2xl font-extrabold text-[0.6875rem] uppercase tracking-widest text-white/70 bg-white/5 border border-white/10 disabled:opacity-50">Vazgeç</button>
                 <button disabled={!contractChecked || !!respondingId}
                   onClick={() => handleRespondRequest(contractModalReq.id, true, true)}
-                  className="flex-1 py-3 rounded-2xl font-black text-[11px] uppercase tracking-widest text-black bg-green-500 active:scale-95 transition-all flex items-center justify-center gap-1.5 disabled:opacity-40">
+                  className="flex-1 py-3 rounded-2xl font-extrabold text-[0.6875rem] uppercase tracking-widest text-black bg-green-500 active:scale-95 transition-all flex items-center justify-center gap-1.5 disabled:opacity-40">
                   {respondingId ? <RefreshCcw size={14} className="animate-spin" /> : <><Check size={14} /> Onayla & Kabul Et</>}
                 </button>
               </div>

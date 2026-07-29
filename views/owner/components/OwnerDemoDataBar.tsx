@@ -52,7 +52,7 @@ export const OwnerDemoDataBar: React.FC<{
           type="button"
           disabled={busy !== null}
           onClick={() => run('seed')}
-          className="text-[10px] font-black uppercase px-3 py-1.5 rounded-lg bg-amber-500/15 text-amber-300 border border-amber-500/25 disabled:opacity-50 hover:bg-amber-500/25 transition-colors"
+          className="text-[10px] font-extrabold uppercase px-3 py-1.5 rounded-lg bg-amber-500/15 text-amber-300 border border-amber-500/25 disabled:opacity-50 hover:bg-amber-500/25 transition-colors"
         >
           {busy === 'seed' ? '...' : 'Demo Ekle'}
         </button>
@@ -61,7 +61,7 @@ export const OwnerDemoDataBar: React.FC<{
             type="button"
             disabled={busy !== null}
             onClick={() => run('purge')}
-            className="text-[10px] font-black uppercase px-3 py-1.5 rounded-lg bg-red-500/10 text-red-400 border border-red-500/20 flex items-center gap-1 disabled:opacity-50 hover:bg-red-500/20 transition-colors"
+            className="text-[10px] font-extrabold uppercase px-3 py-1.5 rounded-lg bg-red-500/10 text-red-400 border border-red-500/20 flex items-center gap-1 disabled:opacity-50 hover:bg-red-500/20 transition-colors"
           >
             <Trash2 size={12} /> {busy === 'purge' ? '...' : 'Temizle'}
           </button>
