@@ -58,6 +58,14 @@ BEGIN
   END LOOP;
 END $do$;
 
+-- ── SIFIRDAN REPLAY GUARD'I (2026-07-29) ────────────────────────────────────
+-- Bu tanım dönüş şekline `slot_minutes` EKLİYOR (5 kolon → 6). Aynı imzayı
+-- 20260827000001 beş kolonla bırakıyor ve CREATE OR REPLACE dönüş tipini
+-- değiştiremez:
+--   ERROR: cannot change return type of existing function (SQLSTATE 42P13)
+-- Canlıda etkisiz (fonksiyon zaten bu şekilde), yalnız sıfırdan replay'i onarır.
+DROP FUNCTION IF EXISTS public._resolve_court_quote(uuid, date, time without time zone);
+
 CREATE OR REPLACE FUNCTION public._resolve_court_quote(
   p_court_id uuid, p_date date, p_start_time time without time zone
 ) RETURNS TABLE(total numeric, deposit numeric, tariff_id uuid, deal_id uuid,

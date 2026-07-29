@@ -11,6 +11,16 @@
 -- ============================================================================
 
 DROP FUNCTION IF EXISTS public.get_current_tariff_price(uuid, date, time without time zone);
+-- ── SIFIRDAN REPLAY GUARD'I (2026-07-29, depo sahibi onayıyla) ──────────────
+-- Aşağıdaki CREATE OR REPLACE 4 argümanlı imzayı 3 kolonla (tariff_id, price,
+-- deposit) tanımlıyor. Ama 20260728154518:47 aynı 4 argümanlı imzayı 5 kolonla
+-- (… + slot_minutes, window_start) bırakıyor. Üstteki DROP yalnız 3 ARGÜMANLI
+-- sürümü düşürdüğü için 4 argümanlı olan ayakta kalıyor ve replay şunu veriyordu:
+--   ERROR: cannot change return type of existing function (SQLSTATE 42P13)
+-- CREATE OR REPLACE dönüş tipini değiştiremez; önce DROP şart.
+-- Canlıda etkisiz (fonksiyon zaten bu şekle getirilmişti), yalnız sıfırdan
+-- replay'i onarır.
+DROP FUNCTION IF EXISTS public.get_current_tariff_price(uuid, date, time without time zone, uuid);
 
 CREATE OR REPLACE FUNCTION public.get_current_tariff_price(
   p_pitch_id uuid,
