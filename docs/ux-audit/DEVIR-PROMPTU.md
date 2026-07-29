@@ -7,7 +7,7 @@
 
 ## KOPYALANACAK PROMPT (buradan aşağısı)
 
-OYNA adlı Türkçe halısaha (5v5) rezervasyon uygulaması üzerinde çalışıyorsun.
+OYNA adlı Türkçe halısaha rezervasyon uygulaması üzerinde çalışıyorsun.
 Lansman öncesi UX/UI denetim planının kalan iş paketlerini uygulayacaksın.
 
 ### Dal ve kimlik kuralları (değişmez)
