@@ -30,17 +30,29 @@ jobs:
           supabase/migrations/20260608_match_join_rpc_fixes.sql	supabase/migrations/20260608000000_match_join_rpc_fixes.sql
           supabase/migrations/202607130000155_baseline_priv_fns_admin_core.sql	supabase/migrations/20260712235959_baseline_priv_fns_admin_core.sql
           EOF
-          # SABİT İSTİSNA (2026-07-29, depo sahibi onayıyla): TEK dosyada
-          # sıfırdan-replay onarımı. 20260803000003 `get_current_tariff_price`i
-          # 4 argüman / 3 kolon olarak CREATE OR REPLACE ediyor, ama
-          # 20260728154518 aynı imzayı 4 argüman / 5 kolon bırakıyor. Dosyadaki
-          # DROP yalnız 3 ARGÜMANLI sürümü düşürdüğü için replay şunu veriyordu:
-          #   ERROR: cannot change return type of existing function (42P13)
-          # Hata geçmişin ORTASINDA oluştuğu için sonraki hiçbir migration onu
-          # önleyemez; dosyaya idempotent bir DROP FUNCTION IF EXISTS eklendi
-          # (canlıda etkisiz). YENİ AF YOKTUR — bu liste büyütülmez.
+          # SABİT İSTİSNA (2026-07-29, depo sahibi onayıyla) — SIFIRDAN REPLAY
+          # ONARIM KAMPANYASI. Bu dal, migration zinciri sıfırdan hiç
+          # çalıştırılmadan büyümüştü; yerel replay (374 dosya, boş küme) beş
+          # kırılma buldu. Hatalar geçmişin ORTASINDA oluştuğu için sonraki
+          # hiçbir migration onları önleyemezdi — düzeltme kaynakta zorunluydu.
+          # Eklenen her şey idempotenttir ve CANLIDA ETKİSİZDİR; yalnız
+          # sıfırdan replay'i onarır. Doğrulama: replay 374/374 yeşil.
+          #
+          #  20260530000000  goalkeepers/referees `match_count` → "matchCount"
+          #                  (üretim ve uygulama kodu camelCase kullanıyor;
+          #                   repo snake_case yaratıyordu → 20260816000001 düşüyordu)
+          #  20260803000003  get_current_tariff_price: 4 argümanlı sürüm için
+          #                  DROP eksikti → 42P13 dönüş tipi çakışması
+          #  20260827000001  invite_friends_to_match (integer) için DROP eksikti
+          #  20260827000003  invite_friends_to_match (jsonb) için DROP eksikti
+          #
+          # YENİ AF YOKTUR — bu liste yalnız yukarıdaki dört onarımı kapsar ve
+          # büyütülmez. Başka bir migration değiştirilirse bekçi yakalar.
           cat > /tmp/allowed_modifications.txt <<'EOF'
+          supabase/migrations/20260530000000_service_integration.sql
           supabase/migrations/20260803000003_saha_bazli_tarife.sql
+          supabase/migrations/20260827000001_mac_kur_atomik_yayin.sql
+          supabase/migrations/20260827000003_mac_kur_kadro_ve_saglayici.sql
           EOF
           # A=eklendi serbest; M=değişti, D=silindi, R=yeniden adlandı → ihlal
           VIOLATIONS=$(git diff --name-status --diff-filter=MDR "$BASE" "$HEAD" -- 'supabase/migrations/*.sql' \

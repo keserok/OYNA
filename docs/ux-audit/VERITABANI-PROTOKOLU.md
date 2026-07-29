@@ -119,3 +119,57 @@ Güvenlik danışmanı toplamı 427 bulgu; bunların 404'ü
 deseni, gürültü. 7 adet `rls_enabled_no_policy` ise **kasıtlı sertleştirme**
 (`password_reset_codes`, `match_private_codes` vb. istemciye tümüyle kapalı,
 yalnız SECURITY DEFINER fonksiyonlar dokunur).
+
+---
+
+## 5. Sıfırdan replay — yerel doğrulama (2026-07-29'da eklendi)
+
+`bash scripts/maintenance/yerel-replay.sh`
+
+Tüm migration zincirini **boş bir PostgreSQL kümesine** uygular ve hataları tek
+seferde listeler. Supabase Preview her turda yalnız TEK hata gösterir, her tur
+dakikalar sürer ve dalın veritabanı **durum tutar** (başarısız turun artık
+verisi kalır, sonraki turu yanıltır). Yerel replay her çalıştırmada tertemiz
+başlar.
+
+Betik, Supabase'in migration'lardan önce sağladığı ortamı kurar: roller
+(`anon`, `authenticated`, `service_role`…), `auth`/`storage` şemaları ve
+yardımcıları (`auth.uid()` vb.), `supabase_realtime` publication'ı, eklentiler
+(`extensions` ŞEMASINA — Supabase orada tutar) ve yerelde kurulamayan
+`pg_cron`/`pg_net` için aynı imzalı taklitler.
+
+**2026-07-29 taban ölçümü: 374/374 başarılı, 0 hata.**
+
+### Bu doğrulamanın bulduğu beş kırılma
+
+Hepsi geçmişin ORTASINDA oluşuyordu; sonraki hiçbir migration önleyemezdi.
+
+| Dosya | Kırılma |
+|---|---|
+| `20260727124350` | `courts.min_capacity`'yi kolonu ekleyen dosyadan ÖNCE güncelliyor |
+| `20260727154401` | aynı sınıf (`max_capacity` güncellemesi) |
+| `20260530000000` | `goalkeepers`/`referees` `match_count` yaratıyor, üretim ve uygulama `"matchCount"` bekliyor |
+| `20260803000003` | `get_current_tariff_price` — 4 argümanlı sürüm için `DROP` eksik (42P13) |
+| `20260827000001` + `20260827000003` | `invite_friends_to_match` — dönüş tipi integer↔jsonb, `DROP` eksik |
+
+**Kök hastalık:** Migration sürüm numaraları gerçek uygulama sırasını
+yansıtmıyor. Üretimde dosyalar farklı sırayla uygulandığı için bu bağımlılıklar
+görünmüyordu; sıfırdan replay sürüm sırasına uyduğu anda ortaya çıktılar.
+
+## 6. Bilinen repo ↔ üretim şema sapması (AÇIK)
+
+Replay'in ürettiği şema üretimle **birebir değil**: 115 tablonun ikisinde de
+aynı, ama 4 tabloda 7 kolon farkı var. Replay'i engellemiyor; ayrı iş.
+
+| Tablo | Üretimde var, replay'de yok | Replay'de var, üretimde yok |
+|---|---|---|
+| `goalkeepers` | `geohash`, `reviews`, `isElite`, `preferredZones`, `recentAwards` | `is_available`, `is_elite`, `preferred_zones`, `recent_awards` |
+| `pitches` | `created_at` | `courts`, `is_approved` |
+| `pitch_bookings` | — | `metadata` |
+| `service_offers` | — | `offered_by`, `provider_type` |
+
+`goalkeepers`/`referees` satırı önemli: uygulama camelCase sorguluyor
+(`services/matchService.ts:279` → `"matchCount"`, `"isElite"`). Yani **üretim
+doğru, repo yanlış**. `matchCount` replay'i kırdığı için düzeltildi; kalan
+camelCase adlar replay'i kırmadığı için dokunulmadı — düzeltilmesi ayrı bir
+doğrulama turu ister.

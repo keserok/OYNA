@@ -1,9 +1,21 @@
 -- ÜRETİMDEN GERİ ÇEKİLDİ (defter sapması onarımı, 2026-07-28)
 -- MAÇ KUR inceleme düzeltmeleri — Bölüm A
-UPDATE public.courts
-   SET max_capacity = GREATEST(COALESCE(max_capacity, 0), min_capacity)
- WHERE min_capacity IS NOT NULL AND max_capacity IS NOT NULL
-   AND min_capacity > max_capacity;
+-- [2026-07-29 sıfırdan replay guard'ı] `courts.min_capacity`/`max_capacity`
+-- kolonlarını 20260812000008 ekliyor — bu dosyadan SONRAKİ bir sürüm. Canlıda
+-- gerçek uygulama sırası farklı olduğu için patlamamıştı; sıfırdan replay'de
+-- "column min_capacity does not exist" veriyordu. Kolonlar yoksa blok atlanır;
+-- model zaten 20260812000008 ve 20260818000000 tarafından kuruluyor.
+DO $guard$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+     WHERE table_schema='public' AND table_name='courts' AND column_name='min_capacity'
+  ) THEN RETURN; END IF;
+
+  UPDATE public.courts
+     SET max_capacity = GREATEST(COALESCE(max_capacity, 0), min_capacity)
+   WHERE min_capacity IS NOT NULL AND max_capacity IS NOT NULL
+     AND min_capacity > max_capacity;
+END $guard$;
 
 CREATE OR REPLACE FUNCTION public.get_court_day_quote(p_court_id uuid, p_date date)
 RETURNS jsonb
