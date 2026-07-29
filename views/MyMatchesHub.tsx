@@ -16,6 +16,7 @@ import {
 } from '../services/playerBookingService';
 import { formatTRY } from '../utils/formatTRY';
 import { formatCapacityRange } from '../shared/pitchShowcaseMapper';
+import { formatMatchDuration } from '../shared/matchTiming';
 import SegmentedTabs from '../components/ui/SegmentedTabs';
 import SkeletonList from '../components/ui/SkeletonList';
 import { MODAL_BACKDROP, MODAL_CARD } from '../components/common/motion';
@@ -74,6 +75,9 @@ const TicketCard: React.FC<{ item: MyAgendaItem; currentUserUid: string; onOpen:
   let footLeft: React.ReactNode = null;
   let footRight: React.ReactNode = null;
   let cancelNote: string | null = null;
+  // Saatin yanındaki süre notu. Rezervasyonda gereksiz (başlangıç–bitiş zaten
+  // süreyi gösterir); maçta GERÇEK veriden gelir (matches.duration_minutes).
+  let timeNote: string | null = null;
 
   if (isMatch) {
     const m = item.match;
@@ -92,6 +96,7 @@ const TicketCard: React.FC<{ item: MyAgendaItem; currentUserUid: string; onOpen:
       statusNode = <span className="font-numeric text-[9px] font-black uppercase tracking-[0.08em] text-white/45">{st.taken}/{st.total} oyuncu</span>;
     }
     time = m.time || '—';
+    timeNote = formatMatchDuration(m);
     title = m.title || 'Maç';
     venue = [m.location, (m as { courtName?: string }).courtName].filter(Boolean).join(' · ') || '—';
     footLeft = st.open > 0 ? (
@@ -140,7 +145,12 @@ const TicketCard: React.FC<{ item: MyAgendaItem; currentUserUid: string; onOpen:
         {typeLabel}
         {statusNode}
       </div>
-      <p className="font-numeric mt-2.5 text-[20px] font-bold tracking-[-0.02em] leading-none">{time}</p>
+      <p className="font-numeric mt-2.5 text-[20px] font-bold tracking-[-0.02em] leading-none">
+        {time}
+        {timeNote && (
+          <span className="ml-2 text-[11px] font-bold tracking-normal text-white/40">{timeNote}</span>
+        )}
+      </p>
       <p className="mt-2.5 text-[15px] font-extrabold leading-tight truncate">{title}</p>
       <p className="mt-1 text-[12px] text-gray-400 flex items-center gap-[5px] truncate"><MapPin size={12} className="shrink-0" />{venue}</p>
       {cancelNote && <p className="mt-3 text-[11px] italic text-red-300/80">{cancelNote}</p>}
@@ -166,8 +176,10 @@ const NextEventHero: React.FC<{ item: MyAgendaItem; currentUserUid: string; onOp
     ? [item.match.location, (item.match as { courtName?: string }).courtName].filter(Boolean).join(' · ')
     : [item.booking.pitches?.district, item.booking.courts?.name].filter(Boolean).join(' · ');
   const heading = dayHeading(item.when);
+  // Maçta saatin yanına GERÇEK süre (duration_minutes) eklenir; rezervasyonda
+  // başlangıç–bitiş aralığı zaten süreyi anlatır.
   const timeRange = isMatch
-    ? item.match.time
+    ? [item.match.time, formatMatchDuration(item.match)].filter(Boolean).join(' · ')
     : `${shortTime(item.booking.start_time)} – ${shortTime(item.booking.end_time)}`;
 
   let chip: React.ReactNode;

@@ -721,7 +721,7 @@ export const FinancialCalendarView: React.FC<{
                     {dayHours.closed && visibleTimeSlots.length === 0 && (
                         <div className="rounded-2xl border border-white/10 bg-[#161B22] p-6 text-center">
                             <p className="text-sm font-bold text-gray-400">Bu gün çalışma saatlerinde kapalı.</p>
-                            <p className="text-[11px] text-gray-600 mt-1">Menü → Aktif Saatler ve Ücretler'den bu güne tarife ekleyerek açabilirsin.</p>
+                            <p className="text-[11px] text-gray-600 mt-1">Sahalarım → saha → Aktif Saatler ve Ücretler'den bu güne tarife ekleyerek açabilirsin.</p>
                         </div>
                     )}
                     {visibleSlots.map((slot) => {
@@ -915,7 +915,7 @@ export const FinancialCalendarView: React.FC<{
                                 // Fiyat GERÇEK tarifeden; tarife yoksa kayıt engellenir (uydurma tutar yazılmaz).
                                 const rateVal = isQuickCreateOpen ? getSlotPrice(isQuickCreateOpen) : null;
                                 if (rateVal == null) {
-                                    notify('Bu saat için tarife tanımlı değil. Menü → Aktif Saatler ve Ücretler\'den tarife ekleyin.', 'warning');
+                                    notify('Bu saat için tarife tanımlı değil. Sahalarım → saha → Aktif Saatler ve Ücretler\'den tarife ekleyin.', 'warning');
                                     setIsAddingSlot(false);
                                     return;
                                 }
@@ -973,7 +973,7 @@ export const FinancialCalendarView: React.FC<{
                         return rate != null ? (
                             <p className="text-sm font-bold text-gray-400 mt-2">Tutar: {rate}₺</p>
                         ) : (
-                            <p className="text-xs font-bold text-amber-400 mt-2">Bu saat için tarife tanımlı değil — Menü → Aktif Saatler ve Ücretler'den ekleyin.</p>
+                            <p className="text-xs font-bold text-amber-400 mt-2">Bu saat için tarife tanımlı değil — Sahalarım → saha → Aktif Saatler ve Ücretler'den ekleyin.</p>
                         );
                     })()}
                 </div>

@@ -4,7 +4,6 @@ import {
   Bell,
   Building2,
   ChevronRight,
-  Clock,
   Globe,
   HelpCircle,
   LayoutDashboard,
@@ -33,7 +32,6 @@ export interface OwnerMenuViewProps {
   onMatches: () => void;
   onBankAccounts: () => void;
   onWithdrawals: () => void;
-  onPricingPolicy: () => void;
   onCancellationPolicy: () => void;
   onLogout: () => void;
   onSecurity: () => void;
@@ -113,7 +111,6 @@ export const OwnerMenuView: React.FC<OwnerMenuViewProps> = ({
   onMatches,
   onBankAccounts,
   onWithdrawals,
-  onPricingPolicy,
   onCancellationPolicy,
   onLogout,
   onSecurity,
@@ -206,10 +203,19 @@ export const OwnerMenuView: React.FC<OwnerMenuViewProps> = ({
               badge={<StatusBadge label={verificationLabel} tone={verificationTone} />}
               onClick={onEditProfile}
             />
+            {/* Fiyat/süre politikası artık BURADA: Sahalarım → saha → "Aktif
+                Saatler ve Ücretler". Tarifesi olmayan saha yayına alınamadığı
+                için rozet bunu menüde de dürüstçe söyler. */}
             <MenuRow
               icon={<LayoutDashboard size={18} />}
               label="Sahalarım"
-              badge={<StatusBadge label={`${stats.courtCount} saha`} tone="info" />}
+              badge={
+                stats.courtsWithoutTariff > 0 ? (
+                  <StatusBadge label={`${stats.courtsWithoutTariff} saha tarifesiz`} tone="danger" />
+                ) : (
+                  <StatusBadge label={`${stats.courtCount} saha`} tone="info" />
+                )
+              }
               onClick={onPitches}
             />
             <MenuRow
@@ -269,19 +275,10 @@ export const OwnerMenuView: React.FC<OwnerMenuViewProps> = ({
                 onClick={onWithdrawals}
               />
             )}
-            {/* Çalışma saatleri ayrı ekran DEĞİL: tesisin açık saatleri
-                tarifelerden türetiliyor, ikisi tek ekranda yönetiliyor. */}
-            <MenuRow
-              icon={<Clock size={18} />}
-              label="Aktif Saatler ve Ücretler"
-              badge={
-                <StatusBadge
-                  label={stats.tariffCount > 0 ? `${stats.tariffCount} tarife` : 'Kurulmadı'}
-                  tone={stats.tariffCount > 0 ? 'info' : 'danger'}
-                />
-              }
-              onClick={onPricingPolicy}
-            />
+            {/* GENEL FİYATLANDIRMA KALDIRILDI: tesis geneli tek politika yerine
+                her saha kendi fiyat/süre politikasını girer (E1a/E5a/E12a).
+                Giriş noktası: Sahalarım → saha → "Aktif Saatler ve Ücretler".
+                Çalışma saatleri ayrı ekran değildir; o tarifelerden türetilir. */}
             <MenuRow
               icon={<RotateCcw size={18} />}
               label="İptal / İade Politikası"

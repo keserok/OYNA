@@ -111,7 +111,11 @@ const PartnerOnboarding: React.FC<PartnerOnboardingProps> = ({ onComplete, onClo
                   iban: iban.trim(),
                   verification_status: 'pending',
                   pricing_mode: pricingMode,
-                  is_open: true,
+                  // Tesis KAPALI başlar: her saha için fiyat politikası girilmeden
+                  // yayına alınamaz (sunucu kapısı: enforce_tariff_before_open +
+                  // trg_enforce_court_tariff_before_activate). Buraya `true` yazmak
+                  // sunucu tarafından zaten geri çevrilirdi — yalan alan bırakmıyoruz.
+                  is_open: false,
                   auto_approve_minutes: 35,
               })
               .select()

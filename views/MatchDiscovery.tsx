@@ -13,6 +13,7 @@ import { subscribeToOpenMatches, fetchNearbyMatches, resolvePrivateMatch, toPriv
 import { EmptyState } from '../components/common/StatusState';
 import { FilterDropdown } from '../components/ui/FilterDropdown';
 import { deriveDiscoveryFilterOptions, roleHasOpenSlot, ROLE_LABEL_MAP } from '../utils/discoveryFilterOptions';
+import { formatMatchDuration, realMatchMinutes } from '../shared/matchTiming';
 
 interface MatchDiscoveryProps {
   onBack: () => void;
@@ -169,7 +170,11 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
       const mentalityColor = MENTALITY_DISPLAY[normalizedMentality].color;
 
       const format = m.format || '7v7';
-      const duration = m.duration || '90 Dakika';
+      // MAÇ SÜRESİ — GERÇEK VERİ (matches.duration_minutes, tarifeden türetilir).
+      // Eski kod burada serbest metin `duration`a düşüyor, o da yoksa '90 Dakika'
+      // UYDURUYORDU: 60 dakikalık maçlar kartta 90 görünüyordu. Artık yedek YOK —
+      // veri yoksa etiket hiç çizilmez (yanlış sayı göstermekten iyidir).
+      const durationLabel = formatMatchDuration(m);
       const gender = m.gender || 'Karma';
       const ageGroup = m.ageGroup || 'Tümü';
       
@@ -190,7 +195,7 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
         matchMentality,
         mentalityColor,
         format,
-        duration,
+        durationLabel,
         gender,
         ageGroup,
         distance: m.distance
@@ -253,8 +258,16 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
         return false;
       }
     }
-    if (dna.duration && match.duration && match.duration.toLowerCase() !== dna.duration.toLowerCase()) {
-      return false;
+    // Süre filtresi de TEK KAYNAKTAN okur: matches.duration_minutes. Eskiden
+    // serbest metin `duration` ile harf harf karşılaştırılıyordu — '90 dakika'
+    // ile '90 Dakika' ayrışabiliyor, metni boş olan maç ise filtreyi sessizce
+    // GEÇİYORDU (kullanıcı 60 seçip 90'lık maç görebiliyordu).
+    if (dna.duration) {
+      const istenenDk = parseInt(dna.duration, 10);
+      const gercekDk = realMatchMinutes(match);
+      if (!Number.isFinite(istenenDk) || gercekDk === null || gercekDk !== istenenDk) {
+        return false;
+      }
     }
     if (dna.age && dna.age !== 'Tümü' && match.ageGroup && match.ageGroup.toLowerCase() !== dna.age.toLowerCase()) {
       return false;
@@ -1038,9 +1051,12 @@ const MatchCard: React.FC<{
               <span className="px-2 py-0.5 rounded border border-white/10 bg-white/5 text-[9px] font-black text-white/80 uppercase tracking-widest backdrop-blur-sm">
                 {match.format}
               </span>
-              <span className="px-2 py-0.5 rounded border border-white/10 bg-white/5 text-[9px] font-black text-white/80 uppercase tracking-widest backdrop-blur-sm">
-                {match.duration}
-              </span>
+              {/* MAÇ SÜRESİ — gerçek veri (duration_minutes). Yoksa hiç çizilmez. */}
+              {match.durationLabel && (
+                <span className="px-2 py-0.5 rounded border border-[#39FF14]/25 bg-[#39FF14]/10 text-[9px] font-black text-[#39FF14] uppercase tracking-widest backdrop-blur-sm">
+                  {match.durationLabel}
+                </span>
+              )}
               <span className="px-2 py-0.5 rounded border border-white/10 bg-white/5 text-[9px] font-black text-white/80 uppercase tracking-widest backdrop-blur-sm">
                 {match.gender}
               </span>

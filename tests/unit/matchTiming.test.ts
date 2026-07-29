@@ -3,8 +3,47 @@ import {
   matchDurationMinutes,
   matchEndMs,
   hasMatchEnded,
+  realMatchMinutes,
+  formatMatchDuration,
   DEFAULT_MATCH_MINUTES,
 } from '../../shared/matchTiming';
+
+// ─── KARTLARDA GÖSTERİLEN SÜRE — gerçek veri, uydurma yedek YOK ─────────────
+
+describe('realMatchMinutes / formatMatchDuration (kart + mac kurallari)', () => {
+  it('camelCase ve snake_case alanlarin ikisini de okur', () => {
+    expect(realMatchMinutes({ durationMinutes: 90 })).toBe(90);
+    expect(realMatchMinutes({ duration_minutes: 120 })).toBe(120);
+  });
+
+  it('veri yoksa null doner — UYDURMA 60 BASMAZ', () => {
+    expect(realMatchMinutes(null)).toBeNull();
+    expect(realMatchMinutes(undefined)).toBeNull();
+    expect(realMatchMinutes({})).toBeNull();
+    expect(realMatchMinutes({ durationMinutes: null })).toBeNull();
+    // Serbest metin `duration` BİLEREK okunmaz (sunucu SSOT'u degil).
+    expect(realMatchMinutes({ duration: '90 Dakika' } as never)).toBeNull();
+  });
+
+  it('aralik disi deger gosterilmez (null) — zaman kapisindan farkli davranis', () => {
+    expect(realMatchMinutes({ durationMinutes: 0 })).toBeNull();
+    expect(realMatchMinutes({ durationMinutes: 4 })).toBeNull();
+    expect(realMatchMinutes({ durationMinutes: 301 })).toBeNull();
+    // Karsilastirma: zaman kapisi ayni girdide varsayilana duser.
+    expect(matchDurationMinutes(0)).toBe(DEFAULT_MATCH_MINUTES);
+  });
+
+  it('etiket tek bicimdir: "90 dakika" (italik yok — karar S17)', () => {
+    expect(formatMatchDuration({ durationMinutes: 90 })).toBe('90 dakika');
+    expect(formatMatchDuration({ durationMinutes: 60 })).toBe('60 dakika');
+    expect(formatMatchDuration({ duration_minutes: 120 })).toBe('120 dakika');
+  });
+
+  it('veri yoksa etiket de null — cagiran alani hic cizmez', () => {
+    expect(formatMatchDuration({})).toBeNull();
+    expect(formatMatchDuration(null)).toBeNull();
+  });
+});
 
 describe('matchDurationMinutes', () => {
   it('serbest metinden dakikayi cikarir', () => {

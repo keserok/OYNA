@@ -96,6 +96,9 @@ export const getMatchDetails = async (matchId: string): Promise<MatchListing | n
       pitchId: data.pitch_id || data.pitchId || undefined,
       courtId: data.court_id || undefined,
       courtName,
+      // Maç süresi (E6) — slottan/tarifeden türetilmiş SUNUCU değeri. Lobideki
+      // "Maç Kuralları" ve kartlar bunu okur; serbest metin `duration` değil.
+      durationMinutes: data.duration_minutes ?? data.durationMinutes ?? undefined,
       isSuccessful: data.is_successful ?? data.isSuccessful ?? undefined,
       confirmedAt: data.confirmed_at || data.confirmedAt || undefined,
       startsAt: data.starts_at || data.startsAt || undefined,

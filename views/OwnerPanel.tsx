@@ -10,6 +10,7 @@ import {
 import { useAppStore } from '../store';
 import { hasMultipleSwitchableRoles } from '../shared/roles';
 import { resolveWorkingHoursForDate, isHourWithinWorkingHours, openHourCount } from '../shared/workingHours';
+import { courtsMissingTariff } from '../shared/courtTariffGate';
 import { PitchManager } from '../admin-panel/views/PitchManager';
 import { OwnerFinanceView } from './owner/OwnerFinanceView';
 import { LoadingState, EmptyState } from '../components/common/StatusState';
@@ -32,7 +33,6 @@ import {
   OwnerMenuView,
   OwnerFacilitySettingsModal,
   OwnerWorkingHoursModal,
-  OwnerPricingPolicyModal,
   OwnerCancellationPolicyModal,
   OwnerWithdrawalsModal,
   OwnerWidgetSettingsModal,
@@ -71,8 +71,9 @@ import {
   updateSubscriptionStatus,
   setSubscriptionAutoRenew,
   subscribeToOwnerBookings,
-  buildHourlyOccupancyGrid,
-  buildEmptyHourlyGrid,
+  getTariffs,
+  buildDayOccupancyGrid,
+  EMPTY_DAY_OCCUPANCY,
   computeCourtDailyStats,
   computeOverallOccupancy,
   getPaymentSettings,
@@ -83,8 +84,8 @@ import {
   updatePitchOperationsSettings,
   toTurkishError,
   type CourtDailyStats,
-  type HourlyOccupancyCell,
 } from '../services/pitchOwnerService';
+import type { SlotTariffInput } from '../shared/slotGrid';
 import { getOwnerDemoPitchId, seedOwnerDemo } from '../services/ownerDemoService';
 import type { PitchCourt, PitchBookingFull, OwnerDailySummary, OwnerPitch, FlashDeal, PitchAvailabilityException, PitchTariff } from '../types';
 
@@ -108,6 +109,27 @@ import { todayISO, bookingToPendingRequest, INITIAL_PENDING_REQUESTS } from './o
 
 type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACTIONS' | 'PITCHES';
 
+/**
+ * pitch_tariffs satırı → panelin `pricingPolicy` biçimi.
+ *
+ * TEK KOPYA: takvim, doluluk şeridi ve tüketici ekranı aynı alanlardan beslenir.
+ * `applies_to_days` / `tariff_type` / `valid_on` kopyalanmazsa ızgara yanlış
+ * güne düşer; `deposit_amount` kopyalanmazsa takvim uydurma kaporaya düşer
+ * (BULGU-123).
+ */
+const tariffRowToPolicy = (t: PitchTariff) => ({
+  startTime: String(t.start_time ?? '08:00'),
+  endTime: String(t.end_time ?? '17:00'),
+  price: Number(t.slot_price ?? 0),
+  slot_price: Number(t.slot_price ?? 0),
+  slot_minutes: Number(t.slot_minutes ?? 60),
+  deposit_amount: Number(t.deposit_amount ?? 0),
+  court_id: t.court_id ?? null,
+  applies_to_days: t.applies_to_days ?? null,
+  tariff_type: t.tariff_type ?? undefined,
+  valid_on: t.valid_on ?? null,
+});
+
  const OwnerPanelInner: React.FC<OwnerPanelProps> = ({ onBack, onNavigate, onNeedOnboarding, onLogout }) => {
   const notify = useOwnerToast();
   const { confirm, confirmElement } = useConfirmSheet();
@@ -128,7 +150,6 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
   const [dailySummary, setDailySummary] = useState<OwnerDailySummary | null>(null);
   const [todayBookings, setTodayBookings] = useState<PitchBookingFull[]>([]);
   const [courtStats, setCourtStats] = useState<CourtDailyStats[]>([]);
-  const [hourlyOccupancy, setHourlyOccupancy] = useState<HourlyOccupancyCell[]>(() => buildEmptyHourlyGrid());
   const [autoApproveMinutes, setAutoApproveMinutes] = useState(35);
   const [isDemoMode, setIsDemoMode] = useState(false);
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
@@ -184,7 +205,6 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
     }
     setActiveTab(tab);
   };
-  const [showPricingPolicy, setShowPricingPolicy] = useState(false);
   const [showCancellationPolicy, setShowCancellationPolicy] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [activeWidgets, setActiveWidgets] = useState<WidgetType[]>(() => {
@@ -228,16 +248,64 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
     todayOpenHoursRef.current = wh.closed ? 0 : openHourCount(wh.open, wh.close);
   }, [facilityData]);
 
-  // Doluluk analizi görünür saat penceresi (mobil grid varsayılanı). Kapanış
-  // 00:00 → 24. Geçersiz/kapalı günde 08–24 güvenli varsayılan.
-  const todayHourWindow = useMemo(() => {
+  // SLOT-3 — Doluluk analizi şeridi. Sabit 24 saatlik ızgara YOK: tarifelerden
+  // (pitch_tariffs.slot_minutes) türetilir, dikdörtgenler süreyle orantılıdır.
+  const tariffsForOccupancy = useMemo<SlotTariffInput[]>(
+    () => ((facilityData?.pricingPolicy ?? []) as any[]).map((p) => ({
+      id: p.id,
+      tariff_type: p.tariff_type ?? 'WEEKDAY',
+      applies_to_days: p.applies_to_days ?? null,
+      start_time: String(p.start_time ?? p.startTime ?? '09:00'),
+      end_time: String(p.end_time ?? p.endTime ?? '00:00'),
+      slot_price: Number(p.slot_price ?? p.price ?? 0),
+      slot_minutes: Number(p.slot_minutes ?? 60),
+      deposit_amount: Number(p.deposit_amount ?? 0),
+      is_active: p.is_active,
+      court_id: p.court_id ?? null,
+      valid_on: p.valid_on ?? null,
+    })),
+    [facilityData],
+  );
+
+  const occupancyGrid = useMemo(() => {
+    const activeCourts = courts.filter((c) => c.is_active !== false);
+    if (activeCourts.length === 0) return EMPTY_DAY_OCCUPANCY;
     const wh = resolveWorkingHoursForDate(facilityData?.workingHours as any, todayISO());
-    const openH = parseInt(String(wh.open ?? '08:00').slice(0, 2), 10);
-    let closeH = parseInt(String(wh.close ?? '00:00').slice(0, 2), 10);
-    if (!Number.isFinite(openH)) return { open: 8, close: 24 };
-    if (!Number.isFinite(closeH) || closeH <= openH) closeH = 24;
-    return { open: openH, close: closeH };
-  }, [facilityData]);
+    return buildDayOccupancyGrid(
+      todayBookings,
+      activeCourts.map((c) => ({ id: c.id, name: c.name })),
+      tariffsForOccupancy,
+      todayISO(),
+      // Tarifesiz tesis boş şerit görmesin (slotGrid Kural 4). Kapalı günde yedek yok.
+      wh.closed ? null : wh,
+    );
+  }, [todayBookings, courts, tariffsForOccupancy, facilityData]);
+
+  // SLOT-3 (4. madde) — sahip tarifeyi değiştirince ŞERİT ANINDA doğru çizmeli.
+  // Tarife modalının onSave yükü ekran için YETERLİ DEĞİL: gün listesini
+  // (applies_to_days) ve tarife tipini taşımıyor, SPECIAL satırlarını da eliyor.
+  // O yükle çizersek hafta sonu tarifesi cumartesi günü şeritten düşerdi.
+  // Bu yüzden modal kapanınca tarifeler GERÇEK KAYNAKTAN yeniden çekilir.
+  // Fiyat politikası artık Sahalarım (PITCHES) sekmesinde, saha bazlı giriliyor.
+  // O sekmeden çıkıldığında tarifeler gerçek kaynaktan yeniden çekilir.
+  const pricingWasOpenRef = useRef(false);
+  useEffect(() => {
+    const wasOpen = pricingWasOpenRef.current;
+    const isOpen = activeTab === 'PITCHES';
+    pricingWasOpenRef.current = isOpen;
+    if (!wasOpen || isOpen || !realPitchId) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const rows = await getTariffs(realPitchId);
+        if (cancelled) return;
+        setFacilityData((prev: any) => (prev ? { ...prev, pricingPolicy: rows.map(tariffRowToPolicy) } : prev));
+      } catch {
+        // Sessiz: şerit son bilinen tarifeyle çizmeye devam eder, yanlış veri basmaz.
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [activeTab, realPitchId]);
 
   const refreshDashboard = React.useCallback(async (pitchId: string, approveMins: number, courtList?: PitchCourt[]) => {
     try {
@@ -251,7 +319,6 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
       const activeCourtRows = (courtList ?? courts).filter((c) => c.is_active !== false);
       const courtMeta = activeCourtRows.map((c) => ({ id: c.id, name: c.name }));
       setCourtStats(computeCourtDailyStats(bookings, courtMeta, todayOpenHoursRef.current));
-      setHourlyOccupancy(buildHourlyOccupancyGrid(bookings, courtMeta));
       setPendingRequests(pending.map((b) => bookingToPendingRequest(b, approveMins)));
     } catch (err) {
       notify(toTurkishError(err), 'error');
@@ -283,19 +350,7 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
       isFacilityOpen: pitch.is_open ?? true,
       latitude: (pitch as { latitude?: number | null }).latitude ?? null,
       longitude: (pitch as { longitude?: number | null }).longitude ?? null,
-      pricingPolicy: (pitch.pitch_tariffs ?? []).map((t: PitchTariff) => ({
-        startTime: String(t.start_time ?? '08:00'),
-        endTime: String(t.end_time ?? '17:00'),
-        price: Number(t.slot_price ?? 0),
-        slot_price: Number(t.slot_price ?? 0),
-        slot_minutes: Number(t.slot_minutes ?? 60),
-        // BULGU-123: takvim kapora varsayılanını tarifeden okur — kopyalanmazsa uydurma orana düşer.
-        deposit_amount: Number(t.deposit_amount ?? 0),
-        court_id: t.court_id ?? null,
-        applies_to_days: t.applies_to_days ?? null,
-        tariff_type: t.tariff_type ?? undefined,
-        valid_on: t.valid_on ?? null,
-      })),
+      pricingPolicy: (pitch.pitch_tariffs ?? []).map(tariffRowToPolicy),
       bankAccounts: [],
       workingHours: Array.isArray(pitch.working_hours) && pitch.working_hours.length ? pitch.working_hours : [],
       district: pitch.district,
@@ -633,7 +688,6 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
       isFacilityOpen,
       verificationStatus: facilityData?.verificationStatus ?? 'pending',
       bankAccountCount: facilityData?.bankAccounts?.length ?? 0,
-      tariffCount: facilityData?.pricingPolicy?.length ?? 0,
       autoApproveEnabled: autoApprove,
       autoApproveMinutes,
       availableBalance: menuBalance,
@@ -643,6 +697,13 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
           facilityData?.paramClientId,
       ),
       courtCount: courts.filter((c) => c.is_active !== false).length,
+      // Kendi tarifesi (court_id = kort) olmayan AKTİF saha sayısı. Kural
+      // shared/courtTariffGate'te tek yerde durur; sunucu ikizi
+      // trg_enforce_court_tariff_before_activate.
+      courtsWithoutTariff: courtsMissingTariff(
+        courts,
+        (facilityData?.pricingPolicy ?? []) as { court_id?: string | null }[],
+      ).length,
     }),
     [
       isFacilityOpen,
@@ -667,13 +728,15 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
         onFix: () => openProfile('location') },
       { key: 'photo', label: 'Fotoğraf yükle', hint: 'Tesis ve saha görselleri', done: (fd?.images?.length ?? 0) > 0,
         onFix: () => openProfile('general') },
-      { key: 'tariff', label: 'Fiyat tarifesi', hint: 'Saat/gün bazlı ücret', done: menuStats.tariffCount > 0,
-        onFix: () => { if (managerGuard()) setShowPricingPolicy(true); } },
+      // Her saha kendi tarifesini girer: adım, tarifesiz saha kalmayınca tamamlanır.
+      { key: 'tariff', label: 'Saha fiyat politikası', hint: 'Her saha için saat/gün bazlı ücret',
+        done: menuStats.courtCount > 0 && menuStats.courtsWithoutTariff === 0,
+        onFix: () => { if (managerGuard()) setActiveTab('PITCHES'); } },
       { key: 'hours', label: 'Çalışma saatleri', hint: 'Açık/kapalı saatler', done: (fd?.workingHours?.length ?? 0) > 0,
         onFix: () => { if (managerGuard()) setShowWorkingHours(true); } },
     ];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [facilityData, menuStats.courtCount, menuStats.tariffCount]);
+  }, [facilityData, menuStats.courtCount, menuStats.courtsWithoutTariff]);
 
   const toggleAutoApprove = async () => {
     if (!effGuardWrite()) return;
@@ -869,12 +932,7 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
                         <span className="flex items-center gap-2"><BarChartIcon size={18} className="text-indigo-500" /> Saha Doluluk Analizi</span>
                         <span className="text-[10px] font-bold text-gray-500 group-hover:text-white uppercase tracking-wider flex items-center gap-1">Takvim <ChevronRight size={13} /></span>
                     </button>
-                    <PitchOccupancyGrid
-                      data={hourlyOccupancy}
-                      courtNames={courts.map(c => c.name)}
-                      openHour={todayHourWindow.open}
-                      closeHour={todayHourWindow.close}
-                    />
+                    <PitchOccupancyGrid grid={occupancyGrid} />
                   </div>
               )}
 
@@ -924,19 +982,7 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
             if (pitch) {
               setFacilityData((prev: any) => ({
                 ...prev,
-                pricingPolicy: (pitch.pitch_tariffs ?? []).map((t: PitchTariff) => ({
-                  startTime: String(t.start_time ?? '08:00'),
-                  endTime: String(t.end_time ?? '17:00'),
-                  price: Number(t.slot_price ?? 0),
-                  slot_price: Number(t.slot_price ?? 0),
-                  slot_minutes: Number(t.slot_minutes ?? 60),
-                  // Tarife düzenlendikten sonra da kapora varsayılanı kaybolmasın.
-                  deposit_amount: Number(t.deposit_amount ?? 0),
-                  court_id: t.court_id ?? null,
-                  applies_to_days: t.applies_to_days ?? null,
-                  tariff_type: t.tariff_type ?? undefined,
-                  valid_on: t.valid_on ?? null,
-                })),
+                pricingPolicy: (pitch.pitch_tariffs ?? []).map(tariffRowToPolicy),
               }));
             }
           }}
@@ -1009,9 +1055,6 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
             if (ownerOnlyGuard()) setShowBankAccountList(true);
           }}
           onWithdrawals={() => { if (ownerOnlyGuard()) setShowWithdrawals(true); }}
-          onPricingPolicy={() => {
-            if (managerGuard()) setShowPricingPolicy(true);
-          }}
           onCancellationPolicy={() => {
             // Karar: iade politikası yönetim ayarı — sahip + müdür düzenler.
             if (managerGuard()) setShowCancellationPolicy(true);
@@ -1045,7 +1088,8 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
           }}
           onOpenPricing={() => {
             setShowEditProfile(false);
-            if (effGuardWrite()) setShowPricingPolicy(true);
+            // Fiyat politikası saha bazlı: Sahalarım listesine götür.
+            if (effGuardWrite()) setActiveTab('PITCHES');
           }}
           onOpenHours={() => {
             setShowEditProfile(false);
@@ -1099,15 +1143,6 @@ type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACT
           onClose={() => setShowWithdrawals(false)}
           facilityId={facilityData?.id}
           readOnly={effReadOnly}
-        />
-      )}
-      {showPricingPolicy && (
-        <OwnerPricingPolicyModal
-          onClose={() => setShowPricingPolicy(false)}
-          facilityId={facilityData?.id}
-          courts={courts}
-          readOnly={effReadOnly}
-          onSave={(policy) => setFacilityData((prev: any) => ({ ...prev, pricingPolicy: policy }))}
         />
       )}
       {showCancellationPolicy && (

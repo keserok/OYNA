@@ -5,6 +5,7 @@ import { MatchListing, PositionSlot } from '../types';
 import { useAppStore } from '../store';
 import { FORMATIONS, type SquadSize } from '../utils/formations';
 import { useCountdown } from '../hooks/useCountdown';
+import { formatMatchDuration } from '../shared/matchTiming';
 
 // ── Shared helpers (subset from MatchJoin) ───────────────────────────────────
 
@@ -193,6 +194,8 @@ export const MatchJoinCard: React.FC<MatchJoinCardProps> = ({ match, currentUser
   const totalAway = awaySlots.length;
 
   const diffConf = DIFF_CONFIG[match.difficulty || ''] || DIFF_CONFIG['Rahat'];
+  // Süre kartın alt rozet satırında görünür; kaynak matches.duration_minutes.
+  const durationLabel = formatMatchDuration(match);
   const countdown = useCountdown(match.date, match.time);
   const isCancelled = match.status === 'CANCELLED';
 
@@ -312,6 +315,12 @@ export const MatchJoinCard: React.FC<MatchJoinCardProps> = ({ match, currentUser
             <span className="text-[8px] font-black uppercase px-2 py-0.5 rounded-md bg-white/5 border border-white/8 text-white/45">
               {match.format || inferSquadSize((match.slots || []).length)}
             </span>
+            {/* MAÇ SÜRESİ — gerçek veri (matches.duration_minutes). Yoksa çizilmez. */}
+            {durationLabel && (
+              <span className="text-[8px] font-black uppercase px-2 py-0.5 rounded-md bg-[#39FF14]/8 border border-[#39FF14]/20 text-[#39FF14]/90">
+                {durationLabel}
+              </span>
+            )}
             {match.price ? (
               <span className="text-[8px] font-black uppercase px-2 py-0.5 rounded-md bg-[#FACC15]/8 border border-[#FACC15]/15 text-[#FACC15]">
                 ₺{match.price}

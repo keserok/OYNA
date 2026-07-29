@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, Plus, Image as ImageIcon, Trash2, Edit3, Save, BadgeCheck, Clock, RotateCcw, Camera, AlertCircle, X } from 'lucide-react';
+import { ArrowLeft, Plus, Image as ImageIcon, Trash2, Edit3, Save, BadgeCheck, Clock, RotateCcw, Camera, AlertCircle, X, Tag } from 'lucide-react';
 import { PitchCourt } from '../../types';
-import { upsertCourt, deleteCourt, getInactiveCourts, reactivateCourt, toTurkishError } from '../../services/pitchOwnerService';
+import { upsertCourt, deleteCourt, getInactiveCourts, reactivateCourt, getCourtsTariffStatus, toTurkishError } from '../../services/pitchOwnerService';
 import { approveCourtGrades } from '../../services/pitchContentService';
 import { supabase } from '../../supabaseClient';
 import PhotoManager from '../../components/pitch-editor/PhotoManager';
@@ -9,6 +9,8 @@ import { COURT_FEATURES, normalizeCourtFeatures } from '../../shared/courtFeatur
 import { SURFACE_LABELS, SURFACE_OPTIONS } from '../../shared/courtSurface';
 import { formatCapacityRange } from '../../shared/pitchShowcaseMapper';
 import { useConfirmSheet } from '../../views/owner/components/useConfirmSheet';
+import { canPublishCourt, COURT_TARIFF_REQUIRED_MESSAGE } from '../../shared/courtTariffGate';
+import { OwnerPricingPolicyModal } from '../../views/owner/menu/OwnerPricingPolicyModal';
 
 // Format aralığı: min/max_capacity TAKIM BAŞI oyuncu tutar ("6v6" → 6).
 // DB CHECK kuralı 3–11 aralığını zorunlu kılar; rozetler formatCapacityRange ile üretilir.
@@ -61,6 +63,11 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
     const [saveError, setSaveError] = useState<string | null>(null);
     const { confirm, confirmElement } = useConfirmSheet();
     const [inactiveCourts, setInactiveCourts] = useState<PitchCourt[]>([]);
+    // SAHA BAZLI FİYAT POLİTİKASI (E1a/E5a/E12a): tesis geneli fiyatlandırma
+    // ekranı kaldırıldı; her saha kendi tarifesini burada girer. courtId → o
+    // sahanın KENDİ aktif tarife sayısı. Sunucu ikizi: courts_tariff_status.
+    const [tariffCounts, setTariffCounts] = useState<Record<string, number>>({});
+    const [pricingCourt, setPricingCourt] = useState<PitchCourt | null>(null);
 
     const isRealFacility = !!facilityId && !facilityId.startsWith('mock-');
 
@@ -70,6 +77,21 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
         getInactiveCourts(facilityId).then(setInactiveCourts).catch(() => setInactiveCourts([]));
     }, [isRealFacility, facilityId]);
     useEffect(() => { loadInactive(); }, [loadInactive, pitches.length]);
+
+    // Tarife durumu — "bu saha için önce fiyat politikası gir" çağrısının kaynağı.
+    const loadTariffCounts = React.useCallback(() => {
+        if (!isRealFacility || !facilityId) { setTariffCounts({}); return; }
+        getCourtsTariffStatus(facilityId)
+            .then((rows) => setTariffCounts(Object.fromEntries(rows.map((r) => [r.courtId, r.ownTariffCount]))))
+            .catch(() => setTariffCounts({}));
+    }, [isRealFacility, facilityId]);
+    useEffect(() => { loadTariffCounts(); }, [loadTariffCounts, pitches.length]);
+
+    /** Bu sahanın KENDİ tarifesi var mı? Yayın kapısının arayüz ikizi. */
+    const hasOwnTariff = React.useCallback(
+        (courtId?: string | null) => !isRealFacility || (courtId ? (tariffCounts[courtId] ?? 0) > 0 : false),
+        [isRealFacility, tariffCounts],
+    );
 
     const handleReactivate = async (court: PitchCourt) => {
         if (readOnly) return;
@@ -116,8 +138,14 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
         }
     };
 
+    // Sahanın düzenlemeye GİRERKENKİ yayın durumu. Yayın kapısı yalnız
+    // GEÇİŞTE (kapalı → yayında) çalışır; zaten yayında olan eski sahalar
+    // tarifesi olmasa da kapanmaz (geriye dönük uyum — sunucu tarafı da aynı).
+    const [wasActive, setWasActive] = useState(false);
+
     const handleEdit = (pitch: PitchCourt) => {
         if (readOnly) return;
+        setWasActive(pitch.is_active !== false);
         setEditingPitch({ ...pitch });
         // Mevcut kortun format aralığı + rozetiyle doldur (yoksa varsayılan 5v5–7v7).
         const ext = pitch as PitchCourt & CourtFormatExtras;
@@ -142,7 +170,11 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
             court_type: 'OPEN',
             surface: 'TURF',
             size: null,
-            is_active: true,
+            // TASLAK olarak açılır: tarife satırı ancak saha kaydedildikten sonra
+            // girilebilir (court_id'ye ihtiyaç var). Sunucu da tarifesiz sahayı
+            // yayına ALDIRMIYOR (trg_enforce_court_tariff_before_activate), bu
+            // yüzden yeni saha doğrudan yayında başlayamaz.
+            is_active: false,
             sort_order: pitches.length,
             price: null,
             capacity: 14,
@@ -155,6 +187,7 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
             grass_grade: null,
             locker_grade: null,
         };
+        setWasActive(false);
         setEditingPitch(newPitch);
         setEditCaps({ min: 5, max: 7, sizeLabel: '' }); // yeni kort varsayılanı
         setSaveError(null);
@@ -165,6 +198,18 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
         // Doğrulama: en küçük format en büyük formatı aşamaz.
         if (editCaps.min > editCaps.max) {
             setSaveError('En küçük format, en büyük formattan büyük olamaz. Aralığı kontrol edin.');
+            return;
+        }
+        // YAYIN KAPISININ ARAYÜZ İKİZİ (shared/courtTariffGate — sunucu ikizi:
+        // trg_enforce_court_tariff_before_activate). Sunucu da reddediyor;
+        // burada durdurmak sahibe NE YAPACAĞINI söyler.
+        const gate = canPublishCourt({
+            wasActive,
+            nextActive: editingPitch.is_active !== false,
+            hasOwnTariff: hasOwnTariff(editingPitch.id),
+        });
+        if (!gate.allowed) {
+            setSaveError(gate.reason ?? COURT_TARIFF_REQUIRED_MESSAGE);
             return;
         }
         setIsSaving(true);
@@ -248,6 +293,22 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
             setSaveError(toTurkishError(err));
         }
     };
+
+    /** Saha bazlı fiyat politikası ekranı — hem düzenleme hem liste görünümünde. */
+    const pricingModal = pricingCourt && facilityId ? (
+        <OwnerPricingPolicyModal
+            facilityId={facilityId}
+            courtId={pricingCourt.id}
+            courtName={pricingCourt.name}
+            readOnly={readOnly}
+            onNotify={(message, variant) => {
+                // Admin panelinde toast sağlayıcısı yok: hata görünür banner'a düşer.
+                if (variant === 'error') setSaveError(message);
+            }}
+            onClose={() => { setPricingCourt(null); loadTariffCounts(); }}
+            onSave={() => { loadTariffCounts(); }}
+        />
+    ) : null;
 
     if (editingPitch) {
         return (
@@ -346,7 +407,10 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
                                     className="w-full bg-[#0A0E14] border border-white/10 rounded-xl p-3 text-white font-bold focus:border-[#FACC15]/50 outline-none transition-colors"
                                     placeholder="Örn: 2000"
                                 />
-                                <p className="text-[10px] text-gray-600">Kaba fiyat. Saat/gün bazlı tarife: Fiyatlandırma Politikası.</p>
+                                <p className="text-[10px] text-gray-600">
+                                    Yalnız vitrindeki kaba etiket. Gerçek fiyat, süre ve kapora aşağıdaki
+                                    <b> Aktif Saatler ve Ücretler</b> bölümünden gelir (tek kaynak).
+                                </p>
                             </div>
                         </div>
 
@@ -426,6 +490,100 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
                                 placeholder="Sahanın özellikleri, kuralları veya ek detayları..."
                             />
                         </div>
+                    </div>
+
+                    {/* ── AKTİF SAATLER VE ÜCRETLER (saha bazlı) ───────────────────
+                        Tesis geneli fiyatlandırma menüsü kaldırıldı: fiyat ve süre
+                        politikası artık HER SAHA için burada tanımlanır (E1a: tarife
+                        satırında, E5a: kortlar farklı süre alabilir). Sahip ve admin
+                        aynı ekranı kullanır (A1a). */}
+                    <div className="bg-[#161B22] p-6 rounded-[24px] border border-white/5 space-y-4 shadow-sm">
+                        <div className="flex items-center justify-between border-b border-white/10 pb-2 mb-4">
+                            <h3 className="text-sm font-black text-white italic uppercase tracking-wider">Aktif Saatler ve Ücretler</h3>
+                            {isRealFacility && editingPitch.id && (
+                                <span className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase border ${
+                                    hasOwnTariff(editingPitch.id)
+                                        ? 'bg-[#10B981]/10 border-[#10B981]/30 text-[#10B981]'
+                                        : 'bg-amber-500/10 border-amber-500/30 text-amber-300'
+                                }`}>
+                                    <Tag size={12} />
+                                    {hasOwnTariff(editingPitch.id)
+                                        ? `${tariffCounts[editingPitch.id] ?? 0} tarife`
+                                        : 'Tarife yok'}
+                                </span>
+                            )}
+                        </div>
+
+                        {!editingPitch.id ? (
+                            <p className="text-xs text-gray-500 leading-relaxed">
+                                Fiyat politikası girmek için önce sahayı kaydedin. Saha kaydedildikten
+                                sonra bu bölümden saat aralıklarını, süreyi (60/90/120 dk) ve ücreti
+                                tanımlarsınız.
+                            </p>
+                        ) : (
+                            <>
+                                {!hasOwnTariff(editingPitch.id) && (
+                                    <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 flex items-start gap-3">
+                                        <AlertCircle size={16} className="text-amber-400 shrink-0 mt-0.5" />
+                                        <p className="text-xs text-amber-200 leading-relaxed">
+                                            <b>Bu saha için önce fiyat politikası gir.</b> Tarifesi olmayan saha
+                                            yayına alınamaz ve uygulamadan rezervasyon kabul etmez.
+                                        </p>
+                                    </div>
+                                )}
+                                <button
+                                    type="button"
+                                    onClick={() => setPricingCourt(editingPitch)}
+                                    disabled={readOnly || !isRealFacility}
+                                    className="w-full py-3 rounded-xl bg-[#39FF14]/10 border border-[#39FF14]/30 text-[#39FF14] font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 disabled:opacity-40"
+                                >
+                                    <Clock size={16} />
+                                    {hasOwnTariff(editingPitch.id) ? 'Fiyat Politikasını Düzenle' : 'Fiyat Politikası Gir'}
+                                </button>
+
+                                {/* YAYIN ANAHTARI — tarifesiz sahada kapalı kalır. */}
+                                <div className="flex items-center justify-between gap-4 pt-2 border-t border-white/5">
+                                    <div className="min-w-0">
+                                        <p className="text-xs font-bold text-gray-300">Yayında</p>
+                                        <p className="text-[10px] text-gray-500 leading-relaxed">
+                                            {editingPitch.is_active !== false
+                                                ? 'Bu saha uygulamada görünüyor ve rezervasyon alabiliyor.'
+                                                : 'Taslak — uygulamada görünmez, rezervasyon almaz.'}
+                                        </p>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        role="switch"
+                                        aria-checked={editingPitch.is_active !== false}
+                                        aria-label="Sahayı yayına al"
+                                        disabled={readOnly}
+                                        onClick={() => {
+                                            const next = editingPitch.is_active === false;
+                                            const d = canPublishCourt({
+                                                wasActive,
+                                                nextActive: next,
+                                                hasOwnTariff: hasOwnTariff(editingPitch.id),
+                                            });
+                                            if (!d.allowed) {
+                                                setSaveError(d.reason ?? COURT_TARIFF_REQUIRED_MESSAGE);
+                                                return;
+                                            }
+                                            setSaveError(null);
+                                            setEditingPitch({ ...editingPitch, is_active: next });
+                                        }}
+                                        className={`shrink-0 w-14 h-8 rounded-full transition-colors relative disabled:opacity-40 ${
+                                            editingPitch.is_active !== false ? 'bg-[#10B981]' : 'bg-white/10'
+                                        }`}
+                                    >
+                                        <span
+                                            className={`absolute top-1 w-6 h-6 rounded-full bg-white transition-all ${
+                                                editingPitch.is_active !== false ? 'left-7' : 'left-1'
+                                            }`}
+                                        />
+                                    </button>
+                                </div>
+                            </>
+                        )}
                     </div>
 
                     <div className="bg-[#161B22] p-6 rounded-[24px] border border-white/5 space-y-4 shadow-sm">
@@ -544,6 +702,7 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
                         )}
                     </div>
                 </div>
+                {pricingModal}
             </div>
         );
     }
@@ -624,6 +783,18 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
                                         </p>
                                     </div>
                                 </div>
+                                {/* Tarifesi olmayan yayındaki saha (eski kayıt): sessizce
+                                    geçiştirilmez — sahibe ne yapacağı söylenir. */}
+                                {isRealFacility && !hasOwnTariff(pitch.id) && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setPricingCourt(pitch)}
+                                        className="w-full px-4 py-2.5 bg-amber-500/10 border-t border-amber-500/25 text-amber-300 text-[11px] font-bold flex items-center gap-2 text-left"
+                                    >
+                                        <AlertCircle size={14} className="shrink-0" />
+                                        Bu saha için fiyat politikası girilmedi — gir
+                                    </button>
+                                )}
                                 <div className="p-4 flex gap-2">
                                     <button
                                         onClick={() => handleEdit(pitch)}
@@ -643,31 +814,52 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
                     </div>
                 )}
 
-                {/* Pasif (silinmiş) sahalar — geri açılabilir (Karar #5) */}
+                {/* Yayında olmayan sahalar: taslak (yeni eklenen, tarifesi henüz
+                    girilmemiş) veya pasife alınmış (Karar #5). Tarifesi olmayanın
+                    "Geri Aç" düğmesi yoktur — sunucu zaten reddeder; onun yerine
+                    doğrudan fiyat politikası ekranına götürülür (sessiz hata YOK). */}
                 {!readOnly && inactiveCourts.length > 0 && (
                     <div className="mt-8">
-                        <h3 className="text-[11px] font-black text-gray-500 uppercase tracking-widest mb-3">Pasif Sahalar</h3>
+                        <h3 className="text-[11px] font-black text-gray-500 uppercase tracking-widest mb-3">Yayında Olmayan Sahalar</h3>
                         <div className="space-y-2">
-                            {inactiveCourts.map((court) => (
-                                <div key={court.id} className="flex items-center justify-between bg-[#161B22]/60 border border-white/5 rounded-2xl p-4">
-                                    <div className="min-w-0">
-                                        <p className="text-sm font-bold text-gray-300 truncate">{court.name}</p>
-                                        <p className="text-[11px] text-gray-600">
-                                            {court.court_type === 'CLOSED' ? 'Kapalı' : 'Açık'} • {SURFACE_LABELS[court.surface ?? 'TURF'] ?? court.surface} • Pasif
-                                        </p>
+                            {inactiveCourts.map((court) => {
+                                const ready = hasOwnTariff(court.id);
+                                return (
+                                    <div key={court.id} className="flex items-center justify-between gap-3 bg-[#161B22]/60 border border-white/5 rounded-2xl p-4">
+                                        <button
+                                            type="button"
+                                            onClick={() => handleEdit(court)}
+                                            className="min-w-0 text-left flex-1"
+                                        >
+                                            <p className="text-sm font-bold text-gray-300 truncate">{court.name}</p>
+                                            <p className="text-[11px] text-gray-600">
+                                                {court.court_type === 'CLOSED' ? 'Kapalı' : 'Açık'} • {SURFACE_LABELS[court.surface ?? 'TURF'] ?? court.surface}
+                                                {' • '}{ready ? 'Yayına hazır' : 'Tarife yok'}
+                                            </p>
+                                        </button>
+                                        {ready ? (
+                                            <button
+                                                onClick={() => handleReactivate(court)}
+                                                className="shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-[11px] font-black uppercase"
+                                            >
+                                                <RotateCcw size={13} /> Yayına Al
+                                            </button>
+                                        ) : (
+                                            <button
+                                                onClick={() => setPricingCourt(court)}
+                                                className="shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-[11px] font-black uppercase"
+                                            >
+                                                <Tag size={13} /> Fiyat Politikası Gir
+                                            </button>
+                                        )}
                                     </div>
-                                    <button
-                                        onClick={() => handleReactivate(court)}
-                                        className="shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-[11px] font-black uppercase"
-                                    >
-                                        <RotateCcw size={13} /> Geri Aç
-                                    </button>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     </div>
                 )}
             </div>
+            {pricingModal}
             {confirmElement}
         </div>
     );

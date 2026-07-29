@@ -26,6 +26,7 @@ import { FORMATIONS as FORMATIONS_SSOT, type SquadSize } from '../utils/formatio
 import TeamPlanBanner from '../components/social/TeamPlanBanner';
 // Tek kaynak lobi mantığı — admin paneli (MatchLobbyPitch) ile AYNI fonksiyonlar (drift yok).
 import { normalizeRole, inferSquadSize, applyCanonicalCoords, resolveGkVisibility, findHiredGkSlotId } from '../shared/lobbyEnrichment';
+import { formatMatchDuration } from '../shared/matchTiming';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -609,6 +610,9 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
     .filter(Boolean) as string[];
 
   const diffConf = difficultyConfig[match.difficulty] || difficultyConfig['Rahat'];
+  // "Maç Kuralları" bölümündeki süre — sunucudaki matches.duration_minutes.
+  // Sabit yazı/varsayılan YOK: veri yoksa satır hiç görünmez.
+  const matchDurationLabel = formatMatchDuration(match);
   const squadSize = inferSquadSize((match.slots || []).length);
   const totalSlots = (match.slots || []).length;
   const takenSlots = (match.slots || []).filter(s => s?.status === 'TAKEN').length;
@@ -3029,6 +3033,16 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                     <span className="text-[11px] font-black text-white/40 uppercase tracking-wider">FORMAT</span>
                     <span className="text-sm font-black text-white uppercase italic">{match.format || '7v7'}</span>
                   </div>
+                  {/* MAÇ SÜRESİ — GERÇEK VERİ (matches.duration_minutes; sahayı 90
+                      dakika kiraladıysan maç 90 dakikadır — E6). Sabit/yazılı süre
+                      YOK; veri gelmiyorsa satır hiç çizilmez. İtalik kullanılmaz
+                      (karar S17: italik yalnız skorda). */}
+                  {matchDurationLabel && (
+                    <div className="flex items-center justify-between px-4 py-4">
+                      <span className="text-[11px] font-black text-white/40 uppercase tracking-wider">SÜRE</span>
+                      <span className="text-sm font-black text-white">{matchDurationLabel}</span>
+                    </div>
+                  )}
                   <div className="flex items-center justify-between px-4 py-4">
                     <span className="text-[11px] font-black text-white/40 uppercase tracking-wider">YAŞ GRUBU</span>
                     <span className="text-sm font-black text-white uppercase italic">{match.ageGroup || 'Belirtilmedi'}</span>

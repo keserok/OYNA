@@ -15,6 +15,9 @@ import { supabase } from '../supabaseClient';
 import { enqueueOrRun } from './offline/outbox';
 import { localDateISO } from '../views/owner/ownerCalendarHelpers';
 import { resolveTariffForSlot } from './tariffService';
+// SLOT-3: doluluk şeridi ızgarayı UYDURMAZ — sunucudaki get_pitch_slots'un
+// istemci ikizinden (SSOT) okur; süre tek kaynaktan gelir (pitch_tariffs.slot_minutes).
+import { buildSlotGrid, bookingCoversSlot, hmToMinutes, type SlotTariffInput } from '../shared/slotGrid';
 import type {
   OwnerPitch,
   OwnerDailySummary,
@@ -141,6 +144,19 @@ export function toTurkishError(error: unknown): string {
 
   if (raw.includes('SLOT_TAKEN')) return 'Bu saat dilimi zaten rezerve edilmiş.';
   if (raw.includes('SLOT_UNAVAILABLE')) return 'Bu saat dilimi kapalı.';
+  // Saha bazlı tarife zorunluluğu (20260828000008). Sunucu mesajı ASCII; kullanıcı
+  // Türkçesini burada görür. Sessiz hata YOK: her kapı ne yapılacağını söyler.
+  if (raw.includes('NO_COURT_TARIFF'))
+    return 'Bu saha için önce fiyat politikası gir — tarifesi olmayan saha yayına alınamaz.';
+  if (raw.includes('COURT_NOT_PUBLISHED'))
+    return 'Bu saha şu an yayında değil; rezervasyon alınamaz.';
+  if (raw.includes('TARIFF_REQUIRED_FOR_BOOKING'))
+    return raw.split('TARIFF_REQUIRED_FOR_BOOKING: ')[1] ?? 'Rezervasyonu olan saati tarifesiz bırakamazsın.';
+  if (raw.includes('SLOT_MINUTES_LOCKED'))
+    return raw.split('SLOT_MINUTES_LOCKED: ')[1] ?? 'Rezervasyon bulunan saatin süresi değiştirilemez.';
+  if (raw.includes('NO_TARIFF'))
+    return 'Tarife girilmeden bu tesis yayında tutulamaz. Önce her saha için fiyat politikası gir.';
+  if (raw.includes('COURT_NOT_FOUND')) return 'Saha bulunamadı.';
   if (raw.includes('INVALID_TOKEN')) return 'QR kodu geçersiz veya süresi dolmuş.';
   if (raw.includes('INVALID_SCORE')) return 'Girilen skor geçersiz.';
   // Tekrar denemek çözmez — maç bitene kadar sunucu her seferinde reddeder.
@@ -517,6 +533,70 @@ export async function getTariffs(pitchId: string): Promise<PitchTariff[]> {
     return (data ?? []) as unknown as PitchTariff[];
   } catch (error) {
     console.error('getTariffs:', error);
+    throw new Error(toTurkishError(error));
+  }
+}
+
+/**
+ * SAHA (KORT) BAZLI tarife kaydı — yalnız `courtId`'ye ait satırları değiştirir.
+ *
+ * `saveTariffs` (owner_replace_tariffs) TESİSİN TÜM tarifelerini siler. Saha
+ * bazlı ekrandan o çağrılsaydı bir sahanın fiyatını kaydeden sahip, diğer
+ * sahaların tarifelerini de silerdi. Sunucu tarafı: `owner_replace_court_tariffs`
+ * (migration 20260828000008) — court_id'yi sunucuda sabitler, E4a/A2a slot süresi
+ * kilidini bu kortun rezervasyonlarına uygular.
+ */
+export async function saveCourtTariffs(courtId: string, tariffs: TariffInput[]): Promise<void> {
+  try {
+    const rows = tariffs.map((t, idx) => ({
+      name: t.name,
+      tariff_type: t.tariff_type,
+      applies_to_days: t.applies_to_days,
+      start_time: t.start_time,
+      end_time: t.end_time,
+      slot_price: t.slot_price,
+      slot_minutes: t.slot_minutes ?? 60,
+      deposit_amount: t.deposit_amount ?? 0,
+      sort_order: t.sort_order ?? idx,
+      is_active: t.is_active ?? true,
+      valid_on: t.valid_on ?? null,
+    }));
+    const { error } = await supabase.rpc('owner_replace_court_tariffs', {
+      p_court_id: courtId,
+      p_tariffs: rows,
+    });
+    if (error) throw error;
+  } catch (error) {
+    console.error('saveCourtTariffs:', error);
+    throw new Error(toTurkishError(error));
+  }
+}
+
+export interface CourtTariffStatus {
+  courtId: string;
+  courtName: string;
+  isActive: boolean;
+  ownTariffCount: number;
+}
+
+/**
+ * Her sahanın KENDİ tarifesi var mı — sahip ve admin panelleri aynı kaynaktan
+ * okur (K-0.3). Tarifesi olmayan saha yayına alınamaz; arayüz bu listeye bakıp
+ * "bu saha için önce fiyat politikası gir" çağrısını gösterir.
+ */
+export async function getCourtsTariffStatus(pitchId: string): Promise<CourtTariffStatus[]> {
+  try {
+    const { data, error } = await supabase.rpc('courts_tariff_status', { p_pitch_id: pitchId });
+    if (error) throw error;
+    return ((data ?? []) as { court_id: string; court_name: string; is_active: boolean; own_tariff_count: number }[])
+      .map((r) => ({
+        courtId: r.court_id,
+        courtName: r.court_name,
+        isActive: r.is_active,
+        ownTariffCount: Number(r.own_tariff_count) || 0,
+      }));
+  } catch (error) {
+    console.error('getCourtsTariffStatus:', error);
     throw new Error(toTurkishError(error));
   }
 }
@@ -1106,10 +1186,44 @@ export interface OccupancySlotCell {
   name: string;
 }
 
-export interface HourlyOccupancyCell {
-  time: string;
-  occupancy: number;
-  pitches: (OccupancySlotCell | null)[];
+/**
+ * Doluluk şeridindeki TEK dikdörtgen. Sabit "1 saat" DEĞİL: süresi tarifenin
+ * `slot_minutes` değeridir (60/90/120). `offsetMinutes` gün başlangıcından
+ * (00:00) itibaren mutlak dakikadır; gece yarısını aşan dilimlerde 1440'ı geçer
+ * — böylece çizim tarafı dikdörtgeni gerçek uzunluğuyla konumlandırabilir.
+ */
+export interface OccupancySlotBar {
+  /** 'HH:MM' */
+  startTime: string;
+  /** 'HH:MM' — gece yarısını aşarsa ertesi günün saati. */
+  endTime: string;
+  /** Slotun GERÇEK süresi (dakika) — dikdörtgenin boyu buradan gelir. */
+  minutes: number;
+  /** 00:00'dan itibaren mutlak başlangıç dakikası (gece taşmasında ≥1440). */
+  offsetMinutes: number;
+  /** Dolu ise rezervasyon özeti, boşsa null. */
+  cell: OccupancySlotCell | null;
+}
+
+export interface CourtOccupancyRow {
+  courtId: string;
+  courtName: string;
+  slots: OccupancySlotBar[];
+  /** Dolu slotların dakika toplamı. */
+  bookedMinutes: number;
+  /** Satılabilir dakika toplamı — doluluğun dürüst PAYDASI (E3a artığı hariç). */
+  sellableMinutes: number;
+  occupancyPercent: number;
+}
+
+export interface DayOccupancyGrid {
+  rows: CourtOccupancyRow[];
+  /** Görünür pencerenin başlangıcı (00:00'dan dakika). */
+  startMinutes: number;
+  /** Görünür pencerenin bitişi (00:00'dan dakika; gece taşmasında >1440). */
+  endMinutes: number;
+  /** Izgara tarifeden mi türedi? false → hiç tarife yok, çalışma saati yedeği. */
+  fromTariffs: boolean;
 }
 
 /** Rezervasyonun görünen sahibi: manuel kayıtta müşteri adı, uygulama
@@ -1138,26 +1252,19 @@ function spanHours(start?: string | null, end?: string | null): number {
   return Math.max(0, e - s);
 }
 
-export function buildEmptyHourlyGrid(courtCount = 0): HourlyOccupancyCell[] {
-  return Array.from({ length: 24 }, (_, h) => ({
-    time: `${h.toString().padStart(2, '0')}:00`,
-    occupancy: 0,
-    pitches: Array.from({ length: Math.max(courtCount, 1) }, () => null),
-  }));
-}
-
-/** Bugünkü rezervasyonlardan saatlik doluluk ızgarası üretir (takvim ile aynı kaynak). */
-export function buildHourlyOccupancyGrid(
+/**
+ * Finans analizi ısı haritası: saat başına kaç kort dolu (0-100 normalize).
+ * Bu bir HİSTOGRAMDIR — slot ızgarası değil; bu yüzden saat çözünürlüğü doğrudur
+ * (90 dakikalık rezervasyon kapsadığı iki saati de ısıtır).
+ */
+export function buildHourlyIntensity(
   bookings: PitchBookingFull[],
   courts: { id: string; name?: string }[],
-): HourlyOccupancyCell[] {
+): { hour: string; intensity: number }[] {
   const activeCourts = courts.length > 0 ? courts : [{ id: '_default', name: 'Saha' }];
-  return Array.from({ length: 24 }, (_, h) => {
-    const time = `${h.toString().padStart(2, '0')}:00`;
-    const pitches: (OccupancySlotCell | null)[] = activeCourts.map((court) => {
-      // B4: başlangıç saati yerine KAPSANAN her saati işaretle → çok-saatlik
-      // rezervasyon (20:00-22:00) hem 20 hem 21 hücresini doldurur (çifte-satış kapanır).
-      const match = bookings.find((b) => {
+  const counts = Array.from({ length: 24 }, (_, h) =>
+    activeCourts.filter((court) =>
+      bookings.some((b) => {
         if (b.court_id !== court.id) return false;
         if (b.status === 'CANCELLED') return false;
         const sH = Number((b.start_time ?? '').slice(0, 2));
@@ -1166,16 +1273,119 @@ export function buildHourlyOccupancyGrid(
         if (!Number.isFinite(sH)) return false;
         if (!Number.isFinite(eH) || eH <= sH) eH = sH + 1; // end yoksa 1 saat varsay
         return h >= sH && h < eH;
-      });
-      if (!match) return null;
+      }),
+    ).length,
+  );
+  const maxOcc = Math.max(...counts, 1);
+  return counts.map((occ, h) => ({
+    hour: `${String(h).padStart(2, '0')}:00`,
+    intensity: Math.round((occ / maxOcc) * 100),
+  }));
+}
+
+export const EMPTY_DAY_OCCUPANCY: DayOccupancyGrid = {
+  rows: [],
+  startMinutes: 8 * 60,
+  endMinutes: 24 * 60,
+  fromTariffs: false,
+};
+
+/**
+ * SLOT-3 — GÜNLÜK DOLULUK ŞERİDİ (dikdörtgenler süreyle orantılı).
+ *
+ * Sabit 24 saatlik ızgara ARTIK YOK. Şerit `shared/slotGrid.buildSlotGrid` ile
+ * kurulur — yani sunucudaki `get_pitch_slots` / `get_court_day_quote` ile
+ * BİREBİR aynı kural (migration 20260828000006/000007). Süre tek kaynaktan
+ * gelir: `pitch_tariffs.slot_minutes` (E1a).
+ *
+ * Sonuçlar:
+ *  · 90 dakikalık slot 60'lıktan bir buçuk kat UZUN çizilir (SLOT-3).
+ *  · Aynı gün içinde sabah 60 / akşam 90 olabilir; her tarife penceresi KENDİ
+ *    adımıyla ilerler (E12a) — tek bir gün-boyu adım varsayılmaz.
+ *  · Kortlar farklı süre alabilir (E5a): ızgara kort bazında kurulur.
+ *  · Pencereye sığmayan artık süre slot ÜRETMEZ (E3a) — şeritte boşluk kalır ve
+ *    bu boşluk doluluk paydasına da girmez.
+ */
+export function buildDayOccupancyGrid(
+  bookings: PitchBookingFull[],
+  courts: { id: string; name?: string }[],
+  tariffs: SlotTariffInput[] | null | undefined,
+  dateISO: string,
+  fallbackWorkingHours?: { open?: string; close?: string; slotDuration?: number } | null,
+): DayOccupancyGrid {
+  const activeCourts = courts.length > 0 ? courts : [];
+  if (activeCourts.length === 0) return EMPTY_DAY_OCCUPANCY;
+
+  const live = bookings.filter((b) => b.status !== 'CANCELLED');
+  const hasTariff = (tariffs ?? []).length > 0;
+
+  let windowStart = Number.POSITIVE_INFINITY;
+  let windowEnd = Number.NEGATIVE_INFINITY;
+
+  const rows: CourtOccupancyRow[] = activeCourts.map((court) => {
+    const grid = buildSlotGrid(tariffs, dateISO, court.id, fallbackWorkingHours);
+
+    // buildSlotGrid mutlak başlangıç dakikasına göre SIRALI döner ama 'HH:MM'
+    // etiketleri gece yarısında başa sarar (25:30 → '01:30'). Sıra monoton
+    // olduğu için geri sarma noktasında +24 saat eklemek mutlak ofseti geri verir.
+    let base = 0;
+    let prev = -1;
+
+    const slots: OccupancySlotBar[] = grid.map((s) => {
+      let offset = hmToMinutes(s.startTime) + base;
+      if (offset < prev) {
+        base += 1440;
+        offset += 1440;
+      }
+      prev = offset;
+
+      const booking = live.find(
+        (b) =>
+          b.court_id === court.id &&
+          !!b.start_time &&
+          bookingCoversSlot(b.start_time, b.end_time ?? b.start_time, s),
+      );
+
       return {
-        type: match.source === 'SUBSCRIPTION' ? 'SUB' : 'DAILY',
-        name: bookingDisplayName(match),
+        startTime: s.startTime,
+        endTime: s.endTime,
+        minutes: s.minutes,
+        offsetMinutes: offset,
+        cell: booking
+          ? {
+              type: booking.source === 'SUBSCRIPTION' ? ('SUB' as const) : ('DAILY' as const),
+              name: bookingDisplayName(booking),
+            }
+          : null,
       };
     });
-    const occupancy = pitches.filter(Boolean).length;
-    return { time, occupancy, pitches };
+
+    for (const s of slots) {
+      if (s.offsetMinutes < windowStart) windowStart = s.offsetMinutes;
+      if (s.offsetMinutes + s.minutes > windowEnd) windowEnd = s.offsetMinutes + s.minutes;
+    }
+
+    const sellableMinutes = slots.reduce((acc, s) => acc + s.minutes, 0);
+    const bookedMinutes = slots.reduce((acc, s) => acc + (s.cell ? s.minutes : 0), 0);
+
+    return {
+      courtId: court.id,
+      courtName: court.name ?? 'Saha',
+      slots,
+      bookedMinutes,
+      sellableMinutes,
+      occupancyPercent:
+        sellableMinutes > 0 ? Math.min(100, Math.round((bookedMinutes / sellableMinutes) * 100)) : 0,
+    };
   });
+
+  // Hiçbir kortta slot yoksa (tarife yok + çalışma saati yedeği de kapalı)
+  // güvenli varsayılan pencere — şerit boş ama ekran çökmez.
+  if (!Number.isFinite(windowStart) || windowEnd <= windowStart) {
+    return { rows, startMinutes: 8 * 60, endMinutes: 24 * 60, fromTariffs: hasTariff };
+  }
+
+  return { rows, startMinutes: windowStart, endMinutes: windowEnd, fromTariffs: hasTariff };
 }
 
 /** Saha bazlı günlük ciro ve doluluk hesaplar. */
@@ -1447,15 +1657,10 @@ export async function getFinanceDashboard(pitchId: string): Promise<FinanceDashb
     id: c.id,
     name: c.name,
   }));
-  const grid = buildHourlyOccupancyGrid(
+  const hourlyIntensity = buildHourlyIntensity(
     todayRows,
     courtsForGrid.length ? courtsForGrid : [{ id: '_default', name: 'Saha' }],
   );
-  const maxOcc = Math.max(...grid.map((g) => g.occupancy), 1);
-  const hourlyIntensity = grid.map((g) => ({
-    hour: g.time,
-    intensity: Math.round((g.occupancy / maxOcc) * 100),
-  }));
 
   return {
     monthCollected,

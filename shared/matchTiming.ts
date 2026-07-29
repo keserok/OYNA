@@ -31,6 +31,38 @@ export function matchDurationMinutes(duration: unknown): number {
     : DEFAULT_MATCH_MINUTES;
 }
 
+/**
+ * KARTTA GÖSTERİLECEK GERÇEK SÜRE — `matches.duration_minutes` (E6/E1a).
+ *
+ * `matchDurationMinutes` zaman KAPISI içindir ve okunamayan değerde 60'a düşer;
+ * bu kabul zaman kapısı için doğru ama EKRAN için yanlıştır: 60 yazmak kullanıcıya
+ * yalan söylemektir. Bu yüzden burada yedek YOKTUR — veri yoksa `null` döner ve
+ * arayüz alanı hiç göstermez.
+ *
+ * Serbest metin `duration` ('90 Dakika') BİLEREK okunmaz: o alan eski/serbest
+ * girdidir ve sunucu SSOT'u değildir (create_match_atomic onu düşürür).
+ */
+export function realMatchMinutes(
+  match: { durationMinutes?: number | null; duration_minutes?: number | null } | null | undefined,
+): number | null {
+  const raw = match?.durationMinutes ?? match?.duration_minutes;
+  const n = typeof raw === 'number' ? raw : parseInt(String(raw ?? ''), 10);
+  if (!Number.isFinite(n)) return null;
+  if (n < MIN_MATCH_MINUTES || n > MAX_MATCH_MINUTES) return null;
+  return Math.floor(n);
+}
+
+/**
+ * Süre etiketi — TEK biçim: "90 dakika". İtalik KULLANILMAZ (karar S17: italik
+ * yalnız skorda). Veri yoksa null döner; çağıran alanı hiç çizmez.
+ */
+export function formatMatchDuration(
+  match: { durationMinutes?: number | null; duration_minutes?: number | null } | null | undefined,
+): string | null {
+  const m = realMatchMinutes(match);
+  return m == null ? null : `${m} dakika`;
+}
+
 /** Maçın bitiş anı (ms). Başlangıç bilinmiyorsa null. */
 export function matchEndMs(startMs: number | null | undefined, duration: unknown): number | null {
   if (startMs == null || !Number.isFinite(startMs)) return null;

@@ -984,6 +984,13 @@ export const PitchStudio: React.FC<PitchStudioProps> = ({ pitchId, onClose, onSa
                     <p className="text-xs text-gray-400 max-w-md">
                       Vitrindeki fiyat ve kapora bu tarifelerden hesaplanır (SSOT: pitch_tariffs).
                       Fiyat/indirim üst sınırı yoktur; kapora tarifede tanımlanır.
+                      <br />
+                      {/* A1a: admin de tarife girebilir. A2a: rezervasyon varken slot
+                          süresi zorlanamaz — sunucu reddeder. Yayın kuralı saha bazlı. */}
+                      <b className="text-amber-300">
+                        Bir sahanın yayına alınabilmesi için o sahaya (korta) ait en az bir tarife
+                        şarttır — &quot;Tüm kortlar&quot; kapsamı yayın kapısını açmaz.
+                      </b>
                     </p>
                     <button
                       type="button"
@@ -996,7 +1003,7 @@ export const PitchStudio: React.FC<PitchStudioProps> = ({ pitchId, onClose, onSa
 
                   {tariffs.length === 0 && tariffsLoaded && (
                     <div className="bg-amber-500/10 border border-amber-500/25 rounded-xl p-4 text-xs text-amber-200">
-                      Henüz tarife yok — vitrinde fiyat gösterilemez ve rezervasyon kaporası hesaplanamaz. En az bir tarife ekleyin.
+                      Henüz tarife yok — vitrinde fiyat gösterilemez, rezervasyon kaporası hesaplanamaz ve hiçbir saha yayına alınamaz. Her saha için ayrı tarife ekleyin.
                     </div>
                   )}
 
@@ -1026,7 +1033,7 @@ export const PitchStudio: React.FC<PitchStudioProps> = ({ pitchId, onClose, onSa
                             className="bg-black/40 border border-white/10 rounded-lg px-2 py-2 text-xs text-white max-w-[140px]"
                             title="Kort kapsamı"
                           >
-                            <option value="">Tüm kortlar</option>
+                            <option value="">Tüm kortlar (yedek — yayın açmaz)</option>
                             {courts.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                           </select>
                           <button

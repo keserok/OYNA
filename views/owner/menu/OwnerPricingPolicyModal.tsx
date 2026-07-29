@@ -1,6 +1,12 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { AlertCircle, Clock, Info, Plus, Tag, Trash2 } from 'lucide-react';
-import { getTariffs, saveTariffs, toTurkishError, type TariffInput } from '../../../services/pitchOwnerService';
+import {
+  getTariffs,
+  saveCourtTariffs,
+  saveTariffs,
+  toTurkishError,
+  type TariffInput,
+} from '../../../services/pitchOwnerService';
 import { useOwnerToast } from '../components/useOwnerToast';
 import { OwnerFullscreenModal } from './OwnerModalFrame';
 import type { PitchCourt, PitchTariff } from '../../../types';
@@ -40,11 +46,23 @@ interface Props {
   facilityId: string;
   courts?: PitchCourt[];
   readOnly?: boolean;
+  /**
+   * SAHA (KORT) KİPİ. Dolu ise ekran YALNIZ bu sahanın tarifelerini gösterir ve
+   * kaydeder (`owner_replace_court_tariffs`). Genel/tesis geneli fiyatlandırma
+   * ekranı kaldırıldı — her saha kendi politikasını girer (E1a/E5a/E12a).
+   */
+  courtId?: string | null;
+  courtName?: string;
+  /** Toast sağlayıcısı olmayan bağlamlarda (admin paneli) hata görünür kalsın. */
+  onNotify?: (message: string, variant: 'success' | 'error') => void;
   /** Kaydedince takvimin anında güncellenmesi için saha-farkında politika verilir. */
   onSave: (pricingPolicy: { startTime: string; endTime: string; price: number; slot_price: number; slot_minutes: number; court_id: string | null }[]) => void;
 }
 
 const ALL_SCOPE = 'ALL';
+
+/** Saha kipinde kapsam anahtarı kortun kendisidir; tesis kipinde 'ALL'. */
+const scopeKeyFor = (courtId?: string | null): string => courtId ?? ALL_SCOPE;
 
 const clampDeposit = (deposit: number, price: number): number => {
   if (!price || price <= 0) return Math.max(0, Math.round(deposit));
@@ -64,10 +82,30 @@ const defaultRows = (): EditRow[] => [
   { id: 'def-2', name: 'Akşam', startTime: '17:00', endTime: '00:00', price: 3200, slotMinutes: 60, deposit: 960, days: [1,2,3,4,5,6,7] },
 ];
 
-export const OwnerPricingPolicyModal: React.FC<Props> = ({ onClose, facilityId, courts = [], readOnly = false, onSave }) => {
-  const notify = useOwnerToast();
+export const OwnerPricingPolicyModal: React.FC<Props> = ({
+  onClose,
+  facilityId,
+  courts = [],
+  readOnly = false,
+  courtId = null,
+  courtName,
+  onNotify,
+  onSave,
+}) => {
+  const toast = useOwnerToast();
+  // Admin panelinde OwnerToastProvider yok; onNotify verilirse hata oraya gider,
+  // yoksa toast'a. Her iki yolda da kullanıcı hatayı GÖRÜR (sessiz hata yok).
+  const notify = React.useCallback(
+    (message: string, variant: 'success' | 'error' = 'success') => {
+      if (onNotify) onNotify(message, variant);
+      else toast(message, variant);
+    },
+    [onNotify, toast],
+  );
+  /** Saha kipi: tek kort, kapsam seçici yok. */
+  const isCourtScoped = Boolean(courtId);
   const activeCourts = useMemo(() => courts.filter((c) => c.is_active !== false), [courts]);
-  const [scope, setScope] = useState<string>(ALL_SCOPE);
+  const [scope, setScope] = useState<string>(courtId ?? ALL_SCOPE);
   // Kapsam (Tüm Sahalar / her saha) → düzenlenebilir NORMAL tarife satırları
   // (yalnız AKTİF hafta içi/sonu). Diğer her tarife korunur (aşağıya).
   const [rowsByScope, setRowsByScope] = useState<Record<string, EditRow[]>>({});
@@ -82,13 +120,17 @@ export const OwnerPricingPolicyModal: React.FC<Props> = ({ onClose, facilityId, 
   useEffect(() => {
     let active = true;
     if (!facilityId || facilityId.startsWith('mock-')) {
-      setRowsByScope({ [ALL_SCOPE]: defaultRows() });
+      setRowsByScope({ [scopeKeyFor(courtId)]: defaultRows() });
       setIsLoading(false);
       return;
     }
     getTariffs(facilityId)
-      .then((rows) => {
+      .then((all) => {
         if (!active) return;
+        // Saha kipinde YALNIZ bu kortun satırları ele alınır; tesis geneli
+        // (court_id = null) eski satırlara dokunulmaz — sunucu da yalnız bu
+        // kortun satırlarını değiştiriyor (owner_replace_court_tariffs).
+        const rows = courtId ? all.filter((t) => t.court_id === courtId) : all;
         // Editörde yalnız AKTİF hafta içi/sonu tarifeler düzenlenir.
         const isEditable = (t: PitchTariff) =>
           t.is_active !== false && (t.tariff_type === 'WEEKDAY' || t.tariff_type === 'WEEKEND');
@@ -110,7 +152,7 @@ export const OwnerPricingPolicyModal: React.FC<Props> = ({ onClose, facilityId, 
         });
         // Varsayılan tarifeler YALNIZ tamamen boş tesiste önerilir; saha-özel
         // veya SPECIAL tarifesi olan tesise sahte 2000/3200 enjekte edilmez.
-        if (rows.length === 0) grouped[ALL_SCOPE] = defaultRows();
+        if (rows.length === 0) grouped[scopeKeyFor(courtId)] = defaultRows();
         setRowsByScope(grouped);
       })
       .catch((err) => notify(toTurkishError(err), 'error'))
@@ -120,7 +162,7 @@ export const OwnerPricingPolicyModal: React.FC<Props> = ({ onClose, facilityId, 
     return () => {
       active = false;
     };
-  }, [facilityId, notify]);
+  }, [facilityId, courtId, notify]);
 
   const rows = rowsByScope[scope] ?? [];
   const setRows = (updater: (prev: EditRow[]) => EditRow[]) =>
@@ -147,13 +189,11 @@ export const OwnerPricingPolicyModal: React.FC<Props> = ({ onClose, facilityId, 
     );
   };
 
-  const scopeCourtId = scope === ALL_SCOPE ? null : scope;
-
   const buildFullTariffSet = (): TariffInput[] => {
     const out: TariffInput[] = [];
     // Her kapsamın NORMAL tarifeleri (court_id ile).
     Object.entries(rowsByScope).forEach(([key, scopeRows]) => {
-      const courtId = key === ALL_SCOPE ? null : key;
+      const rowCourtId = key === ALL_SCOPE ? null : key;
       scopeRows.forEach((r, idx) => {
         out.push({
           name: r.name,
@@ -167,7 +207,7 @@ export const OwnerPricingPolicyModal: React.FC<Props> = ({ onClose, facilityId, 
           slot_minutes: Number(r.slotMinutes) || 60,
           deposit_amount: clampDeposit(Number(r.deposit) || 0, Number(r.price) || 0),
           sort_order: idx,
-          court_id: courtId,
+          court_id: rowCourtId,
         });
       });
     });
@@ -201,11 +241,20 @@ export const OwnerPricingPolicyModal: React.FC<Props> = ({ onClose, facilityId, 
       notify(`"${emptyDays[0].name || 'Tarife'}" için en az bir gün seçmelisin.`, 'error');
       return;
     }
+    // Saha kipinde BOŞ kayıt yasak: tarifesiz saha yayına alınamaz, sahibi
+    // "kaydettim ama saham yayına girmiyor" durumuna düşmesin.
+    if (isCourtScoped && (rowsByScope[scopeKeyFor(courtId)] ?? []).length === 0) {
+      notify('Bu saha için en az bir tarife girmelisin — tarifesiz saha yayına alınamaz.', 'error');
+      return;
+    }
     setIsSaving(true);
     try {
       const fullSet = buildFullTariffSet();
       if (!facilityId.startsWith('mock-')) {
-        await saveTariffs(facilityId, fullSet);
+        // Saha kipi: YALNIZ bu kortun satırları değişir (owner_replace_court_tariffs).
+        // Tesis kipi: eski full-replace (admin tesis kurulumu).
+        if (isCourtScoped && courtId) await saveCourtTariffs(courtId, fullSet);
+        else await saveTariffs(facilityId, fullSet);
       }
       // Takvim/oyuncu tarafı için saha-farkında politika (SPECIAL hariç normal satırlar).
       const policy = fullSet
@@ -279,7 +328,7 @@ export const OwnerPricingPolicyModal: React.FC<Props> = ({ onClose, facilityId, 
 
   return (
     <OwnerFullscreenModal
-      title="Aktif Saatler ve Ücretler"
+      title={isCourtScoped ? `Aktif Saatler ve Ücretler — ${courtName ?? 'Saha'}` : 'Aktif Saatler ve Ücretler'}
       onClose={onClose}
       onSave={readOnly ? undefined : handleSave}
       isSaving={isSaving}
@@ -287,12 +336,22 @@ export const OwnerPricingPolicyModal: React.FC<Props> = ({ onClose, facilityId, 
       <div className="max-w-xl mx-auto space-y-5">
         <div className="bg-blue-500/10 border border-blue-500/20 p-4 rounded-2xl flex items-start gap-3">
           <AlertCircle size={18} className="text-blue-400 shrink-0 mt-0.5" />
-          <p className="text-xs text-blue-200">
-            Burada kurduğun plan tesisin <b>açık saatlerini</b> de belirler — ayrı bir çalışma
-            saati ayarı yoktur. Bir sahaya özel tarife tanımlarsan o saha için <b>saha tarifesi</b>,
-            tanımlamazsan <b>Tüm Sahalar</b> tarifesi geçerli olur. Fiyat değişiklikleri mevcut
-            rezervasyonları etkilemez; kapora slot ücretinin %10–%50'si aralığındadır.
-          </p>
+          {isCourtScoped ? (
+            <p className="text-xs text-blue-200">
+              Bu politika <b>yalnız {courtName ?? 'bu saha'}</b> için geçerlidir; diğer sahaların
+              tarifeleri etkilenmez. Burada kurduğun plan sahanın <b>açık saatlerini</b> de belirler —
+              ayrı bir çalışma saati ayarı yoktur. <b>Tarifesi olmayan saha yayına alınamaz.</b>
+              Fiyat değişiklikleri mevcut rezervasyonları etkilemez; kapora slot ücretinin
+              %10–%50'si aralığındadır.
+            </p>
+          ) : (
+            <p className="text-xs text-blue-200">
+              Burada kurduğun plan tesisin <b>açık saatlerini</b> de belirler — ayrı bir çalışma
+              saati ayarı yoktur. Bir sahaya özel tarife tanımlarsan o saha için <b>saha tarifesi</b>,
+              tanımlamazsan <b>Tüm Sahalar</b> tarifesi geçerli olur. Fiyat değişiklikleri mevcut
+              rezervasyonları etkilemez; kapora slot ücretinin %10–%50'si aralığındadır.
+            </p>
+          )}
         </div>
 
         {/* TÜRETİLMİŞ ÇALIŞMA SAATLERİ — tarifelerden doğar, elle girilmez.
@@ -300,7 +359,9 @@ export const OwnerPricingPolicyModal: React.FC<Props> = ({ onClose, facilityId, 
         <div className="bg-[#0A0E14] border border-white/8 rounded-2xl p-4">
           <div className="flex items-center gap-2 mb-3">
             <Clock size={14} className="text-[#39FF14]" />
-            <h4 className="text-[11px] font-black uppercase tracking-wider text-white">Tesisin Açık Saatleri</h4>
+            <h4 className="text-[11px] font-black uppercase tracking-wider text-white">
+              {isCourtScoped ? 'Bu Sahanın Açık Saatleri' : 'Tesisin Açık Saatleri'}
+            </h4>
           </div>
           <div className="space-y-1.5">
             {derivedHours.map((d) => (
@@ -322,8 +383,9 @@ export const OwnerPricingPolicyModal: React.FC<Props> = ({ onClose, facilityId, 
           </p>
         </div>
 
-        {/* Kapsam seçici: Tüm Sahalar + her saha */}
-        {activeCourts.length > 0 && (
+        {/* Kapsam seçici YALNIZ tesis kipinde (admin tesis kurulumu). Saha
+            kipinde tek kort vardır; seçici gösterilmez. */}
+        {!isCourtScoped && activeCourts.length > 0 && (
           <div className="flex gap-2 overflow-x-auto no-scrollbar -mx-1 px-1">
             {[{ key: ALL_SCOPE, label: 'Tüm Sahalar' }, ...activeCourts.map((c) => ({ key: c.id, label: c.name }))].map(
               (s) => {
@@ -347,7 +409,18 @@ export const OwnerPricingPolicyModal: React.FC<Props> = ({ onClose, facilityId, 
           </div>
         )}
 
-        {scope !== ALL_SCOPE && rows.length === 0 && (
+        {/* Saha kipinde tarife yoksa DÜRÜST çağrı: sessizce boş liste gösterme. */}
+        {isCourtScoped && !isLoading && rows.length === 0 && (
+          <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4 flex items-start gap-3">
+            <AlertCircle size={16} className="text-amber-400 shrink-0 mt-0.5" />
+            <p className="text-xs text-amber-200">
+              <b>Bu saha için fiyat politikası girilmedi.</b> Aşağıdan en az bir tarife ekleyip
+              kaydet — tarifesi olmayan saha yayına alınamaz, rezervasyon da kabul etmez.
+            </p>
+          </div>
+        )}
+
+        {!isCourtScoped && scope !== ALL_SCOPE && rows.length === 0 && (
           <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-4 flex items-start gap-3">
             <Info size={16} className="text-gray-400 shrink-0 mt-0.5" />
             <p className="text-xs text-gray-400">
@@ -522,7 +595,12 @@ export const OwnerPricingPolicyModal: React.FC<Props> = ({ onClose, facilityId, 
                 }
                 className="w-full py-4 border-2 border-dashed border-white/10 rounded-3xl text-gray-400 font-bold text-sm flex items-center justify-center gap-2 hover:bg-white/5"
               >
-                <Plus size={18} /> {scope === ALL_SCOPE ? 'Yeni Tarife Ekle' : 'Bu Sahaya Özel Tarife Ekle'}
+                <Plus size={18} />{' '}
+                {scope === ALL_SCOPE
+                  ? 'Yeni Tarife Ekle'
+                  : isCourtScoped
+                    ? 'Bu Saha İçin Tarife Ekle'
+                    : 'Bu Sahaya Özel Tarife Ekle'}
               </button>
             )}
           </div>

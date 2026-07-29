@@ -154,5 +154,8 @@ vi.mock('framer-motion', () => {
   return {
     motion: motionProxy,
     AnimatePresence: ({ children }: any) => children,
+    // FilterDropdown / MyMatchesHub gibi bileşenler bunu çağırır; mock'ta
+    // eksikse "No useReducedMotion export is defined" ile HER render patlar.
+    useReducedMotion: () => false,
   };
 });
