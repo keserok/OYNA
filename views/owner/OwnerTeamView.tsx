@@ -162,7 +162,7 @@ export const OwnerTeamView: React.FC<OwnerTeamViewProps> = ({
   if (isLoading) return <div className="p-6 pb-40"><LoadingState message="Ekip yükleniyor…" /></div>;
 
   return (
-    <div className="p-4 sm:p-6 pb-40 overflow-y-auto custom-scrollbar bg-[#0A0E14]">
+    <div className="p-4 pb-40 overflow-y-auto custom-scrollbar bg-[#0A0E14]">
       <div className="max-w-5xl mx-auto w-full">
         <OwnerDemoDataBar pitchId={pitchId} onChanged={load} hasDemo={hasDemoData} />
         {isDemoMode && (
@@ -189,33 +189,33 @@ export const OwnerTeamView: React.FC<OwnerTeamViewProps> = ({
         {/* HERO */}
         <div className="relative group mb-6">
           <div className="absolute -inset-0.5 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-[32px] opacity-20 blur" />
-          <div className="relative bg-[#161B22] border border-white/10 rounded-[32px] p-5 sm:p-6 shadow-2xl overflow-hidden">
+          <div className="relative bg-[#161B22] border border-white/10 rounded-[32px] p-5 shadow-2xl overflow-hidden">
             <div className="absolute top-0 right-0 p-6 opacity-5 pointer-events-none"><Users size={120} className="text-indigo-500" /></div>
             <div className="relative z-10">
               <div className="flex justify-between items-start mb-5 gap-3">
                 <div className="min-w-0">
                   <p className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em] mb-1">OPERASYON MERKEZİ</p>
-                  <h2 className="text-2xl sm:text-3xl font-black text-white italic tracking-tight">EKİP</h2>
+                  <h2 className="text-2xl font-black text-white italic tracking-tight">EKİP</h2>
                 </div>
                 <div className="flex items-center gap-2 bg-green-500/10 px-3 py-1.5 rounded-xl border border-green-500/20 shrink-0">
                   <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
                   <span className="text-[10px] font-black text-green-400 uppercase whitespace-nowrap">{onDuty.length} GÖREVDE</span>
                 </div>
               </div>
-              <div className="flex items-center gap-4 sm:gap-6 flex-wrap">
+              <div className="flex items-center gap-4 flex-wrap">
                 <div className="flex -space-x-4">
                   {onDuty.slice(0, 4).map((s) => (
                     <div key={s.id} className="relative">
-                      <img src={avatarFor(s)} className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl border-4 border-[#161B22] object-cover" alt={s.name} />
+                      <img src={avatarFor(s)} className="w-12 h-12 rounded-2xl border-4 border-[#161B22] object-cover" alt={s.name} />
                       <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-[#161B22]" />
                     </div>
                   ))}
                   {onDuty.length === 0 && <div className="text-xs text-gray-600 py-4">Şu an görevde kimse yok</div>}
                 </div>
-                <div className="h-10 w-px bg-white/10 hidden sm:block" />
+                <div className="h-10 w-px bg-white/10 hidden" />
                 <div className="flex gap-5">
-                  <div><p className="text-lg sm:text-xl font-black text-white tabular-nums">{activeMembers.length}</p><p className="text-[10px] text-gray-500 font-bold uppercase">Aktif kişi</p></div>
-                  <div><p className="text-lg sm:text-xl font-black text-white tabular-nums">{managers.length}</p><p className="text-[10px] text-gray-500 font-bold uppercase">Müdür</p></div>
+                  <div><p className="text-lg font-black text-white tabular-nums">{activeMembers.length}</p><p className="text-[10px] text-gray-500 font-bold uppercase">Aktif kişi</p></div>
+                  <div><p className="text-lg font-black text-white tabular-nums">{managers.length}</p><p className="text-[10px] text-gray-500 font-bold uppercase">Müdür</p></div>
                 </div>
               </div>
             </div>
@@ -246,7 +246,7 @@ export const OwnerTeamView: React.FC<OwnerTeamViewProps> = ({
             {team.length === 0 ? (
               <p className="text-sm text-gray-500 text-center py-8">Henüz ekip üyesi yok. {writable && 'Yukarıdan ekleyin.'}</p>
             ) : (
-              <div className="grid gap-3 md:grid-cols-2">
+              <div className="grid gap-3">
                 {team.map((m) => {
                   const st = STATUS_META[m.account_status];
                   // FAZ3: MÜDÜR de kartı açabilir (ACTIVE personelin nöbetini yönetmek için) —
@@ -566,7 +566,7 @@ const TasksPanel: React.FC<{
       {tasks.length === 0 ? (
         <p className="text-sm text-gray-500 text-center py-8">Henüz görev yok.</p>
       ) : (
-        <div className="grid gap-3 md:grid-cols-2">
+        <div className="grid gap-3">
           {tasks.map((task) => (
             <button key={task.id} type="button" onClick={() => toggle(task)}
               className="w-full text-left bg-[#161B22] p-4 rounded-2xl border border-white/5 flex items-start gap-4 hover:border-indigo-500/30 transition-all">

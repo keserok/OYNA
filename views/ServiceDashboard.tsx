@@ -1141,12 +1141,12 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                   </div>
 
                   <div className="relative z-10 grid grid-cols-2 gap-3">
-                      <div className="bg-black/40 backdrop-blur lg:hover:-translate-y-1 transition-transform border border-white/10 rounded-xl p-3 flex flex-col items-center justify-center relative overflow-hidden group">
+                      <div className="bg-black/40 backdrop-blur transition-transform border border-white/10 rounded-xl p-3 flex flex-col items-center justify-center relative overflow-hidden group">
                           <div className="absolute w-full h-1 top-0 left-0 bg-gradient-to-r from-transparent via-red-400 to-transparent translate-x-[-100%] group-hover:animate-shimmer"></div>
                           <span className="text-[9px] text-gray-400 font-bold uppercase tracking-wider mb-1 text-center">Maç Puanı Ort.</span>
                           <span className="text-2xl font-black text-red-400 drop-shadow-[0_0_5px_rgba(239,68,68,0.6)] z-10 relative">{idRatingText}</span>
                       </div>
-                      <div className="bg-black/40 backdrop-blur lg:hover:-translate-y-1 transition-transform border border-white/10 rounded-xl p-3 flex flex-col items-center justify-center relative overflow-hidden group">
+                      <div className="bg-black/40 backdrop-blur transition-transform border border-white/10 rounded-xl p-3 flex flex-col items-center justify-center relative overflow-hidden group">
                           <div className="absolute w-full h-1 top-0 left-0 bg-gradient-to-r from-transparent via-orange-400 to-transparent translate-x-[-100%] group-hover:animate-shimmer"></div>
                           <span className="text-[9px] text-gray-400 font-bold uppercase tracking-wider mb-1 text-center text-balance leading-tight">Yönetim Değeri</span>
                           <span className="text-2xl font-black text-orange-400 drop-shadow-[0_0_5px_rgba(249,115,22,0.6)] z-10 relative">{idClass}</span>
@@ -2146,8 +2146,8 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
 
       {/* BID / OFFER MODAL */}
       {(selectedJob || selectedOffer) && (
-          <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center animate-in fade-in duration-200">
-              <div className="bg-[#161B22] w-full max-w-md rounded-t-[32px] sm:rounded-[32px] border-t sm:border border-white/10 p-6 shadow-2xl relative animate-in slide-in-from-bottom duration-300">
+          <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-end justify-center animate-in fade-in duration-200">
+              <div className="bg-[#161B22] w-full max-w-md rounded-t-[32px] border-t border-white/10 p-6 shadow-2xl relative animate-in slide-in-from-bottom duration-300">
                    {showBidSuccess ? (
                        <div className="py-12 flex flex-col items-center text-center">
                            <div className="w-20 h-20 bg-green-500 rounded-full flex items-center justify-center mb-6 shadow-[0_0_40px_rgba(34,197,94,0.4)]">
@@ -2225,8 +2225,8 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
 
       {/* UPCOMING MATCH DETAIL MODAL */}
       {selectedUpcomingJob && (
-          <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-sm flex items-end sm:items-center justify-center animate-in fade-in duration-200">
-              <div className="bg-[#161B22] w-full max-w-md h-[85vh] sm:h-auto rounded-t-[32px] sm:rounded-[32px] border-t sm:border border-white/10 p-0 shadow-2xl relative flex flex-col overflow-hidden animate-in slide-in-from-bottom duration-300">
+          <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-sm flex items-end justify-center animate-in fade-in duration-200">
+              <div className="bg-[#161B22] w-full max-w-md h-[85vh] rounded-t-[32px] border-t border-white/10 p-0 shadow-2xl relative flex flex-col overflow-hidden animate-in slide-in-from-bottom duration-300">
                   {/* Header */}
                   <div className="p-6 border-b border-white/5 flex justify-between items-center bg-[#0A0E14]">
                       <h3 className="text-lg font-black text-white uppercase tracking-wide">Maç Detayı</h3>
@@ -2274,8 +2274,8 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
 
       {/* HOURS SETTING MODAL */}
       {showOnlineSetupModal && (
-          <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center animate-in fade-in duration-200">
-              <div className="bg-[#161B22] w-full max-w-md rounded-t-[32px] sm:rounded-[32px] border-t sm:border border-white/10 p-6 shadow-2xl relative animate-in slide-in-from-bottom duration-300 max-h-[90vh] overflow-y-auto custom-scrollbar">
+          <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-end justify-center animate-in fade-in duration-200">
+              <div className="bg-[#161B22] w-full max-w-md rounded-t-[32px] border-t border-white/10 p-6 shadow-2xl relative animate-in slide-in-from-bottom duration-300 max-h-[90vh] overflow-y-auto custom-scrollbar">
                   <div className="flex justify-between items-center mb-6">
                       <h3 className="text-xl font-black text-white uppercase tracking-wide">AKTİFLİK AYARLARI</h3>
                       <button onClick={() => setShowOnlineSetupModal(false)} className="p-2 bg-white/5 rounded-full text-gray-400 hover:text-white"><X size={20} /></button>
@@ -2630,8 +2630,8 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
 
       {/* FAZ 5 — TC KİMLİK DOĞRULAMA MODAL */}
       {showIdentityModal && (
-          <div className="fixed inset-0 z-[60] bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center animate-in fade-in duration-200">
-              <div className="bg-[#161B22] w-full max-w-md rounded-t-[32px] sm:rounded-[32px] border-t sm:border border-white/10 p-6 shadow-2xl relative animate-in slide-in-from-bottom duration-300">
+          <div className="fixed inset-0 z-[60] bg-black/80 backdrop-blur-sm flex items-end justify-center animate-in fade-in duration-200">
+              <div className="bg-[#161B22] w-full max-w-md rounded-t-[32px] border-t border-white/10 p-6 shadow-2xl relative animate-in slide-in-from-bottom duration-300">
                   <div className="flex justify-between items-center mb-2">
                       <h3 className="text-xl font-black text-white uppercase tracking-wide">KİMLİK DOĞRULA</h3>
                       <button onClick={() => setShowIdentityModal(false)} className="p-2 bg-white/5 rounded-full text-gray-400 hover:text-white"><X size={20} /></button>

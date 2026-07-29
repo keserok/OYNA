@@ -71,12 +71,12 @@ const RoleSwitcher: React.FC<RoleSwitcherProps> = ({ roles, onClose, onSwitched 
   return (
     <motion.div
       {...MODAL_BACKDROP}
-      className="fixed inset-0 bg-black/75 backdrop-blur-md flex items-end sm:items-center justify-center z-50"
+      className="fixed inset-0 bg-black/75 backdrop-blur-md flex items-end justify-center z-50"
       onClick={onClose}
     >
       <motion.div
         {...MODAL_CARD}
-        className="w-full sm:max-w-sm rounded-t-[28px] sm:rounded-[28px] p-6"
+        className="w-full rounded-t-[28px] p-6"
         style={{ background: 'linear-gradient(180deg, #161B22 0%, #0A0E14 100%)', border: '1px solid rgba(255,255,255,0.08)' }}
         onClick={e => e.stopPropagation()}
       >

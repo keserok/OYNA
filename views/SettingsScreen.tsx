@@ -511,7 +511,7 @@ const JoinFacilityModal: React.FC<{ onClose: () => void; onJoined: (pitchName: s
   };
 
   return (
-    <div className="fixed inset-0 z-[60] bg-black/80 flex items-end sm:items-center justify-center p-4" onClick={onClose} role="presentation">
+    <div className="fixed inset-0 z-[60] bg-black/80 flex items-end justify-center p-4" onClick={onClose} role="presentation">
       <div className="bg-[#161B22] w-full max-w-sm rounded-3xl p-6 pb-safe-6 border border-white/10" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Tesise Katıl">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-black text-white">Tesise Katıl</h3>

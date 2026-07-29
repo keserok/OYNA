@@ -1288,7 +1288,7 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
       {/* K1 — çekim talebi iptal onayı */}
       <AnimatePresence>
         {cancelConfirm && (
-          <div className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center p-4">
+          <div className="fixed inset-0 z-[70] flex items-end justify-center p-4">
             <motion.div
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               onClick={() => !cancelBusy && setCancelConfirm(null)}

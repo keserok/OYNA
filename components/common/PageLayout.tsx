@@ -24,7 +24,7 @@ export const PageLayout: React.FC<PageLayoutProps> = ({
 }) => {
   return (
     <div
-      className={`flex flex-col w-full min-h-screen bg-[#0A0E14] text-white overflow-hidden max-w-lg md:max-w-2xl mx-auto md:border-x md:border-white/5 md:shadow-2xl relative ${className}`}
+      className={`flex flex-col w-full min-h-screen bg-[#0A0E14] text-white overflow-hidden max-w-lg mx-auto relative ${className}`}
     >
       {/* Dynamic top safe area header */}
       {(title || onBack || rightElement) && (

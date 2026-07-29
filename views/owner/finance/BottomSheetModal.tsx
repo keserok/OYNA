@@ -42,7 +42,7 @@ export const BottomSheetModal: React.FC<Props> = ({ title, onClose, children }) 
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-black/80 flex items-end justify-center p-4 pb-0 sm:pb-4"
+      className="fixed inset-0 z-50 bg-black/80 flex items-end justify-center p-4 pb-0"
       style={{ paddingBottom: kbInset }}
       onClick={onClose}
       role="presentation"

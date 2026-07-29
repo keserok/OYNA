@@ -100,7 +100,7 @@ const LocationPickerSheet: React.FC<LocationPickerSheetProps> = ({
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }}
           onClick={close}
-          className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm"
+          className="fixed inset-0 z-[80] flex items-end justify-center bg-black/70 backdrop-blur-sm"
         >
           <motion.div
             key="loc-sheet"
@@ -109,14 +109,14 @@ const LocationPickerSheet: React.FC<LocationPickerSheetProps> = ({
             exit={{ y: 60, opacity: 0 }}
             transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
             onClick={(e) => e.stopPropagation()}
-            className="w-full sm:max-w-md flex flex-col max-h-[85vh]
+            className="w-full flex flex-col max-h-[85vh]
                        bg-gradient-to-b from-[#161B22] to-[#0A0E14]
-                       border border-white/10 border-b-0 sm:border-b
-                       rounded-t-[28px] sm:rounded-[28px]
+                       border border-white/10 border-b-0
+                       rounded-t-[28px]
                        shadow-[0_-10px_60px_rgba(0,0,0,0.6)] overflow-hidden"
           >
             {/* grip */}
-            <div className="pt-3 pb-1 flex justify-center sm:hidden">
+            <div className="pt-3 pb-1 flex justify-center">
               <div className="w-11 h-1.5 rounded-full bg-white/20" />
             </div>
 

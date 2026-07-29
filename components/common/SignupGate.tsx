@@ -24,12 +24,12 @@ const SignupGate: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-[90] flex items-end sm:items-center justify-center">
+    <div className="fixed inset-0 z-[90] flex items-end justify-center">
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setOpen(false)} />
       <motion.div
         initial={{ opacity: 0, y: 60 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative w-full sm:max-w-md bg-[#161B22] border border-[#FACC15]/25 rounded-t-[28px] sm:rounded-[28px] p-6 pb-10 sm:pb-6"
+        className="relative w-full bg-[#161B22] border border-[#FACC15]/25 rounded-t-[28px] p-6 pb-10"
         style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 2.5rem)' }}
       >
         <button

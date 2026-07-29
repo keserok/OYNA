@@ -195,6 +195,42 @@ body {
   height: 100%;
 }
 
+/* ─── Web'de telefon çerçevesi ────────────────────────────────────────────────
+   OYNA bir mobil uygulama; masaüstü tarayıcıda tam genişlikte açılınca kartlar
+   1440px'e yayılıyor ve tasarım dağılıyordu. Geniş pencerede kabuk ortada
+   telefon genişliğinde bir sütuna alınır.
+
+   `contain: paint` DEKORATİF DEĞİL, bu işin çalışmasının tek sebebi: kaynakta
+   77 dosya `position: fixed` kullanıyor (modallar, alt sayfalar, alt menü,
+   toast'lar). Fixed öğeler üstteki genişlik sınırlarını dinlemez; kapsayıcı
+   blok kurulmazsa ilk modalde çerçeve sızar ve overlay tüm pencereye yayılır.
+   Ölçüldü: en geniş fixed öğe 1440px → 448px.
+
+   Eşik 520px: gerçek telefonlar (en geniş ~430px CSS) ve Capacitor native
+   webview bu kuralın ALTINDA kalır — mobilde hiçbir şey değişmez. ────────── */
+@media (min-width: 520px) {
+  html { background-color: #05070b; }
+  #root {
+    max-width: 448px;
+    margin: 0 auto;
+    contain: paint;
+    box-shadow: 0 0 0 1px rgb(255 255 255 / 0.06), 0 24px 80px rgb(0 0 0 / 0.6);
+  }
+  /* Aşağıdaki "iOS yakınlaştırmasını engelle" kuralı `max-width: 768px` ile
+     sınırlı olduğu için masaüstünde alanlar 14px kalıyordu; çerçeve içinde
+     telefonla aynı 16px olsun. Yalnız #root — admin paneli (#admin-root) hariç. */
+  #root input[type="text"],
+  #root input[type="number"],
+  #root input[type="email"],
+  #root input[type="tel"],
+  #root input[type="search"],
+  #root input[type="password"],
+  #root select,
+  #root textarea {
+    font-size: 16px;
+  }
+}
+
 /* Kaydırma zincirlemesini kes: bir liste ucuna gelince hareket komşuya/belgeye
    sızmaz. Dikey kaydırıcılar .custom-scrollbar, yatay şeritler .no-scrollbar
    kullanır (yatayda sayfayı dikey sürüklemeyi de engeller). */
@@ -224,18 +260,22 @@ body.kb-open .pb-safe-6 {
   .team-pulse-active { animation: none !important; }
 }
 
-/* Mesh Gradient Background */
+/* Mesh Gradient Background
+   Genişlik 100vw DEĞİL 100%: vw pencereyi ölçer, telefon çerçevesini değil —
+   masaüstünde arka plan çerçevenin dışına taşardı. */
 .mesh-bg {
   position: fixed;
   top: 0;
   left: 0;
-  width: 100vw;
-  height: 100vh;
+  width: 100%;
+  height: 100%;
   z-index: -1;
   background-color: #0A0E14;
   overflow: hidden;
 }
 
+/* Ölçüler vw DEĞİL kapsayıcı yüzdesi: vw pencereyi ölçer, telefon çerçevesini
+   değil — masaüstünde küreler telefondakinden 3 kat büyük çiziliyordu. */
 .mesh-blob {
   position: absolute;
   opacity: 0.5;
@@ -248,8 +288,8 @@ body.kb-open .pb-safe-6 {
 .mesh-blob-1 {
   top: -10%;
   left: -10%;
-  width: 50vw;
-  height: 50vw;
+  width: 50%;
+  aspect-ratio: 1;
   background: radial-gradient(circle, rgba(20, 30, 60, 0.8) 0%, rgba(10, 14, 20, 0) 70%);
   animation-delay: 0s;
 }
@@ -257,8 +297,8 @@ body.kb-open .pb-safe-6 {
 .mesh-blob-2 {
   bottom: -20%;
   right: -10%;
-  width: 60vw;
-  height: 60vw;
+  width: 60%;
+  aspect-ratio: 1;
   background: radial-gradient(circle, rgba(40, 10, 60, 0.6) 0%, rgba(10, 14, 20, 0) 70%);
   animation-delay: -5s;
 }
@@ -266,8 +306,8 @@ body.kb-open .pb-safe-6 {
 .mesh-blob-3 {
   top: 40%;
   left: 60%;
-  width: 40vw;
-  height: 40vw;
+  width: 40%;
+  aspect-ratio: 1;
   background: radial-gradient(circle, rgba(10, 60, 40, 0.5) 0%, rgba(10, 14, 20, 0) 70%);
   animation-delay: -10s;
 }

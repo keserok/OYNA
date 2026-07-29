@@ -141,7 +141,7 @@ export const OwnerFinanceView: React.FC<OwnerFinanceViewProps> = ({ pitchId, isD
   }
 
   return (
-    <div className="p-4 sm:p-6 pb-40 overflow-y-auto custom-scrollbar bg-[#0A0E14]">
+    <div className="p-4 pb-40 overflow-y-auto custom-scrollbar bg-[#0A0E14]">
       <div className="max-w-5xl mx-auto w-full">
         <OwnerDemoDataBar pitchId={pitchId} onChanged={load} hasDemo={hasDemoData} />
         {isDemoMode && (
@@ -215,15 +215,15 @@ export const OwnerFinanceView: React.FC<OwnerFinanceViewProps> = ({ pitchId, isD
             <p className="text-[10px] font-black text-emerald-400 uppercase tracking-[0.2em]">DÖNEM BAKİYESİ</p>
             <GrowthBadge growth={growth} label="geçen aya göre" />
           </div>
-          <h2 className={`text-3xl sm:text-4xl font-black tracking-tight tabular-nums ${net >= 0 ? 'text-white' : 'text-red-400'}`}>{money(net)}</h2>
+          <h2 className={`text-3xl font-black tracking-tight tabular-nums ${net >= 0 ?'text-white' :'text-red-400'}`}>{money(net)}</h2>
           <p className="text-[10px] text-gray-500 mt-1">Tahsilat − Gider · OYNA komisyonu hariç</p>
           {/* sm+: 3'lü kutu. Mobil: satır listesi — dar sütunda PARA ASLA KIRPILMAZ. */}
-          <div className="hidden sm:grid grid-cols-3 gap-3 mt-6">
+          <div className="hidden grid-cols-3 gap-3 mt-6">
             <StatTile label="Tahsilat" value={money(summary.income.collected_total)} accent="text-emerald-400" />
             <StatTile label="Gider" value={money(summary.expenses.total)} accent="text-red-400" />
             <StatTile label="Bu Ay Bekleyen" value={money(summary.income.pending_total)} accent="text-amber-400" sub={`${summary.income.pending_bookings.length} rezervasyon`} />
           </div>
-          <div className="sm:hidden mt-5 rounded-2xl border border-white/5 bg-white/5 divide-y divide-white/5">
+          <div className="mt-5 rounded-2xl border border-white/5 bg-white/5 divide-y divide-white/5">
             {[
               { label: 'Tahsilat', value: money(summary.income.collected_total), cls: 'text-emerald-400' },
               { label: 'Gider', value: money(summary.expenses.total), cls: 'text-red-400' },

@@ -250,7 +250,7 @@ export const TeamLineupBoard: React.FC<TeamLineupBoardProps> = () => {
     <div className="space-y-6">
 
       {/* ─── TEAM INFOS & CONTROLS ─── */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4">
         
         {/* TEAM A (KIRMIZI / EV SAHİBİ) */}
         <div className="bg-[#161B22]/80 backdrop-blur-md border border-white/5 rounded-3xl p-5 relative overflow-hidden group">
@@ -403,7 +403,7 @@ export const TeamLineupBoard: React.FC<TeamLineupBoardProps> = () => {
       </div>
 
       {/* ─── LINEUP PITCH (DİZİLİŞ SAHASI) ─── */}
-      <div className="relative w-full aspect-[3/4] sm:max-w-md sm:mx-auto bg-[#071b0e] rounded-[36px] border-4 border-[#161B22] shadow-[0_30px_70px_rgba(0,0,0,0.8),inset_0_0_60px_rgba(0,0,0,0.9)] overflow-hidden">
+      <div className="relative w-full aspect-[3/4] bg-[#071b0e] rounded-[36px] border-4 border-[#161B22] shadow-[0_30px_70px_rgba(0,0,0,0.8),inset_0_0_60px_rgba(0,0,0,0.9)] overflow-hidden">
         {/* Pitch Stripes */}
         <div className="absolute inset-0 opacity-[0.07] pointer-events-none" style={{ backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 10%, rgba(0,0,0,0.3) 10%, rgba(0,0,0,0.3) 20%)' }}></div>
 

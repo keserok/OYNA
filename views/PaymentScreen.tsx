@@ -1206,7 +1206,7 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
       </main>
 
       {/* Sabit footer */}
-      <div className="fixed bottom-0 inset-x-0 max-w-lg md:max-w-2xl mx-auto px-5 pb-safe pt-4 bg-gradient-to-t from-[#0A0E14] via-[#0A0E14]/95 to-transparent border-t border-white/5 z-20">
+      <div className="fixed bottom-0 inset-x-0 max-w-lg mx-auto px-5 pb-safe pt-4 bg-gradient-to-t from-[#0A0E14] via-[#0A0E14]/95 to-transparent border-t border-white/5 z-20">
         <div className="flex items-center justify-between mb-3 px-0.5">
           <span className="text-[11px] text-gray-500 font-semibold">{breakdown}</span>
           <span className="text-[13px] font-extrabold text-white">
