@@ -3,11 +3,26 @@ name: CI
 on:
   push:
     branches: [main, master, develop]
+    paths-ignore: ['**.md', 'docs/**', '.gitignore', 'LICENSE']
   pull_request:
+    paths-ignore: ['**.md', 'docs/**', '.gitignore', 'LICENSE']
+
+# MALİYET KORUMASI (2026-07-29). Depo private; GitHub Free private depolara
+# aylık 2.000 dakika veriyor. Kota bitince işler koşucu atanmadan saniyeler
+# içinde düşer (runner_id 0, log yok) — 2026-07-27'de tam bu oldu ve main
+# üç gün kırmızı kaldı. Aşağıdaki üç önlem kotayı korur:
+#   1. concurrency  → arka arkaya push'ta eskiyen turu iptal eder. Bu olmadan
+#                     25 commit = 25 tam tur PARALEL çalışıyordu.
+#   2. paths-ignore → yalnız belge değiştiren commit tur açmaz.
+#   3. timeout-minutes → asılan tek iş varsayılan 360 dk (kotanın %18'i) yakar.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   quality-checks:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -22,6 +37,7 @@ jobs:
 
   admin-smoke:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
