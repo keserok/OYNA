@@ -1,7 +1,7 @@
 # Görsel Regresyon — Kullanım
 
 **Neden var:** 623 birim testi mantığı doğrular, hiçbiri "ekran bozuldu mu?" sorusunu cevaplamaz.
-Bu araç 11 ana ekranı 2 telefon genişliğinde render edip depodaki referans görüntülerle
+Bu araç 12 ana ekranı 2 telefon genişliğinde render edip depodaki referans görüntülerle
 **piksel piksel** karşılaştırır. "Sıfır görsel bozukluk" iddiası ancak bunun yeşil olmasıyla kanıtlanır.
 
 | | |
@@ -10,9 +10,9 @@ Bu araç 11 ana ekranı 2 telefon genişliğinde render edip depodaki referans g
 | Testler | `tests/visual/screens.visual.spec.ts` |
 | Koşum takımı | `tests/visual/harness.ts` |
 | Referans görüntüler | `tests/visual/__baseline__/<proje>/<ad>-linux.png` (depoda) |
-| Kapsam | 11 ekran × 2 viewport = **22 karşılaştırma** |
+| Kapsam | 12 ekran × 2 viewport = **24 karşılaştırma** |
 
-Ekranlar: Splash · Giriş · Ana Sayfa · Maç Lobisi · Maçlarım · Cüzdan · Ödeme · Saha Vitrini · Profil · Bildirimler · Ayarlar
+Ekranlar: Splash · Giriş · Ana Sayfa · Maç Lobisi · Maçlarım · Cüzdan · Ödeme · Saha Vitrini · Profil · Bildirimler · Ayarlar · Giriş Tanıtımı
 Viewport'lar: `telefon` 390×844 · `kucuk-telefon` 360×640
 
 ---
@@ -54,7 +54,7 @@ Commit mesajında hangi ekranların neden değiştiği tek cümleyle yazılmalı
 
 ```bash
 npx vitest run            # 61 dosya / 623 test — mantık
-npm run test:visual       # 22 karşılaştırma — görüntü
+npm run test:visual       # 24 karşılaştırma — görüntü
 ```
 
 Karar tablosu:
@@ -98,7 +98,7 @@ test kırmızıya döndü. Araç gerçekten ölçüyor.
 
 ```ts
 {
-  ad: '12-yeni-ekran',                                  // referans dosya adı
+  ad: '13-yeni-ekran',                                  // referans dosya adı
   capa: /Ekranda görünen bir metin/i,                    // açıldığını doğrular
   ac: async (page) => { await hazirla(page); await ekranaGit(page, 'VIEW_ADI'); },
 }

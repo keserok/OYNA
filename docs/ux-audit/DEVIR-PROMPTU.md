@@ -57,7 +57,7 @@ gerekmiyor; bugün main'e sorunsuz akar.
 |---|---|
 | `npx tsc --noEmit` | 0 hata |
 | `npx vitest run` | 668 test / 63 dosya, sıfır başarısız |
-| `npm run test:visual` | 22/22 |
+| `npm run test:visual` | 24/24 |
 | `npm run build` | başarılı |
 
 ### Tamamlanmış paketler

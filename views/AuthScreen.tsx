@@ -672,7 +672,8 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
                           onChange={(e) => { setName(e.target.value); clearFeedback(); }}
                         />
                       </div>
-                      {name.trim().length > 0 && !nameCheck.valid && (
+                      {/* Aynı gerekçe aşağıdaki hata satırında da duruyorsa iki kez yazma. */}
+                      {name.trim().length > 0 && !nameCheck.valid && error !== nameCheck.reason && (
                         <p style={{ margin: '6px 2px 0', fontSize: 10, fontWeight: 700, color: '#FBBF24' }}>
                           {nameCheck.reason}
                         </p>

@@ -33,9 +33,15 @@ const EKRANLAR: Ekran[] = [
     ac: async (page) => { await hazirla(page, { authAskida: true }); },
   },
   {
+    // AUTH artık tanıtım perdesiyle açılıyor; giriş/kayıt formu ok düğmesinin
+    // ardında. Bu kayıt formu ekranını çeker, tanıtım ayrı kalem (12).
     ad: '02-giris-auth',
-    capa: /SAHAYA ÇIKMA VAKTİ/i,
-    ac: async (page) => { await hazirla(page, { oturumsuz: true }); await ekranaGit(page, 'AUTH'); },
+    capa: /Hesap oluştur|Hoş geldin/i,
+    ac: async (page) => {
+      await hazirla(page, { oturumsuz: true });
+      await ekranaGit(page, 'AUTH');
+      await page.locator('#intro-continue-button').click();
+    },
   },
   {
     ad: '03-ana-sayfa',
@@ -89,6 +95,12 @@ const EKRANLAR: Ekran[] = [
     ad: '11-ayarlar',
     capa: /Sahada Rolün/i,
     ac: async (page) => { await hazirla(page); await ekranaGit(page, 'SETTINGS'); },
+  },
+  {
+    // Giriş akışının kapısı: splash ile giriş formu arasındaki tanıtım perdesi.
+    ad: '12-giris-tanitim',
+    capa: /İSTEDİĞİN ZAMAN/i,
+    ac: async (page) => { await hazirla(page, { oturumsuz: true }); await ekranaGit(page, 'AUTH'); },
   },
 ];
 
