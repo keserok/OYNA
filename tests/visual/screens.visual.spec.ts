@@ -1,6 +1,7 @@
 import { test, expect, type Page } from '@playwright/test';
 import {
   hazirla, ekranaGit, bildirimleriAc, odemeBaglamiTohumla, oturmasiniBekle,
+  degerlendirmeBaglamiTohumla,
 } from './harness';
 
 // ─── OYNA — Ana ekran görsel regresyonu ──────────────────────────────────────
@@ -101,6 +102,60 @@ const EKRANLAR: Ekran[] = [
     ad: '12-giris-tanitim',
     capa: /İSTEDİĞİN ZAMAN/i,
     ac: async (page) => { await hazirla(page, { oturumsuz: true }); await ekranaGit(page, 'AUTH'); },
+  },
+  {
+    // Maç sonu değerlendirme · 1/2 — kendi takımın, 1–10 yıldız şeridi.
+    ad: '13-mac-sonu-kadro',
+    capa: /KENDİ TAKIMIN/,
+    ac: async (page) => {
+      await hazirla(page);
+      await degerlendirmeBaglamiTohumla(page);
+      await ekranaGit(page, 'POST_MATCH_EVAL');
+    },
+  },
+  {
+    // Maç sonu değerlendirme · 2/2 — tesis 5 yıldız (görevli atanmamış maç:
+    // kaleci/hakem kartı HİÇ çizilmez, sahte sağlayıcı uydurulmaz).
+    ad: '14-mac-sonu-tesis',
+    capa: /TESİS VE GÖREVLİLER/,
+    ac: async (page) => {
+      await hazirla(page);
+      await degerlendirmeBaglamiTohumla(page);
+      await ekranaGit(page, 'POST_MATCH_EVAL');
+      await page.getByRole('button', { name: 'Devam' }).click();
+    },
+  },
+  {
+    // Aynı ekran, kaleci + hakem ATANMIŞ maç: iki adet 10 puanlık çubuk kartı.
+    ad: '15-mac-sonu-gorevliler',
+    capa: /TESİS VE GÖREVLİLER/,
+    ac: async (page) => {
+      await hazirla(page);
+      await degerlendirmeBaglamiTohumla(page, { gorevliler: true });
+      await ekranaGit(page, 'POST_MATCH_EVAL');
+      await page.getByRole('button', { name: 'Devam' }).click();
+    },
+  },
+  {
+    // PUANLANMIŞ hâl: yıldız şeridinin clipPath kırpması, altın satır kenarlığı,
+    // sağdaki rakam ve alt sayaç/ortalama birlikte doğrulanır.
+    ad: '16-mac-sonu-kadro-puanli',
+    capa: /KENDİ TAKIMIN/,
+    ac: async (page) => {
+      await hazirla(page);
+      await degerlendirmeBaglamiTohumla(page);
+      await ekranaGit(page, 'POST_MATCH_EVAL');
+      const seritler = page.getByRole('slider');
+      // Şeridin %oran'ına dokun → ceil(oran × 10) puan.
+      const puanla = async (i: number, oran: number) => {
+        const s = seritler.nth(i);
+        const box = (await s.boundingBox())!;
+        await page.mouse.click(box.x + box.width * oran, box.y + box.height / 2);
+      };
+      await puanla(0, 0.95); // 10 — EFSANE ucu
+      await puanla(1, 0.65); // 7
+      await puanla(2, 0.25); // 3
+    },
   },
 ];
 

@@ -254,6 +254,44 @@ export async function odemeBaglamiTohumla(page: Page) {
 }
 
 /**
+ * Maç sonu değerlendirme için deterministik bağlam tohumla.
+ *
+ * Oturumdaki kullanıcı (`gorsel-test-kullanicisi`) EV sahibi kadrosuna konur ki
+ * ekran "KENDİ TAKIMIN" dalını çizsin: kendisi listeden düşer, iki takım
+ * arkadaşı puanlanabilir, deplasman oyuncusu HİÇ görünmez.
+ */
+export async function degerlendirmeBaglamiTohumla(page: Page, opts: { gorevliler?: boolean } = {}) {
+  const oyuncu = (id: string, ad: string, mevki: string) =>
+    `{ id: '${id}', name: '${ad}', avatar: '', rating: 0, position: '${mevki}', x: 50, y: 50 }`;
+  const slot = (sid: string, id: string, ad: string, mevki: string) =>
+    `{ id: '${sid}', role: '${mevki}', x: 50, y: 50, status: 'TAKEN', occupant: '${id}', player: ${oyuncu(id, ad, mevki)} }`;
+
+  await storeIle(page, `(store) => store.getState().setSelectedMatch({
+    id: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
+    title: 'Akşam Maçı',
+    location: 'Yıldız Halı Saha',
+    pitchName: 'Yıldız Halı Saha',
+    date: '1 Mart 2026',
+    time: '20:00 - 21:00',
+    price: 150,
+    difficulty: 'Rahat',
+    minRating: 0,
+    image: '',
+    badges: [],
+    missingPositions: [],
+    creatorId: 'baska-biri',
+    ${opts.gorevliler ? "gkId: 'gk-1', refereeId: 'ref-1'," : ''}
+    slots: [
+      ${slot('h1', 'gorsel-test-kullanicisi', 'Ben', 'ORT')},
+      ${slot('h2', 'p-emre', 'Emre Duran', 'SAV')},
+      ${slot('h3', 'p-caner', 'Caner Kılıç', 'ORT')},
+      ${slot('h4', 'p-ahmet', 'Ahmet Yıldız', 'HÜC')},
+    ],
+    awaySlots: [ ${slot('a1', 'p-rakip', 'Rakip Oyuncu', 'ORT')} ],
+  })`);
+}
+
+/**
  * Ekran görüntüsünden ÖNCE her şeyin oturmasını bekle:
  * yazı tipleri + bir sonraki boya karesi + kısa bir yerleşim payı.
  */
