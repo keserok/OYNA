@@ -14,6 +14,7 @@ import { EmptyState } from '../components/common/StatusState';
 import { FilterDropdown } from '../components/ui/FilterDropdown';
 import { deriveDiscoveryFilterOptions, roleHasOpenSlot, ROLE_LABEL_MAP } from '../utils/discoveryFilterOptions';
 import { formatMatchDuration, realMatchMinutes } from '../shared/matchTiming';
+import { PLAY_STYLE_META } from './onboarding/onboardingShared';
 
 interface MatchDiscoveryProps {
   onBack: () => void;
@@ -161,10 +162,11 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
       } else {
         normalizedMentality = 'Taktiksel';
       }
+      // IP-09: mentalite paletinin beşinci kopyasıydı — renkler tek kaynaktan gelir.
       const MENTALITY_DISPLAY: Record<'Ciddi' | 'Taktiksel' | 'Rahat', { title: string; color: string }> = {
-        Ciddi: { title: 'CİDDİ', color: '#FACC15' },
-        Taktiksel: { title: 'TAKTİKSEL', color: '#3b82f6' },
-        Rahat: { title: 'RAHAT', color: '#10b981' },
+        Ciddi: { title: 'CİDDİ', color: PLAY_STYLE_META.ciddi.color },
+        Taktiksel: { title: 'TAKTİKSEL', color: PLAY_STYLE_META.taktiksel.color },
+        Rahat: { title: 'RAHAT', color: PLAY_STYLE_META.rahat.color },
       };
       const matchMentality = MENTALITY_DISPLAY[normalizedMentality].title;
       const mentalityColor = MENTALITY_DISPLAY[normalizedMentality].color;
@@ -330,7 +332,7 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
   const wizardLabel = wizardCount > 0 ? `${wizardCount} MAÇI GÖSTER` : 'EŞLEŞEN MAÇ YOK';
 
   return (
-    <div className="min-h-screen max-h-screen bg-[#0A0E14] flex flex-col relative overflow-hidden font-sans selection:bg-[#FACC15] selection:text-black">
+    <div className="min-h-screen max-h-screen bg-[#0A0E14] flex flex-col relative overflow-hidden font-sans selection:bg-primary selection:text-on-primary">
       
       {/* ── ARKA PLAN ── */}
       <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-20 mix-blend-overlay pointer-events-none" />
@@ -496,10 +498,12 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
               <motion.button
                 whileTap={{ scale: 0.95 }}
                 onClick={() => setShowWizard(false)}
-                className="relative overflow-hidden w-full py-4 rounded-2xl text-black font-extrabold uppercase tracking-[0.2em] text-xs transition-all border border-[#FACC15]/50"
-                style={{ 
-                  background: 'linear-gradient(135deg, #FACC15, #39FF14)',
-                  boxShadow: '0 0 30px rgba(57,255,20,0.3), 0 8px 30px rgba(250,204,21,0.2)'
+                className="relative overflow-hidden w-full py-4 rounded-2xl text-on-primary font-extrabold uppercase tracking-[0.2em] text-xs transition-all"
+                style={{
+                  /* IP-09: sarı→yeşil gradyanın iki durağı arasındaki kontrast
+                     1.13:1 — gradyan gözle görülmüyordu, düz lekeye iniyordu. */
+                  background: '#39FF14',
+                  boxShadow: '0 0 28px rgba(57,255,20,0.30)'
                 }}
               >
                 {/* Shimmer Efekti */}
@@ -626,7 +630,6 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
                 open={openDropdown === 'format'}
                 onOpenChange={(o) => setOpenDropdown(o ? 'format' : null)}
                 disabled={filterOptions.formats.length === 0}
-                accent="#39FF14"
               />
               <FilterDropdown
                 label="MENTALİTE"
@@ -636,7 +639,6 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
                 open={openDropdown === 'mentality'}
                 onOpenChange={(o) => setOpenDropdown(o ? 'mentality' : null)}
                 disabled={filterOptions.mentalities.length === 0}
-                accent="#FACC15"
               />
               <FilterDropdown
                 label="POZİSYON"
@@ -646,7 +648,6 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
                 open={openDropdown === 'role'}
                 onOpenChange={(o) => setOpenDropdown(o ? 'role' : null)}
                 disabled={filterOptions.roles.length === 0}
-                accent="#39FF14"
               />
             </div>
             {enhancedMatches.length === 0 && (
@@ -811,7 +812,7 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
                 <button
                   onClick={handleJoinPrivate}
                   disabled={privateLoading || privateCode.trim().length < 4}
-                  className={`w-full py-3.5 bg-[#FACC15] text-black font-extrabold rounded-2xl text-sm uppercase tracking-wide transition-transform flex items-center justify-center gap-2 ${privateLoading || privateCode.trim().length < 4 ? 'opacity-50 cursor-not-allowed' : 'active:scale-95 hover:bg-yellow-300'}`}
+                  className={`w-full py-3.5 bg-primary text-on-primary font-extrabold rounded-2xl text-sm uppercase tracking-wide transition-transform flex items-center justify-center gap-2 ${privateLoading || privateCode.trim().length < 4 ? 'opacity-50 cursor-not-allowed' : 'active:scale-95'}`}
                 >
                   {privateLoading ? <><Loader2 size={16} className="animate-spin" /> Aranıyor...</> : 'Maça Git'}
                 </button>

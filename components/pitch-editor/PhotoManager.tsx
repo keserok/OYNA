@@ -184,7 +184,7 @@ export const PhotoManager: React.FC<Props> = ({ pitchId, courtId = null, readOnl
             <img src={transformedImageUrl(item.url, 'thumb')} alt="" className="w-full h-full object-cover" />
 
             {idx === 0 && (
-              <span className="absolute bottom-2 left-2 text-[0.6875rem] font-bold bg-[#FFFF00] text-black px-2 py-0.5 rounded">
+              <span className="absolute bottom-2 left-2 text-[0.6875rem] font-bold bg-warning-bg text-warning border border-warning-line px-2 py-0.5 rounded">
                 KAPAK
               </span>
             )}
@@ -209,7 +209,7 @@ export const PhotoManager: React.FC<Props> = ({ pitchId, courtId = null, readOnl
                     <button
                       type="button"
                       onClick={() => void makeCover(idx)}
-                      className="p-1.5 bg-black/70 text-[#FFFF00] rounded-lg"
+                      className="p-1.5 bg-black/70 text-warning rounded-lg"
                       title="Kapak yap"
                     >
                       <Star size={12} className="fill-current" />

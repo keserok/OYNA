@@ -69,7 +69,7 @@ export const ShowcasePreview: React.FC<{ pitchId: string; onClose: () => void }>
     <div className="fixed inset-0 z-[120] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
       <div className="relative w-full max-w-sm max-h-[90vh] bg-[#0A0E14] border border-white/10 rounded-[32px] overflow-hidden flex flex-col">
         <div className="absolute top-3 left-0 right-0 z-10 flex items-center justify-between px-4">
-          <span className="px-2.5 py-1 rounded-full bg-[#FFFF00] text-black text-[0.625rem] font-extrabold uppercase tracking-wider">
+          <span className="px-2.5 py-1 rounded-full bg-warning-bg text-warning border border-warning-line text-[0.625rem] font-extrabold uppercase tracking-wider">
             Oyuncu Gözüyle Önizleme
           </span>
           <button onClick={onClose} className="w-9 h-9 rounded-full bg-black/60 border border-white/15 flex items-center justify-center text-white">
@@ -208,7 +208,7 @@ export const ShowcasePreview: React.FC<{ pitchId: string; onClose: () => void }>
                   {/* S17: tutarda italik yok — italik yalnız skorda kalır. */}
                   <div className="text-base font-extrabold text-white">₺{Math.round((activeCourts[0]?.price ?? data.total_price ?? 0) * 0.3 / 10) * 10}</div>
                 </div>
-                <div className="px-4 py-3 rounded-xl bg-[#FFFF00] text-black text-[0.6875rem] font-extrabold italic uppercase opacity-70">
+                <div className="px-4 py-3 rounded-xl bg-warning-bg text-warning border border-warning-line text-[0.6875rem] font-extrabold italic uppercase opacity-70">
                   Kaporayı Öde
                 </div>
               </div>

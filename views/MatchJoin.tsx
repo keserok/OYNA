@@ -28,6 +28,7 @@ import TeamPlanBanner from '../components/social/TeamPlanBanner';
 // Tek kaynak lobi mantığı — admin paneli (MatchLobbyPitch) ile AYNI fonksiyonlar (drift yok).
 import { normalizeRole, inferSquadSize, applyCanonicalCoords, resolveGkVisibility, findHiredGkSlotId } from '../shared/lobbyEnrichment';
 import { formatMatchDuration } from '../shared/matchTiming';
+import { PLAY_STYLE_META } from './onboarding/onboardingShared';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -77,10 +78,12 @@ const FORMATIONS = FORMATIONS_SSOT as Record<string, Record<string, { x: number;
 
 // ─── Difficulty Badge Renk Sistemi ─────────────────────────────────────────
 
+// IP-09: bu tablo mentalite paletinin DÖRDÜNCÜ kopyasıydı. Renkler artık tek
+// kaynaktan (PLAY_STYLE_META) gelir — kategori rengi birincil/uyarı olamaz.
 const difficultyConfig: Record<string, { color: string; glow: string; label: string }> = {
-  'Ciddi':     { color: '#FF3B3B', glow: 'rgba(255,59,59,0.4)',   label: 'CİDDİ'      },
-  'Taktiksel': { color: '#FACC15', glow: 'rgba(250,204,21,0.4)',   label: 'TAKTİKSEL'  },
-  'Rahat':     { color: '#39FF14', glow: 'rgba(57,255,20,0.4)',   label: 'RAHAT'      },
+  'Ciddi':     { color: PLAY_STYLE_META.ciddi.color,     glow: 'rgba(248,113,113,0.25)', label: 'CİDDİ'     },
+  'Taktiksel': { color: PLAY_STYLE_META.taktiksel.color, glow: 'rgba(96,165,250,0.25)',  label: 'TAKTİKSEL' },
+  'Rahat':     { color: PLAY_STYLE_META.rahat.color,     glow: 'rgba(169,180,192,0.25)', label: 'RAHAT'     },
 };
 
 const getQualityGrade = (score: number): string => {
@@ -94,9 +97,11 @@ const getQualityGrade = (score: number): string => {
 };
 
 const getGradeColorClass = (grade: string): string => {
-  if (grade.startsWith('A')) return 'text-[#39FF14] drop-shadow-[0_0_8px_rgba(57,255,20,0.4)]';
-  if (grade.startsWith('B')) return 'text-[#FACC15] drop-shadow-[0_0_8px_rgba(250,204,21,0.4)]';
-  return 'text-orange-400';
+  // IP-09: kalite notu bir KATEGORİdir, durum değil — harf zaten "A/B/C" yazıyor.
+  // Ayrım renkte değil, parlaklık merdiveninde: A > B > C.
+  if (grade.startsWith('A')) return 'text-ink';
+  if (grade.startsWith('B')) return 'text-ink-3';
+  return 'text-ink-4';
 };
 
 // İsim baş harfleri: "Ahmet Yılmaz" → "AY", tek kelime → ilk iki harf. Türkçe-doğru büyütme.
@@ -481,7 +486,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
         </p>
         <button
           onClick={onBack}
-          className="min-h-[44px] px-6 rounded-2xl bg-[#39FF14] text-[#0A0E14] text-[0.9375rem] font-bold active:scale-[0.98] transition-transform"
+          className="min-h-[44px] px-6 rounded-2xl bg-[#39FF14] text-on-primary text-[0.9375rem] font-bold active:scale-[0.98] transition-transform"
         >
           Geri Dön
         </button>
@@ -1132,9 +1137,6 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
     <div className="min-h-screen bg-[#0A0E14] flex flex-col relative overflow-hidden font-sans">
 
       {/* Ambiyans arka plan */}
-      <div className="absolute top-0 left-[-15%] w-[500px] h-[500px] bg-[#39FF14]/4 blur-[140px] rounded-full pointer-events-none" />
-      <div className="absolute bottom-0 right-[-10%] w-[400px] h-[400px] bg-[#00f2fe]/4 blur-[120px] rounded-full pointer-events-none" />
-      <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-[0.08] mix-blend-overlay pointer-events-none" />
 
 
 
@@ -1153,10 +1155,10 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
               className="relative w-[19rem] rounded-[28px] overflow-hidden bg-gradient-to-b from-[#161B22] to-[#0d1117] border border-white/10 shadow-[0_30px_70px_rgba(0,0,0,0.85)]">
               {(() => {
                 const isHome = pitchSide === 'home';
-                const accent = isHome ? '#39FF14' : '#f87171';
+                const accent = isHome ? '#FFFFFF' : '#F87171';
                 const initialsCls = isHome
-                  ? 'bg-emerald-950/60 text-emerald-300 border border-emerald-500/25'
-                  : 'bg-red-950/60 text-red-300 border border-red-500/25';
+                  ? 'bg-white/10 text-white border border-white/20'
+                  : 'bg-error-bg text-error border border-error-line';
                 const isMySlot = activePlayer.id === currentUserProfile?.id;
                 const posLabel = { 'GK': 'KALECİ', 'DEF': 'DEFANS', 'MID': 'ORTA SAHA', 'FWD': 'FORVET' }[normalizeRole((activePlayer as any).position || activePlayerSlot?.role || '')] || 'OYUNCU';
                 const c = playerCard;
@@ -1222,7 +1224,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                                 showActionError(e?.message || 'İstek gönderilemedi.');
                               }
                             }}
-                            className="w-full mt-3 py-3 rounded-2xl font-extrabold text-[0.6875rem] uppercase tracking-widest text-[#39FF14] bg-[#39FF14]/10 border border-[#39FF14]/25 active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-60">
+                            className="w-full mt-3 py-3 rounded-2xl font-extrabold text-[0.6875rem] uppercase tracking-widest text-ink bg-white/[0.06] border border-line-strong active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-60">
                             {friendRequestSent ? <><CheckCircle2 size={14} /> İSTEK GÖNDERİLDİ</> : <><UserPlus size={14} /> ARKADAŞ OL</>}
                           </button>
                         )}
@@ -1242,7 +1244,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                         {/* Legacy INVITED davetini davetli kabul eder */}
                         {activePlayerSlot && (activePlayerSlot as any).inviteeId === currentUserProfile.id && (activePlayerSlot as any).assignmentStatus === 'INVITED' && (
                           <button onClick={() => handleAcceptSlot(activePlayerSlot.id)} disabled={isProcessing}
-                            className="w-full py-3.5 rounded-2xl font-extrabold text-xs uppercase tracking-widest text-black bg-[#39FF14] active:scale-95 transition-all shadow-[0_0_20px_rgba(57,255,20,0.35)] flex items-center justify-center gap-2">
+                            className="w-full py-3.5 rounded-2xl font-extrabold text-xs uppercase tracking-widest text-on-primary bg-[#39FF14] active:scale-95 transition-all shadow-[0_0_20px_rgba(57,255,20,0.35)] flex items-center justify-center gap-2">
                             <CheckCircle2 size={15} /> Slotu Kabul Et
                           </button>
                         )}
@@ -1447,7 +1449,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
               initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
               transition={{ type: 'spring', damping: 26, stiffness: 280 }}
               onClick={e => e.stopPropagation()}
-              className="bg-[#161B22] border-t border-[#39FF14]/25 w-full max-w-md rounded-t-[36px] p-6 pb-10 shadow-[0_-20px_50px_rgba(0,0,0,0.8)]">
+              className="bg-[#161B22] border-t border-line-strong w-full max-w-md rounded-t-[36px] p-6 pb-10 shadow-[0_-20px_50px_rgba(0,0,0,0.8)]">
               <div className="w-12 h-1 bg-white/20 rounded-full mx-auto mb-5" />
               <h3 className="text-lg font-extrabold text-white italic uppercase tracking-tighter text-center">Slotu Doldur</h3>
               <p className="text-[0.625rem] text-ink-4 font-bold uppercase tracking-widest text-center mt-1 mb-5">
@@ -1455,7 +1457,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
               </p>
               <div className="space-y-3">
                 <button onClick={() => handleSelfAssign(fillSlot.id)} disabled={isProcessing}
-                  className="w-full py-3.5 rounded-2xl font-extrabold text-sm uppercase tracking-widest text-black bg-[#39FF14] active:scale-95 transition-all shadow-[0_0_20px_rgba(57,255,20,0.3)] flex items-center justify-center gap-2 disabled:opacity-60">
+                  className="w-full py-3.5 rounded-2xl font-extrabold text-sm uppercase tracking-widest text-on-primary bg-[#39FF14] active:scale-95 transition-all shadow-[0_0_20px_rgba(57,255,20,0.3)] flex items-center justify-center gap-2 disabled:opacity-60">
                   {isProcessing ? <Loader2 size={16} className="animate-spin" /> : <><UserPlus size={15} /> KENDİMİ EKLE</>}
                 </button>
                 <button onClick={() => { setAssignPickerSlotId(fillSlot.id); setFillSlot(null); }}
@@ -1509,7 +1511,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                   <Layers size={26} className="text-ink-4 mx-auto mb-2" />
                   <p className="text-xs text-ink-4 font-bold">Henüz kayıtlı taktiğin yok.</p>
                   <button onClick={() => { setShowTacticPicker(false); navigateTo('STUDIO'); }}
-                    className="mt-3 px-4 py-2.5 rounded-xl bg-[#39FF14]/10 border border-[#39FF14]/25 text-[#39FF14] text-[0.625rem] font-extrabold uppercase tracking-widest active:scale-95 transition-all">
+                    className="mt-3 px-4 py-2.5 rounded-xl bg-white/[0.06] border border-line-strong text-ink text-[0.625rem] font-extrabold uppercase tracking-widest active:scale-95 transition-all">
                     Stüdyo'da Taktik Çiz
                   </button>
                 </div>
@@ -1517,7 +1519,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                 <div className="space-y-2 max-h-[46vh] overflow-y-auto custom-scrollbar pr-1">
                   {myTactics.map(t => (
                     <button key={t.id} onClick={() => handleProposeTactic(t.id)}
-                      className="w-full flex items-center justify-between gap-3 bg-black/30 border border-white/8 rounded-2xl p-3.5 text-left hover:border-[#39FF14]/30 active:scale-[0.99] transition-all">
+                      className="w-full flex items-center justify-between gap-3 bg-black/30 border border-white/8 rounded-2xl p-3.5 text-left hover:border-line-strong active:scale-[0.99] transition-all">
                       <div className="min-w-0">
                         <p className="text-sm font-extrabold text-white truncate">{t.name || 'Taktik'}</p>
                         <p className="text-[0.625rem] text-ink-4 font-bold uppercase tracking-wide mt-0.5">
@@ -1611,8 +1613,8 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                                     </div>
                                   )}
                                   {p.is_elite && (
-                                    <div className="absolute -bottom-1 -right-1 p-0.5 rounded-md bg-[#FACC15] border-2 border-[#161B22]">
-                                      <Award size={10} className="text-black" />
+                                    <div className="absolute -bottom-1 -right-1 p-0.5 rounded-md bg-warning-bg border-2 border-[#161B22]">
+                                      <Award size={10} className="text-warning" />
                                     </div>
                                   )}
                                 </div>
@@ -1641,7 +1643,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                                     whileTap={disabled ? undefined : { scale: 0.96 }}
                                     disabled={disabled}
                                     onClick={(e) => { e.stopPropagation(); handleSelectProvider(p); }}
-                                    className="px-4 py-2.5 rounded-xl font-extrabold text-[0.625rem] uppercase tracking-widest text-black transition-all flex items-center justify-center gap-1.5 disabled:opacity-50"
+                                    className="px-4 py-2.5 rounded-xl font-extrabold text-[0.625rem] uppercase tracking-widest text-on-primary transition-all flex items-center justify-center gap-1.5 disabled:opacity-50"
                                     style={{ background: accent, boxShadow: `0 0 15px ${accent}55` }}
                                   >
                                     {submitting ? <Loader2 size={13} className="animate-spin" /> : 'TALEP GÖNDER'}
@@ -1760,7 +1762,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                         whileTap={submitting ? undefined : { scale: 0.97 }}
                         disabled={!!providerSubmittingId}
                         onClick={() => handleSelectProvider(p, 'WALLET')}
-                        className="flex-1 py-3.5 rounded-2xl font-extrabold text-[0.6875rem] uppercase tracking-widest text-black transition-all flex items-center justify-center gap-1.5 disabled:opacity-60"
+                        className="flex-1 py-3.5 rounded-2xl font-extrabold text-[0.6875rem] uppercase tracking-widest text-on-primary transition-all flex items-center justify-center gap-1.5 disabled:opacity-60"
                         style={{ background: accent, boxShadow: `0 0 20px ${accent}55` }}>
                         {submitting ? <Loader2 size={15} className="animate-spin" /> : <><Wallet size={14} /> Cüzdanla</>}
                       </motion.button>
@@ -1969,7 +1971,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
             <button
               onClick={handleBroadcastOpenSlot}
               disabled={broadcasting}
-              className="w-full min-h-[44px] flex items-center justify-center gap-2 px-4 rounded-2xl bg-[#39FF14]/10 border border-[#39FF14]/30 text-[#39FF14] text-[0.8125rem] font-bold active:scale-[0.98] transition-transform disabled:opacity-60"
+              className="w-full min-h-[44px] flex items-center justify-center gap-2 px-4 rounded-2xl bg-white/[0.06] border border-line-strong text-ink text-[0.8125rem] font-bold active:scale-[0.98] transition-transform disabled:opacity-60"
             >
               <Megaphone size={16} /> {broadcasting ? 'İlan gönderiliyor…' : 'Eksik oyuncu ilanı ver'}
             </button>
@@ -2035,7 +2037,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                   : 'bg-transparent border-white/5 opacity-55'
               }`}
             >
-              <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${homeTeam ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]' : 'bg-white shadow-[0_0_6px_rgba(255,255,255,0.6)]'}`} />
+              <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${homeTeam ? 'bg-white shadow-[0_0_6px_rgba(255,255,255,0.6)]' : 'bg-white/40'}`} />
               <p className="text-[0.8125rem] font-extrabold text-white uppercase italic tracking-tight truncate leading-tight flex-1 min-w-0 text-left pr-1.5">
                 {match.homeTeamName || homeTeam?.name || 'BEYAZ'}
               </p>
@@ -2084,8 +2086,8 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
           {/* Bilgi + Badge Şeridi */}
           <div className="flex items-center gap-2 mb-2">
             <button onClick={() => setShowMapModal(true)}
-              className="flex items-center gap-1 text-[0.6875rem] font-bold text-white/50 hover:text-[#39FF14] transition-colors min-w-0 flex-1">
-              <MapPin size={9} className="text-[#39FF14] shrink-0" />
+              className="flex items-center gap-1 text-[0.6875rem] font-bold text-white/50 transition-colors min-w-0 flex-1">
+              <MapPin size={9} className="text-ink-4 shrink-0" />
               <span className="truncate">
                 {match.location || 'Konum'}
                 {(() => {
@@ -2104,7 +2106,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
             </div>
             <div className="flex items-center gap-1 shrink-0">
               {(match as any).is_platform && (
-                <span className="px-1.5 py-0.5 rounded-md text-[0.6875rem] font-extrabold uppercase text-black bg-[#FACC15] border border-[#FACC15]"
+                <span className="px-1.5 py-0.5 rounded-md text-[0.6875rem] font-extrabold uppercase text-warning bg-warning-bg border border-warning-line"
                   title="OYNA Organizasyonu — platform maçı">
                   OYNA
                 </span>
@@ -2159,7 +2161,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
               <p className="text-[0.625rem] font-extrabold text-ink-4 uppercase tracking-[0.2em]">Taktik Önerileri</p>
               <button
                 onClick={async () => { setMyTactics(await listMyTacticsLite()); setShowTacticPicker(true); }}
-                className="text-[0.625rem] font-extrabold uppercase tracking-widest text-[#39FF14] bg-[#39FF14]/8 border border-[#39FF14]/25 px-2.5 py-1.5 rounded-xl active:scale-95 transition-all">
+                className="text-[0.625rem] font-extrabold uppercase tracking-widest text-ink bg-white/[0.06] border border-line-strong px-2.5 py-1.5 rounded-xl active:scale-95 transition-all">
                 + Taktik Öner
               </button>
             </div>
@@ -2170,12 +2172,12 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                 {tacticProposals.map(p => (
                   <button key={p.proposer_id}
                     onClick={() => { setStudioContext({ tacticId: p.tactic_id }); navigateTo('STUDIO'); }}
-                    className="shrink-0 min-w-[150px] text-left bg-[#161B22]/80 border border-white/8 rounded-2xl p-3 hover:border-[#39FF14]/25 active:scale-[0.98] transition-all">
+                    className="shrink-0 min-w-[150px] text-left bg-[#161B22]/80 border border-white/8 rounded-2xl p-3 hover:border-line-strong active:scale-[0.98] transition-all">
                     <p className="text-[0.6875rem] font-extrabold text-white truncate">{p.tactic_name || 'Taktik'}</p>
                     <p className="text-[0.625rem] text-ink-4 font-bold uppercase tracking-wide truncate mt-0.5">
                       {[p.formation, p.size].filter(Boolean).join(' · ') || '—'}
                     </p>
-                    <p className="text-[0.6875rem] text-[#39FF14]/80 font-bold truncate mt-1.5">{p.proposer_name}</p>
+                    <p className="text-[0.6875rem] text-ink-3 font-bold truncate mt-1.5">{p.proposer_name}</p>
                   </button>
                 ))}
               </div>
@@ -2197,7 +2199,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
             <div className="flex items-center gap-2">
               <div className={`w-1.5 h-1.5 rounded-full animate-pulse ${
                 pitchSide === 'home'
-                  ? 'bg-[#39FF14] shadow-[0_0_8px_rgba(57,255,20,0.9)]'
+                  ? 'bg-white'
                   : 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.9)]'
               }`} />
               <p className="text-[0.625rem] font-extrabold text-white/50 uppercase tracking-[0.2em]">
@@ -2208,7 +2210,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
             </div>
             {selectedSlotIds.length > 0 && (
               <motion.span initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }}
-                className="text-[0.625rem] font-extrabold uppercase tracking-widest px-2.5 py-1 rounded-full border text-[#39FF14] bg-[#39FF14]/10 border-[#39FF14]/30">
+                className="text-[0.625rem] font-extrabold uppercase tracking-widest px-2.5 py-1 rounded-full border text-ink bg-white/10 border-white/25">
                 {selectedSlotIds.length} Slot Seçildi
               </motion.span>
             )}
@@ -2291,7 +2293,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                           )}
                         </div>
                         <div className="absolute -top-1 -right-1 p-0.5 rounded-md bg-[#FF9F43] border border-black z-20 pointer-events-none">
-                          <Hand size={9} className="text-black" />
+                          <Hand size={9} className="text-on-primary" />
                         </div>
                         <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-1.5 bg-black/90 backdrop-blur-sm px-2 py-0.5 rounded-full border border-[#FF9F43]/40 shadow-md max-w-[64px] z-20 pointer-events-none">
                           <span className="text-[0.6875rem] font-extrabold text-[#FF9F43] whitespace-nowrap uppercase truncate block">
@@ -2324,8 +2326,8 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                           ) : (
                             <div className={`w-full h-full flex items-center justify-center font-extrabold text-[0.9375rem] tracking-tight ${
                               pitchSide === 'home'
-                                ? 'bg-emerald-950/60 text-emerald-300 border border-emerald-500/20'
-                                : 'bg-red-950/60 text-red-300 border border-red-500/20'
+                                ? 'bg-white/[0.08] text-white border border-white/20'
+                                : 'bg-error-bg text-error border border-error-line'
                             }`}>
                               {getInitials(player.name)}
                             </div>
@@ -2362,7 +2364,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                         >
                           <div className={`w-12 h-12 rounded-full flex items-center justify-center border-2 shadow-lg transition-all duration-200 relative ${
                             isSelected
-                              ? 'bg-[#39FF14] border-white text-black shadow-[0_0_28px_rgba(57,255,20,0.9)] scale-110'
+                              ? 'bg-[#39FF14] border-white text-on-primary shadow-[0_0_28px_rgba(57,255,20,0.9)] scale-110'
                               : 'bg-black/50 border-white/25 text-white/60 hover:border-[#39FF14]/50 backdrop-blur-md'
                           }`}>
                             {isSelected ? (
@@ -2372,7 +2374,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                                 <span className="text-[0.625rem] font-extrabold uppercase tracking-wider leading-none">
                                   { { 'GK': 'KL', 'DEF': 'SAV', 'MID': 'ORT', 'FWD': 'HÜC' }[normalizeRole(slot.role)] || 'ORT' }
                                 </span>
-                                <div className={`absolute -top-1 -right-1 w-4.5 h-4.5 rounded-full text-black flex items-center justify-center border border-black shadow-md z-20 ${
+                                <div className={`absolute -top-1 -right-1 w-4.5 h-4.5 rounded-full text-on-primary flex items-center justify-center border border-black shadow-md z-20 ${
                                   isSelected ? 'bg-white' : 'bg-[#39FF14]'
                                 }`}>
                                   <Plus size={10} strokeWidth={3} />
@@ -2411,15 +2413,15 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                       <div className="relative w-full h-full flex flex-col items-center justify-center">
                         <div className={`w-12 h-12 rounded-full flex items-center justify-center border-2 shadow-[inset_0_2px_10px_rgba(0,0,0,0.6)] ${
                           pitchSide === 'home'
-                            ? 'bg-emerald-950/80 border-emerald-500/30 text-emerald-400/70'
-                            : 'bg-red-950/80 border-red-500/30 text-red-400/70'
+                            ? 'bg-white/[0.06] border-white/20 text-white/70'
+                            : 'bg-error-bg border-error-line text-error'
                         }`}>
                           <Lock size={15} />
                         </div>
                         <div className={`absolute top-full left-1/2 -translate-x-1/2 mt-1.5 px-2.5 py-0.5 rounded-full border z-20 pointer-events-none ${
                           pitchSide === 'home'
-                            ? 'bg-emerald-950/90 border-emerald-500/40'
-                            : 'bg-red-950/90 border-red-500/40'
+                            ? 'bg-white/[0.08] border-white/25'
+                            : 'bg-error-bg border-error-line'
                         }`}>
                           <span className={`text-[0.625rem] font-extrabold uppercase tracking-widest whitespace-nowrap ${
                             pitchSide === 'home' ? 'text-emerald-300' : 'text-red-300'
@@ -2459,7 +2461,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                   <div key={player.id} className="flex flex-col items-center gap-1 shrink-0 bg-black/40 border border-white/5 rounded-2xl p-2.5 min-w-[75px] relative overflow-hidden group">
                     <div className="relative">
                       <img src={player.avatar} alt={player.name} className="w-9 h-9 rounded-full object-cover border border-white/10" />
-                      <div className="absolute -bottom-1 -right-1 w-4.5 h-4.5 rounded-full bg-amber-500 border border-black flex items-center justify-center text-[0.6875rem] font-extrabold text-black">
+                      <div className="absolute -bottom-1 -right-1 w-4.5 h-4.5 rounded-full bg-amber-500 border border-black flex items-center justify-center text-[0.6875rem] font-extrabold text-on-primary">
                         {idx + 1}
                       </div>
                     </div>
@@ -2505,7 +2507,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                         setIsProcessing(false); endWrite();
                       }
                     }}
-                    className="px-3 py-1.5 rounded-xl bg-black/40 border border-white/10 hover:border-[#39FF14]/40 text-white hover:text-[#39FF14] text-[0.625rem] font-extrabold uppercase tracking-wider shrink-0 transition-all active:scale-95 cursor-pointer"
+                    className="px-3 py-1.5 rounded-xl bg-black/40 border border-white/10 hover:border-line-strong text-white text-[0.625rem] font-extrabold uppercase tracking-wider shrink-0 transition-all active:scale-95 cursor-pointer"
                   >
                     {fName}
                   </button>
@@ -2647,7 +2649,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                       <button onClick={() => handleDeclineApplication(req.id)} disabled={reqActionId === req.id}
                         className="px-2.5 py-1.5 rounded-lg text-[0.6875rem] font-extrabold uppercase text-gray-400 border border-white/10 disabled:opacity-50">Reddet</button>
                       <button onClick={() => handleAcceptApplication(req.id)} disabled={reqActionId === req.id}
-                        className="px-2.5 py-1.5 rounded-lg text-[0.6875rem] font-extrabold uppercase text-black bg-green-400 disabled:opacity-50">Kabul</button>
+                        className="px-2.5 py-1.5 rounded-lg text-[0.6875rem] font-extrabold uppercase text-on-primary bg-primary disabled:opacity-50">Kabul</button>
                     </div>
                   );
                 })}
@@ -2672,10 +2674,10 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                         </p>
                       </div>
                       {req.captainConfirmed ? (
-                        <span className="px-3 py-1.5 rounded-lg text-[0.6875rem] font-extrabold uppercase text-green-300 border border-green-500/30">Onayladın ✓</span>
+                        <span className="px-3 py-1.5 rounded-lg text-[0.6875rem] font-extrabold uppercase text-success border border-success-line">Onayladın ✓</span>
                       ) : (
                         <button onClick={() => handleCaptainConfirm(req.id)} disabled={reqActionId === req.id}
-                          className="px-3 py-1.5 rounded-lg text-[0.6875rem] font-extrabold uppercase text-black bg-green-400 disabled:opacity-50">Onayla</button>
+                          className="px-3 py-1.5 rounded-lg text-[0.6875rem] font-extrabold uppercase text-on-primary bg-primary disabled:opacity-50">Onayla</button>
                       )}
                     </div>
                   );
@@ -2726,7 +2728,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                     </div>
                   )}
                   <div className="absolute -bottom-1 -right-1 p-1 rounded-lg bg-[#FF9F43] border-2 border-[#161B22]">
-                    <Hand size={10} className="text-black" />
+                    <Hand size={10} className="text-on-primary" />
                   </div>
                 </div>
                 <div className="flex-1 min-w-0">
@@ -2775,7 +2777,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                     </div>
                   )}
                   <div className="absolute -bottom-1 -right-1 p-1 rounded-lg bg-[#A78BFA] border-2 border-[#161B22]">
-                    <Scale size={10} className="text-black" />
+                    <Scale size={10} className="text-on-primary" />
                   </div>
                 </div>
                 <div className="flex-1 min-w-0">
@@ -2823,8 +2825,8 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                     disabled={isProcessing}
                     onClick={handleBuySlots}
                     whileTap={{ scale: 0.96 }}
-                    className="w-full h-16 rounded-[24px] font-extrabold text-sm uppercase tracking-[0.12em] flex items-center justify-center gap-2 transition-all cursor-pointer text-black"
-                    style={{ background: 'linear-gradient(135deg, #FACC15 0%, #39FF14 100%)', boxShadow: '0 0 35px rgba(57,255,20,0.6), 0 0 70px rgba(250,204,21,0.4), inset 0 1px 0 rgba(255,255,255,0.4)' }}
+                    className="w-full h-16 rounded-[24px] font-extrabold text-sm uppercase tracking-[0.12em] flex items-center justify-center gap-2 transition-all cursor-pointer text-on-primary"
+                    style={{ background: '#39FF14', boxShadow: '0 0 28px rgba(57,255,20,0.30)' }}
                   >
                     {isProcessing ? (
                       <><Loader2 size={20} className="animate-spin" /><span>ÖDENİYOR...</span></>
@@ -2846,8 +2848,8 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                       const first = myReservedSlots[0];
                       if (first) setFillSlot(first as PositionSlot);
                     }}
-                    className="w-full h-16 rounded-[24px] font-extrabold text-sm uppercase tracking-[0.15em] flex items-center justify-center gap-2 text-black cursor-pointer"
-                    style={{ background: 'linear-gradient(135deg, #FACC15 0%, #39FF14 100%)', boxShadow: '0 0 35px rgba(57,255,20,0.5), inset 0 1px 0 rgba(255,255,255,0.4)' }}
+                    className="w-full h-16 rounded-[24px] font-extrabold text-sm uppercase tracking-[0.15em] flex items-center justify-center gap-2 text-on-primary cursor-pointer"
+                    style={{ background: '#39FF14', boxShadow: '0 0 28px rgba(57,255,20,0.30)' }}
                   >
                     <UserPlus size={18} />
                     <span>SLOTLARINI DOLDUR ({myReservedSlots.length})</span>
@@ -2902,8 +2904,8 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                     disabled={isProcessing}
                     onClick={handleBuySlots}
                     whileTap={{ scale: 0.96 }}
-                    className="w-full h-16 rounded-[24px] font-extrabold text-sm uppercase tracking-[0.12em] flex items-center justify-center gap-2 transition-all cursor-pointer text-black"
-                    style={{ background: 'linear-gradient(135deg, #FACC15 0%, #39FF14 100%)', boxShadow: '0 0 35px rgba(57,255,20,0.6), 0 0 70px rgba(250,204,21,0.4), inset 0 1px 0 rgba(255,255,255,0.4)' }}
+                    className="w-full h-16 rounded-[24px] font-extrabold text-sm uppercase tracking-[0.12em] flex items-center justify-center gap-2 transition-all cursor-pointer text-on-primary"
+                    style={{ background: '#39FF14', boxShadow: '0 0 28px rgba(57,255,20,0.30)' }}
                   >
                     {isProcessing ? (
                       <><Loader2 size={20} className="animate-spin" /><span>ÖDENİYOR...</span></>
@@ -2925,8 +2927,8 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                       const first = myReservedSlots[0];
                       if (first) setFillSlot(first as PositionSlot);
                     }}
-                    className="w-full h-16 rounded-[24px] font-extrabold text-sm uppercase tracking-[0.15em] flex items-center justify-center gap-2 text-black cursor-pointer"
-                    style={{ background: 'linear-gradient(135deg, #FACC15 0%, #39FF14 100%)', boxShadow: '0 0 35px rgba(57,255,20,0.5), inset 0 1px 0 rgba(255,255,255,0.4)' }}
+                    className="w-full h-16 rounded-[24px] font-extrabold text-sm uppercase tracking-[0.15em] flex items-center justify-center gap-2 text-on-primary cursor-pointer"
+                    style={{ background: '#39FF14', boxShadow: '0 0 28px rgba(57,255,20,0.30)' }}
                   >
                     <UserPlus size={18} />
                     <span>SLOTLARINI DOLDUR ({myReservedSlots.length})</span>
@@ -2942,7 +2944,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                     disabled={isProcessing}
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
-                    className="w-full h-16 rounded-[24px] bg-amber-500 text-black font-extrabold text-sm uppercase tracking-[0.2em] flex items-center justify-center gap-2 shadow-[0_0_25px_rgba(245,158,11,0.4)] cursor-pointer"
+                    className="w-full h-16 rounded-[24px] bg-warning-bg text-warning border border-warning-line font-extrabold text-sm uppercase tracking-[0.2em] flex items-center justify-center gap-2 cursor-pointer"
                   >
                     {isProcessing ? (
                       <Loader2 size={20} className="animate-spin" />
@@ -2984,7 +2986,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
             >
               <div className="px-5 py-4 border-b border-white/5 flex items-center justify-between bg-black/20">
                 <h3 className="text-sm font-extrabold text-white italic uppercase flex items-center gap-2">
-                  <MapPin size={16} className="text-[#39FF14]" />
+                  <MapPin size={16} className="text-ink-4" />
                   {match?.location} KONUMU
                 </h3>
                 <button onClick={() => setShowMapModal(false)} className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-white/50 hover:bg-white/10 transition-colors">
@@ -3001,7 +3003,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                           <Popup closeButton={false}>
                               <div className="bg-[#161B22]/90 backdrop-blur-md p-3 rounded-2xl border border-white/10 shadow-xl text-center min-w-[120px]">
                                   <h4 className="text-white font-extrabold text-[0.625rem] uppercase tracking-widest mb-1">{match?.location}</h4>
-                                  <a href={`https://www.google.com/maps/dir/?api=1&destination=${pitchCoordinates[0]},${pitchCoordinates[1]}`} target="_blank" rel="noreferrer" className="inline-block mt-2 px-3 py-1.5 bg-[#39FF14]/20 border border-[#39FF14]/50 text-[#39FF14] text-[0.6875rem] font-extrabold uppercase rounded-lg">Yol Tarifi Al</a>
+                                  <a href={`https://www.google.com/maps/dir/?api=1&destination=${pitchCoordinates[0]},${pitchCoordinates[1]}`} target="_blank" rel="noreferrer" className="inline-block mt-2 px-3 py-1.5 bg-white/[0.06] border border-line-strong text-ink text-[0.6875rem] font-extrabold uppercase rounded-lg">Yol Tarifi Al</a>
                               </div>
                           </Popup>
                       </Marker>
@@ -3080,12 +3082,12 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                     <span className="text-[0.6875rem] font-extrabold text-ink-4 uppercase tracking-wider">OYUN SERTLİĞİ</span>
                     <span className={`text-sm font-extrabold uppercase italic ${
                       match.difficulty === 'Ciddi' ? 'text-red-400' :
-                      match.difficulty === 'Taktiksel' ? 'text-[#FACC15]' : 'text-[#39FF14]'
+                      match.difficulty === 'Taktiksel' ? 'text-info' : 'text-ink-3'
                     }`}>{match.difficulty}</span>
                   </div>
                   <div className="flex items-center justify-between px-4 py-4">
                     <span className="text-[0.6875rem] font-extrabold text-ink-4 uppercase tracking-wider">KATILIM ÜCRETİ</span>
-                    <span className={`text-sm font-extrabold uppercase ${match.price > 0 ? 'text-[#39FF14]' : 'text-white/50'}`}>
+                    <span className={`text-sm font-extrabold uppercase ${match.price > 0 ? 'text-ink' : 'text-white/50'}`}>
                       {match.price > 0 ? `${match.price} ₺` : 'ÜCRETSİZ'}
                     </span>
                   </div>

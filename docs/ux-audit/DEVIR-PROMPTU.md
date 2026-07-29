@@ -56,27 +56,51 @@ gerekmiyor; bugün main'e sorunsuz akar.
 | Komut | Beklenen |
 |---|---|
 | `npx tsc --noEmit` | 0 hata |
-| `npx vitest run` | 668 test / 63 dosya, sıfır başarısız |
+| `npx vitest run` | 810 test / 72 dosya, sıfır başarısız |
 | `npm run test:visual` | 24/24 |
 | `npm run build` | başarılı |
+
+> ⚠️ **Önce `npm ci` çalıştır.** Taze klonda `node_modules` yoktur ve `tsc` bu
+> durumda "0 hata" der — çünkü hiçbir dosyayı gerçekten denetlemez, yalnız
+> `Cannot find type definition file for 'node'` verip çıkar. Bu YANILTICI bir
+> yeşildir; bağımlılıklar kurulmadan ölçüm yapma.
 
 ### Tamamlanmış paketler
 
 IP-01 (navigasyon/geri tuşu/overlay) · IP-02 (çift gönderim + idempotency) ·
-IP-03 (ödeme şeffaflığı + 3DS kurtarma) · IP-05 (değerlendirme gizliliği) ·
-IP-06 (bildirim merkezi) · IP-07 (tesis sahibi para dürüstlüğü) ·
-IP-20 (bilet çevrimdışı) · S-serisi kararların tamamı.
+IP-03 (ödeme şeffaflığı + 3DS kurtarma) · IP-04 (ayrılma sözleşmesi) ·
+IP-05 (değerlendirme gizliliği) · IP-06 (bildirim merkezi) ·
+IP-07 (tesis sahibi para dürüstlüğü) · IP-08 (tipografi/kontrast/font) ·
+**IP-09 (renk sistemi, tek aksan)** · IP-20 (bilet çevrimdışı) ·
+S-serisi kararların tamamı.
 
 ### Kalan paketler — önerilen sıra
 
 | Sıra | Paket | Not |
 |---|---|---|
-| 1 | **IP-04** — maçtan ayrılma akışı | Para ile ilgili, önce gitmeli |
-| 2 | **IP-08** — tipografi ölçeği, kontrast, font | Tasarım sistemi tabanı |
-| 3 | **IP-09** — renk sistemi, tek aksan | IP-08 ile birlikte düşün |
-| 4 | **IP-10** — dokunma hedefi, basma geri bildirimi | Kararlar aşağıda |
-| 5 | **IP-14** — bilgi mimarisi, ölü ekranlar | Ekran taşıdığı için erken |
-| 6+ | IP-11, 12, 13, 15, 16, 17, 18, 19, 21, 22, 23 | |
+| 1 | **IP-10** — dokunma hedefi, basma geri bildirimi | Kararlar aşağıda |
+| 2 | **IP-14** — bilgi mimarisi, ölü ekranlar | Ekran taşıdığı için erken |
+| 3+ | IP-11, 12, 13, 15, 16, 17, 18, 19, 21, 22, 23 | |
+
+### IP-09 uygulanırken bulunan sapmalar (plan metni ile kod arasında)
+
+1. **Mürekkep merdiveni adları.** IP-09 metni `text-ink-1/-2/-3` diyor; IP-08
+   gerçekte **dört** basamak kurdu: `ink` · `ink-2` · `ink-3` · `ink-4`.
+   Eşleme (değerler birebir aynı, yalnız ad kaymış):
+   `ink-1`→`ink` (#FFFFFF) · `ink-2`→`ink-3` (#A9B4C0) · `ink-3`→`ink-4` (#8B949E).
+2. **`MatchJoin.tsx` satır numaraları ~90 kayık**, `PitchDiscovery.tsx` ~29 kayık
+   (IP-08 satır ekledi). Plandaki numaralara değil, **içeriğe** göre çalış.
+3. **`#39FF14` sayım hedefi (`≤12`) tutmuyor — hedef yanlıştı, kod değil.**
+   Bugün 24 kullanım var ve **hepsi rol tablosuna uygun**: birincil CTA (7),
+   onaylanmış durum (6), seçim/slot durumu (10), iade tutarı (1). Planın
+   envanteri slot seçici arayüzünü tek satır saymış; gerçekte 10 satır.
+   Sayıyı tutturmak için çalışan seçim arayüzünü bozma.
+4. **Mentalite paleti dört değil BEŞ kopyaydı.** Plan `onboardingShared`,
+   `StepStyle`, `MatchCreate`, `MatchJoin`'i sayıyor; `MatchDiscovery.tsx`
+   içindeki `MENTALITY_DISPLAY` beşincisiydi. Hepsi tek kaynağa bağlandı.
+5. **Kabul kriteri grep'leri yorum satırlarını ayıklamıyor.** "Bu rengi neden
+   sildik" diye yazılan yorum, `grep -c '#FFC107'` sonucunu 0'dan çıkarır.
+   Yorumlarda ölü hex'i **yazma**, kelimeyle anlat.
 
 ---
 

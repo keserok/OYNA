@@ -6,13 +6,19 @@ interface OynaLogoProps {
   width?: number | string;
   height?: number | string;
   animate?: boolean;
+  /** IP-09: marka rengi artık dışarıdan gelir. Varsayılan `currentColor`, yani
+      çağıran taraf `text-primary` verdiğinde logo marka yeşiline boyanır.
+      Eski sabit amber, "bekliyor" sarısı ile 1.06:1 kontrasta
+      sahipti — marka işareti ile bekleyen durum aynı görünüyordu. */
+  color?: string;
 }
 
 export const OynaLogo: React.FC<OynaLogoProps> = ({
   className = "",
   width = 200,
   height = 200,
-  animate = false
+  animate = false,
+  color = 'currentColor'
 }) => {
   const draw: Variants = {
     hidden: { pathLength: 0, opacity: 0 },
@@ -34,7 +40,7 @@ export const OynaLogo: React.FC<OynaLogoProps> = ({
       className={className}
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
-      stroke="#FFC107"
+      stroke={color}
       strokeWidth="3.5"
       strokeLinecap="round"
       strokeLinejoin="round"
@@ -106,7 +112,7 @@ export const OynaLogo: React.FC<OynaLogoProps> = ({
         <motion.circle cx="100" cy="100" r="16" variants={draw} initial={animate ? "hidden" : "visible"} animate="visible" custom={14} strokeWidth="2.5" />
         
         {/* Center Spot */}
-        <motion.circle cx="100" cy="100" r="1.5" fill="#FFC107" variants={draw} initial={animate ? "hidden" : "visible"} animate="visible" custom={15} />
+        <motion.circle cx="100" cy="100" r="1.5" fill={color} variants={draw} initial={animate ? "hidden" : "visible"} animate="visible" custom={15} />
 
         {/* Left Penalty Area (Starts at Left Edge 60) */}
         <motion.path d="M 60 82 L 75 82 L 75 118 L 60 118" variants={draw} initial={animate ? "hidden" : "visible"} animate="visible" custom={16} strokeWidth="2.5" />

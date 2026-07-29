@@ -53,7 +53,7 @@ Commit mesajında hangi ekranların neden değiştiği tek cümleyle yazılmalı
 ## 3. Bir paket sonrası nasıl doğrulanır
 
 ```bash
-npx vitest run            # 61 dosya / 623 test — mantık
+npx vitest run            # 72 dosya / 810 test — mantık
 npm run test:visual       # 24 karşılaştırma — görüntü
 ```
 

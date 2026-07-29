@@ -356,7 +356,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack }) => {
   if (isLoading) return <DashboardSkeleton />;
 
   return (
-    <div className="flex flex-col min-h-screen pb-6 bg-[#0A0E14] text-white font-sans selection:bg-[#FACC15] selection:text-black">
+    <div className="flex flex-col min-h-screen pb-6 bg-[#0A0E14] text-white font-sans selection:bg-primary selection:text-on-primary">
 
       {/* Header */}
       <header className="px-4 xs:px-6 pt-safe pb-4 flex justify-between items-center bg-transparent z-30">
@@ -519,7 +519,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack }) => {
                   <motion.span
                     animate={{ scale: [1, 1.05, 1] }}
                     transition={{ duration: 0.8, repeat: Infinity }}
-                    className="px-3 py-1.5 text-[0.625rem] font-extrabold tracking-widest text-[#0A0E14] bg-[#FACC15] rounded-xl shadow-[0_0_15px_rgba(250,204,21,0.6)] uppercase italic shrink-0"
+                    className="px-3 py-1.5 text-[0.625rem] font-extrabold tracking-widest text-warning bg-warning-bg border border-warning-line rounded-xl uppercase shrink-0"
                   >
                     YENİ MAÇ EKLENDİ
                   </motion.span>
@@ -552,21 +552,20 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack }) => {
           whileTap={{ scale: 0.97 }}
           onClick={() => onNavigate('MATCH_DISCOVERY')}
           className="col-span-2 min-h-[176px] py-6 rounded-[32px] relative overflow-hidden group cursor-pointer border border-black/20"
-          style={{ boxShadow: '0 0 60px rgba(250,204,21,0.35), 0 0 120px rgba(255,215,0,0.15), inset 0 1px 0 rgba(255,255,255,0.2)' }}
+          style={{ boxShadow: '0 0 32px rgba(57,255,20,0.22)' }}
         >
-          {/* Sarı → Siyah ana gradient */}
-          <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, #FACC15 0%, #FFD700 25%, #FFC107 45%, #1a1600 75%, #000000 100%)' }} />
+          {/* IP-09: ekranın TEK birincil dolu bloğu — gradyan yerine düz birincil. */}
+          <div className="absolute inset-0 bg-primary" />
           {/* Animated sweep — koyu tarafta neon yeşili vurgu */}
           <motion.div
             animate={{ backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'] }}
             transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}
             className="absolute inset-0 pointer-events-none opacity-40"
-            style={{ background: 'radial-gradient(ellipse at 80% 50%, rgba(57,255,20,0.25) 0%, transparent 60%)', backgroundSize: '200% 200%' }}
+            style={{ background: 'radial-gradient(ellipse at 80% 50%, rgba(10,14,20,0.18) 0%, transparent 60%)', backgroundSize: '200% 200%' }}
           />
           {/* Carbon texture */}
-          <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-20 pointer-events-none" />
           {/* Sol taraf sarı parlaması (metin bölgesi) */}
-          <div className="absolute inset-0 pointer-events-none" style={{ background: 'linear-gradient(90deg, rgba(250,204,21,0.15) 0%, transparent 50%)' }} />
+          
           {/* Shimmer */}
           <motion.div
             className="absolute inset-0 pointer-events-none"
@@ -580,12 +579,12 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack }) => {
             <div className="relative z-10">
               <div className="flex items-center gap-2 mb-2">
                 <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ duration: 1.5, repeat: Infinity }}>
-                  <Flame size={16} className="text-black fill-black drop-shadow-[0_0_6px_rgba(0,0,0,0.6)]" />
+                  <Flame size={16} className="text-on-primary fill-on-primary" />
                 </motion.div>
-                <span className="text-black text-[0.625rem] font-extrabold uppercase tracking-[0.3em]">MAÇ BUL</span>
+                <span className="text-on-primary text-[0.625rem] font-extrabold uppercase tracking-[0.3em]">MAÇ BUL</span>
               </div>
-              <h2 className="text-4xl font-extrabold text-black italic uppercase leading-[0.85] tracking-tighter" style={{ textShadow: '0 2px 8px rgba(250,204,21,0.3)' }}>Top<br />Oyna</h2>
-              <p className="text-[0.6875rem] text-black/60 mt-2 font-bold">Hemen bir maça katıl ve oynamaya başla.</p>
+              <h2 className="text-4xl font-extrabold text-on-primary italic uppercase leading-[0.85] tracking-tighter">Top<br />Oyna</h2>
+              <p className="text-[0.6875rem] text-on-primary/70 mt-2 font-bold">Hemen bir maça katıl ve oynamaya başla.</p>
             </div>
 
             {/* OYNA LOGO — sağ taraf, siyah zemin üzerinde parlak sarı */}
@@ -597,14 +596,14 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack }) => {
                 animate={{ opacity: [0.4, 1, 0.4], scale: [1, 1.04, 1] }}
                 transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
                 className="absolute inset-0 rounded-full border-2"
-                style={{ borderColor: 'rgba(250,204,21,0.6)', boxShadow: '0 0 20px rgba(250,204,21,0.4), inset 0 0 10px rgba(250,204,21,0.1)' }}
+                style={{ borderColor: 'rgba(10,14,20,0.55)', boxShadow: '0 0 20px rgba(10,14,20,0.35)' }}
               />
               {/* İkinci parlama halkası */}
               <motion.div
                 animate={{ opacity: [0.1, 0.4, 0.1], scale: [1.05, 1.15, 1.05] }}
                 transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
                 className="absolute rounded-full border"
-                style={{ inset: '-6px', borderColor: 'rgba(250,204,21,0.2)' }}
+                style={{ inset: '-6px', borderColor: 'rgba(10,14,20,0.25)' }}
               />
               {/* Rotate animasyonu ile logo */}
               <motion.div
@@ -616,7 +615,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack }) => {
                   width={82}
                   height={82}
                   animate={false}
-                  className="drop-shadow-[0_0_16px_rgba(250,204,21,0.9)]"
+                  className="text-primary drop-shadow-[0_0_16px_rgba(57,255,20,0.45)]"
                 />
               </motion.div>
             </div>
@@ -631,21 +630,19 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack }) => {
           whileTap={{ scale: 0.97 }}
           onClick={() => onNavigate('PITCH_DISCOVERY')}
           className="col-span-2 min-h-[176px] py-6 rounded-[32px] relative overflow-hidden group cursor-pointer border border-black/20"
-          style={{ boxShadow: '0 0 60px rgba(16,185,129,0.35), 0 0 120px rgba(5,150,105,0.15), inset 0 1px 0 rgba(255,255,255,0.2)' }}
         >
           {/* Yeşil → Siyah ana gradient */}
-          <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, #059669 0%, #10B981 25%, #34D399 45%, #022014 75%, #000000 100%)' }} />
+          <div className="absolute inset-0 bg-surface-1" />
           {/* Animated sweep — koyu tarafta neon yeşil vurgu */}
           <motion.div
             animate={{ backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'] }}
             transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}
             className="absolute inset-0 pointer-events-none opacity-40"
-            style={{ background: 'radial-gradient(ellipse at 80% 50%, rgba(16,185,129,0.25) 0%, transparent 60%)', backgroundSize: '200% 200%' }}
+            style={{ background: 'radial-gradient(ellipse at 80% 50%, rgba(255,255,255,0.05) 0%, transparent 60%)', backgroundSize: '200% 200%' }}
           />
           {/* Carbon texture */}
-          <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-20 pointer-events-none" />
           {/* Sol taraf yeşil parlaması (metin bölgesi) */}
-          <div className="absolute inset-0 pointer-events-none" style={{ background: 'linear-gradient(90deg, rgba(16,185,129,0.15) 0%, transparent 50%)' }} />
+          
           {/* Shimmer */}
           <motion.div
             className="absolute inset-0 pointer-events-none"
@@ -658,19 +655,19 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack }) => {
           <div className="absolute inset-0 pointer-events-none overflow-hidden">
             <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'repeating-linear-gradient(90deg, transparent, transparent 40px, rgba(0,0,0,0.15) 40px, rgba(0,0,0,0.15) 80px)' }}></div>
             <div className="absolute inset-0 w-full h-full opacity-15">
-              <svg viewBox="0 0 1050 680" preserveAspectRatio="xMidYMid slice" className="w-full h-full drop-shadow-[0_0_8px_rgba(16,185,129,0.4)]" xmlns="http://www.w3.org/2000/svg">
-                <g stroke="#10B981" strokeWidth="6" fill="none" strokeLinecap="round" strokeLinejoin="round">
+              <svg viewBox="0 0 1050 680" preserveAspectRatio="xMidYMid slice" className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+                <g stroke="rgba(255,255,255,0.55)" strokeWidth="6" fill="none" strokeLinecap="round" strokeLinejoin="round">
                   <rect x="25" y="25" width="1000" height="630" />
                   <line x1="525" y1="25" x2="525" y2="655" />
                   <circle cx="525" cy="340" r="90" />
-                  <circle cx="525" cy="340" r="4" fill="#10B981" />
+                  <circle cx="525" cy="340" r="4" fill="rgba(255,255,255,0.55)" />
                   <rect x="25" y="140" width="165" height="400" />
                   <rect x="25" y="240" width="55" height="200" />
-                  <circle cx="120" cy="340" r="4" fill="#10B981" />
+                  <circle cx="120" cy="340" r="4" fill="rgba(255,255,255,0.55)" />
                   <path d="M 190 260 A 90 90 0 0 1 190 420" />
                   <rect x="860" y="140" width="165" height="400" />
                   <rect x="970" y="240" width="55" height="200" />
-                  <circle cx="930" cy="340" r="4" fill="#10B981" />
+                  <circle cx="930" cy="340" r="4" fill="rgba(255,255,255,0.55)" />
                   <path d="M 860 260 A 90 90 0 0 0 860 420" />
                   <path d="M 65 25 A 40 40 0 0 0 25 65" />
                   <path d="M 25 615 A 40 40 0 0 0 65 655" />
@@ -690,8 +687,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack }) => {
                 </motion.div>
                 <span className="text-white/95 text-[0.625rem] font-extrabold uppercase tracking-[0.3em]">REZERVASYON</span>
               </div>
-              <h2 className="text-4xl font-extrabold text-white italic uppercase leading-[1.05] tracking-tighter" style={{ textShadow: '0 2px 8px rgba(16,185,129,0.3)' }}>Saha<br />Vitrini</h2>
-              <p className="text-[0.6875rem] text-emerald-200/90 mt-2 font-bold">Çevrendeki müsait halı sahaları incele.</p>
+              <h2 className="text-4xl font-extrabold text-ink italic uppercase leading-[1.05] tracking-tighter">Saha<br />Vitrini</h2>
+              <p className="text-[0.6875rem] text-ink-3 mt-2 font-bold">Çevrendeki müsait halı sahaları incele.</p>
             </div>
 
             {/* Neon Harita Diski — sağ taraf, siyah zemin üzerinde parlak yeşil MapPin */}
@@ -716,7 +713,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack }) => {
               <motion.div
                 animate={{ rotate: [0, 4, -4, 0] }}
                 transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
-                className="relative z-10 text-[#10B981]"
+                className="relative z-10 text-ink"
               >
                 <MapPin
                   size={54}
@@ -730,7 +727,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack }) => {
         {/* ═══════════════════════════════════════════════════════════════════
             MAÇ OLUŞTUR — VERSİYON A (AKTİF)
             Stil: Saha Vitrini / Maça Katıl / Rakip Bul ile aynı dil.
-            Kırmızı dolgu, carbon-fibre doku, sol başlık + sağ yuvarlak ikon + kesikli kırmızı sınır çizgisi.
+            Nötr yüzey (IP-09), sol başlık + sağ yuvarlak ikon.
         ═══════════════════════════════════════════════════════════════════ */}
         <AnimatedButton
           as="div"
@@ -739,21 +736,19 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack }) => {
           whileTap={{ scale: 0.97 }}
           onClick={() => onNavigate('MATCH_CREATE')}
           className="col-span-2 min-h-[176px] py-6 rounded-[32px] relative overflow-hidden group cursor-pointer border border-black/20"
-          style={{ boxShadow: '0 0 60px rgba(255,122,0,0.35), 0 0 120px rgba(255,92,0,0.15), inset 0 1px 0 rgba(255,255,255,0.2)' }}
         >
           {/* Turuncu → Siyah ana gradient */}
-          <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, #FF7A00 0%, #FF5C00 25%, #E64A19 45%, #1a0a00 75%, #000000 100%)' }} />
+          <div className="absolute inset-0 bg-surface-1" />
           {/* Animated sweep — koyu tarafta neon kırmızı/turuncu vurgu */}
           <motion.div
             animate={{ backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'] }}
             transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}
             className="absolute inset-0 pointer-events-none opacity-40"
-            style={{ background: 'radial-gradient(ellipse at 80% 50%, rgba(255,122,0,0.25) 0%, transparent 60%)', backgroundSize: '200% 200%' }}
+            style={{ background: 'radial-gradient(ellipse at 80% 50%, rgba(255,255,255,0.05) 0%, transparent 60%)', backgroundSize: '200% 200%' }}
           />
           {/* Carbon texture */}
-          <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-20 pointer-events-none" />
           {/* Sol taraf turuncu parlaması (metin bölgesi) */}
-          <div className="absolute inset-0 pointer-events-none" style={{ background: 'linear-gradient(90deg, rgba(255,122,0,0.15) 0%, transparent 50%)' }} />
+          
           {/* Shimmer */}
           <motion.div
             className="absolute inset-0 pointer-events-none"
@@ -767,12 +762,12 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack }) => {
             <div className="relative z-10">
               <div className="flex items-center gap-2 mb-2">
                 <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ duration: 1.5, repeat: Infinity }}>
-                  <Calendar size={16} className="text-black drop-shadow-[0_0_6px_rgba(0,0,0,0.4)]" />
+                  <Calendar size={16} className="text-ink" />
                 </motion.div>
-                <span className="text-black text-[0.625rem] font-extrabold uppercase tracking-[0.3em]">ORGANİZASYON</span>
+                <span className="text-ink text-[0.625rem] font-extrabold uppercase tracking-[0.3em]">ORGANİZASYON</span>
               </div>
-              <h2 className="text-4xl font-extrabold text-black italic uppercase leading-[1.05] tracking-tighter" style={{ textShadow: '0 2px 8px rgba(255,122,0,0.3)' }}>Maç<br />Oluştur</h2>
-              <p className="text-[0.6875rem] text-black/60 mt-2 font-bold">Maçı organize et.</p>
+              <h2 className="text-4xl font-extrabold text-ink italic uppercase leading-[1.05] tracking-tighter">Maç<br />Oluştur</h2>
+              <p className="text-[0.6875rem] text-ink-3 mt-2 font-bold">Maçı organize et.</p>
             </div>
 
             {/* Organizasyon Diski — sağ taraf, siyah zemin üzerinde parlak turuncu takvim + kalem */}
@@ -784,14 +779,14 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack }) => {
                 animate={{ opacity: [0.4, 1, 0.4], scale: [1, 1.04, 1] }}
                 transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
                 className="absolute inset-0 rounded-full border-2"
-                style={{ borderColor: 'rgba(255,122,0,0.6)', boxShadow: '0 0 20px rgba(255,122,0,0.4), inset 0 0 10px rgba(255,122,0,0.1)' }}
+                style={{ borderColor: 'rgba(255,255,255,0.16)' }}
               />
               {/* İkinci parlama halkası */}
               <motion.div
                 animate={{ opacity: [0.1, 0.4, 0.1], scale: [1.05, 1.15, 1.05] }}
                 transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
                 className="absolute rounded-full border"
-                style={{ inset: '-6px', borderColor: 'rgba(255,122,0,0.2)' }}
+                style={{ inset: '-6px', borderColor: 'rgba(255,255,255,0.08)' }}
               />
               {/* Salınım animasyonu ile saha + takvim özel sembolü */}
               <motion.div
@@ -799,29 +794,29 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack }) => {
                 transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
                 className="relative z-10 flex items-center justify-center"
               >
-                <svg width="72" height="72" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ filter: 'drop-shadow(0 0 12px rgba(255,122,0,0.8))' }}>
+                <svg width="72" height="72" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" >
                   {/* ── SOL: Futbol Sahası ── */}
-                  <rect x="6" y="14" width="40" height="72" rx="3" stroke="#FF7A00" strokeWidth="2.2" />
+                  <rect x="6" y="14" width="40" height="72" rx="3" stroke="rgba(255,255,255,0.75)" strokeWidth="2.2" />
                   {/* Orta çizgi */}
-                  <line x1="6" y1="50" x2="46" y2="50" stroke="#FF7A00" strokeWidth="1.5" />
+                  <line x1="6" y1="50" x2="46" y2="50" stroke="rgba(255,255,255,0.75)" strokeWidth="1.5" />
                   {/* Orta daire */}
-                  <circle cx="26" cy="50" r="8" stroke="#FF7A00" strokeWidth="1.5" />
-                  <circle cx="26" cy="50" r="1.5" fill="#FF7A00" />
+                  <circle cx="26" cy="50" r="8" stroke="rgba(255,255,255,0.75)" strokeWidth="1.5" />
+                  <circle cx="26" cy="50" r="1.5" fill="rgba(255,255,255,0.75)" />
                   {/* Üst ceza sahası */}
-                  <rect x="14" y="14" width="24" height="14" rx="1" stroke="#FF7A00" strokeWidth="1.3" />
-                  <rect x="18" y="14" width="16" height="6" rx="1" stroke="#FF7A00" strokeWidth="1.1" />
+                  <rect x="14" y="14" width="24" height="14" rx="1" stroke="rgba(255,255,255,0.75)" strokeWidth="1.3" />
+                  <rect x="18" y="14" width="16" height="6" rx="1" stroke="rgba(255,255,255,0.75)" strokeWidth="1.1" />
                   {/* Alt ceza sahası */}
-                  <rect x="14" y="72" width="24" height="14" rx="1" stroke="#FF7A00" strokeWidth="1.3" />
-                  <rect x="18" y="80" width="16" height="6" rx="1" stroke="#FF7A00" strokeWidth="1.1" />
+                  <rect x="14" y="72" width="24" height="14" rx="1" stroke="rgba(255,255,255,0.75)" strokeWidth="1.3" />
+                  <rect x="18" y="80" width="16" height="6" rx="1" stroke="rgba(255,255,255,0.75)" strokeWidth="1.1" />
 
                   {/* ── SAĞ: Takvim ── */}
-                  <rect x="52" y="18" width="42" height="66" rx="4" stroke="#FF7A00" strokeWidth="2.2" />
+                  <rect x="52" y="18" width="42" height="66" rx="4" stroke="rgba(255,255,255,0.75)" strokeWidth="2.2" />
                   {/* Takvim üst bar */}
-                  <line x1="52" y1="30" x2="94" y2="30" stroke="#FF7A00" strokeWidth="1.8" />
+                  <line x1="52" y1="30" x2="94" y2="30" stroke="rgba(255,255,255,0.75)" strokeWidth="1.8" />
                   {/* Takvim askıları */}
-                  <line x1="62" y1="13" x2="62" y2="22" stroke="#FF7A00" strokeWidth="2" strokeLinecap="round" />
-                  <line x1="73" y1="13" x2="73" y2="22" stroke="#FF7A00" strokeWidth="2" strokeLinecap="round" />
-                  <line x1="84" y1="13" x2="84" y2="22" stroke="#FF7A00" strokeWidth="2" strokeLinecap="round" />
+                  <line x1="62" y1="13" x2="62" y2="22" stroke="rgba(255,255,255,0.75)" strokeWidth="2" strokeLinecap="round" />
+                  <line x1="73" y1="13" x2="73" y2="22" stroke="rgba(255,255,255,0.75)" strokeWidth="2" strokeLinecap="round" />
+                  <line x1="84" y1="13" x2="84" y2="22" stroke="rgba(255,255,255,0.75)" strokeWidth="2" strokeLinecap="round" />
                   {/* Takvim grid — 5x4 kutucuk */}
                   {[0, 1, 2, 3, 4].map(row => (
                     [0, 1, 2, 3].map(col => (
@@ -833,7 +828,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack }) => {
                         height={6}
                         rx={1.2}
                         fill="none"
-                        stroke="#FF7A00"
+                        stroke="rgba(255,255,255,0.75)"
                         strokeWidth="1.2"
                       />
                     ))
@@ -859,7 +854,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack }) => {
           onClick={() => onNavigate('MATCH_CREATE')}
           className="col-span-2 h-32 bg-[#0A0E14] rounded-[32px] relative overflow-hidden group cursor-pointer border border-amber-500/40 shadow-[0_0_30px_rgba(217,119,6,0.15)]"
         >
-          <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-40 pointer-events-none"></div>
           <div className="absolute inset-0 bg-gradient-to-r from-amber-600/20 via-transparent to-amber-600/10 pointer-events-none"></div>
           <div className="absolute inset-0 p-5 flex items-center justify-between">
             <div className="relative z-10">
@@ -921,15 +915,9 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack }) => {
           whileHover={{ scale: 1.03, y: -5 }}
           whileTap={{ scale: 0.97 }}
           className="h-40 rounded-[28px] relative overflow-hidden group cursor-pointer"
-          style={{ background: '#000', border: '1px solid rgba(0,0,0,.2)', boxShadow: '0 0 40px rgba(57,255,20,.22), 0 0 80px rgba(57,255,20,.08), inset 0 1px 0 rgba(255,255,255,.12)' }}
+          style={{ background: '#000', border: '1px solid rgba(0,0,0,.2)' }}
         >
-          <motion.div
-            className="absolute inset-0"
-            animate={{ backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'] }}
-            transition={{ duration: 22, repeat: Infinity, ease: 'easeInOut' }}
-            style={{ background: 'linear-gradient(135deg, #0a3d12 0%, #1a7a20 25%, #39FF14 45%, #0a2d0e 75%, #000 100%)', backgroundSize: '300% 300%' }}
-          />
-          <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-20 pointer-events-none" />
+          <div className="absolute inset-0 bg-surface-1" />
           <div className="absolute inset-0 pointer-events-none" style={{ background: 'linear-gradient(90deg, rgba(0,0,0,.55) 0%, transparent 65%)' }} />
           <motion.div
             className="absolute inset-0 pointer-events-none"
@@ -939,11 +927,11 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack }) => {
           />
           <div className="absolute inset-0 p-4 flex items-center justify-between">
             <div className="flex flex-col justify-center h-full gap-2">
-              <h3 className="text-[1.625rem] font-extrabold italic leading-[.92] tracking-tighter uppercase text-white">Kaleci<br />Bul</h3>
+              <h3 className="text-[1.625rem] font-extrabold italic leading-[.92] tracking-tighter uppercase text-ink">Kaleci<br />Bul</h3>
               <span className="text-[0.6875rem] font-bold text-ink-4">Kaleni sağlama al.</span>
             </div>
-            <div className="w-[90px] h-[90px] rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(57,255,20,.1)', border: '1.5px solid rgba(57,255,20,.35)' }}>
-              <div className="w-[60px] h-[60px] rounded-full flex items-center justify-center" style={{ background: 'rgba(57,255,20,.15)', border: '1px solid rgba(57,255,20,.5)', color: '#39FF14' }}>
+            <div className="w-[90px] h-[90px] rounded-full flex items-center justify-center flex-shrink-0 bg-white/[0.06] border border-line">
+              <div className="w-[60px] h-[60px] rounded-full flex items-center justify-center bg-white/[0.06] border border-line text-ink">
                 <Shield size={28} />
               </div>
             </div>
@@ -958,15 +946,9 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack }) => {
           whileHover={{ scale: 1.03, y: -5 }}
           whileTap={{ scale: 0.97 }}
           className="h-40 rounded-[28px] relative overflow-hidden group cursor-pointer"
-          style={{ background: '#000', border: '1px solid rgba(0,0,0,.2)', boxShadow: '0 0 40px rgba(59,130,246,.22), 0 0 80px rgba(59,130,246,.08), inset 0 1px 0 rgba(255,255,255,.12)' }}
+          style={{ background: '#000', border: '1px solid rgba(0,0,0,.2)' }}
         >
-          <motion.div
-            className="absolute inset-0"
-            animate={{ backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'] }}
-            transition={{ duration: 26, repeat: Infinity, ease: 'easeInOut', delay: 0.8 }}
-            style={{ background: 'linear-gradient(135deg, #020b18 0%, #0a2240 25%, #3b82f6 45%, #061228 75%, #000 100%)', backgroundSize: '300% 300%' }}
-          />
-          <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-20 pointer-events-none" />
+          <div className="absolute inset-0 bg-surface-1" />
           <div className="absolute inset-0 pointer-events-none" style={{ background: 'linear-gradient(90deg, rgba(0,0,0,.55) 0%, transparent 65%)' }} />
           <motion.div
             className="absolute inset-0 pointer-events-none"
@@ -976,11 +958,11 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack }) => {
           />
           <div className="absolute inset-0 p-4 flex items-center justify-between">
             <div className="flex flex-col justify-center h-full gap-2">
-              <h3 className="text-[1.625rem] font-extrabold italic leading-[.92] tracking-tighter uppercase text-white">Hakem<br />Kirala</h3>
+              <h3 className="text-[1.625rem] font-extrabold italic leading-[.92] tracking-tighter uppercase text-ink">Hakem<br />Kirala</h3>
               <span className="text-[0.6875rem] font-bold text-ink-4">Adil oyna.</span>
             </div>
-            <div className="w-[90px] h-[90px] rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(59,130,246,.1)', border: '1.5px solid rgba(59,130,246,.35)' }}>
-              <div className="w-[60px] h-[60px] rounded-full flex items-center justify-center" style={{ background: 'rgba(59,130,246,.15)', border: '1px solid rgba(99,179,255,.5)', color: '#60a5fa' }}>
+            <div className="w-[90px] h-[90px] rounded-full flex items-center justify-center flex-shrink-0 bg-white/[0.06] border border-line">
+              <div className="w-[60px] h-[60px] rounded-full flex items-center justify-center bg-white/[0.06] border border-line text-ink">
                 <Scale size={28} />
               </div>
             </div>
@@ -1003,9 +985,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack }) => {
           whileHover={{ scale: 1.02, y: -2 }}
           whileTap={{ scale: 0.98 }}
           className="col-span-2 min-h-[176px] rounded-[32px] relative overflow-hidden group cursor-pointer"
-          style={{ 
-            boxShadow: '0 0 40px rgba(255,50,50,0.18), 0 0 80px rgba(255,30,30,0.06)'
-          }}
+          /* IP-09: kırmızı çift parıltı kaldırıldı — kart nötr yüzeydir. */
         >
           {/* ── KATMAN 1: NEON AURA — Nabız atan Electric Red dış glow ── */}
           <motion.div
