@@ -682,6 +682,14 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
         successSubtitle: 'Yerin garanti',
         matchId: match.id,
         slotIds: [...selectedSlotIds],
+        // Ödemenin ait olduğu tesis — iade kademesi YALNIZ bu id ile sorgulanır
+        // (store.bookingPitch önceki gezinmeden kalmış BAŞKA tesis olabilir).
+        pitchId: (match as { pitchId?: string }).pitchId,
+        // BULGU-083 — maça katılımda ekranda tek bir iade cümlesi bile yoktu.
+        // Metin sunucunun gerçek davranışıyla birebir: leave_public_match_slot /
+        // process_match_at_deadline zaman kademesi UYGULAMADAN kalanı iade eder.
+        // Cüzdanda tek bakiye var — "iade kredisi" DENMEZ (karar defteri S6/K-0.3).
+        infoNote: 'Kadro dolmazsa veya maç iptal olursa ödediğin tutarın tamamı cüzdanına döner. Maçtan kendin ayrılırsan da kendi yerin için ödediğin tutar cüzdanına döner. Cüzdanındaki tutar OYNA içindeki saha, maç ve hizmet ödemelerinde kullanılır.',
       });
       setSelectedSlotIds([]);
       // Bu dal try/finally'ye GİRMEDEN dönüyor: kilidi elle bırakmazsak

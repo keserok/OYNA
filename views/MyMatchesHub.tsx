@@ -349,6 +349,9 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onBack, onNavigate }) => {
     store.setPaymentContext({
       kind: 'BOOKING_DEPOSIT',
       badge: 'SAHA KİRALAMA',
+      // BULGU-088 — kademe bu rezervasyonun KENDİ tesisinden gelir; store'daki
+      // bookingPitch bu akışta ya boş ya da Sahalar'da bakılan BAŞKA tesisti.
+      pitchId: b.pitch_id,
       title: b.pitches?.name || 'Saha Rezervasyonu',
       subtitle: `${b.courts?.name ? `${b.courts.name} · ` : ''}${b.booking_date} · ${shortTime(b.start_time)}`,
       details: [

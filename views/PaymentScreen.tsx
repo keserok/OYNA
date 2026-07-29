@@ -12,7 +12,10 @@ import { parseSlotLabel } from '../services/availabilityService';
 import {
   getWalletSummary, listSavedCards, WalletSummary, SavedCard,
 } from '../services/walletService';
-import { startInAppCardPayment, InAppPayInput, getCardFeePct, computeCardFee, cardFeeOf } from '../services/paymentService';
+import {
+  startInAppCardPayment, InAppPayInput, getCardFeePct, computeCardFee, cardFeeOf,
+  getIntentStatus, rawErrorMessage, humanizePaymentError,
+} from '../services/paymentService';
 import { getMyGuardianState } from '../services/guardianService';
 import { blockMatchDeposit } from '../services/matchLifecycleService';
 import { getMatchDetails } from '../services/matchService';
@@ -20,7 +23,6 @@ import AddCardScreen, { CollectedCard } from '../components/payment/AddCardScree
 import ThreeDSSheet, { ThreeDSOutcome } from '../components/payment/ThreeDSSheet';
 import type { PaymentContext } from '../types';
 import { formatTRY } from '../utils/formatTRY';
-import { stripServerErrorPrefix } from '../services/paymentService';
 import {
   safeUuid, isOnline, withSubmitTimeout, SubmitTimeoutError,
   CARD_TIMEOUT_MS, OFFLINE_PAY, TIMEOUT_PAY,
@@ -57,61 +59,7 @@ interface PayResult {
 // C10 — para biçimi tek kaynaktan ("1.500,00₺"). Ekranlar arası tutarlılık.
 const fmt = formatTRY;
 
-// Sağlayıcı/sunucu öneki kırpma TEK kaynaktan gelir (BULGU-092): eski yerel
-// regex yalnız BÜYÜK harfli önekleri yakalıyor, `iyzico: …` sızıyordu.
-const stripRpcPrefix = stripServerErrorPrefix;
-
 const delay = (ms: number) => new Promise<void>(r => setTimeout(r, ms));
-
-// Supabase RPC/edge hataları Error DEĞİL — PostgrestError/FunctionsError düz
-// nesnedir. Her şekilden ham mesajı çıkar (aksi halde "Beklenmeyen hata"ya düşer).
-const rawErrorMessage = (err: unknown): string => {
-  if (!err) return '';
-  if (typeof err === 'string') return err;
-  const e = err as { message?: string; error?: string; details?: string; hint?: string };
-  return e.message || e.error || e.details || e.hint || '';
-};
-
-// Ham hata → kullanıcı dostu Türkçe + gerektiğinde banka/kart yönlendirmesi.
-const humanizePaymentError = (err: unknown): string => {
-  const raw = rawErrorMessage(err);
-  const up = raw.toUpperCase();
-  const has = (...keys: string[]) => keys.some(k => up.includes(k));
-
-  if (has('SLOT_TAKEN', 'SLOT_UNAVAILABLE', 'ZATEN REZERVE', 'DOLU'))
-    return 'Bu saat dilimi az önce dolmuş. Lütfen geri dönüp başka bir saat seç.';
-  if (has('ALREADY_PAID', 'ZATEN'))
-    return 'Bu rezervasyonun kaporası zaten ödenmiş.';
-  if (has('AMOUNT_EXCEEDS_PRICE'))
-    return 'Ödeme tutarı saha ücretini aşıyor. Lütfen tutarı kontrol et.';
-  if (has('NO_TARIFF'))
-    return 'Bu saha için fiyat tanımlı değil; şimdilik uygulamadan ödeme alınamıyor.';
-  if (has('CARD_NOT_FOUND'))
-    return 'Seçtiğin kart bulunamadı. Lütfen kartı yeniden seç veya yeni kart ekle.';
-  if (has('CARD_NEEDS_REVALIDATION'))
-    return 'Bu kart eski sistemden kalma; güvenlik için kart bilgilerini bir kez daha girmen gerekiyor. "Yeni kart ekle" ile aynı kartı girip kaydedebilirsin.';
-  if (has('NO_CARD_AMOUNT'))
-    return 'Bakiyen bu tutarın tamamını karşılıyor — kart gerekmiyor. OYNA Bakiyesi seçiliyken tekrar dene.';
-  if (has('SLOT_TAKEN_REFUNDED'))
-    return 'Sen doğrulama yaparken maçtaki yer doldu. Ödediğin tutar cüzdanına eklendi — istediğin ödemede kullanabilir veya hesabına çekebilirsin.';
-  if (has('BOOKING_CLOSED_REFUNDED'))
-    return 'Rezervasyon bu sırada kapandı. Ödediğin tutar cüzdanına eklendi — istediğin ödemede kullanabilir veya hesabına çekebilirsin.';
-  if (has('INSUFFICIENT_BALANCE'))
-    return stripRpcPrefix(raw) || 'Cüzdan bakiyen bu ödeme için yetersiz. Cüzdanına yükleme yapıp tekrar dene.';
-  if (has('YETERSIZ BAKIYE', 'INSUFFICIENT'))
-    return 'Cüzdan bakiyen yetersiz. Bakiye yükleyebilir veya kartla ödeyebilirsin.';
-  if (has('UNAUTHORIZED', 'GIRIŞ'))
-    return 'Bu işlem için giriş yapman gerekiyor.';
-  // iyzico / banka kaynaklı kart hataları
-  if (has('IYZICO', 'LIMIT', 'DECLINE', 'DO_NOT_HONOUR', 'INSUFFICIENT_FUNDS',
-          'INVALID', 'FRAUD', '3D', 'CARD', 'KART', 'BANKA'))
-    return `${stripRpcPrefix(raw) || 'Kart ödemesi tamamlanamadı.'} — Farklı bir kart deneyebilir veya kartının internetten ödemeye açık olup olmadığını bankandan öğrenebilirsin.`;
-  if (has('PROVIDER_FLOW_REQUIRED', 'PROVIDER_NOT_CONFIGURED'))
-    return 'Ödeme sağlayıcısına ulaşılamadı. Lütfen birazdan tekrar dene.';
-
-  const clean = stripRpcPrefix(raw).trim();
-  return clean || 'Ödeme tamamlanamadı. Lütfen tekrar dene; sorun sürerse farklı bir kart deneyebilir veya bankanla iletişime geçebilirsin.';
-};
 
 const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
   const {
@@ -128,6 +76,9 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
       return {
         kind: 'PITCH_DEPOSIT',
         badge: 'SAHA KİRALAMA',
+        // Yedek akış da tesisini AÇIKÇA taşır; iade kademesi bookingPitch'e
+        // gizli bağımlılıkla değil, bağlamdan okunur (BULGU-088).
+        pitchId: bookingPitch.id,
         title: bookingPitch.name,
         subtitle: `${bookingCourt.name} · ${bookingDate} · ${bookingSlot}`,
         amount: deposit,
@@ -151,7 +102,9 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
   const [inlineError, setInlineError] = useState('');
   // Hata şeridinin BAŞLIĞI duruma göre değişir: gönderilmemiş bir isteği
   // "Ödeme başarısız" diye etiketlemek yalan olur.
-  const [inlineErrorKind, setInlineErrorKind] = useState<'FAIL' | 'OFFLINE' | 'TIMEOUT'>('FAIL');
+  // PENDING = sonuç GERÇEKTEN bilinmiyor (3DS yarıda kaldı, niyet sunucuda
+  // hâlâ askıda). Bu durumu "başarısız" diye etiketlemek yalan olurdu.
+  const [inlineErrorKind, setInlineErrorKind] = useState<'FAIL' | 'OFFLINE' | 'TIMEOUT' | 'PENDING'>('FAIL');
   const [result, setResult] = useState<PayResult | null>(null);
   // C3 — cüzdan özeti çekilemezse bakiye 0 VARSAYILMAZ; kullanıcı yanlışlıkla
   // "yetersiz bakiye"ye/tam kart çekimine itilmesin. Hata + Yeniden Dene gösterilir,
@@ -169,6 +122,14 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
   const [threeDS, setThreeDS] = useState<{
     html: string; intentId: string; balanceApplied: number; cardAmount: number;
   } | null>(null);
+  // BULGU-093 — 3DS zaman aşımı/kesintisinde ASKIDA KALAN niyet. Dolu olduğu
+  // sürece hata şeridinde "Durumu Kontrol Et" çıkar; buton payment_intents
+  // durumunu SUNUCUDAN sorgular. Uydurma durum gösterilmez: PAID/FAILED/PENDING
+  // üç ayrı sonuç verir. (Bayat niyeti kapatacak süpürücü app_config'te KAPALI.)
+  const [pendingPay, setPendingPay] = useState<{
+    intentId: string; balanceApplied: number; cardAmount: number;
+  } | null>(null);
+  const [statusChecking, setStatusChecking] = useState(false);
   // Saha vitrini kaporasında rezervasyon yalnız bir kez oluşturulur; tekrar
   // denemede aynı slot yeniden rezerve edilmesin (SLOT_TAKEN önlenir).
   const pitchBookingIdRef = useRef<string | null>(null);
@@ -237,7 +198,10 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
     // Maçlarım'dan gelen kapora akışında bookingPitch ya boş ya da önceki
     // gezinmeden kalan BAŞKA tesisin verisiydi (BULGU-088).
     const pid = ctx?.pitchId || ((bookingPitch as any)?.id as string | undefined);
-    if (!pid) { setRefundPolicy(null); return; }
+    // Tesis kademesi YALNIZ kapora bağlamlarında geçerlidir (maça katılımda
+    // sunucu zaman kademesi uygulamaz). Tesis bilinmiyorsa kademe GÖSTERİLMEZ —
+    // yanlış tesisin kademesini göstermektense hiç gösterme.
+    if (!ctx?.isDeposit || !pid) { setRefundPolicy(null); return; }
     let alive = true;
     (async () => {
       try {
@@ -250,7 +214,7 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
       } catch { if (alive) setRefundPolicy(null); }
     })();
     return () => { alive = false; };
-  }, [ctx?.pitchId, (bookingPitch as any)?.id]);
+  }, [ctx?.isDeposit, ctx?.pitchId, (bookingPitch as any)?.id]);
 
   // İptal kademesi kullanıcı-dostu metin (tesis politikasıyla birebir).
   const refundTierText = refundPolicy
@@ -591,6 +555,7 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
       recordTicketBooking(); // C4 — dürüst bilet için gerçek rezervasyon id'si
       setLastPaymentError(null);
       idemKeyRef.current = null; // başarı → yeni ödeme yeni anahtar alsın
+      setPendingPay(null); // askıda kalan 3DS niyeti kapandı
       setScreen('SUCCESS');
     } catch (err) {
       // Zaman aşımı ≠ başarısızlık: istek İPTAL EDİLMEDİ, sunucuda tamamlanmış
@@ -602,6 +567,9 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
         setScreen('PAY');
         return;
       }
+      // Kullanıcıya sabit Türkçe metin gösteriliyor; ham sağlayıcı metni
+      // destek için console'da (ve payment_intents.raw'da) kalır.
+      console.warn('[payment] ham sunucu hatası:', rawErrorMessage(err));
       const msg = humanizePaymentError(err);
       setInlineErrorKind('FAIL');
       setInlineError(msg);
@@ -634,24 +602,38 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
       setResult({ balanceApplied: ds.balanceApplied, cardAmount: ds.cardAmount, intentId: ds.intentId });
       recordTicketBooking(); // C4 — dürüst bilet için gerçek rezervasyon id'si
       setLastPaymentError(null);
+      setPendingPay(null); // askıda niyet kalmadı
+      idemKeyRef.current = null;
       setScreen('SUCCESS');
       return;
+    }
+
+    // TIMEOUT = 5 dk boyunca niyet PAID görülmedi, yani hâlâ PENDING olabilir.
+    // Bayat niyeti kapatacak süpürücü app_config'te KAPALI; bu yüzden kullanıcıya
+    // "birazdan güncellenir" DENMEZ, sorgulama düğmesi verilir (BULGU-093).
+    if (!outcome.ok && outcome.reason === 'TIMEOUT') {
+      setPendingPay({ intentId: ds.intentId, balanceApplied: ds.balanceApplied, cardAmount: ds.cardAmount });
+      setInlineErrorKind('PENDING');
+    } else {
+      setInlineErrorKind('FAIL');
     }
 
     // İade-krediye dönüş (yer doldu / rezervasyon kapandı) veya doğrulama hatası
     const msg = outcome.ok
       ? humanizePaymentError(outcome.reason ?? '')
       : outcome.reason === 'TIMEOUT'
-        // Eski metin "bakiyen birazdan güncellenir" diyordu; bunu yapacak süpürücü
-        // KAPALI doğuyor ve ekranda durumu sorgulayan buton yoktu (BULGU-093).
-        ? 'Banka doğrulaması zaman aşımına uğradı. Ödemenin alınıp alınmadığını şimdi kontrol edebilirsin.'
+        ? 'Banka doğrulaması 5 dakikada tamamlanmadı. Kartından tahsilat yapıldı mı, şimdi kontrol edelim.'
         : 'Banka doğrulaması tamamlanamadı. Onaylanmayan tutar kartına yansımaz — tekrar deneyebilir veya bankanla iletişime geçebilirsin.';
     setInlineError(msg);
     if (ctx) {
       setLastPaymentError({
         message: msg,
         contextKind: ctx.kind,
-        title: ctx.isDeposit ? 'Kapora ödemesi başarısız' : 'Ödeme tamamlanamadı',
+        // Zaman aşımında sonuç BİLİNMİYOR; cüzdan afişinde "başarısız" demek
+        // uydurma durum göstermek olur.
+        title: !outcome.ok && outcome.reason === 'TIMEOUT'
+          ? 'Ödemenin durumu belirsiz'
+          : ctx.isDeposit ? 'Kapora ödemesi başarısız' : 'Ödeme tamamlanamadı',
         at: Date.now(),
       });
     }
@@ -659,10 +641,69 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
   };
 
   const handleThreeDSCancel = () => {
+    const ds = threeDS;
     setThreeDS(null);
     useAppStore.getState().setPaymentLockActive(false);
-    setInlineError('Banka doğrulaması yarıda kaldı — ödeme alınmadı. Hazır olduğunda tekrar deneyebilirsin.');
+    // Kullanıcı bankadan KOPTU. SMS'i girdikten sonra çıkmış olabilir; niyet
+    // sunucuda hâlâ PENDING veya PAID olabilir. "Ödeme alınmadı" demek uydurma
+    // durum göstermek olur — sorgulama düğmesi verilir (BULGU-093).
+    if (ds) setPendingPay({ intentId: ds.intentId, balanceApplied: ds.balanceApplied, cardAmount: ds.cardAmount });
+    setInlineError(ds
+      ? 'Banka doğrulamasından çıktın. Kartından tahsilat yapıldı mı, şimdi kontrol edelim.'
+      : 'Banka doğrulaması yarıda kaldı — ödeme alınmadı. Hazır olduğunda tekrar deneyebilirsin.');
+    setInlineErrorKind(ds ? 'PENDING' : 'FAIL');
     setScreen('PAY');
+  };
+
+  /**
+   * BULGU-093 — 3DS kesintisinden sonra paranın akıbetini SUNUCUDAN öğren.
+   * Tek otorite `payment_intents.status`; ekran hiçbir durumu tahmin etmez.
+   *   PAID (+resultReason yok) → gerçek başarı ekranı (bilet/lobi güncellenir)
+   *   PAID (+resultReason var) → tahsil edildi ama cüzdana geri yazıldı
+   *   FAILED                   → tahsilat yok, tekrar denenebilir
+   *   PENDING                  → hâlâ bankada; işlem numarasıyla destek yolu
+   */
+  const handleCheckIntentStatus = async () => {
+    if (!pendingPay || statusChecking) return;
+    setStatusChecking(true);
+    try {
+      const s = await getIntentStatus(pendingPay.intentId);
+      // PAID + resultReason = tahsilat oldu AMA sunucu tutarı cüzdana geri yazdı
+      // (yer doldu / rezervasyon kapandı). Bunu "başarı" saymak uydurma durum
+      // göstermek olurdu — ThreeDSSheet yolundaki dalın aynısı uygulanır.
+      if (s?.status === 'PAID' && s.resultReason) {
+        setPendingPay(null);
+        setInlineErrorKind('FAIL');
+        setInlineError(humanizePaymentError(s.resultReason));
+        if (ctx?.kind === 'MATCH_JOIN') await refreshMatch(ctx.matchId);
+      } else if (s?.status === 'PAID') {
+        if (ctx?.kind === 'MATCH_JOIN') await refreshMatch(ctx.matchId);
+        setResult({
+          balanceApplied: pendingPay.balanceApplied,
+          cardAmount: pendingPay.cardAmount,
+          intentId: pendingPay.intentId,
+        });
+        recordTicketBooking();
+        setLastPaymentError(null);
+        idemKeyRef.current = null; // başarı → yeni ödeme yeni anahtar alsın
+        setPendingPay(null);
+        setInlineError('');
+        setScreen('SUCCESS');
+      } else if (s?.status === 'FAILED') {
+        setPendingPay(null);
+        setInlineErrorKind('FAIL');
+        setInlineError('Kartından tahsilat yapılmamış. Ödeme alınmadı — tekrar deneyebilirsin.');
+      } else {
+        // PENDING veya okunamayan durum: sonucu UYDURMA, dürüst bekleme metni ver.
+        setInlineErrorKind('PENDING');
+        setInlineError(`İşlem hâlâ bankada sürüyor. 10 dakika sonra "Durumu Kontrol Et" ile tekrar bak. Kartından para çekildiği hâlde cüzdanına geçmediyse ${pendingPay.intentId.slice(0, 8).toUpperCase()} işlem numarasıyla destek@oyna.app adresine yaz.`);
+      }
+    } catch {
+      setInlineErrorKind('PENDING');
+      setInlineError('Durum sorgulanamadı. Bağlantını kontrol edip tekrar dene.');
+    } finally {
+      setStatusChecking(false);
+    }
   };
 
   const handleSuccessPrimary = () => {
@@ -909,17 +950,31 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
               <p className="text-[13px] font-extrabold text-red-400">
                 {inlineErrorKind === 'OFFLINE'
                   ? 'Gönderilmedi — bağlantı yok'
-                  : inlineErrorKind === 'TIMEOUT'
-                    ? 'Yanıt gelmedi'
-                    : ctx.isDeposit ? 'Kapora ödemesi başarısız' : 'Ödeme başarısız'}
+                  : inlineErrorKind === 'PENDING'
+                    ? 'Ödemenin durumu belirsiz'
+                    : inlineErrorKind === 'TIMEOUT'
+                      ? 'Yanıt gelmedi'
+                      : ctx.isDeposit ? 'Kapora ödemesi başarısız' : 'Ödeme başarısız'}
               </p>
               <p className="text-[11.5px] text-gray-300 mt-0.5 leading-relaxed">{inlineError}</p>
-              <button
-                onClick={handlePay}
-                disabled={!canPay}
-                className="mt-2.5 inline-flex items-center gap-1.5 text-[11px] font-extrabold text-[#0A0E14] bg-red-400 disabled:opacity-50 rounded-[9px] px-3 py-[7px] active:scale-95 transition-transform">
-                <RefreshCw size={12} /> Tekrar Dene
-              </button>
+              {/* İkisi de PARA aksiyonu → IP10-2(b) gereği en az 44px dokunma hedefi. */}
+              <div className="mt-2.5 flex flex-wrap gap-2">
+                <button
+                  onClick={handlePay}
+                  disabled={!canPay}
+                  className="min-h-[44px] inline-flex items-center gap-1.5 text-[11px] font-extrabold text-[#0A0E14] bg-red-400 disabled:opacity-50 rounded-[11px] px-4 active:scale-95 transition-transform">
+                  <RefreshCw size={12} /> Tekrar Dene
+                </button>
+                {/* BULGU-093 — 3DS kesildiyse paranın akıbeti SUNUCUDAN sorulur. */}
+                {pendingPay && (
+                  <button
+                    onClick={handleCheckIntentStatus}
+                    disabled={statusChecking}
+                    className="min-h-[44px] inline-flex items-center gap-1.5 text-[11px] font-extrabold text-[#0A0E14] bg-[#39FF14] disabled:opacity-50 rounded-[11px] px-4 active:scale-95 transition-transform">
+                    <RefreshCw size={12} className={statusChecking ? 'animate-spin' : ''} /> Durumu Kontrol Et
+                  </button>
+                )}
+              </div>
             </div>
             <button onClick={() => setInlineError('')} className="text-gray-500 shrink-0 self-start"><X size={15} /></button>
           </div>
@@ -1116,9 +1171,9 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
         {/* İade/iptal koşulu HER bağlamda görünür: maça katılımda da para
             hareketi var, koşulu yalnız kapora akışında göstermek eksikti (BULGU-083). */}
         {ctx.infoNote && (
-          <div className="mx-5 flex gap-2.5 items-start px-1">
+          <div className="mx-5 bg-[#161B22] border border-white/8 rounded-2xl p-3.5 flex gap-2.5 items-start">
             <Shield size={15} className="text-[#FACC15] shrink-0 mt-0.5" />
-            <p className="text-[11.5px] text-gray-400 leading-relaxed">{ctx.infoNote}</p>
+            <p className="text-[11.5px] text-gray-300 leading-relaxed">{ctx.infoNote}</p>
           </div>
         )}
 

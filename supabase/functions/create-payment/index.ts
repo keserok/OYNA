@@ -163,8 +163,11 @@ async function iyzicoCheckout(
   const data = await iyzicoPost('/payment/iyzipos/checkoutform/initialize/auth/ecom', body)
   if (data?.status !== 'success' || !data?.checkoutFormContent) {
     const detail = data?.errorMessage || data?.errorCode || 'checkout başlatılamadı'
-    console.error('[create-payment] iyzico initialize başarısız:', JSON.stringify(data))
-    throw new Error(`iyzico: ${detail}`)
+    console.error('[create-payment] iyzico initialize başarısız:', detail, JSON.stringify(data))
+    // BULGU-092 — sağlayıcı adı ve ham İngilizce metni kullanıcıya SIZMAZ;
+    // ham `detail` yalnız sunucu logunda kalır. Kodun ardında Türkçe cümle
+    // ZORUNLU: kırpma yardımcısı yalnız öneki alır, gerisini kullanıcı görür.
+    throw new Error('PROVIDER_ERROR: Ödeme sağlayıcısına ulaşılamadı. Lütfen birazdan tekrar dene.')
   }
   return { checkoutUrl: data.paymentPageUrl, token: data.token, checkoutFormContent: data.checkoutFormContent }
 }
@@ -289,7 +292,7 @@ Deno.serve(async (req: Request) => {
         const { data: declAmt } = await admin.rpc('get_config_number', { p_key: 'sim_decline_amount', p_default: 0 })
         if (Number(declAmt) > 0 && Number(cardAmount) === Number(declAmt)) {
           await admin.rpc('mark_intent_failed', { p_intent_id: intentId, p_reason: 'SIM_DECLINE (QA)' })
-          return json({ error: 'iyzico: Kart reddedildi (SIMULATION test). Farklı bir kart deneyebilir veya bankanla iletişime geçebilirsin.' }, 402)
+          return json({ error: 'CARD_DECLINED: Kartından ödeme alınamadı (test reddi).' }, 402)
         }
         const { data: result, error: applyErr } = await admin.rpc('apply_card_payment', {
           p_intent_id: intentId, p_provider_ref: `SIM-${Date.now()}`,
@@ -338,8 +341,9 @@ Deno.serve(async (req: Request) => {
         console.error('[create-payment] 3DS initialize başarısız:', JSON.stringify({
           status: data?.status, errorCode: data?.errorCode, errorMessage: data?.errorMessage, intentId,
         }))
+        // Ham metin destek için payment_intents.raw'a yazılır; kullanıcıya gitmez.
         await admin.rpc('mark_intent_failed', { p_intent_id: intentId, p_reason: `3DS_INIT: ${detail}` })
-        return json({ error: `iyzico: ${detail}` }, 402)
+        return json({ error: 'CARD_DECLINED: Kartından ödeme alınamadı.' }, 402)
       }
       return json({
         provider: 'IYZICO', requiresThreeDS: true,
@@ -382,10 +386,11 @@ Deno.serve(async (req: Request) => {
       const data = await iyzicoPost('/cardstorage/card', body)
       if (data?.status !== 'success' || !data?.cardToken) {
         const detail = data?.errorMessage || data?.errorCode || 'kart kaydedilemedi'
-        console.error('[create-payment] kart kaydı başarısız:', JSON.stringify({
+        // Ham sağlayıcı metni YALNIZ sunucu logunda; kullanıcı sabit Türkçe görür.
+        console.error('[create-payment] kart kaydı başarısız:', detail, JSON.stringify({
           status: data?.status, errorCode: data?.errorCode, errorMessage: data?.errorMessage,
         }))
-        return json({ error: `iyzico: ${detail}` }, 402)
+        return json({ error: 'CARD_SAVE_FAILED: Kart kaydedilemedi. Kart bilgilerini kontrol edip tekrar dene.' }, 402)
       }
       if (data.cardUserKey) {
         await admin.rpc('set_iyzico_card_user_key', { p_user_id: user.id, p_key: data.cardUserKey })

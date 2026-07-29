@@ -1026,6 +1026,8 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
     setPaymentContext({
       kind: 'PITCH_DEPOSIT',
       badge: 'SAHA KİRALAMA',
+      // İptal/iade kademesi bu tesisten okunur (BULGU-088).
+      pitchId: selectedPitch.id,
       title: selectedPitch.name,
       subtitle: `${selectedCourt.name} · ${selectedDateISO} · ${selectedSlot}`,
       details: [

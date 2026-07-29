@@ -227,11 +227,77 @@ export const stripServerErrorPrefix = (msg: string): string => {
   // Zincirlenmiş önekleri soldan soyar: "iyzico: PAYMENT_FAILED: ..." gibi.
   for (let i = 0; i < 4; i += 1) {
     const next = out
-      .replace(/^(iyzico|iyzipay|stripe|paytr|param|provider|edge|supabase|postgrest)\s*[:\-]\s*/i, '')
+      // NOT: 'param' listeye ALINMAZ — Türkçe'de "param" (= benim param) sık bir
+      // cümle başıdır; "Param: …" gibi bir mesajın ilk kelimesini yutardı.
+      .replace(/^(iyzico|iyzipay|stripe|paytr|provider|edge|supabase|postgrest)\s*[:\-]\s*/i, '')
       .replace(/^[A-Z][A-Z0-9_]{2,}\s*:\s*/, '')
       .trim();
     if (next === out) break;
     out = next;
   }
   return out;
+};
+
+/**
+ * Supabase RPC/edge hataları Error DEĞİL — PostgrestError/FunctionsError düz
+ * nesnedir. Her şekilden ham mesajı çıkarır (aksi halde "Beklenmeyen hata"ya düşer).
+ */
+export const rawErrorMessage = (err: unknown): string => {
+  if (!err) return '';
+  if (typeof err === 'string') return err;
+  const e = err as { message?: string; error?: string; details?: string; hint?: string };
+  return e.message || e.error || e.details || e.hint || '';
+};
+
+/**
+ * Ham ödeme hatası → kullanıcıya gösterilecek Türkçe cümle.
+ *
+ * BULGU-092 — banka/kart reddi dalı SABİT metin döndürür: sağlayıcının adı da,
+ * ham İngilizce metni de kullanıcıya ASLA basılmaz. Ham metin `console` ve
+ * `payment_intents.raw` içinde kalır.
+ *
+ * SIRALAMA KRİTİK: `CARD_NOT_FOUND` ve `CARD_NEEDS_REVALIDATION` genel kart
+ * reddi dalından ÖNCE gelmeli — ikisi de 'CARD' içerir.
+ */
+export const humanizePaymentError = (err: unknown): string => {
+  const raw = rawErrorMessage(err);
+  const up = raw.toUpperCase();
+  const has = (...keys: string[]) => keys.some(k => up.includes(k));
+
+  // PARA HAREKETİ OLAN dallar EN ÜSTTE: 'SLOT_TAKEN_REFUNDED' metni
+  // 'SLOT_TAKEN' içerdiği için aşağıdaki genel dal onu gölgeliyordu ve
+  // kullanıcıya parasının iade edildiği HİÇ söylenmiyordu (BULGU-093 komşusu).
+  if (has('SLOT_TAKEN_REFUNDED'))
+    return 'Sen doğrulama yaparken maçtaki yer doldu. Ödediğin tutar cüzdanına eklendi — istediğin ödemede kullanabilirsin.';
+  if (has('BOOKING_CLOSED_REFUNDED'))
+    return 'Rezervasyon bu sırada kapandı. Ödediğin tutar cüzdanına eklendi — istediğin ödemede kullanabilirsin.';
+  if (has('SLOT_TAKEN', 'SLOT_UNAVAILABLE', 'ZATEN REZERVE', 'DOLU'))
+    return 'Bu saat dilimi az önce dolmuş. Lütfen geri dönüp başka bir saat seç.';
+  if (has('ALREADY_PAID', 'ZATEN'))
+    return 'Bu rezervasyonun kaporası zaten ödenmiş.';
+  if (has('AMOUNT_EXCEEDS_PRICE'))
+    return 'Ödeme tutarı saha ücretini aşıyor. Lütfen tutarı kontrol et.';
+  if (has('NO_TARIFF'))
+    return 'Bu saha için fiyat tanımlı değil; şimdilik uygulamadan ödeme alınamıyor.';
+  if (has('CARD_NOT_FOUND'))
+    return 'Seçtiğin kart bulunamadı. Lütfen kartı yeniden seç veya yeni kart ekle.';
+  if (has('CARD_NEEDS_REVALIDATION'))
+    return 'Bu kart eski sistemden kalma; güvenlik için kart bilgilerini bir kez daha girmen gerekiyor. "Yeni kart ekle" ile aynı kartı girip kaydedebilirsin.';
+  if (has('NO_CARD_AMOUNT'))
+    return 'Bakiyen bu tutarın tamamını karşılıyor — kart gerekmiyor. OYNA Bakiyesi seçiliyken tekrar dene.';
+  if (has('INSUFFICIENT_BALANCE'))
+    return stripServerErrorPrefix(raw) || 'Cüzdan bakiyen bu ödeme için yetersiz. Cüzdanına yükleme yapıp tekrar dene.';
+  if (has('YETERSIZ BAKIYE', 'INSUFFICIENT'))
+    return 'Cüzdan bakiyen yetersiz. Bakiye yükleyebilir veya kartla ödeyebilirsin.';
+  if (has('UNAUTHORIZED', 'GIRIŞ'))
+    return 'Bu işlem için giriş yapman gerekiyor.';
+  // Banka/kart kaynaklı reddler — metin SABİT, sağlayıcı adı sızmaz.
+  if (has('IYZICO', 'LIMIT', 'DECLINE', 'DO_NOT_HONOUR', 'INSUFFICIENT_FUNDS',
+          'INVALID', 'FRAUD', '3D', 'CARD', 'KART', 'BANKA'))
+    return 'Kartından ödeme alınamadı. Farklı bir kart deneyebilir veya kartının internete açık olup olmadığını bankandan sorabilirsin.';
+  if (has('PROVIDER_ERROR', 'PROVIDER_FLOW_REQUIRED', 'PROVIDER_NOT_CONFIGURED'))
+    return 'Ödeme sağlayıcısına ulaşılamadı. Lütfen birazdan tekrar dene.';
+
+  const clean = stripServerErrorPrefix(raw).trim();
+  return clean || 'Ödeme tamamlanamadı. Lütfen tekrar dene; sorun sürerse farklı bir kart deneyebilir veya bankanla iletişime geçebilirsin.';
 };

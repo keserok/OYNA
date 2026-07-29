@@ -17,7 +17,7 @@ import {
 } from '../services/walletService';
 import { validateTrIban } from '../utils/iban';
 import { showToast } from '../components/common/GlobalToast';
-import { startInAppCardPayment, getCardFeePct, computeCardFee } from '../services/paymentService';
+import { startInAppCardPayment, getCardFeePct, computeCardFee, stripServerErrorPrefix } from '../services/paymentService';
 import AddCardScreen from '../components/payment/AddCardScreen';
 import CardBrandMark, { brandGradient } from '../components/payment/CardBrandMark';
 import ThreeDSSheet, { ThreeDSOutcome } from '../components/payment/ThreeDSSheet';
@@ -290,7 +290,10 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
       setTopupBusy(false);
     } catch (e) {
       const raw = e instanceof Error ? e.message : 'Para yükleme başarısız.';
-      setTopupError(raw.replace(/^[A-Z_]+:\s*/, '') || 'Para yükleme başarısız.');
+      // BULGU-092 — yerel regex yalnız BÜYÜK harfli önekleri kesiyordu, edge
+      // `iyzico: …` döndürdüğü için sağlayıcı adı kullanıcıya basılıyordu.
+      console.warn('[wallet] ham sunucu hatası:', raw);
+      setTopupError(stripServerErrorPrefix(raw) || 'Para yükleme başarısız.');
       topupBusyRef.current = false;
       setTopupBusy(false);
     }
@@ -358,8 +361,12 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
   };
 
   // S2.1 — cashout canlı önizleme: kesinti/net her zaman SUNUCUDAN (FE hesaplamaz)
+  // BULGU-086 — TOPUP ekranında da çekilir: kullanıcı PARA YÜKLEMEDEN ÖNCE çıkış
+  // maliyetini (kesinti yüzdesi, minimum, çekimin açık olup olmadığı) görmeli.
+  // TOPUP'ta cashoutAmount boştur → g = 0; preview_wallet_cashout(0) güvenlidir
+  // (_wallet_cashout_quote GREATEST(...,0) uygular) ve fee_pct/min/enabled döner.
   useEffect(() => {
-    if (view !== 'CASHOUT') return;
+    if (view !== 'CASHOUT' && view !== 'TOPUP') return;
     const g = parseFloat(cashoutAmount) || 0;
     let alive = true;
     const t = setTimeout(() => {
@@ -571,9 +578,15 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
             </div>
           )}
 
-          <p className="text-[10px] text-gray-600 leading-relaxed px-0.5">
+          {/* BULGU-086 — çıkış maliyeti ÖDEMEDEN ÖNCE yazılır. Rakamlar sunucudan
+              (preview_wallet_cashout); hiçbiri sabit yazılmaz. Kontrast: bu bir
+              para bilgilendirmesi, text-gray-600 (2.56:1) okunamazdı → gray-400. */}
+          <p className="text-[10px] text-gray-400 leading-relaxed px-0.5">
             Bakiye yalnızca OYNA içindeki saha, maç ve kaleci/hakem hizmet ödemelerinde kullanılır;
             dijital ürün satın alımında kullanılamaz. Yüklemelerde bonus verilmez.
+            {cashoutPreview && (cashoutPreview.enabled
+              ? ` Bakiyeni en az ${fmtInt(cashoutPreview.min)}₺ olmak üzere IBAN'ına geri çekebilirsin; çekimde %${cashoutPreview.fee_pct} hizmet bedeli kesilir.`
+              : " Bakiyenin IBAN'a çekimi şu anda kapalı; bakiye yalnız uygulama içi ödemelerde kullanılır.")}
           </p>
         </main>
         <div className="p-5 pb-safe border-t border-white/5">

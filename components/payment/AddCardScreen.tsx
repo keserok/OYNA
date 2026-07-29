@@ -115,6 +115,8 @@ const AddCardScreen: React.FC<AddCardScreenProps> = ({ onBack, onSaved, collectM
       onSaved?.(created);
     } catch (e) {
       const raw = e instanceof Error ? e.message : 'Kart kaydedilemedi.';
+      // Ham metin destek için console'da kalır; kullanıcı sağlayıcı adını görmez.
+      console.warn('[card] ham sunucu hatası:', raw);
       setError(stripServerErrorPrefix(raw) || 'Kart kaydedilemedi.');
     } finally {
       setBusy(false);
