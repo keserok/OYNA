@@ -82,6 +82,30 @@ S-serisi kararların tamamı.
 | 2 | **IP-14** — bilgi mimarisi, ölü ekranlar | Ekran taşıdığı için erken |
 | 3+ | IP-11, 12, 13, 15, 16, 17, 18, 19, 21, 22, 23 | |
 
+### ⚠️ IP-09'un GERİ ALINAN parçası — ana sayfa kartları (kullanıcı kararı)
+
+**BULGU-034 kapatılmadı; bilerek açık bırakıldı.** IP-09 ana sayfadaki altı
+kahraman kartı nötr yüzeye indirmiş, tek birincil kart bırakmıştı. Kullanıcı
+bu kararı gördükten sonra **geri istedi**: kartlar eski doygun/parıltılı
+hâllerine döndürüldü (sarı "Top Oyna", zümrüt "Saha Vitrini", turuncu "Maç
+Oluştur", yeşil/mavi alt kartlar).
+
+Bunun anlamı — ana sayfada BİLEREK duran şeyler:
+
+- `#FFC107` (kart 1 logosu), çift katmanlı `0 0 60px` / `0 0 40px` parıltılar,
+  altı ayrı kimlik gradyanı, `transparenttextures.com` dokusu, sarı metin
+  seçimi ve dolu sarı "YENİ MAÇ EKLENDİ" rozeti.
+- Ana sayfa logosu **amber** (`color="#FFC107"` çağrı yerinden veriliyor);
+  splash ve profil logosu ise **marka yeşili**. İki yüzey artık ayrışıyor —
+  kullanıcı bunu biliyor, karar onun.
+
+`tests/unit/colorRoles.test.ts` bu yüzden `views/Dashboard.tsx`'i taramaz;
+dosyanın başındaki notta gerekçe yazılı. **Ana sayfayı "düzeltmeden" önce
+kullanıcıya sor.** Renk-rol tablosu diğer tüm oyuncu ekranlarında geçerlidir.
+
+> Not: `OynaLogo` artık rengi sabit tutmuyor (prop'tan alıyor). Bu iyileştirme
+> korundu — geri alınan şey yalnız ana sayfanın *görünümü*, bileşenin yapısı değil.
+
 ### IP-09 uygulanırken bulunan sapmalar (plan metni ile kod arasında)
 
 1. **Mürekkep merdiveni adları.** IP-09 metni `text-ink-1/-2/-3` diyor; IP-08

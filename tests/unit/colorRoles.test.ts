@@ -42,10 +42,18 @@ const BIRINCIL = '#39FF14';
 const token = (ad: string): string | undefined =>
   css.match(new RegExp(`--color-${ad}:\\s*(#[0-9A-Fa-f]{6}|rgba\\([^)]*\\))`))?.[1];
 
-// Renk kararının uygulandığı yüzeyler. Owner paneli KAPSAM DIŞI: kendi temasını
-// korur (karar E7) — bu yüzden views/owner taranmaz.
+// Renk kararının uygulandığı yüzeyler. İki yer KAPSAM DIŞI:
+//
+//   1. `views/owner/**` — tesis paneli kendi temasını korur (karar E7).
+//   2. `views/Dashboard.tsx` — ⚠️ KULLANICI KARARI, REGRESYON DEĞİL.
+//      IP-09 ana sayfadaki altı kahraman kartı nötr yüzeye indirmişti
+//      (BULGU-034: altı kart eşit görsel ağırlıkta yarışıyor, hiçbiri "önce
+//      buraya bak" demiyor). Kullanıcı bu kararı GERİ ALDI ve kartların
+//      önceki doygun/parıltılı hâlini istedi. Dolayısıyla ana sayfada
+//      #FFC107, çift katmanlı parıltı ve dış CDN dokusu BİLEREK duruyor.
+//      Bir sonraki oturum burayı "eksik kalmış" sanıp düzeltmesin —
+//      düzeltmeden önce kullanıcıya sor. Ayrıntı: DEVIR-PROMPTU.md.
 const OYUNCU_DOSYALARI = [
-  'views/Dashboard.tsx',
   'views/MatchJoin.tsx',
   'views/MatchDiscovery.tsx',
   'views/PitchDiscovery.tsx',
@@ -229,12 +237,22 @@ describe('marka logosu', () => {
     expect(logo, 'SVG içinde sabit hex kalmış').not.toMatch(/(stroke|fill)="#[0-9A-Fa-f]{3,6}"/);
   });
 
-  it('üç çağrı yeri de logoyu marka rengine bağlıyor', () => {
-    for (const dosya of ['views/SplashScreen.tsx', 'views/Dashboard.tsx', 'views/ProfileScreen.tsx']) {
+  it('splash ve profil logoyu marka rengine bağlıyor', () => {
+    for (const dosya of ['views/SplashScreen.tsx', 'views/ProfileScreen.tsx']) {
       const src = oku(dosya);
       const blok = src.slice(src.indexOf('<OynaLogo'));
       expect(blok.slice(0, 400), `${dosya} logoya text-primary vermiyor`).toContain('text-primary');
     }
+  });
+
+  // Ana sayfa logosu kullanıcı kararıyla eski amber hâlinde bırakıldı (kart
+  // renkleri geri alındığı için). Renk artık bileşende SABİT DEĞİL — çağrı
+  // yerinden geliyor. Bu testin koruduğu şey: renk kararı çağrı yerinde
+  // görünür olsun, bileşenin içine geri kaçmasın.
+  it('ana sayfa logosu rengini açıkça çağrı yerinden veriyor', () => {
+    const src = oku('views/Dashboard.tsx');
+    const blok = src.slice(src.indexOf('<OynaLogo'), src.indexOf('<OynaLogo') + 600);
+    expect(blok, 'ana sayfa logosu renk vermiyor').toMatch(/color="#[0-9A-Fa-f]{6}"/);
   });
 });
 
@@ -251,19 +269,9 @@ describe('filtre aksanı — yan yana duran aynı bileşen aynı rengi kullanır
 });
 
 describe('dekoratif katmanlar', () => {
-  it('dış CDN dokusu kalmadı — çevrimdışıyken yüklenmiyordu', () => {
-    for (const dosya of ['views/Dashboard.tsx', 'views/MatchJoin.tsx']) {
-      expect(oku(dosya), dosya).not.toContain('transparenttextures.com');
-    }
-  });
-
-  it('Dashboard tek birincil kart taşıyor — altı kart eşit ağırlıkta yarışmıyor', () => {
-    const src = oku('views/Dashboard.tsx');
-    // Çift katmanlı dev parıltılar (0 0 60px / 0 0 40px) kartların hepsinden kalktı.
-    const parilti = src.match(/boxShadow: '0 0 (60|40)px/g) ?? [];
-    expect(parilti.length, 'kartlarda dev parıltı kalmış').toBeLessThanOrEqual(1);
-    // Tek dolu blok: bg-primary yalnız bir kez kart zemini olarak geçer.
-    expect((src.match(/absolute inset-0 bg-primary"/g) ?? []).length).toBe(1);
+  it('maç lobisinde dış CDN dokusu kalmadı — çevrimdışıyken yüklenmiyordu', () => {
+    // Ana sayfa hariç (kullanıcı kararı, yukarıdaki nota bak).
+    expect(oku('views/MatchJoin.tsx')).not.toContain('transparenttextures.com');
   });
 
   it('harita seçimi yalnız renge yaslanmıyor — boyut da değişiyor', () => {
