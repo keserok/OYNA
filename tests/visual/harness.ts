@@ -101,9 +101,17 @@ async function agiKapat(page: Page, opts: { authAskida?: boolean } = {}) {
   }
 }
 
-/** Store modülüne (uygulamanın kullandığı örneğe) erişip fonksiyon çalıştırır. */
+/**
+ * Store modülüne (uygulamanın kullandığı örneğe) erişip fonksiyon çalıştırır.
+ *
+ * Bir önceki adım gezinme tetiklemişse (ör. ekranaGit) evaluate, bağlam
+ * yıkıldığı için "Execution context was destroyed" ile düşebilir. Bu, ölçüm
+ * aracının yarışıdır — uygulamanın hatası değil. Aracın kendisi kırılgan olursa
+ * ürettiği kırmızıya güvenilmez; o yüzden DOM oturana kadar beklenir ve bu
+ * spesifik hatada bir kez tekrar denenir.
+ */
 async function storeIle(page: Page, fn: string, ...args: unknown[]) {
-  return page.evaluate(
+  const calistir = () => page.evaluate(
     async ([kod, argv]) => {
       const m = await import('/store.ts');
       // eslint-disable-next-line no-new-func
@@ -113,6 +121,16 @@ async function storeIle(page: Page, fn: string, ...args: unknown[]) {
     },
     [fn, args] as const,
   );
+
+  await page.waitForLoadState('domcontentloaded');
+  try {
+    return await calistir();
+  } catch (e: unknown) {
+    if (!/Execution context was destroyed/i.test(String((e as Error)?.message))) throw e;
+    await page.waitForLoadState('domcontentloaded');
+    await page.waitForTimeout(150);
+    return calistir();
+  }
 }
 
 /**
