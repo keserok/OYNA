@@ -48,7 +48,6 @@ import {
   type DbPitchRow,
 } from '../shared/pitchShowcaseMapper';
 import { PitchShowcaseCard, SafeImage, FavStar } from '../components/pitch-showcase/PitchShowcaseCard';
-import { select } from '../utils/haptics';
 
 interface MapViewProps {
   pitches: Pitch[];
@@ -792,7 +791,6 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
       if (wasFavorite) n.delete(pitch.id); else n.add(pitch.id);
       return n;
     });
-    select(); // favori degistirildi
     try {
       await togglePitchFavorite(pitch.id, wasFavorite);
     } catch (e) {
@@ -892,7 +890,6 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
     setSelectedCourtId(court.id);
     setSelectedPlacement(court.type);
     setSelectedSlot(null);
-    select(); // kort secildi
   };
 
   const selectedDateISO = useMemo(() => {
@@ -1954,7 +1951,6 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
                         disabled={isBooked || isOwnerClosed || bookingDisabled}
                         onClick={() => {
                           setSelectedSlot(slot.label);
-                          select(); // saat kutusu secildi
                         }}
                         className={`h-14 rounded-[14px] border flex flex-col items-center justify-center gap-0.5 transition-all ${
                           isSelected

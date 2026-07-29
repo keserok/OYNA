@@ -39,11 +39,9 @@ export const AnimatedButton = <T extends React.ElementType = 'button'>({
       return;
     }
 
-    // IP-10: burada eskiden HER dokunuşta ham web titreşimi tetikleniyordu — hem
-    // iOS'ta hiç çalışmıyordu hem de kullanıcı kararı "titreşim her tuşta
-    // olmamalı". Titreşim artık yalnız sonuç/seçim anlarında, çağrı yerinden
-    // (utils/haptics.ts). Buradaki geri bildirim görseldir: whileTap + global
-    // :active parlaklık düşüşü.
+    // IP-10: burada eskiden her dokunuşta titreşim tetikleniyordu. Titreşim
+    // uygulamadan tamamen kaldırıldı (kullanıcı kararı); geri bildirim yalnız
+    // görseldir: whileTap + index.css'teki global :active parlaklık düşüşü.
 
     // Create ripple bubble
     if (elementRef.current) {

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   ArrowLeft, User, Shield, HelpCircle, LogOut, ChevronRight,
   RefreshCw, MapPin, Bell, Lock, AlertCircle, Download, Trash2, Repeat, ShieldCheck,
-  Building2, KeyRound, Crown, X, Check, Vibrate } from 'lucide-react';
+  Building2, KeyRound, Crown, X, Check } from 'lucide-react';
 import { AnimatePresence } from 'framer-motion';
 import { AppView } from '../types';
 import { logout, auth } from '../supabaseAuth';
@@ -22,7 +22,6 @@ import FieldRolePage from '../components/settings/FieldRolePage';
 import SupportPage from '../components/settings/SupportPage';
 import { APP_VERSION } from '../utils/appVersion';
 import { getMyStaffPitches, staffAcceptInvite, type StaffPitch } from '../services/staffService';
-import { success } from '../utils/haptics';
 
 interface SettingsScreenProps {
   onBack: () => void;
@@ -51,7 +50,6 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
   const {
     setUserLocation, setLocationPermissionStatus, activeRegion, setActiveRegion,
     selectedRegions, searchRadius, setSearchRadius, notificationPreferences, myRoles,
-    hapticsEnabled, setHapticsEnabled,
     setStaffPanelContext,
   } = useAppStore();
 
@@ -171,7 +169,6 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
       if (auth.currentUser && loc.coordinates) {
         await fbUpdateUserLocation(auth.currentUser.uid, loc.coordinates.lat, loc.coordinates.lng).catch(() => {});
       }
-      success(); // konum güncellendi
     } catch (err) {
       console.error(err);
       showToast('Konum alınamadı. Elle bölge seçebilir veya cihaz ayarlarından izin verebilirsin.');
@@ -322,39 +319,6 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
             onClick={() => setSubPage('privacy')}
           />
 
-          {/* IP-10: titreşim cihaz tercihidir (localStorage), hesaba bağlı değil. */}
-          <div className="w-full flex items-center justify-between p-4 bg-[#161B22] border border-white/8 rounded-2xl">
-            <div className="flex items-center gap-3">
-              <div
-                className="w-9 h-9 rounded-xl flex items-center justify-center border"
-                style={{ background: 'rgba(57,255,20,0.15)', borderColor: '#39FF1440', color: '#39FF14' }}
-              >
-                <Vibrate size={18} />
-              </div>
-              <div className="text-left">
-                <span className="text-sm font-bold text-white block">Titreşim</span>
-                <span className="text-[0.6875rem] text-gray-400">
-                  Yalnız işlem sonuçlarında ve seçimlerde
-                </span>
-              </div>
-            </div>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={hapticsEnabled}
-              aria-label="Titreşim"
-              onClick={() => setHapticsEnabled(!hapticsEnabled)}
-              className={`relative shrink-0 w-[52px] h-8 rounded-full transition-colors ${
-                hapticsEnabled ? 'bg-primary' : 'bg-white/12 border border-white/15'
-              }`}
-            >
-              <span
-                className={`absolute top-1 w-6 h-6 rounded-full bg-white transition-all ${
-                  hapticsEnabled ? 'left-[23px]' : 'left-1'
-                }`}
-              />
-            </button>
-          </div>
         </section>
 
         {/* Konum */}

@@ -9,7 +9,6 @@ import { MODAL_BACKDROP, MODAL_CARD } from './common/motion';
 import { useBackDismiss } from '../hooks/useBackDismiss';
 // Rol → açılış ekranı + geçilebilir rol ayıklama tek kaynaktan (App.tsx ile ortak; drift yok).
 import { roleToLandingView, switchableRoles } from '../shared/roles';
-import { success } from '../utils/haptics';
 
 // Geriye dönük uyumluluk için yeniden dışa aktar (eski içe aktarımlar kırılmasın).
 export { roleToLandingView };
@@ -60,7 +59,6 @@ const RoleSwitcher: React.FC<RoleSwitcherProps> = ({ roles, onClose, onSwitched 
       }
       const newRole = pending;
       setRole(newRole); // store'daki aktif rolü güncelle
-      success(); // rol degistirildi
       onSwitched(newRole, roleToLandingView(newRole));
     } catch (err) {
       console.error('[RoleSwitcher] switch error:', err);

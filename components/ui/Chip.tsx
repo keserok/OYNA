@@ -1,5 +1,4 @@
 import React, { useRef } from 'react';
-import { select } from '../../utils/haptics';
 
 // Filtre/liste çipi — arkadaş listeleri, dizin filtreleri (Spec E28/I52).
 // onLongPress: liste yönetimi menüsü için (uzun basış ~450ms).
@@ -25,7 +24,6 @@ const Chip: React.FC<ChipProps> = ({
     longFired.current = false;
     timer.current = setTimeout(() => {
       longFired.current = true;
-      select(); // uzun basis tetiklendi
       onLongPress();
     }, 450);
   };

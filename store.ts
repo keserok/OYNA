@@ -112,11 +112,6 @@ function persistSearchRadius(radius: number) {
   }
 }
 
-// ─── Titreşim tercihi (IP-10) ─────────────────────────────────────
-// Anahtarın ve varsayılanın TEK kaynağı utils/haptics.ts; burada yalnız
-// arayüzün yeniden çizilebilmesi için store'a aynalanır.
-import { isHapticsEnabled as readHapticsEnabled, setHapticsEnabled as persistHapticsEnabled } from './utils/haptics';
-
 // ─── Çoklu bölge seçimi kalıcılığı ────────────────────────────────
 // Kullanıcı birden fazla il/ilçe seçebilir; keşif (maç + saha) bu bölgelerin
 // birleşimini gösterir. activeRegion "birincil" bölge olarak (etiket/GPS/harita
@@ -483,9 +478,6 @@ interface AppState {
   notificationPreferences: NotificationPreferences;
   setNotificationPreferences: (prefs: NotificationPreferences) => void;
   updateSingleNotificationPref: (key: keyof NotificationPreferences, enabled: boolean) => void;
-  /** IP-10: cihaza özel titreşim tercihi (Ayarlar). Varsayılan açık. */
-  hapticsEnabled: boolean;
-  setHapticsEnabled: (enabled: boolean) => void;
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -1240,13 +1232,6 @@ export const useAppStore = create<AppState>((set, get) => ({
   setPushToken: (token) => set({ pushToken: token }),
   notificationPreferences: DEFAULT_NOTIFICATION_PREFERENCES,
   setNotificationPreferences: (prefs) => set({ notificationPreferences: prefs }),
-  // IP-10: titreşim tercihi cihazda yaşar (localStorage), sunucuya gitmez —
-  // aynı hesabın telefonu titreşsin, tableti titremesin diyebilmeli.
-  hapticsEnabled: readHapticsEnabled(),
-  setHapticsEnabled: (enabled) => {
-    persistHapticsEnabled(enabled);
-    set({ hapticsEnabled: enabled });
-  },
   updateSingleNotificationPref: (key, enabled) => set((state) => {
     const current = state.notificationPreferences[key];
     // Zorunlu bildirimleri kapatamayız

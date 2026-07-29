@@ -129,10 +129,25 @@ kullanıcıya sor.** Renk-rol tablosu diğer tüm oyuncu ekranlarında geçerlid
 
 ## IP-10 — UYGULANDI. Verilen kararlar ve sapmalar
 
-**Titreşim kararı (kullanıcı, bu oturumda):** yalnız **sonuç (success/error)**
-ve **seçim (select)**. Sıradan buton dokunuşu titreşmez. `utils/haptics.ts`
-bilerek `tap()` DIŞA VERMEZ — politika API yüzeyiyle zorlanıyor.
-Ayarlar → Titreşim anahtarı **varsayılan açık**, cihaza özel (localStorage).
+**⚠️ TİTREŞİM UYGULAMADAN TAMAMEN KALDIRILDI (kullanıcı kararı, nihai).**
+Karar iki adımda değişti: önce "yalnız sonuç + seçim" denendi, sonra kullanıcı
+titreşimden büsbütün vazgeçti. **Geçerli olan ikinci cevaptır.**
+
+Kaldırılanlar: 34 çağrı, `utils/haptics.ts`, Ayarlar'daki anahtar, store dilimi
+ve `@capacitor/haptics` bağımlılığı (package.json + iOS Podfile + Android
+gradle). Uygulamada titreşimin hiçbir izi yok.
+
+`tests/unit/touchTargets.test.ts` geri sızmayı engelliyor: ham
+`navigator.vibrate`, `@capacitor/haptics` importu, `utils/haptics.ts` dosyası
+ve native eklenti bağı — dördü de teste bağlı. **Titreşim eklemeden önce
+kullanıcıya sor.**
+
+> Native tarafta `npx cap sync ios && npx cap sync android` çalıştırılmadı
+> (bu ortamda native araç zinciri yok). Podfile/gradle girdileri elle
+> temizlendi; iOS/Android derlemesinden önce sync gerekir.
+
+Dokunuşun görsel karşılığı DURUYOR: `index.css` global `:active` parlaklık
+düşüşü + `whileTap`. Kaldırılan yalnız titreşimdir.
 
 **Uygulanmayan madde — BULGU-114 GEÇERSİZ.** Plan "kaptanın skor ± butonları
 28px" diyor; o kod `0f1874d` (27 Tem) ile silindi. Planın verdiği 4 satır bugün
@@ -159,9 +174,8 @@ yetkisi maça katılan herkese açık). S1 bu yolu kapsıyor mu?
 - Buton boyutu: **kritik/para butonları 44px; yoğun listelerde 40px serbest.**
   ⚠️ Plan Bölüm 5.6 "istisnasız 44px" diyor — **kullanıcı kararı planı geçersiz kılar.**
 - Basma hissi: **global kararma + ölü ripple kodunu sil.**
-- Titreşim: **native köprü (`@capacitor/haptics` zaten kurulu, hiç kullanılmıyor) +
-  Ayarlar'da açma/kapama.** Kullanıcı sınırı: **"titreşim her tuşta olmamalı"** —
-  yalnız anlamlı olaylarda. Hangi olaylar olduğu **henüz kararlaştırılmadı**, sor.
+- ~~Titreşim: native köprü + Ayarlar'da açma/kapama.~~ **GEÇERSİZ** — titreşim
+  tamamen kaldırıldı (yukarı bak).
 - Ortak `IconButton` bileşeni yaz, zorunlu etiket alanıyla.
 - ⚠️ **IP-10'daki skorla ilgili maddeleri UYGULAMA** — kaptan skor girişi kaldırıldı.
 

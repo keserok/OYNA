@@ -1,8 +1,7 @@
 // IP-10 bekçisi — dokunma hedefi ve erişilebilir ad.
 //
 // Bu test üç sözü kilitler:
-//   1. Ham `navigator.vibrate` çağrısı YOKTUR. Tek kaynak utils/haptics.ts —
-//      aksi hâlde titreşim iPhone'da yine sessizce ölür (WKWebView desteklemez).
+//   1. Titreşim uygulamada YOKTUR (kullanıcı kararı) ve geri sızmaz.
 //   2. Sahada tek elle basılan hedefler 44px altına DÜŞMEZ.
 //   3. Sadece-ikon butonların Türkçe erişilebilir adı vardır.
 //
@@ -11,7 +10,7 @@
 // bu yüzden ölçülen owner dosyaları da listede.
 
 import { describe, it, expect } from 'vitest';
-import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 
 const KOK = process.cwd();
@@ -33,30 +32,40 @@ function taranacakDosyalar(): string[] {
   return out;
 }
 
-describe('titreşim — tek kaynak', () => {
-  it('views/ ve components/ altında ham navigator.vibrate YOK', () => {
+describe('titreşim — uygulamada YOK (kullanıcı kararı)', () => {
+  // Titreşim önce native köprüye taşınmış, sonra kullanıcı kararıyla
+  // UYGULAMADAN TAMAMEN KALDIRILMIŞTIR. Bu blok geri sızmasını engeller:
+  // ham web API'si, Capacitor eklentisi ve eski yardımcı modül — üçü de yasak.
+  it('ham navigator.vibrate çağrısı yok', () => {
     const ihlal: string[] = [];
     for (const yol of taranacakDosyalar()) {
-      const s = oku(yol);
-      s.split('\n').forEach((satir, i) => {
+      oku(yol).split('\n').forEach((satir, i) => {
         if (/navigator\.vibrate\s*\(/.test(satir)) ihlal.push(`${yol}:${i + 1}`);
       });
     }
-    expect(
-      ihlal,
-      `Ham web titreşimi iOS'ta çalışmaz. utils/haptics.ts kullan:\n${ihlal.join('\n')}`,
-    ).toEqual([]);
+    expect(ihlal, `Titreşim kaldırıldı; geri eklenmemeli:\n${ihlal.join('\n')}`).toEqual([]);
   });
 
-  it('titreşim çağıran her dosya tek modülden besleniyor', () => {
-    for (const yol of taranacakDosyalar()) {
-      const s = oku(yol);
-      // select()/success()/error() çağıran bir dosya modülü içe aktarmalı.
-      const cagiriyor = /(^|[^.\w])(select|success|hapticError)\(\)/m.test(s);
-      if (cagiriyor) {
-        expect(s, `${yol} titreşim çağırıyor ama modülü içe aktarmamış`).toContain('utils/haptics');
-      }
-    }
+  it('@capacitor/haptics içe aktarılmıyor', () => {
+    const ihlal = taranacakDosyalar().filter((y) => oku(y).includes('@capacitor/haptics'));
+    expect(ihlal).toEqual([]);
+  });
+
+  it('eski utils/haptics modülü geri gelmedi', () => {
+    expect(existsSync(join(KOK, 'utils/haptics.ts'))).toBe(false);
+    const ihlal = taranacakDosyalar().filter((y) => oku(y).includes('utils/haptics'));
+    expect(ihlal).toEqual([]);
+  });
+
+  it('native eklenti bağı da koparıldı (paket + iOS + Android)', () => {
+    expect(oku('package.json')).not.toContain('@capacitor/haptics');
+    expect(oku('ios/App/Podfile')).not.toContain('CapacitorHaptics');
+    expect(oku('android/capacitor.settings.gradle')).not.toContain('capacitor-haptics');
+  });
+
+  it('görsel basma geri bildirimi DURUYOR — kaldırılan yalnız titreşim', () => {
+    // Titreşim gitti diye dokunuşun karşılığı da yok olmamalı.
+    expect(oku('index.css')).toMatch(/filter:\s*brightness\(0\.78\)/);
   });
 });
 

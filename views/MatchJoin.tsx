@@ -34,7 +34,6 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { OYNA_TILE_URL, oynaTileProps, oynaMapProps, OYNA_MAP_CSS } from '../components/map/mapBase';
 import { Toast } from '../components/common/Toast';
-import { success, error } from '../utils/haptics';
 
 // Fix leaflet default icon path issues
 if (typeof window !== 'undefined') {
@@ -654,7 +653,6 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
       if (isManageMode && slot.purchasedBy === currentUserProfile?.id) {
         setFillSlot(slot);
       } else {
-        error(); // slot alinamadi / rezerve
         showActionError('Bu slot rezerve edildi — satın alan kişi dolduracak.');
       }
       return;
@@ -2500,7 +2498,6 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                           await updateFormationRpc(match.id, pitchSide, payload);
                           const fresh = await getMatchDetails(match.id);
                           if (fresh) applyMatchLocal(fresh);
-                          success(); // dizilis kaydedildi
                         }
                       } catch (err) {
                         console.error(err);

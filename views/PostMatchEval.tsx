@@ -7,7 +7,6 @@ import { auth } from '../supabaseAuth';
 import { submitServiceRating, getMatchServiceRequests, captainConfirmService } from '../services/serviceRequestService';
 import { getPendingScoreProposal, approveMatchScore, type ScoreProposal } from '../services/scoreService';
 import type { PositionSlot } from '../types';
-import { select } from '../utils/haptics';
 
 // FAZ 5: Maça atanmış kaleci/hakem hakkında değerlendirme ekranında gösterilecek bilgi
 interface ServiceProviderInfo {
@@ -107,7 +106,6 @@ const ServiceRatingCard: React.FC<{
               key={val}
               whileTap={{ scale: 0.88 }}
               onClick={() => {
-                select(); // puan secildi
                 onScore(score === val ? 0 : val);
               }}
               className={`h-9 rounded-lg border text-[0.6875rem] font-extrabold transition-all ${
@@ -371,7 +369,6 @@ const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => 
   const [sparkles, setSparkles] = useState<{ id: number; x: number; y: number; delay: number }[]>([]);
 
   const setPlayerRating = (pid: string, val: number, e: React.MouseEvent) => {
-    select(); // oyuncuya puan verildi
     setPlayerRatings(prev => ({ ...prev, [pid]: val }));
     triggerSparkles(e);
   };
@@ -697,7 +694,6 @@ const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => 
                             aria-pressed={active}
                             disabled={currentRating === 0}
                             onClick={() => {
-                              select(); // fair-play secildi
                               setPlayerFairPlay(prev => ({ ...prev, [p.id]: c.value }));
                             }}
                             className={`h-11 rounded-2xl border text-[0.8125rem] font-semibold flex items-center justify-center gap-1.5 transition-all active:scale-[0.97] disabled:opacity-40 ${
@@ -770,7 +766,6 @@ const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => 
                         whileHover={{ scale: 1.15 }} 
                         whileTap={{ scale: 0.9 }} 
                         onClick={(e) => {
-                          select(); // yildiz secildi
                           set(s);
                           triggerSparkles(e);
                         }}

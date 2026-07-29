@@ -29,7 +29,6 @@ import { getMyTeams, getTeamSquad, type MyTeamRow } from '../services/teamSocial
 import { getMatchDetails } from '../services/matchService';
 import { fetchMyFavoritePitchIds } from '../services/pitchFavoritesService';
 import { safeUuid } from '../shared/submitGuard';
-import { select, success, error } from '../utils/haptics';
 
 // Cüzdan yükleme overlay'i — form kaybolmadan bakiye tamamlanır (gerçek akış).
 const WalletScreen = lazy(() => import('./WalletScreen'));
@@ -352,7 +351,6 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
   // ── Seçim eylemleri ───────────────────────────────────────────────────────
   const pickFacility = (f: CreateFacility) => {
     if (f.id === selFacId) return;
-    select(); // tesis seçildi
     setSelFacId(f.id);
     const c0 = f.courts[0];
     setSelCourtId(c0?.id ?? null);
@@ -360,13 +358,12 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
     setConflict(null);
   };
   const pickCourt = (c: CreateCourt) => {
-    select(); // kort seçildi
     setSelCourtId(c.id);
     setFormat(`${c.minCapacity}v${c.minCapacity}`);
     setConflict(null);
   };
-  const pickDay = (i: number) => { select(); setSelDay(i); setConflict(null); };
-  const pickTime = (t: string) => { select(); setSelTime(t); setConflict(null); };
+  const pickDay = (i: number) => { setSelDay(i); setConflict(null); };
+  const pickTime = (t: string) => { setSelTime(t); setConflict(null); };
 
   // ── YAYINLA — atomik ─────────────────────────────────────────────────────
   const publish = useCallback(async () => {
@@ -400,7 +397,6 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
       // Yayın tamam: anahtar tüketildi, bir sonraki maç yeni anahtarla kurulur.
       publishIdemRef.current = null;
       setPubStep(3);
-      success(); // maç yayınlandı
 
       // Davetler (arkadaş VEYA takım arkadaşı; başarısızlık yayını bozmaz)
       if (invited.length > 0) {
@@ -424,7 +420,6 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
         // Saat "Dolu"ya döner, banner en yakın saati önerir — form korunur.
         setLocalBusy(prev => new Set(prev).add(`${selCourtId}|${dateISO}|${selTime}`));
         setConflict({ time: selTime, next: firstFree(selTime) });
-        error(); // saat çakıştı
       } else if (code === 'INSUFFICIENT_BALANCE') {
         setMissingTL(deposit != null ? Math.max(1, Math.ceil(deposit - spendable)) : 1);
         showToast('Kapora için bakiyen yetersiz — formun korundu.', 'error');
@@ -550,7 +545,6 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
   }, [sheet, providers]);
 
   const toggleInvite = (p: InvitedPerson) => {
-    select(); // oyuncu davet listesine alındı/çıkarıldı
     setInvited(prev => prev.some(x => x.id === p.id) ? prev.filter(x => x.id !== p.id) : [...prev, p]);
   };
 
@@ -560,7 +554,6 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
     return o ? (o.all ? 1 : o.providerIds.length) : 0;
   };
   const toggleProvider = (t: 'GK' | 'REF', id: string) => {
-    select(); // sağlayıcı seçildi
     setOffers(prev => {
       const cur = prev.find(o => o.type === t);
       if (!cur) return [...prev, { type: t, providerIds: [id], all: false }];
@@ -571,7 +564,6 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
     });
   };
   const toggleProviderAll = (t: 'GK' | 'REF') => {
-    select(); // tüm sağlayıcılar seçildi
     setOffers(prev => {
       const cur = prev.find(o => o.type === t);
       if (cur?.all) return prev.filter(o => o.type !== t);
@@ -987,7 +979,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                   const on = format === val;
                   const p = total != null ? Math.ceil((total / (n * 2)) * 1.05) : null;
                   return (
-                    <button key={val} onClick={() => { select(); setFormat(val); }}
+                    <button key={val} onClick={() => { setFormat(val); }}
                       className={`relative shrink-0 w-[84px] h-[72px] rounded-[18px] border flex flex-col items-center justify-center gap-0.5 transition-colors ${on ? 'bg-[#39FF14]/[0.09] border-[#39FF14]/50' : 'bg-white/[0.03] border-white/[0.09]'}`}>
                       <span className={`text-base font-extrabold italic ${on ? 'text-[#39FF14]' : 'text-white'}`}>{val}</span>
                       <span className="text-[0.6875rem] font-bold text-white/[0.38]">{n * 2} oyuncu</span>
@@ -1013,7 +1005,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                 {([['OPEN', 'Herkese açık', 'Vitrinde görünür, boş kontenjan dolar'], ['PRIVATE', 'Kod ile', 'Sadece kodu paylaştığın kişiler']] as const).map(([id, label, sub]) => {
                   const on = (teamInvite ? 'PRIVATE' : visibility) === id;
                   return (
-                    <button key={id} onClick={() => { select(); setVisibility(id); if (id === 'OPEN') setTeamInvite(false); }}
+                    <button key={id} onClick={() => { setVisibility(id); if (id === 'OPEN') setTeamInvite(false); }}
                       className={`flex flex-col items-start gap-1.5 p-3.5 rounded-2xl border text-left min-h-[64px] transition-colors ${on ? 'bg-[#39FF14]/[0.08] border-[#39FF14]/[0.45]' : 'bg-white/[0.025] border-white/10'}`}>
                       <span className={`text-xs font-extrabold uppercase ${on ? 'text-[#39FF14]' : ''}`}>{label}</span>
                       <span className="text-[0.6875rem] font-bold leading-snug text-ink-4">{sub}</span>

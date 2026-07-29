@@ -4,7 +4,6 @@ import { MatchListing } from '../types';
 import { auth } from '../supabaseAuth';
 import { getMatchDetails, getMatchNote, saveMatchNote } from '../services/matchService';
 import { LoadingState, ErrorState } from '../components/common/StatusState';
-import { success } from '../utils/haptics';
 
 interface MatchDiaryDetailProps {
     diaryId: string | null;
@@ -108,7 +107,6 @@ const MatchDiaryDetail: React.FC<MatchDiaryDetailProps> = ({ diaryId, onBack }) 
             setNote(draftNote.trim());
             setIsEditingNote(false);
             setJustSaved(true);
-            success(); // not kaydedildi
             setTimeout(() => setJustSaved(false), 2000);
         } catch (err) {
             console.error('Maç notu kaydedilemedi:', err);

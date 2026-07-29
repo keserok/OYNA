@@ -6,7 +6,6 @@ import { useAppStore } from '../store';
 import { auth } from '../supabaseAuth';
 import { fbUpdateUserLocation } from '../supabaseMutations';
 import { showToast } from '../components/common/GlobalToast';
-import { success } from '../utils/haptics';
 
 interface LocationPromptProps {
   onPermissionGranted: () => void;
@@ -40,7 +39,6 @@ const LocationPrompt: React.FC<LocationPromptProps> = ({ onPermissionGranted, on
                 }
                 
                 setStatus('FOUND');
-                success(); // konum bulundu
                 setTimeout(onPermissionGranted, 1500);
             },
             (error) => {
