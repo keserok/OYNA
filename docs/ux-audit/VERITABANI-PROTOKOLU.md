@@ -58,19 +58,25 @@ ls supabase/migrations/*.sql | xargs -n1 basename \
 Çıkan md5, sorgunun `defter_md5` satırıyla **birebir** aynı olmalı.
 *(Henüz uygulanmamış yeni migration dosyalarını hariç tutarak karşılaştır.)*
 
-### Taban değerler — 2026-07-29
+### Taban değerler — 2026-07-29 (PR #137 main'e birleştikten SONRA)
 
 | Kontrol | Değer |
 |---|---|
 | Bağlantı | `postgres / postgres / pg 17.6` |
-| Defter kayıt sayısı | **373** |
-| Defter son sürüm | `20260828000009` |
-| Defter md5 | `660941836f38ce3dc0c01c9d265cc485` |
-| Repo md5 (IP-04 hariç) | `660941836f38ce3dc0c01c9d265cc485` ✅ **sürüklenme yok** |
+| Defter kayıt sayısı | **374** |
+| Defter son sürüm | `20260829000000` (IP-04) |
+| Defter md5 | `69f5b705d865233b85c05cc84dcf9ea0` |
+| Repo md5 | `69f5b705d865233b85c05cc84dcf9ea0` ✅ **sürüklenme yok** |
 | `public` tablo sayısı | 111 |
 | RLS kapalı tablo | **YOK — hepsi açık** |
+| Para yolu RPC (9 adet) | hepsi yerinde |
+| Ayrılma tek kaynak | `preview_leave_match` **ve** `leave_public_match_slot` ikisi de `_leave_match_quote`'tan besleniyor ✅ |
+| `_leave_match_quote` anon çalıştırabilir mi | **HAYIR — kapalı** ✅ |
 | Veritabanı boyutu | 66 MB |
 | 24 saatten eski asılı ödeme niyeti | 0 |
+
+> Önceki taban (birleştirme öncesi): 373 kayıt · `20260828000009` ·
+> md5 `660941836f38ce3dc0c01c9d265cc485`.
 
 ---
 
@@ -109,10 +115,12 @@ select (select count(*) from pg_proc where proname='<yeni_fonksiyon>') as sizint
 
 | # | Bulgu | Durum |
 |---|---|---|
+| 0 | ~~IP-04 migration'ı canlıda yok~~ | ✅ **KAPANDI** — PR #137 birleşti, `20260829000000` üretime indi, `_leave_match_quote` yerinde ve `anon`'a kapalı |
 | 1 | `_wallet_withdrawable`, `_wallet_cashout_restore` — alt çizgili yani **özel** olması gereken cüzdan fonksiyonları `anon` tarafından çalıştırılabiliyor | Açık; ayrı iş |
 | 2 | `auth_leaked_password_protection` kapalı (sızmış parola kontrolü) | Açık; Supabase panelinden açılır |
 | 3 | `public.public_profiles` view'ı SECURITY DEFINER (advisor ERROR) | Kasıtlı görünüyor; teyit edilmeli |
-| 4 | IP-04 migration'ı (`20260829000000`) canlıda **yok** — sağlık kontrolü `para_rpc_eksik: _leave_match_quote` diyor | PR/deploy bekliyor |
+| 4 | `_validate_tariff_days` üretimde yok (`20260728163234` uygulandıktan sonra dosyaya eklenmiş) | Zararsız — çağıranı yok; §6'da ayrıntı |
+| 5 | GitHub Actions kontrolleri kırmızı | Hesap düzeyi (Billing → Actions); depodan düzeltilemez, §7'de kanıtlar |
 
 Güvenlik danışmanı toplamı 427 bulgu; bunların 404'ü
 `authenticated_security_definer_function_executable` — uygulamanın normal RPC

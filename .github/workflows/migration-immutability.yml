@@ -9,9 +9,16 @@ on:
     paths:
       - 'supabase/migrations/**'
 
+# MALİYET KORUMASI (2026-07-29) — gerekçe admin-tests.yml başında.
+# Bu iş zaten paths ile dar; yalnız eskiyen tur iptali ekleniyor.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   immutability:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
         with:

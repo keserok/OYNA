@@ -9,11 +9,18 @@ name: SQL Entegrasyon Testleri
 
 on:
   pull_request:
+    paths-ignore: ['**.md', 'docs/**', '.gitignore', 'LICENSE']
   workflow_dispatch:
+
+# MALİYET KORUMASI (2026-07-29) — gerekçe admin-tests.yml başında.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   sql-integration:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     env:
       DATABASE_URL: ${{ secrets.SUPABASE_TEST_DB_URL }}
     steps:
