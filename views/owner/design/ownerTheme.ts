@@ -12,7 +12,7 @@ export const ownerColors = {
   borderHover: 'border-white/10',
   accent: '#3B82F6',
   accentMuted: 'rgba(59,130,246,0.15)',
-  // FAZ0: neon #39FF14/#FF00FF/#FFFF00 karmaşası yerine tek marka sarısı.
+  // Owner paneli aksanı: --color-info (#60A5FA). Marka yeşili (#39FF14) oyuncu tarafına aittir.
   accentYellow: '#FACC15',
   success: '#10B981',
   successMuted: 'rgba(16,185,129,0.12)',

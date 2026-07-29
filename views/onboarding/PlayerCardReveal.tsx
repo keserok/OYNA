@@ -33,10 +33,12 @@ const PlayerCardReveal: React.FC<PlayerCardRevealProps> = ({
 
   const rows: { label: string; value: string; color: string }[] = [];
   if (ageRange) rows.push({ label: 'YAŞ', value: ageRange.replace('-', '–'), color: '#FFFFFF' });
-  if (gender) rows.push({ label: 'CİNSİYET', value: gender === 'kadin' ? '♀ Kadın' : '♂ Erkek', color: '#00B0FF' });
+  // IP-09 renk-rol tablosu: cinsiyet/pozisyon birer KATEGORİ etiketidir (bilgi
+  // mavisi / nötr mürekkep), "Onaylı" ise onaylanmış DURUMdur (rol 3, birincil).
+  if (gender) rows.push({ label: 'CİNSİYET', value: gender === 'kadin' ? '♀ Kadın' : '♂ Erkek', color: '#60A5FA' });
   if (playStyle) rows.push({ label: 'OYUN STİLİ', value: PLAY_STYLE_META[playStyle].label, color: PLAY_STYLE_META[playStyle].color });
-  if (locationGranted) rows.push({ label: 'KONUM', value: 'Onaylı', color: '#00E676' });
-  if (position) rows.push({ label: 'POZİSYON', value: POSITION_LABEL[position], color: '#FFC107' });
+  if (locationGranted) rows.push({ label: 'KONUM', value: 'Onaylı', color: '#39FF14' });
+  if (position) rows.push({ label: 'POZİSYON', value: POSITION_LABEL[position], color: '#A9B4C0' });
 
   return (
     <motion.div
@@ -98,7 +100,7 @@ const PlayerCardReveal: React.FC<PlayerCardRevealProps> = ({
         style={{
           marginTop: 38, width: '100%', maxWidth: 300, height: 56, borderRadius: 18, border: 'none',
           cursor: busy ? 'default' : 'pointer',
-          background: busy ? 'rgba(57,255,20,0.16)' : 'linear-gradient(90deg,#39FF14,#00E676,#39FF14)', backgroundSize: '220% 100%',
+          background: busy ? 'rgba(57,255,20,0.16)' : '#39FF14', backgroundSize: '220% 100%',
           color: busy ? '#39FF14' : '#06210A', fontSize: 16, fontWeight: 900, letterSpacing: '0.02em',
           boxShadow: busy ? 'none' : '0 0 30px rgba(57,255,20,0.5)', animation: busy ? 'none' : 'obGradMove 3s ease-in-out infinite alternate',
         }}

@@ -616,6 +616,10 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack }) => {
                   width={82}
                   height={82}
                   animate={false}
+                  /* Kullanıcı kararı: ana sayfa kartları IP-09 öncesi renklerine
+                     döndürüldü. Logo eskiden bileşenin içinde sabit amber çiziliyordu;
+                     artık renk prop'tan geldiği için eski görünüm burada verilir. */
+                  color="#FFC107"
                   className="drop-shadow-[0_0_16px_rgba(250,204,21,0.9)]"
                 />
               </motion.div>

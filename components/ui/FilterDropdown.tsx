@@ -7,6 +7,10 @@ import { Check, ChevronDown } from 'lucide-react';
 // openDropdown state'i + overlay'iyle yönetilir. Panel z-30: liste (z-10) üstünde,
 // sticky başlık (z-50) altında kalır — katman haritası için bkz. GlassModal.tsx.
 
+// IP-09: dışarıdan renk veren prop kaldırıldı. Yan yana duran, aynı işi yapan üç filtreden
+// ortadakine sebepsiz farklı renk verilebiliyordu; seçim durumu (rol 2) tek renktir.
+const ACCENT = '#39FF14'; // --color-primary; bkz. index.css RENK-ROL TABLOSU
+
 export interface FilterDropdownOption {
   value: string;
   label: string;       // tetikleyicide görünen kısa metin
@@ -21,7 +25,6 @@ interface FilterDropdownProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   disabled?: boolean;
-  accent?: string;
 }
 
 export const FilterDropdown: React.FC<FilterDropdownProps> = ({
@@ -32,7 +35,6 @@ export const FilterDropdown: React.FC<FilterDropdownProps> = ({
   open,
   onOpenChange,
   disabled = false,
-  accent = '#39FF14',
 }) => {
   const reduceMotion = useReducedMotion();
   const selected = options.find((o) => o.value === value);
@@ -56,7 +58,7 @@ export const FilterDropdown: React.FC<FilterDropdownProps> = ({
         }`}
         style={
           !disabled && (open || hasSelection)
-            ? { backgroundColor: `${accent}12`, borderColor: `${accent}55`, boxShadow: `0 0 15px ${accent}1f` }
+            ? { backgroundColor: `${ACCENT}12`, borderColor: `${ACCENT}55`, boxShadow: `0 0 15px ${ACCENT}1f` }
             : undefined
         }
       >
@@ -67,7 +69,7 @@ export const FilterDropdown: React.FC<FilterDropdownProps> = ({
                etiket standardına (0.08em) çekildi — hem çakışma bitti hem de
                uygulama genelinde tek bir etiket ritmi oldu. */
             className="text-[0.625rem] font-extrabold uppercase tracking-[0.08em] leading-none mb-1"
-            style={{ color: !disabled && hasSelection ? accent : 'rgba(255,255,255,0.45)' }}
+            style={{ color: !disabled && hasSelection ? ACCENT : 'rgba(255,255,255,0.45)' }}
           >
             {label}
           </span>
@@ -82,7 +84,7 @@ export const FilterDropdown: React.FC<FilterDropdownProps> = ({
         <ChevronDown
           size={14}
           className={`shrink-0 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
-          style={{ color: !disabled && (open || hasSelection) ? accent : 'rgba(255,255,255,0.4)' }}
+          style={{ color: !disabled && (open || hasSelection) ? ACCENT : 'rgba(255,255,255,0.4)' }}
         />
       </button>
 
@@ -113,17 +115,17 @@ export const FilterDropdown: React.FC<FilterDropdownProps> = ({
                     className={`w-full min-h-[44px] px-4 flex items-center justify-between gap-2 text-left transition-colors ${
                       isSelected ? '' : 'hover:bg-white/[0.04] active:bg-white/[0.07]'
                     }`}
-                    style={isSelected ? { backgroundColor: `${accent}14` } : undefined}
+                    style={isSelected ? { backgroundColor: `${ACCENT}14` } : undefined}
                   >
                     <span
                       className={`text-[0.6875rem] font-extrabold uppercase tracking-wider truncate ${
                         isSelected ? '' : 'text-white/80'
                       }`}
-                      style={isSelected ? { color: accent } : undefined}
+                      style={isSelected ? { color: ACCENT } : undefined}
                     >
                       {row.panelLabel ?? row.label}
                     </span>
-                    {isSelected && <Check size={14} className="shrink-0" style={{ color: accent }} />}
+                    {isSelected && <Check size={14} className="shrink-0" style={{ color: ACCENT }} />}
                   </button>
                 );
               })}
