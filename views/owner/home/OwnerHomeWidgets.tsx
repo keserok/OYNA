@@ -117,7 +117,12 @@ export const MatchCountdownItem: React.FC<{
 /** Şerit yüksekliği (px) — kort satırının kendisi; süreyi TEMSİL ETMEZ. */
 const SERIT_YUKSEKLIGI = 36;
 /** "Tüm saatler" görünümünde bir saatin piksel karşılığı (yatay kaydırma). */
-const TUM_SAATLER_PX_SAAT = 30;
+// Zaman ekseninin ölçeği: bir saat kaç piksel. TEK ölçek — hem "Aktif saatler"
+// hem "Tüm saatler" aynı genişlikte çizilir, ikisi de yatay kaydırılır.
+// Ekrana sıkıştırma YOK: sıkıştırılan şeritte 90 dakikalık dilim saat
+// etiketleriyle hizasını kaybediyor ve dar telefonda okunmuyordu.
+// 72px/saat → 90 dakikalık dilim 108px, 60 dakikalık 72px (tam 1,5 katı).
+const PX_SAAT = 72;
 
 export const PitchOccupancyGrid: React.FC<{
     /** Tarifeden türetilmiş günlük şerit (services/pitchOwnerService.buildDayOccupancyGrid). */
@@ -147,24 +152,26 @@ export const PitchOccupancyGrid: React.FC<{
     const to = showAll ? Math.max(1440, grid.endMinutes) : grid.endMinutes;
     const span = Math.max(1, to - from);
 
-    // Yüzde konumlama: dikdörtgenin GENİŞLİĞİ = süresi / pencere. Böylece 90
-    // dakikalık slot 60'lığın tam 1,5 katı olur ve kortlar arası saat hizası bozulmaz.
-    const yuzde = (dakika: number) => (dakika / span) * 100;
+    // DOĞRUSAL PİKSEL KONUMLAMA. Dakika → piksel tek bir ölçekten geçer; saat
+    // etiketleri de dilimler de AYNI fonksiyonu kullanır. Bu yüzden "13" etiketi
+    // neredeyse dilim tam oradan başlar, 90 dakikalıksa 14 ile 15'in tam
+    // ortasında biter — hiza matematiksel olarak garanti.
+    const px = (dakika: number) => (dakika / 60) * PX_SAAT;
 
-    // Saat çizgileri — pencere içindeki her tam saat.
+    // Saat çizgileri — pencere içindeki HER tam saat. Atlama yok: eskiden 12
+    // saatten uzun görünümde 2'de bir etiket basılıyordu, şerit "ikişer ikişer"
+    // görünüyor ve dilimlerle ilişkisi kopuyordu. Sabit ölçekte yer bol,
+    // etiketler üst üste binmiyor.
     const ilkSaat = Math.ceil(from / 60);
     const sonSaat = Math.floor(to / 60);
     const saatler: number[] = [];
     for (let h = ilkSaat; h <= sonSaat; h++) saatler.push(h * 60);
-    // Dar pencerede etiketler üst üste binmesin: 12 saatten uzun görünümde 2'de bir.
-    const etiketAdimi = span > 12 * 60 ? 2 : 1;
 
-    // "Aktif saatler" ekrana sığar (kaydırma yok); "Tüm saatler" yatay kaydırılır.
-    const seritStyle: React.CSSProperties = showAll
-        ? { width: `${Math.round((span / 60) * TUM_SAATLER_PX_SAAT)}px` }
-        : { width: '100%' };
-    const innerCls = showAll ? 'w-max' : 'w-full';
-    const seritCls = showAll ? 'shrink-0' : 'flex-1 min-w-0';
+    // Her iki kip de sabit genişlikte ve yatay kaydırılır (ferah görünüm).
+    const toplamPx = px(span);
+    const seritStyle: React.CSSProperties = { width: `${Math.round(toplamPx)}px` };
+    const innerCls = 'w-max';
+    const seritCls = 'shrink-0';
     // Saha adı sütunu yatay kaydırmada SABİT kalır (sticky) — hangi saha olduğu kaybolmaz.
     const nameColCls = 'sticky left-0 z-10 bg-[#161B22] w-14 shrink-0';
 
@@ -216,14 +223,16 @@ export const PitchOccupancyGrid: React.FC<{
                         <div className="flex gap-[2px] mb-1">
                             <div className={`${nameColCls} h-3`} />
                             <div className={`${seritCls} relative h-3`} style={seritStyle}>
-                                {saatler.map((dk, i) => {
-                                    if (i % etiketAdimi !== 0) return null;
-                                    const sol = yuzde(dk - from);
+                                {saatler.map((dk) => {
+                                    const sol = px(dk - from);
                                     return (
                                         <span
                                             key={dk}
-                                            className="absolute bottom-0 text-[9px] font-black text-gray-500 tabular-nums leading-none"
-                                            style={{ left: `${sol}%`, transform: sol < 2 ? 'none' : 'translateX(-50%)' }}
+                                            className="absolute bottom-0 text-[10px] font-black text-gray-500 tabular-nums leading-none"
+                                            // Etiket, temsil ettiği ANIN tam üstünde durur; dilim de
+                                            // aynı noktadan başlar. Sıfır noktasında sola taşmasın diye
+                                            // yalnız ilk etiket ortalanmaz.
+                                            style={{ left: `${sol}px`, transform: sol < 6 ? 'none' : 'translateX(-50%)' }}
                                         >
                                             {Math.floor((dk % 1440) / 60)}
                                         </span>
@@ -254,16 +263,21 @@ export const PitchOccupancyGrid: React.FC<{
                                             const label = `${row.courtName} · ${slot.startTime}-${slot.endTime}`;
                                             const title = `${label} · ${slot.minutes} dakika · ${typeLabel}${slot.cell?.name ? ` · ${slot.cell.name}` : ''}`;
                                             // Pencerenin dışına taşan dilim kırpılır (gece taşması "Tüm saatler"de görünür).
-                                            const sol = yuzde(slot.offsetMinutes - from);
-                                            const gen = yuzde(slot.minutes);
-                                            if (sol >= 100 || sol + gen <= 0) return null;
+                                            const sol = px(slot.offsetMinutes - from);
+                                            const gen = px(slot.minutes);
+                                            if (sol >= toplamPx || sol + gen <= 0) return null;
                                             return (
                                                 <button
                                                     type="button"
                                                     key={`${slot.offsetMinutes}-${slot.minutes}`}
                                                     onClick={() => setSelected({ label, sure: slot.minutes, type: typeLabel, name: slot.cell?.name ?? null })}
                                                     className={`absolute top-0 bottom-0 rounded-[4px] border transition-all duration-200 active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60 ${cls}`}
-                                                    style={{ left: `${Math.max(0, sol)}%`, width: `calc(${Math.min(gen, 100 - Math.max(0, sol))}% - 2px)` }}
+                                                    // Genişlik TAM süredir; kırpma dışında hiçbir şey düşülmez.
+                                                    // Eskiden 2px boşluk düşülüyordu ve oran bozuluyordu
+                                                    // (90/60 = 1,514 çıkıyordu, 1,5 değil). Komşu dilimler
+                                                    // artık kendi kenarlıklarıyla ayrılıyor: hem tam hizalı
+                                                    // hem birbirinden ayırt edilebilir.
+                                                    style={{ left: `${Math.max(0, sol)}px`, width: `${Math.max(0, Math.min(gen, toplamPx - Math.max(0, sol)))}px` }}
                                                     title={title}
                                                     aria-label={title}
                                                     data-slot-minutes={slot.minutes}
