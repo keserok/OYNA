@@ -554,19 +554,10 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack }) => {
           className="col-span-2 min-h-[176px] py-6 rounded-[32px] relative overflow-hidden group cursor-pointer border border-black/20"
           style={{ boxShadow: '0 0 60px rgba(250,204,21,0.35), 0 0 120px rgba(255,215,0,0.15), inset 0 1px 0 rgba(255,255,255,0.2)' }}
         >
-          {/* Sarı → Siyah ana gradient */}
-          <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, #FACC15 0%, #FFD700 25%, #FFC107 45%, #1a1600 75%, #000000 100%)' }} />
-          {/* Animated sweep — koyu tarafta neon yeşili vurgu */}
-          <motion.div
-            animate={{ backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'] }}
-            transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}
-            className="absolute inset-0 pointer-events-none opacity-40"
-            style={{ background: 'radial-gradient(ellipse at 80% 50%, rgba(57,255,20,0.25) 0%, transparent 60%)', backgroundSize: '200% 200%' }}
-          />
+          {/* Düz sarı zemin — sağ alt kararma kaldırıldı, parlaklık her yerde eşit */}
+          <div className="absolute inset-0" style={{ background: '#FACC15' }} />
           {/* Carbon texture */}
           <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-20 pointer-events-none" />
-          {/* Sol taraf sarı parlaması (metin bölgesi) */}
-          <div className="absolute inset-0 pointer-events-none" style={{ background: 'linear-gradient(90deg, rgba(250,204,21,0.15) 0%, transparent 50%)' }} />
           {/* Shimmer */}
           <motion.div
             className="absolute inset-0 pointer-events-none"
@@ -585,44 +576,14 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack }) => {
                 <span className="text-black text-[0.625rem] font-extrabold uppercase tracking-[0.3em]">MAÇ BUL</span>
               </div>
               <h2 className="text-4xl font-extrabold text-black italic uppercase leading-[0.85] tracking-tighter" style={{ textShadow: '0 2px 8px rgba(250,204,21,0.3)' }}>Top<br />Oyna</h2>
-              <p className="text-[0.6875rem] text-black/60 mt-2 font-bold">Hemen bir maça katıl ve oynamaya başla.</p>
+              <p className="text-[0.6875rem] text-black/60 mt-2 font-bold">Maça katıl ve oyna.</p>
             </div>
 
-            {/* OYNA LOGO — sağ taraf, siyah zemin üzerinde parlak sarı */}
-            <div className="absolute right-2 top-1/2 -translate-y-1/2 w-32 h-32 flex items-center justify-center">
-              {/* Arka plan disk — koyu kısım */}
-              <div className="absolute inset-0 rounded-full" style={{ background: 'radial-gradient(circle, #0A0E14 0%, #000000 100%)', boxShadow: '0 0 30px rgba(0,0,0,0.8), inset 0 0 20px rgba(0,0,0,0.5)' }} />
-              {/* Dış halka */}
-              <motion.div
-                animate={{ opacity: [0.4, 1, 0.4], scale: [1, 1.04, 1] }}
-                transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
-                className="absolute inset-0 rounded-full border-2"
-                style={{ borderColor: 'rgba(250,204,21,0.6)', boxShadow: '0 0 20px rgba(250,204,21,0.4), inset 0 0 10px rgba(250,204,21,0.1)' }}
-              />
-              {/* İkinci parlama halkası */}
-              <motion.div
-                animate={{ opacity: [0.1, 0.4, 0.1], scale: [1.05, 1.15, 1.05] }}
-                transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
-                className="absolute rounded-full border"
-                style={{ inset: '-6px', borderColor: 'rgba(250,204,21,0.2)' }}
-              />
-              {/* Rotate animasyonu ile logo */}
-              <motion.div
-                animate={{ rotate: [0, 4, -4, 0] }}
-                transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
-                className="relative z-10"
-              >
-                <OynaLogo
-                  width={82}
-                  height={82}
-                  animate={false}
-                  /* Kullanıcı kararı: ana sayfa kartları IP-09 öncesi renklerine
-                     döndürüldü. Logo eskiden bileşenin içinde sabit amber çiziliyordu;
-                     artık renk prop'tan geldiği için eski görünüm burada verilir. */
-                  color="#FFC107"
-                  className="drop-shadow-[0_0_16px_rgba(250,204,21,0.9)]"
-                />
-              </motion.div>
+            {/* OYNA LOGO — sağ taraf, buton renginde dolu daire içinde (Kaleci/Hakem stili) */}
+            <div className="absolute right-4 top-1/2 -translate-y-1/2 w-[110px] h-[110px] rounded-full flex items-center justify-center" style={{ background: 'rgba(0,0,0,.14)', border: '1.5px solid rgba(0,0,0,.3)' }}>
+              <div className="w-[72px] h-[72px] rounded-full flex items-center justify-center" style={{ background: 'rgba(0,0,0,.18)', border: '1px solid rgba(0,0,0,.4)' }}>
+                <OynaLogo width={44} height={44} animate={false} color="#000000" />
+              </div>
             </div>
           </div>
         </AnimatedButton>
@@ -637,19 +598,10 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack }) => {
           className="col-span-2 min-h-[176px] py-6 rounded-[32px] relative overflow-hidden group cursor-pointer border border-black/20"
           style={{ boxShadow: '0 0 60px rgba(16,185,129,0.35), 0 0 120px rgba(5,150,105,0.15), inset 0 1px 0 rgba(255,255,255,0.2)' }}
         >
-          {/* Yeşil → Siyah ana gradient */}
-          <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, #059669 0%, #10B981 25%, #34D399 45%, #022014 75%, #000000 100%)' }} />
-          {/* Animated sweep — koyu tarafta neon yeşil vurgu */}
-          <motion.div
-            animate={{ backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'] }}
-            transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}
-            className="absolute inset-0 pointer-events-none opacity-40"
-            style={{ background: 'radial-gradient(ellipse at 80% 50%, rgba(16,185,129,0.25) 0%, transparent 60%)', backgroundSize: '200% 200%' }}
-          />
+          {/* Düz yeşil zemin — sağ alt kararma kaldırıldı, parlaklık her yerde eşit */}
+          <div className="absolute inset-0" style={{ background: '#10B981' }} />
           {/* Carbon texture */}
           <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-20 pointer-events-none" />
-          {/* Sol taraf yeşil parlaması (metin bölgesi) */}
-          <div className="absolute inset-0 pointer-events-none" style={{ background: 'linear-gradient(90deg, rgba(16,185,129,0.15) 0%, transparent 50%)' }} />
           {/* Shimmer */}
           <motion.div
             className="absolute inset-0 pointer-events-none"
@@ -662,19 +614,19 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack }) => {
           <div className="absolute inset-0 pointer-events-none overflow-hidden">
             <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'repeating-linear-gradient(90deg, transparent, transparent 40px, rgba(0,0,0,0.15) 40px, rgba(0,0,0,0.15) 80px)' }}></div>
             <div className="absolute inset-0 w-full h-full opacity-15">
-              <svg viewBox="0 0 1050 680" preserveAspectRatio="xMidYMid slice" className="w-full h-full drop-shadow-[0_0_8px_rgba(16,185,129,0.4)]" xmlns="http://www.w3.org/2000/svg">
-                <g stroke="#10B981" strokeWidth="6" fill="none" strokeLinecap="round" strokeLinejoin="round">
+              <svg viewBox="0 0 1050 680" preserveAspectRatio="xMidYMid slice" className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+                <g stroke="#047857" strokeWidth="6" fill="none" strokeLinecap="round" strokeLinejoin="round">
                   <rect x="25" y="25" width="1000" height="630" />
                   <line x1="525" y1="25" x2="525" y2="655" />
                   <circle cx="525" cy="340" r="90" />
-                  <circle cx="525" cy="340" r="4" fill="#10B981" />
+                  <circle cx="525" cy="340" r="4" fill="#047857" />
                   <rect x="25" y="140" width="165" height="400" />
                   <rect x="25" y="240" width="55" height="200" />
-                  <circle cx="120" cy="340" r="4" fill="#10B981" />
+                  <circle cx="120" cy="340" r="4" fill="#047857" />
                   <path d="M 190 260 A 90 90 0 0 1 190 420" />
                   <rect x="860" y="140" width="165" height="400" />
                   <rect x="970" y="240" width="55" height="200" />
-                  <circle cx="930" cy="340" r="4" fill="#10B981" />
+                  <circle cx="930" cy="340" r="4" fill="#047857" />
                   <path d="M 860 260 A 90 90 0 0 0 860 420" />
                   <path d="M 65 25 A 40 40 0 0 0 25 65" />
                   <path d="M 25 615 A 40 40 0 0 0 65 655" />
@@ -698,35 +650,11 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack }) => {
               <p className="text-[0.6875rem] text-emerald-200/90 mt-2 font-bold">Çevrendeki müsait halı sahaları incele.</p>
             </div>
 
-            {/* Neon Harita Diski — sağ taraf, siyah zemin üzerinde parlak yeşil MapPin */}
-            <div className="absolute right-2 top-1/2 -translate-y-1/2 w-32 h-32 flex items-center justify-center">
-              {/* Arka plan disk — koyu kısım */}
-              <div className="absolute inset-0 rounded-full" style={{ background: 'radial-gradient(circle, #0A0E14 0%, #000000 100%)', boxShadow: '0 0 30px rgba(0,0,0,0.8), inset 0 0 20px rgba(0,0,0,0.5)' }} />
-              {/* Dış halka */}
-              <motion.div
-                animate={{ opacity: [0.4, 1, 0.4], scale: [1, 1.04, 1] }}
-                transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
-                className="absolute inset-0 rounded-full border-2"
-                style={{ borderColor: 'rgba(16,185,129,0.6)', boxShadow: '0 0 20px rgba(16,185,129,0.4), inset 0 0 10px rgba(16,185,129,0.1)' }}
-              />
-              {/* İkinci parlama halkası */}
-              <motion.div
-                animate={{ opacity: [0.1, 0.4, 0.1], scale: [1.05, 1.15, 1.05] }}
-                transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
-                className="absolute rounded-full border"
-                style={{ inset: '-6px', borderColor: 'rgba(16,185,129,0.2)' }}
-              />
-              {/* Salınım animasyonu ile MapPin */}
-              <motion.div
-                animate={{ rotate: [0, 4, -4, 0] }}
-                transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
-                className="relative z-10 text-[#10B981]"
-              >
-                <MapPin
-                  size={54}
-                  className="drop-shadow-[0_0_16px_rgba(16,185,129,0.9)]"
-                />
-              </motion.div>
+            {/* Harita Diski — sağ taraf, buton renginde dolu daire içinde (Kaleci/Hakem stili) */}
+            <div className="absolute right-4 top-1/2 -translate-y-1/2 w-[110px] h-[110px] rounded-full flex items-center justify-center" style={{ background: 'rgba(0,0,0,.14)', border: '1.5px solid rgba(0,0,0,.3)' }}>
+              <div className="w-[72px] h-[72px] rounded-full flex items-center justify-center text-white" style={{ background: 'rgba(0,0,0,.18)', border: '1px solid rgba(0,0,0,.4)' }}>
+                <MapPin size={32} />
+              </div>
             </div>
           </div>
         </AnimatedButton>
@@ -745,19 +673,10 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack }) => {
           className="col-span-2 min-h-[176px] py-6 rounded-[32px] relative overflow-hidden group cursor-pointer border border-black/20"
           style={{ boxShadow: '0 0 60px rgba(255,122,0,0.35), 0 0 120px rgba(255,92,0,0.15), inset 0 1px 0 rgba(255,255,255,0.2)' }}
         >
-          {/* Turuncu → Siyah ana gradient */}
-          <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, #FF7A00 0%, #FF5C00 25%, #E64A19 45%, #1a0a00 75%, #000000 100%)' }} />
-          {/* Animated sweep — koyu tarafta neon kırmızı/turuncu vurgu */}
-          <motion.div
-            animate={{ backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'] }}
-            transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}
-            className="absolute inset-0 pointer-events-none opacity-40"
-            style={{ background: 'radial-gradient(ellipse at 80% 50%, rgba(255,122,0,0.25) 0%, transparent 60%)', backgroundSize: '200% 200%' }}
-          />
+          {/* Düz turuncu zemin — sağ alt kararma kaldırıldı, parlaklık her yerde eşit */}
+          <div className="absolute inset-0" style={{ background: '#FF7A00' }} />
           {/* Carbon texture */}
           <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-20 pointer-events-none" />
-          {/* Sol taraf turuncu parlaması (metin bölgesi) */}
-          <div className="absolute inset-0 pointer-events-none" style={{ background: 'linear-gradient(90deg, rgba(255,122,0,0.15) 0%, transparent 50%)' }} />
           {/* Shimmer */}
           <motion.div
             className="absolute inset-0 pointer-events-none"
@@ -779,53 +698,32 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack }) => {
               <p className="text-[0.6875rem] text-black/60 mt-2 font-bold">Maçı organize et.</p>
             </div>
 
-            {/* Organizasyon Diski — sağ taraf, siyah zemin üzerinde parlak turuncu takvim + kalem */}
-            <div className="absolute right-2 top-1/2 -translate-y-1/2 w-32 h-32 flex items-center justify-center">
-              {/* Arka plan disk — koyu kısım */}
-              <div className="absolute inset-0 rounded-full" style={{ background: 'radial-gradient(circle, #0A0E14 0%, #000000 100%)', boxShadow: '0 0 30px rgba(0,0,0,0.8), inset 0 0 20px rgba(0,0,0,0.5)' }} />
-              {/* Dış halka */}
-              <motion.div
-                animate={{ opacity: [0.4, 1, 0.4], scale: [1, 1.04, 1] }}
-                transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
-                className="absolute inset-0 rounded-full border-2"
-                style={{ borderColor: 'rgba(255,122,0,0.6)', boxShadow: '0 0 20px rgba(255,122,0,0.4), inset 0 0 10px rgba(255,122,0,0.1)' }}
-              />
-              {/* İkinci parlama halkası */}
-              <motion.div
-                animate={{ opacity: [0.1, 0.4, 0.1], scale: [1.05, 1.15, 1.05] }}
-                transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
-                className="absolute rounded-full border"
-                style={{ inset: '-6px', borderColor: 'rgba(255,122,0,0.2)' }}
-              />
-              {/* Salınım animasyonu ile saha + takvim özel sembolü */}
-              <motion.div
-                animate={{ rotate: [0, 4, -4, 0] }}
-                transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
-                className="relative z-10 flex items-center justify-center"
-              >
-                <svg width="72" height="72" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ filter: 'drop-shadow(0 0 12px rgba(255,122,0,0.8))' }}>
+            {/* Organizasyon Diski — sağ taraf, buton renginde dolu daire içinde (Kaleci/Hakem stili) */}
+            <div className="absolute right-4 top-1/2 -translate-y-1/2 w-[110px] h-[110px] rounded-full flex items-center justify-center" style={{ background: 'rgba(0,0,0,.14)', border: '1.5px solid rgba(0,0,0,.3)' }}>
+              <div className="w-[72px] h-[72px] rounded-full flex items-center justify-center text-black" style={{ background: 'rgba(0,0,0,.18)', border: '1px solid rgba(0,0,0,.4)' }}>
+                <svg width="46" height="46" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
                   {/* ── SOL: Futbol Sahası ── */}
-                  <rect x="6" y="14" width="40" height="72" rx="3" stroke="#FF7A00" strokeWidth="2.2" />
+                  <rect x="6" y="14" width="40" height="72" rx="3" stroke="currentColor" strokeWidth="2.2" />
                   {/* Orta çizgi */}
-                  <line x1="6" y1="50" x2="46" y2="50" stroke="#FF7A00" strokeWidth="1.5" />
+                  <line x1="6" y1="50" x2="46" y2="50" stroke="currentColor" strokeWidth="1.5" />
                   {/* Orta daire */}
-                  <circle cx="26" cy="50" r="8" stroke="#FF7A00" strokeWidth="1.5" />
-                  <circle cx="26" cy="50" r="1.5" fill="#FF7A00" />
+                  <circle cx="26" cy="50" r="8" stroke="currentColor" strokeWidth="1.5" />
+                  <circle cx="26" cy="50" r="1.5" fill="currentColor" />
                   {/* Üst ceza sahası */}
-                  <rect x="14" y="14" width="24" height="14" rx="1" stroke="#FF7A00" strokeWidth="1.3" />
-                  <rect x="18" y="14" width="16" height="6" rx="1" stroke="#FF7A00" strokeWidth="1.1" />
+                  <rect x="14" y="14" width="24" height="14" rx="1" stroke="currentColor" strokeWidth="1.3" />
+                  <rect x="18" y="14" width="16" height="6" rx="1" stroke="currentColor" strokeWidth="1.1" />
                   {/* Alt ceza sahası */}
-                  <rect x="14" y="72" width="24" height="14" rx="1" stroke="#FF7A00" strokeWidth="1.3" />
-                  <rect x="18" y="80" width="16" height="6" rx="1" stroke="#FF7A00" strokeWidth="1.1" />
+                  <rect x="14" y="72" width="24" height="14" rx="1" stroke="currentColor" strokeWidth="1.3" />
+                  <rect x="18" y="80" width="16" height="6" rx="1" stroke="currentColor" strokeWidth="1.1" />
 
                   {/* ── SAĞ: Takvim ── */}
-                  <rect x="52" y="18" width="42" height="66" rx="4" stroke="#FF7A00" strokeWidth="2.2" />
+                  <rect x="52" y="18" width="42" height="66" rx="4" stroke="currentColor" strokeWidth="2.2" />
                   {/* Takvim üst bar */}
-                  <line x1="52" y1="30" x2="94" y2="30" stroke="#FF7A00" strokeWidth="1.8" />
+                  <line x1="52" y1="30" x2="94" y2="30" stroke="currentColor" strokeWidth="1.8" />
                   {/* Takvim askıları */}
-                  <line x1="62" y1="13" x2="62" y2="22" stroke="#FF7A00" strokeWidth="2" strokeLinecap="round" />
-                  <line x1="73" y1="13" x2="73" y2="22" stroke="#FF7A00" strokeWidth="2" strokeLinecap="round" />
-                  <line x1="84" y1="13" x2="84" y2="22" stroke="#FF7A00" strokeWidth="2" strokeLinecap="round" />
+                  <line x1="62" y1="13" x2="62" y2="22" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                  <line x1="73" y1="13" x2="73" y2="22" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                  <line x1="84" y1="13" x2="84" y2="22" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
                   {/* Takvim grid — 5x4 kutucuk */}
                   {[0, 1, 2, 3, 4].map(row => (
                     [0, 1, 2, 3].map(col => (
@@ -837,13 +735,13 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack }) => {
                         height={6}
                         rx={1.2}
                         fill="none"
-                        stroke="#FF7A00"
+                        stroke="currentColor"
                         strokeWidth="1.2"
                       />
                     ))
                   ))}
                 </svg>
-              </motion.div>
+              </div>
             </div>
           </div>
         </AnimatedButton>
@@ -944,7 +842,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack }) => {
           <div className="absolute inset-0 p-4 flex items-center justify-between">
             <div className="flex flex-col justify-center h-full gap-2">
               <h3 className="text-[1.625rem] font-extrabold italic leading-[.92] tracking-tighter uppercase text-white">Kaleci<br />Bul</h3>
-              <span className="text-[0.6875rem] font-bold text-ink-4">Kaleni sağlama al.</span>
+              <span className="text-[0.6875rem] font-bold text-ink-4">Kaleni koru.</span>
             </div>
             <div className="w-[90px] h-[90px] rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(57,255,20,.1)', border: '1.5px solid rgba(57,255,20,.35)' }}>
               <div className="w-[60px] h-[60px] rounded-full flex items-center justify-center" style={{ background: 'rgba(57,255,20,.15)', border: '1px solid rgba(57,255,20,.5)', color: '#39FF14' }}>

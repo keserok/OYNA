@@ -91,10 +91,10 @@ Ana Sayfa'nın üstünde: sol üstte avatarın (Profil'e gider), sağ üstte **R
 Ana kartlar yukarıdan aşağıya:
 
 - **MAÇLARIM** — maç ve rezervasyon ajandan ("Sıradaki: …" altyazısıyla).
-- **TOP OYNA** — "MAÇ BUL / Hemen bir maça katıl".
+- **TOP OYNA** — "MAÇ BUL / Maça katıl ve oyna".
 - **SAHA VİTRİNİ** — "REZERVASYON / Çevrendeki müsait halı sahaları incele".
 - **MAÇ OLUŞTUR** — "ORGANİZASYON / Maçı organize et".
-- **KALECİ BUL** — "Kaleni sağlama al." · **HAKEM KİRALA** — "Adil oyna."
+- **KALECİ BUL** — "Kaleni koru." · **HAKEM KİRALA** — "Adil oyna."
 - **TAKTİK STÜDYO** — "STRATEJİ & ANALİZ". (Stüdyo'nun alt menüde sekmesi yoktur; buradan girilir.)
 
 ## 4. Maça Katıl
