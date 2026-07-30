@@ -130,6 +130,8 @@ export const UserProfileMirror: React.FC<Props> = ({ userId, onUpdated }) => {
         bio: v.bio,
         birthdate: v.birthdate || '',
         gender: v.gender || '',
+        // self_skill BILEREK gonderilmez: oyuncunun kendi beyani, admin
+        // degistirmez (sheet'te salt-okunur gosterilir).
         play_style: v.playStyle || '',
         ...(v.avatarUrl && v.avatarUrl !== profile?.avatar_url ? { avatar_url: v.avatarUrl } : {}),
       }, 'Profil güncellendi (denetime yazıldı)');
@@ -416,10 +418,12 @@ export const UserProfileMirror: React.FC<Props> = ({ userId, onUpdated }) => {
           gender: profile.gender || '',
           playStyle: profile.playStyle || '',
           avatarUrl: profile.avatar_url || '',
+          selfSkill: (profile as { selfSkill?: number | null }).selfSkill ?? null,
         }}
         saving={sheetSaving}
         onSave={handleSheetSave}
         onClose={() => setSheetOpen(false)}
+        selfSkillEditable={false}
       />
 
       {/* ═══ Ledger'lı bakiye düzeltme ═══ */}

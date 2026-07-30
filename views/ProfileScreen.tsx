@@ -119,6 +119,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate,
                 birthdate: v.birthdate || null,
                 gender: v.gender || null,
                 play_style: v.playStyle || null,
+                self_skill: v.selfSkill,
                 ...(v.avatarUrl && v.avatarUrl !== profile?.avatar_url ? { avatar_url: v.avatarUrl } : {}),
             });
             // MOB-S4: Ana sayfa sol üst avatar (UserAvatar) store'daki oturum
@@ -311,6 +312,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate,
                     gender: profile?.gender || '',
                     playStyle: profile?.playStyle || '',
                     avatarUrl: profile?.avatar_url || '',
+                    selfSkill: profile?.selfSkill ?? null,
                 }}
                 saving={savingEdit}
                 onSave={saveEdit}

@@ -35,6 +35,9 @@ export interface OnboardingDraft {
   gender: Gender;
   position: OnboardingPosition;
   playStyle: PlayStyle;
+  /** Beyan edilen seviye (1–10). Profil tamamlanırken ZORUNLU; dönüşüm kuralı
+   *  utils/skillBand.ts'te tek kaynaktan gelir. */
+  selfSkill: number | null;
   locationGranted: boolean;
   completedAt: number;
 }

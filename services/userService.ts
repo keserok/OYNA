@@ -43,6 +43,9 @@ export interface OynaUser {
   ageRange?: string | null;
   gender?: string | null;
   playStyle?: string | null;
+  /** Beyan edilen seviye (1–10). Kamusal seviye bandının tek kaynağı;
+   *  dönüşüm utils/skillBand.ts'te. NULL = beyan yok → çip çizilmez. */
+  selfSkill?: number | null;
   firstName?: string | null;
   lastName?: string | null;
   /** Reşit olmayan kullanıcı mı? (sunucuda birthdate/age_range'ten hesaplanır) */
@@ -156,6 +159,7 @@ export const syncUserToSupabase = async (supabaseUser: User | null): Promise<Oyn
         ageRange: userSnap.age_range ?? null,
         gender: userSnap.gender ?? null,
         playStyle: userSnap.play_style ?? null,
+        selfSkill: userSnap.self_skill ?? null,
         firstName: userSnap.first_name ?? null,
         lastName: userSnap.last_name ?? null,
         isMinor: userSnap.is_minor ?? false,
@@ -270,6 +274,7 @@ export const getFullUserProfile = async (userId: string): Promise<OynaUser | nul
     ageRange: data.age_range ?? null,
     gender: data.gender ?? null,
     playStyle: data.play_style ?? null,
+    selfSkill: data.self_skill ?? null,
     firstName: data.first_name ?? null,
     lastName: data.last_name ?? null,
     isMinor: data.is_minor ?? false,
@@ -283,7 +288,7 @@ export const getFullUserProfile = async (userId: string): Promise<OynaUser | nul
 /** Sade profil "Profili Düzenle": mevki/bio/avatar/doğum tarihi/cinsiyet/oyun stili günceller (kullanıcının kendi satırı). */
 export const updateProfileBasics = async (
   userId: string,
-  fields: { position?: string; bio?: string; avatar_url?: string; birthdate?: string | null; gender?: string | null; play_style?: string | null },
+  fields: { position?: string; bio?: string; avatar_url?: string; birthdate?: string | null; gender?: string | null; play_style?: string | null; self_skill?: number | null },
 ): Promise<void> => {
   const { error } = await supabase.from('profiles').update(fields).eq('id', userId);
   if (error) throw error;
