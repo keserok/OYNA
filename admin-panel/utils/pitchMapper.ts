@@ -34,16 +34,17 @@ export function mapAdminPitchRowToUi(row: AdminPitchRow): Pitch {
         ? { lat: row.latitude, lng: row.longitude }
         : undefined,
     slots: [],
-    isApproved: row.verification_status === 'approved',
+    isPublished: row.is_published,
     ...(row.isDemo ? { isDemo: true } as { isDemo?: boolean } : {}),
   };
 }
 
-export type PitchStatusFilter = 'ALL' | 'approved' | 'pending' | 'rejected';
+// IP-22: tesis onayı diye bir kavram yok. Süzgeç artık VİTRİN durumudur:
+// tesis oyuncuya görünüyor mu, yoksa gizli mi.
+export type PitchStatusFilter = 'ALL' | 'published' | 'hidden';
 
 export const PITCH_STATUS_FILTERS: Array<{ id: PitchStatusFilter; label: string }> = [
   { id: 'ALL', label: 'Tümü' },
-  { id: 'approved', label: 'Onaylı' },
-  { id: 'pending', label: 'Bekleyen' },
-  { id: 'rejected', label: 'Reddedilen' },
+  { id: 'published', label: 'Vitrinde' },
+  { id: 'hidden', label: 'Gizli' },
 ];

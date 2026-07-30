@@ -49,6 +49,7 @@ import {
 } from '../shared/pitchShowcaseMapper';
 import { PitchShowcaseCard, SafeImage, FavStar } from '../components/pitch-showcase/PitchShowcaseCard';
 import { trUpper } from '../utils/trUpper';
+import { ActionSheet } from '../components/ui/ActionSheet';
 import { formatTRYShort } from '../utils/formatTRY';
 
 interface MapViewProps {
@@ -532,7 +533,6 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
       const pitchRes = await supabase
         .from('pitches')
         .select(PITCH_SHOWCASE_SELECT)
-        .eq('verification_status', 'approved')
         .eq('is_open', true)
         .eq('is_published', true);
 
@@ -1060,12 +1060,27 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
     navigateTo('PAYMENT');
   };
 
-  const handleReportContent = async () => {
+  // IP-23: burada `window.prompt` açılıyordu. iOS WKWebView'de prompt
+  // güvenilir değildir (bazı sürümlerde hiç açılmaz, açılınca da markadan
+  // tamamen kopuk görünür) ve dönen metin doğrudan sunucuya gidiyordu.
+  // Yerine klavye-farkındalıklı bir sheet + çok satırlı alan kondu.
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportText, setReportText] = useState('');
+  const [reportBusy, setReportBusy] = useState(false);
+
+  const handleReportContent = () => {
     if (!selectedPitch) return;
-    const reason = window.prompt('Bu tesisin içeriğinde (fotoğraf/açıklama) sorun mu var? Kısaca belirt:');
-    if (!reason?.trim()) return;
+    setReportText('');
+    setReportOpen(true);
+  };
+
+  const submitReport = async () => {
+    const reason = reportText.trim();
+    if (!selectedPitch || reason.length < 3 || reportBusy) return;
+    setReportBusy(true);
     try {
-      await reportPitchContent(selectedPitch.id, reason.trim(), selectedPitch.ownerId);
+      await reportPitchContent(selectedPitch.id, reason, selectedPitch.ownerId);
+      setReportOpen(false);
       addUserNotification({
         id: `report-${Date.now()}`,
         title: 'Bildirim Alındı',
@@ -1078,6 +1093,8 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
       });
     } catch {
       showActionError('Bildirim gönderilemedi. Lütfen tekrar dene.');
+    } finally {
+      setReportBusy(false);
     }
   };
 
@@ -2162,6 +2179,40 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
       <AnimatePresence>
         {actionError && <Toast message={actionError} variant="error" />}
       </AnimatePresence>
+
+      {/* IP-23 — içerik bildirimi. `window.prompt` yerine klavye-farkındalıklı
+          sheet: ActionSheet visualViewport ile klavyenin üstüne kalkar, yani
+          "Gönder" tuşu klavyenin arkasında kalmaz. */}
+      <ActionSheet
+        open={reportOpen}
+        onClose={() => setReportOpen(false)}
+        title="İçerik bildir"
+        subtitle={selectedPitch?.name}
+        ariaLabel="Tesis içeriği bildirimi"
+        footer={
+          <button
+            onClick={() => { void submitReport(); }}
+            disabled={reportText.trim().length < 3 || reportBusy}
+            className="w-full min-h-12 rounded-2xl bg-[#39FF14] text-[#0A0E14] font-extrabold text-sm disabled:opacity-40 active:scale-[0.98] transition-all"
+          >
+            {reportBusy ? 'Gönderiliyor…' : 'Bildirimi gönder'}
+          </button>
+        }
+      >
+        <p className="text-[0.8125rem] text-gray-400 leading-relaxed mb-3">
+          Bu tesisin fotoğrafında veya açıklamasında bir sorun mu var? Kısaca yaz —
+          moderasyon ekibi bakacak.
+        </p>
+        <textarea
+          value={reportText}
+          onChange={(e) => setReportText(e.target.value.slice(0, 500))}
+          rows={4}
+          autoFocus
+          placeholder="Örnek: Fotoğraflar bu sahaya ait değil."
+          className="w-full rounded-2xl bg-white/[0.04] border border-white/10 px-4 py-3 text-sm text-white placeholder:text-ink-4 outline-none focus:border-[#39FF14]/40 resize-none"
+        />
+        <p className="text-[0.6875rem] text-ink-4 mt-2 text-right">{reportText.trim().length}/500</p>
+      </ActionSheet>
 
     </div>
   );

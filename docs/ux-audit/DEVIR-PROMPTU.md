@@ -48,16 +48,22 @@ Lansman öncesi UX/UI denetim planının kalan iş paketlerini uygulayacaksın.
 
 ## BUGÜNKÜ DURUM
 
-Dal, `origin/main`'in **düz devamı** (fast-forward, 0 commit geride). Birleştirme
-gerekmiyor; bugün main'e sorunsuz akar.
+`origin/main` dala **birleştirildi** (0 commit geride, çakışma yok); bugün
+main'e sorunsuz akar.
+
+> ⚠️ **Göç sürüm çakışması yaşandı, tekrarlamasın.** main'de `20260831000000`
+> önekli bir göç vardı ve IP-22 göçü de aynı numarayı taşıyordu. Aynı sürümü
+> taşıyan iki dosyadan biri sessizce atlanır. IP-22 göçü `20260831000009`'a
+> alındı. **Yeni göç yazmadan önce `ls supabase/migrations | tail` ile son
+> numaraya bak; main ilerlediyse tekrar bak.**
 
 **Yeşil taban — her paketten sonra dördü de geçmeli:**
 
 | Komut | Beklenen |
 |---|---|
 | `npx tsc --noEmit` | 0 hata |
-| `npx vitest run` | 1056 test / 79 dosya, sıfır başarısız |
-| `npm run test:visual` | 24/24 |
+| `npm run test:unit` | 1283 test / 92 dosya, sıfır başarısız |
+| `npm run test:visual` | 40/40 |
 | `npm run build` | başarılı |
 
 > ⚠️ **GÖRSEL TEST "24/24" DEĞİŞMEDİ DEMEK DEĞİLDİR.** Karşılaştırmanın
@@ -89,13 +95,30 @@ IP-07 (tesis sahibi para dürüstlüğü) · IP-08 (tipografi/kontrast/font) ·
 **IP-15 (kayıt kapısı, oturum, yasal onay)** ·
 **IP-16 (tanıtım akışı ve konum tek yolu)** · **IP-18 (profil doğruluğu)** ·
 **IP-19 (para biçimi ve bakiye tekliği)** · IP-20 (bilet çevrimdışı) ·
+**IP-22 (onay sisteminin ve tesis başvurusunun kaldırılması + yönetici
+panelinden tesis yetkilileri)** ·
+**IP-23 (Stüdyo, formasyon verisi, yerel diyaloglar)** ·
 S-serisi kararların tamamı.
 
-### Kalan paketler — önerilen sıra
+### Kalan iş
 
-| Sıra | Paket | Not |
+Denetim planının 23 paketinin 21'i kapandı. Kalan iki paket **kullanıcı kararıyla
+ertelenmiştir**; sırası geldiğinde kullanıcıya sorularak açılır:
+
+| Paket | Konu | Durum |
 |---|---|---|
-| 1+ | IP-22, IP-23 (+IP-21/IP-17 ertelendi) | |
+| IP-17 | Sosyal davet mekanizması uçtan uca (lobi daveti, dürtme, maç sohbeti) | Ertelendi |
+| IP-21 | Tesis sahibi takvim ve rezervasyon yönetimi eksikleri | Ertelendi |
+
+Plan dışı, kullanıcının ayrıca istediği iki iş de açık: telefona bildirim (aşağıda)
+ve tesise özel QR kodlu afiş.
+
+> **QR kodlu afiş — ölçüldü, YOK.** Kaldırılan tesis başvuru ekranında
+> "QR kodlu afişiniz hazır · İndir (PDF)" yazan bir kart vardı; butonun hiçbir
+> davranışı tanımlı değildi ve uygulamanın hiçbir yerinde tesis afişi üreten kod
+> yok. `qrcode` paketi kurulu ve `views/MatchTicket.tsx`'te maç bileti için
+> gerçekten kullanılıyor — tesis afişi bu altyapıyla sıfırdan yazılabilir.
+> Kullanıcı "yok olmasın" dedi; yapılacak iş **yeni özellik geliştirmektir**.
 
 ### ⏳ AÇIK İŞ — telefona bildirim (kullanıcı isteği, HENÜZ YAPILMADI)
 
@@ -104,6 +127,37 @@ gelmesini sağla"** (push notification). Bu iş IP-12/IP-14 kapsamında DEĞİLD
 yapılmadı. Başlamadan önce `notifications/pushService.ts`, Supabase'de token
 tablosu, sunucu tarafı gönderim (edge function/cron) ve native yapılandırma
 (google-services.json / APNs) ölçülmeli — büyük ihtimalle sıfırdan iş.
+
+### IP-23 kararları (kullanıcı, bu oturumda)
+
+> ⚠️ **Planın önerdiği komut mevcut bir dosyayı SİLECEKTİ.** Plan
+> `git mv views/owner/components/IconButton.tsx components/ui/IconButton.tsx`
+> diyor ama `components/ui/IconButton.tsx` **zaten vardı ve farklıydı**
+> (71 vs 48 satır). Komut çalıştırılsaydı oyuncu tarafının butonu sessizce yok
+> olurdu. Tesis sahibininki `components/ui/OwnerIconButton.tsx` adıyla taşındı
+> (karar 20a); iki dosya da yaşıyor.
+
+- **TESİS PANELİNE HİÇ DOKUNULMADI** (kullanıcı kuralı: "tesis panelinin ui
+  kısmını bozma"). Ortak sheet/onay kodu `components/ui/` altına taşındı, eski
+  yollara **tek satırlık yönlendirme** bırakıldı. Böylece tesis panelindeki 10
+  dosyanın import satırları bile değişmedi — `git diff` orada **boş**.
+  Gerekçe: **görsel testler tesis panelinin hiçbir ekranını kapsamıyor**
+  (24 testin 0'ı), yani orada yapılacak bir hatayı hiçbir test yakalayamazdı.
+- **Formasyon verisi:** 22 formasyonun 3'ü adıyla çelişiyordu. En kötüsü
+  `3v3 · 2-0-1` — adı forvet vaat ediyordu ama **forvet slotu yoktu**, kadrodaki
+  forvet sahaya hiç giremiyordu. Üçü düzeltildi:
+  `2v2 1-0-1 → 0-0-1`, `3v3 1-1-1 → 0-1-1`, `3v3 2-0-1 → 1-0-1` (+ FWD slotu).
+  Kanonik kural `tests/unit/formations.test.ts` ile **22/22** kilitli.
+  Canlıda 4 taktik var, hepsi `2-3-1` — kimsenin kaydı bozulmadı; yine de
+  `resolveFormation()` eski adları çeviriyor (karar 22a).
+- **Oyuncu Seç paneli** artık seçimden sonra kapanmıyor, sıradaki boş mevkiye
+  geçiyor; arama ve grup filtresi korunuyor (sıfırlama kapanışa taşındı).
+  Hat eşleşmesi `posToLine`'dan geçiyor — eskiden ham `player.role` ('ST') slot
+  rolüyle ('FWD') karşılaştırılıyordu, hiç tutmuyordu.
+- **Üç yerel diyalog da kalktı** (karar 23a): Stüdyo plan silme →
+  `useConfirmSheet`; tesis şikâyeti → klavye-farkındalıklı `ActionSheet` +
+  `<textarea>`; `useOwnerEntitlements`'ta `notify` **zorunlu** oldu (opsiyonel
+  kaldıkça yeni her çağrı sessizce `alert`e düşebilirdi).
 
 ### IP-16 · IP-18 kararları (kullanıcı, bu oturumda)
 
@@ -123,9 +177,15 @@ tablosu, sunucu tarafı gönderim (edge function/cron) ve native yapılandırma
   `setActiveRegion` ile **kalıcı** olur. Konum kapalıysa **kayıtlı bölge
   hatırlatılır** (kullanıcı kararı).
 - Red ekranda **kalıcı**: `denied` / `blocked` / `timeout` / `unavailable`
-  dördü ayrı metin. Kalıcı engelde "Tekrar Dene" **çizilmez** (çalışmazdı);
-  ayarları açan bir tuş da **eklenmedi** — `capacitor-native-settings` kurulu
-  değil, ölü tuş koymak yerine ne yapılacağı adım adım yazıyor.
+  dördü ayrı metin. Kalıcı engelde "Tekrar Dene" **çizilmez** (çalışmazdı).
+- **"Ayarları Aç" tuşu EKLENDİ** (kullanıcı isteği, sonradan).
+  `capacitor-native-settings@8.1.0` kuruldu; `locationService.openAppSettings()`
+  iki platformda da uygulama ayarları ekranını açar. Tuş yalnız native'de
+  çizilir (`canOpenAppSettings()`), web'de böyle bir ekran olmadığı için metin
+  yol gösterir. Aynı tuş bildirim merkezindeki kalıcı uyarıda da var.
+  > ⚠️ **`npx cap sync ios && npx cap sync android` gerekiyor** — yeni native
+  > eklenti eklendi, sync yapılmadan native derleme onu görmez. Bu ortamda
+  > çalıştırılamadı.
 - **Bildirim merkezinde kalıcı hatırlatma** (kullanıcı kararı). Sunucudan
   gerçek bildirim GÖNDERİLMİYOR: tekrar eden bildirim spam olur ve geri
   alınamaz (CLAUDE.md §5). İzin verilir verilmez kendiliğinden kaybolur.

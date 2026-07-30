@@ -126,9 +126,10 @@ describe('Studio — Oyuncu Seç (yenilenen)', () => {
     fireEvent.change(searchBox(), { target: { value: 'Miraç Kerem' } });
     fireEvent.click(screen.getByText(/adıyla manuel ekle/).closest('button')!);
 
-    // Modal kapanır, oyuncu sahaya iner
-    await waitFor(() => expect(screen.queryByText(/mevkisi için seç/)).not.toBeInTheDocument());
-    expect(screen.getAllByText('Miraç Kerem').length).toBeGreaterThan(0);
+    // IP-23 · karar 21a: panel KAPANMAZ, sıradaki boş mevkiye geçer.
+    // (Eskiden her seçimde kapanıyor, arama kutusu da siliniyordu.)
+    await waitFor(() => expect(screen.getAllByText('Miraç Kerem').length).toBeGreaterThan(0));
+    expect(screen.getByText(/mevkisi için seç/), 'panel açık kalmalı').toBeInTheDocument();
     // Manuel rozeti (Oyuncular listesi) — mor HAYALİ öldü
     expect(screen.getByText('MANUEL')).toBeInTheDocument();
     expect(screen.queryByText('HAYALİ')).not.toBeInTheDocument();
@@ -138,9 +139,8 @@ describe('Studio — Oyuncu Seç (yenilenen)', () => {
     renderStudio();
     openFirstSlotModal();
     fireEvent.click((await screen.findByText('Ayşe Kaya')).closest('button')!);
-    await waitFor(() => expect(screen.queryByText(/mevkisi için seç/)).not.toBeInTheDocument());
-
-    openFirstSlotModal(); // sıradaki boş mevki
+    // IP-23 · karar 21a: panel açık kalır ve sıradaki boş mevkiye kendiliğinden
+    // geçer — kullanıcının paneli yeniden açmasına gerek yok.
     await screen.findByText('Deniz Ak');
     const ayseRow = screen.getAllByText('Ayşe Kaya').map(el => el.closest('button')).find(b => b && b.disabled);
     expect(ayseRow).toBeTruthy();

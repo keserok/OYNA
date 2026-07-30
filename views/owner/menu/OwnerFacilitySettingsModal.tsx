@@ -4,8 +4,8 @@
  *  - Olanaklar: ikonlu standart katalog + özel girdi
  *  - Konum: sürüklenebilir harita pini (lat/lng)
  *  - Vitrin: yayın anahtarı + Vitrin Skoru + analitik + oyuncu gözüyle önizleme
- * Onaylı tesiste ad/konum değişikliği doğrudan yazılamaz (DB trigger korumalı);
- * değişiklik talebi olarak admin onayına gönderilir.
+ * Tesis kimliği (ad/konum) sahibi tarafından doğrudan yazılamaz (DB trigger
+ * korumalı); değişiklik talebi olarak yöneticiye gönderilir.
  */
 import React, { useEffect, useMemo, useState } from 'react';
 import { AlertCircle, Check, Clock, Eye, MapPin } from 'lucide-react';
@@ -106,7 +106,6 @@ export const OwnerFacilitySettingsModal: React.FC<Props> = ({
   const [latLng, setLatLng] = useState<[number, number] | null>(null);
   const [origin, setOrigin] = useState<{ name: string; city: string; district: string; address: string; lat: number | null; lng: number | null } | null>(null);
   const [isPublished, setIsPublished] = useState(true);
-  const [verificationStatus, setVerificationStatus] = useState<'pending' | 'approved' | 'rejected'>(initialData?.verificationStatus ?? 'pending');
   const [hasPendingRequest, setHasPendingRequest] = useState(false);
   // Faz 2 · konum: geocoding + il/ilçe listesi + pin→adres önerisi
   const [geocoding, setGeocoding] = useState(false);
@@ -138,7 +137,7 @@ export const OwnerFacilitySettingsModal: React.FC<Props> = ({
     if (!isRealPitch) return;
     supabase
       .from('pitches')
-      .select('name, city, district, address, latitude, longitude, is_published, verification_status, description, amenities')
+      .select('name, city, district, address, latitude, longitude, is_published, description, amenities')
       .eq('id', facilityId)
       .single()
       .then(({ data }) => {
@@ -161,7 +160,6 @@ export const OwnerFacilitySettingsModal: React.FC<Props> = ({
         });
         if (data.latitude != null && data.longitude != null) setLatLng([data.latitude, data.longitude]);
         setIsPublished(data.is_published !== false);
-        setVerificationStatus((data.verification_status as typeof verificationStatus) ?? 'pending');
       });
     fetchPendingChangeRequests(facilityId)
       .then((reqs) => setHasPendingRequest(reqs.length > 0))
@@ -235,7 +233,9 @@ export const OwnerFacilitySettingsModal: React.FC<Props> = ({
     (latLng ? latLng[0] !== origin.lat || latLng[1] !== origin.lng : false)
   );
 
-  const requiresApproval = verificationStatus === 'approved';
+  // Tesis kimliği (ad/konum) HER ZAMAN yönetici onayından geçer — sunucudaki
+  // koruma tetikleyicisi sahibin doğrudan yazmasına izin vermiyor.
+  const requiresApproval = true;
 
   const handleTogglePublished = async () => {
     if (!isRealPitch) return;
@@ -275,33 +275,17 @@ export const OwnerFacilitySettingsModal: React.FC<Props> = ({
         });
 
         if (identityChanged) {
-          if (requiresApproval) {
-            // Onaylı tesis: ad/konum admin onayına gider (Karar #4)
-            await submitPitchIdentityChange(facilityId, {
-              name: name.trim() !== origin!.name ? name.trim() : undefined,
-              city: city.trim() !== (origin!.city ?? '') ? city.trim() : undefined,
-              district: district.trim() !== (origin!.district ?? '') ? district.trim() : undefined,
-              address: address.trim() !== (origin!.address ?? '') ? address.trim() : undefined,
-              latitude: latLng && latLng[0] !== origin!.lat ? latLng[0] : undefined,
-              longitude: latLng && latLng[1] !== origin!.lng ? latLng[1] : undefined,
-            });
-            setHasPendingRequest(true);
-            notify('Ad/konum değişikliği admin onayına gönderildi. Onaylanınca vitrine yansır.', 'success');
-          } else {
-            // Henüz onaylanmamış tesis: serbest düzenleme
-            await updatePitchProfile(facilityId, {
-              name: name.trim(),
-              city: city.trim() || undefined,
-              district: district.trim() || undefined,
-              address: address.trim() || undefined,
-            });
-            if (latLng) {
-              await supabase
-                .from('pitches')
-                .update({ latitude: latLng[0], longitude: latLng[1] })
-                .eq('id', facilityId);
-            }
-          }
+          // Ad/konum yönetici onayına gider (Karar #4)
+          await submitPitchIdentityChange(facilityId, {
+            name: name.trim() !== origin!.name ? name.trim() : undefined,
+            city: city.trim() !== (origin!.city ?? '') ? city.trim() : undefined,
+            district: district.trim() !== (origin!.district ?? '') ? district.trim() : undefined,
+            address: address.trim() !== (origin!.address ?? '') ? address.trim() : undefined,
+            latitude: latLng && latLng[0] !== origin!.lat ? latLng[0] : undefined,
+            longitude: latLng && latLng[1] !== origin!.lng ? latLng[1] : undefined,
+          });
+          setHasPendingRequest(true);
+          notify('Ad/konum değişikliği yöneticiye gönderildi. Onaylanınca vitrine yansır.', 'success');
         }
       }
       onSave({
@@ -315,7 +299,7 @@ export const OwnerFacilitySettingsModal: React.FC<Props> = ({
       });
       setScoreRefresh((v) => v + 1);
       notify('Tesis ayarları kaydedildi.', 'success');
-      if (!identityChanged || !requiresApproval) onClose();
+      if (!identityChanged) onClose();
     } catch (err) {
       notify(toTurkishError(err), 'error');
     } finally {
@@ -452,17 +436,6 @@ export const OwnerFacilitySettingsModal: React.FC<Props> = ({
               />
             ) : (
               <p className="text-xs text-gray-500">Fotoğraf yüklemek için tesisinizin kaydı tamamlanmalı.</p>
-            )}
-
-            {verificationStatus !== 'approved' && (
-              <div className="bg-amber-500/10 border border-amber-500/20 p-4 rounded-2xl flex items-start gap-3">
-                <AlertCircle size={18} className="text-amber-400 shrink-0 mt-0.5" />
-                <p className="text-xs text-amber-200">
-                  Tesis doğrulama durumu:{' '}
-                  <strong>{verificationStatus === 'pending' ? 'İnceleniyor' : 'Reddedildi'}</strong>.
-                  Onay sonrası oyuncular tesisinizi görebilir.
-                </p>
-              </div>
             )}
           </div>
         )}

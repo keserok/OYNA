@@ -80,7 +80,7 @@ export interface BasicMatchRecord {
 export type Match = BasicMatchRecord;
 
 
-export type AppView = 'SPLASH' | 'AUTH' | 'LOCATION_PROMPT' | 'ROLE_SELECTION' | 'PENDING_VERIFICATION' | 'DASHBOARD' | 'PITCH_DISCOVERY' | 'MY_MATCHES' | 'MARKETPLACE_REF' | 'MARKETPLACE_GK' | 'MY_LISTINGS' | 'LISTING_DETAILS' | 'PAYMENT' | 'MY_TEAM' | 'PROFILE' | 'NOTIFICATIONS' | 'SETTINGS' | 'MATCH_DISCOVERY' | 'MATCH_JOIN' | 'MATCH_TICKET' | 'POST_MATCH' | 'MATCH_DIARY_DETAIL' | 'STUDIO' | 'WALLET' | 'OPPONENT_FINDER' | 'ADMIN_PANEL' | 'SOCIAL' | 'FRIEND_ADD' | 'POST_MATCH_EVAL' | 'MATCH_CREATE' | 'SERVICE_DASHBOARD' | 'OWNER_PANEL' | 'QR_SCANNER' | 'PARTNER_ONBOARDING' | 'SERVICE_APPLICATION' | 'LEGAL' | 'MESSAGES' | 'ONBOARDING' | 'GUARDIAN_CHILD' | 'GUARDIAN_FORM';
+export type AppView = 'SPLASH' | 'AUTH' | 'LOCATION_PROMPT' | 'ROLE_SELECTION' | 'PENDING_VERIFICATION' | 'DASHBOARD' | 'PITCH_DISCOVERY' | 'MY_MATCHES' | 'MARKETPLACE_REF' | 'MARKETPLACE_GK' | 'MY_LISTINGS' | 'LISTING_DETAILS' | 'PAYMENT' | 'MY_TEAM' | 'PROFILE' | 'NOTIFICATIONS' | 'SETTINGS' | 'MATCH_DISCOVERY' | 'MATCH_JOIN' | 'MATCH_TICKET' | 'POST_MATCH' | 'MATCH_DIARY_DETAIL' | 'STUDIO' | 'WALLET' | 'OPPONENT_FINDER' | 'ADMIN_PANEL' | 'SOCIAL' | 'FRIEND_ADD' | 'POST_MATCH_EVAL' | 'MATCH_CREATE' | 'SERVICE_DASHBOARD' | 'OWNER_PANEL' | 'QR_SCANNER' | 'SERVICE_APPLICATION' | 'LEGAL' | 'MESSAGES' | 'ONBOARDING' | 'GUARDIAN_CHILD' | 'GUARDIAN_FORM';
 
 export interface SavedPaymentCard {
   id: string;
@@ -426,7 +426,6 @@ export interface Pitch {
   courts?: Court[]; // Multiple courts in one facility
   isCluster?: boolean;
   clusterCount?: number;
-  isApproved?: boolean; // Admin approval flag
   paymentOptions?: { online: boolean; deposit: boolean; cash: boolean }; // Payment options configured by owner
   paramMerchantId?: string;
   paramApiKey?: string;
@@ -1268,8 +1267,6 @@ export interface OwnerPitch {
   total_price: number | null;
   price_per_person: number | null;
   iban: string | null;
-  verification_status: 'pending' | 'approved' | 'rejected';
-  verification_notes?: string | null;
   pricing_mode: 'FULL' | 'PER_PERSON';
   is_open: boolean;
   is_demo?: boolean;
@@ -1277,7 +1274,6 @@ export interface OwnerPitch {
   is_published?: boolean;
   /** Admin kontrollü "Öne Çıkan" bayrağı */
   is_featured?: boolean;
-  auto_approve_minutes: number;
   description?: string | null;
   amenities?: string[] | null;
   platform_commission_rate?: number | null;

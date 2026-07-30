@@ -1,10 +1,9 @@
-import { Activity, BarChart as BarChartIcon, Clock, Zap } from 'lucide-react';
+import { Activity, BarChart as BarChartIcon, Zap } from 'lucide-react';
 
 export type WidgetType =
   | 'QUICK_STATS'
   | 'QUICK_ACTIONS'
   | 'OCCUPANCY_ANALYSIS'
-  | 'PENDING_REQUESTS'
   | 'WEATHER_INFO'
   | 'STAFF_STATUS'
   | 'MAINTENANCE_ALERTS';
@@ -32,12 +31,6 @@ export const OWNER_WIDGETS: {
     title: 'Saha Doluluk Analizi',
     description: 'Sahaların saatlik doluluk durumunu gösterir.',
     icon: Activity,
-  },
-  {
-    id: 'PENDING_REQUESTS',
-    title: 'Onay Bekleyen Talepler',
-    description: 'Bekleyen rezervasyon taleplerini listeler.',
-    icon: Clock,
   },
 ];
 
@@ -84,13 +77,10 @@ export const FACILITY_AMENITIES = [
 
 export interface OwnerMenuStats {
   isFacilityOpen: boolean;
-  verificationStatus: 'pending' | 'approved' | 'rejected';
   bankAccountCount: number;
   /** Kendi fiyat politikası olmayan AKTİF saha sayısı — menüde dürüst uyarı.
    *  Genel (tesis geneli) fiyatlandırma ekranı kaldırıldı; sayaç saha bazlıdır. */
   courtsWithoutTariff: number;
-  autoApproveEnabled: boolean;
-  autoApproveMinutes: number;
   availableBalance?: number;
   paramConfigured: boolean;
   courtCount: number;
@@ -105,5 +95,4 @@ export interface OwnerFacilityFormData {
   address?: string;
   images?: string[];
   amenities?: string[];
-  verificationStatus?: 'pending' | 'approved' | 'rejected';
 }

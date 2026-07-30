@@ -40,7 +40,6 @@ const mk = (over: Partial<Pitch> = {}): Pitch => ({
   coordinates: over.coordinates,
   slots: [],
   courts: over.courts ?? [court('CLOSED')],
-  isApproved: over.isApproved ?? true,
   isFeatured: over.isFeatured ?? false,
   flashDiscount: over.flashDiscount,
   workingHours: { open: '09:00', close: '23:00', slotDuration: 60 },
@@ -180,11 +179,9 @@ describe('filterAndSortPitches — filtreler', () => {
     expect(ids(out)).toEqual([ps[1].id]);
   });
 
-  it('onaysız saha (isApproved=false) her zaman elenir', () => {
-    const ps = [mk({ isApproved: false }), mk({})];
-    const out = filterAndSortPitches(baseInput(ps));
-    expect(ids(out)).toEqual([ps[1].id]);
-  });
+  // IP-22: "onaylanmamış saha" diye bir durum kalmadı — tesis onayı kaldırıldı.
+  // Görünürlüğün tek kapısı sunucu sorgusundaki `is_published` + `is_open`;
+  // o kapı tests/unit/adminFacilityTeam.test.ts içinde kilitlidir.
 });
 
 // ═══════════════════════════════════════════════════════════════════════════

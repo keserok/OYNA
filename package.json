@@ -43,6 +43,7 @@
     "@capacitor/status-bar": "^8.0.2",
     "@supabase/supabase-js": "^2.106.1",
     "@tailwindcss/vite": "^4.2.1",
+    "capacitor-native-settings": "^8.1.0",
     "framer-motion": "^12.34.3",
     "leaflet": "^1.9.4",
     "lightningcss": "^1.32.0",

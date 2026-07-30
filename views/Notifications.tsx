@@ -17,6 +17,7 @@ import { handleDeepLink } from '../notifications/pushService';
 import { getMatchDetails } from '../services/matchService';
 import { declineMatchListInvite } from '../services/socialService';
 import { showToast } from '../components/common/GlobalToast';
+import { openAppSettings, canOpenAppSettings } from '../services/locationService';
 
 interface NotificationsProps {
   onBack: () => void;
@@ -392,10 +393,22 @@ const Notifications: React.FC<NotificationsProps> = ({ onBack, role }) => {
               <div className="min-w-0">
                 <p className="text-[0.8125rem] font-extrabold text-warning">Konum izni kapalı</p>
                 <p className="text-[0.6875rem] text-gray-300 leading-relaxed mt-1">
-                  Yakınındaki maçları ve sahaları görebilmek için telefon
-                  Ayarlar → Uygulamalar → OYNA → Konum yolundan izin vermen gerekiyor.
+                  Yakınındaki maçları ve sahaları görebilmek için konum iznini açman gerekiyor.
                   {aktifBolge?.label ? ` Şimdilik kayıtlı bölgen kullanılıyor: ${aktifBolge.label}.` : ''}
                 </p>
+                {canOpenAppSettings() ? (
+                  <button
+                    onClick={() => { void openAppSettings(); }}
+                    className="mt-2.5 min-h-11 px-4 rounded-xl bg-warning text-[#0A0E14] text-[0.75rem] font-extrabold active:scale-95 transition-transform"
+                  >
+                    Ayarları Aç
+                  </button>
+                ) : (
+                  // Web'de uygulama ayarları ekranı yok — tuş çizmek yerine yol tarif edilir.
+                  <p className="text-[0.6875rem] text-gray-400 mt-1.5">
+                    Tarayıcıda adres çubuğundaki kilit simgesinden izin verebilirsin.
+                  </p>
+                )}
               </div>
             </div>
           )}

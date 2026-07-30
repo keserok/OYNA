@@ -7,7 +7,6 @@ export type OwnerNavTab = 'HOME' | 'CALENDAR' | 'PITCHES' | 'FINANCE' | 'TEAM' |
 
 interface OwnerBottomNavProps {
   activeTab: OwnerNavTab | string;
-  pendingCount?: number;
   financeLocked?: boolean;
   teamLocked?: boolean;
   /** STAFF-3: yetkiye göre tamamen gizlenen sekmeler (ör. personel için Finans/Ekip). */
@@ -26,15 +25,13 @@ const tabs: { id: OwnerNavTab; label: string; icon: React.ReactNode }[] = [
 
 export const OwnerBottomNav: React.FC<OwnerBottomNavProps> = ({
   activeTab,
-  pendingCount = 0,
   financeLocked,
   teamLocked,
   hiddenTabs = [],
   onSelect,
 }) => {
   // Sahalarım artık menüden açılıyor → o ekrandayken "Menü" sekmesi vurgulanır.
-  const highlightTab =
-    activeTab === 'PENDING_ACTIONS' ? 'HOME' : activeTab === 'PITCHES' ? 'MORE' : activeTab;
+  const highlightTab = activeTab === 'PITCHES' ? 'MORE' : activeTab;
   const shownTabs = tabs.filter((t) => !hiddenTabs.includes(t.id));
 
   return (
@@ -44,7 +41,6 @@ export const OwnerBottomNav: React.FC<OwnerBottomNavProps> = ({
           const isActive = highlightTab === tab.id;
           const locked =
             (tab.id === 'FINANCE' && financeLocked) || (tab.id === 'TEAM' && teamLocked);
-          const showBadge = tab.id === 'HOME' && pendingCount > 0;
 
           return (
             <button
@@ -61,11 +57,6 @@ export const OwnerBottomNav: React.FC<OwnerBottomNavProps> = ({
             >
               <span className={`relative ${isActive ? 'scale-110' : ''} transition-transform`}>
                 {tab.icon}
-                {showBadge && (
-                  <span className="absolute -top-1 -right-2 min-w-[16px] h-4 px-1 bg-amber-500 text-black text-[9px] font-extrabold rounded-full flex items-center justify-center">
-                    {pendingCount > 9 ? '9+' : pendingCount}
-                  </span>
-                )}
                 {locked && (
                   <span className="absolute -bottom-0.5 -right-1 w-2 h-2 bg-slate-600 rounded-full border border-[#0A0E14]" />
                 )}

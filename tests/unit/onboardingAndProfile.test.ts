@@ -91,14 +91,25 @@ describe('konum reddi ekranda kalıcı', () => {
     expect(blok).not.toContain("state === 'blocked'");
   });
 
-  it('kalıcı engelde ne yapılacağı adım adım yazıyor', () => {
-    expect(s).toContain('Ayarlar → Uygulamalar → OYNA → Konum');
+  it('kalıcı engelde neden tekrar denemenin işe yaramadığı yazıyor', () => {
+    // Metin artık yol tarif etmiyor çünkü tuş doğrudan oraya götürüyor.
+    expect(s).toContain('telefon ayarlarından kapatılmış');
+    expect(s).toContain('tekrar denemek işe yaramaz');
   });
 
-  it('çalışmayan "Ayarları Aç" tuşu eklenmedi', () => {
-    // capacitor-native-settings kurulu DEĞİL; ölü tuş koymak yerine metin.
-    expect(s).not.toContain('Ayarları Aç');
-    expect(oku('package.json')).not.toContain('capacitor-native-settings');
+  it('"Ayarları Aç" tuşu var ve yalnız AÇILABİLDİĞİ cihazda çiziliyor', () => {
+    // Kullanıcı isteği: kalıcı engelde ayarlar ekranı açılsın. Eklenti kuruldu.
+    // Web'de böyle bir ekran YOK — orada tuş çizilmez, metin yol gösterir.
+    expect(s).toContain('Ayarları Aç');
+    expect(s).toContain("state === 'blocked' && onOpenSettings");
+    expect(oku('package.json')).toContain('capacitor-native-settings');
+    const svc = oku('services/locationService.ts');
+    expect(svc).toContain('export async function openAppSettings');
+    expect(svc).toContain('if (!IS_NATIVE) return false;');
+    expect(svc).toContain('export const canOpenAppSettings = (): boolean => IS_NATIVE;');
+    // Çağıran taraf tuşu koşullu çiziyor.
+    expect(oku('views/Onboarding.tsx')).toContain('canOpenAppSettings() ?');
+    expect(oku('views/Notifications.tsx')).toContain('canOpenAppSettings() ?');
   });
 
   it('bildirim merkezinde kalıcı hatırlatma var', () => {

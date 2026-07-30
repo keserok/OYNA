@@ -11,7 +11,6 @@ const mapPitchToDb = (pitch: Partial<Pitch>) => {
   if (pitch.googleRating !== undefined) mapped.google_rating = pitch.googleRating;
   if (pitch.googleReviews !== undefined) mapped.google_review_count = pitch.googleReviews;
   if (pitch.totalPrice !== undefined) mapped.price_per_match = pitch.totalPrice;
-  if (pitch.isApproved !== undefined) mapped.verification_status = pitch.isApproved ? 'approved' : 'pending';
   
   if (pitch.coordinates !== undefined) {
     mapped.latitude = pitch.coordinates.lat;
@@ -154,7 +153,6 @@ const mapToSnakeCase = (obj: any) => {
     else if (key === 'paymentOptions') newKey = 'payment_options';
     else if (key === 'isCluster') newKey = 'is_cluster';
     else if (key === 'clusterCount') newKey = 'cluster_count';
-    else if (key === 'isApproved') newKey = 'is_approved';
     else if (key === 'lightingGrade') newKey = 'lighting_grade';
     else if (key === 'grassGrade') newKey = 'grass_grade';
     else if (key === 'lockerRoomGrade') newKey = 'locker_room_grade';
@@ -314,7 +312,6 @@ export const mapFromSnakeCase = (obj: any) => {
     else if (key === 'payment_options') newKey = 'paymentOptions';
     else if (key === 'is_cluster') newKey = 'isCluster';
     else if (key === 'cluster_count') newKey = 'clusterCount';
-    else if (key === 'is_approved') newKey = 'isApproved';
     else if (key === 'lighting_grade') newKey = 'lightingGrade';
     else if (key === 'grass_grade') newKey = 'grassGrade';
     else if (key === 'locker_room_grade') newKey = 'lockerRoomGrade';

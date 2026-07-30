@@ -16,7 +16,8 @@ import { motion, AnimatePresence, Reorder, useReducedMotion, MotionConfig } from
 import { auth } from '../supabaseAuth';
 import { supabase } from '../supabaseClient';
 import { useAppStore } from '../store';
-import { FORMATIONS as FORMATIONS_SSOT } from '../utils/formations';
+import { FORMATIONS as FORMATIONS_SSOT, resolveFormation } from '../utils/formations';
+import { useConfirmSheet } from '../components/ui/useConfirmSheet';
 // Küme 3 köprüsü: kanonik takım/kadro okumaları + tek kayıt kapısı
 import {
     MyTeamRow, TeamSquadRow, getMyTeams, getTeamSquad, formatLabel,
@@ -131,6 +132,9 @@ interface StudioProps {
 }
 
 const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
+    // IP-23: markalı onay penceresi (window.confirm yerine). `confirmElement`
+    // bileşenin köküne konur; `confirm()` promise döner.
+    const { confirm, confirmElement } = useConfirmSheet();
     // Unified Plans State
     const [plans, setPlans] = useState<TacticState[]>([{
         id: crypto.randomUUID(),
@@ -340,7 +344,10 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
         teamName: d.teamName,
         teamId: d.teamId ?? null,
         size: d.size,
-        formation: d.formation,
+        // IP-23: eski (adı içeriğiyle çelişen) formasyon adları düzeltildi.
+        // Eski adla kaydedilmiş bir taktik okunursa boş ekran değil, karşılığı
+        // gelir — kullanıcı taktiğini kaybetmez.
+        formation: resolveFormation(d.size, d.formation) as FormationType,
         slots: JSON.parse(d.slots || '[]'),
         subs: JSON.parse(d.subs || '[]'),
         captainId: d.captainId || null,
@@ -953,12 +960,26 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                 s.id === showPlayerSelect.slotId ? { ...s, player } : s
             );
             setActiveTactic({ ...activeTactic, slots: newSlots });
-            setShowPlayerSelect(null);
+            // IP-23: panel KAPANMIYOR. Eskiden her seçimde tam ekran katman
+            // sökülüp yeniden kuruluyor, arama ve grup filtresi sıfırlanıyordu:
+            // 5 kişilik kadro = 5 kez aç-ara-kapa. Artık sıradaki BOŞ mevkiye
+            // kendiliğinden geçer; son mevki dolunca panel kendiliğinden kapanır.
+            const sonrakiBos = newSlots.find(s => !s.player);
+            if (sonrakiBos) setShowPlayerSelect({ type: 'slot', slotId: sonrakiBos.id });
+            else closePlayerSelect();
         } else if (showPlayerSelect.type === 'sub') {
             setActiveTactic({ ...activeTactic, subs: [...activeTactic.subs, player] });
-            setShowPlayerSelect(null);
+            // Yedek eklemede panel açık kalır: yedek sayısı sınırlı değil,
+            // kullanıcı genelde arka arkaya birkaç kişi ekliyor.
+            showToast(`${player.name} yedeklere eklendi.`, 'success');
         } else if (showPlayerSelect.type === 'any') {
-            let targetSlotIndex = activeTactic.slots.findIndex(s => !s.player && s.role === player.role);
+            // IP-23: eşleşme HAM `player.role` ile yapılıyordu. Oyuncunun mevkisi
+            // 'ST' / 'CM' / 'CB' gibi gelir; slot rolü ise GK/DEF/MID/FWD.
+            // Yani hat eşleşmesi hiç tutmuyor, herkes ilk boş slota düşüyordu.
+            // Dosyada doğru eşleyici (posToLine) zaten vardı, toplu dizmede
+            // kullanılıyordu — tekil seçimde kullanılmıyordu.
+            const hat = posToLine(player.role);
+            let targetSlotIndex = activeTactic.slots.findIndex(s => !s.player && s.role === hat);
             if (targetSlotIndex === -1) {
                 targetSlotIndex = activeTactic.slots.findIndex(s => !s.player);
             }
@@ -1081,15 +1102,24 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
         setEditingPlanIndex(null);
     };
 
-    const handleDeletePlan = (index: number) => {
-        if (confirm('Bu planı silmek istediğine emin misin?')) {
-            const newPlans = plans.filter((_, i) => i !== index);
-            setPlans(newPlans);
-            if (activePlanIndex === index) {
-                setActivePlanIndex(Math.max(0, index - 1));
-            } else if (activePlanIndex > index) {
-                setActivePlanIndex(activePlanIndex - 1);
-            }
+    const handleDeletePlan = async (index: number) => {
+        // IP-23: burada işletim sisteminin çıplak penceresi açılıyordu — markalı
+        // arayüzden çıkıp "localhost diyor ki" gibi bir kutu gösteriyordu ve
+        // iOS WebView'de görünümü hiç kontrol edilemiyordu. Uygulamanın kendi
+        // onay sayfası zaten yazılıydı, yalnız tesis panelinde kullanılıyordu.
+        const onay = await confirm({
+            title: 'Planı sil?',
+            message: `"${plans[index]?.name ?? 'Plan'}" kalıcı olarak silinecek. Bu işlem geri alınamaz.`,
+            confirmLabel: 'Planı Sil',
+            destructive: true,
+        });
+        if (!onay) return;
+        const newPlans = plans.filter((_, i) => i !== index);
+        setPlans(newPlans);
+        if (activePlanIndex === index) {
+            setActivePlanIndex(Math.max(0, index - 1));
+        } else if (activePlanIndex > index) {
+            setActivePlanIndex(activePlanIndex - 1);
         }
     };
 
@@ -1282,16 +1312,23 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
         }
     };
 
-    // ── Oyuncu Seç yaşam döngüsü: açılışta filtreleri sıfırla + kadroları tembel yükle ──
+    // ── Oyuncu Seç yaşam döngüsü ──
+    // IP-23: filtre sıfırlaması AÇILIŞA bağlıydı ve panel her seçimde kapanıp
+    // yeniden açıldığı için her oyuncuda arama kutusu siliniyordu. Artık
+    // sıfırlama KAPANIŞTA yapılır; panel açık kaldığı sürece arama ve grup
+    // filtresi korunur. Kadro yüklemesi açılışta bir kez tetiklenir.
+    const panelAcik = !!showPlayerSelect;
     useEffect(() => {
-        if (!showPlayerSelect) return;
-        setPlayerSearch('');
-        setSelectedGroup('Tümü');
+        if (!panelAcik) return;
         studioTeams.forEach(t => { void ensureSquad(t.team_id); });
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [showPlayerSelect]);
+    }, [panelAcik]);
 
-    const closePlayerSelect = () => { setShowPlayerSelect(null); setPlayerSearch(''); };
+    const closePlayerSelect = () => {
+        setShowPlayerSelect(null);
+        setPlayerSearch('');
+        setSelectedGroup('Tümü');
+    };
 
     // Manuel ekle: aramaya yazılan isim tek dokunuşla oyuncuya dönüşür (mevki sorulmaz;
     // mevkiyi bırakılan slot belirler, genel akışta ilk boş slota oturur).
@@ -2568,11 +2605,15 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                 <Users size={16} className={'text-[#39FF14]'} /> 
                                 Oyuncular
                             </h3>
+                            {/* IP-23: eskiden 32px, metinsiz ve erişilebilir adsız bir artı
+                                ikonuydu; kadro onaylandıktan sonra kalan TEK giriş buydu ve
+                                ekranı kaydırmadan görünmüyordu. */}
                             <button 
                                 onClick={() => setShowPlayerSelect({ type: 'any' })}
-                                className="w-8 h-8 rounded-full bg-[#39FF14]/20 flex items-center justify-center text-[#39FF14] hover:bg-[#39FF14]/30 transition-colors"
+                                aria-label="Oyuncu ekle"
+                                className="min-h-11 px-3.5 rounded-full bg-[#39FF14]/20 flex items-center gap-1.5 text-[#39FF14] text-xs font-extrabold hover:bg-[#39FF14]/30 transition-colors"
                             >
-                                <Plus size={16} />
+                                <Plus size={16} /> Oyuncu Ekle
                             </button>
                         </div>
                         <div className="divide-y divide-white/5">
@@ -2986,12 +3027,18 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                 </button>
                             )}
 
-                            {/* Başparmak bölgesi: vazgeç */}
+                            {/* Başparmak bölgesi: çıkış.
+                                IP-23: panel artık seçimden sonra kapanmadığı için bu tuş
+                                "vazgeç" değil "bitti"dir — kaç mevkinin dolduğunu da söyler. */}
                             <button
                                 onClick={closePlayerSelect}
-                                className="w-full mt-4 mb-6 py-3.5 rounded-2xl bg-white/5 text-gray-400 text-xs font-bold uppercase tracking-widest hover:bg-white/10 transition-all"
+                                className="w-full mt-4 mb-6 min-h-11 py-3.5 rounded-2xl bg-white/5 text-gray-400 text-xs font-bold uppercase tracking-widest hover:bg-white/10 transition-all"
                             >
-                                Vazgeç
+                                {(() => {
+                                    const toplam = activeTactic.slots.length;
+                                    const dolu = activeTactic.slots.filter(s => s.player).length;
+                                    return dolu > 0 ? `Bitti · ${dolu}/${toplam} dizili` : 'Vazgeç';
+                                })()}
                             </button>
                         </div>
                     </motion.div>
@@ -3835,6 +3882,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
             </AnimatePresence>
 
         </div>
+        {confirmElement}
         </MotionConfig>
     );
 };

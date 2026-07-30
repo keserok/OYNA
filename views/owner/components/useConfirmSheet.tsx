@@ -1,57 +1,13 @@
-import React, { useCallback, useState } from 'react';
-import { ConfirmSheet } from './ConfirmSheet';
+// ─── IP-23 · YÖNLENDİRME (re-export) ────────────────────────────────────────
+//
+// Gerçek uygulama `components/ui/` altına taşındı: oyuncu tarafı da bu markalı
+// onay/sheet altyapısını kullanacak, ama oyuncu ekranları `views/owner/`den
+// import edemez (özellik klasörü, paylaşılan katman değil).
+//
+// Bu dosya SİLİNMEDİ ve tesis panelinin import satırlarına DOKUNULMADI:
+// kullanıcı kuralı gereği tesis panelinin arayüzü değişmeyecek ve o ekranların
+// görsel testi YOK (24 görsel testin 0'ı tesis panelini kapsıyor), yani orada
+// yapılacak bir hatayı hiçbir test yakalayamazdı. Tek satırlık yönlendirme,
+// on dosyada import düzenlemekten güvenli.
 
-/**
- * FAZ0: `window.confirm` için promise-tabanlı, markalı drop-in.
- *
- *   const { confirm, confirmElement } = useConfirmSheet();
- *   if (await confirm({ title: 'Hesabı sil?', destructive: true })) { ... }
- *   return <>{…}{confirmElement}</>;
- *
- * Geri-alınamaz mutasyonlarda native confirm yerine bunu kullan.
- */
-interface ConfirmOpts {
-  title: string;
-  message?: React.ReactNode;
-  confirmLabel?: string;
-  cancelLabel?: string;
-  destructive?: boolean;
-  icon?: React.ReactNode;
-}
-
-export function useConfirmSheet() {
-  const [state, setState] = useState<(ConfirmOpts & { resolve: (v: boolean) => void }) | null>(
-    null
-  );
-
-  const confirm = useCallback(
-    (opts: ConfirmOpts) =>
-      new Promise<boolean>((resolve) => setState({ ...opts, resolve })),
-    []
-  );
-
-  const settle = useCallback(
-    (result: boolean) =>
-      setState((s) => {
-        s?.resolve(result);
-        return null;
-      }),
-    []
-  );
-
-  const confirmElement = (
-    <ConfirmSheet
-      open={!!state}
-      title={state?.title ?? ''}
-      message={state?.message}
-      confirmLabel={state?.confirmLabel}
-      cancelLabel={state?.cancelLabel}
-      destructive={state?.destructive}
-      icon={state?.icon}
-      onCancel={() => settle(false)}
-      onConfirm={() => settle(true)}
-    />
-  );
-
-  return { confirm, confirmElement };
-}
+export { useConfirmSheet } from '../../../components/ui/useConfirmSheet';

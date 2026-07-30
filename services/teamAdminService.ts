@@ -74,20 +74,3 @@ export interface PitchLite {
   lng: number | null;
 }
 
-/** Ev sahası seçici için onaylı sahaların hafif listesi. */
-export const getApprovedPitchesLite = async (): Promise<PitchLite[]> => {
-  const { data, error } = await supabase
-    .from('pitches')
-    .select('id, name, district, city, latitude, longitude')
-    .eq('verification_status', 'approved')
-    .order('name');
-  if (error) throw new Error(error.message);
-  return (data ?? []).map((r: any) => ({
-    id: r.id,
-    name: r.name,
-    district: r.district ?? null,
-    city: r.city ?? null,
-    lat: r.latitude ?? null,
-    lng: r.longitude ?? null,
-  }));
-};

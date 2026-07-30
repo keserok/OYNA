@@ -36,7 +36,6 @@ function kaynaklar(): string[] {
 const HUKUKI = [
   'views/LegalScreen.tsx',
   'views/GuardianConsentForm.tsx',
-  'views/PartnerOnboarding.tsx',
   'components/common/LegalModal.tsx', // KVKK aydınlatma metni
 ];
 
@@ -212,10 +211,22 @@ describe('hitap kipi', () => {
 });
 
 describe('kod adı sızıntısı', () => {
-  it('kullanıcıya kod içi ekran adı gösterilmiyor', () => {
-    // Tesis şeridi "PitchDiscovery'de görünmez" yazıyordu.
-    const s = oku('views/OwnerPanel.tsx');
-    expect(s).not.toContain("PitchDiscovery'de");
-    expect(s).toMatch(/Sahalar\\?'da/);
+  // Eskiden tesis şeridi "PitchDiscovery'de görünmez" yazıyordu; düzeltilince
+  // "Sahalar'da" oldu. O şerit IP-22 ile kalktı (tesis onayı diye bir şey yok),
+  // ama kod adının kullanıcı metnine sızmaması kuralı geçerliliğini koruyor.
+  const KOD_ADLARI = ['PitchDiscovery', 'OwnerPanel', 'PendingActions', 'FinancialCalendarView'];
+
+  it.each([
+    'views/OwnerPanel.tsx',
+    'views/owner/menu/OwnerMenuView.tsx',
+    'views/owner/menu/OwnerFacilitySettingsModal.tsx',
+  ])('%s — ekranın kod adı Türkçe cümleye girmiyor', (yol) => {
+    const s = oku(yol);
+    for (const ad of KOD_ADLARI) {
+      // "Ad'de / Ad'da / Ad'ye ..." = kod adı cümlenin içinde çekimlenmiş.
+      expect(s, `${yol} içinde "${ad}" kullanıcı metnine sızmış`).not.toMatch(
+        new RegExp(`${ad}'[a-zçğıöşü]`),
+      );
+    }
   });
 });

@@ -14,7 +14,6 @@ export function mapDbRowToCamel<T extends Record<string, unknown>>(obj: Record<s
     else if (key === 'total_price') newKey = 'totalPrice';
     else if (key === 'google_rating') newKey = 'googleRating';
     else if (key === 'google_reviews') newKey = 'googleReviews';
-    else if (key === 'is_approved') newKey = 'isApproved';
     else if (key === 'owner_id') newKey = 'ownerId';
     mapped[newKey] = obj[key];
   }

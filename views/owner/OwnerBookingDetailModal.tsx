@@ -69,7 +69,11 @@ export const OwnerBookingDetailModal: React.FC<OwnerBookingDetailModalProps> = (
     }
     const ok = await confirm({
       title: 'Rezervasyonu iptal et?',
-      message: 'Ödenmiş tutar varsa iade işlemi başlatılır. Bu işlem geri alınamaz.',
+      // Karar 12a: sahibi iptal edebilir, ama parasal sonucu ÖNCEDEN görmeli.
+      // Ödeme altyapısının kestiği ücret iade edilmez; bu tutar tesise yapılacak
+      // ödemeden düşülür.
+      message:
+        'Ödenmiş tutar varsa oyuncuya iade işlemi başlatılır. Ödeme altyapısının bu tahsilat için kestiği ücret geri alınmaz; sana yapılacak ödemeden düşülür. Bu işlem geri alınamaz.',
       confirmLabel: 'İptal Et',
       destructive: true,
     });

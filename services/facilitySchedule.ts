@@ -10,7 +10,7 @@ export interface ScheduleBooking {
   booking_date: string; // YYYY-MM-DD
   start_time: string;   // HH:MM
   end_time: string;     // HH:MM
-  status: string;       // PENDING | CONFIRMED | COMPLETED | ...
+  status: string;       // CONFIRMED | COMPLETED | CANCELLED
   source: string;       // OWNER_MANUAL | APP_BOOKING | SUBSCRIPTION | APP_MATCH
   price: number | null;
   paid_amount: number | null;
@@ -49,8 +49,6 @@ export interface FacilitySchedule {
     id: string;
     name: string;
     working_hours: unknown;
-    auto_approve_enabled: boolean;
-    auto_approve_minutes: number;
   };
   courts: ScheduleCourt[];
   bookings: ScheduleBooking[];

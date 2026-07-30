@@ -8,9 +8,11 @@ import { hasMultipleSwitchableRoles } from '../../shared/roles';
 import SettingsSubPage from '../common/SettingsSubPage';
 
 // ─── Ayarlar → Sahada Rolün ───────────────────────────────────────────────────
-// Profil'den taşındı. Oyunculuk her zaman açık; kullanıcı ek rol (Kaleci/Hakem/
-// Tesis) için başvurur. Sahip olduğu role dokununca RoleSwitcher açılır;
-// başvurmadığı rol için ilgili onboarding/başvuru akışına yönlendirilir.
+// Profil'den taşındı. Oyunculuk her zaman açık; kullanıcı ek rol (Kaleci/Hakem)
+// için başvurur. Sahip olduğu role dokununca RoleSwitcher açılır; başvurmadığı
+// rol için başvuru akışına yönlendirilir.
+// IP-22: Tesis rolüne BAŞVURULMAZ — tesis ve yetkilileri OYNA ekibi tarafından
+// tanımlanır. Bu yüzden "Tesis" satırı yalnız role ZATEN sahip olana gösterilir.
 interface FieldRolePageProps {
   open: boolean;
   onClose: () => void;
@@ -68,7 +70,6 @@ const FieldRolePage: React.FC<FieldRolePageProps> = ({ open, onClose, onNavigate
       setIsRoleSwitcherOpen(true);
       return;
     }
-    if (r === UserRole.OWNER) { onClose(); onNavigate('PARTNER_ONBOARDING'); return; }
     setServiceAppRole(r);
     onClose();
     onNavigate('SERVICE_APPLICATION');
@@ -91,7 +92,7 @@ const FieldRolePage: React.FC<FieldRolePageProps> = ({ open, onClose, onNavigate
           )}
 
           <div className="space-y-2.5">
-            {ROLE_OPTS.map((opt) => {
+            {ROLE_OPTS.filter((opt) => opt.r !== UserRole.OWNER || roles.includes(opt.r)).map((opt) => {
               const owned = roles.includes(opt.r);
               return (
                 <button

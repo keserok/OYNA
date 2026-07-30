@@ -705,3 +705,84 @@ iyidir.
 
 "Silüet yok" gibi ifadeler kullanıcıya ne yapacağını söylemez. Metin, eylemi
 söyler: "Fotoğraf ekle".
+
+---
+
+## 20. Rezervasyon ve Tesis Sahipliği Kuralı (IP-22)
+
+### 20.1 Rezervasyon anında kesinleşir
+
+Oyuncu bir saati aldığında rezervasyon **o anda** kesinleşir. "Onay bekleyen
+rezervasyon" diye bir durum yoktur; ne tesis sahibi onaylar, ne bir sayaç
+işler, ne de sunucu arka planda otomatik onaylar. Uygulamadan gelen de,
+tesisin kendi girdiği de, yönetici panelinden yapılan da aynı yoldan geçer ve
+aynı anda kesinleşir.
+
+Aynı saatin iki kez satılmasını veritabanının kendi kısıtı engeller; bu koruma
+onaya bağlı değildir, her zaman çalışır.
+
+### 20.2 Kullanıcıya bekleme vaat edilmez
+
+Ekranda geri sayan sayaç, "süre bitince otomatik onaylanacak" yazısı veya
+"onay bekliyor" rozeti bulunmaz. Bu cümleler kullanıcıyı bekletiyordu ve çoğu
+zaman gerçekleşmiyordu.
+
+### 20.3 Tesisler OYNA tarafından tanımlanır
+
+Kullanıcı kendi kendine tesis kaydı **açamaz**. Anlaşılan tesis yönetici
+panelinden eklenir; sahibi, müdürü ve personeli de oradan atanır. Bunun doğal
+sonucu: "tesisin onay bekliyor" / "başvurun reddedildi" gibi ekranlar yoktur,
+çünkü onaylanacak bir başvuru yoktur.
+
+Tesisin adı ve konumu sahibi tarafından doğrudan değiştirilemez; değişiklik
+talebi olarak yöneticiye gider. Bu kural sunucudaki koruma tetikleyicisiyle
+zorunlu kılınmıştır, arayüzün nezaketi değildir.
+
+### 20.4 Paranın yönü iptalden önce söylenir
+
+Tesis kesinleşmiş bir rezervasyonu iptal edebilir. Ancak onay penceresi,
+**iptal etmeden önce**, ödeme altyapısının o tahsilat için kestiği ücretin geri
+alınmadığını ve tesise yapılacak ödemeden düşüleceğini açıkça yazar. Parasal
+sonucu olan bir işlem, sonucu gizlenerek onaylatılmaz.
+
+---
+
+## 21. Tesis Yetkileri Kuralı (IP-22)
+
+### 21.1 Üç yetki vardır, dördüncüsü yoktur
+
+Bir tesiste tam olarak üç düzey bulunur:
+
+- **Sahip** — tesisin tamamı: finans, banka hesabı, para çekme, ekip. Tesiste tek kişidir.
+- **Müdür** — günlük yönetim: takvim, rezervasyon, tarife, ekip listesi. Para çekemez.
+- **Personel** — kasa işleri: rezervasyon açma, tahsilat, görevler. Finans ve ekip kapalı.
+
+Bu üç ad hem veritabanında hem ekranda **aynıdır**. Ekranda görünen etiket
+serbest metin değildir; yetkiden türetilir. "Resepsiyon", "Saha Sorumlusu" gibi
+serbest unvanlar artık yazılamaz — çünkü iki farklı isimlendirme er geç ayrışır
+ve kimin ne yapabildiği belirsizleşir.
+
+### 21.2 Yetkiyi OYNA verir
+
+Tesis de yetkilileri de yönetici panelinden tanımlanır. Kullanıcı kendi kendine
+tesis açamaz, kendine yetki veremez. Yönetici bir uygulama hesabını tesise
+bağladığında o hesap **anında** yetkili olur; davet kodu beklenmez.
+
+Tesis sahibinin kendi ekibini davet koduyla eklemesi ayrı bir yoldur ve durur —
+ama yöneticinin o yolu kullanması gerekmez.
+
+### 21.3 Onaylanacak tesis yoktur
+
+Tesis "doğrulama durumu" diye bir alan yoktur. Bir tesisin oyuncuya görünmesinin
+tek kapısı: **yayında mı + açık mı**. Onay bekleyen tesis kuyruğu, onay/ret
+düğmeleri ve bunlara bağlı bildirimler kaldırılmıştır.
+
+Tesisin adı ve konumu sahibi tarafından doğrudan değiştirilemez; değişiklik
+talebi olarak yöneticiye gider. Bu kural sunucudaki koruma tetikleyicisiyle
+zorunlu kılınmıştır.
+
+### 21.4 Sahipsiz tesis vitrine çıkamaz
+
+Sahibi atanmamış bir tesis yayına alınamaz — kural veritabanı kısıtıyla
+zorlanır. Arayüz bunu yasakla değil, sebebiyle söyler ve sahip atama ekranına
+kısa yol verir.

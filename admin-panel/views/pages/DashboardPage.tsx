@@ -160,9 +160,9 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onRefresh, onNavig
 
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
                 <StatCard label="TOPLAM KULLANICI" value={Number(stats?.total_users ?? adminUsers.length)} unit="Kayıtlı profil" color="#3b82f6" data={revenueSpark.length ? revenueSpark : undefined} />
-                <StatCard label="ONAY BEKLEYEN" value={Number(stats?.pending_verifications ?? 0) + Number(stats?.pending_pitches ?? 0)} unit="GK/Ref + Tesis" color="#ef4444" badge={Number(stats?.pending_pitches ?? 0) > 0 ? 'AKİF' : undefined} badgeColor="text-red-400 bg-red-500/10 border-red-500/20" />
+                <StatCard label="ONAY BEKLEYEN" value={Number(stats?.pending_verifications ?? 0)} unit="Kaleci / Hakem başvurusu" color="#ef4444" badge={Number(stats?.pending_verifications ?? 0) > 0 ? 'AKTİF' : undefined} badgeColor="text-red-400 bg-red-500/10 border-red-500/20" />
                 <StatCard label="SİSTEM GELİRİ" value={financeLoading ? '…' : `₺${Math.round(systemRevenue).toLocaleString('tr')}`} unit={`${financeStats?.payment_count ?? 0} ödeme`} color="#eab308" data={revenueSpark.length ? revenueSpark : undefined} />
-                <StatCard label="AKTİF SAHA" value={Number(stats?.total_pitches ?? adminPitches.length)} unit={`${Number(stats?.pending_pitches ?? 0)} onay bekliyor`} color="#39FF14" />
+                <StatCard label="AKTİF SAHA" value={Number(stats?.total_pitches ?? adminPitches.length)} unit="Kayıtlı tesis" color="#39FF14" />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

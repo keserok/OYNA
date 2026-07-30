@@ -14,21 +14,26 @@ export const SQUAD_SIZES: SquadSize[] = ['2v2', '3v3', '4v4', '5v5', '6v6', '7v7
 
 export const FORMATIONS: Record<SquadSize, Record<string, FormationSlot[]>> = {
   '2v2': {
-    '1-0-1': [
+    // Eski ad '1-0-1' idi: 1 defans vaat ediyordu ama defans slotu yok.
+    '0-0-1': [
       { id: 's1', x: 50, y: 90, role: 'GK' },
       { id: 's2', x: 50, y: 25, role: 'FWD' },
     ],
   },
   '3v3': {
-    '1-1-1': [
+    // Eski ad '1-1-1' idi: 1 defans vaat ediyordu ama defans slotu yok.
+    '0-1-1': [
       { id: 's1', x: 50, y: 90, role: 'GK' },
       { id: 's2', x: 50, y: 60, role: 'MID' },
       { id: 's3', x: 50, y: 25, role: 'FWD' },
     ],
-    '2-0-1': [
+    // Eski ad '2-0-1' idi ve FORVET slotu HİÇ YOKTU. Kadroda forvet varsa
+    // populateSlotsWithSquad üç slotu hat eşleşmesiyle doldurup forveti sahaya
+    // hiç sokmuyordu. İkinci defans forvete çevrildi, ad içerikle eşitlendi.
+    '1-0-1': [
       { id: 's1', x: 50, y: 90, role: 'GK' },
-      { id: 's2', x: 30, y: 55, role: 'DEF' },
-      { id: 's3', x: 70, y: 55, role: 'DEF' },
+      { id: 's2', x: 50, y: 62, role: 'DEF' },
+      { id: 's3', x: 50, y: 25, role: 'FWD' },
     ],
   },
   '4v4': {
@@ -245,4 +250,32 @@ export function defaultFormation(size: SquadSize): string {
 /** Slot listesinin derin kopyasını döndürür (immutable kullanım için). */
 export function cloneSlots(size: SquadSize, formation: string): FormationSlot[] {
   return JSON.parse(JSON.stringify(FORMATIONS[size][formation]));
+}
+
+// ─── Eski formasyon adları (IP-23) ──────────────────────────────────────────
+//
+// Üç formasyonun adı içeriğiyle çelişiyordu ve düzeltildi. Kanonik kural:
+// ad = DEF-MID-FWD, kaleci ada dâhil DEĞİL, slot sayısı = N.
+//
+// Canlıda kayıtlı 4 taktiğin hiçbiri bu üç addan birini kullanmıyor (hepsi
+// `2-3-1`), yani pratikte kimsenin kaydı bozulmuyor. Yine de eski adla
+// kaydedilmiş bir taktik okunursa ekran boş kalmasın diye çevirici duruyor:
+// bilinmeyen ada düşmek, kullanıcının taktiğini kaybetmesi demek.
+const LEGACY_FORMATION_ALIASES: Partial<Record<SquadSize, Record<string, string>>> = {
+  '2v2': { '1-0-1': '0-0-1' },
+  '3v3': { '1-1-1': '0-1-1', '2-0-1': '1-0-1' },
+};
+
+/**
+ * Kayıttan okunan formasyon adını geçerli bir ada çevirir.
+ * Sırayla: geçerliyse aynen → eski adsa yeni karşılığı → yoksa o boyutun
+ * varsayılanı. Asla `undefined` dönmez; çağıran taraf her zaman çizebilir.
+ */
+export function resolveFormation(size: SquadSize, formation: string | null | undefined): string {
+  const tablo = FORMATIONS[size];
+  if (!tablo) return formation ?? '';
+  if (formation && tablo[formation]) return formation;
+  const eski = formation ? LEGACY_FORMATION_ALIASES[size]?.[formation] : undefined;
+  if (eski && tablo[eski]) return eski;
+  return defaultFormation(size);
 }

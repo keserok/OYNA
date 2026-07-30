@@ -14,7 +14,11 @@ const FEATURE_LABELS: Record<OwnerFeatureKey, string> = {
 
 export function useOwnerEntitlements(
   account: OwnerAccount | null,
-  notify?: OwnerNotifyFn,
+  // IP-23: eskiden `notify?` idi ve iki dalda `else alert(msg)` vardı — çıplak
+  // sistem penceresi. Tek çağıran (OwnerPanel) zaten gerçek bir notify geçiyor,
+  // yani o dallar ölü koddu; ama imza opsiyonel kaldıkça YENİ her çağrı
+  // sessizce alert'e düşebilirdi. Artık zorunlu.
+  notify: OwnerNotifyFn,
 ) {
   const isReadOnly = useMemo(
     () => !!account && ['suspended', 'cancelled'].includes(account.status),
@@ -42,8 +46,7 @@ export function useOwnerEntitlements(
     (feature: OwnerFeatureKey): boolean => {
       if (can[feature]) return true;
       const msg = `${FEATURE_LABELS[feature]} mevcut planınızda aktif değil veya hesabınız salt okunur modda. Plan yükseltmesi için destek ile iletişime geçin.`;
-      if (notify) notify(msg, 'warning');
-      else alert(msg);
+      notify(msg, 'warning');
       return false;
     },
     [can, notify],
@@ -52,8 +55,7 @@ export function useOwnerEntitlements(
   const guardWrite = useCallback((): boolean => {
     if (!isReadOnly) return true;
     const msg = 'Hesabınız askıda veya iptal edilmiş. Yalnızca görüntüleme yapabilirsiniz.';
-    if (notify) notify(msg, 'error');
-    else alert(msg);
+    notify(msg, 'error');
     return false;
   }, [isReadOnly, notify]);
 
