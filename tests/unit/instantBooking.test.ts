@@ -36,7 +36,7 @@ function kaynaklar(): string[] {
   return [...out, 'App.tsx', 'types.ts', 'store.ts'];
 }
 
-const GOC = 'supabase/migrations/20260831000000_ip22_onay_sistemi_kaldirildi.sql';
+const GOC = 'supabase/migrations/20260831000009_ip22_onay_sistemi_kaldirildi.sql';
 
 describe('rezervasyon anında kesinleşir', () => {
   const sql = oku(GOC);
