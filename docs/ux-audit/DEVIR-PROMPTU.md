@@ -123,9 +123,15 @@ tablosu, sunucu tarafı gönderim (edge function/cron) ve native yapılandırma
   `setActiveRegion` ile **kalıcı** olur. Konum kapalıysa **kayıtlı bölge
   hatırlatılır** (kullanıcı kararı).
 - Red ekranda **kalıcı**: `denied` / `blocked` / `timeout` / `unavailable`
-  dördü ayrı metin. Kalıcı engelde "Tekrar Dene" **çizilmez** (çalışmazdı);
-  ayarları açan bir tuş da **eklenmedi** — `capacitor-native-settings` kurulu
-  değil, ölü tuş koymak yerine ne yapılacağı adım adım yazıyor.
+  dördü ayrı metin. Kalıcı engelde "Tekrar Dene" **çizilmez** (çalışmazdı).
+- **"Ayarları Aç" tuşu EKLENDİ** (kullanıcı isteği, sonradan).
+  `capacitor-native-settings@8.1.0` kuruldu; `locationService.openAppSettings()`
+  iki platformda da uygulama ayarları ekranını açar. Tuş yalnız native'de
+  çizilir (`canOpenAppSettings()`), web'de böyle bir ekran olmadığı için metin
+  yol gösterir. Aynı tuş bildirim merkezindeki kalıcı uyarıda da var.
+  > ⚠️ **`npx cap sync ios && npx cap sync android` gerekiyor** — yeni native
+  > eklenti eklendi, sync yapılmadan native derleme onu görmez. Bu ortamda
+  > çalıştırılamadı.
 - **Bildirim merkezinde kalıcı hatırlatma** (kullanıcı kararı). Sunucudan
   gerçek bildirim GÖNDERİLMİYOR: tekrar eden bildirim spam olur ve geri
   alınamaz (CLAUDE.md §5). İzin verilir verilmez kendiliğinden kaybolur.
