@@ -2,6 +2,7 @@ import React, { useRef, useCallback } from 'react';
 import { motion, useMotionValue, useTransform, useSpring } from 'framer-motion';
 import { Share2, Trophy } from 'lucide-react';
 import { skillBand } from '../utils/skillBand';
+import { trInitials } from '../utils/trUpper';
 
 // ════════════════════════════════════════════════════════════════════════
 // OYUNCU KARTI — NÖTR SÜRÜM (puan sistemi sökümü, karar F3=b)
@@ -157,10 +158,12 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
                     className="text-5xl font-extrabold italic uppercase tracking-tighter drop-shadow-[0_4px_12px_rgba(0,0,0,0.5)]"
                     style={{ color: T.value, textShadow: `0 0 20px ${T.border}80, 0 0 40px ${T.border}30` }}
                   >
-                    {name.split(' ').map(n => n[0]).join('').substring(0, 2).toLocaleUpperCase('tr-TR')}
+                    {trInitials(name, 2)}
                   </span>
+                  {/* IP-13 (karar 13a): burada eskiden tasarımcı terimi vardı —
+                      kullanıcı iç terminolojiyi değil, ne yapacağını okumalı. */}
                   <span className="text-[0.625rem] font-extrabold uppercase tracking-[0.25em] mt-1.5 opacity-55" style={{ color: T.pos }}>
-                    SİLÜET YOK
+                    FOTOĞRAF EKLE
                   </span>
                 </motion.div>
               </div>

@@ -2,6 +2,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { X, Minus, Plus, Info, AlertTriangle, Check } from 'lucide-react';
 import type { MatchListing, PositionSlot } from '../../types';
 import type { RahatMatchConfig } from '../../services/rahatMatchService';
+// IP-19: fiyat gösterimi tek kaynaktan (sıfır karşılığını da kendi verir).
+import { formatTRYShort } from '../../utils/formatTRY';
 
 // ════════════════════════════════════════════════════════════════════════
 // E3 · RAHAT KATILIM SAYFASI — akışın kalbi
@@ -110,8 +112,7 @@ export const RahatJoinSheet: React.FC<RahatJoinSheetProps> = ({
     onProceed(ids, total);
   };
 
-  const fmt = (n: number) => n.toLocaleString('tr-TR');
-  const payLabel = price === 0 ? 'YERİ AL · ÜCRETSİZ' : `ÖDEMEYE GEÇ · ${fmt(total)}₺`;
+  const payLabel = price === 0 ? 'YERİ AL · ÜCRETSİZ' : `ÖDEMEYE GEÇ · ${formatTRYShort(total)}`;
 
   // Satır başına canlı sayaç (tasarım formülü birebir).
   const rows = Array.from({ length: qty }, (_, i) => {
@@ -243,10 +244,10 @@ export const RahatJoinSheet: React.FC<RahatJoinSheetProps> = ({
         {/* ── Tutar ── */}
         <div style={{ padding: '20px 20px 0', textAlign: 'center' }}>
           <p className="font-numeric" style={{ margin: 0, fontSize: 44, fontWeight: 700, letterSpacing: '-0.02em', color: '#FFFFFF', lineHeight: 1 }}>
-            {price === 0 ? 'ÜCRETSİZ' : `${fmt(total)}₺`}
+            {price === 0 ? 'ÜCRETSİZ' : formatTRYShort(total)}
           </p>
           <p style={{ margin: '7px 0 0', fontSize: 12, fontWeight: 600, color: '#9CA3AF' }}>
-            {price === 0 ? `${qty} yer · ödeme alınmaz` : `${qty} yer × ${fmt(price)}₺`}
+            {price === 0 ? `${qty} yer · ödeme alınmaz` : `${qty} yer × ${formatTRYShort(price)}`}
           </p>
         </div>
 

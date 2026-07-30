@@ -82,8 +82,16 @@ export const ProfileHero: React.FC<ProfileHeroProps> = ({
     const [isFlipped, setIsFlipped] = useState(false);
     // Avatar yüklenemezse (kırık URL / erişilemeyen host) baş harflere düş.
     const [avatarBroken, setAvatarBroken] = useState(false);
-    // Puan sistemi sökümü (F3=b): premium kapısı kalktı — nötr kart herkese açık.
-    const showCard = cardMode;
+
+    // ─── Kart HAZIR mı? (kullanıcı kararı) ──────────────────────────────────
+    // Eski premium kapısı (profiles.card_active) puan sistemi sökümüyle gitti;
+    // yerine içeriğe bakan dürüst bir ölçüt: kart yalnız SÖYLEYECEK BİR ŞEYİ
+    // varken çizilir. Kartın gösterdiği her şey mevki, seviye beyanı ve maç
+    // sayısıdır — üçü de yoksa kart isimden ibaret boş bir kabuktur ve düğmesi
+    // hiç görünmez. Kurulumunu bitiren herkeste (mevki adımı zorunlu) hazırdır.
+    // Tek yerde hesaplanır: tüketici profili ve admin aynası asla ayrışmasın.
+    const cardReady = !!position || selfSkill != null || matches > 0;
+    const showCard = cardReady && cardMode;
     const showAvatarImg = !!avatarUrl && !avatarBroken;
 
     return (
@@ -93,8 +101,9 @@ export const ProfileHero: React.FC<ProfileHeroProps> = ({
             <div className="absolute inset-0 opacity-35" style={{ background: 'radial-gradient(circle at 85% 0%, color-mix(in srgb, var(--color-primary) 30%, transparent) 0%, transparent 60%)' }} />
 
             <div className="relative z-10 p-[18px] pb-4">
-                {/* 👤/🎴 geçişi — nötr kart herkese açık */}
-                <div className="flex justify-end mb-3">
+                {/* 👤/🎴 geçişi — yalnız kart HAZIRSA çizilir (boş kabuk sunulmaz) */}
+                {cardReady && (
+                    <div className="flex justify-end mb-3">
                         <div className="flex gap-1 p-[3px] rounded-[9px] bg-black/35 border border-white/10">
                             <button
                                 onClick={() => setCardMode(false)}
@@ -107,7 +116,8 @@ export const ProfileHero: React.FC<ProfileHeroProps> = ({
                                 className={`w-7 h-[26px] rounded-[7px] text-xs flex items-center justify-center transition-all ${cardMode ? 'bg-primary' : 'opacity-50'}`}
                             >🎴</button>
                         </div>
-                </div>
+                    </div>
+                )}
 
                 {!showCard ? (
                     /* ── Sade görünüm ── */

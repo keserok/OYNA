@@ -31,10 +31,9 @@ const StepSkill: React.FC<StepSkillProps> = ({ value, onChange }) => {
     if (r.width <= 0) return;
     const v = Math.max(1, Math.min(SELF_SKILL_MAX,
       Math.ceil(((clientX - r.left) / r.width) * SELF_SKILL_MAX)));
-    if (v !== value) {
-      if (navigator.vibrate) navigator.vibrate(12);
-      onChange(v);
-    }
+    // Titreşim uygulamadan tamamen kaldırıldı (kullanıcı kararı) — geri
+    // bildirim yalnız görsel: yıldız dolar, band çipi ve etiket anında değişir.
+    if (v !== value) onChange(v);
   }, [value, onChange]);
 
   return (

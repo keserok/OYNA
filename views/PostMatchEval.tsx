@@ -6,6 +6,7 @@ import { supabase } from '../supabaseClient';
 import { auth } from '../supabaseAuth';
 import { submitServiceRating, getMatchServiceRequests, captainConfirmService } from '../services/serviceRequestService';
 import type { PositionSlot } from '../types';
+import { trInitials } from '../utils/trUpper';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // MAÇ SONU DEĞERLENDİRME — 2 ekran + onay (onaylanan tasarım: varyant 1a)
@@ -52,8 +53,8 @@ const MOCK_PLAYERS: EvalPlayer[] = [
   { id: 'p7', name: 'Ahmet Yıldız', pos: 'HÜC', initials: 'AY' },
 ];
 
-const initialsOf = (name: string) =>
-  name.split(' ').filter(Boolean).slice(0, 2).map(w => w[0]?.toUpperCase() ?? '').join('') || '?';
+// IP-13: baş harf üretimi tek kaynaktan — düz toUpperCase 'İ'yi 'I' yapardı.
+const initialsOf = (name: string) => trInitials(name, 2);
 
 const LBL10 = (v: number) =>
   v >= 10 ? 'EFSANE' : v >= 8 ? 'ÇOK İYİ' : v >= 6 ? 'İYİ' : v >= 4 ? 'ORTA' : v > 0 ? 'ZAYIF' : 'PUANLA';
@@ -83,7 +84,8 @@ function useSweepPick(value: number, max: number, onPick: (v: number) => void) {
     e.currentTarget.setPointerCapture?.(e.pointerId);
     const v = valueAt(e.currentTarget, e.clientX);
     if (v !== value) onPick(v);
-    if (navigator.vibrate) navigator.vibrate(12);
+    // Titreşim uygulamadan tamamen kaldırıldı (kullanıcı kararı) — sürme
+    // geri bildirimi görsel: yıldızlar dolar, sağdaki rakam ve etiket değişir.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value, max, onPick]);
 
@@ -508,7 +510,7 @@ const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => 
               background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.10)',
               color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
             }}
-            aria-label={step === 1 ? 'Geri' : 'Kadroya dön'}
+            aria-label="Geri"
           >
             <ArrowLeft size={20} />
           </button>

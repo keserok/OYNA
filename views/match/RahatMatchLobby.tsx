@@ -11,6 +11,9 @@ import { showToast } from '../../components/common/GlobalToast';
 import { skillBand } from '../../utils/skillBand';
 import { PLAY_STYLE_META } from '../onboarding/onboardingShared';
 import { formatMatchDuration } from '../../shared/matchTiming';
+// IP-19: para tek kaynaktan yazılır — fiyat bağlamında formatTRYShort
+// ("Ücretsiz" karşılığını kendi verir), iade/bakiye bağlamında formatTRYAmount.
+import { formatTRYShort, formatTRYAmount } from '../../utils/formatTRY';
 import {
   getMatchDetails, subscribeToMatchUpdates, getMatchLobbyParticipants,
   selfAssignSlot, unassignSlot, previewLeaveMatch, leaveMatchSlot, leaveQuoteMessage,
@@ -809,7 +812,7 @@ const RahatMatchLobby: React.FC<Props> = ({ match: matchProp, onBack }) => {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 20 }}>
               <InfoTile icon={<Calendar size={14} color="#6B7280" />} label="TARİH" value={match.date} numeric />
               <InfoTile icon={<Clock size={14} color="#6B7280" />} label="SAAT" value={match.time} numeric />
-              <InfoTile icon={<Banknote size={14} color="#6B7280" />} label="ÜCRET" value={price === 0 ? 'ÜCRETSİZ' : `${price}₺ / kişi`} numeric />
+              <InfoTile icon={<Banknote size={14} color="#6B7280" />} label="ÜCRET" value={price === 0 ? 'ÜCRETSİZ' : `${formatTRYShort(price)} / kişi`} numeric />
               {(pitch?.location || match.location) && (
                 <InfoTile icon={<MapPin size={14} color="#6B7280" />} label="ADRES" value={pitch?.district || pitch?.location || match.location} />
               )}
@@ -967,7 +970,7 @@ const RahatMatchLobby: React.FC<Props> = ({ match: matchProp, onBack }) => {
           ) : (
             <button type="button" onClick={() => setSheet('join')}
               style={{ width: '100%', height: 54, borderRadius: 16, border: 'none', background: '#39FF14', color: '#0A0E14', fontSize: 14, fontWeight: 900, letterSpacing: '.1em', cursor: 'pointer', boxShadow: '0 0 28px rgba(57,255,20,0.26)' }}>
-              {price === 0 ? 'KATIL · ÜCRETSİZ' : `KATIL · ${price.toLocaleString('tr-TR')}₺`}
+              {price === 0 ? 'KATIL · ÜCRETSİZ' : `KATIL · ${formatTRYShort(price)}`}
             </button>
           )}
         </div>
@@ -1043,7 +1046,7 @@ const RahatMatchLobby: React.FC<Props> = ({ match: matchProp, onBack }) => {
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: 10 }}>
                     <span style={{ fontSize: 12, fontWeight: 700, color: '#9CA3AF' }}>Hesaplanan iade</span>
-                    <span className="font-numeric" style={{ fontSize: 20, fontWeight: 700, color: '#39FF14' }}>{leaveQuote.refundable.toLocaleString('tr-TR')}₺</span>
+                    <span className="font-numeric" style={{ fontSize: 20, fontWeight: 700, color: '#39FF14' }}>{formatTRYAmount(leaveQuote.refundable)}</span>
                   </div>
                 </div>
                 {leaveQuote.late && (
