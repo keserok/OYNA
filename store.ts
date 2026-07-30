@@ -311,8 +311,6 @@ interface AppState {
   setSelectedDiaryId: (id: string | null) => void;
   setSelectedConversationId: (id: string | null) => void;
   setMatchCreateSeed: (seed: AppState['matchCreateSeed']) => void;
-  activeDraftId: string | null;
-  setActiveDraftId: (id: string | null) => void;
   setSelectedGk: (gk: Goalkeeper | null) => void;
   setSelectedRef: (ref: Referee | null) => void;
   bookingPitch: Pitch | null;
@@ -584,7 +582,6 @@ export const useAppStore = create<AppState>((set, get) => ({
   selectedDiaryId: null,
   selectedConversationId: null,
   matchCreateSeed: null,
-  activeDraftId: null,
   selectedGk: null,
   selectedRef: null,
   bookingPitch: null,
@@ -828,7 +825,6 @@ export const useAppStore = create<AppState>((set, get) => ({
   studioContext: null,
   setStudioContext: (c) => set({ studioContext: c }),
   setMatchCreateSeed: (seed) => set({ matchCreateSeed: seed }),
-  setActiveDraftId: (id) => set({ activeDraftId: id }),
   setSelectedGk: (selectedGk) => set({ selectedGk }),
   setSelectedRef: (selectedRef) => set({ selectedRef }),
   setTicketBookingId: (ticketBookingId) => set({ ticketBookingId }),

@@ -235,11 +235,10 @@ const NextEventHero: React.FC<{ item: MyAgendaItem; currentUserUid: string; onOp
 // ═════════════════ ANA BİLEŞEN ═══════════════════════════════════════════════
 
 interface MyMatchesHubProps {
-  onBack: () => void;
   onNavigate: (view: AppView) => void;
 }
 
-const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onBack, onNavigate }) => {
+const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onNavigate }) => {
   const reduceMotion = useReducedMotion();
   const { setSelectedMatch, setMatchCreateSeed, navigateTo, applyMatchLocal, setNavOverlayOpen } = useAppStore();
   const { items, past, counts, nextItem, bookingsLoading, bookingsError, refetchBookings, currentUserUid } = useMyAgenda();
@@ -455,8 +454,17 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onBack, onNavigate }) => {
   const sheetHeading = sheet ? dayHeading(sheet.when) : null;
   const bookingRemaining = sheetBooking ? Math.max((sheetBooking.deposit_amount || 0) - (sheetBooking.paid_amount || 0), 0) : 0;
   // F2.1: tamamlanmış ve henüz puanlanmamış maçta değerlendirme girişi açılır.
-  const sheetMatchEvaluable = !!sheetMatch && sheetMatch.status === 'COMPLETED'
-    && !evaluatedMatchIds.has(sheetMatch.id);
+  const evaluable = (m: { status?: string; id: string } | null | undefined): boolean =>
+    !!m && m.status === 'COMPLETED' && !evaluatedMatchIds.has(m.id);
+  const sheetMatchEvaluable = evaluable(sheetMatch);
+
+  // IP-14 · BULGU-105: değerlendirme kapısı VARSAYILAN KAPALI "Geçmiş & İptaller"
+  // akordeonunun içinde, iptal edilmiş maçlarla aynı listede duruyordu — yani maç
+  // sonu puanlama akışı pratikte hiç bulunamıyordu. Artık sayfanın EN ÜSTÜNDE.
+  const awaitingEval = useMemo(
+    () => past.filter((i): i is MyAgendaItem & { kind: 'MATCH' } => i.kind === 'MATCH' && evaluable(i.match)),
+    [past, evaluatedMatchIds],
+  );
   // Ayrılma yalnız gerçekten kaydı olan için: sahada oturuyor, slot satın almış veya yedekte.
   const sheetMatchLeaveable = !!sheetMatch && !!currentUserUid
     && !['CANCELLED', 'COMPLETED'].includes(sheetMatch.status as string)
@@ -475,13 +483,8 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onBack, onNavigate }) => {
       {/* ── Başlık ── */}
       <header className="sticky top-0 z-30 bg-[#0A0E14]/[0.92] backdrop-blur-xl border-b border-white/5 pt-safe">
         <div className="px-4 py-3 flex items-center justify-between gap-3">
-          <button
-            onClick={onBack}
-            aria-label="Geri"
-            className="w-11 h-11 flex items-center justify-center bg-[#161B22] rounded-full text-white border border-white/5 hover:bg-white/10 active:scale-95 transition-all shrink-0"
-          >
-            <ArrowLeft size={20} />
-          </button>
+          {/* IP-14: Maçlarım artık alt menünün orta tuşu — sekme kökünde
+              geri oku olmaz. */}
           <div className="text-center flex-1 min-w-0">
             <h1 className="text-lg font-extrabold text-white italic uppercase tracking-tighter leading-[1.2] truncate">Maçlarım</h1>
             <p className="font-numeric text-[0.625rem] text-ink-4 uppercase tracking-widest mt-1 truncate">
@@ -581,6 +584,39 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onBack, onNavigate }) => {
           </>
         ) : (
           <>
+            {/* ═══ DEĞERLENDİRMENİ BEKLİYOR ═══
+                Oynanmış ama henüz puanlanmamış maçlar. Puanlama penceresi
+                sınırlı olduğu için bu bölüm listenin en üstünde durur. */}
+            {awaitingEval.length > 0 && (
+              <div className="mb-5">
+                <div className="flex items-center gap-2.5 mb-3">
+                  <span className="text-[0.625rem] font-extrabold uppercase tracking-[0.22em] text-warning">
+                    Değerlendirmeni Bekliyor ({awaitingEval.length})
+                  </span>
+                  <span className="flex-1 h-px bg-warning-line" />
+                </div>
+                <div className="flex flex-col gap-2.5">
+                  {awaitingEval.map((item) => (
+                    <button
+                      key={`eval-${item.id}`}
+                      onClick={() => { setSelectedMatch(item.match); navigateTo('POST_MATCH_EVAL'); }}
+                      className="w-full min-h-[64px] rounded-2xl bg-warning-bg border border-warning-line flex items-center justify-between px-4 py-3 text-left active:scale-[0.99] transition-transform"
+                    >
+                      <span className="min-w-0">
+                        <span className="block text-sm font-extrabold text-ink truncate">
+                          {item.match.title || item.match.location || 'Maç'}
+                        </span>
+                        <span className="block text-[0.6875rem] text-ink-3 font-bold mt-0.5">
+                          Takım arkadaşlarını ve kaleci/hakemi puanla
+                        </span>
+                      </span>
+                      <span className="text-warning font-extrabold shrink-0 ml-3">→</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Sıradaki etkinlik hero'su */}
             {nextItem && (
               <NextEventHero item={nextItem} currentUserUid={currentUserUid} onOpen={() => setSheet(nextItem)} />
@@ -634,7 +670,7 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onBack, onNavigate }) => {
                   onClick={() => setShowPast(v => !v)}
                   className="w-full min-h-[44px] flex items-center justify-center gap-2 rounded-2xl border border-white/5 bg-white/[0.02] text-white/50 text-[0.625rem] font-extrabold uppercase tracking-[0.2em] hover:bg-white/5 active:scale-[0.99] transition-all"
                 >
-                  Geçmiş & İptaller ({visiblePast.length})
+                  Geçmiş &amp; İptaller ({visiblePast.length})
                   <ChevronDown size={14} className={`transition-transform duration-200 ${showPast ? 'rotate-180' : ''}`} />
                 </button>
                 <AnimatePresence initial={false}>

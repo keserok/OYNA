@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus } from 'lucide-react';
+import { Plus, ArrowLeft } from 'lucide-react';
 import { AppView } from '../types';
 import { auth } from '../supabaseAuth';
 import {
@@ -26,6 +26,9 @@ import TeamCreatePanel, { hasTeamDraft } from './social/TeamCreatePanel';
 // ================================================================
 
 interface SocialViewProps {
+  /** IP-14: Sosyal artık bir sekme KÖKÜ değil — Profil'den açılıyor, dolayısıyla
+   *  kapanış yolu olmalı. Alt menü bu ekranda çizilmez. */
+  onBack: () => void;
   onNavigate: (view: AppView) => void;
 }
 
@@ -37,7 +40,7 @@ type TeamsSubTab = 'ALL' | 'MINE' | 'CREATE';
 let rememberedMainTab: MainTab = 'TEAMS';
 let rememberedTeamsSubTab: TeamsSubTab = 'MINE';
 
-const SocialView: React.FC<SocialViewProps> = ({ onNavigate }) => {
+const SocialView: React.FC<SocialViewProps> = ({ onBack, onNavigate }) => {
   const userId = auth.currentUser?.uid || '';
 
   const [tab, setTabState] = useState<MainTab>(rememberedMainTab);
@@ -162,7 +165,14 @@ const SocialView: React.FC<SocialViewProps> = ({ onNavigate }) => {
           style={{ background: 'radial-gradient(circle, #39FF14 0%, transparent 70%)' }}
         />
 
-        <div className="flex items-start justify-between pt-5 mb-1 relative z-10">
+        <div className="flex items-start gap-3 pt-5 mb-1 relative z-10">
+          <button
+            onClick={onBack}
+            aria-label="Geri"
+            className="w-11 h-11 shrink-0 -ml-1 flex items-center justify-center bg-white/5 rounded-full border border-white/10 text-white hover:bg-white/10 active:scale-95 transition-all"
+          >
+            <ArrowLeft size={20} />
+          </button>
           <div>
             <h1 className="text-3xl font-extrabold tracking-tight">Sosyal</h1>
             {/* Sekme-başına bağlamsal özet (G41) */}

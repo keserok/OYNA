@@ -17,7 +17,6 @@ import { formatMatchDuration, realMatchMinutes } from '../shared/matchTiming';
 import { PLAY_STYLE_META } from './onboarding/onboardingShared';
 
 interface MatchDiscoveryProps {
-  onBack: () => void;
   onSelect: (match: MatchListing) => void;
 }
 
@@ -28,7 +27,7 @@ const BUDGET_OPTIONS = ['Ücretsiz', '150₺ ve Altı', '150-250₺', '250-350�
 const GENDER_OPTIONS = ['Karma', 'Erkek', 'Kadın'];
 const AGE_OPTIONS = ['10-14', '14-16', '16-18', '18-22', '23-27', '28-35', '35+', 'Tümü'];
 
-const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => {
+const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onSelect }) => {
   const {
     adminMatches,
     adminUsers,
@@ -531,10 +530,8 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
           {/* HEADER */}
           <header className="sticky top-0 z-50 bg-black/40 backdrop-blur-2xl border-b border-white/5 px-5 pt-safe pb-4">
             <div className="flex items-center justify-between">
+              {/* IP-14: sekme kökü — geri oku kaldırıldı. */}
               <div className="flex items-center gap-3">
-                <button onClick={onBack} aria-label="Geri" className="w-11 h-11 rounded-full bg-white/[0.03] backdrop-blur-md border border-white/10 flex items-center justify-center text-white active:scale-90 transition-all hover:bg-white/10">
-                  <ArrowLeft size={20} />
-                </button>
                 <div>
                   <h1 className="text-xl font-extrabold text-white italic uppercase tracking-tight leading-none drop-shadow-lg">Top Oyna</h1>
                 </div>

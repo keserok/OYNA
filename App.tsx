@@ -1,6 +1,6 @@
 import React, { useEffect, Suspense, lazy } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { UserRole, AppView, MatchListing, Goalkeeper, Referee, Match } from './types';
+import { UserRole, AppView, MatchListing, Goalkeeper, Referee } from './types';
 import { auth, onAuthStateChanged, logout, handleAuthCallbackUrl } from './supabaseAuth';
 import { supabase } from './supabaseClient';
 import { useAppStore } from './store';
@@ -64,10 +64,9 @@ const GuardianConsentChild = lazy(() => import('./views/GuardianConsentChild'));
 const GuardianConsentForm = lazy(() => import('./views/GuardianConsentForm'));
 const ServiceApplication = lazy(() => import('./views/ServiceApplication'));
 const QRScannerView = lazy(() => import('./views/QRScannerView'));
-const MatchesView = lazy(() => import('./views/MatchesView'));
 const LegalScreen = lazy(() => import('./views/LegalScreen'));
 const MessagesView = lazy(() => import('./views/MessagesView'));
-import { BottomNav } from './components/BottomNav';
+import { BottomNav, TAB_IDS } from './components/BottomNav';
 const RoleSwitcher = lazy(() => import('./components/RoleSwitcher'));
 
 // Loading fallback component
@@ -78,7 +77,6 @@ const ViewLoader = () => (
 );
 
 const App: React.FC = () => {
-  const [matches, setMatches] = React.useState<Match[]>([]);
   const [verificationNote, setVerificationNote] = React.useState<string | null>(null);
   // Oturum geri yüklemesi ilk kez çözüldü mü? (Splash otomatik geçişi bunu bekler)
   const [authResolved, setAuthResolved] = React.useState(false);
@@ -666,14 +664,9 @@ const App: React.FC = () => {
         return <QRScannerView
           onBack={() => goBack('OWNER_PANEL')}
           pitchId={useAppStore.getState().ownerActivePitchId}
-          onResult={(res) => {
-            setMatches(prev => [res, ...prev]);
-          }}
         />;
-      case 'MATCHES':
-        return <MatchesView onBack={() => goBack('OWNER_PANEL')} matches={matches} />;
       case 'MY_MATCHES':
-        return <MyMatchesHub onBack={() => goBack('DASHBOARD')} onNavigate={(v) => navigateTo(v)} />;
+        return <MyMatchesHub onNavigate={(v) => navigateTo(v)} />;
       case 'DASHBOARD':
         return <Dashboard
           onNavigate={(newView) => navigateTo(newView)}
@@ -725,7 +718,6 @@ const App: React.FC = () => {
       case 'PROFILE':
         return <ProfileScreen
           role={role || UserRole.PLAYER}
-          onBack={() => goBack('DASHBOARD')}
           onNavigate={(v) => navigateTo(v)}
           onOpenDiaryEntry={(id) => {
             setSelectedDiaryId(id);
@@ -751,7 +743,6 @@ const App: React.FC = () => {
         return <SettingsScreen onBack={() => goBack('DASHBOARD')} onNavigate={(v) => navigateTo(v)} />;
       case 'MATCH_DISCOVERY':
         return <MatchDiscovery
-          onBack={() => goBack('DASHBOARD')}
           onSelect={(match) => {
             useAppStore.getState().setLobbyMode('DISCOVER');
             setSelectedMatch(match);
@@ -768,7 +759,7 @@ const App: React.FC = () => {
         {/* F4.1: bilet artık Maçlarım'daki rezervasyon kartından açılıyor */}
         return <MatchTicket onBack={() => goBack('MY_MATCHES')} />;
       case 'SOCIAL':
-        return <SocialView onNavigate={(v) => navigateTo(v)} />;
+        return <SocialView onBack={() => goBack('PROFILE')} onNavigate={(v) => navigateTo(v)} />;
       case 'FRIEND_ADD':
         return <FriendAddView onBack={() => goBack('SOCIAL')} onNavigate={(v) => navigateTo(v)} />;
       case 'MESSAGES':
@@ -792,7 +783,11 @@ const App: React.FC = () => {
     }
   };
 
-  const showBottomNav = ['DASHBOARD', 'MATCH_DISCOVERY', 'SOCIAL', 'STUDIO', 'PITCH_DISCOVERY', 'PROFILE', 'MY_MATCHES'].includes(view);
+  // Alt menü YALNIZ sekme köklerinde çizilir ve liste BottomNav'dan gelir —
+  // elle yazılan ikinci bir dizi olduğu sürece ikisi kaçınılmaz olarak ayrışıyordu.
+  // Taktik Stüdyo listeden çıktı: sekmesi yoktu, çubuk çiziliyor ama hiçbir sekme
+  // yanmıyordu. Artık tam ekran açılır ve kendi geri okuyla kapanır.
+  const showBottomNav = (TAB_IDS as readonly string[]).includes(view);
 
   return (
     <div className="h-full bg-[#0A0E14] text-white font-['Inter'] relative overflow-hidden">

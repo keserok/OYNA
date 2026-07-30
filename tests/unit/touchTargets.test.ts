@@ -104,9 +104,7 @@ describe('erişilebilir ad — sadece-ikon butonlar', () => {
     ['views/PitchDiscovery.tsx', 'Geri'],
     ['views/PitchDiscovery.tsx', 'Kapat'],
     ['views/PitchDiscovery.tsx', 'Favorilere ekle'],
-    ['views/MatchDiscovery.tsx', 'Geri'],
     ['views/MatchDiscovery.tsx', 'Kapat'],
-    ['views/ProfileScreen.tsx', 'Geri'],
     ['views/ProfileScreen.tsx', 'Ayarlar'],
     ['views/MessagesView.tsx', 'Geri'],
     ['views/MessagesView.tsx', 'Menü'],
@@ -121,6 +119,18 @@ describe('erişilebilir ad — sadece-ikon butonlar', () => {
 
   it.each(ETIKETLI)('%s içinde "%s" etiketi var', (dosya, etiket) => {
     expect(oku(dosya)).toContain(`aria-label="${etiket}"`);
+  });
+
+  // IP-14: sekme köklerinde geri oku YOKTUR — alt menü zaten her yere götürüyor,
+  // ok kullanıcıyı yığında geriye atıp şaşırtıyordu. Beş sekme kökü:
+  // Dashboard · MatchDiscovery · MyMatchesHub · PitchDiscovery · ProfileScreen.
+  // (PitchDiscovery'nin oku YALNIZ seçim modunda çizilir — o sekme kökü değil.)
+  it('sekme köklerinde onBack ile çizilen geri oku yok', () => {
+    for (const dosya of ['views/MatchDiscovery.tsx', 'views/ProfileScreen.tsx', 'views/MyMatchesHub.tsx']) {
+      const src = oku(dosya);
+      expect(src, `${dosya} hâlâ onBack prop'u taşıyor`).not.toMatch(/onBack:\s*\(\)\s*=>\s*void/);
+      expect(src, `${dosya} içinde onClick={onBack} kalmış`).not.toContain('onClick={onBack}');
+    }
   });
 
   it('etiketler Türkçe — İngilizce sızıntı yok', () => {

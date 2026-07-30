@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Spinner } from '../../components/ui/Spinner';
 import {
-  ArrowLeft, Search, Copy, Share2, QrCode, BookUser, UserPlus,
+  ArrowLeft, Search, Copy, Share2, BookUser, UserPlus,
   Check, ChevronRight, Loader2, Clock, Users, X,
 } from 'lucide-react';
 import { AppView } from '../../types';
@@ -367,13 +367,18 @@ const FriendAddView: React.FC<FriendAddViewProps> = ({ onBack, onNavigate }) => 
                   {isContactsAvailable() ? 'OYNA\'daki tanıdıklarını bul' : 'Yalnız uygulamada kullanılabilir'}
                 </div>
               </button>
+              {/* IP-14 · BULGU-024: bu buton "QR ile Ekle" adıyla oyuncuyu TESİS
+                  SAHİBİNİN skor giriş ekranına gönderiyordu (başlık: "SKOR GİR"),
+                  üstelik orada kamera/QR tarayıcı da yoktu. Artık kullanıcının
+                  beklediği işi gerçekten yapıyor: davet linki paylaşımı — aynı
+                  dosyadaki `shareInvite` ile, kamera izni gerektirmeden. */}
               <button
-                onClick={() => onNavigate('QR_SCANNER' as AppView)}
-                className="rounded-2xl bg-white/4 border border-white/8 p-4 text-left active:scale-[0.98]"
+                onClick={shareInvite}
+                className="min-h-[44px] rounded-2xl bg-white/4 border border-white/8 p-4 text-left active:scale-[0.98]"
               >
-                <QrCode size={20} className="text-[#39FF14]" />
-                <div className="text-sm font-bold mt-2">QR ile Ekle</div>
-                <div className="text-[0.6875rem] text-ink-4 mt-0.5">Yan yanaysanız en hızlısı</div>
+                <Share2 size={20} className="text-[#39FF14]" />
+                <div className="text-sm font-bold mt-2">Davet Linki Gönder</div>
+                <div className="text-[0.6875rem] text-ink-4 mt-0.5">WhatsApp, SMS veya kopyala</div>
               </button>
             </div>
 

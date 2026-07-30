@@ -285,15 +285,15 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack }) => {
     unreadNotificationsCount, 
     adminMatches, 
     myTeams,
-    setActiveDraftId,
     setSelectedMatch,
     adminUsers,
     setNewMatchBadge,
     setIsNotificationsOpen
   } = useAppStore();
   const [isLoading, setIsLoading] = useState(!initialLoadComplete);
-  const myDrafts = React.useMemo(() => adminMatches.filter(m => m.status === 'DRAFT'), [adminMatches]);
-  const myUpcomingMatches = React.useMemo(() => adminMatches.filter(m => m.status !== 'DRAFT'), [adminMatches]);
+  // IP-14: myDrafts/myUpcomingMatches ve taslak seçici SİLİNDİ — hiçbiri JSX'te
+  // kullanılmıyordu. Aktif taslak kimliği repoda hiçbir zaman bir değer almadığı
+  // için "yarım kalan maçtan devam et" akışı fiilen hiç çalışmadı.
 
   const { all: userMatches, closest: closestMatch, currentUserUid } = useMyMatches();
 
@@ -413,122 +413,11 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack }) => {
         </div>
       </header>
 
-      {/* 2. MAÇLARIM Pulsing Button */}
-      <div className="px-6 mb-6 relative z-20">
-          <motion.div
-            onClick={() => {
-              setNewMatchBadge(false);
-              // Her zaman Maçlarım hub'ı: boş durumda hub'ın kendi "Top Oyna" CTA'sı yönlendirir.
-              onNavigate('MY_MATCHES');
-            }}
-            initial={{ opacity: 0, y: -20, scale: 0.95 }}
-            animate={{
-              opacity: 1,
-              y: 0,
-              scale: 1,
-              ...(userMatches.length > 0 ? {
-                boxShadow: [
-                  `0 0 15px rgba(239, 68, 68, ${0.1 + (1.8 - closestMatchPulse) * 0.15})`,
-                  `0 0 45px rgba(239, 68, 68, ${0.35 + (1.8 - closestMatchPulse) * 0.35})`,
-                  `0 0 15px rgba(239, 68, 68, ${0.1 + (1.8 - closestMatchPulse) * 0.15})`
-                ]
-              } : { boxShadow: '0 0 0px transparent' })
-            }}
-            transition={{
-              boxShadow: {
-                duration: closestMatchPulse,
-                repeat: userMatches.length > 0 ? Infinity : 0,
-                ease: 'easeInOut'
-              }
-            }}
-            whileHover={{ scale: 1.015 }}
-            whileTap={{ scale: 0.985 }}
-            className="w-full relative rounded-[28px] cursor-pointer group overflow-hidden border border-white/10 hover:border-white/20 transition-all bg-[#0F1319] bg-gradient-to-r from-[#0F1319] to-[#141A22]"
-          >
-            {/* Full button background pulsing red glow (acts like counter, increases with match closeness) */}
-            <motion.div
-              animate={userMatches.length > 0 ? {
-                opacity: [0.03, 0.15 + (1.8 - closestMatchPulse) * 0.12, 0.03]
-              } : { opacity: 0.02 }}
-              transition={{
-                duration: closestMatchPulse,
-                repeat: userMatches.length > 0 ? Infinity : 0,
-                ease: 'easeInOut'
-              }}
-              className="absolute inset-0 bg-[#ef4444] pointer-events-none z-0"
-            />
-
-            {/* Glowing pulsing border effect */}
-            <motion.div
-              animate={userMatches.length > 0 ? {
-                opacity: [0.15, 0.45, 0.15],
-                boxShadow: [
-                  'inset 0 0 15px rgba(239, 68, 68, 0.1)',
-                  'inset 0 0 25px rgba(239, 68, 68, 0.25)',
-                  'inset 0 0 15px rgba(239, 68, 68, 0.1)'
-                ]
-              } : { opacity: 0.08, boxShadow: 'inset 0 0 15px rgba(255,255,255,0.04)' }}
-              transition={{
-                duration: closestMatchPulse,
-                repeat: userMatches.length > 0 ? Infinity : 0,
-                ease: 'easeInOut'
-              }}
-              className="absolute inset-0 rounded-[28px] pointer-events-none z-0"
-            />
-
-            {/* Red Laser Scan Line — yalnız yaklaşan maç varken (Soru 8). */}
-            {userMatches.length > 0 && (
-            <motion.div
-              animate={{ top: ['-40px', '100%', '-40px'] }}
-              transition={{
-                duration: 3.5,
-                repeat: Infinity,
-                ease: 'linear'
-              }}
-              className="absolute left-0 right-0 h-10 bg-gradient-to-b from-transparent via-red-500/30 to-transparent pointer-events-none z-10 top-0"
-              style={{
-                borderBottom: '3.5px solid rgba(239, 68, 68, 0.95)',
-                boxShadow: '0 8px 35px 4px rgba(239, 68, 68, 0.75)'
-              }}
-            />
-            )}
-
-            <div className="relative z-10 py-6 px-7 flex items-center justify-between gap-4">
-              <div className="flex items-center gap-4">
-                {userMatches.length > 0 ? (
-                  <div className="relative flex h-4 w-4 items-center justify-center shrink-0">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-red-600"></span>
-                  </div>
-                ) : (
-                  <div className="w-4 h-4 rounded-full bg-white/15 border border-white/20 shrink-0" />
-                )}
-
-                <div className="flex flex-col">
-                  <h3 className={`font-extrabold text-lg tracking-tighter italic uppercase leading-none ${userMatches.length > 0 ?'text-white' :'text-white/60'}`}>
-                    MAÇLARIM
-                  </h3>
-                  <span className={`text-xs font-medium uppercase tracking-wider mt-2 leading-none ${userMatches.length > 0 ?'text-gray-300' :'text-ink-4'}`}>
-                    {buttonSubtitle}
-                  </span>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3 shrink-0">
-                {currentUserProfile?.newMatchBadge && (
-                  <motion.span
-                    animate={{ scale: [1, 1.05, 1] }}
-                    transition={{ duration: 0.8, repeat: Infinity }}
-                    className="px-3 py-1.5 text-[0.625rem] font-extrabold tracking-widest text-[#0A0E14] bg-[#FACC15] rounded-xl shadow-[0_0_15px_rgba(250,204,21,0.6)] uppercase italic shrink-0"
-                  >
-                    YENİ MAÇ EKLENDİ
-                  </motion.span>
-                )}
-                <ChevronRight size={20} className="text-gray-400 group-hover:text-white group-hover:translate-x-0.5 transition-all" />
-              </div>
-            </div>
-          </motion.div>
-      </div>
+      {/* IP-14: büyük "MAÇLARIM" kartı KALDIRILDI — Maçlarım artık alt menünün
+          orta tuşu (kullanıcı kararı). Ana ekranın en üstünde ikinci bir kapı
+          tutmak, aynı yere iki ayrı yoldan giden bir arayüz demekti. Üstteki
+          takvim kısayolu duruyor: o Maçlarım'ı doğrudan REZERVASYONLAR
+          segmentinde açar — FAB'ın vermediği bir şey verir. */}
 
       {/* BENTO GRID LAYOUT */}
       <motion.main

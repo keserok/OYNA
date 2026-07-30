@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Home, Calendar, Users, User, MapPin } from 'lucide-react';
+import { Home, Calendar, Ticket, User, MapPin } from 'lucide-react';
 import { AppView } from '../types';
 // IP-08: Gezinti etiketleri 12px'ti ve gerçek Inter metrikleriyle 360px'lik
 // ekranda "Ana Sayfa" İKİ SATIRA kırılıyordu (görsel testler yedek fontla
@@ -8,6 +8,17 @@ import { AppView } from '../types';
 // caption basamağına (11px) indi ve `whitespace-nowrap` ile kırılma yasaklandı:
 // birincil gezinti çubuğu asla iki satıra taşmaz.
 import { type_ } from '../ui/type';
+
+/** Alt menünün BEŞ yuvası — TEK KAYNAK.
+ *  App.tsx `showBottomNav`'ı bu listeden türetir; ikisi ayrı yazıldığında
+ *  senkron kaçıyordu (STUDIO listede vardı ama sekmesi yoktu → çubuk çiziliyor
+ *  ama hiçbir sekme yanmıyordu; MY_MATCHES ikisinde de yoktu → çubuk kayboluyordu).
+ *
+ *  Kullanıcı kararı: MAÇLARIM ortadaki büyük tuş olur (bilet, kapora ve maç
+ *  değerlendirmesi oradan geçiyor — en kolay erişilen yuvayı hak ediyor).
+ *  SOSYAL sekmeden çıktı; girişi PROFİL ekranındadır. */
+export const TAB_IDS = ['DASHBOARD', 'MATCH_DISCOVERY', 'MY_MATCHES', 'PITCH_DISCOVERY', 'PROFILE'] as const;
+export type TabId = typeof TAB_IDS[number];
 
 interface BottomNavProps {
   currentView: AppView;
@@ -17,10 +28,10 @@ interface BottomNavProps {
 }
 
 export const BottomNav: React.FC<BottomNavProps> = ({ currentView, onNavigate, hidden = false }) => {
-  const navItems = [
+  const navItems: { id: TabId; icon: typeof Home; label: string; isCenter?: boolean }[] = [
     { id: 'DASHBOARD', icon: Home, label: 'Ana Sayfa' },
     { id: 'MATCH_DISCOVERY', icon: Calendar, label: 'Top Oyna' },
-    { id: 'SOCIAL', icon: Users, label: 'Sosyal', isCenter: true },
+    { id: 'MY_MATCHES', icon: Ticket, label: 'Maçlarım', isCenter: true },
     { id: 'PITCH_DISCOVERY', icon: MapPin, label: 'Sahalar' },
     { id: 'PROFILE', icon: User, label: 'Profil' },
   ];
@@ -39,10 +50,9 @@ export const BottomNav: React.FC<BottomNavProps> = ({ currentView, onNavigate, h
         className="bg-[#161B22]/80 backdrop-blur-xl border border-white/10 rounded-[32px] px-2 py-2 flex items-center justify-between shadow-[0_-10px_40px_rgba(0,0,0,0.5)]"
       >
         {navItems.map((item) => {
-          // MY_MATCHES ve STUDIO sekme DEĞİL ama alt menü çiziliyor; kullanıcı
-          // "neredeyim" sorusunu cevapsız bırakmasın diye Ana Sayfa aktif görünür.
-          const isActive = currentView === item.id
-            || (item.id === 'DASHBOARD' && (currentView === 'MY_MATCHES' || currentView === 'STUDIO'));
+          // Artık beş sekmenin beşi de gerçek bir görünüme karşılık geliyor;
+          // "hangi sekmedeyim" sorusu her zaman cevaplı.
+          const isActive = currentView === item.id;
           const Icon = item.icon;
 
           if (item.isCenter) {

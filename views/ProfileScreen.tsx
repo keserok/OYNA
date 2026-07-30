@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { UserRole, AppView } from '../types';
-import { ArrowLeft, Settings, Users, UserPlus, Wallet, Pencil, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Settings, Users, UserPlus, Wallet, Pencil, AlertCircle, MessagesSquare, ChevronRight } from 'lucide-react';
 import { useAppStore } from '../store';
 import { auth } from '../supabaseAuth';
 import { supabase } from '../supabaseClient';
@@ -18,12 +18,11 @@ import { buildCardData, applyCardTierOverride, ageFromBirthdate, formatPosition,
 
 interface ProfileScreenProps {
     role: UserRole;
-    onBack: () => void;
     onNavigate?: (view: AppView) => void;
     onOpenDiaryEntry: (id: string) => void;
 }
 
-const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate, onOpenDiaryEntry }) => {
+const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onNavigate, onOpenDiaryEntry }) => {
     // Profili Düzenle (mevki + bio + doğum tarihi + ayak) modalı — TEK KAYNAK ProfileEditSheet
     const [showEditModal, setShowEditModal] = useState(false);
     const [savingEdit, setSavingEdit] = useState(false);
@@ -176,10 +175,9 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate,
 
             {/* ═══ FIXED TOP BAR ═══ */}
             <div className="px-6 pb-3 pt-safe flex justify-between items-center shrink-0 z-50">
+                {/* IP-14: sekme kökünde geri oku YOK — alt menü zaten her yere
+                    götürüyor, ok kullanıcıyı yığında geriye atıp şaşırtıyordu. */}
                 <div className="flex items-center justify-between w-full pt-4">
-                    <button onClick={onBack} aria-label="Geri" className="w-11 h-11 flex items-center justify-center bg-[#161B22]/80 rounded-full text-white border border-white/[0.08] hover:bg-white/10 active:scale-95 transition-all">
-                        <ArrowLeft size={19} strokeWidth={2.3} />
-                    </button>
                     <div className="flex items-center gap-2">
                         <OynaLogo width={20} height={20} className="text-primary" />
                         <span className="text-base font-extrabold text-white tracking-[0.05em] uppercase italic">Profil</span>
@@ -292,6 +290,27 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate,
                 <div className="mt-3">
                     <ProfileShortcuts items={shortcuts} />
                 </div>
+
+                {/* ═══ SOSYAL ═══
+                    IP-14: Sosyal alt menüden çıkıp buraya taşındı (kullanıcı kararı).
+                    Yukarıdaki kısayollar Sosyal'in İKİ SEKMESİNE derin bağ veriyor;
+                    bu satır ekranın kendisini açar — Mesajlar'ın tek kapısı burası,
+                    onsuz mesajlaşma erişilemez kalırdı. */}
+                {!isGuest && (
+                    <button
+                        onClick={() => onNavigate && onNavigate('SOCIAL')}
+                        className="mt-3 w-full flex items-center gap-3 p-4 rounded-2xl bg-white/[0.03] border border-white/[0.08] hover:bg-white/[0.06] active:scale-[0.99] transition-all text-left"
+                    >
+                        <div className="w-10 h-10 rounded-xl bg-white/[0.06] border border-white/[0.12] flex items-center justify-center text-white/85 shrink-0">
+                            <MessagesSquare size={18} strokeWidth={2.3} />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                            <span className="text-sm font-extrabold text-white block">Sosyal</span>
+                            <span className="text-[0.6875rem] text-ink-4">Arkadaşlar, takımlar ve mesajlar</span>
+                        </div>
+                        <ChevronRight size={18} className="text-ink-4 shrink-0" />
+                    </button>
+                )}
 
                 {/* Rol yönetimi (rol değiştir + ek rol başvurusu) Ayarlar → Sahada Rolün'e taşındı. */}
 

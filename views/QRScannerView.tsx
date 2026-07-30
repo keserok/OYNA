@@ -11,7 +11,6 @@ import {
 
 interface QRScannerViewProps {
   onBack: () => void;
-  onResult: (result: any) => void;
   /** Owner panelinde aktif tesis — maç listesi bu tesise göre çekilir
    *  (çoklu tesis, personel/müdür ve admin-önizleme için doğru kaynak). */
   pitchId?: string | null;
@@ -22,7 +21,7 @@ interface MatchInfo {
   title: string;
 }
 
-const QRScannerView: React.FC<QRScannerViewProps> = ({ onBack, onResult, pitchId }) => {
+const QRScannerView: React.FC<QRScannerViewProps> = ({ onBack, pitchId }) => {
   const [scanResult, setScanResult] = useState<string | null>(null);
   const [manualCode, setManualCode] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -128,16 +127,6 @@ const QRScannerView: React.FC<QRScannerViewProps> = ({ onBack, onResult, pitchId
       if (rpcErr) throw rpcErr;
 
       setIsSuccess(true);
-      onResult({
-        id: matchInfo?.id || scanResult,
-        teamA: scoreEntry.teamAName,
-        teamB: scoreEntry.teamBName,
-        scoreA: scoreEntry.teamA,
-        scoreB: scoreEntry.teamB,
-        date: new Date().toLocaleDateString('tr-TR'),
-        time: new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
-        pitch: matchInfo?.title || 'Maç',
-      });
 
       setTimeout(() => {
         onBack();
