@@ -103,3 +103,31 @@ export const splitFullName = (full: string | null | undefined): { firstName: str
  * karar sunucudadır; bu yalnızca istemci tarafı gösterim/mantık içindir.)
  */
 export const isMinorAgeRange = (ageRange: AgeRange | ''): boolean => ageRange === '13-17';
+
+/**
+ * IP-16 — "onboarding'i bilerek atladım" bayrağı (kullanıcı bazlı).
+ *
+ * Açılışta `profiles.has_completed_onboarding = false` olan oyuncu tanıtım
+ * akışına geri gönderilir; yarıda kesilen kurulum bir daha hiç açılmıyordu ve
+ * konum izni SADECE orada istendiği için "yakınındaki maç" vaadi de hiç
+ * çalışmıyordu.
+ *
+ * Ama "Şimdilik Atla" diyen kullanıcı her açılışta aynı ekrana çarpmamalı.
+ * Sunucuda karşılığı yok: `apply_onboarding(p_completed=false)` yalnızca
+ * `has_completed_onboarding`i false BIRAKIR, "atlandı" diye bir durum yazmaz.
+ * Bu yüzden bayrak cihazda tutulur; kurtarma yolu Profil'deki
+ * "Profil tamamlanmadı → Tamamla" şeridi olarak kalır.
+ */
+const SKIP_KEY = (uid: string) => `oyna.onboarding.skipped.${uid}`;
+
+export const markOnboardingSkipped = (uid: string): void => {
+  try { localStorage.setItem(SKIP_KEY(uid), '1'); } catch { /* depolama yoksa yoksay */ }
+};
+
+export const wasOnboardingSkipped = (uid: string): boolean => {
+  try { return localStorage.getItem(SKIP_KEY(uid)) === '1'; } catch { return false; }
+};
+
+export const clearOnboardingSkipped = (uid: string): void => {
+  try { localStorage.removeItem(SKIP_KEY(uid)); } catch { /* yoksay */ }
+};

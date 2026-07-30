@@ -56,9 +56,21 @@ gerekmiyor; bugün main'e sorunsuz akar.
 | Komut | Beklenen |
 |---|---|
 | `npx tsc --noEmit` | 0 hata |
-| `npx vitest run` | 1017 test / 78 dosya, sıfır başarısız |
+| `npx vitest run` | 1056 test / 79 dosya, sıfır başarısız |
 | `npm run test:visual` | 24/24 |
 | `npm run build` | başarılı |
+
+> ⚠️ **GÖRSEL TEST "24/24" DEĞİŞMEDİ DEMEK DEĞİLDİR.** Karşılaştırmanın
+> `maxDiffPixelRatio: 0.002` toleransı var (390×844'te ≈ **658 piksel**).
+> Ölçüldü: IP-19'da profil ekranındaki `%0 → —` ve `0 ₺ → 0₺` değişikliği
+> **451 piksel** fark yaratıyor ve testten SESSİZCE geçiyordu; referans
+> görüntü IP-14'ten beri eskimişti. Yani yeşil görsel test yalnız
+> **yerleşim/renk** bozulmadığını kanıtlar; **tek kelimelik ya da tek
+> sembollük** metin değişikliğini yakalamaz. Metin değiştirdiysen ekranı
+> gözle doğrula, "24/24 geçti" demekle yetinme.
+> (Bir ekranın gerçekten değişip değişmediğini ölçmek için geçici bir spec'te
+> `toHaveScreenshot(ad, { maxDiffPixelRatio: 0, threshold: 0 })` kullan —
+> hata mesajı kaç pikselin farklı olduğunu yazar.)
 
 > ⚠️ **Önce `npm ci` çalıştır.** Taze klonda `node_modules` yoktur ve `tsc` bu
 > durumda "0 hata" der — çünkü hiçbir dosyayı gerçekten denetlemez, yalnız
@@ -75,6 +87,7 @@ IP-07 (tesis sahibi para dürüstlüğü) · IP-08 (tipografi/kontrast/font) ·
 **IP-12 (hata ve boş durum sistemi)** · **IP-13 (Türkçe metin ve ton)** ·
 **IP-11 (hareket, pil, algılanan hız)** · **IP-14 (bilgi mimarisi)** ·
 **IP-15 (kayıt kapısı, oturum, yasal onay)** ·
+**IP-16 (tanıtım akışı ve konum tek yolu)** · **IP-18 (profil doğruluğu)** ·
 **IP-19 (para biçimi ve bakiye tekliği)** · IP-20 (bilet çevrimdışı) ·
 S-serisi kararların tamamı.
 
@@ -82,7 +95,7 @@ S-serisi kararların tamamı.
 
 | Sıra | Paket | Not |
 |---|---|---|
-| 1+ | IP-16, 18, 22, 23 (+IP-21/IP-17 ertelendi) | |
+| 1+ | IP-22, IP-23 (+IP-21/IP-17 ertelendi) | |
 
 ### ⏳ AÇIK İŞ — telefona bildirim (kullanıcı isteği, HENÜZ YAPILMADI)
 
@@ -91,6 +104,57 @@ gelmesini sağla"** (push notification). Bu iş IP-12/IP-14 kapsamında DEĞİLD
 yapılmadı. Başlamadan önce `notifications/pushService.ts`, Supabase'de token
 tablosu, sunucu tarafı gönderim (edge function/cron) ve native yapılandırma
 (google-services.json / APNs) ölçülmeli — büyük ihtimalle sıfırdan iş.
+
+### IP-16 · IP-18 kararları (kullanıcı, bu oturumda)
+
+**Planın kaçırdığı iki şey** (ölçümle bulundu):
+1. Sunucuda **`match_participants`** diye gerçek bir katılım tablosu var
+   (13 satır / 3 maç / 8 oyuncu) ve her katılım RPC'si oraya yazıyor. Plan
+   bunu bilmediği için JSONB içinde arama + GIN indeksi öneriyordu; ilişkisel
+   JOIN hem doğru hem hızlı.
+2. **`score_status`** kolonu (20260728113125) zaten ENTERED / NOT_ENTERED /
+   PENDING diye türetiliyor ve trigger'la sürdürülüyor — arayüz onu hiç
+   okumuyordu. Skor boşluğu ikinci kez hesaplanmıyor artık.
+
+**IP-16**
+- Yarıda bırakılan tanıtım açılışta geri gelir; **"Şimdilik Atla" diyen
+  zorlanmaz** (cihaz bazlı bayrak, kurtarma yolu Profil şeridi).
+- Konum **tek yoldan** (`services/locationService`) istenir ve
+  `setActiveRegion` ile **kalıcı** olur. Konum kapalıysa **kayıtlı bölge
+  hatırlatılır** (kullanıcı kararı).
+- Red ekranda **kalıcı**: `denied` / `blocked` / `timeout` / `unavailable`
+  dördü ayrı metin. Kalıcı engelde "Tekrar Dene" **çizilmez** (çalışmazdı);
+  ayarları açan bir tuş da **eklenmedi** — `capacitor-native-settings` kurulu
+  değil, ölü tuş koymak yerine ne yapılacağı adım adım yazıyor.
+- **Bildirim merkezinde kalıcı hatırlatma** (kullanıcı kararı). Sunucudan
+  gerçek bildirim GÖNDERİLMİYOR: tekrar eden bildirim spam olur ve geri
+  alınamaz (CLAUDE.md §5). İzin verilir verilmez kendiliğinden kaybolur.
+- Yaş çarkı **karar 4b**: varsayılan "24-30" gerçekten seçili sayılır, CTA hiç
+  ölü değil. 18 yaş altı seçilirse veli onayı gerekeceği ekranda yazıyor.
+- "Atla" tuşu **küçük KALDI** (kullanıcı kararı) ama artık `ConfirmDialog` ile
+  onay soruyor. Dokunma hedefi bekçisi bu tuşu kapsamıyor — çakışma yok.
+- Özet ekranındaki kayıt hatası artık **kalıcı** ve perdenin İÇİNDE çıkışı var.
+
+**IP-18**
+- `get_my_match_history` RPC'si eklendi ve **canlıya uygulandı** (kullanıcı
+  kararı 9b). Defter dosya adıyla eşitlendi (tuzak #1 — bkz. aşağısı).
+- Kartın arkasındaki **uydurma sayılar silindi** (karar 11a); galibiyet oranı
+  artık ön yüzle **aynı hesaptan** (`winStats`) geliyor.
+- Hiç skorlu maçı olmayan **"%0" değil "—"** görüyor (karar 12a).
+- "SİLÜET YOK" → **"FOTOĞRAF EKLE"** (karar 13a).
+- Maç Raporu: paylaş tuşu **çalışıyor** (karar 14a), not hatası ekranda
+  görünüyor, kırık avatar baş harfe düşüyor.
+
+> ⚠️ **YAPILMADI — `DEFAULT_CARD_STAT = 50`.** Oyuncu kartındaki altı
+> istatistik hâlâ herkeste sabit 50. Kullanıcı kararı: kart
+> `profiles.card_active` ile **admin onayına bağlı** (varsayılan `false`),
+> yani bu sayı bugün kimseye görünmüyor. Doğrulandı. Kart aktifleştirilmeye
+> başlanırsa bu tek satır (`value: 50` → `null`) önce düzeltilmeli.
+
+> ⚠️ **CANLI VERİYLE TEST EDİLEMEDİ.** Veritabanında **5 maç var, tamamlanmış
+> maç 0**. Yani profil geçmişi bugün zaten boş; hata (50'lik pencere) henüz
+> kimseyi ısırmıyor ama platform 50 tamamlanmış maçı geçtiği gün ısıracaktı.
+> Yeni RPC'nin gerçek veriyle davranışı ilk tamamlanan maçlarda doğrulanmalı.
 
 ### IP-15 kararları (kullanıcı, bu oturumda)
 

@@ -4,6 +4,8 @@ import { MatchListing } from '../types';
 import { auth } from '../supabaseAuth';
 import { getMatchDetails, getMatchNote, saveMatchNote } from '../services/matchService';
 import { LoadingState, ErrorState } from '../components/common/StatusState';
+import { showToast } from '../components/common/GlobalToast';
+import { getInitials } from '../utils/avatarHelper';
 
 interface MatchDiaryDetailProps {
     diaryId: string | null;
@@ -63,6 +65,8 @@ const MatchDiaryDetail: React.FC<MatchDiaryDetailProps> = ({ diaryId, onBack }) 
     const [draftNote, setDraftNote] = useState('');
     const [isEditingNote, setIsEditingNote] = useState(false);
     const [savingNote, setSavingNote] = useState(false);
+    // IP-18: not kaydetme hatası ekranda görünür (eskiden yalnız konsoldaydı).
+    const [noteError, setNoteError] = useState<string | null>(null);
     const [justSaved, setJustSaved] = useState(false);
 
     const loadMatch = async () => {
@@ -101,6 +105,7 @@ const MatchDiaryDetail: React.FC<MatchDiaryDetailProps> = ({ diaryId, onBack }) 
 
     const handleSaveNote = async () => {
         if (!diaryId) return;
+        setNoteError(null);
         setSavingNote(true);
         try {
             await saveMatchNote(diaryId, draftNote.trim());
@@ -109,9 +114,45 @@ const MatchDiaryDetail: React.FC<MatchDiaryDetailProps> = ({ diaryId, onBack }) 
             setJustSaved(true);
             setTimeout(() => setJustSaved(false), 2000);
         } catch (err) {
+            // IP-18: hata YALNIZ konsola gidiyordu. Kullanıcı 1000 karaktere
+            // kadar not yazıp Kaydet'e basıyor, buton eski hâline dönüyor ve
+            // ekranda hiçbir mesaj çıkmıyordu — sessiz veri kaybı.
             console.error('Maç notu kaydedilemedi:', err);
+            setNoteError('Notun kaydedilemedi. Bağlantını kontrol edip tekrar dene — yazdıkların duruyor.');
         } finally {
             setSavingNote(false);
+        }
+    };
+
+    /**
+     * IP-18: paylaş tuşunun onClick'i yoktu — dokunulunca hiçbir şey olmuyordu.
+     * Telefonun kendi paylaşım penceresi varsa o açılır; yoksa (masaüstü
+     * tarayıcı) metin panoya kopyalanır. Hiçbir yol yoksa sessiz kalmaz.
+     */
+    const handleShare = async () => {
+        if (!match) return;
+        const metin = [
+            'OYNA · Maç Raporu',
+            match.pitchName,
+            match.date,
+            match.result === 'NONE' ? 'Skor girilmedi' : `Skor: ${match.score}`,
+        ].filter(Boolean).join(' — ');
+        try {
+            if (typeof navigator !== 'undefined' && navigator.share) {
+                await navigator.share({ title: 'OYNA · Maç Raporu', text: metin });
+                return;
+            }
+            if (typeof navigator !== 'undefined' && navigator.clipboard) {
+                await navigator.clipboard.writeText(metin);
+                showToast('Maç raporu panoya kopyalandı.', 'success');
+                return;
+            }
+            showToast('Bu cihazda paylaşım desteklenmiyor.');
+        } catch (err) {
+            // Kullanıcı paylaşım penceresini kapattıysa hata sayılmaz.
+            if ((err as { name?: string })?.name === 'AbortError') return;
+            console.error('Maç raporu paylaşılamadı:', err);
+            showToast('Paylaşım açılamadı. Lütfen tekrar dene.');
         }
     };
 
@@ -127,7 +168,12 @@ const MatchDiaryDetail: React.FC<MatchDiaryDetailProps> = ({ diaryId, onBack }) 
             <div className="text-center">
                 <h1 className="text-sm font-extrabold text-white tracking-widest uppercase">MAÇ RAPORU</h1>
             </div>
-            <button aria-label="Paylaş" className="absolute right-6 w-11 h-11 flex items-center justify-center bg-[#161B22] rounded-full border border-white/5 text-white hover:bg-white/10 active:scale-95 transition-all">
+            {/* IP-18: bu tuşun onClick'i YOKTU — dokunulunca hiçbir şey olmuyordu. */}
+            <button
+                onClick={handleShare}
+                aria-label="Maç raporunu paylaş"
+                className="absolute right-6 w-11 h-11 flex items-center justify-center bg-[#161B22] rounded-full border border-white/5 text-white hover:bg-white/10 active:scale-95 transition-all"
+            >
                 <Share2 size={20} />
             </button>
         </header>
@@ -272,7 +318,24 @@ const MatchDiaryDetail: React.FC<MatchDiaryDetailProps> = ({ diaryId, onBack }) 
                                     }}
                                 >
                                     <div className={`relative w-11 h-11 rounded-full border-2 shadow-2xl overflow-hidden ${isMe ? 'border-[#FACC15] ring-4 ring-[#FACC15]/30 scale-110 z-10' : 'border-white'}`}>
-                                        <img src={player.avatar} alt={player.name} className="w-full h-full object-cover" />
+                                        {/* IP-18: onError yedeği yoktu — kırık görsel bozuk ikon olarak kalıyordu. */}
+                                        <img
+                                            src={player.avatar}
+                                            alt={player.name}
+                                            className="w-full h-full object-cover"
+                                            onError={(e) => {
+                                                const el = e.currentTarget;
+                                                el.style.display = 'none';
+                                                const kap = el.parentElement;
+                                                if (kap && !kap.querySelector('[data-bas-harf]')) {
+                                                    const rozet = document.createElement('span');
+                                                    rozet.setAttribute('data-bas-harf', '1');
+                                                    rozet.className = 'w-full h-full flex items-center justify-center bg-[#161B22] text-white text-[0.6875rem] font-extrabold';
+                                                    rozet.textContent = getInitials(player.name);
+                                                    kap.appendChild(rozet);
+                                                }
+                                            }}
+                                        />
                                     </div>
                                     <div className={`px-2.5 py-1 rounded-md text-[0.6875rem] font-extrabold text-center whitespace-nowrap shadow-lg ${isMe ? 'bg-[#FACC15] text-black' : 'bg-[#161B22]/90 backdrop-blur-md text-white border border-white/10'}`}>
                                         {player.name}
@@ -349,6 +412,11 @@ const MatchDiaryDetail: React.FC<MatchDiaryDetailProps> = ({ diaryId, onBack }) 
                                     <Save size={16} /> {savingNote ? 'Kaydediliyor…' : 'Kaydet'}
                                 </button>
                             </div>
+                            {noteError && (
+                                <p role="alert" className="mt-3 text-[0.75rem] font-bold leading-relaxed text-red-400">
+                                    {noteError}
+                                </p>
+                            )}
                         </div>
                     )}
                 </section>

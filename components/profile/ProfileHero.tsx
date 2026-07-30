@@ -21,7 +21,11 @@ export interface ProfileHeroProps {
     playStyle?: string | null;
     matches: number;
     /** 0–100 */
-    winRate: number;
+    /**
+     * IP-18: `null` = hiç skorlu maç yok. "%0" yazmak yalan olurdu — sıfır
+     * başarı ile veri yokluğu aynı şey değil.
+     */
+    winRate: number | null;
     /** null → MVP hücresi gizli (oylama verisi henüz kaydedilmiyor) */
     mvp?: number | null;
     /** Admin onaylı premium kart (Q24) — true ise 👤/🎴 geçişi görünür */
@@ -187,7 +191,7 @@ export const ProfileHero: React.FC<ProfileHeroProps> = ({
                     </div>
                     <div className="w-px bg-white/10" />
                     <div className="flex-1 py-3 px-1.5 flex flex-col items-center gap-1">
-                        <span className="text-xl font-extrabold text-primary leading-none">%{winRate}</span>
+                        <span className="text-xl font-extrabold text-primary leading-none">{winRate === null ? '—' : `%${winRate}`}</span>
                         <span className="text-[0.625rem] font-extrabold tracking-[0.1em] text-ink-4 uppercase">Galibiyet</span>
                     </div>
                     {mvp != null && (

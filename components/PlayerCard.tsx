@@ -291,8 +291,11 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({ name, photo, position = 
                     >
                       {trInitials(name)}
                     </span>
+                    {/* IP-18 · karar 13a: buradaki eski metin bir tasarımcı
+                        terimiydi; kullanıcıya ne yapması gerektiğini
+                        söylemiyordu. */}
                     <span className="text-[0.625rem] font-extrabold uppercase tracking-[0.25em] mt-1.5 opacity-55" style={{ color: t.pos }}>
-                      SİLÜET YOK
+                      FOTOĞRAF EKLE
                     </span>
                   </motion.div>
                 </div>

@@ -24,7 +24,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 // Eagerly loaded for immediate display (yalnız ilk boyanan ekranlar)
 import SplashScreen from './views/SplashScreen';
 import AuthScreen from './views/AuthScreen';
-import { isOnboardingEnabled } from './views/onboarding/onboardingShared';
+import { isOnboardingEnabled, wasOnboardingSkipped } from './views/onboarding/onboardingShared';
 import { recordUserConsents } from './services/consentService';
 
 // Lazy loaded views to reduce initial bundle size
@@ -208,7 +208,7 @@ const App: React.FC = () => {
           useAppStore.getState().setIsGuest(false);
           const selectProfile = () => supabase
             .from('profiles')
-            .select('role, roles, verification_status, verification_notes, is_admin, wallet_balance, phone, email, full_name, avatar_url')
+            .select('role, roles, verification_status, verification_notes, is_admin, wallet_balance, phone, email, full_name, avatar_url, has_completed_onboarding')
             .eq('id', user.uid)
             .single();
           let { data: profile, error: profileErr } = await selectProfile();
@@ -227,7 +227,7 @@ const App: React.FC = () => {
           if (!profile && (!profileErr || profileErr.code === 'PGRST116')) {
             const { data: recheck } = await supabase
               .from('profiles')
-              .select('role, roles, verification_status, verification_notes, is_admin, wallet_balance, phone, email, full_name, avatar_url')
+              .select('role, roles, verification_status, verification_notes, is_admin, wallet_balance, phone, email, full_name, avatar_url, has_completed_onboarding')
               .eq('id', user.uid)
               .maybeSingle();
             if (recheck) profile = recheck;
@@ -411,6 +411,19 @@ const App: React.FC = () => {
                 // Tekrar-başvuru akışının doğru rolü hedeflemesi için serviceAppRole'ü kur.
                 useAppStore.getState().setServiceAppRole(landingRole);
                 resetNavigation('PENDING_VERIFICATION');
+              } else if (
+                // IP-16 — yarıda bırakılan tanıtım. `has_completed_onboarding`
+                // açılışta HİÇ okunmuyordu: 4 adımın ortasında uygulamayı
+                // kapatan kullanıcı bir daha akışa dönmüyor, konum da yalnız
+                // orada istendiği için bir daha hiç sorulmuyordu.
+                // "Şimdilik Atla" diyen zorlanmaz; onun kurtarma yolu
+                // Profil'deki "Profil tamamlanmadı" şeridi.
+                landingRole === UserRole.PLAYER &&
+                isOnboardingEnabled() &&
+                (profile as { has_completed_onboarding?: boolean | null }).has_completed_onboarding === false &&
+                !wasOnboardingSkipped(user.uid)
+              ) {
+                resetNavigation('ONBOARDING');
               } else {
                 const intent = await niyetiTuket(landingRole);
                 resetNavigation(intent ? intent.view : navigateBasedOnRole(landingRole));

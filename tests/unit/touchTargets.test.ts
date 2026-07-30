@@ -109,7 +109,9 @@ describe('erişilebilir ad — sadece-ikon butonlar', () => {
     ['views/MessagesView.tsx', 'Geri'],
     ['views/MessagesView.tsx', 'Menü'],
     ['views/MatchDiaryDetail.tsx', 'Geri'],
-    ['views/MatchDiaryDetail.tsx', 'Paylaş'],
+    // IP-18: etiket 'Paylaş' → 'Maç raporunu paylaş'. Tuş artık gerçekten
+    // çalışıyor; ekran okuyucu NEYİ paylaştığını da söylüyor.
+    ['views/MatchDiaryDetail.tsx', 'Maç raporunu paylaş'],
     ['views/GuardianConsentChild.tsx', 'Geri'],
     ['views/GuardianConsentForm.tsx', 'Geri'],
     ['views/LegalScreen.tsx', 'Geri'],

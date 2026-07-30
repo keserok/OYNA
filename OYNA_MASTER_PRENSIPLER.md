@@ -614,3 +614,94 @@ Oturum çözülmeden dokunuş kabul edilmez; yoksa oturumu açık kullanıcı gi
 ekranını görür ve ekran altından kayar. Beklerken **ne beklendiği yazılır**
 (~1 sn sonra; hızlı bağlantıda yanıp sönmesin). Ağ takılırsa kullanıcı
 hapsolmaz: **6 saniye** sonra dokunuş yine geçerlidir.
+
+---
+
+## 18. Kurulum Akışı ve Konum Kuralı (IP-16)
+
+### 18.1 Yarım kalan kurulum kaybolmaz
+
+Açılışta `profiles.has_completed_onboarding` **okunur**. Kurulumu yarıda bırakan
+oyuncu akışa geri döner — yoksa konum izni yalnız orada istendiği için
+"yakınındaki maç" vaadi hiç açılmaz.
+
+**Ama "Şimdilik Atla" diyen bir daha zorlanmaz.** Kullanıcının bilinçli kararı
+her açılışta yeniden sorulmaz; kurtarma yolu Profil'deki
+"Profil tamamlanmadı → Tamamla" şeridi olarak durur.
+
+### 18.2 Konum TEK yoldan istenir
+
+`services/locationService` dışında hiçbir yer konum istemez. Tarayıcının ham
+konum API'sini doğrudan çağırmak native izin akışını atlar ve **red / kalıcı
+engel / zaman aşımı / cihazda yok** ayrımını yok eder — dördü farklı metin ve
+farklı çıkış gerektirir.
+
+Verilen izin **kalıcı** olmalıdır: koordinat store'a yazılıp bırakılırsa
+uygulama kapanınca kaybolur. `setActiveRegion` ile bölge kaydedilir. Konum
+kapalıyken **kayıtlı bölge hatırlatılır** — kullanıcı sıfırdan başlamaz.
+
+### 18.3 Çalışmayacak tuş çizilmez
+
+Kalıcı olarak engellenmiş izinde "Tekrar Dene" **gösterilmez**; basınca hiçbir
+şey olmayacaktır. Uygulama içinden ayarları açacak bir yol yoksa **sahte bir
+tuş konmaz** — yapılacak iş metinde adım adım yazılır.
+
+Aynı kural her yerde geçerlidir: bir tuş ya işini yapar ya hiç çizilmez.
+
+### 18.4 Görünen ile geçerli olan aynıdır
+
+Bir seçici ekranda "seçili" görünüyorsa o değer **geçerlidir**. Varsayılanı
+seçili çizip "dokunulmadı" diye saymak, kullanıcıya ölü bir buton ve
+açıklanmayan bir engel bırakır.
+
+### 18.5 Her adım verinin niye istendiğini söyler
+
+Kurulumun her ekranında tek satırlık gerekçe bulunur. Yaşı, adı veya konumu
+neden verdiğini bilmeyen kullanıcı formu terk eder.
+
+Kullanıcının göremediği bir sonuç doğuran seçim (ör. 18 yaş altı → veli onayı)
+**o anda ekranda** söylenir.
+
+### 18.6 Geri dönülemez adım onay ister
+
+Tüm kurulumu bitiren "Atla" gibi bir eylem, tek dokunuşla sessizce
+gerçekleşmez. Kısmi kayıt tutmazsa kullanıcı bunu **öğrenir**; sessizce
+yutulmaz.
+
+Tam ekran perde bir hata gösteriyorsa, çıkış tuşu **perdenin içinde** olmalıdır
+— perdenin altında kalan bir tuş yok sayılır.
+
+---
+
+## 19. Profil ve İstatistik Doğruluğu Kuralı (IP-18)
+
+### 19.1 Listeler kullanıcı kapsamında SUNUCUDA süzülür
+
+"Bana ait" bir liste, platformun tamamı çekilip tarayıcıda süzülerek
+üretilmez. Limit **filtreden sonra** uygulanır; aksi halde platform büyüdükçe
+kullanıcının kendi verisi pencerenin dışına düşer ve liste **sessizce boşalır**.
+
+Katılım, üyelik gibi ilişkiler için JSONB içinde arama yapmadan önce
+**ilişkisel tablo var mı** diye bakılır (`match_participants` gibi).
+
+### 19.2 Aynı gerçeğin tek kaynağı olur
+
+Sunucu bir gerçeği zaten türetip yazıyorsa (`matches.score_status`) arayüz onu
+**okur**, ikinci kez hesaplamaz. İki hesap er geç ayrışır.
+
+### 19.3 Veri yokluğu sıfır değildir
+
+Skoru girilmemiş maç `0 - 0` **değildir**, beraberlik **sayılmaz** ve galibiyet
+oranının paydasına **girmez**. Hiç veri yoksa yüzde `%0` değil **`—`** yazılır:
+sıfır başarı ile ölçüm yokluğu aynı şey değildir.
+
+### 19.4 Ekranda uydurma sayı bulunmaz
+
+Kaynak koda elle yazılmış "18 gol", "9.2 puan" gibi sayılar — arkasında veri
+yolu olmayan her rakam — **gösterilmez**. Boş bırakmak yalan söylemekten
+iyidir.
+
+### 19.5 Kullanıcı tasarımcı terimi görmez
+
+"Silüet yok" gibi ifadeler kullanıcıya ne yapacağını söylemez. Metin, eylemi
+söyler: "Fotoğraf ekle".

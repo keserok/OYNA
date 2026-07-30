@@ -6,6 +6,7 @@ import { useAppStore } from '../store';
 import { auth } from '../supabaseAuth';
 import { fbUpdateUserLocation } from '../supabaseMutations';
 import { showToast } from '../components/common/GlobalToast';
+import { detectRegion } from '../services/locationService';
 
 interface LocationPromptProps {
   onPermissionGranted: () => void;
@@ -14,41 +15,31 @@ interface LocationPromptProps {
 
 const LocationPrompt: React.FC<LocationPromptProps> = ({ onPermissionGranted, onSkip }) => {
   const [status, setStatus] = useState<'IDLE' | 'SCANNING' | 'FOUND' | 'DENIED'>('IDLE');
-  const { setUserLocation, setLocationPermissionStatus } = useAppStore();
+  const { setUserLocation, setLocationPermissionStatus, setActiveRegion } = useAppStore();
 
-  const handleGrantPermission = () => {
+  const handleGrantPermission = async () => {
     setStatus('SCANNING');
     
-    // Simulate finding location
-    if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-            (position) => {
-                // Konumu kaydet
-                setUserLocation({
-                    lat: position.coords.latitude,
-                    lng: position.coords.longitude
-                });
-                setLocationPermissionStatus('GRANTED');
-
-                // Eğer kullanıcı giriş yapmışsa veritabanına da kaydet
-                if (auth.currentUser) {
-                    fbUpdateUserLocation(auth.currentUser.uid, position.coords.latitude, position.coords.longitude).catch(err => {
-                        console.error('Konum DB kaydı başarısız:', err);
-                        showToast('Konumun kaydedilemedi — yakınındaki sahalar eksik görünebilir.');
-                    });
-                }
-                
-                setStatus('FOUND');
-                setTimeout(onPermissionGranted, 1500);
-            },
-            (error) => {
-                console.error('Konum alınamadı:', error);
-                setStatus('DENIED');
-                setLocationPermissionStatus('DENIED');
-            },
-            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-        );
-    } else {
+    // IP-16: konum TEK yoldan istenir (services/locationService). Tarayıcının
+    // ham konum API'sini doğrudan çağırmak native izin akışını atlıyor ve
+    // red / kalıcı engel / zaman aşımı ayrımını kaybediyordu. Ayrıca bölge
+    // artık KAYDEDİLİYOR — izin verilse bile kapsam uygulama kapanınca
+    // kayboluyordu.
+    try {
+        const loc = await detectRegion();
+        if (loc.coordinates) setUserLocation(loc.coordinates);
+        setLocationPermissionStatus('GRANTED');
+        setActiveRegion(loc);
+        if (auth.currentUser && loc.coordinates) {
+            fbUpdateUserLocation(auth.currentUser.uid, loc.coordinates.lat, loc.coordinates.lng).catch(err => {
+                console.error('Konum DB kaydı başarısız:', err);
+                showToast('Konumun kaydedilemedi — yakınındaki sahalar eksik görünebilir.');
+            });
+        }
+        setStatus('FOUND');
+        setTimeout(onPermissionGranted, 1500);
+    } catch (error) {
+        console.error('Konum alınamadı:', error);
         setStatus('DENIED');
         setLocationPermissionStatus('DENIED');
     }
