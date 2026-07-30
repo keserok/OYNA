@@ -1,5 +1,5 @@
 import React, { useEffect, Suspense, lazy } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence, motion, MotionConfig } from 'framer-motion';
 import { UserRole, AppView, MatchListing, Goalkeeper, Referee } from './types';
 import { auth, onAuthStateChanged, logout, handleAuthCallbackUrl } from './supabaseAuth';
 import { supabase } from './supabaseClient';
@@ -69,12 +69,27 @@ const MessagesView = lazy(() => import('./views/MessagesView'));
 import { BottomNav, TAB_IDS } from './components/BottomNav';
 const RoleSwitcher = lazy(() => import('./components/RoleSwitcher'));
 
-// Loading fallback component
-const ViewLoader = () => (
-  <div className="flex items-center justify-center min-h-screen bg-[#0A0E14]">
-    <Spinner size={48} thickness={4} />
-  </div>
-);
+// Bekleme ekranı. IP-11: tek başına dönen halka "bir şey oluyor" demiyordu;
+// ne beklendiği yazılır ve 4 saniyeyi aşarsa sebebi söylenir. Ekran okuyucu
+// için canlı bölge — yoksa görme engelli kullanıcı sessiz bir ekranda kalıyordu.
+const ViewLoader = () => {
+  const [slow, setSlow] = React.useState(false);
+  React.useEffect(() => {
+    const t = setTimeout(() => setSlow(true), 4000);
+    return () => clearTimeout(t);
+  }, []);
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      className="flex flex-col items-center justify-center min-h-screen bg-[#0A0E14]"
+    >
+      <Spinner size={48} thickness={4} />
+      <p className="mt-4 text-[0.8125rem] font-bold text-white/60">Yükleniyor…</p>
+      {slow && <p className="mt-1 text-[0.6875rem] text-white/50">Bağlantın yavaş olabilir.</p>}
+    </div>
+  );
+};
 
 const App: React.FC = () => {
   const [verificationNote, setVerificationNote] = React.useState<string | null>(null);
@@ -791,10 +806,14 @@ const App: React.FC = () => {
   const showBottomNav = (TAB_IDS as readonly string[]).includes(view);
 
   return (
+    // IP-11: framer-motion animasyonları CSS'teki prefers-reduced-motion
+    // bloğuna BAKMAZ (inline style/WAAPI ile sürerler). Sistem tercihini
+    // onlara taşıyan tek şey bu sarmalayıcıdır.
+    <MotionConfig reducedMotion="user">
     <div className="h-full bg-[#0A0E14] text-white font-['Inter'] relative overflow-hidden">
       <OfflineBanner />
       {loadDegraded && (
-        <div className="fixed top-0 inset-x-0 z-[60] bg-amber-500/90 backdrop-blur-sm text-[#0A0E14] text-[0.75rem] font-bold px-4 py-2 pt-safe-2 flex items-center justify-between gap-3">
+        <div role="alert" className="fixed top-0 inset-x-0 z-[60] bg-amber-500/90 backdrop-blur-sm text-[#0A0E14] text-[0.75rem] font-bold px-4 py-2 pt-safe-2 flex items-center justify-between gap-3">
           <span className="min-w-0 truncate">Bağlantı zayıf — bazı veriler yüklenemedi.</span>
           <button
             onClick={() => useAppStore.getState().retryInitialLoad()}
@@ -813,7 +832,7 @@ const App: React.FC = () => {
         <div className="mesh-blob mesh-blob-3"></div>
       </div>
 
-      <AnimatePresence mode="popLayout">
+      <AnimatePresence mode="wait">
         <motion.div
           key={view}
           {...PAGE_TRANSITION}
@@ -922,6 +941,7 @@ const App: React.FC = () => {
         )}
       </AnimatePresence>
     </div>
+    </MotionConfig>
   );
 };
 

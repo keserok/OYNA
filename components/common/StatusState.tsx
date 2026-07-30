@@ -15,7 +15,7 @@ export const LoadingState: React.FC<LoadingStateProps> = ({
   const spinnerSize = { sm: 24, md: 44, lg: 60 }[size];
 
   return (
-    <div className="flex flex-col items-center justify-center p-8 text-center min-h-[200px]">
+    <div role="status" aria-live="polite" className="flex flex-col items-center justify-center p-8 text-center min-h-[200px]">
       <Spinner size={spinnerSize} className="mb-3" />
       <p className="text-sm font-bold text-gray-400 select-none animate-pulse">
         {message}
@@ -39,6 +39,7 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
 }) => {
   return (
     <motion.div 
+      role="alert"
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       className="flex flex-col items-center justify-center p-8 text-center min-h-[250px] bg-red-950/10 border border-red-500/10 rounded-2xl max-w-sm mx-auto my-6"

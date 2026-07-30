@@ -12,9 +12,9 @@ Lansman öncesi UX/UI denetim planının kalan iş paketlerini uygulayacaksın.
 
 ### Dal ve kimlik kuralları (değişmez)
 
-- Yalnız `claude/oyna-ux-audit-solution-q06aq8` dalında geliştir. Başka dala **push etme**.
+- Yalnız `claude/ip-9-remaining-findings-tests-ime71t` dalında geliştir. Başka dala **push etme**.
 - Kullanıcı açıkça istemedikçe **pull request açma**.
-- `git push -u origin claude/oyna-ux-audit-solution-q06aq8`; ağ hatasında 2s/4s/8s/16s ile 4 kez yeniden dene.
+- `git push -u origin claude/ip-9-remaining-findings-tests-ime71t`; ağ hatasında 2s/4s/8s/16s ile 4 kez yeniden dene.
 - Git kimliği: `-c user.email=noreply@anthropic.com -c user.name=Claude`
 - Commit mesajlarının sonuna:
   ```
@@ -56,7 +56,7 @@ gerekmiyor; bugün main'e sorunsuz akar.
 | Komut | Beklenen |
 |---|---|
 | `npx tsc --noEmit` | 0 hata |
-| `npx vitest run` | 951 test / 76 dosya, sıfır başarısız |
+| `npx vitest run` | 973 test / 77 dosya, sıfır başarısız |
 | `npm run test:visual` | 24/24 |
 | `npm run build` | başarılı |
 
@@ -73,14 +73,16 @@ IP-05 (değerlendirme gizliliği) · IP-06 (bildirim merkezi) ·
 IP-07 (tesis sahibi para dürüstlüğü) · IP-08 (tipografi/kontrast/font) ·
 **IP-09 (renk sistemi, tek aksan)** · **IP-10 (dokunma hedefi, erişilebilirlik)** ·
 **IP-12 (hata ve boş durum sistemi)** · **IP-13 (Türkçe metin ve ton)** ·
-**IP-14 (bilgi mimarisi)** · **IP-19 (para biçimi ve bakiye tekliği)** ·
-IP-20 (bilet çevrimdışı) · S-serisi kararların tamamı.
+**IP-11 (hareket, pil, algılanan hız)** · **IP-14 (bilgi mimarisi)** ·
+**IP-19 (para biçimi ve bakiye tekliği)** · IP-20 (bilet çevrimdışı) ·
+S-serisi kararların tamamı.
 
 ### Kalan paketler — önerilen sıra
 
 | Sıra | Paket | Not |
 |---|---|---|
-| 1+ | IP-11, 15, 16, 18, 22, 23 (+IP-21/IP-17 ertelendi) | |
+| 1 | **IP-15** — kayıt kapısı, oturum, yasal onay | Kararlar alındı, aşağıda |
+| 2+ | IP-16, 18, 22, 23 (+IP-21/IP-17 ertelendi) | |
 
 ### ⏳ AÇIK İŞ — telefona bildirim (kullanıcı isteği, HENÜZ YAPILMADI)
 
@@ -89,6 +91,48 @@ gelmesini sağla"** (push notification). Bu iş IP-12/IP-14 kapsamında DEĞİLD
 yapılmadı. Başlamadan önce `notifications/pushService.ts`, Supabase'de token
 tablosu, sunucu tarafı gönderim (edge function/cron) ve native yapılandırma
 (google-services.json / APNs) ölçülmeli — büyük ihtimalle sıfırdan iş.
+
+### IP-11 kararları (kullanıcı, bu oturumda)
+
+- **Düşük hareket YALNIZ sistem tercihine bakar.** `perf.ts`'in ≤4 GB / ≤4
+  çekirdek eşiği Türkiye'deki Android tabanının büyük kısmını kapsıyor;
+  kullanıcı istemeden animasyon kapatmak reddedildi. `hooks/useLowMotion.ts`
+  tek satır: `!!useReducedMotion()`. Cihaz sınıflandırması Stüdyo'ya özgü
+  kaldı — planın "perf.ts'i shared'a taşı" adımı bu yüzden YAPILMADI
+  (taşınsa tek tüketicisi yine Stüdyo olurdu).
+- **Normal cihazda görünüm DEĞİŞMEDİ** (karar 2a). Ana Sayfa'nın 34 dekoratif
+  döngüsü silinmedi, `lowMotion ? { duration: 0 } : {…}` ile koşullandı.
+  Görsel testler baseline güncellemesi olmadan 24/24 geçti — kanıt bu.
+- Geri sayım nabzı (`Dashboard.tsx:123`) koşullanMADI: maçın canlı/taslak
+  olduğunu taşıyan tek animasyon odur, bilgidir.
+- **Spinner muafiyeti.** `prefers-reduced-motion` bloğu `.animate-spin`'i
+  öldürüyordu → 95 spinner donmuş ikona dönüyordu. Muafiyet eklendi; ayrıca
+  dosyanın BAŞINDAKİ çelişen `.oy-spinner { animation: none }` bloğu silindi
+  (sonra geldiği için muafiyeti ezerdi).
+- `AnimatePresence` `popLayout` → `wait`; `PAGE_TRANSITION.duration` 0,35 →
+  **0,2 sn** (mode="wait" çıkış süresini doğrudan gezinmeye ekler).
+- **İyimser slot yazımı `originalMatch`'ten** türüyor, `match`'ten değil:
+  `match` useMemo'su slotu boş maçlar için VARSAYILAN slot üretiyor, onu
+  store'a yazmak uydurma slotları kalıcı yapardı. Gerçek slot yoksa iyimser
+  yazım hiç yapılmaz.
+- `await checkMatchThreshold` **KALDI** (planın `void` önerisi reddedildi):
+  bir tur kazandırıp LIVE rozetini geciktirirdi, gecikmeyi iyimser yazım
+  zaten çözdü.
+
+> **Ölçüm — davranış Chromium'da doğrulandı (kalıcı test değil).** Görsel
+> koşum takımı `MotionGlobalConfig.skipAnimations = true` yaptığı için normal
+> görsel testler bu davranışı ölçemez. Geçici bir Playwright probu ile
+> framer-motion geri açılıp iki kare 900 ms arayla karşılaştırıldı:
+> `reducedMotion: no-preference` → **hareket VAR**;
+> `reducedMotion: reduce` → **hareket YOK**;
+> her iki durumda `.oy-spinner` → `running / 0.72s / infinite`.
+> Kaynak koşulları `tests/unit/motionAndSpeed.test.ts` (22 test) ile kilitli.
+
+> ⚠️ **IP-11'in dokunMADIĞI hareket yükü** (bilerek, karar 2a gereği):
+> kabuktaki 3 `.mesh-blob` (`float 20s infinite`, her ekranda), `.pf-ambient`
+> `blur(120px)` + `pf-breathe`, ve 198 `backdrop-blur`. Bunların hepsi
+> `prefers-reduced-motion` altında CSS kuralıyla zaten duruyor; normal
+> cihazda olduğu gibi bırakıldı.
 
 ### IP-19 kararları (kullanıcı, bu oturumda)
 

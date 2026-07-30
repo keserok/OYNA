@@ -480,3 +480,64 @@ yapılmaz** (`1,5B₺` gibi) — para okunurluğu yer kazancından önce gelir.
 
 Hizalama `font-numeric` sınıfıyla gelir (`index.css`); o sınıf sabit genişlikli
 rakam kuralını zaten taşır, yanına ikinci kez yazılmaz.
+
+---
+
+## 16. Hareket Kuralı (IP-11)
+
+### 16.1 Dekoratif hareket ile bilgi taşıyan hareket ayrıdır
+
+**Dekoratif** (parıltı, gradyan kayması, nabız, dönen çerçeve) sistem "hareketi
+azalt" derse **çizilmez**. Kalıp:
+
+```tsx
+transition={lowMotion ? { duration: 0 } : { duration: N, repeat: Infinity }}
+```
+
+`duration: 0` anahtar kare dizisinin **son** değerine oturur; diziler ya
+`[a, b, a]` olmalı ya da ekran dışına süpüren tek yön — yoksa öğe yanlış yerde
+donar.
+
+**Bilgi taşıyan** hareket bu bayrağa **bakmaz**: bekleme spinner'ı, geri sayım
+nabzı. Durdurulursa kullanıcı uygulamanın kilitlendiğini sanar — hareketi
+azaltmak isteyen kullanıcıyı cezalandırmış olursun.
+
+### 16.2 CSS tek başına yetmez
+
+`@media (prefers-reduced-motion: reduce)` **yalnız CSS animasyonlarını** kapatır.
+Framer Motion inline `style`/WAAPI ile sürer ve o kurala bakmaz. Sistem tercihini
+ona taşıyan iki şey vardır ve **ikisi de gerekir**:
+
+1. `App.tsx` kökündeki `<MotionConfig reducedMotion="user">` — transform ve
+   layout animasyonlarını kapatır.
+2. `hooks/useLowMotion` — `opacity`, `backgroundPosition`, `boxShadow` gibi
+   MotionConfig'in kapsamadığı özellikler için.
+
+### 16.3 Kullanıcı istemeden animasyon kapatılmaz
+
+Düşük hareket kararı **yalnız sistem tercihine** bakar. Cihazın RAM'i veya
+çekirdek sayısı ölçüt değildir: `≤4 GB / ≤4 çekirdek` eşiği Türkiye'deki Android
+tabanının büyük kısmını kapsar ve uygulamanın kimliğini kullanıcıya sormadan
+söker. Cihaz sınıflandırması (`views/studio/perf.ts`) yalnız Stüdyo'nun ağır
+**çizim** efektleri içindir, animasyon için değil.
+
+### 16.4 Geçiş süresi gezinmeye eklenir
+
+`AnimatePresence mode="wait"` çıkan görünümün `exit`i bitmeden yenisini monte
+etmez — süre doğrudan her dokunuşa eklenir. `PAGE_TRANSITION` bu yüzden **0,2 sn**
+tutulur. `popLayout`'a dönmek iki ağır görünümü aynı anda DOM'da bırakır; çözüm
+o değil, süreyi kısaltmaktır.
+
+### 16.5 Bekleme sessiz olmaz
+
+Dönen halka tek başına "bir şey oluyor" demez. Bekleme ekranı **ne beklendiğini
+yazar**; 4 saniyeyi aşarsa sebebini söyler. Bekleme ve hata ekran okuyucuya
+duyurulur: bilgi `role="status" aria-live="polite"`, hata
+`role="alert" aria-live="assertive"`.
+
+### 16.6 Sunucuyu bekleyen ekran boş durmaz
+
+Kullanıcının dokunduğu şey sunucu yanıtını beklemeden sonucu gösterir (iyimser
+yazım); sunucu tek otorite kalır, hata dalında geri alınır. İyimser yazım
+**türetilmiş değil gerçek** veriden yapılır: ekranın kendi doldurduğu varsayılan
+değerler mağazaya yazılırsa uydurma veri kalıcı hale gelir.

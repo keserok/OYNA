@@ -262,11 +262,6 @@ body.offline-banner-on .safe-area-top { padding-top: calc(var(--safe-top) + 1rem
   filter: drop-shadow(0 0 3px color-mix(in srgb, var(--oy-spinner-color) 55%, transparent));
 }
 
-/* Erişilebilirlik — hareket hassasiyeti: dönmeyi durdur (S50 ile uyumlu) */
-@media (prefers-reduced-motion: reduce) {
-  .oy-spinner { animation: none !important; }
-}
-
 /* Yatay yöntem karuseli (ödeme ekranı) — scrollbar gizli */
 .oy-carousel { scrollbar-width: none; }
 .oy-carousel::-webkit-scrollbar { display: none; }
@@ -681,8 +676,10 @@ input:-webkit-autofill:focus {
   transform: translateY(-2px) scale(1.01);
 }
 
-/* S50 – prefers-reduced-motion: hareket hassasiyeti olan kullanıcılar için
-   tüm transition/animasyonları kapat; Framer Motion @media sorgusu buna bakıyor */
+/* S50 – prefers-reduced-motion: hareket hassasiyeti olan kullanıcı için
+   yalnız CSS animasyonlarını kapatır. Framer Motion bu kurala BAKMAZ —
+   o inline style/WAAPI ile sürer; sorumlusu App.tsx'teki
+   <MotionConfig reducedMotion="user"> ve useLowMotion kancasıdır. */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
@@ -690,8 +687,21 @@ input:-webkit-autofill:focus {
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
-  .animate-ping, .animate-pulse, .animate-spin, .animate-bounce {
+  .animate-ping, .animate-pulse, .animate-bounce {
     animation: none !important;
+  }
+  /* IP-11 · BEKLEME GÖSTERGELERİ MUAF. Dönen halka bir hareket efekti değil,
+     "işlem sürüyor" bilgisidir. Durdurulunca 95 spinner donmuş ikona dönüyor
+     ve kullanıcı uygulamanın kilitlendiğini sanıyordu — hareketi azaltmak
+     isteyen kullanıcıyı cezalandıran, amacın tam tersi bir sonuç.
+     Bu kurallar `*` kuralından SONRA gelir ve onu ezer; sıra bozulmamalı. */
+  .animate-spin {
+    animation-duration: 1s !important;
+    animation-iteration-count: infinite !important;
+  }
+  .oy-spinner {
+    animation-duration: 0.72s !important;
+    animation-iteration-count: infinite !important;
   }
 }
 

@@ -674,6 +674,33 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
   // (Tek lobi) Eski ücretsiz tekli katılım (join_public_match_slot) KALDIRILDI —
   // kurucu dahil herkes slot satın alır; ücretsiz maçta aynı RPC 0₺ ile çalışır.
 
+  /**
+   * IP-11 — seçili slotları sunucuyu beklemeden dolu göster; geri alma
+   * fonksiyonu döndürür (başarısızlıkta çağrılır).
+   *
+   * Kaynak `match` DEĞİL `originalMatch`: yukarıdaki `useMemo`, slot listesi
+   * boş gelen maçlar için VARSAYILAN slot üretiyor. `match`'i store'a yazmak
+   * o uydurma slotları kalıcı hale getirirdi. Gerçek slot yoksa iyimser yazım
+   * hiç yapılmaz — ekran eskisi gibi sunucuyu bekler, yanlış şey göstermez.
+   *
+   * Yazılan alanlar sunucudaki kalıbın aynısı (player_buy_slots_v2):
+   * status/player/purchasedBy/occupant/assignmentStatus.
+   */
+  const optimistikDoldur = (): (() => void) | null => {
+    const evSlots = originalMatch?.slots;
+    const depSlots = (originalMatch as { awaySlots?: PositionSlot[] } | null)?.awaySlots;
+    if (!evSlots?.length) return null;
+    const secili = new Set(selectedSlotIds);
+    const doldur = (arr?: PositionSlot[]) => arr?.map((s) =>
+      s && secili.has(s.id)
+        ? { ...s, status: 'TAKEN', player: currentUserProfile,
+            purchasedBy: currentUserProfile.id, occupant: currentUserProfile.id,
+            assignmentStatus: 'SELF' }
+        : s);
+    applyMatchLocal({ ...originalMatch, slots: doldur(evSlots), awaySlots: doldur(depSlots) } as MatchListing);
+    return () => applyMatchLocal({ ...originalMatch, slots: evSlots, awaySlots: depSlots } as MatchListing);
+  };
+
   const handleBuySlots = async () => {
     if (selectedSlotIds.length === 0) return;
     if (!beginWrite()) return;
@@ -721,6 +748,11 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
 
     // Ücretsiz maç: eski hızlı yol (ödeme ekranı gerekmez).
     setIsProcessing(true);
+    // IP-11 · İyimser yazım. Eskiden slot ancak RPC + eşik kontrolü +
+    // getMatchDetails turlarından SONRA doluyordu; yavaş bağlantıda dokunulan
+    // yer saniyelerce boş görünüyordu. Sunucu tek otorite kalır: hata dalında
+    // geri alınır, realtime (subscribeToMatchUpdates) zaten yakınsar.
+    const geriAl = optimistikDoldur();
     try {
       const { error } = await supabase.rpc('player_buy_slots_v2', {
         p_match_id: match.id,
@@ -743,6 +775,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
       useAppStore.getState().setLobbyMode('MANAGE');
       showActionSuccess('Slotların rezerve edildi — kendini veya arkadaşlarını ekle.');
     } catch (e: any) {
+      geriAl?.();
       console.error('Buy slots error:', e);
       const msg = e?.message || '';
       showActionError(msg.includes('MIN_RATING')
