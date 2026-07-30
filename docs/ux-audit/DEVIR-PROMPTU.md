@@ -48,16 +48,22 @@ Lansman öncesi UX/UI denetim planının kalan iş paketlerini uygulayacaksın.
 
 ## BUGÜNKÜ DURUM
 
-Dal, `origin/main`'in **düz devamı** (fast-forward, 0 commit geride). Birleştirme
-gerekmiyor; bugün main'e sorunsuz akar.
+`origin/main` dala **birleştirildi** (0 commit geride, çakışma yok); bugün
+main'e sorunsuz akar.
+
+> ⚠️ **Göç sürüm çakışması yaşandı, tekrarlamasın.** main'de `20260831000000`
+> önekli bir göç vardı ve IP-22 göçü de aynı numarayı taşıyordu. Aynı sürümü
+> taşıyan iki dosyadan biri sessizce atlanır. IP-22 göçü `20260831000009`'a
+> alındı. **Yeni göç yazmadan önce `ls supabase/migrations | tail` ile son
+> numaraya bak; main ilerlediyse tekrar bak.**
 
 **Yeşil taban — her paketten sonra dördü de geçmeli:**
 
 | Komut | Beklenen |
 |---|---|
 | `npx tsc --noEmit` | 0 hata |
-| `npx vitest run` | 1157 test / 81 dosya, sıfır başarısız |
-| `npm run test:visual` | 24/24 |
+| `npm run test:unit` | 1283 test / 92 dosya, sıfır başarısız |
+| `npm run test:visual` | 40/40 |
 | `npm run build` | başarılı |
 
 > ⚠️ **GÖRSEL TEST "24/24" DEĞİŞMEDİ DEMEK DEĞİLDİR.** Karşılaştırmanın
@@ -89,20 +95,30 @@ IP-07 (tesis sahibi para dürüstlüğü) · IP-08 (tipografi/kontrast/font) ·
 **IP-15 (kayıt kapısı, oturum, yasal onay)** ·
 **IP-16 (tanıtım akışı ve konum tek yolu)** · **IP-18 (profil doğruluğu)** ·
 **IP-19 (para biçimi ve bakiye tekliği)** · IP-20 (bilet çevrimdışı) ·
+**IP-22 (onay sisteminin ve tesis başvurusunun kaldırılması + yönetici
+panelinden tesis yetkilileri)** ·
 **IP-23 (Stüdyo, formasyon verisi, yerel diyaloglar)** ·
 S-serisi kararların tamamı.
 
-### Kalan iş — kullanıcı kararlarıyla YENİDEN TANIMLANDI
+### Kalan iş
 
-IP-22 (tesis sahibi durum göstergeleri) kullanıcı kararlarıyla çok daha büyük
-bir işe dönüştü. Sıradaki iki commit:
+Denetim planının 23 paketinin 21'i kapandı. Kalan iki paket **kullanıcı kararıyla
+ertelenmiştir**; sırası geldiğinde kullanıcıya sorularak açılır:
 
-| Sıra | İş | Not |
+| Paket | Konu | Durum |
 |---|---|---|
-| 1 | **Onay sistemi + tesis başvurusunun kaldırılması** | Kararlar aşağıda |
-| 2 | **Admin panel: tesis ekleme + sahip/müdür/personel atama** | Sıfırdan yeni ekran |
+| IP-17 | Sosyal davet mekanizması uçtan uca (lobi daveti, dürtme, maç sohbeti) | Ertelendi |
+| IP-21 | Tesis sahibi takvim ve rezervasyon yönetimi eksikleri | Ertelendi |
 
-(IP-21 ve IP-17 kullanıcı kararıyla ertelendi.)
+Plan dışı, kullanıcının ayrıca istediği iki iş de açık: telefona bildirim (aşağıda)
+ve tesise özel QR kodlu afiş.
+
+> **QR kodlu afiş — ölçüldü, YOK.** Kaldırılan tesis başvuru ekranında
+> "QR kodlu afişiniz hazır · İndir (PDF)" yazan bir kart vardı; butonun hiçbir
+> davranışı tanımlı değildi ve uygulamanın hiçbir yerinde tesis afişi üreten kod
+> yok. `qrcode` paketi kurulu ve `views/MatchTicket.tsx`'te maç bileti için
+> gerçekten kullanılıyor — tesis afişi bu altyapıyla sıfırdan yazılabilir.
+> Kullanıcı "yok olmasın" dedi; yapılacak iş **yeni özellik geliştirmektir**.
 
 ### ⏳ AÇIK İŞ — telefona bildirim (kullanıcı isteği, HENÜZ YAPILMADI)
 
