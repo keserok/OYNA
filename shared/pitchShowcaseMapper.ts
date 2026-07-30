@@ -258,7 +258,6 @@ export const mapDbPitchToUiPitch = (
         : undefined,
     slots: [],
     courts,
-    isApproved: true,
     ownerId: row.owner_id ?? undefined,
     isPublished: row.is_published !== false,
     isFeatured: row.is_featured === true,

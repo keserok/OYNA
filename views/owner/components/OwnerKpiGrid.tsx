@@ -99,16 +99,12 @@ export const OwnerKpiGrid: React.FC<OwnerKpiGridProps> = ({ items, columns = 2 }
 
 /** SaaS command strip — tek satır özet + aksiyon ipuçları */
 interface OwnerCommandStripProps {
-  pendingCount: number;
   isFacilityOpen: boolean;
-  onPendingClick?: () => void;
   onCalendarClick?: () => void;
 }
 
 export const OwnerCommandStrip: React.FC<OwnerCommandStripProps> = ({
-  pendingCount,
   isFacilityOpen,
-  onPendingClick,
   onCalendarClick,
 }) => (
   <div className="flex gap-2 overflow-x-auto pb-1 mb-5 -mx-1 px-1 scrollbar-hide">
@@ -121,16 +117,6 @@ export const OwnerCommandStrip: React.FC<OwnerCommandStripProps> = ({
     >
       {isFacilityOpen ? 'Tesis açık' : 'Tesis kapalı'}
     </span>
-    {pendingCount > 0 && onPendingClick && (
-      <button
-        type="button"
-        onClick={onPendingClick}
-        className="shrink-0 min-h-[44px] px-4 rounded-full bg-amber-500/15 border border-amber-500/30 text-[0.8125rem] font-extrabold text-amber-200 flex items-center gap-1"
-      >
-        <Clock size={11} />
-        {pendingCount} onay bekliyor
-      </button>
-    )}
     {onCalendarClick && (
       <button
         type="button"

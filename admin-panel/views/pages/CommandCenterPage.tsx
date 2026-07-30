@@ -189,12 +189,6 @@ export const CommandCenterPage: React.FC<CommandCenterPageProps> = ({ mode = 'em
               {(queue.pending_verifications ?? []).length === 0 && <p className="text-[11px] text-gray-600">Boş</p>}
             </QueueSection>
 
-            <QueueSection title="Tesis Onay" count={queue.pending_pitches?.length ?? 0} route="MODERATION">
-              {(queue.pending_pitches ?? []).slice(0, 5).map((p) => (
-                <p key={p.id} className="text-[11px] text-gray-400 py-1 border-b border-white/[0.06]">{p.name}</p>
-              ))}
-            </QueueSection>
-
             <QueueSection title="Para Çekme" count={queue.pending_withdrawals?.length ?? 0} route="MODERATION">
               {(queue.pending_withdrawals ?? []).slice(0, 5).map((w) => (
                 <p key={w.id} className="text-[11px] text-[#39FF14] py-1 border-b border-white/[0.06]">{Number(w.amount).toLocaleString('tr')}₺</p>

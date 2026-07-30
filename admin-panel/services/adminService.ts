@@ -55,7 +55,6 @@ export interface AdminDashboardStats {
   successful_matches?: number;
   completed_matches?: number;
   pending_verifications: number;
-  pending_pitches: number;
   pending_withdrawals: number;
   banned_users: number;
   active_goalkeepers: number;
@@ -584,7 +583,6 @@ async function fetchDashboardStatsFallback(): Promise<Record<string, number | st
     total_matches,
     total_communities,
     pending_verifications,
-    pending_pitches,
     pending_withdrawals,
     open_disputes,
     banned_users,
@@ -598,7 +596,6 @@ async function fetchDashboardStatsFallback(): Promise<Record<string, number | st
     countRows('matches'),
     countRows('communities'),
     countRows('profiles', { column: 'verification_status', op: 'eq', value: 'pending' }),
-    countRows('pitches', { column: 'verification_status', op: 'eq', value: 'pending' }),
     countRows('payout_requests', { column: 'status', op: 'eq', value: 'PENDING' }),
     countRows('match_disputes', { column: 'status', op: 'in', value: ['OPEN', 'UNDER_REVIEW'] }),
     countRows('profiles', { column: 'is_banned', op: 'eq', value: true }),
@@ -614,7 +611,6 @@ async function fetchDashboardStatsFallback(): Promise<Record<string, number | st
     total_matches,
     total_communities,
     pending_verifications,
-    pending_pitches,
     pending_withdrawals,
     open_disputes,
     banned_users,
@@ -688,14 +684,6 @@ export async function persistAdminLog(
   if (error) throw new Error(error.message);
 }
 
-export async function moderatePitch(pitchId: string, approved: boolean, notes?: string): Promise<void> {
-  const { error } = await supabase.rpc('admin_moderate_pitch', {
-    p_pitch_id: pitchId,
-    p_approved: approved,
-    p_notes: notes ?? null,
-  });
-  if (error) throw new Error(error.message);
-}
 
 export async function banUserAdmin(
   userId: string,
@@ -763,7 +751,6 @@ export function settingsToDbPayload(settings: Partial<AppSettingsDb>): Record<st
 
 export interface OpsQueue {
   pending_verifications: Array<{ id: string; name: string; email: string; created_at: string }>;
-  pending_pitches: Array<{ id: string; name: string; created_at: string }>;
   pending_withdrawals: Array<{ id: string; amount: number; owner_id: string; created_at: string }>;
   open_disputes: Array<{ id: string; match_id: string; status: string; created_at: string }>;
   deletion_requests: Array<{ id: string; name: string; email: string; requested_at: string }>;
@@ -926,7 +913,6 @@ export async function fetchOpsQueue(): Promise<OpsQueue> {
 
   const empty: OpsQueue = {
     pending_verifications: [],
-    pending_pitches: [],
     pending_withdrawals: [],
     open_disputes: [],
     deletion_requests: [],
@@ -934,9 +920,8 @@ export async function fetchOpsQueue(): Promise<OpsQueue> {
     community_join_requests: [],
   };
 
-  const [verif, pitches, withdrawals, disputes] = await Promise.allSettled([
+  const [verif, withdrawals, disputes] = await Promise.allSettled([
     fetchPendingVerificationsAdmin(),
-    fetchPitchesAdmin({ status: 'pending', limit: 50 }),
     fetchPayouts('PENDING', 50),
     fetchMatchDisputes(),
   ]);
@@ -947,13 +932,6 @@ export async function fetchOpsQueue(): Promise<OpsQueue> {
       name: v.full_name ?? 'İsimsiz',
       email: v.email ?? '',
       created_at: v.created_at,
-    }));
-  }
-  if (pitches.status === 'fulfilled') {
-    empty.pending_pitches = pitches.value.pitches.map((p) => ({
-      id: p.id,
-      name: p.name,
-      created_at: p.created_at ?? new Date().toISOString(),
     }));
   }
   if (withdrawals.status === 'fulfilled') {
@@ -1936,6 +1914,87 @@ export async function listOwnerCandidatesAdmin(query = ''): Promise<OwnerCandida
     .sort(byOwnerFirst);
 }
 
+// ─── IP-22: Tesis yetkilileri (Sahip · Müdür · Personel) ────────────────────
+// Üç düzey tek tanımdan gelir:
+//   Sahip    → pitches.owner_id (Kimlik sekmesinden atanır)
+//   Müdür    → pitch_staff_members.staff_role = 'MANAGER'
+//   Personel → pitch_staff_members.staff_role = 'STAFF'
+// Ekrandaki etiket sunucuda yetkiden türetilir; serbest metin unvan yoktur.
+
+export type PitchStaffRole = 'MANAGER' | 'STAFF';
+
+export const STAFF_ROLE_LABELS: Record<PitchStaffRole, string> = {
+  MANAGER: 'Müdür',
+  STAFF: 'Personel',
+};
+
+export interface PitchTeamMember {
+  member_id: string;
+  user_id: string | null;
+  name: string;
+  staff_role: PitchStaffRole;
+  role_title: string;
+  account_status: 'ROSTER' | 'INVITED' | 'ACTIVE' | 'PASSIVE';
+  phone: string | null;
+  email: string | null;
+  linked: boolean;
+}
+
+export interface PitchTeam {
+  owner: { user_id: string; name: string; email: string | null; phone: string | null } | null;
+  members: PitchTeamMember[];
+}
+
+export async function fetchPitchTeamAdmin(pitchId: string): Promise<PitchTeam> {
+  const { data, error } = await supabase.rpc('admin_pitch_team', { p_pitch_id: pitchId });
+  if (error) throw new Error(error.message);
+  const d = (data ?? {}) as Partial<PitchTeam>;
+  return { owner: d.owner ?? null, members: d.members ?? [] };
+}
+
+/** Uygulama hesabını tesise müdür/personel olarak bağlar (davet kodu beklemeden). */
+export async function setPitchStaffAdmin(
+  pitchId: string,
+  userId: string,
+  role: PitchStaffRole,
+): Promise<void> {
+  const { error } = await supabase.rpc('admin_set_pitch_staff', {
+    p_pitch_id: pitchId,
+    p_user_id: userId,
+    p_staff_role: role,
+  });
+  if (error) throw new Error(error.message);
+}
+
+export async function removePitchStaffAdmin(memberId: string): Promise<void> {
+  const { error } = await supabase.rpc('admin_remove_pitch_staff', { p_member_id: memberId });
+  if (error) throw new Error(error.message);
+}
+
+/**
+ * Yetkili adayı arama — sahip seçicisinden farklı olarak varsayılan liste YOK.
+ * Müdür/personel herhangi bir uygulama kullanıcısı olabilir, o yüzden ülke
+ * genelindeki tüm hesapları listelemek yerine arama ZORUNLU tutulur.
+ */
+export async function searchStaffCandidatesAdmin(query: string): Promise<OwnerCandidate[]> {
+  const q = query.trim();
+  if (q.length < 2) return [];
+  const safe = q.replace(/[%,()]/g, ' ').trim();
+  if (!safe) return [];
+  const { data, error } = await supabase
+    .from('profiles')
+    .select(OWNER_CANDIDATE_COLS)
+    .or(`full_name.ilike.%${safe}%,name.ilike.%${safe}%,email.ilike.%${safe}%,phone.ilike.%${safe}%`)
+    .limit(20);
+  if (error) {
+    if (isRpcFallback(error) || (error.message || '').includes('row-level security')) return [];
+    throw new Error(error.message);
+  }
+  return ((data || []) as (OwnerCandidateRow & { is_banned?: boolean | null })[])
+    .filter((r) => r.is_banned !== true)
+    .map(toOwnerCandidate);
+}
+
 export async function fetchProfileById(userId: string): Promise<AdminUser | null> {
   const { data, error } = await supabase
     .from('profiles')
@@ -2481,10 +2540,10 @@ export interface AdminPitchRow {
   price_per_match: number;
   google_rating: number | null;
   google_review_count: number | null;
-  verification_status: string | null;
   owner_id: string | null;
   image: string | null;
   isDemo: boolean;
+  is_published: boolean;
   created_at: string | null;
   total_count: number;
 }
@@ -2504,7 +2563,6 @@ export function buildPitchPayloadFromUi(pitch: Partial<import('../../types').Pit
     price_per_match: pitch.totalPrice ?? pitch.pricePerPerson ?? 0,
     ...(pitch.googleRating != null ? { google_rating: pitch.googleRating } : {}),
     ...(pitch.googleReviews != null ? { google_review_count: pitch.googleReviews } : {}),
-    verification_status: pitch.isApproved === false ? 'pending' : 'approved',
     image: pitch.image,
     isDemo: (pitch as { isDemo?: boolean }).isDemo ?? false,
   };
@@ -2527,13 +2585,8 @@ export async function fetchPitchesAdmin(opts?: {
       const { fbGetPitches } = await import('../../supabaseMutations');
       const rows = await fbGetPitches() as Array<Record<string, unknown>>;
       let filtered = rows;
-      if (opts?.status === 'pending') {
-        filtered = filtered.filter((p) =>
-          p.isApproved === false
-          || p.verification_status === 'pending'
-          || (p as { verificationStatus?: string }).verificationStatus === 'pending',
-        );
-      }
+      if (opts?.status === 'published') filtered = filtered.filter((p) => p.is_published !== false);
+      else if (opts?.status === 'hidden') filtered = filtered.filter((p) => p.is_published === false);
       const q = opts?.search?.trim().toLowerCase();
       if (q) filtered = filtered.filter((p) => JSON.stringify(p).toLowerCase().includes(q));
       const mapped: AdminPitchRow[] = filtered.map((p) => ({
@@ -2546,10 +2599,10 @@ export async function fetchPitchesAdmin(opts?: {
         price_per_match: Number(p.totalPrice ?? 0),
         google_rating: p.googleRating != null ? Number(p.googleRating) : null,
         google_review_count: Number(p.googleReviews ?? 0),
-        verification_status: p.isApproved === false ? 'pending' : 'approved',
         owner_id: null,
         image: (p.image as string) ?? null,
         isDemo: Boolean((p as { isDemo?: boolean }).isDemo),
+        is_published: p.is_published !== false,
         created_at: null,
         total_count: filtered.length,
       }));

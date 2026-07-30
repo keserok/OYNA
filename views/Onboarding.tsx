@@ -22,7 +22,7 @@ import { fbUpdateUserLocation } from '../supabaseMutations';
 // çağırmak, services/locationService.ts:6'daki sözleşmeyi ihlal ediyor ve
 // native izin akışını (Capacitor) atlıyordu; ayrıca red / kalıcı engel /
 // zaman aşımı ayrımı kayboluyordu.
-import { detectRegion, getLocationPermission, LocationError } from '../services/locationService';
+import { detectRegion, getLocationPermission, LocationError, openAppSettings, canOpenAppSettings } from '../services/locationService';
 import { showToast } from '../components/common/GlobalToast';
 import { validateFirstLast } from '../shared/personName';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
@@ -345,6 +345,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
               onScan={startScan}
               onSkip={goStep1FromSkip}
               hatirlananBolge={activeRegion?.label ?? null}
+              onOpenSettings={canOpenAppSettings() ? () => { void openAppSettings(); } : undefined}
             />
           )}
           {step === 1 && <StepAge index={ageIndex} onChange={setAgeIndex} onFirstTouch={() => setAgeTouched(true)} />}

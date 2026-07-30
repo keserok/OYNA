@@ -158,3 +158,34 @@ export async function detectRegion(opts: DetectOptions = {}): Promise<OynaLocati
   const coords = await requestDeviceLocation(opts);
   return resolveFromCoords(coords.lat, coords.lng, Date.now());
 }
+
+/**
+ * Cihazın uygulama ayarları ekranını açar (konum izni oradan verilir).
+ *
+ * Kullanıcı izni KALICI olarak reddettiyse uygulama içinden tekrar sormanın
+ * yolu yoktur — işletim sistemi bir daha sormaz. Tek gerçek çıkış ayarlara
+ * gitmektir. Bu yüzden bu fonksiyon yalnız `blocked` durumunda çağrılır.
+ *
+ * Web'de böyle bir ekran YOKTUR: tarayıcı izinleri adres çubuğundan yönetilir,
+ * sayfa oradan açamaz. Bu durumda `false` döner ve çağıran taraf tuşu hiç
+ * çizmez — çalışmayacak bir tuş gösterilmez.
+ *
+ * @returns Ayarlar ekranı açıldıysa `true`.
+ */
+export async function openAppSettings(): Promise<boolean> {
+  if (!IS_NATIVE) return false;
+  try {
+    const { NativeSettings, AndroidSettings, IOSSettings } = await import('capacitor-native-settings');
+    await NativeSettings.open({
+      optionAndroid: AndroidSettings.ApplicationDetails,
+      optionIOS: IOSSettings.App,
+    });
+    return true;
+  } catch (err) {
+    console.error('[location] ayarlar ekranı açılamadı:', err);
+    return false;
+  }
+}
+
+/** Ayarlar ekranı bu cihazda açılabilir mi? (Tuşun çizilip çizilmeyeceğini belirler.) */
+export const canOpenAppSettings = (): boolean => IS_NATIVE;

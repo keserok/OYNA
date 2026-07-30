@@ -11,7 +11,6 @@ import {
   LogOut,
   RefreshCw,
   RotateCcw,
-  Settings,
   Shield,
   Tag,
   Trophy,
@@ -30,7 +29,6 @@ export interface OwnerMenuViewProps {
   stats: OwnerMenuStats;
   onEditProfile: () => void;
   onWorkingHours: () => void;
-  onOperations: () => void;
   onMatches: () => void;
   onBankAccounts: () => void;
   onWithdrawals: () => void;
@@ -111,7 +109,6 @@ export const OwnerMenuView: React.FC<OwnerMenuViewProps> = ({
   stats,
   onEditProfile,
   onWorkingHours,
-  onOperations,
   onMatches,
   onBankAccounts,
   onWithdrawals,
@@ -130,18 +127,6 @@ export const OwnerMenuView: React.FC<OwnerMenuViewProps> = ({
 }) => {
   const isOwnerLvl = accessLevel === 'OWNER';
   const isManagerLvl = accessLevel === 'OWNER' || accessLevel === 'MANAGER';
-  const verificationLabel =
-    stats.verificationStatus === 'approved'
-      ? 'Onaylı'
-      : stats.verificationStatus === 'rejected'
-        ? 'Reddedildi'
-        : 'İnceleniyor';
-  const verificationTone =
-    stats.verificationStatus === 'approved'
-      ? 'success'
-      : stats.verificationStatus === 'rejected'
-        ? 'danger'
-        : 'warning';
 
   return (
     <div className="p-6 pb-40 pt-safe-6 overflow-y-auto custom-scrollbar animate-in slide-in-from-right-10 duration-500">
@@ -205,7 +190,12 @@ export const OwnerMenuView: React.FC<OwnerMenuViewProps> = ({
             <MenuRow
               icon={<Building2 size={18} />}
               label="Tesis Ayarları"
-              badge={<StatusBadge label={verificationLabel} tone={verificationTone} />}
+              badge={
+                <StatusBadge
+                  label={stats.isFacilityOpen ? 'Yayında' : 'Kapalı'}
+                  tone={stats.isFacilityOpen ? 'success' : 'warning'}
+                />
+              }
               onClick={onEditProfile}
             />
             {/* Fiyat/süre politikası artık BURADA: Sahalarım → saha → "Aktif
@@ -222,21 +212,6 @@ export const OwnerMenuView: React.FC<OwnerMenuViewProps> = ({
                 )
               }
               onClick={onPitches}
-            />
-            <MenuRow
-              icon={<Settings size={18} />}
-              label="Rezervasyon İşlemleri"
-              badge={
-                <StatusBadge
-                  label={
-                    stats.autoApproveEnabled
-                      ? `Oto ${stats.autoApproveMinutes}dk`
-                      : 'Manuel onay'
-                  }
-                  tone={stats.autoApproveEnabled ? 'info' : 'warning'}
-                />
-              }
-              onClick={onOperations}
             />
             <MenuRow
               icon={<Trophy size={18} />}

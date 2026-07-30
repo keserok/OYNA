@@ -19,6 +19,9 @@ interface StepLocationProps {
   onSkip: () => void;
   /** Daha önce kaydedilmiş bölge — konum kapalıyken bunu hatırlatırız. */
   hatirlananBolge?: string | null;
+  /** Cihazın uygulama ayarlarını açar. Yalnız kalıcı engelde ve yalnız
+   *  açılabildiği cihazlarda çizilir (web'de böyle bir ekran yok). */
+  onOpenSettings?: () => void;
 }
 
 /** Duruma göre kalıcı açıklama + birincil çıkış. */
@@ -29,7 +32,7 @@ const DURUM_METNI: Record<LocState, { baslik: string; alt: string }> = {
   denied:      { baslik: 'Konum izni verilmedi',
                  alt: 'İzin vermeden de devam edebilirsin; bölgeni sonra elle seçersin.' },
   blocked:     { baslik: 'Konum izni kapalı',
-                 alt: 'Telefon Ayarlar → Uygulamalar → OYNA → Konum yolundan izni açabilirsin. Buradan tekrar denemek işe yaramaz.' },
+                 alt: 'Bu izin telefon ayarlarından kapatılmış. Buradan tekrar denemek işe yaramaz — ayarlardan açman gerekiyor.' },
   timeout:     { baslik: 'Konum alınamadı',
                  alt: 'Telefonun konumu zamanında veremedi. Açık alanda tekrar deneyebilirsin.' },
   unavailable: { baslik: 'Bu cihazda konum yok',
@@ -41,7 +44,7 @@ const DURUM_METNI: Record<LocState, { baslik: string; alt: string }> = {
  * idle → scanning (1.6s) → found (onay rozeti) → orkestratör 1.0s sonra
  * otomatik adım 1'e geçer (autoAdvance). "Şimdilik atla" doğrudan geçer.
  */
-const StepLocation: React.FC<StepLocationProps> = ({ state, onSkip, onScan, hatirlananBolge }) => {
+const StepLocation: React.FC<StepLocationProps> = ({ state, onSkip, onScan, hatirlananBolge, onOpenSettings }) => {
   const phase = state;
   const hata = state === 'denied' || state === 'blocked' || state === 'timeout' || state === 'unavailable';
   const sweepDur = phase === 'scanning' ? '1.1s' : '3.4s';
@@ -125,9 +128,20 @@ const StepLocation: React.FC<StepLocationProps> = ({ state, onSkip, onScan, hati
         )}
       </div>
 
-      {/* Kalıcı engelde "Tekrar Dene" ÇALIŞMAZ, o yüzden çizilmez. Ayarları
-          uygulama içinden açacak bir yol da yok (native eklenti kurulu değil);
-          ölü tuş koymak yerine yapılacak iş metinde adım adım yazıyor. */}
+      {/* Kalıcı engelde "Tekrar Dene" ÇALIŞMAZ, o yüzden çizilmez. Tek gerçek
+          çıkış ayarlara gitmek. Tuş yalnız AÇILABİLDİĞİ cihazlarda çizilir —
+          web'de uygulama ayarları ekranı yoktur, orada metin yol gösterir. */}
+      {state === 'blocked' && onOpenSettings && (
+        <button
+          onClick={onOpenSettings}
+          style={{
+            minHeight: 46, padding: '0 22px', borderRadius: 14, background: '#39FF14',
+            border: 'none', color: '#0A0E14', fontSize: 13, fontWeight: 800, cursor: 'pointer',
+          }}
+        >
+          Ayarları Aç
+        </button>
+      )}
 
       {(state === 'denied' || state === 'timeout') && (
         <button

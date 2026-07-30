@@ -114,7 +114,7 @@ export const PitchesPage: React.FC<PitchesPageProps> = ({ onRefresh }) => {
     const statusChips = useMemo(() => {
         const counts = new Map<string, number>();
         for (const p of pitches) {
-            const s = (p as Pitch & { isApproved?: boolean }).isApproved === false ? 'pending' : 'approved';
+            const s = (p as Pitch & { isPublished?: boolean }).isPublished === false ? 'hidden' : 'published';
             counts.set(s, (counts.get(s) || 0) + 1);
         }
         return PITCH_STATUS_FILTERS.map((f) => ({
@@ -181,12 +181,17 @@ export const PitchesPage: React.FC<PitchesPageProps> = ({ onRefresh }) => {
             ),
         },
         {
+            // IP-22: tesis onayı kalktı — anlamlı olan tek durum vitrinde görünüp
+            // görünmediğidir. Aynı bilgi sağdaki göz düğmesiyle değiştirilebilir.
             header: 'DURUM',
-            render: (p: Pitch) => (
-                <StatusBadge tone={(p as Pitch & { isApproved?: boolean }).isApproved === false ? 'warning' : 'success'}>
-                    {(p as Pitch & { isApproved?: boolean }).isApproved === false ? 'BEKLEYEN' : 'ONAYLI'}
-                </StatusBadge>
-            ),
+            render: (p: Pitch) => {
+                const gorunur = (showcaseFlags[p.id] ?? DEFAULT_FLAGS).published;
+                return (
+                    <StatusBadge tone={gorunur ? 'success' : 'warning'}>
+                        {gorunur ? 'VİTRİNDE' : 'GİZLİ'}
+                    </StatusBadge>
+                );
+            },
         },
         {
             header: 'KALİTE',
