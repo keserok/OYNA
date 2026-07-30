@@ -68,13 +68,15 @@ export const POSITION_CODE: Record<string, OnboardingPosition> = {
 
 /** Oyun stili etiket + vurgu rengi — UYGULAMA GENELİNDE TEK KAYNAK.
     KANONİK PALET (kullanıcı kararı): Ciddi=Kırmızı, Taktiksel=Sarı, Rahat=Yeşil.
-    RAHAT = #10b981 (IP-09'a bilinçli istisna): yeşil ailesinde ama #39FF14 değil —
-    mentalite kimliği, aksiyon/CTA rengiyle karışmaz (Rahat maç tasarım kararı).
+    IP-09 jeton kuralıyla birleşim: kategori rengi aksiyon (#39FF14) ya da
+    "bekliyor" (#FACC15) jetonunun AYNISI olamaz — Taktiksel bu yüzden sarı
+    ailesinde kalır ama amber (#F59E0B) taşır. RAHAT = #10b981 (bilinçli):
+    yeşil ailesinde ama #39FF14 değil — mentalite kimliği CTA ile karışmaz.
     Renk kopyası ÜRETME: MatchDiscovery/MatchJoin/MatchCreate/MatchJoinCard/
     admin MatchLobbyHeader hepsi buradan okur. */
 export const PLAY_STYLE_META: Record<Exclude<PlayStyle, ''>, { label: string; color: string }> = {
   ciddi: { label: 'Ciddi', color: '#FF4D4D' },
-  taktiksel: { label: 'Taktiksel', color: '#FACC15' },
+  taktiksel: { label: 'Taktiksel', color: '#F59E0B' },
   rahat: { label: 'Rahat', color: '#10b981' },
 };
 
