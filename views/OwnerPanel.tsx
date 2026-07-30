@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 
 import { useAppStore } from '../store';
+import { money } from './owner/finance/financeUi';
 import { hasMultipleSwitchableRoles } from '../shared/roles';
 import { resolveWorkingHoursForDate, isHourWithinWorkingHours, openHourCount } from '../shared/workingHours';
 import { courtsMissingTariff } from '../shared/courtTariffGate';
@@ -587,7 +588,7 @@ const tariffRowToPolicy = (t: PitchTariff) => ({
     {
       id: 'revenue',
       label: 'Bugünkü Ciro',
-      value: `${dynamicTotalRevenue.toLocaleString('tr-TR')}₺`,
+      value: money(dynamicTotalRevenue),
       trend: 'up',
       trendLabel: 'Canlı veri',
       accent: 'emerald',
@@ -1179,12 +1180,12 @@ const tariffRowToPolicy = (t: PitchTariff) => ({
               ) : courtStats.map((item) => (
                   <div key={item.courtId} className="bg-[#0A0E14] p-4 rounded-2xl border border-white/5 flex justify-between items-center">
                       <span className="text-sm font-bold text-gray-400">{item.courtName}</span>
-                      <span className="text-lg font-extrabold text-emerald-400 tabular-nums">{item.collected.toLocaleString('tr-TR')}₺</span>
+                      <span className="text-lg font-extrabold text-emerald-400 tabular-nums">{money(item.collected)}</span>
                   </div>
               ))}
               <div className="pt-4 border-t border-white/10 flex justify-between items-center">
                   <span className="text-base font-extrabold text-white">TOPLAM TAHSİLAT</span>
-                  <span className="text-2xl font-extrabold text-emerald-500 tabular-nums">{dynamicTotalRevenue.toLocaleString('tr-TR')}₺</span>
+                  <span className="text-2xl font-extrabold text-emerald-500 tabular-nums">{money(dynamicTotalRevenue)}</span>
               </div>
           </div>
       </OwnerBottomSheet>

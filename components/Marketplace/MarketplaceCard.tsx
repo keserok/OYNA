@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { Star, MapPin, ChevronRight, BadgeCheck, Shield, Scale } from 'lucide-react';
 import { Goalkeeper, Referee } from '../../types';
 import { getInitials } from '../ui/Avatar';
+import { formatTRYShort } from '../../utils/formatTRY';
 
 // Rol bazlı tema — Dashboard giriş kartlarıyla tutarlı: Kaleci = neon yeşil,
 // Hakem = mavi. (Eski "brand-primary" sınıfları Tailwind temasında tanımsızdı
@@ -147,8 +148,8 @@ export const MarketplaceCard: React.FC<MarketplaceCardProps> = ({ item, type, on
       {/* Ücret + profil oku */}
       <div className="shrink-0 self-stretch flex flex-col items-end justify-between pl-3 border-l border-white/[0.06] py-0.5">
         <div className="text-right">
-          <span className="block text-lg font-extrabold text-white font-numeric leading-none tabular-nums">
-            {item.fee}<span className="text-[0.8125rem] font-bold text-white/60">₺</span>
+          <span className="block text-lg font-extrabold text-white font-numeric leading-none">
+            {formatTRYShort(item.fee)}
           </span>
           <span className="block text-[0.625rem] font-bold text-ink-4 uppercase tracking-wider mt-1">maç başı</span>
         </div>

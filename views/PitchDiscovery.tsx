@@ -49,6 +49,7 @@ import {
 } from '../shared/pitchShowcaseMapper';
 import { PitchShowcaseCard, SafeImage, FavStar } from '../components/pitch-showcase/PitchShowcaseCard';
 import { trUpper } from '../utils/trUpper';
+import { formatTRYShort } from '../utils/formatTRY';
 
 interface MapViewProps {
   pitches: Pitch[];
@@ -62,6 +63,10 @@ interface MapViewProps {
   /** Seçili bölgelerin idari sınırları (sarı çizgi). Boşsa çizim yok. */
   regionBoundaries: GeoJSON.FeatureCollection | null;
 }
+
+// IP-19 — para tek biçimde: sembol SONDA ("1.500₺"), kuruş varsa iki hane.
+// Burası FİYAT bağlamı: sıfır ücret "0₺" değil "Ücretsiz" diye okunur.
+const fiyat = formatTRYShort;
 
 // Zoom eşiği: altında fiyatlar gizlenir, sahalar yalnız nokta olarak görünür
 // (dokununca yakınlaşır); üstünde seçilebilir fiyat balonları gösterilir.
@@ -391,7 +396,7 @@ const MapViewComponent = ({
                     {/* Aksiyon satırı kartın TAM genişliğinde — kırpılma yok */}
                     <div className="flex items-center justify-between gap-2 px-3 pb-3">
                       {p.totalPrice > 0 ? (
-                        <span className="text-[0.875rem] font-extrabold text-[#39FF14] shrink-0">~{p.totalPrice}₺</span>
+                        <span className="text-[0.875rem] font-extrabold text-[#39FF14] shrink-0">~{fiyat(p.totalPrice)}</span>
                       ) : (
                         <span className="text-[0.6875rem] font-bold text-ink-4 shrink-0">Fiyat bilgisi yok</span>
                       )}
@@ -1037,7 +1042,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
       ],
       amount: selectedSlotQuote.deposit,
       amountLabel: 'Ödenecek Kapora',
-      amountHint: `Saha ücreti ${selectedSlotQuote.price.toLocaleString('tr-TR')}₺ · kalan tesiste ödenir`,
+      amountHint: `Saha ücreti ${fiyat(selectedSlotQuote.price)} · kalan tesiste ödenir`,
       isDeposit: true,
       allowBalance: true,
       successTitle: 'Kapora Onaylandı!',
@@ -1520,7 +1525,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
                     <div className="flex justify-between items-center mb-3">
                       <p className="text-[0.625rem] font-extrabold text-ink-4 uppercase tracking-widest">ORT. SAATLİK FİYAT</p>
                       <span className="text-sm font-extrabold text-[#39FF14]">
-                        {filters.maxPrice == null ? 'Tümü' : `≤ ${filters.maxPrice}₺`}
+                        {filters.maxPrice == null ? 'Tümü' : `≤ ${fiyat(filters.maxPrice)}`}
                       </span>
                     </div>
                     <input
@@ -1536,8 +1541,8 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
                       className="w-full h-2 bg-[#0A0E14] rounded-lg appearance-none cursor-pointer accent-[#39FF14]"
                     />
                     <div className="flex justify-between mt-1.5 text-[0.6875rem] font-bold text-ink-4">
-                      <span>₺{priceBounds.min}</span>
-                      <span>₺{priceBounds.max}+</span>
+                      <span>{fiyat(priceBounds.min)}</span>
+                      <span>{fiyat(priceBounds.max)}+</span>
                     </div>
                   </div>
                 )}
@@ -1771,7 +1776,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
                             </div>
                           </div>
                           <div className="text-right flex-shrink-0 pl-3">
-                            <div className={`text-base font-extrabold ${isSel ? 'text-[#39FF14]' : 'text-white'}`}>₺{price}</div>
+                            <div className={`text-base font-extrabold ${isSel ? 'text-[#39FF14]' : 'text-white'}`}>{fiyat(price)}</div>
                             {courtPriceUnits[court.id] && (
                               <div className="text-[0.625rem] font-extrabold uppercase tracking-[0.1em] text-ink-4">{courtPriceUnits[court.id]}</div>
                             )}
@@ -1967,7 +1972,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
                           {slot.startTime}
                         </span>
                         <span className={`${isBooked || isOwnerClosed ? 'text-[0.6875rem] tracking-[0.1em]' : 'text-[0.6875rem]'} font-extrabold ${isSelected ? 'text-[#05070b]/70' : isBooked ? 'text-red-400' : isOwnerClosed ? 'text-ink-4' : 'text-[#39FF14]'}`}>
-                          {isBooked ? 'DOLU' : isOwnerClosed ? 'KAPALI' : slot.price != null ? `₺${slot.price}` : ''}
+                          {isBooked ? 'DOLU' : isOwnerClosed ? 'KAPALI' : slot.price != null ? fiyat(slot.price) : ''}
                         </span>
                       </button>
                     );
@@ -2010,9 +2015,9 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
                        tarifede "/ saat" yazmak yanlış olurdu. */
                     <div className="text-xl font-extrabold mt-0.5">
                       {isSelectionMode ? (
-                        <>₺{selectedSlotQuote.price}<span className="text-xs font-semibold text-white/50"> {selectedSlotPriceUnit}</span></>
+                        <>{fiyat(selectedSlotQuote.price)}<span className="text-xs font-semibold text-white/50"> {selectedSlotPriceUnit}</span></>
                       ) : (
-                        <>₺{selectedSlotQuote.deposit}<span className="text-xs font-semibold text-white/50"> / ₺{selectedSlotQuote.price}</span></>
+                        <>{fiyat(selectedSlotQuote.deposit)}<span className="text-xs font-semibold text-white/50"> / {fiyat(selectedSlotQuote.price)}</span></>
                       )}
                     </div>
                   ) : (
@@ -2053,7 +2058,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
               </div>
               {selectedSlotQuote && !isSelectionMode && (
                 <p className="px-6 pb-3 -mt-1 text-[0.6875rem] text-ink-4 leading-relaxed">
-                  Kapora rezervasyon güvencesidir; kalan ₺{selectedSlotQuote.price - selectedSlotQuote.deposit} maç günü tesiste ödenir. İptalde tesis politikasına göre iade edilir.
+                  Kapora rezervasyon güvencesidir; kalan {fiyat(selectedSlotQuote.price - selectedSlotQuote.deposit)} maç günü tesiste ödenir. İptalde tesis politikasına göre iade edilir.
                 </p>
               )}
             </div>

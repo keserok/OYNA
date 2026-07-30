@@ -59,7 +59,7 @@ describe('leaveQuoteMessage — hiçbir dal sessiz değil', () => {
       false, false);
     expect(m.tone).toBe('late');
     expect(m.text).toContain('6 saatten az');
-    expect(m.text).toContain('150,00₺');
+    expect(m.text).toContain('150₺');
     expect(m.text).toMatch(/iade edilmez/i);
     expect(m.text).toMatch(/güvenilirlik puanın 10 düşer/i);
   });
@@ -72,7 +72,7 @@ describe('leaveQuoteMessage — hiçbir dal sessiz değil', () => {
     expect(m.tone).toBe('late');
     expect(m.text).toContain('24 saatten az');
     expect(m.text).toContain('%50');
-    expect(m.text).toContain('75,00₺');
+    expect(m.text).toContain('75₺');
     expect(m.text).toMatch(/cüzdanına döner/i);
     expect(m.text).toMatch(/iade edilmez/i);
   });
@@ -85,10 +85,13 @@ describe('leaveQuoteMessage — hiçbir dal sessiz değil', () => {
     expect(m.text).toMatch(/güvenilirlik puanın 10 düşer/i);
   });
 
-  it('erken ayrılma: iade tutarı formatTRY biçiminde basılır', () => {
+  it('erken ayrılma: iade tutarı kanonik biçimde basılır', () => {
+    // IP-19: tam sayıda ondalık YOK. Eskiden "1.500,00₺" yazıyordu; aynı
+    // kullanıcı aynı akışta Sahalar'da "₺1500" görüyordu.
     const m = leaveQuoteMessage(quote({ refundable: 1500, paid: 1500 }), false, false);
     expect(m.tone).toBe('refund');
-    expect(m.text).toContain('1.500,00₺');
+    expect(m.text).toContain('1.500₺');
+    expect(m.text).not.toContain('1.500,00₺');
     expect(m.text).toMatch(/cüzdanına döner/i);
   });
 

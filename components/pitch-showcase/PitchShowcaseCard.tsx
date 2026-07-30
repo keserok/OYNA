@@ -11,6 +11,7 @@ import { motion } from 'framer-motion';
 import { MapPin, Star, Layers } from 'lucide-react';
 import { Pitch } from '../../types';
 import { transformedImageUrl } from '../../utils/imageTransform';
+import { formatTRYShort } from '../../utils/formatTRY';
 
 /** Favori/puan ayrımı: favori = büyük sarı yıldız (dolu/boş), puan = küçük altın yıldız */
 export const FavStar: React.FC<{ active: boolean; size?: number }> = ({ active, size = 18 }) => (
@@ -110,9 +111,9 @@ export const PitchShowcaseCard: React.FC<{
         <div>
           <span className="block text-[0.625rem] font-extrabold uppercase tracking-[0.12em] text-ink-4 mb-0.5">Ort. Saatlik</span>
           <span className="flex items-baseline gap-2">
-            <span className={`text-lg font-extrabold ${pitch.originalPrice ? 'text-[#39FF14]' : 'text-white'}`}>~₺{pitch.totalPrice}</span>
+            <span className={`text-lg font-extrabold ${pitch.originalPrice ? 'text-[#39FF14]' : 'text-white'}`}>~{formatTRYShort(pitch.totalPrice)}</span>
             {pitch.originalPrice && (
-              <span className="text-[0.8125rem] font-semibold text-ink-4 line-through">₺{pitch.originalPrice}</span>
+              <span className="text-[0.8125rem] font-semibold text-ink-4 line-through">{formatTRYShort(pitch.originalPrice)}</span>
             )}
           </span>
         </div>

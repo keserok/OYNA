@@ -16,6 +16,7 @@ import { deriveDiscoveryFilterOptions, roleHasOpenSlot, ROLE_LABEL_MAP } from '.
 import { formatMatchDuration, realMatchMinutes } from '../shared/matchTiming';
 import { PLAY_STYLE_META } from './onboarding/onboardingShared';
 import { trUpper } from '../utils/trUpper';
+import { formatTRYShort } from '../utils/formatTRY';
 
 interface MatchDiscoveryProps {
   onSelect: (match: MatchListing) => void;
@@ -1090,7 +1091,7 @@ const MatchCard: React.FC<{
             ) : (
               <div className="px-3 py-1.5 bg-black/70 backdrop-blur-md border border-white/10 rounded-xl shadow-lg flex flex-col items-center gap-0.5">
                 <span className="text-[0.625rem] font-extrabold uppercase tracking-wider text-ink-4">KİŞİ BAŞI</span>
-                <span className="text-[0.8125rem] font-extrabold text-[#FACC15] tracking-wider drop-shadow-md">{match.price} ₺</span>
+                <span className="text-[0.8125rem] font-extrabold text-[#FACC15] tracking-wider drop-shadow-md">{formatTRYShort(match.price)}</span>
               </div>
             )}
 

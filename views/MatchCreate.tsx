@@ -30,6 +30,7 @@ import { getMatchDetails } from '../services/matchService';
 import { fetchMyFavoritePitchIds } from '../services/pitchFavoritesService';
 import { safeUuid } from '../shared/submitGuard';
 import { trUpper } from '../utils/trUpper';
+import { formatTRYAmount } from '../utils/formatTRY';
 
 // Cüzdan yükleme overlay'i — form kaybolmadan bakiye tamamlanır (gerçek akış).
 const WalletScreen = lazy(() => import('./WalletScreen'));
@@ -55,7 +56,12 @@ const DAY_PREFETCH = 7;
 const MAX_FACILITIES = 6;
 
 const trLower = (s: string) => s.toLocaleLowerCase('tr-TR');
-const fmtTL = (n: number) => Math.round(n).toLocaleString('tr-TR');
+
+// IP-19: buradaki yerel biçimleyici tutarı YUVARLIYORDU. 299,60₺ bakiye "300₺"
+// yazılıyor, eksik hesabı ise gerçek değerden yapıldığı için ekranda aynı anda
+// "bakiyen 300₺" ve "1₺ eksik" görünüyordu. Artık gösterilen sayı ile hesaba
+// giren sayı aynı: ikisi de ham `spendable`.
+const money = formatTRYAmount;
 
 type SheetKind = 'ADV' | 'FRIENDS' | 'PROVIDERS' | 'RULES' | 'TOPUP' | 'SUCCESS' | null;
 
@@ -581,7 +587,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
       for (const id of o.providerIds) sum += list.find(p => p.id === id)?.fee ?? 0;
     }
     if (sum === 0 && unknown) return 'Ücret sağlayıcı onayında netleşir';
-    return `Toplam ${fmtTL(sum)}₺${unknown ? '+' : ''} · onaylanınca tahsil edilir`;
+    return `Toplam ${money(sum)}${unknown ? '+' : ''} · onaylanınca tahsil edilir`;
   }, [offers, providers]);
 
   // Cüzdan overlay'i doğrudan YÜKLEME sekmesinde açılsın
@@ -620,7 +626,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
   const banner = conflict
     ? { tone: '#F87171', box: 'bg-red-400/10 border-red-400/25', title: `${conflict.time} az önce doldu`, sub: conflict.next ? `Bu sahada en yakın müsait saat ${conflict.next}` : 'Bugün için başka müsait saat kalmadı', btn: conflict.next ? `${conflict.next}'e geç` : null, act: () => { if (conflict.next) { pickTime(conflict.next); } } }
     : missingTL > 0 && missing > 0
-    ? { tone: '#FCA5A5', box: 'bg-red-400/10 border-red-400/25', title: `Kapora için ${fmtTL(missing)}₺ eksik`, sub: 'Formun kaybolmaz — yükleyip kaldığın yerden devam et', btn: 'Yükle', act: () => setSheet('TOPUP') }
+    ? { tone: '#FCA5A5', box: 'bg-red-400/10 border-red-400/25', title: `Kapora için ${money(missing)} eksik`, sub: 'Formun kaybolmaz — yükleyip kaldığın yerden devam et', btn: 'Yükle', act: () => setSheet('TOPUP') }
     : seeded
     ? { tone: '#39FF14', box: 'bg-[#39FF14]/[0.07] border-[#39FF14]/25', title: 'Rezervasyonun maça çevriliyor', sub: 'Saha ve saat kilitli — sadece kadroyu kur', btn: 'Detay', act: () => setSheet('RULES') }
     : null;
@@ -759,7 +765,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                 </div>
                 <button onClick={() => { setPriceOpen(v => !v); }} className="shrink-0 text-right flex flex-col items-end gap-1">
                   <span className="font-numeric text-[1.625rem] font-extrabold leading-none text-[#39FF14]">
-                    {perPerson != null ? `${fmtTL(perPerson)}₺` : '—'}
+                    {money(perPerson)}
                   </span>
                   <span className="flex items-center gap-1 text-[0.625rem] font-extrabold uppercase tracking-[0.12em] text-white/[0.38]">
                     Kişi başı <ChevronDown size={11} className={`transition-transform ${priceOpen ? 'rotate-180' : ''}`} />
@@ -771,13 +777,13 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                   <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
                     <div className="mt-3.5 pt-3 border-t border-white/[0.07] flex flex-col gap-1.5 text-[0.6875rem] font-bold">
                       {/* Süre SEÇİLEN dilimden okunur: gündüz 60, akşam 90 olabilir. */}
-                      <div className="flex justify-between text-white/50"><span>{court?.name ?? 'Saha'} · {selHour?.minutes ?? dayQuote?.slotDuration ?? 60} dk</span><span className="font-numeric text-white">{fmtTL(selHour?.basePrice ?? total)}₺</span></div>
+                      <div className="flex justify-between text-white/50"><span>{court?.name ?? 'Saha'} · {selHour?.minutes ?? dayQuote?.slotDuration ?? 60} dk</span><span className="font-numeric text-white">{money(selHour?.basePrice ?? total)}</span></div>
                       {selHour?.deal && selHour.basePrice != null && selHour.total != null && (
-                        <div className="flex justify-between text-[#FACC15]"><span>Son dakika indirimi</span><span className="font-numeric">−{fmtTL(selHour.basePrice - selHour.total)}₺</span></div>
+                        <div className="flex justify-between text-[#FACC15]"><span>Son dakika indirimi</span><span className="font-numeric">−{money(selHour.basePrice - selHour.total)}</span></div>
                       )}
                       <div className="flex justify-between text-white/50"><span>Toplam oyuncu ({per} + {per})</span><span className="font-numeric text-white">÷ {per * 2}</span></div>
                       <div className="flex justify-between text-white/50"><span>OYNA hizmet payı</span><span className="font-numeric text-white">+%5</span></div>
-                      <div className="flex justify-between text-[#39FF14]"><span>Senin payın</span><span className="font-numeric">{perPerson != null ? fmtTL(perPerson) : '—'}₺</span></div>
+                      <div className="flex justify-between text-[#39FF14]"><span>Senin payın</span><span className="font-numeric">{money(perPerson)}</span></div>
                     </div>
                   </motion.div>
                 )}
@@ -841,7 +847,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                             <p className="text-[0.8125rem] font-extrabold truncate">{f.name}</p>
                             <p className="mt-0.5 text-[0.6875rem] font-bold text-white/[0.42] truncate">{[f.city, f.district].filter(Boolean).join(' · ') || '—'}</p>
                             <p className={`mt-1.5 text-[0.6875rem] font-extrabold ${on ? 'text-[#39FF14]' : 'text-white/[0.32]'}`}>
-                              {f.courts.length} saha{f.courts.some(c => c.basePrice > 0) ? ` · ${fmtTL(Math.min(...f.courts.filter(c => c.basePrice > 0).map(c => c.basePrice)))}₺'den` : ''}
+                              {f.courts.length} saha{f.courts.some(c => c.basePrice > 0) ? ` · ${money(Math.min(...f.courts.filter(c => c.basePrice > 0).map(c => c.basePrice)))}'den` : ''}
                             </p>
                           </div>
                         </button>
@@ -884,7 +890,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                               </p>
                             </div>
                             {c.basePrice > 0 && (
-                              <span className={`font-numeric shrink-0 text-xs font-extrabold ${on ? 'text-[#39FF14]' : 'text-white/50'}`}>{fmtTL(c.basePrice)}₺</span>
+                              <span className={`font-numeric shrink-0 text-xs font-extrabold ${on ? 'text-[#39FF14]' : 'text-white/50'}`}>{money(c.basePrice)}</span>
                             )}
                           </button>
                         );
@@ -984,7 +990,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                       className={`relative shrink-0 w-[84px] h-[72px] rounded-[18px] border flex flex-col items-center justify-center gap-0.5 transition-colors ${on ? 'bg-[#39FF14]/[0.09] border-[#39FF14]/50' : 'bg-white/[0.03] border-white/[0.09]'}`}>
                       <span className={`text-base font-extrabold italic ${on ? 'text-[#39FF14]' : 'text-white'}`}>{val}</span>
                       <span className="text-[0.6875rem] font-bold text-white/[0.38]">{n * 2} oyuncu</span>
-                      <span className={`font-numeric text-[0.6875rem] font-extrabold ${on ? 'text-[#39FF14]' : 'text-ink-4'}`}>{p != null ? `${fmtTL(p)}₺` : '—'}</span>
+                      <span className={`font-numeric text-[0.6875rem] font-extrabold ${on ? 'text-[#39FF14]' : 'text-ink-4'}`}>{money(p)}</span>
                       {n === court.minCapacity && (
                         <span className="absolute -top-2 left-1/2 -translate-x-1/2 text-[0.625rem] font-extrabold uppercase tracking-wide text-[#0A0E14] bg-[#FACC15] rounded-md px-1.5 py-0.5 whitespace-nowrap">Önerilen</span>
                       )}
@@ -1098,16 +1104,16 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                   {seeded ? 'Kapora yok — rezervasyon güvencesi zaten ödendi'
                     : deposit != null
                       ? missing > 0
-                        ? `Kapora ${fmtTL(deposit)}₺ · bakiyen ${fmtTL(spendable)}₺`
-                        : `Kapora ${fmtTL(deposit)}₺ · cüzdanından bloke`
+                        ? `Kapora ${money(deposit)} · bakiyen ${money(spendable)}`
+                        : `Kapora ${money(deposit)} · cüzdanından bloke`
                       : 'Kapora saat seçince hesaplanır'}
                 </p>
                 <p className={`mt-0.5 text-[0.6875rem] font-bold leading-snug ${missing > 0 && deposit != null && !seeded ? 'text-red-300' : 'text-[#FACC15]/85'}`}>
                   {seeded ? 'Maç dolunca oyuncu payları cüzdanına gelir'
                     : deposit != null
                       ? missing > 0
-                        ? `${fmtTL(missing)}₺ yükle, kapora anında bloke edilsin`
-                        : `Maç dolunca ${fmtTL(Math.max(0, deposit - (perPerson ?? 0)))}₺ iade · dolmazsa tamamı`
+                        ? `${money(missing)} yükle, kapora anında bloke edilsin`
+                        : `Maç dolunca ${money(Math.max(0, deposit - (perPerson ?? 0)))} iade · dolmazsa tamamı`
                       : 'Kapora ve iade kuralları için dokun'}
                 </p>
               </div>
@@ -1211,7 +1217,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
           <p className="text-center text-[0.6875rem] font-bold text-white/[0.32] pb-1">
             {publishing ? 'Kapatma — işlem birkaç saniye sürebilir'
               : seeded ? 'Rezervasyonun maça çevrilecek · ek ödeme yok'
-              : deposit != null ? `${fmtTL(deposit)}₺ kapora cüzdanından bloke edilir · maç dolmazsa tam iade` : 'Saha ve saat seçince kapora hesaplanır'}
+              : deposit != null ? `${money(deposit)} kapora cüzdanından bloke edilir · maç dolmazsa tam iade` : 'Saha ve saat seçince kapora hesaplanır'}
           </p>
         </div>
       )}
@@ -1558,7 +1564,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                                 </div>
                               </div>
                               <div className="text-right shrink-0">
-                                <div className="font-numeric text-sm font-extrabold" style={{ color: accent }}>{fmtTL(p.fee)}₺</div>
+                                <div className="font-numeric text-sm font-extrabold" style={{ color: accent }}>{money(p.fee)}</div>
                                 <div className="text-[0.625rem] font-bold uppercase text-ink-4 tracking-widest">bedel</div>
                               </div>
                               <span className="w-6 h-6 shrink-0 rounded-full border-2 flex items-center justify-center"
@@ -1604,20 +1610,20 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
               <div className="rounded-[20px] border border-[#FACC15]/25 bg-[#FACC15]/5 p-[18px] flex items-center justify-between gap-3.5">
                 <div>
                   <p className="text-[0.625rem] font-extrabold uppercase tracking-[0.16em] text-[#FACC15]/70">Bu maçın kaporası</p>
-                  <p className="font-numeric mt-1 text-3xl font-extrabold text-[#FACC15]">{seeded ? '0₺' : deposit != null ? `${fmtTL(deposit)}₺` : '—'}</p>
+                  <p className="font-numeric mt-1 text-3xl font-extrabold text-[#FACC15]">{seeded ? money(0) : money(deposit)}</p>
                 </div>
                 <div className="text-right">
                   <p className="text-[0.625rem] font-extrabold uppercase tracking-[0.16em] text-ink-4">Cüzdan bakiyen</p>
-                  <p className={`font-numeric mt-1 text-[1.1875rem] font-extrabold ${missing > 0 && !seeded ? 'text-red-400' : 'text-[#39FF14]'}`}>{fmtTL(spendable)}₺</p>
+                  <p className={`font-numeric mt-1 text-[1.1875rem] font-extrabold ${missing > 0 && !seeded ? 'text-red-400' : 'text-[#39FF14]'}`}>{money(spendable)}</p>
                   <p className={`mt-0.5 text-[0.6875rem] font-extrabold ${missing > 0 && !seeded ? 'text-red-400' : 'text-[#39FF14]'}`}>
-                    {seeded ? 'Gerekmiyor' : missing > 0 ? `${fmtTL(missing)}₺ eksik` : 'Yeterli ✓'}
+                    {seeded ? 'Gerekmiyor' : missing > 0 ? `${money(missing)} eksik` : 'Yeterli ✓'}
                   </p>
                 </div>
               </div>
               {[
                 { n: '1', t: 'Kapora cüzdanından bloke edilir', b: 'Yayınladığın anda tutar güvenceye alınır — para çekilmez, saha sana kilitlenir.' },
                 { n: '2', t: `Maç ${threshold} oyuncuda kesinleşir`, b: 'Toplam kadronun 2 eksiği kadar oyuncu katıldığında maç aktifleşir ve kapora tahsil edilir.' },
-                { n: '3', t: 'Maç dolunca payın dışındaki tutar döner', b: deposit != null && perPerson != null ? `${fmtTL(deposit)}₺ − ${fmtTL(perPerson)}₺ = ${fmtTL(Math.max(0, deposit - perPerson))}₺ cüzdanına iade edilir; sen de herkes gibi yalnız kendi payını ödersin.` : 'Sen de herkes gibi yalnız kendi payını ödersin; kalanı iade edilir.' },
+                { n: '3', t: 'Maç dolunca payın dışındaki tutar döner', b: deposit != null && perPerson != null ? `${money(deposit)} − ${money(perPerson)} = ${money(Math.max(0, deposit - perPerson))} cüzdanına iade edilir; sen de herkes gibi yalnız kendi payını ödersin.` : 'Sen de herkes gibi yalnız kendi payını ödersin; kalanı iade edilir.' },
                 { n: '4', t: 'Maç dolmazsa tam iade', b: 'Kadro eşiğe ulaşmazsa maç iptal olur ve blokaj kesintisiz çözülür. 24 saatten az kala kaptan iptalinde iade yapılmaz.' },
                 // IP-04 — sunucu karşılığı: app_config.match_leave_free_hours (24).
                 // Kaptan iptali kuralıyla bilerek aynı sayı.
@@ -1658,7 +1664,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                 <div className="flex items-center justify-between">
                   <span className="text-[0.625rem] font-extrabold uppercase tracking-[0.14em] text-ink-4">Kapora</span>
                   <span className="font-numeric text-[0.9375rem] font-extrabold text-[#FACC15]">
-                    {result.deposit > 0 ? `${fmtTL(result.deposit)}₺ bloke` : 'Gerekmedi'}
+                    {result.deposit > 0 ? `${money(result.deposit)} bloke` : 'Gerekmedi'}
                   </span>
                 </div>
                 <div className="h-px bg-white/[0.06]" />
@@ -1666,8 +1672,8 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                   <Undo2 size={14} className="text-[#39FF14] shrink-0 mt-0.5" />
                   <p className="text-[0.6875rem] leading-relaxed text-white/55">
                     {result.deposit > 0
-                      ? `Maç dolduğunda ${fmtTL(Math.max(0, result.deposit - result.perPerson))}₺ cüzdanına döner — sen de yalnız ${fmtTL(result.perPerson)}₺ kendi payını ödemiş olursun. Maç dolmazsa tamamı iade.`
-                      : `Kişi başı ücret ${fmtTL(result.perPerson)}₺ — oyuncular katıldıkça ödemeler güvenceye alınır.`}
+                      ? `Maç dolduğunda ${money(Math.max(0, result.deposit - result.perPerson))} cüzdanına döner — sen de yalnız ${money(result.perPerson)} kendi payını ödemiş olursun. Maç dolmazsa tamamı iade.`
+                      : `Kişi başı ücret ${money(result.perPerson)} — oyuncular katıldıkça ödemeler güvenceye alınır.`}
                   </p>
                 </div>
               </div>

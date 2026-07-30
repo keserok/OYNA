@@ -1,5 +1,6 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { Calendar, Download } from 'lucide-react';
+import { money } from './financeUi';
 import {
   ownerFinanceReport, toTurkishError, type OwnerFinanceReport,
 } from '../../../services/pitchOwnerService';
@@ -103,19 +104,19 @@ export const FinanceRangeReport: React.FC<{
           <div className="grid grid-cols-2 gap-2 mb-4">
             <div className="bg-white/5 p-3 rounded-xl border border-white/5">
               <p className="text-[9px] text-gray-500 font-extrabold uppercase mb-1">Brüt Tahsilat</p>
-              <p className="text-base font-extrabold text-white">{report.totals.gross_captured.toLocaleString('tr-TR')}₺</p>
+              <p className="text-base font-extrabold text-white">{money(report.totals.gross_captured)}</p>
             </div>
             <div className="bg-white/5 p-3 rounded-xl border border-white/5">
               <p className="text-[9px] text-gray-500 font-extrabold uppercase mb-1">Net Kazanç</p>
-              <p className="text-base font-extrabold text-emerald-400">{report.totals.owner_net.toLocaleString('tr-TR')}₺</p>
+              <p className="text-base font-extrabold text-emerald-400">{money(report.totals.owner_net)}</p>
             </div>
             <div className="bg-white/5 p-3 rounded-xl border border-white/5">
               <p className="text-[9px] text-gray-500 font-extrabold uppercase mb-1">OYNA Komisyonu</p>
-              <p className="text-base font-extrabold text-red-300">−{report.totals.commission.toLocaleString('tr-TR')}₺</p>
+              <p className="text-base font-extrabold text-red-300">−{money(report.totals.commission)}</p>
             </div>
             <div className="bg-white/5 p-3 rounded-xl border border-white/5">
               <p className="text-[9px] text-gray-500 font-extrabold uppercase mb-1">İade Edilen</p>
-              <p className="text-base font-extrabold text-yellow-300">{report.totals.refunded.toLocaleString('tr-TR')}₺</p>
+              <p className="text-base font-extrabold text-yellow-300">{money(report.totals.refunded)}</p>
             </div>
           </div>
           <p className="text-[11px] text-gray-500 mb-3">
@@ -142,10 +143,10 @@ export const FinanceRangeReport: React.FC<{
                       <tr key={d.day} className="border-b border-white/5">
                         <td className="text-left py-2 pr-2 text-gray-300 whitespace-nowrap">{d.day}</td>
                         <td className="text-right py-2 px-1 text-gray-400">{d.count}</td>
-                        <td className="text-right py-2 px-1 text-white font-bold">{d.gross.toLocaleString('tr-TR')}₺</td>
-                        <td className="text-right py-2 px-1 text-red-300">−{d.commission.toLocaleString('tr-TR')}₺</td>
-                        <td className="text-right py-2 px-1 text-emerald-400 font-bold">{d.owner_net.toLocaleString('tr-TR')}₺</td>
-                        <td className="text-right py-2 pl-1 text-yellow-300">{d.refunded.toLocaleString('tr-TR')}₺</td>
+                        <td className="text-right py-2 px-1 text-white font-bold">{money(d.gross)}</td>
+                        <td className="text-right py-2 px-1 text-red-300">−{money(d.commission)}</td>
+                        <td className="text-right py-2 px-1 text-emerald-400 font-bold">{money(d.owner_net)}</td>
+                        <td className="text-right py-2 pl-1 text-yellow-300">{money(d.refunded)}</td>
                       </tr>
                     ))}
                 </tbody>

@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { TrendingUp, X } from 'lucide-react';
 import { upsertSpecialSlotTariff, toTurkishError } from '../../services/pitchOwnerService';
 import { resolveHourlyPrice } from './ownerCalendarHelpers';
+import { money } from './finance/financeUi';
 
 interface OwnerSpecialPriceModalProps {
   pitchId: string;
@@ -76,7 +77,7 @@ export const OwnerSpecialPriceModal: React.FC<OwnerSpecialPriceModalProps> = ({
               <TrendingUp size={20} className="text-amber-400" /> Özel Fiyat
             </h3>
             <p className="text-xs text-gray-400 mt-1">
-              {timeKey} • Standart: ₺{standardPrice}
+              {timeKey} • Standart: {money(standardPrice)}
             </p>
           </div>
           <button type="button" onClick={onClose} className="p-2 bg-white/5 rounded-full text-gray-400 hover:text-white">
@@ -97,7 +98,7 @@ export const OwnerSpecialPriceModal: React.FC<OwnerSpecialPriceModalProps> = ({
           </div>
           {newPrice > standardPrice && standardPrice > 0 && (
             <p className="text-sm text-amber-400 font-bold mt-3">
-              +{newPrice - standardPrice}₺ ({Math.round(((newPrice - standardPrice) / standardPrice) * 100)}% artış)
+              +{money(newPrice - standardPrice)} ({Math.round(((newPrice - standardPrice) / standardPrice) * 100)}% artış)
             </p>
           )}
         </div>

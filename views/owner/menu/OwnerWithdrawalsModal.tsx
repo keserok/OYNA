@@ -3,6 +3,7 @@ import { AlertCircle, Banknote, Clock, Lock, Wallet, X } from 'lucide-react';
 import { getOwnerBalance, getBankAccounts, requestWithdrawal, getCashoutStatus, toTurkishError } from '../../../services/pitchOwnerService';
 import { useOwnerToast } from '../components/useOwnerToast';
 import { validateTrIban } from '../../../utils/iban';
+import { money } from '../finance/financeUi';
 import { useBackDismiss } from '../../../hooks/useBackDismiss';
 
 interface Props {
@@ -82,7 +83,7 @@ export const OwnerWithdrawalsModal: React.FC<Props> = ({
       return;
     }
     if (amount < cashout.min) {
-      notify(`Minimum çekim tutarı ₺${cashout.min}.`, 'error');
+      notify(`Minimum çekim tutarı ${money(cashout.min)}.`, 'error');
       return;
     }
     if (amount > availableBalance) {
@@ -121,11 +122,11 @@ export const OwnerWithdrawalsModal: React.FC<Props> = ({
           <Wallet size={64} className="absolute top-0 right-0 p-4 opacity-10 text-white" />
           <p className="text-blue-200 text-sm font-bold mb-1">Çekilebilir Bakiye</p>
           <h3 className="text-4xl font-extrabold text-white">
-            ₺{availableBalance.toLocaleString('tr-TR')}
+            {money(availableBalance)}
           </h3>
           {reservedBalance > 0 && (
             <p className="text-amber-200/80 text-xs font-bold mt-2 flex items-center gap-1.5">
-              <Clock size={13} /> ₺{reservedBalance.toLocaleString('tr-TR')} bekleyen talepte rezerve
+              <Clock size={13} /> {money(reservedBalance)} bekleyen talepte rezerve
             </p>
           )}
         </div>
@@ -144,7 +145,7 @@ export const OwnerWithdrawalsModal: React.FC<Props> = ({
             <Clock size={16} className="shrink-0 mt-0.5" />
             <span>
               Kazancın (maç + saha kiralama) tahsilattan <b>2 hafta</b> sonra çekilebilir hale gelir.
-              Talebin admin onayıyla kayıtlı IBAN'ına gönderilir (min ₺{cashout.min}).
+              Talebin admin onayıyla kayıtlı IBAN'ına gönderilir (min {money(cashout.min)}).
             </span>
           </div>
         )}

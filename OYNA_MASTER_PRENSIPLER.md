@@ -422,3 +422,61 @@ sözlüğünden gelir: `Yükleniyor…`, `Kaydediliyor…`, `Gönderiliyor…`.
 
 Kullanıcıya gösterilen metinde kod içi ekran/tablo adı geçemez. "Tesisiniz onay
 bekliyor — PitchDiscovery'de görünmez" gibi bir cümle kullanıcı için anlamsızdır.
+
+---
+
+## 15. Para Biçimi Kuralı (IP-19)
+
+### 15.1 Kanonik biçim: `2.000₺`
+
+Sembol **sonda**, **boşluksuz**, binlik ayraçlı. Tam sayıda ondalık **yok**;
+kuruş varsa **tam iki hane**: `299,90₺`. Değer yoksa `—`.
+
+Gerekçe: aynı tutar üç ayrı yazımla çıkıyordu ve kullanıcı üçünü **tek akışta**
+görüyordu — Sahalar'da `₺2000`, Ödeme'de `2.000,00₺`, Profil'de `2.000 ₺`.
+Aynı sayının üç yazımı, üç ayrı sayı gibi okunuyor.
+
+### 15.2 Bağlama göre çağrı — sıfırın anlamı değişir
+
+| Bağlam | Çağrı | Sıfır |
+|---|---|---|
+| Fiyat: saha, hizmet, maç ücreti | `formatTRYShort` | `Ücretsiz` |
+| Tutar: bakiye, kapora, kesinti, ciro | `formatTRYAmount` | `0₺` |
+| Cüzdan hareketi (giren/çıkan) | `formatTRYSigned` | `+0₺` / `−0₺` |
+
+Bir saha ücretsiz olabilir; bir cüzdan olamaz. `0₺` bedavayı anlatmaz,
+`Ücretsiz` de boş bir cüzdanı.
+
+**`—` ile `0₺` aynı şey değildir.** Veri çekilemediğinde `0₺` göstermek yalandır;
+kullanıcı parasının silindiğini sanır.
+
+### 15.3 Ekranda elle para dizilmez
+
+`₺` karakteri kaynak kodda yalnız iki yerde meşrudur: sayı **giriş alanının**
+yanındaki tek karakterlik süs, ve avukat onaylı hukuki metin. Bunun dışında her
+tutar `utils/formatTRY.ts`'ten geçer. Para için elle `toLocaleString('tr-TR')`
+çağrılmaz.
+
+İkinci bir görünür biçim üreten dışa aktarım **eklenmez**. `formatTRYWithSymbol`
+(daima iki ondalık) bu yüzden silindi.
+
+### 15.4 Gösterilen sayı, hesaba giren sayıdır
+
+Biçimleyici **yuvarlamaz**. Yuvarlarsa ekran kendi kendisiyle çelişir: 299,60₺
+bakiye "300₺" yazılıp eksik hesabı ham değerden yapıldığında, kullanıcı aynı
+ekranda "bakiyen 300₺" ve "1₺ eksik" görür.
+
+### 15.5 Bir para, bir sayı, bir isim
+
+Cüzdan bakiyesi tek kaynaktan okunur (`spendable_balance`); ekran kendi toplamını
+tutmaz. Adı her yerde **"Cüzdan"**dır — "OYNA Bakiyesi" gibi ikinci bir ad
+kullanılmaz. İadeden gelen tutar ayrı bir para türü değildir, ayrı çip almaz.
+
+### 15.6 Tutar tek başına okunabilmeli
+
+Ödeme butonunda tutar, sayı ve eylemle aynı puntoda tek satıra dizilmez. Büyük
+tutar üstte, ne için ödendiği küçük puntoda altta durur. Dar alanda **kısaltma
+yapılmaz** (`1,5B₺` gibi) — para okunurluğu yer kazancından önce gelir.
+
+Hizalama `font-numeric` sınıfıyla gelir (`index.css`); o sınıf sabit genişlikli
+rakam kuralını zaten taşır, yanına ikinci kez yazılmaz.

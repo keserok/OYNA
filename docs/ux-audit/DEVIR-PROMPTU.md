@@ -56,7 +56,7 @@ gerekmiyor; bugün main'e sorunsuz akar.
 | Komut | Beklenen |
 |---|---|
 | `npx tsc --noEmit` | 0 hata |
-| `npx vitest run` | 859 test / 74 dosya, sıfır başarısız |
+| `npx vitest run` | 951 test / 76 dosya, sıfır başarısız |
 | `npm run test:visual` | 24/24 |
 | `npm run build` | başarılı |
 
@@ -73,15 +73,14 @@ IP-05 (değerlendirme gizliliği) · IP-06 (bildirim merkezi) ·
 IP-07 (tesis sahibi para dürüstlüğü) · IP-08 (tipografi/kontrast/font) ·
 **IP-09 (renk sistemi, tek aksan)** · **IP-10 (dokunma hedefi, erişilebilirlik)** ·
 **IP-12 (hata ve boş durum sistemi)** · **IP-13 (Türkçe metin ve ton)** ·
-**IP-14 (bilgi mimarisi)** · IP-20 (bilet çevrimdışı) ·
-S-serisi kararların tamamı.
+**IP-14 (bilgi mimarisi)** · **IP-19 (para biçimi ve bakiye tekliği)** ·
+IP-20 (bilet çevrimdışı) · S-serisi kararların tamamı.
 
 ### Kalan paketler — önerilen sıra
 
 | Sıra | Paket | Not |
 |---|---|---|
-| 1 | **IP-19** — para biçimi ve bakiye tekliği | Kullanıcı sırada bunu seçti |
-| 2+ | IP-11, 15, 16, 18, 22, 23 (+IP-21/IP-17 ertelendi) | |
+| 1+ | IP-11, 15, 16, 18, 22, 23 (+IP-21/IP-17 ertelendi) | |
 
 ### ⏳ AÇIK İŞ — telefona bildirim (kullanıcı isteği, HENÜZ YAPILMADI)
 
@@ -90,6 +89,44 @@ gelmesini sağla"** (push notification). Bu iş IP-12/IP-14 kapsamında DEĞİLD
 yapılmadı. Başlamadan önce `notifications/pushService.ts`, Supabase'de token
 tablosu, sunucu tarafı gönderim (edge function/cron) ve native yapılandırma
 (google-services.json / APNs) ölçülmeli — büyük ihtimalle sıfırdan iş.
+
+### IP-19 kararları (kullanıcı, bu oturumda)
+
+Kanonik biçim **`2.000₺`** — sembol SONDA, boşluksuz, binlik ayraçlı.
+Tam sayıda ondalık YOK; kuruş varsa TAM iki hane (`299,90₺`).
+
+| Bağlam | Çağrı | Sıfır |
+|---|---|---|
+| Fiyat (saha, hizmet, maç ücreti) | `formatTRYShort` | `Ücretsiz` |
+| Tutar (bakiye, kapora, kesinti, ciro) | `formatTRYAmount` | `0₺` |
+| Cüzdan hareketi | `formatTRYSigned` | `+0₺` / `−0₺` |
+| Değer yok (`null`/`NaN`) | hepsi | `—` |
+
+- **`formatTRYWithSymbol` SİLİNDİ.** Daima iki ondalık basıyordu, yani İKİNCİ
+  bir görünür biçimdi — paketin varlık sebebi tam olarak buydu. `formatTRY` ve
+  `formatTRYInt` yalnız çıplak gövde (₺'siz) üretir, giriş alanları içindir.
+- **Cüzdan tek sayı, tek isim.** `WalletScreen` kendi toplamını tutmayı bıraktı
+  (`topupBalance + refundBalance` → `summary.spendableBalance`). Ödeme
+  ekranındaki **"OYNA Bakiyesi" adı kaldırıldı** → her yerde **"Cüzdan"**.
+  Sunucuda `profiles.wallet_balance` ile `spendable_balance` zaten aynı iki
+  kovanın toplamı; sayı ayrışmıyordu, isim ayrışıyordu.
+- **Maç kurma ekranındaki yuvarlama giderildi.** Yerel `fmtTL` tutarı
+  `Math.round` ile basıyordu: 299,60₺ bakiye "300₺" yazılıyor, eksik hesabı ham
+  değerden yapıldığı için ekranda aynı anda "bakiyen 300₺" ve "1₺ eksik"
+  görünüyordu. Gösterilen sayı ile hesaba giren sayı artık aynı.
+- **Katılma tuşu iki katman**: büyük tutar üstte, `2 slot · Öde ve katıl` altta.
+  Aynı butonun `if (false)` içinde iki ölü kopyası vardı, silindi.
+- Dar alanda **kısaltma yok** (`1,5B₺` gibi bir biçim üretilmedi).
+- `views/owner/design/ownerTheme.ts` içindeki `numeric` belirteci
+  `tabular-nums font-numeric` idi; `font-numeric` zaten o kuralı taşıyor.
+- Kilit: `tests/unit/formatTRY.test.ts` (37 test). Testler kaynak okuyarak
+  ekranlarda elle `₺` dizilmesini ve para için elle `toLocaleString('tr-TR')`
+  çağrılmasını da yasaklıyor.
+
+> **Meşru kalan `₺` karakterleri** (testin izinli listesi): sayı GİRİŞ alanının
+> yanındaki tek karakterlik süs (12 dosya), avukat onaylı `LegalScreen` metni
+> ve `MatchDiscovery` bütçe süzgeci seçenekleri (hem etiket hem eşitlik
+> anahtarı oldukları için dokunulmadı).
 
 ### IP-13 kararları (kullanıcı, bu oturumda)
 

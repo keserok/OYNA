@@ -15,6 +15,7 @@ import { OynaLogo } from '../components/OynaLogo';
 // Türetme mantığı TEK KAYNAK: admin panelin Kullanıcı Profili Aynası da aynı
 // modülü kullanır — kart/rozet/puan hesapları iki yüzeyde asla ayrışmaz.
 import { buildCardData, applyCardTierOverride, ageFromBirthdate, formatPosition, trustScoreTo100, winStats } from '../shared/profilePresentation';
+import { formatTRYAmount } from '../utils/formatTRY';
 
 interface ProfileScreenProps {
     role: UserRole;
@@ -149,7 +150,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onNavigate, onOpenD
         {
             icon: <Wallet size={16} strokeWidth={2.3} />,
             label: 'Cüzdan',
-            value: `${(profile?.walletBalance ?? 0).toLocaleString('tr-TR')} ₺`,
+            value: formatTRYAmount(profile?.walletBalance ?? 0),
             onClick: () => onNavigate && onNavigate('WALLET'),
         },
         {

@@ -7,6 +7,7 @@ import { UserRole } from '../types';
 import { Spinner } from '../components/ui/Spinner';
 import { ORDU_DISTRICT_NAMES, LAUNCH_CITY } from '../utils/orduData';
 import { fetchActiveCoverage } from '../services/regionCoverageService';
+import { formatTRYAmount } from '../utils/formatTRY';
 
 interface PartnerOnboardingProps {
   onComplete: () => void;
@@ -542,7 +543,7 @@ const PartnerOnboarding: React.FC<PartnerOnboardingProps> = ({ onComplete, onClo
                   <div className="bg-[#161B22] p-4 rounded-2xl border border-[#39FF14]/20">
                       <TrendingUp className="text-[#39FF14] mb-2" size={20} />
                       <p className="text-[0.6875rem] text-ink-4 uppercase font-bold">Tahmini Aylık Ek Gelir</p>
-                      <p className="text-xl font-extrabold text-[#39FF14]">₺{estimatedRevenue.toLocaleString('tr-TR')}</p>
+                      <p className="text-xl font-extrabold text-[#39FF14]">{formatTRYAmount(estimatedRevenue)}</p>
                   </div>
                   <div className="bg-[#161B22] p-4 rounded-2xl border border-white/5">
                       <MapPin className="text-[#FACC15] mb-2" size={20} />

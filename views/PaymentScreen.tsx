@@ -22,7 +22,7 @@ import { getMatchDetails } from '../services/matchService';
 import AddCardScreen, { CollectedCard } from '../components/payment/AddCardScreen';
 import ThreeDSSheet, { ThreeDSOutcome } from '../components/payment/ThreeDSSheet';
 import type { PaymentContext } from '../types';
-import { formatTRY } from '../utils/formatTRY';
+import { formatTRYAmount } from '../utils/formatTRY';
 import {
   safeUuid, isOnline, withSubmitTimeout, SubmitTimeoutError,
   CARD_TIMEOUT_MS, OFFLINE_PAY, TIMEOUT_PAY,
@@ -33,7 +33,7 @@ import {
  *   maça katılım · saha kaporası · maç oluşturma kaporası (+ mevcut rezervasyon kaporası)
  * Bağlam yalnız başlık/rozet/tutar etiketini değiştirir; düzen sabittir.
  *
- * Ödeme yöntemi karuseli: [OYNA Bakiyesi toggle] [kayıtlı kartlar…] [Yeni kart ekle]
+ * Ödeme yöntemi karuseli: [Cüzdan toggle] [kayıtlı kartlar…] [Yeni kart ekle]
  * Kısmi ödeme: uygulanan bakiye = min(harcanabilir, tutar); kalan karttan.
  * Hata: hibrit — bu ekranda inline kırmızı şerit + cüzdanda banner (store.lastPaymentError).
  *
@@ -56,8 +56,9 @@ interface PayResult {
   pendingThreeDS?: boolean;
 }
 
-// C10 — para biçimi tek kaynaktan ("1.500,00₺"). Ekranlar arası tutarlılık.
-const fmt = formatTRY;
+// C10 + IP-19 — para biçimi tek kaynaktan: "1.500₺", kuruş varsa "299,90₺".
+// Ödeme muhasebe bağlamıdır: sıfır tutar "Ücretsiz" değil "0₺".
+const money = formatTRYAmount;
 
 const delay = (ms: number) => new Promise<void>(r => setTimeout(r, ms));
 
@@ -83,7 +84,7 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
         subtitle: `${bookingCourt.name} · ${bookingDate} · ${bookingSlot}`,
         amount: deposit,
         amountLabel: 'Ödenecek Kapora',
-        amountHint: bookingPrice ? `Saha ücreti ${fmt(bookingPrice)}₺ · kalan tesiste ödenir` : undefined,
+        amountHint: bookingPrice ? `Saha ücreti ${money(bookingPrice)} · kalan tesiste ödenir` : undefined,
         isDeposit: true,
         allowBalance: true,
         successTitle: 'Kapora Onaylandı!',
@@ -265,25 +266,25 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
   };
 
   const breakdown = balanceOnly
-    ? (insufficientBalance ? `Bakiye ${fmt(spendable)}₺ · ${fmt(amount - spendable)}₺ eksik` : 'Tamamı OYNA bakiyenden')
+    ? (insufficientBalance ? `Bakiye ${money(spendable)} · ${money(amount - spendable)} eksik` : 'Tamamı cüzdanından')
     : balanceApplied > 0 && needsCard
-      ? `${fmt(balanceApplied)}₺ bakiye + ${fmt(cardCharge)}₺ kart`
+      ? `${money(balanceApplied)} bakiye + ${money(cardCharge)} kart`
       : balanceApplied > 0
-        ? 'Tamamı OYNA bakiyenden'
+        ? 'Tamamı cüzdanından'
         : 'Tamamı karttan';
 
   const noteText = balanceOnly
     ? (insufficientBalance
-        ? `Bu kapora cüzdan bakiyesinden ödenir. Bakiyen ${fmt(spendable)}₺ — ${fmt(amount - spendable)}₺ daha yüklemen gerekiyor.`
+        ? `Bu kapora cüzdan bakiyesinden ödenir. Bakiyen ${money(spendable)} — ${money(amount - spendable)} daha yüklemen gerekiyor.`
         : 'Kapora cüzdan bakiyenden güvenceye alınır. Maç dolmazsa veya iptal olursa tutar anında cüzdanına döner.')
     : !allowBalance
     ? 'Bakiye bu ödemede kullanılamaz.'
     : balanceApplied > 0 && needsCard
-      ? `Bakiyen tutarın bir kısmını karşılıyor; kalan ${fmt(remaining)}₺${cardFee > 0 ? ` + ${fmt(cardFee)}₺ işlem bedeli` : ''} seçtiğin karttan tahsil edilir.`
+      ? `Bakiyen tutarın bir kısmını karşılıyor; kalan ${money(remaining)}${cardFee > 0 ? ` + ${money(cardFee)} işlem bedeli` : ''} seçtiğin karttan tahsil edilir.`
       : balanceApplied > 0
-        ? 'Tamamı OYNA bakiyenden karşılanıyor — kart gerekmez.'
+        ? 'Tamamı cüzdanından karşılanıyor — kart gerekmez.'
         : cardFee > 0
-          ? `Kartla ödemede ödeme altyapısı komisyonu için %${cardFeePct} işlem bedeli eklenir. OYNA bakiyenden ödersen bu bedel alınmaz.`
+          ? `Kartla ödemede ödeme altyapısı komisyonu için %${cardFeePct} işlem bedeli eklenir. Cüzdanından ödersen bu bedel alınmaz.`
           : 'Bakiye kullanılmıyor; tutarın tamamı seçtiğin karttan tahsil edilir.';
 
   // Lobi state'ini tazele (lost-update önleme — sunucu SSOT).
@@ -792,7 +793,7 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
                 : <Wallet size={22} />}
             </div>
             <p className="text-[0.6875rem] font-numeric text-gray-400">
-              {selectedCard && needsCard ? `•••• ${selectedCard.last4}` : 'OYNA Bakiyesi'}
+              {selectedCard && needsCard ? `•••• ${selectedCard.last4}` : 'Cüzdan'}
             </p>
           </div>
         </div>
@@ -801,7 +802,7 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
         </p>
         <p className="text-[0.8125rem] text-ink-4 mt-2.5 flex items-center gap-1.5">
           <Shield size={13} className="text-[#39FF14] animate-pulse" />
-          {needsCard ? 'Banka doğrulaması hazırlanıyor…' : 'OYNA bakiyenden ödeme alınıyor…'}
+          {needsCard ? 'Banka doğrulaması hazırlanıyor…' : 'Cüzdanından ödeme alınıyor…'}
         </p>
         {/* Banka SMS doğrulaması — uygulama içinde tam ekran (Uber standardı) */}
         {threeDS && (
@@ -836,7 +837,7 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
           </motion.h2>
           <motion.p initial={{ y: 14, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.18 }}
             className="text-[0.8125rem] text-[#39FF14] font-bold mt-2 uppercase tracking-[0.14em]">
-            {fmt(amount)}₺ · {ctx.successSubtitle}
+            {money(amount)} · {ctx.successSubtitle}
           </motion.p>
           <motion.div initial={{ y: 14, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.24 }}
             className="w-full bg-[#161B22] border border-white/8 rounded-3xl p-5 mt-8 space-y-3">
@@ -844,15 +845,15 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
             <SummaryRow label="Yer & Saat" value={ctx.subtitle} />
             <SummaryRow label="Ödeme" value={
               result && result.balanceApplied > 0 && result.cardAmount > 0
-                ? `${fmt(result.balanceApplied)}₺ bakiye + ${fmt(result.cardAmount)}₺ kart`
-                : result && result.balanceApplied > 0 ? 'OYNA bakiyesi' : 'Kart'
+                ? `${money(result.balanceApplied)} bakiye + ${money(result.cardAmount)} kart`
+                : result && result.balanceApplied > 0 ? 'Cüzdan' : 'Kart'
             } />
             {/* TAHSİL EDİLEN gerçek bedel (tahmin değil): sunucunun çektiği
                 toplamdan hizmet tabanı düşülerek bulunur. */}
             {result && cardFeeOf(amount, result.cardAmount, result.balanceApplied) > 0 && (
               <SummaryRow
                 label="Kart işlem bedeli"
-                value={`${fmt(cardFeeOf(amount, result.cardAmount, result.balanceApplied))}₺`}
+                value={money(cardFeeOf(amount, result.cardAmount, result.balanceApplied))}
               />
             )}
             <div className="h-px bg-white/8" />
@@ -1019,7 +1020,7 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
         <div className="text-center px-5 py-0.5">
           <p className="text-[0.6875rem] text-gray-400 font-bold uppercase tracking-[0.1em] mb-1.5">{ctx.amountLabel}</p>
           <p className={`text-[2.75rem] font-extrabold leading-none font-numeric ${ctx.isDeposit ? 'text-[#FACC15]' : 'text-white'}`}>
-            {fmt(amount)}₺
+            {money(amount)}
           </p>
           {ctx.amountHint && <p className="text-[0.6875rem] text-ink-4 mt-2">{ctx.amountHint}</p>}
           {/* Kart işlem bedeli — yalnız kart kısmı varsa ve oran > 0 iken çıkar.
@@ -1028,20 +1029,20 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
             <div className="mt-3 mx-auto max-w-[320px] rounded-2xl border border-white/8 bg-white/[0.03] px-4 py-3 space-y-1.5">
               <div className="flex items-center justify-between text-[0.75rem]">
                 <span className="text-gray-400 font-semibold">Hizmet tutarı</span>
-                <span className="text-white font-bold font-numeric">{fmt(amount)}₺</span>
+                <span className="text-white font-bold font-numeric">{money(amount)}</span>
               </div>
               <div className="flex items-center justify-between text-[0.75rem]">
                 <span className="text-gray-400 font-semibold">Kart işlem bedeli (%{cardFeePct})</span>
-                <span className="text-[#FACC15] font-bold font-numeric">+{fmt(cardFee)}₺</span>
+                <span className="text-[#FACC15] font-bold font-numeric">+{money(cardFee)}</span>
               </div>
               <div className="h-px bg-white/8" />
               <div className="flex items-center justify-between text-[0.8125rem]">
                 <span className="text-white font-extrabold">Karttan çekilecek</span>
-                <span className="text-white font-extrabold font-numeric">{fmt(grandTotal)}₺</span>
+                <span className="text-white font-extrabold font-numeric">{money(grandTotal)}</span>
               </div>
               {allowBalance && !balanceOnly && (
                 <p className="text-[0.6875rem] text-[#39FF14]/80 font-semibold pt-0.5">
-                  OYNA bakiyenden ödersen bu bedel alınmaz.
+                  Cüzdanından ödersen bu bedel alınmaz.
                 </p>
               )}
             </div>
@@ -1052,7 +1053,7 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
         <div>
           <p className="text-[0.6875rem] font-extrabold uppercase tracking-[0.14em] text-ink-4 mb-3 px-5">Ödeme Yöntemi</p>
           <div className="oy-carousel flex gap-3 overflow-x-auto px-5 pb-1.5" style={{ scrollSnapType: 'x mandatory' }}>
-            {/* OYNA bakiyesi toggle (cüzdan-öncelikli akışta tek yöntem) */}
+            {/* Cüzdan toggle (cüzdan-öncelikli akışta tek yöntem) */}
             <button
               disabled={!allowBalance || balanceOnly}
               onClick={() => allowBalance && !balanceOnly && setUseBalance(v => !v)}
@@ -1076,8 +1077,8 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
               <span className="w-10 h-10 rounded-xl bg-[#39FF14]/14 flex items-center justify-center text-[#39FF14] mb-8 block">
                 <Wallet size={20} />
               </span>
-              <p className="text-xs font-extrabold text-white">OYNA Bakiyesi</p>
-              <p className="text-xl font-extrabold text-[#39FF14] mt-1 font-numeric">{fmt(spendable)}₺</p>
+              <p className="text-xs font-extrabold text-white">Cüzdan</p>
+              <p className="text-xl font-extrabold text-[#39FF14] mt-1 font-numeric">{money(spendable)}</p>
               <p className="text-[0.6875rem] text-ink-4 mt-0.5">
                 {!allowBalance ? 'Bu ödemede kullanılamaz'
                   : spendable >= amount ? 'Tamamını karşılar'
@@ -1210,7 +1211,7 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
         <div className="flex items-center justify-between mb-3 px-0.5">
           <span className="text-[0.6875rem] text-ink-4 font-semibold">{breakdown}</span>
           <span className="text-[0.8125rem] font-extrabold text-white">
-            Toplam <span className={ctx.isDeposit ? 'text-[#FACC15]' : 'text-[#39FF14]'}>{fmt(grandTotal)}₺</span>
+            Toplam <span className={ctx.isDeposit ? 'text-[#FACC15]' : 'text-[#39FF14]'}>{money(grandTotal)}</span>
           </span>
         </div>
         {insufficientBalance ? (
@@ -1230,12 +1231,12 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
                 : 'bg-gray-800 text-ink-4'
             }`}
           >
-            <Lock size={17} /> {fmt(grandTotal)}₺ {ctx.isDeposit ? 'KAPORA ÖDE' : 'ÖDE'}
+            <Lock size={17} /> {money(grandTotal)} {ctx.isDeposit ? 'KAPORA ÖDE' : 'ÖDE'}
           </button>
         )}
         {insufficientBalance && (
           <p className="text-center text-[0.6875rem] text-ink-4 mt-2">
-            Bu kapora cüzdandan ödenir — {fmt(amount - spendable)}₺ daha yüklemen yeterli.
+            Bu kapora cüzdandan ödenir — {money(amount - spendable)} daha yüklemen yeterli.
           </p>
         )}
         {needsCard && !selectedCard && (

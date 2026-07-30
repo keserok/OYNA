@@ -6,6 +6,7 @@ import { useAppStore } from '../store';
 import { FORMATIONS, type SquadSize } from '../utils/formations';
 import { useCountdown } from '../hooks/useCountdown';
 import { formatMatchDuration } from '../shared/matchTiming';
+import { formatTRYShort } from '../utils/formatTRY';
 
 // ── Shared helpers (subset from MatchJoin) ───────────────────────────────────
 
@@ -323,7 +324,7 @@ export const MatchJoinCard: React.FC<MatchJoinCardProps> = ({ match, currentUser
             )}
             {match.price ? (
               <span className="text-[0.6875rem] font-extrabold uppercase px-2 py-0.5 rounded-md bg-[#FACC15]/8 border border-[#FACC15]/15 text-[#FACC15]">
-                ₺{match.price}
+                {formatTRYShort(match.price)}
               </span>
             ) : null}
           </div>

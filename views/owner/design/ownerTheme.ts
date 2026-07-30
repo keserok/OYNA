@@ -52,7 +52,9 @@ export const ownerType = {
   bodyStrong: `${type_.bodyLg} font-bold`,
   title: `${type_.titleLg} font-extrabold`,
   display: `${type_.display} font-extrabold`,
-  numeric: 'tabular-nums font-numeric',
+  // IP-19: index.css'teki sınıf sabit genişlikli rakam kuralını zaten taşıyor;
+  // aynı kural burada ikinci kez yazılıyordu.
+  numeric: 'font-numeric',
 } as const;
 
 /** Bölüm başlığı etiketi (rem-tabanlı, uppercase). */

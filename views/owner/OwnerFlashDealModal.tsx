@@ -7,6 +7,7 @@ import {
 } from '../../services/pitchOwnerService';
 import type { FlashDeal } from '../../types';
 import { resolveHourlyPrice } from './ownerCalendarHelpers';
+import { money } from './finance/financeUi';
 
 interface OwnerFlashDealModalProps {
   pitchId: string;
@@ -101,7 +102,7 @@ export const OwnerFlashDealModal: React.FC<OwnerFlashDealModalProps> = ({
           <div>
             <h3 className="text-lg font-extrabold text-white">Flash Deal</h3>
             <p className="text-xs text-gray-400 mt-1">
-              {timeKey} • Standart: ₺{standardPrice}
+              {timeKey} • Standart: {money(standardPrice)}
             </p>
           </div>
           <button type="button" onClick={onClose} className="p-2 bg-white/5 rounded-full text-gray-400 hover:text-white">

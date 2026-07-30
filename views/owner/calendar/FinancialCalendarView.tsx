@@ -7,6 +7,7 @@ import {
   Play, Plus, RefreshCw, Shield, Tag, TrendingUp, User, X,
 } from 'lucide-react';
 import { useOwnerToast } from '../components/useOwnerToast';
+import { money } from '../finance/financeUi';
 import { OwnerBottomSheet } from '../components/OwnerBottomSheet';
 import { useConfirmSheet } from '../components/useConfirmSheet';
 import { OwnerSubscriptionModal } from '../OwnerSubscriptionModal';
@@ -469,11 +470,11 @@ export const FinancialCalendarView: React.FC<{
                 <div className="grid grid-cols-3 gap-2 p-4 pb-2 pt-safe border-b border-white/5 bg-[#161B22]">
                     <div className="flex flex-col">
                         <span className="text-[10px] text-gray-500 font-bold uppercase">Tahsilat</span>
-                        <span className="text-lg font-extrabold text-emerald-400 tracking-tight font-mono">{dailyCollected}₺</span>
+                        <span className="text-lg font-extrabold text-emerald-400 tracking-tight font-mono">{money(dailyCollected)}</span>
                     </div>
                     <div className="flex flex-col border-l border-white/10 pl-4">
                         <span className="text-[10px] text-gray-500 font-bold uppercase">Bekleyen</span>
-                        <span className="text-lg font-extrabold text-red-400 tracking-tight font-mono">{dailyPending}₺</span>
+                        <span className="text-lg font-extrabold text-red-400 tracking-tight font-mono">{money(dailyPending)}</span>
                     </div>
                     <div className="flex flex-col border-l border-white/10 pl-4">
                         <span className="text-[10px] text-gray-500 font-bold uppercase">Doluluk</span>
@@ -807,7 +808,7 @@ export const FinancialCalendarView: React.FC<{
                                                 </div>
                                             </div>
                                             <div className="text-right">
-                                                <p className="text-sm font-extrabold text-white font-mono">{booking.price}₺</p>
+                                                <p className="text-sm font-extrabold text-white font-mono">{money(booking.price)}</p>
                                                 {booking.duration > 1 && (
                                                     <p className="text-[9px] font-bold text-gray-400 mt-0.5">{booking.duration} saat</p>
                                                 )}
@@ -834,7 +835,7 @@ export const FinancialCalendarView: React.FC<{
                                                     <span className="text-xs font-bold uppercase tracking-wider">BOŞ</span>
                                                 </div>
                                                 {currentPrice != null ? (
-                                                    <span className="text-[10px] text-gray-500 font-mono mt-0.5">{currentPrice}₺</span>
+                                                    <span className="text-[10px] text-gray-500 font-mono mt-0.5">{money(currentPrice)}</span>
                                                 ) : (
                                                     <span className="text-[9px] text-amber-500/90 font-bold mt-0.5 uppercase tracking-wide">Tarife yok</span>
                                                 )}
@@ -858,7 +859,7 @@ export const FinancialCalendarView: React.FC<{
                                             title="Flash deal"
                                         >
                                             {hasFlashDeal ? <Percent size={14} /> : <Tag size={14} />}
-                                            <span className="text-[9px] font-bold">{currentPrice != null ? `${currentPrice}₺` : '—'}</span>
+                                            <span className="text-[9px] font-bold">{money(currentPrice)}</span>
                                         </button>
 
                                         <button 
@@ -972,7 +973,7 @@ export const FinancialCalendarView: React.FC<{
                     {(() => {
                         const rate = isQuickCreateOpen ? getSlotPrice(isQuickCreateOpen) : null;
                         return rate != null ? (
-                            <p className="text-sm font-bold text-gray-400 mt-2">Tutar: {rate}₺</p>
+                            <p className="text-sm font-bold text-gray-400 mt-2">Tutar: {money(rate)}</p>
                         ) : (
                             <p className="text-xs font-bold text-amber-400 mt-2">Bu saat için tarife tanımlı değil — Sahalarım → saha → Aktif Saatler ve Ücretler'den ekleyin.</p>
                         );
@@ -1052,12 +1053,12 @@ export const FinancialCalendarView: React.FC<{
                                         onClick={() => setDepositStr(String(quickTariffDeposit))}
                                         className="px-4 min-h-[44px] rounded-xl bg-white/5 border border-white/10 text-white text-[11px] font-extrabold uppercase active:scale-95"
                                     >
-                                        Tarife: {quickTariffDeposit}₺
+                                        Tarife: {money(quickTariffDeposit)}
                                     </button>
                                 )}
                             </div>
                             {isDepositTooBig ? (
-                                <p className="text-[11px] font-bold text-[#F87171]">Kapora, saat ücretinden ({quickSlotRate}₺) fazla olamaz.</p>
+                                <p className="text-[11px] font-bold text-[#F87171]">Kapora, saat ücretinden ({money(quickSlotRate)}) fazla olamaz.</p>
                             ) : (
                                 <p className="text-[11px] text-[#9CA3AF]">Deftere bu tutar yazılır. Kalanı sonra &quot;Tahsilat Al&quot; ile alırsın.</p>
                             )}

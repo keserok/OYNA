@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { APP_VERSION } from '../../../utils/appVersion';
 import type { OwnerMenuStats } from './ownerMenuTypes';
+import { money } from '../finance/financeUi';
 
 export interface OwnerMenuViewProps {
   onNavigate: (view: string) => void;
@@ -266,7 +267,7 @@ export const OwnerMenuView: React.FC<OwnerMenuViewProps> = ({
                   <StatusBadge
                     label={
                       stats.availableBalance != null
-                        ? `₺${stats.availableBalance.toLocaleString('tr-TR')}`
+                        ? money(stats.availableBalance)
                         : 'Bakiye'
                     }
                     tone="success"

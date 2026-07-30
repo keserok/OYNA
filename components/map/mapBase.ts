@@ -9,6 +9,7 @@
 // ════════════════════════════════════════════════════════════════════════
 import L from 'leaflet';
 import type { Pitch } from '../../types';
+import { formatTRYShort } from '../../utils/formatTRY';
 
 // "Leaflet" ön-ekini TÜM haritalardan kaldır — bu kütüphane kredisidir, yasal
 // zorunluluk değildir. Yasal OSM+CARTO veri atıfı görünür kalır. Tek yerden,
@@ -262,9 +263,9 @@ export const OYNA_PITCH_PIN_CSS = `
  * yeniden üretmemeli (memoize) — marker DOM'unun boşuna rebuild olmaması için.
  */
 export const createPitchPin = (pitch: Pitch, isSelected: boolean): L.DivIcon => {
-  const priceLabel = pitch.totalPrice ? `~${pitch.totalPrice}₺` : (pitch.name.split(' ')[0] || 'Saha');
+  const priceLabel = pitch.totalPrice ? `~${formatTRYShort(pitch.totalPrice)}` : (pitch.name.split(' ')[0] || 'Saha');
   const originalLabel = pitch.originalPrice
-    ? `<span style="text-decoration:line-through;color:#888;font-size:8px;margin-right:2px;">₺${pitch.originalPrice}</span>`
+    ? `<span style="text-decoration:line-through;color:#888;font-size:8px;margin-right:2px;">${formatTRYShort(pitch.originalPrice)}</span>`
     : '';
   const flash = pitch.flashDiscount
     ? `<div class="pin-flash">🔥 %${pitch.flashDiscount}</div>`

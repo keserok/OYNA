@@ -3,6 +3,7 @@ import { Banknote, MessageSquare, QrCode, UserX, XCircle } from 'lucide-react';
 import { cancelConfirmedBooking, recordBookingPayment, type PaymentMethod, toTurkishError } from '../../services/pitchOwnerService';
 import { bookingToDebtor } from '../../services/financeService';
 import { parseTRYAmount } from '../../shared/financeModel';
+import { money } from './finance/financeUi';
 import { useOwnerToast } from './components/useOwnerToast';
 import { useConfirmSheet } from './components/useConfirmSheet';
 import { OwnerBottomSheet } from './components/OwnerBottomSheet';
@@ -96,7 +97,7 @@ export const OwnerBookingDetailModal: React.FC<OwnerBookingDetailModalProps> = (
       // BULGU-125: çevrimdışı kayıt "kaydedildi" DEĞİL — para henüz sunucuda yok.
       notify(
         queued
-          ? `İnternet yok — ${amount}₺ henüz kaydedilmedi. Bağlantı gelince otomatik gönderilecek.`
+          ? `İnternet yok — ${money(amount)} henüz kaydedilmedi. Bağlantı gelince otomatik gönderilecek.`
           : 'Tahsilat kaydedildi.',
         queued ? 'warning' : 'success',
       );
@@ -119,7 +120,7 @@ export const OwnerBookingDetailModal: React.FC<OwnerBookingDetailModalProps> = (
     }
     const ok = await confirm({
       title: 'Gelmedi olarak işaretle?',
-      message: `${booking.user} · ${booking.time} — kalan ${balance}₺ veresiye defterine yazılacak. Tahsil edilen tutar iade edilmez.`,
+      message: `${booking.user} · ${booking.time} — kalan ${money(balance)} veresiye defterine yazılacak. Tahsil edilen tutar iade edilmez.`,
       confirmLabel: 'Gelmedi',
       destructive: true,
     });
@@ -127,7 +128,7 @@ export const OwnerBookingDetailModal: React.FC<OwnerBookingDetailModalProps> = (
     setBusy(true);
     try {
       await bookingToDebtor(booking.id, booking.user);
-      notify(`Gelmedi olarak işaretlendi. ${balance}₺ veresiyeye yazıldı — Finans → Veresiye'den takip et.`, 'success');
+      notify(`Gelmedi olarak işaretlendi. ${money(balance)} veresiyeye yazıldı — Finans → Veresiye'den takip et.`, 'success');
       onChanged();
       onClose();
     } catch (err) {
@@ -145,7 +146,7 @@ export const OwnerBookingDetailModal: React.FC<OwnerBookingDetailModalProps> = (
       </button>
       <button type="button" onClick={handleCollect} disabled={busy || !validPay}
         className="flex-[1.5] h-12 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-50">
-        {busy ? <Spinner size={18} color="currentColor" glow={false} /> : <>Tahsil Et · {amount > 0 ? amount : 0}₺</>}
+        {busy ? <Spinner size={18} color="currentColor" glow={false} /> : <>Tahsil Et · {money(Math.max(0, amount))}</>}
       </button>
     </div>
   ) : mode === 'cancel' ? (
@@ -198,18 +199,18 @@ export const OwnerBookingDetailModal: React.FC<OwnerBookingDetailModalProps> = (
         </div>
         <div className="flex justify-between items-center">
           <span className="text-[0.6875rem] text-gray-500 font-bold uppercase">Tutar</span>
-          <span className="text-lg font-extrabold text-white font-mono tabular-nums">{booking.price}₺</span>
+          <span className="text-lg font-extrabold text-white font-mono tabular-nums">{money(booking.price)}</span>
         </div>
         {booking.paid > 0 && (
           <div className="flex justify-between items-center">
             <span className="text-[0.6875rem] text-gray-500 font-bold uppercase">Tahsil edilen</span>
-            <span className="text-sm font-extrabold text-emerald-400 font-mono tabular-nums">{booking.paid}₺</span>
+            <span className="text-sm font-extrabold text-emerald-400 font-mono tabular-nums">{money(booking.paid)}</span>
           </div>
         )}
         {balance > 0 && (
           <div className="flex justify-between items-center border-t border-white/5 pt-2">
             <span className="text-[0.6875rem] text-amber-400 font-bold uppercase">Bekleyen</span>
-            <span className="text-sm font-extrabold text-amber-400 font-mono tabular-nums">{balance}₺</span>
+            <span className="text-sm font-extrabold text-amber-400 font-mono tabular-nums">{money(balance)}</span>
           </div>
         )}
         {booking.note && (

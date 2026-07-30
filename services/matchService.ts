@@ -1,6 +1,6 @@
 import { supabase } from '../supabaseClient';
 import { MatchListing, PositionSlot } from '../types';
-import { formatTRYWithSymbol } from '../utils/formatTRY';
+import { formatTRYAmount } from '../utils/formatTRY';
 
 export interface Match {
   id?: string;
@@ -551,8 +551,8 @@ export const leaveQuoteMessage = (
     const para =
       quote.forfeited <= 0 ? ''
       : quote.refundable > 0
-        ? ` Ödediğinin %${quote.refundPct}'i (${formatTRYWithSymbol(quote.refundable)}) cüzdanına döner, ${formatTRYWithSymbol(quote.forfeited)} iade edilmez.`
-        : ` Ödediğin ${formatTRYWithSymbol(quote.forfeited)} iade edilmez.`;
+        ? ` Ödediğinin %${quote.refundPct}'i (${formatTRYAmount(quote.refundable)}) cüzdanına döner, ${formatTRYAmount(quote.forfeited)} iade edilmez.`
+        : ` Ödediğin ${formatTRYAmount(quote.forfeited)} iade edilmez.`;
     return {
       tone: 'late',
       text: `${esik}.${para} Güvenilirlik puanın ${quote.penalty} düşer ve kaptana haber verilecek.`,
@@ -562,7 +562,7 @@ export const leaveQuoteMessage = (
   if (quote.refundable > 0) {
     return {
       tone: 'refund',
-      text: `Ödediğin ${formatTRYWithSymbol(quote.refundable)} ayrılınca cüzdanına döner.`,
+      text: `Ödediğin ${formatTRYAmount(quote.refundable)} ayrılınca cüzdanına döner.`,
     };
   }
   return {

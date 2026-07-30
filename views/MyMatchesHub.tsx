@@ -18,7 +18,12 @@ import {
   cancelMyBooking, previewBookingCancel, shortTime, toPlayerErrorMessage,
   type MyBooking, type CancelResult, type CancelPreview,
 } from '../services/playerBookingService';
-import { formatTRY, formatTRYWithSymbol } from '../utils/formatTRY';
+import { formatTRYAmount, formatTRYShort } from '../utils/formatTRY';
+
+// IP-19 — para tek biçimde. `fiyat` FİYAT bağlamı (sıfır = "Ücretsiz"),
+// `money` muhasebe bağlamı (sıfır = "0₺"): iade, kapora, kalan tutar.
+const fiyat = formatTRYShort;
+const money = formatTRYAmount;
 import { showToast } from '../components/common/GlobalToast';
 import { formatCapacityRange } from '../shared/pitchShowcaseMapper';
 import { formatMatchDuration } from '../shared/matchTiming';
@@ -114,7 +119,7 @@ const TicketCard: React.FC<{ item: MyAgendaItem; currentUserUid: string; onOpen:
     ) : (
       <span className="flex items-center gap-[5px] text-[0.6875rem] font-bold text-ink-4"><CheckCircle2 size={11} className="text-[#39FF14]" />Kadro tamam</span>
     );
-    footRight = <span className="font-numeric text-[0.75rem] font-bold text-[#FACC15]">{Number(m.price) > 0 ? `₺${Number(m.price).toLocaleString('tr-TR')}` : 'Ücretsiz'}</span>;
+    footRight = <span className="font-numeric text-[0.75rem] font-bold text-[#FACC15]">{fiyat(Number(m.price))}</span>;
   } else {
     const b = item.booking;
     if (b.status === 'CANCELLED') {
@@ -136,7 +141,7 @@ const TicketCard: React.FC<{ item: MyAgendaItem; currentUserUid: string; onOpen:
     ) : remaining > 0 ? (
       <span className="flex items-center gap-[5px] text-[0.6875rem] font-bold text-[#FACC15]"><AlertTriangle size={11} />Kapora bekliyor</span>
     ) : null;
-    footRight = b.price ? <span className="font-numeric text-[0.75rem] font-bold text-[#FACC15]">₺{Number(b.price).toLocaleString('tr-TR')}</span> : null;
+    footRight = b.price ? <span className="font-numeric text-[0.75rem] font-bold text-[#FACC15]">{money(Number(b.price))}</span> : null;
   }
 
   return (
@@ -336,12 +341,12 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onNavigate }) => {
       // IP-04 — sonuç sessiz kalmaz: ne yandı, ne döndü, kullanıcı görsün.
       if (leaveQuote?.late) {
         const geri = leaveQuote.refundable > 0
-          ? `${formatTRYWithSymbol(leaveQuote.refundable)} cüzdanına döndü, ` : '';
+          ? `${formatTRYAmount(leaveQuote.refundable)} cüzdanına döndü, ` : '';
         const yanan = leaveQuote.forfeited > 0
-          ? `${formatTRYWithSymbol(leaveQuote.forfeited)} iade edilmedi, ` : '';
+          ? `${formatTRYAmount(leaveQuote.forfeited)} iade edilmedi, ` : '';
         showToast(`Maçtan ayrıldın. ${geri}${yanan}güvenilirlik puanın ${leaveQuote.penalty} düştü.`, 'error');
       } else if ((leaveQuote?.refundable ?? 0) > 0) {
-        showToast(`Maçtan ayrıldın. ${formatTRYWithSymbol(leaveQuote!.refundable)} cüzdanına geri döndü.`, 'success');
+        showToast(`Maçtan ayrıldın. ${formatTRYAmount(leaveQuote!.refundable)} cüzdanına geri döndü.`, 'success');
       } else {
         showToast('Maçtan ayrıldın.', 'success');
       }
@@ -390,7 +395,7 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onNavigate }) => {
       ],
       amount: remaining,
       amountLabel: 'Ödenecek Kapora',
-      amountHint: b.price ? `Saha ücreti ₺${b.price.toLocaleString('tr-TR')} · kalan tesiste ödenir` : undefined,
+      amountHint: b.price ? `Saha ücreti ${fiyat(b.price)} · kalan tesiste ödenir` : undefined,
       isDeposit: true,
       allowBalance: true,
       successTitle: 'Kapora Onaylandı!',
@@ -734,8 +739,8 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onNavigate }) => {
               <div className="flex items-center justify-between mt-3.5 text-[0.75rem]">
                 <span className="text-ink-4 font-bold uppercase tracking-[0.03em]">Tutar</span>
                 <span className="font-numeric text-[#FACC15] font-extrabold">
-                  ₺{Number(sheetBooking.price || 0).toLocaleString('tr-TR')}
-                  {sheetBooking.deposit_amount > 0 && <span className="text-ink-4 font-bold"> · Kapora ₺{Number(sheetBooking.deposit_amount).toLocaleString('tr-TR')}</span>}
+                  {fiyat(Number(sheetBooking.price) || 0)}
+                  {sheetBooking.deposit_amount > 0 && <span className="text-ink-4 font-bold"> · Kapora {money(Number(sheetBooking.deposit_amount))}</span>}
                 </span>
               </div>
               <div className="flex items-center justify-between mt-2 text-[0.75rem]">
@@ -743,7 +748,7 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onNavigate }) => {
                 {bookingRemaining <= 0 && (sheetBooking.deposit_amount || 0) > 0 ? (
                   <span className="text-[#39FF14] font-bold flex items-center gap-1"><CheckCircle2 size={12} />Ödendi</span>
                 ) : bookingRemaining > 0 ? (
-                  <span className="font-numeric text-[#FACC15] font-bold">₺{bookingRemaining.toLocaleString('tr-TR')} bekliyor</span>
+                  <span className="font-numeric text-[#FACC15] font-bold">{money(bookingRemaining)} bekliyor</span>
                 ) : (
                   <span className="text-ink-4 font-bold">—</span>
                 )}
@@ -754,7 +759,7 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onNavigate }) => {
                   onClick={() => { const b = sheetBooking; setSheet(null); handlePayDeposit(b); }}
                   className="w-full h-[52px] mt-5 rounded-2xl bg-[#39FF14] text-[#0A0E14] text-xs font-extrabold uppercase tracking-[0.12em] shadow-[0_0_22px_rgba(57,255,20,0.22)] active:scale-[0.98] transition-transform"
                 >
-                  Kapora Öde · ₺{bookingRemaining.toLocaleString('tr-TR')}
+                  Kapora Öde · {money(bookingRemaining)}
                 </button>
               )}
 
@@ -845,7 +850,7 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onNavigate }) => {
               <div className="flex items-center justify-between mt-3.5 text-[0.75rem]">
                 <span className="text-ink-4 font-bold uppercase tracking-[0.03em]">Kişi başı</span>
                 <span className="font-numeric text-[#FACC15] font-extrabold">
-                  {Number(sheetMatch.price) > 0 ? `₺${Number(sheetMatch.price).toLocaleString('tr-TR')}` : 'Ücretsiz'}
+                  {fiyat(Number(sheetMatch.price))}
                 </span>
               </div>
               <button
@@ -982,9 +987,9 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onNavigate }) => {
                   <>Bu rezervasyon için ödeme bulunmuyor; iade söz konusu değil.</>
                 ) : cancelPreview.refund_amount > 0 ? (
                   <>Ödediğin tutarın <span className="text-[#39FF14] font-bold">%{cancelPreview.refund_percent}</span>'i
-                    {' '}(<span className="font-numeric text-[#39FF14] font-bold">₺{formatTRY(cancelPreview.refund_amount)}</span>){' '}
+                    {' '}(<span className="font-numeric text-[#39FF14] font-bold">{money(cancelPreview.refund_amount)}</span>){' '}
                     cüzdanına döner
-                    {cancelPreview.psp_fee > 0 && <> (ödeme altyapısı kesintisi −<span className="font-numeric">{formatTRY(cancelPreview.psp_fee)}</span>₺)</>}.</>
+                    {cancelPreview.psp_fee > 0 && <> (ödeme altyapısı kesintisi −<span className="font-numeric">{money(cancelPreview.psp_fee)}</span>)</>}.</>
                 ) : (
                   <>Rezervasyon saatine az kaldığı için <span className="text-red-400 font-bold">iade yapılmayacak</span>.</>
                 )}
@@ -1032,7 +1037,7 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onNavigate }) => {
               <p className="text-sm text-gray-400 leading-relaxed mb-6">
                 Rezervasyonun iptal edildi.
                 {cancelResult.refund_amount > 0
-                  ? <> <span className="font-numeric text-[#39FF14] font-bold">₺{formatTRY(cancelResult.refund_amount)}</span> (%{cancelResult.refund_percent}) cüzdanına eklendi.</>
+                  ? <> <span className="font-numeric text-[#39FF14] font-bold">{money(cancelResult.refund_amount)}</span> (%{cancelResult.refund_percent}) cüzdanına eklendi.</>
                   : ' İade edilecek ödeme bulunmuyor.'}
               </p>
               <button onClick={() => setCancelResult(null)} className="w-full py-3.5 bg-[#FACC15] text-black font-extrabold rounded-2xl text-sm uppercase tracking-wide active:scale-95 transition-transform">

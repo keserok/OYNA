@@ -7,6 +7,8 @@ import { OwnerBottomSheet } from './components/OwnerBottomSheet';
 import { LoadingState, EmptyState } from '../../components/common/StatusState';
 import { supabase } from '../../supabaseClient';
 import { approveBooking, rejectBooking, getPitchAppMatches, toTurkishError } from '../../services/pitchOwnerService';
+import { money } from './finance/financeUi';
+import { formatTRYShort } from '../../utils/formatTRY';
 
 interface RealPendingBooking {
   id: string;
@@ -115,7 +117,7 @@ const RealPendingBookings: React.FC<{ pitchId: string | null }> = ({ pitchId }) 
                             <div className="flex items-center justify-between mb-3">
                                 <div>
                                     <p className="text-sm font-extrabold text-white">{b.courts?.name ?? 'Saha'} · {b.start_time.slice(0,5)}-{b.end_time.slice(0,5)}</p>
-                                    <p className="text-[11px] text-gray-400 mt-0.5">{new Date(b.booking_date + 'T00:00:00').toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', weekday: 'short' })}{b.price > 0 ? ` · ₺${b.price}` : ''}</p>
+                                    <p className="text-[11px] text-gray-400 mt-0.5">{new Date(b.booking_date + 'T00:00:00').toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', weekday: 'short' })}{b.price > 0 ? ` · ${money(b.price)}` : ''}</p>
                                 </div>
                                 <span className="text-[9px] font-extrabold px-2 py-1 rounded-full bg-orange-500/15 text-orange-400 uppercase">Bekliyor</span>
                             </div>
@@ -350,7 +352,7 @@ export const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingR
 
                                     <div className="flex justify-between items-center pl-2 pt-4 border-t border-white/5">
                                         <span className="text-sm font-extrabold text-emerald-400 font-mono">
-                                            {match.price > 0 ? `₺${match.price.toLocaleString('tr-TR')}` : 'Ücretsiz'}
+                                            {formatTRYShort(match.price)}
                                         </span>
                                         <button 
                                             onClick={() => setSelectedMatch(match)}
@@ -394,7 +396,7 @@ export const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingR
                         </div>
                         <div className="flex justify-between text-sm">
                             <span className="text-gray-500 font-bold uppercase text-[0.6875rem]">Ücret</span>
-                            <span className="text-emerald-400 font-extrabold font-mono tabular-nums">₺{Number(selectedMatch.price || 0).toLocaleString('tr-TR')}</span>
+                            <span className="text-emerald-400 font-extrabold font-mono tabular-nums">{money(Number(selectedMatch.price) || 0)}</span>
                         </div>
                     </div>
                 )}
