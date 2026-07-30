@@ -42,9 +42,19 @@ export default function SplashScreen({ onStart, ready = true }: SplashScreenProp
   }, []);
   const canStart = ready || timedOut;
 
+  // Açılış ekranı KENDİNİ TAMAMLASIN diye 2,6 sn beklenir. Ekrandaki en geç
+  // biten öge alt yükleme çizgisidir (0,8 sn gecikme + 1,4 sn süre = 2,2 sn);
+  // slogan 1,7 sn'de, harfler ~1,25 sn'de oturur. 2,6 sn hepsinin bitmesine
+  // izin verir ve üstüne kısa bir duruş bırakır — ekran yarıda kesilmez.
+  //
+  // Bu süre aynı zamanda ARKA PLANA yarar: oturum çözümü, ilk veri isteği ve
+  // tembel yüklenen ekran parçaları bu sırada iniyor. Eskiden 1,2 sn idi;
+  // animasyon bitmeden geçtiği için hem eksik görünüyor hem de sonraki ekran
+  // henüz hazır olmayabiliyordu.
+  const ACILIS_SURESI_MS = 2600;
   useEffect(() => {
     if (!ready) return; // oturum durumu belli olmadan otomatik geçme
-    const timer = setTimeout(onStart, 1200);
+    const timer = setTimeout(onStart, ACILIS_SURESI_MS);
     return () => clearTimeout(timer);
   }, [onStart, ready]);
 

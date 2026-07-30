@@ -514,7 +514,11 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
   const spinner = <span className="au-spin" aria-hidden="true" />;
 
   // ─── Ortak alt sayfa başlığı (geri + OYNA amblemi) ──────────────────────────
-  const sheetHeader = (
+  // `marka=false` → yalnız geri tuşu. Giriş/kayıt ekranında amblem+OYNA yazısı
+  // hemen altındaki büyük başlıkla yineleme yaratıyordu; kaldırılınca ekran
+  // sakinleşti. Kod doğrulama / şifre sıfırlama ekranlarında marka DURUYOR:
+  // oralarda büyük başlık yok, kullanıcı hangi uygulamada olduğunu görmeli.
+  const sayfaBasligi = (marka: boolean) => (
     <div style={{
       position: 'absolute', top: 'calc(var(--safe-top, 0px) + 18px)', left: 0, right: 0,
       display: 'flex', alignItems: 'center', padding: '0 22px', zIndex: 5,
@@ -522,12 +526,15 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
       <button type="button" className="au-iconbtn" onClick={handleHeaderBack} aria-label="Geri git">
         <ChevronLeft size={20} strokeWidth={2.4} />
       </button>
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9, marginRight: 40 }}>
-        <img src={oynaLogo} alt="" style={{ width: 30, height: 30, filter: 'brightness(1.15) drop-shadow(0 0 9px rgba(250,204,21,.55))' }} />
-        <span style={{ fontSize: 19, fontWeight: 900, fontStyle: 'italic', color: '#fff' }}>OYNA</span>
-      </div>
+      {marka && (
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9, marginRight: 40 }}>
+          <img src={oynaLogo} alt="" style={{ width: 30, height: 30, filter: 'brightness(1.15) drop-shadow(0 0 9px rgba(250,204,21,.55))' }} />
+          <span style={{ fontSize: 19, fontWeight: 900, fontStyle: 'italic', color: '#fff' }}>OYNA</span>
+        </div>
+      )}
     </div>
   );
+  const sheetHeader = sayfaBasligi(true);
 
   return (
     // Odak halkası ve seçici, rolün marka rengini CSS değişkeninden okur —
@@ -678,7 +685,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
             display: 'flex', flexDirection: 'column',
             animation: `auPushIn ${gecisSure}ms cubic-bezier(.32,.72,0,1) both`,
           }}>
-            {sheetHeader}
+            {sayfaBasligi(false)}
 
             <div
               className="custom-scrollbar"
@@ -706,7 +713,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
                 </h1>
                 <p style={{ margin: '10px 0 0', fontSize: 14, lineHeight: 1.5, fontWeight: 500, color: '#8B949E', letterSpacing: '-.01em' }}>
                   {isRegister
-                    ? 'Birkaç bilgi yeter, hemen sahaya çıkarsın.'
+                    ? 'Bilgilerini gir, sahaya çıkmaya hazır ol.'
                     : 'Hesabına gir, kaldığın yerden devam et.'}
                 </p>
               </div>
