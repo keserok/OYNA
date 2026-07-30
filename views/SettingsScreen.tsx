@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   ArrowLeft, User, Shield, HelpCircle, LogOut, ChevronRight,
   RefreshCw, MapPin, Bell, Lock, AlertCircle, Download, Trash2, Repeat, ShieldCheck,
-  Building2, KeyRound, Crown, X, Check,
-} from 'lucide-react';
+  Building2, KeyRound, Crown, X, Check } from 'lucide-react';
 import { AnimatePresence } from 'framer-motion';
 import { AppView } from '../types';
 import { logout, auth } from '../supabaseAuth';
@@ -97,7 +96,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
     try {
       const { data: userData } = await supabase.auth.getUser();
       const uid = userData.user?.id;
-      if (!uid) throw new Error('Oturumunuz bulunamadı.');
+      if (!uid) throw new Error('Oturumun bulunamadı.');
 
       const { data: pitches, error: pErr } = await supabase
         .from('pitches')
@@ -154,7 +153,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
     } catch (err) {
       console.error('handleExportOwnerData:', err);
       const raw = err instanceof Error ? err.message : String(err);
-      setExportError(raw.includes('Failed to fetch') ? 'Bağlantı hatası. İnternetinizi kontrol edin.' : 'Veriler indirilemedi. Lütfen tekrar deneyin.');
+      setExportError(raw.includes('Failed to fetch') ? 'Bağlantı hatası. İnternetini kontrol et.' : 'Veriler indirilemedi. Tekrar dene.');
     } finally {
       setIsExporting(false);
     }
@@ -170,7 +169,6 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
       if (auth.currentUser && loc.coordinates) {
         await fbUpdateUserLocation(auth.currentUser.uid, loc.coordinates.lat, loc.coordinates.lng).catch(() => {});
       }
-      if (navigator.vibrate) navigator.vibrate(50);
     } catch (err) {
       console.error(err);
       showToast('Konum alınamadı. Elle bölge seçebilir veya cihaz ayarlarından izin verebilirsin.');
@@ -320,6 +318,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
             subtitle="Görünürlük ve engellenenler"
             onClick={() => setSubPage('privacy')}
           />
+
         </section>
 
         {/* Konum */}
@@ -384,7 +383,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
               <h3 className="text-xs font-extrabold uppercase tracking-wider">Tesis Verilerim (KVKK)</h3>
             </div>
             <p className="text-[0.6875rem] text-gray-400 leading-relaxed">
-              Tesisinize ait son 1 yıllık rezervasyon, gider, veresiye ve abonelik kayıtlarını JSON formatında indirin. Tüm verileriniz size aittir.
+              Tesisine ait son 1 yıllık rezervasyon, gider, veresiye ve abonelik kayıtlarını JSON olarak indir. Tüm verilerin sana aittir.
             </p>
             {exportError && (
               <div className="flex items-center gap-2 text-red-300 text-[0.6875rem] bg-red-900/20 border border-red-500/30 rounded-lg p-2">
@@ -397,7 +396,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
               className="w-full flex items-center justify-center gap-2.5 p-3.5 bg-[#39FF14]/10 hover:bg-[#39FF14]/20 border border-[#39FF14]/30 rounded-xl text-[#39FF14] font-bold text-xs transition-all uppercase tracking-widest disabled:opacity-50"
             >
               {isExporting ? (
-                <><RefreshCw size={14} className="animate-spin" /> Hazırlanıyor...</>
+                <><RefreshCw size={14} className="animate-spin" /> Hazırlanıyor…</>
               ) : (
                 <><Download size={14} /> Tesis Verilerimi İndir</>
               )}

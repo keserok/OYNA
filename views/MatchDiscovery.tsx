@@ -14,12 +14,13 @@ import { FilterDropdown } from '../components/ui/FilterDropdown';
 import { deriveDiscoveryFilterOptions, roleHasOpenSlot, ROLE_LABEL_MAP } from '../utils/discoveryFilterOptions';
 import { PLAY_STYLE_META } from './onboarding/onboardingShared';
 import { formatMatchDuration, realMatchMinutes } from '../shared/matchTiming';
+import { trUpper } from '../utils/trUpper';
+import { formatTRYShort } from '../utils/formatTRY';
 
 // Normalize mentalite ('Ciddi'|'Taktiksel'|'Rahat') → PLAY_STYLE_META anahtarı.
 const MENTALITY_KEY = { Ciddi: 'ciddi', Taktiksel: 'taktiksel', Rahat: 'rahat' } as const;
 
 interface MatchDiscoveryProps {
-  onBack: () => void;
   onSelect: (match: MatchListing) => void;
 }
 
@@ -30,7 +31,7 @@ const BUDGET_OPTIONS = ['Ücretsiz', '150₺ ve Altı', '150-250₺', '250-350�
 const GENDER_OPTIONS = ['Karma', 'Erkek', 'Kadın'];
 const AGE_OPTIONS = ['10-14', '14-16', '16-18', '18-22', '23-27', '28-35', '35+', 'Tümü'];
 
-const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => {
+const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onSelect }) => {
   const {
     adminMatches,
     navigateTo,
@@ -350,7 +351,7 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
           >
             {/* 1. ÜST BAR */}
             <div className="px-5 pt-safe pb-4 flex items-center justify-between shrink-0 border-b border-white/5 bg-black/20 backdrop-blur-lg">
-              <button onClick={() => setShowWizard(false)} className="w-10 h-10 rounded-full bg-white/[0.03] backdrop-blur-md border border-white/10 flex items-center justify-center hover:bg-white/10 hover:border-white/20 transition-all shadow-[0_0_15px_rgba(255,255,255,0.05)]">
+              <button onClick={() => setShowWizard(false)} aria-label="Kapat" className="w-11 h-11 rounded-full bg-white/[0.03] backdrop-blur-md border border-white/10 flex items-center justify-center hover:bg-white/10 hover:border-white/20 transition-all shadow-[0_0_15px_rgba(255,255,255,0.05)]">
                 <ArrowLeft size={18} className="text-white drop-shadow-md" />
               </button>
               <h1 className="text-[1.0625rem] font-extrabold italic uppercase tracking-tighter text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.5)]">
@@ -402,11 +403,11 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
                               : 'bg-white/[0.02] border-white/10 text-white hover:bg-white/[0.05]'
                           }`}
                         >
-                          {dist.toUpperCase()}
+                          {trUpper(dist)}
                         </button>
                       ))}
                     </div>
-                    <p className="text-[0.6875rem] text-white/50 italic">Cihaz konumu bulunamadığı için maçları bölge bazlı filtreleyebilirsiniz.</p>
+                    <p className="text-[0.6875rem] text-white/50 italic">Cihaz konumu bulunamadı; maçları bölge bazlı filtreleyebilirsin.</p>
                   </div>
                 )}
 
@@ -530,10 +531,8 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
           {/* HEADER */}
           <header className="sticky top-0 z-50 bg-black/40 backdrop-blur-2xl border-b border-white/5 px-5 pt-safe pb-4">
             <div className="flex items-center justify-between">
+              {/* IP-14: sekme kökü — geri oku kaldırıldı. */}
               <div className="flex items-center gap-3">
-                <button onClick={onBack} className="w-10 h-10 rounded-full bg-white/[0.03] backdrop-blur-md border border-white/10 flex items-center justify-center text-white active:scale-90 transition-all hover:bg-white/10">
-                  <ArrowLeft size={18} />
-                </button>
                 <div>
                   <h1 className="text-xl font-extrabold text-white italic uppercase tracking-tight leading-none drop-shadow-lg">Top Oyna</h1>
                 </div>
@@ -755,7 +754,21 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
                         </h2>
                     )}
                     {otherMatches.length === 0 ? (
-                      <EmptyState title="Aktif Maç Bulunamadı" message="Bu bölgede şu an açık bir maç yok." />
+                      <EmptyState
+                        title="Aktif Maç Bulunamadı"
+                        message={isFilterActive
+                          ? 'Seçtiğin filtrelere uyan maç yok. Filtreleri gevşetmeyi dene.'
+                          : 'Bu bölgede şu an açık bir maç yok. Sen kurabilirsin.'}
+                        actions={isFilterActive
+                          ? [
+                              { label: 'Filtreleri Temizle', onClick: handleClearFilters },
+                              { label: 'Maç Kur', onClick: () => navigateTo('MATCH_CREATE') },
+                            ]
+                          : [
+                              { label: 'Maç Kur', onClick: () => navigateTo('MATCH_CREATE') },
+                              { label: 'Saha Kirala', onClick: () => navigateTo('PITCH_DISCOVERY') },
+                            ]}
+                      />
                     ) : (
                       otherMatches.map((match, index) => (
                         <MatchCard key={match.id} match={match} index={index} onSelect={onSelect} dna={dna} />
@@ -813,7 +826,7 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onBack, onSelect }) => 
                   disabled={privateLoading || privateCode.trim().length < 4}
                   className={`w-full py-3.5 bg-primary text-on-primary font-extrabold rounded-2xl text-sm uppercase tracking-wide transition-transform flex items-center justify-center gap-2 ${privateLoading || privateCode.trim().length < 4 ? 'opacity-50 cursor-not-allowed' : 'active:scale-95'}`}
                 >
-                  {privateLoading ? <><Loader2 size={16} className="animate-spin" /> Aranıyor...</> : 'Maça Git'}
+                  {privateLoading ? <><Loader2 size={16} className="animate-spin" /> Aranıyor…</> : 'Maça Git'}
                 </button>
                 <button
                   onClick={() => { if (!privateLoading) { setShowPrivateModal(false); setPrivateError(null); setPrivateCode(''); } }}
@@ -1044,12 +1057,12 @@ const MatchCard: React.FC<{
 
             {/* Tesis ve Lokasyon İsmi Devasa (Üst Karakter) */}
             <h3 className="text-xl font-extrabold text-white italic uppercase leading-tight tracking-tighter drop-shadow-[0_4px_15px_rgba(0,0,0,1)] mb-2 break-words">
-              {match.location.toUpperCase()}
+              {trUpper(match.location)}
             </h3>
 
             {/* Tarih ve Saat (Üst Karakter) */}
             <div className="text-[0.625rem] font-extrabold text-[#FACC15] italic uppercase tracking-widest mb-3 drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]">
-              {match.date.toUpperCase()} • {match.time.toUpperCase()}
+              {trUpper(match.date)} • {trUpper(match.time)}
             </div>
             
             <div className="flex items-center gap-1.5 flex-wrap">
@@ -1091,7 +1104,7 @@ const MatchCard: React.FC<{
             ) : (
               <div className="px-3 py-1.5 bg-black/70 backdrop-blur-md border border-white/10 rounded-xl shadow-lg flex flex-col items-center gap-0.5">
                 <span className="text-[0.625rem] font-extrabold uppercase tracking-wider text-ink-4">KİŞİ BAŞI</span>
-                <span className="text-[0.8125rem] font-extrabold text-[#FACC15] tracking-wider drop-shadow-md">{match.price} ₺</span>
+                <span className="text-[0.8125rem] font-extrabold text-[#FACC15] tracking-wider drop-shadow-md">{formatTRYShort(match.price)}</span>
               </div>
             )}
 

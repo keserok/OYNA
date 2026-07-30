@@ -1,5 +1,6 @@
 import { supabase } from '../supabaseClient';
 import { auth } from '../supabaseAuth';
+import { mapError } from '../utils/errorMap';
 import {
   ProviderType,
   ProviderSuggestion,
@@ -432,11 +433,11 @@ const BARE_ERROR_TR: Record<string, string> = {
   INVALID_ROLE: 'Geçersiz rol.',
   NAME_REQUIRED: 'Ad soyad gerekli.',
 };
-function parseRpcError(message?: string): string | null {
-  if (!message) return null;
-  const withDesc = message.match(/[A-Z_]+:\s*(.+)$/);
-  if (withDesc) return withDesc[1];
-  const bare = message.match(/\b([A-Z][A-Z_]{3,})\b/);
-  if (bare && BARE_ERROR_TR[bare[1]]) return BARE_ERROR_TR[bare[1]];
-  return message;
-}
+// IP-12: ortak çeviri utils/errorMap.ts'te. Buradaki sözlük yalnız BU
+// bağlamda (hizmet talebi akışı) daha isabetli olan mesajları ezer.
+const OZEL: Record<string, string> = {
+  INVALID_TYPE: 'Geçersiz hizmet türü.',
+  NOT_FOUND: 'Talep bulunamadı.',
+};
+const parseRpcError = (message?: string): string | null =>
+  message ? mapError(message, undefined, OZEL) : null;

@@ -33,8 +33,25 @@ export const trustScoreTo100 = (trustScore?: number | null): number =>
     Math.round((trustScore ?? 5) * 20);
 
 /** Maç geçmişinden Maç/Galibiyet/%Galibiyet üçlüsü. */
-export const winStats = (results: Array<{ result: 'WIN' | 'LOSS' | 'DRAW' }>): { total: number; wins: number; winRate: number } => {
+/**
+ * Maç geçmişinden Maç / Galibiyet / %Galibiyet.
+ *
+ * IP-18: `winRate` artık YALNIZ skoru girilmiş maçlar üzerinden hesaplanır.
+ * Skoru hiç girilmemiş maçlar (auto_finalize_matches cron'u) eskiden paydaya
+ * giriyor ve oranı sulandırıyordu — 30 skorsuz maçı olan oyuncu profilinde
+ * kocaman yeşil "%0" görüyordu. Hiç skorlu maç yoksa `null` döner; ekran
+ * "%0" değil "—" yazar, çünkü sıfır başarı ile veri yokluğu aynı şey değildir.
+ */
+export const winStats = (
+    results: Array<{ result: 'WIN' | 'LOSS' | 'DRAW' | 'NO_SCORE' }>,
+): { total: number; scoredTotal: number; wins: number; winRate: number | null } => {
     const total = results.length;
-    const wins = results.filter(m => m.result === 'WIN').length;
-    return { total, wins, winRate: total > 0 ? Math.round((wins / total) * 100) : 0 };
+    const skorlu = results.filter(m => m.result !== 'NO_SCORE');
+    const wins = skorlu.filter(m => m.result === 'WIN').length;
+    return {
+        total,
+        scoredTotal: skorlu.length,
+        wins,
+        winRate: skorlu.length > 0 ? Math.round((wins / skorlu.length) * 100) : null,
+    };
 };

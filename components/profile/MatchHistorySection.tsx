@@ -16,6 +16,9 @@ const SCORE_COLOR: Record<MatchHistorySummary['result'], string> = {
     WIN: 'text-primary',
     LOSS: 'text-error',
     DRAW: 'text-warning',
+    // IP-18: skoru girilmemiş maç bir SONUÇ değildir — nötr çizilir, yeşil/
+    // kırmızı/sarı üçlüsüne girmez.
+    NO_SCORE: 'text-ink-4',
 };
 
 /** Sekmeli maç geçmişi listesi: Tümü / Galibiyet (/ Maçın Adamı). */

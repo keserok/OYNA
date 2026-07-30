@@ -18,6 +18,7 @@ import { resolveTariffForSlot } from './tariffService';
 // SLOT-3: doluluk şeridi ızgarayı UYDURMAZ — sunucudaki get_pitch_slots'un
 // istemci ikizinden (SSOT) okur; süre tek kaynaktan gelir (pitch_tariffs.slot_minutes).
 import { buildSlotGrid, bookingCoversSlot, hmToMinutes, type SlotTariffInput } from '../shared/slotGrid';
+import { formatTRYAmount } from '../utils/formatTRY';
 import type {
   OwnerPitch,
   OwnerDailySummary,
@@ -349,7 +350,7 @@ export async function recordBookingPayment(
     return await enqueueOrRun(
       'RECORD_PAYMENT',
       { bookingId, amount, method, note: note ?? null },
-      `Tahsilat · ${amount}₺ ${method === 'CASH' ? 'nakit' : method.toLowerCase()}`,
+      `Tahsilat · ${formatTRYAmount(amount)} ${method === 'CASH' ? 'nakit' : method.toLowerCase()}`,
     );
   } catch (error) {
     console.error('recordBookingPayment:', error);

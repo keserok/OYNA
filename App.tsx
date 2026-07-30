@@ -1,11 +1,12 @@
 import React, { useEffect, Suspense, lazy } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
-import { UserRole, AppView, MatchListing, Goalkeeper, Referee, Match } from './types';
+import { AnimatePresence, motion, MotionConfig } from 'framer-motion';
+import { UserRole, AppView, MatchListing, Goalkeeper, Referee } from './types';
 import { auth, onAuthStateChanged, logout, handleAuthCallbackUrl } from './supabaseAuth';
 import { supabase } from './supabaseClient';
 import { useAppStore } from './store';
 import { roleToLandingView, pickLandingRole, hasMultipleSwitchableRoles, normalizeRole } from './shared/roles';
 import { setActiveRole } from './services/userService';
+import { getMatchDetails } from './services/matchService';
 import { initPushNotifications, subscribeToInAppNotifications, clearPushToken, handleDeepLink } from './notifications/pushService';
 import { Capacitor } from '@capacitor/core';
 import { fetchNotificationPreferences } from './notifications/notificationPreferences';
@@ -23,7 +24,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 // Eagerly loaded for immediate display (yalnız ilk boyanan ekranlar)
 import SplashScreen from './views/SplashScreen';
 import AuthScreen from './views/AuthScreen';
-import { isOnboardingEnabled } from './views/onboarding/onboardingShared';
+import { isOnboardingEnabled, wasOnboardingSkipped } from './views/onboarding/onboardingShared';
 import { recordUserConsents } from './services/consentService';
 
 // Lazy loaded views to reduce initial bundle size
@@ -65,21 +66,58 @@ const GuardianConsentChild = lazy(() => import('./views/GuardianConsentChild'));
 const GuardianConsentForm = lazy(() => import('./views/GuardianConsentForm'));
 const ServiceApplication = lazy(() => import('./views/ServiceApplication'));
 const QRScannerView = lazy(() => import('./views/QRScannerView'));
-const MatchesView = lazy(() => import('./views/MatchesView'));
 const LegalScreen = lazy(() => import('./views/LegalScreen'));
 const MessagesView = lazy(() => import('./views/MessagesView'));
-import { BottomNav } from './components/BottomNav';
+import { BottomNav, TAB_IDS } from './components/BottomNav';
 const RoleSwitcher = lazy(() => import('./components/RoleSwitcher'));
 
-// Loading fallback component
-const ViewLoader = () => (
-  <div className="flex items-center justify-center min-h-screen bg-[#0A0E14]">
-    <Spinner size={48} thickness={4} />
-  </div>
-);
+/**
+ * IP-15 — misafirken başlanan işe geri dön.
+ *
+ * Yalnız OYUNCU açılışında uygulanır: tesis/hakem/kaleci hesabıyla giren biri
+ * oyuncu maç lobisine bırakılmaz. Niyet yoksa `null` döner, çağıran normal
+ * yönlendirmesini yapar.
+ */
+const niyetiTuket = async (
+  landingRole: UserRole,
+): Promise<{ view: AppView; matchId?: string } | null> => {
+  if (landingRole !== UserRole.PLAYER) return null;
+  const intent = useAppStore.getState().consumePendingIntent();
+  if (!intent) return null;
+  // Maç lobisine dönülüyorsa maç mağazada olmayabilir (sayfa yenilenmiş olabilir).
+  if (intent.view === 'MATCH_JOIN' && intent.matchId && !useAppStore.getState().selectedMatch) {
+    try {
+      const m = await getMatchDetails(intent.matchId);
+      if (m) useAppStore.getState().setSelectedMatch(m);
+      else return null;   // maç silinmiş/erişilemez → normal yönlendirme
+    } catch { return null; }
+  }
+  return intent;
+};
+
+// Bekleme ekranı. IP-11: tek başına dönen halka "bir şey oluyor" demiyordu;
+// ne beklendiği yazılır ve 4 saniyeyi aşarsa sebebi söylenir. Ekran okuyucu
+// için canlı bölge — yoksa görme engelli kullanıcı sessiz bir ekranda kalıyordu.
+const ViewLoader = () => {
+  const [slow, setSlow] = React.useState(false);
+  React.useEffect(() => {
+    const t = setTimeout(() => setSlow(true), 4000);
+    return () => clearTimeout(t);
+  }, []);
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      className="flex flex-col items-center justify-center min-h-screen bg-[#0A0E14]"
+    >
+      <Spinner size={48} thickness={4} />
+      <p className="mt-4 text-[0.8125rem] font-bold text-white/60">Yükleniyor…</p>
+      {slow && <p className="mt-1 text-[0.6875rem] text-white/50">Bağlantın yavaş olabilir.</p>}
+    </div>
+  );
+};
 
 const App: React.FC = () => {
-  const [matches, setMatches] = React.useState<Match[]>([]);
   const [verificationNote, setVerificationNote] = React.useState<string | null>(null);
   // Oturum geri yüklemesi ilk kez çözüldü mü? (Splash otomatik geçişi bunu bekler)
   const [authResolved, setAuthResolved] = React.useState(false);
@@ -171,7 +209,7 @@ const App: React.FC = () => {
           useAppStore.getState().setIsGuest(false);
           const selectProfile = () => supabase
             .from('profiles')
-            .select('role, roles, verification_status, verification_notes, is_admin, wallet_balance, phone, email, full_name, avatar_url')
+            .select('role, roles, verification_status, verification_notes, is_admin, wallet_balance, phone, email, full_name, avatar_url, has_completed_onboarding')
             .eq('id', user.uid)
             .single();
           let { data: profile, error: profileErr } = await selectProfile();
@@ -190,7 +228,7 @@ const App: React.FC = () => {
           if (!profile && (!profileErr || profileErr.code === 'PGRST116')) {
             const { data: recheck } = await supabase
               .from('profiles')
-              .select('role, roles, verification_status, verification_notes, is_admin, wallet_balance, phone, email, full_name, avatar_url')
+              .select('role, roles, verification_status, verification_notes, is_admin, wallet_balance, phone, email, full_name, avatar_url, has_completed_onboarding')
               .eq('id', user.uid)
               .maybeSingle();
             if (recheck) profile = recheck;
@@ -372,8 +410,22 @@ const App: React.FC = () => {
                 // Tekrar-başvuru akışının doğru rolü hedeflemesi için serviceAppRole'ü kur.
                 useAppStore.getState().setServiceAppRole(landingRole);
                 resetNavigation('PENDING_VERIFICATION');
+              } else if (
+                // IP-16 — yarıda bırakılan tanıtım. `has_completed_onboarding`
+                // açılışta HİÇ okunmuyordu: 4 adımın ortasında uygulamayı
+                // kapatan kullanıcı bir daha akışa dönmüyor, konum da yalnız
+                // orada istendiği için bir daha hiç sorulmuyordu.
+                // "Şimdilik Atla" diyen zorlanmaz; onun kurtarma yolu
+                // Profil'deki "Profil tamamlanmadı" şeridi.
+                landingRole === UserRole.PLAYER &&
+                isOnboardingEnabled() &&
+                (profile as { has_completed_onboarding?: boolean | null }).has_completed_onboarding === false &&
+                !wasOnboardingSkipped(user.uid)
+              ) {
+                resetNavigation('ONBOARDING');
               } else {
-                resetNavigation(navigateBasedOnRole(landingRole));
+                const intent = await niyetiTuket(landingRole);
+                resetNavigation(intent ? intent.view : navigateBasedOnRole(landingRole));
               }
             }
           }
@@ -599,7 +651,14 @@ const App: React.FC = () => {
         // goBack: profil "Tamamla" ile gelindiyse profile döner; yeni kayıt
         // akışında yığın boş → role göre panele (Dashboard) düşer.
         return <Onboarding
-          onComplete={() => goBack(navigateBasedOnRole(useAppStore.getState().role))}
+          onComplete={async () => {
+            // IP-15: kapıdan gelip hesap açan kullanıcı onboarding'den sonra
+            // Ana Sayfa'ya değil, başladığı ekrana döner.
+            const st = useAppStore.getState();
+            const intent = await niyetiTuket(st.role);
+            if (intent) { resetNavigation(intent.view); return; }
+            goBack(navigateBasedOnRole(st.role));
+          }}
         />;
       case 'AUTH':
         return <AuthScreen role={role} onSuccess={() => resetNavigation(navigateBasedOnRole(role))} onBack={() => goBack('SPLASH')} />;
@@ -665,14 +724,9 @@ const App: React.FC = () => {
         return <QRScannerView
           onBack={() => goBack('OWNER_PANEL')}
           pitchId={useAppStore.getState().ownerActivePitchId}
-          onResult={(res) => {
-            setMatches(prev => [res, ...prev]);
-          }}
         />;
-      case 'MATCHES':
-        return <MatchesView onBack={() => goBack('OWNER_PANEL')} matches={matches} />;
       case 'MY_MATCHES':
-        return <MyMatchesHub onBack={() => goBack('DASHBOARD')} onNavigate={(v) => navigateTo(v)} />;
+        return <MyMatchesHub onNavigate={(v) => navigateTo(v)} />;
       case 'DASHBOARD':
         return <Dashboard
           onNavigate={(newView) => navigateTo(newView)}
@@ -724,7 +778,6 @@ const App: React.FC = () => {
       case 'PROFILE':
         return <ProfileScreen
           role={role || UserRole.PLAYER}
-          onBack={() => goBack('DASHBOARD')}
           onNavigate={(v) => navigateTo(v)}
           onOpenDiaryEntry={(id) => {
             setSelectedDiaryId(id);
@@ -750,7 +803,6 @@ const App: React.FC = () => {
         return <SettingsScreen onBack={() => goBack('DASHBOARD')} onNavigate={(v) => navigateTo(v)} />;
       case 'MATCH_DISCOVERY':
         return <MatchDiscovery
-          onBack={() => goBack('DASHBOARD')}
           onSelect={(match) => {
             useAppStore.getState().setLobbyMode('DISCOVER');
             setSelectedMatch(match);
@@ -774,13 +826,14 @@ const App: React.FC = () => {
         {/* F4.1: bilet artık Maçlarım'daki rezervasyon kartından açılıyor */}
         return <MatchTicket onBack={() => goBack('MY_MATCHES')} />;
       case 'SOCIAL':
-        return <SocialView onNavigate={(v) => navigateTo(v)} />;
+        return <SocialView onBack={() => goBack('PROFILE')} onNavigate={(v) => navigateTo(v)} />;
       case 'FRIEND_ADD':
         return <FriendAddView onBack={() => goBack('SOCIAL')} onNavigate={(v) => navigateTo(v)} />;
       case 'MESSAGES':
         return <MessagesView
           initialConversationId={selectedConversationId}
           initialTeamChatId={selectedTeamChatId}
+          onFindFriends={() => navigateTo('FRIEND_ADD')}
           onBack={() => {
             setSelectedConversationId(null);
             setSelectedTeamChatId(null);
@@ -798,13 +851,21 @@ const App: React.FC = () => {
     }
   };
 
-  const showBottomNav = ['DASHBOARD', 'MATCH_DISCOVERY', 'SOCIAL', 'STUDIO', 'PITCH_DISCOVERY', 'PROFILE', 'MY_MATCHES'].includes(view);
+  // Alt menü YALNIZ sekme köklerinde çizilir ve liste BottomNav'dan gelir —
+  // elle yazılan ikinci bir dizi olduğu sürece ikisi kaçınılmaz olarak ayrışıyordu.
+  // Taktik Stüdyo listeden çıktı: sekmesi yoktu, çubuk çiziliyor ama hiçbir sekme
+  // yanmıyordu. Artık tam ekran açılır ve kendi geri okuyla kapanır.
+  const showBottomNav = (TAB_IDS as readonly string[]).includes(view);
 
   return (
+    // IP-11: framer-motion animasyonları CSS'teki prefers-reduced-motion
+    // bloğuna BAKMAZ (inline style/WAAPI ile sürerler). Sistem tercihini
+    // onlara taşıyan tek şey bu sarmalayıcıdır.
+    <MotionConfig reducedMotion="user">
     <div className="h-full bg-[#0A0E14] text-white font-['Inter'] relative overflow-hidden">
       <OfflineBanner />
       {loadDegraded && (
-        <div className="fixed top-0 inset-x-0 z-[60] bg-amber-500/90 backdrop-blur-sm text-[#0A0E14] text-[0.75rem] font-bold px-4 py-2 pt-safe-2 flex items-center justify-between gap-3">
+        <div role="alert" className="fixed top-0 inset-x-0 z-[60] bg-amber-500/90 backdrop-blur-sm text-[#0A0E14] text-[0.75rem] font-bold px-4 py-2 pt-safe-2 flex items-center justify-between gap-3">
           <span className="min-w-0 truncate">Bağlantı zayıf — bazı veriler yüklenemedi.</span>
           <button
             onClick={() => useAppStore.getState().retryInitialLoad()}
@@ -823,7 +884,7 @@ const App: React.FC = () => {
         <div className="mesh-blob mesh-blob-3"></div>
       </div>
 
-      <AnimatePresence mode="popLayout">
+      <AnimatePresence mode="wait">
         <motion.div
           key={view}
           {...PAGE_TRANSITION}
@@ -932,6 +993,7 @@ const App: React.FC = () => {
         )}
       </AnimatePresence>
     </div>
+    </MotionConfig>
   );
 };
 

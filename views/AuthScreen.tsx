@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { Check, Mail, ArrowRight, ChevronLeft, KeyRound, Lock, User, Eye, EyeOff, Users, ChevronDown, CheckCircle2 } from 'lucide-react';
 import { UserRole } from '../types';
@@ -11,9 +11,16 @@ import { DEMO_ACCOUNT_GROUPS } from '../data/demoAccounts';
 import { getHasAccount } from '../supabaseClient';
 import { useAppStore } from '../store';
 import { validateFullName, normalizeNameInput } from '../shared/personName';
-import { LegalModal } from '../components/common/LegalModal';
+// IP-15: yasal belgeler artık ÖZET değil TAM metin (karar 7b) — 39 KB. Statik
+// import edilirse giriş paketine girer ve belgeyi hiç açmayan kullanıcı da
+// indirir. Modal yalnız bağlantıya dokununca yüklenir; tip import'u derlemede
+// silindiği için paketi etkilemez.
+const LegalModal = lazy(() =>
+  import('../components/common/LegalModal').then((m) => ({ default: m.LegalModal })));
+import type { LegalModalKind } from '../components/common/LegalModal';
 import heroEmblem from '../assets/auth/hero-emblem.webp';
 import oynaLogo from '../assets/onboarding/oyna-logo.webp';
+import { mapAuthError } from '../utils/errorMap';
 
 interface AuthScreenProps {
   /** App tarafından geçilir ama BİLEREK çağrılmaz: başarı sonrası yönlendirmeyi
@@ -114,7 +121,15 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
   const [stage, setStage] = useState<Stage>(introShownThisSession ? 'input' : 'intro');
   // Kayıt-öncelikli akış: bu cihazda daha önce hiç oturum açılmadıysa KAYIT,
   // açıldıysa (çıkış yapmış kullanıcı) GİRİŞ ekranıyla başla.
-  const [isRegister, setIsRegister] = useState(() => !getHasAccount());
+  // IP-15: kayıt kapısı hangi butondan gelindiyse ekranı o modda açar —
+  // "Zaten hesabım var" diyen kullanıcı kayıt formuna düşmez.
+  const [isRegister, setIsRegister] = useState(() => {
+    const zorlanan = useAppStore.getState().authStartMode;
+    if (zorlanan) return zorlanan === 'register';
+    return !getHasAccount();
+  });
+  // Tek seferlik: mod okundu, bayrak temizlenir (sonraki açılış kendi kararını verir).
+  useEffect(() => { useAppStore.getState().setAuthStartMode(null); }, []);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
@@ -129,7 +144,9 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [resendIn, setResendIn] = useState(0);
-  const [openModal, setOpenModal] = useState<'kvkk' | 'sozlesme' | null>(null);
+  // IP-15: anahtarlar artık resmi belge anahtarları — modal tam metni
+  // shared/legalDocs.ts'ten okur, Ayarlar → Yasal ile birebir aynı.
+  const [openModal, setOpenModal] = useState<LegalModalKind | null>(null);
   // Demo hesap seçici (main'de aktif): açık/kapalı + o an giriş yapılan hesap
   const [demoPickerOpen, setDemoPickerOpen] = useState(false);
   const [demoLoggingIn, setDemoLoggingIn] = useState<string | null>(null);
@@ -156,7 +173,11 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
   };
 
   const handleSendOtp = async () => {
-    if (!agreed || !contactValid || isLoading) return;
+    // IP-15: eskiden `!agreed || !contactValid` iken SESSİZCE dönüyordu.
+    // Diğer handler'lar gibi eksik olan tek şeyi söyler.
+    if (isLoading) return;
+    if (!contactValid) { setError('Geçerli bir e-posta adresi gir.'); return; }
+    if (!requireAgreement()) return;
     setError(null);
     // Dev/demo modu: demo hesabı (veya "mirackerem") → OTP'siz anında giriş.
     // onSuccess() ÇAĞIRMA: o anda yerel `role` hâlâ eski (PLAYER) olduğundan owner'ı
@@ -169,7 +190,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
         // navigasyonu auth dinleyicisine bırak (rol-doğru yönlendirme)
       } catch (err: any) {
         console.error('Demo giriş hatası:', err);
-        setError(err?.message || 'Demo giriş başarısız.');
+        setError(mapAuthError(err, 'Demo giriş başarısız.'));
         setIsLoading(null);
       }
       return;
@@ -182,7 +203,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
       setResendIn(60);
     } catch (err: any) {
       console.error('OTP gönderim hatası:', err);
-      setError(err?.message || 'Doğrulama kodu gönderilemedi. Lütfen tekrar deneyin.');
+      setError(mapAuthError(err, 'Doğrulama kodu gönderilemedi. Lütfen tekrar deneyin.'));
     } finally {
       setIsLoading(null);
     }
@@ -199,7 +220,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
       setResendIn(60);
       setInfo('Yeni kod gönderildi.');
     } catch (err: any) {
-      setError(err?.message || 'Kod tekrar gönderilemedi.');
+      setError(mapAuthError(err, 'Kod tekrar gönderilemedi.'));
     } finally {
       setIsLoading(null);
     }
@@ -217,7 +238,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
       // Spinner, dinleyici doğru panele yönlendirip bu ekranı kaldırana dek döner.
     } catch (err: any) {
       console.error('OTP doğrulama hatası:', err);
-      setError(err?.message || 'Kod hatalı veya süresi dolmuş.');
+      setError(mapAuthError(err, 'Kod hatalı veya süresi dolmuş.'));
       setIsLoading(null);
     }
   };
@@ -239,7 +260,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
         // navigasyonu auth dinleyicisine bırak (rol-doğru yönlendirme)
       } catch (err: any) {
         console.error('Demo giriş hatası:', err);
-        setError(err?.message || 'Demo giriş başarısız.');
+        setError(mapAuthError(err, 'Demo giriş başarısız.'));
         setIsLoading(null);
       }
       return;
@@ -290,7 +311,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
         setIsRegister(false);
         setInfo('Bu e-posta zaten kayıtlı — şifrenle giriş yapabilirsin.');
       } else {
-        setError(err?.message || 'Kayıt başarısız. Lütfen tekrar dene.');
+        setError(mapAuthError(err, 'Kayıt başarısız. Lütfen tekrar dene.'));
       }
       setIsLoading(null);
     }
@@ -349,7 +370,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
   // dokununca ne yapılması gerektiği açıkça söylenir ("hiçbir şey olmuyor" hissi biter).
   function requireAgreement(): boolean {
     if (agreed) return true;
-    setError("Devam etmek için önce KVKK Aydınlatma Metni'ni ve Kullanıcı Sözleşmesi'ni onayla.");
+    setError("Devam etmek için KVKK Aydınlatma Metni'ni ve Kullanım Şartları'nı onayla.");
     return false;
   }
 
@@ -364,7 +385,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
       // navigasyonu global auth dinleyicisi yapar. Web'de sayfa yönlenir.
     } catch (err: any) {
       console.error('[Auth] Google hatası:', err);
-      setError(err?.message || 'Google ile giriş başarısız.');
+      setError(mapAuthError(err, 'Google ile giriş başarısız.'));
     } finally {
       setIsLoading(null);
     }
@@ -381,7 +402,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
       // onSuccess() burada da çağrılırsa çifte yönlendirme/flaş oluşur.
     } catch (err: any) {
       console.error('[Auth] Apple hatası:', err);
-      setError(err?.message || 'Apple ile giriş başarısız.');
+      setError(mapAuthError(err, 'Apple ile giriş başarısız.'));
     } finally {
       setIsLoading(null);
     }
@@ -402,7 +423,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
       // navigasyon auth dinleyicisinde
     } catch (err: any) {
       console.error('[Auth] Demo hesap girişi hatası:', err);
-      setError(err?.message || 'Demo hesabıyla giriş başarısız.');
+      setError(mapAuthError(err, 'Demo hesabıyla giriş başarısız.'));
       setDemoLoggingIn(null);
     }
   };
@@ -445,9 +466,18 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
 
   // Devre dışı görünüm: onay/alanlar eksikken buton sönük ama TIKLANABİLİR kalır
   // (dokununca eksik olanı söyler). Yükleme sırasında gerçekten kilitlenir.
-  const ctaStyle = (ready: boolean): React.CSSProperties => ready
-    ? { background: ctaGradient, color: '#0A0E14', boxShadow: `0 0 20px 0 ${color}57, inset 0 1px 0 rgba(255,255,255,.28)` }
-    : { background: 'rgba(255,255,255,.05)', color: 'rgba(255,255,255,.32)' };
+  // IP-15: buton SESSİZCE pasif kalmaz. Eskiden form eksikken grileşiyordu ve
+  // dokunulduğunda hiçbir şey söylemiyordu; kullanıcı hangi alanın eksik
+  // olduğunu tahmin etmek zorundaydı. Artık buton canlı görünür, dokununca
+  // handler eksik olan TEK şeyi söyler. `ready` yalnız hafif bir vurgu farkı.
+  const ctaStyle = (ready: boolean): React.CSSProperties => ({
+    background: ctaGradient,
+    color: '#0A0E14',
+    boxShadow: ready
+      ? `0 0 20px 0 ${color}57, inset 0 1px 0 rgba(255,255,255,.28)`
+      : 'inset 0 1px 0 rgba(255,255,255,.28)',
+    opacity: ready ? 1 : 0.72,
+  });
 
   const spinner = <span className="au-spin" aria-hidden="true" />;
 
@@ -731,7 +761,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
                 )}
 
                 {error && (
-                  <p style={{ margin: '11px 2px 0', fontSize: 11.5, fontWeight: 700, lineHeight: 1.5, color: '#FF4D4D' }}>{error}</p>
+                  <p role="alert" aria-live="assertive" style={{ margin: '11px 2px 0', fontSize: 11.5, fontWeight: 700, lineHeight: 1.5, color: '#FF4D4D' }}>{error}</p>
                 )}
 
                 {/* KVKK + Sözleşme onayı */}
@@ -753,9 +783,9 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
                     {agreed && <Check size={12} color="#0A0E14" strokeWidth={3.4} />}
                   </button>
                   <p style={{ margin: 0, fontSize: 10, lineHeight: 1.7, fontWeight: 700, letterSpacing: '.01em', color: '#8B949E' }}>
-                    <button type="button" className="au-link" onClick={() => setOpenModal('kvkk')} style={{ color }}>KVKK Aydınlatma Metni</button>
+                    <button type="button" className="au-link" onClick={() => setOpenModal('KVKK')} style={{ color }}>KVKK Aydınlatma Metni</button>
                     'ni ve{' '}
-                    <button type="button" className="au-link" onClick={() => setOpenModal('sozlesme')} style={{ color }}>Kullanıcı Sözleşmesi</button>
+                    <button type="button" className="au-link" onClick={() => setOpenModal('TERMS')} style={{ color }}>Kullanım Şartları</button>
                     'ni okudum, kişisel verilerimin işlenmesini onaylıyorum.
                   </p>
                 </div>
@@ -786,7 +816,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
                       <div style={{ marginTop: 12, maxHeight: 320, overflowY: 'auto', paddingRight: 4, display: 'flex', flexDirection: 'column', gap: 16 }} className="custom-scrollbar">
                         {!agreed && (
                           <p style={{ margin: 0, padding: '0 2px', fontSize: 10, fontWeight: 700, color: 'rgba(250,204,21,.9)' }}>
-                            Giriş için önce yukarıdaki KVKK/Sözleşme kutusunu onayla.
+                            Giriş için yukarıdaki KVKK ve Kullanım Şartları kutusunu onayla.
                           </p>
                         )}
                         {DEMO_ACCOUNT_GROUPS.map((group) => (
@@ -856,7 +886,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
 
                   {/* Kod ile giriş — ikincil (yalnız giriş modunda) */}
                   {!isRegister && (
-                    <button type="button" className="au-ghost" onClick={handleSendOtp} disabled={busy || !agreed || !contactValid}>
+                    <button type="button" className="au-ghost" onClick={handleSendOtp} disabled={busy}>
                       {isLoading === 'send' ? spinner : 'KOD İLE GİRİŞ YAP'}
                     </button>
                   )}
@@ -871,15 +901,18 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
                     type="button"
                     className="au-ghost"
                     onClick={handleGuestLogin}
-                    disabled={busy || !agreed}
+                    // IP-15 · karar 6a: misafir GEZİNME yazma eylemi değil,
+                    // sunucuya rıza kaydı gitmiyor → KVKK onayı istenmez.
+                    // Onay yalnız hesap açılırken zorunlu.
+                    disabled={busy}
                   >
                     {isLoading === 'guest' ? spinner : 'ÖNCE MAÇLARA GÖZ AT'}
                   </button>
 
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, paddingTop: 2 }}>
-                    <button type="button" className="au-footlink" onClick={() => setOpenModal('sozlesme')}>Kullanıcı Sözleşmesi</button>
+                    <button type="button" className="au-footlink" onClick={() => setOpenModal('TERMS')}>Kullanım Şartları</button>
                     <span style={{ fontSize: 10, color: '#3a434e' }}>|</span>
-                    <button type="button" className="au-footlink" onClick={() => setOpenModal('kvkk')}>KVKK Aydınlatma Metni</button>
+                    <button type="button" className="au-footlink" onClick={() => setOpenModal('KVKK')}>KVKK Aydınlatma Metni</button>
                   </div>
                 </div>
               </div>
@@ -988,7 +1021,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
                 )}
 
                 {error && (
-                  <p style={{ margin: '13px 2px 0', fontSize: 11.5, fontWeight: 700, lineHeight: 1.5, textAlign: 'center', color: '#FF4D4D' }}>{error}</p>
+                  <p role="alert" aria-live="assertive" style={{ margin: '13px 2px 0', fontSize: 11.5, fontWeight: 700, lineHeight: 1.5, textAlign: 'center', color: '#FF4D4D' }}>{error}</p>
                 )}
 
                 <div style={{ textAlign: 'center', marginTop: 16 }}>
@@ -1047,7 +1080,11 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
         )}
 
         <AnimatePresence>
-          {openModal && <LegalModal openModal={openModal} setOpenModal={setOpenModal} />}
+          {openModal && (
+            <Suspense fallback={null}>
+              <LegalModal openModal={openModal} setOpenModal={setOpenModal} />
+            </Suspense>
+          )}
         </AnimatePresence>
       </div>
     </div>

@@ -117,6 +117,11 @@ function persistSearchRadius(radius: number) {
 // merkezi) senkron tutulur.
 const SELECTED_REGIONS_KEY = 'oyna_selected_regions';
 
+// IP-15 — misafirin yarım bıraktığı iş. OAuth yönlendirmesi sayfayı yeniden
+// yüklediği için bellekte tutmak yetmez; 30 dakika sonra bayat sayılır.
+const PENDING_INTENT_KEY = 'oyna.pendingIntent';
+const PENDING_INTENT_MAX_AGE_MS = 30 * 60 * 1000;
+
 /** İki bölge aynı mı? (il + ilçe; ilçe null = il geneli) */
 export const sameRegion = (a: OynaLocation, b: OynaLocation): boolean =>
   a.city === b.city && (a.district ?? null) === (b.district ?? null);
@@ -309,8 +314,6 @@ interface AppState {
   setSelectedDiaryId: (id: string | null) => void;
   setSelectedConversationId: (id: string | null) => void;
   setMatchCreateSeed: (seed: AppState['matchCreateSeed']) => void;
-  activeDraftId: string | null;
-  setActiveDraftId: (id: string | null) => void;
   setSelectedGk: (gk: Goalkeeper | null) => void;
   setSelectedRef: (ref: Referee | null) => void;
   bookingPitch: Pitch | null;
@@ -447,6 +450,18 @@ interface AppState {
   // Misafir modu: oturum açmadan gezinme. Yazma aksiyonlarında kayıt kapısı açılır.
   isGuest: boolean;
   setIsGuest: (v: boolean) => void;
+  // IP-15 — Kayıt kapısı niyeti. Misafir bir yazma aksiyonu denediğinde hangi
+  // ekranda olduğu saklanır; kayıt/giriş + onboarding bitince kullanıcı oraya
+  // geri bırakılır. Eskiden `resetNavigation('AUTH')` yığını siliyor, kullanıcı
+  // kaydolduktan sonra Ana Sayfa'ya düşüyordu — başladığı iş kayboluyordu.
+  // Google/Apple yönlendirmesinde sayfa yeniden yüklenebildiği için
+  // localStorage'a da yazılır (30 dk ömür).
+  pendingIntent: { view: AppView; matchId?: string; ts: number } | null;
+  setPendingIntent: (view: AppView, matchId?: string) => void;
+  consumePendingIntent: () => { view: AppView; matchId?: string } | null;
+  // Kapıdan gelindiğinde AuthScreen'in hangi modda açılacağı.
+  authStartMode: 'register' | 'login' | null;
+  setAuthStartMode: (m: 'register' | 'login' | null) => void;
   // Giriş yapmış oyuncunun gerçek profili (ad/avatar/puan) — admin-only
   // adminUsers yerine maç akışlarında kullanılır (KN-2 'Oyuncu' fallback'i).
   currentUserProfile: CurrentUserProfile | null;
@@ -582,7 +597,6 @@ export const useAppStore = create<AppState>((set, get) => ({
   selectedDiaryId: null,
   selectedConversationId: null,
   matchCreateSeed: null,
-  activeDraftId: null,
   selectedGk: null,
   selectedRef: null,
   bookingPitch: null,
@@ -826,7 +840,6 @@ export const useAppStore = create<AppState>((set, get) => ({
   studioContext: null,
   setStudioContext: (c) => set({ studioContext: c }),
   setMatchCreateSeed: (seed) => set({ matchCreateSeed: seed }),
-  setActiveDraftId: (id) => set({ activeDraftId: id }),
   setSelectedGk: (selectedGk) => set({ selectedGk }),
   setSelectedRef: (selectedRef) => set({ selectedRef }),
   setTicketBookingId: (ticketBookingId) => set({ ticketBookingId }),
@@ -1196,6 +1209,30 @@ export const useAppStore = create<AppState>((set, get) => ({
   setIsRoleSwitcherOpen: (open) => set({ isRoleSwitcherOpen: open }),
   isGuest: false,
   setIsGuest: (v) => set({ isGuest: v }),
+  pendingIntent: null,
+  setPendingIntent: (view, matchId) => {
+    const rec = { view, matchId, ts: Date.now() };
+    set({ pendingIntent: rec });
+    try { localStorage.setItem(PENDING_INTENT_KEY, JSON.stringify(rec)); }
+    catch { /* depolama yoksa bellek kopyası yeter */ }
+  },
+  consumePendingIntent: () => {
+    let rec = get().pendingIntent;
+    if (!rec) {
+      // Bellek boş: OAuth yönlendirmesi sayfayı yeniden yüklemiş olabilir.
+      try {
+        const raw = localStorage.getItem(PENDING_INTENT_KEY);
+        if (raw) rec = JSON.parse(raw);
+      } catch { rec = null; }
+    }
+    try { localStorage.removeItem(PENDING_INTENT_KEY); } catch { /* yok sayılır */ }
+    set({ pendingIntent: null });
+    // Bayat niyet kullanıcıyı beklemediği bir ekrana atar; 30 dk sonra düşer.
+    if (!rec || typeof rec.ts !== 'number' || Date.now() - rec.ts > PENDING_INTENT_MAX_AGE_MS) return null;
+    return { view: rec.view, matchId: rec.matchId };
+  },
+  authStartMode: null,
+  setAuthStartMode: (m) => set({ authStartMode: m }),
   currentUserProfile: null,
   setCurrentUserProfile: (p) => set({ currentUserProfile: p }),
   staffPanelContext: null,

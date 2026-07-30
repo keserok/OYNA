@@ -102,7 +102,7 @@ export const OwnerPaymentSettingsModal: React.FC<Props> = ({ onClose, facilityId
     >
       <div className="max-w-xl mx-auto space-y-6">
         {isLoading ? (
-          <p className="text-center text-gray-500 text-sm py-8">Ayarlar yükleniyor...</p>
+          <p className="text-center text-gray-500 text-sm py-8">Ayarlar yükleniyor…</p>
         ) : (
           <>
             <div className="bg-blue-500/10 border border-blue-500/20 p-4 rounded-2xl flex items-start gap-3">

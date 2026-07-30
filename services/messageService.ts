@@ -1,5 +1,6 @@
 import { supabase } from '../supabaseClient';
 import { auth } from '../supabaseAuth';
+import { mapError } from '../utils/errorMap';
 
 // ─── FAZ 6 — 1-1 Mesajlaşma (yalnız arkadaşlar, realtime) ────────────────────
 
@@ -32,19 +33,14 @@ const mapMessage = (r: any): Message => ({
   createdAt: r.created_at,
 });
 
-function parseRpcError(message?: string): string | null {
-  if (!message) return null;
-  const m = message.match(/[A-Z_]+:\s*(.+)$/);
-  if (m) return m[1];
-  const bare: Record<string, string> = {
-    NOT_FRIENDS: 'Yalnızca arkadaşlarınla mesajlaşabilirsin.',
-    BLOCKED: 'Engelleme nedeniyle mesajlaşılamıyor.',
-    FORBIDDEN: 'Bu işlem için yetkin yok.',
-    UNAUTHORIZED: 'Oturumun bulunamadı. Lütfen tekrar giriş yap.',
-  };
-  const b = message.match(/\b([A-Z][A-Z_]{3,})\b/);
-  return b && bare[b[1]] ? bare[b[1]] : message;
-}
+// IP-12: ortak çeviri utils/errorMap.ts'te. Buradaki sözlük yalnız BU
+// bağlamda daha isabetli olan mesajları ezer.
+const OZEL: Record<string, string> = {
+  NOT_FRIENDS: 'Yalnızca arkadaşlarınla mesajlaşabilirsin.',
+  BLOCKED: 'Engelleme nedeniyle mesajlaşılamıyor.',
+};
+const parseRpcError = (message?: string): string | null =>
+  message ? mapError(message, undefined, OZEL) : null;
 
 /** Bir arkadaşla konuşma getir/oluştur → conversation id. */
 export const getOrCreateConversation = async (otherUserId: string): Promise<string> => {

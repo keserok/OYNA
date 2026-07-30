@@ -24,7 +24,6 @@ const Chip: React.FC<ChipProps> = ({
     longFired.current = false;
     timer.current = setTimeout(() => {
       longFired.current = true;
-      if (navigator.vibrate) navigator.vibrate(30);
       onLongPress();
     }, 450);
   };

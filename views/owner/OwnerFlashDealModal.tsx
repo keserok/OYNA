@@ -7,6 +7,7 @@ import {
 } from '../../services/pitchOwnerService';
 import type { FlashDeal } from '../../types';
 import { resolveHourlyPrice } from './ownerCalendarHelpers';
+import { money } from './finance/financeUi';
 
 interface OwnerFlashDealModalProps {
   pitchId: string;
@@ -101,7 +102,7 @@ export const OwnerFlashDealModal: React.FC<OwnerFlashDealModalProps> = ({
           <div>
             <h3 className="text-lg font-extrabold text-white">Flash Deal</h3>
             <p className="text-xs text-gray-400 mt-1">
-              {timeKey} • Standart: ₺{standardPrice}
+              {timeKey} • Standart: {money(standardPrice)}
             </p>
           </div>
           <button type="button" onClick={onClose} className="p-2 bg-white/5 rounded-full text-gray-400 hover:text-white">
@@ -172,7 +173,7 @@ export const OwnerFlashDealModal: React.FC<OwnerFlashDealModalProps> = ({
             disabled={saving}
             className="flex-[2] py-4 bg-[#FACC15] text-black font-extrabold text-lg rounded-2xl hover:bg-yellow-300 active:scale-95 transition-all disabled:opacity-50"
           >
-            {saving ? 'KAYDEDİLİYOR...' : 'FLASH DEAL OLUŞTUR'}
+            {saving ? 'KAYDEDİLİYOR…' : 'FLASH DEAL OLUŞTUR'}
           </button>
         </div>
       </div>

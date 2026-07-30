@@ -11,7 +11,6 @@ import {
 
 interface QRScannerViewProps {
   onBack: () => void;
-  onResult: (result: any) => void;
   /** Owner panelinde aktif tesis — maç listesi bu tesise göre çekilir
    *  (çoklu tesis, personel/müdür ve admin-önizleme için doğru kaynak). */
   pitchId?: string | null;
@@ -22,7 +21,7 @@ interface MatchInfo {
   title: string;
 }
 
-const QRScannerView: React.FC<QRScannerViewProps> = ({ onBack, onResult, pitchId }) => {
+const QRScannerView: React.FC<QRScannerViewProps> = ({ onBack, pitchId }) => {
   const [scanResult, setScanResult] = useState<string | null>(null);
   const [manualCode, setManualCode] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -70,7 +69,7 @@ const QRScannerView: React.FC<QRScannerViewProps> = ({ onBack, onResult, pitchId
     } catch (err) {
       console.error('validateToken:', err);
       const raw = err instanceof Error ? err.message : String(err);
-      setError(raw.includes('Failed to fetch') ? 'Bağlantı hatası. İnternetinizi kontrol edin.' : 'Kod doğrulanamadı.');
+      setError(raw.includes('Failed to fetch') ? 'Bağlantı hatası. İnternetini kontrol et.' : 'Kod doğrulanamadı.');
       setTimeout(() => setError(null), 4000);
     } finally {
       setIsValidating(false);
@@ -98,7 +97,7 @@ const QRScannerView: React.FC<QRScannerViewProps> = ({ onBack, onResult, pitchId
       setScanResult(token);
     } catch (err) {
       const raw = err instanceof Error ? err.message : String(err);
-      setError(raw.includes('yetki') ? 'Bu maç için skor girme yetkiniz yok.' : 'Maç seçilemedi. Tekrar deneyin.');
+      setError(raw.includes('yetki') ? 'Bu maç için skor girme yetkin yok.' : 'Maç seçilemedi. Tekrar dene.');
       setTimeout(() => setError(null), 4000);
     } finally {
       setPickingId(null);
@@ -128,16 +127,6 @@ const QRScannerView: React.FC<QRScannerViewProps> = ({ onBack, onResult, pitchId
       if (rpcErr) throw rpcErr;
 
       setIsSuccess(true);
-      onResult({
-        id: matchInfo?.id || scanResult,
-        teamA: scoreEntry.teamAName,
-        teamB: scoreEntry.teamBName,
-        scoreA: scoreEntry.teamA,
-        scoreB: scoreEntry.teamB,
-        date: new Date().toLocaleDateString('tr-TR'),
-        time: new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
-        pitch: matchInfo?.title || 'Maç',
-      });
 
       setTimeout(() => {
         onBack();
@@ -150,7 +139,7 @@ const QRScannerView: React.FC<QRScannerViewProps> = ({ onBack, onResult, pitchId
       else if (raw.includes('INVALID_SCORE')) msg = 'Girilen skor geçersiz.';
       // Tekrar denemek çözmez — maç bitene kadar sunucu her seferinde reddeder.
       else if (raw.includes('TOO_EARLY')) msg = 'Skor ancak maç bittikten sonra girilebilir.';
-      else if (raw.includes('Failed to fetch')) msg = 'Bağlantı hatası. İnternetinizi kontrol edin.';
+      else if (raw.includes('Failed to fetch')) msg = 'Bağlantı hatası. İnternetini kontrol et.';
       setError(msg);
       setTimeout(() => setError(null), 4000);
     } finally {

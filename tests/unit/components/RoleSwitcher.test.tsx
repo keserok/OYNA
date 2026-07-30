@@ -50,7 +50,7 @@ describe('RoleSwitcher Component', () => {
       return /Kaleci.*rolüne geçmek istediğine emin misin\?/s.test(text);
     });
     expect(matches.length).toBeGreaterThan(0);
-    expect(screen.getByText('Evet, Geç')).toBeInTheDocument();
+    expect(screen.getByText('Rolü Değiştir')).toBeInTheDocument();
     expect(screen.getByText('Vazgeç')).toBeInTheDocument();
   });
 
@@ -65,7 +65,7 @@ describe('RoleSwitcher Component', () => {
     fireEvent.click(gkBtn!);
 
     // Confirm change
-    const confirmBtn = screen.getByText('Evet, Geç');
+    const confirmBtn = screen.getByText('Rolü Değiştir');
     fireEvent.click(confirmBtn);
 
     // Should call service and trigger callbacks
@@ -87,7 +87,7 @@ describe('RoleSwitcher Component', () => {
     fireEvent.click(gkBtn!);
 
     // Confirm change
-    const confirmBtn = screen.getByText('Evet, Geç');
+    const confirmBtn = screen.getByText('Rolü Değiştir');
     fireEvent.click(confirmBtn);
 
     // Confirmation dialog closes and error appears

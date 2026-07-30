@@ -59,7 +59,6 @@ const RoleSwitcher: React.FC<RoleSwitcherProps> = ({ roles, onClose, onSwitched 
       }
       const newRole = pending;
       setRole(newRole); // store'daki aktif rolü güncelle
-      if (navigator.vibrate) navigator.vibrate([20, 40, 60]);
       onSwitched(newRole, roleToLandingView(newRole));
     } catch (err) {
       console.error('[RoleSwitcher] switch error:', err);
@@ -165,7 +164,7 @@ const RoleSwitcher: React.FC<RoleSwitcherProps> = ({ roles, onClose, onSwitched 
                   className="w-full h-12 rounded-2xl font-extrabold text-sm text-black flex items-center justify-center gap-2 disabled:opacity-60 transition-all"
                   style={{ background: ROLE_META[pending].color }}
                 >
-                  {loading ? (<><RefreshCw size={15} className="animate-spin" /> Geçiliyor...</>) : 'Evet, Geç'}
+                  {loading ? (<><RefreshCw size={15} className="animate-spin" /> Geçiliyor…</>) : 'Rolü Değiştir'}
                 </button>
                 <button
                   onClick={() => setPending(null)}

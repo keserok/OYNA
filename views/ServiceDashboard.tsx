@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { UserRole, AppView, JobListing, GkStyle, DirectOffer, Equipment, ServiceRequest, MatchListing } from '../types';
 import { MapPin, Navigation, Star, DollarSign, Calendar, Shield, Scale, Power, Bell, Wallet, List, User, Check, X, ChevronRight, Clock, Trophy, Search, MessageSquare, Send, ArrowRight, Hand, Briefcase, PlusCircle, Sparkles, Zap, Activity, Coins, Tag, Flame, RefreshCcw, Eye, Gauge, Flag, CreditCard, Banknote, Users, Settings, Award, AlertTriangle, CheckCircle2, BadgeCheck, Inbox, PenLine } from 'lucide-react';
 import { getWalletHistory, WalletHistoryItem } from '../services/userService';
-import { formatTRYWithSymbol } from '../utils/formatTRY';
+import { formatTRYAmount, formatTRYSigned } from '../utils/formatTRY';
 import { parseMatchDateTime } from '../utils/matchDateTime';
 import { matchEndMs } from '../shared/matchTiming';
 import {
@@ -43,6 +43,7 @@ import { submitRefereeMatchScore } from '../services/scoreService';
 import { APP_VERSION } from '../utils/appVersion';
 import { LoadingState, ErrorState } from '../components/common/StatusState';
 import { Toast } from '../components/common/Toast';
+import { trUpper } from '../utils/trUpper';
 
 interface ServiceDashboardProps {
   role: UserRole;
@@ -56,6 +57,14 @@ interface ServiceDashboardProps {
 // ve içindeki "%0 komisyon" bandı gerçek dışıydı (oran %10). Ücret düzenleme
 // ServiceProfile'da canlı.
 type Tab = 'HOME' | 'JOBS' | 'WALLET' | 'MENU' | 'PROFILE_VIEW' | 'SETTINGS_VIEW';
+
+// IP-19 — para tek biçimde. Hizmet paneli muhasebe bağlamıdır: sıfır kazanç
+// "Ücretsiz" değil "0₺".
+const money = formatTRYAmount;
+
+/** No-show teminatı — sunucudaki SSOT `app_config.gk_min_balance` (varsayılan 500).
+ *  Sözleşme metninde iki ayrı yerde elle yazılıydı; tek sayı, tek yer. */
+const GK_MIN_TEMINAT = 500;
 
 // Removed equipment mock data
 
@@ -549,7 +558,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
     }
   };
 
-  // FAZ 4 — Kaleci kabulü sözleşme + 500₺ teminat onayı gerektirir → önce modal aç.
+  // FAZ 4 — Kaleci kabulü sözleşme + teminat onayı gerektirir → önce modal aç.
   const handleAcceptClick = (req: ServiceRequest) => {
     if (req.providerType === 'GK') {
       setContractChecked(false);
@@ -751,7 +760,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
       if (match) {
           const hasConflict = myUpcomingMatches.some(um => um.date === match.date && um.time === match.time);
           if (hasConflict) {
-              showActionError('Bu tarih ve saatte zaten onaylanmış bir maçınız var. Lütfen teklifi reddedin.');
+              showActionError('Bu tarih ve saatte zaten onaylanmış bir maçın var. Teklifi reddet.');
               return;
           }
       }
@@ -774,7 +783,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
           } else {
               console.error("Error from supabase:", error);
               if (error.message && error.message.includes('CONFLICT_DETECTED')) {
-                  showActionError('Bu tarih ve saatte zaten onaylanmış bir maçınız var. Lütfen teklifi reddedin.');
+                  showActionError('Bu tarih ve saatte zaten onaylanmış bir maçın var. Teklifi reddet.');
               } else {
                   showActionError('Bir hata oluştu. Lütfen tekrar dene.');
               }
@@ -782,7 +791,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
       } catch (error: any) {
           console.error("Error accepting offer:", error);
           if (error.message && error.message.includes('CONFLICT_DETECTED')) {
-              showActionError('Bu tarih ve saatte zaten onaylanmış bir maçınız var. Lütfen teklifi reddedin.');
+              showActionError('Bu tarih ve saatte zaten onaylanmış bir maçın var. Teklifi reddet.');
           } else {
               showActionError('Teklif kabul edilemedi. Lütfen tekrar dene.');
           }
@@ -805,7 +814,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
       // Yerel çifte-rezervasyon uyarısı (sunucu tarafı da _provider_has_conflict ile korur)
       const hasConflict = myUpcomingMatches.some(um => um.date === selectedJob.date && um.time === selectedJob.time);
       if (hasConflict) {
-          showActionError('Bu tarih ve saatte zaten onaylanmış bir maçınız var.');
+          showActionError('Bu tarih ve saatte zaten onaylanmış bir maçın var.');
           return;
       }
 
@@ -884,8 +893,8 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
           setCancelPreview(null);
           showActionSuccess(r.penalty > 0
               ? (r.penaltyCharged
-                  ? `İşi bıraktın — ${r.penalty}₺ geç iptal cezası kesildi.`
-                  : `İşi bıraktın — ${r.penalty}₺ ceza bakiyenden tahsil edilemedi, hesabına borç işlenebilir.`)
+                  ? `İşi bıraktın — ${money(r.penalty)} geç iptal cezası kesildi.`
+                  : `İşi bıraktın — ${money(r.penalty)} ceza bakiyenden tahsil edilemedi, hesabına borç işlenebilir.`)
               : 'İşi cezasız bıraktın. Kaptana haber verildi.');
           await Promise.all([fetchIncomingRequests(), fetchEarnings()]);
       } catch (err: any) {
@@ -917,7 +926,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
   const idRated = typeof userProfile?.rating === 'number' && userProfile.rating > 0;
   const idRatingText = idRated ? Number(userProfile.rating).toFixed(1) : '—';
   const idFilledBars = idRated ? Math.round(Number(userProfile.rating) / 2) : 0; // 0-10 → 0-5
-  const idFirstName = userProfile?.fullName?.split(' ')[0]?.toUpperCase() || '';
+  const idFirstName = trUpper(userProfile?.fullName?.split(' ')[0]);
   const idStyle: string | null = (typeof userProfile?.style === 'string' && userProfile.style.trim()) ? userProfile.style : null;
   // Sabit "A-CLASS" yerine puandan türetilen sınıf (rookie → YENİ).
   const idClass = !idRated ? 'YENİ' : Number(userProfile.rating) >= 8 ? 'A SINIF' : Number(userProfile.rating) >= 6 ? 'B SINIF' : 'C SINIF';
@@ -1216,7 +1225,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
           </div>
 
           {requestsLoading ? (
-              <LoadingState message="Talepler yükleniyor..." size="sm" />
+              <LoadingState message="Talepler yükleniyor…" size="sm" />
           ) : requestsError ? (
               <ErrorState message={requestsError} onRetry={fetchIncomingRequests} />
           ) : (newRequests.length === 0 && activeRequests.length === 0) ? (
@@ -1241,8 +1250,8 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                                       </div>
                                       <div className="text-right">
                                           <p className="text-[0.6875rem] text-ink-4 font-bold uppercase">Eline geçecek</p>
-                                          <p className="text-lg font-extrabold text-green-400">{req.providerAmount}₺</p>
-                                          <p className="text-[0.6875rem] text-ink-4 font-bold">Brüt {req.fee}₺</p>
+                                          <p className="text-lg font-extrabold text-green-400">{money(req.providerAmount)}</p>
+                                          <p className="text-[0.6875rem] text-ink-4 font-bold">Brüt {money(req.fee)}</p>
                                       </div>
                                   </div>
                                   <div className="mt-4 flex gap-2">
@@ -1280,7 +1289,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                                       </div>
                                       <div className="text-right">
                                           <p className="text-[0.6875rem] text-ink-4 font-bold uppercase">Ceza</p>
-                                          <p className="text-lg font-extrabold text-red-400">{req.penaltyAmount ?? '—'}₺</p>
+                                          <p className="text-lg font-extrabold text-red-400">{money(req.penaltyAmount)}</p>
                                       </div>
                                   </div>
                                   {(req.status as string) === 'DISPUTED' ? (
@@ -1324,7 +1333,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                                           <span className={`text-[0.625rem] font-extrabold px-2 py-1 rounded-md uppercase tracking-wider ${req.status === 'CAPTURED' ? 'bg-blue-500/20 text-blue-400' : 'bg-green-500/20 text-green-400'}`}>
                                               {req.status === 'CAPTURED' ? 'Ödeme Bekliyor' : 'Onaylandı'}
                                           </span>
-                                          <p className="text-sm font-extrabold text-green-400 mt-1">{req.providerAmount}₺</p>
+                                          <p className="text-sm font-extrabold text-green-400 mt-1">{money(req.providerAmount)}</p>
                                       </div>
                                   </div>
                                   {/* KB-1: İki-taraflı onay TÜM CAPTURED taleplerde gösterilir.
@@ -1390,7 +1399,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                                           <span className="text-[0.625rem] font-extrabold px-2 py-1 rounded-md uppercase tracking-wider bg-green-500/20 text-green-400 inline-flex items-center gap-1">
                                               <CheckCircle2 size={11} /> Ödendi
                                           </span>
-                                          <p className="text-sm font-extrabold text-green-400 mt-1">{req.providerAmount}₺</p>
+                                          <p className="text-sm font-extrabold text-green-400 mt-1">{money(req.providerAmount)}</p>
                                       </div>
                                   </div>
                               </div>
@@ -1520,7 +1529,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                         </div>
                         <div className="text-right shrink-0 pl-3">
                           <p className="text-[0.625rem] font-extrabold uppercase text-ink-4 tracking-widest">Bedel</p>
-                          <p className={`text-lg font-extrabold ${isRef ? 'text-red-400' : 'text-[#39FF14]'}`}>{o.fee}₺</p>
+                          <p className={`text-lg font-extrabold ${isRef ? 'text-red-400' : 'text-[#39FF14]'}`}>{money(o.fee)}</p>
                         </div>
                       </div>
                       <div className="flex gap-2">
@@ -1555,7 +1564,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                   <div className="grid grid-cols-2 gap-4">
                       <div>
                           <p className="text-[0.6875rem] text-ink-4 font-bold uppercase">Kazanç</p>
-                          <p className="text-2xl font-extrabold text-white">{earningsBalance}₺</p>
+                          <p className="text-2xl font-extrabold text-white">{money(earningsBalance)}</p>
                       </div>
                       <div className="text-right">
                           <p className="text-[0.6875rem] text-ink-4 font-bold uppercase">Sıradaki Maç</p>
@@ -1703,7 +1712,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
               </div>
               <div className="flex gap-3 overflow-x-auto pb-4 custom-scrollbar snap-x">
                   {offersLoading ? (
-                    <LoadingState message="Teklifler yükleniyor..." size="sm" />
+                    <LoadingState message="Teklifler yükleniyor…" size="sm" />
                   ) : offersError ? (
                     <ErrorState message={offersError} onRetry={fetchOffers} />
                   ) : myOffers.length > 0 ? myOffers.map(offer => (
@@ -1735,7 +1744,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                           <div className="flex items-center justify-between">
                               <div className="flex flex-col">
                                   <span className="text-[0.6875rem] text-ink-4 uppercase font-bold">Teklif</span>
-                                  <span className="text-xl font-extrabold text-[#FACC15]">{offer.offerAmount}₺</span>
+                                  <span className="text-xl font-extrabold text-[#FACC15]">{money(offer.offerAmount)}</span>
                               </div>
                               <button 
                                 onClick={() => handleOpenOffer(offer)}
@@ -1746,7 +1755,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                           </div>
                       </motion.div>
                   )) : (
-                    <div className="text-ink-4 text-[0.6875rem] uppercase font-bold italic w-full text-center py-4">Bekleyen özel teklifiniz yok</div>
+                    <div className="text-ink-4 text-[0.6875rem] uppercase font-bold italic w-full text-center py-4">Bekleyen özel teklifin yok</div>
                   )}
               </div>
           </div>
@@ -1782,7 +1791,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                          <div className="p-4 flex items-center justify-between">
                              <div>
                                  <h4 className="font-extrabold text-white text-sm">{job.pitchName || job.location || 'Saha'}</h4>
-                                 <p className="text-[0.6875rem] text-gray-400">{[job.date, job.time].filter(Boolean).join(' • ') || 'Maç'}{job.fee != null ? ` · ${formatTRYWithSymbol(job.fee)}` : ''}</p>
+                                 <p className="text-[0.6875rem] text-gray-400">{[job.date, job.time].filter(Boolean).join(' • ') || 'Maç'}{job.fee != null ? ` · ${formatTRYAmount(job.fee)}` : ''}</p>
                              </div>
                              <div className="flex items-center gap-2">
                                  <span className="bg-yellow-500/20 text-yellow-500 text-[0.625rem] font-extrabold px-2 py-1 rounded-md uppercase tracking-wider">
@@ -1838,7 +1847,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                         </div>
                         <div className="text-right shrink-0">
                           {/* Gerçek fiyat yoksa uydurma 250/350 değil "Standart ücret". */}
-                          <p className="text-lg font-extrabold text-white">{job.fee != null ? formatTRYWithSymbol(job.fee) : 'Standart'}</p>
+                          <p className="text-lg font-extrabold text-white">{job.fee != null ? formatTRYAmount(job.fee) : 'Standart'}</p>
                           <p className="text-[0.6875rem] text-ink-4">maç başı</p>
                         </div>
                       </div>
@@ -1886,23 +1895,23 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
           <div className="bg-gradient-to-br from-gray-800 to-[#161B22] p-6 rounded-[32px] border border-white/10 relative overflow-hidden">
               <div className="absolute top-0 right-0 p-6 opacity-5"><Wallet size={120} /></div>
               <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Toplam Kazanç</p>
-              <h2 className="text-4xl font-extrabold text-white mt-2">{earningsBalance + reservedBalance}₺</h2>
+              <h2 className="text-4xl font-extrabold text-white mt-2">{money(earningsBalance + reservedBalance)}</h2>
 
               <div className="mt-6 flex gap-4">
                   <div className="flex-1">
                       <p className="text-[0.6875rem] text-ink-4 uppercase font-bold">Çekilebilir</p>
-                      <p className="text-xl font-bold text-green-400">{earningsBalance}₺</p>
+                      <p className="text-xl font-bold text-green-400">{money(earningsBalance)}</p>
                   </div>
                   <div className="flex-1 border-l border-white/10 pl-4">
                       <p className="text-[0.6875rem] text-ink-4 uppercase font-bold">Çekim Bekleyen</p>
-                      <p className="text-xl font-bold text-gray-300">{reservedBalance}₺</p>
+                      <p className="text-xl font-bold text-gray-300">{money(reservedBalance)}</p>
                   </div>
               </div>
 
               {pendingPayout && (
                   <div className="mt-4 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-xl">
                       <p className="text-[0.6875rem] text-yellow-400 font-bold">
-                          {pendingPayout.amount}₺ tutarındaki çekim talebin işleniyor ({pendingPayout.iban}).
+                          {money(pendingPayout.amount)} tutarındaki çekim talebin işleniyor ({pendingPayout.iban}).
                           Sonuçlanınca bildirim alacaksın.
                       </p>
                   </div>
@@ -1936,7 +1945,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                                   ) : (
                                       <Banknote size={18} />
                                   )}
-                                  {isTransferring ? 'GÖNDERİLİYOR...' : transferSuccess ? 'TALEP ALINDI' : 'PARAYI ÇEK'}
+                                  {isTransferring ? 'GÖNDERİLİYOR…' : transferSuccess ? 'TALEP ALINDI' : 'PARAYI ÇEK'}
                               </button>
                           </div>
                       );
@@ -1965,7 +1974,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
           <section>
               <h3 className="font-bold text-white text-sm px-2 mb-3 uppercase tracking-wide">İŞLEM GEÇMİŞİ</h3>
               {walletHistoryLoading ? (
-                  <LoadingState message="İşlemler yükleniyor..." />
+                  <LoadingState message="İşlemler yükleniyor…" />
               ) : walletHistoryError ? (
                   <ErrorState message={walletHistoryError} onRetry={fetchWalletHistory} />
               ) : walletHistory.length === 0 ? (
@@ -1979,7 +1988,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                               <p className="text-[0.6875rem] text-ink-4">{tx.date}</p>
                           </div>
                           <div className={`text-right ${tx.amount > 0 ? 'text-white' : 'text-red-400'}`}>
-                              <p className="font-extrabold text-sm">{tx.amount > 0 ? '+' : ''}{tx.amount}₺</p>
+                              <p className="font-extrabold text-sm">{formatTRYSigned(tx.amount, tx.amount > 0)}</p>
                               <p className={`text-[0.6875rem] font-bold ${tx.status === 'CLEARED' ? 'text-green-500' : 'text-yellow-500'}`}>
                                   {tx.status === 'CLEARED' ? 'Onaylandı' : 'Bekliyor'}
                               </p>
@@ -2487,7 +2496,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                       }}
                       className="w-full py-4 rounded-2xl font-extrabold text-white text-sm disabled:opacity-40 bg-blue-600 hover:bg-blue-500 transition-colors"
                   >
-                      {addingMethod ? 'KAYDEDİLİYOR...' : 'YÖNTEMİ KAYDET'}
+                      {addingMethod ? 'KAYDEDİLİYOR…' : 'YÖNTEMİ KAYDET'}
                   </button>
               </motion.div>
           </div>
@@ -2503,7 +2512,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                     <p className="text-xs text-gray-400 leading-relaxed mb-4">
                         {cancelPreview.penalty > 0 ? (
                             <>Maça {cancelPreview.hoursLeft != null ? `${cancelPreview.hoursLeft} saat` : 'az süre'} kaldığı için{' '}
-                            <span className="text-red-400 font-extrabold">{cancelPreview.penalty}₺ geç iptal cezası</span> kesilecek
+                            <span className="text-red-400 font-extrabold">{money(cancelPreview.penalty)} geç iptal cezası</span> kesilecek
                             ve kaptana tazminat olarak aktarılacak. Kaptanın ödemesi iade edilir.</>
                         ) : (
                             <>Maça 24 saatten fazla var — <span className="text-green-400 font-extrabold">ceza kesilmeyecek</span>.
@@ -2515,7 +2524,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                             className="flex-1 py-3 rounded-xl bg-white/5 text-white text-xs font-extrabold uppercase">Vazgeç</button>
                         <button onClick={handleConfirmCancelAssignment} disabled={cancellingId === cancelPreview.reqId}
                             className="flex-1 py-3 rounded-xl bg-red-500 text-white text-xs font-extrabold uppercase disabled:opacity-50">
-                            {cancelPreview.penalty > 0 ? `Bırak (${cancelPreview.penalty}₺ ceza)` : 'İşi Bırak'}
+                            {cancelPreview.penalty > 0 ? `Bırak (${money(cancelPreview.penalty)} ceza)` : 'İşi Bırak'}
                         </button>
                     </div>
                 </div>
@@ -2621,7 +2630,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                 className={`w-full py-3.5 rounded-xl font-extrabold text-white text-sm ${theme.bg} hover:brightness-110 transition-all uppercase shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2`}
               >
                 {submittingScore && <RefreshCcw size={14} className="animate-spin" />}
-                {submittingScore ? 'KAYDEDİLİYOR...' : 'SKORU KAYDET VE BİTİR'}
+                {submittingScore ? 'KAYDEDİLİYOR…' : 'SKORU KAYDET VE BİTİR'}
               </button>
             </motion.div>
           </div>
@@ -2679,7 +2688,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                           className="w-full py-4 bg-yellow-500 hover:bg-yellow-400 text-black font-extrabold text-sm rounded-2xl transition-colors shadow-lg disabled:opacity-50 flex items-center justify-center gap-2 uppercase tracking-wider"
                       >
                           {identitySubmitting ? <RefreshCcw size={16} className="animate-spin" /> : <BadgeCheck size={16} />}
-                          {identitySubmitting ? 'Gönderiliyor...' : 'Doğrulamayı Gönder'}
+                          {identitySubmitting ? 'Gönderiliyor…' : 'Doğrulamayı Gönder'}
                       </button>
                   </div>
               </div>
@@ -2761,15 +2770,15 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                 <p>Kabul ettiğin maça ilan edilen saatte katılmayı taahhüt edersin.</p>
                 <p><span className="text-red-400 font-extrabold">No-show (mazeretsiz katılmama)</span> durumunda, maçın kaleci slot ücreti hesabından otomatik tahsil edilip maç kaptanına tazminat olarak aktarılır.</p>
                 <p>Bu tahsilata karşı <span className="text-white font-bold">48 saat</span> içinde itiraz edebilirsin; itiraz halinde durum OYNA yönetimi tarafından incelenir.</p>
-                <p>Hizmet verebilmek için hesabında en az <span className="text-green-400 font-extrabold">500₺ teminat</span> bulundurmalısın — bu bakiye ceza tahsilatının güvencesidir.</p>
-                <p className="text-white/80 font-bold pt-1">Eline geçecek: {contractModalReq.providerAmount}₺ (brüt {contractModalReq.fee}₺)</p>
+                <p>Hizmet verebilmek için hesabında en az <span className="text-green-400 font-extrabold">{money(GK_MIN_TEMINAT)} teminat</span> bulundurmalısın — bu bakiye ceza tahsilatının güvencesidir.</p>
+                <p className="text-white/80 font-bold pt-1">Eline geçecek: {money(contractModalReq.providerAmount)} (brüt {money(contractModalReq.fee)})</p>
               </div>
               <label className="flex items-start gap-2.5 mt-4 cursor-pointer select-none">
                 <button onClick={() => setContractChecked(v => !v)}
                   className={`mt-0.5 w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-colors ${contractChecked ? 'bg-green-500 border-green-500' : 'border-white/25 bg-white/5'}`}>
                   {contractChecked && <Check size={13} className="text-black" strokeWidth={3} />}
                 </button>
-                <span className="text-[0.6875rem] text-white/70 leading-relaxed">Sözleşmeyi okudum, no-show cezasını ve 500₺ teminat şartını kabul ediyorum.</span>
+                <span className="text-[0.6875rem] text-white/70 leading-relaxed">Sözleşmeyi okudum, no-show cezasını ve {money(GK_MIN_TEMINAT)} teminat şartını kabul ediyorum.</span>
               </label>
               <div className="flex gap-2 mt-5">
                 <button disabled={!!respondingId} onClick={() => setContractModalReq(null)}

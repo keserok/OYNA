@@ -6,6 +6,7 @@ import { auth } from '../supabaseAuth';
 import { supabase } from '../supabaseClient';
 import { formatTRY } from '../utils/formatTRY';
 import { readTicketCache, writeTicketCache, type TicketSnapshot } from '../utils/ticketCache';
+import { formatTRYAmount } from '../utils/formatTRY';
 
 /**
  * DİJİTAL BİLET — DÜRÜST (C4).
@@ -248,8 +249,8 @@ const MatchTicket: React.FC<MatchTicketProps> = ({ onBack }) => {
                   {payState === 'PARTIAL' ? 'Ödenen kapora' : payState === 'PAID' ? 'Ödendi' : 'Ödenen'}
                 </span>
                 <span className="text-black font-extrabold font-numeric">
-                  {formatTRY(Number(booking.paid_amount) || 0)}₺
-                  {Number(booking.price) > 0 && <span className="text-gray-600"> / {formatTRY(Number(booking.price))}₺</span>}
+                  {formatTRYAmount(Number(booking.paid_amount) || 0)}
+                  {Number(booking.price) > 0 && <span className="text-gray-600"> / {formatTRYAmount(Number(booking.price))}</span>}
                 </span>
               </div>
             )}

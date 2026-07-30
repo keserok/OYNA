@@ -66,7 +66,7 @@ const DeleteAccountModal: React.FC<{
     // Cihaz-hesap bayrağını temizle: bu cihaz artık kayıt-öncelikli auth ekranı
     // görür. (Çıkışta temizlenmez; yalnızca silme talebinde.)
     clearHasAccount();
-    setToast({ message: `Silme talebiniz alındı. ${waitDays} gün içinde hesabınız silinecek.`, variant: 'success' });
+    setToast({ message: `Silme talebin alındı. ${waitDays} gün içinde hesabın silinecek.`, variant: 'success' });
     setTimeout(() => { onConfirmed(); }, 2000);
   };
 
@@ -150,7 +150,7 @@ const DeleteAccountModal: React.FC<{
                 onClick={() => setStep(2)}
                 className="w-full h-12 rounded-2xl font-extrabold text-sm bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30 transition-colors"
               >
-                Evet, Devam Et
+                Hesabı Sil
               </button>
               <button
                 onClick={onClose}
@@ -178,7 +178,7 @@ const DeleteAccountModal: React.FC<{
                 disabled={confirmText !== 'HESABIMI SİL' || loading}
                 className="w-full h-12 rounded-2xl font-extrabold text-sm bg-red-600 text-white disabled:opacity-40 transition-opacity"
               >
-                {loading ? 'İŞLENİYOR...' : 'Hesabımı Kalıcı Olarak Sil'}
+                {loading ? 'İŞLENİYOR…' : 'Hesabımı Kalıcı Olarak Sil'}
               </button>
               <button
                 onClick={onClose}

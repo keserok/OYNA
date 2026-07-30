@@ -195,7 +195,6 @@ const ServiceApplication: React.FC<ServiceApplicationProps> = ({ role, onSubmitt
     }
     if (!canSubmit) {
       setSubmitAttempted(true);
-      if (navigator.vibrate) navigator.vibrate(80);
       return;
     }
     setError(null);
@@ -242,7 +241,6 @@ const ServiceApplication: React.FC<ServiceApplicationProps> = ({ role, onSubmitt
       }
       if (queueErr) throw queueErr;
 
-      if (navigator.vibrate) navigator.vibrate([40, 60, 120]);
       onSubmitted();
     } catch (err: any) {
       console.error('[ServiceApplication] başvuru hatası:', err);
@@ -626,8 +624,8 @@ const ServiceApplication: React.FC<ServiceApplicationProps> = ({ role, onSubmitt
                 maxLength={280}
                 className="bg-transparent w-full outline-none text-white font-medium placeholder:text-ink-4 text-sm resize-none"
                 placeholder={isGk
-                  ? 'Refleks ve pozisyon almada uzmanım. Penaltı kurtarma oranım %40...'
-                  : 'FIFA lisanslı hakem. 150+ maç deneyimi. Diyalog temelli yaklaşım...'}
+                  ? 'Refleks ve pozisyon almada uzmanım. Penaltı kurtarma oranım %40…'
+                  : 'FIFA lisanslı hakem. 150+ maç deneyimi. Diyalog temelli yaklaşım…'}
               />
             </div>
             <div className="flex items-center justify-between mt-1 ml-1">
@@ -651,8 +649,8 @@ const ServiceApplication: React.FC<ServiceApplicationProps> = ({ role, onSubmitt
                 maxLength={500}
                 className="bg-transparent w-full outline-none text-white font-medium placeholder:text-ink-4 text-sm resize-none"
                 placeholder={isGk
-                  ? 'Neden kaleci olmak istiyorsun? Kısaca anlat...'
-                  : 'Neden hakem olmak istiyorsun? Kısaca anlat...'}
+                  ? 'Neden kaleci olmak istiyorsun? Kısaca anlat…'
+                  : 'Neden hakem olmak istiyorsun? Kısaca anlat…'}
               />
             </div>
             <div className="flex items-center justify-between mt-1 ml-1">

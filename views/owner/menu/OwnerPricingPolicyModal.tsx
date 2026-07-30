@@ -11,6 +11,7 @@ import { useOwnerToast } from '../components/useOwnerToast';
 import { OwnerFullscreenModal } from './OwnerModalFrame';
 import type { PitchCourt, PitchTariff } from '../../../types';
 import { ALLOWED_SLOT_MINUTES, buildSlotGrid, slotLabel } from '../../../shared/slotGrid';
+import { money } from '../finance/financeUi';
 
 // Kapora saatlik ücretin %10–%50'si aralığında olmalı (Karar #34).
 const DEPOSIT_MIN_PCT = 0.1;
@@ -278,7 +279,7 @@ export const OwnerPricingPolicyModal: React.FC<Props> = ({
   };
 
   const depositRange = (price: number) =>
-    price > 0 ? `₺${Math.round(price * DEPOSIT_MIN_PCT)}–₺${Math.round(price * DEPOSIT_MAX_PCT)}` : '';
+    price > 0 ? `${money(Math.round(price * DEPOSIT_MIN_PCT))}–${money(Math.round(price * DEPOSIT_MAX_PCT))}` : '';
 
   /**
    * TÜRETİLMİŞ ÇALIŞMA SAATLERİ — sunucudaki derive_pitch_working_hours ile
@@ -431,7 +432,7 @@ export const OwnerPricingPolicyModal: React.FC<Props> = ({
         )}
 
         {isLoading ? (
-          <p className="text-center text-gray-500 text-sm py-8">Tarifeler yükleniyor...</p>
+          <p className="text-center text-gray-500 text-sm py-8">Tarifeler yükleniyor…</p>
         ) : (
           <div className="space-y-4">
             {rows.map((tariff) => (

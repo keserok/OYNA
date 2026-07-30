@@ -216,7 +216,7 @@ describe('Para yükleme ekranı çıkış maliyetini yazar (BULGU-086)', () => {
 
   it('kesinti yüzdesi ve minimum SUNUCUDAN gelir, sabit yazılmaz', () => {
     expect(wallet).toContain('%${cashoutPreview.fee_pct}');
-    expect(wallet).toContain('${fmtInt(cashoutPreview.min)}');
+    expect(wallet).toContain('${money(cashoutPreview.min)}');
   });
 
   it('çekim kapalıyken kapalı olduğu yazılır (karar S6)', () => {

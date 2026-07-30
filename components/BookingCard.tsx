@@ -6,6 +6,7 @@ import {
 import type { MyBooking } from '../services/playerBookingService';
 import { canCancel, shortTime } from '../services/playerBookingService';
 import { formatCapacityRange } from '../shared/pitchShowcaseMapper';
+import { formatTRYShort, formatTRYAmount } from '../utils/formatTRY';
 
 // Maçlarım hub'ındaki rezervasyon kartı — MatchJoinCard'ın cam diliyle uyumlu.
 // Para = altın (#FACC15) kuralı; rakamlar Space Grotesk (.font-numeric).
@@ -95,9 +96,9 @@ export const BookingCard: React.FC<BookingCardProps> = ({
           <div className="flex items-center justify-between mt-3 text-xs">
             <span className="text-ink-4 font-bold uppercase tracking-wide">Tutar</span>
             <span className="text-[#FACC15] font-extrabold font-numeric">
-              ₺{b.price.toLocaleString('tr-TR')}
+              {formatTRYShort(b.price)}
               {b.deposit_amount > 0 && (
-                <span className="text-ink-4 font-bold"> · Kapora ₺{b.deposit_amount.toLocaleString('tr-TR')}</span>
+                <span className="text-ink-4 font-bold"> · Kapora {formatTRYAmount(b.deposit_amount)}</span>
               )}
             </span>
           </div>
@@ -128,8 +129,8 @@ export const BookingCard: React.FC<BookingCardProps> = ({
             }`}
           >
             {paying
-              ? (<><Loader2 size={14} className="animate-spin" /> İşleniyor...</>)
-              : (<><CreditCard size={14} /> Kaporayı Öde (<span className="font-numeric">₺{depositRemaining.toLocaleString('tr-TR')}</span>)</>)}
+              ? (<><Loader2 size={14} className="animate-spin" /> İşleniyor…</>)
+              : (<><CreditCard size={14} /> Kaporayı Öde (<span className="font-numeric">{formatTRYAmount(depositRemaining)}</span>)</>)}
           </button>
         </div>
       )}

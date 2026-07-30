@@ -85,7 +85,7 @@ export const OwnerKpiGrid: React.FC<OwnerKpiGridProps> = ({ items, columns = 2 }
               {item.value}
             </p>
             {(item.sublabel || item.trendLabel) && (
-              <div className={`flex items-center gap-1 text-[10px] font-bold mt-2 w-fit px-2 py-0.5 rounded-lg ${accent.badge}`}>
+              <div className={`flex items-center gap-1 text-[0.8125rem] font-bold mt-2 w-fit px-2 py-0.5 rounded-lg ${accent.badge}`}>
                 {item.trend === 'up' ? <TrendingUp size={11} /> : null}
                 {item.trendLabel ?? item.sublabel}
               </div>
@@ -113,7 +113,7 @@ export const OwnerCommandStrip: React.FC<OwnerCommandStripProps> = ({
 }) => (
   <div className="flex gap-2 overflow-x-auto pb-1 mb-5 -mx-1 px-1 scrollbar-hide">
     <span
-      className={`shrink-0 px-3 py-1.5 rounded-full border text-[10px] font-bold ${
+      className={`shrink-0 min-h-[44px] px-4 inline-flex items-center rounded-full border text-[0.8125rem] font-bold ${
         isFacilityOpen
           ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
           : 'bg-red-500/10 border-red-500/20 text-red-400'
@@ -125,7 +125,7 @@ export const OwnerCommandStrip: React.FC<OwnerCommandStripProps> = ({
       <button
         type="button"
         onClick={onPendingClick}
-        className="shrink-0 px-3 py-1.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-[10px] font-extrabold text-amber-200 flex items-center gap-1"
+        className="shrink-0 min-h-[44px] px-4 rounded-full bg-amber-500/15 border border-amber-500/30 text-[0.8125rem] font-extrabold text-amber-200 flex items-center gap-1"
       >
         <Clock size={11} />
         {pendingCount} onay bekliyor
@@ -135,7 +135,7 @@ export const OwnerCommandStrip: React.FC<OwnerCommandStripProps> = ({
       <button
         type="button"
         onClick={onCalendarClick}
-        className="shrink-0 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-[10px] font-bold text-slate-300 flex items-center gap-1"
+        className="shrink-0 min-h-[44px] px-4 rounded-full bg-white/5 border border-white/10 text-[0.8125rem] font-bold text-slate-300 flex items-center gap-1"
       >
         <CalendarCheck size={11} />
         Takvime git

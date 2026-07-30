@@ -10,7 +10,6 @@ type AnimatedButtonProps<T extends React.ElementType> = {
   className?: string;
   variant?: ButtonVariant;
   size?: ButtonSize;
-  haptic?: boolean;
   disabled?: boolean;
   isLoading?: boolean;
   ariaLabel?: string;
@@ -23,7 +22,6 @@ export const AnimatedButton = <T extends React.ElementType = 'button'>({
   className = '',
   variant = 'primary',
   size = 'md',
-  haptic = true,
   disabled = false,
   isLoading = false,
   ariaLabel,
@@ -41,10 +39,9 @@ export const AnimatedButton = <T extends React.ElementType = 'button'>({
       return;
     }
 
-    // Light tap haptic vibration
-    if (haptic && typeof navigator !== 'undefined' && navigator.vibrate) {
-      navigator.vibrate(40);
-    }
+    // IP-10: burada eskiden her dokunuşta titreşim tetikleniyordu. Titreşim
+    // uygulamadan tamamen kaldırıldı (kullanıcı kararı); geri bildirim yalnız
+    // görseldir: whileTap + index.css'teki global :active parlaklık düşüşü.
 
     // Create ripple bubble
     if (elementRef.current) {
@@ -66,7 +63,7 @@ export const AnimatedButton = <T extends React.ElementType = 'button'>({
   };
 
   // Base theme classes
-  const baseClasses = 'relative overflow-hidden font-extrabold uppercase tracking-wider transition-all duration-200 outline-none flex items-center justify-center select-none active:scale-[0.98]';
+  const baseClasses = 'relative overflow-hidden font-extrabold uppercase tracking-wider transition-all duration-200 outline-none flex items-center justify-center select-none';
   
   // Accessibility focus styling
   const focusClasses = 'focus-visible:ring-2 focus-visible:ring-[#39FF14] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0A0E14]';
@@ -83,7 +80,7 @@ export const AnimatedButton = <T extends React.ElementType = 'button'>({
   const sizeClasses = {
     // IP-08: buton etiketi okunur metindir → 11px taban (10px yalnız BÜYÜK HARF
     // + harf aralıklı etiketlerde meşru, burada metin serbest geliyor).
-    sm: 'px-3 py-1.5 text-[0.6875rem] rounded-lg min-h-[36px]',
+    sm: 'px-3 py-2 text-[0.6875rem] rounded-lg min-h-[44px]',
     md: 'px-5 py-3 text-xs rounded-xl min-h-[44px] min-w-[44px]',
     lg: 'px-8 py-4 text-sm rounded-2xl min-h-[52px] min-w-[52px]',
     custom: ''

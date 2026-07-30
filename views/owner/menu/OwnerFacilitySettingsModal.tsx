@@ -193,7 +193,7 @@ export const OwnerFacilitySettingsModal: React.FC<Props> = ({
       setActiveTab('location');
       notify('Konum bulundu — pini kontrol edip gerekiyorsa ince ayar yapın.', 'success');
     } catch {
-      notify('Konum servisi şu an yanıt vermedi. Pini haritadan elle yerleştirebilirsiniz.', 'error');
+      notify('Konum servisi şu an yanıt vermedi. Pini haritadan elle yerleştirebilirsin.', 'error');
     } finally {
       setGeocoding(false);
     }
@@ -361,7 +361,7 @@ export const OwnerFacilitySettingsModal: React.FC<Props> = ({
           <div className="bg-blue-500/10 border border-blue-500/20 p-4 rounded-2xl flex items-start gap-3">
             <Clock size={18} className="text-blue-400 shrink-0 mt-0.5" />
             <p className="text-xs text-blue-200">
-              Onay bekleyen bir ad/konum değişikliği talebiniz var. Admin onaylayınca vitrine yansır.
+              Onay bekleyen bir ad/konum değişikliği talebin var. Admin onaylayınca vitrine yansır.
             </p>
           </div>
         )}
@@ -390,7 +390,7 @@ export const OwnerFacilitySettingsModal: React.FC<Props> = ({
                 onChange={(e) => setDescription(e.target.value.slice(0, DESC_MAX))}
                 rows={4}
                 className="w-full bg-[#161B22] border border-white/5 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-blue-500/40 resize-none"
-                placeholder="Zemin ve aydınlatmanızı, ulaşım kolaylığını ve öne çıkan imkanlarınızı anlatın. Örn: 'Kapalı ve açık iki sahamız, profesyonel zemin ve ışıklandırmamız var; duş ve soyunma odaları tam donanımlıdır.'"
+                placeholder="Zemini, aydınlatmayı, ulaşım kolaylığını ve öne çıkan imkanları anlat. Örn: 'Kapalı ve açık iki saha, profesyonel zemin ve ışıklandırma var; duş ve soyunma odaları tam donanımlı.'"
               />
             </div>
             <div className="grid grid-cols-2 gap-3">

@@ -7,6 +7,7 @@ import {
   Target, MousePointer2, Trophy, Activity, Calendar, CalendarCheck, Star, TrendingUp, Flame, Zap, PenLine, Hand
 } from 'lucide-react';
 import { OynaLogo } from '../components/OynaLogo';
+import { useLowMotion } from '../hooks/useLowMotion';
 import { AppView, Goalkeeper, Referee } from '../types';
 import { AnimatedButton } from '../components/AnimatedButton';
 import { UserAvatar } from '../components/common/UserAvatar';
@@ -37,7 +38,7 @@ const DashboardSkeleton = () => (
     <div className="h-24 w-full bg-gray-800 rounded-[32px]"></div>
     <div className="flex justify-center items-center gap-2 mt-10">
       <div className="w-2 h-2 bg-[#FACC15] rounded-full animate-bounce"></div>
-      <p className="text-[#FACC15] text-xs font-bold uppercase tracking-widest">Sistem Sahayı Hazırlıyor...</p>
+      <p className="text-[#FACC15] text-xs font-bold uppercase tracking-widest">Sistem Sahayı Hazırlıyor…</p>
     </div>
   </div>
 );
@@ -71,6 +72,10 @@ interface MatchCountdownProps {
 }
 
 const MatchCountdown: React.FC<MatchCountdownProps> = ({ onClick, matchTitle, matchLocation, matchTime, matchDate, isDraft, isCancelled, isLive }) => {
+  // IP-11: sistem "hareketi azalt" derse dekoratif döngüler çizilmez. Geri
+  // sayım nabzı (TimerBox) BUNA BAKMAZ — maçın canlı/taslak olduğunu taşıyan
+  // tek animasyon odur, bilgidir.
+  const lowMotion = useLowMotion();
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
 
   useEffect(() => {
@@ -156,7 +161,7 @@ const MatchCountdown: React.FC<MatchCountdownProps> = ({ onClick, matchTitle, ma
              backgroundPosition: ['0% 0%', '100% 100%', '0% 0%'],
              scale: [1, 1.15, 1]
            }}
-           transition={{ duration: 15, repeat: Infinity, ease: 'linear' }}
+           transition={lowMotion ? { duration: 0 } : { duration: 15, repeat: Infinity, ease: 'linear' }}
            className="absolute inset-0 opacity-40 mix-blend-screen"
            style={{
              backgroundImage: isCancelled
@@ -177,7 +182,7 @@ const MatchCountdown: React.FC<MatchCountdownProps> = ({ onClick, matchTitle, ma
           {isCancelled ? (
             <motion.div
               animate={{ y: ['-100%', '250%'] }}
-              transition={{ duration: 3.5, repeat: Infinity, ease: 'linear' }}
+              transition={lowMotion ? { duration: 0 } : { duration: 3.5, repeat: Infinity, ease: 'linear' }}
               className="absolute left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-red-500 to-transparent pointer-events-none z-10"
               style={{
                 boxShadow: '0 0 10px 2px rgba(239, 68, 68, 0.8), 0 0 20px 4px rgba(239, 68, 68, 0.4)'
@@ -186,7 +191,7 @@ const MatchCountdown: React.FC<MatchCountdownProps> = ({ onClick, matchTitle, ma
           ) : (isDraft || isLive || !hasDays) && (
             <motion.div
               animate={{ y: ['-100%', '200%'] }}
-              transition={{ duration: 2.5, repeat: Infinity, ease: 'linear' }}
+              transition={lowMotion ? { duration: 0 } : { duration: 2.5, repeat: Infinity, ease: 'linear' }}
               className={`absolute left-0 right-0 h-1/2 bg-gradient-to-b from-transparent pointer-events-none ${isLive ? 'to-[#39FF14]/15' : isDraft ? 'to-amber-500/20' : 'to-red-500/20'}`}
               style={{ borderBottom: isLive ? '1.5px solid rgba(57,255,20,0.8)' : isDraft ? '1px solid rgba(245,158,11,0.5)' : '1px solid rgba(239,68,68,0.5)' }}
             />
@@ -202,7 +207,7 @@ const MatchCountdown: React.FC<MatchCountdownProps> = ({ onClick, matchTitle, ma
              <div className="flex items-center gap-2.5 px-3.5 py-1.5 rounded-full bg-black/40 border border-white/5 backdrop-blur-md">
                <motion.div
                  animate={{ opacity: [1, 0.4, 1], scale: [1, 1.2, 1] }}
-                 transition={{ duration: 1.5, repeat: Infinity }}
+                 transition={lowMotion ? { duration: 0 } : { duration: 1.5, repeat: Infinity }}
                  className={`w-2.5 h-2.5 rounded-full ${isCancelled ? 'bg-red-500 shadow-[0_0_12px_rgba(239,68,68,0.9)]' : isLive ? 'bg-[#39FF14] shadow-[0_0_12px_rgba(57,255,20,0.9)] animate-pulse' : isDraft ? 'bg-amber-500 shadow-[0_0_12px_rgba(245,158,11,0.9)]' : hasDays ? 'bg-green-500' : 'bg-red-500 shadow-[0_0_12px_rgba(239,68,68,0.9)]'}`}
                />
                <span className={`text-[0.625rem] font-extrabold uppercase tracking-[0.25em] ${themeColor}`}>
@@ -279,21 +284,24 @@ const itemVariants = {
 
 
 const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack }) => {
+  // IP-11: yalnız sistem tercihi. Normal cihazda ekranın görünümü DEĞİŞMEZ —
+  // 35 sonsuz döngü olduğu gibi çalışır (kullanıcı kararı: 2a).
+  const lowMotion = useLowMotion();
   const { 
     initialLoadComplete, 
     globalTexts, 
     unreadNotificationsCount, 
     adminMatches, 
     myTeams,
-    setActiveDraftId,
     setSelectedMatch,
     adminUsers,
     setNewMatchBadge,
     setIsNotificationsOpen
   } = useAppStore();
   const [isLoading, setIsLoading] = useState(!initialLoadComplete);
-  const myDrafts = React.useMemo(() => adminMatches.filter(m => m.status === 'DRAFT'), [adminMatches]);
-  const myUpcomingMatches = React.useMemo(() => adminMatches.filter(m => m.status !== 'DRAFT'), [adminMatches]);
+  // IP-14: myDrafts/myUpcomingMatches ve taslak seçici SİLİNDİ — hiçbiri JSX'te
+  // kullanılmıyordu. Aktif taslak kimliği repoda hiçbir zaman bir değer almadığı
+  // için "yarım kalan maçtan devam et" akışı fiilen hiç çalışmadı.
 
   const { all: userMatches, closest: closestMatch, currentUserUid } = useMyMatches();
 
@@ -413,122 +421,11 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack }) => {
         </div>
       </header>
 
-      {/* 2. MAÇLARIM Pulsing Button */}
-      <div className="px-6 mb-6 relative z-20">
-          <motion.div
-            onClick={() => {
-              setNewMatchBadge(false);
-              // Her zaman Maçlarım hub'ı: boş durumda hub'ın kendi "Top Oyna" CTA'sı yönlendirir.
-              onNavigate('MY_MATCHES');
-            }}
-            initial={{ opacity: 0, y: -20, scale: 0.95 }}
-            animate={{
-              opacity: 1,
-              y: 0,
-              scale: 1,
-              ...(userMatches.length > 0 ? {
-                boxShadow: [
-                  `0 0 15px rgba(239, 68, 68, ${0.1 + (1.8 - closestMatchPulse) * 0.15})`,
-                  `0 0 45px rgba(239, 68, 68, ${0.35 + (1.8 - closestMatchPulse) * 0.35})`,
-                  `0 0 15px rgba(239, 68, 68, ${0.1 + (1.8 - closestMatchPulse) * 0.15})`
-                ]
-              } : { boxShadow: '0 0 0px transparent' })
-            }}
-            transition={{
-              boxShadow: {
-                duration: closestMatchPulse,
-                repeat: userMatches.length > 0 ? Infinity : 0,
-                ease: 'easeInOut'
-              }
-            }}
-            whileHover={{ scale: 1.015 }}
-            whileTap={{ scale: 0.985 }}
-            className="w-full relative rounded-[28px] cursor-pointer group overflow-hidden border border-white/10 hover:border-white/20 transition-all bg-[#0F1319] bg-gradient-to-r from-[#0F1319] to-[#141A22]"
-          >
-            {/* Full button background pulsing red glow (acts like counter, increases with match closeness) */}
-            <motion.div
-              animate={userMatches.length > 0 ? {
-                opacity: [0.03, 0.15 + (1.8 - closestMatchPulse) * 0.12, 0.03]
-              } : { opacity: 0.02 }}
-              transition={{
-                duration: closestMatchPulse,
-                repeat: userMatches.length > 0 ? Infinity : 0,
-                ease: 'easeInOut'
-              }}
-              className="absolute inset-0 bg-[#ef4444] pointer-events-none z-0"
-            />
-
-            {/* Glowing pulsing border effect */}
-            <motion.div
-              animate={userMatches.length > 0 ? {
-                opacity: [0.15, 0.45, 0.15],
-                boxShadow: [
-                  'inset 0 0 15px rgba(239, 68, 68, 0.1)',
-                  'inset 0 0 25px rgba(239, 68, 68, 0.25)',
-                  'inset 0 0 15px rgba(239, 68, 68, 0.1)'
-                ]
-              } : { opacity: 0.08, boxShadow: 'inset 0 0 15px rgba(255,255,255,0.04)' }}
-              transition={{
-                duration: closestMatchPulse,
-                repeat: userMatches.length > 0 ? Infinity : 0,
-                ease: 'easeInOut'
-              }}
-              className="absolute inset-0 rounded-[28px] pointer-events-none z-0"
-            />
-
-            {/* Red Laser Scan Line — yalnız yaklaşan maç varken (Soru 8). */}
-            {userMatches.length > 0 && (
-            <motion.div
-              animate={{ top: ['-40px', '100%', '-40px'] }}
-              transition={{
-                duration: 3.5,
-                repeat: Infinity,
-                ease: 'linear'
-              }}
-              className="absolute left-0 right-0 h-10 bg-gradient-to-b from-transparent via-red-500/30 to-transparent pointer-events-none z-10 top-0"
-              style={{
-                borderBottom: '3.5px solid rgba(239, 68, 68, 0.95)',
-                boxShadow: '0 8px 35px 4px rgba(239, 68, 68, 0.75)'
-              }}
-            />
-            )}
-
-            <div className="relative z-10 py-6 px-7 flex items-center justify-between gap-4">
-              <div className="flex items-center gap-4">
-                {userMatches.length > 0 ? (
-                  <div className="relative flex h-4 w-4 items-center justify-center shrink-0">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-red-600"></span>
-                  </div>
-                ) : (
-                  <div className="w-4 h-4 rounded-full bg-white/15 border border-white/20 shrink-0" />
-                )}
-
-                <div className="flex flex-col">
-                  <h3 className={`font-extrabold text-lg tracking-tighter italic uppercase leading-none ${userMatches.length > 0 ?'text-white' :'text-white/60'}`}>
-                    MAÇLARIM
-                  </h3>
-                  <span className={`text-xs font-medium uppercase tracking-wider mt-2 leading-none ${userMatches.length > 0 ?'text-gray-300' :'text-ink-4'}`}>
-                    {buttonSubtitle}
-                  </span>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3 shrink-0">
-                {currentUserProfile?.newMatchBadge && (
-                  <motion.span
-                    animate={{ scale: [1, 1.05, 1] }}
-                    transition={{ duration: 0.8, repeat: Infinity }}
-                    className="px-3 py-1.5 text-[0.625rem] font-extrabold tracking-widest text-[#0A0E14] bg-[#FACC15] rounded-xl shadow-[0_0_15px_rgba(250,204,21,0.6)] uppercase italic shrink-0"
-                  >
-                    YENİ MAÇ EKLENDİ
-                  </motion.span>
-                )}
-                <ChevronRight size={20} className="text-gray-400 group-hover:text-white group-hover:translate-x-0.5 transition-all" />
-              </div>
-            </div>
-          </motion.div>
-      </div>
+      {/* IP-14: büyük "MAÇLARIM" kartı KALDIRILDI — Maçlarım artık alt menünün
+          orta tuşu (kullanıcı kararı). Ana ekranın en üstünde ikinci bir kapı
+          tutmak, aynı yere iki ayrı yoldan giden bir arayüz demekti. Üstteki
+          takvim kısayolu duruyor: o Maçlarım'ı doğrudan REZERVASYONLAR
+          segmentinde açar — FAB'ın vermediği bir şey verir. */}
 
       {/* BENTO GRID LAYOUT */}
       <motion.main
@@ -559,7 +456,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack }) => {
           {/* Animated sweep — koyu tarafta neon yeşili vurgu */}
           <motion.div
             animate={{ backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'] }}
-            transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}
+            transition={lowMotion ? { duration: 0 } : { duration: 8, repeat: Infinity, ease: 'easeInOut' }}
             className="absolute inset-0 pointer-events-none opacity-40"
             style={{ background: 'radial-gradient(ellipse at 80% 50%, rgba(57,255,20,0.25) 0%, transparent 60%)', backgroundSize: '200% 200%' }}
           />
@@ -571,7 +468,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack }) => {
           <motion.div
             className="absolute inset-0 pointer-events-none"
             animate={{ x: ['-100%', '200%'] }}
-            transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut', repeatDelay: 4 }}
+            transition={lowMotion ? { duration: 0 } : { duration: 5, repeat: Infinity, ease: 'easeInOut', repeatDelay: 4 }}
             style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.12), transparent)', transform: 'skewX(-20deg)' }}
           />
 
@@ -579,7 +476,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack }) => {
           <div className="absolute inset-0 p-6 pr-[150px] flex items-center justify-between">
             <div className="relative z-10">
               <div className="flex items-center gap-2 mb-2">
-                <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ duration: 1.5, repeat: Infinity }}>
+                <motion.div animate={{ scale: [1, 1.2, 1] }} transition={lowMotion ? { duration: 0 } : { duration: 1.5, repeat: Infinity }}>
                   <Flame size={16} className="text-black fill-black drop-shadow-[0_0_6px_rgba(0,0,0,0.6)]" />
                 </motion.div>
                 <span className="text-black text-[0.625rem] font-extrabold uppercase tracking-[0.3em]">MAÇ BUL</span>
@@ -595,21 +492,21 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack }) => {
               {/* Dış halka */}
               <motion.div
                 animate={{ opacity: [0.4, 1, 0.4], scale: [1, 1.04, 1] }}
-                transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
+                transition={lowMotion ? { duration: 0 } : { duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
                 className="absolute inset-0 rounded-full border-2"
                 style={{ borderColor: 'rgba(250,204,21,0.6)', boxShadow: '0 0 20px rgba(250,204,21,0.4), inset 0 0 10px rgba(250,204,21,0.1)' }}
               />
               {/* İkinci parlama halkası */}
               <motion.div
                 animate={{ opacity: [0.1, 0.4, 0.1], scale: [1.05, 1.15, 1.05] }}
-                transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+                transition={lowMotion ? { duration: 0 } : { duration: 3, repeat: Infinity, ease: 'easeInOut' }}
                 className="absolute rounded-full border"
                 style={{ inset: '-6px', borderColor: 'rgba(250,204,21,0.2)' }}
               />
               {/* Rotate animasyonu ile logo */}
               <motion.div
                 animate={{ rotate: [0, 4, -4, 0] }}
-                transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
+                transition={lowMotion ? { duration: 0 } : { duration: 5, repeat: Infinity, ease: 'easeInOut' }}
                 className="relative z-10"
               >
                 <OynaLogo
@@ -642,7 +539,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack }) => {
           {/* Animated sweep — koyu tarafta neon yeşil vurgu */}
           <motion.div
             animate={{ backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'] }}
-            transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}
+            transition={lowMotion ? { duration: 0 } : { duration: 8, repeat: Infinity, ease: 'easeInOut' }}
             className="absolute inset-0 pointer-events-none opacity-40"
             style={{ background: 'radial-gradient(ellipse at 80% 50%, rgba(16,185,129,0.25) 0%, transparent 60%)', backgroundSize: '200% 200%' }}
           />
@@ -654,7 +551,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack }) => {
           <motion.div
             className="absolute inset-0 pointer-events-none"
             animate={{ x: ['-100%', '200%'] }}
-            transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut', repeatDelay: 4 }}
+            transition={lowMotion ? { duration: 0 } : { duration: 5, repeat: Infinity, ease: 'easeInOut', repeatDelay: 4 }}
             style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.12), transparent)', transform: 'skewX(-20deg)' }}
           />
 
@@ -689,12 +586,12 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack }) => {
           <div className="absolute inset-0 p-6 pr-[150px] flex items-center justify-between">
             <div className="relative z-10">
               <div className="flex items-center gap-2 mb-2">
-                <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ duration: 1.5, repeat: Infinity }}>
+                <motion.div animate={{ scale: [1, 1.2, 1] }} transition={lowMotion ? { duration: 0 } : { duration: 1.5, repeat: Infinity }}>
                   <MapPin size={16} className="text-white fill-none drop-shadow-[0_0_6px_rgba(255,255,255,0.4)]" />
                 </motion.div>
                 <span className="text-white/95 text-[0.625rem] font-extrabold uppercase tracking-[0.3em]">REZERVASYON</span>
               </div>
-              <h2 className="text-4xl font-extrabold text-white italic uppercase leading-[1.05] tracking-tighter" style={{ textShadow: '0 2px 8px rgba(16,185,129,0.3)' }}>Saha<br />Vitrini</h2>
+              <h2 className="text-4xl font-extrabold text-white italic uppercase leading-[1.05] tracking-tighter" style={{ textShadow: '0 2px 8px rgba(16,185,129,0.3)' }}>Sahalar</h2>
               <p className="text-[0.6875rem] text-emerald-200/90 mt-2 font-bold">Çevrendeki müsait halı sahaları incele.</p>
             </div>
 
@@ -705,21 +602,21 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack }) => {
               {/* Dış halka */}
               <motion.div
                 animate={{ opacity: [0.4, 1, 0.4], scale: [1, 1.04, 1] }}
-                transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
+                transition={lowMotion ? { duration: 0 } : { duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
                 className="absolute inset-0 rounded-full border-2"
                 style={{ borderColor: 'rgba(16,185,129,0.6)', boxShadow: '0 0 20px rgba(16,185,129,0.4), inset 0 0 10px rgba(16,185,129,0.1)' }}
               />
               {/* İkinci parlama halkası */}
               <motion.div
                 animate={{ opacity: [0.1, 0.4, 0.1], scale: [1.05, 1.15, 1.05] }}
-                transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+                transition={lowMotion ? { duration: 0 } : { duration: 3, repeat: Infinity, ease: 'easeInOut' }}
                 className="absolute rounded-full border"
                 style={{ inset: '-6px', borderColor: 'rgba(16,185,129,0.2)' }}
               />
               {/* Salınım animasyonu ile MapPin */}
               <motion.div
                 animate={{ rotate: [0, 4, -4, 0] }}
-                transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
+                transition={lowMotion ? { duration: 0 } : { duration: 5, repeat: Infinity, ease: 'easeInOut' }}
                 className="relative z-10 text-[#10B981]"
               >
                 <MapPin
@@ -733,7 +630,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack }) => {
 
         {/* ═══════════════════════════════════════════════════════════════════
             MAÇ OLUŞTUR — VERSİYON A (AKTİF)
-            Stil: Saha Vitrini / Maça Katıl / Rakip Bul ile aynı dil.
+            Stil: Sahalar / Maça Katıl / Rakip Bul ile aynı dil.
             Kırmızı dolgu, carbon-fibre doku, sol başlık + sağ yuvarlak ikon + kesikli kırmızı sınır çizgisi.
         ═══════════════════════════════════════════════════════════════════ */}
         <AnimatedButton
@@ -750,7 +647,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack }) => {
           {/* Animated sweep — koyu tarafta neon kırmızı/turuncu vurgu */}
           <motion.div
             animate={{ backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'] }}
-            transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}
+            transition={lowMotion ? { duration: 0 } : { duration: 8, repeat: Infinity, ease: 'easeInOut' }}
             className="absolute inset-0 pointer-events-none opacity-40"
             style={{ background: 'radial-gradient(ellipse at 80% 50%, rgba(255,122,0,0.25) 0%, transparent 60%)', backgroundSize: '200% 200%' }}
           />
@@ -762,7 +659,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack }) => {
           <motion.div
             className="absolute inset-0 pointer-events-none"
             animate={{ x: ['-100%', '200%'] }}
-            transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut', repeatDelay: 4 }}
+            transition={lowMotion ? { duration: 0 } : { duration: 5, repeat: Infinity, ease: 'easeInOut', repeatDelay: 4 }}
             style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.12), transparent)', transform: 'skewX(-20deg)' }}
           />
 
@@ -770,7 +667,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack }) => {
           <div className="absolute inset-0 p-6 pr-[150px] flex items-center justify-between">
             <div className="relative z-10">
               <div className="flex items-center gap-2 mb-2">
-                <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ duration: 1.5, repeat: Infinity }}>
+                <motion.div animate={{ scale: [1, 1.2, 1] }} transition={lowMotion ? { duration: 0 } : { duration: 1.5, repeat: Infinity }}>
                   <Calendar size={16} className="text-black drop-shadow-[0_0_6px_rgba(0,0,0,0.4)]" />
                 </motion.div>
                 <span className="text-black text-[0.625rem] font-extrabold uppercase tracking-[0.3em]">ORGANİZASYON</span>
@@ -786,21 +683,21 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack }) => {
               {/* Dış halka */}
               <motion.div
                 animate={{ opacity: [0.4, 1, 0.4], scale: [1, 1.04, 1] }}
-                transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
+                transition={lowMotion ? { duration: 0 } : { duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
                 className="absolute inset-0 rounded-full border-2"
                 style={{ borderColor: 'rgba(255,122,0,0.6)', boxShadow: '0 0 20px rgba(255,122,0,0.4), inset 0 0 10px rgba(255,122,0,0.1)' }}
               />
               {/* İkinci parlama halkası */}
               <motion.div
                 animate={{ opacity: [0.1, 0.4, 0.1], scale: [1.05, 1.15, 1.05] }}
-                transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+                transition={lowMotion ? { duration: 0 } : { duration: 3, repeat: Infinity, ease: 'easeInOut' }}
                 className="absolute rounded-full border"
                 style={{ inset: '-6px', borderColor: 'rgba(255,122,0,0.2)' }}
               />
               {/* Salınım animasyonu ile saha + takvim özel sembolü */}
               <motion.div
                 animate={{ rotate: [0, 4, -4, 0] }}
-                transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
+                transition={lowMotion ? { duration: 0 } : { duration: 5, repeat: Infinity, ease: 'easeInOut' }}
                 className="relative z-10 flex items-center justify-center"
               >
                 <svg width="72" height="72" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ filter: 'drop-shadow(0 0 12px rgba(255,122,0,0.8))' }}>
@@ -930,7 +827,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack }) => {
           <motion.div
             className="absolute inset-0"
             animate={{ backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'] }}
-            transition={{ duration: 22, repeat: Infinity, ease: 'easeInOut' }}
+            transition={lowMotion ? { duration: 0 } : { duration: 22, repeat: Infinity, ease: 'easeInOut' }}
             style={{ background: 'linear-gradient(135deg, #0a3d12 0%, #1a7a20 25%, #39FF14 45%, #0a2d0e 75%, #000 100%)', backgroundSize: '300% 300%' }}
           />
           <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-20 pointer-events-none" />
@@ -938,7 +835,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack }) => {
           <motion.div
             className="absolute inset-0 pointer-events-none"
             animate={{ x: ['-100%', '150%'] }}
-            transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut', repeatDelay: 6 }}
+            transition={lowMotion ? { duration: 0 } : { duration: 5, repeat: Infinity, ease: 'easeInOut', repeatDelay: 6 }}
             style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.09), transparent)', transform: 'skewX(-20deg)' }}
           />
           <div className="absolute inset-0 p-4 flex items-center justify-between">
@@ -967,7 +864,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack }) => {
           <motion.div
             className="absolute inset-0"
             animate={{ backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'] }}
-            transition={{ duration: 26, repeat: Infinity, ease: 'easeInOut', delay: 0.8 }}
+            transition={lowMotion ? { duration: 0 } : { duration: 26, repeat: Infinity, ease: 'easeInOut', delay: 0.8 }}
             style={{ background: 'linear-gradient(135deg, #020b18 0%, #0a2240 25%, #3b82f6 45%, #061228 75%, #000 100%)', backgroundSize: '300% 300%' }}
           />
           <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-20 pointer-events-none" />
@@ -975,7 +872,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack }) => {
           <motion.div
             className="absolute inset-0 pointer-events-none"
             animate={{ x: ['-100%', '150%'] }}
-            transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut', repeatDelay: 7 }}
+            transition={lowMotion ? { duration: 0 } : { duration: 6, repeat: Infinity, ease: 'easeInOut', repeatDelay: 7 }}
             style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.09), transparent)', transform: 'skewX(-20deg)' }}
           />
           <div className="absolute inset-0 p-4 flex items-center justify-between">
@@ -1021,7 +918,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack }) => {
                 '0 0 20px rgba(255,50,50,0.12), 0 0 60px rgba(255,30,30,0.05)'
               ]
             }}
-            transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
+            transition={lowMotion ? { duration: 0 } : { duration: 4, repeat: Infinity, ease: 'easeInOut' }}
           />
 
           {/* ── KATMAN 2: RADİKAL ÇERÇEVE — Dönen conic-gradient border ── */}
@@ -1033,7 +930,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack }) => {
                 background: 'conic-gradient(from 0deg, transparent 0%, transparent 20%, rgba(255,50,50,0.7) 35%, #FF3232 50%, rgba(255,50,50,0.7) 65%, transparent 80%, transparent 100%)'
               }}
               animate={{ rotate: 360 }}
-              transition={{ duration: 10, repeat: Infinity, ease: 'linear' }}
+              transition={lowMotion ? { duration: 0 } : { duration: 10, repeat: Infinity, ease: 'linear' }}
             />
             {/* İç maske — ince kenar çizgisi bırakır */}
             <div className="absolute inset-[1.5px] rounded-[31px]" style={{ background: 'linear-gradient(135deg, #0d1b3a 0%, #09132c 20%, #060b1b 50%, #03050d 80%, #000000 100%)' }} />
@@ -1079,7 +976,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack }) => {
           <motion.div
             className="absolute inset-0 pointer-events-none z-[5]"
             animate={{ x: ['-100%', '200%'] }}
-            transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut', repeatDelay: 5 }}
+            transition={lowMotion ? { duration: 0 } : { duration: 6, repeat: Infinity, ease: 'easeInOut', repeatDelay: 5 }}
             style={{ background: 'linear-gradient(90deg, transparent, rgba(255,50,50,0.05), rgba(255,255,255,0.03), transparent)', transform: 'skewX(-20deg)' }}
           />
 
@@ -1094,7 +991,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack }) => {
                     rotate: [0, 10, -10, 0],
                     scale: [1, 1.08, 1]
                   }}
-                  transition={{ duration: 5, repeat: Infinity }}
+                  transition={lowMotion ? { duration: 0 } : { duration: 5, repeat: Infinity }}
                   className="w-14 h-14 rounded-2xl flex items-center justify-center relative overflow-hidden"
                   style={{ 
                     background: 'rgba(255,50,50,0.06)', 
@@ -1106,7 +1003,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack }) => {
                   <motion.div
                     className="absolute left-0 right-0 h-[1px] pointer-events-none"
                     animate={{ top: ['0%', '100%', '0%'] }}
-                    transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
+                    transition={lowMotion ? { duration: 0 } : { duration: 3, repeat: Infinity, ease: 'linear' }}
                     style={{ background: 'linear-gradient(90deg, transparent, rgba(255,50,50,0.7), transparent)' }}
                   />
                   <Target size={28} className="relative z-10" style={{ color: '#FF3232', filter: 'drop-shadow(0 0 8px rgba(255,50,50,0.5))' }} />
@@ -1118,7 +1015,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack }) => {
                     opacity: [0.4, 0, 0.4],
                     scale: [1, 1.2, 1]
                   }}
-                  transition={{ duration: 2.5, repeat: Infinity, ease: 'easeOut' }}
+                  transition={lowMotion ? { duration: 0 } : { duration: 2.5, repeat: Infinity, ease: 'easeOut' }}
                   style={{ border: '1px solid rgba(255,50,50,0.25)' }}
                 />
               </div>
@@ -1142,7 +1039,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack }) => {
                 <div className="flex items-center gap-2 mb-1">
                   <motion.div
                     animate={{ opacity: [0.5, 1, 0.5] }}
-                    transition={{ duration: 2, repeat: Infinity }}
+                    transition={lowMotion ? { duration: 0 } : { duration: 2, repeat: Infinity }}
                   >
                     <Sparkles size={14} style={{ color: '#FF3232', filter: 'drop-shadow(0 0 4px rgba(255,50,50,0.5))' }} />
                   </motion.div>
@@ -1153,7 +1050,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack }) => {
               </div>
               <motion.div
                 animate={{ x: [0, 5, 0] }}
-                transition={{ duration: 1.5, repeat: Infinity }}
+                transition={lowMotion ? { duration: 0 } : { duration: 1.5, repeat: Infinity }}
                 className="p-3 rounded-2xl relative overflow-hidden group-hover:translate-x-1 group-hover:-translate-y-1 transition-all duration-300"
                 style={{ 
                   background: 'linear-gradient(135deg, #FF3232, #cc1a1a)',

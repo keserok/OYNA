@@ -37,6 +37,7 @@ export const Spinner: React.FC<SpinnerProps> = ({
   return (
     <span
       role="status"
+      aria-live="polite"
       aria-label={label}
       className={`oy-spinner${glow ? ' oy-spinner-glow' : ''}${className ? ` ${className}` : ''}`}
       style={{

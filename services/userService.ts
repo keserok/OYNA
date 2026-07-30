@@ -54,7 +54,12 @@ export interface MatchHistorySummary {
   date: string;
   pitchName: string;
   score: string;
-  result: 'WIN' | 'LOSS' | 'DRAW';
+  /**
+   * IP-18: `NO_SCORE` eklendi. Skoru hiç girilmemiş maç (auto_finalize_matches
+   * cron'u 3 saat sonra maçı skorsuz kapatıyor) eskiden `?? 0` yedeği yüzünden
+   * "0 - 0 / BERABERLİK" sayılıyor ve galibiyet oranını aşağı çekiyordu.
+   */
+  result: 'WIN' | 'LOSS' | 'DRAW' | 'NO_SCORE';
 }
 
 // ─── GK/Ref rolleri onay gerektiren roller ─────────────────────────────────
@@ -339,40 +344,43 @@ export const getWalletHistory = async (userId: string): Promise<WalletHistoryIte
 /**
  * Kullanıcının tamamlanmış maçlardaki geçmişini (home/away katılımına göre) döndürür.
  */
-export const getMatchHistory = async (userId: string): Promise<MatchHistorySummary[]> => {
+/**
+ * Profil maç geçmişi.
+ *
+ * IP-18: eskiden platformun TÜM tamamlanmış maçlarından ilk 50'si çekilip
+ * katılımcı süzgeci tarayıcıda uygulanıyordu — `userId` hiçbir sorgu filtresine
+ * girmiyordu. Platformda 50'den fazla tamamlanmış maç biriktiği gün kullanıcının
+ * kendi maçları o pencerenin dışına düşüyor ve geçmiş sessizce boşalıyordu.
+ * Artık süzgeç sunucuda: `get_my_match_history` katılımı `match_participants`
+ * ilişkisel tablosundan okur ve limiti filtreden SONRA uygular.
+ */
+export const getMatchHistory = async (_userId: string): Promise<MatchHistorySummary[]> => {
   try {
-    const { data, error } = await supabase
-      .from('matches')
-      .select('*')
-      .eq('status', 'COMPLETED')
-      .order('date', { ascending: false })
-      .limit(50);
-
+    // Kimlik sunucuda auth.uid()'den okunur; parametre imza uyumu için durur.
+    const { data, error } = await supabase.rpc('get_my_match_history', { p_limit: 50 });
     if (error) throw error;
 
-    return (data || [])
-      .map((row: any) => {
-        const slots = row.slots || [];
-        const awaySlots = row.away_slots || row.awaySlots || [];
-        const isAway = awaySlots.some((s: any) => s?.player?.id === userId);
-        const isHome = slots.some((s: any) => s?.player?.id === userId);
-        return { row, slots, awaySlots, isAway, isParticipant: isHome || isAway };
-      })
-      .filter(x => x.isParticipant)
-      .map(({ row, isAway }) => {
-        const homeScore = row.homeScore ?? row.home_score ?? 0;
-        const awayScore = row.awayScore ?? row.away_score ?? 0;
-        const result: 'WIN' | 'LOSS' | 'DRAW' = homeScore === awayScore
+    return (data ?? []).map((row: any): MatchHistorySummary => {
+      // Skor durumu SUNUCUNUN türettiği kolondan gelir (matches.score_status).
+      // Burada ikinci kez hesaplanmaz — iki ayrı doğruluk kaynağı olmaz.
+      const girildi = row.score_status === 'ENTERED';
+      const ev = row.homeScore as number | null;
+      const dep = row.awayScore as number | null;
+      const isAway = !!row.is_away;
+      const result: MatchHistorySummary['result'] = !girildi || ev === null || dep === null
+        ? 'NO_SCORE'
+        : ev === dep
           ? 'DRAW'
-          : (isAway ? awayScore > homeScore : homeScore > awayScore) ? 'WIN' : 'LOSS';
-        return {
-          id: row.id as string,
-          date: row.date as string,
-          pitchName: (row.pitchName || row.pitch_name || row.location || 'Saha') as string,
-          score: `${homeScore} - ${awayScore}`,
-          result,
-        };
-      });
+          : (isAway ? dep > ev : ev > dep) ? 'WIN' : 'LOSS';
+      return {
+        id: row.id as string,
+        date: row.date as string,
+        // `matches` tablosunda pitchName/pitch_name kolonu YOK — saha adı location'dan gelir.
+        pitchName: (row.location || row.title || 'Saha') as string,
+        score: result === 'NO_SCORE' ? 'Skor yok' : `${ev} - ${dep}`,
+        result,
+      };
+    });
   } catch (err) {
     console.error('[UserService] Maç geçmişi çekme hatası:', err);
     throw err;
