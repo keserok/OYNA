@@ -1,16 +1,31 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// Android surum ve kutuphane sabitleri
+//
+// Bu dosya Capacitor 8.4'un RESMI sablonuyla birebir hizalanmistir
+// (node_modules/@capacitor/cli/assets/android-template.tar.gz).
+// Onceki degerler Capacitor 6/7 doneminden kalmisti ve Capacitor 8'in
+// kendi kutuphanelerinin bekledigi surumlerin GERISINDEYDI.
+//
+// compileSdk/targetSdk 36 = Android 16.
+// Gerekce: Google Play, 31 Agustos 2026'dan itibaren yeni uygulamalarda ve
+// guncellemelerde API 36 zorunlu kiliyor.
+//
+// minSdk 24 (Android 7.0): Capacitor 8'in resmi tabani. Onceki 23 (Android 6.0)
+// degeri Capacitor 8 tarafindan test edilmeyen bir yapilandirmaydi.
+// ═══════════════════════════════════════════════════════════════════════════
 ext {
-    minSdkVersion = 23
-    compileSdkVersion = 35
-    targetSdkVersion = 35
-    androidxActivityVersion = '1.9.2'
-    androidxAppCompatVersion = '1.7.0'
-    androidxCoordinatorLayoutVersion = '1.2.0'
-    androidxCoreVersion = '1.15.0'
-    androidxFragmentVersion = '1.8.4'
-    coreSplashScreenVersion = '1.0.1'
-    androidxWebkitVersion = '1.12.1'
+    minSdkVersion = 24
+    compileSdkVersion = 36
+    targetSdkVersion = 36
+    androidxActivityVersion = '1.11.0'
+    androidxAppCompatVersion = '1.7.1'
+    androidxCoordinatorLayoutVersion = '1.3.0'
+    androidxCoreVersion = '1.17.0'
+    androidxFragmentVersion = '1.8.9'
+    coreSplashScreenVersion = '1.2.0'
+    androidxWebkitVersion = '1.14.0'
     junitVersion = '4.13.2'
-    androidxJunitVersion = '1.2.1'
-    androidxEspressoCoreVersion = '3.6.1'
-    cordovaAndroidVersion = '10.1.1'
+    androidxJunitVersion = '1.3.0'
+    androidxEspressoCoreVersion = '3.7.0'
+    cordovaAndroidVersion = '14.0.1'
 }

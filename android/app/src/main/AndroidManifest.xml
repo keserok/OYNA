@@ -35,6 +35,24 @@
 
         </activity>
 
+        <!--
+          Android 16 (API 36) davranış değişikliği: hedef sürüm 36 olan
+          uygulamalarda, en dar kenarı 600dp'den geniş ekranlarda (tablet,
+          katlanabilir telefonun açık hâli) android:screenOrientation="portrait"
+          YOK SAYILIR — yani uygulama yatay dönebilir hâle gelir.
+
+          OYNA'nın arayüzü telefon-dikey tasarlanmıştır; tablette yatay açılması
+          bozuk görünüme ve mağaza incelemesinde ret riskine yol açar. Aşağıdaki
+          özellik, dikey kilidini Android 16'da da geçerli kılar.
+
+          NOT: Bu bir GEÇİŞ kolaylığıdır; hedef sürüm 37 olduğunda geçerliliğini
+          yitirir. Kalıcı çözüm, arayüzün yatay/tablet düzenini gerçekten
+          desteklemesidir (lansman sonrası işi).
+        -->
+        <property
+            android:name="android.window.PROPERTY_COMPAT_ALLOW_RESTRICTED_ORIENTATION"
+            android:value="true" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
