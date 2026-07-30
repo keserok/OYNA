@@ -284,23 +284,64 @@ gidip geleceksin.
 | Portre kilidi | ✅ | |
 | Veri Güvenliği formu | 🟡 | **Senin işin** — §4.2 |
 | Kapalı test (12 kişi × 14 gün) | 🟡 | **Kişisel hesapsa zorunlu** — §4.2 |
-| `targetSdk` | ⚠️ | **35 — bkz. aşağıdaki uyarı** |
+| `targetSdk` | ✅ | **36 (Android 16)** — §3.1.1'de yükseltildi |
+| 16 KB sayfa boyutu (Android 15+) | ✅ | Eklentilerde native `.so` kütüphanesi yok — konu dışı |
 
-> ### ⚠️ ZAMAN BASKISI: `targetSdk` 35 → 36
->
-> Google Play, yeni uygulamalarda **31 Ağustos 2026'dan itibaren API 36
-> (Android 16)** istiyor. Proje şu an **35** hedefliyor.
->
-> **Bugün 30 Temmuz 2026 — elinde 32 gün var.**
->
-> Bu süre içinde çıkarsan sorun yok. Ama 31 Ağustos'tan sonra **güncelleme bile
-> gönderemezsin.** 36'ya yükseltme, Android derleme aracının (AGP 8.7.2 → 8.9+)
-> da yükseltilmesini gerektiriyor. Bu değişikliği bu oturumda **bilerek
-> yapmadım**: derleme yapamadığım için test edemezdim ve test edilmemiş bir
-> altyapı yükseltmesi lansman arifesinde en riskli hamledir.
->
-> **Önerim:** Önce 35 ile çık, ilk sürüm yayına girsin. Hemen ardından 36
-> yükseltmesini ayrı bir görev olarak, gerçek cihaz testiyle yap.
+### 3.1.1 API 36 (Android 16) yükseltmesi — YAPILDI
+
+**Sade özet:** Google Play'in 31 Ağustos 2026 son tarihi kapatıldı. Uygulama
+artık Android 16 hedefliyor.
+
+**Neden riskli değildi (beklediğimden kolay çıktı):** Yükseltmeyi tahminle
+yapmadım. Capacitor 8.4, kendi resmî Android şablonunu paketin içinde taşıyor
+(`node_modules/@capacitor/cli/assets/android-template.tar.gz`). Bu şablon
+**zaten API 36 için ayarlanmış.** Yani projeyi, Capacitor ekibinin test edip
+yayınladığı yapılandırmaya **hizaladım** — yeni ve denenmemiş bir kombinasyon
+üretmedim.
+
+Asıl bulgu şuydu: projenin Android ayarları **Capacitor 6/7 döneminden kalmıştı**
+ve Capacitor 8'in kendi kütüphanelerinin beklediğinin gerisindeydi.
+
+| Ayar | Önce | Sonra | Kaynak |
+|---|---|---|---|
+| `compileSdkVersion` | 35 | **36** | Capacitor 8.4 şablonu |
+| `targetSdkVersion` | 35 | **36** | Capacitor 8.4 şablonu |
+| `minSdkVersion` | 23 | **24** | Capacitor 8'in resmî tabanı |
+| Android Gradle Plugin | 8.7.2 | **8.13.0** | Capacitor 8.4 eklentilerinin **hepsi** bunu kullanıyordu |
+| Gradle | 8.11.1 | **8.14.3** | AGP 8.13 şartı |
+| google-services | 4.4.2 | **4.4.4** | Capacitor 8.4 şablonu |
+| androidx (activity/core/fragment/webkit…) | eski | güncel | Capacitor 8.4 şablonu |
+| cordova-android | 10.1.1 | **14.0.1** | Capacitor 8.4 şablonu |
+
+**Android 16'nın iki davranış değişikliği ve ne yaptığımız:**
+
+1. **Kenardan kenara ekran zorunluluğu.** API 36'da içerik durum çubuğunun ve
+   gezinme çubuğunun altına taşar; eski "bunu kapat" ayarı artık yok sayılıyor.
+   Bu, WebView tabanlı bir uygulama için **en büyük risk.**
+   → **Uygulama zaten hazırmış.** `index.html`'de `viewport-fit=cover` var ve
+   `index.css` tam bir güvenli-alan sınıf seti tanımlıyor (`--safe-top`,
+   `--safe-bottom`, `.pb-safe-nav` vb.) — bunlar arayüzde **30'dan fazla yerde**
+   kullanılıyor. Ek kod gerekmedi.
+
+2. **Büyük ekranlarda dikey kilidin yok sayılması.** API 36'da, geniş ekranlarda
+   (tablet, açık katlanabilir) `screenOrientation="portrait"` çalışmıyor.
+   OYNA'nın arayüzü telefon-dikey tasarlandığı için tablette yatay açılması
+   bozuk görünüme ve **mağaza reddine** yol açardı.
+   → `AndroidManifest.xml`'e `PROPERTY_COMPAT_ALLOW_RESTRICTED_ORIENTATION`
+   eklendi; dikey kilit korunuyor. (Bu bir geçiş kolaylığıdır, hedef sürüm 37
+   olduğunda geçersizleşir — kalıcı çözüm arayüzün tablet düzenini gerçekten
+   desteklemesidir.)
+
+> **`minSdk` 23 → 24 ne demek:** Android 6.0 (2015) cihazlar artık uygulamayı
+> kuramaz. 2026 itibarıyla bu cihazların payı binde birler seviyesindedir ve
+> Capacitor 8 zaten Android 7.0'ı taban kabul ediyor. Pratik etkisi yok denecek
+> kadar az; karşılığında **test edilmiş** yapılandırmaya geçildi.
+
+> ⚠️ **Bu değişiklik bu oturumda DERLENEMEDİ** (ortam Google sunucularına
+> kapalı). Doğrulayabildiklerim: `npx cap sync android` temiz geçti (13 eklenti),
+> tüm Gradle/XML dosyaları geçerli, eklentilerin tamamı yeni SDK değerlerini
+> `variables.gradle`'dan okuyor. **İlk CI derlemesi bu yükseltmenin gerçek
+> sınavıdır** — ve derleme, telefona kurmadan önce hatayı yakalar.
 
 ### 3.2 App Store kontrol listesi
 
@@ -471,16 +512,51 @@ dosyasını sürükle.
 
 ## FAZ 5 — STRATEJİK KARAR MATRİSİ
 
-### Karar 1 — targetSdk 35 ile mi çıkalım, 36'ya yükseltip mi?
+### Karar 1 — targetSdk 35 ile mi çıkalım, 36'ya yükseltip mi? ✅ KARAR VERİLDİ
 
-**Problem:** Play, 31 Ağustos 2026'dan sonra API 36 istiyor. 32 günün var.
+**Problem:** Play, 31 Ağustos 2026'dan sonra API 36 istiyor. 32 gün vardı.
 
-**Ekip önerisi:** 🟢 **35 ile ÇIK, hemen ardından 36'ya yükselt.**
+**Kurucu kararı (30 Temmuz 2026):** 🟢 **36'ya yükseltilsin.** Uygulandı — §3.1.1.
+
+**Sonradan öğrenilen:** Yükseltme, ilk tahminimden **belirgin şekilde düşük
+riskli** çıktı. Gerekçe: Capacitor 8.4'ün resmî Android şablonu zaten API 36
+için ayarlanmış durumda; proje sadece o test edilmiş şablona hizalandı, yeni
+bir kombinasyon icat edilmedi. Ayrıca API 36'nın en büyük riski olan kenardan
+kenara ekran zorunluluğu için uygulamanın CSS'i **zaten hazırdı.**
 
 | Seçenek | Artı | Eksi |
 |---|---|---|
-| **35 ile çık (önerilen)** | Bugün çıkabilirsin; test edilmiş yapı; risk minimum | 32 gün içinde yükseltme yapman şart |
-| Önce 36'ya yükselt | Tek seferde biter | AGP yükseltmesi + gerçek cihaz testi gerekir; lansmanı 1-2 hafta geciktirir; test edilmemiş yapıyla çıkma riski |
+| **36'ya yükselt (seçilen)** | 31 Ağustos son tarihi kapandı; Capacitor 8'in test edilmiş yapılandırmasına geçildi; bayat Android ayarları da düzeldi | Gerçek cihaz testi şart; Android 6.0 desteği düştü (etkisi binde birler) |
+| 35 ile çık, sonra yükselt | Bugün çıkabilirdin | 32 gün içinde aynı iş yine yapılacaktı — üstelik lansman sonrası, canlı kullanıcı varken (daha riskli an) |
+
+---
+
+### Karar 1b — Yükseltme sırasında çıkan bayat native yapılandırma
+
+**Problem:** `cap sync` çalıştırıldığında, depoya işlenmiş Capacitor dosyalarının
+**bayat** olduğu görüldü: `@capacitor/browser` ve `capacitor-native-settings`
+eklentileri Android derlemesine hiç dahil edilmemişti. İkisi de kodda kullanılıyor.
+
+**Etkisi:**
+- `@capacitor/browser` → **Android'de Google ile giriş çalışmaz.** `loginWithGoogle()`
+  native tarafta `Browser.open()` çağırıyor ve **yedek/try-catch yok** — çağrı hata
+  fırlatır, giriş tamamen başarısız olur.
+- `capacitor-native-settings` → Konum izni reddedildiğinde çıkan "Ayarlara git"
+  tuşu çizilir ama **hiçbir şey yapmaz** (bu akışta try-catch var, çökmez).
+
+**Neden kimse fark etmedi:** Bu hatalar tip kontrolüne ve birim testlerine
+**görünmez** — JS paketleri mevcut ve derleniyor; kırılan şey native köprü.
+Yalnız gerçek cihazda ortaya çıkar. Tipik "no-code/AI ile geliştirme" izi:
+paket kurulmuş, JS yazılmış, ama `cap sync` bir daha çalıştırılmamış.
+
+**Ekip önerisi:** 🟢 **Üretilen dosyalar depoya işlendi** (yapıldı) **ve CI her
+derlemede `cap sync` çalıştırıyor** (zaten öyle kurulmuştu) — yani hata bir daha
+sessizce geri gelemez.
+
+| Seçenek | Artı | Eksi |
+|---|---|---|
+| **Dosyaları işle + CI'da cap sync (seçilen)** | İki koruma katmanı; depo tutarlı | — |
+| Yalnız CI'ya güven | Daha az dosya | Android Studio'dan elle derleyen biri yine bozuk paket üretir |
 
 ---
 
@@ -650,6 +726,26 @@ açıkça belirt** (Kural 3.1.5(a)).
 | `android/app/src/main/res/xml/backup_rules.xml` | **YENİ** — Android 11 ve altı yedek kısıtı |
 | `android/app/build.gradle` | Sürüm numarası CI'dan geçilebilir hâle getirildi |
 | `.github/workflows/android-release.yml` | **YENİ** — tek düğmeyle AAB üretimi |
+| `android/variables.gradle` | **API 36** + Capacitor 8.4 şablonuna hizalama |
+| `android/build.gradle` | AGP 8.13.0, google-services 4.4.4 |
+| `android/gradle/wrapper/gradle-wrapper.properties` | Gradle 8.14.3 |
+| `android/app/src/main/AndroidManifest.xml` | Android 16 dikey kilit koruması |
+| `android/app/capacitor.build.gradle` | **Bayat dosya düzeltildi** — `browser` + `native-settings` eklendi |
+| `android/capacitor.settings.gradle` | Aynı — eksik iki eklenti bağlandı |
 | `docs/master/MASTER_LANSMAN_RAPORU_2026-07-30.md` | **YENİ** — bu rapor |
 
-**Doğrulama:** `tsc` temiz · 1283/1283 birim testi geçti · üretim derlemesi başarılı.
+**Doğrulama:** `tsc` temiz · 1283/1283 birim testi geçti · üretim derlemesi
+başarılı · `npx cap sync android` temiz (13 eklenti) · tüm Gradle/XML dosyaları
+sözdizimsel olarak geçerli.
+
+⚠️ **Android derlemesi bu ortamda yapılamadı** (ağ politikası Google sunucularını
+kapatıyor). API 36 yükseltmesinin gerçek sınavı **ilk CI derlemesidir.**
+
+---
+
+## SIRADAKİ ADIM — tek cümlede
+
+**GitHub → Settings → Billing → ödeme yöntemi ekle** (§4.1). Kotayı açtığın an
+Actions düğmesi çalışır; ilk derleme hem AAB'yi üretir hem de API 36
+yükseltmesini doğrular. Derleme kırmızı olursa hatayı bana getir, çözelim —
+**telefona kurmadan önce yakalanır, kullanıcıya asla yansımaz.**
