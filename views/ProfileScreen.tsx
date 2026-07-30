@@ -27,6 +27,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate,
     // Profili Düzenle (mevki + bio + doğum tarihi + ayak) modalı — TEK KAYNAK ProfileEditSheet
     const [showEditModal, setShowEditModal] = useState(false);
     const [savingEdit, setSavingEdit] = useState(false);
+    const [saveError, setSaveError] = useState<string | null>(null);
     const { setMyRoles, setSocialTarget } = useAppStore();
 
     const [profile, setProfile] = useState<OynaUser | null>(null);
@@ -107,11 +108,12 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate,
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [uid]);
 
-    const openEdit = () => setShowEditModal(true);
+    const openEdit = () => { setSaveError(null); setShowEditModal(true); };
 
     const saveEdit = async (v: ProfileEditValues) => {
         if (!uid) return;
         setSavingEdit(true);
+        setSaveError(null);
         try {
             await updateProfileBasics(uid, {
                 position: v.position,
@@ -137,7 +139,12 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate,
             setShowEditModal(false);
             await loadProfile();
         } catch (e) {
+            // İki aşamalı kayıt (basics + seviye RPC'si): ikincisi düşerse
+            // sessizce yutma — sheet açık kalır, sebep Kaydet'in üstünde görünür,
+            // kullanıcı yeniden dener. (Basics çoktan yazılmış olabilir; yeniden
+            // kayıt idempotenttir.)
             console.error('Profil güncelleme hatası:', e);
+            setSaveError('Kaydedilemedi. Bağlantını kontrol edip tekrar dene.');
         } finally {
             setSavingEdit(false);
         }
@@ -316,6 +323,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate,
                     selfSkill: profile?.selfSkill ?? null,
                 }}
                 saving={savingEdit}
+                errorText={saveError}
                 onSave={saveEdit}
                 onClose={() => setShowEditModal(false)}
             />

@@ -42,9 +42,11 @@ export interface ProfileEditSheetProps {
      * ALINAN AKRAN PUANLARI panelinden görür.) Varsayılan: düzenlenebilir.
      */
     selfSkillEditable?: boolean;
+    /** Kaydetme hatası — sheet açık kalır, sebep Kaydet'in üstünde görünür. */
+    errorText?: string | null;
 }
 
-export const ProfileEditSheet: React.FC<ProfileEditSheetProps> = ({ open, initial, saving, onSave, onClose, title, selfSkillEditable = true }) => {
+export const ProfileEditSheet: React.FC<ProfileEditSheetProps> = ({ open, initial, saving, onSave, onClose, title, selfSkillEditable = true, errorText }) => {
     const [photoError, setPhotoError] = useState<string | null>(null);
     const [pos, setPos] = useState(initial.position);
     const [bio, setBio] = useState(initial.bio);
@@ -198,8 +200,10 @@ export const ProfileEditSheet: React.FC<ProfileEditSheetProps> = ({ open, initia
                             );
                         })()}
                     </div>
-                    {/* Beyan geri alınamaz: seçili yıldıza dokunmak null'a ÇEVİRMEZ —
-                        sunucu kapısı (set_my_self_skill) NULL'u reddeder, UI da sunmaz. */}
+                    {/* KAYITLI beyan geri alınamaz (sunucu kapısı NULL'u reddeder) —
+                        ama henüz beyan YOKKEN yanlışlıkla dokunulan yıldız sheet
+                        içinde geri alınabilmeli: taslak seçim ikinci dokunuşla
+                        temizlenir, kayıtlı beyan temizlenemez. */}
                     <div className="mt-1.5 flex items-center gap-0.5">
                         {Array.from({ length: SELF_SKILL_MAX }).map((_, i) => {
                             const val = i + 1;
@@ -211,7 +215,9 @@ export const ProfileEditSheet: React.FC<ProfileEditSheetProps> = ({ open, initia
                                     type="button"
                                     disabled={!selfSkillEditable}
                                     aria-label={`Seviye ${val}`}
-                                    onClick={() => setSelfSkill(val)}
+                                    onClick={() => setSelfSkill(
+                                        initial.selfSkill == null && selfSkill === val ? null : val,
+                                    )}
                                     className="flex-1 flex justify-center py-1.5 active:scale-90 transition-transform disabled:active:scale-100 disabled:cursor-default"
                                 >
                                     <svg width={24} height={24} viewBox="0 0 24 24" aria-hidden="true">
@@ -261,6 +267,11 @@ export const ProfileEditSheet: React.FC<ProfileEditSheetProps> = ({ open, initia
                     <label className="text-[0.625rem] text-ink-4 font-bold uppercase tracking-wider ml-1">Kısa Tanıtım</label>
                     <textarea value={bio} onChange={(e) => setBio(e.target.value)} rows={3} maxLength={200} placeholder="Kendini birkaç kelimeyle anlat..." className="mt-1.5 w-full bg-[#161B22] border border-white/10 rounded-2xl px-4 py-3 text-white text-sm outline-none focus:border-primary/40 resize-none" />
                 </div>
+                {errorText && (
+                    <p className="text-[0.6875rem] font-bold text-red-400 text-center bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2">
+                        {errorText}
+                    </p>
+                )}
                 <button
                     onClick={() => void onSave({ position: pos.trim(), bio: bio.trim(), birthdate, gender, playStyle: style, avatarUrl: avatar, selfSkill })}
                     disabled={saving || uploading}

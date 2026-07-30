@@ -96,4 +96,33 @@ describe('ProfileEditSheet — beyan geri alınamaz', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Kaydet' }));
     expect(onSave.mock.calls[0][0].selfSkill).toBe(9);
   });
+
+  it('henuz beyan YOKKEN yanlis dokunus geri alinabilir: taslak ikinci dokunusla temizlenir', () => {
+    // KAYITLI beyan silinemez ama kaydedilmemiş taslak seçim tuzak olmamalı —
+    // yoksa yalnız bio düzenlemeye gelen kullanıcı istemeden KALICI beyan yaratır.
+    const onSave = vi.fn();
+    render(
+      <ProfileEditSheet
+        open title="Profili Düzenle"
+        initial={{ position: 'orta', bio: '', birthdate: '', gender: '', playStyle: '', avatarUrl: '', selfSkill: null }}
+        saving={false} onSave={onSave} onClose={vi.fn()}
+      />,
+    );
+    fireEvent.click(screen.getByLabelText('Seviye 6'));
+    fireEvent.click(screen.getByLabelText('Seviye 6'));
+    fireEvent.click(screen.getByRole('button', { name: 'Kaydet' }));
+    expect(onSave.mock.calls[0][0].selfSkill).toBeNull();
+  });
+
+  it('kaydetme hatasi sessizce yutulmaz: errorText Kaydet ustunde gorunur', () => {
+    render(
+      <ProfileEditSheet
+        open title="Profili Düzenle"
+        initial={{ position: 'orta', bio: '', birthdate: '', gender: '', playStyle: '', avatarUrl: '', selfSkill: 7 }}
+        saving={false} errorText="Kaydedilemedi. Bağlantını kontrol edip tekrar dene."
+        onSave={vi.fn()} onClose={vi.fn()}
+      />,
+    );
+    expect(screen.getByText(/Kaydedilemedi/)).toBeInTheDocument();
+  });
 });
