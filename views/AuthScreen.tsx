@@ -1,4 +1,4 @@
-import React, { useState, useEffect, Suspense, lazy } from 'react';
+import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { Check, Mail, ArrowRight, ChevronLeft, KeyRound, Lock, User, Eye, EyeOff, Users, ChevronDown, CheckCircle2 } from 'lucide-react';
 import { UserRole } from '../types';
@@ -70,16 +70,33 @@ const KEYFRAMES = `
 @keyframes auFadeBlur { from { opacity: 0; filter: blur(8px); } to { opacity: 1; filter: blur(0); } }
 @keyframes auScaleIn { from { opacity: 0; transform: scale(1.04); filter: blur(10px); } to { opacity: 1; transform: scale(1); filter: blur(0); } }
 @keyframes auSheet { from { transform: translateY(76%); } to { transform: translateY(0); } }
+/* Tanıtımdan giriş ekranına "itme" (push) geçişi — iOS'taki gibi: gelen ekran
+   sağdan tam ekran girer, giden ekran sola kayıp söner. Süre ve eğri iOS'un
+   kendi navigasyon geçişiyle aynı his verecek şekilde seçildi. */
+@keyframes auPushIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
+@keyframes auPushOut { from { transform: translateX(0); opacity: 1; } to { transform: translateX(-26%); opacity: 0; } }
 @keyframes auSweep { 0%, 52% { opacity: 0; transform: translateX(-140px) skewX(-14deg); } 66% { opacity: 1; } 100% { opacity: 0; transform: translateX(100%) skewX(-14deg); } }
 @keyframes auSwing { from { transform: translateX(0); } to { transform: translateX(calc(100% - 56px)); } }
 @keyframes auSpinLogo { from { transform: rotate(0deg); } to { transform: rotate(342deg); } }
 @keyframes auToast { from { opacity: 0; transform: translateY(-18px) scale(.94); } to { opacity: 1; transform: translateY(0) scale(1); } }
 @keyframes auRing { to { transform: rotate(360deg); } }
 
-.au-field { height: 56px; padding: 0 18px; border-radius: 20px; background: #0A0E14; border: 1px solid #1f2937; display: flex; align-items: center; gap: 12px; transition: border-color .2s ease; }
-.au-field:focus-within { border-color: rgba(255,255,255,.4); }
-.au-input { flex: 1; min-width: 0; background: transparent; border: none; outline: none; color: #fff; font-size: 14px; font-weight: 700; }
-.au-input::placeholder { color: #4b5563; font-weight: 600; }
+/* Alanlar: yükseklik 58px (rahat dokunma), yumuşak köşe, odakta marka rengiyle
+   ince bir halka. Odak halkası kenarlığı kalınlaştırmaz — kutu titremesin. */
+.au-field { height: 58px; padding: 0 18px; border-radius: 18px; background: rgba(8,11,17,.85); border: 1px solid rgba(255,255,255,.07); display: flex; align-items: center; gap: 12px; transition: border-color .18s ease, box-shadow .18s ease, background .18s ease; }
+.au-field:focus-within { border-color: var(--au-accent, rgba(255,255,255,.4)); background: rgba(8,11,17,1); box-shadow: 0 0 0 3px var(--au-accent-soft, rgba(255,255,255,.08)); }
+/* Metin 16px: iOS'ta bundan küçük yazı alanına dokununca Safari sayfayı
+   otomatik yakınlaştırır ve düzen bozulur. Güven veren okunaklılık da bu boyutta. */
+.au-input { flex: 1; min-width: 0; background: transparent; border: none; outline: none; color: #fff; font-size: 16px; font-weight: 600; letter-spacing: -.01em; }
+.au-input::placeholder { color: #4b5563; font-weight: 500; letter-spacing: 0; }
+/* Alan başlığı — küçük, harf aralıklı, sakin. Formu "okunur" hâle getirir. */
+.au-label { display: block; margin: 0 0 8px 4px; font-size: 10.5px; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; color: #6b7684; }
+/* Giriş / Kaydol seçici — tek dokunuşla mod değişir; kaydırma (slide) göstergesi
+   hangi modda olunduğunu net söyler. */
+.au-seg { position: relative; display: grid; grid-template-columns: 1fr 1fr; padding: 4px; border-radius: 16px; background: rgba(8,11,17,.8); border: 1px solid rgba(255,255,255,.06); }
+.au-seg-ind { position: absolute; top: 4px; bottom: 4px; width: calc(50% - 4px); border-radius: 12px; background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.08); transition: transform .32s cubic-bezier(.32,.72,0,1); }
+.au-seg-btn { position: relative; z-index: 1; height: 42px; border: none; background: none; cursor: pointer; font-size: 13px; font-weight: 800; letter-spacing: -.01em; color: #7d8894; transition: color .22s ease; }
+.au-seg-btn[aria-selected="true"] { color: #fff; }
 .au-social { flex: 1; height: 54px; border-radius: 999px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 9px; background: rgba(22,27,34,.55); border: 1px solid rgba(255,255,255,.08); color: #fff; font-size: 13px; font-weight: 700; transition: background .3s cubic-bezier(.16,1,.3,1), border-color .3s, transform .3s cubic-bezier(.16,1,.3,1); }
 .au-social:hover:not(:disabled) { background: rgba(30,36,45,.8); border-color: rgba(255,255,255,.15); transform: translateY(-2px); }
 .au-social:active:not(:disabled) { transform: scale(.97); }
@@ -119,6 +136,21 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
   const ctaGradient = `linear-gradient(120deg, ${color} 0%, ${light} 100%)`;
 
   const [stage, setStage] = useState<Stage>(introShownThisSession ? 'input' : 'intro');
+  // Tanıtım → giriş "itme" geçişi: iki ekran kısa süre BİRLİKTE durur; gelen
+  // sağdan girerken giden sola kayar. Tek ekran anında değişseydi hareket
+  // kesik görünürdü. Süre CSS'teki .42sn ile aynı tutulur.
+  const [pushing, setPushing] = useState(false);
+  const gecisSure = 420;
+  // Sayaç ref'te tutulur ve ekran kapanırsa temizlenir: aksi hâlde kullanıcı
+  // geçiş sürerken geri giderse, kapanmış bileşende durum güncellenmeye çalışılır.
+  const gecisSayaci = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (gecisSayaci.current) clearTimeout(gecisSayaci.current); }, []);
+  const introdanDevamEt = () => {
+    setPushing(true);
+    setStage('input');
+    if (gecisSayaci.current) clearTimeout(gecisSayaci.current);
+    gecisSayaci.current = setTimeout(() => setPushing(false), gecisSure);
+  };
   // Kayıt-öncelikli akış: bu cihazda daha önce hiç oturum açılmadıysa KAYIT,
   // açıldıysa (çıkış yapmış kullanıcı) GİRİŞ ekranıyla başla.
   // IP-15: kayıt kapısı hangi butondan gelindiyse ekranı o modda açar —
@@ -498,7 +530,16 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
   );
 
   return (
-    <div className="fixed inset-0 overflow-hidden select-none" style={{ background: '#0A0E14' }}>
+    // Odak halkası ve seçici, rolün marka rengini CSS değişkeninden okur —
+    // renk tek yerden gelir, her alana tek tek yazılmaz.
+    <div
+      className="fixed inset-0 overflow-hidden select-none"
+      style={{
+        background: '#0A0E14',
+        ['--au-accent' as string]: color,
+        ['--au-accent-soft' as string]: `${color}24`,
+      } as React.CSSProperties}
+    >
       <style>{KEYFRAMES}</style>
 
       <div style={{
@@ -540,8 +581,16 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
         </div>
 
         {/* ═══ TANITIM ═══ */}
-        {stage === 'intro' && (
-          <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', animation: 'auScaleIn .6s cubic-bezier(.22,1,.36,1) both' }}>
+        {(stage === 'intro' || pushing) && (
+          <div style={{
+            position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
+            // Geçiş sırasında tanıtım ekranı sola kayarak çıkar; o an dokunuşa
+            // kapatılır ki kullanıcı çıkmakta olan ekranın tuşuna basamasın.
+            animation: pushing
+              ? `auPushOut ${gecisSure}ms cubic-bezier(.32,.72,0,1) both`
+              : 'auScaleIn .6s cubic-bezier(.22,1,.36,1) both',
+            pointerEvents: pushing ? 'none' : undefined,
+          }}>
             <div style={{ height: CURTAIN, flexShrink: 0 }} />
 
             {/* Perde üzerinde gezen ışık süpürmesi */}
@@ -604,7 +653,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
                   id="intro-continue-button"
                   type="button"
                   className="au-next"
-                  onClick={() => setStage('input')}
+                  onClick={introdanDevamEt}
                   aria-label="Devam et"
                   style={{
                     background: `linear-gradient(135deg, ${color} 0%, ${light} 60%, ${color} 100%)`,
@@ -620,46 +669,67 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
 
         {/* ═══ GİRİŞ / KAYIT ═══ */}
         {stage === 'input' && (
-          <div style={{ position: 'absolute', inset: 0 }}>
-            <div style={{
-              position: 'absolute', top: 0, left: 0, right: 0, height: CURTAIN,
-              backdropFilter: 'blur(7px) saturate(.95)', WebkitBackdropFilter: 'blur(7px) saturate(.95)',
-              background: 'rgba(10,14,20,.5)', animation: 'auFadeBlur .5s ease-out both', pointerEvents: 'none',
-            }} />
+          // TAM EKRAN + SAĞDAN İTME: eskiden alttan açılan yarım paneldi
+          // (ekranın %19'undan başlayan yuvarlak köşeli sayfa). Tanıtımdan
+          // gelen hareketi sürdürmesi ve formun tam alanı kullanması için
+          // tam ekrana alındı.
+          <div style={{
+            position: 'absolute', inset: 0, background: '#0A0E14',
+            display: 'flex', flexDirection: 'column',
+            animation: `auPushIn ${gecisSure}ms cubic-bezier(.32,.72,0,1) both`,
+          }}>
             {sheetHeader}
 
-            <div style={{
-              position: 'absolute', left: 0, right: 0, bottom: 0,
-              top: 'max(19%, calc(var(--safe-top, 0px) + 108px))',
-              borderRadius: '34px 34px 0 0', background: 'rgba(13,18,26,.9)',
-              backdropFilter: 'blur(28px) saturate(180%)', WebkitBackdropFilter: 'blur(28px) saturate(180%)',
-              border: '1px solid rgba(255,255,255,.08)', borderBottom: 'none',
-              boxShadow: '0 -12px 44px rgba(0,0,0,.5)', display: 'flex', flexDirection: 'column',
-              overflow: 'hidden', animation: 'auSheet .6s cubic-bezier(.22,1,.36,1) both',
-            }}>
-              <div style={{ width: 40, height: 4, borderRadius: 999, background: 'rgba(255,255,255,.18)', margin: '14px auto 18px', flexShrink: 0 }} />
+            <div
+              className="custom-scrollbar"
+              style={{
+                flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden',
+                display: 'flex', flexDirection: 'column',
+                padding: '0 24px',
+                // Üst şerit (geri + amblem) mutlak konumlu ve içeriğin ÜSTÜNDE
+                // durur. Panel tam ekran olduğu için içerik artık en tepeden
+                // başlıyor; bu dolgu olmazsa başlık şeridin altında kalır.
+                // Hesap: güvenli alan + şeridin 18px üst boşluğu + 40px yüksekliği + nefes payı.
+                paddingTop: 'calc(var(--safe-top, 0px) + 82px)',
+                paddingBottom: 'calc(var(--safe-bottom, 0px) + var(--kb-height, 0px) + 26px)',
+              }}
+            >
+              {/* Başlık — sola hizalı ve sakin. Ortalanmış italik-versal
+                  başlık "kampanya afişi" hissi veriyordu; giriş ekranında
+                  güven veren şey sadelik. */}
+              <div style={{ marginBottom: 26 }}>
+                <h1 style={{
+                  margin: 0, fontSize: 32, lineHeight: 1.1, fontWeight: 800,
+                  letterSpacing: '-.035em', color: '#fff',
+                }}>
+                  {isRegister ? 'Hesap oluştur' : 'Tekrar hoş geldin'}
+                </h1>
+                <p style={{ margin: '10px 0 0', fontSize: 14, lineHeight: 1.5, fontWeight: 500, color: '#8B949E', letterSpacing: '-.01em' }}>
+                  {isRegister
+                    ? 'Birkaç bilgi yeter, hemen sahaya çıkarsın.'
+                    : 'Hesabına gir, kaldığın yerden devam et.'}
+                </p>
+              </div>
 
-              <div
-                className="custom-scrollbar"
-                style={{
-                  flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden',
-                  display: 'flex', flexDirection: 'column', padding: '0 26px',
-                  paddingBottom: 'calc(var(--safe-bottom, 0px) + var(--kb-height, 0px) + 26px)',
-                }}
-              >
-                <div style={{ textAlign: 'center', marginBottom: 24 }}>
-                  <div style={{ fontSize: 30, lineHeight: 1.06, fontWeight: 900, fontStyle: 'italic', textTransform: 'uppercase', letterSpacing: '-.02em', color: '#fff' }}>
-                    {isRegister ? 'Hesap oluştur' : 'Hoş geldin!'}
-                  </div>
-                  <p style={{ margin: '9px 0 0', fontSize: 12.5, lineHeight: 1.55, color: '#8B949E' }}>
-                    {isRegister
-                      ? 'Bilgilerini gir, saniyeler içinde sahaya çık.'
-                      : 'Devam etmek için hesabına giriş yap.'}
-                  </p>
-                </div>
+              {/* Giriş / Kaydol seçici — mod hangisiyse gösterge oraya kayar. */}
+              <div className="au-seg" role="tablist" aria-label="Giriş veya kayıt" style={{ marginBottom: 22 }}>
+                <span className="au-seg-ind" style={{ transform: isRegister ? 'translateX(100%)' : 'translateX(0)' }} aria-hidden="true" />
+                <button
+                  type="button" role="tab" aria-selected={!isRegister} className="au-seg-btn"
+                  onClick={() => { if (isRegister) { setIsRegister(false); clearFeedback(); } }}
+                >
+                  Giriş Yap
+                </button>
+                <button
+                  type="button" role="tab" aria-selected={isRegister} className="au-seg-btn"
+                  onClick={() => { if (!isRegister) { setIsRegister(true); clearFeedback(); } }}
+                >
+                  Kaydol
+                </button>
+              </div>
 
-                {/* Sosyal giriş — BİRİNCİL (§3.1: Google + Apple) */}
-                <div style={{ display: 'flex', gap: 12 }}>
+              {/* Sosyal giriş — BİRİNCİL (§3.1: Google + Apple) */}
+              <div style={{ display: 'flex', gap: 12 }}>
                   <button type="button" className="au-social" onClick={handleGoogleLogin} disabled={busy}>
                     {isLoading === 'google' ? spinner : (
                       <svg width="19" height="19" viewBox="0 0 24 24" aria-hidden="true">
@@ -690,9 +760,11 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
                   {/* Ad Soyad — yalnız kayıt akışında, S8 gereği zorunlu */}
                   {isRegister && (
                     <div>
+                      <label className="au-label" htmlFor="au-name">Ad Soyad</label>
                       <div className="au-field">
                         <User size={19} color="#6b7280" style={{ flexShrink: 0 }} />
                         <input
+                          id="au-name"
                           type="text"
                           autoComplete="name"
                           className="au-input"
@@ -710,9 +782,12 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
                       )}
                     </div>
                   )}
-                  <div className="au-field">
+                  <div>
+                    <label className="au-label" htmlFor="au-email">E-posta</label>
+                    <div className="au-field">
                     <Mail size={19} color="#6b7280" style={{ flexShrink: 0 }} />
                     <input
+                      id="au-email"
                       type="email"
                       inputMode="email"
                       autoComplete="email"
@@ -722,10 +797,14 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
                       value={email}
                       onChange={(e) => { setEmail(e.target.value); clearFeedback(); }}
                     />
+                    </div>
                   </div>
-                  <div className="au-field">
+                  <div>
+                    <label className="au-label" htmlFor="au-password">Şifre</label>
+                    <div className="au-field">
                     <Lock size={19} color="#6b7280" style={{ flexShrink: 0 }} />
                     <input
+                      id="au-password"
                       type={showPassword ? 'text' : 'password'}
                       autoComplete={isRegister ? 'new-password' : 'current-password'}
                       className="au-input"
@@ -743,6 +822,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
                     >
                       {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                     </button>
+                    </div>
                   </div>
                 </div>
 
@@ -915,7 +995,6 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
                     <button type="button" className="au-footlink" onClick={() => setOpenModal('KVKK')}>KVKK Aydınlatma Metni</button>
                   </div>
                 </div>
-              </div>
             </div>
           </div>
         )}
