@@ -17,6 +17,7 @@
     "admin:deploy:interactive": "bash admin-panel/scripts/supabase-interactive-deploy.sh",
     "build": "vite build",
     "build:legal": "node scripts/build-legal-pages.mjs",
+    "assets:generate": "capacitor-assets generate --android",
     "preview": "vite preview",
     "lint": "tsc --noEmit",
     "owner:demo:seed": "node scripts/owner-demo.mjs seed",
@@ -61,6 +62,7 @@
     "zustand": "^5.0.11"
   },
   "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
     "@capacitor/cli": "^8.3.4",
     "@fontsource-variable/inter": "^5.3.0",
     "@fontsource-variable/space-grotesk": "^5.3.0",
