@@ -86,7 +86,7 @@ export function slotUserId(slot: PositionSlot): string | undefined {
   return slot.player?.id || (slot as unknown as { userId?: string }).userId;
 }
 
-export interface LobbyUser { id: string; name: string; avatar?: string; rating?: number }
+export interface LobbyUser { id: string; name: string; avatar?: string; selfSkill?: number | null }
 
 /**
  * Kanonik koordinat + GERÇEK oyuncu çözümü. DEMO-FALLBACK YOK:
@@ -99,10 +99,10 @@ export function enrichSlots(slots: PositionSlot[], users: LobbyUser[], format?: 
     const uid = slotUserId(slot);
     const u = uid ? users.find((x) => x.id === uid) : undefined;
     if (u) {
-      return { ...slot, player: { id: u.id, name: u.name || 'Oyuncu', avatar: u.avatar || avatarFor(u.id, u.name), rating: u.rating ?? 5, position: slot.role, x: slot.x, y: slot.y, paymentStatus: slot.player?.paymentStatus } as Player };
+      return { ...slot, player: { id: u.id, name: u.name || 'Oyuncu', avatar: u.avatar || avatarFor(u.id, u.name), selfSkill: u.selfSkill ?? null, position: slot.role, x: slot.x, y: slot.y, paymentStatus: slot.player?.paymentStatus } as Player };
     }
     if (slot.player?.name) return { ...slot, player: { ...slot.player, avatar: slot.player.avatar || avatarFor(slot.player.id || slot.id, slot.player.name), position: slot.role, x: slot.x, y: slot.y } as Player };
-    if (uid) return { ...slot, player: { id: uid, name: 'Oyuncu', avatar: avatarFor(uid), rating: 5, position: slot.role, x: slot.x, y: slot.y } as Player };
+    if (uid) return { ...slot, player: { id: uid, name: 'Oyuncu', avatar: avatarFor(uid), position: slot.role, x: slot.x, y: slot.y } as Player };
     return slot;
   });
 }

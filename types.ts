@@ -24,7 +24,6 @@ export interface AdminUser {
   avatar: string;
   role: UserRole;             
   roles?: UserRole[];        
-  rating: number;            
   isVerified: boolean;       
   isBanned: boolean;         
   isShadowBanned?: boolean;
@@ -34,13 +33,10 @@ export interface AdminUser {
   wallet?: number;           
   reliabilityScore?: number; 
   banExpiresAt?: string | null; 
-  playerCard?: PlayerCardData;
   oynaId?: string; // Benzersiz OYNA Kimliği Örn: #ARD932
   friends?: string[]; // Onaylanmış arkadaşların User ID'leri
   isLookingForTeam?: boolean; // Transfer Merkezi Görünürlüğü
   newMatchBadge?: boolean; // Yeni maç eklendi bildirim rozeti
-  cardActive?: boolean; // Premium oyuncu kartı admin tarafından aktif mi (card_active)
-  cardTier?: 'bronze' | 'silver' | 'gold' | null; // Aktif kartın tier'ı (card_tier)
 }
 
 export interface AdminLog {
@@ -162,28 +158,6 @@ export interface CurrentUserProfile {
   id: string;
   name: string;
   avatar: string;
-  rating: number;
-}
-
-export interface PlayerCardData {
-  overall: number;
-  tier: 'gold' | 'silver' | 'bronze';
-  /** Henüz maç oynamamış (rookie) → kart OVR yerine "—" ve nötr tema gösterir. */
-  isRookie?: boolean;
-  isStatsVerified: boolean;
-  diamondValue: number;
-  flatModifier?: number; // Opanel admin override katsayısı
-  winCount: number;
-  totalMatches: number;
-  cardImage?: string;
-  stats: {
-    pace: PlayerStat;
-    shooting: PlayerStat;
-    passing: PlayerStat;
-    dribbling: PlayerStat;
-    defense: PlayerStat;
-    physical: PlayerStat;
-  };
 }
 
 export enum GkStyle {
@@ -196,10 +170,15 @@ export interface Player {
   id: string;
   name: string;
   avatar: string;
-  rating: number;
+  /** Beyan edilen seviye (profiles.self_skill, 1–10). Kadro satırındaki
+   *  seviye bandının kaynağı; yoksa çip çizilmez. Eski akran-puanı 'rating'
+   *  alanı SÖKÜLDÜ (20260830000000). */
+  selfSkill?: number | null;
   position: string;
-  x: number; // Percentage 0-100
-  y: number; // Percentage 0-100
+  /** Saha yüzdesi — POZİSYONSUZ (Rahat) slot oyuncusunda sunucu bu anahtarları
+   *  hiç yazmaz; diziliş çizen kod yalnız Ciddi/Taktiksel yolunda çalışır. */
+  x?: number;
+  y?: number;
   paymentStatus?: 'PAID' | 'PENDING' | 'UNPAID'; // New for Match Lobby
   instruction?: string;
   style?: string;
@@ -209,7 +188,6 @@ export interface FieldPlayerCard {
   id: string;
   name: string;
   position: string;
-  rating: number;
   isSpecial: boolean; // Red card if true
   avatar: string;
   x: number; // Position on field
@@ -309,7 +287,6 @@ export interface MatchListing {
   rawDate?: string;
   price: number;
   difficulty: 'Ciddi' | 'Taktiksel' | 'Rahat';
-  minRating: number;
   image: string;
   badges: string[];
   missingPositions: { role: string; count: number }[];
@@ -775,7 +752,6 @@ export interface JobListing {
   offeredFee: number;
   captainName: string;
   teamName: string;
-  minRating: number; // New: Constraint
   viewers: number; // New: FOMO
 }
 

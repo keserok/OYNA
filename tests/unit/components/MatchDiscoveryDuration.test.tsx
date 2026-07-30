@@ -29,7 +29,6 @@ const mac = (over: Record<string, unknown> = {}) => ({
   date: '30 Temmuz',
   price: 150,
   difficulty: 'Rahat',
-  minRating: 0,
   image: '',
   badges: [],
   missingPositions: [],
@@ -46,7 +45,7 @@ const mac = (over: Record<string, unknown> = {}) => ({
 const ciz = (matches: Record<string, unknown>[]) => {
   useAppStore.setState({
     adminMatches: matches,
-    adminUsers: [{ id: 'u1', rating: 5 }],
+    adminUsers: [{ id: 'u1' }],
     userLocation: null,
     selectedRegions: [],
     searchRadius: 25,

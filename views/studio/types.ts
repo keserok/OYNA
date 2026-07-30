@@ -5,7 +5,6 @@ export interface Player {
     id: string;
     name: string;
     role: string;
-    rating: number;
     code?: string;
     isOpponent?: boolean;
     isCustom?: boolean;

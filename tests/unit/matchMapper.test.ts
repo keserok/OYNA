@@ -9,8 +9,7 @@ import {
 function row(partial: Partial<AdminMatchRow>): AdminMatchRow {
   return {
     id: 'm1', title: 'Test Maç', location: 'Altınordu', date: null, time: '20:00',
-    price: 200, difficulty: 'Ciddi', status: 'ACTIVE', format: '7v7', image: null,
-    minRating: 3, badges: null, missingPositions: null, slots: null, away_slots: null,
+    price: 200, difficulty: 'Ciddi', status: 'ACTIVE', format: '7v7', image: null, badges: null, missingPositions: null, slots: null, away_slots: null,
     chatMessages: null, refereeId: null, creatorId: null, isDemo: null,
     cancel_reason: null, refund_status: null, created_at: null,
     ...partial,

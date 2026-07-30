@@ -262,7 +262,7 @@ export async function odemeBaglamiTohumla(page: Page) {
  */
 export async function degerlendirmeBaglamiTohumla(page: Page, opts: { gorevliler?: boolean } = {}) {
   const oyuncu = (id: string, ad: string, mevki: string) =>
-    `{ id: '${id}', name: '${ad}', avatar: '', rating: 0, position: '${mevki}', x: 50, y: 50 }`;
+    `{ id: '${id}', name: '${ad}', avatar: '', position: '${mevki}', x: 50, y: 50 }`;
   const slot = (sid: string, id: string, ad: string, mevki: string) =>
     `{ id: '${sid}', role: '${mevki}', x: 50, y: 50, status: 'TAKEN', occupant: '${id}', player: ${oyuncu(id, ad, mevki)} }`;
 
@@ -275,7 +275,6 @@ export async function degerlendirmeBaglamiTohumla(page: Page, opts: { gorevliler
     time: '20:00 - 21:00',
     price: 150,
     difficulty: 'Rahat',
-    minRating: 0,
     image: '',
     badges: [],
     missingPositions: [],

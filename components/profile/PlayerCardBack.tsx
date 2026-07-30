@@ -5,17 +5,14 @@ import { MatchHistorySummary } from '../../services/userService';
  * Premium kartın arka yüzü — performans raporu (son 5 maç, galibiyet %, trend).
  * ProfileScreen içindeki CardBack'ten taşındı; davranış birebir aynı.
  */
-export const PlayerCardBack: React.FC<{ tier: 'gold' | 'silver' | 'bronze'; matches: MatchHistorySummary[] }> = ({ tier, matches }) => {
+export const PlayerCardBack: React.FC<{ matches: MatchHistorySummary[] }> = ({ matches }) => {
     const last5 = matches.slice(0, 5);
     const wins = matches.filter(m => m.result === 'WIN').length;
     const total = matches.length;
     const winRate = total > 0 ? Math.round((wins / total) * 100) : 0;
 
-    const colors = {
-        gold: { border: '#d4a84b', text: '#ffd54f', label: '#c8962a' },
-        silver: { border: '#8a96c0', text: '#c5cef5', label: '#7888b8' },
-        bronze: { border: '#b07840', text: '#d4986a', label: '#8a5c28' }
-    }[tier];
+    // Tier sistemi söküldü (F3=b) — kart arkası tek nötr paletle çizilir.
+    const colors = { border: '#3d5566', text: '#9db4c4', label: '#5c7385' };
 
     return (
         <div className="w-full h-full rounded-[24px] overflow-hidden relative" style={{ background: 'linear-gradient(160deg, #0a0e14 0%, #161B22 50%, #0a0e14 100%)', border: `2px solid ${colors.border}` }}>

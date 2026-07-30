@@ -45,7 +45,6 @@ export interface AppSettings {
   maintenanceMode: boolean;
   registrationOpen: boolean;
   commissionRate: number;
-  minRatingToPlay: number;
   maxMatchsPerDay: number;
   featuredPitchId: string;
   announcementBanner: string;
@@ -157,7 +156,6 @@ const INITIAL_SETTINGS: AppSettings = {
   maintenanceMode: false,
   registrationOpen: true,
   commissionRate: 10,
-  minRatingToPlay: 2.5,
   maxMatchsPerDay: 3,
   featuredPitchId: '1',
   announcementBanner: '🎉 OYNA v2.0 yayında! Yeni özellikler geldi.',

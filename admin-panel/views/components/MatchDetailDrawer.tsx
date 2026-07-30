@@ -240,7 +240,7 @@ export const MatchDetailDrawer: React.FC<Props> = ({ match, onClose, onUpdated, 
           ...s,
           status: 'TAKEN' as const,
           userId: user.id,
-          player: { id: user.id, name: user.name, avatar: user.avatar, rating: user.rating, position: s.role, x: s.x, y: s.y, paymentStatus: 'PAID' as const },
+          player: { id: user.id, name: user.name, avatar: user.avatar, position: s.role, x: s.x, y: s.y, paymentStatus: 'PAID' as const },
         } : s);
         const patched = isAway ? { ...local, awaySlots: next } : { ...local, slots: next };
         await updateMatch(patched);

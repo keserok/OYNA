@@ -1,15 +1,10 @@
 import { supabase } from '../supabaseClient';
 import { User } from '@supabase/supabase-js';
-import { PlayerCardData } from '../types';
-
-// GERÇEK puan verisi profiles.skill_rating (0-5, zaten hesaplı) ve
-// profiles.match_count'tan gelir. Eski kod olmayan `profiles.stats` kolonunu
-// okuyup HER kullanıcıya default {matchesPlayed:0, rating:5.0} veriyordu →
-// tüm kartlar sahte OVR 100 çıkıyordu (KN-4). Not: DB'de `rating` 0-10
-// skalasındadır; `skill_rating` onun 0-5 karşılığıdır — kart ölçeği bunu bekler.
-const mapPlayerStats = (row: any): { matchesPlayed: number; rating: number } => ({
+// Oyuncu istatistiği artık yalnız maç sayısı taşır. Akran-puanı türevleri
+// (skill_rating → kart OVR zinciri) 20260830000000 sökümüyle öldü; kamusal
+// seviye göstergesi profiles.self_skill'dir (OynaUser.selfSkill).
+const mapPlayerStats = (row: any): { matchesPlayed: number } => ({
   matchesPlayed: Number(row?.match_count ?? 0),
-  rating: typeof row?.skill_rating === 'number' ? row.skill_rating : 0,
 });
 
 export interface OynaUser {
@@ -24,13 +19,7 @@ export interface OynaUser {
   walletBalance: number;
   stats: {
     matchesPlayed: number;
-    rating: number;
   };
-  playerCard?: PlayerCardData | null;
-  /** Premium kart admin tarafından aktifleştirildi mi? (false → sade profil) */
-  cardActive?: boolean;
-  /** Admin'in atadığı tier (yalnız kart aktifken). */
-  cardTier?: 'bronze' | 'silver' | 'gold' | null;
   /** Sahadaki mevki (ör. Kaleci, Stoper, Orta Saha) — sade profilde gösterilir. */
   position?: string | null;
   /** Kısa tanıtım — sade profilde gösterilir. */
@@ -104,7 +93,6 @@ export const syncUserToSupabase = async (supabaseUser: User | null): Promise<Oyn
         wallet_balance: 0,
         stats: {
           matchesPlayed: 0,
-          rating: 5.0,
         },
         last_active_at: new Date().toISOString(),
         created_at: new Date().toISOString(),
@@ -261,9 +249,6 @@ export const getFullUserProfile = async (userId: string): Promise<OynaUser | nul
     is_admin: data.is_admin ?? false,
     walletBalance: data.wallet_balance ?? 0,
     stats: mapPlayerStats(data),
-    playerCard: (data.player_card as PlayerCardData) || null,
-    cardActive: data.card_active ?? false,
-    cardTier: (data.card_tier as 'bronze' | 'silver' | 'gold' | null) ?? null,
     position: data.position ?? null,
     bio: data.bio ?? null,
     birthdate: data.birthdate ?? null,

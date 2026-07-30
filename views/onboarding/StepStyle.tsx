@@ -1,6 +1,6 @@
 import React from 'react';
 import { Flame, Brain, Smile } from 'lucide-react';
-import { PlayStyle } from './onboardingShared';
+import { PlayStyle, PLAY_STYLE_META } from './onboardingShared';
 
 interface StepStyleProps {
   style: PlayStyle;
@@ -17,9 +17,9 @@ interface StyleDef {
 }
 
 const STYLES: StyleDef[] = [
-  { key: 'ciddi', name: 'Ciddi', color: '#FFC107', desc: 'Kazanmak için oyna, her maç önemli.', icon: Flame, stats: { tempo: 95, plan: 70, keyif: 55 } },
-  { key: 'taktiksel', name: 'Taktiksel', color: '#00B0FF', desc: 'Plan yap, pozisyonunu koru, akıllı oyna.', icon: Brain, stats: { tempo: 65, plan: 95, keyif: 70 } },
-  { key: 'rahat', name: 'Rahat', color: '#39FF14', desc: 'Keyif için oyna; önemli olan katılmak.', icon: Smile, stats: { tempo: 55, plan: 50, keyif: 98 } },
+  { key: 'ciddi', name: 'Ciddi', color: PLAY_STYLE_META.ciddi.color, desc: 'Kazanmak için oyna, her maç önemli.', icon: Flame, stats: { tempo: 95, plan: 70, keyif: 55 } },
+  { key: 'taktiksel', name: 'Taktiksel', color: PLAY_STYLE_META.taktiksel.color, desc: 'Plan yap, pozisyonunu koru, akıllı oyna.', icon: Brain, stats: { tempo: 65, plan: 95, keyif: 70 } },
+  { key: 'rahat', name: 'Rahat', color: PLAY_STYLE_META.rahat.color, desc: 'Keyif için oyna; önemli olan katılmak.', icon: Smile, stats: { tempo: 55, plan: 50, keyif: 98 } },
 ];
 
 const StatBar: React.FC<{ label: string; value: number; color: string; active: boolean }> = ({ label, value, color, active }) => (

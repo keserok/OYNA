@@ -6,7 +6,7 @@ import { AddUserModal } from '../components/AddUserModal';
 import { AdminSearchBar } from '../components/AdminSearchBar';
 import { AdminFilterChips } from '../components/AdminFilterChips';
 import { Users, Shield, Scale, PlayCircle, Trash2, Eye, Edit3, Ban, ShieldCheck, Star, BadgeCheck, CreditCard } from 'lucide-react';
-import { startGhostSession, fetchAdminProfiles, toTurkishAdminError, setPlayerCardAdmin } from '../../services/adminService';
+import { startGhostSession, fetchAdminProfiles, toTurkishAdminError } from '../../services/adminService';
 import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import { openGhostInConsumerApp } from '../../../utils/ghostDeepLink';
 import { maskEmail } from '../../utils/pii';
@@ -289,7 +289,7 @@ export const UsersPage: React.FC<UsersPageProps> = ({ subRoute, mode = 'embedded
             csvValue: (u: any) => `${u.name} (${subRoute === 'KULLANICILAR' ? (u.role || 'PLAYER') : subRoute === 'KALECİLER' ? (u.style || 'KALECİ') : (u.level || 'HAKEM')})`,
             render: (u: any) => (
                 <div>
-                    <div className="font-bold text-white flex items-center gap-1.5">{u.name} <span className="text-[10px] text-gray-500 font-mono">({u.rating?.toFixed(1) || '5.0'}★)</span></div>
+                    <div className="font-bold text-white flex items-center gap-1.5">{u.name}</div>
                     <div className={`text-[9px] bg-white/5 border border-white/10 px-1.5 py-0.5 rounded inline-block mt-1 font-extrabold ${rowIconColor}`}>
                         {subRoute === 'KULLANICILAR' ? (u.role || 'PLAYER') :
                          subRoute === 'KALECİLER' ? (u.style || 'KALECİ') :
@@ -384,30 +384,6 @@ export const UsersPage: React.FC<UsersPageProps> = ({ subRoute, mode = 'embedded
                                 <BadgeCheck size={11} /> DOĞRULA
                             </button>
                         )}
-                        <div
-                            title="Premium kart durumu / tier"
-                            className={`flex items-center gap-1 px-2 py-1 rounded-lg border text-[9px] font-extrabold ${u.cardActive ? 'bg-cyan-500/10 text-cyan-300 border-cyan-500/30' : 'bg-white/5 text-gray-400 border-white/10'}`}
-                        >
-                            <CreditCard size={11} />
-                            <select
-                                value={u.cardActive ? (u.cardTier || 'bronze') : ''}
-                                onChange={async (e) => {
-                                    const v = e.target.value;
-                                    const active = v !== '';
-                                    try {
-                                        await setPlayerCardAdmin(u.id, active, active ? (v as 'bronze' | 'silver' | 'gold') : null);
-                                        success(active ? `Kart aktif · ${v.toUpperCase()}` : 'Kart kapatıldı');
-                                        if (subRoute === 'KULLANICILAR') await loadServerUsers();
-                                    } catch (err) { toastError(err instanceof Error ? err.message : 'İşlem başarısız'); }
-                                }}
-                                className="bg-transparent outline-none cursor-pointer text-[9px] font-extrabold uppercase [&>option]:bg-gray-900 [&>option]:text-white"
-                            >
-                                <option value="">KART KAPALI</option>
-                                <option value="bronze">BRONZE</option>
-                                <option value="silver">SILVER</option>
-                                <option value="gold">GOLD</option>
-                            </select>
-                        </div>
                         </>
                     )}
                     <button 

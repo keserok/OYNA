@@ -51,10 +51,8 @@ const profileFixture = {
   verification_status: 'approved',
   is_admin: false,
   walletBalance: 150,
-  stats: { matchesPlayed: 3, rating: 3.5 },
-  playerCard: null,
-  cardActive: false,
-  cardTier: null,
+  stats: { matchesPlayed: 3 },
+  selfSkill: 7,
   position: 'Stoper',
   bio: 'Merhaba dünya',
   birthdate: '2000-01-01',
@@ -78,11 +76,9 @@ vi.mock('../../../services/friendService', () => ({
 
 const updateUserAppProfileAdmin = vi.fn(async () => {});
 const adjustWalletBalanceAdmin = vi.fn(async () => {});
-const setPlayerCardAdmin = vi.fn(async () => {});
 vi.mock('../../../admin-panel/services/adminService', () => ({
   updateUserAppProfileAdmin: (...args: unknown[]) => updateUserAppProfileAdmin(...(args as [])),
   adjustWalletBalanceAdmin: (...args: unknown[]) => adjustWalletBalanceAdmin(...(args as [])),
-  setPlayerCardAdmin: (...args: unknown[]) => setPlayerCardAdmin(...(args as [])),
   toTurkishAdminError: (e: unknown) => String(e),
 }));
 
@@ -149,19 +145,22 @@ describe('Kullanıcı Profili Aynası (admin)', () => {
     await waitFor(() => expect(adjustWalletBalanceAdmin).toHaveBeenCalledWith('u1', 250, 'test iadesi'));
   });
 
-  it('Yönetici Alanları: güven puanı /20 ölçeğiyle, beceri 0–5 kırpmasıyla gönderilir', async () => {
+  it('Yönetici Alanları: güven puanı /20 ölçeğiyle gönderilir (beceri alanı SÖKÜLDÜ)', async () => {
     render(<UserProfileMirror userId="u1" />);
     await screen.findByText('Deneme Oyuncu');
 
     fireEvent.click(screen.getByRole('button', { name: /Yönetici Alanları/ }));
-    const skill = await screen.findByPlaceholderText('örn. 3.8');
-    fireEvent.change(skill, { target: { value: '4.9' } });
-    const slider = screen.getByRole('slider');
+    // Puan sistemi sökümü (20260830000000): "Beceri Puanı" girişi artık YOK —
+    // admin bir oyuncunun beceri puanını yazamaz; akran puanları ayrı panelde
+    // salt-okunur görünür. Alanın geri sızmadığını da sabitle.
+    expect(screen.queryByPlaceholderText('örn. 3.8')).not.toBeInTheDocument();
+    const slider = await screen.findByRole('slider');
     fireEvent.change(slider, { target: { value: '60' } });
 
     fireEvent.click(screen.getByRole('button', { name: 'Yönetici Alanlarını Kaydet' }));
     await waitFor(() => expect(updateUserAppProfileAdmin).toHaveBeenCalledTimes(1));
     const [, fields] = updateUserAppProfileAdmin.mock.calls[0] as [string, Record<string, unknown>];
-    expect(fields).toMatchObject({ trust_score: 3, skill_rating: 4.9 }); // 60/20 = 3
+    expect(fields).toMatchObject({ trust_score: 3 }); // 60/20 = 3
+    expect(fields).not.toHaveProperty('skill_rating');
   });
 });

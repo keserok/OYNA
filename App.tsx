@@ -277,7 +277,6 @@ const App: React.FC = () => {
               id: user.uid,
               name: (profile.full_name as string) || user.displayName || 'Oyuncu',
               avatar: (profile.avatar_url as string) || user.photoURL || '',
-              rating: 0, // puan ayrı kaynaktan; burada kritik değil (join fallback'i 4.5)
             });
 
             // onAuthStateChanged HER auth olayında tetiklenir (SIGNED_IN +
@@ -343,7 +342,6 @@ const App: React.FC = () => {
                       email: '',
                       avatar: '',
                       role: UserRole.PLAYER,
-                      rating: 5,
                       isVerified: false,
                       isBanned: false,
                       joinDate: new Date().toISOString(),

@@ -14,7 +14,7 @@ import { ProfileEditSheet, type ProfileEditValues } from '../components/profile/
 import { OynaLogo } from '../components/OynaLogo';
 // Türetme mantığı TEK KAYNAK: admin panelin Kullanıcı Profili Aynası da aynı
 // modülü kullanır — kart/rozet/puan hesapları iki yüzeyde asla ayrışmaz.
-import { buildCardData, applyCardTierOverride, ageFromBirthdate, formatPosition, trustScoreTo100, winStats } from '../shared/profilePresentation';
+import { ageFromBirthdate, formatPosition, trustScoreTo100, winStats } from '../shared/profilePresentation';
 
 interface ProfileScreenProps {
     role: UserRole;
@@ -141,9 +141,6 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate,
 
     const { total, wins, winRate } = winStats(matchHistory);
 
-    // Tier admin-atamalı (Q24): kart aktifken admin'in seçtiği tier kullanılır.
-    const cardData = applyCardTierOverride(buildCardData(profile, wins, total), profile);
-
     // Güven puanı: DB'de 0–5, ekranda 0–100.
     const trustScore = trustScoreTo100(profile?.trustScore);
 
@@ -259,8 +256,8 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate,
                     matches={total}
                     winRate={winRate}
                     mvp={motmCount}
-                    cardAvailable={!!profile?.cardActive}
-                    cardData={cardData}
+                    winCount={wins}
+                    selfSkill={profile?.selfSkill ?? null}
                     cardBackMatches={matchHistory}
                     onEditAvatar={isGuest ? undefined : openEdit}
                     onShareCard={() => {

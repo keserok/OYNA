@@ -141,7 +141,8 @@ export interface LobbyParticipant {
   side: 'home' | 'away';
   name: string;
   avatarUrl: string;
-  rating: number;
+  /** Beyan edilen seviye (1-10) — kadro satırı band çipi. */
+  selfSkill?: number | null;
 }
 
 /**
@@ -199,7 +200,7 @@ export const getMatchLobbyParticipants = async (
 
     const { data: profs } = await supabase
       .from('public_profiles')
-      .select('id, name, avatar_url, rating')
+      .select('id, name, avatar_url, self_skill')
       .in('id', roster.map(r => r.userId));
     const byId = new Map((profs || []).map((pr: any) => [pr.id, pr]));
 
@@ -210,7 +211,7 @@ export const getMatchLobbyParticipants = async (
         side,
         name: (pr?.name as string) || 'Oyuncu',
         avatarUrl: (pr?.avatar_url as string) || '',
-        rating: (typeof pr?.rating === 'number' ? pr.rating : 4.5),
+        selfSkill: (typeof pr?.self_skill === 'number' ? pr.self_skill : null),
       };
     });
   } catch (e) {

@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { AppView } from '../types';
 import { useAppStore } from '../store';
+import { PLAY_STYLE_META } from './onboarding/onboardingShared';
 import { showToast } from '../components/common/GlobalToast';
 import { Spinner } from '../components/ui/Spinner';
 import {
@@ -42,10 +43,11 @@ interface MatchCreateProps {
 const WD = ['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt'];
 const MO = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
 const MO_LONG = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
+// Renk TEK KAYNAK: PLAY_STYLE_META (alt başlıklar bu ekrana özgü kalır).
 const MENTALS = [
-  { id: 'Ciddi', sub: 'Rekabetçi', color: '#FF4D4D' },
-  { id: 'Taktiksel', sub: 'Sistem', color: '#FACC15' },
-  { id: 'Rahat', sub: 'Eğlence', color: '#39FF14' },
+  { id: 'Ciddi', sub: 'Rekabetçi', color: PLAY_STYLE_META.ciddi.color },
+  { id: 'Taktiksel', sub: 'Sistem', color: PLAY_STYLE_META.taktiksel.color },
+  { id: 'Rahat', sub: 'Eğlence', color: PLAY_STYLE_META.rahat.color },
 ] as const;
 const GENDERS = ['Karma', 'Erkek', 'Kadın'];
 const AGES = ['18-22', '23-27', '28-35', '35+', 'Tümü'];

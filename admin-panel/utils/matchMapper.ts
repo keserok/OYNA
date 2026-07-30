@@ -11,7 +11,6 @@ export interface AdminMatchRow {
   status: string | null;
   format: string | null;
   image: string | null;
-  minRating: number | null;
   badges: unknown;
   missingPositions: unknown;
   slots: unknown;
@@ -103,7 +102,6 @@ export function mapAdminMatchRowToListing(row: AdminMatchRow | Record<string, un
     rawDate: r.date ? String(r.date).slice(0, 10) : undefined,
     price: Number(r.price ?? 0),
     difficulty,
-    minRating: Number(r.minRating ?? 3),
     // Görsel yoksa boş bırak: düzenlemede formu boş açar, kaydetince tetikleyici
     // sahanın fotoğrafını otomatik yazar (stok görsel geri sızmasın).
     image: r.image || '',
@@ -189,7 +187,6 @@ export function listingToMatchPayload(match: MatchPayloadSource): Record<string,
     duration: match.duration,
     gender: match.gender,
     ageGroup: match.ageGroup,
-    minRating: match.minRating,
     image: match.image,
     badges: match.badges,
     missingPositions: match.missingPositions,

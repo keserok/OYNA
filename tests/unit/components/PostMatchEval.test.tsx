@@ -52,7 +52,7 @@ const slot = (id: string, playerId: string | null, name = ''): PositionSlot => (
   x: 50,
   y: 50,
   status: playerId ? 'TAKEN' : 'OPEN',
-  ...(playerId ? { occupant: playerId, player: { id: playerId, name, avatar: '', rating: 0, position: 'ORT', x: 50, y: 50 } } : {}),
+  ...(playerId ? { occupant: playerId, player: { id: playerId, name, avatar: '', position: 'ORT', x: 50, y: 50 } } : {}),
 } as PositionSlot);
 
 const MAC: MatchListing = {
@@ -63,7 +63,6 @@ const MAC: MatchListing = {
   date: '30 Temmuz',
   price: 150,
   difficulty: 'Rahat',
-  minRating: 0,
   image: '',
   badges: [],
   missingPositions: [],

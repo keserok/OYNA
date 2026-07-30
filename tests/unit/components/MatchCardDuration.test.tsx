@@ -19,7 +19,6 @@ const mac = (over: Partial<MatchListing> = {}): MatchListing => ({
   date: '30 Temmuz',
   price: 150,
   difficulty: 'Rahat',
-  minRating: 0,
   image: '',
   badges: [],
   missingPositions: [],

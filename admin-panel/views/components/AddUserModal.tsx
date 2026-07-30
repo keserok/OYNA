@@ -47,7 +47,6 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, onA
                     email: created.email,
                     avatar,
                     role: userRole,
-                    rating: Number(rating),
                     isVerified: true,
                     isBanned: false,
                     joinDate: new Date().toISOString(),
@@ -185,10 +184,14 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, onA
                                 <label className="text-[10px] text-gray-500 font-extrabold uppercase tracking-widest block mb-1">E-Posta *</label>
                                 <input value={email} onChange={e => setEmail(e.target.value)} type="email" className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-white/30 transition-colors" placeholder="ali@ornek.com" />
                             </div>
-                            <div>
-                                <label className="text-[10px] text-gray-500 font-extrabold uppercase tracking-widest block mb-1">Rating / Puan</label>
-                                <input value={rating} onChange={e => setRating(e.target.value)} type="number" step="0.1" min="0" max="5" className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-white/30 transition-colors" placeholder="5.0" />
-                            </div>
+                            {/* Rating yalnız SAĞLAYICI (kaleci/hakem) hesabında anlamlı —
+                                oyuncu puan sistemi söküldü (20260830000000). */}
+                            {roleType !== 'KULLANICILAR' && (
+                                <div>
+                                    <label className="text-[10px] text-gray-500 font-extrabold uppercase tracking-widest block mb-1">Rating / Puan</label>
+                                    <input value={rating} onChange={e => setRating(e.target.value)} type="number" step="0.1" min="0" max="5" className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-white/30 transition-colors" placeholder="5.0" />
+                                </div>
+                            )}
                         </div>
 
                         <div>

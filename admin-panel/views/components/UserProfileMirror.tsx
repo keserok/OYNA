@@ -27,11 +27,10 @@ import { ProfileHero, TrustScoreCard, ProfileShortcuts, MatchHistorySection } fr
 import type { ShortcutItem } from '../../../components/profile';
 import { ProfileEditSheet, type ProfileEditValues } from '../../../components/profile/ProfileEditSheet';
 import {
-  buildCardData, applyCardTierOverride, ageFromBirthdate, formatPosition,
-  trustScoreTo100, winStats,
+  ageFromBirthdate, formatPosition, trustScoreTo100, winStats,
 } from '../../../shared/profilePresentation';
 import {
-  adjustWalletBalanceAdmin, setPlayerCardAdmin, updateUserAppProfileAdmin,
+  adjustWalletBalanceAdmin, updateUserAppProfileAdmin,
   toTurkishAdminError,
 } from '../../services/adminService';
 import { useAdminToast } from '../context/AdminToastContext';
@@ -70,10 +69,8 @@ export const UserProfileMirror: React.FC<Props> = ({ userId, onUpdated }) => {
   const [sheetSaving, setSheetSaving] = useState(false);
   const [nameDraft, setNameDraft] = useState('');
   const [trustDraft, setTrustDraft] = useState(100);
-  const [skillDraft, setSkillDraft] = useState('0');
   const [adminOpen, setAdminOpen] = useState(false);
   const [adminSaving, setAdminSaving] = useState(false);
-  const [cardBusy, setCardBusy] = useState(false);
   const [walletOpen, setWalletOpen] = useState(false);
   const [walletAmount, setWalletAmount] = useState('');
   const [walletReason, setWalletReason] = useState('');
@@ -97,7 +94,6 @@ export const UserProfileMirror: React.FC<Props> = ({ userId, onUpdated }) => {
       setHistory(historyData);
       setNameDraft(profileData.full_name || '');
       setTrustDraft(trustScoreTo100(profileData.trustScore));
-      setSkillDraft(String(profileData.stats?.rating ?? 0));
       const [friendsRes, teamsRes] = await Promise.allSettled([
         fetchFriends(userId),
         supabase.from('team_members').select('team_id', { count: 'exact', head: true }).eq('user_id', userId),
@@ -148,12 +144,9 @@ export const UserProfileMirror: React.FC<Props> = ({ userId, onUpdated }) => {
     const name = nameDraft.trim();
     setAdminSaving(true);
     try {
-      // DB kısıtı profiles_skill_rating_check: [1.0, 5.0] — taban 1'e kırpılır.
-      const skill = Math.max(1, Math.min(5, Number(skillDraft.replace(',', '.'))));
       await saveFields({
         ...(name && name !== (profile.full_name || '') ? { full_name: name } : {}),
         ...(trustDraft !== trustScoreTo100(profile.trustScore) ? { trust_score: trustDraft / 20 } : {}),
-        ...(Number.isFinite(skill) && skill !== (profile.stats?.rating ?? 0) ? { skill_rating: skill } : {}),
       }, 'Yönetici alanları kaydedildi');
     } catch (err) {
       toastError(toTurkishAdminError(err));
@@ -162,19 +155,6 @@ export const UserProfileMirror: React.FC<Props> = ({ userId, onUpdated }) => {
     }
   };
 
-  const handleCard = async (active: boolean, tier: 'bronze' | 'silver' | 'gold') => {
-    setCardBusy(true);
-    try {
-      await setPlayerCardAdmin(userId, active, tier);
-      success(active ? `Premium kart aktif — ${tier.toUpperCase()}` : 'Premium kart kapatıldı');
-      await load();
-      onUpdated?.();
-    } catch (err) {
-      toastError(toTurkishAdminError(err));
-    } finally {
-      setCardBusy(false);
-    }
-  };
 
   const handleWallet = async () => {
     const amount = Number(walletAmount.replace(',', '.'));
@@ -218,7 +198,6 @@ export const UserProfileMirror: React.FC<Props> = ({ userId, onUpdated }) => {
   }
 
   const { total, wins, winRate } = winStats(history);
-  const cardData = applyCardTierOverride(buildCardData(profile, wins, total), profile);
   const trustScore = trustScoreTo100(profile.trustScore);
 
   const shortcuts: ShortcutItem[] = [
@@ -277,8 +256,8 @@ export const UserProfileMirror: React.FC<Props> = ({ userId, onUpdated }) => {
             matches={total}
             winRate={winRate}
             mvp={null}
-            cardAvailable={!!profile.cardActive}
-            cardData={cardData}
+            winCount={wins}
+            selfSkill={(profile as { selfSkill?: number | null }).selfSkill ?? null}
             cardBackMatches={history}
             onEditAvatar={() => setSheetOpen(true)}
           />
@@ -341,17 +320,6 @@ export const UserProfileMirror: React.FC<Props> = ({ userId, onUpdated }) => {
                 />
                 <p className="text-[9px] text-gray-600 mt-1">DB'de 0–5 saklanır (÷20). Master 3.4: güven 100'den başlar, yalnız düşer — artışı istisnai durumda kullanın.</p>
               </div>
-              <div>
-                <label className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Beceri Puanı (kart OVR temeli, 1–5)</label>
-                <input
-                  value={skillDraft}
-                  onChange={(e) => setSkillDraft(e.target.value)}
-                  inputMode="decimal"
-                  className="mt-1 w-28 h-10 bg-black/40 border border-white/15 rounded-xl px-3 text-sm text-white font-mono focus:border-purple-500/40 focus:outline-none"
-                  placeholder="örn. 3.8"
-                />
-                <p className="text-[9px] text-gray-600 mt-1">Kart görünümündeki OVR bu puandan türetilir (1–5 → 20–100). Hiç maçı yoksa kart "rookie" kalır.</p>
-              </div>
             </div>
 
             <button
@@ -362,47 +330,6 @@ export const UserProfileMirror: React.FC<Props> = ({ userId, onUpdated }) => {
             >
               {adminSaving ? <Loader2 size={13} className="animate-spin" /> : null} Yönetici Alanlarını Kaydet
             </button>
-
-            {/* Premium kart yönetimi (Q24) */}
-            <div className="border-t border-white/[0.06] pt-3 space-y-2">
-              <div className="flex items-center justify-between">
-                <p className="text-[10px] font-extrabold text-gray-400 uppercase tracking-wider">Premium Kart (Q24)</p>
-                <button
-                  type="button"
-                  disabled={cardBusy}
-                  onClick={() => void handleCard(!profile.cardActive, (profile.cardTier || 'bronze'))}
-                  className={`px-3 py-1.5 rounded-lg text-[10px] font-extrabold uppercase border transition-colors disabled:opacity-40 ${
-                    profile.cardActive
-                      ? 'bg-[#39FF14]/15 border-[#39FF14]/40 text-[#39FF14]'
-                      : 'bg-white/5 border-white/15 text-gray-400 hover:text-white'
-                  }`}
-                >
-                  {profile.cardActive ? 'AKTİF — Kapat' : 'KAPALI — Aç'}
-                </button>
-              </div>
-              <div className="flex gap-1.5">
-                {(['bronze', 'silver', 'gold'] as const).map((t) => (
-                  <button
-                    key={t}
-                    type="button"
-                    disabled={cardBusy || !profile.cardActive}
-                    onClick={() => void handleCard(true, t)}
-                    className={`flex-1 py-2 rounded-lg text-[10px] font-extrabold uppercase border transition-colors disabled:opacity-30 ${
-                      profile.cardTier === t
-                        ? t === 'gold'
-                          ? 'bg-yellow-500/20 border-yellow-500/50 text-yellow-300'
-                          : t === 'silver'
-                          ? 'bg-gray-300/15 border-gray-300/40 text-gray-200'
-                          : 'bg-orange-500/15 border-orange-500/40 text-orange-300'
-                        : 'border-white/10 text-gray-500 hover:text-white'
-                    }`}
-                  >
-                    {t}
-                  </button>
-                ))}
-              </div>
-              <p className="text-[9px] text-gray-600">Kart aktifken kullanıcı profilinde 👤/🎴 geçişi belirir — aynadaki hero'da birebir test edebilirsiniz.</p>
-            </div>
           </motion.div>
         )}
       </div>
