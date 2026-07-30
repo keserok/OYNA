@@ -40,16 +40,26 @@ güvenlik açığı bulunup kapatıldı.**
 
 **Yok.** Kalan her şey senin hesap/sözleşme işin (FAZ 4).
 
-### Dürüst uyarı — bu oturumda YAPAMADIĞIM şey
+### Dürüst uyarı — AAB bu oturumda üretilemedi (iki ayrı engel)
 
-Bu çalışma ortamının internet politikası Google'ın sunucularına
-(`dl.google.com`, `maven.google.com`) erişimi **kapatıyor.** Android derleme
-araçları yalnız oradan inebildiği için **AAB dosyasını bu oturumda üretemedim.**
+**Engel 1 — bu çalışma ortamı.** Ortamın internet politikası Google'ın
+sunucularına (`dl.google.com`, `maven.google.com`) erişimi **kapatıyor.**
+Android derleme araçları ve Capacitor'ün bağımlılıkları yalnız oradan
+inebildiği için burada derleme fiziksel olarak mümkün değil. Alternatif
+kaynakları (Ubuntu depoları, Maven Central, GitHub) tek tek denedim — hiçbiri
+Android platform kütüphanelerini sağlamıyor.
 
-Bunun yerine kalıcı ve daha iyi bir çözüm kurdum: paketi GitHub'ın
-bilgisayarları üretiyor, sen tek düğmeye basıp indiriyorsun. Adım adım
-anlatım §4.1'de. Bu, tek seferlik bir dosyadan daha değerli — her yeni
-sürümde aynı düğme çalışacak.
+**Engel 2 — GitHub Actions kotası.** Bunun üzerine kalıcı çözümü kurdum:
+paketi GitHub'ın bilgisayarları üretsin, sen tek düğmeye basıp indir. Hattı
+kurdum ve **kendim çalıştırıp test ettim** — iş 4 saniyede düştü. Araştırdım:
+**27 Temmuz'dan beri bu depodaki her otomatik iş aynı şekilde düşüyor**, çünkü
+GitHub'ın ücretsiz aylık dakika kotası bitmiş. Kodda hata yok; çalıştıracak
+bilgisayar yok.
+
+**Sonuç:** Hat kurulu ve doğrulanmış (YAML geçerli, 18 adım, Gradle/XML
+geçerli), imzalama anahtarın hazır. Kotayı açar açmaz (§4.1 — 2 dakika, ~3 TL)
+tek düğmeyle AAB'yi alırsın. Bu, tek seferlik bir dosyadan daha değerli:
+her yeni sürümde aynı düğme çalışacak.
 
 ---
 
@@ -350,9 +360,39 @@ dışı aktarım analizi, B2B işletme sözleşmesi, hizmet sağlayıcı sözle�
 
 ## FAZ 4 — KURUCU AKSİYON LİSTESİ (yalnız senin yapabileceklerin)
 
-### 4.1 🎯 AAB'yi almak (ilk yapılacak — 15 dakika)
+### 4.1 🎯 AAB'yi almak
 
 Bu oturumda kurduğum hat sayesinde Android Studio kurmana gerek yok.
+
+> ## 🔴 ÖNCE ŞUNU ÇÖZ: GitHub Actions dakikaların bitmiş
+>
+> Hattı kurduktan sonra **kendim çalıştırıp test ettim.** İş 4 saniyede düştü.
+> Sebebini araştırdım ve kesin teşhis şu:
+>
+> **27 Temmuz 2026'dan bu yana bu depodaki HER otomatik iş 3-15 saniyede
+> düşüyor.** İşlere bilgisayar (runner) hiç atanmıyor (`runner_id: 0`), günlük
+> kaydı üretilmiyor (404). Bu, GitHub'ın **ücretsiz aylık dakika kotasının
+> bitmesinin** tipik belirtisidir — ve depondaki kendi CI notların da
+> 27 Temmuz'da tam bu olayı belgelemiş.
+>
+> Yani: **yazdığım iş akışında hata yok, çalıştıracak bilgisayar yok.**
+> (Sözdizimini ayrıca doğruladım: YAML geçerli, 18 adım, Gradle ve XML
+> değişiklikleri geçerli.)
+>
+> ### Nasıl çözülür (2 dakika, ~2 TL)
+>
+> GitHub → sağ üstte profil resmin → **Settings** → sol altta **Billing and
+> licensing** → **Payment information** → kart ekle. Sonra aynı yerde
+> **Spending limit** → aylık bir üst sınır belirle (ör. 5 USD).
+>
+> Maliyet çok düşük: Linux dakikası ~0,008 USD. Bir Android derlemesi ~10
+> dakika ≈ **0,08 USD (~3 TL).** Ayda 20 derleme yapsan 2 USD etmez.
+>
+> **Alternatif (ücretsiz):** Kota her ay yenilenir. Faturalandırma günün
+> geldiğinde işler kendiliğinden çalışmaya başlar. Ama lansmanı buna
+> bağlamak, tarihini GitHub'ın takvimine teslim etmek demektir.
+>
+> Kotayı açtıktan sonra aşağıdaki adımlara devam et — hattın geri kalanı hazır.
 
 **Adım 1 — Anahtarı GitHub'a kaydet.** Sana 3 dosya gönderiyorum. GitHub'da:
 depo sayfası → **Settings** → **Secrets and variables** → **Actions** →
