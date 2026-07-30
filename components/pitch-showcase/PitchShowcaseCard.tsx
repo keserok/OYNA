@@ -16,7 +16,7 @@ import { transformedImageUrl } from '../../utils/imageTransform';
 export const FavStar: React.FC<{ active: boolean; size?: number }> = ({ active, size = 18 }) => (
   <Star
     size={size}
-    className={active ? 'fill-[#FFFF00] text-[#FFFF00]' : 'text-white'}
+    className={active ? 'fill-warning text-warning' : 'text-white'}
     strokeWidth={2}
   />
 );
@@ -63,7 +63,7 @@ export const PitchShowcaseCard: React.FC<{
             </span>
           ) : null}
           {pitch.isFeatured && (
-            <span className="px-2 py-1 rounded-lg bg-[#FFFF00] text-[0.6875rem] font-extrabold text-black shadow-md uppercase">Öne Çıkan</span>
+            <span className="px-2 py-1 rounded-lg bg-warning-bg text-[0.6875rem] font-extrabold text-warning border border-warning-line shadow-md uppercase">Öne Çıkan</span>
           )}
         </div>
 

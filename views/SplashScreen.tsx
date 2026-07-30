@@ -86,7 +86,7 @@ export default function SplashScreen({ onStart, ready = true }: SplashScreenProp
               animate={false}
               width="100%"
               height="100%"
-              className="drop-shadow-[0_0_24px_rgba(57,255,20,0.6)]"
+              className="text-primary drop-shadow-[0_0_24px_rgba(57,255,20,0.45)]"
             />
           </motion.div>
 

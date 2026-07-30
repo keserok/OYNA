@@ -172,9 +172,13 @@ export const OYNA_MAPLIBRE_CSS = `
     transition: box-shadow .15s ease;
     animation: oynaPinFade .22s ease-out;
   }
+  /* IP-09: seçili pin eskiden saf sarıydı; seçilmemiş yeşille kontrastı
+     1.26:1 — yani seçim gözle ayırt edilemiyordu. Artık beyaz VE %35 büyük:
+     işaret yalnız renge değil, boyuta da yaslanıyor. */
   .oyna-mldot.selected .dot-core {
-    background: #FFFF00;
-    box-shadow: 0 0 0 4px rgba(255,255,0,0.22), 0 0 14px rgba(255,255,0,0.85);
+    background: #FFFFFF;
+    box-shadow: 0 0 0 4px rgba(255,255,255,0.30), 0 0 14px rgba(255,255,255,0.85);
+    transform: scale(calc(var(--oyna-dot-scale, 1) * 1.35));
   }
   @keyframes oynaPinFade { from { opacity: 0; } to { opacity: 1; } }
   .oyna-mluser { position: relative; width: 16px; height: 16px; }

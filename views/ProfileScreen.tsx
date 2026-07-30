@@ -190,7 +190,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate,
                         <ArrowLeft size={19} strokeWidth={2.3} />
                     </button>
                     <div className="flex items-center gap-2">
-                        <OynaLogo width={20} height={20} />
+                        <OynaLogo width={20} height={20} className="text-primary" />
                         <span className="text-base font-extrabold text-white tracking-[0.05em] uppercase italic">Profil</span>
                     </div>
                     <button onClick={() => onNavigate && onNavigate('SETTINGS')} className="w-[42px] h-[42px] flex items-center justify-center bg-[#161B22]/80 rounded-full text-white/75 hover:text-white border border-white/[0.08] hover:bg-white/10 active:scale-95 transition-all">
@@ -222,7 +222,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate,
                             <div className="flex gap-2.5">
                                 <button
                                     onClick={() => onNavigate && onNavigate('AUTH')}
-                                    className="flex-1 h-11 rounded-2xl bg-[#FACC15] text-black font-extrabold text-[0.6875rem] uppercase tracking-widest active:scale-95 transition-all shadow-[0_0_15px_rgba(250,204,21,0.3)] hover:bg-yellow-300"
+                                    className="flex-1 h-11 rounded-2xl bg-primary text-on-primary font-extrabold text-[0.6875rem] uppercase tracking-widest active:scale-95 transition-all"
                                 >
                                     Giriş Yap
                                 </button>

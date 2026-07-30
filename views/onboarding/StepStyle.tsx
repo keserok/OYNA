@@ -10,16 +10,19 @@ interface StepStyleProps {
 interface StyleDef {
   key: Exclude<PlayStyle, ''>;
   name: string;
-  color: string;
   desc: string;
   icon: React.ElementType;
   stats: { tempo: number; plan: number; keyif: number };
 }
 
+/** IP-09: renk artık burada tanımlanmıyor — `PLAY_STYLE_META` tek kaynak.
+    Önceden bu dosya kendi paletini yazıyordu (Ciddi amber, Taktiksel açık mavi)
+    ve bir sonraki ekran (PlayerCardReveal) başka renkler gösteriyordu; aynı
+    etiket iki ekranda iki renkti. */
 const STYLES: StyleDef[] = [
-  { key: 'ciddi', name: 'Ciddi', color: PLAY_STYLE_META.ciddi.color, desc: 'Kazanmak için oyna, her maç önemli.', icon: Flame, stats: { tempo: 95, plan: 70, keyif: 55 } },
-  { key: 'taktiksel', name: 'Taktiksel', color: PLAY_STYLE_META.taktiksel.color, desc: 'Plan yap, pozisyonunu koru, akıllı oyna.', icon: Brain, stats: { tempo: 65, plan: 95, keyif: 70 } },
-  { key: 'rahat', name: 'Rahat', color: PLAY_STYLE_META.rahat.color, desc: 'Keyif için oyna; önemli olan katılmak.', icon: Smile, stats: { tempo: 55, plan: 50, keyif: 98 } },
+  { key: 'ciddi', name: 'Ciddi', desc: 'Kazanmak için oyna, her maç önemli.', icon: Flame, stats: { tempo: 95, plan: 70, keyif: 55 } },
+  { key: 'taktiksel', name: 'Taktiksel', desc: 'Plan yap, pozisyonunu koru, akıllı oyna.', icon: Brain, stats: { tempo: 65, plan: 95, keyif: 70 } },
+  { key: 'rahat', name: 'Rahat', desc: 'Keyif için oyna; önemli olan katılmak.', icon: Smile, stats: { tempo: 55, plan: 50, keyif: 98 } },
 ];
 
 const StatBar: React.FC<{ label: string; value: number; color: string; active: boolean }> = ({ label, value, color, active }) => (
@@ -40,6 +43,7 @@ const StepStyle: React.FC<StepStyleProps> = ({ style, onChange }) => {
           const sel = style === s.key;
           const offset = i - 1; // -1, 0, +1
           const Icon = s.icon;
+          const color = PLAY_STYLE_META[s.key].color;
           return (
             <button
               key={s.key}
@@ -48,8 +52,10 @@ const StepStyle: React.FC<StepStyleProps> = ({ style, onChange }) => {
                 position: 'relative', width: 108, minHeight: 220, borderRadius: 18, cursor: 'pointer',
                 padding: 14, textAlign: 'left',
                 background: 'linear-gradient(160deg, rgba(255,255,255,0.06), rgba(10,14,20,0.5))',
-                border: `1.5px solid ${sel ? s.color : 'rgba(255,255,255,0.1)'}`,
-                boxShadow: sel ? `0 0 28px ${s.color}55, 0 20px 40px rgba(0,0,0,0.5)` : '0 10px 24px rgba(0,0,0,0.35)',
+                /* IP-09: seçim bir ETKİLEŞİM durumudur (rol 2) → birincil renk.
+                   Kategori rengi kartın içeriğinde kalır, çerçevede değil. */
+                border: `1.5px solid ${sel ? '#39FF14' : 'rgba(255,255,255,0.1)'}`,
+                boxShadow: sel ? '0 0 28px rgba(57,255,20,0.28), 0 20px 40px rgba(0,0,0,0.5)' : '0 10px 24px rgba(0,0,0,0.35)',
                 transform: sel
                   ? 'rotateY(0deg) translateZ(18px) scale(1.05)'
                   : `rotateY(${offset * 12}deg) translateZ(-10px) scale(0.96)`,
@@ -60,16 +66,16 @@ const StepStyle: React.FC<StepStyleProps> = ({ style, onChange }) => {
             >
               <div style={{
                 width: 40, height: 40, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                background: `${s.color}22`, marginBottom: 10,
+                background: `${color}22`, marginBottom: 10,
               }}>
-                <Icon size={22} color={s.color} />
+                <Icon size={22} color={color} />
               </div>
-              <div style={{ fontSize: 14, fontWeight: 800, color: s.color, marginBottom: 4 }}>{s.name}</div>
+              <div style={{ fontSize: 14, fontWeight: 800, color: color, marginBottom: 4 }}>{s.name}</div>
               <div style={{ fontSize: 9.5, lineHeight: 1.4, color: 'rgba(255,255,255,0.6)', marginBottom: 12, minHeight: 40 }}>{s.desc}</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <StatBar label="TEMPO" value={s.stats.tempo} color={s.color} active={sel} />
-                <StatBar label="PLAN" value={s.stats.plan} color={s.color} active={sel} />
-                <StatBar label="KEYİF" value={s.stats.keyif} color={s.color} active={sel} />
+                <StatBar label="TEMPO" value={s.stats.tempo} color={color} active={sel} />
+                <StatBar label="PLAN" value={s.stats.plan} color={color} active={sel} />
+                <StatBar label="KEYİF" value={s.stats.keyif} color={color} active={sel} />
               </div>
             </button>
           );
