@@ -103,6 +103,15 @@ jobs:
             echo "::warning::GOOGLE_SERVICES_JSON secret'i yok — bu pakette ANDROID PUSH BILDIRIMLERI CALISMAZ."
           fi
 
+      # Uygulama ikonu ve acilis ekrani, assets/ altindaki ana gorsellerden
+      # HER DERLEMEDE yeniden uretilir. Bu adim olmadan android/.../res/mipmap-*
+      # klasorleri depoya bir kez islenmis eski gorsellerle kalir ve marka
+      # degisince sessizce eskiyorlar (2026-07-30'da tam bu oldu: uygulama
+      # ikonu eski simsek logosunda kalmisti). Kaynak degisirse ikon otomatik
+      # degisir; elle senkron tutmaya gerek yoktur.
+      - name: Uygulama ikonu ve acilis ekranini uret
+        run: npm run assets:generate
+
       - name: Capacitor senkronizasyonu
         run: npx cap sync android
 

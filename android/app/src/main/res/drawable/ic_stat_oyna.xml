@@ -1,11 +1,35 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Bildirim küçük ikonu: beyaz monokrom şimşek (⚡ OYNA) -->
+<!--
+  Bildirim küçük ikonu (durum çubuğunda görünen).
+
+  ÖNEMLİ: Android bu ikonu TEK RENGE boyar — yalnız şeklin şeffaf olmayan
+  kısmı kullanılır, renk bilgisi atılır. Bu yüzden ikon sade bir silüet
+  olmalıdır; detaylı çizim 24dp'de lekeye dönüşür.
+
+  ESKİDEN: şimşek (⚡) idi — eski markadan kalmıştı ve uygulama ikonuyla
+  çelişiyordu. Marka amblemi (top + oynat üçgeni) bu boyutta okunacak
+  şekilde sadeleştirilerek buraya taşındı.
+
+  NOT: Uygulama ikonu `assets/icon-*.png` dosyalarından OTOMATİK üretilir
+  (npm run assets:generate). Bu dosya ise elle tutulur, çünkü bildirim
+  ikonu vektör ve tek renk olmak zorundadır. Marka değişirse bu dosyanın
+  da elle güncellenmesi gerekir.
+-->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
     android:viewportWidth="24"
     android:viewportHeight="24">
+
+    <!-- Dış halka (top) -->
+    <path
+        android:pathData="M2.5,12 a9.5,9.5 0 1,0 19,0 a9.5,9.5 0 1,0 -19,0"
+        android:fillColor="#00000000"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="2" />
+
+    <!-- Ortadaki oynat üçgeni -->
     <path
         android:fillColor="#FFFFFFFF"
-        android:pathData="M13,2 L4,14 L10.5,14 L9,22 L20,9 L13.5,9 Z" />
+        android:pathData="M10,7.8 L10,16.2 L16.8,12 Z" />
 </vector>
