@@ -17,11 +17,79 @@ const EDITABLE = new Set(['INPUT', 'TEXTAREA', 'SELECT']);
 const isEditable = (el: Element | null): el is HTMLElement =>
   !!el && (EDITABLE.has(el.tagName) || (el as HTMLElement).isContentEditable);
 
+/** Alan ile klavyenin üst kenarı arasında bırakılan nefes payı (px). */
+export const KLAVYE_PAYI = 20;
+
+/**
+ * Odaklanan alanı klavyenin hemen üstüne getirmek için kapsayıcının NE KADAR
+ * kaydırılması gerektiğini hesaplar. Saf fonksiyon — DOM'a dokunmaz, bu yüzden
+ * test edilebilir (bkz. tests/unit/klavyeKonumu.test.ts).
+ *
+ * @param alanUst     alanın ekrandaki üst kenarı (getBoundingClientRect().top)
+ * @param alanAlt     alanın ekrandaki alt kenarı
+ * @param gorunurYuk  klavyenin ÜSTÜNDE kalan görünür yükseklik
+ * @returns kaydırma miktarı (+ aşağı, − yukarı) ya da gerek yoksa `null`
+ */
+export function kaydirmaMiktari(
+  alanUst: number,
+  alanAlt: number,
+  gorunurYuk: number,
+  pay: number = KLAVYE_PAYI,
+): number | null {
+  const hedefAlt = gorunurYuk - pay;
+  // Alan tamamen görünüyorsa dokunma — gereksiz kaydırma titreme yaratır.
+  if (alanAlt <= hedefAlt && alanUst >= pay) return null;
+  // Üst kenarın dışına taşmışsa yukarı çek; değilse klavyenin üstüne al.
+  return alanUst < pay ? alanUst - pay : alanAlt - hedefAlt;
+}
+
+/**
+ * En yakın GERÇEKTEN kaydırılabilir atayı bulur.
+ * `overflow-y` uygun olsa bile içerik sığıyorsa o eleman kaymaz; bu yüzden
+ * scrollHeight/clientHeight karşılaştırması da yapılır. Aksi hâlde yanlış
+ * kapsayıcı seçilip hiçbir şey kaymıyordu.
+ */
+const kaydirilabilirAta = (el: HTMLElement): HTMLElement | null => {
+  let p: HTMLElement | null = el.parentElement;
+  while (p) {
+    const s = getComputedStyle(p);
+    if (/(auto|scroll|overlay)/.test(s.overflowY) && p.scrollHeight > p.clientHeight + 1) return p;
+    p = p.parentElement;
+  }
+  return null;
+};
+
+/**
+ * Odaklanan alanı klavyenin HEMEN ÜSTÜNE taşır.
+ *
+ * Eskiden `scrollIntoView({ block: 'center' })` çağrılıyordu: alan kaydırma
+ * kabının ORTASINA gidiyordu. Kap tüm ekran yüksekliğinde olduğu için "orta"
+ * ekranın %50'sidir — klavye ekranın %45-55'ini kapladığında alan klavyenin
+ * ARKASINDA kalabiliyordu. Artık görünür yüksekliğe göre hesaplanıyor.
+ */
 const scrollFocusedIntoView = () => {
   const el = document.activeElement;
   if (!isEditable(el)) return;
+
+  // Klavyenin üstünde kalan görünür yükseklik.
+  // visualViewport en güvenilir kaynaktır (klavye açılınca kendisi küçülür);
+  // desteklenmiyorsa --kb-height'tan hesaplanır.
+  const kb = parseFloat(
+    getComputedStyle(document.documentElement).getPropertyValue('--kb-height'),
+  ) || 0;
+  const gorunurYukseklik = window.visualViewport?.height ?? window.innerHeight - kb;
+
+  const r = el.getBoundingClientRect();
+  const fark = kaydirmaMiktari(r.top, r.bottom, gorunurYukseklik);
+  if (fark === null) return; // zaten görünür
+
+  const kapsayici = kaydirilabilirAta(el);
+  if (kapsayici) {
+    kapsayici.scrollTo({ top: kapsayici.scrollTop + fark, behavior: 'smooth' });
+    return;
+  }
   try {
-    el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   } catch {
     el.scrollIntoView();
   }
@@ -43,6 +111,14 @@ export const initKeyboardManager = (): (() => void) => {
     later(scrollFocusedIntoView, 300);
   };
   document.addEventListener('focusin', onFocusIn);
+
+  // Emniyet katmanı: bazı Android klavyeleri (ve tahmin/emoji şeridi açılıp
+  // kapandığında) Capacitor'ün keyboardWillShow olayını tetiklemez ya da
+  // yüksekliği sonradan değiştirir. visualViewport küçüldüğünde alanı yeniden
+  // konumlandırırız — eklenti olayı gelmese de alan klavyenin altında kalmaz.
+  const vv = window.visualViewport;
+  const onViewportResize = () => { later(scrollFocusedIntoView, 60); };
+  vv?.addEventListener('resize', onViewportResize);
 
   void (async () => {
     try {
@@ -71,6 +147,7 @@ export const initKeyboardManager = (): (() => void) => {
   return () => {
     cancelled = true;
     document.removeEventListener('focusin', onFocusIn);
+    vv?.removeEventListener('resize', onViewportResize);
     timers.forEach(clearTimeout);
     cleanupListeners?.();
     root.style.setProperty('--kb-height', '0px');
