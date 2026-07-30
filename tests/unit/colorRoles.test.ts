@@ -205,8 +205,13 @@ describe('mentalite paleti — tek kaynak', () => {
 
   it('StepStyle her mentaliteyi ikon + ad ile birlikte çiziyor', () => {
     const src = oku('views/onboarding/StepStyle.tsx');
-    // Üç ayrı lucide ikonu içe aktarılır ve her kartta <Icon .../> çizilir.
-    expect(src).toMatch(/import \{[^}]*Flame[^}]*Brain[^}]*Smile[^}]*\} from 'lucide-react'/);
+    // Kuralın özü: renk TEK BAŞINA anlam taşımaz — her mentalite ikon + ad ile
+    // birlikte çizilir. Hangi ikonun kullanıldığı ürün kararıdır (Rahat'ın
+    // ikonu kullanıcı kararıyla gülümseme yerine yaprak oldu), bu yüzden
+    // burada ikon ADLARI değil, ÜÇ AYRI ikonun var olduğu sabitlenir.
+    const ikonlar = src.match(/import \{([^}]*)\} from 'lucide-react'/)?.[1] ?? '';
+    const adet = ikonlar.split(',').map(s => s.trim()).filter(Boolean).length;
+    expect(adet, `üç mentalite için üç ikon bekleniyor: ${ikonlar}`).toBe(3);
     expect(src).toContain('<Icon');
     expect(src).toContain('{s.name}');
   });
