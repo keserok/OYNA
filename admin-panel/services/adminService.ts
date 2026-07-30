@@ -2129,6 +2129,52 @@ export async function deleteMatchAdmin(matchId: string): Promise<void> {
   }
 }
 
+// ─── E9 · Rahat maç lobisi + akran puanları ─────────────────────────────────
+
+/** admin_player_peer_scores çıktısı — puanlayan kimliği BİLEREK yok (anonimlik). */
+export interface PlayerPeerScores {
+  count: number;
+  /** Hiç puan yoksa null — panel "—" basar, 0 DEĞİL. */
+  average: number | null;
+  motmCount: number;
+  selfSkill: number | null;
+  recent: Array<{ score: number; fairPlay: number | null; at: string; matchId: string | null; matchTitle: string | null }>;
+}
+
+/** Bir oyuncunun ALDIĞI akran puanları (admin-only; 20260830000000 RPC'si). */
+export async function fetchPlayerPeerScoresAdmin(userId: string, limit = 20): Promise<PlayerPeerScores> {
+  const { data, error } = await supabase.rpc('admin_player_peer_scores', {
+    p_user_id: userId,
+    p_limit: limit,
+  });
+  if (error) {
+    if (isRpcMissing(error)) throw new Error('admin_player_peer_scores RPC deploy edilmedi.');
+    throw new Error(error.message);
+  }
+  const d = (data ?? {}) as Record<string, unknown>;
+  return {
+    count: Number(d.count) || 0,
+    average: typeof d.average === 'number' ? d.average : null,
+    motmCount: Number(d.motmCount) || 0,
+    selfSkill: typeof d.selfSkill === 'number' ? d.selfSkill : null,
+    recent: Array.isArray(d.recent) ? (d.recent as PlayerPeerScores['recent']) : [],
+  };
+}
+
+/** Rahat lobide yeri karşı takıma taşı (player_move_slot_team; admin muafiyeti 20260830000003). */
+export async function moveSlotTeamAdmin(
+  matchId: string,
+  slotId: string,
+  targetSide: 'home' | 'away',
+): Promise<void> {
+  const { error } = await supabase.rpc('player_move_slot_team', {
+    p_match_id: matchId,
+    p_slot_id: slotId,
+    p_target_side: targetSide,
+  });
+  if (error) throw new Error(error.message);
+}
+
 export async function kickFromSlotAdmin(matchId: string, slotId: string, isAway = false): Promise<PositionSlot[]> {
   const { data, error } = await supabase.rpc('admin_kick_from_slot', {
     p_match_id: matchId,

@@ -15,7 +15,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
-  Loader2, Pencil, RefreshCw, ShieldAlert, Sparkles, Users, UserPlus, Wallet, X,
+  Loader2, Pencil, RefreshCw, ShieldAlert, Sparkles, Star, Users, UserPlus, Wallet, X,
 } from 'lucide-react';
 import { supabase } from '../../../supabaseClient';
 import {
@@ -30,10 +30,11 @@ import {
   ageFromBirthdate, formatPosition, trustScoreTo100, winStats,
 } from '../../../shared/profilePresentation';
 import {
-  adjustWalletBalanceAdmin, updateUserAppProfileAdmin,
-  toTurkishAdminError,
+  adjustWalletBalanceAdmin, fetchPlayerPeerScoresAdmin, updateUserAppProfileAdmin,
+  toTurkishAdminError, type PlayerPeerScores,
 } from '../../services/adminService';
 import { useAdminToast } from '../context/AdminToastContext';
+import { skillBand } from '../../../utils/skillBand';
 
 interface Props {
   userId: string;
@@ -75,6 +76,12 @@ export const UserProfileMirror: React.FC<Props> = ({ userId, onUpdated }) => {
   const [walletAmount, setWalletAmount] = useState('');
   const [walletReason, setWalletReason] = useState('');
   const [walletBusy, setWalletBusy] = useState(false);
+
+  // Alınan akran puanları (salt-okunur; puanlayan kimliği RPC'de bile yok)
+  const [peerOpen, setPeerOpen] = useState(false);
+  const [peer, setPeer] = useState<PlayerPeerScores | null>(null);
+  const [peerLoading, setPeerLoading] = useState(false);
+  const [peerError, setPeerError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -155,6 +162,25 @@ export const UserProfileMirror: React.FC<Props> = ({ userId, onUpdated }) => {
     }
   };
 
+
+  const loadPeer = useCallback(async () => {
+    setPeerLoading(true);
+    setPeerError(null);
+    try {
+      setPeer(await fetchPlayerPeerScoresAdmin(userId));
+    } catch (err) {
+      setPeerError(toTurkishAdminError(err));
+    } finally {
+      setPeerLoading(false);
+    }
+  }, [userId]);
+
+  const togglePeer = () => {
+    setPeerOpen((o) => {
+      if (!o && !peer && !peerLoading) void loadPeer();
+      return !o;
+    });
+  };
 
   const handleWallet = async () => {
     const amount = Number(walletAmount.replace(',', '.'));
@@ -330,6 +356,77 @@ export const UserProfileMirror: React.FC<Props> = ({ userId, onUpdated }) => {
             >
               {adminSaving ? <Loader2 size={13} className="animate-spin" /> : null} Yönetici Alanlarını Kaydet
             </button>
+          </motion.div>
+        )}
+      </div>
+
+      {/* ═══ ALINAN AKRAN PUANLARI — puan sistemi söküldü; skorlar yalnız burada,
+           salt-okunur görünür. Puanlayan kimliği RPC çıktısında bile YOK (anonim). ═══ */}
+      <div className="bg-[#161B22]/60 border border-purple-500/15 rounded-2xl p-4 space-y-3">
+        <button type="button" onClick={togglePeer} className="w-full flex items-center justify-between gap-2">
+          <p className="text-[10px] font-extrabold text-purple-300 uppercase tracking-wider flex items-center gap-1.5">
+            <Star size={12} /> Alınan Akran Puanları (kullanıcı görmez)
+          </p>
+          <span className="text-[10px] text-gray-500 font-extrabold">{peerOpen ? '▲' : '▼'}</span>
+        </button>
+
+        {peerOpen && (
+          <motion.div initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
+            {peerLoading ? (
+              <div className="py-6 flex flex-col items-center gap-2 text-gray-500">
+                <Loader2 size={16} className="animate-spin" />
+                <p className="text-[10px]">Akran puanları yükleniyor…</p>
+              </div>
+            ) : peerError ? (
+              <div className="py-4 flex flex-col items-center gap-2 text-center">
+                <p className="text-[11px] text-gray-400">{peerError}</p>
+                <button type="button" onClick={() => void loadPeer()} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-white/15 text-[10px] font-extrabold uppercase text-gray-300 hover:text-white">
+                  <RefreshCw size={10} /> Yeniden Dene
+                </button>
+              </div>
+            ) : peer ? (
+              <>
+                <div className="grid grid-cols-4 gap-2">
+                  {([
+                    ['Puan Sayısı', String(peer.count)],
+                    // Hiç puan yoksa "—" — 0 ortalama uydurulmaz.
+                    ['Ortalama', peer.average === null ? '—' : peer.average.toFixed(1)],
+                    ['MVP', String(peer.motmCount)],
+                    ['Öz Beyan', skillBand(peer.selfSkill)?.label ?? '—'],
+                  ] as const).map(([label, value]) => (
+                    <div key={label} className="bg-black/30 border border-white/10 rounded-xl px-2 py-2 text-center">
+                      <p className="text-sm font-extrabold text-white font-mono">{value}</p>
+                      <p className="text-[8px] text-gray-500 font-bold uppercase tracking-wider mt-0.5">{label}</p>
+                    </div>
+                  ))}
+                </div>
+
+                {peer.recent.length > 0 && (
+                  <div className="space-y-1">
+                    <p className="text-[9px] text-gray-500 font-bold uppercase tracking-wider">Son puanlar</p>
+                    {peer.recent.map((r, i) => (
+                      <div key={i} className="flex items-center justify-between gap-2 bg-black/20 border border-white/5 rounded-lg px-2.5 py-1.5">
+                        <span className="text-[10px] text-gray-400 truncate min-w-0">
+                          {r.matchTitle || 'Maç'}
+                          {r.at ? <span className="text-gray-600"> · {new Date(r.at).toLocaleDateString('tr-TR')}</span> : null}
+                        </span>
+                        <span className="flex items-center gap-1.5 shrink-0">
+                          {r.fairPlay != null && (
+                            <span className="text-[9px] font-bold text-gray-500">FP {r.fairPlay}</span>
+                          )}
+                          <span className="text-[11px] font-extrabold text-amber-300 font-mono">{r.score}/10</span>
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <p className="text-[9px] text-gray-600 leading-relaxed">
+                  Puanlayan kimliği gösterilmez — RPC anonim döndürür. Skorlar MVP seçiminde
+                  kullanılır; oyuncu profiline puan/kart olarak yansımaz.
+                </p>
+              </>
+            ) : null}
           </motion.div>
         )}
       </div>

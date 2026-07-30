@@ -12,6 +12,7 @@ import {
   swapSlotsAdmin,
   cancelMatchAdmin,
   kickFromSlotAdmin,
+  moveSlotTeamAdmin,
   setMatchStatusAdmin,
   overrideMatchScoreAdmin,
   notifyMatchRosterAdmin,
@@ -31,6 +32,7 @@ import {
 import { useAdminToast } from '../context/AdminToastContext';
 import { ActionConfirmModal, type ActionConfirmOptions } from './ActionConfirmModal';
 import { MatchLobbyPitch } from './MatchLobbyPitch';
+import { MatchLobbyRoster } from './MatchLobbyRoster';
 import { MatchLobbyHeader } from './MatchLobbyHeader';
 import { supabase } from '../../../supabaseClient';
 import { allowedSquadSizesForCourts, formatCapacityRangeForCourts } from '../../../shared/pitchShowcaseMapper';
@@ -250,6 +252,25 @@ export const MatchDetailDrawer: React.FC<Props> = ({ match, onClose, onUpdated, 
       } else {
         toastError(msg);
       }
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // Rahat kadro düzeltmesi: yeri karşı takımın İLK AÇIK slotuna taşır (para
+  // hareketi yok; 20260830000003 is_admin muafiyeti). Taşıma İKİ tarafı da
+  // değiştirdiği için tek taraflı refreshLocalSlots yetmez — tam satır tazelenir.
+  const handleMoveTeam = async (slotId: string, isAway: boolean) => {
+    if (!local) return;
+    setBusy(true);
+    try {
+      await moveSlotTeamAdmin(local.id, slotId, isAway ? 'home' : 'away');
+      const full = await adminGetMatchAdmin(local.id);
+      if (full) setLocal((prev) => (prev && prev.id === full.id ? { ...prev, ...full } : full));
+      success('Yer karşı takıma taşındı');
+      onUpdated();
+    } catch (err) {
+      toastError(toTurkishAdminError(err));
     } finally {
       setBusy(false);
     }
@@ -601,6 +622,17 @@ export const MatchDetailDrawer: React.FC<Props> = ({ match, onClose, onUpdated, 
 
                 {local.slots.length === 0 ? (
                   <p className="text-[11px] text-gray-600 py-6 text-center">Bu maçın kadro/slot tanımı yok.</p>
+                ) : local.difficulty === 'Rahat' ? (
+                  // E9 · Rahat maç: saha çizimi yok — oyuncuyla aynı dili konuşan
+                  // pozisyonsuz iki kolonlu kadro (BEYAZ | KIRMIZI).
+                  <MatchLobbyRoster
+                    slots={local.slots}
+                    awaySlots={local.awaySlots}
+                    users={adminUsers}
+                    busy={busy}
+                    onKick={(slotId, isAway) => handleKick(slotId, isAway)}
+                    onMoveTeam={(slotId, isAway) => handleMoveTeam(slotId, isAway)}
+                  />
                 ) : (
                   <MatchLobbyPitch
                     slots={local.slots}

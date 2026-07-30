@@ -76,9 +76,21 @@ vi.mock('../../../services/friendService', () => ({
 
 const updateUserAppProfileAdmin = vi.fn(async () => {});
 const adjustWalletBalanceAdmin = vi.fn(async () => {});
+// Anonim akran puanları — RPC çıktısında puanlayan kimliği YOK (sözleşme).
+const fetchPlayerPeerScoresAdmin = vi.fn(async () => ({
+  count: 3,
+  average: 7.67,
+  motmCount: 1,
+  selfSkill: 7,
+  recent: [
+    { score: 9, fairPlay: null, at: '2026-07-21T20:00:00Z', matchId: 'm1', matchTitle: 'Salı Maçı' },
+    { score: 7, fairPlay: 4, at: '2026-07-14T20:00:00Z', matchId: 'm2', matchTitle: null },
+  ],
+}));
 vi.mock('../../../admin-panel/services/adminService', () => ({
   updateUserAppProfileAdmin: (...args: unknown[]) => updateUserAppProfileAdmin(...(args as [])),
   adjustWalletBalanceAdmin: (...args: unknown[]) => adjustWalletBalanceAdmin(...(args as [])),
+  fetchPlayerPeerScoresAdmin: (...args: unknown[]) => fetchPlayerPeerScoresAdmin(...(args as [])),
   toTurkishAdminError: (e: unknown) => String(e),
 }));
 
@@ -162,5 +174,27 @@ describe('Kullanıcı Profili Aynası (admin)', () => {
     const [, fields] = updateUserAppProfileAdmin.mock.calls[0] as [string, Record<string, unknown>];
     expect(fields).toMatchObject({ trust_score: 3 }); // 60/20 = 3
     expect(fields).not.toHaveProperty('skill_rating');
+  });
+
+  it('Alınan Akran Puanları paneli: aç → RPC çağrılır, özet + son puanlar anonim listelenir', async () => {
+    render(<UserProfileMirror userId="u1" />);
+    await screen.findByText('Deneme Oyuncu');
+
+    // Panel kapalıyken RPC ÇAĞRILMAZ (her ayna açılışında bedava sorgu yok)
+    expect(fetchPlayerPeerScoresAdmin).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: /Alınan Akran Puanları/ }));
+    await waitFor(() => expect(fetchPlayerPeerScoresAdmin).toHaveBeenCalledWith('u1'));
+
+    // Özet: ortalama TEK ondalıkla basılır (7.67 → 7.7)
+    expect(await screen.findByText('7.7')).toBeInTheDocument();
+    expect(screen.getByText('MVP')).toBeInTheDocument();
+    // Öz beyan BANDI (ham 7 değil, ORTA) — hero'daki band çipiyle çakışabilir,
+    // en az bir tane olması yeterli
+    expect(screen.getAllByText('ORTA').length).toBeGreaterThan(0);
+    // Son puanlar: maç adı + skor; puanlayan kimliği HİÇBİR yerde yok
+    expect(screen.getByText(/Salı Maçı/)).toBeInTheDocument();
+    expect(screen.getByText('9/10')).toBeInTheDocument();
+    expect(screen.getByText(/Puanlayan kimliği gösterilmez/)).toBeInTheDocument();
   });
 });
