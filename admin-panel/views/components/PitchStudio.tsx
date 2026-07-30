@@ -24,7 +24,12 @@ import { getPitchFinanceSummary, type FinanceSummary } from '../../../services/f
 import { monthLabel, shiftMonth, isMonthAfter, methodLabel } from '../../../shared/financeModel';
 import { money, BreakdownList } from '../../../views/owner/finance/financeUi';
 import { localDateISO } from '../../../views/owner/ownerCalendarHelpers';
-import { createPitchAdmin, updatePitchAdmin, listOwnerCandidatesAdmin, fetchProfileById, toTurkishAdminError, type OwnerCandidate } from '../../services/adminService';
+import {
+  createPitchAdmin, updatePitchAdmin, listOwnerCandidatesAdmin, fetchProfileById,
+  fetchPitchTeamAdmin, setPitchStaffAdmin, removePitchStaffAdmin, searchStaffCandidatesAdmin,
+  STAFF_ROLE_LABELS, toTurkishAdminError,
+  type OwnerCandidate, type PitchTeam, type PitchStaffRole,
+} from '../../services/adminService';
 import { getTariffs, saveTariffs, getPitchRefundPolicy, setPitchRefundPolicy, type TariffInput } from '../../../services/pitchOwnerService';
 import { setPitchPublished, setPitchShowcaseFlags, type PitchShowcaseFlags } from '../../../services/pitchContentService';
 import { AMENITY_CATALOG, normalizeAmenity } from '../../../shared/amenities';
@@ -49,7 +54,7 @@ interface PitchStudioProps {
   onSaved: () => void;
 }
 
-type StudioTab = 'identity' | 'amenities' | 'hours' | 'courts' | 'tariffs' | 'photos' | 'showcase' | 'schedule' | 'finance';
+type StudioTab = 'identity' | 'amenities' | 'hours' | 'courts' | 'team' | 'tariffs' | 'photos' | 'showcase' | 'schedule' | 'finance';
 
 const DESC_MIN = 40;
 const DESC_MAX = 500;
@@ -194,7 +199,6 @@ export const PitchStudio: React.FC<PitchStudioProps> = ({ pitchId, onClose, onSa
   const [flashEnabled, setFlashEnabled] = useState(false);
   const [availabilityBadge, setAvailabilityBadge] = useState(false);
   const [bookingDisabledAdmin, setBookingDisabledAdmin] = useState(false);
-  const [verificationStatus, setVerificationStatus] = useState<'pending' | 'approved' | 'rejected'>('approved');
   const [showPreview, setShowPreview] = useState(false);
   const [scoreRefresh, setScoreRefresh] = useState(0);
 
@@ -203,7 +207,6 @@ export const PitchStudio: React.FC<PitchStudioProps> = ({ pitchId, onClose, onSa
   // (admin onaysız/gizli sahayı da görmeli — teşhis şeridi durumu ayrıca söyler).
   const [mirrorPitch, setMirrorPitch] = useState<Pitch | null>(null);
   const [mirrorRow, setMirrorRow] = useState<{
-    verification_status: string | null;
     is_open: boolean | null;
     is_published: boolean | null;
   } | null>(null);
@@ -218,7 +221,7 @@ export const PitchStudio: React.FC<PitchStudioProps> = ({ pitchId, onClose, onSa
     void (async () => {
       const { data, error } = await supabase
         .from('pitches')
-        .select('name, map_label, city, district, address, latitude, longitude, description, amenities, working_hours, is_published, is_featured, flash_deals_enabled, show_availability_badge, booking_disabled_by_admin, is_active, verification_status, price_per_match, owner_id')
+        .select('name, map_label, city, district, address, latitude, longitude, description, amenities, working_hours, is_published, is_featured, flash_deals_enabled, show_availability_badge, booking_disabled_by_admin, is_active, price_per_match, owner_id')
         .eq('id', pitchId)
         .single();
       if (!alive) return;
@@ -249,7 +252,6 @@ export const PitchStudio: React.FC<PitchStudioProps> = ({ pitchId, onClose, onSa
       setAvailabilityBadge((data as { show_availability_badge?: boolean | null }).show_availability_badge === true);
       setBookingDisabledAdmin((data as { booking_disabled_by_admin?: boolean | null }).booking_disabled_by_admin === true);
       setIsActive(data.is_active !== false);
-      setVerificationStatus((data.verification_status as typeof verificationStatus) ?? 'approved');
       setPricePerMatch(Number(data.price_per_match ?? 0));
       setOwnerId((data.owner_id as string | null) ?? '');
       setInitialOwnerId((data.owner_id as string | null) ?? '');
@@ -405,6 +407,95 @@ export const PitchStudio: React.FC<PitchStudioProps> = ({ pitchId, onClose, onSa
     if (activeTab === 'finance' && id) void loadFinance();
   }, [activeTab, id, loadFinance]);
 
+  // ── Yetkililer (Sahip · Müdür · Personel) ──
+  const [team, setTeam] = useState<PitchTeam | null>(null);
+  const [teamLoading, setTeamLoading] = useState(false);
+  const [teamError, setTeamError] = useState<string | null>(null);
+  const [staffQuery, setStaffQuery] = useState('');
+  const [staffResults, setStaffResults] = useState<OwnerCandidate[]>([]);
+  const [staffSearching, setStaffSearching] = useState(false);
+  const [staffRole, setStaffRole] = useState<PitchStaffRole>('STAFF');
+  const [staffBusyId, setStaffBusyId] = useState<string | null>(null);
+
+  const loadTeam = useCallback(async () => {
+    if (!id) return;
+    setTeamLoading(true);
+    setTeamError(null);
+    try {
+      setTeam(await fetchPitchTeamAdmin(id));
+    } catch (err) {
+      setTeamError(toTurkishAdminError(err));
+    } finally {
+      setTeamLoading(false);
+    }
+  }, [id]);
+
+  useEffect(() => {
+    if (activeTab === 'team' && id) void loadTeam();
+  }, [activeTab, id, loadTeam]);
+
+  // Yetkili adayı arama — en az 2 harf, 300 ms bekleme (her tuşta sorgu atmaz).
+  useEffect(() => {
+    if (activeTab !== 'team') return;
+    const q = staffQuery.trim();
+    if (q.length < 2) { setStaffResults([]); return; }
+    let alive = true;
+    setStaffSearching(true);
+    const t = setTimeout(() => {
+      void searchStaffCandidatesAdmin(q)
+        .then((rows) => { if (alive) setStaffResults(rows); })
+        .catch(() => { if (alive) setStaffResults([]); })
+        .finally(() => { if (alive) setStaffSearching(false); });
+    }, 300);
+    return () => { alive = false; clearTimeout(t); };
+  }, [staffQuery, activeTab]);
+
+  const assignStaff = async (userId: string) => {
+    if (!id) return;
+    setStaffBusyId(userId);
+    try {
+      await setPitchStaffAdmin(id, userId, staffRole);
+      success(`${STAFF_ROLE_LABELS[staffRole]} yetkisi verildi.`);
+      setStaffQuery('');
+      setStaffResults([]);
+      await loadTeam();
+    } catch (err) {
+      toastError(toTurkishAdminError(err));
+    } finally {
+      setStaffBusyId(null);
+    }
+  };
+
+  const changeStaffRole = async (userId: string | null, role: PitchStaffRole) => {
+    if (!id || !userId) {
+      toastError('Bu kayda bağlı bir uygulama hesabı yok — önce hesabı bağlayın.');
+      return;
+    }
+    setStaffBusyId(userId);
+    try {
+      await setPitchStaffAdmin(id, userId, role);
+      success(`Yetki ${STAFF_ROLE_LABELS[role]} olarak güncellendi.`);
+      await loadTeam();
+    } catch (err) {
+      toastError(toTurkishAdminError(err));
+    } finally {
+      setStaffBusyId(null);
+    }
+  };
+
+  const removeStaff = async (memberId: string, adi: string) => {
+    setStaffBusyId(memberId);
+    try {
+      await removePitchStaffAdmin(memberId);
+      success(`${adi} tesisin yetkilileri arasından çıkarıldı.`);
+      await loadTeam();
+    } catch (err) {
+      toastError(toTurkishAdminError(err));
+    } finally {
+      setStaffBusyId(null);
+    }
+  };
+
   // Canlı Ayna: oyuncu vitrinindeki AYNI sorgudan beslenir (PITCH_SHOWCASE_SELECT +
   // mapDbPitchToUiPitch). verification/is_open/is_published filtreleri BİLEREK yok —
   // ham durum teşhis şeridinde gösterilir.
@@ -419,11 +510,9 @@ export const PitchStudio: React.FC<PitchStudioProps> = ({ pitchId, onClose, onSa
         .single();
       if (error || !data) throw error ?? new Error('Tesis bulunamadı.');
       const row = data as unknown as DbPitchRow & {
-        verification_status?: string | null;
         is_open?: boolean | null;
       };
       setMirrorRow({
-        verification_status: row.verification_status ?? null,
         is_open: row.is_open ?? null,
         is_published: row.is_published ?? null,
       });
@@ -603,20 +692,7 @@ export const PitchStudio: React.FC<PitchStudioProps> = ({ pitchId, onClose, onSa
     }
   };
 
-  const handleVerificationChange = async (status: 'pending' | 'approved' | 'rejected') => {
-    if (!id) return;
-    const prev = verificationStatus;
-    setVerificationStatus(status);
-    try {
-      await updatePitchAdmin(id, { verification_status: status });
-      success('Doğrulama durumu güncellendi.');
-      setMirrorRefresh((v) => v + 1);
-      onSaved();
-    } catch (err) {
-      setVerificationStatus(prev);
-      toastError(toTurkishAdminError(err));
-    }
-  };
+
 
   const toggleAmenity = (item: string) => {
     setAmenities((prev) => (prev.includes(item) ? prev.filter((a) => a !== item) : [...prev, item]));
@@ -647,6 +723,7 @@ export const PitchStudio: React.FC<PitchStudioProps> = ({ pitchId, onClose, onSa
     { id: 'amenities', label: 'Olanaklar', icon: Sparkles, requiresId: false },
     { id: 'hours', label: 'Çalışma Saatleri', icon: Clock, requiresId: false },
     { id: 'courts', label: 'Kortlar', icon: LayoutGrid, requiresId: true },
+    { id: 'team', label: 'Yetkililer', icon: ShieldCheck, requiresId: true },
     { id: 'tariffs', label: 'Tarifeler & Fiyat', icon: Wallet, requiresId: true },
     { id: 'schedule', label: 'Takvim & Doluluk', icon: CalendarClock, requiresId: true },
     { id: 'finance', label: 'Finans', icon: Coins, requiresId: true },
@@ -1194,6 +1271,180 @@ export const PitchStudio: React.FC<PitchStudioProps> = ({ pitchId, onClose, onSa
                 </>
               )}
 
+              {activeTab === 'team' && id && (
+                <>
+                  {/* IP-22: tesisin yetkilileri buradan belirlenir. ÜÇ düzey vardır ve
+                      hepsi tek tanımdan gelir — Sahip tesise, Müdür ve Personel ekibe. */}
+                  <div className="bg-black/30 border border-white/[0.06] rounded-2xl p-5 space-y-1.5">
+                    <p className="text-sm font-extrabold text-white">Bu tesiste kim ne yapabilir?</p>
+                    <p className="text-[11px] text-gray-400 leading-relaxed">
+                      <strong className="text-white">Sahip</strong> — tesisin tamamı: finans, banka hesabı, para çekme, ekip.
+                      Kimlik &amp; Konum sekmesinden atanır, tesiste tek kişidir.<br />
+                      <strong className="text-white">Müdür</strong> — günlük yönetim: takvim, rezervasyon, tarife, ekip listesi. Para çekemez.<br />
+                      <strong className="text-white">Personel</strong> — kasa işleri: rezervasyon açma, tahsilat, görevler. Finans ve ekip kapalı.
+                    </p>
+                  </div>
+
+                  {teamError && (
+                    <div className="bg-red-500/10 border border-red-500/25 rounded-xl p-3 flex items-start gap-2.5">
+                      <AlertTriangle size={14} className="text-red-400 shrink-0 mt-0.5" />
+                      <p className="text-[11px] text-red-300 font-bold">{teamError}</p>
+                    </div>
+                  )}
+
+                  {/* Sahip */}
+                  <div className="bg-black/30 border border-white/[0.06] rounded-2xl p-5">
+                    <label className={`${labelCls} flex items-center gap-1.5`}><ShieldCheck size={12} /> Sahip</label>
+                    {teamLoading && !team ? (
+                      <div className="flex items-center gap-2 text-gray-500 text-xs py-2"><Loader2 size={14} className="animate-spin" /> Yükleniyor…</div>
+                    ) : team?.owner ? (
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-sm font-bold text-white truncate">{team.owner.name}</p>
+                          <p className="text-[11px] text-gray-500 truncate">{team.owner.email || team.owner.phone || '—'}</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setActiveTab('identity')}
+                          className="shrink-0 px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 text-[11px] font-bold"
+                        >
+                          Sahibi değiştir
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-between gap-3">
+                        <p className="text-[11px] text-amber-300 font-bold">
+                          Bu tesisin sahibi yok — sahipsiz tesis vitrine çıkarılamaz.
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => setActiveTab('identity')}
+                          className="shrink-0 px-3 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white text-[11px] font-extrabold"
+                        >
+                          Sahip ata
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Yeni yetkili ekle */}
+                  <div className="bg-black/30 border border-white/[0.06] rounded-2xl p-5 space-y-3">
+                    <label className={`${labelCls} flex items-center gap-1.5`}><Plus size={12} /> Yetkili Ekle</label>
+                    <div className="flex gap-2">
+                      {(['MANAGER', 'STAFF'] as const).map((r) => (
+                        <button
+                          key={r}
+                          type="button"
+                          onClick={() => setStaffRole(r)}
+                          className={`px-4 py-2 rounded-xl text-xs font-bold border transition-colors ${
+                            staffRole === r
+                              ? 'bg-red-500/15 border-red-500/40 text-red-300'
+                              : 'bg-white/[0.03] border-white/10 text-gray-500'
+                          }`}
+                        >
+                          {STAFF_ROLE_LABELS[r]}
+                        </button>
+                      ))}
+                    </div>
+                    <input
+                      value={staffQuery}
+                      onChange={(e) => setStaffQuery(e.target.value)}
+                      placeholder="Ad, e-posta veya telefonla kullanıcı ara (en az 2 harf)…"
+                      className={inputCls}
+                    />
+                    {staffSearching && (
+                      <p className="text-[11px] text-gray-500 flex items-center gap-1.5"><Loader2 size={12} className="animate-spin" /> Aranıyor…</p>
+                    )}
+                    {!staffSearching && staffQuery.trim().length >= 2 && staffResults.length === 0 && (
+                      <p className="text-[11px] text-gray-500">Eşleşen kullanıcı bulunamadı. Kişinin OYNA hesabı olması gerekir.</p>
+                    )}
+                    {staffResults.length > 0 && (
+                      <div className="max-h-56 overflow-y-auto custom-scrollbar rounded-xl border border-white/10 divide-y divide-white/5">
+                        {staffResults.map((c) => (
+                          <button
+                            key={c.id}
+                            type="button"
+                            disabled={staffBusyId === c.id}
+                            onClick={() => void assignStaff(c.id)}
+                            className="w-full flex items-center justify-between gap-3 px-3 py-2.5 text-left hover:bg-white/5 disabled:opacity-50"
+                          >
+                            <span className="min-w-0">
+                              <span className="block text-xs font-bold text-white truncate">{ownerLabel(c)}</span>
+                              <span className="block text-[10px] text-gray-500 truncate">{c.email || c.phone || c.id.slice(0, 8)}</span>
+                            </span>
+                            <span className="shrink-0 text-[10px] font-extrabold uppercase text-red-300">
+                              {staffBusyId === c.id ? '…' : `${STAFF_ROLE_LABELS[staffRole]} yap`}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Mevcut yetkililer */}
+                  <div className="bg-black/30 border border-white/[0.06] rounded-2xl p-5 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <label className={`${labelCls} mb-0`}>Müdürler ve Personel ({team?.members.length ?? 0})</label>
+                      <button
+                        type="button"
+                        onClick={() => void loadTeam()}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 text-[10px] font-bold uppercase"
+                      >
+                        <RefreshCcw size={11} className={teamLoading ? 'animate-spin' : ''} /> Yenile
+                      </button>
+                    </div>
+                    {teamLoading && !team ? (
+                      <div className="flex items-center justify-center py-8 text-gray-500"><Loader2 size={16} className="animate-spin" /></div>
+                    ) : (team?.members.length ?? 0) === 0 ? (
+                      <p className="text-[11px] text-gray-500 py-4 text-center">
+                        Bu tesise henüz müdür veya personel atanmadı.
+                      </p>
+                    ) : (
+                      <div className="rounded-xl border border-white/10 divide-y divide-white/5">
+                        {(team?.members ?? []).map((m) => (
+                          <div key={m.member_id} className="flex items-center justify-between gap-3 px-3 py-3">
+                            <div className="min-w-0">
+                              <p className="text-xs font-bold text-white truncate">{m.name}</p>
+                              <p className="text-[10px] text-gray-500 truncate">
+                                {m.email || m.phone || '—'}
+                                {!m.linked && <span className="text-amber-400"> · uygulama hesabı bağlı değil</span>}
+                                {m.linked && m.account_status !== 'ACTIVE' && <span className="text-amber-400"> · girişi aktif değil</span>}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              {(['MANAGER', 'STAFF'] as const).map((r) => (
+                                <button
+                                  key={r}
+                                  type="button"
+                                  disabled={staffBusyId === (m.user_id ?? m.member_id) || m.staff_role === r}
+                                  onClick={() => void changeStaffRole(m.user_id, r)}
+                                  className={`px-2.5 py-1.5 rounded-lg text-[10px] font-extrabold border transition-colors disabled:cursor-default ${
+                                    m.staff_role === r
+                                      ? 'bg-red-500/15 border-red-500/40 text-red-300'
+                                      : 'bg-white/[0.03] border-white/10 text-gray-500 hover:text-white'
+                                  }`}
+                                >
+                                  {STAFF_ROLE_LABELS[r]}
+                                </button>
+                              ))}
+                              <button
+                                type="button"
+                                disabled={staffBusyId === m.member_id}
+                                onClick={() => void removeStaff(m.member_id, m.name)}
+                                title="Yetkiyi kaldır"
+                                className="p-1.5 rounded-lg bg-red-500/10 border border-red-500/25 text-red-400 hover:bg-red-500/20 disabled:opacity-50"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+
               {activeTab === 'photos' && id && (
                 <>
                   <p className="text-xs text-gray-400">
@@ -1231,7 +1482,6 @@ export const PitchStudio: React.FC<PitchStudioProps> = ({ pitchId, onClose, onSa
                       <>
                         <div className="flex flex-wrap gap-2">
                           {([
-                            { label: 'Doğrulama: Onaylı', ok: mirrorRow.verification_status === 'approved' },
                             { label: 'Tesis Açık', ok: mirrorRow.is_open === true },
                             { label: 'Yayında', ok: mirrorRow.is_published === true },
                           ] as const).map((c) => (
@@ -1247,7 +1497,7 @@ export const PitchStudio: React.FC<PitchStudioProps> = ({ pitchId, onClose, onSa
                             </span>
                           ))}
                         </div>
-                        {!(mirrorRow.verification_status === 'approved' && mirrorRow.is_open === true && mirrorRow.is_published === true) && (
+                        {!(mirrorRow.is_open === true && mirrorRow.is_published === true) && (
                           <div className="bg-amber-500/10 border border-amber-500/25 rounded-xl p-3 flex items-start gap-2.5">
                             <AlertTriangle size={14} className="text-amber-400 shrink-0 mt-0.5" />
                             <p className="text-[11px] text-amber-300 font-bold leading-relaxed">
@@ -1374,30 +1624,6 @@ export const PitchStudio: React.FC<PitchStudioProps> = ({ pitchId, onClose, onSa
                     </div>
                   </div>
 
-                  <div className="bg-black/30 border border-white/[0.06] rounded-2xl p-5">
-                    <label className={`${labelCls} flex items-center gap-1.5`}><ShieldCheck size={12} /> Doğrulama Durumu</label>
-                    <div className="flex gap-2">
-                      {([
-                        { v: 'approved', label: 'Onaylı', cls: 'bg-green-500/15 border-green-500/40 text-green-300' },
-                        { v: 'pending', label: 'İncelemede', cls: 'bg-amber-500/15 border-amber-500/40 text-amber-300' },
-                        { v: 'rejected', label: 'Reddedildi', cls: 'bg-red-500/15 border-red-500/40 text-red-300' },
-                      ] as const).map((opt) => (
-                        <button
-                          key={opt.v}
-                          type="button"
-                          onClick={() => void handleVerificationChange(opt.v)}
-                          className={`px-4 py-2 rounded-xl text-xs font-bold border transition-colors ${
-                            verificationStatus === opt.v ? opt.cls : 'bg-white/[0.03] border-white/10 text-gray-500'
-                          }`}
-                        >
-                          {opt.label}
-                        </button>
-                      ))}
-                    </div>
-                    <p className="text-[10px] text-gray-600 mt-2">
-                      Onaylı tesiste owner'ın ad/konum değişiklikleri admin onayına düşer (kimlik koruması).
-                    </p>
-                  </div>
 
                   <div>
                     <button

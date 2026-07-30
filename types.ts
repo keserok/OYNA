@@ -442,7 +442,6 @@ export interface Pitch {
   courts?: Court[]; // Multiple courts in one facility
   isCluster?: boolean;
   clusterCount?: number;
-  isApproved?: boolean; // Admin approval flag
   paymentOptions?: { online: boolean; deposit: boolean; cash: boolean }; // Payment options configured by owner
   paramMerchantId?: string;
   paramApiKey?: string;
@@ -1246,8 +1245,6 @@ export interface OwnerPitch {
   total_price: number | null;
   price_per_person: number | null;
   iban: string | null;
-  verification_status: 'pending' | 'approved' | 'rejected';
-  verification_notes?: string | null;
   pricing_mode: 'FULL' | 'PER_PERSON';
   is_open: boolean;
   is_demo?: boolean;

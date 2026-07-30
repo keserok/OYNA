@@ -222,8 +222,8 @@ export const getMatchLobbyParticipants = async (
 /**
  * Maça ATANMIŞ kaleci/hakem — lobide HERKESE gösterilir (salt-okunur).
  * Kaynak: `matches.gk_id`/`matches.refereeId` → `goalkeepers`/`referees` tabloları.
- * RLS: her iki tablonun SELECT politikası onaylı (verification_status='approved')
- * ve demo-değil (ya da demo_mode açık) sağlayıcıları herkese açar; okunamıyorsa
+ * RLS: her iki tablonun SELECT politikası yalnız doğrulanmış ve demo-değil
+ * (ya da demo modu açık) sağlayıcıları herkese açar; okunamıyorsa
  * (ör. reddedilmiş sağlayıcı) null döner ve UI o kartı hiç göstermez.
  * jsonb `skills`/`stats` ham döner — çağıran defansif okur (anahtarlar TR/EN olabilir).
  */

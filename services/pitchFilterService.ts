@@ -145,7 +145,6 @@ export function filterAndSortPitches(input: FilterAndSortInput): Pitch[] {
 
   const result = pitches
     .filter((p) => {
-      if (p.isApproved === false) return false;
       if (favOnly && !favorites.has(p.id)) return false;
       if (onlyDiscounted && !p.flashDiscount) return false;
       if (!pitchInSelectedRegions(p, selectedRegions)) return false;
