@@ -29,6 +29,7 @@ import { formatTRYAmount, formatTRYShort } from '../utils/formatTRY';
 const money = formatTRYAmount;
 import { showToast } from '../components/common/GlobalToast';
 import { FORMATIONS as FORMATIONS_SSOT, type SquadSize } from '../utils/formations';
+import { playStyleMetaForDifficulty } from './onboarding/onboardingShared';
 import TeamPlanBanner from '../components/social/TeamPlanBanner';
 // Tek kaynak lobi mantığı — admin paneli (MatchLobbyPitch) ile AYNI fonksiyonlar (drift yok).
 import { normalizeRole, inferSquadSize, applyCanonicalCoords, resolveGkVisibility, findHiredGkSlotId } from '../shared/lobbyEnrichment';
@@ -83,15 +84,14 @@ const FORMATIONS = FORMATIONS_SSOT as Record<string, Record<string, { x: number;
 // (checkAndGetStatus + fillVacatedSlot kaldırıldı — F1.8: kick artık sunucuda,
 // player_kick_slot RPC'si; statü/terfi hesabının client kopyası kalmadı.)
 
-// ─── Difficulty Badge Renk Sistemi ─────────────────────────────────────────
-
-// IP-09: bu tablo mentalite paletinin DÖRDÜNCÜ kopyasıydı. Renkler artık tek
-// kaynaktan (PLAY_STYLE_META) gelir — kategori rengi birincil/uyarı olamaz.
-const difficultyConfig: Record<string, { color: string; glow: string; label: string }> = {
-  'Ciddi':     { color: PLAY_STYLE_META.ciddi.color,     glow: 'rgba(248,113,113,0.25)', label: 'CİDDİ'     },
-  'Taktiksel': { color: PLAY_STYLE_META.taktiksel.color, glow: 'rgba(96,165,250,0.25)',  label: 'TAKTİKSEL' },
-  'Rahat':     { color: PLAY_STYLE_META.rahat.color,     glow: 'rgba(169,180,192,0.25)', label: 'RAHAT'     },
-};
+// ─── Difficulty Badge Renk Sistemi — TEK KAYNAK: PLAY_STYLE_META ────────────
+// Glow, kanonik renkten %40 alfa ile türetilir (yeni renk kopyası üretmez).
+const difficultyConfig: Record<string, { color: string; glow: string; label: string }> = Object.fromEntries(
+  (['Ciddi', 'Taktiksel', 'Rahat'] as const).map((d) => {
+    const meta = playStyleMetaForDifficulty(d)!;
+    return [d, { color: meta.color, glow: `${meta.color}66`, label: meta.label.toLocaleUpperCase('tr-TR') }];
+  }),
+);
 
 const getQualityGrade = (score: number): string => {
   if (score >= 95) return 'A+';
@@ -172,7 +172,7 @@ const enrichSideSlots = (
         id: pid,
         name: prof?.name || orig.name || 'Oyuncu',
         avatar: (prof ? prof.avatarUrl : orig.avatar) || '',
-        rating: prof?.rating || orig.rating || 4.5,
+        selfSkill: prof?.selfSkill ?? orig.selfSkill ?? null,
         position: slot.role || 'OYUNCU',
         x: slot.x,
         y: slot.y,
@@ -355,7 +355,6 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
         awayTeamId: (updatedMatch as any).away_team_id || (updatedMatch as any).awayTeamId,
         creatorId: (updatedMatch as any).creator_id || (updatedMatch as any).creatorId,
         reservePlayers: (updatedMatch as any).reserve_players || (updatedMatch as any).reservePlayers || [],
-        minRating: (updatedMatch as any).min_rating || (updatedMatch as any).minRating,
         homeScore: (updatedMatch as any).home_score || (updatedMatch as any).homeScore,
         awayScore: (updatedMatch as any).away_score || (updatedMatch as any).awayScore,
         scoreEnteredAt: (updatedMatch as any).score_entered_at || (updatedMatch as any).scoreEnteredAt,
@@ -548,7 +547,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
   // Gerçek profil (store) önce; admin-only adminUsers yalnız admin oturumunda dolu.
   const currentUserProfile = storeCurrentUserProfile
     || (adminUsers || []).find(u => u?.id === currentUserUid)
-    || { id: currentUserUid, name: auth.currentUser ? (auth.currentUser.displayName || 'Oyuncu') : 'Misafir', avatar: auth.currentUser?.photoURL || '/player_card_photo.png', role: UserRole.PLAYER, rating: 0 };
+    || { id: currentUserUid, name: auth.currentUser ? (auth.currentUser.displayName || 'Oyuncu') : 'Misafir', avatar: auth.currentUser?.photoURL || '/player_card_photo.png', role: UserRole.PLAYER };
 
   // Kaptanlık global rol değil; maçı kuran kişi o maçın yöneticisidir.
   const isCaptain = match.creatorId === currentUserProfile?.id;
@@ -797,9 +796,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
       geriAl?.();
       console.error('Buy slots error:', e);
       const msg = e?.message || '';
-      showActionError(msg.includes('MIN_RATING')
-        ? `Bu maç minimum ${match.minRating || "belirli bir"} puan istiyor — puanın henüz yetmiyor.`
-        : msg.includes('Yetersiz') ? 'Cüzdan bakiyen yetersiz.' : 'Slot satın alınamadı. Lütfen tekrar dene.');
+      showActionError(msg.includes('Yetersiz') ? 'Cüzdan bakiyen yetersiz.' : 'Slot satın alınamadı. Lütfen tekrar dene.');
     } finally {
       setIsProcessing(false); endWrite();
     }
@@ -823,9 +820,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
       if (fresh) applyMatchLocal(fresh);
     } catch (e: any) {
       console.error('Join reserve error:', e);
-      showActionError((e?.message || '').includes('MIN_RATING')
-        ? `Bu maç minimum ${match.minRating || "belirli bir"} puan istiyor — puanın henüz yetmiyor.`
-        : 'Yedek olarak katılırken bir hata oluştu.');
+      showActionError('Yedek olarak katılırken bir hata oluştu.');
     } finally {
       setIsProcessing(false); endWrite();
     }

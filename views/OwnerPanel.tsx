@@ -39,8 +39,7 @@ import {
   OwnerWidgetSettingsModal,
   OwnerMatchesModal,
   OwnerNotificationsModal,
-  // NOT: OwnerPaymentSettingsModal (PayTR/Param) şu an bağlı değil — ödeme
-  // sağlayıcı entegrasyonu canlıya alınınca menüye eklenecek.
+  OwnerPaymentSettingsModal,
   OwnerSecurityModal,
   OwnerSupportModal,
   OwnerLogoutModal,
@@ -195,6 +194,7 @@ const tariffRowToPolicy = (t: PitchTariff) => ({
     setActiveTab(tab);
   };
   const [showCancellationPolicy, setShowCancellationPolicy] = useState(false);
+  const [showPaymentMode, setShowPaymentMode] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [activeWidgets, setActiveWidgets] = useState<WidgetType[]>(() => {
       const saved = localStorage.getItem('owner_activeWidgets');
@@ -892,6 +892,10 @@ const tariffRowToPolicy = (t: PitchTariff) => ({
             // Karar: iade politikası yönetim ayarı — sahip + müdür düzenler.
             if (managerGuard()) setShowCancellationPolicy(true);
           }}
+          onPaymentMode={() => {
+            // Ödeme modu paranın nasıl toplandığını belirler → yalnız tesis sahibi.
+            if (ownerOnlyGuard()) setShowPaymentMode(true);
+          }}
           onSecurity={() => setShowSecurity(true)}
           onSupport={() => setShowSupport(true)}
           onLogout={() => setShowLogoutConfirm(true)}
@@ -973,6 +977,16 @@ const tariffRowToPolicy = (t: PitchTariff) => ({
           onClose={() => setShowCancellationPolicy(false)}
           facilityId={facilityData?.id ?? ''}
           readOnly={isReadOnly}
+        />
+      )}
+      {showPaymentMode && (
+        <OwnerPaymentSettingsModal
+          onClose={() => setShowPaymentMode(false)}
+          facilityId={facilityData?.id ?? ''}
+          readOnly={isReadOnly}
+          onSave={(data) =>
+            setFacilityData((prev: any) => ({ ...prev, paymentOptions: data.paymentOptions }))
+          }
         />
       )}
       {showSecurity && <OwnerSecurityModal onClose={() => setShowSecurity(false)} />}

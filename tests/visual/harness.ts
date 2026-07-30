@@ -254,6 +254,92 @@ export async function odemeBaglamiTohumla(page: Page) {
 }
 
 /**
+ * Maç sonu değerlendirme için deterministik bağlam tohumla.
+ *
+ * Oturumdaki kullanıcı (`gorsel-test-kullanicisi`) EV sahibi kadrosuna konur ki
+ * ekran "KENDİ TAKIMIN" dalını çizsin: kendisi listeden düşer, iki takım
+ * arkadaşı puanlanabilir, deplasman oyuncusu HİÇ görünmez.
+ */
+export async function degerlendirmeBaglamiTohumla(page: Page, opts: { gorevliler?: boolean } = {}) {
+  const oyuncu = (id: string, ad: string, mevki: string) =>
+    `{ id: '${id}', name: '${ad}', avatar: '', position: '${mevki}', x: 50, y: 50 }`;
+  const slot = (sid: string, id: string, ad: string, mevki: string) =>
+    `{ id: '${sid}', role: '${mevki}', x: 50, y: 50, status: 'TAKEN', occupant: '${id}', player: ${oyuncu(id, ad, mevki)} }`;
+
+  await storeIle(page, `(store) => store.getState().setSelectedMatch({
+    id: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
+    title: 'Akşam Maçı',
+    location: 'Yıldız Halı Saha',
+    pitchName: 'Yıldız Halı Saha',
+    date: '1 Mart 2026',
+    time: '20:00 - 21:00',
+    price: 150,
+    difficulty: 'Rahat',
+    image: '',
+    badges: [],
+    missingPositions: [],
+    creatorId: 'baska-biri',
+    ${opts.gorevliler ? "gkId: 'gk-1', refereeId: 'ref-1'," : ''}
+    slots: [
+      ${slot('h1', 'gorsel-test-kullanicisi', 'Ben', 'ORT')},
+      ${slot('h2', 'p-emre', 'Emre Duran', 'SAV')},
+      ${slot('h3', 'p-caner', 'Caner Kılıç', 'ORT')},
+      ${slot('h4', 'p-ahmet', 'Ahmet Yıldız', 'HÜC')},
+    ],
+    awaySlots: [ ${slot('a1', 'p-rakip', 'Rakip Oyuncu', 'ORT')} ],
+  })`);
+}
+
+/**
+ * Rahat maç lobisi için deterministik bağlam: pozisyonsuz iki takım kadrosu,
+ * beş satır durumunun tamamı (BOŞ/REZERVE/LİNK/DOLU/DAVETLİ) + yedek listesi.
+ * Ağ kapalı olduğundan tesis/konfig istekleri boş döner → varsayılan kademeler
+ * ve foto-yok zemini de görüntülenmiş olur.
+ */
+export async function rahatBaglamiTohumla(page: Page, opts: { dolu?: boolean } = {}) {
+  const oyuncu = (id: string, ad: string) =>
+    `{ id: '${id}', name: '${ad}', avatar: '', position: 'OYUNCU', selfSkill: ${id === 'p-ali' ? 9 : id === 'p-veli' ? 2 : 5} }`;
+  const dolu = (sid: string, id: string, ad: string, ek = '') =>
+    `{ id: '${sid}', role: 'OYUNCU', status: 'TAKEN', occupant: '${id}', player: ${oyuncu(id, ad)}${ek} }`;
+  const slots = opts.dolu
+    ? `[${dolu('w0', 'p-ali', 'Ali Vural')}, ${dolu('w1', 'p-emre', 'Emre Duran')}]`
+    : `[
+        ${dolu('w0', 'p-ali', 'Ali Vural')},
+        { id: 'w1', role: 'OYUNCU', status: 'TAKEN', purchasedBy: 'p-baska', assignmentStatus: 'RESERVED' },
+        { id: 'w2', role: 'OYUNCU', status: 'TAKEN', purchasedBy: 'p-baska', assignmentStatus: 'LINK_PENDING' },
+        { id: 'w3', role: 'OYUNCU', status: 'OPEN' }
+      ]`;
+  const away = opts.dolu
+    ? `[${dolu('r0', 'p-veli', 'Veli Kaya')}, ${dolu('r1', 'p-kaan', 'Kaan Demir')}]`
+    : `[
+        ${dolu('r0', 'p-veli', 'Veli Kaya', ", purchasedBy: 'p-baska', assignmentStatus: 'ASSIGNED'")},
+        { id: 'r1', role: 'OYUNCU', status: 'OPEN' }
+      ]`;
+  await storeIle(page, `(store) => store.getState().setSelectedMatch({
+    id: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
+    title: 'Rahat Akşam Maçı',
+    location: 'Altınordu Halı Saha',
+    pitchName: 'Altınordu Halı Saha',
+    courtName: 'Kort 2',
+    date: 'Bugün',
+    time: '20:00 – 21:00',
+    startsAt: '2026-03-01T20:00:00Z',
+    price: 200,
+    difficulty: 'Rahat',
+    footwearRule: 'CLEATS_OK',
+    format: '2v2',
+    gender: 'Karma',
+    image: '',
+    badges: [],
+    missingPositions: [],
+    creatorId: 'baska-biri',
+    slots: ${slots},
+    awaySlots: ${away},
+    reservePlayers: ${opts.dolu ? "[{ id: 'p-yedek', name: 'Deniz Usta' }]" : '[]'},
+  })`);
+}
+
+/**
  * Ekran görüntüsünden ÖNCE her şeyin oturmasını bekle:
  * yazı tipleri + bir sonraki boya karesi + kısa bir yerleşim payı.
  */

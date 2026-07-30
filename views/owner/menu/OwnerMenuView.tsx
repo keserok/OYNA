@@ -4,6 +4,7 @@ import {
   Bell,
   Building2,
   ChevronRight,
+  CreditCard,
   Globe,
   HelpCircle,
   LayoutDashboard,
@@ -32,6 +33,8 @@ export interface OwnerMenuViewProps {
   onBankAccounts: () => void;
   onWithdrawals: () => void;
   onCancellationPolicy: () => void;
+  /** Ödeme modu (sahada / online / oyuncu seçsin) ayar modalını açar. */
+  onPaymentMode: () => void;
   onLogout: () => void;
   onSecurity: () => void;
   onSupport: () => void;
@@ -110,6 +113,7 @@ export const OwnerMenuView: React.FC<OwnerMenuViewProps> = ({
   onBankAccounts,
   onWithdrawals,
   onCancellationPolicy,
+  onPaymentMode,
   onLogout,
   onSecurity,
   onSupport,
@@ -259,6 +263,11 @@ export const OwnerMenuView: React.FC<OwnerMenuViewProps> = ({
               icon={<RotateCcw size={18} />}
               label="İptal / İade Politikası"
               onClick={onCancellationPolicy}
+            />
+            <MenuRow
+              icon={<CreditCard size={18} />}
+              label="Ödeme Modu"
+              onClick={onPaymentMode}
             />
           </div>
         </section>

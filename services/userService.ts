@@ -1,15 +1,10 @@
 import { supabase } from '../supabaseClient';
 import { User } from '@supabase/supabase-js';
-import { PlayerCardData } from '../types';
-
-// GERÇEK puan verisi profiles.skill_rating (0-5, zaten hesaplı) ve
-// profiles.match_count'tan gelir. Eski kod olmayan `profiles.stats` kolonunu
-// okuyup HER kullanıcıya default {matchesPlayed:0, rating:5.0} veriyordu →
-// tüm kartlar sahte OVR 100 çıkıyordu (KN-4). Not: DB'de `rating` 0-10
-// skalasındadır; `skill_rating` onun 0-5 karşılığıdır — kart ölçeği bunu bekler.
-const mapPlayerStats = (row: any): { matchesPlayed: number; rating: number } => ({
+// Oyuncu istatistiği artık yalnız maç sayısı taşır. Akran-puanı türevleri
+// (skill_rating → kart OVR zinciri) 20260831000000 sökümüyle öldü; kamusal
+// seviye göstergesi profiles.self_skill'dir (OynaUser.selfSkill).
+const mapPlayerStats = (row: any): { matchesPlayed: number } => ({
   matchesPlayed: Number(row?.match_count ?? 0),
-  rating: typeof row?.skill_rating === 'number' ? row.skill_rating : 0,
 });
 
 export interface OynaUser {
@@ -24,13 +19,7 @@ export interface OynaUser {
   walletBalance: number;
   stats: {
     matchesPlayed: number;
-    rating: number;
   };
-  playerCard?: PlayerCardData | null;
-  /** Premium kart admin tarafından aktifleştirildi mi? (false → sade profil) */
-  cardActive?: boolean;
-  /** Admin'in atadığı tier (yalnız kart aktifken). */
-  cardTier?: 'bronze' | 'silver' | 'gold' | null;
   /** Sahadaki mevki (ör. Kaleci, Stoper, Orta Saha) — sade profilde gösterilir. */
   position?: string | null;
   /** Kısa tanıtım — sade profilde gösterilir. */
@@ -43,6 +32,9 @@ export interface OynaUser {
   ageRange?: string | null;
   gender?: string | null;
   playStyle?: string | null;
+  /** Beyan edilen seviye (1–10). Kamusal seviye bandının tek kaynağı;
+   *  dönüşüm utils/skillBand.ts'te. NULL = beyan yok → çip çizilmez. */
+  selfSkill?: number | null;
   firstName?: string | null;
   lastName?: string | null;
   /** Reşit olmayan kullanıcı mı? (sunucuda birthdate/age_range'ten hesaplanır) */
@@ -106,7 +98,6 @@ export const syncUserToSupabase = async (supabaseUser: User | null): Promise<Oyn
         wallet_balance: 0,
         stats: {
           matchesPlayed: 0,
-          rating: 5.0,
         },
         last_active_at: new Date().toISOString(),
         created_at: new Date().toISOString(),
@@ -161,6 +152,7 @@ export const syncUserToSupabase = async (supabaseUser: User | null): Promise<Oyn
         ageRange: userSnap.age_range ?? null,
         gender: userSnap.gender ?? null,
         playStyle: userSnap.play_style ?? null,
+        selfSkill: userSnap.self_skill ?? null,
         firstName: userSnap.first_name ?? null,
         lastName: userSnap.last_name ?? null,
         isMinor: userSnap.is_minor ?? false,
@@ -262,9 +254,6 @@ export const getFullUserProfile = async (userId: string): Promise<OynaUser | nul
     is_admin: data.is_admin ?? false,
     walletBalance: data.wallet_balance ?? 0,
     stats: mapPlayerStats(data),
-    playerCard: (data.player_card as PlayerCardData) || null,
-    cardActive: data.card_active ?? false,
-    cardTier: (data.card_tier as 'bronze' | 'silver' | 'gold' | null) ?? null,
     position: data.position ?? null,
     bio: data.bio ?? null,
     birthdate: data.birthdate ?? null,
@@ -275,6 +264,7 @@ export const getFullUserProfile = async (userId: string): Promise<OynaUser | nul
     ageRange: data.age_range ?? null,
     gender: data.gender ?? null,
     playStyle: data.play_style ?? null,
+    selfSkill: data.self_skill ?? null,
     firstName: data.first_name ?? null,
     lastName: data.last_name ?? null,
     isMinor: data.is_minor ?? false,
@@ -291,6 +281,15 @@ export const updateProfileBasics = async (
   fields: { position?: string; bio?: string; avatar_url?: string; birthdate?: string | null; gender?: string | null; play_style?: string | null },
 ): Promise<void> => {
   const { error } = await supabase.from('profiles').update(fields).eq('id', userId);
+  if (error) throw error;
+};
+
+// Seviye beyanı DOĞRUDAN kolon yazımıyla GİTMEZ: authenticated'ın profiles
+// UPDATE yetkisi kolon-bazlıdır ve self_skill listede yok — payload'a girerse
+// tüm PATCH 42501 ile düşer. Tek yazma yolu set_my_self_skill RPC'sidir;
+// aralık (1-10) ve NULL reddi (beyan silinemez) kapısı da orada.
+export const setMySelfSkill = async (value: number): Promise<void> => {
+  const { error } = await supabase.rpc('set_my_self_skill', { p_value: value });
   if (error) throw error;
 };
 

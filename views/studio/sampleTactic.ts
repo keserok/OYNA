@@ -27,7 +27,6 @@ export const buildSampleTactic = (opts: { id: string; players?: Player[] }): Tac
             id: `sample_${i}`,
             name: PLACEHOLDER_NAMES[i] ?? `Oyuncu ${i + 1}`,
             role: s.role,
-            rating: 75,
         };
         return { ...s, player };
     });

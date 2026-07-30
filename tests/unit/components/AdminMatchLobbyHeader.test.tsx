@@ -34,7 +34,6 @@ const matchFixture: MatchListing = {
   rawDate: '2026-08-05',
   price: 200,
   difficulty: 'Rahat',
-  minRating: 3,
   image: '',
   badges: ['Rahat'],
   missingPositions: [],

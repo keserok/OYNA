@@ -22,7 +22,6 @@ export function fromProfileRow(row: Record<string, any>): AdminUser {
     avatar: row.avatar_url ?? '',
     role: (row.role as UserRole) ?? UserRole.PLAYER,
     roles: Array.isArray(row.roles) ? (row.roles as UserRole[]) : [],
-    rating: Number(row.rating) || 5.0,
     isVerified: Boolean(row.is_verified),
     isBanned: Boolean(row.is_banned),
     joinDate: row.join_date ?? row.created_at ?? '',
@@ -30,8 +29,6 @@ export function fromProfileRow(row: Record<string, any>): AdminUser {
     wallet: Number(row.wallet_balance ?? row.wallet ?? 0),
     reliabilityScore: Number(row.reliability_score) ?? 100,
     banExpiresAt: row.ban_expires_at ?? null,
-    playerCard: row.player_card ?? {},
-    cardActive: row.card_active === undefined ? undefined : Boolean(row.card_active),
     oynaId: row.oyna_id ?? undefined,
     friends: Array.isArray(row.friends) ? row.friends : [],
     isLookingForTeam: Boolean(row.is_looking_for_team),
@@ -52,7 +49,6 @@ export function toProfileRow(user: Partial<AdminUser>): Record<string, any> {
   if (user.avatar !== undefined)           row.avatar_url = user.avatar;
   if (user.role !== undefined)             row.role = user.role;
   if (user.roles !== undefined)            row.roles = user.roles;
-  if (user.rating !== undefined)           row.rating = user.rating;
   if (user.isVerified !== undefined)       row.is_verified = user.isVerified;
   if (user.isBanned !== undefined)         row.is_banned = user.isBanned;
   if (user.joinDate !== undefined)         row.join_date = user.joinDate;
@@ -60,8 +56,6 @@ export function toProfileRow(user: Partial<AdminUser>): Record<string, any> {
   if (user.wallet !== undefined)           row.wallet_balance = user.wallet;
   if (user.reliabilityScore !== undefined) row.reliability_score = user.reliabilityScore;
   if (user.banExpiresAt !== undefined)     row.ban_expires_at = user.banExpiresAt;
-  if (user.playerCard !== undefined)       row.player_card = user.playerCard;
-  if (user.cardActive !== undefined)       row.card_active = user.cardActive;
   if (user.oynaId !== undefined)           row.oyna_id = user.oynaId;
   if (user.friends !== undefined)          row.friends = user.friends;
   if (user.isLookingForTeam !== undefined) row.is_looking_for_team = user.isLookingForTeam;
@@ -84,7 +78,6 @@ export function newProfileFromAuth(authUser: {
     email: authUser.email ?? null,
     avatar_url: authUser.photoURL ?? '',
     role: 'PLAYER',
-    rating: 5.0,
     wallet_balance: 0,
     is_verified: false,
     is_banned: false,

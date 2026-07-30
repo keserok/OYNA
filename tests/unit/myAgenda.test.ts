@@ -14,7 +14,6 @@ const m = (over: Partial<MatchListing>): MatchListing => ({
   date: '2026-07-19',
   price: 200,
   difficulty: 'Rahat',
-  minRating: 0,
   image: '',
   badges: [],
   missingPositions: [],

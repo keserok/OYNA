@@ -1,5 +1,6 @@
 import { supabase, SUPABASE_URL } from '../../supabaseClient';
 import { AdminUser, UserRole, AdminLog, MatchListing, PositionSlot, Goalkeeper, Referee, Pitch, Team } from '../../types';
+import type { AdminPitchPaymentMode, PaymentMode } from '../../types';
 import { mapAdminMatchRowToListing, listingToMatchPayload, type AdminMatchRow } from '../utils/matchMapper';
 import { mapAdminPitchRowToUi } from '../utils/pitchMapper';
 import { mapDbRowToCamel } from '../utils/dbRowMapper';
@@ -87,7 +88,6 @@ export interface AppSettingsDb {
   maintenanceMode: boolean;
   registrationOpen: boolean;
   commissionRate: number;
-  minRatingToPlay: number;
   maxMatchsPerDay: number;
   featuredPitchId: string | null;
   announcementBanner: string;
@@ -108,15 +108,12 @@ const mapProfileRow = (row: Record<string, unknown>): AdminUser => {
     avatar: (row.avatar_url as string) || '',
     role: (row.role as UserRole) || UserRole.PLAYER,
     roles: roles as UserRole[] | undefined,
-    rating: Number(row.rating ?? 5),
     isVerified: Boolean(row.is_verified),
     isBanned: Boolean(row.is_banned),
     joinDate: (row.created_at as string) || (row.join_date as string) || new Date().toISOString(),
     matchCount: Number(row.match_count ?? 0),
     wallet: Number(row.wallet_balance ?? 0),
     banExpiresAt: (row.ban_expires_at as string) || null,
-    cardActive: Boolean(row.card_active),
-    cardTier: (row.card_tier as 'bronze' | 'silver' | 'gold' | null) ?? null,
   };
 };
 
@@ -125,7 +122,6 @@ const mapSettingsRow = (row: Record<string, unknown>): AppSettingsDb => ({
   maintenanceMode: Boolean(row.maintenance_mode ?? row.maintenanceMode),
   registrationOpen: (row.registration_open ?? row.registrationOpen) !== false,
   commissionRate: Number(row.commission_rate ?? row.commissionRate ?? 10),
-  minRatingToPlay: Number(row.min_rating_to_play ?? row.minRatingToPlay ?? 3),
   maxMatchsPerDay: Number(row.max_matches_per_day ?? row.maxMatchsPerDay ?? 3),
   featuredPitchId: (row.featured_pitch_id as string) || (row.featuredPitchId as string) || null,
   announcementBanner: (row.announcement_banner as string) || (row.announcementBanner as string) || '',
@@ -492,7 +488,7 @@ export async function fetchAdminProfiles(options?: {
 
   let q = supabase
     .from('profiles')
-    .select('id, full_name, name, email, phone, avatar_url, role, roles, rating, match_count, is_verified, is_banned, wallet_balance, ban_expires_at, created_at, join_date, card_active, card_tier', { count: 'exact' })
+    .select('id, full_name, name, email, phone, avatar_url, role, roles, match_count, is_verified, is_banned, wallet_balance, ban_expires_at, created_at, join_date', { count: 'exact' })
     .order('created_at', { ascending: false });
 
   if (search) {
@@ -507,7 +503,7 @@ export async function fetchAdminProfiles(options?: {
   if (fbErr) {
     let retryQ = supabase
       .from('profiles')
-      .select('id, full_name, name, email, phone, avatar_url, role, roles, rating, match_count, is_verified, is_banned, wallet_balance, ban_expires_at, created_at, join_date, card_active, card_tier', { count: 'exact' })
+      .select('id, full_name, name, email, phone, avatar_url, role, roles, match_count, is_verified, is_banned, wallet_balance, ban_expires_at, created_at, join_date', { count: 'exact' })
       .order('join_date', { ascending: false });
     if (search) {
       retryQ = retryQ.or(`full_name.ilike.%${search}%,name.ilike.%${search}%,email.ilike.%${search}%`);
@@ -709,23 +705,6 @@ export async function updateSettingsAdmin(settings: Record<string, unknown>): Pr
   if (error) throw new Error(error.message);
 }
 
-/**
- * Oyuncunun premium kartını aktive/pasive eder ve tier atar.
- * active=false → sade profil (foto + mevki + bio + oynanan maçlar).
- * active=true  → premium FIFA kartı; tier verilmezse mevcut tier ya da 'bronze'.
- */
-export async function setPlayerCardAdmin(
-  userId: string,
-  active: boolean,
-  tier?: 'bronze' | 'silver' | 'gold' | null,
-): Promise<void> {
-  const { error } = await supabase.rpc('admin_set_player_card', {
-    p_user_id: userId,
-    p_active: active,
-    p_tier: tier ?? null,
-  });
-  if (error) throw new Error(error.message);
-}
 
 export async function logImpersonation(targetUserId: string): Promise<void> {
   const { error } = await supabase.rpc('admin_log_impersonation', { p_target_user_id: targetUserId });
@@ -760,7 +739,6 @@ export function settingsToDbPayload(settings: Partial<AppSettingsDb>): Record<st
   if (settings.maintenanceMode !== undefined) payload.maintenance_mode = settings.maintenanceMode;
   if (settings.registrationOpen !== undefined) payload.registration_open = settings.registrationOpen;
   if (settings.commissionRate !== undefined) payload.commission_rate = settings.commissionRate;
-  if (settings.minRatingToPlay !== undefined) payload.min_rating_to_play = settings.minRatingToPlay;
   if (settings.maxMatchsPerDay !== undefined) payload.max_matches_per_day = settings.maxMatchsPerDay;
   if (settings.featuredPitchId !== undefined) payload.featured_pitch_id = settings.featuredPitchId;
   if (settings.announcementBanner !== undefined) payload.announcement_banner = settings.announcementBanner;
@@ -1500,6 +1478,36 @@ export async function setFeatureFlag(key: string, enabled: boolean): Promise<voi
   if (error) throw new Error(error.message);
 }
 
+// ─── Ödeme Modu (tesis bazlı) ──────────────────────────────────────────────
+
+/**
+ * Tüm tesislerin ödeme modu tablosu. `effective_mode` sunucuda hesaplanır;
+ * tesisin TERCİHİ (`pitch_mode`) ile FİİLÎ durumu arasındaki fark burada görünür
+ * — global mod bir tavan olduğu için ikisi ayrışabilir.
+ */
+export async function fetchPitchPaymentModes(): Promise<AdminPitchPaymentMode[]> {
+  const { data, error } = await supabase.rpc('admin_list_pitch_payment_modes');
+  if (error) throw new Error(error.message);
+  return (data || []) as AdminPitchPaymentMode[];
+}
+
+/**
+ * Bir tesisin ödeme modunu admin olarak yazar ve isteğe bağlı olarak kilitler.
+ * Kilitliyken saha sahibi modu değiştiremez. Değişiklik audit'lenir.
+ */
+export async function setPitchPaymentMode(
+  pitchId: string,
+  mode: PaymentMode,
+  locked?: boolean,
+): Promise<void> {
+  const { error } = await supabase.rpc('admin_set_pitch_payment_mode', {
+    p_pitch_id: pitchId,
+    p_mode: mode,
+    p_locked: locked ?? null,
+  });
+  if (error) throw new Error(error.message);
+}
+
 /** Hafif bayrak haritası (key→enabled) — modül gizleme için (public read). */
 export async function fetchFeatureFlagMap(): Promise<Record<string, boolean>> {
   const { data, error } = await supabase.from('feature_flags').select('key, enabled');
@@ -1990,7 +1998,7 @@ export async function searchStaffCandidatesAdmin(query: string): Promise<OwnerCa
 export async function fetchProfileById(userId: string): Promise<AdminUser | null> {
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, full_name, name, email, phone, avatar_url, role, roles, rating, match_count, is_verified, is_banned, wallet_balance, ban_expires_at, created_at, card_active, card_tier')
+    .select('id, full_name, name, email, phone, avatar_url, role, roles, match_count, is_verified, is_banned, wallet_balance, ban_expires_at, created_at')
     .eq('id', userId)
     .maybeSingle();
   if (error || !data) return null;
@@ -2209,6 +2217,52 @@ export async function deleteMatchAdmin(matchId: string): Promise<void> {
     }
     throw new Error(error.message);
   }
+}
+
+// ─── E9 · Rahat maç lobisi + akran puanları ─────────────────────────────────
+
+/** admin_player_peer_scores çıktısı — puanlayan kimliği BİLEREK yok (anonimlik). */
+export interface PlayerPeerScores {
+  count: number;
+  /** Hiç puan yoksa null — panel "—" basar, 0 DEĞİL. */
+  average: number | null;
+  motmCount: number;
+  selfSkill: number | null;
+  recent: Array<{ score: number; fairPlay: number | null; at: string; matchId: string | null; matchTitle: string | null }>;
+}
+
+/** Bir oyuncunun ALDIĞI akran puanları (admin-only; 20260831000000 RPC'si). */
+export async function fetchPlayerPeerScoresAdmin(userId: string, limit = 20): Promise<PlayerPeerScores> {
+  const { data, error } = await supabase.rpc('admin_player_peer_scores', {
+    p_user_id: userId,
+    p_limit: limit,
+  });
+  if (error) {
+    if (isRpcMissing(error)) throw new Error('admin_player_peer_scores RPC deploy edilmedi.');
+    throw new Error(error.message);
+  }
+  const d = (data ?? {}) as Record<string, unknown>;
+  return {
+    count: Number(d.count) || 0,
+    average: typeof d.average === 'number' ? d.average : null,
+    motmCount: Number(d.motmCount) || 0,
+    selfSkill: typeof d.selfSkill === 'number' ? d.selfSkill : null,
+    recent: Array.isArray(d.recent) ? (d.recent as PlayerPeerScores['recent']) : [],
+  };
+}
+
+/** Rahat lobide yeri karşı takıma taşı (player_move_slot_team; admin muafiyeti 20260831000003). */
+export async function moveSlotTeamAdmin(
+  matchId: string,
+  slotId: string,
+  targetSide: 'home' | 'away',
+): Promise<void> {
+  const { error } = await supabase.rpc('player_move_slot_team', {
+    p_match_id: matchId,
+    p_slot_id: slotId,
+    p_target_side: targetSide,
+  });
+  if (error) throw new Error(error.message);
 }
 
 export async function kickFromSlotAdmin(matchId: string, slotId: string, isAway = false): Promise<PositionSlot[]> {
@@ -2824,17 +2878,11 @@ export function buildUserProfilePayload(user: import('../../types').AdminUser): 
     role: user.role,
     is_verified: user.isVerified,
     match_count: user.matchCount,
-    rating: user.rating,
     // wallet_balance BİLEREK GÖNDERİLMEZ: modal açıkken gerçekleşen cüzdan
     // hareketini bayat değerle geri alma riski vardı; bakiye düzeltmesi artık
     // ledger'lı admin_adjust_wallet_balance ile yapılır (Profil Aynası → Cüzdan).
   };
   if (user.phone) payload.phone = user.phone;
-  if (user.playerCard) {
-    payload.player_card = user.playerCard;
-    if (user.playerCard.tier) payload.card_tier = user.playerCard.tier;
-  }
-  if (user.cardActive !== undefined) payload.card_active = user.cardActive;
   return payload;
 }
 
@@ -2880,7 +2928,7 @@ export async function updateUserProfileAdmin(user: import('../../types').AdminUs
 /**
  * Kullanıcı Profili Aynası (uygulama-paritesi) alanları — ProfileEditSheet'in
  * yazdıkları + profil ekranındaki yönetimsel alanlar. Ölçekler DB cinsindendir:
- * trust_score/skill_rating 0–5 (UI 0–100 gösterir, /20 ile gönderilir).
+ * trust_score 0–5 (UI 0–100 gösterir, /20 ile gönderilir).
  */
 export interface AppProfileAdminFields {
   full_name?: string;
@@ -2893,10 +2941,7 @@ export interface AppProfileAdminFields {
   play_style?: string;
   age_range?: string;
   trust_score?: number;
-  skill_rating?: number;
   has_completed_onboarding?: boolean;
-  card_active?: boolean;
-  card_tier?: 'bronze' | 'silver' | 'gold';
 }
 
 /**

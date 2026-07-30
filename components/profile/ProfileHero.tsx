@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Camera } from 'lucide-react';
-import { PlayerCardData } from '../../types';
 import { PlayerCard } from '../PlayerCard';
 import { PlayerCardBack } from './PlayerCardBack';
 import { MatchHistorySummary } from '../../services/userService';
@@ -28,9 +27,10 @@ export interface ProfileHeroProps {
     winRate: number | null;
     /** null → MVP hücresi gizli (oylama verisi henüz kaydedilmiyor) */
     mvp?: number | null;
-    /** Admin onaylı premium kart (Q24) — true ise 👤/🎴 geçişi görünür */
-    cardAvailable?: boolean;
-    cardData?: PlayerCardData | null;
+    /** Kart görünümündeki galibiyet sayısı (nötr kart alt paneli). */
+    winCount?: number;
+    /** Beyan edilen seviye (1–10) — kartta band çipi olarak görünür. */
+    selfSkill?: number | null;
     /** Kart arka yüzü (flip) için maç geçmişi */
     cardBackMatches?: MatchHistorySummary[];
     /** undefined → düzenleme yok (salt okunur profil / misafir) */
@@ -63,13 +63,13 @@ const Chip: React.FC<{ children: React.ReactNode; accent?: boolean; color?: stri
 };
 
 /**
- * Profil kimlik kartı: sade görünüm (isim + rozetler + avatar) ile
- * premium FIFA kart görünümü arasında geçiş; altta Maç/Galibiyet(/MVP) şeridi.
+ * Profil kimlik kartı: sade görünüm (isim + rozetler + avatar) ile nötr oyuncu
+ * kartı arasında geçiş; altta Maç/Galibiyet(/MVP) şeridi. OVR/tier sökülü (F3=b).
  */
 export const ProfileHero: React.FC<ProfileHeroProps> = ({
     name, avatarUrl, verified, position, age, ageRange, gender, playStyle,
     matches, winRate, mvp = null,
-    cardAvailable = false, cardData, cardBackMatches = [],
+    winCount = 0, selfSkill = null, cardBackMatches = [],
     onEditAvatar, onShareCard,
 }) => {
     // Onboarding rozetleri (üst bar): Oyun Stili · Yaş · Cinsiyet · Pozisyon.
@@ -82,7 +82,16 @@ export const ProfileHero: React.FC<ProfileHeroProps> = ({
     const [isFlipped, setIsFlipped] = useState(false);
     // Avatar yüklenemezse (kırık URL / erişilemeyen host) baş harflere düş.
     const [avatarBroken, setAvatarBroken] = useState(false);
-    const showCard = cardAvailable && cardMode && !!cardData;
+
+    // ─── Kart HAZIR mı? (kullanıcı kararı) ──────────────────────────────────
+    // Eski premium kapısı (profiles.card_active) puan sistemi sökümüyle gitti;
+    // yerine içeriğe bakan dürüst bir ölçüt: kart yalnız SÖYLEYECEK BİR ŞEYİ
+    // varken çizilir. Kartın gösterdiği her şey mevki, seviye beyanı ve maç
+    // sayısıdır — üçü de yoksa kart isimden ibaret boş bir kabuktur ve düğmesi
+    // hiç görünmez. Kurulumunu bitiren herkeste (mevki adımı zorunlu) hazırdır.
+    // Tek yerde hesaplanır: tüketici profili ve admin aynası asla ayrışmasın.
+    const cardReady = !!position || selfSkill != null || matches > 0;
+    const showCard = cardReady && cardMode;
     const showAvatarImg = !!avatarUrl && !avatarBroken;
 
     return (
@@ -92,8 +101,8 @@ export const ProfileHero: React.FC<ProfileHeroProps> = ({
             <div className="absolute inset-0 opacity-35" style={{ background: 'radial-gradient(circle at 85% 0%, color-mix(in srgb, var(--color-primary) 30%, transparent) 0%, transparent 60%)' }} />
 
             <div className="relative z-10 p-[18px] pb-4">
-                {/* 👤/🎴 geçişi — yalnız admin onaylı kartı olanlarda */}
-                {cardAvailable && cardData && (
+                {/* 👤/🎴 geçişi — yalnız kart HAZIRSA çizilir (boş kabuk sunulmaz) */}
+                {cardReady && (
                     <div className="flex justify-end mb-3">
                         <div className="flex gap-1 p-[3px] rounded-[9px] bg-black/35 border border-white/10">
                             <button
@@ -166,11 +175,11 @@ export const ProfileHero: React.FC<ProfileHeroProps> = ({
                                 className="relative w-full"
                             >
                                 <div style={{ backfaceVisibility: 'hidden' }}>
-                                    <PlayerCard name={name} photo={avatarUrl || '/player_card_photo.png'} position={position || undefined} cardData={cardData!} onShare={onShareCard} />
+                                    <PlayerCard name={name} photo={avatarUrl || '/player_card_photo.png'} position={position || undefined} matchCount={matches} winCount={winCount} selfSkill={selfSkill} onShare={onShareCard} />
                                 </div>
                                 <div className="absolute inset-0 w-full" style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}>
                                     <div style={{ aspectRatio: '2 / 3' }}>
-                                        <PlayerCardBack tier={cardData!.tier} matches={cardBackMatches} />
+                                        <PlayerCardBack matches={cardBackMatches} />
                                     </div>
                                 </div>
                             </motion.div>

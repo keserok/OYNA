@@ -31,6 +31,7 @@ import { recordUserConsents } from './services/consentService';
 const Dashboard = lazy(() => import('./views/Dashboard'));
 const MatchDiscovery = lazy(() => import('./views/MatchDiscovery'));
 const MatchJoin = lazy(() => import('./views/MatchJoin'));
+const RahatMatchLobby = lazy(() => import('./views/match/RahatMatchLobby'));
 const LocationPrompt = lazy(() => import('./views/LocationPrompt'));
 const RoleSelection = lazy(() => import('./views/RoleSelection'));
 const PitchDiscovery = lazy(() => import('./views/PitchDiscovery'));
@@ -314,7 +315,6 @@ const App: React.FC = () => {
               id: user.uid,
               name: (profile.full_name as string) || user.displayName || 'Oyuncu',
               avatar: (profile.avatar_url as string) || user.photoURL || '',
-              rating: 0, // puan ayrı kaynaktan; burada kritik değil (join fallback'i 4.5)
             });
 
             // onAuthStateChanged HER auth olayında tetiklenir (SIGNED_IN +
@@ -380,7 +380,6 @@ const App: React.FC = () => {
                       email: '',
                       avatar: '',
                       role: UserRole.PLAYER,
-                      rating: 5,
                       isVerified: false,
                       isBanned: false,
                       joinDate: new Date().toISOString(),
@@ -804,6 +803,13 @@ const App: React.FC = () => {
           }}
         />;
       case 'MATCH_JOIN':
+        // RAHAT bir maç ÇEŞİDİdir: pozisyonsuz kadro lobisi açılır; Ciddi/
+        // Taktiksel saha+diziliş akışına dokunulmaz. Dallanma BURADA (hook-
+        // güvenli): MatchJoin'in kendi içinde erken return, satır 600+ hook'ları
+        // yüzünden rules-of-hooks ihlali olurdu.
+        if (selectedMatch?.difficulty === 'Rahat') {
+          return <RahatMatchLobby match={selectedMatch} onBack={() => goBack('MATCH_DISCOVERY')} />;
+        }
         return <MatchJoin
           match={selectedMatch}
           onBack={() => goBack('MATCH_DISCOVERY')}

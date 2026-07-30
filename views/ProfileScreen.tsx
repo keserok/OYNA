@@ -4,7 +4,7 @@ import { ArrowLeft, Settings, Users, UserPlus, Wallet, Pencil, AlertCircle, Mess
 import { useAppStore } from '../store';
 import { auth } from '../supabaseAuth';
 import { supabase } from '../supabaseClient';
-import { getFullUserProfile, getMatchHistory, MatchHistorySummary, OynaUser, updateProfileBasics } from '../services/userService';
+import { getFullUserProfile, getMatchHistory, MatchHistorySummary, OynaUser, setMySelfSkill, updateProfileBasics } from '../services/userService';
 import { fetchFriends } from '../services/friendService';
 import { getMyTeams } from '../services/teamSocialService';
 import { LoadingState, ErrorState } from '../components/common/StatusState';
@@ -14,7 +14,9 @@ import { ProfileEditSheet, type ProfileEditValues } from '../components/profile/
 import { OynaLogo } from '../components/OynaLogo';
 // Türetme mantığı TEK KAYNAK: admin panelin Kullanıcı Profili Aynası da aynı
 // modülü kullanır — kart/rozet/puan hesapları iki yüzeyde asla ayrışmaz.
-import { buildCardData, applyCardTierOverride, ageFromBirthdate, formatPosition, trustScoreTo100, winStats } from '../shared/profilePresentation';
+// (buildCardData / applyCardTierOverride puan sistemi sökümüyle silindi —
+//  nötr kartın OVR/seviye türetmesi yok.)
+import { ageFromBirthdate, formatPosition, trustScoreTo100, winStats } from '../shared/profilePresentation';
 import { formatTRYAmount } from '../utils/formatTRY';
 
 interface ProfileScreenProps {
@@ -27,6 +29,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onNavigate, onOpenD
     // Profili Düzenle (mevki + bio + doğum tarihi + ayak) modalı — TEK KAYNAK ProfileEditSheet
     const [showEditModal, setShowEditModal] = useState(false);
     const [savingEdit, setSavingEdit] = useState(false);
+    const [saveError, setSaveError] = useState<string | null>(null);
     const { setMyRoles, setSocialTarget } = useAppStore();
 
     const [profile, setProfile] = useState<OynaUser | null>(null);
@@ -107,11 +110,12 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onNavigate, onOpenD
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [uid]);
 
-    const openEdit = () => setShowEditModal(true);
+    const openEdit = () => { setSaveError(null); setShowEditModal(true); };
 
     const saveEdit = async (v: ProfileEditValues) => {
         if (!uid) return;
         setSavingEdit(true);
+        setSaveError(null);
         try {
             await updateProfileBasics(uid, {
                 position: v.position,
@@ -121,6 +125,11 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onNavigate, onOpenD
                 play_style: v.playStyle || null,
                 ...(v.avatarUrl && v.avatarUrl !== profile?.avatar_url ? { avatar_url: v.avatarUrl } : {}),
             });
+            // Seviye beyanı ayrı kapıdan: RPC aralığı doğrular, NULL'u reddeder
+            // (beyan bir kez verildikten sonra silinemez — kadro çipi sözleşmesi).
+            if (v.selfSkill != null && v.selfSkill !== profile?.selfSkill) {
+                await setMySelfSkill(v.selfSkill);
+            }
             // MOB-S4: Ana sayfa sol üst avatar (UserAvatar) store'daki oturum
             // kimliğinden beslenir — fotoğraf değişimini ANINDA oraya da yansıt.
             if (v.avatarUrl && v.avatarUrl !== profile?.avatar_url) {
@@ -132,16 +141,18 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onNavigate, onOpenD
             setShowEditModal(false);
             await loadProfile();
         } catch (e) {
+            // İki aşamalı kayıt (basics + seviye RPC'si): ikincisi düşerse
+            // sessizce yutma — sheet açık kalır, sebep Kaydet'in üstünde görünür,
+            // kullanıcı yeniden dener. (Basics çoktan yazılmış olabilir; yeniden
+            // kayıt idempotenttir.)
             console.error('Profil güncelleme hatası:', e);
+            setSaveError('Kaydedilemedi. Bağlantını kontrol edip tekrar dene.');
         } finally {
             setSavingEdit(false);
         }
     };
 
     const { total, wins, winRate } = winStats(matchHistory);
-
-    // Tier admin-atamalı (Q24): kart aktifken admin'in seçtiği tier kullanılır.
-    const cardData = applyCardTierOverride(buildCardData(profile, wins, total), profile);
 
     // Güven puanı: DB'de 0–5, ekranda 0–100.
     const trustScore = trustScoreTo100(profile?.trustScore);
@@ -257,8 +268,8 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onNavigate, onOpenD
                     matches={total}
                     winRate={winRate}
                     mvp={motmCount}
-                    cardAvailable={!!profile?.cardActive}
-                    cardData={cardData}
+                    winCount={wins}
+                    selfSkill={profile?.selfSkill ?? null}
                     cardBackMatches={matchHistory}
                     onEditAvatar={isGuest ? undefined : openEdit}
                     onShareCard={() => {
@@ -331,8 +342,10 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onNavigate, onOpenD
                     gender: profile?.gender || '',
                     playStyle: profile?.playStyle || '',
                     avatarUrl: profile?.avatar_url || '',
+                    selfSkill: profile?.selfSkill ?? null,
                 }}
                 saving={savingEdit}
+                errorText={saveError}
                 onSave={saveEdit}
                 onClose={() => setShowEditModal(false)}
             />

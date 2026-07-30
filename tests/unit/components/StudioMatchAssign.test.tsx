@@ -29,7 +29,7 @@ vi.mock('framer-motion', () => {
 
 const ROW = {
   id: 'tac-1', name: 'Takım Planı', size: '7v7', formation: '2-3-1',
-  slots: JSON.stringify([{ id: 's1', x: 50, y: 90, role: 'GK', player: { id: 'p1', name: 'Kaleci', role: 'GK', rating: 70 } }]),
+  slots: JSON.stringify([{ id: 's1', x: 50, y: 90, role: 'GK', player: { id: 'p1', name: 'Kaleci', role: 'GK' } }]),
   subs: '[]', opponents: '[]', drawings: '[]',
   captainId: null, notes: '', mentality: 'Balanced', tempo: '5', identity: 'BALANCED',
   status: 'APPROVED', teamId: 'team-1', teamName: 'Kartallar', updatedAt: '2026-07-21T09:00:00Z',

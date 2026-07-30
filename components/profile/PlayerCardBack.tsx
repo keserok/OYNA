@@ -9,15 +9,12 @@ import { winStats } from '../../shared/profilePresentation';
  * galibiyet oranı artık ön yüzle AYNI hesaptan gelir (`winStats`) — burada ayrı
  * bir formül vardı ve skorsuz maçları da paydaya katıyordu.
  */
-export const PlayerCardBack: React.FC<{ tier: 'gold' | 'silver' | 'bronze'; matches: MatchHistorySummary[] }> = ({ tier, matches }) => {
+export const PlayerCardBack: React.FC<{ matches: MatchHistorySummary[] }> = ({ matches }) => {
     const last5 = matches.slice(0, 5);
     const { winRate } = winStats(matches);
 
-    const colors = {
-        gold: { border: '#d4a84b', text: '#ffd54f', label: '#c8962a' },
-        silver: { border: '#8a96c0', text: '#c5cef5', label: '#7888b8' },
-        bronze: { border: '#b07840', text: '#d4986a', label: '#8a5c28' }
-    }[tier];
+    // Tier sistemi söküldü (F3=b) — kart arkası tek nötr paletle çizilir.
+    const colors = { border: '#3d5566', text: '#9db4c4', label: '#5c7385' };
 
     return (
         <div className="w-full h-full rounded-[24px] overflow-hidden relative" style={{ background: 'linear-gradient(160deg, #0a0e14 0%, #161B22 50%, #0a0e14 100%)', border: `2px solid ${colors.border}` }}>

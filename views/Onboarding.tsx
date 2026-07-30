@@ -5,6 +5,8 @@ import StepLocation, { type LocState } from './onboarding/StepLocation';
 import StepAge from './onboarding/StepAge';
 import StepName from './onboarding/StepName';
 import StepStyle from './onboarding/StepStyle';
+import StepSkill from './onboarding/StepSkill';
+import { isValidSelfSkill } from '../utils/skillBand';
 import PlayerCardReveal from './onboarding/PlayerCardReveal';
 import {
   AGE_RANGES, AgeRange, Gender, OnboardingPosition, PlayStyle, OnboardingDraft,
@@ -32,21 +34,24 @@ interface OnboardingProps {
 
 
 
-const KICKERS = ['ADIM 1 · KONUM', 'ADIM 2 · YAŞ', 'ADIM 3 · İSİM', 'ADIM 4 · STİL'];
-const TITLES = ['Konumunu ayarla.', 'Yaşını seç.', 'Sahne senin.', 'Nasıl oynarsın?'];
+const KICKERS = ['ADIM 1 · KONUM', 'ADIM 2 · YAŞ', 'ADIM 3 · İSİM', 'ADIM 4 · STİL', 'ADIM 5 · SEVİYE'];
+const TITLES = ['Konumunu ayarla.', 'Yaşını seç.', 'Sahne senin.', 'Nasıl oynarsın?', 'Kendini nasıl değerlendirirsin?'];
 // IP-16 — her adım verinin NİYE istendiğini söyler. Eskiden yalnız konum
 // adımında gerekçe vardı; kullanıcı yaşını ve adını niye verdiğini bilmiyordu.
+// 5. adım (seviye) bu dalda eklendi; gerekçesi de aynı dille yazıldı.
 const SUBTITLES = [
   'Sana en yakın sahaları ve maçları gösterebilmemiz için.',
   'Yaşına uygun maçlara denk gelmen için. Kimseye yaşın değil, yaş aralığın görünür.',
   'Maç kadrosunda bu adla ve bu mevkide görünürsün.',
   'Sahada nasıl oynadığını bilen takım arkadaşları bulmak için.',
+  'Kadroda dengeli takımlar kurulsun diye. Ham puanın değil, yalnız seviye aralığın görünür.',
 ];
 const AURAS = [
   { top: 'rgba(57,255,20,0.28)', bottom: 'rgba(0,176,255,0.22)' },
   { top: 'rgba(0,176,255,0.26)', bottom: 'rgba(57,255,20,0.20)' },
   { top: 'rgba(255,193,7,0.22)', bottom: 'rgba(57,255,20,0.22)' },
   { top: 'rgba(57,255,20,0.28)', bottom: 'rgba(255,193,7,0.20)' },
+  { top: 'rgba(250,204,21,0.24)', bottom: 'rgba(16,185,129,0.22)' },
 ];
 
 const KEYFRAMES = `
@@ -76,6 +81,8 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
   const [gender, setGender] = useState<Gender>('');
   const [position, setPosition] = useState<OnboardingPosition>('');
   const [playStyle, setPlayStyle] = useState<PlayStyle>('');
+  // Beyan edilen seviye (1-10). ZORUNLU: seçilmeden profil tamamlanamaz.
+  const [selfSkill, setSelfSkill] = useState<number | null>(null);
   const [locationGranted, setLocationGranted] = useState(false);
   // IP-16: "Atla" artık onay soruyor (kullanıcı kararı: tuş küçük kalsın ama sorsun).
   const [skipConfirm, setSkipConfirm] = useState(false);
@@ -113,6 +120,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
         if (p.gender === 'kadin' || p.gender === 'erkek') setGender(p.gender);
         if (p.playStyle === 'ciddi' || p.playStyle === 'taktiksel' || p.playStyle === 'rahat') setPlayStyle(p.playStyle);
         if (p.position && POSITION_CODE[p.position]) setPosition(POSITION_CODE[p.position]);
+        if (isValidSelfSkill(p.selfSkill)) setSelfSkill(p.selfSkill as number);
       } catch {
         /* ön-dolum best-effort — hata akışı bozmaz */
       }
@@ -168,6 +176,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
       case 1: return true;   // varsayılan yaş geçerli sayılır (4b)
       case 2: return nameCheck.valid;
       case 3: return playStyle !== '';
+      case 4: return isValidSelfSkill(selfSkill);
       default: return false;
     }
   })();
@@ -181,7 +190,8 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
       case 0: return phase === 'scanning' ? 'Taranıyor…' : 'Konumu Aç';
       case 1: return 'Devam Et';
       case 2: return 'Devam Et';
-      case 3: return 'Profili Tamamla';
+      case 3: return 'Devam Et';
+      case 4: return 'Profili Tamamla';
       default: return '';
     }
   })();
@@ -189,8 +199,8 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
   const handleCta = () => {
     if (!ctaEnabled) return;
     if (step === 0) { startScan(); return; }
-    if (step === 3) { setDone(true); return; }
-    setStep((s) => Math.min(3, s + 1));
+    if (step === 4) { setDone(true); return; }
+    setStep((s) => Math.min(4, s + 1));
   };
 
   const handleBack = () => {
@@ -209,6 +219,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
     gender,
     position,
     playStyle,
+    selfSkill,
     locationGranted,
     completedAt: Date.now(),
   });
@@ -243,6 +254,14 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
     if (!nameCheck.valid) {
       setStep(2);
       showToast(nameCheck.reason ?? 'Devam etmek için ad ve soyadını gir.');
+      return;
+    }
+    // Seviye beyanı da atlanamaz (ad-soyad kapısının ikizi). Sunucu ikizi
+    // apply_onboarding'de SELF_SKILL_REQUIRED olarak durur; burada kullanıcıyı
+    // hata yerine doğru adıma göndeririz.
+    if (!isValidSelfSkill(selfSkill)) {
+      setStep(4);
+      showToast('Devam etmek için seviyeni seç.');
       return;
     }
     setSaving(true);
@@ -284,7 +303,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
             <ArrowLeft size={18} color="#fff" />
           </button>
           <div style={{ display: 'flex', gap: 6 }}>
-            {[0, 1, 2, 3].map((seg) => (
+            {[0, 1, 2, 3, 4].map((seg) => (
               <span key={seg} style={{
                 width: 30, height: 5, borderRadius: 3, transition: 'background 0.35s ease, box-shadow 0.35s ease',
                 background: seg === step ? '#39FF14' : seg < step ? 'rgba(57,255,20,0.55)' : 'rgba(255,255,255,0.12)',
@@ -332,6 +351,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
           {step === 1 && <StepAge index={ageIndex} onChange={setAgeIndex} onFirstTouch={() => setAgeTouched(true)} />}
           {step === 2 && <StepName firstName={firstName} lastName={lastName} gender={gender} position={position} onFirst={setFirstName} onLast={setLastName} onGender={setGender} onPosition={setPosition} error={(firstName.trim() || lastName.trim()) && !nameCheck.valid ? nameCheck.reason ?? null : null} />}
           {step === 3 && <StepStyle style={playStyle} onChange={setPlayStyle} />}
+          {step === 4 && <StepSkill value={selfSkill} onChange={setSelfSkill} />}
         </div>
 
         {/* CTA */}

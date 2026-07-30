@@ -30,6 +30,10 @@ export const applyOnboarding = async (
     p_position: draft.position ? POSITION_LABEL[draft.position] : '',
     p_play_style: draft.playStyle || '',
     p_completed: completed,
+    // Beyan edilen seviye (1–10). null gönderilir → sunucu forward-only
+    // birleştirir: mevcut değeri SİLMEZ. completed=true iken sunucuda NULL
+    // olamaz (SELF_SKILL_REQUIRED) — istemci kapısı Onboarding'de.
+    p_self_skill: draft.selfSkill ?? null,
   });
   if (error) throw error;
   return data as ApplyOnboardingResult;

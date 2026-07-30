@@ -14,7 +14,6 @@ export interface FriendProfile {
   total_matches: number;
   last_active_at: string | null;
   roles: string[] | null;
-  player_card: { position?: string; fp?: number } | null;
 }
 
 export interface FriendshipRow {
@@ -65,7 +64,7 @@ export const fetchFriends = async (userId: string): Promise<FriendshipRow[]> => 
 
   const { data: profiles, error: pError } = await supabase
     .from('public_profiles')
-    .select('id, full_name, avatar_url, oyna_id, win_count, total_matches, last_active_at, roles, player_card')
+    .select('id, full_name, avatar_url, oyna_id, win_count, total_matches, last_active_at, roles')
     .in('id', otherIds);
 
   if (pError) throw pError;
@@ -78,7 +77,7 @@ export const fetchFriends = async (userId: string): Promise<FriendshipRow[]> => 
     return {
       ...r,
       status: r.status as 'PENDING' | 'ACCEPTED' | 'REJECTED',
-      other_user: profileMap.get(otherId) || { id: otherId, full_name: null, avatar_url: null, oyna_id: null, win_count: 0, total_matches: 0, last_active_at: null, roles: null, player_card: null },
+      other_user: profileMap.get(otherId) || { id: otherId, full_name: null, avatar_url: null, oyna_id: null, win_count: 0, total_matches: 0, last_active_at: null, roles: null },
       iAmSender,
       myGroup: iAmSender ? r.sender_group : r.receiver_group,
       isFavorite: iAmSender ? r.sender_is_favorite : r.receiver_is_favorite,
@@ -101,7 +100,7 @@ export const fetchPendingRequests = async (userId: string): Promise<FriendReques
 
   const { data: profiles } = await supabase
     .from('public_profiles')
-    .select('id, full_name, avatar_url, oyna_id, win_count, total_matches, last_active_at, roles, player_card')
+    .select('id, full_name, avatar_url, oyna_id, win_count, total_matches, last_active_at, roles')
     .in('id', senderIds);
 
   const profileMap = new Map((profiles || []).map(p => [p.id, p]));
@@ -109,7 +108,7 @@ export const fetchPendingRequests = async (userId: string): Promise<FriendReques
   return data.map(r => ({
     ...r,
     status: 'PENDING' as const,
-    sender: profileMap.get(r.sender_id) || { id: r.sender_id, full_name: null, avatar_url: null, oyna_id: null, win_count: 0, total_matches: 0, last_active_at: null, roles: null, player_card: null },
+    sender: profileMap.get(r.sender_id) || { id: r.sender_id, full_name: null, avatar_url: null, oyna_id: null, win_count: 0, total_matches: 0, last_active_at: null, roles: null },
   }));
 };
 

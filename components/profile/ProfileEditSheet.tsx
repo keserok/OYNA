@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { Pencil } from 'lucide-react';
 import { useImageUpload } from '../../hooks/useImageUpload';
 import { POSITION_LABEL, POSITION_ABBR, PLAY_STYLE_META, GENDER_LABEL } from '../../views/onboarding/onboardingShared';
+import { skillBand, SELF_SKILL_MAX } from '../../utils/skillBand';
 
 // ════════════════════════════════════════════════════════════════════════
 // PROFİLİ DÜZENLE ALT SAYFASI — TEK KAYNAK
@@ -23,6 +24,8 @@ export interface ProfileEditValues {
     gender: string;
     playStyle: string;
     avatarUrl: string;
+    /** Beyan edilen seviye (1–10). null = henüz beyan yok. */
+    selfSkill: number | null;
 }
 
 export interface ProfileEditSheetProps {
@@ -33,9 +36,17 @@ export interface ProfileEditSheetProps {
     onClose: () => void;
     /** Varsayılan "Profili Düzenle"; admin aynasında kullanıcı adıyla özelleştirilebilir. */
     title?: string;
+    /**
+     * Seviye, oyuncunun KENDİ beyanıdır — admin aynasında salt-okunur gösterilir.
+     * (Admin bir oyuncunun kendi beyanını değiştirmez; aldığı akran puanlarını
+     * ALINAN AKRAN PUANLARI panelinden görür.) Varsayılan: düzenlenebilir.
+     */
+    selfSkillEditable?: boolean;
+    /** Kaydetme hatası — sheet açık kalır, sebep Kaydet'in üstünde görünür. */
+    errorText?: string | null;
 }
 
-export const ProfileEditSheet: React.FC<ProfileEditSheetProps> = ({ open, initial, saving, onSave, onClose, title }) => {
+export const ProfileEditSheet: React.FC<ProfileEditSheetProps> = ({ open, initial, saving, onSave, onClose, title, selfSkillEditable = true, errorText }) => {
     const [photoError, setPhotoError] = useState<string | null>(null);
     const [pos, setPos] = useState(initial.position);
     const [bio, setBio] = useState(initial.bio);
@@ -43,6 +54,7 @@ export const ProfileEditSheet: React.FC<ProfileEditSheetProps> = ({ open, initia
     const [birthdate, setBirthdate] = useState(initial.birthdate);
     const [gender, setGender] = useState(initial.gender);
     const [style, setStyle] = useState(initial.playStyle);
+    const [selfSkill, setSelfSkill] = useState<number | null>(initial.selfSkill);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const { uploadImage, uploading } = useImageUpload('avatars', { minWidth: 200 });
 
@@ -56,6 +68,7 @@ export const ProfileEditSheet: React.FC<ProfileEditSheetProps> = ({ open, initia
         setBirthdate(initial.birthdate);
         setGender(initial.gender);
         setStyle(initial.playStyle);
+        setSelfSkill(initial.selfSkill);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [open]);
 
@@ -169,6 +182,63 @@ export const ProfileEditSheet: React.FC<ProfileEditSheetProps> = ({ open, initia
                         })}
                     </div>
                 </div>
+                {/* ── SEVİYEN — beyan edilen seviye (1–10), kadroda banda indirgenir ── */}
+                <div>
+                    <div className="flex items-center justify-between ml-1 mr-1">
+                        <label className="text-[0.625rem] text-ink-4 font-bold uppercase tracking-wider">Seviyen</label>
+                        {(() => {
+                            const band = skillBand(selfSkill);
+                            if (!band) return null;
+                            return (
+                                <span
+                                    lang="tr"
+                                    className="text-[0.625rem] font-extrabold uppercase tracking-widest px-2 py-1 rounded-full"
+                                    style={{ color: band.color, backgroundColor: `${band.color}18`, border: `1px solid ${band.color}45` }}
+                                >
+                                    {band.label}
+                                </span>
+                            );
+                        })()}
+                    </div>
+                    {/* KAYITLI beyan geri alınamaz (sunucu kapısı NULL'u reddeder) —
+                        ama henüz beyan YOKKEN yanlışlıkla dokunulan yıldız sheet
+                        içinde geri alınabilmeli: taslak seçim ikinci dokunuşla
+                        temizlenir, kayıtlı beyan temizlenemez. */}
+                    <div className="mt-1.5 flex items-center gap-0.5">
+                        {Array.from({ length: SELF_SKILL_MAX }).map((_, i) => {
+                            const val = i + 1;
+                            const filled = selfSkill != null && val <= selfSkill;
+                            const color = filled ? (skillBand(selfSkill)?.color ?? '#FACC15') : 'rgba(255,255,255,0.16)';
+                            return (
+                                <button
+                                    key={val}
+                                    type="button"
+                                    disabled={!selfSkillEditable}
+                                    aria-label={`Seviye ${val}`}
+                                    onClick={() => setSelfSkill(
+                                        initial.selfSkill == null && selfSkill === val ? null : val,
+                                    )}
+                                    className="flex-1 flex justify-center py-1.5 active:scale-90 transition-transform disabled:active:scale-100 disabled:cursor-default"
+                                >
+                                    <svg width={24} height={24} viewBox="0 0 24 24" aria-hidden="true">
+                                        <path
+                                            d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z"
+                                            fill={filled ? color : 'none'} stroke={color} strokeWidth={1.5}
+                                            strokeLinecap="round" strokeLinejoin="round"
+                                        />
+                                    </svg>
+                                </button>
+                            );
+                        })}
+                    </div>
+                    <p className="mt-1 ml-1 text-[0.625rem] text-ink-4 font-semibold">
+                        {selfSkill != null
+                            ? <>Şu an: <span style={{ color: skillBand(selfSkill)?.color }}>{skillBand(selfSkill)?.label}</span>{' '}
+                                <span className="font-numeric">({selfSkill}/{SELF_SKILL_MAX})</span></>
+                            : 'Henüz seviye beyanın yok — kadroda seviye çipin görünmez.'}
+                        {!selfSkillEditable && ' · Oyuncunun kendi beyanı, değiştirilemez.'}
+                    </p>
+                </div>
                 <div>
                     <label className="text-[0.625rem] text-ink-4 font-bold uppercase tracking-wider ml-1">Oyun Stili</label>
                     <div className="mt-1.5 grid grid-cols-3 gap-2">
@@ -197,8 +267,13 @@ export const ProfileEditSheet: React.FC<ProfileEditSheetProps> = ({ open, initia
                     <label className="text-[0.625rem] text-ink-4 font-bold uppercase tracking-wider ml-1">Kısa Tanıtım</label>
                     <textarea value={bio} onChange={(e) => setBio(e.target.value)} rows={3} maxLength={200} placeholder="Kendini birkaç kelimeyle anlat…" className="mt-1.5 w-full bg-[#161B22] border border-white/10 rounded-2xl px-4 py-3 text-white text-sm outline-none focus:border-primary/40 resize-none" />
                 </div>
+                {errorText && (
+                    <p className="text-[0.6875rem] font-bold text-red-400 text-center bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2">
+                        {errorText}
+                    </p>
+                )}
                 <button
-                    onClick={() => void onSave({ position: pos.trim(), bio: bio.trim(), birthdate, gender, playStyle: style, avatarUrl: avatar })}
+                    onClick={() => void onSave({ position: pos.trim(), bio: bio.trim(), birthdate, gender, playStyle: style, avatarUrl: avatar, selfSkill })}
                     disabled={saving || uploading}
                     className="w-full h-12 rounded-2xl bg-primary text-black font-extrabold text-xs uppercase tracking-widest active:scale-95 transition-all disabled:opacity-50"
                 >

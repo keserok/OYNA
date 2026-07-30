@@ -303,7 +303,6 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
         id: m.user_id,
         name: m.full_name,
         role: m.pos || 'CM',
-        rating: m.fp || 70,
         ...(m.jersey_number != null ? { jersey: m.jersey_number } : {}),
     });
 
@@ -317,12 +316,12 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
         return 'MID';
     };
 
-    // Akıllı dizme (S22): mevki hattına göre eşleştir, çakışmada fp yüksek olan sahaya.
+    // Akıllı dizme (S22): mevki hattına göre eşleştir. Sıra deterministik olsun
+    // diye ada göre dizilir (OVR/fp söküldü — 20260830 puan sistemi sökümü).
     const populateSlotsWithSquad = (squad: TeamSquadRow[], currentSlots: Slot[]): Slot[] => {
         const newSlots = currentSlots.map(s => ({ ...s, player: undefined as Player | undefined }));
-        // fp'ye göre azalan sırala → greedy en-iyi-önce yerleştirme.
         const players = squad.map(m => ({ ...squadRowToPlayer(m), line: posToLine(m.pos) }))
-            .sort((a, b) => (b.rating || 0) - (a.rating || 0));
+            .sort((a, b) => a.name.localeCompare(b.name, 'tr'));
         const used = new Set<string>();
         // 1. Geçiş: her slotu HATTI uyan en yüksek fp'li oyuncuyla doldur.
         newSlots.forEach((slot, i) => {
@@ -1336,7 +1335,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
     const handleManualAdd = () => {
         const name = playerSearch.trim().slice(0, 20);
         if (name.length < 2) return;
-        const newPlayer: Player = { id: `custom_${Date.now()}`, name, role: '-', rating: 70, isCustom: true };
+        const newPlayer: Player = { id: `custom_${Date.now()}`, name, role: '-', isCustom: true };
         handleSelectPlayer(newPlayer);
         setPlayerSearch('');
     };
@@ -1431,7 +1430,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
         const stamp = Date.now();
         const newOpponent: Slot = {
             id: `opp_${stamp}`, x, y, role: 'OPP',
-            player: { id: `opp_p_${stamp}`, name: `Rakip ${activeTactic.opponents.length + 1}`, role: 'OPP', rating: 0, isOpponent: true },
+            player: { id: `opp_p_${stamp}`, name: `Rakip ${activeTactic.opponents.length + 1}`, role: 'OPP', isOpponent: true },
         };
         setActiveTactic({ ...activeTactic, opponents: [...activeTactic.opponents, newOpponent] });
     };
@@ -1445,7 +1444,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
             x: Math.round(100 - s.x),
             y: Math.round(100 - s.y),
             role: 'OPP',
-            player: { id: `opp_p_${stamp}_${i}`, name: `R${i + 1}`, role: 'OPP', rating: 0, isOpponent: true },
+            player: { id: `opp_p_${stamp}_${i}`, name: `R${i + 1}`, role: 'OPP', isOpponent: true },
         }));
         setActiveTactic({ ...activeTactic, opponents: mirrored });
         showToast('Rakip takım sahaya dizildi (ayna).');
@@ -2914,7 +2913,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                     return (
                                         <button
                                             key={friend.friend_id}
-                                            onClick={() => handleSelectPlayer({ id: friend.friend_id, name: friend.full_name, role: friend.pos || 'CM', rating: friend.fp ?? 70, isCustom: false })}
+                                            onClick={() => handleSelectPlayer({ id: friend.friend_id, name: friend.full_name, role: friend.pos || 'CM', isCustom: false })}
                                             disabled={inSquad}
                                             className="w-full bg-[#161B22] border border-white/5 rounded-2xl p-3 flex items-center justify-between transition-all text-left group enabled:hover:border-[#39FF14]/50 enabled:hover:bg-[#39FF14]/[0.04] disabled:opacity-45 disabled:cursor-not-allowed"
                                         >

@@ -2,21 +2,23 @@ import { ORDU_DISTRICT_NAMES } from '../utils/orduData';
 import React, { useState, useMemo, useEffect } from 'react';
 import {
   ArrowLeft, MapPin, Clock, Circle,
-  ChevronRight, ShieldAlert, KeyRound, Loader2
+  ChevronRight, KeyRound, Loader2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MatchListing } from '../types';
 import { useAppStore } from '../store';
-import { auth } from '../supabaseAuth';
 import { supabase } from '../supabaseClient';
 import { subscribeToOpenMatches, fetchNearbyMatches, resolvePrivateMatch, toPrivateMatchErrorMessage, getMatchDetails } from '../services/matchService';
 import { EmptyState } from '../components/common/StatusState';
 import { FilterDropdown } from '../components/ui/FilterDropdown';
 import { deriveDiscoveryFilterOptions, roleHasOpenSlot, ROLE_LABEL_MAP } from '../utils/discoveryFilterOptions';
-import { formatMatchDuration, realMatchMinutes } from '../shared/matchTiming';
 import { PLAY_STYLE_META } from './onboarding/onboardingShared';
+import { formatMatchDuration, realMatchMinutes } from '../shared/matchTiming';
 import { trUpper } from '../utils/trUpper';
 import { formatTRYShort } from '../utils/formatTRY';
+
+// Normalize mentalite ('Ciddi'|'Taktiksel'|'Rahat') → PLAY_STYLE_META anahtarı.
+const MENTALITY_KEY = { Ciddi: 'ciddi', Taktiksel: 'taktiksel', Rahat: 'rahat' } as const;
 
 interface MatchDiscoveryProps {
   onSelect: (match: MatchListing) => void;
@@ -32,16 +34,12 @@ const AGE_OPTIONS = ['10-14', '14-16', '16-18', '18-22', '23-27', '28-35', '35+'
 const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onSelect }) => {
   const {
     adminMatches,
-    adminUsers,
     navigateTo,
     userLocation,
     selectedRegions,
     searchRadius,
     setSearchRadius
   } = useAppStore();
-  const currentUserUid = auth.currentUser?.uid || 'u1';
-  const currentUser = adminUsers.find(u => u.id === currentUserUid) || adminUsers[0];
-  const trustScore = currentUser?.rating || 4.2;
 
   // ── Özel maç (kodla katılım) ──
   const [showPrivateModal, setShowPrivateModal] = useState(false);
@@ -163,14 +161,11 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onSelect }) => {
       } else {
         normalizedMentality = 'Taktiksel';
       }
-      // IP-09: mentalite paletinin beşinci kopyasıydı — renkler tek kaynaktan gelir.
-      const MENTALITY_DISPLAY: Record<'Ciddi' | 'Taktiksel' | 'Rahat', { title: string; color: string }> = {
-        Ciddi: { title: 'CİDDİ', color: PLAY_STYLE_META.ciddi.color },
-        Taktiksel: { title: 'TAKTİKSEL', color: PLAY_STYLE_META.taktiksel.color },
-        Rahat: { title: 'RAHAT', color: PLAY_STYLE_META.rahat.color },
-      };
-      const matchMentality = MENTALITY_DISPLAY[normalizedMentality].title;
-      const mentalityColor = MENTALITY_DISPLAY[normalizedMentality].color;
+      // Mentalite kimliği TEK KAYNAKTAN (PLAY_STYLE_META) — altı ayrı renk
+      // kopyası vardı ve birbirinden sapmıştı (BULGU-006 sınıfı drift).
+      const mentalityMeta = PLAY_STYLE_META[MENTALITY_KEY[normalizedMentality]];
+      const matchMentality = mentalityMeta.label.toLocaleUpperCase('tr-TR');
+      const mentalityColor = mentalityMeta.color;
 
       const format = m.format || '7v7';
       // MAÇ SÜRESİ — GERÇEK VERİ (matches.duration_minutes, tarifeden türetilir).
@@ -228,6 +223,10 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onSelect }) => {
         next.mentality = ''; changed = true;
       }
       if (prev.role && !filterOptions.roles.includes(prev.role)) {
+        next.role = ''; changed = true;
+      }
+      // Rahat maç pozisyonsuzdur — mentalite Rahat'a dönerse rol filtresi anlamsızlaşır.
+      if (prev.mentality === 'Rahat' && prev.role) {
         next.role = ''; changed = true;
       }
       return changed ? next : prev;
@@ -646,7 +645,7 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onSelect }) => {
                 onChange={(v) => setDna({ ...dna, role: v })}
                 open={openDropdown === 'role'}
                 onOpenChange={(o) => setOpenDropdown(o ? 'role' : null)}
-                disabled={filterOptions.roles.length === 0}
+                disabled={filterOptions.roles.length === 0 || dna.mentality === 'Rahat'}
               />
             </div>
             {enhancedMatches.length === 0 && (
@@ -723,7 +722,7 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onSelect }) => {
                       ) : (
                         <div className="space-y-6 mb-8">
                           {matchingMatches.map((match, index) => (
-                            <MatchCard key={match.id} match={match} index={index} onSelect={onSelect} dna={dna} trustScore={trustScore} />
+                            <MatchCard key={match.id} match={match} index={index} onSelect={onSelect} dna={dna} />
                           ))}
                         </div>
                       )}
@@ -738,7 +737,7 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onSelect }) => {
                         </h2>
                         <div className="space-y-6">
                           {otherMatches.map((match, index) => (
-                            <MatchCard key={match.id} match={match} index={index + matchingMatches.length} onSelect={onSelect} dna={dna} trustScore={trustScore} />
+                            <MatchCard key={match.id} match={match} index={index + matchingMatches.length} onSelect={onSelect} dna={dna} />
                           ))}
                         </div>
                       </div>
@@ -772,7 +771,7 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onSelect }) => {
                       />
                     ) : (
                       otherMatches.map((match, index) => (
-                        <MatchCard key={match.id} match={match} index={index} onSelect={onSelect} dna={dna} trustScore={trustScore} />
+                        <MatchCard key={match.id} match={match} index={index} onSelect={onSelect} dna={dna} />
                       ))
                     )}
                   </div>
@@ -880,8 +879,7 @@ const MatchCard: React.FC<{
   index: number;
   onSelect: (match: MatchListing) => void;
   dna: any;
-  trustScore: number;
-}> = ({ match, index, onSelect, dna, trustScore }) => {
+}> = ({ match, index, onSelect, dna }) => {
   const roleMap: Record<string, string> = { 'HÜC': 'HÜCUM', 'ORT': 'ORTA SAHA', 'SAV': 'SAVUNMA', 'KL': 'KALECİ' };
   const myRole = roleMap[dna.role];
   const glowColor = match.mentalityColor;
@@ -892,9 +890,6 @@ const MatchCard: React.FC<{
   useEffect(() => { setImgBroken(false); }, [match.image]);
   const hasPoster = !!match.image && !imgBroken;
   
-  // Güven skoru 3.0'ın altındakiler veya minRating'i karşılayamayanlar için kilitli premium kart mantığı
-  const isLocked = match.minRating && match.minRating > trustScore;
-
   // ── Kontenjan hesabı (gerçek slot verisi) ──
   const homeSlots: any[] = match.slots || [];
   const awaySlotData: any[] = match.awaySlots || [];
@@ -950,12 +945,19 @@ const MatchCard: React.FC<{
       initial={{ opacity: 0, y: 30, scale: 0.95 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={{ duration: 0.5, delay: index * 0.05, type: 'spring', damping: 25 }}
-      onClick={() => {
-        if (isLocked) return; // Kilitliyse tıklanamaz
-        onSelect(match);
-      }}
+      onClick={() => onSelect(match)}
       className="relative w-full min-h-[400px] flex flex-col rounded-[32px] overflow-hidden cursor-pointer group shadow-2xl border border-white/5"
     >
+      {/* Mesafe çipi — YALNIZ gerçek veriyle (get_nearby_matches distance_meters).
+          Koordinatsız/GPS'siz yolda hiç çizilmez; sahte '1.5 km' basılmaz. */}
+      {match.difficulty === 'Rahat' && Number.isFinite(Number(match.distance)) && Number(match.distance) > 0 && (
+        <div className="absolute top-4 right-4 z-20 flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-black/70 backdrop-blur-md border border-white/10">
+          <MapPin size={11} className="text-[#39FF14]" />
+          <span className="font-numeric text-[0.6875rem] font-semibold text-[#D1D5DB]">
+            {(Number(match.distance) / 1000).toLocaleString('tr-TR', { maximumFractionDigits: 1 })} km
+          </span>
+        </div>
+      )}
       {/* Arka Plan Posteri (saha fotoğrafı) — yoksa sahanın rengiyle zemin */}
       {hasPoster ? (
         <img src={match.image} onError={() => setImgBroken(true)} className="absolute inset-0 w-full h-full object-cover transition-transform duration-[2s] ease-out group-hover:scale-110" alt={match.location} referrerPolicy="no-referrer" />
@@ -1005,17 +1007,28 @@ const MatchCard: React.FC<{
         </div>
       )}
 
-      {/* ── ARANAN OYUNCU — tek dil: iki tarafın açık slot toplamı ── */}
+      {/* ── ARANAN OYUNCU — tek dil: iki tarafın açık slot toplamı.
+           Rahat maçta kalan ≤3 ise aciliyet dili: kırmızı 'N YER KALDI' (E1). ── */}
       <div className="flex flex-col gap-2.5 items-start">
-        <div
-          className="flex items-center gap-2 px-3 py-2 rounded-xl backdrop-blur-xl border bg-black/60 border-white/10"
-          style={{ borderLeft: `4px solid ${Number(match.openCount) > 0 ? '#39FF14' : '#FACC15'}` }}
-        >
-          <Circle size={12} className={Number(match.openCount) > 0 ? 'text-[#39FF14]' : 'text-[#FACC15]'} />
-          <span className="text-[0.625rem] font-extrabold uppercase tracking-widest text-white/85">
-            {Number(match.openCount) > 0 ? `${match.openCount} OYUNCU ARANIYOR` : 'KADRO TAMAM'}
-          </span>
-        </div>
+        {(() => {
+          const acik = Number(match.openCount);
+          const rahatAz = match.difficulty === 'Rahat' && acik > 0 && acik <= 3;
+          const cizgi = rahatAz ? '#F87171' : acik > 0 ? '#39FF14' : '#FACC15';
+          const metin = acik > 0
+            ? (rahatAz ? `${acik} YER KALDI` : `${acik} OYUNCU ARANIYOR`)
+            : 'KADRO TAMAM';
+          return (
+            <div
+              className="flex items-center gap-2 px-3 py-2 rounded-xl backdrop-blur-xl border bg-black/60 border-white/10"
+              style={{ borderLeft: `4px solid ${cizgi}` }}
+            >
+              <Circle size={12} style={{ color: cizgi }} />
+              <span className="text-[0.625rem] font-extrabold uppercase tracking-widest" style={{ color: rahatAz ? '#F87171' : 'rgba(255,255,255,0.85)' }}>
+                {metin}
+              </span>
+            </div>
+          );
+        })()}
       </div>
  
       {/* ── ESNEK BOŞLUK: alt bloğu aşağı iter, çakışmayı önler ── */}
@@ -1098,8 +1111,7 @@ const MatchCard: React.FC<{
             <motion.button 
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              disabled={isLocked}
-              className="w-14 h-14 rounded-2xl flex items-center justify-center backdrop-blur-xl border border-white/20 transition-all bg-white/[0.05] hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_30px_rgba(0,0,0,0.5)]"
+              className="w-14 h-14 rounded-2xl flex items-center justify-center backdrop-blur-xl border border-white/20 transition-all bg-white/[0.05] hover:bg-white/10 shadow-[0_0_30px_rgba(0,0,0,0.5)]"
               style={{ boxShadow: `0 0 35px ${glowColor}25` }}
             >
               <ChevronRight size={24} className="text-white drop-shadow-lg group-hover:translate-x-1 transition-transform" />
@@ -1109,34 +1121,6 @@ const MatchCard: React.FC<{
       </div>
       </div>{/* /İÇERİK (esnek dikey akış) */}
 
-      {/* ── PREMIUM DİNAMİK KİLİT & BLUR KAPLAMASI ── */}
-      {isLocked && (
-        <div className="absolute inset-0 bg-black/75 backdrop-blur-md z-30 flex flex-col items-center justify-center p-6 text-center select-none animate-in fade-in duration-300">
-          <motion.div
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ type: 'spring', delay: 0.1 }}
-            className="flex flex-col items-center gap-4"
-          >
-            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-red-600/20 to-amber-600/10 border-2 border-red-500/50 flex items-center justify-center shadow-[0_0_25px_rgba(239,68,68,0.4)]">
-              <ShieldAlert size={32} className="text-red-500 animate-pulse" />
-            </div>
-            
-            <div className="space-y-2">
-              <h4 className="text-lg font-extrabold italic uppercase tracking-widest text-[#FACC15] drop-shadow-[0_0_10px_rgba(250,204,21,0.4)]">
-                KİLİTLİ PREMİUM MAÇ
-              </h4>
-              <p className="text-[0.625rem] text-white/80 font-extrabold uppercase tracking-widest leading-relaxed max-w-[240px] mx-auto">
-                Bu maça katılabilmek için minimum <span className="text-[#39FF14]">★ {match.minRating}</span> yetenek puanı gerekmektedir.
-              </p>
-              <div className="w-24 h-px bg-white/10 mx-auto my-3" />
-              <p className="text-[0.625rem] text-gray-400 font-bold uppercase tracking-widest">
-                Senin Yetenek Puanın: <span className="text-red-400">★ {trustScore}</span>
-              </p>
-            </div>
-          </motion.div>
-        </div>
-      )}
     </motion.div>
   );
 };

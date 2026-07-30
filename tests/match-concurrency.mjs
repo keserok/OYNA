@@ -74,8 +74,7 @@ const { data: matchId, error: createErr } = await o1.c.rpc('player_create_match'
     title: TITLE, location: TITLE, date: dateIso, time: timeStr,
     price: 0, difficulty: 'Rahat', status: 'ACTIVE', format: '4v4',
     // isDemo:false ŞART — matches SELECT RLS'i demo satırları (demo_mode_enabled
-    // kapalıyken) HERKESTEN gizler; test maçı görünür olmalı. Temizlik: CANCELLED.
-    minRating: 0, visibility: 'OPEN', creatorId: o1.uid, isDemo: false,
+    // kapalıyken) HERKESTEN gizler; test maçı görünür olmalı. Temizlik: CANCELLED. visibility: 'OPEN', creatorId: o1.uid, isDemo: false,
     pitch_id: pitch?.id || null,
     badges: [], missingPositions: [], slots, awaySlots: [], reservePlayers: [], chatMessages: [],
   },

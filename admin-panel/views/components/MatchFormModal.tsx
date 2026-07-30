@@ -89,7 +89,6 @@ export const MatchFormModal: React.FC<Props> = ({ open, mode, match, onClose, on
     time: '20:00',
     price: '200',
     difficulty: 'Rahat' as MatchListing['difficulty'],
-    minRating: '3.0',
     status: 'ACTIVE' as NonNullable<MatchListing['status']>,
     format: '7v7',
     duration: '',
@@ -124,7 +123,6 @@ export const MatchFormModal: React.FC<Props> = ({ open, mode, match, onClose, on
         time: match.time,
         price: String(match.price),
         difficulty: match.difficulty,
-        minRating: String(match.minRating),
         status: match.status || 'ACTIVE',
         format: match.format || '7v7',
         duration: match.duration || '',
@@ -147,7 +145,6 @@ export const MatchFormModal: React.FC<Props> = ({ open, mode, match, onClose, on
         time: '20:00',
         price: '200',
         difficulty: 'Rahat',
-        minRating: '3.0',
         status: 'ACTIVE',
         format: '7v7',
         duration: '',
@@ -235,7 +232,6 @@ export const MatchFormModal: React.FC<Props> = ({ open, mode, match, onClose, on
         time: f.time,
         price: Number(f.price) || 0,
         difficulty: f.difficulty,
-        minRating: Number(f.minRating) || 3,
         status: f.status,
         format: f.format,
         duration: f.duration || undefined,
@@ -335,9 +331,7 @@ export const MatchFormModal: React.FC<Props> = ({ open, mode, match, onClose, on
               <Field label="Katılım (₺)">
                 <input type="number" value={f.price} onChange={(e) => setF({ ...f, price: e.target.value })} className={inputCls} />
               </Field>
-              <Field label="Min. Rating">
-                <input type="number" step="0.1" value={f.minRating} onChange={(e) => setF({ ...f, minRating: e.target.value })} className={inputCls} />
-              </Field>
+              {/* Min. Rating alanı söküldü — puan barajı sistemden kalktı (20260831000000). */}
             </div>
             <div className="grid grid-cols-2 gap-3">
               <Field label="Zorluk">
