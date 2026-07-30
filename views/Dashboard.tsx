@@ -571,18 +571,18 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack }) => {
             <div className="relative z-10">
               <div className="flex items-center gap-2 mb-2">
                 <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ duration: 1.5, repeat: Infinity }}>
-                  <Flame size={16} className="text-white fill-white drop-shadow-[0_0_6px_rgba(255,255,255,0.7)]" />
+                  <Flame size={16} className="text-[#FEF9C3] fill-[#FEF9C3] drop-shadow-[0_0_6px_rgba(254,240,138,0.8)]" />
                 </motion.div>
-                <span className="text-white text-[0.625rem] font-extrabold uppercase tracking-[0.3em]">MAÇ BUL</span>
+                <span className="text-[#FEF9C3] text-[0.625rem] font-extrabold uppercase tracking-[0.3em]">MAÇ BUL</span>
               </div>
-              <h2 className="text-4xl font-extrabold text-white italic uppercase leading-[0.85] tracking-tighter" style={{ textShadow: '0 0 16px rgba(255,255,255,0.55), 0 1px 3px rgba(0,0,0,0.3)' }}>Top<br />Oyna</h2>
-              <p className="text-[0.6875rem] text-white mt-2 font-bold">Maça katıl ve oyna.</p>
+              <h2 className="text-4xl font-extrabold text-[#FEF9C3] italic uppercase leading-[0.85] tracking-tighter" style={{ textShadow: '0 0 16px rgba(254,240,138,0.8), 0 1px 3px rgba(0,0,0,0.35)' }}>Top<br />Oyna</h2>
+              <p className="text-[0.6875rem] text-[#FEF9C3] mt-2 font-bold">Maça katıl ve oyna.</p>
             </div>
 
             {/* OYNA LOGO — sağ taraf, buton renginde dolu daire içinde (Kaleci/Hakem stili) */}
             <div className="absolute right-4 top-1/2 -translate-y-1/2 w-[110px] h-[110px] rounded-full flex items-center justify-center" style={{ background: 'rgba(0,0,0,.14)', border: '1.5px solid rgba(0,0,0,.3)' }}>
               <div className="w-[72px] h-[72px] rounded-full flex items-center justify-center" style={{ background: 'rgba(0,0,0,.18)', border: '1px solid rgba(0,0,0,.4)' }}>
-                <OynaLogo width={44} height={44} animate={false} color="#FFFFFF" className="drop-shadow-[0_0_10px_rgba(255,255,255,0.7)]" />
+                <OynaLogo width={44} height={44} animate={false} color="#FEF9C3" className="drop-shadow-[0_0_10px_rgba(254,240,138,0.8)]" />
               </div>
             </div>
           </div>
@@ -642,18 +642,18 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack }) => {
             <div className="relative z-10">
               <div className="flex items-center gap-2 mb-2">
                 <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ duration: 1.5, repeat: Infinity }}>
-                  <MapPin size={16} className="text-white fill-none drop-shadow-[0_0_6px_rgba(255,255,255,0.7)]" />
+                  <MapPin size={16} className="text-[#A7F3D0] fill-none drop-shadow-[0_0_6px_rgba(167,243,208,0.8)]" />
                 </motion.div>
-                <span className="text-white text-[0.625rem] font-extrabold uppercase tracking-[0.3em]">REZERVASYON</span>
+                <span className="text-[#A7F3D0] text-[0.625rem] font-extrabold uppercase tracking-[0.3em]">REZERVASYON</span>
               </div>
-              <h2 className="text-4xl font-extrabold text-white italic uppercase leading-[1.05] tracking-tighter" style={{ textShadow: '0 0 16px rgba(255,255,255,0.55), 0 1px 3px rgba(0,0,0,0.3)' }}>Saha<br />Vitrini</h2>
-              <p className="text-[0.6875rem] text-white mt-2 font-bold">Çevrendeki müsait halı sahaları incele.</p>
+              <h2 className="text-4xl font-extrabold text-[#A7F3D0] italic uppercase leading-[1.05] tracking-tighter" style={{ textShadow: '0 0 16px rgba(167,243,208,0.7), 0 1px 3px rgba(0,0,0,0.35)' }}>Saha<br />Vitrini</h2>
+              <p className="text-[0.6875rem] text-[#A7F3D0] mt-2 font-bold">Çevrendeki müsait halı sahaları incele.</p>
             </div>
 
             {/* Harita Diski — sağ taraf, buton renginde dolu daire içinde (Kaleci/Hakem stili) */}
             <div className="absolute right-4 top-1/2 -translate-y-1/2 w-[110px] h-[110px] rounded-full flex items-center justify-center" style={{ background: 'rgba(0,0,0,.14)', border: '1.5px solid rgba(0,0,0,.3)' }}>
-              <div className="w-[72px] h-[72px] rounded-full flex items-center justify-center text-white" style={{ background: 'rgba(0,0,0,.18)', border: '1px solid rgba(0,0,0,.4)' }}>
-                <MapPin size={32} className="drop-shadow-[0_0_10px_rgba(255,255,255,0.7)]" />
+              <div className="w-[72px] h-[72px] rounded-full flex items-center justify-center text-[#A7F3D0]" style={{ background: 'rgba(0,0,0,.18)', border: '1px solid rgba(0,0,0,.4)' }}>
+                <MapPin size={32} className="drop-shadow-[0_0_10px_rgba(167,243,208,0.8)]" />
               </div>
             </div>
           </div>
@@ -690,18 +690,18 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack }) => {
             <div className="relative z-10">
               <div className="flex items-center gap-2 mb-2">
                 <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ duration: 1.5, repeat: Infinity }}>
-                  <Calendar size={16} className="text-white drop-shadow-[0_0_6px_rgba(255,255,255,0.7)]" />
+                  <Calendar size={16} className="text-[#FED7AA] drop-shadow-[0_0_6px_rgba(254,215,170,0.8)]" />
                 </motion.div>
-                <span className="text-white text-[0.625rem] font-extrabold uppercase tracking-[0.3em]">ORGANİZASYON</span>
+                <span className="text-[#FED7AA] text-[0.625rem] font-extrabold uppercase tracking-[0.3em]">ORGANİZASYON</span>
               </div>
-              <h2 className="text-4xl font-extrabold text-white italic uppercase leading-[1.05] tracking-tighter" style={{ textShadow: '0 0 16px rgba(255,255,255,0.55), 0 1px 3px rgba(0,0,0,0.3)' }}>Maç<br />Oluştur</h2>
-              <p className="text-[0.6875rem] text-white mt-2 font-bold">Maçı organize et.</p>
+              <h2 className="text-4xl font-extrabold text-[#FED7AA] italic uppercase leading-[1.05] tracking-tighter" style={{ textShadow: '0 0 16px rgba(254,215,170,0.7), 0 1px 3px rgba(0,0,0,0.35)' }}>Maç<br />Oluştur</h2>
+              <p className="text-[0.6875rem] text-[#FED7AA] mt-2 font-bold">Maçı organize et.</p>
             </div>
 
             {/* Organizasyon Diski — sağ taraf, buton renginde dolu daire içinde (Kaleci/Hakem stili) */}
             <div className="absolute right-4 top-1/2 -translate-y-1/2 w-[110px] h-[110px] rounded-full flex items-center justify-center" style={{ background: 'rgba(0,0,0,.14)', border: '1.5px solid rgba(0,0,0,.3)' }}>
-              <div className="w-[72px] h-[72px] rounded-full flex items-center justify-center text-white" style={{ background: 'rgba(0,0,0,.18)', border: '1px solid rgba(0,0,0,.4)' }}>
-                <svg width="46" height="46" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ filter: 'drop-shadow(0 0 8px rgba(255,255,255,0.6))' }}>
+              <div className="w-[72px] h-[72px] rounded-full flex items-center justify-center text-[#FED7AA]" style={{ background: 'rgba(0,0,0,.18)', border: '1px solid rgba(0,0,0,.4)' }}>
+                <svg width="46" height="46" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ filter: 'drop-shadow(0 0 8px rgba(254,215,170,0.7))' }}>
                   {/* ── SOL: Futbol Sahası ── */}
                   <rect x="6" y="14" width="40" height="72" rx="3" stroke="currentColor" strokeWidth="2.2" />
                   {/* Orta çizgi */}
@@ -841,12 +841,12 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack }) => {
           />
           <div className="absolute inset-0 p-4 flex items-center justify-between">
             <div className="flex flex-col justify-center h-full gap-2">
-              <h3 className="text-[1.625rem] font-extrabold italic leading-[.92] tracking-tighter uppercase text-white" style={{ textShadow: '0 0 14px rgba(255,255,255,0.45)' }}>Kaleci<br />Bul</h3>
-              <span className="text-[0.6875rem] font-bold text-white">Kaleni koru.</span>
+              <h3 className="text-[1.625rem] font-extrabold italic leading-[.92] tracking-tighter uppercase text-[#39FF14]" style={{ textShadow: '0 0 14px rgba(57,255,20,0.5)' }}>Kaleci<br />Bul</h3>
+              <span className="text-[0.6875rem] font-bold text-[#39FF14]">Kaleni koru.</span>
             </div>
             <div className="w-[90px] h-[90px] rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(57,255,20,.1)', border: '1.5px solid rgba(57,255,20,.35)' }}>
-              <div className="w-[60px] h-[60px] rounded-full flex items-center justify-center" style={{ background: 'rgba(57,255,20,.15)', border: '1px solid rgba(57,255,20,.5)', color: '#FFFFFF' }}>
-                <Shield size={28} className="drop-shadow-[0_0_8px_rgba(255,255,255,0.7)]" />
+              <div className="w-[60px] h-[60px] rounded-full flex items-center justify-center" style={{ background: 'rgba(57,255,20,.15)', border: '1px solid rgba(57,255,20,.5)', color: '#39FF14' }}>
+                <Shield size={28} className="drop-shadow-[0_0_8px_rgba(57,255,20,0.7)]" />
               </div>
             </div>
           </div>
@@ -878,12 +878,12 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack }) => {
           />
           <div className="absolute inset-0 p-4 flex items-center justify-between">
             <div className="flex flex-col justify-center h-full gap-2">
-              <h3 className="text-[1.625rem] font-extrabold italic leading-[.92] tracking-tighter uppercase text-white" style={{ textShadow: '0 0 14px rgba(255,255,255,0.45)' }}>Hakem<br />Kirala</h3>
-              <span className="text-[0.6875rem] font-bold text-white">Adil oyna.</span>
+              <h3 className="text-[1.625rem] font-extrabold italic leading-[.92] tracking-tighter uppercase text-[#60A5FA]" style={{ textShadow: '0 0 14px rgba(96,165,250,0.55)' }}>Hakem<br />Kirala</h3>
+              <span className="text-[0.6875rem] font-bold text-[#60A5FA]">Adil oyna.</span>
             </div>
             <div className="w-[90px] h-[90px] rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(59,130,246,.1)', border: '1.5px solid rgba(59,130,246,.35)' }}>
-              <div className="w-[60px] h-[60px] rounded-full flex items-center justify-center" style={{ background: 'rgba(59,130,246,.15)', border: '1px solid rgba(99,179,255,.5)', color: '#FFFFFF' }}>
-                <Scale size={28} className="drop-shadow-[0_0_8px_rgba(255,255,255,0.7)]" />
+              <div className="w-[60px] h-[60px] rounded-full flex items-center justify-center" style={{ background: 'rgba(59,130,246,.15)', border: '1px solid rgba(99,179,255,.5)', color: '#60A5FA' }}>
+                <Scale size={28} className="drop-shadow-[0_0_8px_rgba(96,165,250,0.7)]" />
               </div>
             </div>
           </div>
@@ -1007,7 +1007,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack }) => {
                     transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
                     style={{ background: 'linear-gradient(90deg, transparent, rgba(255,50,50,0.7), transparent)' }}
                   />
-                  <Target size={28} className="relative z-10" style={{ color: '#FFFFFF', filter: 'drop-shadow(0 0 8px rgba(255,255,255,0.6))' }} />
+                  <Target size={28} className="relative z-10" style={{ color: '#6090FC', filter: 'drop-shadow(0 0 8px rgba(96,144,252,0.6))' }} />
                 </motion.div>
                 {/* İkon etrafında genişleyen nabız halkası */}
                 <motion.div
@@ -1042,12 +1042,12 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack }) => {
                     animate={{ opacity: [0.5, 1, 0.5] }}
                     transition={{ duration: 2, repeat: Infinity }}
                   >
-                    <Sparkles size={14} style={{ color: '#FFFFFF', filter: 'drop-shadow(0 0 4px rgba(255,255,255,0.6))' }} />
+                    <Sparkles size={14} style={{ color: '#6090FC', filter: 'drop-shadow(0 0 4px rgba(96,144,252,0.6))' }} />
                   </motion.div>
-                  <p className="text-[0.625rem] font-extrabold uppercase tracking-[0.2em] text-white" style={{ textShadow: '0 0 10px rgba(255,255,255,0.3)' }}>STRATEJİ & ANALİZ</p>
+                  <p className="text-[0.625rem] font-extrabold uppercase tracking-[0.2em] text-[#6090FC]" style={{ textShadow: '0 0 10px rgba(96,144,252,0.35)' }}>STRATEJİ & ANALİZ</p>
                 </div>
-                <h2 className="text-3xl font-extrabold text-white italic leading-none tracking-tight" style={{ textShadow: '0 0 18px rgba(255,255,255,0.4)' }}>TAKTİK STÜDYO</h2>
-                <p className="text-[0.6875rem] text-white font-bold mt-1.5">Maç analizleri ve oyuncu istatistikleri.</p>
+                <h2 className="text-3xl font-extrabold text-[#6090FC] italic leading-none tracking-tight" style={{ textShadow: '0 0 18px rgba(96,144,252,0.45)' }}>TAKTİK STÜDYO</h2>
+                <p className="text-[0.6875rem] text-[#6090FC] font-bold mt-1.5">Maç analizleri ve oyuncu istatistikleri.</p>
               </div>
               <motion.div
                 animate={{ x: [0, 5, 0] }}
@@ -1060,7 +1060,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack }) => {
               >
                 {/* CTA üzerinde cam vurgusu */}
                 <div className="absolute inset-0 pointer-events-none rounded-2xl" style={{ background: 'linear-gradient(180deg, rgba(255,255,255,0.18) 0%, transparent 50%)' }} />
-                <MousePointer2 size={20} className="text-white relative z-10 drop-shadow-[0_0_6px_rgba(255,255,255,0.7)]" />
+                <MousePointer2 size={20} className="text-[#FFD6D6] relative z-10 drop-shadow-[0_0_6px_rgba(255,120,120,0.8)]" />
               </motion.div>
             </div>
           </div>
