@@ -273,9 +273,18 @@ export const getFullUserProfile = async (userId: string): Promise<OynaUser | nul
 /** Sade profil "Profili Düzenle": mevki/bio/avatar/doğum tarihi/cinsiyet/oyun stili günceller (kullanıcının kendi satırı). */
 export const updateProfileBasics = async (
   userId: string,
-  fields: { position?: string; bio?: string; avatar_url?: string; birthdate?: string | null; gender?: string | null; play_style?: string | null; self_skill?: number | null },
+  fields: { position?: string; bio?: string; avatar_url?: string; birthdate?: string | null; gender?: string | null; play_style?: string | null },
 ): Promise<void> => {
   const { error } = await supabase.from('profiles').update(fields).eq('id', userId);
+  if (error) throw error;
+};
+
+// Seviye beyanı DOĞRUDAN kolon yazımıyla GİTMEZ: authenticated'ın profiles
+// UPDATE yetkisi kolon-bazlıdır ve self_skill listede yok — payload'a girerse
+// tüm PATCH 42501 ile düşer. Tek yazma yolu set_my_self_skill RPC'sidir;
+// aralık (1-10) ve NULL reddi (beyan silinemez) kapısı da orada.
+export const setMySelfSkill = async (value: number): Promise<void> => {
+  const { error } = await supabase.rpc('set_my_self_skill', { p_value: value });
   if (error) throw error;
 };
 

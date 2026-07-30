@@ -9,7 +9,7 @@ import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   X, Ban, ShieldCheck, PlayCircle, Edit3, Eye, Wallet, ScrollText,
-  BadgeCheck, Loader2, Mail, Phone, Star,
+  BadgeCheck, Loader2, Mail, Phone,
 } from 'lucide-react';
 import { supabase } from '../../../supabaseClient';
 import { toTurkishAdminError } from '../../services/adminService';

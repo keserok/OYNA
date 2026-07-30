@@ -157,7 +157,7 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
                     className="text-5xl font-extrabold italic uppercase tracking-tighter drop-shadow-[0_4px_12px_rgba(0,0,0,0.5)]"
                     style={{ color: T.value, textShadow: `0 0 20px ${T.border}80, 0 0 40px ${T.border}30` }}
                   >
-                    {name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
+                    {name.split(' ').map(n => n[0]).join('').substring(0, 2).toLocaleUpperCase('tr-TR')}
                   </span>
                   <span className="text-[0.625rem] font-extrabold uppercase tracking-[0.25em] mt-1.5 opacity-55" style={{ color: T.pos }}>
                     SİLÜET YOK

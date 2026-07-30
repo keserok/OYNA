@@ -198,6 +198,8 @@ export const ProfileEditSheet: React.FC<ProfileEditSheetProps> = ({ open, initia
                             );
                         })()}
                     </div>
+                    {/* Beyan geri alınamaz: seçili yıldıza dokunmak null'a ÇEVİRMEZ —
+                        sunucu kapısı (set_my_self_skill) NULL'u reddeder, UI da sunmaz. */}
                     <div className="mt-1.5 flex items-center gap-0.5">
                         {Array.from({ length: SELF_SKILL_MAX }).map((_, i) => {
                             const val = i + 1;
@@ -209,7 +211,7 @@ export const ProfileEditSheet: React.FC<ProfileEditSheetProps> = ({ open, initia
                                     type="button"
                                     disabled={!selfSkillEditable}
                                     aria-label={`Seviye ${val}`}
-                                    onClick={() => setSelfSkill(selfSkill === val ? null : val)}
+                                    onClick={() => setSelfSkill(val)}
                                     className="flex-1 flex justify-center py-1.5 active:scale-90 transition-transform disabled:active:scale-100 disabled:cursor-default"
                                 >
                                     <svg width={24} height={24} viewBox="0 0 24 24" aria-hidden="true">

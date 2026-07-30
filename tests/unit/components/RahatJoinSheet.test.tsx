@@ -91,6 +91,28 @@ describe('RahatJoinSheet — sayaç ve seçim', () => {
     expect(screen.getByText('Seçtiğin yer az önce doldu — takımını güncelle.')).toBeInTheDocument();
   });
 
+  it('YARIS: adet dusur → taraf dolar → adet artir: bayat secim canlanmaz, temizlenir', () => {
+    const m = mac();
+    const { rerender } = render(
+      <RahatJoinSheet open match={m} summary="s" config={CFG} busy={false} onClose={vi.fn()} onProceed={vi.fn()} />,
+    );
+    // qty 2, 2. satırda KIRMIZI seç
+    fireEvent.click(screen.getByLabelText('Artır'));
+    fireEvent.click(screen.getAllByText('KIRMIZI TAKIM')[1]);
+    // qty 1'e düşür — gizlenen seçim korunur (o an doğru)
+    fireEvent.click(screen.getByLabelText('Azalt'));
+    // Realtime: Kırmızı tamamen doldu
+    const dolu = mac({ awaySlots: [slot('r0', 'TAKEN'), slot('r1', 'TAKEN'), slot('r2', 'TAKEN')] });
+    rerender(
+      <RahatJoinSheet open match={dolu} summary="s" config={CFG} busy={false} onClose={vi.fn()} onProceed={vi.fn()} />,
+    );
+    // qty tekrar 2 — bayat KIRMIZI seçimi "seçili" diye CANLANAMAZ:
+    // temizlenir, şerit çıkar ve satır DOLU olarak çizilir
+    fireEvent.click(screen.getByLabelText('Artır'));
+    expect(screen.getByText('Seçtiğin yer az önce doldu — takımını güncelle.')).toBeInTheDocument();
+    expect(screen.getAllByText('DOLU').length).toBeGreaterThan(0);
+  });
+
   it('ucretsiz macta CTA "YERI AL" olur ve iade notu cizilmez', () => {
     ciz(mac({ price: 0 }));
     expect(screen.getByText(/YERİ AL · ÜCRETSİZ/)).toBeInTheDocument();

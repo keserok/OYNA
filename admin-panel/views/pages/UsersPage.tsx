@@ -5,7 +5,7 @@ import { ActionConfirmModal, ActionConfirmOptions } from '../components/ActionCo
 import { AddUserModal } from '../components/AddUserModal';
 import { AdminSearchBar } from '../components/AdminSearchBar';
 import { AdminFilterChips } from '../components/AdminFilterChips';
-import { Users, Shield, Scale, PlayCircle, Trash2, Eye, Edit3, Ban, ShieldCheck, Star, BadgeCheck, CreditCard } from 'lucide-react';
+import { Users, Shield, Scale, PlayCircle, Trash2, Eye, Edit3, Ban, ShieldCheck, BadgeCheck } from 'lucide-react';
 import { startGhostSession, fetchAdminProfiles, toTurkishAdminError } from '../../services/adminService';
 import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import { openGhostInConsumerApp } from '../../../utils/ghostDeepLink';

@@ -64,6 +64,9 @@ export const RahatJoinSheet: React.FC<RahatJoinSheetProps> = ({
   }, [open]);
 
   // ── YARIŞ: canlı veri seçimleri geçersiz kıldıysa fazlaları temizle + şerit ──
+  // qty da bağımlılıkta: adet düşürülüp (gizlenen seçim korunur) yarışta taraf
+  // dolduktan sonra adet geri artırılırsa, yeniden görünür olan bayat seçim
+  // burada tekrar doğrulanır — dolu takım "seçili" diye canlanamaz.
   useEffect(() => {
     if (!open) return;
     setPicks(prev => {
@@ -82,7 +85,7 @@ export const RahatJoinSheet: React.FC<RahatJoinSheetProps> = ({
     });
     setQty(q => Math.min(q, maxQty));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [wOpen.length, rOpen.length, open]);
+  }, [wOpen.length, rOpen.length, open, qty]);
 
   if (!open) return null;
 
@@ -132,7 +135,7 @@ export const RahatJoinSheet: React.FC<RahatJoinSheetProps> = ({
 
   const TeamOption: React.FC<{
     label: string; labelColor: string; count: string;
-    state: 'full' | 'selected' | 'open'; hoverBorder: string; onPick: () => void;
+    state: 'full' | 'selected' | 'open'; onPick: () => void;
   }> = ({ label, labelColor, count, state, onPick }) => {
     if (state === 'full') {
       return (
@@ -223,12 +226,12 @@ export const RahatJoinSheet: React.FC<RahatJoinSheetProps> = ({
               )}
               <div style={{ flex: 1, display: 'flex', gap: 9, minWidth: 0 }}>
                 <TeamOption
-                  label="BEYAZ TAKIM" labelColor="#E8EDF4" count={row.wCount} hoverBorder="rgba(232,237,244,0.4)"
+                  label="BEYAZ TAKIM" labelColor="#E8EDF4" count={row.wCount}
                   state={row.wSel ? 'selected' : row.wFull ? 'full' : 'open'}
                   onPick={() => pick(row.i, 'W')}
                 />
                 <TeamOption
-                  label="KIRMIZI TAKIM" labelColor="#D93A3A" count={row.rCount} hoverBorder="rgba(217,58,58,0.6)"
+                  label="KIRMIZI TAKIM" labelColor="#D93A3A" count={row.rCount}
                   state={row.rSel ? 'selected' : row.rFull ? 'full' : 'open'}
                   onPick={() => pick(row.i, 'R')}
                 />

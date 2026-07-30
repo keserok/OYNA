@@ -4,7 +4,7 @@ import { ArrowLeft, Settings, Users, UserPlus, Wallet, Pencil, AlertCircle } fro
 import { useAppStore } from '../store';
 import { auth } from '../supabaseAuth';
 import { supabase } from '../supabaseClient';
-import { getFullUserProfile, getMatchHistory, MatchHistorySummary, OynaUser, updateProfileBasics } from '../services/userService';
+import { getFullUserProfile, getMatchHistory, MatchHistorySummary, OynaUser, setMySelfSkill, updateProfileBasics } from '../services/userService';
 import { fetchFriends } from '../services/friendService';
 import { getMyTeams } from '../services/teamSocialService';
 import { LoadingState, ErrorState } from '../components/common/StatusState';
@@ -119,9 +119,13 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate,
                 birthdate: v.birthdate || null,
                 gender: v.gender || null,
                 play_style: v.playStyle || null,
-                self_skill: v.selfSkill,
                 ...(v.avatarUrl && v.avatarUrl !== profile?.avatar_url ? { avatar_url: v.avatarUrl } : {}),
             });
+            // Seviye beyanı ayrı kapıdan: RPC aralığı doğrular, NULL'u reddeder
+            // (beyan bir kez verildikten sonra silinemez — kadro çipi sözleşmesi).
+            if (v.selfSkill != null && v.selfSkill !== profile?.selfSkill) {
+                await setMySelfSkill(v.selfSkill);
+            }
             // MOB-S4: Ana sayfa sol üst avatar (UserAvatar) store'daki oturum
             // kimliğinden beslenir — fotoğraf değişimini ANINDA oraya da yansıt.
             if (v.avatarUrl && v.avatarUrl !== profile?.avatar_url) {

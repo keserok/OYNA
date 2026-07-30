@@ -454,7 +454,6 @@ const RahatMatchLobby: React.FC<Props> = ({ match: matchProp, onBack }) => {
 
   const RosterCard: React.FC<{
     title: string; color: string; rows: RosterRow[]; filledLabel: string;
-    side: 'home' | 'away';
   }> = ({ title, color, rows, filledLabel }) => (
     <div style={{ ...CARD, padding: '13px 15px 6px', marginBottom: 10, boxShadow: '0 10px 24px rgba(0,0,0,0.30)' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingBottom: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
@@ -775,8 +774,8 @@ const RahatMatchLobby: React.FC<Props> = ({ match: matchProp, onBack }) => {
               </div>
             ) : (
               <>
-                <RosterCard title="BEYAZ TAKIM" color={TEAM_WHITE} rows={whiteRows} filledLabel={`${wFilled}/${whiteSlots.length}`} side="home" />
-                <RosterCard title="KIRMIZI TAKIM" color={TEAM_RED} rows={redRows} filledLabel={`${rFilled}/${redSlots.length}`} side="away" />
+                <RosterCard title="BEYAZ TAKIM" color={TEAM_WHITE} rows={whiteRows} filledLabel={`${wFilled}/${whiteSlots.length}`} />
+                <RosterCard title="KIRMIZI TAKIM" color={TEAM_RED} rows={redRows} filledLabel={`${rFilled}/${redSlots.length}`} />
               </>
             )}
 
