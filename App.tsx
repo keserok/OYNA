@@ -30,6 +30,7 @@ import { recordUserConsents } from './services/consentService';
 const Dashboard = lazy(() => import('./views/Dashboard'));
 const MatchDiscovery = lazy(() => import('./views/MatchDiscovery'));
 const MatchJoin = lazy(() => import('./views/MatchJoin'));
+const RahatMatchLobby = lazy(() => import('./views/match/RahatMatchLobby'));
 const LocationPrompt = lazy(() => import('./views/LocationPrompt'));
 const RoleSelection = lazy(() => import('./views/RoleSelection'));
 const PitchDiscovery = lazy(() => import('./views/PitchDiscovery'));
@@ -757,6 +758,13 @@ const App: React.FC = () => {
           }}
         />;
       case 'MATCH_JOIN':
+        // RAHAT bir maç ÇEŞİDİdir: pozisyonsuz kadro lobisi açılır; Ciddi/
+        // Taktiksel saha+diziliş akışına dokunulmaz. Dallanma BURADA (hook-
+        // güvenli): MatchJoin'in kendi içinde erken return, satır 600+ hook'ları
+        // yüzünden rules-of-hooks ihlali olurdu.
+        if (selectedMatch?.difficulty === 'Rahat') {
+          return <RahatMatchLobby match={selectedMatch} onBack={() => goBack('MATCH_DISCOVERY')} />;
+        }
         return <MatchJoin
           match={selectedMatch}
           onBack={() => goBack('MATCH_DISCOVERY')}

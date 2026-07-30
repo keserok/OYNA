@@ -328,6 +328,9 @@ export interface MatchListing {
   confirmedAt?: string;       // T-8s quorum onay zamanı
   startsAt?: string;          // maç başlangıç timestamp'i (lifecycle için)
   isDemo?: boolean;           // demo/seed maçı (panelde rozetle ayrıştırılır)
+  /** Ayakkabı kuralı (matches.footwear_rule): CLEATS_OK | TURF_SHOES.
+   *  Yoksa HAKKINDA'daki ayakkabı kartı hiç çizilmez. */
+  footwearRule?: 'CLEATS_OK' | 'TURF_SHOES' | null;
   // Escrow kapora yaşam-döngüsü (20260716000001): NONE|BLOCKED|CAPTURED|VOIDED|REFUNDED
   depositStatus?: 'NONE' | 'BLOCKED' | 'CAPTURED' | 'VOIDED' | 'REFUNDED';
   depositAmount?: number;     // bloke edilen/tahsil edilen kapora

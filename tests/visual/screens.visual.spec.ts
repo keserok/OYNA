@@ -1,7 +1,7 @@
 import { test, expect, type Page } from '@playwright/test';
 import {
   hazirla, ekranaGit, bildirimleriAc, odemeBaglamiTohumla, oturmasiniBekle,
-  degerlendirmeBaglamiTohumla,
+  degerlendirmeBaglamiTohumla, rahatBaglamiTohumla,
 } from './harness';
 
 // ─── OYNA — Ana ekran görsel regresyonu ──────────────────────────────────────
@@ -155,6 +155,53 @@ const EKRANLAR: Ekran[] = [
       await puanla(0, 0.95); // 10 — EFSANE ucu
       await puanla(1, 0.65); // 7
       await puanla(2, 0.25); // 3
+    },
+  },
+  {
+    // E2 · Rahat maç lobisi — DURUM: iki takım kadrosu, beş satır durumu,
+    // doluluk halkası, kademe çubuğu, hesaplanan onay saati.
+    ad: '17-rahat-durum',
+    capa: /BEYAZ TAKIM/,
+    ac: async (page) => {
+      await hazirla(page);
+      await rahatBaglamiTohumla(page);
+      await ekranaGit(page, 'MATCH_JOIN');
+    },
+  },
+  {
+    // E4 · HAKKINDA: bilgi ızgarası + seviye/tip/ayakkabı kartları.
+    // (Ağ kapalı: tesis verisi yok → TESİS/HARİTA kartları bilinçli yok.)
+    ad: '18-rahat-hakkinda',
+    capa: /MAÇ SEVİYESİ/,
+    ac: async (page) => {
+      await hazirla(page);
+      await rahatBaglamiTohumla(page);
+      await ekranaGit(page, 'MATCH_JOIN');
+      await page.getByText('HAKKINDA', { exact: true }).click();
+    },
+  },
+  {
+    // E3 · Katılım sheet'i: adet 2, ilk yer Beyaz seçili — canlı sayaçlar.
+    ad: '19-rahat-katilim',
+    capa: /KAÇ KİŞİ İÇİN YER ALIYORSUN/,
+    ac: async (page) => {
+      await hazirla(page);
+      await rahatBaglamiTohumla(page);
+      await ekranaGit(page, 'MATCH_JOIN');
+      await page.getByText(/KATIL · 200₺/).click();
+      await page.getByLabel('Artır').click();
+      // Sheet içindeki takım SEÇENEĞİ (arkadaki kadro başlığı değil).
+      await page.getByRole('button', { name: /BEYAZ TAKIM/ }).first().click();
+    },
+  },
+  {
+    // E6 · Kadro tam: yedek CTA + yedek listesi bloğu.
+    ad: '20-rahat-dolu',
+    capa: /YEDEK LİSTESİNE GİR/,
+    ac: async (page) => {
+      await hazirla(page);
+      await rahatBaglamiTohumla(page, { dolu: true });
+      await ekranaGit(page, 'MATCH_JOIN');
     },
   },
 ];
