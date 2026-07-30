@@ -5,7 +5,7 @@
 > ilerler. Her problem; veritabanı incelenerek, uygulamanın UI/UX yapısına uygun ve
 > gerektiğinde **tam yetkili admin paneline** entegre edilerek çözülür.
 
-**Son güncelleme:** 2026-06-30
+**Son güncelleme:** 2026-07-30
 **Proje:** OYNA (Supabase ref: `iikvzgyccvgcybzdfwlv`) · React 19 · Vite · Tailwind v4 · Zustand · Capacitor
 
 ---
@@ -120,6 +120,29 @@ Her problem aşağıdaki yaşam döngüsünden geçer:
   2. `isGuest` bayrağı eklendi; üste temaya uyumlu **işlevli misafir şeridi** kondu (Giriş Yap/Kaydol → `onNavigate('AUTH')` ile mevcut giriş ekranına gider).
 - **Kapsam:** Yalnızca **UI/UX + Frontend** (giriş/kayıt eylemi mevcut Supabase Auth ile çalışıyor; yeni backend/DB yok).
 - **Etkilenen katmanlar:** Frontend. **Onay:** ✅ (misafir şeridi dahil). **Doğrulama:** `tsc` temiz + 390px önizleme paylaşıldı.
+
+### [OYUNCU-05] Rahat maç lobisinde tesis kartı komple boş geliyordu
+- **Durum:** ✔️ Tamamlandı
+- **Tarih:** 2026-07-30
+- **Problem:** Rahat maç lobisinin "Hakkında" bölümünde tesis adı, adres, açıklama,
+  olanaklar ve harita hiç görünmüyordu. Kullanıcıya gösterilen iptal/iade oranı da
+  o tesisin kendi oranı değil, platform geneli varsayılan oranıydı.
+- **İnceleme bulguları:**
+  - `services/rahatMatchService.ts` içindeki sorgu `pitches.location` kolonunu istiyordu.
+    Canlıda böyle bir kolon **yok**; tesisin adres kolonunun adı `address`.
+  - **Asıl ders:** PostgREST var olmayan bir kolon istendiğinde o alanı atlamaz,
+    **sorgunun tamamını reddeder** (hata 42703). Yani tek bir yanlış kolon adı
+    tek bir alanı değil, o sorgudan gelen HER ŞEYİ yok eder. Çağıran fonksiyon
+    hatayı yutup `null` döndüğü için ekranda hata bile görünmüyordu — kart
+    sadece "veri yok" gibi davranıyordu.
+- **Uygulanan çözüm:** Sorgu `address` (ve yedek olarak `city`) okuyor; eşleme projenin
+  kanonik deseniyle aynı (`shared/pitchShowcaseMapper.ts` → adres yoksa ilçe/il birleşimi).
+- **Testler neden yakalamadı:** Görsel test hermetiktir (ağ kapalı), tesis sorgusu zaten
+  hiç çalışmıyor ve "veri yoksa kart çizilmez" davranışı **doğru** görünüyordu.
+  Yeşil test, kırık üretim demekti. `tests/unit/rahatPitchColumns.test.ts` bu boşluğu
+  kapatır: seçilen kolonlar gerçek şemayla karşılaştırılır, ağ gerekmez.
+- **Etkilenen katmanlar:** Frontend (veri katmanı). Veritabanına dokunulmadı.
+- **Uygulama notu:** PR #150.
 
 ---
 
