@@ -792,6 +792,45 @@ export interface WalletTransaction {
   status: 'CLEARED' | 'PENDING';
 }
 
+// ─── Ödeme Modu (Nakit / Online) ───────────────────────────────────────────
+// İki katmanlı anahtar: global (platform admini) bir TAVAN'dır, tesis modu
+// onun altında çalışır. Tek doğruluk kaynağı `resolve_payment_mode` RPC'sidir.
+export type PaymentMode = 'CASH_ONLY' | 'ONLINE_ONLY' | 'HYBRID';
+
+/** Etkin modun neden o değere düştüğü — arayüzde dürüst açıklama için. */
+export type PaymentModeReason =
+  | 'PROVIDER_NOT_LIVE'    // Ödeme sağlayıcısı SIMULATION/DISABLED → online kapalı
+  | 'GLOBAL_CASH_ONLY'     // Platform tümüyle nakit modunda
+  | 'GLOBAL_ONLINE_ONLY'   // Platform tümüyle online modunda
+  | 'GLOBAL_HYBRID'        // Global hibrit, tesis belirtilmemiş
+  | 'PITCH_CHOICE';        // Tesisin kendi tercihi geçerli
+
+export interface PaymentModeResolution {
+  effective_mode: PaymentMode;
+  global_mode: PaymentMode;
+  /** Tesis bazlı sorgulanmadıysa null. */
+  pitch_mode: PaymentMode | null;
+  /** true ise saha sahibi modu değiştiremez (admin kilidi). */
+  locked: boolean;
+  provider: string;
+  provider_live: boolean;
+  cash_allowed: boolean;
+  online_allowed: boolean;
+  reason: PaymentModeReason;
+}
+
+/** Admin panelinde tesis bazlı mod listesi satırı. */
+export interface AdminPitchPaymentMode {
+  pitch_id: string;
+  pitch_name: string;
+  district: string | null;
+  owner_id: string | null;
+  pitch_mode: PaymentMode;
+  effective_mode: PaymentMode;
+  locked: boolean;
+  updated_at: string | null;
+}
+
 // FAZ 2: iyzico pre-auth state machine
 export type PaymentIntentStatus = 'PENDING' | 'BLOCKED' | 'CAPTURED' | 'PAID' | 'FAILED' | 'REFUNDED' | 'VOIDED';
 export type CommissionModel = 'MODEL_A' | 'MODEL_B';

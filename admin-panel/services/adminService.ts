@@ -1,5 +1,6 @@
 import { supabase, SUPABASE_URL } from '../../supabaseClient';
 import { AdminUser, UserRole, AdminLog, MatchListing, PositionSlot, Goalkeeper, Referee, Pitch, Team } from '../../types';
+import type { AdminPitchPaymentMode, PaymentMode } from '../../types';
 import { mapAdminMatchRowToListing, listingToMatchPayload, type AdminMatchRow } from '../utils/matchMapper';
 import { mapAdminPitchRowToUi } from '../utils/pitchMapper';
 import { mapDbRowToCamel } from '../utils/dbRowMapper';
@@ -1496,6 +1497,36 @@ export async function fetchFeatureFlags(): Promise<FeatureFlagRow[]> {
 
 export async function setFeatureFlag(key: string, enabled: boolean): Promise<void> {
   const { error } = await supabase.rpc('admin_set_feature_flag', { p_key: key, p_enabled: enabled });
+  if (error) throw new Error(error.message);
+}
+
+// ─── Ödeme Modu (tesis bazlı) ──────────────────────────────────────────────
+
+/**
+ * Tüm tesislerin ödeme modu tablosu. `effective_mode` sunucuda hesaplanır;
+ * tesisin TERCİHİ (`pitch_mode`) ile FİİLÎ durumu arasındaki fark burada görünür
+ * — global mod bir tavan olduğu için ikisi ayrışabilir.
+ */
+export async function fetchPitchPaymentModes(): Promise<AdminPitchPaymentMode[]> {
+  const { data, error } = await supabase.rpc('admin_list_pitch_payment_modes');
+  if (error) throw new Error(error.message);
+  return (data || []) as AdminPitchPaymentMode[];
+}
+
+/**
+ * Bir tesisin ödeme modunu admin olarak yazar ve isteğe bağlı olarak kilitler.
+ * Kilitliyken saha sahibi modu değiştiremez. Değişiklik audit'lenir.
+ */
+export async function setPitchPaymentMode(
+  pitchId: string,
+  mode: PaymentMode,
+  locked?: boolean,
+): Promise<void> {
+  const { error } = await supabase.rpc('admin_set_pitch_payment_mode', {
+    p_pitch_id: pitchId,
+    p_mode: mode,
+    p_locked: locked ?? null,
+  });
   if (error) throw new Error(error.message);
 }
 
