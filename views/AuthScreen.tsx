@@ -14,6 +14,7 @@ import { validateFullName, normalizeNameInput } from '../shared/personName';
 import { LegalModal } from '../components/common/LegalModal';
 import heroEmblem from '../assets/auth/hero-emblem.webp';
 import oynaLogo from '../assets/onboarding/oyna-logo.webp';
+import { mapAuthError } from '../utils/errorMap';
 
 interface AuthScreenProps {
   /** App tarafından geçilir ama BİLEREK çağrılmaz: başarı sonrası yönlendirmeyi
@@ -169,7 +170,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
         // navigasyonu auth dinleyicisine bırak (rol-doğru yönlendirme)
       } catch (err: any) {
         console.error('Demo giriş hatası:', err);
-        setError(err?.message || 'Demo giriş başarısız.');
+        setError(mapAuthError(err, 'Demo giriş başarısız.'));
         setIsLoading(null);
       }
       return;
@@ -182,7 +183,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
       setResendIn(60);
     } catch (err: any) {
       console.error('OTP gönderim hatası:', err);
-      setError(err?.message || 'Doğrulama kodu gönderilemedi. Lütfen tekrar deneyin.');
+      setError(mapAuthError(err, 'Doğrulama kodu gönderilemedi. Lütfen tekrar deneyin.'));
     } finally {
       setIsLoading(null);
     }
@@ -199,7 +200,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
       setResendIn(60);
       setInfo('Yeni kod gönderildi.');
     } catch (err: any) {
-      setError(err?.message || 'Kod tekrar gönderilemedi.');
+      setError(mapAuthError(err, 'Kod tekrar gönderilemedi.'));
     } finally {
       setIsLoading(null);
     }
@@ -217,7 +218,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
       // Spinner, dinleyici doğru panele yönlendirip bu ekranı kaldırana dek döner.
     } catch (err: any) {
       console.error('OTP doğrulama hatası:', err);
-      setError(err?.message || 'Kod hatalı veya süresi dolmuş.');
+      setError(mapAuthError(err, 'Kod hatalı veya süresi dolmuş.'));
       setIsLoading(null);
     }
   };
@@ -239,7 +240,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
         // navigasyonu auth dinleyicisine bırak (rol-doğru yönlendirme)
       } catch (err: any) {
         console.error('Demo giriş hatası:', err);
-        setError(err?.message || 'Demo giriş başarısız.');
+        setError(mapAuthError(err, 'Demo giriş başarısız.'));
         setIsLoading(null);
       }
       return;
@@ -290,7 +291,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
         setIsRegister(false);
         setInfo('Bu e-posta zaten kayıtlı — şifrenle giriş yapabilirsin.');
       } else {
-        setError(err?.message || 'Kayıt başarısız. Lütfen tekrar dene.');
+        setError(mapAuthError(err, 'Kayıt başarısız. Lütfen tekrar dene.'));
       }
       setIsLoading(null);
     }
@@ -364,7 +365,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
       // navigasyonu global auth dinleyicisi yapar. Web'de sayfa yönlenir.
     } catch (err: any) {
       console.error('[Auth] Google hatası:', err);
-      setError(err?.message || 'Google ile giriş başarısız.');
+      setError(mapAuthError(err, 'Google ile giriş başarısız.'));
     } finally {
       setIsLoading(null);
     }
@@ -381,7 +382,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
       // onSuccess() burada da çağrılırsa çifte yönlendirme/flaş oluşur.
     } catch (err: any) {
       console.error('[Auth] Apple hatası:', err);
-      setError(err?.message || 'Apple ile giriş başarısız.');
+      setError(mapAuthError(err, 'Apple ile giriş başarısız.'));
     } finally {
       setIsLoading(null);
     }
@@ -402,7 +403,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
       // navigasyon auth dinleyicisinde
     } catch (err: any) {
       console.error('[Auth] Demo hesap girişi hatası:', err);
-      setError(err?.message || 'Demo hesabıyla giriş başarısız.');
+      setError(mapAuthError(err, 'Demo hesabıyla giriş başarısız.'));
       setDemoLoggingIn(null);
     }
   };

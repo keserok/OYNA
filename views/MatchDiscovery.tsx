@@ -753,7 +753,21 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onSelect }) => {
                         </h2>
                     )}
                     {otherMatches.length === 0 ? (
-                      <EmptyState title="Aktif Maç Bulunamadı" message="Bu bölgede şu an açık bir maç yok." />
+                      <EmptyState
+                        title="Aktif Maç Bulunamadı"
+                        message={isFilterActive
+                          ? 'Seçtiğin filtrelere uyan maç yok. Filtreleri gevşetmeyi dene.'
+                          : 'Bu bölgede şu an açık bir maç yok. Sen kurabilirsin.'}
+                        actions={isFilterActive
+                          ? [
+                              { label: 'Filtreleri Temizle', onClick: handleClearFilters },
+                              { label: 'Maç Kur', onClick: () => navigateTo('MATCH_CREATE') },
+                            ]
+                          : [
+                              { label: 'Maç Kur', onClick: () => navigateTo('MATCH_CREATE') },
+                              { label: 'Saha Kirala', onClick: () => navigateTo('PITCH_DISCOVERY') },
+                            ]}
+                      />
                     ) : (
                       otherMatches.map((match, index) => (
                         <MatchCard key={match.id} match={match} index={index} onSelect={onSelect} dna={dna} trustScore={trustScore} />

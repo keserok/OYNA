@@ -39,6 +39,8 @@ interface MessagesViewProps {
   initialConversationId?: string | null;
   /** Takım Detayı / derin bağlantıdan gelen takım sohbeti hedefi. */
   initialTeamChatId?: string | null;
+  /** Boş gelen kutusundan arkadaş bulmaya çıkış (IP-12). */
+  onFindFriends: () => void;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -119,7 +121,9 @@ const InboxList: React.FC<{
   items: InboxItem[];
   loading: boolean;
   onSelect: (item: InboxItem) => void;
-}> = ({ items, loading, onSelect }) => {
+  /** Boş gelen kutusundan çıkış — IP-12 · BULGU-066. */
+  onFindFriends: () => void;
+}> = ({ items, loading, onSelect, onFindFriends }) => {
   if (loading) return (
     <div className="flex items-center justify-center py-20">
       <Spinner size={28} color="#34D399" />
@@ -130,6 +134,13 @@ const InboxList: React.FC<{
     <div className="text-center py-16">
       <MessageCircle size={40} className="mx-auto mb-3 text-ink-4" />
       <p className="text-sm text-ink-4">Henüz mesajın yok</p>
+      {/* IP-12 · BULGU-066: burası çıkmaz sokaktı — ikon ve cümle vardı, çıkış yoktu. */}
+      <button
+        onClick={onFindFriends}
+        className="mt-4 min-h-[44px] px-5 rounded-2xl bg-primary text-on-primary text-xs font-extrabold uppercase tracking-wide active:scale-[0.98] transition-transform"
+      >
+        Arkadaş Bul
+      </button>
     </div>
   );
 
@@ -776,7 +787,7 @@ type ActiveChat =
   | null;
 
 const MessagesView: React.FC<MessagesViewProps> = ({
-  onBack, initialConversationId, initialTeamChatId,
+  onBack, initialConversationId, initialTeamChatId, onFindFriends,
 }) => {
   const myUid = auth.currentUser?.uid || '';
 
@@ -879,9 +890,14 @@ const MessagesView: React.FC<MessagesViewProps> = ({
             {listError}
           </div>
         )}
-        <InboxList items={items} loading={loading} onSelect={item => {
-          setActive(item.kind === 'DM' ? { kind: 'DM', dm: item.dm } : { kind: 'TEAM', team: item.team });
-        }} />
+        <InboxList
+          items={items}
+          loading={loading}
+          onFindFriends={onFindFriends}
+          onSelect={item => {
+            setActive(item.kind === 'DM' ? { kind: 'DM', dm: item.dm } : { kind: 'TEAM', team: item.team });
+          }}
+        />
       </div>
     </div>
   );

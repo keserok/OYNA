@@ -34,6 +34,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { OYNA_TILE_URL, oynaTileProps, oynaMapProps, OYNA_MAP_CSS } from '../components/map/mapBase';
 import { Toast } from '../components/common/Toast';
+import { mapError } from '../utils/errorMap';
 
 // Fix leaflet default icon path issues
 if (typeof window !== 'undefined') {
@@ -868,7 +869,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
       setShowTacticPicker(false);
       await refreshTacticProposals();
       showActionSuccess('Taktiğin maça önerildi. 📋');
-    } catch (e: any) { showActionError(e?.message || 'Taktik önerilemedi.'); }
+    } catch (e: any) { showActionError(mapError(e, 'Taktik önerilemedi.')); }
   };
 
   // Satın alınan slot için paylaşılabilir devralma kodu üret
@@ -1033,7 +1034,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
       await refreshServiceRequests(match.id);
       showActionSuccess('Başvuru kabul edildi. Ücret bloke edildi.');
     } catch (err: any) {
-      showActionError(err?.message || 'Başvuru kabul edilemedi.');
+      showActionError(mapError(err, 'Başvuru kabul edilemedi.'));
     } finally { setReqActionId(null); }
   };
   const handleDeclineApplication = async (requestId: string) => {
@@ -1043,7 +1044,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
       await refreshServiceRequests(match.id);
       showActionSuccess('Başvuru reddedildi.');
     } catch (err: any) {
-      showActionError(err?.message || 'Başvuru reddedilemedi.');
+      showActionError(mapError(err, 'Başvuru reddedilemedi.'));
     } finally { setReqActionId(null); }
   };
   const handleCaptainConfirm = async (requestId: string) => {
@@ -1053,7 +1054,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
       await refreshServiceRequests(match.id);
       showActionSuccess('Onayladın. Sağlayıcı da onaylayınca ücret ödenir.');
     } catch (err: any) {
-      showActionError(err?.message || 'Onay kaydedilemedi.');
+      showActionError(mapError(err, 'Onay kaydedilemedi.'));
     } finally { setReqActionId(null); }
   };
 
@@ -1075,7 +1076,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
       setProviderSuggestions(list);
     } catch (err: any) {
       console.error('[MatchJoin] sağlayıcı önerileri:', err);
-      showActionError(err?.message || 'Uygun sağlayıcılar getirilemedi.');
+      showActionError(mapError(err, 'Uygun sağlayıcılar getirilemedi.'));
     } finally {
       setProvidersLoading(false);
     }
@@ -1098,7 +1099,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
       showActionSuccess(`Ödeme alındı — ${provider.name} onayı bekleniyor`);
     } catch (err: any) {
       console.error('[MatchJoin] talep/ödeme:', err);
-      showActionError(err?.message || 'Hizmet talebi oluşturulamadı.');
+      showActionError(mapError(err, 'Hizmet talebi oluşturulamadı.'));
     } finally {
       setProviderSubmittingId(null);
     }
@@ -1121,7 +1122,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
           : `No-show bildirildi. Ceza (${r.penalty}₺) teminattan tahsil edilemedi — durum incelemeye alındı.`
       );
     } catch (e: any) {
-      showActionError(e?.message || 'No-show bildirilemedi.');
+      showActionError(mapError(e, 'No-show bildirilemedi.'));
     } finally {
       setIsProcessing(false); endWrite();
     }
@@ -1220,7 +1221,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                                 setFriendRequestSent(true);
                                 showActionSuccess('Arkadaşlık isteği gönderildi.');
                               } catch (e: any) {
-                                showActionError(e?.message || 'İstek gönderilemedi.');
+                                showActionError(mapError(e, 'İstek gönderilemedi.'));
                               }
                             }}
                             className="w-full mt-3 py-3 rounded-2xl font-extrabold text-[0.6875rem] uppercase tracking-widest text-ink bg-white/[0.06] border border-line-strong active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-60">

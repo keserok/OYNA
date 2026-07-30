@@ -17,6 +17,8 @@ import FriendsPanel from './social/FriendsPanel';
 import MyTeamsPanel from './social/MyTeamsPanel';
 import TeamsDirectoryPanel from './social/TeamsDirectoryPanel';
 import TeamCreatePanel, { hasTeamDraft } from './social/TeamCreatePanel';
+import { mapError } from '../utils/errorMap';
+import { ErrorState } from '../components/common/StatusState';
 
 // ================================================================
 // SocialView — Sosyal kabuk (Foundation Spec §2-3)
@@ -85,6 +87,9 @@ const SocialView: React.FC<SocialViewProps> = ({ onBack, onNavigate }) => {
   }, [socialTarget, setTab, setTeamsSubTab, setSocialTarget]);
 
   // Arkadaş verisi — tek atış RPC katmanı (C4)
+  const [friendsError, setFriendsError] = useState<string | null>(null);
+  const [teamsError, setTeamsError] = useState<string | null>(null);
+
   const loadFriendData = useCallback(async (silent = false) => {
     if (!userId) { setLoadingFriends(false); return; }
     if (!silent) setLoadingFriends(true);
@@ -93,8 +98,11 @@ const SocialView: React.FC<SocialViewProps> = ({ onBack, onNavigate }) => {
         getFriends(), getFriendRequests(), getFriendLists(),
       ]);
       setFriends(f); setRequests(r); setFriendLists(l);
+      setFriendsError(null);
     } catch (e) {
       console.error('[SocialView] arkadaşlar yüklenemedi', e);
+      // Sessiz hata = yalan boş durum. Kullanıcı "arkadaşın yok" sanıyordu.
+      setFriendsError(mapError(e, 'Arkadaş listen yüklenemedi.'));
     } finally {
       setLoadingFriends(false);
     }
@@ -109,8 +117,10 @@ const SocialView: React.FC<SocialViewProps> = ({ onBack, onNavigate }) => {
         getMyTeams(), getMyTeamInvites(userId),
       ]);
       setMyTeams(t); setTeamInvites(inv);
+      setTeamsError(null);
     } catch (e) {
       console.error('[SocialView] takımlar yüklenemedi', e);
+      setTeamsError(mapError(e, 'Takımların yüklenemedi.'));
     } finally {
       setLoadingTeams(false);
     }
@@ -243,7 +253,14 @@ const SocialView: React.FC<SocialViewProps> = ({ onBack, onNavigate }) => {
               exit={{ opacity: 0, x: -10 }}
               transition={{ duration: 0.18 }}
             >
-              {teamsSubTab === 'MINE' && (
+              {teamsSubTab === 'MINE' && teamsError && !loadingTeams && (
+                <ErrorState
+                  title="Takımların Yüklenemedi"
+                  message={teamsError}
+                  onRetry={() => loadTeamData()}
+                />
+              )}
+              {teamsSubTab === 'MINE' && !teamsError && (
                 <MyTeamsPanel
                   teams={myTeams}
                   invites={teamInvites}
@@ -277,6 +294,13 @@ const SocialView: React.FC<SocialViewProps> = ({ onBack, onNavigate }) => {
               exit={{ opacity: 0, x: 10 }}
               transition={{ duration: 0.18 }}
             >
+              {friendsError && !loadingFriends ? (
+                <ErrorState
+                  title="Arkadaş Listen Yüklenemedi"
+                  message={friendsError}
+                  onRetry={() => loadFriendData()}
+                />
+              ) : (
               <FriendsPanel
                 userId={userId}
                 friends={friends}
@@ -289,6 +313,7 @@ const SocialView: React.FC<SocialViewProps> = ({ onBack, onNavigate }) => {
                 messagingId={messagingId}
                 onToast={showToast}
               />
+              )}
             </motion.div>
           )}
         </AnimatePresence>

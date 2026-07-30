@@ -71,15 +71,32 @@ IP-01 (navigasyon/geri tuşu/overlay) · IP-02 (çift gönderim + idempotency) �
 IP-03 (ödeme şeffaflığı + 3DS kurtarma) · IP-04 (ayrılma sözleşmesi) ·
 IP-05 (değerlendirme gizliliği) · IP-06 (bildirim merkezi) ·
 IP-07 (tesis sahibi para dürüstlüğü) · IP-08 (tipografi/kontrast/font) ·
-**IP-09 (renk sistemi, tek aksan)** · **IP-10 (dokunma hedefi, titreşim,
-erişilebilirlik)** · IP-20 (bilet çevrimdışı) · S-serisi kararların tamamı.
+**IP-09 (renk sistemi, tek aksan)** · **IP-10 (dokunma hedefi, erişilebilirlik)** ·
+**IP-12 (hata ve boş durum sistemi)** · **IP-14 (bilgi mimarisi)** ·
+IP-20 (bilet çevrimdışı) · S-serisi kararların tamamı.
 
 ### Kalan paketler — önerilen sıra
 
 | Sıra | Paket | Not |
 |---|---|---|
-| 1 | **IP-14** — bilgi mimarisi, ölü ekranlar | Ekran taşıdığı için erken |
-| 2+ | IP-11, 12, 13, 15, 16, 17, 18, 19, 21, 22, 23 | |
+| 1+ | IP-11, 13, 15, 16, 17, 18, 19, 21, 22, 23 | |
+
+### ⏳ AÇIK İŞ — telefona bildirim (kullanıcı isteği, HENÜZ YAPILMADI)
+
+Kullanıcı IP-14 kararlarıyla birlikte şunu istedi: **"bildirim gelirse telefona
+gelmesini sağla"** (push notification). Bu iş IP-12/IP-14 kapsamında DEĞİLDİ ve
+yapılmadı. Başlamadan önce `notifications/pushService.ts`, Supabase'de token
+tablosu, sunucu tarafı gönderim (edge function/cron) ve native yapılandırma
+(google-services.json / APNs) ölçülmeli — büyük ihtimalle sıfırdan iş.
+
+### IP-14 · IP-12 kararları (kullanıcı, bu oturumda)
+
+Alt menü: Ana Sayfa · Top Oyna · **Maçlarım (orta)** · Sahalar · Profil.
+Sosyal → Profil'den. Sekme köklerinde geri oku YOK, zil de eklenmedi —
+**bildirim zili yalnız Ana Sayfa'da**. Stüdyo alt menüde değil.
+MatchesView + taslak mekanizması silindi. "QR ile Ekle" → davet linki.
+Hata tonu **SEN**. Tanınmayan kod: Türkçe genel mesaj (kod `codeOf()` ile
+ayrıca sunulabilir). Altı `parseRpcError` kopyası tek sözlüğe indi.
 
 ### ⚠️ IP-09'un GERİ ALINAN parçası — ana sayfa kartları (kullanıcı kararı)
 

@@ -766,6 +766,7 @@ const App: React.FC = () => {
         return <MessagesView
           initialConversationId={selectedConversationId}
           initialTeamChatId={selectedTeamChatId}
+          onFindFriends={() => navigateTo('FRIEND_ADD')}
           onBack={() => {
             setSelectedConversationId(null);
             setSelectedTeamChatId(null);

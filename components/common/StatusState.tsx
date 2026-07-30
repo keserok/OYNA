@@ -33,7 +33,7 @@ interface ErrorStateProps {
 
 export const ErrorState: React.FC<ErrorStateProps> = ({
   title = 'Bir Hata Oluştu',
-  message = 'Veriler yüklenirken teknik bir problem yaşandı. Lütfen tekrar deneyin.',
+  message = 'Bilgiler yüklenemedi. Bağlantını kontrol edip tekrar dene.',
   onRetry,
   retryLabel = 'Tekrar Dene'
 }) => {
@@ -61,16 +61,28 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
   );
 };
 
+interface EmptyStateAction {
+  label: string;
+  onClick: () => void;
+  /** İlk aksiyon birincil çizilir; ikincisi nötr. */
+  variant?: 'primary' | 'secondary';
+}
+
 interface EmptyStateProps {
   title?: string;
   message?: string;
   icon?: React.ReactNode;
+  /** IP-12 · BULGU-059: boş durum ÇIKMAZ SOKAK olmamalı. Bu prop arayüzde hiç
+   *  yoktu, dolayısıyla ekranlar buton koyamıyordu — kullanıcı "maç yok"
+   *  yazısına bakıp orada kalıyordu. */
+  actions?: EmptyStateAction[];
 }
 
 export const EmptyState: React.FC<EmptyStateProps> = ({
-  title = 'Sonuç Bulunamadı',
-  message = 'Görüntülenecek herhangi bir veri kaydı bulunmuyor.',
-  icon
+  title = 'Burada Henüz Bir Şey Yok',
+  message = 'Görünecek bir kayıt bulunamadı.',
+  icon,
+  actions,
 }) => {
   return (
     <motion.div 
@@ -87,6 +99,23 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
       <p className="text-xs text-ink-4 leading-relaxed max-w-[260px]">
         {message}
       </p>
+      {actions && actions.length > 0 && (
+        <div className="flex flex-col gap-2 mt-4 w-full max-w-[260px]">
+          {actions.map((a, i) => (
+            <button
+              key={a.label}
+              onClick={a.onClick}
+              className={`w-full min-h-[44px] px-4 rounded-2xl text-xs font-extrabold uppercase tracking-wide active:scale-[0.98] transition-transform ${
+                (a.variant ?? (i === 0 ? 'primary' : 'secondary')) === 'primary'
+                  ? 'bg-primary text-on-primary'
+                  : 'border border-white/12 text-white/75 hover:bg-white/5'
+              }`}
+            >
+              {a.label}
+            </button>
+          ))}
+        </div>
+      )}
     </motion.div>
   );
 };

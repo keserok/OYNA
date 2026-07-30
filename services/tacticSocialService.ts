@@ -1,4 +1,5 @@
 import { supabase } from '../supabaseClient';
+import { mapError } from '../utils/errorMap';
 
 // ─── FAZ 6 — Takım Taktik Sosyal Motoru (oylama/yorum/favori/aktif/kopyala) ──
 
@@ -28,19 +29,14 @@ export interface TacticComment {
   createdAt: string;
 }
 
-function parseRpcError(message?: string): string | null {
-  if (!message) return null;
-  const m = message.match(/[A-Z_]+:\s*(.+)$/);
-  if (m) return m[1];
-  const bare: Record<string, string> = {
-    FORBIDDEN: 'Bu işlem için yetkin yok (takım üyesi/yönetici değilsin).',
-    NOT_TEAM_TACTIC: 'Yalnızca takım taktikleri için geçerli.',
-    UNAUTHORIZED: 'Oturumun bulunamadı. Lütfen tekrar giriş yap.',
-    NOT_FOUND: 'Taktik bulunamadı.',
-  };
-  const b = message.match(/\b([A-Z][A-Z_]{3,})\b/);
-  return b && bare[b[1]] ? bare[b[1]] : message;
-}
+// IP-12: ortak çeviri utils/errorMap.ts'te. Buradaki sözlük yalnız BU
+// bağlamda daha isabetli olan mesajları ezer.
+const OZEL: Record<string, string> = {
+  FORBIDDEN: 'Bu işlem için yetkin yok (takım üyesi/yönetici değilsin).',
+  NOT_FOUND: 'Taktik bulunamadı.',
+};
+const parseRpcError = (message?: string): string | null =>
+  message ? mapError(message, undefined, OZEL) : null;
 
 /** Takımın "En İyi Taktikler" vitrinini getir (aktif → oy % → favori sıralı). */
 export const getTeamTacticsShowcase = async (teamId: string): Promise<TacticShowcaseItem[]> => {

@@ -21,6 +21,7 @@ import { startInAppCardPayment, getCardFeePct, computeCardFee, stripServerErrorP
 import AddCardScreen from '../components/payment/AddCardScreen';
 import CardBrandMark, { brandGradient } from '../components/payment/CardBrandMark';
 import ThreeDSSheet, { ThreeDSOutcome } from '../components/payment/ThreeDSSheet';
+import { mapError, mapPayoutError } from '../utils/errorMap';
 
 /**
  * CÜZDAN — role göre iki yapı (tasarım 2a + kaleci/hakem):
@@ -338,7 +339,7 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
     });
     setPayoutBusy(false);
     if (error) {
-      setPayoutError(error.message.replace(/^[A-Z_]+: /, ''));
+      setPayoutError(mapPayoutError(error));
     } else {
       setPayoutDone(true);
       fetchData();
@@ -411,7 +412,7 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
       setCashoutAmount('');
       fetchData();
     } catch (e) {
-      setCashoutError((e instanceof Error ? e.message : 'Çekim talebi oluşturulamadı.').replace(/^[A-Z_]+: /, ''));
+      setCashoutError(mapPayoutError(e, 'Çekim talebi oluşturulamadı.'));
     } finally {
       cashoutBusyRef.current = false;
       setCashoutBusy(false);
@@ -433,7 +434,7 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
       fetchData();
     } catch (e) {
       setCancelConfirm(null);
-      showToast((e instanceof Error ? e.message : 'Talep iptal edilemedi.').replace(/^[A-Z_]+: /, ''));
+      showToast(mapError(e, 'Talep iptal edilemedi.'));
       fetchData();
     } finally {
       setCancelBusy(false);
