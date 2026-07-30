@@ -1,0 +1,196 @@
+# ═══════════════════════════════════════════════════════════════════════════
+# OYNA — Google Play icin AAB uretimi
+#
+# NE ISE YARAR: Bu is, Google Play'e yuklenecek kurulum paketini (.aab) senin
+# yerine GitHub'in bilgisayarlarinda uretir. Kendi bilgisayarina Android
+# Studio kurman GEREKMEZ.
+#
+# NASIL CALISTIRILIR:
+#   GitHub'da depo sayfasi -> ust menuden "Actions" -> soldaki listeden
+#   "Android — Google Play paketi (AAB)" -> sagdaki "Run workflow" dugmesi.
+#   Bittiginde ayni sayfanin altindaki "Artifacts" bolumunden .aab dosyasini
+#   indirirsin ve Play Console'a yuklersin.
+#
+# IMZALAMA: Play, paketin senin "yukleme anahtarinla" (upload key) imzalanmasini
+#   ister. Anahtar deposu GitHub Secrets'ta saklanir (asla depoya konmaz).
+#   Secret'lar tanimli DEGILSE is yine calisir ama IMZASIZ paket uretir —
+#   imzasiz paket Play'e YUKLENEMEZ, yalnizca derlemenin saglamligini gosterir.
+#
+# GEREKEN SECRET'LAR (Settings -> Secrets and variables -> Actions):
+#   ANDROID_KEYSTORE_BASE64  -> anahtar deposu dosyasinin base64 metni (zorunlu)
+#   ANDROID_KEYSTORE_PASSWORD-> anahtar deposu sifresi                 (zorunlu)
+#   ANDROID_KEY_ALIAS        -> anahtar takma adi                      (zorunlu)
+#   ANDROID_KEY_PASSWORD     -> anahtar sifresi                        (zorunlu)
+#   GOOGLE_SERVICES_JSON     -> Firebase google-services.json icerigi  (push icin)
+#   VITE_SUPABASE_URL        -> Supabase adresi        (yoksa koddaki uretim yedegi)
+#   VITE_SUPABASE_ANON_KEY   -> Supabase anon anahtari (yoksa koddaki uretim yedegi)
+# ═══════════════════════════════════════════════════════════════════════════
+name: Android — Google Play paketi (AAB)
+
+on:
+  workflow_dispatch:
+    inputs:
+      versionName:
+        description: 'Surum adi (kullaniciya gorunen, or. 3.0.0)'
+        required: false
+        default: '3.0.0'
+      buildApkToo:
+        description: 'Telefona elle kurulabilen APK de uret (test icin)'
+        type: boolean
+        required: false
+        default: false
+
+concurrency:
+  group: android-release-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-aab:
+    name: AAB uret
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Node kur
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Java 21 kur
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Android SDK kur
+        uses: android-actions/setup-android@v3
+
+      - name: Bagimliliklari kur
+        run: npm ci
+
+      # Kalite kapisi: tip kontrolu ve birim testleri gecmeden paket uretilmez.
+      # Boylece bozuk bir surum Play'e yuklenemez.
+      - name: Tip kontrolu (tsc)
+        run: npm run lint
+
+      - name: Birim testleri
+        run: npm run test:unit
+
+      - name: Web uygulamasini derle
+        run: npm run build
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_SENTRY_DSN: ${{ secrets.VITE_SENTRY_DSN }}
+          VITE_POSTHOG_KEY: ${{ secrets.VITE_POSTHOG_KEY }}
+          VITE_POSTHOG_HOST: ${{ secrets.VITE_POSTHOG_HOST }}
+
+      - name: Yasal sayfalari uret
+        run: npm run build:legal
+        continue-on-error: true
+
+      - name: Firebase yapilandirmasi (push bildirimleri)
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: |
+          if [ -n "$GOOGLE_SERVICES_JSON" ]; then
+            printf '%s' "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
+            echo "::notice::google-services.json yazildi — push bildirimleri aktif."
+          else
+            echo "::warning::GOOGLE_SERVICES_JSON secret'i yok — bu pakette ANDROID PUSH BILDIRIMLERI CALISMAZ."
+          fi
+
+      - name: Capacitor senkronizasyonu
+        run: npx cap sync android
+
+      - name: Imzalama anahtarini hazirla
+        id: signing
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          if [ -n "$KEYSTORE_B64" ] && [ -n "$KEYSTORE_PASSWORD" ] && [ -n "$KEY_ALIAS" ] && [ -n "$KEY_PASSWORD" ]; then
+            printf '%s' "$KEYSTORE_B64" | base64 -d > android/oyna-upload.keystore
+            # key.properties, android/app/build.gradle tarafindan okunur.
+            {
+              echo "storeFile=../oyna-upload.keystore"
+              echo "storePassword=$KEYSTORE_PASSWORD"
+              echo "keyAlias=$KEY_ALIAS"
+              echo "keyPassword=$KEY_PASSWORD"
+            } > android/key.properties
+            echo "signed=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::Paket YUKLEME ANAHTARIYLA imzalanacak."
+          else
+            echo "signed=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Imzalama secret'lari eksik — IMZASIZ paket uretilecek. Bu paket Play Console'a YUKLENEMEZ."
+          fi
+
+      # versionCode her calistirmada artmali (Play ayni sayiyi ikinci kez kabul etmez).
+      # github.run_number her turda 1 artan bir sayidir; buna sabit bir taban ekliyoruz.
+      - name: Surum numaralarini hesapla
+        id: ver
+        run: |
+          echo "code=$(( 1000 + ${{ github.run_number }} ))" >> "$GITHUB_OUTPUT"
+          echo "name=${{ inputs.versionName }}" >> "$GITHUB_OUTPUT"
+
+      - name: AAB derle
+        working-directory: android
+        run: |
+          chmod +x ./gradlew
+          ./gradlew bundleRelease --no-daemon --stacktrace \
+            -PoynaVersionCode=${{ steps.ver.outputs.code }} \
+            -PoynaVersionName=${{ steps.ver.outputs.name }}
+
+      - name: APK derle (istege bagli)
+        if: ${{ inputs.buildApkToo }}
+        working-directory: android
+        run: |
+          ./gradlew assembleRelease --no-daemon \
+            -PoynaVersionCode=${{ steps.ver.outputs.code }} \
+            -PoynaVersionName=${{ steps.ver.outputs.name }}
+
+      - name: Paketleri isimlendir
+        id: out
+        run: |
+          mkdir -p cikti
+          cp android/app/build/outputs/bundle/release/*.aab \
+             "cikti/oyna-${{ steps.ver.outputs.name }}-${{ steps.ver.outputs.code }}.aab"
+          if [ -d android/app/build/outputs/apk/release ]; then
+            cp android/app/build/outputs/apk/release/*.apk \
+               "cikti/oyna-${{ steps.ver.outputs.name }}-${{ steps.ver.outputs.code }}.apk" 2>/dev/null || true
+          fi
+          ls -lh cikti
+
+      - name: Paketi yukle (indirilebilir cikti)
+        uses: actions/upload-artifact@v4
+        with:
+          name: oyna-android-${{ steps.ver.outputs.name }}-${{ steps.ver.outputs.code }}
+          path: cikti/*
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Ozet
+        run: |
+          {
+            echo "## OYNA Android paketi hazir"
+            echo ""
+            echo "| Alan | Deger |"
+            echo "|---|---|"
+            echo "| Surum adi | \`${{ steps.ver.outputs.name }}\` |"
+            echo "| Surum kodu (versionCode) | \`${{ steps.ver.outputs.code }}\` |"
+            echo "| Imzali mi | \`${{ steps.signing.outputs.signed }}\` |"
+            echo "| Paket kimligi | \`com.oyna.app\` |"
+            echo ""
+            if [ "${{ steps.signing.outputs.signed }}" = "true" ]; then
+              echo "**Sirada ne var:** Yukaridaki \"Artifacts\" bolumunden .aab dosyasini indir,"
+              echo "Play Console -> Uretim (Production) -> Yeni surum olustur -> dosyayi surukle."
+            else
+              echo "**DIKKAT:** Bu paket IMZASIZ. Play Console kabul etmez."
+              echo "Once imzalama secret'larini ekleyip isi tekrar calistir."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"

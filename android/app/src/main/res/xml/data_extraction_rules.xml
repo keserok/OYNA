@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Android 12 (API 31) ve üzeri için yedekleme/cihaz aktarım kuralları.
+
+  NEDEN: OYNA'nın oturum belirteci (giriş anahtarı) WebView'ın localStorage'ı ve
+  Capacitor Preferences (SharedPreferences) içinde tutulur. Bu veri buluta
+  yedeklenir veya yeni telefona aktarılırsa, kullanıcının OTURUMU da kopyalanmış
+  olur — ödeme yapabilen bir hesap için kabul edilemez. Bu yüzden hem bulut
+  yedeği hem cihazdan cihaza aktarım için TÜM uygulama verisi hariç tutulur.
+  Kullanıcı yeni cihazda normal şekilde tekrar giriş yapar.
+-->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="root" />
+        <exclude domain="database" />
+        <exclude domain="sharedpref" />
+        <exclude domain="file" />
+        <exclude domain="external" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="root" />
+        <exclude domain="database" />
+        <exclude domain="sharedpref" />
+        <exclude domain="file" />
+        <exclude domain="external" />
+    </device-transfer>
+</data-extraction-rules>
