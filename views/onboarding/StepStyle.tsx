@@ -1,5 +1,5 @@
 import React from 'react';
-import { Flame, Brain, Smile } from 'lucide-react';
+import { Flame, Brain, Leaf } from 'lucide-react';
 import { PlayStyle, PLAY_STYLE_META } from './onboardingShared';
 
 interface StepStyleProps {
@@ -22,7 +22,7 @@ interface StyleDef {
 const STYLES: StyleDef[] = [
   { key: 'ciddi', name: 'Ciddi', desc: 'Kazanmak için oyna, her maç önemli.', icon: Flame, stats: { tempo: 95, plan: 70, keyif: 55 } },
   { key: 'taktiksel', name: 'Taktiksel', desc: 'Plan yap, pozisyonunu koru, akıllı oyna.', icon: Brain, stats: { tempo: 65, plan: 95, keyif: 70 } },
-  { key: 'rahat', name: 'Rahat', desc: 'Keyif için oyna; önemli olan katılmak.', icon: Smile, stats: { tempo: 55, plan: 50, keyif: 98 } },
+  { key: 'rahat', name: 'Rahat', desc: 'Keyif için oyna; önemli olan katılmak.', icon: Leaf, stats: { tempo: 55, plan: 50, keyif: 98 } },
 ];
 
 const StatBar: React.FC<{ label: string; value: number; color: string; active: boolean }> = ({ label, value, color, active }) => (

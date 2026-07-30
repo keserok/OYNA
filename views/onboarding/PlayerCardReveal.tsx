@@ -27,27 +27,27 @@ interface PlayerCardRevealProps {
   onSkip?: () => void;
 }
 
-const SPHERE = 'radial-gradient(circle at 32% 28%, #C8FFB0, #4DFF2A 45%, #17B356 72%, #075B2C)';
-
 /**
- * Onboarding final özeti — KARTSIZ ("havada"). Kart çerçevesi/kenarlığı
- * kaldırıldı; küre avatar + isim + bilgi satırları doğrudan koyu zeminde
- * yüzer. "Başla" profili tamamlar (apply_onboarding, completed=true).
+ * Onboarding final özeti — KARTSIZ ve SADE (kullanıcı kararı).
+ *
+ * Baş harf küresi kaldırıldı: kullanıcı adını zaten iki satır yukarıda
+ * okuyor, küre aynı bilgiyi üçüncü kez (baş harf olarak) tekrar ediyordu.
+ * Bilgi değerleri de tek renkte — beş ayrı vurgu rengi yerine düz beyaz
+ * bir sıra. Sakin, premium bir kapanış ekranı.
  */
 const PlayerCardReveal: React.FC<PlayerCardRevealProps> = ({
   firstName, lastName, ageRange, gender, position, playStyle, locationGranted, busy, onStart, onBack, error, onSkip,
 }) => {
-  const initials = (trUpper(firstName.trim()).charAt(0) || '') + (trUpper(lastName.trim()).charAt(0) || '');
   const fullName = trUpper(`${firstName.trim()} ${lastName.trim()}`.trim());
 
-  const rows: { label: string; value: string; color: string }[] = [];
-  if (ageRange) rows.push({ label: 'YAŞ', value: ageRange.replace('-', '–'), color: '#FFFFFF' });
-  // IP-09 renk-rol tablosu: cinsiyet/pozisyon birer KATEGORİ etiketidir (bilgi
-  // mavisi / nötr mürekkep), "Onaylı" ise onaylanmış DURUMdur (rol 3, birincil).
-  if (gender) rows.push({ label: 'CİNSİYET', value: gender === 'kadin' ? '♀ Kadın' : '♂ Erkek', color: '#60A5FA' });
-  if (playStyle) rows.push({ label: 'OYUN STİLİ', value: PLAY_STYLE_META[playStyle].label, color: PLAY_STYLE_META[playStyle].color });
-  if (locationGranted) rows.push({ label: 'KONUM', value: 'Onaylı', color: '#39FF14' });
-  if (position) rows.push({ label: 'POZİSYON', value: POSITION_LABEL[position], color: '#A9B4C0' });
+  // Değerlerin tamamı beyaz: bu ekran bir gösterge paneli değil, bir kapanış
+  // özeti. Ayrım rengi değil, etiket/değer hiyerarşisi taşır.
+  const rows: { label: string; value: string }[] = [];
+  if (ageRange) rows.push({ label: 'YAŞ', value: ageRange.replace('-', '–') });
+  if (gender) rows.push({ label: 'CİNSİYET', value: gender === 'kadin' ? '♀ Kadın' : '♂ Erkek' });
+  if (playStyle) rows.push({ label: 'OYUN STİLİ', value: PLAY_STYLE_META[playStyle].label });
+  if (locationGranted) rows.push({ label: 'KONUM', value: 'Onaylı' });
+  if (position) rows.push({ label: 'POZİSYON', value: POSITION_LABEL[position] });
 
   return (
     <motion.div
@@ -65,36 +65,30 @@ const PlayerCardReveal: React.FC<PlayerCardRevealProps> = ({
       </h1>
       <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.55)', marginBottom: 30 }}>Oynamaya hazırsın.</p>
 
-      {/* Küre avatar — havada, arkasında yumuşak ışıma */}
+      {/* İsim — ekranın tek kahramanı (küre kaldırıldı) */}
       <motion.div
-        initial={{ scale: 0.2, y: 24, opacity: 0, filter: 'blur(10px)' }}
-        animate={{ scale: 1, y: 0, opacity: 1, filter: 'blur(0px)' }}
-        transition={{ duration: 0.9, ease: [0.34, 1.56, 0.64, 1] }}
-        style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center' }}
+        initial={{ opacity: 0, y: 16, filter: 'blur(6px)' }}
+        animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+        transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+        style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}
       >
-        <div style={{ position: 'absolute', width: 220, height: 220, top: -70, borderRadius: '50%', background: 'radial-gradient(circle, rgba(57,255,20,0.22), transparent 62%)', filter: 'blur(20px)', pointerEvents: 'none' }} />
-        <div style={{
-          position: 'relative', width: 108, height: 108, borderRadius: '50%', background: SPHERE,
-          boxShadow: 'inset -10px -12px 22px rgba(0,0,0,0.35), inset 6px 7px 14px rgba(255,255,255,0.25), 0 0 44px rgba(57,255,20,0.45)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 900, fontSize: 38,
-          textShadow: '0 2px 4px rgba(0,0,0,0.4)',
-        }}>{initials || '★'}</div>
-
-        <div style={{ fontSize: 22, fontWeight: 900, color: '#fff', marginTop: 18, textAlign: 'center', letterSpacing: '-0.01em' }}>{fullName || 'OYUNCU'}</div>
-        <div style={{ width: 52, height: 2, background: '#39FF14', borderRadius: 2, margin: '14px 0 0', boxShadow: '0 0 12px rgba(57,255,20,0.6)' }} />
+        <div style={{ fontSize: 30, fontWeight: 900, color: '#fff', textAlign: 'center', letterSpacing: '-0.02em', lineHeight: 1.1 }}>
+          {fullName || 'OYUNCU'}
+        </div>
+        <div style={{ width: 44, height: 2, background: 'rgba(255,255,255,0.22)', borderRadius: 2, marginTop: 16 }} />
       </motion.div>
 
-      {/* Bilgi satırları — kartsız, havada */}
+      {/* Bilgi satırları — tek renk (beyaz), düz sıra */}
       <motion.div
         initial={{ opacity: 0, y: 14 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.5 }}
-        style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '22px 30px', marginTop: 28, maxWidth: 320 }}
+        transition={{ delay: 0.35 }}
+        style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '22px 30px', marginTop: 26, maxWidth: 320 }}
       >
         {rows.map((r) => (
           <div key={r.label} style={{ textAlign: 'center', minWidth: 74 }}>
             <div style={{ fontSize: 8, fontWeight: 900, letterSpacing: '0.2em', color: 'rgba(255,255,255,0.42)', marginBottom: 3 }}>{r.label}</div>
-            <div style={{ fontSize: 15, fontWeight: 900, color: r.color, whiteSpace: 'nowrap' }}>{r.value}</div>
+            <div style={{ fontSize: 15, fontWeight: 900, color: '#FFFFFF', whiteSpace: 'nowrap' }}>{r.value}</div>
           </div>
         ))}
       </motion.div>
