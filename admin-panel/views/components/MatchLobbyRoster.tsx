@@ -18,7 +18,7 @@ import { skillBand } from '../../../utils/skillBand';
 //
 // Satır aksiyonları admin'e özel: "Çıkar (iade)" admin_kick_from_slot'a,
 // "Takım değiştir" player_move_slot_team'e (is_admin muafiyeti,
-// 20260830000003) gider. Katılım/atama YOK — Rahat'ta yerler E3 katılım
+// 20260831000003) gider. Katılım/atama YOK — Rahat'ta yerler E3 katılım
 // sayfasından satın alınır, admin kadroyu yalnız düzeltir.
 
 const TEAM_WHITE = '#E8EDF4';

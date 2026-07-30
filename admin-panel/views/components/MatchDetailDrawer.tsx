@@ -258,7 +258,7 @@ export const MatchDetailDrawer: React.FC<Props> = ({ match, onClose, onUpdated, 
   };
 
   // Rahat kadro düzeltmesi: yeri karşı takımın İLK AÇIK slotuna taşır (para
-  // hareketi yok; 20260830000003 is_admin muafiyeti). Taşıma İKİ tarafı da
+  // hareketi yok; 20260831000003 is_admin muafiyeti). Taşıma İKİ tarafı da
   // değiştirdiği için tek taraflı refreshLocalSlots yetmez — tam satır tazelenir.
   const handleMoveTeam = async (slotId: string, isAway: boolean) => {
     if (!local) return;

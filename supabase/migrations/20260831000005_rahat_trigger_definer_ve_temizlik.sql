@@ -1,7 +1,7 @@
 -- ============================================================================
 -- RAHAT TRIGGER GÜVENLİK DÜZELTMESİ + ÖLÜ FONKSİYON TEMİZLİĞİ
 --
--- 1) _rahat_slots_positionless (20260830000001) SECURITY DEFINER değildi ama
+-- 1) _rahat_slots_positionless (20260831000001) SECURITY DEFINER değildi ama
 --    authenticated'dan EXECUTE'u alınmış _flatten_slot_array'i çağırıyordu.
 --    Invoker-rights trigger DML'i yapan rolün yetkileriyle koşar: matches_update
 --    RLS politikası (20260810000000) kaptanın matches satırını DOĞRUDAN
@@ -10,7 +10,7 @@
 --    Emsal matches BEFORE trigger'ları gibi (matches_autofill_image,
 --    matches_format_range_guard) SECURITY DEFINER yapılır — gövde AYNI.
 --
--- 2) _flat_slots (20260830000001) hiç çağıransız kaldı: slot üretimi üç
+-- 2) _flat_slots (20260831000001) hiç çağıransız kaldı: slot üretimi üç
 --    yaratma yolunda değil trigger'daki _flatten_slot_array'de çözüldü,
 --    üreteç tasarım artığı olarak prod'a gitmesin.
 -- ============================================================================

@@ -1,7 +1,7 @@
 import { supabase } from '../supabaseClient';
 import { User } from '@supabase/supabase-js';
 // Oyuncu istatistiği artık yalnız maç sayısı taşır. Akran-puanı türevleri
-// (skill_rating → kart OVR zinciri) 20260830000000 sökümüyle öldü; kamusal
+// (skill_rating → kart OVR zinciri) 20260831000000 sökümüyle öldü; kamusal
 // seviye göstergesi profiles.self_skill'dir (OynaUser.selfSkill).
 const mapPlayerStats = (row: any): { matchesPlayed: number } => ({
   matchesPlayed: Number(row?.match_count ?? 0),

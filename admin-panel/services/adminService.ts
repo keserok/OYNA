@@ -2141,7 +2141,7 @@ export interface PlayerPeerScores {
   recent: Array<{ score: number; fairPlay: number | null; at: string; matchId: string | null; matchTitle: string | null }>;
 }
 
-/** Bir oyuncunun ALDIĞI akran puanları (admin-only; 20260830000000 RPC'si). */
+/** Bir oyuncunun ALDIĞI akran puanları (admin-only; 20260831000000 RPC'si). */
 export async function fetchPlayerPeerScoresAdmin(userId: string, limit = 20): Promise<PlayerPeerScores> {
   const { data, error } = await supabase.rpc('admin_player_peer_scores', {
     p_user_id: userId,
@@ -2161,7 +2161,7 @@ export async function fetchPlayerPeerScoresAdmin(userId: string, limit = 20): Pr
   };
 }
 
-/** Rahat lobide yeri karşı takıma taşı (player_move_slot_team; admin muafiyeti 20260830000003). */
+/** Rahat lobide yeri karşı takıma taşı (player_move_slot_team; admin muafiyeti 20260831000003). */
 export async function moveSlotTeamAdmin(
   matchId: string,
   slotId: string,

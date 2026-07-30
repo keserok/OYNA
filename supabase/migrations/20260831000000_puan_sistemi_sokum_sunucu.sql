@@ -110,7 +110,7 @@ UPDATE public.matches
  WHERE COALESCE("minRating", 0) <> 0;
 
 COMMENT ON COLUMN public.matches."minRating" IS
-  'KULLANIMDAN KALDIRILDI (20260830000000). Baraj sökülmüştür, sunucu zorlamaz. '
+  'KULLANIMDAN KALDIRILDI (20260831000000). Baraj sökülmüştür, sunucu zorlamaz. '
   'Kolon geri dönüş için tutuluyor; okunmamalı, yazılmamalı.';
 
 -- ─── 2) Akran puanı → profiles.ratings_history trigger''ı sökülür ────────────
@@ -137,7 +137,7 @@ END $$;
 DROP FUNCTION IF EXISTS public.update_user_skill_rating();
 
 COMMENT ON COLUMN public.profiles.rating IS
-  'KULLANIMDAN KALDIRILDI (20260830000000). Akran ortalamasından türeyen eski '
+  'KULLANIMDAN KALDIRILDI (20260831000000). Akran ortalamasından türeyen eski '
   'kamusal puan; artık hiçbir şey yazmıyor ve hiçbir kapı okumuyor. Kamusal '
   'seviye göstergesi: profiles.self_skill. Kolon geri dönüş için tutuluyor.';
 

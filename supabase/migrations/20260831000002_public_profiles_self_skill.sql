@@ -1,7 +1,7 @@
 -- ============================================================================
 -- public_profiles: beyan edilen seviye girer, akran-puanı yüzeyi çıkar
 --
--- Puan sistemi sökümünün (20260830000000) görünüm ayağı:
+-- Puan sistemi sökümünün (20260831000000) görünüm ayağı:
 --   + self_skill        — kadro satırı seviye bandının kaynağı (skillBand)
 --   − rating            — eski akran türevi kamusal puan (artık hiçbir istemci okumaz)
 --   − skill_rating      — kart OVR temeli (kart OVR sistemi söküldü)
@@ -56,4 +56,4 @@ COMMENT ON VIEW public.public_profiles IS
   'Column- and row-filtered public read surface for profiles. Never add email, '
   'phone, last_location, wallet_balance, wallet, or iyzico_card_user_key. '
   'Akran-puanı kolonları (rating/skill_rating/ratings_history/player_card/'
-  'card_*) 20260830000002 ile bilinçli çıkarıldı — geri ekleme.';
+  'card_*) 20260831000002 ile bilinçli çıkarıldı — geri ekleme.';

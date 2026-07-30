@@ -1,7 +1,7 @@
 -- ============================================================================
 -- player_move_slot_team: admin da taşıyabilir (E9 — admin Rahat lobisi)
 --
--- 20260830000001'deki fonksiyonun TEK değişikliği: sahiplik kapısına
+-- 20260831000001'deki fonksiyonun TEK değişikliği: sahiplik kapısına
 -- is_admin() muafiyeti. Admin, kullanıcının satın aldığı yeri kadro
 -- yönetimi için karşı takıma taşıyabilir (para hareketi yine YOK; oturan
 -- varsa match_participants.role birlikte taşınır — davranış aynen).

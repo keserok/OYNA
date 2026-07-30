@@ -162,7 +162,7 @@ describe('Kullanıcı Profili Aynası (admin)', () => {
     await screen.findByText('Deneme Oyuncu');
 
     fireEvent.click(screen.getByRole('button', { name: /Yönetici Alanları/ }));
-    // Puan sistemi sökümü (20260830000000): "Beceri Puanı" girişi artık YOK —
+    // Puan sistemi sökümü (20260831000000): "Beceri Puanı" girişi artık YOK —
     // admin bir oyuncunun beceri puanını yazamaz; akran puanları ayrı panelde
     // salt-okunur görünür. Alanın geri sızmadığını da sabitle.
     expect(screen.queryByPlaceholderText('örn. 3.8')).not.toBeInTheDocument();
