@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { UserRole, AppView } from '../types';
-import { ArrowLeft, Settings, Users, UserPlus, Wallet, Pencil, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Settings, Users, UserPlus, Wallet, Pencil, AlertCircle, MessagesSquare, ChevronRight } from 'lucide-react';
 import { useAppStore } from '../store';
 import { auth } from '../supabaseAuth';
 import { supabase } from '../supabaseClient';
-import { getFullUserProfile, getMatchHistory, MatchHistorySummary, OynaUser, updateProfileBasics } from '../services/userService';
+import { getFullUserProfile, getMatchHistory, MatchHistorySummary, OynaUser, setMySelfSkill, updateProfileBasics } from '../services/userService';
 import { fetchFriends } from '../services/friendService';
 import { getMyTeams } from '../services/teamSocialService';
 import { LoadingState, ErrorState } from '../components/common/StatusState';
@@ -14,19 +14,22 @@ import { ProfileEditSheet, type ProfileEditValues } from '../components/profile/
 import { OynaLogo } from '../components/OynaLogo';
 // Türetme mantığı TEK KAYNAK: admin panelin Kullanıcı Profili Aynası da aynı
 // modülü kullanır — kart/rozet/puan hesapları iki yüzeyde asla ayrışmaz.
-import { buildCardData, applyCardTierOverride, ageFromBirthdate, formatPosition, trustScoreTo100, winStats } from '../shared/profilePresentation';
+// (buildCardData / applyCardTierOverride puan sistemi sökümüyle silindi —
+//  nötr kartın OVR/seviye türetmesi yok.)
+import { ageFromBirthdate, formatPosition, trustScoreTo100, winStats } from '../shared/profilePresentation';
+import { formatTRYAmount } from '../utils/formatTRY';
 
 interface ProfileScreenProps {
     role: UserRole;
-    onBack: () => void;
     onNavigate?: (view: AppView) => void;
     onOpenDiaryEntry: (id: string) => void;
 }
 
-const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate, onOpenDiaryEntry }) => {
+const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onNavigate, onOpenDiaryEntry }) => {
     // Profili Düzenle (mevki + bio + doğum tarihi + ayak) modalı — TEK KAYNAK ProfileEditSheet
     const [showEditModal, setShowEditModal] = useState(false);
     const [savingEdit, setSavingEdit] = useState(false);
+    const [saveError, setSaveError] = useState<string | null>(null);
     const { setMyRoles, setSocialTarget } = useAppStore();
 
     const [profile, setProfile] = useState<OynaUser | null>(null);
@@ -107,11 +110,12 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate,
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [uid]);
 
-    const openEdit = () => setShowEditModal(true);
+    const openEdit = () => { setSaveError(null); setShowEditModal(true); };
 
     const saveEdit = async (v: ProfileEditValues) => {
         if (!uid) return;
         setSavingEdit(true);
+        setSaveError(null);
         try {
             await updateProfileBasics(uid, {
                 position: v.position,
@@ -121,6 +125,11 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate,
                 play_style: v.playStyle || null,
                 ...(v.avatarUrl && v.avatarUrl !== profile?.avatar_url ? { avatar_url: v.avatarUrl } : {}),
             });
+            // Seviye beyanı ayrı kapıdan: RPC aralığı doğrular, NULL'u reddeder
+            // (beyan bir kez verildikten sonra silinemez — kadro çipi sözleşmesi).
+            if (v.selfSkill != null && v.selfSkill !== profile?.selfSkill) {
+                await setMySelfSkill(v.selfSkill);
+            }
             // MOB-S4: Ana sayfa sol üst avatar (UserAvatar) store'daki oturum
             // kimliğinden beslenir — fotoğraf değişimini ANINDA oraya da yansıt.
             if (v.avatarUrl && v.avatarUrl !== profile?.avatar_url) {
@@ -132,16 +141,18 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate,
             setShowEditModal(false);
             await loadProfile();
         } catch (e) {
+            // İki aşamalı kayıt (basics + seviye RPC'si): ikincisi düşerse
+            // sessizce yutma — sheet açık kalır, sebep Kaydet'in üstünde görünür,
+            // kullanıcı yeniden dener. (Basics çoktan yazılmış olabilir; yeniden
+            // kayıt idempotenttir.)
             console.error('Profil güncelleme hatası:', e);
+            setSaveError('Kaydedilemedi. Bağlantını kontrol edip tekrar dene.');
         } finally {
             setSavingEdit(false);
         }
     };
 
     const { total, wins, winRate } = winStats(matchHistory);
-
-    // Tier admin-atamalı (Q24): kart aktifken admin'in seçtiği tier kullanılır.
-    const cardData = applyCardTierOverride(buildCardData(profile, wins, total), profile);
 
     // Güven puanı: DB'de 0–5, ekranda 0–100.
     const trustScore = trustScoreTo100(profile?.trustScore);
@@ -150,7 +161,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate,
         {
             icon: <Wallet size={16} strokeWidth={2.3} />,
             label: 'Cüzdan',
-            value: `${(profile?.walletBalance ?? 0).toLocaleString('tr-TR')} ₺`,
+            value: formatTRYAmount(profile?.walletBalance ?? 0),
             onClick: () => onNavigate && onNavigate('WALLET'),
         },
         {
@@ -176,15 +187,14 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate,
 
             {/* ═══ FIXED TOP BAR ═══ */}
             <div className="px-6 pb-3 pt-safe flex justify-between items-center shrink-0 z-50">
+                {/* IP-14: sekme kökünde geri oku YOK — alt menü zaten her yere
+                    götürüyor, ok kullanıcıyı yığında geriye atıp şaşırtıyordu. */}
                 <div className="flex items-center justify-between w-full pt-4">
-                    <button onClick={onBack} className="w-[42px] h-[42px] flex items-center justify-center bg-[#161B22]/80 rounded-full text-white border border-white/[0.08] hover:bg-white/10 active:scale-95 transition-all">
-                        <ArrowLeft size={19} strokeWidth={2.3} />
-                    </button>
                     <div className="flex items-center gap-2">
                         <OynaLogo width={20} height={20} className="text-primary" />
                         <span className="text-base font-extrabold text-white tracking-[0.05em] uppercase italic">Profil</span>
                     </div>
-                    <button onClick={() => onNavigate && onNavigate('SETTINGS')} className="w-[42px] h-[42px] flex items-center justify-center bg-[#161B22]/80 rounded-full text-white/75 hover:text-white border border-white/[0.08] hover:bg-white/10 active:scale-95 transition-all">
+                    <button onClick={() => onNavigate && onNavigate('SETTINGS')} aria-label="Ayarlar" className="w-11 h-11 flex items-center justify-center bg-[#161B22]/80 rounded-full text-white/75 hover:text-white border border-white/[0.08] hover:bg-white/10 active:scale-95 transition-all">
                         <Settings size={17} />
                     </button>
                 </div>
@@ -193,7 +203,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate,
             {/* ═══ SCROLLABLE BODY ═══ */}
             <div className="relative z-10 flex-1 overflow-y-auto px-5 pt-2 pb-safe-nav custom-scrollbar">
                 {loading ? (
-                    <LoadingState message="Profil yükleniyor..." />
+                    <LoadingState message="Profil yükleniyor…" />
                 ) : error ? (
                     <ErrorState message={error} onRetry={loadProfile} />
                 ) : (
@@ -258,8 +268,8 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate,
                     matches={total}
                     winRate={winRate}
                     mvp={motmCount}
-                    cardAvailable={!!profile?.cardActive}
-                    cardData={cardData}
+                    winCount={wins}
+                    selfSkill={profile?.selfSkill ?? null}
                     cardBackMatches={matchHistory}
                     onEditAvatar={isGuest ? undefined : openEdit}
                     onShareCard={() => {
@@ -293,6 +303,27 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate,
                     <ProfileShortcuts items={shortcuts} />
                 </div>
 
+                {/* ═══ SOSYAL ═══
+                    IP-14: Sosyal alt menüden çıkıp buraya taşındı (kullanıcı kararı).
+                    Yukarıdaki kısayollar Sosyal'in İKİ SEKMESİNE derin bağ veriyor;
+                    bu satır ekranın kendisini açar — Mesajlar'ın tek kapısı burası,
+                    onsuz mesajlaşma erişilemez kalırdı. */}
+                {!isGuest && (
+                    <button
+                        onClick={() => onNavigate && onNavigate('SOCIAL')}
+                        className="mt-3 w-full flex items-center gap-3 p-4 rounded-2xl bg-white/[0.03] border border-white/[0.08] hover:bg-white/[0.06] active:scale-[0.99] transition-all text-left"
+                    >
+                        <div className="w-10 h-10 rounded-xl bg-white/[0.06] border border-white/[0.12] flex items-center justify-center text-white/85 shrink-0">
+                            <MessagesSquare size={18} strokeWidth={2.3} />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                            <span className="text-sm font-extrabold text-white block">Sosyal</span>
+                            <span className="text-[0.6875rem] text-ink-4">Arkadaşlar, takımlar ve mesajlar</span>
+                        </div>
+                        <ChevronRight size={18} className="text-ink-4 shrink-0" />
+                    </button>
+                )}
+
                 {/* Rol yönetimi (rol değiştir + ek rol başvurusu) Ayarlar → Sahada Rolün'e taşındı. */}
 
                 {/* ═══ MAÇ GEÇMİŞİ ═══ */}
@@ -311,8 +342,10 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onBack, onNavigate,
                     gender: profile?.gender || '',
                     playStyle: profile?.playStyle || '',
                     avatarUrl: profile?.avatar_url || '',
+                    selfSkill: profile?.selfSkill ?? null,
                 }}
                 saving={savingEdit}
+                errorText={saveError}
                 onSave={saveEdit}
                 onClose={() => setShowEditModal(false)}
             />

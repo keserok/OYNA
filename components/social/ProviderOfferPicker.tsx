@@ -5,6 +5,7 @@ import { useAppStore } from '../../store';
 import { UserRole } from '../../types';
 import { showToast } from '../common/GlobalToast';
 import type { DeferredProvider } from '../../services/matchLifecycleService';
+import { formatTRYShort } from '../../utils/formatTRY';
 
 // ════════════════════════════════════════════════════════════════════════════
 // ProviderOfferPicker — maç oluşturmada kaleci/hakem TEKLİF seçici (marketplace).
@@ -199,7 +200,7 @@ const ProviderOfferPicker: React.FC<ProviderOfferPickerProps> = ({ onClose, onCo
                     </div>
                   </div>
                   <div className="text-right shrink-0">
-                    <div className="text-sm font-extrabold" style={{ color: accent }}>{p.fee}₺</div>
+                    <div className="text-sm font-extrabold" style={{ color: accent }}>{formatTRYShort(p.fee)}</div>
                     <div className="text-[0.625rem] font-bold uppercase text-ink-4 tracking-widest">bedel</div>
                   </div>
                   <span className={`w-6 h-6 shrink-0 rounded-full border-2 flex items-center justify-center`}

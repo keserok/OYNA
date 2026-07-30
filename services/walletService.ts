@@ -1,4 +1,5 @@
 import { supabase } from '../supabaseClient';
+import { mapError } from '../utils/errorMap';
 
 // ─── Tipler ───────────────────────────────────────────────────────────────────
 export interface WalletSummary {
@@ -80,12 +81,11 @@ const mapPayout = (r: any): PayoutRequestRow => ({
   rejectReason: r.reject_reason ?? null,
 });
 
-// RPC RAISE EXCEPTION 'KOD: açıklama' → kullanıcıya açıklamayı göster
-const parseRpcError = (message?: string): string | null => {
-  if (!message) return null;
-  const withDesc = message.match(/[A-Z_]+:\s*(.+)$/);
-  return withDesc ? withDesc[1] : message;
-};
+// IP-12: eskiden yalnız 'KOD: açıklama' biçimini ayıklıyordu; açıklamasız
+// çıplak kod (ör. UNAUTHORIZED) ekrana TEK KELİME olarak çıkıyordu. Artık
+// ortak sözlükten geçiyor.
+const parseRpcError = (message?: string): string | null =>
+  message ? mapError(message) : null;
 
 // ─── Cüzdan özeti (TEK kaynak: get_wallet_summary) ───────────────────────────
 export const getWalletSummary = async (): Promise<WalletSummary> => {

@@ -51,8 +51,8 @@ vi.mock('../../../services/teamSocialService', () => ({
 }));
 
 const SLOTS = JSON.stringify([
-  { id: 's1', x: 50, y: 90, role: 'GK', player: { id: 'u-active', name: 'Aktif Oyuncu', role: 'GK', rating: 80, jersey: 7 } },
-  { id: 's2', x: 50, y: 25, role: 'FWD', player: { id: 'u-gone', name: 'Ayrilan Oyuncu', role: 'FWD', rating: 70 } },
+  { id: 's1', x: 50, y: 90, role: 'GK', player: { id: 'u-active', name: 'Aktif Oyuncu', role: 'GK', jersey: 7 } },
+  { id: 's2', x: 50, y: 25, role: 'FWD', player: { id: 'u-gone', name: 'Ayrilan Oyuncu', role: 'FWD' } },
 ]);
 const TAC_ROW = {
   id: 'tac-x', name: 'Takım Planı', size: '7v7', formation: '2-3-1',

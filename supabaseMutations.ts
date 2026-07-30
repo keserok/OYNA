@@ -88,7 +88,6 @@ const mapUserToDb = (user: Partial<AdminUser>) => {
   // RPC'sinden geçer — bayat değerle eşzamanlı cüzdan hareketini ezme riski kapandı.
   // NOT: profiles tablosunda 'stats' kolonu yok. Gerçek kolonlara yaz (F4).
   if (user.matchCount !== undefined) mapped.match_count = user.matchCount;
-  if (user.rating !== undefined) mapped.rating = user.rating;
   return mapped;
 };
 
@@ -283,7 +282,7 @@ export const fbGetAppSettings = async () => {
 export const fbGetAdminProfiles = async () => {
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, full_name, email, phone, avatar_url, role, roles, rating, match_count, is_verified, is_banned, wallet_balance, ban_expires_at, created_at')
+    .select('id, full_name, email, phone, avatar_url, role, roles, match_count, is_verified, is_banned, wallet_balance, ban_expires_at, created_at')
     .order('created_at', { ascending: false })
     .limit(500);
   if (error) throw new Error(`Kullanıcılar yüklenemedi: ${error.message}`);

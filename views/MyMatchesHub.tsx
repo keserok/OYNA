@@ -18,7 +18,12 @@ import {
   cancelMyBooking, previewBookingCancel, shortTime, toPlayerErrorMessage,
   type MyBooking, type CancelResult, type CancelPreview,
 } from '../services/playerBookingService';
-import { formatTRY, formatTRYWithSymbol } from '../utils/formatTRY';
+import { formatTRYAmount, formatTRYShort } from '../utils/formatTRY';
+
+// IP-19 — para tek biçimde. `fiyat` FİYAT bağlamı (sıfır = "Ücretsiz"),
+// `money` muhasebe bağlamı (sıfır = "0₺"): iade, kapora, kalan tutar.
+const fiyat = formatTRYShort;
+const money = formatTRYAmount;
 import { showToast } from '../components/common/GlobalToast';
 import { formatCapacityRange } from '../shared/pitchShowcaseMapper';
 import { formatMatchDuration } from '../shared/matchTiming';
@@ -114,7 +119,7 @@ const TicketCard: React.FC<{ item: MyAgendaItem; currentUserUid: string; onOpen:
     ) : (
       <span className="flex items-center gap-[5px] text-[0.6875rem] font-bold text-ink-4"><CheckCircle2 size={11} className="text-[#39FF14]" />Kadro tamam</span>
     );
-    footRight = <span className="font-numeric text-[0.75rem] font-bold text-[#FACC15]">{Number(m.price) > 0 ? `₺${Number(m.price).toLocaleString('tr-TR')}` : 'Ücretsiz'}</span>;
+    footRight = <span className="font-numeric text-[0.75rem] font-bold text-[#FACC15]">{fiyat(Number(m.price))}</span>;
   } else {
     const b = item.booking;
     if (b.status === 'CANCELLED') {
@@ -136,7 +141,7 @@ const TicketCard: React.FC<{ item: MyAgendaItem; currentUserUid: string; onOpen:
     ) : remaining > 0 ? (
       <span className="flex items-center gap-[5px] text-[0.6875rem] font-bold text-[#FACC15]"><AlertTriangle size={11} />Kapora bekliyor</span>
     ) : null;
-    footRight = b.price ? <span className="font-numeric text-[0.75rem] font-bold text-[#FACC15]">₺{Number(b.price).toLocaleString('tr-TR')}</span> : null;
+    footRight = b.price ? <span className="font-numeric text-[0.75rem] font-bold text-[#FACC15]">{money(Number(b.price))}</span> : null;
   }
 
   return (
@@ -235,11 +240,10 @@ const NextEventHero: React.FC<{ item: MyAgendaItem; currentUserUid: string; onOp
 // ═════════════════ ANA BİLEŞEN ═══════════════════════════════════════════════
 
 interface MyMatchesHubProps {
-  onBack: () => void;
   onNavigate: (view: AppView) => void;
 }
 
-const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onBack, onNavigate }) => {
+const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onNavigate }) => {
   const reduceMotion = useReducedMotion();
   const { setSelectedMatch, setMatchCreateSeed, navigateTo, applyMatchLocal, setNavOverlayOpen } = useAppStore();
   const { items, past, counts, nextItem, bookingsLoading, bookingsError, refetchBookings, currentUserUid } = useMyAgenda();
@@ -337,12 +341,12 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onBack, onNavigate }) => {
       // IP-04 — sonuç sessiz kalmaz: ne yandı, ne döndü, kullanıcı görsün.
       if (leaveQuote?.late) {
         const geri = leaveQuote.refundable > 0
-          ? `${formatTRYWithSymbol(leaveQuote.refundable)} cüzdanına döndü, ` : '';
+          ? `${formatTRYAmount(leaveQuote.refundable)} cüzdanına döndü, ` : '';
         const yanan = leaveQuote.forfeited > 0
-          ? `${formatTRYWithSymbol(leaveQuote.forfeited)} iade edilmedi, ` : '';
+          ? `${formatTRYAmount(leaveQuote.forfeited)} iade edilmedi, ` : '';
         showToast(`Maçtan ayrıldın. ${geri}${yanan}güvenilirlik puanın ${leaveQuote.penalty} düştü.`, 'error');
       } else if ((leaveQuote?.refundable ?? 0) > 0) {
-        showToast(`Maçtan ayrıldın. ${formatTRYWithSymbol(leaveQuote!.refundable)} cüzdanına geri döndü.`, 'success');
+        showToast(`Maçtan ayrıldın. ${formatTRYAmount(leaveQuote!.refundable)} cüzdanına geri döndü.`, 'success');
       } else {
         showToast('Maçtan ayrıldın.', 'success');
       }
@@ -391,7 +395,7 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onBack, onNavigate }) => {
       ],
       amount: remaining,
       amountLabel: 'Ödenecek Kapora',
-      amountHint: b.price ? `Saha ücreti ₺${b.price.toLocaleString('tr-TR')} · kalan tesiste ödenir` : undefined,
+      amountHint: b.price ? `Saha ücreti ${fiyat(b.price)} · kalan tesiste ödenir` : undefined,
       isDeposit: true,
       allowBalance: true,
       successTitle: 'Kapora Onaylandı!',
@@ -455,8 +459,17 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onBack, onNavigate }) => {
   const sheetHeading = sheet ? dayHeading(sheet.when) : null;
   const bookingRemaining = sheetBooking ? Math.max((sheetBooking.deposit_amount || 0) - (sheetBooking.paid_amount || 0), 0) : 0;
   // F2.1: tamamlanmış ve henüz puanlanmamış maçta değerlendirme girişi açılır.
-  const sheetMatchEvaluable = !!sheetMatch && sheetMatch.status === 'COMPLETED'
-    && !evaluatedMatchIds.has(sheetMatch.id);
+  const evaluable = (m: { status?: string; id: string } | null | undefined): boolean =>
+    !!m && m.status === 'COMPLETED' && !evaluatedMatchIds.has(m.id);
+  const sheetMatchEvaluable = evaluable(sheetMatch);
+
+  // IP-14 · BULGU-105: değerlendirme kapısı VARSAYILAN KAPALI "Geçmiş & İptaller"
+  // akordeonunun içinde, iptal edilmiş maçlarla aynı listede duruyordu — yani maç
+  // sonu puanlama akışı pratikte hiç bulunamıyordu. Artık sayfanın EN ÜSTÜNDE.
+  const awaitingEval = useMemo(
+    () => past.filter((i): i is MyAgendaItem & { kind: 'MATCH' } => i.kind === 'MATCH' && evaluable(i.match)),
+    [past, evaluatedMatchIds],
+  );
   // Ayrılma yalnız gerçekten kaydı olan için: sahada oturuyor, slot satın almış veya yedekte.
   const sheetMatchLeaveable = !!sheetMatch && !!currentUserUid
     && !['CANCELLED', 'COMPLETED'].includes(sheetMatch.status as string)
@@ -475,13 +488,8 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onBack, onNavigate }) => {
       {/* ── Başlık ── */}
       <header className="sticky top-0 z-30 bg-[#0A0E14]/[0.92] backdrop-blur-xl border-b border-white/5 pt-safe">
         <div className="px-4 py-3 flex items-center justify-between gap-3">
-          <button
-            onClick={onBack}
-            aria-label="Geri"
-            className="w-11 h-11 flex items-center justify-center bg-[#161B22] rounded-full text-white border border-white/5 hover:bg-white/10 active:scale-95 transition-all shrink-0"
-          >
-            <ArrowLeft size={20} />
-          </button>
+          {/* IP-14: Maçlarım artık alt menünün orta tuşu — sekme kökünde
+              geri oku olmaz. */}
           <div className="text-center flex-1 min-w-0">
             <h1 className="text-lg font-extrabold text-white italic uppercase tracking-tighter leading-[1.2] truncate">Maçlarım</h1>
             <p className="font-numeric text-[0.625rem] text-ink-4 uppercase tracking-widest mt-1 truncate">
@@ -581,6 +589,39 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onBack, onNavigate }) => {
           </>
         ) : (
           <>
+            {/* ═══ DEĞERLENDİRMENİ BEKLİYOR ═══
+                Oynanmış ama henüz puanlanmamış maçlar. Puanlama penceresi
+                sınırlı olduğu için bu bölüm listenin en üstünde durur. */}
+            {awaitingEval.length > 0 && (
+              <div className="mb-5">
+                <div className="flex items-center gap-2.5 mb-3">
+                  <span className="text-[0.625rem] font-extrabold uppercase tracking-[0.22em] text-warning">
+                    Değerlendirmeni Bekliyor ({awaitingEval.length})
+                  </span>
+                  <span className="flex-1 h-px bg-warning-line" />
+                </div>
+                <div className="flex flex-col gap-2.5">
+                  {awaitingEval.map((item) => (
+                    <button
+                      key={`eval-${item.id}`}
+                      onClick={() => { setSelectedMatch(item.match); navigateTo('POST_MATCH_EVAL'); }}
+                      className="w-full min-h-[64px] rounded-2xl bg-warning-bg border border-warning-line flex items-center justify-between px-4 py-3 text-left active:scale-[0.99] transition-transform"
+                    >
+                      <span className="min-w-0">
+                        <span className="block text-sm font-extrabold text-ink truncate">
+                          {item.match.title || item.match.location || 'Maç'}
+                        </span>
+                        <span className="block text-[0.6875rem] text-ink-3 font-bold mt-0.5">
+                          Takım arkadaşlarını ve kaleci/hakemi puanla
+                        </span>
+                      </span>
+                      <span className="text-warning font-extrabold shrink-0 ml-3">→</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Sıradaki etkinlik hero'su */}
             {nextItem && (
               <NextEventHero item={nextItem} currentUserUid={currentUserUid} onOpen={() => setSheet(nextItem)} />
@@ -620,7 +661,7 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onBack, onNavigate }) => {
                       {segment === 'BOOKINGS' ? 'Yaklaşan Rezervasyon Yok' : 'Yaklaşan Maç Yok'}
                     </p>
                     <p className="mt-1.5 text-xs text-ink-4">
-                      {segment === 'BOOKINGS' ? "Saha Vitrini'nden yeni bir rezervasyon oluşturabilirsin." : 'Top Oyna ekranından açık maçlara katılabilirsin.'}
+                      {segment === 'BOOKINGS' ? "Sahalar'dan yeni bir rezervasyon oluşturabilirsin." : 'Top Oyna ekranından açık maçlara katılabilirsin.'}
                     </p>
                   </div>
                 </motion.div>
@@ -634,7 +675,7 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onBack, onNavigate }) => {
                   onClick={() => setShowPast(v => !v)}
                   className="w-full min-h-[44px] flex items-center justify-center gap-2 rounded-2xl border border-white/5 bg-white/[0.02] text-white/50 text-[0.625rem] font-extrabold uppercase tracking-[0.2em] hover:bg-white/5 active:scale-[0.99] transition-all"
                 >
-                  Geçmiş & İptaller ({visiblePast.length})
+                  Geçmiş &amp; İptaller ({visiblePast.length})
                   <ChevronDown size={14} className={`transition-transform duration-200 ${showPast ? 'rotate-180' : ''}`} />
                 </button>
                 <AnimatePresence initial={false}>
@@ -698,8 +739,8 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onBack, onNavigate }) => {
               <div className="flex items-center justify-between mt-3.5 text-[0.75rem]">
                 <span className="text-ink-4 font-bold uppercase tracking-[0.03em]">Tutar</span>
                 <span className="font-numeric text-[#FACC15] font-extrabold">
-                  ₺{Number(sheetBooking.price || 0).toLocaleString('tr-TR')}
-                  {sheetBooking.deposit_amount > 0 && <span className="text-ink-4 font-bold"> · Kapora ₺{Number(sheetBooking.deposit_amount).toLocaleString('tr-TR')}</span>}
+                  {fiyat(Number(sheetBooking.price) || 0)}
+                  {sheetBooking.deposit_amount > 0 && <span className="text-ink-4 font-bold"> · Kapora {money(Number(sheetBooking.deposit_amount))}</span>}
                 </span>
               </div>
               <div className="flex items-center justify-between mt-2 text-[0.75rem]">
@@ -707,7 +748,7 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onBack, onNavigate }) => {
                 {bookingRemaining <= 0 && (sheetBooking.deposit_amount || 0) > 0 ? (
                   <span className="text-[#39FF14] font-bold flex items-center gap-1"><CheckCircle2 size={12} />Ödendi</span>
                 ) : bookingRemaining > 0 ? (
-                  <span className="font-numeric text-[#FACC15] font-bold">₺{bookingRemaining.toLocaleString('tr-TR')} bekliyor</span>
+                  <span className="font-numeric text-[#FACC15] font-bold">{money(bookingRemaining)} bekliyor</span>
                 ) : (
                   <span className="text-ink-4 font-bold">—</span>
                 )}
@@ -718,7 +759,7 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onBack, onNavigate }) => {
                   onClick={() => { const b = sheetBooking; setSheet(null); handlePayDeposit(b); }}
                   className="w-full h-[52px] mt-5 rounded-2xl bg-[#39FF14] text-[#0A0E14] text-xs font-extrabold uppercase tracking-[0.12em] shadow-[0_0_22px_rgba(57,255,20,0.22)] active:scale-[0.98] transition-transform"
                 >
-                  Kapora Öde · ₺{bookingRemaining.toLocaleString('tr-TR')}
+                  Kapora Öde · {money(bookingRemaining)}
                 </button>
               )}
 
@@ -809,7 +850,7 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onBack, onNavigate }) => {
               <div className="flex items-center justify-between mt-3.5 text-[0.75rem]">
                 <span className="text-ink-4 font-bold uppercase tracking-[0.03em]">Kişi başı</span>
                 <span className="font-numeric text-[#FACC15] font-extrabold">
-                  {Number(sheetMatch.price) > 0 ? `₺${Number(sheetMatch.price).toLocaleString('tr-TR')}` : 'Ücretsiz'}
+                  {fiyat(Number(sheetMatch.price))}
                 </span>
               </div>
               <button
@@ -906,7 +947,7 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onBack, onNavigate }) => {
                   disabled={leaving || leaveQuoteLoading || leaveQuote == null}
                   className={`w-full py-3.5 bg-red-500 text-white font-extrabold rounded-2xl text-sm uppercase tracking-wide transition-transform flex items-center justify-center gap-2 disabled:opacity-40 disabled:pointer-events-none ${leaving ? 'opacity-60 cursor-wait' : 'active:scale-95 hover:bg-red-600'}`}
                 >
-                  {leaving ? <><Loader2 size={16} className="animate-spin" /> Ayrılıyor...</> : 'Evet, Ayrıl'}
+                  {leaving ? <><Loader2 size={16} className="animate-spin" /> Ayrılıyor…</> : 'Maçtan Ayrıl'}
                 </button>
                 <button onClick={() => { if (!leaving) setLeaveTarget(null); }} className="w-full py-3 text-gray-400 font-bold text-sm hover:text-white transition-colors">
                   Vazgeç
@@ -946,9 +987,9 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onBack, onNavigate }) => {
                   <>Bu rezervasyon için ödeme bulunmuyor; iade söz konusu değil.</>
                 ) : cancelPreview.refund_amount > 0 ? (
                   <>Ödediğin tutarın <span className="text-[#39FF14] font-bold">%{cancelPreview.refund_percent}</span>'i
-                    {' '}(<span className="font-numeric text-[#39FF14] font-bold">₺{formatTRY(cancelPreview.refund_amount)}</span>){' '}
+                    {' '}(<span className="font-numeric text-[#39FF14] font-bold">{money(cancelPreview.refund_amount)}</span>){' '}
                     cüzdanına döner
-                    {cancelPreview.psp_fee > 0 && <> (ödeme altyapısı kesintisi −<span className="font-numeric">{formatTRY(cancelPreview.psp_fee)}</span>₺)</>}.</>
+                    {cancelPreview.psp_fee > 0 && <> (ödeme altyapısı kesintisi −<span className="font-numeric">{money(cancelPreview.psp_fee)}</span>)</>}.</>
                 ) : (
                   <>Rezervasyon saatine az kaldığı için <span className="text-red-400 font-bold">iade yapılmayacak</span>.</>
                 )}
@@ -965,7 +1006,7 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onBack, onNavigate }) => {
                   disabled={cancelling}
                   className={`w-full py-3.5 bg-red-500 text-white font-extrabold rounded-2xl text-sm uppercase tracking-wide transition-transform flex items-center justify-center gap-2 ${cancelling ? 'opacity-60 cursor-wait' : 'active:scale-95 hover:bg-red-600'}`}
                 >
-                  {cancelling ? <><Loader2 size={16} className="animate-spin" /> İptal ediliyor...</> : 'Evet, İptal Et'}
+                  {cancelling ? <><Loader2 size={16} className="animate-spin" /> İptal ediliyor…</> : 'Rezervasyonu İptal Et'}
                 </button>
                 <button onClick={() => setCancelTarget(null)} className="w-full py-3 text-gray-400 font-bold text-sm hover:text-white transition-colors">
                   Vazgeç
@@ -996,7 +1037,7 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onBack, onNavigate }) => {
               <p className="text-sm text-gray-400 leading-relaxed mb-6">
                 Rezervasyonun iptal edildi.
                 {cancelResult.refund_amount > 0
-                  ? <> <span className="font-numeric text-[#39FF14] font-bold">₺{formatTRY(cancelResult.refund_amount)}</span> (%{cancelResult.refund_percent}) cüzdanına eklendi.</>
+                  ? <> <span className="font-numeric text-[#39FF14] font-bold">{money(cancelResult.refund_amount)}</span> (%{cancelResult.refund_percent}) cüzdanına eklendi.</>
                   : ' İade edilecek ödeme bulunmuyor.'}
               </p>
               <button onClick={() => setCancelResult(null)} className="w-full py-3.5 bg-[#FACC15] text-black font-extrabold rounded-2xl text-sm uppercase tracking-wide active:scale-95 transition-transform">

@@ -50,7 +50,6 @@ const RegionPickerPage: React.FC<RegionPickerPageProps> = ({ open, onClose }) =>
         fbUpdateUserLocation(auth.currentUser.uid, loc.coordinates.lat, loc.coordinates.lng).catch(() => {});
       }
     }
-    if (navigator.vibrate) navigator.vibrate(20);
   };
 
   const toggleRegion = (city: string, district: string | null) => {

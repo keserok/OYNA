@@ -17,7 +17,13 @@ const SignupGate: React.FC = () => {
 
   if (!isOpen) return null;
 
-  const goSignup = () => {
+  // IP-15: kapı iki yol sunar. Niyeti kapıyı AÇAN ekran yazdı; burada yalnız
+  // AuthScreen'in hangi modda açılacağı söylenir. Eskiden tek buton hem
+  // "kaydol" hem "giriş yap" diyordu; hesabı olan kullanıcı kayıt formuna
+  // düşüp geri dönmek zorunda kalıyordu.
+  const go = (mode: 'register' | 'login') => {
+    const s = useAppStore.getState();
+    s.setAuthStartMode(mode);
     setOpen(false);
     setIsGuest(false);
     resetNavigation('AUTH');
@@ -29,7 +35,7 @@ const SignupGate: React.FC = () => {
       <motion.div
         initial={{ opacity: 0, y: 60 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative w-full bg-[#161B22] border border-[#FACC15]/25 rounded-t-[28px] p-6 pb-10"
+        className="relative w-full bg-[#161B22] border border-white/[0.08] rounded-t-[28px] p-6 pb-10"
         style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 2.5rem)' }}
       >
         <button
@@ -39,22 +45,28 @@ const SignupGate: React.FC = () => {
         >
           <X size={18} />
         </button>
-        <div className="w-14 h-14 rounded-2xl bg-[#FACC15]/15 flex items-center justify-center mb-4">
-          <Zap size={26} className="text-[#FACC15]" />
+        <div className="w-14 h-14 rounded-2xl bg-[#39FF14]/12 flex items-center justify-center mb-4">
+          <Zap size={26} className="text-[#39FF14]" />
         </div>
         <h3 className="text-white font-extrabold text-xl mb-2">Sahaya çıkmaya hazır mısın?</h3>
         <p className="text-sm text-gray-400 leading-relaxed mb-6">
-          Maça katılmak, saha kiralamak ve oyuncu kartını oluşturmak için ücretsiz bir hesap yeterli. 30 saniyeni alır.
+          Maça katılmak, saha kiralamak ve oyuncu kartını oluşturmak için ücretsiz bir hesap yeterli. Hesabını aç, kaldığın yerden devam et.
         </p>
         <button
-          onClick={goSignup}
-          className="w-full py-4 bg-[#FACC15] text-black font-extrabold text-base rounded-2xl flex items-center justify-center gap-2 active:scale-95 transition-all"
+          onClick={() => go('register')}
+          className="w-full py-4 bg-[#39FF14] text-[#0A0E14] font-extrabold text-base rounded-2xl flex items-center justify-center gap-2 active:scale-95 transition-all"
         >
-          <UserPlus size={18} /> ÜCRETSİZ KAYDOL / GİRİŞ YAP
+          <UserPlus size={18} /> ÜCRETSİZ HESAP AÇ
+        </button>
+        <button
+          onClick={() => go('login')}
+          className="w-full min-h-11 py-3 mt-1 text-gray-400 font-bold text-sm"
+        >
+          Zaten hesabım var — giriş yap
         </button>
         <button
           onClick={() => setOpen(false)}
-          className="w-full py-3 mt-2 text-ink-4 font-bold text-sm"
+          className="w-full min-h-11 py-3 text-ink-4 font-bold text-sm"
         >
           Şimdilik gezinmeye devam et
         </button>

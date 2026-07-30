@@ -11,6 +11,7 @@ import { courtFeatureLabel, normalizeCourtFeatures } from '../../shared/courtFea
 import { surfaceLabel } from '../../shared/courtSurface';
 import { formatCapacityRange } from '../../shared/pitchShowcaseMapper';
 import { transformedImageUrl } from '../../utils/imageTransform';
+import { formatTRYShort, formatTRYAmount } from '../../utils/formatTRY';
 
 interface PreviewData {
   name: string;
@@ -113,7 +114,7 @@ export const ShowcasePreview: React.FC<{ pitchId: string; onClose: () => void }>
                 )}
                 <span className="opacity-50">·</span>
                 <span>{data.district ?? data.city ?? ''}</span>
-                {data.total_price ? (<><span className="opacity-50">·</span><span>~₺{data.total_price}/saat</span></>) : null}
+                {data.total_price ? (<><span className="opacity-50">·</span><span>~{formatTRYShort(data.total_price)}/saat</span></>) : null}
               </div>
               {data.description && (
                 <p className="mt-3 text-[0.8125rem] leading-relaxed text-white/70 font-medium">{data.description}</p>
@@ -178,7 +179,7 @@ export const ShowcasePreview: React.FC<{ pitchId: string; onClose: () => void }>
                             </div>
                           </div>
                           <div className="text-right flex-shrink-0 pl-2">
-                            <div className="text-sm font-extrabold text-white">₺{court.price ?? data.total_price ?? '—'}</div>
+                            <div className="text-sm font-extrabold text-white">{formatTRYShort(court.price ?? data.total_price)}</div>
                             <div className="text-[0.6875rem] font-extrabold uppercase text-ink-4">/saat</div>
                           </div>
                         </div>
@@ -206,7 +207,7 @@ export const ShowcasePreview: React.FC<{ pitchId: string; onClose: () => void }>
                 <div className="flex-1">
                   <div className="text-[0.625rem] font-extrabold uppercase tracking-wider text-ink-4">Kapora · örnek</div>
                   {/* S17: tutarda italik yok — italik yalnız skorda kalır. */}
-                  <div className="text-base font-extrabold text-white">₺{Math.round((activeCourts[0]?.price ?? data.total_price ?? 0) * 0.3 / 10) * 10}</div>
+                  <div className="text-base font-extrabold text-white">{formatTRYAmount(Math.round((activeCourts[0]?.price ?? data.total_price ?? 0) * 0.3 / 10) * 10)}</div>
                 </div>
                 <div className="px-4 py-3 rounded-xl bg-warning-bg text-warning border border-warning-line text-[0.6875rem] font-extrabold italic uppercase opacity-70">
                   Kaporayı Öde

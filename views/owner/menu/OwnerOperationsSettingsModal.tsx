@@ -64,7 +64,7 @@ export const OwnerOperationsSettingsModal: React.FC<Props> = ({
   return (
     <OwnerCenteredModal title="Rezervasyon İşlemleri" onClose={onClose}>
       {isLoading ? (
-        <p className="text-center text-gray-500 text-sm py-6">Yükleniyor...</p>
+        <p className="text-center text-gray-500 text-sm py-6">Yükleniyor…</p>
       ) : (
         <div className="space-y-6">
           <div className="bg-blue-500/10 border border-blue-500/20 p-4 rounded-2xl flex items-start gap-3">
@@ -119,7 +119,7 @@ export const OwnerOperationsSettingsModal: React.FC<Props> = ({
             disabled={isSaving}
             className="w-full py-4 bg-blue-600 text-white font-extrabold rounded-2xl hover:bg-blue-500 disabled:opacity-50"
           >
-            {isSaving ? 'Kaydediliyor...' : 'Kaydet'}
+            {isSaving ? 'Kaydediliyor…' : 'Kaydet'}
           </button>
         </div>
       )}

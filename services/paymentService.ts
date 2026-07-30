@@ -4,6 +4,7 @@
 // Gerçek sağlayıcı bağlandığında checkoutUrl'e yönlendirme devreye girer.
 
 import { supabase } from '../supabaseClient';
+import { mapError, isNetworkError, AG_HATASI } from '../utils/errorMap';
 
 export interface CreatePaymentResponse {
   intentId: string;
@@ -260,6 +261,9 @@ export const rawErrorMessage = (err: unknown): string => {
  * reddi dalından ÖNCE gelmeli — ikisi de 'CARD' içerir.
  */
 export const humanizePaymentError = (err: unknown): string => {
+  // IP-12 · BULGU-056: hiçbir dal ağ hatasını tanımıyordu; zayıf şebekede
+  // ekranda "Failed to fetch" yazıyordu. Ağ ayrı bir çözüm yolu ister.
+  if (isNetworkError(err)) return AG_HATASI;
   const raw = rawErrorMessage(err);
   const up = raw.toUpperCase();
   const has = (...keys: string[]) => keys.some(k => up.includes(k));
@@ -298,6 +302,8 @@ export const humanizePaymentError = (err: unknown): string => {
   if (has('PROVIDER_ERROR', 'PROVIDER_FLOW_REQUIRED', 'PROVIDER_NOT_CONFIGURED'))
     return 'Ödeme sağlayıcısına ulaşılamadı. Lütfen birazdan tekrar dene.';
 
-  const clean = stripServerErrorPrefix(raw).trim();
-  return clean || 'Ödeme tamamlanamadı. Lütfen tekrar dene; sorun sürerse farklı bir kart deneyebilir veya bankanla iletişime geçebilirsin.';
+  // IP-12: burada eskiden `return clean` vardı — tanınmayan HER şey ham haliyle
+  // ekrana çıkıyordu (İngilizce sağlayıcı metinleri dahil). Artık ortak sözlükten
+  // geçiyor; sözlük de tanımazsa Türkçe genel mesaj döner, ham metin ASLA.
+  return mapError(err, 'Ödeme tamamlanamadı. Lütfen tekrar dene; sorun sürerse farklı bir kart deneyebilir veya bankanla iletişime geçebilirsin.');
 };

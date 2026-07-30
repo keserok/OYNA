@@ -69,7 +69,6 @@ export interface TeamSquadRow {
   role: TeamRole;
   jersey_number: number | null;
   pos: string | null;
-  fp: number | null;
   joined_at: string | null;
 }
 

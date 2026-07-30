@@ -1,6 +1,6 @@
 import { supabase } from '../supabaseClient';
 import { MatchListing, PositionSlot } from '../types';
-import { formatTRYWithSymbol } from '../utils/formatTRY';
+import { formatTRYAmount } from '../utils/formatTRY';
 
 export interface Match {
   id?: string;
@@ -100,6 +100,7 @@ export const getMatchDetails = async (matchId: string): Promise<MatchListing | n
       // Maç süresi (E6) — slottan/tarifeden türetilmiş SUNUCU değeri. Lobideki
       // "Maç Kuralları" ve kartlar bunu okur; serbest metin `duration` değil.
       durationMinutes: data.duration_minutes ?? data.durationMinutes ?? undefined,
+      footwearRule: data.footwear_rule ?? data.footwearRule ?? null,
       isSuccessful: data.is_successful ?? data.isSuccessful ?? undefined,
       confirmedAt: data.confirmed_at || data.confirmedAt || undefined,
       startsAt: data.starts_at || data.startsAt || undefined,
@@ -141,7 +142,8 @@ export interface LobbyParticipant {
   side: 'home' | 'away';
   name: string;
   avatarUrl: string;
-  rating: number;
+  /** Beyan edilen seviye (1-10) — kadro satırı band çipi. */
+  selfSkill?: number | null;
 }
 
 /**
@@ -199,7 +201,7 @@ export const getMatchLobbyParticipants = async (
 
     const { data: profs } = await supabase
       .from('public_profiles')
-      .select('id, name, avatar_url, rating')
+      .select('id, name, avatar_url, self_skill')
       .in('id', roster.map(r => r.userId));
     const byId = new Map((profs || []).map((pr: any) => [pr.id, pr]));
 
@@ -210,7 +212,7 @@ export const getMatchLobbyParticipants = async (
         side,
         name: (pr?.name as string) || 'Oyuncu',
         avatarUrl: (pr?.avatar_url as string) || '',
-        rating: (typeof pr?.rating === 'number' ? pr.rating : 4.5),
+        selfSkill: (typeof pr?.self_skill === 'number' ? pr.self_skill : null),
       };
     });
   } catch (e) {
@@ -551,8 +553,8 @@ export const leaveQuoteMessage = (
     const para =
       quote.forfeited <= 0 ? ''
       : quote.refundable > 0
-        ? ` Ödediğinin %${quote.refundPct}'i (${formatTRYWithSymbol(quote.refundable)}) cüzdanına döner, ${formatTRYWithSymbol(quote.forfeited)} iade edilmez.`
-        : ` Ödediğin ${formatTRYWithSymbol(quote.forfeited)} iade edilmez.`;
+        ? ` Ödediğinin %${quote.refundPct}'i (${formatTRYAmount(quote.refundable)}) cüzdanına döner, ${formatTRYAmount(quote.forfeited)} iade edilmez.`
+        : ` Ödediğin ${formatTRYAmount(quote.forfeited)} iade edilmez.`;
     return {
       tone: 'late',
       text: `${esik}.${para} Güvenilirlik puanın ${quote.penalty} düşer ve kaptana haber verilecek.`,
@@ -562,7 +564,7 @@ export const leaveQuoteMessage = (
   if (quote.refundable > 0) {
     return {
       tone: 'refund',
-      text: `Ödediğin ${formatTRYWithSymbol(quote.refundable)} ayrılınca cüzdanına döner.`,
+      text: `Ödediğin ${formatTRYAmount(quote.refundable)} ayrılınca cüzdanına döner.`,
     };
   }
   return {

@@ -133,7 +133,7 @@ export const OwnerCloseSlotModal: React.FC<OwnerCloseSlotModalProps> = ({
           disabled={saving}
           className="w-full py-4 bg-red-600 text-white font-extrabold text-lg rounded-2xl hover:bg-red-500 active:scale-95 transition-all disabled:opacity-50"
         >
-          {saving ? 'KAPATILIYOR...' : 'SLOTU KAPAT'}
+          {saving ? 'KAPATILIYOR…' : 'SLOTU KAPAT'}
         </button>
       </div>
     </div>

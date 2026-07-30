@@ -24,7 +24,6 @@ export interface AdminUser {
   avatar: string;
   role: UserRole;             
   roles?: UserRole[];        
-  rating: number;            
   isVerified: boolean;       
   isBanned: boolean;         
   isShadowBanned?: boolean;
@@ -34,13 +33,10 @@ export interface AdminUser {
   wallet?: number;           
   reliabilityScore?: number; 
   banExpiresAt?: string | null; 
-  playerCard?: PlayerCardData;
   oynaId?: string; // Benzersiz OYNA Kimliği Örn: #ARD932
   friends?: string[]; // Onaylanmış arkadaşların User ID'leri
   isLookingForTeam?: boolean; // Transfer Merkezi Görünürlüğü
   newMatchBadge?: boolean; // Yeni maç eklendi bildirim rozeti
-  cardActive?: boolean; // Premium oyuncu kartı admin tarafından aktif mi (card_active)
-  cardTier?: 'bronze' | 'silver' | 'gold' | null; // Aktif kartın tier'ı (card_tier)
 }
 
 export interface AdminLog {
@@ -84,7 +80,7 @@ export interface BasicMatchRecord {
 export type Match = BasicMatchRecord;
 
 
-export type AppView = 'SPLASH' | 'AUTH' | 'LOCATION_PROMPT' | 'ROLE_SELECTION' | 'PENDING_VERIFICATION' | 'DASHBOARD' | 'PITCH_DISCOVERY' | 'MY_MATCHES' | 'MARKETPLACE_REF' | 'MARKETPLACE_GK' | 'MY_LISTINGS' | 'LISTING_DETAILS' | 'PAYMENT' | 'MY_TEAM' | 'PROFILE' | 'NOTIFICATIONS' | 'SETTINGS' | 'MATCH_DISCOVERY' | 'MATCH_JOIN' | 'MATCH_TICKET' | 'POST_MATCH' | 'MATCH_DIARY_DETAIL' | 'STUDIO' | 'WALLET' | 'OPPONENT_FINDER' | 'ADMIN_PANEL' | 'SOCIAL' | 'FRIEND_ADD' | 'POST_MATCH_EVAL' | 'MATCH_CREATE' | 'SERVICE_DASHBOARD' | 'OWNER_PANEL' | 'QR_SCANNER' | 'MATCHES' | 'PARTNER_ONBOARDING' | 'SERVICE_APPLICATION' | 'LEGAL' | 'MESSAGES' | 'ONBOARDING' | 'GUARDIAN_CHILD' | 'GUARDIAN_FORM';
+export type AppView = 'SPLASH' | 'AUTH' | 'LOCATION_PROMPT' | 'ROLE_SELECTION' | 'PENDING_VERIFICATION' | 'DASHBOARD' | 'PITCH_DISCOVERY' | 'MY_MATCHES' | 'MARKETPLACE_REF' | 'MARKETPLACE_GK' | 'MY_LISTINGS' | 'LISTING_DETAILS' | 'PAYMENT' | 'MY_TEAM' | 'PROFILE' | 'NOTIFICATIONS' | 'SETTINGS' | 'MATCH_DISCOVERY' | 'MATCH_JOIN' | 'MATCH_TICKET' | 'POST_MATCH' | 'MATCH_DIARY_DETAIL' | 'STUDIO' | 'WALLET' | 'OPPONENT_FINDER' | 'ADMIN_PANEL' | 'SOCIAL' | 'FRIEND_ADD' | 'POST_MATCH_EVAL' | 'MATCH_CREATE' | 'SERVICE_DASHBOARD' | 'OWNER_PANEL' | 'QR_SCANNER' | 'PARTNER_ONBOARDING' | 'SERVICE_APPLICATION' | 'LEGAL' | 'MESSAGES' | 'ONBOARDING' | 'GUARDIAN_CHILD' | 'GUARDIAN_FORM';
 
 export interface SavedPaymentCard {
   id: string;
@@ -162,28 +158,6 @@ export interface CurrentUserProfile {
   id: string;
   name: string;
   avatar: string;
-  rating: number;
-}
-
-export interface PlayerCardData {
-  overall: number;
-  tier: 'gold' | 'silver' | 'bronze';
-  /** Henüz maç oynamamış (rookie) → kart OVR yerine "—" ve nötr tema gösterir. */
-  isRookie?: boolean;
-  isStatsVerified: boolean;
-  diamondValue: number;
-  flatModifier?: number; // Opanel admin override katsayısı
-  winCount: number;
-  totalMatches: number;
-  cardImage?: string;
-  stats: {
-    pace: PlayerStat;
-    shooting: PlayerStat;
-    passing: PlayerStat;
-    dribbling: PlayerStat;
-    defense: PlayerStat;
-    physical: PlayerStat;
-  };
 }
 
 export enum GkStyle {
@@ -196,10 +170,15 @@ export interface Player {
   id: string;
   name: string;
   avatar: string;
-  rating: number;
+  /** Beyan edilen seviye (profiles.self_skill, 1–10). Kadro satırındaki
+   *  seviye bandının kaynağı; yoksa çip çizilmez. Eski akran-puanı 'rating'
+   *  alanı SÖKÜLDÜ (20260831000000). */
+  selfSkill?: number | null;
   position: string;
-  x: number; // Percentage 0-100
-  y: number; // Percentage 0-100
+  /** Saha yüzdesi — POZİSYONSUZ (Rahat) slot oyuncusunda sunucu bu anahtarları
+   *  hiç yazmaz; diziliş çizen kod yalnız Ciddi/Taktiksel yolunda çalışır. */
+  x?: number;
+  y?: number;
   paymentStatus?: 'PAID' | 'PENDING' | 'UNPAID'; // New for Match Lobby
   instruction?: string;
   style?: string;
@@ -209,7 +188,6 @@ export interface FieldPlayerCard {
   id: string;
   name: string;
   position: string;
-  rating: number;
   isSpecial: boolean; // Red card if true
   avatar: string;
   x: number; // Position on field
@@ -309,7 +287,6 @@ export interface MatchListing {
   rawDate?: string;
   price: number;
   difficulty: 'Ciddi' | 'Taktiksel' | 'Rahat';
-  minRating: number;
   image: string;
   badges: string[];
   missingPositions: { role: string; count: number }[];
@@ -351,6 +328,9 @@ export interface MatchListing {
   confirmedAt?: string;       // T-8s quorum onay zamanı
   startsAt?: string;          // maç başlangıç timestamp'i (lifecycle için)
   isDemo?: boolean;           // demo/seed maçı (panelde rozetle ayrıştırılır)
+  /** Ayakkabı kuralı (matches.footwear_rule): CLEATS_OK | TURF_SHOES.
+   *  Yoksa HAKKINDA'daki ayakkabı kartı hiç çizilmez. */
+  footwearRule?: 'CLEATS_OK' | 'TURF_SHOES' | null;
   // Escrow kapora yaşam-döngüsü (20260716000001): NONE|BLOCKED|CAPTURED|VOIDED|REFUNDED
   depositStatus?: 'NONE' | 'BLOCKED' | 'CAPTURED' | 'VOIDED' | 'REFUNDED';
   depositAmount?: number;     // bloke edilen/tahsil edilen kapora
@@ -362,9 +342,13 @@ export interface MatchListing {
 
 export interface PositionSlot {
   id: string;
-  role: string; // 'LB', 'CB', 'CM', etc.
-  x: number;
-  y: number;
+  /** 'LB', 'CB', 'CM'… — POZİSYONSUZ (Rahat) maçta 'OYUNCU'. */
+  role: string;
+  /** Sahadaki yüzde koordinatı. Rahat maçta slot pozisyonsuzdur; sunucu bu
+   *  anahtarları HİÇ yazmaz (uydurma 0,0 basılmaz). Diziliş çizen kod yalnız
+   *  Ciddi/Taktiksel yolda çalışır ve orada değer garantidir. */
+  x?: number;
+  y?: number;
   status: 'OPEN' | 'TAKEN' | 'LOCKED';
   player?: Player; // If taken
   // Tek lobi slot makinesi (P2): satın alma + atama yaşam döngüsü.
@@ -771,7 +755,6 @@ export interface JobListing {
   offeredFee: number;
   captainName: string;
   teamName: string;
-  minRating: number; // New: Constraint
   viewers: number; // New: FOMO
 }
 

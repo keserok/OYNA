@@ -2,10 +2,12 @@ import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { MapPin, Clock, Calendar, ChevronRight } from 'lucide-react';
 import { MatchListing, PositionSlot } from '../types';
+import { playStyleMetaForDifficulty } from '../views/onboarding/onboardingShared';
 import { useAppStore } from '../store';
 import { FORMATIONS, type SquadSize } from '../utils/formations';
 import { useCountdown } from '../hooks/useCountdown';
 import { formatMatchDuration } from '../shared/matchTiming';
+import { formatTRYShort } from '../utils/formatTRY';
 
 // ── Shared helpers (subset from MatchJoin) ───────────────────────────────────
 
@@ -70,11 +72,13 @@ const applyCanonicalCoords = (slots: PositionSlot[]): PositionSlot[] => {
   });
 };
 
-const DIFF_CONFIG: Record<string, { color: string; label: string }> = {
-  'Ciddi':     { color: '#FF4D4D', label: 'CİDDİ'     },
-  'Taktiksel': { color: '#FACC15', label: 'TAKTİKSEL' },
-  'Rahat':     { color: '#39FF14', label: 'RAHAT'     },
-};
+// Renk/etiket TEK KAYNAK: PLAY_STYLE_META (yerel kopya söküldü — drift kaynağıydı).
+const DIFF_CONFIG: Record<string, { color: string; label: string }> = Object.fromEntries(
+  (['Ciddi', 'Taktiksel', 'Rahat'] as const).map((d) => {
+    const meta = playStyleMetaForDifficulty(d)!;
+    return [d, { color: meta.color, label: meta.label.toLocaleUpperCase('tr-TR') }];
+  }),
+);
 
 // ── MiniPitch ─────────────────────────────────────────────────────────────────
 
@@ -323,7 +327,7 @@ export const MatchJoinCard: React.FC<MatchJoinCardProps> = ({ match, currentUser
             )}
             {match.price ? (
               <span className="text-[0.6875rem] font-extrabold uppercase px-2 py-0.5 rounded-md bg-[#FACC15]/8 border border-[#FACC15]/15 text-[#FACC15]">
-                ₺{match.price}
+                {formatTRYShort(match.price)}
               </span>
             ) : null}
           </div>

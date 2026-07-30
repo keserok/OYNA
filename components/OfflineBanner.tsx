@@ -30,7 +30,7 @@ const OfflineBanner: React.FC = () => {
   if (!isOffline) return null;
 
   return (
-    <div className="fixed top-0 inset-x-0 z-[100] bg-red-600 text-white text-xs font-bold flex items-center justify-center gap-2 py-2 px-4" style={{ paddingTop: 'max(var(--safe-top), 0.5rem)' }}>
+    <div role="status" aria-live="polite" className="fixed top-0 inset-x-0 z-[100] bg-red-600 text-white text-xs font-bold flex items-center justify-center gap-2 py-2 px-4" style={{ paddingTop: 'max(var(--safe-top), 0.5rem)' }}>
       <WifiOff size={14} />
       İnternet bağlantısı yok — bazı özellikler kullanılamayabilir
     </div>

@@ -1,4 +1,5 @@
 import { supabase } from '../supabaseClient';
+import { mapError } from '../utils/errorMap';
 
 // ─── FAZ 6 — Takım-vs-takım skor kaydı (oyuncu-hepsi-onaylar) ────────────────
 
@@ -20,19 +21,14 @@ export interface ScoreActionResult {
   needed?: number;
 }
 
-function parseRpcError(message?: string): string | null {
-  if (!message) return null;
-  const m = message.match(/[A-Z_]+:\s*(.+)$/);
-  if (m) return m[1];
-  const bare: Record<string, string> = {
-    NOT_PARTICIPANT: 'Yalnızca maça katılanlar skor önerebilir/onaylayabilir.',
-    INVALID_SCORE: 'Geçersiz skor.',
-    UNAUTHORIZED: 'Oturumun bulunamadı. Lütfen tekrar giriş yap.',
-    NOT_FOUND: 'Öneri bulunamadı.',
-  };
-  const b = message.match(/\b([A-Z][A-Z_]{3,})\b/);
-  return b && bare[b[1]] ? bare[b[1]] : message;
-}
+// IP-12: ortak çeviri utils/errorMap.ts'te. Buradaki sözlük yalnız BU
+// bağlamda daha isabetli olan mesajları ezer.
+const OZEL: Record<string, string> = {
+  NOT_PARTICIPANT: 'Yalnızca maça katılanlar skor önerebilir/onaylayabilir.',
+  NOT_FOUND: 'Öneri bulunamadı.',
+};
+const parseRpcError = (message?: string): string | null =>
+  message ? mapError(message, undefined, OZEL) : null;
 
 /** Maç skoru öner (katılımcı). Öneren otomatik onaylar. */
 export const proposeMatchScore = async (

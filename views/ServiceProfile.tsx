@@ -22,6 +22,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { MapContainer, TileLayer, Circle, Marker, useMapEvents } from 'react-leaflet';
 import { OYNA_TILE_URL, oynaTileProps, oynaMapProps, OYNA_MAP_CSS } from '../components/map/mapBase';
+import { formatTRYShort } from '../utils/formatTRY';
 
 // Fix leaflet default icon path issues
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -401,7 +402,7 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
                 onChange={e => setTempBio(e.target.value)}
                 rows={4}
                 className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-sm text-white outline-none resize-none focus:border-white/30 transition-colors"
-                placeholder="Kendini tanıt..."
+                placeholder="Kendini tanıt…"
               />
               <div className="flex gap-2">
                 <button
@@ -458,7 +459,7 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
                 </div>
               ) : (
                 <div className="flex items-center gap-2">
-                  <span className="text-4xl font-extrabold text-white">{fee}₺</span>
+                  <span className="text-4xl font-extrabold text-white">{formatTRYShort(fee)}</span>
                   <button onClick={() => setEditingFee(true)} className="text-ink-4 hover:text-white p-1">
                     <Edit3 size={14} />
                   </button>
@@ -477,7 +478,7 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
                     border: `1px solid ${fee === v ? accentColor : 'rgba(255,255,255,0.08)'}`
                   }}
                 >
-                  {v}₺
+                  {formatTRYShort(v)}
                 </button>
               ))}
             </div>

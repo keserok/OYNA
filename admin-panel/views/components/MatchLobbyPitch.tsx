@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { X, Search, UserCheck, Shuffle, Star, ArrowLeftRight } from 'lucide-react';
+import { X, Search, UserCheck, Shuffle, ArrowLeftRight } from 'lucide-react';
 import type { PositionSlot, AdminUser } from '../../../types';
 import { enrichSlots, collectAssignedIds, normalizeRole, avatarFor } from '../../../shared/lobbyEnrichment';
 import { MatchPitch } from '../../../shared/MatchPitch';
@@ -26,7 +26,7 @@ const PlayerPicker: React.FC<PlayerPickerProps> = ({ users, assignedIds, busy, o
       ? users.filter((u) => u.name.toLocaleLowerCase('tr').includes(needle) || (u.email || '').toLocaleLowerCase('tr').includes(needle))
       : users;
     return [...base]
-      .sort((a, b) => (Number(assignedIds.has(a.id)) - Number(assignedIds.has(b.id))) || (b.rating - a.rating))
+      .sort((a, b) => (Number(assignedIds.has(a.id)) - Number(assignedIds.has(b.id))) || a.name.localeCompare(b.name, 'tr'))
       .slice(0, 40);
   }, [q, users, assignedIds]);
 
@@ -60,7 +60,6 @@ const PlayerPicker: React.FC<PlayerPickerProps> = ({ users, assignedIds, busy, o
                 <p className="text-xs font-bold text-white truncate">{u.name}</p>
                 <p className="text-[9px] text-gray-500 truncate">{u.email}</p>
               </div>
-              <span className="flex items-center gap-0.5 text-[10px] font-extrabold text-yellow-400 shrink-0"><Star size={10} />{Number(u.rating).toFixed(1)}</span>
               {assigned && <span className="text-[8px] font-bold text-amber-400 border border-amber-500/30 rounded px-1 py-0.5 shrink-0">Kadroda</span>}
             </button>
           );

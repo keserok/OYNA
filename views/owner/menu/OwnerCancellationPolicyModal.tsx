@@ -74,13 +74,13 @@ export const OwnerCancellationPolicyModal: React.FC<Props> = ({ onClose, facilit
   return (
     <OwnerCenteredModal title="İptal / İade Politikası" onClose={onClose}>
       {isLoading ? (
-        <p className="text-center text-gray-500 text-sm py-6">Yükleniyor...</p>
+        <p className="text-center text-gray-500 text-sm py-6">Yükleniyor…</p>
       ) : (
         <div className="space-y-6">
           <div className="bg-blue-500/10 border border-blue-500/20 p-4 rounded-2xl flex items-start gap-3">
             <AlertCircle size={18} className="text-blue-400 shrink-0 mt-0.5" />
             <p className="text-xs text-blue-200 leading-relaxed">
-              Oyuncular rezervasyonu iptal ettiğinde ne kadar iade alacağını burada belirlersiniz.
+              Oyuncular rezervasyonu iptal ettiğinde ne kadar iade alacağını burada belirlersin.
               Kapalıyken OYNA varsayılanı geçerlidir: <b>≥24 saat %100</b>, <b>6–24 saat %50</b>, <b>&lt;6 saat iade yok</b>.
               Oyuncu bu koşulları ödeme ve iptal ekranında görür.
             </p>
@@ -158,7 +158,7 @@ export const OwnerCancellationPolicyModal: React.FC<Props> = ({ onClose, facilit
               className="w-full py-4 bg-blue-600 text-white font-extrabold rounded-2xl hover:bg-blue-500 disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {!custom && <RotateCcw size={16} />}
-              {isSaving ? 'Kaydediliyor...' : custom ? 'Kaydet' : 'Global Varsayılanı Kullan'}
+              {isSaving ? 'Kaydediliyor…' : custom ? 'Kaydet' : 'Global Varsayılanı Kullan'}
             </button>
           )}
         </div>

@@ -1,20 +1,17 @@
 import { supabase } from '../supabaseClient';
+import { mapError } from '../utils/errorMap';
 
 // ─── FAZ 6 — Takım yönetimi: kaptan devir + çoklu yönetici + ayrıl/arşiv ─────
 
-function parseRpcError(message?: string): string | null {
-  if (!message) return null;
-  const m = message.match(/[A-Z_]+:\s*(.+)$/);
-  if (m) return m[1];
-  const bare: Record<string, string> = {
-    FORBIDDEN: 'Bu işlem için yetkin yok (takım yöneticisi değilsin).',
-    NOT_MEMBER: 'Kullanıcı takım üyesi değil.',
-    UNAUTHORIZED: 'Oturumun bulunamadı. Lütfen tekrar giriş yap.',
-    NOT_FOUND: 'Takım bulunamadı.',
-  };
-  const b = message.match(/\b([A-Z][A-Z_]{3,})\b/);
-  return b && bare[b[1]] ? bare[b[1]] : message;
-}
+// IP-12: ortak çeviri utils/errorMap.ts'te. Buradaki sözlük yalnız BU
+// bağlamda daha isabetli olan mesajları ezer.
+const OZEL: Record<string, string> = {
+  FORBIDDEN: 'Bu işlem için yetkin yok (takım yöneticisi değilsin).',
+  NOT_MEMBER: 'Kullanıcı takım üyesi değil.',
+  NOT_FOUND: 'Takım bulunamadı.',
+};
+const parseRpcError = (message?: string): string | null =>
+  message ? mapError(message, undefined, OZEL) : null;
 
 /** Kaptanlığı başka bir üyeye devret. */
 export const transferCaptaincy = async (teamId: string, newCaptainId: string): Promise<void> => {

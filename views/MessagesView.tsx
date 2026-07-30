@@ -24,6 +24,7 @@ import {
 import { supabase } from '../supabaseClient';
 import { useAppStore } from '../store';
 import TeamCrest from '../components/social/TeamCrest';
+import { trInitials } from '../utils/trUpper';
 
 // ================================================================
 // MessagesView — BİRLEŞİK gelen kutusu (Spec §3.10 / N90):
@@ -39,11 +40,13 @@ interface MessagesViewProps {
   initialConversationId?: string | null;
   /** Takım Detayı / derin bağlantıdan gelen takım sohbeti hedefi. */
   initialTeamChatId?: string | null;
+  /** Boş gelen kutusundan arkadaş bulmaya çıkış (IP-12). */
+  onFindFriends: () => void;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 const getInitials = (name: string | null) =>
-  (name || '?').split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+  trInitials(name);
 
 const timeAgo = (iso: string | null): string => {
   if (!iso) return '';
@@ -119,7 +122,9 @@ const InboxList: React.FC<{
   items: InboxItem[];
   loading: boolean;
   onSelect: (item: InboxItem) => void;
-}> = ({ items, loading, onSelect }) => {
+  /** Boş gelen kutusundan çıkış — IP-12 · BULGU-066. */
+  onFindFriends: () => void;
+}> = ({ items, loading, onSelect, onFindFriends }) => {
   if (loading) return (
     <div className="flex items-center justify-center py-20">
       <Spinner size={28} color="#34D399" />
@@ -130,6 +135,13 @@ const InboxList: React.FC<{
     <div className="text-center py-16">
       <MessageCircle size={40} className="mx-auto mb-3 text-ink-4" />
       <p className="text-sm text-ink-4">Henüz mesajın yok</p>
+      {/* IP-12 · BULGU-066: burası çıkmaz sokaktı — ikon ve cümle vardı, çıkış yoktu. */}
+      <button
+        onClick={onFindFriends}
+        className="mt-4 min-h-[44px] px-5 rounded-2xl bg-primary text-on-primary text-xs font-extrabold uppercase tracking-wide active:scale-[0.98] transition-transform"
+      >
+        Arkadaş Bul
+      </button>
     </div>
   );
 
@@ -319,7 +331,7 @@ const ChatView: React.FC<{
       await blockUserFully(myUid, conversation.otherId);
       // F1: blok sonrası sohbet AÇIK kalmasın — kompozer kilitlenir + net durum.
       setBlocked(true);
-      setActionInfo(`${name} engellendi. Artık mesajlaşamazsınız.`);
+      setActionInfo(`${name} engellendi. Artık mesajlaşamazsın.`);
     } catch (e: any) {
       setError(e?.message || 'Kullanıcı engellenemedi.');
     }
@@ -345,7 +357,7 @@ const ChatView: React.FC<{
       <div className="flex-shrink-0 px-4 py-3 border-b border-white/8 flex items-center gap-3 relative bg-[#070B10]/80 backdrop-blur-xl">
         <button
           onClick={onBack}
-          className="w-9 h-9 rounded-xl bg-white/6 border border-white/10 flex items-center justify-center hover:bg-white/12 transition-colors flex-shrink-0"
+          aria-label="Geri" className="w-11 h-11 rounded-xl bg-white/6 border border-white/10 flex items-center justify-center hover:bg-white/12 transition-colors flex-shrink-0"
         >
           <ArrowLeft size={18} className="text-gray-300" />
         </button>
@@ -358,7 +370,7 @@ const ChatView: React.FC<{
         </div>
         <button
           onClick={() => setMenuOpen(v => !v)}
-          className="w-9 h-9 rounded-xl bg-white/6 border border-white/10 flex items-center justify-center hover:bg-white/12 transition-colors flex-shrink-0"
+          aria-label="Menü" className="w-11 h-11 rounded-xl bg-white/6 border border-white/10 flex items-center justify-center hover:bg-white/12 transition-colors flex-shrink-0"
         >
           <MoreVertical size={18} className="text-gray-300" />
         </button>
@@ -478,7 +490,7 @@ const ChatView: React.FC<{
             }
           }}
           rows={1}
-          placeholder="Mesaj yaz..."
+          placeholder="Mesaj yaz…"
           className="flex-1 resize-none max-h-28 bg-white/6 border border-white/10 rounded-2xl px-4 py-3 text-sm text-white placeholder:text-ink-4 focus:outline-none focus:border-emerald-500/50"
         />
         <button
@@ -610,7 +622,7 @@ const TeamChatView: React.FC<{
       <div className="flex-shrink-0 px-4 py-3 border-b border-white/8 flex items-center gap-3 relative bg-[#070B10]/80 backdrop-blur-xl">
         <button
           onClick={onBack}
-          className="w-9 h-9 rounded-xl bg-white/6 border border-white/10 flex items-center justify-center hover:bg-white/12 transition-colors flex-shrink-0"
+          aria-label="Geri" className="w-11 h-11 rounded-xl bg-white/6 border border-white/10 flex items-center justify-center hover:bg-white/12 transition-colors flex-shrink-0"
         >
           <ArrowLeft size={18} className="text-gray-300" />
         </button>
@@ -631,7 +643,7 @@ const TeamChatView: React.FC<{
         </button>
         <button
           onClick={() => setMenuOpen(v => !v)}
-          className="w-9 h-9 rounded-xl bg-white/6 border border-white/10 flex items-center justify-center hover:bg-white/12 transition-colors flex-shrink-0"
+          aria-label="Menü" className="w-11 h-11 rounded-xl bg-white/6 border border-white/10 flex items-center justify-center hover:bg-white/12 transition-colors flex-shrink-0"
         >
           <MoreVertical size={18} className="text-gray-300" />
         </button>
@@ -752,7 +764,7 @@ const TeamChatView: React.FC<{
             }
           }}
           rows={1}
-          placeholder={`${team.team_name} sohbetine yaz...`}
+          placeholder={`${team.team_name} sohbetine yaz…`}
           className="flex-1 resize-none max-h-28 bg-white/6 border border-white/10 rounded-2xl px-4 py-3 text-sm text-white placeholder:text-ink-4 focus:outline-none focus:border-emerald-500/50"
         />
         <button
@@ -776,7 +788,7 @@ type ActiveChat =
   | null;
 
 const MessagesView: React.FC<MessagesViewProps> = ({
-  onBack, initialConversationId, initialTeamChatId,
+  onBack, initialConversationId, initialTeamChatId, onFindFriends,
 }) => {
   const myUid = auth.currentUser?.uid || '';
 
@@ -864,7 +876,7 @@ const MessagesView: React.FC<MessagesViewProps> = ({
         <div className="flex items-center gap-3 pt-5 pb-4">
           <button
             onClick={onBack}
-            className="w-9 h-9 rounded-xl bg-white/6 border border-white/10 flex items-center justify-center hover:bg-white/12 transition-colors flex-shrink-0"
+            aria-label="Geri" className="w-11 h-11 rounded-xl bg-white/6 border border-white/10 flex items-center justify-center hover:bg-white/12 transition-colors flex-shrink-0"
           >
             <ArrowLeft size={18} className="text-gray-300" />
           </button>
@@ -879,9 +891,14 @@ const MessagesView: React.FC<MessagesViewProps> = ({
             {listError}
           </div>
         )}
-        <InboxList items={items} loading={loading} onSelect={item => {
-          setActive(item.kind === 'DM' ? { kind: 'DM', dm: item.dm } : { kind: 'TEAM', team: item.team });
-        }} />
+        <InboxList
+          items={items}
+          loading={loading}
+          onFindFriends={onFindFriends}
+          onSelect={item => {
+            setActive(item.kind === 'DM' ? { kind: 'DM', dm: item.dm } : { kind: 'TEAM', team: item.team });
+          }}
+        />
       </div>
     </div>
   );

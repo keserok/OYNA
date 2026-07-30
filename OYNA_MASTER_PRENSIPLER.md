@@ -366,3 +366,342 @@ OYNA tek merchant; saha ödemeleri **iki haftada bir (otomatik) payout**. Tüm o
 - **Yasal metinlerin hukukçu onaylı finalizasyonu** + **iyzico sözleşmesi/KYC**.
 - Asgari kayıt yaşı (öneri: 15) — son onay.
 - Format etiketi XvX kaleci dahil mi (taraf başına toplam) — uygulama detayı.
+
+---
+
+## 14. ✍️ Dil ve Adlandırma Kuralı (IP-13)
+
+Bu bölüm bir tercih listesi değil, **uygulanabilir kuraldır**: her maddesi
+`tests/unit/turkishText.test.ts` ile kilitlidir. Kural değişecekse önce testi
+değiştir, sonra kodu.
+
+### 14.1 Hitap: SEN
+
+Arayüzün tamamı **SEN** kipindedir. "Yükleyebilirsiniz" değil "yükleyebilirsin",
+"Lütfen tekrar deneyin" değil "Tekrar dene".
+
+**Tek istisna — hukuki metinler SİZ kalır:** `LegalScreen`, `GuardianConsentForm`,
+`PartnerOnboarding` sözleşme bölümleri ve `LegalModal` içindeki KVKK metni.
+Gerekçe: bu metinler avukat onayına gidiyor; dil değişikliği hukuki içeriği
+değiştirme riski taşır.
+
+> Not: "Arkadaşsınız", "Arkadaşlığınız", "birbirinizi" gibi **çoğul** ifadeler
+> SİZ kipi değildir (iki kişiye birden hitap eder) — dokunulmaz.
+
+### 14.2 Ekran adı: bir ekranın TEK adı vardır
+
+Sekme etiketi, ekran başlığı ve metin içindeki atıf **aynı kelimedir**. Kaynak:
+`ui/labels.ts` → `SCREEN`. Alt menüde "Sahalar" yazan sekme, açılınca kendini
+"Saha Vitrini" diye tanıtamaz; kullanıcı sekmede ne gördüyse onu arar.
+
+### 14.3 Büyük harf: `trUpper`, asla `toUpperCase()`
+
+Türkçe metin `utils/trUpper.ts` ile büyütülür. Düz `toUpperCase()` noktalı/
+noktasız `i` ayrımını bozar: `Gizlilik Politikası` → `GIZLILIK POLITIKASI`.
+
+**Teknik alanlarda TAM TERSİ geçerlidir:** IBAN, davet kodu, işlem numarası,
+enum ve kart markası ASCII'dir; orada `tr-TR` locale `i`'yi ASCII olmayan `İ`'ye
+çevirip doğrulamayı bozar. O çağrılar bilerek düz `toUpperCase()`'tir ve testin
+izinli listesindedir.
+
+### 14.4 Yıkıcı ve güvenli buton
+
+- Güvenli buton **daima "Vazgeç"**.
+- Yıkıcı buton **fiili söyler**: "Maçtan Ayrıl", "Rezervasyonu İptal Et",
+  "Hesabı Sil". **"Evet," ön eki kullanılmaz.**
+
+Gerekçe: yan yana duran "Evet, İptal Et" ile "Vazgeç" Türkçede eş anlamlı
+okunuyordu; kullanıcı hangisinin yıkıcı olduğunu ayırt edemiyordu.
+
+### 14.5 Üç nokta ve bekleme metni
+
+Tek karakter: **`…`** (`...` değil). Bekleme metinleri `ui/labels.ts` → `WAIT`
+sözlüğünden gelir: `Yükleniyor…`, `Kaydediliyor…`, `Gönderiliyor…`.
+
+### 14.6 Kod adı sızmaz
+
+Kullanıcıya gösterilen metinde kod içi ekran/tablo adı geçemez. "Tesisiniz onay
+bekliyor — PitchDiscovery'de görünmez" gibi bir cümle kullanıcı için anlamsızdır.
+
+---
+
+## 15. Para Biçimi Kuralı (IP-19)
+
+### 15.1 Kanonik biçim: `2.000₺`
+
+Sembol **sonda**, **boşluksuz**, binlik ayraçlı. Tam sayıda ondalık **yok**;
+kuruş varsa **tam iki hane**: `299,90₺`. Değer yoksa `—`.
+
+Gerekçe: aynı tutar üç ayrı yazımla çıkıyordu ve kullanıcı üçünü **tek akışta**
+görüyordu — Sahalar'da `₺2000`, Ödeme'de `2.000,00₺`, Profil'de `2.000 ₺`.
+Aynı sayının üç yazımı, üç ayrı sayı gibi okunuyor.
+
+### 15.2 Bağlama göre çağrı — sıfırın anlamı değişir
+
+| Bağlam | Çağrı | Sıfır |
+|---|---|---|
+| Fiyat: saha, hizmet, maç ücreti | `formatTRYShort` | `Ücretsiz` |
+| Tutar: bakiye, kapora, kesinti, ciro | `formatTRYAmount` | `0₺` |
+| Cüzdan hareketi (giren/çıkan) | `formatTRYSigned` | `+0₺` / `−0₺` |
+
+Bir saha ücretsiz olabilir; bir cüzdan olamaz. `0₺` bedavayı anlatmaz,
+`Ücretsiz` de boş bir cüzdanı.
+
+**`—` ile `0₺` aynı şey değildir.** Veri çekilemediğinde `0₺` göstermek yalandır;
+kullanıcı parasının silindiğini sanır.
+
+### 15.3 Ekranda elle para dizilmez
+
+`₺` karakteri kaynak kodda yalnız iki yerde meşrudur: sayı **giriş alanının**
+yanındaki tek karakterlik süs, ve avukat onaylı hukuki metin. Bunun dışında her
+tutar `utils/formatTRY.ts`'ten geçer. Para için elle `toLocaleString('tr-TR')`
+çağrılmaz.
+
+İkinci bir görünür biçim üreten dışa aktarım **eklenmez**. `formatTRYWithSymbol`
+(daima iki ondalık) bu yüzden silindi.
+
+### 15.4 Gösterilen sayı, hesaba giren sayıdır
+
+Biçimleyici **yuvarlamaz**. Yuvarlarsa ekran kendi kendisiyle çelişir: 299,60₺
+bakiye "300₺" yazılıp eksik hesabı ham değerden yapıldığında, kullanıcı aynı
+ekranda "bakiyen 300₺" ve "1₺ eksik" görür.
+
+### 15.5 Bir para, bir sayı, bir isim
+
+Cüzdan bakiyesi tek kaynaktan okunur (`spendable_balance`); ekran kendi toplamını
+tutmaz. Adı her yerde **"Cüzdan"**dır — "OYNA Bakiyesi" gibi ikinci bir ad
+kullanılmaz. İadeden gelen tutar ayrı bir para türü değildir, ayrı çip almaz.
+
+### 15.6 Tutar tek başına okunabilmeli
+
+Ödeme butonunda tutar, sayı ve eylemle aynı puntoda tek satıra dizilmez. Büyük
+tutar üstte, ne için ödendiği küçük puntoda altta durur. Dar alanda **kısaltma
+yapılmaz** (`1,5B₺` gibi) — para okunurluğu yer kazancından önce gelir.
+
+Hizalama `font-numeric` sınıfıyla gelir (`index.css`); o sınıf sabit genişlikli
+rakam kuralını zaten taşır, yanına ikinci kez yazılmaz.
+
+---
+
+## 16. Hareket Kuralı (IP-11)
+
+### 16.1 Dekoratif hareket ile bilgi taşıyan hareket ayrıdır
+
+**Dekoratif** (parıltı, gradyan kayması, nabız, dönen çerçeve) sistem "hareketi
+azalt" derse **çizilmez**. Kalıp:
+
+```tsx
+transition={lowMotion ? { duration: 0 } : { duration: N, repeat: Infinity }}
+```
+
+`duration: 0` anahtar kare dizisinin **son** değerine oturur; diziler ya
+`[a, b, a]` olmalı ya da ekran dışına süpüren tek yön — yoksa öğe yanlış yerde
+donar.
+
+**Bilgi taşıyan** hareket bu bayrağa **bakmaz**: bekleme spinner'ı, geri sayım
+nabzı. Durdurulursa kullanıcı uygulamanın kilitlendiğini sanar — hareketi
+azaltmak isteyen kullanıcıyı cezalandırmış olursun.
+
+### 16.2 CSS tek başına yetmez
+
+`@media (prefers-reduced-motion: reduce)` **yalnız CSS animasyonlarını** kapatır.
+Framer Motion inline `style`/WAAPI ile sürer ve o kurala bakmaz. Sistem tercihini
+ona taşıyan iki şey vardır ve **ikisi de gerekir**:
+
+1. `App.tsx` kökündeki `<MotionConfig reducedMotion="user">` — transform ve
+   layout animasyonlarını kapatır.
+2. `hooks/useLowMotion` — `opacity`, `backgroundPosition`, `boxShadow` gibi
+   MotionConfig'in kapsamadığı özellikler için.
+
+### 16.3 Kullanıcı istemeden animasyon kapatılmaz
+
+Düşük hareket kararı **yalnız sistem tercihine** bakar. Cihazın RAM'i veya
+çekirdek sayısı ölçüt değildir: `≤4 GB / ≤4 çekirdek` eşiği Türkiye'deki Android
+tabanının büyük kısmını kapsar ve uygulamanın kimliğini kullanıcıya sormadan
+söker. Cihaz sınıflandırması (`views/studio/perf.ts`) yalnız Stüdyo'nun ağır
+**çizim** efektleri içindir, animasyon için değil.
+
+### 16.4 Geçiş süresi gezinmeye eklenir
+
+`AnimatePresence mode="wait"` çıkan görünümün `exit`i bitmeden yenisini monte
+etmez — süre doğrudan her dokunuşa eklenir. `PAGE_TRANSITION` bu yüzden **0,2 sn**
+tutulur. `popLayout`'a dönmek iki ağır görünümü aynı anda DOM'da bırakır; çözüm
+o değil, süreyi kısaltmaktır.
+
+### 16.5 Bekleme sessiz olmaz
+
+Dönen halka tek başına "bir şey oluyor" demez. Bekleme ekranı **ne beklendiğini
+yazar**; 4 saniyeyi aşarsa sebebini söyler. Bekleme ve hata ekran okuyucuya
+duyurulur: bilgi `role="status" aria-live="polite"`, hata
+`role="alert" aria-live="assertive"`.
+
+### 16.6 Sunucuyu bekleyen ekran boş durmaz
+
+Kullanıcının dokunduğu şey sunucu yanıtını beklemeden sonucu gösterir (iyimser
+yazım); sunucu tek otorite kalır, hata dalında geri alınır. İyimser yazım
+**türetilmiş değil gerçek** veriden yapılır: ekranın kendi doldurduğu varsayılan
+değerler mağazaya yazılırsa uydurma veri kalıcı hale gelir.
+
+---
+
+## 17. Kayıt Kapısı ve Yasal Onay Kuralı (IP-15)
+
+### 17.1 Misafir okur, yazamaz — ve bunu hata olarak öğrenmez
+
+Misafirin denediği **her yazma aksiyonu** kayıt kapısını açar. Sunucuya
+gönderilip hata mesajı olarak geri dönmez: RPC'nin ürettiği "Slot satın
+alınamadı" gibi bir cümle kullanıcıya neyin eksik olduğunu söylemez.
+
+Kapı, aksiyonun **kendi başına** durur:
+
+```ts
+const requireAccount = (): boolean => {
+  if (auth.currentUser) return true;
+  const s = useAppStore.getState();
+  s.setPendingIntent('MATCH_JOIN', match.id);
+  s.setIsSignupGateOpen(true);
+  return false;
+};
+```
+
+Kapı **son anda** açılır — form doldurulabilsin, kullanılamayacak bir ekran
+gösterilmesin.
+
+### 17.2 Başlanan iş kaybolmaz
+
+Kapı, kullanıcının bulunduğu ekranı `pendingIntent` olarak saklar; kayıt +
+onboarding bitince kullanıcı **tam o ekrana** döner. Niyet `localStorage`'a da
+yazılır (OAuth yönlendirmesi sayfayı yeniden yükler) ve **30 dakika** sonra
+düşer — bayat niyet kullanıcıyı beklemediği bir ekrana atar.
+
+Niyet yalnız **oyuncu** açılışında tüketilir: tesis sahibi hesabıyla giren biri
+oyuncu maç lobisine bırakılmaz.
+
+### 17.3 Hiçbir buton sessizce pasif kalmaz
+
+Tek meşru pasiflik nedeni **"işlem sürüyor"**dur. Eksik alan veya onay,
+butonu öldürerek değil, dokunulduğunda **eksik olan tek şeyi söyleyerek**
+bildirilir. Grileşen bir buton kullanıcıya hangi alanın eksik olduğunu
+söylemez; tahmin ettirir.
+
+Hata metni ekran okuyucuya duyurulur: `role="alert" aria-live="assertive"`.
+
+### 17.4 Rıza yalnız hesap açılırken istenir
+
+Salt-okur gezinme yazma eylemi değildir ve sunucuya rıza kaydı gitmez; orada
+KVKK onayı **istenmez**. Onay yalnız hesap açılırken (kayıt / Google / Apple)
+zorunludur.
+
+### 17.5 Onay anındaki metin, resmi belgenin ta kendisidir
+
+Onay kutusundan açılan metin ile Ayarlar → Yasal'daki belge **aynı kaynaktan**
+gelir (`shared/legalDocs.ts`). Kısaltılmış "özet" gösterilmez: kullanıcı neye
+onay verdiğini görebilmelidir.
+
+Belgenin **tek adı** vardır — arayüzde "Kullanıcı Sözleşmesi", yasal ekranda
+"Kullanım Şartları" olamaz.
+
+Sunucuya yazılan **sürüm damgası** belgenin kendi tarihiyle aynı yerden gelir
+(`shared/legalVersion.ts`). Damga metinden eskiyse denetimde "hangi metne onay
+verildi" sorusu cevapsız kalır.
+
+> Yasal metinler ağırdır (≈38 KB). Onay modalı **tembel yüklenir** — belgeyi
+> hiç açmayan kullanıcı indirmez.
+
+### 17.6 Açılış ekranı dokunuşu yutmaz
+
+Oturum çözülmeden dokunuş kabul edilmez; yoksa oturumu açık kullanıcı giriş
+ekranını görür ve ekran altından kayar. Beklerken **ne beklendiği yazılır**
+(~1 sn sonra; hızlı bağlantıda yanıp sönmesin). Ağ takılırsa kullanıcı
+hapsolmaz: **6 saniye** sonra dokunuş yine geçerlidir.
+
+---
+
+## 18. Kurulum Akışı ve Konum Kuralı (IP-16)
+
+### 18.1 Yarım kalan kurulum kaybolmaz
+
+Açılışta `profiles.has_completed_onboarding` **okunur**. Kurulumu yarıda bırakan
+oyuncu akışa geri döner — yoksa konum izni yalnız orada istendiği için
+"yakınındaki maç" vaadi hiç açılmaz.
+
+**Ama "Şimdilik Atla" diyen bir daha zorlanmaz.** Kullanıcının bilinçli kararı
+her açılışta yeniden sorulmaz; kurtarma yolu Profil'deki
+"Profil tamamlanmadı → Tamamla" şeridi olarak durur.
+
+### 18.2 Konum TEK yoldan istenir
+
+`services/locationService` dışında hiçbir yer konum istemez. Tarayıcının ham
+konum API'sini doğrudan çağırmak native izin akışını atlar ve **red / kalıcı
+engel / zaman aşımı / cihazda yok** ayrımını yok eder — dördü farklı metin ve
+farklı çıkış gerektirir.
+
+Verilen izin **kalıcı** olmalıdır: koordinat store'a yazılıp bırakılırsa
+uygulama kapanınca kaybolur. `setActiveRegion` ile bölge kaydedilir. Konum
+kapalıyken **kayıtlı bölge hatırlatılır** — kullanıcı sıfırdan başlamaz.
+
+### 18.3 Çalışmayacak tuş çizilmez
+
+Kalıcı olarak engellenmiş izinde "Tekrar Dene" **gösterilmez**; basınca hiçbir
+şey olmayacaktır. Uygulama içinden ayarları açacak bir yol yoksa **sahte bir
+tuş konmaz** — yapılacak iş metinde adım adım yazılır.
+
+Aynı kural her yerde geçerlidir: bir tuş ya işini yapar ya hiç çizilmez.
+
+### 18.4 Görünen ile geçerli olan aynıdır
+
+Bir seçici ekranda "seçili" görünüyorsa o değer **geçerlidir**. Varsayılanı
+seçili çizip "dokunulmadı" diye saymak, kullanıcıya ölü bir buton ve
+açıklanmayan bir engel bırakır.
+
+### 18.5 Her adım verinin niye istendiğini söyler
+
+Kurulumun her ekranında tek satırlık gerekçe bulunur. Yaşı, adı veya konumu
+neden verdiğini bilmeyen kullanıcı formu terk eder.
+
+Kullanıcının göremediği bir sonuç doğuran seçim (ör. 18 yaş altı → veli onayı)
+**o anda ekranda** söylenir.
+
+### 18.6 Geri dönülemez adım onay ister
+
+Tüm kurulumu bitiren "Atla" gibi bir eylem, tek dokunuşla sessizce
+gerçekleşmez. Kısmi kayıt tutmazsa kullanıcı bunu **öğrenir**; sessizce
+yutulmaz.
+
+Tam ekran perde bir hata gösteriyorsa, çıkış tuşu **perdenin içinde** olmalıdır
+— perdenin altında kalan bir tuş yok sayılır.
+
+---
+
+## 19. Profil ve İstatistik Doğruluğu Kuralı (IP-18)
+
+### 19.1 Listeler kullanıcı kapsamında SUNUCUDA süzülür
+
+"Bana ait" bir liste, platformun tamamı çekilip tarayıcıda süzülerek
+üretilmez. Limit **filtreden sonra** uygulanır; aksi halde platform büyüdükçe
+kullanıcının kendi verisi pencerenin dışına düşer ve liste **sessizce boşalır**.
+
+Katılım, üyelik gibi ilişkiler için JSONB içinde arama yapmadan önce
+**ilişkisel tablo var mı** diye bakılır (`match_participants` gibi).
+
+### 19.2 Aynı gerçeğin tek kaynağı olur
+
+Sunucu bir gerçeği zaten türetip yazıyorsa (`matches.score_status`) arayüz onu
+**okur**, ikinci kez hesaplamaz. İki hesap er geç ayrışır.
+
+### 19.3 Veri yokluğu sıfır değildir
+
+Skoru girilmemiş maç `0 - 0` **değildir**, beraberlik **sayılmaz** ve galibiyet
+oranının paydasına **girmez**. Hiç veri yoksa yüzde `%0` değil **`—`** yazılır:
+sıfır başarı ile ölçüm yokluğu aynı şey değildir.
+
+### 19.4 Ekranda uydurma sayı bulunmaz
+
+Kaynak koda elle yazılmış "18 gol", "9.2 puan" gibi sayılar — arkasında veri
+yolu olmayan her rakam — **gösterilmez**. Boş bırakmak yalan söylemekten
+iyidir.
+
+### 19.5 Kullanıcı tasarımcı terimi görmez
+
+"Silüet yok" gibi ifadeler kullanıcıya ne yapacağını söylemez. Metin, eylemi
+söyler: "Fotoğraf ekle".

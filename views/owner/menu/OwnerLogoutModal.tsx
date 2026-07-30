@@ -18,7 +18,7 @@ export const OwnerLogoutModal: React.FC<Props> = ({ onClose, onConfirm }) => {
       </div>
       <h3 className="text-2xl font-extrabold text-white mb-2">Güvenli Çıkış</h3>
       <p className="text-gray-400 text-sm mb-8 leading-relaxed">
-        Oturumunuzu sonlandırmak istediğinize emin misiniz?
+        Oturumunu sonlandırmak istediğine emin misin?
       </p>
       <div className="grid grid-cols-2 gap-4">
         <button

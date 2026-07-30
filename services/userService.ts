@@ -1,15 +1,10 @@
 import { supabase } from '../supabaseClient';
 import { User } from '@supabase/supabase-js';
-import { PlayerCardData } from '../types';
-
-// GERÇEK puan verisi profiles.skill_rating (0-5, zaten hesaplı) ve
-// profiles.match_count'tan gelir. Eski kod olmayan `profiles.stats` kolonunu
-// okuyup HER kullanıcıya default {matchesPlayed:0, rating:5.0} veriyordu →
-// tüm kartlar sahte OVR 100 çıkıyordu (KN-4). Not: DB'de `rating` 0-10
-// skalasındadır; `skill_rating` onun 0-5 karşılığıdır — kart ölçeği bunu bekler.
-const mapPlayerStats = (row: any): { matchesPlayed: number; rating: number } => ({
+// Oyuncu istatistiği artık yalnız maç sayısı taşır. Akran-puanı türevleri
+// (skill_rating → kart OVR zinciri) 20260831000000 sökümüyle öldü; kamusal
+// seviye göstergesi profiles.self_skill'dir (OynaUser.selfSkill).
+const mapPlayerStats = (row: any): { matchesPlayed: number } => ({
   matchesPlayed: Number(row?.match_count ?? 0),
-  rating: typeof row?.skill_rating === 'number' ? row.skill_rating : 0,
 });
 
 export interface OynaUser {
@@ -24,13 +19,7 @@ export interface OynaUser {
   walletBalance: number;
   stats: {
     matchesPlayed: number;
-    rating: number;
   };
-  playerCard?: PlayerCardData | null;
-  /** Premium kart admin tarafından aktifleştirildi mi? (false → sade profil) */
-  cardActive?: boolean;
-  /** Admin'in atadığı tier (yalnız kart aktifken). */
-  cardTier?: 'bronze' | 'silver' | 'gold' | null;
   /** Sahadaki mevki (ör. Kaleci, Stoper, Orta Saha) — sade profilde gösterilir. */
   position?: string | null;
   /** Kısa tanıtım — sade profilde gösterilir. */
@@ -43,6 +32,9 @@ export interface OynaUser {
   ageRange?: string | null;
   gender?: string | null;
   playStyle?: string | null;
+  /** Beyan edilen seviye (1–10). Kamusal seviye bandının tek kaynağı;
+   *  dönüşüm utils/skillBand.ts'te. NULL = beyan yok → çip çizilmez. */
+  selfSkill?: number | null;
   firstName?: string | null;
   lastName?: string | null;
   /** Reşit olmayan kullanıcı mı? (sunucuda birthdate/age_range'ten hesaplanır) */
@@ -62,7 +54,12 @@ export interface MatchHistorySummary {
   date: string;
   pitchName: string;
   score: string;
-  result: 'WIN' | 'LOSS' | 'DRAW';
+  /**
+   * IP-18: `NO_SCORE` eklendi. Skoru hiç girilmemiş maç (auto_finalize_matches
+   * cron'u 3 saat sonra maçı skorsuz kapatıyor) eskiden `?? 0` yedeği yüzünden
+   * "0 - 0 / BERABERLİK" sayılıyor ve galibiyet oranını aşağı çekiyordu.
+   */
+  result: 'WIN' | 'LOSS' | 'DRAW' | 'NO_SCORE';
 }
 
 // ─── GK/Ref rolleri onay gerektiren roller ─────────────────────────────────
@@ -101,7 +98,6 @@ export const syncUserToSupabase = async (supabaseUser: User | null): Promise<Oyn
         wallet_balance: 0,
         stats: {
           matchesPlayed: 0,
-          rating: 5.0,
         },
         last_active_at: new Date().toISOString(),
         created_at: new Date().toISOString(),
@@ -156,6 +152,7 @@ export const syncUserToSupabase = async (supabaseUser: User | null): Promise<Oyn
         ageRange: userSnap.age_range ?? null,
         gender: userSnap.gender ?? null,
         playStyle: userSnap.play_style ?? null,
+        selfSkill: userSnap.self_skill ?? null,
         firstName: userSnap.first_name ?? null,
         lastName: userSnap.last_name ?? null,
         isMinor: userSnap.is_minor ?? false,
@@ -257,9 +254,6 @@ export const getFullUserProfile = async (userId: string): Promise<OynaUser | nul
     is_admin: data.is_admin ?? false,
     walletBalance: data.wallet_balance ?? 0,
     stats: mapPlayerStats(data),
-    playerCard: (data.player_card as PlayerCardData) || null,
-    cardActive: data.card_active ?? false,
-    cardTier: (data.card_tier as 'bronze' | 'silver' | 'gold' | null) ?? null,
     position: data.position ?? null,
     bio: data.bio ?? null,
     birthdate: data.birthdate ?? null,
@@ -270,6 +264,7 @@ export const getFullUserProfile = async (userId: string): Promise<OynaUser | nul
     ageRange: data.age_range ?? null,
     gender: data.gender ?? null,
     playStyle: data.play_style ?? null,
+    selfSkill: data.self_skill ?? null,
     firstName: data.first_name ?? null,
     lastName: data.last_name ?? null,
     isMinor: data.is_minor ?? false,
@@ -286,6 +281,15 @@ export const updateProfileBasics = async (
   fields: { position?: string; bio?: string; avatar_url?: string; birthdate?: string | null; gender?: string | null; play_style?: string | null },
 ): Promise<void> => {
   const { error } = await supabase.from('profiles').update(fields).eq('id', userId);
+  if (error) throw error;
+};
+
+// Seviye beyanı DOĞRUDAN kolon yazımıyla GİTMEZ: authenticated'ın profiles
+// UPDATE yetkisi kolon-bazlıdır ve self_skill listede yok — payload'a girerse
+// tüm PATCH 42501 ile düşer. Tek yazma yolu set_my_self_skill RPC'sidir;
+// aralık (1-10) ve NULL reddi (beyan silinemez) kapısı da orada.
+export const setMySelfSkill = async (value: number): Promise<void> => {
+  const { error } = await supabase.rpc('set_my_self_skill', { p_value: value });
   if (error) throw error;
 };
 
@@ -340,40 +344,43 @@ export const getWalletHistory = async (userId: string): Promise<WalletHistoryIte
 /**
  * Kullanıcının tamamlanmış maçlardaki geçmişini (home/away katılımına göre) döndürür.
  */
-export const getMatchHistory = async (userId: string): Promise<MatchHistorySummary[]> => {
+/**
+ * Profil maç geçmişi.
+ *
+ * IP-18: eskiden platformun TÜM tamamlanmış maçlarından ilk 50'si çekilip
+ * katılımcı süzgeci tarayıcıda uygulanıyordu — `userId` hiçbir sorgu filtresine
+ * girmiyordu. Platformda 50'den fazla tamamlanmış maç biriktiği gün kullanıcının
+ * kendi maçları o pencerenin dışına düşüyor ve geçmiş sessizce boşalıyordu.
+ * Artık süzgeç sunucuda: `get_my_match_history` katılımı `match_participants`
+ * ilişkisel tablosundan okur ve limiti filtreden SONRA uygular.
+ */
+export const getMatchHistory = async (_userId: string): Promise<MatchHistorySummary[]> => {
   try {
-    const { data, error } = await supabase
-      .from('matches')
-      .select('*')
-      .eq('status', 'COMPLETED')
-      .order('date', { ascending: false })
-      .limit(50);
-
+    // Kimlik sunucuda auth.uid()'den okunur; parametre imza uyumu için durur.
+    const { data, error } = await supabase.rpc('get_my_match_history', { p_limit: 50 });
     if (error) throw error;
 
-    return (data || [])
-      .map((row: any) => {
-        const slots = row.slots || [];
-        const awaySlots = row.away_slots || row.awaySlots || [];
-        const isAway = awaySlots.some((s: any) => s?.player?.id === userId);
-        const isHome = slots.some((s: any) => s?.player?.id === userId);
-        return { row, slots, awaySlots, isAway, isParticipant: isHome || isAway };
-      })
-      .filter(x => x.isParticipant)
-      .map(({ row, isAway }) => {
-        const homeScore = row.homeScore ?? row.home_score ?? 0;
-        const awayScore = row.awayScore ?? row.away_score ?? 0;
-        const result: 'WIN' | 'LOSS' | 'DRAW' = homeScore === awayScore
+    return (data ?? []).map((row: any): MatchHistorySummary => {
+      // Skor durumu SUNUCUNUN türettiği kolondan gelir (matches.score_status).
+      // Burada ikinci kez hesaplanmaz — iki ayrı doğruluk kaynağı olmaz.
+      const girildi = row.score_status === 'ENTERED';
+      const ev = row.homeScore as number | null;
+      const dep = row.awayScore as number | null;
+      const isAway = !!row.is_away;
+      const result: MatchHistorySummary['result'] = !girildi || ev === null || dep === null
+        ? 'NO_SCORE'
+        : ev === dep
           ? 'DRAW'
-          : (isAway ? awayScore > homeScore : homeScore > awayScore) ? 'WIN' : 'LOSS';
-        return {
-          id: row.id as string,
-          date: row.date as string,
-          pitchName: (row.pitchName || row.pitch_name || row.location || 'Saha') as string,
-          score: `${homeScore} - ${awayScore}`,
-          result,
-        };
-      });
+          : (isAway ? dep > ev : ev > dep) ? 'WIN' : 'LOSS';
+      return {
+        id: row.id as string,
+        date: row.date as string,
+        // `matches` tablosunda pitchName/pitch_name kolonu YOK — saha adı location'dan gelir.
+        pitchName: (row.location || row.title || 'Saha') as string,
+        score: result === 'NO_SCORE' ? 'Skor yok' : `${ev} - ${dep}`,
+        result,
+      };
+    });
   } catch (err) {
     console.error('[UserService] Maç geçmişi çekme hatası:', err);
     throw err;

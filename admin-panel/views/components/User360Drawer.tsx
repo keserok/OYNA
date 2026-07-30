@@ -9,7 +9,7 @@ import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   X, Ban, ShieldCheck, PlayCircle, Edit3, Eye, Wallet, ScrollText,
-  BadgeCheck, Loader2, Mail, Phone, Star,
+  BadgeCheck, Loader2, Mail, Phone,
 } from 'lucide-react';
 import { supabase } from '../../../supabaseClient';
 import { toTurkishAdminError } from '../../services/adminService';
@@ -118,7 +118,7 @@ export const User360Drawer: React.FC<Props> = ({ user, onClose, onBanToggle, onV
 
   if (!user) return null;
 
-  const reliability = user.reliabilityScore ?? Math.round((user.rating ?? 5) * 20);
+  const reliability = user.reliabilityScore ?? 100;
 
   // Portal → document.body: dönüşümlü (transform) bir üst öğe içinde kalırsa
   // `position:fixed` viewport yerine o öğeye göre konumlanıp üst kısmı ekranın
@@ -149,7 +149,6 @@ export const User360Drawer: React.FC<Props> = ({ user, onClose, onBanToggle, onV
                   <span className="text-[9px] font-extrabold text-blue-400 bg-blue-500/10 border border-blue-500/20 px-1.5 py-0.5 rounded">{user.role || 'PLAYER'}</span>
                   {user.isBanned ? <StatusBadge tone="danger">BANLI</StatusBadge> : <StatusBadge tone="success">AKTİF</StatusBadge>}
                   {user.isVerified && <StatusBadge tone="info">DOĞRULANMIŞ</StatusBadge>}
-                  {user.cardActive && <StatusBadge tone="info">{(user.cardTier || 'bronze').toUpperCase()} KART</StatusBadge>}
                 </div>
               </div>
             </div>
@@ -216,12 +215,6 @@ export const User360Drawer: React.FC<Props> = ({ user, onClose, onBanToggle, onV
               <div className="bg-black/30 border border-white/[0.06] rounded-xl p-3 text-center">
                 <p className="text-[9px] text-gray-500 uppercase font-bold">Güvenilirlik</p>
                 <p className={`text-lg font-extrabold font-mono ${reliability >= 80 ? 'text-green-400' : reliability >= 60 ? 'text-amber-400' : 'text-red-400'}`}>{reliability}</p>
-              </div>
-              <div className="bg-black/30 border border-white/[0.06] rounded-xl p-3 text-center">
-                <p className="text-[9px] text-gray-500 uppercase font-bold">Puan</p>
-                <p className="text-lg font-extrabold font-mono text-white flex items-center justify-center gap-1">
-                  {(user.rating ?? 5).toFixed(1)} <Star size={12} className="text-[#FFFF00] fill-current" />
-                </p>
               </div>
               <div className="bg-black/30 border border-white/[0.06] rounded-xl p-3 text-center">
                 <p className="text-[9px] text-gray-500 uppercase font-bold">Maç</p>

@@ -1,5 +1,6 @@
 import { supabase } from '../supabaseClient';
 import { enqueueOrRun } from './offline/outbox';
+import { formatTRYAmount } from '../utils/formatTRY';
 
 // ─── FI-1 — Finans veri katmanı ──────────────────────────────────────────────
 // get_pitch_finance_summary RPC'sinin (owner-veya-admin yetkili) tek çağrılık
@@ -91,7 +92,7 @@ export async function debtorAddPayment(
     return await enqueueOrRun(
       'DEBTOR_PAYMENT',
       { debtorId, amount, method, note: note ?? null },
-      `Veresiye ödemesi · ${amount}₺`,
+      `Veresiye ödemesi · ${formatTRYAmount(amount)}`,
     );
   } catch (error) {
     throw new Error(mapDebtorError((error as Error).message));

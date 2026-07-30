@@ -1,16 +1,26 @@
 import { supabase } from '../supabaseClient';
+import { LEGAL_UPDATED_ISO } from '../shared/legalVersion';
 
 // ─── KVKK / Sözleşme rıza kaydı servis katmanı ────────────────────
 // Kullanıcının kabul ettiği belgeleri sunucuda denetlenebilir şekilde
 // kaydeder (kim, hangi belge, hangi sürüm, ne zaman, IP/UA sunucuda).
 
-/** Kabul edilen belgelerin sürüm damgası — metin değişince artırılır. */
+/**
+ * Kabul edilen belgelerin sürüm damgası.
+ *
+ * IP-15: bu tarihler elle yazılıyordu ve belgenin kendi "Son güncelleme"
+ * tarihinden ESKİ kalmıştı — sunucuda "kullanıcı hangi metne onay verdi"
+ * sorusu cevapsızdı. Artık damga belgeyle TEK kaynaktan gelir.
+ *
+ * Mevcut kullanıcılardan yeniden onay İSTENMİYOR (kullanıcı kararı 9a):
+ * `record_user_consent` her çağrıda yeni satır yazar, eski kayıtlar silinmez.
+ */
 export const CONSENT_VERSIONS = {
-  TERMS: '2026-07-13',
-  KVKK: '2026-07-12',
-  RIZA: '2026-07-12',
-  PRIVACY: '2026-07-12',
-  VELI: '2026-07-14',
+  TERMS: LEGAL_UPDATED_ISO,
+  KVKK: LEGAL_UPDATED_ISO,
+  RIZA: LEGAL_UPDATED_ISO,
+  PRIVACY: LEGAL_UPDATED_ISO,
+  VELI: LEGAL_UPDATED_ISO,
 } as const;
 
 export type ConsentDocumentKey = keyof typeof CONSENT_VERSIONS;

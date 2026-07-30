@@ -17,7 +17,6 @@ export interface FriendRow {
   avatar_url: string | null;
   oyna_id: string | null;
   pos: string | null;
-  fp: number | null;
   win_count: number;
   total_matches: number;
   matches_together: number;

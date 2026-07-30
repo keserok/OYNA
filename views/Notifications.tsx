@@ -141,6 +141,14 @@ const Notifications: React.FC<NotificationsProps> = ({ onBack, role }) => {
 
   const { navigateTo, setSelectedMatch, clearUnreadNotifications, incrementUnreadNotifications } = useAppStore();
 
+  // IP-16 (kullanıcı kararı) — konum izni kapalıysa bildirim listesinin en
+  // üstünde KALICI bir hatırlatma durur. Sunucudan bildirim GÖNDERİLMEZ:
+  // tekrar tekrar gerçek bildirim yazmak spam olur ve geri alınamaz. Bu
+  // hatırlatma yerel bir durumdur, izin verilir verilmez kendiliğinden kaybolur.
+  const konumIzni = useAppStore(st => st.locationPermissionStatus);
+  const aktifBolge = useAppStore(st => st.activeRegion);
+  const konumKapali = konumIzni === 'DENIED';
+
   // ─── Gerçek DB bildirimleri ───────────────────────────────────────────────
   const [notifs, setNotifs] = useState<AppNotification[]>([]);
   const [loading, setLoading] = useState(true);
@@ -375,6 +383,22 @@ const Notifications: React.FC<NotificationsProps> = ({ onBack, role }) => {
 
         {/* Notification list */}
         <div className="flex-1 px-4 py-4 pb-28 overflow-y-auto">
+          {konumKapali && (
+            <div
+              role="status"
+              className="mb-3 rounded-2xl border border-warning-line bg-warning-bg px-4 py-3.5 flex items-start gap-3"
+            >
+              <MapPin size={16} className="text-warning shrink-0 mt-0.5" />
+              <div className="min-w-0">
+                <p className="text-[0.8125rem] font-extrabold text-warning">Konum izni kapalı</p>
+                <p className="text-[0.6875rem] text-gray-300 leading-relaxed mt-1">
+                  Yakınındaki maçları ve sahaları görebilmek için telefon
+                  Ayarlar → Uygulamalar → OYNA → Konum yolundan izin vermen gerekiyor.
+                  {aktifBolge?.label ? ` Şimdilik kayıtlı bölgen kullanılıyor: ${aktifBolge.label}.` : ''}
+                </p>
+              </div>
+            </div>
+          )}
           {loading ? (
             <div className="flex flex-col items-center justify-center py-28 text-center">
               <Spinner size={32} color={accentColor} className="mb-4" />

@@ -7,6 +7,7 @@ import { UserRole } from '../types';
 import { Spinner } from '../components/ui/Spinner';
 import { ORDU_DISTRICT_NAMES, LAUNCH_CITY } from '../utils/orduData';
 import { fetchActiveCoverage } from '../services/regionCoverageService';
+import { formatTRYAmount } from '../utils/formatTRY';
 
 interface PartnerOnboardingProps {
   onComplete: () => void;
@@ -16,9 +17,9 @@ interface PartnerOnboardingProps {
 type Step = 'LANDING' | 'SETUP_1' | 'SETUP_2' | 'SETUP_3' | 'LOADING' | 'DASHBOARD';
 
 const LOADING_STEPS = [
-  'Tesis profili oluşturuluyor...',
-  'Varsayılan tarife yapılandırılıyor...',
-  'Bölgesel pazar analizi yapılıyor...',
+  'Tesis profili oluşturuluyor…',
+  'Varsayılan tarife yapılandırılıyor…',
+  'Bölgesel pazar analizi yapılıyor…',
 ];
 
 const PartnerOnboarding: React.FC<PartnerOnboardingProps> = ({ onComplete, onClose }) => {
@@ -63,7 +64,6 @@ const PartnerOnboarding: React.FC<PartnerOnboardingProps> = ({ onComplete, onClo
   }, []);
 
   const handleNext = () => {
-      if (navigator.vibrate) navigator.vibrate(50);
       if (step === 'SETUP_1') {
           if (!facilityName.trim()) { setOnboardError('Lütfen tesis adını girin.'); return; }
           if (!city.trim() || !district.trim()) { setOnboardError('Lütfen il ve ilçe seçin.'); return; }
@@ -380,7 +380,7 @@ const PartnerOnboarding: React.FC<PartnerOnboardingProps> = ({ onComplete, onClo
                                     type="text" 
                                     value={iban}
                                     onChange={(e) => setIban(e.target.value)}
-                                    placeholder="TR00 0000..." 
+                                    placeholder="TR00 0000…" 
                                     className="w-full bg-transparent border-b-2 border-white/20 py-3 text-xl font-mono font-bold text-white focus:border-[#FACC15] outline-none placeholder:text-ink-4 transition-colors"
                                   />
                               </div>
@@ -433,7 +433,7 @@ const PartnerOnboarding: React.FC<PartnerOnboardingProps> = ({ onComplete, onClo
               {!onboardError ? (
                   <div className="relative z-10 text-center w-full max-w-sm">
                       <Spinner size={96} thickness={5} color="#FACC15" className="mx-auto mb-8" style={{ filter: 'drop-shadow(0 0 24px rgba(250,204,21,0.35))' }} />
-                      <h2 className="text-2xl font-extrabold text-white mb-6">SAHANIZ DÜNYAYA AÇILIYOR...</h2>
+                      <h2 className="text-2xl font-extrabold text-white mb-6">SAHANIZ DÜNYAYA AÇILIYOR…</h2>
                       <div className="space-y-3 text-left">
                           {LOADING_STEPS.map((label, idx) => {
                               const done = idx < loadingStep;
@@ -543,7 +543,7 @@ const PartnerOnboarding: React.FC<PartnerOnboardingProps> = ({ onComplete, onClo
                   <div className="bg-[#161B22] p-4 rounded-2xl border border-[#39FF14]/20">
                       <TrendingUp className="text-[#39FF14] mb-2" size={20} />
                       <p className="text-[0.6875rem] text-ink-4 uppercase font-bold">Tahmini Aylık Ek Gelir</p>
-                      <p className="text-xl font-extrabold text-[#39FF14]">₺{estimatedRevenue.toLocaleString('tr-TR')}</p>
+                      <p className="text-xl font-extrabold text-[#39FF14]">{formatTRYAmount(estimatedRevenue)}</p>
                   </div>
                   <div className="bg-[#161B22] p-4 rounded-2xl border border-white/5">
                       <MapPin className="text-[#FACC15] mb-2" size={20} />

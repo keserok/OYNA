@@ -124,7 +124,7 @@ const GuardianConsentForm: React.FC<GuardianConsentFormProps> = ({ onBack }) => 
     <div className="fixed inset-0 bg-white text-slate-900 overflow-y-auto" style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
       {/* Resmi başlık şeridi */}
       <header className="sticky top-0 z-10 bg-white/95 backdrop-blur border-b border-slate-200 px-5 py-4 flex items-center gap-3">
-        <button onClick={onBack} className="w-10 h-10 rounded-full flex items-center justify-center text-slate-600 hover:bg-slate-100 active:scale-95 transition">
+        <button onClick={onBack} aria-label="Geri" className="w-11 h-11 rounded-full flex items-center justify-center text-slate-600 hover:bg-slate-100 active:scale-95 transition">
           <ArrowLeft size={20} />
         </button>
         <div className="flex-1">

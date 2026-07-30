@@ -1,19 +1,49 @@
 import React, { useEffect, useRef } from 'react';
 
-type Phase = 'idle' | 'scanning' | 'found';
+// IP-16: eskiden yalnız üç hal vardı ve reddedilen izin ekranı HİÇ
+// değiştirmiyordu — tek geri bildirim 4 saniyelik bir bildirimdi, o da
+// "Ayarlar'dan açabilirsin" diyordu ama Ayarlar'a giden tuş yoktu.
+// Artık her başarısızlık kendi kalıcı metnini ve kendi çıkışını taşır.
+export type LocState =
+  | 'idle'        // henüz denenmedi
+  | 'scanning'    // izin isteniyor / konum alınıyor
+  | 'found'       // alındı
+  | 'denied'      // kullanıcı bu sefer reddetti — tekrar denenebilir
+  | 'blocked'     // kalıcı olarak engelli — tekrar denemek işe yaramaz
+  | 'timeout'     // cihaz konumu zamanında veremedi
+  | 'unavailable';// cihazda konum yok/kapalı
 
 interface StepLocationProps {
-  phase: Phase;
+  state: LocState;
   onScan: () => void;      // "Konumu Aç" — CTA'dan da tetiklenebilir
   onSkip: () => void;
+  /** Daha önce kaydedilmiş bölge — konum kapalıyken bunu hatırlatırız. */
+  hatirlananBolge?: string | null;
 }
+
+/** Duruma göre kalıcı açıklama + birincil çıkış. */
+const DURUM_METNI: Record<LocState, { baslik: string; alt: string }> = {
+  idle:        { baslik: 'Yakınındaki sahaları ve maçları göster', alt: '' },
+  scanning:    { baslik: 'Çevren taranıyor…', alt: '' },
+  found:       { baslik: 'Konumun onaylandı', alt: '' },
+  denied:      { baslik: 'Konum izni verilmedi',
+                 alt: 'İzin vermeden de devam edebilirsin; bölgeni sonra elle seçersin.' },
+  blocked:     { baslik: 'Konum izni kapalı',
+                 alt: 'Telefon Ayarlar → Uygulamalar → OYNA → Konum yolundan izni açabilirsin. Buradan tekrar denemek işe yaramaz.' },
+  timeout:     { baslik: 'Konum alınamadı',
+                 alt: 'Telefonun konumu zamanında veremedi. Açık alanda tekrar deneyebilirsin.' },
+  unavailable: { baslik: 'Bu cihazda konum yok',
+                 alt: 'Bölgeni elle seçerek devam edebilirsin.' },
+};
 
 /**
  * Adım 0 · Konum (3D radar).
  * idle → scanning (1.6s) → found (onay rozeti) → orkestratör 1.0s sonra
  * otomatik adım 1'e geçer (autoAdvance). "Şimdilik atla" doğrudan geçer.
  */
-const StepLocation: React.FC<StepLocationProps> = ({ phase, onSkip }) => {
+const StepLocation: React.FC<StepLocationProps> = ({ state, onSkip, onScan, hatirlananBolge }) => {
+  const phase = state;
+  const hata = state === 'denied' || state === 'blocked' || state === 'timeout' || state === 'unavailable';
   const sweepDur = phase === 'scanning' ? '1.1s' : '3.4s';
   const foundRef = useRef<HTMLDivElement | null>(null);
 
@@ -79,17 +109,43 @@ const StepLocation: React.FC<StepLocationProps> = ({ phase, onSkip }) => {
         )}
       </div>
 
-      <div style={{ textAlign: 'center', minHeight: 22 }}>
-        <p style={{ margin: 0, fontSize: 13, color: 'rgba(255,255,255,0.62)' }}>
-          {phase === 'scanning' ? 'Çevren taranıyor…' : phase === 'found' ? 'Konumun onaylandı' : 'Yakınındaki sahaları ve maçları göster'}
+      <div style={{ textAlign: 'center', minHeight: 22, padding: '0 24px' }} role={hata ? 'alert' : undefined}>
+        <p style={{ margin: 0, fontSize: 13, fontWeight: hata ? 700 : 400, color: hata ? '#FCA5A5' : 'rgba(255,255,255,0.62)' }}>
+          {DURUM_METNI[state].baslik}
         </p>
+        {DURUM_METNI[state].alt && (
+          <p style={{ margin: '6px 0 0', fontSize: 12, lineHeight: 1.55, color: 'rgba(255,255,255,0.55)' }}>
+            {DURUM_METNI[state].alt}
+          </p>
+        )}
+        {hata && hatirlananBolge && (
+          <p style={{ margin: '8px 0 0', fontSize: 12, fontWeight: 700, color: '#39FF14' }}>
+            Kayıtlı bölgen kullanılacak: {hatirlananBolge}
+          </p>
+        )}
       </div>
 
-      {phase === 'idle' && (
+      {/* Kalıcı engelde "Tekrar Dene" ÇALIŞMAZ, o yüzden çizilmez. Ayarları
+          uygulama içinden açacak bir yol da yok (native eklenti kurulu değil);
+          ölü tuş koymak yerine yapılacak iş metinde adım adım yazıyor. */}
+
+      {(state === 'denied' || state === 'timeout') && (
+        <button
+          onClick={onScan}
+          style={{
+            minHeight: 46, padding: '0 22px', borderRadius: 14, background: 'rgba(255,255,255,0.06)',
+            border: '1px solid rgba(255,255,255,0.16)', color: '#fff', fontSize: 13, fontWeight: 800, cursor: 'pointer',
+          }}
+        >
+          Tekrar Dene
+        </button>
+      )}
+
+      {(phase === 'idle' || hata) && (
         <button
           onClick={onSkip}
           className="text-[0.8125rem]"
-          style={{ color: 'rgba(255,255,255,0.45)', textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer' }}
+          style={{ minHeight: 46, color: 'rgba(255,255,255,0.45)', textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer' }}
         >
           Konumsuz devam et
         </button>

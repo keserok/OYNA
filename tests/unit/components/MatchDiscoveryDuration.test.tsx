@@ -29,7 +29,6 @@ const mac = (over: Record<string, unknown> = {}) => ({
   date: '30 Temmuz',
   price: 150,
   difficulty: 'Rahat',
-  minRating: 0,
   image: '',
   badges: [],
   missingPositions: [],
@@ -46,7 +45,7 @@ const mac = (over: Record<string, unknown> = {}) => ({
 const ciz = (matches: Record<string, unknown>[]) => {
   useAppStore.setState({
     adminMatches: matches,
-    adminUsers: [{ id: 'u1', rating: 5 }],
+    adminUsers: [{ id: 'u1' }],
     userLocation: null,
     selectedRegions: [],
     searchRadius: 25,
@@ -103,12 +102,13 @@ describe('Top Oyna süre filtresi — serbest metne değil gerçek veriye bakar'
 
   it('90 secilince 60 dakikalik mac "filtreye uygun" bolumune GIRMEZ', () => {
     ciz([
-      mac({ id: 'm1', location: 'Altmislik', durationMinutes: 60 }),
-      mac({ id: 'm2', location: 'Doksanlik', durationMinutes: 90 }),
+      mac({ id: 'm1', location: 'Altmışlık', durationMinutes: 60 }),
+      mac({ id: 'm2', location: 'Doksanlık', durationMinutes: 90 }),
     ]);
     filtreyiAc('90 Dakika');
     const uygunBaslik = screen.getByText('Filtreye Uygun Maçlar');
     const uygunBolum = uygunBaslik.parentElement as HTMLElement;
+    // IP-13: büyütme tr-TR locale'iyle yapılır — 'ı' → 'I' (noktasız).
     expect(uygunBolum.textContent).toContain('DOKSANLIK');
     expect(uygunBolum.textContent).not.toContain('ALTMISLIK');
   });

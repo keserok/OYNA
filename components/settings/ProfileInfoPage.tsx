@@ -342,7 +342,7 @@ const ProfileInfoPage: React.FC<ProfileInfoPageProps> = ({ open, onClose }) => {
                 disabled={savingPass || !newPassword || !confirmPassword}
                 className="w-full h-11 rounded-xl font-extrabold text-sm bg-[#3b82f6] text-white disabled:opacity-40"
               >
-                {savingPass ? 'Kaydediliyor...' : (hasPassword ? 'Şifreyi Güncelle' : 'Şifre Oluştur')}
+                {savingPass ? 'Kaydediliyor…' : (hasPassword ? 'Şifreyi Güncelle' : 'Şifre Oluştur')}
               </button>
               <MsgLine msg={passMsg} />
             </div>

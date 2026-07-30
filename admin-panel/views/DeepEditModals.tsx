@@ -177,58 +177,6 @@ export const DeepEditUserModal: React.FC<ModalProps & { user: AdminUser }> = ({ 
         }
     };
 
-    // Sliders for dynamic FifaCard
-    const stats = {
-        pace: edit.playerCard?.stats?.pace || { value: 75, videoUrl: null },
-        shooting: edit.playerCard?.stats?.shooting || { value: 70, videoUrl: null },
-        passing: edit.playerCard?.stats?.passing || { value: 75, videoUrl: null },
-        dribbling: edit.playerCard?.stats?.dribbling || { value: 75, videoUrl: null },
-        defense: edit.playerCard?.stats?.defense || { value: 65, videoUrl: null },
-        physical: edit.playerCard?.stats?.physical || { value: 70, videoUrl: null }
-    };
-
-    const handleStatChange = (key: string, value: number) => {
-        const currentCard = edit.playerCard || {
-            overall: 75,
-            tier: 'gold',
-            isStatsVerified: true,
-            diamondValue: 0,
-            winCount: edit.matchCount || 0,
-            totalMatches: edit.matchCount || 0,
-            stats: {
-                pace: { value: 75, videoUrl: null },
-                shooting: { value: 70, videoUrl: null },
-                passing: { value: 75, videoUrl: null },
-                dribbling: { value: 75, videoUrl: null },
-                defense: { value: 65, videoUrl: null },
-                physical: { value: 70, videoUrl: null }
-            }
-        };
-        
-        const updatedStats = {
-            ...currentCard.stats,
-            [key]: { value, videoUrl: null }
-        };
-        
-        const overall = Math.round(
-            (updatedStats.pace.value +
-             updatedStats.shooting.value +
-             updatedStats.passing.value +
-             updatedStats.dribbling.value +
-             updatedStats.defense.value +
-             updatedStats.physical.value) / 6
-        );
-
-        setEdit(prev => ({
-            ...prev,
-            rating: Number((overall / 20).toFixed(1)),
-            playerCard: {
-                ...currentCard,
-                overall,
-                stats: updatedStats
-            }
-        }));
-    };
 
     return (
         <AnimatePresence>
@@ -275,59 +223,6 @@ export const DeepEditUserModal: React.FC<ModalProps & { user: AdminUser }> = ({ 
                             <FI label="Maç Sayısı"><I type="number" value={edit.matchCount} onChange={e => setEdit({ ...edit, matchCount: +e.target.value })} /></FI>
                         </div>
 
-                        {/* Sliders for FifaCard stats */}
-                        <div className="p-4 bg-black/30 rounded-2xl border border-purple-500/20 space-y-3">
-                            <p className="text-[10px] font-extrabold text-purple-400 uppercase tracking-widest flex items-center gap-1.5"><Zap size={11} /> TEKNİK KART YETENEK SÜRGÜLERİ (0-100)</p>
-                            
-                            {[
-                                { key: 'pace', label: 'Hız (PAC)', color: 'text-yellow-400' },
-                                { key: 'shooting', label: 'Şut (SHO)', color: 'text-red-400' },
-                                { key: 'passing', label: 'Pas (PAS)', color: 'text-blue-400' },
-                                { key: 'dribbling', label: 'Dripling (DRI)', color: 'text-purple-400' },
-                                { key: 'defense', label: 'Defans (DEF)', color: 'text-green-400' },
-                                { key: 'physical', label: 'Fizik (PHY)', color: 'text-orange-400' }
-                            ].map(item => (
-                                <div key={item.key} className="flex items-center gap-3">
-                                    <span className="text-[10px] font-bold text-gray-400 w-24 uppercase">{item.label}</span>
-                                    <input 
-                                        type="range" 
-                                        min="10" 
-                                        max="99" 
-                                        value={stats[item.key as keyof typeof stats].value}
-                                        onChange={e => handleStatChange(item.key, parseInt(e.target.value))}
-                                        className="flex-1 accent-red-500 cursor-pointer"
-                                    />
-                                    <span className={`text-xs font-extrabold w-8 text-right ${item.color}`}>
-                                        {stats[item.key as keyof typeof stats].value}
-                                    </span>
-                                </div>
-                            ))}
-
-                            {/* Kart seviyesi (tier) seçici */}
-                            <div className="pt-3 mt-1 border-t border-white/5">
-                                <p className="text-[9px] font-extrabold text-gray-400 uppercase tracking-widest mb-2">KART SEVİYESİ</p>
-                                <div className="grid grid-cols-3 gap-2">
-                                    {([
-                                        { key: 'gold', label: 'ALTIN', cls: 'from-yellow-500/20 to-amber-600/20 text-yellow-300 border-yellow-500/40' },
-                                        { key: 'silver', label: 'GÜMÜŞ', cls: 'from-gray-300/15 to-gray-400/15 text-gray-200 border-gray-300/40' },
-                                        { key: 'bronze', label: 'BRONZ', cls: 'from-orange-700/25 to-amber-800/25 text-orange-300 border-orange-600/40' },
-                                    ] as const).map(t => {
-                                        const active = (edit.playerCard?.tier || 'gold') === t.key;
-                                        return (
-                                            <button key={t.key} type="button"
-                                                onClick={() => setEdit(prev => ({
-                                                    ...prev,
-                                                    playerCard: { ...(prev.playerCard || {} as any), tier: t.key },
-                                                }))}
-                                                className={`h-9 rounded-xl text-[10px] font-extrabold border transition-all bg-gradient-to-br ${t.cls} ${active ? 'ring-2 ring-white/30 opacity-100' : 'opacity-50 hover:opacity-80'}`}>
-                                                {t.label}
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                        </div>
-
                         {/* Wallet — SALT OKUNUR: bakiyeyi elle ezmek wallet_transactions
                             ledger'ıyla mutabakatı bozuyordu. Düzeltme artık ledger'lı
                             admin_adjust_wallet_balance yolundan: Kullanıcı 360 → Profil
@@ -345,33 +240,8 @@ export const DeepEditUserModal: React.FC<ModalProps & { user: AdminUser }> = ({ 
                         {/* Status toggles */}
                         <div className="space-y-2">
                             <p className="text-[9px] font-extrabold text-gray-400 uppercase tracking-widest mb-2 flex items-center gap-2"><Shield size={11} /> HESAP DURUMLARI</p>
-                            <Toggle label="Oyuncu Kartı Aktif" desc="Kart uygulamada (Top Oyna) görünsün — kapatılırsa gizlenir" value={edit.cardActive ?? true} onChange={() => setEdit(prev => ({ ...prev, cardActive: !(prev.cardActive ?? true) }))} />
                             <Toggle label="Doğrulanmış Hesap" desc="Mavi tik göster" value={edit.isVerified} onChange={() => setEdit(prev => ({ ...prev, isVerified: !prev.isVerified }))} />
                             <Toggle label="Hesabı Banla" desc="Kullanıcı sisteme giremez, aktif rezervasyonları iptal edilir" value={edit.isBanned} onChange={() => setEdit(prev => ({ ...prev, isBanned: !prev.isBanned }))} danger />
-                        </div>
-                    </div>
-
-                    {/* Right Column - FifaCard Interactive Preview */}
-                    <div className="w-full lg:w-80 flex flex-col items-center justify-start py-4 bg-[#121820] rounded-3xl border border-white/5 relative overflow-hidden self-start">
-                        <p className="text-[9px] font-extrabold text-purple-400 uppercase tracking-widest mb-3">CANLI KART ÖNİZLEMESİ</p>
-                        <FifaCard 
-                            rating={edit.rating}
-                            role={edit.role}
-                            name={edit.name}
-                            avatar={edit.avatar}
-                            stats={{
-                                label1: 'HIZ', val1: stats.pace.value,
-                                label2: 'DRB', val2: stats.dribbling.value,
-                                label3: 'ŞUT', val3: stats.shooting.value,
-                                label4: 'DEF', val4: stats.defense.value,
-                                label5: 'PAS', val5: stats.passing.value,
-                                label6: 'FİZ', val6: stats.physical.value
-                            }}
-                        />
-                        <div className="mt-4 px-4 text-center">
-                            <span className="text-[10px] text-gray-500 font-mono">
-                                Toplam FUT Puanı: <span className="text-white font-bold">{edit.playerCard?.overall || 75}</span> / 99
-                            </span>
                         </div>
                     </div>
                 </div>

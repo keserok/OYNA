@@ -21,9 +21,15 @@ import MatchSquadPicker, { type PickedPlayer } from '../components/social/MatchS
 import { getMatchTacticProposals, proposeMatchTactic, listMyTacticsLite, type MatchTacticProposal, type MyTacticLite } from '../services/tacticSocialService';
 import { findProvidersForMatch, createServiceRequest, getMatchServiceRequests, acceptProviderApplication, declineProviderApplication, captainConfirmService, fundServiceRequest, captainReportNoShow } from '../services/serviceRequestService';
 import { checkMatchThreshold, cancelMatchByCaptain } from '../services/matchLifecycleService';
-import { formatTRYWithSymbol } from '../utils/formatTRY';
+import { formatTRYAmount, formatTRYShort } from '../utils/formatTRY';
+
+// IP-19 — para tek biçimde: "2.000₺", kuruş varsa "299,90₺", değer yoksa "—".
+// `money` muhasebe bağlamı (sıfır = "0₺"); saha fiyatı gibi FİYAT alanlarında
+// `formatTRYShort` kullanılır, orada sıfır "Ücretsiz" demektir.
+const money = formatTRYAmount;
 import { showToast } from '../components/common/GlobalToast';
 import { FORMATIONS as FORMATIONS_SSOT, type SquadSize } from '../utils/formations';
+import { playStyleMetaForDifficulty } from './onboarding/onboardingShared';
 import TeamPlanBanner from '../components/social/TeamPlanBanner';
 // Tek kaynak lobi mantığı — admin paneli (MatchLobbyPitch) ile AYNI fonksiyonlar (drift yok).
 import { normalizeRole, inferSquadSize, applyCanonicalCoords, resolveGkVisibility, findHiredGkSlotId } from '../shared/lobbyEnrichment';
@@ -34,6 +40,8 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { OYNA_TILE_URL, oynaTileProps, oynaMapProps, OYNA_MAP_CSS } from '../components/map/mapBase';
 import { Toast } from '../components/common/Toast';
+import { mapError } from '../utils/errorMap';
+import { trUpper } from '../utils/trUpper';
 
 // Fix leaflet default icon path issues
 if (typeof window !== 'undefined') {
@@ -76,15 +84,14 @@ const FORMATIONS = FORMATIONS_SSOT as Record<string, Record<string, { x: number;
 // (checkAndGetStatus + fillVacatedSlot kaldırıldı — F1.8: kick artık sunucuda,
 // player_kick_slot RPC'si; statü/terfi hesabının client kopyası kalmadı.)
 
-// ─── Difficulty Badge Renk Sistemi ─────────────────────────────────────────
-
-// IP-09: bu tablo mentalite paletinin DÖRDÜNCÜ kopyasıydı. Renkler artık tek
-// kaynaktan (PLAY_STYLE_META) gelir — kategori rengi birincil/uyarı olamaz.
-const difficultyConfig: Record<string, { color: string; glow: string; label: string }> = {
-  'Ciddi':     { color: PLAY_STYLE_META.ciddi.color,     glow: 'rgba(248,113,113,0.25)', label: 'CİDDİ'     },
-  'Taktiksel': { color: PLAY_STYLE_META.taktiksel.color, glow: 'rgba(96,165,250,0.25)',  label: 'TAKTİKSEL' },
-  'Rahat':     { color: PLAY_STYLE_META.rahat.color,     glow: 'rgba(169,180,192,0.25)', label: 'RAHAT'     },
-};
+// ─── Difficulty Badge Renk Sistemi — TEK KAYNAK: PLAY_STYLE_META ────────────
+// Glow, kanonik renkten %40 alfa ile türetilir (yeni renk kopyası üretmez).
+const difficultyConfig: Record<string, { color: string; glow: string; label: string }> = Object.fromEntries(
+  (['Ciddi', 'Taktiksel', 'Rahat'] as const).map((d) => {
+    const meta = playStyleMetaForDifficulty(d)!;
+    return [d, { color: meta.color, glow: `${meta.color}66`, label: meta.label.toLocaleUpperCase('tr-TR') }];
+  }),
+);
 
 const getQualityGrade = (score: number): string => {
   if (score >= 95) return 'A+';
@@ -165,7 +172,7 @@ const enrichSideSlots = (
         id: pid,
         name: prof?.name || orig.name || 'Oyuncu',
         avatar: (prof ? prof.avatarUrl : orig.avatar) || '',
-        rating: prof?.rating || orig.rating || 4.5,
+        selfSkill: prof?.selfSkill ?? orig.selfSkill ?? null,
         position: slot.role || 'OYUNCU',
         x: slot.x,
         y: slot.y,
@@ -348,7 +355,6 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
         awayTeamId: (updatedMatch as any).away_team_id || (updatedMatch as any).awayTeamId,
         creatorId: (updatedMatch as any).creator_id || (updatedMatch as any).creatorId,
         reservePlayers: (updatedMatch as any).reserve_players || (updatedMatch as any).reservePlayers || [],
-        minRating: (updatedMatch as any).min_rating || (updatedMatch as any).minRating,
         homeScore: (updatedMatch as any).home_score || (updatedMatch as any).homeScore,
         awayScore: (updatedMatch as any).away_score || (updatedMatch as any).awayScore,
         scoreEnteredAt: (updatedMatch as any).score_entered_at || (updatedMatch as any).scoreEnteredAt,
@@ -533,13 +539,15 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
   const awayTeam = match.awayTeamId ? (userTeams || []).find(t => t.id === match.awayTeamId) : null;
 
   // ── Kullanıcı ─────────────────────────────────────────────────────────────
-  // Misafirde gerçek kimlik yok: görüntüleme 'Misafir' etiketiyle yapılır;
-  // katılma aksiyonu store.joinMatch içindeki kayıt kapısına takılır.
+  // Misafirde gerçek kimlik yok: görüntüleme 'Misafir' etiketiyle yapılır.
+  // Yazma aksiyonları (handleBuySlots / handleJoinAsReserve) kendi
+  // başlarındaki requireAccount() kapısında durur.
+  // (Eski yorum "store.joinMatch içindeki kapı" diyordu — öyle bir eylem yok.)
   const currentUserUid = auth.currentUser?.uid ?? 'guest';
   // Gerçek profil (store) önce; admin-only adminUsers yalnız admin oturumunda dolu.
   const currentUserProfile = storeCurrentUserProfile
     || (adminUsers || []).find(u => u?.id === currentUserUid)
-    || { id: currentUserUid, name: auth.currentUser ? (auth.currentUser.displayName || 'Oyuncu') : 'Misafir', avatar: auth.currentUser?.photoURL || '/player_card_photo.png', role: UserRole.PLAYER, rating: 0 };
+    || { id: currentUserUid, name: auth.currentUser ? (auth.currentUser.displayName || 'Oyuncu') : 'Misafir', avatar: auth.currentUser?.photoURL || '/player_card_photo.png', role: UserRole.PLAYER };
 
   // Kaptanlık global rol değil; maçı kuran kişi o maçın yöneticisidir.
   const isCaptain = match.creatorId === currentUserProfile?.id;
@@ -653,7 +661,6 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
       if (isManageMode && slot.purchasedBy === currentUserProfile?.id) {
         setFillSlot(slot);
       } else {
-        if (navigator.vibrate) navigator.vibrate(15);
         showActionError('Bu slot rezerve edildi — satın alan kişi dolduracak.');
       }
       return;
@@ -668,8 +675,52 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
   // (Tek lobi) Eski ücretsiz tekli katılım (join_public_match_slot) KALDIRILDI —
   // kurucu dahil herkes slot satın alır; ücretsiz maçta aynı RPC 0₺ ile çalışır.
 
+  /**
+   * IP-15 — misafir bir YAZMA aksiyonu denerse genel hata toast'ı yerine kayıt
+   * kapısı açılır. Eskiden ücretsiz maçta `player_buy_slots_v2` misafirle
+   * çağrılıyor, RPC hata döndürüyor ve ekranda "Slot satın alınamadı" yazıyordu
+   * — kullanıcı neyin eksik olduğunu anlamıyordu.
+   *
+   * Niyet saklanır: kayıt + onboarding bitince kullanıcı BU maça geri döner.
+   */
+  const requireAccount = (): boolean => {
+    if (auth.currentUser) return true;
+    const s = useAppStore.getState();
+    s.setPendingIntent('MATCH_JOIN', match.id);
+    s.setIsSignupGateOpen(true);
+    return false;
+  };
+
+  /**
+   * IP-11 — seçili slotları sunucuyu beklemeden dolu göster; geri alma
+   * fonksiyonu döndürür (başarısızlıkta çağrılır).
+   *
+   * Kaynak `match` DEĞİL `originalMatch`: yukarıdaki `useMemo`, slot listesi
+   * boş gelen maçlar için VARSAYILAN slot üretiyor. `match`'i store'a yazmak
+   * o uydurma slotları kalıcı hale getirirdi. Gerçek slot yoksa iyimser yazım
+   * hiç yapılmaz — ekran eskisi gibi sunucuyu bekler, yanlış şey göstermez.
+   *
+   * Yazılan alanlar sunucudaki kalıbın aynısı (player_buy_slots_v2):
+   * status/player/purchasedBy/occupant/assignmentStatus.
+   */
+  const optimistikDoldur = (): (() => void) | null => {
+    const evSlots = originalMatch?.slots;
+    const depSlots = (originalMatch as { awaySlots?: PositionSlot[] } | null)?.awaySlots;
+    if (!evSlots?.length) return null;
+    const secili = new Set(selectedSlotIds);
+    const doldur = (arr?: PositionSlot[]) => arr?.map((s) =>
+      s && secili.has(s.id)
+        ? { ...s, status: 'TAKEN', player: currentUserProfile,
+            purchasedBy: currentUserProfile.id, occupant: currentUserProfile.id,
+            assignmentStatus: 'SELF' }
+        : s);
+    applyMatchLocal({ ...originalMatch, slots: doldur(evSlots), awaySlots: doldur(depSlots) } as MatchListing);
+    return () => applyMatchLocal({ ...originalMatch, slots: evSlots, awaySlots: depSlots } as MatchListing);
+  };
+
   const handleBuySlots = async () => {
     if (selectedSlotIds.length === 0) return;
+    if (!requireAccount()) return;
     if (!beginWrite()) return;
     const total = (match.price || 0) * selectedSlotIds.length;
 
@@ -688,7 +739,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
         ],
         amount: total,
         amountLabel: 'Ödenecek Tutar',
-        amountHint: `${selectedSlotIds.length} slot × ${(match.price || 0).toLocaleString('tr-TR')}₺ · rezerve ettiğin yerler`,
+        amountHint: `${selectedSlotIds.length} slot × ${money(match.price || 0)} · rezerve ettiğin yerler`,
         isDeposit: false,
         allowBalance: true,
         successTitle: 'Katılımın Onaylandı!',
@@ -715,6 +766,11 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
 
     // Ücretsiz maç: eski hızlı yol (ödeme ekranı gerekmez).
     setIsProcessing(true);
+    // IP-11 · İyimser yazım. Eskiden slot ancak RPC + eşik kontrolü +
+    // getMatchDetails turlarından SONRA doluyordu; yavaş bağlantıda dokunulan
+    // yer saniyelerce boş görünüyordu. Sunucu tek otorite kalır: hata dalında
+    // geri alınır, realtime (subscribeToMatchUpdates) zaten yakınsar.
+    const geriAl = optimistikDoldur();
     try {
       const { error } = await supabase.rpc('player_buy_slots_v2', {
         p_match_id: match.id,
@@ -737,17 +793,17 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
       useAppStore.getState().setLobbyMode('MANAGE');
       showActionSuccess('Slotların rezerve edildi — kendini veya arkadaşlarını ekle.');
     } catch (e: any) {
+      geriAl?.();
       console.error('Buy slots error:', e);
       const msg = e?.message || '';
-      showActionError(msg.includes('MIN_RATING')
-        ? `Bu maç minimum ${match.minRating || "belirli bir"} puan istiyor — puanın henüz yetmiyor.`
-        : msg.includes('Yetersiz') ? 'Cüzdan bakiyen yetersiz.' : 'Slot satın alınamadı. Lütfen tekrar dene.');
+      showActionError(msg.includes('Yetersiz') ? 'Cüzdan bakiyen yetersiz.' : 'Slot satın alınamadı. Lütfen tekrar dene.');
     } finally {
       setIsProcessing(false); endWrite();
     }
   };
 
   const handleJoinAsReserve = async () => {
+    if (!requireAccount()) return;
     if (isAlreadyJoined || isAlreadyJoinedReserve) return;
     setIsProcessing(true);
 
@@ -764,9 +820,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
       if (fresh) applyMatchLocal(fresh);
     } catch (e: any) {
       console.error('Join reserve error:', e);
-      showActionError((e?.message || '').includes('MIN_RATING')
-        ? `Bu maç minimum ${match.minRating || "belirli bir"} puan istiyor — puanın henüz yetmiyor.`
-        : 'Yedek olarak katılırken bir hata oluştu.');
+      showActionError('Yedek olarak katılırken bir hata oluştu.');
     } finally {
       setIsProcessing(false); endWrite();
     }
@@ -857,7 +911,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
       if (fresh) applyMatchLocal(fresh);
       setFillSlot(null);
       showActionSuccess(refunded > 0
-        ? `Slot iade edildi — ${refunded.toLocaleString('tr-TR')}₺ cüzdanına iade edildi.`
+        ? `Slot iade edildi — ${money(refunded)} cüzdanına iade edildi.`
         : 'Slot vitrine iade edildi.');
     } catch { showActionError('Slot iade edilemedi.'); }
     finally { setIsProcessing(false); endWrite(); }
@@ -869,7 +923,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
       setShowTacticPicker(false);
       await refreshTacticProposals();
       showActionSuccess('Taktiğin maça önerildi. 📋');
-    } catch (e: any) { showActionError(e?.message || 'Taktik önerilemedi.'); }
+    } catch (e: any) { showActionError(mapError(e, 'Taktik önerilemedi.')); }
   };
 
   // Satın alınan slot için paylaşılabilir devralma kodu üret
@@ -917,7 +971,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
       const fresh = await getMatchDetails(match.id);
       if (fresh) applyMatchLocal(fresh); // KN-3b: taze veri DB'ye GERİ yazılmaz
       setActivePlayerSlotId(null);
-      showActionSuccess(refunded > 0 ? `Oyuncu çıkarıldı — ${refunded}₺ cüzdanına iade edildi.` : 'Oyuncu kadrodan çıkarıldı.');
+      showActionSuccess(refunded > 0 ? `Oyuncu çıkarıldı — ${money(refunded)} cüzdanına iade edildi.` : 'Oyuncu kadrodan çıkarıldı.');
     } catch (e: any) {
       console.error(e);
       const msg = String(e?.message || '');
@@ -951,12 +1005,12 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
       // söktüğü için YEREL toast görünmez; sonucu GLOBAL kanaldan söylüyoruz.
       if (leaveQuote?.late) {
         const geri = leaveQuote.refundable > 0
-          ? `${formatTRYWithSymbol(leaveQuote.refundable)} cüzdanına döndü, ` : '';
+          ? `${formatTRYAmount(leaveQuote.refundable)} cüzdanına döndü, ` : '';
         const yanan = leaveQuote.forfeited > 0
-          ? `${formatTRYWithSymbol(leaveQuote.forfeited)} iade edilmedi, ` : '';
+          ? `${formatTRYAmount(leaveQuote.forfeited)} iade edilmedi, ` : '';
         showToast(`Maçtan ayrıldın. ${geri}${yanan}güvenilirlik puanın ${leaveQuote.penalty} düştü.`, 'error');
       } else if ((leaveQuote?.refundable ?? 0) > 0) {
-        showToast(`Maçtan ayrıldın. ${formatTRYWithSymbol(leaveQuote!.refundable)} cüzdanına geri döndü.`, 'success');
+        showToast(`Maçtan ayrıldın. ${formatTRYAmount(leaveQuote!.refundable)} cüzdanına geri döndü.`, 'success');
       } else {
         showToast('Maçtan ayrıldın.', 'success');
       }
@@ -1034,7 +1088,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
       await refreshServiceRequests(match.id);
       showActionSuccess('Başvuru kabul edildi. Ücret bloke edildi.');
     } catch (err: any) {
-      showActionError(err?.message || 'Başvuru kabul edilemedi.');
+      showActionError(mapError(err, 'Başvuru kabul edilemedi.'));
     } finally { setReqActionId(null); }
   };
   const handleDeclineApplication = async (requestId: string) => {
@@ -1044,7 +1098,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
       await refreshServiceRequests(match.id);
       showActionSuccess('Başvuru reddedildi.');
     } catch (err: any) {
-      showActionError(err?.message || 'Başvuru reddedilemedi.');
+      showActionError(mapError(err, 'Başvuru reddedilemedi.'));
     } finally { setReqActionId(null); }
   };
   const handleCaptainConfirm = async (requestId: string) => {
@@ -1054,7 +1108,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
       await refreshServiceRequests(match.id);
       showActionSuccess('Onayladın. Sağlayıcı da onaylayınca ücret ödenir.');
     } catch (err: any) {
-      showActionError(err?.message || 'Onay kaydedilemedi.');
+      showActionError(mapError(err, 'Onay kaydedilemedi.'));
     } finally { setReqActionId(null); }
   };
 
@@ -1076,7 +1130,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
       setProviderSuggestions(list);
     } catch (err: any) {
       console.error('[MatchJoin] sağlayıcı önerileri:', err);
-      showActionError(err?.message || 'Uygun sağlayıcılar getirilemedi.');
+      showActionError(mapError(err, 'Uygun sağlayıcılar getirilemedi.'));
     } finally {
       setProvidersLoading(false);
     }
@@ -1099,7 +1153,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
       showActionSuccess(`Ödeme alındı — ${provider.name} onayı bekleniyor`);
     } catch (err: any) {
       console.error('[MatchJoin] talep/ödeme:', err);
-      showActionError(err?.message || 'Hizmet talebi oluşturulamadı.');
+      showActionError(mapError(err, 'Hizmet talebi oluşturulamadı.'));
     } finally {
       setProviderSubmittingId(null);
     }
@@ -1118,11 +1172,11 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
       setShowNoShowConfirm(false);
       showActionSuccess(
         r.penaltyCharged
-          ? `No-show bildirildi. ${r.penalty}₺ ceza kalecinin teminatından tahsil edilip sana aktarıldı.`
-          : `No-show bildirildi. Ceza (${r.penalty}₺) teminattan tahsil edilemedi — durum incelemeye alındı.`
+          ? `No-show bildirildi. ${money(r.penalty)} ceza kalecinin teminatından tahsil edilip sana aktarıldı.`
+          : `No-show bildirildi. Ceza (${money(r.penalty)}) teminattan tahsil edilemedi — durum incelemeye alındı.`
       );
     } catch (e: any) {
-      showActionError(e?.message || 'No-show bildirilemedi.');
+      showActionError(mapError(e, 'No-show bildirilemedi.'));
     } finally {
       setIsProcessing(false); endWrite();
     }
@@ -1221,7 +1275,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                                 setFriendRequestSent(true);
                                 showActionSuccess('Arkadaşlık isteği gönderildi.');
                               } catch (e: any) {
-                                showActionError(e?.message || 'İstek gönderilemedi.');
+                                showActionError(mapError(e, 'İstek gönderilemedi.'));
                               }
                             }}
                             className="w-full mt-3 py-3 rounded-2xl font-extrabold text-[0.6875rem] uppercase tracking-widest text-ink bg-white/[0.06] border border-line-strong active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-60">
@@ -1274,7 +1328,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
               })()}
 
               <button onClick={() => setActivePlayerSlotId(null)}
-                className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-white/70 hover:bg-white/20 transition-colors backdrop-blur-md z-10">
+                aria-label="Kapat" className="absolute top-4 right-4 w-11 h-11 rounded-full bg-white/10 flex items-center justify-center text-white/70 hover:bg-white/20 transition-colors backdrop-blur-md z-10">
                 <X size={16} />
               </button>
             </motion.div>
@@ -1335,7 +1389,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                   onClick={() => setShowLeaveConfirm(false)}
                   disabled={isProcessing}
                   className="flex-1 py-3 rounded-2xl font-extrabold text-sm uppercase tracking-widest text-white bg-white/5 border border-white/10 hover:bg-white/10 transition-colors">
-                  İPTAL
+                  VAZGEÇ
                 </button>
                 {/* IP-04 — para sonucu bilinmeden yıkıcı aksiyon yapılamaz:
                     önizleme yüklenirken veya alınamadığında AYRIL pasiftir. */}
@@ -1343,7 +1397,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                   onClick={isAlreadyJoinedReserve ? handleLeaveReserves : handleLeaveMatch}
                   disabled={isProcessing || (!isAlreadyJoinedReserve && (leaveQuoteLoading || leaveQuote == null))}
                   className="flex-1 py-3 rounded-2xl font-extrabold text-sm uppercase tracking-widest text-white bg-red-600 shadow-[0_0_20px_rgba(239,68,68,0.4)] hover:bg-red-500 transition-colors flex items-center justify-center disabled:opacity-40 disabled:pointer-events-none">
-                  {isProcessing ? <Loader2 size={18} className="animate-spin" /> : 'AYRIL'}
+                  {isProcessing ? <Loader2 size={18} className="animate-spin" /> : 'MAÇTAN AYRIL'}
                 </button>
               </div>
             </motion.div>
@@ -1412,7 +1466,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
               </h3>
               
               <p className="text-sm text-gray-400 mb-6 font-semibold">
-                <strong>{removeConfirmSlot.player?.name}</strong> isimli oyuncuyu kadrodan çıkarmak istediğinize emin misiniz?
+                <strong>{removeConfirmSlot.player?.name}</strong> isimli oyuncuyu kadrodan çıkarmak istediğine emin misin?
               </p>
               
               <div className="flex gap-3">
@@ -1634,7 +1688,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                               <div className="flex items-center justify-between pt-1">
                                 <div>
                                   <p className="text-[0.625rem] font-extrabold text-ink-4 uppercase tracking-widest">Ücret</p>
-                                  <p className="text-xl font-extrabold text-white tracking-tighter">{p.fee}₺</p>
+                                  <p className="text-xl font-extrabold text-white tracking-tighter">{money(p.fee)}</p>
                                 </div>
                                 <div className="flex items-center gap-2">
                                   <span className="flex items-center gap-0.5 text-[0.625rem] font-extrabold uppercase tracking-widest text-ink-4">Detay <ChevronRight size={12} /></span>
@@ -1725,7 +1779,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                       </div>
                       <div className="rounded-2xl border border-white/8 bg-white/[0.04] py-4 flex flex-col items-center gap-1">
                         <span className="text-[0.625rem] font-extrabold uppercase tracking-[0.2em] text-ink-4">ÜCRET</span>
-                        <span className="text-3xl font-extrabold tabular-nums leading-none text-white">{p.fee}₺</span>
+                        <span className="text-3xl font-extrabold tabular-nums leading-none text-white">{money(p.fee)}</span>
                       </div>
                     </div>
 
@@ -1774,7 +1828,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                         <CreditCard size={14} /> Kartla
                       </motion.button>
                     </div>
-                    <p className="text-center mt-2 text-sm font-extrabold" style={{ color: accent }}>{p.fee}₺</p>
+                    <p className="text-center mt-2 text-sm font-extrabold" style={{ color: accent }}>{money(p.fee)}</p>
                     <p className="text-[0.6875rem] text-ink-4 text-center mt-1 leading-relaxed px-2">
                       Ücret emanete alınır; {isRef ? 'hakem' : 'kaleci'} onaylayınca aktarılır. Reddedilir/no-show olursa iade edilir.
                     </p>
@@ -1782,7 +1836,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                 );
               })()}
               <button onClick={() => { if (!providerSubmittingId) setMarketDetailProvider(null); }}
-                className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-white/70 hover:bg-white/20 transition-colors backdrop-blur-md z-10">
+                aria-label="Kapat" className="absolute top-4 right-4 w-11 h-11 rounded-full bg-white/10 flex items-center justify-center text-white/70 hover:bg-white/20 transition-colors backdrop-blur-md z-10">
                 <X size={16} />
               </button>
             </motion.div>
@@ -1854,7 +1908,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                       </div>
                       <div className="rounded-2xl border border-white/8 bg-white/[0.04] py-4 flex flex-col items-center gap-1">
                         <span className="text-[0.625rem] font-extrabold uppercase tracking-[0.2em] text-ink-4">ÜCRET</span>
-                        <span className="text-3xl font-extrabold tabular-nums leading-none text-white">{p.fee != null ? p.fee + '₺' : '—'}</span>
+                        <span className="text-3xl font-extrabold tabular-nums leading-none text-white">{money(p.fee)}</span>
                       </div>
                     </div>
 
@@ -1888,7 +1942,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                     )}
                   </div>
               <button onClick={() => setProviderDetail(null)}
-                className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-white/70 hover:bg-white/20 transition-colors backdrop-blur-md z-10">
+                aria-label="Kapat" className="absolute top-4 right-4 w-11 h-11 rounded-full bg-white/10 flex items-center justify-center text-white/70 hover:bg-white/20 transition-colors backdrop-blur-md z-10">
                 <X size={16} />
               </button>
             </motion.div>
@@ -1915,7 +1969,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
               <h3 className="text-lg font-extrabold text-white tracking-tight">Kaleci gelmedi mi?</h3>
               <p className="text-[0.6875rem] text-white/50 leading-relaxed mt-2 px-1">
                 No-show bildirdiğinde ödediğin ücret iade edilir ve maçın slot ücreti
-                ({match.price ?? 0}₺) ceza olarak kalecinin teminatından sana aktarılır.
+                ({money(match.price ?? 0)}) ceza olarak kalecinin teminatından sana aktarılır.
                 Kaleci 48 saat içinde itiraz edebilir.
               </p>
               <div className="w-full flex gap-2 mt-5">
@@ -1938,8 +1992,9 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
         {/* Navigasyon Satırı */}
         <div className="flex items-center gap-3 px-5 pt-safe pt-2 pb-3">
           <button onClick={onBack}
-            className="w-9 h-9 flex items-center justify-center bg-white/5 rounded-full border border-white/10 text-white hover:bg-white/10 active:scale-90 transition-all">
-            <ArrowLeft size={17} />
+            aria-label="Geri"
+            className="w-11 h-11 flex items-center justify-center bg-white/5 rounded-full border border-white/10 text-white hover:bg-white/10 active:scale-95 transition-all">
+            <ArrowLeft size={20} />
           </button>
           <div className="flex-1 min-w-0">
             <h1 className="text-[0.9375rem] font-extrabold text-white italic uppercase tracking-tighter leading-tight truncate">
@@ -2116,7 +2171,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                 {diffConf.label}
               </span>
               <span className="px-1.5 py-0.5 rounded-md text-[0.6875rem] font-extrabold uppercase text-white/70 bg-white/8 border border-white/10">
-                {squadSize.toUpperCase()}
+                {trUpper(squadSize)}
               </span>
             </div>
           </div>
@@ -2498,7 +2553,6 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                           await updateFormationRpc(match.id, pitchSide, payload);
                           const fresh = await getMatchDetails(match.id);
                           if (fresh) applyMatchLocal(fresh);
-                          if (navigator.vibrate) navigator.vibrate(30);
                         }
                       } catch (err) {
                         console.error(err);
@@ -2598,7 +2652,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                       <div>
                         <h4 className="font-extrabold text-xs text-white uppercase tracking-wider">{statusLabel}</h4>
                         <p className="text-[0.625rem] text-ink-4 font-bold mt-0.5 uppercase tracking-wide">
-                          Ücret: {activeReq.fee}₺
+                          Ücret: {money(activeReq.fee)}
                         </p>
                       </div>
                     </div>
@@ -2644,7 +2698,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                       <img src={applicant?.avatar || `https://i.pravatar.cc/150?u=${req.providerId}`} alt="" className="w-9 h-9 rounded-xl object-cover border border-white/10" />
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-extrabold text-white truncate">{applicant?.name || label}</p>
-                        <p className="text-[0.625rem] text-ink-4 font-bold uppercase tracking-wide">{label} · {req.fee}₺ blokaj</p>
+                        <p className="text-[0.625rem] text-ink-4 font-bold uppercase tracking-wide">{label} · {money(req.fee)} blokaj</p>
                       </div>
                       <button onClick={() => handleDeclineApplication(req.id)} disabled={reqActionId === req.id}
                         className="px-2.5 py-1.5 rounded-lg text-[0.6875rem] font-extrabold uppercase text-gray-400 border border-white/10 disabled:opacity-50">Reddet</button>
@@ -2743,7 +2797,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                       <span className="flex items-center gap-1 text-[0.6875rem] font-extrabold text-yellow-400"><Star size={10} fill="currentColor" />{gk.rating.toFixed(1)}</span>
                     )}
                     {gk.fee != null && (
-                      <span className="text-[0.6875rem] font-extrabold text-white/70">{gk.fee}₺</span>
+                      <span className="text-[0.6875rem] font-extrabold text-white/70">{money(gk.fee)}</span>
                     )}
                   </div>
                 </div>
@@ -2792,7 +2846,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                       <span className="flex items-center gap-1 text-[0.6875rem] font-extrabold text-yellow-400"><Star size={10} fill="currentColor" />{assignedReferee.rating.toFixed(1)}</span>
                     )}
                     {assignedReferee.fee != null && (
-                      <span className="text-[0.6875rem] font-extrabold text-white/70">{assignedReferee.fee}₺</span>
+                      <span className="text-[0.6875rem] font-extrabold text-white/70">{money(assignedReferee.fee)}</span>
                     )}
                     {assignedReferee.level && (
                       <span className="text-[0.625rem] font-bold text-ink-4 uppercase tracking-wide truncate">{assignedReferee.level}</span>
@@ -2825,15 +2879,28 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                     disabled={isProcessing}
                     onClick={handleBuySlots}
                     whileTap={{ scale: 0.96 }}
-                    className="w-full h-16 rounded-[24px] font-extrabold text-sm uppercase tracking-[0.12em] flex items-center justify-center gap-2 transition-all cursor-pointer text-on-primary"
+                    className="w-full h-16 rounded-[24px] font-extrabold flex items-center justify-center gap-2 transition-all cursor-pointer text-on-primary"
                     style={{ background: '#39FF14', boxShadow: '0 0 28px rgba(57,255,20,0.30)' }}
                   >
                     {isProcessing ? (
-                      <><Loader2 size={20} className="animate-spin" /><span>ÖDENİYOR...</span></>
+                      <><Loader2 size={20} className="animate-spin" /><span className="text-sm uppercase tracking-[0.12em]">ÖDENİYOR…</span></>
                     ) : total > 0 ? (
-                      <><span>{selectedSlotIds.length} SLOT · ₺{total.toLocaleString('tr-TR')}</span><span className="opacity-60">·</span><span>ÖDE VE KATIL</span><ChevronRight size={18} /></>
+                      // IP-19 · iki katman: ödenecek tutar tek başına ve büyük;
+                      // slot sayısı ile eylem altta küçük. Eskiden üçü de aynı
+                      // puntoda tek satırdaydı, göz tutarı bulamıyordu.
+                      <>
+                        <span className="flex flex-col items-center leading-none">
+                          <span className="font-numeric text-[1.375rem] font-extrabold">{money(total)}</span>
+                          <span className="mt-1 text-[0.6875rem] font-bold uppercase tracking-[0.1em] opacity-70">
+                            {selectedSlotIds.length} slot · Öde ve katıl
+                          </span>
+                        </span>
+                        <ChevronRight size={18} />
+                      </>
                     ) : (
-                      <><span>{selectedSlotIds.length} SLOT</span><span className="opacity-60">·</span><span>YERİNİ AYIRT</span><ChevronRight size={18} /></>
+                      <span className="flex items-center gap-2 text-sm uppercase tracking-[0.12em]">
+                        <span>{selectedSlotIds.length} SLOT</span><span className="opacity-60">·</span><span>YERİNİ AYIRT</span><ChevronRight size={18} />
+                      </span>
                     )}
                   </motion.button>
                 );
@@ -2896,47 +2963,10 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
               const activeSlots = pitchSide === 'home' ? (match.slots || []) : (match.awaySlots || []);
               const isActiveSideFull = activeSlots.length > 0 && activeSlots.every(s => s.status === 'TAKEN');
 
-              if (false) {
-                const unitPrice = Number((match as any).price) || 0;
-                const total = selectedSlotIds.length * unitPrice;
-                return (
-                  <motion.button
-                    disabled={isProcessing}
-                    onClick={handleBuySlots}
-                    whileTap={{ scale: 0.96 }}
-                    className="w-full h-16 rounded-[24px] font-extrabold text-sm uppercase tracking-[0.12em] flex items-center justify-center gap-2 transition-all cursor-pointer text-on-primary"
-                    style={{ background: '#39FF14', boxShadow: '0 0 28px rgba(57,255,20,0.30)' }}
-                  >
-                    {isProcessing ? (
-                      <><Loader2 size={20} className="animate-spin" /><span>ÖDENİYOR...</span></>
-                    ) : total > 0 ? (
-                      <><span>{selectedSlotIds.length} SLOT · ₺{total.toLocaleString('tr-TR')}</span><span className="opacity-60">·</span><span>ÖDE VE KATIL</span><ChevronRight size={18} /></>
-                    ) : (
-                      <><span>{selectedSlotIds.length} SLOT</span><span className="opacity-60">·</span><span>YERİNİ AYIRT</span><ChevronRight size={18} /></>
-                    )}
-                  </motion.button>
-                );
-              }
-
-              if (false) {
-                return (
-                  <motion.button
-                    whileTap={{ scale: 0.97 }}
-                    onClick={() => {
-                      if (!isManageMode) useAppStore.getState().setLobbyMode('MANAGE');
-                      const first = myReservedSlots[0];
-                      if (first) setFillSlot(first as PositionSlot);
-                    }}
-                    className="w-full h-16 rounded-[24px] font-extrabold text-sm uppercase tracking-[0.15em] flex items-center justify-center gap-2 text-on-primary cursor-pointer"
-                    style={{ background: '#39FF14', boxShadow: '0 0 28px rgba(57,255,20,0.30)' }}
-                  >
-                    <UserPlus size={18} />
-                    <span>SLOTLARINI DOLDUR ({myReservedSlots.length})</span>
-                    <ChevronRight size={18} />
-                  </motion.button>
-                );
-              }
-
+              // IP-19: buradaki iki `if (false)` bloğu, yukarıdaki ÖNCELİK 1 ve
+              // ÖNCELİK 2 dallarının ölü kopyalarıydı. Aynı butonun üç ayrı
+              // sürümü duruyordu; para biçimi düzeltilirken hangisinin canlı
+              // olduğu okunmuyordu. Ölü kopyalar silindi.
               if (isActiveSideFull) {
                 return (
                   <motion.button
@@ -3046,6 +3076,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                   <h2 className="text-base font-extrabold text-white uppercase italic tracking-tight">MAÇ ÖZELLİKLERİ</h2>
                 </div>
                 <button
+                  aria-label="Kapat"
                   onClick={() => setShowInfoModal(false)}
                   className="w-9 h-9 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/50 hover:text-white transition-colors"
                 >
@@ -3088,7 +3119,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                   <div className="flex items-center justify-between px-4 py-4">
                     <span className="text-[0.6875rem] font-extrabold text-ink-4 uppercase tracking-wider">KATILIM ÜCRETİ</span>
                     <span className={`text-sm font-extrabold uppercase ${match.price > 0 ? 'text-ink' : 'text-white/50'}`}>
-                      {match.price > 0 ? `${match.price} ₺` : 'ÜCRETSİZ'}
+                      {formatTRYShort(match.price)}
                     </span>
                   </div>
                 </div>

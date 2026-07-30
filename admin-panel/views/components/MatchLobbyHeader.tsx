@@ -13,14 +13,14 @@ import { Calendar, Check, Clock, Eye, MapPin, Pencil, Swords, Wallet, X } from '
 import type { MatchListing } from '../../../types';
 import { formatDateLabel } from '../../utils/matchMapper';
 
-// Uygulamadaki difficultyConfig (MatchJoin) ile aynı kimlik renkleri (K/S/Y paleti).
+// Kimlik renkleri TEK KAYNAK: PLAY_STYLE_META (uygulamayla birebir aynı).
 const DIFF_META: Record<MatchListing['difficulty'], { color: string; label: string }> = {
   Ciddi: { color: '#FF4757', label: 'Ciddi' },
   Taktiksel: { color: '#FACC15', label: 'Taktiksel' },
   Rahat: { color: '#39FF14', label: 'Rahat' },
 };
 
-type FieldKey = 'title' | 'location' | 'date' | 'time' | 'price' | 'difficulty' | 'format' | 'visibility' | 'minRating';
+type FieldKey = 'title' | 'location' | 'date' | 'time' | 'price' | 'difficulty' | 'format' | 'visibility';
 
 interface Props {
   match: MatchListing;
@@ -54,7 +54,6 @@ export const MatchLobbyHeader: React.FC<Props> = ({ match, busy, onSave, allowed
       case 'price': setDraft(String(match.price ?? 0)); break;
       case 'difficulty': setDraft(match.difficulty); break;
       case 'format': setDraft(match.format || '7v7'); break;
-      case 'minRating': setDraft(String(match.minRating ?? 3)); break;
       case 'visibility': setDraft(match.visibility || 'OPEN'); setCodeDraft(match.privateCode || ''); break;
     }
   };
@@ -92,12 +91,6 @@ export const MatchLobbyHeader: React.FC<Props> = ({ match, busy, onSave, allowed
         const n = Number(draft);
         if (!Number.isFinite(n) || n < 0) return;
         payload = { price: n }; patch = { price: n };
-        break;
-      }
-      case 'minRating': {
-        const n = Number(draft.replace(',', '.'));
-        if (!Number.isFinite(n) || n < 0 || n > 5) return;
-        payload = { minRating: n }; patch = { minRating: n };
         break;
       }
       case 'difficulty': {
@@ -191,9 +184,6 @@ export const MatchLobbyHeader: React.FC<Props> = ({ match, busy, onSave, allowed
         <button type="button" disabled={busy} onClick={() => open('price')} className={`flex items-center gap-1 px-2 py-1 rounded-lg bg-white/5 border border-white/10 text-[10px] font-extrabold text-white/70 ${chipBtn}`}>
           <Wallet size={10} className="text-[#39FF14]" /> {Number(match.price ?? 0).toLocaleString('tr-TR')} ₺ / kişi
         </button>
-        <button type="button" disabled={busy} onClick={() => open('minRating')} className={`px-2 py-1 rounded-lg bg-white/5 border border-white/10 text-[10px] font-extrabold text-white/70 ${chipBtn}`}>
-          MIN ★ {Number(match.minRating ?? 3).toFixed(1)}
-        </button>
         <button
           type="button" disabled={busy} onClick={() => open('visibility')}
           className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-extrabold border ${chipBtn} ${
@@ -214,7 +204,7 @@ export const MatchLobbyHeader: React.FC<Props> = ({ match, busy, onSave, allowed
               {{
                 title: 'Maç Başlığı', location: 'Konum / Saha', date: 'Tarih', time: 'Saat',
                 price: 'Kişi Başı Ücret (₺)', difficulty: 'Zorluk', format: 'Format',
-                visibility: 'Görünürlük', minRating: 'Minimum Puan',
+                visibility: 'Görünürlük',
               }[active]}
             </p>
             <button type="button" onClick={() => setActive(null)} className="w-6 h-6 rounded-lg bg-white/5 text-gray-500 hover:text-white flex items-center justify-center"><X size={12} /></button>

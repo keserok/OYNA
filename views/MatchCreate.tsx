@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { AppView } from '../types';
 import { useAppStore } from '../store';
+import { PLAY_STYLE_META } from './onboarding/onboardingShared';
 import { showToast } from '../components/common/GlobalToast';
 import { Spinner } from '../components/ui/Spinner';
 import {
@@ -29,6 +30,9 @@ import { getMyTeams, getTeamSquad, type MyTeamRow } from '../services/teamSocial
 import { getMatchDetails } from '../services/matchService';
 import { fetchMyFavoritePitchIds } from '../services/pitchFavoritesService';
 import { safeUuid } from '../shared/submitGuard';
+import { trUpper } from '../utils/trUpper';
+import { auth } from '../supabaseAuth';
+import { formatTRYAmount } from '../utils/formatTRY';
 
 // Cüzdan yükleme overlay'i — form kaybolmadan bakiye tamamlanır (gerçek akış).
 const WalletScreen = lazy(() => import('./WalletScreen'));
@@ -42,10 +46,11 @@ interface MatchCreateProps {
 const WD = ['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt'];
 const MO = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
 const MO_LONG = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
+// Renk TEK KAYNAK: PLAY_STYLE_META (alt başlıklar bu ekrana özgü kalır).
 const MENTALS = [
-  { id: 'Ciddi', sub: 'Rekabetçi', color: '#FF4D4D' },
-  { id: 'Taktiksel', sub: 'Sistem', color: '#FACC15' },
-  { id: 'Rahat', sub: 'Eğlence', color: '#39FF14' },
+  { id: 'Ciddi', sub: 'Rekabetçi', color: PLAY_STYLE_META.ciddi.color },
+  { id: 'Taktiksel', sub: 'Sistem', color: PLAY_STYLE_META.taktiksel.color },
+  { id: 'Rahat', sub: 'Eğlence', color: PLAY_STYLE_META.rahat.color },
 ] as const;
 const GENDERS = ['Karma', 'Erkek', 'Kadın'];
 const AGES = ['18-22', '23-27', '28-35', '35+', 'Tümü'];
@@ -53,11 +58,13 @@ const DAY_MAX = 30;
 const DAY_PREFETCH = 7;
 const MAX_FACILITIES = 6;
 
-function buzz(pattern: number | number[]) {
-  try { if (navigator.vibrate) navigator.vibrate(pattern); } catch { /* desteklenmiyor */ }
-}
 const trLower = (s: string) => s.toLocaleLowerCase('tr-TR');
-const fmtTL = (n: number) => Math.round(n).toLocaleString('tr-TR');
+
+// IP-19: buradaki yerel biçimleyici tutarı YUVARLIYORDU. 299,60₺ bakiye "300₺"
+// yazılıyor, eksik hesabı ise gerçek değerden yapıldığı için ekranda aynı anda
+// "bakiyen 300₺" ve "1₺ eksik" görünüyordu. Artık gösterilen sayı ile hesaba
+// giren sayı aynı: ikisi de ham `spendable`.
+const money = formatTRYAmount;
 
 type SheetKind = 'ADV' | 'FRIENDS' | 'PROVIDERS' | 'RULES' | 'TOPUP' | 'SUCCESS' | null;
 
@@ -354,7 +361,6 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
   // ── Seçim eylemleri ───────────────────────────────────────────────────────
   const pickFacility = (f: CreateFacility) => {
     if (f.id === selFacId) return;
-    buzz(12);
     setSelFacId(f.id);
     const c0 = f.courts[0];
     setSelCourtId(c0?.id ?? null);
@@ -362,16 +368,24 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
     setConflict(null);
   };
   const pickCourt = (c: CreateCourt) => {
-    buzz(12);
     setSelCourtId(c.id);
     setFormat(`${c.minCapacity}v${c.minCapacity}`);
     setConflict(null);
   };
-  const pickDay = (i: number) => { buzz(12); setSelDay(i); setConflict(null); };
-  const pickTime = (t: string) => { buzz(12); setSelTime(t); setConflict(null); };
+  const pickDay = (i: number) => { setSelDay(i); setConflict(null); };
+  const pickTime = (t: string) => { setSelTime(t); setConflict(null); };
 
   // ── YAYINLA — atomik ─────────────────────────────────────────────────────
   const publish = useCallback(async () => {
+    // IP-15 — misafir kapısı SON anda: form doldurulabilsin, kaydolunca
+    // kaldığı yerden devam etsin (karar 12a). Eskiden misafirde sunucu
+    // PostgREST'in İngilizce mesajını "Maç yayınlanamadı: …" diye basıyordu.
+    if (!auth.currentUser) {
+      const s = useAppStore.getState();
+      s.setPendingIntent('MATCH_CREATE');
+      s.setIsSignupGateOpen(true);
+      return;
+    }
     // StrictMode/eşzamanlı render'da çift tetiklenmeye karşı kilit
     if (publishBusyRef.current) return;
     publishBusyRef.current = true;
@@ -402,7 +416,6 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
       // Yayın tamam: anahtar tüketildi, bir sonraki maç yeni anahtarla kurulur.
       publishIdemRef.current = null;
       setPubStep(3);
-      buzz([18, 40, 30]);
 
       // Davetler (arkadaş VEYA takım arkadaşı; başarısızlık yayını bozmaz)
       if (invited.length > 0) {
@@ -426,7 +439,6 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
         // Saat "Dolu"ya döner, banner en yakın saati önerir — form korunur.
         setLocalBusy(prev => new Set(prev).add(`${selCourtId}|${dateISO}|${selTime}`));
         setConflict({ time: selTime, next: firstFree(selTime) });
-        buzz(30);
       } else if (code === 'INSUFFICIENT_BALANCE') {
         setMissingTL(deposit != null ? Math.max(1, Math.ceil(deposit - spendable)) : 1);
         showToast('Kapora için bakiyen yetersiz — formun korundu.', 'error');
@@ -515,7 +527,6 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
 
   // Takım kadrosu ilk açılışta çekilir, sonra önbellekten
   const toggleTeam = useCallback(async (teamId: string) => {
-    buzz(10);
     if (openTeamId === teamId) { setOpenTeamId(null); return; }
     setOpenTeamId(teamId);
     if (teamSquads[teamId]) return;
@@ -553,7 +564,6 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
   }, [sheet, providers]);
 
   const toggleInvite = (p: InvitedPerson) => {
-    buzz(10);
     setInvited(prev => prev.some(x => x.id === p.id) ? prev.filter(x => x.id !== p.id) : [...prev, p]);
   };
 
@@ -563,7 +573,6 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
     return o ? (o.all ? 1 : o.providerIds.length) : 0;
   };
   const toggleProvider = (t: 'GK' | 'REF', id: string) => {
-    buzz(10);
     setOffers(prev => {
       const cur = prev.find(o => o.type === t);
       if (!cur) return [...prev, { type: t, providerIds: [id], all: false }];
@@ -574,7 +583,6 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
     });
   };
   const toggleProviderAll = (t: 'GK' | 'REF') => {
-    buzz(10);
     setOffers(prev => {
       const cur = prev.find(o => o.type === t);
       if (cur?.all) return prev.filter(o => o.type !== t);
@@ -591,7 +599,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
       for (const id of o.providerIds) sum += list.find(p => p.id === id)?.fee ?? 0;
     }
     if (sum === 0 && unknown) return 'Ücret sağlayıcı onayında netleşir';
-    return `Toplam ${fmtTL(sum)}₺${unknown ? '+' : ''} · onaylanınca tahsil edilir`;
+    return `Toplam ${money(sum)}${unknown ? '+' : ''} · onaylanınca tahsil edilir`;
   }, [offers, providers]);
 
   // Cüzdan overlay'i doğrudan YÜKLEME sekmesinde açılsın
@@ -630,7 +638,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
   const banner = conflict
     ? { tone: '#F87171', box: 'bg-red-400/10 border-red-400/25', title: `${conflict.time} az önce doldu`, sub: conflict.next ? `Bu sahada en yakın müsait saat ${conflict.next}` : 'Bugün için başka müsait saat kalmadı', btn: conflict.next ? `${conflict.next}'e geç` : null, act: () => { if (conflict.next) { pickTime(conflict.next); } } }
     : missingTL > 0 && missing > 0
-    ? { tone: '#FCA5A5', box: 'bg-red-400/10 border-red-400/25', title: `Kapora için ${fmtTL(missing)}₺ eksik`, sub: 'Formun kaybolmaz — yükleyip kaldığın yerden devam et', btn: 'Yükle', act: () => setSheet('TOPUP') }
+    ? { tone: '#FCA5A5', box: 'bg-red-400/10 border-red-400/25', title: `Kapora için ${money(missing)} eksik`, sub: 'Formun kaybolmaz — yükleyip kaldığın yerden devam et', btn: 'Yükle', act: () => setSheet('TOPUP') }
     : seeded
     ? { tone: '#39FF14', box: 'bg-[#39FF14]/[0.07] border-[#39FF14]/25', title: 'Rezervasyonun maça çevriliyor', sub: 'Saha ve saat kilitli — sadece kadroyu kur', btn: 'Detay', act: () => setSheet('RULES') }
     : null;
@@ -712,7 +720,6 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
             <button
               onClick={async () => {
                 if (notified) return;
-                buzz(12);
                 try { await recordDemandSignal('NOTIFY', 'Ordu', 'Altınordu'); setNotified(true); }
                 catch { showToast('Kaydedilemedi, tekrar dene.', 'error'); }
               }}
@@ -768,9 +775,9 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                   <p className="mt-1 text-[0.8125rem] font-extrabold truncate">{venueTxt}</p>
                   <p className="mt-0.5 text-[0.75rem] font-semibold text-ink-4">{whenTxt}</p>
                 </div>
-                <button onClick={() => { buzz(8); setPriceOpen(v => !v); }} className="shrink-0 text-right flex flex-col items-end gap-1">
+                <button onClick={() => { setPriceOpen(v => !v); }} className="shrink-0 text-right flex flex-col items-end gap-1">
                   <span className="font-numeric text-[1.625rem] font-extrabold leading-none text-[#39FF14]">
-                    {perPerson != null ? `${fmtTL(perPerson)}₺` : '—'}
+                    {money(perPerson)}
                   </span>
                   <span className="flex items-center gap-1 text-[0.625rem] font-extrabold uppercase tracking-[0.12em] text-white/[0.38]">
                     Kişi başı <ChevronDown size={11} className={`transition-transform ${priceOpen ? 'rotate-180' : ''}`} />
@@ -782,13 +789,13 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                   <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
                     <div className="mt-3.5 pt-3 border-t border-white/[0.07] flex flex-col gap-1.5 text-[0.6875rem] font-bold">
                       {/* Süre SEÇİLEN dilimden okunur: gündüz 60, akşam 90 olabilir. */}
-                      <div className="flex justify-between text-white/50"><span>{court?.name ?? 'Saha'} · {selHour?.minutes ?? dayQuote?.slotDuration ?? 60} dk</span><span className="font-numeric text-white">{fmtTL(selHour?.basePrice ?? total)}₺</span></div>
+                      <div className="flex justify-between text-white/50"><span>{court?.name ?? 'Saha'} · {selHour?.minutes ?? dayQuote?.slotDuration ?? 60} dk</span><span className="font-numeric text-white">{money(selHour?.basePrice ?? total)}</span></div>
                       {selHour?.deal && selHour.basePrice != null && selHour.total != null && (
-                        <div className="flex justify-between text-[#FACC15]"><span>Son dakika indirimi</span><span className="font-numeric">−{fmtTL(selHour.basePrice - selHour.total)}₺</span></div>
+                        <div className="flex justify-between text-[#FACC15]"><span>Son dakika indirimi</span><span className="font-numeric">−{money(selHour.basePrice - selHour.total)}</span></div>
                       )}
                       <div className="flex justify-between text-white/50"><span>Toplam oyuncu ({per} + {per})</span><span className="font-numeric text-white">÷ {per * 2}</span></div>
                       <div className="flex justify-between text-white/50"><span>OYNA hizmet payı</span><span className="font-numeric text-white">+%5</span></div>
-                      <div className="flex justify-between text-[#39FF14]"><span>Senin payın</span><span className="font-numeric">{perPerson != null ? fmtTL(perPerson) : '—'}₺</span></div>
+                      <div className="flex justify-between text-[#39FF14]"><span>Senin payın</span><span className="font-numeric">{money(perPerson)}</span></div>
                     </div>
                   </motion.div>
                 )}
@@ -852,7 +859,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                             <p className="text-[0.8125rem] font-extrabold truncate">{f.name}</p>
                             <p className="mt-0.5 text-[0.6875rem] font-bold text-white/[0.42] truncate">{[f.city, f.district].filter(Boolean).join(' · ') || '—'}</p>
                             <p className={`mt-1.5 text-[0.6875rem] font-extrabold ${on ? 'text-[#39FF14]' : 'text-white/[0.32]'}`}>
-                              {f.courts.length} saha{f.courts.some(c => c.basePrice > 0) ? ` · ${fmtTL(Math.min(...f.courts.filter(c => c.basePrice > 0).map(c => c.basePrice)))}₺'den` : ''}
+                              {f.courts.length} saha{f.courts.some(c => c.basePrice > 0) ? ` · ${money(Math.min(...f.courts.filter(c => c.basePrice > 0).map(c => c.basePrice)))}'den` : ''}
                             </p>
                           </div>
                         </button>
@@ -895,7 +902,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                               </p>
                             </div>
                             {c.basePrice > 0 && (
-                              <span className={`font-numeric shrink-0 text-xs font-extrabold ${on ? 'text-[#39FF14]' : 'text-white/50'}`}>{fmtTL(c.basePrice)}₺</span>
+                              <span className={`font-numeric shrink-0 text-xs font-extrabold ${on ? 'text-[#39FF14]' : 'text-white/50'}`}>{money(c.basePrice)}</span>
                             )}
                           </button>
                         );
@@ -932,7 +939,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                     );
                   })}
                   {daysLoaded < DAY_MAX && (
-                    <button onClick={() => { buzz(10); setDaysLoaded(DAY_MAX); }}
+                    <button onClick={() => { setDaysLoaded(DAY_MAX); }}
                       className="shrink-0 w-16 h-[60px] rounded-2xl border border-dashed border-white/[0.14] text-ink-4 flex flex-col items-center justify-center gap-0.5 active:scale-95 transition-transform">
                       <span className="font-numeric text-xs font-extrabold">+{DAY_MAX - daysLoaded}</span>
                       <span className="text-[0.6875rem] font-extrabold">gün daha</span>
@@ -991,11 +998,11 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                   const on = format === val;
                   const p = total != null ? Math.ceil((total / (n * 2)) * 1.05) : null;
                   return (
-                    <button key={val} onClick={() => { buzz(12); setFormat(val); }}
+                    <button key={val} onClick={() => { setFormat(val); }}
                       className={`relative shrink-0 w-[84px] h-[72px] rounded-[18px] border flex flex-col items-center justify-center gap-0.5 transition-colors ${on ? 'bg-[#39FF14]/[0.09] border-[#39FF14]/50' : 'bg-white/[0.03] border-white/[0.09]'}`}>
                       <span className={`text-base font-extrabold italic ${on ? 'text-[#39FF14]' : 'text-white'}`}>{val}</span>
                       <span className="text-[0.6875rem] font-bold text-white/[0.38]">{n * 2} oyuncu</span>
-                      <span className={`font-numeric text-[0.6875rem] font-extrabold ${on ? 'text-[#39FF14]' : 'text-ink-4'}`}>{p != null ? `${fmtTL(p)}₺` : '—'}</span>
+                      <span className={`font-numeric text-[0.6875rem] font-extrabold ${on ? 'text-[#39FF14]' : 'text-ink-4'}`}>{money(p)}</span>
                       {n === court.minCapacity && (
                         <span className="absolute -top-2 left-1/2 -translate-x-1/2 text-[0.625rem] font-extrabold uppercase tracking-wide text-[#0A0E14] bg-[#FACC15] rounded-md px-1.5 py-0.5 whitespace-nowrap">Önerilen</span>
                       )}
@@ -1017,7 +1024,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                 {([['OPEN', 'Herkese açık', 'Vitrinde görünür, boş kontenjan dolar'], ['PRIVATE', 'Kod ile', 'Sadece kodu paylaştığın kişiler']] as const).map(([id, label, sub]) => {
                   const on = (teamInvite ? 'PRIVATE' : visibility) === id;
                   return (
-                    <button key={id} onClick={() => { buzz(10); setVisibility(id); if (id === 'OPEN') setTeamInvite(false); }}
+                    <button key={id} onClick={() => { setVisibility(id); if (id === 'OPEN') setTeamInvite(false); }}
                       className={`flex flex-col items-start gap-1.5 p-3.5 rounded-2xl border text-left min-h-[64px] transition-colors ${on ? 'bg-[#39FF14]/[0.08] border-[#39FF14]/[0.45]' : 'bg-white/[0.025] border-white/10'}`}>
                       <span className={`text-xs font-extrabold uppercase ${on ? 'text-[#39FF14]' : ''}`}>{label}</span>
                       <span className="text-[0.6875rem] font-bold leading-snug text-ink-4">{sub}</span>
@@ -1040,11 +1047,11 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                 className="flex items-center gap-3 rounded-[20px] border border-white/10 bg-white/[0.025] p-3.5 text-left min-h-[60px] active:scale-[0.99] transition-transform">
                 <div className="flex items-center">
                   <div className="w-[34px] h-[34px] rounded-full bg-gradient-to-br from-[#1e2532] to-[#11151c] border-2 border-[#39FF14] flex items-center justify-center text-xs font-extrabold">
-                    {(currentUserProfile?.name ?? 'S').charAt(0).toUpperCase()}
+                    {trUpper((currentUserProfile?.name ?? 'S').charAt(0))}
                   </div>
                   {invited.slice(0, 3).map(p => (
                     <div key={p.id} className="w-[34px] h-[34px] -ml-2.5 rounded-full bg-gradient-to-br from-[#1e2532] to-[#11151c] border-2 border-[#0A0E14] flex items-center justify-center text-xs font-extrabold text-white/80">
-                      {p.name.charAt(0).toUpperCase()}
+                      {trUpper(p.name.charAt(0))}
                     </div>
                   ))}
                   <div className="w-[34px] h-[34px] -ml-2.5 rounded-full bg-white/[0.04] border-2 border-white/[0.16] flex items-center justify-center text-white/50">
@@ -1065,7 +1072,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
 
             {/* Kaleci / hakem — gerçek sağlayıcı seçimi */}
             <section className="flex flex-col gap-2.5">
-              <button onClick={() => { buzz(8); setSheet('PROVIDERS'); }}
+              <button onClick={() => { setSheet('PROVIDERS'); }}
                 className="flex items-center gap-3 rounded-[20px] border border-white/10 bg-white/[0.025] p-3.5 text-left min-h-[56px] active:scale-[0.99] transition-transform">
                 <div className="w-9 h-9 rounded-xl shrink-0 flex items-center justify-center bg-white/5 text-white/55"><ShieldCheck size={16} /></div>
                 <div className="flex-1 min-w-0">
@@ -1109,16 +1116,16 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                   {seeded ? 'Kapora yok — rezervasyon güvencesi zaten ödendi'
                     : deposit != null
                       ? missing > 0
-                        ? `Kapora ${fmtTL(deposit)}₺ · bakiyen ${fmtTL(spendable)}₺`
-                        : `Kapora ${fmtTL(deposit)}₺ · cüzdanından bloke`
+                        ? `Kapora ${money(deposit)} · bakiyen ${money(spendable)}`
+                        : `Kapora ${money(deposit)} · cüzdanından bloke`
                       : 'Kapora saat seçince hesaplanır'}
                 </p>
                 <p className={`mt-0.5 text-[0.6875rem] font-bold leading-snug ${missing > 0 && deposit != null && !seeded ? 'text-red-300' : 'text-[#FACC15]/85'}`}>
                   {seeded ? 'Maç dolunca oyuncu payları cüzdanına gelir'
                     : deposit != null
                       ? missing > 0
-                        ? `${fmtTL(missing)}₺ yükle, kapora anında bloke edilsin`
-                        : `Maç dolunca ${fmtTL(Math.max(0, deposit - (perPerson ?? 0)))}₺ iade · dolmazsa tamamı`
+                        ? `${money(missing)} yükle, kapora anında bloke edilsin`
+                        : `Maç dolunca ${money(Math.max(0, deposit - (perPerson ?? 0)))} iade · dolmazsa tamamı`
                       : 'Kapora ve iade kuralları için dokun'}
                 </p>
               </div>
@@ -1222,7 +1229,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
           <p className="text-center text-[0.6875rem] font-bold text-white/[0.32] pb-1">
             {publishing ? 'Kapatma — işlem birkaç saniye sürebilir'
               : seeded ? 'Rezervasyonun maça çevrilecek · ek ödeme yok'
-              : deposit != null ? `${fmtTL(deposit)}₺ kapora cüzdanından bloke edilir · maç dolmazsa tam iade` : 'Saha ve saat seçince kapora hesaplanır'}
+              : deposit != null ? `${money(deposit)} kapora cüzdanından bloke edilir · maç dolmazsa tam iade` : 'Saha ve saat seçince kapora hesaplanır'}
           </p>
         </div>
       )}
@@ -1367,7 +1374,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                   <div className="flex gap-2">
                     {([['FRIENDS', `Arkadaşlar${friends.length ? ` · ${friends.length}` : ''}`],
                        ['TEAMS', `Takımlarım${teams.length ? ` · ${teams.length}` : ''}`]] as const).map(([id, label]) => (
-                      <button key={id} onClick={() => { buzz(8); setSquadTab(id); }}
+                      <button key={id} onClick={() => { setSquadTab(id); }}
                         className={`flex-1 h-[38px] rounded-xl text-[0.6875rem] font-extrabold uppercase tracking-[0.06em] border transition-colors ${
                           squadTab === id ? 'bg-[#39FF14] border-[#39FF14] text-[#0A0E14]' : 'bg-white/[0.03] border-white/10 text-white/60'}`}>
                         {label}
@@ -1400,7 +1407,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                             })}
                             className={`flex items-center gap-3 p-3 rounded-2xl border text-left ${on ? 'bg-[#39FF14]/[0.07] border-[#39FF14]/40' : 'bg-white/[0.025] border-white/[0.07]'}`}>
                             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#1e2532] to-[#11151c] border border-white/10 flex items-center justify-center text-sm font-extrabold shrink-0 overflow-hidden">
-                              {f.avatar_url ? <img src={f.avatar_url} alt="" className="w-full h-full object-cover" /> : (f.full_name ?? '?').charAt(0).toUpperCase()}
+                              {f.avatar_url ? <img src={f.avatar_url} alt="" className="w-full h-full object-cover" /> : trUpper((f.full_name ?? '?').charAt(0))}
                             </div>
                             <div className="flex-1 min-w-0">
                               <p className="text-[0.875rem] font-extrabold truncate">{f.full_name}</p>
@@ -1429,7 +1436,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                             className="w-full flex items-center gap-3 p-3 text-left">
                             <div className="w-10 h-10 rounded-xl flex items-center justify-center text-sm font-extrabold shrink-0 border border-white/10"
                               style={{ background: `linear-gradient(135deg, ${t.color1 || '#1e2532'}, ${t.color2 || '#11151c'})` }}>
-                              {(t.short_name || t.name || '?').charAt(0).toUpperCase()}
+                              {trUpper((t.short_name || t.name || '?').charAt(0))}
                             </div>
                             <div className="flex-1 min-w-0">
                               <p className="text-[0.875rem] font-extrabold truncate">{t.name}</p>
@@ -1451,7 +1458,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                                   <button key={m.id} onClick={() => toggleInvite(m)}
                                     className={`flex items-center gap-3 p-2.5 rounded-xl border text-left ${on ? 'bg-[#39FF14]/[0.07] border-[#39FF14]/40' : 'bg-white/[0.03] border-white/[0.06]'}`}>
                                     <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#1e2532] to-[#11151c] border border-white/10 flex items-center justify-center text-xs font-extrabold shrink-0">
-                                      {m.name.charAt(0).toUpperCase()}
+                                      {trUpper(m.name.charAt(0))}
                                     </div>
                                     <div className="flex-1 min-w-0">
                                       <p className="text-[0.8125rem] font-bold truncate">{m.name}</p>
@@ -1504,10 +1511,10 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                     const on = providerTab === id;
                     const n = offerCount(id);
                     return (
-                      <button key={id} onClick={() => { buzz(8); setProviderTab(id); }}
+                      <button key={id} onClick={() => { setProviderTab(id); }}
                         className={`flex-1 py-2.5 text-[0.6875rem] font-extrabold rounded-xl transition-all flex items-center justify-center gap-2 ${on ? 'text-[#0A0E14]' : 'text-ink-4'}`}
                         style={on ? { background: color } : {}}>
-                        <Icon size={14} /> {label.toUpperCase()}{n > 0 ? ` · ${offerOf(id)?.all ? 'Tümü' : n}` : ''}
+                        <Icon size={14} /> {trUpper(label)}{n > 0 ? ` · ${offerOf(id)?.all ? 'Tümü' : n}` : ''}
                       </button>
                     );
                   })}
@@ -1556,7 +1563,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                               className="w-full flex items-center gap-3 rounded-2xl border p-3 text-left transition-all active:scale-[0.99]"
                               style={on ? { background: `${accent}12`, borderColor: `${accent}80` } : { background: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.06)' }}>
                               <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 shrink-0 overflow-hidden flex items-center justify-center text-base font-extrabold">
-                                {p.avatar ? <img src={p.avatar} alt="" referrerPolicy="no-referrer" className="w-full h-full object-cover" /> : p.name.charAt(0).toUpperCase()}
+                                {p.avatar ? <img src={p.avatar} alt="" referrerPolicy="no-referrer" className="w-full h-full object-cover" /> : trUpper(p.name.charAt(0))}
                               </div>
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-1.5">
@@ -1569,7 +1576,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                                 </div>
                               </div>
                               <div className="text-right shrink-0">
-                                <div className="font-numeric text-sm font-extrabold" style={{ color: accent }}>{fmtTL(p.fee)}₺</div>
+                                <div className="font-numeric text-sm font-extrabold" style={{ color: accent }}>{money(p.fee)}</div>
                                 <div className="text-[0.625rem] font-bold uppercase text-ink-4 tracking-widest">bedel</div>
                               </div>
                               <span className="w-6 h-6 shrink-0 rounded-full border-2 flex items-center justify-center"
@@ -1615,20 +1622,20 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
               <div className="rounded-[20px] border border-[#FACC15]/25 bg-[#FACC15]/5 p-[18px] flex items-center justify-between gap-3.5">
                 <div>
                   <p className="text-[0.625rem] font-extrabold uppercase tracking-[0.16em] text-[#FACC15]/70">Bu maçın kaporası</p>
-                  <p className="font-numeric mt-1 text-3xl font-extrabold text-[#FACC15]">{seeded ? '0₺' : deposit != null ? `${fmtTL(deposit)}₺` : '—'}</p>
+                  <p className="font-numeric mt-1 text-3xl font-extrabold text-[#FACC15]">{seeded ? money(0) : money(deposit)}</p>
                 </div>
                 <div className="text-right">
                   <p className="text-[0.625rem] font-extrabold uppercase tracking-[0.16em] text-ink-4">Cüzdan bakiyen</p>
-                  <p className={`font-numeric mt-1 text-[1.1875rem] font-extrabold ${missing > 0 && !seeded ? 'text-red-400' : 'text-[#39FF14]'}`}>{fmtTL(spendable)}₺</p>
+                  <p className={`font-numeric mt-1 text-[1.1875rem] font-extrabold ${missing > 0 && !seeded ? 'text-red-400' : 'text-[#39FF14]'}`}>{money(spendable)}</p>
                   <p className={`mt-0.5 text-[0.6875rem] font-extrabold ${missing > 0 && !seeded ? 'text-red-400' : 'text-[#39FF14]'}`}>
-                    {seeded ? 'Gerekmiyor' : missing > 0 ? `${fmtTL(missing)}₺ eksik` : 'Yeterli ✓'}
+                    {seeded ? 'Gerekmiyor' : missing > 0 ? `${money(missing)} eksik` : 'Yeterli ✓'}
                   </p>
                 </div>
               </div>
               {[
                 { n: '1', t: 'Kapora cüzdanından bloke edilir', b: 'Yayınladığın anda tutar güvenceye alınır — para çekilmez, saha sana kilitlenir.' },
                 { n: '2', t: `Maç ${threshold} oyuncuda kesinleşir`, b: 'Toplam kadronun 2 eksiği kadar oyuncu katıldığında maç aktifleşir ve kapora tahsil edilir.' },
-                { n: '3', t: 'Maç dolunca payın dışındaki tutar döner', b: deposit != null && perPerson != null ? `${fmtTL(deposit)}₺ − ${fmtTL(perPerson)}₺ = ${fmtTL(Math.max(0, deposit - perPerson))}₺ cüzdanına iade edilir; sen de herkes gibi yalnız kendi payını ödersin.` : 'Sen de herkes gibi yalnız kendi payını ödersin; kalanı iade edilir.' },
+                { n: '3', t: 'Maç dolunca payın dışındaki tutar döner', b: deposit != null && perPerson != null ? `${money(deposit)} − ${money(perPerson)} = ${money(Math.max(0, deposit - perPerson))} cüzdanına iade edilir; sen de herkes gibi yalnız kendi payını ödersin.` : 'Sen de herkes gibi yalnız kendi payını ödersin; kalanı iade edilir.' },
                 { n: '4', t: 'Maç dolmazsa tam iade', b: 'Kadro eşiğe ulaşmazsa maç iptal olur ve blokaj kesintisiz çözülür. 24 saatten az kala kaptan iptalinde iade yapılmaz.' },
                 // IP-04 — sunucu karşılığı: app_config.match_leave_free_hours (24).
                 // Kaptan iptali kuralıyla bilerek aynı sayı.
@@ -1669,7 +1676,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                 <div className="flex items-center justify-between">
                   <span className="text-[0.625rem] font-extrabold uppercase tracking-[0.14em] text-ink-4">Kapora</span>
                   <span className="font-numeric text-[0.9375rem] font-extrabold text-[#FACC15]">
-                    {result.deposit > 0 ? `${fmtTL(result.deposit)}₺ bloke` : 'Gerekmedi'}
+                    {result.deposit > 0 ? `${money(result.deposit)} bloke` : 'Gerekmedi'}
                   </span>
                 </div>
                 <div className="h-px bg-white/[0.06]" />
@@ -1677,8 +1684,8 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                   <Undo2 size={14} className="text-[#39FF14] shrink-0 mt-0.5" />
                   <p className="text-[0.6875rem] leading-relaxed text-white/55">
                     {result.deposit > 0
-                      ? `Maç dolduğunda ${fmtTL(Math.max(0, result.deposit - result.perPerson))}₺ cüzdanına döner — sen de yalnız ${fmtTL(result.perPerson)}₺ kendi payını ödemiş olursun. Maç dolmazsa tamamı iade.`
-                      : `Kişi başı ücret ${fmtTL(result.perPerson)}₺ — oyuncular katıldıkça ödemeler güvenceye alınır.`}
+                      ? `Maç dolduğunda ${money(Math.max(0, result.deposit - result.perPerson))} cüzdanına döner — sen de yalnız ${money(result.perPerson)} kendi payını ödemiş olursun. Maç dolmazsa tamamı iade.`
+                      : `Kişi başı ücret ${money(result.perPerson)} — oyuncular katıldıkça ödemeler güvenceye alınır.`}
                   </p>
                 </div>
               </div>

@@ -15,7 +15,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
-  Loader2, Pencil, RefreshCw, ShieldAlert, Sparkles, Users, UserPlus, Wallet, X,
+  Loader2, Pencil, RefreshCw, ShieldAlert, Sparkles, Star, Users, UserPlus, Wallet, X,
 } from 'lucide-react';
 import { supabase } from '../../../supabaseClient';
 import {
@@ -27,14 +27,14 @@ import { ProfileHero, TrustScoreCard, ProfileShortcuts, MatchHistorySection } fr
 import type { ShortcutItem } from '../../../components/profile';
 import { ProfileEditSheet, type ProfileEditValues } from '../../../components/profile/ProfileEditSheet';
 import {
-  buildCardData, applyCardTierOverride, ageFromBirthdate, formatPosition,
-  trustScoreTo100, winStats,
+  ageFromBirthdate, formatPosition, trustScoreTo100, winStats,
 } from '../../../shared/profilePresentation';
 import {
-  adjustWalletBalanceAdmin, setPlayerCardAdmin, updateUserAppProfileAdmin,
-  toTurkishAdminError,
+  adjustWalletBalanceAdmin, fetchPlayerPeerScoresAdmin, updateUserAppProfileAdmin,
+  toTurkishAdminError, type PlayerPeerScores,
 } from '../../services/adminService';
 import { useAdminToast } from '../context/AdminToastContext';
+import { skillBand } from '../../../utils/skillBand';
 
 interface Props {
   userId: string;
@@ -70,14 +70,18 @@ export const UserProfileMirror: React.FC<Props> = ({ userId, onUpdated }) => {
   const [sheetSaving, setSheetSaving] = useState(false);
   const [nameDraft, setNameDraft] = useState('');
   const [trustDraft, setTrustDraft] = useState(100);
-  const [skillDraft, setSkillDraft] = useState('0');
   const [adminOpen, setAdminOpen] = useState(false);
   const [adminSaving, setAdminSaving] = useState(false);
-  const [cardBusy, setCardBusy] = useState(false);
   const [walletOpen, setWalletOpen] = useState(false);
   const [walletAmount, setWalletAmount] = useState('');
   const [walletReason, setWalletReason] = useState('');
   const [walletBusy, setWalletBusy] = useState(false);
+
+  // Alınan akran puanları (salt-okunur; puanlayan kimliği RPC'de bile yok)
+  const [peerOpen, setPeerOpen] = useState(false);
+  const [peer, setPeer] = useState<PlayerPeerScores | null>(null);
+  const [peerLoading, setPeerLoading] = useState(false);
+  const [peerError, setPeerError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -97,7 +101,6 @@ export const UserProfileMirror: React.FC<Props> = ({ userId, onUpdated }) => {
       setHistory(historyData);
       setNameDraft(profileData.full_name || '');
       setTrustDraft(trustScoreTo100(profileData.trustScore));
-      setSkillDraft(String(profileData.stats?.rating ?? 0));
       const [friendsRes, teamsRes] = await Promise.allSettled([
         fetchFriends(userId),
         supabase.from('team_members').select('team_id', { count: 'exact', head: true }).eq('user_id', userId),
@@ -130,6 +133,8 @@ export const UserProfileMirror: React.FC<Props> = ({ userId, onUpdated }) => {
         bio: v.bio,
         birthdate: v.birthdate || '',
         gender: v.gender || '',
+        // self_skill BILEREK gonderilmez: oyuncunun kendi beyani, admin
+        // degistirmez (sheet'te salt-okunur gosterilir).
         play_style: v.playStyle || '',
         ...(v.avatarUrl && v.avatarUrl !== profile?.avatar_url ? { avatar_url: v.avatarUrl } : {}),
       }, 'Profil güncellendi (denetime yazıldı)');
@@ -146,12 +151,9 @@ export const UserProfileMirror: React.FC<Props> = ({ userId, onUpdated }) => {
     const name = nameDraft.trim();
     setAdminSaving(true);
     try {
-      // DB kısıtı profiles_skill_rating_check: [1.0, 5.0] — taban 1'e kırpılır.
-      const skill = Math.max(1, Math.min(5, Number(skillDraft.replace(',', '.'))));
       await saveFields({
         ...(name && name !== (profile.full_name || '') ? { full_name: name } : {}),
         ...(trustDraft !== trustScoreTo100(profile.trustScore) ? { trust_score: trustDraft / 20 } : {}),
-        ...(Number.isFinite(skill) && skill !== (profile.stats?.rating ?? 0) ? { skill_rating: skill } : {}),
       }, 'Yönetici alanları kaydedildi');
     } catch (err) {
       toastError(toTurkishAdminError(err));
@@ -160,18 +162,24 @@ export const UserProfileMirror: React.FC<Props> = ({ userId, onUpdated }) => {
     }
   };
 
-  const handleCard = async (active: boolean, tier: 'bronze' | 'silver' | 'gold') => {
-    setCardBusy(true);
+
+  const loadPeer = useCallback(async () => {
+    setPeerLoading(true);
+    setPeerError(null);
     try {
-      await setPlayerCardAdmin(userId, active, tier);
-      success(active ? `Premium kart aktif — ${tier.toUpperCase()}` : 'Premium kart kapatıldı');
-      await load();
-      onUpdated?.();
+      setPeer(await fetchPlayerPeerScoresAdmin(userId));
     } catch (err) {
-      toastError(toTurkishAdminError(err));
+      setPeerError(toTurkishAdminError(err));
     } finally {
-      setCardBusy(false);
+      setPeerLoading(false);
     }
+  }, [userId]);
+
+  const togglePeer = () => {
+    setPeerOpen((o) => {
+      if (!o && !peer && !peerLoading) void loadPeer();
+      return !o;
+    });
   };
 
   const handleWallet = async () => {
@@ -216,7 +224,6 @@ export const UserProfileMirror: React.FC<Props> = ({ userId, onUpdated }) => {
   }
 
   const { total, wins, winRate } = winStats(history);
-  const cardData = applyCardTierOverride(buildCardData(profile, wins, total), profile);
   const trustScore = trustScoreTo100(profile.trustScore);
 
   const shortcuts: ShortcutItem[] = [
@@ -275,8 +282,8 @@ export const UserProfileMirror: React.FC<Props> = ({ userId, onUpdated }) => {
             matches={total}
             winRate={winRate}
             mvp={null}
-            cardAvailable={!!profile.cardActive}
-            cardData={cardData}
+            winCount={wins}
+            selfSkill={(profile as { selfSkill?: number | null }).selfSkill ?? null}
             cardBackMatches={history}
             onEditAvatar={() => setSheetOpen(true)}
           />
@@ -339,17 +346,6 @@ export const UserProfileMirror: React.FC<Props> = ({ userId, onUpdated }) => {
                 />
                 <p className="text-[9px] text-gray-600 mt-1">DB'de 0–5 saklanır (÷20). Master 3.4: güven 100'den başlar, yalnız düşer — artışı istisnai durumda kullanın.</p>
               </div>
-              <div>
-                <label className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Beceri Puanı (kart OVR temeli, 1–5)</label>
-                <input
-                  value={skillDraft}
-                  onChange={(e) => setSkillDraft(e.target.value)}
-                  inputMode="decimal"
-                  className="mt-1 w-28 h-10 bg-black/40 border border-white/15 rounded-xl px-3 text-sm text-white font-mono focus:border-purple-500/40 focus:outline-none"
-                  placeholder="örn. 3.8"
-                />
-                <p className="text-[9px] text-gray-600 mt-1">Kart görünümündeki OVR bu puandan türetilir (1–5 → 20–100). Hiç maçı yoksa kart "rookie" kalır.</p>
-              </div>
             </div>
 
             <button
@@ -360,47 +356,77 @@ export const UserProfileMirror: React.FC<Props> = ({ userId, onUpdated }) => {
             >
               {adminSaving ? <Loader2 size={13} className="animate-spin" /> : null} Yönetici Alanlarını Kaydet
             </button>
+          </motion.div>
+        )}
+      </div>
 
-            {/* Premium kart yönetimi (Q24) */}
-            <div className="border-t border-white/[0.06] pt-3 space-y-2">
-              <div className="flex items-center justify-between">
-                <p className="text-[10px] font-extrabold text-gray-400 uppercase tracking-wider">Premium Kart (Q24)</p>
-                <button
-                  type="button"
-                  disabled={cardBusy}
-                  onClick={() => void handleCard(!profile.cardActive, (profile.cardTier || 'bronze'))}
-                  className={`px-3 py-1.5 rounded-lg text-[10px] font-extrabold uppercase border transition-colors disabled:opacity-40 ${
-                    profile.cardActive
-                      ? 'bg-[#39FF14]/15 border-[#39FF14]/40 text-[#39FF14]'
-                      : 'bg-white/5 border-white/15 text-gray-400 hover:text-white'
-                  }`}
-                >
-                  {profile.cardActive ? 'AKTİF — Kapat' : 'KAPALI — Aç'}
+      {/* ═══ ALINAN AKRAN PUANLARI — puan sistemi söküldü; skorlar yalnız burada,
+           salt-okunur görünür. Puanlayan kimliği RPC çıktısında bile YOK (anonim). ═══ */}
+      <div className="bg-[#161B22]/60 border border-purple-500/15 rounded-2xl p-4 space-y-3">
+        <button type="button" onClick={togglePeer} className="w-full flex items-center justify-between gap-2">
+          <p className="text-[10px] font-extrabold text-purple-300 uppercase tracking-wider flex items-center gap-1.5">
+            <Star size={12} /> Alınan Akran Puanları (kullanıcı görmez)
+          </p>
+          <span className="text-[10px] text-gray-500 font-extrabold">{peerOpen ? '▲' : '▼'}</span>
+        </button>
+
+        {peerOpen && (
+          <motion.div initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
+            {peerLoading ? (
+              <div className="py-6 flex flex-col items-center gap-2 text-gray-500">
+                <Loader2 size={16} className="animate-spin" />
+                <p className="text-[10px]">Akran puanları yükleniyor…</p>
+              </div>
+            ) : peerError ? (
+              <div className="py-4 flex flex-col items-center gap-2 text-center">
+                <p className="text-[11px] text-gray-400">{peerError}</p>
+                <button type="button" onClick={() => void loadPeer()} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-white/15 text-[10px] font-extrabold uppercase text-gray-300 hover:text-white">
+                  <RefreshCw size={10} /> Yeniden Dene
                 </button>
               </div>
-              <div className="flex gap-1.5">
-                {(['bronze', 'silver', 'gold'] as const).map((t) => (
-                  <button
-                    key={t}
-                    type="button"
-                    disabled={cardBusy || !profile.cardActive}
-                    onClick={() => void handleCard(true, t)}
-                    className={`flex-1 py-2 rounded-lg text-[10px] font-extrabold uppercase border transition-colors disabled:opacity-30 ${
-                      profile.cardTier === t
-                        ? t === 'gold'
-                          ? 'bg-yellow-500/20 border-yellow-500/50 text-yellow-300'
-                          : t === 'silver'
-                          ? 'bg-gray-300/15 border-gray-300/40 text-gray-200'
-                          : 'bg-orange-500/15 border-orange-500/40 text-orange-300'
-                        : 'border-white/10 text-gray-500 hover:text-white'
-                    }`}
-                  >
-                    {t}
-                  </button>
-                ))}
-              </div>
-              <p className="text-[9px] text-gray-600">Kart aktifken kullanıcı profilinde 👤/🎴 geçişi belirir — aynadaki hero'da birebir test edebilirsiniz.</p>
-            </div>
+            ) : peer ? (
+              <>
+                <div className="grid grid-cols-4 gap-2">
+                  {([
+                    ['Puan Sayısı', String(peer.count)],
+                    // Hiç puan yoksa "—" — 0 ortalama uydurulmaz.
+                    ['Ortalama', peer.average === null ? '—' : peer.average.toFixed(1)],
+                    ['MVP', String(peer.motmCount)],
+                    ['Öz Beyan', skillBand(peer.selfSkill)?.label ?? '—'],
+                  ] as const).map(([label, value]) => (
+                    <div key={label} className="bg-black/30 border border-white/10 rounded-xl px-2 py-2 text-center">
+                      <p className="text-sm font-extrabold text-white font-mono">{value}</p>
+                      <p className="text-[8px] text-gray-500 font-bold uppercase tracking-wider mt-0.5">{label}</p>
+                    </div>
+                  ))}
+                </div>
+
+                {peer.recent.length > 0 && (
+                  <div className="space-y-1">
+                    <p className="text-[9px] text-gray-500 font-bold uppercase tracking-wider">Son puanlar</p>
+                    {peer.recent.map((r, i) => (
+                      <div key={i} className="flex items-center justify-between gap-2 bg-black/20 border border-white/5 rounded-lg px-2.5 py-1.5">
+                        <span className="text-[10px] text-gray-400 truncate min-w-0">
+                          {r.matchTitle || 'Maç'}
+                          {r.at ? <span className="text-gray-600"> · {new Date(r.at).toLocaleDateString('tr-TR')}</span> : null}
+                        </span>
+                        <span className="flex items-center gap-1.5 shrink-0">
+                          {r.fairPlay != null && (
+                            <span className="text-[9px] font-bold text-gray-500">FP {r.fairPlay}</span>
+                          )}
+                          <span className="text-[11px] font-extrabold text-amber-300 font-mono">{r.score}/10</span>
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <p className="text-[9px] text-gray-600 leading-relaxed">
+                  Puanlayan kimliği gösterilmez — RPC anonim döndürür. Skorlar MVP seçiminde
+                  kullanılır; oyuncu profiline puan/kart olarak yansımaz.
+                </p>
+              </>
+            ) : null}
           </motion.div>
         )}
       </div>
@@ -416,10 +442,12 @@ export const UserProfileMirror: React.FC<Props> = ({ userId, onUpdated }) => {
           gender: profile.gender || '',
           playStyle: profile.playStyle || '',
           avatarUrl: profile.avatar_url || '',
+          selfSkill: (profile as { selfSkill?: number | null }).selfSkill ?? null,
         }}
         saving={sheetSaving}
         onSave={handleSheetSave}
         onClose={() => setSheetOpen(false)}
+        selfSkillEditable={false}
       />
 
       {/* ═══ Ledger'lı bakiye düzeltme ═══ */}

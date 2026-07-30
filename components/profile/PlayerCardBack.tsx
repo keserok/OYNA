@@ -1,21 +1,20 @@
 import React from 'react';
 import { MatchHistorySummary } from '../../services/userService';
+import { winStats } from '../../shared/profilePresentation';
 
 /**
- * Premium kartın arka yüzü — performans raporu (son 5 maç, galibiyet %, trend).
- * ProfileScreen içindeki CardBack'ten taşındı; davranış birebir aynı.
+ * Premium kartın arka yüzü — performans raporu (son 5 maç, maç sayısı, galibiyet %).
+ *
+ * IP-18: gol/asist/en iyi puan/trend sabitleri silindi (bkz. aşağıdaki not) ve
+ * galibiyet oranı artık ön yüzle AYNI hesaptan gelir (`winStats`) — burada ayrı
+ * bir formül vardı ve skorsuz maçları da paydaya katıyordu.
  */
-export const PlayerCardBack: React.FC<{ tier: 'gold' | 'silver' | 'bronze'; matches: MatchHistorySummary[] }> = ({ tier, matches }) => {
+export const PlayerCardBack: React.FC<{ matches: MatchHistorySummary[] }> = ({ matches }) => {
     const last5 = matches.slice(0, 5);
-    const wins = matches.filter(m => m.result === 'WIN').length;
-    const total = matches.length;
-    const winRate = total > 0 ? Math.round((wins / total) * 100) : 0;
+    const { winRate } = winStats(matches);
 
-    const colors = {
-        gold: { border: '#d4a84b', text: '#ffd54f', label: '#c8962a' },
-        silver: { border: '#8a96c0', text: '#c5cef5', label: '#7888b8' },
-        bronze: { border: '#b07840', text: '#d4986a', label: '#8a5c28' }
-    }[tier];
+    // Tier sistemi söküldü (F3=b) — kart arkası tek nötr paletle çizilir.
+    const colors = { border: '#3d5566', text: '#9db4c4', label: '#5c7385' };
 
     return (
         <div className="w-full h-full rounded-[24px] overflow-hidden relative" style={{ background: 'linear-gradient(160deg, #0a0e14 0%, #161B22 50%, #0a0e14 100%)', border: `2px solid ${colors.border}` }}>
@@ -34,36 +33,28 @@ export const PlayerCardBack: React.FC<{ tier: 'gold' | 'silver' | 'bronze'; matc
                     <p className="text-[0.625rem] font-extrabold uppercase tracking-widest mb-2" style={{ color: colors.label }}>Son 5 Maç</p>
                     <div className="flex gap-2 justify-center">
                         {last5.map((m, i) => (
-                            <div key={i} className={`w-8 h-8 rounded-lg flex items-center justify-center text-[0.6875rem] font-extrabold border ${m.result === 'WIN' ? 'bg-green-500/20 text-green-400 border-green-500/30' : m.result === 'LOSS' ? 'bg-red-500/20 text-red-400 border-red-500/30' : 'bg-gray-500/20 text-gray-400 border-gray-500/30'}`}>
-                                {m.result === 'WIN' ? 'G' : m.result === 'LOSS' ? 'M' : 'B'}
+                            // IP-18: skoru girilmemiş maç "B" (beraberlik) DEĞİLDİR — "·" ile nötr çizilir.
+                            <div key={i} className={`w-8 h-8 rounded-lg flex items-center justify-center text-[0.6875rem] font-extrabold border ${m.result === 'WIN' ? 'bg-green-500/20 text-green-400 border-green-500/30' : m.result === 'LOSS' ? 'bg-red-500/20 text-red-400 border-red-500/30' : m.result === 'NO_SCORE' ? 'bg-white/5 text-ink-4 border-white/10' : 'bg-gray-500/20 text-gray-400 border-gray-500/30'}`}
+                                title={m.result === 'NO_SCORE' ? 'Skor girilmedi' : undefined}>
+                                {m.result === 'WIN' ? 'G' : m.result === 'LOSS' ? 'M' : m.result === 'NO_SCORE' ? '·' : 'B'}
                             </div>
                         ))}
                     </div>
                 </div>
+                {/* IP-18 · karar 11a — kartın arkasındaki dört sayı (gol,
+                    pas verme, en yüksek puan ve trend çubukları) kaynak koda
+                    ELLE yazılmış sabitlerdi. Bu veriler uygulamada hiç
+                    toplanmıyor, dolayısıyla gerçekleşebilecekleri bir yol da
+                    yoktu. Silindi; geriye yalnız gerçekten hesaplanan iki şey
+                    kalır: son 5 maç ve galibiyet oranı. */}
                 <div className="grid grid-cols-2 gap-2">
                     <div className="bg-black/40 rounded-xl p-2.5 border border-white/5 text-center">
-                        <span className="text-lg font-extrabold" style={{ color: colors.text }}>18</span>
-                        <p className="text-[0.625rem] font-extrabold uppercase tracking-widest" style={{ color: colors.label }}>Gol</p>
+                        <span className="text-lg font-extrabold" style={{ color: colors.text }}>{matches.length}</span>
+                        <p className="text-[0.625rem] font-extrabold uppercase tracking-widest" style={{ color: colors.label }}>Maç</p>
                     </div>
                     <div className="bg-black/40 rounded-xl p-2.5 border border-white/5 text-center">
-                        <span className="text-lg font-extrabold" style={{ color: colors.text }}>12</span>
-                        <p className="text-[0.625rem] font-extrabold uppercase tracking-widest" style={{ color: colors.label }}>Asist</p>
-                    </div>
-                    <div className="bg-black/40 rounded-xl p-2.5 border border-white/5 text-center">
-                        <span className="text-lg font-extrabold" style={{ color: colors.text }}>9.2</span>
-                        <p className="text-[0.625rem] font-extrabold uppercase tracking-widest" style={{ color: colors.label }}>En İyi Puan</p>
-                    </div>
-                    <div className="bg-black/40 rounded-xl p-2.5 border border-white/5 text-center">
-                        <span className="text-lg font-extrabold" style={{ color: colors.text }}>{winRate}%</span>
+                        <span className="text-lg font-extrabold" style={{ color: colors.text }}>{winRate === null ? '—' : `${winRate}%`}</span>
                         <p className="text-[0.625rem] font-extrabold uppercase tracking-widest" style={{ color: colors.label }}>Galibiyet</p>
-                    </div>
-                </div>
-                <div>
-                    <p className="text-[0.625rem] font-extrabold uppercase tracking-widest mb-1.5" style={{ color: colors.label }}>Performans Trendi</p>
-                    <div className="flex items-end gap-[3px] h-8 justify-center">
-                        {[7.2, 8.1, 6.5, 8.8, 9.2, 7.8, 8.5, 9.0, 7.5, 8.2].map((v, i) => (
-                            <div key={i} className="w-3 rounded-sm" style={{ height: `${(v / 10) * 100}%`, background: v >= 8 ? 'linear-gradient(to top, #22c55e, #4ade80)' : v >= 7 ? 'linear-gradient(to top, #eab308, #facc15)' : 'linear-gradient(to top, #ef4444, #f87171)' }} />
-                        ))}
                     </div>
                 </div>
                 <div className="flex items-center justify-center gap-2">

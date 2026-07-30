@@ -20,6 +20,8 @@ import Chip from '../components/ui/Chip';
 import { getInitials } from '../components/ui/Avatar';
 import { createServiceRequest, fundServiceRequest } from '../services/serviceRequestService';
 import { auth } from '../supabaseAuth';
+import { trCapitalize } from '../utils/trUpper';
+import { formatTRYShort } from '../utils/formatTRY';
 
 const getNormalizedDifficulty = (diff?: string): string => {
   if (!diff) return 'Rahat';
@@ -27,7 +29,7 @@ const getNormalizedDifficulty = (diff?: string): string => {
   if (d === 'ciddi' || d === 'pro') return 'Ciddi';
   if (d === 'taktiksel' || d === 'yarı-pro' || d === 'yari-pro' || d === 'yarı pro' || d === 'yari pro') return 'Taktiksel';
   if (d === 'rahat' || d === 'amatör' || d === 'amator' || d === 'eğlence' || d === 'eglence') return 'Rahat';
-  return diff.charAt(0).toUpperCase() + diff.slice(1);
+  return trCapitalize(diff);
 };
 
 // "18:00 - 23:00" gibi bir aralıkta seçilen saatin kalıp kalmadığını kontrol eder.
@@ -97,7 +99,7 @@ const SkillBar: React.FC<{ label: string; value: number; color: string }> = ({ l
     <div className="space-y-1.5">
         <div className="flex justify-between items-center">
             <span className="text-[0.6875rem] font-bold text-white/50">{label}</span>
-            <span className="text-[0.6875rem] font-extrabold text-white font-numeric tabular-nums">{value}</span>
+            <span className="text-[0.6875rem] font-extrabold text-white font-numeric">{value}</span>
         </div>
         <div className="h-1.5 bg-white/[0.06] rounded-full overflow-hidden">
             <motion.div
@@ -348,7 +350,7 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect, onCre
     }, [selectedProfile, stepBackOverlay]);
 
     const handleShare = async (p: Goalkeeper | Referee) => {
-        const text = `${p.name} — OYNA'da ${roleLabel}. Maç başı ücret: ${p.fee}₺${p.rating > 0 ? `, puan: ${p.rating.toFixed(1)}` : ''}.`;
+        const text = `${p.name} — OYNA'da ${roleLabel}. Maç başı ücret: ${formatTRYShort(p.fee)}${p.rating > 0 ? `, puan: ${p.rating.toFixed(1)}` : ''}.`;
         try {
             if (navigator.share) {
                 await navigator.share({ title: `OYNA · ${p.name}`, text });
@@ -686,14 +688,14 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect, onCre
                                         <div className="space-y-1.5">
                                             <div className="flex justify-between items-center">
                                                 <span className="text-[0.625rem] font-extrabold text-ink-4 uppercase tracking-widest">Emanete Alınan Ücret</span>
-                                                <span className="text-base font-extrabold font-numeric tabular-nums" style={{ color: theme.accent }}>
-                                                    {hireResult?.fee ?? detail.fee} ₺
+                                                <span className="text-base font-extrabold font-numeric" style={{ color: theme.accent }}>
+                                                    {formatTRYShort(hireResult?.fee ?? detail.fee)}
                                                 </span>
                                             </div>
                                             {hireResult && (
                                                 <div className="flex justify-between items-center">
                                                     <span className="text-[0.625rem] font-extrabold text-ink-4 uppercase tracking-widest">{roleLabel} Net Kazancı</span>
-                                                    <span className="text-xs font-bold text-white/60 font-numeric tabular-nums">{hireResult.providerAmount} ₺</span>
+                                                    <span className="text-xs font-bold text-white/60 font-numeric">{formatTRYShort(hireResult.providerAmount)}</span>
                                                 </div>
                                             )}
                                         </div>
@@ -794,7 +796,7 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect, onCre
                                         <div className="p-4 rounded-2xl border" style={{ backgroundColor: theme.soft, borderColor: theme.border }}>
                                             <div className="flex items-center justify-between">
                                                 <span className="text-[0.625rem] font-extrabold text-white/60 uppercase tracking-widest">Hizmet Bedeli</span>
-                                                <span className="text-xl font-extrabold font-numeric tabular-nums text-white">{detail.fee}₺</span>
+                                                <span className="text-xl font-extrabold font-numeric text-white">{formatTRYShort(detail.fee)}</span>
                                             </div>
                                             <p className="text-[0.6875rem] font-semibold text-ink-4 mt-2 leading-relaxed">
                                                 Onaylayınca <span className="text-white font-bold">emanete alınır</span> — {roleLabel.toLocaleLowerCase('tr-TR')} kabul edip
@@ -869,7 +871,7 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect, onCre
                                             <p className="text-[0.625rem] font-bold uppercase tracking-widest" style={{ color: theme.accent }}>{roleLabel}</p>
                                         </div>
                                         <div className="text-right shrink-0">
-                                            <p className="text-base font-extrabold text-white font-numeric tabular-nums">{detail.fee}₺</p>
+                                            <p className="text-base font-extrabold text-white font-numeric">{formatTRYShort(detail.fee)}</p>
                                             <p className="text-[0.6875rem] font-bold text-ink-4 uppercase">maç başı</p>
                                         </div>
                                     </div>
@@ -1206,7 +1208,7 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect, onCre
                                 <div className="absolute bottom-0 left-0 w-full px-5 pt-4 pb-safe bg-[#0A0E14]/95 backdrop-blur-md border-t border-white/5 flex gap-3 items-center z-20">
                                     <div className="flex flex-col items-start pr-1 shrink-0">
                                         <span className="text-[0.625rem] font-extrabold text-ink-4 uppercase tracking-widest">Hizmet Bedeli</span>
-                                        <span className="text-xl font-extrabold text-white font-numeric tabular-nums leading-tight">{detail.fee}₺</span>
+                                        <span className="text-xl font-extrabold text-white font-numeric leading-tight">{formatTRYShort(detail.fee)}</span>
                                         <span className="text-[0.6875rem] font-bold text-ink-4">maç başı</span>
                                     </div>
                                     <button

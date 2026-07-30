@@ -16,6 +16,15 @@ interface PlayerCardRevealProps {
   /** "Başla" — profili tamamla (completed=true) ve uygulamaya geç. */
   onStart: () => void;
   onBack: () => void;
+  /**
+   * IP-16 — kayıt hatası KALICI. Eskiden yalnız 4 saniyelik bir bildirim
+   * çıkıyordu; bu perde `absolute inset-0 z-20` olduğu için üstteki "Atla"
+   * tuşunu da örtüyordu, yani hatada kullanıcının görünür hiçbir çıkışı
+   * kalmıyordu.
+   */
+  error?: string | null;
+  /** Hata durumunda perdenin İÇİNDEN çıkış — kurulumu şimdilik geç. */
+  onSkip?: () => void;
 }
 
 const SPHERE = 'radial-gradient(circle at 32% 28%, #C8FFB0, #4DFF2A 45%, #17B356 72%, #075B2C)';
@@ -26,7 +35,7 @@ const SPHERE = 'radial-gradient(circle at 32% 28%, #C8FFB0, #4DFF2A 45%, #17B356
  * yüzer. "Başla" profili tamamlar (apply_onboarding, completed=true).
  */
 const PlayerCardReveal: React.FC<PlayerCardRevealProps> = ({
-  firstName, lastName, ageRange, gender, position, playStyle, locationGranted, busy, onStart, onBack,
+  firstName, lastName, ageRange, gender, position, playStyle, locationGranted, busy, onStart, onBack, error, onSkip,
 }) => {
   const initials = (trUpper(firstName.trim()).charAt(0) || '') + (trUpper(lastName.trim()).charAt(0) || '');
   const fullName = trUpper(`${firstName.trim()} ${lastName.trim()}`.trim());
@@ -105,8 +114,29 @@ const PlayerCardReveal: React.FC<PlayerCardRevealProps> = ({
           boxShadow: busy ? 'none' : '0 0 30px rgba(57,255,20,0.5)', animation: busy ? 'none' : 'obGradMove 3s ease-in-out infinite alternate',
         }}
       >
-        {busy ? 'Kaydediliyor…' : 'Başla'}
+        {busy ? 'Kaydediliyor…' : error ? 'Tekrar Dene' : 'Başla'}
       </motion.button>
+
+      {error && (
+        <>
+          <p role="alert" style={{ marginTop: 14, maxWidth: 300, fontSize: 12.5, lineHeight: 1.55, fontWeight: 700, color: '#FCA5A5', textAlign: 'center' }}>
+            {error}
+          </p>
+          {onSkip && (
+            <button
+              onClick={onSkip}
+              disabled={busy}
+              style={{
+                marginTop: 10, minHeight: 46, padding: '0 18px', background: 'none', border: 'none',
+                color: 'rgba(255,255,255,0.55)', fontSize: 13, fontWeight: 700,
+                textDecoration: 'underline', cursor: busy ? 'default' : 'pointer',
+              }}
+            >
+              Şimdilik Geç
+            </button>
+          )}
+        </>
+      )}
     </motion.div>
   );
 };

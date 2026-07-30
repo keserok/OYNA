@@ -371,7 +371,7 @@ const InviteModal: React.FC<{
 
   const submit = async () => {
     if (!name.trim()) { notify('İsim gerekli.', 'warning'); return; }
-    if (mode === 'ROSTER' && teamCount >= maxStaff) { notify(`Planınız en fazla ${maxStaff} kayda izin veriyor.`, 'warning'); return; }
+    if (mode === 'ROSTER' && teamCount >= maxStaff) { notify(`Planın en fazla ${maxStaff} kayda izin veriyor.`, 'warning'); return; }
     setBusy(true);
     try {
       if (mode === 'LOGIN') {

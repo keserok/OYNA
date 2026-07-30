@@ -9,13 +9,13 @@ interface LoadingStateProps {
 }
 
 export const LoadingState: React.FC<LoadingStateProps> = ({
-  message = 'Yükleniyor...',
+  message = 'Yükleniyor…',
   size = 'md'
 }) => {
   const spinnerSize = { sm: 24, md: 44, lg: 60 }[size];
 
   return (
-    <div className="flex flex-col items-center justify-center p-8 text-center min-h-[200px]">
+    <div role="status" aria-live="polite" className="flex flex-col items-center justify-center p-8 text-center min-h-[200px]">
       <Spinner size={spinnerSize} className="mb-3" />
       <p className="text-sm font-bold text-gray-400 select-none animate-pulse">
         {message}
@@ -33,12 +33,13 @@ interface ErrorStateProps {
 
 export const ErrorState: React.FC<ErrorStateProps> = ({
   title = 'Bir Hata Oluştu',
-  message = 'Veriler yüklenirken teknik bir problem yaşandı. Lütfen tekrar deneyin.',
+  message = 'Bilgiler yüklenemedi. Bağlantını kontrol edip tekrar dene.',
   onRetry,
   retryLabel = 'Tekrar Dene'
 }) => {
   return (
     <motion.div 
+      role="alert"
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       className="flex flex-col items-center justify-center p-8 text-center min-h-[250px] bg-red-950/10 border border-red-500/10 rounded-2xl max-w-sm mx-auto my-6"
@@ -61,16 +62,28 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
   );
 };
 
+interface EmptyStateAction {
+  label: string;
+  onClick: () => void;
+  /** İlk aksiyon birincil çizilir; ikincisi nötr. */
+  variant?: 'primary' | 'secondary';
+}
+
 interface EmptyStateProps {
   title?: string;
   message?: string;
   icon?: React.ReactNode;
+  /** IP-12 · BULGU-059: boş durum ÇIKMAZ SOKAK olmamalı. Bu prop arayüzde hiç
+   *  yoktu, dolayısıyla ekranlar buton koyamıyordu — kullanıcı "maç yok"
+   *  yazısına bakıp orada kalıyordu. */
+  actions?: EmptyStateAction[];
 }
 
 export const EmptyState: React.FC<EmptyStateProps> = ({
-  title = 'Sonuç Bulunamadı',
-  message = 'Görüntülenecek herhangi bir veri kaydı bulunmuyor.',
-  icon
+  title = 'Burada Henüz Bir Şey Yok',
+  message = 'Görünecek bir kayıt bulunamadı.',
+  icon,
+  actions,
 }) => {
   return (
     <motion.div 
@@ -87,6 +100,23 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
       <p className="text-xs text-ink-4 leading-relaxed max-w-[260px]">
         {message}
       </p>
+      {actions && actions.length > 0 && (
+        <div className="flex flex-col gap-2 mt-4 w-full max-w-[260px]">
+          {actions.map((a, i) => (
+            <button
+              key={a.label}
+              onClick={a.onClick}
+              className={`w-full min-h-[44px] px-4 rounded-2xl text-xs font-extrabold uppercase tracking-wide active:scale-[0.98] transition-transform ${
+                (a.variant ?? (i === 0 ? 'primary' : 'secondary')) === 'primary'
+                  ? 'bg-primary text-on-primary'
+                  : 'border border-white/12 text-white/75 hover:bg-white/5'
+              }`}
+            >
+              {a.label}
+            </button>
+          ))}
+        </div>
+      )}
     </motion.div>
   );
 };

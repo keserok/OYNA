@@ -251,7 +251,7 @@ export const OwnerSubscriptionModal: React.FC<OwnerSubscriptionModalProps> = ({
             disabled={saving}
             className="w-full h-16 bg-blue-600 text-white font-extrabold text-lg rounded-2xl shadow-xl shadow-blue-900/20 hover:bg-blue-500 transition-all disabled:opacity-50"
           >
-            {saving ? 'KAYDEDİLİYOR...' : 'ABONMANI OLUŞTUR'}
+            {saving ? 'KAYDEDİLİYOR…' : 'ABONMANI OLUŞTUR'}
           </button>
         </div>
       </div>

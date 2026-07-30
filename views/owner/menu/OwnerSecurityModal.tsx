@@ -188,7 +188,7 @@ export const OwnerSecurityModal: React.FC<Props> = ({ onClose }) => {
           disabled={isSaving || !currentPassword || !policyOk || !matchOk}
           className="w-full py-4 bg-blue-600 text-white font-extrabold rounded-2xl hover:bg-blue-500 disabled:opacity-50 flex items-center justify-center gap-2"
         >
-          <Lock size={18} /> {isSaving ? 'Güncelleniyor...' : 'Şifreyi Güncelle'}
+          <Lock size={18} /> {isSaving ? 'Güncelleniyor…' : 'Şifreyi Güncelle'}
         </button>
 
         <div className="pt-2 border-t border-white/5">
@@ -198,7 +198,7 @@ export const OwnerSecurityModal: React.FC<Props> = ({ onClose }) => {
             disabled={signingOutAll}
             className="w-full py-3 bg-red-500/10 border border-red-500/20 text-red-400 font-bold text-sm rounded-2xl hover:bg-red-500/20 disabled:opacity-50 flex items-center justify-center gap-2"
           >
-            <LogOut size={16} /> {signingOutAll ? 'Çıkış yapılıyor...' : 'Tüm Cihazlardan Çıkış Yap'}
+            <LogOut size={16} /> {signingOutAll ? 'Çıkış yapılıyor…' : 'Tüm Cihazlardan Çıkış Yap'}
           </button>
           <p className="text-[10px] text-gray-500 mt-2 text-center">
             Şüpheli bir giriş fark ettiyseniz tüm oturumları kapatın.

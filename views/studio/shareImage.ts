@@ -3,6 +3,7 @@
 // <canvas> üzerinden PNG Blob üretir. foreignObject/dış görsel YOK →
 // canvas tainting olmaz; dış font gömülmez (sistem yazı tipi yığını).
 import type { TacticState, Slot } from './types';
+import { trUpper } from '../../utils/trUpper';
 
 const FONT = "'Inter','Segoe UI',system-ui,-apple-system,Roboto,sans-serif";
 
@@ -65,7 +66,7 @@ function tokenSvg(slot: Slot, captainId: string | null | undefined): string {
   }
   const fill = isGK ? '#f97316' : '#141a24';
   const stroke = isGK ? '#fdba74' : 'rgba(255,255,255,0.4)';
-  const initial = esc((slot.player.name || '?').charAt(0).toUpperCase());
+  const initial = esc(trUpper((slot.player.name || '?').charAt(0)));
   const name = esc(slot.player.name || '');
   const nameW = Math.min(PITCH_W - 24, name.length * 15 + 26);
   const labelY = cy + TOKEN_R + 36;
@@ -102,7 +103,7 @@ export function buildTacticSvg(t: TacticState, opts: TacticImageOpts = {}): stri
   const accent = opts.accent || '#39FF14';
   const sizeLabel = opts.sizeLabel || t.size;
   const ident = IDENTITY[t.identity as string] || IDENTITY.BALANCED;
-  const crest = (opts.teamName || t.name || '?').trim().slice(0, 2).toUpperCase();
+  const crest = trUpper((opts.teamName || t.name || '?').trim().slice(0, 2));
   const notes = t.notes ? esc(t.notes) : '';
 
   const slots = (t.slots || []).map(s => tokenSvg(s, t.captainId)).join('');
@@ -131,9 +132,9 @@ export function buildTacticSvg(t: TacticState, opts: TacticImageOpts = {}): stri
   <text x="${W - 66}" y="66" font-size="18" font-weight="900" fill="rgba(255,255,255,0.32)" letter-spacing="4" text-anchor="end">MATCH DAY</text>
   <rect x="${W / 2 - 52}" y="86" width="104" height="104" rx="28" fill="${accent}"/>
   <text x="${W / 2}" y="${86 + 68}" font-size="44" font-weight="900" fill="#04140a" text-anchor="middle">${esc(crest)}</text>
-  <text x="${W / 2}" y="238" font-size="54" font-weight="900" fill="#ffffff" text-anchor="middle" font-style="italic">${esc((t.name || 'TAKTİK').toUpperCase())}</text>
+  <text x="${W / 2}" y="238" font-size="54" font-weight="900" fill="#ffffff" text-anchor="middle" font-style="italic">${esc(trUpper(t.name || 'TAKTİK'))}</text>
   <rect x="${W / 2 - 150}" y="256" width="300" height="34" rx="17" fill="rgba(57,255,20,0.12)" stroke="${accent}" stroke-opacity="0.35"/>
-  <text x="${W / 2}" y="279" font-size="19" font-weight="900" fill="${accent}" text-anchor="middle" letter-spacing="3">${esc((t.formation || '').toUpperCase())} SİSTEMİ</text>
+  <text x="${W / 2}" y="279" font-size="19" font-weight="900" fill="${accent}" text-anchor="middle" letter-spacing="3">${esc(trUpper(t.formation))} SİSTEMİ</text>
 
   <!-- Pitch -->
   <rect x="${PITCH_X}" y="${PITCH_Y}" width="${PITCH_W}" height="${PITCH_H}" rx="28" fill="#0B2815" stroke="rgba(255,255,255,0.06)" stroke-width="2"/>
@@ -146,7 +147,7 @@ export function buildTacticSvg(t: TacticState, opts: TacticImageOpts = {}): stri
   <text x="${W / 2}" y="${footerTop + 44}" font-size="18" font-weight="700" fill="#9ca3af" text-anchor="middle" letter-spacing="4">OYUN KİMLİĞİ</text>
   <text x="${W / 2}" y="${idY}" font-size="40" font-weight="900" fill="${ident.color}" text-anchor="middle" font-style="italic">${esc(ident.label)}</text>
   ${notes ? `<rect x="${PITCH_X}" y="${idY + 26}" width="${PITCH_W}" height="70" rx="16" fill="rgba(255,255,255,0.05)" stroke="rgba(255,255,255,0.1)"/><text x="${W / 2}" y="${idY + 68}" font-size="22" font-style="italic" fill="#d1d5db" text-anchor="middle">"${notes.length > 60 ? notes.slice(0, 60) + '…' : notes}"</text>` : ''}
-  <text x="${PITCH_X + 8}" y="${H - 44}" font-size="18" font-weight="700" fill="#6b7280" letter-spacing="2">${esc((t.formation || '').toUpperCase())} · ${esc(sizeLabel)}</text>
+  <text x="${PITCH_X + 8}" y="${H - 44}" font-size="18" font-weight="700" fill="#6b7280" letter-spacing="2">${esc(trUpper(t.formation))} · ${esc(sizeLabel)}</text>
   <text x="${W - PITCH_X - 8}" y="${H - 44}" font-size="18" font-weight="900" fill="${accent}" text-anchor="end" letter-spacing="2">POWERED BY OYNA</text>
 </svg>`;
 }

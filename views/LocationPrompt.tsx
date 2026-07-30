@@ -6,6 +6,7 @@ import { useAppStore } from '../store';
 import { auth } from '../supabaseAuth';
 import { fbUpdateUserLocation } from '../supabaseMutations';
 import { showToast } from '../components/common/GlobalToast';
+import { detectRegion } from '../services/locationService';
 
 interface LocationPromptProps {
   onPermissionGranted: () => void;
@@ -14,42 +15,31 @@ interface LocationPromptProps {
 
 const LocationPrompt: React.FC<LocationPromptProps> = ({ onPermissionGranted, onSkip }) => {
   const [status, setStatus] = useState<'IDLE' | 'SCANNING' | 'FOUND' | 'DENIED'>('IDLE');
-  const { setUserLocation, setLocationPermissionStatus } = useAppStore();
+  const { setUserLocation, setLocationPermissionStatus, setActiveRegion } = useAppStore();
 
-  const handleGrantPermission = () => {
+  const handleGrantPermission = async () => {
     setStatus('SCANNING');
     
-    // Simulate finding location
-    if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-            (position) => {
-                // Konumu kaydet
-                setUserLocation({
-                    lat: position.coords.latitude,
-                    lng: position.coords.longitude
-                });
-                setLocationPermissionStatus('GRANTED');
-
-                // Eğer kullanıcı giriş yapmışsa veritabanına da kaydet
-                if (auth.currentUser) {
-                    fbUpdateUserLocation(auth.currentUser.uid, position.coords.latitude, position.coords.longitude).catch(err => {
-                        console.error('Konum DB kaydı başarısız:', err);
-                        showToast('Konumun kaydedilemedi — yakınındaki sahalar eksik görünebilir.');
-                    });
-                }
-                
-                setStatus('FOUND');
-                if (navigator.vibrate) navigator.vibrate([50, 100, 50]);
-                setTimeout(onPermissionGranted, 1500);
-            },
-            (error) => {
-                console.error('Konum alınamadı:', error);
-                setStatus('DENIED');
-                setLocationPermissionStatus('DENIED');
-            },
-            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-        );
-    } else {
+    // IP-16: konum TEK yoldan istenir (services/locationService). Tarayıcının
+    // ham konum API'sini doğrudan çağırmak native izin akışını atlıyor ve
+    // red / kalıcı engel / zaman aşımı ayrımını kaybediyordu. Ayrıca bölge
+    // artık KAYDEDİLİYOR — izin verilse bile kapsam uygulama kapanınca
+    // kayboluyordu.
+    try {
+        const loc = await detectRegion();
+        if (loc.coordinates) setUserLocation(loc.coordinates);
+        setLocationPermissionStatus('GRANTED');
+        setActiveRegion(loc);
+        if (auth.currentUser && loc.coordinates) {
+            fbUpdateUserLocation(auth.currentUser.uid, loc.coordinates.lat, loc.coordinates.lng).catch(err => {
+                console.error('Konum DB kaydı başarısız:', err);
+                showToast('Konumun kaydedilemedi — yakınındaki sahalar eksik görünebilir.');
+            });
+        }
+        setStatus('FOUND');
+        setTimeout(onPermissionGranted, 1500);
+    } catch (error) {
+        console.error('Konum alınamadı:', error);
         setStatus('DENIED');
         setLocationPermissionStatus('DENIED');
     }
@@ -103,7 +93,7 @@ const LocationPrompt: React.FC<LocationPromptProps> = ({ onPermissionGranted, on
 
           <div className="text-center px-8 space-y-3">
               <h2 className="text-2xl font-extrabold text-white tracking-tight">
-                  {status === 'SCANNING' ? 'KONUM TARANIYOR...' : status === 'FOUND' ? 'LOKASYON DOĞRULANDI' : 'SAHANI BULALIM'}
+                  {status === 'SCANNING' ? 'KONUM TARANIYOR…' : status === 'FOUND' ? 'LOKASYON DOĞRULANDI' : 'SAHANI BULALIM'}
               </h2>
               <p className="text-gray-400 text-sm leading-relaxed max-w-xs mx-auto">
                   {status === 'DENIED' 
@@ -130,7 +120,7 @@ const LocationPrompt: React.FC<LocationPromptProps> = ({ onPermissionGranted, on
                     disabled={status !== 'IDLE'}
                     className={`w-full h-16 rounded-2xl font-extrabold text-lg flex items-center justify-center gap-2 transition-all ${status === 'IDLE' ? 'bg-[#39FF14] text-black hover:scale-[1.02] shadow-[0_0_30px_rgba(57,255,20,0.2)]' : 'bg-gray-800 text-ink-4 cursor-not-allowed'}`}
                   >
-                      {status === 'IDLE' ? <><Navigation size={20} fill="black" /> RADARI AÇ</> : 'BEKLEYİNİZ...'}
+                      {status === 'IDLE' ? <><Navigation size={20} fill="black" /> RADARI AÇ</> : 'BEKLEYİNİZ…'}
                   </button>
                   {status === 'IDLE' && (
                       <button onClick={handleSkip} className="w-full py-3 text-xs font-bold text-ink-4 hover:text-white transition-colors">

@@ -1,16 +1,14 @@
 import React, { useState } from 'react';
 import { TrendingUp, TrendingDown } from 'lucide-react';
-import { formatTRYInt, formatTRYWithSymbol } from '../../../utils/formatTRY';
+import { formatTRYAmount } from '../../../utils/formatTRY';
 import { sharePercent, type GrowthResult, type DayBar } from '../../../shared/financeModel';
 
 // ─── FI-1 — Finans ekranı ortak sunum parçaları ──────────────────────────────
 
-/** Para: tam sayıda ondalıksız ("2.700₺"), kuruş varsa 2 hane ("2.700,50₺"),
- *  değersizde "—". Kanonik utils/formatTRY üzerine kurulu (tek kaynak). */
-export const money = (n: number | null | undefined): string => {
-  if (typeof n !== 'number' || !Number.isFinite(n)) return '—';
-  return Number.isInteger(n) ? `${formatTRYInt(n)}₺` : formatTRYWithSymbol(n);
-};
+/** IP-19: gövde SİLİNDİ, tek kaynağa alias oldu — ikinci implementasyon yok.
+ *  Tek fark: finans raporunda sıfır "Ücretsiz" değil "0₺"dir (muhasebe satırı,
+ *  bedava bir şey değil). */
+export const money = formatTRYAmount;
 
 /** Kıyas rozeti: ▲%12 (yeşil) / ▼%8 (kırmızı) / "Yeni" (prev 0) / "—" (eşit). */
 export const GrowthBadge: React.FC<{ growth: GrowthResult; label?: string }> = ({ growth, label }) => {

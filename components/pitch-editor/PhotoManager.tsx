@@ -71,7 +71,7 @@ export const PhotoManager: React.FC<Props> = ({ pitchId, courtId = null, readOnl
   const handleFiles = (files: FileList | null) => {
     if (!files || files.length === 0) return;
     if (items.length + files.length > maxPhotos) {
-      onError?.(`En fazla ${maxPhotos} fotoğraf yükleyebilirsiniz.`);
+      onError?.(`En fazla ${maxPhotos} fotoğraf yükleyebilirsin.`);
       return;
     }
     const arr = Array.from(files);

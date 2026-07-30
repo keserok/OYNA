@@ -1,14 +1,34 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { ArrowLeft, Star, ShieldCheck, Users, Trophy, MessageSquare, Droplets, Hand, Gavel, CheckCircle2, AlertTriangle } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import { ArrowLeft, Star, Layers, Scale, ShieldCheck, Check, AlertTriangle } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { useAppStore } from '../store';
 import { supabase } from '../supabaseClient';
 import { auth } from '../supabaseAuth';
 import { submitServiceRating, getMatchServiceRequests, captainConfirmService } from '../services/serviceRequestService';
-import { getPendingScoreProposal, approveMatchScore, type ScoreProposal } from '../services/scoreService';
 import type { PositionSlot } from '../types';
+import { trInitials } from '../utils/trUpper';
 
-// FAZ 5: Maça atanmış kaleci/hakem hakkında değerlendirme ekranında gösterilecek bilgi
+// ═══════════════════════════════════════════════════════════════════════════
+// MAÇ SONU DEĞERLENDİRME — 2 ekran + onay (onaylanan tasarım: varyant 1a)
+//
+// Akış:  1) KENDİ TAKIMIN — her oyuncuya tek dokunuşla/sürükleyerek 1–10 yıldız
+//        2) TESİS & GÖREVLİLER — tesis 5 yıldız, hakem ve kaleci 10 puan
+//        3) ONAY — ne kaydedildiğini dürüstçe anlatan kapanış
+//
+// Tasarım kararıyla akıştan ÇIKANLAR (bilinçli):
+//   • Serbest not alanları (oyuncu / tesis / görevli yorumu)
+//   • Skor onayı (el sıkışma) — skor teklifi/onayı takım maçı akışında
+//     (views/social/TeamDetailView) yaşamaya devam eder
+//   • Oyuncu başına centilmenlik seçimi — sunucu tarafında nötr (3) kaydedilir;
+//     reliability_score'u BESLEMEDİĞİ doğrulandı (yalnız geç-ayrılma yaptırımı
+//     yazıyor), yani ceza/güvenilirlik mekaniği bu kaldırmadan etkilenmez.
+//
+// Puan ölçekleri sunucu sözleşmesiyle birebir:
+//   submit_match_evaluation → player_ratings.skill_score CHECK (1..10)
+//   submit_pitch_rating     → p_score 1..5
+//   submit_service_rating   → p_score 1..10  (sağlayıcı payout kapısı)
+// ═══════════════════════════════════════════════════════════════════════════
+
 interface ServiceProviderInfo {
   id: string;
   type: 'GK' | 'REF';
@@ -21,178 +41,223 @@ interface PostMatchEvalProps {
   onComplete: () => void;
 }
 
-interface EvalPlayer { id: string; name: string; pos: string; initials: string; color: string; tier: string }
+interface EvalPlayer { id: string; name: string; pos: string; initials: string }
 
 const MOCK_PLAYERS: EvalPlayer[] = [
-  { id: 'p1', name: 'Ahmet Y.', pos: 'SNT',     initials: 'AY', color: '#ffd54f', tier: 'gold' },
-  { id: 'p2', name: 'Caner K.', pos: 'MID',     initials: 'CK', color: '#c5cef5', tier: 'silver' },
-  { id: 'p3', name: 'Emre D.',  pos: 'DEF',     initials: 'ED', color: '#d4986a', tier: 'bronze' },
-  { id: 'p4', name: 'Burak Ş.', pos: 'KL',      initials: 'BŞ', color: '#ffd54f', tier: 'gold' },
-  { id: 'p5', name: 'Mert A.',  pos: 'MID',     initials: 'MA', color: '#c5cef5', tier: 'silver' },
+  { id: 'p1', name: 'Burak Şen', pos: 'KL', initials: 'BŞ' },
+  { id: 'p2', name: 'Emre Duran', pos: 'SAV', initials: 'ED' },
+  { id: 'p3', name: 'Serkan Taş', pos: 'SAV', initials: 'ST' },
+  { id: 'p4', name: 'Caner Kılıç', pos: 'ORT', initials: 'CK' },
+  { id: 'p5', name: 'Mert Aksu', pos: 'ORT', initials: 'MA' },
+  { id: 'p6', name: 'Onur Bulut', pos: 'ORT', initials: 'OB' },
+  { id: 'p7', name: 'Ahmet Yıldız', pos: 'HÜC', initials: 'AY' },
 ];
 
-const initialsOf = (name: string) =>
-  name.split(' ').filter(Boolean).slice(0, 2).map(w => w[0]?.toUpperCase() ?? '').join('') || '?';
+// IP-13: baş harf üretimi tek kaynaktan — düz toUpperCase 'İ'yi 'I' yapardı.
+const initialsOf = (name: string) => trInitials(name, 2);
 
-// Oyuncu başına centilmenlik. Değerler player_ratings.fair_play_score
-// CHECK (1..5) aralığına birebir oturur; seçim yapılmazsa 3 (nötr) gider.
-const FAIR_PLAY_CHOICES = [
-  { value: 5, label: 'Centilmendi' },
-  { value: 3, label: 'Normal' },
-  { value: 1, label: 'Sert oynadı' },
-] as const;
-const FAIR_PLAY_NEUTRAL = 3;
+const LBL10 = (v: number) =>
+  v >= 10 ? 'EFSANE' : v >= 8 ? 'ÇOK İYİ' : v >= 6 ? 'İYİ' : v >= 4 ? 'ORTA' : v > 0 ? 'ZAYIF' : 'PUANLA';
+const LBL5 = (v: number) =>
+  v >= 5 ? 'MÜKEMMEL' : v >= 4 ? 'ÇOK İYİ' : v >= 3 ? 'İYİ' : v >= 2 ? 'ORTA' : v > 0 ? 'ZAYIF' : 'PUANLA';
 
-// Sparkle Particle Component
-const Sparkle: React.FC<{ x: number; y: number; delay: number }> = ({ x, y, delay }) => (
-  <motion.div
-    initial={{ x, y, scale: 0, opacity: 1 }}
-    animate={{ 
-      y: y - 70, 
-      x: x + (Math.random() - 0.5) * 50,
-      scale: [0, 1.3, 0.7, 0],
-      opacity: [1, 1, 0.5, 0],
-      rotate: [0, 180, 360]
-    }}
-    transition={{ duration: 1.0, delay, ease: "easeOut" }}
-    className="absolute pointer-events-none text-[#FACC15] z-50"
-  >
-    <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
-      <path d="M12 0l3 9 9 3-9 3-3 9-3-9-9-3 9-3z" />
-    </svg>
-  </motion.div>
-);
+const MONO = "'Space Grotesk', ui-monospace, monospace";
 
-// FAZ 5: Kaleci/Hakem 1-10 puanlama + opsiyonel yorum bloğu.
-// Puan girilmezse (score === 0) gönderim atlanır — değerlendirme zorunlu değildir.
-const ServiceRatingCard: React.FC<{
-  info: ServiceProviderInfo;
-  score: number;
-  comment: string;
-  onScore: (val: number) => void;
-  onComment: (val: string) => void;
-}> = ({ info, score, comment, onScore, onComment }) => {
-  const isGk = info.type === 'GK';
-  const accent = isGk ? 'text-[#FACC15]' : 'text-blue-400';
-  const ring = isGk ? 'border-[#FACC15]/20 bg-[#FACC15]/10' : 'border-blue-500/20 bg-blue-500/10';
-  const Icon = isGk ? Hand : Gavel;
+/**
+ * Tek hareketle puanlama şeridi: dokun ya da sürükle. Aynı değere tekrar
+ * dokunmak puanı sıfırlar (tasarımdaki toggle davranışı). Sürüklerken sıfırlama
+ * tetiklenmez — parmak gezdirirken puan sürekli güncellenir.
+ */
+function useSweepPick(value: number, max: number, onPick: (v: number) => void) {
+  const moved = useRef(false);
+  const startVal = useRef(0);
+
+  const valueAt = (el: HTMLElement, clientX: number) => {
+    const r = el.getBoundingClientRect();
+    if (r.width <= 0) return 0;
+    return Math.max(1, Math.min(max, Math.ceil((clientX - r.left) / r.width * max)));
+  };
+
+  const onPointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    moved.current = false;
+    startVal.current = value;
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+    const v = valueAt(e.currentTarget, e.clientX);
+    if (v !== value) onPick(v);
+    // Titreşim uygulamadan tamamen kaldırıldı (kullanıcı kararı) — sürme
+    // geri bildirimi görsel: yıldızlar dolar, sağdaki rakam ve etiket değişir.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value, max, onPick]);
+
+  const onPointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    if (!e.currentTarget.hasPointerCapture?.(e.pointerId)) return;
+    // Parmak gezdirildiği AN sürükleme sayılır — değer aynı kalsa bile. Aksi
+    // halde sürükleyip başlangıç değerine dönmek "dokunma" gibi okunur ve
+    // parmak kaldırılınca puan sessizce sıfırlanır.
+    moved.current = true;
+    const v = valueAt(e.currentTarget, e.clientX);
+    if (v !== value) onPick(v);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value, max, onPick]);
+
+  const onPointerUp = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    e.currentTarget.releasePointerCapture?.(e.pointerId);
+    // Dokunma (sürükleme değil) + zaten aynı değerdeydi → temizle.
+    if (!moved.current && startVal.current !== 0 && startVal.current === valueAt(e.currentTarget, e.clientX)) {
+      onPick(0);
+    }
+    moved.current = false;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [max, onPick]);
+
+  return { onPointerDown, onPointerMove, onPointerUp };
+}
+
+/** Yıldız şeridi — `max` yıldız, dolu kısım soldan kırpılır. */
+const StarStrip: React.FC<{
+  value: number; max: number; size: number; height: number; onPick: (v: number) => void;
+}> = ({ value, max, size, height, onPick }) => {
+  const handlers = useSweepPick(value, max, onPick);
+  const row = (filled: boolean) => (
+    <div style={{ display: 'flex', alignItems: 'center', height, width: '100%' }}>
+      {Array.from({ length: max }).map((_, i) => (
+        <div key={i} style={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
+          <Star
+            size={size}
+            strokeWidth={1.5}
+            style={filled ? { filter: 'drop-shadow(0 0 6px rgba(250,204,21,0.35))' } : undefined}
+            color={filled ? '#FACC15' : 'rgba(255,255,255,0.13)'}
+            fill={filled ? '#FACC15' : 'none'}
+          />
+        </div>
+      ))}
+    </div>
+  );
   return (
-    <div className="bg-[#121620]/50 border border-white/5 rounded-[24px] p-5 flex flex-col gap-4 relative overflow-hidden">
-      {/* Sağlayıcı kimliği */}
-      <div className="flex items-center gap-3">
-        <div className={`w-11 h-11 rounded-2xl flex items-center justify-center border overflow-hidden shrink-0 ${ring}`}>
-          {info.avatar
-            ? <img src={info.avatar} alt={info.name} className="w-full h-full object-cover" />
-            : <Icon size={20} className={accent} />}
-        </div>
-        <div className="min-w-0">
-          <p className="text-[0.75rem] font-semibold text-[#8B949E]">
-            {isGk ? 'Kaleci değerlendirmesi' : 'Hakem değerlendirmesi'}
-          </p>
-          <p className="text-sm font-extrabold text-white uppercase tracking-tight italic truncate">{info.name}</p>
-        </div>
-        {score > 0 && (
-          <span className={`ml-auto text-lg font-extrabold italic tracking-tighter ${accent}`}>{score}<span className="text-[#8B949E] text-xs">/10</span></span>
-        )}
+    <div
+      {...handlers}
+      role="slider"
+      aria-valuemin={0}
+      aria-valuemax={max}
+      aria-valuenow={value}
+      style={{ position: 'relative', height, cursor: 'pointer', touchAction: 'none', userSelect: 'none' }}
+    >
+      {row(false)}
+      {/* Dolu katman TAM genişlikte durur ve clipPath ile soldan açılır — böylece
+          yıldızlar boş katmanla birebir hizalı kalır (dar kutuya sığdırma yok). */}
+      <div
+        style={{
+          position: 'absolute', top: 0, left: 0, width: '100%', height,
+          pointerEvents: 'none',
+          clipPath: `inset(0 ${(1 - value / max) * 100}% 0 0)`,
+          transition: 'clip-path 0.12s ease',
+        }}
+      >
+        {row(true)}
       </div>
-
-      {/* 1-10 puan butonları */}
-      <div className="grid grid-cols-10 gap-1.5">
-        {Array.from({ length: 10 }).map((_, i) => {
-          const val = i + 1;
-          const active = val <= score;
-          return (
-            <motion.button
-              key={val}
-              whileTap={{ scale: 0.88 }}
-              onClick={() => {
-                if (navigator.vibrate) navigator.vibrate(15);
-                onScore(score === val ? 0 : val);
-              }}
-              className={`h-9 rounded-lg border text-[0.6875rem] font-extrabold transition-all ${
-                active
-                  ? isGk
-                    ? 'bg-[#FACC15] text-black border-[#FACC15] shadow-[0_0_8px_rgba(250,204,21,0.3)]'
-                    : 'bg-blue-500 text-white border-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.3)]'
-                  : 'bg-black/30 border-white/5 text-[#8B949E] hover:text-white hover:border-white/10'
-              }`}
-            >
-              {val}
-            </motion.button>
-          );
-        })}
-      </div>
-
-      {/* Opsiyonel yorum */}
-      <textarea
-        value={comment}
-        onChange={(e) => onComment(e.target.value)}
-        placeholder={isGk ? 'Kaleci hakkında not (isteğe bağlı)…' : 'Hakem hakkında not (isteğe bağlı)…'}
-        className="w-full bg-black/40 border border-white/8 rounded-2xl p-3.5 text-[0.9375rem] leading-[22px] text-white focus:outline-none focus:border-white/20 min-h-[60px] resize-none placeholder-[#8B949E] font-normal transition-all"
-      />
     </div>
   );
 };
 
+/** 10 parçalı puan çubuğu (hakem / kaleci) — altında 1..10 sayı şeridi. */
+const SegmentBar: React.FC<{
+  value: number; max: number; color: string; onPick: (v: number) => void;
+}> = ({ value, max, color, onPick }) => {
+  const handlers = useSweepPick(value, max, onPick);
+  return (
+    <div>
+      <div
+        {...handlers}
+        role="slider"
+        aria-valuemin={0}
+        aria-valuemax={max}
+        aria-valuenow={value}
+        style={{ display: 'flex', gap: 8, height: 30, cursor: 'pointer', touchAction: 'none', userSelect: 'none' }}
+      >
+        {Array.from({ length: max }).map((_, i) => (
+          <div
+            key={i}
+            style={{
+              flex: 1, borderRadius: 8,
+              background: i < value ? color : 'rgba(255,255,255,0.05)',
+              transition: 'background 0.12s ease',
+            }}
+          />
+        ))}
+      </div>
+      <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
+        {Array.from({ length: max }).map((_, i) => (
+          <span key={i} style={{ flex: 1, textAlign: 'center', fontSize: 10, color: '#8B949E' }}>{i + 1}</span>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+const CARD: React.CSSProperties = {
+  borderRadius: 20,
+  border: '1px solid rgba(255,255,255,0.08)',
+  background: 'rgba(22,27,34,0.72)',
+  padding: '16px 14px 18px',
+};
+
 const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => {
   const { selectedMatch } = useAppStore();
-  // Gerçek (UUID) maç mı? Mock/demo yollarını tek yerden kapılar (G1/G2).
+  // Gerçek (UUID) maç mı? Mock/demo yollarını tek yerden kapılar.
   const isRealMatch = !!selectedMatch?.id && /^[0-9a-f-]{36}$/i.test(selectedMatch.id);
 
-  // Gerçek katılımcıları maçın kadrosundan türet; demo maçta örnek kadro,
-  // gerçek-ama-katılımcısız maçta BOŞ (G2: mock oyuncuları gerçek RPC'ye
-  // puanlamak reddediliyordu).
+  /**
+   * Kullanıcının OYNADIĞI taraf. Tasarım "KENDİ TAKIMIN" diyor: yalnız kendi
+   * takım arkadaşlarını puanlarsın. Taraf çözülemezse (ör. kadroda yer almayan
+   * kurucu) tüm kadroya düşer ve başlık "KADRO" olur — sahte takım uydurulmaz.
+   */
+  const mySide = useMemo<'home' | 'away' | null>(() => {
+    const uid = auth.currentUser?.uid;
+    if (!uid || !selectedMatch) return null;
+    const isMine = (s: PositionSlot) => s.occupant === uid || s.player?.id === uid;
+    if ((selectedMatch.slots ?? []).some(isMine)) return 'home';
+    if ((selectedMatch.awaySlots ?? []).some(isMine)) return 'away';
+    return null;
+  }, [selectedMatch]);
+
   const PLAYERS = useMemo<EvalPlayer[]>(() => {
     if (!selectedMatch) return MOCK_PLAYERS;
     const uid = auth.currentUser?.uid;
-    const allSlots: PositionSlot[] = [
-      ...(selectedMatch.slots ?? []),
-      ...(selectedMatch.awaySlots ?? []),
-    ];
-    const real = allSlots
+    const source: PositionSlot[] =
+      mySide === 'home' ? (selectedMatch.slots ?? [])
+        : mySide === 'away' ? (selectedMatch.awaySlots ?? [])
+          : [...(selectedMatch.slots ?? []), ...(selectedMatch.awaySlots ?? [])];
+
+    const real = source
       .filter(s => s.status === 'TAKEN' && s.player && s.player.id !== uid)
       .map((s): EvalPlayer => ({
         id: s.player!.id,
         name: s.player!.name,
         pos: s.player!.position || s.role || '—',
         initials: initialsOf(s.player!.name),
-        color: '#c5cef5',
-        tier: 'silver',
       }));
     if (real.length > 0) return real;
     return isRealMatch ? [] : MOCK_PLAYERS;
-  }, [selectedMatch, isRealMatch]);
+  }, [selectedMatch, isRealMatch, mySide]);
 
-  const [submitting, setSubmitting] = useState(false);
-  const [step, setStep] = useState(1);
-  // G1: skor onayı YALNIZ gerçek bir bekleyen öneri varsa gösterilir (sabit
-  // 5-3 sahte ekranı öldü). Varsayılan kapalı; effect gerçek öneriyi bulunca açar.
-  const [showHandshake, setShowHandshake] = useState(false);
-  const [scoreProposal, setScoreProposal] = useState<ScoreProposal | null>(null);
-  const [approvingScore, setApprovingScore] = useState(false);
-  // BULGU-097: saha notu artık gerçekten kaydediliyor — submit_pitch_rating'in
-  // mevcut p_comment parametresiyle gider (eskiden yalnız state'te durup yok oluyordu).
-  const [orgComment, setOrgComment] = useState('');
-  const [playerCardIdx, setPlayerCardIdx] = useState(0);
-  const [playerRatings, setPlayerRatings] = useState<Record<string, number>>({});
-  // BULGU-096: centilmenlik artık oyuncu başına. Tek global değer, puanlanan
-  // HERKESE (kendi takım arkadaşların dahil) aynı fair_play_score olarak gidiyordu.
-  const [playerFairPlay, setPlayerFairPlay] = useState<Record<string, number>>({});
-  // F2.2: MOTM seçimi kaldırıldı — ayrı oy saklanmaz; MVP, player_ratings
-  // ortalamasından TÜRETİLİR (match_motm görünümü + get_player_motm_count).
-  // Eski buton kullanıcıya seçim yaptırıp hiçbir yere yazmıyordu (sessiz kayıp).
-  const [pitchRating, setPitchRating] = useState(0);
+  const [step, setStep] = useState<1 | 2>(1);
   const [showResult, setShowResult] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [infoToast, setInfoToast] = useState<string | null>(null);
-  // BULGU-097: sonuç ekranı yalnız GERÇEKTEN kaydedilen veriyi anlatır.
+  // Sonuç ekranı YALNIZ gerçekten kaydedileni anlatır; kaydedilemeyenler adıyla.
   const [saveErrors, setSaveErrors] = useState<string[]>([]);
 
-  // FAZ 5: Maça atanmış kaleci/hakem değerlendirmesi (1-10 + opsiyonel yorum)
+  const [playerRatings, setPlayerRatings] = useState<Record<string, number>>({});
+  const [pitchRating, setPitchRating] = useState(0);
   const [providers, setProviders] = useState<ServiceProviderInfo[]>([]);
-  const [serviceScores, setServiceScores] = useState<Record<string, number>>({});      // key: provider id
-  const [serviceComments, setServiceComments] = useState<Record<string, string>>({});   // key: provider id
+  const [serviceScores, setServiceScores] = useState<Record<string, number>>({});
 
-  // Atanmış sağlayıcı bilgilerini (ad/avatar) çek
+  const pitchName = (selectedMatch as { pitchName?: string; location?: string } | null)?.pitchName
+    || selectedMatch?.location
+    || 'Tesis';
+
+  // Atanmış sağlayıcılar. "Kendi takımın" çerçevesiyle tutarlı: kendi tarafının
+  // kalecisi + maçın hakemi. Taraf çözülemezse iki kaleci de listelenir.
   useEffect(() => {
     let cancelled = false;
 
@@ -213,80 +278,69 @@ const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => 
     const loadProviders = async () => {
       if (!selectedMatch) { setProviders([]); return; }
       const tasks: Promise<ServiceProviderInfo>[] = [];
-      // İki taraflı kaleci: ev sahibi + deplasman kalecisi ayrı ayrı değerlendirilir.
-      if (selectedMatch.gkId) tasks.push(fetchProvider('goalkeepers', selectedMatch.gkId, 'GK', 'Ev Sahibi Kalecisi'));
-      if (selectedMatch.awayGkId) tasks.push(fetchProvider('goalkeepers', selectedMatch.awayGkId, 'GK', 'Deplasman Kalecisi'));
-      if (selectedMatch.refereeId) tasks.push(fetchProvider('referees', selectedMatch.refereeId, 'REF', 'Hakem'));
+      const wantHomeGk = mySide !== 'away';
+      const wantAwayGk = mySide !== 'home';
+      if (selectedMatch.gkId && wantHomeGk) {
+        tasks.push(fetchProvider('goalkeepers', selectedMatch.gkId, 'GK', 'Kaleci'));
+      }
+      if (selectedMatch.awayGkId && wantAwayGk) {
+        tasks.push(fetchProvider('goalkeepers', selectedMatch.awayGkId, 'GK', 'Deplasman Kalecisi'));
+      }
+      if (selectedMatch.refereeId) {
+        tasks.push(fetchProvider('referees', selectedMatch.refereeId, 'REF', 'Hakem'));
+      }
       const results = await Promise.all(tasks);
       if (!cancelled) setProviders(results);
     };
 
     loadProviders();
     return () => { cancelled = true; };
-  }, [selectedMatch]);
+  }, [selectedMatch, mySide]);
 
   const showInfo = (msg: string) => {
     setInfoToast(msg);
     setTimeout(() => setInfoToast(null), 3500);
   };
 
-  // G1: gerçek maç için bekleyen skor önerisini çek; varsa onay ekranını aç.
-  useEffect(() => {
-    let cancelled = false;
-    if (!isRealMatch || !selectedMatch?.id) return;
-    getPendingScoreProposal(selectedMatch.id)
-      .then((p) => { if (!cancelled && p) { setScoreProposal(p); setShowHandshake(true); } })
-      .catch(() => { /* öneri yoksa onay ekranı gösterilmez */ });
-    return () => { cancelled = true; };
-  }, [isRealMatch, selectedMatch?.id]);
+  const rated = useMemo(() => Object.values(playerRatings).filter(v => v > 0), [playerRatings]);
+  const avgLabel = rated.length ? (rated.reduce((a, b) => a + b, 0) / rated.length).toFixed(1) : '—';
 
-  const handleApproveScore = async () => {
-    if (!scoreProposal || approvingScore) { setShowHandshake(false); return; }
-    setApprovingScore(true);
-    try {
-      await approveMatchScore(scoreProposal.id);
-      showInfo('Skoru onayladın.');
-    } catch (e: any) {
-      showInfo(e?.message || 'Skor onaylanamadı.');
-    } finally {
-      setApprovingScore(false);
-      setShowHandshake(false);
-    }
-  };
+  const summaryText = useMemo(() => {
+    const extra: string[] = [];
+    if (pitchRating > 0) extra.push('tesis');
+    if (providers.some(p => p.type === 'REF' && (serviceScores[p.id] ?? 0) > 0)) extra.push('hakem');
+    if (providers.some(p => p.type === 'GK' && (serviceScores[p.id] ?? 0) > 0)) extra.push('kaleci');
+    const head = rated.length > 0 ? `${rated.length} oyuncu` : 'Oyuncu puanı yok';
+    return extra.length ? `${head} · ${extra.join(' · ')} puanlandı.` : `${head} puanlandı.`;
+  }, [rated.length, pitchRating, providers, serviceScores]);
 
-  // Değerlendirmeyi kalıcılaştır: oyuncu puanları + maçı sonlandır ("başarılı maç" sinyali)
+  // ─── Kaydetme: her parça BAĞIMSIZ try/catch ──────────────────────────────
+  // Oyuncu puanı düşse de servis puanlaması çalışmalı (sağlayıcı payout kapısı).
   const persistEvaluation = async () => {
     if (submitting) return;
-    // Demo (UUID olmayan) maçta sunucu çağrılarını atla; gerçek maçta kaydet.
-    if (!isRealMatch) {
-      // Gerçek (UUID) maç değil → yalnız sonuç ekranını göster (demo)
-      setShowResult(true);
-      return;
-    }
+    if (!isRealMatch) { setShowResult(true); return; }
+
     setSubmitting(true);
     setSaveErrors([]);
-    // Kaydedilemeyen parçaların adları; sonuç ekranı bu listeyi okur.
     const failed: string[] = [];
 
-    // Bug C: Oyuncu-değerlendirmesi başarısız olsa bile servis (kaleci/hakem)
-    // puanlaması ÇALIŞMALI — aksi halde sağlayıcı ödemesi serbest bırakılmaz.
-    // Bu yüzden oyuncu-değerlendirme ile servis-puanlama bağımsız try/catch'lerde.
     try {
-      const ratings = Object.entries(playerRatings).map(([ratee_id, stars]) => ({
-        ratee_id,
-        skill_score: Math.max(1, Math.min(10, Math.round((stars as number) * 2))),
-        // BULGU-096: her oyuncunun KENDİ centilmenlik seçimi; seçilmediyse nötr 3.
-        fair_play_score: playerFairPlay[ratee_id] ?? FAIR_PLAY_NEUTRAL,
-      }));
+      // skill_score DOĞRUDAN 1–10: şerit zaten 10'luk. (Eski ekran 5 yıldızı
+      // ×2 ile 10'a çeviriyordu; artık ara dönüşüm yok.)
+      const ratings = Object.entries(playerRatings)
+        .filter(([, v]) => (v as number) > 0)
+        .map(([ratee_id, v]) => ({
+          ratee_id,
+          skill_score: Math.max(1, Math.min(10, Math.round(v as number))),
+          // fair_play_score GÖNDERİLMEZ → sunucu nötr 3 yazar (RPC COALESCE).
+        }));
       if (ratings.length > 0) {
-        const { error: evalErr } = await supabase.rpc('submit_match_evaluation', {
-          p_match_id: selectedMatch.id, p_ratings: ratings,
+        const { error } = await supabase.rpc('submit_match_evaluation', {
+          p_match_id: selectedMatch!.id, p_ratings: ratings,
         });
-        if (evalErr) throw evalErr;
+        if (error) throw error;
       }
     } catch (err) {
-      // Oyuncu-değerlendirme başarısız → kullanıcıyı bilgilendir ama
-      // servis puanlamasını engelleme (return etme).
       console.warn('[PostMatchEval] Oyuncu değerlendirmesi kaydedilemedi:', err);
       const em = String((err as any)?.message || '');
       if (/already|zaten|duplicate/i.test(em)) {
@@ -297,59 +351,49 @@ const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => 
       }
     }
 
-    // finalize yalnız maç sahibi/kaptan için yetkili; değilse otomatik cron
-    // sonlandırır. Ayrı try/catch: bu bir yaşam-döngüsü adımı, kullanıcının
-    // girdiği bir veri değil — hatası "puanın kaydedilemedi" diye raporlanmaz.
+    // Yaşam döngüsü adımı (kullanıcı verisi değil) → hatası rapor edilmez, cron devralır.
     try {
       const uid = auth.currentUser?.uid;
-      if (uid && selectedMatch.creatorId === uid) {
-        const { error: finErr } = await supabase.rpc('finalize_match', { p_match_id: selectedMatch.id });
-        if (finErr) throw finErr;
+      if (uid && selectedMatch!.creatorId === uid) {
+        const { error } = await supabase.rpc('finalize_match', { p_match_id: selectedMatch!.id });
+        if (error) throw error;
       }
     } catch (err) {
       console.warn('[PostMatchEval] Maç sonlandırılamadı (cron devralır):', err);
     }
 
-    // SAHA PUANI + SAHA NOTU: yıldız submit_pitch_rating ile kaydedilir; BULGU-097
-    // gereği not da aynı çağrıda p_comment ile gider. Not yalnız yıldızla birlikte
-    // gönderilir: p_score 1..5 zorunlu olduğu için yıldızsız not sahaya sahte
-    // 1 yıldız yazardı. Bağımsız try/catch: saha düşse de oyuncu/servis etkilenmez.
+    // Tesis puanı 1..5. Not alanı akıştan çıktı → p_comment null.
     if (pitchRating > 0) {
       try {
-        const { error: prErr } = await supabase.rpc('submit_pitch_rating', {
-          p_match_id: selectedMatch.id,
+        const { error } = await supabase.rpc('submit_pitch_rating', {
+          p_match_id: selectedMatch!.id,
           p_score: Math.max(1, Math.min(5, Math.round(pitchRating))),
-          p_comment: orgComment.trim() || null,
+          p_comment: null,
         });
-        if (prErr) throw prErr;
+        if (error) throw error;
       } catch (e) {
-        console.warn('[PostMatchEval] Saha puanı kaydedilemedi:', e);
-        failed.push('Saha puanın');
+        console.warn('[PostMatchEval] Tesis puanı kaydedilemedi:', e);
+        failed.push('Tesis puanın');
       }
     }
 
-    // FAZ 5: Kaleci/Hakem 1-10 puanlaması — sağlayıcı rating'ini günceller + payout serbest.
-    // Atlanabilir: yalnız puan girilmiş (score > 0) sağlayıcılar gönderilir.
-    // Oyuncu-değerlendirme başarısız olsa bile burası bağımsız çalışır.
+    // Kaleci/hakem 1..10 → sağlayıcı rating'i + payout serbest bırakma.
     for (const p of providers) {
       const score = serviceScores[p.id] ?? 0;
       if (score <= 0) continue;
       try {
-        await submitServiceRating(selectedMatch.id, p.id, p.type, score, serviceComments[p.id]?.trim() || undefined);
+        await submitServiceRating(selectedMatch!.id, p.id, p.type, score, undefined);
       } catch (e) {
         console.warn(`[PostMatchEval] ${p.type} puanlaması kaydedilemedi:`, e);
         failed.push(p.type === 'GK' ? 'Kaleci puanın' : 'Hakem puanın');
       }
     }
 
-    // F1.1c: Kaptan değerlendirmeyi gönderdiğinde, bekleyen hizmet taleplerinin
-    // kaptan onayı da işlenir (iki-taraflı payout kapısının kaptan ayağı —
-    // ayrı butona gerek kalmadan "değerlendirme = katılım kanıtı" prensibi).
-    // Sunucu yetkiyi ayrıca doğrular (_hire_side_for); hata payout'u bloklamaz.
+    // Kaptan onayı: "değerlendirme = katılım kanıtı" — payout'un kaptan ayağı.
     try {
-      const uid2 = auth.currentUser?.uid;
-      if (uid2 && selectedMatch.creatorId === uid2) {
-        const reqs = await getMatchServiceRequests(selectedMatch.id);
+      const uid = auth.currentUser?.uid;
+      if (uid && selectedMatch!.creatorId === uid) {
+        const reqs = await getMatchServiceRequests(selectedMatch!.id);
         for (const r of reqs) {
           if (r.status === 'CAPTURED' && !r.captainConfirmed && !r.payoutReleased) {
             try { await captainConfirmService(r.id); }
@@ -360,505 +404,325 @@ const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => 
     } catch (e) {
       console.warn('[PostMatchEval] hizmet onayı adımı atlandı:', e);
     }
-    // İki kaleci varsa aynı etiket iki kez düşmesin.
+
     setSaveErrors(Array.from(new Set(failed)));
     setSubmitting(false);
     setShowResult(true);
   };
 
-  // Sparkle burst coordinates
-  const [sparkles, setSparkles] = useState<{ id: number; x: number; y: number; delay: number }[]>([]);
+  // ─── Ortak arka plan: tesis görseli + koyu gradyan (görsel yoksa düz koyu) ──
+  const Backdrop: React.FC<{ hero?: boolean }> = ({ hero }) => (
+    <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none' }}>
+      {selectedMatch?.image && (
+        <div
+          style={{
+            position: 'absolute', top: hero ? 0 : '-8%', left: '-20%', right: '-20%',
+            height: hero ? '100%' : '66%',
+            backgroundImage: `url(${selectedMatch.image})`,
+            backgroundSize: 'cover', backgroundPosition: hero ? '50% 30%' : '50% 22%',
+            opacity: hero ? 0.22 : 0.16,
+          }}
+        />
+      )}
+      <div
+        style={{
+          position: 'absolute', inset: 0,
+          background: hero
+            ? 'linear-gradient(180deg,rgba(10,14,20,0.62) 0%,rgba(10,14,20,0.80) 40%,rgba(10,14,20,0.96) 100%)'
+            : 'linear-gradient(180deg,rgba(10,14,20,0.30) 0%,rgba(10,14,20,0.88) 34%,#0A0E14 62%)',
+        }}
+      />
+    </div>
+  );
 
-  const setPlayerRating = (pid: string, val: number, e: React.MouseEvent) => {
-    if (navigator.vibrate) navigator.vibrate(20);
-    setPlayerRatings(prev => ({ ...prev, [pid]: val }));
-    triggerSparkles(e);
-  };
+  const Toast = () => infoToast ? (
+    <div style={{
+      position: 'absolute', left: 16, right: 16, bottom: 104, zIndex: 5,
+      borderRadius: 14, padding: '11px 14px', fontSize: 12, fontWeight: 600, color: '#0A0E14',
+      background: '#FACC15', boxShadow: '0 10px 30px rgba(0,0,0,0.45)',
+    }}>{infoToast}</div>
+  ) : null;
 
-  const triggerSparkles = (e: React.MouseEvent) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    
-    const newSparkles = Array.from({ length: 6 }).map((_, i) => ({
-      id: Math.random() + i,
-      x: x + (Math.random() - 0.5) * 10,
-      y: y + (Math.random() - 0.5) * 10,
-      delay: i * 0.04
-    }));
-    
-    setSparkles(prev => [...prev, ...newSparkles]);
-    
-    setTimeout(() => {
-      setSparkles(prev => prev.filter(s => !newSparkles.some(n => n.id === s.id)));
-    }, 1200);
-  };
-
-  const ratingValues: number[] = Object.values(playerRatings) as number[];
-  const avgPlayerRating = ratingValues.length > 0
-    ? (ratingValues.reduce((a, b) => a + b, 0) / ratingValues.length).toFixed(1)
-    : '—';
-
-  const getTierBadgeClass = (tier: string) => {
-    if (tier === 'gold') return 'bg-gradient-to-br from-[#ffe082] to-[#ffb300] text-black border border-[#ffb300] shadow-[0_0_12px_rgba(255,179,0,0.35)]';
-    if (tier === 'silver') return 'bg-gradient-to-br from-[#e0e0e0] to-[#9e9e9e] text-black border border-[#9e9e9e] shadow-[0_0_10px_rgba(200,200,200,0.15)]';
-    return 'bg-gradient-to-br from-[#bcaaa4] to-[#8d6e63] text-white border border-[#8d6e63]';
-  };
-
+  // ═══ ONAY EKRANI ═══
   if (showResult) {
+    const ok = saveErrors.length === 0;
     return (
-      <div className="fixed inset-0 bg-[#0A0E14] text-white font-sans flex flex-col items-center justify-center p-6 z-50 overflow-hidden">
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[350px] h-[350px] bg-[#FACC15]/4 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-1/4 left-1/2 -translate-x-1/2 translate-y-1/2 w-[300px] h-[300px] bg-[#39FF14]/4 rounded-full blur-3xl pointer-events-none" />
-
-        <motion.div 
-          initial={{ scale: 0.8, opacity: 0 }} 
-          animate={{ scale: 1, opacity: 1 }} 
-          transition={{ type: 'spring', damping: 20, stiffness: 150 }}
-          className="flex flex-col items-center gap-6 w-full max-w-sm relative z-10"
-        >
-          {/* Kısmi hatada kutlama rozeti gösterilmez — ekran ne olduğunu dürüstçe anlatır. */}
-          {saveErrors.length === 0 ? (
-            <motion.div
-              animate={{
-                rotate: [0, -10, 10, -10, 0],
-                scale: [1, 1.05, 1]
-              }}
-              transition={{ duration: 0.8, ease: "easeInOut", repeat: 0, delay: 0.2 }}
-              className="w-24 h-24 rounded-full bg-gradient-to-br from-[#FACC15] to-amber-500 flex items-center justify-center shadow-[0_0_50px_rgba(250,204,21,0.5)] border border-[#FACC15]/40"
-            >
-              <Trophy size={42} className="text-black" />
-            </motion.div>
-          ) : (
-            <div className="w-24 h-24 rounded-full bg-[rgba(248,113,113,0.12)] border border-[rgba(248,113,113,0.35)] flex items-center justify-center">
-              <AlertTriangle size={42} className="text-[#F87171]" />
-            </div>
-          )}
-
-          {/* BULGU-097: "başarıyla yüklendi" artık koşulsuz değil; ne kaydedilemediyse adıyla yazılır. */}
-          <div className="text-center space-y-1">
-            <h2 className="text-2xl font-extrabold uppercase tracking-tighter italic leading-none">
-              {saveErrors.length === 0 ? 'DEĞERLENDİRMEN KAYDEDİLDİ' : 'DEĞERLENDİRME YARIM KALDI'}
+      <div lang="tr" style={{ position: 'fixed', inset: 0, background: '#0A0E14', color: '#fff', display: 'flex', flexDirection: 'column', overflow: 'hidden', zIndex: 50 }}>
+        <Backdrop hero />
+        <div style={{ position: 'relative', zIndex: 2, flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 22, padding: '0 28px' }}>
+          <motion.div
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: 'spring', damping: 18, stiffness: 170 }}
+            style={{
+              width: 78, height: 78, borderRadius: 999,
+              border: `1px solid ${ok ? 'rgba(250,204,21,0.45)' : 'rgba(248,113,113,0.35)'}`,
+              background: ok ? 'rgba(250,204,21,0.10)' : 'rgba(248,113,113,0.12)',
+              color: ok ? '#FACC15' : '#F87171',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              boxShadow: ok ? '0 0 40px rgba(250,204,21,0.14)' : 'none',
+            }}
+          >
+            {ok ? <Check size={34} /> : <AlertTriangle size={34} />}
+          </motion.div>
+          <div style={{ textAlign: 'center' }}>
+            <h2 style={{ margin: 0, fontSize: 22, lineHeight: '26px', letterSpacing: '-0.02em', fontWeight: 800, fontStyle: 'italic', textTransform: 'uppercase' }}>
+              {ok ? 'DEĞERLENDİRMEN KAYDEDİLDİ' : 'DEĞERLENDİRME YARIM KALDI'}
             </h2>
-            <p className="text-[0.8125rem] font-semibold text-[#A9B4C0]">
-              {saveErrors.length === 0
-                ? 'Puanların kaydedildi.'
-                : `Şunlar kaydedilemedi: ${saveErrors.join(', ')}.`}
+            <p style={{ margin: '8px 0 0', fontSize: 13, lineHeight: '18px', color: '#A9B4C0' }}>
+              {ok ? summaryText : `${saveErrors.join(', ')} kaydedilemedi. Diğerleri kaydedildi.`}
             </p>
           </div>
-
-          <div className="grid grid-cols-2 gap-3 w-full">
-            <div className="bg-[#121620]/50 border border-white/5 rounded-2xl p-4 text-center flex flex-col justify-center">
-              <p className="text-[0.75rem] text-[#8B949E] font-bold mb-1.5">Puanladığın oyuncu</p>
-              <p className="text-xl font-extrabold text-white italic tracking-tighter leading-none">{Object.keys(playerRatings).length}</p>
-            </div>
-            <div className="bg-[#121620]/50 border border-white/5 rounded-2xl p-4 text-center flex flex-col justify-center">
-              <p className="text-[0.75rem] text-[#8B949E] font-bold mb-1.5">Ortalama puanın</p>
-              <p className="text-xl font-extrabold text-[#39FF14] italic tracking-tighter leading-none">{avgPlayerRating}</p>
-            </div>
-          </div>
-
-          {/* Tekrar güvenli: tüm yazma yolları upsert (ON CONFLICT DO UPDATE). */}
-          {saveErrors.length > 0 && (
-            <motion.button
-              whileTap={{ scale: 0.98 }}
-              onClick={() => { setShowResult(false); persistEvaluation(); }}
-              className="w-full h-14 bg-white/5 border border-white/10 text-white font-extrabold rounded-2xl text-xs uppercase tracking-widest"
-            >
-              Tekrar dene
-            </motion.button>
-          )}
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
+        </div>
+        <div style={{ position: 'relative', zIndex: 2, padding: '0 16px 46px' }}>
+          <button
+            type="button"
             onClick={onComplete}
-            className="w-full h-14 bg-[#39FF14] text-[#0A0E14] font-bold rounded-2xl text-[0.9375rem] shadow-[0_0_30px_rgba(57,255,20,0.25)] hover:shadow-[0_0_40px_rgba(57,255,20,0.4)] active:scale-95 transition-all"
+            style={{
+              width: '100%', height: 52, border: 'none', borderRadius: 16,
+              background: '#39FF14', color: '#0A0E14', fontSize: 15, fontWeight: 700,
+              cursor: 'pointer', boxShadow: '0 0 24px rgba(57,255,20,0.22)',
+            }}
           >
-            Maçlarıma dön
-          </motion.button>
-        </motion.div>
+            Ana ekrana dön
+          </button>
+        </div>
       </div>
     );
   }
 
-  if (showHandshake) {
-    return (
-      <div className="fixed inset-0 bg-[#0A0E14] text-white font-sans flex flex-col items-center justify-center p-6 z-50 overflow-hidden">
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[350px] h-[350px] bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10 pointer-events-none" />
-
-        <motion.div 
-          initial={{ scale: 0.9, opacity: 0, y: 20 }} 
-          animate={{ scale: 1, opacity: 1, y: 0 }} 
-          className="bg-[#121620]/80 backdrop-blur-xl border border-white/10 rounded-3xl p-8 w-full max-w-sm relative z-10 flex flex-col items-center text-center shadow-2xl"
-        >
-          <div className="w-16 h-16 rounded-full bg-blue-500/20 border border-blue-500/40 flex items-center justify-center mb-4">
-            <Trophy size={32} className="text-blue-400" />
-          </div>
-          <h2 className="text-2xl font-extrabold uppercase italic tracking-tight text-white mb-2">SKOR ONAYI</h2>
-          <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mb-6">Maç Skoru Girildi — Onayla</p>
-
-          <div className="flex items-center justify-center gap-6 mb-8 w-full">
-            <div className="text-center flex-1">
-              <span className="text-[0.75rem] text-[#8B949E] font-bold uppercase block mb-2">EV</span>
-              <div className="text-5xl font-extrabold text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]">{scoreProposal?.homeScore ?? 0}</div>
-            </div>
-            <div className="text-3xl font-extrabold text-ink-4">-</div>
-            <div className="text-center flex-1">
-              <span className="text-[0.75rem] text-[#8B949E] font-bold uppercase block mb-2">DEP</span>
-              <div className="text-5xl font-extrabold text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]">{scoreProposal?.awayScore ?? 0}</div>
-            </div>
-          </div>
-
-          <div className="w-full space-y-3">
-            <motion.button
-              whileTap={{ scale: 0.96 }}
-              disabled={approvingScore}
-              onClick={handleApproveScore}
-              className="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-500 text-white font-extrabold text-sm rounded-2xl uppercase tracking-widest shadow-[0_0_20px_rgba(59,130,246,0.3)] flex items-center justify-center gap-2 disabled:opacity-60"
-            >
-              <ShieldCheck size={18} /> {approvingScore ? 'ONAYLANIYOR…' : 'SKORU ONAYLA'}
-            </motion.button>
-            <motion.button
-              whileTap={{ scale: 0.96 }}
-              onClick={() => {
-                // Prensipler §3.4: skor itirazı ayrı bir özellik değil; sorunlar
-                // admin'e "Sorun Bildir" ile gider. Eskiden sahte "iletildi" toast'ı
-                // vardı (hiçbir kayıt/RPC yok) — gerçek kanalı söyle.
-                showInfo('Hakemin girdiği skor resmîdir. İtirazın varsa maç detayından "Sorun Bildir"i kullan.');
-                setShowHandshake(false);
-              }}
-              className="w-full py-4 bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 font-extrabold text-xs rounded-2xl uppercase tracking-widest transition-all"
-            >
-              KATILMIYORUM
-            </motion.button>
-          </div>
-        </motion.div>
-      </div>
-    );
-  }
+  const headerTitle = step === 1
+    ? (mySide ? 'KENDİ TAKIMIN' : 'KADRO')
+    : 'TESİS VE GÖREVLİLER';
 
   return (
-    <div className="fixed inset-0 bg-[#0A0E14] text-white font-sans flex flex-col overflow-hidden select-none">
-      {infoToast && (
-        <div className="fixed top-16 left-1/2 -translate-x-1/2 z-[999] bg-blue-900/90 border border-blue-500/40 text-blue-200 text-[0.6875rem] font-bold px-4 py-2 rounded-xl shadow-xl backdrop-blur-sm">
-          {infoToast}
-        </div>
-      )}
-      {/* ── HEADER (Glassmorphic & safe area top) ── */}
-      <header className="fixed top-0 left-0 right-0 z-40 bg-[#0E131F]/80 backdrop-blur-xl border-b border-white/5 pb-4 pt-safe px-5">
-        <div className="flex items-center justify-between pt-3 mb-3">
-          <button onClick={onBack} className="w-11 h-11 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 active:scale-95 transition-all shadow-md">
-            <ArrowLeft size={20} className="text-white" />
+    <div lang="tr" style={{ position: 'fixed', inset: 0, background: '#0A0E14', color: '#fff', display: 'flex', flexDirection: 'column', overflow: 'hidden', zIndex: 50 }}>
+      <Backdrop />
+
+      {/* ═══ BAŞLIK ═══ */}
+      <header style={{ position: 'relative', zIndex: 2, padding: '58px 16px 14px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <button
+            type="button"
+            onClick={() => (step === 1 ? onBack() : setStep(1))}
+            style={{
+              width: 44, height: 44, flex: 'none', borderRadius: 999,
+              background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.10)',
+              color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+            }}
+            aria-label="Geri"
+          >
+            <ArrowLeft size={20} />
           </button>
-          
-          <div className="text-center flex-1 mx-4">
-            <h1 className="text-sm font-extrabold uppercase tracking-[0.2em] italic text-white truncate leading-[1.2]">MAÇ DEĞERLENDİRME</h1>
-            {/* BULGU-101: hangi maçın puanlandığı sabit metinden değil, maçın kendisinden okunur. */}
-            {selectedMatch && (
-              <p className="text-[0.75rem] font-bold text-[#8B949E] truncate mt-1">
-                {[
-                  selectedMatch.courtName || selectedMatch.pitchName || selectedMatch.location,
-                  [selectedMatch.date, selectedMatch.time].filter(Boolean).join(' '),
-                ].filter(Boolean).join(' · ')}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ margin: 0, fontSize: 10, lineHeight: '12px', letterSpacing: '0.2em', textTransform: 'uppercase', fontWeight: 800, color: '#8B949E' }}>
+              MAÇ DEĞERLENDİRME · {step}/2
+            </p>
+            <p style={{ margin: '3px 0 0', fontSize: 16, lineHeight: '20px', letterSpacing: '-0.01em', fontWeight: 800, fontStyle: 'italic', textTransform: 'uppercase', color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {headerTitle}
+            </p>
+          </div>
+          {step === 1 && PLAYERS.length > 0 && (
+            <div style={{ flex: 'none', textAlign: 'right' }}>
+              <p style={{ margin: 0, fontFamily: MONO, fontVariantNumeric: 'tabular-nums', fontSize: 22, lineHeight: '22px', fontWeight: 600, color: '#FACC15' }}>
+                {rated.length}<span style={{ color: '#8B949E', fontSize: 13 }}>/{PLAYERS.length}</span>
               </p>
-            )}
-          </div>
-
-          <div className="w-11 h-11 bg-white/5 border border-white/10 rounded-full flex items-center justify-center">
-            <span className="text-[0.6875rem] font-extrabold text-white/50">{step}/2</span>
-          </div>
-        </div>
-
-        {/* Progress Bar */}
-        <div className="flex gap-1.5 px-1">
-          {[1,2].map(s => (
-            <div key={s} className="flex-1 h-1 bg-white/5 rounded-full overflow-hidden">
-              <motion.div 
-                initial={{ width: 0 }} 
-                animate={{ width: step >= s ? '100%' : '0%' }} 
-                transition={{ duration: 0.4 }}
-                className="h-full rounded-full bg-gradient-to-r from-[#39FF14] to-emerald-400" 
-              />
+              <p style={{ margin: '2px 0 0', fontSize: 10, lineHeight: '12px', letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 800, color: '#8B949E' }}>
+                PUANLANDI
+              </p>
             </div>
-          ))}
+          )}
         </div>
       </header>
 
-      {/* ── CONTENT AREA ── */}
-      <div className="flex-1 overflow-y-auto pt-32 pb-12 px-5 custom-scrollbar">
-        <AnimatePresence mode="wait">
-
-          {/* ─ ADIM 1: OYUNCU PUANLARI — kart kart hızlı puanla ─ */}
-          {step === 1 && (() => {
-            // G2: gerçek maçta değerlendirilecek katılımcı yoksa boş-durum +
-            // devam (mock oyuncu göstermek yerine dürüst atlama).
-            if (PLAYERS.length === 0) {
-              return (
-                <motion.div key="s1-empty" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="space-y-5 text-center py-8">
-                  <div className="w-16 h-16 rounded-full bg-white/5 border border-white/10 flex items-center justify-center mx-auto">
-                    <Users size={28} className="text-[#8B949E]" />
-                  </div>
-                  <p className="text-[0.9375rem] leading-[22px] font-medium text-[#A9B4C0] max-w-xs mx-auto">
-                    Bu maçta puanlayacağın başka oyuncu yok. Saha ve görevli puanına geçebilirsin.
-                  </p>
-                  <button onClick={() => setStep(2)}
-                    className="px-6 py-3 rounded-2xl bg-[#39FF14] text-[#0A0E14] font-bold text-[0.9375rem] active:scale-95 transition-all">
-                    Devam et
-                  </button>
-                </motion.div>
-              );
-            }
-            const p = PLAYERS[playerCardIdx];
-            if (!p) return null;
-            const currentRating = playerRatings[p.id] ?? 0;
-            const isLast = playerCardIdx === PLAYERS.length - 1;
-            const advanceCard = () => {
-              if (isLast) setStep(2);
-              else { setPlayerCardIdx(i => i + 1); if (navigator.vibrate) navigator.vibrate(12); }
-            };
-            return (
-              <motion.div
-                key={`s1-${playerCardIdx}`}
-                initial={{ opacity: 0, x: 30 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -30 }}
-                transition={{ type: 'spring', damping: 25, stiffness: 220 }}
-                className="space-y-5"
-              >
-                {/* BULGU-106: puanlamanın anonim olduğu sözü ekranda verilir (RLS ile de karşılanır). */}
-                <p className="text-[0.75rem] font-medium text-[#8B949E] leading-[16px]">
-                  Puanların gizli. Kimin kaç yıldız verdiği hiç kimseye gösterilmez.
+      {/* ═══ EKRAN 1 · KADRO ═══ */}
+      {step === 1 && (
+        <>
+          <div style={{ position: 'relative', zIndex: 2, flex: 1, minHeight: 0, overflow: 'auto', padding: '14px 16px 20px' }}>
+            {PLAYERS.length === 0 ? (
+              <div style={{ ...CARD, textAlign: 'center', marginTop: 24 }}>
+                <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: '#fff' }}>Puanlanacak takım arkadaşın yok</p>
+                <p style={{ margin: '6px 0 0', fontSize: 12, lineHeight: '17px', color: '#8B949E' }}>
+                  Bu maçın kadrosunda senden başka oyuncu görünmüyor. Tesis ve görevlileri yine puanlayabilirsin.
                 </p>
-
-                {/* Progress */}
-                <div className="flex items-center gap-3">
-                  {/* Artık geri gidilecek bir adım yok; ekrandan çıkış üstteki ok ile yapılır. */}
-                  <button onClick={() => setPlayerCardIdx(i => Math.max(0, i - 1))}
-                    disabled={playerCardIdx === 0}
-                    className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-[#A9B4C0] active:scale-95 transition-all disabled:opacity-30">
-                    ←
-                  </button>
-                  <div className="flex-1 flex gap-1">
-                    {PLAYERS.map((_, i) => (
-                      <div key={i} className={`flex-1 h-1.5 rounded-full transition-all ${i < playerCardIdx ? 'bg-[#39FF14]' : i === playerCardIdx ? 'bg-[#FACC15]' : 'bg-white/10'}`} />
-                    ))}
-                  </div>
-                  <span className="text-[0.75rem] font-bold text-[#8B949E]">{playerCardIdx + 1}/{PLAYERS.length}</span>
-                </div>
-
-                {/* Player card */}
-                <div className="rounded-[32px] border p-7 flex flex-col gap-6 relative overflow-hidden transition-all bg-[#121620]/70 border-white/8">
-                  <div className="absolute -top-10 left-1/2 -translate-x-1/2 w-32 h-32 bg-amber-500/6 rounded-full blur-2xl pointer-events-none" />
-                  <div className="flex items-center gap-4">
-                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center font-extrabold text-base border ${getTierBadgeClass(p.tier)}`}>
-                      {p.initials}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-base font-extrabold text-white uppercase tracking-tight italic">{p.name}</p>
-                      <span className="px-2 py-0.5 bg-white/5 border border-white/10 rounded text-[0.625rem] font-extrabold text-gray-400 tracking-wider uppercase">{p.pos}</span>
-                    </div>
-                  </div>
-
-                  {/* Stars */}
-                  <div className="flex gap-3 justify-center relative overflow-visible">
-                    {[1,2,3,4,5].map(s => (
-                      <motion.button key={s} whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.85 }}
-                        onClick={(e) => setPlayerRating(p.id, s, e)} className="p-1 relative overflow-visible">
-                        <Star size={34} className={`transition-all duration-200 ${s <= currentRating ? 'text-[#FACC15] fill-[#FACC15] drop-shadow-[0_0_10px_rgba(250,204,21,0.5)]' : 'text-gray-800 hover:text-ink-4'}`} />
-                      </motion.button>
-                    ))}
-                    <div className="absolute inset-0 pointer-events-none overflow-visible">
-                      {sparkles.map(s => <Sparkle key={s.id} x={s.x} y={s.y} delay={s.delay} />)}
-                    </div>
-                  </div>
-                  {currentRating > 0 && (
-                    <p className="text-center text-[0.625rem] font-extrabold uppercase tracking-widest text-[#FACC15]/70 -mt-3">
-                      {currentRating === 5 ? 'Mükemmel' : currentRating >= 4 ? 'Çok İyi' : currentRating >= 3 ? 'İyi' : currentRating >= 2 ? 'Orta' : 'Zayıf'}
-                    </p>
-                  )}
-
-                  {/* BULGU-096: centilmenlik oyuncu başına. Seçim yapılmazsa nötr 3 gider. */}
-                  <div className="space-y-2">
-                    <span className="block text-[0.8125rem] font-semibold text-[#8B949E]">Centilmenlik</span>
-                    <div className="grid grid-cols-3 gap-2">
-                      {FAIR_PLAY_CHOICES.map(c => {
-                        const active = playerFairPlay[p.id] === c.value;
-                        const tone = c.value === 5
-                          ? 'bg-[rgba(57,255,20,0.12)] border-[rgba(57,255,20,0.35)] text-[#39FF14]'
-                          : c.value === 1
-                            ? 'bg-[rgba(248,113,113,0.12)] border-[rgba(248,113,113,0.35)] text-[#F87171]'
-                            : 'bg-white/10 border-white/25 text-white';
-                        return (
-                          <button
-                            key={c.value}
-                            type="button"
-                            aria-pressed={active}
-                            disabled={currentRating === 0}
-                            onClick={() => {
-                              if (navigator.vibrate) navigator.vibrate(15);
-                              setPlayerFairPlay(prev => ({ ...prev, [p.id]: c.value }));
-                            }}
-                            className={`h-11 rounded-2xl border text-[0.8125rem] font-semibold flex items-center justify-center gap-1.5 transition-all active:scale-[0.97] disabled:opacity-40 ${
-                              active ? tone : 'bg-black/30 border-white/8 text-[#8B949E]'
-                            }`}
-                          >
-                            {active && c.value === 5 && <CheckCircle2 size={14} />}
-                            {c.label}
-                          </button>
-                        );
-                      })}
-                    </div>
-                    {/* Centilmenlik yalnız yıldızla birlikte gönderiliyor; yıldızsız seçim
-                        sessizce kaybolmasın diye kapalı tutulur. */}
-                    {currentRating === 0 && (
-                      <p className="text-[0.75rem] font-medium text-[#8B949E]">Centilmenlik notu için önce yıldız ver.</p>
-                    )}
-                  </div>
-                </div>
-
-                {/* Actions */}
-                <div className="flex gap-3">
-                  <motion.button whileTap={{ scale: 0.97 }} onClick={advanceCard}
-                    className="w-14 h-14 bg-white/5 border border-white/10 text-gray-400 rounded-2xl text-[0.6875rem] font-extrabold uppercase flex items-center justify-center hover:bg-white/8 transition-all">
-                    Atla
-                  </motion.button>
-                  <motion.button whileTap={{ scale: 0.98 }} onClick={advanceCard}
-                    disabled={currentRating === 0}
-                    className={`flex-1 h-14 font-extrabold rounded-2xl text-xs uppercase tracking-widest flex items-center justify-center gap-2 transition-all ${currentRating > 0 ? 'bg-gradient-to-r from-[#39FF14] to-emerald-400 text-black shadow-[0_0_20px_rgba(57,255,20,0.2)]' : 'bg-white/5 border border-white/10 text-[#8B949E]'}`}>
-                    {isLast ? 'TAMAMLA →' : 'SONRAKI →'}
-                  </motion.button>
-                </div>
-              </motion.div>
-            );
-          })()}
-
-          {/* ─ ADIM 2: SAHA VE GÖREVLİLER ─ */}
-          {step === 2 && (
-            <motion.div 
-              key="s2" 
-              initial={{ opacity: 0, x: 25 }} 
-              animate={{ opacity: 1, x: 0 }} 
-              exit={{ opacity: 0, x: -25 }} 
-              transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              className="space-y-6"
-            >
-              <div className="text-center py-4 bg-[#121620]/40 rounded-[32px] border border-white/5 p-5 relative overflow-hidden">
-                <div className="absolute -top-12 left-1/2 -translate-x-1/2 w-24 h-24 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none" />
-                <div className="w-14 h-14 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex items-center justify-center mx-auto mb-3.5 shadow-[inset_0_2px_8px_rgba(16,185,129,0.15)]">
-                  <Star size={26} className="text-emerald-400" />
-                </div>
-                <h2 className="text-base font-extrabold uppercase tracking-tight italic">Saha ve görevliler</h2>
-                <p className="text-[0.8125rem] font-semibold text-[#8B949E] mt-1">Sahayı ve maça gelen görevlileri puanla</p>
               </div>
-
-              {/* BULGU-097: 1-5 yıldızlı "HAKEM PERFORMANSI" kalktı — hiçbir yere yazılmıyordu.
-                  Hakem puanı tek yerde, aşağıdaki ServiceRatingCard (1-10) ile toplanır. */}
-              {[
-                { label: 'Saha / zemin kalitesi', val: pitchRating, set: setPitchRating, icon: Droplets, color: 'text-[#39FF14]' },
-              ].map(({ label, val, set, icon: Icon, color }) => (
-                <div key={label} className="bg-[#121620]/50 border border-white/5 rounded-[24px] p-5 flex flex-col gap-3.5 relative overflow-visible">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[0.8125rem] font-semibold text-[#8B949E]">{label}</span>
-                    <Icon size={16} className={color} />
-                  </div>
-                  <div className="flex gap-2 justify-center relative overflow-visible">
-                    {[1,2,3,4,5].map(s => (
-                      <motion.button 
-                        key={s} 
-                        whileHover={{ scale: 1.15 }} 
-                        whileTap={{ scale: 0.9 }} 
-                        onClick={(e) => {
-                          if (navigator.vibrate) navigator.vibrate(20);
-                          set(s);
-                          triggerSparkles(e);
+            ) : (
+              <>
+                <p style={{ margin: '0 0 14px', fontSize: 11, lineHeight: '15px', color: '#8B949E' }}>
+                  Puanların gizli. Kimin kaç yıldız verdiği kimseye gösterilmez.
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {PLAYERS.map(p => {
+                    const v = playerRatings[p.id] ?? 0;
+                    return (
+                      <div
+                        key={p.id}
+                        style={{
+                          borderRadius: 18, padding: '12px 13px 14px',
+                          border: `1px solid ${v ? 'rgba(250,204,21,0.30)' : 'rgba(255,255,255,0.07)'}`,
+                          background: v ? 'rgba(250,204,21,0.05)' : 'rgba(255,255,255,0.02)',
+                          transition: 'border-color 0.15s ease, background 0.15s ease',
                         }}
-                        className="p-1 relative overflow-visible"
                       >
-                        <Star 
-                          size={28} 
-                          className={`transition-colors ${
-                            s <= val 
-                              ? 'text-[#39FF14] fill-[#39FF14] drop-shadow-[0_0_8px_rgba(57,255,20,0.5)]' 
-                              : 'text-gray-800 hover:text-ink-4'
-                          }`} 
-                        />
-                      </motion.button>
-                    ))}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
+                          <div style={{
+                            width: 36, height: 36, flex: 'none', borderRadius: 11,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontSize: 12, fontWeight: 800, letterSpacing: '0.02em',
+                            background: 'rgba(255,255,255,0.06)', color: '#C9D1D9',
+                            border: '1px solid rgba(255,255,255,0.12)',
+                          }}>{p.initials}</div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <p style={{ margin: 0, fontSize: 14, lineHeight: '18px', fontWeight: 700, letterSpacing: '-0.01em', color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</p>
+                            <p style={{ margin: '1px 0 0', fontSize: 10, lineHeight: '12px', letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 800, color: '#8B949E' }}>{p.pos}</p>
+                          </div>
+                          <p style={{ margin: 0, fontFamily: MONO, fontVariantNumeric: 'tabular-nums', fontSize: 20, lineHeight: '20px', fontWeight: 600, color: v ? '#FACC15' : 'rgba(255,255,255,0.22)', minWidth: 28, textAlign: 'right' }}>
+                            {v ? String(v) : '—'}
+                          </p>
+                        </div>
+                        <div style={{ marginTop: 10 }}>
+                          <StarStrip
+                            value={v}
+                            max={10}
+                            size={26}
+                            height={28}
+                            onPick={(nv) => setPlayerRatings(prev => ({ ...prev, [p.id]: nv }))}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                <p style={{ margin: '16px 2px 0', fontSize: 11, lineHeight: '15px', color: '#8B949E' }}>
+                  Boş bıraktığın oyuncu gönderilmez. Kendini puanlayamazsın.
+                </p>
+              </>
+            )}
+          </div>
+
+          <footer style={{ position: 'relative', zIndex: 2, padding: '12px 16px 40px', borderTop: '1px solid rgba(255,255,255,0.07)', background: 'rgba(10,14,20,0.86)', backdropFilter: 'blur(18px)', display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p style={{ margin: 0, fontSize: 12, lineHeight: '16px', fontWeight: 600, color: '#C9D1D9' }}>
+                {rated.length}/{PLAYERS.length} oyuncu puanlandı
+              </p>
+              <p style={{ margin: '1px 0 0', fontSize: 11, lineHeight: '15px', color: '#8B949E' }}>
+                Ortalaman <span style={{ fontFamily: MONO, color: '#FACC15' }}>{avgLabel}</span>
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setStep(2)}
+              style={{
+                flex: 'none', height: 52, padding: '0 26px', border: 'none', borderRadius: 16,
+                background: '#39FF14', color: '#0A0E14', fontSize: 15, fontWeight: 700,
+                letterSpacing: '-0.01em', cursor: 'pointer', boxShadow: '0 0 24px rgba(57,255,20,0.22)',
+              }}
+            >
+              Devam
+            </button>
+          </footer>
+        </>
+      )}
+
+      {/* ═══ EKRAN 2 · TESİS & GÖREVLİLER ═══ */}
+      {step === 2 && (
+        <>
+          <div style={{ position: 'relative', zIndex: 2, flex: 1, minHeight: 0, overflow: 'auto', padding: '16px 16px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+
+            {/* TESİS — 5 yıldız, tek genel puan */}
+            <div style={{ ...CARD, flex: 'none' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
+                <div style={{ width: 36, height: 36, flex: 'none', borderRadius: 11, background: 'rgba(57,255,20,0.10)', border: '1px solid rgba(57,255,20,0.35)', color: '#39FF14', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Layers size={19} />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ margin: 0, fontSize: 10, lineHeight: '12px', letterSpacing: '0.14em', textTransform: 'uppercase', fontWeight: 800, color: '#8B949E' }}>TESİS</p>
+                  <p style={{ margin: '1px 0 0', fontSize: 15, lineHeight: '19px', fontWeight: 700, color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{pitchName}</p>
+                </div>
+                <p style={{ margin: 0, fontSize: 10, lineHeight: '12px', letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 800, color: '#FACC15' }}>{LBL5(pitchRating)}</p>
+              </div>
+              <div style={{ marginTop: 12 }}>
+                <StarStrip value={pitchRating} max={5} size={44} height={46} onPick={setPitchRating} />
+              </div>
+              <p style={{ margin: '8px 2px 0', fontSize: 11, lineHeight: '15px', color: '#8B949E' }}>
+                Zemin, soyunma odası, ışık — tek genel puan.
+              </p>
+            </div>
+
+            {/* GÖREVLİLER — hakem mavi, kaleci altın; 10 puan */}
+            {providers.map(p => {
+              const isGk = p.type === 'GK';
+              const v = serviceScores[p.id] ?? 0;
+              const color = isGk ? '#FACC15' : '#60A5FA';
+              const tint = isGk ? 'rgba(250,204,21,0.12)' : 'rgba(96,165,250,0.12)';
+              const line = isGk ? 'rgba(250,204,21,0.35)' : 'rgba(96,165,250,0.35)';
+              return (
+                <div key={p.id} style={{ ...CARD, flex: 'none' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
+                    <div style={{ width: 36, height: 36, flex: 'none', borderRadius: 11, background: tint, border: `1px solid ${line}`, color, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                      {p.avatar
+                        ? <img src={p.avatar} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        : isGk ? <ShieldCheck size={19} /> : <Scale size={19} />}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ margin: 0, fontSize: 10, lineHeight: '12px', letterSpacing: '0.14em', textTransform: 'uppercase', fontWeight: 800, color: '#8B949E' }}>
+                        {isGk ? 'KALECİ' : 'HAKEM'}
+                      </p>
+                      <p style={{ margin: '1px 0 0', fontSize: 15, lineHeight: '19px', fontWeight: 700, color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</p>
+                    </div>
+                    <p style={{ margin: 0, fontFamily: MONO, fontVariantNumeric: 'tabular-nums', fontSize: 22, lineHeight: '22px', fontWeight: 600, color: v ? '#fff' : 'rgba(255,255,255,0.22)' }}>
+                      {v ? String(v) : '—'}<span style={{ fontSize: 12, color: '#8B949E' }}>/10</span>
+                    </p>
+                  </div>
+                  <div style={{ marginTop: 12 }}>
+                    <SegmentBar
+                      value={v}
+                      max={10}
+                      color={color}
+                      onPick={(nv) => setServiceScores(prev => ({ ...prev, [p.id]: nv }))}
+                    />
                   </div>
                 </div>
-              ))}
+              );
+            })}
 
-              {/* Saha notu: yıldızla aynı çağrıda (submit_pitch_rating p_comment) gider,
-                  bu yüzden saha kartının hemen altında ve yıldıza bağlı. */}
-              <div className="bg-[#121620]/50 border border-white/5 rounded-[24px] p-5 space-y-3">
-                <div className="flex items-center gap-2">
-                  <MessageSquare size={14} className="text-[#8B949E]" />
-                  <span className="text-[0.8125rem] font-semibold text-[#8B949E]">Saha hakkında not (isteğe bağlı)</span>
-                </div>
-                <textarea
-                  value={orgComment}
-                  onChange={(e) => setOrgComment(e.target.value)}
-                  maxLength={500}
-                  disabled={pitchRating === 0}
-                  className="w-full bg-black/40 border border-white/8 rounded-2xl p-4 text-[0.9375rem] leading-[22px] text-white focus:outline-none focus:border-[#39FF14]/50 min-h-[96px] resize-none placeholder-[#8B949E] font-normal disabled:opacity-50 transition-all"
-                  placeholder="Zemin, soyunma odası, ışık… sahayla ilgili notun"
-                />
-                {pitchRating === 0 && (
-                  <p className="text-[0.75rem] font-medium text-[#8B949E]">Not bırakmak için önce sahaya yıldız ver.</p>
-                )}
-              </div>
+            <p style={{ margin: '2px 2px 0', fontSize: 11, lineHeight: '15px', color: '#8B949E' }}>
+              Hepsi isteğe bağlı. Puan vermediğin başlık gönderilmez.
+            </p>
+          </div>
 
-              {/* Sparkle burst layer */}
-              <div className="absolute inset-0 pointer-events-none overflow-visible">
-                {sparkles.map(s => (
-                  <Sparkle key={s.id} x={s.x} y={s.y} delay={s.delay} />
-                ))}
-              </div>
+          <footer style={{ position: 'relative', zIndex: 2, padding: '12px 16px 40px', borderTop: '1px solid rgba(255,255,255,0.07)', background: 'rgba(10,14,20,0.86)', backdropFilter: 'blur(18px)', display: 'flex', alignItems: 'center', gap: 12 }}>
+            <button
+              type="button"
+              onClick={() => setStep(1)}
+              style={{
+                flex: 'none', width: 52, height: 52, borderRadius: 16,
+                background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.10)',
+                color: '#A9B4C0', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+              }}
+              aria-label="Kadroya dön"
+            >
+              <ArrowLeft size={20} />
+            </button>
+            <button
+              type="button"
+              onClick={persistEvaluation}
+              disabled={submitting}
+              style={{
+                flex: 1, height: 52, border: 'none', borderRadius: 16,
+                background: '#39FF14', color: '#0A0E14', fontSize: 15, fontWeight: 700,
+                letterSpacing: '-0.01em', cursor: submitting ? 'default' : 'pointer',
+                opacity: submitting ? 0.6 : 1,
+                boxShadow: '0 0 24px rgba(57,255,20,0.22)',
+              }}
+            >
+              {submitting ? 'Gönderiliyor…' : 'Değerlendirmeyi gönder'}
+            </button>
+          </footer>
+        </>
+      )}
 
-              {/* FAZ 5: Atanmış Kaleci / Hakem 1-10 değerlendirmesi (varsa, atlanabilir) */}
-              {providers.length > 0 && (
-                <div className="space-y-3">
-                  <span className="text-[0.8125rem] font-semibold text-[#8B949E] block ml-1">
-                    Görevli puanı (isteğe bağlı)
-                  </span>
-                  {providers.map(p => (
-                    <ServiceRatingCard
-                      key={p.id}
-                      info={p}
-                      score={serviceScores[p.id] ?? 0}
-                      comment={serviceComments[p.id] ?? ''}
-                      onScore={(val) => setServiceScores(prev => ({ ...prev, [p.id]: val }))}
-                      onComment={(val) => setServiceComments(prev => ({ ...prev, [p.id]: val }))}
-                    />
-                  ))}
-                </div>
-              )}
-
-              {/* Actions */}
-              <div className="flex gap-3">
-                <motion.button 
-                  whileTap={{ scale: 0.98 }} 
-                  onClick={() => setStep(1)}
-                  className="flex-1 h-14 bg-white/5 border border-white/10 text-white font-extrabold rounded-2xl text-xs uppercase tracking-widest flex items-center justify-center hover:bg-white/10"
-                >
-                  ← GERİ
-                </motion.button>
-                <motion.button
-                  whileTap={{ scale: 0.98 }}
-                  onClick={persistEvaluation}
-                  disabled={submitting}
-                  className="flex-[2] h-14 bg-gradient-to-r from-emerald-600 to-[#39FF14] text-[#0A0E14] font-bold rounded-2xl text-[0.9375rem] flex items-center justify-center shadow-[0_0_20px_rgba(57,255,20,0.2)] hover:shadow-[0_0_30px_rgba(57,255,20,0.3)] transition-all disabled:opacity-60"
-                >
-                  {submitting ? 'Gönderiliyor…' : 'Değerlendirmeyi gönder'}
-                </motion.button>
-              </div>
-            </motion.div>
-          )}
-
-        </AnimatePresence>
-      </div>
-
+      <Toast />
     </div>
   );
 };

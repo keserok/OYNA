@@ -26,6 +26,10 @@ export const Toast: React.FC<ToastProps> = ({ message, variant = 'error' }) => {
   const { container, icon: Icon, iconColor, text } = VARIANT_STYLES[variant];
   return (
     <motion.div
+      // IP-11: toast ekranda görünüyordu ama ekran okuyucuya HİÇ duyurulmuyordu.
+      // Hata sözü kesip okunur (assertive); bilgi sıradaki fırsatta (polite).
+      role={variant === 'error' ? 'alert' : 'status'}
+      aria-live={variant === 'error' ? 'assertive' : 'polite'}
       initial={{ opacity: 0, y: 40 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 40 }}

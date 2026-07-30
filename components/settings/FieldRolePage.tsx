@@ -4,6 +4,7 @@ import { UserRole, AppView } from '../../types';
 import { useAppStore } from '../../store';
 import { auth } from '../../supabaseAuth';
 import { getFullUserProfile } from '../../services/userService';
+import { hasMultipleSwitchableRoles } from '../../shared/roles';
 import SettingsSubPage from '../common/SettingsSubPage';
 
 // ─── Ayarlar → Sahada Rolün ───────────────────────────────────────────────────
@@ -24,7 +25,7 @@ const ROLE_OPTS = [
 
 const FieldRolePage: React.FC<FieldRolePageProps> = ({ open, onClose, onNavigate }) => {
   const uid = auth.currentUser?.uid || '';
-  const { setMyRoles, setIsRoleSwitcherOpen, setServiceAppRole } = useAppStore();
+  const { myRoles, setMyRoles, setIsRoleSwitcherOpen, setServiceAppRole } = useAppStore();
   const [loading, setLoading] = useState(true);
   const [roles, setRoles] = useState<string[]>([]);
   const [pending, setPending] = useState(false);
@@ -50,7 +51,19 @@ const FieldRolePage: React.FC<FieldRolePageProps> = ({ open, onClose, onNavigate
 
   const handleRole = (r: UserRole, owned: boolean) => {
     if (owned) {
-      if (roles.length) setMyRoles(roles);
+      // IP-14 · BULGU-027: burada eskiden `setMyRoles(roles)` vardı — profilden
+      // gelen HAM diziyi yazıyor ve App.tsx'in bilinçli kurduğu
+      // `profiles.roles ∪ aktif rol` birleşimini eziyordu. Eski owner
+      // hesaplarında profiles.roles 'OWNER' içermediği için rol kayboluyordu.
+      // Artık ezmiyoruz, BİRLEŞTİRİYORUZ.
+      const birlesik = Array.from(new Set<string>([...(myRoles || []), ...roles]));
+      if (birlesik.length) setMyRoles(birlesik);
+
+      // Rol değiştirici yalnız ≥2 geçilebilir rol varsa RENDER EDİLİYOR
+      // (App.tsx kapısı). Tek rolde eskiden sayfa kapanıp hiçbir şey açılmıyordu:
+      // dokunuş sessizce yutuluyordu. Artık tek roldeyken sayfa AÇIK kalır.
+      if (!hasMultipleSwitchableRoles(birlesik)) return;
+
       onClose();
       setIsRoleSwitcherOpen(true);
       return;
