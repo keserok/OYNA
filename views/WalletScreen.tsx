@@ -600,7 +600,7 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
             }`}>
             {topupBusy ? <RefreshCw size={18} className="animate-spin" /> : <Plus size={18} />}
             {topupBusy
-              ? 'YÜKLENİYOR...'
+              ? 'YÜKLENİYOR…'
               : topupFee > 0
                 ? `${fmt(effectiveTopup + topupFee)}₺ ÖDE · ${fmtInt(effectiveTopup)}₺ YÜKLE`
                 : `${fmtInt(effectiveTopup)}₺ YÜKLE`}
@@ -848,7 +848,7 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
                 ? 'bg-[#39FF14] text-[#0A0E14]' : 'bg-gray-800 text-ink-4'
             }`}>
             {payoutBusy ? <RefreshCw size={18} className="animate-spin" /> : <ArrowUpRight size={18} />}
-            {payoutBusy ? 'GÖNDERİLİYOR...' : `${payoutAmount ? fmtInt(Number(payoutAmount)) : '0'}₺ ÇEKİM TALEP ET`}
+            {payoutBusy ? 'GÖNDERİLİYOR…' : `${payoutAmount ? fmtInt(Number(payoutAmount)) : '0'}₺ ÇEKİM TALEP ET`}
           </button>
         </div>
       </div>
@@ -965,7 +965,7 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
                 canSubmit ? 'bg-[#39FF14] text-[#0A0E14]' : 'bg-gray-800 text-ink-4'
               }`}>
               {cashoutBusy ? <RefreshCw size={18} className="animate-spin" /> : <ArrowUpRight size={18} />}
-              {cashoutBusy ? 'GÖNDERİLİYOR...' : (g > 0 && pv ? `${fmt(pv.net)}₺ AL` : 'ÇEKİM TALEP ET')}
+              {cashoutBusy ? 'GÖNDERİLİYOR…' : (g > 0 && pv ? `${fmt(pv.net)}₺ AL` : 'ÇEKİM TALEP ET')}
             </button>
           </div>
         )}

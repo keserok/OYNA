@@ -128,7 +128,7 @@ export const BookingCard: React.FC<BookingCardProps> = ({
             }`}
           >
             {paying
-              ? (<><Loader2 size={14} className="animate-spin" /> İşleniyor...</>)
+              ? (<><Loader2 size={14} className="animate-spin" /> İşleniyor…</>)
               : (<><CreditCard size={14} /> Kaporayı Öde (<span className="font-numeric">₺{depositRemaining.toLocaleString('tr-TR')}</span>)</>)}
           </button>
         </div>

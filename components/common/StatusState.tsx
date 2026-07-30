@@ -9,7 +9,7 @@ interface LoadingStateProps {
 }
 
 export const LoadingState: React.FC<LoadingStateProps> = ({
-  message = 'Yükleniyor...',
+  message = 'Yükleniyor…',
   size = 'md'
 }) => {
   const spinnerSize = { sm: 24, md: 44, lg: 60 }[size];

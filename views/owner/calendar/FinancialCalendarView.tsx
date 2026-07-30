@@ -26,6 +26,7 @@ import {
 } from '../../../services/pitchOwnerService';
 import { todayISO } from '../ownerPanelShared';
 import type { PitchBookingFull, PitchCourt, FlashDeal, PitchAvailabilityException } from '../../../types';
+import { trUpper } from '../../../utils/trUpper';
 
 // Takvim veri modeli (SALT TAŞIMA)
 interface CalendarBooking {
@@ -567,7 +568,7 @@ export const FinancialCalendarView: React.FC<{
                                         <ChevronLeft size={16} />
                                     </button>
                                     <h3 className="text-base font-extrabold text-white italic min-w-[130px] text-center">
-                                        {new Date(monthCursor.y, monthCursor.m, 1).toLocaleDateString('tr-TR', { month: 'long', year: 'numeric' }).toUpperCase()}
+                                        {trUpper(new Date(monthCursor.y, monthCursor.m, 1).toLocaleDateString('tr-TR', { month: 'long', year: 'numeric' }))}
                                     </h3>
                                     <button
                                         onClick={() => setMonthCursor(({ y, m }) => m === 11 ? { y: y + 1, m: 0 } : { y, m: m + 1 })}
@@ -586,7 +587,7 @@ export const FinancialCalendarView: React.FC<{
                                 <button
                                     onClick={() => {
                                       if (readOnly) {
-                                        notify('Hesabınız salt okunur modda.', 'warning');
+                                        notify('Hesabın salt okunur modda.', 'warning');
                                         return;
                                       }
                                       setIsSubscriptionModalOpen(true);
@@ -819,7 +820,7 @@ export const FinancialCalendarView: React.FC<{
                                         <button 
                                             onClick={() => {
                                               if (readOnly) {
-                                                notify('Hesabınız salt okunur modda. Yeni rezervasyon oluşturulamaz.', 'warning');
+                                                notify('Hesabın salt okunur modda. Yeni rezervasyon oluşturulamaz.', 'warning');
                                                 return;
                                               }
                                               handleQuickCreate(time);
@@ -843,7 +844,7 @@ export const FinancialCalendarView: React.FC<{
                                         <button 
                                             onClick={() => {
                                               if (!canFlashDeals) {
-                                                notify('Flash deal mevcut planınızda aktif değil.', 'warning');
+                                                notify('Flash deal mevcut planında aktif değil.', 'warning');
                                                 return;
                                               }
                                               setFlashDealModalOpen(time);
@@ -904,7 +905,7 @@ export const FinancialCalendarView: React.FC<{
                         onClick={async () => {
                             if (!isQuickCreateOpen || !selectedCourtId) return;
                             if (!isRealPitch) {
-                                notify('Rezervasyon kaydı için önce tesisinizin onaylanması gerekir.', 'warning');
+                                notify('Rezervasyon kaydı için önce tesisinin onaylanması gerekir.', 'warning');
                                 return;
                             }
                             setIsAddingSlot(true);
@@ -961,7 +962,7 @@ export const FinancialCalendarView: React.FC<{
                         disabled={isAddingSlot || (paymentStatus === 'PARTIAL' && !isDepositValid)}
                         className="w-full py-4 min-h-[52px] bg-[#FACC15] text-black font-extrabold text-lg rounded-2xl hover:bg-yellow-300 active:scale-[0.98] transition-all disabled:opacity-50"
                     >
-                        {isAddingSlot ? 'KAYDEDİLİYOR...' : 'KAYDET'}
+                        {isAddingSlot ? 'KAYDEDİLİYOR…' : 'KAYDET'}
                     </button>
                 }
             >

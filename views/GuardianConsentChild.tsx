@@ -84,7 +84,7 @@ const GuardianConsentChild: React.FC<GuardianConsentChildProps> = ({ onBack, onG
             <h2 className="text-xl font-extrabold mb-2">Bu hesap için veli onayı gerekmiyor</h2>
             <p className="text-sm text-gray-400 leading-relaxed mb-6">
               Hesabın reşit görünüyor. 18 yaşından küçük bir çocuğu onaylamak istiyorsanız
-              aşağıdan devam edebilirsiniz.
+              aşağıdan devam edebilirsin.
             </p>
             <button onClick={onGoVeliForm} className="px-6 py-3 rounded-xl bg-[#39FF14] text-[#06210A] font-extrabold text-sm active:scale-95 transition">
               Çocuğumu Onayla →
@@ -128,8 +128,8 @@ const GuardianConsentChild: React.FC<GuardianConsentChildProps> = ({ onBack, onG
               </div>
               <ol className="space-y-3">
                 {[
-                  'Bu kodu velinize verin.',
-                  'Veliniz kendi OYNA hesabına girsin (yoksa ücretsiz oluştursun).',
+                  'Bu kodu veline ver.',
+                  'Velin kendi OYNA hesabına girsin (yoksa ücretsiz oluştursun).',
                   'Ayarlar → Veli Onayı bölümüne bu kodu girsin.',
                   'Kimlik bilgilerini doldurup onaylasın — hesabın anında açılır.',
                 ].map((s, i) => (
@@ -145,7 +145,7 @@ const GuardianConsentChild: React.FC<GuardianConsentChildProps> = ({ onBack, onG
               onClick={onGoVeliForm}
               className="w-full mt-4 text-center text-sm text-gray-400 hover:text-white transition-colors py-2"
             >
-              Veli misiniz? <span className="text-[#39FF14] font-bold">Çocuğunuzu onaylayın →</span>
+              Veli misin? <span className="text-[#39FF14] font-bold">Çocuğunu onayla →</span>
             </button>
           </>
         )}

@@ -656,7 +656,7 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onNavigate }) => {
                       {segment === 'BOOKINGS' ? 'Yaklaşan Rezervasyon Yok' : 'Yaklaşan Maç Yok'}
                     </p>
                     <p className="mt-1.5 text-xs text-ink-4">
-                      {segment === 'BOOKINGS' ? "Saha Vitrini'nden yeni bir rezervasyon oluşturabilirsin." : 'Top Oyna ekranından açık maçlara katılabilirsin.'}
+                      {segment === 'BOOKINGS' ? "Sahalar'dan yeni bir rezervasyon oluşturabilirsin." : 'Top Oyna ekranından açık maçlara katılabilirsin.'}
                     </p>
                   </div>
                 </motion.div>
@@ -942,7 +942,7 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onNavigate }) => {
                   disabled={leaving || leaveQuoteLoading || leaveQuote == null}
                   className={`w-full py-3.5 bg-red-500 text-white font-extrabold rounded-2xl text-sm uppercase tracking-wide transition-transform flex items-center justify-center gap-2 disabled:opacity-40 disabled:pointer-events-none ${leaving ? 'opacity-60 cursor-wait' : 'active:scale-95 hover:bg-red-600'}`}
                 >
-                  {leaving ? <><Loader2 size={16} className="animate-spin" /> Ayrılıyor...</> : 'Evet, Ayrıl'}
+                  {leaving ? <><Loader2 size={16} className="animate-spin" /> Ayrılıyor…</> : 'Maçtan Ayrıl'}
                 </button>
                 <button onClick={() => { if (!leaving) setLeaveTarget(null); }} className="w-full py-3 text-gray-400 font-bold text-sm hover:text-white transition-colors">
                   Vazgeç
@@ -1001,7 +1001,7 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onNavigate }) => {
                   disabled={cancelling}
                   className={`w-full py-3.5 bg-red-500 text-white font-extrabold rounded-2xl text-sm uppercase tracking-wide transition-transform flex items-center justify-center gap-2 ${cancelling ? 'opacity-60 cursor-wait' : 'active:scale-95 hover:bg-red-600'}`}
                 >
-                  {cancelling ? <><Loader2 size={16} className="animate-spin" /> İptal ediliyor...</> : 'Evet, İptal Et'}
+                  {cancelling ? <><Loader2 size={16} className="animate-spin" /> İptal ediliyor…</> : 'Rezervasyonu İptal Et'}
                 </button>
                 <button onClick={() => setCancelTarget(null)} className="w-full py-3 text-gray-400 font-bold text-sm hover:text-white transition-colors">
                   Vazgeç

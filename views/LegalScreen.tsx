@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ArrowLeft, FileText, Shield, ShieldCheck, Lock, RefreshCw, Cookie, ChevronRight, Users, Scale } from 'lucide-react';
+import { trUpper } from '../utils/trUpper';
 
 interface LegalScreenProps {
   onBack: () => void;
@@ -413,7 +414,7 @@ const LegalScreen: React.FC<LegalScreenProps> = ({ onBack, initialDoc }) => {
           <button onClick={() => setDoc(null)} aria-label="Geri" className="w-11 h-11 flex items-center justify-center bg-[#161B22] rounded-full border border-white/5 text-white hover:bg-white/10 active:scale-95 transition-all">
             <ArrowLeft size={20} />
           </button>
-          <h1 className="text-lg font-extrabold italic tracking-tight">{d.title.toUpperCase()}</h1>
+          <h1 className="text-lg font-extrabold italic tracking-tight">{trUpper(d.title)}</h1>
         </header>
         <main className="p-6 max-w-2xl mx-auto">
           <div className="bg-[#161B22] border border-white/5 rounded-3xl p-6">

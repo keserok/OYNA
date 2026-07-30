@@ -35,6 +35,7 @@ import 'leaflet/dist/leaflet.css';
 import { OYNA_TILE_URL, oynaTileProps, oynaMapProps, OYNA_MAP_CSS } from '../components/map/mapBase';
 import { Toast } from '../components/common/Toast';
 import { mapError } from '../utils/errorMap';
+import { trUpper } from '../utils/trUpper';
 
 // Fix leaflet default icon path issues
 if (typeof window !== 'undefined') {
@@ -1335,7 +1336,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                   onClick={() => setShowLeaveConfirm(false)}
                   disabled={isProcessing}
                   className="flex-1 py-3 rounded-2xl font-extrabold text-sm uppercase tracking-widest text-white bg-white/5 border border-white/10 hover:bg-white/10 transition-colors">
-                  İPTAL
+                  VAZGEÇ
                 </button>
                 {/* IP-04 — para sonucu bilinmeden yıkıcı aksiyon yapılamaz:
                     önizleme yüklenirken veya alınamadığında AYRIL pasiftir. */}
@@ -1343,7 +1344,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                   onClick={isAlreadyJoinedReserve ? handleLeaveReserves : handleLeaveMatch}
                   disabled={isProcessing || (!isAlreadyJoinedReserve && (leaveQuoteLoading || leaveQuote == null))}
                   className="flex-1 py-3 rounded-2xl font-extrabold text-sm uppercase tracking-widest text-white bg-red-600 shadow-[0_0_20px_rgba(239,68,68,0.4)] hover:bg-red-500 transition-colors flex items-center justify-center disabled:opacity-40 disabled:pointer-events-none">
-                  {isProcessing ? <Loader2 size={18} className="animate-spin" /> : 'AYRIL'}
+                  {isProcessing ? <Loader2 size={18} className="animate-spin" /> : 'MAÇTAN AYRIL'}
                 </button>
               </div>
             </motion.div>
@@ -1412,7 +1413,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
               </h3>
               
               <p className="text-sm text-gray-400 mb-6 font-semibold">
-                <strong>{removeConfirmSlot.player?.name}</strong> isimli oyuncuyu kadrodan çıkarmak istediğinize emin misiniz?
+                <strong>{removeConfirmSlot.player?.name}</strong> isimli oyuncuyu kadrodan çıkarmak istediğine emin misin?
               </p>
               
               <div className="flex gap-3">
@@ -2117,7 +2118,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                 {diffConf.label}
               </span>
               <span className="px-1.5 py-0.5 rounded-md text-[0.6875rem] font-extrabold uppercase text-white/70 bg-white/8 border border-white/10">
-                {squadSize.toUpperCase()}
+                {trUpper(squadSize)}
               </span>
             </div>
           </div>
@@ -2829,7 +2830,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                     style={{ background: '#39FF14', boxShadow: '0 0 28px rgba(57,255,20,0.30)' }}
                   >
                     {isProcessing ? (
-                      <><Loader2 size={20} className="animate-spin" /><span>ÖDENİYOR...</span></>
+                      <><Loader2 size={20} className="animate-spin" /><span>ÖDENİYOR…</span></>
                     ) : total > 0 ? (
                       <><span>{selectedSlotIds.length} SLOT · ₺{total.toLocaleString('tr-TR')}</span><span className="opacity-60">·</span><span>ÖDE VE KATIL</span><ChevronRight size={18} /></>
                     ) : (
@@ -2908,7 +2909,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                     style={{ background: '#39FF14', boxShadow: '0 0 28px rgba(57,255,20,0.30)' }}
                   >
                     {isProcessing ? (
-                      <><Loader2 size={20} className="animate-spin" /><span>ÖDENİYOR...</span></>
+                      <><Loader2 size={20} className="animate-spin" /><span>ÖDENİYOR…</span></>
                     ) : total > 0 ? (
                       <><span>{selectedSlotIds.length} SLOT · ₺{total.toLocaleString('tr-TR')}</span><span className="opacity-60">·</span><span>ÖDE VE KATIL</span><ChevronRight size={18} /></>
                     ) : (

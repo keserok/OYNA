@@ -96,7 +96,7 @@ export const OwnerWithdrawalsModal: React.FC<Props> = ({
       } else {
         await new Promise((r) => setTimeout(r, 800));
       }
-      notify('Para çekme talebiniz alındı.', 'success');
+      notify('Para çekme talebin alındı.', 'success');
       setTimeout(onClose, 1200);
     } catch (err) {
       notify(toTurkishError(err), 'error');
@@ -143,8 +143,8 @@ export const OwnerWithdrawalsModal: React.FC<Props> = ({
           <div className="bg-blue-500/5 border border-blue-500/15 p-4 rounded-2xl text-xs text-blue-200/80 flex items-start gap-2.5">
             <Clock size={16} className="shrink-0 mt-0.5" />
             <span>
-              Kazancınız (maç + saha kiralama) tahsilattan <b>2 hafta</b> sonra çekilebilir hale gelir.
-              Talebiniz admin onayıyla kayıtlı IBAN'ınıza gönderilir (min ₺{cashout.min}).
+              Kazancın (maç + saha kiralama) tahsilattan <b>2 hafta</b> sonra çekilebilir hale gelir.
+              Talebin admin onayıyla kayıtlı IBAN'ına gönderilir (min ₺{cashout.min}).
             </span>
           </div>
         )}
@@ -208,7 +208,7 @@ export const OwnerWithdrawalsModal: React.FC<Props> = ({
         >
           {!cashout.enabled ? (
             <><Lock size={20} /> Çekim Yakında Açılacak</>
-          ) : isProcessing ? 'İşleniyor...' : (
+          ) : isProcessing ? 'İşleniyor…' : (
             <><Banknote size={22} /> Para Çek</>
           )}
         </button>

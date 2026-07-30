@@ -23,7 +23,7 @@ interface Props {
 
 const SUPPORT_EMAIL = 'destek@oyna.app';
 
-/** Sunucunun anlamlı Türkçe mesajını ("En fazla 5 açık talebiniz olabilir" vb.)
+/** Sunucunun anlamlı Türkçe mesajını ("En fazla 5 açık talebin olabilir" vb.)
  *  jenerik metinle ezme; yalnız kod-benzeri mesajlarda fallback kullan. */
 const serverMessage = (err: unknown, fallback: string): string => {
   const msg = (err as { message?: string })?.message;

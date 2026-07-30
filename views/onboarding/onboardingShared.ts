@@ -81,7 +81,9 @@ export const GENDER_LABEL: Record<Exclude<Gender, ''>, string> = {
 };
 
 /** tr-TR büyük harf (İ/ı sorunu için). */
-export const trUpper = (s: string): string => s.toLocaleUpperCase('tr-TR');
+// IP-13: tanım utils/trUpper.ts'e taşındı (tek kaynak). Buradan yeniden dışa
+// veriliyor ki mevcut import'lar kırılmasın.
+export { trUpper } from '../../utils/trUpper';
 
 /**
  * Tek "ad soyad" metnini ad/soyad olarak böler: son kelime = soyad, kalanı ad.

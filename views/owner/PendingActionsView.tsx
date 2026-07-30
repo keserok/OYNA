@@ -102,7 +102,7 @@ const RealPendingBookings: React.FC<{ pitchId: string | null }> = ({ pitchId }) 
             </div>
             {loading ? (
                 <div className="bg-[#161B22] border border-white/5 rounded-2xl">
-                    <LoadingState message="Yükleniyor..." size="sm" />
+                    <LoadingState message="Yükleniyor…" size="sm" />
                 </div>
             ) : rows.length === 0 ? (
                 <div className="bg-[#161B22] border border-white/5 rounded-2xl">
@@ -297,7 +297,7 @@ export const PendingActionsView: React.FC<PendingActionsViewProps> = ({ pendingR
                     <div className="flex flex-col items-center justify-center py-16 text-center">
                         <Users size={48} className="text-gray-600 mb-4" />
                         <p className="text-base font-bold text-gray-400">
-                            {matchesLoading ? 'Yükleniyor...' : 'Bu tesiste açık oyuncu maçı yok'}
+                            {matchesLoading ? 'Yükleniyor…' : 'Bu tesiste açık oyuncu maçı yok'}
                         </p>
                         <p className="text-xs text-gray-500 mt-1 max-w-[280px]">
                             Uygulama üzerinden bu sahaya bağlı maçlar burada listelenir.

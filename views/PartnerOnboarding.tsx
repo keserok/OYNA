@@ -16,9 +16,9 @@ interface PartnerOnboardingProps {
 type Step = 'LANDING' | 'SETUP_1' | 'SETUP_2' | 'SETUP_3' | 'LOADING' | 'DASHBOARD';
 
 const LOADING_STEPS = [
-  'Tesis profili oluşturuluyor...',
-  'Varsayılan tarife yapılandırılıyor...',
-  'Bölgesel pazar analizi yapılıyor...',
+  'Tesis profili oluşturuluyor…',
+  'Varsayılan tarife yapılandırılıyor…',
+  'Bölgesel pazar analizi yapılıyor…',
 ];
 
 const PartnerOnboarding: React.FC<PartnerOnboardingProps> = ({ onComplete, onClose }) => {
@@ -379,7 +379,7 @@ const PartnerOnboarding: React.FC<PartnerOnboardingProps> = ({ onComplete, onClo
                                     type="text" 
                                     value={iban}
                                     onChange={(e) => setIban(e.target.value)}
-                                    placeholder="TR00 0000..." 
+                                    placeholder="TR00 0000…" 
                                     className="w-full bg-transparent border-b-2 border-white/20 py-3 text-xl font-mono font-bold text-white focus:border-[#FACC15] outline-none placeholder:text-ink-4 transition-colors"
                                   />
                               </div>
@@ -432,7 +432,7 @@ const PartnerOnboarding: React.FC<PartnerOnboardingProps> = ({ onComplete, onClo
               {!onboardError ? (
                   <div className="relative z-10 text-center w-full max-w-sm">
                       <Spinner size={96} thickness={5} color="#FACC15" className="mx-auto mb-8" style={{ filter: 'drop-shadow(0 0 24px rgba(250,204,21,0.35))' }} />
-                      <h2 className="text-2xl font-extrabold text-white mb-6">SAHANIZ DÜNYAYA AÇILIYOR...</h2>
+                      <h2 className="text-2xl font-extrabold text-white mb-6">SAHANIZ DÜNYAYA AÇILIYOR…</h2>
                       <div className="space-y-3 text-left">
                           {LOADING_STEPS.map((label, idx) => {
                               const done = idx < loadingStep;

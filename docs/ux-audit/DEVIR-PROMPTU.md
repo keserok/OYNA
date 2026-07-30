@@ -72,14 +72,16 @@ IP-03 (ödeme şeffaflığı + 3DS kurtarma) · IP-04 (ayrılma sözleşmesi) ·
 IP-05 (değerlendirme gizliliği) · IP-06 (bildirim merkezi) ·
 IP-07 (tesis sahibi para dürüstlüğü) · IP-08 (tipografi/kontrast/font) ·
 **IP-09 (renk sistemi, tek aksan)** · **IP-10 (dokunma hedefi, erişilebilirlik)** ·
-**IP-12 (hata ve boş durum sistemi)** · **IP-14 (bilgi mimarisi)** ·
-IP-20 (bilet çevrimdışı) · S-serisi kararların tamamı.
+**IP-12 (hata ve boş durum sistemi)** · **IP-13 (Türkçe metin ve ton)** ·
+**IP-14 (bilgi mimarisi)** · IP-20 (bilet çevrimdışı) ·
+S-serisi kararların tamamı.
 
 ### Kalan paketler — önerilen sıra
 
 | Sıra | Paket | Not |
 |---|---|---|
-| 1+ | IP-11, 13, 15, 16, 17, 18, 19, 21, 22, 23 | |
+| 1 | **IP-19** — para biçimi ve bakiye tekliği | Kullanıcı sırada bunu seçti |
+| 2+ | IP-11, 15, 16, 18, 22, 23 (+IP-21/IP-17 ertelendi) | |
 
 ### ⏳ AÇIK İŞ — telefona bildirim (kullanıcı isteği, HENÜZ YAPILMADI)
 
@@ -88,6 +90,24 @@ gelmesini sağla"** (push notification). Bu iş IP-12/IP-14 kapsamında DEĞİLD
 yapılmadı. Başlamadan önce `notifications/pushService.ts`, Supabase'de token
 tablosu, sunucu tarafı gönderim (edge function/cron) ve native yapılandırma
 (google-services.json / APNs) ölçülmeli — büyük ihtimalle sıfırdan iş.
+
+### IP-13 kararları (kullanıcı, bu oturumda)
+
+- Ekran adı: **"Sahalar" kanon** — "Saha Vitrini" adı kaldırıldı. Diğer üç
+  adlandırma ikiliği (MAÇ BUL/Top Oyna, Maç Oluştur/YAYINLA, Kaleci Bul/Hakem
+  Kirala) **bilerek OLDUĞU GİBİ BIRAKILDI** — kullanıcı "kalsınlar" dedi.
+- Yıkıcı buton fiili söyler, güvenli buton daima "Vazgeç", **"Evet," ön eki yok**.
+- **Hukuki metinler SİZ kipinde KALIR** (LegalScreen, GuardianConsentForm,
+  PartnerOnboarding, LegalModal/KVKK). Avukat onayı bekliyorlar; dil
+  değişikliği hukuki içeriği değiştirebilir. Arayüzün geri kalanı SEN.
+- Üç nokta tek karakter: `…`.
+- Kural `OYNA_MASTER_PRENSIPLER.md` §14'te yazılı, `tests/unit/turkishText.test.ts`
+  ile kilitli.
+
+> ⚠️ `toUpperCase()` **hepsi kaldırılmadı, kaldırılMAMALI**: IBAN, davet kodu,
+> işlem numarası, enum ve kart markası ASCII alanlardır. Orada `tr-TR` locale
+> `i`'yi ASCII olmayan `İ`'ye çevirip doğrulamayı BOZAR. Kalan 10 dosyadaki
+> çağrılar bilerek düz `toUpperCase()`'tir ve testin izinli listesindedir.
 
 ### IP-14 · IP-12 kararları (kullanıcı, bu oturumda)
 

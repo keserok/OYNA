@@ -102,7 +102,7 @@ const LocationPrompt: React.FC<LocationPromptProps> = ({ onPermissionGranted, on
 
           <div className="text-center px-8 space-y-3">
               <h2 className="text-2xl font-extrabold text-white tracking-tight">
-                  {status === 'SCANNING' ? 'KONUM TARANIYOR...' : status === 'FOUND' ? 'LOKASYON DOĞRULANDI' : 'SAHANI BULALIM'}
+                  {status === 'SCANNING' ? 'KONUM TARANIYOR…' : status === 'FOUND' ? 'LOKASYON DOĞRULANDI' : 'SAHANI BULALIM'}
               </h2>
               <p className="text-gray-400 text-sm leading-relaxed max-w-xs mx-auto">
                   {status === 'DENIED' 
@@ -129,7 +129,7 @@ const LocationPrompt: React.FC<LocationPromptProps> = ({ onPermissionGranted, on
                     disabled={status !== 'IDLE'}
                     className={`w-full h-16 rounded-2xl font-extrabold text-lg flex items-center justify-center gap-2 transition-all ${status === 'IDLE' ? 'bg-[#39FF14] text-black hover:scale-[1.02] shadow-[0_0_30px_rgba(57,255,20,0.2)]' : 'bg-gray-800 text-ink-4 cursor-not-allowed'}`}
                   >
-                      {status === 'IDLE' ? <><Navigation size={20} fill="black" /> RADARI AÇ</> : 'BEKLEYİNİZ...'}
+                      {status === 'IDLE' ? <><Navigation size={20} fill="black" /> RADARI AÇ</> : 'BEKLEYİNİZ…'}
                   </button>
                   {status === 'IDLE' && (
                       <button onClick={handleSkip} className="w-full py-3 text-xs font-bold text-ink-4 hover:text-white transition-colors">

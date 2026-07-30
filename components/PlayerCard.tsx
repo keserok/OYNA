@@ -2,6 +2,7 @@ import React, { useRef, useCallback } from 'react';
 import { motion, useMotionValue, useTransform, useSpring } from 'framer-motion';
 import { Share2, Trophy } from 'lucide-react';
 import { PlayerCardData } from '../types';
+import { trInitials } from '../utils/trUpper';
 
 interface TierTheme {
   cardBg: string; border: string; glow: string;
@@ -288,7 +289,7 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({ name, photo, position = 
                       className="text-5xl font-extrabold italic uppercase tracking-tighter drop-shadow-[0_4px_12px_rgba(0,0,0,0.5)]"
                       style={{ color: t.overall, textShadow: `0 0 20px ${t.border}80, 0 0 40px ${t.border}30` }}
                     >
-                      {name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
+                      {trInitials(name)}
                     </span>
                     <span className="text-[0.625rem] font-extrabold uppercase tracking-[0.25em] mt-1.5 opacity-55" style={{ color: t.pos }}>
                       SİLÜET YOK

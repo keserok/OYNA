@@ -164,7 +164,7 @@ const RoleSwitcher: React.FC<RoleSwitcherProps> = ({ roles, onClose, onSwitched 
                   className="w-full h-12 rounded-2xl font-extrabold text-sm text-black flex items-center justify-center gap-2 disabled:opacity-60 transition-all"
                   style={{ background: ROLE_META[pending].color }}
                 >
-                  {loading ? (<><RefreshCw size={15} className="animate-spin" /> Geçiliyor...</>) : 'Evet, Geç'}
+                  {loading ? (<><RefreshCw size={15} className="animate-spin" /> Geçiliyor…</>) : 'Rolü Değiştir'}
                 </button>
                 <button
                   onClick={() => setPending(null)}

@@ -741,7 +741,7 @@ const TeamDetailView: React.FC<TeamDetailViewProps> = ({ onBack, onNavigate }) =
                   <EmptyState
                     icon={ClipboardList}
                     title="Henüz takım taktiği yok"
-                    description="Stüdyo'da ilk taktiğinizi kurun; onaylananlar burada vitrine çıkar."
+                    description="Stüdyo'da ilk taktiğini kur; onaylananlar burada vitrine çıkar."
                     actions={[{ label: "Stüdyo'da Taktik Kur", onClick: () => openStudio(), primary: true }]}
                   />
                 ) : (

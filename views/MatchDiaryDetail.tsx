@@ -138,7 +138,7 @@ const MatchDiaryDetail: React.FC<MatchDiaryDetailProps> = ({ diaryId, onBack }) 
             <div className="min-h-screen bg-[#0A0E14] flex flex-col relative font-sans">
                 {header}
                 <div className="flex-1 flex items-center justify-center">
-                    <LoadingState message="Maç detayları yükleniyor..." />
+                    <LoadingState message="Maç detayları yükleniyor…" />
                 </div>
             </div>
         );
@@ -328,7 +328,7 @@ const MatchDiaryDetail: React.FC<MatchDiaryDetailProps> = ({ diaryId, onBack }) 
                             </div>
                             <textarea
                                 className="min-h-[140px] bg-transparent text-base text-white placeholder:text-ink-4 outline-none resize-none font-serif leading-relaxed"
-                                placeholder="Bugünkü maç nasıldı? Taktik işe yaradı mı? Kimi tutmakta zorlandın? Kendine notlar al..."
+                                placeholder="Bugünkü maç nasıldı? Taktik işe yaradı mı? Kimi tutmakta zorlandın? Kendine notlar al…"
                                 value={draftNote}
                                 onChange={(e) => setDraftNote(e.target.value)}
                                 maxLength={1000}
@@ -346,7 +346,7 @@ const MatchDiaryDetail: React.FC<MatchDiaryDetailProps> = ({ diaryId, onBack }) 
                                     disabled={savingNote}
                                     className="flex-[1.5] h-12 rounded-2xl bg-[#FACC15] text-black font-extrabold text-xs uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-50"
                                 >
-                                    <Save size={16} /> {savingNote ? 'Kaydediliyor...' : 'Kaydet'}
+                                    <Save size={16} /> {savingNote ? 'Kaydediliyor…' : 'Kaydet'}
                                 </button>
                             </div>
                         </div>

@@ -165,7 +165,7 @@ export const OwnerMenuView: React.FC<OwnerMenuViewProps> = ({
 
       {isReadOnly && (
         <div className="mb-6 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/20 text-xs text-red-300 font-bold text-center">
-          Hesabınız salt okunur modda — yalnızca görüntüleme yapabilirsiniz.
+          Hesabın salt okunur modda — yalnızca görüntüleme yapabilirsin.
         </div>
       )}
 

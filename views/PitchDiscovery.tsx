@@ -48,6 +48,7 @@ import {
   type DbPitchRow,
 } from '../shared/pitchShowcaseMapper';
 import { PitchShowcaseCard, SafeImage, FavStar } from '../components/pitch-showcase/PitchShowcaseCard';
+import { trUpper } from '../utils/trUpper';
 
 interface MapViewProps {
   pitches: Pitch[];
@@ -1181,7 +1182,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
               </button>
             )}
             <h1 className="mt-1 text-[2rem] font-extrabold italic uppercase tracking-[-0.04em] leading-[0.9]">
-              Saha<br />Vitrini
+              Sahalar
             </h1>
           </div>
 
@@ -1248,7 +1249,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
           </div>
           <input
             type="text"
-            placeholder="Saha veya bölge ara..."
+            placeholder="Saha veya bölge ara…"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full h-12 bg-[#161B22] border border-white/5 rounded-2xl pl-12 pr-5 text-sm font-bold outline-none focus:border-[#39FF14]/50 focus:bg-[#1C232B] transition-all shadow-inner"
@@ -1289,7 +1290,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
             )}
 
             {pitchesLoading ? (
-              <LoadingState message="Sahalar yükleniyor..." />
+              <LoadingState message="Sahalar yükleniyor…" />
             ) : pitchesError ? (
               <ErrorState message={pitchesError} onRetry={fetchPitches} />
             ) : filteredPitches.length === 0 ? (
@@ -1484,7 +1485,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
                           onClick={() => setFilters({ ...filters, district: filters.district === d ? 'Tümü' : d })}
                           className={`px-4 py-2.5 rounded-xl text-[0.6875rem] font-extrabold transition-all border ${filters.district === d ? 'bg-success-bg text-primary border-success-line' : 'bg-[#0A0E14] text-gray-400 border-white/5'}`}
                         >
-                          {d.toUpperCase()} · {count}
+                          {trUpper(d)} · {count}
                         </button>
                       ))}
                     </div>

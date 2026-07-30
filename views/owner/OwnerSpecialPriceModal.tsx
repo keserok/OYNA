@@ -114,7 +114,7 @@ export const OwnerSpecialPriceModal: React.FC<OwnerSpecialPriceModalProps> = ({
           disabled={saving}
           className="w-full py-4 bg-amber-500 text-black font-extrabold text-lg rounded-2xl hover:bg-amber-400 active:scale-95 transition-all disabled:opacity-50"
         >
-          {saving ? 'KAYDEDİLİYOR...' : 'ÖZEL FİYATI KAYDET'}
+          {saving ? 'KAYDEDİLİYOR…' : 'ÖZEL FİYATI KAYDET'}
         </button>
       </div>
     </div>

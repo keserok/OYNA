@@ -43,6 +43,7 @@ import { submitRefereeMatchScore } from '../services/scoreService';
 import { APP_VERSION } from '../utils/appVersion';
 import { LoadingState, ErrorState } from '../components/common/StatusState';
 import { Toast } from '../components/common/Toast';
+import { trUpper } from '../utils/trUpper';
 
 interface ServiceDashboardProps {
   role: UserRole;
@@ -751,7 +752,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
       if (match) {
           const hasConflict = myUpcomingMatches.some(um => um.date === match.date && um.time === match.time);
           if (hasConflict) {
-              showActionError('Bu tarih ve saatte zaten onaylanmış bir maçınız var. Lütfen teklifi reddedin.');
+              showActionError('Bu tarih ve saatte zaten onaylanmış bir maçın var. Teklifi reddet.');
               return;
           }
       }
@@ -774,7 +775,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
           } else {
               console.error("Error from supabase:", error);
               if (error.message && error.message.includes('CONFLICT_DETECTED')) {
-                  showActionError('Bu tarih ve saatte zaten onaylanmış bir maçınız var. Lütfen teklifi reddedin.');
+                  showActionError('Bu tarih ve saatte zaten onaylanmış bir maçın var. Teklifi reddet.');
               } else {
                   showActionError('Bir hata oluştu. Lütfen tekrar dene.');
               }
@@ -782,7 +783,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
       } catch (error: any) {
           console.error("Error accepting offer:", error);
           if (error.message && error.message.includes('CONFLICT_DETECTED')) {
-              showActionError('Bu tarih ve saatte zaten onaylanmış bir maçınız var. Lütfen teklifi reddedin.');
+              showActionError('Bu tarih ve saatte zaten onaylanmış bir maçın var. Teklifi reddet.');
           } else {
               showActionError('Teklif kabul edilemedi. Lütfen tekrar dene.');
           }
@@ -805,7 +806,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
       // Yerel çifte-rezervasyon uyarısı (sunucu tarafı da _provider_has_conflict ile korur)
       const hasConflict = myUpcomingMatches.some(um => um.date === selectedJob.date && um.time === selectedJob.time);
       if (hasConflict) {
-          showActionError('Bu tarih ve saatte zaten onaylanmış bir maçınız var.');
+          showActionError('Bu tarih ve saatte zaten onaylanmış bir maçın var.');
           return;
       }
 
@@ -917,7 +918,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
   const idRated = typeof userProfile?.rating === 'number' && userProfile.rating > 0;
   const idRatingText = idRated ? Number(userProfile.rating).toFixed(1) : '—';
   const idFilledBars = idRated ? Math.round(Number(userProfile.rating) / 2) : 0; // 0-10 → 0-5
-  const idFirstName = userProfile?.fullName?.split(' ')[0]?.toUpperCase() || '';
+  const idFirstName = trUpper(userProfile?.fullName?.split(' ')[0]);
   const idStyle: string | null = (typeof userProfile?.style === 'string' && userProfile.style.trim()) ? userProfile.style : null;
   // Sabit "A-CLASS" yerine puandan türetilen sınıf (rookie → YENİ).
   const idClass = !idRated ? 'YENİ' : Number(userProfile.rating) >= 8 ? 'A SINIF' : Number(userProfile.rating) >= 6 ? 'B SINIF' : 'C SINIF';
@@ -1216,7 +1217,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
           </div>
 
           {requestsLoading ? (
-              <LoadingState message="Talepler yükleniyor..." size="sm" />
+              <LoadingState message="Talepler yükleniyor…" size="sm" />
           ) : requestsError ? (
               <ErrorState message={requestsError} onRetry={fetchIncomingRequests} />
           ) : (newRequests.length === 0 && activeRequests.length === 0) ? (
@@ -1703,7 +1704,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
               </div>
               <div className="flex gap-3 overflow-x-auto pb-4 custom-scrollbar snap-x">
                   {offersLoading ? (
-                    <LoadingState message="Teklifler yükleniyor..." size="sm" />
+                    <LoadingState message="Teklifler yükleniyor…" size="sm" />
                   ) : offersError ? (
                     <ErrorState message={offersError} onRetry={fetchOffers} />
                   ) : myOffers.length > 0 ? myOffers.map(offer => (
@@ -1746,7 +1747,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                           </div>
                       </motion.div>
                   )) : (
-                    <div className="text-ink-4 text-[0.6875rem] uppercase font-bold italic w-full text-center py-4">Bekleyen özel teklifiniz yok</div>
+                    <div className="text-ink-4 text-[0.6875rem] uppercase font-bold italic w-full text-center py-4">Bekleyen özel teklifin yok</div>
                   )}
               </div>
           </div>
@@ -1936,7 +1937,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                                   ) : (
                                       <Banknote size={18} />
                                   )}
-                                  {isTransferring ? 'GÖNDERİLİYOR...' : transferSuccess ? 'TALEP ALINDI' : 'PARAYI ÇEK'}
+                                  {isTransferring ? 'GÖNDERİLİYOR…' : transferSuccess ? 'TALEP ALINDI' : 'PARAYI ÇEK'}
                               </button>
                           </div>
                       );
@@ -1965,7 +1966,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
           <section>
               <h3 className="font-bold text-white text-sm px-2 mb-3 uppercase tracking-wide">İŞLEM GEÇMİŞİ</h3>
               {walletHistoryLoading ? (
-                  <LoadingState message="İşlemler yükleniyor..." />
+                  <LoadingState message="İşlemler yükleniyor…" />
               ) : walletHistoryError ? (
                   <ErrorState message={walletHistoryError} onRetry={fetchWalletHistory} />
               ) : walletHistory.length === 0 ? (
@@ -2487,7 +2488,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                       }}
                       className="w-full py-4 rounded-2xl font-extrabold text-white text-sm disabled:opacity-40 bg-blue-600 hover:bg-blue-500 transition-colors"
                   >
-                      {addingMethod ? 'KAYDEDİLİYOR...' : 'YÖNTEMİ KAYDET'}
+                      {addingMethod ? 'KAYDEDİLİYOR…' : 'YÖNTEMİ KAYDET'}
                   </button>
               </motion.div>
           </div>
@@ -2621,7 +2622,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                 className={`w-full py-3.5 rounded-xl font-extrabold text-white text-sm ${theme.bg} hover:brightness-110 transition-all uppercase shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2`}
               >
                 {submittingScore && <RefreshCcw size={14} className="animate-spin" />}
-                {submittingScore ? 'KAYDEDİLİYOR...' : 'SKORU KAYDET VE BİTİR'}
+                {submittingScore ? 'KAYDEDİLİYOR…' : 'SKORU KAYDET VE BİTİR'}
               </button>
             </motion.div>
           </div>
@@ -2679,7 +2680,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                           className="w-full py-4 bg-yellow-500 hover:bg-yellow-400 text-black font-extrabold text-sm rounded-2xl transition-colors shadow-lg disabled:opacity-50 flex items-center justify-center gap-2 uppercase tracking-wider"
                       >
                           {identitySubmitting ? <RefreshCcw size={16} className="animate-spin" /> : <BadgeCheck size={16} />}
-                          {identitySubmitting ? 'Gönderiliyor...' : 'Doğrulamayı Gönder'}
+                          {identitySubmitting ? 'Gönderiliyor…' : 'Doğrulamayı Gönder'}
                       </button>
                   </div>
               </div>

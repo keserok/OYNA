@@ -102,7 +102,7 @@ export const OwnerWorkingHoursModal: React.FC<Props> = ({
         <div className="bg-blue-500/10 border border-blue-500/20 p-4 rounded-2xl flex items-start gap-3">
           <AlertCircle size={18} className="text-blue-400 shrink-0 mt-0.5" />
           <p className="text-xs text-blue-200">
-            Kapalı günleri işaretleyebilir veya saat aralıklarını düzenleyebilirsiniz. Değişiklikler
+            Kapalı günleri işaretleyebilir veya saat aralıklarını düzenleyebilirsin. Değişiklikler
             yeni rezervasyonlara yansır.
           </p>
         </div>

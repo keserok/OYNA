@@ -191,7 +191,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onNavigate, onOpenD
             {/* ═══ SCROLLABLE BODY ═══ */}
             <div className="relative z-10 flex-1 overflow-y-auto px-5 pt-2 pb-safe-nav custom-scrollbar">
                 {loading ? (
-                    <LoadingState message="Profil yükleniyor..." />
+                    <LoadingState message="Profil yükleniyor…" />
                 ) : error ? (
                     <ErrorState message={error} onRetry={loadProfile} />
                 ) : (

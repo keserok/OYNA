@@ -56,6 +56,7 @@ import type { LibraryEntry, StatusTone } from './studio/tacticLibrary';
 import { perfTierFrom, readDeviceSignals, liteGate } from './studio/perf';
 // İlk kullanım — "Örnek taktiği yükle" içeriği (saf üretici)
 import { buildSampleTactic } from './studio/sampleTactic';
+import { trUpper } from '../utils/trUpper';
 
 // ⚡ ANİMASYON MODÜLÜ — ayrı chunk olarak lazy tutulur (ilk boya hafif kalır)
 // ama stüdyo açılır açılmaz arka planda otomatik indirilir: oynatma kontrolleri
@@ -1082,7 +1083,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
     };
 
     const handleDeletePlan = (index: number) => {
-        if (confirm('Bu planı silmek istediğinize emin misiniz?')) {
+        if (confirm('Bu planı silmek istediğine emin misin?')) {
             const newPlans = plans.filter((_, i) => i !== index);
             setPlans(newPlans);
             if (activePlanIndex === index) {
@@ -2018,7 +2019,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                     {drawings.length > 0 && (
                         <Suspense fallback={
                             <div className="flex items-center gap-2 px-4 py-2 rounded-full text-xs font-extrabold bg-white/5 text-gray-400 whitespace-nowrap">
-                                <Loader2 size={14} className="animate-spin" /> Oynatma kontrolleri yükleniyor...
+                                <Loader2 size={14} className="animate-spin" /> Oynatma kontrolleri yükleniyor…
                             </div>
                         }>
                             <AnimationToolbar
@@ -2429,7 +2430,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                 }`}
                             >
                                 <div className="flex items-center gap-2 mb-1.5">
-                                    <span className="w-6 h-6 rounded-lg flex items-center justify-center text-[0.6875rem] font-extrabold text-black shrink-0" style={{ background: team.color1 || '#39FF14' }}>{(team.short_name || team.name || '?').slice(0, 2).toUpperCase()}</span>
+                                    <span className="w-6 h-6 rounded-lg flex items-center justify-center text-[0.6875rem] font-extrabold text-black shrink-0" style={{ background: team.color1 || '#39FF14' }}>{trUpper((team.short_name || team.name || '?').slice(0, 2))}</span>
                                     <h4 className="text-white font-bold text-xs truncate flex-1">{team.name}</h4>
                                 </div>
                                 <div className="flex items-center justify-between">
@@ -2498,7 +2499,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                 <div className="px-6 pb-3 mt-4">
                     <div className="flex items-center gap-3 bg-[#161B22] rounded-2xl border border-white/5 p-3">
                         <span className="w-9 h-9 rounded-xl flex items-center justify-center text-xs font-extrabold text-black shrink-0" style={{ background: confirmedTeam?.color1 || '#39FF14' }}>
-                            {(confirmedTeam?.short_name || activeTactic.teamName || '?').slice(0, 2).toUpperCase()}
+                            {trUpper((confirmedTeam?.short_name || activeTactic.teamName || '?').slice(0, 2))}
                         </span>
                         <div className="flex-1 min-w-0">
                             <div className="text-sm font-extrabold text-white truncate">{activeTactic.teamName || 'Takımım'}</div>
@@ -2843,7 +2844,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                             className={`whitespace-nowrap px-3.5 py-2 rounded-full text-[0.625rem] font-extrabold uppercase tracking-widest border transition-all flex items-center gap-1.5 shrink-0 ${sel ? 'bg-[#39FF14] text-black border-[#39FF14] shadow-[0_0_15px_rgba(57,255,20,0.25)]' : 'bg-white/5 text-gray-400 border-white/10 hover:border-white/30 hover:text-white'}`}
                                         >
                                             <span className="w-3.5 h-3.5 rounded-[4px] flex items-center justify-center text-[0.6875rem] font-extrabold text-black leading-none" style={{ background: team.color1 || '#39FF14' }}>
-                                                {(team.short_name || team.name).charAt(0).toUpperCase()}
+                                                {trUpper((team.short_name || team.name).charAt(0))}
                                             </span>
                                             {team.short_name || team.name}
                                         </button>
@@ -2879,7 +2880,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                             <div className="flex items-center gap-3 min-w-0 pointer-events-none">
                                                 <div className="relative w-11 h-11 shrink-0">
                                                     <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-[#1e2532] to-[#11151c] flex items-center justify-center font-extrabold text-base text-white border border-white/10 shadow-lg group-hover:text-[#39FF14] transition-colors">
-                                                        {friend.full_name.charAt(0).toUpperCase()}
+                                                        {trUpper(friend.full_name.charAt(0))}
                                                     </div>
                                                     {friend.avatar_url && (
                                                         <img src={friend.avatar_url} alt="" onError={(e) => { e.currentTarget.style.display = 'none'; }} className="absolute inset-0 w-11 h-11 rounded-2xl object-cover border border-white/10 shadow-lg" />
@@ -2916,7 +2917,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                     <div key={team.team_id} className="mt-4">
                                         <h4 className="text-[0.625rem] font-extrabold text-ink-4 uppercase tracking-widest flex items-center gap-2 mb-2">
                                             <span className="w-4 h-4 rounded-md flex items-center justify-center text-[0.6875rem] font-extrabold text-black leading-none" style={{ background: team.color1 || '#39FF14' }}>
-                                                {(team.short_name || team.name).charAt(0).toUpperCase()}
+                                                {trUpper((team.short_name || team.name).charAt(0))}
                                             </span>
                                             {team.name}
                                         </h4>
@@ -2935,7 +2936,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                                         >
                                                             <div className="flex items-center gap-3 min-w-0 pointer-events-none">
                                                                 <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-[#1e2532] to-[#11151c] flex items-center justify-center font-extrabold text-base text-white border border-white/10 shadow-lg group-hover:text-[#39FF14] transition-colors shrink-0">
-                                                                    {m.full_name.charAt(0).toUpperCase()}
+                                                                    {trUpper(m.full_name.charAt(0))}
                                                                 </div>
                                                                 <div className="min-w-0">
                                                                     <h4 className="text-sm font-extrabold text-white tracking-tight truncate group-hover:text-[#39FF14] transition-colors">{m.full_name}</h4>
@@ -3245,7 +3246,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                             className={`whitespace-nowrap px-3.5 py-2 rounded-full text-[0.625rem] font-extrabold uppercase tracking-widest border transition-all flex items-center gap-1.5 shrink-0 ${libraryTab === team.team_id ? 'bg-[#39FF14] text-black border-[#39FF14]' : 'bg-white/5 text-gray-400 border-white/10 hover:text-white'}`}
                                         >
                                             <span className="w-3.5 h-3.5 rounded-[4px] flex items-center justify-center text-[0.6875rem] font-extrabold text-black leading-none" style={{ background: team.color1 || '#39FF14' }}>
-                                                {(team.short_name || team.name).charAt(0).toUpperCase()}
+                                                {trUpper((team.short_name || team.name).charAt(0))}
                                             </span>
                                             {team.short_name || team.name}
                                         </button>
@@ -3432,7 +3433,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                 SAYFAYI YENİLE
                             </h3>
                             <p className="text-gray-400 text-sm mb-6">
-                                Sayfa yenilenecektir. Eğer güncel taktikleri kaydetmediyseniz hepsi <strong className="text-red-400">YOK OLACAKTIR</strong>. Devam etmek istiyor musunuz?
+                                Sayfa yenilenecek. Güncel taktikleri kaydetmediysen hepsi <strong className="text-red-400">YOK OLACAKTIR</strong>. Devam etmek istiyor musun?
                             </p>
                             
                             <div className="flex gap-3">

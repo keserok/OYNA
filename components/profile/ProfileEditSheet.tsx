@@ -195,14 +195,14 @@ export const ProfileEditSheet: React.FC<ProfileEditSheetProps> = ({ open, initia
                 </div>
                 <div>
                     <label className="text-[0.625rem] text-ink-4 font-bold uppercase tracking-wider ml-1">Kısa Tanıtım</label>
-                    <textarea value={bio} onChange={(e) => setBio(e.target.value)} rows={3} maxLength={200} placeholder="Kendini birkaç kelimeyle anlat..." className="mt-1.5 w-full bg-[#161B22] border border-white/10 rounded-2xl px-4 py-3 text-white text-sm outline-none focus:border-primary/40 resize-none" />
+                    <textarea value={bio} onChange={(e) => setBio(e.target.value)} rows={3} maxLength={200} placeholder="Kendini birkaç kelimeyle anlat…" className="mt-1.5 w-full bg-[#161B22] border border-white/10 rounded-2xl px-4 py-3 text-white text-sm outline-none focus:border-primary/40 resize-none" />
                 </div>
                 <button
                     onClick={() => void onSave({ position: pos.trim(), bio: bio.trim(), birthdate, gender, playStyle: style, avatarUrl: avatar })}
                     disabled={saving || uploading}
                     className="w-full h-12 rounded-2xl bg-primary text-black font-extrabold text-xs uppercase tracking-widest active:scale-95 transition-all disabled:opacity-50"
                 >
-                    {saving ? 'Kaydediliyor...' : 'Kaydet'}
+                    {saving ? 'Kaydediliyor…' : 'Kaydet'}
                 </button>
             </div>
         </div>,

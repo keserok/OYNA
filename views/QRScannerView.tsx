@@ -69,7 +69,7 @@ const QRScannerView: React.FC<QRScannerViewProps> = ({ onBack, pitchId }) => {
     } catch (err) {
       console.error('validateToken:', err);
       const raw = err instanceof Error ? err.message : String(err);
-      setError(raw.includes('Failed to fetch') ? 'Bağlantı hatası. İnternetinizi kontrol edin.' : 'Kod doğrulanamadı.');
+      setError(raw.includes('Failed to fetch') ? 'Bağlantı hatası. İnternetini kontrol et.' : 'Kod doğrulanamadı.');
       setTimeout(() => setError(null), 4000);
     } finally {
       setIsValidating(false);
@@ -97,7 +97,7 @@ const QRScannerView: React.FC<QRScannerViewProps> = ({ onBack, pitchId }) => {
       setScanResult(token);
     } catch (err) {
       const raw = err instanceof Error ? err.message : String(err);
-      setError(raw.includes('yetki') ? 'Bu maç için skor girme yetkiniz yok.' : 'Maç seçilemedi. Tekrar deneyin.');
+      setError(raw.includes('yetki') ? 'Bu maç için skor girme yetkin yok.' : 'Maç seçilemedi. Tekrar dene.');
       setTimeout(() => setError(null), 4000);
     } finally {
       setPickingId(null);
@@ -139,7 +139,7 @@ const QRScannerView: React.FC<QRScannerViewProps> = ({ onBack, pitchId }) => {
       else if (raw.includes('INVALID_SCORE')) msg = 'Girilen skor geçersiz.';
       // Tekrar denemek çözmez — maç bitene kadar sunucu her seferinde reddeder.
       else if (raw.includes('TOO_EARLY')) msg = 'Skor ancak maç bittikten sonra girilebilir.';
-      else if (raw.includes('Failed to fetch')) msg = 'Bağlantı hatası. İnternetinizi kontrol edin.';
+      else if (raw.includes('Failed to fetch')) msg = 'Bağlantı hatası. İnternetini kontrol et.';
       setError(msg);
       setTimeout(() => setError(null), 4000);
     } finally {

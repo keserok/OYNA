@@ -366,3 +366,59 @@ OYNA tek merchant; saha ödemeleri **iki haftada bir (otomatik) payout**. Tüm o
 - **Yasal metinlerin hukukçu onaylı finalizasyonu** + **iyzico sözleşmesi/KYC**.
 - Asgari kayıt yaşı (öneri: 15) — son onay.
 - Format etiketi XvX kaleci dahil mi (taraf başına toplam) — uygulama detayı.
+
+---
+
+## 14. ✍️ Dil ve Adlandırma Kuralı (IP-13)
+
+Bu bölüm bir tercih listesi değil, **uygulanabilir kuraldır**: her maddesi
+`tests/unit/turkishText.test.ts` ile kilitlidir. Kural değişecekse önce testi
+değiştir, sonra kodu.
+
+### 14.1 Hitap: SEN
+
+Arayüzün tamamı **SEN** kipindedir. "Yükleyebilirsiniz" değil "yükleyebilirsin",
+"Lütfen tekrar deneyin" değil "Tekrar dene".
+
+**Tek istisna — hukuki metinler SİZ kalır:** `LegalScreen`, `GuardianConsentForm`,
+`PartnerOnboarding` sözleşme bölümleri ve `LegalModal` içindeki KVKK metni.
+Gerekçe: bu metinler avukat onayına gidiyor; dil değişikliği hukuki içeriği
+değiştirme riski taşır.
+
+> Not: "Arkadaşsınız", "Arkadaşlığınız", "birbirinizi" gibi **çoğul** ifadeler
+> SİZ kipi değildir (iki kişiye birden hitap eder) — dokunulmaz.
+
+### 14.2 Ekran adı: bir ekranın TEK adı vardır
+
+Sekme etiketi, ekran başlığı ve metin içindeki atıf **aynı kelimedir**. Kaynak:
+`ui/labels.ts` → `SCREEN`. Alt menüde "Sahalar" yazan sekme, açılınca kendini
+"Saha Vitrini" diye tanıtamaz; kullanıcı sekmede ne gördüyse onu arar.
+
+### 14.3 Büyük harf: `trUpper`, asla `toUpperCase()`
+
+Türkçe metin `utils/trUpper.ts` ile büyütülür. Düz `toUpperCase()` noktalı/
+noktasız `i` ayrımını bozar: `Gizlilik Politikası` → `GIZLILIK POLITIKASI`.
+
+**Teknik alanlarda TAM TERSİ geçerlidir:** IBAN, davet kodu, işlem numarası,
+enum ve kart markası ASCII'dir; orada `tr-TR` locale `i`'yi ASCII olmayan `İ`'ye
+çevirip doğrulamayı bozar. O çağrılar bilerek düz `toUpperCase()`'tir ve testin
+izinli listesindedir.
+
+### 14.4 Yıkıcı ve güvenli buton
+
+- Güvenli buton **daima "Vazgeç"**.
+- Yıkıcı buton **fiili söyler**: "Maçtan Ayrıl", "Rezervasyonu İptal Et",
+  "Hesabı Sil". **"Evet," ön eki kullanılmaz.**
+
+Gerekçe: yan yana duran "Evet, İptal Et" ile "Vazgeç" Türkçede eş anlamlı
+okunuyordu; kullanıcı hangisinin yıkıcı olduğunu ayırt edemiyordu.
+
+### 14.5 Üç nokta ve bekleme metni
+
+Tek karakter: **`…`** (`...` değil). Bekleme metinleri `ui/labels.ts` → `WAIT`
+sözlüğünden gelir: `Yükleniyor…`, `Kaydediliyor…`, `Gönderiliyor…`.
+
+### 14.6 Kod adı sızmaz
+
+Kullanıcıya gösterilen metinde kod içi ekran/tablo adı geçemez. "Tesisiniz onay
+bekliyor — PitchDiscovery'de görünmez" gibi bir cümle kullanıcı için anlamsızdır.

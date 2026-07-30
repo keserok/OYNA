@@ -8,6 +8,8 @@ import { AppView } from '../types';
 // caption basamağına (11px) indi ve `whitespace-nowrap` ile kırılma yasaklandı:
 // birincil gezinti çubuğu asla iki satıra taşmaz.
 import { type_ } from '../ui/type';
+// IP-13: sekme etiketi ile ekran başlığı AYNI kaynaktan gelir.
+import { SCREEN } from '../ui/labels';
 
 /** Alt menünün BEŞ yuvası — TEK KAYNAK.
  *  App.tsx `showBottomNav`'ı bu listeden türetir; ikisi ayrı yazıldığında
@@ -29,11 +31,11 @@ interface BottomNavProps {
 
 export const BottomNav: React.FC<BottomNavProps> = ({ currentView, onNavigate, hidden = false }) => {
   const navItems: { id: TabId; icon: typeof Home; label: string; isCenter?: boolean }[] = [
-    { id: 'DASHBOARD', icon: Home, label: 'Ana Sayfa' },
-    { id: 'MATCH_DISCOVERY', icon: Calendar, label: 'Top Oyna' },
-    { id: 'MY_MATCHES', icon: Ticket, label: 'Maçlarım', isCenter: true },
-    { id: 'PITCH_DISCOVERY', icon: MapPin, label: 'Sahalar' },
-    { id: 'PROFILE', icon: User, label: 'Profil' },
+    { id: 'DASHBOARD', icon: Home, label: SCREEN.dashboard },
+    { id: 'MATCH_DISCOVERY', icon: Calendar, label: SCREEN.matchDiscovery },
+    { id: 'MY_MATCHES', icon: Ticket, label: SCREEN.myMatches, isCenter: true },
+    { id: 'PITCH_DISCOVERY', icon: MapPin, label: SCREEN.pitchDiscovery },
+    { id: 'PROFILE', icon: User, label: SCREEN.profile },
   ];
 
   return (

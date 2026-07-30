@@ -37,7 +37,7 @@ const DashboardSkeleton = () => (
     <div className="h-24 w-full bg-gray-800 rounded-[32px]"></div>
     <div className="flex justify-center items-center gap-2 mt-10">
       <div className="w-2 h-2 bg-[#FACC15] rounded-full animate-bounce"></div>
-      <p className="text-[#FACC15] text-xs font-bold uppercase tracking-widest">Sistem Sahayı Hazırlıyor...</p>
+      <p className="text-[#FACC15] text-xs font-bold uppercase tracking-widest">Sistem Sahayı Hazırlıyor…</p>
     </div>
   </div>
 );
@@ -583,7 +583,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack }) => {
                 </motion.div>
                 <span className="text-white/95 text-[0.625rem] font-extrabold uppercase tracking-[0.3em]">REZERVASYON</span>
               </div>
-              <h2 className="text-4xl font-extrabold text-white italic uppercase leading-[1.05] tracking-tighter" style={{ textShadow: '0 2px 8px rgba(16,185,129,0.3)' }}>Saha<br />Vitrini</h2>
+              <h2 className="text-4xl font-extrabold text-white italic uppercase leading-[1.05] tracking-tighter" style={{ textShadow: '0 2px 8px rgba(16,185,129,0.3)' }}>Sahalar</h2>
               <p className="text-[0.6875rem] text-emerald-200/90 mt-2 font-bold">Çevrendeki müsait halı sahaları incele.</p>
             </div>
 
@@ -622,7 +622,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onBack }) => {
 
         {/* ═══════════════════════════════════════════════════════════════════
             MAÇ OLUŞTUR — VERSİYON A (AKTİF)
-            Stil: Saha Vitrini / Maça Katıl / Rakip Bul ile aynı dil.
+            Stil: Sahalar / Maça Katıl / Rakip Bul ile aynı dil.
             Kırmızı dolgu, carbon-fibre doku, sol başlık + sağ yuvarlak ikon + kesikli kırmızı sınır çizgisi.
         ═══════════════════════════════════════════════════════════════════ */}
         <AnimatedButton

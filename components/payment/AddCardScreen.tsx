@@ -268,7 +268,7 @@ const AddCardScreen: React.FC<AddCardScreenProps> = ({ onBack, onSaved, collectM
           }`}
         >
           <Plus size={18} />
-          {busy ? 'KAYDEDİLİYOR...'
+          {busy ? 'KAYDEDİLİYOR…'
             : collectMode ? (save ? 'KULLAN VE KAYDET' : 'BU ÖDEMEDE KULLAN')
             : 'KARTI KAYDET'}
         </button>

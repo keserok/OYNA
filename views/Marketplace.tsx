@@ -20,6 +20,7 @@ import Chip from '../components/ui/Chip';
 import { getInitials } from '../components/ui/Avatar';
 import { createServiceRequest, fundServiceRequest } from '../services/serviceRequestService';
 import { auth } from '../supabaseAuth';
+import { trCapitalize } from '../utils/trUpper';
 
 const getNormalizedDifficulty = (diff?: string): string => {
   if (!diff) return 'Rahat';
@@ -27,7 +28,7 @@ const getNormalizedDifficulty = (diff?: string): string => {
   if (d === 'ciddi' || d === 'pro') return 'Ciddi';
   if (d === 'taktiksel' || d === 'yarı-pro' || d === 'yari-pro' || d === 'yarı pro' || d === 'yari pro') return 'Taktiksel';
   if (d === 'rahat' || d === 'amatör' || d === 'amator' || d === 'eğlence' || d === 'eglence') return 'Rahat';
-  return diff.charAt(0).toUpperCase() + diff.slice(1);
+  return trCapitalize(diff);
 };
 
 // "18:00 - 23:00" gibi bir aralıkta seçilen saatin kalıp kalmadığını kontrol eder.

@@ -24,6 +24,7 @@ import {
 import { supabase } from '../supabaseClient';
 import { useAppStore } from '../store';
 import TeamCrest from '../components/social/TeamCrest';
+import { trInitials } from '../utils/trUpper';
 
 // ================================================================
 // MessagesView — BİRLEŞİK gelen kutusu (Spec §3.10 / N90):
@@ -45,7 +46,7 @@ interface MessagesViewProps {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 const getInitials = (name: string | null) =>
-  (name || '?').split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+  trInitials(name);
 
 const timeAgo = (iso: string | null): string => {
   if (!iso) return '';
@@ -330,7 +331,7 @@ const ChatView: React.FC<{
       await blockUserFully(myUid, conversation.otherId);
       // F1: blok sonrası sohbet AÇIK kalmasın — kompozer kilitlenir + net durum.
       setBlocked(true);
-      setActionInfo(`${name} engellendi. Artık mesajlaşamazsınız.`);
+      setActionInfo(`${name} engellendi. Artık mesajlaşamazsın.`);
     } catch (e: any) {
       setError(e?.message || 'Kullanıcı engellenemedi.');
     }
@@ -489,7 +490,7 @@ const ChatView: React.FC<{
             }
           }}
           rows={1}
-          placeholder="Mesaj yaz..."
+          placeholder="Mesaj yaz…"
           className="flex-1 resize-none max-h-28 bg-white/6 border border-white/10 rounded-2xl px-4 py-3 text-sm text-white placeholder:text-ink-4 focus:outline-none focus:border-emerald-500/50"
         />
         <button
@@ -763,7 +764,7 @@ const TeamChatView: React.FC<{
             }
           }}
           rows={1}
-          placeholder={`${team.team_name} sohbetine yaz...`}
+          placeholder={`${team.team_name} sohbetine yaz…`}
           className="flex-1 resize-none max-h-28 bg-white/6 border border-white/10 rounded-2xl px-4 py-3 text-sm text-white placeholder:text-ink-4 focus:outline-none focus:border-emerald-500/50"
         />
         <button

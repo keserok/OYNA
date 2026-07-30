@@ -401,7 +401,7 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
                 onChange={e => setTempBio(e.target.value)}
                 rows={4}
                 className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-sm text-white outline-none resize-none focus:border-white/30 transition-colors"
-                placeholder="Kendini tanıt..."
+                placeholder="Kendini tanıt…"
               />
               <div className="flex gap-2">
                 <button

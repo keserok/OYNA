@@ -217,7 +217,7 @@ export const OwnerBankAccountsModal: React.FC<OwnerBankAccountsModalProps> = ({
             />
             <input
               className="w-full bg-[#0A0E14] border border-white/5 rounded-xl p-3 text-white text-sm font-mono"
-              placeholder="IBAN (TR...)"
+              placeholder="IBAN (TR…)"
               value={form.iban}
               onChange={(e) => setForm({ ...form, iban: e.target.value })}
             />

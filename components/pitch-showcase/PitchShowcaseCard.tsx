@@ -1,5 +1,5 @@
 /**
- * Saha Vitrini kartı — TEK KAYNAK.
+ * Sahalar (saha vitrini) kartı — TEK KAYNAK.
  * Oyuncu Saha Keşfet listesinde çizilen vitrin kartının kendisi; admin
  * PitchStudio "Canlı Ayna"sı da birebir bu bileşeni çizer. Kartın görselinde
  * yapılacak her değişiklik YALNIZ burada yapılır — iki ayrı kart / drift yok.

@@ -381,7 +381,7 @@ const ServiceSettings: React.FC<ServiceSettingsProps> = ({ role, onBack, onLogou
                 className="w-full py-3 rounded-2xl font-extrabold text-sm text-white disabled:opacity-50"
                 style={{ background: '#3b82f6' }}
               >
-                {isSavingPassword ? 'Güncelleniyor...' : 'Şifreyi Güncelle'}
+                {isSavingPassword ? 'Güncelleniyor…' : 'Şifreyi Güncelle'}
               </button>
             </div>
             <button

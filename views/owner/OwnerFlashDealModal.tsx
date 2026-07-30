@@ -172,7 +172,7 @@ export const OwnerFlashDealModal: React.FC<OwnerFlashDealModalProps> = ({
             disabled={saving}
             className="flex-[2] py-4 bg-[#FACC15] text-black font-extrabold text-lg rounded-2xl hover:bg-yellow-300 active:scale-95 transition-all disabled:opacity-50"
           >
-            {saving ? 'KAYDEDİLİYOR...' : 'FLASH DEAL OLUŞTUR'}
+            {saving ? 'KAYDEDİLİYOR…' : 'FLASH DEAL OLUŞTUR'}
           </button>
         </div>
       </div>

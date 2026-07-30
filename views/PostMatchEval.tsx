@@ -7,6 +7,7 @@ import { auth } from '../supabaseAuth';
 import { submitServiceRating, getMatchServiceRequests, captainConfirmService } from '../services/serviceRequestService';
 import { getPendingScoreProposal, approveMatchScore, type ScoreProposal } from '../services/scoreService';
 import type { PositionSlot } from '../types';
+import { trInitials } from '../utils/trUpper';
 
 // FAZ 5: Maça atanmış kaleci/hakem hakkında değerlendirme ekranında gösterilecek bilgi
 interface ServiceProviderInfo {
@@ -32,7 +33,7 @@ const MOCK_PLAYERS: EvalPlayer[] = [
 ];
 
 const initialsOf = (name: string) =>
-  name.split(' ').filter(Boolean).slice(0, 2).map(w => w[0]?.toUpperCase() ?? '').join('') || '?';
+  trInitials(name);
 
 // Oyuncu başına centilmenlik. Değerler player_ratings.fair_play_score
 // CHECK (1..5) aralığına birebir oturur; seçim yapılmazsa 3 (nötr) gider.

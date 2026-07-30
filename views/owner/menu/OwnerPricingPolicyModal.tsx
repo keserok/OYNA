@@ -431,7 +431,7 @@ export const OwnerPricingPolicyModal: React.FC<Props> = ({
         )}
 
         {isLoading ? (
-          <p className="text-center text-gray-500 text-sm py-8">Tarifeler yükleniyor...</p>
+          <p className="text-center text-gray-500 text-sm py-8">Tarifeler yükleniyor…</p>
         ) : (
           <div className="space-y-4">
             {rows.map((tariff) => (

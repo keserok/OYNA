@@ -168,7 +168,7 @@ const PendingVerificationView: React.FC<PendingVerificationViewProps> = ({ onApp
                 🎉
               </motion.div>
               <h2 className="text-3xl font-extrabold text-white italic">Profilin Onaylandı!</h2>
-              <p className="text-gray-300 mt-2">Yönlendiriliyorsun...</p>
+              <p className="text-gray-300 mt-2">Yönlendiriliyorsun…</p>
             </div>
           </motion.div>
         )}

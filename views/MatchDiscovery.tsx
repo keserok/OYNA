@@ -15,6 +15,7 @@ import { FilterDropdown } from '../components/ui/FilterDropdown';
 import { deriveDiscoveryFilterOptions, roleHasOpenSlot, ROLE_LABEL_MAP } from '../utils/discoveryFilterOptions';
 import { formatMatchDuration, realMatchMinutes } from '../shared/matchTiming';
 import { PLAY_STYLE_META } from './onboarding/onboardingShared';
+import { trUpper } from '../utils/trUpper';
 
 interface MatchDiscoveryProps {
   onSelect: (match: MatchListing) => void;
@@ -402,11 +403,11 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onSelect }) => {
                               : 'bg-white/[0.02] border-white/10 text-white hover:bg-white/[0.05]'
                           }`}
                         >
-                          {dist.toUpperCase()}
+                          {trUpper(dist)}
                         </button>
                       ))}
                     </div>
-                    <p className="text-[0.6875rem] text-white/50 italic">Cihaz konumu bulunamadığı için maçları bölge bazlı filtreleyebilirsiniz.</p>
+                    <p className="text-[0.6875rem] text-white/50 italic">Cihaz konumu bulunamadı; maçları bölge bazlı filtreleyebilirsin.</p>
                   </div>
                 )}
 
@@ -825,7 +826,7 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onSelect }) => {
                   disabled={privateLoading || privateCode.trim().length < 4}
                   className={`w-full py-3.5 bg-primary text-on-primary font-extrabold rounded-2xl text-sm uppercase tracking-wide transition-transform flex items-center justify-center gap-2 ${privateLoading || privateCode.trim().length < 4 ? 'opacity-50 cursor-not-allowed' : 'active:scale-95'}`}
                 >
-                  {privateLoading ? <><Loader2 size={16} className="animate-spin" /> Aranıyor...</> : 'Maça Git'}
+                  {privateLoading ? <><Loader2 size={16} className="animate-spin" /> Aranıyor…</> : 'Maça Git'}
                 </button>
                 <button
                   onClick={() => { if (!privateLoading) { setShowPrivateModal(false); setPrivateError(null); setPrivateCode(''); } }}
@@ -1042,12 +1043,12 @@ const MatchCard: React.FC<{
 
             {/* Tesis ve Lokasyon İsmi Devasa (Üst Karakter) */}
             <h3 className="text-xl font-extrabold text-white italic uppercase leading-tight tracking-tighter drop-shadow-[0_4px_15px_rgba(0,0,0,1)] mb-2 break-words">
-              {match.location.toUpperCase()}
+              {trUpper(match.location)}
             </h3>
 
             {/* Tarih ve Saat (Üst Karakter) */}
             <div className="text-[0.625rem] font-extrabold text-[#FACC15] italic uppercase tracking-widest mb-3 drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]">
-              {match.date.toUpperCase()} • {match.time.toUpperCase()}
+              {trUpper(match.date)} • {trUpper(match.time)}
             </div>
             
             <div className="flex items-center gap-1.5 flex-wrap">

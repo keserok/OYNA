@@ -29,6 +29,7 @@ import { getMyTeams, getTeamSquad, type MyTeamRow } from '../services/teamSocial
 import { getMatchDetails } from '../services/matchService';
 import { fetchMyFavoritePitchIds } from '../services/pitchFavoritesService';
 import { safeUuid } from '../shared/submitGuard';
+import { trUpper } from '../utils/trUpper';
 
 // Cüzdan yükleme overlay'i — form kaybolmadan bakiye tamamlanır (gerçek akış).
 const WalletScreen = lazy(() => import('./WalletScreen'));
@@ -1028,11 +1029,11 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                 className="flex items-center gap-3 rounded-[20px] border border-white/10 bg-white/[0.025] p-3.5 text-left min-h-[60px] active:scale-[0.99] transition-transform">
                 <div className="flex items-center">
                   <div className="w-[34px] h-[34px] rounded-full bg-gradient-to-br from-[#1e2532] to-[#11151c] border-2 border-[#39FF14] flex items-center justify-center text-xs font-extrabold">
-                    {(currentUserProfile?.name ?? 'S').charAt(0).toUpperCase()}
+                    {trUpper((currentUserProfile?.name ?? 'S').charAt(0))}
                   </div>
                   {invited.slice(0, 3).map(p => (
                     <div key={p.id} className="w-[34px] h-[34px] -ml-2.5 rounded-full bg-gradient-to-br from-[#1e2532] to-[#11151c] border-2 border-[#0A0E14] flex items-center justify-center text-xs font-extrabold text-white/80">
-                      {p.name.charAt(0).toUpperCase()}
+                      {trUpper(p.name.charAt(0))}
                     </div>
                   ))}
                   <div className="w-[34px] h-[34px] -ml-2.5 rounded-full bg-white/[0.04] border-2 border-white/[0.16] flex items-center justify-center text-white/50">
@@ -1388,7 +1389,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                             })}
                             className={`flex items-center gap-3 p-3 rounded-2xl border text-left ${on ? 'bg-[#39FF14]/[0.07] border-[#39FF14]/40' : 'bg-white/[0.025] border-white/[0.07]'}`}>
                             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#1e2532] to-[#11151c] border border-white/10 flex items-center justify-center text-sm font-extrabold shrink-0 overflow-hidden">
-                              {f.avatar_url ? <img src={f.avatar_url} alt="" className="w-full h-full object-cover" /> : (f.full_name ?? '?').charAt(0).toUpperCase()}
+                              {f.avatar_url ? <img src={f.avatar_url} alt="" className="w-full h-full object-cover" /> : trUpper((f.full_name ?? '?').charAt(0))}
                             </div>
                             <div className="flex-1 min-w-0">
                               <p className="text-[0.875rem] font-extrabold truncate">{f.full_name}</p>
@@ -1417,7 +1418,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                             className="w-full flex items-center gap-3 p-3 text-left">
                             <div className="w-10 h-10 rounded-xl flex items-center justify-center text-sm font-extrabold shrink-0 border border-white/10"
                               style={{ background: `linear-gradient(135deg, ${t.color1 || '#1e2532'}, ${t.color2 || '#11151c'})` }}>
-                              {(t.short_name || t.name || '?').charAt(0).toUpperCase()}
+                              {trUpper((t.short_name || t.name || '?').charAt(0))}
                             </div>
                             <div className="flex-1 min-w-0">
                               <p className="text-[0.875rem] font-extrabold truncate">{t.name}</p>
@@ -1439,7 +1440,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                                   <button key={m.id} onClick={() => toggleInvite(m)}
                                     className={`flex items-center gap-3 p-2.5 rounded-xl border text-left ${on ? 'bg-[#39FF14]/[0.07] border-[#39FF14]/40' : 'bg-white/[0.03] border-white/[0.06]'}`}>
                                     <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#1e2532] to-[#11151c] border border-white/10 flex items-center justify-center text-xs font-extrabold shrink-0">
-                                      {m.name.charAt(0).toUpperCase()}
+                                      {trUpper(m.name.charAt(0))}
                                     </div>
                                     <div className="flex-1 min-w-0">
                                       <p className="text-[0.8125rem] font-bold truncate">{m.name}</p>
@@ -1495,7 +1496,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                       <button key={id} onClick={() => { setProviderTab(id); }}
                         className={`flex-1 py-2.5 text-[0.6875rem] font-extrabold rounded-xl transition-all flex items-center justify-center gap-2 ${on ? 'text-[#0A0E14]' : 'text-ink-4'}`}
                         style={on ? { background: color } : {}}>
-                        <Icon size={14} /> {label.toUpperCase()}{n > 0 ? ` · ${offerOf(id)?.all ? 'Tümü' : n}` : ''}
+                        <Icon size={14} /> {trUpper(label)}{n > 0 ? ` · ${offerOf(id)?.all ? 'Tümü' : n}` : ''}
                       </button>
                     );
                   })}
@@ -1544,7 +1545,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                               className="w-full flex items-center gap-3 rounded-2xl border p-3 text-left transition-all active:scale-[0.99]"
                               style={on ? { background: `${accent}12`, borderColor: `${accent}80` } : { background: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.06)' }}>
                               <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 shrink-0 overflow-hidden flex items-center justify-center text-base font-extrabold">
-                                {p.avatar ? <img src={p.avatar} alt="" referrerPolicy="no-referrer" className="w-full h-full object-cover" /> : p.name.charAt(0).toUpperCase()}
+                                {p.avatar ? <img src={p.avatar} alt="" referrerPolicy="no-referrer" className="w-full h-full object-cover" /> : trUpper(p.name.charAt(0))}
                               </div>
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-1.5">
