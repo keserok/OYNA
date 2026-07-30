@@ -68,7 +68,11 @@ export const fetchRahatPitchInfo = async (pitchId: string): Promise<RahatPitchIn
   try {
     const { data, error } = await supabase
       .from('pitches')
-      .select('name, location, district, description, amenities, images, latitude, longitude, refund_full_hours, refund_half_hours, refund_half_pct')
+      // DİKKAT: tesisin adres kolonu 'address'tir; 'location' DİYE BİR KOLON YOK.
+      // PostgREST olmayan bir kolon istendiğinde TÜM sorguyu reddeder — bu yüzden
+      // yanlış ad, tek alanı değil tesis kartının tamamını sessizce yok ediyordu.
+      // Kanonik eşleme shared/pitchShowcaseMapper.ts:223 ile aynı: address → location.
+      .select('name, address, district, city, description, amenities, images, latitude, longitude, refund_full_hours, refund_half_hours, refund_half_pct')
       .eq('id', pitchId)
       .maybeSingle();
     if (error) throw error;
@@ -79,7 +83,10 @@ export const fetchRahatPitchInfo = async (pitchId: string): Promise<RahatPitchIn
     const arr = (v: unknown): string[] => (Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string' && !!x) : []);
     return {
       name: (row.name as string) || null,
-      location: (row.location as string) || null,
+      // Adres yoksa ilçe/il birleşimine düş (pitchShowcaseMapper ile aynı desen).
+      location: (row.address as string)
+        || [row.district, row.city].filter(Boolean).join(', ')
+        || null,
       district: (row.district as string) || null,
       description: (row.description as string) || null,
       amenities: arr(row.amenities),
