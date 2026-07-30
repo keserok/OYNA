@@ -1,129 +1,78 @@
 import React from 'react';
-import { motion, Variants } from 'framer-motion';
+import { motion } from 'framer-motion';
 
 interface OynaLogoProps {
   className?: string;
   width?: number | string;
   height?: number | string;
+  /** true → logo yumuşak bir belirme animasyonuyla girer (açılış ekranı için). */
   animate?: boolean;
-  /** IP-09: marka rengi artık dışarıdan gelir. Varsayılan `currentColor`, yani
-      çağıran taraf `text-primary` verdiğinde logo marka yeşiline boyanır.
-      Eski sabit amber, "bekliyor" sarısı ile 1.06:1 kontrasta
-      sahipti — marka işareti ile bekleyen durum aynı görünüyordu. */
+  /** IP-09: marka rengi DIŞARIDAN gelir, bileşene sabitlenmez. Varsayılan
+      `currentColor` — çağıran taraf `text-primary` verdiğinde logo marka
+      rengine boyanır. */
   color?: string;
 }
 
+// Marka amblemi — tek yol (path) olarak.
+//
+// KAYNAK: assets/oyna_son.png_202607301524.jpeg (tasarımcının master görseli).
+// Bu yol, master görselden vektöre çevrilerek üretildi; yani uygulama içindeki
+// logo ile telefondaki uygulama simgesi ARTIK BİREBİR AYNI çizimdir.
+//
+// Öncesinde buradaki çizim elle yazılmış, basitleştirilmiş bir versiyondu:
+// topun panel deseni eksikti (kenarlarda boş kamalar vardı) ve oynat üçgeni
+// master'a göre orantısız büyüktü.
+//
+// Şekil çizgi (stroke) değil DOLGU (fill) olarak tanımlıdır; içteki boşluklar
+// `evenodd` kuralıyla oyulur. Bu yüzden ölçeklendiğinde çizgi kalınlığı
+// bozulmaz — 20px'te de 160px'te de doğru orantıda görünür.
+//
+// ── LOGO DEĞİŞİRSE BU YOL NASIL YENİDEN ÜRETİLİR ──────────────────────────
+// Aşağıdaki yol, master görselden `potrace` ile vektöre çevrildi. potrace
+// yalnız bu tek seferlik iş için gerekli olduğundan bağımlılık olarak
+// TUTULMUYOR (her derlemede 70 paket fazladan kurulmasın diye); gerektiğinde
+// geçici kurulur:
+//
+//   npm i -D potrace
+//   node -e "
+//     const sharp=require('sharp'), potrace=require('potrace'), fs=require('fs');
+//     (async()=>{
+//       // 1) Master görselden ambleme kare kesit al (sınırları gözle/ölçerek belirle),
+//       //    siyah-beyaz maskeye çevir. scripts/logo-kaynak-uret.mjs aynı kesiti hesaplar.
+//       const m = await sharp('assets/<master>.jpeg')
+//         .extract({left:912, top:891, width:1967, height:1967})
+//         .resize(520,520).greyscale().normalise().threshold(60).negate().png().toBuffer();
+//       fs.writeFileSync('/tmp/maske.png', m);
+//       // 2) Vektöre çevir. Bu ayarlar ~10 KB / ~260 düğüm verir; sadelik ile
+//       //    sadakat arasındaki denge burada kuruldu.
+//       potrace.trace('/tmp/maske.png',
+//         {turdSize:8, alphaMax:1.0, optCurve:true, optTolerance:1.2, threshold:128},
+//         (e,svg)=> fs.writeFileSync('/tmp/izlenen.svg', svg));
+//     })();"
+//   npm un potrace
+//
+// Sonra /tmp/izlenen.svg içindeki tek `d="..."` değerini aşağıya yapıştır.
+// viewBox de o dosyadaki ile aynı olmalı (şu an 0 0 520 520).
+// ──────────────────────────────────────────────────────────────────────────
+const AMBLEM_YOLU = 'M 239 4.058 C 137.725 11.287, 45.755 83.228, 13.041 180.809 C -39.377 337.166, 72.149 502.276, 239.489 516.057 C 373.810 527.118, 498.208 430.018, 516.973 299.464 C 518.077 291.784, 519.478 282.125, 520.087 278 C 522.462 261.912, 519.525 228.412, 513.575 203.714 C 483.325 78.158, 368.689 -5.199, 239 4.058 M 241 15.715 C 217.923 17.308, 213.118 19.215, 205.778 29.692 C 194.878 45.251, 194.132 43.144, 213.500 51.518 C 227.282 57.478, 243.538 65.578, 253.328 71.367 L 260.850 75.814 267.675 71.806 C 276.570 66.583, 298.936 55.405, 311.144 50.081 C 325.575 43.788, 325.042 44.920, 318.284 34.910 C 308.132 19.872, 308.465 20.162, 299.463 18.498 C 283.871 15.615, 259.351 14.448, 241 15.715 M 182 27.852 C 146.064 39.705, 109.158 62.411, 85 87.531 L 79.500 93.250 84.390 92.625 C 87.079 92.281, 91.819 92, 94.923 92 C 100.317 92, 100.962 91.706, 109.533 85.344 C 131.713 68.882, 158.149 53.605, 177.500 46.068 L 185.500 42.952 191.218 33.476 C 197.941 22.335, 198.217 22.503, 182 27.852 M 324.055 24.750 C 324.085 25.163, 326.672 29.459, 329.805 34.297 L 335.500 43.094 348 48.326 C 368.362 56.848, 390.624 69.976, 410.878 85.404 C 413.835 87.657, 416.985 90.010, 417.878 90.634 C 418.770 91.258, 424.110 92.026, 429.745 92.342 L 439.991 92.916 438.524 90.708 C 430.898 79.227, 396.122 53.894, 370.675 41.282 C 350.178 31.124, 323.838 21.784, 324.055 24.750 M 174.500 58.299 C 153.357 67.597, 127.222 83.411, 111.831 96.220 L 106.119 100.974 101.477 115.177 C 96.014 131.894, 90.210 156.609, 89.425 166.500 L 88.869 173.500 104.091 182.500 C 124.578 194.613, 124 194.103, 124 200.073 C 124 206.243, 123.880 206.233, 112.714 199.179 C 97.611 189.638, 84.413 182, 83.030 182 C 80.745 182, 51.270 209.860, 43.646 219.225 C 35.440 229.307, 34.747 299.255, 42.732 311.500 C 49.242 321.481, 82.484 351.630, 85.974 350.717 C 86.857 350.486, 95.532 345.055, 105.253 338.649 C 125.241 325.475, 125.480 325.382, 124.722 331.038 C 123.879 337.319, 122.169 339.032, 106.323 349.472 C 98.170 354.844, 91.333 359.390, 91.128 359.574 C 88.779 361.697, 105.548 418.533, 110.412 424.931 C 115.910 432.164, 176.127 465.275, 188.159 467.682 C 192.003 468.451, 246.317 439.385, 253.737 432.588 C 254.632 431.768, 255.119 424.152, 255.502 404.978 L 256.030 378.500 258.765 376.201 C 265.455 370.576, 265 368.743, 265 401.310 C 265 428.054, 265.157 430.824, 266.750 432.188 C 269.851 434.841, 302.068 453.535, 316.624 461.127 L 330.748 468.493 334.624 467.114 C 356.972 459.161, 407.885 429.894, 410.951 423.238 C 422.404 398.378, 431.576 360.433, 426.750 357.880 C 423.533 356.178, 367.849 319.066, 365.750 317.225 C 363.569 315.312, 363.470 311.417, 365.582 310.607 C 369.635 309.052, 373.377 311.050, 402.831 330.500 C 419.905 341.775, 434.324 351, 434.873 351 C 438.248 351, 469.382 322.311, 477.212 311.986 C 482.190 305.422, 484.631 263.482, 481.675 235.306 L 480.500 224.111 474.825 217.302 C 468.862 210.147, 458.948 200.394, 445.261 188.215 L 437.073 180.931 423.787 189.273 C 416.479 193.862, 403.655 202.006, 395.289 207.371 C 378.282 218.276, 372.880 219.787, 372.191 213.831 C 371.909 211.392, 373.244 210.267, 387.691 200.768 C 408.288 187.226, 414.870 183.039, 424.189 177.548 L 431.877 173.017 431.366 169.259 C 428.418 147.599, 417.693 106.243, 413.645 100.931 C 404.745 89.251, 342.148 53, 330.878 53 C 327.080 53, 287.645 71.520, 271.250 81.004 L 266 84.040 266 111.741 C 266 147.695, 265.169 151.985, 258.918 148.293 L 256.028 146.585 255.764 115.220 L 255.500 83.855 250.500 81.118 C 227.452 68.501, 195.774 53.979, 190 53.383 C 187.422 53.117, 183.337 54.413, 174.500 58.299 M 87 102.654 C 85.075 102.838, 80.275 103.251, 76.334 103.572 L 69.169 104.155 62.204 113.327 C 44.762 136.300, 23 178.560, 23 189.459 C 23 191.609, 28.253 202.587, 33.161 210.695 L 35.095 213.890 42.991 205.388 C 51.176 196.575, 63.803 184.596, 72.626 177.275 C 77.617 173.134, 77.741 172.896, 78.916 165.275 C 81.570 148.050, 86.795 126.773, 92.463 110.109 C 94.887 102.983, 94.834 101.882, 92.083 102.160 C 91.213 102.248, 88.925 102.470, 87 102.654 M 426 102.916 C 426 103.545, 427.982 110.459, 430.404 118.280 C 435.402 134.416, 439.611 152.426, 441.252 164.691 L 442.369 173.036 449.934 179.214 C 454.095 182.612, 463.698 191.669, 471.273 199.340 C 478.848 207.011, 485.282 213.051, 485.570 212.763 C 488.189 210.145, 497 191.901, 497 189.097 C 497 177.280, 475.660 135.947, 457.392 112.383 L 451.100 104.267 442.800 103.600 C 438.235 103.233, 432.587 102.672, 430.250 102.353 C 427.390 101.963, 426 102.147, 426 102.916 M 159.096 120.159 C 152.179 122.147, 146.098 127.841, 142.181 136 C 140.099 140.335, 139.031 375.017, 141.049 384.736 C 143.776 397.871, 153.289 405.500, 166.940 405.500 L 175.538 405.500 237.519 368.392 C 271.608 347.983, 316.744 320.983, 337.820 308.392 C 387.910 278.468, 388.509 277.919, 388.420 262 C 388.322 244.604, 392.172 247.667, 308 197.997 C 286.825 185.502, 251.050 164.350, 228.500 150.993 C 169.898 116.281, 170.954 116.751, 159.096 120.159 M 162.275 128.949 C 150.984 131.707, 149.852 135.434, 149.658 170.506 L 149.500 199 172.050 199 C 199.641 199, 197 196.846, 197 219.346 L 197 237.293 201.557 242.164 C 213.185 254.595, 212.972 271.265, 201.039 282.847 L 196.912 286.851 196.950 305.308 C 196.997 328.117, 198.295 326.482, 180.096 326.555 C 172.618 326.585, 162.602 326.697, 157.837 326.805 L 149.174 327 149.411 355.750 C 149.686 389.260, 150.487 392.210, 160.315 395.933 C 168.806 399.151, 169.405 398.879, 217.290 370.121 L 257.883 345.741 257.966 320.041 L 258.049 294.342 252.155 292.703 C 220.744 283.970, 221.306 239.466, 252.929 231.440 L 257.500 230.280 257.767 204.775 L 258.033 179.270 239.767 168.461 C 229.720 162.517, 216.775 154.860, 211 151.447 C 205.225 148.034, 194.425 141.638, 187 137.234 C 173.091 128.985, 168.470 127.436, 162.275 128.949 M 262.535 199.750 C 262.765 209.512, 262.963 220.281, 262.976 223.679 L 263 229.858 268.270 231.390 C 299.823 240.563, 299.986 283.964, 268.500 292.530 L 262.500 294.162 262.172 318.081 C 261.906 337.482, 262.094 341.992, 263.172 341.956 C 263.902 341.932, 278.900 333.257, 296.500 322.680 L 328.500 303.448 328.793 295.072 L 329.086 286.695 325.588 283.812 C 313.262 273.652, 312.848 253.121, 324.729 241.224 L 329 236.947 329 229.042 L 329 221.136 312.250 211.200 C 303.038 205.736, 289.425 197.761, 282 193.479 C 274.575 189.196, 267.306 184.862, 265.846 183.846 C 264.386 182.831, 262.950 182, 262.655 182 C 262.359 182, 262.306 189.988, 262.535 199.750 M 149.928 203.250 C 149.888 203.387, 149.759 209.688, 149.640 217.250 L 149.425 231 159.090 231 C 172.029 231, 171.080 228.430, 170.766 262.621 L 170.500 291.500 160 292 L 149.500 292.500 149.500 307 L 149.500 321.500 170.750 321.770 L 192 322.040 192 262.520 L 192 203 171 203 C 159.450 203, 149.968 203.113, 149.928 203.250 M 16.667 213.750 C 12.811 232.164, 12.500 235.713, 12.532 261 C 12.566 287.365, 13.979 300.428, 18.780 318.750 C 20.827 326.559, 20.583 326.625, 26.132 316.747 L 30.765 308.500 29.450 299 C 27.183 282.615, 26.566 257.586, 27.988 239.650 L 29.287 223.262 24.394 214.659 C 18.439 204.190, 18.663 204.216, 16.667 213.750 M 495.972 214.546 L 490.735 223.217 492.015 238.358 C 493.438 255.178, 492.945 282.368, 490.924 298.610 L 489.665 308.720 493.964 316.610 C 498.827 325.534, 498.816 325.518, 499.508 324.825 C 508.716 315.618, 510.547 215.214, 501.670 206.336 C 501.416 206.083, 498.853 209.778, 495.972 214.546 M 334 261.961 L 334 300.084 338.750 297.381 C 341.363 295.894, 346.087 293.142, 349.250 291.266 L 355 287.855 355 262.042 L 355 236.228 347.750 231.980 C 343.762 229.644, 339.038 226.856, 337.250 225.785 L 334 223.837 334 261.961 M 249.043 237.208 C 225.517 248.853, 230.701 288.881, 255.750 288.990 L 258 289 258 262 L 258 235 255.750 235.001 C 254.512 235.001, 251.494 235.994, 249.043 237.208 M 262.614 261.531 C 262.743 291.598, 262.312 289.899, 269.262 287.703 C 292.656 280.312, 294.111 247.877, 271.521 237.358 C 261.875 232.866, 262.484 231.214, 262.614 261.531 M 149.119 262 L 149.093 288 157.547 288 L 166 288 166 262 L 166 236 157.572 236 L 149.145 236 149.119 262 M 360 262 C 360 274.100, 360.257 284, 360.572 284 C 361.825 284, 370.670 278.518, 373.339 276.086 C 381.385 268.757, 381.577 255.291, 373.739 247.965 C 371.513 245.883, 361.828 240, 360.628 240 C 360.283 240, 360 249.900, 360 262 M 325.571 246.319 C 318.346 255.790, 318.498 269.315, 325.925 278 L 328.919 281.500 328.959 262.250 C 328.982 251.662, 328.798 243, 328.551 243 C 328.304 243, 326.963 244.493, 325.571 246.319 M 0.409 260.500 C 0.408 269.850, 0.558 273.810, 0.743 269.299 C 0.928 264.789, 0.929 257.139, 0.745 252.299 C 0.562 247.460, 0.410 251.150, 0.409 260.500 M 196.769 245.207 C 196.506 245.918, 196.564 254.375, 196.897 264 L 197.503 281.500 200.776 276.515 C 206.561 267.706, 207.326 259.477, 203.125 251.247 C 200.685 246.465, 197.443 243.385, 196.769 245.207 M 34.596 322.214 C 33.773 323.471, 31.475 328.017, 29.490 332.314 L 25.880 340.129 28.081 346.744 C 35.647 369.479, 64.306 415.812, 74.019 421.010 C 75.762 421.943, 96.900 424.097, 97.813 423.435 C 97.985 423.310, 96.063 417.516, 93.541 410.561 C 88.757 397.362, 85.257 384.731, 82.162 369.500 L 80.334 360.500 68.417 350.913 C 61.863 345.641, 51.908 336.512, 46.296 330.628 C 36.170 320.009, 36.082 319.946, 34.596 322.214 M 471.500 332.435 C 464.900 339.209, 455.198 348.133, 449.940 352.268 L 440.379 359.787 438.068 370.643 C 435.231 383.962, 429.197 404.793, 425.094 415.433 C 423.411 419.797, 422.173 423.506, 422.343 423.676 C 422.773 424.107, 442.429 422.189, 445.221 421.445 C 454.589 418.946, 494 353.531, 494 340.480 C 494 338.380, 485.214 319.982, 484.248 320.060 C 483.837 320.094, 478.100 325.662, 471.500 332.435 M 90 438.009 C 116.820 463.060, 147.144 480.755, 184.733 493.288 C 199.602 498.246, 199.429 498.386, 192.287 487.173 L 186.500 478.086 178.500 474.876 C 160.618 467.701, 134.632 453.783, 115.038 440.886 C 105.514 434.618, 104.114 434, 99.427 434 C 96.596 434, 92.079 433.746, 89.390 433.436 L 84.500 432.871 90 438.009 M 422 434.004 C 414.838 434.696, 413.981 435.067, 402.978 442.246 C 381.008 456.582, 360.068 467.862, 342.366 474.898 L 334.232 478.131 328.163 487.566 C 324.825 492.755, 322.518 497, 323.035 497 C 326.465 497, 352.162 487.702, 366.332 481.334 C 387.275 471.921, 417.622 451.292, 431.453 437.066 L 435.406 433 432.453 433.140 C 430.829 433.217, 426.125 433.606, 422 434.004 M 252.748 445.072 C 240.701 452.584, 216.421 466.332, 206.750 471.117 C 196.487 476.194, 196.603 475.764, 202.952 485.166 C 215.272 503.414, 218.381 504.452, 260.500 504.390 C 302.992 504.328, 305.178 503.604, 317.109 485.647 C 324.041 475.215, 324.353 476.202, 312.173 470.076 C 302.522 465.223, 277.833 451.134, 267.796 444.753 C 264.883 442.902, 262.050 441.128, 261.500 440.812 C 260.950 440.496, 257.012 442.413, 252.748 445.072';
+
 export const OynaLogo: React.FC<OynaLogoProps> = ({
-  className = "",
+  className = '',
   width = 200,
   height = 200,
   animate = false,
-  color = 'currentColor'
-}) => {
-  const draw: Variants = {
-    hidden: { pathLength: 0, opacity: 0 },
-    visible: (i: number) => ({
-      pathLength: 1,
-      opacity: 1,
-      transition: {
-        pathLength: { delay: i * 0.1, type: "spring", duration: 1.5, bounce: 0 },
-        opacity: { delay: i * 0.1, duration: 0.2 }
-      }
-    })
-  };
-
-  return (
-    <svg
-      width={width}
-      height={height}
-      viewBox="0 0 200 200"
-      className={className}
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      stroke={color}
-      strokeWidth="3.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      {/* 1. OUTER CIRCLE */}
-      <motion.circle
-        cx="100" cy="100" r="85"
-        variants={draw} initial={animate ? "hidden" : "visible"} animate="visible" custom={1}
-        strokeWidth="4"
-      />
-
-      {/* 2. BALL PANELS (clipped to perfectly fit inside the outer circle) */}
-      <clipPath id="circle-clip">
-        <circle cx="100" cy="100" r="84.5" />
-      </clipPath>
-
-      <g clipPath="url(#circle-clip)">
-        {/* Top/Bottom Center Vertical Lines */}
-        <motion.line x1="100" y1="67" x2="100" y2="30" variants={draw} initial={animate ? "hidden" : "visible"} animate="visible" custom={2} />
-        <motion.line x1="100" y1="133" x2="100" y2="170" variants={draw} initial={animate ? "hidden" : "visible"} animate="visible" custom={2} />
-
-        {/* Top Hexagon branches */}
-        <motion.path d="M 100 30 L 70 20 L 40 -5" variants={draw} initial={animate ? "hidden" : "visible"} animate="visible" custom={3} />
-        <motion.path d="M 100 30 L 130 20 L 160 -5" variants={draw} initial={animate ? "hidden" : "visible"} animate="visible" custom={3} />
-        
-        {/* Bottom Hexagon branches */}
-        <motion.path d="M 100 170 L 70 180 L 40 205" variants={draw} initial={animate ? "hidden" : "visible"} animate="visible" custom={4} />
-        <motion.path d="M 100 170 L 130 180 L 160 205" variants={draw} initial={animate ? "hidden" : "visible"} animate="visible" custom={4} />
-
-        {/* Left Side Web */}
-        <motion.path d="M 62 50 L 45 40 L 70 20" variants={draw} initial={animate ? "hidden" : "visible"} animate="visible" custom={5} />
-        <motion.path d="M 45 40 L 25 75 L 5 55" variants={draw} initial={animate ? "hidden" : "visible"} animate="visible" custom={6} />
-        <motion.path d="M 60 100 L 40 100 L 25 75" variants={draw} initial={animate ? "hidden" : "visible"} animate="visible" custom={7} />
-        
-        <motion.path d="M 62 150 L 45 160 L 70 180" variants={draw} initial={animate ? "hidden" : "visible"} animate="visible" custom={5} />
-        <motion.path d="M 45 160 L 25 125 L 5 145" variants={draw} initial={animate ? "hidden" : "visible"} animate="visible" custom={6} />
-        <motion.path d="M 40 100 L 25 125" variants={draw} initial={animate ? "hidden" : "visible"} animate="visible" custom={7} />
-        
-        <motion.path d="M 25 75 L 0 85" variants={draw} initial={animate ? "hidden" : "visible"} animate="visible" custom={8} />
-        <motion.path d="M 25 125 L 0 115" variants={draw} initial={animate ? "hidden" : "visible"} animate="visible" custom={8} />
-
-        {/* Right Side Web */}
-        <motion.path d="M 125 80 L 145 50 L 130 20" variants={draw} initial={animate ? "hidden" : "visible"} animate="visible" custom={9} />
-        <motion.path d="M 145 50 L 175 75 L 205 60" variants={draw} initial={animate ? "hidden" : "visible"} animate="visible" custom={10} />
-        <motion.path d="M 175 75 L 175 125" variants={draw} initial={animate ? "hidden" : "visible"} animate="visible" custom={11} />
-        
-        <motion.path d="M 125 120 L 145 150 L 130 180" variants={draw} initial={animate ? "hidden" : "visible"} animate="visible" custom={9} />
-        <motion.path d="M 145 150 L 175 125 L 205 140" variants={draw} initial={animate ? "hidden" : "visible"} animate="visible" custom={10} />
-      </g>
-
-      {/* 3. CENTRAL PLAY BUTTON (TRIANGLE) */}
-      <motion.path
-        d="M 60 55 Q 60 45 70 50 L 155 95 Q 165 100 155 105 L 70 150 Q 60 155 60 145 Z"
-        variants={draw} initial={animate ? "hidden" : "visible"} animate="visible" custom={12}
-        strokeWidth="4"
-        fill="transparent"
-      />
-
-      {/* 4. INNER FOOTBALL PITCH (clipped to triangle) */}
-      <clipPath id="triangle-clip">
-        <path d="M 60 55 Q 60 45 70 50 L 155 95 Q 165 100 155 105 L 70 150 Q 60 155 60 145 Z" />
-      </clipPath>
-
-      <g clipPath="url(#triangle-clip)">
-        {/* Pitch Halfway Line matches exactly the vertical spokes X=100 */}
-        <motion.line x1="100" y1="0" x2="100" y2="200" variants={draw} initial={animate ? "hidden" : "visible"} animate="visible" custom={13} strokeWidth="3" />
-        
-        {/* Center Circle */}
-        <motion.circle cx="100" cy="100" r="16" variants={draw} initial={animate ? "hidden" : "visible"} animate="visible" custom={14} strokeWidth="2.5" />
-        
-        {/* Center Spot */}
-        <motion.circle cx="100" cy="100" r="1.5" fill={color} variants={draw} initial={animate ? "hidden" : "visible"} animate="visible" custom={15} />
-
-        {/* Left Penalty Area (Starts at Left Edge 60) */}
-        <motion.path d="M 60 82 L 75 82 L 75 118 L 60 118" variants={draw} initial={animate ? "hidden" : "visible"} animate="visible" custom={16} strokeWidth="2.5" />
-        {/* Left Penalty Arc (using A curve) */}
-        <motion.path d="M 75 91 A 10 10 0 0 1 75 109" variants={draw} initial={animate ? "hidden" : "visible"} animate="visible" custom={18} strokeWidth="2.5" />
-        
-        {/* Right Penalty Area (Aligned perfectly symmetric with Left Goal Line relative to Center X=100. Right Goal Line is X=140.) */}
-        <motion.path d="M 140 82 L 125 82 L 125 118 L 140 118" variants={draw} initial={animate ? "hidden" : "visible"} animate="visible" custom={16} strokeWidth="2.5" />
-        {/* Right Penalty Arc */}
-        <motion.path d="M 125 91 A 10 10 0 0 0 125 109" variants={draw} initial={animate ? "hidden" : "visible"} animate="visible" custom={18} strokeWidth="2.5" />
-      </g>
-    </svg>
-  );
-};
+  color = 'currentColor',
+}) => (
+  <motion.svg
+    width={width}
+    height={height}
+    viewBox="0 0 520 520"
+    className={className}
+    xmlns="http://www.w3.org/2000/svg"
+    initial={animate ? { opacity: 0, scale: 0.92 } : false}
+    animate={animate ? { opacity: 1, scale: 1 } : undefined}
+    transition={{ duration: 0.6, ease: 'easeOut' }}
+  >
+    <path d={AMBLEM_YOLU} fill={color} fillRule="evenodd" />
+  </motion.svg>
+);
