@@ -56,7 +56,7 @@ gerekmiyor; bugün main'e sorunsuz akar.
 | Komut | Beklenen |
 |---|---|
 | `npx tsc --noEmit` | 0 hata |
-| `npx vitest run` | 973 test / 77 dosya, sıfır başarısız |
+| `npx vitest run` | 1017 test / 78 dosya, sıfır başarısız |
 | `npm run test:visual` | 24/24 |
 | `npm run build` | başarılı |
 
@@ -74,6 +74,7 @@ IP-07 (tesis sahibi para dürüstlüğü) · IP-08 (tipografi/kontrast/font) ·
 **IP-09 (renk sistemi, tek aksan)** · **IP-10 (dokunma hedefi, erişilebilirlik)** ·
 **IP-12 (hata ve boş durum sistemi)** · **IP-13 (Türkçe metin ve ton)** ·
 **IP-11 (hareket, pil, algılanan hız)** · **IP-14 (bilgi mimarisi)** ·
+**IP-15 (kayıt kapısı, oturum, yasal onay)** ·
 **IP-19 (para biçimi ve bakiye tekliği)** · IP-20 (bilet çevrimdışı) ·
 S-serisi kararların tamamı.
 
@@ -81,8 +82,7 @@ S-serisi kararların tamamı.
 
 | Sıra | Paket | Not |
 |---|---|---|
-| 1 | **IP-15** — kayıt kapısı, oturum, yasal onay | Kararlar alındı, aşağıda |
-| 2+ | IP-16, 18, 22, 23 (+IP-21/IP-17 ertelendi) | |
+| 1+ | IP-16, 18, 22, 23 (+IP-21/IP-17 ertelendi) | |
 
 ### ⏳ AÇIK İŞ — telefona bildirim (kullanıcı isteği, HENÜZ YAPILMADI)
 
@@ -91,6 +91,54 @@ gelmesini sağla"** (push notification). Bu iş IP-12/IP-14 kapsamında DEĞİLD
 yapılmadı. Başlamadan önce `notifications/pushService.ts`, Supabase'de token
 tablosu, sunucu tarafı gönderim (edge function/cron) ve native yapılandırma
 (google-services.json / APNs) ölçülmeli — büyük ihtimalle sıfırdan iş.
+
+### IP-15 kararları (kullanıcı, bu oturumda)
+
+> ⚠️ **Planın D bölümü ZATEN YAPILMIŞTI.** AuthScreen denetimden sonra yeniden
+> yazılmış: planın saydığı dört `…Disabled` hesabı yok, handler'lar zaten
+> `requireAgreement()` + alan alan Türkçe hata veriyordu. Kalan gerçek kusur
+> butonun GÖRÜNÜŞTE ölü olmasıydı. Ayrıca `COUNTRY_CODES` silinmiş,
+> `hooks/useMatchCreate.ts` yok (kırmızı çizgi), `store.joinMatchPleiAction`
+> yok. Planın 3, 7, 8, 30, 34, 38. maddeleri bu yüzden uygulanamadı.
+
+- **Kapı artık dört yazma yolunda**: maça katıl / yedek ol (`requireAccount`),
+  saha kaporası, maç yayınla, ödeme. Eskiden TEK yerdeydi (`PaymentScreen`),
+  bu yüzden ücretsiz maçta misafir "Slot satın alınamadı" hatası alıyordu.
+- **Maç yayınlama kapısı SON anda** (karar 12a): misafir formu doldurabilir,
+  hesap açınca kaldığı yerden devam eder.
+- **`pendingIntent`** — `localStorage`, 30 dk ömür (karar 11a). OAuth
+  yönlendirmesi sayfayı yeniden yüklediği için bellek yetmiyor. Yalnız
+  **OYUNCU** açılışında tüketilir; tesis sahibi hesabıyla giren biri maç
+  lobisine bırakılmaz. Maç silinmişse normal yönlendirmeye düşer.
+- **Misafir gezinme rıza İSTEMEZ** (karar 6a): sunucuya rıza kaydı gitmiyor.
+- **Onay anında TAM belge** (karar 7b — kullanıcı önerimi reddetti). Özetler
+  silindi; `LegalModal` artık `shared/legalDocs.ts`'ten okuyor, Ayarlar →
+  Yasal ile birebir aynı metin.
+- **Belge adı tek: "Kullanım Şartları"** (karar 8a). "Kullanıcı Sözleşmesi"
+  adı arayüzden kalktı — o adla bir belge zaten yoktu.
+- **Rıza damgası tek kaynaktan** (`shared/legalVersion.ts`). Eskiden sunucuya
+  `2026-07-12/13/14` yazılıyordu, belge ise `15.07.2026` diyordu. Mevcut
+  kullanıcılardan **yeniden onay istenmiyor** (karar 9a).
+- **Telefon girişi EKRANI yazılmadı** (karar 10a): Supabase Phone sağlayıcısının
+  açık olup olmadığı repodan doğrulanamıyor, test edilemeyecek ekran yazılmaz.
+  Ölü `loginWithPhone`/`verifyOtp` çifti silindi; `sendPhoneOtp`/`verifyPhoneOtp`
+  duruyor ve e-posta OTP'siyle aynı yönlendirme yolunu kullanır.
+- **Splash** oturum çözülmeden dokunuşu yutmuyor; 6 sn güvenlik zamanlayıcısı
+  var, bekleme yazısı ~1 sn sonra çıkıyor (karar 13a — hızlı bağlantıda
+  yanıp sönmesin).
+- **Kapı davet oldu**: sarı dolgu → `#39FF14`, "30 saniyeni alır" yalanı
+  kalktı, ikinci buton "Zaten hesabım var — giriş yap" (`authStartMode`).
+
+> **Paket boyutu ölçüldü.** Tam belgeler statik import edilince `main`
+> **101 → 140 KB** oluyordu: 39 KB yasal metni, belgeyi hiç açmayan kullanıcı
+> da indiriyordu. `LegalModal` tembel yüklemeye alındı → `main` **100 KB**
+> (başlangıçtan 1 KB küçük), metin kendi `legalDocs` parçasında dokununca
+> geliyor. `tests/unit/signupGateAndLegal.test.ts` bunu kilitliyor.
+
+> ⚠️ **IP-15'in ÇÖZMEDİĞİ, bilinen davranış:** `SignupGate` bir overlay ve
+> `App.tsx`'teki Android donanım geri tuşu dinleyicisi onu tanımıyor — geri
+> tuşu kapıyı kapatmak yerine uygulamayı küçültüyor. Bu IP-01 kapsamında;
+> kapı artık çok daha sık açılacağı için daha görünür hale gelecek.
 
 ### IP-11 kararları (kullanıcı, bu oturumda)
 

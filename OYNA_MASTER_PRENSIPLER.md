@@ -541,3 +541,76 @@ Kullanıcının dokunduğu şey sunucu yanıtını beklemeden sonucu gösterir (
 yazım); sunucu tek otorite kalır, hata dalında geri alınır. İyimser yazım
 **türetilmiş değil gerçek** veriden yapılır: ekranın kendi doldurduğu varsayılan
 değerler mağazaya yazılırsa uydurma veri kalıcı hale gelir.
+
+---
+
+## 17. Kayıt Kapısı ve Yasal Onay Kuralı (IP-15)
+
+### 17.1 Misafir okur, yazamaz — ve bunu hata olarak öğrenmez
+
+Misafirin denediği **her yazma aksiyonu** kayıt kapısını açar. Sunucuya
+gönderilip hata mesajı olarak geri dönmez: RPC'nin ürettiği "Slot satın
+alınamadı" gibi bir cümle kullanıcıya neyin eksik olduğunu söylemez.
+
+Kapı, aksiyonun **kendi başına** durur:
+
+```ts
+const requireAccount = (): boolean => {
+  if (auth.currentUser) return true;
+  const s = useAppStore.getState();
+  s.setPendingIntent('MATCH_JOIN', match.id);
+  s.setIsSignupGateOpen(true);
+  return false;
+};
+```
+
+Kapı **son anda** açılır — form doldurulabilsin, kullanılamayacak bir ekran
+gösterilmesin.
+
+### 17.2 Başlanan iş kaybolmaz
+
+Kapı, kullanıcının bulunduğu ekranı `pendingIntent` olarak saklar; kayıt +
+onboarding bitince kullanıcı **tam o ekrana** döner. Niyet `localStorage`'a da
+yazılır (OAuth yönlendirmesi sayfayı yeniden yükler) ve **30 dakika** sonra
+düşer — bayat niyet kullanıcıyı beklemediği bir ekrana atar.
+
+Niyet yalnız **oyuncu** açılışında tüketilir: tesis sahibi hesabıyla giren biri
+oyuncu maç lobisine bırakılmaz.
+
+### 17.3 Hiçbir buton sessizce pasif kalmaz
+
+Tek meşru pasiflik nedeni **"işlem sürüyor"**dur. Eksik alan veya onay,
+butonu öldürerek değil, dokunulduğunda **eksik olan tek şeyi söyleyerek**
+bildirilir. Grileşen bir buton kullanıcıya hangi alanın eksik olduğunu
+söylemez; tahmin ettirir.
+
+Hata metni ekran okuyucuya duyurulur: `role="alert" aria-live="assertive"`.
+
+### 17.4 Rıza yalnız hesap açılırken istenir
+
+Salt-okur gezinme yazma eylemi değildir ve sunucuya rıza kaydı gitmez; orada
+KVKK onayı **istenmez**. Onay yalnız hesap açılırken (kayıt / Google / Apple)
+zorunludur.
+
+### 17.5 Onay anındaki metin, resmi belgenin ta kendisidir
+
+Onay kutusundan açılan metin ile Ayarlar → Yasal'daki belge **aynı kaynaktan**
+gelir (`shared/legalDocs.ts`). Kısaltılmış "özet" gösterilmez: kullanıcı neye
+onay verdiğini görebilmelidir.
+
+Belgenin **tek adı** vardır — arayüzde "Kullanıcı Sözleşmesi", yasal ekranda
+"Kullanım Şartları" olamaz.
+
+Sunucuya yazılan **sürüm damgası** belgenin kendi tarihiyle aynı yerden gelir
+(`shared/legalVersion.ts`). Damga metinden eskiyse denetimde "hangi metne onay
+verildi" sorusu cevapsız kalır.
+
+> Yasal metinler ağırdır (≈38 KB). Onay modalı **tembel yüklenir** — belgeyi
+> hiç açmayan kullanıcı indirmez.
+
+### 17.6 Açılış ekranı dokunuşu yutmaz
+
+Oturum çözülmeden dokunuş kabul edilmez; yoksa oturumu açık kullanıcı giriş
+ekranını görür ve ekran altından kayar. Beklerken **ne beklendiği yazılır**
+(~1 sn sonra; hızlı bağlantıda yanıp sönmesin). Ağ takılırsa kullanıcı
+hapsolmaz: **6 saniye** sonra dokunuş yine geçerlidir.

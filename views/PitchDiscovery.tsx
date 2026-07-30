@@ -1020,6 +1020,14 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
   // Kapora ödemesi → birleşik ödeme ekranı (tasarım 1b, bağlam: SAHA KİRALAMA).
   // Kart zorunluluğu ön kapısı kalktı: kart ekleme artık ödeme ekranının içinde.
   const handlePayDeposit = () => {
+    // IP-15 — misafir, kullanamayacağı ödeme ekranını görmeden kapıya çıkar.
+    // Eskiden kapı bir ekran SONRA (PaymentScreen) açılıyordu.
+    if (!auth.currentUser) {
+      const s = useAppStore.getState();
+      s.setPendingIntent('PITCH_DISCOVERY');
+      s.setIsSignupGateOpen(true);
+      return;
+    }
     if (!selectedSlot || !selectedCourtId || !selectedPitch || !selectedCourt || !selectedSlotQuote) return;
     persistBookingSelection();
     setIsDetailOpen(false);

@@ -30,6 +30,7 @@ import { getMatchDetails } from '../services/matchService';
 import { fetchMyFavoritePitchIds } from '../services/pitchFavoritesService';
 import { safeUuid } from '../shared/submitGuard';
 import { trUpper } from '../utils/trUpper';
+import { auth } from '../supabaseAuth';
 import { formatTRYAmount } from '../utils/formatTRY';
 
 // Cüzdan yükleme overlay'i — form kaybolmadan bakiye tamamlanır (gerçek akış).
@@ -374,6 +375,15 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
 
   // ── YAYINLA — atomik ─────────────────────────────────────────────────────
   const publish = useCallback(async () => {
+    // IP-15 — misafir kapısı SON anda: form doldurulabilsin, kaydolunca
+    // kaldığı yerden devam etsin (karar 12a). Eskiden misafirde sunucu
+    // PostgREST'in İngilizce mesajını "Maç yayınlanamadı: …" diye basıyordu.
+    if (!auth.currentUser) {
+      const s = useAppStore.getState();
+      s.setPendingIntent('MATCH_CREATE');
+      s.setIsSignupGateOpen(true);
+      return;
+    }
     // StrictMode/eşzamanlı render'da çift tetiklenmeye karşı kilit
     if (publishBusyRef.current) return;
     publishBusyRef.current = true;

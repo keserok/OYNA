@@ -6,6 +6,7 @@ import { supabase } from './supabaseClient';
 import { useAppStore } from './store';
 import { roleToLandingView, pickLandingRole, hasMultipleSwitchableRoles, normalizeRole } from './shared/roles';
 import { setActiveRole } from './services/userService';
+import { getMatchDetails } from './services/matchService';
 import { initPushNotifications, subscribeToInAppNotifications, clearPushToken, handleDeepLink } from './notifications/pushService';
 import { Capacitor } from '@capacitor/core';
 import { fetchNotificationPreferences } from './notifications/notificationPreferences';
@@ -68,6 +69,30 @@ const LegalScreen = lazy(() => import('./views/LegalScreen'));
 const MessagesView = lazy(() => import('./views/MessagesView'));
 import { BottomNav, TAB_IDS } from './components/BottomNav';
 const RoleSwitcher = lazy(() => import('./components/RoleSwitcher'));
+
+/**
+ * IP-15 — misafirken başlanan işe geri dön.
+ *
+ * Yalnız OYUNCU açılışında uygulanır: tesis/hakem/kaleci hesabıyla giren biri
+ * oyuncu maç lobisine bırakılmaz. Niyet yoksa `null` döner, çağıran normal
+ * yönlendirmesini yapar.
+ */
+const niyetiTuket = async (
+  landingRole: UserRole,
+): Promise<{ view: AppView; matchId?: string } | null> => {
+  if (landingRole !== UserRole.PLAYER) return null;
+  const intent = useAppStore.getState().consumePendingIntent();
+  if (!intent) return null;
+  // Maç lobisine dönülüyorsa maç mağazada olmayabilir (sayfa yenilenmiş olabilir).
+  if (intent.view === 'MATCH_JOIN' && intent.matchId && !useAppStore.getState().selectedMatch) {
+    try {
+      const m = await getMatchDetails(intent.matchId);
+      if (m) useAppStore.getState().setSelectedMatch(m);
+      else return null;   // maç silinmiş/erişilemez → normal yönlendirme
+    } catch { return null; }
+  }
+  return intent;
+};
 
 // Bekleme ekranı. IP-11: tek başına dönen halka "bir şey oluyor" demiyordu;
 // ne beklendiği yazılır ve 4 saniyeyi aşarsa sebebi söylenir. Ekran okuyucu
@@ -387,7 +412,8 @@ const App: React.FC = () => {
                 useAppStore.getState().setServiceAppRole(landingRole);
                 resetNavigation('PENDING_VERIFICATION');
               } else {
-                resetNavigation(navigateBasedOnRole(landingRole));
+                const intent = await niyetiTuket(landingRole);
+                resetNavigation(intent ? intent.view : navigateBasedOnRole(landingRole));
               }
             }
           }
@@ -613,7 +639,14 @@ const App: React.FC = () => {
         // goBack: profil "Tamamla" ile gelindiyse profile döner; yeni kayıt
         // akışında yığın boş → role göre panele (Dashboard) düşer.
         return <Onboarding
-          onComplete={() => goBack(navigateBasedOnRole(useAppStore.getState().role))}
+          onComplete={async () => {
+            // IP-15: kapıdan gelip hesap açan kullanıcı onboarding'den sonra
+            // Ana Sayfa'ya değil, başladığı ekrana döner.
+            const st = useAppStore.getState();
+            const intent = await niyetiTuket(st.role);
+            if (intent) { resetNavigation(intent.view); return; }
+            goBack(navigateBasedOnRole(st.role));
+          }}
         />;
       case 'AUTH':
         return <AuthScreen role={role} onSuccess={() => resetNavigation(navigateBasedOnRole(role))} onBack={() => goBack('SPLASH')} />;

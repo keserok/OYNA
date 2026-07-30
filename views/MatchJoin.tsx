@@ -540,8 +540,10 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
   const awayTeam = match.awayTeamId ? (userTeams || []).find(t => t.id === match.awayTeamId) : null;
 
   // ── Kullanıcı ─────────────────────────────────────────────────────────────
-  // Misafirde gerçek kimlik yok: görüntüleme 'Misafir' etiketiyle yapılır;
-  // katılma aksiyonu store.joinMatch içindeki kayıt kapısına takılır.
+  // Misafirde gerçek kimlik yok: görüntüleme 'Misafir' etiketiyle yapılır.
+  // Yazma aksiyonları (handleBuySlots / handleJoinAsReserve) kendi
+  // başlarındaki requireAccount() kapısında durur.
+  // (Eski yorum "store.joinMatch içindeki kapı" diyordu — öyle bir eylem yok.)
   const currentUserUid = auth.currentUser?.uid ?? 'guest';
   // Gerçek profil (store) önce; admin-only adminUsers yalnız admin oturumunda dolu.
   const currentUserProfile = storeCurrentUserProfile
@@ -675,6 +677,22 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
   // kurucu dahil herkes slot satın alır; ücretsiz maçta aynı RPC 0₺ ile çalışır.
 
   /**
+   * IP-15 — misafir bir YAZMA aksiyonu denerse genel hata toast'ı yerine kayıt
+   * kapısı açılır. Eskiden ücretsiz maçta `player_buy_slots_v2` misafirle
+   * çağrılıyor, RPC hata döndürüyor ve ekranda "Slot satın alınamadı" yazıyordu
+   * — kullanıcı neyin eksik olduğunu anlamıyordu.
+   *
+   * Niyet saklanır: kayıt + onboarding bitince kullanıcı BU maça geri döner.
+   */
+  const requireAccount = (): boolean => {
+    if (auth.currentUser) return true;
+    const s = useAppStore.getState();
+    s.setPendingIntent('MATCH_JOIN', match.id);
+    s.setIsSignupGateOpen(true);
+    return false;
+  };
+
+  /**
    * IP-11 — seçili slotları sunucuyu beklemeden dolu göster; geri alma
    * fonksiyonu döndürür (başarısızlıkta çağrılır).
    *
@@ -703,6 +721,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
 
   const handleBuySlots = async () => {
     if (selectedSlotIds.length === 0) return;
+    if (!requireAccount()) return;
     if (!beginWrite()) return;
     const total = (match.price || 0) * selectedSlotIds.length;
 
@@ -787,6 +806,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
   };
 
   const handleJoinAsReserve = async () => {
+    if (!requireAccount()) return;
     if (isAlreadyJoined || isAlreadyJoinedReserve) return;
     setIsProcessing(true);
 

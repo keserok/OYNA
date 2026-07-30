@@ -197,43 +197,15 @@ export const loginWithApple = async (): Promise<void> => {
   }
 };
 
-// ─── Phone OTP — Adım 1: SMS gönder ─────────────────────────────────────────
-// phone: E.164 formatı zorunlu (+90XXXXXXXXXX)
-export const loginWithPhone = async (phone: string): Promise<void> => {
-  if (!/^\+[1-9]\d{6,14}$/.test(phone)) {
-    throw new Error('invalid_phone');
-  }
-
-  const { error } = await supabase.auth.signInWithOtp({ phone });
-
-  if (error) {
-    if (error.message.toLowerCase().includes('rate')) {
-      throw new Error('rate_limit');
-    }
-    throw new Error('invalid_phone');
-  }
-};
-
-// ─── Phone OTP — Adım 2: Kodu doğrula ───────────────────────────────────────
-export const verifyOtp = async (phone: string, token: string): Promise<void> => {
-  const { data, error } = await supabase.auth.verifyOtp({
-    phone,
-    token,
-    type: 'sms',
-  });
-
-  if (error) {
-    if (error.message.toLowerCase().includes('expired')) {
-      throw new Error('expired_token');
-    }
-    throw new Error('invalid_token');
-  }
-
-  // currentUser'ı yeni oturum bilgisiyle güncelle
-  if (data?.user) {
-    auth.currentUser = await buildCurrentUser(data.user);
-  }
-};
+// IP-15 — ölü `loginWithPhone` / `verifyOtp` çifti SİLİNDİ. Hiçbir ekrandan
+// çağrılmıyorlardı ve aşağıdaki `sendPhoneOtp` / `verifyPhoneOtp` ile İKİ
+// paralel telefon yolu oluşturuyorlardı: bakım borcu.
+//
+// Telefonla giriş EKRANI bu pakette YAPILMADI (kullanıcı kararı 10a): Supabase
+// projesinde Phone sağlayıcısının açık olup olmadığı repodan doğrulanamıyor,
+// yani yazılacak ekran test edilemez. Sağlayıcı açıldığında `sendPhoneOtp` /
+// `verifyPhoneOtp` hazır bekliyor; e-posta OTP'siyle aynı yönlendirme yolunu
+// kullanırlar, ek navigasyon kodu gerekmez.
 
 // ─── Logout ───────────────────────────────────────────────────────────────────
 export const logout = async (): Promise<void> => {
