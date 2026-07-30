@@ -37,7 +37,6 @@ import {
   OwnerCancellationPolicyModal,
   OwnerWithdrawalsModal,
   OwnerWidgetSettingsModal,
-  OwnerOperationsSettingsModal,
   OwnerMatchesModal,
   OwnerNotificationsModal,
   // NOT: OwnerPaymentSettingsModal (PayTR/Param) şu an bağlı değil — ödeme
@@ -64,9 +63,6 @@ import {
   getOwnerBalance,
   getOwnerDailySummary,
   getPitchBookings,
-  getPendingBookings,
-  approveBooking,
-  rejectBooking,
   ownerCreateManualBooking,
   getSubscriptions,
   updateSubscriptionStatus,
@@ -81,8 +77,6 @@ import {
   getBankAccounts,
   getActiveFlashDeals,
   getAvailabilityExceptions,
-  getPitchAppMatches,
-  updatePitchOperationsSettings,
   toTurkishError,
   type CourtDailyStats,
 } from '../services/pitchOwnerService';
@@ -93,7 +87,6 @@ import type { PitchCourt, PitchBookingFull, OwnerDailySummary, OwnerPitch, Flash
 interface OwnerPanelProps {
   onBack: () => void;
   onNavigate: (view: any) => void;
-  onNeedOnboarding?: () => void;
   /** Gerçek oturum kapatma (App merkezî handleLogout) → giriş ekranına düşer. */
   onLogout?: () => void;
 }
@@ -101,14 +94,13 @@ interface OwnerPanelProps {
 // --- HELPERS ---
 
 import { FinancialCalendarView } from './owner/calendar/FinancialCalendarView';
-import { MatchCountdownItem, PitchOccupancyGrid } from './owner/home/OwnerHomeWidgets';
+import { PitchOccupancyGrid } from './owner/home/OwnerHomeWidgets';
 import { OwnerSetupProgress, type SetupStep } from './owner/home/OwnerSetupProgress';
-import { PendingActionsView } from './owner/PendingActionsView';
 import { OwnerBottomSheet } from './owner/components/OwnerBottomSheet';
 import { useConfirmSheet } from './owner/components/useConfirmSheet';
-import { todayISO, bookingToPendingRequest, INITIAL_PENDING_REQUESTS } from './owner/ownerPanelShared';
+import { todayISO } from './owner/ownerPanelShared';
 
-type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACTIONS' | 'PITCHES';
+type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PITCHES';
 
 /**
  * pitch_tariffs satırı → panelin `pricingPolicy` biçimi.
@@ -131,7 +123,7 @@ const tariffRowToPolicy = (t: PitchTariff) => ({
   valid_on: t.valid_on ?? null,
 });
 
- const OwnerPanelInner: React.FC<OwnerPanelProps> = ({ onBack, onNavigate, onNeedOnboarding, onLogout }) => {
+ const OwnerPanelInner: React.FC<OwnerPanelProps> = ({ onBack, onNavigate, onLogout }) => {
   const notify = useOwnerToast();
   const { confirm, confirmElement } = useConfirmSheet();
   const { setIsNotificationsOpen, setIsRoleSwitcherOpen, myRoles, setStaffPanelContext } = useAppStore();
@@ -151,14 +143,10 @@ const tariffRowToPolicy = (t: PitchTariff) => ({
   const [dailySummary, setDailySummary] = useState<OwnerDailySummary | null>(null);
   const [todayBookings, setTodayBookings] = useState<PitchBookingFull[]>([]);
   const [courtStats, setCourtStats] = useState<CourtDailyStats[]>([]);
-  const [autoApproveMinutes, setAutoApproveMinutes] = useState(35);
   const [isDemoMode, setIsDemoMode] = useState(false);
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
   const [isAdminPreview, setIsAdminPreview] = useState(false);
 
-  const [pendingRequests, setPendingRequests] = useState<any[]>(INITIAL_PENDING_REQUESTS);
-  // FAZ1: işlenmekte olan talep id'leri — çift-onay/çift-ret koruması + buton kilidi.
-  const [processingRequestIds, setProcessingRequestIds] = useState<Set<string>>(new Set());
   const [showRevenueModal, setShowRevenueModal] = useState(false);
   const [showOccupancyModal, setShowOccupancyModal] = useState(false);
   const [showEditProfile, setShowEditProfile] = useState(false);
@@ -213,12 +201,10 @@ const tariffRowToPolicy = (t: PitchTariff) => ({
       return saved ? JSON.parse(saved) : [
           'QUICK_STATS',
           'QUICK_ACTIONS',
-          'OCCUPANCY_ANALYSIS',
-          'PENDING_REQUESTS'
+          'OCCUPANCY_ANALYSIS'
       ];
   });
   const [showWidgetSettings, setShowWidgetSettings] = useState(false);
-  const [showOperations, setShowOperations] = useState(false);
   const [showMatches, setShowMatches] = useState(false);
   const [showNotifPrefs, setShowNotifPrefs] = useState(false);
   const [showSecurity, setShowSecurity] = useState(false);
@@ -308,19 +294,17 @@ const tariffRowToPolicy = (t: PitchTariff) => ({
     return () => { cancelled = true; };
   }, [activeTab, realPitchId]);
 
-  const refreshDashboard = React.useCallback(async (pitchId: string, approveMins: number, courtList?: PitchCourt[]) => {
+  const refreshDashboard = React.useCallback(async (pitchId: string, courtList?: PitchCourt[]) => {
     try {
-      const [summary, bookings, pending] = await Promise.all([
+      const [summary, bookings] = await Promise.all([
         getOwnerDailySummary(pitchId),
         getPitchBookings(pitchId, todayISO()),
-        getPendingBookings(pitchId),
       ]);
       setDailySummary(summary);
       setTodayBookings(bookings);
       const activeCourtRows = (courtList ?? courts).filter((c) => c.is_active !== false);
       const courtMeta = activeCourtRows.map((c) => ({ id: c.id, name: c.name }));
       setCourtStats(computeCourtDailyStats(bookings, courtMeta, todayOpenHoursRef.current));
-      setPendingRequests(pending.map((b) => bookingToPendingRequest(b, approveMins)));
     } catch (err) {
       notify(toTurkishError(err), 'error');
     }
@@ -339,7 +323,6 @@ const tariffRowToPolicy = (t: PitchTariff) => ({
     useAppStore.getState().setOwnerActivePitchId(pitch.id);
     setIsDemoMode(demo || !!pitch.is_demo);
     setCourts(facilityCourts);
-    setAutoApproveMinutes(pitch.auto_approve_minutes ?? 35);
     setIsFacilityOpen(pitch.is_open ?? true);
     setFacilityData({
       id: pitch.id,
@@ -357,7 +340,6 @@ const tariffRowToPolicy = (t: PitchTariff) => ({
       district: pitch.district,
       city: pitch.city,
       address: pitch.address,
-      verificationStatus: pitch.verification_status ?? 'pending',
       pricingMode: pitch.pricing_mode ?? 'FULL',
       paymentOptions: { online: true, deposit: false, cash: true },
       paramMerchantId: '',
@@ -366,7 +348,7 @@ const tariffRowToPolicy = (t: PitchTariff) => ({
     });
 
     // Rezervasyon özetleri (HOME) — kortlar zaten set edildi, bloklamadan yükle.
-    void refreshDashboard(pitch.id, pitch.auto_approve_minutes ?? 35, facilityCourts);
+    void refreshDashboard(pitch.id, facilityCourts);
 
     // ── YAVAŞ YOL: ödeme/banka/hesap ayarları — TAMAMEN arkada (await EDİLMEZ).
     // applyPitch bunu beklemez; yükleme efekti isLoading'i çekirdek veri gelir
@@ -530,9 +512,9 @@ const tariffRowToPolicy = (t: PitchTariff) => ({
   useEffect(() => {
     if (!realPitchId) return;
     return subscribeToOwnerBookings(realPitchId, () => {
-      refreshDashboard(realPitchId, autoApproveMinutes);
+      refreshDashboard(realPitchId);
     }, 'panel');
-  }, [realPitchId, autoApproveMinutes, refreshDashboard]);
+  }, [realPitchId, refreshDashboard]);
 
   // Mock fallback kaldırıldı — tesis yoksa onboarding ekranı gösterilir
 
@@ -541,7 +523,6 @@ const tariffRowToPolicy = (t: PitchTariff) => ({
     ? computeOverallOccupancy(todayBookings, dailySummary.active_courts || dailySummary.total_courts, todayOpenHoursRef.current)
     : computeOverallOccupancy(todayBookings, courts.length, todayOpenHoursRef.current);
 
-  const pendingCount = pendingRequests.filter((r) => r.status === 'PENDING').length;
   const confirmedToday = todayBookings.filter((b) => b.status === 'CONFIRMED').length;
 
   const trialDaysLeft = useMemo(() => {
@@ -567,22 +548,8 @@ const tariffRowToPolicy = (t: PitchTariff) => ({
         message: 'DEMO MODU — OYNA Demo Arena (gerçek veri değil)',
       });
     }
-    if (!isDemoMode && facilityData?.verificationStatus === 'pending') {
-      list.push({
-        id: 'verification',
-        tone: 'info',
-        message: 'Tesisin onay bekliyor — Sahalar\'da henüz görünmüyor',
-      });
-    }
-    if (!isDemoMode && facilityData?.verificationStatus === 'rejected') {
-      list.push({
-        id: 'rejected',
-        tone: 'danger',
-        message: 'Tesis başvurun reddedildi — ayarlardan güncelle',
-      });
-    }
     return list;
-  }, [isAdminPreview, isDemoMode, facilityData?.verificationStatus, facilityData?.name, ownerAccount, isPastDue]);
+  }, [isAdminPreview, isDemoMode, facilityData?.name, ownerAccount, isPastDue]);
 
   const homeKpis = useMemo((): OwnerKpiItem[] => [
     {
@@ -605,14 +572,6 @@ const tariffRowToPolicy = (t: PitchTariff) => ({
       onClick: () => setShowOccupancyModal(true),
     },
     {
-      id: 'pending',
-      label: 'Onay Bekleyen',
-      value: String(pendingCount),
-      accent: pendingCount > 0 ? 'amber' : 'slate',
-      icon: kpiIcons.clock,
-      onClick: pendingCount > 0 ? () => setActiveTab('PENDING_ACTIONS') : undefined,
-    },
-    {
       id: 'confirmed',
       label: 'Onaylı Maç',
       value: String(confirmedToday),
@@ -621,7 +580,7 @@ const tariffRowToPolicy = (t: PitchTariff) => ({
       icon: kpiIcons.calendar,
       onClick: () => setActiveTab('CALENDAR'),
     },
-  ], [dynamicTotalRevenue, dynamicOccupancyRatio, pendingCount, confirmedToday]);
+  ], [dynamicTotalRevenue, dynamicOccupancyRatio, confirmedToday]);
 
   useEffect(() => {
       localStorage.setItem('owner_activeWidgets', JSON.stringify(activeWidgets));
@@ -630,10 +589,6 @@ const tariffRowToPolicy = (t: PitchTariff) => ({
   const toggleFacilityStatus = async () => {
     if (!effGuardWrite()) return;
     if (!facilityData?.id) return;
-    if (!isDemoMode && facilityData.verificationStatus !== 'approved') {
-      notify('Tesis admin onayından sonra yayına alınabilir.', 'warning');
-      return;
-    }
 
     const newStatus = !isFacilityOpen;
     setIsFacilityOpen(newStatus); // iyimser güncelleme
@@ -655,22 +610,6 @@ const tariffRowToPolicy = (t: PitchTariff) => ({
     }
   };
 
-  const [autoApprove, setAutoApprove] = useState(true);
-  useEffect(() => {
-    if (!realPitchId) return;
-    supabase
-      .from('pitches')
-      .select('auto_approve_enabled, auto_approve_minutes')
-      .eq('id', realPitchId)
-      .single()
-      .then(({ data }) => {
-        if (!data) return;
-        const row = data as { auto_approve_enabled?: boolean; auto_approve_minutes?: number };
-        setAutoApprove(row.auto_approve_enabled ?? true);
-        if (row.auto_approve_minutes != null) setAutoApproveMinutes(row.auto_approve_minutes);
-      });
-  }, [realPitchId]);
-
   useEffect(() => {
     if (activeTab !== 'MORE' || !realPitchId) return;
     if (realPitchId.startsWith('mock-')) {
@@ -687,10 +626,7 @@ const tariffRowToPolicy = (t: PitchTariff) => ({
   const menuStats: OwnerMenuStats = useMemo(
     () => ({
       isFacilityOpen,
-      verificationStatus: facilityData?.verificationStatus ?? 'pending',
       bankAccountCount: facilityData?.bankAccounts?.length ?? 0,
-      autoApproveEnabled: autoApprove,
-      autoApproveMinutes,
       availableBalance: menuBalance,
       paramConfigured: Boolean(
         facilityData?.paramMerchantId &&
@@ -709,8 +645,6 @@ const tariffRowToPolicy = (t: PitchTariff) => ({
     [
       isFacilityOpen,
       facilityData,
-      autoApprove,
-      autoApproveMinutes,
       menuBalance,
       courts,
     ],
@@ -739,75 +673,17 @@ const tariffRowToPolicy = (t: PitchTariff) => ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [facilityData, menuStats.courtCount, menuStats.courtsWithoutTariff]);
 
-  const toggleAutoApprove = async () => {
-    if (!effGuardWrite()) return;
-    const next = !autoApprove;
-    setAutoApprove(next);
-    if (!realPitchId) return;
-    try {
-      await updatePitchOperationsSettings(realPitchId, { auto_approve_enabled: next });
-    } catch (err) {
-      setAutoApprove(!next);
-      notify(toTurkishError(err), 'error');
-    }
-  };
-
-  const handleProcessRequest = async (id: string, action: 'APPROVE' | 'REJECT') => {
-      if (!effGuardWrite()) return;
-      // BULGU-121: Reddet geri alınamaz + müşteriye ret bildirimi gider. Onay,
-      // iyimser işaretlemeden ÖNCE sorulur — "Vazgeç" kartı hiç bozmasın.
-      // PendingActionsView ile AYNI onay kalıbı.
-      if (action === 'REJECT') {
-          const req = pendingRequests.find((r: any) => r.id === id);
-          const ok = await confirm({
-              title: 'Rezervasyonu reddet?',
-              message: req?.subtitle
-                  ? `${req.subtitle} talebi reddedilecek. Bu işlem geri alınamaz.`
-                  : 'Bu rezervasyon talebi geri alınamaz şekilde reddedilecek.',
-              confirmLabel: 'Reddet',
-              destructive: true,
-          });
-          if (!ok) return;
-      }
-      // FAZ1: aynı talep zaten işleniyorsa ikinci dokunuşu yok say (çift onay/ret = para kaybı).
-      if (processingRequestIds.has(id)) return;
-      setProcessingRequestIds((prev) => { const n = new Set(prev); n.add(id); return n; });
-      // İyimser: talebi hemen işaretle (liste yenilenince sunucu gerçeğiyle değişir).
-      setPendingRequests((prev: any[]) => prev.map(req =>
-          req.id === id ? { ...req, status: action === 'APPROVE' ? 'APPROVED' : 'REJECTED' } : req
-      ));
-      try {
-          if (realPitchId) {
-              if (action === 'APPROVE') {
-                  await approveBooking(id);
-              } else {
-                  await rejectBooking(id, 'Tesis sahibi tarafından reddedildi.');
-              }
-              await refreshDashboard(realPitchId, autoApproveMinutes);
-          }
-      } catch (err) {
-          notify(toTurkishError(err), 'error');
-          // İyimser değişikliği geri al: sunucu gerçeğini yeniden çek.
-          if (realPitchId) await refreshDashboard(realPitchId, autoApproveMinutes);
-      } finally {
-          setProcessingRequestIds((prev) => { const n = new Set(prev); n.delete(id); return n; });
-      }
-  };
-
   if (needsOnboarding && !isLoading) {
+    // IP-22: kendi kendine tesis başvurusu kaldırıldı. Tesisler OYNA ekibi
+    // tarafından eklenir; panel de artık olmayan bir kayıt akışını vaat etmez.
     return (
       <div className="min-h-dvh flex flex-col items-center justify-center bg-[#0A0E14] text-white p-8 text-center safe-top safe-bottom">
         <Building2 size={64} className="text-[#FACC15] mb-6" />
-        <h1 className="text-2xl font-extrabold mb-3">Tesisini OYNA&apos;ya Ekle</h1>
+        <h1 className="text-2xl font-extrabold mb-3">Hesabına bağlı tesis yok</h1>
         <p className="text-gray-400 text-sm max-w-sm mb-8">
-          Ücretli işletme paneline erişmek için tesis kaydını tamamla. Demo verisi kaldırıldıysa gerçek tesisini oluştur.
+          Tesisler OYNA ekibi tarafından tanımlanır ve yetkileri buradan verilir.
+          Anlaşman varsa tesisin panele bağlanması için OYNA ile iletişime geç.
         </p>
-        <button
-          onClick={() => onNeedOnboarding?.()}
-          className="px-8 py-4 bg-[#FACC15] text-black font-extrabold rounded-2xl mb-4"
-        >
-          TESİS KAYDI BAŞLAT
-        </button>
         <button onClick={onBack} className="text-ink-4 text-sm font-bold">Geri Dön</button>
       </div>
     );
@@ -860,11 +736,10 @@ const tariffRowToPolicy = (t: PitchTariff) => ({
                       render edilmiyordu; şerit artık alt barın üstünde, tüm sekmelerde. */}
                   <button
                     onClick={() => setIsNotificationsOpen(true)}
-                    aria-label={pendingCount > 0 ? `Bildirimler (${pendingCount} bekleyen)` : 'Bildirimler'}
+                    aria-label="Bildirimler"
                     className="w-11 h-11 flex items-center justify-center rounded-lg hover:bg-[#252B3B] text-gray-400 relative active:scale-95 transition-transform"
                   >
                       <Bell size={20} />
-                      {pendingCount > 0 && <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse border-2 border-[#0A0E14]"></span>}
                   </button>
               </div>
           </header>
@@ -883,9 +758,7 @@ const tariffRowToPolicy = (t: PitchTariff) => ({
           // pb-40: çevrimdışı kuyruk şeridi (44px) + alt bar son kartı örtmesin.
           <main className="flex-1 px-6 pt-6 overflow-y-auto custom-scrollbar pb-40">
               <OwnerCommandStrip
-                pendingCount={pendingCount}
                 isFacilityOpen={isFacilityOpen}
-                onPendingClick={pendingCount > 0 ? () => setActiveTab('PENDING_ACTIONS') : undefined}
                 onCalendarClick={() => setActiveTab('CALENDAR')}
               />
 
@@ -934,32 +807,6 @@ const tariffRowToPolicy = (t: PitchTariff) => ({
                         <span className="text-[0.625rem] font-bold text-ink-4 group-hover:text-white uppercase tracking-wider flex items-center gap-1">Takvim <ChevronRight size={13} /></span>
                     </button>
                     <PitchOccupancyGrid grid={occupancyGrid} />
-                  </div>
-              )}
-
-              {activeWidgets.includes('PENDING_REQUESTS') && (
-                  <div className="bg-[#161B22] border border-white/5 rounded-2xl p-6 mb-6 shadow-xl relative overflow-hidden">
-                      <h3 className="font-bold text-white text-base flex items-center gap-2 mb-4">
-                          <Clock size={18} className="text-yellow-500" /> Onay Bekleyen Talepler
-                      </h3>
-                      {pendingCount > 0 ? (
-                          <div className="space-y-4">
-                              {pendingRequests.filter((r: any) => r.status === 'PENDING').slice(0, 3).map((req: any) => (
-                                  <MatchCountdownItem
-                                      key={req.id}
-                                      request={req}
-                                      isProcessing={processingRequestIds.has(req.id)}
-                                      onApprove={() => handleProcessRequest(req.id, 'APPROVE')}
-                                      onReject={() => handleProcessRequest(req.id, 'REJECT')}
-                                  />
-                              ))}
-                              {pendingCount > 3 && (
-                                  <button onClick={() => setActiveTab('PENDING_ACTIONS')} className="w-full py-2 text-xs font-bold text-blue-400 hover:text-blue-300 text-center">Tümünü Gör ({pendingCount})</button>
-                              )}
-                          </div>
-                      ) : (
-                          <p className="text-sm text-ink-4 text-center py-4">Bekleyen talep bulunmuyor.</p>
-                      )}
                   </div>
               )}
 
@@ -1019,18 +866,6 @@ const tariffRowToPolicy = (t: PitchTariff) => ({
           accessLevel={accessLevel}
         />
       )}
-      {activeTab === 'PENDING_ACTIONS' && (
-          <PendingActionsView
-              pendingRequests={pendingRequests}
-              realPitchId={realPitchId}
-              autoApprove={autoApprove}
-              onToggleAutoApprove={toggleAutoApprove}
-              processingIds={processingRequestIds}
-              onApprove={(id) => handleProcessRequest(id, 'APPROVE')}
-              onReject={(id) => handleProcessRequest(id, 'REJECT')}
-              onBack={() => setActiveTab('HOME')}
-          />
-      )}
       {activeTab === 'MORE' && (
         <OwnerMenuView
           onNavigate={onNavigate}
@@ -1045,9 +880,6 @@ const tariffRowToPolicy = (t: PitchTariff) => ({
           }}
           onWorkingHours={() => {
             if (managerGuard()) setShowWorkingHours(true);
-          }}
-          onOperations={() => {
-            if (managerGuard()) setShowOperations(true);
           }}
           onMatches={() => {
             if (managerGuard()) setShowMatches(true);
@@ -1117,16 +949,6 @@ const tariffRowToPolicy = (t: PitchTariff) => ({
           /* Karar #26: skor girişi yalnız SAHİP + MÜDÜR; PERSONEL salt-okunur. */
           readOnly={effReadOnly || !isManagerLevel}
           onClose={() => setShowMatches(false)}
-        />
-      )}
-      {showOperations && (
-        <OwnerOperationsSettingsModal
-          onClose={() => setShowOperations(false)}
-          facilityId={facilityData?.id ?? ''}
-          onUpdated={({ autoApproveEnabled, autoApproveMinutes: mins }) => {
-            setAutoApprove(autoApproveEnabled);
-            setAutoApproveMinutes(mins);
-          }}
         />
       )}
       {showBankAccountList && (
@@ -1220,7 +1042,6 @@ const tariffRowToPolicy = (t: PitchTariff) => ({
 
       <OwnerBottomNav
         activeTab={activeTab}
-        pendingCount={pendingCount}
         financeLocked={false}
         teamLocked={false}
         hiddenTabs={accessLevel === 'STAFF' ? ['FINANCE', 'TEAM'] : []}

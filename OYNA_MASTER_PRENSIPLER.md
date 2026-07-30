@@ -705,3 +705,42 @@ iyidir.
 
 "Silüet yok" gibi ifadeler kullanıcıya ne yapacağını söylemez. Metin, eylemi
 söyler: "Fotoğraf ekle".
+
+---
+
+## 20. Rezervasyon ve Tesis Sahipliği Kuralı (IP-22)
+
+### 20.1 Rezervasyon anında kesinleşir
+
+Oyuncu bir saati aldığında rezervasyon **o anda** kesinleşir. "Onay bekleyen
+rezervasyon" diye bir durum yoktur; ne tesis sahibi onaylar, ne bir sayaç
+işler, ne de sunucu arka planda otomatik onaylar. Uygulamadan gelen de,
+tesisin kendi girdiği de, yönetici panelinden yapılan da aynı yoldan geçer ve
+aynı anda kesinleşir.
+
+Aynı saatin iki kez satılmasını veritabanının kendi kısıtı engeller; bu koruma
+onaya bağlı değildir, her zaman çalışır.
+
+### 20.2 Kullanıcıya bekleme vaat edilmez
+
+Ekranda geri sayan sayaç, "süre bitince otomatik onaylanacak" yazısı veya
+"onay bekliyor" rozeti bulunmaz. Bu cümleler kullanıcıyı bekletiyordu ve çoğu
+zaman gerçekleşmiyordu.
+
+### 20.3 Tesisler OYNA tarafından tanımlanır
+
+Kullanıcı kendi kendine tesis kaydı **açamaz**. Anlaşılan tesis yönetici
+panelinden eklenir; sahibi, müdürü ve personeli de oradan atanır. Bunun doğal
+sonucu: "tesisin onay bekliyor" / "başvurun reddedildi" gibi ekranlar yoktur,
+çünkü onaylanacak bir başvuru yoktur.
+
+Tesisin adı ve konumu sahibi tarafından doğrudan değiştirilemez; değişiklik
+talebi olarak yöneticiye gider. Bu kural sunucudaki koruma tetikleyicisiyle
+zorunlu kılınmıştır, arayüzün nezaketi değildir.
+
+### 20.4 Paranın yönü iptalden önce söylenir
+
+Tesis kesinleşmiş bir rezervasyonu iptal edebilir. Ancak onay penceresi,
+**iptal etmeden önce**, ödeme altyapısının o tahsilat için kestiği ücretin geri
+alınmadığını ve tesise yapılacak ödemeden düşüleceğini açıkça yazar. Parasal
+sonucu olan bir işlem, sonucu gizlenerek onaylatılmaz.

@@ -59,7 +59,6 @@ const MatchCreate = lazy(() => import('./views/MatchCreate'));
 const MyMatchesHub = lazy(() => import('./views/MyMatchesHub'));
 const OwnerPanel = lazy(() => import('./views/OwnerPanel'));
 const ServiceDashboard = lazy(() => import('./views/ServiceDashboard'));
-const PartnerOnboarding = lazy(() => import('./views/PartnerOnboarding'));
 const Onboarding = lazy(() => import('./views/Onboarding'));
 const GuardianConsentChild = lazy(() => import('./views/GuardianConsentChild'));
 const GuardianConsentForm = lazy(() => import('./views/GuardianConsentForm'));
@@ -703,17 +702,11 @@ const App: React.FC = () => {
           <OwnerPanel
             onBack={() => goBack(navigateBasedOnRole(role))}
             onNavigate={(v) => navigateTo(v as AppView)}
-            onNeedOnboarding={() => navigateTo('PARTNER_ONBOARDING')}
             onLogout={handleLogout}
           />
         );
       case 'SERVICE_DASHBOARD':
         return <ServiceDashboard role={role!} onBack={() => goBack(navigateBasedOnRole(role))} onNavigate={(v) => navigateTo(v)} onLogout={handleLogout} />;
-      case 'PARTNER_ONBOARDING':
-        return <PartnerOnboarding
-          onComplete={() => resetNavigation('OWNER_PANEL')}
-          onClose={() => goBack(navigateBasedOnRole(role))}
-        />;
       case 'SERVICE_APPLICATION':
         return <ServiceApplication
           role={(serviceAppRole === UserRole.REFEREE ? UserRole.REFEREE : UserRole.GOALKEEPER)}

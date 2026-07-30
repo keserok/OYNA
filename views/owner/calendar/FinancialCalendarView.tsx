@@ -99,7 +99,7 @@ function mapDbBookingToCalendar(b: PitchBookingFull): CalendarBooking {
   };
 }
 
-type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PENDING_ACTIONS' | 'PITCHES';
+type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PITCHES';
 
 // --- COMPONENTS ---
 

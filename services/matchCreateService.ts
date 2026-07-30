@@ -55,14 +55,13 @@ interface DbCreatePitchRow {
 }
 
 /**
- * Onaylı + yayında tesisler ve aktif sahaları. Sıralama istemcide yapılır:
+ * Yayında olan açık tesisler ve aktif sahaları. Sıralama istemcide yapılır:
  * favoriler → daha önce maç kurulan tesisler → puan (rating_count kapılı).
  */
 export async function fetchCreateFacilities(): Promise<CreateFacility[]> {
   const { data, error } = await supabase
     .from('pitches')
     .select('id, name, district, city, image, images, rating, rating_count, google_rating, courts(id, name, court_type, min_capacity, max_capacity, size_label, price, is_active, sort_order), pitch_tariffs(id, is_active)')
-    .eq('verification_status', 'approved')
     .eq('is_published', true)
     .eq('is_open', true);
   if (error) throw error;

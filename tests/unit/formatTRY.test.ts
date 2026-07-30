@@ -155,7 +155,6 @@ describe('ekranlarda elle para dizilmiyor', () => {
   const SUS_ALANI = [
     'views/WalletScreen.tsx',
     'views/ServiceProfile.tsx',
-    'views/PartnerOnboarding.tsx',
     'views/ServiceDashboard.tsx',
     'views/ServiceApplication.tsx',
     'views/MatchJoin.tsx',

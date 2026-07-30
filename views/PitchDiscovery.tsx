@@ -533,7 +533,6 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
       const pitchRes = await supabase
         .from('pitches')
         .select(PITCH_SHOWCASE_SELECT)
-        .eq('verification_status', 'approved')
         .eq('is_open', true)
         .eq('is_published', true);
 

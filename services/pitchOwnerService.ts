@@ -288,32 +288,8 @@ export async function getPitchBookings(
   }
 }
 
-export async function approveBooking(bookingId: string): Promise<void> {
-  try {
-    // STAFF-2: kasa (sahip/müdür/personel) denetimli RPC ile onaylar — yalnız
-    // PENDING→CONFIRMED. Ham tablo yazımı artık personel için kapalı.
-    const { error } = await supabase.rpc('staff_approve_booking', { p_booking_id: bookingId });
-    if (error) throw error;
-  } catch (error) {
-    console.error('approveBooking:', error);
-    throw new Error(toTurkishError(error));
-  }
-}
-
-export async function rejectBooking(bookingId: string, reason: string): Promise<void> {
-  try {
-    // STAFF-2: kasa denetimli RPC — yalnız PENDING reddi; cancelled_by sunucuda.
-    // Oyuncuya ret bildirimi DB trigger'ından gelir (notify_booking_events).
-    const { error } = await supabase.rpc('staff_reject_pending', {
-      p_booking_id: bookingId,
-      p_reason: reason,
-    });
-    if (error) throw error;
-  } catch (error) {
-    console.error('rejectBooking:', error);
-    throw new Error(toTurkishError(error));
-  }
-}
+// IP-22: onay/ret akışı kaldırıldı — rezervasyon oluşur oluşmaz kesinleşir.
+// Tesisin elinde kalan tek işlem, kesinleşmiş rezervasyonu iptal etmek.
 
 /**
  * Onaylanmış (CONFIRMED) bir rezervasyonu iptal eder (acil iptal).
@@ -710,57 +686,6 @@ export async function togglePitchOpen(pitchId: string, isOpen: boolean): Promise
   }
 }
 
-export interface PitchOperationsSettings {
-  is_open: boolean;
-  auto_approve_enabled: boolean;
-  auto_approve_minutes: number;
-}
-
-export async function getPitchOperationsSettings(pitchId: string): Promise<PitchOperationsSettings> {
-  try {
-    const { data, error } = await supabase
-      .from('pitches')
-      .select('is_open, auto_approve_enabled, auto_approve_minutes')
-      .eq('id', pitchId)
-      .single();
-    if (error) throw error;
-    const row = data as {
-      is_open?: boolean;
-      auto_approve_enabled?: boolean;
-      auto_approve_minutes?: number;
-    };
-    return {
-      is_open: row.is_open ?? true,
-      auto_approve_enabled: row.auto_approve_enabled ?? true,
-      auto_approve_minutes: row.auto_approve_minutes ?? 35,
-    };
-  } catch (error) {
-    console.error('getPitchOperationsSettings:', error);
-    throw new Error(toTurkishError(error));
-  }
-}
-
-export async function updatePitchOperationsSettings(
-  pitchId: string,
-  settings: Partial<Pick<PitchOperationsSettings, 'auto_approve_enabled' | 'auto_approve_minutes'>>,
-): Promise<void> {
-  try {
-    const payload: Record<string, unknown> = {};
-    if (settings.auto_approve_enabled !== undefined) {
-      payload.auto_approve_enabled = settings.auto_approve_enabled;
-    }
-    if (settings.auto_approve_minutes !== undefined) {
-      payload.auto_approve_minutes = settings.auto_approve_minutes;
-    }
-    if (Object.keys(payload).length === 0) return;
-    const { error } = await supabase.from('pitches').update(payload).eq('id', pitchId);
-    if (error) throw error;
-  } catch (error) {
-    console.error('updatePitchOperationsSettings:', error);
-    throw new Error(toTurkishError(error));
-  }
-}
-
 // ----------------------------------------------------------------------------
 // EXPENSES
 // ----------------------------------------------------------------------------
@@ -908,63 +833,6 @@ export async function deleteFlashDeal(dealId: string): Promise<void> {
     if (error) throw error;
   } catch (error) {
     console.error('deleteFlashDeal:', error);
-    throw new Error(toTurkishError(error));
-  }
-}
-
-export interface PitchAppMatchRow {
-  id: string;
-  bookingId: string;
-  title: string;
-  pitchName: string;
-  time: string;
-  price: number;
-  maxPlayers: number;
-  joinedPlayers: number;
-  status: string;
-}
-
-export async function getPitchAppMatches(pitchId: string): Promise<PitchAppMatchRow[]> {
-  try {
-    const { data, error } = await supabase
-      .from('pitch_bookings')
-      .select('id, booking_date, start_time, price, status, match_id, courts(name), matches(id, title, status, slots, away_slots, date, time, location)')
-      .eq('pitch_id', pitchId)
-      .eq('source', 'APP_MATCH')
-      .neq('status', 'CANCELLED')
-      .not('match_id', 'is', null)
-      .order('booking_date', { ascending: false })
-      .limit(50);
-    if (error) throw error;
-
-    return (data ?? []).map((row: Record<string, unknown>) => {
-      const match = row.matches as Record<string, unknown> | null;
-      const slots = (match?.slots as unknown[]) ?? [];
-      const awaySlots = (match?.away_slots as unknown[]) ?? [];
-      const allSlots = [...slots, ...awaySlots];
-      const taken = allSlots.filter((s) => {
-        const slot = s as { status?: string };
-        return slot.status === 'TAKEN';
-      }).length;
-      const courtName = (row.courts as { name?: string } | null)?.name ?? 'Saha';
-      const bookingDate = String(row.booking_date ?? '');
-      const startTime = String(row.start_time ?? '').slice(0, 5);
-      const matchDate = String(match?.date ?? bookingDate);
-      const matchTime = String(match?.time ?? startTime);
-      return {
-        id: String(match?.id ?? row.match_id),
-        bookingId: String(row.id),
-        title: String(match?.title ?? 'Oyuncu Maçı'),
-        pitchName: courtName,
-        time: `${matchDate} ${matchTime}`.trim(),
-        price: Number(row.price ?? 0),
-        maxPlayers: allSlots.length || 14,
-        joinedPlayers: taken,
-        status: String(match?.status ?? row.status ?? 'ACTIVE'),
-      };
-    });
-  } catch (error) {
-    console.error('getPitchAppMatches:', error);
     throw new Error(toTurkishError(error));
   }
 }
@@ -1432,23 +1300,6 @@ export function computeOverallOccupancy(
     .filter((b) => b.status !== 'CANCELLED')
     .reduce((s, b) => s + spanHours(b.start_time, b.end_time), 0);
   return Math.min(100, Math.round((booked / totalSlots) * 100));
-}
-
-export async function getPendingBookings(pitchId: string): Promise<PitchBookingFull[]> {
-  try {
-    const { data, error } = await supabase
-      .from('pitch_bookings')
-      .select('*, courts(name)')
-      .eq('pitch_id', pitchId)
-      .eq('status', 'PENDING')
-      .gte('booking_date', todayISO())
-      .order('created_at', { ascending: true });
-    if (error) throw error;
-    return (data ?? []) as unknown as PitchBookingFull[];
-  } catch (error) {
-    console.error('getPendingBookings:', error);
-    throw new Error(toTurkishError(error));
-  }
 }
 
 export interface CourtInput {
