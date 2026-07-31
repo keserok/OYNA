@@ -97,8 +97,96 @@
   unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;
 }
 
+/* ══════════════════════════════════════════════════════════════════════════
+   MONTSERRAT (başlık) + LORA (gövde/etiket) — onaylı ana sayfa tasarımının
+   resmî yazı tipleri. Inter KALDIRILMADI: `--font-sans` hâlâ Inter'dir ve
+   ana sayfa dışındaki tüm ekranlar onunla çizilir. Bu ikisi ek token'dır.
+
+   Inter ile AYNI kurallar: kendi sunucumuzdan (public/fonts), değişken
+   eksenli tek dosya, `font-display: swap`, Google CDN YOK. Çevrimdışıyken
+   arayüz sistem fontuna düşmez.
+
+   Türkçe kapsama: `ı` (U+0131) latin altkümesinde; `İ ğ Ğ ş Ş` ve `₺`
+   (U+20BA) latin-ext'te. İKİSİ de tanımlı — biri eksik kalırsa Türkçe metin
+   bozulur. `unicode-range` sayesinde tarayıcı yalnız gerekeni indirir.
+
+   Ağırlık aralıkları üreticinin çizdiği kadardır: Montserrat 100–900,
+   Lora 400–700. `font-synthesis: none` gövdede açık olduğu için bu aralığın
+   dışı SAHTE çizilmez — yanlışlık görünür olur.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('/fonts/montserrat-latin-wght-normal.woff2') format('woff2-variations');
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('/fonts/montserrat-latin-ext-wght-normal.woff2') format('woff2-variations');
+  unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Montserrat';
+  font-style: italic;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('/fonts/montserrat-latin-wght-italic.woff2') format('woff2-variations');
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
+@font-face {
+  font-family: 'Montserrat';
+  font-style: italic;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('/fonts/montserrat-latin-ext-wght-italic.woff2') format('woff2-variations');
+  unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;
+}
+
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('/fonts/lora-latin-wght-normal.woff2') format('woff2-variations');
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('/fonts/lora-latin-ext-wght-normal.woff2') format('woff2-variations');
+  unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('/fonts/lora-latin-wght-italic.woff2') format('woff2-variations');
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('/fonts/lora-latin-ext-wght-italic.woff2') format('woff2-variations');
+  unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;
+}
+
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  /* Onaylı ana sayfa tasarımının iki resmî yazı tipi. Yedekte Inter durur:
+     bir glif (ör. ₺) Montserrat/Lora'da yoksa metin kaybolmaz, Inter çizer. */
+  --font-display: "Montserrat", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-body: "Lora", "Inter", Georgia, ui-serif, serif;
   --breakpoint-xs: 375px;
   
   /* ─── IP-09 · OYNA RENK-ROL TABLOSU ──────────────────────────────────────
@@ -168,6 +256,29 @@
   --color-info-bg: rgba(96,165,250,0.12);
   --color-info-line: rgba(96,165,250,0.35);
   
+  /* ─── ANA SAYFA · KATEGORİ AKSAN RENKLERİ ────────────────────────────────
+     Onaylı ana sayfa tasarımının kart kimliği. Her kartın kendi rengi var ki
+     kullanıcı ekranı taramadan "hangi kutu neydi"yi hatırlasın.
+
+     KULLANIM ALANI (üçü ile sınırlı):
+       1. kartın üst ışık çizgisi (2px),
+       2. ikon halkasının kenarı + ikonun kendisi,
+       3. bölüm etiketi ("REZERVASYON", "ORGANİZASYON").
+     KULLANILMAZ: buton dolgusu, gövde metni rengi, başka ekranların durum
+     göstergesi. Durum dili (başarı/bekliyor/hata/bilgi) YUKARIDAKİ dörtlüden
+     gelir; bu aksanlar yalnız KİMLİKTİR, ANLAM taşımaz.
+
+     Onaylanmış bilinçli istisna: --color-cat-keeper birincil yeşille aynı
+     tondadır. Kaleci kartı etkileşimlidir (role="button"), dekoratif değil —
+     "#39FF14 asla dekoratif" kuralı ihlal edilmiş olmaz.
+  ────────────────────────────────────────────────────────────────────────── */
+  --color-cat-play:   #FACC15;      /* Top Oyna      */
+  --color-cat-pitch:  #10B981;      /* Sahalar       */
+  --color-cat-create: #FF7A00;      /* Maç Kur       */
+  --color-cat-keeper: #39FF14;      /* Kaleci        */
+  --color-cat-ref:    #60A5FA;      /* Hakem         */
+  --color-cat-studio: #F87171;      /* Taktik Stüdyo */
+
   /* Custom Animations & Transitions */
   --animate-pulse-slow: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
@@ -200,6 +311,24 @@
    `safe-area-top` kullanıyordu ama TANIMSIZDI → çentikli cihazda modal başlığı
    Dynamic Island altına giriyordu. (Unlayered kural, Tailwind p-4'ü ezer.) */
 .safe-area-top { padding-top: calc(var(--safe-top) + 1rem); }
+
+/* ─── Ana sayfa üst boşluğu (views/Dashboard.tsx) ──────────────────────────
+   Onaylı tasarım üst boşluğu SABİT verir: clamp(42px, 7.1cqh, 60px). Bu değer
+   390×844 maketinde doğrudur ama gerçek cihazda tek başına yetmez — iPhone'un
+   Dynamic Island'ı 59px'e kadar iner ve "ANA SAYFA" başlığı altına girerdi.
+   Tersi de kötü: sadece güvenli alanı kullanmak (pt-safe) çentiksiz Android'de
+   boşluğu tasarımdakinin yarısına düşürür, düzen yukarı kayar.
+   Kullanıcı kararı: İKİSİNDEN BÜYÜĞÜ. Maket ölçüsünde tasarım birebir korunur
+   (env = 0 → 42–60px), çentikli cihazda gerektiği kadar büyür. Ne çakışma
+   ne fazla boşluk.
+   `cqh`, Dashboard kökündeki `container-type: size` bağlamına göre çözülür. */
+.dash-safe-top {
+  padding-top: max(calc(var(--safe-top) + 0.5rem), clamp(42px, 7.1cqh, 60px));
+}
+/* Çevrimdışı şeridi açıkken diğer üst-boşluk sınıflarıyla aynı davranış. */
+body.offline-banner-on .dash-safe-top {
+  padding-top: calc(max(calc(var(--safe-top) + 0.5rem), clamp(42px, 7.1cqh, 60px)) + var(--offline-banner-h));
+}
 
 /* ─── Çevrimdışı şeridi yer kaplar (components/OfflineBanner.tsx) ──────────
    Şerit `fixed top-0 z-[100]` çizilir; kabuk yer açmazsa üstteki geri/kapat
@@ -529,6 +658,21 @@ body.kb-open .pb-safe-6 {
   100% { transform: translateX(200%); }
 }
 .animate-shimmer { animation: shimmer 1.4s ease-in-out; }
+
+/* Ana sayfa iskelet çubuğu (views/Dashboard.tsx · YÜKLENİYOR durumu).
+   Yukarıdaki `shimmer`dan farkı: o öğeyi KAYDIRIR (transform), bu ise
+   degradeyi öğenin İÇİNDE gezdirir (background-position) — çubuk yerinde
+   durur, üstünden ışık geçer. Kart yerleşimi hiç oynamaz.
+   `prefers-reduced-motion` bloğu (dosyanın sonunda) bunu da durdurur. */
+@keyframes oyna-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Ana sayfa kapı kartlarının basılı hâli. Kartlar framer-motion kullanmaz
+   (altı kart × çok katmanlı gradyan = gereksiz JS yükü); geri bildirim tek
+   satırlık bir CSS dönüşümüdür. Değer tasarımdan: 0.985. */
+.oy-dash-card:active { transform: scale(0.985); }
 
 /* Neon pulse ring */
 @keyframes neon-ring {

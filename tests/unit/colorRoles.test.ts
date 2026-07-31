@@ -250,14 +250,24 @@ describe('marka logosu', () => {
     }
   });
 
-  // Ana sayfa logosu kullanıcı kararıyla eski amber hâlinde bırakıldı (kart
-  // renkleri geri alındığı için). Renk artık bileşende SABİT DEĞİL — çağrı
-  // yerinden geliyor. Bu testin koruduğu şey: renk kararı çağrı yerinde
-  // görünür olsun, bileşenin içine geri kaçmasın.
-  it('ana sayfa logosu rengini açıkça çağrı yerinden veriyor', () => {
+  // Ana sayfa, onaylı tasarımla birlikte `OynaLogo` yerine tasarımın kendi
+  // amblemini (components/dashboard/OynaMarks · OynaMark) kullanıyor. KURAL
+  // AYNI KALDI ve bu testin koruduğu şey odur: renk kararı ÇAĞRI YERİNDE
+  // görünür olsun, bileşenin içine sabitlenip kaçmasın.
+  it('ana sayfa amblemi rengini açıkça çağrı yerinden veriyor', () => {
     const src = oku('views/Dashboard.tsx');
-    const blok = src.slice(src.indexOf('<OynaLogo'), src.indexOf('<OynaLogo') + 600);
-    expect(blok, 'ana sayfa logosu renk vermiyor').toMatch(/color="#[0-9A-Fa-f]{6}"/);
+    const blok = src.slice(src.indexOf('<OynaMark'), src.indexOf('<OynaMark') + 600);
+    expect(blok, 'ana sayfa amblemi renk vermiyor').toContain('color:');
+  });
+
+  it('tasarım amblemleri renk SABİTLEMİYOR — rengi üst öğeden alır', () => {
+    // `fill="currentColor"` olmazsa amblem kendi rengini dayatır ve kart
+    // kimliği (kategori aksanı) çağrı yerinden yönetilemez hâle gelir.
+    const src = oku('components/dashboard/OynaMarks.tsx');
+    expect(src).toContain('fill="currentColor"');
+    // Dosyada renk sabiti (#RRGGBB) hiç olmamalı — yol verisi dışında.
+    const kod = src.split('\n').filter((l) => !l.trim().startsWith("'M")).join('\n');
+    expect(kod, 'amblem dosyasında sabit renk var').not.toMatch(/#[0-9A-Fa-f]{6}/);
   });
 });
 

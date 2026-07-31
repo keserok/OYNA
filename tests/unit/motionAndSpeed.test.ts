@@ -93,17 +93,27 @@ describe('Ana Sayfa döngüleri', () => {
     expect(kosulsuz.map(x => x.n), 'lowMotion ile koşulla').toEqual([]);
   });
 
-  it('geri sayım nabzı KOŞULLANMADI — maçın canlı olduğunu o taşıyor', () => {
-    const bilgi = sonsuzSatirlar.filter(({ l }) => l.includes('pulse || isDraft || isLive'));
-    expect(bilgi.length).toBe(1);
-    expect(bilgi[0].l).not.toContain('lowMotion');
+  // NOT — "geri sayım nabzı" testi KALDIRILDI. Onaylı ana sayfa tasarımında
+  // geri sayım kartı yok. Zaten eski dosyada da `MatchCountdown` bileşeni
+  // tanımlıydı ama HİÇ ÇİZİLMİYORDU (ölü koddu); test çizilmeyen bir şeyi
+  // koruyordu. Nabzın gerçekten çizildiği bir ekran gelirse kural o ekranın
+  // testine yazılır.
+
+  it('ana sayfa dekoratif sonsuz döngü İÇERMİYOR', () => {
+    // Onaylı tasarım, eski 35 sonsuz framer-motion döngüsünü kaldırdı: kartlar
+    // artık duruyor, tek hareket YÜKLENİYOR durumundaki iskelet parıltısı.
+    // Bu test kararın geri sızmasını engeller — biri "canlansın" diye tek tek
+    // döngü eklerse burada patlar.
+    expect(sonsuzSatirlar.length).toBe(0);
   });
 
-  it('döngü sayısı hâlâ yüksek — normal cihazda görünüm DEĞİŞMEDİ', () => {
-    // Kullanıcı kararı 2a: normal cihazda hiçbir şey kalkmaz, yalnız sistem
-    // tercihi açıkken çizilmez. Bu test o kararın bozulmadığını kilitler.
-    expect(sonsuzSatirlar.length).toBeGreaterThan(30);
-    expect(dash).toContain('const lowMotion = useLowMotion();');
+  it('iskelet parıltısı CSS animasyonudur — hareket tercihine tabidir', () => {
+    // Tek hareket bu. `oyna-shimmer` bir CSS @keyframes'tir, dolayısıyla
+    // dosyanın sonundaki prefers-reduced-motion bloğu onu da durdurur.
+    // framer-motion olsaydı o bloğa BAKMAZDI (inline style ile sürer).
+    expect(dash).toContain('oyna-shimmer');
+    expect(dash).not.toContain('framer-motion');
+    expect(oku('index.css')).toContain('@keyframes oyna-shimmer');
   });
 
   it('koşullu dal son anahtar kareye oturuyor', () => {
