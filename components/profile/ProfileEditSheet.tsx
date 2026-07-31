@@ -1,28 +1,41 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Pencil } from 'lucide-react';
+import { ChevronLeft } from 'lucide-react';
 import { useImageUpload } from '../../hooks/useImageUpload';
 import { POSITION_LABEL, POSITION_ABBR, PLAY_STYLE_META, GENDER_LABEL } from '../../views/onboarding/onboardingShared';
 import { skillBand, SELF_SKILL_MAX } from '../../utils/skillBand';
 
 // ════════════════════════════════════════════════════════════════════════
-// PROFİLİ DÜZENLE ALT SAYFASI — TEK KAYNAK
+// PROFİLİ DÜZENLE — TEK KAYNAK (tasarım 4c)
 // ProfileScreen (kullanıcı kendi profili) ve admin panelin Kullanıcı Profili
 // Aynası (admin, seçili kullanıcı adına) AYNI düzenleme yüzeyini kullanır.
 // Yazma yolu bileşenin dışındadır: kullanıcı updateProfileBasics'e, admin
 // audit'li admin_update_user_profile RPC'sine kaydeder (onSave ile).
 //
-// GÖRÜNÜM: profil ekranıyla aynı dil (tasarım 3a "İnce Neon") — tırnaklı yazı,
-// #F5F3EE mürekkep, #161B22 alan yüzeyleri, italik yardım metinleri.
-// `pf-serif` BURAYA AYRICA yazılır: sayfa portal ile <body>'ye çizilir, yani
+// GÖRÜNÜM: tasarım 4c — alttan açılan yarım sayfa değil, TAM EKRAN. Kendi üst
+// çubuğu (geri oku + başlık), numaralı bölümleri (01 Kimlik · 02 Oyun ·
+// 03 Tanıtım) ve alta sabitlenmiş Kaydet çubuğu vardır. Yeni bir uygulama
+// görünümü (route) AÇILMAZ: bileşen yine open/onClose ile sürülen bir katman —
+// böylece admin panelinde de (uygulama gezintisi olmayan bir yerde) çalışır.
+// `pf-serif` BURAYA AYRICA yazılır: katman portal ile <body>'ye çizilir, yani
 // profil ekranının altında DEĞİLDİR ve yazı tipini ondan miras alamaz.
 // Kalın ağırlık en fazla 700 (font-bold): Lora ekseni 400–700 taşır ve
 // `font-synthesis: none` yüzünden 800 sahte kalın üretmez, sessizce düşerdi.
+//
+// KAYIT SÖZLEŞMESİ (kullanıcı kararı: "Kaydedildi göster, sonra kapat"):
+// `onSave` HATA FIRLATIRSA kayıt başarısızdır — katman açık kalır, sebebi
+// ebeveyn gösterir (uygulamada errorText, admin panelinde toast). Sorunsuz
+// dönerse düğme kısaca "Kaydedildi" olur ve katman kendini kapatır. Bu yüzden
+// ebeveynler artık başarıda kendileri kapatmaz; kapatmayı bu sözleşme sürer.
 // ════════════════════════════════════════════════════════════════════════
 
 const POSITION_ORDER = ['kaleci', 'defans', 'orta', 'forvet'] as const;
 const GENDER_ORDER = ['kadin', 'erkek'] as const;
 const PLAY_STYLE_ORDER = ['ciddi', 'taktiksel', 'rahat'] as const;
+const GENDER_SYMBOL: Record<(typeof GENDER_ORDER)[number], string> = { kadin: '♀', erkek: '♂' };
+const BIO_MAX = 200;
+/** "Kaydedildi" onayının ekranda kalma süresi (ms) — sonra katman kapanır. */
+const KAYDEDILDI_MS = 900;
 
 export interface ProfileEditValues {
     position: string;
@@ -39,21 +52,45 @@ export interface ProfileEditSheetProps {
     open: boolean;
     initial: ProfileEditValues;
     saving: boolean;
+    /** Hata FIRLATIRSA katman açık kalır; sorunsuz dönerse kendini kapatır. */
     onSave: (values: ProfileEditValues) => void | Promise<void>;
     onClose: () => void;
     /** Varsayılan "Profili Düzenle"; admin aynasında kullanıcı adıyla özelleştirilebilir. */
     title?: string;
+    /** Kimlik bölümünde gösterilen ad (avatar baş harfleri buradan türetilir). */
+    name?: string;
     /**
      * Seviye, oyuncunun KENDİ beyanıdır — admin aynasında salt-okunur gösterilir.
      * (Admin bir oyuncunun kendi beyanını değiştirmez; aldığı akran puanlarını
      * ALINAN AKRAN PUANLARI panelinden görür.) Varsayılan: düzenlenebilir.
      */
     selfSkillEditable?: boolean;
-    /** Kaydetme hatası — sheet açık kalır, sebep Kaydet'in üstünde görünür. */
+    /** Kaydetme hatası — katman açık kalır, sebep Kaydet'in üstünde görünür. */
     errorText?: string | null;
 }
 
-export const ProfileEditSheet: React.FC<ProfileEditSheetProps> = ({ open, initial, saving, onSave, onClose, title, selfSkillEditable = true, errorText }) => {
+const initialsOf = (name: string) =>
+    name.split(' ').filter(Boolean).map(w => w[0]).join('').slice(0, 2).toLocaleUpperCase('tr-TR');
+
+/** Numaralı bölüm başlığı: "01 — Kimlik" + sağa uzanan ince çizgi. */
+const Bolum: React.FC<{ no: string; ad: string; ilk?: boolean }> = ({ no, ad, ilk }) => (
+    <div className={`flex items-center gap-2.5 ${ilk ? 'mt-1.5' : 'mt-6'}`}>
+        <span className="text-[0.6875rem] italic text-[#F5F3EE]/[0.5]">{no} — {ad}</span>
+        <span className="flex-1 h-px bg-white/[0.12]" />
+    </div>
+);
+
+/** Seçilebilir kutu (pozisyon / cinsiyet) — seçiliyken birincil dolgu. */
+const secimSinifi = (secili: boolean) =>
+    `rounded-[14px] border transition-all active:scale-95 ${
+        secili
+            ? 'bg-primary border-primary text-on-primary'
+            : 'bg-surface-1 border-white/[0.08] text-[#F5F3EE]/[0.6] hover:bg-white/[0.05]'
+    }`;
+
+export const ProfileEditSheet: React.FC<ProfileEditSheetProps> = ({
+    open, initial, saving, onSave, onClose, title, name, selfSkillEditable = true, errorText,
+}) => {
     const [photoError, setPhotoError] = useState<string | null>(null);
     const [pos, setPos] = useState(initial.position);
     const [bio, setBio] = useState(initial.bio);
@@ -62,13 +99,18 @@ export const ProfileEditSheet: React.FC<ProfileEditSheetProps> = ({ open, initia
     const [gender, setGender] = useState(initial.gender);
     const [style, setStyle] = useState(initial.playStyle);
     const [selfSkill, setSelfSkill] = useState<number | null>(initial.selfSkill);
+    const [kaydedildi, setKaydedildi] = useState(false);
+    const [avatarBroken, setAvatarBroken] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const kapatmaSayaci = useRef<ReturnType<typeof setTimeout> | null>(null);
     const { uploadImage, uploading } = useImageUpload('avatars', { minWidth: 200 });
 
     // Sayfa her açılışta güncel profil değerleriyle tohumlanır.
     useEffect(() => {
         if (!open) return;
         setPhotoError(null);
+        setKaydedildi(false);
+        setAvatarBroken(false);
         setPos(initial.position);
         setBio(initial.bio);
         setAvatar(initial.avatarUrl);
@@ -79,6 +121,10 @@ export const ProfileEditSheet: React.FC<ProfileEditSheetProps> = ({ open, initia
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [open]);
 
+    // Katman kapanırken bekleyen kapatma sayacı kalmasın (kapalı bileşende
+    // setState → React uyarısı ve ebeveynde beklenmedik ikinci kapatma).
+    useEffect(() => () => { if (kapatmaSayaci.current) clearTimeout(kapatmaSayaci.current); }, []);
+
     const handlePickPhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
@@ -86,6 +132,7 @@ export const ProfileEditSheet: React.FC<ProfileEditSheetProps> = ({ open, initia
         try {
             const url = await uploadImage(file);
             setAvatar(url);
+            setAvatarBroken(false);
         } catch (err: any) {
             // D5: eskiden yalnız console.error → kullanıcı neden yüklenmediğini
             // bilmiyordu. imageCompression açıklayıcı mesaj verir (HEIC/boyut/…).
@@ -96,195 +143,269 @@ export const ProfileEditSheet: React.FC<ProfileEditSheetProps> = ({ open, initia
         }
     };
 
+    const kaydet = async () => {
+        if (saving || uploading || kaydedildi) return;
+        try {
+            await onSave({
+                position: pos.trim(), bio: bio.trim(), birthdate,
+                gender, playStyle: style, avatarUrl: avatar, selfSkill,
+            });
+        } catch {
+            // Sebebi ebeveyn gösterir (errorText / toast); katman açık kalır.
+            return;
+        }
+        setKaydedildi(true);
+        kapatmaSayaci.current = setTimeout(onClose, KAYDEDILDI_MS);
+    };
+
     if (!open) return null;
+
+    const band = skillBand(selfSkill);
+    const gosterilenAd = name?.trim() || '';
+    const fotoVar = !!avatar && !avatarBroken;
+    const kaydetKilitli = saving || uploading || kaydedildi;
 
     // z-[260]: uygulamada BottomNav'ın, admin panelde 360 drawer'ının (z-[240]) üstünde kalmalı.
     return createPortal(
-        <div className="fixed inset-0 z-[260] flex items-end justify-center bg-black/70 backdrop-blur-sm" onClick={onClose}>
-            <div onClick={(e) => e.stopPropagation()} className="pf-serif w-full max-w-lg max-h-[88vh] overflow-y-auto custom-scrollbar bg-bg-main text-[#F5F3EE] border-t border-white/10 rounded-t-[28px] p-6 pb-10 space-y-4">
-                <div className="w-10 h-1 rounded-full bg-white/20 mx-auto" />
-                <h3 className="text-base font-bold uppercase tracking-[0.18em]">{title || 'Profili Düzenle'}</h3>
-                {/* Profil fotoğrafı */}
-                <div className="flex flex-col items-center gap-3">
-                    <button
-                        type="button"
-                        onClick={() => fileInputRef.current?.click()}
-                        disabled={uploading}
-                        className="relative group active:scale-95 transition-all disabled:opacity-60"
-                    >
+        <div className="pf-serif pf-canvas fixed inset-0 z-[260] flex flex-col text-[#F5F3EE]">
+            <div className="pf-ambient" />
+
+            {/* ═══ ÜST ÇUBUK ═══ */}
+            <div className="relative z-10 shrink-0 flex items-center gap-3 px-5 pb-3 pt-safe">
+                <button
+                    type="button"
+                    onClick={onClose}
+                    aria-label="Geri"
+                    className="w-11 h-11 rounded-full bg-surface-1/80 border border-white/[0.08] flex items-center justify-center text-[#F5F3EE]/[0.8] hover:text-[#F5F3EE] hover:bg-white/10 active:scale-95 transition-all shrink-0"
+                >
+                    <ChevronLeft size={18} />
+                </button>
+                <span className="flex-1 min-w-0 text-[1.125rem] font-semibold truncate">{title || 'Profili Düzenle'}</span>
+            </div>
+
+            {/* ═══ GÖVDE ═══ */}
+            <div className="relative z-10 flex-1 overflow-y-auto custom-scrollbar px-6 pt-2.5 pb-safe-nav">
+                {/* ─── 01 — KİMLİK ─── */}
+                <Bolum no="01" ad="Kimlik" ilk />
+                <div className="mt-3.5 flex items-center gap-3.5">
+                    {fotoVar ? (
                         <img
-                            src={avatar || '/player_card_photo.png'}
-                            alt="Profil"
+                            src={avatar}
+                            alt={gosterilenAd || 'Profil'}
                             referrerPolicy="no-referrer"
-                            className="w-24 h-24 rounded-3xl object-cover border border-white/10"
+                            onError={() => setAvatarBroken(true)}
+                            className="w-16 h-16 rounded-full object-cover bg-white/[0.12] border border-white/[0.14] shrink-0"
                         />
-                        <div className="absolute inset-0 rounded-3xl bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                            <Pencil size={20} className="text-[#F5F3EE]" />
+                    ) : (
+                        <div className="w-16 h-16 rounded-full bg-white/[0.12] border border-white/[0.14] flex items-center justify-center text-[1.375rem] font-bold shrink-0">
+                            {gosterilenAd ? initialsOf(gosterilenAd) : '👤'}
                         </div>
-                        {uploading && (
-                            <div className="absolute inset-0 rounded-3xl bg-black/70 flex items-center justify-center">
-                                <span className="text-[0.625rem] font-bold text-primary uppercase tracking-widest">Yükleniyor…</span>
-                            </div>
-                        )}
-                    </button>
-                    <button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploading} className="text-[0.625rem] font-bold text-primary uppercase tracking-widest disabled:opacity-60">
-                        Fotoğrafı Değiştir
-                    </button>
-                    {photoError && (
-                        <p className="text-[0.6875rem] text-error text-center max-w-xs bg-error/10 border border-error/25 rounded-xl px-3 py-2">
-                            {photoError}
-                        </p>
                     )}
+                    <div className="flex-1 min-w-0">
+                        {gosterilenAd && <span className="block text-base font-semibold truncate">{gosterilenAd}</span>}
+                        <button
+                            type="button"
+                            onClick={() => fileInputRef.current?.click()}
+                            disabled={uploading}
+                            className="text-[0.6875rem] italic text-primary hover:underline disabled:opacity-60"
+                        >
+                            {uploading ? 'Yükleniyor…' : 'Fotoğrafı değiştir'}
+                        </button>
+                    </div>
                     <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handlePickPhoto} />
                 </div>
-                <div>
-                    <label className="text-[0.625rem] text-[#F5F3EE]/[0.55] font-semibold uppercase tracking-[0.14em] ml-1">Pozisyon</label>
-                    <div className="mt-1.5 grid grid-cols-4 gap-2">
-                        {POSITION_ORDER.map((code) => {
-                            const label = POSITION_LABEL[code];
-                            const sel = pos === label;
-                            return (
-                                <button
-                                    key={code}
-                                    type="button"
-                                    onClick={() => setPos(sel ? '' : label)}
-                                    className={`py-2.5 rounded-2xl border transition-all active:scale-95 flex flex-col items-center gap-0.5 ${
-                                        sel ? 'bg-primary text-on-primary border-primary' : 'bg-surface-1 text-[#F5F3EE]/[0.6] border-white/10 hover:bg-white/5'
-                                    }`}
-                                >
-                                    <span className="text-[0.8125rem] font-bold">{POSITION_ABBR[code]}</span>
-                                    <span className="text-[0.6875rem] font-bold opacity-80">{label}</span>
-                                </button>
-                            );
-                        })}
-                    </div>
-                </div>
-                <div>
-                    <label className="text-[0.625rem] text-[#F5F3EE]/[0.55] font-semibold uppercase tracking-[0.14em] ml-1">Doğum Tarihi</label>
+                {photoError && (
+                    <p className="mt-2.5 text-[0.6875rem] text-error bg-error/10 border border-error/25 rounded-xl px-3 py-2">
+                        {photoError}
+                    </p>
+                )}
+
+                <div className="mt-3.5 bg-surface-1 border border-white/[0.08] rounded-[14px] px-4 py-2.5 flex items-center justify-between gap-3">
+                    <label htmlFor="pe-birthdate" className="text-xs italic text-[#F5F3EE]/[0.6] shrink-0">Doğum tarihi</label>
                     <input
+                        id="pe-birthdate"
                         type="date"
                         value={birthdate}
                         onChange={(e) => setBirthdate(e.target.value)}
                         max={new Date().toISOString().slice(0, 10)}
-                        className="mt-1.5 w-full bg-surface-1 border border-white/10 rounded-2xl px-4 py-3 text-[#F5F3EE] text-sm outline-none focus:border-primary/40 [color-scheme:dark]"
+                        className="bg-transparent border-none text-sm text-[#F5F3EE] text-right outline-none [color-scheme:dark] min-w-0"
                     />
                 </div>
-                <div>
-                    <label className="text-[0.625rem] text-[#F5F3EE]/[0.55] font-semibold uppercase tracking-[0.14em] ml-1">Cinsiyet</label>
-                    <div className="mt-1.5 flex gap-2">
-                        {GENDER_ORDER.map((g) => {
-                            const sel = gender === g;
-                            return (
-                                <button
-                                    key={g}
-                                    type="button"
-                                    onClick={() => setGender(sel ? '' : g)}
-                                    className={`flex-1 py-3 rounded-2xl text-[0.6875rem] font-bold uppercase tracking-widest border transition-all active:scale-95 ${
-                                        sel ? 'bg-primary text-on-primary border-primary' : 'bg-surface-1 text-[#F5F3EE]/[0.6] border-white/10 hover:bg-white/5'
-                                    }`}
-                                >
-                                    {g === 'kadin' ? '♀' : '♂'} {GENDER_LABEL[g]}
-                                </button>
-                            );
-                        })}
-                    </div>
+
+                <div className="mt-2.5 flex gap-2">
+                    {GENDER_ORDER.map((g) => {
+                        const sel = gender === g;
+                        return (
+                            <button
+                                key={g}
+                                type="button"
+                                onClick={() => setGender(sel ? '' : g)}
+                                aria-pressed={sel}
+                                className={`flex-1 h-11 text-xs ${sel ? 'font-bold' : ''} ${secimSinifi(sel)}`}
+                            >
+                                {GENDER_SYMBOL[g]} {GENDER_LABEL[g]}
+                            </button>
+                        );
+                    })}
                 </div>
+
+                {/* ─── 02 — OYUN ─── */}
+                <Bolum no="02" ad="Oyun" />
+                <div className="mt-3.5 grid grid-cols-4 gap-2">
+                    {POSITION_ORDER.map((code) => {
+                        const label = POSITION_LABEL[code];
+                        const sel = pos === label;
+                        return (
+                            <button
+                                key={code}
+                                type="button"
+                                onClick={() => setPos(sel ? '' : label)}
+                                aria-pressed={sel}
+                                className={`min-h-12 py-2.5 flex flex-col items-center gap-0.5 ${secimSinifi(sel)}`}
+                            >
+                                <span className="text-[0.8125rem] font-bold">{POSITION_ABBR[code]}</span>
+                                <span className="text-[0.6875rem]">{label}</span>
+                            </button>
+                        );
+                    })}
+                </div>
+
                 {/* ── SEVİYEN — beyan edilen seviye (1–10), kadroda banda indirgenir ── */}
-                <div>
-                    <div className="flex items-center justify-between ml-1 mr-1">
-                        <label className="text-[0.625rem] text-[#F5F3EE]/[0.55] font-semibold uppercase tracking-[0.14em]">Seviyen</label>
-                        {(() => {
-                            const band = skillBand(selfSkill);
-                            if (!band) return null;
-                            return (
-                                <span
-                                    lang="tr"
-                                    className="text-[0.625rem] font-bold uppercase tracking-widest px-2 py-1 rounded-full"
-                                    style={{ color: band.color, backgroundColor: `${band.color}18`, border: `1px solid ${band.color}45` }}
-                                >
-                                    {band.label}
-                                </span>
-                            );
-                        })()}
+                <div className="mt-4">
+                    <div className="flex items-center justify-between gap-2">
+                        <span className="text-xs italic text-[#F5F3EE]/[0.75]">Seviyen</span>
+                        {band && (
+                            <span
+                                lang="tr"
+                                className="text-[0.625rem] font-bold uppercase tracking-[0.1em] px-2.5 py-[3px] rounded-full"
+                                style={{ color: band.color, backgroundColor: `${band.color}17`, border: `1px solid ${band.color}45` }}
+                            >
+                                {band.label} · {selfSkill}/{SELF_SKILL_MAX}
+                            </span>
+                        )}
                     </div>
                     {/* KAYITLI beyan geri alınamaz (sunucu kapısı NULL'u reddeder) —
-                        ama henüz beyan YOKKEN yanlışlıkla dokunulan yıldız sheet
+                        ama henüz beyan YOKKEN yanlışlıkla dokunulan sayı katman
                         içinde geri alınabilmeli: taslak seçim ikinci dokunuşla
                         temizlenir, kayıtlı beyan temizlenemez. */}
-                    <div className="mt-1.5 flex items-center gap-0.5">
+                    <div className="mt-2.5 grid grid-cols-10 gap-1">
                         {Array.from({ length: SELF_SKILL_MAX }).map((_, i) => {
                             const val = i + 1;
-                            const filled = selfSkill != null && val <= selfSkill;
-                            const color = filled ? (skillBand(selfSkill)?.color ?? '#FACC15') : 'rgba(255,255,255,0.16)';
+                            const dolu = selfSkill != null && val <= selfSkill;
+                            const secili = selfSkill === val;
+                            const renk = skillBand(val)?.color ?? '#FACC15';
                             return (
                                 <button
                                     key={val}
                                     type="button"
                                     disabled={!selfSkillEditable}
                                     aria-label={`Seviye ${val}`}
+                                    aria-pressed={secili}
                                     onClick={() => setSelfSkill(
                                         initial.selfSkill == null && selfSkill === val ? null : val,
                                     )}
-                                    className="flex-1 flex justify-center py-1.5 active:scale-90 transition-transform disabled:active:scale-100 disabled:cursor-default"
+                                    className={`h-10 rounded-[10px] text-xs transition-all active:scale-95 disabled:active:scale-100 disabled:cursor-default ${
+                                        dolu ? 'font-bold text-on-primary' : 'text-[#F5F3EE]/[0.6]'
+                                    }`}
+                                    style={{
+                                        backgroundColor: dolu ? renk : 'var(--color-surface-1)',
+                                        border: secili
+                                            ? '2px solid #F5F3EE'
+                                            : `1px solid ${dolu ? renk : 'rgba(255,255,255,0.08)'}`,
+                                        boxShadow: secili ? `0 0 14px ${renk}59` : undefined,
+                                    }}
                                 >
-                                    <svg width={24} height={24} viewBox="0 0 24 24" aria-hidden="true">
-                                        <path
-                                            d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z"
-                                            fill={filled ? color : 'none'} stroke={color} strokeWidth={1.5}
-                                            strokeLinecap="round" strokeLinejoin="round"
-                                        />
-                                    </svg>
+                                    {val}
                                 </button>
                             );
                         })}
                     </div>
-                    <p className="mt-1 ml-1 text-[0.625rem] italic text-[#F5F3EE]/[0.6]">
-                        {selfSkill != null
-                            ? <>Şu an: <span style={{ color: skillBand(selfSkill)?.color }}>{skillBand(selfSkill)?.label}</span>{' '}
-                                <span>({selfSkill}/{SELF_SKILL_MAX})</span></>
-                            : 'Henüz seviye beyanın yok — kadroda seviye çipin görünmez.'}
-                        {!selfSkillEditable && ' · Oyuncunun kendi beyanı, değiştirilemez.'}
-                    </p>
-                </div>
-                <div>
-                    <label className="text-[0.625rem] text-[#F5F3EE]/[0.55] font-semibold uppercase tracking-[0.14em] ml-1">Oyun Stili</label>
-                    <div className="mt-1.5 grid grid-cols-3 gap-2">
-                        {/* Kimlik renkleri (kanonik K/S/Y) seçim beklenmeden görünür:
-                            seçili → dolu renk, değil → kendi renginde tonlu */}
-                        {PLAY_STYLE_ORDER.map((s) => {
-                            const sel = style === s;
-                            const meta = PLAY_STYLE_META[s];
+                    <p className="mt-1.5 ml-1 text-[0.6875rem] italic text-[#F5F3EE]/[0.55]">
+                        {(['baslangic', 'orta', 'ileri'] as const).map((k, i) => {
+                            const b = skillBand(k === 'baslangic' ? 1 : k === 'orta' ? 5 : 9)!;
+                            const aralik = k === 'baslangic' ? '1–3' : k === 'orta' ? '4–7' : '8–10';
                             return (
-                                <button
-                                    key={s}
-                                    type="button"
-                                    onClick={() => setStyle(sel ? '' : s)}
-                                    className="py-3 rounded-2xl text-[0.6875rem] font-bold uppercase tracking-widest border transition-all active:scale-95"
-                                    style={sel
-                                        ? { color: '#000', backgroundColor: meta.color, borderColor: meta.color, boxShadow: `0 0 14px ${meta.color}40` }
-                                        : { color: meta.color, backgroundColor: `${meta.color}12`, borderColor: `${meta.color}45` }}
-                                >
-                                    {meta.label}
-                                </button>
+                                <React.Fragment key={k}>
+                                    {i > 0 && ' · '}
+                                    {/* "BAŞLANGIÇ" → "Başlangıç", "İLERİ" → "İleri":
+                                        ilk harf olduğu gibi kalır, gerisi Türkçe
+                                        küçültmeden geçer (aksi halde "Ileri" olurdu). */}
+                                    <span style={{ color: b.color }} lang="tr">
+                                        {aralik} {b.label.charAt(0) + b.label.slice(1).toLocaleLowerCase('tr-TR')}
+                                    </span>
+                                </React.Fragment>
                             );
                         })}
-                    </div>
+                    </p>
+                    {selfSkill == null && (
+                        <p className="mt-1 ml-1 text-[0.6875rem] italic text-[#F5F3EE]/[0.55]">
+                            Henüz seviye beyanın yok — kadroda seviye çipin görünmez.
+                        </p>
+                    )}
+                    {!selfSkillEditable && (
+                        <p className="mt-1 ml-1 text-[0.6875rem] italic text-[#F5F3EE]/[0.55]">
+                            Oyuncunun kendi beyanı, değiştirilemez.
+                        </p>
+                    )}
                 </div>
-                <div>
-                    <label className="text-[0.625rem] text-[#F5F3EE]/[0.55] font-semibold uppercase tracking-[0.14em] ml-1">Kısa Tanıtım</label>
-                    <textarea value={bio} onChange={(e) => setBio(e.target.value)} rows={3} maxLength={200} placeholder="Kendini birkaç kelimeyle anlat…" className="mt-1.5 w-full bg-surface-1 border border-white/10 rounded-2xl px-4 py-3 text-[#F5F3EE] text-sm outline-none focus:border-primary/40 resize-none" />
+
+                <div className="mt-4 grid grid-cols-3 gap-2">
+                    {/* Kimlik renkleri (kanonik K/S/Y) seçim beklenmeden görünür:
+                        seçili → dolu renk, değil → kendi renginde tonlu */}
+                    {PLAY_STYLE_ORDER.map((s) => {
+                        const sel = style === s;
+                        const meta = PLAY_STYLE_META[s];
+                        return (
+                            <button
+                                key={s}
+                                type="button"
+                                onClick={() => setStyle(sel ? '' : s)}
+                                aria-pressed={sel}
+                                className={`py-3 rounded-[14px] border text-center text-xs transition-all active:scale-95 ${sel ? 'font-bold' : ''}`}
+                                style={sel
+                                    ? { color: '#0A0E14', backgroundColor: meta.color, borderColor: meta.color, boxShadow: `0 0 14px ${meta.color}40` }
+                                    : { color: meta.color, backgroundColor: `${meta.color}12`, borderColor: `${meta.color}45` }}
+                            >
+                                {meta.label}
+                            </button>
+                        );
+                    })}
                 </div>
+
+                {/* ─── 03 — TANITIM ─── */}
+                <Bolum no="03" ad="Tanıtım" />
+                <div className="mt-3.5 bg-surface-1 border border-white/[0.08] rounded-[14px] px-4 py-3">
+                    <textarea
+                        value={bio}
+                        onChange={(e) => setBio(e.target.value)}
+                        rows={3}
+                        maxLength={BIO_MAX}
+                        placeholder="Kendini kısaca tanıt…"
+                        aria-label="Kısa tanıtım"
+                        className="w-full bg-transparent border-none resize-none outline-none italic text-sm leading-[1.55] text-[#F5F3EE]/[0.85] placeholder:text-[#F5F3EE]/[0.4] p-0"
+                    />
+                    <p className="mt-1.5 text-[0.625rem] text-[#F5F3EE]/[0.4] text-right">{bio.length}/{BIO_MAX}</p>
+                </div>
+            </div>
+
+            {/* ═══ SABİT KAYDET ÇUBUĞU ═══ */}
+            <div className="absolute left-0 right-0 bottom-0 z-20 px-5 pt-8 pb-safe bg-gradient-to-t from-[#0A0E14] from-55% to-transparent">
                 {errorText && (
-                    <p className="text-[0.6875rem] text-error text-center bg-error/10 border border-error/25 rounded-xl px-3 py-2">
+                    <p className="mb-2.5 text-[0.6875rem] text-error text-center bg-error/10 border border-error/25 rounded-xl px-3 py-2">
                         {errorText}
                     </p>
                 )}
                 <button
-                    onClick={() => void onSave({ position: pos.trim(), bio: bio.trim(), birthdate, gender, playStyle: style, avatarUrl: avatar, selfSkill })}
-                    disabled={saving || uploading}
-                    className="w-full h-12 rounded-2xl bg-primary text-on-primary font-bold text-xs uppercase tracking-widest active:scale-95 transition-all disabled:opacity-50"
+                    type="button"
+                    onClick={() => void kaydet()}
+                    disabled={kaydetKilitli}
+                    className={`w-full h-[50px] rounded-full text-[0.8125rem] font-bold text-on-primary transition-all active:scale-95 disabled:active:scale-100 ${
+                        kaydedildi
+                            ? 'bg-[#10b981] shadow-[0_0_24px_rgba(16,185,129,0.3)]'
+                            : 'bg-primary shadow-[0_0_24px_rgba(57,255,20,0.25)] disabled:opacity-60'
+                    }`}
                 >
-                    {saving ? 'Kaydediliyor…' : 'Kaydet'}
+                    {kaydedildi ? 'Kaydedildi' : saving ? 'Kaydediliyor…' : 'Kaydet'}
                 </button>
             </div>
         </div>,

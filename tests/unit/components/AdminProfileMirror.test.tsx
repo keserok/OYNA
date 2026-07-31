@@ -127,9 +127,14 @@ describe('Kullanıcı Profili Aynası (admin)', () => {
     await screen.findByText('Deneme Oyuncu');
 
     fireEvent.click(screen.getByRole('button', { name: /Düzenle/ }));
-    // Uygulamadaki alt sayfanın alanları (tek kaynak bileşen)
-    expect(await screen.findByText('Doğum Tarihi')).toBeInTheDocument();
-    expect(screen.getByText('Oyun Stili')).toBeInTheDocument();
+    // Uygulamadaki düzenleme ekranının alanları (tek kaynak bileşen).
+    // Tasarım 4c: numaralı bölümler + "Doğum tarihi" satırı.
+    expect(await screen.findByText('Doğum tarihi')).toBeInTheDocument();
+    expect(screen.getByText('01 — Kimlik')).toBeInTheDocument();
+    expect(screen.getByText('02 — Oyun')).toBeInTheDocument();
+    expect(screen.getByText('03 — Tanıtım')).toBeInTheDocument();
+    // Seviye, oyuncunun kendi beyanı — admin aynasında salt-okunur.
+    expect(screen.getByText(/değiştirilemez/)).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Kaydet' }));
     await waitFor(() => expect(updateUserAppProfileAdmin).toHaveBeenCalledTimes(1));

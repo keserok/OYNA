@@ -138,9 +138,13 @@ export const UserProfileMirror: React.FC<Props> = ({ userId, onUpdated }) => {
         play_style: v.playStyle || '',
         ...(v.avatarUrl && v.avatarUrl !== profile?.avatar_url ? { avatar_url: v.avatarUrl } : {}),
       }, 'Profil güncellendi (denetime yazıldı)');
-      setSheetOpen(false);
+      // Katmanı BURADA kapatma: kayıt sözleşmesi gereği "Kaydedildi" onayını
+      // gösterip kendisi kapanır (onClose ile geri döner).
     } catch (err) {
+      // Hata YUKARI FIRLATILIR: katman ancak böyle "kaydedilmedi" olduğunu
+      // bilir, açık kalır ve admin toast'taki sebebi görüp yeniden dener.
       toastError(toTurkishAdminError(err));
+      throw err;
     } finally {
       setSheetSaving(false);
     }
@@ -430,6 +434,7 @@ export const UserProfileMirror: React.FC<Props> = ({ userId, onUpdated }) => {
       <ProfileEditSheet
         open={sheetOpen}
         title={`Profili Düzenle — ${profile.full_name || 'Oyuncu'}`}
+        name={profile.full_name || 'Oyuncu'}
         initial={{
           position: profile.position || '',
           bio: profile.bio || '',

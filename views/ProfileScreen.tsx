@@ -113,7 +113,13 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onNavigate, onOpenD
     const openEdit = () => { setSaveError(null); setShowEditModal(true); };
 
     const saveEdit = async (v: ProfileEditValues) => {
-        if (!uid) return;
+        // Oturum düşmüşse SESSİZCE dönme: düzenleme katmanı "hata fırlatmadı =
+        // kaydedildi" sözleşmesiyle çalışıyor, sessiz dönüş sahte "Kaydedildi"
+        // gösterip değişiklikleri yutardı.
+        if (!uid) {
+            setSaveError('Oturumun kapanmış görünüyor. Tekrar giriş yapıp dene.');
+            throw new Error('ProfileScreen.saveEdit: oturum yok');
+        }
         setSavingEdit(true);
         setSaveError(null);
         try {
@@ -138,15 +144,18 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onNavigate, onOpenD
                     useAppStore.getState().setCurrentUserProfile({ ...cur, avatar: v.avatarUrl });
                 }
             }
-            setShowEditModal(false);
+            // Katmanı BURADA kapatma: kayıt sözleşmesi gereği "Kaydedildi"
+            // onayını gösterip kendisi kapanır (onClose ile geri döner).
             await loadProfile();
         } catch (e) {
             // İki aşamalı kayıt (basics + seviye RPC'si): ikincisi düşerse
-            // sessizce yutma — sheet açık kalır, sebep Kaydet'in üstünde görünür,
+            // sessizce yutma — katman açık kalır, sebep Kaydet'in üstünde görünür,
             // kullanıcı yeniden dener. (Basics çoktan yazılmış olabilir; yeniden
-            // kayıt idempotenttir.)
+            // kayıt idempotenttir.) Hata YUKARI FIRLATILIR: katman ancak böyle
+            // "kaydedilmedi" olduğunu bilir ve açık kalır.
             console.error('Profil güncelleme hatası:', e);
             setSaveError('Kaydedilemedi. Bağlantını kontrol edip tekrar dene.');
+            throw e;
         } finally {
             setSavingEdit(false);
         }
@@ -324,6 +333,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onNavigate, onOpenD
             {/* ═══ PROFİLİ DÜZENLE — TEK KAYNAK alt sayfa (admin aynası da aynısını kullanır) ═══ */}
             <ProfileEditSheet
                 open={showEditModal}
+                name={profile?.full_name || 'Oyuncu'}
                 initial={{
                     position: profile?.position || '',
                     bio: profile?.bio || '',
