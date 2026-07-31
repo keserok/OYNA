@@ -178,10 +178,12 @@ const pitchText = (error: boolean, n: number | null): string => {
   if (n === null) return 'Yakındaki sahaları gör';
   return n === 0 ? 'Yakında müsait saha yok' : `Çevrende ${n} halı saha`;
 };
+// Kaleci/Hakem kartları dar (yan yana iki kart) — metin TEK SATIRDA kalmalı.
+// 'Şu an müsait yok' iki satıra kırılıp kartı sıkıştırıyordu.
 const providerText = (error: boolean, n: number | null): string => {
   if (error) return '—';
   if (n === null) return 'Listeye göz at';
-  return n === 0 ? 'Şu an müsait yok' : `${n} müsait`;
+  return n === 0 ? 'Müsait yok' : `${n} müsait`;
 };
 
 const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {

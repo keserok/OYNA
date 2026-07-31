@@ -14,7 +14,10 @@ import {
   deriveDiscoveryFilterOptions, roleHasOpenSlot, hasOpenSlot, matchInBudget,
   ROLE_LABEL_MAP, BUDGET_BUCKETS,
 } from '../utils/discoveryFilterOptions';
-import { buildDayStrip, matchOnDay, startOfDayMs, formatDayLabel } from '../utils/discoveryDays';
+import {
+  buildDayStrip, matchOnDay, startOfDayMs, formatDayLabel, isGeceMaci,
+} from '../utils/discoveryDays';
+import { matchStartDayMs } from '../shared/matchTiming';
 import DayStrip from '../components/discovery/DayStrip';
 import DiscoveryFilterSheet, {
   EMPTY_FILTERS, countActiveFilters, type DiscoveryFilters,
@@ -534,7 +537,7 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onSelect }) => {
                       ) : (
                         <div className="space-y-6 mb-8">
                           {matchingMatches.map((match, index) => (
-                            <MatchCard key={match.id} match={match} index={index} onSelect={onSelect} dna={dna} />
+                            <MatchCard key={match.id} match={match} index={index} onSelect={onSelect} dna={dna} geceIsareti={isGeceMaci(match, selectedDay)} />
                           ))}
                         </div>
                       )}
@@ -549,7 +552,7 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onSelect }) => {
                         </h2>
                         <div className="space-y-6">
                           {otherMatches.map((match, index) => (
-                            <MatchCard key={match.id} match={match} index={index + matchingMatches.length} onSelect={onSelect} dna={dna} />
+                            <MatchCard key={match.id} match={match} index={index + matchingMatches.length} onSelect={onSelect} dna={dna} geceIsareti={isGeceMaci(match, selectedDay)} />
                           ))}
                         </div>
                       </div>
@@ -581,7 +584,7 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onSelect }) => {
                       />
                     ) : (
                       otherMatches.map((match, index) => (
-                        <MatchCard key={match.id} match={match} index={index} onSelect={onSelect} dna={dna} />
+                        <MatchCard key={match.id} match={match} index={index} onSelect={onSelect} dna={dna} geceIsareti={isGeceMaci(match, selectedDay)} />
                       ))
                     )}
                   </div>
@@ -659,7 +662,9 @@ const MatchCard: React.FC<{
   index: number;
   onSelect: (match: MatchListing) => void;
   dna: any;
-}> = ({ match, index, onSelect, dna }) => {
+  /** Seçili günün gecesine taşan maç (ör. Cuma seçili, maç 00:30). */
+  geceIsareti?: boolean;
+}> = ({ match, index, onSelect, dna, geceIsareti }) => {
   const roleMap: Record<string, string> = { 'HÜC': 'HÜCUM', 'ORT': 'ORTA SAHA', 'SAV': 'SAVUNMA', 'KL': 'KALECİ' };
   const myRole = roleMap[dna.role];
   const glowColor = match.mentalityColor;
@@ -848,9 +853,23 @@ const MatchCard: React.FC<{
               {trUpper(match.location)}
             </h3>
 
-            {/* Tarih ve Saat (Üst Karakter) */}
-            <div className="text-[0.625rem] font-extrabold text-[#FACC15] italic uppercase tracking-widest mb-3 drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]">
-              {trUpper(match.date)} • {trUpper(match.time)}
+            {/* Tarih ve Saat — gün şeridiyle AYNI dil ("BUGÜN" / "1 AĞU").
+                Eskiden veritabanının ham biçimi basılıyordu ("2026-08-01"),
+                üstteki şerit güzel tarih gösterirken kart uyumsuz kalıyordu. */}
+            <div className="flex items-center gap-1.5 flex-wrap mb-3">
+              <span className="text-[0.625rem] font-extrabold text-[#FACC15] italic uppercase tracking-widest drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]">
+                {(() => {
+                  const gun = matchStartDayMs(match);
+                  return gun === null ? trUpper(match.date) : formatDayLabel(gun);
+                })()} • {trUpper(match.time)}
+              </span>
+              {/* Gece maçı seçili günün ertesine taşar — kullanıcı Cuma'da
+                  gördüğü maçın gece yarısını geçtiğini burada anlar. */}
+              {geceIsareti && (
+                <span className="px-1.5 py-0.5 rounded border border-[#8b5cf6]/40 bg-[#8b5cf6]/15 text-[0.625rem] font-extrabold uppercase tracking-widest text-[#c4b5fd]">
+                  Gece
+                </span>
+              )}
             </div>
             
             <div className="flex items-center gap-1.5 flex-wrap">

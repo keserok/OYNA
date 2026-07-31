@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { matchStartMs, matchStartDayMs } from '../../shared/matchTiming';
-import { buildDayStrip, matchOnDay, formatDayLabel, startOfDayMs } from '../../utils/discoveryDays';
+import {
+  buildDayStrip, matchOnDay, formatDayLabel, startOfDayMs, matchDayKeys, isGeceMaci,
+} from '../../utils/discoveryDays';
 
 // ─── TOP OYNA GÜN SEÇİCİ ────────────────────────────────────────────────────
 //
@@ -128,6 +130,50 @@ describe('matchOnDay — gün kısıtı', () => {
   it('tarihi çözülemeyen maç belirli bir güne AİT SAYILMAZ', () => {
     const gun = startOfDayMs(SABIT_AN);
     expect(matchOnDay({ date: '30 Temmuz', time: '20:00' }, gun, SABIT_AN)).toBe(false);
+  });
+});
+
+// ─── GECE MAÇLARI ────────────────────────────────────────────────────────────
+// Karar: 00:00–06:00 arası başlayan maç İKİ güne birden yazılır. "Cuma gecesi
+// 00:30 maçı" hem Cuma'da (oyuncunun dili) hem Cumartesi'de (takvim) görünür;
+// hangi güne bakarsa baksın kullanıcı maçını bulur.
+
+describe('gece maçları iki günde birden görünür', () => {
+  const cumaGecesi = { date: '2026-08-02', time: '00:30' }; // 2 Ağustos Pazar 00:30
+  const oncekiGun = new Date(2026, 7, 1).getTime();
+  const gercekGun = new Date(2026, 7, 2).getTime();
+
+  it('iki gün anahtarı üretir: önceki gün + gerçek gün', () => {
+    expect(matchDayKeys(cumaGecesi, SABIT_AN)).toEqual([oncekiGun, gercekGun]);
+  });
+
+  it('gündüz maçı TEK güne yazılır', () => {
+    expect(matchDayKeys({ date: '2026-08-02', time: '20:00' }, SABIT_AN)).toEqual([gercekGun]);
+  });
+
+  it('sınır: 06:00 artık gece değildir, 05:59 gecedir', () => {
+    expect(matchDayKeys({ date: '2026-08-02', time: '06:00' }, SABIT_AN)).toHaveLength(1);
+    expect(matchDayKeys({ date: '2026-08-02', time: '05:59' }, SABIT_AN)).toHaveLength(2);
+  });
+
+  it('her iki gün seçildiğinde de listede kalır', () => {
+    expect(matchOnDay(cumaGecesi, oncekiGun, SABIT_AN)).toBe(true);
+    expect(matchOnDay(cumaGecesi, gercekGun, SABIT_AN)).toBe(true);
+    expect(matchOnDay(cumaGecesi, new Date(2026, 7, 3).getTime(), SABIT_AN)).toBe(false);
+  });
+
+  it('her iki günün sayacına da işlenir', () => {
+    const strip = buildDayStrip([cumaGecesi], SABIT_AN, 4);
+    expect(strip[0].count).toBe(1); // 1 Ağustos — "o gecenin maçı"
+    expect(strip[1].count).toBe(1); // 2 Ağustos — takvimdeki gerçek gün
+    expect(strip[2].count).toBe(0);
+  });
+
+  it("'GECE' işareti yalnız ÖNCEKİ gün seçiliyken çıkar", () => {
+    expect(isGeceMaci(cumaGecesi, oncekiGun, SABIT_AN)).toBe(true);
+    expect(isGeceMaci(cumaGecesi, gercekGun, SABIT_AN)).toBe(false);
+    expect(isGeceMaci({ date: '2026-08-02', time: '20:00' }, gercekGun, SABIT_AN)).toBe(false);
+    expect(isGeceMaci(cumaGecesi, null, SABIT_AN)).toBe(false);
   });
 });
 
