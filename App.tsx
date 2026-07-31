@@ -890,7 +890,11 @@ const App: React.FC = () => {
             // (`height:100%` + container query) hesaplar ve alt menü payını
             // kendi içinde ayırır. Dıştan `pb-safe-nav` eklenirse pay İKİ KEZ
             // sayılır: kartlar sıkışır, altta ölü bant kalır.
-            view === 'MY_MATCHES' || view === 'DASHBOARD'
+            // MATCH_DISCOVERY de aynı ailede: ekran `max-h-screen` + kendi
+            // iç kaydırması ile çalışır, kart listesi ve filtre paneli bar
+            // payını kendileri ayırır. Dış dolgu bırakılırsa sayfa 120px
+            // boşluğa doğru sürüklenebiliyordu.
+            view === 'MY_MATCHES' || view === 'DASHBOARD' || view === 'MATCH_DISCOVERY'
               ? ''
               : showBottomNav ? 'pb-safe-nav' : 'pb-safe'
           }`}

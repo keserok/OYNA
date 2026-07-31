@@ -2,6 +2,8 @@ import { describe, it, expect } from 'vitest';
 import {
   deriveDiscoveryFilterOptions,
   roleHasOpenSlot,
+  hasOpenSlot,
+  matchInBudget,
   FORMAT_VALUES,
   MENTALITY_VALUES,
   ROLE_IDS,
@@ -94,5 +96,101 @@ describe('pozisyon seçenekleri — checkMatchFilters semantiğiyle birebir', ()
   it('missingPositions olmayan maç patlatmaz', () => {
     expect(roleHasOpenSlot({}, 'KL')).toBe(false);
     expect(roleHasOpenSlot(null, 'SAV')).toBe(false);
+  });
+});
+
+// ─── GERÇEK SLOT VERİSİ ───────────────────────────────────────────────────────
+//
+// REGRESYON: pozisyon filtresi yalnız `missingPositions` okuyordu. O kolon
+// kayıtlarda BOŞ ([]) ve Top Oyna listesi onu her maç için boş diziyle
+// eziyordu → filtre hiçbir zaman seçenek üretmiyor, dropdown hep pasif
+// kalıyordu. Gerçek roller `slots`/`awaySlots` içinde 'GK'|'DEF'|'MID'|'FWD'
+// kodlarıyla duruyor.
+
+describe('pozisyon — GERÇEK slot verisinden okunur', () => {
+  const slot = (role: string, status = 'OPEN') => ({ id: `s-${role}-${status}`, role, status });
+
+  it("veritabanı kodları ('GK'|'DEF'|'MID'|'FWD') doğru role çevrilir", () => {
+    expect(roleHasOpenSlot({ slots: [slot('GK')] }, 'KL')).toBe(true);
+    expect(roleHasOpenSlot({ slots: [slot('DEF')] }, 'SAV')).toBe(true);
+    expect(roleHasOpenSlot({ slots: [slot('MID')] }, 'ORT')).toBe(true);
+    expect(roleHasOpenSlot({ slots: [slot('FWD')] }, 'HÜC')).toBe(true);
+  });
+
+  it('DOLU slot açık sayılmaz', () => {
+    expect(roleHasOpenSlot({ slots: [slot('GK', 'TAKEN')] }, 'KL')).toBe(false);
+  });
+
+  it('deplasman kadrosundaki açık slot da sayılır', () => {
+    expect(roleHasOpenSlot({ slots: [slot('GK', 'TAKEN')], awaySlots: [slot('FWD')] }, 'HÜC')).toBe(true);
+  });
+
+  it('başka rolün açık slotu istenen rolü açmaz', () => {
+    expect(roleHasOpenSlot({ slots: [slot('GK')] }, 'HÜC')).toBe(false);
+  });
+
+  it('slot varken seçenek listesi gerçekten dolar (eskiden hep boştu)', () => {
+    const o = deriveDiscoveryFilterOptions([
+      { format: '7v7', difficulty: 'Ciddi', slots: [slot('GK'), slot('DEF', 'TAKEN')], awaySlots: [slot('FWD')] },
+    ]);
+    expect(o.roles).toEqual(['KL', 'HÜC']);
+  });
+
+  it('slot verisi varsa missingPositions yedeğine düşülmez', () => {
+    const m = { slots: [slot('GK', 'TAKEN')], missingPositions: [{ role: 'KALECİ', count: 3 }] };
+    expect(roleHasOpenSlot(m, 'KL')).toBe(false);
+  });
+});
+
+// ─── CİNSİYET / YAŞ / SÜRE / ÜCRET — SABİT LİSTE DEĞİL, VERİDEN ──────────────
+//
+// REGRESYON: yaş filtresi '10-14 … 35+' sunuyordu ama kayıtlardaki değer
+// '18-35'ti; seçilen hiçbir yaş hiçbir maçla eşleşmiyordu.
+
+describe('cinsiyet / yaş / süre / ücret seçenekleri veriden türer', () => {
+  it("veritabanında ne varsa o listelenir ('18-35' dahil)", () => {
+    const o = deriveDiscoveryFilterOptions([
+      { ageGroup: '18-35', gender: 'Karma', durationMinutes: 60, price: 120 },
+      { ageGroup: '18-22', gender: 'Erkek', durationMinutes: 90, price: 0 },
+    ]);
+    expect(o.ageGroups).toEqual(['18-22', '18-35']);
+    expect(o.genders).toEqual(['Erkek', 'Karma']);
+    expect(o.durations).toEqual([60, 90]);
+  });
+
+  it("'Tümü' bir kısıt değildir — yaş seçeneği olarak sunulmaz", () => {
+    const o = deriveDiscoveryFilterOptions([{ ageGroup: 'Tümü' }, { ageGroup: '23-27' }]);
+    expect(o.ageGroups).toEqual(['23-27']);
+  });
+
+  it('boş/eksik alanlar seçenek üretmez', () => {
+    const o = deriveDiscoveryFilterOptions([{ gender: null, ageGroup: '', durationMinutes: null }]);
+    expect(o.genders).toEqual([]);
+    expect(o.ageGroups).toEqual([]);
+    expect(o.durations).toEqual([]);
+  });
+
+  it('yalnız içinde maç OLAN ücret kovaları sunulur', () => {
+    const o = deriveDiscoveryFilterOptions([{ price: 0 }, { price: 500 }]);
+    expect(o.budgets.map((b) => b.id)).toEqual(['free', 'o350']);
+  });
+
+  it('ücret kovaları sınırları doğru ayırır', () => {
+    expect(matchInBudget({ price: 0 }, 'free')).toBe(true);
+    expect(matchInBudget({ price: 1 }, 'free')).toBe(false);
+    // Ücretsiz maç "150 ve altı" kovasına düşmez — ayrı bir dildir.
+    expect(matchInBudget({ price: 0 }, 'u150')).toBe(false);
+    expect(matchInBudget({ price: 150 }, 'u150')).toBe(true);
+    expect(matchInBudget({ price: 300 }, '250-350')).toBe(true);
+    expect(matchInBudget({ price: 400 }, 'o350')).toBe(true);
+    expect(matchInBudget({ price: 100 }, 'o350')).toBe(false);
+  });
+});
+
+describe('hasOpenSlot — boş kontenjan filtresi', () => {
+  it('iki taraftan birinde açık slot varsa doğru', () => {
+    expect(hasOpenSlot({ slots: [{ status: 'TAKEN' }], awaySlots: [{ status: 'OPEN' }] })).toBe(true);
+    expect(hasOpenSlot({ slots: [{ status: 'TAKEN' }], awaySlots: [{ status: 'TAKEN' }] })).toBe(false);
+    expect(hasOpenSlot({})).toBe(false);
   });
 });

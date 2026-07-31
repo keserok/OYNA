@@ -21,12 +21,23 @@ vi.mock('../../../services/matchService', () => ({
   getMatchDetails: vi.fn(),
 }));
 
+// Gün şeridi maçın GERÇEK başlangıcını (starts_at) okur ve açılışta İÇİNDE
+// BULUNULAN GÜNÜ seçer. Bu dosya SÜREYİ ölçüyor; maçlar listede kalsın diye
+// başlangıç bugüne kurulur — gerçek veride bu alan zaten hep dolu
+// (get_nearby_matches `starts_at IS NOT NULL` şartını koşar).
+const bugunSaat20 = () => {
+  const d = new Date();
+  d.setHours(20, 0, 0, 0);
+  return d.toISOString();
+};
+
 const mac = (over: Record<string, unknown> = {}) => ({
   id: 'm1',
   title: 'Akşam Maçı',
   location: 'Arena Sport',
   time: '20:00',
   date: '30 Temmuz',
+  startsAt: bugunSaat20(),
   price: 150,
   difficulty: 'Rahat',
   image: '',
@@ -93,10 +104,11 @@ describe('Top Oyna maç kartı — süre gerçek veriden', () => {
 });
 
 describe('Top Oyna süre filtresi — serbest metne değil gerçek veriye bakar', () => {
-  const filtreyiAc = (secim: string) => {
+  // Süre çipi artık kartla AYNI dili konuşur: '90 dakika' (formatMatchDuration).
+  const filtreyiAc = (secim: RegExp) => {
     fireEvent.click(screen.getByRole('button', { name: /^filtre$/i }));
     fireEvent.click(screen.getByRole('button', { name: secim }));
-    // Sihirbazı kapat → liste görünür ("N MAÇI GÖSTER" / "EŞLEŞEN MAÇ YOK").
+    // Paneli kapat → liste görünür ("N MAÇI GÖSTER" / "EŞLEŞEN MAÇ YOK").
     fireEvent.click(screen.getByRole('button', { name: /MAÇI GÖSTER|EŞLEŞEN MAÇ YOK/ }));
   };
 
@@ -105,7 +117,7 @@ describe('Top Oyna süre filtresi — serbest metne değil gerçek veriye bakar'
       mac({ id: 'm1', location: 'Altmışlık', durationMinutes: 60 }),
       mac({ id: 'm2', location: 'Doksanlık', durationMinutes: 90 }),
     ]);
-    filtreyiAc('90 Dakika');
+    filtreyiAc(/^90 dakika$/i);
     const uygunBaslik = screen.getByText('Filtreye Uygun Maçlar');
     const uygunBolum = uygunBaslik.parentElement as HTMLElement;
     // IP-13: büyütme tr-TR locale'iyle yapılır — 'ı' → 'I' (noktasız).
@@ -114,8 +126,13 @@ describe('Top Oyna süre filtresi — serbest metne değil gerçek veriye bakar'
   });
 
   it('suresi bilinmeyen mac "filtreye uygun" sayilmaz (sessizce gecmez)', () => {
-    ciz([mac({ id: 'm1', location: 'Bilinmeyen', duration: '90 Dakika' })]);
-    filtreyiAc('90 Dakika');
+    // Süresi bilinen bir maç da listede olmalı — yoksa süre çipi hiç çizilmez
+    // (seçenekler artık listelenen maçlardan türetilir).
+    ciz([
+      mac({ id: 'm1', location: 'Bilinmeyen', duration: '90 Dakika' }),
+      mac({ id: 'm2', location: 'Doksanlık', durationMinutes: 90 }),
+    ]);
+    filtreyiAc(/^90 dakika$/i);
     const uygunBolum = screen.getByText('Filtreye Uygun Maçlar').parentElement as HTMLElement;
     expect(uygunBolum.textContent).not.toContain('BILINMEYEN');
   });

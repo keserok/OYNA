@@ -1,7 +1,6 @@
-import { ORDU_DISTRICT_NAMES } from '../utils/orduData';
 import React, { useState, useMemo, useEffect } from 'react';
 import {
-  ArrowLeft, MapPin, Clock, Circle,
+  MapPin, Clock, Circle,
   ChevronRight, KeyRound, Loader2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -11,9 +10,17 @@ import { supabase } from '../supabaseClient';
 import { subscribeToOpenMatches, fetchNearbyMatches, resolvePrivateMatch, toPrivateMatchErrorMessage, getMatchDetails } from '../services/matchService';
 import { EmptyState } from '../components/common/StatusState';
 import { FilterDropdown } from '../components/ui/FilterDropdown';
-import { deriveDiscoveryFilterOptions, roleHasOpenSlot, ROLE_LABEL_MAP } from '../utils/discoveryFilterOptions';
+import {
+  deriveDiscoveryFilterOptions, roleHasOpenSlot, hasOpenSlot, matchInBudget,
+  ROLE_LABEL_MAP, BUDGET_BUCKETS,
+} from '../utils/discoveryFilterOptions';
+import { buildDayStrip, matchOnDay, startOfDayMs, formatDayLabel } from '../utils/discoveryDays';
+import DayStrip from '../components/discovery/DayStrip';
+import DiscoveryFilterSheet, {
+  EMPTY_FILTERS, countActiveFilters, type DiscoveryFilters,
+} from '../components/discovery/DiscoveryFilterSheet';
 import { PLAY_STYLE_META } from './onboarding/onboardingShared';
-import { formatMatchDuration, realMatchMinutes } from '../shared/matchTiming';
+import { formatMatchDuration, realMatchMinutes, matchStartMs } from '../shared/matchTiming';
 import { trUpper } from '../utils/trUpper';
 import { formatTRYShort } from '../utils/formatTRY';
 
@@ -23,13 +30,6 @@ const MENTALITY_KEY = { Ciddi: 'ciddi', Taktiksel: 'taktiksel', Rahat: 'rahat' }
 interface MatchDiscoveryProps {
   onSelect: (match: MatchListing) => void;
 }
-
-// ── OYUN DNA'SI SEÇENEKLERİ ──
-// Format/Mentalite/Pozisyon seçenekleri sabit liste DEĞİLDİR: yalnız listelenen
-// açık maçlarda fiilen bulunan değerlerden türetilir (utils/discoveryFilterOptions).
-const BUDGET_OPTIONS = ['Ücretsiz', '150₺ ve Altı', '150-250₺', '250-350₺', '350₺ ve Üzeri'];
-const GENDER_OPTIONS = ['Karma', 'Erkek', 'Kadın'];
-const AGE_OPTIONS = ['10-14', '14-16', '16-18', '18-22', '23-27', '28-35', '35+', 'Tümü'];
 
 const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onSelect }) => {
   const {
@@ -87,18 +87,9 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onSelect }) => {
   const [showWizard, setShowWizard] = useState(false);
   // Format/Mentalite/Pozisyon dropdown'ları: aynı anda en fazla biri açık.
   const [openDropdown, setOpenDropdown] = useState<'format' | 'mentality' | 'role' | null>(null);
-  // Hızlı filtre çipleri (Q14): nearby (mesafeye göre sırala) / today / open / cheap
-  const [quick, setQuick] = useState<string[]>([]);
-  const [dna, setDna] = useState({
-    format: '',
-    budget: '',
-    duration: '',
-    age: '',
-    gender: '',
-    role: '',
-    mentality: '',
-    district: ''
-  });
+  // Gün seçici: açılışta İÇİNDE BULUNULAN GÜN seçili. null = tüm günler.
+  const [selectedDay, setSelectedDay] = useState<number | null>(() => startOfDayMs(new Date()));
+  const [dna, setDna] = useState<DiscoveryFilters>(EMPTY_FILTERS);
 
   const [nearbyMatches, setNearbyMatches] = useState<any[]>([]);
 
@@ -186,7 +177,6 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onSelect }) => {
         ...m,
         date: m.date || '18.05.2026',
         time: m.time || '22:00 - 23:00',
-        missingPositions: [],
         openCount,
         price,
         difficulty: normalizedMentality,
@@ -201,9 +191,8 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onSelect }) => {
     });
   }, [adminMatches, nearbyMatches, userLocation, selectedRegions]);
 
-  const isFilterActive = useMemo(() => {
-    return !!(dna.format || dna.budget || dna.duration || (dna.age && dna.age !== 'Tümü') || dna.gender || dna.role || dna.mentality || dna.district);
-  }, [dna]);
+  const activeFilterCount = useMemo(() => countActiveFilters(dna), [dna]);
+  const isFilterActive = activeFilterCount > 0;
 
   // Dropdown seçenekleri: yalnız listelenen açık maçlarda fiilen bulunan değerler.
   // matchingMatches değil enhancedMatches üzerinden türetilir ki bir seçim diğer
@@ -225,6 +214,18 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onSelect }) => {
       if (prev.role && !filterOptions.roles.includes(prev.role)) {
         next.role = ''; changed = true;
       }
+      if (prev.gender && !filterOptions.genders.some(g => g.toLowerCase() === prev.gender.toLowerCase())) {
+        next.gender = ''; changed = true;
+      }
+      if (prev.age && !filterOptions.ageGroups.some(a => a.toLowerCase() === prev.age.toLowerCase())) {
+        next.age = ''; changed = true;
+      }
+      if (prev.duration !== null && !filterOptions.durations.includes(prev.duration)) {
+        next.duration = null; changed = true;
+      }
+      if (prev.budget && !filterOptions.budgets.some(b => b.id === prev.budget)) {
+        next.budget = ''; changed = true;
+      }
       // Rahat maç pozisyonsuzdur — mentalite Rahat'a dönerse rol filtresi anlamsızlaşır.
       if (prev.mentality === 'Rahat' && prev.role) {
         next.role = ''; changed = true;
@@ -238,43 +239,25 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onSelect }) => {
     });
   }, [filterOptions]);
 
+  // TEK FİLTRE KAPISI — panelde ve liste üstündeki dropdown'larda seçilen her
+  // kısıt buradan geçer. Her kural GERÇEK veritabanı alanını okur.
   const checkMatchFilters = (match: any) => {
     if (dna.format && match.format && match.format.toLowerCase() !== dna.format.toLowerCase()) {
       return false;
     }
-    if (dna.budget) {
-      const price = match.price || 0;
-      if (dna.budget === 'Ücretsiz' && price !== 0) {
-        return false;
-      }
-      if (dna.budget === '150₺ ve Altı' && (price === 0 || price > 150)) {
-        return false;
-      }
-      if (dna.budget === '150-250₺' && (price < 150 || price > 250)) {
-        return false;
-      }
-      if (dna.budget === '250-350₺' && (price < 250 || price > 350)) {
-        return false;
-      }
-      if (dna.budget === '350₺ ve Üzeri' && price < 350) {
-        return false;
-      }
-    }
-    // Süre filtresi de TEK KAYNAKTAN okur: matches.duration_minutes. Eskiden
-    // serbest metin `duration` ile harf harf karşılaştırılıyordu — '90 dakika'
-    // ile '90 Dakika' ayrışabiliyor, metni boş olan maç ise filtreyi sessizce
-    // GEÇİYORDU (kullanıcı 60 seçip 90'lık maç görebiliyordu).
-    if (dna.duration) {
-      const istenenDk = parseInt(dna.duration, 10);
-      const gercekDk = realMatchMinutes(match);
-      if (!Number.isFinite(istenenDk) || gercekDk === null || gercekDk !== istenenDk) {
-        return false;
-      }
-    }
-    if (dna.age && dna.age !== 'Tümü' && match.ageGroup && match.ageGroup.toLowerCase() !== dna.age.toLowerCase()) {
+    if (dna.budget && !matchInBudget(match, dna.budget)) {
       return false;
     }
-    if (dna.gender && match.gender && match.gender.toLowerCase() !== dna.gender.toLowerCase()) {
+    // Süre TEK KAYNAKTAN okunur: matches.duration_minutes. Eskiden serbest metin
+    // `duration` ile harf harf karşılaştırılıyordu — '90 dakika' ile '90 Dakika'
+    // ayrışabiliyor, metni boş olan maç ise filtreyi sessizce GEÇİYORDU.
+    if (dna.duration !== null && realMatchMinutes(match) !== dna.duration) {
+      return false;
+    }
+    if (dna.age && (match.ageGroup ?? '').toLowerCase() !== dna.age.toLowerCase()) {
+      return false;
+    }
+    if (dna.gender && (match.gender ?? '').toLowerCase() !== dna.gender.toLowerCase()) {
       return false;
     }
     if (dna.role && !roleHasOpenSlot(match, dna.role)) {
@@ -285,51 +268,44 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onSelect }) => {
         return false;
       }
     }
-    if (dna.district && match.location && !match.location.toLowerCase().includes(dna.district.toLowerCase())) {
+    if (dna.onlyOpen && !hasOpenSlot(match)) {
       return false;
     }
     return true;
   };
 
-  const { matchingMatches, otherMatches } = useMemo(() => {
-    // Hızlı filtre çipleri (Q14) — listeye son aşamada uygulanır.
-    const aq = (list: any[]) => {
-      let r = list;
-      if (quick.includes('open')) r = r.filter((m: any) => [...(m.slots || []), ...(m.awaySlots || [])].some((s: any) => s?.status === 'OPEN'));
-      if (quick.includes('today')) {
-        const n = new Date();
-        r = r.filter((m: any) => {
-          const d = getMatchTargetDate(m.date, m.time);
-          return d.getFullYear() === n.getFullYear() && d.getMonth() === n.getMonth() && d.getDate() === n.getDate();
-        });
-      }
-      if (quick.includes('cheap')) r = r.filter((m: any) => (Number(m.price) || 0) <= 200);
-      if (quick.includes('nearby')) r = [...r].sort((a: any, b: any) => (a.distance ?? Infinity) - (b.distance ?? Infinity));
-      return r;
-    };
+  // Gün şeridi sayıları: gün DIŞINDAKİ tüm filtreler uygulanmış hâliyle sayılır —
+  // "bu filtrelerle hangi günde maç var" sorusunun doğru cevabı budur.
+  const dayStrip = useMemo(
+    () => buildDayStrip(enhancedMatches.filter(checkMatchFilters)),
+    [enhancedMatches, dna],
+  );
+
+  const { matchingMatches, otherMatches, dayScopedCount } = useMemo(() => {
+    // Gün, yarıçap gibi bir KAPSAM kısıtıdır: hem eşleşen hem "diğer" listesi
+    // seçili güne göre daraltılır, yoksa çipte 5 Ağustos yazarken listede
+    // başka günün maçları görünürdü.
+    const scoped = enhancedMatches.filter((m) => matchOnDay(m, selectedDay));
+    // Gün içinde doğal sıra saat sırasıdır; saati çözülemeyen maç sona düşer.
+    const byTime = (a: any, b: any) =>
+      (matchStartMs(a) ?? Infinity) - (matchStartMs(b) ?? Infinity);
+    const sorted = [...scoped].sort(byTime);
+
     if (!isFilterActive) {
-      return { matchingMatches: [], otherMatches: aq(enhancedMatches) };
+      return { matchingMatches: [], otherMatches: sorted, dayScopedCount: sorted.length };
     }
-    const matching = aq(enhancedMatches.filter(checkMatchFilters));
-    const other = aq(enhancedMatches.filter(m => !checkMatchFilters(m)));
-    return { matchingMatches: matching, otherMatches: other };
-  }, [enhancedMatches, isFilterActive, dna, quick]);
+    const matching = sorted.filter(checkMatchFilters);
+    const other = sorted.filter((m) => !checkMatchFilters(m));
+    return { matchingMatches: matching, otherMatches: other, dayScopedCount: sorted.length };
+  }, [enhancedMatches, isFilterActive, dna, selectedDay]);
 
-  const handleClearFilters = () => {
-    setDna({
-      format: '',
-      budget: '',
-      duration: '',
-      age: '',
-      gender: '',
-      role: '',
-      mentality: '',
-      district: ''
-    });
-  };
+  const handleClearFilters = () => setDna(EMPTY_FILTERS);
 
-  const wizardCount = isFilterActive ? matchingMatches.length : enhancedMatches.length;
-  const wizardLabel = wizardCount > 0 ? `${wizardCount} MAÇI GÖSTER` : 'EŞLEŞEN MAÇ YOK';
+  const wizardCount = isFilterActive ? matchingMatches.length : dayScopedCount;
+  const dayLabel = selectedDay === null ? null : formatDayLabel(selectedDay);
+  // Liste başlığı: hangi gün + hangi yarıçap içinde olduğumuzu tek satırda söyler.
+  const scopeLabel = [dayLabel, userLocation || selectedRegions.length > 0 ? `${searchRadius} KM İÇİNDE` : null]
+    .filter(Boolean).join(' · ') || 'TÜM MAÇLAR';
 
   return (
     <div className="min-h-screen max-h-screen bg-[#0A0E14] flex flex-col relative overflow-hidden font-sans selection:bg-primary selection:text-on-primary">
@@ -342,180 +318,19 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onSelect }) => {
       ═══════════════════════════════════════════════════════════════════════ */}
       <AnimatePresence>
         {showWizard && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -50, filter: 'blur(10px)' }}
-            transition={{ duration: 0.4, ease: 'easeOut' }}
-            className="absolute inset-0 z-50 flex flex-col h-full bg-[#0A0E14]"
-          >
-            {/* 1. ÜST BAR */}
-            <div className="px-5 pt-safe pb-4 flex items-center justify-between shrink-0 border-b border-white/5 bg-black/20 backdrop-blur-lg">
-              <button onClick={() => setShowWizard(false)} aria-label="Kapat" className="w-11 h-11 rounded-full bg-white/[0.03] backdrop-blur-md border border-white/10 flex items-center justify-center hover:bg-white/10 hover:border-white/20 transition-all shadow-[0_0_15px_rgba(255,255,255,0.05)]">
-                <ArrowLeft size={18} className="text-white drop-shadow-md" />
-              </button>
-              <h1 className="text-[1.0625rem] font-extrabold italic uppercase tracking-tighter text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.5)]">
-                Oynamak istediğin maçı bul
-              </h1>
-              <button onClick={() => setShowWizard(false)} className="w-10 text-right text-[0.625rem] font-extrabold uppercase tracking-widest text-white/50 hover:text-white transition-colors">
-                Geç
-              </button>
-            </div>
-
-            {/* ANA İÇERİK */}
-            <div className="flex-1 flex flex-col px-5 py-2 gap-4 justify-between relative z-10 overflow-y-auto no-scrollbar">
-              <div className="space-y-3">
-              
-                {/* Yarıçap (Radius) Slider */}
-                {userLocation && (
-                  <div className="space-y-3 mb-2 p-4 bg-[#161B22] border border-[#39FF14]/30 rounded-2xl shadow-[0_0_15px_rgba(57,255,20,0.1)]">
-                    <div className="flex justify-between items-center">
-                        <p className="text-[0.625rem] font-extrabold uppercase tracking-[0.2em] text-[#39FF14]">Arama Çapı (Mesafe)</p>
-                        <span className="text-[#39FF14] text-xs font-extrabold drop-shadow-md">{searchRadius} KM</span>
-                    </div>
-                    <input
-                        type="range"
-                        min="5" max="50" step="5"
-                        value={searchRadius}
-                        onChange={(e) => setSearchRadius(Number(e.target.value))}
-                        className="w-full h-2 bg-black rounded-lg appearance-none cursor-pointer border border-white/10"
-                        style={{
-                          background: `linear-gradient(to right, #39FF14 0%, #39FF14 ${((searchRadius - 5) / 45) * 100}%, #161B22 ${((searchRadius - 5) / 45) * 100}%, #161B22 100%)`
-                        }}
-                    />
-                    <p className="text-[0.6875rem] text-white/50 italic">Mevcut konumuna göre <span className="text-white font-bold">{searchRadius} KM</span> çapındaki sahalarda olan maçlar listelenir.</p>
-                  </div>
-                )}
-
-                {/* Bölge (İlçe) Seçimi - Konum Yoksa Alternatif */}
-                {!userLocation && (
-                  <div className="space-y-2 mb-2 p-4 bg-[#161B22] border border-white/5 rounded-2xl">
-                    <p className="text-[0.625rem] font-extrabold uppercase tracking-[0.2em] text-white/50 drop-shadow-md">Arama Bölgesi (İlçe)</p>
-                    <div className="flex flex-wrap gap-2">
-                      {['Tümü', ...ORDU_DISTRICT_NAMES].map(dist => (
-                        <button
-                          key={dist}
-                          type="button"
-                          onClick={() => setDna({ ...dna, district: dist === 'Tümü' ? '' : dist })}
-                          className={`px-3 py-2 rounded-xl text-[0.6875rem] font-extrabold tracking-widest transition-all backdrop-blur-md border ${
-                            (dist === 'Tümü' && !dna.district) || dna.district === dist
-                              ? 'bg-[#39FF14]/10 border-[#39FF14]/50 text-[#39FF14] shadow-[0_0_20px_rgba(57,255,20,0.2)]'
-                              : 'bg-white/[0.02] border-white/10 text-white hover:bg-white/[0.05]'
-                          }`}
-                        >
-                          {trUpper(dist)}
-                        </button>
-                      ))}
-                    </div>
-                    <p className="text-[0.6875rem] text-white/50 italic">Cihaz konumu bulunamadı; maçları bölge bazlı filtreleyebilirsin.</p>
-                  </div>
-                )}
-
-                {/* Takım Formatı / Pozisyon / Mentalite bu panelde YOK: her filtrenin
-                    tek evi var — liste üstündeki üç dropdown (FilterDropdown). */}
-
-                {/* Bütçe */}
-                <div className="space-y-2">
-                  <p className="text-[0.625rem] font-extrabold uppercase tracking-[0.2em] text-white/50 drop-shadow-md">Kişi Başı Ücret</p>
-                  <div className="flex flex-wrap gap-2">
-                    {BUDGET_OPTIONS.map(b => (
-                      <button
-                        key={b}
-                        onClick={() => setDna({ ...dna, budget: dna.budget === b ? '' : b })}
-                        className={`px-4 py-2.5 rounded-xl text-[0.6875rem] font-extrabold tracking-widest transition-all backdrop-blur-md border ${
-                          dna.budget === b 
-                            ? 'bg-[#FACC15]/10 border-[#FACC15]/50 text-[#FACC15] shadow-[0_0_20px_rgba(250,204,21,0.2)] drop-shadow-[0_0_5px_rgba(250,204,21,0.8)]' 
-                            : 'bg-white/[0.02] border-white/10 text-white hover:bg-white/[0.05]'
-                        }`}
-                      >
-                        {b}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Maç Süresi */}
-                <div className="space-y-2">
-                  <p className="text-[0.625rem] font-extrabold uppercase tracking-[0.2em] text-white/50 drop-shadow-md">Maç Süresi</p>
-                  <div className="flex gap-2">
-                    {['60 Dakika', '90 Dakika', '120 Dakika'].map(d => (
-                      <button
-                        key={d}
-                        onClick={() => setDna({ ...dna, duration: dna.duration === d ? '' : d })}
-                        className={`flex-1 py-2.5 rounded-xl text-[0.6875rem] font-extrabold tracking-widest transition-all backdrop-blur-md border ${
-                          dna.duration === d 
-                            ? 'bg-[#39FF14]/10 border-[#39FF14]/50 text-[#39FF14] shadow-[0_0_20px_rgba(57,255,20,0.2)]' 
-                            : 'bg-white/[0.02] border-white/10 text-white hover:bg-white/[0.05]'
-                        }`}
-                      >
-                        {d}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Yaş & Cinsiyet */}
-                <div className="flex gap-4">
-                  <div className="flex-1 space-y-2">
-                    <p className="text-[0.625rem] font-extrabold uppercase tracking-[0.2em] text-white/50 drop-shadow-md">Cinsiyet</p>
-                    <div className="flex bg-white/[0.02] p-1 rounded-xl border border-white/10 backdrop-blur-md">
-                      {GENDER_OPTIONS.map(g => (
-                        <button
-                          key={g}
-                          onClick={() => setDna({ ...dna, gender: dna.gender === g ? '' : g })}
-                          className={`flex-1 py-2 rounded-lg text-[0.625rem] font-extrabold uppercase tracking-widest transition-all ${
-                            dna.gender === g ? 'bg-white/20 text-white shadow-md drop-shadow-[0_0_5px_rgba(255,255,255,0.5)] border border-white/30' : 'text-white'
-                          }`}
-                        >
-                          {g}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="flex-[1.5] space-y-2">
-                    <p className="text-[0.625rem] font-extrabold uppercase tracking-[0.2em] text-white/50 drop-shadow-md">Yaş</p>
-                    <div className="flex overflow-x-auto no-scrollbar gap-1.5 pb-1">
-                      {AGE_OPTIONS.map(a => (
-                        <button
-                          key={a}
-                          onClick={() => setDna({ ...dna, age: dna.age === a ? '' : a })}
-                          className={`shrink-0 px-4 py-2 rounded-xl text-[0.6875rem] font-extrabold transition-all backdrop-blur-md border ${
-                            dna.age === a ? 'bg-[#FACC15]/10 border-[#FACC15]/50 text-[#FACC15] shadow-[0_0_15px_rgba(250,204,21,0.2)]' : 'bg-white/[0.02] border-white/10 text-white'
-                          }`}
-                        >
-                          {a}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-            </div>
-
-            {/* ANA BUTON (SABİT ALT) */}
-            <div className="px-5 pb-8 pt-2 shrink-0 relative z-10 bg-gradient-to-t from-black via-black/80 to-transparent">
-              <motion.button
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setShowWizard(false)}
-                className="relative overflow-hidden w-full py-4 rounded-2xl text-on-primary font-extrabold uppercase tracking-[0.2em] text-xs transition-all"
-                style={{
-                  /* IP-09: sarı→yeşil gradyanın iki durağı arasındaki kontrast
-                     1.13:1 — gradyan gözle görülmüyordu, düz lekeye iniyordu. */
-                  background: '#39FF14',
-                  boxShadow: '0 0 28px rgba(57,255,20,0.30)'
-                }}
-              >
-                {/* Shimmer Efekti */}
-                <motion.div
-                  className="absolute inset-0 skew-x-12 bg-gradient-to-r from-transparent via-white/40 to-transparent"
-                  animate={{ x: ['-100%', '200%'] }}
-                  transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut', repeatDelay: 2 }}
-                />
-                <span className="relative z-10 drop-shadow-sm">{wizardLabel}</span>
-              </motion.button>
-            </div>
-          </motion.div>
+          <DiscoveryFilterSheet
+            filters={dna}
+            setFilters={setDna}
+            options={filterOptions}
+            onClose={() => setShowWizard(false)}
+            onClear={handleClearFilters}
+            resultCount={wizardCount}
+            activeCount={activeFilterCount}
+            searchRadius={searchRadius}
+            setSearchRadius={setSearchRadius}
+            selectedRegions={selectedRegions}
+            hasGps={!!userLocation}
+          />
         )}
       </AnimatePresence>
 
@@ -584,12 +399,12 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onSelect }) => {
               )}
               {dna.budget && (
                 <button onClick={() => setDna({ ...dna, budget: '' })} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 border border-white/15 text-[0.625rem] font-extrabold uppercase tracking-widest text-white shrink-0 active:scale-95 transition-all">
-                  {dna.budget} <span className="text-ink-4 text-[0.6875rem] leading-none">✕</span>
+                  {BUDGET_BUCKETS.find(b => b.id === dna.budget)?.label ?? dna.budget} <span className="text-ink-4 text-[0.6875rem] leading-none">✕</span>
                 </button>
               )}
-              {dna.duration && (
-                <button onClick={() => setDna({ ...dna, duration: '' })} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 border border-white/15 text-[0.625rem] font-extrabold uppercase tracking-widest text-white shrink-0 active:scale-95 transition-all">
-                  {dna.duration} <span className="text-ink-4 text-[0.6875rem] leading-none">✕</span>
+              {dna.duration !== null && (
+                <button onClick={() => setDna({ ...dna, duration: null })} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 border border-white/15 text-[0.625rem] font-extrabold uppercase tracking-widest text-white shrink-0 active:scale-95 transition-all">
+                  {dna.duration} DAKİKA <span className="text-ink-4 text-[0.6875rem] leading-none">✕</span>
                 </button>
               )}
               {dna.gender && (
@@ -597,14 +412,14 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onSelect }) => {
                   {dna.gender.toLocaleUpperCase('tr-TR')} <span className="text-ink-4 text-[0.6875rem] leading-none">✕</span>
                 </button>
               )}
-              {dna.age && dna.age !== 'Tümü' && (
+              {dna.age && (
                 <button onClick={() => setDna({ ...dna, age: '' })} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 border border-white/15 text-[0.625rem] font-extrabold uppercase tracking-widest text-white shrink-0 active:scale-95 transition-all">
                   {dna.age} YAŞ <span className="text-ink-4 text-[0.6875rem] leading-none">✕</span>
                 </button>
               )}
-              {dna.district && (
-                <button onClick={() => setDna({ ...dna, district: '' })} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 border border-white/15 text-[0.625rem] font-extrabold uppercase tracking-widest text-white shrink-0 active:scale-95 transition-all">
-                  {dna.district.toLocaleUpperCase('tr-TR')} <span className="text-ink-4 text-[0.6875rem] leading-none">✕</span>
+              {dna.onlyOpen && (
+                <button onClick={() => setDna({ ...dna, onlyOpen: false })} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 border border-white/15 text-[0.625rem] font-extrabold uppercase tracking-widest text-white shrink-0 active:scale-95 transition-all">
+                  YERİ BOŞ <span className="text-ink-4 text-[0.6875rem] leading-none">✕</span>
                 </button>
               )}
             </div>
@@ -655,34 +470,21 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onSelect }) => {
             )}
           </div>
 
-          {/* MATCH CARDS (POSTERS) */}
-          <div className="flex-1 overflow-y-auto px-4 py-6 space-y-6 relative z-10 custom-scrollbar">
+          {/* ── GÜN ŞERİDİ — kaydırılabilir gün seçici (açılışta bugün seçili) ── */}
+          <div className="shrink-0 border-b border-white/5 bg-[#0D121F]/40 backdrop-blur-md">
+            <DayStrip
+              days={dayStrip}
+              value={selectedDay}
+              onChange={setSelectedDay}
+              totalCount={dayStrip.reduce((n, d) => n + d.count, 0)}
+            />
+          </div>
+
+          {/* MATCH CARDS (POSTERS) — ekran kendi içinde kaydırır, dıştaki
+              dolgu buraya işlemez; son kart alt menünün altında kalmasın diye
+              bar payını liste kendisi ayırır (pb-safe-nav: index.css). */}
+          <div className="flex-1 overflow-y-auto px-4 pt-6 pb-safe-nav space-y-6 relative z-10 custom-scrollbar">
             <>
-                {/* Hızlı filtre çipleri (Q14) */}
-                <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
-                  {[
-                    { k: 'nearby', label: 'Yakınımda' },
-                    { k: 'today', label: 'Bugün' },
-                    { k: 'open', label: 'Boş Kontenjan' },
-                    { k: 'cheap', label: 'Uygun Fiyat' },
-                  ].map((c) => {
-                    const active = quick.includes(c.k);
-                    return (
-                      <button
-                        key={c.k}
-                        onClick={() => setQuick((prev) => prev.includes(c.k) ? prev.filter((x) => x !== c.k) : [...prev, c.k])}
-                        className="shrink-0 px-3.5 py-2 rounded-full text-[0.6875rem] font-extrabold tracking-wide whitespace-nowrap transition-all border"
-                        style={{
-                          background: active ? '#39FF14' : 'rgba(255,255,255,0.04)',
-                          color: active ? '#000' : 'rgba(255,255,255,0.6)',
-                          borderColor: active ? '#39FF14' : 'rgba(255,255,255,0.08)',
-                        }}
-                      >
-                        {c.label}
-                      </button>
-                    );
-                  })}
-                </div>
                 {isFilterActive && (
                   <>
                     {/* Filtreye Uygun Maçlar Section */}
@@ -696,9 +498,19 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onSelect }) => {
                         <div className="bg-[#ef4444]/10 border border-[#ef4444]/20 backdrop-blur-md rounded-[24px] p-6 flex flex-col items-center justify-center text-center gap-3 shadow-[0_0_15px_rgba(239,68,68,0.1)] mb-8">
                           <p className="text-white font-extrabold italic uppercase tracking-tighter text-base">Filtrelere Uygun Maç Bulunamadı</p>
                           <p className="text-white/60 text-[0.625rem] font-bold uppercase tracking-wider max-w-sm">
-                            Seçtiğin kriterlere uyan aktif bir maç bulunmuyor. Diğer maçları inceleyebilir ya da filtrelerini sıfırlayabilirsin.
+                            {dayLabel
+                              ? `${dayLabel} için seçtiğin kriterlere uyan maç yok. Başka bir gün seçebilir ya da filtrelerini gevşetebilirsin.`
+                              : 'Seçtiğin kriterlere uyan aktif bir maç bulunmuyor. Diğer maçları inceleyebilir ya da filtrelerini sıfırlayabilirsin.'}
                           </p>
                           <div className="flex gap-2 flex-wrap justify-center">
+                            {selectedDay !== null && (
+                              <button
+                                onClick={() => setSelectedDay(null)}
+                                className="px-5 py-2.5 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 text-[0.625rem] font-extrabold uppercase tracking-widest text-white transition-all active:scale-95"
+                              >
+                                Tüm Günler
+                              </button>
+                            )}
                             <button
                               onClick={handleClearFilters}
                               className="px-5 py-2.5 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 text-[0.625rem] font-extrabold uppercase tracking-widest text-white transition-all active:scale-95"
@@ -733,7 +545,7 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onSelect }) => {
                       <div>
                         <h2 className="text-sm font-extrabold italic uppercase tracking-widest text-ink-4 mb-4 flex items-center gap-2">
                           <span className="inline-block w-1.5 h-3 bg-white/20 rounded-sm" />
-                          {userLocation ? `${searchRadius} KM ÇAPINDAKİ DİĞER MAÇLAR` : 'Tüm Maçlar'}
+                          {dayLabel ? `${dayLabel} · DİĞER MAÇLAR` : 'DİĞER MAÇLAR'}
                         </h2>
                         <div className="space-y-6">
                           {otherMatches.map((match, index) => (
@@ -747,21 +559,19 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onSelect }) => {
      
                 {!isFilterActive && (
                   <div className="space-y-6">
-                    {userLocation && (
-                        <h2 className="text-sm font-extrabold italic uppercase tracking-widest text-[#39FF14] mb-4 flex items-center gap-2 drop-shadow-[0_0_8px_rgba(57,255,20,0.4)]">
-                          <MapPin size={16} />
-                          {searchRadius} KM ÇAPINDAKİ MAÇLAR
-                        </h2>
-                    )}
+                    <h2 className="text-sm font-extrabold italic uppercase tracking-widest text-[#39FF14] mb-4 flex items-center gap-2 drop-shadow-[0_0_8px_rgba(57,255,20,0.4)]">
+                      <MapPin size={16} />
+                      {scopeLabel}
+                    </h2>
                     {otherMatches.length === 0 ? (
                       <EmptyState
-                        title="Aktif Maç Bulunamadı"
-                        message={isFilterActive
-                          ? 'Seçtiğin filtrelere uyan maç yok. Filtreleri gevşetmeyi dene.'
+                        title={dayLabel ? `${dayLabel} İçin Maç Yok` : 'Aktif Maç Bulunamadı'}
+                        message={dayLabel
+                          ? 'Bu güne açık maç yok. Şeritten başka bir gün seçebilir ya da kendi maçını kurabilirsin.'
                           : 'Bu bölgede şu an açık bir maç yok. Sen kurabilirsin.'}
-                        actions={isFilterActive
+                        actions={selectedDay !== null
                           ? [
-                              { label: 'Filtreleri Temizle', onClick: handleClearFilters },
+                              { label: 'Tüm Günler', onClick: () => setSelectedDay(null) },
                               { label: 'Maç Kur', onClick: () => navigateTo('MATCH_CREATE') },
                             ]
                           : [
@@ -844,36 +654,6 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onSelect }) => {
   );
 };
 
-const getMatchTargetDate = (dateStr: string, timeStr: string): Date => {
-  const now = new Date();
-  const [hours, minutes] = timeStr.split(':').map(Number);
-  
-  let targetDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes, 0);
-  
-  const cleanDateStr = dateStr.toLowerCase().trim();
-  if (cleanDateStr === 'yarın') {
-    targetDate.setDate(targetDate.getDate() + 1);
-  } else if (cleanDateStr !== 'bugün') {
-    const daysOfWeek: Record<string, number> = {
-      'pazartesi': 1,
-      'salı': 2,
-      'çarşamba': 3,
-      'perşembe': 4,
-      'cuma': 5,
-      'cumartesi': 6,
-      'pazar': 0
-    };
-    const targetDayNum = daysOfWeek[cleanDateStr];
-    if (targetDayNum !== undefined) {
-      const currentDayNum = now.getDay();
-      let diff = targetDayNum - currentDayNum;
-      if (diff <= 0) diff += 7; // Next occurrence
-      targetDate.setDate(targetDate.getDate() + diff);
-    }
-  }
-  return targetDate;
-};
-
 const MatchCard: React.FC<{
   match: any;
   index: number;
@@ -905,12 +685,20 @@ const MatchCard: React.FC<{
   const [isUrgentTime, setIsUrgentTime] = useState(false);
 
   useEffect(() => {
-    const target = getMatchTargetDate(match.date, match.time);
-    
+    // Geri sayım da gün filtresiyle AYNI tarihi çözer (shared/matchTiming).
+    // Eskiden burada ayrı bir metin çözücü vardı ve veritabanının ISO tarihini
+    // ('2026-08-01') tanımadığı için her maçı BUGÜN sanıyordu.
+    const targetMs = matchStartMs(match);
+    if (targetMs === null) {
+      setTimeLeft('');
+      setIsUrgentTime(false);
+      return;
+    }
+
     const updateTimer = () => {
       const now = new Date().getTime();
-      const diff = target.getTime() - now;
-      
+      const diff = targetMs - now;
+
       setIsUrgentTime(diff > 0 && diff < 2 * 60 * 60 * 1000);
       if (diff <= 0) {
         setTimeLeft('BAŞLADI');
