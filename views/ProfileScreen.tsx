@@ -277,6 +277,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onNavigate, onOpenD
                     matches={total}
                     winRate={winRate}
                     mvp={motmCount}
+                    selfSkill={profile?.selfSkill ?? null}
                     onEditAvatar={isGuest ? undefined : openEdit}
                 />
 

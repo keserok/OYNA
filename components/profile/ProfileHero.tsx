@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Camera } from 'lucide-react';
 import { PLAY_STYLE_META, GENDER_LABEL } from '../../views/onboarding/onboardingShared';
+import { skillBand } from '../../utils/skillBand';
 
 export interface ProfileHeroProps {
     name: string;
@@ -23,6 +24,12 @@ export interface ProfileHeroProps {
     winRate: number | null;
     /** null → MVP hücresi gizli (oylama verisi henüz kaydedilmiyor) */
     mvp?: number | null;
+    /**
+     * Beyan edilen seviye (1–10). Künyenin sonunda BAND çipi olarak görünür
+     * (ham sayı değil): kadroda "ben 7 o 6" kıyası doğmasın diye kamusal
+     * yüzeylerde yalnız band gösterilir. null → çip hiç çizilmez.
+     */
+    selfSkill?: number | null;
     /** undefined → düzenleme yok (salt okunur profil / misafir) */
     onEditAvatar?: () => void;
 }
@@ -41,7 +48,7 @@ const initialsOf = (name: string) =>
  */
 export const ProfileHero: React.FC<ProfileHeroProps> = ({
     name, avatarUrl, verified, position, age, ageRange, gender, playStyle,
-    matches, winRate, mvp = null,
+    matches, winRate, mvp = null, selfSkill = null,
     onEditAvatar,
 }) => {
     // Künye satırı: onboarding'de toplanan dört bilgi, olmayanlar sessizce düşer.
@@ -49,6 +56,7 @@ export const ProfileHero: React.FC<ProfileHeroProps> = ({
     const ageText = age != null ? `${age} yaş` : (ageRange ? `${ageRange.replace('-', '–')} yaş` : null);
     const genderText = gender === 'kadin' || gender === 'erkek' ? GENDER_LABEL[gender] : null;
     const kunye = [position, ageText, genderText, styleMeta?.label].filter(Boolean).join(' · ');
+    const band = skillBand(selfSkill);
     // Avatar yüklenemezse (kırık URL / erişilemeyen host) baş harflere düş.
     const [avatarBroken, setAvatarBroken] = useState(false);
     const showAvatarImg = !!avatarUrl && !avatarBroken;
@@ -93,8 +101,26 @@ export const ProfileHero: React.FC<ProfileHeroProps> = ({
                             </svg>
                         )}
                     </div>
-                    {kunye && (
-                        <p className="mt-1 text-[0.6875rem] italic text-[#F5F3EE]/[0.6] truncate">{kunye}</p>
+                    {/* `flex-wrap`: dar ekranda (360px) çip künyeyi kırpıyordu —
+                        "Orta Saha · 26 yaş · Erkek · …" olup oyun stili düşüyordu.
+                        Yer kalmayınca çip alt satıra iner, künye tam okunur. */}
+                    {(kunye || band) && (
+                        <div className="mt-1 flex items-center flex-wrap gap-x-1.5 gap-y-1 min-w-0">
+                            {kunye && (
+                                <p className="min-w-0 text-[0.6875rem] italic text-[#F5F3EE]/[0.6] truncate">{kunye}</p>
+                            )}
+                            {/* Seviye bandı: künye uzun olsa bile KIRPILMAZ (shrink-0) —
+                                kırpılan bir seviye etiketi yanlış okunur. */}
+                            {band && (
+                                <span
+                                    lang="tr"
+                                    className="shrink-0 text-[0.625rem] font-bold uppercase tracking-[0.08em] px-2 py-[2px] rounded-full"
+                                    style={{ color: band.color, backgroundColor: `${band.color}17`, border: `1px solid ${band.color}45` }}
+                                >
+                                    {band.label}
+                                </span>
+                            )}
+                        </div>
                     )}
                 </div>
             </div>
