@@ -4,9 +4,14 @@ import ReactDOM from 'react-dom/client';
 import App from './App';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { initObservability } from './utils/observability';
+import { installOynaScrollSystem } from './utils/scrollSystem';
 
 // FAZ 7.4 — Sentry/PostHog cephesi (env yoksa no-op).
 initObservability();
+
+// Kaydırma davranışı (yaylanma + uç sınırları) TEK yerden kurulur; bundan
+// sonra eklenen ekranlar da otomatik olarak doğru davranır.
+installOynaScrollSystem();
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {

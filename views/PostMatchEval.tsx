@@ -140,7 +140,9 @@ const StarStrip: React.FC<{
       aria-valuemin={0}
       aria-valuemax={max}
       aria-valuenow={value}
-      style={{ position: 'relative', height, cursor: 'pointer', touchAction: 'none', userSelect: 'none' }}
+      // 'pan-y': yıldızlar üzerinde YANA sürükleme puan seçer, YUKARI sürükleme
+      // sayfayı kaydırır (puanlama ekranı uzun bir listedir).
+      style={{ position: 'relative', height, cursor: 'pointer', touchAction: 'pan-y', userSelect: 'none' }}
     >
       {row(false)}
       {/* Dolu katman TAM genişlikte durur ve clipPath ile soldan açılır — böylece
@@ -172,7 +174,9 @@ const SegmentBar: React.FC<{
         aria-valuemin={0}
         aria-valuemax={max}
         aria-valuenow={value}
-        style={{ display: 'flex', gap: 8, height: 30, cursor: 'pointer', touchAction: 'none', userSelect: 'none' }}
+        // 'pan-y': çubuk üzerinde YANA sürükleme puan seçer, YUKARI sürükleme
+        // sayfayı kaydırır.
+        style={{ display: 'flex', gap: 8, height: 30, cursor: 'pointer', touchAction: 'pan-y', userSelect: 'none' }}
       >
         {Array.from({ length: max }).map((_, i) => (
           <div

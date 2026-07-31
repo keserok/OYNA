@@ -2181,7 +2181,18 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                     onPointerUp={handlePointerUp}
                     onPointerLeave={handlePointerUp}
                     onPointerCancel={handlePointerUp}
-                    style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`, transformOrigin: 'center center', touchAction: 'none', transition: (pinchRef.current || panStartRef.current) ? 'none' : 'transform 0.18s ease-out' }}
+                    // PARMAK PAYLAŞIMI: tahta ekranın büyük bölümünü kaplıyor.
+                    // Parmağı hep kendine alırsa kullanıcı bu alandan sayfayı
+                    // kaydıramaz. Kural:
+                    //   • Oyuncunun ÜSTÜ → oyuncu taşınır (onlarda `touch-none`)
+                    //   • Boş saha       → sayfa kayar ('pan-y')
+                    //   • Çizim modu     → parmak çizer ('none' şart)
+                    //   • Yakınlaştırılmış → tahta gezinir ('none'); kullanıcı
+                    //     yakınlaştırmayı bilerek açtı, "Sıfırla" ile geri döner.
+                    // Yakınlaştırma her durumda iki parmakla (pinch) çalışır:
+                    // pinch'te parmakların ORTASI yer değiştirmediği için
+                    // tarayıcı 'pan-y' hareketini kaydırma sanmaz.
+                    style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`, transformOrigin: 'center center', touchAction: (tool.startsWith('draw') || zoom > 1) ? 'none' : 'pan-y', transition: (pinchRef.current || panStartRef.current) ? 'none' : 'transform 0.18s ease-out' }}
                     className={`relative w-full aspect-[3/4] bg-[#0B2815] rounded-[24px] border-4 border-[#161B22] ${liteGate(perfTier, 'shadow-[inset_0_0_60px_rgba(0,0,0,0.8)]')} overflow-hidden ${tool.startsWith('draw') ? 'cursor-crosshair' : ''} ${tool === 'opponent' ? 'cursor-copy' : ''}`}
                 >
                     {/* S44 — hafif kimlik vinyeti (WCAG: yalnız dekoratif, kontrastı bozmaz) */}
@@ -2288,7 +2299,10 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                         <motion.div 
                             key={opp.id}
                             onPointerDown={(e) => handleDragStart('opponent', opp.id, e)}
-                            className={`absolute w-10 h-10 ${!oppLayer.interactive ? 'pointer-events-none' : (tool === 'move' ? 'cursor-grab active:cursor-grabbing touch-none' : 'pointer-events-auto')} ${isMoving ? `brightness-125 ${liteGate(perfTier, 'drop-shadow-[0_0_15px_rgba(239,68,68,0.8)]')}` : ''} ${oppLayer.dimmed ? 'opacity-40' : ''}`}
+                            // `touch-none` YALNIZ gerçekten sürüklenebilirken: RAKİP modunda
+                            // değilken bu nokta taşınamaz, parmağı boşuna tutup sayfanın
+                            // kaymasını engellememeli.
+                            className={`absolute w-10 h-10 ${!oppLayer.interactive ? 'pointer-events-none' : (tool === 'move' ? `cursor-grab active:cursor-grabbing ${drawSide === 'OPP' ? 'touch-none' : ''}` : 'pointer-events-auto')} ${isMoving ? `brightness-125 ${liteGate(perfTier, 'drop-shadow-[0_0_15px_rgba(239,68,68,0.8)]')}` : ''} ${oppLayer.dimmed ? 'opacity-40' : ''}`}
                             animate={anim ? anim.animate : {
                                 left: `${opp.x}%`,
                                 top: `${opp.y}%`
@@ -2333,7 +2347,10 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                 }
                             }}
                             onClick={() => { if (heldSub) placeHeldSub(slot.id); }}
-                            className={`absolute w-12 h-12 ${!usLayer.interactive ? 'pointer-events-none' : (tool === 'move' && slot.player ? 'cursor-grab active:cursor-grabbing touch-none' : '')} ${isMoving ? `brightness-125 ${liteGate(perfTier, 'drop-shadow-[0_0_15px_rgba(57,255,20,0.8)]')}` : ''} ${usLayer.dimmed ? 'opacity-40' : ''} ${heldSub ? 'cursor-pointer ring-2 ring-[#39FF14] rounded-full ring-offset-1 ring-offset-black/40' : ''}`}
+                            // `touch-none` YALNIZ gerçekten sürüklenebilirken (yukarıdaki
+                            // onPointerDown ile aynı koşul) — aksi hâlde bu kare parmağı
+                            // boşuna tutar ve sayfa kaymaz.
+                            className={`absolute w-12 h-12 ${!usLayer.interactive ? 'pointer-events-none' : (tool === 'move' && slot.player && drawSide === 'US' && !heldSub ? 'cursor-grab active:cursor-grabbing touch-none' : '')} ${isMoving ? `brightness-125 ${liteGate(perfTier, 'drop-shadow-[0_0_15px_rgba(57,255,20,0.8)]')}` : ''} ${usLayer.dimmed ? 'opacity-40' : ''} ${heldSub ? 'cursor-pointer ring-2 ring-[#39FF14] rounded-full ring-offset-1 ring-offset-black/40' : ''}`}
                             style={{ x: "-50%", y: "-50%", zIndex: draggedItem?.id === slot.id ? 50 : usLayer.z }}
                         >
                             {slot.player ? (

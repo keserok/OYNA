@@ -65,7 +65,9 @@ const StepSkill: React.FC<StepSkillProps> = ({ value, onChange }) => {
         }}
         style={{
           display: 'flex', alignItems: 'center', gap: 2,
-          height: 44, cursor: 'pointer', touchAction: 'none', userSelect: 'none',
+          // 'pan-y': yıldız şeridinde YANA sürükleme seviye seçer; dikey
+          // sürükleme sayfaya bırakılır (adım kaydırılabilir hâle gelirse hazır).
+          height: 44, cursor: 'pointer', touchAction: 'pan-y', userSelect: 'none',
         }}
       >
         {Array.from({ length: SELF_SKILL_MAX }).map((_, i) => {

@@ -484,12 +484,15 @@ export const FinancialCalendarView: React.FC<{
 
                 <div className="p-4 pt-2 space-y-3">
                     {/* 30 günlük kaydırılabilir gün şeridi (bugünden ileri).
-                        Kenar fade'leri "kaydır, daha çok gün var" sinyali verir; touch-action:pan-x
-                        yatay swipe'ı garanti eder (dikey kaydırmaya takılmaz). */}
+                        Kenar fade'leri "kaydır, daha çok gün var" sinyali verir.
+                        touch-action 'pan-x pan-y': yatay sürükleme şeridi gezdirir,
+                        DİKEY sürükleme sayfayı kaydırır. Eskiden yalnız 'pan-x' yazıyordu;
+                        o zaman şeridin üstünden parmağını yukarı sürüklemek hiçbir şey
+                        yapmıyordu — kullanıcı "kaydırma tutmuyor" diye görüyordu. */}
                     <div className="relative">
                         <div
                             ref={dayStripRef}
-                            style={{ touchAction: 'pan-x' }}
+                            style={{ touchAction: 'pan-x pan-y' }}
                             onScroll={(e) => {
                                 const el = e.currentTarget;
                                 setStripAtStart(el.scrollLeft < 8);

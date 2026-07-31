@@ -35,6 +35,16 @@ export const oynaTileProps = {
   maxNativeZoom: 20,
 };
 
+/**
+ * Dokunmatik mi? (telefon/tablet) — fare varsa `false`.
+ * Harita parmak paylaşımı YALNIZ dokunmatikte devreye girer; admin panelinde
+ * ve masaüstü tarayıcıda fare ile sürükleme aynen çalışmaya devam eder.
+ */
+const isCoarsePointer =
+  typeof window !== 'undefined' && window.matchMedia
+    ? window.matchMedia('(pointer: coarse)').matches
+    : false;
+
 // MapContainer'a spread edilecek platform-optimize ayarlar.
 // zoomSnap=1 → tam-sayı zoom = karo netliği (kalite önceliği); pinch yine akıcı.
 export const oynaMapProps = {
@@ -51,6 +61,26 @@ export const oynaMapProps = {
   tapTolerance: 18,                 // parmak dokunuşu toleransı (mobil)
   maxZoom: 19,
   preferCanvas: false,              // divIcon pinler DOM ister
+
+  // ── PARMAK PAYLAŞIMI (harita mı sayfa mı kayacak?) ─────────────────────
+  // Sorun: harita bir sayfanın ORTASINDA büyük bir alan kaplıyor. Harita tek
+  // parmağı kendine alırsa kullanıcı o bölgeden sayfayı kaydıramaz — yalnız
+  // haritanın sağında/solunda kalan ince kenarlar çalışır.
+  //
+  // Çözüm (Google Haritalar'ın gömülü haritada yaptığının aynısı):
+  //   • TEK parmak  → sayfa kayar (harita karışmaz)
+  //   • İKİ parmak  → harita gezinir ve yakınlaşır
+  //
+  // `dragging:false` bunu TEK BAŞINA sağlar: Leaflet sürükleme kapalıyken
+  // haritanın kabına `touch-action: pan-x pan-y` yazar (leaflet.css), yani
+  // tek parmağı tarayıcıya bırakır; iki parmaklı pinch işleyicisi ise hem
+  // yakınlaştırır HEM kaydırır. Kullanıcıya ipucu OYNA_MAP_CSS'teki katmanla
+  // gösterilir (utils/scrollSystem.ts tetikler).
+  //
+  // Fare varken (admin paneli, masaüstü) sürükleme AÇIK kalır — orada
+  // paylaşılacak bir kaydırma sorunu yok.
+  dragging: !isCoarsePointer,
+  touchZoom: true,
 };
 
 // ── Ortak temel CSS ───────────────────────────────────────────────────────
@@ -82,6 +112,26 @@ export const OYNA_MAP_CSS = `
   .leaflet-zoom-anim .leaflet-marker-icon,
   .leaflet-zoom-anim .oyna-pin-root,
   .leaflet-zoom-anim .oyna-pin-root * { transition: none !important; }
+  /* SÜRÜKLENEBİLİR PİN: harita tek parmağı sayfaya bıraktığı için kabın
+     touch-action'ı 'pan-x pan-y'. Pin bundan MUAF olmalı, yoksa pini
+     sürüklemeye çalışan parmak sayfayı kaydırır ve pin yerinden oynamaz. */
+  .leaflet-marker-draggable { touch-action: none !important; }
+  /* İKİ PARMAK İPUCU: tek parmakla haritayı gezdirmeye çalışan kullanıcıya
+     ne yapması gerektiğini söyler. Sınıfı utils/scrollSystem.ts ekler/siler;
+     burada yalnız görünüşü tarif edilir (DOM'a düğüm eklenmez). */
+  .leaflet-container::after {
+    content: 'Haritayı gezdirmek için iki parmak kullan';
+    position: absolute; inset: 0; z-index: 900;
+    display: grid; place-items: center; text-align: center;
+    padding: 0 24px;
+    font-family: inherit; font-size: 12px; font-weight: 800; line-height: 1.4;
+    color: #fff; background: rgba(6,11,18,0.62);
+    opacity: 0; pointer-events: none;
+    transition: opacity .18s ease;
+  }
+  .leaflet-container.oyna-hint-on::after { opacity: 1; }
+  /* Fare kullanan cihazda tek parmak sorunu yok — ipucu hiç çıkmasın. */
+  @media (pointer: fine) { .leaflet-container::after { content: none; } }
   /* Karusel: scrollbar gizle (WebKit dahil) */
   .oyna-map-carousel { scrollbar-width: none; -ms-overflow-style: none; }
   .oyna-map-carousel::-webkit-scrollbar { display: none; }
@@ -123,6 +173,18 @@ export const OYNA_MAPLIBRE_CSS = `
   }
   .maplibregl-ctrl-attrib a { color: rgba(57,255,20,0.55) !important; }
   .maplibregl-ctrl-attrib-button { background-color: rgba(255,255,255,0.3) !important; }
+  /* İKİ PARMAK İPUCU (cooperativeGestures) — MapLibre bu katmanı kendi
+     yönetir; biz yalnız markaya uyduruyoruz. Tek parmakla haritayı gezdirmeye
+     çalışıldığında belirir, parmak kalkınca söner. */
+  .maplibregl-cooperative-gesture-screen {
+    background: rgba(6,11,18,0.62) !important;
+    color: #fff !important;
+    font-family: inherit !important;
+    font-size: 12px !important; font-weight: 800 !important; line-height: 1.4 !important;
+    text-align: center;
+    transition: opacity .35s ease .25s !important;
+  }
+  .maplibregl-cooperative-gesture-screen.maplibregl-show { transition: opacity .12s ease !important; }
   /* Fiyat balonu pini — yalnız yakın zoom'da görünür; --oyna-bubble-scale
      zoom'a göre JS'ten set edilir (uzaklaştıkça hafifçe küçülür). Anchor
      bottom olduğundan ölçek alt-orta noktadan uygulanır → tip koordinatta kalır. */

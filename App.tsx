@@ -894,7 +894,11 @@ const App: React.FC = () => {
             // iç kaydırması ile çalışır, kart listesi ve filtre paneli bar
             // payını kendileri ayırır. Dış dolgu bırakılırsa sayfa 120px
             // boşluğa doğru sürüklenebiliyordu.
-            view === 'MY_MATCHES' || view === 'DASHBOARD' || view === 'MATCH_DISCOVERY'
+            // PITCH_DISCOVERY aynı ailenin son üyesi: kökü `min-h-screen` +
+            // `overflow-hidden`, içerik kendi `<main>` kaydırıcısında akar ve
+            // bar payını orada (`pb-safe-nav`) ayırır. Dıştaki dolgu burada da
+            // yalnız ÖLÜ BANT üretiyordu — sayfa boşluğa doğru sürükleniyordu.
+            view === 'MY_MATCHES' || view === 'DASHBOARD' || view === 'MATCH_DISCOVERY' || view === 'PITCH_DISCOVERY'
               ? ''
               : showBottomNav ? 'pb-safe-nav' : 'pb-safe'
           }`}

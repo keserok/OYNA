@@ -521,7 +521,10 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onNavigate }) => {
       {/* ── İçerik ── */}
       {/* Kaydırma bu konteynerde: gün başlıkları header'ın hemen altına yapışır,
           kartlar yarı saydam alt barın altından akar (pb-36 bar payı). */}
-      <main className="flex-1 min-h-0 px-4 pt-4 overflow-y-auto overscroll-contain custom-scrollbar pb-36 relative z-10">
+      {/* Alt boşluk `pb-36` (sabit 144px) idi: güvenli alanı saymadığı için
+          çentikli telefonda alt menü son kartın ucunu örtebiliyordu.
+          `pb-safe-nav` payı cihaza göre ayarlar. */}
+      <main className="flex-1 min-h-0 px-4 pt-4 overflow-y-auto overscroll-contain custom-scrollbar pb-safe-nav relative z-10">
         {bookingsError && (
           <div className="mb-4 flex items-center justify-between gap-3 px-4 py-3 rounded-2xl bg-red-950/30 border border-red-500/20">
             <p className="text-[0.6875rem] text-red-300 font-bold leading-snug">
