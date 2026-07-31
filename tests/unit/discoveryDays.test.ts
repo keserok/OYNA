@@ -15,12 +15,12 @@ import {
 const SABIT_AN = new Date(2026, 7, 1, 12, 0, 0); // 1 Ağustos 2026, Cumartesi 12:00
 
 describe('matchStartMs — maçın gerçek başlangıcı', () => {
-  it('ISO date + time, starts_at\'tan ÖNCE gelir (saat dilimi sapması)', () => {
-    // create_match_atomic 21:00'lik maçı '21:00+00' yazıyor; İstanbul'da bu
-    // ertesi güne düşer. Kartta yazan tarih (date) esas alınır ki şeritteki
-    // gün ile kart hep aynı şeyi söylesin.
+  it("ISO date + time, starts_at'tan ÖNCE gelir (ekran tutarlılığı)", () => {
+    // Kartta yazan tarih/saat esas alınır ki gün şeridi, kart ve sayaçlar hep
+    // aynı şeyi söylesin — kullanıcının cihaz saat dilimi ne olursa olsun.
+    // (starts_at burada bilerek farklı bir an veriyor.)
     const ms = matchStartMs(
-      { date: '2026-08-05', time: '21:00', starts_at: '2026-08-05T21:00:00Z' },
+      { date: '2026-08-05', time: '21:00', starts_at: '2026-08-05T18:00:00Z' },
       SABIT_AN,
     );
     expect(ms).toBe(new Date(2026, 7, 5, 21, 0, 0, 0).getTime());

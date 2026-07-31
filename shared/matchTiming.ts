@@ -94,14 +94,17 @@ function parseClock(timeStr: unknown): [number, number] {
  *   3. Eski metin etiketleri: 'Bugün' / 'Yarın' / gün adı + `time`
  * Hiçbiri çözülemezse null — çağıran uydurma tarih göstermek yerine alanı çizmez.
  *
- * NEDEN `starts_at` İKİNCİ SIRADA (dikkat):
- * `create_match_atomic`, `starts_at`i `(p_date + p_start_time)::timestamptz`
- * ile yazıyor. Sunucunun saat dilimi UTC olduğu için 21:00'lik bir maç
- * '21:00+00' oluyor — oysa o saat İstanbul duvar saatidir. Yani `starts_at`
- * gerçek andan 3 saat SAPIYOR ve İstanbul'daki bir oyuncuda 21:00'lik maç
- * ertesi güne (00:00) düşüyordu. `date` + `time` ise kartta YAZAN değerin ta
- * kendisi: şeritteki gün ile kartta okunan tarih böylece hep aynı oluyor.
- * (Verideki bu sapma ayrı bir iştir; burada yalnız doğru günü seçiyoruz.)
+ * NEDEN `date` + `time` İLK SIRADA:
+ * Bu ikisi kartta YAZAN değerdir. Gün şeridi, kart tarihi ve gün sayaçları
+ * aynı kaynaktan beslendiği için hepsi her zaman aynı şeyi söyler; kullanıcı
+ * cihazının saat dilimi ne olursa olsun "20:00 maçı" 20:00 olarak görünür.
+ *
+ * `starts_at` ise maçın MUTLAK anıdır ve sunucu tarafının otoritesidir
+ * (hatırlatma, iade, otomatik iptal, görevli eşleştirme onu okur). Bir dönem
+ * yanlış saat dilimiyle yazıldığı (İstanbul duvar saati UTC sanılıyordu, 3
+ * saat sapma) için burada bilerek ikinci sıradaydı; o sapma
+ * 20260903000000_mac_saati_istanbul_saat_dilimi ile giderildi. Sıralamanın
+ * korunma sebebi artık sapma değil, yukarıdaki EKRAN TUTARLILIĞIDIR.
  */
 export function matchStartMs(
   match: Record<string, any> | null | undefined,
