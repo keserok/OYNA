@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ChevronRight, ShieldCheck, X } from 'lucide-react';
+import { ShieldCheck, X } from 'lucide-react';
 
-const RING_R = 21;
+const RING_R = 19;
 const RING_C = 2 * Math.PI * RING_R;
 
 export interface TrustScoreCardProps {
@@ -23,28 +23,28 @@ export const TrustScoreCard: React.FC<TrustScoreCardProps> = ({ score, note }) =
         <>
             <button
                 onClick={() => setSheetOpen(true)}
-                className="w-full rounded-[22px] p-3.5 px-4 bg-primary/5 border border-primary/25 flex items-center gap-3.5 hover:bg-primary/10 active:scale-[0.99] transition-all"
+                className="w-full rounded-3xl p-4 bg-surface-1 shadow-[0_10px_30px_rgba(0,0,0,0.3)] flex items-center gap-3.5 hover:bg-white/[0.06] active:scale-[0.99] transition-all"
             >
-                <div className="relative w-[52px] h-[52px] flex items-center justify-center shrink-0">
-                    <svg width="52" height="52" viewBox="0 0 52 52" className="absolute inset-0 -rotate-90">
-                        <circle cx="26" cy="26" r={RING_R} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="5" />
+                <div className="relative w-[46px] h-[46px] flex items-center justify-center shrink-0">
+                    <svg width="46" height="46" viewBox="0 0 46 46" className="absolute inset-0 -rotate-90">
+                        <circle cx="23" cy="23" r={RING_R} fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth="4" />
                         <circle
-                            cx="26" cy="26" r={RING_R} fill="none"
+                            cx="23" cy="23" r={RING_R} fill="none"
                             className="stroke-primary"
-                            strokeWidth="5" strokeLinecap="round"
+                            strokeWidth="4" strokeLinecap="round"
                             strokeDasharray={`${RING_C} ${RING_C}`}
                             strokeDashoffset={RING_C * (1 - clamped / 100)}
                         />
                     </svg>
-                    <span className="relative text-base font-extrabold text-white">{clamped}</span>
+                    <span className="relative text-[0.8125rem] font-bold text-[#F5F3EE]">{clamped}</span>
                 </div>
                 <div className="flex-1 text-left min-w-0">
-                    <p className="text-[0.625rem] font-extrabold tracking-[0.14em] uppercase text-ink-4 mb-1">Güven Puanı</p>
-                    <p className="text-[0.6875rem] font-semibold text-white/50 leading-[1.4]">
+                    <p className="text-[0.625rem] font-semibold tracking-[0.14em] uppercase text-[#F5F3EE]/[0.55] mb-[3px]">Güven Puanı</p>
+                    <p className="text-[0.6875rem] italic text-[#F5F3EE]/[0.6] leading-[1.45]">
                         {note || 'Fair-play geçmişin ve katılım disiplininle hesaplanır.'}
                     </p>
                 </div>
-                <ChevronRight size={16} className="text-ink-4 shrink-0" strokeWidth={2.4} />
+                <span aria-hidden className="text-[#F5F3EE]/[0.5] shrink-0">→</span>
             </button>
 
             {/* Açıklama bottom-sheet'i — portal: üst motion sarmalayıcıların stacking

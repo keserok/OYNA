@@ -113,10 +113,11 @@ describe('Kullanıcı Profili Aynası (admin)', () => {
     expect(await screen.findByText('Deneme Oyuncu')).toBeInTheDocument();
     expect(screen.getByText('Merhaba dünya')).toBeInTheDocument();
     expect(screen.getByText('CANLI AYNA')).toBeInTheDocument();
-    // Kısayollar: cüzdan bakiyesi + en-iyi-çaba sayaçlar
+    // Kısayollar: cüzdan bakiyesi + en-iyi-çaba sayaçlar.
+    // Tasarım 3a: değerler çıplak sayı — etiket ("Takımları") zaten ne olduğunu söylüyor.
     expect(screen.getByText('150 ₺')).toBeInTheDocument();
-    expect(screen.getByText('2 Takım')).toBeInTheDocument();
-    expect(screen.getByText('1 Arkadaş')).toBeInTheDocument();
+    expect(screen.getByText('Takımları').closest('div')?.textContent).toContain('2');
+    expect(screen.getByText('Arkadaşları').closest('div')?.textContent).toContain('1');
     // Maç geçmişi kartı (uygulamadaki bileşen)
     expect(screen.getByText('Arena')).toBeInTheDocument();
   });

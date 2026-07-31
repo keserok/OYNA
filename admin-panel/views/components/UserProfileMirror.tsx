@@ -15,7 +15,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
-  Loader2, Pencil, RefreshCw, ShieldAlert, Sparkles, Star, Users, UserPlus, Wallet, X,
+  Loader2, Pencil, RefreshCw, ShieldAlert, Sparkles, Star, Wallet, X,
 } from 'lucide-react';
 import { supabase } from '../../../supabaseClient';
 import {
@@ -223,25 +223,23 @@ export const UserProfileMirror: React.FC<Props> = ({ userId, onUpdated }) => {
     );
   }
 
-  const { total, wins, winRate } = winStats(history);
+  const { total, winRate } = winStats(history);
   const trustScore = trustScoreTo100(profile.trustScore);
 
+  // Tasarım 3a: kısayollarda ikon yok, değer çıplak sayı — uygulamayla birebir.
   const shortcuts: ShortcutItem[] = [
     {
-      icon: <Wallet size={16} strokeWidth={2.3} />,
       label: 'Cüzdan',
       value: fmtMoney(profile.walletBalance ?? 0),
       onClick: () => setWalletOpen(true),
     },
     {
-      icon: <Users size={16} strokeWidth={2.3} />,
       label: 'Takımları',
-      value: teamsCount === null ? '—' : `${teamsCount} Takım`,
+      value: teamsCount === null ? '—' : `${teamsCount}`,
     },
     {
-      icon: <UserPlus size={16} strokeWidth={2.3} />,
       label: 'Arkadaşları',
-      value: friendsCount === null ? '—' : `${friendsCount} Arkadaş`,
+      value: friendsCount === null ? '—' : `${friendsCount}`,
     },
   ];
 
@@ -259,7 +257,7 @@ export const UserProfileMirror: React.FC<Props> = ({ userId, onUpdated }) => {
       </div>
 
       {/* ═══ UYGULAMA TUVALİ — ProfileScreen gövdesinin birebir kopyası ═══ */}
-      <div className="relative mx-auto w-full max-w-[400px] rounded-[30px] border border-white/10 bg-bg-main px-4 py-5 overflow-hidden">
+      <div className="relative mx-auto w-full max-w-[400px] rounded-[30px] border border-white/10 pf-canvas pf-serif px-4 py-5 overflow-hidden">
         <div className="pf-ambient" />
         <div className="relative z-10 space-y-3">
           {/* Profil tamamlanmadı sinyali (uygulamadaki şeridin bilgilendirme hâli) */}
@@ -282,9 +280,6 @@ export const UserProfileMirror: React.FC<Props> = ({ userId, onUpdated }) => {
             matches={total}
             winRate={winRate}
             mvp={null}
-            winCount={wins}
-            selfSkill={(profile as { selfSkill?: number | null }).selfSkill ?? null}
-            cardBackMatches={history}
             onEditAvatar={() => setSheetOpen(true)}
           />
 

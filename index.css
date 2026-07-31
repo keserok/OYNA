@@ -97,6 +97,46 @@
   unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;
 }
 
+/* Lora — YALNIZCA Profil ekranı (kullanıcı kararı: tasarım 3a "İnce Neon").
+   Inter gibi kendi sunucumuzdan gelir; Google CDN'e bağlanmaz, çevrimdışıyken
+   de çizilir. Değişken ağırlık ekseni 400–700 taşır: Profil ekranında 800
+   (`font-extrabold`) KULLANILMAZ — `font-synthesis: none` yüzünden sahte kalın
+   üretilmez, yazı sessizce 700'e düşerdi. Gerçek italik yüzü vardır (tasarımın
+   italik satırları bu yüzden sahte eğim değil).
+   Türkçe kapsama: `ı` latin'de; `İ ğ Ğ ş Ş ₺` latin-ext'te — ikisi de zorunlu. */
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('/fonts/lora-latin-wght-normal.woff2') format('woff2-variations');
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('/fonts/lora-latin-ext-wght-normal.woff2') format('woff2-variations');
+  unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('/fonts/lora-latin-wght-italic.woff2') format('woff2-variations');
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('/fonts/lora-latin-ext-wght-italic.woff2') format('woff2-variations');
+  unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;
+}
+
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --breakpoint-xs: 375px;
@@ -271,6 +311,22 @@ body.offline-banner-on .safe-area-top { padding-top: calc(var(--safe-top) + 1rem
 .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
 .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 99px; }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+
+/* ─── Profil ekranı — tasarım 3a "İnce Neon" ────────────────────────────────
+   Bu iki sınıf YALNIZ Profil ekranında (ve admin panelindeki birebir aynasında)
+   kullanılır; uygulamanın geri kalanı Inter + düz koyu zemin olarak kalır.
+
+   `.pf-serif`: kullanıcı kararı — profil tırnaklı (serif) yazıya geçer.
+   Rakamlar da Lora çizer; `tabular-nums` alt alta gelen skorların/tutarların
+   hizasını korur (Space Grotesk'e düşmez, tasarımın yüzü bozulmasın diye).
+   `.pf-canvas`: tasarımın üstten aşağı yeşile çalan zemin geçişi. */
+.pf-serif {
+  font-family: 'Lora', Georgia, 'Times New Roman', serif;
+  font-variant-numeric: tabular-nums;
+}
+.pf-canvas {
+  background: linear-gradient(175deg, #0D2318 0%, #0A1510 42%, #0A0E14 100%);
+}
 
 /* Profil — köşedeki ambient "nefes" ışıması (prefers-reduced-motion S50 ile kapanır) */
 @keyframes pf-breathe {
