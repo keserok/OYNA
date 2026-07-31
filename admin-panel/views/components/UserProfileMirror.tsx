@@ -493,7 +493,6 @@ export const UserProfileMirror: React.FC<Props> = ({ userId, onUpdated }) => {
             matches={total}
             winRate={winRate}
             mvp={null}
-            selfSkill={(profile as { selfSkill?: number | null }).selfSkill ?? null}
             onEditAvatar={() => setSheetOpen(true)}
           />
 

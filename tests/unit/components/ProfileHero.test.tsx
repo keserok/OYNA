@@ -57,26 +57,12 @@ describe('ProfileHero — kimlik kartı', () => {
     expect(screen.queryByText('%0')).not.toBeInTheDocument();
   });
 
-  it('MVP verisi yokken MVP hucresi cizilmez', () => {
+  it('MVP verisi yokken EN IYI hucresi cizilmez', () => {
     const { rerender } = ciz({ matches: 5, winRate: 60, mvp: null });
-    expect(screen.queryByText('MVP')).not.toBeInTheDocument();
+    expect(screen.queryByText('EN İYİ')).not.toBeInTheDocument();
     rerender(
       <ProfileHero name="Deneme Oyuncu" position={null} age={null} matches={5} winRate={60} mvp={3} />,
     );
-    expect(screen.getByText('MVP')).toBeInTheDocument();
-  });
-
-  it('seviye beyani varsa kunye sonunda BAND cipi cizilir (ham sayi degil)', () => {
-    ciz({ position: 'Orta Saha', age: 26, selfSkill: 6 });
-    expect(screen.getByText('ORTA')).toBeInTheDocument();
-    // Kamusal yüzeyde ham sayı GÖSTERİLMEZ — kadroda "ben 7 o 6" kıyası doğmasın.
-    expect(screen.queryByText(/6\s*\/\s*10/)).not.toBeInTheDocument();
-  });
-
-  it('seviye beyani yoksa band cipi hic cizilmez', () => {
-    ciz({ position: 'Orta Saha', selfSkill: null });
-    for (const b of ['BAŞLANGIÇ', 'ORTA', 'İLERİ']) {
-      expect(screen.queryByText(b), `${b} çipi sızdı`).not.toBeInTheDocument();
-    }
+    expect(screen.getByText('EN İYİ')).toBeInTheDocument();
   });
 });
