@@ -5,7 +5,7 @@ import { test, expect, Page } from '@playwright/test';
 // Canlı backend YOK: Supabase REST/RPC/Auth çağrıları route ile stub'lanır,
 // oturum localStorage'a tohumlanır. Böylece gerçek tarayıcıda, gerçek pointer
 // olaylarıyla stüdyonun BİRİM TESTLERİN KAPSAYAMADIĞI davranışı doğrulanır:
-// dashboard→stüdyo geçişi, parmakla çizim, ilk kullanım turu + örnek taktik.
+// dashboard→stüdyo geçişi, parmakla çizim, ilk kullanım tanıtımı + örnek taktik.
 
 const b64url = (o: unknown) =>
   Buffer.from(JSON.stringify(o)).toString('base64')
@@ -94,20 +94,39 @@ test.describe('Taktik Stüdyo — hermetik', () => {
     await expect.poll(() => runPath.count(), { timeout: 5000 }).toBeGreaterThan(0);
   });
 
-  test('ilk kullanımda tur çıkar; "Örnek yükle" çalışan bir taktik yükler', async ({ page }) => {
+  // İlk kullanım tanıtımı 2026-07-23'te YENİLENDİ: "Sonraki" ile ilerleyen
+  // 3 adımlı tur yerine, altı aracın tamamını tek sayfada anlatan ve "Başla"
+  // ile kapanan bir tanıtım var. Örnek taktik daveti de turun içinden çıktı;
+  // artık tanıtım kapandıktan sonra BOŞ TAHTADA beliriyor.
+  test('ilk kullanımda tanıtım çıkar; "Örnek taktiği yükle" çalışan bir taktik yükler', async ({ page }) => {
     await bootstrap(page, { onboarded: false });
     await openStudio(page);
 
-    // 3 adımlı tur
-    await expect(page.getByText('Oyuncularını yerleştir')).toBeVisible();
-    await page.getByRole('button', { name: /Sonraki/ }).click();
-    await expect(page.getByText('Hareketleri çiz')).toBeVisible();
-    await page.getByRole('button', { name: /Sonraki/ }).click();
-    await expect(page.getByText('İzle ve paylaş')).toBeVisible();
+    // Tek sayfa tanıtım: altı aracın tamamı aynı anda listelenir.
+    await expect(page.getByText('Oyuncuları yerleştir')).toBeVisible();
+    await expect(page.getByText('KOŞU çiz')).toBeVisible();
+    await expect(page.getByText('PAS çiz — tek top, zincir')).toBeVisible();
+    await expect(page.getByText('OYNAT / DURDUR')).toBeVisible();
+    await expect(page.getByText('Tempo & taraf')).toBeVisible();
+    await expect(page.getByText('Paylaş', { exact: true })).toBeVisible();
 
-    // Örnek taktik yükle → plan sekmesinde "Örnek Taktik" + sahada çizim (pas oku)
-    await page.getByRole('button', { name: /Örnek yükle/ }).click();
+    // "Başla" tanıtımı kapatır.
+    await page.getByRole('button', { name: 'Başla' }).click();
+    await expect(page.getByText('Oyuncuları yerleştir')).toBeHidden();
+
+    // Boş tahtadaki örnek taktik daveti → plana yüklenir + sahada çizim belirir.
+    await page.getByText('Örnek taktiği yükle').click();
     await expect(page.getByText('Örnek Taktik').first()).toBeVisible({ timeout: 8000 });
     await expect.poll(() => page.locator('svg path[stroke="#39FF14"]').count(), { timeout: 8000 }).toBeGreaterThan(0);
+  });
+
+  // Tanıtım kullanıcı-başına BİR KEZ görünür; Yardım ile istendiğinde geri gelir.
+  test('tanıtım bir daha kendiliğinden açılmaz; Yardım ile yeniden açılır', async ({ page }) => {
+    await bootstrap(page, { onboarded: true });
+    await openStudio(page);
+
+    await expect(page.getByText('Oyuncuları yerleştir')).toBeHidden();
+    await page.getByRole('button', { name: 'Yardım' }).click();
+    await expect(page.getByText('Oyuncuları yerleştir')).toBeVisible();
   });
 });

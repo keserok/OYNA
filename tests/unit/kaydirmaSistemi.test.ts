@@ -15,17 +15,24 @@
 // edilemez — o taraf cihaz üstünde/Playwright ile doğrulanır.
 
 import { describe, it, expect, afterEach } from 'vitest';
-import { damp, scrollStep, stretchLimit, findScroller } from '../../utils/scrollSystem';
+import { damp, scrollStep, stretchLimit, findScroller, findScrollerX } from '../../utils/scrollSystem';
 
 // ── Yardımcı: jsdom düzen hesaplamadığı için ölçüleri elle veriyoruz ────────
 function kutu(
-  ozellikler: { style?: string; scrollHeight?: number; clientHeight?: number; noBounce?: boolean } = {},
+  ozellikler: {
+    style?: string;
+    scrollHeight?: number; clientHeight?: number;
+    scrollWidth?: number; clientWidth?: number;
+    noBounce?: boolean;
+  } = {},
 ): HTMLElement {
   const el = document.createElement('div');
   if (ozellikler.style) el.setAttribute('style', ozellikler.style);
   if (ozellikler.noBounce) el.setAttribute('data-oyna-no-bounce', '');
   Object.defineProperty(el, 'scrollHeight', { value: ozellikler.scrollHeight ?? 0, configurable: true });
   Object.defineProperty(el, 'clientHeight', { value: ozellikler.clientHeight ?? 0, configurable: true });
+  Object.defineProperty(el, 'scrollWidth', { value: ozellikler.scrollWidth ?? 0, configurable: true });
+  Object.defineProperty(el, 'clientWidth', { value: ozellikler.clientWidth ?? 0, configurable: true });
   return el;
 }
 
@@ -187,5 +194,88 @@ describe('hareketi hangi kaydırıcı alır', () => {
     duz.appendChild(hedef);
     document.body.appendChild(duz);
     expect(findScroller(hedef)).toBeNull();
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Yatay şeritler de yaylanır (kullanıcı kararı: uygulamanın her yeri aynı
+// hissetsin). Aynı motor, yön kilitlendikten sonra o eksenin kaydırıcısını
+// arar; dikey davranış bundan etkilenmez.
+describe('yatay hareket hangi şeridi alır', () => {
+  it('en yakın YATAY şeridi bulur', () => {
+    const serit = kutu({ style: 'overflow-x: auto', scrollWidth: 1200, clientWidth: 390 });
+    const hedef = document.createElement('span');
+    serit.appendChild(hedef);
+    document.body.appendChild(serit);
+    expect(findScrollerX(hedef)).toBe(serit);
+  });
+
+  it('taşma yoksa (kartlar ekrana sığıyorsa) null döner — yaylanacak bir şey yok', () => {
+    const serit = kutu({ style: 'overflow-x: auto', scrollWidth: 390, clientWidth: 390 });
+    const hedef = document.createElement('span');
+    serit.appendChild(hedef);
+    document.body.appendChild(serit);
+    expect(findScrollerX(hedef)).toBeNull();
+  });
+
+  it('içteki şerit dıştakinden önce gelir', () => {
+    const dis = kutu({ style: 'overflow-x: auto', scrollWidth: 2000, clientWidth: 390 });
+    const ic = kutu({ style: 'overflow-x: auto', scrollWidth: 900, clientWidth: 300 });
+    const hedef = document.createElement('span');
+    ic.appendChild(hedef);
+    dis.appendChild(ic);
+    document.body.appendChild(dis);
+    expect(findScrollerX(hedef)).toBe(ic);
+  });
+
+  it('yalnız DİKEY kaydıran listede yatay çekiş kimseyi seçmez', () => {
+    const liste = kutu({ style: 'overflow-y: auto', scrollHeight: 2000, clientHeight: 800 });
+    const hedef = document.createElement('span');
+    liste.appendChild(hedef);
+    document.body.appendChild(liste);
+    expect(findScrollerX(hedef)).toBeNull();
+  });
+
+  it('sabit katmanın (modal) KENDİ şeridi çalışır; arkadaki şerit çalışmaz', () => {
+    const arkaSerit = kutu({ style: 'overflow-x: auto', scrollWidth: 1200, clientWidth: 390 });
+    const modal = kutu({ style: 'position: fixed' });
+    const modalSerit = kutu({ style: 'overflow-x: auto', scrollWidth: 800, clientWidth: 300 });
+    const hedef = document.createElement('span');
+    modalSerit.appendChild(hedef);
+    modal.appendChild(modalSerit);
+    arkaSerit.appendChild(modal);
+    document.body.appendChild(arkaSerit);
+    // Şerit modalin içinde → bulunur.
+    expect(findScrollerX(hedef)).toBe(modalSerit);
+
+    // Modalin kendi şeridi yoksa arkadaki şeride UZANILMAZ.
+    const bosModal = kutu({ style: 'position: fixed' });
+    const hedef2 = document.createElement('span');
+    bosModal.appendChild(hedef2);
+    arkaSerit.appendChild(bosModal);
+    expect(findScrollerX(hedef2)).toBeNull();
+  });
+
+  it('kart kart duran (snap) karusel devralınmaz — kendi snap davranışı korunur', () => {
+    // Ölçüldü: snap'li şeritte kaydırmayı devralmak kart atlatıyordu
+    // (konum 0'dan 308'e sıçrıyordu). Bu şeritler tarayıcıya bırakılır.
+    const karusel = kutu({
+      style: 'overflow-x: auto; scroll-snap-type: x mandatory',
+      scrollWidth: 2000, clientWidth: 390,
+    });
+    const hedef = document.createElement('span');
+    karusel.appendChild(hedef);
+    document.body.appendChild(karusel);
+    expect(findScrollerX(hedef)).toBeNull();
+  });
+
+  it('`data-oyna-no-bounce` işaretli bölgede yatay yaylanma da devre dışı kalır', () => {
+    const serit = kutu({ style: 'overflow-x: auto', scrollWidth: 1200, clientWidth: 390 });
+    const muaf = kutu({ noBounce: true });
+    const hedef = document.createElement('span');
+    muaf.appendChild(hedef);
+    serit.appendChild(muaf);
+    document.body.appendChild(serit);
+    expect(findScrollerX(hedef)).toBeNull();
   });
 });

@@ -882,6 +882,11 @@ const App: React.FC = () => {
           key={view}
           {...PAGE_TRANSITION}
           onScrollCapture={showBottomNav ? handleNavScrollCapture : undefined}
+          // Görünüm kaydırıcısının işareti. İki yerden okunur:
+          //  • index.css — ekranların "tam ekran" ölçüsünü VİEWPORT yerine bu
+          //    kabın iç yüksekliğine bağlayan tek ortak kural.
+          //  • tests/visual/oluBosluk.visual.spec.ts — ölü bant ölçümü.
+          data-oyna-view-scroller=""
           className={`w-full h-full absolute inset-0 overflow-y-auto overscroll-contain custom-scrollbar ${
             // MY_MATCHES kendi içinde kaydırır ve bar payını kendisi ayırır →
             // dış dolgu ölü bant yaratmasın, kartlar barın altından aksın.

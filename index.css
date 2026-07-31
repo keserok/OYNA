@@ -312,6 +312,37 @@
    Dynamic Island altına giriyordu. (Unlayered kural, Tailwind p-4'ü ezer.) */
 .safe-area-top { padding-top: calc(var(--safe-top) + 1rem); }
 
+/* ─── "TAM EKRAN" = KAP, VİEWPORT DEĞİL ───────────────────────────────────────
+   SORUN: ekranlar yüksekliğini `min-h-screen` / `h-screen` ile istiyordu; bu
+   Tailwind sınıfları `100vh` yazar, yani TELEFON EKRANININ tamamı. Oysa hiçbir
+   ekran ekranın tamamında yaşamıyor: hepsi App.tsx'teki görünüm kaydırıcısının
+   içinde ve o kap, alt menü + güvenli alan (çentik / ana ekran çubuğu) payı
+   kadar DAHA KISA — pay kaydırıcının dolgusuna yazılı. Ekran kabına sığmıyor,
+   aradaki fark altta kaydırılabilir ama bomboş bir bant olarak kalıyordu:
+   kullanıcı parmağını sürüklediğinde sayfa boşluğa doğru kayıyordu.
+
+   Ölçüldü (çentikli telefon taklidi, 390×844): 12 ekranda tam 50px ölü bant
+   (= 34px güvenli alan + 16px dolgu). Bu kuralla hepsinde 0px.
+
+   ÇÖZÜM: `100vh` yerine `100%`. Yüzde, öğenin İÇİNDE YAŞADIĞI kabın iç
+   yüksekliğine göre çözülür — yani dolgular düşülmüş hâline. Zincir kurulu:
+   html → body → #root → kabuk hepsi `height: 100%`, kaydırıcı da
+   `absolute inset-0`. Böylece her ekran otomatik olarak kabına sığar; ekran
+   başına kod yazmak ya da muaf ekran listesi tutmak gerekmez, sonradan eklenen
+   ekranlar da doğru doğar.
+
+   EK KAZANÇ: `100vh` mobil tarayıcıda adres çubuğu GİZLİYKENKİ boyu verir; bu
+   yüzden çubuk görünürken ekran her zaman viewport'tan uzun olurdu. `100%`
+   gerçek kabı ölçtüğü için o fark da kapanır (`dvh`ye ihtiyaç kalmaz).
+
+   KAPSAM: yalnız `#root` — yönetim paneli (`#admin-root`) masaüstü için
+   tasarlandı, kendi `100vh` hesapları geçerli kalır. Katmansız (unlayered)
+   yazıldı: Tailwind yardımcıları `@layer utilities` içinde olduğundan bu kural
+   onları ezer — dosyadaki `.safe-area-top` ile aynı desen. ────────────────── */
+#root .min-h-screen { min-height: 100%; }
+#root .h-screen     { height: 100%; }
+#root .max-h-screen { max-height: 100%; }
+
 /* ─── Ana sayfa üst boşluğu (views/Dashboard.tsx) ──────────────────────────
    Onaylı tasarım üst boşluğu SABİT verir: clamp(42px, 7.1cqh, 60px). Bu değer
    390×844 maketinde doğrudur ama gerçek cihazda tek başına yetmez — iPhone'un
