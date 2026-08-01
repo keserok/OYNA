@@ -524,8 +524,12 @@ const RahatMatchLobby: React.FC<Props> = ({ match: matchProp, onBack }) => {
     <div lang="tr" className="fixed inset-0 z-40 flex flex-col" style={{ background: '#0A0E14', color: '#FFFFFF' }}>
       <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar" style={{ paddingBottom: 130 }}>
 
-        {/* ── Foto karuseli / yedek zemin ── */}
-        <div style={{ position: 'relative', height: 220, background: 'linear-gradient(160deg, #0d1712 0%, #0A0E14 100%)', overflow: 'hidden' }}>
+        {/* ── Foto karuseli ──
+            ZEMİN: sayfanın geri kalanıyla AYNI düz renk. Önceden burada yeşile
+            çalan bir geçiş (#0d1712 → #0A0E14) vardı; fotoğraf yokken üst blok
+            gözle görülür biçimde ayrı bir panel gibi duruyordu. Tek arka plan
+            kararı gereği düz renge alındı. */}
+        <div style={{ position: 'relative', height: 220, background: '#0A0E14', overflow: 'hidden' }}>
           {photos.length > 0 ? (
             <div
               style={{ display: 'flex', height: '100%', overflowX: 'auto', scrollSnapType: 'x mandatory' }}
@@ -540,12 +544,13 @@ const RahatMatchLobby: React.FC<Props> = ({ match: matchProp, onBack }) => {
                   style={{ width: '100%', height: '100%', objectFit: 'cover', flexShrink: 0, scrollSnapAlign: 'start' }} />
               ))}
             </div>
-          ) : (
-            <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <span style={{ fontSize: 44, fontWeight: 900, fontStyle: 'italic', color: 'rgba(57,255,20,0.35)' }}>{initialsOf(facilityName)}</span>
-            </div>
-          )}
-          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(10,14,20,0.55) 0%, transparent 35%, transparent 60%, rgba(10,14,20,0.9) 100%)', pointerEvents: 'none' }} />
+          ) : null}
+          {/* KARARTMA PERDESİ KALDIRILDI (tek arka plan kararı): üstte %55,
+              altta %90 siyah bir katman çiziliyordu; ekranın üst bölgesinin
+              "koyulaşmış" görünmesinin asıl sebebi buydu. Perdenin tek işlevi
+              kapat/paylaş düğmelerini açık fotoğrafta okunur tutmaktı — o iş
+              zaten düğmelerin KENDİ koyu daire zeminiyle çözülüyor (aşağıda),
+              yani perde gereksizdi. */}
 
           <button type="button" onClick={onBack} aria-label="Kapat"
             style={{ position: 'absolute', top: 54, left: 16, width: 44, height: 44, borderRadius: '50%', background: 'rgba(10,14,20,0.6)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
@@ -580,11 +585,11 @@ const RahatMatchLobby: React.FC<Props> = ({ match: matchProp, onBack }) => {
           </div>
         )}
 
-        {/* ── Tesis kimliği ── */}
+        {/* ── Tesis kimliği ──
+            Baş harf kutusu KALDIRILDI (kullanıcı kararı): tesis adının solunda
+            duran 46px'lik kutu, adın kendisiyle aynı bilgiyi tekrar ediyordu ve
+            başlığı sağa itiyordu. Artık ad doğrudan kenar boşluğundan başlar. */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '16px 20px 14px' }}>
-          <div style={{ width: 46, height: 46, borderRadius: 14, flexShrink: 0, background: '#0d1712', border: '1px solid rgba(57,255,20,0.22)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <span style={{ fontSize: 15, fontWeight: 900, fontStyle: 'italic', color: '#39FF14' }}>{initialsOf(facilityName)}</span>
-          </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <h1 style={{ margin: 0, fontSize: 20, fontWeight: 900, letterSpacing: '-0.02em', lineHeight: 1.15, color: '#FFFFFF', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{facilityName}</h1>
             {courtName && <p style={{ margin: '3px 0 0', fontSize: 12, fontWeight: 600, color: '#9CA3AF' }}>@{courtName}</p>}

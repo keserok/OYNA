@@ -1201,6 +1201,15 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
     return selectedPitch?.images ?? [];
   }, [selectedCourt, selectedPitch]);
 
+  /** Galeride kaçıncı fotoğraftayız — alt noktacıklar ve sayaç bunu okur.
+   *  Önceden noktacıklar SABİT olarak ilki yanacak şekilde yazılmıştı: kullanıcı
+   *  fotoğrafları kaydırsa da gösterge hiç değişmiyordu, yani "kaçıncıdayım"
+   *  bilgisi yanlıştı. */
+  const [galleryIdx, setGalleryIdx] = useState(0);
+
+  // Kort değişince galeri başa sarar; gösterge de sıfırlanmalı.
+  useEffect(() => { setGalleryIdx(0); }, [selectedCourtId, selectedPitch?.id]);
+
   // Admin tesis bazlı online rezervasyon kapatması (sunucu BOOKING_DISABLED ile
   // zaten reddeder; arayüz baştan kapatır ki oyuncu boşa uğraşmasın).
   const bookingDisabled = selectedPitch?.bookingDisabledByAdmin === true;
@@ -1208,7 +1217,16 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
   const amenitySplit = useMemo(() => splitAmenities(selectedPitch?.amenities ?? []), [selectedPitch]);
 
   return (
-    <div className="min-h-screen bg-[#0A0E14] text-white flex flex-col font-sans overflow-hidden">
+    // YÜKSEKLİK SABİT OLMALI (`h-full`), "en az bu kadar" (`min-h-screen`) DEĞİL.
+    // Bu ekran dikey bir yığın: üstte sabit başlık, altta kendi içinde kayan
+    // liste (`<main className="flex-1 overflow-y-auto">`). Bir çocuğun "kalan
+    // alanı doldur + taşarsa kaydır" davranışı, ANA KUTUNUN yüksekliği belli
+    // olduğunda çalışır. `min-h-screen` yalnız bir TABAN verir, yüksekliği
+    // serbest bırakır: kutu içerikle birlikte uzar, `flex-1` sınırlanacak bir
+    // alan bulamaz ve listenin kendi kaydırması HİÇ DEVREYE GİRMEZ — ekran
+    // kaydırılamaz görünür. `h-full` kabın tamamını alır, sınır netleşir.
+    // (Maçlarım ve Maç Kur ekranları zaten bu desende çalışıyor.)
+    <div className="h-full bg-[#0A0E14] text-white flex flex-col font-sans overflow-hidden">
 
       {/* Header Section */}
       <header className="px-6 pt-safe pb-3 bg-gradient-to-b from-[#0A0E14] to-transparent sticky top-0 z-40 backdrop-blur-md">
@@ -1687,8 +1705,19 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
             {/* Scrollable Content */}
             <div className="flex-1 overflow-y-auto custom-scrollbar pb-44">
               {/* Galeri — seçili sahanın kendi görselleri öncelikli */}
-              <div className="relative w-full h-[35vh]">
-                <div key={selectedCourtId ?? 'pitch'} className="w-full h-full flex overflow-x-auto snap-x snap-mandatory no-scrollbar">
+              {/* Yükseklik %35 → %45 (kullanıcı kararı): fotoğraf belirgin
+                  şekilde büyür, altındaki başlık ve fiyat hâlâ ilk bakışta
+                  görünür kalır. */}
+              <div className="relative w-full h-[45vh]">
+                <div
+                  key={selectedCourtId ?? 'pitch'}
+                  className="w-full h-full flex overflow-x-auto snap-x snap-mandatory no-scrollbar"
+                  onScroll={(e) => {
+                    const el = e.currentTarget;
+                    const i = Math.round(el.scrollLeft / Math.max(1, el.clientWidth));
+                    setGalleryIdx((onceki) => (onceki === i ? onceki : i));
+                  }}
+                >
                   {(galleryImages.length > 0 ? galleryImages : ['']).map((img, idx) => (
                     <div key={idx} className="w-full h-full flex-shrink-0 snap-center relative">
                       <SafeImage src={img} alt={`${selectedCourt?.name ?? selectedPitch.name} ${idx + 1}`} className="w-full h-full object-cover" variant="detail" />
@@ -1702,11 +1731,24 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
                   </span>
                 )}
                 {galleryImages.length > 1 && (
-                  <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
-                    {galleryImages.map((_, idx) => (
-                      <div key={idx} className={`h-1.5 rounded-full backdrop-blur-md ${idx === 0 ? 'w-4 bg-white' : 'w-1.5 bg-white/50'}`}></div>
-                    ))}
-                  </div>
+                  <>
+                    {/* Noktacıklar artık GERÇEK konumu gösterir (galleryIdx). */}
+                    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
+                      {galleryImages.map((_, idx) => (
+                        <div
+                          key={idx}
+                          className={`h-1.5 rounded-full backdrop-blur-md transition-all duration-200 ${
+                            idx === galleryIdx ? 'w-4 bg-white' : 'w-1.5 bg-white/50'
+                          }`}
+                        />
+                      ))}
+                    </div>
+                    {/* "3 / 8" sayacı: çok fotoğraflı tesiste kaç tane olduğunu
+                        noktacıkları saymadan görebilmek için. */}
+                    <span className="absolute bottom-5 right-4 z-10 px-2 py-0.5 rounded-full bg-black/55 backdrop-blur-md border border-white/15 text-[0.6875rem] font-extrabold text-white/90 tabular-nums">
+                      {Math.min(galleryIdx + 1, galleryImages.length)} / {galleryImages.length}
+                    </span>
+                  </>
                 )}
               </div>
 

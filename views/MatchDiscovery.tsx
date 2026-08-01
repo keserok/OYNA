@@ -346,8 +346,15 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onSelect }) => {
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }}
           className="absolute inset-0 flex flex-col z-40 bg-[#0A0E14]"
         >
-          {/* HEADER */}
-          <header className="sticky top-0 z-50 bg-black/40 backdrop-blur-2xl border-b border-white/5 px-5 pt-safe pb-4">
+          {/* HEADER
+              ZEMİN YOK (bilinçli): burada `bg-black/40 + backdrop-blur` vardı;
+              %40 siyah, sayfanın #0A0E14 zeminini DAHA KOYU bir banda çeviriyordu
+              ve ekranın üstü ayrı bir blok gibi duruyordu. Başlık, kayan listenin
+              ÜSTÜNDE değil YANINDA duruyor (ikisi de aynı dikey yığının çocuğu),
+              yani içerik altından geçmiyor — opak zemine ve blur'a ihtiyacı yok.
+              Kaldırılınca filtre satırı, gün şeridi ve liste ile birebir aynı
+              renge oturur. Alttaki ince ayraç çizgisi kaldı. */}
+          <header className="relative z-50 border-b border-white/5 px-5 pt-safe pb-4">
             <div className="flex items-center justify-between">
               {/* IP-14: sekme kökü — geri oku kaldırıldı. */}
               <div className="flex items-center gap-3">
@@ -435,8 +442,17 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onSelect }) => {
           )}
 
           {/* ── FORMAT · MENTALİTE · POZİSYON — üç simetrik dropdown, tek satır ──
-              overflow-* YOK: paneller satırın altına doğru (yukarıdan aşağıya) açılır. */}
-          <div className="relative shrink-0 z-30 border-b border-white/5 bg-[#0D121F]/40 backdrop-blur-md">
+              overflow-* YOK: paneller satırın altına doğru (yukarıdan aşağıya) açılır.
+
+              ZEMİN YOK (bilinçli): bu satır sayfanın koyu lacivert bir tonuyla
+              (#0D121F/40 + blur) boyanıyordu; ekranın geri kalanı düz #0A0E14
+              olduğu için üst bölge gözle görülür biçimde AYRI bir blok gibi
+              duruyordu. Satır sabit (sticky/fixed) değil, akışta duruyor —
+              altındaki liste onun altından geçmez, dolayısıyla opak bir zemine
+              hiç ihtiyacı yok. Zemin kaldırılınca sayfa rengiyle birebir aynı
+              olur. Alttaki ince ayraç çizgisi KALDI: filtreleri listeden ayıran
+              tek işaret odur. */}
+          <div className="relative shrink-0 z-30 border-b border-white/5">
             <div className="flex gap-2 px-5 py-3">
               <FilterDropdown
                 label="FORMAT"
@@ -473,8 +489,9 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onSelect }) => {
             )}
           </div>
 
-          {/* ── GÜN ŞERİDİ — kaydırılabilir gün seçici (açılışta bugün seçili) ── */}
-          <div className="shrink-0 border-b border-white/5 bg-[#0D121F]/40 backdrop-blur-md">
+          {/* ── GÜN ŞERİDİ — kaydırılabilir gün seçici (açılışta bugün seçili) ──
+              Zemin, üstteki filtre satırıyla aynı gerekçeyle kaldırıldı. */}
+          <div className="shrink-0 border-b border-white/5">
             <DayStrip
               days={dayStrip}
               value={selectedDay}
