@@ -40,16 +40,34 @@ DECLARE
   v_away     jsonb;
   v_uid      uuid;
   i          int;
-  v_gun      int;
   v_ev       int;
   v_dep      int;
   v_saat     time;
+  v_sahalar     uuid[];
+  v_saha_adlari text[];
+  /** Geçmiş maçlar kaç SAAT önce oynanmış olsun.
+   *  İlk ikisi değerlendirme penceresinin İÇİNDE (2 gün = 48 saat), son ikisi
+   *  DIŞINDA. Böylece hem "puanlanabilir" hem de "süresi doldu, listeden düştü"
+   *  hâli aynı anda test edilebilir. */
+  v_gecmis_saat int[] := ARRAY[8, 30, 120, 288];
+  v_saat_once   int;
 BEGIN
   -- ══ 0) ÖNCEKİ KOŞUMU GERİ AL (idempotentlik) ══════════════════════════════
   DELETE FROM public.wallet_transactions
    WHERE meta->>'seed' = 'demo_ekosistem';
 
-  -- Bu seed'in ürettiği maçlar (etiketli başlık öneki) ve bağlı satırları
+  -- Bu seed'in ürettiği maçlar ve bağlı satırları.
+  --
+  -- İŞARET GÖRÜNMEZ OLMALI: ilk sürümde maç başlıklarına `[EKO]` öneki
+  -- konuyordu ve seed kendi kayıtlarını o önekten buluyordu. Önek KULLANICIYA
+  -- GÖRÜNDÜ — maç listesinde, değerlendirme kartlarında ve bildirim
+  -- metinlerinde "[EKO] Yaklaşan Maç 2" gibi çıktı.
+  --
+  -- Yerine SABİT KİMLİK kullanılıyor (deponun `a0000001-...` saha kimlikleriyle
+  -- aynı desen): bu seed'in maçları `ec......-....-4...-8...-............`
+  -- önekini taşır. Görünmez, çakışmaz ve YALNIZ kendi kayıtlarını hedefler —
+  -- "tüm demo maçları sil" deseydik diğer demo seed'lerinin (ör. tek lobi
+  -- vitrini) maçlarını da sessizce silerdik.
   FOR r IN
     SELECT c.conrelid::regclass::text AS tbl,
            (SELECT attname FROM pg_attribute
@@ -58,18 +76,25 @@ BEGIN
      WHERE c.confrelid = 'public.matches'::regclass AND c.contype = 'f'
   LOOP
     EXECUTE format(
-      'DELETE FROM %s WHERE %I IN (SELECT id FROM public.matches WHERE title LIKE %L)',
-      r.tbl, r.col, '[EKO]%');
+      'DELETE FROM %s WHERE %I IN (SELECT id FROM public.matches WHERE id::text LIKE %L)',
+      r.tbl, r.col, 'ec0000%');
   END LOOP;
-  DELETE FROM public.matches WHERE title LIKE '[EKO]%';
+  DELETE FROM public.matches WHERE id::text LIKE 'ec0000%';
 
   -- ══ 1) KAYNAKLAR ══════════════════════════════════════════════════════════
-  SELECT p.id, p.name, p.district, p.owner_id
-    INTO v_pitch, v_pitch_name, v_district, v_owner
+  SELECT p.id, p.district
+    INTO v_pitch, v_district
     FROM public.pitches p
    WHERE p.latitude IS NOT NULL AND p.longitude IS NOT NULL
    ORDER BY p.created_at
    LIMIT 1;
+
+  -- Maçlar tek tesise yığılmasın: koordinatlı sahaların tamamı sırayla
+  -- kullanılır, böylece liste gerçek bir şehir gibi görünür.
+  SELECT array_agg(p.id ORDER BY p.created_at), array_agg(p.name ORDER BY p.created_at)
+    INTO v_sahalar, v_saha_adlari
+    FROM public.pitches p
+   WHERE p.latitude IS NOT NULL AND p.longitude IS NOT NULL;
 
   IF v_pitch IS NULL THEN
     RAISE EXCEPTION 'Koordinatlı saha bulunamadı — önce saha seed''i çalışmalı.';
@@ -153,10 +178,11 @@ BEGIN
 
   -- ══ 3) OYNANMIŞ MAÇLAR (geçmiş, skoru girilmiş) ═══════════════════════════
   FOR i IN 1..4 LOOP
-    v_gun := i * 4;                         -- 4, 8, 12, 16 gün önce
+    v_saat_once := v_gecmis_saat[i];        -- 8, 30, 120, 288 saat önce
     v_ev  := 2 + (i % 4);
     v_dep := 1 + ((i + 2) % 4);
-    mid   := gen_random_uuid();
+    -- Sabit kimlik: geçmiş maçlar ec000001-…-0000000000NN
+    mid   := ('ec000001-0001-4001-8001-' || lpad(i::text, 12, '0'))::uuid;
 
     v_slots := public._default_formation_slots('7v7', 'slot');
     v_away  := public._default_formation_slots('7v7', 'away');
@@ -188,19 +214,20 @@ BEGIN
       "scoreEnteredAt", is_successful)
     SELECT
       mid,
-      '[EKO] Geçmiş Maç ' || i,
+      -- Gerçekçi ad: "Capo Arena Akşam Maçı" (kullanıcı kararı 6b).
+      v_saha_adlari[i] || ' ' || (ARRAY['Akşam Maçı','Gece Maçı','Hafta Ortası Maçı','Cumartesi Maçı'])[i],
       v_district,
-      to_char(current_date - v_gun, 'YYYY-MM-DD'),
-      '20:00',
+      to_char((now() - make_interval(hours => v_saat_once)) AT TIME ZONE 'Europe/Istanbul', 'YYYY-MM-DD'),
+      to_char((now() - make_interval(hours => v_saat_once)) AT TIME ZONE 'Europe/Istanbul', 'HH24:MI'),
       150, 'Taktiksel', 'COMPLETED', '7v7',
       '60 Dakika', 'Karma', '18-35', 0, '["7v7"]'::jsonb, '[]'::jsonb,
       v_slots, v_away,
-      pl.id, pl.id, v_pitch, true,
+      pl.id, pl.id, v_sahalar[i], true,
       'OPEN',
-      ((current_date - v_gun) + time '20:00') AT TIME ZONE 'Europe/Istanbul',
+      now() - make_interval(hours => v_saat_once),
       'https://images.unsplash.com/photo-1575361204480-aadea2559ee2?q=80&w=600',
       v_ev, v_dep, 'ENTERED',
-      ((current_date - v_gun) + time '22:00') AT TIME ZONE 'Europe/Istanbul',
+      now() - make_interval(hours => v_saat_once) + interval '2 hours',
       true
     FROM public.profiles pl JOIN auth.users u ON u.id = pl.id
     WHERE u.email = 'oyuncu01@oyna.app';
@@ -219,7 +246,8 @@ BEGIN
 
   -- ══ 4) OYNANACAK MAÇLAR (gelecek, kayıt açık) ═════════════════════════════
   FOR i IN 1..5 LOOP
-    mid    := gen_random_uuid();
+    -- Sabit kimlik: yaklaşan maçlar ec000002-…-0000000000NN
+    mid    := ('ec000002-0002-4002-8002-' || lpad(i::text, 12, '0'))::uuid;
     v_saat := CASE WHEN i % 2 = 0 THEN time '21:00' ELSE time '19:30' END;
 
     v_slots := public._default_formation_slots('7v7', 'slot');
@@ -249,14 +277,15 @@ BEGIN
       visibility, starts_at, image)
     SELECT
       mid,
-      '[EKO] Yaklaşan Maç ' || i,
+      v_saha_adlari[((i - 1) % array_length(v_sahalar,1)) + 1] || ' ' ||
+        (ARRAY['Akşam Maçı','Gece Maçı','Hafta Sonu Maçı','Antrenman Maçı','Dostluk Maçı'])[i],
       v_district,
       to_char(current_date + i, 'YYYY-MM-DD'),
       to_char(v_saat, 'HH24:MI'),
       120 + (i * 20), 'Rahat', 'ACTIVE', '7v7',
       '60 Dakika', 'Karma', '18-35', 0, '["7v7"]'::jsonb, '[]'::jsonb,
       v_slots, v_away,
-      pl.id, pl.id, v_pitch, true,
+      pl.id, pl.id, v_sahalar[((i - 1) % array_length(v_sahalar,1)) + 1], true,
       'OPEN',
       ((current_date + i) + v_saat) AT TIME ZONE 'Europe/Istanbul',
       'https://images.unsplash.com/photo-1529900748604-07564a03e7a6?q=80&w=600'
@@ -286,10 +315,10 @@ SELECT 'bakiye' AS ne,
   FROM public.profiles WHERE email LIKE '%@oyna.app'
 UNION ALL
 SELECT 'gecmis_mac', count(*)::text, ''
-  FROM public.matches WHERE title LIKE '[EKO]%' AND status = 'COMPLETED'
+  FROM public.matches WHERE id::text LIKE 'ec0000%' AND status = 'COMPLETED'
 UNION ALL
 SELECT 'gelecek_mac', count(*)::text, ''
-  FROM public.matches WHERE title LIKE '[EKO]%' AND status = 'ACTIVE'
+  FROM public.matches WHERE id::text LIKE 'ec0000%' AND status = 'ACTIVE'
 UNION ALL
 SELECT 'cuzdan_hareketi', count(*)::text, ''
   FROM public.wallet_transactions WHERE meta->>'seed' = 'demo_ekosistem';
