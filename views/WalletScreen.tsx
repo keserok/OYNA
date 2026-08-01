@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertTriangle, ArrowLeft, ArrowUpRight, Check, CheckCircle2, Clock,
-  CreditCard, Gift, History, Info, Landmark, List, Pencil, Plus,
+  CreditCard, Gift, History, Info, Landmark, List, Lock, Pencil, Plus,
   RefreshCw, RotateCcw, Shield, Trash2, TrendingUp, Users, Wallet, X, Zap,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -233,6 +233,10 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
   // kısayolu sunucunun `spendable_balance` alanını okuyor; cüzdanın kendi
   // toplamı tutmaya kalkması, aynı paranın üç ekranda ayrışması demekti.
   const walletBalance = summary?.spendableBalance ?? 0;
+  // Bir maçta güvencede bekleyen kapora. walletBalance'a DÂHİL DEĞİL: para
+  // zaten cüzdandan çıktı, burada yalnız "nerede?" sorusu cevaplanıyor.
+  const blockedBalance = summary?.blockedBalance ?? 0;
+  const blockedMatchCount = summary?.blockedMatchCount ?? 0;
 
   const effectiveTopup = isCustom ? Number(customAmount) || 0 : topupAmount;
   // Kart işlem bedeli (app_config.card_fee_pct; 0 = kapalı) — sunucudaki
@@ -1141,6 +1145,26 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
                 <p className="relative mt-4 text-[0.6875rem] font-semibold text-[#8fe87a]/70">
                   Bu tutarın {money(refundBalance)} kadarı iadelerden geldi.
                 </p>
+              )}
+              {/* BLOKE — kapora ödendiğinde bakiye düşüyor ve sıradan bir
+                  harcama gibi görünüyordu; parasının nerede olduğu hiçbir
+                  ekranda yazmıyordu. Bu satır yalnız "nerede?" sorusunu
+                  cevaplar; yukarıdaki bakiyeye DÂHİL DEĞİLDİR. */}
+              {blockedBalance > 0 && (
+                <div className="relative mt-4 pt-3.5 border-t border-white/10 flex items-start gap-2.5">
+                  <Lock size={13} className="text-[#FACC15] shrink-0 mt-0.5" />
+                  <div className="min-w-0">
+                    <p className="text-[0.75rem] font-extrabold text-white">
+                      {money(blockedBalance)} bir maçta güvencede
+                    </p>
+                    <p className="text-[0.6875rem] font-semibold text-[#8fe87a]/70 leading-snug mt-0.5">
+                      {blockedMatchCount > 1
+                        ? `${blockedMatchCount} maçın kaporası bekliyor. `
+                        : 'Kurduğun maçın kaporası bekliyor. '}
+                      Kadro dolunca payın düşülüp kalanı, dolmazsa tamamı cüzdanına döner.
+                    </p>
+                  </div>
+                </div>
               )}
             </div>
 

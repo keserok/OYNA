@@ -26,7 +26,8 @@ const mac = (over: Partial<MatchListing> = {}): MatchListing => ({
 } as MatchListing);
 
 const CFG: RahatMatchConfig = {
-  captureWindowHours: 8, refundFullHours: 48, refundHalfHours: 12, refundHalfPct: 30,
+  captureWindowHours: 8, decisionWindowMinutes: 90,
+  refundFullHours: 48, refundHalfHours: 12, refundHalfPct: 30,
 };
 
 const ciz = (m = mac(), onProceed = vi.fn(), extra: Partial<React.ComponentProps<typeof RahatJoinSheet>> = {}) => {

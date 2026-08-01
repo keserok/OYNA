@@ -299,6 +299,123 @@ BEGIN
     ON CONFLICT (match_id, user_id) DO NOTHING;
   END LOOP;
 
+  -- ══ 4b) KAPORALI MAÇLAR — kapora yaşam döngüsünün üç hâli ═════════════════
+  --
+  -- NEDEN: kapora akışı demo veride HİÇ yoktu; "kaporam nerede", "kadro
+  -- yetişmezse ne olur", "dolunca ne kadar döner" soruları uygulamada
+  -- denenemiyordu. Üç maç üç hâli birden açar:
+  --   A) Kapora bloke · kadro eksik · karar anına günler var
+  --      → kaptan cüzdanında "bloke" satırını, lobide güvence rozetini görür.
+  --   B) Kapora bloke · kadro eksik · SON ÇAĞRI penceresinde (6 saat sonra)
+  --      → sunucunun 10 dakikalık taraması ilk turda uyarı bildirimi gönderir.
+  --   C) Kapora tahsil · kadro tam
+  --      → "payın düşüldü, kalanı iade edildi" hâli.
+  --
+  -- ÖNEMLİ: para hareketleri ELLE YAZILMAZ. Gerçek RPC (`match_block_deposit`)
+  -- demo kaptan kimliğiyle çağrılır; böylece cüzdan defteri, ödeme niyeti ve
+  -- kaptanın koltuğu üretimdeki akışın BİREBİR aynısı olur. Elle yazılan bir
+  -- demo, düzeltilen hatayı gizleyebilirdi.
+  FOR i IN 1..3 LOOP
+    mid := ('ec000003-0003-4003-8003-' || lpad(i::text, 12, '0'))::uuid;
+
+    -- Her maçın kaptanı ayrı: tek hesabın bakiyesi üç kaporaya yetmez.
+    SELECT p.id INTO v_uid
+      FROM public.profiles p JOIN auth.users u ON u.id = p.id
+     WHERE u.email = 'oyuncu' || lpad((14 + i)::text, 2, '0') || '@oyna.app';
+    CONTINUE WHEN v_uid IS NULL;
+
+    -- A: 3 gün sonra · B: 6 saat sonra (son çağrı penceresi) · C: 2 gün sonra
+    v_saat_once := (ARRAY[72, 6, 48])[i];
+    v_slots := public._default_formation_slots('5v5', 'slot');
+    v_away  := public._default_formation_slots('5v5', 'away');
+
+    INSERT INTO public.matches (
+      id, title, location, date, "time", price, difficulty, status, format,
+      duration, gender, "ageGroup", "minRating", badges, "missingPositions",
+      slots, "awaySlots", "creatorId", captain_id, pitch_id, "isDemo",
+      visibility, starts_at, image, deposit_status)
+    VALUES (
+      mid,
+      v_saha_adlari[((i - 1) % array_length(v_sahalar,1)) + 1] || ' ' ||
+        (ARRAY['Kaporalı Maç','Son Çağrı Maçı','Kadrosu Tamamlanan Maç'])[i],
+      v_district,
+      to_char((now() + make_interval(hours => v_saat_once)) AT TIME ZONE 'Europe/Istanbul', 'YYYY-MM-DD'),
+      to_char((now() + make_interval(hours => v_saat_once)) AT TIME ZONE 'Europe/Istanbul', 'HH24:MI'),
+      (ARRAY[180, 200, 150])[i], 'Taktiksel', 'ACTIVE', '5v5',
+      '60 Dakika', 'Karma', '18-35', 0, '["5v5"]'::jsonb, '[]'::jsonb,
+      v_slots, v_away, v_uid, v_uid,
+      v_sahalar[((i - 1) % array_length(v_sahalar,1)) + 1], true,
+      'OPEN',
+      now() + make_interval(hours => v_saat_once),
+      'https://images.unsplash.com/photo-1529900748604-07564a03e7a6?q=80&w=600',
+      'NONE');
+
+    -- Kaporayı GERÇEK akışla bloke et (kaptan kimliğine bürünerek).
+    -- Kaptanı koltuğa oturtmak da bu çağrının işidir.
+    PERFORM set_config('request.jwt.claims',
+      json_build_object('sub', v_uid, 'role', 'authenticated')::text, true);
+    PERFORM public.match_block_deposit(mid, (ARRAY[900, 1000, 700])[i], '[]'::jsonb);
+
+    -- C: kadroyu eşiğe (toplam − 2 = 8) tamamla. Slot dolunca sunucunun kendi
+    -- tetikleyicisi maçı kesinleştirir ve kaporayı tahsil eder — burada elle
+    -- "tahsil edildi" yazmayız, gerçekten tahsil ETTİRİRİZ.
+    IF i = 3 THEN
+      UPDATE public.matches m SET
+        slots = (SELECT jsonb_agg(
+                   CASE WHEN s.val->>'status' = 'OPEN' AND pl.id IS NOT NULL THEN
+                     s.val || jsonb_build_object(
+                       'status','TAKEN','assignmentStatus','SELF',
+                       'purchasedBy', pl.id::text, 'occupant', pl.id::text,
+                       'player', public._profile_player_json(pl.id, s.val->>'role'))
+                   ELSE s.val END ORDER BY s.ord)
+                 FROM (SELECT value AS val, row_number() OVER () AS ord
+                         FROM jsonb_array_elements(m.slots)) s
+                 LEFT JOIN LATERAL (
+                   SELECT p.id FROM public.profiles p JOIN auth.users u ON u.id = p.id
+                    WHERE u.email = 'oyuncu' || lpad((s.ord)::text, 2, '0') || '@oyna.app'
+                 ) pl ON true),
+        "awaySlots" = (SELECT jsonb_agg(
+                   CASE WHEN s.ord <= 3 AND pl.id IS NOT NULL THEN
+                     s.val || jsonb_build_object(
+                       'status','TAKEN','assignmentStatus','SELF',
+                       'purchasedBy', pl.id::text, 'occupant', pl.id::text,
+                       'player', public._profile_player_json(pl.id, s.val->>'role'))
+                   ELSE s.val END ORDER BY s.ord)
+                 FROM (SELECT value AS val, row_number() OVER () AS ord
+                         FROM jsonb_array_elements(m."awaySlots")) s
+                 LEFT JOIN LATERAL (
+                   SELECT p.id FROM public.profiles p JOIN auth.users u ON u.id = p.id
+                    WHERE u.email = 'oyuncu' || lpad((5 + s.ord)::text, 2, '0') || '@oyna.app'
+                 ) pl ON true)
+      WHERE m.id = mid;
+    ELSE
+      -- A ve B: kadro bilerek eksik (kaptan + 2 kişi) — karar anı gelince
+      -- iptal edilip kaporanın tamamı iade edilecek yol denenebilsin.
+      UPDATE public.matches m SET
+        slots = (SELECT jsonb_agg(
+                   CASE WHEN s.ord IN (2,3) AND pl.id IS NOT NULL THEN
+                     s.val || jsonb_build_object(
+                       'status','TAKEN','assignmentStatus','SELF',
+                       'purchasedBy', pl.id::text, 'occupant', pl.id::text,
+                       'player', public._profile_player_json(pl.id, s.val->>'role'))
+                   ELSE s.val END ORDER BY s.ord)
+                 FROM (SELECT value AS val, row_number() OVER () AS ord
+                         FROM jsonb_array_elements(m.slots)) s
+                 LEFT JOIN LATERAL (
+                   SELECT p.id FROM public.profiles p JOIN auth.users u ON u.id = p.id
+                    WHERE u.email = 'oyuncu' || lpad((17 + s.ord)::text, 2, '0') || '@oyna.app'
+                 ) pl ON true)
+      WHERE m.id = mid;
+    END IF;
+  END LOOP;
+
+  -- Kapora hareketleri defteri değiştirdi: aynaları YENİDEN türet.
+  -- (Kapora satırlarını `wallet_spend_balance` yazar; naif SUM yerine sunucunun
+  --  kendi kova mantığı kullanılır, yoksa bakiye ekranla ayrışır.)
+  FOR r IN SELECT p.id FROM public.profiles p WHERE p.email LIKE '%@oyna.app' LOOP
+    PERFORM public._sync_wallet_mirror(r.id);
+  END LOOP;
+
   -- ══ 5) MAÇ SAYAÇLARI ══════════════════════════════════════════════════════
   UPDATE public.profiles p
      SET match_count = COALESCE((
@@ -321,4 +438,10 @@ SELECT 'gelecek_mac', count(*)::text, ''
   FROM public.matches WHERE id::text LIKE 'ec0000%' AND status = 'ACTIVE'
 UNION ALL
 SELECT 'cuzdan_hareketi', count(*)::text, ''
-  FROM public.wallet_transactions WHERE meta->>'seed' = 'demo_ekosistem';
+  FROM public.wallet_transactions WHERE meta->>'seed' = 'demo_ekosistem'
+UNION ALL
+SELECT 'kapora_bloke', count(*)::text, COALESCE(sum(deposit_amount)::text, '0')
+  FROM public.matches WHERE id::text LIKE 'ec000003%' AND deposit_status = 'BLOCKED'
+UNION ALL
+SELECT 'kapora_tahsil', count(*)::text, COALESCE(sum(deposit_amount)::text, '0')
+  FROM public.matches WHERE id::text LIKE 'ec000003%' AND deposit_status = 'CAPTURED';
