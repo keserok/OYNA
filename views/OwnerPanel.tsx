@@ -35,6 +35,7 @@ import {
   OwnerFacilitySettingsModal,
   OwnerWorkingHoursModal,
   OwnerCancellationPolicyModal,
+  OwnerAgreementModal,
   OwnerWithdrawalsModal,
   OwnerWidgetSettingsModal,
   OwnerMatchesModal,
@@ -194,6 +195,8 @@ const tariffRowToPolicy = (t: PitchTariff) => ({
     setActiveTab(tab);
   };
   const [showCancellationPolicy, setShowCancellationPolicy] = useState(false);
+  // OYNA ile yapılan ticari anlaşma — salt okunur, YALNIZ tesis sahibi (karar 6a).
+  const [showAgreement, setShowAgreement] = useState(false);
   const [showPaymentMode, setShowPaymentMode] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [activeWidgets, setActiveWidgets] = useState<WidgetType[]>(() => {
@@ -892,6 +895,10 @@ const tariffRowToPolicy = (t: PitchTariff) => ({
             // Karar: iade politikası yönetim ayarı — sahip + müdür düzenler.
             if (managerGuard()) setShowCancellationPolicy(true);
           }}
+          onAgreement={() => {
+            // Ticari anlaşma YALNIZ tesis sahibine açıktır (karar 6a).
+            if (ownerOnlyGuard()) setShowAgreement(true);
+          }}
           onPaymentMode={() => {
             // Ödeme modu paranın nasıl toplandığını belirler → yalnız tesis sahibi.
             if (ownerOnlyGuard()) setShowPaymentMode(true);
@@ -970,6 +977,12 @@ const tariffRowToPolicy = (t: PitchTariff) => ({
           onClose={() => setShowWithdrawals(false)}
           facilityId={facilityData?.id}
           readOnly={effReadOnly}
+        />
+      )}
+      {showAgreement && (
+        <OwnerAgreementModal
+          onClose={() => setShowAgreement(false)}
+          facilityId={facilityData?.id ?? ''}
         />
       )}
       {showCancellationPolicy && (

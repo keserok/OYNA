@@ -149,14 +149,22 @@ describe('Maça katılım ödemesinde iade cümlesi (BULGU-083)', () => {
   const matchJoin = oku('views/MatchJoin.tsx');
   const payment = oku('views/PaymentScreen.tsx');
 
+  // Metin artık şablon dizesi: iade kademesi saatleri SAHADAN geldiği için
+  // cümlenin ortasına `${...}` giriyor (bkz. match_cancel_policy).
+  const infoNote = matchJoin.match(/infoNote: `([^`]+)`/)?.[1] ?? '';
+
   it('MATCH_JOIN bağlamı infoNote taşır', () => {
-    expect(matchJoin).toMatch(/infoNote: 'Kadro dolmazsa veya maç iptal olursa/);
+    expect(matchJoin).toMatch(/infoNote: `Kadro dolmazsa veya maç iptal olursa/);
   });
 
   it('metin "iade kredisi" DEMEZ — tek bakiye var (karar defteri)', () => {
-    const not = matchJoin.match(/infoNote: '([^']+)'/)?.[1] ?? '';
-    expect(not).not.toContain('iade kredisi');
-    expect(not).toContain('cüzdanına döner');
+    expect(infoNote).not.toContain('iade kredisi');
+    expect(infoNote).toContain('cüzdanına döner');
+  });
+
+  it('iade saatleri metne GÖMÜLÜ değil — sahanın ayarından gelir', () => {
+    expect(infoNote).toContain('${iadeKademesiCumlesi(iptalPolitikasi)}');
+    expect(infoNote).not.toMatch(/\d+\s*saatten fazla/);
   });
 
   it('infoNote artık isDeposit kapısına kilitli değil', () => {

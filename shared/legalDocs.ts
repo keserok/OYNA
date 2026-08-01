@@ -127,6 +127,7 @@ Fatura düzenleme yükümlülüğü, hizmeti fiilen sunan tarafa (Tesis) veya ka
 - 6 saatten az kala yapılan iptallerde: iade yapılmaz.
 İadenin yapılacağı yer: Bu maddedeki tüm iadeler, ödemenin yapıldığı karta değil, Kullanıcının OYNA cüzdanına işlenir. Cüzdandaki tutar Platform içindeki tüm ödemelerde kullanılabilir; para çekimi özelliği açıldığında ayrıca madde 6.5'teki koşullarla banka hesabına çekilebilir.
 Bu kademeli yapı yalnızca Kullanıcı kaynaklı iptallere uygulanır.
+Tesise özel süre: Yukarıdaki 24/6 saat eşikleri Platform varsayılanıdır. Bir Tesis kendi rezervasyon ve maçları için daha uzun ya da daha kısa bir ücretsiz iptal süresi belirleyebilir. Bu durumda o rezervasyon/maç için Tesisin belirlediği süre uygulanır ve ilgili süre, ödeme yapılmadan önce ilgili ekranda Kullanıcıya gösterilir.
 
 6.2 Ayrıntılı Düzenleme
 İptal/iade süreçlerine ve iade tutarının OYNA cüzdanına işlenmesine ilişkin ayrıntılı hükümler Mesafeli Satış ve İptal/İade Koşulları belgesinde; cüzdanın kullanımı ve cüzdandan para çekimine ilişkin hükümler ise madde 6.5'te düzenlenmiştir. Çelişki hâlinde iptal/iade konusunda Mesafeli Satış ve İptal/İade Koşulları esas alınır.
@@ -389,6 +390,7 @@ Kapora, uygulama üzerinden güvenli ödeme altyapısı ile tahsil edilir. Kalan
 - Rezervasyon/maç saatine 24 SAATTEN FAZLA süre kala yapılan iptallerde: ödenen tutarın tamamına yakını iade edilir (yalnızca ödeme altyapısı sağlayıcısının kestiği işlem bedeli hariç).
 - Rezervasyon/maç saatine 6-24 SAAT kala yapılan iptallerde: ödenen tutarın %50'si iade edilir.
 - Rezervasyon/maç saatine 6 SAATTEN AZ kala yapılan iptallerde: iade yapılmaz.
+- Yukarıdaki saatler Platform varsayılanıdır; tesis kendi ücretsiz iptal süresini farklı belirleyebilir. O rezervasyon/maç için geçerli süre, ödeme yapmadan önce ilgili ekranda gösterilir.
 
 4.1 İADE NEREYE YAPILIR?
 - İade, ödemenin yapıldığı karta değil, OYNA cüzdanınıza yapılır. Tutar, iptal işlemi tamamlandığı anda cüzdanınıza geçer.

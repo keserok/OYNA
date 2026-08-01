@@ -84,6 +84,9 @@ BEGIN
 
   -- ══ 3) SAHAYA ÖZEL ANLAŞMA: 2000'e kirala, oyuncuya 2400'e sat ═══════════
   BEGIN
+    -- is_admin'i kullanıcı kendisi değiştiremez (protect_profile_sensitive_fields).
+    -- Test için "oturum yok" durumuna düşüp sistem olarak yetki veriyoruz.
+    PERFORM set_config('request.jwt.claims', '', true);
     UPDATE public.profiles SET is_admin = true WHERE id = o;
     PERFORM set_config('request.jwt.claims', json_build_object('sub',o,'role','authenticated')::text, true);
     j := public.admin_set_pitch_agreement(pit, 'MODEL_B', 5, 20, NULL, 'Test anlaşması');
@@ -221,9 +224,10 @@ BEGIN
 
   -- ══ 9) YETKİ: anlaşmayı YALNIZ SAHİBİ görür, personel GÖREMEZ ════════════
   BEGIN
+    PERFORM set_config('request.jwt.claims', '', true);
     UPDATE public.profiles SET is_admin = false WHERE id = o;
-    INSERT INTO public.pitch_staff_members(pitch_id,user_id,staff_role,account_status,full_name)
-      VALUES (pit, per, 'STAFF', 'ACTIVE', 'Personel');
+    INSERT INTO public.pitch_staff_members(pitch_id,user_id,name,staff_role,account_status)
+      VALUES (pit, per, 'Personel', 'STAFF', 'ACTIVE');
 
     PERFORM set_config('request.jwt.claims', json_build_object('sub',o,'role','authenticated')::text, true);
     SET LOCAL ROLE authenticated;

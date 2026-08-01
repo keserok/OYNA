@@ -6,6 +6,7 @@ import {
   ChevronRight,
   CreditCard,
   Globe,
+  Handshake,
   HelpCircle,
   LayoutDashboard,
   LogOut,
@@ -33,6 +34,8 @@ export interface OwnerMenuViewProps {
   onBankAccounts: () => void;
   onWithdrawals: () => void;
   onCancellationPolicy: () => void;
+  /** OYNA ile yapılan ticari anlaşmayı gösterir — YALNIZ tesis sahibi. */
+  onAgreement: () => void;
   /** Ödeme modu (sahada / online / oyuncu seçsin) ayar modalını açar. */
   onPaymentMode: () => void;
   onLogout: () => void;
@@ -113,6 +116,7 @@ export const OwnerMenuView: React.FC<OwnerMenuViewProps> = ({
   onBankAccounts,
   onWithdrawals,
   onCancellationPolicy,
+  onAgreement,
   onPaymentMode,
   onLogout,
   onSecurity,
@@ -259,6 +263,16 @@ export const OwnerMenuView: React.FC<OwnerMenuViewProps> = ({
                 her saha kendi fiyat/süre politikasını girer (E1a/E5a/E12a).
                 Giriş noktası: Sahalarım → saha → "Aktif Saatler ve Ücretler".
                 Çalışma saatleri ayrı ekran değildir; o tarifelerden türetilir. */}
+            {/* Anlaşma ticari bilgidir: müdür/personel GÖRMEZ (karar 6a). */}
+            {isOwnerLvl && (
+              <MenuRow
+                icon={<Handshake size={18} />}
+                iconClass="text-emerald-400"
+                label="OYNA Anlaşmam"
+                badge={<StatusBadge label="Salt okunur" tone="neutral" />}
+                onClick={onAgreement}
+              />
+            )}
             <MenuRow
               icon={<RotateCcw size={18} />}
               label="İptal / İade Politikası"
