@@ -2057,7 +2057,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
   );
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#0A0E14] relative overflow-hidden">
+    <div className="h-full flex flex-col bg-[#0A0E14] relative overflow-hidden">
       
       {/* Profile sub-view */}
       {activeTab === 'PROFILE_VIEW' && (

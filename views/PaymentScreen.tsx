@@ -751,7 +751,7 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
   // ─── Bağlam yoksa güvenli çıkış ────────────────────────────────────────────
   if (!ctx) {
     return (
-      <div className="min-h-screen bg-[#0A0E14] flex flex-col items-center justify-center gap-4 p-6">
+      <div className="h-full bg-[#0A0E14] flex flex-col items-center justify-center gap-4 p-6">
         <AlertTriangle size={32} className="text-yellow-400" />
         <p className="text-gray-400 text-sm text-center">Ödeme bağlamı bulunamadı. Lütfen geri dönüp tekrar deneyin.</p>
         <button onClick={onBack} className="px-6 py-3 bg-[#161B22] border border-white/10 text-white font-bold rounded-2xl">Geri Dön</button>
@@ -778,7 +778,7 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
 
   if (screen === 'PROCESSING') {
     return (
-      <div lang="tr" className="min-h-screen bg-[#0A0E14] flex flex-col items-center justify-center p-8">
+      <div lang="tr" className="h-full bg-[#0A0E14] flex flex-col items-center justify-center p-8">
         <div className="relative w-[170px] h-[170px] mb-10">
           <svg width="170" height="170" viewBox="0 0 100 100" className="-rotate-90">
             <circle cx="50" cy="50" r="44" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="5" />
@@ -819,7 +819,7 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
 
   if (screen === 'SUCCESS') {
     return (
-      <div lang="tr" className="min-h-screen bg-[#0A0E14] flex flex-col relative overflow-hidden">
+      <div lang="tr" className="h-full bg-[#0A0E14] flex flex-col relative overflow-hidden">
         <div className="absolute top-0 inset-x-0 h-[340px] pointer-events-none"
           style={{ background: 'radial-gradient(circle at 50% 30%, rgba(57,255,20,0.16), transparent 65%)' }} />
         <main className="flex-1 overflow-y-auto flex flex-col items-center px-6 pt-20 pb-6 relative">
@@ -893,7 +893,7 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
 
   // ─── Ana ödeme ekranı (1b) ─────────────────────────────────────────────────
   return (
-    <div lang="tr" className="min-h-screen bg-[#0A0E14] flex flex-col font-sans">
+    <div lang="tr" className="h-full bg-[#0A0E14] flex flex-col font-sans">
       <header className="px-5 pt-safe py-4 flex items-center gap-4 border-b border-white/5 sticky top-0 bg-[#0A0E14]/90 backdrop-blur-xl z-20">
         <button onClick={() => { setPaymentContext(null); onBack(); }}
           className="w-11 h-11 flex items-center justify-center bg-[#161B22] rounded-full border border-white/5 text-white active:scale-95 transition-all shrink-0">

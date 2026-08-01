@@ -108,8 +108,12 @@ export const fetchRahatPitchInfo = async (pitchId: string): Promise<RahatPitchIn
 // izler: tesis override'ı → global settings → (24/6/50 sunucu varsayılanları).
 
 export interface RahatMatchConfig {
-  /** Maç başlamadan kaç saat önce onay/iptal kararı verilir (T-Ns). */
+  /** SON ÇAĞRI: maç başlamadan kaç saat önce kaptana "kadro yetişmiyor" uyarısı
+   *  gider. Bu adımda maç İPTAL EDİLMEZ. */
   captureWindowHours: number;
+  /** KESİN KARAR: maç başlamadan kaç dakika önce kadro son kez sayılır ve
+   *  maç ya kesinleşir ya iptal edilir. Lobideki "karar saati" budur. */
+  decisionWindowMinutes: number;
   refundFullHours: number;
   refundHalfHours: number;
   refundHalfPct: number;
@@ -117,6 +121,7 @@ export interface RahatMatchConfig {
 
 const CONFIG_DEFAULTS: RahatMatchConfig = {
   captureWindowHours: 8,
+  decisionWindowMinutes: 90,
   refundFullHours: 24,
   refundHalfHours: 6,
   refundHalfPct: 50,
@@ -129,12 +134,13 @@ export const fetchRahatMatchConfig = async (
   try {
     const { data } = await supabase
       .from('settings')
-      .select('capture_window_hours, booking_refund_full_hours, booking_refund_half_hours, booking_refund_half_pct')
+      .select('capture_window_hours, decision_window_minutes, booking_refund_full_hours, booking_refund_half_hours, booking_refund_half_pct')
       .limit(1)
       .maybeSingle();
     const row = (data ?? {}) as Record<string, unknown>;
     global = {
       captureWindowHours: typeof row.capture_window_hours === 'number' ? row.capture_window_hours : undefined,
+      decisionWindowMinutes: typeof row.decision_window_minutes === 'number' ? row.decision_window_minutes : undefined,
       refundFullHours: typeof row.booking_refund_full_hours === 'number' ? row.booking_refund_full_hours : undefined,
       refundHalfHours: typeof row.booking_refund_half_hours === 'number' ? row.booking_refund_half_hours : undefined,
       refundHalfPct: typeof row.booking_refund_half_pct === 'number' ? row.booking_refund_half_pct : undefined,
@@ -144,14 +150,33 @@ export const fetchRahatMatchConfig = async (
   }
   return {
     captureWindowHours: global.captureWindowHours ?? CONFIG_DEFAULTS.captureWindowHours,
+    decisionWindowMinutes: global.decisionWindowMinutes ?? CONFIG_DEFAULTS.decisionWindowMinutes,
     refundFullHours: pitch?.refundFullHours ?? global.refundFullHours ?? CONFIG_DEFAULTS.refundFullHours,
     refundHalfHours: pitch?.refundHalfHours ?? global.refundHalfHours ?? CONFIG_DEFAULTS.refundHalfHours,
     refundHalfPct: pitch?.refundHalfPct ?? global.refundHalfPct ?? CONFIG_DEFAULTS.refundHalfPct,
   };
 };
 
-/** Onay karar saati: starts_at − captureWindowHours. starts_at yoksa null. */
+/**
+ * KESİN KARAR saati: starts_at − decisionWindowMinutes (varsayılan 90 dk).
+ * starts_at yoksa null döner ve ekranda cümle hiç çizilmez.
+ *
+ * ESKİDEN `captureWindowHours` (8 saat) kullanılıyordu; o artık SON ÇAĞRI
+ * (uyarı) anıdır, maçın kaderi orada belirlenmez. Lobide karar saati diye 8
+ * saat öncesini göstermek oyuncuya yanlış son tarih veriyordu.
+ */
 export const quorumDecisionTime = (
+  startsAt: string | null | undefined,
+  cfg: RahatMatchConfig,
+): Date | null => {
+  if (!startsAt) return null;
+  const t = new Date(startsAt);
+  if (isNaN(t.getTime())) return null;
+  return new Date(t.getTime() - cfg.decisionWindowMinutes * 60_000);
+};
+
+/** SON ÇAĞRI saati: starts_at − captureWindowHours. Uyarı anıdır, karar değil. */
+export const lastCallTime = (
   startsAt: string | null | undefined,
   cfg: RahatMatchConfig,
 ): Date | null => {

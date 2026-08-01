@@ -48,6 +48,7 @@ import {
   type DbPitchRow,
 } from '../shared/pitchShowcaseMapper';
 import { PitchShowcaseCard, SafeImage, FavStar } from '../components/pitch-showcase/PitchShowcaseCard';
+import PhotoCarousel from '../components/common/PhotoCarousel';
 import { trUpper } from '../utils/trUpper';
 import { ActionSheet } from '../components/ui/ActionSheet';
 import { formatTRYShort } from '../utils/formatTRY';
@@ -496,6 +497,9 @@ const MONTHS_TR = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temm
 const MONTHS_TR_SHORT = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
 const WEEKDAY_HEADERS = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
 const CALENDAR_MAX_DAYS = 90; // Karar #12: 3 ay ileri
+/** Tarih şeridinde parmakla geçilen gün sayısı; ötesi takvimden seçilir.
+ *  14 = iki hafta (kullanıcı kararı) — oyuncunun planlama ufku. */
+const STRIP_DAYS = 14;
 
 const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
 const dayOffsetFromToday = (d: Date) => Math.round((startOfDay(d).getTime() - startOfDay(new Date()).getTime()) / 86400000);
@@ -1201,6 +1205,9 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
     return selectedPitch?.images ?? [];
   }, [selectedCourt, selectedPitch]);
 
+  // NOT: galerideki konum (kaçıncı fotoğraf) artık burada tutulmuyor —
+  // PhotoCarousel kendi içinde yönetiyor. Kort değişince `key` ile sıfırlanır.
+
   // Admin tesis bazlı online rezervasyon kapatması (sunucu BOOKING_DISABLED ile
   // zaten reddeder; arayüz baştan kapatır ki oyuncu boşa uğraşmasın).
   const bookingDisabled = selectedPitch?.bookingDisabledByAdmin === true;
@@ -1208,7 +1215,16 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
   const amenitySplit = useMemo(() => splitAmenities(selectedPitch?.amenities ?? []), [selectedPitch]);
 
   return (
-    <div className="min-h-screen bg-[#0A0E14] text-white flex flex-col font-sans overflow-hidden">
+    // YÜKSEKLİK SABİT OLMALI (`h-full`), "en az bu kadar" (`min-h-screen`) DEĞİL.
+    // Bu ekran dikey bir yığın: üstte sabit başlık, altta kendi içinde kayan
+    // liste (`<main className="flex-1 overflow-y-auto">`). Bir çocuğun "kalan
+    // alanı doldur + taşarsa kaydır" davranışı, ANA KUTUNUN yüksekliği belli
+    // olduğunda çalışır. `min-h-screen` yalnız bir TABAN verir, yüksekliği
+    // serbest bırakır: kutu içerikle birlikte uzar, `flex-1` sınırlanacak bir
+    // alan bulamaz ve listenin kendi kaydırması HİÇ DEVREYE GİRMEZ — ekran
+    // kaydırılamaz görünür. `h-full` kabın tamamını alır, sınır netleşir.
+    // (Maçlarım ve Maç Kur ekranları zaten bu desende çalışıyor.)
+    <div className="h-full bg-[#0A0E14] text-white flex flex-col font-sans overflow-hidden">
 
       {/* Header Section */}
       <header className="px-6 pt-safe pb-3 bg-gradient-to-b from-[#0A0E14] to-transparent sticky top-0 z-40 backdrop-blur-md">
@@ -1687,27 +1703,27 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
             {/* Scrollable Content */}
             <div className="flex-1 overflow-y-auto custom-scrollbar pb-44">
               {/* Galeri — seçili sahanın kendi görselleri öncelikli */}
-              <div className="relative w-full h-[35vh]">
-                <div key={selectedCourtId ?? 'pitch'} className="w-full h-full flex overflow-x-auto snap-x snap-mandatory no-scrollbar">
-                  {(galleryImages.length > 0 ? galleryImages : ['']).map((img, idx) => (
-                    <div key={idx} className="w-full h-full flex-shrink-0 snap-center relative">
-                      <SafeImage src={img} alt={`${selectedCourt?.name ?? selectedPitch.name} ${idx + 1}`} className="w-full h-full object-cover" variant="detail" />
-                    </div>
-                  ))}
-                </div>
-                <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-[#0A0E14] to-transparent pointer-events-none"></div>
-                {(selectedCourt?.images ?? []).filter(Boolean).length > 0 && (
-                  <span className="absolute top-[calc(env(safe-area-inset-top)+64px)] right-4 z-10 px-2.5 py-1 rounded-full bg-black/50 backdrop-blur-md border border-white/15 text-[0.6875rem] font-extrabold text-white/85">
-                    {selectedCourt?.name}
-                  </span>
-                )}
-                {galleryImages.length > 1 && (
-                  <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
-                    {galleryImages.map((_, idx) => (
-                      <div key={idx} className={`h-1.5 rounded-full backdrop-blur-md ${idx === 0 ? 'w-4 bg-white' : 'w-1.5 bg-white/50'}`}></div>
-                    ))}
-                  </div>
-                )}
+              {/* Galeri — ortak PhotoCarousel bileşeni (Airbnb kalitesi):
+                  parmakla tek tek geçiş, konumu izleyen noktacıklar, "3 / 8"
+                  sayacı ve dokununca tam ekran görüntüleyici. Yükseklik %35 →
+                  %45 (kullanıcı kararı): fotoğraf belirgin şekilde büyür ama
+                  altındaki başlık ve fiyat hâlâ ilk bakışta görünür kalır. */}
+              <div className="relative">
+                <PhotoCarousel
+                  key={selectedCourtId ?? 'pitch'}
+                  images={galleryImages}
+                  alt={selectedCourt?.name ?? selectedPitch.name}
+                  className="w-full h-[45vh]"
+                  badge={
+                    (selectedCourt?.images ?? []).filter(Boolean).length > 0 ? (
+                      <span className="absolute top-[calc(env(safe-area-inset-top)+64px)] right-4 z-10 px-2.5 py-1 rounded-full bg-black/50 backdrop-blur-md border border-white/15 text-[0.6875rem] font-extrabold text-white/85">
+                        {selectedCourt?.name}
+                      </span>
+                    ) : undefined
+                  }
+                />
+                {/* Fotoğrafın altını sayfa zeminine bağlayan yumuşak geçiş. */}
+                <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-[#0A0E14] to-transparent pointer-events-none" />
               </div>
 
               {/* Başlık + puan */}
@@ -1854,20 +1870,17 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
                 </div>
               )}
 
-              {/* Tarih Seç: hızlı 5 gün + tam takvim (Karar #12) */}
+              {/* Tarih Seç — kaydırılabilir 14 gün, şeridin SONUNDA takvim.
+                  Önceden yalnız 5 gün vardı ve takvim ayrı bir başlık düğmesindeydi;
+                  oyuncu iki haftalık planını şeritte göremiyordu. Artık iki hafta
+                  parmakla geçilir, daha uzağı isteyen şeridin sonundaki takvim
+                  döşemesine basar. Üst köşedeki ayrı düğme KALDIRILDI: aynı işi
+                  yapan iki ayrı giriş noktası kafa karıştırıyordu.
+                  Takvimin üst sınırı CALENDAR_MAX_DAYS (Karar #12: 3 ay). */}
               <div className="px-6 mt-8">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-base font-extrabold tracking-tight">Tarih Seç</h3>
-                  <button
-                    onClick={() => setCalendarOpen(v => !v)}
-                    className="flex items-center gap-1.5 px-3 py-[7px] rounded-full bg-white/5 border border-white/10 text-[0.6875rem] font-extrabold text-white/80"
-                  >
-                    <CalendarIcon size={13} />
-                    {calendarOpen ? 'Takvimi kapat' : 'Tüm tarihler'}
-                  </button>
-                </div>
-                <div className="flex gap-2 overflow-x-auto no-scrollbar">
-                  {Array.from({ length: 5 }).map((_, d) => {
+                <h3 className="text-base font-extrabold tracking-tight mb-3">Tarih Seç</h3>
+                <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+                  {Array.from({ length: STRIP_DAYS }).map((_, d) => {
                     const date = new Date();
                     date.setDate(date.getDate() + d);
                     const dayName = date.toLocaleDateString('tr-TR', { weekday: 'short' });
@@ -1875,7 +1888,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
                     return (
                       <button
                         key={d}
-                        onClick={() => { setSelectedDate(d); setSelectedSlot(null); }}
+                        onClick={() => { setSelectedDate(d); setSelectedSlot(null); setCalendarOpen(false); }}
                         className={`flex-shrink-0 w-[58px] h-[74px] rounded-[18px] border flex flex-col items-center justify-center transition-all ${
                           isSel
                             ? 'bg-[#39FF14]/10 border-[#39FF14] text-[#39FF14]'
@@ -1887,6 +1900,34 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
                       </button>
                     );
                   })}
+
+                  {/* Şeridin sonundaki takvim döşemesi. Şeritten UZAK bir gün
+                      seçilmişse (takvimden) o gün burada gösterilir ki seçim
+                      görünmez olmasın. */}
+                  {(() => {
+                    const uzakSecim = selectedDate >= STRIP_DAYS;
+                    const uzakTarih = new Date();
+                    uzakTarih.setDate(uzakTarih.getDate() + selectedDate);
+                    return (
+                      <button
+                        onClick={() => setCalendarOpen(v => !v)}
+                        aria-label={calendarOpen ? 'Takvimi kapat' : 'Takvimden tarih seç'}
+                        aria-expanded={calendarOpen}
+                        className={`flex-shrink-0 w-[58px] h-[74px] rounded-[18px] border flex flex-col items-center justify-center gap-1 transition-all ${
+                          uzakSecim || calendarOpen
+                            ? 'bg-[#39FF14]/10 border-[#39FF14] text-[#39FF14]'
+                            : 'bg-white/[0.03] border-white/[0.07] text-white/60'
+                        }`}
+                      >
+                        <CalendarIcon size={18} />
+                        <span className="text-[0.625rem] font-extrabold uppercase leading-none">
+                          {uzakSecim
+                            ? uzakTarih.toLocaleDateString('tr-TR', { day: '2-digit', month: 'short' })
+                            : 'Takvim'}
+                        </span>
+                      </button>
+                    );
+                  })()}
                 </div>
 
                 {/* Tam takvim */}

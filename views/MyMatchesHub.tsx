@@ -5,10 +5,11 @@ import {
   CheckCircle2, XCircle, Loader2, MapPin, Swords, Navigation, Repeat, LogOut, QrCode,
   AlertCircle, Info,
 } from 'lucide-react';
-import { AppView } from '../types';
+import { AppView, type MatchListing } from '../types';
 import { useAppStore } from '../store';
 import { supabase } from '../supabaseClient';
 import { useMyAgenda, type MyAgendaItem } from '../hooks/useMyAgenda';
+import { parseMatchDate } from '../hooks/useMyMatches';
 import { useCountdown } from '../hooks/useCountdown';
 import {
   getMatchDetails, previewLeaveMatch, leaveMatchSlot, leaveQuoteMessage,
@@ -45,6 +46,11 @@ type Segment = 'ALL' | 'MATCHES' | 'BOOKINGS';
 const AY = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
 
 const firstTimeToken = (t: string): string => (t || '').trim().split(' ')[0];
+
+/** Değerlendirme penceresi: maç BİTİMİNDEN sonra bu kadar süre puanlanabilir.
+ *  Sunucudaki `evaluation_window_days` (varsayılan 2) ile AYNI olmalı — aksi
+ *  halde kullanıcı listede gördüğü karta tıklayıp sunucudan hata alır. */
+const EVAL_WINDOW_MS = 2 * 24 * 60 * 60 * 1000;
 
 // Gün başlığı: Bugün/Yarın önde + tarih; diğer günlerde tarih önde + gün adı.
 const dayHeading = (when: Date | null): { primary: string; secondary: string } => {
@@ -176,15 +182,27 @@ const TicketCard: React.FC<{ item: MyAgendaItem; currentUserUid: string; onOpen:
 
 // ═════════════════ SIRADAKİ ETKİNLİK HERO ════════════════════════════════════
 
-const NextEventHero: React.FC<{ item: MyAgendaItem; currentUserUid: string; onOpen: () => void }> = ({ item, currentUserUid, onOpen }) => {
+const NextEventHero: React.FC<{
+  item: MyAgendaItem;
+  currentUserUid: string;
+  onOpen: () => void;
+  /** Tesis adını çözmek için saha listesi (match.location İLÇE tutar). */
+  pitches: { id: string; name?: string }[];
+}> = ({ item, currentUserUid, onOpen, pitches }) => {
   const isMatch = item.kind === 'MATCH';
   const date = isMatch ? item.match.date : item.booking.booking_date;
   const time = isMatch ? firstTimeToken(item.match.time) : shortTime(item.booking.start_time);
   const countdown = useCountdown(date, time);
   const title = isMatch ? (item.match.title || 'Maç') : (item.booking.pitches?.name || 'Saha Rezervasyonu');
+  // KONUM: tesis adı · kort. Önceden `match.location` basılıyordu; o alan tesis
+  // adını değil İLÇEYİ taşır, bu yüzden kartta yalnız "Altınordu" görünüyordu.
+  // Tesis adı store'daki saha listesinden çözülür; bulunamazsa ilçeye düşülür.
   const venue = isMatch
-    ? [item.match.location, (item.match as { courtName?: string }).courtName].filter(Boolean).join(' · ')
-    : [item.booking.pitches?.district, item.booking.courts?.name].filter(Boolean).join(' · ');
+    ? [
+        pitches.find((p) => p.id === (item.match as { pitchId?: string }).pitchId)?.name || item.match.location,
+        (item.match as { courtName?: string }).courtName,
+      ].filter(Boolean).join(' · ')
+    : [item.booking.pitches?.name || item.booking.pitches?.district, item.booking.courts?.name].filter(Boolean).join(' · ');
   const heading = dayHeading(item.when);
   // Maçta saatin yanına GERÇEK süre (duration_minutes) eklenir; rezervasyonda
   // başlangıç–bitiş aralığı zaten süreyi anlatır.
@@ -246,6 +264,10 @@ interface MyMatchesHubProps {
 const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onNavigate }) => {
   const reduceMotion = useReducedMotion();
   const { setSelectedMatch, setMatchCreateSeed, navigateTo, applyMatchLocal, setNavOverlayOpen } = useAppStore();
+  // Tesis adlarını çözmek için saha listesi: maç satırındaki `location` alanı
+  // İLÇE tutuyor ("Altınordu"), tesis adını değil. Saha listesi zaten store'da
+  // yüklü olduğu için ek istek gerekmez.
+  const adminPitches = useAppStore((s) => s.adminPitches);
   const { items, past, counts, nextItem, bookingsLoading, bookingsError, refetchBookings, currentUserUid } = useMyAgenda();
 
   const [segment, setSegment] = useState<Segment>(
@@ -459,8 +481,31 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onNavigate }) => {
   const sheetHeading = sheet ? dayHeading(sheet.when) : null;
   const bookingRemaining = sheetBooking ? Math.max((sheetBooking.deposit_amount || 0) - (sheetBooking.paid_amount || 0), 0) : 0;
   // F2.1: tamamlanmış ve henüz puanlanmamış maçta değerlendirme girişi açılır.
-  const evaluable = (m: { status?: string; id: string } | null | undefined): boolean =>
-    !!m && m.status === 'COMPLETED' && !evaluatedMatchIds.has(m.id);
+  /**
+   * Puanlanabilir mi? Üç koşul:
+   *   1. Maç oynanmış (COMPLETED)
+   *   2. Kullanıcı henüz puanlamamış
+   *   3. DEĞERLENDİRME PENCERESİ AÇIK — maç bitiminden 2 gün geçmemiş
+   *
+   * (3) kullanıcı kararı: değerlendirilmemiş maçlar iki gün sonra bu ekrandan
+   * kalkar. Bu yalnız görünüm değil: sunucu da aynı pencereyi uyguluyor
+   * (migration 20260801141608), yani süre dolduktan sonra puanlama denemesi
+   * `EVAL_WINDOW_CLOSED` ile reddedilir. İkisi AYNI kuralı kullanmalı ki
+   * kullanıcı tıklayıp hata almasın — bu yüzden pencere burada da kapatılır.
+   *
+   * Pencere maçın BAŞLANGICINDAN değil BİTİŞİNDEN sayılır; süre bilinmiyorsa
+   * 60 dakika varsayılır (sunucudaki varsayımın aynısı).
+   */
+  const evaluable = (m: MatchListing | { status?: string; id: string } | null | undefined): boolean => {
+    if (!m || m.status !== 'COMPLETED' || evaluatedMatchIds.has(m.id)) return false;
+    const mm = m as MatchListing;
+    const basla = parseMatchDate(mm.date ?? '', mm.time ?? '');
+    // Başlangıcı çözülemeyen eski kayıt: sunucu da engellemiyor, biz de gizlemeyiz.
+    if (!basla || isNaN(basla.getTime())) return true;
+    const dk = (mm as { durationMinutes?: number }).durationMinutes ?? 60;
+    const bitis = basla.getTime() + dk * 60_000;
+    return Date.now() <= bitis + EVAL_WINDOW_MS;
+  };
   const sheetMatchEvaluable = evaluable(sheetMatch);
 
   // IP-14 · BULGU-105: değerlendirme kapısı VARSAYILAN KAPALI "Geçmiş & İptaller"
@@ -603,31 +648,62 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onNavigate }) => {
                   </span>
                   <span className="flex-1 h-px bg-warning-line" />
                 </div>
+                {/* KART TASARIMI (kullanıcı kararı):
+                    • Sarı/kehribar zemin bırakıldı — kart artık uygulamanın
+                      diğer kartlarıyla aynı aileden: koyu zemin + ince beyaz
+                      kenarlık + beyaz yazı. "Değerlendirme" olduğunu üstteki
+                      bölüm başlığı zaten söylüyor.
+                    • Maç BAŞLIĞI yazılmıyor. Yalnız GERÇEK VERİ: tarih,
+                      saat + süre, tesis · kort.
+                    • "Takım arkadaşlarını puanla" alt yazısı kaldırıldı. */}
                 <div className="flex flex-col gap-2.5">
-                  {awaitingEval.map((item) => (
-                    <button
-                      key={`eval-${item.id}`}
-                      onClick={() => { setSelectedMatch(item.match); navigateTo('POST_MATCH_EVAL'); }}
-                      className="w-full min-h-[64px] rounded-2xl bg-warning-bg border border-warning-line flex items-center justify-between px-4 py-3 text-left active:scale-[0.99] transition-transform"
-                    >
-                      <span className="min-w-0">
-                        <span className="block text-sm font-extrabold text-ink truncate">
-                          {item.match.title || item.match.location || 'Maç'}
+                  {awaitingEval.map((item) => {
+                    const m = item.match;
+                    const baslik = dayHeading(item.when);
+                    // Tarih: "3 Ağustos · Pazar" (bugün/yarın ise o etiket öne geçer)
+                    const tarihSatiri = baslik.primary === 'Bugün' || baslik.primary === 'Yarın'
+                      ? `${baslik.secondary} · ${baslik.primary}`
+                      : [baslik.primary, baslik.secondary].filter(Boolean).join(' · ');
+                    // Saat + gerçek süre ("21:00 · 60 dakika")
+                    const saatSatiri = [m.time, formatMatchDuration(m)].filter(Boolean).join(' · ');
+                    // Tesis adı store'daki saha listesinden çözülür; `location`
+                    // İLÇE tutuyor, tek başına "Altınordu" gibi bilgisiz kalırdı.
+                    const saha = adminPitches.find((p) => p.id === (m as { pitchId?: string }).pitchId);
+                    const yerSatiri = [saha?.name || m.location, (m as { courtName?: string }).courtName]
+                      .filter(Boolean).join(' · ');
+                    return (
+                      <button
+                        key={`eval-${item.id}`}
+                        onClick={() => { setSelectedMatch(m); navigateTo('POST_MATCH_EVAL'); }}
+                        className="w-full rounded-2xl bg-[#12161D] border border-white/[0.07] flex items-center justify-between gap-3 px-4 py-3.5 text-left active:scale-[0.99] transition-transform"
+                      >
+                        <span className="min-w-0">
+                          <span className="block text-[0.9375rem] font-extrabold text-white truncate">
+                            {tarihSatiri}
+                          </span>
+                          {saatSatiri && (
+                            <span className="font-numeric block text-[0.8125rem] font-bold text-white/70 mt-0.5 truncate">
+                              {saatSatiri}
+                            </span>
+                          )}
+                          {yerSatiri && (
+                            <span className="flex items-center gap-1 text-[0.75rem] font-semibold text-white/55 mt-1 truncate">
+                              <MapPin size={11} className="shrink-0" />
+                              <span className="truncate">{yerSatiri}</span>
+                            </span>
+                          )}
                         </span>
-                        <span className="block text-[0.6875rem] text-ink-3 font-bold mt-0.5">
-                          Takım arkadaşlarını ve kaleci/hakemi puanla
-                        </span>
-                      </span>
-                      <span className="text-warning font-extrabold shrink-0 ml-3">→</span>
-                    </button>
-                  ))}
+                        <ChevronRight size={18} className="text-white/50 shrink-0" />
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             )}
 
             {/* Sıradaki etkinlik hero'su */}
             {nextItem && (
-              <NextEventHero item={nextItem} currentUserUid={currentUserUid} onOpen={() => setSheet(nextItem)} />
+              <NextEventHero item={nextItem} currentUserUid={currentUserUid} onOpen={() => setSheet(nextItem)} pitches={adminPitches} />
             )}
 
             {/* Yapışkan gün başlıklı tek ızgara */}

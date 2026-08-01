@@ -167,7 +167,7 @@ const SocialView: React.FC<SocialViewProps> = ({ onBack, onNavigate }) => {
   const captainCount = activeTeams.filter(t => t.my_role === 'CAPTAIN').length;
 
   return (
-    <div className="min-h-screen bg-[#0A0E14] text-white flex flex-col font-sans">
+    <div className="h-full bg-[#0A0E14] text-white flex flex-col font-sans">
       {/* ── Header ── */}
       <div className="pt-safe px-5 pb-0 flex-shrink-0">
         <div

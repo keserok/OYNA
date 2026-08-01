@@ -552,6 +552,29 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
   // Kaptanlık global rol değil; maçı kuran kişi o maçın yöneticisidir.
   const isCaptain = match.creatorId === currentUserProfile?.id;
 
+  // ── Kaporanın DURUMU (kaptan için) ────────────────────────────────────────
+  // Bu bilgi eskiden yalnız yönetim panelinde vardı: kaportayı ödeyen oyuncu
+  // parasının nerede olduğunu ve iptal ederse ne olacağını hiçbir ekranda
+  // göremiyordu. Alanlar `matches` satırından ham gelir (getMatchDetails
+  // select('*') yapar), o yüzden okurken tip daraltılır.
+  const kaporaDurumu = (match as { deposit_status?: string }).deposit_status ?? 'NONE';
+  const kaporaTutari = Number((match as { deposit_amount?: number }).deposit_amount ?? 0);
+  const kaporaBloke = kaporaDurumu === 'BLOCKED';
+  const kaporaTahsil = kaporaDurumu === 'CAPTURED';
+  const kendiPayi = Number(match.price ?? 0);
+  const kaporaIadesi = Math.max(0, kaporaTutari - kendiPayi);
+  // Maça kalan saat — iptal sonucunu ekranda SOMUT söyleyebilmek için.
+  // Hesaplanamıyorsa (starts_at yok) hiç sayı uydurmayız.
+  const macaKalanSaat = (() => {
+    const ham = (match as { startsAt?: string; starts_at?: string }).startsAt
+      ?? (match as { starts_at?: string }).starts_at;
+    if (!ham) return null;
+    const t = new Date(ham).getTime();
+    if (Number.isNaN(t)) return null;
+    return (t - Date.now()) / 3_600_000;
+  })();
+  const gecIptal = kaporaTahsil && macaKalanSaat !== null && macaKalanSaat < 24;
+
   const isHomeCaptain = match.creatorId === currentUserProfile.id || homeTeam?.captain === currentUserProfile.id || homeTeam?.captains?.includes(currentUserProfile.id);
   const isAwayCaptain = !!awayTeam && (awayTeam.captain === currentUserProfile.id || awayTeam.captains?.includes(currentUserProfile.id));
 
@@ -1188,7 +1211,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
   // ─── RENDER ─────────────────────────────────────────────────────────────────
 
   return (
-    <div className="min-h-screen bg-[#0A0E14] flex flex-col relative overflow-hidden font-sans">
+    <div className="h-full bg-[#0A0E14] flex flex-col relative overflow-hidden font-sans">
 
       {/* Ambiyans arka plan */}
 
@@ -1422,7 +1445,24 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
               <p className="text-sm text-gray-400 mb-3">
                 Bu maçı iptal etmek istediğine emin misin? Tüm kadro bilgilendirilir ve maç vitrinden kaldırılır.
               </p>
-              {/* Kademeli iade özeti — sunucu 24s kuralıyla birebir */}
+              {/* 8a — SOMUT sonuç. Eskiden yalnız genel kural yazıyordu;
+                  kaptan kendi kaporasına ne olacağını GÖRMEDEN iptal ediyordu.
+                  Artık şu anki duruma göre tek cümlelik kesin sonuç yazılır. */}
+              {kaporaTutari > 0 && (
+                <p className={`text-[0.6875rem] font-bold rounded-xl px-3 py-2 mb-3 text-left ${
+                  gecIptal
+                    ? 'text-red-300 bg-red-500/[0.09] border border-red-500/25'
+                    : 'text-[#8fe87a] bg-[#39FF14]/[0.07] border border-[#39FF14]/20'
+                }`}>
+                  {kaporaBloke && <>Kaporan <b>{money(kaporaTutari)}</b> henüz tahsil edilmedi — <b>tamamı</b> cüzdanına geri döner.</>}
+                  {kaporaTahsil && !gecIptal && <>Kaporan tahsil edilmişti; maça 24 saatten fazla olduğu için <b>{money(kaporaTutari)} iade edilir</b>.</>}
+                  {gecIptal && (
+                    <>Maça <b>{Math.max(0, Math.floor(macaKalanSaat ?? 0))} saat</b> kaldı. Kaporan tahsil edilmişti:
+                      {' '}<b>{money(kaporaTutari)} iade EDİLMEZ</b> ve güven puanın düşer.</>
+                  )}
+                </p>
+              )}
+              {/* Katılımcı tarafı — sunucu 24s kuralıyla birebir */}
               <p className="text-[0.6875rem] font-bold text-amber-300/90 bg-amber-400/[0.07] border border-amber-400/20 rounded-xl px-3 py-2 mb-6 text-left">
                 • Maça <b>24 saatten fazla</b> varsa: katılımcı ödemeleri iade edilir.<br />
                 • <b>24 saatten az</b> kaldıysa: geç iptal — iade yapılmaz ve fair-play puanın etkilenebilir.
@@ -2018,6 +2058,40 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
             </div>
           )}
         </div>
+
+        {/* ── 7c: KAPORA DURUMU (yalnız kaptan) ────────────────────────────────
+            Kapora ödendiğinde para cüzdandan çıkıyor ama nereye gittiği ve ne
+            zaman döneceği hiçbir oyuncu ekranında yazmıyordu; bilgi yalnız
+            yönetim panelindeydi. Kaptan artık kendi parasını burada görür. */}
+        {isManageMode && isCaptain && kaporaTutari > 0 && (kaporaBloke || kaporaTahsil) && (
+          <div className="px-4 pb-3">
+            <div className={`flex items-start gap-2.5 px-3.5 py-3 rounded-2xl border ${
+              kaporaBloke
+                ? 'bg-[#FACC15]/[0.07] border-[#FACC15]/25'
+                : 'bg-[#39FF14]/[0.06] border-[#39FF14]/22'
+            }`}>
+              {kaporaBloke
+                ? <Lock size={14} className="text-[#FACC15] shrink-0 mt-0.5" />
+                : <CheckCircle2 size={14} className="text-[#39FF14] shrink-0 mt-0.5" />}
+              <div className="min-w-0">
+                <p className="text-[0.75rem] font-extrabold text-white leading-tight">
+                  {kaporaBloke
+                    ? `Kaporan ${money(kaporaTutari)} güvencede`
+                    : `Kapora tahsil edildi · payın ${money(kendiPayi)}`}
+                </p>
+                <p className="text-[0.6875rem] font-semibold text-ink-4 leading-snug mt-0.5">
+                  {kaporaBloke
+                    ? (kaporaIadesi > 0
+                        ? `Kadro dolarsa ${money(kaporaIadesi)} cüzdanına döner; dolmazsa tamamı iade edilir.`
+                        : 'Kadro dolmazsa tamamı cüzdanına iade edilir.')
+                    : (kaporaIadesi > 0
+                        ? `${money(kaporaIadesi)} cüzdanına iade edildi.`
+                        : 'Kaporanın tamamı katılım payına sayıldı.')}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* ── IP-06 / BULGU-078: eksik oyuncu ilanı — yakındaki oyunculara tek
             dokunuş çağrı. Olumlu aksiyon, yıkıcı aksiyonun ÜSTÜNDE durur. ── */}

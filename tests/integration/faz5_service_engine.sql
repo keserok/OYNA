@@ -27,8 +27,8 @@ BEGIN
   UPDATE public.profiles SET name='Oyuncu1', wallet_balance=0 WHERE id=p1;
   UPDATE public.profiles SET name='Oyuncu2', wallet_balance=0 WHERE id=p2;
   UPDATE public.profiles SET is_admin=true, role='SUPER_ADMIN', name='Admin' WHERE id=adm;
-  INSERT INTO public.pitches(id,name,address,city,district,owner_id,is_active,verification_status)
-    VALUES (pitch,'Servis Saha','Altınordu','Ordu','Altınordu',o,true,'approved');
+  INSERT INTO public.pitches(id,name,address,city,district,owner_id,is_active)
+    VALUES (pitch,'Servis Saha','Altınordu','Ordu','Altınordu',o,true);
   INSERT INTO public.goalkeepers(id,name,fee,rating,"matchCount","preferredZones","isDemo")
     VALUES (gk,'Kaleci',200,0,0,'[]'::jsonb,false);
   slots2 := jsonb_build_array(

@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertTriangle, ArrowLeft, ArrowUpRight, Check, CheckCircle2, Clock,
-  CreditCard, Gift, History, Info, Landmark, List, Pencil, Plus,
+  CreditCard, Gift, History, Info, Landmark, List, Lock, Pencil, Plus,
   RefreshCw, RotateCcw, Shield, Trash2, TrendingUp, Users, Wallet, X, Zap,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -233,6 +233,10 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
   // kısayolu sunucunun `spendable_balance` alanını okuyor; cüzdanın kendi
   // toplamı tutmaya kalkması, aynı paranın üç ekranda ayrışması demekti.
   const walletBalance = summary?.spendableBalance ?? 0;
+  // Bir maçta güvencede bekleyen kapora. walletBalance'a DÂHİL DEĞİL: para
+  // zaten cüzdandan çıktı, burada yalnız "nerede?" sorusu cevaplanıyor.
+  const blockedBalance = summary?.blockedBalance ?? 0;
+  const blockedMatchCount = summary?.blockedMatchCount ?? 0;
 
   const effectiveTopup = isCustom ? Number(customAmount) || 0 : topupAmount;
   // Kart işlem bedeli (app_config.card_fee_pct; 0 = kapalı) — sunucudaki
@@ -464,7 +468,7 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
   if (view === 'TOPUP') {
     const selectedCard = savedCards.find(c => c.id === topupCardId) ?? null;
     return (
-      <div lang="tr" className="min-h-screen bg-[#0A0E14] flex flex-col font-sans">
+      <div lang="tr" className="h-full bg-[#0A0E14] flex flex-col font-sans">
         <SubHeader title="Para Yükle" subtitle="Cüzdanına ekle" onBack={() => setView('MAIN')} />
         <main className="flex-1 overflow-y-auto p-5 space-y-5">
           <div className="text-center py-1">
@@ -631,7 +635,7 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
     const defaultCard = savedCards.find(c => c.isDefault) ?? savedCards[0] ?? null;
     const others = savedCards.filter(c => c.id !== defaultCard?.id);
     return (
-      <div lang="tr" className="min-h-screen bg-[#0A0E14] flex flex-col font-sans">
+      <div lang="tr" className="h-full bg-[#0A0E14] flex flex-col font-sans">
         <SubHeader title="Kartlarım" subtitle="Kayıtlı ödeme yöntemleri" onBack={() => setView('MAIN')} />
         <main className="flex-1 overflow-y-auto p-5 space-y-3.5">
           {defaultCard && (
@@ -733,7 +737,7 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
       ['ALL', 'Tümü'], ['TOPUP', 'Yükleme'], ['PAYMENT', 'Ödeme'], ['REFUND', 'İade'], ['EARNING', 'Kazanç'],
     ];
     return (
-      <div lang="tr" className="min-h-screen bg-[#0A0E14] flex flex-col font-sans">
+      <div lang="tr" className="h-full bg-[#0A0E14] flex flex-col font-sans">
         <SubHeader title="İşlem Geçmişi" subtitle="Tüm hareketler" onBack={() => setView('MAIN')} />
         <div className="shrink-0 px-5 pt-3.5">
           <div className="oy-carousel flex gap-2 overflow-x-auto">
@@ -773,7 +777,7 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
   if (view === 'PAYOUT_FORM') {
     const quick = [500, 1000];
     return (
-      <div lang="tr" className="min-h-screen bg-[#0A0E14] flex flex-col font-sans">
+      <div lang="tr" className="h-full bg-[#0A0E14] flex flex-col font-sans">
         <SubHeader title="IBAN'a Çek" subtitle="Kazancını hesabına aktar" onBack={() => { setView('MAIN'); setPayoutError(''); }} />
         <main className="flex-1 overflow-y-auto p-5 space-y-[18px]">
           <div className="text-center py-2">
@@ -869,7 +873,7 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
       && g > 0 && (!pv || ((g >= pv.min || pv.min_waived) && g <= pv.withdrawable_balance))
       && validateIBAN(cashoutIban) && !!cashoutHolder.trim();
     return (
-      <div lang="tr" className="min-h-screen bg-[#0A0E14] flex flex-col font-sans">
+      <div lang="tr" className="h-full bg-[#0A0E14] flex flex-col font-sans">
         <SubHeader title="Paranı Çek" subtitle="Cüzdan bakiyeni banka hesabına aktar"
           onBack={() => { setView('MAIN'); setCashoutError(''); setCashoutDone(null); }} />
         <main className="flex-1 overflow-y-auto p-5 space-y-4">
@@ -981,7 +985,7 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
   const recentTx = txList.slice(0, 6);
 
   return (
-    <div lang="tr" className="min-h-screen bg-[#0A0E14] flex flex-col font-sans relative overflow-hidden">
+    <div lang="tr" className="h-full bg-[#0A0E14] flex flex-col font-sans relative overflow-hidden">
       <div className="fixed inset-0 pointer-events-none z-0">
         <div className={`absolute top-[-10%] left-[-10%] w-[50%] h-[30%] blur-[120px] rounded-full ${isEarningsRole ? 'bg-[#FACC15]/8' : 'bg-[#39FF14]/8'}`} />
       </div>
@@ -1141,6 +1145,26 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
                 <p className="relative mt-4 text-[0.6875rem] font-semibold text-[#8fe87a]/70">
                   Bu tutarın {money(refundBalance)} kadarı iadelerden geldi.
                 </p>
+              )}
+              {/* BLOKE — kapora ödendiğinde bakiye düşüyor ve sıradan bir
+                  harcama gibi görünüyordu; parasının nerede olduğu hiçbir
+                  ekranda yazmıyordu. Bu satır yalnız "nerede?" sorusunu
+                  cevaplar; yukarıdaki bakiyeye DÂHİL DEĞİLDİR. */}
+              {blockedBalance > 0 && (
+                <div className="relative mt-4 pt-3.5 border-t border-white/10 flex items-start gap-2.5">
+                  <Lock size={13} className="text-[#FACC15] shrink-0 mt-0.5" />
+                  <div className="min-w-0">
+                    <p className="text-[0.75rem] font-extrabold text-white">
+                      {money(blockedBalance)} bir maçta güvencede
+                    </p>
+                    <p className="text-[0.6875rem] font-semibold text-[#8fe87a]/70 leading-snug mt-0.5">
+                      {blockedMatchCount > 1
+                        ? `${blockedMatchCount} maçın kaporası bekliyor. `
+                        : 'Kurduğun maçın kaporası bekliyor. '}
+                      Kadro dolunca payın düşülüp kalanı, dolmazsa tamamı cüzdanına döner.
+                    </p>
+                  </div>
+                </div>
               )}
             </div>
 

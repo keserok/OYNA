@@ -340,6 +340,56 @@ export async function rahatBaglamiTohumla(page: Page, opts: { dolu?: boolean } =
 }
 
 /**
+ * TAKTİKSEL / CİDDİ maç lobisi için bağlam.
+ *
+ * `difficulty` alanı lobinin HANGİ ekrana açılacağını belirler (App.tsx):
+ * 'Rahat' → pozisyonsuz RahatMatchLobby, diğerleri → saha + diziliş akışlı
+ * MatchJoin. Rahat tohumuyla MatchJoin'e HİÇ girilemez, o yüzden ayrı tohum.
+ */
+export async function taktikBaglamiTohumla(page: Page) {
+  const oyuncu = (id: string, ad: string, mevki: string) =>
+    `{ id: '${id}', name: '${ad}', avatar: '', position: '${mevki}' }`;
+  const dolu = (sid: string, id: string, ad: string, mevki: string) =>
+    `{ id: '${sid}', role: '${mevki}', x: 50, y: 50, status: 'TAKEN', occupant: '${id}', player: ${oyuncu(id, ad, mevki)} }`;
+  const bos = (sid: string, mevki: string) =>
+    `{ id: '${sid}', role: '${mevki}', x: 50, y: 50, status: 'OPEN' }`;
+
+  await storeIle(page, `(store) => store.getState().setSelectedMatch({
+    id: 'bbbbbbbb-cccc-dddd-eeee-ffffffffffff',
+    title: 'Taktiksel Akşam Maçı',
+    location: 'Altınordu',
+    pitchName: 'Yıldız Halı Saha',
+    courtName: 'Kort 1',
+    date: 'Bugün',
+    time: '21:00 – 22:00',
+    startsAt: '2026-03-01T21:00:00Z',
+    price: 180,
+    difficulty: 'Taktiksel',
+    format: '7v7',
+    gender: 'Karma',
+    image: '',
+    badges: [],
+    missingPositions: [],
+    creatorId: 'baska-biri',
+    slots: [
+      ${dolu('s0', 'p-ali', 'Ali Vural', 'KL')},
+      ${dolu('s1', 'p-emre', 'Emre Duran', 'SAV')},
+      ${dolu('s2', 'p-caner', 'Caner Kılıç', 'ORT')},
+      ${bos('s3', 'ORT')},
+      ${bos('s4', 'HÜC')},
+      ${bos('s5', 'SAV')},
+      ${bos('s6', 'HÜC')}
+    ],
+    awaySlots: [
+      ${dolu('a0', 'p-veli', 'Veli Kaya', 'KL')},
+      ${bos('a1', 'SAV')},
+      ${bos('a2', 'ORT')}
+    ],
+    reservePlayers: [],
+  })`);
+}
+
+/**
  * Ekran görüntüsünden ÖNCE her şeyin oturmasını bekle:
  * yazı tipleri + bir sonraki boya karesi + kısa bir yerleşim payı.
  */

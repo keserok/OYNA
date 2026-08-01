@@ -8,6 +8,15 @@ export interface WalletSummary {
   refundCreditBalance: number; // iade kredisi (yalnızca OYNA içi)
   topupBalance: number;        // yüklenen bakiye
   spendableBalance: number;    // topup + iade kredisi (ödemelerde kullanılabilir)
+  /**
+   * Bir maçta GÜVENCEDE bekleyen kapora toplamı. Harcanabilir bakiyeye DÂHİL
+   * DEĞİLDİR — para zaten cüzdandan çıkmıştır. Yalnız "param nerede?" sorusunu
+   * cevaplar: kapora ödendiğinde bakiye düşüyor ve sıradan bir harcama gibi
+   * görünüyordu; nereye gittiği hiçbir ekranda yazmıyordu.
+   */
+  blockedBalance: number;
+  /** Kaç maçta bloke var (tekil rakam yerine "1 maçta" diyebilmek için). */
+  blockedMatchCount: number;
 }
 
 // Kayıtlı kart — YALNIZ maskeli meta (PAN/CVV asla FE'den öteye geçmez;
@@ -100,6 +109,8 @@ export const getWalletSummary = async (): Promise<WalletSummary> => {
     refundCreditBalance: refund,
     topupBalance: topup,
     spendableBalance: Number(d?.spendable_balance) || topup + refund,
+    blockedBalance: Number(d?.blocked_balance) || 0,
+    blockedMatchCount: Number(d?.blocked_match_count) || 0,
   };
 };
 

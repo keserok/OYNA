@@ -435,7 +435,7 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect, onCre
     }, [detail, detailStats, type]);
 
     return (
-        <div className="min-h-screen bg-[#0A0E14] relative flex flex-col font-sans overflow-hidden">
+        <div className="h-full bg-[#0A0E14] relative flex flex-col font-sans overflow-hidden">
 
             {/* 1. Başlık */}
             <header className="px-5 pt-6 pb-4 flex items-center gap-3 bg-[#0A0E14]/90 backdrop-blur-xl sticky top-0 z-30 border-b border-white/5">

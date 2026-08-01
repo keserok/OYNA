@@ -25,6 +25,9 @@ export const BARE_CODE_TR: Record<string, string> = {
   SECURITY: 'Güvenlik kontrolü bu işlemi durdurdu. Tekrar dene, sürerse bize yaz.',
   NOT_FOUND: 'Aradığın kayıt bulunamadı. Silinmiş ya da taşınmış olabilir.',
   NOT_PARTICIPANT: 'Bu maça katılmadığın için bu işlemi yapamazsın.',
+  // Puanlama maç bitiminden 2 gün sonra kapanır (sunucu kapısı:
+  // migration 20260801141608). Süre `evaluation_window_days` ile ayarlanabilir.
+  EVAL_WINDOW_CLOSED: 'Bu maçın değerlendirme süresi doldu. Puanlama maç bitiminden 2 gün sonra kapanır.',
   NOT_MEMBER: 'Bu takımın üyesi değilsin.',
   NOT_OWNER: 'Bu kayıt sana ait değil.',
   NOT_FRIENDS: 'Bunu yapabilmek için önce arkadaş olmanız gerekiyor.',

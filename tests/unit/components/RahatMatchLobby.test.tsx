@@ -56,7 +56,8 @@ vi.mock('../../../services/rahatMatchService', async (importOriginal) => {
     ...actual,
     fetchRahatPitchInfo: vi.fn(async () => null),
     fetchRahatMatchConfig: vi.fn(async () => ({
-      captureWindowHours: 8, refundFullHours: 24, refundHalfHours: 6, refundHalfPct: 50,
+      captureWindowHours: 8, decisionWindowMinutes: 90,
+      refundFullHours: 24, refundHalfHours: 6, refundHalfPct: 50,
     })),
   };
 });
@@ -208,11 +209,14 @@ describe('RahatMatchLobby — veri dürüstlüğü (yoksa çizme)', () => {
     expect(screen.queryByText('Yol Tarifi Al')).not.toBeInTheDocument();
   });
 
-  it('onay saati HESAPLANIR: starts_at − onay penceresi (8 saat)', async () => {
+  // KURAL DEĞİŞTİ (2026-09): karar anı 8 saat önce DEĞİL, 90 dakika önce.
+  // 8 saat artık "son çağrı" (uyarı) anıdır ve maçın kaderini belirlemez;
+  // lobide onu karar saati diye göstermek oyuncuya yanlış son tarih veriyordu.
+  it('onay saati HESAPLANIR: starts_at − karar penceresi (90 dakika)', async () => {
     const startsAt = '2026-03-01T20:00:00+03:00';
     // Beklenen etiket bileşenle AYNI mantıktan (yerel saat dilimi farkı test
-    // ortamına göre değişebilir — sabit '12:00' yazmak UTC koşumda kırılırdı).
-    const expected = new Date(new Date(startsAt).getTime() - 8 * 3600_000)
+    // ortamına göre değişebilir — sabit '18:30' yazmak UTC koşumda kırılırdı).
+    const expected = new Date(new Date(startsAt).getTime() - 90 * 60_000)
       .toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
     ciz(mac({ startsAt }));
     await waitFor(() => expect(screen.getByText(/bildireceğiz/)).toBeInTheDocument());

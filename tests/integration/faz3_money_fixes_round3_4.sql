@@ -27,8 +27,8 @@ BEGIN
   PERFORM set_config('app.wallet_ctx','on',true);
   UPDATE public.profiles SET name='User', wallet_balance=300 WHERE id=u;
   PERFORM set_config('app.wallet_ctx','',true);
-  INSERT INTO public.pitches(id,name,address,city,district,owner_id,is_active,verification_status)
-    VALUES (pitch,'R3 Saha','Altınordu','Ordu','Altınordu',o,true,'approved');
+  INSERT INTO public.pitches(id,name,address,city,district,owner_id,is_active)
+    VALUES (pitch,'R3 Saha','Altınordu','Ordu','Altınordu',o,true);
   INSERT INTO public.courts(id,pitch_id,name) VALUES (court,pitch,'Kort 1');
 
   PERFORM set_config('request.jwt.claims', json_build_object('sub',u,'role','authenticated')::text, true);
