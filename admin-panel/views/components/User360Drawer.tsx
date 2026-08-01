@@ -8,7 +8,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  X, Ban, ShieldCheck, PlayCircle, Edit3, Eye, Wallet, ScrollText,
+  X, Ban, ShieldCheck, PlayCircle, Eye, Wallet, ScrollText,
   BadgeCheck, Loader2, Mail, Phone,
 } from 'lucide-react';
 import { supabase } from '../../../supabaseClient';
@@ -25,7 +25,6 @@ interface Props {
   onBanToggle: (u: AdminUser) => void;
   onVerify: (u: AdminUser) => void;
   onGhost: (u: AdminUser) => void;
-  onEdit: (u: AdminUser) => void;
   /** Profil Aynası bir alan kaydettiğinde liste tazelemesi için. */
   onUpdated?: () => void;
 }
@@ -48,7 +47,7 @@ interface AuditRow {
 
 const fmtMoney = (n: number) => `${Number(n).toLocaleString('tr-TR')}₺`;
 
-export const User360Drawer: React.FC<Props> = ({ user, onClose, onBanToggle, onVerify, onGhost, onEdit, onUpdated }) => {
+export const User360Drawer: React.FC<Props> = ({ user, onClose, onBanToggle, onVerify, onGhost, onUpdated }) => {
   const { error: toastError } = useAdminToast();
   // Varsayılan sekme PROFİL: kullanıcıyı uygulamadaki hâliyle gör + düzenle (ayna).
   const [tab, setTab] = useState<'profil' | 'operasyon'>('profil');
@@ -278,10 +277,10 @@ export const User360Drawer: React.FC<Props> = ({ user, onClose, onBanToggle, onV
           </div>
 
           {/* Aksiyon barı — mevcut onaylı akışlara delege */}
-          <div className="shrink-0 p-4 border-t border-white/10 grid grid-cols-4 gap-2">
-            <button type="button" onClick={() => onEdit(user)} className="flex flex-col items-center gap-1 py-2.5 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-300 text-[9px] font-extrabold uppercase">
-              <Edit3 size={14} /> Düzenle
-            </button>
+          {/* Aksiyon barından "Düzenle" KALKTI: düzenleme tek yerde, Profil
+              (Uygulama Aynası) sekmesinde — kullanıcı kararı "üç düzenleme yeri
+              tek yerde birleşsin". */}
+          <div className="shrink-0 p-4 border-t border-white/10 grid grid-cols-3 gap-2">
             <button type="button" onClick={() => onBanToggle(user)} className={`flex flex-col items-center gap-1 py-2.5 rounded-xl text-[9px] font-extrabold uppercase border ${user.isBanned ? 'bg-green-500/10 border-green-500/20 text-green-300' : 'bg-red-500/10 border-red-500/20 text-red-300'}`}>
               {user.isBanned ? <ShieldCheck size={14} /> : <Ban size={14} />}
               {user.isBanned ? 'Unban' : 'Banla'}

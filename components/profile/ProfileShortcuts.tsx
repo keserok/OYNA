@@ -1,26 +1,26 @@
 import React from 'react';
 
 export interface ShortcutItem {
-    icon: React.ReactNode;
     label: string;
     value: string;
     /** Verilmezse hücre tıklanamaz bilgi kutusu olarak çizilir (salt-okunur profil). */
     onClick?: () => void;
 }
 
-const cellClass = 'flex-1 min-w-0 rounded-2xl py-3.5 px-1.5 bg-white/[0.03] border border-white/[0.08] flex flex-col items-center gap-2';
+const cellClass = 'flex-1 min-w-0 rounded-[20px] py-3.5 px-2 bg-surface-1 shadow-[0_10px_30px_rgba(0,0,0,0.3)] flex flex-col items-center gap-1.5';
 
-/** Profil kısayol satırı — Cüzdan / Takımlarım / Arkadaşlarım (veya salt-okunur karşılıkları). */
+/**
+ * Profil kısayol satırı — Cüzdan / Takımlarım / Arkadaşlarım.
+ * Tasarım 3a: ikon yok; üstte değer, altında etiket. Kullanıcı kararı: cüzdan
+ * tutarı da diğerleri gibi BEYAZ (yeşil vurgu profilde güven halkasına ayrıldı).
+ */
 export const ProfileShortcuts: React.FC<{ items: ShortcutItem[] }> = ({ items }) => (
-    <div className="flex gap-2">
+    <div className="flex gap-2.5">
         {items.map((item) => {
             const content = (
                 <>
-                    <div className="w-[34px] h-[34px] rounded-[10px] bg-white/[0.06] border border-white/[0.12] flex items-center justify-center text-white/85">
-                        {item.icon}
-                    </div>
-                    <span className="text-[0.6875rem] font-extrabold text-white/55 leading-[1.2] text-center truncate max-w-full">{item.label}</span>
-                    <span className="text-sm font-extrabold text-white truncate max-w-full">{item.value}</span>
+                    <span className="text-[0.9375rem] font-bold text-[#F5F3EE] truncate max-w-full">{item.value}</span>
+                    <span className="text-[0.625rem] text-[#F5F3EE]/[0.55] leading-[1.2] text-center truncate max-w-full">{item.label}</span>
                 </>
             );
             return item.onClick ? (

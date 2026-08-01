@@ -15,7 +15,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
-  Loader2, Pencil, RefreshCw, ShieldAlert, Sparkles, Star, Users, UserPlus, Wallet, X,
+  Loader2, Pencil, RefreshCw, ShieldAlert, Sparkles, Star, Wallet, X,
 } from 'lucide-react';
 import { supabase } from '../../../supabaseClient';
 import {
@@ -30,11 +30,17 @@ import {
   ageFromBirthdate, formatPosition, trustScoreTo100, winStats,
 } from '../../../shared/profilePresentation';
 import {
-  adjustWalletBalanceAdmin, fetchPlayerPeerScoresAdmin, updateUserAppProfileAdmin,
-  toTurkishAdminError, type PlayerPeerScores,
+  adjustWalletBalanceAdmin, banUserAdmin, fetchPlayerPeerScoresAdmin, updateUserAppProfileAdmin,
+  toTurkishAdminError, type AppProfileAdminFields, type PlayerPeerScores,
 } from '../../services/adminService';
 import { useAdminToast } from '../context/AdminToastContext';
-import { skillBand } from '../../../utils/skillBand';
+import { skillBand, SELF_SKILL_MAX } from '../../../utils/skillBand';
+import { UserRole } from '../../../types';
+import {
+  NOTIFICATION_CATEGORIES,
+  fetchNotificationTemplates as fetchBildirimSablonlari,
+} from '../../../notifications/notificationPreferences';
+import { DEFAULT_NOTIFICATION_PREFERENCES } from '../../../notifications/pushService';
 
 interface Props {
   userId: string;
@@ -43,6 +49,103 @@ interface Props {
 }
 
 const fmtMoney = (n: number) => `${Number(n).toLocaleString('tr-TR')} ₺`;
+
+// ═══ v4 · Aynada düzenlenebilir yönetici alanları ═══════════════════════════
+// Kullanıcı kararı: "üç düzenleme yeri tek yerde birleşsin". Eskiden Kullanıcılar
+// sayfasındaki DERİN DÜZENLEME penceresinde duran alanlar (telefon, rol, maç
+// sayısı, doğrulanmış, yasak) buraya taşındı; yanlarına aynada hiç olmayanlar
+// eklendi (seviye beyanı, yaş aralığı, pro, kurulum, gizlilik, bildirimler).
+// Kapsam dışı (kullanıcı kararı): cüzdanı doğrudan yazma, admin yetkisi verme,
+// doğrulama durumunu elle değiştirme.
+
+interface BildirimTercihi { enabled: boolean; mandatory: boolean }
+type BildirimHaritasi = Record<string, BildirimTercihi>;
+
+interface YoneticiAlanlari {
+  phone: string;
+  role: string;
+  is_verified: boolean;
+  is_pro: boolean;
+  is_banned: boolean;
+  match_count: number;
+  self_skill: number | null;
+  age_range: string;
+  has_completed_onboarding: boolean;
+  is_searchable: boolean;
+  discoverable_by_phone: boolean;
+  show_online_status: boolean;
+  bildirimler: BildirimHaritasi;
+}
+
+const YONETICI_KOLONLARI =
+  'phone, role, is_verified, is_pro, is_banned, match_count, self_skill, age_range, ' +
+  'has_completed_onboarding, is_searchable, discoverable_by_phone, show_online_status, notification_preferences';
+
+/**
+ * Kayıtlı tercihleri uygulamanın VARSAYILANLARIYLA birleştirir. İki sebep:
+ * (1) hiç tercihi olmayan kullanıcıda panel boş kalmasın, (2) `mandatory`
+ * bayrağının tek kaynağı DEFAULT_NOTIFICATION_PREFERENCES olsun — zorunlu bir
+ * bildirim panelden yanlışlıkla kapatılamasın.
+ * Eski satırlarda değer düz `true/false` olabilir; o biçim de okunur.
+ */
+const bildirimleriNormalize = (ham: unknown): BildirimHaritasi => {
+  const harita: BildirimHaritasi = {};
+  for (const [k, v] of Object.entries(DEFAULT_NOTIFICATION_PREFERENCES as unknown as BildirimHaritasi)) {
+    harita[k] = { enabled: v.enabled, mandatory: v.mandatory };
+  }
+  if (ham && typeof ham === 'object') {
+    for (const [k, v] of Object.entries(ham as Record<string, unknown>)) {
+      const zorunlu = harita[k]?.mandatory ?? false;
+      if (typeof v === 'boolean') harita[k] = { enabled: v, mandatory: zorunlu };
+      else if (v && typeof v === 'object' && 'enabled' in (v as Record<string, unknown>)) {
+        harita[k] = { enabled: !!(v as BildirimTercihi).enabled, mandatory: zorunlu };
+      }
+    }
+  }
+  return harita;
+};
+
+/** Kategorilere girmeyen anahtarlar sessizce kaybolmasın: "Diğer" grubu. */
+const bildirimGruplari = (harita: BildirimHaritasi) => {
+  const siniflanan = new Set(NOTIFICATION_CATEGORIES.flatMap((c) => c.preferences as string[]));
+  const gruplar = NOTIFICATION_CATEGORIES.map((c) => ({
+    key: c.key,
+    label: c.label,
+    anahtarlar: (c.preferences as string[]).filter((k) => k in harita),
+  }));
+  const diger = Object.keys(harita).filter((k) => !siniflanan.has(k));
+  if (diger.length) gruplar.push({ key: 'DIGER', label: 'Diğer Bildirimler', anahtarlar: diger });
+  return gruplar.filter((g) => g.anahtarlar.length > 0);
+};
+
+/** Admin panelindeki küçük aç/kapa anahtarı. */
+const Anahtar: React.FC<{
+  label: string; desc?: string; value: boolean; onChange: () => void;
+  disabled?: boolean; danger?: boolean;
+}> = ({ label, desc, value, onChange, disabled, danger }) => (
+  <button
+    type="button"
+    onClick={disabled ? undefined : onChange}
+    disabled={disabled}
+    className={`w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl border text-left transition-colors ${
+      disabled ? 'bg-black/20 border-white/5 cursor-default' : 'bg-black/30 border-white/10 hover:border-white/20'
+    }`}
+  >
+    <span className="min-w-0">
+      <span className={`block text-[11px] font-bold ${disabled ? 'text-gray-500' : 'text-white'}`}>{label}</span>
+      {desc && <span className="block text-[9px] text-gray-500 mt-0.5">{desc}</span>}
+    </span>
+    <span
+      className={`shrink-0 w-9 h-5 rounded-full border transition-colors relative ${
+        value
+          ? danger ? 'bg-red-500/70 border-red-400/60' : 'bg-[#39FF14]/70 border-[#39FF14]/60'
+          : 'bg-white/10 border-white/15'
+      } ${disabled ? 'opacity-50' : ''}`}
+    >
+      <span className={`absolute top-[2px] w-3.5 h-3.5 rounded-full bg-white transition-all ${value ? 'left-[18px]' : 'left-[2px]'}`} />
+    </span>
+  </button>
+);
 
 /** Admin krom şeridi: uygulama UI'ından ayrışsın diye tek tip mor "yönet" düğmesi. */
 const AdminChip: React.FC<{ label: string; onClick: () => void; icon?: React.ReactNode }> = ({ label, onClick, icon }) => (
@@ -72,6 +175,14 @@ export const UserProfileMirror: React.FC<Props> = ({ userId, onUpdated }) => {
   const [trustDraft, setTrustDraft] = useState(100);
   const [adminOpen, setAdminOpen] = useState(false);
   const [adminSaving, setAdminSaving] = useState(false);
+  // v4: kayıtlı hâl (kıyas için) + üzerinde çalışılan taslak. Kaydederken yalnız
+  // DEĞİŞEN alanlar gönderilir — RPC gönderilmeyen alana dokunmaz.
+  const [yKayitli, setYKayitli] = useState<YoneticiAlanlari | null>(null);
+  const [yTaslak, setYTaslak] = useState<YoneticiAlanlari | null>(null);
+  // Bildirim adları uygulamanın kendi şablon tablosundan gelir (label_tr) —
+  // admin panelinde `match_reminder_24h` gibi ham anahtar okutmamak için.
+  // En-iyi-çaba: gelmezse ham anahtar gösterilir, panel yine çalışır.
+  const [bildirimAdlari, setBildirimAdlari] = useState<Record<string, { ad: string; zorunlu: boolean }>>({});
   const [walletOpen, setWalletOpen] = useState(false);
   const [walletAmount, setWalletAmount] = useState('');
   const [walletReason, setWalletReason] = useState('');
@@ -101,12 +212,52 @@ export const UserProfileMirror: React.FC<Props> = ({ userId, onUpdated }) => {
       setHistory(historyData);
       setNameDraft(profileData.full_name || '');
       setTrustDraft(trustScoreTo100(profileData.trustScore));
-      const [friendsRes, teamsRes] = await Promise.allSettled([
+      const [friendsRes, teamsRes, yoneticiRes, sablonRes] = await Promise.allSettled([
         fetchFriends(userId),
         supabase.from('team_members').select('team_id', { count: 'exact', head: true }).eq('user_id', userId),
+        // v4: aynada düzenlenebilir alanlar. getFullUserProfile bunları
+        // haritalamıyor (uygulama ekranı göstermiyor); admin için ayrıca okunur.
+        // Kendi async sarmalayıcısında: bu okuma SENKRON bile patlasa (istemci
+        // farkı, eksik zincir) hata reddedilmiş söze dönüşür ve ayna açılmaya
+        // devam eder — sayaçlarla aynı "en-iyi-çaba" kuralı.
+        (async () => supabase.from('profiles').select(YONETICI_KOLONLARI).eq('id', userId).single())(),
+        (async () => fetchBildirimSablonlari())(),
       ]);
+      if (sablonRes.status === 'fulfilled' && Array.isArray(sablonRes.value)) {
+        const harita: Record<string, { ad: string; zorunlu: boolean }> = {};
+        for (const s of sablonRes.value) {
+          // Zorunluluk iki kaynağın BİRLEŞİMİ (uygulamadaki isMandatory ile aynı
+          // kural): şablon zorunlu diyorsa ya da kullanıcı kapatamıyorsa kilitli.
+          harita[s.type_key] = { ad: s.label_tr || s.type_key, zorunlu: !!s.is_mandatory || s.can_user_disable === false };
+        }
+        setBildirimAdlari(harita);
+      }
       setFriendsCount(friendsRes.status === 'fulfilled' ? friendsRes.value.length : null);
       setTeamsCount(teamsRes.status === 'fulfilled' && !teamsRes.value.error ? (teamsRes.value.count ?? 0) : null);
+      if (yoneticiRes.status === 'fulfilled' && yoneticiRes.value && !yoneticiRes.value.error && yoneticiRes.value.data) {
+        const r = yoneticiRes.value.data as unknown as Record<string, unknown>;
+        const alanlar: YoneticiAlanlari = {
+          phone: (r.phone as string) || '',
+          role: (r.role as string) || 'PLAYER',
+          is_verified: !!r.is_verified,
+          is_pro: !!r.is_pro,
+          is_banned: !!r.is_banned,
+          match_count: Number(r.match_count ?? 0),
+          self_skill: r.self_skill == null ? null : Number(r.self_skill),
+          age_range: (r.age_range as string) || '',
+          has_completed_onboarding: !!r.has_completed_onboarding,
+          is_searchable: r.is_searchable !== false,
+          discoverable_by_phone: r.discoverable_by_phone !== false,
+          show_online_status: r.show_online_status !== false,
+          bildirimler: bildirimleriNormalize(r.notification_preferences),
+        };
+        setYKayitli(alanlar);
+        setYTaslak(alanlar);
+      } else {
+        // Okunamadıysa panel açılmaz — boş/yanlış değerlerle kaydetme riski olmasın.
+        setYKayitli(null);
+        setYTaslak(null);
+      }
     } catch (err) {
       setLoadError(toTurkishAdminError(err));
     } finally {
@@ -138,9 +289,13 @@ export const UserProfileMirror: React.FC<Props> = ({ userId, onUpdated }) => {
         play_style: v.playStyle || '',
         ...(v.avatarUrl && v.avatarUrl !== profile?.avatar_url ? { avatar_url: v.avatarUrl } : {}),
       }, 'Profil güncellendi (denetime yazıldı)');
-      setSheetOpen(false);
+      // Katmanı BURADA kapatma: kayıt sözleşmesi gereği "Kaydedildi" onayını
+      // gösterip kendisi kapanır (onClose ile geri döner).
     } catch (err) {
+      // Hata YUKARI FIRLATILIR: katman ancak böyle "kaydedilmedi" olduğunu
+      // bilir, açık kalır ve admin toast'taki sebebi görüp yeniden dener.
       toastError(toTurkishAdminError(err));
+      throw err;
     } finally {
       setSheetSaving(false);
     }
@@ -151,16 +306,74 @@ export const UserProfileMirror: React.FC<Props> = ({ userId, onUpdated }) => {
     const name = nameDraft.trim();
     setAdminSaving(true);
     try {
-      await saveFields({
+      const alanlar: AppProfileAdminFields = {
         ...(name && name !== (profile.full_name || '') ? { full_name: name } : {}),
         ...(trustDraft !== trustScoreTo100(profile.trustScore) ? { trust_score: trustDraft / 20 } : {}),
-      }, 'Yönetici alanları kaydedildi');
+      };
+
+      // v4: yalnız DEĞİŞEN alanlar payload'a girer — dokunulmayan alan sunucuda
+      // da dokunulmadan kalır ve denetim kaydı gerçekten neyin değiştiğini gösterir.
+      if (yTaslak && yKayitli) {
+        const d = <K extends keyof YoneticiAlanlari>(k: K) => yTaslak[k] !== yKayitli[k];
+        if (d('phone')) alanlar.phone = yTaslak.phone.trim();
+        if (d('role')) alanlar.role = yTaslak.role;
+        if (d('is_verified')) alanlar.is_verified = yTaslak.is_verified;
+        if (d('is_pro')) alanlar.is_pro = yTaslak.is_pro;
+        if (d('match_count')) alanlar.match_count = yTaslak.match_count;
+        // Beyan geri alınamaz: null'a çekme gönderilmez (sunucu da reddediyor).
+        if (d('self_skill') && yTaslak.self_skill != null) alanlar.self_skill = yTaslak.self_skill;
+        if (d('age_range')) alanlar.age_range = yTaslak.age_range.trim();
+        if (d('has_completed_onboarding')) alanlar.has_completed_onboarding = yTaslak.has_completed_onboarding;
+        if (d('is_searchable')) alanlar.is_searchable = yTaslak.is_searchable;
+        if (d('discoverable_by_phone')) alanlar.discoverable_by_phone = yTaslak.discoverable_by_phone;
+        if (d('show_online_status')) alanlar.show_online_status = yTaslak.show_online_status;
+
+        const degisenBildirimler: Record<string, BildirimTercihi> = {};
+        for (const [k, v] of Object.entries(yTaslak.bildirimler)) {
+          if (yKayitli.bildirimler[k]?.enabled !== v.enabled) degisenBildirimler[k] = v;
+        }
+        if (Object.keys(degisenBildirimler).length) alanlar.notification_preferences = degisenBildirimler;
+      }
+
+      // Yasak AYRI yoldan gider: banUserAdmin oturumu da düşürür ve aktif
+      // rezervasyonları iptal eder — profil güncellemesiyle aynı şey değildir.
+      const yasakDegisti = !!yTaslak && !!yKayitli && yTaslak.is_banned !== yKayitli.is_banned;
+      if (yasakDegisti && yTaslak) await banUserAdmin(userId, yTaslak.is_banned, null);
+
+      if (Object.keys(alanlar).length === 0 && !yasakDegisti) {
+        success('Değişiklik yok');
+        return;
+      }
+      if (Object.keys(alanlar).length > 0) {
+        await saveFields(alanlar, 'Yönetici alanları kaydedildi (denetime yazıldı)');
+      } else {
+        success('Hesap yasağı güncellendi (denetime yazıldı)');
+        await load();
+        onUpdated?.();
+      }
     } catch (err) {
       toastError(toTurkishAdminError(err));
     } finally {
       setAdminSaving(false);
     }
   };
+
+  /** Taslakta tek alan güncelle (panel çizilmeden önce çağrılmaz). */
+  const yGuncelle = <K extends keyof YoneticiAlanlari>(k: K, v: YoneticiAlanlari[K]) =>
+    setYTaslak((t) => (t ? { ...t, [k]: v } : t));
+
+  /** Zorunluluk iki kaynağın BİRLEŞİMİ: istemci varsayılanı + DB şablonu. */
+  const bildirimZorunlu = (anahtar: string) =>
+    !!(yTaslak?.bildirimler[anahtar]?.mandatory || bildirimAdlari[anahtar]?.zorunlu);
+
+  const bildirimAnahtarla = (anahtar: string) =>
+    setYTaslak((t) => {
+      if (!t) return t;
+      const mevcut = t.bildirimler[anahtar];
+      // Zorunlu bildirim kapatılamaz — kullanıcı da kapatamıyor, admin de kapatmaz.
+      if (!mevcut || mevcut.mandatory || bildirimAdlari[anahtar]?.zorunlu) return t;
+      return { ...t, bildirimler: { ...t.bildirimler, [anahtar]: { ...mevcut, enabled: !mevcut.enabled } } };
+    });
 
 
   const loadPeer = useCallback(async () => {
@@ -223,25 +436,23 @@ export const UserProfileMirror: React.FC<Props> = ({ userId, onUpdated }) => {
     );
   }
 
-  const { total, wins, winRate } = winStats(history);
+  const { total, winRate } = winStats(history);
   const trustScore = trustScoreTo100(profile.trustScore);
 
+  // Tasarım 3a: kısayollarda ikon yok, değer çıplak sayı — uygulamayla birebir.
   const shortcuts: ShortcutItem[] = [
     {
-      icon: <Wallet size={16} strokeWidth={2.3} />,
       label: 'Cüzdan',
       value: fmtMoney(profile.walletBalance ?? 0),
       onClick: () => setWalletOpen(true),
     },
     {
-      icon: <Users size={16} strokeWidth={2.3} />,
       label: 'Takımları',
-      value: teamsCount === null ? '—' : `${teamsCount} Takım`,
+      value: teamsCount === null ? '—' : `${teamsCount}`,
     },
     {
-      icon: <UserPlus size={16} strokeWidth={2.3} />,
       label: 'Arkadaşları',
-      value: friendsCount === null ? '—' : `${friendsCount} Arkadaş`,
+      value: friendsCount === null ? '—' : `${friendsCount}`,
     },
   ];
 
@@ -259,7 +470,7 @@ export const UserProfileMirror: React.FC<Props> = ({ userId, onUpdated }) => {
       </div>
 
       {/* ═══ UYGULAMA TUVALİ — ProfileScreen gövdesinin birebir kopyası ═══ */}
-      <div className="relative mx-auto w-full max-w-[400px] rounded-[30px] border border-white/10 bg-bg-main px-4 py-5 overflow-hidden">
+      <div className="relative mx-auto w-full max-w-[400px] rounded-[30px] border border-white/10 pf-canvas pf-serif px-4 py-5 overflow-hidden">
         <div className="pf-ambient" />
         <div className="relative z-10 space-y-3">
           {/* Profil tamamlanmadı sinyali (uygulamadaki şeridin bilgilendirme hâli) */}
@@ -282,9 +493,6 @@ export const UserProfileMirror: React.FC<Props> = ({ userId, onUpdated }) => {
             matches={total}
             winRate={winRate}
             mvp={null}
-            winCount={wins}
-            selfSkill={(profile as { selfSkill?: number | null }).selfSkill ?? null}
-            cardBackMatches={history}
             onEditAvatar={() => setSheetOpen(true)}
           />
 
@@ -347,6 +555,165 @@ export const UserProfileMirror: React.FC<Props> = ({ userId, onUpdated }) => {
                 <p className="text-[9px] text-gray-600 mt-1">DB'de 0–5 saklanır (÷20). Master 3.4: güven 100'den başlar, yalnız düşer — artışı istisnai durumda kullanın.</p>
               </div>
             </div>
+
+            {yTaslak ? (
+              <>
+                {/* ── HESAP & İLETİŞİM (eski "Derin Düzenleme" penceresinden taşındı) ── */}
+                <div className="space-y-2">
+                  <p className="text-[9px] font-extrabold text-gray-400 uppercase tracking-widest">Hesap & İletişim</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">E-posta (salt okunur)</label>
+                      <input
+                        value={profile.email || ''}
+                        readOnly disabled
+                        className="mt-1 w-full h-10 bg-black/20 border border-white/10 rounded-xl px-3 text-sm text-gray-500 opacity-70"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Telefon</label>
+                      <input
+                        value={yTaslak.phone}
+                        onChange={(e) => yGuncelle('phone', e.target.value)}
+                        placeholder="+90 5..."
+                        className="mt-1 w-full h-10 bg-black/40 border border-white/15 rounded-xl px-3 text-sm text-white focus:border-purple-500/40 focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Sistem Rolü</label>
+                      <select
+                        value={yTaslak.role}
+                        onChange={(e) => yGuncelle('role', e.target.value)}
+                        className="mt-1 w-full h-10 bg-black/40 border border-white/15 rounded-xl px-3 text-sm text-white focus:border-purple-500/40 focus:outline-none"
+                      >
+                        {Object.values(UserRole).map((r) => <option key={r} value={r}>{r}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Maç Sayısı</label>
+                      <input
+                        type="number" min={0}
+                        value={yTaslak.match_count}
+                        onChange={(e) => yGuncelle('match_count', Math.max(0, Number(e.target.value)))}
+                        className="mt-1 w-full h-10 bg-black/40 border border-white/15 rounded-xl px-3 text-sm text-white focus:border-purple-500/40 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+                  <Anahtar
+                    label="Doğrulanmış Hesap" desc="Profilde mavi tik görünür"
+                    value={yTaslak.is_verified} onChange={() => yGuncelle('is_verified', !yTaslak.is_verified)}
+                  />
+                  <Anahtar
+                    label="Pro Rozeti" desc="Ücretli üyelik işareti"
+                    value={yTaslak.is_pro} onChange={() => yGuncelle('is_pro', !yTaslak.is_pro)}
+                  />
+                  <Anahtar
+                    label="Hesabı Yasakla" danger
+                    desc="Kullanıcı giriş yapamaz; ayrı bir yetki adımından geçer ve denetime yazılır"
+                    value={yTaslak.is_banned} onChange={() => yGuncelle('is_banned', !yTaslak.is_banned)}
+                  />
+                </div>
+
+                {/* ── UYGULAMA ALANLARI ── */}
+                <div className="space-y-2">
+                  <p className="text-[9px] font-extrabold text-gray-400 uppercase tracking-widest">Uygulama Alanları</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <div className="flex items-center justify-between gap-2">
+                        <label className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Seviye Beyanı</label>
+                        {yTaslak.self_skill != null && (
+                          <span className="text-[9px] font-extrabold" style={{ color: skillBand(yTaslak.self_skill)?.color }}>
+                            {skillBand(yTaslak.self_skill)?.label}
+                          </span>
+                        )}
+                      </div>
+                      <select
+                        value={yTaslak.self_skill ?? ''}
+                        onChange={(e) => yGuncelle('self_skill', e.target.value === '' ? null : Number(e.target.value))}
+                        className="mt-1 w-full h-10 bg-black/40 border border-white/15 rounded-xl px-3 text-sm text-white focus:border-purple-500/40 focus:outline-none"
+                      >
+                        <option value="">— beyan yok —</option>
+                        {Array.from({ length: SELF_SKILL_MAX }, (_, i) => i + 1).map((n) => (
+                          <option key={n} value={n}>{n}</option>
+                        ))}
+                      </select>
+                      {/* Oyuncunun kendi beyanı: düzeltilebilir ama SİLİNEMEZ
+                          (sunucu NULL'u reddeder — "beyan geri alınamaz"). */}
+                      <p className="text-[9px] text-gray-600 mt-1">Oyuncunun kendi beyanı. Düzeltilebilir, silinemez.</p>
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Yaş Aralığı</label>
+                      <input
+                        value={yTaslak.age_range}
+                        onChange={(e) => yGuncelle('age_range', e.target.value)}
+                        placeholder="ör. 24-30"
+                        className="mt-1 w-full h-10 bg-black/40 border border-white/15 rounded-xl px-3 text-sm text-white focus:border-purple-500/40 focus:outline-none"
+                      />
+                      <p className="text-[9px] text-gray-600 mt-1">Doğum tarihi yoksa profilde bu görünür.</p>
+                    </div>
+                  </div>
+                  <Anahtar
+                    label="Kurulumu Tamamladı" desc="Kapalıyken uygulama kurulum ekranını tekrar gösterir"
+                    value={yTaslak.has_completed_onboarding}
+                    onChange={() => yGuncelle('has_completed_onboarding', !yTaslak.has_completed_onboarding)}
+                  />
+                </div>
+
+                {/* ── GİZLİLİK (uygulamada: Sosyal → Gizlilik) ── */}
+                <div className="space-y-2">
+                  <p className="text-[9px] font-extrabold text-gray-400 uppercase tracking-widest">Gizlilik Tercihleri</p>
+                  <p className="text-[9px] text-gray-600 -mt-1">
+                    Bunlar kullanıcının kendi seçimleridir; buradan değiştirmek kullanıcının tercihini ezer.
+                    Yalnız destek talebi üzerine kullanın — her değişiklik denetime yazılır.
+                  </p>
+                  <Anahtar
+                    label="Aramada Görünsün" desc="Kapalıysa isimle aranarak bulunamaz"
+                    value={yTaslak.is_searchable} onChange={() => yGuncelle('is_searchable', !yTaslak.is_searchable)}
+                  />
+                  <Anahtar
+                    label="Telefonla Bulunabilsin" desc="Rehberdeki numarayla eşleşme"
+                    value={yTaslak.discoverable_by_phone}
+                    onChange={() => yGuncelle('discoverable_by_phone', !yTaslak.discoverable_by_phone)}
+                  />
+                  <Anahtar
+                    label="Çevrimiçi Durumu Görünsün"
+                    value={yTaslak.show_online_status}
+                    onChange={() => yGuncelle('show_online_status', !yTaslak.show_online_status)}
+                  />
+                </div>
+
+                {/* ── BİLDİRİM TERCİHLERİ ── */}
+                <div className="space-y-2">
+                  <p className="text-[9px] font-extrabold text-gray-400 uppercase tracking-widest">Bildirim Tercihleri</p>
+                  <p className="text-[9px] text-gray-600 -mt-1">
+                    Zorunlu bildirimler (maça alınma, iptal, davet gibi) kapatılamaz — kilitli görünürler.
+                  </p>
+                  {bildirimGruplari(yTaslak.bildirimler).map((grup) => (
+                    <div key={grup.key} className="space-y-1.5">
+                      <p className="text-[9px] text-purple-300/70 font-bold uppercase tracking-wider mt-2">{grup.label}</p>
+                      {grup.anahtarlar.map((anahtar) => {
+                        const t = yTaslak.bildirimler[anahtar];
+                        const zorunlu = bildirimZorunlu(anahtar);
+                        return (
+                          <Anahtar
+                            key={anahtar}
+                            label={bildirimAdlari[anahtar]?.ad || anahtar}
+                            desc={zorunlu ? 'Zorunlu — kapatılamaz' : undefined}
+                            value={t.enabled}
+                            disabled={zorunlu}
+                            onChange={() => bildirimAnahtarla(anahtar)}
+                          />
+                        );
+                      })}
+                    </div>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <p className="text-[10px] text-gray-500 bg-black/30 border border-white/10 rounded-xl p-3">
+                Ek yönetici alanları okunamadı (yetki veya bağlantı). Ad ve güven puanı yine kaydedilebilir.
+              </p>
+            )}
 
             <button
               type="button"
@@ -435,6 +802,7 @@ export const UserProfileMirror: React.FC<Props> = ({ userId, onUpdated }) => {
       <ProfileEditSheet
         open={sheetOpen}
         title={`Profili Düzenle — ${profile.full_name || 'Oyuncu'}`}
+        name={profile.full_name || 'Oyuncu'}
         initial={{
           position: profile.position || '',
           bio: profile.bio || '',

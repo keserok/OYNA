@@ -2942,6 +2942,26 @@ export interface AppProfileAdminFields {
   age_range?: string;
   trust_score?: number;
   has_completed_onboarding?: boolean;
+  // ── v4 (20260903000000) · Aynada düzenlenebilir hâle gelen alanlar ─────────
+  /** İletişim/hesap: PII maskeli gelirse sunucu yazımı reddeder (• içeren değer). */
+  phone?: string;
+  role?: string;
+  is_verified?: boolean;
+  is_pro?: boolean;
+  match_count?: number;
+  /** Oyuncunun seviye beyanı (1–10). Sunucu NULL'a çekmeyi reddeder — beyan geri alınamaz. */
+  self_skill?: number;
+  /** Gizlilik tercihleri (uygulamada Sosyal → Gizlilik). */
+  is_searchable?: boolean;
+  discoverable_by_phone?: boolean;
+  show_online_status?: boolean;
+  /**
+   * Bildirim tercihleri: sunucuda EZİLMEZ, mevcut nesneyle birleştirilir —
+   * yalnız DEĞİŞEN anahtarları gönderin. Şekil uygulamanınkiyle aynıdır
+   * (notifications/pushService · NotificationPreferences): anahtar başına
+   * `{ enabled, mandatory }`. Zorunlu bildirimler kapatılamaz.
+   */
+  notification_preferences?: Record<string, { enabled: boolean; mandatory: boolean }>;
 }
 
 /**
