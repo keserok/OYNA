@@ -1,4 +1,8 @@
-node_modules/
+# Sondaki eğik çizgi YALNIZ klasörü yok sayar. 2026-08-01'de depoya
+# `node_modules` adında bir KISAYOL (symlink) girdi ve bu desen onu tutmadı:
+# dalı alan herkeste node_modules kendine dönen bozuk bir bağa dönüştü, tüm
+# araçlar kırıldı. Eğik çizgisiz desen ikisini de kapsar.
+node_modules
 .vite/
 dist/
 *.zip
