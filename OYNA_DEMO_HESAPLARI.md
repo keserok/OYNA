@@ -51,6 +51,38 @@ ekranındaki "Demo Hesabıyla Gir" listesi görünmez olur.
 
 ---
 
+## 🧪 Ekosistem seed'i — "her şey dolu" test ortamı
+
+`supabase/seeds/demo_ekosistem_seed.sql` demo hesapları **uçtan uca test
+edilebilir** hâle getirir. Ekranlar boş değil gerçekçi veriyle açılır; mağaza
+öncesi AAB denemelerinde tüm sistem (cüzdan, maç yaşam döngüsü, skor, geçmiş,
+saha sahibi kazancı, kaleci/hakem hakedişi) çalışır durumda görünür.
+
+Ne kurar:
+
+- **29 demo hesabının hepsine bakiye.** Bakiye elle yazılmaz: her hesabın
+  bakiyesi kendi `wallet_transactions` satırlarının TOPLAMINA eşittir, böylece
+  admin panelindeki finans raporları da tutarlı okur. Roller farklı hareket
+  üretir — oyuncu `TOP_UP` + `MATCH_FEE`, saha sahibi `BOOKING_EARNING`,
+  kaleci/hakem `SERVICE_EARNING`.
+- **4 oynanmış maç** (`COMPLETED`, skorları girilmiş, kadroları dolu) →
+  maç geçmişi, skor ekranı ve değerlendirme akışı test edilebilir.
+- **5 yaklaşan maç** (`ACTIVE`, kademeli doluluk: 1'den 5'e dolu yer) →
+  lobi, katılım ve yer satın alma akışı test edilebilir.
+
+Özellikleri:
+
+- **Yalnız demo:** sadece `@oyna.app` hesapları ve `[EKO]` önekli maçlar
+  etkilenir. Gerçek kullanıcıya, gerçek maça ve saha kataloğuna dokunmaz.
+- **İdempotent:** kendi ürettiği kayıtları `meta->>'seed' = 'demo_ekosistem'`
+  etiketinden ve `[EKO]` başlık önekinden bulup siler, sonra yeniden kurar.
+  İki kez çalıştırmak veriyi ikiye katlamaz.
+- **Geri alma:** `demo_clean_start_purge.sql` bu seed'in izini de siler.
+
+Çalıştırma: Supabase Dashboard → SQL Editor → dosyayı yapıştır → Run.
+
+---
+
 ## Tablo formatı (ayrıştırıcı sözleşmesi)
 
 Her hesap satırı şu dört kolonludur — **bu kolon sırasını koru**:
