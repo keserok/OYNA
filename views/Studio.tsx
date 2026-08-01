@@ -3784,7 +3784,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                 )}
             </AnimatePresence>
 
-            {/* İlk kullanım turu — 3 adım + örnek taktik (yardım butonundan yeniden açılır) */}
+            {/* İlk kullanım tanıtımı — tek sayfa, tüm araçlar (Yardım ile yeniden açılır) */}
             <AnimatePresence>
                 {onboardStep !== null && (() => {
                     // TEK SAYFA kapsamlı araç tanıtımı (demo/örnek-oynatma yok):

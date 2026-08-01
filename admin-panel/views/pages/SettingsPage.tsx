@@ -131,7 +131,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ subRoute, onRefresh 
                         
 
                         {/* "Min. Oyun Puanı" alanı söküldü: puan barajı sistemden kalktı
-                            (20260831000000) — beyan (self_skill) barajda kullanılmaz. */}
+                            (20260730135953) — beyan (self_skill) barajda kullanılmaz. */}
 
                         <div className="bg-black/30 border border-white/[0.06] rounded-xl p-5 flex items-center justify-between gap-4">
                             <div>

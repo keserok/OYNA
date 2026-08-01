@@ -6,7 +6,7 @@ import { supabase } from '../supabaseClient';
 // Rahat maç bir ekran değil bir MAÇ ÇEŞİDİ: slot makinesi, ödeme ve iade
 // zinciri Ciddi/Taktiksel ile aynı (player_buy_slots_v2, leave_public_match_slot).
 // Buradaki fonksiyonlar yalnız Rahat yüzeyinin İHTİYAÇ DUYDUĞU ekleri taşır:
-//   • takım taşıma (player_move_slot_team — 20260831000001)
+//   • takım taşıma (player_move_slot_team — 20260730140253)
 //   • devralma kodu (player_make_slot_code)
 //   • tesis vitrini bilgisi (fotoğraf/olanak/açıklama/koordinat)
 //   • onay saati + iade kademesi için CANLI konfig (uydurma sabit YOK)

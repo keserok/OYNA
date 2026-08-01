@@ -244,7 +244,7 @@ hepsi canlının gerisinde (canlı `20260828`'de).
 > **SONUÇ (2026-07-28) — yapıldı.** Uygulama sırasında üretilen 5 migration,
 > üretim defterindeki gerçek zaman damgalarına göre yeniden adlandırıldı
 > (`20260829000000`→`20260728113125`, `20260830000000`→`20260728114605`,
-> `20260831000000`→`20260728154518`, `20260832000000`→`20260728161215`,
+> `20260730135953`→`20260728154518`, `20260832000000`→`20260728161215`,
 > `20260833000000`→`20260728163234`). Uyarı notu plana eklendi:
 > `OYNA-COZUM-PLANI.md` § 0.6b. Planın gövdesindeki `20260819000000`
 > geçişleri artık yer tutucu olarak okunmalı.

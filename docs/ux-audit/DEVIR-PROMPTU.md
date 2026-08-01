@@ -51,7 +51,7 @@ Lansman öncesi UX/UI denetim planının kalan iş paketlerini uygulayacaksın.
 `origin/main` dala **birleştirildi** (0 commit geride, çakışma yok); bugün
 main'e sorunsuz akar.
 
-> ⚠️ **Göç sürüm çakışması yaşandı, tekrarlamasın.** main'de `20260831000000`
+> ⚠️ **Göç sürüm çakışması yaşandı, tekrarlamasın.** main'de `20260730135953`
 > önekli bir göç vardı ve IP-22 göçü de aynı numarayı taşıyordu. Aynı sürümü
 > taşıyan iki dosyadan biri sessizce atlanır. IP-22 göçü `20260831000009`'a
 > alındı. **Yeni göç yazmadan önce `ls supabase/migrations | tail` ile son

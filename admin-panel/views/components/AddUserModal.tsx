@@ -185,7 +185,7 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, onA
                                 <input value={email} onChange={e => setEmail(e.target.value)} type="email" className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-white/30 transition-colors" placeholder="ali@ornek.com" />
                             </div>
                             {/* Rating yalnız SAĞLAYICI (kaleci/hakem) hesabında anlamlı —
-                                oyuncu puan sistemi söküldü (20260831000000). */}
+                                oyuncu puan sistemi söküldü (20260730135953). */}
                             {roleType !== 'KULLANICILAR' && (
                                 <div>
                                     <label className="text-[10px] text-gray-500 font-extrabold uppercase tracking-widest block mb-1">Rating / Puan</label>

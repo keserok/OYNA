@@ -103,7 +103,7 @@ function parseClock(timeStr: unknown): [number, number] {
  * (hatırlatma, iade, otomatik iptal, görevli eşleştirme onu okur). Bir dönem
  * yanlış saat dilimiyle yazıldığı (İstanbul duvar saati UTC sanılıyordu, 3
  * saat sapma) için burada bilerek ikinci sıradaydı; o sapma
- * 20260903000000_mac_saati_istanbul_saat_dilimi ile giderildi. Sıralamanın
+ * 20260731150208_mac_saati_istanbul_saat_dilimi ile giderildi. Sıralamanın
  * korunma sebebi artık sapma değil, yukarıdaki EKRAN TUTARLILIĞIDIR.
  */
 export function matchStartMs(

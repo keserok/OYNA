@@ -172,7 +172,7 @@ export interface Player {
   avatar: string;
   /** Beyan edilen seviye (profiles.self_skill, 1–10). Kadro satırındaki
    *  seviye bandının kaynağı; yoksa çip çizilmez. Eski akran-puanı 'rating'
-   *  alanı SÖKÜLDÜ (20260831000000). */
+   *  alanı SÖKÜLDÜ (20260730135953). */
   selfSkill?: number | null;
   position: string;
   /** Saha yüzdesi — POZİSYONSUZ (Rahat) slot oyuncusunda sunucu bu anahtarları

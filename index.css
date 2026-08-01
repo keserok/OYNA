@@ -778,14 +778,6 @@ body.kb-open .pb-safe-6 {
 }
 .text-reveal { animation: text-reveal 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
 
-/* View container — ensures absolute positioned pages stack correctly */
-#view-root {
-  position: relative;
-  width: 100%;
-  min-height: 100dvh;
-  overflow: hidden;
-}
-
 /* Smooth font rendering */
 * {
   -webkit-font-smoothing: antialiased;
