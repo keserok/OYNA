@@ -61,6 +61,11 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
     const [editCaps, setEditCaps] = useState<{ min: number; max: number; sizeLabel: string }>({ min: 5, max: 7, sizeLabel: '' });
     const [isSaving, setIsSaving] = useState(false);
     const [saveError, setSaveError] = useState<string | null>(null);
+    /** Düzenlenen kortun hiç fotoğrafı yok mu — uyarı bunu okur.
+     *  PhotoManager listeyi ilk yüklediğinde de `onChanged` çağırdığı için
+     *  değer kendiliğinden doğrulanır; başlangıçta uyarı gösterilmez ki
+     *  yükleme sırasında yanıp sönmesin. */
+    const [fotografYok, setFotografYok] = useState(false);
     const { confirm, confirmElement } = useConfirmSheet();
     const [inactiveCourts, setInactiveCourts] = useState<PitchCourt[]>([]);
     // SAHA BAZLI FİYAT POLİTİKASI (E1a/E5a/E12a): tesis geneli fiyatlandırma
@@ -684,11 +689,29 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
 
                         {isRealFacility && editingPitch.id ? (
                             /* Kayıtlı kort: pitch_media hattı — sıkıştırma, kapak, etiket, sıralama (Karar #19) */
-                            <PhotoManager
-                                pitchId={facilityId!}
-                                courtId={editingPitch.id}
-                                onError={(m) => setSaveError(m)}
-                            />
+                            <>
+                                {/* FOTOĞRAF ZORUNLU (kullanıcı kararı: "fotoğrafsız
+                                    tesis mümkün olmasın"). Kural kademeli uygulanır:
+                                    kayıt engellenmez ama fotoğrafsız tesis oyuncu
+                                    vitrininde LİSTELENMEZ (bkz. migration
+                                    20260801135629). Uyarı burada durur ki sahibi
+                                    neden görünmediğini tahmin etmek zorunda kalmasın. */}
+                                {fotografYok && (
+                                    <div className="rounded-2xl border border-amber-500/30 bg-amber-500/[0.08] p-3.5">
+                                        <p className="text-xs font-extrabold text-amber-300">Fotoğraf eksik — vitrinde görünmez</p>
+                                        <p className="text-[11px] text-amber-200/70 mt-1 leading-relaxed">
+                                            En az bir fotoğraf ekleyin. Fotoğrafsız tesisler oyuncu tarafındaki
+                                            saha listesinde gösterilmez; fotoğraf eklediğinizde kendiliğinden geri gelir.
+                                        </p>
+                                    </div>
+                                )}
+                                <PhotoManager
+                                    pitchId={facilityId!}
+                                    courtId={editingPitch.id}
+                                    onError={(m) => setSaveError(m)}
+                                    onChanged={(urls) => setFotografYok(urls.length === 0)}
+                                />
+                            </>
                         ) : isRealFacility ? (
                             <p className="text-xs text-gray-500 leading-relaxed">
                                 Fotoğraf eklemek için önce sahayı kaydedin; ardından düzenleyip fotoğraflarını yükleyin.

@@ -28,6 +28,7 @@ import { checkMatchThreshold } from '../../services/matchLifecycleService';
 import { getFriends } from '../../services/socialService';
 import RahatJoinSheet from '../../components/match/RahatJoinSheet';
 import MatchSquadPicker from '../../components/social/MatchSquadPicker';
+import PhotoCarousel from '../../components/common/PhotoCarousel';
 
 // ════════════════════════════════════════════════════════════════════════
 // E2/E4/E5/E6 · RAHAT MAÇ LOBİSİ — pozisyonsuz katılım yüzeyi
@@ -142,7 +143,6 @@ const RahatMatchLobby: React.FC<Props> = ({ match: matchProp, onBack }) => {
   const [tab, setTab] = useState<'durum' | 'hakkinda'>('durum');
   const [sheet, setSheet] = useState<'' | 'join' | 'reserve' | 'leave'>('');
   const [busy, setBusy] = useState(false);
-  const [photoIdx, setPhotoIdx] = useState(0);
   const [loadingRoster, setLoadingRoster] = useState(true);
   const [participants, setParticipants] = useState<LobbyParticipant[]>([]);
   const [friendIds, setFriendIds] = useState<Set<string>>(new Set());
@@ -530,21 +530,10 @@ const RahatMatchLobby: React.FC<Props> = ({ match: matchProp, onBack }) => {
             gözle görülür biçimde ayrı bir panel gibi duruyordu. Tek arka plan
             kararı gereği düz renge alındı. */}
         <div style={{ position: 'relative', height: 220, background: '#0A0E14', overflow: 'hidden' }}>
-          {photos.length > 0 ? (
-            <div
-              style={{ display: 'flex', height: '100%', overflowX: 'auto', scrollSnapType: 'x mandatory' }}
-              className="custom-scrollbar"
-              onScroll={(e) => {
-                const el = e.currentTarget;
-                setPhotoIdx(Math.round(el.scrollLeft / Math.max(1, el.clientWidth)));
-              }}
-            >
-              {photos.map((src, i) => (
-                <img key={i} src={src} alt={`${facilityName} ${i + 1}`} referrerPolicy="no-referrer"
-                  style={{ width: '100%', height: '100%', objectFit: 'cover', flexShrink: 0, scrollSnapAlign: 'start' }} />
-              ))}
-            </div>
-          ) : null}
+          {/* Saha vitriniyle AYNI bileşen: parmakla tek tek geçiş, konumu izleyen
+              noktacıklar, sayaç ve dokununca tam ekran görüntüleyici. Önceden bu
+              ekran kendi kopyasını taşıyordu. */}
+          <PhotoCarousel images={photos} alt={facilityName} className="w-full h-full" />
           {/* KARARTMA PERDESİ KALDIRILDI (tek arka plan kararı): üstte %55,
               altta %90 siyah bir katman çiziliyordu; ekranın üst bölgesinin
               "koyulaşmış" görünmesinin asıl sebebi buydu. Perdenin tek işlevi
@@ -562,13 +551,6 @@ const RahatMatchLobby: React.FC<Props> = ({ match: matchProp, onBack }) => {
             <Share2 size={18} color="#FFFFFF" />
           </button>
 
-          {photos.length > 1 && (
-            <div style={{ position: 'absolute', bottom: 10, left: 0, right: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
-              {photos.map((_, i) => (
-                <span key={i} style={{ width: i === photoIdx ? 16 : 5, height: 3, borderRadius: 9999, background: i === photoIdx ? '#FFFFFF' : 'rgba(255,255,255,0.32)', transition: 'width .2s ease' }} />
-              ))}
-            </div>
-          )}
         </div>
 
         {/* ── İptal / Onay şeritleri ── */}

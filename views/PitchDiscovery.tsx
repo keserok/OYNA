@@ -48,6 +48,7 @@ import {
   type DbPitchRow,
 } from '../shared/pitchShowcaseMapper';
 import { PitchShowcaseCard, SafeImage, FavStar } from '../components/pitch-showcase/PitchShowcaseCard';
+import PhotoCarousel from '../components/common/PhotoCarousel';
 import { trUpper } from '../utils/trUpper';
 import { ActionSheet } from '../components/ui/ActionSheet';
 import { formatTRYShort } from '../utils/formatTRY';
@@ -1204,14 +1205,8 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
     return selectedPitch?.images ?? [];
   }, [selectedCourt, selectedPitch]);
 
-  /** Galeride kaçıncı fotoğraftayız — alt noktacıklar ve sayaç bunu okur.
-   *  Önceden noktacıklar SABİT olarak ilki yanacak şekilde yazılmıştı: kullanıcı
-   *  fotoğrafları kaydırsa da gösterge hiç değişmiyordu, yani "kaçıncıdayım"
-   *  bilgisi yanlıştı. */
-  const [galleryIdx, setGalleryIdx] = useState(0);
-
-  // Kort değişince galeri başa sarar; gösterge de sıfırlanmalı.
-  useEffect(() => { setGalleryIdx(0); }, [selectedCourtId, selectedPitch?.id]);
+  // NOT: galerideki konum (kaçıncı fotoğraf) artık burada tutulmuyor —
+  // PhotoCarousel kendi içinde yönetiyor. Kort değişince `key` ile sıfırlanır.
 
   // Admin tesis bazlı online rezervasyon kapatması (sunucu BOOKING_DISABLED ile
   // zaten reddeder; arayüz baştan kapatır ki oyuncu boşa uğraşmasın).
@@ -1708,51 +1703,27 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
             {/* Scrollable Content */}
             <div className="flex-1 overflow-y-auto custom-scrollbar pb-44">
               {/* Galeri — seçili sahanın kendi görselleri öncelikli */}
-              {/* Yükseklik %35 → %45 (kullanıcı kararı): fotoğraf belirgin
-                  şekilde büyür, altındaki başlık ve fiyat hâlâ ilk bakışta
-                  görünür kalır. */}
-              <div className="relative w-full h-[45vh]">
-                <div
+              {/* Galeri — ortak PhotoCarousel bileşeni (Airbnb kalitesi):
+                  parmakla tek tek geçiş, konumu izleyen noktacıklar, "3 / 8"
+                  sayacı ve dokununca tam ekran görüntüleyici. Yükseklik %35 →
+                  %45 (kullanıcı kararı): fotoğraf belirgin şekilde büyür ama
+                  altındaki başlık ve fiyat hâlâ ilk bakışta görünür kalır. */}
+              <div className="relative">
+                <PhotoCarousel
                   key={selectedCourtId ?? 'pitch'}
-                  className="w-full h-full flex overflow-x-auto snap-x snap-mandatory no-scrollbar"
-                  onScroll={(e) => {
-                    const el = e.currentTarget;
-                    const i = Math.round(el.scrollLeft / Math.max(1, el.clientWidth));
-                    setGalleryIdx((onceki) => (onceki === i ? onceki : i));
-                  }}
-                >
-                  {(galleryImages.length > 0 ? galleryImages : ['']).map((img, idx) => (
-                    <div key={idx} className="w-full h-full flex-shrink-0 snap-center relative">
-                      <SafeImage src={img} alt={`${selectedCourt?.name ?? selectedPitch.name} ${idx + 1}`} className="w-full h-full object-cover" variant="detail" />
-                    </div>
-                  ))}
-                </div>
-                <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-[#0A0E14] to-transparent pointer-events-none"></div>
-                {(selectedCourt?.images ?? []).filter(Boolean).length > 0 && (
-                  <span className="absolute top-[calc(env(safe-area-inset-top)+64px)] right-4 z-10 px-2.5 py-1 rounded-full bg-black/50 backdrop-blur-md border border-white/15 text-[0.6875rem] font-extrabold text-white/85">
-                    {selectedCourt?.name}
-                  </span>
-                )}
-                {galleryImages.length > 1 && (
-                  <>
-                    {/* Noktacıklar artık GERÇEK konumu gösterir (galleryIdx). */}
-                    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
-                      {galleryImages.map((_, idx) => (
-                        <div
-                          key={idx}
-                          className={`h-1.5 rounded-full backdrop-blur-md transition-all duration-200 ${
-                            idx === galleryIdx ? 'w-4 bg-white' : 'w-1.5 bg-white/50'
-                          }`}
-                        />
-                      ))}
-                    </div>
-                    {/* "3 / 8" sayacı: çok fotoğraflı tesiste kaç tane olduğunu
-                        noktacıkları saymadan görebilmek için. */}
-                    <span className="absolute bottom-5 right-4 z-10 px-2 py-0.5 rounded-full bg-black/55 backdrop-blur-md border border-white/15 text-[0.6875rem] font-extrabold text-white/90 tabular-nums">
-                      {Math.min(galleryIdx + 1, galleryImages.length)} / {galleryImages.length}
-                    </span>
-                  </>
-                )}
+                  images={galleryImages}
+                  alt={selectedCourt?.name ?? selectedPitch.name}
+                  className="w-full h-[45vh]"
+                  badge={
+                    (selectedCourt?.images ?? []).filter(Boolean).length > 0 ? (
+                      <span className="absolute top-[calc(env(safe-area-inset-top)+64px)] right-4 z-10 px-2.5 py-1 rounded-full bg-black/50 backdrop-blur-md border border-white/15 text-[0.6875rem] font-extrabold text-white/85">
+                        {selectedCourt?.name}
+                      </span>
+                    ) : undefined
+                  }
+                />
+                {/* Fotoğrafın altını sayfa zeminine bağlayan yumuşak geçiş. */}
+                <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-[#0A0E14] to-transparent pointer-events-none" />
               </div>
 
               {/* Başlık + puan */}
