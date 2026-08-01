@@ -63,6 +63,103 @@ export function formatMatchDuration(
   return m == null ? null : `${m} dakika`;
 }
 
+// ── MAÇIN BAŞLANGIÇ ANI ──────────────────────────────────────────────────
+// SSOT: `matches.starts_at` (timestamptz). `date`/`time` serbest METİN
+// kolonlarıdır ve veritabanında ISO ('2026-08-01') tutulur; ama eski/uydurma
+// kayıtlarda 'Bugün' / 'Yarın' / 'Cumartesi' gibi etiketler de görülebilir.
+//
+// Neden burada: Top Oyna gün filtresi, kart geri sayımı ve "bugünkü maç"
+// sayısı aynı tarihi çözmek zorunda. Ayrı ayrı çözülüyordu ve METİN çözücü
+// ISO tarihi TANIMIYORDU: '2026-08-01' hiçbir kalıba uymadığı için sessizce
+// BUGÜNE düşüyordu — yani her maç "bugün" sanılıyordu.
+
+const WEEKDAY_INDEX: Record<string, number> = {
+  pazar: 0, pazartesi: 1, salı: 2, sali: 2, çarşamba: 3, carsamba: 3,
+  perşembe: 4, persembe: 4, cuma: 5, cumartesi: 6,
+};
+
+/** 'HH:MM' ya da '22:00 - 23:00' → [saat, dakika]; okunamazsa [0, 0]. */
+function parseClock(timeStr: unknown): [number, number] {
+  const m = String(timeStr ?? '').match(/(\d{1,2}):(\d{2})/);
+  if (!m) return [0, 0];
+  const h = Number(m[1]);
+  const min = Number(m[2]);
+  return [h >= 0 && h <= 23 ? h : 0, min >= 0 && min <= 59 ? min : 0];
+}
+
+/**
+ * Maçın başlangıç anı (ms). Sırayla dener:
+ *   1. ISO `date`/`rawDate` ('2026-08-01') + `time` ('21:00') — CİHAZ SAATİYLE
+ *   2. `starts_at` / `startsAt` (timestamp)
+ *   3. Eski metin etiketleri: 'Bugün' / 'Yarın' / gün adı + `time`
+ * Hiçbiri çözülemezse null — çağıran uydurma tarih göstermek yerine alanı çizmez.
+ *
+ * NEDEN `date` + `time` İLK SIRADA:
+ * Bu ikisi kartta YAZAN değerdir. Gün şeridi, kart tarihi ve gün sayaçları
+ * aynı kaynaktan beslendiği için hepsi her zaman aynı şeyi söyler; kullanıcı
+ * cihazının saat dilimi ne olursa olsun "20:00 maçı" 20:00 olarak görünür.
+ *
+ * `starts_at` ise maçın MUTLAK anıdır ve sunucu tarafının otoritesidir
+ * (hatırlatma, iade, otomatik iptal, görevli eşleştirme onu okur). Bir dönem
+ * yanlış saat dilimiyle yazıldığı (İstanbul duvar saati UTC sanılıyordu, 3
+ * saat sapma) için burada bilerek ikinci sıradaydı; o sapma
+ * 20260731150208_mac_saati_istanbul_saat_dilimi ile giderildi. Sıralamanın
+ * korunma sebebi artık sapma değil, yukarıdaki EKRAN TUTARLILIĞIDIR.
+ */
+export function matchStartMs(
+  match: Record<string, any> | null | undefined,
+  now: Date = new Date(),
+): number | null {
+  if (!match) return null;
+
+  // `rawDate`: admin eşleyicisi `date`i 'Bugün'/'5 Ağu' etiketine çevirirken
+  // ham ISO tarihi bu alanda saklar (admin-panel/utils/matchMapper).
+  const raw = String(match.rawDate ?? match.date ?? '').trim();
+  const [hours, minutes] = parseClock(match.time);
+
+  // ISO: 2026-08-01 (veritabanının fiilen yazdığı biçim)
+  const iso = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (iso) {
+    const d = new Date(Number(iso[1]), Number(iso[2]) - 1, Number(iso[3]), hours, minutes, 0, 0);
+    if (Number.isFinite(d.getTime())) return d.getTime();
+  }
+
+  const stamp = match.starts_at ?? match.startsAt;
+  if (stamp) {
+    const t = new Date(stamp).getTime();
+    if (Number.isFinite(t)) return t;
+  }
+
+  if (!raw) return null;
+
+  // Eski serbest metin etiketleri
+  const label = raw.toLocaleLowerCase('tr-TR');
+  const base = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes, 0, 0);
+  if (label === 'bugün') return base.getTime();
+  if (label === 'yarın') { base.setDate(base.getDate() + 1); return base.getTime(); }
+
+  const target = WEEKDAY_INDEX[label];
+  if (target !== undefined) {
+    let diff = target - now.getDay();
+    if (diff <= 0) diff += 7; // bir sonraki aynı gün
+    base.setDate(base.getDate() + diff);
+    return base.getTime();
+  }
+
+  return null;
+}
+
+/** Maçın başlangıç günü, yerel saatle gece yarısına yuvarlanmış (gün filtresi için). */
+export function matchStartDayMs(
+  match: Record<string, any> | null | undefined,
+  now: Date = new Date(),
+): number | null {
+  const ms = matchStartMs(match, now);
+  if (ms === null) return null;
+  const d = new Date(ms);
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+}
+
 /** Maçın bitiş anı (ms). Başlangıç bilinmiyorsa null. */
 export function matchEndMs(startMs: number | null | undefined, duration: unknown): number | null {
   if (startMs == null || !Number.isFinite(startMs)) return null;

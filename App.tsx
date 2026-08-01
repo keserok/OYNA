@@ -882,10 +882,30 @@ const App: React.FC = () => {
           key={view}
           {...PAGE_TRANSITION}
           onScrollCapture={showBottomNav ? handleNavScrollCapture : undefined}
+          // Görünüm kaydırıcısının işareti. İki yerden okunur:
+          //  • index.css — ekranların "tam ekran" ölçüsünü VİEWPORT yerine bu
+          //    kabın iç yüksekliğine bağlayan tek ortak kural.
+          //  • tests/visual/oluBosluk.visual.spec.ts — ölü bant ölçümü.
+          data-oyna-view-scroller=""
           className={`w-full h-full absolute inset-0 overflow-y-auto overscroll-contain custom-scrollbar ${
             // MY_MATCHES kendi içinde kaydırır ve bar payını kendisi ayırır →
             // dış dolgu ölü bant yaratmasın, kartlar barın altından aksın.
-            view === 'MY_MATCHES' ? '' : showBottomNav ? 'pb-safe-nav' : 'pb-safe'
+            // DASHBOARD aynı gerekçeyle muaf: ana sayfa TEK EKRANA sığan,
+            // kaydırmasız bir düzendir; yüksekliğini kapsayıcının tamamından
+            // (`height:100%` + container query) hesaplar ve alt menü payını
+            // kendi içinde ayırır. Dıştan `pb-safe-nav` eklenirse pay İKİ KEZ
+            // sayılır: kartlar sıkışır, altta ölü bant kalır.
+            // MATCH_DISCOVERY de aynı ailede: ekran `max-h-screen` + kendi
+            // iç kaydırması ile çalışır, kart listesi ve filtre paneli bar
+            // payını kendileri ayırır. Dış dolgu bırakılırsa sayfa 120px
+            // boşluğa doğru sürüklenebiliyordu.
+            // PITCH_DISCOVERY aynı ailenin son üyesi: kökü `min-h-screen` +
+            // `overflow-hidden`, içerik kendi `<main>` kaydırıcısında akar ve
+            // bar payını orada (`pb-safe-nav`) ayırır. Dıştaki dolgu burada da
+            // yalnız ÖLÜ BANT üretiyordu — sayfa boşluğa doğru sürükleniyordu.
+            view === 'MY_MATCHES' || view === 'DASHBOARD' || view === 'MATCH_DISCOVERY' || view === 'PITCH_DISCOVERY'
+              ? ''
+              : showBottomNav ? 'pb-safe-nav' : 'pb-safe'
           }`}
         >
           {/* A5: Görünüm-seviyesi hata sınırı. Bir görünüm çökse de (ör. lazy

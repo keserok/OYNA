@@ -1,76 +1,77 @@
 import React, { useState } from 'react';
-import { ChevronRight } from 'lucide-react';
 import { MatchHistorySummary } from '../../services/userService';
-
-type Filter = 'ALL' | 'WIN' | 'MVP';
 
 export interface MatchHistorySectionProps {
     matches: MatchHistorySummary[];
     /** Verilmezse satırlar tıklanamaz (salt-okunur profil). */
     onOpen?: (id: string) => void;
-    /** MVP oylaması kayıt altına alınınca açılacak; şimdilik kapalı. */
-    showMvpTab?: boolean;
 }
 
-const SCORE_COLOR: Record<MatchHistorySummary['result'], string> = {
-    WIN: 'text-primary',
-    LOSS: 'text-error',
-    DRAW: 'text-warning',
+/** Tasarım 3a: sonuç, skorun renginden değil soldaki harf rozetinden okunur. */
+const RESULT_BADGE: Record<MatchHistorySummary['result'], { harf: string; sinif: string; etiket: string }> = {
+    WIN: { harf: 'G', sinif: 'bg-primary/15 border-primary/35 text-primary', etiket: 'Galibiyet' },
+    DRAW: { harf: 'B', sinif: 'bg-warning/15 border-warning/35 text-warning', etiket: 'Beraberlik' },
+    LOSS: { harf: 'M', sinif: 'bg-error/15 border-error/35 text-error', etiket: 'Mağlubiyet' },
     // IP-18: skoru girilmemiş maç bir SONUÇ değildir — nötr çizilir, yeşil/
     // kırmızı/sarı üçlüsüne girmez.
-    NO_SCORE: 'text-ink-4',
+    NO_SCORE: { harf: '–', sinif: 'bg-white/[0.06] border-white/[0.15] text-[#F5F3EE]/[0.55]', etiket: 'Skor girilmedi' },
 };
 
-/** Sekmeli maç geçmişi listesi: Tümü / Galibiyet (/ Maçın Adamı). */
-export const MatchHistorySection: React.FC<MatchHistorySectionProps> = ({ matches, onOpen, showMvpTab = false }) => {
-    const [filter, setFilter] = useState<Filter>('ALL');
+/** Başlangıçta gösterilen satır sayısı; gerisi "Tümü" ile yerinde açılır. */
+const ILK_GOSTERIM = 4;
 
-    const tabs: Array<[Filter, string]> = [
-        ['ALL', 'Tümü'],
-        ['WIN', 'Galibiyet'],
-        ...(showMvpTab ? [['MVP', 'Maçın Adamı'] as [Filter, string]] : []),
-    ];
-
-    const filtered = matches.filter(m => {
-        if (filter === 'WIN') return m.result === 'WIN';
-        if (filter === 'MVP') return false; // MVP verisi henüz kaydedilmiyor
-        return true;
-    });
+/**
+ * Maç geçmişi listesi (tasarım 3a "İnce Neon"): tek kart içinde son 4 maç,
+ * başlığın sağında "Tümü →". Kullanıcı kararı: ayrı bir "tüm maçlar" sayfası
+ * açılmaz — liste yerinde uzayıp kısalır. Skorlar BEYAZ; kazandın/kaybettin
+ * bilgisi soldaki renkli harf rozetinden okunur.
+ */
+export const MatchHistorySection: React.FC<MatchHistorySectionProps> = ({ matches, onOpen }) => {
+    const [hepsiAcik, setHepsiAcik] = useState(false);
+    const gorunen = hepsiAcik ? matches : matches.slice(0, ILK_GOSTERIM);
+    const fazlasiVar = matches.length > ILK_GOSTERIM;
 
     return (
         <div>
-            <div className="flex items-center mt-[22px] mb-0.5">
-                <span className="text-[0.6875rem] font-extrabold tracking-[0.12em] uppercase text-white/50">Maç Geçmişi</span>
-            </div>
-            <div className="flex mt-2.5 border-b border-white/10">
-                {tabs.map(([id, label]) => (
+            <div className="flex items-baseline justify-between mt-6 mb-2.5 px-0.5">
+                <span className="text-[0.9375rem] font-bold text-[#F5F3EE]">Maç Geçmişi</span>
+                {fazlasiVar && (
                     <button
-                        key={id}
-                        onClick={() => setFilter(id)}
-                        className={`flex-1 text-center pt-2.5 pb-3 px-1 text-[0.6875rem] font-bold tracking-[0.02em] transition-colors border-b-2 -mb-px ${
-                            filter === id ? 'text-white border-primary' : 'text-ink-4 border-transparent'
-                        }`}
+                        onClick={() => setHepsiAcik(a => !a)}
+                        className="text-[0.625rem] italic text-[#F5F3EE]/[0.55] hover:text-[#F5F3EE] transition-colors"
                     >
-                        {label}
+                        {hepsiAcik ? 'Daha az ←' : `Tümü (${matches.length}) →`}
                     </button>
-                ))}
+                )}
             </div>
-            <div className="flex flex-col">
-                {filtered.length > 0 ? (
-                    filtered.map(m => {
+
+            {gorunen.length > 0 ? (
+                <div className="rounded-3xl bg-surface-1 shadow-[0_10px_30px_rgba(0,0,0,0.3)] overflow-hidden">
+                    {gorunen.map((m, i) => {
+                        const rozet = RESULT_BADGE[m.result];
+                        const sonSatir = i === gorunen.length - 1;
                         const rowContent = (
                             <>
+                                <span
+                                    aria-label={rozet.etiket}
+                                    className={`w-[22px] h-[22px] rounded-full border flex items-center justify-center text-[0.625rem] font-bold shrink-0 ${rozet.sinif}`}
+                                >
+                                    {rozet.harf}
+                                </span>
                                 <div className="flex-1 min-w-0">
-                                    <span className="text-[0.625rem] font-extrabold tracking-[0.1em] uppercase text-ink-4">{m.date}</span>
-                                    <h4 className="text-base font-bold text-white mt-1 uppercase tracking-[0.01em] truncate">{m.pitchName}</h4>
+                                    <p className="text-[0.625rem] tracking-[0.12em] uppercase text-[#F5F3EE]/[0.55]">{m.date}</p>
+                                    <p className="mt-0.5 text-[0.875rem] font-semibold text-[#F5F3EE] truncate">{m.pitchName}</p>
                                 </div>
-                                <span className={`text-[1.1875rem] font-extrabold italic tracking-tight shrink-0 ${SCORE_COLOR[m.result]}`}>{m.score}</span>
-                                {onOpen && <ChevronRight size={15} className="text-ink-4 shrink-0" strokeWidth={2.4} />}
+                                {m.result === 'NO_SCORE' ? (
+                                    <span className="text-[0.6875rem] italic text-[#F5F3EE]/[0.55] shrink-0">{m.score}</span>
+                                ) : (
+                                    <span className="text-base font-bold italic tracking-tight text-[#F5F3EE] shrink-0">{m.score}</span>
+                                )}
                             </>
                         );
-                        const rowClass = 'flex items-center gap-3 py-3.5 px-0.5 border-b border-white/[0.06] text-left';
+                        const rowClass = `w-full flex items-center gap-3 py-3.5 px-4 text-left ${sonSatir ? '' : 'border-b border-white/[0.08]'}`;
                         return onOpen ? (
-                            <button key={m.id} onClick={() => onOpen(m.id)} className={`${rowClass} hover:bg-white/[0.02] transition-colors`}>
+                            <button key={m.id} onClick={() => onOpen(m.id)} className={`${rowClass} hover:bg-white/[0.03] transition-colors`}>
                                 {rowContent}
                             </button>
                         ) : (
@@ -78,13 +79,13 @@ export const MatchHistorySection: React.FC<MatchHistorySectionProps> = ({ matche
                                 {rowContent}
                             </div>
                         );
-                    })
-                ) : (
-                    <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/[0.06] text-center mt-2">
-                        <p className="text-[0.6875rem] font-bold text-ink-4 uppercase tracking-[0.06em]">Bu kategoride maç yok</p>
-                    </div>
-                )}
-            </div>
+                    })}
+                </div>
+            ) : (
+                <div className="rounded-3xl bg-surface-1 shadow-[0_10px_30px_rgba(0,0,0,0.3)] p-6 text-center">
+                    <p className="text-[0.6875rem] italic text-[#F5F3EE]/[0.55]">Henüz oynanmış bir maçın yok.</p>
+                </div>
+            )}
         </div>
     );
 };

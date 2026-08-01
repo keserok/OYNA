@@ -104,7 +104,9 @@ describe('erişilebilir ad — sadece-ikon butonlar', () => {
     ['views/PitchDiscovery.tsx', 'Geri'],
     ['views/PitchDiscovery.tsx', 'Kapat'],
     ['views/PitchDiscovery.tsx', 'Favorilere ekle'],
-    ['views/MatchDiscovery.tsx', 'Kapat'],
+    // Top Oyna filtre panelinin kapatma tuşu: panel kendi dosyasına taşındı
+    // (DiscoveryFilterSheet). Kural aynı — bekçi yeni evini izliyor.
+    ['components/discovery/DiscoveryFilterSheet.tsx', 'Kapat'],
     ['views/ProfileScreen.tsx', 'Ayarlar'],
     ['views/MessagesView.tsx', 'Geri'],
     ['views/MessagesView.tsx', 'Menü'],

@@ -12,7 +12,7 @@ import { openGhostInConsumerApp } from '../../../utils/ghostDeepLink';
 import { maskEmail } from '../../utils/pii';
 import { ProviderDetailPanel } from '../components/ProviderDetailPanel';
 import { User360Drawer } from '../components/User360Drawer';
-import { DeepEditProviderModal, DeepEditUserModal } from '../DeepEditModals';
+import { DeepEditProviderModal } from '../DeepEditModals';
 import { Goalkeeper, Referee, AdminUser } from '../../../types';
 import { ModuleCrudBar } from '../components/ModuleCrudBar';
 import { PageShell } from '../components/PageShell';
@@ -57,7 +57,6 @@ export const UsersPage: React.FC<UsersPageProps> = ({ subRoute, mode = 'embedded
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [detailProvider, setDetailProvider] = useState<{ item: Goalkeeper | Referee; type: 'GK' | 'REF' } | null>(null);
     const [editProvider, setEditProvider] = useState<{ item: Goalkeeper | Referee; type: 'GK' | 'REF' } | null>(null);
-    const [editUser, setEditUser] = useState<AdminUser | null>(null);
     const [user360, setUser360] = useState<AdminUser | null>(null);
     // Ghost girişi zorunlu sebeple sunucu oturumu açar (Karar #31)
     const [ghostTarget, setGhostTarget] = useState<{ id: string; name: string; role?: string } | null>(null);
@@ -360,13 +359,6 @@ export const UsersPage: React.FC<UsersPageProps> = ({ subRoute, mode = 'embedded
                             <Eye size={12} /> 360
                         </button>
                         <button
-                            onClick={() => setEditUser(u)}
-                            title="Düzenle"
-                            className="flex items-center gap-1 px-2.5 py-1 bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 rounded-lg border border-purple-500/20 text-[9px] font-extrabold uppercase"
-                        >
-                            <Edit3 size={12} /> Düzenle
-                        </button>
-                        <button
                             onClick={() => handleBanToggle(u)}
                             title={u.isBanned ? 'Banı kaldır' : 'Banla'}
                             className={`flex items-center gap-1 px-2.5 py-1 rounded-lg border text-[9px] font-extrabold uppercase ${u.isBanned ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'}`}
@@ -499,12 +491,6 @@ export const UsersPage: React.FC<UsersPageProps> = ({ subRoute, mode = 'embedded
                     onClose={() => { setEditProvider(null); void refresh(); }}
                 />
             )}
-            {editUser && (
-                <DeepEditUserModal
-                    user={editUser}
-                    onClose={() => { setEditUser(null); void refresh(); }}
-                />
-            )}
             {ghostTarget && (
                 <div className="fixed inset-0 z-[200] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
                     <div className="bg-[#161B22] border border-red-500/30 rounded-2xl w-full max-w-sm p-5 space-y-4">
@@ -560,7 +546,6 @@ export const UsersPage: React.FC<UsersPageProps> = ({ subRoute, mode = 'embedded
                     })();
                 }}
                 onGhost={(u) => { setUser360(null); handleImpersonateRequest(u.id); }}
-                onEdit={(u) => { setUser360(null); setEditUser(u); }}
                 onUpdated={() => void refresh()}
             />
         </PageShell>

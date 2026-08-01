@@ -23,6 +23,32 @@ export const SCREEN = {
   wallet: 'Cüzdan',
   settings: 'Ayarlar',
   studio: 'Taktik Stüdyo',
+  /** views/MatchCreate.tsx ekran başlığıyla birebir aynı. */
+  matchCreate: 'Maç Kur',
+  /** views/Marketplace.tsx type="GK" ekran başlığıyla birebir aynı. */
+  marketplaceGk: 'Kaleci Bul',
+  /** views/Marketplace.tsx type="REF" ekran başlığıyla birebir aynı. */
+  marketplaceRef: 'Hakem Kirala',
+} as const;
+
+/**
+ * Ana sayfadaki KAPI KARTLARININ adı.
+ *
+ * Neden ayrı: Kaleci ve Hakem kartları ekranın yarısı genişliğinde. "Kaleci
+ * Bul" oraya tek satıra sığmıyor; sığdırmak için puntoyu düşürmek ölçeği
+ * (ui/type.ts) delerdi. Kullanıcı kararı: KART kısa adı taşır, açılan EKRAN
+ * tam adı taşır.
+ *
+ * Drift koruması: farklı olması GEREKMEYEN adlar SCREEN'den türetilir, elle
+ * ikinci kez yazılmaz. Yalnız iki kart kendi kısa adını taşır.
+ */
+export const CARD = {
+  matchDiscovery: SCREEN.matchDiscovery,
+  pitchDiscovery: SCREEN.pitchDiscovery,
+  matchCreate: SCREEN.matchCreate,
+  marketplaceGk: 'Kaleci',
+  marketplaceRef: 'Hakem',
+  studio: SCREEN.studio,
 } as const;
 
 /**

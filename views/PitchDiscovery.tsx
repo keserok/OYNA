@@ -299,6 +299,18 @@ const MapViewComponent = ({
         dragRotate={false}
         pitchWithRotate={false}
         touchZoomRotate={true}
+        // PARMAK PAYLAŞIMI: harita sayfanın ortasında büyük bir alan kaplıyor.
+        // Tek parmağı kendine alırsa kullanıcı bu bölgeden sayfayı kaydıramaz.
+        // `cooperativeGestures` ile tek parmak SAYFAYI kaydırır, iki parmak
+        // haritayı gezdirir/yakınlaştırır; tek parmakla denenince MapLibre
+        // aşağıdaki Türkçe ipucunu gösterir. (Leaflet haritaları için aynı
+        // davranış components/map/mapBase.ts içinde kuruluyor.)
+        cooperativeGestures
+        locale={{
+          'CooperativeGesturesHandler.MobileHelpText': 'Haritayı gezdirmek için iki parmak kullan',
+          'CooperativeGesturesHandler.WindowsHelpText': 'Yakınlaştırmak için Ctrl + tekerlek',
+          'CooperativeGesturesHandler.MacHelpText': 'Yakınlaştırmak için ⌘ + tekerlek',
+        }}
         style={{ width: '100%', height: '100%' }}
         onClick={() => onPitchSelect(null)}
         onZoom={(e) => handleZoomChange(e.viewState.zoom)}
@@ -1289,7 +1301,11 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-y-auto px-6 pb-32 custom-scrollbar">
+      {/* Alt boşluk `pb-32` (sabit 128px) idi: çentikli telefonlarda güvenli alan
+          hesaba katılmadığı için alt menü son kartın bir kısmını örtüyordu.
+          `pb-safe-nav` = güvenli alan + 7,5rem — payı cihaza göre ayarlar ve
+          klavye açılınca (body.kb-open) kendini büyütür. */}
+      <main className="flex-1 overflow-y-auto px-6 pb-safe-nav custom-scrollbar">
         {viewMode === 'LIST' ? (
           <div>
             <div className="flex justify-between items-center mb-5 mt-1">

@@ -331,7 +331,7 @@ export const MatchFormModal: React.FC<Props> = ({ open, mode, match, onClose, on
               <Field label="Katılım (₺)">
                 <input type="number" value={f.price} onChange={(e) => setF({ ...f, price: e.target.value })} className={inputCls} />
               </Field>
-              {/* Min. Rating alanı söküldü — puan barajı sistemden kalktı (20260831000000). */}
+              {/* Min. Rating alanı söküldü — puan barajı sistemden kalktı (20260730135953). */}
             </div>
             <div className="grid grid-cols-2 gap-3">
               <Field label="Zorluk">

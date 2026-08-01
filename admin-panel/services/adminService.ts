@@ -2231,7 +2231,7 @@ export interface PlayerPeerScores {
   recent: Array<{ score: number; fairPlay: number | null; at: string; matchId: string | null; matchTitle: string | null }>;
 }
 
-/** Bir oyuncunun ALDIĞI akran puanları (admin-only; 20260831000000 RPC'si). */
+/** Bir oyuncunun ALDIĞI akran puanları (admin-only; 20260730135953 RPC'si). */
 export async function fetchPlayerPeerScoresAdmin(userId: string, limit = 20): Promise<PlayerPeerScores> {
   const { data, error } = await supabase.rpc('admin_player_peer_scores', {
     p_user_id: userId,
@@ -2251,7 +2251,7 @@ export async function fetchPlayerPeerScoresAdmin(userId: string, limit = 20): Pr
   };
 }
 
-/** Rahat lobide yeri karşı takıma taşı (player_move_slot_team; admin muafiyeti 20260831000003). */
+/** Rahat lobide yeri karşı takıma taşı (player_move_slot_team; admin muafiyeti 20260730140341). */
 export async function moveSlotTeamAdmin(
   matchId: string,
   slotId: string,
@@ -2942,6 +2942,26 @@ export interface AppProfileAdminFields {
   age_range?: string;
   trust_score?: number;
   has_completed_onboarding?: boolean;
+  // ── v4 (20260731150208) · Aynada düzenlenebilir hâle gelen alanlar ─────────
+  /** İletişim/hesap: PII maskeli gelirse sunucu yazımı reddeder (• içeren değer). */
+  phone?: string;
+  role?: string;
+  is_verified?: boolean;
+  is_pro?: boolean;
+  match_count?: number;
+  /** Oyuncunun seviye beyanı (1–10). Sunucu NULL'a çekmeyi reddeder — beyan geri alınamaz. */
+  self_skill?: number;
+  /** Gizlilik tercihleri (uygulamada Sosyal → Gizlilik). */
+  is_searchable?: boolean;
+  discoverable_by_phone?: boolean;
+  show_online_status?: boolean;
+  /**
+   * Bildirim tercihleri: sunucuda EZİLMEZ, mevcut nesneyle birleştirilir —
+   * yalnız DEĞİŞEN anahtarları gönderin. Şekil uygulamanınkiyle aynıdır
+   * (notifications/pushService · NotificationPreferences): anahtar başına
+   * `{ enabled, mandatory }`. Zorunlu bildirimler kapatılamaz.
+   */
+  notification_preferences?: Record<string, { enabled: boolean; mandatory: boolean }>;
 }
 
 /**

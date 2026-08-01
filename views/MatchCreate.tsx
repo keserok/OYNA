@@ -1205,7 +1205,10 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                 className="absolute top-[6px] left-[6px] w-[56px] h-[56px] rounded-[18px] flex items-center justify-center cursor-grab active:cursor-grabbing"
                 style={{
                   transform: `translateX(${Math.round(slide * ((trackRef.current?.clientWidth ?? 340) - 63))}px)`,
-                  touchAction: 'none',
+                  // 'pan-y': tutamağı YANA sürüklemek yayınlar, YUKARI sürüklemek
+                  // sayfayı kaydırır. Eski 'none' değeri bu 56px'lik kareyi
+                  // kaydırılamaz bir ada yapıyordu.
+                  touchAction: 'pan-y',
                   background: slide >= 0.88
                     ? 'linear-gradient(135deg, #7CFF5C, #39FF14)'
                     : 'linear-gradient(135deg, #39FF14, #2BD10F)',

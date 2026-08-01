@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { UserRole, AppView } from '../types';
-import { ArrowLeft, Settings, Users, UserPlus, Wallet, Pencil, AlertCircle, MessagesSquare, ChevronRight } from 'lucide-react';
+import { Settings, Pencil, AlertCircle } from 'lucide-react';
 import { useAppStore } from '../store';
 import { auth } from '../supabaseAuth';
 import { supabase } from '../supabaseClient';
@@ -113,7 +113,13 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onNavigate, onOpenD
     const openEdit = () => { setSaveError(null); setShowEditModal(true); };
 
     const saveEdit = async (v: ProfileEditValues) => {
-        if (!uid) return;
+        // Oturum düşmüşse SESSİZCE dönme: düzenleme katmanı "hata fırlatmadı =
+        // kaydedildi" sözleşmesiyle çalışıyor, sessiz dönüş sahte "Kaydedildi"
+        // gösterip değişiklikleri yutardı.
+        if (!uid) {
+            setSaveError('Oturumun kapanmış görünüyor. Tekrar giriş yapıp dene.');
+            throw new Error('ProfileScreen.saveEdit: oturum yok');
+        }
         setSavingEdit(true);
         setSaveError(null);
         try {
@@ -138,50 +144,53 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onNavigate, onOpenD
                     useAppStore.getState().setCurrentUserProfile({ ...cur, avatar: v.avatarUrl });
                 }
             }
-            setShowEditModal(false);
+            // Katmanı BURADA kapatma: kayıt sözleşmesi gereği "Kaydedildi"
+            // onayını gösterip kendisi kapanır (onClose ile geri döner).
             await loadProfile();
         } catch (e) {
             // İki aşamalı kayıt (basics + seviye RPC'si): ikincisi düşerse
-            // sessizce yutma — sheet açık kalır, sebep Kaydet'in üstünde görünür,
+            // sessizce yutma — katman açık kalır, sebep Kaydet'in üstünde görünür,
             // kullanıcı yeniden dener. (Basics çoktan yazılmış olabilir; yeniden
-            // kayıt idempotenttir.)
+            // kayıt idempotenttir.) Hata YUKARI FIRLATILIR: katman ancak böyle
+            // "kaydedilmedi" olduğunu bilir ve açık kalır.
             console.error('Profil güncelleme hatası:', e);
             setSaveError('Kaydedilemedi. Bağlantını kontrol edip tekrar dene.');
+            throw e;
         } finally {
             setSavingEdit(false);
         }
     };
 
-    const { total, wins, winRate } = winStats(matchHistory);
+    const { total, winRate } = winStats(matchHistory);
 
     // Güven puanı: DB'de 0–5, ekranda 0–100.
     const trustScore = trustScoreTo100(profile?.trustScore);
 
+    // Tasarım 3a: ikon yok, değerler çıplak sayı — etiket zaten ne olduğunu söylüyor.
     const shortcuts: ShortcutItem[] = [
         {
-            icon: <Wallet size={16} strokeWidth={2.3} />,
             label: 'Cüzdan',
             value: formatTRYAmount(profile?.walletBalance ?? 0),
             onClick: () => onNavigate && onNavigate('WALLET'),
         },
         {
-            icon: <Users size={16} strokeWidth={2.3} />,
             label: 'Takımlarım',
-            value: `${teamsCount} Takım`,
+            value: `${teamsCount}`,
             // MY_TEAM artık belirli takım detayı (TeamDetailView, selectedTeamId gerekir);
             // Sosyal'in Takımlarım sekmesine yönlendir (main A4 kararı).
             onClick: () => { setSocialTarget({ tab: 'TEAMS', subTab: 'MINE' }); onNavigate && onNavigate('SOCIAL'); },
         },
         {
-            icon: <UserPlus size={16} strokeWidth={2.3} />,
             label: 'Arkadaşlarım',
-            value: `${friendsCount} Arkadaş`,
+            value: `${friendsCount}`,
             onClick: () => { setSocialTarget({ tab: 'FRIENDS' }); onNavigate && onNavigate('SOCIAL'); },
         },
     ];
 
     return (
-        <div className="fixed inset-0 bg-bg-main flex flex-col h-screen overflow-hidden selection:bg-primary selection:text-black">
+        // Tasarım 3a "İnce Neon": tırnaklı yazı (pf-serif) + yeşile çalan zemin
+        // geçişi (pf-canvas) YALNIZ bu ekranda; uygulamanın geri kalanı Inter kalır.
+        <div className="fixed inset-0 pf-canvas pf-serif flex flex-col h-screen overflow-hidden selection:bg-primary selection:text-black">
             {/* Ambient ışıma */}
             <div className="pf-ambient" />
 
@@ -192,9 +201,9 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onNavigate, onOpenD
                 <div className="flex items-center justify-between w-full pt-4">
                     <div className="flex items-center gap-2">
                         <OynaLogo width={20} height={20} className="text-primary" />
-                        <span className="text-base font-extrabold text-white tracking-[0.05em] uppercase italic">Profil</span>
+                        <span className="text-[1.0625rem] font-bold text-[#F5F3EE] tracking-[0.18em] uppercase">Profil</span>
                     </div>
-                    <button onClick={() => onNavigate && onNavigate('SETTINGS')} aria-label="Ayarlar" className="w-11 h-11 flex items-center justify-center bg-[#161B22]/80 rounded-full text-white/75 hover:text-white border border-white/[0.08] hover:bg-white/10 active:scale-95 transition-all">
+                    <button onClick={() => onNavigate && onNavigate('SETTINGS')} aria-label="Ayarlar" className="w-11 h-11 flex items-center justify-center bg-surface-1/80 rounded-full text-[#F5F3EE]/[0.8] hover:text-[#F5F3EE] border border-white/[0.08] hover:bg-white/10 active:scale-95 transition-all">
                         <Settings size={17} />
                     </button>
                 </div>
@@ -215,21 +224,21 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onNavigate, onOpenD
                         <div className="relative z-10 flex flex-col gap-3">
                             <div className="flex items-center gap-2">
                                 <span className="w-2 h-2 rounded-full bg-[#FACC15] animate-pulse" />
-                                <p className="text-[0.6875rem] font-extrabold uppercase tracking-widest text-[#FACC15]">Misafir Modundasın</p>
+                                <p className="text-[0.6875rem] font-bold uppercase tracking-widest text-[#FACC15]">Misafir Modundasın</p>
                             </div>
-                            <p className="text-[0.6875rem] text-gray-400 leading-relaxed">
+                            <p className="text-[0.6875rem] text-[#F5F3EE]/[0.6] leading-relaxed">
                                 Profilini oluşturmak, maçlara katılmak ve istatistiklerini biriktirmek için giriş yap.
                             </p>
                             <div className="flex gap-2.5">
                                 <button
                                     onClick={() => onNavigate && onNavigate('AUTH')}
-                                    className="flex-1 h-11 rounded-2xl bg-primary text-on-primary font-extrabold text-[0.6875rem] uppercase tracking-widest active:scale-95 transition-all"
+                                    className="flex-1 h-11 rounded-2xl bg-primary text-on-primary font-bold text-[0.6875rem] uppercase tracking-widest active:scale-95 transition-all"
                                 >
                                     Giriş Yap
                                 </button>
                                 <button
                                     onClick={() => onNavigate && onNavigate('AUTH')}
-                                    className="flex-1 h-11 rounded-2xl bg-white/5 border border-white/15 text-white font-extrabold text-[0.6875rem] uppercase tracking-widest active:scale-95 transition-all hover:bg-white/10"
+                                    className="flex-1 h-11 rounded-2xl bg-white/5 border border-white/15 text-[#F5F3EE] font-bold text-[0.6875rem] uppercase tracking-widest active:scale-95 transition-all hover:bg-white/10"
                                 >
                                     Kaydol
                                 </button>
@@ -248,10 +257,10 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onNavigate, onOpenD
                             <AlertCircle size={20} className="text-[#FACC15]" />
                         </div>
                         <div className="flex-1 min-w-0">
-                            <p className="text-[0.8125rem] font-extrabold text-white">Profil tamamlanmadı</p>
-                            <p className="text-[0.6875rem] text-gray-400 leading-snug">Birkaç bilgi eksik. Tamamla, sana uygun maçları önerelim.</p>
+                            <p className="text-[0.8125rem] font-bold text-[#F5F3EE]">Profil tamamlanmadı</p>
+                            <p className="text-[0.6875rem] text-[#F5F3EE]/[0.6] leading-snug">Birkaç bilgi eksik. Tamamla, sana uygun maçları önerelim.</p>
                         </div>
-                        <span className="text-[0.6875rem] font-extrabold text-[#FACC15] uppercase tracking-wider shrink-0">Tamamla →</span>
+                        <span className="text-[0.6875rem] font-bold text-[#FACC15] uppercase tracking-wider shrink-0">Tamamla →</span>
                     </button>
                 )}
 
@@ -268,24 +277,16 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onNavigate, onOpenD
                     matches={total}
                     winRate={winRate}
                     mvp={motmCount}
-                    winCount={wins}
-                    selfSkill={profile?.selfSkill ?? null}
-                    cardBackMatches={matchHistory}
                     onEditAvatar={isGuest ? undefined : openEdit}
-                    onShareCard={() => {
-                        if (navigator.share) {
-                            navigator.share({ title: 'OYNA', text: `${profile?.full_name || 'Oyuncu'} — OYNA oyuncu kartım`, url: window.location.origin }).catch(() => {});
-                        }
-                    }}
                 />
 
                 {/* Bio + Profili Düzenle — sade tutuldu, hero'nun hemen altında */}
                 {!isGuest && (
                     <div className="mt-3 flex items-center gap-3 px-1">
-                        <p className={`flex-1 text-[0.75rem] leading-relaxed ${profile?.bio ? 'text-gray-400' : 'text-ink-4 italic'}`}>
+                        <p className={`flex-1 text-[0.75rem] italic leading-relaxed ${profile?.bio ? 'text-[#F5F3EE]/[0.6]' : 'text-[#F5F3EE]/[0.55]'}`}>
                             {profile?.bio || 'Henüz bir tanıtım eklemedin.'}
                         </p>
-                        <button onClick={openEdit} className="shrink-0 px-3.5 py-2 rounded-full bg-white/5 border border-white/15 text-white text-[0.625rem] font-extrabold uppercase tracking-widest hover:bg-white/10 active:scale-95 transition-all flex items-center gap-1.5">
+                        <button onClick={openEdit} className="shrink-0 px-3.5 py-2 rounded-full bg-white/5 border border-white/15 text-[#F5F3EE] text-[0.625rem] font-bold uppercase tracking-widest hover:bg-white/10 active:scale-95 transition-all flex items-center gap-1.5">
                             <Pencil size={11} /> Düzenle
                         </button>
                     </div>
@@ -311,16 +312,13 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onNavigate, onOpenD
                 {!isGuest && (
                     <button
                         onClick={() => onNavigate && onNavigate('SOCIAL')}
-                        className="mt-3 w-full flex items-center gap-3 p-4 rounded-2xl bg-white/[0.03] border border-white/[0.08] hover:bg-white/[0.06] active:scale-[0.99] transition-all text-left"
+                        className="mt-3 w-full flex items-center gap-3 py-4 px-4 rounded-[20px] bg-surface-1 shadow-[0_10px_30px_rgba(0,0,0,0.3)] hover:bg-white/[0.06] active:scale-[0.99] transition-all text-left"
                     >
-                        <div className="w-10 h-10 rounded-xl bg-white/[0.06] border border-white/[0.12] flex items-center justify-center text-white/85 shrink-0">
-                            <MessagesSquare size={18} strokeWidth={2.3} />
-                        </div>
                         <div className="min-w-0 flex-1">
-                            <span className="text-sm font-extrabold text-white block">Sosyal</span>
-                            <span className="text-[0.6875rem] text-ink-4">Arkadaşlar, takımlar ve mesajlar</span>
+                            <span className="text-[0.8125rem] font-semibold text-[#F5F3EE] block">Sosyal</span>
+                            <span className="text-[0.6875rem] italic text-[#F5F3EE]/[0.55]">Arkadaşlar, takımlar ve mesajlar</span>
                         </div>
-                        <ChevronRight size={18} className="text-ink-4 shrink-0" />
+                        <span aria-hidden className="text-[#F5F3EE]/[0.5] shrink-0">→</span>
                     </button>
                 )}
 
@@ -335,6 +333,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onNavigate, onOpenD
             {/* ═══ PROFİLİ DÜZENLE — TEK KAYNAK alt sayfa (admin aynası da aynısını kullanır) ═══ */}
             <ProfileEditSheet
                 open={showEditModal}
+                name={profile?.full_name || 'Oyuncu'}
                 initial={{
                     position: profile?.position || '',
                     bio: profile?.bio || '',

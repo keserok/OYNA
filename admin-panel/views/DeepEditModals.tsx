@@ -156,99 +156,13 @@ const GradePicker: React.FC<{ label: string; desc?: string; value?: 'A' | 'B' | 
 );
 
 // ═══════════════════════════════════════════════════════════════
-// USER DEEP EDIT
+// USER DEEP EDIT — KALDIRILDI (kullanıcı kararı: "üç düzenleme yeri tek yerde
+// birleşsin"). Kullanıcı düzenleme artık TEK yerde: Kullanıcılar → 360 →
+// Profil (Uygulama Aynası). Oradaki DÜZENLE uygulamanın kendi ekranını açar,
+// "Yönetici Alanları" ise bu pencerede duran alanların tamamını (telefon, rol,
+// maç sayısı, doğrulanmış, yasak) ve fazlasını taşır.
+// Sağlayıcı (kaleci/hakem) derin düzenlemesi aşağıda DURUYOR.
 // ═══════════════════════════════════════════════════════════════
-export const DeepEditUserModal: React.FC<ModalProps & { user: AdminUser }> = ({ user, onClose }) => {
-    const [edit, setEdit] = useState<AdminUser>(user);
-    const [saving, setSaving] = useState(false);
-    const { showOk, Toast } = useToast();
-    const updateUser = useAppStore((s) => s.updateUser);
-
-    const handleSave = async () => {
-        setSaving(true);
-        try {
-            await updateUser(edit);
-            showOk('✅ Kullanıcı veritabanına kaydedildi');
-            setTimeout(onClose, 1000);
-        } catch (err) {
-            showOk(`❌ Kayıt başarısız: ${err instanceof Error ? err.message : 'Bilinmeyen hata'}`);
-        } finally {
-            setSaving(false);
-        }
-    };
-
-
-    return (
-        <AnimatePresence>
-            <Shell title={`Kullanıcı Düzenle — ${user.name}`} onClose={onClose} footer={
-                <div className="flex items-center justify-between">
-                    <p className="text-[9px] text-gray-600 font-mono">ID: {user.id}</p>
-                    <div className="flex gap-2">
-                        <button onClick={onClose} className="px-4 py-2 rounded-xl text-xs font-bold text-gray-400 hover:text-white border border-white/10 hover:bg-white/5 transition-all">İptal</button>
-                        <button onClick={handleSave} disabled={saving} className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-red-600 to-purple-700 text-white rounded-xl text-xs font-extrabold transition-all disabled:opacity-50 hover:opacity-90">
-                            {saving ? <><Loader2 size={13} className="animate-spin" /> Kaydediliyor...</> : <><Save size={13} /> GÜNCELLE</>}
-                        </button>
-                    </div>
-                </div>
-            }>
-                <Toast />
-                
-                {/* 2-Column Grid Layout with Card Preview */}
-                <div className="flex flex-col lg:flex-row gap-6">
-                    {/* Left Column - Form Inputs */}
-                    <div className="flex-1 space-y-4">
-                        {/* Avatar */}
-                        <div className="flex gap-4 items-start bg-black/25 p-4 rounded-2xl border border-white/5">
-                            <PhotoUploadZone currentUrl={edit.avatar} onChanged={url => setEdit({ ...edit, avatar: url })} folder="users" round />
-                            <div className="flex-1 space-y-3">
-                                <FI label="Avatar Görseli"><I value={edit.avatar} onChange={e => setEdit({ ...edit, avatar: e.target.value })} placeholder="https://..." /></FI>
-                                <FI label="İsim Soyisim"><I value={edit.name} onChange={e => setEdit({ ...edit, name: e.target.value })} /></FI>
-                            </div>
-                        </div>
-
-                        {/* Contact — PII sunucudan maskeli gelir; maskeli değer yazımını
-                            sunucu reddeder. E-posta auth kimliğidir, panelden düzenlenmez. */}
-                        <div className="grid grid-cols-2 gap-4">
-                            <FI label="E-posta (salt okunur — maskeli)"><I value={edit.email} disabled readOnly className="opacity-60" /></FI>
-                            <FI label="Telefon"><I value={edit.phone || ''} onChange={e => setEdit({ ...edit, phone: e.target.value })} placeholder="+90 5..." /></FI>
-                        </div>
-
-                        {/* Role selection */}
-                        <div className="grid grid-cols-2 gap-4">
-                            <FI label="Sistem Rolü">
-                                <Sel value={edit.role} onChange={e => setEdit({ ...edit, role: e.target.value as UserRole })}>
-                                    {Object.values(UserRole).map(r => <option key={r} value={r}>{r}</option>)}
-                                </Sel>
-                            </FI>
-                            <FI label="Maç Sayısı"><I type="number" value={edit.matchCount} onChange={e => setEdit({ ...edit, matchCount: +e.target.value })} /></FI>
-                        </div>
-
-                        {/* Wallet — SALT OKUNUR: bakiyeyi elle ezmek wallet_transactions
-                            ledger'ıyla mutabakatı bozuyordu. Düzeltme artık ledger'lı
-                            admin_adjust_wallet_balance yolundan: Kullanıcı 360 → Profil
-                            Aynası → Cüzdan kısayolu. */}
-                        <div className="p-4 bg-black/30 rounded-2xl border border-yellow-500/20">
-                            <p className="text-[9px] font-extrabold text-yellow-400 uppercase tracking-widest mb-3 flex items-center gap-2"><Wallet size={11} /> CÜZDAN</p>
-                            <div className="flex items-center justify-between gap-3">
-                                <p className="text-lg font-extrabold font-mono text-yellow-400">{Number(edit.wallet || 0).toLocaleString('tr-TR')} ₺</p>
-                                <p className="text-[10px] text-gray-500 leading-relaxed text-right max-w-[260px]">
-                                    Bakiye düzeltmesi ledger'a işlenir: <span className="text-gray-300 font-bold">360 → Profil Aynası → Cüzdan</span> (sebep zorunlu, FINANCE yetkisi).
-                                </p>
-                            </div>
-                        </div>
-
-                        {/* Status toggles */}
-                        <div className="space-y-2">
-                            <p className="text-[9px] font-extrabold text-gray-400 uppercase tracking-widest mb-2 flex items-center gap-2"><Shield size={11} /> HESAP DURUMLARI</p>
-                            <Toggle label="Doğrulanmış Hesap" desc="Mavi tik göster" value={edit.isVerified} onChange={() => setEdit(prev => ({ ...prev, isVerified: !prev.isVerified }))} />
-                            <Toggle label="Hesabı Banla" desc="Kullanıcı sisteme giremez, aktif rezervasyonları iptal edilir" value={edit.isBanned} onChange={() => setEdit(prev => ({ ...prev, isBanned: !prev.isBanned }))} danger />
-                        </div>
-                    </div>
-                </div>
-            </Shell>
-        </AnimatePresence>
-    );
-};
 
 // ═══════════════════════════════════════════════════════════════
 // GOALKEEPER / REFEREE DEEP EDIT
