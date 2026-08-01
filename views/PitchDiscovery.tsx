@@ -496,6 +496,9 @@ const MONTHS_TR = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temm
 const MONTHS_TR_SHORT = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
 const WEEKDAY_HEADERS = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
 const CALENDAR_MAX_DAYS = 90; // Karar #12: 3 ay ileri
+/** Tarih şeridinde parmakla geçilen gün sayısı; ötesi takvimden seçilir.
+ *  14 = iki hafta (kullanıcı kararı) — oyuncunun planlama ufku. */
+const STRIP_DAYS = 14;
 
 const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
 const dayOffsetFromToday = (d: Date) => Math.round((startOfDay(d).getTime() - startOfDay(new Date()).getTime()) / 86400000);
@@ -1896,20 +1899,17 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
                 </div>
               )}
 
-              {/* Tarih Seç: hızlı 5 gün + tam takvim (Karar #12) */}
+              {/* Tarih Seç — kaydırılabilir 14 gün, şeridin SONUNDA takvim.
+                  Önceden yalnız 5 gün vardı ve takvim ayrı bir başlık düğmesindeydi;
+                  oyuncu iki haftalık planını şeritte göremiyordu. Artık iki hafta
+                  parmakla geçilir, daha uzağı isteyen şeridin sonundaki takvim
+                  döşemesine basar. Üst köşedeki ayrı düğme KALDIRILDI: aynı işi
+                  yapan iki ayrı giriş noktası kafa karıştırıyordu.
+                  Takvimin üst sınırı CALENDAR_MAX_DAYS (Karar #12: 3 ay). */}
               <div className="px-6 mt-8">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-base font-extrabold tracking-tight">Tarih Seç</h3>
-                  <button
-                    onClick={() => setCalendarOpen(v => !v)}
-                    className="flex items-center gap-1.5 px-3 py-[7px] rounded-full bg-white/5 border border-white/10 text-[0.6875rem] font-extrabold text-white/80"
-                  >
-                    <CalendarIcon size={13} />
-                    {calendarOpen ? 'Takvimi kapat' : 'Tüm tarihler'}
-                  </button>
-                </div>
-                <div className="flex gap-2 overflow-x-auto no-scrollbar">
-                  {Array.from({ length: 5 }).map((_, d) => {
+                <h3 className="text-base font-extrabold tracking-tight mb-3">Tarih Seç</h3>
+                <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+                  {Array.from({ length: STRIP_DAYS }).map((_, d) => {
                     const date = new Date();
                     date.setDate(date.getDate() + d);
                     const dayName = date.toLocaleDateString('tr-TR', { weekday: 'short' });
@@ -1917,7 +1917,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
                     return (
                       <button
                         key={d}
-                        onClick={() => { setSelectedDate(d); setSelectedSlot(null); }}
+                        onClick={() => { setSelectedDate(d); setSelectedSlot(null); setCalendarOpen(false); }}
                         className={`flex-shrink-0 w-[58px] h-[74px] rounded-[18px] border flex flex-col items-center justify-center transition-all ${
                           isSel
                             ? 'bg-[#39FF14]/10 border-[#39FF14] text-[#39FF14]'
@@ -1929,6 +1929,34 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
                       </button>
                     );
                   })}
+
+                  {/* Şeridin sonundaki takvim döşemesi. Şeritten UZAK bir gün
+                      seçilmişse (takvimden) o gün burada gösterilir ki seçim
+                      görünmez olmasın. */}
+                  {(() => {
+                    const uzakSecim = selectedDate >= STRIP_DAYS;
+                    const uzakTarih = new Date();
+                    uzakTarih.setDate(uzakTarih.getDate() + selectedDate);
+                    return (
+                      <button
+                        onClick={() => setCalendarOpen(v => !v)}
+                        aria-label={calendarOpen ? 'Takvimi kapat' : 'Takvimden tarih seç'}
+                        aria-expanded={calendarOpen}
+                        className={`flex-shrink-0 w-[58px] h-[74px] rounded-[18px] border flex flex-col items-center justify-center gap-1 transition-all ${
+                          uzakSecim || calendarOpen
+                            ? 'bg-[#39FF14]/10 border-[#39FF14] text-[#39FF14]'
+                            : 'bg-white/[0.03] border-white/[0.07] text-white/60'
+                        }`}
+                      >
+                        <CalendarIcon size={18} />
+                        <span className="text-[0.625rem] font-extrabold uppercase leading-none">
+                          {uzakSecim
+                            ? uzakTarih.toLocaleDateString('tr-TR', { day: '2-digit', month: 'short' })
+                            : 'Takvim'}
+                        </span>
+                      </button>
+                    );
+                  })()}
                 </div>
 
                 {/* Tam takvim */}
