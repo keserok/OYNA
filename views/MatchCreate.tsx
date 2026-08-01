@@ -20,8 +20,9 @@ import { Spinner } from '../components/ui/Spinner';
 import {
   fetchCreateFacilities, getCourtDayQuote, createMatchAtomic, inviteFriendsToMatch,
   parseCreateMatchError, recordDemandSignal, listBookableProviders,
+  fetchPitchPricePreview, kisiBasiTutar, PITCH_PRICE_FALLBACK,
   type CreateFacility, type CreateCourt, type DayQuote, type AtomicCreateResult,
-  type BookableProvider,
+  type BookableProvider, type PitchPricePreview,
 } from '../services/matchCreateService';
 import { fetchPitchAvailability, buildBusyMap, isSlotBusy, toISODate, type BusyMap } from '../services/playerBookingService';
 import { getWalletSummary, type WalletSummary } from '../services/walletService';
@@ -187,6 +188,16 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
 
   const fac: CreateFacility | null = useMemo(
     () => facilities.find(f => f.id === selFacId) ?? null, [facilities, selFacId]);
+  // Seçilen sahanın fiyat farkı ve iptal saatleri — panelden değişebildiği için
+  // ekranda sabit sayı tutulmaz. Saha seçilene kadar sunucu varsayılanı geçerli.
+  const [sahaFiyat, setSahaFiyat] = useState<PitchPricePreview>(PITCH_PRICE_FALLBACK);
+  useEffect(() => {
+    let alive = true;
+    setSahaFiyat(PITCH_PRICE_FALLBACK);
+    if (!selFacId) return;
+    fetchPitchPricePreview(selFacId).then((p) => { if (alive && p) setSahaFiyat(p); });
+    return () => { alive = false; };
+  }, [selFacId]);
   const court: CreateCourt | null = useMemo(
     () => fac?.courts.find(c => c.id === selCourtId) ?? null, [fac, selCourtId]);
   const per = parseInt(format.split('v')[0], 10) || 7;
@@ -219,7 +230,9 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
   const selHour = visibleHours.find(h => h.time === selTime) ?? null;
   const total = seeded ? (seed?.price ?? 0) : (selHour?.total ?? null);
   const deposit = seeded ? 0 : (selHour?.deposit ?? null);
-  const perPerson = total != null ? Math.ceil((total / (per * 2)) * 1.05) : null;
+  // Kişi başı tutar SAHANIN anlaşmasından hesaplanır (eski gömülü %5 kaldırıldı);
+  // formül sunucudaki create_match_atomic ile birebir aynı.
+  const perPerson = total != null ? kisiBasiTutar(total, per * 2, sahaFiyat) : null;
   const spendable = wallet?.spendableBalance ?? 0;
   const missing = deposit != null ? Math.max(0, Math.ceil(deposit - spendable)) : 0;
   const threshold = per * 2 - 2;
@@ -996,7 +1009,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                 {court && Array.from({ length: Math.max(0, court.maxCapacity - court.minCapacity + 1) }, (_, i) => court.minCapacity + i).map(n => {
                   const val = `${n}v${n}`;
                   const on = format === val;
-                  const p = total != null ? Math.ceil((total / (n * 2)) * 1.05) : null;
+                  const p = total != null ? kisiBasiTutar(total, n * 2, sahaFiyat) : null;
                   return (
                     <button key={val} onClick={() => { setFormat(val); }}
                       className={`relative shrink-0 w-[84px] h-[72px] rounded-[18px] border flex flex-col items-center justify-center gap-0.5 transition-colors ${on ? 'bg-[#39FF14]/[0.09] border-[#39FF14]/50' : 'bg-white/[0.03] border-white/[0.09]'}`}>
@@ -1640,10 +1653,10 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                 { n: '2', t: `Maç ${threshold} oyuncuda kesinleşir`, b: 'Toplam kadronun 2 eksiği kadar oyuncu katıldığında maç aktifleşir ve kapora tahsil edilir.' },
                 { n: '3', t: 'Maç dolunca payın dışındaki tutar döner', b: deposit != null && perPerson != null ? `${money(deposit)} − ${money(perPerson)} = ${money(Math.max(0, deposit - perPerson))} cüzdanına iade edilir; sen de herkes gibi yalnız kendi payını ödersin.` : 'Sen de herkes gibi yalnız kendi payını ödersin; kalanı iade edilir.' },
                 { n: '4', t: 'Son çağrı: maça 8 saat kala', b: 'Kadro hâlâ eşiğin altındaysa sana bildirim gelir — maç bu adımda iptal EDİLMEZ, doldurmak için hâlâ vaktin vardır.' },
-                { n: '5', t: 'Kesin karar: maça 90 dakika kala', b: 'Kadro eşiği tutuyorsa maç kesinleşir. Tutmuyorsa maç iptal olur ve kaporanın TAMAMI cüzdanına döner. 24 saatten az kala sen iptal edersen iade yapılmaz.' },
-                // IP-04 — sunucu karşılığı: app_config.match_leave_free_hours (24).
-                // Kaptan iptali kuralıyla bilerek aynı sayı.
-                { n: '6', t: 'Oyuncu ayrılması — iade kademesi', b: 'Kadrodaki bir oyuncu maça 24 saatten fazla varken ayrılırsa ödediği tutar cüzdanına döner. 6–24 saat kala %50 iade edilir, 6 saatten az kala iade yapılmaz. Tam iade penceresi kapandıktan sonra ayrılanın güvenilirlik puanı düşer; sana bildirim gider, boşalan yer vitrine açılır.' },
+                { n: '5', t: 'Kesin karar: maça 90 dakika kala', b: `Kadro eşiği tutuyorsa maç kesinleşir. Tutmuyorsa maç iptal olur ve kaporanın TAMAMI cüzdanına döner. ${sahaFiyat.fullHours} saatten az kala sen iptal edersen iade yapılmaz.` },
+                // IP-04 — saatler SAHANIN ayarından (pitch_price_preview); kaptan
+                // iptali kuralıyla bilerek aynı sayı, ikisi de aynı kaynaktan okur.
+                { n: '6', t: 'Oyuncu ayrılması — iade kademesi', b: `Kadrodaki bir oyuncu maça ${sahaFiyat.fullHours} saatten fazla varken ayrılırsa ödediği tutar cüzdanına döner. ${sahaFiyat.halfHours}–${sahaFiyat.fullHours} saat kala %${sahaFiyat.halfPct} iade edilir, ${sahaFiyat.halfHours} saatten az kala iade yapılmaz. Tam iade penceresi kapandıktan sonra ayrılanın güvenilirlik puanı düşer; sana bildirim gider, boşalan yer vitrine açılır.` },
               ].map(r => (
                 <div key={r.n} className="flex gap-3 rounded-[18px] border border-white/[0.08] bg-white/[0.03] p-4">
                   <div className="font-numeric w-9 h-9 rounded-xl bg-[#39FF14]/10 border border-[#39FF14]/25 text-[#39FF14] text-sm font-extrabold flex items-center justify-center shrink-0">{r.n}</div>

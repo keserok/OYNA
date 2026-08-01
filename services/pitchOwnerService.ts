@@ -1633,6 +1633,46 @@ export async function setPitchRefundPolicy(
   }
 }
 
+// ── OYNA ile yapılan ticari anlaşma (SALT OKUNUR) ───────────────────────────
+// Karar 6a: tesis sahibi anlaşmasını GÖRÜR ama değiştiremez; değişiklik OYNA
+// yönetimindedir. YALNIZ SAHİBİ görür — müdür ve personel göremez (sunucu
+// `my_pitch_agreement` içinde `is_pitch_owner` ile kapatır, ekran ayrıca gizler).
+
+export interface MyPitchAgreement {
+  model: 'MODEL_A' | 'MODEL_B';
+  ratePct: number;
+  markupPct: number;
+  markupAmount: number;
+  /** Sahaya özel anlaşma mı, yoksa genel varsayılan mı? */
+  ozel: boolean;
+  ornekTaban: number;
+  ornekSahaya: number;
+  ornekOyuncudan: number;
+  iptalSaati: number;
+}
+
+export async function getMyPitchAgreement(pitchId: string): Promise<MyPitchAgreement> {
+  try {
+    const { data, error } = await supabase.rpc('my_pitch_agreement', { p_pitch_id: pitchId });
+    if (error) throw error;
+    const d = (data ?? {}) as Record<string, unknown>;
+    return {
+      model: (d.model === 'MODEL_B' ? 'MODEL_B' : 'MODEL_A'),
+      ratePct: Number(d.rate_pct ?? 0),
+      markupPct: Number(d.markup_pct ?? 0),
+      markupAmount: Number(d.markup_amount ?? 0),
+      ozel: Boolean(d.sahaya_ozel),
+      ornekTaban: Number(d.ornek_taban ?? 2000),
+      ornekSahaya: Number(d.ornek_sahaya ?? 0),
+      ornekOyuncudan: Number(d.ornek_oyuncudan ?? 0),
+      iptalSaati: Number(d.iptal_saati ?? 24),
+    };
+  } catch (error) {
+    console.error('getMyPitchAgreement:', error);
+    throw new Error(toTurkishError(error));
+  }
+}
+
 export async function deleteCourt(courtId: string): Promise<void> {
   try {
     const { error } = await supabase

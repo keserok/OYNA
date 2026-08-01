@@ -148,6 +148,58 @@ export async function getCourtDayQuote(courtId: string, dateISO: string): Promis
   };
 }
 
+// ── Sahanın fiyat farkı ve iptal saatleri ───────────────────────────────────
+// Tarifedeki tutar SAHAYA ödenendir; oyuncudan alınan = o tutar + saha
+// anlaşmasındaki fark. Bu fark eskiden ekranda `* 1.05` diye SABİTTİ; sahayla
+// başka bir oran konuşulduğunda ekrandaki fiyat ile yayınlandığında oluşan
+// gerçek fiyat birbirini tutmuyordu. Artık ikisi de aynı kaynaktan gelir.
+
+export interface PitchPricePreview {
+  markupPct: number;
+  markupAmount: number;
+  fullHours: number;
+  halfHours: number;
+  halfPct: number;
+}
+
+/** Sunucu varsayılanları — saha okunamazsa ekran bugünkü davranışı korur. */
+export const PITCH_PRICE_FALLBACK: PitchPricePreview = {
+  markupPct: 5, markupAmount: 0, fullHours: 24, halfHours: 6, halfPct: 50,
+};
+
+export async function fetchPitchPricePreview(pitchId: string | null): Promise<PitchPricePreview | null> {
+  try {
+    const { data, error } = await supabase.rpc('pitch_price_preview', { p_pitch_id: pitchId });
+    if (error) throw error;
+    const d = (data ?? {}) as Record<string, unknown>;
+    return {
+      markupPct: Number(d.markup_pct) || 0,
+      markupAmount: Number(d.markup_amount) || 0,
+      fullHours: Number(d.full_hours) || PITCH_PRICE_FALLBACK.fullHours,
+      halfHours: Number(d.half_hours) || PITCH_PRICE_FALLBACK.halfHours,
+      halfPct: Number(d.half_pct) || PITCH_PRICE_FALLBACK.halfPct,
+    };
+  } catch (e) {
+    console.warn('[matchCreate] saha fiyat/iptal bilgisi okunamadı:', e);
+    return null;
+  }
+}
+
+/**
+ * Oyuncudan toplanacak toplam. Sunucudaki `_markup_tutari` ile BİREBİR:
+ * sabit tutar doluysa yüzde yok sayılır.
+ */
+export const oyuncuToplami = (taban: number, p: PitchPricePreview): number => {
+  const fark = p.markupAmount > 0
+    ? Math.round(p.markupAmount * 100) / 100
+    : Math.round(taban * p.markupPct) / 100;
+  return taban + fark;
+};
+
+/** Kişi başı tutar — sunucudaki `CEIL(oyuncu_toplam / (per*2))` ile birebir. */
+export const kisiBasiTutar = (taban: number, kisiSayisi: number, p: PitchPricePreview): number =>
+  Math.ceil(oyuncuToplami(taban, p) / kisiSayisi);
+
 // ── Atomik yayın ────────────────────────────────────────────────────────────
 
 export interface AtomicCreateParams {

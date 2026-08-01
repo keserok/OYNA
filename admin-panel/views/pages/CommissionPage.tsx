@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { supabase } from '../../../supabaseClient';
 import { PageShell } from '../components/PageShell';
+import { PitchAgreementsPanel } from '../components/PitchAgreementsPanel';
 import { useAdminToast } from '../context/AdminToastContext';
 import { Percent, Plus, RefreshCw, Edit2, Check, X, Trash2 } from 'lucide-react';
 
@@ -11,6 +12,8 @@ interface CommissionConfigRow {
   model: 'MODEL_A' | 'MODEL_B';
   rate_pct: number;
   markup_pct: number;
+  /** Sabit markup (₺). 0'dan büyükse yüzde yerine BU geçerlidir. */
+  markup_amount: number;
   is_active: boolean;
   notes: string | null;
   created_at: string;
@@ -63,6 +66,7 @@ export const CommissionPage: React.FC = () => {
           model:      editRow.model ?? 'MODEL_A',
           rate_pct:   Number(editRow.rate_pct ?? 0),
           markup_pct: Number(editRow.markup_pct ?? 0),
+          markup_amount: Number(editRow.markup_amount ?? 0),
           is_active:  editRow.is_active ?? true,
           notes:      editRow.notes ?? null,
         });
@@ -73,6 +77,7 @@ export const CommissionPage: React.FC = () => {
           model:      editRow.model,
           rate_pct:   Number(editRow.rate_pct ?? 0),
           markup_pct: Number(editRow.markup_pct ?? 0),
+          markup_amount: Number(editRow.markup_amount ?? 0),
           is_active:  editRow.is_active,
           notes:      editRow.notes ?? null,
           updated_at: new Date().toISOString(),
@@ -109,7 +114,7 @@ export const CommissionPage: React.FC = () => {
             <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Yenile
           </button>
           <button
-            onClick={() => setEditRow({ _isNew: true, scope: 'GLOBAL', model: 'MODEL_A', rate_pct: 15, markup_pct: 0, is_active: true })}
+            onClick={() => setEditRow({ _isNew: true, scope: 'GLOBAL', model: 'MODEL_A', rate_pct: 15, markup_pct: 0, markup_amount: 0, is_active: true })}
             className="h-9 px-3 rounded-xl bg-[#39FF14] text-black font-bold flex items-center gap-2 text-sm hover:brightness-110 active:scale-95 transition-all">
             <Plus size={14} /> Yeni Kural
           </button>
@@ -137,7 +142,7 @@ export const CommissionPage: React.FC = () => {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-white/5 bg-white/[0.02]">
-              {['Kapsam','Model','Oran (%)','Markup (%)','Notlar','Durum',''].map(h => (
+              {['Kapsam','Model','Oran (%)','Fiyat farkı','Notlar','Durum',''].map(h => (
                 <th key={h} className="px-4 py-3 text-left text-[11px] font-extrabold text-gray-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
               ))}
             </tr>
@@ -158,7 +163,11 @@ export const CommissionPage: React.FC = () => {
                 <td className="px-4 py-3 font-bold text-white whitespace-nowrap">{SCOPE_LABELS[row.scope] ?? row.scope}</td>
                 <td className="px-4 py-3 text-gray-400 whitespace-nowrap">{MODEL_LABELS[row.model] ?? row.model}</td>
                 <td className="px-4 py-3 text-[#39FF14] font-extrabold">{row.rate_pct}%</td>
-                <td className="px-4 py-3 text-gray-400">{row.markup_pct > 0 ? `${row.markup_pct}%` : '—'}</td>
+                <td className="px-4 py-3 text-gray-400">
+                  {row.markup_amount > 0
+                    ? `${Math.round(row.markup_amount).toLocaleString('tr-TR')} ₺`
+                    : row.markup_pct > 0 ? `${row.markup_pct}%` : '—'}
+                </td>
                 <td className="px-4 py-3 text-gray-500 max-w-[200px] truncate">{row.notes ?? '—'}</td>
                 <td className="px-4 py-3">
                   <span className={`text-[10px] font-extrabold px-2 py-1 rounded-full ${row.is_active ? 'text-green-400 bg-green-400/10' : 'text-gray-500 bg-gray-500/10'}`}>
@@ -182,6 +191,11 @@ export const CommissionPage: React.FC = () => {
           </tbody>
         </table>
       </div>
+
+      {/* Saha bazlı anlaşmalar — saha adıyla, örnek hesapla ve iptal saatiyle.
+          Üstteki ham tablo kapsam kurallarının tamamını gösterir; buradaki
+          bölüm ise günlük işi (hangi sahayla kaça anlaştık) tek ekranda tutar. */}
+      <PitchAgreementsPanel />
 
       {/* Edit modal */}
       {editRow && (
@@ -226,10 +240,18 @@ export const CommissionPage: React.FC = () => {
                 className="w-full bg-[#0A0E14] border border-white/10 rounded-xl px-3 py-2 text-white text-sm" />
             </Field>
 
-            <Field label="Markup (%) — Model B için">
-              <input type="number" min="0" max="100" step="0.5"
+            <Field label="Fiyat farkı — yüzde (%)">
+              <input type="number" min="0" max="200" step="0.5"
                 value={editRow.markup_pct ?? 0}
                 onChange={e => setEditRow(r => ({ ...r!, markup_pct: parseFloat(e.target.value) || 0 }))}
+                className="w-full bg-[#0A0E14] border border-white/10 rounded-xl px-3 py-2 text-white text-sm" />
+            </Field>
+
+            {/* Sabit tutar doluysa yüzde YOK SAYILIR (sunucudaki _markup_tutari). */}
+            <Field label="Fiyat farkı — sabit tutar (₺) · doluysa yüzdeyi ezer">
+              <input type="number" min="0" step="10"
+                value={editRow.markup_amount ?? 0}
+                onChange={e => setEditRow(r => ({ ...r!, markup_amount: parseFloat(e.target.value) || 0 }))}
                 className="w-full bg-[#0A0E14] border border-white/10 rounded-xl px-3 py-2 text-white text-sm" />
             </Field>
 

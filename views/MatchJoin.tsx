@@ -15,7 +15,7 @@ import { MatchListing, PositionSlot, UserRole, Player, Team, ProviderType, Provi
 import { useAppStore } from '../store';
 import { auth } from '../supabaseAuth';
 import { supabase } from '../supabaseClient';
-import { subscribeToMatchUpdates, getMatchDetails, getPitchCoordinates, getMatchLobbyParticipants, getFriendPlayerCard, getMatchProviders, getMyMatchPrivateCode, selfAssignSlot, assignSlotToFriend, unassignSlot, releaseSlot, kickSlot, updateFormationRpc, previewLeaveMatch, leaveMatchSlot, leaveQuoteMessage, type LobbyParticipant, type FriendPlayerCard, type MatchProvider, type LeaveMatchQuote } from '../services/matchService';
+import { subscribeToMatchUpdates, getMatchDetails, getPitchCoordinates, getMatchLobbyParticipants, getFriendPlayerCard, getMatchProviders, getMyMatchPrivateCode, selfAssignSlot, assignSlotToFriend, unassignSlot, releaseSlot, kickSlot, updateFormationRpc, previewLeaveMatch, leaveMatchSlot, leaveQuoteMessage, fetchMatchCancelPolicy, iadeKademesiCumlesi, CANCEL_POLICY_FALLBACK, type LobbyParticipant, type FriendPlayerCard, type MatchProvider, type LeaveMatchQuote, type MatchCancelPolicy } from '../services/matchService';
 import { sendFriendRequest } from '../services/friendService';
 import MatchSquadPicker, { type PickedPlayer } from '../components/social/MatchSquadPicker';
 import { getMatchTacticProposals, proposeMatchTactic, listMyTacticsLite, type MatchTacticProposal, type MyTacticLite } from '../services/tacticSocialService';
@@ -284,6 +284,9 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
   // sessiz kalmamalı (BULGU-087).
   const [leaveQuote, setLeaveQuote] = useState<LeaveMatchQuote | null>(null);
   const [leaveQuoteLoading, setLeaveQuoteLoading] = useState(false);
+  // Sahanın kendi iptal/iade saatleri. Panelden değiştirilebildiği için ekranda
+  // sabit sayı yazılamaz; sunucudan gelene kadar sunucu varsayılanı gösterilir.
+  const [iptalPolitikasi, setIptalPolitikasi] = useState<MatchCancelPolicy>(CANCEL_POLICY_FALLBACK);
 
   // (Rakip davet/katıl modalları kaldırıldı — lobi sadeleştirmesi)
 
@@ -329,6 +332,15 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
     });
     return () => { alive = false; };
   }, [(match as { pitchId?: string } | undefined)?.pitchId, match?.location]);
+
+  // Sahanın iptal/iade saatleri — saha sahibi ya da admin panelden değiştirince
+  // lobideki her cümle (kaptan iptali, ödeme notu) o an geçerli sayıyı gösterir.
+  useEffect(() => {
+    if (!match?.id) return;
+    let alive = true;
+    fetchMatchCancelPolicy(match.id).then((p) => { if (alive && p) setIptalPolitikasi(p); });
+    return () => { alive = false; };
+  }, [match?.id]);
 
   // ── İlk hidrasyon: DB'deki yetkili satırı çek (private_code dahil) ──────
   useEffect(() => {
@@ -573,7 +585,9 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
     if (Number.isNaN(t)) return null;
     return (t - Date.now()) / 3_600_000;
   })();
-  const gecIptal = kaporaTahsil && macaKalanSaat !== null && macaKalanSaat < 24;
+  // Serbest iptal eşiği SAHADAN gelir (koda gömülü 24 kaldırıldı).
+  const serbestIptalSaati = iptalPolitikasi.fullHours;
+  const gecIptal = kaporaTahsil && macaKalanSaat !== null && macaKalanSaat < serbestIptalSaati;
 
   const isHomeCaptain = match.creatorId === currentUserProfile.id || homeTeam?.captain === currentUserProfile.id || homeTeam?.captains?.includes(currentUserProfile.id);
   const isAwayCaptain = !!awayTeam && (awayTeam.captain === currentUserProfile.id || awayTeam.captains?.includes(currentUserProfile.id));
@@ -776,7 +790,8 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
         // Metin sunucunun gerçek davranışıyla birebir: leave_public_match_slot /
         // process_match_at_deadline zaman kademesi UYGULAMADAN kalanı iade eder.
         // Cüzdanda tek bakiye var — "iade kredisi" DENMEZ (karar defteri S6/K-0.3).
-        infoNote: 'Kadro dolmazsa veya maç iptal olursa ödediğin tutarın tamamı cüzdanına döner. Maçtan kendin ayrılırsan iade kademeye tabidir: maça 24 saatten fazla varsa tamamı, 6–24 saat kala %50\u2019si cüzdanına döner; 6 saatten az kala iade yapılmaz. Tam iade penceresi kapandıktan sonra ayrılırsan güvenilirlik puanın da düşer. Cüzdanındaki tutar OYNA içindeki saha, maç ve hizmet ödemelerinde kullanılır.',
+        // Kademe sayıları SAHADAN gelir (match_cancel_policy) — metne gömülmez.
+        infoNote: `Kadro dolmazsa veya maç iptal olursa ödediğin tutarın tamamı cüzdanına döner. Maçtan kendin ayrılırsan iade kademeye tabidir: ${iadeKademesiCumlesi(iptalPolitikasi)}. Tam iade penceresi kapandıktan sonra ayrılırsan güvenilirlik puanın da düşer. Cüzdanındaki tutar OYNA içindeki saha, maç ve hizmet ödemelerinde kullanılır.`,
       });
       setSelectedSlotIds([]);
       // Bu dal try/finally'ye GİRMEDEN dönüyor: kilidi elle bırakmazsak
@@ -1046,8 +1061,8 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
     }
   };
 
-  // B4: Kurucu maçı iptal eder — sunucu 24s kuralını uygular
-  // (≥24s: katılımcı ödemeleri iade / <24s: no-show politikası).
+  // B4: Kurucu maçı iptal eder — eşiği SUNUCU sahanın ayarından okur
+  // (≥serbest saat: katılımcı ödemeleri iade / altında: no-show politikası).
   const handleCancelMatch = async () => {
     if (!beginWrite()) return;
     setIsProcessing(true);
@@ -1455,17 +1470,17 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                     : 'text-[#8fe87a] bg-[#39FF14]/[0.07] border border-[#39FF14]/20'
                 }`}>
                   {kaporaBloke && <>Kaporan <b>{money(kaporaTutari)}</b> henüz tahsil edilmedi — <b>tamamı</b> cüzdanına geri döner.</>}
-                  {kaporaTahsil && !gecIptal && <>Kaporan tahsil edilmişti; maça 24 saatten fazla olduğu için <b>{money(kaporaTutari)} iade edilir</b>.</>}
+                  {kaporaTahsil && !gecIptal && <>Kaporan tahsil edilmişti; maça {serbestIptalSaati} saatten fazla olduğu için <b>{money(kaporaTutari)} iade edilir</b>.</>}
                   {gecIptal && (
                     <>Maça <b>{Math.max(0, Math.floor(macaKalanSaat ?? 0))} saat</b> kaldı. Kaporan tahsil edilmişti:
                       {' '}<b>{money(kaporaTutari)} iade EDİLMEZ</b> ve güven puanın düşer.</>
                   )}
                 </p>
               )}
-              {/* Katılımcı tarafı — sunucu 24s kuralıyla birebir */}
+              {/* Katılımcı tarafı — eşik SAHANIN ayarından (match_cancel_policy) */}
               <p className="text-[0.6875rem] font-bold text-amber-300/90 bg-amber-400/[0.07] border border-amber-400/20 rounded-xl px-3 py-2 mb-6 text-left">
-                • Maça <b>24 saatten fazla</b> varsa: katılımcı ödemeleri iade edilir.<br />
-                • <b>24 saatten az</b> kaldıysa: geç iptal — iade yapılmaz ve fair-play puanın etkilenebilir.
+                • Maça <b>{serbestIptalSaati} saatten fazla</b> varsa: katılımcı ödemeleri iade edilir.<br />
+                • <b>{serbestIptalSaati} saatten az</b> kaldıysa: geç iptal — iade yapılmaz ve fair-play puanın etkilenebilir.
               </p>
               <div className="flex gap-3">
                 <button

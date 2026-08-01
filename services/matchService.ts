@@ -469,6 +469,61 @@ export const toPrivateMatchErrorMessage = (err: unknown): string => {
   return 'Maç bulunamadı. Lütfen kodu kontrol edip tekrar dene.';
 };
 
+// ─── Maçın iptal/iade saatleri — SAHADAN ────────────────────────────────────
+// Ekranlar bugüne kadar 24/6/50 sayılarını metne GÖMÜLÜ yazıyordu; saha kendi
+// serbest-iptal saatini değiştirdiğinde oyuncuya hâlâ eski sayı görünüyordu.
+// Tek kaynak sunucudaki `match_cancel_policy` (o da `_pitch_refund_tiers`).
+
+export interface MatchCancelPolicy {
+  fullHours: number;  // bu saatten fazla varsa tam iade / kaptan serbest iptal
+  halfHours: number;  // bu saatten fazla varsa yarım iade
+  halfPct: number;    // yarım kademe yüzdesi
+}
+
+/** Sunucu varsayılanlarıyla aynı — ağ yoksa ekran boş cümle kurmasın diye. */
+export const CANCEL_POLICY_FALLBACK: MatchCancelPolicy = { fullHours: 24, halfHours: 6, halfPct: 50 };
+
+/** Maçın sahasına göre iptal/iade kademesi. Hata durumunda `null` döner. */
+export const fetchMatchCancelPolicy = async (matchId: string): Promise<MatchCancelPolicy | null> => {
+  try {
+    const { data, error } = await supabase.rpc('match_cancel_policy', { p_match_id: matchId });
+    if (error) throw error;
+    const d = (data ?? {}) as Record<string, unknown>;
+    return {
+      fullHours: Number(d.full_hours) || CANCEL_POLICY_FALLBACK.fullHours,
+      halfHours: Number(d.half_hours) || CANCEL_POLICY_FALLBACK.halfHours,
+      halfPct: Number(d.half_pct) || CANCEL_POLICY_FALLBACK.halfPct,
+    };
+  } catch (e) {
+    console.warn('[match] iptal kademesi okunamadı:', e);
+    return null;
+  }
+};
+
+/** Maç henüz kurulmadan (sahayı seçmişken) aynı kademe. */
+export const fetchPitchCancelPolicy = async (pitchId: string): Promise<MatchCancelPolicy | null> => {
+  try {
+    const { data, error } = await supabase.rpc('preview_pitch_refund_policy', { p_pitch_id: pitchId });
+    if (error) throw error;
+    const d = (data ?? {}) as Record<string, unknown>;
+    return {
+      fullHours: Number(d.full_hours) || CANCEL_POLICY_FALLBACK.fullHours,
+      halfHours: Number(d.half_hours) || CANCEL_POLICY_FALLBACK.halfHours,
+      halfPct: Number(d.half_pct) || CANCEL_POLICY_FALLBACK.halfPct,
+    };
+  } catch (e) {
+    console.warn('[match] saha iptal kademesi okunamadı:', e);
+    return null;
+  }
+};
+
+/**
+ * Katılım/ayrılma iade cümlesi — TEK kaynak. Sayılar sahadan gelir.
+ * MatchJoin (ödeme bilgi notu) ve MatchCreate (adım metni) aynı cümleyi kurar.
+ */
+export const iadeKademesiCumlesi = (p: MatchCancelPolicy): string =>
+  `maça ${p.fullHours} saatten fazla varsa tamamı, ${p.halfHours}–${p.fullHours} saat kala %${p.halfPct}'si cüzdanına döner; ${p.halfHours} saatten az kala iade yapılmaz`;
+
 // ─── IP-04 — Maçtan ayrılma sözleşmesi ──────────────────────────────────────
 // Sunucudaki `_leave_match_quote` çıktısıyla BİREBİR. Ayrılma ekranlarının
 // tamamı (MatchJoin lobisi + Maçlarım) bu tek tipten beslenir; "modalda yazan
