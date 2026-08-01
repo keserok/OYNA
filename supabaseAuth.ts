@@ -386,12 +386,32 @@ export const signInWithEmailPassword = async (email: string, password: string) =
 // doğrulama bekletir; UI bu durumu (session yoksa) "e-postanı doğrula" olarak
 // ele almalıdır.
 export const signUpWithPassword = async (email: string, password: string, fullName: string) => {
+  const temizEposta = email.trim().toLowerCase();
   const { data, error } = await supabase.auth.signUp({
-    email: email.trim().toLowerCase(),
+    email: temizEposta,
     password,
     options: { data: { full_name: fullName } },
   });
   if (error) throw error;
+
+  // ÖLÜ UÇ KORUMASI: kayıt başarılı ama oturum gelmediyse kullanıcı, gelmesi
+  // belirsiz bir doğrulama e-postasını beklemek zorunda kalır. Bu durumda
+  // ŞİFREYLE GİRİŞİ hemen deneriz: proje ayarında onay kapalıysa (bugünkü
+  // üretim ayarı) giriş açılır ve kullanıcı doğrudan uygulamaya girer; onay
+  // gerçekten zorunluysa bu deneme sessizce başarısız olur ve ekran "e-postanı
+  // doğrula" mesajını gösterir. Hiçbir güvenlik kuralı gevşetilmez — parolayı
+  // zaten kullanıcının kendisi bu ekranda belirledi.
+  if (data?.user && !data.session) {
+    const { data: giris } = await supabase.auth.signInWithPassword({
+      email: temizEposta,
+      password,
+    });
+    if (giris?.session && giris.user) {
+      auth.currentUser = await buildCurrentUser(giris.user);
+      return giris;
+    }
+  }
+
   if (data?.user && data.session) auth.currentUser = await buildCurrentUser(data.user);
   return data;
 };

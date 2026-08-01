@@ -1,6 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import {
-  hazirla, ekranaGit, bildirimleriAc, odemeBaglamiTohumla, oturmasiniBekle,
+  hazirla, ekranaGit, bildirimleriAc, odemeBaglamiTohumla, doluProfilTohumla, oturmasiniBekle,
   degerlendirmeBaglamiTohumla, rahatBaglamiTohumla,
 } from './harness';
 
@@ -82,6 +82,17 @@ const EKRANLAR: Ekran[] = [
     ad: '09-profil',
     capa: /Güv|Profil/i,
     ac: async (page) => { await hazirla(page); await ekranaGit(page, 'PROFILE'); },
+  },
+  {
+    // Bilgileri DOLU profil: mevki/yaş/cinsiyet/oyun stili kutuları ancak veri
+    // varken çizilir; boş profil kaydı bu yerleşimi hiç korumuyordu.
+    ad: '09b-profil-bilgili',
+    capa: /Güv|Profil/i,
+    ac: async (page) => {
+      await hazirla(page);
+      await doluProfilTohumla(page);
+      await ekranaGit(page, 'PROFILE');
+    },
   },
   {
     ad: '10-bildirimler',

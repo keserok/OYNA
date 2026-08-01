@@ -254,6 +254,49 @@ export async function odemeBaglamiTohumla(page: Page) {
 }
 
 /**
+ * Profil ekranı için DOLU bir oyuncu profili tohumla.
+ *
+ * Varsayılan hermetik ağ her REST isteğine boş cevap verir; profil ekranı da
+ * bu yüzden hep BOŞ hâlde görüntüleniyordu. Mevki/yaş/cinsiyet/oyun stili
+ * kutuları (2026-08 kullanıcı kararı) ancak veri varken çizildiği için o
+ * yerleşimi görsel kayıt HİÇ korumuyordu. Bu tohum, yalnız `profiles`
+ * sorgusunu dolu döndürür; diğer isteklere dokunmaz.
+ *
+ * DİKKAT: `hazirla()`dan SONRA, `ekranaGit(page,'PROFILE')`den ÖNCE çağrılmalı —
+ * Playwright son kaydedilen route'u önce dener.
+ */
+export async function doluProfilTohumla(page: Page) {
+  await page.route('**/rest/v1/profiles**', (route) => {
+    const tekil = (route.request().headers()['accept'] || '').includes('vnd.pgrst.object');
+    const satir = {
+      id: 'gorsel-test-kullanicisi',
+      name: 'Ahmet Yılmaz',
+      full_name: 'Ahmet Yılmaz',
+      email: 'ahmet@oyna.app',
+      avatar_url: '',
+      position: 'Orta Saha',
+      birthdate: '1996-04-12',
+      age_range: '24-30',
+      gender: 'erkek',
+      play_style: 'taktiksel',
+      bio: 'Hafta içi akşam maçlarını kaçırmam.',
+      trust_score: 4.6,
+      role: 'PLAYER',
+      roles: ['PLAYER'],
+      has_completed_onboarding: true,
+      verification_status: 'approved',
+      matches_played: 24,
+      self_skill: 7,
+    };
+    return route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(tekil ? satir : [satir]),
+    });
+  });
+}
+
+/**
  * Maç sonu değerlendirme için deterministik bağlam tohumla.
  *
  * Oturumdaki kullanıcı (`gorsel-test-kullanicisi`) EV sahibi kadrosuna konur ki
