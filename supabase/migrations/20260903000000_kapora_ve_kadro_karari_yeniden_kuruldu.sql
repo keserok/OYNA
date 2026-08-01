@@ -30,6 +30,20 @@
 --   • Kapora ödenince kaptan otomatik olarak kadroya oturur ve sayılır.
 --   • Para hareketi tek yerden: iade ve tahsil daima aynı iç fonksiyonlardan.
 --
+-- GERİ ALMA (gerekirse): bu migration YALNIZ fonksiyon gövdesi değiştirir,
+-- veri silmez. Eski davranışa dönmek için aşağıdaki dosyalardaki ilgili
+-- CREATE OR REPLACE bloklarını yeniden çalıştırmak yeterlidir:
+--   _match_player_counts      → 20260716000001_escrow_match_lifecycle.sql
+--   match_fill_stats          → 20260704000001_faz3_match_lifecycle.sql
+--   match_block_deposit       → 20260719000001001_wallet_first_payments.sql
+--   match_void_deposit        → 20260719000001001_wallet_first_payments.sql
+--   match_capture_deposit     → 20260812000001_match_capture_partial_refund.sql
+--   process_match_at_deadline → 20260826000002_tek_lobi_p2_slot_yasam_dongusu.sql
+--   auto_process_matches      → 20260704000002_faz3_corrections.sql
+--   get_wallet_summary        → 20260717000002_wallet_topup_bucket.sql
+-- (Eklenen `settings.decision_window_minutes` sütunu ile yeni app_config
+--  kayıtları zararsızdır; geri alınmaları gerekmez.)
+--
 -- ZAMANLAMA: mevcut `auto_process_matches` cron'u (her 10 dk) korunur; yalnız
 -- fonksiyonun içi iki aşamalı hâle gelir. Dışarıdaki edge function + gizli
 -- anahtar bağımlılığı GEREKMEZ — bu yüzden depodaki 90 dakikalık cron'un aksine

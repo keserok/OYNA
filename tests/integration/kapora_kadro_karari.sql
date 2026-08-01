@@ -12,6 +12,9 @@
 -- ============================================================================
 BEGIN;
 CREATE TEMP TABLE _r(test text, ok boolean, got text) ON COMMIT DROP;
+-- 7. bölüm gerçek `authenticated` rolüne geçtiği için sonuç tablosuna o rolün de
+-- yazabilmesi gerekir; yoksa test kendi aracına takılır.
+GRANT ALL ON _r TO authenticated;
 DO $$
 DECLARE
   o     uuid := 'aa000000-0000-0000-0000-0000000000a1';  -- tesis sahibi
@@ -22,6 +25,7 @@ DECLARE
   m_bos uuid := 'aa000000-0000-0000-0000-000000000b01';
   m_dol uuid := 'aa000000-0000-0000-0000-000000000b02';
   m_cag uuid := 'aa000000-0000-0000-0000-000000000b03';
+  m_yet uuid := 'aa000000-0000-0000-0000-000000000b04';  -- yetki senaryosu
   j jsonb; n numeric; v_status text; v_dep text; v_cnt numeric; v_min int; v_filled int;
 BEGIN
   -- ── Zemin ────────────────────────────────────────────────────────────────
@@ -169,6 +173,64 @@ BEGIN
     INSERT INTO _r VALUES ('KAP_6_90dk_karar_verir', v_status='CANCELLED', 'durum='||v_status);
   EXCEPTION WHEN OTHERS THEN
     INSERT INTO _r VALUES ('KAP_6_90dk_karar_verir', false, SQLERRM);
+  END;
+
+  -- ══ 7) YETKİ: kullanıcı akışı çalışır, karar fonksiyonu dışarı KAPALI ════
+  --
+  -- NEDEN: Supabase'de public şemadaki her fonksiyon, `authenticated` rolüne
+  -- EXECUTE verilmişse /rest/v1/rpc/<ad> adresinden internete açıktır.
+  -- `process_match_at_deadline` maçı iptal edip parayı hareket ettirir ve
+  -- İÇİNDE KİMLİK KONTROLÜ YOKTUR (yalnız sunucunun zamanlayıcısı çağırsın
+  -- diye yazılmış) — açık kalırsa giriş yapmış herkes BAŞKASININ maçını zorla
+  -- iptal ettirebilir. Bu bölüm hem kapının kapalı olduğunu hem de kapatmanın
+  -- normal kullanıcı akışını BOZMADIĞINI kanıtlar.
+  BEGIN
+    INSERT INTO public.matches(id,title,status,pitch_id,price,slots,"awaySlots","creatorId",captain_id,starts_at,deposit_status)
+     VALUES (m_yet,'Yetki testi','ACTIVE',pitch,200,
+       (SELECT jsonb_agg(jsonb_build_object('id','s'||i,'role','OYUNCU','status','OPEN')) FROM generate_series(0,4) i),
+       (SELECT jsonb_agg(jsonb_build_object('id','a'||i,'role','OYUNCU','status','OPEN')) FROM generate_series(0,4) i),
+       kap2,kap2,now()+interval '5 hours','NONE');
+    PERFORM set_config('request.jwt.claims', json_build_object('sub',kap2,'role','authenticated')::text, true);
+    SET LOCAL ROLE authenticated;   -- ARTIK GERÇEK KULLANICI ROLÜNDEYİZ
+
+    BEGIN
+      j := public.match_block_deposit(m_yet, 800, '[]'::jsonb);
+      INSERT INTO _r VALUES ('KAP_7a_kullanici_kapora_bloke_edebiliyor',
+        (j->>'ok')::boolean AND (j->>'captain_seated')::boolean, 'j='||j::text);
+    EXCEPTION WHEN OTHERS THEN
+      INSERT INTO _r VALUES ('KAP_7a_kullanici_kapora_bloke_edebiliyor', false, SQLERRM);
+    END;
+
+    BEGIN
+      j := public.match_check_threshold(m_yet);
+      INSERT INTO _r VALUES ('KAP_7b_kullanici_esik_kontrolu', j ? 'live', 'j='||j::text);
+    EXCEPTION WHEN OTHERS THEN
+      INSERT INTO _r VALUES ('KAP_7b_kullanici_esik_kontrolu', false, SQLERRM);
+    END;
+
+    BEGIN
+      PERFORM public.process_match_at_deadline(m_yet);
+      INSERT INTO _r VALUES ('KAP_7c_karar_fonksiyonu_disari_kapali', false,
+        'AÇIK KALMIŞ: kullanıcı başkasının maçını iptal ettirebilir!');
+    EXCEPTION WHEN insufficient_privilege THEN
+      INSERT INTO _r VALUES ('KAP_7c_karar_fonksiyonu_disari_kapali', true, 'yetki reddedildi (beklenen)');
+    WHEN OTHERS THEN
+      INSERT INTO _r VALUES ('KAP_7c_karar_fonksiyonu_disari_kapali', false, 'beklenmeyen: '||SQLERRM);
+    END;
+
+    BEGIN
+      j := public.match_cancel_by_captain(m_yet);
+      SELECT status, deposit_status INTO v_status, v_dep FROM public.matches WHERE id=m_yet;
+      INSERT INTO _r VALUES ('KAP_7d_kaptan_iptali_ve_iade',
+        v_status='CANCELLED' AND v_dep='VOIDED', 'durum='||v_status||' kapora='||v_dep);
+    EXCEPTION WHEN OTHERS THEN
+      INSERT INTO _r VALUES ('KAP_7d_kaptan_iptali_ve_iade', false, SQLERRM);
+    END;
+
+    RESET ROLE;
+  EXCEPTION WHEN OTHERS THEN
+    RESET ROLE;
+    INSERT INTO _r VALUES ('KAP_7_yetki_bolumu', false, SQLERRM);
   END;
 END $$;
 SELECT test, CASE WHEN ok THEN 'PASS' ELSE 'FAIL' END AS result, got FROM _r ORDER BY test;
