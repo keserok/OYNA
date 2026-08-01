@@ -24,8 +24,8 @@ BEGIN
   INSERT INTO auth.users(id) VALUES (o),(p1),(p2),(p3),(p4),(c1),(c2),(f1),(f2),(w);
   UPDATE public.profiles SET role='OWNER', name='Owner', wallet_balance=0 WHERE id=o;
   UPDATE public.profiles SET wallet_balance=0 WHERE id IN (p1,p2,p3,p4,c1,c2,f1,f2,w);
-  INSERT INTO public.pitches(id,name,address,city,district,owner_id,is_active,verification_status)
-    VALUES (pitch,'Lifecycle Saha','Altınordu','Ordu','Altınordu',o,true,'approved');
+  INSERT INTO public.pitches(id,name,address,city,district,owner_id,is_active)
+    VALUES (pitch,'Lifecycle Saha','Altınordu','Ordu','Altınordu',o,true);
 
   -- match_fill_stats + quorum CONFIRM (4 slot PAID → onay + owner net 170)
   INSERT INTO public.matches(id,title,status,pitch_id,price,slots,"awaySlots","creatorId",captain_id,starts_at)
@@ -47,12 +47,18 @@ BEGIN
    WHERE user_id=o AND type='MATCH_EARNING' AND match_id=m_conf AND status='PENDING';
   INSERT INTO _r VALUES ('FAZ3_confirm_owner_earning_170', n=170, 'owner_earning='||n);
 
-  -- quorum CANCEL + iade (1/4 PAID → iptal + wallet_balance iade + idempotent)
+  -- quorum CANCEL + iade (kadro eşiği tutmuyor → iptal + wallet_balance iade + idempotent)
+  -- NOT (2026-09): eşik artık yüzde değil, TOPLAM − 2. Bu yüzden kadro 8 slota
+  -- çıkarıldı: eşik 6, dolu 2 → "yetersiz" dalı hâlâ sınanıyor. (Eski 4 slotlu
+  -- kurulumda eşik 2 olurdu ve maç ONAYLANIRDI — test kuralı değil kendini
+  -- sınamış olurdu.)
   INSERT INTO public.matches(id,title,status,pitch_id,price,slots,"awaySlots","creatorId",captain_id,starts_at)
    VALUES (m_canc,'Cancel','ACTIVE',pitch,200,
      jsonb_build_array(
        jsonb_build_object('status','TAKEN','player',jsonb_build_object('id',c1,'paymentStatus','PAID')),
        jsonb_build_object('status','TAKEN','player',jsonb_build_object('id',c2,'paymentStatus','PENDING')),
+       jsonb_build_object('status','OPEN'), jsonb_build_object('status','OPEN'),
+       jsonb_build_object('status','OPEN'), jsonb_build_object('status','OPEN'),
        jsonb_build_object('status','OPEN'), jsonb_build_object('status','OPEN')
      ),'[]'::jsonb,o,o,now()+interval '5 hours');
   INSERT INTO public.wallet_transactions(user_id,match_id,amount,type,description)

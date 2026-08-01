@@ -28,8 +28,8 @@ BEGIN
   UPDATE public.profiles SET role='GOALKEEPER', roles='["GOALKEEPER"]'::jsonb,
          verification_status='approved', is_available=true, name='Kaleci2', wallet_balance=0 WHERE id=gk2;
   UPDATE public.profiles SET is_admin=true, role='SUPER_ADMIN', name='Admin' WHERE id=adm;
-  INSERT INTO public.pitches(id,name,address,city,district,owner_id,is_active,verification_status)
-    VALUES (pitch,'F8 Saha','Altınordu','Ordu','Altınordu',o,true,'approved');
+  INSERT INTO public.pitches(id,name,address,city,district,owner_id,is_active)
+    VALUES (pitch,'F8 Saha','Altınordu','Ordu','Altınordu',o,true);
   INSERT INTO public.goalkeepers(id,name,fee,rating,"matchCount","preferredZones","isDemo")
     VALUES (gk,'Kaleci',200,0,0,'[]'::jsonb,false), (gk2,'Kaleci2',250,0,0,'[]'::jsonb,false);
   INSERT INTO public.matches(id,title,status,pitch_id,price,slots,"awaySlots","creatorId",captain_id,starts_at)

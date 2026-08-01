@@ -49,8 +49,8 @@ BEGIN
     INSERT INTO public.admin_team_members(user_id, role) VALUES (adm, 'SUPER_ADMIN')
     ON CONFLICT DO NOTHING;
   EXCEPTION WHEN undefined_table OR undefined_column THEN NULL; END;
-  INSERT INTO public.pitches(id,name,address,city,district,owner_id,is_active,verification_status)
-    VALUES (pitch,'F1 Saha','Altınordu','Ordu','Altınordu',o,true,'approved');
+  INSERT INTO public.pitches(id,name,address,city,district,owner_id,is_active)
+    VALUES (pitch,'F1 Saha','Altınordu','Ordu','Altınordu',o,true);
   INSERT INTO public.goalkeepers(id,name,fee,rating,"matchCount","preferredZones","isDemo")
     VALUES (gk,'Kaleci',200,0,0,'[]'::jsonb,false);
   slots2 := jsonb_build_array(
