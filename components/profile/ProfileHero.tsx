@@ -94,7 +94,7 @@ export const ProfileHero: React.FC<ProfileHeroProps> = ({
                         )}
                     </div>
                     {kunye && (
-                        <p className="mt-1 text-[0.6875rem] italic text-[#F5F3EE]/[0.6] truncate">{kunye}</p>
+                        <p className="mt-1 text-[0.75rem] italic text-[#F5F3EE]/[0.7] truncate">{kunye}</p>
                     )}
                 </div>
             </div>
@@ -103,19 +103,19 @@ export const ProfileHero: React.FC<ProfileHeroProps> = ({
             <div className="flex bg-black/[0.45] border border-white/10 rounded-2xl mt-4 py-3">
                 <div className="flex-1 text-center">
                     <p className="text-[1.375rem] font-bold leading-none">{matches}</p>
-                    <p className="mt-1 text-[0.625rem] font-normal tracking-[0.16em] text-[#F5F3EE]/[0.55]">MAÇ</p>
+                    <p className="mt-1 text-[0.6875rem] font-normal tracking-[0.16em] text-[#F5F3EE]/[0.65]">MAÇ</p>
                 </div>
                 <div className="w-px bg-white/[0.12]" />
                 <div className="flex-1 text-center">
                     <p className="text-[1.375rem] font-bold leading-none">{winRate === null ? '—' : `%${winRate}`}</p>
-                    <p className="mt-1 text-[0.625rem] font-normal tracking-[0.16em] text-[#F5F3EE]/[0.55]">GALİBİYET</p>
+                    <p className="mt-1 text-[0.6875rem] font-normal tracking-[0.16em] text-[#F5F3EE]/[0.65]">GALİBİYET</p>
                 </div>
                 {mvp != null && (
                     <>
                         <div className="w-px bg-white/[0.12]" />
                         <div className="flex-1 text-center">
                             <p className="text-[1.375rem] font-bold leading-none">{mvp}</p>
-                            <p className="mt-1 text-[0.625rem] font-normal tracking-[0.16em] text-[#F5F3EE]/[0.55]">EN İYİ</p>
+                            <p className="mt-1 text-[0.6875rem] font-normal tracking-[0.16em] text-[#F5F3EE]/[0.65]">EN İYİ</p>
                         </div>
                     </>
                 )}

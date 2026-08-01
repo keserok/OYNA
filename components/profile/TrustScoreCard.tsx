@@ -36,11 +36,11 @@ export const TrustScoreCard: React.FC<TrustScoreCardProps> = ({ score, note }) =
                             strokeDashoffset={RING_C * (1 - clamped / 100)}
                         />
                     </svg>
-                    <span className="relative text-[0.8125rem] font-bold text-[#F5F3EE]">{clamped}</span>
+                    <span className="relative text-[0.9375rem] font-bold text-[#F5F3EE]">{clamped}</span>
                 </div>
                 <div className="flex-1 text-left min-w-0">
-                    <p className="text-[0.625rem] font-semibold tracking-[0.14em] uppercase text-[#F5F3EE]/[0.55] mb-[3px]">Güven Puanı</p>
-                    <p className="text-[0.6875rem] italic text-[#F5F3EE]/[0.6] leading-[1.45]">
+                    <p className="text-[0.6875rem] font-semibold tracking-[0.14em] uppercase text-[#F5F3EE]/[0.65] mb-[3px]">Güven Puanı</p>
+                    <p className="text-[0.75rem] italic text-[#F5F3EE]/[0.7] leading-[1.45]">
                         {note || 'Fair-play geçmişin ve katılım disiplininle hesaplanır.'}
                     </p>
                 </div>

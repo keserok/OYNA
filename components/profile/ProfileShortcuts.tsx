@@ -19,8 +19,8 @@ export const ProfileShortcuts: React.FC<{ items: ShortcutItem[] }> = ({ items })
         {items.map((item) => {
             const content = (
                 <>
-                    <span className="text-[0.9375rem] font-bold text-[#F5F3EE] truncate max-w-full">{item.value}</span>
-                    <span className="text-[0.625rem] text-[#F5F3EE]/[0.55] leading-[1.2] text-center truncate max-w-full">{item.label}</span>
+                    <span className="text-[1.0625rem] font-bold text-[#F5F3EE] truncate max-w-full">{item.value}</span>
+                    <span className="text-[0.6875rem] text-[#F5F3EE]/[0.65] leading-[1.2] text-center truncate max-w-full">{item.label}</span>
                 </>
             );
             return item.onClick ? (

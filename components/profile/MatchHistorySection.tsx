@@ -34,11 +34,11 @@ export const MatchHistorySection: React.FC<MatchHistorySectionProps> = ({ matche
     return (
         <div>
             <div className="flex items-baseline justify-between mt-6 mb-2.5 px-0.5">
-                <span className="text-[0.9375rem] font-bold text-[#F5F3EE]">Maç Geçmişi</span>
+                <span className="text-[1.0625rem] font-bold text-[#F5F3EE]">Maç Geçmişi</span>
                 {fazlasiVar && (
                     <button
                         onClick={() => setHepsiAcik(a => !a)}
-                        className="text-[0.625rem] italic text-[#F5F3EE]/[0.55] hover:text-[#F5F3EE] transition-colors"
+                        className="text-[0.6875rem] italic text-[#F5F3EE]/[0.65] hover:text-[#F5F3EE] transition-colors"
                     >
                         {hepsiAcik ? 'Daha az ←' : `Tümü (${matches.length}) →`}
                     </button>
@@ -54,18 +54,18 @@ export const MatchHistorySection: React.FC<MatchHistorySectionProps> = ({ matche
                             <>
                                 <span
                                     aria-label={rozet.etiket}
-                                    className={`w-[22px] h-[22px] rounded-full border flex items-center justify-center text-[0.625rem] font-bold shrink-0 ${rozet.sinif}`}
+                                    className={`w-[22px] h-[22px] rounded-full border flex items-center justify-center text-[0.6875rem] font-bold shrink-0 ${rozet.sinif}`}
                                 >
                                     {rozet.harf}
                                 </span>
                                 <div className="flex-1 min-w-0">
-                                    <p className="text-[0.625rem] tracking-[0.12em] uppercase text-[#F5F3EE]/[0.55]">{m.date}</p>
-                                    <p className="mt-0.5 text-[0.875rem] font-semibold text-[#F5F3EE] truncate">{m.pitchName}</p>
+                                    <p className="text-[0.6875rem] tracking-[0.12em] uppercase text-[#F5F3EE]/[0.65]">{m.date}</p>
+                                    <p className="mt-0.5 text-[0.9375rem] font-semibold text-[#F5F3EE] truncate">{m.pitchName}</p>
                                 </div>
                                 {m.result === 'NO_SCORE' ? (
-                                    <span className="text-[0.6875rem] italic text-[#F5F3EE]/[0.55] shrink-0">{m.score}</span>
+                                    <span className="text-[0.75rem] italic text-[#F5F3EE]/[0.65] shrink-0">{m.score}</span>
                                 ) : (
-                                    <span className="text-base font-bold italic tracking-tight text-[#F5F3EE] shrink-0">{m.score}</span>
+                                    <span className="text-[1.125rem] font-bold italic tracking-tight text-[#F5F3EE] shrink-0">{m.score}</span>
                                 )}
                             </>
                         );
@@ -83,7 +83,7 @@ export const MatchHistorySection: React.FC<MatchHistorySectionProps> = ({ matche
                 </div>
             ) : (
                 <div className="rounded-3xl bg-surface-1 shadow-[0_10px_30px_rgba(0,0,0,0.3)] p-6 text-center">
-                    <p className="text-[0.6875rem] italic text-[#F5F3EE]/[0.55]">Henüz oynanmış bir maçın yok.</p>
+                    <p className="text-[0.75rem] italic text-[#F5F3EE]/[0.65]">Henüz oynanmış bir maçın yok.</p>
                 </div>
             )}
         </div>
