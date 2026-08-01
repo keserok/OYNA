@@ -287,7 +287,7 @@ const FriendAddView: React.FC<FriendAddViewProps> = ({ onBack, onNavigate }) => 
   const isSearchActive = query.trim().replace(/^@/, '').length >= 2;
 
   return (
-    <div className="min-h-screen bg-[#0A0E14] text-white flex flex-col font-sans">
+    <div className="h-full bg-[#0A0E14] text-white flex flex-col font-sans">
       {/* Başlık */}
       <div className="pt-safe px-5 flex items-center gap-3 pb-2">
         <button

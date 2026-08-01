@@ -181,7 +181,7 @@ const MatchDiaryDetail: React.FC<MatchDiaryDetailProps> = ({ diaryId, onBack }) 
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-[#0A0E14] flex flex-col relative font-sans">
+            <div className="h-full bg-[#0A0E14] flex flex-col relative font-sans">
                 {header}
                 <div className="flex-1 flex items-center justify-center">
                     <LoadingState message="Maç detayları yükleniyor…" />
@@ -192,7 +192,7 @@ const MatchDiaryDetail: React.FC<MatchDiaryDetailProps> = ({ diaryId, onBack }) 
 
     if (error || !match) {
         return (
-            <div className="min-h-screen bg-[#0A0E14] flex flex-col relative font-sans">
+            <div className="h-full bg-[#0A0E14] flex flex-col relative font-sans">
                 {header}
                 <div className="flex-1 flex items-center justify-center">
                     <ErrorState message={error || 'Maç bulunamadı.'} onRetry={loadMatch} />
@@ -211,7 +211,7 @@ const MatchDiaryDetail: React.FC<MatchDiaryDetailProps> = ({ diaryId, onBack }) 
     const badgeLabel = noScore ? 'SKOR GİRİLMEDİ' : isWin ? 'GALİBİYET' : isLoss ? 'MAĞLUBİYET' : 'BERABERLİK';
 
     return (
-        <div className="min-h-screen bg-[#0A0E14] flex flex-col relative font-sans">
+        <div className="h-full bg-[#0A0E14] flex flex-col relative font-sans">
             {header}
 
             <main className="flex-1 p-6 space-y-8 overflow-y-auto custom-scrollbar flex flex-col items-center">

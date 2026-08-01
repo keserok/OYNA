@@ -1188,7 +1188,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
   // ─── RENDER ─────────────────────────────────────────────────────────────────
 
   return (
-    <div className="min-h-screen bg-[#0A0E14] flex flex-col relative overflow-hidden font-sans">
+    <div className="h-full bg-[#0A0E14] flex flex-col relative overflow-hidden font-sans">
 
       {/* Ambiyans arka plan */}
 

@@ -23,8 +23,12 @@ export const PageLayout: React.FC<PageLayoutProps> = ({
   transparentHeader = false,
 }) => {
   return (
+    // `h-full` ŞART (min-h-screen değil): aşağıdaki <main> "kalan alanı doldur,
+    // taşarsan kendi içinde kaydır" der. Bu ancak ANA KUTUNUN yüksekliği BELLİ
+    // olduğunda çalışır. Yalnız taban verilirse kutu içerikle uzar, <main> hiç
+    // sınırlanmaz ve kendi kaydırması DEVREYE GİRMEZ.
     <div
-      className={`flex flex-col w-full min-h-screen bg-[#0A0E14] text-white overflow-hidden max-w-lg mx-auto relative ${className}`}
+      className={`flex flex-col w-full h-full bg-[#0A0E14] text-white overflow-hidden max-w-lg mx-auto relative ${className}`}
     >
       {/* Dynamic top safe area header */}
       {(title || onBack || rightElement) && (

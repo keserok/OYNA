@@ -870,7 +870,7 @@ const MessagesView: React.FC<MessagesViewProps> = ({
   }
 
   return (
-    <div className="min-h-screen bg-[#070B10] text-white flex flex-col font-sans">
+    <div className="h-full bg-[#070B10] text-white flex flex-col font-sans">
       {/* ── Başlık ── */}
       <div className="pt-safe px-5 flex-shrink-0">
         <div className="flex items-center gap-3 pt-5 pb-4">

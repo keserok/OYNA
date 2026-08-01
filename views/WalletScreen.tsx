@@ -464,7 +464,7 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
   if (view === 'TOPUP') {
     const selectedCard = savedCards.find(c => c.id === topupCardId) ?? null;
     return (
-      <div lang="tr" className="min-h-screen bg-[#0A0E14] flex flex-col font-sans">
+      <div lang="tr" className="h-full bg-[#0A0E14] flex flex-col font-sans">
         <SubHeader title="Para Yükle" subtitle="Cüzdanına ekle" onBack={() => setView('MAIN')} />
         <main className="flex-1 overflow-y-auto p-5 space-y-5">
           <div className="text-center py-1">
@@ -631,7 +631,7 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
     const defaultCard = savedCards.find(c => c.isDefault) ?? savedCards[0] ?? null;
     const others = savedCards.filter(c => c.id !== defaultCard?.id);
     return (
-      <div lang="tr" className="min-h-screen bg-[#0A0E14] flex flex-col font-sans">
+      <div lang="tr" className="h-full bg-[#0A0E14] flex flex-col font-sans">
         <SubHeader title="Kartlarım" subtitle="Kayıtlı ödeme yöntemleri" onBack={() => setView('MAIN')} />
         <main className="flex-1 overflow-y-auto p-5 space-y-3.5">
           {defaultCard && (
@@ -733,7 +733,7 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
       ['ALL', 'Tümü'], ['TOPUP', 'Yükleme'], ['PAYMENT', 'Ödeme'], ['REFUND', 'İade'], ['EARNING', 'Kazanç'],
     ];
     return (
-      <div lang="tr" className="min-h-screen bg-[#0A0E14] flex flex-col font-sans">
+      <div lang="tr" className="h-full bg-[#0A0E14] flex flex-col font-sans">
         <SubHeader title="İşlem Geçmişi" subtitle="Tüm hareketler" onBack={() => setView('MAIN')} />
         <div className="shrink-0 px-5 pt-3.5">
           <div className="oy-carousel flex gap-2 overflow-x-auto">
@@ -773,7 +773,7 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
   if (view === 'PAYOUT_FORM') {
     const quick = [500, 1000];
     return (
-      <div lang="tr" className="min-h-screen bg-[#0A0E14] flex flex-col font-sans">
+      <div lang="tr" className="h-full bg-[#0A0E14] flex flex-col font-sans">
         <SubHeader title="IBAN'a Çek" subtitle="Kazancını hesabına aktar" onBack={() => { setView('MAIN'); setPayoutError(''); }} />
         <main className="flex-1 overflow-y-auto p-5 space-y-[18px]">
           <div className="text-center py-2">
@@ -869,7 +869,7 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
       && g > 0 && (!pv || ((g >= pv.min || pv.min_waived) && g <= pv.withdrawable_balance))
       && validateIBAN(cashoutIban) && !!cashoutHolder.trim();
     return (
-      <div lang="tr" className="min-h-screen bg-[#0A0E14] flex flex-col font-sans">
+      <div lang="tr" className="h-full bg-[#0A0E14] flex flex-col font-sans">
         <SubHeader title="Paranı Çek" subtitle="Cüzdan bakiyeni banka hesabına aktar"
           onBack={() => { setView('MAIN'); setCashoutError(''); setCashoutDone(null); }} />
         <main className="flex-1 overflow-y-auto p-5 space-y-4">
@@ -981,7 +981,7 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
   const recentTx = txList.slice(0, 6);
 
   return (
-    <div lang="tr" className="min-h-screen bg-[#0A0E14] flex flex-col font-sans relative overflow-hidden">
+    <div lang="tr" className="h-full bg-[#0A0E14] flex flex-col font-sans relative overflow-hidden">
       <div className="fixed inset-0 pointer-events-none z-0">
         <div className={`absolute top-[-10%] left-[-10%] w-[50%] h-[30%] blur-[120px] rounded-full ${isEarningsRole ? 'bg-[#FACC15]/8' : 'bg-[#39FF14]/8'}`} />
       </div>
