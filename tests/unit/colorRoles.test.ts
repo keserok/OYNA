@@ -290,8 +290,12 @@ describe('dekoratif katmanlar', () => {
   });
 
   it('harita seçimi yalnız renge yaslanmıyor — boyut da değişiyor', () => {
+    // Keşif haritası MapLibre'den Leaflet'e taşınınca pin sınıfı
+    // `.oyna-mldot` → `.oyna-ddot` oldu ("ml" = maplibre, artık yok).
+    // Kural aynı: seçili pin renkle BİRLİKTE boyutça da ayrışmalı.
     const src = oku('components/map/mapBase.ts');
-    const secili = src.slice(src.indexOf('.oyna-mldot.selected .dot-core'));
-    expect(secili.slice(0, 300)).toMatch(/transform:\s*scale/);
+    const baslangic = src.indexOf('.oyna-ddot.selected .dot-core');
+    expect(baslangic, 'seçili nokta pini kuralı bulunamadı').toBeGreaterThan(-1);
+    expect(src.slice(baslangic, baslangic + 300)).toMatch(/transform:\s*scale/);
   });
 });

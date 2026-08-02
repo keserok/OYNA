@@ -5,9 +5,12 @@
 @source "./components/**/*.{ts,tsx}";
 @source "./views/**/*.{ts,tsx}";
 @source "./App.tsx";
-@source "./admin-panel/**/*.{ts,tsx}";
-@source "./admin-panel/admin.html";
 @source "./index.html";
+/* DİKKAT — `admin-panel/**` BURADA TARANMAZ. Yönetim paneli kendi giriş
+   dosyasından (admin-panel/admin.css) beslenir; o dosya bunu import edip
+   ÜSTÜNE panel klasörünü tarar. Buraya admin yolu eklenirse yalnız panelde
+   kullanılan kurallar telefonun stil dosyasına geri sızar. Gerekçe ve kural
+   admin-panel/admin.css başında yazılı. */
 /* IP-08: tipografi ölçeğinin TEK kaynağı — burada taranmazsa ui/type.ts
    içindeki arbitrary sınıflar (text-[0.6875rem] vb.) hiç üretilmez. */
 @source "./ui/**/*.{ts,tsx}";
@@ -494,6 +497,32 @@ html {
   overflow: hidden;
   overscroll-behavior: none;
   background-color: #0A0E14;
+
+  /* ─── TELEFONUN "YAZI BOYUTU" AYARI YERLEŞİMİ BOZMASIN ────────────────────
+     Android WebView'ında, kullanıcı telefon ayarlarından yazı boyutunu
+     büyüttüğünde tarayıcı "metin otomatik büyütme" (text autosizing) devreye
+     sokar. Bu özelliğin kritik yan etkisi şudur: YALNIZ yazı puntosunu büyütür,
+     yazının içinde durduğu kutuyu, dolguyu, satır yüksekliğini ve buton boyunu
+     BÜYÜTMEZ. Sonuç, tasarımı bozan bir uyumsuzluktur — yazılar kutularına
+     sığmaz, satırlar üst üste biner, kartlar sıkışık ve düzensiz görünür.
+     ("Bazı yazı ve stiller sıkışık/saçma duruyor" şikâyetinin bilinen sebebi.)
+
+     `text-size-adjust: 100%` bu otomatik büyütmeyi kapatır: uygulama, tasarımda
+     belirlenen ölçekte çizilir ve yerleşim her telefonda tutarlı kalır.
+
+     ERİŞİLEBİLİRLİK — NE KAYBEDİLİR, NE KAYBEDİLMEZ:
+       • Kaybedilen: Android'in "Yazı tipi boyutu" ayarının SADECE yazıyı
+         büyütmesi. Zaten yerleşimi bozduğu için bu yol kullanılamazdı.
+       • Kaybedilmeyen: Android'in "Görüntü boyutu" (display size) ayarı.
+         O ayar CSS pikselinin kendisini büyütür; yazı, kutu, dolgu, buton
+         HEPSİ birlikte orantılı büyür ve yerleşim bozulmaz. Az gören
+         kullanıcının doğru yolu budur ve aynen çalışmaya devam eder.
+       • Tarayıcıdaki (vercel) yakınlaştırma da aynen çalışır.
+
+     NOT: Bu kural, otomatik büyütmenin devrede OLMADIĞI cihazlarda hiçbir şeyi
+     değiştirmez — yani yanlış teşhis olsa bile bir şey bozmaz. ────────────── */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 body {
   font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;

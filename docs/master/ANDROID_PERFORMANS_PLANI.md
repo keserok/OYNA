@@ -142,50 +142,86 @@ kırar: ölü WebView temizlenir ve uygulama temiz şekilde yeniden başlatılı
 
 ---
 
-## 5. Sırada ne var — ölçülmüş etkiye göre sıralı
+## 5. İkinci tur — kullanıcı kararlarıyla yapılanlar
 
-Aşağıdakiler **yapılmadı**; her biri ayrı bir görev olarak verilmelidir.
-Sıralama tahmine değil, yukarıdaki ölçümlere dayanır.
+Aşağıdaki üç madde bir önceki turda "yapılmadı" diye kaydedilmişti. Kullanıcı
+her biri için ayrı ayrı karar verdi ve maddeler o kararlara göre uygulandı.
 
-### 5.1 İki ayrı harita kütüphanesi taşınıyor — **en büyük tek kazanç**
+### 5.1 İki ayrı harita kütüphanesi → TEK kütüphane (Leaflet) ✅ YAPILDI
 
-Uygulama aynı anda iki harita yığını paketliyor:
+Uygulama aynı anda iki harita yığını paketliyordu:
 
 | Kütüphane | Boyut | Kullanan ekranlar |
 |---|---:|---|
-| `maplibre-gl` (+ `react-map-gl`) | 803 KB | `PitchDiscovery` |
+| `maplibre-gl` (+ `react-map-gl`) | 803 KB | yalnız `PitchDiscovery` |
 | `leaflet` (+ `react-leaflet`) | ~150 KB + 16 KB CSS | `MatchJoin`, `ServiceProfile`, `OwnerFacilitySettingsModal`, admin `PitchStudio` |
 
-Tek yığına indirmek ~800 KB'lık kodu ortadan kaldırır. Ayrıca `maplibre-gl`
-WebGL kullanır; zayıf telefonlarda hem yavaştır hem de bellek tüketimiyle
-çökmeyi doğrudan besler. **Risk:** harita davranışı 5 ekranı ilgilendirir, görsel
-regresyon riski gerçektir — ayrı görev, ayrı doğrulama ister.
+**Kullanıcı kararı:** Leaflet'te birleş (5 ekranda zaten o var, 1 ekranda
+maplibre). Saha Keşfi haritasının görünümünün bir miktar değişmesi kabul edildi.
 
-### 5.2 CSS'i telefon ve admin için ayırmak — ölçüldü: 38 KB
+`views/PitchDiscovery.tsx` react-leaflet'e taşındı. Pin biçimleri, seçim
+davranışı, zoom'a bağlı ölçekleme ve iki-parmak jesti korundu; pinler
+Leaflet'in 0×0 anchor deseniyle koordinata çivilendi (`components/map/mapBase.ts`).
+
+**Ölçüldü — Saha Keşfi ekranını açmanın maliyeti:**
+
+| | önce | sonra | kazanç |
+|---|---:|---:|---:|
+| ekranın indirdiği kod+stil | 1.108.968 B | 238.332 B | **−870.636 B (%78,5)** |
+| uygulamanın toplam boyutu | 5.115.368 B | 4.224.465 B | **−890.903 B (%17,4)** |
+
+Açılış yükü değişmedi (1.172.841 → 1.172.776 B): keşif ekranı zaten talep
+üzerine yüklendiği için maplibre açılışta değil, o ekran açılırken iniyordu.
+
+**Ek kazanç — çökme ve kapsama:** MapLibre çizim için WebGL zorunlu kılıyordu;
+kart WebGL veremediğinde ekran "harita bu cihazda desteklenmiyor" diyor ve
+harita hiç açılmıyordu. Leaflet raster karo çizer, WebGL istemez → o nazik
+teslim ekranı KALDIRILDI, harita artık en zayıf telefonda da açılır. Belleği
+dar cihazlarda WebGL bağlamının düşürülmesi kaynaklı çökme riski de ortadan
+kalkar.
+
+**Doğrulama:** `tests/visual/haritaDuman.visual.spec.ts` — harita gerçek
+Chromium'da kurulur, karo katmanı bağlanır, yasal atıf görünür, pinler saha
+adıyla basılır, pin kökü 0×0 kalır (koordinata çivili), pine dokununca seçim
+ve alt karusel açılır, konsol temiz.
+
+### 5.2 CSS'i telefon ve admin için ayırmak ✅ YAPILDI — ölçüldü: 38 KB
 
 `index.css` içindeki `@source "./admin-panel/**"` satırları, admin panelinde
-kullanılan tüm sınıfların telefonun CSS'ine girmesine yol açıyor. Deneme
-derlemesiyle ölçüldü: **302 KB → 264 KB**.
+kullanılan tüm sınıfların telefonun CSS'ine girmesine yol açıyordu.
 
-**Neden hemen yapılmadı:** `admin-panel/admin.html` aynı `/index.css` dosyasını
-kullanıyor. Satırı silmek admin panelinin stillerini bozar. Doğru çözüm, admin'e
-kendi CSS girişini vermektir — bu, admin panelini de test etmeyi gerektirir.
+**Kullanıcı kararı:** yapılsın, ama dikkatli olunsun.
 
-### 5.3 Kullanılmayan bağımlılıklar
+Admin'e kendi giriş dosyası verildi (`admin-panel/admin.css`): telefonun
+`index.css`ini import eder, ÜSTÜNE yalnız `admin-panel/` klasörünü tarar.
+Panel telefonun tüm stillerini almaya devam eder; telefon panelinkileri
+taşımaz.
 
-- `pdfkit` — kodda **hiç** kullanılmıyor (pakete de girmiyor, yalnız
-  `package.json` ve kurulum süresi yükü).
-- `react-map-gl` / `maplibre-gl` — 5.1 ile birlikte değerlendirilmeli.
+**Ölçüldü:** telefonun stil dosyası **302.646 B → 264.508 B (−38.138 B, %12,6)**.
 
-### 5.4 Android `minifyEnabled` (R8) kapalı
+**Doğrulama:** admin kaynağındaki 762 benzersiz sınıfın **762'si de** admin
+CSS'inde üretiliyor (eksik yok); bunların 233'ü telefondan çıkarıldı, 529'u
+ortak. Panel gerçek tarayıcıda açılıp kendi CSS'ini yüklediği, gövde rengi,
+yazı tipi ve yalnız-admin sınıfları (`max-w-4xl`, `bg-amber-950/60`)
+çalıştığı doğrulandı.
+
+### 5.3 Kullanılmayan bağımlılıklar ✅ YAPILDI
+
+`pdfkit` kodda **hiç** kullanılmıyordu (yalnız `package.json`'da duruyordu).
+`maplibre-gl` ve `react-map-gl` ile birlikte kaldırıldı — üçü ve bağımlılıkları
+toplam **77 paket**.
+
+### 5.4 Android `minifyEnabled` (R8) kapalı — KULLANICI KARARIYLA KAPALI KALDI
 
 `android/app/build.gradle` içinde `release { minifyEnabled false }`. Açmak APK
 boyutunu ve DEX yükleme süresini düşürür.
 
-**Neden hemen yapılmadı:** R8, yansıma (reflection) ile çağrılan Capacitor
-eklenti sınıflarını eleyebilir ve bu **yalnız gerçek cihazda, çalışma anında**
-belli olur — derleme yeşil kalır, özellik sessizce ölür. Gerçek telefonda
-uçtan uca test edilmeden açılmamalı.
+**Neden yapılmadı:** R8, yansıma (reflection) ile çağrılan Capacitor eklenti
+sınıflarını eleyebilir ve bu **yalnız gerçek cihazda, çalışma anında** belli
+olur — derleme yeşil kalır, özellik sessizce ölür (bildirim gitmez, ödeme
+açılmaz gibi). Kullanıcıya risk anlatıldı; **kullanıcı kararı: şimdilik kapalı
+kalsın.** İleride açılırsa gerçek telefonda giriş, harita, kamera/QR, bildirim
+ve ödeme akışları tek tek denenmelidir.
 
 ### 5.5 Yazı tipleri
 
@@ -193,6 +229,53 @@ uçtan uca test edilmeden açılmamalı.
 Grotesk — normal + italik). Hepsi APK'nın içinde. `unicode-range` sayesinde
 tarayıcı yalnız gerekeni okur, ama dosyalar yine de pakette taşınır. Gerçekten
 kullanılan aileler/eksenler gözden geçirilebilir.
+
+### 5.6 Zayıf cihaz eşiği — "4-6 GB telefonlar da kapsansın"
+
+Kullanıcı sorunu 4-6 GB RAM'li telefonlarda yaşadığını bildirdi; eşiğin bunları
+kapsayıp kapsamadığı soruldu.
+
+**Bulgu:** `navigator.deviceMemory` gerçek RAM'i vermez. Standart, parmak izi
+çıkarmayı zorlaştırmak için değeri ikinin kuvvetlerine yuvarlar ve 8'de keser —
+izin verilen TEK değerler: `0.25 · 0.5 · 1 · 2 · 4 · 8`. Yani 5, 6 ya da 7
+**asla** dönmez. 6 GB'lık bir Android'in çekirdek payı düşülmüş gerçek belleği
+~5,5–5,9 GB'dır ve 4 ile 8 arasındaki orta nokta 6 GB olduğundan tarayıcı bunu
+**4** diye bildirir.
+
+**Sonuç:** var olan `memory <= 4` eşiği 4 GB ve 6 GB telefonların İKİSİNİ de
+zaten kapsıyordu. Eşik `LITE_MEMORY_MAX_GB = 6` olarak yeniden yazıldı —
+davranış DEĞİŞMEDİ, kullanıcının kararı kayda geçti ki ileride biri 4'ü görüp
+"6 GB'lıklar dışarıda kalmış" diye yanlış bir düzeltme yapmasın. Birim testi
+izin verilen altı değerin tamamını sabitliyor (`tests/unit/studioPerf.test.ts`).
+
+### 5.7 "Yazılar sıkışık duruyor" — telefonun yazı boyutu ayarı
+
+Kullanıcı bazı yazı ve stillerin sıkışık/saçma durduğunu bildirdi.
+
+**Ölçüm önce yapıldı, tahmin sonra:** yedi ana ekran altı gerçek telefon
+genişliğinde (320 · 360 · 375 · 390 · 412 · 430) açılıp taranan üç şey —
+sayfanın yatayda kayması, ekran dışına çıkan içerik, kutusuna sığmayan yazı —
+**hepsinde sıfır bulgu** verdi. Yani sorun ekran GENİŞLİĞİ değil.
+
+**Kalan sebep:** Android WebView'ında kullanıcı telefon ayarlarından yazı
+boyutunu büyüttüğünde tarayıcı "metin otomatik büyütme" uygular. Bu özellik
+YALNIZ yazı puntosunu büyütür; yazının içinde durduğu kutuyu, dolguyu, satır
+yüksekliğini ve buton boyunu büyütmez → yazılar kutularına sığmaz, satırlar
+biner, kartlar sıkışık görünür. Bu tam olarak tarif edilen belirtidir.
+
+`index.css` → `html { text-size-adjust: 100% }` ile bu otomatik büyütme
+kapatıldı. Özelliğin devrede OLMADIĞI cihazlarda kural hiçbir şeyi değiştirmez.
+
+**Erişilebilirlik:** Android'in "Görüntü boyutu" (display size) ayarı aynen
+çalışmaya devam eder — o ayar CSS pikselinin kendisini büyütür, yazı ve kutu
+birlikte orantılı büyür, yerleşim bozulmaz. Az gören kullanıcının doğru yolu
+budur.
+
+**Bekçi test:** `tests/visual/ekranUyum.visual.spec.ts` — yedi ekran, en dar
+(360) ve en geniş (430) telefon genişliğinde taşma/kırpılma olmadığını sabitler.
+Görsel referans testlerinden farkı: onlar "görüntü değişti mi" der, bu test
+"bozuk mu" der. Tasarım bilerek değişince referans güncellenir, bu test yeşil
+kalmalıdır.
 
 ---
 

@@ -1,0 +1,28 @@
+/* ════════════════════════════════════════════════════════════════════════════
+   YÖNETİM PANELİ — STİL GİRİŞİ
+   ────────────────────────────────────────────────────────────────────────────
+   NEDEN AYRI BİR DOSYA VAR:
+   Telefon uygulaması ve yönetim paneli aynı stil dosyasını paylaşıyordu. Tailwind
+   bir sınıfı ancak kaynakta GÖRDÜĞÜ zaman üretir; `index.css` hem telefonu hem
+   `admin-panel/` klasörünü taradığı için, yalnızca panelde kullanılan görünüm
+   kuralları da telefonun stil dosyasına yazılıyordu. Telefon, hiçbir zaman
+   açmayacağı bir ekranın stillerini her açılışta indirip işliyordu.
+
+   Artık tarama ikiye ayrıldı:
+     • index.css        → telefon (components, views, ui, App.tsx, index.html)
+     • admin-panel/admin.css → yukarıdakilerin TAMAMI + admin-panel klasörü
+
+   Panel, telefonun stillerini de alır (renk tokenları, yazı tipleri, ortak
+   bileşenler oradan gelir) — yani panelin görünümünde hiçbir şey eksilmez.
+   Değişen tek şey, telefonun artık panele ait kuralları taşımamasıdır.
+
+   YENİ DOSYA EKLERKEN: panele özel bir klasör açarsan `@source` satırını BURAYA
+   ekle, `index.css`e değil. Aksi halde o klasörün sınıfları telefonun stil
+   dosyasına da yazılır ve bu ayrım bozulur.
+   ════════════════════════════════════════════════════════════════════════════ */
+
+@import "../index.css";
+
+/* Yalnız panelde kullanılan sınıflar — telefon bunları taşımaz. */
+@source "./**/*.{ts,tsx}";
+@source "./admin.html";

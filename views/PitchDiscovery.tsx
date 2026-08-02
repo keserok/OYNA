@@ -8,9 +8,13 @@ import {
 } from 'lucide-react';
 import { Pitch, Court } from '../types';
 import { useAppStore } from '../store';
-import MapGL, { Marker as MapMarker, Source as MapSource, Layer as MapLayer, AttributionControl, type MapRef } from 'react-map-gl/maplibre';
-import 'maplibre-gl/dist/maplibre-gl.css';
-import { OYNA_MAPLIBRE_STYLE, OYNA_MAPLIBRE_CSS, isWebglAvailable } from '../components/map/mapBase';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+import { MapContainer, TileLayer, Marker, GeoJSON, useMap, useMapEvents } from 'react-leaflet';
+import {
+  OYNA_TILE_URL, oynaTileProps, oynaMapProps, OYNA_MAP_CSS, OYNA_DISCOVERY_CSS,
+  createDiscoveryNamePin, createDiscoveryDotPin, createUserLocationIcon,
+} from '../components/map/mapBase';
 import { fetchActiveCoverage, type RegionCoverage } from '../services/regionCoverageService';
 import { requestDeviceLocation } from '../services/locationService';
 import { openDirections, isIOSPlatform, appleMapsDirectionsUrl, googleMapsDirectionsUrl } from '../utils/directions';
@@ -74,85 +78,121 @@ const fiyat = formatTRYShort;
 // (dokununca yakınlaşır); üstünde seçilebilir fiyat balonları gösterilir.
 const PIN_BUBBLE_ZOOM = 12.5;
 
-// Fiyat pini — react-map-gl Marker (anchor="bottom" → tip TAM koordinatta).
-// Maplibre pini GPU'da konumlar; zoom/pan'de native sabit (kayma yok).
-const PricePin = React.memo(({ pitch, selected, onSelect }: { pitch: Pitch; selected: boolean; onSelect: (p: Pitch) => void }) => {
-  // Pin, fiyat yerine sahanın TEK İSMİNİ gösterir. Admin map_label belirlediyse o,
-  // yoksa tam ad kullanılır (uzun adlar CSS ile kısaltılır).
-  const nameLabel = pitch.mapLabel || pitch.name || 'Saha';
+// Keşif haritasının stil bloğu: Leaflet temeli + keşif pinleri. Tek dizge
+// olarak birleştirilir — <style> etiketi tek çocuk metin bekler.
+const DISCOVERY_MAP_CSS = OYNA_MAP_CSS + OYNA_DISCOVERY_CSS;
+
+/** Marker tıklamasının haritanın "boşluğa tıklandı → seçimi bırak" kuralını
+ *  tetiklemesini engeller. */
+const stopMapClick = (e: L.LeafletMouseEvent): void => {
+  L.DomEvent.stopPropagation(e.originalEvent);
+};
+
+/** Kullanıcının mavi konum noktası — hiç değişmez, bir kez üretilir. */
+const userLocationIcon = createUserLocationIcon();
+
+// Ad pini — yakın zoom. divIcon 0×0 + anchor [0,0] olduğundan pinin tipi TAM
+// koordinatta durur; zoom/pan'de kaymaz (bkz. components/map/mapBase.ts).
+const NamePin = React.memo(({ pitch, selected, onSelect }: { pitch: Pitch; selected: boolean; onSelect: (p: Pitch) => void }) => {
+  // İkon yalnız görünümü belirleyen alanlar değişince yeniden üretilir —
+  // her render'da yeni ikon vermek marker DOM'unu boşuna yeniden kurardı.
+  const icon = useMemo(
+    () => createDiscoveryNamePin(pitch, selected),
+    [pitch.mapLabel, pitch.name, pitch.flashDiscount, selected],
+  );
   return (
-    <MapMarker longitude={pitch.coordinates!.lng} latitude={pitch.coordinates!.lat} anchor="bottom">
-      <div className="oyna-mlpin" onClick={(e) => { e.stopPropagation(); onSelect(pitch); }}>
-        {pitch.flashDiscount ? <div className="pin-flash">🔥 %{pitch.flashDiscount}</div> : null}
-        <div className={`pin-bubble${selected ? ' selected' : ''}`}>
-          <svg width="8" height="8" viewBox="0 0 8 8" fill={selected ? '#000' : '#39FF14'}><circle cx="4" cy="4" r="4" /></svg>
-          <span className="pin-name">{nameLabel}</span>
-        </div>
-        <div className={`pin-nub${selected ? ' selected' : ''}`} />
-      </div>
-    </MapMarker>
+    <Marker
+      position={[pitch.coordinates!.lat, pitch.coordinates!.lng]}
+      icon={icon}
+      // Seçili pin diğerlerinin üstünde çizilsin (balon komşularının altında kalmasın).
+      zIndexOffset={selected ? 1000 : 0}
+      alt={pitch.name}
+      eventHandlers={{ click: (e) => { stopMapClick(e); onSelect(pitch); } }}
+    />
   );
 });
 
-// Nokta pini — uzak zoom görünümü. Fiyat yok; dokununca harita sahaya yakınlaşır
-// ve pinler seçilebilir fiyat balonlarına dönüşür (aşamalı keşif).
-const DotPin = React.memo(({ pitch, selected, onZoomInto }: { pitch: Pitch; selected: boolean; onZoomInto: (p: Pitch) => void }) => (
-  <MapMarker longitude={pitch.coordinates!.lng} latitude={pitch.coordinates!.lat} anchor="center">
-    <div
-      className={`oyna-mldot${selected ? ' selected' : ''}`}
-      role="button"
-      aria-label={`${pitch.name} — yakınlaş`}
-      onClick={(e) => { e.stopPropagation(); onZoomInto(pitch); }}
-    >
-      <div className="dot-core" />
-    </div>
-  </MapMarker>
-));
+// Nokta pini — uzak zoom görünümü. Ad yok; dokununca harita sahaya yakınlaşır
+// ve pinler seçilebilir ad balonlarına dönüşür (aşamalı keşif).
+const DotPin = React.memo(({ pitch, selected, onZoomInto }: { pitch: Pitch; selected: boolean; onZoomInto: (p: Pitch) => void }) => {
+  const icon = useMemo(() => createDiscoveryDotPin(selected), [selected]);
+  return (
+    <Marker
+      position={[pitch.coordinates!.lat, pitch.coordinates!.lng]}
+      icon={icon}
+      zIndexOffset={selected ? 1000 : 0}
+      alt={`${pitch.name} — yakınlaş`}
+      eventHandlers={{ click: (e) => { stopMapClick(e); onZoomInto(pitch); } }}
+    />
+  );
+});
+
+/**
+ * Harita örneğini dışarı verir ve zoom/tık olaylarını bağlar.
+ * (react-leaflet'te harita örneğine ancak MapContainer'ın İÇİNDEN erişilir;
+ * projedeki diğer harita ekranları da bu deseni kullanıyor.)
+ */
+const MapWiring = ({ onReady, onZoomChange, onBackgroundClick }: {
+  onReady: (map: L.Map) => void;
+  onZoomChange: (zoom: number) => void;
+  onBackgroundClick: () => void;
+}) => {
+  const map = useMap();
+  useMapEvents({
+    zoom: () => onZoomChange(map.getZoom()),
+    click: () => onBackgroundClick(),
+  });
+  useEffect(() => { onReady(map); }, [map, onReady]);
+  return null;
+};
 
 const MapViewComponent = ({
   pitches, selectedPitch, onPitchSelect, onOpenDetail, center, userLocation,
   onLocate, onLocateError, regionBoundaries,
 }: MapViewProps) => {
-  const mapRef = React.useRef<MapRef | null>(null);
-  const isFlyingRef = React.useRef(false);
+  // Harita örneği MapContainer'ın içinden gelir (MapWiring). State tutuluyor
+  // ki harita hazır olduğunda ona bağlı efektler (sınıra sığdır, merkeze uç)
+  // kendiliğinden çalışsın — ref ile zamanlama yarışı olurdu.
+  const [map, setMap] = useState<L.Map | null>(null);
   const carouselRef = React.useRef<HTMLDivElement | null>(null);
   const programmaticScrollRef = React.useRef(false);
-  const webglOk = useMemo(() => isWebglAvailable(), []);
   const [locating, setLocating] = useState(false);
   // iOS: Apple/Google seçici; Android/Web doğrudan Google.
   const [directionsFor, setDirectionsFor] = useState<Pitch | null>(null);
 
-  // Zoom'a bağlı pin modu: eşik altı nokta (fiyat gizli), üstü fiyat balonu.
-  const [bubbleMode, setBubbleMode] = useState(true); // initialViewState zoom=13 ≥ eşik
+  // Zoom'a bağlı pin modu: eşik altı nokta (ad gizli), üstü ad balonu.
+  const [bubbleMode, setBubbleMode] = useState(true); // başlangıç zoom=13 ≥ eşik
 
   // Pin ölçeği React render'ı OLMADAN CSS değişkeniyle güncellenir — zoom
   // sırasında her karede setState jank üretirdi; CSS var'ı GPU'da ucuz.
-  const applyPinScale = useCallback((zoom: number) => {
-    const el = mapRef.current?.getMap()?.getContainer();
+  const applyPinScale = useCallback((zoom: number, target?: L.Map) => {
+    const el = (target ?? map)?.getContainer();
     if (!el) return;
     const dotScale = Math.min(1, Math.max(0.5, 0.5 + (zoom - 8) * (0.5 / 4.5)));
     const bubbleScale = Math.min(1, Math.max(0.88, 0.88 + (zoom - PIN_BUBBLE_ZOOM) * 0.08));
     el.style.setProperty('--oyna-dot-scale', dotScale.toFixed(3));
     el.style.setProperty('--oyna-bubble-scale', bubbleScale.toFixed(3));
-  }, []);
+  }, [map]);
 
-  const handleZoomChange = useCallback((zoom: number) => {
-    applyPinScale(zoom);
+  const handleZoomChange = useCallback((zoom: number, target?: L.Map) => {
+    applyPinScale(zoom, target);
     setBubbleMode(zoom >= PIN_BUBBLE_ZOOM); // değer değişmezse React render atlar
   }, [applyPinScale]);
 
   // Nokta pinine dokunuş: seçim değil, sahaya yumuşak yakınlaşma — balonlar
   // görünür olduğu anda pinler seçilebilir hale gelir (aşamalı keşif).
+  //
+  // NOT — hedef zoom TAM SAYI: haritanın karo netliği `zoomSnap: 1` kararına
+  // dayanır (bkz. mapBase.ts). Ara bir zoom'da (13,7 gibi) karolar büyütülerek
+  // gösterilir ve yazılar bulanıklaşır.
   const zoomIntoPitch = useCallback((p: Pitch) => {
-    const map = mapRef.current;
     if (!p.coordinates || !map) return;
-    isFlyingRef.current = true;
-    map.flyTo({
-      center: [p.coordinates.lng, p.coordinates.lat],
-      zoom: Math.max(map.getZoom() + 1.6, PIN_BUBBLE_ZOOM + 1.2),
-      duration: 650,
-    });
-  }, []);
+    map.flyTo(
+      [p.coordinates.lat, p.coordinates.lng],
+      Math.max(Math.round(map.getZoom()) + 2, Math.ceil(PIN_BUBBLE_ZOOM) + 1),
+      { duration: 0.65 },
+    );
+  }, [map]);
 
   const handleDirections = (p: Pitch) => {
     if (!p.coordinates) return;
@@ -167,11 +207,9 @@ const MapViewComponent = ({
   );
 
   const flyToPitch = (p: Pitch) => {
-    const map = mapRef.current;
     if (!p.coordinates || !map) return;
-    isFlyingRef.current = true;
-    const z = Math.max(map.getZoom(), 15);
-    map.flyTo({ center: [p.coordinates.lng, p.coordinates.lat], zoom: z, duration: 700 });
+    const z = Math.max(Math.round(map.getZoom()), 15);
+    map.flyTo([p.coordinates.lat, p.coordinates.lng], z, { duration: 0.7 });
   };
 
   // Pin tap → seçim + uçuş + karuseli o karta kaydır (Airbnb çift yönlü senkron).
@@ -216,8 +254,7 @@ const MapViewComponent = ({
     setLocating(true);
     try {
       const coords = await onLocate();
-      isFlyingRef.current = true;
-      mapRef.current?.flyTo({ center: [coords.lng, coords.lat], zoom: 15, duration: 800 });
+      map?.flyTo([coords.lat, coords.lng], 15, { duration: 0.8 });
     } catch (e) {
       onLocateError((e as { message?: string })?.message || 'Konum alınamadı. Konum iznini kontrol et.');
     } finally {
@@ -232,11 +269,12 @@ const MapViewComponent = ({
     return regionBoundaries.features.map((f) => (f.properties?.key as string) ?? '').sort().join('|');
   }, [regionBoundaries]);
 
-  const mapReadyRef = React.useRef(false);
   // Seçili bölge sınırlarını kadraja sığdır (kenar boşluğuyla → sarı sınır İÇERİDE).
-  const fitToBoundaries = useCallback(() => {
-    const map = mapRef.current;
-    if (!map || !regionBoundaries?.features?.length) return;
+  // NOT: Leaflet sınırları [güney-batı, kuzey-doğu] ve [enlem, boylam] sırasıyla
+  // ister; GeoJSON koordinatları ise [boylam, enlem] verir — sıra burada çevrilir.
+  const fitToBoundaries = useCallback((target?: L.Map) => {
+    const m = target ?? map;
+    if (!m || !regionBoundaries?.features?.length) return;
     let minLng = Infinity, minLat = Infinity, maxLng = -Infinity, maxLat = -Infinity;
     const scan = (c: unknown): void => {
       if (typeof (c as number[])[0] === 'number') {
@@ -247,28 +285,33 @@ const MapViewComponent = ({
     };
     regionBoundaries.features.forEach((f) => f.geometry && scan((f.geometry as { coordinates: unknown }).coordinates));
     if (minLng !== Infinity) {
-      isFlyingRef.current = true;
-      map.fitBounds([[minLng, minLat], [maxLng, maxLat]], { padding: 60, maxZoom: 13, duration: 700 });
+      m.flyToBounds([[minLat, minLng], [maxLat, maxLng]], { padding: [60, 60], maxZoom: 13, duration: 0.7 });
     }
-  }, [regionBoundaries]);
+  }, [regionBoundaries, map]);
 
   // Sınır imzası değişince VE harita hazırsa sığdır (yarış koşulu yok).
   useEffect(() => {
-    if (boundsSig && mapReadyRef.current) fitToBoundaries();
+    if (boundsSig && map) fitToBoundaries();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [boundsSig]);
+  }, [boundsSig, map]);
 
   // Merkez prop'u değişince (ilçe filtresi / bölge) yumuşak uçuş. İlk değeri
-  // initialViewState koyar; bu efekt yalnız SONRAKİ değişimlerde uçar.
+  // MapContainer'ın `center`'ı koyar; bu efekt yalnız SONRAKİ değişimlerde uçar.
   const didInitCenter = React.useRef(false);
   useEffect(() => {
-    const map = mapRef.current;
     if (!map) return;
     if (!didInitCenter.current) { didInitCenter.current = true; return; }
-    isFlyingRef.current = true;
-    map.flyTo({ center: [center[1], center[0]], zoom: map.getZoom(), duration: 700 });
+    map.flyTo(center, map.getZoom(), { duration: 0.7 });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [center]);
+  }, [center, map]);
+
+  // Harita hazır olduğu an: örneği yukarı ver, pin ölçeğini kur, sınıra sığdır.
+  const handleMapReady = useCallback((m: L.Map) => {
+    setMap(m);
+    handleZoomChange(m.getZoom(), m);
+    fitToBoundaries(m);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const distanceLabel = (p: Pitch): string | null => {
     if (!userLocation || !p.coordinates) return null;
@@ -278,75 +321,73 @@ const MapViewComponent = ({
 
   const showCarousel = !!selectedPitch && mapPitches.length > 0;
 
-  // WebGL yoksa (çok eski/zayıf cihaz) nazik fallback — harita çökmesin.
-  if (!webglOk) {
-    return (
-      <div className="absolute inset-0 z-0 flex flex-col items-center justify-center gap-3 px-8 text-center bg-[#0A0E14]">
-        <MapPin size={30} className="text-ink-4" />
-        <p className="text-white/70 text-xs font-extrabold uppercase tracking-wide">Harita bu cihazda desteklenmiyor</p>
-        <p className="text-ink-4 text-[0.6875rem] leading-relaxed">Sahaları liste görünümünde inceleyebilirsin.</p>
-      </div>
-    );
-  }
-
   return (
     <div className="absolute inset-0 z-0">
-      <style>{OYNA_MAPLIBRE_CSS}</style>
-      <MapGL
-        ref={mapRef}
-        initialViewState={{ longitude: center[1], latitude: center[0], zoom: 13 }}
-        mapStyle={OYNA_MAPLIBRE_STYLE}
-        attributionControl={false}
-        dragRotate={false}
-        pitchWithRotate={false}
-        touchZoomRotate={true}
-        // PARMAK PAYLAŞIMI: harita sayfanın ortasında büyük bir alan kaplıyor.
-        // Tek parmağı kendine alırsa kullanıcı bu bölgeden sayfayı kaydıramaz.
-        // `cooperativeGestures` ile tek parmak SAYFAYI kaydırır, iki parmak
-        // haritayı gezdirir/yakınlaştırır; tek parmakla denenince MapLibre
-        // aşağıdaki Türkçe ipucunu gösterir. (Leaflet haritaları için aynı
-        // davranış components/map/mapBase.ts içinde kuruluyor.)
-        cooperativeGestures
-        locale={{
-          'CooperativeGesturesHandler.MobileHelpText': 'Haritayı gezdirmek için iki parmak kullan',
-          'CooperativeGesturesHandler.WindowsHelpText': 'Yakınlaştırmak için Ctrl + tekerlek',
-          'CooperativeGesturesHandler.MacHelpText': 'Yakınlaştırmak için ⌘ + tekerlek',
-        }}
+      <style>{DISCOVERY_MAP_CSS}</style>
+      {/*
+        PARMAK PAYLAŞIMI: harita ekranın büyük bir alanını kaplıyor. Tek parmağı
+        kendine alırsa kullanıcı bu bölgeden sayfayı kaydıramaz. `oynaMapProps`
+        dokunmatik cihazda `dragging: false` verir → tek parmak SAYFAYI kaydırır,
+        iki parmak haritayı gezdirir/yakınlaştırır. Tek parmakla denenince
+        "iki parmak kullan" ipucu belirir (utils/scrollSystem.ts tetikler,
+        görünümü OYNA_MAP_CSS'te). Fare varken sürükleme açık kalır.
+      */}
+      <MapContainer
+        center={center}
+        zoom={13}
         style={{ width: '100%', height: '100%' }}
-        onClick={() => onPitchSelect(null)}
-        onZoom={(e) => handleZoomChange(e.viewState.zoom)}
-        onLoad={() => {
-          mapReadyRef.current = true;
-          handleZoomChange(mapRef.current?.getZoom() ?? 13);
-          fitToBoundaries();
-        }}
+        {...oynaMapProps}
       >
-        <AttributionControl compact position="bottom-right" />
+        <TileLayer url={OYNA_TILE_URL} {...oynaTileProps} />
+        <MapWiring
+          onReady={handleMapReady}
+          onZoomChange={handleZoomChange}
+          onBackgroundClick={() => onPitchSelect(null)}
+        />
 
-        {/* Seçili bölgelerin idari sınırı — belirgin sarı çizgi (glow'lu) + çok hafif dolgu */}
+        {/* Seçili bölgelerin idari sınırı — belirgin sarı çizgi (glow'lu) + çok hafif dolgu.
+            İki katman: altta geniş ve saydam "parıltı", üstte net çizgi + çok hafif dolgu.
+            `interactive: false` ŞART — sınırın içine dokunmak seçimi bırakmayı engellemesin.
+            `key` sınır imzasıyla değişir: react-leaflet GeoJSON verisini sonradan
+            güncellemez, yeni anahtar katmanı yeniden kurar. */}
         {regionBoundaries && regionBoundaries.features.length > 0 && (
-          <MapSource id="oyna-regions" type="geojson" data={regionBoundaries}>
-            <MapLayer id="oyna-regions-fill" type="fill" paint={{ 'fill-color': '#FFE100', 'fill-opacity': 0.035 }} />
-            <MapLayer id="oyna-regions-glow" type="line" layout={{ 'line-join': 'round' }} paint={{ 'line-color': '#FFE100', 'line-width': 9, 'line-opacity': 0.18, 'line-blur': 6 }} />
-            <MapLayer id="oyna-regions-line" type="line" layout={{ 'line-join': 'round', 'line-cap': 'round' }} paint={{ 'line-color': '#FFE100', 'line-width': 3, 'line-opacity': 1 }} />
-          </MapSource>
+          <>
+            <GeoJSON
+              key={`glow-${boundsSig}`}
+              data={regionBoundaries}
+              interactive={false}
+              style={{ fill: false, color: '#FFE100', weight: 9, opacity: 0.18, lineJoin: 'round' }}
+            />
+            <GeoJSON
+              key={`line-${boundsSig}`}
+              data={regionBoundaries}
+              interactive={false}
+              style={{
+                color: '#FFE100', weight: 3, opacity: 1, lineJoin: 'round', lineCap: 'round',
+                fillColor: '#FFE100', fillOpacity: 0.035,
+              }}
+            />
+          </>
         )}
 
         {/* Mavi nokta YALNIZ gerçek kullanıcı konumunda — harita merkezinde değil */}
         {userLocation && (
-          <MapMarker longitude={userLocation.lng} latitude={userLocation.lat} anchor="center">
-            <div className="oyna-mluser"><div className="pulse" /><div className="dot" /></div>
-          </MapMarker>
+          <Marker
+            position={[userLocation.lat, userLocation.lng]}
+            icon={userLocationIcon}
+            interactive={false}
+            alt="Konumun"
+          />
         )}
 
         {mapPitches.map((pitch) => (
           bubbleMode ? (
-            <PricePin key={pitch.id} pitch={pitch} selected={selectedPitch?.id === pitch.id} onSelect={selectFromPin} />
+            <NamePin key={pitch.id} pitch={pitch} selected={selectedPitch?.id === pitch.id} onSelect={selectFromPin} />
           ) : (
             <DotPin key={pitch.id} pitch={pitch} selected={selectedPitch?.id === pitch.id} onZoomInto={zoomIntoPitch} />
           )
         ))}
-      </MapGL>
+      </MapContainer>
 
       {/* Konumuma dön FAB — karusel açıkken üstüne çıkar */}
       <button

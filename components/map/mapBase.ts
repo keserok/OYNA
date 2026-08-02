@@ -138,96 +138,118 @@ export const OYNA_MAP_CSS = `
 `;
 
 // ════════════════════════════════════════════════════════════════════════
-// MAPLIBRE (VEKTÖR) — keşif haritası. GPU'da pürüzsüz zoom/pan; pinler HTML
-// marker olduğundan koordinata NATIVE sabit (divIcon anchor hilesi gerekmez).
-// Karo kaynağı: OpenFreeMap (ücretsiz, anahtarsız). Diğer ekranlar hâlâ
-// Leaflet kullanır (yukarıdaki export'lar); bu bölüm yalnız PitchDiscovery.
+// KEŞİF HARİTASI (PitchDiscovery) — pin katmanı
+// ------------------------------------------------------------------------
+// Burası bir zamanlar MapLibre (vektör/WebGL) kullanıyordu. Uygulamada İKİ
+// ayrı harita motoru birden taşınıyordu: MapLibre yalnız bu tek ekranda,
+// Leaflet ise diğer beş ekranda. Bunun üç bedeli vardı:
+//   1. Telefon, hiç açmayabileceği bir ekran için ~800 KB fazladan kod
+//      indiriyor ve ayrıştırıyordu.
+//   2. MapLibre çizim için WebGL (ekran kartı) zorunlu kılar. Belleği dar
+//      Android'lerde WebGL bağlamı en önce düşürülen kaynaktır; bu, "uygulama
+//      kendini kapattı" şikâyetini besleyen etkenlerden biriydi. Kart WebGL'i
+//      hiç veremediğinde ise ekran "harita bu cihazda desteklenmiyor" diyordu.
+//   3. Aynı işin iki ayrı yerde iki ayrı biçimde bakımı gerekiyordu.
+//
+// Kullanıcı kararıyla harita motoru TEKE indirildi: Leaflet. Leaflet raster
+// karo çizer, WebGL istemez — yani en zayıf telefonda da harita AÇILIR.
+// Görünüm bilinçli olarak korunmuştur: aynı koyu bazemap, aynı pin biçimi,
+// aynı seçim davranışı ve aynı zoom'a bağlı ölçekleme.
+//
+// PİN SABİTLİĞİNİN KALBİ: divIcon 0×0 boyutlu ve anchor [0,0] verilir; yani
+// pin kökünün orijini TAM koordinata oturur. Görünen parçalar (balon, tip,
+// nokta) o orijine göre `position:absolute` + `transform` ile yerleşir.
+// Böylece zoom/pan sırasında Leaflet yalnız 0×0 kökü taşır, pin koordinata
+// çivili kalır. Bu desen dosyanın altındaki `OYNA_PITCH_PIN_CSS` ile aynıdır
+// ve uygulamada zaten kanıtlanmıştır.
 // ════════════════════════════════════════════════════════════════════════
 
-// OpenFreeMap koyu vektör stili (anahtarsız). Atıf stil içinde gömülü gelir.
-export const OYNA_MAPLIBRE_STYLE = 'https://tiles.openfreemap.org/styles/dark';
+/**
+ * Pin etiketleri saha adı gibi VERİTABANINDAN gelen metinler taşır ve bu
+ * metin `innerHTML` ile yazılır. Kaçırılmazsa bir saha adındaki `<` işareti
+ * pini bozar (kötü niyetli hâlde daha fazlasını yapar). Tek satırlık bekçi.
+ */
+const escapeHtml = (s: string): string =>
+  s.replace(/[&<>"']/g, (c) =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] as string),
+  );
 
-/** WebGL desteği (MapLibre zorunlu). Yoksa çağıran taraf nazik fallback gösterir. */
-export function isWebglAvailable(): boolean {
-  try {
-    const canvas = document.createElement('canvas');
-    return !!(
-      (window as unknown as { WebGLRenderingContext?: unknown }).WebGLRenderingContext &&
-      (canvas.getContext('webgl2') || canvas.getContext('webgl'))
-    );
-  } catch {
-    return false;
+/** Kullanıcının gerçek konumu (mavi nokta + nabız). Kullanan iki CSS bloğunda
+ *  da AYNI olsun diye tek yerde durur — kopyalanırsa biri güncellenmeden kalır. */
+export const OYNA_USER_LOCATION_CSS = `
+  /* Kullanıcı konumu (mavi nokta) — Uber tarzı, gerçek konumda */
+  .oyna-userloc-root { position: absolute; width: 0; height: 0; }
+  .oyna-userloc-dot {
+    position: absolute; left: 0; top: 0; transform: translate(-50%, -50%);
+    width: 16px; height: 16px; border-radius: 50%;
+    background: #00D8FF; border: 2.5px solid #fff;
+    box-shadow: 0 0 0 2px rgba(0,216,255,0.35), 0 2px 8px rgba(0,0,0,0.5);
   }
-}
+  .oyna-userloc-pulse {
+    position: absolute; left: 0; top: 0; transform: translate(-50%, -50%);
+    width: 16px; height: 16px; border-radius: 50%;
+    background: rgba(0,216,255,0.4);
+    animation: oynaUserPulse 2s ease-out infinite;
+  }
+  @keyframes oynaUserPulse {
+    0% { width: 16px; height: 16px; opacity: 0.7; }
+    100% { width: 64px; height: 64px; opacity: 0; }
+  }
+`;
 
-// MapLibre keşif haritası CSS: marka koyu zemin, atıf (minimal ⓘ), fiyat pini
-// (anchor="bottom" → tip koordinatta), kullanıcı mavi noktası, karusel gizli
-// scrollbar. Pinler maplibre tarafından GPU'da konumlanır → zoom'da kaymaz.
-export const OYNA_MAPLIBRE_CSS = `
-  .maplibregl-map { background: #060B12; font-family: inherit; -webkit-tap-highlight-color: transparent; }
-  .maplibregl-ctrl-attrib {
-    background: rgba(10,14,20,0.55) !important;
-    color: rgba(255,255,255,0.38) !important;
-    font-size: 9px !important; border-radius: 8px 0 0 0 !important;
-    backdrop-filter: blur(4px);
-  }
-  .maplibregl-ctrl-attrib a { color: rgba(57,255,20,0.55) !important; }
-  .maplibregl-ctrl-attrib-button { background-color: rgba(255,255,255,0.3) !important; }
-  /* İKİ PARMAK İPUCU (cooperativeGestures) — MapLibre bu katmanı kendi
-     yönetir; biz yalnız markaya uyduruyoruz. Tek parmakla haritayı gezdirmeye
-     çalışıldığında belirir, parmak kalkınca söner. */
-  .maplibregl-cooperative-gesture-screen {
-    background: rgba(6,11,18,0.62) !important;
-    color: #fff !important;
-    font-family: inherit !important;
-    font-size: 12px !important; font-weight: 800 !important; line-height: 1.4 !important;
-    text-align: center;
-    transition: opacity .35s ease .25s !important;
-  }
-  .maplibregl-cooperative-gesture-screen.maplibregl-show { transition: opacity .12s ease !important; }
-  /* Fiyat balonu pini — yalnız yakın zoom'da görünür; --oyna-bubble-scale
-     zoom'a göre JS'ten set edilir (uzaklaştıkça hafifçe küçülür). Anchor
-     bottom olduğundan ölçek alt-orta noktadan uygulanır → tip koordinatta kalır. */
-  .oyna-mlpin {
-    position: relative; display: flex; flex-direction: column; align-items: center; cursor: pointer;
-    transform: scale(var(--oyna-bubble-scale, 1));
-    transform-origin: center bottom;
-  }
-  .oyna-mlpin .pin-bubble {
+// Keşif haritası CSS'i: pin biçimleri MapLibre sürümüyle görsel olarak
+// birebir aynı; yalnız konumlandırma Leaflet'in 0×0 anchor desenine göre
+// yeniden kuruldu. `--oyna-bubble-scale` / `--oyna-dot-scale` değişkenlerini
+// zoom sırasında JS set eder (React render'ı olmadan → kaydırmada jank yok).
+export const OYNA_DISCOVERY_CSS = `
+  ${OYNA_USER_LOCATION_CSS}
+  /* ── Ad balonu pini — yakın zoom. Tip (nub) TAM koordinatta durur. ── */
+  .oyna-dpin { position: absolute; width: 0; height: 0; cursor: pointer; }
+  .oyna-dpin .pin-bubble {
+    position: absolute; left: 0; bottom: 11px;
+    transform: translateX(-50%) scale(var(--oyna-bubble-scale, 1));
+    transform-origin: 50% 100%;
     display: flex; align-items: center; gap: 4px;
     background: #0D111A; border: 1.5px solid rgba(57,255,20,0.35);
-    color: #39FF14; font-size: 10px; font-weight: 900; line-height: 1;
+    color: #39FF14; font-size: 10px; font-weight: 900; font-family: inherit; line-height: 1;
     padding: 6px 10px; border-radius: 100px; white-space: nowrap;
     box-shadow: 0 4px 22px rgba(0,0,0,0.7), 0 0 12px rgba(57,255,20,0.15);
-    transition: background-color .18s ease, color .18s ease, transform .18s ease, box-shadow .18s ease;
+    transition: background-color .18s ease, color .18s ease, border-color .18s ease, box-shadow .18s ease;
+    animation: oynaPinFade .22s ease-out;
   }
-  .oyna-mlpin .pin-bubble.selected {
+  .oyna-dpin .pin-bubble.selected {
     background: #39FF14; color: #000; border-color: #39FF14;
     box-shadow: 0 4px 24px rgba(0,0,0,0.7), 0 0 26px rgba(57,255,20,0.6);
-    transform: scale(1.14);
+    transform: translateX(-50%) scale(calc(var(--oyna-bubble-scale, 1) * 1.14));
   }
   /* Saha adı: uzun adlar pini şişirmesin — tek satır, kısaltmalı */
-  .oyna-mlpin .pin-bubble .pin-name {
+  .oyna-dpin .pin-bubble .pin-name {
     max-width: 132px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
-  .oyna-mlpin .pin-nub {
-    width: 9px; height: 9px; border-radius: 50%; background: #39FF14; margin-top: -2px;
+  .oyna-dpin .pin-nub {
+    position: absolute; left: 0; bottom: 0;
+    width: 9px; height: 9px; border-radius: 50%; background: #39FF14;
+    transform: translate(-50%, 50%);
     box-shadow: 0 0 10px rgba(57,255,20,0.85);
+    transition: background-color .18s ease, box-shadow .18s ease;
+    animation: oynaPinFade .22s ease-out;
   }
-  .oyna-mlpin .pin-nub.selected { background: #000; box-shadow: 0 0 15px rgba(57,255,20,1); }
-  .oyna-mlpin .pin-flash {
-    position: absolute; top: -14px; left: 50%; transform: translateX(-50%);
+  .oyna-dpin .pin-nub.selected { background: #000; box-shadow: 0 0 15px rgba(57,255,20,1); }
+  .oyna-dpin .pin-flash {
+    position: absolute; left: 0; bottom: 34px; transform: translateX(-50%);
     background: #FF3B30; color: #fff; font-size: 9px; font-weight: 900;
-    padding: 2px 6px; border-radius: 100px; white-space: nowrap; box-shadow: 0 2px 8px rgba(255,59,48,0.5);
+    padding: 2px 6px; border-radius: 100px; white-space: nowrap;
+    box-shadow: 0 2px 8px rgba(255,59,48,0.5);
   }
-  .oyna-mlpin .pin-bubble, .oyna-mlpin .pin-nub { animation: oynaPinFade .22s ease-out; }
-  /* Nokta pini — uzak zoom'da fiyat gizli, yalnız konum noktası. Dokunma alanı
-     sabit 30px (parmak dostu); görünen çekirdek --oyna-dot-scale ile küçülür. */
-  .oyna-mldot {
-    width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;
-    cursor: pointer;
+  /* ── Nokta pini — uzak zoom: ad gizli, yalnız konum noktası. Dokunma alanı
+     sabit 30px (parmak dostu), koordinatta ortalı; görünen çekirdek
+     --oyna-dot-scale ile küçülür. ── */
+  .oyna-ddot {
+    position: absolute; left: 0; top: 0;
+    width: 30px; height: 30px; margin: -15px 0 0 -15px;
+    display: flex; align-items: center; justify-content: center; cursor: pointer;
   }
-  .oyna-mldot .dot-core {
+  .oyna-ddot .dot-core {
     width: 13px; height: 13px; border-radius: 50%;
     background: #39FF14; border: 2px solid rgba(6,11,18,0.95);
     box-shadow: 0 0 9px rgba(57,255,20,0.65), 0 1px 4px rgba(0,0,0,0.5);
@@ -238,26 +260,48 @@ export const OYNA_MAPLIBRE_CSS = `
   /* IP-09: seçili pin eskiden saf sarıydı; seçilmemiş yeşille kontrastı
      1.26:1 — yani seçim gözle ayırt edilemiyordu. Artık beyaz VE %35 büyük:
      işaret yalnız renge değil, boyuta da yaslanıyor. */
-  .oyna-mldot.selected .dot-core {
+  .oyna-ddot.selected .dot-core {
     background: #FFFFFF;
     box-shadow: 0 0 0 4px rgba(255,255,255,0.30), 0 0 14px rgba(255,255,255,0.85);
     transform: scale(calc(var(--oyna-dot-scale, 1) * 1.35));
   }
   @keyframes oynaPinFade { from { opacity: 0; } to { opacity: 1; } }
-  .oyna-mluser { position: relative; width: 16px; height: 16px; }
-  .oyna-mluser .dot {
-    position: absolute; inset: 0; width: 16px; height: 16px; border-radius: 50%;
-    background: #00D8FF; border: 2.5px solid #fff;
-    box-shadow: 0 0 0 2px rgba(0,216,255,0.35), 0 2px 8px rgba(0,0,0,0.5);
-  }
-  .oyna-mluser .pulse {
-    position: absolute; inset: 0; width: 16px; height: 16px; border-radius: 50%;
-    background: rgba(0,216,255,0.4); animation: oynaUserPulse 2s ease-out infinite;
-  }
-  @keyframes oynaUserPulse { 0% { transform: scale(1); opacity: .7; } 100% { transform: scale(4); opacity: 0; } }
   .oyna-map-carousel { scrollbar-width: none; -ms-overflow-style: none; }
   .oyna-map-carousel::-webkit-scrollbar { display: none; }
 `;
+
+/**
+ * Keşif haritası ad pini (yakın zoom). Saha adını taşır; tipi koordinata çivili.
+ * `mapLabel` admin tarafından verilmişse o kullanılır, yoksa tam ad.
+ */
+export const createDiscoveryNamePin = (pitch: Pitch, isSelected: boolean): L.DivIcon => {
+  const nameLabel = escapeHtml(pitch.mapLabel || pitch.name || 'Saha');
+  const sel = isSelected ? ' selected' : '';
+  const flash = pitch.flashDiscount
+    ? `<div class="pin-flash">🔥 %${escapeHtml(String(pitch.flashDiscount))}</div>`
+    : '';
+  const dotFill = isSelected ? '#000' : '#39FF14';
+  return L.divIcon({
+    className: '',
+    html:
+      `<div class="oyna-dpin">${flash}` +
+      `<div class="pin-bubble${sel}">` +
+      `<svg width="8" height="8" viewBox="0 0 8 8" fill="${dotFill}"><circle cx="4" cy="4" r="4"/></svg>` +
+      `<span class="pin-name">${nameLabel}</span></div>` +
+      `<div class="pin-nub${sel}"></div></div>`,
+    iconSize: [0, 0],
+    iconAnchor: [0, 0],
+  });
+};
+
+/** Keşif haritası nokta pini (uzak zoom). Ad gizli; dokununca haritayı yakınlaştırır. */
+export const createDiscoveryDotPin = (isSelected: boolean): L.DivIcon =>
+  L.divIcon({
+    className: '',
+    html: `<div class="oyna-ddot${isSelected ? ' selected' : ''}"><div class="dot-core"></div></div>`,
+    iconSize: [0, 0],
+    iconAnchor: [0, 0],
+  });
 
 // ── Fiyat baloncuklu saha pini (SABİT anchor) ─────────────────────────────
 // Anchor [0,0] + 0×0 kök: kökün orijini TAM koordinata oturur; nub (tip)
@@ -299,24 +343,7 @@ export const OYNA_PITCH_PIN_CSS = `
     padding: 2px 6px; border-radius: 100px; white-space: nowrap;
     box-shadow: 0 2px 8px rgba(255,59,48,0.5);
   }
-  /* Kullanıcı konumu (mavi nokta) — Uber tarzı, gerçek konumda */
-  .oyna-userloc-root { position: absolute; width: 0; height: 0; }
-  .oyna-userloc-dot {
-    position: absolute; left: 0; top: 0; transform: translate(-50%, -50%);
-    width: 16px; height: 16px; border-radius: 50%;
-    background: #00D8FF; border: 2.5px solid #fff;
-    box-shadow: 0 0 0 2px rgba(0,216,255,0.35), 0 2px 8px rgba(0,0,0,0.5);
-  }
-  .oyna-userloc-pulse {
-    position: absolute; left: 0; top: 0; transform: translate(-50%, -50%);
-    width: 16px; height: 16px; border-radius: 50%;
-    background: rgba(0,216,255,0.4);
-    animation: oynaUserPulse 2s ease-out infinite;
-  }
-  @keyframes oynaUserPulse {
-    0% { width: 16px; height: 16px; opacity: 0.7; }
-    100% { width: 64px; height: 64px; opacity: 0; }
-  }
+  ${OYNA_USER_LOCATION_CSS}
 `;
 
 /**
