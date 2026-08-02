@@ -66,11 +66,64 @@ public class MainActivity extends BridgeActivity {
     /** Uygulamanin BIR ONCEKI kapanisinin sebebi (JSON). Ayarlar ekraninda gosterilir. */
     private static final String KEY_SON_KAPANMA = "oyna.sonKapanmaSebebi";
 
+    /** Push bildirimleri bu pakette CALISABILIR mi? ("true"/"false") */
+    private static final String KEY_PUSH_KULLANILABILIR = "oyna.pushKullanilabilir";
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         kaydetOncekiKapanmaSebebi();
+        kaydetPushKullanilabilirMi();
         kurWebViewCokmeKorumasi();
+    }
+
+    // ════════════════════════════════════════════════════════════════════════
+    // PUSH ALTYAPISI YOKSA UYGULAMA COKMESIN — "kendi kendine kapanma"nin
+    // GERCEK sebebi buydu
+    // ------------------------------------------------------------------------
+    // ZINCIR (gercek cihazdan alinan yigin izi ile dogrulandi):
+    //   1. `android/app/build.gradle` google-services eklentisini YALNIZCA
+    //      `google-services.json` dosyasi varsa uygular. Dosya depoda yok
+    //      (gizli bilgi oldugu icin .gitignore'da) ve derleme sirasinda da
+    //      yazilmadiysa eklenti hic uygulanmaz.
+    //   2. Eklenti uygulanmayinca Firebase yapilandirmasi APK'ya girmez ve
+    //      Firebase HIC kurulmaz.
+    //   3. Uygulama giristen ~1-2 saniye sonra `PushNotifications.register()`
+    //      cagirir (notifications/pushService.ts).
+    //   4. Native taraf Firebase'i ister ve
+    //      `IllegalStateException: Default FirebaseApp is not initialized`
+    //      atar.
+    //   5. Capacitor bu hatayi yakalar ama `RuntimeException` olarak YENIDEN
+    //      FIRLATIR (Bridge.java). Hata JS'e degil, native bir Handler
+    //      is parcacigina dusen olumcul hataya donusur.
+    //   6. Uygulama aninda kapanir. Kullanicinin gordugu: "ana ekrani gectikten
+    //      1-2 saniye sonra uygulama kapaniyor".
+    //
+    // NEDEN JS TARAFINDA TRY/CATCH YETMEZ: 5. adimdaki hata JS'e hic ulasmaz;
+    // sozun (promise) reddi olarak degil, surec olduren bir hata olarak
+    // dogar. Bu yuzden tek dogru cozum, altyapi yokken O CAGRIYI HIC YAPMAMAK.
+    //
+    // Burasi o karari verir ve JS'in okuyabilecegi yere yazar. Not: iOS'ta push
+    // Firebase'siz (dogrudan APNs ile) calisir; bu bayrak yalniz Android icindir.
+    // ════════════════════════════════════════════════════════════════════════
+    private void kaydetPushKullanilabilirMi() {
+        boolean kullanilabilir = false;
+        String neden;
+        try {
+            // Firebase kurulduysa varsayilan uygulama listede olur. Yapilandirma
+            // dosyasi yoksa liste BOS doner (Firebase sessizce kurulamaz).
+            kullanilabilir = !com.google.firebase.FirebaseApp.getApps(this).isEmpty();
+            neden = kullanilabilir
+                ? "Firebase kurulu — push kullanilabilir."
+                : "Firebase kurulamadi (google-services.json pakete girmemis) — push devre disi.";
+        } catch (Throwable t) {
+            // Sinif hic yoksa (eklenti kaldirilmis) ya da beklenmedik bir durum:
+            // guvenli taraf HER ZAMAN "kullanilamaz"dir. Push'un calismamasi,
+            // uygulamanin cokmesinden kat kat iyidir.
+            neden = "Firebase durumu okunamadi (" + t.getClass().getSimpleName() + ") — push devre disi.";
+        }
+        Log.i(TAG, neden);
+        yazTercih(KEY_PUSH_KULLANILABILIR, kullanilabilir ? "true" : "false");
     }
 
     // ════════════════════════════════════════════════════════════════════════

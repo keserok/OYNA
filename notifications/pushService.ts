@@ -6,6 +6,7 @@
 
 import { PushNotifications, Token, PushNotificationSchema, ActionPerformed } from '@capacitor/push-notifications';
 import { Capacitor } from '@capacitor/core';
+import { Preferences } from '@capacitor/preferences';
 import { supabase } from '../supabaseClient';
 // Derin bağlantı maçı HAM satır değil, map'lenmiş MatchListing olarak taşır
 // (BULGU-100). matchService yalnız supabaseClient + types import ettiği için
@@ -254,6 +255,50 @@ export const handleDeepLink = async (
   }
 };
 
+// ════════════════════════════════════════════════════════════════════════════
+// ÇÖKME KORUMASI — "uygulama ana ekrandan 1-2 saniye sonra kapanıyor"
+// ----------------------------------------------------------------------------
+// Bu, uygulamanın kendi kendine kapanmasının GERÇEK sebebiydi ve gerçek cihazdan
+// alınan yığın iziyle doğrulandı:
+//
+//   IllegalStateException: Default FirebaseApp is not initialized in this
+//   process com.oyna.app
+//
+// Zincir şöyle işliyordu:
+//   1. `google-services.json` (Firebase yapılandırması) pakete girmemişti.
+//      `android/app/build.gradle` google-services eklentisini yalnız o dosya
+//      varsa uygular; yoksa Firebase HİÇ kurulmaz.
+//   2. Uygulama, girişten hemen sonra `PushNotifications.register()` çağırıyordu.
+//   3. Native taraf Firebase'i bulamayıp hata atıyordu.
+//   4. Capacitor bu hatayı `RuntimeException` olarak YENİDEN FIRLATIYOR ve hata
+//      native bir iş parçacığında süreç öldüren bir hataya dönüşüyordu.
+//   5. Uygulama anında kapanıyordu.
+//
+// AŞAĞIDAKİ try/catch BU HATAYI YAKALAYAMAZ. Hata JS'e hiç ulaşmıyor; sözün
+// (promise) reddi olarak değil, uygulamayı öldüren native bir hata olarak
+// doğuyor. Bu yüzden tek doğru çözüm, altyapı yokken O ÇAĞRIYI HİÇ YAPMAMAK.
+//
+// Kararı Android tarafı verir (MainActivity.java, Firebase gerçekten kurulmuş
+// mu diye bakar) ve buraya bir bayrak bırakır. iOS'ta push Firebase'siz
+// (doğrudan APNs ile) çalışır, bu yüzden kontrol yalnız Android'e uygulanır.
+// ════════════════════════════════════════════════════════════════════════════
+
+/** MainActivity.java ile AYNI anahtar olmalı — orada da sabit olarak yazılı. */
+const PUSH_KULLANILABILIR_ANAHTARI = 'oyna.pushKullanilabilir';
+
+export const pushAltyapisiHazirMi = async (): Promise<boolean> => {
+  // iOS push için Firebase gerekmez; kontrol yalnız Android'i ilgilendirir.
+  if (Capacitor.getPlatform() !== 'android') return true;
+  try {
+    const { value } = await Preferences.get({ key: PUSH_KULLANILABILIR_ANAHTARI });
+    // Bayrak YOKSA da "hazır değil" sayılır. Push'un çalışmaması, uygulamanın
+    // çökmesinden kat kat iyidir — belirsizlikte güvenli tarafta kalınır.
+    return value === 'true';
+  } catch {
+    return false;
+  }
+};
+
 // ─── Ana Başlatma Fonksiyonu ─────────────────────────────────────
 export const initPushNotifications = async (
   userId: string,
@@ -263,6 +308,17 @@ export const initPushNotifications = async (
   // Web platformunda Capacitor push çalışmaz, sessizce çık
   if (!Capacitor.isNativePlatform()) {
     console.log('[PushService] Web platformu tespit edildi — native push devre dışı.');
+    return false;
+  }
+
+  // ÇÖKME KORUMASI: altyapı yoksa hiçbir push çağrısı yapılmaz (yukarıdaki
+  // uzun nota bak). Bu satır olmadan uygulama açılıştan saniyeler sonra ölür.
+  if (!(await pushAltyapisiHazirMi())) {
+    console.warn(
+      '[PushService] Push altyapısı bu pakette yok (Firebase kurulmamış) — ' +
+      'kayıt adımı atlandı. Uygulamanın geri kalanı normal çalışır; yalnızca ' +
+      'anlık bildirim gelmez.',
+    );
     return false;
   }
 

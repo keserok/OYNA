@@ -92,16 +92,57 @@ jobs:
         run: npm run build:legal
         continue-on-error: true
 
+      # ─────────────────────────────────────────────────────────────────────
+      # FIREBASE YAPILANDIRMASI — burasi bir kez uygulamayi COKERTTI, dikkat.
+      #
+      # OLAN SUYDU: secret tanimli degildi, bu adim yalnizca bir "warning"
+      # basip gecti ve IMZALI, DAGITILABILIR ama ACILISTA COKEN bir APK
+      # uretildi. Cokme sebebi: google-services.json olmayinca
+      # `android/app/build.gradle` google-services eklentisini uygulamiyor →
+      # Firebase hic kurulmuyor → uygulamanin girissen sonra cagirdigi
+      # `PushNotifications.register()` native tarafta olumcul hata atiyor.
+      #
+      # Iki katmanli koruma var, ikisi de gerekli:
+      #   1. UYGULAMA TARAFI: Firebase yoksa register() HIC cagrilmaz
+      #      (MainActivity.java + notifications/pushService.ts). Yani eksik
+      #      secret artik uygulamayi COKERTMEZ, yalnizca push'u kapatir.
+      #   2. BURASI: durum artik goze batacak sekilde raporlanir; eksikse
+      #      hata seviyesinde anons edilir ve is ozetine yazilir ki
+      #      "push neden gelmiyor?" sorusu bir daha aranmasin.
+      # ─────────────────────────────────────────────────────────────────────
       - name: Firebase yapilandirmasi (push bildirimleri)
+        id: firebase
         env:
           GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
         run: |
-          if [ -n "$GOOGLE_SERVICES_JSON" ]; then
-            printf '%s' "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
-            echo "::notice::google-services.json yazildi — push bildirimleri aktif."
-          else
-            echo "::warning::GOOGLE_SERVICES_JSON secret'i yok — bu pakette ANDROID PUSH BILDIRIMLERI CALISMAZ."
+          if [ -z "$GOOGLE_SERVICES_JSON" ]; then
+            echo "push=false" >> "$GITHUB_OUTPUT"
+            echo "::error::GOOGLE_SERVICES_JSON secret'i TANIMLI DEGIL. Bu pakette push bildirimleri CALISMAZ. (Uygulama cokmez — koruma devrede — ama anlik bildirim gitmez.) Duzeltmek icin: Firebase Console -> Proje ayarlari -> Android uygulamasi -> google-services.json indir; GitHub -> Settings -> Secrets and variables -> Actions -> New repository secret -> ad: GOOGLE_SERVICES_JSON, deger: dosyanin TAM icerigi."
+            exit 0
           fi
+
+          printf '%s' "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
+
+          # Secret bozuk/yarim yapistirilmis olabilir. Bozuk dosya, sessizce
+          # calismayan bir push'tan daha kotusudur: Gradle eklentisi uygulanir
+          # ama yapilandirma hatali olur. Icerigi burada dogrula.
+          if ! python3 -c "
+          import json,sys
+          d=json.load(open('android/app/google-services.json'))
+          assert d['project_info']['project_id'], 'project_id bos'
+          assert d['client'], 'client listesi bos'
+          pkgs=[c['client_info']['android_client_info']['package_name'] for c in d['client']]
+          assert 'com.oyna.app' in pkgs, 'google-services.json com.oyna.app icermiyor, bulunanlar: %s' % pkgs
+          print('project_id=%s' % d['project_info']['project_id'])
+          "; then
+            rm -f android/app/google-services.json
+            echo "push=false" >> "$GITHUB_OUTPUT"
+            echo "::error::GOOGLE_SERVICES_JSON secret'i GECERSIZ (bozuk JSON ya da yanlis paket kimligi). Dosya silindi; paket push'suz uretilecek. Secret'i Firebase Console'dan yeniden indirip TAM icerigiyle yapistir."
+            exit 0
+          fi
+
+          echo "push=true" >> "$GITHUB_OUTPUT"
+          echo "::notice::google-services.json dogrulandi — push bildirimleri aktif."
 
       # Uygulama ikonu ve acilis ekrani, assets/ altindaki ana gorsellerden
       # HER DERLEMEDE yeniden uretilir. Bu adim olmadan android/.../res/mipmap-*
@@ -193,8 +234,18 @@ jobs:
             echo "| Surum adi | \`${{ steps.ver.outputs.name }}\` |"
             echo "| Surum kodu (versionCode) | \`${{ steps.ver.outputs.code }}\` |"
             echo "| Imzali mi | \`${{ steps.signing.outputs.signed }}\` |"
+            echo "| Push bildirimleri | \`${{ steps.firebase.outputs.push }}\` |"
             echo "| Paket kimligi | \`com.oyna.app\` |"
             echo ""
+            if [ "${{ steps.firebase.outputs.push }}" != "true" ]; then
+              echo "> **Push bildirimleri bu pakette KAPALI.** Uygulama normal calisir ve"
+              echo "> COKMEZ (koruma devrede), ama anlik bildirim gonderilemez. Acmak icin"
+              echo "> \`GOOGLE_SERVICES_JSON\` secret'ini ekle: Firebase Console -> Proje"
+              echo "> ayarlari -> Android uygulamasi -> google-services.json indir ->"
+              echo "> GitHub -> Settings -> Secrets and variables -> Actions -> New"
+              echo "> repository secret (ad: GOOGLE_SERVICES_JSON, deger: dosyanin tam icerigi)."
+              echo ""
+            fi
             if [ "${{ steps.signing.outputs.signed }}" = "true" ]; then
               echo "**Sirada ne var:** Yukaridaki \"Artifacts\" bolumunden .aab dosyasini indir,"
               echo "Play Console -> Uretim (Production) -> Yeni surum olustur -> dosyayi surukle."

@@ -422,3 +422,85 @@ Sebebe göre yol haritası:
   donanım hızlandırmayı sınırlamak gündeme gelir.
 * **ANR** → ana iş parçacığını bloklayan iş aranır.
 * **CRASH** → yığın izi doğrudan satırı gösterir.
+
+---
+
+## 9. ✅ ÇÖZÜLDÜ — "uygulama kendi kendine kapanıyor"un GERÇEK sebebi
+
+Sekizinci bölümde kurulan teşhis düzeneği işe yaradı: kullanıcı gerçek cihazdan
+yığın izini paylaştı ve sebep kesinleşti. **Bellekle hiç ilgisi yokmuş.**
+
+```
+java.lang.RuntimeException: java.lang.reflect.InvocationTargetException
+  at com.getcapacitor.Bridge.lambda$callPluginMethod$0(Bridge.java:850)
+  ...
+Caused by: java.lang.reflect.InvocationTargetException
+  at com.getcapacitor.PluginHandle.invoke(PluginHandle.java:138)
+Caused by: java.lang.IllegalStateException:
+  Default FirebaseApp is not initialized in this process com.oyna.app
+```
+
+### 9.1 Zincir
+
+| # | Olan |
+|---|---|
+| 1 | `google-services.json` (Firebase yapılandırması) pakete **girmemiş**. Dosya gizli bilgi olduğu için `.gitignore`'da; derleme sırasında `GOOGLE_SERVICES_JSON` secret'ından yazılması gerekiyor, secret tanımlı değildi. |
+| 2 | `android/app/build.gradle` google-services eklentisini **yalnız o dosya varsa** uygular (satır 75-80). Dosya yok → eklenti uygulanmadı → Firebase yapılandırması APK'ya hiç girmedi. |
+| 3 | Uygulama, girişten ~1-2 saniye sonra `PushNotifications.register()` çağırıyor (`notifications/pushService.ts`). |
+| 4 | Native taraf `FirebaseMessaging.getInstance()` istiyor → `IllegalStateException`. |
+| 5 | Capacitor bu hatayı yakalıyor ama **`RuntimeException` olarak yeniden fırlatıyor** (`Bridge.java`). Hata JS'e değil, native bir Handler iş parçacığına düşen ölümcül hataya dönüşüyor. |
+| 6 | Süreç ölüyor. Kullanıcının gördüğü: *"ana ekranı geçtikten 1-2 saniye sonra kapanıyor."* |
+
+### 9.2 Neden önceki iki tur tutmadı — ve buradan çıkan ders
+
+* **1. tur** WebView render sürecinin ölümüne karşı koruma yazdı. Gerçek bir
+  senaryodur ama bu değildi.
+* **2. tur** bellek tüketimini düşürdü (harita karoları ~400 MB → ~8 MB).
+  Gerçek bir kazançtır ama bu da değildi.
+* **3. tur** sebebi sormayı bıraktı, **ölçtü** — ve tek turda bitti.
+
+> **KURAL:** "Uygulama kapanıyor" bir teşhis değil, bir SEMPTOMDUR. Yığın izi ya
+> da `getHistoricalProcessExitReasons` kaydı görülmeden yazılan hiçbir düzeltme
+> "çözüm" sayılmaz. İki tur ve iki APK bu yüzden harcandı.
+
+### 9.3 Neden JS tarafında `try/catch` yetmez
+
+`initPushNotifications` zaten baştan sona `try/catch` içindeydi ve yine de
+çöküyordu. Sebep: hata 5. adımda **JS'e hiç ulaşmıyor**. Sözün (promise) reddi
+olarak değil, native iş parçacığında süreç öldüren bir hata olarak doğuyor.
+JavaScript'in yakalayabileceği bir şey ortada yok.
+
+**Tek doğru çözüm: altyapı yokken o çağrıyı HİÇ YAPMAMAK.**
+
+### 9.4 Uygulanan çözüm — üç katman
+
+**Katman 1 — Uygulama bir daha bu yüzden çökmez.**
+`MainActivity.java` açılışta Firebase'in gerçekten kurulup kurulmadığına bakar
+(`FirebaseApp.getApps(...)`) ve sonucu Capacitor tercih deposuna yazar.
+`pushService.ts` bu bayrağı okur; Firebase yoksa `register()` çağrısını hiç
+yapmaz. Uygulama normal çalışır, yalnızca anlık bildirim gelmez.
+
+Bilgi **yoksa** da push kapatılır — belirsizlikte güvenli taraf budur. Push'un
+çalışmaması, uygulamanın çökmesinden kat kat iyidir. (Birim testi bu hâli ayrıca
+sabitler; negatif kontrol yapıldı.)
+
+iOS'ta push Firebase istemez (doğrudan APNs), bu yüzden kontrol yalnız
+Android'e uygulanır.
+
+**Katman 2 — Bu bir daha sessizce olmaz.**
+İş akışı eskiden secret yokken yalnızca bir "warning" basıp geçiyor ve
+**imzalı, dağıtılabilir ama açılışta çöken** bir APK üretiyordu. Artık:
+* secret yoksa `::error::` seviyesinde anons + iş özetinde açık uyarı,
+* secret varsa içeriği **doğrulanır** (geçerli JSON mu, `com.oyna.app` paketini
+  içeriyor mu). Yarım yapıştırılmış bir secret sessizce kabul edilmez.
+
+**Katman 3 — Push'u gerçekten açmak (kullanıcı adımı).**
+Firebase Console → Proje ayarları → Android uygulaması → `google-services.json`
+indir → GitHub → Settings → Secrets and variables → Actions → New repository
+secret → ad `GOOGLE_SERVICES_JSON`, değer dosyanın tam içeriği.
+
+### 9.5 Bu, üretimdeki paketi de etkiliyor
+
+Play Store'a giden AAB de aynı iş akışıyla üretildiği için, secret hiç
+tanımlanmadıysa **üretimdeki uygulama da aynı çökmeyi yaşıyor** demektir.
+Katman 1 çökmeyi kaldırır; push'un çalışması için Katman 3 şarttır.
