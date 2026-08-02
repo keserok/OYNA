@@ -107,22 +107,38 @@ public class MainActivity extends BridgeActivity {
     // Firebase'siz (dogrudan APNs ile) calisir; bu bayrak yalniz Android icindir.
     // ════════════════════════════════════════════════════════════════════════
     private void kaydetPushKullanilabilirMi() {
+        // Ek ipucu: google-services eklentisi uygulandiysa bu kaynak URETILIR.
+        // Yoksa yapilandirma APK'ya hic girmemis demektir. Teshis icin loglanir.
+        int kaynakId = getResources().getIdentifier("google_app_id", "string", getPackageName());
+
         boolean kullanilabilir = false;
         String neden;
         try {
-            // Firebase kurulduysa varsayilan uygulama listede olur. Yapilandirma
-            // dosyasi yoksa liste BOS doner (Firebase sessizce kurulamaz).
-            kullanilabilir = !com.google.firebase.FirebaseApp.getApps(this).isEmpty();
+            // ── NEDEN YANSIMA (reflection)? ──────────────────────────────────
+            // `com.google.firebase.FirebaseApp` sinifina DOGRUDAN yazmak bu
+            // dosyayi derlenemez yapar: push eklentisi firebase-messaging'i
+            // `implementation` olarak tanimlar, yani sinifi kendi disina ACMAZ
+            // ve uygulama modulunun derleme yolunda gorunmez. (Denendi; derleme
+            // bu yuzden kirildi.)
+            //
+            // Yansima ile bagimlilik derleme zamanindan CALISMA zamanina kayar:
+            // sinif varsa gercek cevabi aliriz, yoksa guvenli tarafta kaliriz.
+            // Ayrica dogru tasarim da budur — bu dosyanin Firebase'i tanimasi
+            // gerekmiyor, yalnizca "kurulu mu?" sorusunun cevabi gerekiyor.
+            Class<?> firebaseApp = Class.forName("com.google.firebase.FirebaseApp");
+            Object liste = firebaseApp.getMethod("getApps", Context.class).invoke(null, this);
+            kullanilabilir = (liste instanceof List) && !((List<?>) liste).isEmpty();
             neden = kullanilabilir
                 ? "Firebase kurulu — push kullanilabilir."
                 : "Firebase kurulamadi (google-services.json pakete girmemis) — push devre disi.";
+        } catch (ClassNotFoundException e) {
+            neden = "Firebase kitapligi pakette yok — push devre disi.";
         } catch (Throwable t) {
-            // Sinif hic yoksa (eklenti kaldirilmis) ya da beklenmedik bir durum:
-            // guvenli taraf HER ZAMAN "kullanilamaz"dir. Push'un calismamasi,
-            // uygulamanin cokmesinden kat kat iyidir.
+            // Beklenmedik her durumda guvenli taraf "kullanilamaz"dir. Push'un
+            // calismamasi, uygulamanin cokmesinden kat kat iyidir.
             neden = "Firebase durumu okunamadi (" + t.getClass().getSimpleName() + ") — push devre disi.";
         }
-        Log.i(TAG, neden);
+        Log.i(TAG, neden + " (google_app_id kaynagi " + (kaynakId != 0 ? "VAR" : "YOK") + ")");
         yazTercih(KEY_PUSH_KULLANILABILIR, kullanilabilir ? "true" : "false");
     }
 
