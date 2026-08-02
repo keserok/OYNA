@@ -894,3 +894,58 @@ input:-webkit-autofill:focus {
 }
 
 
+
+/* ══════════════════════════════════════════════════════════════════════════
+   ZAYIF CİHAZ MODU — html.oyna-lite
+   ──────────────────────────────────────────────────────────────────────────
+   Sınıfı kim ekliyor: `utils/perfTier.ts` (açılışta, cihazın çekirdek/RAM
+   sinyallerine bakarak). Karar mantığı `views/studio/perf.ts` içindedir.
+
+   NEDEN: `backdrop-filter` (cam efekti) mobil GPU'daki EN pahalı efekttir.
+   Efekti taşıyan her kutu için tarayıcı ayrı bir katman açar, arkasındaki
+   görüntüyü kopyalar ve bulandırır — her karede yeniden. Uygulamada 191 yerde
+   var; bir liste kaydırılırken ekrandaki tüm kartlar aynı anda bunu tetikler.
+   Giriş seviyesi telefonlarda kare hızını yere indiren, "tutukluk" olarak
+   hissedilen ana sebep budur.
+
+   NE DEĞİŞİR: yalnız bulanıklık. Kutuların arka plan rengi, saydamlığı,
+   kenarlığı, içeriği ve yerleşimi AYNI kalır — uygulamadaki cam yüzeylerin
+   neredeyse tamamı zaten koyu ve %60–95 opak (bg-black/70, bg-black/85 gibi),
+   bu yüzden bulanıklık gitse de okunabilirlik korunur.
+
+   NE DEĞİŞMEZ: animasyonlar. Onların kararı `hooks/useLowMotion.ts` içinde
+   ayrıca verilmiştir ve bilinçli olarak yalnız kullanıcının sistem tercihine
+   bağlıdır — cihaz gücüne göre otomatik kapatılmaz.
+
+   GERİ ALMA: bu bloğu silmek yeterlidir; başka hiçbir dosya bilmez.
+   ══════════════════════════════════════════════════════════════════════════ */
+html.oyna-lite [class*="backdrop-blur"] {
+  /* ÖNEMLİ — bu satır kuralın ÇALIŞAN kısmıdır, silinmemeli.
+     Alttaki iki `backdrop-filter: none` satırına tek başına GÜVENİLEMEZ:
+     CSS küçültücü (lightningcss) ikisini aynı özellik sayıp standart olanı
+     atıyor, geriye yalnız `-webkit-` öneki kalıyor. Android WebView ise
+     öneksiz olanı okur — yani yalnız o iki satır bırakılsaydı, kural tam da
+     hedeflediği telefonlarda hiçbir işe yaramazdı (derlenmiş çıktıda
+     doğrulandı).
+
+     Tailwind bulanıklığı `backdrop-filter: var(--tw-backdrop-blur,) ...`
+     biçiminde kurar. Değişkeni `initial` yapınca `var()` boş yedeğine düşer;
+     kodda başka backdrop efekti (brightness/saturate vb.) hiç kullanılmadığı
+     için ifadenin tamamı boşalır, özellik geçersiz olur ve tarayıcı pahalı
+     katmanı HİÇ açmaz. Küçültücü değişken adına dokunamaz. */
+  --tw-backdrop-blur: initial;
+
+  /* Tailwind dışında elle yazılmış bir cam efekti kalırsa diye ikinci hat. */
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* Neon "glow" gölgeleri de her karede yeniden çizilen pahalı efektlerdir.
+   Zayıf cihazda butonun kendisi ve rengi durur, yalnız etrafındaki ışıma
+   söner. (perf.ts'in "lite" tanımı: gölge/blur/glow kısılır.) */
+html.oyna-lite .button-neon-glow,
+html.oyna-lite .button-neon-glow-blue,
+html.oyna-lite .button-neon-glow:hover,
+html.oyna-lite .button-neon-glow-blue:hover {
+  box-shadow: none !important;
+}

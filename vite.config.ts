@@ -67,10 +67,41 @@ export default defineConfig({
         admin: path.resolve(__dirname, 'admin-panel/admin.html'),
       },
       output: {
-        manualChunks: {
-          'react-vendor': ['react', 'react-dom'],
-          'supabase-vendor': ['@supabase/supabase-js'],
-          'ui-vendor': ['framer-motion', 'lucide-react', 'recharts']
+        // ── PAKET AYRIMI (telefondaki açılış hızının BİRİNCİ belirleyicisi) ──
+        //
+        // Telefon uygulamayı açarken, ilk ekran boyanmadan ÖNCE burada
+        // "vendor" diye ayrılan paketlerin tamamını okumak ve derlemek
+        // zorundadır. Giriş seviyesi bir telefonda bu iş saniyelerle ölçülür.
+        //
+        // ÖNCEKİ HALİ liste biçimindeydi (`{'react-vendor': ['react', ...]}`)
+        // ve iki sessiz hatası vardı:
+        //
+        //   1. `react-vendor` paketi 1 BAYT olarak üretiliyordu — yani boştu.
+        //      React, kural eşleşmediği için `ui-vendor`ın içine karışmıştı;
+        //      amaçlanan ayrım hiç gerçekleşmiyordu.
+        //   2. `ui-vendor` içinde `recharts` (grafik çizim kütüphanesi) vardı.
+        //      recharts YALNIZCA admin panelinde, tek bir sayfada kullanılıyor
+        //      (`admin-panel/views/pages/DashboardPage.tsx`). Buna rağmen
+        //      telefondaki index.html onu açılışta yüklüyordu: her kullanıcı,
+        //      hiç görmeyeceği grafikler için 338 KB'lık kod indirip derliyordu.
+        //
+        // Fonksiyon biçimi paket YOLUNA bakar, bu yüzden iki hata da ortadan
+        // kalkar. Ölçülen sonuç — telefonun açılışta işlediği kod+stil:
+        //      önce: 1.510.000 bayt (403 KB sıkıştırılmış)
+        //      sonra: 1.172.000 bayt (301 KB sıkıştırılmış)
+        // recharts artık yalnız admin paneli o sayfayı açtığında yükleniyor.
+        //
+        // KURAL: buraya yeni bir satır eklerken, o kütüphanenin telefonda
+        // gerçekten AÇILIŞTA gerekip gerekmediğini sor. Gerekmiyorsa kendi
+        // adıyla ayrı bir parçaya koy — ayrı parça, ihtiyaç anında yüklenir.
+        manualChunks(id: string) {
+          if (!id.includes('node_modules')) return;
+          if (/node_modules\/(react|react-dom|scheduler)\//.test(id)) return 'react-vendor';
+          if (id.includes('@supabase')) return 'supabase-vendor';
+          if (id.includes('framer-motion') || id.includes('motion-dom') || id.includes('motion-utils')) return 'motion-vendor';
+          // Grafikler: yalnız admin panelinde. Telefon bu parçayı HİÇ yüklemez.
+          if (id.includes('recharts') || id.includes('/d3-') || id.includes('victory-vendor')) return 'charts-vendor';
+          if (id.includes('lucide-react')) return 'icons-vendor';
         }
       }
     }
