@@ -20,6 +20,7 @@ import RegionPickerPage from '../components/settings/RegionPickerPage';
 import ProfileInfoPage from '../components/settings/ProfileInfoPage';
 import FieldRolePage from '../components/settings/FieldRolePage';
 import SupportPage from '../components/settings/SupportPage';
+import SonKapanmaKarti from '../components/settings/SonKapanmaKarti';
 import { APP_VERSION } from '../utils/appVersion';
 import { getMyStaffPitches, staffAcceptInvite, type StaffPitch } from '../services/staffService';
 
@@ -434,6 +435,9 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
               value=""
               onClick={() => setSubPage('support')}
             />
+            {/* Uygulama beklenmedik şekilde kapandıysa sebebini gösterir.
+                Kapanma olmamışsa ya da Android değilse hiçbir şey çizmez. */}
+            <SonKapanmaKarti />
             <button
               onClick={handleLogout}
               className="w-full flex items-center justify-center gap-2 p-4 mt-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-500 font-bold text-sm hover:bg-red-500/20 transition-colors"

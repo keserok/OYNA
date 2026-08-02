@@ -315,3 +315,110 @@ yeşil · `oyna-lite` kuralı gerçek Chromium'da doğrulandı.
 Java değişikliği yalnız Capacitor'ın resmî `Bridge.setWebViewClient` API'sini ve
 standart Android sınıflarını kullanır; derlenmesi
 `.github/workflows/android-release.yml` iş akışında gerçekleşir.
+
+---
+
+## 8. Üçüncü tur — "uygulama hâlâ kendi kendine kapanıyor"
+
+İlk turdaki `onRenderProcessGone` koruması APK'ya girdi ve **sorun devam etti.**
+Buradan çıkan ders, çözümün kendisinden daha önemli: *kapanmanın tek bir sebebi
+yok ve dışarıdan hepsi aynı görünüyor.* İkinci kez tahmin yürütmek yerine
+sebebin ÖLÇÜLMESİ gerekiyordu.
+
+### 8.1 Sebebi tahmin etme — telefona sor
+
+Android 11'den beri sistem, uygulamanın önceki kapanışlarının sebebini kendisi
+tutuyor (`ActivityManager.getHistoricalProcessExitReasons`). Olası sebepler ve
+ilaçları birbirinden tamamen farklı:
+
+| Sistem sebebi | Anlamı | Doğru ilaç |
+|---|---|---|
+| `REASON_LOW_MEMORY` | Telefonun belleği doldu | Bellek tüketimini düşür |
+| `REASON_SIGNALED` | Sistem/üretici yazılımı zorla kapattı | Pil koruma ayarı, bellek |
+| `REASON_CRASH` | Java tarafında hata | Yığın izini oku, hatayı düzelt |
+| `REASON_CRASH_NATIVE` | WebView/sistem kütüphanesinde derin çökme | WebView sürümü, GPU |
+| `REASON_ANR` | Uygulama dondu, sistem kapattı | Ana iş parçacığını boşalt |
+| `REASON_FREEZER` | Arka planda dondurulmuşken sonlandırıldı | Genelde normaldir |
+
+`MainActivity.java` açılışta bu kaydı okur, sade Türkçeye çevirir ve
+`@capacitor/preferences` eklentisinin kullandığı `SharedPreferences` dosyasına
+(`CapacitorStorage`) yazar. Böylece **ayrı bir Capacitor eklentisi yazmadan** JS
+tarafı bilgiyi `Preferences.get()` ile okuyabilir.
+
+Kullanıcı **Ayarlar → Destek** altında "Son kapanma sebebi" kartını görür:
+sebep, zaman, o andaki bellek kullanımı ve *kapanma anında uygulamayı kullanıp
+kullanmadığı*. Son ayrım kritik — ön planda kapanma gerçek bir arızadır; arka
+planda kapanma Android'in normal bellek geri alımı olabilir (kullanıcı geri
+döndüğünde uygulama baştan açılır ve bu da "kendi kendine kapandı" hissettirir
+ama sebebi bambaşkadır).
+
+Kart yalnız Android'de ve kayıt varsa çizilir; bilgi telefonda kalır, hiçbir
+yere gönderilmez.
+
+### 8.2 Ölçülen somut bellek kaçağı: harita karoları
+
+Sebebi beklerken bulunan ve tek başına ciddi olan bir tüketim:
+
+Harita karoları ekranda birer `<img>`'dir ve tarayıcı bunları **açılmış** hâlde
+tutar; maliyet dosya boyutu değil `en × boy × 4 bayt`tır:
+
+* normal karo 256×256 → **0,26 MB**
+* retina karo 512×512 → **1,05 MB** (dört katı)
+
+Leaflet ayrıca görünen alanın `keepBuffer` kadar dışındaki karoları da atmadan
+saklıyordu. Projedeki ayar `keepBuffer: 8` + retina karolardı:
+
+```
+en kötü hâl: (3+16) × (4+16) = 380 karo × 1,05 MB ≈ 400 MB
+```
+
+4 GB'lık bir telefon için ölümcül — ve Android bellek daralınca en çok yer
+tutan uygulamayı öldürür. Karşılaştırma için: saha fotoğrafları zaten
+`utils/imageTransform.ts` ile 320/640/1280 piksele küçültülüyor ve `lazy`
+yükleniyor; yani görseller disiplinliydi, **karolar disiplinsizdi.**
+
+Karar cihaza göre ayrıldı (herkese aynı ceza kesilmedi):
+
+| | Güçlü telefon | Zayıf telefon |
+|---|---|---|
+| karo çözünürlüğü | retina (keskin) | normal |
+| `keepBuffer` | 8 (akıcı) | 1 |
+| gezinirken karo isteme | anında | gezinme bitince |
+| en kötü hâl bellek | ~400 MB | **~8 MB** |
+
+### 8.3 Bellek baskısında önce yedeklenebileni bırak
+
+Android bellek daralınca uygulamalara "elindekini bırak" diye haber verir
+(`onTrimMemory`) ve **bırakmayanı öldürür.** OYNA bu çağrıya hiç cevap
+vermiyordu. Artık ciddi baskı seviyelerinde WebView'ın bellekteki görüntü
+önbelleği boşaltılır — içerik kaybolmaz, yalnızca yeniden indirilir.
+
+### 8.4 Test yazarken düşülen tuzak (kayda değer)
+
+Karo koruması için önce bir tarayıcı testi yazıldı ve **yeşil geçti — ama
+korumayı kapatınca da yeşil geçti.** Yani test hiçbir şey kanıtlamıyordu.
+İki sebebi vardı:
+
+1. Görsel test ortamı `deviceScaleFactor: 1` ile çalışıyor; o durumda Leaflet
+   retina karo zaten hiç istemez.
+2. Pencere boyutunu değiştirmek haritayı gezdirmediği için saklanan karo sayısı
+   hiç büyümüyordu.
+
+Test birim testine taşındı (`tests/unit/haritaKaroBellek.test.ts`): cihaz
+sinyalleri doğrudan verilir, modül yeniden yüklenir, sonuç ölçülür. **Negatif
+kontrol yapıldı** — koruma kapatıldığında 6 testin 3'ü kırmızıya döndü.
+
+> **KURAL:** Bir koruma için yazılan test, koruma kapatıldığında KIRILDIĞI
+> görülmeden "geçti" sayılmaz. Yeşil test, çalışan test demek değildir.
+
+### 8.5 Sırada ne var
+
+Kapanma kaydı okunduğunda sebep kesinleşecek ve düzeltme ona göre yapılacak.
+Sebebe göre yol haritası:
+
+* **LOW_MEMORY / SIGNALED** → bellek işi doğru yolda; sonraki adımlar: aynı anda
+  bellekte duran ekran sayısını sınırlamak, uzun listelerde pencereleme.
+* **CRASH_NATIVE** → cihazın WebView sürümü ve GPU sürücüsü; yazılım tarafında
+  donanım hızlandırmayı sınırlamak gündeme gelir.
+* **ANR** → ana iş parçacığını bloklayan iş aranır.
+* **CRASH** → yığın izi doğrudan satırı gösterir.

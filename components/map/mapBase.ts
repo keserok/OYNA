@@ -10,15 +10,66 @@
 import L from 'leaflet';
 import type { Pitch } from '../../types';
 import { formatTRYShort } from '../../utils/formatTRY';
+import { perfTierFrom, readDeviceSignals } from '../../views/studio/perf';
 
 // "Leaflet" ön-ekini TÜM haritalardan kaldır — bu kütüphane kredisidir, yasal
 // zorunluluk değildir. Yasal OSM+CARTO veri atıfı görünür kalır. Tek yerden,
 // tüm ekranlar için (mapBase her harita ekranınca import edilir).
 L.Control.Attribution.prototype.options.prefix = false;
 
+// ════════════════════════════════════════════════════════════════════════════
+// KARO BELLEĞİ — zayıf telefonlarda kapanmanın en güçlü adaylarından biri
+// ----------------------------------------------------------------------------
+// Harita karoları (tile) ekranda birer <img> düğümüdür ve tarayıcı bunları
+// AÇILMIŞ (decode edilmiş) hâlde bellekte tutar. Maliyet ham dosya boyutu
+// değildir; açılmış bir görüntü "en × boy × 4 bayt" yer kaplar:
+//
+//   • normal karo   256×256 → 262.144 bayt  (~0,26 MB)
+//   • retina karo   512×512 → 1.048.576 bayt (~1,05 MB)   ← DÖRT KAT
+//
+// Kaç karo bellekte durur? Leaflet, görünen alanın `keepBuffer` kadar dışındaki
+// karoları da atmadan saklar. 360×640 bir ekranda görünen karo ~12'dir; ama
+// kullanıcı haritayı gezdirdikçe saklanan karo sayısı hızla büyür:
+//
+//   keepBuffer = 8 → en kötü hâlde (3+16) × (4+16) = 380 karo
+//                    380 × 1,05 MB ≈ 400 MB   ← 4 GB'lık telefon için ölümcül
+//   keepBuffer = 1 → en kötü hâlde  (3+2) × (4+2) =  30 karo
+//                     30 × 0,26 MB ≈ 8 MB
+//
+// Yani zayıf cihazda YALNIZ harita yüzünden yüzlerce MB tüketilebiliyordu.
+// Android bellek daralınca en çok yer tutan uygulamayı öldürür — kullanıcının
+// gördüğü şey "uygulama kendi kendine kapandı" olur.
+//
+// KARAR: ayrım cihaza göre yapılır, herkese aynı ceza kesilmez.
+//   • Güçlü telefon → eskisi gibi: retina karolar + geniş tampon (kalite)
+//   • Zayıf telefon → normal karolar + dar tampon (ayakta kalmak)
+// Zayıf cihazda harita bir tık daha az keskin görünür; buna karşılık bellek
+// tüketimi ~50 kat düşer.
+// ════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Cihaz zayıf mı? Kararı `views/studio/perf.ts` verir (tek kaynak, test edilmiş).
+ * Kurulum beklenmeden doğrudan tarayıcı sinyallerinden okunur: bu dosya tembel
+ * yüklenen ekranlarca çekiliyor ve kurulum sırasına bağlı kalmak istemiyoruz.
+ */
+const zayifCihaz: boolean = (() => {
+  try {
+    const azHareket =
+      typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+        ? window.matchMedia('(prefers-reduced-motion: reduce)').matches
+        : false;
+    return perfTierFrom(readDeviceSignals(azHareket)) === 'lite';
+  } catch {
+    return false; // sinyal okunamadı → güçlü varsay (iyi telefon kalite kaybetmesin)
+  }
+})();
+
 // ── Tile sağlayıcı + ZORUNLU atıf ─────────────────────────────────────────
-// {r} → retina (@2x) karoları otomatik; koyu bazemap markayla uyumlu.
-export const OYNA_TILE_URL = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
+// {r} → retina (@2x) karolar. Zayıf cihazda BİLEREK yok: aynı karo dörtte bir
+// bellek tutar (yukarıdaki hesap).
+export const OYNA_TILE_URL = zayifCihaz
+  ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png'
+  : 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
 
 // OSM + CARTO atıfı YASAL ZORUNLULUK — asla gizlenmez (yalnız markayla stillenir).
 export const OYNA_TILE_ATTRIBUTION =
@@ -28,8 +79,14 @@ export const OYNA_TILE_ATTRIBUTION =
 export const oynaTileProps = {
   attribution: OYNA_TILE_ATTRIBUTION,
   crossOrigin: true as const,      // tainted-canvas önler (WebView'da tile hataları)
-  keepBuffer: 8,                    // pan'de gri boşluk / yeniden yükleme olmasın
-  updateWhenIdle: false,            // pan sırasında karolar canlı yüklensin
+  // Görünen alanın kaç karo dışına kadar saklanacağı. 8, pan sırasında gri
+  // boşluk görünmesin diye seçilmişti; bedeli yukarıdaki bellek hesabıdır.
+  // Zayıf cihazda 1'e indirilir (Leaflet'in kendi varsayılanı 2). Güçlü
+  // cihazda 8 KORUNUR — orada bellek sıkıntısı yok, akıcılık kazancı gerçek.
+  keepBuffer: zayifCihaz ? 1 : 8,
+  // Zayıf cihazda pan BİTENE kadar yeni karo isteme: gezinme sırasında yüzlerce
+  // karo açıp hemen atmak hem belleği hem işlemciyi boşuna yorar.
+  updateWhenIdle: zayifCihaz,
   updateWhenZooming: false,         // zoom animasyonu bitene kadar karo yükleme (jank↓)
   maxZoom: 20,
   maxNativeZoom: 20,
