@@ -4,7 +4,7 @@
 > `docs/sistem/KONTROLLER.json` dosyalarından üretilir.
 > Değişiklik için o dosyaları düzenleyip `npm run sistem:harita` çalıştırın.
 
-> Kayıt sürümü: 1 · Son güncelleme: 2026-08-03 (P-0, P-1, P-2a, P-2b tamamlandi)
+> Kayıt sürümü: 1 · Son güncelleme: 2026-08-03 (P-0, P-1, P-2a, P-2b, P-2c, P-2d kismi)
 
 ## Bu harita ne işe yarar?
 
@@ -95,7 +95,7 @@ utils/iban.ts
 | `K-PARA-3` | %30 kuralı yalnız telefonda mı duruyor, yoksa veritabanı da reddediyor mu? | Kural yalnız istemcide; sunucu her tutarı kabul ediyor | DEGISIKLIKTE |
 | `K-KILIT-1` | İki fonksiyon aynı tabloları ters sırada kilitlerse sistem kilitlenir. Sıra tutarlı mı? | Kilitlenme yalnız yoğun anda oluşur, testte hiç görünmez | HER_IKISI |
 
-**⚠️ Bu taşta şu an açık olan bulgular:** M-P0-1, CTO-P0-2, CTO-P0-3, CTO-P0-4
+**⚠️ Bu taşta şu an açık olan bulgular:** CTO-P0-2, CTO-P0-3, CTO-P0-4
 
 ---
 
@@ -228,8 +228,6 @@ scripts/generate-rls-policy.ts
 | `K-KAPI-2` | Kullanıcı kendi rolünü, bakiyesini veya cezasını değiştirebiliyor mu? | Koruma bir tabloda var, yeni tabloda unutulmuş | HER_IKISI |
 | `K-KAPI-3` | Yetkili çalışan fonksiyonlar kandırılmaya açık mı? | Tek bir yeni fonksiyon kuralı bozar | HER_IKISI |
 
-**⚠️ Bu taşta şu an açık olan bulgular:** CTO-P0-1, CTO-P0-5
-
 ---
 
 ## B06 · BILDIRIM  🟠 YÜKSEK
@@ -260,7 +258,7 @@ supabase/functions/admin-broadcast/
 | `K-BILDIRIM-1` | Son 24 saatte gönderilmeye çalışılan bildirimlerin kaçı gerçekten gitti? | Bildirim gitmiyor ama uygulama 'gönderdim' sanıyor | GUNLUK |
 | `K-BILDIRIM-2` | Son 24 saatte biten/iptal olan maçların hepsi katılımcılarına haber verdi mi? | Olay oldu, bildirim üretilmedi, hata da yok | GUNLUK |
 
-**⚠️ Bu taşta şu an açık olan bulgular:** M-16, CTO-P0-5
+**⚠️ Bu taşta şu an açık olan bulgular:** M-16
 
 ---
 
