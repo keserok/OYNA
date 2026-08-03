@@ -59,9 +59,11 @@
 | # | Karar | Not |
 |---|---|---|
 | **K-3.1** | **Kaptan maçı İPTAL EDEMEZ.** Maçı yalnız **saha sahibi** ve **admin paneli üzerinden admin** iptal edebilir. | Mevcut `match_cancel_by_captain` kaldırılacak/kısıtlanacak |
-| **K-3.2** | **Kaptanın tek çıkışı kendi slotudur.** Kaptan yalnızca kendi slotunu iade edebilir ve kaporasını geri alabilir. | Kapora/kaptanlık devri kuralı netleştirilmeli — bkz. §IV Açık Nokta 1 |
+| **K-3.2** | **Kaptanın maçtan çıkışı = maçın iptali.** Kaptan kendi yerini bırakırsa maç iptal olur ve **tüm kullanıcılara eksiksiz iade** yapılır (K-3.3 ile aynı sonuç). | Açık Nokta 1 (b) şıkkı seçildi |
 | **K-3.3** | **Saha sahibi veya admin maçı iptal ettiğinde tüm kullanıcılara paraları EKSİKSİZ olarak cüzdanlarına döner.** Kademe yok, kesinti yok. | CPO-P0-3'ün yerine geçer |
-| **K-3.4** | **Oyuncu no-show'u işaretlenecek.** Maç sonunda kaptana "gelmeyen oldu mu?" sorulur, işaretlenen oyuncunun güvenilirlik puanı düşer. Para cezası yok. | CPO-P1-5 |
+| **K-3.4** | **Kaptanın maç bırakma hakkı: kişi başına ayda 1 kez.** Aynı kişi bir takvim ayı içinde bu işlemi yalnız bir kez yapabilir. Kötüye kullanım engeli. | Sayaç + kullanıcıya kalan hak gösterimi gerekir |
+| **K-3.5** | **Slot devri, maç iptali DEĞİLDİR.** Kaptan yerini başkasına devrederse maç **devam eder**. Kaptanın **kaporası bloke kalır** (maçın güvencesi bozulmaz). Maç oynanıp ödemeler toplandığında kapora **ödeme havuzundan kaptana iade edilir**. | Bugünkü davranıştan farklı: kapora şu an kesinleşme anında iade ediliyor |
+| **K-3.6** | **Oyuncu no-show'u işaretlenecek.** Maç sonunda kaptana "gelmeyen oldu mu?" sorulur, işaretlenen oyuncunun güvenilirlik puanı düşer. Para cezası yok. | CPO-P1-5 |
 
 ## K-4 · Deneyim
 
@@ -104,7 +106,7 @@
 
 | # | P0 | Kanıt | Durum |
 |---|---|---|---|
-| CPO-P0-1 | **Vitrindeki maçların %83'ü sahte.** `get_nearby_matches()` demo filtresi taşımıyor; `demo_mode_enabled` canlıda açık. Canlı çağrı: 6 maç, 5'i demo. | `get_nearby_matches()` · `app_config` | 🟠 **KURUCU: "şimdilik kalsın"** — mağazaya gönderim öncesi kapatılması şartıyla ertelendi |
+| CPO-P0-1 | **Vitrindeki maçların %83'ü sahte.** `get_nearby_matches()` demo filtresi taşımıyor; `demo_mode_enabled` canlıda açık. Canlı çağrı: 6 maç, 5'i demo. | `get_nearby_matches()` · `app_config` | 🟠 **ERTELENDİ (kurucu kararı).** Kurucu "piyasaya çıkıyoruz" dediği anda kapatılacak. **Lansman kontrol listesinin 1. maddesidir.** |
 | CPO-P0-2 | Nakit modda uygulamadan gelen rezervasyonda gelir kaydı oluşmuyor. | `credit_owner_booking_earning()` | 🟢 **ÇÖZÜLDÜ (karar)** → K-2.1/K-2.3 |
 | CPO-P0-3 | Kaptan kesinleşmiş maçı iptal edince oyuncuların parası iade edilmiyor. | `match_cancel_by_captain()` | 🟢 **KAPANDI (tasarımla)** → K-3.1: kaptan artık iptal edemeyecek |
 | CPO-P0-4 | Maç iptalinde katılımcılara bildirim gitmiyor (büyük/küçük harf). Canlı: eşleşen 0, gerçek 40 satır. | `notify_match_cancelled()` | 🔴 **AÇIK** — K-3.3 ile birlikte daha da kritik |
@@ -152,23 +154,92 @@
 | Y-8 | **Kârlılık göstergesi:** oyuncu maçlar ekranında UI, admin panelinde her maçta oran + kırmızı uyarı. | K-2.5 | P1 |
 | Y-9 | **Kapsama = anlaşma.** `region_coverage` yalnız saha anlaşması olan ilçelerde açık olsun; anlaşma bitince kapansın. | K-1.2 | P1 |
 | Y-10 | **Concierge onboarding ekranları:** admin ve saha sahibi panelinde abonman/sabit saat toplu giriş. | K-1.5 | P1 |
-| Y-11 | **`match_cancel_by_captain` kaldırılması/kısıtlanması.** | K-3.1 | P1 |
+| Y-11 | **`match_cancel_by_captain` yeniden yazılması.** Kaptan çıkışı artık maçı iptal eder ve herkese eksiksiz iade yapar (bugün yalnız kaptanın kaporasına dokunuyor). | K-3.1/K-3.2 | P1 |
+| Y-13 | **Aylık "maç bırakma" sayacı.** Kişi başına takvim ayında 1 hak; kalan hak kullanıcıya gösterilir; hak bitince slot devrine yönlendirilir. | K-3.4 | P1 |
+| Y-14 | **Slot devrinde kapora davranışının değişmesi.** Bugün kapora kesinleşme anında (kendi payı düşülerek) iade ediliyor; devir sonrası **maç oynanana kadar bloke kalmalı** ve sonra **tam** iade edilmeli. | K-3.5 | P1 |
 | Y-12 | **Tek master prensipler dosyası** (session sonu) + `CLAUDE.md` pusula güncellemesi. | K-6.5 | Session sonu |
 
 ---
 
-# BÖLÜM IV — AÇIK NOKTALAR (kurucu yanıtı bekliyor)
+# BÖLÜM IV — AÇIK NOKTALAR
 
-| # | Soru | Neden önemli |
+| # | Soru | Durum |
 |---|---|---|
-| **1** | **Kaptan kendi slotunu bırakırsa kaporaya ve kaptanlığa ne olur?** K-3.2 "slotunu iade eder, kaporasını geri alır" diyor. Ama kapora tüm maçın güvencesidir — kaptan çıkınca maç güvencesiz kalır. Seçenekler: (a) kaptanlık ve kapora yükümlülüğü bir sonraki oyuncuya devrolur, (b) kaptan çıkarsa maç otomatik iptal olur ve herkese iade yapılır, (c) kaptan kadro dolmadan çıkamaz. | K-3.2'nin uygulanabilmesi buna bağlı |
-| **2** | **Ahmet Kuru 2. Saha'nın 0 ₺ tarifesini düzeltebilir miyim?** Canlı veri değişikliği — onayınız olmadan dokunmuyorum. | CPO-P0-6 |
-| **3** | **Demo verisi ne zaman kapanacak?** "Şimdilik kalsın" dediniz. Mağaza gönderiminden önce kapatılması şart — hangi tarihte? | CPO-P0-1 |
-| **4** | **Hangi eski dokümanlar arşive taşınsın?** `YAPILACAKLAR.md` taşındı. Aday görünenler: `ODEME_MASTER_PLAN.md`, `KALECI_ODEME_DEVIR.md`, `*_EDGE_CASE_PLANI.md` (3 dosya), `problemler_ve_cozum_onerileri.md`, `veritabani_uretim_ve_optimizasyon_plani.md`. `CLAUDE.md`'nin işaret ettiği dosyalara dokunmadım. | K-6.1 |
+| **1** | Kaptan kendi slotunu bırakırsa kaporaya ve kaptanlığa ne olur? | 🟢 **YANITLANDI** → K-3.2 · K-3.4 · K-3.5 |
+| **2** | **Ahmet Kuru 2. Saha'nın 0 ₺ tarifesini düzeltebilir miyim?** Hafta içi 15:00–23:00 bandı canlıda bedava satılıyor. Canlı veri değişikliği — kurucu onayı olmadan dokunulmaz. | 🔴 **HÂLÂ AÇIK** (CPO-P0-6) |
+| **3** | Demo verisi ne zaman kapanacak? | 🟢 **YANITLANDI:** Kurucu "piyasaya çıkıyoruz" dediği anda kapatılacak. O ana kadar açık kalır. |
+| **4** | Hangi eski dokümanlar arşive taşınsın? | 🟡 **ERTELENDİ:** Sonra değerlendirilecek. Şimdilik yalnız `YAPILACAKLAR.md` taşındı. |
+
+### Uygulama sırasında netleşmesi gereken varsayım
+
+K-3.5 (slot devri) için şu okumayla ilerlenecek; kurucu aksini söylemedikçe geçerlidir:
+
+> Kaptan yerini devrettiğinde **oynamıyor ama maçın sorumlusu olarak kalıyor**. Kaporası bloke
+> kalmaya devam eder. Maç oynandığında kapora **tam olarak** iade edilir — kendi payı düşülmez,
+> çünkü sahada yer almamıştır.
+
+Ayrıca K-3.4'ün doğal arayüz sonucu: aylık hakkını kullanmış bir kaptan maçı bırakmak istediğinde
+sistem onu **slot devrine** yönlendirir ("Bu ay maç bırakma hakkını kullandın — yerini devredebilirsin").
+Böylece sınır bir duvar değil, sağlıklı davranışa yönlendirme olur.
 
 ---
 
-# BÖLÜM V — SONRAKİ ROLLER İÇİN DEVİR NOTLARI
+# BÖLÜM V — KODU NASIL İŞLEYECEĞİZ (uygulama planı)
+
+## Temel kural: paket paket, tek seferde değil
+
+Bu sürecin sonunda 6 rolün bulguları birikince ortaya **50+ iş kalemi** çıkacak. Bunları tek bir
+büyük hamlede uygulamak, bu projenin geçmişindeki en pahalı hatayı tekrarlamak olur
+(`CLAUDE.md` §4: *"çalışan yerler bozuldu"*).
+
+Bunun yerine iş **paketlere** bölünür. Bir paket şu üç şeyi birlikte taşır:
+
+1. **Değişiklik** — dar kapsamlı, tek konu
+2. **Doğrulama** — uygulamada tıklayarak kontrol adımı (terminal komutu değil)
+3. **Geri alma yolu** — bozulursa nasıl geri dönülür
+
+Paket bunlardan biri eksikse **uygulanmaz**.
+
+## Zamanlama: ne zaman kod yazılır?
+
+| Aşama | Ne yapılır | Gerekçe |
+|---|---|---|
+| **Şimdi** | Yalnız **onaylanmış hızlı kazanımlar** (K-4.5, 6 madde) | Riski sıfıra yakın, diğer rollerin bulgularıyla çakışmaz, kurucu onayladı |
+| **Roller sürerken** | Kod yazılmaz, yalnız bulgu toplanır | Aynı dosyaya iki kez dokunmak israftır. Örnek: maç iptal zincirini şimdi yazarsak, Mimar "bu zincir şöyle olmalı" dediğinde baştan yazarız |
+| **6 rol bittiğinde** | Tüm bulgular **tek birleşik yol haritasında** paketlere bölünür ve sıralanır | Çakışan öneriler burada çözülür |
+| **Sonra** | Paket paket uygulama, her paket ayrı onay | Tek kurucu kapasitesine uygun tempo |
+
+## Paketleme kuralları
+
+- **Dal:** her paket kendi dalında — `board/<konu>` (ör. `board/mac-iptal-zinciri`)
+- **`main`'e merge yalnız kurucu onayıyla.** Doğrudan `main`'e push yok.
+- **Veritabanı değişikliği yalnız yeni migration dosyası** olarak üretilir. Eski migration dosyalarına asla dokunulmaz.
+- **Canlı veritabanına migration uygulamak ayrı bir onaydır.** Dosyayı yazmak ≠ canlıya uygulamak.
+- **Her paket sonunda:** `npm run lint` temiz + `npm run test:unit` yeşil. Geçmeden "bitti" denmez.
+- **Ortak dosyalara** (`types.ts`, `store.ts`, `supabaseMutations.ts`, `services/*`) dokunan paketlerde etkilenen ekranlar önceden listelenir.
+- **Para akışına dokunan paketler** (iade, komisyon, kapora, payout) tek başına bir pakettir — başka işle karıştırılmaz.
+- Uçtan uca doğrulama gerekiyorsa `/verify` skill'i uygulamayı canlı Supabase'e karşı sürebilir.
+
+## Öngörülen paket sırası (CPO turu itibarıyla)
+
+> Diğer roller konuştuktan sonra bu liste genişleyecek ve yeniden sıralanacak.
+
+| # | Paket | İçerik | Risk |
+|---|---|---|---|
+| **P-0** | **Hızlı kazanımlar** | K-4.5'in 6 maddesi | Düşük |
+| **P-1** | **Link altyapısı** | Y-1, Y-2 — paylaşılabilir maç linki, önizleme sayfası, davet linkinin çalışması | Orta (mağaza dosyaları) |
+| **P-2** | **Kaptan para paneli** | Y-3, Y-4, Y-5 | Düşük |
+| **P-3** | **Maç iptal zinciri** ⚠️ | K-3.1–K-3.5, Y-6, Y-11, Y-13, Y-14, CPO-P0-4 | **Yüksek — para akışı** |
+| **P-4** | **Komisyon ve kârlılık** ⚠️ | K-2.3, K-2.4, K-2.5, Y-7, Y-8 | **Yüksek — para akışı** |
+| **P-5** | **Ölçüm** | K-1.4 — 8 olay + "başarılı maç" görünümü | Düşük |
+| **P-6** | **Kapsama = anlaşma** | K-1.2, Y-9, CPO-P0-9 | Orta |
+| **P-7** | **Concierge ekranları** | K-1.5, Y-10 | Orta |
+| **P-8** | **Eşleştirme ve deneyim** | K-4.1, K-4.2, K-4.4, K-3.6 | Düşük |
+| **P-SON** | **Lansman anahtarları** | CPO-P0-1 (demo kapatma), demo veri temizliği, go-live kontrol listesi | **Kurucu "çıkıyoruz" dediğinde** |
+
+---
+
+# BÖLÜM VI — SONRAKİ ROLLER İÇİN DEVİR NOTLARI
 
 **CTO'ya:** İş mantığının ezici çoğunluğu PostgreSQL fonksiyonlarında (840 routine). İstemci fiyat/komisyon hesaplamıyor — bu iyi. Üç konuda "aynı gerçeğin iki kaynağı" kalıbı tekrar ediyor: komisyon (3 kaynak), kadro durumu (`matches.slots` JSONB ↔ `match_participants` tablosu), bakiye (`profiles.wallet` ↔ `profiles.wallet_balance` — canlıda **33 profilin 20'sinde farklı**). Migration dosya adları gelecek tarihli: `20260904*` dosyaları 1 Ağustos'ta commit edilmiş. **K-2.1 ile online ödeme kesinleştiği için** İyzico entegrasyonunun tamamlanması artık P0'dır.
 
