@@ -258,6 +258,36 @@
       "sessizlik_tipi": "Migration BAŞARILI göründü ama işini yapmadı"
     },
     {
+      "id": "K-SAHIBI-1",
+      "ad": "Saha sahibi yalnız kendi tesisini mi yönetebiliyor?",
+      "sade_anlatim": "Bir saha sahibi, başka bir tesisin takvimini, finansını veya personelini görebiliyor mu?",
+      "ne_zaman": "HER_IKISI",
+      "tur": "SQL",
+      "nasil": "scripts/sistem/sql/sahibi-izolasyon.sql",
+      "basari_olcutu": "kapısız tesis fonksiyonu = 0",
+      "sessizlik_tipi": "Tek tesisle test edilir, sorun ancak ikinci tesis gelince görünür"
+    },
+    {
+      "id": "K-SAHIBI-2",
+      "ad": "Panelde gösterilen tutar canlı veriyle aynı mı?",
+      "sade_anlatim": "Saha sahibinin finans ekranındaki rakamlar ile veritabanındaki gerçek toplamlar birebir tutuyor mu?",
+      "ne_zaman": "GUNLUK",
+      "tur": "SQL",
+      "nasil": "scripts/sistem/sql/sahibi-finans-mutabakat.sql",
+      "basari_olcutu": "sapan tesis = 0",
+      "sessizlik_tipi": "Panel bir rakam gösteriyor, gerçek başka — kimse iki tarafı karşılaştırmıyor"
+    },
+    {
+      "id": "K-PAZAR-1",
+      "ad": "Hizmet ödemesi erken serbest bırakılmış mı?",
+      "sade_anlatim": "Kaleci/hakem ücreti, maç gerçekleşmeden ödenmiş mi?",
+      "ne_zaman": "GUNLUK",
+      "tur": "SQL",
+      "nasil": "scripts/sistem/sql/pazaryeri-odeme-zamani.sql",
+      "basari_olcutu": "erken serbest bırakma = 0",
+      "sessizlik_tipi": "Ödeme gitti, hizmet verilmedi — geri almak imkânsız"
+    },
+    {
       "id": "K-DEMO-1",
       "ad": "Demo veri kurallara uyuyor mu?",
       "sade_anlatim": "Demo satırları gerçek sistemin kurallarına uyuyor mu, denetimi kirletiyor mu?",

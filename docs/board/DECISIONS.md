@@ -165,6 +165,21 @@ kurmamış ve **BAŞARILI tamamlanmış.** Uyarıyı kimse görmemiş. Efor 1,5 
 > Bu olay, K-8'deki "sessizce yanlış davranan kural"ın en saf örneğidir:
 > **kod doğru davrandı, uyardı, ve uyarısı kimseye ulaşmadı.**
 
+## K-11 · Mekanizma kararları (3 Ağustos 2026)
+
+| # | Karar | Sonuç |
+|---|---|---|
+| **K-11.1** | **Durdurma politikası ikili.** 🔴 KRİTİK taşlarda (PARA, KAPILAR, KİMLİK, AYARLAR) iş **durur**, devam için CEO onayı gerekir. Diğerlerinde uyarır, devam eder. | `etki.mjs` bu davranışı taşıyor; uygulama aşamasında zorlayıcı hale gelecek. |
+| **K-11.2** | **Saha sahibi ve pazaryeri ekranları "inanılmaz özen" hak ediyor.** | `B13 SAHA-SAHIBI` ve `B14 PAZARYERI` **ORTA → YÜKSEK** çıkarıldı. B13'e `views/owner/` ağacı (52 dosya) + 5 servis + Edge Function bağlandı → 12 dosyadan **70 dosyaya**. B14'e 3 ekran eklendi → **9 dosya**. `views/owner/finance/` ayrıca `B01 PARA`'ya da bağlandı (bir dosya birden fazla taşa ait olabilir). Üç yeni kontrol: `K-SAHIBI-1`, `K-SAHIBI-2`, `K-PAZAR-1`. **Kapsam %42 → %63.** |
+| **K-11.3** | **"Kontrol edilemedi" = KIRMIZI.** | Bilinçli tercih; bedeli ara sıra yanlış alarm. Gerekçe: bu projedeki pahalı hataların hepsi "bilinmiyor"un "sorun yok" sanılmasından çıktı. |
+| **K-11.4** | **Günlük rapor admin panelinde "Sistem Sağlığı" ekranına yazılacak** (panel hazır), kırmızıda ayrıca e-posta. | Ekranda: taş başına yeşil/sarı/kırmızı, kırılan kontrolün adı ve zamanı, 30 günlük geçmiş. E-posta ayrıca gider — denetçi, denetlediği bildirim kanalına bağımlı olamaz. |
+| **K-11.5** | **Kapsam zorunluluğu lansmandan SONRA açılacak.** | `npm run sistem:kapsam -- --sert` CI'a lansman sonrası eklenir. Önce alışkanlık, sonra kural. |
+| **K-11.6** | **`CLAUDE.md` bağlaması oturum sonunda, toplu yapılacak.** | K-6.5 ile birlikte: tek master prensipler dosyası + `CLAUDE.md` pusula güncellemesi + mekanizma maddesi aynı anda yazılacak. |
+
+> **K-11.2 mimari olarak da doğru bir karardır**, yalnız kurucu tercihi değil: `views/owner/`
+> kod tabanının **en büyük tek alt ağacı** (52 dosya) ve gelirin toplandığı operatör yüzeyi;
+> pazaryeri ise K-5.1 gereği teminat ve online ödeme taşıyor — yani gerçek para.
+
 ---
 
 # BÖLÜM II — CPO BULGULARININ GÜNCEL DURUMU
@@ -398,7 +413,7 @@ Kurucunun isteği üzerine `docs/sistem/` altında kalıcı düzenek kuruldu ve 
 |---|---|
 | `docs/sistem/MEKANIZMA.md` | Sade Türkçe kullanım kılavuzu — **buradan başlanır** |
 | `docs/sistem/YAPI-TASLARI.json` | 15 temel yapı taşı (tek kaynak, makine okunur) |
-| `docs/sistem/KONTROLLER.json` | 26 kontrol; her birinde "yakaladığı sessizlik" yazılı |
+| `docs/sistem/KONTROLLER.json` | 29 kontrol; her birinde "yakaladığı sessizlik" yazılı |
 | `docs/sistem/SISTEM-HARITASI.md` | **Üretilen** okunabilir harita (elle düzenlenmez) |
 | `scripts/sistem/etki.mjs` | `npm run etki` — değişiklik hangi taşlara dokunuyor |
 | `scripts/sistem/kapsam.mjs` | `npm run sistem:kapsam` — çürüme bekçisi |
@@ -406,8 +421,8 @@ Kurucunun isteği üzerine `docs/sistem/` altında kalıcı düzenek kuruldu ve 
 
 **15 yapı taşı:** B01 PARA 🔴 · B02 KADRO 🟠 · B03 ZAMAN 🟠 · B04 REZERVASYON 🟠 ·
 B05 KAPILAR 🔴 · B06 BİLDİRİM 🟠 · B07 KAPSAMA 🟡 · B08 KİMLİK 🔴 · B09 YÜK 🟡 ·
-B10 OTOMASYON 🟠 · **B11 AYARLAR 🔴** · B12 DEMO ⚪ · B13 SAHA SAHİBİ 🟡 ·
-B14 PAZARYERİ 🟡 · B15 SOSYAL 🟡
+B10 OTOMASYON 🟠 · **B11 AYARLAR 🔴** · B12 DEMO ⚪ · B13 SAHA SAHİBİ 🟠 ·
+B14 PAZARYERİ 🟠 · B15 SOSYAL 🟡
 
 > **B11 AYARLAR bu turda doğdu.** Bugünkü iki büyük arızanın tek kök nedeni bu alandaydı
 > ve **hiçbir yapı taşı oraya sahip çıkmıyordu.**
@@ -416,10 +431,10 @@ B14 PAZARYERİ 🟡 · B15 SOSYAL 🟡
 tutulmadığı için ayrışamaz, (2) kapsam bekçisi — haritaya bağlanmamış dosyayı listeler,
 CI'da hata verdirilebilir, (3) açık bulgular haritada yaşar, araç her seferinde yüzüne söyler.
 
-**Dürüst durum:** kapsam **%42** (289 dosyadan 121'i). Harita şu an **riskli ve para
-dokunan** kısımları kapsıyor; arayüz bileşenleri henüz bağlanmadı. Bilinçli başlangıç.
+**Dürüst durum:** kapsam **%63** (289 dosyadan 182'si). K-11.2 sonrası saha sahibi ağacı da
+bağlandı. Kalan 107 dosya ağırlıklı olarak genel arayüz bileşenleri.
 
-**Henüz yapılmayanlar** (kod aşamasında): 14 SQL kontrol dosyası · 5 tarayıcı komutu ·
+**Henüz yapılmayanlar** (kod aşamasında): 17 SQL kontrol dosyası · 5 tarayıcı komutu ·
 günlük denetim işi + Sistem Sağlığı kartı · kırmızıda e-posta · CI'da sert kapsam denetimi ·
 kapsamın yükseltilmesi. Tam liste `MEKANIZMA.md` §7'de — **bilerek görünür bırakıldı.**
 

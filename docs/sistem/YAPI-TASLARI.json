@@ -28,6 +28,9 @@
         "components/payment/",
         "views/PaymentScreen.tsx",
         "views/WalletView.tsx",
+        "views/owner/finance/",
+        "views/owner/calendar/FinancialCalendarView.tsx",
+        "views/owner/OwnerBankAccountsModal.tsx",
         "supabase/functions/create-payment/",
         "supabase/functions/capture-payment/",
         "supabase/functions/void-payment/",
@@ -374,11 +377,13 @@
     {
       "id": "B13",
       "ad": "SAHA-SAHIBI",
-      "risk": "ORTA",
-      "sade_anlatim": "Saha sahibinin paneli. Tesis bilgileri, kortlar, fotoğraflar, personel, takvim, finans raporu.",
+      "risk": "YUKSEK",
+      "sade_anlatim": "Saha sahibinin paneli. Tesis bilgileri, kortlar, fotoğraflar, personel, takvim, finans raporu, tahsilat, abonman, özel fiyat, kampanya.",
       "garanti_ettigi": [
         "Saha sahibi yalnız kendi tesisini yönetebilir",
-        "Elle kapatılan slotun komisyon alacağı kaydedilir (K-2.3)"
+        "Elle kapatılan slotun komisyon alacağı kaydedilir (K-2.3)",
+        "Panelde gösterilen her tutar canlı veriyle birebir aynıdır",
+        "İnternet kesildiğinde yapılan işlem kaybolmaz (outbox)"
       ],
       "dosyalar": [
         "services/pitchOwnerService.ts",
@@ -386,23 +391,40 @@
         "services/pitchShowcaseService.ts",
         "services/ownerAccountService.ts",
         "services/staffService.ts",
+        "services/demandService.ts",
+        "services/pitchFilterService.ts",
+        "services/pitchFavoritesService.ts",
+        "services/onboardingService.ts",
+        "services/offline/",
         "components/pitch-editor/",
         "components/pitch-showcase/",
         "views/OwnerPanel.tsx",
-        "hooks/useOwnerEntitlements.ts"
+        "views/owner/",
+        "hooks/useOwnerEntitlements.ts",
+        "supabase/functions/admin-owner-credentials/"
       ],
-      "db_nesneleri": ["pitches", "pitch_staff", "can_staff_pitch", "get_facility_schedule"],
-      "kontroller": ["K-KAPI-1"],
-      "bilinen_acik_bulgular": ["Y-7", "Y-10"]
+      "db_nesneleri": [
+        "pitches",
+        "pitch_staff",
+        "can_staff_pitch",
+        "get_facility_schedule",
+        "owner_cancel_confirmed_booking",
+        "release_owner_earnings"
+      ],
+      "kontroller": ["K-KAPI-1", "K-SAHIBI-1", "K-SAHIBI-2"],
+      "bilinen_acik_bulgular": ["Y-7", "Y-10"],
+      "not": "Risk 3 Ağustos 2026'da ORTA'dan YÜKSEK'e çıkarıldı (K-11.2). Kurucu direktifi: saha sahibi ekranları 'inanılmaz bir özeni hak ediyor'. Gerekçe mimari olarak da doğru: bu panel gelirin toplandığı operatör yüzeyidir ve `views/owner/` altında 52 dosya taşır — kod tabanının en büyük tek alt ağacı."
     },
     {
       "id": "B14",
       "ad": "PAZARYERI",
-      "risk": "ORTA",
-      "sade_anlatim": "Kaleci ve hakem kiralama. Talep, teklif, teminat, hizmet ödemesi.",
+      "risk": "YUKSEK",
+      "sade_anlatim": "Kaleci ve hakem kiralama. Başvuru, profil, talep, teklif, teminat, hizmet ödemesi.",
       "garanti_ettigi": [
         "Hizmet ödemesi maç gerçekleşmeden serbest bırakılmaz",
-        "Teminat kuralları uygulanır (K-5.1)"
+        "Teminat kuralları uygulanır (K-5.1)",
+        "Sağlayıcı yalnız kendi talep ve kazançlarını görür",
+        "Süresi geçen talep askıda kalmaz"
       ],
       "dosyalar": [
         "services/serviceProviderService.ts",
@@ -410,7 +432,10 @@
         "services/serviceOfferService.ts",
         "components/Marketplace/",
         "views/Marketplace.tsx",
-        "views/ServiceDashboard.tsx"
+        "views/ServiceDashboard.tsx",
+        "views/ServiceApplication.tsx",
+        "views/ServiceProfile.tsx",
+        "views/ServiceSettings.tsx"
       ],
       "db_nesneleri": [
         "service_requests",
@@ -419,8 +444,9 @@
         "expire_service_requests",
         "auto_release_service_payouts"
       ],
-      "kontroller": ["K-PARA-2"],
-      "bilinen_acik_bulgular": []
+      "kontroller": ["K-PARA-2", "K-KAPI-1", "K-PAZAR-1"],
+      "bilinen_acik_bulgular": [],
+      "not": "Risk 3 Ağustos 2026'da ORTA'dan YÜKSEK'e çıkarıldı (K-11.2). Gerekçe mimari olarak da doğru: K-5.1 gereği burada teminat ve online ödeme var — yani bu taş gerçek para taşıyor."
     },
     {
       "id": "B15",

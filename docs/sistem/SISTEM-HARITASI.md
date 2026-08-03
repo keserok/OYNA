@@ -44,8 +44,8 @@ ve o taşlarda **zaten açık olan** bulgular neler.
 | B10 | **OTOMASYON** | 🟠 YÜKSEK | Kimse dokunmadan kendi kendine çalışan işler. Zamanlanmış görevler (cron), maç kapanışı, hatırlatmalar, temizlik işleri. |
 | B11 | **AYARLAR** | 🔴 KRİTİK | Sistemin davranışını belirleyen anahtarlar. Veritabanı ayarları, ortam değişkenleri, özellik bayrakları, acil durdurma anahtarları. Kod doğru olsa bile bunlardan biri eksikse sistem sessizce çalışmaz. |
 | B12 | **DEMO** | ⚪ DÜŞÜK | Tanıtım ve deneme verileri. Boş ekran görünmesin diye duran sahte maçlar, sahalar, hesaplar. |
-| B13 | **SAHA-SAHIBI** | 🟡 ORTA | Saha sahibinin paneli. Tesis bilgileri, kortlar, fotoğraflar, personel, takvim, finans raporu. |
-| B14 | **PAZARYERI** | 🟡 ORTA | Kaleci ve hakem kiralama. Talep, teklif, teminat, hizmet ödemesi. |
+| B13 | **SAHA-SAHIBI** | 🟠 YÜKSEK | Saha sahibinin paneli. Tesis bilgileri, kortlar, fotoğraflar, personel, takvim, finans raporu, tahsilat, abonman, özel fiyat, kampanya. |
+| B14 | **PAZARYERI** | 🟠 YÜKSEK | Kaleci ve hakem kiralama. Başvuru, profil, talep, teklif, teminat, hizmet ödemesi. |
 | B15 | **SOSYAL** | 🟡 ORTA | Arkadaşlar, takımlar, sohbet, davetler, taktik tahtası. |
 
 ---
@@ -70,6 +70,9 @@ services/paymentModeService.ts
 components/payment/
 views/PaymentScreen.tsx
 views/WalletView.tsx
+views/owner/finance/
+views/owner/calendar/FinancialCalendarView.tsx
+views/owner/OwnerBankAccountsModal.tsx
 supabase/functions/create-payment/
 supabase/functions/capture-payment/
 supabase/functions/void-payment/
@@ -459,13 +462,15 @@ scripts/seeds/
 
 ---
 
-## B13 · SAHA-SAHIBI  🟡 ORTA
+## B13 · SAHA-SAHIBI  🟠 YÜKSEK
 
-Saha sahibinin paneli. Tesis bilgileri, kortlar, fotoğraflar, personel, takvim, finans raporu.
+Saha sahibinin paneli. Tesis bilgileri, kortlar, fotoğraflar, personel, takvim, finans raporu, tahsilat, abonman, özel fiyat, kampanya.
 
 **Bu taşın garanti ettiği:**
 - Saha sahibi yalnız kendi tesisini yönetebilir
 - Elle kapatılan slotun komisyon alacağı kaydedilir (K-2.3)
+- Panelde gösterilen her tutar canlı veriyle birebir aynıdır
+- İnternet kesildiğinde yapılan işlem kaybolmaz (outbox)
 
 **Dosyalar:**
 
@@ -475,31 +480,44 @@ services/pitchContentService.ts
 services/pitchShowcaseService.ts
 services/ownerAccountService.ts
 services/staffService.ts
+services/demandService.ts
+services/pitchFilterService.ts
+services/pitchFavoritesService.ts
+services/onboardingService.ts
+services/offline/
 components/pitch-editor/
 components/pitch-showcase/
 views/OwnerPanel.tsx
+views/owner/
 hooks/useOwnerEntitlements.ts
+supabase/functions/admin-owner-credentials/
 ```
 
-**Veritabanı nesneleri:** `pitches`, `pitch_staff`, `can_staff_pitch`, `get_facility_schedule`
+**Veritabanı nesneleri:** `pitches`, `pitch_staff`, `can_staff_pitch`, `get_facility_schedule`, `owner_cancel_confirmed_booking`, `release_owner_earnings`
 
 **Bu taşı koruyan kontroller:**
 
 | Kontrol | Ne sorar | Yakaladığı sessizlik | Ne zaman |
 |---|---|---|---|
 | `K-KAPI-1` | Kullanıcının çağırabildiği fonksiyonlardan kaçında 'sen kimsin' kontrolü yok? | Fonksiyon çalışıyor ama kimin çağırdığına bakmıyor | HER_IKISI |
+| `K-SAHIBI-1` | Bir saha sahibi, başka bir tesisin takvimini, finansını veya personelini görebiliyor mu? | Tek tesisle test edilir, sorun ancak ikinci tesis gelince görünür | HER_IKISI |
+| `K-SAHIBI-2` | Saha sahibinin finans ekranındaki rakamlar ile veritabanındaki gerçek toplamlar birebir tutuyor mu? | Panel bir rakam gösteriyor, gerçek başka — kimse iki tarafı karşılaştırmıyor | GUNLUK |
 
 **⚠️ Bu taşta şu an açık olan bulgular:** Y-7, Y-10
 
+> **Not:** Risk 3 Ağustos 2026'da ORTA'dan YÜKSEK'e çıkarıldı (K-11.2). Kurucu direktifi: saha sahibi ekranları 'inanılmaz bir özeni hak ediyor'. Gerekçe mimari olarak da doğru: bu panel gelirin toplandığı operatör yüzeyidir ve `views/owner/` altında 52 dosya taşır — kod tabanının en büyük tek alt ağacı.
+
 ---
 
-## B14 · PAZARYERI  🟡 ORTA
+## B14 · PAZARYERI  🟠 YÜKSEK
 
-Kaleci ve hakem kiralama. Talep, teklif, teminat, hizmet ödemesi.
+Kaleci ve hakem kiralama. Başvuru, profil, talep, teklif, teminat, hizmet ödemesi.
 
 **Bu taşın garanti ettiği:**
 - Hizmet ödemesi maç gerçekleşmeden serbest bırakılmaz
 - Teminat kuralları uygulanır (K-5.1)
+- Sağlayıcı yalnız kendi talep ve kazançlarını görür
+- Süresi geçen talep askıda kalmaz
 
 **Dosyalar:**
 
@@ -510,6 +528,9 @@ services/serviceOfferService.ts
 components/Marketplace/
 views/Marketplace.tsx
 views/ServiceDashboard.tsx
+views/ServiceApplication.tsx
+views/ServiceProfile.tsx
+views/ServiceSettings.tsx
 ```
 
 **Veritabanı nesneleri:** `service_requests`, `admin_fetch_goalkeepers`, `admin_fetch_referees`, `expire_service_requests`, `auto_release_service_payouts`
@@ -519,6 +540,10 @@ views/ServiceDashboard.tsx
 | Kontrol | Ne sorar | Yakaladığı sessizlik | Ne zaman |
 |---|---|---|---|
 | `K-PARA-2` | Başlayıp bitmemiş ödeme kaç tane ve en eskisi kaç saatlik? | Süpürücü çalışmıyor ama kimse fark etmiyor | GUNLUK |
+| `K-KAPI-1` | Kullanıcının çağırabildiği fonksiyonlardan kaçında 'sen kimsin' kontrolü yok? | Fonksiyon çalışıyor ama kimin çağırdığına bakmıyor | HER_IKISI |
+| `K-PAZAR-1` | Kaleci/hakem ücreti, maç gerçekleşmeden ödenmiş mi? | Ödeme gitti, hizmet verilmedi — geri almak imkânsız | GUNLUK |
+
+> **Not:** Risk 3 Ağustos 2026'da ORTA'dan YÜKSEK'e çıkarıldı (K-11.2). Gerekçe mimari olarak da doğru: K-5.1 gereği burada teminat ve online ödeme var — yani bu taş gerçek para taşıyor.
 
 ---
 
@@ -589,4 +614,7 @@ views/Studio.tsx
 | `K-AYAR-1` **Zorunlu ayarların hepsi dolu mu?** | Sistemin çalışması için gereken ayarlardan boş kalan var mı? (3 Ağustos 2026'daki iki büyük arızanın tek kök nedeni buydu) | boş zorunlu ayar = 0 | HER_IKISI |
 | `K-AYAR-2` **Panelde görünen her ayarın kodda karşılığı var mı?** | Panelden açıp kapattığın bir düğme gerçekten bir şey yapıyor mu? | ölü ayar = 0 | HER_IKISI |
 | `K-AYAR-3` **Migration'lar sessizce vazgeçmiş mi?** | Bir migration 'ayar eksik, kurmadım' deyip devam etmiş mi? | koşullu kurulum + eksik ayar = 0 | HER_IKISI |
+| `K-SAHIBI-1` **Saha sahibi yalnız kendi tesisini mi yönetebiliyor?** | Bir saha sahibi, başka bir tesisin takvimini, finansını veya personelini görebiliyor mu? | kapısız tesis fonksiyonu = 0 | HER_IKISI |
+| `K-SAHIBI-2` **Panelde gösterilen tutar canlı veriyle aynı mı?** | Saha sahibinin finans ekranındaki rakamlar ile veritabanındaki gerçek toplamlar birebir tutuyor mu? | sapan tesis = 0 | GUNLUK |
+| `K-PAZAR-1` **Hizmet ödemesi erken serbest bırakılmış mı?** | Kaleci/hakem ücreti, maç gerçekleşmeden ödenmiş mi? | erken serbest bırakma = 0 | GUNLUK |
 | `K-DEMO-1` **Demo veri kurallara uyuyor mu?** | Demo satırları gerçek sistemin kurallarına uyuyor mu, denetimi kirletiyor mu? | kural dışı demo satırı = 0 | GUNLUK |

@@ -125,10 +125,13 @@ Her kaynak dosyanın bir yapı taşına ait olmasını sınar. Yeni bir dosya ek
 haritaya bağlanmadığında **listede görünür.** `--sert` bayrağıyla çalıştırılırsa hata
 verir (CI'da kullanılmak üzere).
 
-> **Bugünkü durum dürüstçe:** kapsam **%42** (289 dosyadan 121'i haritada). Harita şu an
-> sistemin **riskli ve para dokunan** kısımlarını kapsıyor; arayüz bileşenleri ve yardımcı
-> dosyalar henüz bağlanmadı. Bu bilinçli bir başlangıç: **önce riskli yerler.** Kapsam
-> her pakette artırılır ve bu komut ne kadar yol kaldığını her zaman söyler.
+> **Bugünkü durum dürüstçe:** kapsam **%63** (289 dosyadan 182'si haritada). Harita
+> sistemin **riskli ve para dokunan** kısımlarını kapsıyor; kalan 107 dosya ağırlıklı
+> olarak genel arayüz bileşenleri. Kapsam her pakette artırılır ve bu komut ne kadar yol
+> kaldığını her zaman söyler.
+>
+> Zorunluluk (`--sert`) **lansmandan sonra** açılacak (K-11.5) — önce mekanizma
+> alışkanlık haline gelsin, sonra kural olsun.
 
 ### Savunma 3 — Bulgular haritaya bağlı
 
@@ -146,7 +149,25 @@ ve `npm run etki` her seferinde yüzüne söyler.
 npm run etki
 ```
 
-Çıktıyı oku. KRİTİK bir taş varsa **dur ve onay al.**
+Çıktıyı oku. Kural (K-11.1):
+
+| Dokunulan taşın riski | Ne olur |
+|---|---|
+| 🔴 **KRİTİK** (PARA, KAPILAR, KİMLİK, AYARLAR) | **İş DURUR.** Devam için CEO'nun açık onayı gerekir. |
+| 🟠 YÜKSEK · 🟡 ORTA · ⚪ DÜŞÜK | Uyarır, iş devam eder. Zorunlu kontroller yine çalıştırılır. |
+
+> Neden ikili? Her şeyi durdurursak mekanizma engele dönüşür ve zamanla atlanır.
+> Hiçbir şeyi durdurmazsak süs olur. Durma yetkisi yalnız geri alınamaz zararı olan
+> dört taşta.
+
+### Kontrolün kendisi çalışamazsa (K-11.3)
+
+Veritabanına ulaşılamadı, sorgu hata verdi, araç çöktü — bunların hepsi
+**KIRMIZI sayılır**, "sorun yok" sayılmaz.
+
+> Bu bilinçli bir tercih ve bedeli var: ara sıra yanlış alarm alacağız. Kabul edildi,
+> çünkü bu projedeki bütün pahalı hatalar **"bilinmiyor"un "sorun yok" sanılmasından**
+> çıktı.
 
 ### Her değişiklikten SONRA
 
@@ -159,11 +180,17 @@ Ve `npm run etki` çıktısındaki **zorunlu kontrolleri** çalıştır.
 
 ### Her gün (otomatik — kurulacak)
 
-`GUNLUK` işaretli kontroller çalışır, sonucu admin panelindeki **"Sistem Sağlığı"**
-kartına yazılır. Kırmızı varsa **e-posta** gider.
+`GUNLUK` işaretli kontroller çalışır, sonucu **admin panelinde "Sistem Sağlığı" ekranına**
+yazılır (K-11.4 — panel hazır, ekran oraya eklenecek). Kırmızı varsa ayrıca **e-posta** gider.
 
-> E-posta seçildi, bildirim değil — çünkü bildirim kanalının kendisi kırılabiliyor
-> (M-P0-3 tam olarak buydu). Denetçi, denetlediği şeye bağımlı olamaz.
+Ekranda görünecekler:
+- Her yapı taşı için tek satır: yeşil / sarı / kırmızı
+- Kırmızı olanın **hangi kontrolde** ve **ne zaman** kırıldığı
+- "Kontrol edilemedi" durumu **kırmızı** olarak gösterilir (K-11.3)
+- Son 30 günün geçmişi — bir şeyin ne zaman bozulduğu görülebilsin
+
+> E-posta ayrıca gönderiliyor, çünkü bildirim kanalının kendisi kırılabiliyor
+> (M-P0-3 tam olarak buydu). **Denetçi, denetlediği şeye bağımlı olamaz.**
 
 ---
 
@@ -198,14 +225,16 @@ listesine `id`'sini yaz → `npm run sistem:harita` çalıştır.
 
 Mekanizmanın iskeleti kuruldu ve çalışıyor. Şunlar **kod uygulama aşamasında** eklenecek:
 
-- [ ] `scripts/sistem/sql/` altındaki 14 SQL kontrol dosyası (şu an `KONTROLLER.json`'da
+- [ ] `scripts/sistem/sql/` altındaki 17 SQL kontrol dosyası (şu an `KONTROLLER.json`'da
       tanımlı ama dosyaları yazılmadı)
 - [ ] `npm run sistem:limitsiz-sorgu`, `sistem:filtresiz-abonelik`, `sistem:zaman-deseni`,
       `sistem:olu-ayar`, `sistem:sessiz-vazgecme` tarayıcıları
-- [ ] Günlük çalışan denetim işi + admin panelinde "Sistem Sağlığı" kartı
+- [ ] Günlük çalışan denetim işi + admin panelinde **"Sistem Sağlığı" ekranı** (K-11.4)
 - [ ] Kırmızı durumda e-posta gönderimi
-- [ ] CI'da `npm run sistem:kapsam -- --sert`
-- [ ] Kapsamın %42'den yukarı çekilmesi
+- [ ] KRİTİK taşlarda **durdurma** davranışının uygulanması (K-11.1)
+- [ ] CI'da `npm run sistem:kapsam -- --sert` — **lansmandan sonra** (K-11.5)
+- [ ] Kapsamın %63'ten yukarı çekilmesi (kalan 107 dosya, ağırlıklı genel arayüz)
+- [ ] `CLAUDE.md`'ye mekanizma maddesinin eklenmesi — **oturum sonunda, toplu** (K-11.6)
 
 > Bu liste bilerek burada duruyor. Mekanizmanın ilk kuralı kendisine de uygulanır:
 > **eksik olan şey görünür olmalı.**
