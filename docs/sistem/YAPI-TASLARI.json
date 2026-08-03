@@ -1,7 +1,7 @@
 {
   "$aciklama": "OYNA sisteminin TEMEL YAPI TAŞLARI. Bu dosya makine tarafından okunur; SISTEM-HARITASI.md bundan üretilir. ELLE İKİ YERDE TUTMA — yalnız burayı düzenle, sonra 'npm run sistem:harita' çalıştır.",
   "$surum": 1,
-  "$guncelleme": "2026-08-03",
+  "$guncelleme": "2026-08-03 (P-0 tamamlandi)",
   "$risk_seviyeleri": {
     "KRITIK": "Yanlış giderse para kaybolur, kimlik ele geçer veya veri sızar. Değişiklik CEO onayı ister.",
     "YUKSEK": "Yanlış giderse kullanıcı zarar görür ve geri alması zordur. Değişiklik tam doğrulama ister.",
@@ -60,8 +60,18 @@
         "mark_intent_failed",
         "list_stale_payment_intents"
       ],
-      "kontroller": ["K-PARA-1", "K-PARA-2", "K-PARA-3", "K-KILIT-1"],
-      "bilinen_acik_bulgular": ["M-P0-1", "M-P0-2", "CTO-P0-2", "CTO-P0-3", "CTO-P0-4"]
+      "kontroller": [
+        "K-PARA-1",
+        "K-PARA-2",
+        "K-PARA-3",
+        "K-KILIT-1"
+      ],
+      "bilinen_acik_bulgular": [
+        "M-P0-1",
+        "CTO-P0-2",
+        "CTO-P0-3",
+        "CTO-P0-4"
+      ]
     },
     {
       "id": "B02",
@@ -97,8 +107,13 @@
         "_match_player_counts",
         "match_fill_stats"
       ],
-      "kontroller": ["K-KADRO-1", "K-KADRO-2"],
-      "bilinen_acik_bulgular": ["M-P0-4"]
+      "kontroller": [
+        "K-KADRO-1",
+        "K-KADRO-2"
+      ],
+      "bilinen_acik_bulgular": [
+        "M-P0-4"
+      ]
     },
     {
       "id": "B03",
@@ -127,8 +142,13 @@
         "trg_matches_sync_time_and_score_status",
         "get_facility_schedule"
       ],
-      "kontroller": ["K-ZAMAN-1", "K-ZAMAN-2"],
-      "bilinen_acik_bulgular": ["M-P0-8"]
+      "kontroller": [
+        "K-ZAMAN-1",
+        "K-ZAMAN-2"
+      ],
+      "bilinen_acik_bulgular": [
+        "M-P0-8"
+      ]
     },
     {
       "id": "B04",
@@ -160,8 +180,14 @@
         "get_showcase_availability",
         "materialize_subscriptions"
       ],
-      "kontroller": ["K-REZ-1", "K-REZ-2"],
-      "bilinen_acik_bulgular": ["M-10", "Y-6"]
+      "kontroller": [
+        "K-REZ-1",
+        "K-REZ-2"
+      ],
+      "bilinen_acik_bulgular": [
+        "M-10",
+        "Y-6"
+      ]
     },
     {
       "id": "B05",
@@ -189,8 +215,16 @@
         "matches_update",
         "matches_select_public"
       ],
-      "kontroller": ["K-KAPI-1", "K-KAPI-2", "K-KAPI-3"],
-      "bilinen_acik_bulgular": ["CTO-P0-1", "CTO-P0-5", "M-P0-5"]
+      "kontroller": [
+        "K-KAPI-1",
+        "K-KAPI-2",
+        "K-KAPI-3"
+      ],
+      "bilinen_acik_bulgular": [
+        "CTO-P0-1",
+        "CTO-P0-5",
+        "M-P0-5"
+      ]
     },
     {
       "id": "B06",
@@ -216,8 +250,14 @@
         "admin_broadcast_notification",
         "net._http_response"
       ],
-      "kontroller": ["K-BILDIRIM-1", "K-BILDIRIM-2"],
-      "bilinen_acik_bulgular": ["M-P0-3", "M-16", "CTO-P0-5"]
+      "kontroller": [
+        "K-BILDIRIM-1",
+        "K-BILDIRIM-2"
+      ],
+      "bilinen_acik_bulgular": [
+        "M-16",
+        "CTO-P0-5"
+      ]
     },
     {
       "id": "B07",
@@ -245,8 +285,14 @@
         "get_nearby_matches",
         "get_nearby_pitches"
       ],
-      "kontroller": ["K-KAPSAMA-1"],
-      "bilinen_acik_bulgular": ["M-11", "M-12", "Y-9"]
+      "kontroller": [
+        "K-KAPSAMA-1"
+      ],
+      "bilinen_acik_bulgular": [
+        "M-11",
+        "M-12",
+        "Y-9"
+      ]
     },
     {
       "id": "B08",
@@ -275,8 +321,13 @@
         "sync_admin_flags_trigger",
         "trg_protect_profile_columns"
       ],
-      "kontroller": ["K-KIMLIK-1", "K-KAPI-2"],
-      "bilinen_acik_bulgular": ["M-P0-5"]
+      "kontroller": [
+        "K-KIMLIK-1",
+        "K-KAPI-2"
+      ],
+      "bilinen_acik_bulgular": [
+        "M-P0-5"
+      ]
     },
     {
       "id": "B09",
@@ -299,9 +350,25 @@
         "utils/imageTransform.ts",
         "services/pitchMediaService.ts"
       ],
-      "db_nesneleri": ["supabase_realtime", "pg_matviews", "admin_dashboard_stats"],
-      "kontroller": ["K-YUK-1", "K-YUK-2", "K-YUK-3"],
-      "bilinen_acik_bulgular": ["M-P0-6", "M-P0-7", "M-P0-9", "M-17", "M-18", "M-19", "M-20"]
+      "db_nesneleri": [
+        "supabase_realtime",
+        "pg_matviews",
+        "admin_dashboard_stats"
+      ],
+      "kontroller": [
+        "K-YUK-1",
+        "K-YUK-2",
+        "K-YUK-3"
+      ],
+      "bilinen_acik_bulgular": [
+        "M-P0-6",
+        "M-P0-7",
+        "M-P0-9",
+        "M-17",
+        "M-18",
+        "M-19",
+        "M-20"
+      ]
     },
     {
       "id": "B10",
@@ -327,8 +394,14 @@
         "expire_stale_waitlists",
         "release_owner_earnings"
       ],
-      "kontroller": ["K-OTO-1", "K-OTO-2"],
-      "bilinen_acik_bulgular": ["M-P0-2", "M-15", "M-16"]
+      "kontroller": [
+        "K-OTO-1",
+        "K-OTO-2"
+      ],
+      "bilinen_acik_bulgular": [
+        "M-15",
+        "M-16"
+      ]
     },
     {
       "id": "B11",
@@ -340,7 +413,12 @@
         "Eksik ayar sessiz kalmaz — kurulum sırasında ve her gün raporlanır",
         "Panelde görünen her ayarın kodda gerçekten bir karşılığı vardır"
       ],
-      "dosyalar": ["supabaseClient.ts", "capacitor.config.ts", "vercel.json", ".env.example"],
+      "dosyalar": [
+        "supabaseClient.ts",
+        "capacitor.config.ts",
+        "vercel.json",
+        ".env.example"
+      ],
       "db_nesneleri": [
         "app_config",
         "app.settings.functions_base_url",
@@ -351,8 +429,14 @@
         "payment_provider",
         "is_feature_enabled"
       ],
-      "kontroller": ["K-AYAR-1", "K-AYAR-2", "K-AYAR-3"],
-      "bilinen_acik_bulgular": ["M-P0-2", "M-P0-3", "CTO-P1-ozellik-bayraklari"],
+      "kontroller": [
+        "K-AYAR-1",
+        "K-AYAR-2",
+        "K-AYAR-3"
+      ],
+      "bilinen_acik_bulgular": [
+        "CTO-P1-ozellik-bayraklari"
+      ],
       "not": "Bu yapı taşı 3 Ağustos 2026'da doğdu: sweeper cron'unun kurulmaması ve 18/18 push hatasının TEK kök nedeni bu kutudaki iki boş ayardı. Hiçbir yapı taşı bu alana sahip çıkmıyordu."
     },
     {
@@ -370,9 +454,17 @@
         "scripts/owner-demo.mjs",
         "scripts/seeds/"
       ],
-      "db_nesneleri": ["matches.isDemo", "demo_mode_enabled"],
-      "kontroller": ["K-DEMO-1"],
-      "bilinen_acik_bulgular": ["M-P0-4", "M-P0-5"]
+      "db_nesneleri": [
+        "matches.isDemo",
+        "demo_mode_enabled"
+      ],
+      "kontroller": [
+        "K-DEMO-1"
+      ],
+      "bilinen_acik_bulgular": [
+        "M-P0-4",
+        "M-P0-5"
+      ]
     },
     {
       "id": "B13",
@@ -411,8 +503,15 @@
         "owner_cancel_confirmed_booking",
         "release_owner_earnings"
       ],
-      "kontroller": ["K-KAPI-1", "K-SAHIBI-1", "K-SAHIBI-2"],
-      "bilinen_acik_bulgular": ["Y-7", "Y-10"],
+      "kontroller": [
+        "K-KAPI-1",
+        "K-SAHIBI-1",
+        "K-SAHIBI-2"
+      ],
+      "bilinen_acik_bulgular": [
+        "Y-7",
+        "Y-10"
+      ],
       "not": "Risk 3 Ağustos 2026'da ORTA'dan YÜKSEK'e çıkarıldı (K-11.2). Kurucu direktifi: saha sahibi ekranları 'inanılmaz bir özeni hak ediyor'. Gerekçe mimari olarak da doğru: bu panel gelirin toplandığı operatör yüzeyidir ve `views/owner/` altında 52 dosya taşır — kod tabanının en büyük tek alt ağacı."
     },
     {
@@ -444,7 +543,11 @@
         "expire_service_requests",
         "auto_release_service_payouts"
       ],
-      "kontroller": ["K-PARA-2", "K-KAPI-1", "K-PAZAR-1"],
+      "kontroller": [
+        "K-PARA-2",
+        "K-KAPI-1",
+        "K-PAZAR-1"
+      ],
       "bilinen_acik_bulgular": [],
       "not": "Risk 3 Ağustos 2026'da ORTA'dan YÜKSEK'e çıkarıldı (K-11.2). Gerekçe mimari olarak da doğru: K-5.1 gereği burada teminat ve online ödeme var — yani bu taş gerçek para taşıyor."
     },
@@ -479,8 +582,12 @@
         "match_list_invites",
         "get_friends"
       ],
-      "kontroller": ["K-KAPI-1"],
-      "bilinen_acik_bulgular": ["M-21"]
+      "kontroller": [
+        "K-KAPI-1"
+      ],
+      "bilinen_acik_bulgular": [
+        "M-21"
+      ]
     }
   ]
 }

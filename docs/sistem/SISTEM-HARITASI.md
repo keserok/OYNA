@@ -4,7 +4,7 @@
 > `docs/sistem/KONTROLLER.json` dosyalarından üretilir.
 > Değişiklik için o dosyaları düzenleyip `npm run sistem:harita` çalıştırın.
 
-> Kayıt sürümü: 1 · Son güncelleme: 2026-08-03
+> Kayıt sürümü: 1 · Son güncelleme: 2026-08-03 (P-0 tamamlandi)
 
 ## Bu harita ne işe yarar?
 
@@ -95,7 +95,7 @@ utils/iban.ts
 | `K-PARA-3` | %30 kuralı yalnız telefonda mı duruyor, yoksa veritabanı da reddediyor mu? | Kural yalnız istemcide; sunucu her tutarı kabul ediyor | DEGISIKLIKTE |
 | `K-KILIT-1` | İki fonksiyon aynı tabloları ters sırada kilitlerse sistem kilitlenir. Sıra tutarlı mı? | Kilitlenme yalnız yoğun anda oluşur, testte hiç görünmez | HER_IKISI |
 
-**⚠️ Bu taşta şu an açık olan bulgular:** M-P0-1, M-P0-2, CTO-P0-2, CTO-P0-3, CTO-P0-4
+**⚠️ Bu taşta şu an açık olan bulgular:** M-P0-1, CTO-P0-2, CTO-P0-3, CTO-P0-4
 
 ---
 
@@ -260,7 +260,7 @@ supabase/functions/admin-broadcast/
 | `K-BILDIRIM-1` | Son 24 saatte gönderilmeye çalışılan bildirimlerin kaçı gerçekten gitti? | Bildirim gitmiyor ama uygulama 'gönderdim' sanıyor | GUNLUK |
 | `K-BILDIRIM-2` | Son 24 saatte biten/iptal olan maçların hepsi katılımcılarına haber verdi mi? | Olay oldu, bildirim üretilmedi, hata da yok | GUNLUK |
 
-**⚠️ Bu taşta şu an açık olan bulgular:** M-P0-3, M-16, CTO-P0-5
+**⚠️ Bu taşta şu an açık olan bulgular:** M-16, CTO-P0-5
 
 ---
 
@@ -395,7 +395,7 @@ services/matchLifecycleService.ts
 | `K-OTO-1` | Olması gereken cron işlerinin hepsi canlıda var mı? | Migration 'kuramadım' diye uyarı yazdı, kimse okumadı | HER_IKISI |
 | `K-OTO-2` | Defalarca denenip hep başarısız olan maç/iş var mı? | Hata yutuluyor, iş sonsuza dek tekrarlanıyor | GUNLUK |
 
-**⚠️ Bu taşta şu an açık olan bulgular:** M-P0-2, M-15, M-16
+**⚠️ Bu taşta şu an açık olan bulgular:** M-15, M-16
 
 ---
 
@@ -427,7 +427,7 @@ vercel.json
 | `K-AYAR-2` | Panelden açıp kapattığın bir düğme gerçekten bir şey yapıyor mu? | Düğmeye basıyorsun, hiçbir şey olmuyor, hata da yok | HER_IKISI |
 | `K-AYAR-3` | Bir migration 'ayar eksik, kurmadım' deyip devam etmiş mi? | Migration BAŞARILI göründü ama işini yapmadı | HER_IKISI |
 
-**⚠️ Bu taşta şu an açık olan bulgular:** M-P0-2, M-P0-3, CTO-P1-ozellik-bayraklari
+**⚠️ Bu taşta şu an açık olan bulgular:** CTO-P1-ozellik-bayraklari
 
 > **Not:** Bu yapı taşı 3 Ağustos 2026'da doğdu: sweeper cron'unun kurulmaması ve 18/18 push hatasının TEK kök nedeni bu kutudaki iki boş ayardı. Hiçbir yapı taşı bu alana sahip çıkmıyordu.
 

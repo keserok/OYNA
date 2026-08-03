@@ -37,7 +37,7 @@ INSERT INTO public.app_config (key, value, value_type, category, label, descript
 VALUES (
   'functions_base_url',
   '"https://iikvzgyccvgcybzdfwlv.supabase.co/functions/v1"'::jsonb,
-  'string',
+  'text',            -- app_config_value_type_check: number|boolean|text|json
   'SISTEM',
   'Edge Function adresi',
   'Veritabanının Edge Function çağırırken kullandığı taban adres. Gizli değildir. Bölge göçünde MUTLAKA güncellenir.',
