@@ -4,7 +4,7 @@
 > `docs/sistem/KONTROLLER.json` dosyalarından üretilir.
 > Değişiklik için o dosyaları düzenleyip `npm run sistem:harita` çalıştırın.
 
-> Kayıt sürümü: 1 · Son güncelleme: 2026-08-03 (P-0, P-1 tamamlandi)
+> Kayıt sürümü: 1 · Son güncelleme: 2026-08-03 (P-0, P-1, P-2a, P-2b tamamlandi)
 
 ## Bu harita ne işe yarar?
 
@@ -132,7 +132,7 @@ utils/formations.ts
 | `K-KADRO-1` | Maçın içindeki liste ile katılımcı tablosu aynı kişileri mi gösteriyor? (demo hariç) | İki kaynak sessizce ayrışıyor; hangisinin doğru olduğu belirsizleşiyor | HER_IKISI |
 | `K-KADRO-2` | Yeni bir fonksiyon yalnız listeye yazıp tabloyu unutmuş mu? | Yeni kod eski sözleşmeyi bilmiyor | DEGISIKLIKTE |
 
-**⚠️ Bu taşta şu an açık olan bulgular:** M-P0-4
+> **Not:** P-2a (3 Agustos 2026): M-P0-4 ESASLI SEKILDE DUZELTILDI. Iddia edilen '12/20 macta kadro sapmasi' ve 'ayrilan kisiye bildirim gidiyor' YANLISTI. Gercek: role sutunu TARAF tutuyor (home/away), status creator/confirmed/LEFT tutuyor (ayrilanlar isaretleniyor), _match_participant_ids TABLOYA DEGIL JSON'a bakiyor. Iki kaynak celismiyor, farkli seyler tutuyor. GERCEK ACIK daha dardi ama ciddiydi: _match_participant_ids slotu SATIN ALMIS ama kimseyi oturtmamis kisiyi dondurmuyordu -> mac iptalinde parayi odeyen kisiye HIC bildirim gitmiyordu (K-3.3 tehdit altindaydi). Duzeltildi: OTURANLAR birlesim SATIN ALANLAR. Ayrica role/status sozluk kisitlari eklendi.
 
 ---
 
@@ -228,7 +228,7 @@ scripts/generate-rls-policy.ts
 | `K-KAPI-2` | Kullanıcı kendi rolünü, bakiyesini veya cezasını değiştirebiliyor mu? | Koruma bir tabloda var, yeni tabloda unutulmuş | HER_IKISI |
 | `K-KAPI-3` | Yetkili çalışan fonksiyonlar kandırılmaya açık mı? | Tek bir yeni fonksiyon kuralı bozar | HER_IKISI |
 
-**⚠️ Bu taşta şu an açık olan bulgular:** CTO-P0-1, CTO-P0-5, M-P0-5
+**⚠️ Bu taşta şu an açık olan bulgular:** CTO-P0-1, CTO-P0-5
 
 ---
 
