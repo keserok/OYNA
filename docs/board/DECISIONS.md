@@ -98,6 +98,27 @@
 |---|---|
 | **K-7.1** | Ekip: **tek kurucu** + Claude (20x max plan). Tüm efor tahminleri buna göre yapılacak; "ekip tut" öneren tavsiye verilmeyecek. |
 
+## K-8 · CTO turu kararları (3 Ağustos 2026)
+
+| # | Karar | Durum |
+|---|---|---|
+| **K-8.1** | **Kapılar doğru kurulacak ve kurulduğu sürekli ölçülecek.** Güven sınırı paketi (G1–G6) + kapı envanteri. Ayrıntı: `02-cto-EK-guven-siniri.md` | ⏳ Uygulanacak |
+| **K-8.2** | **Sessizce yanlış davranan kural bırakılmayacak.** Altı sessizlik türü için otomatik dedektör ("Sessizlik Denetçisi") kurulacak. Ayrıntı: `02-cto-EK2` Bölüm 1 | ⏳ Uygulanacak |
+| **K-8.3** | **Supabase bahsi bilinçli sürdürülecek.** Çıkış maliyeti belgelenecek, Supabase'e özgü bağımlılıklar listelenip sayısı izlenecek. Bahis doğru; amaç dış şoka hazırlıklı olmak. Ayrıntı: `02-cto-EK2` Bölüm 2 | ⏳ Uygulanacak |
+| **K-8.4** | **Altı katmanlı erken uyarı sistemi kurulacak:** katı tip denetimi · saldırı testleri · kapı envanteri · sessizlik denetçisi · para denetçisi · hata izleme + huni. Ayrıntı: `02-cto-EK2` Bölüm 3 | ⏳ Uygulanacak |
+| **K-8.5** | **Demo verisi kalacak ama zararsız hale getirilecek.** D1–D4: para/katılım fonksiyonları demoyu reddetsin · vitrin filtresi · seed/purge kapatılsın · ölçüm demoyu hariç tutsun. Ayrıntı: `02-cto-EK2` Bölüm 4 | ⏳ Uygulanacak |
+| **K-8.6** | **Ayrı staging ortamı için ek maliyet KABUL EDİLMEDİ** (S1: hayır). Ancak K-8.7'nin doğal yan ürünü olarak test ortamı elde edilecek. | ✅ Karar |
+| **K-8.7** | **Veritabanı Avrupa'ya taşınacak** (S3: taşıyalım). Hedef: mevcut `oyna-staging` projesi — zaten `eu-central-1`/Frankfurt'ta. Taşıma sonrası Singapur projesi test ortamı olur. **Ayrı plan gerekiyor; Mimar turunda ele alınacak.** | ⏳ Planlanacak |
+| **K-8.8** | **`Hadi` Supabase projesi kapatıldı** (S4: kapat). Boş olduğu doğrulandı (0 tablo, 0 kullanıcı, 0 dosya), duraklatıldı. | ✅ **YAPILDI** |
+| **K-8.9** | **Sürüm numarası otomatikleştirilecek** (S5: olur). `package.json` tek kaynak; Android ve iOS oradan okuyacak. | ⏳ Uygulanacak |
+| **K-8.10** | **İyzico geçiş tarihi bilinmiyor** (S2: hayır). Bu yüzden güven sınırı işleri **ödeme beklenmeden** yapılacak — tarih yarın olabilir. | ✅ Karar |
+
+## K-9 · Sonraki roller için kurucu direktifi
+
+| # | Direktif |
+|---|---|
+| **K-9.1** | **Sistem Mimarı turu daha derin ve kapsamlı olacak.** Kurucu talebi: *"daha zeki ve kapsamlı bir iş çıkarıp sorularını tüm sistemi mükemmelleştirmeye yönelik sor."* Mimar turu, tek tek hata avından çok **sistemin bütün olarak doğru kurulmasına** odaklanacak; sorular da bu düzeyde olacak. |
+
 ---
 
 # BÖLÜM II — CPO BULGULARININ GÜNCEL DURUMU
