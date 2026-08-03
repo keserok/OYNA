@@ -16,7 +16,7 @@
 | # | Rol | Durum | Çıktı |
 |---|---|---|---|
 | 1 | **CPO** | ✅ Tamamlandı · kararlar alındı (3 Ağu 2026) | `docs/board/01-cpo.md` |
-| 2 | CTO | ⏳ Sırada | — |
+| 2 | **CTO** | ✅ Tamamlandı (3 Ağu 2026) · kurucu yanıtı bekliyor | `docs/board/02-cto.md` |
 | 3 | Software Architect | ⏳ Bekliyor | — |
 | 4 | Principal Engineer | ⏳ Bekliyor | — |
 | 5 | SRE & DevOps Lead | ⏳ Bekliyor | — |
@@ -138,6 +138,32 @@
 
 ---
 
+## CTO — P0'lar
+
+> Tamamı **canlı veritabanında tarafımdan test edilerek** doğrulandı. Ayrıntı: `docs/board/02-cto.md`
+
+| # | P0 | Kanıt | Durum |
+|---|---|---|---|
+| CTO-P0-1 | **`matches` kaydı istemciden doğrudan yazılabiliyor.** `matches_update` politikasında `WITH CHECK` yok; `authenticated` rolü **58 sütuna** UPDATE yetkili — `price`, `commission_rate_pct/markup_pct/markup_amount`, `slots`, `deposit_status`, `status` dahil. Koruyucu tetikleyici yok (`trg_set_match_commission_model` yalnız INSERT). | canlı `pg_policies` + `column_privileges` | 🔴 AÇIK |
+| CTO-P0-2 | **İade oranı istemcinin gönderdiği saatten hesaplanıyor.** `process_tiered_refund(p_hours_to_match)` gerçek başlangıç saatini hiç okumuyor; `authenticated`'a açık. | canlı fonksiyon gövdesi + yetki testi | 🔴 AÇIK |
+| CTO-P0-3 | **Kaporanın alt sınırı yok.** `record_app_deposit_payment` yalnız tavan kontrolü yapıyor; %30 kuralı yalnız istemcide (`PitchDiscovery.tsx:980`). `direct_booking_deposit_default_pct` ayarı 554 fonksiyonun hiçbirinde okunmuyor. | canlı fonksiyon gövdesi | 🔴 AÇIK |
+| CTO-P0-4 | **`match_block_deposit` keyfi tutarla `authenticated`'a açık.** Denetim migration'ı kardeş fonksiyonları kapatmış, bunu atlamış. | canlı yetki testi | 🔴 AÇIK |
+| CTO-P0-5 | **Herkes herkese bildirim yazabiliyor.** `notifications_insert_own_sender` yalnız `sender_id = auth.uid()` istiyor; `user_id` başkası olabilir. Bildirim doğrudan push'a dönüşüyor. | canlı `pg_policies` | 🔴 AÇIK · **push açılmadan önce şart** |
+| CTO-P0-6 | **Staging yok.** `oyna-staging` INACTIVE; üretim URL+anahtarı `supabaseClient.ts:13-15`'te gömülü, env eksikse sessizce canlıya bağlanıyor; CI her PR'da canlıya vuruyor. | canlı proje durumu + `admin-tests.yml:37-51` | 🟡 CEO KARARI (S1) |
+| CTO-P0-7 | **Ne zorunlu güncelleme var ne canlı yama.** Force-update mekanizması yok, OTA yok. İki kaçış yolu da kapalı. | tam repo taraması + `capacitor.config.ts:48-50` | 🔴 AÇIK |
+| CTO-P0-8 | **TypeScript katı modu kapalı** (`tsconfig.json`'da `strict` anahtarı yok), 500 `any`. Ayrıca `supabase/functions/` typecheck kapsamı dışında — 15 Edge Function hiç denetlenmiyor. Maliyet ölçüldü: `--strict` ile **38 hata**, 19'u tek dosyada. | `tsconfig.json:32-51` | 🔴 AÇIK |
+| CTO-P0-9 | **Bus factor 1.** 198 commit'in 156'sı (%79) Claude oturumları. Kodu okuyabilen ikinci insan yok. `README.md`'nin işaret ettiği 6 yoldan 5'i mevcut değil. | git geçmişi + `README.md` | 🔴 AÇIK |
+
+## CTO — P1/P2 özeti
+
+Acil durdurma anahtarı 554 fonksiyondan 8'ini kapsıyor · özellik bayrakları hiçbir sunucu kapısına bağlı değil (`is_feature_enabled` 0 çağrı) · panelde **9 ölü ayar** (6'sı fair-play) · admin paneli mobil pakete giriyor · `IYZICO_BASE_URL` varsayılanı canlı ödeme ortamı · `VITE_DEMO_ACCOUNTS` fail-open + `?demo=1` her adreste · lansman planındaki 2 env bayrağı kodda hiç okunmuyor · sürüm 4 dosyada elle · `.gitignore` 3 npm komutunun dosyasını yutmuş · filtresiz+temizlenmeyen global maç aboneliği · 229 fonksiyon çok kez tanımlanmış · iOS `PrivacyInfo.xcprivacy` yok · 3 kullanılmayan bağımlılık (biri kamera izni → mağaza riski) · iki harita motoru birden · KVKK/veli onayı ve admin denetim kayıtları sessizce yutulabiliyor · boş 3. Supabase projesi.
+
+## CTO — canlıda doğrulanan güçlü yanlar
+
+Migration sapması **sıfır** (398=398, "defterde yok" denen 8 baseline de defterde — dokümanlar bayat) · **554/554** `SECURITY DEFINER` fonksiyonda `search_path` sabitlenmiş · `profiles` sütun düzeyinde iki katmanlı korumalı (kullanıcı kendi cezasını kaldıramıyor, bakiyesini değiştiremiyor, rol yükseltemiyor) · anonim yazma politikası **yok** · çifte rezervasyon DB kısıtıyla engelli · sır sızıntısı yok, `gitleaks` doğru yapılandırılmış · migration değişmezliği CI ile zorlanıyor · **0** `@ts-ignore`, **2** boş `catch`, 1426 test yeşil · para akışı SQL entegrasyon testleriyle korunuyor.
+
+---
+
 # BÖLÜM III — KARARLARDAN DOĞAN YENİ İŞ KALEMLERİ
 
 > Bunlar CPO turunun bulgusu değil, **kurucu kararlarının gerektirdiği** yeni işlerdir.
@@ -226,7 +252,8 @@ Paket bunlardan biri eksikse **uygulanmaz**.
 
 | # | Paket | İçerik | Risk |
 |---|---|---|---|
-| **P-0** | **Hızlı kazanımlar** | K-4.5'in 6 maddesi | Düşük |
+| **P-0** | **Hızlı kazanımlar** | K-4.5'in 6 maddesi + CTO'nun 6 hızlı kazanımı | Düşük |
+| **P-GS** | **Güven sınırı** ⚠️ | CTO-P0-1…5 — maç kaydı sütun koruması, iade saati, kapora tabanı, `match_block_deposit` kapatma, bildirim politikası. **CPO wedge'inden ÖNCE gelir** (ÇAKIŞMA 1). | **Yüksek — para** |
 | **P-1** | **Link altyapısı** | Y-1, Y-2 — paylaşılabilir maç linki, önizleme sayfası, davet linkinin çalışması | Orta (mağaza dosyaları) |
 | **P-2** | **Kaptan para paneli** | Y-3, Y-4, Y-5 | Düşük |
 | **P-3** | **Maç iptal zinciri** ⚠️ | K-3.1–K-3.5, Y-6, Y-11, Y-13, Y-14, CPO-P0-4 | **Yüksek — para akışı** |
