@@ -17,7 +17,7 @@
 |---|---|---|---|
 | 1 | **CPO** | ✅ Tamamlandı · kararlar alındı (3 Ağu 2026) | `docs/board/01-cpo.md` |
 | 2 | **CTO** | ✅ Tamamlandı (3 Ağu 2026) · kurucu yanıtı bekliyor | `docs/board/02-cto.md` |
-| 3 | Software Architect | ⏳ Bekliyor | — |
+| 3 | **Software Architect** | ✅ Tamamlandı (3 Ağu 2026) · kurucu yanıtı bekliyor | `docs/board/03-mimar.md` |
 | 4 | Principal Engineer | ⏳ Bekliyor | — |
 | 5 | SRE & DevOps Lead | ⏳ Bekliyor | — |
 | 6 | Security & Financial Infra Lead | ⏳ Bekliyor | — |
@@ -185,6 +185,41 @@ Migration sapması **sıfır** (398=398, "defterde yok" denen 8 baseline de deft
 
 ---
 
+## MİMAR — P0'lar
+
+> Tamamı **canlı veritabanında tarafımdan ölçülerek** doğrulandı. Ayrıntı: `docs/board/03-mimar.md`
+
+| # | P0 | Kanıt | Durum |
+|---|---|---|---|
+| M-P0-1 | **Ödeme ve maç kapanışı ters sırada kilit alıyor — kilitlenme (deadlock) kaçınılmaz.** `apply_card_payment`: payment_intents → pitch_bookings → matches. `process_match_at_deadline`: matches → payment_intents. Kesilen taraf ödeme olursa para çekilir, slot verilmez. | canlı fonksiyon gövdelerinden kilit sırası çıkarımı | 🔴 AÇIK |
+| M-P0-2 | **Ödeme süpürücüsü iki kez ölü.** `sweeper_cron=0`, `sweeper_enabled="false"`, 13 cron işinde süpürücü yok — ama `payment_provider=IYZICO`. Yarıda kalan ödeme sonsuza dek askıda. M-P0-1 ile birleşince para kaybı zinciri tamamlanıyor. | canlı `app_config` + `cron.job` | 🔴 AÇIK |
+| M-P0-3 | **Dışarı giden tüm HTTP çağrıları başarısız: 18/18 = HTTP 500.** `notify_send_push_webhook()` ne `Authorization` başlığı gönderiyor ne doğru gövde biçimini. Hiçbir push bildirimi gitmiyor, hata hiçbir yere yazılmıyor. | canlı `net._http_response` + fonksiyon gövdesi | 🔴 AÇIK · **K-3.3 iade bildirimlerinin ön koşulu** |
+| M-P0-4 | **Kadro çift kaynaklı ve canlıda zaten ayrışmış.** 20 maçın 12'sinde JSON kadrosu ile `match_participants` uyuşmuyor (**2'si gerçek maç**). `player_release_slot`/`player_self_assign`/`player_unassign_slot` yalnız JSON yazıyor, tabloya yazmıyor. | canlı karşılaştırma sorgusu + fonksiyon taraması | 🔴 AÇIK · S-3 kararı gerekiyor |
+| M-P0-5 | **`matches.status` için CHECK yok; hesap silme kapısı hayalet sözlük arıyor.** Kapı `('GATHERING','CONFIRMED','PLAYING','LIVE')` kontrol ediyor; sistemin gerçekten kullandığı `ACTIVE` listede yok. Sonuç: **parası bloke kullanıcı hesabını silebilir.** Canlıda sözlük dışı `CONFIRMED` satırı da mevcut. | canlı `pg_constraint` + `_account_deletion_status:40` + durum dağılımı | 🔴 AÇIK |
+| M-P0-6 | **`fbGetMatches` limitsiz — açılışta tüm maç tablosu iniyor.** `supabaseMutations.ts:362`. Satır ort. 3.457 B → 5.000 maçta **17,3 MB/açılış**; 500 eşzamanlıda **8,6 GB** = ücretsiz planın 5 GB aylık kotasının 1,7 katı, tek Cuma akşamında. | kod + canlı satır boyutu ölçümü | 🔴 AÇIK |
+| M-P0-7 | **`matches-list-sync` filtresiz canlı abonelik.** `store.ts:562-564`. Her maç değişikliği tam satır olarak herkese gidiyor: aylık ~6M mesaj (kota 2M), cron patlamasında saniyeler içinde 50.000 mesaj. | kod + canlı `pg_publication_tables` | 🔴 AÇIK |
+| M-P0-8 | **Migration yeniden kurma bombası.** Canlı **DOĞRU** (20/20 maçta sıfır saat sapması), ama repodaki son `player_create_match` tanımı (`20260826000001:245`) 3 saat kaydıran deseni taşıyor. Sıfırdan kurulum sessizce yanlış açılır. **S3 bölge göçünün ön koşulu.** | repo satırı + canlı desen doğrulaması | 🔴 AÇIK |
+| M-P0-9 | **Veritabanı Singapur'da** (`ap-southeast-1`); her isteğe 160–220 ms. Açılış 15 istek, lobi 10–14 istek. Frankfurt'a taşıma oturum başına ~5 sn kazandırır ve **bugün en ucuz** (33 profil). | canlı proje bölgesi + istek sayımı | 🟡 CEO KARARI (S-1) |
+
+## MİMAR — P1/P2 özeti
+
+`pitch_slot_holds` ölü tablo (0 yazan, 0 temizleyen) · coğrafi indeks hiç kullanılmıyor (canlı EXPLAIN'de Seq Scan) · ana sayfa sayacı için 345 KB–1 MB iniyor (kod yorumu yanlış) · lobide her satışta herkeste 4 sorgu → 14 kişilik lobide 784 sorgu · `MatchJoin.tsx`'te 13 noktada gereksiz tam yeniden çekme · `auto_process_matches` zehirli hap biriktiriyor (alt sınır yok + hata yutuluyor) · `send_match_reminders` 1.400 tekil INSERT + 50.000 canlı mesaj · `recharts` her oyuncuya iniyor, `react-vendor` chunk'ı boş üretiliyor · **hiçbir önbellek katmanı yok** (0 materialized view, 0 istemci önbelleği) · fotoğraf sıkıştırmasında kaçış yolu — canlıda 6,8 MB PNG bulundu; görsel dönüştürme ücretsiz planda çalışmayabilir · `VirtualList` yazılmış ama 0 kez kullanılıyor · kopyalanmış alanların hiçbirinde senkron trigger'ı yok (`teams`'te 0 trigger) · `tsconfig` katı mod kapalı + `tests`/`supabase`/`notifications` kapsam dışı · abonelik üretimi gün-gün döngüyle · admin paneli 17 tam tablo sayımı.
+
+## MİMAR — canlıda doğrulanan güçlü yanlar
+
+**Çifte rezervasyon matematiksel olarak imkânsız** (`pitch_bookings_no_overlap` GiST EXCLUDE, `court_id NOT NULL`, trigger'la beslenen `slot_range`) · **slot satın alma yarışı kilitli** (`player_buy_slots_v2__inner` içinde `FOR UPDATE`) · **cüzdan eksiye düşemiyor**, `check_money_invariants()` 8 değişmezde `ok:true` · **zaman sapması sıfır** (20/20 maçta metin saat = mutlak saat) · **migration defteri temiz** (398=398) · `get_facility_schedule` örnek gösterilecek kalitede (31 günlük pencere sınırı + yetki kapısı + tek sorgu) · saha kartlarındaki tarife/müsaitlik N+1 **değil**, toplu çekilmiş · 12 aboneliğin 11'i doğru filtrelenmiş.
+
+## MİMAR — keşif ekiplerinin abartılı iddiaları (düzeltildi)
+
+| İddia | Gerçek |
+|---|---|
+| "Canlıda `player_create_match` saatleri 3 saat kaydırıyor" | **Yanlış.** Canlı doğru desen kullanıyor; sorun yalnız repo yeniden kurma yolunda (M-P0-8). |
+| "`pitch_bookings.payment_status`'ta CHECK yok" | **Yanlış.** `pitch_bookings_payment_status_check` canlıda var. CHECK'i eksik olan yalnız `matches.status`. |
+| "6 fonksiyonda hayalet durum sözlüğü" | **Abartılı.** Canlıda 3 fonksiyon (hepsi hesap silme ailesi). |
+| "Arkadaş listesinde N+1" | **Yanlış.** `socialService.ts:114-118` tek RPC, temiz. |
+
+---
+
 # BÖLÜM III — KARARLARDAN DOĞAN YENİ İŞ KALEMLERİ
 
 > Bunlar CPO turunun bulgusu değil, **kurucu kararlarının gerektirdiği** yeni işlerdir.
@@ -216,6 +251,16 @@ Migration sapması **sıfır** (398=398, "defterde yok" denen 8 baseline de deft
 | **2** | **Ahmet Kuru 2. Saha'nın 0 ₺ tarifesini düzeltebilir miyim?** Hafta içi 15:00–23:00 bandı canlıda bedava satılıyor. Canlı veri değişikliği — kurucu onayı olmadan dokunulmaz. | 🔴 **HÂLÂ AÇIK** (CPO-P0-6) |
 | **3** | Demo verisi ne zaman kapanacak? | 🟢 **YANITLANDI:** Kurucu "piyasaya çıkıyoruz" dediği anda kapatılacak. O ana kadar açık kalır. |
 | **4** | Hangi eski dokümanlar arşive taşınsın? | 🟡 **ERTELENDİ:** Sonra değerlendirilecek. Şimdilik yalnız `YAPILACAKLAR.md` taşındı. |
+| **5** | **Demo satırlarını kurallara uydurabilir miyim?** 12 sapmalı maçın 10'u demo; sözlük dışı `CONFIRMED` satırı da demo. Kalıcı denetim bunlar yüzünden her gün boşuna kırmızı yanacak. Canlı veri değişikliği — onay gerekiyor. | 🔴 **AÇIK** (Mimar S-8) |
+| **6** | **Bölge taşıma (Singapur → Frankfurt) için kesinti penceresi verilir mi?** Bugün 33 profille en ucuz an; her yeni kullanıcı maliyeti artırır. | 🔴 **AÇIK** (Mimar S-1) |
+| **7** | **Supabase Pro planına ne zaman geçiyoruz?** Saha fotoğraflarının görünmesi buna bağlı olabilir; ücretsizde kalınacaksa yükleme anında küçük boy üretimi yazılmalı (~1 gün ek iş). | 🔴 **AÇIK** (Mimar S-2) |
+| **8** | **Kadroda tek doğru kaynak hangisi olsun?** Mimar önerisi: `match_participants`. K-3.3'teki "herkese eksiksiz iade" bu karara bağlı. | 🔴 **AÇIK** (Mimar S-3) |
+| **9** | **Yarıda kalan ödeme için süpürücü politikası ne olsun?** (a) bankaya sor-çöz, (b) doğrudan iptal, (c) admin paneline düşür. Mimar önerisi: (a)+(c). | 🔴 **AÇIK** (Mimar S-4) |
+| **10** | **İşlenemeyen maç kaç denemeden sonra durup CEO'ya sorsun?** Mimar önerisi: 3 deneme → `NEEDS_REVIEW` + panelde kırmızı. | 🔴 **AÇIK** (Mimar S-5) |
+| **11** | **`starts_at` tek doğru zaman kaynağı olsun mu?** Metin `date`/`time` veritabanı tarafından türetilirse saat sapması fiziksel olarak imkânsız hale gelir. | 🔴 **AÇIK** (Mimar S-6) |
+| **12** | **Yurt dışı / farklı saat dilimi hedefi var mı?** Yoksa iş yükü sıfır; varsa saha bazlı saat dilimi alanı **şimdi** eklenmeli (~0,5 gün). | 🔴 **AÇIK** (Mimar S-7) |
+| **13** | **Kalıcı denetim ne sıklıkta, nereye rapor etsin?** Mimar önerisi: günlük + admin panelinde "Sistem Sağlığı" kartı + kırmızıda e-posta (push'a bağımlı olmasın). | 🔴 **AÇIK** (Mimar S-9) |
+| **14** | **Sıralama: para ailesi mi ölçek ailesi mi önce?** Mimar önerisi: **para ailesi önce** (M-P0-1/2/4/5), tek istisna M-P0-8 hemen. | 🔴 **AÇIK** (Mimar S-10) |
 
 ### Uygulama sırasında netleşmesi gereken varsayım
 
@@ -299,4 +344,46 @@ Paket bunlardan biri eksikse **uygulanmaz**.
 
 ---
 
-*Son güncelleme: 3 Ağustos 2026 · CPO turu + kurucu kararları işlendi*
+## Mimar turundan sonraki roller için ek notlar (3 Ağu 2026)
+
+**Principal Engineer'a:** Mimar turu **yapıyı** denetledi, **kod kalitesini** denetlemedi — orası size ait.
+Elinizde şu somut başlangıç noktaları var: `MatchJoin.tsx` **2.643+ satır** ve içinde 13 ayrı yerde
+aynı yeniden-çekme kalıbı tekrarlanıyor (M-14) — burası bu kod tabanının en yüksek karmaşıklıklı
+dosyası ve dokunulan her akış oradan geçiyor. `tsconfig.json` katı mod kapalı ve `tests`,
+`supabase`, `notifications`, `src` klasörleri hiç tip kontrolünden geçmiyor (M-22, CTO-P0-8).
+`VirtualList.tsx` yazılmış ama sıfır kez kullanılıyor; `redeemReferralCode` (`socialService.ts:187`)
+sıfır çağrılı; `subscribeToOpenMatches` (`matchService.ts:43-47`) ölü ama tetiklenirse her olayda
+tüm açık maçları yeniden çeker. Bu üçü aynı ailenin üyesi: **yazılmış, bağlanmamış, kimse fark
+etmemiş.** Ölü kod envanteri bu turda çıkarılmadı — sizin turunuzun doğal işi.
+Bir de: 1426 test yeşil ama testler tip kontrolü dışında; "yeşil" ifadesinin ne kadarına
+güvenebileceğimizi netleştirmek gerekiyor.
+
+**SRE'ye:** Mimar turu SRE'nin işini **büyüttü.** Üç yeni somut madde: (1) `net._http_response`
+tablosunda **18/18 çağrı HTTP 500** — sistemin dışarı açılan tüm kapıları kapalı ve bunu ölçen
+hiçbir şey yok (M-P0-3); bu, izleme (monitoring) kurmanın *neden* birinci iş olduğunun canlı
+kanıtı. (2) 13 cron işi var ama **süpürücü yok** ve `auto_process_matches` başarısız işi sonsuza
+dek yeniden deniyor, hatayı yutarak (M-P0-2, M-15) — cron'ların kendi sağlık raporu yok.
+(3) Ücretsiz plan sınırları operasyonel bir tavan: 5 GB aylık veri, 200 eşzamanlı canlı bağlantı,
+2M canlı mesaj — mevcut mimariyle **tek Cuma akşamı** üçü de aşılıyor (M-P0-6, M-P0-7).
+Bölge göçü (M-P0-9) sizin planlayacağınız iş ve **M-P0-8 çözülmeden başlatılmamalı.**
+
+**Security'ye:** Mimar turunda iki bulgu doğrudan sizin alanınıza giriyor. (1) `matches.status`
+CHECK'siz olduğu için hesap silme kapısı hiç tetiklenmiyor — **parası bloke kullanıcı hesabını
+silebiliyor** (M-P0-5); bu bir yetki açığı değil, bir *sessiz kapı* açığı ve CTO-P0-1'le
+(58 sütun istemciden yazılabilir) aynı aileden. (2) Push köprüsü `Authorization` başlığı olmadan
+çağrı yapıyor (M-P0-3) — düzeltilirken `service_role` anahtarının fonksiyon gövdesine gömülmemesi,
+Vault'ta tutulması şart; aksi halde 554 fonksiyonun tanımını okuyabilen herkes anahtarı görür.
+Ayrıca M-P0-4'teki kadro ayrışması bir yetki sorunu değil ama **para iadesi kime yapılacak**
+sorusunu belirsiz bıraktığı için finansal denetim açısından sizi ilgilendirir.
+
+**Strategic Advisor'a:** Bu turun tek cümlelik özeti şudur ve stratejik değerlendirmeniz buna
+oturmalı: **sistemin temeli sağlam kurulmuş ama etrafındaki dünya değişince kimse haber
+alamıyor.** Çifte rezervasyon matematiksel olarak imkânsız, para değişmezleri yeşil, zaman sapması
+sıfır — bunlar gerçek başarılar. Buna karşılık en az yedi yer sessizce yanlış çalışıyor ve
+**hiçbiri hata vermiyor.** Yani sorun mühendislik kalitesi değil, **geri bildirim eksikliği**.
+Tek kurucu (K-7.1) ve kod okuyamayan bir kurucu için bu, ölçeklenebilirliğin *tek* gerçek
+belirleyicisidir.
+
+---
+
+*Son güncelleme: 3 Ağustos 2026 · CPO + CTO + Mimar turları işlendi*
