@@ -4,7 +4,7 @@
 > `docs/sistem/KONTROLLER.json` dosyalarından üretilir.
 > Değişiklik için o dosyaları düzenleyip `npm run sistem:harita` çalıştırın.
 
-> Kayıt sürümü: 1 · Son güncelleme: 2026-08-03 (P-0 tamamlandi)
+> Kayıt sürümü: 1 · Son güncelleme: 2026-08-03 (P-0, P-1 tamamlandi)
 
 ## Bu harita ne işe yarar?
 
@@ -164,7 +164,7 @@ services/facilitySchedule.ts
 | `K-ZAMAN-1` | Ekranda yazan saat ile gerçek saat birebir aynı mı? | Saat kayması hata vermez, sadece yanlış sonuç üretir | HER_IKISI |
 | `K-ZAMAN-2` | Veritabanını sıfırdan kurunca saatleri kaydıracak eski yazım repoda duruyor mu? | Canlı doğru olduğu için kimse repoyu kontrol etmiyor | HER_IKISI |
 
-**⚠️ Bu taşta şu an açık olan bulgular:** M-P0-8
+> **Not:** P-1'de (3 Agustos 2026) zaman TEK KAYNAK haline getirildi: trg_a_matches_zaman_normalize tetikleyicisi date+time <-> starts_at cift yonlu normalizasyonu Europe/Istanbul ile yapar. Artik HANGI fonksiyon yazarsa yazsin sapma olusamaz. KALINTI: player_create_match, admin_create_match__core ve admin_update_match__core kaynak kodlarinda hala riskli deseni tasiyor (npm run sistem:zaman-deseni ile gorulur) - tetikleyici bunlari etkisiz kildigi icin zarar veremezler, ama ileride temizlenmeli.
 
 ---
 
