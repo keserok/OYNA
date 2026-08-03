@@ -117,7 +117,13 @@ Cuma 20:00'de aynı anda 30 lobide ödeme akarken cron da çalışıyorsa çakı
 
 **Kanıt (canlı):** `app_config` → `sweeper_cron = 0`, `sweeper_enabled = "false"`, buna karşılık `payment_provider = IYZICO`. `cron.job` listesinde 13 iş var, **süpürücü yok.**
 
-**Mevcut durum:** Ödeme sağlayıcısı gerçek (iyzico), ama "ödeme başladı ama sonucu gelmedi" durumundaki kayıtları temizleyen mekanizma hem kapalı hem de zaten hiç kurulmamış.
+> **⚠️ KENDİ BULGUMU DÜZELTİYORUM (3 Ağu 2026, aynı gün).** İlk yazımda "mekanizma zaten hiç kurulmamış" demiştim. **Bu yanlıştı.** Süpürücü **tamamen yazılmış ve doğru yazılmış**: `supabase/functions/sweep-stale-payments/index.ts` (237 satır) ve zamanlaması `supabase/migrations/20260726000001001_sweep_stale_payments_cron.sql`. Üstelik davranışı, CEO'nun S-4'te verdiği cevabın **birebir kendisi**: iyzico'ya "bu para gerçekten çekildi mi?" diye sorar; çekilmişse tamamlar, çekilmemişse iptal eder, belirsizse **dokunmaz**.
+>
+> **Gerçek sorun bambaşka ve çok daha küçük:** migration'ın kendisi, kurulum için gereken iki veritabanı ayarının dolu olmasını şart koşuyor (`app.settings.functions_base_url`, `app.settings.webhook_secret`). Canlıda **ikisi de boş.** Migration bunu fark etti, `RAISE NOTICE` ile uyardı, cron'u kurmadı ve **BAŞARILI olarak tamamlandı.** Uyarıyı kimse görmedi.
+>
+> Yani süpürücü yazılmadığı için değil, **iki ayar boş olduğu için** yok. Efor tahminim 1,5 günden **birkaç saate** düşüyor.
+
+**Mevcut durum:** Ödeme sağlayıcısı gerçek (iyzico), süpürücü kodu hazır ve doğru, ama iki eksik ayar yüzünden zamanlaması hiç kurulmamış — üstüne bir de `sweeper_enabled` kapalı (bu ikincisi bilinçli bir güvenlik tercihi, kod "güvenli doğar" ilkesiyle yazılmış).
 
 **Risk:** Kullanıcı ödeme ekranında kartını girer, tam o anda telefonu kapanır / internet gider. `payment_intents` satırı `PENDING`'de kalır. Kimse dokunmaz. Para bankada bloke kalır, slot boş kalır, kullanıcı ne parasını görür ne yerini. **Bu, M-1 (deadlock) ile birleştiğinde para kaybı zincirini tamamlıyor:** deadlock ödemeyi yarıda keser, süpürücü olmadığı için kimse toplamaz.
 
@@ -144,7 +150,24 @@ net.http_post(
 )
 ```
 
-**Mevcut durum:** Veritabanı bildirim göndermeye çalışıyor, Edge Function yetkisiz diye reddediyor, hata hiçbir yere yazılmıyor, kimse görmüyor.
+> **⚠️ TANIYI NETLEŞTİRDİM (3 Ağu 2026, aynı gün).** Hata mesajını canlıdan okudum: 18 kaydın hepsinde **`"Server misconfigured"`**. Kaynağını buldum — `supabase/functions/send-push/index.ts:56-57`:
+> ```ts
+> const webhookSecret = Deno.env.get('WEBHOOK_SECRET')
+> if (!webhookSecret) {
+>   console.error('[send-push] WEBHOOK_SECRET env variable is not set!')
+>   return new Response('Server misconfigured', { status: 500 })
+> }
+> ```
+> Yani **şu an yaşanan arıza, Edge Function'ın `WEBHOOK_SECRET` ortam değişkeninin ayarlanmamış olması.** Fonksiyon, gelen isteğin yetkisine bakmadan **önce** kendi ayarı eksik diye 500 dönüyor.
+>
+> Bulduğum üç kusur **sırayla** ortaya çıkacak — biri düzeltilince sıradaki görünür hale gelir:
+> 1. **Şimdi:** `WEBHOOK_SECRET` ortam değişkeni boş → `500 Server misconfigured`
+> 2. **Düzeltilince:** `notify_send_push_webhook` `Authorization` başlığı göndermiyor → `401 Unauthorized`
+> 3. **O da düzeltilince:** gövde `row_to_json(NEW)` biçiminde, `{type,table,record,schema}` bekleniyor → bildirim gider ama içeriği okunamaz
+>
+> **Üçünü birden düzeltmeden "push çalışıyor" denemez.** Tek tek düzeltmek, her seferinde yeni bir hata koduna geçmek demektir.
+
+**Mevcut durum:** Veritabanı bildirim göndermeye çalışıyor, Edge Function kendi ayarı eksik olduğu için daha isteğe bakmadan reddediyor, hata hiçbir yere yazılmıyor, kimse görmüyor.
 
 **Risk:** Push bildirimi OYNA'nın **ürün mekaniğinin bir parçası**, süs değil: "maçın 1 saat sonra", "kadro doldu", "ödemen alındı", "maç iptal edildi — paran iade edildi". Bunların hiçbiri gitmiyor. K-3.3 kararınız (saha/admin iptalinde herkese tam iade) bildirimsiz uygulanırsa kullanıcı parasının iade edildiğini **hiç öğrenmez** ve destek talebi olarak size döner.
 
@@ -325,6 +348,41 @@ THEN (v_date::date + (v_time_norm||':00')::time)::timestamptz ELSE NULL END;
 **Efor:** ~1 gün planlama + kesinti penceresi (M-8 çözüldükten SONRA)
 
 **Doğrulama:** Taşıma sonrası aynı isteğin süresi ölçülür; ~180 ms'den ~40 ms'ye düşmeli.
+
+---
+
+## 🔎 M-2 ve M-3'ün ORTAK KÖK NEDENİ — bu turun en önemli bulgusu
+
+İki ayrı P0 gibi görünen şeyin **tek bir kök nedeni** olduğunu geç fark ettim. Ayrı ayrı yazdıktan sonra kazdım ve şunu buldum:
+
+| Ayar | Nerede | Canlıdaki değeri |
+|---|---|---|
+| `app.settings.functions_base_url` | Veritabanı ayarı | **BOŞ** |
+| `app.settings.webhook_secret` | Veritabanı ayarı | **BOŞ** |
+| `WEBHOOK_SECRET` | Edge Function ortam değişkeni | **BOŞ** (hata mesajından kesin) |
+
+**Bu üç boş kutu, iki büyük arızanın tamamını açıklıyor:**
+- Süpürücü cron'u hiç kurulmadı → **askıda kalan para hiç toplanmıyor**
+- Push köprüsü 500 dönüyor → **hiçbir bildirim gitmiyor**
+
+Kodda hata yok. Mimaride hata yok. **Üç kutu boş, o kadar.**
+
+### Bunu neden kimse fark etmedi — ve asıl ders
+
+Süpürücü migration'ı aslında **çok iyi yazılmış.** Ayarların boş olduğunu fark etti, `RAISE NOTICE` ile "kurmadım, ayarları girip tekrar çalıştırın" diye uyardı, zarar vermemek için cron'u kurmadı ve **BAŞARILI durumda tamamlandı.**
+
+Migration defterine "başarıyla uygulandı" diye yazıldı. Doğru — teknik olarak başarıyla uygulandı. Ama **işini yapmadı.**
+
+> Bu, K-8'de üzerinde anlaştığımız "sessizce yanlış davranan kural"ın en saf hali: **kod doğru davrandı, uyardı, ve uyarısı kimseye ulaşmadı.**
+
+Sistemde bu tür bir "koşullu kurulum" deseni tek yerde olsaydı sorun değildi. Ama artık biliyoruz ki bu desen var, ve **hiçbir yapı taşı 'ayarlar' alanına sahip çıkmıyordu.**
+
+**Bu yüzden sistem haritasına `B11 · AYARLAR` adında yeni bir temel yapı taşı ekledim** (`docs/sistem/YAPI-TASLARI.json`) ve üç kalıcı kontrol yazdım:
+- `K-AYAR-1` — zorunlu ayarların hepsi dolu mu?
+- `K-AYAR-2` — panelde görünen her ayarın kodda karşılığı var mı?
+- `K-AYAR-3` — **bir migration sessizce vazgeçmiş mi?**
+
+Sonuncusu tam olarak bugünkü olayı yakalar: koşullu kurulum içeren bir migration + eksik ayar = alarm.
 
 ---
 

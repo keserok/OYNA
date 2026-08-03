@@ -119,6 +119,52 @@
 |---|---|
 | **K-9.1** | **Sistem Mimarı turu daha derin ve kapsamlı olacak.** Kurucu talebi: *"daha zeki ve kapsamlı bir iş çıkarıp sorularını tüm sistemi mükemmelleştirmeye yönelik sor."* Mimar turu, tek tek hata avından çok **sistemin bütün olarak doğru kurulmasına** odaklanacak; sorular da bu düzeyde olacak. |
 
+## K-10 · Mimar turu kararları (3 Ağustos 2026)
+
+Kurucu, Mimar turunun **üç çakışma çözümünü de** ve **on sorunun tamamını** yanıtladı.
+
+| # | Karar | Sonuç |
+|---|---|---|
+| **K-10.1** | **Bölge taşıma onaylandı.** "Kimse etkilenmez çünkü herkes demo." Kesinti penceresi serbest. | M-P0-9 uygulanacak. **Ön koşul: M-P0-8 (migration bombası) önce çözülecek.** |
+| **K-10.2** | **Pro plana sonra geçilecek; fotoğraflar Pro OLMADAN da çalışmalı.** | Yükleme anında küçük/orta/büyük boy üretilip saklanacak; `render/image/public` yoluna bağımlılık kaldırılacak. Sıkıştırma kaçış yolu da kapatılacak. |
+| **K-10.3** | **Tek doğru kadro kaynağı: `match_participants`.** Ek direktif: *"diğer tabloyu da tam olarak incele ve gerekli bağlanıp ayarlanması gereken bir şey varsa ayarla."* | `match_participants` tam envanteri çıkarılacak (sütunlar, kısıtlar, indeksler, RLS, tetikleyiciler, yazan/okuyan tüm fonksiyonlar); eksikler tamamlanacak. Kapsam yalnız 3 fonksiyonu düzeltmekle sınırlı değil. |
+| **K-10.4** | **Süpürücü politikası: "ödeme alınmadıysa alınmasın, alındıysa alınsın."** | Mimar önerisi (a) — iyzico ile mutabakat. **Mevcut `sweep-stale-payments` kodu zaten tam olarak bunu yapıyor** (aşağıdaki kök neden notuna bak). |
+| **K-10.5** | **Zehirli maç: 3 denemeden sonra dur, insana sor.** | `auto_process_matches`'e deneme sayacı + `NEEDS_REVIEW` durumu + panelde kırmızı liste. |
+| **K-10.6** | **`starts_at` tek doğru zaman kaynağı olacak, sağlam kurulacak.** | Metin `date`/`time` veritabanı tarafından türetilecek; sapma fiziksel olarak imkânsız hale gelecek. |
+| **K-10.7** | **Yalnız Türkiye saati geçerli.** Yurt dışı hedefi yok. | `Europe/Istanbul` sabit kalır. Saha bazlı saat dilimi alanı **eklenmeyecek** — iş yükü sıfır. |
+| **K-10.8** | **Demo verilerin canlıda düzeltilmesine izin verildi.** "Her şeyi yeni sisteme uygun halledebilirsin." | Kadro sapmaları + sözlük dışı `CONFIRMED` durumu düzeltilecek. Ayrıca tüm denetim sorguları `isDemo` filtreli olacak. |
+| **K-10.9** | **Günlük denetim + panelde "Sistem Sağlığı" kartı + kırmızıda e-posta onaylandı.** | E-posta bilinçli tercih: denetçi, denetlediği bildirim kanalına bağımlı olamaz. |
+| **K-10.10** | **Sıralama: para ailesi önce.** | M-P0-1/2/4/5 ilk pakette. Tek istisna M-P0-8 — hemen, çünkü göçün ön koşulu. |
+| **K-10.11** | **Çakışma 1, 2 ve 3'ün çözümleri onaylandı.** | Sırasıyla: önce `get_my_matches()` sonra limit · demo veriler kalır ama kurallara uydurulur + denetim demo hariç çalışır · ölçek işleri ikiye bölünür (lansman öncesi M-P0-6/7/8/9, sonrası diğerleri). |
+| **K-10.12** | **Kalıcı mekanizma istendi.** *"Öyle dosyalar üretelim ki mekanizma inanılmaz sağlam olsun, lakin bir sistem değiştirdiğimizde mekanizmanın temel yapı taşlarından hangilerini ilgilendirdiğini dahi görebilelim."* | `docs/sistem/` altında kuruldu — bkz. aşağıdaki bölüm. |
+
+### 🔎 K-10 turunda bulunan KÖK NEDEN — iki P0 tek sebepten
+
+Mimar raporu yazıldıktan sonra kazıldı ve **M-P0-2 ile M-P0-3'ün aynı kök nedenden**
+doğduğu bulundu. Üç ayar kutusu boş:
+
+| Ayar | Nerede | Canlı değeri |
+|---|---|---|
+| `app.settings.functions_base_url` | Veritabanı ayarı | **BOŞ** |
+| `app.settings.webhook_secret` | Veritabanı ayarı | **BOŞ** |
+| `WEBHOOK_SECRET` | Edge Function ortam değişkeni | **BOŞ** |
+
+**Sonuçları:** süpürücü cron'u hiç kurulmadı (para toplanmıyor) + push köprüsü
+`500 Server misconfigured` dönüyor (bildirim gitmiyor).
+
+**Mimarın kendi bulgusunu düzeltmesi:** M-P0-2'de "süpürücü hiç kurulmamış" denmişti —
+**yanlıştı.** `supabase/functions/sweep-stale-payments/index.ts` (237 satır) tam yazılmış
+ve K-10.4'teki kurucu kararının birebir kendisini uyguluyor. Migration da doğru davranmış:
+ayarların boş olduğunu fark etmiş, `RAISE NOTICE` ile uyarmış, zarar vermemek için cron'u
+kurmamış ve **BAŞARILI tamamlanmış.** Uyarıyı kimse görmemiş. Efor 1,5 günden birkaç saate düştü.
+
+**Push için üç kusur sırayla ortaya çıkacak:** (1) şimdi `WEBHOOK_SECRET` boş → 500,
+(2) düzeltilince `Authorization` başlığı yok → 401, (3) o da düzeltilince gövde biçimi yanlış.
+**Üçü birden düzeltilmeden "push çalışıyor" denemez.**
+
+> Bu olay, K-8'deki "sessizce yanlış davranan kural"ın en saf örneğidir:
+> **kod doğru davrandı, uyardı, ve uyarısı kimseye ulaşmadı.**
+
 ---
 
 # BÖLÜM II — CPO BULGULARININ GÜNCEL DURUMU
@@ -341,6 +387,41 @@ Paket bunlardan biri eksikse **uygulanmaz**.
 **SRE'ye:** `sweeper_enabled = false` (askıda ödeme süpürücüsü kapalı) — K-2.1 ile online ödeme geldiğinde bu **P0** olur. `push_live_enabled = false`. Sentry/PostHog anahtarları girilmemiş. `admin_mfa_required = false`. Bölge `ap-southeast-1` (Singapur) — Türkiye kullanıcısı için hem gecikme hem veri yeri sorusu. Tek kurucu (K-7.1) → otomasyon ve alarm, insan nöbetinden önemli.
 
 **Security'ye:** K-2.1 (online ödeme) + K-5.1 (kaleci teminatı + online ödeme) birlikte **cüzdanda gerçek para tutmayı kesinleştirdi**. Bu, Türkiye'de 6493 sayılı kanun kapsamında ödeme kuruluşu/elektronik para lisansı sorusunu doğurur ve repoda bu konuda **hiçbir analiz yok** (mevcut hukukçu notu yalnız tüketici iade hakkına bakmış). Ayrıca: `demo_mode_enabled` canlıda açık ve RLS politikaları buna bağlı; `get_nearby_matches` `SECURITY DEFINER` ve RLS'i baypas ediyor; `admin_broadcast_notification`'ın `p_type` parametresi whitelist'siz.
+
+---
+
+# BÖLÜM VII — MEKANİZMA (K-10.12)
+
+Kurucunun isteği üzerine `docs/sistem/` altında kalıcı düzenek kuruldu ve **çalışır durumda**.
+
+| Dosya | Ne |
+|---|---|
+| `docs/sistem/MEKANIZMA.md` | Sade Türkçe kullanım kılavuzu — **buradan başlanır** |
+| `docs/sistem/YAPI-TASLARI.json` | 15 temel yapı taşı (tek kaynak, makine okunur) |
+| `docs/sistem/KONTROLLER.json` | 26 kontrol; her birinde "yakaladığı sessizlik" yazılı |
+| `docs/sistem/SISTEM-HARITASI.md` | **Üretilen** okunabilir harita (elle düzenlenmez) |
+| `scripts/sistem/etki.mjs` | `npm run etki` — değişiklik hangi taşlara dokunuyor |
+| `scripts/sistem/kapsam.mjs` | `npm run sistem:kapsam` — çürüme bekçisi |
+| `scripts/sistem/harita.mjs` | `npm run sistem:harita` — haritayı yeniden üretir |
+
+**15 yapı taşı:** B01 PARA 🔴 · B02 KADRO 🟠 · B03 ZAMAN 🟠 · B04 REZERVASYON 🟠 ·
+B05 KAPILAR 🔴 · B06 BİLDİRİM 🟠 · B07 KAPSAMA 🟡 · B08 KİMLİK 🔴 · B09 YÜK 🟡 ·
+B10 OTOMASYON 🟠 · **B11 AYARLAR 🔴** · B12 DEMO ⚪ · B13 SAHA SAHİBİ 🟡 ·
+B14 PAZARYERİ 🟡 · B15 SOSYAL 🟡
+
+> **B11 AYARLAR bu turda doğdu.** Bugünkü iki büyük arızanın tek kök nedeni bu alandaydı
+> ve **hiçbir yapı taşı oraya sahip çıkmıyordu.**
+
+**Çürümeye karşı üç savunma:** (1) tek kaynak + üretilen metin — aynı bilgi iki yerde
+tutulmadığı için ayrışamaz, (2) kapsam bekçisi — haritaya bağlanmamış dosyayı listeler,
+CI'da hata verdirilebilir, (3) açık bulgular haritada yaşar, araç her seferinde yüzüne söyler.
+
+**Dürüst durum:** kapsam **%42** (289 dosyadan 121'i). Harita şu an **riskli ve para
+dokunan** kısımları kapsıyor; arayüz bileşenleri henüz bağlanmadı. Bilinçli başlangıç.
+
+**Henüz yapılmayanlar** (kod aşamasında): 14 SQL kontrol dosyası · 5 tarayıcı komutu ·
+günlük denetim işi + Sistem Sağlığı kartı · kırmızıda e-posta · CI'da sert kapsam denetimi ·
+kapsamın yükseltilmesi. Tam liste `MEKANIZMA.md` §7'de — **bilerek görünür bırakıldı.**
 
 ---
 

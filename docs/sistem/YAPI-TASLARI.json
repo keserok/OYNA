@@ -1,0 +1,460 @@
+{
+  "$aciklama": "OYNA sisteminin TEMEL YAPI TAŞLARI. Bu dosya makine tarafından okunur; SISTEM-HARITASI.md bundan üretilir. ELLE İKİ YERDE TUTMA — yalnız burayı düzenle, sonra 'npm run sistem:harita' çalıştır.",
+  "$surum": 1,
+  "$guncelleme": "2026-08-03",
+  "$risk_seviyeleri": {
+    "KRITIK": "Yanlış giderse para kaybolur, kimlik ele geçer veya veri sızar. Değişiklik CEO onayı ister.",
+    "YUKSEK": "Yanlış giderse kullanıcı zarar görür ve geri alması zordur. Değişiklik tam doğrulama ister.",
+    "ORTA": "Yanlış giderse deneyim bozulur, düzeltilebilir.",
+    "DUSUK": "Yanlış giderse yalnız iç araçlar etkilenir."
+  },
+  "yapi_taslari": [
+    {
+      "id": "B01",
+      "ad": "PARA",
+      "risk": "KRITIK",
+      "sade_anlatim": "Kullanıcıdan para almak, cüzdanda tutmak, saha sahibine ve hakem/kaleciye ödemek, iade etmek. Komisyon hesabı da buraya dahil.",
+      "garanti_ettigi": [
+        "Cüzdan bakiyesi asla eksiye düşmez",
+        "Alınan her kuruşun bir karşılığı vardır (8 para değişmezi)",
+        "Aynı ödeme iki kez tahsil edilmez",
+        "Yarıda kalan ödeme sonsuza dek askıda kalmaz"
+      ],
+      "dosyalar": [
+        "services/paymentService.ts",
+        "services/walletService.ts",
+        "services/financeService.ts",
+        "services/paymentModeService.ts",
+        "components/payment/",
+        "views/PaymentScreen.tsx",
+        "views/WalletView.tsx",
+        "supabase/functions/create-payment/",
+        "supabase/functions/capture-payment/",
+        "supabase/functions/void-payment/",
+        "supabase/functions/refund-payment/",
+        "supabase/functions/payment-webhook/",
+        "supabase/functions/iyzico-3ds-callback/",
+        "supabase/functions/sweep-stale-payments/",
+        "utils/formatTRY.ts",
+        "utils/iban.ts"
+      ],
+      "db_nesneleri": [
+        "payment_intents",
+        "wallet_transactions",
+        "commission_config",
+        "apply_card_payment",
+        "player_buy_slots_v2",
+        "player_buy_slots_v2__inner",
+        "record_app_deposit_payment",
+        "process_tiered_refund",
+        "match_block_deposit",
+        "calculate_commission",
+        "_pitch_agreement",
+        "_markup_tutari",
+        "check_money_invariants",
+        "release_owner_earnings",
+        "auto_release_service_payouts",
+        "mark_intent_failed",
+        "list_stale_payment_intents"
+      ],
+      "kontroller": ["K-PARA-1", "K-PARA-2", "K-PARA-3", "K-KILIT-1"],
+      "bilinen_acik_bulgular": ["M-P0-1", "M-P0-2", "CTO-P0-2", "CTO-P0-3", "CTO-P0-4"]
+    },
+    {
+      "id": "B02",
+      "ad": "KADRO",
+      "risk": "YUKSEK",
+      "sade_anlatim": "Bir maçta kimin oynadığı. Slot alma, bırakma, devretme, yedek listesi, takım kadrosu.",
+      "garanti_ettigi": [
+        "Bir slotu aynı anda iki kişi alamaz",
+        "'Kim bu maçta' sorusunun tek bir doğru cevabı vardır",
+        "Maçtan ayrılan kişi listelerde kalmaz"
+      ],
+      "dosyalar": [
+        "services/matchService.ts",
+        "services/matchLifecycleService.ts",
+        "services/rahatMatchService.ts",
+        "hooks/useMyMatches.ts",
+        "hooks/useMyAgenda.ts",
+        "views/MatchJoin.tsx",
+        "views/RahatMatchLobby.tsx",
+        "components/match/",
+        "utils/matchPositions.ts",
+        "utils/formations.ts"
+      ],
+      "db_nesneleri": [
+        "matches.slots",
+        "matches.awaySlots",
+        "match_participants",
+        "player_release_slot",
+        "player_unassign_slot",
+        "player_self_assign",
+        "match_kick_player",
+        "_match_participant_ids",
+        "_match_player_counts",
+        "match_fill_stats"
+      ],
+      "kontroller": ["K-KADRO-1", "K-KADRO-2"],
+      "bilinen_acik_bulgular": ["M-P0-4"]
+    },
+    {
+      "id": "B03",
+      "ad": "ZAMAN",
+      "risk": "YUKSEK",
+      "sade_anlatim": "Bir maçın ne zaman olduğu. Saat, tarih, süre, saat dilimi, geri sayım.",
+      "garanti_ettigi": [
+        "Ekranda görünen saat ile gerçek saat aynıdır",
+        "Saat dilimi her zaman Europe/Istanbul'dur (K-10.7)",
+        "starts_at tek doğru kaynaktır; metin saat ondan türetilir (K-10.6)"
+      ],
+      "dosyalar": [
+        "utils/matchDateTime.ts",
+        "utils/discoveryDays.ts",
+        "hooks/useCountdown.ts",
+        "services/availabilityService.ts",
+        "services/facilitySchedule.ts"
+      ],
+      "db_nesneleri": [
+        "matches.starts_at",
+        "matches.date",
+        "matches.time",
+        "matches.duration_minutes",
+        "player_create_match",
+        "create_match_atomic",
+        "trg_matches_sync_time_and_score_status",
+        "get_facility_schedule"
+      ],
+      "kontroller": ["K-ZAMAN-1", "K-ZAMAN-2"],
+      "bilinen_acik_bulgular": ["M-P0-8"]
+    },
+    {
+      "id": "B04",
+      "ad": "REZERVASYON",
+      "risk": "YUKSEK",
+      "sade_anlatim": "Sahanın hangi saatinin kime ayrıldığı. Kort, tarife, abonman, saha sahibinin elle kapattığı slotlar.",
+      "garanti_ettigi": [
+        "Aynı korta aynı saate iki rezervasyon yapılamaz (veritabanı kısıtıyla)",
+        "İptal edilen rezervasyon saati serbest bırakır",
+        "Tarifesi olmayan saat satılamaz"
+      ],
+      "dosyalar": [
+        "services/pitchBookingService.ts",
+        "services/playerBookingService.ts",
+        "services/tariffService.ts",
+        "services/availabilityService.ts",
+        "hooks/usePitchAvailability.ts",
+        "views/PitchDiscovery.tsx"
+      ],
+      "db_nesneleri": [
+        "pitch_bookings",
+        "pitch_bookings_no_overlap",
+        "courts",
+        "pitch_tariffs",
+        "pitch_slot_holds",
+        "create_pitch_booking",
+        "owner_cancel_confirmed_booking",
+        "auto_approve_bookings",
+        "get_showcase_availability",
+        "materialize_subscriptions"
+      ],
+      "kontroller": ["K-REZ-1", "K-REZ-2"],
+      "bilinen_acik_bulgular": ["M-10", "Y-6"]
+    },
+    {
+      "id": "B05",
+      "ad": "KAPILAR",
+      "risk": "KRITIK",
+      "sade_anlatim": "Kimin neyi görebileceği ve değiştirebileceği. Satır kuralları (RLS), sütun izinleri, fonksiyon yetkileri, koruyucu tetikleyiciler.",
+      "garanti_ettigi": [
+        "Kullanıcı başkasının verisini okuyamaz/yazamaz",
+        "Kullanıcı kendi rolünü, bakiyesini, cezasını değiştiremez",
+        "Her SECURITY DEFINER fonksiyonun görünür bir yetki kontrolü vardır"
+      ],
+      "dosyalar": [
+        "supabaseAuth.ts",
+        "supabaseClient.ts",
+        "scripts/generate-rls-policy.ts"
+      ],
+      "db_nesneleri": [
+        "pg_policies",
+        "protect_profile_columns",
+        "protect_profile_sensitive_fields",
+        "require_admin_role",
+        "require_admin_write",
+        "can_staff_pitch",
+        "notifications_insert_own_sender",
+        "matches_update",
+        "matches_select_public"
+      ],
+      "kontroller": ["K-KAPI-1", "K-KAPI-2", "K-KAPI-3"],
+      "bilinen_acik_bulgular": ["CTO-P0-1", "CTO-P0-5", "M-P0-5"]
+    },
+    {
+      "id": "B06",
+      "ad": "BILDIRIM",
+      "risk": "YUKSEK",
+      "sade_anlatim": "Kullanıcıya haber vermek. Uygulama içi bildirim, telefon bildirimi (push), e-posta.",
+      "garanti_ettigi": [
+        "Gönderilmesi gereken her bildirim gerçekten gider",
+        "Gitmeyen bildirim sessiz kalmaz, sayılır ve raporlanır",
+        "Kullanıcı başkası adına bildirim yollayamaz"
+      ],
+      "dosyalar": [
+        "notifications/",
+        "services/notificationService.ts",
+        "supabase/functions/send-push/",
+        "supabase/functions/send-email/",
+        "supabase/functions/admin-broadcast/"
+      ],
+      "db_nesneleri": [
+        "notifications",
+        "notify_send_push_webhook",
+        "send_match_reminders",
+        "admin_broadcast_notification",
+        "net._http_response"
+      ],
+      "kontroller": ["K-BILDIRIM-1", "K-BILDIRIM-2"],
+      "bilinen_acik_bulgular": ["M-P0-3", "M-16", "CTO-P0-5"]
+    },
+    {
+      "id": "B07",
+      "ad": "KAPSAMA",
+      "risk": "ORTA",
+      "sade_anlatim": "Nerede hizmet verdiğimiz. İl/ilçe kapsama alanları, harita, mesafe hesabı, yakındaki maç ve saha bulma.",
+      "garanti_ettigi": [
+        "Kapsama dışı bir yere maç/saha gösterilmez",
+        "Mesafe hesabı doğrudur ve indeksten yararlanır"
+      ],
+      "dosyalar": [
+        "services/regionCoverageService.ts",
+        "services/locationService.ts",
+        "services/geocodingService.ts",
+        "components/map/",
+        "components/location/",
+        "utils/geo.ts",
+        "utils/regionResolver.ts",
+        "utils/orduData.ts",
+        "views/MatchDiscovery.tsx"
+      ],
+      "db_nesneleri": [
+        "region_coverage",
+        "pitches_geo_idx",
+        "get_nearby_matches",
+        "get_nearby_pitches"
+      ],
+      "kontroller": ["K-KAPSAMA-1"],
+      "bilinen_acik_bulgular": ["M-11", "M-12", "Y-9"]
+    },
+    {
+      "id": "B08",
+      "ad": "KIMLIK",
+      "risk": "KRITIK",
+      "sade_anlatim": "Kim olduğun. Giriş, kayıt, roller, admin yetkisi, hesap silme, veli onayı, KVKK.",
+      "garanti_ettigi": [
+        "Kullanıcı kendi rolünü yükseltemez",
+        "Parası askıda olan kullanıcı hesabını silemez",
+        "Silinen hesabın verisi kurallara uygun temizlenir"
+      ],
+      "dosyalar": [
+        "supabaseAuth.ts",
+        "services/userService.ts",
+        "services/consentService.ts",
+        "services/guardianService.ts",
+        "views/AuthScreen.tsx",
+        "views/ProfileScreen.tsx",
+        "components/profile/"
+      ],
+      "db_nesneleri": [
+        "profiles",
+        "_account_deletion_status",
+        "admin_process_account_deletion__core",
+        "process_expired_account_deletions",
+        "sync_admin_flags_trigger",
+        "trg_protect_profile_columns"
+      ],
+      "kontroller": ["K-KIMLIK-1", "K-KAPI-2"],
+      "bilinen_acik_bulgular": ["M-P0-5"]
+    },
+    {
+      "id": "B09",
+      "ad": "YUK",
+      "risk": "ORTA",
+      "sade_anlatim": "Sistemin kaç kişiyi kaldırabildiği. Sorgu boyutları, canlı abonelikler, önbellek, uygulama paketi boyutu, görseller.",
+      "garanti_ettigi": [
+        "Açılışta inen veri sınırlıdır ve maç sayısıyla büyümez",
+        "Canlı abonelikler filtrelidir",
+        "Aylık plan kotaları aşılmaz"
+      ],
+      "dosyalar": [
+        "store.ts",
+        "supabaseMutations.ts",
+        "vite.config.ts",
+        "services/dashboardCountsService.ts",
+        "hooks/useDashboardCounts.ts",
+        "components/common/VirtualList.tsx",
+        "utils/imageCompression.ts",
+        "utils/imageTransform.ts",
+        "services/pitchMediaService.ts"
+      ],
+      "db_nesneleri": ["supabase_realtime", "pg_matviews", "admin_dashboard_stats"],
+      "kontroller": ["K-YUK-1", "K-YUK-2", "K-YUK-3"],
+      "bilinen_acik_bulgular": ["M-P0-6", "M-P0-7", "M-P0-9", "M-17", "M-18", "M-19", "M-20"]
+    },
+    {
+      "id": "B10",
+      "ad": "OTOMASYON",
+      "risk": "YUKSEK",
+      "sade_anlatim": "Kimse dokunmadan kendi kendine çalışan işler. Zamanlanmış görevler (cron), maç kapanışı, hatırlatmalar, temizlik işleri.",
+      "garanti_ettigi": [
+        "Zamanlanmış her iş gerçekten çalışır ve sonucu kaydedilir",
+        "Başarısız iş sonsuza dek tekrarlanmaz; 3 denemeden sonra insana sorar (K-10.5)",
+        "Hata asla sessizce yutulmaz"
+      ],
+      "dosyalar": [
+        "supabase/functions/auto-cancel-matches/",
+        "supabase/functions/sweep-stale-payments/",
+        "services/matchLifecycleService.ts"
+      ],
+      "db_nesneleri": [
+        "cron.job",
+        "auto_process_matches",
+        "auto_finalize_matches",
+        "process_match_at_deadline",
+        "expire_service_requests",
+        "expire_stale_waitlists",
+        "release_owner_earnings"
+      ],
+      "kontroller": ["K-OTO-1", "K-OTO-2"],
+      "bilinen_acik_bulgular": ["M-P0-2", "M-15", "M-16"]
+    },
+    {
+      "id": "B11",
+      "ad": "AYARLAR",
+      "risk": "KRITIK",
+      "sade_anlatim": "Sistemin davranışını belirleyen anahtarlar. Veritabanı ayarları, ortam değişkenleri, özellik bayrakları, acil durdurma anahtarları. Kod doğru olsa bile bunlardan biri eksikse sistem sessizce çalışmaz.",
+      "garanti_ettigi": [
+        "Sistemin ihtiyaç duyduğu her ayarın dolu olduğu sürekli kontrol edilir",
+        "Eksik ayar sessiz kalmaz — kurulum sırasında ve her gün raporlanır",
+        "Panelde görünen her ayarın kodda gerçekten bir karşılığı vardır"
+      ],
+      "dosyalar": ["supabaseClient.ts", "capacitor.config.ts", "vercel.json", ".env.example"],
+      "db_nesneleri": [
+        "app_config",
+        "app.settings.functions_base_url",
+        "app.settings.webhook_secret",
+        "sweeper_enabled",
+        "push_live_enabled",
+        "demo_mode_enabled",
+        "payment_provider",
+        "is_feature_enabled"
+      ],
+      "kontroller": ["K-AYAR-1", "K-AYAR-2", "K-AYAR-3"],
+      "bilinen_acik_bulgular": ["M-P0-2", "M-P0-3", "CTO-P1-ozellik-bayraklari"],
+      "not": "Bu yapı taşı 3 Ağustos 2026'da doğdu: sweeper cron'unun kurulmaması ve 18/18 push hatasının TEK kök nedeni bu kutudaki iki boş ayardı. Hiçbir yapı taşı bu alana sahip çıkmıyordu."
+    },
+    {
+      "id": "B12",
+      "ad": "DEMO",
+      "risk": "DUSUK",
+      "sade_anlatim": "Tanıtım ve deneme verileri. Boş ekran görünmesin diye duran sahte maçlar, sahalar, hesaplar.",
+      "garanti_ettigi": [
+        "Demo veri gerçek veriyle karışmaz",
+        "Demo veri denetim raporlarını kirletmez (K-10.8)",
+        "Demo veri gerçek sistemin kurallarına uyar"
+      ],
+      "dosyalar": [
+        "services/ownerDemoService.ts",
+        "scripts/owner-demo.mjs",
+        "scripts/seeds/"
+      ],
+      "db_nesneleri": ["matches.isDemo", "demo_mode_enabled"],
+      "kontroller": ["K-DEMO-1"],
+      "bilinen_acik_bulgular": ["M-P0-4", "M-P0-5"]
+    },
+    {
+      "id": "B13",
+      "ad": "SAHA-SAHIBI",
+      "risk": "ORTA",
+      "sade_anlatim": "Saha sahibinin paneli. Tesis bilgileri, kortlar, fotoğraflar, personel, takvim, finans raporu.",
+      "garanti_ettigi": [
+        "Saha sahibi yalnız kendi tesisini yönetebilir",
+        "Elle kapatılan slotun komisyon alacağı kaydedilir (K-2.3)"
+      ],
+      "dosyalar": [
+        "services/pitchOwnerService.ts",
+        "services/pitchContentService.ts",
+        "services/pitchShowcaseService.ts",
+        "services/ownerAccountService.ts",
+        "services/staffService.ts",
+        "components/pitch-editor/",
+        "components/pitch-showcase/",
+        "views/OwnerPanel.tsx",
+        "hooks/useOwnerEntitlements.ts"
+      ],
+      "db_nesneleri": ["pitches", "pitch_staff", "can_staff_pitch", "get_facility_schedule"],
+      "kontroller": ["K-KAPI-1"],
+      "bilinen_acik_bulgular": ["Y-7", "Y-10"]
+    },
+    {
+      "id": "B14",
+      "ad": "PAZARYERI",
+      "risk": "ORTA",
+      "sade_anlatim": "Kaleci ve hakem kiralama. Talep, teklif, teminat, hizmet ödemesi.",
+      "garanti_ettigi": [
+        "Hizmet ödemesi maç gerçekleşmeden serbest bırakılmaz",
+        "Teminat kuralları uygulanır (K-5.1)"
+      ],
+      "dosyalar": [
+        "services/serviceProviderService.ts",
+        "services/serviceRequestService.ts",
+        "services/serviceOfferService.ts",
+        "components/Marketplace/",
+        "views/Marketplace.tsx",
+        "views/ServiceDashboard.tsx"
+      ],
+      "db_nesneleri": [
+        "service_requests",
+        "admin_fetch_goalkeepers",
+        "admin_fetch_referees",
+        "expire_service_requests",
+        "auto_release_service_payouts"
+      ],
+      "kontroller": ["K-PARA-2"],
+      "bilinen_acik_bulgular": []
+    },
+    {
+      "id": "B15",
+      "ad": "SOSYAL",
+      "risk": "ORTA",
+      "sade_anlatim": "Arkadaşlar, takımlar, sohbet, davetler, taktik tahtası.",
+      "garanti_ettigi": [
+        "Kullanıcı yalnız kendi sohbetlerini görür",
+        "Süresi geçen davetler temizlenir"
+      ],
+      "dosyalar": [
+        "services/socialService.ts",
+        "services/friendService.ts",
+        "services/teamService.ts",
+        "services/teamChatService.ts",
+        "services/teamAdminService.ts",
+        "services/teamSocialService.ts",
+        "services/tacticSocialService.ts",
+        "services/messageService.ts",
+        "services/contactsService.ts",
+        "components/social/",
+        "views/SocialView.tsx",
+        "views/MessagesView.tsx",
+        "views/Studio.tsx"
+      ],
+      "db_nesneleri": [
+        "friendships",
+        "teams",
+        "team_invites",
+        "match_list_invites",
+        "get_friends"
+      ],
+      "kontroller": ["K-KAPI-1"],
+      "bilinen_acik_bulgular": ["M-21"]
+    }
+  ]
+}
