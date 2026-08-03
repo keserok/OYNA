@@ -1,4 +1,20 @@
-# 🏛️ OYNA — Master Prensipler Dokümanı
+# ⛔ GEÇERSİZ — BAĞLAYICI DEĞİLDİR
+
+> **Bu dosya 3 Ağustos 2026 itibarıyla kurucu kararıyla GEÇERSİZ ilan edilmiştir.**
+> Buradaki hiçbir madde bir kararı bağlamaz, bir tartışmayı kapatmaz ve "böyle yazıyor"
+> gerekçesiyle kullanılamaz. Dosya yalnızca **tarihsel referans** olarak duruyor.
+>
+> **Sebep:** Aynı adı taşıyan iki kopya (bu dosya ve kökteki `OYNA_MASTER_PRENSIPLER.md`)
+> farklı yerlerde bayatlamış ve birbiriyle çelişiyordu. Hangisinin bağlayıcı olduğu belirsizdi.
+>
+> **Yerine geçecek:** Danışma kurulu süreci tamamlandığında yazılacak **tek** master prensipler dosyası.
+> O dosya yayınlanana kadar geçerlilik sırası için: **`GECERLILIK_POLITIKASI.md`**
+>
+> **Kısa kural:** Çelişki varsa **canlı sistem** kazanır — bu dosya değil.
+
+---
+
+# 🏛️ OYNA — Master Prensipler Dokümanı *(arşiv)*
 
 > **Durum:** TASLAK — canlı geliştiriliyor. Keşif soruları yanıtlandıkça bölüm bölüm dolduruluyor.
 > **Kaynak:** `docs/eski/OYNA_MASTER_KESIF_SORULARI.md` (200 soru) + bölüm bölüm Q&A.
