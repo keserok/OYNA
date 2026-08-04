@@ -112,6 +112,10 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onSelect }) => {
     }
 
     let cancelled = false;
+    // [P-7 / M-20] Yarıçap kaydırıcısı her oynatıldığında bu efekt tetikleniyor
+    // ve bölge başına 1 RPC atıyordu (3 bölge = 3 sorgu, her piksel hareketinde).
+    // 300 ms gecikme ile kullanıcı kaydırmayı bitirene kadar bekleniyor.
+    const timer = setTimeout(() => {
     Promise.all(centers.map((c) => fetchNearbyMatches(c.lat, c.lng, searchRadius))).then((perCenter) => {
       if (cancelled) return;
       // get_nearby_matches HAM matches satırı döndürür (SETOF matches); satırı
@@ -126,7 +130,8 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onSelect }) => {
       });
       setNearbyMatches(Array.from(byId.values()));
     });
-    return () => { cancelled = true; };
+    }, 300);
+    return () => { cancelled = true; clearTimeout(timer); };
   }, [userLocation, selectedRegions, searchRadius]);
 
   const enhancedMatches = useMemo(() => {

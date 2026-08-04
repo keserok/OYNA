@@ -1,7 +1,7 @@
 {
   "$aciklama": "OYNA sisteminin TEMEL YAPI TAŞLARI. Bu dosya makine tarafından okunur; SISTEM-HARITASI.md bundan üretilir. ELLE İKİ YERDE TUTMA — yalnız burayı düzenle, sonra 'npm run sistem:harita' çalıştır.",
   "$surum": 1,
-  "$guncelleme": "2026-08-03 (P-0, P-1, P-2 tamamlandi; CTO 5/5 P0 kapali)",
+  "$guncelleme": "2026-08-03 (P-0..P-3, P-7 kismi; CTO 5/5)",
   "$risk_seviyeleri": {
     "KRITIK": "Yanlış giderse para kaybolur, kimlik ele geçer veya veri sızar. Değişiklik CEO onayı ister.",
     "YUKSEK": "Yanlış giderse kullanıcı zarar görür ve geri alması zordur. Değişiklik tam doğrulama ister.",
@@ -179,9 +179,9 @@
         "K-REZ-2"
       ],
       "bilinen_acik_bulgular": [
-        "M-10",
         "Y-6"
-      ]
+      ],
+      "not": "M-10 DUZELTMESI (P-7, 3 Agustos 2026): 'pitch_slot_holds olu tablo, kaldirilmali' tavsiyem YANLISTI ve uygulansaydi URETIMI BOZARDI. Tabloya YAZAN yok (dogru), ama UC fonksiyon ondan OKUYOR: create_pitch_booking (rezervasyon akisinin kalbi), get_facility_schedule (saha sahibi takvimi) ve cleanup_expired_holds. Tablo SILINMEDI. Gercek durum: hold ozelligi yarim bagli - okuyan taraf kurulu, yazan taraf yok. Zararsiz; ileride ya tamamlanir ya sokulur."
     },
     {
       "id": "B05",
@@ -278,7 +278,6 @@
         "K-KAPSAMA-1"
       ],
       "bilinen_acik_bulgular": [
-        "M-11",
         "M-12",
         "Y-9"
       ]
@@ -355,7 +354,6 @@
         "M-P0-9",
         "M-17",
         "M-18",
-        "M-19",
         "M-20"
       ]
     },
@@ -450,10 +448,8 @@
       "kontroller": [
         "K-DEMO-1"
       ],
-      "bilinen_acik_bulgular": [
-        "M-P0-4",
-        "M-P0-5"
-      ]
+      "bilinen_acik_bulgular": [],
+      "not": "P-3 (3 Agustos 2026): 6 tabloya is_demo sutunu + kandirilamayan tetikleyiciler eklendi. Demo olcutu: @oyna.app e-postasi (kaynak: demo_ekosistem_seed.sql, canlida 29/3/1 olarak dogrulandi). Artik denetim demo haric calisabiliyor. Olcum: panelde gorunen 15.860 TL'nin 13.940 TL'si demoymus, gercek para 1.920 TL."
     },
     {
       "id": "B13",

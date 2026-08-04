@@ -5,6 +5,13 @@
  */
 
 export const MAX_UPLOAD_BYTES = 10 * 1024 * 1024; // bucket limiti ile aynı
+/**
+ * [P-7 / M-19] Tarayıcı çözemediği dosyalar için üst sınır.
+ * Sıkıştırma kaçış yolu (decode edilemeyen dosyayı olduğu gibi geçirme) canlıda
+ * gerçekten kullanılmıştı: depoda 6,8 MB'lık ham bir PNG bulundu. Küçük ve
+ * sıradışı formatlara tolerans korunuyor, ama büyük dosya artık sessizce geçmez.
+ */
+export const UNDECODABLE_MAX_BYTES = 2 * 1024 * 1024;
 export const MIN_IMAGE_WIDTH = 800;
 /** Vitrin (tesis/saha) görselleri için önerilen min çözünürlük (Faz 8 · Karar #8). */
 export const SHOWCASE_MIN_WIDTH = 1280;
@@ -72,6 +79,15 @@ export async function compressImageForUpload(file: File, options: CompressOption
     if (/hei[cf]/i.test(file.type) || /\.hei[cf]$/i.test(file.name)) {
       throw new ImageValidationError(
         'Bu HEIC fotoğraf tarayıcıda işlenemedi. Telefonunuzda Ayarlar > Kamera > Formatlar\'dan "En Uyumlu"yu seçin veya fotoğrafı JPEG olarak paylaşıp tekrar deneyin.',
+      );
+    }
+    // [P-7 / M-19] SESSİZ KAÇIŞ KAPATILDI.
+    // Eskiden burada dosya sıkıştırılmadan olduğu gibi geçiyordu; canlıda
+    // 6,8 MB'lık ham PNG bu yoldan girmişti (16 nesnenin ortalaması 616 KB).
+    // Küçük dosyalarda tolerans sürüyor, büyük dosya artık açıkça reddediliyor.
+    if (file.size > UNDECODABLE_MAX_BYTES) {
+      throw new ImageValidationError(
+        'Bu fotoğraf tarayıcıda işlenemedi ve sıkıştırılamadığı için çok büyük. Lütfen JPEG olarak kaydedip tekrar deneyin.',
       );
     }
     return file;

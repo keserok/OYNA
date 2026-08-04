@@ -4,7 +4,7 @@
 > `docs/sistem/KONTROLLER.json` dosyalarından üretilir.
 > Değişiklik için o dosyaları düzenleyip `npm run sistem:harita` çalıştırın.
 
-> Kayıt sürümü: 1 · Son güncelleme: 2026-08-03 (P-0, P-1, P-2 tamamlandi; CTO 5/5 P0 kapali)
+> Kayıt sürümü: 1 · Son güncelleme: 2026-08-03 (P-0..P-3, P-7 kismi; CTO 5/5)
 
 ## Bu harita ne işe yarar?
 
@@ -197,7 +197,9 @@ views/PitchDiscovery.tsx
 | `K-REZ-1` | Aynı korta aynı saate iki rezervasyonu engelleyen veritabanı kuralı duruyor mu? | Bir migration kısıtı düşürür, kimse fark etmez | HER_IKISI |
 | `K-REZ-2` | Saha sahibi rezervasyonu iptal edince maç da iptal oluyor mu? | Rezervasyon iptal, maç ayakta — iki tablo birbirinden habersiz | DEGISIKLIKTE |
 
-**⚠️ Bu taşta şu an açık olan bulgular:** M-10, Y-6
+**⚠️ Bu taşta şu an açık olan bulgular:** Y-6
+
+> **Not:** M-10 DUZELTMESI (P-7, 3 Agustos 2026): 'pitch_slot_holds olu tablo, kaldirilmali' tavsiyem YANLISTI ve uygulansaydi URETIMI BOZARDI. Tabloya YAZAN yok (dogru), ama UC fonksiyon ondan OKUYOR: create_pitch_booking (rezervasyon akisinin kalbi), get_facility_schedule (saha sahibi takvimi) ve cleanup_expired_holds. Tablo SILINMEDI. Gercek durum: hold ozelligi yarim bagli - okuyan taraf kurulu, yazan taraf yok. Zararsiz; ileride ya tamamlanir ya sokulur.
 
 ---
 
@@ -292,7 +294,7 @@ views/MatchDiscovery.tsx
 |---|---|---|---|
 | `K-KAPSAMA-1` | Yakındaki sahaları bulan sorgu tüm tabloyu mu tarıyor? | Küçük veride hızlı, büyük veride çöküyor | DEGISIKLIKTE |
 
-**⚠️ Bu taşta şu an açık olan bulgular:** M-11, M-12, Y-9
+**⚠️ Bu taşta şu an açık olan bulgular:** M-12, Y-9
 
 ---
 
@@ -363,7 +365,7 @@ services/pitchMediaService.ts
 | `K-YUK-2` | Bir tablonun tüm değişikliklerini herkese gönderen abonelik var mı? | Tek kullanıcıda görünmez, 500 kullanıcıda kotayı 3'e katlar | HER_IKISI |
 | `K-YUK-3` | Uygulama ilk açıldığında inen dosya boyutu kabul edilebilir mi? | Her yeni kütüphane biraz ekler, kimse toplamı ölçmez | DEGISIKLIKTE |
 
-**⚠️ Bu taşta şu an açık olan bulgular:** M-P0-6, M-P0-7, M-P0-9, M-17, M-18, M-19, M-20
+**⚠️ Bu taşta şu an açık olan bulgular:** M-P0-6, M-P0-7, M-P0-9, M-17, M-18, M-20
 
 ---
 
@@ -456,7 +458,7 @@ scripts/seeds/
 |---|---|---|---|
 | `K-DEMO-1` | Demo satırları gerçek sistemin kurallarına uyuyor mu, denetimi kirletiyor mu? | Demo veri gerçeği yanlış temsil ediyor, denemeler yanıltıyor | GUNLUK |
 
-**⚠️ Bu taşta şu an açık olan bulgular:** M-P0-4, M-P0-5
+> **Not:** P-3 (3 Agustos 2026): 6 tabloya is_demo sutunu + kandirilamayan tetikleyiciler eklendi. Demo olcutu: @oyna.app e-postasi (kaynak: demo_ekosistem_seed.sql, canlida 29/3/1 olarak dogrulandi). Artik denetim demo haric calisabiliyor. Olcum: panelde gorunen 15.860 TL'nin 13.940 TL'si demoymus, gercek para 1.920 TL.
 
 ---
 
