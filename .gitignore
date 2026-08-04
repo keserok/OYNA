@@ -24,6 +24,10 @@ scripts/*
 # Kılavuz ekran görüntüsü çekim aracı (tekrar üretilebilirlik için depoda)
 !scripts/kilavuz-gorselleri/
 !scripts/kilavuz-gorselleri/**
+# Rafa kaldırma öncesi tam yedek aracı (bkz. docs/master/runbook/RAFA_KALDIRMA_VE_GERI_ACMA.md)
+!scripts/maintenance/
+!scripts/maintenance/yedek-al.sh
+!scripts/maintenance/storage-yedekle.mjs
 !admin-panel/scripts/admin-panel-verify.mjs
 !admin-panel/scripts/admin-supabase-deploy.mjs
 !admin-panel/scripts/start-admin-local.mjs
@@ -94,3 +98,7 @@ scratchpad/
 # Ajan gecici sinama dosyalari
 *.tmp.mjs
 playwright-report/
+
+# ─── Veritabanı yedekleri — GERÇEK KULLANICI VERİSİ, ASLA COMMIT'LEME ───
+# `scripts/maintenance/yedek-al.sh` bu klasöre yazar.
+yedek/
