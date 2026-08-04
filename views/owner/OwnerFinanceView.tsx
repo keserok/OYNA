@@ -122,18 +122,18 @@ export const OwnerFinanceView: React.FC<OwnerFinanceViewProps> = ({ pitchId, isD
   const nextLocked = isMonthAfter(shiftMonth(month, 1), currentMonth);
 
   if (isLoading) {
-    return <div className="p-6 pb-40"><LoadingState message="Finans verileri yükleniyor…" /></div>;
+    return <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-6 pb-40"><LoadingState message="Finans verileri yükleniyor…" /></div>;
   }
   if (isMock) {
     return (
-      <div className="p-6 pb-40 text-center text-gray-500">
+      <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-6 pb-40 text-center text-gray-500">
         <p className="text-sm">Finans modülü için tesisinizi oluşturun veya demo modunu başlatın.</p>
       </div>
     );
   }
   if (!summary) {
     return (
-      <div className="p-6 pb-40 text-center">
+      <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-6 pb-40 text-center">
         <p className="text-sm text-red-400 font-bold mb-3">{error ?? 'Finans özeti yüklenemedi.'}</p>
         <button onClick={load} className="text-xs text-blue-400 font-bold">Tekrar dene</button>
       </div>
@@ -141,7 +141,11 @@ export const OwnerFinanceView: React.FC<OwnerFinanceViewProps> = ({ pitchId, isD
   }
 
   return (
-    <div className="p-4 pb-40 overflow-y-auto custom-scrollbar bg-[#0A0E14]">
+    // KAYDIRMA: `flex-1 min-h-0` şart. OwnerPanel kökü artık `h-full` (sınırlı);
+    // bu kutu sınırlanmazsa içerikle uzar, kaydırma üretmez ve alt kartlara
+    // parmakla ulaşılamaz. `min-h-0` olmadan `flex-1` tek başına yetmez —
+    // esnek çocuğun min-height varsayılanı `auto`dur (içeriğinden küçülemez).
+    <div className="flex-1 min-h-0 p-4 pb-40 overflow-y-auto overscroll-contain custom-scrollbar bg-[#0A0E14]">
       <div className="max-w-5xl mx-auto w-full">
         <OwnerDemoDataBar pitchId={pitchId} onChanged={load} hasDemo={hasDemoData} />
         {isDemoMode && (

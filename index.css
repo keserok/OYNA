@@ -347,6 +347,36 @@
 #root .min-h-screen { min-height: 100%; }
 #root .h-screen     { height: 100%; }
 #root .max-h-screen { max-height: 100%; }
+/* `dvh` de aynı aileden — kural yazıldığında kaynakta yoktu, sonradan girdi ve
+   sessizce kapsam dışında kaldı (OwnerPanel `min-h-dvh` kullanıyordu; saha
+   sahibi ekranlarında iç kaydırma bu yüzden hiç devreye girmiyordu). */
+#root .min-h-dvh { min-height: 100%; }
+#root .h-dvh     { height: 100%; }
+#root .max-h-dvh { max-height: 100%; }
+
+/* ─── KAYDIRMA GÜVENLİK AĞI (üç kez aynı şikâyet geldi) ───────────────────────
+   ŞİKÂYET: "Şu ekranda kaydırma çalışmıyor." Üç ayrı seferde, üç ayrı ekranda.
+   Her seferinde ekran ekran düzeltildi; dördüncüsü yine geldi.
+
+   TEK VE AYNI SEBEP: CSS'te bir esnek (flex) ya da ızgara (grid) çocuğunun
+   `min-height` VARSAYILANI `auto`dur — yani "içeriğimden küçülemem". Bu yüzden
+   `flex-1 overflow-y-auto` diye yazılmış bir kutu, kalan alana sığmak yerine
+   içerikle birlikte UZAR ve kaydırma çubuğu HİÇ DEVREYE GİRMEZ. Üstündeki kap
+   `overflow-hidden` ise içerik kesilir ve parmakla hiç ulaşılamaz.
+
+   Doğru kurulum `flex-1 min-h-0 overflow-y-auto`dur; kaynakta 10 yerde doğru,
+   49 yerde eksik yazılmıştı. Tek tek eklemek yerine kural buraya yazıldı:
+   kaydırması İSTENEN her kutunun `min-height`ı sıfırlanır.
+
+   NEDEN GÜVENLİ: Esnek/ızgara ÇOCUĞU OLMAYAN öğelerde `min-height`ın hesaplanan
+   değeri zaten 0'dır — onlarda hiçbir şey değişmez. Değişen tek durum, tam da
+   düzeltmek istediğimiz durumdur.
+
+   KAPSAM: yalnız `#root`. Yönetim paneli (`#admin-root`) masaüstü için ayrı
+   tasarlandı, kendi yerleşimi geçerli kalır. ─────────────────────────────── */
+#root .overflow-y-auto,
+#root .overflow-auto,
+#root .overflow-y-scroll { min-height: 0; }
 
 /* ─── Ana sayfa üst boşluğu (views/Dashboard.tsx) ──────────────────────────
    Onaylı tasarım üst boşluğu SABİT verir: clamp(42px, 7.1cqh, 60px). Bu değer

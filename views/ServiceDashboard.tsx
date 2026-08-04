@@ -2068,14 +2068,23 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
   return (
     <div className="h-full flex flex-col bg-[#0A0E14] relative overflow-hidden">
       
-      {/* Profile sub-view */}
+      {/* Profil alt ekranı.
+          KAYDIRMA: Bu ekranların kökü `min-h-screen`dir — yani App'in görünüm
+          kaydırıcısında SAYFA BOYU akmak üzere yazılmışlar. Burada ise
+          `overflow-hidden` bir kabın içine konuyorlardı: taşan kısım kesiliyor
+          ve parmakla ULAŞILAMIYORDU (ölçüldü: Ayarlar'da 71px kesik, Profil'de
+          kaydırma hiç yok). Kendi kaydırıcılarına alındılar. */}
       {activeTab === 'PROFILE_VIEW' && (
-        <ServiceProfile role={role} onBack={() => setActiveTab('MENU')} />
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain custom-scrollbar">
+          <ServiceProfile role={role} onBack={() => setActiveTab('MENU')} />
+        </div>
       )}
 
       {/* Settings sub-view */}
       {activeTab === 'SETTINGS_VIEW' && (
-        <ServiceSettings role={role} onBack={() => setActiveTab('MENU')} onLogout={onLogout ?? onBack} />
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain custom-scrollbar">
+          <ServiceSettings role={role} onBack={() => setActiveTab('MENU')} onLogout={onLogout ?? onBack} />
+        </div>
       )}
 
       {activeTab !== 'PROFILE_VIEW' && activeTab !== 'SETTINGS_VIEW' && (<>

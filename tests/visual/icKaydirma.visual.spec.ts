@@ -156,3 +156,78 @@ test.describe('İç kaydırıcı — yük altında boyunu korumalı', () => {
     });
   }
 });
+
+// ─── PANEL SEKMELERİ (dördüncü şikâyet: 4 Ağustos 2026) ──────────────────────
+//
+// ŞİKÂYET: "Saha sahibi ve kaleci/hakem arayüzlerinde kaydırma çalışmıyor."
+//
+// Yukarıdaki sınav ekranların YALNIZ AÇILIŞ sekmesine bakıyordu. Panellerin
+// kendi iç sekmeleri (Özet/Takvim/Ekip/Finans/Menü ve Ana Sayfa/Maç Bul/
+// Cüzdan/Menü + Menü'nün alt ekranları) hiç ölçülmüyordu. Ölçülünce iki
+// gerçek arıza çıktı:
+//
+//   • Kaleci/hakem → Menü → Profilim ve Ayarlar: iç kaydırıcı HİÇ YOKTU ve
+//     üstlerindeki kap `overflow-hidden` idi → içerik kesiliyor, parmakla
+//     ulaşılamıyordu (Ayarlar'da 71px ölçüldü).
+//   • Saha sahibi paneli: kök `min-h-dvh` idi (taban, sınır değil) → içindeki
+//     `flex-1 overflow-y-auto` kutular sınırlanamıyor, kaydırma üretmiyor,
+//     bunun yerine BÜTÜN SAYFA dışarıdan kayıyordu (başlık ve alt bar dahil).
+//
+// Bu blok o sekmeleri tek tek gezer. Bir daha sessizce kırılamaz.
+
+const PANEL_SEKMELERI: { panel: string; sekme: string; ard?: string }[] = [
+  { panel: 'SERVICE_DASHBOARD', sekme: 'Ana Sayfa' },
+  { panel: 'SERVICE_DASHBOARD', sekme: 'Maç Bul' },
+  { panel: 'SERVICE_DASHBOARD', sekme: 'Cüzdan' },
+  { panel: 'SERVICE_DASHBOARD', sekme: 'Menü' },
+  { panel: 'SERVICE_DASHBOARD', sekme: 'Menü', ard: 'Profilim' },
+  { panel: 'SERVICE_DASHBOARD', sekme: 'Menü', ard: 'Ayarlar' },
+  { panel: 'OWNER_PANEL', sekme: 'Özet' },
+  { panel: 'OWNER_PANEL', sekme: 'Takvim' },
+  { panel: 'OWNER_PANEL', sekme: 'Ekip' },
+  { panel: 'OWNER_PANEL', sekme: 'Finans' },
+  { panel: 'OWNER_PANEL', sekme: 'Menü' },
+];
+
+test.describe('Panel sekmeleri — her sekme kendi içinde kaydırmalı', () => {
+  for (const s of PANEL_SEKMELERI) {
+    const ad = `${s.panel === 'OWNER_PANEL' ? 'Saha sahibi' : 'Kaleci/hakem'} · ${s.sekme}${s.ard ? ' › ' + s.ard : ''}`;
+    test(ad, async ({ page }) => {
+      await hazirla(page);
+      await ekranaGit(page, s.panel);
+      await page.waitForTimeout(1200);
+      await oturmasiniBekle(page).catch(() => {});
+
+      await page.getByText(s.sekme, { exact: true }).first().click({ timeout: 10_000 });
+      await page.waitForTimeout(700);
+      if (s.ard) {
+        await page.getByText(s.ard, { exact: true }).first().click({ timeout: 10_000 });
+        await page.waitForTimeout(900);
+      }
+
+      const m = await yukAltindaOlc(page);
+      const kunye = `"${ad}" · kök: "${m.kokSinif}" · kaydırıcı: "${m.icEtiket}"`;
+
+      // 1) Kök yük altında ŞİŞMEMELİ — yüksekliği belli olmalı.
+      expect(
+        m.kokYukYukAltinda,
+        `${kunye}\nKök ${m.kokYuk}px → ${m.kokYukYukAltinda}px büyüdü. ` +
+        'Sınırlı olmalı (h-full), taban değil (min-h-dvh/min-h-screen).',
+      ).toBe(m.kokYuk);
+
+      // 2) ASIL SINAV: sekme KENDİ İÇİNDE kaydırmalı.
+      expect(
+        m.kaydirilabilir,
+        `${kunye}\nBu sekme kendi içinde kaydırma ÜRETMEDİ ` +
+        `(görünen ${m.gorunen}px, kaydırılabilir ${m.kaydirilabilir}px). ` +
+        'Kullanıcı alttaki içeriğe parmakla ulaşamaz.',
+      ).toBeGreaterThan(1000);
+
+      // 3) Taşma dışarı çıkmamalı — başlık ve alt bar yerinde kalmalı.
+      expect(
+        m.disKaydirma,
+        `${kunye}\nSayfanın kendisi uzadı (${m.disKaydirma}px) — başlık ve alt bar da kayar.`,
+      ).toBeLessThanOrEqual(1);
+    });
+  }
+});
