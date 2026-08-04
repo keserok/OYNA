@@ -143,3 +143,44 @@ describe('D1 — bozuk maç koruması', () => {
     expect(s).toContain('AND NOT elle_bakilmali');
   });
 });
+
+describe('Başvuru sadeleştirmesi — zorunluluk kapıları doğru yerde', () => {
+  const FORM = 'views/ServiceApplication.tsx';
+
+  it('kimlik fotoğrafı ve KVKK zorunlu KALDI', () => {
+    const s = oku(FORM);
+    expect(s).toContain("idPhoto: !idPhoto ?");
+    expect(s).toContain('agreed: !agreed ?');
+  });
+
+  it('ücret · tarz · bölge · lisans artık zorunlu değil', () => {
+    const s = oku(FORM);
+    expect(s).toContain('style: null,');
+    expect(s).toContain('zones: null,');
+    expect(s).toContain('level: null,');
+    // Ücret girildiyse hâlâ geçerli olmalı, girilmediyse serbest
+    expect(s).toContain('feeGirildi && !(Number(fee) > 0)');
+  });
+
+  it('ücret boşsa 0 DEĞİL null gider (bedava kiralama deliği)', () => {
+    const s = oku(FORM);
+    expect(s).toContain('fee: feeGirildi ? Number(fee) : null');
+  });
+
+  it('sunucu ücreti belirlenmemiş sağlayıcıyı kiralatmaz', () => {
+    const s = oku('supabase/migrations/20260804340000_ucretsiz_saglayici_kiralamasi_engellendi.sql');
+    expect(s).toContain('PROVIDER_NO_FEE');
+    expect(s).toContain('v_fee <= 0');
+    // Mevcut müsaitlik kapısı korunmalı
+    expect(s).toContain('PROVIDER_UNAVAILABLE');
+  });
+
+  it('iki serbest yazı alanı tek "Not" alanında birleşti', () => {
+    const s = oku(FORM);
+    // Etiket olarak yok (yorumda geçmesi serbest — neden kaldırıldığını anlatıyor)
+    expect(s).not.toMatch(/tracking-wider">Niyet Mektubu/);
+    expect(s).not.toContain('{/* Niyet Mektubu */}');
+    expect(s).not.toContain('const [intentLetter');
+    expect(s).toContain('intentLetter: bio.trim()');
+  });
+});
