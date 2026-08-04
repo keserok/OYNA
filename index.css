@@ -311,6 +311,15 @@
 /* MOB-M4/M5/M6: üst/alt güvenli alan + bileşen dolgusu birleşimleri */
 .pt-safe-2   { padding-top:    calc(var(--safe-top) + 0.5rem); }
 .pt-safe-6   { padding-top:    calc(var(--safe-top) + 1.5rem); }
+/* Sahalar ekranının başlığı (views/PitchDiscovery.tsx).
+   `pt-safe` yalnız `env(safe-area-inset-top) + 1rem` verir. Güvenli alanı
+   BİLDİRMEYEN cihazda (bazı Android'ler, tarayıcı, webview yapılandırması
+   eksikse) bu 0 + 1rem = 16px'e düşer ve "Sahalar" başlığı çentiğin/Dynamic
+   Island'ın altına giriyordu — kullanıcı bildirdi.
+   Ana sayfadaki (satır ~385) ile AYNI karar: İKİSİNDEN BÜYÜĞÜ. Çentikli
+   cihazda güvenli alan kadar büyür, bildirmeyen cihazda 3,25rem taban kalır;
+   ne çakışma ne fazla boşluk. */
+.pt-safe-baslik { padding-top: max(calc(var(--safe-top) + 1rem), 3.25rem); }
 .pb-safe-6   { padding-bottom: calc(var(--safe-bottom) + 1.5rem); }
 /* FAZ0: hayalet sınıf — OwnerModalFrame/BankAccounts/Withdrawals/ImageCropModal
    `safe-area-top` kullanıyordu ama TANIMSIZDI → çentikli cihazda modal başlığı
@@ -406,6 +415,7 @@ body.offline-banner-on .safe-top      { padding-top: calc(var(--safe-top) + var(
 body.offline-banner-on .pt-safe       { padding-top: calc(var(--safe-top) + 1rem   + var(--offline-banner-h)); }
 body.offline-banner-on .pt-safe-2     { padding-top: calc(var(--safe-top) + 0.5rem + var(--offline-banner-h)); }
 body.offline-banner-on .pt-safe-6     { padding-top: calc(var(--safe-top) + 1.5rem + var(--offline-banner-h)); }
+body.offline-banner-on .pt-safe-baslik { padding-top: calc(max(calc(var(--safe-top) + 1rem), 3.25rem) + var(--offline-banner-h)); }
 body.offline-banner-on .safe-area-top { padding-top: calc(var(--safe-top) + 1rem   + var(--offline-banner-h)); }
 /* FAZ0: hayalet sınıf — OwnerKpiGrid vb. `scrollbar-hide` kullanıyordu; `.no-scrollbar` ile aynı. */
 .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
