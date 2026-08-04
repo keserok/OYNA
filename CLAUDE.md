@@ -28,8 +28,6 @@
   düzeltme, yeniden düzenleme (refactor), stil değişikliği yapma.
 - Çalışırken başka bir sorun fark edersen: DÜZELTME. Özetin "fark ettiklerim"
   bölümünde sade dille listele; kullanıcı isterse ayrı görev olarak verir.
-- Küçük değişiklik her zaman büyük değişikliğe tercih edilir.
-- Görev metnindeki "DOKUNULMASIN" satırı kesin sınırdır.
 
 ## 3. Veritabanı uyumu (geçmişte sorun oldu — zorunlu adımlar)
 
@@ -85,8 +83,3 @@ Görevin doğrudan parçası değilse şu alanlara girme; parçasıysa önce
 - Git: doğrudan `main` dalına push etme; işler kendi dalında yapılır.
   Commit mesajları Türkçe ve açıklayıcı olur.
 
-## 7. Görev şablonu
-
-Kullanıcı görevleri genellikle `GOREV_SABLONU.md` içindeki formatla verir
-(GÖREV / NEREDE / ŞU AN NE OLUYOR / OLMASI GEREKEN / DOKUNULMASIN).
-Şablonsuz gelen bir görev belirsizse, bu başlıklardaki eksik bilgiyi sade dille sor.
