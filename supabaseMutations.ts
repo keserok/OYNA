@@ -365,6 +365,18 @@ export const fbGetMatches = async () => {
   return (data || []).map(mapFromSnakeCase);
 };
 
+// [P-5 / M-P0-6] "Maçlarım" için KAPSAMLI sunucu sorgusu.
+// Açılışta tüm matches tablosunu indirmeyi gereksiz kılar: kullanıcı yalnız
+// kendi maçlarını çeker (kurucu | slotta oturan | slotu satın alan | yedek).
+// Ölçüt get_my_matches() içinde, hooks/useMyMatches.ts ile BİREBİR aynı.
+// Hata durumunda BOŞ döner (throw etmez): eski global liste yedek olarak durur,
+// yani bu ekleme hiçbir maçı kaybettiremez.
+export const fbGetMyMatches = async () => {
+  const { data, error } = await supabase.rpc('get_my_matches');
+  if (error) { console.warn('[fbGetMyMatches] scoped sorgu basarisiz:', error.message); return []; }
+  return (data || []).map(mapFromSnakeCase);
+};
+
 export const fbGetTeams = async () => {
   const { data, error } = await supabase.from('teams').select('*').limit(TEAMS_MAX);
   if (error) throw new Error(`Takımlar yüklenemedi: ${error.message}`);

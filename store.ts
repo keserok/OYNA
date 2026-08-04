@@ -253,6 +253,10 @@ interface AppState {
   adminGoalkeepers: Goalkeeper[];
   adminReferees: Referee[];
   adminMatches: MatchListing[];
+  /** [P-5/M-P0-6] Kullanicinin KENDI maclari — sunucudan kapsamli olarak gelir.
+   *  useMyMatches bunu adminMatches filtresiyle BIRLESTIRIR; boylece scoped
+   *  sorgu bir sebeple bos donse bile hicbir mac kaybolmaz. */
+  myMatches: MatchListing[];
   adminUsers: AdminUser[];
   adminNotifications: AdminNotification[];
   adminLogs: AdminLog[];
@@ -506,10 +510,11 @@ export const useAppStore = create<AppState>((set, get) => ({
       ]);
 
     try {
-      const [sessionRes, pitchesRes, matchesRes, teamsRes, servicesRes, textsRes] = await Promise.allSettled([
+      const [sessionRes, pitchesRes, matchesRes, myMatchesRes, teamsRes, servicesRes, textsRes] = await Promise.allSettled([
         withTimeout(supabase.auth.getSession()),
         withTimeout(FB.fbGetPitches()),
         withTimeout(FB.fbGetMatches()),
+        withTimeout(FB.fbGetMyMatches()),
         withTimeout(FB.fbGetTeams()),
         withTimeout(get().loadServices(), 4000),
         withTimeout<any>(Promise.resolve(supabase.from('texts').select('key, value'))),
@@ -520,6 +525,9 @@ export const useAppStore = create<AppState>((set, get) => ({
       }
       if (matchesRes.status === 'fulfilled' && matchesRes.value) {
         set({ adminMatches: matchesRes.value as MatchListing[] });
+      }
+      if (myMatchesRes.status === 'fulfilled' && myMatchesRes.value) {
+        set({ myMatches: myMatchesRes.value as MatchListing[] });
       }
       if (teamsRes.status === 'fulfilled' && teamsRes.value) {
         set({ adminTeams: teamsRes.value as Team[] });
@@ -698,6 +706,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   adminReferees: [],
   servicesError: false,
   adminMatches: [],
+  myMatches: [],
   adminUsers: [],
   adminNotifications: [],
   adminLogs: [],

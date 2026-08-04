@@ -1,7 +1,7 @@
 {
   "$aciklama": "OYNA sisteminin TEMEL YAPI TAŞLARI. Bu dosya makine tarafından okunur; SISTEM-HARITASI.md bundan üretilir. ELLE İKİ YERDE TUTMA — yalnız burayı düzenle, sonra 'npm run sistem:harita' çalıştır.",
   "$surum": 1,
-  "$guncelleme": "2026-08-03 (P-0..P-3, P-7 kismi; CTO 5/5)",
+  "$guncelleme": "2026-08-03 (P-0..P-3, P-5 kismi, P-7; CTO 5/5)",
   "$risk_seviyeleri": {
     "KRITIK": "Yanlış giderse para kaybolur, kimlik ele geçer veya veri sızar. Değişiklik CEO onayı ister.",
     "YUKSEK": "Yanlış giderse kullanıcı zarar görür ve geri alması zordur. Değişiklik tam doğrulama ister.",
@@ -339,9 +339,12 @@
         "services/pitchMediaService.ts"
       ],
       "db_nesneleri": [
-        "supabase_realtime",
+        "admin_dashboard_stats",
+        "get_my_matches",
+        "get_nearby_pitches",
         "pg_matviews",
-        "admin_dashboard_stats"
+        "pitches_geo_idx",
+        "supabase_realtime"
       ],
       "kontroller": [
         "K-YUK-1",
@@ -349,13 +352,11 @@
         "K-YUK-3"
       ],
       "bilinen_acik_bulgular": [
-        "M-P0-6",
         "M-P0-7",
         "M-P0-9",
-        "M-17",
-        "M-18",
-        "M-20"
-      ]
+        "M-18"
+      ],
+      "not": "P-5 kismi (3 Agustos 2026): get_my_matches() RPC yazildi ve istemciye baglandi. useMyMatches artik IKI KAYNAGIN BIRLESIMINI kullaniyor (sunucudan kapsamli + global listenin yerel filtresi) - boylece hicbir mac kaybolamaz; Cakisma-1'in dogruluk sarti korunuyor. SIRADAKI ADIM: global fbGetMatches'in daraltilmasi. ONCE M-P0-7 (filtresiz realtime) karari verilmeli - o abonelik kaldirilirsa kesif listeleri canli guncellenmez; bu bir URUN karari, teknik degil. P-7'de M-17 (ilk yuk 561->232 KB), M-11 (geo indeks), M-19 (sikistirma kacisi) ve M-20 (debounce) kapatildi."
     },
     {
       "id": "B10",
