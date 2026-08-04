@@ -7,6 +7,8 @@
 // bir gün kaymaz. Bu üç söz saf fonksiyonlarda yaşıyor; burada kilitleniyor.
 
 import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import {
   AYLAR, MIN_YEAR, daysInMonth, toISODateLocal, parseISODate, yasHesapla,
 } from '../../components/profile/BirthdatePicker';
@@ -68,6 +70,33 @@ describe('yaş hesabı', () => {
 
   it('doğum gününden bir gün önce henüz artmamıştır', () => {
     expect(yasHesapla(1998, 8, 5, now)).toBe(27);
+  });
+});
+
+// ─── Kaynak düzeyinde iki koruma ───────────────────────────────────────────
+// İkisi de düşmanca incelemede yakalandı; ikisi de gözle görülmeyen ama
+// kullanıcıyı doğrudan vuran türden.
+describe('tekerlek — sessiz tuzaklar', () => {
+  const kaynak = readFileSync(join(process.cwd(), 'components/profile/BirthdatePicker.tsx'), 'utf8');
+  const sheet = readFileSync(join(process.cwd(), 'components/profile/ProfileEditSheet.tsx'), 'utf8');
+
+  it('tekerlek uygulamanın kaydırma motorundan MUAF', () => {
+    // Muaf olmazsa motor devralıp her karede scrollTop yazıyor, snap de her
+    // yazımda en yakın öğeye kilitliyor → tekerlek parmağın altında zıplıyor.
+    // Motor YATAY şeritlerde snap'i atlıyor ama dikeyde böyle bir muafiyet yok.
+    expect(kaynak).toContain('data-oyna-no-bounce');
+  });
+
+  it('geri tuşu / Esc önce seçiciyi kapatıyor, ekrandan çıkmıyor', () => {
+    // Kayıt olmazsa Android geri tuşu doğrudan goBack() çalıştırıp Ayarlar'dan
+    // çıkıyor ve kaydedilmemiş düzenlemeler siliniyordu.
+    expect(kaynak).toMatch(/useBackDismiss\(open, onCancel, 'birthdate-picker', 5\)/);
+    expect(sheet).toMatch(/useBackDismiss\(open,[\s\S]{0,80}'profile-edit'\)/);
+  });
+
+  it('seçici, düzenleme katmanından DAHA ÜSTTE kapanır', () => {
+    // Öncelik eşit olsaydı hangisinin kapanacağı yığın sırasına kalırdı.
+    expect(kaynak).toContain("'birthdate-picker', 5");
   });
 });
 

@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom';
 import { ChevronLeft } from 'lucide-react';
 import { useLowMotion } from '../../hooks/useLowMotion';
+import { useBackDismiss } from '../../hooks/useBackDismiss';
 
 // ════════════════════════════════════════════════════════════════════════════
 // DOĞUM TARİHİ SEÇİCİ — üç tekerlek (GÜN · AY · YIL)
@@ -131,6 +132,13 @@ const Wheel: React.FC<WheelProps> = ({ label, items, selected, onSelect, lowMoti
         onScroll={onScroll}
         role="listbox"
         aria-label={label}
+        // `data-oyna-no-bounce`: uygulamanın kendi kaydırma motoru (yaylanma)
+        // bu bölgeyi DEVRALMASIN. Devralırsa her karede `scrollTop` yazıyor,
+        // `snap-mandatory` de her yazımda en yakın öğeye kilitliyor — tekerlek
+        // parmağın altında zıplıyor. Motor yatay şeritlerde snap'i zaten
+        // atlıyor ama DİKEY tarafta böyle bir muafiyet yok; bu yüzden burada
+        // açıkça işaretleniyor.
+        data-oyna-no-bounce=""
         className="box-border overflow-y-auto no-scrollbar snap-y snap-mandatory overscroll-contain"
         style={{
           height: WHEEL_H,
@@ -178,6 +186,11 @@ export interface BirthdatePickerProps {
  */
 export const BirthdatePicker: React.FC<BirthdatePickerProps> = ({ open, value, onCancel, onConfirm }) => {
   const lowMotion = useLowMotion();
+  // Android donanım geri tuşu ve Esc: önce BU katman kapansın. Kayıt olmadan
+  // geri tuşu doğrudan `goBack()` çalıştırıyor ve Ayarlar'dan tamamen çıkıp
+  // düzenleme ekranındaki kaydedilmemiş değişiklikleri siliyordu.
+  // Öncelik 5: hemen altındaki düzenleme katmanından (0) yüksek.
+  useBackDismiss(open, onCancel, 'birthdate-picker', 5);
   const bugun = useMemo(() => new Date(), []);
   const buYil = bugun.getFullYear();
 

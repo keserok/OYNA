@@ -5,6 +5,7 @@ import { useImageUpload } from '../../hooks/useImageUpload';
 import { POSITION_LABEL, POSITION_ABBR, PLAY_STYLE_META, GENDER_LABEL } from '../../views/onboarding/onboardingShared';
 import { skillBand, SELF_SKILL_MAX } from '../../utils/skillBand';
 import { BirthdatePicker, AYLAR, parseISODate } from './BirthdatePicker';
+import { useBackDismiss } from '../../hooks/useBackDismiss';
 
 // ════════════════════════════════════════════════════════════════════════
 // PROFİLİ DÜZENLE — TEK KAYNAK (tasarım 4c)
@@ -130,6 +131,12 @@ export const ProfileEditSheet: React.FC<ProfileEditSheetProps> = ({
     const fileInputRef = useRef<HTMLInputElement>(null);
     const kapatmaSayaci = useRef<ReturnType<typeof setTimeout> | null>(null);
     const { uploadImage, uploading } = useImageUpload('avatars', { minWidth: 200 });
+
+    // Android donanım geri tuşu ve Esc bu katmanı kapatsın. Kaydı olmadan geri
+    // tuşu doğrudan `goBack()` çalıştırıyor, arkadaki ekrandan çıkıyor ve
+    // kaydedilmemiş düzenlemeler (fotoğraf, mevki, seviye beyanı) kayboluyordu.
+    // Kaydederken kapatma: "Kaydedildi" gösterimi kesilmesin diye kilitli.
+    useBackDismiss(open, () => { if (!saving && !kaydedildi) onClose(); }, 'profile-edit');
 
     // Sayfa her açılışta güncel profil değerleriyle tohumlanır.
     useEffect(() => {
