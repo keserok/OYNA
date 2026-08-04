@@ -37,7 +37,14 @@ Kimse bakmıyorken sistem kendini toparlayabiliyor mu, bozulduğunu size söyley
 
 ### Öneri 1 — En büyük risk yedek
 
-Veritabanı **70 MB** ve içinde artık **gerçek para kayıtları** var (1.920 ₺). Ücretsiz planda otomatik yedek garantisi **yoktur**.
+Veritabanı **70 MB**. Ücretsiz planda otomatik yedek garantisi **yoktur**.
+
+> **⚠️ DÜZELTME (Stratejik Danışman turu, 4 Ağustos 2026):** Bu paragrafta önce
+> *"içinde artık gerçek para kayıtları var (1.920 ₺)"* yazıyordu. **Bu yanlıştı — hata bendendi.**
+> O 1.920 ₺, **2 adet BAŞARISIZ ödeme denemesidir** (`payment_intents.status='FAILED'`,
+> `paid_at` boş). OYNA bugüne kadar **tek kuruş gerçek para işlemedi**.
+> Yedek yine de doğru bir iştir (yarın gerçek para geldiğinde hazır olacak),
+> ama aciliyet gerekçesi yanlış kurulmuştu.
 
 Bugün elimizdeki tek yedek, P-2 öncesi kendi aldığım anlık kopya (`yedek` şeması, 5 tablo). Bu **bir kereye mahsustu**, düzenli değil.
 

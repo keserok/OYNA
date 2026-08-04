@@ -297,7 +297,7 @@ Bölme çizgileri kodda **zaten var**, yalnız dosya olarak ayrılmamışlar.
 
 | # | P0 | Kanıt | Durum |
 |---|---|---|---|
-| SRE-1 | **Düzenli yedek YOK — tek geri alınamaz risk.** Ücretsiz plan, veritabanı 70 MB, içinde gerçek para var (1.920 ₺). Elimizdeki tek yedek P-2 öncesi tek seferlik anlık kopya. Yanlış migration/silme geri dönülemez olur. | canlı plan + `yedek` şeması | 🟢 **KAPANDI** (S-1=a) — gecelik yedek + K-YEDEK-1. Dış kopya (S-1=b) hâlâ açık. |
+| SRE-1 | **Düzenli yedek YOK — tek geri alınamaz risk.** Ücretsiz plan, veritabanı 70 MB. (⚠️ Bu satırda önce *"içinde gerçek para var (1.920 ₺)"* yazıyordu — **yanlıştı**; o tutar 2 başarısız ödeme denemesidir. Bkz. STR-1.) Elimizdeki tek yedek P-2 öncesi tek seferlik anlık kopya. Yanlış migration/silme geri dönülemez olur. | canlı plan + `yedek` şeması | 🟢 **KAPANDI** (S-1=a) — gecelik yedek + K-YEDEK-1. Dış kopya (S-1=b) hâlâ açık. |
 | SRE-2 | **Sistem bozulduğunu kimseye söyleyemiyor.** Gece denetimi çalışıyor (12 kontrol, 06:40) ama K-13.2 gereği e-posta kapalı; bulgu kurucu panele girene kadar bekler. P-0'daki 4 aylık sessizliğin sebebi bu boşluktu. | K-13.2 + `send-email` anahtarsız | 🟡 **KURUCU KARARIYLA ERTELENDİ** (S-2 = "şimdi değil") — bedeli SRE-RISK-PLANI 2.2'de yazılı |
 
 ## SRE & DEVOPS — P1/P2 özeti
@@ -365,6 +365,46 @@ Yapı taşı sayısı 15 → **17**, kontrol sayısı 29 → **32**.
 ## SECURITY — kapsam dışı bırakılanlar
 
 Sızma testi (gerçek saldırı simülasyonu) ve iyzico hesabının kendi güvenlik ayarları **incelenmedi** — ikisi de lansman öncesi ayrı birer iştir.
+
+---
+
+## K-17 · Güvenlik turu kararları (4 Ağustos 2026)
+
+> Kurucu: *"Önerilerini onaylıyorum sıradaki karaktere geçelim p leri sonra kapatırız."*
+> Yani **öneriler onaylandı, uygulama ertelendi.** Aşağıdakiler onaylı ama HENÜZ UYGULANMADI.
+
+| # | Karar | Durum |
+|---|---|---|
+| **K-17.1** (SEC S-1 = a) | `profiles.wallet` sütununun yazma yetkisi geri alınacak ve koruma tetikleyicisine eklenecek. Sütun **silinmeyecek** (geri dönülebilir seçenek). | ⏳ Onaylı · uygulanmadı |
+| **K-17.2** (SEC S-4 = a) | Güvenlik düzeltmelerinden **yalnız SEC-1** öncelikli; SEC-3 (görünüm) ve SEC-8 (uzantılar) ekran kırabileceği için **deneme ortamından sonra**. | ⏳ Onaylı · uygulanmadı |
+| **K-17.3** | Kalan P'ler (SEC-1…SEC-8, SRE-4, SRE-8) **lansman hazırlığından sonra** kapatılacak. | 📌 Kurucu kararı |
+
+**Cevabı hâlâ bekleyen iki soru** (kurucu açıkça yanıtlamadı, ben de yerine karar vermedim):
+- **SEC S-2:** Gerçek ad soyad (`full_name`) diğer üyelere görünsün mü? → KVKK kararı
+- **SEC S-3:** Sızmış parola koruması açılsın mı? → Supabase panelinde 5 dakikalık ayar
+
+---
+
+## STRATEGIC ADVISOR — P0'lar
+
+> **Analiz tabanı:** dal `559ea49` + canlı (K-14).
+> **Rolün sorusu:** *"Bu ürün işe yarayacak mı, sıradaki hamle ne olmalı?"*
+
+| # | P0 | Kanıt | Durum |
+|---|---|---|---|
+| STR-1 | **Karar verdiğiniz sayılar gerçeği göstermiyor.** (1) "1.920 ₺ gerçek para" → **2 başarısız deneme**; başarılı gerçek ödeme **0**, gerçek kişiye ait cüzdan hareketi **0**. (2) "4 gerçek maç" → **3'ünü demo kullanıcılar kurmuş**; `K-DEMO-1` bunu yakalamıyor çünkü yalnız `payment_intents` ↔ `profiles` bakıyor. (3) "33 kullanıcı" → 29'u demo, kalan 4'ün **2'si kurucunun kendisi**, 1'i test, 1'i silinmiş → **dışarıdan gelen kullanıcı: 0**. | canlı sorgular | 🔴 AÇIK · **S-1** |
+
+## STRATEGIC ADVISOR — P1/P2 özeti
+
+**P1:** Lansmanın önündeki engel artık teknik değil — `demo_mode_enabled=true` (vitrinin %83'ü sahte, CPO-P0-1) ve `payment_mode_global=CASH_ONLY` · **kart ödemesi canlıda hiç çalışmadı**; üç tur onu okudu ve beğendi ama hiçbiri çalıştırmadı · tek kişilik ekip + alarmın kurucuya ulaşmaması (SRE-2) tek nokta arıza.
+
+**P2:** `OYNA_MASTER_PRENSIPLER.md` hâlâ "GEÇERSİZ" damgalı; yerine geçecek tek master dosya **bu sürecin bitmesini** bekliyordu — süreç bitti (K-6.5 / K-11.6).
+
+## STRATEGIC ADVISOR — kapanış tespiti
+
+**Mükemmelleştirme tuzağının eşiğindeyiz.** Altı tur gerçek değer üretti: lansmanda para kaybettirecek en az beş hata kapatıldı, kalıcı denetim mekanizması kuruldu (17 yapı taşı, 32 kontrol, 14 yeşil, 1.437 test). Ama elde **çok iyi mühendislikle yapılmış, hiç kimsenin kullanmadığı bir ürün** var.
+
+> **En büyük risk: yedinci bir mühendislik turu istemek.** Sıradaki gerçek bulgu artık kodda değil, ilk gerçek kullanıcının davranışında.
 
 ---
 
@@ -668,4 +708,4 @@ belirleyicisidir.
 
 ---
 
-*Son güncelleme: 4 Ağustos 2026 · CPO + CTO + Mimar + Kıdemli Yazılım Mühendisi + SRE + Güvenlik turları işlendi*
+*Son güncelleme: 4 Ağustos 2026 · YEDİ ROLÜN TAMAMI işlendi — danışma kurulu süreci tamamlandı*
