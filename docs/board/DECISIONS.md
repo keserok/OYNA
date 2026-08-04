@@ -43,7 +43,7 @@
 | 1 | **CPO** | ✅ Tamamlandı · kararlar alındı (3 Ağu 2026) | `docs/board/01-cpo.md` |
 | 2 | **CTO** | ✅ Tamamlandı (3 Ağu 2026) · kurucu yanıtı bekliyor | `docs/board/02-cto.md` |
 | 3 | **Software Architect** | ✅ Tamamlandı + **P-0…P-5, P-7 uygulandı** (4 Ağu 2026) | `03-mimar.md` · `UYGULAMA-PLANI.md` |
-| 4 | **Principal Engineer** | 🔵 Sırada — **güncel dal** analiz edilecek (K-14) | — |
+| 4 | **Principal Engineer** | ✅ Tamamlandı (4 Ağu 2026) · **güncel dal analiz edildi** (K-14) | `docs/board/04-kidemli-yazilim-muhendisi.md` |
 | 5 | SRE & DevOps Lead | ⏳ Bekliyor | — |
 | 6 | Security & Financial Infra Lead | ⏳ Bekliyor | — |
 | 7 | Strategic Advisor | 🔒 Kilitli (1–6 bitmeden açılmaz) | — |
@@ -243,6 +243,26 @@ kurmamış ve **BAŞARILI tamamlanmış.** Uyarıyı kimse görmemiş. Efor 1,5 
 > **K-13.2 notu:** E-posta olmadığı için denetim sonucunu görmek **panele girmeyi** gerektirir.
 > P-0'da öğrenilen ders (*"kimseye ulaşmayan uyarı, hiç olmamış uyarıdır"*) burada bilerek
 > kabul edildi; e-posta ileride eklenecek (`send-email` altyapısı hazır, yalnız Resend anahtarı eksik).
+
+---
+
+## KIDEMLİ YAZILIM MÜHENDİSİ — P0'lar
+
+> **Analiz tabanı:** dal `6fc2b2c` + canlı (K-14). Kapatılmış bulgular tekrar bildirilmedi.
+
+| # | P0 | Ölçüm | Durum |
+|---|---|---|---|
+| PE-1 | **`MatchJoin.tsx` 3.240 satır** · 40 `useState` · 13 `useEffect` · 14 tekrar eden yeniden-çekme · 42 `as any`. Paranın ve kadronun kesiştiği ekran; K-1.1 ve K-3.3 buraya kod eklemeyi gerektiriyor. | dosya ölçümü | 🔴 AÇIK |
+| PE-2 | **Testler tip kontrolü dışında.** `tsconfig` `exclude`: tests, notifications, supabase, scripts, src, arsiv. Kapsama alınınca **27 hata** (11 hatalı tip dönüşümü, 8 **yanlış özellik adı**, 3 bulunamayan modül). "1.426 test yeşil" cümlesi olduğundan az şey garanti ediyor. | `tsc` ölçümü | 🔴 AÇIK |
+| PE-3 | **`strict` kapalı.** `--strict` ile **38 hata**: 16 yanlış argüman, **14 belirsiz parametre**, 2 **null kontrolsüz** (doğrudan çökme sebebi). | `tsc --strict` | 🔴 AÇIK |
+
+## KIDEMLİ YAZILIM MÜHENDİSİ — P1/P2 özeti
+
+4 ölü yapı (`VirtualList`, `redeemReferralCode`, `fbAddMatch`, `fbUpdateMatch` — hepsi 0 çağrı) · **429 `any`** ve en yoğun olduğu üç dosya para ekranları · 7 boş `catch` (sessizce yutulan hata) · 4 dev dosya daha bölünmeyi bekliyor (Studio 3.907, adminService 3.394, ServiceDashboard 2.805, PitchDiscovery 2.296).
+
+## KIDEMLİ YAZILIM MÜHENDİSİ — güçlü yanlar
+
+**`@ts-ignore` = 0** (kimse tip kontrolünü zorla susturmamış) · 1.426 test / 102 dosya · TODO-FIXME yalnız 6 (borç birikmemiş) · üretimde `console.log` 1 dosya · `npm run etki` + gece denetimi çalışıyor.
 
 ---
 
