@@ -26,7 +26,7 @@ import {
     saveTeamTactic, approveTacticRpc, rejectTacticRpc, getTacticById,
     setTacticShareLink, tacticShareUrl, getTeamTacticsShowcase,
     setActiveTactic as setActiveTacticRpc, TacticConflictError, logStudioEvent,
-    assignMatchTactic,
+    assignMatchTactic, deleteMyTactic,
 } from '../services/tacticSocialService';
 // Takımın yaklaşan maçı — "kaydederken maça ata" için (teamService SSOT)
 import { fetchTeamNextMatch } from '../services/teamService';
@@ -301,6 +301,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
     const [teamShowcases, setTeamShowcases] = useState<Record<string, LibraryEntry[]>>({});
     const [loadingShowcase, setLoadingShowcase] = useState<string | null>(null);
     const [openingTacticId, setOpeningTacticId] = useState<string | null>(null);
+    const [deletingTacticId, setDeletingTacticId] = useState<string | null>(null);
 
     // Global Store — stüdyo bağlamı
     const studioContext = useAppStore(s => s.studioContext);
@@ -890,6 +891,38 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
     };
     const openHelp = () => setOnboardStep(0);
 
+    // Takım seçimini onayla — TEK giriş noktası (eskiden iki ayrı düğme vardı).
+    // Üç durum:
+    //   • Takım yok (Kişisel): plan takımdan KOPARILIR, kayıt kişisel kütüphaneye gider.
+    //   • Takım var, kadro elle doldurulmuş: üzerine YAZMA, yalnız onayla.
+    //   • Takım var, kadro eksik: takımın gerçek kadrosunu diz ve onayla.
+    const confirmTeamSelection = async () => {
+        if (!selectedTeamId) {
+            setActiveTactic({ ...activeTactic, teamId: null, teamName: undefined });
+            setIsTeamConfirmed(true);
+            return;
+        }
+        const teamRow = studioTeams.find(t => t.team_id === selectedTeamId);
+        if (isSquadComplete) {
+            setActiveTactic({ ...activeTactic, teamId: selectedTeamId, teamName: teamRow?.name });
+            setIsTeamConfirmed(true);
+            return;
+        }
+        try {
+            const squad = await ensureSquad(selectedTeamId);
+            setActiveTactic({
+                ...activeTactic,
+                slots: populateSlotsWithSquad(squad, activeTactic.slots),
+                teamName: teamRow?.name,
+                teamId: selectedTeamId,
+            });
+            setIsTeamConfirmed(true);
+        } catch (e) {
+            console.error('[Studio] kadro yüklenemedi', e);
+            showToast('Kadro yüklenemedi.', 'error');
+        }
+    };
+
     // Tempo (1-10, plana özel) — oynatma hızını da sürer (computeSeqMap çarpanı).
     const setTempo = (value: number) => {
         const tempo = normalizeTempo(value);
@@ -961,6 +994,31 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
         setPlans(prev => [...prev, tactic!]);
         setActivePlanIndex(plans.length);
         setShowTacticsModal(false);
+    };
+
+    // Kütüphaneden taktik sil — YALNIZ kişisel sekmede (kendi kaydettiklerin).
+    // Yetki veritabanındaki `tactics_delete` kuralına dayanır (userId = auth.uid());
+    // başkasının/takımın taktiği bu yolla silinemez. Geri alınamaz → önce onay sor.
+    // Açık plan silinen kayda bağlıysa sorun olmaz: kaydetme, listede bulunmayan
+    // id'yi "yeni kayıt" sayar (doSaveTactic'teki existingId kontrolü).
+    const handleDeleteLibraryEntry = async (entry: LibraryEntry) => {
+        const ok = await confirm({
+            title: 'Taktiği sil?',
+            message: <><b className="text-white">{entry.name}</b> kütüphanenden kalıcı olarak silinecek. Bu işlem geri alınamaz.</>,
+            confirmLabel: 'Sil',
+            destructive: true,
+        });
+        if (!ok) return;
+        setDeletingTacticId(entry.id);
+        try {
+            await deleteMyTactic(entry.id);
+            setDbTactics(prev => prev.filter(t => t.id !== entry.id));
+            showToast('Taktik silindi.');
+        } catch (e) {
+            showToast((e as Error)?.message || 'Taktik silinemedi.', 'error');
+        } finally {
+            setDeletingTacticId(null);
+        }
     };
 
     // Özel formasyon: satır sayısı deseninden üret, YALNIZ aktif plana uygula (anında).
@@ -2610,8 +2668,41 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                         </h3>
                     </div>
                     
-                    {/* Horizontal Team List — kanonik get_my_teams (hayalet güç puanı öldü) */}
+                    {/* Takım şeridi — kanonik get_my_teams. Başta "Kişisel" kartı:
+                        takımsız çalışma yolu (kayıt kişisel kütüphaneye gider).
+                        Takım yoksa şerit yerine yol gösteren boş durum çıkar. */}
+                    {studioTeams.length === 0 ? (
+                        <div className="mb-4 rounded-2xl border border-dashed border-white/15 bg-white/[0.03] p-4">
+                            <p className="text-[0.8125rem] font-extrabold text-white">Henüz bir takımın yok</p>
+                            <p className="text-[0.6875rem] text-ink-4 leading-relaxed mt-1">
+                                Sorun değil — taktiğini kurup <b className="text-gray-300">kişisel kütüphanene</b> kaydedebilirsin.
+                                Takımla çalışmak istersen önce Sosyal'den bir takım kur ya da bir takıma katıl.
+                            </p>
+                            <button
+                                onClick={() => onNavigate('SOCIAL')}
+                                className="mt-3 inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white/5 border border-white/10 text-white text-[0.625rem] font-extrabold uppercase tracking-widest hover:bg-white/10 hover:border-[#39FF14]/40 transition-all"
+                            >
+                                <Users size={14} className="text-[#39FF14]" /> Sosyal'e git
+                            </button>
+                        </div>
+                    ) : (
                     <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2 mb-4">
+                        {/* Kişisel (takımsız) */}
+                        <button
+                            onClick={() => setSelectedTeamId(null)}
+                            className={`flex-shrink-0 w-[150px] p-3 rounded-2xl border transition-all text-left ${
+                                selectedTeamId === null
+                                    ? 'bg-[#39FF14]/10 border-[#39FF14]/50 shadow-[0_0_15px_rgba(57,255,20,0.2)]'
+                                    : 'bg-white/5 border-white/5 hover:bg-white/10'
+                            }`}
+                        >
+                            <div className="flex items-center gap-2 mb-1.5">
+                                <span className="w-6 h-6 rounded-lg bg-white/10 border border-white/15 flex items-center justify-center text-white shrink-0"><UserPlus size={13} /></span>
+                                <h4 className="text-white font-bold text-xs truncate flex-1">Kişisel</h4>
+                            </div>
+                            <div className="text-[0.6875rem] font-bold text-ink-4">Takımsız çalış</div>
+                        </button>
+
                         {studioTeams.map((team) => {
                             const need = activeTactic.slots.length;
                             const ready = Math.min(team.member_count, need);
@@ -2630,54 +2721,26 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                     <span className="w-6 h-6 rounded-lg flex items-center justify-center text-[0.6875rem] font-extrabold text-black shrink-0" style={{ background: team.color1 || '#39FF14' }}>{trUpper((team.short_name || team.name || '?').slice(0, 2))}</span>
                                     <h4 className="text-white font-bold text-xs truncate flex-1">{team.name}</h4>
                                 </div>
-                                <div className="flex items-center justify-between">
-                                    <div className="text-[0.6875rem] font-bold text-ink-4">
-                                        <span className={enough ? 'text-[#39FF14]' : 'text-amber-400'}>{ready}/{need}</span> hazır
-                                    </div>
-                                    <div className="text-[0.6875rem] text-ink-4 font-mono tabular-nums">{team.wins}G {team.draws}B {team.losses}M</div>
+                                <div className="text-[0.6875rem] font-bold text-ink-4">
+                                    <span className={enough ? 'text-[#39FF14]' : 'text-amber-400'}>{ready}/{need}</span> hazır
                                 </div>
                                 {!enough && <div className="mt-1 text-[0.625rem] font-extrabold text-amber-400 uppercase tracking-widest">Eksik kadro</div>}
                             </button>
                         );})}
                     </div>
+                    )}
 
                     <div className="flex flex-col gap-2">
-                        {selectedTeamId && !isSquadComplete && (
-                            <button
-                                onClick={() => {
-                                    void (async () => {
-                                        try {
-                                            const squad = await ensureSquad(selectedTeamId);
-                                            const teamRow = studioTeams.find(t => t.team_id === selectedTeamId);
-                                            setActiveTactic({
-                                                ...activeTactic,
-                                                slots: populateSlotsWithSquad(squad, activeTactic.slots),
-                                                teamName: teamRow?.name,
-                                                teamId: selectedTeamId,
-                                            });
-                                            setIsTeamConfirmed(true);
-                                        } catch (e) {
-                                            console.error('[Studio] kadro yüklenemedi', e);
-                                            showToast('Kadro yüklenemedi.', 'error');
-                                        }
-                                    })();
-                                }}
-                                className="w-full h-12 bg-gradient-to-r from-[#39FF14] to-emerald-600 rounded-2xl flex items-center justify-center gap-2 text-black font-extrabold text-[0.625rem] tracking-widest uppercase hover:scale-[1.02] active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(57,255,20,0.3)] animate-pulse"
-                            >
-                                <Users size={16} />
-                                SEÇİLİ TAKIMI ONAYLA
-                            </button>
-                        )}
-                        
-                        {isSquadComplete && (
-                            <button
-                                onClick={() => setIsTeamConfirmed(true)}
-                                className="w-full h-12 bg-gradient-to-r from-[#39FF14] to-emerald-600 rounded-2xl flex items-center justify-center gap-2 text-black font-extrabold text-[0.625rem] tracking-widest uppercase hover:scale-[1.02] active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(57,255,20,0.3)] animate-pulse"
-                            >
-                                <Users size={16} />
-                                KADROYU ONAYLA
-                            </button>
-                        )}
+                        {/* TEK onay düğmesi — etiketi bağlama göre değişir; kadro elle
+                            doldurulmuşsa üzerine YAZILMAZ, yalnız onaylanır. */}
+                        <button
+                            onClick={() => void confirmTeamSelection()}
+                            className="w-full h-12 bg-[#39FF14] rounded-2xl flex items-center justify-center gap-2 text-black font-extrabold text-[0.625rem] tracking-widest uppercase hover:brightness-110 active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(57,255,20,0.25)]"
+                        >
+                            <Users size={16} />
+                            {!selectedTeamId ? 'KİŞİSEL OLARAK DEVAM ET'
+                                : isSquadComplete ? 'KADROYU ONAYLA' : 'KADROYU DİZ VE ONAYLA'}
+                        </button>
 
                         <button
                             onClick={() => setShowPlayerSelect({ type: 'any' })}
@@ -2695,11 +2758,16 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
             {isTeamConfirmed && (
                 <div className="px-6 pb-3 mt-4">
                     <div className="flex items-center gap-3 bg-[#161B22] rounded-2xl border border-white/5 p-3">
-                        <span className="w-9 h-9 rounded-xl flex items-center justify-center text-xs font-extrabold text-black shrink-0" style={{ background: confirmedTeam?.color1 || '#39FF14' }}>
-                            {trUpper((confirmedTeam?.short_name || activeTactic.teamName || '?').slice(0, 2))}
-                        </span>
+                        {/* Kişisel modda takım arması yerine nötr simge */}
+                        {confirmedTeam ? (
+                            <span className="w-9 h-9 rounded-xl flex items-center justify-center text-xs font-extrabold text-black shrink-0" style={{ background: confirmedTeam.color1 || '#39FF14' }}>
+                                {trUpper((confirmedTeam.short_name || activeTactic.teamName || '?').slice(0, 2))}
+                            </span>
+                        ) : (
+                            <span className="w-9 h-9 rounded-xl bg-white/10 border border-white/15 flex items-center justify-center text-white shrink-0"><UserPlus size={16} /></span>
+                        )}
                         <div className="flex-1 min-w-0">
-                            <div className="text-sm font-extrabold text-white truncate">{activeTactic.teamName || 'Takımım'}</div>
+                            <div className="text-sm font-extrabold text-white truncate">{confirmedTeam ? (activeTactic.teamName || confirmedTeam.name) : 'Kişisel'}</div>
                             <div className="text-[0.6875rem] font-bold text-ink-4">
                                 <span className={missingCount === 0 ? 'text-[#39FF14]' : 'text-amber-400'}>{filledCount}/{activeTactic.slots.length}</span> dizili
                                 {missingCount > 0 && <span className="ml-2 text-amber-400 font-extrabold uppercase tracking-widest">· {missingCount} eksik</span>}
@@ -2849,11 +2917,11 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                 <div className="flex gap-2 w-full items-stretch">
                     <button
                         onClick={() => setShowTacticsModal(true)}
-                        title="Taktiklerim"
+                        title="Kütüphane"
                         className="w-16 shrink-0 min-h-[56px] rounded-2xl bg-[#161B22] border border-white/10 flex flex-col items-center justify-center gap-1 text-gray-400 hover:text-white hover:bg-white/5 transition-all"
                     >
                         <List size={18} />
-                        <span className="font-extrabold text-[0.6875rem] tracking-widest">TAKTİKLER</span>
+                        <span className="font-extrabold text-[0.625rem] tracking-widest">KÜTÜPHANE</span>
                     </button>
 
                     <div className="flex-1 relative group">
@@ -3435,7 +3503,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                             <div className="p-5 border-b border-white/5 bg-[#0A0E14]/50">
                                 <div className="flex justify-between items-center mb-4">
                                     <h3 className="text-lg font-extrabold text-white uppercase tracking-widest flex items-center gap-2.5">
-                                        <List size={20} className="text-[#39FF14]" /> TAKTİK KÜTÜPHANESİ
+                                        <List size={20} className="text-[#39FF14]" /> KÜTÜPHANE
                                     </h3>
                                     <button onClick={() => setShowTacticsModal(false)} aria-label="Kapat" className="p-2 text-gray-400 hover:text-white transition-colors bg-white/5 rounded-full"><X size={18} /></button>
                                 </div>
@@ -3495,12 +3563,16 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                             none: 'hidden',
                                         };
                                         const isOpening = openingTacticId === entry.id;
+                                        const isDeleting = deletingTacticId === entry.id;
+                                        // Onay rozeti YALNIZ takım defterlerinde anlamlı. Kişisel
+                                        // kütüphanede her şey zaten senin; "Onaylı" rozeti gürültü.
+                                        const showStatus = entry.source === 'TEAM' && sm.tone !== 'none';
                                         return (
+                                            <div key={entry.id} className="flex items-stretch gap-2">
                                             <button
-                                                key={entry.id}
                                                 onClick={() => void openLibraryEntry(entry)}
-                                                disabled={isOpening}
-                                                className="w-full text-left p-4 rounded-2xl border border-white/5 bg-[#0A0E14]/30 hover:bg-[#39FF14]/10 hover:border-[#39FF14]/30 transition-all group flex items-center justify-between disabled:opacity-60"
+                                                disabled={isOpening || isDeleting}
+                                                className="flex-1 min-w-0 text-left p-4 rounded-2xl border border-white/5 bg-[#0A0E14]/30 hover:bg-[#39FF14]/10 hover:border-[#39FF14]/30 transition-all group flex items-center justify-between disabled:opacity-60"
                                             >
                                                 <div className="min-w-0">
                                                     <div className="flex items-center gap-2">
@@ -3511,7 +3583,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                                     </div>
                                                     <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                                                         <span className="text-[0.6875rem] font-mono text-ink-4 uppercase">{entry.formation || '—'} · {entry.size || '—'}</span>
-                                                        {sm.tone !== 'none' && (
+                                                        {showStatus && (
                                                             <span className={`text-[0.625rem] font-extrabold uppercase tracking-widest border rounded-full px-2 py-0.5 ${toneClass[sm.tone]}`}>{sm.label}</span>
                                                         )}
                                                     </div>
@@ -3520,6 +3592,20 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                                     {isOpening ? <Loader2 size={16} className="animate-spin" /> : <ChevronRight size={16} />}
                                                 </div>
                                             </button>
+                                            {/* Sil — yalnız kişisel kütüphanede (kendi kaydettiklerin).
+                                                Takım defterinde çıkmaz: oradan silme yetkisi yok. */}
+                                            {entry.source === 'MINE' && (
+                                                <button
+                                                    onClick={() => void handleDeleteLibraryEntry(entry)}
+                                                    disabled={isDeleting || isOpening}
+                                                    title="Taktiği sil"
+                                                    aria-label={`${entry.name} taktiğini sil`}
+                                                    className="shrink-0 w-12 rounded-2xl border border-white/5 bg-[#0A0E14]/30 text-ink-4 hover:text-red-400 hover:bg-red-500/10 hover:border-red-500/30 transition-all flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed"
+                                                >
+                                                    {isDeleting ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
+                                                </button>
+                                            )}
+                                            </div>
                                         );
                                     })
                                 )}
@@ -3564,17 +3650,46 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                         className="w-full bg-[#0A0E14] border border-white/10 rounded-2xl px-5 py-4 text-sm text-white placeholder-gray-600 focus:border-[#39FF14] outline-none transition-colors"
                                     />
                                 </div>
+                                {/* Nereye kaydedilecek? Son anda değiştirilebilir —
+                                    eskiden yalnız gösteriliyordu, seçilemiyordu. */}
+                                {studioTeams.length > 0 && (
+                                    <div>
+                                        <label className="block text-[0.625rem] font-extrabold text-gray-400 uppercase tracking-widest mb-2 ml-2">Nereye kaydedilsin?</label>
+                                        <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+                                            <button
+                                                type="button"
+                                                onClick={() => setSelectedTeamId(null)}
+                                                className={`shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-full text-[0.625rem] font-extrabold uppercase tracking-widest border transition-all ${!selectedTeamId ? 'bg-[#39FF14] text-black border-[#39FF14]' : 'bg-white/5 text-gray-400 border-white/10 hover:text-white'}`}
+                                            >
+                                                <List size={12} /> Kütüphanem
+                                            </button>
+                                            {studioTeams.map(t => (
+                                                <button
+                                                    key={t.team_id}
+                                                    type="button"
+                                                    onClick={() => setSelectedTeamId(t.team_id)}
+                                                    className={`shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-full text-[0.625rem] font-extrabold uppercase tracking-widest border transition-all ${selectedTeamId === t.team_id ? 'bg-[#39FF14] text-black border-[#39FF14]' : 'bg-white/5 text-gray-400 border-white/10 hover:text-white'}`}
+                                                >
+                                                    <span className="w-3.5 h-3.5 rounded-[4px] flex items-center justify-center text-[0.6875rem] font-extrabold text-black leading-none" style={{ background: t.color1 || '#39FF14' }}>
+                                                        {trUpper((t.short_name || t.name).charAt(0))}
+                                                    </span>
+                                                    {t.short_name || t.name}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
                                 {/* Hedef bağlam: status sunucuda belirlenir — dürüst önizleme */}
                                 <div className="bg-[#0A0E14] border border-white/10 rounded-2xl px-5 py-4 text-xs">
                                     {(() => {
                                         const teamRow = studioTeams.find(t => t.team_id === selectedTeamId);
                                         if (!teamRow) {
-                                            return <span className="text-gray-400">📁 <b className="text-white">Kişisel kütüphanene</b> kaydedilir.</span>;
+                                            return <span className="flex items-center gap-2.5 text-gray-400"><List size={15} className="text-[#39FF14] shrink-0" /><span><b className="text-white">Kişisel kütüphanene</b> kaydedilir.</span></span>;
                                         }
                                         const admin = teamRow.my_role === 'CAPTAIN' || teamRow.my_role === 'ADMIN';
                                         return admin
-                                            ? <span className="text-gray-400">🛡️ <b className="text-white">{teamRow.name}</b> oyun defterine <b className="text-[#39FF14]">onaylı</b> kaydedilir.</span>
-                                            : <span className="text-gray-400">🛡️ <b className="text-white">{teamRow.name}</b> yöneticilerine <b className="text-amber-400">öneri</b> olarak gönderilir.</span>;
+                                            ? <span className="flex items-center gap-2.5 text-gray-400"><Shield size={15} className="text-[#39FF14] shrink-0" /><span><b className="text-white">{teamRow.name}</b> oyun defterine <b className="text-[#39FF14]">onaylı</b> kaydedilir.</span></span>
+                                            : <span className="flex items-center gap-2.5 text-gray-400"><Shield size={15} className="text-amber-400 shrink-0" /><span><b className="text-white">{teamRow.name}</b> yöneticilerine <b className="text-amber-400">öneri</b> olarak gönderilir.</span></span>;
                                     })()}
                                 </div>
                                 {/* Kaydederken maça ata — yalnız yönetici + takım + yaklaşan maç (nextMatch effect zaten gate'ler) */}

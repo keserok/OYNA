@@ -96,6 +96,102 @@ Aktarım yaparken sınır bu listedir. Bunların dışına çıkan bir değişik
 
 ## 5. Kayıtlar
 
+### 2026-08-04 · Takım seçimi, kütüphane ve kaydetme sadeleşti
+
+- **Ne istendi:** "Alttaki takım seçimi akışını ve taktikler ve kütüphaneye
+  kaydet kısımlarını da gerçek veriler ve taktik stüdyonun tasarım sistemine
+  göre tam olarak ayarlamak istiyorum. Kullanıcının gözüne güzel gözükecek
+  basit bir sistem." (Sunulan öneri listesinden A, B, C'nin yıldızlıları; ek
+  kararlar: kartlardan G/B/M kalksın, silme olsun, ad "Kütüphane", tarih yok.)
+
+- **Önce doğrulanan:** Bu üç bölümde sahte/örnek veri **yoktu** — takım kartları,
+  kadro, kişisel kütüphane, takım oyun defteri ve "yaklaşan maç" zaten canlı
+  veritabanından geliyordu. Sorun veri değil, akıştaki boşluklar ve görünüm
+  pürüzleriydi.
+
+- **Ne yapıldı — takım seçimi:**
+  - **Tek onay düğmesi.** Eskiden iki ayrı düğme vardı ("SEÇİLİ TAKIMI ONAYLA" /
+    "KADROYU ONAYLA"). Artık tek düğme, etiketi bağlama göre değişiyor:
+    *KİŞİSEL OLARAK DEVAM ET* · *KADROYU DİZ VE ONAYLA* · *KADROYU ONAYLA*.
+    Kadro elle doldurulmuşsa **üzerine yazılmıyor**, yalnız onaylanıyor.
+  - **Sürekli yanıp sönme ve degrade kaldırıldı** — stüdyonun geri kalanı gibi
+    sakin, düz neon yeşil.
+  - **"Kişisel" kartı** eklendi (şeridin başında). Takımsız çalışma yolu artık
+    var; seçilince plan takımdan koparılıyor ve kayıt kişisel kütüphaneye
+    gidiyor. Onaylı çip de "Kişisel" gösteriyor. **Eskiden takım seçtikten sonra
+    kişisel moda dönmenin hiçbir yolu yoktu.**
+  - **Takımı olmayana yol gösterildi:** boş şerit yerine "Henüz bir takımın yok"
+    kutusu + Sosyal'e götüren düğme.
+  - **Kartlardan G/B/M satırı kaldırıldı** (galibiyet/beraberlik/mağlubiyet).
+    Gerçek veriydi ama stüdyoda karar verdirmiyordu; "7/7 hazır" kaldı.
+
+- **Ne yapıldı — kütüphane:**
+  - **Tek isim: KÜTÜPHANE.** Alt bar düğmesi "TAKTİKLER", pencere "TAKTİK
+    KÜTÜPHANESİ" diyordu; ikisi de "KÜTÜPHANE" oldu.
+  - **Kişisel sekmede "Onaylı" rozeti gizlendi.** Onay mekanizması takımlara ait;
+    kendi kütüphanende her satır zaten senin, rozet gürültüydü. Takım
+    sekmelerinde rozetler (onaylı / onay bekliyor / reddedildi) aynen duruyor.
+  - **Satırdan silme geldi** — yalnız kişisel sekmede. Geri alınamaz iş olduğu
+    için önce markalı onay penceresi çıkıyor.
+
+- **Ne yapıldı — kaydetme:**
+  - **Hedef seçici** eklendi: pencerede *[Kütüphanem] [Takım…]* çipleri. Eskiden
+    hedef yalnız **gösteriliyordu**, değiştirilemiyordu. Onay/öneri mantığına
+    dokunulmadı — o kararı sunucu veriyor.
+  - **Emoji yerine çizgi ikon** (📁/🛡️ → liste/kalkan simgeleri) — stüdyonun
+    geri kalanıyla aynı dil.
+
+- **Silmede yetki — nasıl güvence altında:**
+  Silme yetkisi tamamen veritabanındaki `tactics_delete` kuralına dayanıyor:
+  yalnız `userId = auth.uid()` olan satır silinebilir. **Canlı veritabanı
+  okunarak doğrulandı** (repo ile birebir aynı). Bu yüzden:
+  - Kişisel sekmedeki her satır senin → silinebilir, **veritabanı değişikliği
+    gerekmedi**.
+  - Takım defterinde silme düğmesi **çıkmıyor** (oradan silme yetkisi yok).
+  - Kural engellerse Postgres hata vermez, 0 satır etkiler; bu yüzden silinen
+    satır geri isteniyor ve boş dönerse sessiz başarısızlık yerine açık hata
+    gösteriliyor.
+
+- **Dokunulan dosyalar:**
+  - `views/Studio.tsx` — takım seçimi bölümü, onaylı çip, kütüphane satırları,
+    kaydet penceresi, `confirmTeamSelection` ve `handleDeleteLibraryEntry`.
+  - `services/tacticSocialService.ts` — `deleteMyTactic` (yeni, additif).
+  - `tests/unit/components/StudioLibrary.test.tsx` — yeni adlara uyarlandı +
+    rozet kapsamı ve silme için 5 test.
+  - `tests/unit/components/StudioTeamPick.test.tsx` — **yeni** (8 test).
+
+- **Korunanlar:**
+  - Kaydetme/onay/öneri mantığı, iyimser kilit ve çakışma diyaloğu aynı.
+  - "Yaklaşan maça ata" anahtarı aynı.
+  - Takım sekmeleri, arama, aktif plan yıldızı ve satır açma akışı aynı.
+  - Kadro dizme algoritması (hat eşleştirme) aynı.
+
+- **Kontroller:** `npm run lint` temiz · `npm run test:unit` 1457 test yeşil ·
+  `npm run test:e2e:studio` 8 test yeşil · `npm run build` başarılı.
+  Projenin kendi kontrast bekçisi silme düğmesinin ilk gri tonunu AA eşiğinin
+  altında bulup reddetti; renk erişilebilir tona çevrildi.
+
+- **Nasıl kontrol edersin:**
+  1. **Sosyal → TAKTİK STÜDYO** → aşağı in. Takım şeridinin başında **"Kişisel"**
+     kartı olmalı; kartlarda artık **G/B/M yazmamalı**.
+  2. Bir takım seç → tek düğme **"KADROYU DİZ VE ONAYLA"** demeli, **yanıp
+     sönmemeli**. Bas → kadro dizilmeli.
+  3. Çipteki **"Değiştir"** → **"Kişisel"** kartını seç → **"KİŞİSEL OLARAK
+     DEVAM ET"** → çip artık "Kişisel" demeli.
+  4. Alt bardaki **KÜTÜPHANE** düğmesine bas → pencere başlığı da **KÜTÜPHANE**
+     olmalı. Kişisel sekmede satırlarda **"Onaylı" rozeti olmamalı** ve her
+     satırın sağında **çöp kutusu** olmalı; takım sekmesinde çöp kutusu
+     **olmamalı**, rozetler ise **olmalı**.
+  5. Bir kişisel taktiği sil → önce onay sorulmalı, sonra satır listeden gitmeli.
+  6. **KAYDET** penceresini aç → **"Nereye kaydedilsin?"** çipleriyle hedefi
+     değiştir; alttaki açıklama satırı buna göre değişmeli.
+
+- **Commit:** _(bir sonraki adımda dolduruldu)_
+
+- **Geri alınırsa:** Takım seçiminde iki ayrı yanıp sönen düğme geri gelir,
+  kişisel moda dönüş yolu kapanır, kütüphaneden silme kalkar ve kaydet hedefi
+  yeniden sabitlenir. Kayıtlı taktik verisine dokunmaz — veri kaybı olmaz.
+
 ### 2026-08-04 · Oynat/Durdur artık anlık ve eşzamanlı (oyuncular topla aynı motora alındı)
 
 - **Ne istendi:** "Oynat ve durdur butonunun fonksiyonlarının mükemmel

@@ -60,6 +60,8 @@ vi.mock('../../../services/teamSocialService', () => ({
   formatLabel: (s: unknown) => String(s),
 }));
 
+const { deleteMyTactic } = vi.hoisted(() => ({ deleteMyTactic: vi.fn(async () => {}) }));
+
 const { getShowcase } = vi.hoisted(() => ({
   getShowcase: vi.fn(async () => [
     { id: 'team-tac-1', name: 'Takım Aktif Planı', formation: '2-3-1', size: '7v7', status: 'APPROVED', is_active: true },
@@ -77,6 +79,9 @@ vi.mock('../../../services/tacticSocialService', () => ({
   tacticShareUrl: vi.fn(() => ''),
   getTeamTacticsShowcase: getShowcase,
   setActiveTactic: vi.fn(),
+  assignMatchTactic: vi.fn(),
+  deleteMyTactic,
+  TacticConflictError: class TacticConflictError extends Error {},
 }));
 vi.mock('../../../services/teamChatService', () => ({ sendTeamMessage: vi.fn(), tacticMessageBody: vi.fn(() => '') }));
 vi.mock('../../../services/socialService', () => ({ getFriends: vi.fn(async () => []), getFriendLists: vi.fn(async () => []) }));
@@ -86,13 +91,13 @@ import Studio from '../../../views/Studio';
 // ─── Birleşik Taktik Kütüphanesi ─────────────────────────────────────────────
 
 const renderStudio = () => render(<Studio onBack={vi.fn()} onNavigate={vi.fn()} />);
-const openLibrary = () => fireEvent.click(screen.getByRole('button', { name: /TAKTİKLER/ }));
+const openLibrary = () => fireEvent.click(screen.getByTitle('Kütüphane'));
 
 describe('Studio — Taktik Kütüphanesi', () => {
   it('Kütüphanem sekmesi kişisel taktikleri listeler; takım sekmesi çıkar', async () => {
     renderStudio();
     openLibrary();
-    expect(await screen.findByText('TAKTİK KÜTÜPHANESİ')).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'KÜTÜPHANE' })).toBeInTheDocument();
     expect(await screen.findByText('Kişisel Plan')).toBeInTheDocument();
     // Takım kütüphane sekmesi görünür
     expect(screen.getByTitle('Takım kütüphanesi: Kartallar')).toBeInTheDocument();
@@ -127,8 +132,75 @@ describe('Studio — Taktik Kütüphanesi', () => {
     renderStudio();
     openLibrary();
     fireEvent.click(await screen.findByText('Kişisel Plan'));
-    await waitFor(() => expect(screen.queryByText('TAKTİK KÜTÜPHANESİ')).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByRole('heading', { name: 'KÜTÜPHANE' })).not.toBeInTheDocument());
     // Plan sekmelerinde yeni plan adı görünür
     expect(screen.getAllByText('Kişisel Plan').length).toBeGreaterThan(0);
+  });
+});
+
+// ─── Durum rozeti yalnız TAKIM defterinde (2026-08-04, kullanıcı kararı) ──────
+// Kişisel kütüphanede her şey zaten senin; "Onaylı" rozeti anlam taşımıyordu.
+describe('Studio — Kütüphane: durum rozeti kapsamı', () => {
+  it('kişisel sekmede "Onaylı" rozeti çıkmaz', async () => {
+    renderStudio();
+    openLibrary();
+    await screen.findByText('Kişisel Plan');
+    expect(screen.queryByText('Onaylı')).not.toBeInTheDocument();
+  });
+
+  it('takım sekmesinde durum rozetleri çıkmaya devam eder', async () => {
+    renderStudio();
+    openLibrary();
+    await screen.findByText('Kişisel Plan');
+    fireEvent.click(screen.getByTitle('Takım kütüphanesi: Kartallar'));
+    await screen.findByText('Takım Aktif Planı');
+    expect(screen.getByText('Onaylı')).toBeInTheDocument();
+    expect(screen.getByText('Onay bekliyor')).toBeInTheDocument();
+  });
+});
+
+// ─── Kütüphaneden silme (2026-08-04, kullanıcı kararı) ───────────────────────
+// Yalnız KİŞİSEL sekmede: veritabanı kuralı (tactics_delete) sadece kendi
+// kaydettiğin satırı silmeye izin veriyor. Takım defterinde düğme çıkmaz.
+describe('Studio — Kütüphaneden silme', () => {
+  const deleteBtn = () => screen.getByRole('button', { name: 'Kişisel Plan taktiğini sil' });
+
+  it('kişisel satırda sil düğmesi vardır; takım satırında yoktur', async () => {
+    renderStudio();
+    openLibrary();
+    await screen.findByText('Kişisel Plan');
+    expect(deleteBtn()).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTitle('Takım kütüphanesi: Kartallar'));
+    await screen.findByText('Takım Aktif Planı');
+    expect(screen.queryByRole('button', { name: /taktiğini sil$/ })).not.toBeInTheDocument();
+  });
+
+  it('onay verilince taktik silinir ve satır listeden kalkar', async () => {
+    deleteMyTactic.mockClear();
+    renderStudio();
+    openLibrary();
+    await screen.findByText('Kişisel Plan');
+
+    fireEvent.click(deleteBtn());
+    // Markalı onay penceresi — geri alınamaz iş, önce sorulur
+    fireEvent.click(await screen.findByRole('button', { name: 'Sil' }));
+
+    await waitFor(() => expect(deleteMyTactic).toHaveBeenCalledWith('mine-1'));
+    await waitFor(() => expect(screen.queryByText('Kişisel Plan')).not.toBeInTheDocument());
+  });
+
+  it('vazgeçilince hiçbir şey silinmez', async () => {
+    deleteMyTactic.mockClear();
+    renderStudio();
+    openLibrary();
+    await screen.findByText('Kişisel Plan');
+
+    fireEvent.click(deleteBtn());
+    fireEvent.click(await screen.findByRole('button', { name: 'Vazgeç' }));
+
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Sil' })).not.toBeInTheDocument());
+    expect(deleteMyTactic).not.toHaveBeenCalled();
+    expect(screen.getByText('Kişisel Plan')).toBeInTheDocument();
   });
 });

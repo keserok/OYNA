@@ -189,6 +189,29 @@ export const getTacticById = async (tacticId: string): Promise<Record<string, an
   return data as Record<string, any> | null;
 };
 
+/**
+ * KENDİ taktiğini sil (kişisel kütüphane satırı).
+ *
+ * Yetki tamamen veritabanındaki `tactics_delete` kuralına dayanır:
+ * yalnız `userId = auth.uid()` olan satır silinebilir. Yani başkasının ya da
+ * takımın (senin yazmadığın) taktiği bu yolla silinemez.
+ *
+ * Kural engellediğinde Postgres HATA VERMEZ, sadece 0 satır etkiler; bu yüzden
+ * silinen satır geri istenir ve boş dönerse sessiz başarısızlık yerine açık
+ * hata fırlatılır.
+ */
+export const deleteMyTactic = async (tacticId: string): Promise<void> => {
+  const { data, error } = await supabase
+    .from('tactics')
+    .delete()
+    .eq('id', tacticId)
+    .select('id');
+  if (error) throw new Error(parseRpcError(error.message) ?? 'Taktik silinemedi.');
+  if (!data || data.length === 0) {
+    throw new Error('Taktik silinemedi — yalnız kendi kaydettiğin taktikleri silebilirsin.');
+  }
+};
+
 /** Taktik paylaşım linkini aç/yenile/kapat (yalnız yazar — N92).
     enabled=true her çağrıda YENİ token üretir. → oyna.app/t/{token} */
 export const setTacticShareLink = async (
