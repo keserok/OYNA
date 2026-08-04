@@ -266,6 +266,30 @@ kurmamış ve **BAŞARILI tamamlanmış.** Uyarıyı kimse görmemiş. Efor 1,5 
 
 ---
 
+## K-15 · Kod kalitesi kararları (4 Ağustos 2026)
+
+| # | Karar | Sonuç |
+|---|---|---|
+| **K-15.1** (PE S-1) | **`MatchJoin.tsx` ÖNCE bölünecek, özellik SONRA eklenecek.** Yöntem: **ürün kavramlarına göre** (teknik katmana göre DEĞİL). | Dörde ayrılır: **Kadro · Para · Kaleci-Hakem · Taktik**. Ekran kısmı ana dosyada kalır ve bunları bir araya getirir. |
+| **K-15.2** (PE S-2) | **Testlerin tip kontrolü ve katı mod LANSMAN SONRASINA.** | 65 hata (27 test + 38 katı) sonraya kaldı. ⚠️ Bu, *"1.426 test yeşil"* cümlesinin lansmana kadar **tam güvence vermediği** anlamına gelir; her raporda hatırlatılacak. |
+| **K-15.3** (PE S-3) | **%20 kuralı:** her 5 günlük işin 1 günü, kullanıcının görmediği ama sonraki işleri hızlandıran işlere ayrılır. | Ayrıca sorulmaz; her paketin sonuna eklenir. |
+
+### Bölme ölçütü (K-15.1'in gerekçesi)
+
+Doğru bölme, **kurucunun cümleleriyle** kod dosyaları arasında birebir eşleşme kurar:
+
+| Kurucu kararı | Dokunulacak tek dosya |
+|---|---|
+| K-3.3 "iptal olunca herkese iade" | **Para** |
+| K-1.1 "kaptan para paneli" | **Para** |
+| K-5.1 "kaleci teminatı" | **Kaleci-Hakem** |
+| K-3.4/K-3.5 slot devri ve bırakma | **Kadro** |
+
+Kanıt: 40 `useState` tek tek okundu; kendiliğinden bu öbeklere ayrılıyorlar.
+Bölme çizgileri kodda **zaten var**, yalnız dosya olarak ayrılmamışlar.
+
+---
+
 ---
 
 # BÖLÜM II — CPO BULGULARININ GÜNCEL DURUMU
