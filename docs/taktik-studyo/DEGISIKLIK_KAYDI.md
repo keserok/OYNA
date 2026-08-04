@@ -160,7 +160,7 @@ Aktarım yaparken sınır bu listedir. Bunların dışına çıkan bir değişik
   6. Birkaç pas da çizip tekrar dene: top ve oyuncular **birlikte** durup
      **birlikte** devam etmeli.
 
-- **Commit:** _(bir sonraki adımda dolduruldu)_
+- **Commit:** `a613b62` (kod + kayıt)
 
 - **Geri alınırsa:** DURDUR yine yalnız topu dondurur, oyuncular yürümeye devam
   eder ve rotayı iki tur yürür. Kayıtlı taktik verisine dokunmaz — veri kaybı olmaz.
