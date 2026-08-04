@@ -252,7 +252,7 @@ kurmamış ve **BAŞARILI tamamlanmış.** Uyarıyı kimse görmemiş. Efor 1,5 
 
 | # | P0 | Ölçüm | Durum |
 |---|---|---|---|
-| PE-1 | **`MatchJoin.tsx` 3.240 satır** · 40 `useState` · 13 `useEffect` · 14 tekrar eden yeniden-çekme · 42 `as any`. Paranın ve kadronun kesiştiği ekran; K-1.1 ve K-3.3 buraya kod eklemeyi gerektiriyor. | dosya ölçümü | 🔴 AÇIK |
+| PE-1 | **`MatchJoin.tsx` bölündü (K-15.1).** Üç alan dosyası: `useMacParaBilgisi` (K-3.3/K-1.1), `useMacSaglayicilari` (K-5.1), `useMacKadrosu` (K-3.4/K-3.5). Ölçüm: satır 3.240→3.194 · useState 40→32 · useEffect 13→**7** · tekrar eden yeniden-çekme 14→**0**. Koruma testi eklendi (`macLobisiBolunmesi.test.ts`). | ölçüldü | 🟢 **KAPANDI** |
 | PE-2 | **Testler tip kontrolü dışında.** `tsconfig` `exclude`: tests, notifications, supabase, scripts, src, arsiv. Kapsama alınınca **27 hata** (11 hatalı tip dönüşümü, 8 **yanlış özellik adı**, 3 bulunamayan modül). "1.426 test yeşil" cümlesi olduğundan az şey garanti ediyor. | `tsc` ölçümü | 🔴 AÇIK |
 | PE-3 | **`strict` kapalı.** `--strict` ile **38 hata**: 16 yanlış argüman, **14 belirsiz parametre**, 2 **null kontrolsüz** (doğrudan çökme sebebi). | `tsc --strict` | 🔴 AÇIK |
 

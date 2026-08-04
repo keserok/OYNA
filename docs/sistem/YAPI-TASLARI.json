@@ -1,7 +1,7 @@
 {
   "$aciklama": "OYNA sisteminin TEMEL YAPI TAŞLARI. Bu dosya makine tarafından okunur; SISTEM-HARITASI.md bundan üretilir. ELLE İKİ YERDE TUTMA — yalnız burayı düzenle, sonra 'npm run sistem:harita' çalıştır.",
   "$surum": 1,
-  "$guncelleme": "2026-08-03 (P-0..P-5, P-7 tamam; P-4 canli denetim kurulu; CTO 5/5)",
+  "$guncelleme": "2026-08-04 (P-0..P-5, P-7; CTO 5/5; PE-1 kapandi)",
   "$risk_seviyeleri": {
     "KRITIK": "Yanlış giderse para kaybolur, kimlik ele geçer veya veri sızar. Değişiklik CEO onayı ister.",
     "YUKSEK": "Yanlış giderse kullanıcı zarar görür ve geri alması zordur. Değişiklik tam doğrulama ister.",
@@ -21,25 +21,26 @@
         "Yarıda kalan ödeme sonsuza dek askıda kalmaz"
       ],
       "dosyalar": [
-        "services/paymentService.ts",
-        "services/walletService.ts",
+        "components/payment/",
+        "hooks/useMacParaBilgisi.ts",
         "services/financeService.ts",
         "services/paymentModeService.ts",
-        "components/payment/",
+        "services/paymentService.ts",
+        "services/walletService.ts",
+        "supabase/functions/capture-payment/",
+        "supabase/functions/create-payment/",
+        "supabase/functions/iyzico-3ds-callback/",
+        "supabase/functions/payment-webhook/",
+        "supabase/functions/refund-payment/",
+        "supabase/functions/sweep-stale-payments/",
+        "supabase/functions/void-payment/",
+        "utils/formatTRY.ts",
+        "utils/iban.ts",
         "views/PaymentScreen.tsx",
         "views/WalletView.tsx",
-        "views/owner/finance/",
-        "views/owner/calendar/FinancialCalendarView.tsx",
         "views/owner/OwnerBankAccountsModal.tsx",
-        "supabase/functions/create-payment/",
-        "supabase/functions/capture-payment/",
-        "supabase/functions/void-payment/",
-        "supabase/functions/refund-payment/",
-        "supabase/functions/payment-webhook/",
-        "supabase/functions/iyzico-3ds-callback/",
-        "supabase/functions/sweep-stale-payments/",
-        "utils/formatTRY.ts",
-        "utils/iban.ts"
+        "views/owner/calendar/FinancialCalendarView.tsx",
+        "views/owner/finance/"
       ],
       "db_nesneleri": [
         "payment_intents",
@@ -80,16 +81,17 @@
         "Maçtan ayrılan kişi listelerde kalmaz"
       ],
       "dosyalar": [
-        "services/matchService.ts",
-        "services/matchLifecycleService.ts",
-        "services/rahatMatchService.ts",
-        "hooks/useMyMatches.ts",
-        "hooks/useMyAgenda.ts",
-        "views/MatchJoin.tsx",
-        "views/RahatMatchLobby.tsx",
         "components/match/",
+        "hooks/useMacKadrosu.ts",
+        "hooks/useMyAgenda.ts",
+        "hooks/useMyMatches.ts",
+        "services/matchLifecycleService.ts",
+        "services/matchService.ts",
+        "services/rahatMatchService.ts",
+        "utils/formations.ts",
         "utils/matchPositions.ts",
-        "utils/formations.ts"
+        "views/MatchJoin.tsx",
+        "views/RahatMatchLobby.tsx"
       ],
       "db_nesneleri": [
         "matches.slots",
@@ -511,13 +513,14 @@
         "Süresi geçen talep askıda kalmaz"
       ],
       "dosyalar": [
+        "components/Marketplace/",
+        "hooks/useMacSaglayicilari.ts",
+        "services/serviceOfferService.ts",
         "services/serviceProviderService.ts",
         "services/serviceRequestService.ts",
-        "services/serviceOfferService.ts",
-        "components/Marketplace/",
         "views/Marketplace.tsx",
-        "views/ServiceDashboard.tsx",
         "views/ServiceApplication.tsx",
+        "views/ServiceDashboard.tsx",
         "views/ServiceProfile.tsx",
         "views/ServiceSettings.tsx"
       ],

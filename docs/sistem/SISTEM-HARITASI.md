@@ -4,7 +4,7 @@
 > `docs/sistem/KONTROLLER.json` dosyalarından üretilir.
 > Değişiklik için o dosyaları düzenleyip `npm run sistem:harita` çalıştırın.
 
-> Kayıt sürümü: 1 · Son güncelleme: 2026-08-03 (P-0..P-5, P-7 tamam; P-4 canli denetim kurulu; CTO 5/5)
+> Kayıt sürümü: 1 · Son güncelleme: 2026-08-04 (P-0..P-5, P-7; CTO 5/5; PE-1 kapandi)
 
 ## Bu harita ne işe yarar?
 
@@ -63,25 +63,26 @@ Kullanıcıdan para almak, cüzdanda tutmak, saha sahibine ve hakem/kaleciye öd
 **Dosyalar:**
 
 ```
-services/paymentService.ts
-services/walletService.ts
+components/payment/
+hooks/useMacParaBilgisi.ts
 services/financeService.ts
 services/paymentModeService.ts
-components/payment/
-views/PaymentScreen.tsx
-views/WalletView.tsx
-views/owner/finance/
-views/owner/calendar/FinancialCalendarView.tsx
-views/owner/OwnerBankAccountsModal.tsx
-supabase/functions/create-payment/
+services/paymentService.ts
+services/walletService.ts
 supabase/functions/capture-payment/
-supabase/functions/void-payment/
-supabase/functions/refund-payment/
-supabase/functions/payment-webhook/
+supabase/functions/create-payment/
 supabase/functions/iyzico-3ds-callback/
+supabase/functions/payment-webhook/
+supabase/functions/refund-payment/
 supabase/functions/sweep-stale-payments/
+supabase/functions/void-payment/
 utils/formatTRY.ts
 utils/iban.ts
+views/PaymentScreen.tsx
+views/WalletView.tsx
+views/owner/OwnerBankAccountsModal.tsx
+views/owner/calendar/FinancialCalendarView.tsx
+views/owner/finance/
 ```
 
 **Veritabanı nesneleri:** `payment_intents`, `wallet_transactions`, `commission_config`, `apply_card_payment`, `player_buy_slots_v2`, `player_buy_slots_v2__inner`, `record_app_deposit_payment`, `process_tiered_refund`, `match_block_deposit`, `calculate_commission`, `_pitch_agreement`, `_markup_tutari`, `check_money_invariants`, `release_owner_earnings`, `auto_release_service_payouts`, `mark_intent_failed`, `list_stale_payment_intents`
@@ -111,16 +112,17 @@ Bir maçta kimin oynadığı. Slot alma, bırakma, devretme, yedek listesi, tak�
 **Dosyalar:**
 
 ```
-services/matchService.ts
-services/matchLifecycleService.ts
-services/rahatMatchService.ts
-hooks/useMyMatches.ts
+components/match/
+hooks/useMacKadrosu.ts
 hooks/useMyAgenda.ts
+hooks/useMyMatches.ts
+services/matchLifecycleService.ts
+services/matchService.ts
+services/rahatMatchService.ts
+utils/formations.ts
+utils/matchPositions.ts
 views/MatchJoin.tsx
 views/RahatMatchLobby.tsx
-components/match/
-utils/matchPositions.ts
-utils/formations.ts
 ```
 
 **Veritabanı nesneleri:** `matches.slots`, `matches.awaySlots`, `match_participants`, `player_release_slot`, `player_unassign_slot`, `player_self_assign`, `match_kick_player`, `_match_participant_ids`, `_match_player_counts`, `match_fill_stats`
@@ -524,13 +526,14 @@ Kaleci ve hakem kiralama. Başvuru, profil, talep, teklif, teminat, hizmet ödem
 **Dosyalar:**
 
 ```
+components/Marketplace/
+hooks/useMacSaglayicilari.ts
+services/serviceOfferService.ts
 services/serviceProviderService.ts
 services/serviceRequestService.ts
-services/serviceOfferService.ts
-components/Marketplace/
 views/Marketplace.tsx
-views/ServiceDashboard.tsx
 views/ServiceApplication.tsx
+views/ServiceDashboard.tsx
 views/ServiceProfile.tsx
 views/ServiceSettings.tsx
 ```
