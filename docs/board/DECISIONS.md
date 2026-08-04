@@ -44,7 +44,7 @@
 | 2 | **CTO** | ✅ Tamamlandı (3 Ağu 2026) · kurucu yanıtı bekliyor | `docs/board/02-cto.md` |
 | 3 | **Software Architect** | ✅ Tamamlandı + **P-0…P-5, P-7 uygulandı** (4 Ağu 2026) | `03-mimar.md` · `UYGULAMA-PLANI.md` |
 | 4 | **Principal Engineer** | ✅ Tamamlandı (4 Ağu 2026) · **güncel dal analiz edildi** (K-14) | `docs/board/04-kidemli-yazilim-muhendisi.md` |
-| 5 | SRE & DevOps Lead | ⏳ Bekliyor | — |
+| 5 | **SRE & DevOps Lead** | ✅ Tamamlandı (4 Ağu 2026) · **güncel dal** analiz edildi (K-14) | `docs/board/05-sre-devops.md` |
 | 6 | Security & Financial Infra Lead | ⏳ Bekliyor | — |
 | 7 | Strategic Advisor | 🔒 Kilitli (1–6 bitmeden açılmaz) | — |
 
@@ -287,6 +287,26 @@ Doğru bölme, **kurucunun cümleleriyle** kod dosyaları arasında birebir eşl
 
 Kanıt: 40 `useState` tek tek okundu; kendiliğinden bu öbeklere ayrılıyorlar.
 Bölme çizgileri kodda **zaten var**, yalnız dosya olarak ayrılmamışlar.
+
+---
+
+## SRE & DEVOPS — P0'lar
+
+> **Analiz tabanı:** dal `2a05516` + canlı (K-14).
+> **Rolün sorusu:** *"Gece 3'te bir şey bozulduğunda ne oluyor?"*
+
+| # | P0 | Kanıt | Durum |
+|---|---|---|---|
+| SRE-1 | **Düzenli yedek YOK — tek geri alınamaz risk.** Ücretsiz plan, veritabanı 70 MB, içinde gerçek para var (1.920 ₺). Elimizdeki tek yedek P-2 öncesi tek seferlik anlık kopya. Yanlış migration/silme geri dönülemez olur. | canlı plan + `yedek` şeması | 🔴 AÇIK · **S-1** |
+| SRE-2 | **Sistem bozulduğunu kimseye söyleyemiyor.** Gece denetimi çalışıyor (12 kontrol, 06:40) ama K-13.2 gereği e-posta kapalı; bulgu kurucu panele girene kadar bekler. P-0'daki 4 aylık sessizliğin sebebi bu boşluktu. | K-13.2 + `send-email` anahtarsız | 🔴 AÇIK · **S-2** |
+
+## SRE & DEVOPS — P1/P2 özeti
+
+`integration-tests` CI kapısı gizli anahtar yoksa **sessizce YEŞİL geçiyor** ("atlandı" ile "geçti" aynı renkte) · staging ACTIVE ama **0 tablo**, 19 migration doğrudan canlıya gitti · izleme neredeyse boş (391 dosyada **2** olay + **6** hata yakalama; anahtarlar girilmemiş) · `auto-cancel-matches` repoda var canlıda yok — **çağıran yok**, kesinti değil repo artığı · sürüm **4 ayrı yerde** elle · geri alma blokları yazılı ama **hiç prova edilmemiş**.
+
+## SRE & DEVOPS — güçlü yanlar
+
+**Zamanlanmış işler kusursuz: 24 saatte 2.134 çalışma, 0 başarısız** · en uzun iş 1 saniye · gece denetimi çalışıyor (12 yeşil) · gizli anahtar Vault'ta şifreli, hiçbir komuta gömülü değil · migration değişmezliği CI ile korunuyor · güvenlik başlıkları kurulu · repo–canlı migration uyumu tam.
 
 ---
 
