@@ -141,14 +141,49 @@ export interface NotificationTemplateInfo {
   can_user_disable: boolean;
   category: string;
   sort_order: number;
+  /** 1 = zorunlu (her modda gider) · 2 = önemli · 3 = isteğe bağlı. Panelden yönetilir. */
+  mod_seviyesi?: number;
 }
 
 export const fetchNotificationTemplates = async (): Promise<NotificationTemplateInfo[]> => {
   const { data, error } = await supabase
     .from('notification_templates')
-    .select('type_key, label_tr, is_mandatory, can_user_disable, category, sort_order')
+    .select('type_key, label_tr, is_mandatory, can_user_disable, category, sort_order, mod_seviyesi')
     .order('sort_order', { ascending: true });
 
   if (error || !data) return [];
   return data as NotificationTemplateInfo[];
+};
+
+// ─── Bildirim Modu (S2, 4 Ağustos 2026) ──────────────────────────
+// Eski tek tek açma/kapama düğmeleri GERÇEKTE UYGULANMIYORDU: bildirim üreten
+// 49 veritabanı fonksiyonundan yalnız 1'i tercihe bakıyordu. Yerine üç mod +
+// veritabanı seviyesinde tek bekçi geldi; bekçi 49'unu da kapsıyor.
+//
+// Seviyeler (panelden yönetilir): 1 = zorunlu · 2 = önemli · 3 = isteğe bağlı
+export type NotificationMode = 'TUMU' | 'ONEMLI' | 'ZORUNLU';
+
+export const MODE_LEVEL: Record<NotificationMode, number> = {
+  TUMU: 3,
+  ONEMLI: 2,
+  ZORUNLU: 1,
+};
+
+export const fetchNotificationMode = async (): Promise<NotificationMode> => {
+  const { data, error } = await supabase.rpc('bildirim_modum');
+  if (error) {
+    console.warn('[NotifMode] mod okunamadı:', error.message);
+    return 'TUMU';
+  }
+  const m = String(data ?? 'TUMU');
+  return (m === 'ONEMLI' || m === 'ZORUNLU') ? m : 'TUMU';
+};
+
+export const setNotificationMode = async (mod: NotificationMode): Promise<boolean> => {
+  const { error } = await supabase.rpc('bildirim_modu_ayarla', { p_mod: mod });
+  if (error) {
+    console.error('[NotifMode] mod yazılamadı:', error.message);
+    return false;
+  }
+  return true;
 };

@@ -203,6 +203,11 @@ interface AppState {
   // Takım Detayı açılış sekmesi (derin bağlantı: team/{id}/members → KADRO)
   teamInitialTab: 'GENEL' | 'KADRO' | 'TAKTIK' | 'MACLAR' | null;
   setTeamInitialTab: (t: 'GENEL' | 'KADRO' | 'TAKTIK' | 'MACLAR' | null) => void;
+  // A4: Ayarlar hangi alt sayfayla açılsın (derin bağlantı: oyna://support).
+  // SettingsScreen bunu okuyup TÜKETİR (okur okumaz null'a çeker) — aksi hâlde
+  // kullanıcı Ayarlar'a her girdiğinde Destek sayfası tekrar açılırdı.
+  settingsSubPage: string | null;
+  setSettingsSubPage: (p: string | null) => void;
   // Birleşik gelen kutusu: açılışta odaklanacak takım sohbeti (team/{id}/chat)
   selectedTeamChatId: string | null;
   setSelectedTeamChatId: (id: string | null) => void;
@@ -868,6 +873,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   setSelectedTeamId: (id) => set({ selectedTeamId: id }),
   teamInitialTab: null,
   setTeamInitialTab: (t) => set({ teamInitialTab: t }),
+  settingsSubPage: null,
+  setSettingsSubPage: (p) => set({ settingsSubPage: p }),
   selectedTeamChatId: null,
   setSelectedTeamChatId: (id) => set({ selectedTeamChatId: id }),
   studioContext: null,

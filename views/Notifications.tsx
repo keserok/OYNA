@@ -208,10 +208,14 @@ const Notifications: React.FC<NotificationsProps> = ({ onBack, role }) => {
             setSelectedConversationId: s.setSelectedConversationId,
             setSelectedTeamChatId: s.setSelectedTeamChatId,
             setTeamInitialTab: s.setTeamInitialTab,
+            setSettingsSubPage: s.setSettingsSubPage,
             showToast,
           });
-          if (ok) onBack(); // BULGU-016: başarısızsa sheet AÇIK kalır
-          return;
+          if (ok) { onBack(); return; } // BULGU-016: başarısızsa sheet AÇIK kalır
+          // A1 (4 Ağustos 2026): bağlantı işlenemediyse BURADA DURMA.
+          // Eskiden koşulsuz `return` vardı; bozuk adresli 36 maç hatırlatması
+          // yüzünden maç numarası elde olmasına rağmen hiçbir şey açılmıyordu.
+          if (!n.matchId) return;
         }
         if (n.matchId) {
           // BULGU-016: önce maçı yükle, SONRA görünümü değiştir. Aksi hâlde

@@ -395,7 +395,14 @@ const MapViewComponent = ({
                       <div className="flex-1 min-w-0 py-0.5">
                         <div className="flex items-start justify-between gap-2">
                           <h4 className="text-[0.75rem] font-extrabold italic uppercase text-white truncate">{p.name}</h4>
-                          <span className="flex items-center gap-0.5 text-[0.6875rem] font-extrabold text-[#FACC15] shrink-0">★ {p.rating}</span>
+                          {/* B1 (4 Ağustos 2026): değerlendirilmemiş saha "★ 0" gösteriyordu —
+                              "sıfır puan almış" gibi okunuyordu. PitchShowcaseCard'daki
+                              V-2 kuralı buraya da uygulandı: gerçek oy yoksa "Yeni". */}
+                          {(p.ratingCount > 0 || p.googleReviews > 0) ? (
+                            <span className="flex items-center gap-0.5 text-[0.6875rem] font-extrabold text-[#FACC15] shrink-0">★ {p.rating.toFixed(1)}</span>
+                          ) : (
+                            <span className="text-[0.625rem] font-extrabold uppercase tracking-wide text-ink-4 shrink-0">Yeni</span>
+                          )}
                         </div>
                         <div className="flex items-center gap-2 mt-1 text-[0.6875rem] font-bold text-white/50">
                           <span className="truncate">{p.district}</span>

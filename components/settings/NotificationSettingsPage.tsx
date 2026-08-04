@@ -1,30 +1,35 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import {
-  Bell, Lock, RefreshCw, Moon, AlertCircle, ChevronDown,
-  Zap, Trophy, Volume2,
-} from 'lucide-react';
+import { Bell, Trophy, Shield, AlertCircle, Check, Volume2, ChevronDown } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
 import { AnimatePresence, motion } from 'framer-motion';
 import { auth } from '../../supabaseAuth';
 import { useAppStore } from '../../store';
 import {
-  NOTIFICATION_CATEGORIES,
   fetchNotificationTemplates,
   updateAllNotificationPreferences,
+  fetchNotificationMode,
+  setNotificationMode,
+  MODE_LEVEL,
   NotificationTemplateInfo,
+  NotificationMode,
 } from '../../notifications/notificationPreferences';
-import type {
-  NotificationPreferences,
-  NotificationPreferenceKey,
-} from '../../notifications/pushService';
+import type { NotificationPreferences } from '../../notifications/pushService';
 import SettingsSubPage from '../common/SettingsSubPage';
 
-// ─── Bildirim Ayarları — sadeleştirilmiş + geliştirilmiş ──────────────────────
-// • Kategori ana anahtarları (tek dokunuşla tüm alt bildirimleri aç/kapat)
-// • Genişleyen detay (ince ayar isteyen için)
-// • Hızlı ön ayarlar (Hepsi / Sadece Maç / Sessiz)
-// • Sessiz saatler (notification_preferences.quiet_hours — send-push inUserQuietHours ile uygular)
-// • Cihaz izni uyarısı (OS'ta bildirim kapalıysa)
+// ─── Bildirim Ayarları — ÜÇ MOD (S2, 4 Ağustos 2026) ─────────────────────────
+//
+// NEDEN DEĞİŞTİ: Bu ekran eskiden 41 ayrı açma/kapama düğmesi gösteriyordu.
+// Düğmeler kaydediliyordu ama GERÇEKTE UYGULANMIYORDU — bildirim üreten 49
+// veritabanı fonksiyonundan yalnız 1'i tercihe bakıyordu. Canlıda 35 kullanıcının
+// 51 anahtarı kapalıydı ve hepsi yok sayılıyordu; kapatan kullanıcı bildirimi
+// yine alıyordu.
+//
+// YENİ KURULUM: Kullanıcı üç moddan birini seçer. Hangi bildirimin hangi modda
+// gideceğini YÖNETİCİ PANELİ belirler (notification_templates.mod_seviyesi) ve
+// kuralı veritabanındaki tek bekçi uygular — 49 fonksiyonun hepsini kapsar.
+//
+// Sessiz saatler aynen korundu (send-push edge fonksiyonu uygular).
+
 interface NotificationSettingsPageProps {
   open: boolean;
   onClose: () => void;
@@ -32,32 +37,48 @@ interface NotificationSettingsPageProps {
 
 interface QuietHours { start: string; end: string }
 
-const CATEGORY_ICONS: Record<string, React.ReactNode> = {
-  MATCH: <span>⚽</span>,
-  STAFF: <span>🧤</span>,
-  REMINDER: <span>⏰</span>,
-  DISCOVERY: <span>📍</span>,
-  GENERAL: <span>📊</span>,
-  OTHER: <span>🔔</span>,
-};
-
-// Ön ayar profilleri: hangi kategorilerin AÇIK olacağını belirler
-// (zorunlu bildirimler her zaman açık kalır, dokunulmaz).
-const PRESETS: { key: string; label: string; icon: React.ReactNode; on: string[] }[] = [
-  { key: 'ALL', label: 'Hepsi', icon: <Bell size={14} />, on: ['MATCH', 'STAFF', 'REMINDER', 'DISCOVERY', 'GENERAL', 'OTHER'] },
-  { key: 'MATCH_ONLY', label: 'Sadece Maç', icon: <Trophy size={14} />, on: ['MATCH', 'STAFF', 'REMINDER'] },
-  { key: 'QUIET', label: 'Sessiz', icon: <Moon size={14} />, on: [] },
+const MODLAR: {
+  key: NotificationMode;
+  baslik: string;
+  ozet: string;
+  aciklama: string;
+  icon: React.ReactNode;
+  renk: string;
+}[] = [
+  {
+    key: 'TUMU',
+    baslik: 'Hepsi',
+    ozet: 'Her şeyden haberim olsun',
+    aciklama: 'Maç hareketleri, takım ve arkadaş bildirimleri, kampanyalar — hepsi gelir.',
+    icon: <Bell size={18} />,
+    renk: '#39FF14',
+  },
+  {
+    key: 'ONEMLI',
+    baslik: 'Önemli olanlar',
+    ozet: 'Maçlarım ve takımım',
+    aciklama: 'Maç ve kadro hareketleri, takım işleri ve paranla ilgili her şey gelir. Kampanya, arkadaşlık ve sohbet bildirimleri gelmez.',
+    icon: <Trophy size={18} />,
+    renk: '#FACC15',
+  },
+  {
+    key: 'ZORUNLU',
+    baslik: 'Sadece zorunlu',
+    ozet: 'En aza indir',
+    aciklama: 'Yalnız kapatılamayan bildirimler gelir: para hareketleri, maç iptali, sana gelen doğrudan davetler ve güvenlik uyarıları.',
+    icon: <Shield size={18} />,
+    renk: '#60A5FA',
+  },
 ];
-
-// Üründe her zaman zorunlu türler — DB şablonu/kayıtlı tercih gecikse bile
-// UI'da kilitli kalır (ör. maçtan 1 saat önce hatırlatıcısı kapatılamaz).
-const FORCED_MANDATORY = new Set<string>(['match_reminder_1h']);
 
 const NotificationSettingsPage: React.FC<NotificationSettingsPageProps> = ({ open, onClose }) => {
   const { notificationPreferences, setNotificationPreferences } = useAppStore();
   const [templates, setTemplates] = useState<NotificationTemplateInfo[]>([]);
-  const [expanded, setExpanded] = useState<string | null>(null);
+  const [mod, setMod] = useState<NotificationMode>('TUMU');
+  const [modYuklendi, setModYuklendi] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [hata, setHata] = useState<string | null>(null);
+  const [listeAcik, setListeAcik] = useState(false);
   const [isNative] = useState(() => Capacitor.isNativePlatform());
   const [permissionDenied, setPermissionDenied] = useState(false);
 
@@ -68,7 +89,9 @@ const NotificationSettingsPage: React.FC<NotificationSettingsPageProps> = ({ ope
   const [quietEnd, setQuietEnd] = useState<string>(initialQuiet?.end ?? '08:00');
 
   useEffect(() => {
-    if (open) fetchNotificationTemplates().then(setTemplates);
+    if (!open) return;
+    void fetchNotificationTemplates().then(setTemplates);
+    void fetchNotificationMode().then((m) => { setMod(m); setModYuklendi(true); });
   }, [open]);
 
   // Sayfa açıldığında sessiz saat durumunu store'dan tazele (tercihler
@@ -97,92 +120,48 @@ const NotificationSettingsPage: React.FC<NotificationSettingsPageProps> = ({ ope
     return () => { active = false; };
   }, [open, isNative]);
 
-  // DB şablonlarını görüntü kategorilerine grupla (tek kaynak NOTIFICATION_CATEGORIES
-  // + bilinmeyenler için "Diğer" — hiçbir bildirim sessizce kaybolmaz).
-  const groups = useMemo(() => {
-    const categorized = new Set(NOTIFICATION_CATEGORIES.flatMap(c => c.preferences as string[]));
-    const base = NOTIFICATION_CATEGORIES.map(cat => ({
-      key: cat.key,
-      label: cat.label,
-      items: templates.filter(t => (cat.preferences as string[]).includes(t.type_key)),
-    }));
-    const other = templates.filter(t => !categorized.has(t.type_key));
-    if (other.length) base.push({ key: 'OTHER', label: 'Diğer Bildirimler', items: other });
-    return base.filter(g => g.items.length > 0);
-  }, [templates]);
+  // Seçili modda HANGİ bildirimlerin geleceği — kullanıcı ne seçtiğini görebilsin.
+  const { gelenler, gelmeyenler } = useMemo(() => {
+    const sinir = MODE_LEVEL[mod];
+    const gelen: NotificationTemplateInfo[] = [];
+    const gelmeyen: NotificationTemplateInfo[] = [];
+    templates.forEach((t) => {
+      // Seviye bilinmiyorsa zorunlu say — bekçi de böyle davranır.
+      const seviye = t.mod_seviyesi ?? 1;
+      (seviye <= sinir ? gelen : gelmeyen).push(t);
+    });
+    return { gelenler: gelen, gelmeyenler: gelmeyen };
+  }, [templates, mod]);
 
-  const prefOf = useCallback(
-    (key: string) => notificationPreferences[key as NotificationPreferenceKey],
-    [notificationPreferences],
-  );
+  const modSec = useCallback(async (yeni: NotificationMode) => {
+    if (saving || yeni === mod) return;
+    const onceki = mod;
+    setSaving(true);
+    setHata(null);
+    setMod(yeni);                                   // iyimser güncelleme
+    const ok = await setNotificationMode(yeni);
+    if (!ok) {
+      setMod(onceki);                               // yazılamadıysa geri al
+      setHata('Ayar kaydedilemedi. Bağlantını kontrol edip tekrar dene.');
+    }
+    setSaving(false);
+  }, [mod, saving]);
 
-  // Tek zorunluluk kaynağı: kayıtlı tercih VEYA DB şablonu VEYA ürün-zorunlusu.
-  const isMandatory = useCallback(
-    (t: NotificationTemplateInfo) => {
-      const cur = prefOf(t.type_key);
-      return !!(cur?.mandatory || t.is_mandatory || FORCED_MANDATORY.has(t.type_key));
-    },
-    [prefOf],
-  );
-
-  // Tek yazma yolu: iyimser store güncellemesi + DB. quiet_hours dahil tüm
-  // ekstra alanları korur (updateAllNotificationPreferences pass-through yapar).
-  const persist = useCallback(async (next: NotificationPreferences) => {
+  // Sessiz saatleri kaydet — açıkken {start,end} yaz, kapalıyken anahtarı sil
+  // (backend key yoksa sessiz saati devre dışı sayar).
+  const saveQuietHours = useCallback(async (enabled: boolean, start: string, end: string) => {
+    const next = { ...notificationPreferences } as NotificationPreferences & { quiet_hours?: QuietHours };
+    if (enabled) next.quiet_hours = { start, end };
+    else delete next.quiet_hours;
     setSaving(true);
     setNotificationPreferences(next);
     const uid = auth.currentUser?.uid;
     if (uid) await updateAllNotificationPreferences(uid, next);
     setSaving(false);
-  }, [setNotificationPreferences]);
-
-  // Bir kategorideki tüm ZORUNLU OLMAYAN bildirimleri hedef duruma getir
-  const setCategory = (items: NotificationTemplateInfo[], enabled: boolean) => {
-    const next: NotificationPreferences = { ...notificationPreferences };
-    items.forEach(t => {
-      const key = t.type_key as NotificationPreferenceKey;
-      if (!isMandatory(t)) next[key] = { enabled, mandatory: false };
-    });
-    persist(next);
-  };
-
-  const toggleSingle = (t: NotificationTemplateInfo) => {
-    const key = t.type_key as NotificationPreferenceKey;
-    if (isMandatory(t)) return;
-    const cur = notificationPreferences[key];
-    const next: NotificationPreferences = { ...notificationPreferences, [key]: { enabled: !(cur?.enabled ?? true), mandatory: false } };
-    persist(next);
-  };
-
-  const applyPreset = (on: string[]) => {
-    const next: NotificationPreferences = { ...notificationPreferences };
-    groups.forEach(g => {
-      const enabled = on.includes(g.key);
-      g.items.forEach(t => {
-        const key = t.type_key as NotificationPreferenceKey;
-        if (!isMandatory(t)) next[key] = { enabled, mandatory: false };
-      });
-    });
-    persist(next);
-  };
-
-  // Sessiz saatleri kaydet — açıkken {start,end} yaz, kapalıyken anahtarı sil
-  // (backend key yoksa sessiz saati devre dışı sayar).
-  const saveQuietHours = (enabled: boolean, start: string, end: string) => {
-    const next = { ...notificationPreferences } as NotificationPreferences & { quiet_hours?: QuietHours };
-    if (enabled) next.quiet_hours = { start, end };
-    else delete next.quiet_hours;
-    persist(next);
-  };
-
-  // Kategori ana anahtar durumu: herhangi bir zorunlu-olmayan açıksa "açık"
-  const categoryEnabled = (items: NotificationTemplateInfo[]) =>
-    items.some(t => !isMandatory(t) && (prefOf(t.type_key)?.enabled ?? true));
-
-  const hasOptional = (items: NotificationTemplateInfo[]) =>
-    items.some(t => !isMandatory(t));
+  }, [notificationPreferences, setNotificationPreferences]);
 
   return (
-    <SettingsSubPage open={open} onClose={onClose} title="Bildirimler" subtitle="Neyin bildirileceğini yönet">
+    <SettingsSubPage open={open} onClose={onClose} title="Bildirimler" subtitle="Ne kadar bildirim istersin?">
       {/* Cihaz izni uyarısı — yalnızca native cihazda izin kapalıysa */}
       {isNative && permissionDenied && (
         <div className="mb-5 bg-red-500/10 border border-red-500/25 rounded-2xl p-4 flex items-start gap-3">
@@ -190,34 +169,119 @@ const NotificationSettingsPage: React.FC<NotificationSettingsPageProps> = ({ ope
           <div>
             <p className="text-sm font-bold text-red-300">Bildirim izni kapalı</p>
             <p className="text-xs text-red-200/70 mt-0.5 leading-relaxed">
-              Aşağıdaki ayarlar kayıtlı ama telefonun bildirim iznini kapattığı için bildirim gelmez.
+              Aşağıdaki ayar kayıtlı ama telefonun bildirim iznini kapattığı için bildirim gelmez.
               Cihaz ayarlarından OYNA bildirimlerine izin ver.
             </p>
           </div>
         </div>
       )}
 
-      {/* Hızlı ön ayarlar */}
-      <div className="mb-5">
-        <p className="text-[0.6875rem] font-extrabold uppercase tracking-widest text-ink-4 mb-2 ml-1 flex items-center gap-1.5">
-          <Zap size={12} className="text-[#39FF14]" /> Hızlı Ayar
-        </p>
-        <div className="grid grid-cols-3 gap-2">
-          {PRESETS.map(p => (
-            <button
-              key={p.key}
-              onClick={() => applyPreset(p.on)}
-              disabled={saving || groups.length === 0}
-              className="flex flex-col items-center gap-1.5 py-3 rounded-2xl bg-[#161B22] border border-white/8 hover:bg-white/5 active:scale-[0.98] transition-all disabled:opacity-50"
-            >
-              <span className="text-[#39FF14]">{p.icon}</span>
-              <span className="text-xs font-bold text-white">{p.label}</span>
-            </button>
-          ))}
+      {hata && (
+        <div className="mb-4 bg-red-500/10 border border-red-500/25 rounded-2xl p-3 flex items-center gap-2">
+          <AlertCircle size={15} className="text-red-400 shrink-0" />
+          <p className="text-xs text-red-200">{hata}</p>
         </div>
+      )}
+
+      {/* ─── Üç mod ─────────────────────────────────────────────────────── */}
+      <div className="space-y-2.5 mb-5">
+        {MODLAR.map((m) => {
+          const secili = mod === m.key;
+          return (
+            <button
+              key={m.key}
+              onClick={() => void modSec(m.key)}
+              disabled={saving || !modYuklendi}
+              aria-pressed={secili}
+              className={`w-full text-left rounded-2xl p-4 border transition-all active:scale-[0.99] disabled:opacity-60 ${
+                secili
+                  ? 'bg-white/[0.06] border-white/20'
+                  : 'bg-[#161B22] border-white/8 hover:bg-white/[0.03]'
+              }`}
+              style={secili ? { borderColor: `${m.renk}66`, boxShadow: `0 0 22px ${m.renk}1a` } : undefined}
+            >
+              <div className="flex items-start gap-3">
+                <span
+                  className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border"
+                  style={{ color: m.renk, backgroundColor: `${m.renk}1f`, borderColor: `${m.renk}40` }}
+                >
+                  {m.icon}
+                </span>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-extrabold text-white">{m.baslik}</span>
+                    {secili && (
+                      <span
+                        className="inline-flex items-center gap-1 text-[0.625rem] font-extrabold uppercase tracking-wide px-1.5 py-0.5 rounded-full"
+                        style={{ color: m.renk, backgroundColor: `${m.renk}1f` }}
+                      >
+                        <Check size={10} strokeWidth={3} /> Seçili
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[0.6875rem] font-bold text-white/50 mt-0.5">{m.ozet}</p>
+                  <p className="text-[0.6875rem] text-gray-400 leading-relaxed mt-1.5">{m.aciklama}</p>
+                </div>
+              </div>
+            </button>
+          );
+        })}
       </div>
 
-      {/* Sessiz saatler */}
+      {/* ─── Seçimin ne anlama geldiği (şeffaflık) ──────────────────────── */}
+      {templates.length > 0 && (
+        <div className="mb-5 bg-[#161B22] border border-white/8 rounded-2xl overflow-hidden">
+          <button
+            onClick={() => setListeAcik((v) => !v)}
+            className="w-full flex items-center justify-between p-4 hover:bg-white/[0.03] transition-colors"
+          >
+            <div className="text-left">
+              <span className="text-sm font-bold text-white block">Bu modda ne gelir?</span>
+              <span className="text-[0.6875rem] text-gray-400">
+                {gelenler.length} tür gelir · {gelmeyenler.length} tür gelmez
+              </span>
+            </div>
+            <ChevronDown
+              size={17}
+              className={`text-gray-400 transition-transform ${listeAcik ? 'rotate-180' : ''}`}
+            />
+          </button>
+          <AnimatePresence initial={false}>
+            {listeAcik && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.18 }}
+                className="overflow-hidden border-t border-white/5"
+              >
+                <div className="p-4 space-y-3">
+                  <div>
+                    <p className="text-[0.625rem] font-extrabold uppercase tracking-widest text-[#39FF14] mb-1.5">
+                      Gelecek
+                    </p>
+                    <p className="text-[0.6875rem] text-gray-300 leading-relaxed">
+                      {gelenler.map((t) => t.label_tr).join(' · ')}
+                    </p>
+                  </div>
+                  {gelmeyenler.length > 0 && (
+                    <div>
+                      <p className="text-[0.625rem] font-extrabold uppercase tracking-widest text-gray-400 mb-1.5">
+                        Gelmeyecek
+                      </p>
+                      <p className="text-[0.6875rem] text-gray-400 leading-relaxed">
+                        {gelmeyenler.map((t) => t.label_tr).join(' · ')}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      )}
+
+      {/* ─── Sessiz saatler ─────────────────────────────────────────────── */}
       <div className="mb-5 bg-[#161B22] border border-white/8 rounded-2xl overflow-hidden">
         <div className="flex items-center justify-between p-4">
           <div className="flex items-center gap-3">
@@ -226,45 +290,46 @@ const NotificationSettingsPage: React.FC<NotificationSettingsPageProps> = ({ ope
             </span>
             <div>
               <span className="text-sm font-bold text-white block">Sessiz Saatler</span>
-              <span className="text-[0.6875rem] text-gray-400">Bu aralıkta bildirim gelmez (acil olanlar hariç)</span>
+              <span className="text-[0.6875rem] text-gray-400">Bu aralıkta telefonun çalmaz</span>
             </div>
           </div>
           <button
             role="switch"
             aria-checked={quietEnabled}
             aria-label="Sessiz saatler"
-            onClick={() => { const v = !quietEnabled; setQuietEnabled(v); saveQuietHours(v, quietStart, quietEnd); }}
+            onClick={() => { const v = !quietEnabled; setQuietEnabled(v); void saveQuietHours(v, quietStart, quietEnd); }}
             disabled={saving}
             className={`relative w-11 h-6 rounded-full transition-all duration-200 shrink-0 ${quietEnabled ? 'bg-[#39FF14] shadow-[0_0_10px_rgba(57,255,20,0.4)]' : 'bg-gray-700'}`}
           >
             <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-all duration-200 ${quietEnabled ? 'translate-x-5' : 'translate-x-0'}`} />
           </button>
         </div>
-        <AnimatePresence>
+        <AnimatePresence initial={false}>
           {quietEnabled && (
             <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.18 }}
               className="overflow-hidden border-t border-white/5"
             >
-              <div className="flex items-center gap-3 p-4">
+              <div className="p-4 flex items-center gap-3">
                 <label className="flex-1">
-                  <span className="text-[0.6875rem] font-bold uppercase text-ink-4 block mb-1">Başlangıç</span>
+                  <span className="text-[0.625rem] font-extrabold uppercase tracking-widest text-ink-4 block mb-1">Başlangıç</span>
                   <input
                     type="time"
                     value={quietStart}
-                    onChange={e => { setQuietStart(e.target.value); saveQuietHours(true, e.target.value, quietEnd); }}
-                    className="w-full h-11 bg-black/30 border border-white/10 rounded-xl px-3 text-sm font-bold text-white outline-none focus:border-[#39FF14]/40"
+                    onChange={(e) => { setQuietStart(e.target.value); void saveQuietHours(true, e.target.value, quietEnd); }}
+                    className="w-full bg-[#0A0E14] border border-white/10 rounded-xl px-3 py-2 text-sm font-bold text-white"
                   />
                 </label>
                 <label className="flex-1">
-                  <span className="text-[0.6875rem] font-bold uppercase text-ink-4 block mb-1">Bitiş</span>
+                  <span className="text-[0.625rem] font-extrabold uppercase tracking-widest text-ink-4 block mb-1">Bitiş</span>
                   <input
                     type="time"
                     value={quietEnd}
-                    onChange={e => { setQuietEnd(e.target.value); saveQuietHours(true, quietStart, e.target.value); }}
-                    className="w-full h-11 bg-black/30 border border-white/10 rounded-xl px-3 text-sm font-bold text-white outline-none focus:border-[#39FF14]/40"
+                    onChange={(e) => { setQuietEnd(e.target.value); void saveQuietHours(true, quietStart, e.target.value); }}
+                    className="w-full bg-[#0A0E14] border border-white/10 rounded-xl px-3 py-2 text-sm font-bold text-white"
                   />
                 </label>
               </div>
@@ -273,104 +338,10 @@ const NotificationSettingsPage: React.FC<NotificationSettingsPageProps> = ({ ope
         </AnimatePresence>
       </div>
 
-      {/* Kategori ana anahtarları */}
-      <p className="text-[0.6875rem] font-extrabold uppercase tracking-widest text-ink-4 mb-2 ml-1 flex items-center gap-1.5">
-        <Bell size={12} className="text-[#39FF14]" /> Kategoriler
+      <p className="text-[0.6875rem] text-gray-400 leading-relaxed px-1 pb-2">
+        Para hareketleri, maç iptali ve sana gelen doğrudan davetler hangi modu
+        seçersen seç her zaman gelir — bunlar kaçırılmaması gereken bildirimlerdir.
       </p>
-
-      {groups.length === 0 ? (
-        <div className="py-10 flex justify-center">
-          <RefreshCw size={20} className="animate-spin text-ink-4" />
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {groups.map(group => {
-            const isOpen = expanded === group.key;
-            const optional = hasOptional(group.items);
-            const on = categoryEnabled(group.items);
-            return (
-              <div key={group.key} className="bg-[#161B22] border border-white/8 rounded-2xl overflow-hidden">
-                {/* Başlık satırı: ana anahtar + genişlet */}
-                <div className="flex items-center justify-between p-4">
-                  <button
-                    onClick={() => setExpanded(isOpen ? null : group.key)}
-                    className="flex items-center gap-3 flex-1 min-w-0 text-left"
-                  >
-                    <span className="text-lg">{CATEGORY_ICONS[group.key] ?? <span>🔔</span>}</span>
-                    <span className="text-sm font-bold text-white truncate">{group.label}</span>
-                    <ChevronDown size={15} className={`text-ink-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
-                  </button>
-                  {optional ? (
-                    <button
-                      role="switch"
-                      aria-checked={on}
-                      aria-label={`${group.label} kategorisi`}
-                      onClick={() => setCategory(group.items, !on)}
-                      disabled={saving}
-                      className={`relative w-11 h-6 rounded-full transition-all duration-200 shrink-0 ${on ? 'bg-[#39FF14] shadow-[0_0_10px_rgba(57,255,20,0.4)]' : 'bg-gray-700'}`}
-                    >
-                      <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-all duration-200 ${on ? 'translate-x-5' : 'translate-x-0'}`} />
-                    </button>
-                  ) : (
-                    <Lock size={14} className="text-ink-4 shrink-0" />
-                  )}
-                </div>
-
-                {/* Detay: tekil bildirimler */}
-                <AnimatePresence>
-                  {isOpen && (
-                    <motion.div
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: 'auto' }}
-                      exit={{ opacity: 0, height: 0 }}
-                      className="overflow-hidden border-t border-white/5"
-                    >
-                      {group.items.map((t, idx) => {
-                        const cur = prefOf(t.type_key);
-                        const mandatory = isMandatory(t);
-                        const enabled = mandatory ? true : (cur?.enabled ?? true);
-                        return (
-                          <div
-                            key={t.type_key}
-                            className={`flex items-center justify-between px-4 py-3 ${idx < group.items.length - 1 ? 'border-b border-white/[0.04]' : ''}`}
-                          >
-                            <div className="flex items-center gap-2.5 flex-1 pr-3 min-w-0">
-                              {mandatory && <Lock size={12} className="text-ink-4 shrink-0" />}
-                              <div className="min-w-0">
-                                <span className="text-[0.8125rem] font-semibold text-white block truncate">{t.label_tr}</span>
-                                {mandatory && <span className="text-[0.6875rem] text-ink-4">Zorunlu — kapatılamaz</span>}
-                              </div>
-                            </div>
-                            <button
-                              role="switch"
-                              aria-checked={enabled}
-                              aria-label={mandatory ? `${t.label_tr} — zorunlu` : `${t.label_tr}`}
-                              onClick={() => toggleSingle(t)}
-                              disabled={mandatory || saving}
-                              className={`relative w-10 h-[22px] rounded-full transition-all duration-200 shrink-0 ${
-                                mandatory ? 'bg-gray-700 opacity-60 cursor-not-allowed' : enabled ? 'bg-[#39FF14]' : 'bg-gray-700'
-                              }`}
-                            >
-                              <span className={`absolute top-0.5 left-0.5 w-[18px] h-[18px] bg-white rounded-full shadow transition-all duration-200 ${enabled ? 'translate-x-[18px]' : 'translate-x-0'}`} />
-                            </button>
-                          </div>
-                        );
-                      })}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      <div className="flex items-start gap-2 px-2 mt-4">
-        <Lock size={12} className="text-ink-4 shrink-0 mt-0.5" />
-        <p className="text-[0.6875rem] text-ink-4 leading-relaxed">
-          Kilit ikonlu bildirimler güvenlik ve hizmet kalitesi için zorunludur; sessiz saatlerde bile iletilebilir.
-        </p>
-      </div>
     </SettingsSubPage>
   );
 };

@@ -37,7 +37,18 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
   const [isExporting, setIsExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
-  const [subPage, setSubPage] = useState<SubPage>(null);
+  // A4: derin bağlantı (oyna://support) Ayarlar'ı doğrudan Destek alt sayfasıyla
+  // açar. İstek TÜKETİLİR — okuyunca store'daki değer sıfırlanır, yoksa kullanıcı
+  // Ayarlar'a her girdiğinde Destek sayfası tekrar açılırdı.
+  const [subPage, setSubPage] = useState<SubPage>(() => {
+    const istek = useAppStore.getState().settingsSubPage;
+    return (istek === 'support' || istek === 'notifications') ? istek : null;
+  });
+  useEffect(() => {
+    if (useAppStore.getState().settingsSubPage) {
+      useAppStore.getState().setSettingsSubPage(null);
+    }
+  }, []);
   // STAFF-3: kullanıcının personel/müdür olduğu tesisler + davet kodu kullan
   const [staffPitches, setStaffPitches] = useState<StaffPitch[]>([]);
   const [showJoinModal, setShowJoinModal] = useState(false);

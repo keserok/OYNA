@@ -136,6 +136,8 @@ export interface DeepLinkActions {
   setSelectedConversationId?: (id: string | null) => void;
   setSelectedTeamChatId?: (id: string | null) => void;
   setTeamInitialTab?: (t: 'GENEL' | 'KADRO' | 'TAKTIK' | 'MACLAR' | null) => void;
+  /** A4: destek cevabı bildirimi Ayarlar'ın Destek alt sayfasını doğrudan açar. */
+  setSettingsSubPage?: (p: string | null) => void;
   /** Sessiz hata yerine kullanıcıya geri bildirim. GlobalToast'ı buraya import
    *  etmek yerine enjekte ediyoruz — store/supabaseAuth bu modülü import ettiği
    *  için yeni React bağımlılığı sokulmaz. */
@@ -151,7 +153,13 @@ function isValidUuid(value: string | undefined): boolean {
 }
 
 // İzin verilen kaynak türleri (whitelist) — bilinmeyen kaynaklar DASHBOARD'a düşer.
-const ALLOWED_RESOURCES = new Set(['match', 'profile', 'team', 'messages', 'tactic', 'social']);
+// A3/A4 (4 Ağustos 2026): 'wallet', 'owner', 'support', 'bookings' eklendi.
+// Önce yoklardı; iade bildirimi 'oyna://wallet' taşıyor ama whitelist'te
+// olmadığı için 10 iade bildirimi cüzdan yerine DASHBOARD'a düşüyordu.
+const ALLOWED_RESOURCES = new Set([
+  'match', 'profile', 'team', 'messages', 'tactic', 'social',
+  'wallet', 'owner', 'support', 'bookings',
+]);
 
 /** Dönüş `true` = görünüm GERÇEKTEN değişti. Çağıran (bildirim sheet'i) buna
  *  bakarak kendini kapatır; başarısızlıkta açık kalır (BULGU-016). */
@@ -247,6 +255,24 @@ export const handleDeepLink = async (
         });
       }
       setView('SOCIAL');
+      return true;
+    // ─── A3/A4 (4 Ağustos 2026) — daha önce hiçbiri tanınmıyordu ───────────
+    case 'wallet':
+      // İade bildirimi: kullanıcı parasını görmek istiyor, ana ekranı değil.
+      setView('WALLET');
+      return true;
+    case 'owner':
+      // Saha sahibine giden bildirimler (yeni rezervasyon · iptal · talep sonucu).
+      setView('OWNER_PANEL');
+      return true;
+    case 'support':
+      // Destek cevabı → Ayarlar içindeki Destek alt sayfası doğrudan açılır.
+      actions.setSettingsSubPage?.('support');
+      setView('SETTINGS');
+      return true;
+    case 'bookings':
+      // Tesis rezervasyonu iptal etti → oyuncunun maç/rezervasyon listesi.
+      setView('MY_MATCHES');
       return true;
     default:
       setView('DASHBOARD');
