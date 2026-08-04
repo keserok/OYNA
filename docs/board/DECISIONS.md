@@ -17,7 +17,7 @@
 |---|---|---|---|
 | 1 | **CPO** | ✅ Tamamlandı · kararlar alındı (3 Ağu 2026) | `docs/board/01-cpo.md` |
 | 2 | **CTO** | ✅ Tamamlandı (3 Ağu 2026) · kurucu yanıtı bekliyor | `docs/board/02-cto.md` |
-| 3 | **Software Architect** | ✅ Tamamlandı (3 Ağu 2026) · kurucu yanıtı bekliyor | `docs/board/03-mimar.md` |
+| 3 | **Software Architect** | ✅ Tamamlandı + **P-0…P-5, P-7 uygulandı** (4 Ağu 2026) | `03-mimar.md` · `UYGULAMA-PLANI.md` |
 | 4 | Principal Engineer | ⏳ Bekliyor | — |
 | 5 | SRE & DevOps Lead | ⏳ Bekliyor | — |
 | 6 | Security & Financial Infra Lead | ⏳ Bekliyor | — |
@@ -199,6 +199,25 @@ kurmamış ve **BAŞARILI tamamlanmış.** Uyarıyı kimse görmemiş. Efor 1,5 
 | PRO-3 | **Görsel dönüştürme** (K-10.2) | Yükleme anında çok boy üretilecek | Sunucu tarafı dönüştürme açılır, yükleme akışı sadeleşir |
 | PRO-4 | **Aylık dışa veri** | 5 GB | 250 GB → global sorgu sınırları gevşetilebilir |
 | PRO-5 | **Veritabanı dalı ile test** | Yok (doğrudan canlı) | Her paket için geçici kopya açılabilir |
+
+---
+
+## K-13 · Uygulama turu kararları (4 Ağustos 2026)
+
+| # | Karar | Uygulandı mı |
+|---|---|---|
+| **K-13.1** (S-1) | Bölge de konum da yoksa "Top Oyna" ülke geneli göstermez: önce **konum izni** istenir, verilmezse **ilçe seçimine** yönlendirir. | ✅ |
+| **K-13.2** (S-2) | **Şimdilik e-posta yok.** Alarm yalnız admin panelinde görünür. | ✅ |
+| **K-13.3** (S-4) | "Sistem Sağlığı" ayrı sayfa değil, **Komuta Merkezi** içinde bölüm. | ✅ |
+| **K-13.4** (S-5) | **30 günlük geçmiş** saklanır. | ✅ |
+| **K-13.5** (S-6) | Staging şeması **kurucu tarafından** doldurulacak. | ⏳ kurucuda |
+| **K-13.6** (S-7) | Bölge göçü, paketler bitince yapılacak. | ⏳ sırada |
+| **K-13.7** (S-9) | `push_live_enabled` **lansmana kadar kapalı kalır.** | ✅ kapalı |
+| **K-13.8** (S-10) | Ahmet Kuru 2. Saha 0 ₺ tarifesi **şimdilik kalsın.** | ✅ kayda geçti |
+
+> **K-13.2 notu:** E-posta olmadığı için denetim sonucunu görmek **panele girmeyi** gerektirir.
+> P-0'da öğrenilen ders (*"kimseye ulaşmayan uyarı, hiç olmamış uyarıdır"*) burada bilerek
+> kabul edildi; e-posta ileride eklenecek (`send-email` altyapısı hazır, yalnız Resend anahtarı eksik).
 
 ---
 
