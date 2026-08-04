@@ -6,8 +6,33 @@
 > ve `main` kodu dışında kararların tek yazılı kaynağıdır.
 > **Kural:** Buraya yalnız **kanıtlı** bulgular ve **kurucunun açıkça verdiği** kararlar girer.
 >
-> **Kaynak ortam:** `main` @ `da54bff` · canlı Supabase projesi `OYNA` (`iikvzgyccvgcybzdfwlv`)
-> Tüm canlı doğrulamalar salt-okunurdur.
+> ## ⚠️ ANALİZ TABANI — BAĞLAYICI KURAL (K-14, 4 Ağustos 2026)
+>
+> **CPO, CTO ve Mimar turları `main` @ `da54bff` durumunu analiz etti. O TABAN ARTIK GEÇERSİZ.**
+>
+> Uygulama turunda dala **19 migration canlıya uygulandı** ve 40 dosya değişti.
+> Bu yüzden **4. rolden itibaren HER ROL şunu analiz eder:**
+>
+> | Kaynak | Ne |
+> |---|---|
+> | **Kod** | `claude/oyna-advisory-prompt-8s4x3m` dalının **EN SON hâli** — `main` DEĞİL |
+> | **Veritabanı** | Canlı `OYNA` projesinin **O ANKİ** hâli (`iikvzgyccvgcybzdfwlv`) |
+> | **Kararlar** | Bu dosyadaki K-1…K-14'ün tamamı |
+>
+> **Bir rol konuşmadan önce ZORUNLU:**
+> 1. `git log --oneline -5` ile dalın son hâlini doğrula
+> 2. `npm run etki -- main` ile bu dalda NELERİN değiştiğini gör
+> 3. Kapatılmış bulguları TEKRAR RAPORLAMA — `docs/sistem/YAPI-TASLARI.json`
+>    içindeki `bilinen_acik_bulgular` listeleri **güncel gerçeği** tutar
+>
+> **Neden bu kural var:** Bu turda kendi bulgularımın 5'i, uygulama sırasında
+> yanlış çıktı — çünkü rapor yazılırken doğru olan şey, uygulanırken değişmişti.
+> Bayat taban üzerinden analiz eden bir rol, **zaten kapatılmış sorunları
+> yeniden bildirir** ve kurucunun zamanını çalar.
+
+> **Kaynak ortam:** `claude/oyna-advisory-prompt-8s4x3m` (güncel HEAD) ·
+> canlı Supabase projesi `OYNA` (`iikvzgyccvgcybzdfwlv`)
+> Canlı okuma serbesttir; canlı yazma kurucu onayına bağlıdır.
 
 ---
 
@@ -18,7 +43,7 @@
 | 1 | **CPO** | ✅ Tamamlandı · kararlar alındı (3 Ağu 2026) | `docs/board/01-cpo.md` |
 | 2 | **CTO** | ✅ Tamamlandı (3 Ağu 2026) · kurucu yanıtı bekliyor | `docs/board/02-cto.md` |
 | 3 | **Software Architect** | ✅ Tamamlandı + **P-0…P-5, P-7 uygulandı** (4 Ağu 2026) | `03-mimar.md` · `UYGULAMA-PLANI.md` |
-| 4 | Principal Engineer | ⏳ Bekliyor | — |
+| 4 | **Principal Engineer** | 🔵 Sırada — **güncel dal** analiz edilecek (K-14) | — |
 | 5 | SRE & DevOps Lead | ⏳ Bekliyor | — |
 | 6 | Security & Financial Infra Lead | ⏳ Bekliyor | — |
 | 7 | Strategic Advisor | 🔒 Kilitli (1–6 bitmeden açılmaz) | — |
