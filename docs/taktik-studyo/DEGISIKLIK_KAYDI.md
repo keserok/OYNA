@@ -61,7 +61,8 @@ Yeni bir değişiklik yapan oturum, "Kayıtlar" bölümünün **en üstüne** ş
 - **Dokunulan dosyalar:** (tam yol + hangi bölüm)
 - **Korunanlar:** (bilerek elle tutulmayan, aynı bırakılan şeyler)
 - **Nasıl kontrol edersin:** (uygulama içinde tıklama adımlarıyla)
-- **Commit:** (kısa numara)
+- **Commit:** (kısa numara — commit kendi numarasını içeremediği için
+  değişiklik commit'lendikten SONRA küçük bir ek commit ile doldurulur)
 - **Geri alınırsa:** (ne olur, neyi etkiler)
 ```
 
@@ -157,7 +158,8 @@ Aktarım yaparken sınır bu listedir. Bunların dışına çıkan bir değişik
   5. **BİZ | RAKİP** anahtarına ve **RAKİP** butonuna bas → eskisi gibi
      çalıştığını doğrula.
 
-- **Commit:** _(bu kaydın hemen ardından gelen "commit numarası yazıldı" adımında dolduruldu — aşağıya bak)_
+- **Commit:** `916d01f` (kod + kayıt). Bu satırın kendisi bir sonraki
+  küçük commit ile dolduruldu — bir commit kendi numarasını içeremez.
 
 - **Geri alınırsa:** Araç çubuğu eski haline, tek satır yan yana kayan
   düzene döner ve ipucu yazısı kaybolur. Taktiklerin, planların ve kayıtlı
