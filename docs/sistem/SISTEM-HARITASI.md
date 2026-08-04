@@ -387,7 +387,6 @@ Kimse dokunmadan kendi kendine çalışan işler. Zamanlanmış görevler (cron)
 **Dosyalar:**
 
 ```
-supabase/functions/auto-cancel-matches/
 supabase/functions/sweep-stale-payments/
 services/matchLifecycleService.ts
 ```
@@ -402,6 +401,8 @@ services/matchLifecycleService.ts
 | `K-OTO-2` | Defalarca denenip hep başarısız olan maç/iş var mı? | Hata yutuluyor, iş sonsuza dek tekrarlanıyor | GUNLUK |
 
 **⚠️ Bu taşta şu an açık olan bulgular:** M-15, M-16
+
+> **Not:** SON-KARAR 26 (4 Agu 2026): auto-cancel-matches dosyasi SILINDI — canliya hic yayinlanmamisti, cagiran cron yoktu ve isini veritabanindaki auto_process_matches() yapiyor. Iki yerde iki kural durmasin diye kaldirildi.
 
 ---
 

@@ -77,13 +77,47 @@ Görevin doğrudan parçası değilse şu alanlara girme; parçasıysa önce
 
 ## 6. Proje pusulası
 
-- Ürün kararlarının tek kaynağı: `OYNA_MASTER_PRENSIPLER.md` + `docs/master/OYNA_MASTER.md`.
-  Karar gerektiren belirsizlikte önce buraya bak; çelişki varsa kullanıcıya sor.
+- **Ürün ve sistem kararlarının tek kaynağı: `OYNA_PRENSIPLER.md`** (kök dizin).
+  Karar gerektiren belirsizlikte ÖNCE buraya bak; çelişki varsa kullanıcıya sor.
+  - Kanıtlar ve gerekçeler: `docs/board/DECISIONS.md` (K-1…K-17)
+  - Ayrıntılı rol raporları: `docs/board/01-cpo.md` … `07-stratejik-danisman.md`
+  - Açık kararlar: `docs/board/SON_KARARLAR.md`
+  - ⛔ `OYNA_MASTER_PRENSIPLER.md` ve `docs/master/OYNA_MASTER.md` **ARŞİVDİR**,
+    bağlayıcı değildir. Geçerlilik sırası: canlı sistem → `main` kodu →
+    `OYNA_PRENSIPLER.md` → `DECISIONS.md`.
 - Bilinen sorunlar ve çözüm geçmişi: `docs/master/PROBLEMLER_VE_COZUMLER.md` —
   aynı hata ikinci kez sıfırdan çözülmez.
 - Operasyon ve panel soruları: `docs/master/RUNBOOK.md`.
 - Git: doğrudan `main` dalına push etme; işler kendi dalında yapılır.
   Commit mesajları Türkçe ve açıklayıcı olur.
+
+## 6.5 Mekanizma — değişiklikten ÖNCE çalıştır
+
+Bu repoda kalıcı bir "bağışıklık sistemi" var: **17 yapı taşı, 32 kontrol.**
+Sade anlatımı: `docs/sistem/MEKANIZMA.md`
+
+**Kod ya da veritabanı değiştirmeden önce ZORUNLU:**
+
+```
+npm run etki          # hangi temel yapı taşlarına dokunuyorsun?
+```
+
+- 🔴 **KRİTİK** taşlara dokunuyorsan (PARA · KAPILAR · KİMLİK · AYARLAR · KURTARMA)
+  komut **DUR** der. Sade dille bildir ve kullanıcıdan onay al (CLAUDE.md §5).
+- Yeni bir dosya eklediysen `docs/sistem/YAPI-TASLARI.json` içinde bir yapı taşına
+  bağla; bağlamazsan `npm run sistem:kapsam` seni uyarır.
+- Haritada yazan bir dosyayı taşıdıysan/sildiysen **kapsam denetimi hata verir** —
+  harita gerçekle bağını kaybetmiş demektir, düzelt.
+
+**Diğer denetimler:**
+```
+npm run sistem:kapsam   # harita gerçeği yansıtıyor mu?
+npm run sistem:surum    # sürüm numarası her yerde aynı mı?
+npm run sistem:harita   # SISTEM-HARITASI.md'yi yeniden üret (elle düzenleme!)
+```
+
+**Altın kural (P-0):** Yeni bir koruma eklerken sor — *"peki bu koruma bozulursa
+kim söyleyecek?"* Cevabı yoksa koruma yarım kurulmuştur.
 
 ## 7. Görev şablonu
 

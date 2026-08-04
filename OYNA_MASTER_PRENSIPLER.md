@@ -7,8 +7,9 @@
 > **Sebep:** Aynı adı taşıyan iki kopya (bu dosya ve `docs/master/OYNA_MASTER_PRENSIPLER.md`)
 > farklı yerlerde bayatlamış ve birbiriyle çelişiyordu. Hangisinin bağlayıcı olduğu belirsizdi.
 >
-> **Yerine geçecek:** Danışma kurulu süreci tamamlandığında yazılacak **tek** master prensipler dosyası.
-> O dosya yayınlanana kadar geçerlilik sırası için: **`GECERLILIK_POLITIKASI.md`**
+> **✅ YERİNE GEÇEN DOSYA YAZILDI (4 Ağustos 2026): `OYNA_PRENSIPLER.md`** (kök dizin).
+> Danışma kurulu süreci 7 rolle tamamlandı; K-1…K-17 kararları orada toplandı.
+> Bu dosya yalnızca tarihsel referanstır.
 >
 > **Kısa kural:** Çelişki varsa **canlı sistem** kazanır — bu dosya değil.
 

@@ -6,13 +6,14 @@ import {
 } from '../../services/adminService';
 import { openGhostInConsumerApp } from '../../../utils/ghostDeepLink';
 import { PageShell } from '../components/PageShell';
+import { GercekDurum } from '../components/GercekDurum';
 import { SistemSagligi } from '../components/SistemSagligi';
 import { CokmeKayitlari } from '../components/CokmeKayitlari';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { useAdminToast } from '../context/AdminToastContext';
 import { useDebouncedCallback } from '../hooks/useDebouncedCallback';
 import { supabase } from '../../../supabaseClient';
-import { Zap, RefreshCw, Trash2, ExternalLink, PlayCircle, Bug } from 'lucide-react';
+import { Zap, RefreshCw, Trash2, ExternalLink, PlayCircle, Bug, Gauge } from 'lucide-react';
 import type { AdminNavigateFn, GodViewSubRoute } from '../GodViewPanel';
 
 interface CommandCenterPageProps {
@@ -133,6 +134,15 @@ export const CommandCenterPage: React.FC<CommandCenterPageProps> = ({ mode = 'em
           </button>
         }
       >
+        {/* [STR-1] GERÇEK DURUM — en üstte, çünkü diğer her sayı buna göre
+            okunur. Demo veriler ayrı sütunda; hiçbiri gerçeğe karışmaz. */}
+        <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-5">
+          <h3 className="text-xs font-bold text-gray-300 mb-3 flex items-center gap-2">
+            <Gauge size={14} /> Gerçek Durum
+          </h3>
+          <GercekDurum />
+        </div>
+
         {/* [P-4 / K-11.4 / S-4=a] SİSTEM SAĞLIĞI — en üstte, çünkü sabah ilk
             bakılacak yer burası. Her gece 06:40'ta kendini denetler. */}
         <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-5">

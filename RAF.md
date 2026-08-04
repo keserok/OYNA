@@ -198,6 +198,34 @@ Geri döndüğünde "ben bunu böyle mi bırakmıştım?" diye sormaman için:
 | `maintenance_mode` | (yok) | Bakım modu kapalı |
 | `registration_open` | (yok → açık) | Kayıt açık |
 
-**Not:** Kayıt açık ve uygulama yayında. Raftayken biri kayıt olabilir. Bugüne
-kadar dışarıdan hiç kimse gelmedi (0 dış kullanıcı), o yüzden risk düşük — ama
-istersen kayıtları kapatabilirim, tek satırlık iş.
+**Kurucu kararı (4 Ağu 2026): kayıt AÇIK kalacak.** Kapatma önerim reddedildi ve
+bu doğru çıktı: rafa hazırlık sırasında **iki gerçek kayıt** oldu (14:29 ve 14:30),
+biri başarıyla giriş de yaptı. Sistem şu an gerçekten kullanılıyor.
+
+---
+
+## 8. Son turda ayrıca yapılanlar (4 Ağustos 2026)
+
+Kurucu 52 kararın tamamını onayladı (yalnız "kayıt kapatma" reddedildi).
+
+| İş | Sonuç |
+|---|---|
+| Kuralsız 6 tablonun geniş yetkileri geri alındı | Artık güvenlik *kazara* değil, kurulu |
+| `pay_public_match_deposit` kaldırıldı | Kullanılmayan, tutarı istemciden alan para yolu |
+| 7 fonksiyonun gereksiz `anon` yetkisi geri alındı | Giriş öncesi ekranlar etkilenmedi |
+| **Maç iptalinde bildirim düzeltildi (CPO-P0-4)** | Canlıda test: **0 → 7 kişi** bildirim aldı |
+| `K-DEMO-1` denetimi maçlara da bakıyor | Eklendiği anda 3 yanlış kayıt yakalandı |
+| 3 yanlış işaretli maç düzeltildi | Öncesi arşive alındı |
+| **Panele "Gerçek Durum" kartı eklendi** | Demo ile gerçek yan yana, karışmadan |
+| Geçici tablo silindi (arşivi alındı) | `_saat_dilimi_duzeltme_yedek` |
+| Yedek kapsamı 8 → **10 tablo** | `app_config` + `commission_config` eklendi |
+| `auto-cancel-matches` dosyası silindi | Yayında değildi, işini veritabanı yapıyor |
+| **`OYNA_PRENSIPLER.md` yazıldı** | K-1…K-17 tek çelişkisiz dosyada |
+| `CLAUDE.md` yeni pusulaya bağlandı | Mekanizma kullanımı da eklendi |
+
+**Yapılmayan bir öneri:** `net._http_response` için temizlik önermiştim; ölçünce
+pg_net'in kendi 6 saatlik temizliği olduğu görüldü — gereksizdi, yapılmadı.
+
+**Yan bulgu (düzeltilmedi):** `K-BILDIRIM-1` denetimi "son 24 saat" diye soruyor
+ama pg_net 6 saatten eski kayıtları siliyor. Gece olan bir bildirim hatası sabah
+denetimine kadar silinmiş olur ve kontrol yeşil görünür. Ayrı bir iş.

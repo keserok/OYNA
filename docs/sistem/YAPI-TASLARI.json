@@ -370,7 +370,6 @@
         "Hata asla sessizce yutulmaz"
       ],
       "dosyalar": [
-        "supabase/functions/auto-cancel-matches/",
         "supabase/functions/sweep-stale-payments/",
         "services/matchLifecycleService.ts"
       ],
@@ -390,7 +389,8 @@
       "bilinen_acik_bulgular": [
         "M-15",
         "M-16"
-      ]
+      ],
+      "not": "SON-KARAR 26 (4 Agu 2026): auto-cancel-matches dosyasi SILINDI — canliya hic yayinlanmamisti, cagiran cron yoktu ve isini veritabanindaki auto_process_matches() yapiyor. Iki yerde iki kural durmasin diye kaldirildi."
     },
     {
       "id": "B11",
