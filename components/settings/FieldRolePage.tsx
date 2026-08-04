@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Shield, Scale, Building2, Activity, RefreshCw } from 'lucide-react';
+import { Shield, Scale, Building2, Activity, RefreshCw, KeyRound, ChevronRight } from 'lucide-react';
 import { UserRole, AppView } from '../../types';
 import { useAppStore } from '../../store';
 import { auth } from '../../supabaseAuth';
@@ -17,6 +17,14 @@ interface FieldRolePageProps {
   open: boolean;
   onClose: () => void;
   onNavigate: (view: AppView) => void;
+  /**
+   * "Tesise Katıl" — 6 haneli davet koduyla bir tesis ekibine katılma.
+   * Kullanıcı kararı (2026-08): Ayarlar'ın "İşletme" bölümünden buraya taşındı;
+   * davet koduyla ekibe girmek de bir "sahadaki rolün" meselesi.
+   * Modal Ayarlar ekranında duruyor (katılım sonrası tesis listesini orası
+   * tazeliyor); bu sayfa yalnız açılışı tetikler. Verilmezse satır çizilmez.
+   */
+  onJoinPitch?: () => void;
 }
 
 const ROLE_OPTS = [
@@ -25,7 +33,7 @@ const ROLE_OPTS = [
   { r: UserRole.OWNER, label: 'Tesis', sub: 'Sahanı ve rezervasyonları yönet', color: '#3b82f6', icon: <Building2 size={20} /> },
 ];
 
-const FieldRolePage: React.FC<FieldRolePageProps> = ({ open, onClose, onNavigate }) => {
+const FieldRolePage: React.FC<FieldRolePageProps> = ({ open, onClose, onNavigate, onJoinPitch }) => {
   const uid = auth.currentUser?.uid || '';
   const { myRoles, setMyRoles, setIsRoleSwitcherOpen, setServiceAppRole } = useAppStore();
   const [loading, setLoading] = useState(true);
@@ -117,6 +125,32 @@ const FieldRolePage: React.FC<FieldRolePageProps> = ({ open, onClose, onNavigate
               );
             })}
           </div>
+
+          {/* ── TESİSE KATIL ──────────────────────────────────────────────
+              Rol BAŞVURUSU değil, davet kodu kullanma: ayrı bir başlık
+              altında ve ayrı bir görsel dilde duruyor ki yukarıdaki üç
+              "başvur" satırıyla karışmasın.
+              IP-22 hatırlatması: tesis rolüne başvurulmaz — tesisi OYNA ekibi
+              tanımlar. Buradaki iş, TANIMLANMIŞ bir tesisin ekibine
+              katılmaktır. */}
+          {onJoinPitch && (
+            <div className="pt-1">
+              <h3 className="text-xs font-bold text-ink-4 uppercase mb-2.5 ml-1">Tesis Ekibi</h3>
+              <button
+                onClick={() => { onClose(); onJoinPitch(); }}
+                className="w-full flex items-center gap-3 p-4 bg-[#161B22] border border-white/8 rounded-2xl hover:bg-white/5 transition-colors active:scale-[0.99]"
+              >
+                <div className="w-11 h-11 rounded-xl flex items-center justify-center bg-white/5 border border-white/10 text-gray-300 shrink-0">
+                  <KeyRound size={20} />
+                </div>
+                <div className="text-left flex-1 min-w-0">
+                  <p className="text-sm font-extrabold text-white leading-tight">Tesise Katıl</p>
+                  <p className="text-[0.6875rem] text-gray-400">Sana verilen 6 haneli davet koduyla tesis ekibine katıl</p>
+                </div>
+                <ChevronRight size={18} className="text-ink-4 shrink-0" />
+              </button>
+            </div>
+          )}
         </div>
       )}
     </SettingsSubPage>
