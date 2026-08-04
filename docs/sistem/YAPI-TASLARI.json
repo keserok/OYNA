@@ -1,7 +1,7 @@
 {
   "$aciklama": "OYNA sisteminin TEMEL YAPI TAŞLARI. Bu dosya makine tarafından okunur; SISTEM-HARITASI.md bundan üretilir. ELLE İKİ YERDE TUTMA — yalnız burayı düzenle, sonra 'npm run sistem:harita' çalıştır.",
   "$surum": 1,
-  "$guncelleme": "2026-08-03 (P-0, P-1, P-2a, P-2b, P-2c, P-2d kismi)",
+  "$guncelleme": "2026-08-03 (P-0, P-1, P-2 tamamlandi; CTO 5/5 P0 kapali)",
   "$risk_seviyeleri": {
     "KRITIK": "Yanlış giderse para kaybolur, kimlik ele geçer veya veri sızar. Değişiklik CEO onayı ister.",
     "YUKSEK": "Yanlış giderse kullanıcı zarar görür ve geri alması zordur. Değişiklik tam doğrulama ister.",
@@ -66,11 +66,8 @@
         "K-PARA-3",
         "K-KILIT-1"
       ],
-      "bilinen_acik_bulgular": [
-        "CTO-P0-2",
-        "CTO-P0-3",
-        "CTO-P0-4"
-      ]
+      "bilinen_acik_bulgular": [],
+      "not": "CTO'nun 5 P0'inin tamami kapatildi (3 Agustos 2026). CTO-P0-4 DUZELTMESI: 'match_block_deposit keyfi tutarla acik' iddiasi FAZLA IDDIALIYDI - fonksiyonda 'yalniz maci kuran kaptan' kapisi ZATEN vardi. Fiyat oranli taban eklemeyi denedim ama canli veri durdurdu: matches.price SLOT BASINA fiyat, bloke tutarlar fiyatin %285-500'u. Yanlis varsayimla taban koymak akisi bozardi. Tutar zaten kaptanin KENDI cuzdanindan dusuyor ve deposit_status<>'NONE' tekrari engelliyor - gercek bir acik yok."
     },
     {
       "id": "B02",

@@ -4,7 +4,7 @@
 > `docs/sistem/KONTROLLER.json` dosyalarından üretilir.
 > Değişiklik için o dosyaları düzenleyip `npm run sistem:harita` çalıştırın.
 
-> Kayıt sürümü: 1 · Son güncelleme: 2026-08-03 (P-0, P-1, P-2a, P-2b, P-2c, P-2d kismi)
+> Kayıt sürümü: 1 · Son güncelleme: 2026-08-03 (P-0, P-1, P-2 tamamlandi; CTO 5/5 P0 kapali)
 
 ## Bu harita ne işe yarar?
 
@@ -95,7 +95,7 @@ utils/iban.ts
 | `K-PARA-3` | %30 kuralı yalnız telefonda mı duruyor, yoksa veritabanı da reddediyor mu? | Kural yalnız istemcide; sunucu her tutarı kabul ediyor | DEGISIKLIKTE |
 | `K-KILIT-1` | İki fonksiyon aynı tabloları ters sırada kilitlerse sistem kilitlenir. Sıra tutarlı mı? | Kilitlenme yalnız yoğun anda oluşur, testte hiç görünmez | HER_IKISI |
 
-**⚠️ Bu taşta şu an açık olan bulgular:** CTO-P0-2, CTO-P0-3, CTO-P0-4
+> **Not:** CTO'nun 5 P0'inin tamami kapatildi (3 Agustos 2026). CTO-P0-4 DUZELTMESI: 'match_block_deposit keyfi tutarla acik' iddiasi FAZLA IDDIALIYDI - fonksiyonda 'yalniz maci kuran kaptan' kapisi ZATEN vardi. Fiyat oranli taban eklemeyi denedim ama canli veri durdurdu: matches.price SLOT BASINA fiyat, bloke tutarlar fiyatin %285-500'u. Yanlis varsayimla taban koymak akisi bozardi. Tutar zaten kaptanin KENDI cuzdanindan dusuyor ve deposit_status<>'NONE' tekrari engelliyor - gercek bir acik yok.
 
 ---
 
