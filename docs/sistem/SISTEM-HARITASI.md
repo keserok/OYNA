@@ -4,7 +4,7 @@
 > `docs/sistem/KONTROLLER.json` dosyalarından üretilir.
 > Değişiklik için o dosyaları düzenleyip `npm run sistem:harita` çalıştırın.
 
-> Kayıt sürümü: 1 · Son güncelleme: 2026-08-04 (P-0..P-5, P-7; CTO 5/5; PE-1 kapandi)
+> Kayıt sürümü: 1 · Son güncelleme: 2026-08-04 (P-0..P-5, P-7; CTO 5/5; PE-1; SRE-1 ve SRE-3 kapandi -> B16 KURTARMA + B17 GORUNURLUK dogdu)
 
 ## Bu harita ne işe yarar?
 
@@ -47,6 +47,8 @@ ve o taşlarda **zaten açık olan** bulgular neler.
 | B13 | **SAHA-SAHIBI** | 🟠 YÜKSEK | Saha sahibinin paneli. Tesis bilgileri, kortlar, fotoğraflar, personel, takvim, finans raporu, tahsilat, abonman, özel fiyat, kampanya. |
 | B14 | **PAZARYERI** | 🟠 YÜKSEK | Kaleci ve hakem kiralama. Başvuru, profil, talep, teklif, teminat, hizmet ödemesi. |
 | B15 | **SOSYAL** | 🟡 ORTA | Arkadaşlar, takımlar, sohbet, davetler, taktik tahtası. |
+| B16 | **KURTARMA** | 🔴 KRİTİK | Bir şey bozulduğunda geri dönebilmek. Yedekler, geri yükleme, migration geri alma, kaza sonrası kurtarma. Diğer bütün yapı taşları 'bozulmasın' diye çalışır; bu yapı taşı 'bozulduğunda ne yapacağız' sorusunun cevabıdır. |
+| B17 | **GORUNURLUK** | 🟠 YÜKSEK | Bir şeyin bozulduğunu ÖĞRENEBİLMEK. Çökme kayıtları, hata izleme, sistem sağlığı denetimi, panelde görünen alarmlar. Kurtarma 'nasıl geri döneriz' sorusuysa, bu 'bozulduğunu ne zaman fark ederiz' sorusudur. |
 
 ---
 
@@ -79,7 +81,7 @@ supabase/functions/void-payment/
 utils/formatTRY.ts
 utils/iban.ts
 views/PaymentScreen.tsx
-views/WalletView.tsx
+views/WalletScreen.tsx
 views/owner/OwnerBankAccountsModal.tsx
 views/owner/calendar/FinancialCalendarView.tsx
 views/owner/finance/
@@ -122,7 +124,7 @@ services/rahatMatchService.ts
 utils/formations.ts
 utils/matchPositions.ts
 views/MatchJoin.tsx
-views/RahatMatchLobby.tsx
+views/match/RahatMatchLobby.tsx
 ```
 
 **Veritabanı nesneleri:** `matches.slots`, `matches.awaySlots`, `match_participants`, `player_release_slot`, `player_unassign_slot`, `player_self_assign`, `match_kick_player`, `_match_participant_ids`, `_match_player_counts`, `match_fill_stats`
@@ -419,6 +421,9 @@ supabaseClient.ts
 capacitor.config.ts
 vercel.json
 .env.example
+package.json
+android/app/build.gradle
+utils/appVersion.ts
 ```
 
 **Veritabanı nesneleri:** `app_config`, `app.settings.functions_base_url`, `app.settings.webhook_secret`, `sweeper_enabled`, `push_live_enabled`, `demo_mode_enabled`, `payment_provider`, `is_feature_enabled`
@@ -430,6 +435,7 @@ vercel.json
 | `K-AYAR-1` | Sistemin çalışması için gereken ayarlardan boş kalan var mı? (3 Ağustos 2026'daki iki büyük arızanın tek kök nedeni buydu) | Kod kusursuz, ayar boş, sistem sessizce hiçbir şey yapmıyor | HER_IKISI |
 | `K-AYAR-2` | Panelden açıp kapattığın bir düğme gerçekten bir şey yapıyor mu? | Düğmeye basıyorsun, hiçbir şey olmuyor, hata da yok | HER_IKISI |
 | `K-AYAR-3` | Bir migration 'ayar eksik, kurmadım' deyip devam etmiş mi? | Migration BAŞARILI göründü ama işini yapmadı | HER_IKISI |
+| `K-SURUM-1` | Web, Android ve iOS aynı sürüm numarasını mı taşıyor? Biri geride kalırsa 'hangi sürümde bu hata vardı' sorusunun cevabı kaybolur. | package.json yükseltilir, telefon uygulamaları eski numarayla yayınlanır; kimse fark etmez | DEGISIKLIKTE |
 
 **⚠️ Bu taşta şu an açık olan bulgular:** CTO-P1-ozellik-bayraklari
 
@@ -590,6 +596,72 @@ views/Studio.tsx
 
 ---
 
+## B16 · KURTARMA  🔴 KRİTİK
+
+Bir şey bozulduğunda geri dönebilmek. Yedekler, geri yükleme, migration geri alma, kaza sonrası kurtarma. Diğer bütün yapı taşları 'bozulmasın' diye çalışır; bu yapı taşı 'bozulduğunda ne yapacağız' sorusunun cevabıdır.
+
+**Bu taşın garanti ettiği:**
+- Kritik tabloların her gece tam kopyası alınır ve 7 gün saklanır
+- Yedek alınmazsa panel kırmızı yanar — sessizce durmuş bir yedek, yedeksizlikten kötüdür
+- Her migration dosyasında geri alma adımları yazılıdır
+
+**Dosyalar:**
+
+```
+supabase/migrations/20260804120000_sre1_gecelik_yedek.sql
+supabase/migrations/20260804130000_sre1_yedek_saglik_kontrolu.sql
+```
+
+**Veritabanı nesneleri:** `yedek`, `yedek.kapsam`, `yedek.gunluk_al`, `yedek_durumu`, `gecelik_yedek`
+
+**Bu taşı koruyan kontroller:**
+
+| Kontrol | Ne sorar | Yakaladığı sessizlik | Ne zaman |
+|---|---|---|---|
+| `K-YEDEK-1` | Her gece 05:30'da kritik tabloların kopyası alınır. Bu kontrol o kopyanın BUGÜN alındığını ve içindeki tablo sayısının tam olduğunu doğrular. | Yedek aylar önce sessizce durmuş; kaza günü 'yedeğim var' sanıp yanılmak | GUNLUK |
+
+**⚠️ Bu taşta şu an açık olan bulgular:** SRE-8
+
+> **Not:** Bu yapi tasi 4 Agustos 2026'da dogdu. SRE turu tek GERI ALINAMAZ riski buldu: ucretsiz planda otomatik yedek garantisi yok ve veritabaninda artik GERCEK PARA var. Gecelik ic kopya (S-1=a) kuruldu. DURUST SINIR: yanlis migration / kazara silme / bozulan veri 7 gune kadar geri alinir; veritabaninin TAMAMEN gitmesi kapsanmaz (kopya ayni veritabaninda). Tam guvence icin haftalik DIS kopya (S-1=b) veya Pro plan gerekir. SRE-8 hala acik: geri yukleme hic PROVA edilmedi.
+
+---
+
+## B17 · GORUNURLUK  🟠 YÜKSEK
+
+Bir şeyin bozulduğunu ÖĞRENEBİLMEK. Çökme kayıtları, hata izleme, sistem sağlığı denetimi, panelde görünen alarmlar. Kurtarma 'nasıl geri döneriz' sorusuysa, bu 'bozulduğunu ne zaman fark ederiz' sorusudur.
+
+**Bu taşın garanti ettiği:**
+- Uygulama bir kullanıcının telefonunda çöktüğünde kayda geçer — kullanıcının bize yazmasını beklemeyiz
+- Hata kayıtları üçüncü tarafa GÖNDERİLMEZ; kendi veritabanımızda kalır
+- Kişisel bilgi (e-posta, telefon, kart, oturum anahtarı) kaydedilmeden önce hem tarayıcıda hem sunucuda silinir
+- Bozuk bir ekran sel gibi kayıt üretse bile sistem boğulmaz (saatte aynı hatadan 20, toplamda 500 sınırı)
+
+**Dosyalar:**
+
+```
+utils/observability.ts
+components/ErrorBoundary.tsx
+admin-panel/views/components/CokmeKayitlari.tsx
+admin-panel/views/components/SistemSagligi.tsx
+supabase/migrations/20260804140000_sre3_cokme_kaydi.sql
+supabase/migrations/20260804150000_sre3_ek_bilgi_temizligi.sql
+supabase/migrations/20260804160000_sre3_gizlendi_etiketi_duzeltmesi.sql
+```
+
+**Veritabanı nesneleri:** `istemci_hatalari`, `hata_bildir`, `hata_ozeti`, `hata_temizle_metin`, `hata_temizle_json`, `hata_kayitlarini_temizle`, `hata_kayit_temizligi`, `sistem_saglik_kayitlari`, `sistem_saglik_calistir`, `sistem_saglik_ozet`, `sistem_saglik_gunluk`
+
+**Bu taşı koruyan kontroller:**
+
+| Kontrol | Ne sorar | Yakaladığı sessizlik | Ne zaman |
+|---|---|---|---|
+| `K-COKME-1` | Son 24 saatte kaç kişide, kaç farklı hata oluştu. Yeni bir sürümden sonra ani artış, o sürümün bir şeyi bozduğunu gösterir. | Uygulama bir grup kullanıcıda çöküyor ama kimse şikâyet etmediği için hiç öğrenilmiyor | GUNLUK |
+
+**⚠️ Bu taşta şu an açık olan bulgular:** SRE-2, SRE-5
+
+> **Not:** Bu yapi tasi 4 Agustos 2026'da dogdu. SRE turu olctu: 391 dosyada yalnizca 2 trackEvent ve 6 captureError vardi VE hicbiri bir yere gitmiyordu — utils/observability.ts Sentry icin yazilmis ama anahtar yoktu, yani her cagri sessiz no-op'tu. ErrorBoundary ekranda 'sorun Oyna tarafina iletildi' yazdigi halde iletilmiyordu. S-3 karari 'guvenli olsun': ucuncu tarafa veri gonderilmez, kendi veritabanimiza yazilir. Ayrica artik yalnizca elle cagrilan yerler degil, YAKALANMAMIS tum hatalar da toplanir (window.onerror + unhandledrejection). SRE-2 hala acik: alarm kurucunun telefonuna ULASAMAZ, panele bakmasi gerekir (S-2 = 'bu oturumda e-posta yok').
+
+---
+
 ## Kontrol kataloğu (tümü)
 
 | Kontrol | Ne sorar | Başarı ölçütü | Ne zaman |
@@ -623,3 +695,6 @@ views/Studio.tsx
 | `K-SAHIBI-2` **Panelde gösterilen tutar canlı veriyle aynı mı?** | Saha sahibinin finans ekranındaki rakamlar ile veritabanındaki gerçek toplamlar birebir tutuyor mu? | sapan tesis = 0 | GUNLUK |
 | `K-PAZAR-1` **Hizmet ödemesi erken serbest bırakılmış mı?** | Kaleci/hakem ücreti, maç gerçekleşmeden ödenmiş mi? | erken serbest bırakma = 0 | GUNLUK |
 | `K-DEMO-1` **Demo veri kurallara uyuyor mu?** | Demo satırları gerçek sistemin kurallarına uyuyor mu, denetimi kirletiyor mu? | kural dışı demo satırı = 0 | GUNLUK |
+| `K-YEDEK-1` **Gecelik yedek gerçekten alındı mı?** | Her gece 05:30'da kritik tabloların kopyası alınır. Bu kontrol o kopyanın BUGÜN alındığını ve içindeki tablo sayısının tam olduğunu doğrular. | son_yedek_tarihi = bugün VE son_gun_tablo = beklenen_tablo | GUNLUK |
+| `K-COKME-1` **Uygulama kimsede çöküyor mu?** | Son 24 saatte kaç kişide, kaç farklı hata oluştu. Yeni bir sürümden sonra ani artış, o sürümün bir şeyi bozduğunu gösterir. | etkilenen_kisi son 7 günün ortalamasının 3 katını aşmamalı | GUNLUK |
+| `K-SURUM-1` **Sürüm numarası her yerde aynı mı?** | Web, Android ve iOS aynı sürüm numarasını mı taşıyor? Biri geride kalırsa 'hangi sürümde bu hata vardı' sorusunun cevabı kaybolur. | Çıkış kodu 0 — üç yerde de package.json'daki sürüm yazıyor | DEGISIKLIKTE |

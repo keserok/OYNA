@@ -7,11 +7,12 @@ import {
 import { openGhostInConsumerApp } from '../../../utils/ghostDeepLink';
 import { PageShell } from '../components/PageShell';
 import { SistemSagligi } from '../components/SistemSagligi';
+import { CokmeKayitlari } from '../components/CokmeKayitlari';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { useAdminToast } from '../context/AdminToastContext';
 import { useDebouncedCallback } from '../hooks/useDebouncedCallback';
 import { supabase } from '../../../supabaseClient';
-import { Zap, RefreshCw, Trash2, ExternalLink, PlayCircle } from 'lucide-react';
+import { Zap, RefreshCw, Trash2, ExternalLink, PlayCircle, Bug } from 'lucide-react';
 import type { AdminNavigateFn, GodViewSubRoute } from '../GodViewPanel';
 
 interface CommandCenterPageProps {
@@ -139,6 +140,15 @@ export const CommandCenterPage: React.FC<CommandCenterPageProps> = ({ mode = 'em
             <Zap size={14} /> Sistem Sağlığı
           </h3>
           <SistemSagligi />
+        </div>
+
+        {/* [SRE-3 / S-3] ÇÖKME KAYITLARI — uygulama kimde çöktü, kaç kişide?
+            Üçüncü tarafa gitmez; kayıtlar kendi veritabanımızda durur. */}
+        <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-5">
+          <h3 className="text-xs font-bold text-gray-300 mb-3 flex items-center gap-2">
+            <Bug size={14} /> Çökme Kayıtları
+          </h3>
+          <CokmeKayitlari />
         </div>
 
         <div className="bg-gradient-to-r from-red-950/40 to-purple-950/40 border border-red-500/20 rounded-2xl p-5">

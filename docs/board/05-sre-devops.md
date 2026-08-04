@@ -236,6 +236,59 @@ Bu ayrım özellikle sizin durumunuzda önemli, çünkü **tek kişisiniz.** Bü
 
 P-0'da bunun bedelini zaten bir kez ödedik: bildirimler aylarca çalışmadı, çünkü çalışmadığını söyleyecek kimse yoktu. **Bugün aynı boşluk yedek tarafında duruyor** — ve orada bedeli geri alınamaz.
 
+
+---
+
+# AŞAMA 4 — UYGULAMA (4 Ağustos 2026, kurucu onayıyla)
+
+> Kurucu kararları: **S-1 = (a)** gecelik iç kopya · **S-2 = "şimdi değil"** (e-posta bu oturumda yok) · **S-3 = "güvenli olacak şekilde"**.
+> Ayrıntılı plan: **`docs/board/SRE-RISK-PLANI.md`**
+
+| # | Bulgu | Son durum |
+|---|---|---|
+| SRE-1 | Düzenli yedek yok | ✅ **Kapandı** — gecelik yedek + K-YEDEK-1 |
+| SRE-2 | Alarm size ulaşamıyor | 🟡 Kararınızla ertelendi |
+| SRE-3 | CI sessiz yeşil | ✅ **Görünür yapıldı** |
+| SRE-4 | Deneme ortamı boş | 🟡 Sizin ~20 dakikanız |
+| SRE-5 | İzleme neredeyse boş | ✅ **Kapandı** — çökme kaydı + K-COKME-1 |
+| SRE-6 | `auto-cancel-matches` artığı | ✅ **İşaretlendi** (silme kararı sizin) |
+| SRE-7 | Sürüm dört yerde | ✅ **Kapandı** — `npm run sistem:surum` |
+| SRE-8 | Geri alma prova edilmemiş | 🟡 Deneme ortamına bağlı |
+
+**8 bulgunun 5'i kapandı.** Kalan 3'ü tek bir şeye bağlı: deneme ortamı (SRE-4) ve sizin katılımınız.
+
+## Canlıya uygulananlar (6 migration)
+
+| Migration | Ne yapar |
+|---|---|
+| `20260804120000_sre1_gecelik_yedek` | 8 kritik tablonun gecelik kopyası, 7 gün saklama |
+| `20260804130000_sre1_yedek_saglik_kontrolu` | K-YEDEK-1 — yedek alınmazsa panel kırmızı |
+| `20260804140000_sre3_cokme_kaydi` | `istemci_hatalari` + `hata_bildir` + `hata_ozeti` |
+| `20260804150000_sre3_ek_bilgi_temizligi` | Ek bilgiyi alan alan temizleme (metin yerine) |
+| `20260804160000_sre3_gizlendi_etiketi_duzeltmesi` | `[gizlendi]` etiketi JSON metni olarak |
+| `20260804170000_sre3_cokme_saglik_kontrolu` | K-COKME-1 — çökme artışı denetimi |
+| `20260804180000_sre1_yedek_durumu_yetki_daraltmasi` | Kendi hatam: gereksiz yetki geri alındı |
+
+**Doğrulama:** gece denetimi **12 → 14 yeşil**, 0 kırmızı. Canlı fonksiyon tanımı ile repo dosyası **birebir aynı** (md5 karşılaştırıldı). `npm run lint` temiz, `npm run test:unit` **1437/1437** yeşil.
+
+## Test edilerek yakalanan üç hata (canlıya bu hâliyle çıkmadı)
+
+1. **Ek bilgi temizleyicisi JSON'u bozuyordu** — milisaniye zaman damgası 13 hanelidir ve "kart numarası" desenine takılıyordu. Her sıradan hata kaydı ek bilgisini kaybedecekti. Alan alan temizlemeye çevrildi.
+2. **`[gizlendi]` etiketi geçersiz JSON'du** — köşeli parantez yüzünden Postgres onu *dizi* sanıyordu; ek bilgi taşıyan her kayıt sessizce düşüyordu.
+3. **`yedek_durumu()` herkese açıktı** — güvenlik taraması yakaladı; yetki geri alındı, denetim etkilenmedi.
+
+## Mekanizmaya eklenenler
+
+- **B16 KURTARMA** (🔴 KRİTİK) — "bozulduğunda geri dönebilir miyiz?"
+- **B17 GÖRÜNÜRLÜK** (🟠 YÜKSEK) — "bozulduğunu öğrenebilir miyiz?"
+- **K-YEDEK-1**, **K-COKME-1**, **K-SURUM-1** kontrolleri (29 → 32)
+- Kapsam denetçisine **çürüme kontrolü** — ilk çalıştırmada iki gerçek çürük buldu
+  (`views/WalletView.tsx` ve `views/RahatMatchLobby.tsx` haritada yazıyordu, diskte yoktu)
+
+## Sıradaki role devredilenler
+
+Güvenlik taramasında 441 bulgu var (1 ERROR: `public_profiles` görünümü SECURITY DEFINER; 8 tabloda RLS açık ama kural yok; 428 SECURITY DEFINER fonksiyon kullanıcıya açık). **Kapsam disiplini gereği dokunmadım** — bunlar Security & Financial Infrastructure Lead'in alanı.
+
 ---
 
 **Bir sonraki rol:** Security & Financial Infrastructure Lead

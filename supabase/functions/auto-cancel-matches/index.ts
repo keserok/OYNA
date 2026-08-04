@@ -1,4 +1,26 @@
 // ═══════════════════════════════════════════════════════════════
+// ⚠️⚠️ BU DOSYA ARTIK KULLANILMIYOR — YAYINDA DEĞİL (SRE-6, 4 Ağu 2026)
+// ───────────────────────────────────────────────────────────────
+// SRE turu canlıyı ölçtü:
+//   • Bu fonksiyon Supabase'e HİÇ yayınlanmamış (canlıda 14 fonksiyon var,
+//     bu onlardan biri değil).
+//   • Onu çağıracağı söylenen cron işi de canlıda yok.
+//   • Yaptığı iş BAŞKA BİR YERDE zaten yapılıyor: veritabanındaki
+//     `auto_process_matches()` fonksiyonu, `auto_process_matches` cron işiyle
+//     10 dakikada bir çalışıyor ve karar anına gelen her maç için AYNI RPC'yi
+//     (`process_match_at_deadline`) çağırıyor.
+//
+// Yani maç iptali ÇALIŞIYOR — ama bu dosya üzerinden değil, veritabanı
+// üzerinden. Bu dosya silinmedi çünkü silme kararı kurucunun; ama YANLIŞLIKLA
+// yayınlanmasın diye buraya yazıldı. Yayınlanırsa zarar vermez
+// (process_match_at_deadline aynı işi iki kez yapmaz) ama iki ayrı yerde iki
+// ayrı kural olur — ilerideki bir değişiklikte biri güncellenip diğeri
+// unutulur. Tek kural tek yerde durmalı.
+//
+// KARAR BEKLİYOR: ya bu dosya silinsin, ya da veritabanındaki kopya kaldırılıp
+// bu yayınlansın. İkisi birden durmamalı.
+// ═══════════════════════════════════════════════════════════════
+//
 // OYNA APP — Supabase Edge Function: auto-cancel-matches
 //
 // [C4] 90 dakikalık OTOMATİK MAÇ İPTALİ — sunucu tarafı otorite.

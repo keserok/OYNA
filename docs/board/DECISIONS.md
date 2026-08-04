@@ -297,18 +297,48 @@ Bölme çizgileri kodda **zaten var**, yalnız dosya olarak ayrılmamışlar.
 
 | # | P0 | Kanıt | Durum |
 |---|---|---|---|
-| SRE-1 | **Düzenli yedek YOK — tek geri alınamaz risk.** Ücretsiz plan, veritabanı 70 MB, içinde gerçek para var (1.920 ₺). Elimizdeki tek yedek P-2 öncesi tek seferlik anlık kopya. Yanlış migration/silme geri dönülemez olur. | canlı plan + `yedek` şeması | 🔴 AÇIK · **S-1** |
-| SRE-2 | **Sistem bozulduğunu kimseye söyleyemiyor.** Gece denetimi çalışıyor (12 kontrol, 06:40) ama K-13.2 gereği e-posta kapalı; bulgu kurucu panele girene kadar bekler. P-0'daki 4 aylık sessizliğin sebebi bu boşluktu. | K-13.2 + `send-email` anahtarsız | 🔴 AÇIK · **S-2** |
+| SRE-1 | **Düzenli yedek YOK — tek geri alınamaz risk.** Ücretsiz plan, veritabanı 70 MB, içinde gerçek para var (1.920 ₺). Elimizdeki tek yedek P-2 öncesi tek seferlik anlık kopya. Yanlış migration/silme geri dönülemez olur. | canlı plan + `yedek` şeması | 🟢 **KAPANDI** (S-1=a) — gecelik yedek + K-YEDEK-1. Dış kopya (S-1=b) hâlâ açık. |
+| SRE-2 | **Sistem bozulduğunu kimseye söyleyemiyor.** Gece denetimi çalışıyor (12 kontrol, 06:40) ama K-13.2 gereği e-posta kapalı; bulgu kurucu panele girene kadar bekler. P-0'daki 4 aylık sessizliğin sebebi bu boşluktu. | K-13.2 + `send-email` anahtarsız | 🟡 **KURUCU KARARIYLA ERTELENDİ** (S-2 = "şimdi değil") — bedeli SRE-RISK-PLANI 2.2'de yazılı |
 
 ## SRE & DEVOPS — P1/P2 özeti
 
-`integration-tests` CI kapısı gizli anahtar yoksa **sessizce YEŞİL geçiyor** ("atlandı" ile "geçti" aynı renkte) · staging ACTIVE ama **0 tablo**, 19 migration doğrudan canlıya gitti · izleme neredeyse boş (391 dosyada **2** olay + **6** hata yakalama; anahtarlar girilmemiş) · `auto-cancel-matches` repoda var canlıda yok — **çağıran yok**, kesinti değil repo artığı · sürüm **4 ayrı yerde** elle · geri alma blokları yazılı ama **hiç prova edilmemiş**.
+**4 Ağustos 2026 itibarıyla:** SRE-3 (CI sessiz yeşil) ✅ görünür yapıldı · SRE-5 (izleme boş) ✅ kapandı — çökme kaydı kendi veritabanımızda, üçüncü tarafa veri gitmez · SRE-6 (`auto-cancel-matches`) ✅ işaretlendi, silme kararı kurucuda · SRE-7 (sürüm 4 yerde) ✅ kapandı — `npm run sistem:surum` sapmayı yakalıyor.
+
+**Hâlâ açık:** SRE-4 (deneme ortamı ACTIVE ama **0 tablo**; 24 migration doğrudan canlıya gitti) · SRE-8 (geri alma blokları yazılı, **hiç prova edilmemiş**). İkisi de kurucunun ~20 dakikasına bağlı ve **birbirine bağlı** — prova ancak deneme ortamı kurulunca yapılabilir.
+
+Tam plan: **`docs/board/SRE-RISK-PLANI.md`**
 
 ## SRE & DEVOPS — güçlü yanlar
 
 **Zamanlanmış işler kusursuz: 24 saatte 2.134 çalışma, 0 başarısız** · en uzun iş 1 saniye · gece denetimi çalışıyor (12 yeşil) · gizli anahtar Vault'ta şifreli, hiçbir komuta gömülü değil · migration değişmezliği CI ile korunuyor · güvenlik başlıkları kurulu · repo–canlı migration uyumu tam.
 
 ---
+
+---
+
+## K-16 · SRE turu kararları (4 Ağustos 2026)
+
+| # | Karar | Sonuç |
+|---|---|---|
+| **K-16.1** (S-1 = a) | **Gecelik iç kopya kurulacak.** | 8 kritik tablo, her gece 05:30, 7 gün saklama. Kuruldu ve doğrulandı. **Sınırı açıkça yazıldı:** veritabanı tamamen giderse kapsamaz. |
+| **K-16.2** (S-2 = "şimdi değil") | **Alarm e-postası bu oturumda açılmayacak.** | Denetim çalışır ama bulgusu kurucu panele girene kadar bekler. Bu bilinçli bir kabul; bedeli `SRE-RISK-PLANI.md` 2.2'de yazılı. |
+| **K-16.3** (S-3 = "güvenli olacak şekilde") | **Çökme kayıtları ÜÇÜNCÜ TARAFA GÖNDERİLMEZ.** Sentry/PostHog kullanılmaz; kayıtlar kendi veritabanımızda kalır, 30 gün saklanır, yalnız yönetici okur. | Dışarı veri çıkmaz → KVKK sorusu doğmaz. Kişisel bilgi hem tarayıcıda hem sunucuda silinir (iki kat elek). |
+| **K-16.4** (yeni) | **Her koruma kurulduğunda, o korumanın kendisi de denetlenir.** | "Peki bu koruma bozulursa kim söyleyecek?" sorusu artık her yeni korumanın yanında sorulacak. K-YEDEK-1 ve K-COKME-1 bu kuraldan doğdu. |
+
+### K-16.4'ün gerekçesi — bu turda üç kez aynı desen çıktı
+
+1. **Yedek** kuruldu → sessizce durursa kimse fark etmez → **K-YEDEK-1**
+2. **Çökme kaydı** kuruldu → kimse bakmazsa yine öğrenilmez → **K-COKME-1**
+3. **Sistem haritası** vardı → dosya adı değişince sessizce yalan söylüyordu → **çürüme denetimi** eklendi ve *hemen iki gerçek yalan buldu* (`views/WalletView.tsx`, `views/RahatMatchLobby.tsx` haritada yazıyordu, diskte yoktu)
+
+### Mekanizmaya eklenen iki yapı taşı
+
+| Yapı taşı | Sorusu | Risk |
+|---|---|---|
+| **B16 KURTARMA** | Bozulduğunda geri dönebilir miyiz? | 🔴 KRİTİK — değişiklik CEO onayı ister |
+| **B17 GÖRÜNÜRLÜK** | Bozulduğunu öğrenebilir miyiz? | 🟠 YÜKSEK |
+
+Yapı taşı sayısı 15 → **17**, kontrol sayısı 29 → **32**.
 
 ---
 
@@ -612,4 +642,4 @@ belirleyicisidir.
 
 ---
 
-*Son güncelleme: 3 Ağustos 2026 · CPO + CTO + Mimar turları işlendi*
+*Son güncelleme: 4 Ağustos 2026 · CPO + CTO + Mimar + Kıdemli Yazılım Mühendisi + SRE turları işlendi*

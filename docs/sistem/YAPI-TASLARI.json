@@ -1,7 +1,7 @@
 {
   "$aciklama": "OYNA sisteminin TEMEL YAPI TAŞLARI. Bu dosya makine tarafından okunur; SISTEM-HARITASI.md bundan üretilir. ELLE İKİ YERDE TUTMA — yalnız burayı düzenle, sonra 'npm run sistem:harita' çalıştır.",
   "$surum": 1,
-  "$guncelleme": "2026-08-04 (P-0..P-5, P-7; CTO 5/5; PE-1 kapandi)",
+  "$guncelleme": "2026-08-04 (P-0..P-5, P-7; CTO 5/5; PE-1; SRE-1 ve SRE-3 kapandi -> B16 KURTARMA + B17 GORUNURLUK dogdu)",
   "$risk_seviyeleri": {
     "KRITIK": "Yanlış giderse para kaybolur, kimlik ele geçer veya veri sızar. Değişiklik CEO onayı ister.",
     "YUKSEK": "Yanlış giderse kullanıcı zarar görür ve geri alması zordur. Değişiklik tam doğrulama ister.",
@@ -37,7 +37,7 @@
         "utils/formatTRY.ts",
         "utils/iban.ts",
         "views/PaymentScreen.tsx",
-        "views/WalletView.tsx",
+        "views/WalletScreen.tsx",
         "views/owner/OwnerBankAccountsModal.tsx",
         "views/owner/calendar/FinancialCalendarView.tsx",
         "views/owner/finance/"
@@ -91,7 +91,7 @@
         "utils/formations.ts",
         "utils/matchPositions.ts",
         "views/MatchJoin.tsx",
-        "views/RahatMatchLobby.tsx"
+        "views/match/RahatMatchLobby.tsx"
       ],
       "db_nesneleri": [
         "matches.slots",
@@ -406,7 +406,10 @@
         "supabaseClient.ts",
         "capacitor.config.ts",
         "vercel.json",
-        ".env.example"
+        ".env.example",
+        "package.json",
+        "android/app/build.gradle",
+        "utils/appVersion.ts"
       ],
       "db_nesneleri": [
         "app_config",
@@ -421,7 +424,8 @@
       "kontroller": [
         "K-AYAR-1",
         "K-AYAR-2",
-        "K-AYAR-3"
+        "K-AYAR-3",
+        "K-SURUM-1"
       ],
       "bilinen_acik_bulgular": [
         "CTO-P1-ozellik-bayraklari"
@@ -576,6 +580,77 @@
       "bilinen_acik_bulgular": [
         "M-21"
       ]
+    },
+    {
+      "id": "B16",
+      "ad": "KURTARMA",
+      "risk": "KRITIK",
+      "sade_anlatim": "Bir şey bozulduğunda geri dönebilmek. Yedekler, geri yükleme, migration geri alma, kaza sonrası kurtarma. Diğer bütün yapı taşları 'bozulmasın' diye çalışır; bu yapı taşı 'bozulduğunda ne yapacağız' sorusunun cevabıdır.",
+      "garanti_ettigi": [
+        "Kritik tabloların her gece tam kopyası alınır ve 7 gün saklanır",
+        "Yedek alınmazsa panel kırmızı yanar — sessizce durmuş bir yedek, yedeksizlikten kötüdür",
+        "Her migration dosyasında geri alma adımları yazılıdır"
+      ],
+      "dosyalar": [
+        "supabase/migrations/20260804120000_sre1_gecelik_yedek.sql",
+        "supabase/migrations/20260804130000_sre1_yedek_saglik_kontrolu.sql"
+      ],
+      "db_nesneleri": [
+        "yedek",
+        "yedek.kapsam",
+        "yedek.gunluk_al",
+        "yedek_durumu",
+        "gecelik_yedek"
+      ],
+      "kontroller": [
+        "K-YEDEK-1"
+      ],
+      "bilinen_acik_bulgular": [
+        "SRE-8"
+      ],
+      "not": "Bu yapi tasi 4 Agustos 2026'da dogdu. SRE turu tek GERI ALINAMAZ riski buldu: ucretsiz planda otomatik yedek garantisi yok ve veritabaninda artik GERCEK PARA var. Gecelik ic kopya (S-1=a) kuruldu. DURUST SINIR: yanlis migration / kazara silme / bozulan veri 7 gune kadar geri alinir; veritabaninin TAMAMEN gitmesi kapsanmaz (kopya ayni veritabaninda). Tam guvence icin haftalik DIS kopya (S-1=b) veya Pro plan gerekir. SRE-8 hala acik: geri yukleme hic PROVA edilmedi."
+    },
+    {
+      "id": "B17",
+      "ad": "GORUNURLUK",
+      "risk": "YUKSEK",
+      "sade_anlatim": "Bir şeyin bozulduğunu ÖĞRENEBİLMEK. Çökme kayıtları, hata izleme, sistem sağlığı denetimi, panelde görünen alarmlar. Kurtarma 'nasıl geri döneriz' sorusuysa, bu 'bozulduğunu ne zaman fark ederiz' sorusudur.",
+      "garanti_ettigi": [
+        "Uygulama bir kullanıcının telefonunda çöktüğünde kayda geçer — kullanıcının bize yazmasını beklemeyiz",
+        "Hata kayıtları üçüncü tarafa GÖNDERİLMEZ; kendi veritabanımızda kalır",
+        "Kişisel bilgi (e-posta, telefon, kart, oturum anahtarı) kaydedilmeden önce hem tarayıcıda hem sunucuda silinir",
+        "Bozuk bir ekran sel gibi kayıt üretse bile sistem boğulmaz (saatte aynı hatadan 20, toplamda 500 sınırı)"
+      ],
+      "dosyalar": [
+        "utils/observability.ts",
+        "components/ErrorBoundary.tsx",
+        "admin-panel/views/components/CokmeKayitlari.tsx",
+        "admin-panel/views/components/SistemSagligi.tsx",
+        "supabase/migrations/20260804140000_sre3_cokme_kaydi.sql",
+        "supabase/migrations/20260804150000_sre3_ek_bilgi_temizligi.sql",
+        "supabase/migrations/20260804160000_sre3_gizlendi_etiketi_duzeltmesi.sql"
+      ],
+      "db_nesneleri": [
+        "istemci_hatalari",
+        "hata_bildir",
+        "hata_ozeti",
+        "hata_temizle_metin",
+        "hata_temizle_json",
+        "hata_kayitlarini_temizle",
+        "hata_kayit_temizligi",
+        "sistem_saglik_kayitlari",
+        "sistem_saglik_calistir",
+        "sistem_saglik_ozet",
+        "sistem_saglik_gunluk"
+      ],
+      "kontroller": [
+        "K-COKME-1"
+      ],
+      "bilinen_acik_bulgular": [
+        "SRE-2",
+        "SRE-5"
+      ],
+      "not": "Bu yapi tasi 4 Agustos 2026'da dogdu. SRE turu olctu: 391 dosyada yalnizca 2 trackEvent ve 6 captureError vardi VE hicbiri bir yere gitmiyordu — utils/observability.ts Sentry icin yazilmis ama anahtar yoktu, yani her cagri sessiz no-op'tu. ErrorBoundary ekranda 'sorun Oyna tarafina iletildi' yazdigi halde iletilmiyordu. S-3 karari 'guvenli olsun': ucuncu tarafa veri gonderilmez, kendi veritabanimiza yazilir. Ayrica artik yalnizca elle cagrilan yerler degil, YAKALANMAMIS tum hatalar da toplanir (window.onerror + unhandledrejection). SRE-2 hala acik: alarm kurucunun telefonuna ULASAMAZ, panele bakmasi gerekir (S-2 = 'bu oturumda e-posta yok')."
     }
   ]
 }

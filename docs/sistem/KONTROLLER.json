@@ -296,6 +296,36 @@
       "nasil": "scripts/sistem/sql/demo-uyum.sql",
       "basari_olcutu": "kural dışı demo satırı = 0",
       "sessizlik_tipi": "Demo veri gerçeği yanlış temsil ediyor, denemeler yanıltıyor"
+    },
+    {
+      "id": "K-YEDEK-1",
+      "ad": "Gecelik yedek gerçekten alındı mı?",
+      "sade_anlatim": "Her gece 05:30'da kritik tabloların kopyası alınır. Bu kontrol o kopyanın BUGÜN alındığını ve içindeki tablo sayısının tam olduğunu doğrular.",
+      "ne_zaman": "GUNLUK",
+      "tur": "SQL",
+      "nasil": "SELECT public.yedek_durumu();",
+      "basari_olcutu": "son_yedek_tarihi = bugün VE son_gun_tablo = beklenen_tablo",
+      "sessizlik_tipi": "Yedek aylar önce sessizce durmuş; kaza günü 'yedeğim var' sanıp yanılmak"
+    },
+    {
+      "id": "K-COKME-1",
+      "ad": "Uygulama kimsede çöküyor mu?",
+      "sade_anlatim": "Son 24 saatte kaç kişide, kaç farklı hata oluştu. Yeni bir sürümden sonra ani artış, o sürümün bir şeyi bozduğunu gösterir.",
+      "ne_zaman": "GUNLUK",
+      "tur": "SQL",
+      "nasil": "SELECT public.hata_ozeti(24);",
+      "basari_olcutu": "etkilenen_kisi son 7 günün ortalamasının 3 katını aşmamalı",
+      "sessizlik_tipi": "Uygulama bir grup kullanıcıda çöküyor ama kimse şikâyet etmediği için hiç öğrenilmiyor"
+    },
+    {
+      "id": "K-SURUM-1",
+      "ad": "Sürüm numarası her yerde aynı mı?",
+      "sade_anlatim": "Web, Android ve iOS aynı sürüm numarasını mı taşıyor? Biri geride kalırsa 'hangi sürümde bu hata vardı' sorusunun cevabı kaybolur.",
+      "ne_zaman": "DEGISIKLIKTE",
+      "tur": "KOMUT",
+      "nasil": "npm run sistem:surum",
+      "basari_olcutu": "Çıkış kodu 0 — üç yerde de package.json'daki sürüm yazıyor",
+      "sessizlik_tipi": "package.json yükseltilir, telefon uygulamaları eski numarayla yayınlanır; kimse fark etmez"
     }
   ]
 }
