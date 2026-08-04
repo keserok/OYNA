@@ -6,6 +6,7 @@ import {
 } from '../../services/adminService';
 import { openGhostInConsumerApp } from '../../../utils/ghostDeepLink';
 import { PageShell } from '../components/PageShell';
+import { SistemSagligi } from '../components/SistemSagligi';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { useAdminToast } from '../context/AdminToastContext';
 import { useDebouncedCallback } from '../hooks/useDebouncedCallback';
@@ -131,6 +132,15 @@ export const CommandCenterPage: React.FC<CommandCenterPageProps> = ({ mode = 'em
           </button>
         }
       >
+        {/* [P-4 / K-11.4 / S-4=a] SİSTEM SAĞLIĞI — en üstte, çünkü sabah ilk
+            bakılacak yer burası. Her gece 06:40'ta kendini denetler. */}
+        <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-5">
+          <h3 className="text-xs font-bold text-gray-300 mb-3 flex items-center gap-2">
+            <Zap size={14} /> Sistem Sağlığı
+          </h3>
+          <SistemSagligi />
+        </div>
+
         <div className="bg-gradient-to-r from-red-950/40 to-purple-950/40 border border-red-500/20 rounded-2xl p-5">
           <h3 className="text-xs font-bold text-red-400 mb-3 flex items-center gap-2">
             <PlayCircle size={14} /> Ghost Mode — Kullanıcı Taklidi

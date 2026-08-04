@@ -1,7 +1,7 @@
 {
   "$aciklama": "OYNA sisteminin TEMEL YAPI TAŞLARI. Bu dosya makine tarafından okunur; SISTEM-HARITASI.md bundan üretilir. ELLE İKİ YERDE TUTMA — yalnız burayı düzenle, sonra 'npm run sistem:harita' çalıştır.",
   "$surum": 1,
-  "$guncelleme": "2026-08-03 (P-0..P-3, P-5 kismi, P-7; CTO 5/5)",
+  "$guncelleme": "2026-08-03 (P-0..P-5, P-7 tamam; P-4 canli denetim kurulu; CTO 5/5)",
   "$risk_seviyeleri": {
     "KRITIK": "Yanlış giderse para kaybolur, kimlik ele geçer veya veri sızar. Değişiklik CEO onayı ister.",
     "YUKSEK": "Yanlış giderse kullanıcı zarar görür ve geri alması zordur. Değişiklik tam doğrulama ister.",
@@ -352,7 +352,6 @@
         "K-YUK-3"
       ],
       "bilinen_acik_bulgular": [
-        "M-P0-7",
         "M-P0-9",
         "M-18"
       ],

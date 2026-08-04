@@ -4,7 +4,7 @@
 > `docs/sistem/KONTROLLER.json` dosyalarından üretilir.
 > Değişiklik için o dosyaları düzenleyip `npm run sistem:harita` çalıştırın.
 
-> Kayıt sürümü: 1 · Son güncelleme: 2026-08-03 (P-0..P-3, P-5 kismi, P-7; CTO 5/5)
+> Kayıt sürümü: 1 · Son güncelleme: 2026-08-03 (P-0..P-5, P-7 tamam; P-4 canli denetim kurulu; CTO 5/5)
 
 ## Bu harita ne işe yarar?
 
@@ -365,7 +365,7 @@ services/pitchMediaService.ts
 | `K-YUK-2` | Bir tablonun tüm değişikliklerini herkese gönderen abonelik var mı? | Tek kullanıcıda görünmez, 500 kullanıcıda kotayı 3'e katlar | HER_IKISI |
 | `K-YUK-3` | Uygulama ilk açıldığında inen dosya boyutu kabul edilebilir mi? | Her yeni kütüphane biraz ekler, kimse toplamı ölçmez | DEGISIKLIKTE |
 
-**⚠️ Bu taşta şu an açık olan bulgular:** M-P0-7, M-P0-9, M-18
+**⚠️ Bu taşta şu an açık olan bulgular:** M-P0-9, M-18
 
 > **Not:** P-5 kismi (3 Agustos 2026): get_my_matches() RPC yazildi ve istemciye baglandi. useMyMatches artik IKI KAYNAGIN BIRLESIMINI kullaniyor (sunucudan kapsamli + global listenin yerel filtresi) - boylece hicbir mac kaybolamaz; Cakisma-1'in dogruluk sarti korunuyor. SIRADAKI ADIM: global fbGetMatches'in daraltilmasi. ONCE M-P0-7 (filtresiz realtime) karari verilmeli - o abonelik kaldirilirsa kesif listeleri canli guncellenmez; bu bir URUN karari, teknik degil. P-7'de M-17 (ilk yuk 561->232 KB), M-11 (geo indeks), M-19 (sikistirma kacisi) ve M-20 (debounce) kapatildi.
 
