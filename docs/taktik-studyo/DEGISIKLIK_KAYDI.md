@@ -162,7 +162,7 @@ Aktarım yaparken sınır bu listedir. Bunların dışına çıkan bir değişik
   6. **Çöp kutusu → Sadece rakipler** → liste açılmalı; birkaçını işaretle →
      **"Seçilenleri sil"** → yalnız işaretlediklerin gitmeli.
 
-- **Commit:** _(bir sonraki adımda dolduruldu)_
+- **Commit:** `f6b90ac` (kod + kayıt)
 
 - **Geri alınırsa:** Başlıkta plan adı ve diziliş geri gelir, koşu her yerden
   çizilebilir olur, temizleme yine topluca siler. Kayıtlı taktik verisine
