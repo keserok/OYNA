@@ -7,9 +7,21 @@ import {
   fetchNotificationTemplates,
   sendTemplateTestAdmin,
   updateNotificationTemplate,
+  fetchBildirimSeviyeleri,
+  setBildirimSeviyesi,
   toTurkishAdminError,
   type NotificationTemplateRow,
+  type BildirimSeviyeRow,
 } from '../../services/adminService';
+
+// ─── S2 — Üç mod (4 Ağustos 2026) ────────────────────────────────────────────
+// Oyuncu tarafında artık 41 ayrı düğme yok, üç mod var. Bu ekran hangi
+// bildirimin hangi modda gideceğini belirler.
+const SEVIYE_ETIKET: Record<number, { ad: string; aciklama: string; renk: string }> = {
+  1: { ad: 'Zorunlu',       aciklama: 'Her modda gider — kapatılamaz',        renk: 'text-amber-300 bg-amber-500/15 border-amber-500/25' },
+  2: { ad: 'Önemli',        aciklama: '"Önemli olanlar" ve "Hepsi" modunda',  renk: 'text-cyan-300 bg-cyan-500/15 border-cyan-500/25' },
+  3: { ad: 'İsteğe bağlı',  aciklama: 'Yalnız "Hepsi" modunda',               renk: 'text-gray-300 bg-white/8 border-white/15' },
+};
 
 const CATEGORY_LABELS: Record<string, string> = {
   MAC: 'Maç Bildirimleri',
@@ -70,6 +82,9 @@ export const NotificationTemplatesPage: React.FC<{ onRefresh?: () => Promise<voi
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [templates, setTemplates] = useState<NotificationTemplateRow[]>([]);
+  // type_key -> seviye/kullanım bilgisi (admin_bildirim_seviyeleri)
+  const [seviyeler, setSeviyeler] = useState<Record<string, BildirimSeviyeRow>>({});
+  const [seviyeYazan, setSeviyeYazan] = useState<string | null>(null);
   const [draft, setDraft] = useState<EditDraft | null>(null);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState<string | null>(null);
@@ -92,8 +107,14 @@ export const NotificationTemplatesPage: React.FC<{ onRefresh?: () => Promise<voi
     setLoading(true);
     setLoadError(null);
     try {
-      const rows = await fetchNotificationTemplates();
+      const [rows, sev] = await Promise.all([
+        fetchNotificationTemplates(),
+        // Seviye/kullanım bilgisi okunamazsa ekran yine açılsın — metin
+        // düzenleme bu bilgiye bağlı değil.
+        fetchBildirimSeviyeleri().catch(() => [] as BildirimSeviyeRow[]),
+      ]);
       setTemplates(rows);
+      setSeviyeler(Object.fromEntries(sev.map((r) => [r.type_key, r])));
     } catch (err) {
       setLoadError(toTurkishAdminError(err));
     } finally {
@@ -104,6 +125,23 @@ export const NotificationTemplatesPage: React.FC<{ onRefresh?: () => Promise<voi
   useEffect(() => {
     void load();
   }, [load]);
+
+  const seviyeDegistir = async (typeKey: string, yeni: number) => {
+    const onceki = seviyeler[typeKey];
+    if (!onceki || onceki.mod_seviyesi === yeni) return;
+    setSeviyeYazan(typeKey);
+    // iyimser güncelleme
+    setSeviyeler((p) => ({ ...p, [typeKey]: { ...onceki, mod_seviyesi: yeni } }));
+    try {
+      await setBildirimSeviyesi(typeKey, yeni);
+      success(`"${onceki.label_tr}" artık ${SEVIYE_ETIKET[yeni].ad.toLowerCase()} seviyede`);
+    } catch (err) {
+      setSeviyeler((p) => ({ ...p, [typeKey]: onceki })); // geri al
+      toastError(toTurkishAdminError(err));
+    } finally {
+      setSeviyeYazan(null);
+    }
+  };
 
   const openEditor = (row: NotificationTemplateRow) => {
     setDraft({
@@ -210,6 +248,17 @@ export const NotificationTemplatesPage: React.FC<{ onRefresh?: () => Promise<voi
                               <Lock size={9} /> Kapatılamaz
                             </span>
                           )}
+                          {/* S4b: 51 şablonun 36'sı bugüne kadar HİÇ gönderilmedi.
+                              Panelde düzenlediğin metnin gerçekten kullanılıp
+                              kullanılmadığı belli olsun diye bu rozet var. */}
+                          {seviyeler[row.type_key] && !seviyeler[row.type_key].uretiliyor && (
+                            <span
+                              className="text-[9px] font-extrabold px-1.5 py-0.5 rounded text-gray-400 bg-white/8 border border-white/10"
+                              title="Bu tür bugüne kadar hiç gönderilmedi — metni değiştirmek şu an bir şeyi değiştirmez"
+                            >
+                              Kullanılmıyor
+                            </span>
+                          )}
                         </div>
                       </div>
 
@@ -221,6 +270,39 @@ export const NotificationTemplatesPage: React.FC<{ onRefresh?: () => Promise<voi
                           {replacePreviewVars(row.body_tr)}
                         </p>
                       </div>
+
+                      {/* S2: hangi modda gideceği — üç seviye */}
+                      {seviyeler[row.type_key] && (
+                        <div className="mb-3">
+                          <p className="text-[9px] font-extrabold uppercase tracking-widest text-gray-400 mb-1.5">
+                            Hangi modda gitsin?
+                          </p>
+                          <div className="flex gap-1">
+                            {[1, 2, 3].map((sv) => {
+                              const secili = seviyeler[row.type_key].mod_seviyesi === sv;
+                              const kilitli = row.is_mandatory && sv !== 1;
+                              return (
+                                <button
+                                  key={sv}
+                                  type="button"
+                                  disabled={seviyeYazan === row.type_key || kilitli}
+                                  onClick={() => void seviyeDegistir(row.type_key, sv)}
+                                  title={
+                                    kilitli
+                                      ? 'Bu bildirim zorunlu — seviyesi düşürülemez'
+                                      : SEVIYE_ETIKET[sv].aciklama
+                                  }
+                                  className={`flex-1 px-1.5 py-1 rounded-md text-[9px] font-extrabold border transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+                                    secili ? SEVIYE_ETIKET[sv].renk : 'text-gray-400 bg-transparent border-white/10 hover:bg-white/5'
+                                  }`}
+                                >
+                                  {SEVIYE_ETIKET[sv].ad}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
 
                       <div className="mt-auto flex gap-2">
                         <button

@@ -2845,6 +2845,36 @@ export async function updateNotificationTemplate(
   if (error) throw new Error(error.message);
 }
 
+// ─── S2 — Bildirim modu seviyeleri (4 Ağustos 2026) ──────────────────────────
+// Oyuncu tarafında 41 ayrı düğme yerine ÜÇ MOD var. Hangi bildirimin hangi
+// modda gideceğine buradan karar verilir.
+//   Seviye 1 = zorunlu   → her modda gider (para · iptal · davet · güvenlik)
+//   Seviye 2 = önemli    → "Önemli olanlar" ve "Hepsi" modlarında gider
+//   Seviye 3 = isteğe bağlı → yalnız "Hepsi" modunda gider
+export interface BildirimSeviyeRow {
+  type_key: string;
+  label_tr: string;
+  category: string | null;
+  mod_seviyesi: number;
+  is_mandatory: boolean;
+  /** Bu türde bugüne kadar GERÇEKTEN bildirim üretilmiş mi? */
+  uretiliyor: boolean;
+  uretim_adedi: number;
+}
+
+export async function fetchBildirimSeviyeleri(): Promise<BildirimSeviyeRow[]> {
+  const { data, error } = await supabase.rpc('admin_bildirim_seviyeleri');
+  if (error) throw new Error(isRpcMissing(error) ? 'admin_bildirim_seviyeleri RPC deploy edilmedi' : error.message);
+  return (data || []) as BildirimSeviyeRow[];
+}
+
+export async function setBildirimSeviyesi(typeKey: string, seviye: number): Promise<void> {
+  const { error } = await supabase.rpc('admin_bildirim_seviyesi_ayarla', {
+    p_type_key: typeKey, p_seviye: seviye,
+  });
+  if (error) throw new Error(error.message);
+}
+
 export async function deleteGoalkeeperAdmin(id: string): Promise<void> {
   const { error } = await supabase.rpc('admin_delete_goalkeeper', { p_id: id });
   if (error) throw new Error(isRpcMissing(error) ? 'admin_delete_goalkeeper RPC deploy edilmedi' : error.message);

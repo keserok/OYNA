@@ -9,6 +9,7 @@ import { PageShell } from '../components/PageShell';
 import { GercekDurum } from '../components/GercekDurum';
 import { SistemSagligi } from '../components/SistemSagligi';
 import { CokmeKayitlari } from '../components/CokmeKayitlari';
+import { ElleBakilacaklar } from '../components/ElleBakilacaklar';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { useAdminToast } from '../context/AdminToastContext';
 import { useDebouncedCallback } from '../hooks/useDebouncedCallback';
@@ -160,6 +161,10 @@ export const CommandCenterPage: React.FC<CommandCenterPageProps> = ({ mode = 'em
           </h3>
           <CokmeKayitlari />
         </div>
+
+        {/* [D1] ELLE BAKILACAK MAÇLAR — otomatik iş 3 kez deneyip pes ettiyse
+            maç buraya düşer. Normalde bu liste boştur. */}
+        <ElleBakilacaklar />
 
         <div className="bg-gradient-to-r from-red-950/40 to-purple-950/40 border border-red-500/20 rounded-2xl p-5">
           <h3 className="text-xs font-bold text-red-400 mb-3 flex items-center gap-2">

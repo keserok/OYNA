@@ -390,8 +390,9 @@ Kimse dokunmadan kendi kendine çalışan işler. Zamanlanmış görevler (cron)
 **Dosyalar:**
 
 ```
-supabase/functions/sweep-stale-payments/
+admin-panel/views/components/ElleBakilacaklar.tsx
 services/matchLifecycleService.ts
+supabase/functions/sweep-stale-payments/
 ```
 
 **Veritabanı nesneleri:** `cron.job`, `auto_process_matches`, `auto_finalize_matches`, `process_match_at_deadline`, `expire_service_requests`, `expire_stale_waitlists`, `release_owner_earnings`, `supurucu_hata_kaydet`, `admin_elle_bakilacaklar`, `admin_raftan_indir`

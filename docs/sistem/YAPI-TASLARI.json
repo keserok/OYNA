@@ -379,8 +379,9 @@
         "Hata asla sessizce yutulmaz"
       ],
       "dosyalar": [
-        "supabase/functions/sweep-stale-payments/",
-        "services/matchLifecycleService.ts"
+        "admin-panel/views/components/ElleBakilacaklar.tsx",
+        "services/matchLifecycleService.ts",
+        "supabase/functions/sweep-stale-payments/"
       ],
       "db_nesneleri": [
         "cron.job",
