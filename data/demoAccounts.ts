@@ -1,11 +1,11 @@
-// ─── Demo hesap kataloğu — kaynak: OYNA_DEMO_HESAPLARI.md ─────────────────────
-// Bu modül, kök dizindeki `OYNA_DEMO_HESAPLARI.md` dosyasını ham metin olarak
+// ─── Demo hesap kataloğu — kaynak: docs/OYNA_DEMO_HESAPLARI.md ───────────────
+// Bu modül, `docs/OYNA_DEMO_HESAPLARI.md` dosyasını ham metin olarak
 // (`?raw`) içe aktarıp içindeki hesap tablolarını ayrıştırır. Böylece demo hesap
 // listesinin TEK KAYNAĞI o Markdown dosyasıdır: satır ekl/çıkar → giriş
 // ekranındaki demo seçici otomatik güncellenir (aynı e-posta Supabase Auth'ta da
 // mevcut olmak kaydıyla). Ayrıştırıcı sözleşmesi md dosyasında belgelidir:
 //   | Rol | E-posta | İsim | Açıklama |
-import rosterMd from '../OYNA_DEMO_HESAPLARI.md?raw';
+import rosterMd from '../docs/OYNA_DEMO_HESAPLARI.md?raw';
 
 export type DemoRole = 'PLAYER' | 'OWNER' | 'GOALKEEPER' | 'REFEREE';
 

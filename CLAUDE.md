@@ -61,7 +61,7 @@
 - Kontroller geçmeden "bitti" deme. Kırılan test varsa gizleme; sade dille bildir.
 - Uçtan uca doğrulama gerekiyorsa `/verify` skill'i uygulamayı canlı Supabase'e
   karşı Playwright ile sürebilir (bkz. `.claude/skills/verify`).
-  Demo hesaplar: `OYNA_DEMO_HESAPLARI.md`.
+  Demo hesaplar: `docs/OYNA_DEMO_HESAPLARI.md`.
 
 ## 5. Yüksek riskli bölgeler — dokunmadan önce bildir + onay al
 
