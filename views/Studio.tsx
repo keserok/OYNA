@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback, Suspense, lazy } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback, Suspense, lazy } from 'react';
 import { Spinner } from '../components/ui/Spinner';
 import {
     ChevronLeft, Users, Save, Plus, Trash2, Minus,
@@ -61,6 +61,8 @@ import { trUpper } from '../utils/trUpper';
 // ama stüdyo açılır açılmaz arka planda otomatik indirilir: oynatma kontrolleri
 // araç çubuğunda her zaman doğrudan görünür, ayrıca bir "indir" kapısı yoktur.
 const AdvancedAnimationModule = lazy(() => import('./studio/AdvancedAnimationModule'));
+// Oyuncu markörünün CSS animasyon tarifi (yalnız tip — chunk'ı çekmez).
+import type { PlayerCssAnimation } from './studio/AdvancedAnimationModule';
 const AnimationToolbar = lazy(() =>
     import('./studio/AdvancedAnimationModule').then(m => ({ default: m.AnimationToolbar }))
 );
@@ -106,8 +108,6 @@ const TOOL_HINTS: Record<StudioTool, string> = {
 const DRAFT_KEY = 'oyna_studio_draft_v1';   // S49 otomatik taslak
 const ONBOARD_KEY = 'oyna_studio_onboarded_v1'; // ilk kullanım turu bir kez gösterilir
 const ZOOM_STEPS = [1, 1.35, 1.7, 2.1] as const; // S46 pinch/pan yakınlaştırma kademeleri
-// OYNAT başına oynatma turu sayısı — modüldeki `repeat: 1` (ilk + 1 tekrar) ile eş.
-const PLAY_TIMES = 2;
 
 // Boyuta göre örnek satır deseni (kaleci hariç toplam = boyut-1).
 const exampleForSize = (size: SquadSize): string => {
@@ -229,20 +229,20 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
     const [showBall, setShowBall] = useState(false);
 
     // ⚡ Gelişmiş Animasyon Modülü durumu (lazy-load).
-    // isAdvancedAnimLoaded: kullanıcı modülü indirdi mi?
-    // advancedAnimApiRef: yüklenen modülün getAnimationProps fonksiyonu (saha
+    // isAdvancedAnimLoaded: modül indi mi?
+    // advancedAnimApiRef: yüklenen modülün getPlayerCssAnimation fonksiyonu (saha
     // slot/rakip markörlerini hareket ettirmek için çekirdekte kullanılır).
     const [isAdvancedAnimLoaded, setIsAdvancedAnimLoaded] = useState(false);
     const [isLoadingAdvancedAnim, setIsLoadingAdvancedAnim] = useState(false);
-    const advancedAnimApiRef = useRef<null | ((path: DrawingLine, isSimulating: boolean, playMode: PlayMode, seqInfo: { startTime: number, duration: number }, totalSeqDur: number) => any)>(null);
+    const advancedAnimApiRef = useRef<null | ((path: DrawingLine, playMode: PlayMode, seqInfo: { startTime: number, duration: number }, totalSeqDur: number) => PlayerCssAnimation | null)>(null);
 
-    // Modülü on-demand indirir; getAnimationProps API'sini ref'e bağlar.
+    // Modülü on-demand indirir; oyuncu animasyonu API'sini ref'e bağlar.
     const loadAdvancedAnimation = async () => {
         if (isAdvancedAnimLoaded || isLoadingAdvancedAnim) return;
         setIsLoadingAdvancedAnim(true);
         try {
             const mod = await import('./studio/AdvancedAnimationModule');
-            advancedAnimApiRef.current = mod.getAnimationProps;
+            advancedAnimApiRef.current = mod.getPlayerCssAnimation;
             setIsAdvancedAnimLoaded(true);
         } catch (e) {
             console.error('Gelişmiş animasyon modülü yüklenemedi:', e);
@@ -687,13 +687,37 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
     // Oynatma hızı plan temposundan gelir: tempo 5 = 1.0x, 1 = 0.6x, 10 = 1.5x.
     const { seqMap, totalSeqDuration } = computeSeqMap(drawings, tempoSpeedFactor(activeTactic.tempo));
 
-    // ── OYNAT = İKİ tur: taktik iki kez oynar, sonra kendiliğinden durur; tekrar
-    // izlemek için yeniden OYNAT gerekir. (Modüldeki repeat: 1 ile uyumlu.)
+    // ── OYNAT = BİR tur: taktik bir kez oynar, sonra kendiliğinden durur; tekrar
+    // izlemek için "TEKRAR OYNAT" gerekir. Top, oyuncular ve bitiş sayacı AYNI
+    // süreyi paylaşır; üçü birlikte başlar ve birlikte biter.
     const playCycleSeconds = playMode === 'SEQ'
         ? totalSeqDuration
         : drawings.reduce((mx, d) => Math.max(mx, seqMap.get(d.id)?.duration || 0), 0);
     // Rota süresi (CSS top animasyonuyla eş): zincir sonuna varınca "bitti".
     const simTotalSeconds = Math.max(0.4, totalSeqDuration || playCycleSeconds || 2);
+
+    // ── Oyuncu markörlerinin CSS animasyonu (madde 18 — DONDUR/DEVAM) ────────
+    // Oyuncular topla AYNI motorla sürülür: CSS @keyframes + animationPlayState.
+    // Böylece DURDUR hepsini AYNI ANDA olduğu yerde dondurur, OYNAT kaldığı
+    // yerden devam ettirir. (framer-motion'da "dondur" yoktu; eskiden top donar,
+    // oyuncular yürümeye devam ederdi.)
+    // Anahtar: markörün id'si (slot ya da rakip) → animasyon tarifi.
+    const playerAnims = useMemo(() => {
+        const map = new Map<string, PlayerCssAnimation>();
+        const api = advancedAnimApiRef.current;
+        if (!isSimulating || !api) return map;
+        [...activeTactic.slots, ...activeTactic.opponents].forEach(el => {
+            const path = drawings.find(d => d.attachedTo === el.id && d.type === 'line');
+            if (!path) return;
+            const info = seqMap.get(path.id);
+            if (!info) return;
+            const anim = api(path, playMode, info, totalSeqDuration);
+            if (anim) map.set(el.id, anim);
+        });
+        return map;
+        // isAdvancedAnimLoaded: ref dolduğunda yeniden hesapla (ref tek başına tetiklemez).
+    }, [isSimulating, isAdvancedAnimLoaded, activeTactic.slots, activeTactic.opponents,
+        drawings, playMode, seqMap, totalSeqDuration]);
 
     // ── OYNAT / DURDUR / DEVAM durum makinesi (madde 18) ─────────────────────
     // Eski davranış (DURDUR → başa dön) KALDIRILDI. Artık:
@@ -2386,11 +2410,16 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                         </div>
                     )}
 
+                    {/* Oyuncu/rakip koşu animasyonlarının @keyframes tanımları —
+                        tek <style> ile basılır; markörler bunlara ada göre bağlanır. */}
+                    {playerAnims.size > 0 && (
+                        <style>{Array.from(playerAnims.values()).map(a => a.css).join('')}</style>
+                    )}
+
                     {/* Opponents */}
                     {activeTactic.opponents.map(opp => {
-                        const path = drawings.find(d => d.attachedTo === opp.id && d.type === 'line');
-                        const isMoving = isSimulating && path && advancedAnimApiRef.current;
-                        const anim = path && isMoving ? advancedAnimApiRef.current!(path, isSimulating, playMode, seqMap.get(path.id)!, totalSeqDuration) : null;
+                        const anim = playerAnims.get(opp.id) || null;
+                        const isMoving = !!anim;
                         return (
                         <motion.div 
                             key={opp.id}
@@ -2399,12 +2428,22 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                             // değilken bu nokta taşınamaz, parmağı boşuna tutup sayfanın
                             // kaymasını engellememeli.
                             className={`absolute w-10 h-10 ${!oppLayer.interactive ? 'pointer-events-none' : (tool === 'move' ? `cursor-grab active:cursor-grabbing ${drawSide === 'OPP' ? 'touch-none' : ''}` : 'pointer-events-auto')} ${isMoving ? `brightness-125 ${liteGate(perfTier, 'drop-shadow-[0_0_15px_rgba(239,68,68,0.8)]')}` : ''} ${oppLayer.dimmed ? 'opacity-40' : ''}`}
-                            animate={anim ? anim.animate : {
-                                left: `${opp.x}%`,
-                                top: `${opp.y}%`
+                            // Simülasyonda konumu CSS animasyonu sürer; framer-motion
+                            // yalnız markörü rotanın BAŞINA oturtur (sıçrama olmasın).
+                            animate={anim
+                                ? { left: `${anim.startX}%`, top: `${anim.startY}%` }
+                                : { left: `${opp.x}%`, top: `${opp.y}%` }}
+                            transition={anim ? { duration: 0 } : (draggedItem?.id === opp.id ? { duration: 0 } : { type: "spring", stiffness: 300, damping: 30 })}
+                            // `animation` kısayolu play-state'i sıfırlar → animationPlayState
+                            // MUTLAKA sonra gelmeli (topla aynı desen).
+                            style={{
+                                x: "-50%", y: "-50%",
+                                zIndex: draggedItem?.id === opp.id ? 50 : oppLayer.z,
+                                ...(anim ? {
+                                    animation: `${anim.name} ${anim.duration}s linear forwards`,
+                                    animationPlayState: simPaused ? 'paused' as const : 'running' as const,
+                                } : {}),
                             }}
-                            transition={anim ? anim.transition as any : (draggedItem?.id === opp.id ? { duration: 0 } : { type: "spring", stiffness: 300, damping: 30 })}
-                            style={{ x: "-50%", y: "-50%", zIndex: draggedItem?.id === opp.id ? 50 : oppLayer.z }}
                         >
                             <div className={`relative w-full h-full rounded-full border-2 flex items-center justify-center shadow-lg bg-red-900/80 text-white transition-all ${selectedEl?.type === 'opponent' && selectedEl.id === opp.id ? 'border-white ring-2 ring-white/70 scale-110' : 'border-red-500'}`}>
                                 <Swords size={16} />
@@ -2424,18 +2463,18 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
 
                     {/* Slots */}
                     {activeTactic.slots.map(slot => {
-                        const path = drawings.find(d => d.attachedTo === slot.id && d.type === 'line');
-                        const isMoving = isSimulating && path && advancedAnimApiRef.current;
-                        const anim = path && isMoving ? advancedAnimApiRef.current!(path, isSimulating, playMode, seqMap.get(path.id)!, totalSeqDuration) : null;
+                        const anim = playerAnims.get(slot.id) || null;
+                        const isMoving = !!anim;
                         return (
-                        <motion.div 
+                        <motion.div
                             key={slot.id}
-                            layout={draggedItem ? false : !perfLite}
-                            animate={anim ? anim.animate : {
-                                left: `${slot.x}%`,
-                                top: `${slot.y}%`
-                            }}
-                            transition={anim ? anim.transition as any : (draggedItem?.id === slot.id ? { duration: 0 } : { type: "spring", stiffness: 300, damping: 30 })}
+                            // Simülasyonda `layout` kapalı: CSS animasyonu left/top'u
+                            // sürerken framer-motion layout ölçümü araya girmesin.
+                            layout={draggedItem || isMoving ? false : !perfLite}
+                            animate={anim
+                                ? { left: `${anim.startX}%`, top: `${anim.startY}%` }
+                                : { left: `${slot.x}%`, top: `${slot.y}%` }}
+                            transition={anim ? { duration: 0 } : (draggedItem?.id === slot.id ? { duration: 0 } : { type: "spring", stiffness: 300, damping: 30 })}
                             onPointerDown={(e) => {
                                 if (heldSub) return; // S26 — takas modunda sürükleme başlatma
                                 if (tool === 'move' && slot.player) {
@@ -2447,7 +2486,16 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                             // onPointerDown ile aynı koşul) — aksi hâlde bu kare parmağı
                             // boşuna tutar ve sayfa kaymaz.
                             className={`absolute w-12 h-12 ${!usLayer.interactive ? 'pointer-events-none' : (tool === 'move' && slot.player && drawSide === 'US' && !heldSub ? 'cursor-grab active:cursor-grabbing touch-none' : '')} ${isMoving ? `brightness-125 ${liteGate(perfTier, 'drop-shadow-[0_0_15px_rgba(57,255,20,0.8)]')}` : ''} ${usLayer.dimmed ? 'opacity-40' : ''} ${heldSub ? 'cursor-pointer ring-2 ring-[#39FF14] rounded-full ring-offset-1 ring-offset-black/40' : ''}`}
-                            style={{ x: "-50%", y: "-50%", zIndex: draggedItem?.id === slot.id ? 50 : usLayer.z }}
+                            // `animation` kısayolu play-state'i sıfırlar → animationPlayState
+                            // MUTLAKA sonra gelmeli (topla aynı desen).
+                            style={{
+                                x: "-50%", y: "-50%",
+                                zIndex: draggedItem?.id === slot.id ? 50 : usLayer.z,
+                                ...(anim ? {
+                                    animation: `${anim.name} ${anim.duration}s linear forwards`,
+                                    animationPlayState: simPaused ? 'paused' as const : 'running' as const,
+                                } : {}),
+                            }}
                         >
                             {slot.player ? (
                                 <motion.div

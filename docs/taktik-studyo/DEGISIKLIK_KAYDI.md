@@ -96,6 +96,75 @@ Aktarım yaparken sınır bu listedir. Bunların dışına çıkan bir değişik
 
 ## 5. Kayıtlar
 
+### 2026-08-04 · Oynat/Durdur artık anlık ve eşzamanlı (oyuncular topla aynı motora alındı)
+
+- **Ne istendi:** "Oynat ve durdur butonunun fonksiyonlarının mükemmel
+  çalışmasını, yani anlık oynatmalarını ve durdurmalarını sağla. Herhangi bir
+  animasyon bozulması problem çıkma ihtimalinin olmamasını sağlayarak kodları
+  titizce yaz."
+
+- **Bulunan iki hata (kullanıcı "mükemmel çalışsın" derken bunları tarif ediyordu):**
+  1. **DURDUR yarım çalışıyordu.** Top ve bitiş sayacı bir motorla (CSS), oyuncular
+     başka bir motorla (framer-motion) sürülüyordu. İkincisinde "olduğu yerde
+     dondur" özelliği yok — DURDUR'a basınca **top duruyor, oyuncular yürümeye
+     devam ediyordu.**
+  2. **Tur sayıları tutmuyordu.** Oyuncular rotayı **iki tur**, top ve bitiş
+     sayacı **bir tur** koşuyordu. Buton "TEKRAR OYNAT"a döndüğünde oyuncular
+     hâlâ hareket hâlindeydi.
+
+- **Ne yapıldı:**
+  - **Oyuncular topla aynı motora alındı.** Koşu rotası artık CSS `@keyframes`
+    ile sürülüyor; DURDUR hepsini `animation-play-state: paused` ile **aynı anda
+    olduğu yerde** donduruyor, OYNAT **kaldığı yerden** devam ettiriyor.
+  - **Herkes bir tur koşuyor.** Top, oyuncular ve bitiş sayacı aynı süreyi
+    paylaşıyor; birlikte başlayıp birlikte bitiyor. Tur bitince buton
+    "TEKRAR OYNAT" oluyor ve sahada gerçekten hareket kalmıyor.
+  - Hareketin **zamanlaması değişmedi**: SIRALI'da her çizgi yine yalnız kendi
+    penceresinde ilerliyor, penceresinden önce başlangıçta, sonra bitişte
+    bekliyor; EŞZAMANLI'da rota yine eşit aralıklarla kat ediliyor. Yalnız
+    hareketi **süren motor** değişti.
+  - Eski hesap fonksiyonu (`getAnimationProps`) artık hiçbir yerde kullanılmadığı
+    için kaldırıldı; testleri yeni fonksiyona (`getPlayerCssAnimation`) taşındı.
+  - Kullanılmayan `PLAY_TIMES` sabiti silindi (tanımlıydı ama hiç çağrılmıyordu —
+    "iki tur" niyetini anlatıyordu, gerçekte hiçbir şeyi sürmüyordu).
+
+- **Dokunulan dosyalar:**
+  - `views/studio/AdvancedAnimationModule.tsx` — `getPlayerCssAnimation` (yeni,
+    saf fonksiyon) eklendi; `getAnimationProps` kaldırıldı. Top animasyonu,
+    sekans rozetleri ve oynatma kontrollerine dokunulmadı.
+  - `views/Studio.tsx` — oyuncu/rakip markörleri CSS animasyonuna bağlandı;
+    `PLAY_TIMES` silindi. Çizim, kaydetme ve paylaşma mantığı aynı.
+  - `tests/unit/advancedAnimation.test.ts` — yeni fonksiyonun zamanlamasını
+    kilitleyen 9 test.
+  - `tests/e2e/studio.hermetic.spec.ts` — gerçek tarayıcıda 2 yeni test.
+
+- **Korunanlar:**
+  - Hareketin görünen yolu, hızı ve tempo ayarı aynı.
+  - OYNAT / DURDUR / DEVAM / TEKRAR OYNAT düğme akışı aynı.
+  - Topun görünürlük penceresi, sekans rozetleri, BİZ/RAKİP katmanları aynı.
+  - Simülasyondan çıkınca oyuncular eskisi gibi yerlerine dönüyor.
+
+- **Kontroller:** `npm run lint` temiz · `npm run test:unit` 1444 test yeşil ·
+  `npm run test:e2e:studio` 8 test yeşil · `npm run build` başarılı.
+  Gerçek tarayıcıda ölçüldü: DURDUR'dan sonra oyuncunun konumu **değişmiyor**;
+  DEVAM'dan sonra yeniden ilerliyor; tur bitince hareket **duruyor**.
+
+- **Nasıl kontrol edersin:**
+  1. **Sosyal → TAKTİK STÜDYO** aç, bir oyuncudan uzun bir **KOŞU** çiz.
+  2. **OYNAT**'a bas → oyuncu yürümeli.
+  3. Ortasında **DURDUR**'a bas → oyuncu **anında ve olduğu yerde** durmalı
+     (eskiden yürümeye devam ediyordu).
+  4. **DEVAM**'a bas → kaldığı yerden ilerlemeli.
+  5. Sonuna kadar bekle → buton **TEKRAR OYNAT** olduğunda sahada hareket
+     kalmamalı (eskiden oyuncular ikinci tura başlıyordu).
+  6. Birkaç pas da çizip tekrar dene: top ve oyuncular **birlikte** durup
+     **birlikte** devam etmeli.
+
+- **Commit:** _(bir sonraki adımda dolduruldu)_
+
+- **Geri alınırsa:** DURDUR yine yalnız topu dondurur, oyuncular yürümeye devam
+  eder ve rotayı iki tur yürür. Kayıtlı taktik verisine dokunmaz — veri kaybı olmaz.
+
 ### 2026-08-04 · Başlık sadeleşti, örnek taktik kalktı, koşu kuralı ve seçerek temizleme geldi
 
 - **Ne istendi:** "Üst başlıktaki plan/2-3-1 kısımlarını sil, sadece Stüdyo yaz.

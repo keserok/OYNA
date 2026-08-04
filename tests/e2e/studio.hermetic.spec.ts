@@ -164,6 +164,88 @@ test.describe('Taktik Stüdyo — hermetik', () => {
     expect(await runPath.count()).toBe(0);
   });
 
+  // ─── OYNAT / DURDUR (2026-08-04) ────────────────────────────────────────────
+  // Oyuncular artık topla AYNI motorla (CSS keyframes) sürülüyor. Eskiden
+  // framer-motion ile sürüldükleri için DURDUR'a basınca top donuyor, oyuncular
+  // yürümeye devam ediyordu; ayrıca oyuncular rotayı iki tur yürürken top ve
+  // bitiş sayacı bir tur koşuyordu. Bu testler ikisini de kilitler.
+
+  /** Hareket eden markörün sahadaki gerçek konumu (hesaplanmış left/top). */
+  async function movingMarkerPos(page: Page) {
+    return page.locator('[data-testid="studio-pitch"] .brightness-125').first().evaluate((el) => {
+      const s = getComputedStyle(el as HTMLElement);
+      return `${s.left}|${s.top}`;
+    });
+  }
+
+  /** Tempoyu en yavaşa (1) çeker — ölçüm için yeterli süre kalsın. */
+  async function setSlowestTempo(page: Page) {
+    await page.getByTitle('Oynatma temposu (plana özel, 1-10)').click();
+    await page.getByLabel('Tempo (1-10)').fill('1');
+    await page.getByRole('button', { name: 'Tamam' }).click();
+  }
+
+  /** Kalecinin üzerinden uzun, çapraz bir koşu çizer (ölçülebilir süre için). */
+  async function drawLongRun(page: Page) {
+    await page.getByRole('button', { name: /KOŞU/ }).click();
+    await dragOnPitch(page, { x: 50, y: 90 }, { x: 20, y: 20 });
+    await expect.poll(() => page.locator('svg path[stroke="#39FF14"]').count(), { timeout: 5000 }).toBeGreaterThan(0);
+  }
+
+  test('DURDUR oyuncuyu OLDUĞU YERDE dondurur; OYNAT kaldığı yerden devam eder', async ({ page }) => {
+    await bootstrap(page, { onboarded: true });
+    await openStudio(page);
+    await setSlowestTempo(page);
+    await drawLongRun(page);
+
+    // OYNAT → oyuncu gerçekten yürüyor mu?
+    await page.getByTitle('Taktiği oynat').click();
+    await page.waitForTimeout(400);
+    const a = await movingMarkerPos(page);
+    await page.waitForTimeout(500);
+    const b = await movingMarkerPos(page);
+    expect(b, 'oynatırken oyuncu hareket etmeli').not.toBe(a);
+
+    // DURDUR → oyuncu DONMALI (asıl hata buydu: top donuyor, oyuncu yürüyordu)
+    await page.getByTitle('Taktiği durdur (olduğu yerde dondur)').click();
+    const frozen1 = await movingMarkerPos(page);
+    await page.waitForTimeout(900);
+    const frozen2 = await movingMarkerPos(page);
+    expect(frozen2, 'DURDUR sonrası oyuncu kımıldamamalı').toBe(frozen1);
+
+    // DEVAM → kaldığı yerden ilerlemeli
+    await page.getByTitle('Kaldığı yerden devam et').click();
+    await page.waitForTimeout(500);
+    const resumed = await movingMarkerPos(page);
+    expect(resumed, 'DEVAM sonrası oyuncu yeniden hareket etmeli').not.toBe(frozen2);
+  });
+
+  test('oynatma BİR tur sürer: bitince buton TEKRAR OYNAT olur ve oyuncu durur', async ({ page }) => {
+    await bootstrap(page, { onboarded: true });
+    await openStudio(page);
+    await setSlowestTempo(page);
+    await drawLongRun(page);
+
+    await page.getByTitle('Taktiği oynat').click();
+    // Tur bitince buton "TEKRAR OYNAT"a döner (bitiş sayacı doldu).
+    // Not: butonun erişilebilir adı aria-label'dan gelir ("Taktiği oynat"),
+    // bu yüzden GÖRÜNEN yazıya bakılır.
+    await expect(page.getByText('TEKRAR OYNAT')).toBeVisible({ timeout: 15000 });
+
+    // Buton bittiğini söylüyorsa oyuncu da GERÇEKTEN durmuş olmalı —
+    // eskiden oyuncular ikinci tura başlıyor, buton ise "bitti" diyordu.
+    const p1 = await movingMarkerPos(page);
+    await page.waitForTimeout(900);
+    const p2 = await movingMarkerPos(page);
+    expect(p2, 'tur bitince oyuncu hareketsiz olmalı').toBe(p1);
+
+    // TEKRAR OYNAT → animasyon baştan kurulur ve oyuncu yeniden yürür
+    await page.getByTitle('Taktiği oynat').click();
+    await page.waitForTimeout(600);
+    const p3 = await movingMarkerPos(page);
+    expect(p3, 'TEKRAR OYNAT sonrası oyuncu yeniden hareket etmeli').not.toBe(p2);
+  });
+
   // İlk kullanım tanıtımı 2026-07-23'te YENİLENDİ: "Sonraki" ile ilerleyen
   // 3 adımlı tur yerine, altı aracın tamamını tek sayfada anlatan ve "Başla"
   // ile kapanan bir tanıtım var.
