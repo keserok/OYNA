@@ -180,6 +180,28 @@ kurmamış ve **BAŞARILI tamamlanmış.** Uyarıyı kimse görmemiş. Efor 1,5 
 > kod tabanının **en büyük tek alt ağacı** (52 dosya) ve gelirin toplandığı operatör yüzeyi;
 > pazaryeri ise K-5.1 gereği teminat ve online ödeme taşıyor — yani gerçek para.
 
+## K-12 · Ölçek kararı (3 Ağustos 2026)
+
+| # | Karar | Sonuç |
+|---|---|---|
+| **K-12.1** | **Küresel canlı abonelik kapatılacak** (Mimar önerisi (c)). "Top Oyna" kartlarındaki doluluk sayısının **anlık** tazeliğinden şimdilik vazgeçiliyor. | Aylık canlı mesaj **~6M → ~200K**; açılışta inen veri **17,3 MB → ~50 KB**; cron patlaması biter. |
+| **K-12.2** | **Ön koşul:** kapatmadan önce `get_my_matches()` kaleci/hakem atamalarını da kapsayacak. | Aksi halde Kaleci/Hakem paneli eksik liste gösterir. |
+| **K-12.3** | Bu bir **geri alınabilir** karardır; hattı yeniden açmak tek satırlık iştir. | Yanlış çıkarsa bedeli düşük. |
+
+### 📌 PRO PLANA GEÇİLDİĞİNDE YENİDEN DEĞERLENDİRİLECEKLER
+
+Ücretsiz planın sınırları yüzünden bugün verilen kararlar. Pro alındığında tekrar açılabilir:
+
+| # | Konu | Bugünkü karar | Pro'da ne değişir |
+|---|---|---|---|
+| PRO-1 | **Küresel canlı abonelik** (K-12.1) | Kapatıldı | 2M mesaj sınırı kalkar → keşif kartlarında anlık doluluk geri açılabilir |
+| PRO-2 | **Eşzamanlı canlı bağlantı** | 200 sınırı var | 500'e çıkar → 200'üncü kullanıcıdan sonrası da canlı güncelleme alır |
+| PRO-3 | **Görsel dönüştürme** (K-10.2) | Yükleme anında çok boy üretilecek | Sunucu tarafı dönüştürme açılır, yükleme akışı sadeleşir |
+| PRO-4 | **Aylık dışa veri** | 5 GB | 250 GB → global sorgu sınırları gevşetilebilir |
+| PRO-5 | **Veritabanı dalı ile test** | Yok (doğrudan canlı) | Her paket için geçici kopya açılabilir |
+
+---
+
 ---
 
 # BÖLÜM II — CPO BULGULARININ GÜNCEL DURUMU
