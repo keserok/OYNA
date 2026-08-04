@@ -2,7 +2,47 @@
 
 **Tarih:** 4 Ağustos 2026 · **Kaynak:** danışma kurulu 7 rolünün kapanmayan maddeleri
 + bu oturumda yapılan bağımsız tarama
-**Durum:** ⏳ **karar bekliyor** — hiçbiri uygulanmadı
+**Durum:** ✅ **KARARLAR ALINDI VE UYGULANDI** (4 Ağustos 2026)
+
+> Aşağıdaki analiz, kararlar alınmadan ÖNCEKİ hâlidir; kanıt olarak olduğu gibi
+> duruyor. Ne yapıldığı bir sonraki bölümde.
+
+---
+
+## ✅ Ne yapıldı, ne yapılmadı
+
+| # | Bulgu | Sonuç |
+|---|---|---|
+| A1 | Maç hatırlatması tıklanmıyor | ✅ düzeltildi + geçmiş 36 bildirim de onarıldı |
+| A2 | Hatırlatma yanlış saat söylüyor | ✅ gerçek kalan süre yazılıyor; 24s hatırlatma yalnız 20-24 saat kala |
+| A3 | İade bildirimi cüzdanı açmıyor | ✅ `wallet` izinli ekran listesine eklendi |
+| A4/A7 | Adressiz bildirimler | ✅ dördüne de adres verildi (`owner`, `support`, `bookings`) |
+| A5 | Bildirim tercihleri uygulanmıyor | ✅ **üç mod + veritabanı bekçisi**; 49 fonksiyonun hiçbirine dokunulmadı |
+| A6 | Panelde kullanılmayan şablonlar | ✅ "Kullanılmıyor" rozeti eklendi |
+| A8 | Sessiz saatler | ℹ️ zarar yok — push açıldığında çalışıyor, aksiyon gerekmedi |
+| B1 | Sahte/sıfır puan görünümü | ✅ harita şeridindeki kart da "Yeni" gösteriyor |
+| **B2** | **Referans kodu girme ekranı yok** | ⛔ **YAPILMADI** — kayıt ekranı onayı verilmedi |
+| C1/C2 | 8 ölü ayar | ✅ silindi; çalışan `fairplay_late_cancel_penalty` korundu |
+| C3 | Kaleci sözleşmesi iki yerde | ✅ tek kaynağa indirildi (veritabanı), metin sadeleştirildi |
+| D1 | Bozuk maç sonsuz tekrar | ✅ 3 denemeden sonra raf + panelde liste |
+| D2 | Bildirim izni değersiz isteniyor | ✅ maça katılınca, açıklama ekranıyla |
+| **D3** | **Zorunlu güncelleme** | ⛔ **YAPILMADI** — lansman sonrasına bırakıldı |
+| E1 | Saha listesi ölçeği | ✅ sunucu tarafında şehir filtresi |
+
+### Karar sonrası ortaya çıkan İKİ YENİ bulgu (ikisi de kapatıldı)
+
+| Bulgu | Nasıl bulundu | Sonuç |
+|---|---|---|
+| **Tek bozuk maç, bütün turu durduruyordu** — `auto_finalize_matches`'ta hata yakalama hiç yoktu; bir maç patlayınca o turdaki diğer maçların hiçbiri sonuçlandırılmıyordu | D1 üzerinde çalışırken | ✅ her maç kendi koruması içinde |
+| **Ücreti 0 olan sağlayıcı bedavaya kiralanabiliyordu** — sunucu yalnız "ücret boş mu" diye bakıyordu, 0 geçerli sayılıyordu | başvuru formu sadeleştirilirken | ✅ `PROVIDER_NO_FEE` kapısı |
+
+### Kendi hatalarım (görünür bırakıldı)
+
+- **"17 ölü ayar" yanlıştı** → tam tarama sonucu **9**; uygulamanın ve edge fonksiyonların okuduğu ayarları ölü sanmıştım.
+- **"5 saha sahte 5 yıldız gösteriyor" yanlıştı** → uygulama zaten `rating_count=0` korumasını yapıyordu; gerçek sorun harita şeridinde **"★ 0"** görünmesiydi (daha kötü okunuyordu).
+- **Eklediğim sağlık kontrolü paneli bozdu** → kendi damgasını attığı için panel 17 yerine 3 kontrol gösterdi; migration'ın kendi doğrulaması yakaladı, ayrı göçle düzeltildi.
+
+---
 
 > Bu belgedeki her satır **canlı sistemden ölçülmüş** bir gerçektir. Tahmin,
 > "muhtemelen", "olabilir" yok. Her bulgunun altında ya bir dosya:satır ya da
