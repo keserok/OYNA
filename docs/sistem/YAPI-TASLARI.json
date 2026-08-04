@@ -1,7 +1,7 @@
 {
   "$aciklama": "OYNA sisteminin TEMEL YAPI TAŞLARI. Bu dosya makine tarafından okunur; SISTEM-HARITASI.md bundan üretilir. ELLE İKİ YERDE TUTMA — yalnız burayı düzenle, sonra 'npm run sistem:harita' çalıştır.",
   "$surum": 1,
-  "$guncelleme": "2026-08-04 (ana sayfa yeniden tasarimi: bolge bant gorseli + gorsel varyantlari B07/B09'a baglandi)",
+  "$guncelleme": "2026-08-04 (profil yeniden tasarimi: duzenleme Ayarlar > Bilgilerim'e tasindi, B08'e baglandi)",
   "$risk_seviyeleri": {
     "KRITIK": "Yanlış giderse para kaybolur, kimlik ele geçer veya veri sızar. Değişiklik CEO onayı ister.",
     "YUKSEK": "Yanlış giderse kullanıcı zarar görür ve geri alması zordur. Değişiklik tam doğrulama ister.",
@@ -307,7 +307,8 @@
         "services/guardianService.ts",
         "views/AuthScreen.tsx",
         "views/ProfileScreen.tsx",
-        "components/profile/"
+        "components/profile/",
+        "components/settings/ProfileInfoPage.tsx"
       ],
       "db_nesneleri": [
         "profiles",

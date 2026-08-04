@@ -294,7 +294,9 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
         <section>
           <h3 className="text-xs font-bold text-ink-4 uppercase mb-3 ml-2">Hesap</h3>
           <div className="flex flex-col">
-            <SettingItem icon={<User size={20} />} title="Profil Bilgileri" value="Düzenle" onClick={() => setSubPage('profile')} />
+            {/* Profili düzenlemenin TEK kapısı burası (kullanıcı kararı,
+                2026-08). Profil ekranındaki "Düzenle" düğmesi kaldırıldı. */}
+            <SettingItem icon={<User size={20} />} title="Bilgilerim" value="Düzenle" onClick={() => setSubPage('profile')} />
             <SettingItem icon={<ShieldCheck size={20} />} title="Veli Onayı" value="" onClick={() => onNavigate('GUARDIAN_CHILD')} />
             <SettingItem icon={<Shield size={20} />} title="Yasal & Sözleşmeler" value="" onClick={() => onNavigate('LEGAL')} />
           </div>

@@ -5,6 +5,8 @@ export interface MatchHistorySectionProps {
     matches: MatchHistorySummary[];
     /** Verilmezse satırlar tıklanamaz (salt-okunur profil). */
     onOpen?: (id: string) => void;
+    /** Boş hâldeki "Maç bul" çıkışı. Verilmezse düğme çizilmez. */
+    onFindMatch?: () => void;
 }
 
 /** Tasarım 3a: sonuç, skorun renginden değil soldaki harf rozetinden okunur. */
@@ -26,7 +28,7 @@ const ILK_GOSTERIM = 4;
  * açılmaz — liste yerinde uzayıp kısalır. Skorlar BEYAZ; kazandın/kaybettin
  * bilgisi soldaki renkli harf rozetinden okunur.
  */
-export const MatchHistorySection: React.FC<MatchHistorySectionProps> = ({ matches, onOpen }) => {
+export const MatchHistorySection: React.FC<MatchHistorySectionProps> = ({ matches, onOpen, onFindMatch }) => {
     const [hepsiAcik, setHepsiAcik] = useState(false);
     const gorunen = hepsiAcik ? matches : matches.slice(0, ILK_GOSTERIM);
     const fazlasiVar = matches.length > ILK_GOSTERIM;
@@ -82,8 +84,20 @@ export const MatchHistorySection: React.FC<MatchHistorySectionProps> = ({ matche
                     })}
                 </div>
             ) : (
-                <div className="rounded-3xl bg-surface-1 shadow-[0_10px_30px_rgba(0,0,0,0.3)] p-6 text-center">
-                    <p className="text-[0.8125rem] italic text-[#F5F3EE]/[0.55]">Henüz oynanmış bir maçın yok.</p>
+                /* Boş hâl bir ÇIKIŞ sunar. "Henüz maçın yok" tek başına
+                   kullanıcıyı çıkmaza sokuyordu; tasarım buraya "Maç bul"
+                   düğmesini koydu. Düğme YALNIZ `onFindMatch` verilirse
+                   çizilir — admin panelindeki salt-okunur aynada anlamsız. */
+                <div className="rounded-3xl bg-surface-1 shadow-[0_10px_30px_rgba(0,0,0,0.3)] py-7 px-6 flex flex-col items-center gap-3.5 text-center">
+                    <p className="text-[0.875rem] text-[#F5F3EE]/[0.55] leading-relaxed">Henüz oynanmış bir maçın yok.</p>
+                    {onFindMatch && (
+                        <button
+                            onClick={onFindMatch}
+                            className="min-h-[44px] px-[18px] rounded-full bg-white text-[#0A0E14] text-[0.8125rem] active:opacity-85 transition-opacity"
+                        >
+                            Maç bul
+                        </button>
+                    )}
                 </div>
             )}
         </div>

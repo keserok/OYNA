@@ -242,12 +242,21 @@ describe('marka logosu', () => {
     expect(logo, 'SVG içinde sabit hex kalmış').not.toMatch(/(stroke|fill)="#[0-9A-Fa-f]{3,6}"/);
   });
 
-  it('splash ve profil logoyu marka rengine bağlıyor', () => {
-    for (const dosya of ['views/SplashScreen.tsx', 'views/ProfileScreen.tsx']) {
+  // Profil ekranı, onaylı profil tasarımıyla birlikte üst bardaki logoyu
+  // KALDIRDI: alt menüde "Profil" sekmesi zaten yanıyordu, başlık + logo aynı
+  // şeyi ikinci kez söylüyordu. Kural değişmedi — logoyu ÇİZEN her yer rengi
+  // çağrı yerinden vermeye devam ediyor; profil artık çizenlerden biri değil.
+  it('logoyu çizen ekranlar marka rengine bağlıyor', () => {
+    for (const dosya of ['views/SplashScreen.tsx']) {
       const src = oku(dosya);
       const blok = src.slice(src.indexOf('<OynaLogo'));
       expect(blok.slice(0, 400), `${dosya} logoya text-primary vermiyor`).toContain('text-primary');
     }
+  });
+
+  it('profil ekranı logoyu artık çizmiyor (tasarım kararı)', () => {
+    // Geri sızarsa yukarıdaki listeye de eklenmeli — renksiz logo kaçağı olmasın.
+    expect(oku('views/ProfileScreen.tsx')).not.toContain('<OynaLogo');
   });
 
   // Ana sayfa, onaylı tasarımla birlikte `OynaLogo` yerine tasarımın kendi

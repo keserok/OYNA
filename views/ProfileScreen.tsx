@@ -1,23 +1,39 @@
+// ════════════════════════════════════════════════════════════════════════════
+// PROFİL
+// ════════════════════════════════════════════════════════════════════════════
+//
+// Kaynak: onaylı profil tasarımı (OYNA Profil UI) — "Profil · dolu" ve
+// "Profil · yeni kullanıcı" ekranları, 390×844.
+//
+// ── DÜZENLEME BU EKRANDA DEĞİL ─────────────────────────────────────────────
+// Kullanıcı kararı (2026-08): profili düzenleme AYARLARA taşındı
+// (Ayarlar → Bilgilerim). Bu ekran artık salt GÖSTERİR; tek çıkışı sağ üstteki
+// dişli. Eskiden burada hem "Düzenle" düğmesi hem de tam bir düzenleme
+// katmanı vardı; aynı bilgiler Ayarlar'daki "Profil Bilgileri" sayfasında da
+// düzenlenebiliyordu — iki kapı, iki farklı alan kümesi, tek bir gerçek.
+//
+// ── ÜST BARDA YALNIZ DİŞLİ VAR ─────────────────────────────────────────────
+// Tasarımda ekran adı yazmıyor: alt menüde "Profil" sekmesi zaten yanıyor,
+// başlık aynı şeyi ikinci kez söylüyordu. Sekme kökünde geri oku da YOK.
+// ════════════════════════════════════════════════════════════════════════════
+
 import React, { useState, useEffect } from 'react';
 import { UserRole, AppView } from '../types';
-import { Settings, Pencil, AlertCircle } from 'lucide-react';
+import { Settings, ChevronRight } from 'lucide-react';
 import { useAppStore } from '../store';
 import { auth } from '../supabaseAuth';
 import { supabase } from '../supabaseClient';
-import { getFullUserProfile, getMatchHistory, MatchHistorySummary, OynaUser, setMySelfSkill, updateProfileBasics } from '../services/userService';
+import { getFullUserProfile, getMatchHistory, MatchHistorySummary, OynaUser } from '../services/userService';
 import { fetchFriends } from '../services/friendService';
 import { getMyTeams } from '../services/teamSocialService';
 import { LoadingState, ErrorState } from '../components/common/StatusState';
-import { ProfileHero, TrustScoreCard, ProfileShortcuts, MatchHistorySection } from '../components/profile';
+import { TrustScoreCard, ProfileShortcuts, MatchHistorySection, ProfileIdentityCard } from '../components/profile';
 import type { ShortcutItem } from '../components/profile';
-import { ProfileEditSheet, type ProfileEditValues } from '../components/profile/ProfileEditSheet';
-import { OynaLogo } from '../components/OynaLogo';
 // Türetme mantığı TEK KAYNAK: admin panelin Kullanıcı Profili Aynası da aynı
 // modülü kullanır — kart/rozet/puan hesapları iki yüzeyde asla ayrışmaz.
-// (buildCardData / applyCardTierOverride puan sistemi sökümüyle silindi —
-//  nötr kartın OVR/seviye türetmesi yok.)
-import { ageFromBirthdate, formatPosition, trustScoreTo100, winStats } from '../shared/profilePresentation';
+import { ageFromBirthdate, trustScoreTo100 } from '../shared/profilePresentation';
 import { formatTRYAmount } from '../utils/formatTRY';
+import profileAmbient from '../assets/profile/profile-ambient.png';
 
 interface ProfileScreenProps {
     role: UserRole;
@@ -26,10 +42,6 @@ interface ProfileScreenProps {
 }
 
 const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onNavigate, onOpenDiaryEntry }) => {
-    // Profili Düzenle (mevki + bio + doğum tarihi + ayak) modalı — TEK KAYNAK ProfileEditSheet
-    const [showEditModal, setShowEditModal] = useState(false);
-    const [savingEdit, setSavingEdit] = useState(false);
-    const [saveError, setSaveError] = useState<string | null>(null);
     const { setMyRoles, setSocialTarget } = useAppStore();
 
     const [profile, setProfile] = useState<OynaUser | null>(null);
@@ -110,63 +122,10 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onNavigate, onOpenD
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [uid]);
 
-    const openEdit = () => { setSaveError(null); setShowEditModal(true); };
-
-    const saveEdit = async (v: ProfileEditValues) => {
-        // Oturum düşmüşse SESSİZCE dönme: düzenleme katmanı "hata fırlatmadı =
-        // kaydedildi" sözleşmesiyle çalışıyor, sessiz dönüş sahte "Kaydedildi"
-        // gösterip değişiklikleri yutardı.
-        if (!uid) {
-            setSaveError('Oturumun kapanmış görünüyor. Tekrar giriş yapıp dene.');
-            throw new Error('ProfileScreen.saveEdit: oturum yok');
-        }
-        setSavingEdit(true);
-        setSaveError(null);
-        try {
-            await updateProfileBasics(uid, {
-                position: v.position,
-                bio: v.bio,
-                birthdate: v.birthdate || null,
-                gender: v.gender || null,
-                play_style: v.playStyle || null,
-                ...(v.avatarUrl && v.avatarUrl !== profile?.avatar_url ? { avatar_url: v.avatarUrl } : {}),
-            });
-            // Seviye beyanı ayrı kapıdan: RPC aralığı doğrular, NULL'u reddeder
-            // (beyan bir kez verildikten sonra silinemez — kadro çipi sözleşmesi).
-            if (v.selfSkill != null && v.selfSkill !== profile?.selfSkill) {
-                await setMySelfSkill(v.selfSkill);
-            }
-            // MOB-S4: Ana sayfa sol üst avatar (UserAvatar) store'daki oturum
-            // kimliğinden beslenir — fotoğraf değişimini ANINDA oraya da yansıt.
-            if (v.avatarUrl && v.avatarUrl !== profile?.avatar_url) {
-                const cur = useAppStore.getState().currentUserProfile;
-                if (cur && cur.id === uid) {
-                    useAppStore.getState().setCurrentUserProfile({ ...cur, avatar: v.avatarUrl });
-                }
-            }
-            // Katmanı BURADA kapatma: kayıt sözleşmesi gereği "Kaydedildi"
-            // onayını gösterip kendisi kapanır (onClose ile geri döner).
-            await loadProfile();
-        } catch (e) {
-            // İki aşamalı kayıt (basics + seviye RPC'si): ikincisi düşerse
-            // sessizce yutma — katman açık kalır, sebep Kaydet'in üstünde görünür,
-            // kullanıcı yeniden dener. (Basics çoktan yazılmış olabilir; yeniden
-            // kayıt idempotenttir.) Hata YUKARI FIRLATILIR: katman ancak böyle
-            // "kaydedilmedi" olduğunu bilir ve açık kalır.
-            console.error('Profil güncelleme hatası:', e);
-            setSaveError('Kaydedilemedi. Bağlantını kontrol edip tekrar dene.');
-            throw e;
-        } finally {
-            setSavingEdit(false);
-        }
-    };
-
-    const { total, winRate } = winStats(matchHistory);
-
     // Güven puanı: DB'de 0–5, ekranda 0–100.
     const trustScore = trustScoreTo100(profile?.trustScore);
 
-    // Tasarım 3a: ikon yok, değerler çıplak sayı — etiket zaten ne olduğunu söylüyor.
+    // Tasarım: ikon yok, değerler çıplak sayı — etiket zaten ne olduğunu söylüyor.
     const shortcuts: ShortcutItem[] = [
         {
             label: 'Cüzdan',
@@ -191,26 +150,43 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onNavigate, onOpenD
         // Tasarım 3a "İnce Neon": tırnaklı yazı (pf-serif) + yeşile çalan zemin
         // geçişi (pf-canvas) YALNIZ bu ekranda; uygulamanın geri kalanı Inter kalır.
         <div className="fixed inset-0 pf-canvas pf-serif flex flex-col h-screen overflow-hidden selection:bg-primary selection:text-black">
-            {/* Ambient ışıma */}
+            {/* Ambient ışıma — tasarımın üstteki saha çizimi + köşe parıltısı.
+                Görsel `mix-blend-mode: screen` ile zemine karışır ve aşağı
+                doğru maskeyle söner; içeriğin okunurluğunu bozmaz. */}
+            <img
+                src={profileAmbient}
+                alt=""
+                aria-hidden
+                className="pointer-events-none absolute top-[-10px] left-1/2 -translate-x-1/2 w-[520px] max-w-none opacity-50 mix-blend-screen"
+                style={{
+                    WebkitMaskImage: 'linear-gradient(180deg,#000 0%,#000 40%,transparent 88%)',
+                    maskImage: 'linear-gradient(180deg,#000 0%,#000 40%,transparent 88%)',
+                }}
+            />
             <div className="pf-ambient" />
 
-            {/* ═══ FIXED TOP BAR ═══ */}
-            <div className="px-6 pb-3 pt-safe flex justify-between items-center shrink-0 z-50">
+            {/* ═══ ÜST BAR — yalnız ayarlar dişlisi ═══ */}
+            <div className="px-6 pb-2.5 pt-safe flex justify-end items-center shrink-0 z-50">
                 {/* IP-14: sekme kökünde geri oku YOK — alt menü zaten her yere
                     götürüyor, ok kullanıcıyı yığında geriye atıp şaşırtıyordu. */}
-                <div className="flex items-center justify-between w-full pt-4">
-                    <div className="flex items-center gap-2">
-                        <OynaLogo width={20} height={20} className="text-primary" />
-                        <span className="text-[1.125rem] font-bold text-[#F5F3EE] tracking-[0.18em] uppercase">Profil</span>
-                    </div>
-                    <button onClick={() => onNavigate && onNavigate('SETTINGS')} aria-label="Ayarlar" className="w-11 h-11 flex items-center justify-center bg-surface-1/80 rounded-full text-[#F5F3EE]/[0.8] hover:text-[#F5F3EE] border border-white/[0.08] hover:bg-white/10 active:scale-95 transition-all">
-                        <Settings size={17} />
-                    </button>
-                </div>
+                <button
+                    onClick={() => onNavigate && onNavigate('SETTINGS')}
+                    aria-label="Ayarlar"
+                    className="mt-4 w-11 h-11 flex items-center justify-center bg-surface-1/[0.75] rounded-full text-[#F5F3EE] border border-white/[0.08] hover:bg-white/10 active:scale-95 transition-all"
+                >
+                    <Settings size={17} />
+                </button>
             </div>
 
-            {/* ═══ SCROLLABLE BODY ═══ */}
-            <div className="relative z-10 flex-1 overflow-y-auto px-5 pt-2 pb-safe-nav custom-scrollbar">
+            {/* ═══ KAYDIRILAN GÖVDE ═══
+                DİKKAT: burada `flex flex-col gap-3` KULLANMA. Flex kolonda
+                çocuklar varsayılan olarak SIKIŞIR (`flex-shrink: 1`) — içerik
+                kaydırıcıdan uzun olduğunda kaydırma üretmek yerine kartları
+                ezer. Tasarımın kendi HTML'inde her kart `flex:none` taşıdığı
+                için orada sorun yoktu; burada kartlar ortak bileşenler ve
+                böyle bir garantileri yok. Aralar `space-y-3` ile veriliyor:
+                kaydırıcı düz blok kalır, `tests/visual/icKaydirma` yeşil. */}
+            <div className="relative z-10 flex-1 overflow-y-auto px-5 pt-1.5 pb-safe-nav custom-scrollbar space-y-3">
                 {loading ? (
                     <LoadingState message="Profil yükleniyor…" />
                 ) : error ? (
@@ -219,7 +195,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onNavigate, onOpenD
                 <>
                 {/* ═══ MİSAFİR ŞERİDİ — oturumsuz kullanıcıya kaydolma çağrısı ═══ */}
                 {isGuest && (
-                    <div className="mb-4 bg-[#FACC15]/[0.06] border border-[#FACC15]/30 rounded-3xl p-5 shadow-[0_8px_30px_rgba(0,0,0,0.4)] relative overflow-hidden">
+                    <div className="bg-[#FACC15]/[0.06] border border-[#FACC15]/30 rounded-3xl p-5 shadow-[0_8px_30px_rgba(0,0,0,0.4)] relative overflow-hidden">
                         <div className="absolute -top-10 -right-10 w-32 h-32 bg-[#FACC15]/10 blur-[40px] rounded-full pointer-events-none" />
                         <div className="relative z-10 flex flex-col gap-3">
                             <div className="flex items-center gap-2">
@@ -247,62 +223,49 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onNavigate, onOpenD
                     </div>
                 )}
 
-                {/* ═══ PROFİL TAMAMLANMADI ŞERİDİ — onboarding'i atlayan kayıtlı kullanıcı ═══ */}
+                {/* ═══ PROFİL TAMAMLANMADI ═══
+                    Tasarımda ekranın EN ÜSTÜNDE, kimlik kartından önce durur:
+                    yeni kullanıcının ilk gördüğü şey "ne yapmalıyım" olmalı. */}
                 {!isGuest && profile && profile.hasCompletedOnboarding === false && (
                     <button
                         onClick={() => onNavigate && onNavigate('ONBOARDING')}
-                        className="w-full mb-4 text-left bg-[#FACC15]/[0.07] border border-[#FACC15]/30 rounded-3xl p-4 flex items-center gap-3 active:scale-[0.99] transition-all shadow-[0_8px_30px_rgba(0,0,0,0.35)]"
+                        className="w-full text-left bg-[#161B22]/[0.92] border border-white/[0.14] rounded-[24px] p-4 flex items-center gap-3.5 min-h-[48px] active:scale-[0.99] transition-all"
                     >
-                        <div className="w-10 h-10 rounded-2xl bg-[#FACC15]/15 flex items-center justify-center shrink-0">
-                            <AlertCircle size={20} className="text-[#FACC15]" />
-                        </div>
                         <div className="flex-1 min-w-0">
-                            <p className="text-[0.9375rem] font-bold text-[#F5F3EE]">Profil tamamlanmadı</p>
-                            <p className="text-[0.8125rem] text-[#F5F3EE]/[0.6] leading-snug">Birkaç bilgi eksik. Tamamla, sana uygun maçları önerelim.</p>
+                            <p className="text-[0.9375rem] text-[#F5F3EE]">Profil tamamlanmadı</p>
+                            <p className="mt-0.5 text-[0.8125rem] text-[#F5F3EE]/[0.6] leading-snug">
+                                Birkaç bilgi eksik. Tamamla, sana uygun maçları önerelim.
+                            </p>
                         </div>
-                        <span className="text-[0.75rem] font-bold text-[#FACC15] uppercase tracking-wider shrink-0">Tamamla →</span>
+                        <ChevronRight size={18} className="text-[#F5F3EE] shrink-0" />
                     </button>
                 )}
 
-                {/* ═══ KİMLİK KARTI ═══ */}
-                <ProfileHero
+                {/* ═══ KİMLİK KARTI ═══
+                    Fotoğraf değiştirme buradan AYARLARA götürür — düzenleme tek
+                    kapıdan geçsin diye (bu ekranda artık kayıt yapılmıyor). */}
+                <ProfileIdentityCard
                     name={profile?.full_name || (isGuest ? 'Misafir' : 'Oyuncu')}
                     avatarUrl={profile?.avatar_url}
                     verified={!isGuest && profile?.verification_status === 'approved'}
-                    position={formatPosition(profile?.position)}
+                    position={profile?.position}
                     age={ageFromBirthdate(profile?.birthdate)}
                     ageRange={profile?.ageRange}
                     gender={profile?.gender}
                     playStyle={profile?.playStyle}
-                    matches={total}
-                    winRate={winRate}
-                    mvp={motmCount}
-                    onEditAvatar={isGuest ? undefined : openEdit}
+                    selfSkill={profile?.selfSkill}
+                    layout="row"
+                    onEditAvatar={isGuest ? undefined : () => onNavigate && onNavigate('SETTINGS')}
+                    // Fotoğrafı olan kullanıcıda ek satır çizilmez: kart sade
+                    // kalsın, değiştirme yolu zaten Ayarlar → Bilgilerim.
+                    showAddPhotoRow={!isGuest && !profile?.avatar_url}
                 />
 
-                {/* Bio + Profili Düzenle — sade tutuldu, hero'nun hemen altında */}
-                {!isGuest && (
-                    <div className="mt-3 flex items-center gap-3 px-1">
-                        <p className={`flex-1 text-[0.875rem] italic leading-relaxed ${profile?.bio ? 'text-[#F5F3EE]/[0.6]' : 'text-[#F5F3EE]/[0.55]'}`}>
-                            {profile?.bio || 'Henüz bir tanıtım eklemedin.'}
-                        </p>
-                        <button onClick={openEdit} className="shrink-0 px-3.5 py-2 rounded-full bg-white/5 border border-white/15 text-[#F5F3EE] text-[0.6875rem] font-bold uppercase tracking-widest hover:bg-white/10 active:scale-95 transition-all flex items-center gap-1.5">
-                            <Pencil size={11} /> Düzenle
-                        </button>
-                    </div>
-                )}
-
                 {/* ═══ GÜVEN PUANI ═══ */}
-                {!isGuest && (
-                    <div className="mt-3.5">
-                        <TrustScoreCard score={trustScore} />
-                    </div>
-                )}
+                {!isGuest && <TrustScoreCard score={trustScore} />}
 
                 {/* ═══ KISAYOLLAR ═══ */}
-                <div className="mt-3">
-                    <ProfileShortcuts items={shortcuts} />
-                </div>
+                <ProfileShortcuts items={shortcuts} />
 
                 {/* ═══ SOSYAL ═══
                     IP-14: Sosyal alt menüden çıkıp buraya taşındı (kullanıcı kararı).
@@ -312,42 +275,33 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onNavigate, onOpenD
                 {!isGuest && (
                     <button
                         onClick={() => onNavigate && onNavigate('SOCIAL')}
-                        className="mt-3 w-full flex items-center gap-3 py-4 px-4 rounded-[20px] bg-surface-1 shadow-[0_10px_30px_rgba(0,0,0,0.3)] hover:bg-white/[0.06] active:scale-[0.99] transition-all text-left"
+                        className="w-full flex items-center gap-3 py-4 px-4 rounded-[20px] bg-surface-1 min-h-[48px] hover:bg-white/[0.06] active:scale-[0.99] transition-all text-left"
                     >
                         <div className="min-w-0 flex-1">
-                            <span className="text-[0.9375rem] font-semibold text-[#F5F3EE] block">Sosyal</span>
-                            <span className="text-[0.8125rem] italic text-[#F5F3EE]/[0.55]">Arkadaşlar, takımlar ve mesajlar</span>
+                            <span className="text-[0.9375rem] text-[#F5F3EE] block">Sosyal</span>
+                            <span className="text-[0.8125rem] text-[#F5F3EE]/[0.55]">
+                                {friendsCount === 0 && teamsCount === 0
+                                    ? 'Arkadaş ekle, takıma katıl'
+                                    : 'Arkadaşlar, takımlar ve mesajlar'}
+                            </span>
                         </div>
-                        <span aria-hidden className="text-[#F5F3EE]/[0.5] shrink-0">→</span>
+                        <ChevronRight size={18} className="text-[#F5F3EE]/[0.5] shrink-0" />
                     </button>
                 )}
 
                 {/* Rol yönetimi (rol değiştir + ek rol başvurusu) Ayarlar → Sahada Rolün'e taşındı. */}
 
                 {/* ═══ MAÇ GEÇMİŞİ ═══ */}
-                <MatchHistorySection matches={matchHistory} onOpen={onOpenDiaryEntry} />
+                <MatchHistorySection
+                    matches={matchHistory}
+                    onOpen={onOpenDiaryEntry}
+                    onFindMatch={() => onNavigate && onNavigate('MATCH_DISCOVERY')}
+                />
+                {/* Maç/galibiyet/en iyi ÜÇLÜSÜ bu ekranda yok — tasarım kararı:
+                    istatistikler Ayarlar → Bilgilerim sayfasına taşındı. */}
                 </>
                 )}
             </div>
-
-            {/* ═══ PROFİLİ DÜZENLE — TEK KAYNAK alt sayfa (admin aynası da aynısını kullanır) ═══ */}
-            <ProfileEditSheet
-                open={showEditModal}
-                name={profile?.full_name || 'Oyuncu'}
-                initial={{
-                    position: profile?.position || '',
-                    bio: profile?.bio || '',
-                    birthdate: profile?.birthdate || '',
-                    gender: profile?.gender || '',
-                    playStyle: profile?.playStyle || '',
-                    avatarUrl: profile?.avatar_url || '',
-                    selfSkill: profile?.selfSkill ?? null,
-                }}
-                saving={savingEdit}
-                errorText={saveError}
-                onSave={saveEdit}
-                onClose={() => setShowEditModal(false)}
-            />
         </div>
     );
 };
