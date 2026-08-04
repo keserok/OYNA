@@ -57,7 +57,8 @@ CREATE TABLE IF NOT EXISTS public.image_variants (
 
 COMMENT ON TABLE public.image_variants IS
   'Bir orijinal görselden türetilmiş WebP boyları (@1x/@2x/@3x) ve bulanık '
-  'minyatürü (LQIP). Üretim sunucu tarafındadır (edge function: image-variants).';
+  'minyatürü (LQIP). Üretim YÜKLEME ANINDA, tarayıcıda yapılır '
+  '(OYNA_PRENSIPLER.md · PRO-3); Pro planda sunucu tarafına taşınacak.';
 COMMENT ON COLUMN public.image_variants.lqip IS
   'data: URI — ~16px bulanık WebP. Ağ isteği gerektirmesin diye satırda tutulur.';
 COMMENT ON COLUMN public.image_variants.width IS

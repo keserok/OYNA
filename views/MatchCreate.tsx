@@ -34,6 +34,7 @@ import { safeUuid } from '../shared/submitGuard';
 import { trUpper } from '../utils/trUpper';
 import { auth } from '../supabaseAuth';
 import { formatTRYAmount } from '../utils/formatTRY';
+import { useLowMotion } from '../hooks/useLowMotion';
 
 // Cüzdan yükleme overlay'i — form kaybolmadan bakiye tamamlanır (gerçek akış).
 const WalletScreen = lazy(() => import('./WalletScreen'));
@@ -132,20 +133,28 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
   const [sheet, setSheet] = useState<SheetKind>(null);
 
   // ── Yayın durumu ──────────────────────────────────────────────────────────
+  // KULLANICI KARARI (2026-08): alttaki KAYDIRMALI onay kaldırıldı, yerine
+  // doğrudan basılan bir buton kondu. Buton yalnız TEMEL AYARLARIN HEPSİ
+  // tamamlanınca ortaya çıkar (bkz. `canPublish`); eksik varken yerinde ne
+  // eksik olduğunu söyleyen pasif bir şerit durur.
+  //
+  // Kaydırma neden gitti: kaza korumasıydı ama bedeli ağırdı — tutamağı
+  // 56px'lik bir alandan yakalayıp yatayda sürüklemek gerekiyordu ve dikey
+  // kaydırmayla çakışıyordu. Kaza koruması ARTIK BAŞKA YERDE: buton zaten
+  // yalnız her şey hazırken beliriyor, `publishBusyRef` çift tetiklemeyi
+  // kilitliyor ve kaporanın ne olacağı butonun hemen altında yazıyor.
   const [publishing, setPublishing] = useState(false);
   const [pubStep, setPubStep] = useState(0);
-  const [slide, setSlide] = useState(0);
-  const dragRef = useRef<{ left: number; max: number } | null>(null);
-  const trackRef = useRef<HTMLDivElement | null>(null);
   const publishRef = useRef<() => void>(() => {});
   const publishBusyRef = useRef(false);
+  // Hareket hassasiyeti açıksa buton beliriş animasyonu olmadan gelir.
+  const lowMotion = useLowMotion();
   // İdempotency anahtarı: AYNI yayın denemesi boyunca sabit kalır. Sunucudan
   // yanıt gelmeden kesilen (timeout/kopma) bir istekten sonra tekrar deneme
   // AYNI anahtarla gider → çift maç/rezervasyon/kapora imkânsız. Yalnız YAYIN
   // BAŞARIYLA tamamlanınca sıfırlanır; hata dalında sıfırlanmaz (sunucuda
   // işlem gerçekten düştüyse claim satırı da geri alınmıştır, anahtar temizdir).
   const publishIdemRef = useRef<string | null>(null);
-  const slideValRef = useRef(0);
   const [result, setResult] = useState<AtomicCreateResult | null>(null);
   const [conflict, setConflict] = useState<{ time: string; next: string | null } | null>(null);
   const [missingTL, setMissingTL] = useState(0);
@@ -481,7 +490,6 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
         showToast('Maç yayınlanamadı. Lütfen tekrar dene.', 'error');
         console.error('create_match_atomic:', message);
       }
-      setSlide(0);
     } finally {
       clearTimeout(t1); clearTimeout(t2);
       publishBusyRef.current = false;
@@ -492,43 +500,14 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
       mental, offers, seed?.bookingId, invited, deposit, spendable, firstFree]);
   publishRef.current = publish;
 
-  // ── Kaydır → yayınla (pointer takibi pencerede) ───────────────────────────
-  // Yayın tetikleme YAN ETKİSİ state updater'ın dışında tutulur (StrictMode
-  // updater'ları iki kez çalıştırır); güncel değer ref'te izlenir.
-  useEffect(() => {
-    const move = (e: PointerEvent) => {
-      const d = dragRef.current;
-      if (!d) return;
-      const x = Math.max(0, Math.min(d.max, e.clientX - d.left - 27));
-      slideValRef.current = x / d.max;
-      setSlide(slideValRef.current);
-    };
-    const up = () => {
-      if (!dragRef.current) return;
-      dragRef.current = null;
-      if (slideValRef.current >= 0.88) {
-        setSlide(1);
-        void publishRef.current();
-      } else {
-        setSlide(0);
-      }
-      slideValRef.current = 0;
-    };
-    window.addEventListener('pointermove', move);
-    window.addEventListener('pointerup', up);
-    window.addEventListener('pointercancel', up);
-    return () => {
-      window.removeEventListener('pointermove', move);
-      window.removeEventListener('pointerup', up);
-      window.removeEventListener('pointercancel', up);
-    };
-  }, []);
-
-  const onThumbDown = () => {
+  // ── Yayınla ───────────────────────────────────────────────────────────────
+  // Tek satır: butona basılınca yayın başlar. `publishRef` duruyor çünkü
+  // `publish` her render'da yeniden kuruluyor; buton her zaman GÜNCEL sürümü
+  // çağırmalı. Çift tetikleme kilidi `publish`in kendi içinde
+  // (`publishBusyRef`) — buton iki kez basılsa da iki maç açılmaz.
+  const onPublish = () => {
     if (!canPublish) return;
-    const rect = trackRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    dragRef.current = { left: rect.left + 5, max: rect.width - 59 };
+    void publishRef.current();
   };
 
   // ── Kadro: arkadaşlar + takımlar (sheet açılınca, gerçek servislerden) ───
@@ -1166,77 +1145,34 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
               ))}
             </div>
           ) : canPublish ? (
-            /* Kaydır → yayınla: dolum ilerledikçe parlayan ray, ışıltı taraması,
-               yaklaştıkça beliren "BIRAK" ipucu ve eşiğe varınca doygunlaşan tutamak. */
-            <div ref={trackRef}
-              className="relative h-[68px] rounded-[22px] overflow-hidden border transition-colors duration-200"
+            /* YAYINLA — doğrudan basılan buton.
+               Ekranın TEK dolu birincil bloğu: dolgu #39FF14, üzerindeki metin
+               #0A0E14 (index.css rol tablosu). Yalnız temel ayarların hepsi
+               tamamlanınca çizilir; o âna kadar yerinde ne eksik olduğunu
+               söyleyen pasif şerit durur. Beliriş bir hareketle vurgulanır
+               ki kullanıcı "artık hazır" olduğunu fark etsin. */
+            <motion.button
+              type="button"
+              onClick={onPublish}
+              initial={lowMotion ? false : { opacity: 0, y: 8, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ type: 'spring', damping: 24, stiffness: 340 }}
+              className="w-full h-[68px] rounded-[22px] flex items-center justify-center gap-2.5 active:scale-[0.985] transition-transform outline-none focus-visible:ring-2 focus-visible:ring-white/70"
               style={{
-                background: 'linear-gradient(180deg, rgba(57,255,20,0.10), rgba(57,255,20,0.05))',
-                borderColor: slide >= 0.88 ? 'rgba(57,255,20,0.85)' : 'rgba(57,255,20,0.28)',
-                boxShadow: slide >= 0.88 ? '0 0 34px rgba(57,255,20,0.30)' : 'none',
-              }}>
-              {/* Dolum */}
-              <div className="absolute left-0 top-0 bottom-0 transition-[background] duration-200"
-                style={{
-                  width: `${Math.round(slide * ((trackRef.current?.clientWidth ?? 340) - 63)) + 63}px`,
-                  background: slide >= 0.88
-                    ? 'linear-gradient(90deg, rgba(57,255,20,0.30), rgba(57,255,20,0.42))'
-                    : 'linear-gradient(90deg, rgba(57,255,20,0.10), rgba(57,255,20,0.22))',
-                }} />
-              {/* Işıltı taraması — boştayken hafifçe akar, sürüklerken durur */}
-              {slide < 0.02 && (
-                <motion.div aria-hidden
-                  className="absolute inset-y-0 w-24 pointer-events-none"
-                  style={{ background: 'linear-gradient(90deg, transparent, rgba(57,255,20,0.16), transparent)' }}
-                  animate={{ x: ['-20%', '460%'] }}
-                  transition={{ duration: 2.6, repeat: Infinity, ease: 'easeInOut', repeatDelay: 0.7 }} />
-              )}
-              {/* Yön okları — tutamağın gideceği yolu gösterir */}
-              <div className="absolute inset-y-0 right-6 flex items-center gap-1 pointer-events-none"
-                style={{ opacity: Math.max(0, 0.5 - slide * 1.4) }}>
-                {[0, 1, 2].map(i => (
-                  <motion.span key={i} className="text-[#39FF14]"
-                    animate={{ opacity: [0.25, 1, 0.25] }}
-                    transition={{ duration: 1.4, repeat: Infinity, delay: i * 0.18 }}>
-                    <ChevronRight size={14} strokeWidth={3} />
-                  </motion.span>
-                ))}
-              </div>
-              {/* Metin */}
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none px-16">
-                <span className="text-[0.8125rem] font-extrabold uppercase tracking-[0.11em] text-[#39FF14] text-center"
-                  style={{ opacity: Math.max(0, 1 - slide * 2.4) }}>
-                  Kaydır → yayınla{deposit ? ' & kapora' : ''}
-                </span>
-                <span className="absolute text-[0.8125rem] font-extrabold uppercase tracking-[0.14em] text-[#39FF14]"
-                  style={{ opacity: slide >= 0.88 ? 1 : 0, transition: 'opacity .15s' }}>
-                  Bırak ve yayınla
-                </span>
-              </div>
-              {/* Tutamak */}
-              <motion.div onPointerDown={onThumbDown}
-                className="absolute top-[6px] left-[6px] w-[56px] h-[56px] rounded-[18px] flex items-center justify-center cursor-grab active:cursor-grabbing"
-                style={{
-                  transform: `translateX(${Math.round(slide * ((trackRef.current?.clientWidth ?? 340) - 63))}px)`,
-                  // 'pan-y': tutamağı YANA sürüklemek yayınlar, YUKARI sürüklemek
-                  // sayfayı kaydırır. Eski 'none' değeri bu 56px'lik kareyi
-                  // kaydırılamaz bir ada yapıyordu.
-                  touchAction: 'pan-y',
-                  background: slide >= 0.88
-                    ? 'linear-gradient(135deg, #7CFF5C, #39FF14)'
-                    : 'linear-gradient(135deg, #39FF14, #2BD10F)',
-                  color: '#0A0E14',
-                  boxShadow: slide >= 0.88
-                    ? '0 0 30px rgba(57,255,20,0.65), inset 0 1px 0 rgba(255,255,255,0.45)'
-                    : '0 6px 18px rgba(0,0,0,0.35), 0 0 20px rgba(57,255,20,0.30), inset 0 1px 0 rgba(255,255,255,0.35)',
-                }}
-                animate={slide < 0.02 ? { scale: [1, 1.04, 1] } : { scale: 1 }}
-                transition={slide < 0.02 ? { duration: 1.8, repeat: Infinity, ease: 'easeInOut' } : { duration: 0.15 }}>
-                <ArrowRight size={23} strokeWidth={2.8} />
-              </motion.div>
-            </div>
+                background: 'linear-gradient(135deg, #7CFF5C, #39FF14)',
+                color: 'var(--color-on-primary)',
+                boxShadow: '0 8px 22px rgba(0,0,0,0.35), 0 0 30px rgba(57,255,20,0.35), inset 0 1px 0 rgba(255,255,255,0.4)',
+              }}
+            >
+              <span className="text-[0.9375rem] font-extrabold uppercase tracking-[0.11em]">
+                Maçı Yayınla{deposit ? ' & Kapora' : ''}
+              </span>
+              <ArrowRight size={20} strokeWidth={3} />
+            </motion.button>
           ) : (
-            <div className="h-16 rounded-[20px] border border-white/[0.07] bg-white/[0.02] flex items-center justify-center">
+            /* Henüz hazır değil: buton YOK, eksik olan söyleniyor. Yükseklik
+               butonunkiyle aynı tutulur — hazır olunca alt bar zıplamaz. */
+            <div className="h-[68px] rounded-[22px] border border-white/[0.07] bg-white/[0.02] flex items-center justify-center">
               <span className="text-xs font-extrabold uppercase tracking-[0.11em] text-ink-4">
                 {!selCourtId ? 'Önce saha seç' : !selTime ? 'Saat seç' : 'Bu saat kullanılamıyor'}
               </span>

@@ -270,7 +270,7 @@
         "utils/orduData.ts",
         "views/MatchDiscovery.tsx",
         "admin-panel/views/pages/HomeBannersPage.tsx",
-        "supabase/migrations/20260905000000_ana_sayfa_bolge_gorseli_ve_gorsel_varyantlari.sql"
+        "supabase/migrations/20260804190741_ana_sayfa_bolge_gorseli_ve_gorsel_varyantlari.sql"
       ],
       "db_nesneleri": [
         "region_coverage",
