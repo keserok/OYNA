@@ -136,7 +136,7 @@ export const AnimationToolbar: React.FC<AnimationToolbarProps> = ({
             onClick={onPlayPause}
             title={title}
             aria-label={title}
-            className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-extrabold transition-all whitespace-nowrap shadow-lg ${playing ? 'bg-red-500 text-white shadow-red-500/30' : 'bg-[#FACC15] text-black shadow-[#FACC15]/30 hover:scale-105'}`}
+            className={`shrink-0 flex items-center gap-1 px-2.5 py-2 rounded-full text-xs font-extrabold transition-all whitespace-nowrap shadow-lg ${playing ? 'bg-red-500 text-white shadow-red-500/30' : 'bg-[#FACC15] text-black shadow-[#FACC15]/30 hover:scale-105'}`}
         >
             {playing ? (
                 <><Square size={14} className="fill-current" /> {label}</>
@@ -144,28 +144,37 @@ export const AnimationToolbar: React.FC<AnimationToolbarProps> = ({
                 <><Play size={14} className="fill-current" /> {label}</>
             )}
         </button>
+        {/* Düzenlemeye dön — yalnız oynatma sırasında görünen ek buton; araç
+            çubuğunun 3. satırı en kalabalık haliyle dar telefonda (360px) da
+            sığsın diye yazısız ve bir tık küçük. */}
         {isSimulating && onExit && (
             <button
                 onClick={onExit}
                 title="Düzenlemeye dön"
                 aria-label="Düzenlemeye dön"
-                className="flex items-center gap-2 px-3.5 py-2 rounded-full text-xs font-extrabold transition-all whitespace-nowrap bg-white/5 text-gray-300 hover:bg-white/10"
+                className="shrink-0 flex items-center justify-center w-8 h-8 rounded-full transition-all bg-white/5 text-gray-300 hover:bg-white/10"
             >
-                <X size={14} /> Düzenle
+                <X size={14} />
             </button>
         )}
+        {/* Top ve oynatma sırası — araç çubuğunun 3. satırına sığsın diye yazısız;
+            ne yaptıkları aria-label/title ile korunur, durum renkle okunur
+            (top açıkken turuncu, sıralı oynatmada mor). */}
         <button
             onClick={() => setShowBall(!showBall)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-extrabold transition-all whitespace-nowrap shadow-lg ${showBall ? 'bg-orange-500 text-white shadow-orange-500/30' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}
+            title={showBall ? 'Topu gizle' : 'Topu göster'}
+            aria-label={showBall ? 'Topu gizle' : 'Topu göster'}
+            className={`shrink-0 flex items-center justify-center w-9 h-9 rounded-full text-sm transition-all shadow-lg ${showBall ? 'bg-orange-500 text-white shadow-orange-500/30' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}
         >
-            ⚽ TOPU {showBall ? 'GİZLE' : 'GÖSTER'}
+            ⚽
         </button>
         <button
             onClick={() => setPlayMode(p => p === 'SYNC' ? 'SEQ' : 'SYNC')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-extrabold transition-all whitespace-nowrap shadow-lg ${playMode === 'SEQ' ? 'bg-indigo-500 text-white shadow-indigo-500/30' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}
-            title="Sıralı veya Eşzamanlı Simülasyon"
+            className={`shrink-0 flex items-center justify-center w-9 h-9 rounded-full text-sm transition-all shadow-lg ${playMode === 'SEQ' ? 'bg-indigo-500 text-white shadow-indigo-500/30' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}
+            title={playMode === 'SEQ' ? 'Sıralı oynatılıyor — eşzamanlıya geç' : 'Eşzamanlı oynatılıyor — sıralıya geç'}
+            aria-label={playMode === 'SEQ' ? 'Sıralı oynatılıyor — eşzamanlıya geç' : 'Eşzamanlı oynatılıyor — sıralıya geç'}
         >
-            {playMode === 'SEQ' ? '🔄 SIRALI OYNAT' : '👥 EŞZAMANLI OYNAT'}
+            {playMode === 'SEQ' ? '🔄' : '👥'}
         </button>
     </>
     );

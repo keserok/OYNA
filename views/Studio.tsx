@@ -86,6 +86,16 @@ const resolvePlanColor = (plan: TacticState): PlanColor =>
     (!plan.groupColor || plan.groupColor === 'DEFAULT') ? mentalityColor(plan.mentality) : plan.groupColor;
 const PIP_HEX: Record<PlanColor, string> = { DEFAULT: '#39FF14', RED: '#ef4444', NAVY: '#6366f1', GREEN: '#10b981' };
 
+// Araç ipucu — araç çubuğunun ÇİZİM satırının altında, seçili aracın ne
+// yaptığını tek cümleyle anlatır. Stüdyoyu ilk kez açan biri deneme yanılma
+// yapmadan anlasın diye var; araç değişince yazı da değişir (aria-live).
+const TOOL_HINTS: Record<StudioTool, string> = {
+    move: 'TAŞI seçili — oyuncuya dokunup sürükle; boş mevkideki + işaretiyle oyuncu ekle.',
+    draw_run: 'KOŞU seçili — bir oyuncudan başlayıp parmağınla hareket çizgisini çek.',
+    draw_pass: 'PAS seçili — topun gideceği yolu çiz; arka arkaya çizersen pas zinciri olur.',
+    opponent: 'RAKİP seçili — sahaya dokunarak rakip oyuncu ekle.',
+};
+
 // Faz 9 — kalıcılık & mobil deneyim anahtarları
 const DRAFT_KEY = 'oyna_studio_draft_v1';   // S49 otomatik taslak
 const ONBOARD_KEY = 'oyna_studio_onboarded_v1'; // ilk kullanım turu bir kez gösterilir
@@ -2000,62 +2010,131 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                 {openSelector && <div className="fixed inset-0 z-30" onClick={() => setOpenSelector(null)} />}
             </div>
 
-            {/* Toolbar */}
-            <div className="px-6 pb-4 flex gap-2 overflow-x-auto no-scrollbar">
-                    <button 
+            {/* Araç çubuğu — İŞE GÖRE 3 SATIR (ince ayraçla ayrılır).
+                Önceden 14 buton tek satırda yan yana kayıyordu; ekrana sığmayanı
+                görmek için yana sürüklemek gerekiyordu. Artık her satır tek bir
+                soruyu yanıtlar:
+                  1) ÇİZİM   — ne çiziyorum?      (TAŞI · KOŞU · PAS · sadece hareket)
+                  2) TAKIM   — kimi düzenliyorum? (BİZ/RAKİP · rakibi diz · geri/yinele/temizle)
+                  3) OYNATMA — nasıl izliyorum?   (OYNAT · top · sıra · TEMPO)
+                Satırlar dar telefonda da sığacak şekilde ölçülendi: 360/375/390 px
+                genişlikte, boş tahtada da oynatma sırasında da taşma yok. Yardımcı
+                butonlar yer kazanmak için yazısız/simgeli (anlamları title +
+                aria-label ile korunur). overflow-x-auto yalnız güvenlik ağıdır —
+                beklenmedik bir genişlikte hiçbir buton erişilemez kalmasın diye. */}
+            <div className="px-6 pb-4 space-y-2">
+
+                {/* ── 1. SATIR · ÇİZİM — hangi araç açık (3 eşit kutu, satırı doldurur) */}
+                <div className="flex gap-2">
+                    <button
                         onClick={() => setTool('move')}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold transition-all whitespace-nowrap ${tool === 'move' ? 'bg-[#39FF14] text-black' : 'bg-white/5 text-white hover:bg-white/10'}`}
+                        className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-full text-xs font-bold transition-all whitespace-nowrap ${tool === 'move' ? 'bg-[#39FF14] text-black' : 'bg-white/5 text-white hover:bg-white/10'}`}
                     >
                         <MousePointer2 size={14} /> TAŞI
                     </button>
-                    <button 
+                    <button
                         onClick={() => setTool('draw_run')}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold transition-all whitespace-nowrap ${tool === 'draw_run' ? 'bg-[#39FF14] text-black' : 'bg-white/5 text-white hover:bg-white/10'}`}
+                        className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-full text-xs font-bold transition-all whitespace-nowrap ${tool === 'draw_run' ? 'bg-[#39FF14] text-black' : 'bg-white/5 text-white hover:bg-white/10'}`}
                         title="Koşu Çiz"
                     >
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeDasharray="4 4"><path d="M5 12h14"></path></svg> KOŞU
                     </button>
-                    <button 
+                    <button
                         onClick={() => setTool('draw_pass')}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold transition-all whitespace-nowrap ${tool === 'draw_pass' ? 'bg-[#39FF14] text-black' : 'bg-white/5 text-white hover:bg-white/10'}`}
+                        className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-full text-xs font-bold transition-all whitespace-nowrap ${tool === 'draw_pass' ? 'bg-[#39FF14] text-black' : 'bg-white/5 text-white hover:bg-white/10'}`}
                         title="Pas Çiz"
                     >
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M5 12h14M12 5l7 7-7 7"></path></svg> PAS
                     </button>
-                    {/* Rakip takımı sahaya diz (ayna) + rakip düzenleme moduna geç */}
+                    {/* Sadece Hareket (S12) — çizgileri gizle, yalnız top+oyuncu hareketi
+                        görünür. Çizim satırında durur: çizgilerin GÖRÜNÜRLÜĞÜNÜ ayarlar. */}
                     <button
-                        onClick={placeOpponentTeam}
-                        title="Rakip takımı sahaya diz (mevcut dizilişin aynası)"
-                        className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold transition-all whitespace-nowrap ${drawSide === 'OPP' ? 'bg-red-500 text-white' : 'bg-white/5 text-white hover:bg-red-500/20 hover:text-red-400'}`}
+                        onClick={() => setHideLines(v => !v)}
+                        title={hideLines ? 'Çizgileri göster' : 'Sadece hareket (çizgileri gizle)'}
+                        aria-label={hideLines ? 'Çizgileri göster' : 'Sadece hareket (çizgileri gizle)'}
+                        className={`shrink-0 flex items-center justify-center w-9 h-9 ml-1 rounded-full transition-all ${hideLines ? 'bg-[#39FF14] text-black' : 'bg-white/5 text-white hover:bg-white/10'}`}
                     >
-                        <Swords size={14} /> RAKİP
+                        {hideLines ? <EyeOff size={14} /> : <Eye size={14} />}
                     </button>
+                </div>
+
+                {/* Araç ipucu — seçili aracın ne yaptığı tek cümle. aria-live ile
+                    ekran okuyucu da araç değişimini duyurur. */}
+                <p aria-live="polite" className="px-1 text-[0.6875rem] leading-snug text-ink-4">
+                    {TOOL_HINTS[tool]}
+                </p>
+
+                <div className="h-px bg-white/10" />
+
+                {/* ── 2. SATIR · TAKIM — kimi düzenliyorum (sol) + geri al/yinele/temizle (sağ) */}
+                <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
                     {/* BİZ / RAKİP — hangi takımı DÜZENLİYORUM (taşıma/isim/çizim yalnız o tarafta) */}
                     <div className="flex items-center rounded-full bg-white/5 border border-white/10 p-0.5 shrink-0">
                         <button
                             onClick={() => { setDrawSide('US'); setSelectedEl(null); setNamingOpp(null); setSelectedSeqBadge(null); }}
                             title="Bizim takımı düzenle"
-                            className={`px-3 py-1.5 rounded-full text-[0.6875rem] font-extrabold tracking-widest transition-all ${drawSide === 'US' ? 'bg-[#39FF14] text-black' : 'text-gray-400 hover:text-white'}`}
+                            className={`px-2.5 py-1.5 rounded-full text-[0.6875rem] font-extrabold tracking-widest transition-all ${drawSide === 'US' ? 'bg-[#39FF14] text-black' : 'text-gray-400 hover:text-white'}`}
                         >BİZ</button>
                         <button
                             onClick={() => { setDrawSide('OPP'); setSelectedEl(null); setHeldSub(null); setSelectedSeqBadge(null); }}
                             title="Rakibi düzenle"
-                            className={`px-3 py-1.5 rounded-full text-[0.6875rem] font-extrabold tracking-widest transition-all ${drawSide === 'OPP' ? 'bg-red-500 text-white' : 'text-gray-400 hover:text-white'}`}
+                            className={`px-2.5 py-1.5 rounded-full text-[0.6875rem] font-extrabold tracking-widest transition-all ${drawSide === 'OPP' ? 'bg-red-500 text-white' : 'text-gray-400 hover:text-white'}`}
                         >RAKİP</button>
                     </div>
-                    {/* Tempo — plana özel oynatma hızı (1-10); dokununca ayar sayfası açılır */}
+                    {/* Rakip takımı sahaya diz (ayna) + rakip düzenleme moduna geç.
+                        Yanındaki anahtarda zaten "RAKİP" yazdığı için burada yazı
+                        yinelenmiyor; kılıç simgesi + title yeterli ve satır sığıyor. */}
                     <button
-                        onClick={() => setShowTempoSheet(true)}
-                        title="Oynatma temposu (plana özel, 1-10)"
-                        className="flex items-center gap-2 px-4 py-2 rounded-full text-xs font-extrabold transition-all whitespace-nowrap shadow-lg bg-blue-500/15 text-blue-300 border border-blue-400/30 hover:bg-blue-500/25"
+                        onClick={placeOpponentTeam}
+                        title="Rakip takımı sahaya diz (mevcut dizilişin aynası)"
+                        aria-label="Rakip takımı sahaya diz (mevcut dizilişin aynası)"
+                        className={`shrink-0 flex items-center justify-center w-9 h-9 rounded-full transition-all ${drawSide === 'OPP' ? 'bg-red-500 text-white' : 'bg-white/5 text-white hover:bg-red-500/20 hover:text-red-400'}`}
                     >
-                        <Gauge size={14} /> TEMPO {normalizeTempo(activeTactic.tempo)}
+                        <Swords size={14} />
                     </button>
+                    {/* Esneyen boşluk — düzenleme yardımcılarını sağa yaslar */}
+                    <div className="flex-1 min-w-2" />
+                    {/* Geri Al / Yinele (S14) + Temizle — yer kazanmak için simge */}
+                    <button
+                        onClick={undo}
+                        disabled={undoStack.length === 0}
+                        title="Geri Al"
+                        aria-label="Geri Al"
+                        className="shrink-0 flex items-center justify-center w-9 h-9 rounded-full bg-white/5 text-white hover:bg-white/10 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                    >
+                        <RotateCw size={14} className="-scale-x-100" />
+                    </button>
+                    <button
+                        onClick={redo}
+                        disabled={redoStack.length === 0}
+                        title="Yinele"
+                        aria-label="Yinele"
+                        className="shrink-0 flex items-center justify-center w-9 h-9 rounded-full bg-white/5 text-white hover:bg-white/10 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                    >
+                        <RotateCw size={14} />
+                    </button>
+                    <button
+                        onClick={() => setShowClearSheet(true)}
+                        title="Temizle"
+                        aria-label="Temizle"
+                        className="shrink-0 flex items-center justify-center w-9 h-9 rounded-full bg-white/5 text-white hover:bg-red-500/20 hover:text-red-500 transition-all"
+                    >
+                        <Trash2 size={14} />
+                    </button>
+                </div>
+
+                <div className="h-px bg-white/10" />
+
+                {/* ── 3. SATIR · OYNATMA — taktiği nasıl izliyorum.
+                    Oynatma sırasında "düzenlemeye dön" butonu da eklendiği için bu
+                    satır en kalabalık hale gelir; dar telefonda (360px) sığması için
+                    aralıklar ve iç boşluklar ölçülü tutuldu. */}
+                <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
                     {/* Oynatma kontrolleri — kapı butonu yok; modül açılışta arka planda yüklenir */}
                     {drawings.length > 0 && (
                         <Suspense fallback={
-                            <div className="flex items-center gap-2 px-4 py-2 rounded-full text-xs font-extrabold bg-white/5 text-gray-400 whitespace-nowrap">
-                                <Loader2 size={14} className="animate-spin" /> Oynatma kontrolleri yükleniyor…
+                            <div className="flex items-center gap-2 px-3 py-2 rounded-full text-xs font-extrabold bg-white/5 text-gray-400 whitespace-nowrap">
+                                <Loader2 size={14} className="animate-spin" /> Oynatma yükleniyor…
                             </div>
                         }>
                             <AnimationToolbar
@@ -2071,39 +2150,16 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                             />
                         </Suspense>
                     )}
-                    <div className="w-px h-8 bg-white/10 mx-1"></div>
-                    {/* Geri Al / Yinele (S14) */}
+                    {/* Tempo — plana özel oynatma hızı (1-10); dokununca ayar sayfası açılır */}
                     <button
-                        onClick={undo}
-                        disabled={undoStack.length === 0}
-                        title="Geri Al"
-                        className="flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-bold bg-white/5 text-white hover:bg-white/10 transition-all whitespace-nowrap disabled:opacity-30 disabled:cursor-not-allowed"
+                        onClick={() => setShowTempoSheet(true)}
+                        title="Oynatma temposu (plana özel, 1-10)"
+                        className="shrink-0 flex items-center gap-1 px-2.5 py-2 rounded-full text-xs font-extrabold transition-all whitespace-nowrap shadow-lg bg-blue-500/15 text-blue-300 border border-blue-400/30 hover:bg-blue-500/25"
                     >
-                        <RotateCw size={14} className="-scale-x-100" /> GERİ AL
-                    </button>
-                    <button
-                        onClick={redo}
-                        disabled={redoStack.length === 0}
-                        title="Yinele"
-                        className="flex items-center justify-center w-9 h-9 rounded-full text-xs font-bold bg-white/5 text-white hover:bg-white/10 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
-                    >
-                        <RotateCw size={14} />
-                    </button>
-                    {/* Sadece Hareket (S12) — çizgileri gizle, yalnız top+oyuncu hareketi görünür */}
-                    <button
-                        onClick={() => setHideLines(v => !v)}
-                        title={hideLines ? 'Çizgileri göster' : 'Sadece hareket (çizgileri gizle)'}
-                        className={`flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-bold transition-all whitespace-nowrap ${hideLines ? 'bg-[#39FF14] text-black' : 'bg-white/5 text-white hover:bg-white/10'}`}
-                    >
-                        {hideLines ? <EyeOff size={14} /> : <Eye size={14} />} SADECE HAREKET
-                    </button>
-                    <button
-                        onClick={() => setShowClearSheet(true)}
-                        className="flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold bg-white/5 text-white hover:bg-red-500/20 hover:text-red-500 transition-all whitespace-nowrap"
-                    >
-                        <Trash2 size={14} /> TEMİZLE
+                        <Gauge size={14} /> TEMPO {normalizeTempo(activeTactic.tempo)}
                     </button>
                 </div>
+            </div>
             </>)}
 
             {/* Bayat kadro uyarısı — takım oyuncusu artık kadroda değilse tek dokunuş eşitle */}
