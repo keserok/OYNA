@@ -1,9 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ChevronLeft } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useImageUpload } from '../../hooks/useImageUpload';
 import { POSITION_LABEL, POSITION_ABBR, PLAY_STYLE_META, GENDER_LABEL } from '../../views/onboarding/onboardingShared';
 import { skillBand, SELF_SKILL_MAX } from '../../utils/skillBand';
+import { BirthdatePicker, AYLAR, parseISODate } from './BirthdatePicker';
 
 // ════════════════════════════════════════════════════════════════════════
 // PROFİLİ DÜZENLE — TEK KAYNAK (tasarım 4c)
@@ -33,12 +34,22 @@ const POSITION_ORDER = ['kaleci', 'defans', 'orta', 'forvet'] as const;
 const GENDER_ORDER = ['kadin', 'erkek'] as const;
 const PLAY_STYLE_ORDER = ['ciddi', 'taktiksel', 'rahat'] as const;
 const GENDER_SYMBOL: Record<(typeof GENDER_ORDER)[number], string> = { kadin: '♀', erkek: '♂' };
-const BIO_MAX = 200;
 /** "Kaydedildi" onayının ekranda kalma süresi (ms) — sonra katman kapanır. */
 const KAYDEDILDI_MS = 900;
 
 export interface ProfileEditValues {
     position: string;
+    /**
+     * Kısa tanıtım.
+     *
+     * BU KATMANDA ARTIK DÜZENLENMİYOR (onaylı tasarımda "03 — Tanıtım"
+     * bölümü yok). Alan yine de arayüzde duruyor ve `initial.bio` OLDUĞU GİBİ
+     * geri veriliyor — kaldırılsaydı `updateProfileBasics` alana `undefined`
+     * yazar ve kayıtlı tanıtımlar SESSİZCE SİLİNİRDİ.
+     *
+     * Tanıtımı halen düzenleyen yer: kaleci/hakem profili (`ServiceProfile`),
+     * pazaryeri kartında orası gösteriliyor.
+     */
     bio: string;
     birthdate: string;
     gender: string;
@@ -80,21 +91,36 @@ const Bolum: React.FC<{ no: string; ad: string; ilk?: boolean }> = ({ no, ad, il
     </div>
 );
 
-/** Seçilebilir kutu (pozisyon / cinsiyet) — seçiliyken birincil dolgu. */
+/**
+ * Seçilebilir kutu (pozisyon / cinsiyet) — seçiliyken BEYAZ dolgu.
+ *
+ * Neden yeşil değil: bu ekranda aynı anda üç ayrı seçim ızgarası var
+ * (cinsiyet, mevki, oyun stili) ve oyun stili çipleri KENDİ kimlik
+ * renklerini taşıyor (kırmızı/turuncu/yeşil). Seçim de yeşil olsaydı
+ * "Rahat" stilinin yeşiliyle "seçili" yeşili aynı ekranda çakışır, hangisi
+ * durum hangisi kimlik ayırt edilemezdi. Beyaz hiçbir kimliğe ait değil;
+ * yalnız "bunu sen seçtin" der. Onaylı tasarımın kararı budur.
+ */
 const secimSinifi = (secili: boolean) =>
     `rounded-[14px] border transition-all active:scale-95 ${
         secili
-            ? 'bg-primary border-primary text-on-primary'
+            ? 'bg-white border-white text-[#0A0E14]'
             : 'bg-surface-1 border-white/[0.08] text-[#F5F3EE]/[0.6] hover:bg-white/[0.05]'
     }`;
+
+/** 'YYYY-MM-DD' → "15 Kasım 1998"; boş/bozuksa null. */
+const tarihMetni = (iso: string): string | null => {
+    const p = parseISODate(iso);
+    return p ? `${p.d} ${AYLAR[p.m1 - 1]} ${p.y}` : null;
+};
 
 export const ProfileEditSheet: React.FC<ProfileEditSheetProps> = ({
     open, initial, saving, onSave, onClose, title, name, selfSkillEditable = true, errorText,
 }) => {
     const [photoError, setPhotoError] = useState<string | null>(null);
     const [pos, setPos] = useState(initial.position);
-    const [bio, setBio] = useState(initial.bio);
     const [avatar, setAvatar] = useState(initial.avatarUrl);
+    const [tarihAcik, setTarihAcik] = useState(false);
     const [birthdate, setBirthdate] = useState(initial.birthdate);
     const [gender, setGender] = useState(initial.gender);
     const [style, setStyle] = useState(initial.playStyle);
@@ -111,8 +137,8 @@ export const ProfileEditSheet: React.FC<ProfileEditSheetProps> = ({
         setPhotoError(null);
         setKaydedildi(false);
         setAvatarBroken(false);
+        setTarihAcik(false);
         setPos(initial.position);
-        setBio(initial.bio);
         setAvatar(initial.avatarUrl);
         setBirthdate(initial.birthdate);
         setGender(initial.gender);
@@ -147,7 +173,11 @@ export const ProfileEditSheet: React.FC<ProfileEditSheetProps> = ({
         if (saving || uploading || kaydedildi) return;
         try {
             await onSave({
-                position: pos.trim(), bio: bio.trim(), birthdate,
+                position: pos.trim(),
+                // Tanıtım bu katmanda düzenlenmiyor; gelen değer OLDUĞU GİBİ
+                // geri gider. Atlanırsa kayıtlı tanıtım sessizce silinirdi.
+                bio: initial.bio,
+                birthdate,
                 gender, playStyle: style, avatarUrl: avatar, selfSkill,
             });
         } catch {
@@ -180,7 +210,12 @@ export const ProfileEditSheet: React.FC<ProfileEditSheetProps> = ({
                 >
                     <ChevronLeft size={18} />
                 </button>
-                <span className="flex-1 min-w-0 text-[1.125rem] font-semibold truncate">{title || 'Profili Düzenle'}</span>
+                {/* Başlık küçük ve harf aralıklı — tasarım kararı: ekranın
+                    kendisi zaten "düzenleme" moduna girmiş durumda, büyük bir
+                    başlık dikkati içerikten alıyordu. */}
+                <span className="flex-1 min-w-0 text-[0.6875rem] tracking-[0.14em] text-[#F5F3EE]/[0.55] uppercase truncate">
+                    {title || 'Profili Düzenle'}
+                </span>
             </div>
 
             {/* ═══ GÖVDE ═══ */}
@@ -207,7 +242,10 @@ export const ProfileEditSheet: React.FC<ProfileEditSheetProps> = ({
                             type="button"
                             onClick={() => fileInputRef.current?.click()}
                             disabled={uploading}
-                            className="text-[0.6875rem] italic text-primary hover:underline disabled:opacity-60"
+                            /* Beyaz + alt çizgi (onaylı tasarım). Yeşil değil:
+                               bu ekranda yeşil "birincil eylem" anlamı taşımıyor
+                               ve seviye ızgarasındaki yeşil bantla karışıyordu. */
+                            className="text-[0.6875rem] text-[#F5F3EE] border-b border-white/[0.35] disabled:opacity-60"
                         >
                             {uploading ? 'Yükleniyor…' : 'Fotoğrafı değiştir'}
                         </button>
@@ -220,17 +258,22 @@ export const ProfileEditSheet: React.FC<ProfileEditSheetProps> = ({
                     </p>
                 )}
 
-                <div className="mt-3.5 bg-surface-1 border border-white/[0.08] rounded-[14px] px-4 py-2.5 flex items-center justify-between gap-3">
-                    <label htmlFor="pe-birthdate" className="text-xs italic text-[#F5F3EE]/[0.6] shrink-0">Doğum tarihi</label>
-                    <input
-                        id="pe-birthdate"
-                        type="date"
-                        value={birthdate}
-                        onChange={(e) => setBirthdate(e.target.value)}
-                        max={new Date().toISOString().slice(0, 10)}
-                        className="bg-transparent border-none text-sm text-[#F5F3EE] text-right outline-none [color-scheme:dark] min-w-0"
-                    />
-                </div>
+                {/* Doğum tarihi — yerleşik `<input type="date">` KALDIRILDI.
+                    O girdi her platformda başka bir şey çiziyordu ve doğum
+                    tarihi için en kötüsü takvimdi: kullanıcı 1998'e ulaşmak
+                    için aylarca geri basıyordu. Yerine üç tekerlekli kendi
+                    seçicimiz açılıyor (BirthdatePicker). */}
+                <button
+                    type="button"
+                    onClick={() => setTarihAcik(true)}
+                    className="mt-3.5 w-full bg-surface-1 border border-white/[0.08] rounded-[14px] px-4 py-2.5 min-h-12 flex items-center justify-between gap-3 hover:bg-white/[0.05] transition-colors active:scale-[0.99]"
+                >
+                    <span className="text-xs italic text-[#F5F3EE]/[0.6] shrink-0">Doğum tarihi</span>
+                    <span className={`flex items-center gap-2.5 text-sm ${birthdate ? 'text-[#F5F3EE]' : 'text-[#F5F3EE]/[0.45]'}`}>
+                        {tarihMetni(birthdate) ?? 'Ekle'}
+                        <ChevronRight size={15} className="text-[#F5F3EE]/[0.5] shrink-0" />
+                    </span>
+                </button>
 
                 <div className="mt-2.5 flex gap-2">
                     {GENDER_ORDER.map((g) => {
@@ -372,20 +415,11 @@ export const ProfileEditSheet: React.FC<ProfileEditSheetProps> = ({
                     })}
                 </div>
 
-                {/* ─── 03 — TANITIM ─── */}
-                <Bolum no="03" ad="Tanıtım" />
-                <div className="mt-3.5 bg-surface-1 border border-white/[0.08] rounded-[14px] px-4 py-3">
-                    <textarea
-                        value={bio}
-                        onChange={(e) => setBio(e.target.value)}
-                        rows={3}
-                        maxLength={BIO_MAX}
-                        placeholder="Kendini kısaca tanıt…"
-                        aria-label="Kısa tanıtım"
-                        className="w-full bg-transparent border-none resize-none outline-none italic text-sm leading-[1.55] text-[#F5F3EE]/[0.85] placeholder:text-[#F5F3EE]/[0.4] p-0"
-                    />
-                    <p className="mt-1.5 text-[0.625rem] text-[#F5F3EE]/[0.4] text-right">{bio.length}/{BIO_MAX}</p>
-                </div>
+                {/* "03 — Tanıtım" bölümü onaylı tasarımla KALDIRILDI.
+                    Oyuncu profilinde tanıtım artık hiçbir yerde gösterilmiyordu;
+                    yalnız kaleci/hakem kartında görünüyor ve orası kendi
+                    ekranından (ServiceProfile) düzenleniyor. Kayıtlı değerler
+                    silinmiyor — `kaydet` içinde olduğu gibi geri gönderiliyor. */}
             </div>
 
             {/* ═══ SABİT KAYDET ÇUBUĞU ═══ */}
@@ -395,19 +429,33 @@ export const ProfileEditSheet: React.FC<ProfileEditSheetProps> = ({
                         {errorText}
                     </p>
                 )}
+                {/* Kaydet BEYAZ (onaylı tasarım) — seçim durumuyla aynı dil.
+                    Başarı anında kısaca yeşile döner: "Kaydedildi" bir DURUM
+                    bildirimidir, rengi de durum dilinden gelir. */}
                 <button
                     type="button"
                     onClick={() => void kaydet()}
                     disabled={kaydetKilitli}
-                    className={`w-full h-[50px] rounded-full text-[0.8125rem] font-bold text-on-primary transition-all active:scale-95 disabled:active:scale-100 ${
+                    className={`w-full h-[50px] rounded-full text-[0.8125rem] font-semibold transition-all active:scale-95 disabled:active:scale-100 ${
                         kaydedildi
-                            ? 'bg-[#10b981] shadow-[0_0_24px_rgba(16,185,129,0.3)]'
-                            : 'bg-primary shadow-[0_0_24px_rgba(57,255,20,0.25)] disabled:opacity-60'
+                            ? 'bg-[#10b981] text-[#0A0E14] shadow-[0_0_24px_rgba(16,185,129,0.3)]'
+                            : 'bg-white text-[#0A0E14] disabled:opacity-60'
                     }`}
                 >
                     {kaydedildi ? 'Kaydedildi' : saving ? 'Kaydediliyor…' : 'Kaydet'}
                 </button>
             </div>
+
+            {/* ═══ DOĞUM TARİHİ SEÇİCİ ═══
+                Katmanın ÜSTÜNDE (z-270) açılır; seçilen tarih yalnız yerel
+                duruma yazılır — asıl kayıt yine alttaki Kaydet düğmesinden
+                geçer, yani kullanıcı vazgeçebilir. */}
+            <BirthdatePicker
+                open={tarihAcik}
+                value={birthdate}
+                onCancel={() => setTarihAcik(false)}
+                onConfirm={(iso) => { setBirthdate(iso); setTarihAcik(false); }}
+            />
         </div>,
         document.body
     );

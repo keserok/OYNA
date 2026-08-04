@@ -93,13 +93,12 @@ describe('ProfileEditSheet — kayıt sözleşmesi', () => {
     fireEvent.click(screen.getByRole('button', { name: /Kadın/ }));
     fireEvent.click(seviyeDugmesi(6));
     fireEvent.click(screen.getByRole('button', { name: 'Ciddi' }));
-    fireEvent.change(screen.getByLabelText('Kısa tanıtım'), { target: { value: 'Yeni tanıtım' } });
     fireEvent.click(screen.getByRole('button', { name: 'Kaydet' }));
 
     await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
     expect(onSave.mock.calls[0][0]).toMatchObject({
       position: 'Kaleci', gender: 'kadin', playStyle: 'ciddi',
-      selfSkill: 6, bio: 'Yeni tanıtım', birthdate: '1999-04-12',
+      selfSkill: 6, birthdate: '1999-04-12',
     });
   });
 
@@ -158,14 +157,43 @@ describe('ProfileEditSheet — seviye beyanı', () => {
   });
 });
 
-describe('ProfileEditSheet — tanıtım sayacı', () => {
-  it('yazdikca sayac guncellenir ve 200 karakterle sinirlidir', () => {
-    ciz({ initial: { ...TEMEL, bio: '' } });
-    const alan = screen.getByLabelText('Kısa tanıtım') as HTMLTextAreaElement;
-    expect(screen.getByText('0/200')).toBeInTheDocument();
-    fireEvent.change(alan, { target: { value: 'abcde' } });
-    expect(screen.getByText('5/200')).toBeInTheDocument();
-    expect(alan.maxLength).toBe(200);
+describe('ProfileEditSheet — tanıtım artık burada düzenlenmiyor', () => {
+  // Onaylı tasarım "03 — Tanıtım" bölümünü kaldırdı: oyuncu profilinde
+  // tanıtım hiçbir yerde gösterilmiyordu. Yalnız kaleci/hakem kartında
+  // görünüyor ve orası kendi ekranından (ServiceProfile) düzenleniyor.
+  it('tanıtım alanı ÇİZİLMİYOR', () => {
+    ciz({ initial: { ...TEMEL, bio: 'eski tanıtım' } });
+    expect(screen.queryByLabelText('Kısa tanıtım')).not.toBeInTheDocument();
+    expect(screen.queryByText('03 — Tanıtım')).not.toBeInTheDocument();
+  });
+
+  it('KAYITLI tanıtım silinmiyor — olduğu gibi geri gönderiliyor', () => {
+    // ASIL KURAL BU. Alan arayüzden kalkarken payload'dan da düşseydi
+    // `updateProfileBasics` bio'ya `undefined` yazar ve kullanıcının
+    // kayıtlı tanıtımı ilk kayıtta sessizce silinirdi.
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    ciz({ onSave, initial: { ...TEMEL, bio: 'eski tanıtım' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Kaydet' }));
+    return waitFor(() => {
+      expect(onSave).toHaveBeenCalledTimes(1);
+      expect(onSave.mock.calls[0][0].bio).toBe('eski tanıtım');
+    });
+  });
+});
+
+describe('ProfileEditSheet — doğum tarihi', () => {
+  it('yerleşik tarih girdisi YOK, satır tekerlek seçiciyi açıyor', () => {
+    ciz({ initial: { ...TEMEL, birthdate: '1999-04-12' } });
+    // Eski `<input type="date">` her platformda başka bir şey çiziyordu.
+    expect(document.querySelector('input[type="date"]')).toBeNull();
+    // Satır, tarihi Türkçe okunur biçimde gösterir.
+    const satir = screen.getByRole('button', { name: /Doğum tarihi/ });
+    expect(satir.textContent).toContain('12 Nisan 1999');
+  });
+
+  it('tarih yokken satır "Ekle" der', () => {
+    ciz({ initial: { ...TEMEL, birthdate: '' } });
+    expect(screen.getByRole('button', { name: /Doğum tarihi/ }).textContent).toContain('Ekle');
   });
 });
 

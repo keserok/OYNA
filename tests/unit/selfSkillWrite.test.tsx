@@ -42,6 +42,10 @@ vi.mock('framer-motion', () => ({
     },
   }),
   AnimatePresence: ({ children }: any) => children,
+  // ProfileEditSheet artık doğum tarihi seçicisini içeriyor; o da
+  // `useLowMotion` → framer-motion'ın `useReducedMotion` kancasını kullanıyor.
+  // Kısmi mock'ta bu dışa aktarım yoksa bileşen hiç kurulamıyor.
+  useReducedMotion: () => false,
 }));
 
 vi.mock('../../hooks/useImageUpload', () => ({
