@@ -342,6 +342,32 @@ Yapı taşı sayısı 15 → **17**, kontrol sayısı 29 → **32**.
 
 ---
 
+## SECURITY & FINANCIAL INFRASTRUCTURE — P0'lar
+
+> **Analiz tabanı:** dal `d16659c` + canlı (K-14).
+> **Rolün sorusu:** *"Kötü niyetli biri para çalabilir mi, başkasının bilgisine ulaşabilir mi?"*
+> **Yöntem:** varsayım değil — canlıda gerçek saldırı denemeleri yapıldı, hepsi geri alındı.
+
+| # | P0 | Kanıt | Durum |
+|---|---|---|---|
+| SEC-1 | **`profiles.wallet` sütununu kullanıcı kendisi değiştirebiliyor.** Canlıda denendi: `authenticated` rolünde 0 → 999999 yazıldı (geri alındı). İki koruma tetikleyicisi de bu sütunu saymıyor. **Bugün para çalınamaz** — sütun 33 profilin 33'ünde 0, hiçbir kod okumuyor, gerçek bakiye `wallet_balance`. P0 sayılma sebebi: koruma tasarımı bu sütun sınıfına zaten karar vermiş, liste eksik kalmış; adı "wallet" olduğu için ileride bakiye sanılması çok olası. | canlı test + `protect_profile_columns` / `protect_profile_sensitive_fields` | 🔴 AÇIK · **S-1** |
+
+## SECURITY — P1/P2 özeti
+
+**P1:** Altı tabloda RLS açık ama kural yok; bugün RLS koruyor (anon testi: 0 satır) ama arkalarındaki `authenticated` INSERT/UPDATE/DELETE yetkileri duruyor — tek bir izin verici kural eklenirse canlanır (`password_reset_codes` bunlardan biri) · `public_profiles` görünümü SECURITY DEFINER olduğu için altındaki RLS devre dışı, tek koruma bir `WHERE` satırı; `full_name` (gerçek ad) her üyeye açık (**S-2**) · `pay_public_match_deposit` tutarı istemciden alıyor — başkasının parası harcanamıyor (alt fonksiyon koruyor) ve uygulama bunu hiç çağırmıyor, kalan risk yalnız görsel "ÖDENDİ" rozeti · 16 fonksiyon `anon`'a EXECUTE açık, hepsi içeriden korumalı (canlıda denendi: UNAUTHORIZED) ama gereksiz yüzey.
+
+**P2:** Sızmış parola koruması kapalı (**S-3**) · `_saat_dilimi_duzeltme_yedek` geçici tablosu duruyor · `cube`/`earthdistance`/`btree_gist` `public` şemasında — taşımak coğrafi indeksi bozabilir, deneme ortamına (SRE-4) bağlı.
+
+## SECURITY — güçlü yanlar
+
+**854 fonksiyonda gömülü gizli anahtar: 0** · ödeme geri dönüşü iyzico'ya imzalı sorguyla **kaynağından** doğrulanıyor, tutar geri dönüşten alınmıyor · `apply_booking_payment` idempotent (aynı ödeme iki kez işlenmez) · `process_match_refund` iade tutarını defterle **birebir** doğruluyor · **canlıda denendi ve reddedildi:** `role='admin'`, `wallet_balance=999999`, `is_banned`, `is_verified` · RLS kapalı tablo **0** · 8 para değişmezi temiz · depoda sızmış anahtar yok (koddaki tek JWT yayınlanabilir anon anahtarı) · 117 yönetici denetim kaydı.
+
+## SECURITY — kapsam dışı bırakılanlar
+
+Sızma testi (gerçek saldırı simülasyonu) ve iyzico hesabının kendi güvenlik ayarları **incelenmedi** — ikisi de lansman öncesi ayrı birer iştir.
+
+---
+
 # BÖLÜM II — CPO BULGULARININ GÜNCEL DURUMU
 
 ## P0'lar
@@ -642,4 +668,4 @@ belirleyicisidir.
 
 ---
 
-*Son güncelleme: 4 Ağustos 2026 · CPO + CTO + Mimar + Kıdemli Yazılım Mühendisi + SRE turları işlendi*
+*Son güncelleme: 4 Ağustos 2026 · CPO + CTO + Mimar + Kıdemli Yazılım Mühendisi + SRE + Güvenlik turları işlendi*
