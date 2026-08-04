@@ -7,6 +7,7 @@ import {
   LocateFixed, Loader2, Navigation2, MapPinOff, Bell, Send, Check, Plus,
 } from 'lucide-react';
 import { Pitch, Court } from '../types';
+import { SCREEN } from '../ui/labels';
 import { useAppStore } from '../store';
 import MapGL, { Marker as MapMarker, Source as MapSource, Layer as MapLayer, AttributionControl, type MapRef } from 'react-map-gl/maplibre';
 import 'maplibre-gl/dist/maplibre-gl.css';
@@ -1240,7 +1241,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
               </button>
             )}
             <h1 className="mt-1 text-[2rem] font-extrabold italic uppercase tracking-[-0.04em] leading-[0.9]">
-              Sahalar
+              {SCREEN.pitchDiscovery}
             </h1>
           </div>
 

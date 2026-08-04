@@ -41,6 +41,9 @@ Kullanıcı / tesis / maç / sağlayıcı yönetimi:
 ### YALNIZ ADMIN / SUPER_ADMIN (allowed=[])
 Platform ayarları ve toplu iletişim:
 - `admin_update_settings`, `admin_set_config`, `admin_set_feature_flag`, `admin_update_texts`, `admin_broadcast_notification`
+- `admin_upsert_home_banner`, `admin_delete_home_banner` — ana sayfa bant görselinin
+  bölgeye (il/ilçe) göre atanması. `admin_update_texts` ile aynı sınıfta: bir
+  BÖLGEDEKİ HERKESİN gördüğü sunum içeriği.
 
 ### YALNIZ SUPER_ADMIN
 - `admin_set_platform_role`, `admin_revoke_platform_role` (son SUPER_ADMIN düşürülemez, self-revoke yasak, SUPER_ADMIN atama yalnız SUPER_ADMIN)
@@ -51,6 +54,19 @@ Platform ayarları ve toplu iletişim:
 - `admin_fetch_profiles` → email/telefon **maskeli** döner; arama ham kolonda çalışır.
 - `admin_reveal_pii(user, field)` → ham değeri döndürür **ve** aynı çağrıda `PII_REVEAL` audit'i yazar (log düşmeden değer dönmez).
 - `admin_start_ghost` / `admin_end_ghost` → `admin_ghost_sessions` + `GHOST_START`/`GHOST_END` audit.
+
+## Admin OLMAYAN ama kapılı RPC'ler
+
+Bunlar `require_admin_role` kullanmaz; kapıları başka bir sahiplik kuralıdır.
+Burada duruyorlar ki "kapısız" sanılmasınlar.
+
+- `record_image_variants(...)` — yükleme anında üretilen görsel boylarını kaydeder.
+  Kapı: çağıran, ilgili `storage.objects` nesnesinin **sahibi** olmalıdır
+  (`owner = auth.uid()`); admin muaftır. Kapı olmasaydı giriş yapmış herhangi
+  bir kullanıcı, başkasının görselinin varyant adreslerini kendi yüklediğiyle
+  değiştirebilirdi — ekranda görünen fotoğrafı sessizce değiştirmek.
+- `home_banner_for_region(...)` — salt okuma, `anon` dahil herkese açık.
+  Ana sayfa giriş yapılmadan da çizilebilmeli.
 
 ## Bakım kuralları
 

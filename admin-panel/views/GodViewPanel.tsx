@@ -38,6 +38,7 @@ const NotificationTemplatesPage = lazy(() => import('./pages/NotificationTemplat
 const OwnerAccountsPage = lazy(() => import('./pages/OwnerAccountsPage').then(m => ({ default: m.OwnerAccountsPage })));
 const DeletionQueuePage = lazy(() => import('./pages/DeletionQueuePage').then(m => ({ default: m.DeletionQueuePage })));
 const RegionCoveragePage = lazy(() => import('./pages/RegionCoveragePage').then(m => ({ default: m.RegionCoveragePage })));
+const HomeBannersPage = lazy(() => import('./pages/HomeBannersPage').then(m => ({ default: m.HomeBannersPage })));
 const SupportTicketsPage = lazy(() => import('./pages/SupportTicketsPage').then(m => ({ default: m.SupportTicketsPage })));
 
 export type GodViewSubRoute =
@@ -47,7 +48,7 @@ export type GodViewSubRoute =
   | 'SERVICE_DISPUTES' | 'MODERATION' | 'DELETION_QUEUE'
   | 'OWNER_ACCOUNTS' | 'AUDIT_LOG' | 'FINANCE' | 'COMMISSION' | 'DISPUTES' | 'PROMO_CODES' | 'ACL'
   | 'SYSTEM_PARAMS' | 'VERIFICATION' | 'NOTIFICATION_TEMPLATES' | 'REGION_COVERAGE'
-  | 'GUARDIAN_CONSENTS' | 'SUPPORT_TICKETS';
+  | 'GUARDIAN_CONSENTS' | 'SUPPORT_TICKETS' | 'HOME_BANNERS';
 
 export type AdminNavigateFn = (route: GodViewSubRoute, params?: AdminNavParams) => void;
 
@@ -196,6 +197,8 @@ const GodViewPanelInner: React.FC<Props> = ({
                 return <GuardianConsentsPage />;
             case 'REGION_COVERAGE':
                 return <RegionCoveragePage />;
+            case 'HOME_BANNERS':
+                return <HomeBannersPage />;
             case 'SUPPORT_TICKETS':
                 return <SupportTicketsPage />;
             default:

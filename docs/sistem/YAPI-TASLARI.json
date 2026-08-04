@@ -1,7 +1,7 @@
 {
   "$aciklama": "OYNA sisteminin TEMEL YAPI TAŞLARI. Bu dosya makine tarafından okunur; SISTEM-HARITASI.md bundan üretilir. ELLE İKİ YERDE TUTMA — yalnız burayı düzenle, sonra 'npm run sistem:harita' çalıştır.",
   "$surum": 1,
-  "$guncelleme": "2026-08-04 (P-0..P-5, P-7; CTO 5/5; PE-1; SRE-1 ve SRE-3 kapandi -> B16 KURTARMA + B17 GORUNURLUK dogdu)",
+  "$guncelleme": "2026-08-04 (ana sayfa yeniden tasarimi: bolge bant gorseli + gorsel varyantlari B07/B09'a baglandi)",
   "$risk_seviyeleri": {
     "KRITIK": "Yanlış giderse para kaybolur, kimlik ele geçer veya veri sızar. Değişiklik CEO onayı ister.",
     "YUKSEK": "Yanlış giderse kullanıcı zarar görür ve geri alması zordur. Değişiklik tam doğrulama ister.",
@@ -268,13 +268,19 @@
         "utils/geo.ts",
         "utils/regionResolver.ts",
         "utils/orduData.ts",
-        "views/MatchDiscovery.tsx"
+        "views/MatchDiscovery.tsx",
+        "admin-panel/views/pages/HomeBannersPage.tsx",
+        "supabase/migrations/20260905000000_ana_sayfa_bolge_gorseli_ve_gorsel_varyantlari.sql"
       ],
       "db_nesneleri": [
         "region_coverage",
         "pitches_geo_idx",
         "get_nearby_matches",
-        "get_nearby_pitches"
+        "get_nearby_pitches",
+        "home_banners",
+        "home_banner_for_region()",
+        "admin_upsert_home_banner()",
+        "admin_delete_home_banner()"
       ],
       "kontroller": [
         "K-KAPSAMA-1"
@@ -338,7 +344,11 @@
         "components/common/VirtualList.tsx",
         "utils/imageCompression.ts",
         "utils/imageTransform.ts",
-        "services/pitchMediaService.ts"
+        "services/pitchMediaService.ts",
+        "services/dashboardHomeService.ts",
+        "hooks/useDashboardHome.ts",
+        "utils/imageVariants.ts",
+        "hooks/useImageUpload.ts"
       ],
       "db_nesneleri": [
         "admin_dashboard_stats",
@@ -346,7 +356,9 @@
         "get_nearby_pitches",
         "pg_matviews",
         "pitches_geo_idx",
-        "supabase_realtime"
+        "supabase_realtime",
+        "image_variants",
+        "record_image_variants()"
       ],
       "kontroller": [
         "K-YUK-1",

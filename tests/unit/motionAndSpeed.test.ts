@@ -82,7 +82,11 @@ describe('düşük hareket kararı — yalnız sistem tercihi', () => {
 });
 
 describe('Ana Sayfa döngüleri', () => {
-  const dash = oku('views/Dashboard.tsx');
+  // Ana sayfa iki dosyaya bölündü: ekranın kendisi ve ortak parçaları
+  // (`components/dashboard/HomePieces.tsx` — iskelet, aksan çizgisi, basma
+  // kabı, çok boylu fotoğraf). Kural İKİSİNİ birden bağlar; yoksa hareket
+  // parça dosyasına taşınarak kuraldan kaçabilirdi.
+  const dash = oku('views/Dashboard.tsx') + '\n' + oku('components/dashboard/HomePieces.tsx');
   const sonsuzSatirlar = dash.split('\n')
     .map((l, i) => ({ l, n: i + 1 }))
     .filter(({ l }) => l.includes('repeat: Infinity'));

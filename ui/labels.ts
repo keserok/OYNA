@@ -15,8 +15,13 @@ export const SCREEN = {
   dashboard: 'Ana Sayfa',
   matchDiscovery: 'Top Oyna',
   myMatches: 'Maçlarım',
-  /** Kullanıcı kararı: "Sahalar" kanon; eski "Saha Vitrini" adı kaldırıldı. */
-  pitchDiscovery: 'Sahalar',
+  /**
+   * Kullanıcı kararı (2026-08, onaylı ana sayfa tasarımı): ekranın adı
+   * "Saha Kirala". Önceki adlar sırasıyla "Saha Vitrini" → "Sahalar" idi;
+   * ikisi de kaldırıldı. Yeni ad EYLEMİ söylüyor — kullanıcı "sahaları
+   * listelemek" değil "saha kiralamak" için giriyor.
+   */
+  pitchDiscovery: 'Saha Kirala',
   profile: 'Profil',
   social: 'Sosyal',
   messages: 'Mesajlar',

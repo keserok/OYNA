@@ -121,16 +121,22 @@ describe('ekran adı tekliği', () => {
     expect(TAB_IDS.length).toBe(5);
   });
 
-  it('"Saha Vitrini" adı kalmadı — ekranın tek adı "Sahalar"', () => {
-    expect(SCREEN.pitchDiscovery).toBe('Sahalar');
+  it('eski adlar kalmadı — ekranın tek adı "Saha Kirala"', () => {
+    // Ad geçmişi: "Saha Vitrini" → "Sahalar" → "Saha Kirala" (onaylı ana
+    // sayfa tasarımı). Yeni ad eylemi söyler; kullanıcı listelemeye değil
+    // kiralamaya giriyor. Eskilerin ikisi de kaynakta kalmamalı.
+    expect(SCREEN.pitchDiscovery).toBe('Saha Kirala');
     const ihlal = kaynaklar().filter((y) => oku(y).includes('Saha Vitrini'));
     expect(ihlal, 'ekranın ikinci adı hâlâ duruyor').toEqual([]);
   });
 
-  it('metin içi atıflar da sekme adını kullanıyor', () => {
+  it('metin içi atıflar sabitten türer, elle yazılmaz', () => {
+    // Drift koruması: atıf metni SCREEN'den şablonla kurulmalı. Elle yazılan
+    // ad, sabit değişince geride kalır — bu ekranda tam olarak iki kez oldu.
     const s = oku('views/MyMatchesHub.tsx');
     expect(s).not.toContain("Saha Vitrini'nden");
-    expect(s).toContain("Sahalar'dan");
+    expect(s).not.toContain("Sahalar'dan");
+    expect(s).toContain('${SCREEN.pitchDiscovery}\'dan');
   });
 });
 

@@ -3,6 +3,7 @@ import {
   Zap, MapPin, Users, Shield, Scale, Megaphone, CreditCard, Settings, Type,
   Radio, Swords, Lock, Globe, Trophy, ScrollText, ShieldCheck, AlertOctagon,
   SlidersHorizontal, MessageSquare, Building2, BadgeCheck, UserX, Baby, LifeBuoy,
+  Image as ImageIcon,
 } from 'lucide-react';
 import type { GodViewSubRoute } from '../GodViewPanel';
 
@@ -68,6 +69,7 @@ export const ADMIN_ROUTES: AdminRouteDef[] = [
   { route: 'HAKEMLER', title: 'Hakemler', label: 'Hakemler', description: 'Hakem profilleri, seviye ve maç geçmişi.', group: 'Operasyon', sidebarGroup: 'OPERASYON', accent: 'yellow', icon: Scale, inPalette: true, badge: 'referees' },
   { route: 'TAKIMLAR', title: 'Takımlar', label: 'Takımlar', description: 'Platform takım kayıtları ve kaptan bilgileri.', group: 'Operasyon', sidebarGroup: 'OPERASYON', accent: 'blue', icon: Users, inPalette: true },
   { route: 'REGION_COVERAGE', title: 'Bölge Kapsama', label: 'Bölge Kapsama', description: 'Hizmet kapsamındaki il/ilçeler ve harita sınırları.', group: 'Operasyon', sidebarGroup: 'OPERASYON', accent: 'yellow', icon: Globe, inPalette: true },
+  { route: 'HOME_BANNERS', title: 'Ana Sayfa Görseli', label: 'Ana Sayfa Görseli', description: 'Oyuncunun ana sayfasındaki “Saha Kirala” bandının bölgeye göre değişen fotoğrafı.', group: 'Operasyon', sidebarGroup: 'OPERASYON', accent: 'green', icon: ImageIcon, inPalette: true },
 
   // Doğrulama Merkezi'nin alt sekmeleri — sidebar'da yok, palette'ten erişilir.
   { route: 'PENDING_VERIFICATIONS', title: 'Onay Bekleyenler', label: 'Onay Bekleyenler', description: 'Kaleci ve hakem doğrulama talepleri.', group: 'Operasyon', sidebarGroup: null, accent: 'yellow', icon: BadgeCheck, inPalette: true },

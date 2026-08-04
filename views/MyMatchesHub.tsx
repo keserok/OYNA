@@ -8,6 +8,7 @@ import {
 import { AppView, type MatchListing } from '../types';
 import { useAppStore } from '../store';
 import { supabase } from '../supabaseClient';
+import { SCREEN } from '../ui/labels';
 import { useMyAgenda, type MyAgendaItem } from '../hooks/useMyAgenda';
 import { parseMatchDate } from '../hooks/useMyMatches';
 import { useCountdown } from '../hooks/useCountdown';
@@ -740,7 +741,7 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onNavigate }) => {
                       {segment === 'BOOKINGS' ? 'Yaklaşan Rezervasyon Yok' : 'Yaklaşan Maç Yok'}
                     </p>
                     <p className="mt-1.5 text-xs text-ink-4">
-                      {segment === 'BOOKINGS' ? "Sahalar'dan yeni bir rezervasyon oluşturabilirsin." : 'Top Oyna ekranından açık maçlara katılabilirsin.'}
+                      {segment === 'BOOKINGS' ? `${SCREEN.pitchDiscovery}'dan yeni bir rezervasyon oluşturabilirsin.` : `${SCREEN.matchDiscovery} ekranından açık maçlara katılabilirsin.`}
                     </p>
                   </div>
                 </motion.div>

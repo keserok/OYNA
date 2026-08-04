@@ -5,7 +5,7 @@ import { BottomNav, TAB_IDS } from '../../../components/BottomNav';
 
 // IP-14 · Kullanıcı kararı: alt menünün beş yuvası yeniden dağıtıldı.
 //
-//   Ana Sayfa · Top Oyna · **Maçlarım (orta tuş)** · Sahalar · Profil
+//   Ana Sayfa · Top Oyna · **Maçlarım (orta tuş)** · Saha Kirala · Profil
 //
 // Gerekçe: bilet, kapora ödemesi ve maç değerlendirmesi Maçlarım'dan geçiyor —
 // en kolay erişilen yuvayı o hak ediyor. SOSYAL sekmeden çıktı; girişi Profil
@@ -16,7 +16,7 @@ describe('BottomNav — beş yuva', () => {
   it('beş sekmeyi de çiziyor', () => {
     render(<BottomNav currentView="DASHBOARD" onNavigate={vi.fn()} />);
     expect(screen.getByRole('navigation')).toBeInTheDocument();
-    for (const etiket of ['Ana Sayfa', 'Top Oyna', 'Maçlarım', 'Sahalar', 'Profil']) {
+    for (const etiket of ['Ana Sayfa', 'Top Oyna', 'Maçlarım', 'Saha Kirala', 'Profil']) {
       expect(screen.getByText(etiket)).toBeInTheDocument();
     }
   });
