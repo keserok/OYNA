@@ -81,12 +81,11 @@ Aktarım yaparken sınır bu listedir. Bunların dışına çıkan bir değişik
 | `views/studio/pitchGeometry.ts` | Çizgi ve sıra hesapları |
 | `views/studio/layering.ts` | BİZ/RAKİP katman kuralları |
 | `views/studio/perf.ts` | Zayıf cihazda süsü kısma |
-| `views/studio/sampleTactic.ts` | "Örnek taktiği yükle" içeriği |
 | `views/studio/shareImage.ts` | Taktik görseli üretme/indirme |
 | `views/studio/tacticLibrary.ts` | Taktik kütüphanesi süzme/sıralama |
 | `services/tacticSocialService.ts` | Taktiğin kaydı, paylaşımı, onayı |
 | `tests/unit/components/Studio*.test.tsx` | Stüdyo birim testleri |
-| `tests/unit/studio*.test.ts`, `tests/unit/sampleTactic.test.ts`, `tests/unit/tacticLibrary.test.ts` | Stüdyo yardımcı testleri |
+| `tests/unit/studio*.test.ts`, `tests/unit/tacticLibrary.test.ts` | Stüdyo yardımcı testleri |
 | `tests/e2e/studio.hermetic.spec.ts` | Uçtan uca stüdyo testi |
 
 > Not: `views/Studio.tsx`, sistem haritasında **B15 · SOSYAL** yapı taşına
@@ -96,6 +95,78 @@ Aktarım yaparken sınır bu listedir. Bunların dışına çıkan bir değişik
 ---
 
 ## 5. Kayıtlar
+
+### 2026-08-04 · Başlık sadeleşti, örnek taktik kalktı, koşu kuralı ve seçerek temizleme geldi
+
+- **Ne istendi:** "Üst başlıktaki plan/2-3-1 kısımlarını sil, sadece Stüdyo yaz.
+  Örnek taktiği sil. Koşular oyuncudan çekilmediyse oluşmasın, sahanın üstünde
+  kırmızı bildirim geçsin. Sıralama sayıları sol tarafta kayboluyor, saha içinde
+  kalsın. Temizlemede tek tek seçip silinebilsin."
+
+- **Ne yapıldı:**
+  - **Başlık:** Artık sabit **"Stüdyo"** yazıyor. Plan adı ve "2-3-1 · 7v7"
+    satırı başlıktan kalktı. Plan adını değiştirme yolu duruyor: plan kartındaki
+    kalem simgesi ya da karta çift dokunma.
+  - **Örnek taktik tamamen kaldırıldı:** boş tahtadaki "Örnek taktiği yükle"
+    daveti, taktiği üreten dosya ve testleri silindi. Yerine başka bir öneri
+    konmadı — tanıtım ekranı zaten araçların tamamını anlatıyor.
+  - **Koşu kuralı:** KOŞU artık bir **oyuncudan başlamak zorunda**. Boş sahadan
+    çizilmeye çalışılırsa çizgi **oluşmaz** ve sahanın hemen üstünde kırmızı
+    uyarı belirir. Doğru bir koşu çizilince uyarı kalkar. Uyarı bir stüdyo
+    oturumunda **en fazla iki kez** gösterilir — kural yine geçerlidir, yalnız
+    mesaj susar. KOŞU aracından çıkılınca da uyarı kalkar (mesaj yalnız o araç
+    seçiliyken anlamlı). PAS'a dokunulmadı: boş alana pas serbest.
+  - **Koşu tutunma alanı genişletildi** (saha yüzdesi 5 → 9). Kural zorunlu
+    olduğu için dar alan çizmeyi imkânsızlaştırıyordu. PAS'ın alanı aynı kaldı.
+  - **Sıra numarası paneli saha içinde kalıyor:** rozet sol üçte birdeyse panel
+    sağa doğru, sağ üçte birdeyse sola doğru açılıyor; alt kenardaki rozetlerde
+    yukarı açılıyor. Numara çoksa panel **iki satıra** iniyor, daha da çoksa
+    kendi içinde kayıyor. (Numaralar eskisi gibi yalnız SIRALI oynatmada çıkar.)
+  - **Temizlemede seçerek silme:** "Sadece çizimler" ve "Sadece rakipler" artık
+    doğrudan silmiyor; içeriği **listeliyor**. Satırlara dokunup işaretliyorsun,
+    alttaki **"Seçilenleri sil (n)"** ile kaldırıyorsun. Aynı listede
+    "Tümünü işaretle" ve "Hepsini sil (n)" de var; geri oku ana menüye döner.
+    Bir rakip silindiğinde ona bağlı çizimler de gidiyor (tekli silmeyle aynı).
+
+- **Dokunulan dosyalar:**
+  - `views/Studio.tsx` — başlık, örnek taktik kaldırma, koşu kuralı + uyarı,
+    temizle sayfası seçim akışı.
+  - `views/studio/AdvancedAnimationModule.tsx` — yalnız sıra numarası panelinin
+    konumu ve satır kaydırması. Animasyon hesaplarına dokunulmadı.
+  - `views/studio/sampleTactic.ts` — **silindi**.
+  - `tests/unit/sampleTactic.test.ts` — **silindi**.
+  - `tests/unit/components/StudioClearPick.test.tsx` — **yeni** (başlık + seçerek silme).
+  - `tests/unit/components/StudioOnboarding.test.tsx` — örnek taktik testi,
+    "davet çıkmamalı" testine dönüştü.
+  - `tests/e2e/studio.hermetic.spec.ts` — koşu kuralı için 2 yeni test; mevcut
+    çizim testi artık oyuncudan başlıyor.
+
+- **Korunanlar:**
+  - PAS davranışı, pas zinciri ve tutunma alanı aynı.
+  - Sunum modu başlığı ("Sunum · Sadece Hareket") aynı.
+  - Plan kartları, diziliş/boyut seçicileri, kaydetme ve paylaşma aynı.
+  - "Seçili ögeyi sil" ve "Hepsini sil" yolları duruyor.
+  - Numaralar hâlâ yalnız SIRALI oynatmada; eşzamanlıda çıkmıyor.
+
+- **Kontroller:** `npm run lint` temiz · `npm run test:unit` 1439 test yeşil ·
+  `npm run test:e2e:studio` 6 test yeşil.
+
+- **Nasıl kontrol edersin:**
+  1. **Sosyal → TAKTİK STÜDYO** aç. Üstte sadece **"Stüdyo"** yazmalı.
+  2. Boş tahtada **örnek taktik daveti çıkmamalı**.
+  3. **KOŞU**'ya bas, **boş bir yerden** parmağını çek → çizgi oluşmamalı,
+     sahanın üstünde **kırmızı uyarı** çıkmalı.
+  4. Şimdi **bir oyuncunun üzerinden** çek → çizgi oluşmalı, uyarı kaybolmalı.
+  5. Birkaç çizim yap, **sıralı oynatma** simgesine geç, **sol kenardaki** bir
+     numaraya dokun → sıralama paneli saha içinde, sağa doğru açılmalı.
+  6. **Çöp kutusu → Sadece rakipler** → liste açılmalı; birkaçını işaretle →
+     **"Seçilenleri sil"** → yalnız işaretlediklerin gitmeli.
+
+- **Commit:** _(bir sonraki adımda dolduruldu)_
+
+- **Geri alınırsa:** Başlıkta plan adı ve diziliş geri gelir, koşu her yerden
+  çizilebilir olur, temizleme yine topluca siler. Kayıtlı taktik verisine
+  dokunmaz — veri kaybı olmaz.
 
 ### 2026-08-04 · Araç çubuğu tek satırdan 3 satıra bölündü + araç ipucu eklendi
 

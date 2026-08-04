@@ -250,6 +250,18 @@ const AdvancedAnimationModule: React.FC<AdvancedAnimationModuleProps> = ({
                 if (!midPoint) return null;
                 const isMuted = !!mutedLineIds?.includes(line.id);
                 const isSelected = !isMuted && selectedSeqBadge === line.id;
+                // Sıra paneli SAHANIN İÇİNDE kalmalı: saha `overflow-hidden` olduğu
+                // için ortalanmış panel, kenardaki rozetlerde dışarı taşıp kesiliyordu
+                // (sol kenardaki oyuncularda numaralar hiç görünmüyordu).
+                // Çözüm: rozet nerede duruyorsa panel oraya göre açılır —
+                //   sol üçte bir  → sağa doğru açılır (sol kenarı rozete yaslı)
+                //   sağ üçte bir  → sola doğru açılır (sağ kenarı rozete yaslı)
+                //   orta          → eskisi gibi ortalanır
+                // Alt kenarda da aynı sorun var: aşağıdaki rozetlerde panel yukarı açılır.
+                const panelX = midPoint.x < 33 ? 'left-0'
+                    : midPoint.x > 67 ? 'right-0'
+                    : 'left-1/2 -translate-x-1/2';
+                const panelY = midPoint.y > 70 ? 'bottom-10' : 'top-10';
                 return (
                     <div
                         key={`badge-${line.id}`}
@@ -270,8 +282,10 @@ const AdvancedAnimationModule: React.FC<AdvancedAnimationModuleProps> = ({
                         </div>
 
                         {isSelected && (
+                            // flex-wrap + max-w: numaralar çoksa panel sahayı aşmak
+                            // yerine İKİ SATIRA iner; daha da çoksa kendi içinde kayar.
                             <div
-                                className="absolute top-10 left-1/2 -translate-x-1/2 bg-[#161B22] border border-white/10 rounded-xl p-2 shadow-2xl flex gap-1 pointer-events-auto"
+                                className={`absolute ${panelY} ${panelX} w-max max-w-[13rem] max-h-24 overflow-y-auto no-scrollbar bg-[#161B22] border border-white/10 rounded-xl p-2 shadow-2xl flex flex-wrap gap-1 pointer-events-auto`}
                                 onPointerDown={(e) => e.stopPropagation()}
                             >
                                 {isCustomSeqInputOpen ? (
