@@ -20,7 +20,7 @@ export interface MyMatchesResult {
 }
 
 export function useMyMatches(): MyMatchesResult {
-  const { adminMatches } = useAppStore();
+  const { adminMatches, myMatches } = useAppStore();
   // Demo 'u1' fallback'i YOK: oturum yoksa (misafir) liste boştur — başka
   // kullanıcıların verisi asla "benim maçlarım" gibi görünmez.
   const currentUserUid = auth.currentUser?.uid ?? '';
@@ -34,13 +34,25 @@ export function useMyMatches(): MyMatchesResult {
       s?.player?.id === currentUserUid ||
       s?.occupant === currentUserUid ||
       s?.purchasedBy === currentUserUid;
-    return adminMatches.filter(m =>
+    const yerelFiltre = adminMatches.filter(m =>
       m.creatorId === currentUserUid ||
       m.slots?.some(mine) ||
       m.awaySlots?.some(mine) ||
       m.reservePlayers?.some(p => p?.id === currentUserUid)
     );
-  }, [adminMatches, currentUserUid]);
+
+    // [P-5 / M-P0-6] İKİ KAYNAĞIN BİRLEŞİMİ.
+    // myMatches sunucudan KAPSAMLI gelir (get_my_matches); yerelFiltre ise
+    // global listenin telefonda süzülmesidir. Birleşim alınıyor çünkü:
+    //   • Global liste ileride daraltılacak → yerelFiltre eksik kalabilir
+    //   • Scoped sorgu bir sebeple boş dönerse → yerelFiltre devreye girer
+    // Böylece hiçbir maç KAYBOLAMAZ (Çakışma-1'in doğruluk şartı).
+    // Aynı maç iki kaynakta da varsa, sunucudan gelen (daha taze) kazanır.
+    const birlesim = new Map<string, MatchListing>();
+    yerelFiltre.forEach(m => { if (m?.id) birlesim.set(m.id, m); });
+    myMatches.forEach(m => { if (m?.id) birlesim.set(m.id, m); });
+    return Array.from(birlesim.values());
+  }, [adminMatches, myMatches, currentUserUid]);
 
   const upcoming = useMemo(() => {
     return all

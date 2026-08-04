@@ -70,7 +70,14 @@ export default defineConfig({
         manualChunks: {
           'react-vendor': ['react', 'react-dom'],
           'supabase-vendor': ['@supabase/supabase-js'],
-          'ui-vendor': ['framer-motion', 'lucide-react', 'recharts']
+          // [P-7] 'recharts' BU LİSTEDEN ÇIKARILDI.
+          // Sebep: framer-motion App.tsx:2'de statik import edildiği için
+          // ui-vendor ilk yükte iniyor. recharts'ın tek kullanıcısı ise
+          // admin-panel/views/pages/DashboardPage.tsx — yani grafik kütüphanesi
+          // her oyuncunun telefonuna gereksiz iniyordu.
+          // Listeden çıkarılınca Vite onu kendi lazy chunk'ına ayırır ve
+          // yalnız admin paneli açılınca iner.
+          'ui-vendor': ['framer-motion', 'lucide-react']
         }
       }
     }

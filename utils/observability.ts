@@ -4,6 +4,15 @@
 // cephe (façade). Tüm uygulama yalnızca bu modülü çağırır; sağlayıcı değişse
 // bile çağrı noktaları değişmez.
 //
+// ── SRE-3 (4 Ağu 2026) · KENDİ ÇÖKME KAYDIMIZ ──────────────────────────────
+// Kurucu kararı: hata kayıtları ÜÇÜNCÜ TARAFA GÖNDERİLMEZ. Sentry/PostHog
+// anahtarı yoksa (bugünkü durum) hatalar kendi veritabanımızdaki
+// `hata_bildir` kapısına yazılır. Dışarı hiçbir veri çıkmaz.
+//
+// Ayrıca artık YALNIZCA elle çağrılan yerler değil, yakalanmamış tüm hatalar
+// da kaydedilir (window.onerror + unhandledrejection). Eskiden uygulama bir
+// kullanıcının telefonunda çöktüğünde bunu hiç kimse bilmiyordu.
+//
 // AKTİVASYON: tamamen env-var ile. Anahtar yoksa her fonksiyon SESSİZ no-op'tur
 // (dev'de console.debug). Böylece build her zaman yeşil kalır ve canlıya
 // geçişte yalnızca aşağıdaki ortam değişkenlerini doldurmak yeterlidir:
@@ -156,25 +165,101 @@ function initPostHog(): void {
   }
 }
 
+// ── SRE-3 · Kendi veritabanımıza çökme kaydı ───────────────────────────────
+// Üçüncü tarafa gitmez. Sunucu tarafında ikinci bir gizlilik eleği daha var
+// (`hata_temizle_metin` / `hata_temizle_json`), bu yüzden burada kaçan bir
+// e-posta/telefon olsa bile kayda geçmez.
+
+/** Hata kaydederken hata olursa sonsuz döngü olmasın diye bayrak. */
+let kayitSuruyor = false;
+/** Aynı hatanın saniyede yüzlerce kez gitmesini engelleyen basit kova. */
+const sonGonderim = new Map<string, number>();
+const AYNI_HATA_BEKLEME_MS = 60_000;
+
+function platformAdi(): string {
+  try {
+    const c = (window as any)?.Capacitor;
+    if (c?.getPlatform) return String(c.getPlatform());
+  } catch { /* yut */ }
+  return 'web';
+}
+
+function hataMetni(error: unknown): { mesaj: string; yigin?: string } {
+  if (error instanceof Error) {
+    return { mesaj: `${error.name}: ${error.message}`, yigin: error.stack };
+  }
+  if (typeof error === 'string') return { mesaj: error };
+  try { return { mesaj: JSON.stringify(error).slice(0, 500) }; }
+  catch { return { mesaj: String(error) }; }
+}
+
+function kendiKaydimizaGonder(
+  error: unknown,
+  nerede?: string,
+  context?: Record<string, unknown>,
+): void {
+  if (!hasWindow || kayitSuruyor) return;
+  const { mesaj, yigin } = hataMetni(error);
+  if (!mesaj || !mesaj.trim()) return;
+
+  // Aynı hata bir dakika içinde tekrar tekrar gelmesin.
+  const anahtar = `${nerede ?? ''}|${mesaj.split('\n')[0]}`;
+  const simdi = Date.now();
+  const oncekiZaman = sonGonderim.get(anahtar);
+  if (oncekiZaman && simdi - oncekiZaman < AYNI_HATA_BEKLEME_MS) return;
+  sonGonderim.set(anahtar, simdi);
+
+  kayitSuruyor = true;
+  // Dinamik import: gözlemlenebilirlik modülü açılışta veritabanı istemcisini
+  // çekmesin, ilk yük hafif kalsın.
+  import('../supabaseClient')
+    .then(({ supabase }) => supabase.rpc('hata_bildir', {
+      p_mesaj: mesaj,
+      p_nerede: nerede ?? null,
+      p_yigin: yigin ?? null,
+      p_ekran: window.location?.pathname ?? null,
+      p_surum: RELEASE,
+      p_platform: platformAdi(),
+      p_ek: context ? (context as Record<string, unknown>) : null,
+    }))
+    .catch(() => { /* kayıt gidemezse uygulama etkilenmez */ })
+    .finally(() => { kayitSuruyor = false; });
+}
+
 // ── Genel API ──────────────────────────────────────────────────────────────
 
-/** Uygulama açılışında bir kez çağrılır (index.tsx). Anahtar yoksa no-op. */
+/** Uygulama açılışında bir kez çağrılır (index.tsx). */
 export function initObservability(): void {
   if (initialized || !hasWindow) return;
   initialized = true;
-  if (!SENTRY_DSN && !POSTHOG_KEY) { debug('gözlemlenebilirlik kapalı (env yok)'); return; }
+
+  // Yakalanmamış hatalar: kullanıcı bize söylemek zorunda kalmasın.
+  window.addEventListener('error', (olay: ErrorEvent) => {
+    captureException(olay.error ?? olay.message, { tur: 'window.onerror' });
+  });
+  window.addEventListener('unhandledrejection', (olay: PromiseRejectionEvent) => {
+    captureException(olay.reason, { tur: 'unhandledrejection' });
+  });
+
+  if (!SENTRY_DSN && !POSTHOG_KEY) {
+    debug('dış sağlayıcı kapalı — hatalar kendi veritabanımıza yazılıyor');
+    return;
+  }
   initSentry();
   initPostHog();
 }
 
-/** Yakalanan/yakalanmamış hatayı Sentry'ye bildirir; yoksa konsola yazar. */
+/**
+ * Hatayı kaydeder. Sentry açıksa oraya da gider; her hâlükârda KENDİ
+ * veritabanımıza yazılır (SRE-3). Asla hata fırlatmaz.
+ */
 export function captureException(error: unknown, context?: Record<string, unknown>): void {
   try {
     if (hasWindow && window.Sentry?.captureException) {
       window.Sentry.captureException(error, context ? { extra: context } : undefined);
-    } else {
-      debug('captureException', error, context);
     }
+    kendiKaydimizaGonder(error, (context?.where as string) ?? (context?.tur as string), context);
+    debug('captureException', error, context);
   } catch { /* yut */ }
 }
 

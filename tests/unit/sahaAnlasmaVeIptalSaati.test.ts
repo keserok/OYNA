@@ -82,9 +82,18 @@ describe('Ekranlarda gömülü sayı KALMADI', () => {
     expect(s).toContain('<b>{serbestIptalSaati} saatten az</b>');
   });
 
-  it('MatchJoin politikayı sunucudan çekiyor', () => {
-    const s = oku('views/MatchJoin.tsx');
-    expect(s).toContain('fetchMatchCancelPolicy(match.id)');
+  it('İptal politikası SUNUCUDAN çekiliyor (K-15.1 sonrası: Para alanı ayrı dosyada)', () => {
+    // K-15.1 ile MatchJoin.tsx ürün kavramlarına göre bölündü; iptal
+    // politikası + ayrılma iade önizlemesi "Para" öbeğine taşındı.
+    // KORUNAN KURAL DEĞİŞMEDİ: politika ekrana GÖMÜLMEZ, sunucudan gelir.
+    // Test artık kuralı YENİ yerinde sınıyor ve ayrıca ekranın o dosyayı
+    // gerçekten kullandığını da doğruluyor (eskisi bunu kontrol etmiyordu).
+    const hook = oku('hooks/useMacParaBilgisi.ts');
+    expect(hook).toContain('fetchMatchCancelPolicy(macId)');
+    expect(hook).toContain('previewLeaveMatch(macId)');
+
+    const ekran = oku('views/MatchJoin.tsx');
+    expect(ekran).toContain('useMacParaBilgisi(match?.id, showLeaveConfirm)');
   });
 });
 

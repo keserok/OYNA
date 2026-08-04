@@ -27,7 +27,12 @@
     "owner:demo:purge": "node scripts/owner-demo.mjs purge",
     "owner:menu:live-test": "node scripts/owner-menu-live-test.mjs",
     "godview:demo:seed": "node scripts/godview-demo.mjs seed",
-    "godview:demo:purge": "node scripts/godview-demo.mjs purge"
+    "godview:demo:purge": "node scripts/godview-demo.mjs purge",
+    "etki": "node scripts/sistem/etki.mjs",
+    "sistem:harita": "node scripts/sistem/harita.mjs",
+    "sistem:kapsam": "node scripts/sistem/kapsam.mjs",
+    "sistem:zaman-deseni": "node scripts/sistem/zaman-deseni.mjs",
+    "sistem:surum": "node scripts/sistem/surum.mjs"
   },
   "dependencies": {
     "@capacitor-community/apple-sign-in": "^7.1.0",

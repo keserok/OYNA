@@ -1,164 +1,118 @@
-# ⚡ OYNA - Dijital Amatör Futbol ve Halı Saha Ekosistemi
+# ⚡ OYNA
 
-![Version](https://img.shields.io/badge/version-3.0.0-emerald)
-![Status](https://img.shields.io/badge/status-production--ready-blue)
-![Platform](https://img.shields.io/badge/platform-Web%20%7C%20iOS%20%7C%20Android-orange)
-![Tech Stack](https://img.shields.io/badge/stack-React%2019%20%7C%20Supabase%20%7C%20Tailwind%20v4-brightgreen)
+**Halı saha rezervasyon platformu.** Çift taraflı pazar: saha sahipleri ↔ oyuncular.
+Ana vaat *saha kiralamak değil* — **kaptanın para toplama derdini bitirmek.**
 
-**OYNA**, sıradan bir halı saha rezervasyon sisteminin ötesinde; amatör futbol oyuncularını, kalecileri, hakemleri, takımları ve tesis sahiplerini **EA Sports FIFA Ultimate Team (FUT)** ve **Football Manager (FM)** oyunlaştırma dinamikleriyle tek bir dijital çatı altında birleştiren, **premium ve gerçek zamanlı** bir spor ekosistemidir.
-
----
-
-## 🚀 Öne Çıkan Özellikler & Modüller
-
-* **Taktik Stüdyosu ([Studio.tsx](views/Studio.tsx)):** 5+1, 6+1 ve 7+1 formasyon desteği (`2-3-1`, `3-2-1` vb.). `framer-motion` tabanlı interaktif sürükle-bırak dizilim sahası ([TeamLineupBoard.tsx](components/TeamLineupBoard.tsx)) ve gerçek zamanlı taktik tahtası.
-* **Takım Kurma & Yönetimi ([MyTeam.tsx](views/MyTeam.tsx)):** Kulüp oluşturma, kadro yönetimi ve Supabase ile anlık senkronizasyon.
-
-### 2. 🧤 Hizmet Pazaryeri — Kaleci & Hakem (Talent Hub)
-* **Hizmet Motoru (Faz 5):** Lisanslı kaleci ve hakemlerin başvuru, profil ve kazanç akışını yöneten servis katmanı ([ServiceApplication.tsx](views/ServiceApplication.tsx), [ServiceDashboard.tsx](views/ServiceDashboard.tsx), [ServiceProfile.tsx](views/ServiceProfile.tsx), [ServiceSettings.tsx](views/ServiceSettings.tsx)).
-* **Kiralama & Teklif Verme:** Kadrolardaki eksikleri tamamlamak için kaleci veya hakem kiralama sistemi.
-* **Maç Sonu Puanlama (1–10):** Hizmet veren kaleci ve hakemlerin maç bitiminde 1–10 arası değerlendirilmesi ([RefereeScoreModule.tsx](components/RefereeScoreModule.tsx)).
-* **FOMO Arayüzü:** İlanların anlık kaç kişi tarafından incelendiğini gösteren dinamik ibareler (örneğin: *"🔥 12 Kaleci İnceliyor"*).
-* **FP (Fair Play) & Güvenilirlik Skoru:** Toksik davranışları önlemek adına maç iptal etme, geç kalma veya sportmenlik dışı hareketlere bağlı olarak düşen/artan dinamik puanlama motoru.
-
-### 3. 🏟️ Harita Destekli Halı Saha & Rezervasyon
-* **Airbnb Stili Fiyat Pinli Harita:** Leaflet entegrasyonuyla sahaları konumlarına ve fiyat etiketlerine göre haritada filtreleme ([PitchDiscovery.tsx](views/PitchDiscovery.tsx)).
-* **Dinamik Takvim & Rezervasyon:** Saha doluluk durumunun gerçek zamanlı izlenmesi ve rezervasyon isteklerinin onay akışı.
-* **Güvenli Ödeme Havuzu (Split Payment):** Maç kiralama bedelinin oyuncular arasında bölüştürülmesi. Kaptan garantörlüğü (`Safety Net`) ile rezervasyon güvencesi.
-* **QR Kodlu Dijital Bilet ([MatchTicket.tsx](views/MatchTicket.tsx)):** Ödeme sonrası oluşturulan, tesiste rezervasyon kanıtı olarak gösterilen dijital kart (turnike/okuyucu entegrasyonu yoktur).
-
-### 4. 💼 B2B Tesis Yönetim Paneli
-* **SaaS Altyapısı:** Saha sahiplerinin fiyatlandırma, doluluk, takvim rezervasyonları, tesis fotoğrafları ve menü ayarlarını doğrudan yönettiği gelişmiş yönetim portalı ([OwnerPanel.tsx](views/OwnerPanel.tsx)).
-* **Rezervasyon Onaylama / Reddetme:** Gelen kiralama taleplerinin yönetimi.
-* **Payout & Finans (Faz 4):** Saha sahibi ↔ admin ödeme süreçleri tek kaynakta (`payout_requests`) birleştirilmiş; tutarlı finans ve ekip yönetim ekranları.
-
-### 5. ⚖️ Yasal Uyum Sayfaları (Faz 3)
-* Üyelik Sözleşmesi ve Kullanım Şartları, Gizlilik Politikası, KVKK Aydınlatma Metni ile Mesafeli Satış Sözleşmesi & İptal/İade Politikaları sisteme entegre edilmiştir ([LegalScreen.tsx](views/LegalScreen.tsx)).
+**Durum:** 🅿️ **Rafta** (4 Ağustos 2026) · henüz lansman yapılmadı
+**Kapsama:** Ordu · 19 ilçe hazır · 4 saha yayında
 
 ---
 
-## 🛠️ Teknoloji Yığını
+## 🚦 Buradan başla
 
-* **Ön Yüz (Frontend):** React 19, TypeScript, Vite 6.x, TailwindCSS v4 (Neon Cyberpunk tema: Deep Navy & Cyber Yellow), Zustand (Global State), Recharts, Leaflet, Framer Motion, Lucide React.
-* **Arka Yüz (Backend):** Supabase (Authentication, PostgreSQL Database, Realtime, Storage, Edge Functions).
-* **Mobil Altyapı:** Capacitor (iOS & Android native entegrasyonu, Push Notifications, Safe Area yapılandırması).
-* **Test:** Vitest (birim testleri) ve Playwright (UI ve Admin Panel testleri).
+| Sorun ne? | Dosya |
+|---|---|
+| **Uygulama rafta, nasıl uyandırırım?** | **[`RAF.md`](RAF.md)** ← aylar sonra dönüyorsan buradan başla |
+| **Bir karar nasıl verilmişti?** | **[`OYNA_PRENSIPLER.md`](OYNA_PRENSIPLER.md)** ← tek pusula |
+| **Claude ile çalışacağım** | [`CLAUDE.md`](CLAUDE.md) — oturum kuralları |
+| **Yeni iş vereceğim** | [`GOREV_SABLONU.md`](GOREV_SABLONU.md) |
 
 ---
 
-## 📂 Proje Yapısı
+## 📚 Belgeler
 
-Proje kök dizini karmaşayı önlemek için optimize edilmiştir:
+| Konu | Yer |
+|---|---|
+| Kararların kanıtı ve gerekçesi (K-1…K-17) | [`docs/board/DECISIONS.md`](docs/board/DECISIONS.md) |
+| Danışma kurulu rol raporları (7 rol) | [`docs/board/`](docs/board/) |
+| Cevap bekleyen kararlar | [`docs/board/SON_KARARLAR.md`](docs/board/SON_KARARLAR.md) |
+| **Sistemin bağışıklık sistemi** (17 yapı taşı, 32 kontrol) | [`docs/sistem/MEKANIZMA.md`](docs/sistem/MEKANIZMA.md) |
+| Bilinen sorunlar ve çözüm geçmişi | [`docs/master/PROBLEMLER_VE_COZUMLER.md`](docs/master/PROBLEMLER_VE_COZUMLER.md) |
+| Operasyon / panel soruları | [`docs/master/RUNBOOK.md`](docs/master/RUNBOOK.md) |
+| iOS'a çıkış rehberi | [`docs/master/IOS_CIKIS_REHBERI.md`](docs/master/IOS_CIKIS_REHBERI.md) |
+| Kılavuzlar | [`docs/kilavuzlar/`](docs/kilavuzlar/) |
+| ⛔ Arşiv — **bağlayıcı değil** | [`docs/eski/`](docs/eski/) |
+
+---
+
+## 🧰 Çalıştırma
 
 ```bash
-OYNA_App/
-├── components/          # Paylaşılan premium UI bileşenleri (FifaCard, TeamLineupBoard vb.)
-├── views/               # Lazy-loaded ana ekranlar (Dashboard, Marketplace, Studio, OwnerPanel, Service* vb.)
-├── services/            # Veritabanı sorguları ve servisleri (geoService, matchService, pitchService)
-├── store/               # Zustand store dilimleri (player & admin state)
-├── admin-panel/         # OPanel/GodView yönetici arayüzü ve deploy araçları
-├── notifications/       # Push bildirim entegrasyonu ve kullanıcı tercihleri
-├── hooks/               # Custom React hook'ları (useImageUpload vb.)
-├── utils/               # Yardımcı algoritmalar (Geohash, Haversine hesabı, ReputationEngine)
-├── supabase/            # Supabase SQL şemaları, tetikleyiciler ve yerel CLI yapılandırması
-├── docs/                # Detaylı mimari, tasarım ve veritabanı kılavuzları
-├── scripts/             # DB sorgu, RLS policy üretici ve demo veri seed araçları
-├── tests/               # Vitest birim testleri ve Playwright entegrasyon testleri
-├── App.tsx              # Ana yönlendirici (Router) ve rol bazlı geçişler
-├── store.ts             # Zustand global state management
-├── types.ts             # TypeScript arayüz ve enum tanımları
-├── index.css            # Global CSS ve cyberpunk tema stil tanımları
-└── capacitor.config.ts  # Mobil platform derleme ayarları
+npm ci        # bağımlılıkları kur (bir kez)
+npm run dev   # uygulamayı aç
 ```
+
+**Bitirmeden önce zorunlu kontroller:**
+
+```bash
+npm run lint       # tip kontrolü — temiz olmalı
+npm run test:unit  # 1.437 test — hepsi geçmeli
+```
+
+**Değişiklikten ÖNCE — mekanizma:**
+
+```bash
+npm run etki            # hangi temel yapı taşlarına dokunuyorum?
+npm run sistem:kapsam   # harita gerçeği yansıtıyor mu?
+npm run sistem:surum    # sürüm numarası her yerde aynı mı?
+```
+
+> `npm run etki`, 🔴 KRİTİK yapı taşlarına (PARA · KAPILAR · KİMLİK · AYARLAR ·
+> KURTARMA) dokunuyorsan **DUR** der ve onay ister. Bu bilerek böyle.
 
 ---
 
-## 🚀 Kurulum ve Çalıştırma
+## 🏗️ Kod nerede
 
-### Gereksinimler
-* Node.js 18 veya üzeri
-* npm
-* Supabase CLI (Veritabanı işlemleri için opsiyonel)
+| Klasör | Ne var |
+|---|---|
+| `views/` · `components/` · `shared/` · `ui/` | Oyuncu uygulaması arayüzü |
+| `admin-panel/` | Yönetici paneli (Komuta Merkezi · Sistem Sağlığı · Gerçek Durum) |
+| `services/` · `hooks/` · `utils/` | İş mantığı ve yardımcılar |
+| `supabase/migrations/` | **Veritabanı şeması — tek doğru kaynak** (430+ dosya) |
+| `supabase/functions/` | Edge Function'lar (ödeme · bildirim · süpürücü) |
+| `sozlesmeler/` | Yasal metinlerin kaynağı → `npm run build:legal` HTML üretir |
+| `scripts/sistem/` | Mekanizma araçları (etki · kapsam · harita · sürüm) |
+| `tests/` | 1.437 birim testi + Playwright |
 
-### 1. Bağımlılıkları Yükleme
-```bash
-npm install
-```
-
-### 2. Çevre Değişkenleri
-Projenin çalışması için kök dizinde bir `.env` dosyası oluşturun. Hazır şablonu kopyalayarak başlayabilirsiniz (tam liste için [.env.example](.env.example)):
-```bash
-cp .env.example .env
-```
-Zorunlu değişkenler:
-```env
-# Supabase (ZORUNLU)
-VITE_SUPABASE_URL=https://your-project-id.supabase.co
-VITE_SUPABASE_ANON_KEY=your-anon-key-here
-
-# Edge Function / admin deploy işlemleri için
-SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
-```
-> Push bildirimleri (APNS/FCM), admin deploy token'ları ve geliştirme bayrakları (`VITE_DEV_MODE`) gibi opsiyonel değişkenler için [.env.example](.env.example) dosyasına bakın.
-
-### 3. Uygulamayı Başlatma
-* **Oyuncu Arayüzü (Web — Port 4000):**
-  ```bash
-  npm run dev
-  ```
-* **OPanel Yönetici Arayüzü (Admin — Port 4005):**
-  ```bash
-  npm run dev:admin
-  ```
-
-### 4. Mobil Entegrasyon (Capacitor)
-Vite build sonrası mobil platform dosyalarını senkronize etmek için:
-```bash
-npm run build
-npx cap sync
-```
-
-### 5. Test & Lint
-```bash
-npm run lint        # tsc --noEmit (tip kontrolü)
-npm run test:unit   # Vitest birim testleri
-npm run test:admin  # Playwright admin panel testleri
-```
+**Kök dizindeki ortak `.ts` dosyaları** — `store.ts`, `types.ts`, `supabaseClient.ts`,
+`supabaseAuth.ts`, `supabaseMutations.ts` — geniş etki yaratır. Değiştirmeden önce
+kullanım yerlerini ara (bkz. `CLAUDE.md` §4).
 
 ---
 
-## 🗄️ Veritabanı & Güvenlik Yönetimi
+## ⚙️ Teknoloji
 
-Veritabanı işlemleri, otomatik migration'lar ve RLS (Row Level Security) kuralları ile ilgili detaylar için [DATABASE_README.md](docs/eski/DATABASE_README.md) dosyasını inceleyebilirsiniz. *(Not: bu belge arşivdedir; güncel durum için [docs/master/OYNA_MASTER.md](docs/master/OYNA_MASTER.md).)*
-
-Sık kullanılan bazı veritabanı komutları:
-* **Bağlantı Testi:**
-  ```bash
-  npx tsx scripts/db-query.ts --file scripts/db-queries/test-connection.sql
-  ```
-* **RLS Durum Kontrolü:**
-  ```bash
-  npx tsx scripts/db-query.ts --file scripts/db-queries/check-rls.sql
-  ```
-* **Demo Veri Ekleme:**
-  ```bash
-  npm run owner:demo:seed
-  ```
+React 19 · Vite · TypeScript · Tailwind v4 · Capacitor 8 (iOS/Android) ·
+Supabase (PostgreSQL 17 · Edge Functions · Auth · Storage) · Zustand ·
+Vitest + Playwright
 
 ---
 
-## 📚 Ek Dökümantasyonlar
+## 🔒 Bilerek kapalı olanlar
 
-Dokümanlar iki klasörde düzenlidir — **güncel** olanlar `docs/master/`, **arşiv** `docs/eski/`. Tam içindekiler tablosu: **[docs/README.md](docs/README.md)**.
+Bunlar eksik değil, **karar**dır. Tam liste: [`OYNA_PRENSIPLER.md`](OYNA_PRENSIPLER.md) §11
 
-* **[🏆 OYNA Master (tek kaynak)](docs/master/OYNA_MASTER.md)** - Tüm dokümanların konsolide durum + karar özeti (buradan başlayın).
-* [Master Prensipler](docs/master/OYNA_MASTER_PRENSIPLER.md) - Ürün ve mimari temel prensipler (en üst otorite).
-* [Yol Haritası](docs/master/OYNA_YOL_HARITASI.md) - Faz planı ve geliştirme öncelikleri.
-* [Operasyonel Durum](docs/master/OYNA_OPERASYONEL_DURUM.md) - Kalan işler ve go-live durumu.
-* [Store Lansman Planı](docs/master/STORE_LANSMAN_PLANI.md) - App Store & Google Play süreci.
-* [🍎 iOS'a Çıkış Rehberi](docs/master/IOS_CIKIS_REHBERI.md) - Kurucu için adım adım: Mac kurulumu → Xcode → TestFlight → App Review.
-* [RUNBOOK](docs/master/RUNBOOK.md) - Yazılımcısız çalıştırma & kurtarma kılavuzu.
-* _Arşiv (`docs/eski/`):_ eski mimari/tasarım belgeleri, aşılmış soru setleri, Firebase-dönemi planlar ve bayat referanslar (DATABASE_README, DOSYALARIN_ISLEVLERI).
+| Ayar | Durum | Ne zaman açılır |
+|---|---|---|
+| `demo_mode_enabled` | **açık** | Lansman gününün 1. maddesi: kapatılır |
+| `payment_mode_global` | `CASH_ONLY` | İlk gerçek kart işlemi denendikten sonra |
+| `push_live_enabled` | kapalı | Lansmanda APNs/FCM hazır olunca |
+| `wallet_cashout_enabled` | kapalı | Kimlik doğrulama + sözleşmeler yayınlanınca |
 
 ---
-*Developed with ❤️ for OYNA Ecosystem*
+
+## 📊 Bugünkü durum (4 Ağustos 2026)
+
+| Ölçüm | Değer |
+|---|---|
+| Sağlık denetimi | **14 yeşil / 0 kırmızı** |
+| Para değişmezleri (8 kural) | temiz |
+| Birim testleri | **1.437 / 1.437** |
+| Veritabanı | 37 MB · 18 zamanlanmış iş · son 24 saatte **0 hata** |
+| Gerçek kullanıcı 6 · gerçek maç 1 | **tahsil edilen para: 0 ₺** |
+
+> Son satır kasten böyle yazıldı: OYNA bugüne kadar **tek kuruş gerçek para
+> işlemedi.** Mühendislik kalitesi yüksek ama ürün henüz tek bir müşteriye
+> dokunmadı. Ayrıntı:
+> [`docs/board/07-stratejik-danisman.md`](docs/board/07-stratejik-danisman.md)

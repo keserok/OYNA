@@ -26,7 +26,7 @@ Hizmetin sunulması, rezervasyon ve ödeme süreçleri, maç/takım eşleştirme
 
 ### 3. Verilerin Paylaşımı ve Görünürlüğü
 Verileriniz yalnızca aşağıdaki taraflarla, belirtilen amaçla sınırlı olarak paylaşılabilir:
-- Rezervasyon yaptığınız **tesis** ile (yalnızca rezervasyonun gerektirdiği asgari ölçüde — bkz. [Veri Paylaşım Protokolü](veri-paylasim-protokolu.md); olağan rezervasyonda tesise ad-soyad veya telefonunuz aktarılmaz)
+- Rezervasyon yaptığınız **tesis** ile (yalnızca rezervasyonun gerektirdiği asgari ölçüde — bkz. [Veri Paylaşım Protokolü](../veri-paylasim-protokolu.md); olağan rezervasyonda tesise ad-soyad veya telefonunuz aktarılmaz)
 - Talep ettiğiniz hizmet kapsamında **kaleci/hakem gibi hizmet sağlayıcılar** ile (yalnızca ilgili hizmetin ifası için gerekli asgari ölçüde; telefon/e-posta/konum aktarılmaz)
 - **Ödeme kuruluşu** ile (ödeme işlemlerinin gerçekleştirilmesi için)
 - Barındırma, hata izleme ve kullanım analitiği sağlayan **teknoloji tedarikçilerimiz** ile (yalnızca hizmetin işletilmesi için)

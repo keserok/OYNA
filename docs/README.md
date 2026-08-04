@@ -16,7 +16,7 @@ Bu klasör iki bölümden oluşur:
 | Doküman | İçerik |
 |---|---|
 | [OYNA_MASTER.md](master/OYNA_MASTER.md) | **Konsolide tek kaynak** — tüm dokümanların durum + karar özeti, doküman haritası |
-| [OYNA_MASTER_PRENSIPLER.md](master/OYNA_MASTER_PRENSIPLER.md) | Ürün & mimari temel prensipler — **en üst otorite** (20 bölüm + revizyon notları) |
+| [OYNA_PRENSIPLER.md](../OYNA_PRENSIPLER.md) | Ürün ve sistem kararlarının **tek kaynağı** (K-1…K-17). Eski master prensipler arşivde: `docs/eski/` |
 | [OYNA_YOL_HARITASI.md](master/OYNA_YOL_HARITASI.md) | Faz 0–7 detaylı geliştirme yol haritası (ne/neden/sonuç) |
 | [OYNA_OPERASYONEL_DURUM.md](master/OYNA_OPERASYONEL_DURUM.md) | Operasyonel durum & kalan işler (tek güncel kaynak etiketi) |
 | [OYNA_GO_LIVE_IYZICO.md](master/OYNA_GO_LIVE_IYZICO.md) | iyzico para motoru aktivasyon runbook'u |

@@ -2,7 +2,7 @@
 
 _Son güncelleme: 26 Temmuz 2026 · Uygulama sürümü 3.0.0_
 
-> Bu kılavuz, OYNA'da maç bulmak, maç kurmak, saha kiralamak ve takımıyla oynamak isteyen oyuncular içindir. Kaleci veya hakem olarak hizmet vermek istiyorsan [Kaleci & Hakem Kılavuzu](02-kaleci-hakem-kilavuzu.md)'na, tesisini yönetmek istiyorsan [Tesis Kılavuzu](03-tesis-kilavuzu.md)'na bak.
+> Bu kılavuz, OYNA'da maç bulmak, maç kurmak, saha kiralamak ve takımıyla oynamak isteyen oyuncular içindir. Kaleci veya hakem olarak hizmet vermek istiyorsan [Kaleci & Hakem Kılavuzu](02-kaleci-kilavuzu.md)'na, tesisini yönetmek istiyorsan [Tesis Kılavuzu](04-saha-sahibi-kilavuzu.md)'na bak.
 
 ## 1. Giriş
 
@@ -480,7 +480,7 @@ Profil'in sağ üstündeki dişliden girersin:
 - **Hakem** — "Yönettiğin maçtan kazan".
 - **Tesis** — "Sahanı ve rezervasyonları yönet".
 
-Başvurun incelenirken "Başvurun inceleniyor — oyuncu olarak oynamaya devam edebilirsin" şeridini görürsün. Sahip olduğun rollerde **SAHİP** rozeti çıkar; dokununca roller arasında geçiş yaparsın. Ayrıntılar için [Kaleci & Hakem Kılavuzu](02-kaleci-hakem-kilavuzu.md) ve [Tesis Kılavuzu](03-tesis-kilavuzu.md).
+Başvurun incelenirken "Başvurun inceleniyor — oyuncu olarak oynamaya devam edebilirsin" şeridini görürsün. Sahip olduğun rollerde **SAHİP** rozeti çıkar; dokununca roller arasında geçiş yaparsın. Ayrıntılar için [Kaleci & Hakem Kılavuzu](02-kaleci-kilavuzu.md) ve [Tesis Kılavuzu](04-saha-sahibi-kilavuzu.md).
 
 ### 13.2 Yasal belgeler
 

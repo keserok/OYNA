@@ -1,10 +1,21 @@
 # SQL entegrasyon testleri (tests/integration/*.sql) — para/maç akışlarının
 # gerçek Postgres fonksiyonları üzerinde doğrulanması.
 #
-# SUPABASE_TEST_DB_URL secret'ı tanımlı değilse iş YEŞİL kalır ve notice düşer
-# (testler atlanır) — böylece secret eklenene kadar CI kırılmaz. Secret bir
-# test/branch veritabanına işaret etmelidir; testler BEGIN…ROLLBACK ile izole
-# olsa da üretim bağlantısı verilmemelidir.
+# SUPABASE_TEST_DB_URL secret'ı tanımlı değilse iş YEŞİL kalır ve testler
+# atlanır — böylece secret eklenene kadar CI kırılmaz. Secret bir test/branch
+# veritabanına işaret etmelidir; testler BEGIN…ROLLBACK ile izole olsa da
+# üretim bağlantısı verilmemelidir.
+#
+# ── SRE-3 (4 Ağu 2026) · "ATLANDI" ile "GEÇTİ" aynı görünmesin ─────────────
+# Eski hâlinde atlama yalnızca `::notice` düşürüyordu: PR'da yeşil tik
+# görünüyor, SQL testlerinin HİÇ koşmadığı ancak logları açan biri fark
+# ediyordu. Para fonksiyonlarını koruyan testler bunlar olduğu için bu
+# sessizlik tehlikeliydi.
+#
+# Artık atlama: (1) uyarı işareti (annotation) bırakır, (2) PR özet sayfasına
+# büyük harflerle yazar. Yeşil kalmaya devam eder çünkü bugün ortada test
+# veritabanı YOK — sert başarısızlık her PR'ı bloke ederdi.
+# KALICI ÇÖZÜM: deneme ortamı (SRE-4) kurulunca `exit 1` yapılacak.
 name: SQL Entegrasyon Testleri
 
 on:
@@ -31,7 +42,21 @@ jobs:
         run: |
           if [ -z "${DATABASE_URL}" ]; then
             echo "skip=true" >> "$GITHUB_OUTPUT"
-            echo "::notice::SUPABASE_TEST_DB_URL tanımlı değil — SQL entegrasyon testleri atlandı. Secret'ı ekleyince bu iş gerçek doğrulama yapar."
+            echo "::warning title=SQL entegrasyon testleri KOŞMADI::SUPABASE_TEST_DB_URL tanımlı değil. Para ve maç akışlarını doğrulayan SQL testleri ATLANDI — bu yeşil tik 'testler geçti' anlamına GELMEZ."
+            {
+              echo "## ⚠️ SQL ENTEGRASYON TESTLERİ KOŞMADI"
+              echo ""
+              echo "\`SUPABASE_TEST_DB_URL\` tanımlı olmadığı için para ve maç akışlarını"
+              echo "doğrulayan SQL testleri **atlandı**."
+              echo ""
+              echo "Bu işin yeşil olması **testler geçti demek değildir** — hiç çalışmadılar."
+              echo ""
+              echo "Gerçek doğrulama için deneme veritabanı kurulup secret eklenmeli (SRE-4)."
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            {
+              echo "## ✅ SQL entegrasyon testleri çalıştırıldı"
+            } >> "$GITHUB_STEP_SUMMARY"
           fi
 
       - name: psql kur
@@ -41,3 +66,9 @@ jobs:
       - name: Entegrasyon testlerini çalıştır
         if: steps.gate.outputs.skip != 'true'
         run: bash tests/integration/run.sh
+
+      # Atlandığında bu adım PR'daki adım listesinde AÇIKÇA görünür.
+      - name: "⚠️ DİKKAT — SQL testleri atlandı, doğrulama yapılmadı"
+        if: steps.gate.outputs.skip == 'true'
+        run: |
+          echo "SQL entegrasyon testleri koşmadı. Ayrıntı için iş özetine bakın."

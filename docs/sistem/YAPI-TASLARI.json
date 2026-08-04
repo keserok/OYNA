@@ -1,0 +1,656 @@
+{
+  "$aciklama": "OYNA sisteminin TEMEL YAPI TAŞLARI. Bu dosya makine tarafından okunur; SISTEM-HARITASI.md bundan üretilir. ELLE İKİ YERDE TUTMA — yalnız burayı düzenle, sonra 'npm run sistem:harita' çalıştır.",
+  "$surum": 1,
+  "$guncelleme": "2026-08-04 (P-0..P-5, P-7; CTO 5/5; PE-1; SRE-1 ve SRE-3 kapandi -> B16 KURTARMA + B17 GORUNURLUK dogdu)",
+  "$risk_seviyeleri": {
+    "KRITIK": "Yanlış giderse para kaybolur, kimlik ele geçer veya veri sızar. Değişiklik CEO onayı ister.",
+    "YUKSEK": "Yanlış giderse kullanıcı zarar görür ve geri alması zordur. Değişiklik tam doğrulama ister.",
+    "ORTA": "Yanlış giderse deneyim bozulur, düzeltilebilir.",
+    "DUSUK": "Yanlış giderse yalnız iç araçlar etkilenir."
+  },
+  "yapi_taslari": [
+    {
+      "id": "B01",
+      "ad": "PARA",
+      "risk": "KRITIK",
+      "sade_anlatim": "Kullanıcıdan para almak, cüzdanda tutmak, saha sahibine ve hakem/kaleciye ödemek, iade etmek. Komisyon hesabı da buraya dahil.",
+      "garanti_ettigi": [
+        "Cüzdan bakiyesi asla eksiye düşmez",
+        "Alınan her kuruşun bir karşılığı vardır (8 para değişmezi)",
+        "Aynı ödeme iki kez tahsil edilmez",
+        "Yarıda kalan ödeme sonsuza dek askıda kalmaz"
+      ],
+      "dosyalar": [
+        "components/payment/",
+        "hooks/useMacParaBilgisi.ts",
+        "services/financeService.ts",
+        "services/paymentModeService.ts",
+        "services/paymentService.ts",
+        "services/walletService.ts",
+        "supabase/functions/capture-payment/",
+        "supabase/functions/create-payment/",
+        "supabase/functions/iyzico-3ds-callback/",
+        "supabase/functions/payment-webhook/",
+        "supabase/functions/refund-payment/",
+        "supabase/functions/sweep-stale-payments/",
+        "supabase/functions/void-payment/",
+        "utils/formatTRY.ts",
+        "utils/iban.ts",
+        "views/PaymentScreen.tsx",
+        "views/WalletScreen.tsx",
+        "views/owner/OwnerBankAccountsModal.tsx",
+        "views/owner/calendar/FinancialCalendarView.tsx",
+        "views/owner/finance/"
+      ],
+      "db_nesneleri": [
+        "payment_intents",
+        "wallet_transactions",
+        "commission_config",
+        "apply_card_payment",
+        "player_buy_slots_v2",
+        "player_buy_slots_v2__inner",
+        "record_app_deposit_payment",
+        "process_tiered_refund",
+        "match_block_deposit",
+        "calculate_commission",
+        "_pitch_agreement",
+        "_markup_tutari",
+        "check_money_invariants",
+        "release_owner_earnings",
+        "auto_release_service_payouts",
+        "mark_intent_failed",
+        "list_stale_payment_intents"
+      ],
+      "kontroller": [
+        "K-PARA-1",
+        "K-PARA-2",
+        "K-PARA-3",
+        "K-KILIT-1"
+      ],
+      "bilinen_acik_bulgular": [],
+      "not": "CTO'nun 5 P0'inin tamami kapatildi (3 Agustos 2026). CTO-P0-4 DUZELTMESI: 'match_block_deposit keyfi tutarla acik' iddiasi FAZLA IDDIALIYDI - fonksiyonda 'yalniz maci kuran kaptan' kapisi ZATEN vardi. Fiyat oranli taban eklemeyi denedim ama canli veri durdurdu: matches.price SLOT BASINA fiyat, bloke tutarlar fiyatin %285-500'u. Yanlis varsayimla taban koymak akisi bozardi. Tutar zaten kaptanin KENDI cuzdanindan dusuyor ve deposit_status<>'NONE' tekrari engelliyor - gercek bir acik yok."
+    },
+    {
+      "id": "B02",
+      "ad": "KADRO",
+      "risk": "YUKSEK",
+      "sade_anlatim": "Bir maçta kimin oynadığı. Slot alma, bırakma, devretme, yedek listesi, takım kadrosu.",
+      "garanti_ettigi": [
+        "Bir slotu aynı anda iki kişi alamaz",
+        "'Kim bu maçta' sorusunun tek bir doğru cevabı vardır",
+        "Maçtan ayrılan kişi listelerde kalmaz"
+      ],
+      "dosyalar": [
+        "components/match/",
+        "hooks/useMacKadrosu.ts",
+        "hooks/useMyAgenda.ts",
+        "hooks/useMyMatches.ts",
+        "services/matchLifecycleService.ts",
+        "services/matchService.ts",
+        "services/rahatMatchService.ts",
+        "utils/formations.ts",
+        "utils/matchPositions.ts",
+        "views/MatchJoin.tsx",
+        "views/match/RahatMatchLobby.tsx"
+      ],
+      "db_nesneleri": [
+        "matches.slots",
+        "matches.awaySlots",
+        "match_participants",
+        "player_release_slot",
+        "player_unassign_slot",
+        "player_self_assign",
+        "match_kick_player",
+        "_match_participant_ids",
+        "_match_player_counts",
+        "match_fill_stats"
+      ],
+      "kontroller": [
+        "K-KADRO-1",
+        "K-KADRO-2"
+      ],
+      "bilinen_acik_bulgular": [],
+      "not": "P-2a (3 Agustos 2026): M-P0-4 ESASLI SEKILDE DUZELTILDI. Iddia edilen '12/20 macta kadro sapmasi' ve 'ayrilan kisiye bildirim gidiyor' YANLISTI. Gercek: role sutunu TARAF tutuyor (home/away), status creator/confirmed/LEFT tutuyor (ayrilanlar isaretleniyor), _match_participant_ids TABLOYA DEGIL JSON'a bakiyor. Iki kaynak celismiyor, farkli seyler tutuyor. GERCEK ACIK daha dardi ama ciddiydi: _match_participant_ids slotu SATIN ALMIS ama kimseyi oturtmamis kisiyi dondurmuyordu -> mac iptalinde parayi odeyen kisiye HIC bildirim gitmiyordu (K-3.3 tehdit altindaydi). Duzeltildi: OTURANLAR birlesim SATIN ALANLAR. Ayrica role/status sozluk kisitlari eklendi."
+    },
+    {
+      "id": "B03",
+      "ad": "ZAMAN",
+      "risk": "YUKSEK",
+      "sade_anlatim": "Bir maçın ne zaman olduğu. Saat, tarih, süre, saat dilimi, geri sayım.",
+      "garanti_ettigi": [
+        "Ekranda görünen saat ile gerçek saat aynıdır",
+        "Saat dilimi her zaman Europe/Istanbul'dur (K-10.7)",
+        "starts_at tek doğru kaynaktır; metin saat ondan türetilir (K-10.6)"
+      ],
+      "dosyalar": [
+        "utils/matchDateTime.ts",
+        "utils/discoveryDays.ts",
+        "hooks/useCountdown.ts",
+        "services/availabilityService.ts",
+        "services/facilitySchedule.ts"
+      ],
+      "db_nesneleri": [
+        "matches.starts_at",
+        "matches.date",
+        "matches.time",
+        "matches.duration_minutes",
+        "player_create_match",
+        "create_match_atomic",
+        "trg_matches_sync_time_and_score_status",
+        "get_facility_schedule"
+      ],
+      "kontroller": [
+        "K-ZAMAN-1",
+        "K-ZAMAN-2"
+      ],
+      "bilinen_acik_bulgular": [],
+      "not": "P-1'de (3 Agustos 2026) zaman TEK KAYNAK haline getirildi: trg_a_matches_zaman_normalize tetikleyicisi date+time <-> starts_at cift yonlu normalizasyonu Europe/Istanbul ile yapar. Artik HANGI fonksiyon yazarsa yazsin sapma olusamaz. KALINTI: player_create_match, admin_create_match__core ve admin_update_match__core kaynak kodlarinda hala riskli deseni tasiyor (npm run sistem:zaman-deseni ile gorulur) - tetikleyici bunlari etkisiz kildigi icin zarar veremezler, ama ileride temizlenmeli."
+    },
+    {
+      "id": "B04",
+      "ad": "REZERVASYON",
+      "risk": "YUKSEK",
+      "sade_anlatim": "Sahanın hangi saatinin kime ayrıldığı. Kort, tarife, abonman, saha sahibinin elle kapattığı slotlar.",
+      "garanti_ettigi": [
+        "Aynı korta aynı saate iki rezervasyon yapılamaz (veritabanı kısıtıyla)",
+        "İptal edilen rezervasyon saati serbest bırakır",
+        "Tarifesi olmayan saat satılamaz"
+      ],
+      "dosyalar": [
+        "services/pitchBookingService.ts",
+        "services/playerBookingService.ts",
+        "services/tariffService.ts",
+        "services/availabilityService.ts",
+        "hooks/usePitchAvailability.ts",
+        "views/PitchDiscovery.tsx"
+      ],
+      "db_nesneleri": [
+        "pitch_bookings",
+        "pitch_bookings_no_overlap",
+        "courts",
+        "pitch_tariffs",
+        "pitch_slot_holds",
+        "create_pitch_booking",
+        "owner_cancel_confirmed_booking",
+        "auto_approve_bookings",
+        "get_showcase_availability",
+        "materialize_subscriptions"
+      ],
+      "kontroller": [
+        "K-REZ-1",
+        "K-REZ-2"
+      ],
+      "bilinen_acik_bulgular": [
+        "Y-6"
+      ],
+      "not": "M-10 DUZELTMESI (P-7, 3 Agustos 2026): 'pitch_slot_holds olu tablo, kaldirilmali' tavsiyem YANLISTI ve uygulansaydi URETIMI BOZARDI. Tabloya YAZAN yok (dogru), ama UC fonksiyon ondan OKUYOR: create_pitch_booking (rezervasyon akisinin kalbi), get_facility_schedule (saha sahibi takvimi) ve cleanup_expired_holds. Tablo SILINMEDI. Gercek durum: hold ozelligi yarim bagli - okuyan taraf kurulu, yazan taraf yok. Zararsiz; ileride ya tamamlanir ya sokulur."
+    },
+    {
+      "id": "B05",
+      "ad": "KAPILAR",
+      "risk": "KRITIK",
+      "sade_anlatim": "Kimin neyi görebileceği ve değiştirebileceği. Satır kuralları (RLS), sütun izinleri, fonksiyon yetkileri, koruyucu tetikleyiciler.",
+      "garanti_ettigi": [
+        "Kullanıcı başkasının verisini okuyamaz/yazamaz",
+        "Kullanıcı kendi rolünü, bakiyesini, cezasını değiştiremez",
+        "Her SECURITY DEFINER fonksiyonun görünür bir yetki kontrolü vardır"
+      ],
+      "dosyalar": [
+        "supabaseAuth.ts",
+        "supabaseClient.ts",
+        "scripts/generate-rls-policy.ts"
+      ],
+      "db_nesneleri": [
+        "pg_policies",
+        "protect_profile_columns",
+        "protect_profile_sensitive_fields",
+        "require_admin_role",
+        "require_admin_write",
+        "can_staff_pitch",
+        "notifications_insert_own_sender",
+        "matches_update",
+        "matches_select_public"
+      ],
+      "kontroller": [
+        "K-KAPI-1",
+        "K-KAPI-2",
+        "K-KAPI-3"
+      ],
+      "bilinen_acik_bulgular": []
+    },
+    {
+      "id": "B06",
+      "ad": "BILDIRIM",
+      "risk": "YUKSEK",
+      "sade_anlatim": "Kullanıcıya haber vermek. Uygulama içi bildirim, telefon bildirimi (push), e-posta.",
+      "garanti_ettigi": [
+        "Gönderilmesi gereken her bildirim gerçekten gider",
+        "Gitmeyen bildirim sessiz kalmaz, sayılır ve raporlanır",
+        "Kullanıcı başkası adına bildirim yollayamaz"
+      ],
+      "dosyalar": [
+        "notifications/",
+        "services/notificationService.ts",
+        "supabase/functions/send-push/",
+        "supabase/functions/send-email/",
+        "supabase/functions/admin-broadcast/"
+      ],
+      "db_nesneleri": [
+        "notifications",
+        "notify_send_push_webhook",
+        "send_match_reminders",
+        "admin_broadcast_notification",
+        "net._http_response"
+      ],
+      "kontroller": [
+        "K-BILDIRIM-1",
+        "K-BILDIRIM-2"
+      ],
+      "bilinen_acik_bulgular": [
+        "M-16"
+      ]
+    },
+    {
+      "id": "B07",
+      "ad": "KAPSAMA",
+      "risk": "ORTA",
+      "sade_anlatim": "Nerede hizmet verdiğimiz. İl/ilçe kapsama alanları, harita, mesafe hesabı, yakındaki maç ve saha bulma.",
+      "garanti_ettigi": [
+        "Kapsama dışı bir yere maç/saha gösterilmez",
+        "Mesafe hesabı doğrudur ve indeksten yararlanır"
+      ],
+      "dosyalar": [
+        "services/regionCoverageService.ts",
+        "services/locationService.ts",
+        "services/geocodingService.ts",
+        "components/map/",
+        "components/location/",
+        "utils/geo.ts",
+        "utils/regionResolver.ts",
+        "utils/orduData.ts",
+        "views/MatchDiscovery.tsx"
+      ],
+      "db_nesneleri": [
+        "region_coverage",
+        "pitches_geo_idx",
+        "get_nearby_matches",
+        "get_nearby_pitches"
+      ],
+      "kontroller": [
+        "K-KAPSAMA-1"
+      ],
+      "bilinen_acik_bulgular": [
+        "M-12",
+        "Y-9"
+      ]
+    },
+    {
+      "id": "B08",
+      "ad": "KIMLIK",
+      "risk": "KRITIK",
+      "sade_anlatim": "Kim olduğun. Giriş, kayıt, roller, admin yetkisi, hesap silme, veli onayı, KVKK.",
+      "garanti_ettigi": [
+        "Kullanıcı kendi rolünü yükseltemez",
+        "Parası askıda olan kullanıcı hesabını silemez",
+        "Silinen hesabın verisi kurallara uygun temizlenir"
+      ],
+      "dosyalar": [
+        "supabaseAuth.ts",
+        "services/userService.ts",
+        "services/consentService.ts",
+        "services/guardianService.ts",
+        "views/AuthScreen.tsx",
+        "views/ProfileScreen.tsx",
+        "components/profile/"
+      ],
+      "db_nesneleri": [
+        "profiles",
+        "_account_deletion_status",
+        "admin_process_account_deletion__core",
+        "process_expired_account_deletions",
+        "sync_admin_flags_trigger",
+        "trg_protect_profile_columns"
+      ],
+      "kontroller": [
+        "K-KIMLIK-1",
+        "K-KAPI-2"
+      ],
+      "bilinen_acik_bulgular": [
+        "M-P0-5"
+      ]
+    },
+    {
+      "id": "B09",
+      "ad": "YUK",
+      "risk": "ORTA",
+      "sade_anlatim": "Sistemin kaç kişiyi kaldırabildiği. Sorgu boyutları, canlı abonelikler, önbellek, uygulama paketi boyutu, görseller.",
+      "garanti_ettigi": [
+        "Açılışta inen veri sınırlıdır ve maç sayısıyla büyümez",
+        "Canlı abonelikler filtrelidir",
+        "Aylık plan kotaları aşılmaz"
+      ],
+      "dosyalar": [
+        "store.ts",
+        "supabaseMutations.ts",
+        "vite.config.ts",
+        "services/dashboardCountsService.ts",
+        "hooks/useDashboardCounts.ts",
+        "components/common/VirtualList.tsx",
+        "utils/imageCompression.ts",
+        "utils/imageTransform.ts",
+        "services/pitchMediaService.ts"
+      ],
+      "db_nesneleri": [
+        "admin_dashboard_stats",
+        "get_my_matches",
+        "get_nearby_pitches",
+        "pg_matviews",
+        "pitches_geo_idx",
+        "supabase_realtime"
+      ],
+      "kontroller": [
+        "K-YUK-1",
+        "K-YUK-2",
+        "K-YUK-3"
+      ],
+      "bilinen_acik_bulgular": [
+        "M-P0-9",
+        "M-18"
+      ],
+      "not": "P-5 kismi (3 Agustos 2026): get_my_matches() RPC yazildi ve istemciye baglandi. useMyMatches artik IKI KAYNAGIN BIRLESIMINI kullaniyor (sunucudan kapsamli + global listenin yerel filtresi) - boylece hicbir mac kaybolamaz; Cakisma-1'in dogruluk sarti korunuyor. SIRADAKI ADIM: global fbGetMatches'in daraltilmasi. ONCE M-P0-7 (filtresiz realtime) karari verilmeli - o abonelik kaldirilirsa kesif listeleri canli guncellenmez; bu bir URUN karari, teknik degil. P-7'de M-17 (ilk yuk 561->232 KB), M-11 (geo indeks), M-19 (sikistirma kacisi) ve M-20 (debounce) kapatildi."
+    },
+    {
+      "id": "B10",
+      "ad": "OTOMASYON",
+      "risk": "YUKSEK",
+      "sade_anlatim": "Kimse dokunmadan kendi kendine çalışan işler. Zamanlanmış görevler (cron), maç kapanışı, hatırlatmalar, temizlik işleri.",
+      "garanti_ettigi": [
+        "Zamanlanmış her iş gerçekten çalışır ve sonucu kaydedilir",
+        "Başarısız iş sonsuza dek tekrarlanmaz; 3 denemeden sonra insana sorar (K-10.5)",
+        "Hata asla sessizce yutulmaz"
+      ],
+      "dosyalar": [
+        "supabase/functions/sweep-stale-payments/",
+        "services/matchLifecycleService.ts"
+      ],
+      "db_nesneleri": [
+        "cron.job",
+        "auto_process_matches",
+        "auto_finalize_matches",
+        "process_match_at_deadline",
+        "expire_service_requests",
+        "expire_stale_waitlists",
+        "release_owner_earnings"
+      ],
+      "kontroller": [
+        "K-OTO-1",
+        "K-OTO-2"
+      ],
+      "bilinen_acik_bulgular": [
+        "M-15",
+        "M-16"
+      ],
+      "not": "SON-KARAR 26 (4 Agu 2026): auto-cancel-matches dosyasi SILINDI — canliya hic yayinlanmamisti, cagiran cron yoktu ve isini veritabanindaki auto_process_matches() yapiyor. Iki yerde iki kural durmasin diye kaldirildi."
+    },
+    {
+      "id": "B11",
+      "ad": "AYARLAR",
+      "risk": "KRITIK",
+      "sade_anlatim": "Sistemin davranışını belirleyen anahtarlar. Veritabanı ayarları, ortam değişkenleri, özellik bayrakları, acil durdurma anahtarları. Kod doğru olsa bile bunlardan biri eksikse sistem sessizce çalışmaz.",
+      "garanti_ettigi": [
+        "Sistemin ihtiyaç duyduğu her ayarın dolu olduğu sürekli kontrol edilir",
+        "Eksik ayar sessiz kalmaz — kurulum sırasında ve her gün raporlanır",
+        "Panelde görünen her ayarın kodda gerçekten bir karşılığı vardır"
+      ],
+      "dosyalar": [
+        "supabaseClient.ts",
+        "capacitor.config.ts",
+        "vercel.json",
+        ".env.example",
+        "package.json",
+        "android/app/build.gradle",
+        "utils/appVersion.ts"
+      ],
+      "db_nesneleri": [
+        "app_config",
+        "app.settings.functions_base_url",
+        "app.settings.webhook_secret",
+        "sweeper_enabled",
+        "push_live_enabled",
+        "demo_mode_enabled",
+        "payment_provider",
+        "is_feature_enabled"
+      ],
+      "kontroller": [
+        "K-AYAR-1",
+        "K-AYAR-2",
+        "K-AYAR-3",
+        "K-SURUM-1"
+      ],
+      "bilinen_acik_bulgular": [
+        "CTO-P1-ozellik-bayraklari"
+      ],
+      "not": "Bu yapı taşı 3 Ağustos 2026'da doğdu: sweeper cron'unun kurulmaması ve 18/18 push hatasının TEK kök nedeni bu kutudaki iki boş ayardı. Hiçbir yapı taşı bu alana sahip çıkmıyordu."
+    },
+    {
+      "id": "B12",
+      "ad": "DEMO",
+      "risk": "DUSUK",
+      "sade_anlatim": "Tanıtım ve deneme verileri. Boş ekran görünmesin diye duran sahte maçlar, sahalar, hesaplar.",
+      "garanti_ettigi": [
+        "Demo veri gerçek veriyle karışmaz",
+        "Demo veri denetim raporlarını kirletmez (K-10.8)",
+        "Demo veri gerçek sistemin kurallarına uyar"
+      ],
+      "dosyalar": [
+        "services/ownerDemoService.ts",
+        "scripts/owner-demo.mjs",
+        "scripts/seeds/"
+      ],
+      "db_nesneleri": [
+        "matches.isDemo",
+        "demo_mode_enabled"
+      ],
+      "kontroller": [
+        "K-DEMO-1"
+      ],
+      "bilinen_acik_bulgular": [],
+      "not": "P-3 (3 Agustos 2026): 6 tabloya is_demo sutunu + kandirilamayan tetikleyiciler eklendi. Demo olcutu: @oyna.app e-postasi (kaynak: demo_ekosistem_seed.sql, canlida 29/3/1 olarak dogrulandi). Artik denetim demo haric calisabiliyor. Olcum: panelde gorunen 15.860 TL'nin 13.940 TL'si demoymus, gercek para 1.920 TL."
+    },
+    {
+      "id": "B13",
+      "ad": "SAHA-SAHIBI",
+      "risk": "YUKSEK",
+      "sade_anlatim": "Saha sahibinin paneli. Tesis bilgileri, kortlar, fotoğraflar, personel, takvim, finans raporu, tahsilat, abonman, özel fiyat, kampanya.",
+      "garanti_ettigi": [
+        "Saha sahibi yalnız kendi tesisini yönetebilir",
+        "Elle kapatılan slotun komisyon alacağı kaydedilir (K-2.3)",
+        "Panelde gösterilen her tutar canlı veriyle birebir aynıdır",
+        "İnternet kesildiğinde yapılan işlem kaybolmaz (outbox)"
+      ],
+      "dosyalar": [
+        "services/pitchOwnerService.ts",
+        "services/pitchContentService.ts",
+        "services/pitchShowcaseService.ts",
+        "services/ownerAccountService.ts",
+        "services/staffService.ts",
+        "services/demandService.ts",
+        "services/pitchFilterService.ts",
+        "services/pitchFavoritesService.ts",
+        "services/onboardingService.ts",
+        "services/offline/",
+        "components/pitch-editor/",
+        "components/pitch-showcase/",
+        "views/OwnerPanel.tsx",
+        "views/owner/",
+        "hooks/useOwnerEntitlements.ts",
+        "supabase/functions/admin-owner-credentials/"
+      ],
+      "db_nesneleri": [
+        "pitches",
+        "pitch_staff",
+        "can_staff_pitch",
+        "get_facility_schedule",
+        "owner_cancel_confirmed_booking",
+        "release_owner_earnings"
+      ],
+      "kontroller": [
+        "K-KAPI-1",
+        "K-SAHIBI-1",
+        "K-SAHIBI-2"
+      ],
+      "bilinen_acik_bulgular": [
+        "Y-7",
+        "Y-10"
+      ],
+      "not": "Risk 3 Ağustos 2026'da ORTA'dan YÜKSEK'e çıkarıldı (K-11.2). Kurucu direktifi: saha sahibi ekranları 'inanılmaz bir özeni hak ediyor'. Gerekçe mimari olarak da doğru: bu panel gelirin toplandığı operatör yüzeyidir ve `views/owner/` altında 52 dosya taşır — kod tabanının en büyük tek alt ağacı."
+    },
+    {
+      "id": "B14",
+      "ad": "PAZARYERI",
+      "risk": "YUKSEK",
+      "sade_anlatim": "Kaleci ve hakem kiralama. Başvuru, profil, talep, teklif, teminat, hizmet ödemesi.",
+      "garanti_ettigi": [
+        "Hizmet ödemesi maç gerçekleşmeden serbest bırakılmaz",
+        "Teminat kuralları uygulanır (K-5.1)",
+        "Sağlayıcı yalnız kendi talep ve kazançlarını görür",
+        "Süresi geçen talep askıda kalmaz"
+      ],
+      "dosyalar": [
+        "components/Marketplace/",
+        "hooks/useMacSaglayicilari.ts",
+        "services/serviceOfferService.ts",
+        "services/serviceProviderService.ts",
+        "services/serviceRequestService.ts",
+        "views/Marketplace.tsx",
+        "views/ServiceApplication.tsx",
+        "views/ServiceDashboard.tsx",
+        "views/ServiceProfile.tsx",
+        "views/ServiceSettings.tsx"
+      ],
+      "db_nesneleri": [
+        "service_requests",
+        "admin_fetch_goalkeepers",
+        "admin_fetch_referees",
+        "expire_service_requests",
+        "auto_release_service_payouts"
+      ],
+      "kontroller": [
+        "K-PARA-2",
+        "K-KAPI-1",
+        "K-PAZAR-1"
+      ],
+      "bilinen_acik_bulgular": [],
+      "not": "Risk 3 Ağustos 2026'da ORTA'dan YÜKSEK'e çıkarıldı (K-11.2). Gerekçe mimari olarak da doğru: K-5.1 gereği burada teminat ve online ödeme var — yani bu taş gerçek para taşıyor."
+    },
+    {
+      "id": "B15",
+      "ad": "SOSYAL",
+      "risk": "ORTA",
+      "sade_anlatim": "Arkadaşlar, takımlar, sohbet, davetler, taktik tahtası.",
+      "garanti_ettigi": [
+        "Kullanıcı yalnız kendi sohbetlerini görür",
+        "Süresi geçen davetler temizlenir"
+      ],
+      "dosyalar": [
+        "services/socialService.ts",
+        "services/friendService.ts",
+        "services/teamService.ts",
+        "services/teamChatService.ts",
+        "services/teamAdminService.ts",
+        "services/teamSocialService.ts",
+        "services/tacticSocialService.ts",
+        "services/messageService.ts",
+        "services/contactsService.ts",
+        "components/social/",
+        "views/SocialView.tsx",
+        "views/MessagesView.tsx",
+        "views/Studio.tsx"
+      ],
+      "db_nesneleri": [
+        "friendships",
+        "teams",
+        "team_invites",
+        "match_list_invites",
+        "get_friends"
+      ],
+      "kontroller": [
+        "K-KAPI-1"
+      ],
+      "bilinen_acik_bulgular": [
+        "M-21"
+      ]
+    },
+    {
+      "id": "B16",
+      "ad": "KURTARMA",
+      "risk": "KRITIK",
+      "sade_anlatim": "Bir şey bozulduğunda geri dönebilmek. Yedekler, geri yükleme, migration geri alma, kaza sonrası kurtarma. Diğer bütün yapı taşları 'bozulmasın' diye çalışır; bu yapı taşı 'bozulduğunda ne yapacağız' sorusunun cevabıdır.",
+      "garanti_ettigi": [
+        "Kritik tabloların her gece tam kopyası alınır ve 7 gün saklanır",
+        "Yedek alınmazsa panel kırmızı yanar — sessizce durmuş bir yedek, yedeksizlikten kötüdür",
+        "Her migration dosyasında geri alma adımları yazılıdır"
+      ],
+      "dosyalar": [
+        "supabase/migrations/20260804120000_sre1_gecelik_yedek.sql",
+        "supabase/migrations/20260804130000_sre1_yedek_saglik_kontrolu.sql"
+      ],
+      "db_nesneleri": [
+        "yedek",
+        "yedek.kapsam",
+        "yedek.gunluk_al",
+        "yedek_durumu",
+        "gecelik_yedek"
+      ],
+      "kontroller": [
+        "K-YEDEK-1"
+      ],
+      "bilinen_acik_bulgular": [
+        "SRE-8"
+      ],
+      "not": "Bu yapi tasi 4 Agustos 2026'da dogdu. SRE turu tek GERI ALINAMAZ riski buldu: ucretsiz planda otomatik yedek garantisi yok ve veritabaninda artik GERCEK PARA var. Gecelik ic kopya (S-1=a) kuruldu. DURUST SINIR: yanlis migration / kazara silme / bozulan veri 7 gune kadar geri alinir; veritabaninin TAMAMEN gitmesi kapsanmaz (kopya ayni veritabaninda). Tam guvence icin haftalik DIS kopya (S-1=b) veya Pro plan gerekir. SRE-8 hala acik: geri yukleme hic PROVA edilmedi."
+    },
+    {
+      "id": "B17",
+      "ad": "GORUNURLUK",
+      "risk": "YUKSEK",
+      "sade_anlatim": "Bir şeyin bozulduğunu ÖĞRENEBİLMEK. Çökme kayıtları, hata izleme, sistem sağlığı denetimi, panelde görünen alarmlar. Kurtarma 'nasıl geri döneriz' sorusuysa, bu 'bozulduğunu ne zaman fark ederiz' sorusudur.",
+      "garanti_ettigi": [
+        "Uygulama bir kullanıcının telefonunda çöktüğünde kayda geçer — kullanıcının bize yazmasını beklemeyiz",
+        "Hata kayıtları üçüncü tarafa GÖNDERİLMEZ; kendi veritabanımızda kalır",
+        "Kişisel bilgi (e-posta, telefon, kart, oturum anahtarı) kaydedilmeden önce hem tarayıcıda hem sunucuda silinir",
+        "Bozuk bir ekran sel gibi kayıt üretse bile sistem boğulmaz (saatte aynı hatadan 20, toplamda 500 sınırı)"
+      ],
+      "dosyalar": [
+        "utils/observability.ts",
+        "components/ErrorBoundary.tsx",
+        "admin-panel/views/components/CokmeKayitlari.tsx",
+        "admin-panel/views/components/SistemSagligi.tsx",
+        "supabase/migrations/20260804140000_sre3_cokme_kaydi.sql",
+        "supabase/migrations/20260804150000_sre3_ek_bilgi_temizligi.sql",
+        "supabase/migrations/20260804160000_sre3_gizlendi_etiketi_duzeltmesi.sql"
+      ],
+      "db_nesneleri": [
+        "istemci_hatalari",
+        "hata_bildir",
+        "hata_ozeti",
+        "hata_temizle_metin",
+        "hata_temizle_json",
+        "hata_kayitlarini_temizle",
+        "hata_kayit_temizligi",
+        "sistem_saglik_kayitlari",
+        "sistem_saglik_calistir",
+        "sistem_saglik_ozet",
+        "sistem_saglik_gunluk"
+      ],
+      "kontroller": [
+        "K-COKME-1"
+      ],
+      "bilinen_acik_bulgular": [
+        "SRE-2",
+        "SRE-5"
+      ],
+      "not": "Bu yapi tasi 4 Agustos 2026'da dogdu. SRE turu olctu: 391 dosyada yalnizca 2 trackEvent ve 6 captureError vardi VE hicbiri bir yere gitmiyordu — utils/observability.ts Sentry icin yazilmis ama anahtar yoktu, yani her cagri sessiz no-op'tu. ErrorBoundary ekranda 'sorun Oyna tarafina iletildi' yazdigi halde iletilmiyordu. S-3 karari 'guvenli olsun': ucuncu tarafa veri gonderilmez, kendi veritabanimiza yazilir. Ayrica artik yalnizca elle cagrilan yerler degil, YAKALANMAMIS tum hatalar da toplanir (window.onerror + unhandledrejection). SRE-2 hala acik: alarm kurucunun telefonuna ULASAMAZ, panele bakmasi gerekir (S-2 = 'bu oturumda e-posta yok')."
+    }
+  ]
+}

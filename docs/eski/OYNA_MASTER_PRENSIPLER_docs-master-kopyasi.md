@@ -1,7 +1,23 @@
-# 🏛️ OYNA — Master Prensipler Dokümanı
+# ⛔ GEÇERSİZ — BAĞLAYICI DEĞİLDİR
+
+> **Bu dosya 3 Ağustos 2026 itibarıyla kurucu kararıyla GEÇERSİZ ilan edilmiştir.**
+> Buradaki hiçbir madde bir kararı bağlamaz, bir tartışmayı kapatmaz ve "böyle yazıyor"
+> gerekçesiyle kullanılamaz. Dosya yalnızca **tarihsel referans** olarak duruyor.
+>
+> **Sebep:** Aynı adı taşıyan iki kopya (bu dosya ve kökteki `OYNA_MASTER_PRENSIPLER.md`)
+> farklı yerlerde bayatlamış ve birbiriyle çelişiyordu. Hangisinin bağlayıcı olduğu belirsizdi.
+>
+> **Yerine geçecek:** Danışma kurulu süreci tamamlandığında yazılacak **tek** master prensipler dosyası.
+> O dosya yayınlanana kadar geçerlilik sırası için: **`GECERLILIK_POLITIKASI.md`**
+>
+> **Kısa kural:** Çelişki varsa **canlı sistem** kazanır — bu dosya değil.
+
+---
+
+# 🏛️ OYNA — Master Prensipler Dokümanı *(arşiv)*
 
 > **Durum:** TASLAK — canlı geliştiriliyor. Keşif soruları yanıtlandıkça bölüm bölüm dolduruluyor.
-> **Kaynak:** `docs/OYNA_MASTER_KESIF_SORULARI.md` (200 soru) + bölüm bölüm Q&A.
+> **Kaynak:** `docs/eski/OYNA_MASTER_KESIF_SORULARI.md` (200 soru) + bölüm bölüm Q&A.
 > **Son güncelleme:** ✅ **TÜM 20 BÖLÜM TAMAMLANDI + tutarlılık gözden geçirmesi yapıldı** (payout/yasal/iptal/ton tutarsızlıkları düzeltildi).
 > **Amaç:** Karışıklıkları gidermek → binlerce kullanıcı, saha sahibi, kaleci, hakem için sorunsuz → canlıya + store.
 
@@ -23,8 +39,8 @@
 - **Lansman rolleri:** `PLAYER`, `GOALKEEPER`, `REFEREE`, `OWNER` + Admin(ler). `CAPTAIN`(global) ve `COMMUNITY_ADMIN` kaldırıldı.
 - **Kaptanlık = takım-içi yöneticilik** (global rol değil): Takımı **kuran** otomatik yönetici olur; yönetici, takımdaki **herkese** yönetim yetkisi verebilir (çoklu yönetici mümkün).
   - **Yönetici yetkileri:** Takım arayüzündeki **taktik stüdyo** ile taktik düzenini ayarlama/onaylama; **oyuncu ekleme/çıkarma**.
-- **Çoklu rol:** Bir kişi birden çok rol taşıyabilir; **ancak güvenlik için her rol arayüzüne geçişte yeniden giriş/çıkış (re-login) gerekir.** Aktif rol girişte seçilir.
-- **Oyuncu → kaleci/hakem:** Aynı hesaba rol başvurusu eklenir; o arayüze re-login ile geçilir.
+- **Çoklu rol (GÜNCELLENDİ — Faz 7):** Bir kişi birden çok rol taşıyabilir. Aktif rol girişte seçilir; sonradan **uygulama-içi "Rol Değiştir"** ile geçilir. Geçiş yalnızca kullanıcının **zaten sahip olduğu** roller arasındadır (`set_active_role` RPC, `roles[]` dışına çıkamaz → ayrıcalık yükseltme yok) ve bir **onay adımı** ister. *(Önceki "tam re-login zorunlu" kararı, kullanıcı onayıyla uygulama-içi geçişe revize edildi: ADMIN'e yükselme mümkün olmadığından sürtünmesiz geçiş tercih edildi; tam re-auth gerekmiyor.)*
+- **Oyuncu → kaleci/hakem:** Aynı hesaba rol başvurusu eklenir; başvuru onaylanınca o role **uygulama-içi geçişle** girilir.
 - **Maç açma:** Hem oyuncu/kaptan hem **saha sahibi** maç açabilir/düzenleyebilir (iki taraflı maç açma & düzenleme sistemi).
 - **Açılış ekranı:** PLAYER→Dashboard, GK/REF→ServiceDashboard, OWNER→OwnerPanel; kaptana ayrı ekran yok ("Takımım" Dashboard içinde).
 - **Admin rolleri (onaylandı):**
@@ -42,7 +58,7 @@
 - **Giriş yöntemleri:** **Google + Apple (birincil)**, **E-posta (ikincil)**. **SMS/telefon ile giriş YOK** (telefon yalnızca profil/iletişim alanı). → Supabase Auth (OAuth) ↔ `profiles` tam entegre kurulacak.
 - **Misafir girişi:** Lansmanda **YOK**; geliştirme sırasında geçici kalabilir, yayından önce kaldırılır.
 - **Kimlik esnekliği:** Telefon/hesap tekilliği zorunlu değil (ödeme yapıldığı sürece). *Not: gevşek kimlik → ban/fair-play kaçışını zayıflatır; sistem bunu göz önünde tutmalı.*
-- **Rol & giriş akışı:** **Varsayılan rol yok**; her arayüzün kendi rolü var. Akış: **Arayüz/rol seç → Auth (Google/Apple/e-posta) → (yeni hesap) Onboarding sihirbazı → ilgili arayüz.** Başka role geçiş = **re-login**.
+- **Rol & giriş akışı:** **Varsayılan rol yok**; her arayüzün kendi rolü var. Akış: **Arayüz/rol seç → Auth (Google/Apple/e-posta) → (yeni hesap) Onboarding sihirbazı → ilgili arayüz.** Sahip olunan roller arası geçiş = **uygulama-içi "Rol Değiştir"** (re-login değil; bkz. §3 Çoklu rol).
 - **Onboarding sihirbazı (yeni kullanıcı; sayfa sayfa; hepsi zorunlu):** Ad-soyad → Telefon → Profil fotoğrafı → Konum izni. (Auth ekranından sonra.)
   - **Profil fotoğrafı:** zorunlu (Supabase Storage).
   - **Konum:** zorunlu; OS'ten reddedilirse fallback = manuel şehir/ilçe (Ordu) seçimi.
@@ -82,7 +98,8 @@
   - **Hakem (hakemli maç):** Hakem skoru girer → resmi kayıt; sonuç **"Takımlar → Hakemli Maçlar"**da görünür. **Yalnız kayıtlı takımlar** bu geçmişi alır; kayıtsız/pickup maçta **otomatik takım oluşturulmaz** (skor kişisel maç geçmişinde). Kayıtlı takımlar **saha sahibine skor bildirerek** de geçmişlerini geliştirebilir.
   - **Saha sahibi:** İki kayıtlı takım talep ederse saha sahibi skoru sisteme girer; sonuç takım arayüzlerinde görünür. *(Tarafsız kayıt; "oyuncu adına işlem" değil.)*
 - **Maç sonu değerlendirme sayfası:** Atlanabilir ama **teşvik edilir**; **2 sayfa geçişiyle hızlı/keyifli** UX. İçerik: rakip/takım **fair-play yıldızı** + opsiyonel **oyuncu puanı** + opsiyonel **yorum**; **hizmet alındıysa kaleci/hakem 1–10** puanı. Sadece **fair-play + hizmet puanını** besler (kartları değil).
-- **MOTM:** Ödülsüz **kozmetik etiket**; **değerlendirme puanlarından** belirlenir.
+- **MOTM:** Ödülsüz **kozmetik etiket**; **değerlendirme puanlarından** belirlenir. *(F2'de uygulandı: `match_motm` görünümü + profil sayacı — ayrı oy saklanmaz.)*
+- **İptal cezası (PLANLI — henüz sunucuda uygulanmıyor):** Maça ≤90 dk kala oyuncu kaynaklı iptalde güvenilirlik puanı **−10**; puan **%70'in altına** düşerse **1 hafta katılım kilidi**. *(Eski client kopyası `utils/gameRules.ts` silindi; kural buraya taşındı — uygulanacaksa sunucu tarafında yazılmalı.)*
 - **Fair-play/güvenilirlik:** Başlangıç **100**. no-show (−), geç iptal (−), kötü değerlendirme (−), sorunsuz oynama (+). Eşikler **admin'den**. Düşükse profilde **uyarı**; çok düşükse **katılım kısıtı/ban**. **Admin panelinde görüntülenir.**
 - **No-show:** Maçı **oluşturan** isterse gelmeyenleri işaretler. **Kurucu gelmezse:** herhangi bir katılımcının **"Sorun Bildir"**i (tek kişi yeterli) → **admin incelemesi** → doğrulanırsa ban. (Kurucu da Sorun Bildir'le itiraz eder.)
 - **Sorun Bildir:** Skor itirazı yok; **no-show / saha sorunu / iade** için "sorun bildir" → admin **OPERASYON**.
@@ -325,7 +342,7 @@ OYNA tek merchant; saha ödemeleri **iki haftada bir (otomatik) payout**. Tüm o
 | **4** | Saha Sahibi B2B | Panel + B2B ton (+ saha sahibi sınırları #20'ye göre). |
 | **5** | Kaleci/Hakem | Gerçek teklif/kabul + %10 + payout. |
 | **6** | Takım & Taktik | Takım + arkadaşlar + takım-içi taktik (oylama/yorum/favori) + 1-1 mesaj; çoklu yönetici. |
-| **7** | Güvenlik, Altyapı & Store | RLS; edge function deploy + güvenlik; çoklu-rol re-login; iOS/Android; test. |
+| **7** | Güvenlik, Altyapı & Store | RLS; edge function deploy + güvenlik; çoklu-rol uygulama-içi geçiş; iOS/Android; test. |
 
 ## 11.1 Lansman, Store & Operasyon
 - **İşletme:** Şahıs şirketi — **Miraç Kerem Çürüksulu**. Store hesapları (Apple Developer + Google Play) şirket adına.
@@ -369,420 +386,34 @@ OYNA tek merchant; saha ödemeleri **iki haftada bir (otomatik) payout**. Tüm o
 
 ---
 
-## 14. ✍️ Dil ve Adlandırma Kuralı (IP-13)
-
-Bu bölüm bir tercih listesi değil, **uygulanabilir kuraldır**: her maddesi
-`tests/unit/turkishText.test.ts` ile kilitlidir. Kural değişecekse önce testi
-değiştir, sonra kodu.
-
-### 14.1 Hitap: SEN
-
-Arayüzün tamamı **SEN** kipindedir. "Yükleyebilirsiniz" değil "yükleyebilirsin",
-"Lütfen tekrar deneyin" değil "Tekrar dene".
-
-**Tek istisna — hukuki metinler SİZ kalır:** `LegalScreen`, `GuardianConsentForm`,
-`PartnerOnboarding` sözleşme bölümleri ve `LegalModal` içindeki KVKK metni.
-Gerekçe: bu metinler avukat onayına gidiyor; dil değişikliği hukuki içeriği
-değiştirme riski taşır.
-
-> Not: "Arkadaşsınız", "Arkadaşlığınız", "birbirinizi" gibi **çoğul** ifadeler
-> SİZ kipi değildir (iki kişiye birden hitap eder) — dokunulmaz.
-
-### 14.2 Ekran adı: bir ekranın TEK adı vardır
-
-Sekme etiketi, ekran başlığı ve metin içindeki atıf **aynı kelimedir**. Kaynak:
-`ui/labels.ts` → `SCREEN`. Alt menüde "Sahalar" yazan sekme, açılınca kendini
-"Saha Vitrini" diye tanıtamaz; kullanıcı sekmede ne gördüyse onu arar.
-
-### 14.3 Büyük harf: `trUpper`, asla `toUpperCase()`
-
-Türkçe metin `utils/trUpper.ts` ile büyütülür. Düz `toUpperCase()` noktalı/
-noktasız `i` ayrımını bozar: `Gizlilik Politikası` → `GIZLILIK POLITIKASI`.
-
-**Teknik alanlarda TAM TERSİ geçerlidir:** IBAN, davet kodu, işlem numarası,
-enum ve kart markası ASCII'dir; orada `tr-TR` locale `i`'yi ASCII olmayan `İ`'ye
-çevirip doğrulamayı bozar. O çağrılar bilerek düz `toUpperCase()`'tir ve testin
-izinli listesindedir.
-
-### 14.4 Yıkıcı ve güvenli buton
-
-- Güvenli buton **daima "Vazgeç"**.
-- Yıkıcı buton **fiili söyler**: "Maçtan Ayrıl", "Rezervasyonu İptal Et",
-  "Hesabı Sil". **"Evet," ön eki kullanılmaz.**
-
-Gerekçe: yan yana duran "Evet, İptal Et" ile "Vazgeç" Türkçede eş anlamlı
-okunuyordu; kullanıcı hangisinin yıkıcı olduğunu ayırt edemiyordu.
-
-### 14.5 Üç nokta ve bekleme metni
-
-Tek karakter: **`…`** (`...` değil). Bekleme metinleri `ui/labels.ts` → `WAIT`
-sözlüğünden gelir: `Yükleniyor…`, `Kaydediliyor…`, `Gönderiliyor…`.
-
-### 14.6 Kod adı sızmaz
-
-Kullanıcıya gösterilen metinde kod içi ekran/tablo adı geçemez. "Tesisiniz onay
-bekliyor — PitchDiscovery'de görünmez" gibi bir cümle kullanıcı için anlamsızdır.
-
----
-
-## 15. Para Biçimi Kuralı (IP-19)
-
-### 15.1 Kanonik biçim: `2.000₺`
-
-Sembol **sonda**, **boşluksuz**, binlik ayraçlı. Tam sayıda ondalık **yok**;
-kuruş varsa **tam iki hane**: `299,90₺`. Değer yoksa `—`.
-
-Gerekçe: aynı tutar üç ayrı yazımla çıkıyordu ve kullanıcı üçünü **tek akışta**
-görüyordu — Sahalar'da `₺2000`, Ödeme'de `2.000,00₺`, Profil'de `2.000 ₺`.
-Aynı sayının üç yazımı, üç ayrı sayı gibi okunuyor.
-
-### 15.2 Bağlama göre çağrı — sıfırın anlamı değişir
-
-| Bağlam | Çağrı | Sıfır |
-|---|---|---|
-| Fiyat: saha, hizmet, maç ücreti | `formatTRYShort` | `Ücretsiz` |
-| Tutar: bakiye, kapora, kesinti, ciro | `formatTRYAmount` | `0₺` |
-| Cüzdan hareketi (giren/çıkan) | `formatTRYSigned` | `+0₺` / `−0₺` |
-
-Bir saha ücretsiz olabilir; bir cüzdan olamaz. `0₺` bedavayı anlatmaz,
-`Ücretsiz` de boş bir cüzdanı.
-
-**`—` ile `0₺` aynı şey değildir.** Veri çekilemediğinde `0₺` göstermek yalandır;
-kullanıcı parasının silindiğini sanır.
-
-### 15.3 Ekranda elle para dizilmez
-
-`₺` karakteri kaynak kodda yalnız iki yerde meşrudur: sayı **giriş alanının**
-yanındaki tek karakterlik süs, ve avukat onaylı hukuki metin. Bunun dışında her
-tutar `utils/formatTRY.ts`'ten geçer. Para için elle `toLocaleString('tr-TR')`
-çağrılmaz.
-
-İkinci bir görünür biçim üreten dışa aktarım **eklenmez**. `formatTRYWithSymbol`
-(daima iki ondalık) bu yüzden silindi.
-
-### 15.4 Gösterilen sayı, hesaba giren sayıdır
-
-Biçimleyici **yuvarlamaz**. Yuvarlarsa ekran kendi kendisiyle çelişir: 299,60₺
-bakiye "300₺" yazılıp eksik hesabı ham değerden yapıldığında, kullanıcı aynı
-ekranda "bakiyen 300₺" ve "1₺ eksik" görür.
-
-### 15.5 Bir para, bir sayı, bir isim
-
-Cüzdan bakiyesi tek kaynaktan okunur (`spendable_balance`); ekran kendi toplamını
-tutmaz. Adı her yerde **"Cüzdan"**dır — "OYNA Bakiyesi" gibi ikinci bir ad
-kullanılmaz. İadeden gelen tutar ayrı bir para türü değildir, ayrı çip almaz.
-
-### 15.6 Tutar tek başına okunabilmeli
-
-Ödeme butonunda tutar, sayı ve eylemle aynı puntoda tek satıra dizilmez. Büyük
-tutar üstte, ne için ödendiği küçük puntoda altta durur. Dar alanda **kısaltma
-yapılmaz** (`1,5B₺` gibi) — para okunurluğu yer kazancından önce gelir.
-
-Hizalama `font-numeric` sınıfıyla gelir (`index.css`); o sınıf sabit genişlikli
-rakam kuralını zaten taşır, yanına ikinci kez yazılmaz.
-
----
-
-## 16. Hareket Kuralı (IP-11)
-
-### 16.1 Dekoratif hareket ile bilgi taşıyan hareket ayrıdır
-
-**Dekoratif** (parıltı, gradyan kayması, nabız, dönen çerçeve) sistem "hareketi
-azalt" derse **çizilmez**. Kalıp:
-
-```tsx
-transition={lowMotion ? { duration: 0 } : { duration: N, repeat: Infinity }}
-```
-
-`duration: 0` anahtar kare dizisinin **son** değerine oturur; diziler ya
-`[a, b, a]` olmalı ya da ekran dışına süpüren tek yön — yoksa öğe yanlış yerde
-donar.
-
-**Bilgi taşıyan** hareket bu bayrağa **bakmaz**: bekleme spinner'ı, geri sayım
-nabzı. Durdurulursa kullanıcı uygulamanın kilitlendiğini sanar — hareketi
-azaltmak isteyen kullanıcıyı cezalandırmış olursun.
-
-### 16.2 CSS tek başına yetmez
-
-`@media (prefers-reduced-motion: reduce)` **yalnız CSS animasyonlarını** kapatır.
-Framer Motion inline `style`/WAAPI ile sürer ve o kurala bakmaz. Sistem tercihini
-ona taşıyan iki şey vardır ve **ikisi de gerekir**:
-
-1. `App.tsx` kökündeki `<MotionConfig reducedMotion="user">` — transform ve
-   layout animasyonlarını kapatır.
-2. `hooks/useLowMotion` — `opacity`, `backgroundPosition`, `boxShadow` gibi
-   MotionConfig'in kapsamadığı özellikler için.
-
-### 16.3 Kullanıcı istemeden animasyon kapatılmaz
-
-Düşük hareket kararı **yalnız sistem tercihine** bakar. Cihazın RAM'i veya
-çekirdek sayısı ölçüt değildir: `≤4 GB / ≤4 çekirdek` eşiği Türkiye'deki Android
-tabanının büyük kısmını kapsar ve uygulamanın kimliğini kullanıcıya sormadan
-söker. Cihaz sınıflandırması (`views/studio/perf.ts`) yalnız Stüdyo'nun ağır
-**çizim** efektleri içindir, animasyon için değil.
-
-### 16.4 Geçiş süresi gezinmeye eklenir
-
-`AnimatePresence mode="wait"` çıkan görünümün `exit`i bitmeden yenisini monte
-etmez — süre doğrudan her dokunuşa eklenir. `PAGE_TRANSITION` bu yüzden **0,2 sn**
-tutulur. `popLayout`'a dönmek iki ağır görünümü aynı anda DOM'da bırakır; çözüm
-o değil, süreyi kısaltmaktır.
-
-### 16.5 Bekleme sessiz olmaz
-
-Dönen halka tek başına "bir şey oluyor" demez. Bekleme ekranı **ne beklendiğini
-yazar**; 4 saniyeyi aşarsa sebebini söyler. Bekleme ve hata ekran okuyucuya
-duyurulur: bilgi `role="status" aria-live="polite"`, hata
-`role="alert" aria-live="assertive"`.
-
-### 16.6 Sunucuyu bekleyen ekran boş durmaz
-
-Kullanıcının dokunduğu şey sunucu yanıtını beklemeden sonucu gösterir (iyimser
-yazım); sunucu tek otorite kalır, hata dalında geri alınır. İyimser yazım
-**türetilmiş değil gerçek** veriden yapılır: ekranın kendi doldurduğu varsayılan
-değerler mağazaya yazılırsa uydurma veri kalıcı hale gelir.
-
----
-
-## 17. Kayıt Kapısı ve Yasal Onay Kuralı (IP-15)
-
-### 17.1 Misafir okur, yazamaz — ve bunu hata olarak öğrenmez
-
-Misafirin denediği **her yazma aksiyonu** kayıt kapısını açar. Sunucuya
-gönderilip hata mesajı olarak geri dönmez: RPC'nin ürettiği "Slot satın
-alınamadı" gibi bir cümle kullanıcıya neyin eksik olduğunu söylemez.
-
-Kapı, aksiyonun **kendi başına** durur:
-
-```ts
-const requireAccount = (): boolean => {
-  if (auth.currentUser) return true;
-  const s = useAppStore.getState();
-  s.setPendingIntent('MATCH_JOIN', match.id);
-  s.setIsSignupGateOpen(true);
-  return false;
-};
-```
-
-Kapı **son anda** açılır — form doldurulabilsin, kullanılamayacak bir ekran
-gösterilmesin.
-
-### 17.2 Başlanan iş kaybolmaz
-
-Kapı, kullanıcının bulunduğu ekranı `pendingIntent` olarak saklar; kayıt +
-onboarding bitince kullanıcı **tam o ekrana** döner. Niyet `localStorage`'a da
-yazılır (OAuth yönlendirmesi sayfayı yeniden yükler) ve **30 dakika** sonra
-düşer — bayat niyet kullanıcıyı beklemediği bir ekrana atar.
-
-Niyet yalnız **oyuncu** açılışında tüketilir: tesis sahibi hesabıyla giren biri
-oyuncu maç lobisine bırakılmaz.
-
-### 17.3 Hiçbir buton sessizce pasif kalmaz
-
-Tek meşru pasiflik nedeni **"işlem sürüyor"**dur. Eksik alan veya onay,
-butonu öldürerek değil, dokunulduğunda **eksik olan tek şeyi söyleyerek**
-bildirilir. Grileşen bir buton kullanıcıya hangi alanın eksik olduğunu
-söylemez; tahmin ettirir.
-
-Hata metni ekran okuyucuya duyurulur: `role="alert" aria-live="assertive"`.
-
-### 17.4 Rıza yalnız hesap açılırken istenir
-
-Salt-okur gezinme yazma eylemi değildir ve sunucuya rıza kaydı gitmez; orada
-KVKK onayı **istenmez**. Onay yalnız hesap açılırken (kayıt / Google / Apple)
-zorunludur.
-
-### 17.5 Onay anındaki metin, resmi belgenin ta kendisidir
-
-Onay kutusundan açılan metin ile Ayarlar → Yasal'daki belge **aynı kaynaktan**
-gelir (`shared/legalDocs.ts`). Kısaltılmış "özet" gösterilmez: kullanıcı neye
-onay verdiğini görebilmelidir.
-
-Belgenin **tek adı** vardır — arayüzde "Kullanıcı Sözleşmesi", yasal ekranda
-"Kullanım Şartları" olamaz.
-
-Sunucuya yazılan **sürüm damgası** belgenin kendi tarihiyle aynı yerden gelir
-(`shared/legalVersion.ts`). Damga metinden eskiyse denetimde "hangi metne onay
-verildi" sorusu cevapsız kalır.
-
-> Yasal metinler ağırdır (≈38 KB). Onay modalı **tembel yüklenir** — belgeyi
-> hiç açmayan kullanıcı indirmez.
-
-### 17.6 Açılış ekranı dokunuşu yutmaz
-
-Oturum çözülmeden dokunuş kabul edilmez; yoksa oturumu açık kullanıcı giriş
-ekranını görür ve ekran altından kayar. Beklerken **ne beklendiği yazılır**
-(~1 sn sonra; hızlı bağlantıda yanıp sönmesin). Ağ takılırsa kullanıcı
-hapsolmaz: **6 saniye** sonra dokunuş yine geçerlidir.
-
----
-
-## 18. Kurulum Akışı ve Konum Kuralı (IP-16)
-
-### 18.1 Yarım kalan kurulum kaybolmaz
-
-Açılışta `profiles.has_completed_onboarding` **okunur**. Kurulumu yarıda bırakan
-oyuncu akışa geri döner — yoksa konum izni yalnız orada istendiği için
-"yakınındaki maç" vaadi hiç açılmaz.
-
-**Ama "Şimdilik Atla" diyen bir daha zorlanmaz.** Kullanıcının bilinçli kararı
-her açılışta yeniden sorulmaz; kurtarma yolu Profil'deki
-"Profil tamamlanmadı → Tamamla" şeridi olarak durur.
-
-### 18.2 Konum TEK yoldan istenir
-
-`services/locationService` dışında hiçbir yer konum istemez. Tarayıcının ham
-konum API'sini doğrudan çağırmak native izin akışını atlar ve **red / kalıcı
-engel / zaman aşımı / cihazda yok** ayrımını yok eder — dördü farklı metin ve
-farklı çıkış gerektirir.
-
-Verilen izin **kalıcı** olmalıdır: koordinat store'a yazılıp bırakılırsa
-uygulama kapanınca kaybolur. `setActiveRegion` ile bölge kaydedilir. Konum
-kapalıyken **kayıtlı bölge hatırlatılır** — kullanıcı sıfırdan başlamaz.
-
-### 18.3 Çalışmayacak tuş çizilmez
-
-Kalıcı olarak engellenmiş izinde "Tekrar Dene" **gösterilmez**; basınca hiçbir
-şey olmayacaktır. Uygulama içinden ayarları açacak bir yol yoksa **sahte bir
-tuş konmaz** — yapılacak iş metinde adım adım yazılır.
-
-Aynı kural her yerde geçerlidir: bir tuş ya işini yapar ya hiç çizilmez.
-
-### 18.4 Görünen ile geçerli olan aynıdır
-
-Bir seçici ekranda "seçili" görünüyorsa o değer **geçerlidir**. Varsayılanı
-seçili çizip "dokunulmadı" diye saymak, kullanıcıya ölü bir buton ve
-açıklanmayan bir engel bırakır.
-
-### 18.5 Her adım verinin niye istendiğini söyler
-
-Kurulumun her ekranında tek satırlık gerekçe bulunur. Yaşı, adı veya konumu
-neden verdiğini bilmeyen kullanıcı formu terk eder.
-
-Kullanıcının göremediği bir sonuç doğuran seçim (ör. 18 yaş altı → veli onayı)
-**o anda ekranda** söylenir.
-
-### 18.6 Geri dönülemez adım onay ister
-
-Tüm kurulumu bitiren "Atla" gibi bir eylem, tek dokunuşla sessizce
-gerçekleşmez. Kısmi kayıt tutmazsa kullanıcı bunu **öğrenir**; sessizce
-yutulmaz.
-
-Tam ekran perde bir hata gösteriyorsa, çıkış tuşu **perdenin içinde** olmalıdır
-— perdenin altında kalan bir tuş yok sayılır.
-
----
-
-## 19. Profil ve İstatistik Doğruluğu Kuralı (IP-18)
-
-### 19.1 Listeler kullanıcı kapsamında SUNUCUDA süzülür
-
-"Bana ait" bir liste, platformun tamamı çekilip tarayıcıda süzülerek
-üretilmez. Limit **filtreden sonra** uygulanır; aksi halde platform büyüdükçe
-kullanıcının kendi verisi pencerenin dışına düşer ve liste **sessizce boşalır**.
-
-Katılım, üyelik gibi ilişkiler için JSONB içinde arama yapmadan önce
-**ilişkisel tablo var mı** diye bakılır (`match_participants` gibi).
-
-### 19.2 Aynı gerçeğin tek kaynağı olur
-
-Sunucu bir gerçeği zaten türetip yazıyorsa (`matches.score_status`) arayüz onu
-**okur**, ikinci kez hesaplamaz. İki hesap er geç ayrışır.
-
-### 19.3 Veri yokluğu sıfır değildir
-
-Skoru girilmemiş maç `0 - 0` **değildir**, beraberlik **sayılmaz** ve galibiyet
-oranının paydasına **girmez**. Hiç veri yoksa yüzde `%0` değil **`—`** yazılır:
-sıfır başarı ile ölçüm yokluğu aynı şey değildir.
-
-### 19.4 Ekranda uydurma sayı bulunmaz
-
-Kaynak koda elle yazılmış "18 gol", "9.2 puan" gibi sayılar — arkasında veri
-yolu olmayan her rakam — **gösterilmez**. Boş bırakmak yalan söylemekten
-iyidir.
-
-### 19.5 Kullanıcı tasarımcı terimi görmez
-
-"Silüet yok" gibi ifadeler kullanıcıya ne yapacağını söylemez. Metin, eylemi
-söyler: "Fotoğraf ekle".
-
----
-
-## 20. Rezervasyon ve Tesis Sahipliği Kuralı (IP-22)
-
-### 20.1 Rezervasyon anında kesinleşir
-
-Oyuncu bir saati aldığında rezervasyon **o anda** kesinleşir. "Onay bekleyen
-rezervasyon" diye bir durum yoktur; ne tesis sahibi onaylar, ne bir sayaç
-işler, ne de sunucu arka planda otomatik onaylar. Uygulamadan gelen de,
-tesisin kendi girdiği de, yönetici panelinden yapılan da aynı yoldan geçer ve
-aynı anda kesinleşir.
-
-Aynı saatin iki kez satılmasını veritabanının kendi kısıtı engeller; bu koruma
-onaya bağlı değildir, her zaman çalışır.
-
-### 20.2 Kullanıcıya bekleme vaat edilmez
-
-Ekranda geri sayan sayaç, "süre bitince otomatik onaylanacak" yazısı veya
-"onay bekliyor" rozeti bulunmaz. Bu cümleler kullanıcıyı bekletiyordu ve çoğu
-zaman gerçekleşmiyordu.
-
-### 20.3 Tesisler OYNA tarafından tanımlanır
-
-Kullanıcı kendi kendine tesis kaydı **açamaz**. Anlaşılan tesis yönetici
-panelinden eklenir; sahibi, müdürü ve personeli de oradan atanır. Bunun doğal
-sonucu: "tesisin onay bekliyor" / "başvurun reddedildi" gibi ekranlar yoktur,
-çünkü onaylanacak bir başvuru yoktur.
-
-Tesisin adı ve konumu sahibi tarafından doğrudan değiştirilemez; değişiklik
-talebi olarak yöneticiye gider. Bu kural sunucudaki koruma tetikleyicisiyle
-zorunlu kılınmıştır, arayüzün nezaketi değildir.
-
-### 20.4 Paranın yönü iptalden önce söylenir
-
-Tesis kesinleşmiş bir rezervasyonu iptal edebilir. Ancak onay penceresi,
-**iptal etmeden önce**, ödeme altyapısının o tahsilat için kestiği ücretin geri
-alınmadığını ve tesise yapılacak ödemeden düşüleceğini açıkça yazar. Parasal
-sonucu olan bir işlem, sonucu gizlenerek onaylatılmaz.
-
----
-
-## 21. Tesis Yetkileri Kuralı (IP-22)
-
-### 21.1 Üç yetki vardır, dördüncüsü yoktur
-
-Bir tesiste tam olarak üç düzey bulunur:
-
-- **Sahip** — tesisin tamamı: finans, banka hesabı, para çekme, ekip. Tesiste tek kişidir.
-- **Müdür** — günlük yönetim: takvim, rezervasyon, tarife, ekip listesi. Para çekemez.
-- **Personel** — kasa işleri: rezervasyon açma, tahsilat, görevler. Finans ve ekip kapalı.
-
-Bu üç ad hem veritabanında hem ekranda **aynıdır**. Ekranda görünen etiket
-serbest metin değildir; yetkiden türetilir. "Resepsiyon", "Saha Sorumlusu" gibi
-serbest unvanlar artık yazılamaz — çünkü iki farklı isimlendirme er geç ayrışır
-ve kimin ne yapabildiği belirsizleşir.
-
-### 21.2 Yetkiyi OYNA verir
-
-Tesis de yetkilileri de yönetici panelinden tanımlanır. Kullanıcı kendi kendine
-tesis açamaz, kendine yetki veremez. Yönetici bir uygulama hesabını tesise
-bağladığında o hesap **anında** yetkili olur; davet kodu beklenmez.
-
-Tesis sahibinin kendi ekibini davet koduyla eklemesi ayrı bir yoldur ve durur —
-ama yöneticinin o yolu kullanması gerekmez.
-
-### 21.3 Onaylanacak tesis yoktur
-
-Tesis "doğrulama durumu" diye bir alan yoktur. Bir tesisin oyuncuya görünmesinin
-tek kapısı: **yayında mı + açık mı**. Onay bekleyen tesis kuyruğu, onay/ret
-düğmeleri ve bunlara bağlı bildirimler kaldırılmıştır.
-
-Tesisin adı ve konumu sahibi tarafından doğrudan değiştirilemez; değişiklik
-talebi olarak yöneticiye gider. Bu kural sunucudaki koruma tetikleyicisiyle
-zorunlu kılınmıştır.
-
-### 21.4 Sahipsiz tesis vitrine çıkamaz
-
-Sahibi atanmamış bir tesis yayına alınamaz — kural veritabanı kısıtıyla
-zorlanır. Arayüz bunu yasakla değil, sebebiyle söyler ve sahip atama ekranına
-kısa yol verir.
+## 14. 📝 Revizyon Notları (02.07.2026 — kod↔doküman hizalaması)
+
+Kod tabanı denetiminde doküman ile uygulamanın sessizce ayrıştığı noktalar tespit edildi.
+"Tek kaynak" ilkesi bu doküman için de geçerli olsun diye ayrışmalar burada kayıt altına alındı.
+
+### 14.1 Revize edilen kararlar
+- **Misafir girişi (§3.1 revize ÖNERİSİ):** Eski karar "lansmanda YOK" idi. Uygulamada misafir
+  modu **değer kapılı** hale getirildi: misafir yalnız gezinir (Top Oyna), yazma aksiyonlarında
+  (maça katıl/ödeme) kayıt daveti açılır; sahte kimlikle işlem mümkün değil (`isGuest` +
+  `SignupGate`). Ertelenmiş onboarding modeliyle tutarlı olduğundan **lansmanda kalması
+  önerilir** — ⚠️ kurucu onayı bekliyor; reddedilirse `AuthScreen`'deki buton kaldırılır.
+- **Onboarding (§3.1 revize):** "Sayfa sayfa zorunlu sihirbaz (ad-soyad→telefon→foto→konum)"
+  yerine kodda **onaylanmış ertelenmiş model** geçerli: 3 ekran değer anlatımı → Auth →
+  bağlamsal konum izni; profil tamamlama ilk maç akışına ertelenir. Zorunlu profil fotoğrafı
+  kararı bu modelle birlikte düştü.
+- **Hesap silme (§3.1 uygulandı):** "Aktif rezervasyon varken engellenir" kuralı DB'ye işlendi
+  (`20260709000001_account_deletion_active_booking_guard.sql`): aktif saha rezervasyonu veya
+  bloke/tahsil edilmiş yaklaşan maç katılımı varken silme reddedilir. Bekleme süresi tek
+  kaynaktan (`app_config.account_deletion_wait_days`, varsayılan **7 gün**; UI eşitlendi).
+
+### 14.2 Bu temizlikte kapatılan kalıntılar (§2 kapsam dışı)
+- Oyuncu Premium/Pro kalıntıları (`isPro`, `proPrice`, admin Pro toggle) kaldırıldı.
+- TeamCreator'daki Topluluk prop'u + hardcoded "Boğaziçi Üniversitesi" verisi kaldırıldı.
+- Kapsam dışı feature-flag kalıntıları (aiCoach/scoutSystem) ayıklandı.
+- Kullanıcıya görünen İstanbul kalıntıları Ordu'ya çevrildi/temizlendi (§9).
+
+### 14.3 Hâlâ açık (bilinçli, sıraya alındı)
+- **§7.1 tek skor:** `rating`/`fairPlayScore`/`reliabilityScore` hâlâ ayrı — DB+UI koordineli
+  refactor gerektirir; lansman engeli değil.
+- **§4.5 ücretsiz sahalar & yaş matrisi:** `is_free` kavramı henüz yok — ayrı faz olarak yapılacak.
+- **§8.2 Studio modülerleştirme** ve **§10.1 i18n altyapısı** — lansman sonrası.

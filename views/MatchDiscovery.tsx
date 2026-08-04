@@ -9,6 +9,8 @@ import { useAppStore } from '../store';
 import { supabase } from '../supabaseClient';
 import { subscribeToOpenMatches, fetchNearbyMatches, resolvePrivateMatch, toPrivateMatchErrorMessage, getMatchDetails } from '../services/matchService';
 import { EmptyState } from '../components/common/StatusState';
+import RegionPickerPage from '../components/settings/RegionPickerPage';
+import { requestDeviceLocation } from '../services/locationService';
 import { FilterDropdown } from '../components/ui/FilterDropdown';
 import {
   deriveDiscoveryFilterOptions, roleHasOpenSlot, hasOpenSlot, matchInBudget,
@@ -41,7 +43,8 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onSelect }) => {
     userLocation,
     selectedRegions,
     searchRadius,
-    setSearchRadius
+    setSearchRadius,
+    setUserLocation
   } = useAppStore();
 
   // ── Özel maç (kodla katılım) ──
@@ -95,6 +98,22 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onSelect }) => {
   const [dna, setDna] = useState<DiscoveryFilters>(EMPTY_FILTERS);
 
   const [nearbyMatches, setNearbyMatches] = useState<any[]>([]);
+  // [P-5 / S-1] Kapsam yoksa gosterilecek yonlendirme icin.
+  const [showRegionPicker, setShowRegionPicker] = useState(false);
+  const [konumIsteniyor, setKonumIsteniyor] = useState(false);
+
+  const konumIste = async () => {
+    setKonumIsteniyor(true);
+    try {
+      const c = await requestDeviceLocation();
+      setUserLocation({ lat: c.lat, lng: c.lng });
+    } catch {
+      // Izin verilmedi/alinamadi -> ilce secimine yonlendir (S-1 = a + b)
+      setShowRegionPicker(true);
+    } finally {
+      setKonumIsteniyor(false);
+    }
+  };
 
   useEffect(() => {
     // Çoklu bölge: her seçili bölgenin merkezinden yakındaki maçları çek ve
@@ -112,6 +131,10 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onSelect }) => {
     }
 
     let cancelled = false;
+    // [P-7 / M-20] Yarıçap kaydırıcısı her oynatıldığında bu efekt tetikleniyor
+    // ve bölge başına 1 RPC atıyordu (3 bölge = 3 sorgu, her piksel hareketinde).
+    // 300 ms gecikme ile kullanıcı kaydırmayı bitirene kadar bekleniyor.
+    const timer = setTimeout(() => {
     Promise.all(centers.map((c) => fetchNearbyMatches(c.lat, c.lng, searchRadius))).then((perCenter) => {
       if (cancelled) return;
       // get_nearby_matches HAM matches satırı döndürür (SETOF matches); satırı
@@ -126,10 +149,20 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onSelect }) => {
       });
       setNearbyMatches(Array.from(byId.values()));
     });
-    return () => { cancelled = true; };
+    }, 300);
+    return () => { cancelled = true; clearTimeout(timer); };
   }, [userLocation, selectedRegions, searchRadius]);
 
+  // [P-5 / K-12.1 / S-1] Kapsam yoksa ARTIK ÜLKE GENELİ GÖSTERİLMİYOR.
+  // Eskiden bölge de konum da yoksa global adminMatches listesine düşülüyordu;
+  // yani Ordu'daki kullanıcıya İstanbul maçı gösteriliyordu — hem işe yaramaz
+  // hem de o global listenin var olma sebebiydi.
+  // Kurucu kararı S-1 = (a)+(b): önce konum izni istenir, verilmezse kullanıcı
+  // bölge seçmeye yönlendirilir.
+  const kapsamYok = selectedRegions.length === 0 && !userLocation;
+
   const enhancedMatches = useMemo(() => {
+    if (kapsamYok) return [];
     const hasScope = selectedRegions.length > 0 || !!userLocation;
     const sourceMatches = (hasScope && nearbyMatches.length > 0) ? nearbyMatches : adminMatches;
     // Sadece oynanabilir maçları göster — DRAFT/CANCELLED/COMPLETED gizle.
@@ -192,7 +225,7 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onSelect }) => {
         distance: m.distance
       };
     });
-  }, [adminMatches, nearbyMatches, userLocation, selectedRegions]);
+  }, [adminMatches, nearbyMatches, userLocation, selectedRegions, kapsamYok]);
 
   const activeFilterCount = useMemo(() => countActiveFilters(dna), [dna]);
   const isFilterActive = activeFilterCount > 0;
@@ -583,7 +616,18 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onSelect }) => {
                       <MapPin size={16} />
                       {scopeLabel}
                     </h2>
-                    {otherMatches.length === 0 ? (
+                    {kapsamYok ? (
+                      /* [P-5 / S-1] Bölge de konum da yoksa ülke geneli GÖSTERİLMEZ.
+                         Kullanıcı önce konum iznine, olmazsa bölge seçimine yönlendirilir. */
+                      <EmptyState
+                        title="Nerede Oynayacaksın?"
+                        message="Yakınındaki maçları görebilmemiz için konumuna izin ver ya da oynamak istediğin ilçeyi seç."
+                        actions={[
+                          { label: konumIsteniyor ? 'Konum alınıyor…' : 'Konumumu Kullan', onClick: konumIste },
+                          { label: 'İlçe Seç', onClick: () => setShowRegionPicker(true) },
+                        ]}
+                      />
+                    ) : otherMatches.length === 0 ? (
                       <EmptyState
                         title={dayLabel ? `${dayLabel} İçin Maç Yok` : 'Aktif Maç Bulunamadı'}
                         message={dayLabel
@@ -669,6 +713,10 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onSelect }) => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* [P-5 / S-1] İlçe seçici — kapsam yokken kullanıcıyı buraya yönlendiriyoruz.
+          Ayarlar ekranındaki bileşenin aynısı; kullanıcı ekrandan çıkmadan seçer. */}
+      <RegionPickerPage open={showRegionPicker} onClose={() => setShowRegionPicker(false)} />
 
     </div>
   );

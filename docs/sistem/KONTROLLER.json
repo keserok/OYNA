@@ -1,0 +1,331 @@
+{
+  "$aciklama": "DENETİM KONTROLLERİ — her biri bir yapı taşının garantisini sınar. 'nasil' alanı ya bir npm komutu ya bir SQL sorgusudur. 'sessizlik_tipi' bu kontrolün hangi sessiz bozulmayı yakaladığını söyler.",
+  "$surum": 1,
+  "$ne_zaman_degerleri": {
+    "DEGISIKLIKTE": "İlgili yapı taşına dokunulduğunda çalıştırılır.",
+    "GUNLUK": "Her gün otomatik çalışır, sonucu Sistem Sağlığı kartına yazar.",
+    "HER_IKISI": "Hem değişiklikte hem günlük."
+  },
+  "kontroller": [
+    {
+      "id": "K-PARA-1",
+      "ad": "Para değişmezleri yeşil mi?",
+      "sade_anlatim": "Sistemdeki toplam para giriş-çıkışı tutuyor mu, 8 kural birden sınanır.",
+      "ne_zaman": "HER_IKISI",
+      "tur": "SQL",
+      "nasil": "SELECT public.check_money_invariants();",
+      "basari_olcutu": "ok = true",
+      "sessizlik_tipi": "Para yavaşça kaçıyor ama kimse toplamı kontrol etmiyor"
+    },
+    {
+      "id": "K-PARA-2",
+      "ad": "Askıda ödeme var mı?",
+      "sade_anlatim": "Başlayıp bitmemiş ödeme kaç tane ve en eskisi kaç saatlik?",
+      "ne_zaman": "GUNLUK",
+      "tur": "SQL",
+      "nasil": "SELECT count(*) AS adet, max(now()-created_at) AS en_eski FROM payment_intents WHERE status IN ('PENDING','BLOCKED') AND created_at < now() - interval '30 minutes';",
+      "basari_olcutu": "adet = 0",
+      "sessizlik_tipi": "Süpürücü çalışmıyor ama kimse fark etmiyor"
+    },
+    {
+      "id": "K-PARA-3",
+      "ad": "Kapora alt sınırı sunucuda zorlanıyor mu?",
+      "sade_anlatim": "%30 kuralı yalnız telefonda mı duruyor, yoksa veritabanı da reddediyor mu?",
+      "ne_zaman": "DEGISIKLIKTE",
+      "tur": "SQL",
+      "nasil": "SELECT pg_get_functiondef(oid) ILIKE '%direct_booking_deposit_default_pct%' AS taban_var FROM pg_proc WHERE proname='record_app_deposit_payment';",
+      "basari_olcutu": "taban_var = true",
+      "sessizlik_tipi": "Kural yalnız istemcide; sunucu her tutarı kabul ediyor"
+    },
+    {
+      "id": "K-KILIT-1",
+      "ad": "Para fonksiyonları aynı kilit sırasını mı kullanıyor?",
+      "sade_anlatim": "İki fonksiyon aynı tabloları ters sırada kilitlerse sistem kilitlenir. Sıra tutarlı mı?",
+      "ne_zaman": "HER_IKISI",
+      "tur": "SQL",
+      "nasil": "scripts/sistem/sql/kilit-sirasi.sql",
+      "basari_olcutu": "ters sıralı çift = 0",
+      "sessizlik_tipi": "Kilitlenme yalnız yoğun anda oluşur, testte hiç görünmez"
+    },
+    {
+      "id": "K-KADRO-1",
+      "ad": "Kadronun iki kaynağı uyuşuyor mu?",
+      "sade_anlatim": "Maçın içindeki liste ile katılımcı tablosu aynı kişileri mi gösteriyor? (demo hariç)",
+      "ne_zaman": "HER_IKISI",
+      "tur": "SQL",
+      "nasil": "scripts/sistem/sql/kadro-uyum.sql",
+      "basari_olcutu": "sapan maç sayısı = 0",
+      "sessizlik_tipi": "İki kaynak sessizce ayrışıyor; hangisinin doğru olduğu belirsizleşiyor"
+    },
+    {
+      "id": "K-KADRO-2",
+      "ad": "Kadroya yazan her fonksiyon iki kaynağa da yazıyor mu?",
+      "sade_anlatim": "Yeni bir fonksiyon yalnız listeye yazıp tabloyu unutmuş mu?",
+      "ne_zaman": "DEGISIKLIKTE",
+      "tur": "SQL",
+      "nasil": "scripts/sistem/sql/kadro-yazarlari.sql",
+      "basari_olcutu": "tek kaynağa yazan fonksiyon = 0",
+      "sessizlik_tipi": "Yeni kod eski sözleşmeyi bilmiyor"
+    },
+    {
+      "id": "K-ZAMAN-1",
+      "ad": "Maç saatleri tutarlı mı?",
+      "sade_anlatim": "Ekranda yazan saat ile gerçek saat birebir aynı mı?",
+      "ne_zaman": "HER_IKISI",
+      "tur": "SQL",
+      "nasil": "scripts/sistem/sql/zaman-uyum.sql",
+      "basari_olcutu": "sapan maç sayısı = 0",
+      "sessizlik_tipi": "Saat kayması hata vermez, sadece yanlış sonuç üretir"
+    },
+    {
+      "id": "K-ZAMAN-2",
+      "ad": "Repoda riskli saat deseni var mı?",
+      "sade_anlatim": "Veritabanını sıfırdan kurunca saatleri kaydıracak eski yazım repoda duruyor mu?",
+      "ne_zaman": "HER_IKISI",
+      "tur": "KOMUT",
+      "nasil": "npm run sistem:zaman-deseni",
+      "basari_olcutu": "riskli desen = 0",
+      "sessizlik_tipi": "Canlı doğru olduğu için kimse repoyu kontrol etmiyor"
+    },
+    {
+      "id": "K-REZ-1",
+      "ad": "Çifte rezervasyon kısıtı yerinde mi?",
+      "sade_anlatim": "Aynı korta aynı saate iki rezervasyonu engelleyen veritabanı kuralı duruyor mu?",
+      "ne_zaman": "HER_IKISI",
+      "tur": "SQL",
+      "nasil": "SELECT count(*) AS var FROM pg_constraint WHERE conname='pitch_bookings_no_overlap';",
+      "basari_olcutu": "var = 1",
+      "sessizlik_tipi": "Bir migration kısıtı düşürür, kimse fark etmez"
+    },
+    {
+      "id": "K-REZ-2",
+      "ad": "İptal edilen rezervasyon maça yansıyor mu?",
+      "sade_anlatim": "Saha sahibi rezervasyonu iptal edince maç da iptal oluyor mu?",
+      "ne_zaman": "DEGISIKLIKTE",
+      "tur": "SQL",
+      "nasil": "scripts/sistem/sql/iptal-zinciri.sql",
+      "basari_olcutu": "kopuk zincir = 0",
+      "sessizlik_tipi": "Rezervasyon iptal, maç ayakta — iki tablo birbirinden habersiz"
+    },
+    {
+      "id": "K-KAPI-1",
+      "ad": "Yetki kontrolü görünmeyen fonksiyon var mı?",
+      "sade_anlatim": "Kullanıcının çağırabildiği fonksiyonlardan kaçında 'sen kimsin' kontrolü yok?",
+      "ne_zaman": "HER_IKISI",
+      "tur": "SQL",
+      "nasil": "scripts/sistem/sql/kapisiz-fonksiyonlar.sql",
+      "basari_olcutu": "kapısız YAZAN fonksiyon = 0",
+      "sessizlik_tipi": "Fonksiyon çalışıyor ama kimin çağırdığına bakmıyor"
+    },
+    {
+      "id": "K-KAPI-2",
+      "ad": "Hassas sütunlar korunuyor mu?",
+      "sade_anlatim": "Kullanıcı kendi rolünü, bakiyesini veya cezasını değiştirebiliyor mu?",
+      "ne_zaman": "HER_IKISI",
+      "tur": "SQL",
+      "nasil": "scripts/sistem/sql/hassas-sutunlar.sql",
+      "basari_olcutu": "korumasız hassas sütun = 0",
+      "sessizlik_tipi": "Koruma bir tabloda var, yeni tabloda unutulmuş"
+    },
+    {
+      "id": "K-KAPI-3",
+      "ad": "Her SECURITY DEFINER fonksiyonda search_path sabit mi?",
+      "sade_anlatim": "Yetkili çalışan fonksiyonlar kandırılmaya açık mı?",
+      "ne_zaman": "HER_IKISI",
+      "tur": "SQL",
+      "nasil": "SELECT count(*) AS acik FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public' AND p.prosecdef AND (p.proconfig IS NULL OR NOT EXISTS (SELECT 1 FROM unnest(p.proconfig) c WHERE c LIKE 'search_path=%'));",
+      "basari_olcutu": "acik = 0",
+      "sessizlik_tipi": "Tek bir yeni fonksiyon kuralı bozar"
+    },
+    {
+      "id": "K-BILDIRIM-1",
+      "ad": "Dışarı giden çağrılar başarılı mı?",
+      "sade_anlatim": "Son 24 saatte gönderilmeye çalışılan bildirimlerin kaçı gerçekten gitti?",
+      "ne_zaman": "GUNLUK",
+      "tur": "SQL",
+      "nasil": "SELECT count(*) FILTER (WHERE status_code BETWEEN 200 AND 299) AS basarili, count(*) FILTER (WHERE status_code NOT BETWEEN 200 AND 299) AS basarisiz FROM net._http_response WHERE created >= now() - interval '24 hours';",
+      "basari_olcutu": "basarisiz = 0",
+      "sessizlik_tipi": "Bildirim gitmiyor ama uygulama 'gönderdim' sanıyor"
+    },
+    {
+      "id": "K-BILDIRIM-2",
+      "ad": "Bildirim üretilen her olay gerçekten bildirim üretmiş mi?",
+      "sade_anlatim": "Son 24 saatte biten/iptal olan maçların hepsi katılımcılarına haber verdi mi?",
+      "ne_zaman": "GUNLUK",
+      "tur": "SQL",
+      "nasil": "scripts/sistem/sql/bildirim-kapsami.sql",
+      "basari_olcutu": "bildirimsiz olay = 0",
+      "sessizlik_tipi": "Olay oldu, bildirim üretilmedi, hata da yok"
+    },
+    {
+      "id": "K-KAPSAMA-1",
+      "ad": "Coğrafi sorgular indeks kullanıyor mu?",
+      "sade_anlatim": "Yakındaki sahaları bulan sorgu tüm tabloyu mu tarıyor?",
+      "ne_zaman": "DEGISIKLIKTE",
+      "tur": "SQL",
+      "nasil": "scripts/sistem/sql/geo-indeks.sql",
+      "basari_olcutu": "Seq Scan yok",
+      "sessizlik_tipi": "Küçük veride hızlı, büyük veride çöküyor"
+    },
+    {
+      "id": "K-KIMLIK-1",
+      "ad": "Hesap silme kapısı gerçek durum sözlüğünü mü kullanıyor?",
+      "sade_anlatim": "Silme engeli, sistemin gerçekten kullandığı kelimeleri mi arıyor?",
+      "ne_zaman": "HER_IKISI",
+      "tur": "SQL",
+      "nasil": "scripts/sistem/sql/hayalet-sozluk.sql",
+      "basari_olcutu": "hayalet kelime = 0",
+      "sessizlik_tipi": "Kapı var, çalışıyor görünüyor, hiç tetiklenmiyor"
+    },
+    {
+      "id": "K-YUK-1",
+      "ad": "Limitsiz sorgu var mı?",
+      "sade_anlatim": "Tablonun tamamını indiren bir sorgu eklenmiş mi?",
+      "ne_zaman": "HER_IKISI",
+      "tur": "KOMUT",
+      "nasil": "npm run sistem:limitsiz-sorgu",
+      "basari_olcutu": "limitsiz select = 0",
+      "sessizlik_tipi": "Az veriyle sorunsuz, çok veriyle kotayı patlatıyor"
+    },
+    {
+      "id": "K-YUK-2",
+      "ad": "Filtresiz canlı abonelik var mı?",
+      "sade_anlatim": "Bir tablonun tüm değişikliklerini herkese gönderen abonelik var mı?",
+      "ne_zaman": "HER_IKISI",
+      "tur": "KOMUT",
+      "nasil": "npm run sistem:filtresiz-abonelik",
+      "basari_olcutu": "filtresiz kanal = 0",
+      "sessizlik_tipi": "Tek kullanıcıda görünmez, 500 kullanıcıda kotayı 3'e katlar"
+    },
+    {
+      "id": "K-YUK-3",
+      "ad": "İlk yük boyutu sınırın altında mı?",
+      "sade_anlatim": "Uygulama ilk açıldığında inen dosya boyutu kabul edilebilir mi?",
+      "ne_zaman": "DEGISIKLIKTE",
+      "tur": "KOMUT",
+      "nasil": "npm run build",
+      "basari_olcutu": "ilk yük gzip < 350 KB",
+      "sessizlik_tipi": "Her yeni kütüphane biraz ekler, kimse toplamı ölçmez"
+    },
+    {
+      "id": "K-OTO-1",
+      "ad": "Beklenen her zamanlanmış iş kurulu mu?",
+      "sade_anlatim": "Olması gereken cron işlerinin hepsi canlıda var mı?",
+      "ne_zaman": "HER_IKISI",
+      "tur": "SQL",
+      "nasil": "scripts/sistem/sql/cron-envanteri.sql",
+      "basari_olcutu": "eksik iş = 0",
+      "sessizlik_tipi": "Migration 'kuramadım' diye uyarı yazdı, kimse okumadı"
+    },
+    {
+      "id": "K-OTO-2",
+      "ad": "Takılmış (zehirli) iş var mı?",
+      "sade_anlatim": "Defalarca denenip hep başarısız olan maç/iş var mı?",
+      "ne_zaman": "GUNLUK",
+      "tur": "SQL",
+      "nasil": "SELECT count(*) AS zehirli FROM matches WHERE status='ACTIVE' AND starts_at < now() - interval '3 hours';",
+      "basari_olcutu": "zehirli = 0",
+      "sessizlik_tipi": "Hata yutuluyor, iş sonsuza dek tekrarlanıyor"
+    },
+    {
+      "id": "K-AYAR-1",
+      "ad": "Zorunlu ayarların hepsi dolu mu?",
+      "sade_anlatim": "Sistemin çalışması için gereken ayarlardan boş kalan var mı? (3 Ağustos 2026'daki iki büyük arızanın tek kök nedeni buydu)",
+      "ne_zaman": "HER_IKISI",
+      "tur": "SQL",
+      "nasil": "scripts/sistem/sql/ayar-envanteri.sql",
+      "basari_olcutu": "boş zorunlu ayar = 0",
+      "sessizlik_tipi": "Kod kusursuz, ayar boş, sistem sessizce hiçbir şey yapmıyor"
+    },
+    {
+      "id": "K-AYAR-2",
+      "ad": "Panelde görünen her ayarın kodda karşılığı var mı?",
+      "sade_anlatim": "Panelden açıp kapattığın bir düğme gerçekten bir şey yapıyor mu?",
+      "ne_zaman": "HER_IKISI",
+      "tur": "KOMUT",
+      "nasil": "npm run sistem:olu-ayar",
+      "basari_olcutu": "ölü ayar = 0",
+      "sessizlik_tipi": "Düğmeye basıyorsun, hiçbir şey olmuyor, hata da yok"
+    },
+    {
+      "id": "K-AYAR-3",
+      "ad": "Migration'lar sessizce vazgeçmiş mi?",
+      "sade_anlatim": "Bir migration 'ayar eksik, kurmadım' deyip devam etmiş mi?",
+      "ne_zaman": "HER_IKISI",
+      "tur": "KOMUT",
+      "nasil": "npm run sistem:sessiz-vazgecme",
+      "basari_olcutu": "koşullu kurulum + eksik ayar = 0",
+      "sessizlik_tipi": "Migration BAŞARILI göründü ama işini yapmadı"
+    },
+    {
+      "id": "K-SAHIBI-1",
+      "ad": "Saha sahibi yalnız kendi tesisini mi yönetebiliyor?",
+      "sade_anlatim": "Bir saha sahibi, başka bir tesisin takvimini, finansını veya personelini görebiliyor mu?",
+      "ne_zaman": "HER_IKISI",
+      "tur": "SQL",
+      "nasil": "scripts/sistem/sql/sahibi-izolasyon.sql",
+      "basari_olcutu": "kapısız tesis fonksiyonu = 0",
+      "sessizlik_tipi": "Tek tesisle test edilir, sorun ancak ikinci tesis gelince görünür"
+    },
+    {
+      "id": "K-SAHIBI-2",
+      "ad": "Panelde gösterilen tutar canlı veriyle aynı mı?",
+      "sade_anlatim": "Saha sahibinin finans ekranındaki rakamlar ile veritabanındaki gerçek toplamlar birebir tutuyor mu?",
+      "ne_zaman": "GUNLUK",
+      "tur": "SQL",
+      "nasil": "scripts/sistem/sql/sahibi-finans-mutabakat.sql",
+      "basari_olcutu": "sapan tesis = 0",
+      "sessizlik_tipi": "Panel bir rakam gösteriyor, gerçek başka — kimse iki tarafı karşılaştırmıyor"
+    },
+    {
+      "id": "K-PAZAR-1",
+      "ad": "Hizmet ödemesi erken serbest bırakılmış mı?",
+      "sade_anlatim": "Kaleci/hakem ücreti, maç gerçekleşmeden ödenmiş mi?",
+      "ne_zaman": "GUNLUK",
+      "tur": "SQL",
+      "nasil": "scripts/sistem/sql/pazaryeri-odeme-zamani.sql",
+      "basari_olcutu": "erken serbest bırakma = 0",
+      "sessizlik_tipi": "Ödeme gitti, hizmet verilmedi — geri almak imkânsız"
+    },
+    {
+      "id": "K-DEMO-1",
+      "ad": "Demo veri kurallara uyuyor mu?",
+      "sade_anlatim": "Demo satırları gerçek sistemin kurallarına uyuyor mu, denetimi kirletiyor mu?",
+      "ne_zaman": "GUNLUK",
+      "tur": "SQL",
+      "nasil": "scripts/sistem/sql/demo-uyum.sql",
+      "basari_olcutu": "kural dışı demo satırı = 0",
+      "sessizlik_tipi": "Demo veri gerçeği yanlış temsil ediyor, denemeler yanıltıyor"
+    },
+    {
+      "id": "K-YEDEK-1",
+      "ad": "Gecelik yedek gerçekten alındı mı?",
+      "sade_anlatim": "Her gece 05:30'da kritik tabloların kopyası alınır. Bu kontrol o kopyanın BUGÜN alındığını ve içindeki tablo sayısının tam olduğunu doğrular.",
+      "ne_zaman": "GUNLUK",
+      "tur": "SQL",
+      "nasil": "SELECT public.yedek_durumu();",
+      "basari_olcutu": "son_yedek_tarihi = bugün VE son_gun_tablo = beklenen_tablo",
+      "sessizlik_tipi": "Yedek aylar önce sessizce durmuş; kaza günü 'yedeğim var' sanıp yanılmak"
+    },
+    {
+      "id": "K-COKME-1",
+      "ad": "Uygulama kimsede çöküyor mu?",
+      "sade_anlatim": "Son 24 saatte kaç kişide, kaç farklı hata oluştu. Yeni bir sürümden sonra ani artış, o sürümün bir şeyi bozduğunu gösterir.",
+      "ne_zaman": "GUNLUK",
+      "tur": "SQL",
+      "nasil": "SELECT public.hata_ozeti(24);",
+      "basari_olcutu": "etkilenen_kisi son 7 günün ortalamasının 3 katını aşmamalı",
+      "sessizlik_tipi": "Uygulama bir grup kullanıcıda çöküyor ama kimse şikâyet etmediği için hiç öğrenilmiyor"
+    },
+    {
+      "id": "K-SURUM-1",
+      "ad": "Sürüm numarası her yerde aynı mı?",
+      "sade_anlatim": "Web, Android ve iOS aynı sürüm numarasını mı taşıyor? Biri geride kalırsa 'hangi sürümde bu hata vardı' sorusunun cevabı kaybolur.",
+      "ne_zaman": "DEGISIKLIKTE",
+      "tur": "KOMUT",
+      "nasil": "npm run sistem:surum",
+      "basari_olcutu": "Çıkış kodu 0 — üç yerde de package.json'daki sürüm yazıyor",
+      "sessizlik_tipi": "package.json yükseltilir, telefon uygulamaları eski numarayla yayınlanır; kimse fark etmez"
+    }
+  ]
+}

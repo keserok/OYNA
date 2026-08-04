@@ -1,5 +1,8 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { Spinner } from '../components/ui/Spinner';
+import { useMacParaBilgisi } from '../hooks/useMacParaBilgisi';
+import { useMacSaglayicilari } from '../hooks/useMacSaglayicilari';
+import { useMacKadrosu } from '../hooks/useMacKadrosu';
 import {
   ArrowLeft, MapPin, Clock, Calendar, Zap, Hand, Scale,
   X, Loader2, ChevronRight, UserPlus,
@@ -15,7 +18,7 @@ import { MatchListing, PositionSlot, UserRole, Player, Team, ProviderType, Provi
 import { useAppStore } from '../store';
 import { auth } from '../supabaseAuth';
 import { supabase } from '../supabaseClient';
-import { subscribeToMatchUpdates, getMatchDetails, getPitchCoordinates, getMatchLobbyParticipants, getFriendPlayerCard, getMatchProviders, getMyMatchPrivateCode, selfAssignSlot, assignSlotToFriend, unassignSlot, releaseSlot, kickSlot, updateFormationRpc, previewLeaveMatch, leaveMatchSlot, leaveQuoteMessage, fetchMatchCancelPolicy, iadeKademesiCumlesi, CANCEL_POLICY_FALLBACK, type LobbyParticipant, type FriendPlayerCard, type MatchProvider, type LeaveMatchQuote, type MatchCancelPolicy } from '../services/matchService';
+import { subscribeToMatchUpdates, getMatchDetails, getPitchCoordinates, getMatchLobbyParticipants, getFriendPlayerCard, getMatchProviders, getMyMatchPrivateCode, selfAssignSlot, assignSlotToFriend, unassignSlot, releaseSlot, kickSlot, updateFormationRpc, leaveMatchSlot, leaveQuoteMessage, iadeKademesiCumlesi, type LobbyParticipant, type FriendPlayerCard, type MatchProvider } from '../services/matchService';
 import { sendFriendRequest } from '../services/friendService';
 import MatchSquadPicker, { type PickedPlayer } from '../components/social/MatchSquadPicker';
 import { getMatchTacticProposals, proposeMatchTactic, listMyTacticsLite, type MatchTacticProposal, type MyTacticLite } from '../services/tacticSocialService';
@@ -254,7 +257,6 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
   const [pitchSide, setPitchSide] = useState<'home' | 'away'>('home');
   const [hasAutoSelectedSide, setHasAutoSelectedSide] = useState(false);
   // Sahadaki dolu slotları gerçek oyuncularla doldurmak için (RLS-güvenli public_profiles).
-  const [lobbyParticipants, setLobbyParticipants] = useState<LobbyParticipant[]>([]);
 
   // Dolu slota basınca açılan sade oyuncu bilgi kartı
   const [activePlayerSlotId, setActivePlayerSlotId] = useState<string | null>(null);
@@ -282,11 +284,8 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
   // IP-04 — ayrılma sözleşmesi (SUNUCUDAN; gerçek iadeyle birebir aynı kaynak).
   // Tek sayı değil nesne: "0 iade" ile "hesaplanamadı" ayrı sonuçlar, ikisi de
   // sessiz kalmamalı (BULGU-087).
-  const [leaveQuote, setLeaveQuote] = useState<LeaveMatchQuote | null>(null);
-  const [leaveQuoteLoading, setLeaveQuoteLoading] = useState(false);
   // Sahanın kendi iptal/iade saatleri. Panelden değiştirilebildiği için ekranda
   // sabit sayı yazılamaz; sunucudan gelene kadar sunucu varsayılanı gösterilir.
-  const [iptalPolitikasi, setIptalPolitikasi] = useState<MatchCancelPolicy>(CANCEL_POLICY_FALLBACK);
 
   // (Rakip davet/katıl modalları kaldırıldı — lobi sadeleştirmesi)
 
@@ -295,16 +294,12 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
   const [providerSuggestions, setProviderSuggestions] = useState<ProviderSuggestion[]>([]);
   const [providersLoading, setProvidersLoading] = useState(false);
   const [providerSubmittingId, setProviderSubmittingId] = useState<string | null>(null);
-  const [serviceRequests, setServiceRequests] = useState<ServiceRequest[]>([]);
   // FAZ 3: pazarda seçilen sağlayıcının dikey detaylı kartı (yetenek barları + istatistik)
   const [marketDetailProvider, setMarketDetailProvider] = useState<ProviderSuggestion | null>(null);
 
   // FAZ 2: maça ATANMIŞ kaleci/hakem. Hakem lobide HERKESE gösterilir; kaleci
   // ise YALNIZ kiralayan tarafın üyelerine. İki taraflı: ev sahibi + deplasman
   // kalecisi ayrı ayrı tutulur (her takım kendi kalecisini kiralar).
-  const [assignedGoalkeeper, setAssignedGoalkeeper] = useState<MatchProvider | null>(null);
-  const [assignedAwayGoalkeeper, setAssignedAwayGoalkeeper] = useState<MatchProvider | null>(null);
-  const [assignedReferee, setAssignedReferee] = useState<MatchProvider | null>(null);
   // Atanmış kaleci/hakem dikey detay kartı (herkese) — hangi sağlayıcı + tür.
   const [providerDetail, setProviderDetail] = useState<{ p: MatchProvider; isRef: boolean } | null>(null);
   const [showNoShowConfirm, setShowNoShowConfirm] = useState(false);
@@ -321,6 +316,23 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
   // MANAGE = Maçlarım hub'ından; yönetim aksiyonları yalnız burada görünür.
   const isManageMode = lobbyMode === 'MANAGE';
 
+  // ── [K-15.1] TEK TAZELEME NOKTASI ─────────────────────────────────────────
+  // Bir aksiyon sunucuda maçı değiştirdikten sonra taze hâli çekilip YEREL
+  // uygulanır (DB'ye geri YAZILMAZ — KN-3b). Bu iki satır dosyada 14 AYRI
+  // yerde birebir tekrar ediyordu; Kıdemli Yazılım Mühendisi turunun bulgusu
+  // buydu (PE-1). Tek yere indirildi: davranış aynı, tekrar bitti.
+  const macTazele = useCallback(async () => {
+    if (!match?.id) return null;
+    const fresh = await macTazele();
+    return fresh;
+  }, [match?.id, applyMatchLocal]);
+
+  // ── [K-15.1] PARA ALANI ayri dosyada: hooks/useMacParaBilgisi.ts ─────────
+  // Iptal politikasi + ayrilma iade onizlemesi. K-3.3 ve K-1.1 kararlari
+  // buraya dokunacak; o yuzden kendi dosyasinda.
+  const { iptalPolitikasi, leaveQuote, leaveQuoteLoading } =
+    useMacParaBilgisi(match?.id, showLeaveConfirm);
+
   // Saha konumu: pitch_id (FK) tek otorite; store'daki isim eşleşmesi varsayılan
   // koordinat bastığı için kullanılmaz. Çözülemezse null kalır → harita gizlenir.
   useEffect(() => {
@@ -335,12 +347,6 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
 
   // Sahanın iptal/iade saatleri — saha sahibi ya da admin panelden değiştirince
   // lobideki her cümle (kaptan iptali, ödeme notu) o an geçerli sayıyı gösterir.
-  useEffect(() => {
-    if (!match?.id) return;
-    let alive = true;
-    fetchMatchCancelPolicy(match.id).then((p) => { if (alive && p) setIptalPolitikasi(p); });
-    return () => { alive = false; };
-  }, [match?.id]);
 
   // ── İlk hidrasyon: DB'deki yetkili satırı çek (private_code dahil) ──────
   useEffect(() => {
@@ -388,43 +394,20 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
   }, [originalMatch?.id]);
 
   // ── FAZ 5: Maçın kaleci/hakem hizmet taleplerini yükle ──────────────────
-  const refreshServiceRequests = async (matchId: string) => {
-    try {
-      const reqs = await getMatchServiceRequests(matchId);
-      setServiceRequests(reqs);
-    } catch (err) {
-      console.warn('[MatchJoin] hizmet talepleri yüklenemedi:', err);
-    }
-  };
-
-  useEffect(() => {
-    if (!originalMatch?.id) return;
-    refreshServiceRequests(originalMatch.id);
-  }, [originalMatch?.id]);
 
   // ── FAZ 2: Maça atanmış kaleci/hakem ───────────────────────────────────────
   // gk_id = ev sahibi kalecisi, away_gk_id = deplasman kalecisi (iki taraflı).
   const assignedGkId = (match as any)?.gkId || (match as any)?.gk_id || null;
   const assignedAwayGkId = (match as any)?.awayGkId || (match as any)?.away_gk_id || null;
   const assignedRefId = (match as any)?.refereeId || (match as any)?.ref_id || null;
-  useEffect(() => {
-    if (!assignedGkId && !assignedAwayGkId && !assignedRefId) {
-      setAssignedGoalkeeper(null);
-      setAssignedAwayGoalkeeper(null);
-      setAssignedReferee(null);
-      return;
-    }
-    let alive = true;
-    getMatchProviders(assignedGkId, assignedRefId, assignedAwayGkId)
-      .then(({ goalkeeper, awayGoalkeeper, referee }) => {
-        if (!alive) return;
-        setAssignedGoalkeeper(goalkeeper);
-        setAssignedAwayGoalkeeper(awayGoalkeeper);
-        setAssignedReferee(referee);
-      })
-      .catch(() => {});
-    return () => { alive = false; };
-  }, [assignedGkId, assignedAwayGkId, assignedRefId]);
+
+  // ── [K-15.1] KALECİ-HAKEM ALANI ayrı dosyada: hooks/useMacSaglayicilari.ts
+  // Atanmış sağlayıcılar + hizmet talepleri. K-5.1 (kaleci teminatı) buraya
+  // dokunacak; o yüzden kendi dosyasında.
+  const {
+    assignedGoalkeeper, assignedAwayGoalkeeper, assignedReferee,
+    serviceRequests, refreshServiceRequests,
+  } = useMacSaglayicilari(match?.id, assignedGkId, assignedAwayGkId, assignedRefId);
 
   // ── Özel maç kodu — yalnız kurucuya, istemciye kapalı tablodan RPC ile (P1) ──
   useEffect(() => {
@@ -453,15 +436,11 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
   const takenSignature =
     ((match?.slots as PositionSlot[] | undefined) || []).filter(s => s?.status === 'TAKEN').length + ':' +
     ((match?.awaySlots as PositionSlot[] | undefined) || []).filter(s => s?.status === 'TAKEN').length;
-  useEffect(() => {
-    if (!originalMatch?.id) return;
-    let alive = true;
-    getMatchLobbyParticipants(originalMatch.id, match?.homeTeamId, match?.awayTeamId)
-      .then(list => { if (alive) setLobbyParticipants(list); })
-      .catch(() => {});
-    return () => { alive = false; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [originalMatch?.id, takenSignature, match?.homeTeamId, match?.awayTeamId]);
+
+  // ── [K-15.1] KADRO ALANI ayrı dosyada: hooks/useMacKadrosu.ts ────────────
+  // K-3.4 (aylık bırakma hakkı) ve K-3.5 (slot devri) buraya dokunacak.
+  const { lobbyParticipants, homeParticipants, awayParticipants } =
+    useMacKadrosu(originalMatch?.id, match?.homeTeamId, match?.awayTeamId, takenSignature);
 
   // ── İlk açılışta oyuncu sayısı az olan tarafı otomatik göster ─────────────
   // Eşitlik/0 → ev sahibi. hasAutoSelectedSide ile yalnız bir kez tetiklenir;
@@ -595,8 +574,6 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
   // ── Sahadaki dolu slotları GERÇEK katılımcılarla zenginleştir ─────────────
   // Kaynak: match_participants ⋈ public_profiles (RLS-güvenli). Eski `adminUsers`
   // (hiç yüklenmeyen) index-hack'inin yerine gerçek oyuncu ad/avatarı gelir.
-  const homeParticipants = lobbyParticipants.filter(p => p.side === 'home');
-  const awayParticipants = lobbyParticipants.filter(p => p.side === 'away');
   const enrichedSlots = enrichSideSlots(match.slots || [], homeParticipants, 'UNPAID');
   const enrichedAwaySlots = enrichSideSlots(match.awaySlots || [], awayParticipants, 'PAID');
 
@@ -647,16 +624,6 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
 
   // IP-04 — ayrılma modalı açılınca sözleşmeyi SUNUCUDAN çek. Hata ile "iade
   // yok" artık ayrı sonuçlar: hata durumunda quote null kalır ve AYRIL pasifleşir.
-  useEffect(() => {
-    if (!showLeaveConfirm || !match?.id) { setLeaveQuote(null); setLeaveQuoteLoading(false); return; }
-    let alive = true;
-    setLeaveQuoteLoading(true);
-    previewLeaveMatch(match.id)
-      .then(q => { if (alive) setLeaveQuote(q); })
-      .catch(e => { console.error('[MatchJoin] ayrılma önizlemesi alınamadı:', e); if (alive) setLeaveQuote(null); })
-      .finally(() => { if (alive) setLeaveQuoteLoading(false); });
-    return () => { alive = false; };
-  }, [showLeaveConfirm, match?.id]);
 
   // Sahada oturanlar — arkadaş atama seçicisinde "eklendi" işaretlemek için
   const assignedIds = [...(match.slots || []), ...(match.awaySlots || [])]
@@ -822,8 +789,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
 
       // KN-3b: taze durumu çek, YEREL uygula (DB'ye geri yazma — eski kod
       // fresh'i updateMatch ile geri yazıyordu: gereksiz yazım + yarış).
-      const fresh = await getMatchDetails(match.id);
-      if (fresh) applyMatchLocal(fresh);
+      const fresh = await macTazele();
 
       setSelectedSlotIds([]);
       setNewMatchBadge(true);
@@ -854,8 +820,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
       if (error) throw error;
 
       // KN-3b: yedek listesi sunucuda güncellendi; taze çek, yerel uygula.
-      const fresh = await getMatchDetails(match.id);
-      if (fresh) applyMatchLocal(fresh);
+      const fresh = await macTazele();
     } catch (e: any) {
       console.error('Join reserve error:', e);
       showActionError('Yedek olarak katılırken bir hata oluştu.');
@@ -872,8 +837,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
       await leaveMatchSlot(match.id, currentUserProfile.id);
 
       // KN-3b: sunucu çıkardı; taze çek, yerel uygula.
-      const fresh = await getMatchDetails(match.id);
-      if (fresh) applyMatchLocal(fresh);
+      const fresh = await macTazele();
       setShowLeaveConfirm(false);
       showActionSuccess('Yedek listesinden çıktın.');
     } catch (e: any) {
@@ -890,8 +854,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
     setIsProcessing(true);
     try {
       await selfAssignSlot(match.id, slotId);
-      const fresh = await getMatchDetails(match.id);
-      if (fresh) applyMatchLocal(fresh); // KN-3b
+      const fresh = await macTazele(); // KN-3b
       setFillSlot(null);
       showActionSuccess('Sahadasın! ⚽');
     } catch (e: any) {
@@ -921,8 +884,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
           : `${picked[i].name} atanamadı.`);
       }
     }
-    const fresh = await getMatchDetails(match.id);
-    if (fresh) applyMatchLocal(fresh);
+    const fresh = await macTazele();
     setFillSlot(null);
     if (ok > 0) showActionSuccess(`${ok} arkadaşın slota eklendi — bildirim gitti ⚽`);
   };
@@ -932,8 +894,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
     setIsProcessing(true);
     try {
       await unassignSlot(match.id, slotId);
-      const fresh = await getMatchDetails(match.id);
-      if (fresh) applyMatchLocal(fresh);
+      const fresh = await macTazele();
       setActivePlayerSlotId(null);
       showActionSuccess('Slot yeniden rezervine döndü.');
     } catch { showActionError('İşlem tamamlanamadı. Lütfen tekrar dene.'); }
@@ -945,8 +906,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
     setIsProcessing(true);
     try {
       const refunded = await releaseSlot(match.id, slotId);
-      const fresh = await getMatchDetails(match.id);
-      if (fresh) applyMatchLocal(fresh);
+      const fresh = await macTazele();
       setFillSlot(null);
       showActionSuccess(refunded > 0
         ? `Slot iade edildi — ${money(refunded)} cüzdanına iade edildi.`
@@ -969,8 +929,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
     try {
       const { data, error } = await supabase.rpc('player_make_slot_code', { p_match_id: match.id, p_slot_id: slotId });
       if (error) throw error;
-      const fresh = await getMatchDetails(match.id);
-      if (fresh) applyMatchLocal(fresh); // KN-3b: taze veri DB'ye GERİ yazılmaz
+      const fresh = await macTazele(); // KN-3b: taze veri DB'ye GERİ yazılmaz
       setFillSlot(null);
       showActionSuccess(`Devralma kodu: ${data} — arkadaşına gönder.`);
     } catch (e: any) {
@@ -986,8 +945,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
     try {
       const { error } = await supabase.rpc('player_accept_slot', { p_match_id: match.id, p_slot_id: slotId });
       if (error) throw error;
-      const fresh = await getMatchDetails(match.id);
-      if (fresh) applyMatchLocal(fresh); // KN-3b: taze veri DB'ye GERİ yazılmaz
+      const fresh = await macTazele(); // KN-3b: taze veri DB'ye GERİ yazılmaz
       setActivePlayerSlotId(null);
       showActionSuccess('Slotu kabul ettin — kadrodasın! ⚽');
     } catch (e: any) {
@@ -1006,8 +964,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
   const handleRemovePlayer = async (slotId: string) => {
     try {
       const refunded = await kickSlot(match.id, slotId);
-      const fresh = await getMatchDetails(match.id);
-      if (fresh) applyMatchLocal(fresh); // KN-3b: taze veri DB'ye GERİ yazılmaz
+      const fresh = await macTazele(); // KN-3b: taze veri DB'ye GERİ yazılmaz
       setActivePlayerSlotId(null);
       showActionSuccess(refunded > 0 ? `Oyuncu çıkarıldı — ${money(refunded)} cüzdanına iade edildi.` : 'Oyuncu kadrodan çıkarıldı.');
     } catch (e: any) {
@@ -1035,8 +992,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
       // reliabilityScore halef hesabı, hiç yüklenmeyen adminUsers ile
       // herkes=100) sunucunun DOĞRU sonucunu bayat tam-dizi yazımıyla
       // eziyordu. Taze çek, yerel uygula, çık.
-      const fresh = await getMatchDetails(match.id);
-      if (fresh) applyMatchLocal(fresh);
+      const fresh = await macTazele();
 
       setShowLeaveConfirm(false);
       // IP-04 — ayrılmanın parasal sonucu sessiz kalmaz. onBack() bu ekranı
@@ -1068,8 +1024,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
     setIsProcessing(true);
     try {
       const res = await cancelMatchByCaptain(match.id);
-      const fresh = await getMatchDetails(match.id);
-      if (fresh) applyMatchLocal(fresh);
+      const fresh = await macTazele();
       showActionSuccess(
         res?.outcome && String(res.outcome).toUpperCase().includes('REFUND')
           ? 'Maç iptal edildi — katılımcı ödemeleri iade edildi.'
@@ -1123,7 +1078,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
     setReqActionId(requestId);
     try {
       await acceptProviderApplication(requestId);
-      await refreshServiceRequests(match.id);
+      await refreshServiceRequests();
       showActionSuccess('Başvuru kabul edildi. Ücret bloke edildi.');
     } catch (err: any) {
       showActionError(mapError(err, 'Başvuru kabul edilemedi.'));
@@ -1133,7 +1088,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
     setReqActionId(requestId);
     try {
       await declineProviderApplication(requestId);
-      await refreshServiceRequests(match.id);
+      await refreshServiceRequests();
       showActionSuccess('Başvuru reddedildi.');
     } catch (err: any) {
       showActionError(mapError(err, 'Başvuru reddedilemedi.'));
@@ -1143,7 +1098,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
     setReqActionId(requestId);
     try {
       await captainConfirmService(requestId);
-      await refreshServiceRequests(match.id);
+      await refreshServiceRequests();
       showActionSuccess('Onayladın. Sağlayıcı da onaylayınca ücret ödenir.');
     } catch (err: any) {
       showActionError(mapError(err, 'Onay kaydedilemedi.'));
@@ -1185,7 +1140,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
         providerModalType === 'GK' ? myCaptainSideUpper : undefined,
       );
       await fundServiceRequest(requestId, source);
-      await refreshServiceRequests(match.id);
+      await refreshServiceRequests();
       setMarketDetailProvider(null);
       setProviderModalType(null);
       showActionSuccess(`Ödeme alındı — ${provider.name} onayı bekleniyor`);
@@ -1206,7 +1161,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
     try {
       setIsProcessing(true);
       const r = await captainReportNoShow(capturedGkRequest.id);
-      await refreshServiceRequests(match.id);
+      await refreshServiceRequests();
       setShowNoShowConfirm(false);
       showActionSuccess(
         r.penaltyCharged
@@ -2640,8 +2595,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                             return { id: s.id, x: coord.x, y: coord.y, role: coord.role };
                           });
                           await updateFormationRpc(match.id, pitchSide, payload);
-                          const fresh = await getMatchDetails(match.id);
-                          if (fresh) applyMatchLocal(fresh);
+                          const fresh = await macTazele();
                         }
                       } catch (err) {
                         console.error(err);

@@ -52,10 +52,10 @@ Kayıttan sonra kısa bir tanışma sihirbazı açılır: konum izni, yaş aral�
 | Rol | Ne yapar | Kılavuzu |
 |---|---|---|
 | **Oyuncu** | Maç bulur, maç kurar, saha kiralar, takım yönetir. Herkesin temel rolü. | [Oyuncu Kılavuzu](01-oyuncu-kilavuzu.md) |
-| **Kaleci** | Maçlara kiralık kaleci olarak katılır, maç başı ücret kazanır. | [Kaleci & Hakem Kılavuzu](02-kaleci-hakem-kilavuzu.md) |
-| **Hakem** | Maçları yönetir, resmî skoru girer, maç başı ücret kazanır. | [Kaleci & Hakem Kılavuzu](02-kaleci-hakem-kilavuzu.md) |
-| **Saha Sahibi** | Tesisini OYNA vitrinine ekler; rezervasyon, takvim ve kasayı yönetir. Ekibine **Müdür** ve **Personel** ekleyebilir. | [Saha Sahibi Kılavuzu](03-saha-sahibi-kilavuzu.md) |
-| Admin | OYNA ekibidir: başvuruları onaylar, ödemeleri ve platformu yönetir. Son kullanıcıyı ilgilendirmez. | [Admin Kılavuzu](04-admin-kilavuzu.md) |
+| **Kaleci** | Maçlara kiralık kaleci olarak katılır, maç başı ücret kazanır. | [Kaleci & Hakem Kılavuzu](02-kaleci-kilavuzu.md) |
+| **Hakem** | Maçları yönetir, resmî skoru girer, maç başı ücret kazanır. | [Kaleci & Hakem Kılavuzu](02-kaleci-kilavuzu.md) |
+| **Saha Sahibi** | Tesisini OYNA vitrinine ekler; rezervasyon, takvim ve kasayı yönetir. Ekibine **Müdür** ve **Personel** ekleyebilir. | [Saha Sahibi Kılavuzu](04-saha-sahibi-kilavuzu.md) |
+| Admin | OYNA ekibidir: başvuruları onaylar, ödemeleri ve platformu yönetir. Son kullanıcıyı ilgilendirmez. | [Admin Kılavuzu](05-admin-kilavuzu.md) |
 
 Kaleci, hakem ve saha sahibi rolleri başvuruya tabidir; başvurular OYNA ekibi tarafından incelenir (genellikle 24 saat içinde). Oyunculuğun her zaman açık kalır.
 

@@ -36,7 +36,7 @@ export class ErrorBoundary extends Component<Props, State> {
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     // Hata Oyna tarafına raporlanır ("Sorun Oyna tarafına iletildi").
     console.error('Uncaught error:', error, errorInfo);
-    captureException(error, { componentStack: errorInfo.componentStack });
+    captureException(error, { where: 'ErrorBoundary', componentStack: errorInfo.componentStack });
   }
 
   private handleBack = () => {

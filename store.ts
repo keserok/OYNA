@@ -253,6 +253,10 @@ interface AppState {
   adminGoalkeepers: Goalkeeper[];
   adminReferees: Referee[];
   adminMatches: MatchListing[];
+  /** [P-5/M-P0-6] Kullanicinin KENDI maclari — sunucudan kapsamli olarak gelir.
+   *  useMyMatches bunu adminMatches filtresiyle BIRLESTIRIR; boylece scoped
+   *  sorgu bir sebeple bos donse bile hicbir mac kaybolmaz. */
+  myMatches: MatchListing[];
   adminUsers: AdminUser[];
   adminNotifications: AdminNotification[];
   adminLogs: AdminLog[];
@@ -506,10 +510,11 @@ export const useAppStore = create<AppState>((set, get) => ({
       ]);
 
     try {
-      const [sessionRes, pitchesRes, matchesRes, teamsRes, servicesRes, textsRes] = await Promise.allSettled([
+      const [sessionRes, pitchesRes, matchesRes, myMatchesRes, teamsRes, servicesRes, textsRes] = await Promise.allSettled([
         withTimeout(supabase.auth.getSession()),
         withTimeout(FB.fbGetPitches()),
         withTimeout(FB.fbGetMatches()),
+        withTimeout(FB.fbGetMyMatches()),
         withTimeout(FB.fbGetTeams()),
         withTimeout(get().loadServices(), 4000),
         withTimeout<any>(Promise.resolve(supabase.from('texts').select('key, value'))),
@@ -520,6 +525,9 @@ export const useAppStore = create<AppState>((set, get) => ({
       }
       if (matchesRes.status === 'fulfilled' && matchesRes.value) {
         set({ adminMatches: matchesRes.value as MatchListing[] });
+      }
+      if (myMatchesRes.status === 'fulfilled' && myMatchesRes.value) {
+        set({ myMatches: myMatchesRes.value as MatchListing[] });
       }
       if (teamsRes.status === 'fulfilled' && teamsRes.value) {
         set({ adminTeams: teamsRes.value as Team[] });
@@ -551,14 +559,37 @@ export const useAppStore = create<AppState>((set, get) => ({
   initApp: async () => {
     await get().retryInitialLoad();
 
-    // Maç listesini canlı tut: admin panelden veya başka bir oyuncudan gelen
-    // ekleme/güncelleme/silme işlemleri sayfa yenilenmeden burada görünsün.
-    // initApp birden çok kez çağrılabilir (StrictMode / auth değişimi). Aynı isimli
-    // kanal yeniden .on()+.subscribe() edilirse "after subscribe()" hatası oluşur;
-    // önce varsa eski aboneliği temizle (sağlamlık).
+    // ════════════════════════════════════════════════════════════════════
+    // [P-5 / M-P0-7 / K-12.1] KÜRESEL CANLI ABONELİK KAPATILDI
+    // ────────────────────────────────────────────────────────────────────
+    // Eskiden burada FİLTRESİZ bir kanal açılıyordu: matches tablosundaki
+    // HER değişiklik, uygulaması açık olan HERKESE tam satır (~3,5 KB)
+    // olarak gidiyordu. Ölçüm:
+    //   • tek slot satışı = 500 abone × 3,5 KB = 1,73 MB
+    //   • bir maçın 14 slotu dolarsa = 24 MB
+    //   • aylık ~6.000.000 mesaj (ücretsiz plan sınırı 2.000.000)
+    //   • send_match_reminders cron'u 100 maçı işaretleyince saniyeler
+    //     içinde 50.000 mesaj → o anda kimse canlı güncelleme alamıyor
+    //
+    // Kurucu kararı K-12.1: "Top Oyna" kartlarındaki doluluk sayısının
+    // ANLIK tazeliğinden vazgeçildi. Kazanç: aylık mesaj ~6M → ~200K.
+    //
+    // NE BOZULMUYOR (tek tek doğrulandı):
+    //   • Maç lobisi: kendi `match_{id}` kanalı var (matchService.ts:427)
+    //     → lobide slot dolması ANINDA görünmeye devam ediyor
+    //   • Bildirimler, sosyal olaylar, saha takvimi: hepsi filtreli kendi
+    //     kanallarında
+    //   • "Maçlarım", Marketplace, Maç Kur: get_my_matches() kapsıyor
+    //   • Kaleci/Hakem paneli: K-12.2 ile get_my_matches kapsamına alındı
+    //
+    // GERİ ALMA: bu blok geri açılırsa eski davranış döner (tek satırlık iş).
+    // PRO-1: Pro plana geçilince 2M sınırı kalkar, yeniden açılabilir.
+    // ════════════════════════════════════════════════════════════════════
     supabase.getChannels()
       .filter((c) => c.topic === 'realtime:matches-list-sync')
       .forEach((c) => { supabase.removeChannel(c); });
+    const KURESEL_MAC_ABONELIGI_ACIK = false; // K-12.1 · PRO-1
+    if (KURESEL_MAC_ABONELIGI_ACIK) {
     supabase
       .channel('matches-list-sync')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'matches' }, (payload) => {
@@ -584,6 +615,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         });
       })
       .subscribe();
+    }
   },
   view: 'SPLASH',
   navigationStack: [],
@@ -698,6 +730,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   adminReferees: [],
   servicesError: false,
   adminMatches: [],
+  myMatches: [],
   adminUsers: [],
   adminNotifications: [],
   adminLogs: [],
