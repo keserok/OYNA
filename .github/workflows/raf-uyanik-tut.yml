@@ -1,0 +1,71 @@
+# ═══════════════════════════════════════════════════════════════════════════
+# OYNA — RAFTA UYANIK TUTMA
+#
+# NE İŞE YARAR: Supabase, ÜCRETSİZ plandaki projeleri 7 gün boyunca yeterli
+# veritabanı hareketi görmezse DURAKLATIR. Duraklatılan proje 90 gün içinde
+# tek tıkla geri açılır; 90 günü geçerse yalnızca yedek dosyası indirilip
+# başka bir yere kurulabilir (çok daha zahmetli).
+#
+# Bu iş her gün veritabanına ufak bir okuma isteği gönderir. Supabase bunu
+# "kullanım" sayar ve proje duraklatılmaz.
+#
+# MALİYET: Günde ~15 saniye. Aylık ~8 dakika. GitHub Free özel depoya aylık
+# 2.000 dakika veriyor — yani kotanın binde 4'ü. (Diğer iş akışlarındaki
+# maliyet uyarılarıyla aynı gerekçe: 2026-07-27'de kota bitmişti.)
+#
+# GİZLİ ANAHTAR GEREKMEZ: kullanılan anahtar "anon" (yayınlanabilir) anahtardır
+# ve zaten uygulamanın içinde herkese açıktır. Yazma yetkisi yoktur.
+#
+# ── KAPATMAK İSTERSEN ──────────────────────────────────────────────────────
+# GitHub → Actions → soldan "Raf — veritabanını uyanık tut" → sağ üstteki
+# "..." → "Disable workflow". Kapatırsan proje ~7 gün sonra duraklar; verin
+# silinmez, 90 gün içinde tek tıkla geri açarsın.
+# ═══════════════════════════════════════════════════════════════════════════
+name: Raf — veritabanını uyanık tut
+
+on:
+  schedule:
+    # Her gün 09:17 UTC (12:17 İstanbul). Tam saat başı değil: GitHub'ın
+    # yoğun dakikalarında işler kuyruğa girip gecikebiliyor.
+    - cron: '17 9 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: raf-uyanik-tut
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Veritabanına dokun
+        run: |
+          URL="https://iikvzgyccvgcybzdfwlv.supabase.co"
+          ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlpa3Z6Z3ljY3ZnY3liemRmd2x2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk0NjM0NDAsImV4cCI6MjA5NTAzOTQ0MH0.T7P_7lYp07zcXrioKkMqZENoYoi-D9aPmjhNAfihMvM"
+
+          # `pitches` seçildi çünkü giriş yapmamış (anon) bir istemcinin
+          # gerçekten okuyabildiği doğrulandı — canlıda test edildi, 6 satır
+          # döndü. (İlk denemede `region_coverage` kullanılmıştı; onun satır
+          # kuralı yönetici kontrolü çağırdığı için anon'a hata veriyor ve
+          # ping sessizce kırık kalırdı.)
+          KOD=$(curl -s -o /tmp/yanit.txt -w "%{http_code}" \
+                "$URL/rest/v1/pitches?select=id&limit=1" \
+                -H "apikey: $ANON" -H "Authorization: Bearer $ANON")
+
+          echo "HTTP $KOD"
+          cat /tmp/yanit.txt
+
+          if [ "$KOD" != "200" ]; then
+            echo "::error title=Veritabanina ulasilamadi::HTTP $KOD dondu. Proje duraklatilmis ya da anahtar degismis olabilir."
+            exit 1
+          fi
+
+          {
+            echo "## ✅ Veritabanı uyanık"
+            echo ""
+            echo "Bugünkü dokunuş başarılı (HTTP 200). Proje duraklatılmayacak."
+          } >> "$GITHUB_STEP_SUMMARY"
