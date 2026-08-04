@@ -186,7 +186,7 @@ Aktarım yaparken sınır bu listedir. Bunların dışına çıkan bir değişik
   6. **KAYDET** penceresini aç → **"Nereye kaydedilsin?"** çipleriyle hedefi
      değiştir; alttaki açıklama satırı buna göre değişmeli.
 
-- **Commit:** _(bir sonraki adımda dolduruldu)_
+- **Commit:** `a391a8d` (kod + kayıt)
 
 - **Geri alınırsa:** Takım seçiminde iki ayrı yanıp sönen düğme geri gelir,
   kişisel moda dönüş yolu kapanır, kütüphaneden silme kalkar ve kaydet hedefi
