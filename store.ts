@@ -208,6 +208,9 @@ interface AppState {
   // kullanıcı Ayarlar'a her girdiğinde Destek sayfası tekrar açılırdı.
   settingsSubPage: string | null;
   setSettingsSubPage: (p: string | null) => void;
+  // D2: bildirim izni açıklama ekranı gösterilsin mi? Maça katılınca kalkar.
+  pushIzniSorulsun: boolean;
+  setPushIzniSorulsun: (v: boolean) => void;
   // Birleşik gelen kutusu: açılışta odaklanacak takım sohbeti (team/{id}/chat)
   selectedTeamChatId: string | null;
   setSelectedTeamChatId: (id: string | null) => void;
@@ -875,6 +878,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   setTeamInitialTab: (t) => set({ teamInitialTab: t }),
   settingsSubPage: null,
   setSettingsSubPage: (p) => set({ settingsSubPage: p }),
+  pushIzniSorulsun: false,
+  setPushIzniSorulsun: (v) => set({ pushIzniSorulsun: v }),
   selectedTeamChatId: null,
   setSelectedTeamChatId: (id) => set({ selectedTeamChatId: id }),
   studioContext: null,

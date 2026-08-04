@@ -285,6 +285,18 @@ export const initPushNotifications = async (
   userId: string,
   onInAppNotification?: (notification: PushNotificationSchema) => void,
   onDeepLink?: (link: string) => void,
+  /** D2 (4 Ağustos 2026) — izin SORULSUN mu?
+   *
+   *  Eskiden bu fonksiyon çağrıldığı anda izin isterdi ve girişte çağrılırdı:
+   *  kullanıcı henüz uygulamada hiçbir şey yapmamışken telefon "bildirim
+   *  göndersin mi?" diye soruyordu. Sonuç canlıda ölçüldü: 35 profil, izin
+   *  veren SIFIR kişi. Telefon bu izni bir kez sorar; "hayır" diyen kullanıcı
+   *  ayarlardan elle açmadıkça bir daha bildirim alamaz.
+   *
+   *  Artık varsayılan `false`: giriş anında YALNIZCA zaten izin verilmişse
+   *  kayıt yapılır, kimseye soru sorulmaz. `true` yalnız doğru anda —
+   *  kullanıcı bir maça katıldıktan ve değerini gördükten sonra — geçilir. */
+  izinIste: boolean = false,
 ): Promise<boolean> => {
   // Web platformunda Capacitor push çalışmaz, sessizce çık
   if (!Capacitor.isNativePlatform()) {
@@ -296,8 +308,12 @@ export const initPushNotifications = async (
     // 1. Mevcut izin durumunu kontrol et
     let permission = await PushNotifications.checkPermissions();
 
-    // 2. İzin henüz verilmemişse iste
+    // 2. İzin henüz verilmemişse — YALNIZ doğru anda iste (D2)
     if (permission.receive === 'prompt' || permission.receive === 'prompt-with-rationale') {
+      if (!izinIste) {
+        console.log('[PushService] İzin henüz sorulmadı — doğru ana bırakıldı (D2).');
+        return false;
+      }
       permission = await PushNotifications.requestPermissions();
     }
 

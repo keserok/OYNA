@@ -24,6 +24,7 @@
         "components/payment/",
         "hooks/useMacParaBilgisi.ts",
         "services/financeService.ts",
+        "services/gkSozlesmeService.ts",
         "services/paymentModeService.ts",
         "services/paymentService.ts",
         "services/walletService.ts",
@@ -229,18 +230,26 @@
         "Kullanıcı başkası adına bildirim yollayamaz"
       ],
       "dosyalar": [
+        "components/common/PushIzniModal.tsx",
         "notifications/",
+        "notifications/pushIzniKapisi.ts",
         "services/notificationService.ts",
-        "supabase/functions/send-push/",
+        "supabase/functions/admin-broadcast/",
         "supabase/functions/send-email/",
-        "supabase/functions/admin-broadcast/"
+        "supabase/functions/send-push/"
       ],
       "db_nesneleri": [
         "notifications",
         "notify_send_push_webhook",
         "send_match_reminders",
         "admin_broadcast_notification",
-        "net._http_response"
+        "net._http_response",
+        "bildirim_gonderilsin_mi",
+        "bildirim_modu_bekcisi",
+        "bildirim_modum",
+        "bildirim_modu_ayarla",
+        "admin_bildirim_seviyeleri",
+        "admin_bildirim_seviyesi_ayarla"
       ],
       "kontroller": [
         "K-BILDIRIM-1",
@@ -380,7 +389,10 @@
         "process_match_at_deadline",
         "expire_service_requests",
         "expire_stale_waitlists",
-        "release_owner_earnings"
+        "release_owner_earnings",
+        "supurucu_hata_kaydet",
+        "admin_elle_bakilacaklar",
+        "admin_raftan_indir"
       ],
       "kontroller": [
         "K-OTO-1",
@@ -641,7 +653,8 @@
         "sistem_saglik_kayitlari",
         "sistem_saglik_calistir",
         "sistem_saglik_ozet",
-        "sistem_saglik_gunluk"
+        "sistem_saglik_gunluk",
+        "sistem_saglik_ek_kontroller"
       ],
       "kontroller": [
         "K-COKME-1"

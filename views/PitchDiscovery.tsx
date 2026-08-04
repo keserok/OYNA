@@ -553,11 +553,29 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
       // V-3: pitch_flash_deals SLOT-ÖZEL (court_id/booking_date/start_time). Vitrinde
       // tüm sahaya indirim yansıtmak yem-değiştirdi; bu yüzden burada çekilmiyor. Doğru
       // slot-özel indirim (rezervasyon takviminde ilgili slotta + booking fiyatında) OW-D.
-      const pitchRes = await supabase
+      // E1 (4 Ağustos 2026): Eskiden ülkedeki TÜM yayınlanmış sahalar çekilip
+      // filtreleme tarayıcıda yapılıyordu. Bugün 6 saha var, sorun değil; ~200
+      // sahada liste yavaşlar ve boşuna mobil veri harcanır.
+      //
+      // HİÇBİR ŞEYİ GİZLEMEZ: bölge filtresi (pitchInSelectedRegions) zaten
+      // tarayıcıda uygulanıyordu — bu satırlar sadece "nasılsa elenecek"
+      // satırların indirilmesini engeller. Şehri boş olan sahalar bilerek
+      // dışarıda bırakılmaz: eski filtre onları ilçeden eşleştirebiliyordu.
+      let sorgu = supabase
         .from('pitches')
         .select(PITCH_SHOWCASE_SELECT)
         .eq('is_open', true)
         .eq('is_published', true);
+
+      const secilenSehirler = Array.from(
+        new Set(selectedRegions.map((r) => r.city).filter(Boolean)),
+      ) as string[];
+      if (secilenSehirler.length > 0) {
+        const liste = secilenSehirler.map((c) => `"${c.replace(/"/g, '')}"`).join(',');
+        sorgu = sorgu.or(`city.is.null,city.in.(${liste})`);
+      }
+
+      const pitchRes = await sorgu;
 
       if (pitchRes.error) throw pitchRes.error;
 
@@ -572,7 +590,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
     } finally {
       setPitchesLoading(false);
     }
-  }, []);
+  }, [selectedRegions]);
 
   /**
    * "Bugün X saat müsait" rozeti (Karar #7): doluluk kişisel-veri-içermeyen
