@@ -387,7 +387,12 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onSelect }) => {
               yani içerik altından geçmiyor — opak zemine ve blur'a ihtiyacı yok.
               Kaldırılınca filtre satırı, gün şeridi ve liste ile birebir aynı
               renge oturur. Alttaki ince ayraç çizgisi kaldı. */}
-          <header className="relative z-50 border-b border-white/5 px-5 pt-safe pb-4">
+          {/* pt-safe-baslik: `pt-safe` yalnız `env(safe-area-inset-top) + 1rem`
+              verir; güvenli alanı BİLDİRMEYEN cihazda bu 16px'e düşer ve
+              "Top Oyna" başlığı çentiğin/Dynamic Island'ın altına giriyordu.
+              Kural ikisinden büyüğünü alır (bkz. index.css) — Sahalar ekranında
+              da aynısı kullanılıyor. */}
+          <header className="relative z-50 border-b border-white/5 px-5 pt-safe-baslik pb-4">
             <div className="flex items-center justify-between">
               {/* IP-14: sekme kökü — geri oku kaldırıldı. */}
               <div className="flex items-center gap-3">
