@@ -51,7 +51,7 @@ Kapatmadan önce ölçülen son durum:
 | Birim testleri | **1.437 / 1.437 geçti** |
 | Tip kontrolü (`npm run lint`) | temiz |
 | Üretim derlemesi (`npm run build`) | başarılı |
-| Veritabanı boyutu | **36 MB** (temizlik öncesi 70 MB) |
+| Veritabanı boyutu | **37 MB** (temizlik öncesi 70 MB) |
 
 ---
 
@@ -90,7 +90,7 @@ zararı yok, elektriği yok.
 
 | İş | Ne zaman | Ne yapar |
 |---|---|---|
-| `gecelik_yedek` | her gece 05:30 | 8 kritik tablonun kopyası, 7 gün saklanır |
+| `gecelik_yedek` | her gece 05:30 | **10** kritik tablonun kopyası, 7 gün saklanır |
 | `sistem_saglik_gunluk` | her sabah 06:40 | 14 kontrolü çalıştırır, panele yazar |
 | `cron_gunlugu_temizligi` | her sabah 07:10 | iş günlüğünü 7 güne indirir (**yeni**) |
 | `hata_kayit_temizligi` | her sabah 06:50 | 30 günden eski çökme kaydını siler |
@@ -169,16 +169,25 @@ için önerim"** tablosu, tam olarak nereden devam edeceğini söylüyor.
 
 Bunlar bilinçli olarak ertelendi; acil değiller.
 
-| # | İş | Not |
-|---|---|---|
-| STR-1 | Panelde "Gerçek Durum" kartı | Baktığın kullanıcı/maç/para sayıları demo'yu içeriyor |
-| SEC-2 | Kuralsız 6 tablonun geniş yetkileri | Bugün RLS koruyor, ama kazara |
-| SEC-3 | `public_profiles` görünümü + gerçek ad kararı | **Senin KVKK kararın** bekleniyor |
-| SEC-6 | Sızmış parola koruması | Supabase panelinde 5 dakika — **senin kararın** |
-| SRE-2 | Alarmın sana ulaşması (e-posta) | Bilinçli ertelendi |
-| SRE-4 | Deneme ortamı (`oyna-staging` boş) | Senin ~20 dakikan |
-| SRE-8 | Geri alma provası | SRE-4'e bağlı |
-| CPO-P0-1 | `demo_mode_enabled` açık | **Lansmandan önce kapatılmalı** |
+| # | İş | Kimde | Not |
+|---|---|---|---|
+| — | **Yedek dosyasını indir** | 🟡 sen | Bölüm 4 · rafa kaldırmadan önceki TEK zorunlu iş |
+| SEC-3 | `public_profiles` sıkılaştırma + gerçek ad kararı | 🟡 sen | KVKK kararın · ekran boşaltabilir, deneme ortamı ister |
+| SEC-6 | Sızmış parola koruması | 🟡 sen | Supabase panelinde 5 dakika |
+| SEC-8 | Uzantıların `public`ten taşınması | ⏸️ | Coğrafi indeksi bozabilir |
+| SRE-2 | Alarmın sana ulaşması (e-posta) | 🟡 sen | Lansmandan önce |
+| SRE-4 | Deneme ortamı (`oyna-staging` boş) | 🟡 sen | ~20 dakika · SEC-3, SEC-8 ve SRE-8'i açar |
+| SRE-8 | Geri alma provası | ⏸️ | SRE-4'e bağlı |
+| STR-3 | İlk gerçek kart işlemi | 🟡 birlikte | Kart ödemesi canlıda hiç çalışmadı |
+| CPO-P0-1 | `demo_mode_enabled` açık | ⏸️ | **Lansman gününün 1. maddesi** |
+| CPO-P0-6 | Ahmet Kuru 2. Saha 0 ₺ tarifesi | 🟡 sen | Gerçek fiyatı söyle, girerim |
+| — | Yasal metinler · mağaza hesapları · alan adı | 🟡 sen | Lansmanın ön şartları |
+
+**Bu turda KAPANANLAR:** STR-1 (Gerçek Durum kartı) · SEC-1 (wallet) ·
+SEC-2 (kuralsız tablo yetkileri) · SEC-4 (kullanılmayan ödeme yolu) ·
+SEC-5 (anon yetkileri) · SEC-7 (geçici tablo) · SRE-6 (`auto-cancel-matches`) ·
+SRE-7 (sürüm) · CPO-P0-4 (iptal bildirimi) · K-6.5/K-11.6 (master dosya).
+Tam liste: `docs/board/SON_KARARLAR.md`
 
 ---
 
