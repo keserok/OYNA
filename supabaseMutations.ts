@@ -352,15 +352,31 @@ export const fbGetPitches = async () => {
   return (data || []).map(mapFromSnakeCase);
 };
 
-// DİKKAT: matches'e GLOBAL limit KONULMAZ. Kullanıcının kendi maçları (useMyMatches)
-// ayrı bir scoped sorgudan değil, bu global adminMatches listesinin CLIENT-SIDE
-// filtrelenmesinden türetiliyor. created_at'e göre limit'lersek, tablo büyüdüğünde
-// kullanıcının haftalar önce oluşturduğu ama HÂLÂ yaklaşan/OPEN maçı listeden düşer
-// ve panelinde kaybolur (doğruluk regresyonu). Kalıcı çözüm: keşif için
-// get_nearby_matches, "benim maçlarım" için ayrı bir scoped RPC — o refactor
-// yapılana kadar matches sınırsız kalır (ölçek < doğruluk).
+// [P-5 / M-P0-6] SINIR KONULDU — yukarıdaki eski yorumun koşulu ORTADAN KALKTI.
+//
+// Eski gerekçe: "matches'e GLOBAL limit KONULMAZ, çünkü useMyMatches bu listenin
+// telefonda filtrelenmesinden türetiliyor; limit koyulursa kullanıcının maçı
+// kaybolur (ölçek < doğruluk)."  O gerekçe O GÜN DOĞRUYDU.
+//
+// Artık geçerli değil, çünkü kalıcı çözüm kuruldu (Çakışma-1, kurucu onayı K-10.11):
+//   • "Maçlarım"      → get_my_matches() RPC (kurucu|kaptan|kaleci|hakem|
+//                        slotta oturan|satın alan|yedek) — hooks/useMyMatches
+//                        İKİ KAYNAĞIN BİRLEŞİMİNİ kullanıyor, hiçbir maç kaybolmaz
+//   • Keşif           → get_nearby_matches() RPC
+//   • Kaleci/Hakem    → K-12.2 ile get_my_matches kapsamına alındı
+//
+// Bu liste artık YALNIZ admin gösterge panelindeki iki widget'ı besliyor
+// (DashboardPage: eksik mevki sayısı + son 5 maç). Admin'in ASIL maç sayfası
+// kendi sunucu-taraflı sayfalı sorgusunu kullanıyor (fetchMatchesAdmin).
+//
+// Sınır: yaklaşan/yeni maçlar önce gelsin diye starts_at'e göre azalan sırada.
+const MATCHES_MAX = 300;
 export const fbGetMatches = async () => {
-  const { data, error } = await supabase.from('matches').select('*');
+  const { data, error } = await supabase
+    .from('matches')
+    .select('*')
+    .order('starts_at', { ascending: false, nullsFirst: false })
+    .limit(MATCHES_MAX);
   if (error) throw new Error(`Maçlar yüklenemedi: ${error.message}`);
   return (data || []).map(mapFromSnakeCase);
 };

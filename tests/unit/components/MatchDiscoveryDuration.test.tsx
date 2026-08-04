@@ -57,16 +57,22 @@ const ciz = (matches: Record<string, unknown>[]) => {
   useAppStore.setState({
     adminMatches: matches,
     adminUsers: [{ id: 'u1' }],
-    userLocation: null,
+    // [P-5 / S-1] Kapsam (bölge veya konum) ZORUNLU hale geldi: bölge de konum da
+    // yoksa "Top Oyna" artık ülke geneli listelemiyor, kullanıcıyı ilçe seçmeye
+    // yönlendiriyor. Bu dosya SÜREYİ ölçüyor, kapsamı değil — o yüzden gerçek
+    // kullanımdaki gibi bir konum veriliyor. İddialar değişmedi.
+    // (fetchNearbyMatches mock'u [] döndürdüğü için kartlar yine adminMatches'ten gelir.)
+    userLocation: { lat: 40.9862, lng: 37.8797 },
     selectedRegions: [],
     searchRadius: 25,
     setSearchRadius: vi.fn(),
+    setUserLocation: vi.fn(),
   } as never);
   return render(<MatchDiscovery onBack={vi.fn()} onSelect={vi.fn()} />);
 };
 
 beforeEach(() => {
-  useAppStore.setState({ adminMatches: [], selectedRegions: [], userLocation: null } as never);
+  useAppStore.setState({ adminMatches: [], selectedRegions: [], userLocation: { lat: 40.9862, lng: 37.8797 } } as never);
 });
 
 describe('Top Oyna maç kartı — süre gerçek veriden', () => {
