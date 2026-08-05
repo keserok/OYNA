@@ -36,6 +36,9 @@ export interface KapiDurumu {
   onerilenGuncelleme: boolean;
   guncellemeMesaj: string | null;
   kayitAcik: boolean;
+  /** Panelden ayarlanan mağaza adresleri; boşsa aşağıdaki yedekler kullanılır. */
+  magazaIos: string | null;
+  magazaAndroid: string | null;
   destek: string;
   /** Kapı sorulamadı (ağ/sunucu). Her şey AÇIK varsayılır. */
   sorulamadi: boolean;
@@ -50,6 +53,8 @@ export const KAPI_ACIK: KapiDurumu = {
   onerilenGuncelleme: false,
   guncellemeMesaj: null,
   kayitAcik: true,
+  magazaIos: null,
+  magazaAndroid: null,
   destek: 'destek@oyna.app',
   sorulamadi: true,
 };
@@ -62,6 +67,8 @@ interface SunucuYaniti {
   onerilen_guncelleme?: boolean;
   guncelleme_mesaj?: string | null;
   kayit_acik?: boolean;
+  magaza_ios?: string | null;
+  magaza_android?: string | null;
   destek?: string;
 }
 
@@ -89,6 +96,8 @@ export async function kapiyiSor(surum: string = APP_VERSION): Promise<KapiDurumu
       onerilenGuncelleme: d.onerilen_guncelleme === true,
       guncellemeMesaj: d.guncelleme_mesaj ?? null,
       kayitAcik: d.kayit_acik !== false,
+      magazaIos: d.magaza_ios ?? null,
+      magazaAndroid: d.magaza_android ?? null,
       destek: d.destek || 'destek@oyna.app',
       sorulamadi: false,
     };
@@ -100,7 +109,12 @@ export async function kapiyiSor(surum: string = APP_VERSION): Promise<KapiDurumu
 
 /**
  * Mağaza adresi — telefonun türüne göre.
- * Kimlikler `capacitor.config.ts` ile aynı olmalı.
+ *
+ * ÖNCE SUNUCUDAN GELEN ADRES kullanılır, yoksa aşağıdaki yedeğe düşülür.
+ * Neden: zorunlu güncelleme ekranını gören kullanıcı ZATEN yeni sürüm
+ * indiremiyor. Adres koda gömülü olsaydı, yanlış olduğunda düzeltmenin tek
+ * yolu yeni sürüm yayınlamak olurdu — yani hiçbir yolu olmazdı.
+ * (iOS kimliği App Store Connect'te uygulama açılınca panele girilir.)
  */
 export const MAGAZA_ANDROID = 'https://play.google.com/store/apps/details?id=com.oyna.app';
 // iOS mağaza kimliği App Store Connect'te uygulama oluşturulunca netleşir.
@@ -108,12 +122,12 @@ export const MAGAZA_ANDROID = 'https://play.google.com/store/apps/details?id=com
 // ama düğme "hiçbir yere gitmeyen düğme" olmaz.
 export const MAGAZA_IOS = 'https://apps.apple.com/tr/search?term=oyna%20hal%C4%B1%20saha';
 
-export function magazaAdresi(): string {
+export function magazaAdresi(durum?: Pick<KapiDurumu, 'magazaIos' | 'magazaAndroid'>): string {
   try {
     const ua = typeof navigator !== 'undefined' ? navigator.userAgent || '' : '';
-    if (/iphone|ipad|ipod/i.test(ua)) return MAGAZA_IOS;
-    return MAGAZA_ANDROID;
+    if (/iphone|ipad|ipod/i.test(ua)) return durum?.magazaIos || MAGAZA_IOS;
+    return durum?.magazaAndroid || MAGAZA_ANDROID;
   } catch {
-    return MAGAZA_ANDROID;
+    return durum?.magazaAndroid || MAGAZA_ANDROID;
   }
 }

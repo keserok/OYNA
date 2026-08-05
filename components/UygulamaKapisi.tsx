@@ -107,7 +107,7 @@ export const UygulamaKapisi: React.FC<UygulamaKapisiProps> = ({ children }) => {
   }, [sor]);
 
   const magazayaGit = () => {
-    try { window.open(magazaAdresi(), '_blank', 'noopener'); } catch { /* yut */ }
+    try { window.open(magazaAdresi(durum), '_blank', 'noopener'); } catch { /* yut */ }
   };
   const destegeYaz = () => {
     try {

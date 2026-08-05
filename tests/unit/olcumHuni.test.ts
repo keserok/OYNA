@@ -20,7 +20,7 @@ import { HUNILER, HUNI_SIRASI, TUM_OLAYLAR, OLAY_YERI } from '../../shared/olayK
 
 const oku = (p: string) => readFileSync(join(process.cwd(), p), 'utf8');
 
-const MIGRATION = 'supabase/migrations/20260805120000_olcum_huni_sistemi.sql';
+const MIGRATION = 'supabase/migrations/20260805181455_olcum_huni_sistemi.sql';
 /** Olayın uygulamada BAĞLI olup olmadığına bakılacak dosyalar. */
 const UYGULAMA_DOSYALARI = [
   'views/MatchCreate.tsx',

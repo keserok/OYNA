@@ -15,7 +15,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const oku = (p: string) => readFileSync(join(process.cwd(), p), 'utf8');
-const MIGRATION = 'supabase/migrations/20260805140000_uygulama_kapisi.sql';
+const MIGRATION = 'supabase/migrations/20260805183708_uygulama_kapisi.sql';
 
 describe('kapı AÇIK arızalanır — uygulama tarafı', () => {
   beforeEach(() => vi.resetModules());

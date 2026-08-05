@@ -997,6 +997,7 @@ export async function addSubscription(
       status: 'ACTIVE',
     });
     if (error) throw error;
+    olayYaz('tesis_defter_islendi', { tekrarlanabilir: true, ek: { tur: 'abonelik' } });
   } catch (error) {
     console.error('addSubscription:', error);
     throw new Error(toTurkishError(error));

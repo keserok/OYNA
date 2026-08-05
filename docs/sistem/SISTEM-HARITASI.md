@@ -463,6 +463,7 @@ Tanıtım ve deneme verileri. Boş ekran görünmesin diye duran sahte maçlar, 
 - Demo veri gerçek veriyle karışmaz
 - Demo veri denetim raporlarını kirletmez (K-10.8)
 - Demo veri gerçek sistemin kurallarına uyar
+- Demo kullanicinin kurdugu mac otomatik demo isaretlenir (bir kez demo, hep demo)
 
 **Dosyalar:**
 
@@ -472,7 +473,7 @@ scripts/owner-demo.mjs
 scripts/seeds/
 ```
 
-**Veritabanı nesneleri:** `matches.isDemo`, `demo_mode_enabled`
+**Veritabanı nesneleri:** `demo_isareti_mac`, `demo_mode_enabled`, `matches.isDemo`, `trg_demo_isareti_mac`
 
 **Bu taşı koruyan kontroller:**
 
@@ -481,6 +482,8 @@ scripts/seeds/
 | `K-DEMO-1` | Demo satırları gerçek sistemin kurallarına uyuyor mu, denetimi kirletiyor mu? | Demo veri gerçeği yanlış temsil ediyor, denemeler yanıltıyor | GUNLUK |
 
 > **Not:** P-3 (3 Agustos 2026): 6 tabloya is_demo sutunu + kandirilamayan tetikleyiciler eklendi. Demo olcutu: @oyna.app e-postasi (kaynak: demo_ekosistem_seed.sql, canlida 29/3/1 olarak dogrulandi). Artik denetim demo haric calisabiliyor. Olcum: panelde gorunen 15.860 TL'nin 13.940 TL'si demoymus, gercek para 1.920 TL.
+
+5 Agustos 2026 — K-DEMO-1 EKSIGI KAPATILDI: profiles.is_demo bir tetikleyiciyle otomatik doluyordu ama matches."isDemo" boyle bir tetikleyiciye SAHIP DEGILDI. Demo bir kullanicinin kurdugu mac 'gercek' gorunuyordu (canlida 22 macin 1'i tam olarak bu durumdaydi) ve yeni kurulan 'basarili mac' metrigi onu gercek sayacakti. Tetikleyici eklendi, gecmis duzeltildi, metrige ikinci kat koruma kondu.
 
 ---
 
@@ -624,15 +627,17 @@ Bir şey bozulduğunda geri dönebilmek. Yedekler, geri yükleme, migration geri
 **Dosyalar:**
 
 ```
+admin-panel/views/components/KapiDurumu.tsx
+components/UygulamaKapisi.tsx
 supabase/migrations/20260804120000_sre1_gecelik_yedek.sql
 supabase/migrations/20260804130000_sre1_yedek_saglik_kontrolu.sql
+supabase/migrations/20260805183708_uygulama_kapisi.sql
+supabase/migrations/20260805183804_uygulama_kapisi_bozuk_surum_kilitlemesin.sql
+supabase/migrations/20260805190910_demo_sizintisi_ve_kapi_ayarlari.sql
 utils/uygulamaKapisi.ts
-components/UygulamaKapisi.tsx
-admin-panel/views/components/KapiDurumu.tsx
-supabase/migrations/20260805140000_uygulama_kapisi.sql
 ```
 
-**Veritabanı nesneleri:** `yedek`, `yedek.kapsam`, `yedek.gunluk_al`, `yedek_durumu`, `gecelik_yedek`, `uygulama_kapisi`, `surum_kucuk_mu`, `kapi_sagligi`
+**Veritabanı nesneleri:** `gecelik_yedek`, `kapi_sagligi`, `settings.storeUrlAndroid`, `settings.storeUrlIos`, `surum_kucuk_mu`, `uygulama_kapisi`, `yedek`, `yedek.gunluk_al`, `yedek.kapsam`, `yedek_durumu`
 
 **Bu taşı koruyan kontroller:**
 
@@ -665,17 +670,17 @@ Bir şeyin bozulduğunu ÖĞRENEBİLMEK. Çökme kayıtları, hata izleme, siste
 **Dosyalar:**
 
 ```
-utils/observability.ts
-components/ErrorBoundary.tsx
 admin-panel/views/components/CokmeKayitlari.tsx
+admin-panel/views/components/Huni.tsx
 admin-panel/views/components/SistemSagligi.tsx
+components/ErrorBoundary.tsx
+shared/olayKatalogu.ts
 supabase/migrations/20260804140000_sre3_cokme_kaydi.sql
 supabase/migrations/20260804150000_sre3_ek_bilgi_temizligi.sql
 supabase/migrations/20260804160000_sre3_gizlendi_etiketi_duzeltmesi.sql
-shared/olayKatalogu.ts
+supabase/migrations/20260805181455_olcum_huni_sistemi.sql
+utils/observability.ts
 utils/olcum.ts
-admin-panel/views/components/Huni.tsx
-supabase/migrations/20260805120000_olcum_huni_sistemi.sql
 ```
 
 **Veritabanı nesneleri:** `istemci_hatalari`, `hata_bildir`, `hata_ozeti`, `hata_temizle_metin`, `hata_temizle_json`, `hata_kayitlarini_temizle`, `hata_kayit_temizligi`, `sistem_saglik_kayitlari`, `sistem_saglik_calistir`, `sistem_saglik_ozet`, `sistem_saglik_gunluk`, `sistem_saglik_ek_kontroller`, `olay_tanimlari`, `urun_olaylari`, `urun_olaylari_gunluk`, `olay_yaz`, `huni_ozeti`, `basarili_mac_ozeti`, `olcum_sagligi`, `olcum_gunluk_ozet_uret`, `olcum_kayitlarini_temizle`, `olcum_gunluk_ozet`, `olcum_temizlik`
