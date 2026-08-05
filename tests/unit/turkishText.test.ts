@@ -32,15 +32,6 @@ function kaynaklar(): string[] {
   return out;
 }
 
-// [PANEL-AYRIMI] views/owner/PitchManager.tsx admin-panel/views/ altından BURAYA
-// TAŞINDI (panel kodu oyuncu paketinden ayrılırken). Geldiği yerde bu metin
-// kuralları HİÇ uygulanmıyordu ve dosya borcunu yanında getirdi:
-//   • 8 SİZ kipi  ("planınız", "Seçiniz", "eklemediniz", "kontrol edin"…)
-//   • 2 üç nokta  (yer tutucu metinlerde)
-//   • 2 para dizimi (formatTRY.test.ts tarafında istisnalı)
-// Taşıma görevi kapsamında KULLANICIYA GÖRÜNEN METİN DEĞİŞTİRİLMEDİ — dil
-// düzeltmesi ayrı bir görevdir. Bu istisna o görev yapılınca KALDIRILMALIDIR.
-const TASINMIS_PANEL_EKRANI = ['views/owner/PitchManager.tsx'];
 
 /** Hukuki metinler — kullanıcı kararı gereği SİZ kipinde KALIR. */
 const HUKUKI = [
@@ -184,7 +175,6 @@ describe('üç nokta ve bekleme metni', () => {
   it('kullanıcıya görünen metinde "..." kalmadı', () => {
     const ihlal: string[] = [];
     for (const yol of kaynaklar()) {
-      if (TASINMIS_PANEL_EKRANI.includes(yol)) continue;
       oku(yol).split('\n').forEach((satir, i) => {
         // Kod yorumu ve spread hariç: harf ardından gelen üç nokta.
         if (satir.trim().startsWith('//') || satir.trim().startsWith('*')) return;
@@ -210,7 +200,7 @@ describe('hitap kipi', () => {
     const sizKipi = /\b\w+(iniz|ınız|unuz|ünüz)\b|\bediniz\b|\byapınız\b|\bdeneyiniz\b|\bkontrol edin\b/;
     const ihlal: string[] = [];
     for (const yol of kaynaklar()) {
-      if (HUKUKI.includes(yol) || TASINMIS_PANEL_EKRANI.includes(yol)) continue;
+      if (HUKUKI.includes(yol)) continue;
       oku(yol).split('\n').forEach((satir, i) => {
         if (satir.trim().startsWith('//') || satir.trim().startsWith('*')) return;
         if (cogul.test(satir)) return;

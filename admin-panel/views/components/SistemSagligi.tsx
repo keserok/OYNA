@@ -62,9 +62,16 @@ export const SistemSagligi: React.FC = () => {
   useEffect(() => { void yukle(); }, [yukle]);
 
   // Elle çalıştırma: denetimi beklemeden şimdi ölç.
+  //
+  // [DÜZELTME] Eskiden burada doğrudan `sistem_saglik_calistir` çağrılıyordu.
+  // O fonksiyon `authenticated` rolüne KAPALI (gece işi çağırıyor, kapı
+  // koyulsaydı cron kırılırdı) — yani bu düğme HİÇ ÇALIŞMIYORDU.
+  // Artık yönetici kapılı sarmalayıcı çağrılıyor; sarmalayıcı hem ana denetimi
+  // hem EK KONTROLLERİ çalıştırıyor, böylece düğme kartın tamamını tazeliyor
+  // (eskiden ek kontroller elle çalıştırmada güncellenmiyordu).
   const simdiCalistir = async () => {
     setCalistiriliyor(true);
-    const { error } = await supabase.rpc('sistem_saglik_calistir');
+    const { error } = await supabase.rpc('admin_sistem_saglik_calistir');
     if (error) setHata(error.message);
     await yukle();
     setCalistiriliyor(false);

@@ -164,16 +164,14 @@ describe('ekranlarda elle para dizilmiyor', () => {
     'views/owner/OwnerSubscriptionModal.tsx',
     'views/owner/finance/FinanceCollectTab.tsx',
     'views/owner/calendar/FinancialCalendarView.tsx',
+    // Para dizimi formatTRYShort'a taşındı; kalan tek ₺ ücret alanının
+    // birim etiketi ("Saatlik Ücret (₺)") — aşağıdaki süs kontrolü doğrular.
+    'views/owner/PitchManager.tsx',
   ];
   /** Avukat onaylı metin — dokunulmadı (IP-13'teki HUKUKI kararıyla aynı). */
   const HUKUKI = ['views/LegalScreen.tsx'];
   /** Bütçe süzgeci seçenekleri: hem etiket hem eşitlik anahtarı. */
-  // [PANEL-AYRIMI] views/owner/PitchManager.tsx, admin-panel/views/ altından
-  // BURAYA TAŞINDI (panel kodu oyuncu paketinden ayrılırken). Geldiği yerde bu
-  // metin kuralları hiç uygulanmıyordu; dosya bu borcu YANINDA getirdi
-  // (2 para dizimi, 2 üç nokta). Taşıma işi kapsamında kullanıcıya görünen
-  // metin DEĞİŞTİRİLMEDİ; ayrı bir görevde düzeltilmeli.
-  const SUZGEC = ['views/MatchDiscovery.tsx', 'views/owner/PitchManager.tsx'];
+  const SUZGEC = ['views/MatchDiscovery.tsx'];
 
   it('şablon/JSX içinde çıplak ₺ kalmadı', () => {
     const ihlal: string[] = [];

@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, Plus, Image as ImageIcon, Trash2, Edit3, Save, BadgeCheck, Clock, RotateCcw, Camera, AlertCircle, X, Tag } from 'lucide-react';
 import { PitchCourt } from '../../types';
+import { formatTRYShort } from '../../utils/formatTRY';
 import { upsertCourt, deleteCourt, getInactiveCourts, reactivateCourt, getCourtsTariffStatus, toTurkishError } from '../../services/pitchOwnerService';
 import { approveCourtGrades } from '../../services/pitchContentService';
 import { supabase } from '../../supabaseClient';
@@ -165,7 +166,7 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
     const handleAddNew = () => {
         if (readOnly) return;
         if (pitches.length >= maxCourts) {
-            setSaveError(`Mevcut planınız en fazla ${maxCourts} saha destekliyor. Daha fazla saha için Menü → Faturalandırma'dan planınızı yükseltin veya destek ile iletişime geçin.`);
+            setSaveError(`Mevcut planın en fazla ${maxCourts} saha destekliyor. Daha fazla saha için Menü → Faturalandırma'dan planını yükselt ya da destekle iletişime geç.`);
             return;
         }
         const newPitch: PitchCourt = {
@@ -202,7 +203,7 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
         if (readOnly || !editingPitch || !facilityId) return;
         // Doğrulama: en küçük format en büyük formatı aşamaz.
         if (editCaps.min > editCaps.max) {
-            setSaveError('En küçük format, en büyük formattan büyük olamaz. Aralığı kontrol edin.');
+            setSaveError('En küçük format, en büyük formattan büyük olamaz. Aralığı gözden geçir.');
             return;
         }
         // YAYIN KAPISININ ARAYÜZ İKİZİ (shared/courtTariffGate — sunucu ikizi:
@@ -454,7 +455,7 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
                                     value={editCaps.sizeLabel}
                                     onChange={(e) => setEditCaps({ ...editCaps, sizeLabel: e.target.value })}
                                     className="w-full bg-[#0A0E14] border border-white/10 rounded-xl p-3 text-white font-bold focus:border-[#FACC15]/50 outline-none transition-colors"
-                                    placeholder="7v7, Mini..."
+                                    placeholder="7v7, Mini…"
                                 />
                             </div>
                         </div>
@@ -492,7 +493,7 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
                                 value={editingPitch.description || ''}
                                 onChange={(e) => setEditingPitch({ ...editingPitch, description: e.target.value })}
                                 className="w-full bg-[#0A0E14] border border-white/10 rounded-xl p-3 text-white font-bold focus:border-[#FACC15]/50 outline-none transition-colors h-24 resize-none"
-                                placeholder="Sahanın özellikleri, kuralları veya ek detayları..."
+                                placeholder="Sahanın özellikleri, kuralları veya ek detayları…"
                             />
                         </div>
                     </div>
@@ -523,7 +524,7 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
                             <p className="text-xs text-gray-500 leading-relaxed">
                                 Fiyat politikası girmek için önce sahayı kaydedin. Saha kaydedildikten
                                 sonra bu bölümden saat aralıklarını, süreyi (60/90/120 dk) ve ücreti
-                                tanımlarsınız.
+                                tanımlarsın.
                             </p>
                         ) : (
                             <>
@@ -624,7 +625,7 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
                                         onChange={(e) => setEditingPitch({ ...editingPitch, lighting_grade: e.target.value || null })}
                                         className="w-full bg-[#0A0E14] border border-white/10 rounded-xl p-3 text-white font-bold focus:border-[#FACC15]/50 outline-none transition-colors appearance-none"
                                     >
-                                        <option value="">Seçiniz</option>
+                                        <option value="">Seç</option>
                                         <option value="A+">A+ Çok İyi</option>
                                         <option value="A">A İyi</option>
                                         <option value="B">B Standart</option>
@@ -638,7 +639,7 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
                                         onChange={(e) => setEditingPitch({ ...editingPitch, grass_grade: e.target.value || null })}
                                         className="w-full bg-[#0A0E14] border border-white/10 rounded-xl p-3 text-white font-bold focus:border-[#FACC15]/50 outline-none transition-colors appearance-none"
                                     >
-                                        <option value="">Seçiniz</option>
+                                        <option value="">Seç</option>
                                         <option value="A+">A+ Çok İyi</option>
                                         <option value="A">A İyi</option>
                                         <option value="B">B Standart</option>
@@ -652,7 +653,7 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
                                         onChange={(e) => setEditingPitch({ ...editingPitch, locker_grade: e.target.value || null })}
                                         className="w-full bg-[#0A0E14] border border-white/10 rounded-xl p-3 text-white font-bold focus:border-[#FACC15]/50 outline-none transition-colors appearance-none"
                                     >
-                                        <option value="">Seçiniz</option>
+                                        <option value="">Seç</option>
                                         <option value="A+">A+ Çok İyi</option>
                                         <option value="A">A İyi</option>
                                         <option value="B">B Standart</option>
@@ -765,8 +766,8 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
                         <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center text-gray-600 mb-4">
                             <ImageIcon size={40} />
                         </div>
-                        <h3 className="text-white font-bold text-lg mb-2">Henüz saha eklemediniz</h3>
-                        <p className="text-gray-500 text-sm max-w-[250px] mb-6">Müşterilerinizin rezervasyon yapabilmesi için en az bir saha eklemelisiniz.</p>
+                        <h3 className="text-white font-bold text-lg mb-2">Henüz saha eklemedin</h3>
+                        <p className="text-gray-500 text-sm max-w-[250px] mb-6">Müşterilerinin rezervasyon yapabilmesi için en az bir saha eklemelisin.</p>
                         <button
                             onClick={handleAddNew}
                             disabled={!facilityId || readOnly}
@@ -802,7 +803,7 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
                                                 const r = formatCapacityRange(pitch.min_capacity, pitch.max_capacity, pitch.capacity);
                                                 return r ? ` • ${r}` : '';
                                             })()}
-                                            {pitch.price ? ` • ₺${pitch.price}/Saat` : ''}
+                                            {pitch.price ? ` • ${formatTRYShort(pitch.price)}/Saat` : ''}
                                         </p>
                                     </div>
                                 </div>
