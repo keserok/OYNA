@@ -90,11 +90,16 @@ const heroText = (error: boolean, total: number | null, hasScope: boolean): stri
   if (error) return 'Maçlar yüklenemedi';
   if (!hasScope) return 'Yakınındaki maçları gör';
   if (total === null) return '—';
-  return total === 0 ? 'Bugün yakınında maç yok' : `${total} maç · bugün ve yarın`;
+  // Sıfırda da SAYILI biçim kalır ("0 maç · bugün ve yarın"). Tasarım bunu
+  // bilerek böyle yapmış: "maç yok" cümlesi hemen altındaki şerit başlığında
+  // zaten yazıyor; ikisi de aynı cümleyi kurarsa ekran kendini tekrar eder.
+  return `${total} maç · bugün ve yarın`;
 };
 
 const pitchText = (error: boolean, n: number | null, hasScope: boolean): string => {
-  if (error) return '—';
+  // Hata hâlinde "—" DEĞİL: kullanıcı neden boş olduğunu okuyabilmeli, ama
+  // "haritada gör" ipucu durmalı — kart hâlâ tıklanabilir.
+  if (error) return 'Sahalar yüklenemedi · haritada gör';
   if (!hasScope) return 'Yakındaki sahaları gör';
   if (n === null) return '—';
   return n === 0 ? 'Yakında müsait saha yok' : `Çevrende ${n} halı saha · haritada gör`;
@@ -368,34 +373,14 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
         </div>
       )}
 
-      {/* Hata — kartlar TIKLANABİLİR KALIR: sayı gelmedi diye kapılar kapanmaz. */}
-      {error && !offline && (
-        <div
-          role="alert"
-          style={{
-            flex: 'none', margin: `0 ${PAGE_X} var(--oy-space-2)`,
-            padding: '8px 12px', borderRadius: 'var(--oy-radius-sm)',
-            background: 'var(--color-error-bg)', border: '1px solid var(--color-error-line)',
-            display: 'flex', alignItems: 'center', gap: 9,
-          }}
-        >
-          <CircleAlert size={15} color="var(--color-error)" style={{ flex: 'none' }} aria-hidden />
-          <span style={{ flex: 1, minWidth: 0, fontSize: px('footnote'), color: 'var(--color-ink-2)' }}>
-            Bağlantı kurulamadı
-          </span>
-          <button
-            type="button"
-            onClick={home.refresh}
-            style={{
-              fontFamily: 'var(--font-display)', fontSize: px('microLabel'), fontWeight: 800,
-              letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--color-error)',
-              background: 'none', border: 0, padding: '4px 2px', cursor: 'pointer', flex: 'none',
-            }}
-          >
-            Tekrar Dene
-          </button>
-        </div>
-      )}
+      {/* HATA ŞERİDİ YOK — bilinçli.
+          Tasarımın "Hata" ekranında üstte ayrı bir uyarı kutusu YOKTUR; hata
+          üç yerde konuşur: kahraman kartın alt satırı ("Maçlar yüklenemedi"),
+          maç şeridinin kendisi (başlık + açıklama + TEKRAR DENE) ve Saha
+          Kirala'nın alt satırı ("Sahalar yüklenemedi · haritada gör").
+          Üstte ikinci bir "Tekrar Dene" düğmesi daha vardı; aynı ekranda iki
+          ayrı yenileme düğmesi kullanıcıya "hangisi?" dedirtiyordu. Kartlar
+          her hâlde TIKLANABİLİR kalır: sayı gelmedi diye kapılar kapanmaz. */}
 
       {/* ═══ KAYDIRICI ══════════════════════════════════════════════════════ */}
       <div
@@ -861,10 +846,14 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
             </div>
           ) : (
             <StripEmpty
-              error={error}
+              /* Çevrimdışıyken hata konuşmaz: yukarıdaki çevrimdışı şeridi
+                 zaten durumu söylüyor. İkisi birden çıkarsa kullanıcı iki
+                 farklı sebep okur ve hangisine inanacağını bilemez. */
+              error={error && !offline}
               hasScope={hasScope}
               onCreate={() => onNavigate('MATCH_CREATE')}
               onBrowse={() => onNavigate('MATCH_DISCOVERY')}
+              onRetry={home.refresh}
             />
           )}
         </div>
@@ -923,13 +912,21 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                 >
                   {upper(CARD.pitchDiscovery)}
                 </span>
-                {loading ? (
-                  <Skeleton w={168} h={12} />
-                ) : (
-                  <span style={{ fontSize: px('body'), lineHeight: 1.3, color: 'var(--color-ink-2)' }}>
-                    {pitchText(error, home.pitches, hasScope)}
-                  </span>
-                )}
+                {/* Yüklenirken sayı yerine iskelet çubuk gelir ama "· haritada gör"
+                    ipucu DURUR (tasarım böyle): kart yüklenirken de ne işe
+                    yaradığı okunabilsin. */}
+                {/* `div` — iskelet çubuğu blok bir kutu; `span` içine blok kutu
+                    koymak geçersiz HTML olurdu. Dizilim kolonda olduğu için
+                    görünüm birebir aynı kalır. */}
+                <div style={{ fontSize: px('body'), lineHeight: 1.3, color: 'var(--color-ink-2)' }}>
+                  {loading ? (
+                    <>
+                      <Skeleton w={150} h={11} /> · haritada gör
+                    </>
+                  ) : (
+                    pitchText(error, home.pitches, hasScope)
+                  )}
+                </div>
               </div>
             </div>
           </Tap>
@@ -965,8 +962,13 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                   Sahayı seç, kadroyu davet et
                 </span>
               </div>
+              {/* Amblem `fill="currentColor"` ile çizilir: rengi ÇAĞIRAN verir.
+                  Burada verilmemişti ve ikon kartın metin renginden BEYAZ
+                  doğuyordu; tasarımda turuncudur (m-create · fill #FF7A00).
+                  Kaleci ve hakem kartlarında renk zaten açıkça veriliyor —
+                  atlanan tek yer burasıydı. */}
               <IconRing size={66} color="rgba(255,122,0,0.75)">
-                <MatchCreateMark width={28} height={29.3} />
+                <MatchCreateMark width={28} height={29.3} style={{ color: 'var(--color-cat-create)' }} />
               </IconRing>
             </div>
           </Tap>
@@ -1160,61 +1162,102 @@ const StripSkeleton: React.FC = () => (
 );
 
 /**
- * Şeridin boş hâli — TEK BLOK.
+ * Şeridin boş hâli — ONAYLI TASARIMDAN BİREBİR.
  *
- * Boş bir şerit yerine tek bir blok gelir; kullanıcıya "burada bir şey
- * eksik" değil "burada şunu yapabilirsin" denir. İki çıkış: kendi maçını
- * kur, ya da tüm maçlara bak.
+ * Kaynak: "OYNA — Ana Sayfa · yedi mod" → "Maçı yok" ve "Hata" ekranları.
+ *
+ * ÖNCEKİ HÂLİ NEDEN DEĞİŞTİ (kullanıcı bildirimi): Kesikli çerçeveli bir kutu
+ * içinde başlık ve iki ÇİZGİLİ düğme vardı. Tasarımda kutu YOK; ortalanmış bir
+ * sütun var: ikon → başlık → AÇIKLAMA CÜMLESİ → düğmeler. Açıklama cümlesi
+ * hiç yoktu; kullanıcıya ne yapabileceğini söyleyen tek satır oydu.
+ * Ayrıca birincil eylem (MAÇ KUR) tasarımda DOLU YEŞİLDİR — iki çizgili düğme
+ * arasında hangisinin ana yol olduğu belli olmuyordu.
+ *
+ * ÖLÇÜLER (tasarımdan): kap 22px 24px 26px dolgu, gap 11px, ortalı;
+ * ikon 40×39.5 (opacity .5) / hata ikonu 30×30 #F87171;
+ * başlık Montserrat 800 italik 16px, satır 1.15, ls -0.03em;
+ * açıklama 13px, satır 1.45, #C9D1D9, en fazla 258px;
+ * düğmeler min-h 48px, radius 14px, dolgu 0 18px, gap 9px,
+ * Montserrat 800 italik 13px.
  */
+const BOS_HAL_METIN: React.CSSProperties = {
+  fontSize: px('body'), lineHeight: 1.45, color: 'var(--color-ink-2)', maxWidth: 258,
+};
+const BOS_HAL_BASLIK: React.CSSProperties = {
+  fontFamily: 'var(--font-display)', fontWeight: 800, fontStyle: 'italic',
+  fontSize: px('title'), lineHeight: 1.15, letterSpacing: '-0.03em', color: 'var(--color-ink)',
+};
+/** Boş hâl düğmesi — birincil (dolu yeşil) ya da ikincil (koyu, çerçeveli). */
+const BosHalDugme: React.FC<{
+  birincil?: boolean; onClick: () => void; label: string; children: React.ReactNode;
+}> = ({ birincil, onClick, label, children }) => (
+  <Tap
+    onClick={onClick}
+    label={label}
+    style={{
+      minHeight: 48, display: 'flex', alignItems: 'center', padding: '0 18px',
+      borderRadius: 14,
+      background: birincil ? 'var(--color-primary)' : 'var(--color-surface-1)',
+      border: birincil ? 'none' : '1px solid rgba(255,255,255,0.12)',
+      color: birincil ? 'var(--color-on-primary)' : 'var(--color-ink)',
+    }}
+  >
+    <span
+      style={{
+        fontFamily: 'var(--font-display)', fontWeight: 800, fontStyle: 'italic',
+        fontSize: px('body'), color: 'inherit',
+      }}
+    >
+      {children}
+    </span>
+  </Tap>
+);
+
 const StripEmpty: React.FC<{
   error: boolean;
   hasScope: boolean;
   onCreate: () => void;
   onBrowse: () => void;
-}> = ({ error, hasScope, onCreate, onBrowse }) => (
-  <div style={{ padding: `var(--oy-space-4) ${PAGE_X}` }}>
-    <div
-      style={{
-        borderRadius: 'var(--oy-radius-md)', border: '1px dashed rgba(255,255,255,0.28)',
-        padding: '18px 16px', display: 'flex', flexDirection: 'column', gap: 'var(--oy-space-3)',
-      }}
-    >
-      <span
-        style={{
-          fontFamily: 'var(--font-display)', fontWeight: 800, fontStyle: 'italic',
-          fontSize: px('bodyLg'), letterSpacing: '-0.03em', color: 'var(--color-ink)',
-        }}
-      >
-        {error
-          ? 'MAÇLAR YÜKLENEMEDİ'
-          : hasScope ? 'BUGÜN YAKININDA MAÇ YOK' : 'ÖNCE BÖLGENİ SEÇ'}
-      </span>
-      <div style={{ display: 'flex', gap: 'var(--oy-space-2)' }}>
-        <Tap
-          onClick={onCreate}
-          label={CARD.matchCreate}
-          style={{
-            flex: 1, minHeight: 'var(--oy-tap-min)', borderRadius: 'var(--oy-radius-sm)',
-            border: BOX_BORDER, display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}
-        >
-          <span style={{ fontSize: px('footnote'), fontWeight: 600, letterSpacing: '0.08em', color: 'var(--color-ink)' }}>
+  onRetry: () => void;
+}> = ({ error, hasScope, onCreate, onBrowse, onRetry }) => (
+  <div
+    style={{
+      padding: '22px 24px 26px', display: 'flex', flexDirection: 'column',
+      alignItems: 'center', gap: 11, textAlign: 'center',
+    }}
+  >
+    {error ? (
+      <CircleAlert size={30} color="#F87171" strokeWidth={1.8} aria-hidden />
+    ) : (
+      <OynaMark width={40} height={39.5} style={{ opacity: 0.5 }} />
+    )}
+
+    <span style={BOS_HAL_BASLIK}>
+      {error
+        ? 'MAÇLAR YÜKLENEMEDİ'
+        : hasScope ? 'BUGÜN YAKININDA MAÇ YOK' : 'ÖNCE BÖLGENİ SEÇ'}
+    </span>
+
+    {/* Açıklama cümlesi: tasarımın parçası ve tek "ne yapabilirim" ipucu. */}
+    <span style={BOS_HAL_METIN}>
+      {error
+        ? 'Bağlantı kurulamadı. Birazdan tekrar deneyebilirsin.'
+        : hasScope
+          ? 'Kendin bir maç kurabilir ya da bu hafta açılanlara bakabilirsin.'
+          : 'Yakınındaki maçları görebilmemiz için önce bölgeni seçmen gerekiyor.'}
+    </span>
+
+    <div style={{ marginTop: 3, display: 'flex', gap: 9 }}>
+      {error ? (
+        <BosHalDugme onClick={onRetry} label="Tekrar dene">TEKRAR DENE</BosHalDugme>
+      ) : (
+        <>
+          <BosHalDugme birincil onClick={onCreate} label={CARD.matchCreate}>
             {upper(CARD.matchCreate)}
-          </span>
-        </Tap>
-        <Tap
-          onClick={onBrowse}
-          label="Bu haftanın maçları"
-          style={{
-            flex: 1, minHeight: 'var(--oy-tap-min)', borderRadius: 'var(--oy-radius-sm)',
-            border: BOX_BORDER, display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}
-        >
-          <span style={{ fontSize: px('footnote'), fontWeight: 600, letterSpacing: '0.08em', color: 'var(--color-ink)' }}>
-            BU HAFTA
-          </span>
-        </Tap>
-      </div>
+          </BosHalDugme>
+          <BosHalDugme onClick={onBrowse} label="Bu haftanın maçları">BU HAFTA</BosHalDugme>
+        </>
+      )}
     </div>
   </div>
 );

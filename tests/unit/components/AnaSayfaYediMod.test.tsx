@@ -60,6 +60,9 @@ const TEMEL: DashboardHome = {
   refresh: () => {},
 };
 
+/** Yalnız düğmenin kendisi — açıklama cümlesindeki "tekrar dene…" sayılmaz. */
+const TEKRAR_DENE = /^TEKRAR DENE$/;
+
 const kur = (over: Partial<DashboardHome> = {}) => {
   durum.v = { ...TEMEL, ...over };
   return render(
@@ -98,6 +101,10 @@ describe('Ana sayfa — yedi mod', () => {
     // maç kurabilmeli, saha kiralayabilmeli.
     expect(screen.getByText(/TOP OYNA/i)).toBeTruthy();
     expect(screen.getByText(/SAHA KİRALA/i)).toBeTruthy();
+    // Kahraman kartın alt satırı sayılı kalır; "maç yok" cümlesi ŞERİT
+    // başlığında bir kez söylenir — ekran kendini tekrar etmez.
+    expect(screen.getByText('0 maç · bugün ve yarın')).toBeTruthy();
+    expect(screen.getByText(/BUGÜN YAKININDA MAÇ YOK/)).toBeTruthy();
   });
 
   it('M3 · Yeni kullanıcı: profil boşken ekran yine çizilir', () => {
@@ -117,7 +124,15 @@ describe('Ana sayfa — yedi mod', () => {
 
   it('M5 · Hata: uyarı + TEKRAR DENE çıkar, kapılar TIKLANABİLİR kalır', () => {
     kur({ error: true, matchTotal: null, pitches: null, balance: null });
-    expect(screen.getByText(/TEKRAR DENE/i)).toBeTruthy();
+    // TAM eşleşme aranıyor: açıklama cümlesi "…birazdan tekrar
+    // deneyebilirsin" de içinde "tekrar dene" geçiriyor; gevşek arama iki
+    // sonuç bulup testi yanlış yere düşürüyordu.
+    expect(screen.getByText(TEKRAR_DENE)).toBeTruthy();
+    // Tasarımda hata TEK düğmeyle konuşur — üstte ikinci bir uyarı kutusu yok.
+    expect(screen.queryAllByText(TEKRAR_DENE)).toHaveLength(1);
+    // Hata, kartların alt satırlarında da okunur.
+    expect(screen.getByText(/Maçlar yüklenemedi/i)).toBeTruthy();
+    expect(screen.getByText(/Sahalar yüklenemedi · haritada gör/i)).toBeTruthy();
     // Tasarım kararı: sayı gelmedi diye kapılar kapanmaz.
     expect(screen.getByText(/TOP OYNA/i)).toBeTruthy();
     expect(screen.getByText(/SAHA KİRALA/i)).toBeTruthy();
@@ -126,7 +141,7 @@ describe('Ana sayfa — yedi mod', () => {
   it('M6 · Çevrimdışı: HATA DEĞİL — önbellek içeriği durur', () => {
     kur({ offline: true });
     // Çevrimdışı bir hata değildir: "TEKRAR DENE" çıkmamalı, içerik kalmalı.
-    expect(screen.queryByText(/TEKRAR DENE/i)).toBeNull();
+    expect(screen.queryByText(TEKRAR_DENE)).toBeNull();
     expect(screen.getByText(/TOP OYNA/i)).toBeTruthy();
   });
 
@@ -134,7 +149,7 @@ describe('Ana sayfa — yedi mod', () => {
     // İkisi aynı anda çizilirse kullanıcı iki farklı şey okur ve hangisine
     // inanacağını bilemez. Çevrimdışı daha üst gerçektir.
     kur({ offline: true, error: true });
-    expect(screen.queryByText(/TEKRAR DENE/i)).toBeNull();
+    expect(screen.queryByText(TEKRAR_DENE)).toBeNull();
   });
 
   it('M7 · Yenileniyor: şerit açılır, içerik YERİNDE kalır', () => {
