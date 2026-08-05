@@ -33,7 +33,7 @@ import {
 import { auth, getAuthIdentity, updateUserEmail, updateUserPassword, AuthIdentityInfo } from '../../supabaseAuth';
 import {
   getFullUserProfile, getMatchHistory, updateProfileBasics, updateProfileName,
-  setMySelfSkill, type MatchHistorySummary, type OynaUser,
+  saveProfileEdit, type MatchHistorySummary, type OynaUser,
 } from '../../services/userService';
 import { getMyTeams, type MyTeamRow } from '../../services/teamSocialService';
 import { supabase } from '../../supabaseClient';
@@ -258,20 +258,13 @@ const ProfileInfoPage: React.FC<ProfileInfoPageProps> = ({ open, onClose }) => {
     setSavingEdit(true);
     setEditError(null);
     try {
-      await updateProfileBasics(uid, {
-        position: v.position,
-        bio: v.bio,
-        birthdate: v.birthdate || null,
-        gender: v.gender || null,
-        play_style: v.playStyle || null,
-        ...(v.avatarUrl && v.avatarUrl !== profile?.avatar_url ? { avatar_url: v.avatarUrl } : {}),
+      // Kayıt mantığı TEK KAYNAKTA (services/userService · saveProfileEdit):
+      // aynı katman Profil ekranındaki kimlik kutusundan da açılıyor.
+      const { avatarChanged } = await saveProfileEdit(uid, v, {
+        avatarUrl: profile?.avatar_url,
+        selfSkill: profile?.selfSkill,
       });
-      // Seviye beyanı ayrı kapıdan: RPC aralığı doğrular, NULL'u reddeder
-      // (beyan bir kez verildikten sonra silinemez — kadro çipi sözleşmesi).
-      if (v.selfSkill != null && v.selfSkill !== profile?.selfSkill) {
-        await setMySelfSkill(v.selfSkill);
-      }
-      if (v.avatarUrl && v.avatarUrl !== profile?.avatar_url) {
+      if (avatarChanged) {
         const cur = useAppStore.getState().currentUserProfile;
         if (cur && cur.id === uid) useAppStore.getState().setCurrentUserProfile({ ...cur, avatar: v.avatarUrl });
       }

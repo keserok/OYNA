@@ -95,6 +95,31 @@ const EKRANLAR: Ekran[] = [
     },
   },
   {
+    // Kullanıcı kararı: kimlik kutusuna dokunmak "Profili Düzenle"yi açar.
+    // Ekranın kendisi de onaylı tasarımdan birebir çizildi — burada kilitleniyor.
+    ad: '09c-profil-duzenle',
+    // Başlık DOM'da "Profili Düzenle"; büyük harf görünümü CSS'ten geliyor.
+    capa: /Profili Düzenle/,
+    ac: async (page) => {
+      await hazirla(page);
+      await doluProfilTohumla(page);
+      await ekranaGit(page, 'PROFILE');
+      await page.getByRole('button', { name: 'Profili düzenle' }).click();
+    },
+  },
+  {
+    // Doğum tarihi seçici — üç tekerlek. Tasarımın 06. ekranı.
+    ad: '09d-dogum-tarihi',
+    capa: /yaşındasın/,
+    ac: async (page) => {
+      await hazirla(page);
+      await doluProfilTohumla(page);
+      await ekranaGit(page, 'PROFILE');
+      await page.getByRole('button', { name: 'Profili düzenle' }).click();
+      await page.getByRole('button', { name: /Doğum tarihi/ }).click();
+    },
+  },
+  {
     ad: '10-bildirimler',
     capa: /Bildirimler/i,
     ac: async (page) => {

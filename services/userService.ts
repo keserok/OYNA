@@ -293,6 +293,43 @@ export const setMySelfSkill = async (value: number): Promise<void> => {
   if (error) throw error;
 };
 
+/**
+ * "Profili Düzenle" katmanının TEK kayıt yolu.
+ *
+ * NEDEN AYRI BİR İŞLEV: Bu katman artık İKİ yerden açılıyor — Ayarlar →
+ * Bilgilerim ve Profil ekranındaki kimlik kutusu (kullanıcı kararı). Kayıt
+ * mantığı iki ekranda ayrı ayrı yazılsaydı, biri güncellenip diğeri unutulduğu
+ * gün aynı katman iki farklı şey kaydeder hâle gelirdi. Özellikle iki incelik
+ * burada saklı ve ikisi de sessizce bozulabilir:
+ *   • Seviye beyanı kolon yazımıyla GİTMEZ; ayrı RPC'den geçer.
+ *   • Fotoğraf yalnız DEĞİŞTİYSE gönderilir (aynı adresi tekrar yazmak
+ *     gereksiz bir güncelleme üretir).
+ *
+ * Hata FIRLATIR: çağıran ekran katmanı açık tutup sebebi göstersin.
+ */
+export const saveProfileEdit = async (
+  userId: string,
+  v: {
+    position: string; bio: string; birthdate: string; gender: string;
+    playStyle: string; avatarUrl: string; selfSkill: number | null;
+  },
+  onceki: { avatarUrl?: string | null; selfSkill?: number | null },
+): Promise<{ avatarChanged: boolean }> => {
+  const avatarChanged = !!v.avatarUrl && v.avatarUrl !== onceki.avatarUrl;
+  await updateProfileBasics(userId, {
+    position: v.position,
+    bio: v.bio,
+    birthdate: v.birthdate || null,
+    gender: v.gender || null,
+    play_style: v.playStyle || null,
+    ...(avatarChanged ? { avatar_url: v.avatarUrl } : {}),
+  });
+  if (v.selfSkill != null && v.selfSkill !== onceki.selfSkill) {
+    await setMySelfSkill(v.selfSkill);
+  }
+  return { avatarChanged };
+};
+
 // Görünen ad — DB'de hem name (NOT NULL, legacy) hem full_name (görüntülenen)
 // tutuluyor; ikisini de senkron tutar ki isim her yerde tutarlı görünsün.
 export const updateProfileName = async (userId: string, fullName: string): Promise<void> => {

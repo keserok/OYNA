@@ -6,6 +6,7 @@ import { POSITION_LABEL, POSITION_ABBR, PLAY_STYLE_META, GENDER_LABEL } from '..
 import { skillBand, SELF_SKILL_MAX } from '../../utils/skillBand';
 import { BirthdatePicker, AYLAR, parseISODate } from './BirthdatePicker';
 import { useBackDismiss } from '../../hooks/useBackDismiss';
+import profileAmbient from '../../assets/profile/profile-ambient.png';
 
 // ════════════════════════════════════════════════════════════════════════
 // PROFİLİ DÜZENLE — TEK KAYNAK (tasarım 4c)
@@ -19,10 +20,10 @@ import { useBackDismiss } from '../../hooks/useBackDismiss';
 // 03 Tanıtım) ve alta sabitlenmiş Kaydet çubuğu vardır. Yeni bir uygulama
 // görünümü (route) AÇILMAZ: bileşen yine open/onClose ile sürülen bir katman —
 // böylece admin panelinde de (uygulama gezintisi olmayan bir yerde) çalışır.
-// `pf-serif` BURAYA AYRICA yazılır: katman portal ile <body>'ye çizilir, yani
-// profil ekranının altında DEĞİLDİR ve yazı tipini ondan miras alamaz.
-// Kalın ağırlık en fazla 700 (font-bold): Lora ekseni 400–700 taşır ve
-// `font-synthesis: none` yüzünden 800 sahte kalın üretmez, sessizce düşerdi.
+// ZEMİN VE YAZI: onaylı tasarımda düz #0A0E14 + üstteki saha ışıması; gövde
+// Inter, sayı/başlık Montserrat 800 italik. (Bir dönem bu katman tırnaklı
+// yazı ve yeşile çalan zeminle çiziliyordu — "tasarım 3a"; teslim edilen yeni
+// tasarım o dili bıraktı.)
 //
 // KAYIT SÖZLEŞMESİ (kullanıcı kararı: "Kaydedildi göster, sonra kapat"):
 // `onSave` HATA FIRLATIRSA kayıt başarısızdır — katman açık kalır, sebebi
@@ -86,8 +87,8 @@ const initialsOf = (name: string) =>
 
 /** Numaralı bölüm başlığı: "01 — Kimlik" + sağa uzanan ince çizgi. */
 const Bolum: React.FC<{ no: string; ad: string; ilk?: boolean }> = ({ no, ad, ilk }) => (
-    <div className={`flex items-center gap-2.5 ${ilk ? 'mt-1.5' : 'mt-6'}`}>
-        <span className="text-[0.6875rem] italic text-[#F5F3EE]/[0.5]">{no} — {ad}</span>
+    <div className={`flex items-center gap-2.5 ${ilk ? 'mt-1.5' : 'mt-[22px]'}`}>
+        <span className="text-[0.6875rem] tracking-[0.1em] text-[#F5F3EE]/[0.5]">{no} — {ad}</span>
         <span className="flex-1 h-px bg-white/[0.12]" />
     </div>
 );
@@ -204,16 +205,26 @@ export const ProfileEditSheet: React.FC<ProfileEditSheetProps> = ({
 
     // z-[260]: uygulamada BottomNav'ın, admin panelde 360 drawer'ının (z-[240]) üstünde kalmalı.
     return createPortal(
-        <div className="pf-serif pf-canvas fixed inset-0 z-[260] flex flex-col text-[#F5F3EE]">
-            <div className="pf-ambient" />
+        <div className="fixed inset-0 z-[260] flex flex-col bg-[#0A0E14] text-white">
+            {/* Üstteki saha ışıması — tasarımın `.oyna-saha` katmanı. */}
+            <img
+                src={profileAmbient}
+                alt=""
+                aria-hidden
+                className="pointer-events-none absolute top-[-10px] left-1/2 -translate-x-1/2 w-[520px] max-w-none opacity-50 mix-blend-screen"
+                style={{
+                    WebkitMaskImage: 'linear-gradient(180deg,#000 0%,#000 40%,transparent 88%)',
+                    maskImage: 'linear-gradient(180deg,#000 0%,#000 40%,transparent 88%)',
+                }}
+            />
 
             {/* ═══ ÜST ÇUBUK ═══ */}
-            <div className="relative z-10 shrink-0 flex items-center gap-3 px-5 pb-3 pt-safe">
+            <div className="relative z-10 shrink-0 flex items-center gap-3 px-5 pb-2.5 pt-safe">
                 <button
                     type="button"
                     onClick={onClose}
                     aria-label="Geri"
-                    className="w-11 h-11 rounded-full bg-surface-1/80 border border-white/[0.08] flex items-center justify-center text-[#F5F3EE]/[0.8] hover:text-[#F5F3EE] hover:bg-white/10 active:scale-95 transition-all shrink-0"
+                    className="w-11 h-11 rounded-full bg-surface-1/[0.75] border border-white/[0.08] flex items-center justify-center text-white hover:bg-white/10 active:scale-95 transition-all shrink-0"
                 >
                     <ChevronLeft size={18} />
                 </button>
@@ -226,7 +237,7 @@ export const ProfileEditSheet: React.FC<ProfileEditSheetProps> = ({
             </div>
 
             {/* ═══ GÖVDE ═══ */}
-            <div className="relative z-10 flex-1 overflow-y-auto custom-scrollbar px-6 pt-2.5 pb-safe-nav">
+            <div className="relative z-10 flex-1 overflow-y-auto custom-scrollbar px-5 pt-1 pb-safe-nav">
                 {/* ─── 01 — KİMLİK ─── */}
                 <Bolum no="01" ad="Kimlik" ilk />
                 <div className="mt-3.5 flex items-center gap-3.5">
@@ -239,12 +250,12 @@ export const ProfileEditSheet: React.FC<ProfileEditSheetProps> = ({
                             className="w-16 h-16 rounded-full object-cover bg-white/[0.12] border border-white/[0.14] shrink-0"
                         />
                     ) : (
-                        <div className="w-16 h-16 rounded-full bg-white/[0.12] border border-white/[0.14] flex items-center justify-center text-[1.375rem] font-bold shrink-0">
+                        <div className="w-16 h-16 rounded-full bg-white/[0.12] border border-white/[0.14] flex items-center justify-center text-[1.375rem] font-[Montserrat] font-extrabold italic shrink-0">
                             {gosterilenAd ? initialsOf(gosterilenAd) : '👤'}
                         </div>
                     )}
-                    <div className="flex-1 min-w-0">
-                        {gosterilenAd && <span className="block text-base font-semibold truncate">{gosterilenAd}</span>}
+                    <div className="flex-1 min-w-0 flex flex-col gap-1 items-start">
+                        {gosterilenAd && <span className="block max-w-full text-base truncate">{gosterilenAd}</span>}
                         <button
                             type="button"
                             onClick={() => fileInputRef.current?.click()}
@@ -273,10 +284,10 @@ export const ProfileEditSheet: React.FC<ProfileEditSheetProps> = ({
                 <button
                     type="button"
                     onClick={() => setTarihAcik(true)}
-                    className="mt-3.5 w-full bg-surface-1 border border-white/[0.08] rounded-[14px] px-4 py-2.5 min-h-12 flex items-center justify-between gap-3 hover:bg-white/[0.05] transition-colors active:scale-[0.99]"
+                    className="mt-3.5 w-full bg-surface-1 border border-white/[0.08] rounded-[14px] px-4 py-[11px] min-h-12 flex items-center justify-between gap-3 hover:bg-white/[0.05] transition-colors active:scale-[0.99]"
                 >
-                    <span className="text-xs italic text-[#F5F3EE]/[0.6] shrink-0">Doğum tarihi</span>
-                    <span className={`flex items-center gap-2.5 text-sm ${birthdate ? 'text-[#F5F3EE]' : 'text-[#F5F3EE]/[0.45]'}`}>
+                    <span className="text-xs text-[#F5F3EE]/[0.6] shrink-0">Doğum tarihi</span>
+                    <span className={`flex items-center gap-[9px] text-sm ${birthdate ? 'text-white' : 'text-[#F5F3EE]/[0.45]'}`}>
                         {tarihMetni(birthdate) ?? 'Ekle'}
                         <ChevronRight size={15} className="text-[#F5F3EE]/[0.5] shrink-0" />
                     </span>
@@ -291,7 +302,7 @@ export const ProfileEditSheet: React.FC<ProfileEditSheetProps> = ({
                                 type="button"
                                 onClick={() => setGender(sel ? '' : g)}
                                 aria-pressed={sel}
-                                className={`flex-1 h-11 text-xs ${sel ? 'font-bold' : ''} ${secimSinifi(sel)}`}
+                                className={`flex-1 h-12 text-xs ${secimSinifi(sel)}`}
                             >
                                 {GENDER_SYMBOL[g]} {GENDER_LABEL[g]}
                             </button>
@@ -311,9 +322,9 @@ export const ProfileEditSheet: React.FC<ProfileEditSheetProps> = ({
                                 type="button"
                                 onClick={() => setPos(sel ? '' : label)}
                                 aria-pressed={sel}
-                                className={`min-h-12 py-2.5 flex flex-col items-center gap-0.5 ${secimSinifi(sel)}`}
+                                className={`min-h-[52px] py-[9px] px-0.5 flex flex-col items-center justify-center gap-0.5 ${secimSinifi(sel)}`}
                             >
-                                <span className="text-[0.8125rem] font-bold">{POSITION_ABBR[code]}</span>
+                                <span className="text-[0.8125rem] font-semibold">{POSITION_ABBR[code]}</span>
                                 <span className="text-[0.6875rem]">{label}</span>
                             </button>
                         );
@@ -321,13 +332,13 @@ export const ProfileEditSheet: React.FC<ProfileEditSheetProps> = ({
                 </div>
 
                 {/* ── SEVİYEN — beyan edilen seviye (1–10), kadroda banda indirgenir ── */}
-                <div className="mt-4">
+                <div className="mt-[18px]">
                     <div className="flex items-center justify-between gap-2">
-                        <span className="text-xs italic text-[#F5F3EE]/[0.75]">Seviyen</span>
+                        <span className="text-xs text-[#F5F3EE]/[0.75]">Seviyen</span>
                         {band && (
                             <span
                                 lang="tr"
-                                className="text-[0.625rem] font-bold uppercase tracking-[0.1em] px-2.5 py-[3px] rounded-full"
+                                className="text-[0.625rem] uppercase tracking-[0.1em] px-2.5 py-1 rounded-full"
                                 style={{ color: band.color, backgroundColor: `${band.color}17`, border: `1px solid ${band.color}45` }}
                             >
                                 {band.label} · {selfSkill}/{SELF_SKILL_MAX}
@@ -355,7 +366,7 @@ export const ProfileEditSheet: React.FC<ProfileEditSheetProps> = ({
                                         initial.selfSkill == null && selfSkill === val ? null : val,
                                     )}
                                     className={`h-10 rounded-[10px] text-xs transition-all active:scale-95 disabled:active:scale-100 disabled:cursor-default ${
-                                        dolu ? 'font-bold text-on-primary' : 'text-[#F5F3EE]/[0.6]'
+                                        dolu ? 'text-on-primary' : 'text-[#F5F3EE]/[0.6]'
                                     }`}
                                     style={{
                                         backgroundColor: dolu ? renk : 'var(--color-surface-1)',
@@ -370,7 +381,7 @@ export const ProfileEditSheet: React.FC<ProfileEditSheetProps> = ({
                             );
                         })}
                     </div>
-                    <p className="mt-1.5 ml-1 text-[0.6875rem] italic text-[#F5F3EE]/[0.55]">
+                    <p className="mt-2 ml-0.5 text-[0.6875rem] text-[#F5F3EE]/[0.55]">
                         {(['baslangic', 'orta', 'ileri'] as const).map((k, i) => {
                             const b = skillBand(k === 'baslangic' ? 1 : k === 'orta' ? 5 : 9)!;
                             const aralik = k === 'baslangic' ? '1–3' : k === 'orta' ? '4–7' : '8–10';
@@ -388,18 +399,18 @@ export const ProfileEditSheet: React.FC<ProfileEditSheetProps> = ({
                         })}
                     </p>
                     {selfSkill == null && (
-                        <p className="mt-1 ml-1 text-[0.6875rem] italic text-[#F5F3EE]/[0.55]">
+                        <p className="mt-1 ml-0.5 text-[0.6875rem] text-[#F5F3EE]/[0.55]">
                             Henüz seviye beyanın yok — kadroda seviye çipin görünmez.
                         </p>
                     )}
                     {!selfSkillEditable && (
-                        <p className="mt-1 ml-1 text-[0.6875rem] italic text-[#F5F3EE]/[0.55]">
+                        <p className="mt-1 ml-0.5 text-[0.6875rem] text-[#F5F3EE]/[0.55]">
                             Oyuncunun kendi beyanı, değiştirilemez.
                         </p>
                     )}
                 </div>
 
-                <div className="mt-4 grid grid-cols-3 gap-2">
+                <div className="mt-[18px] grid grid-cols-3 gap-2">
                     {/* Kimlik renkleri (kanonik K/S/Y) seçim beklenmeden görünür:
                         seçili → dolu renk, değil → kendi renginde tonlu */}
                     {PLAY_STYLE_ORDER.map((s) => {
@@ -411,7 +422,7 @@ export const ProfileEditSheet: React.FC<ProfileEditSheetProps> = ({
                                 type="button"
                                 onClick={() => setStyle(sel ? '' : s)}
                                 aria-pressed={sel}
-                                className={`py-3 rounded-[14px] border text-center text-xs transition-all active:scale-95 ${sel ? 'font-bold' : ''}`}
+                                className="py-[13px] px-1 rounded-[14px] border text-center text-xs transition-all active:scale-95"
                                 style={sel
                                     ? { color: '#0A0E14', backgroundColor: meta.color, borderColor: meta.color, boxShadow: `0 0 14px ${meta.color}40` }
                                     : { color: meta.color, backgroundColor: `${meta.color}12`, borderColor: `${meta.color}45` }}

@@ -48,11 +48,18 @@ export interface ProfileIdentityCardProps {
   onEditAvatar?: () => void;
   /** Fotoğraf yokken kartın altında beliren "Fotoğrafını ekle" satırı. */
   showAddPhotoRow?: boolean;
+  /**
+   * Kartın GÖVDESİNE dokunulunca çalışır (kullanıcı kararı: profil ekranında
+   * bilgi kutusuna basınca "Profili Düzenle" açılır). Verilmezse kart düz bir
+   * kutu olarak kalır — salt-okunur bağlamlarda (misafir, yönetim aynası)
+   * sahte bir eylem görünmesin.
+   */
+  onPress?: () => void;
 }
 
 export const ProfileIdentityCard: React.FC<ProfileIdentityCardProps> = ({
   name, avatarUrl, verified, position, age, ageRange, gender, playStyle,
-  selfSkill, layout = 'row', onEditAvatar, showAddPhotoRow = true,
+  selfSkill, layout = 'row', onEditAvatar, showAddPhotoRow = true, onPress,
 }) => {
   // Kırık/erişilemeyen fotoğraf adresi → baş harflere düş.
   const [broken, setBroken] = useState(false);
@@ -120,7 +127,7 @@ export const ProfileIdentityCard: React.FC<ProfileIdentityCardProps> = ({
       </div>
 
       {bosKunye ? (
-        <p className="m-0 text-[0.8125rem] leading-[1.35] text-ink-4">Mevki ve seviye eklenmedi</p>
+        <p className="m-0 text-[0.8125rem] leading-[1.35] text-[#F5F3EE]/[0.55]">Mevki ve seviye eklenmedi</p>
       ) : (
         <div className="flex flex-col gap-[3px] text-[0.8125rem] leading-[1.35] text-white">
           {line1 && <p className="m-0">{line1}</p>}
@@ -130,12 +137,30 @@ export const ProfileIdentityCard: React.FC<ProfileIdentityCardProps> = ({
     </div>
   );
 
+  // Kartın gövdesi: `onPress` verilirse basılabilir olur. Alt satır ("Fotoğrafını
+  // ekle") ve avatar rozeti KENDİ düğmeleri olduğu için gövdenin DIŞINDA kalır —
+  // iç içe düğme geçersiz HTML'dir ve dokunuşlar birbirini yerdi.
+  const govde = (
+    <div className={column ? 'flex flex-col items-center gap-3' : 'flex items-center gap-[18px]'}>
+      {avatar}
+      {kunye}
+    </div>
+  );
+
   return (
     <div className="rounded-[24px] border border-white/[0.08] bg-[#161B22]/[0.92] p-5 flex flex-col">
-      <div className={column ? 'flex flex-col items-center gap-3' : 'flex items-center gap-[18px]'}>
-        {avatar}
-        {kunye}
-      </div>
+      {onPress ? (
+        <div
+          role="button"
+          tabIndex={0}
+          aria-label="Profili düzenle"
+          onClick={onPress}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onPress(); } }}
+          className="text-left cursor-pointer active:opacity-90 transition-opacity"
+        >
+          {govde}
+        </div>
+      ) : govde}
 
       {/* Fotoğraf yoksa kartın dibinde ayrı bir çağrı: rozet küçük, bu satır
           gözden kaçmaz. Fotoğraf varsa satır "değiştir"e döner. */}
@@ -143,7 +168,7 @@ export const ProfileIdentityCard: React.FC<ProfileIdentityCardProps> = ({
         <button
           type="button"
           onClick={onEditAvatar}
-          className="mt-4 pt-3.5 w-full min-h-[44px] flex items-center justify-center gap-2 border-t border-white/[0.08] text-[0.8125rem] text-white active:opacity-75 transition-opacity"
+          className="mt-4 pt-3.5 w-full min-h-[44px] flex items-center justify-center gap-[9px] border-t border-white/[0.08] text-[0.8125rem] text-white active:opacity-75 transition-opacity"
         >
           <Camera size={12} strokeWidth={2.6} />
           {showImg ? 'Fotoğrafını değiştir' : 'Fotoğrafını ekle'}
