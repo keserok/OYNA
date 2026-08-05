@@ -4,7 +4,7 @@
 > `docs/sistem/KONTROLLER.json` dosyalarından üretilir.
 > Değişiklik için o dosyaları düzenleyip `npm run sistem:harita` çalıştırın.
 
-> Kayıt sürümü: 1 · Son güncelleme: 2026-08-04 (P-0..P-5, P-7; CTO 5/5; PE-1; SRE-1 ve SRE-3 kapandi -> B16 KURTARMA + B17 GORUNURLUK dogdu)
+> Kayıt sürümü: 1 · Son güncelleme: 2026-08-04 (profil yeniden tasarimi: duzenleme Ayarlar > Bilgilerim'e tasindi, B08'e baglandi)
 
 ## Bu harita ne işe yarar?
 
@@ -291,9 +291,11 @@ utils/geo.ts
 utils/regionResolver.ts
 utils/orduData.ts
 views/MatchDiscovery.tsx
+admin-panel/views/pages/HomeBannersPage.tsx
+supabase/migrations/20260804190741_ana_sayfa_bolge_gorseli_ve_gorsel_varyantlari.sql
 ```
 
-**Veritabanı nesneleri:** `region_coverage`, `pitches_geo_idx`, `get_nearby_matches`, `get_nearby_pitches`
+**Veritabanı nesneleri:** `region_coverage`, `pitches_geo_idx`, `get_nearby_matches`, `get_nearby_pitches`, `home_banners`, `home_banner_for_region()`, `admin_upsert_home_banner()`, `admin_delete_home_banner()`
 
 **Bu taşı koruyan kontroller:**
 
@@ -324,6 +326,7 @@ services/guardianService.ts
 views/AuthScreen.tsx
 views/ProfileScreen.tsx
 components/profile/
+components/settings/ProfileInfoPage.tsx
 ```
 
 **Veritabanı nesneleri:** `profiles`, `_account_deletion_status`, `admin_process_account_deletion__core`, `process_expired_account_deletions`, `sync_admin_flags_trigger`, `trg_protect_profile_columns`
@@ -360,9 +363,13 @@ components/common/VirtualList.tsx
 utils/imageCompression.ts
 utils/imageTransform.ts
 services/pitchMediaService.ts
+services/dashboardHomeService.ts
+hooks/useDashboardHome.ts
+utils/imageVariants.ts
+hooks/useImageUpload.ts
 ```
 
-**Veritabanı nesneleri:** `admin_dashboard_stats`, `get_my_matches`, `get_nearby_pitches`, `pg_matviews`, `pitches_geo_idx`, `supabase_realtime`
+**Veritabanı nesneleri:** `admin_dashboard_stats`, `get_my_matches`, `get_nearby_pitches`, `pg_matviews`, `pitches_geo_idx`, `supabase_realtime`, `image_variants`, `record_image_variants()`
 
 **Bu taşı koruyan kontroller:**
 
@@ -640,6 +647,9 @@ Bir şeyin bozulduğunu ÖĞRENEBİLMEK. Çökme kayıtları, hata izleme, siste
 - Hata kayıtları üçüncü tarafa GÖNDERİLMEZ; kendi veritabanımızda kalır
 - Kişisel bilgi (e-posta, telefon, kart, oturum anahtarı) kaydedilmeden önce hem tarayıcıda hem sunucuda silinir
 - Bozuk bir ekran sel gibi kayıt üretse bile sistem boğulmaz (saatte aynı hatadan 20, toplamda 500 sınırı)
+- Ana vaadin dort akisi (kaptan · oyuncu · kiralama · tesis) adim adim olculur
+- "Basarili mac" metrigi olay kaydindan degil GERCEK veriden hesaplanir
+- Uygulama olcum yazmayi birakirsa panel kirmizi yanar — sessizlik 'kimse kullanmiyor' diye okunmaz
 
 **Dosyalar:**
 
@@ -651,19 +661,26 @@ admin-panel/views/components/SistemSagligi.tsx
 supabase/migrations/20260804140000_sre3_cokme_kaydi.sql
 supabase/migrations/20260804150000_sre3_ek_bilgi_temizligi.sql
 supabase/migrations/20260804160000_sre3_gizlendi_etiketi_duzeltmesi.sql
+shared/olayKatalogu.ts
+utils/olcum.ts
+admin-panel/views/components/Huni.tsx
+supabase/migrations/20260805120000_olcum_huni_sistemi.sql
 ```
 
-**Veritabanı nesneleri:** `istemci_hatalari`, `hata_bildir`, `hata_ozeti`, `hata_temizle_metin`, `hata_temizle_json`, `hata_kayitlarini_temizle`, `hata_kayit_temizligi`, `sistem_saglik_kayitlari`, `sistem_saglik_calistir`, `sistem_saglik_ozet`, `sistem_saglik_gunluk`, `sistem_saglik_ek_kontroller`
+**Veritabanı nesneleri:** `istemci_hatalari`, `hata_bildir`, `hata_ozeti`, `hata_temizle_metin`, `hata_temizle_json`, `hata_kayitlarini_temizle`, `hata_kayit_temizligi`, `sistem_saglik_kayitlari`, `sistem_saglik_calistir`, `sistem_saglik_ozet`, `sistem_saglik_gunluk`, `sistem_saglik_ek_kontroller`, `olay_tanimlari`, `urun_olaylari`, `urun_olaylari_gunluk`, `olay_yaz`, `huni_ozeti`, `basarili_mac_ozeti`, `olcum_sagligi`, `olcum_gunluk_ozet_uret`, `olcum_kayitlarini_temizle`, `olcum_gunluk_ozet`, `olcum_temizlik`
 
 **Bu taşı koruyan kontroller:**
 
 | Kontrol | Ne sorar | Yakaladığı sessizlik | Ne zaman |
 |---|---|---|---|
 | `K-COKME-1` | Son 24 saatte kaç kişide, kaç farklı hata oluştu. Yeni bir sürümden sonra ani artış, o sürümün bir şeyi bozduğunu gösterir. | Uygulama bir grup kullanıcıda çöküyor ama kimse şikâyet etmediği için hiç öğrenilmiyor | GUNLUK |
+| K-OLCUM-1 | ⚠️ tanım bulunamadı | — | — |
 
 **⚠️ Bu taşta şu an açık olan bulgular:** SRE-2, SRE-5
 
 > **Not:** Bu yapi tasi 4 Agustos 2026'da dogdu. SRE turu olctu: 391 dosyada yalnizca 2 trackEvent ve 6 captureError vardi VE hicbiri bir yere gitmiyordu — utils/observability.ts Sentry icin yazilmis ama anahtar yoktu, yani her cagri sessiz no-op'tu. ErrorBoundary ekranda 'sorun Oyna tarafina iletildi' yazdigi halde iletilmiyordu. S-3 karari 'guvenli olsun': ucuncu tarafa veri gonderilmez, kendi veritabanimiza yazilir. Ayrica artik yalnizca elle cagrilan yerler degil, YAKALANMAMIS tum hatalar da toplanir (window.onerror + unhandledrejection). SRE-2 hala acik: alarm kurucunun telefonuna ULASAMAZ, panele bakmasi gerekir (S-2 = 'bu oturumda e-posta yok').
+
+5 Agustos 2026 — OLCUM/HUNI: prensip 1.6'nin ('Olcum zorunludur') karsiligi kuruldu. 20 olay, 4 huni, kendi veritabanimiza yazilir. Kurucu kararlari: dort huni de olculur; 'basarili mac' = kadro doldu + para toplandi + saati gecti (+ iptal yok); kayitta kullanici kimligi tutulur; panel kirilimlari tarih/ilce/yeni-eski/telefon. P-0 geregi olcumun kendisi de denetlenir (olcum_sagligi).
 
 ---
 
