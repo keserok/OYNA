@@ -616,25 +616,36 @@ Bir şey bozulduğunda geri dönebilmek. Yedekler, geri yükleme, migration geri
 - Kritik tabloların her gece tam kopyası alınır ve 7 gün saklanır
 - Yedek alınmazsa panel kırmızı yanar — sessizce durmuş bir yedek, yedeksizlikten kötüdür
 - Her migration dosyasında geri alma adımları yazılıdır
+- Bozuk bir surum yayinlandiginda panelden ayni dakika durdurulabilir
+- Kapi ACIK arizalanir: sunucuya ulasilamazsa uygulama NORMAL acilir
+- Yonetim paneli kilitlenmez — bakimi acan kisi onu kapatabilir
+- Bakim acik kaldiginda panel uyarir (suresiz bakim ayrica isaretlenir)
 
 **Dosyalar:**
 
 ```
 supabase/migrations/20260804120000_sre1_gecelik_yedek.sql
 supabase/migrations/20260804130000_sre1_yedek_saglik_kontrolu.sql
+utils/uygulamaKapisi.ts
+components/UygulamaKapisi.tsx
+admin-panel/views/components/KapiDurumu.tsx
+supabase/migrations/20260805140000_uygulama_kapisi.sql
 ```
 
-**Veritabanı nesneleri:** `yedek`, `yedek.kapsam`, `yedek.gunluk_al`, `yedek_durumu`, `gecelik_yedek`
+**Veritabanı nesneleri:** `yedek`, `yedek.kapsam`, `yedek.gunluk_al`, `yedek_durumu`, `gecelik_yedek`, `uygulama_kapisi`, `surum_kucuk_mu`, `kapi_sagligi`
 
 **Bu taşı koruyan kontroller:**
 
 | Kontrol | Ne sorar | Yakaladığı sessizlik | Ne zaman |
 |---|---|---|---|
+| `K-KAPI-3` | Yetkili çalışan fonksiyonlar kandırılmaya açık mı? | Tek bir yeni fonksiyon kuralı bozar | HER_IKISI |
 | `K-YEDEK-1` | Her gece 05:30'da kritik tabloların kopyası alınır. Bu kontrol o kopyanın BUGÜN alındığını ve içindeki tablo sayısının tam olduğunu doğrular. | Yedek aylar önce sessizce durmuş; kaza günü 'yedeğim var' sanıp yanılmak | GUNLUK |
 
 **⚠️ Bu taşta şu an açık olan bulgular:** SRE-8
 
 > **Not:** Bu yapi tasi 4 Agustos 2026'da dogdu. SRE turu tek GERI ALINAMAZ riski buldu: ucretsiz planda otomatik yedek garantisi yok ve veritabaninda artik GERCEK PARA var. Gecelik ic kopya (S-1=a) kuruldu. DURUST SINIR: yanlis migration / kazara silme / bozulan veri 7 gune kadar geri alinir; veritabaninin TAMAMEN gitmesi kapsanmaz (kopya ayni veritabaninda). Tam guvence icin haftalik DIS kopya (S-1=b) veya Pro plan gerekir. SRE-8 hala acik: geri yukleme hic PROVA edilmedi.
+
+5 Agustos 2026 — UYGULAMA KAPISI: bakim modu ve zorunlu guncelleme kuruldu. Once anahtar VARDI ama uygulama okumuyordu; zorunlu guncelleme hic yoktu. Kurucu kararlari: 1A tam kilit · 2A iki kademe (onerilen + zorunlu) · 3 magaza+destek cikisi · 4 herkese (oyuncu/tesis/gorevli). Canlida yakalanan hata: rakamsiz surum metni ('bozuk') kullaniciyi KILITLIYORDU (bos metin 0 sayilip esigin altinda kaliyordu); duzeltildi ve testle kilitlendi.
 
 ---
 
