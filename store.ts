@@ -9,7 +9,8 @@ import { supabase } from './supabaseClient';
 import { trackEvent, captureException } from './utils/observability';
 import type { NotificationPreferences } from './notifications/pushService';
 import { DEFAULT_NOTIFICATION_PREFERENCES } from './notifications/pushService';
-import type { AdminSession } from './admin-panel/services/adminService';
+import type { AdminSession } from './shared/adminKopru';
+import { adminKoprusu, adminKoprusuHazirMi } from './shared/adminKopru';
 
 // (Tek lobi P4) Store'daki Friend tipi ve friends dizisi KALDIRILDI: hiçbir
 // yerde DB'den doldurulmuyordu ve lobi davet modalını boş/mock bırakıyordu.
@@ -954,14 +955,14 @@ export const useAppStore = create<AppState>((set, get) => ({
     const prev = get().adminPitches;
     set({ adminPitches: [pitch, ...prev] });
     try {
-      const { createPitchAdmin, buildPitchPayloadFromUi } = await import('./admin-panel/services/adminService');
+      const { createPitchAdmin, buildPitchPayloadFromUi } = adminKoprusu();
       try {
         const newId = await createPitchAdmin(buildPitchPayloadFromUi(pitch));
         set({ adminPitches: [{ ...pitch, id: newId }, ...prev] });
       } catch {
         await FB.fbAddPitch(pitch);
         if (get().adminSession) {
-          const { persistAdminLog } = await import('./admin-panel/services/adminService');
+          const { persistAdminLog } = adminKoprusu();
           await persistAdminLog('PITCH_CREATE', 'pitch', pitch.id, pitch.name).catch(() => {});
         }
       }
@@ -971,13 +972,13 @@ export const useAppStore = create<AppState>((set, get) => ({
     const prev = get().adminPitches;
     set({ adminPitches: prev.map(p => p.id === pitch.id ? pitch : p) });
     try {
-      const { updatePitchAdmin, buildPitchPayloadFromUi } = await import('./admin-panel/services/adminService');
+      const { updatePitchAdmin, buildPitchPayloadFromUi } = adminKoprusu();
       try {
         await updatePitchAdmin(pitch.id, buildPitchPayloadFromUi(pitch));
       } catch {
         await FB.fbUpdatePitch(pitch);
         if (get().adminSession) {
-          const { persistAdminLog } = await import('./admin-panel/services/adminService');
+          const { persistAdminLog } = adminKoprusu();
           await persistAdminLog('PITCH_UPDATE', 'pitch', pitch.id, pitch.name).catch(() => {});
         }
       }
@@ -988,13 +989,13 @@ export const useAppStore = create<AppState>((set, get) => ({
     const pitch = prev.find(p => p.id === id);
     set({ adminPitches: prev.filter(p => p.id !== id) });
     try {
-      const { deletePitchAdmin } = await import('./admin-panel/services/adminService');
+      const { deletePitchAdmin } = adminKoprusu();
       try {
         await deletePitchAdmin(id);
       } catch {
         await FB.fbDeletePitch(id);
         if (get().adminSession && pitch) {
-          const { persistAdminLog } = await import('./admin-panel/services/adminService');
+          const { persistAdminLog } = adminKoprusu();
           await persistAdminLog('PITCH_DELETE', 'pitch', id, pitch.name).catch(() => {});
         }
       }
@@ -1013,7 +1014,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     // Kısmi payload tüm kaydı ezmesin: mevcut kayıtla merge et
     set({ adminGoalkeepers: prev.map(g => g.id === gk.id ? { ...g, ...gk } : g) });
     try {
-      const { updateGoalkeeperAdmin } = await import('./admin-panel/services/adminService');
+      const { updateGoalkeeperAdmin } = adminKoprusu();
       await updateGoalkeeperAdmin(gk);
     } catch (e) { set({ adminGoalkeepers: prev }); throw e; }
   },
@@ -1037,13 +1038,13 @@ export const useAppStore = create<AppState>((set, get) => ({
     const gk = prev.find(g => g.id === id);
     set({ adminGoalkeepers: prev.filter(g => g.id !== id) });
     try {
-      const { deleteGoalkeeperAdmin } = await import('./admin-panel/services/adminService');
+      const { deleteGoalkeeperAdmin } = adminKoprusu();
       try {
         await deleteGoalkeeperAdmin(id);
       } catch {
         await FB.fbDeleteGoalkeeper(id);
         if (get().adminSession && gk) {
-          const { persistAdminLog } = await import('./admin-panel/services/adminService');
+          const { persistAdminLog } = adminKoprusu();
           await persistAdminLog('GK_DELETE', 'goalkeeper', id, gk.name).catch(() => {});
         }
       }
@@ -1062,7 +1063,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     // Kısmi payload tüm kaydı ezmesin: mevcut kayıtla merge et
     set({ adminReferees: prev.map(r => r.id === ref.id ? { ...r, ...ref } : r) });
     try {
-      const { updateRefereeAdmin } = await import('./admin-panel/services/adminService');
+      const { updateRefereeAdmin } = adminKoprusu();
       await updateRefereeAdmin(ref);
     } catch (e) { set({ adminReferees: prev }); throw e; }
   },
@@ -1071,13 +1072,13 @@ export const useAppStore = create<AppState>((set, get) => ({
     const ref = prev.find(r => r.id === id);
     set({ adminReferees: prev.filter(r => r.id !== id) });
     try {
-      const { deleteRefereeAdmin } = await import('./admin-panel/services/adminService');
+      const { deleteRefereeAdmin } = adminKoprusu();
       try {
         await deleteRefereeAdmin(id);
       } catch {
         await FB.fbDeleteReferee(id);
         if (get().adminSession && ref) {
-          const { persistAdminLog } = await import('./admin-panel/services/adminService');
+          const { persistAdminLog } = adminKoprusu();
           await persistAdminLog('REF_DELETE', 'referee', id, ref.name).catch(() => {});
         }
       }
@@ -1117,7 +1118,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     const prev = get().adminMatches;
     set({ adminMatches: [match, ...prev] });
     try {
-      const { listingToMatchPayload } = await import('./admin-panel/utils/matchMapper');
+      const { listingToMatchPayload } = await import('./shared/matchMapper');
       const { data, error } = await supabase.rpc('player_create_match', { p_payload: listingToMatchPayload(match) });
       if (error) throw error;
       const newId = data as string;
@@ -1129,7 +1130,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     const prev = get().adminMatches;
     set({ adminMatches: prev.map(m => m.id === match.id ? match : m) });
     try {
-      const { listingToMatchPayload } = await import('./admin-panel/utils/matchMapper');
+      const { listingToMatchPayload } = await import('./shared/matchMapper');
       const { error } = await supabase.rpc('player_update_match', { p_match_id: match.id, p_payload: listingToMatchPayload(match) });
       if (error) throw error;
     } catch (e) { set({ adminMatches: prev }); throw e; }
@@ -1144,7 +1145,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     const prev = get().adminMatches;
     set({ adminMatches: prev.filter(m => m.id !== id) });
     try {
-      const { deleteMatchAdmin } = await import('./admin-panel/services/adminService');
+      const { deleteMatchAdmin } = adminKoprusu();
       await deleteMatchAdmin(id);
     } catch (e) { set({ adminMatches: prev }); throw e; }
   },
@@ -1162,7 +1163,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     const existing = prev.find(u => u.id === user.id);
     set({ adminUsers: prev.map(u => u.id === user.id ? user : u) });
     try {
-      const svc = await import('./admin-panel/services/adminService');
+      const svc = adminKoprusu();
       if (existing && existing.isBanned !== user.isBanned) {
         await svc.banUserAdmin(user.id, user.isBanned, user.banExpiresAt ?? null);
       }
@@ -1184,7 +1185,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     const prev = get().adminUsers;
     set({ adminUsers: prev.map(u => u.id === id ? { ...u, isBanned: true } : u) });
     try {
-      const { banUserAdmin } = await import('./admin-panel/services/adminService');
+      const { banUserAdmin } = adminKoprusu();
       await banUserAdmin(id, true);
     } catch (e) { set({ adminUsers: prev }); throw e; }
   },
@@ -1192,7 +1193,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     const prev = get().adminUsers;
     set({ adminUsers: prev.map(u => u.id === id ? { ...u, isBanned: false } : u) });
     try {
-      const { banUserAdmin } = await import('./admin-panel/services/adminService');
+      const { banUserAdmin } = adminKoprusu();
       await banUserAdmin(id, false);
     } catch (e) { set({ adminUsers: prev }); throw e; }
   },
@@ -1200,7 +1201,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     const prev = get().adminUsers;
     set({ adminUsers: prev.map(u => u.id === id ? { ...u, isVerified: true } : u) });
     try {
-      const { verifyUserAdmin } = await import('./admin-panel/services/adminService');
+      const { verifyUserAdmin } = adminKoprusu();
       await verifyUserAdmin(id);
     } catch (e) { set({ adminUsers: prev }); throw e; }
   },
@@ -1215,7 +1216,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     const prev = get().adminUsers;
     set({ adminUsers: prev.filter(u => u.id !== id) });
     try {
-      const { processAccountDeletion } = await import('./admin-panel/services/adminService');
+      const { processAccountDeletion } = adminKoprusu();
       await processAccountDeletion(id, true);
     } catch (e) { set({ adminUsers: prev }); throw e; }
   },
@@ -1266,7 +1267,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     const next = { ...prev, ...settings };
     set({ appSettings: next });
     try {
-      const { updateSettingsAdmin, settingsToDbPayload } = await import('./admin-panel/services/adminService');
+      const { updateSettingsAdmin, settingsToDbPayload } = adminKoprusu();
       await updateSettingsAdmin(settingsToDbPayload({
         ...settings,
         payoutMode: settings.payoutMode as 'cash' | 'online' | 'deposit' | undefined,
@@ -1285,16 +1286,21 @@ export const useAppStore = create<AppState>((set, get) => ({
       timestamp: new Date().toISOString(),
     };
     set((state) => ({ adminLogs: [entry, ...state.adminLogs] }));
-    import('./admin-panel/services/adminService').then(({ persistAdminLog }) => {
-      persistAdminLog(
-        log.action,
-        'system',
-        log.targetId || null,
-        log.targetName,
-        undefined,
-        { details: log.details },
-      ).catch((err) => console.warn('Audit log persist failed:', err));
-    });
+    // Yönetici denetim kaydı YALNIZ panelde kalıcılaştırılır. Panel kurulu
+    // değilse (oyuncu uygulaması) sessizce atlanır: burada hata fırlatmak
+    // çağıran akışı bozardı ve zaten yazacak bir yönetici oturumu yoktur.
+    if (adminKoprusuHazirMi()) {
+      adminKoprusu()
+        .persistAdminLog(
+          log.action,
+          'system',
+          log.targetId || null,
+          log.targetName,
+          undefined,
+          { details: log.details },
+        )
+        .catch((err) => console.warn('Audit log persist failed:', err));
+    }
   },
 
   // User Notifications

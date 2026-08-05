@@ -4,7 +4,7 @@ import { X, Check, UploadCloud, Loader2 } from 'lucide-react';
 import { useImageUpload } from '../../../hooks/useImageUpload';
 import { useAppStore } from '../../../store';
 import { supabase } from '../../../supabaseClient';
-import type { MatchPayloadSource } from '../../utils/matchMapper';
+import type { MatchPayloadSource } from '../../../shared/matchMapper';
 import {
   allowedSquadSizesForCourt,
   allowedSquadSizesForCourts,

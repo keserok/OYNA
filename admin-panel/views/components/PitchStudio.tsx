@@ -36,7 +36,7 @@ import { AMENITY_CATALOG, normalizeAmenity } from '../../../shared/amenities';
 import PhotoManager from '../../../components/pitch-editor/PhotoManager';
 import ShowcaseScoreCard from '../../../components/pitch-editor/ShowcaseScoreCard';
 import ShowcasePreview from '../../../components/pitch-editor/ShowcasePreview';
-import { PitchManager } from '../PitchManager';
+import { PitchManager } from '../../../views/owner/PitchManager';
 import { useAdminToast } from '../context/AdminToastContext';
 import { DEFAULT_WORKING_DAYS, type OwnerWorkingDay } from '../../../views/owner/menu/ownerMenuTypes';
 import { ORDU_CENTER } from '../../../utils/orduData';

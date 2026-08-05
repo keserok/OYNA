@@ -2,6 +2,17 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import AdminApp from './AdminApp';
 import { ErrorBoundary } from '../components/ErrorBoundary';
+import { adminKoprusunuKur } from '../shared/adminKopru';
+import * as adminServis from './services/adminService';
+
+// ─── KÖPRÜYÜ KUR (panel kodunun oyuncu paketine sızmasını engelleyen yer) ────
+// store.ts'deki yönetici eylemleri (saha sil, kullanıcı yasakla, ayar değiştir…)
+// artık paneli KENDİSİ import etmiyor; panel açılışta yeteneklerini buraya
+// bırakıyor. Oyuncu uygulaması bu satırı hiç çalıştırmadığı için panel kodu
+// onun paket grafiğine HİÇ girmez.
+// Kayıt, React ağacı çizilmeden ÖNCE yapılır: ilk ekranda tetiklenen bir
+// yönetici eylemi bile köprüyü kurulu bulur.
+adminKoprusunuKur(adminServis);
 
 // ─── Deploy-sonrası "bayat parça" kendini iyileştirme ─────────────────────────
 // SPA sekmesi açıkken yeni bir sürüm yayınlanınca eski hash'li JS parçaları silinir;

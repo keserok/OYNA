@@ -12,7 +12,7 @@ import { money } from './owner/finance/financeUi';
 import { hasMultipleSwitchableRoles } from '../shared/roles';
 import { resolveWorkingHoursForDate, isHourWithinWorkingHours, openHourCount } from '../shared/workingHours';
 import { courtsMissingTariff } from '../shared/courtTariffGate';
-import { PitchManager } from '../admin-panel/views/PitchManager';
+import { PitchManager } from './owner/PitchManager';
 import { OwnerFinanceView } from './owner/OwnerFinanceView';
 import { LoadingState, EmptyState } from '../components/common/StatusState';
 import { OwnerTeamView } from './owner/OwnerTeamView';

@@ -200,7 +200,9 @@
       "dosyalar": [
         "supabaseAuth.ts",
         "supabaseClient.ts",
-        "scripts/generate-rls-policy.ts"
+        "scripts/generate-rls-policy.ts",
+        "shared/adminKopru.ts",
+        "tests/unit/panelSizintisi.test.ts"
       ],
       "db_nesneleri": [
         "pg_policies",
@@ -323,7 +325,8 @@
         "views/AuthScreen.tsx",
         "views/ProfileScreen.tsx",
         "components/profile/",
-        "components/settings/ProfileInfoPage.tsx"
+        "components/settings/ProfileInfoPage.tsx",
+        "services/ghostModeService.ts"
       ],
       "db_nesneleri": [
         "profiles",
@@ -365,7 +368,8 @@
         "hooks/useDashboardHome.ts",
         "utils/imageVariants.ts",
         "hooks/useImageUpload.ts",
-        "tests/unit/acilisBolgeDaraltmasi.test.ts"
+        "tests/unit/acilisBolgeDaraltmasi.test.ts",
+        "shared/matchMapper.ts"
       ],
       "db_nesneleri": [
         "admin_dashboard_stats",
@@ -520,7 +524,8 @@
         "views/OwnerPanel.tsx",
         "views/owner/",
         "hooks/useOwnerEntitlements.ts",
-        "supabase/functions/admin-owner-credentials/"
+        "supabase/functions/admin-owner-credentials/",
+        "views/owner/PitchManager.tsx"
       ],
       "db_nesneleri": [
         "pitches",

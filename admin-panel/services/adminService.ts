@@ -1,7 +1,7 @@
 import { supabase, SUPABASE_URL } from '../../supabaseClient';
 import { AdminUser, UserRole, AdminLog, MatchListing, PositionSlot, Goalkeeper, Referee, Pitch, Team } from '../../types';
 import type { AdminPitchPaymentMode, PaymentMode } from '../../types';
-import { mapAdminMatchRowToListing, listingToMatchPayload, type AdminMatchRow } from '../utils/matchMapper';
+import { mapAdminMatchRowToListing, listingToMatchPayload, type AdminMatchRow } from '../../shared/matchMapper';
 import { mapAdminPitchRowToUi } from '../utils/pitchMapper';
 import { mapDbRowToCamel } from '../utils/dbRowMapper';
 

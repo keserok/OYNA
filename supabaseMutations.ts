@@ -349,23 +349,18 @@ const TEAMS_MAX = 2000;
 /**
  * [YUK-2] VERİ TUTARSIZLIĞINA DAYANIKLILIK — kabul edilebilir "il" değerleri.
  *
- * SORUN (canlıda ölçüldü, 2026-08-05): `pitches` tablosunda ilin İLÇE ADIYLA
- * yazıldığı kayıtlar var. Bugün 6 sahanın 1'i böyle:
- *     "Ahmet Kuru Tesisleri" → city='Altınordu', district='Altınordu'
- * Doğrusu region_coverage'daki gibi city='Ordu', district='Altınordu' olmalıydı.
+ * GEÇMİŞ: 5 Ağustos 2026'da canlıda, ilin İLÇE ADIYLA yazıldığı bir kayıt
+ * bulundu — "Ahmet Kuru Tesisleri" → city='Altınordu' (doğrusu 'Ordu').
+ * Bölge daraltması düz `city='Ordu'` yazılsaydı bu saha ve ona bağlı 4 maç,
+ * Ordu/Altınordu'daki kullanıcının ekranından KAYBOLACAKTI.
+ * O kayıt kurucu onayıyla düzeltildi; bugün 6 sahanın 6'sı tutarlı.
  *
- * NEDEN ÖNEMLİ: bölge daraltması düz `city='Ordu'` yazılsaydı bu saha ve ona
- * bağlı 4 maç, Ordu/Altınordu'daki kullanıcının ekranından KAYBOLURDU — yani
- * yükü azaltayım derken çalışan bir yeri bozmuş olurduk.
- *
- * ÇÖZÜM: ilçe zaten kesin eşleşiyor (tüm kayıtlarda 'Altınordu' doğru yazılmış).
- * O yüzden ilçeye TAM eşleşme aranır, il ise "gerçek il VEYA ilçe adı" olarak
- * esnetilir. İlçe eşleşmesi zorunlu kaldığı için bu esneklik başka bir ilin
- * sahasını sızdıramaz.
- *
- * BU GEÇİCİDİR: veri düzeltilirse (tek satırlık güncelleme) bu yardımcı silinip
- * düz `city` eşitliğine dönülebilir. Kurucu onayı beklediği için veriye
- * DOKUNULMADI (CLAUDE.md §3 — canlıya yazmak onaya bağlı).
+ * PEKİ NEDEN DURUYOR: veri bir kez böyle girildiyse tekrar girilebilir ve bu
+ * hata SESSİZ — kimse "sahalarım eksik" demeden fark edilmez. Bu yüzden kural
+ * savunma olarak kalır: ilçeye TAM eşleşme aranır, il ise "gerçek il VEYA ilçe
+ * adı" olarak esnetilir. İlçe eşleşmesi zorunlu kaldığı için bu esneklik başka
+ * bir ilin sahasını sızdıramaz (Ordu/Merkez ile Samsun/Merkez karışmaz, çünkü
+ * il adayları yalnız o bölgenin kendi il ve ilçe adıdır).
  */
 const ilAdaylari = (bolge: { city?: string | null; district?: string | null }): string[] =>
   [...new Set([bolge.city, bolge.district].filter((x): x is string => !!x))];

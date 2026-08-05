@@ -11,7 +11,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Calendar, Check, Clock, Eye, MapPin, Pencil, Swords, Wallet, X } from 'lucide-react';
 import type { MatchListing } from '../../../types';
-import { formatDateLabel } from '../../utils/matchMapper';
+import { formatDateLabel } from '../../../shared/matchMapper';
 
 // Kimlik renkleri TEK KAYNAK: PLAY_STYLE_META (uygulamayla birebir aynı).
 const DIFF_META: Record<MatchListing['difficulty'], { color: string; label: string }> = {
