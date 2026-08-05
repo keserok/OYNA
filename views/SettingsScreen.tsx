@@ -247,65 +247,44 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
 
       <main className="p-6 space-y-8">
 
-        {/* Sahada Rolün — en üstte tek belirgin buton (rol başvuru + geçiş home'u) */}
-        <button
-          onClick={() => setSubPage('role')}
-          className="w-full flex items-center justify-between p-4 rounded-2xl border border-[#3b82f6]/25 hover:bg-[#3b82f6]/10 transition-colors"
-          style={{ background: 'rgba(59,130,246,0.08)' }}
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#3b82f6]/15 border border-[#3b82f6]/30 flex items-center justify-center text-[#3b82f6]">
-              <Repeat size={19} />
-            </div>
-            <div className="text-left">
-              <span className="text-sm font-extrabold text-white block">Sahada Rolün</span>
-              <span className="text-[0.6875rem] text-gray-400">
-                {hasMultipleRoles ? 'Rol değiştir veya yeni role başvur' : 'Kaleci, hakem veya tesis için başvur'}
-              </span>
-            </div>
-          </div>
-          <ChevronRight size={18} className="text-[#3b82f6]" />
-        </button>
-
-        {/* İşletme — personel/müdür panel girişi + davet kodu kullanma */}
-        <section className="space-y-3">
-          <h3 className="text-xs font-bold text-ink-4 uppercase mb-1 ml-2">İşletme</h3>
-          {staffPitches.map((p) => (
-            <button
-              key={p.member_id}
-              onClick={() => openStaffPanel(p)}
-              className="w-full flex items-center justify-between p-4 bg-[#161B22] border border-indigo-500/20 rounded-2xl hover:bg-white/5 transition-colors"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-indigo-500/15 border border-indigo-500/30 text-indigo-300">
-                  {p.access_level === 'MANAGER' ? <Crown size={18} /> : <Building2 size={18} />}
+        {/* ── İŞLETME ── personel/müdür olduğun tesislerin panel girişi.
+            Kullanıcı kararı (2026-08): "Tesise Katıl" buradan ÇIKTI ve
+            Ayarlar → Sahada Rolün sayfasının içine taşındı — davet koduyla
+            ekibe katılmak da bir "sahadaki rolün" meselesi.
+            Bu bölüm artık personel olunan tesis YOKSA hiç çizilmez: eskiden
+            "Tesise Katıl" düğmesi onu tek başına ayakta tutuyordu, o gidince
+            geriye yalnız boş bir başlık kalırdı. */}
+        {staffPitches.length > 0 && (
+          <section className="space-y-3">
+            <h3 className="text-xs font-bold text-ink-4 uppercase mb-1 ml-2">İşletme</h3>
+            {staffPitches.map((p) => (
+              <button
+                key={p.member_id}
+                onClick={() => openStaffPanel(p)}
+                className="w-full flex items-center justify-between p-4 bg-[#161B22] border border-indigo-500/20 rounded-2xl hover:bg-white/5 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-indigo-500/15 border border-indigo-500/30 text-indigo-300">
+                    {p.access_level === 'MANAGER' ? <Crown size={18} /> : <Building2 size={18} />}
+                  </div>
+                  <div className="text-left">
+                    <span className="text-sm font-bold text-white block">{p.pitch_name}</span>
+                    <span className="text-[0.6875rem] text-gray-400">Tesis paneli · {p.access_level === 'MANAGER' ? 'Müdür' : 'Personel'}</span>
+                  </div>
                 </div>
-                <div className="text-left">
-                  <span className="text-sm font-bold text-white block">{p.pitch_name}</span>
-                  <span className="text-[0.6875rem] text-gray-400">Tesis paneli · {p.access_level === 'MANAGER' ? 'Müdür' : 'Personel'}</span>
-                </div>
-              </div>
-              <ChevronRight size={18} className="text-indigo-400" />
-            </button>
-          ))}
-          <button
-            onClick={() => setShowJoinModal(true)}
-            className="w-full flex items-center gap-3 p-4 bg-[#161B22] border border-white/8 rounded-2xl hover:bg-white/5 transition-colors"
-          >
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-white/5 border border-white/10 text-gray-300"><KeyRound size={18} /></div>
-            <div className="text-left flex-1">
-              <span className="text-sm font-bold text-white block">Tesise Katıl</span>
-              <span className="text-[0.6875rem] text-gray-400">Sana verilen 6 haneli davet koduyla tesis ekibine katıl</span>
-            </div>
-            <ChevronRight size={18} className="text-ink-4" />
-          </button>
-        </section>
+                <ChevronRight size={18} className="text-indigo-400" />
+              </button>
+            ))}
+          </section>
+        )}
 
         {/* Hesap */}
         <section>
           <h3 className="text-xs font-bold text-ink-4 uppercase mb-3 ml-2">Hesap</h3>
           <div className="flex flex-col">
-            <SettingItem icon={<User size={20} />} title="Profil Bilgileri" value="Düzenle" onClick={() => setSubPage('profile')} />
+            {/* Profili düzenlemenin TEK kapısı burası (kullanıcı kararı,
+                2026-08). Profil ekranındaki "Düzenle" düğmesi kaldırıldı. */}
+            <SettingItem icon={<User size={20} />} title="Bilgilerim" value="Düzenle" onClick={() => setSubPage('profile')} />
             <SettingItem icon={<ShieldCheck size={20} />} title="Veli Onayı" value="" onClick={() => onNavigate('GUARDIAN_CHILD')} />
             <SettingItem icon={<Shield size={20} />} title="Yasal & Sözleşmeler" value="" onClick={() => onNavigate('LEGAL')} />
           </div>
@@ -445,6 +424,17 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
               value=""
               onClick={() => setSubPage('support')}
             />
+            {/* Sahada Rolün — kullanıcı kararı (2026-08): ekranın EN ÜSTÜNDEKİ
+                büyük mavi karttan buraya, Yardım Merkezi'nin altına İKİNCİ
+                SATIR olarak indi. Gerekçe: rol başvurusu günlük bir iş değil;
+                üstte durduğunda her Ayarlar açılışında ilk göze çarpan şey
+                oluyordu. Tesise katılma da bu sayfanın içine girdi. */}
+            <SettingItem
+              icon={<Repeat size={20} />}
+              title="Sahada Rolün"
+              value={hasMultipleRoles ? 'Rol değiştir' : 'Başvur'}
+              onClick={() => setSubPage('role')}
+            />
             <button
               onClick={handleLogout}
               className="w-full flex items-center justify-center gap-2 p-4 mt-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-500 font-bold text-sm hover:bg-red-500/20 transition-colors"
@@ -467,7 +457,15 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
 
       {/* Alt sayfalar — tam ekran, içeriye girilir */}
       <ProfileInfoPage open={subPage === 'profile'} onClose={() => setSubPage(null)} />
-      <FieldRolePage open={subPage === 'role'} onClose={() => setSubPage(null)} onNavigate={onNavigate} />
+      {/* Tesise katılma davet kodu bu sayfanın içinden açılır; modal burada
+          durmaya devam ediyor çünkü katılım başarılı olunca "İşletme"
+          listesini (staffPitches) tazeleyen yer burası. */}
+      <FieldRolePage
+        open={subPage === 'role'}
+        onClose={() => setSubPage(null)}
+        onNavigate={onNavigate}
+        onJoinPitch={() => setShowJoinModal(true)}
+      />
       <NotificationSettingsPage open={subPage === 'notifications'} onClose={() => setSubPage(null)} />
       <RegionPickerPage open={subPage === 'region'} onClose={() => setSubPage(null)} />
       <SupportPage open={subPage === 'support'} onClose={() => setSubPage(null)} />

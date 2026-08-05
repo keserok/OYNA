@@ -186,12 +186,38 @@
   unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;
 }
 
+/* Open Sans — ana sayfada TEK yerde kullanılır: Taktik Stüdyo şeridinin
+   yazısı (700). Onaylı tasarım o satırı bilerek diğerlerinden farklı bir
+   yazı tipiyle çizer; şerit ekranın en altında tek başına durduğu için
+   ayrı bir ses tonu taşır. Başka yerde kullanılmaz.
+   Değişken eksen 300–800 (üreticinin çizdiği aralık) — italik yüzü yoktur,
+   bu yüzden yalnız `normal` tanımlıdır. */
+@font-face {
+  font-family: 'Open Sans';
+  font-style: normal;
+  font-weight: 300 800;
+  font-display: swap;
+  src: url('/fonts/open-sans-latin-wght-normal.woff2') format('woff2-variations');
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
+@font-face {
+  font-family: 'Open Sans';
+  font-style: normal;
+  font-weight: 300 800;
+  font-display: swap;
+  src: url('/fonts/open-sans-latin-ext-wght-normal.woff2') format('woff2-variations');
+  unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;
+}
+
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   /* Onaylı ana sayfa tasarımının iki resmî yazı tipi. Yedekte Inter durur:
      bir glif (ör. ₺) Montserrat/Lora'da yoksa metin kaybolmaz, Inter çizer. */
   --font-display: "Montserrat", "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-body: "Lora", "Inter", Georgia, ui-serif, serif;
+  /* Ana sayfada TEK satır kullanır: Taktik Stüdyo şeridi. Ayrı bir ses tonu
+     taşısın diye onaylı tasarım orada Open Sans ister. Başka yerde kullanma. */
+  --font-accent: "Open Sans", "Inter", ui-sans-serif, system-ui, sans-serif;
   --breakpoint-xs: 375px;
   
   /* ─── IP-09 · OYNA RENK-ROL TABLOSU ──────────────────────────────────────
@@ -278,14 +304,72 @@
      "#39FF14 asla dekoratif" kuralı ihlal edilmiş olmaz.
   ────────────────────────────────────────────────────────────────────────── */
   --color-cat-play:   #FACC15;      /* Top Oyna      */
-  --color-cat-pitch:  #10B981;      /* Sahalar       */
+  --color-cat-pitch:  #10B981;      /* Saha Kirala   */
   --color-cat-create: #FF7A00;      /* Maç Kur       */
   --color-cat-keeper: #39FF14;      /* Kaleci        */
   --color-cat-ref:    #60A5FA;      /* Hakem         */
-  --color-cat-studio: #F87171;      /* Taktik Stüdyo */
+  /* Taktik Stüdyo aksanı #F87171 DEĞİL #FF0000'dır (onaylı ana sayfa
+     tasarımı). Ayrım bilinçli: #F87171 HATA rengidir ve stüdyo şeridi hata
+     değildir — ikisi aynı tonda kalırsa kullanıcı kırmızıyı "bir şey ters
+     gitti" diye okur. #0A0E14 üstünde 4.83:1, 15px/700 metinde AA geçer.
+     Bu token YALNIZ ana sayfada kullanılır (tek kullanım yeri: stüdyo
+     şeridinin yazısı, üst aksan çizgisi ve radyal parıltısı). */
+  --color-cat-studio: #FF0000;      /* Taktik Stüdyo */
+
+  /* ── Cüzdan bakiyesi ────────────────────────────────────────────────────
+     Birincil yeşilden (#39FF14) AYRI bir ton. Sebep: #39FF14 "kullanıcıya
+     DÖNEN para"dır (iade, kazanç) — bir olayı anlatır. Bakiye ise olay değil
+     DURUMDUR; sürekli ekranda durur. İkisi aynı tonda olsaydı her bakış
+     "para geldi" gibi okunurdu. #0A0E14 üstünde 14.57:1. */
+  --color-money-balance: #00FFA5;
 
   /* Custom Animations & Transitions */
   --animate-pulse-slow: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+
+  /* ═══ ANA SAYFA · 4px TABANLI ÖLÇEK ═══════════════════════════════════════
+     Onaylı tasarımın TÜM boşluk, köşe ve kart yükseklikleri bu üç merdivenden
+     gelir. Ekranda serbest sayı bırakılmaz: bir ölçü buradaysa token'dır,
+     değilse tasarımda da yoktur.
+
+     Neden token: aynı ölçü ekranın altı ayrı yerinde tekrar ediyor. Elle
+     ikinci kez yazılan ölçü, er geç sapan ölçüdür — bu ekranın önceki
+     sürümünde tam olarak bu oldu.
+     ────────────────────────────────────────────────────────────────────── */
+
+  /* Boşluk merdiveni — 4'ün katları. */
+  --oy-space-1:  4px;
+  --oy-space-2:  8px;
+  --oy-space-3: 12px;
+  --oy-space-4: 16px;
+  --oy-space-6: 24px;   /* sayfa kenar boşluğu */
+  --oy-space-8: 32px;   /* bölümler arası */
+
+  /* Köşe merdiveni. `--oy-radius-pill` yuvarlak/kapsül öğeler içindir. */
+  --oy-radius-sm:   14px;
+  --oy-radius-md:   20px;   /* maç kartı, şerit kartları */
+  --oy-radius-lg:   24px;   /* kapı kartları, başlığın alt köşeleri */
+  --oy-radius-xl:   32px;   /* Top Oyna kartı — ekranın tek büyük köşesi */
+  --oy-radius-pill: 999px;
+
+  /* Kart yüksekliği merdiveni — tasarımdaki ALTI kart boyu.
+     DİKKAT: brifing metni stüdyo şeridini 72px diye anlatır, teslim edilen
+     HTML 64px çizer. Tek doğru kaynak HTML olduğu için 64 alındı. */
+  --oy-card-strip: 64px;    /* Taktik Stüdyo */
+  --oy-card-duo:   92px;    /* Kaleci · Hakem (yan yana) */
+  --oy-card-row:  104px;    /* Maç Kur */
+  --oy-card-hero: 118px;    /* Top Oyna */
+  --oy-card-wide: 136px;    /* Saha Kirala */
+  --oy-card-tall: 176px;    /* profil + cüzdan sırası */
+
+  /* Sabit ölçüler — tasarımda tek bir yerde geçen ama "sihirli sayı"
+     olmaması gereken değerler. */
+  --oy-header-h:     83px;  /* başlık; kaydırıcının DIŞINDA durur */
+  --oy-avatar:       56px;  /* profil kartındaki kişi yuvarlağı */
+  --oy-wallet-w:    128px;  /* cüzdan + maçlarım kolonu */
+  --oy-matchcard-w: 190px;  /* şerit maç kartı */
+  --oy-allcard-w:   128px;  /* şeritteki "TÜM MAÇLAR" kartı */
+  --oy-matchphoto-h: 86px;  /* maç kartı fotoğraf bandı */
+  --oy-tap-min:      48px;  /* en küçük dokunma hedefi (erişilebilirlik) */
 }
 
 /* ─── iOS Safe Area Desteği ─────────────────────────────────────────────────
@@ -387,23 +471,64 @@
 #root .overflow-auto,
 #root .overflow-y-scroll { min-height: 0; }
 
-/* ─── Ana sayfa üst boşluğu (views/Dashboard.tsx) ──────────────────────────
-   Onaylı tasarım üst boşluğu SABİT verir: clamp(42px, 7.1cqh, 60px). Bu değer
-   390×844 maketinde doğrudur ama gerçek cihazda tek başına yetmez — iPhone'un
-   Dynamic Island'ı 59px'e kadar iner ve "ANA SAYFA" başlığı altına girerdi.
-   Tersi de kötü: sadece güvenli alanı kullanmak (pt-safe) çentiksiz Android'de
-   boşluğu tasarımdakinin yarısına düşürür, düzen yukarı kayar.
-   Kullanıcı kararı: İKİSİNDEN BÜYÜĞÜ. Maket ölçüsünde tasarım birebir korunur
-   (env = 0 → 42–60px), çentikli cihazda gerektiği kadar büyür. Ne çakışma
-   ne fazla boşluk.
-   `cqh`, Dashboard kökündeki `container-type: size` bağlamına göre çözülür. */
+/* ═══ ANA SAYFA (views/Dashboard.tsx) ═════════════════════════════════════
+   Onaylı tasarımın davranış kuralları. Ölçüler @theme'deki `--oy-*`
+   token'larından gelir; burada yalnız DAVRANIŞ tanımlıdır.
+   ═════════════════════════════════════════════════════════════════════════ */
+
+/* ── Başlığın üst güvenli alanı ────────────────────────────────────────────
+   Tasarımda maket bir durum çubuğu var; üretimde onu OS çizer. Başlığın
+   kendi 83px'i sabittir, çentik payı ONUN ÜSTÜNE eklenir — yoksa iPhone'un
+   Dynamic Island'ı "ANA SAYFA" yazısının üstüne biner.
+   Çentiksiz Android'de env=0 olur ve tasarım birebir korunur. */
 .dash-safe-top {
-  padding-top: max(calc(var(--safe-top) + 0.5rem), clamp(42px, 7.1cqh, 60px));
+  padding-top: var(--safe-top);
 }
 /* Çevrimdışı şeridi açıkken diğer üst-boşluk sınıflarıyla aynı davranış. */
 body.offline-banner-on .dash-safe-top {
-  padding-top: calc(max(calc(var(--safe-top) + 0.5rem), clamp(42px, 7.1cqh, 60px)) + var(--offline-banner-h));
+  padding-top: calc(var(--safe-top) + var(--offline-banner-h));
 }
+
+/* ── Basma davranışı ───────────────────────────────────────────────────────
+   Basılınca 90ms'de %96,5'e iner, bırakılınca 420ms'de yerine oturur.
+   ÇERÇEVE YOK — klavye odağı dahil. Bu bilinçli bir karardır: kart zaten
+   ekranın tamamını kaplayan bir hedeftir, çerçeve tasarımı böler.
+   Erişilebilirlik kaybı yok: her hedef `role="button"` + `aria-label`
+   taşır ve Enter/Space ile açılır. */
+[data-tap] {
+  transition: transform 420ms cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: manipulation;
+  cursor: pointer;
+}
+[data-tap]:active { transition-duration: 90ms; transform: scale(0.965); }
+[data-tap]:focus, [data-tap]:focus-visible { outline: none; }
+/* Hareket hassasiyeti: ölçek animasyonu tamamen kapanır. Titreşim de
+   kapanır ama onun sorumlusu JS tarafı (useLowMotion). */
+@media (prefers-reduced-motion: reduce) {
+  [data-tap] { transition: none; will-change: auto; }
+  [data-tap]:active { transform: none; }
+}
+
+/* ── Profil kartındaki kişi yuvarlağı ──────────────────────────────────────
+   `UserAvatar` kendi yedek renklerini taşır (yeşil harf, koyu yeşil zemin) —
+   uygulamanın geri kalanında doğru olan budur. Ana sayfada tasarım şeffaf
+   zemin + beyaz harf ister. Eleman seçicisi (0,1,1) yardımcı sınıfı (0,1,0)
+   yener; ne `!important` ne de sınıf sırasına güvenmek gerekir. */
+.oy-home-avatar > div { background: transparent; color: var(--color-ink); }
+.oy-home-avatar > img { width: 100%; height: 100%; object-fit: cover; }
+
+/* ── Kaydırma çubuğu gizli, kaydırma zinciri kesik ─────────────────────────
+   `overscroll-behavior: contain`: ana sayfa dibine gelince arkadaki kabuk
+   kaymaz; yatay şerit sonuna gelince de sayfa yana kaymaz. Android'in kendi
+   aşağı-çek-yenile hareketiyle çakışmayı da bu keser. */
+[data-oy-scroll], [data-oy-strip] { scrollbar-width: none; }
+[data-oy-scroll]::-webkit-scrollbar, [data-oy-strip]::-webkit-scrollbar { width: 0; height: 0; }
+[data-oy-scroll] { overscroll-behavior-y: contain; -webkit-overflow-scrolling: touch; }
+[data-oy-strip] { overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; }
 
 /* ─── Çevrimdışı şeridi yer kaplar (components/OfflineBanner.tsx) ──────────
    Şerit `fixed top-0 z-[100]` çizilir; kabuk yer açmazsa üstteki geri/kapat
