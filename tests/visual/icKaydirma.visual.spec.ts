@@ -1,7 +1,7 @@
 import { test, expect, type Page } from '@playwright/test';
 import {
   hazirla, ekranaGit, oturmasiniBekle,
-  odemeBaglamiTohumla, rahatBaglamiTohumla, taktikBaglamiTohumla,
+  odemeBaglamiTohumla, rahatBaglamiTohumla, taktikBaglamiTohumla, kapsamsizTohumla,
 } from './harness';
 
 // Kaydırma motoru dokunmatik OLMAYAN cihazda hiç kurulmaz ve azaltılmış
@@ -307,4 +307,75 @@ test.describe('Parmak bağlı mı — panelin her noktası kaydırma yüzeyi', (
       }
     });
   }
+});
+
+// ─── SON DÜĞMEYE ULAŞILABİLİYOR MU ──────────────────────────────────────────
+//
+// NEDEN: Profil ekranının kart araları kullanıcı isteğiyle 12px'ten 18px'e
+// çıktı ("premium ve rahat olsun"). Boşluk arttıkça içerik uzar; kaydırıcının
+// alt dolgusu (`pb-safe-nav`) yetmezse EN ALTTAKİ düğme sonuna kadar
+// kaydırıldığında bile alt menünün ARKASINDA kalır — görünür ama basılamaz,
+// üstelik ekran görüntüsü testleri yalnız üst kısmı çektiği için sessizce
+// geçer. Bu blok o sessizliği kapatır: sonuna kadar kaydırıp son düğmenin
+// alt menünün ÜSTÜNDE bittiğini ölçer.
+test.describe('Son düğme alt menünün arkasında kalmamalı', () => {
+  test('Profil ekranı — "Maç bul" tam görünür', async ({ page }) => {
+    await hazirla(page);
+    await ekranaGit(page, 'PROFILE');
+    await page.waitForTimeout(1200);
+    await oturmasiniBekle(page).catch(() => {});
+
+    // Çentikli telefon: alt güvenli alan sıfır değilken en dar durum oluşur.
+    await page.addStyleTag({ content: ':root { --safe-bottom: 34px; --safe-top: 47px; }' });
+    await page.evaluate(() => new Promise<void>((r) => requestAnimationFrame(() => r())));
+
+    const olcum = await page.evaluate(() => {
+      const sc = [...document.querySelectorAll('*')]
+        .find((e) => e instanceof HTMLElement
+          && getComputedStyle(e).overflowY === 'auto'
+          && e.scrollHeight > e.clientHeight + 4) as HTMLElement | undefined;
+      if (!sc) return null;
+      sc.scrollTop = sc.scrollHeight;
+      const dugme = [...document.querySelectorAll('button')]
+        .find((b) => (b.textContent || '').trim() === 'Maç bul');
+      if (!dugme) return null;
+      const nav = document.querySelector('nav');
+      return {
+        dugmeAlt: Math.round(dugme.getBoundingClientRect().bottom),
+        navUst: Math.round(nav ? nav.getBoundingClientRect().top : window.innerHeight),
+      };
+    });
+
+    expect(olcum, 'Profil kaydırıcısı ya da "Maç bul" düğmesi bulunamadı').not.toBeNull();
+    expect(
+      olcum!.dugmeAlt,
+      `Sonuna kadar kaydırıldığında "Maç bul" düğmesinin alt kenarı ${olcum!.dugmeAlt}px, ` +
+      `alt menü ise ${olcum!.navUst}px'te başlıyor — düğme menünün arkasında kalıyor. ` +
+      'Kaydırıcının alt dolgusu (`pb-safe-nav`) içeriğe yetmiyor demektir.',
+    ).toBeLessThanOrEqual(olcum!.navUst);
+  });
+});
+
+// ─── "KONUMU AYARLA" GERÇEKTEN BÖLGE SAYFASINI AÇIYOR MU ────────────────────
+//
+// NEDEN: Düğme iki adımlı çalışıyor — önce store'a "Ayarlar'ı Bölgelerim ile
+// aç" isteği yazıyor, sonra Ayarlar ekranına gidiyor. İki adımdan biri
+// kopsa (ör. Ayarlar isteği tanımadığı bir değer diye yok sayarsa) düğme
+// kullanıcıyı Ayarlar'ın ANA listesine bırakır ve bölge satırını kendisi
+// aramak zorunda kalır. Ekran görüntüsü bunu göremez; bu test görür.
+test.describe('Ana sayfadaki "KONUMU AYARLA" düğmesi', () => {
+  test('Ayarlar → Bölgelerim sayfasını doğrudan açar', async ({ page }) => {
+    await hazirla(page);
+    await ekranaGit(page, 'DASHBOARD');
+    await kapsamsizTohumla(page);
+
+    await page.getByLabel('Konumu ayarla').click();
+
+    // Bölgelerim alt sayfasının kendi başlığı görünmeli.
+    await expect(
+      page.getByText(/Bölgelerim/i).first(),
+      '"KONUMU AYARLA" Ayarlar\'ı açtı ama Bölgelerim sayfası gelmedi — ' +
+      'derin bağlantı isteği (settingsSubPage = "region") tüketilmemiş olabilir.',
+    ).toBeVisible({ timeout: 15_000 });
+  });
 });

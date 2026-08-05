@@ -107,6 +107,25 @@ describe('Ana sayfa — yedi mod', () => {
     expect(screen.getByText(/BUGÜN YAKININDA MAÇ YOK/)).toBeTruthy();
   });
 
+  it('M2b · Bölge seçilmemiş: "BU HAFTA" yerine "KONUMU AYARLA" çıkar', () => {
+    // Kullanıcı kararı: bölge yokken "BU HAFTA" kullanıcıyı boş bir listeye
+    // götürüyordu. Yerine eksik olanı tamamlayan düğme konuldu.
+    kur({ strip: [], matchTotal: null, hasScope: false });
+    expect(screen.getByText(/ÖNCE BÖLGENİ SEÇ/)).toBeTruthy();
+    expect(screen.getByLabelText('Konumu ayarla')).toBeTruthy();
+    expect(screen.queryByLabelText('Bu haftanın maçları')).toBeNull();
+    // Maç kurma yolu kapanmaz — boş hâlin düğmesi de, kapı kartı da durur.
+    // ("MAÇ KUR" yazısı ekranda İKİ yerde geçer; erişilebilir ad ayırt eder.)
+    expect(screen.getAllByLabelText(/Maç Kur/i).length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('M2c · Bölge seçili ama maç yok: MAÇ KUR ve BU HAFTA birlikte çalışır', () => {
+    kur({ strip: [], matchTotal: 0, hasScope: true });
+    expect(screen.getAllByLabelText(/Maç Kur/i).length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByLabelText('Bu haftanın maçları')).toBeTruthy();
+    expect(screen.queryByLabelText('Konumu ayarla')).toBeNull();
+  });
+
   it('M3 · Yeni kullanıcı: profil boşken ekran yine çizilir', () => {
     kur({
       profile: { id: 'u1', name: 'Arda', avatarUrl: null } as unknown as DashboardHome['profile'],

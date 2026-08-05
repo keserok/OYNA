@@ -23,7 +23,7 @@ export const TrustScoreCard: React.FC<TrustScoreCardProps> = ({ score, note }) =
         <>
             <button
                 onClick={() => setSheetOpen(true)}
-                className="w-full rounded-3xl p-4 bg-surface-1 flex items-center gap-3.5 hover:bg-white/[0.06] active:scale-[0.99] transition-all"
+                className="w-full rounded-3xl p-[18px] bg-surface-1 flex items-center gap-3.5 hover:bg-white/[0.06] active:scale-[0.99] transition-all"
             >
                 <div className="relative w-[46px] h-[46px] flex items-center justify-center shrink-0">
                     <svg width="46" height="46" viewBox="0 0 46 46" className="absolute inset-0 -rotate-90">

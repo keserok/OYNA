@@ -265,6 +265,29 @@ export async function odemeBaglamiTohumla(page: Page) {
  * DİKKAT: `hazirla()`dan SONRA, `ekranaGit(page,'PROFILE')`den ÖNCE çağrılmalı —
  * Playwright son kaydedilen route'u önce dener.
  */
+/**
+ * Kapsamlı kullanıcı: seçili bir bölge VAR.
+ * Ana sayfa bu hâlde arama yapar; hermetik ortamda sonuç boş döndüğü için
+ * "BUGÜN YAKININDA MAÇ YOK" hâli çizilir (MAÇ KUR + BU HAFTA).
+ */
+export async function kapsamliTohumla(page: Page) {
+  await storeIle(page, `(store) => store.getState().setUserLocation({ lat: 40.9862, lng: 37.8797 })`);
+  await storeIle(page, `(store) => store.setState({
+    selectedRegions: [{ label: 'Altınordu', city: 'Ordu', district: 'Altınordu', coordinates: { lat: 40.9862, lng: 37.8797 } }],
+    activeRegion: { label: 'Altınordu', city: 'Ordu', district: 'Altınordu', coordinates: { lat: 40.9862, lng: 37.8797 } },
+  })`);
+}
+
+/**
+ * Kapsamsız kullanıcı: ne seçili bölge ne de GPS konumu var.
+ * Ana sayfa bu hâlde "ÖNCE BÖLGENİ SEÇ" boş hâlini çizer ve şeridin ikinci
+ * düğmesi "KONUMU AYARLA" olur (kullanıcı kararı, 2026-08).
+ */
+export async function kapsamsizTohumla(page: Page) {
+  await storeIle(page, `(store) => store.getState().setUserLocation(null)`);
+  await storeIle(page, `(store) => store.setState({ selectedRegions: [], activeRegion: null })`);
+}
+
 export async function doluProfilTohumla(page: Page) {
   await page.route('**/rest/v1/profiles**', (route) => {
     const tekil = (route.request().headers()['accept'] || '').includes('vnd.pgrst.object');

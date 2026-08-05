@@ -13,21 +13,24 @@ export interface ShortcutItem {
     dim?: boolean;
 }
 
-const cellClass = 'flex-1 min-w-0 rounded-[20px] py-[15px] px-2 bg-surface-1 flex flex-col items-center gap-[7px]';
+const cellClass = 'flex-1 min-w-0 rounded-[20px] py-[18px] px-2 bg-surface-1 flex flex-col items-center gap-2';
 
 /**
  * Profil kısayol satırı — Cüzdan / Takımlarım / Arkadaşlarım.
- * Tasarım: ikon yok; üstte değer (Montserrat 800 italik), altında etiket.
- * Kullanıcı kararı: cüzdan tutarı da diğerleri gibi BEYAZ (yeşil vurgu
- * profilde güven halkasına ayrıldı).
+ * Tasarım: ikon yok; üstte değer, altında etiket. Kullanıcı kararı: cüzdan
+ * tutarı da diğerleri gibi BEYAZ (yeşil vurgu profilde güven halkasına ayrıldı).
+ *
+ * DEĞERLER DÜZ YAZILIR, YATIK DEĞİL (kullanıcı kararı, 2026-08): bu üç kutu
+ * yan yana ve dar; eğik rakamlar kutu kenarına yaslanınca okumayı zorluyordu.
+ * Kalın başlık yazısı korunur, yalnız eğim kalkar.
  */
 export const ProfileShortcuts: React.FC<{ items: ShortcutItem[] }> = ({ items }) => (
-    <div className="flex gap-2.5">
+    <div className="flex gap-3">
         {items.map((item) => {
             const content = (
                 <>
                     <span
-                        className={`text-[1.0625rem] font-[Montserrat] font-extrabold italic truncate max-w-full ${
+                        className={`text-[1.0625rem] font-[Montserrat] font-extrabold truncate max-w-full ${
                             item.dim ? 'text-[#F5F3EE]/[0.45]' : 'text-white'
                         }`}
                     >

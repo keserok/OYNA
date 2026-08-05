@@ -185,6 +185,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
   const sessionProfile = useAppStore((s) => s.currentUserProfile);
   const adminUsers = useAppStore((s) => s.adminUsers);
   const setIsNotificationsOpen = useAppStore((s) => s.setIsNotificationsOpen);
+  const setSettingsSubPage = useAppStore((s) => s.setSettingsSubPage);
   const setSelectedMatch = useAppStore((s) => s.setSelectedMatch);
   const adminMatches = useAppStore((s) => s.adminMatches);
 
@@ -854,6 +855,10 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
               onCreate={() => onNavigate('MATCH_CREATE')}
               onBrowse={() => onNavigate('MATCH_DISCOVERY')}
               onRetry={home.refresh}
+              // Ayarlar'ı DOĞRUDAN "Bölgelerim" sayfasıyla açar (var olan derin
+              // bağlantı kanalı). Kullanıcı ayarlar listesinde bölge satırını
+              // aramak zorunda kalmasın.
+              onSetLocation={() => { setSettingsSubPage('region'); onNavigate('SETTINGS'); }}
             />
           )}
         </div>
@@ -1219,7 +1224,9 @@ const StripEmpty: React.FC<{
   onCreate: () => void;
   onBrowse: () => void;
   onRetry: () => void;
-}> = ({ error, hasScope, onCreate, onBrowse, onRetry }) => (
+  /** Bölge/konum seçme sayfasını açar — kapsam YOKKEN tek anlamlı eylem. */
+  onSetLocation: () => void;
+}> = ({ error, hasScope, onCreate, onBrowse, onRetry, onSetLocation }) => (
   <div
     style={{
       padding: '22px 24px 26px', display: 'flex', flexDirection: 'column',
@@ -1247,6 +1254,13 @@ const StripEmpty: React.FC<{
           : 'Yakınındaki maçları görebilmemiz için önce bölgeni seçmen gerekiyor.'}
     </span>
 
+    {/* DÜĞMELER — HANGİSİNİN GÖRÜNECEĞİ EKRANIN DURUMUNA BAĞLI (kullanıcı kararı):
+        • Hata          → yalnız TEKRAR DENE
+        • Bölge seçilmemiş → MAÇ KUR + KONUMU AYARLA
+          "BU HAFTA" burada anlamsızdı: bölge yokken hangi haftanın hangi
+          şehirdeki maçları gösterilecekti? Kullanıcıyı boş bir listeye
+          götürüyordu. Yerine eksik olanı tamamlayan düğme kondu.
+        • Bölge seçilmiş, maç yok → MAÇ KUR + BU HAFTA (ikisi de çalışır) */}
     <div style={{ marginTop: 3, display: 'flex', gap: 9 }}>
       {error ? (
         <BosHalDugme onClick={onRetry} label="Tekrar dene">TEKRAR DENE</BosHalDugme>
@@ -1255,7 +1269,11 @@ const StripEmpty: React.FC<{
           <BosHalDugme birincil onClick={onCreate} label={CARD.matchCreate}>
             {upper(CARD.matchCreate)}
           </BosHalDugme>
-          <BosHalDugme onClick={onBrowse} label="Bu haftanın maçları">BU HAFTA</BosHalDugme>
+          {hasScope ? (
+            <BosHalDugme onClick={onBrowse} label="Bu haftanın maçları">BU HAFTA</BosHalDugme>
+          ) : (
+            <BosHalDugme onClick={onSetLocation} label="Konumu ayarla">KONUMU AYARLA</BosHalDugme>
+          )}
         </>
       )}
     </div>

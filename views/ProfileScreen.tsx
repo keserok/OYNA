@@ -240,9 +240,15 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onNavigate, onOpenD
                 kaydırıcıdan uzun olduğunda kaydırma üretmek yerine kartları
                 ezer. Tasarımın kendi HTML'inde her kart `flex:none` taşıdığı
                 için orada sorun yoktu; burada kartlar ortak bileşenler ve
-                böyle bir garantileri yok. Aralar `space-y-3` ile veriliyor:
-                kaydırıcı düz blok kalır, `tests/visual/icKaydirma` yeşil. */}
-            <div className="relative z-10 flex-1 overflow-y-auto px-5 pt-1.5 pb-safe-nav custom-scrollbar space-y-3">
+                böyle bir garantileri yok. Aralar `space-y-*` ile veriliyor:
+                kaydırıcı düz blok kalır, `tests/visual/icKaydirma` yeşil.
+
+                ARALIK 18px (kullanıcı kararı, 2026-08): "tüm butonların
+                aralarındaki boşlukları arttır, ekran premium ve rahat olsun."
+                12px'te kartlar tek bir blok gibi okunuyordu; 18px'te her kart
+                kendi başına bir nesne. Yatay kenar 20px kalır — kart
+                genişlikleri tasarımdaki gibi. */}
+            <div className="relative z-10 flex-1 overflow-y-auto px-5 pt-2 pb-safe-nav custom-scrollbar space-y-[18px]">
                 <YenileniyorSeridi aktif={cekerekYenileniyor} />
                 {loading ? (
                     <LoadingState message="Profil yükleniyor…" />
@@ -305,7 +311,6 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onNavigate, onOpenD
                 <ProfileIdentityCard
                     name={profile?.full_name || (isGuest ? 'Misafir' : 'Oyuncu')}
                     avatarUrl={profile?.avatar_url}
-                    verified={!isGuest && profile?.verification_status === 'approved'}
                     position={profile?.position}
                     age={ageFromBirthdate(profile?.birthdate)}
                     ageRange={profile?.ageRange}
@@ -345,7 +350,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onNavigate, onOpenD
                 {!isGuest && (
                     <button
                         onClick={() => onNavigate && onNavigate('SOCIAL')}
-                        className="w-full flex items-center gap-3 py-4 px-4 rounded-[20px] bg-surface-1 min-h-[48px] hover:bg-white/[0.06] active:scale-[0.99] transition-all text-left"
+                        className="w-full flex items-center gap-3 py-[18px] px-[18px] rounded-[20px] bg-surface-1 min-h-[48px] hover:bg-white/[0.06] active:scale-[0.99] transition-all text-left"
                     >
                         <div className="min-w-0 flex-1">
                             <span className="text-[0.9375rem] text-[#F5F3EE] block">Sosyal</span>

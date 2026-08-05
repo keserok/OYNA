@@ -29,7 +29,6 @@ const initialsOf = (name: string) =>
 export interface ProfileIdentityCardProps {
   name: string;
   avatarUrl?: string | null;
-  verified?: boolean;
   position?: string | null;
   /** Doğum tarihinden hesaplanmış yaş. */
   age?: number | null;
@@ -58,7 +57,7 @@ export interface ProfileIdentityCardProps {
 }
 
 export const ProfileIdentityCard: React.FC<ProfileIdentityCardProps> = ({
-  name, avatarUrl, verified, position, age, ageRange, gender, playStyle,
+  name, avatarUrl, position, age, ageRange, gender, playStyle,
   selfSkill, layout = 'row', onEditAvatar, showAddPhotoRow = true, onPress,
 }) => {
   // Kırık/erişilemeyen fotoğraf adresi → baş harflere düş.
@@ -110,21 +109,18 @@ export const ProfileIdentityCard: React.FC<ProfileIdentityCardProps> = ({
 
   const kunye = (
     <div className={`min-w-0 flex flex-col gap-2 ${column ? 'items-center text-center' : 'flex-1 items-center text-center'}`}>
-      <div className="flex items-center gap-2 min-w-0 max-w-full">
-        <h1
-          className={`m-0 font-[Montserrat] font-extrabold italic tracking-[-0.02em] text-white truncate ${
-            column ? 'text-[1.5rem] leading-[1.75rem]' : 'text-[1.375rem] leading-[1.625rem]'
-          }`}
-        >
-          {name}
-        </h1>
-        {verified && (
-          <svg width="17" height="17" viewBox="0 0 24 24" className="shrink-0" aria-label="Doğrulanmış">
-            <circle cx="12" cy="12" r="10" className="fill-primary" />
-            <path d="M8 12l2.5 2.5L16 9" stroke="#0A0E14" strokeWidth="2.4" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        )}
-      </div>
+      {/* DOĞRULAMA TİKİ YOK — kullanıcı kararı (2026-08):
+          "Profil ekranındaki tik işaretini kaldır ve bir daha görünmemesini
+          sağla." Onaylı tasarımın kimlik kartında da tik yoktur. Bileşen
+          `verified` diye bir alan KABUL ETMEZ; geri gelmesin diye kilitli
+          testi var (tests/unit/onboardingAndProfile). */}
+      <h1
+        className={`m-0 max-w-full font-[Montserrat] font-extrabold italic tracking-[-0.02em] text-white truncate ${
+          column ? 'text-[1.5rem] leading-[1.75rem]' : 'text-[1.375rem] leading-[1.625rem]'
+        }`}
+      >
+        {name}
+      </h1>
 
       {bosKunye ? (
         <p className="m-0 text-[0.8125rem] leading-[1.35] text-[#F5F3EE]/[0.55]">Mevki ve seviye eklenmedi</p>

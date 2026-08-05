@@ -108,8 +108,10 @@ describe('profil ekranı — tasarım kararları', () => {
   it('kaydırıcı flex kolon DEĞİL — uzun içerik sıkışmaz', () => {
     // Flex kolonda çocuklar varsayılan olarak sıkışır ve kaydırma üretilmez;
     // tests/visual/icKaydirma bunu yakalamıştı.
+    // Aralık DEĞERİ değişebilir (kullanıcı 12px'ten 18px'e çıkarttı); kural
+    // "flex kolon değil, blok akış" olmasıdır — yani `space-y-*` kullanılması.
     const blok = profil.slice(profil.indexOf('overflow-y-auto') - 200, profil.indexOf('overflow-y-auto') + 200);
-    expect(blok).toContain('space-y-3');
+    expect(blok).toMatch(/space-y-\S+/);
     expect(blok).not.toMatch(/overflow-y-auto[^"]*flex flex-col/);
   });
 });

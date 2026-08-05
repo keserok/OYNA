@@ -48,9 +48,10 @@ export const MatchHistorySection: React.FC<MatchHistorySectionProps> = ({ matche
     return (
         <div>
             {/* Başlık: küçük, harf aralıklı, soluk — bir bölüm etiketidir,
-                kartların kendisiyle yarışmaz. Boş hâlde üst boşluk küçülür
-                (tasarım: dolu 14px, boş 6px). */}
-            <div className={`flex items-baseline justify-between ${bos ? 'mt-1.5' : 'mt-3.5'} mb-2.5 px-0.5`}>
+                kartların kendisiyle yarışmaz. Üst boşluk KÜÇÜK tutulur:
+                ekranın kart araları artık 18px (kullanıcı kararı) ve buraya
+                ayrıca boşluk eklenirse başlık listeden kopuk durur. */}
+            <div className={`flex items-baseline justify-between ${bos ? 'mt-0.5' : 'mt-1'} mb-3 px-0.5`}>
                 <span className="text-[0.6875rem] tracking-[0.14em] uppercase text-[#F5F3EE]/[0.55]">Maç Geçmişi</span>
                 {fazlasiVar && (
                     <button
@@ -86,7 +87,7 @@ export const MatchHistorySection: React.FC<MatchHistorySectionProps> = ({ matche
                                 )}
                             </>
                         );
-                        const rowClass = `w-full flex items-center gap-3 py-3.5 px-4 text-left ${sonSatir ? '' : 'border-b border-white/[0.06]'}`;
+                        const rowClass = `w-full flex items-center gap-3.5 py-[17px] px-[18px] text-left ${sonSatir ? '' : 'border-b border-white/[0.06]'}`;
                         return onOpen ? (
                             <button key={m.id} onClick={() => onOpen(m.id)} className={`${rowClass} hover:bg-white/[0.03] transition-colors`}>
                                 {rowContent}
@@ -103,7 +104,7 @@ export const MatchHistorySection: React.FC<MatchHistorySectionProps> = ({ matche
                    kullanıcıyı çıkmaza sokuyordu; tasarım buraya "Maç bul"
                    düğmesini koydu. Düğme YALNIZ `onFindMatch` verilirse
                    çizilir — admin panelindeki salt-okunur aynada anlamsız. */
-                <div className="rounded-3xl bg-surface-1 py-[18px] px-6 flex flex-col items-center gap-3 text-center">
+                <div className="rounded-3xl bg-surface-1 py-6 px-6 flex flex-col items-center gap-4 text-center">
                     <p className="m-0 text-[0.875rem] text-[#F5F3EE]/[0.55] leading-[1.5]">Henüz oynanmış bir maçın yok.</p>
                     {onFindMatch && (
                         <button

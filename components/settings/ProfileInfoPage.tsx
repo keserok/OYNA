@@ -310,7 +310,6 @@ const ProfileInfoPage: React.FC<ProfileInfoPageProps> = ({ open, onClose }) => {
             <ProfileIdentityCard
               name={savedName || 'Oyuncu'}
               avatarUrl={profile?.avatar_url}
-              verified={profile?.verification_status === 'approved'}
               position={profile?.position}
               age={age}
               ageRange={profile?.ageRange}

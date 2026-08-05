@@ -120,7 +120,18 @@ export function useDashboardHome(): DashboardHome {
   // Kapsam değişince eski istek geç dönüp yeni sonucun üstüne yazmasın.
   const runId = useRef(0);
   const mounted = useRef(true);
-  useEffect(() => () => { mounted.current = false; }, []);
+  // DİKKAT — bayrak her montajda YENİDEN AÇILIR.
+  // Eskiden yalnız temizlik vardı (`() => () => { mounted.current = false }`).
+  // React'in StrictMode'u geliştirme modunda her bileşeni bir kez kurup BOZUP
+  // yeniden kuruyor; o sahte bozma bayrağı false yapıyor ve bir daha kimse
+  // true'ya çevirmiyordu. Sonuç: aşağıdaki tazeleme sonucu HER SEFERİNDE
+  // "bileşen gitmiş" sanılıp atılıyor, ana sayfa sonsuza dek iskelet
+  // (gri çubuklar) hâlinde kalıyordu. Görsel testler de o bozuk hâli
+  // "referans" diye saklıyordu — hata iki kat sessizdi.
+  useEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; };
+  }, []);
 
   const centersKey = useMemo(
     () => centers.map((c) => `${c.lat.toFixed(4)},${c.lng.toFixed(4)}`).join('|'),

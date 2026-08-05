@@ -1,7 +1,7 @@
 import { test, expect, type Page } from '@playwright/test';
 import {
   hazirla, ekranaGit, bildirimleriAc, odemeBaglamiTohumla, doluProfilTohumla, oturmasiniBekle,
-  degerlendirmeBaglamiTohumla, rahatBaglamiTohumla,
+  degerlendirmeBaglamiTohumla, rahatBaglamiTohumla, kapsamsizTohumla, kapsamliTohumla,
 } from './harness';
 
 // ─── OYNA — Ana ekran görsel regresyonu ──────────────────────────────────────
@@ -45,9 +45,31 @@ const EKRANLAR: Ekran[] = [
     },
   },
   {
+    // Bölgesi SEÇİLİ kullanıcı. Hermetik ortamda arama boş döner, yani bu
+    // referans "bölge var ama bugün maç yok" hâlini kilitler: MAÇ KUR ve
+    // BU HAFTA düğmelerinin ikisi de çalışır.
     ad: '03-ana-sayfa',
     capa: /ANA SAYFA/,
-    ac: async (page) => { await hazirla(page); await ekranaGit(page, 'DASHBOARD'); },
+    ac: async (page) => {
+      await hazirla(page);
+      await ekranaGit(page, 'DASHBOARD');
+      await kapsamliTohumla(page);
+    },
+  },
+  {
+    // Bölge/konum HİÇ seçilmemiş ana sayfa. Kullanıcı kararı: bu hâlde şeridin
+    // ikinci düğmesi "BU HAFTA" değil "KONUMU AYARLA" olur — bölge yokken
+    // haftalık liste boş açılıyordu.
+    ad: '03b-ana-sayfa-konumsuz',
+    capa: /ÖNCE BÖLGENİ SEÇ/,
+    ac: async (page) => {
+      await hazirla(page);
+      await ekranaGit(page, 'DASHBOARD');
+      // Kapsam ekrana GİRDİKTEN sonra sıfırlanır: gezinti sıfırlaması
+      // uygulamanın konum tespitini yeniden tetikliyor ve önce yazılan boş
+      // kapsamın üstüne yazıyordu.
+      await kapsamsizTohumla(page);
+    },
   },
   {
     ad: '04-mac-lobisi',
