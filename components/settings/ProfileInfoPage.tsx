@@ -33,7 +33,7 @@ import {
 import { auth, getAuthIdentity, updateUserEmail, updateUserPassword, AuthIdentityInfo } from '../../supabaseAuth';
 import {
   getFullUserProfile, getMatchHistory, updateProfileBasics, updateProfileName,
-  setMySelfSkill, type MatchHistorySummary, type OynaUser,
+  saveProfileEdit, type MatchHistorySummary, type OynaUser,
 } from '../../services/userService';
 import { getMyTeams, type MyTeamRow } from '../../services/teamSocialService';
 import { supabase } from '../../supabaseClient';
@@ -258,20 +258,13 @@ const ProfileInfoPage: React.FC<ProfileInfoPageProps> = ({ open, onClose }) => {
     setSavingEdit(true);
     setEditError(null);
     try {
-      await updateProfileBasics(uid, {
-        position: v.position,
-        bio: v.bio,
-        birthdate: v.birthdate || null,
-        gender: v.gender || null,
-        play_style: v.playStyle || null,
-        ...(v.avatarUrl && v.avatarUrl !== profile?.avatar_url ? { avatar_url: v.avatarUrl } : {}),
+      // Kayıt mantığı TEK KAYNAKTA (services/userService · saveProfileEdit):
+      // aynı katman Profil ekranındaki kimlik kutusundan da açılıyor.
+      const { avatarChanged } = await saveProfileEdit(uid, v, {
+        avatarUrl: profile?.avatar_url,
+        selfSkill: profile?.selfSkill,
       });
-      // Seviye beyanı ayrı kapıdan: RPC aralığı doğrular, NULL'u reddeder
-      // (beyan bir kez verildikten sonra silinemez — kadro çipi sözleşmesi).
-      if (v.selfSkill != null && v.selfSkill !== profile?.selfSkill) {
-        await setMySelfSkill(v.selfSkill);
-      }
-      if (v.avatarUrl && v.avatarUrl !== profile?.avatar_url) {
+      if (avatarChanged) {
         const cur = useAppStore.getState().currentUserProfile;
         if (cur && cur.id === uid) useAppStore.getState().setCurrentUserProfile({ ...cur, avatar: v.avatarUrl });
       }
@@ -317,7 +310,6 @@ const ProfileInfoPage: React.FC<ProfileInfoPageProps> = ({ open, onClose }) => {
             <ProfileIdentityCard
               name={savedName || 'Oyuncu'}
               avatarUrl={profile?.avatar_url}
-              verified={profile?.verification_status === 'approved'}
               position={profile?.position}
               age={age}
               ageRange={profile?.ageRange}
@@ -429,6 +421,23 @@ const ProfileInfoPage: React.FC<ProfileInfoPageProps> = ({ open, onClose }) => {
                 <StatBox value={motmCount == null ? '—' : `${motmCount}`} label="En iyi seçildi" dim={!motmCount} />
               </div>
             </div>
+
+            {/* ═══ PROFİLİ DÜZENLE ═══
+                Onaylı tasarımda istatistiklerin hemen altında duran satır.
+                Üstteki alanlar (Mevki/Cinsiyet/Yaş/Stil/Seviye) düzenleme
+                sayfasını tek tek açar; bu satır aynı sayfayı BAŞTAN açar ve
+                neyin düzenlenebildiğini tek cümlede söyler. */}
+            <button
+              type="button"
+              onClick={() => setEditOpen(true)}
+              className="w-full rounded-[24px] bg-surface-1 px-[18px] py-4 flex items-center gap-3 min-h-[48px] text-left hover:bg-white/[0.06] transition-colors"
+            >
+              <div className="flex-1 min-w-0">
+                <p className="m-0 text-[0.9375rem] text-white">Profili düzenle</p>
+                <p className="mt-0.5 mb-0 text-[0.8125rem] text-ink-4">Fotoğraf, mevki, seviye ve doğum tarihi</p>
+              </div>
+              <ChevronRight size={16} className="text-ink-4 shrink-0" />
+            </button>
 
             {/* ═══ HESAP ═══
                 Tasarımda yok; uygulamada başka yeri de yok. Kimlik/giriş

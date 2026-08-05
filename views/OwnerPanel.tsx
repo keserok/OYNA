@@ -12,7 +12,7 @@ import { money } from './owner/finance/financeUi';
 import { hasMultipleSwitchableRoles } from '../shared/roles';
 import { resolveWorkingHoursForDate, isHourWithinWorkingHours, openHourCount } from '../shared/workingHours';
 import { courtsMissingTariff } from '../shared/courtTariffGate';
-import { PitchManager } from '../admin-panel/views/PitchManager';
+import { PitchManager } from './owner/PitchManager';
 import { OwnerFinanceView } from './owner/OwnerFinanceView';
 import { LoadingState, EmptyState } from '../components/common/StatusState';
 import { OwnerTeamView } from './owner/OwnerTeamView';
@@ -27,6 +27,8 @@ import { OwnerToastProvider, useOwnerToast } from './owner/components/useOwnerTo
 import { OwnerKpiGrid, OwnerCommandStrip, kpiIcons, type OwnerKpiItem } from './owner/components/OwnerKpiGrid';
 import { OwnerStatusBar, type OwnerStatusBanner } from './owner/components/OwnerStatusBar';
 import { OwnerBottomNav } from './owner/components/OwnerBottomNav';
+import { useAsagiCekYenile } from '../hooks/useAsagiCekYenile';
+import { YenileniyorSeridi } from '../components/common/YenileniyorSeridi';
 import { OutboxBadge } from './owner/components/OutboxBadge';
 import { installOutboxAutoFlush, setOutboxDropNotifier } from '../services/offline/outbox';
 import { OwnerHomeSkeleton } from './owner/components/OwnerHomeSkeleton';
@@ -99,6 +101,7 @@ import { OwnerSetupProgress, type SetupStep } from './owner/home/OwnerSetupProgr
 import { OwnerBottomSheet } from './owner/components/OwnerBottomSheet';
 import { useConfirmSheet } from './owner/components/useConfirmSheet';
 import { todayISO } from './owner/ownerPanelShared';
+import { olayYaz } from '../utils/olcum';
 
 type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PITCHES';
 
@@ -184,6 +187,9 @@ const tariffRowToPolicy = (t: PitchTariff) => ({
     return () => setOutboxDropNotifier(null);
   }, [notify]);
 
+  // ÖLÇÜM · tesis hunisi 1/5 — "paneli açtı".
+  useEffect(() => { olayYaz('tesis_panel_acildi'); }, []);
+
   const handleTabSelect = (tab: OwnerTab) => {
     // Finans & Ekip her owner'a açık — plan kilidi yok.
     // STAFF-3: personel Finans/Sahalar sekmesini açamaz (yönetim yetkisi ister).
@@ -192,6 +198,9 @@ const tariffRowToPolicy = (t: PitchTariff) => ({
       setActiveTab('HOME');
       return;
     }
+    // ÖLÇÜM · tesis hunisi 2/5 — "takvimi açtı". Takvim bu panelin asıl işidir;
+    // paneli açıp takvime hiç girmeyen sahibi, paneli kullanmıyor demektir.
+    if (tab === 'CALENDAR') olayYaz('tesis_takvim_acildi');
     setActiveTab(tab);
   };
   const [showCancellationPolicy, setShowCancellationPolicy] = useState(false);
@@ -519,6 +528,14 @@ const tariffRowToPolicy = (t: PitchTariff) => ({
     }, 'panel');
   }, [realPitchId, refreshDashboard]);
 
+  // AŞAĞI ÇEKİP YENİLE (kullanıcı kararı: paneller de dâhil).
+  // Saha sahibi günün cirosunu/rezervasyonlarını sık kontrol eder; tazelemenin
+  // tek yolu ekrandan çıkıp girmekti. Artık parmakla çekmek yetiyor.
+  const cekerekYenileniyor = useAsagiCekYenile(async () => {
+    const pid = realPitchId ?? facilityData?.id;
+    if (pid) await refreshDashboard(pid);
+  });
+
   // Mock fallback kaldırıldı — tesis yoksa onboarding ekranı gösterilir
 
   const dynamicTotalRevenue = dailySummary?.collected_today ?? todayBookings.reduce((s, b) => s + (b.paid_amount ?? 0), 0);
@@ -693,13 +710,16 @@ const tariffRowToPolicy = (t: PitchTariff) => ({
   }
 
   return (
-    // KAYDIRMA: Kök eskiden `min-h-dvh` idi — yalnız bir TABAN veriyor,
-    // yüksekliği serbest bırakıyordu. Bu yüzden içindeki `flex-1 overflow-y-auto`
-    // kutular sınırlanacak alan bulamıyor, kaydırma üretmiyor ve tüm sayfa
-    // dışarıdan kayıyordu (başlık ve alt bar da kayıyordu). Ölçüldü: iç kaydırma
-    // 0px, kök yük altında 3000px şişiyor. `h-full` sınırı netleştirir.
-    <div className="h-full flex flex-col bg-[#0A0E14] text-slate-200 font-sans selection:bg-blue-500 selection:text-white relative">
+    // KAYDIRMA KÖK ÇÖZÜMÜ (kullanıcı kararı, 4 Ağustos 2026 — üçüncü şikâyet):
+    // "Tüm ekran parmakla kaydırılabilir olmalı." Bir önceki düzeltme kökü
+    // `h-full` yapıp sekmeleri İÇ kaydırıcıya almıştı; gerçek cihazda parmak
+    // başlığa/duruma şeridine denk gelince yine hiçbir şey kaymıyordu.
+    // Yeni model Ayarlar/Profil ile aynı: ekranın TAMAMI App'in görünüm
+    // kaydırıcısında akar. OwnerStatusBar `sticky` (görünür kalır ama sayfayı
+    // kaydırır), OwnerBottomNav `fixed` (yerinde durur).
+    <div className="min-h-screen flex flex-col bg-[#0A0E14] text-slate-200 font-sans selection:bg-blue-500 selection:text-white relative">
       <OwnerStatusBar banners={statusBanners} />
+      <YenileniyorSeridi aktif={cekerekYenileniyor} />
       
       {/* Header logic adjustment for Menu view */}
       {activeTab !== 'CALENDAR' && activeTab !== 'MORE' && (
@@ -764,7 +784,8 @@ const tariffRowToPolicy = (t: PitchTariff) => ({
 
       {activeTab === 'HOME' && !isLoading && (
           // pb-40: çevrimdışı kuyruk şeridi (44px) + alt bar son kartı örtmesin.
-          <main className="flex-1 px-6 pt-6 overflow-y-auto custom-scrollbar pb-40">
+          // İç kaydırıcı YOK — içerik sayfayla akar (kök yorumuna bak).
+          <main className="flex-1 px-6 pt-6 pb-40">
               <OwnerCommandStrip
                 isFacilityOpen={isFacilityOpen}
                 onCalendarClick={() => setActiveTab('CALENDAR')}

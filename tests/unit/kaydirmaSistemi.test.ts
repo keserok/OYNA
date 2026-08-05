@@ -145,6 +145,38 @@ describe('hareketi hangi kaydırıcı alır', () => {
     expect(findScroller(hedef)).toBe(ic);
   });
 
+  // ── Görünüm kaydırıcısı istisnası (kullanıcı kararı, 4 Ağustos 2026) ──────
+  // "Ekran donuk" şikâyetinin kökü: içerik kısaysa hiçbir kutu taşmıyor ve
+  // parmak karşılık bulmuyordu. Ana görünüm kaydırıcısı taşma OLMASA da
+  // yakalanır — kısa ekran da esner ve yaylanır.
+  it('görünüm kaydırıcısı içerik KISA olsa da yakalanır (donuk ekran biter)', () => {
+    const gorunum = kutu({ style: 'overflow-y: auto', scrollHeight: 800, clientHeight: 800 });
+    gorunum.setAttribute('data-oyna-view-scroller', '');
+    const hedef = document.createElement('span');
+    gorunum.appendChild(hedef);
+    document.body.appendChild(gorunum);
+    expect(findScroller(hedef)).toBe(gorunum);
+  });
+
+  it('görünüm kaydırıcısı işareti OLMAYAN taşmasız kutu yine atlanır', () => {
+    const kap = kutu({ style: 'overflow-y: auto', scrollHeight: 800, clientHeight: 800 });
+    const hedef = document.createElement('span');
+    kap.appendChild(hedef);
+    document.body.appendChild(kap);
+    expect(findScroller(hedef)).toBeNull();
+  });
+
+  it('içi taşan liste, görünüm kaydırıcısından ÖNCE gelir (normal kaydırma bozulmaz)', () => {
+    const gorunum = kutu({ style: 'overflow-y: auto', scrollHeight: 800, clientHeight: 800 });
+    gorunum.setAttribute('data-oyna-view-scroller', '');
+    const liste = kutu({ style: 'overflow-y: auto', scrollHeight: 900, clientHeight: 300 });
+    const hedef = document.createElement('span');
+    liste.appendChild(hedef);
+    gorunum.appendChild(liste);
+    document.body.appendChild(gorunum);
+    expect(findScroller(hedef)).toBe(liste);
+  });
+
   it('YATAY şerit atlanır — üstünde dikey sürükleme sayfayı kaydırır (karar 6)', () => {
     // Gün seçici gibi bir şerit: yatayda kayar, dikeyde taşma yok.
     const sayfa = kutu({ style: 'overflow-y: auto', scrollHeight: 2000, clientHeight: 800 });

@@ -35,6 +35,7 @@ import { trUpper } from '../utils/trUpper';
 import { auth } from '../supabaseAuth';
 import { formatTRYAmount } from '../utils/formatTRY';
 import { useLowMotion } from '../hooks/useLowMotion';
+import { olayYaz } from '../utils/olcum';
 
 // Cüzdan yükleme overlay'i — form kaybolmadan bakiye tamamlanır (gerçek akış).
 const WalletScreen = lazy(() => import('./WalletScreen'));
@@ -78,6 +79,8 @@ interface InvitedPerson {
   source: 'FRIEND' | 'TEAM';
 }
 
+// ÖLÇÜM — kaptan hunisi (prensip 1.1'in ana akışı).
+
 const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
   const {
     setMatchCreateSeed, setSelectedMatch, applyMatchLocal,
@@ -90,6 +93,8 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
   const [seed, setSeed] = useState(() => useAppStore.getState().matchCreateSeed);
   useEffect(() => {
     if (useAppStore.getState().matchCreateSeed) setMatchCreateSeed(null);
+    // ÖLÇÜM · kaptan hunisi 1/5 — "Maç Kur ekranını açtı".
+    olayYaz('kaptan_ekran_acildi');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -395,7 +400,13 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
     setConflict(null);
   };
   const pickDay = (i: number) => { setSelDay(i); setConflict(null); };
-  const pickTime = (t: string) => { setSelTime(t); setConflict(null); };
+  const pickTime = (t: string) => {
+    setSelTime(t);
+    setConflict(null);
+    // ÖLÇÜM · kaptan hunisi 2/5 — saha zaten seçili olmadan saat seçilemez,
+    // yani bu an "saha ve saat seçildi" demektir.
+    olayYaz('kaptan_saha_secildi');
+  };
 
   // ── YAYINLA — atomik ─────────────────────────────────────────────────────
   const publish = useCallback(async () => {
@@ -411,6 +422,11 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
     // StrictMode/eşzamanlı render'da çift tetiklenmeye karşı kilit
     if (publishBusyRef.current) return;
     publishBusyRef.current = true;
+    // ÖLÇÜM · kaptan hunisi 3/5 — "kapora ekranına geldi". Bu akışta kapora
+    // AYRI bir ekranda değil, yayınlama anında cüzdandan alınıyor; kullanıcının
+    // paraya taahhüt ettiği an burasıdır. (Bakiye yetmezse ödeme ekranına
+    // gidilir ve orası da AYNI olayı yazar — iki yol tek adımda birleşir.)
+    olayYaz('kaptan_kapora_ekrani');
     setPublishing(true);
     setPubStep(0);
     setConflict(null);
@@ -454,6 +470,11 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
       getWalletSummary().then(setWallet).catch(() => {});
       setResult(res);
       setCopied(false);
+      // ÖLÇÜM · kaptan hunisi 4/5 ve 5/5. Kapora bu çağrının İÇİNDE bloke
+      // edildiği için ikisi birlikte yazılır; 3→4 düşüşü "para adımında
+      // vazgeçti/yetmedi", 4→5 düşüşü ise sunucu tarafı hatası demektir.
+      olayYaz('kaptan_kapora_odendi');
+      olayYaz('kaptan_mac_yayinda');
       setSheet('SUCCESS');
     } catch (err) {
       const { code, message } = parseCreateMatchError(err);

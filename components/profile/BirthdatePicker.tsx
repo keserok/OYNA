@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { ChevronLeft } from 'lucide-react';
 import { useLowMotion } from '../../hooks/useLowMotion';
 import { useBackDismiss } from '../../hooks/useBackDismiss';
+import profileAmbient from '../../assets/profile/profile-ambient.png';
 
 // ════════════════════════════════════════════════════════════════════════════
 // DOĞUM TARİHİ SEÇİCİ — üç tekerlek (GÜN · AY · YIL)
@@ -248,8 +249,18 @@ export const BirthdatePicker: React.FC<BirthdatePickerProps> = ({ open, value, o
   const yas = yasHesapla(y, m1, d, bugun);
 
   return createPortal(
-    <div className="pf-serif pf-canvas fixed inset-0 z-[270] flex flex-col text-[#F5F3EE]">
-      <div className="pf-ambient" />
+    <div className="fixed inset-0 z-[270] flex flex-col bg-[#0A0E14] text-white">
+      {/* Üstteki saha ışıması — tasarımın `.oyna-saha` katmanı. */}
+      <img
+        src={profileAmbient}
+        alt=""
+        aria-hidden
+        className="pointer-events-none absolute top-[-10px] left-1/2 -translate-x-1/2 w-[520px] max-w-none opacity-50 mix-blend-screen"
+        style={{
+          WebkitMaskImage: 'linear-gradient(180deg,#000 0%,#000 40%,transparent 88%)',
+          maskImage: 'linear-gradient(180deg,#000 0%,#000 40%,transparent 88%)',
+        }}
+      />
 
       {/* ═══ ÜST ÇUBUK ═══ */}
       <div className="relative z-10 shrink-0 flex items-center gap-3 px-5 pb-2.5 pt-safe">
@@ -265,15 +276,15 @@ export const BirthdatePicker: React.FC<BirthdatePickerProps> = ({ open, value, o
       </div>
 
       {/* ═══ GÖVDE ═══ */}
-      <div className="relative z-10 flex-1 min-h-0 flex flex-col px-5 pt-4 overflow-y-auto custom-scrollbar">
-        <p className="m-0 text-center text-2xl leading-7 font-[Montserrat] font-extrabold italic text-[#F5F3EE]">
+      <div className="relative z-10 flex-1 min-h-0 flex flex-col px-5 pt-[18px] overflow-y-auto custom-scrollbar">
+        <p className="m-0 text-center text-2xl leading-7 font-[Montserrat] font-extrabold italic text-white">
           {d} {AYLAR[m1 - 1]} {y}
         </p>
         <p className="mt-2 mb-0 text-center text-[0.8125rem] text-[#F5F3EE]/[0.55]" aria-live="polite">
           {yas} yaşındasın
         </p>
 
-        <div className="mt-5 relative bg-surface-1 border border-white/[0.08] rounded-[24px] px-2 pt-3.5 pb-[18px]">
+        <div className="mt-[22px] relative bg-surface-1 border border-white/[0.08] rounded-[24px] px-2 pt-3.5 pb-[18px]">
           {/* Ortadaki vurgu bandı — seçili satırın nerede olduğunu söyler.
               `pointer-events:none`: tekerleklerin dokunuşunu yutmamalı. */}
           <div

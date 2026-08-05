@@ -3,6 +3,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { UygulamaKapisi } from './components/UygulamaKapisi';
 import { initObservability } from './utils/observability';
 import { installOynaScrollSystem } from './utils/scrollSystem';
 
@@ -22,7 +23,15 @@ const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
     <ErrorBoundary>
-      <App />
+      {/* ACİL DURUM FRENLERİ — uygulamanın EN DIŞI.
+          Bakım modu ve zorunlu güncelleme burada durdurur; içerideki hiçbir
+          ekran, hiçbir ödeme çizilmez. En dışta olması bilinçli: rol ayrımı
+          yapmaz, oyuncu/tesis sahibi/kaleci/hakem hepsi aynı frene takılır
+          (kurucu kararı 4).
+          Kapı sorulamazsa HİÇBİR ŞEY yapmaz — uygulama normal açılır. */}
+      <UygulamaKapisi>
+        <App />
+      </UygulamaKapisi>
     </ErrorBoundary>
   </React.StrictMode>
 );

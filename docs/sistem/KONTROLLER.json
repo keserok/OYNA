@@ -138,6 +138,16 @@
       "sessizlik_tipi": "Tek bir yeni fonksiyon kuralı bozar"
     },
     {
+      "id": "K-KAPI-4",
+      "ad": "Veritabanı kapısı kendiliğinden açıldı mı?",
+      "sade_anlatim": "Hangi fonksiyonun dışarıya açık olduğu onaylanmış bir listede tutulur. Gece bu liste canlı durumla karşılaştırılır; onaysız açılan kapı kırmızı yanar.",
+      "ne_zaman": "HER_IKISI",
+      "tur": "SQL",
+      "nasil": "SELECT public.kapi_denetimi();",
+      "basari_olcutu": "durum = 'YESIL' (kendiliğinden açılan kapı = 0)",
+      "sessizlik_tipi": "Yeni bir fonksiyon sessizce herkese açık doğuyor, kimse fark etmiyor"
+    },
+    {
       "id": "K-BILDIRIM-1",
       "ad": "Dışarı giden çağrılar başarılı mı?",
       "sade_anlatim": "Son 24 saatte gönderilmeye çalışılan bildirimlerin kaçı gerçekten gitti?",
@@ -316,6 +326,16 @@
       "nasil": "SELECT public.hata_ozeti(24);",
       "basari_olcutu": "etkilenen_kisi son 7 günün ortalamasının 3 katını aşmamalı",
       "sessizlik_tipi": "Uygulama bir grup kullanıcıda çöküyor ama kimse şikâyet etmediği için hiç öğrenilmiyor"
+    },
+    {
+      "id": "K-OLCUM-1",
+      "ad": "Ölçüm sistemi hâlâ kayıt tutuyor mu?",
+      "sade_anlatim": "Huni adımları son 24 saatte kaç olay yazdı, adımların hangisi tamamen sustu? Susan adım 'kimse buraya gelmiyor' sanılır ama aslında ölçüm kopmuştur.",
+      "ne_zaman": "GUNLUK",
+      "tur": "SQL",
+      "nasil": "SELECT public.olcum_sagligi();",
+      "basari_olcutu": "durum = 'YESIL' (susan huni adımı = 0)",
+      "sessizlik_tipi": "Ölçüm sessizce durur, panel sıfır gösterir, sıfır 'talep yok' diye okunur"
     },
     {
       "id": "K-SURUM-1",

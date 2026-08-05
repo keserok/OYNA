@@ -9,12 +9,14 @@ import { PageShell } from '../components/PageShell';
 import { GercekDurum } from '../components/GercekDurum';
 import { SistemSagligi } from '../components/SistemSagligi';
 import { CokmeKayitlari } from '../components/CokmeKayitlari';
+import { Huni } from '../components/Huni';
+import { KapiDurumu } from '../components/KapiDurumu';
 import { ElleBakilacaklar } from '../components/ElleBakilacaklar';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { useAdminToast } from '../context/AdminToastContext';
 import { useDebouncedCallback } from '../hooks/useDebouncedCallback';
 import { supabase } from '../../../supabaseClient';
-import { Zap, RefreshCw, Trash2, ExternalLink, PlayCircle, Bug, Gauge } from 'lucide-react';
+import { Zap, RefreshCw, Trash2, ExternalLink, PlayCircle, Bug, Gauge, Target, ShieldAlert } from 'lucide-react';
 import type { AdminNavigateFn, GodViewSubRoute } from '../GodViewPanel';
 
 interface CommandCenterPageProps {
@@ -151,6 +153,26 @@ export const CommandCenterPage: React.FC<CommandCenterPageProps> = ({ mode = 'em
             <Zap size={14} /> Sistem Sağlığı
           </h3>
           <SistemSagligi />
+        </div>
+
+        {/* ACİL DURUM FRENLERİ — bakım modu ve zorunlu güncelleme AÇIK mı?
+            En üstte duruyor: "bakım açık kaldı" fark edilmeden geçen her saat
+            uygulamanın kapalı olduğu bir saattir. */}
+        <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-5">
+          <h3 className="text-xs font-bold text-gray-300 mb-3 flex items-center gap-2">
+            <ShieldAlert size={14} /> Acil Durum Frenleri
+          </h3>
+          <KapiDurumu />
+        </div>
+
+        {/* HUNİ — "kullanıcıyı nerede kaybediyoruz?" (prensip 1.6)
+            Çökme kayıtlarının hemen ÜSTÜNDE duruyor: biri "ne bozuldu",
+            diğeri "ne işe yaramıyor" sorusunun cevabı. */}
+        <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-5">
+          <h3 className="text-xs font-bold text-gray-300 mb-3 flex items-center gap-2">
+            <Target size={14} /> Huni — kullanıcıyı nerede kaybediyoruz?
+          </h3>
+          <Huni />
         </div>
 
         {/* [SRE-3 / S-3] ÇÖKME KAYITLARI — uygulama kimde çöktü, kaç kişide?

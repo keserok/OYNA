@@ -1,8 +1,17 @@
 import { test, expect, type Page } from '@playwright/test';
 import {
   hazirla, ekranaGit, oturmasiniBekle,
-  odemeBaglamiTohumla, rahatBaglamiTohumla, taktikBaglamiTohumla,
+  odemeBaglamiTohumla, rahatBaglamiTohumla, taktikBaglamiTohumla, kapsamsizTohumla,
 } from './harness';
+
+// Kaydırma motoru dokunmatik OLMAYAN cihazda hiç kurulmaz ve azaltılmış
+// hareket açıkken bilerek devre dışıdır. "Parmak bağlı mı" bloğu motoru
+// ölçtüğü için ikisi de burada açılır (görsel config 'reduce' verir).
+test.use({
+  contextOptions: { reducedMotion: 'no-preference', hasTouch: true, isMobile: true },
+  hasTouch: true,
+  isMobile: true,
+});
 
 // ─── İÇ KAYDIRICI regresyonu ─────────────────────────────────────────────────
 //
@@ -98,7 +107,6 @@ const SENARYOLAR: Senaryo[] = [
   { gorunum: 'MARKETPLACE_GK', capa: /Kaleci Bul/i },
   { gorunum: 'MARKETPLACE_REF', capa: /Hakem Kirala/i },
   { gorunum: 'MATCH_CREATE', capa: /Maç|Saha/i },
-  { gorunum: 'SERVICE_DASHBOARD', capa: /^(HAKEM|KALECİ)$/ },
   {
     gorunum: 'PAYMENT',
     capa: /Ödenecek Kapora/i,
@@ -157,23 +165,19 @@ test.describe('İç kaydırıcı — yük altında boyunu korumalı', () => {
   }
 });
 
-// ─── PANEL SEKMELERİ (dördüncü şikâyet: 4 Ağustos 2026) ──────────────────────
+// ─── PANEL SEKMELERİ — SAYFA-AKIŞ MODELİ (beşinci şikâyet: 4 Ağustos 2026) ───
 //
-// ŞİKÂYET: "Saha sahibi ve kaleci/hakem arayüzlerinde kaydırma çalışmıyor."
+// TARİHÇE: Dördüncü şikâyette paneller "sabit kabuk + İÇ kaydırıcı" modeline
+// alınmış ve bu test iç kaydırıcıyı şart koşmuştu. BEŞİNCİ şikâyet geldi:
+// gerçek cihazda parmak başlığa/sekme çubuğuna/kısa içerikli sekmeye denk
+// gelince yine hiçbir şey kaymıyordu (html/body bilinçli kilitli; o noktada
+// kayacak kutu yok). Kullanıcı kararı net: "TÜM ekran parmakla kaydırılabilir
+// olmalı."
 //
-// Yukarıdaki sınav ekranların YALNIZ AÇILIŞ sekmesine bakıyordu. Panellerin
-// kendi iç sekmeleri (Özet/Takvim/Ekip/Finans/Menü ve Ana Sayfa/Maç Bul/
-// Cüzdan/Menü + Menü'nün alt ekranları) hiç ölçülmüyordu. Ölçülünce iki
-// gerçek arıza çıktı:
-//
-//   • Kaleci/hakem → Menü → Profilim ve Ayarlar: iç kaydırıcı HİÇ YOKTU ve
-//     üstlerindeki kap `overflow-hidden` idi → içerik kesiliyor, parmakla
-//     ulaşılamıyordu (Ayarlar'da 71px ölçüldü).
-//   • Saha sahibi paneli: kök `min-h-dvh` idi (taban, sınır değil) → içindeki
-//     `flex-1 overflow-y-auto` kutular sınırlanamıyor, kaydırma üretmiyor,
-//     bunun yerine BÜTÜN SAYFA dışarıdan kayıyordu (başlık ve alt bar dahil).
-//
-// Bu blok o sekmeleri tek tek gezer. Bir daha sessizce kırılamaz.
+// YENİ MODEL: Ayarlar/Profil ekranlarıyla aynı — panel kökü `min-h-screen`,
+// içerik App'in görünüm kaydırıcısında akar; başlık dahil her nokta parmak
+// yüzeyidir. Alt gezinmeler `fixed` kalır. Bu blok artık DIŞ kaydırmayı
+// şart koşar (önceki sürümün tam tersi — bilinçli).
 
 const PANEL_SEKMELERI: { panel: string; sekme: string; ard?: string }[] = [
   { panel: 'SERVICE_DASHBOARD', sekme: 'Ana Sayfa' },
@@ -189,7 +193,28 @@ const PANEL_SEKMELERI: { panel: string; sekme: string; ard?: string }[] = [
   { panel: 'OWNER_PANEL', sekme: 'Menü' },
 ];
 
-test.describe('Panel sekmeleri — her sekme kendi içinde kaydırmalı', () => {
+/** Sayfa-akış ölçümü: ekran köküne yük ekle; SAYFA (görünüm kaydırıcısı)
+ *  kaydırma üretmeli. Ekran başlığı dahil her nokta aynı kaydırıcıya aittir. */
+async function sayfaAkisiOlc(page: Page): Promise<{ disKaydirma: number; kokSinif: string }> {
+  return page.evaluate(() => {
+    const sc = document.querySelector('[data-oyna-view-scroller]');
+    if (!(sc instanceof HTMLElement)) throw new Error('Görünüm kaydırıcısı yok');
+    const kok = sc.firstElementChild;
+    if (!(kok instanceof HTMLElement)) throw new Error('Ekran kökü yok');
+    const dolgu = document.createElement('div');
+    dolgu.style.height = '3000px';
+    kok.appendChild(dolgu);
+    void kok.offsetHeight;
+    const sonuc = {
+      disKaydirma: sc.scrollHeight - sc.clientHeight,
+      kokSinif: (kok.className || '(sınıfsız)').slice(0, 70),
+    };
+    dolgu.remove();
+    return sonuc;
+  });
+}
+
+test.describe('Panel sekmeleri — ekranın TAMAMI sayfayla kaymalı', () => {
   for (const s of PANEL_SEKMELERI) {
     const ad = `${s.panel === 'OWNER_PANEL' ? 'Saha sahibi' : 'Kaleci/hakem'} · ${s.sekme}${s.ard ? ' › ' + s.ard : ''}`;
     test(ad, async ({ page }) => {
@@ -205,29 +230,152 @@ test.describe('Panel sekmeleri — her sekme kendi içinde kaydırmalı', () => 
         await page.waitForTimeout(900);
       }
 
-      const m = await yukAltindaOlc(page);
-      const kunye = `"${ad}" · kök: "${m.kokSinif}" · kaydırıcı: "${m.icEtiket}"`;
-
-      // 1) Kök yük altında ŞİŞMEMELİ — yüksekliği belli olmalı.
-      expect(
-        m.kokYukYukAltinda,
-        `${kunye}\nKök ${m.kokYuk}px → ${m.kokYukYukAltinda}px büyüdü. ` +
-        'Sınırlı olmalı (h-full), taban değil (min-h-dvh/min-h-screen).',
-      ).toBe(m.kokYuk);
-
-      // 2) ASIL SINAV: sekme KENDİ İÇİNDE kaydırmalı.
-      expect(
-        m.kaydirilabilir,
-        `${kunye}\nBu sekme kendi içinde kaydırma ÜRETMEDİ ` +
-        `(görünen ${m.gorunen}px, kaydırılabilir ${m.kaydirilabilir}px). ` +
-        'Kullanıcı alttaki içeriğe parmakla ulaşamaz.',
-      ).toBeGreaterThan(1000);
-
-      // 3) Taşma dışarı çıkmamalı — başlık ve alt bar yerinde kalmalı.
+      const m = await sayfaAkisiOlc(page);
       expect(
         m.disKaydirma,
-        `${kunye}\nSayfanın kendisi uzadı (${m.disKaydirma}px) — başlık ve alt bar da kayar.`,
-      ).toBeLessThanOrEqual(1);
+        `"${ad}" · kök: "${m.kokSinif}"\nYük altında SAYFA kaydırma üretmedi ` +
+        `(${m.disKaydirma}px). Panel sayfa-akış modelinden çıkmış demektir — ` +
+        'başlığa/kısa sekmeye konan parmak yine karşılıksız kalır.',
+      ).toBeGreaterThan(1000);
     });
   }
+});
+
+// ─── PARMAK BAĞLI MI — panelin HER noktası kaydırma yüzeyi mi? ───────────────
+//
+// Yukarıdaki blok "sayfada kaydırılacak bir şey var mı" sorusunu ölçer.
+// Bu blok kullanıcının asıl şikâyetini ölçer: "parmağımla kaydıramıyorum".
+// İkisi aynı şey DEĞİL — sayfa kaydırılabilir olsa bile parmağın denk geldiği
+// nokta (başlık, sekme çubuğu, boş alan) kaydırıcıya bağlı değilse ekran ölü
+// hisseder. Beşinci şikâyetin sebebi tam olarak buydu.
+//
+// NASIL ÖLÇÜLÜR: Gerçek TouchEvent zinciri gönderilir ve kaydırma motorunun
+// yazdığı ESNEME okunur. Esneme > 0 ise o nokta kaydırıcıya bağlıdır.
+// (Yapay dokunma olayları tarayıcının KENDİ kaydırmasını tetikleyemez — bu
+// yüzden scrollTop değil, motorun JS ile yazdığı esneme ölçülür.)
+//
+// TUZAK — okurken dikkat: dikey esneme `translate: 0px 63px` biçiminde yazılır.
+// İLK sayı her zaman 0'dır; ölçüm İKİNCİ sayıyı okumalıdır. Bu test yazılırken
+// ilk sayı okunup "hiçbir yerde kaymıyor" sanılmıştı.
+test.describe('Parmak bağlı mı — panelin her noktası kaydırma yüzeyi', () => {
+  const NOKTALAR = [
+    { ad: 'başlık üstü',  oran: 0.08 },
+    { ad: 'orta',         oran: 0.45 },
+    { ad: 'alt bar üstü', oran: 0.80 },
+  ];
+
+  for (const panel of ['SERVICE_DASHBOARD', 'OWNER_PANEL']) {
+    const panelAd = panel === 'OWNER_PANEL' ? 'Saha sahibi' : 'Kaleci/hakem';
+    test(`${panelAd} paneli`, async ({ page }) => {
+      // Motor: dokunmatik ŞART, azaltılmış hareket kapalı olmalı (kurulum koşulu).
+      await page.context().addInitScript(() => { /* bağlam seçenekleri config'ten gelir */ });
+      await hazirla(page);
+      await ekranaGit(page, panel);
+      await page.waitForTimeout(1500);
+      await oturmasiniBekle(page).catch(() => {});
+
+      for (const n of NOKTALAR) {
+        const esneme = await page.evaluate((oran) => {
+          const sc = document.querySelector('[data-oyna-view-scroller]');
+          if (!(sc instanceof HTMLElement)) return -1;
+          sc.scrollTop = 0;
+          const x = Math.round(window.innerWidth / 2);
+          const y0 = Math.round(window.innerHeight * oran);
+          const hedef = document.elementFromPoint(x, y0) ?? sc;
+          const dokun = (tip: string, y: number) => {
+            const t = new Touch({ identifier: 1, target: hedef, clientX: x, clientY: y });
+            hedef.dispatchEvent(new TouchEvent(tip, {
+              touches: tip === 'touchend' ? [] : [t],
+              targetTouches: tip === 'touchend' ? [] : [t],
+              changedTouches: [t], bubbles: true, cancelable: true, composed: true,
+            }));
+          };
+          dokun('touchstart', y0);
+          for (let i = 1; i <= 8; i++) dokun('touchmove', y0 + i * 20);
+          const sayilar = ((sc.style.translate || '').match(/-?[\d.]+/g) || []).map(Number);
+          const px = sayilar.length > 1 ? sayilar[1] : (sayilar[0] ?? 0);
+          dokun('touchend', y0 + 160);
+          return Math.round(px);
+        }, n.oran);
+
+        expect(
+          esneme,
+          `"${panelAd} · ${n.ad}" noktasından parmak çekilince kaydırıcı CEVAP VERMEDİ ` +
+          `(esneme ${esneme}px). Bu nokta kaydırma yüzeyi değil demektir — kullanıcı ` +
+          'ekranı orada "donuk" hisseder. Panel sayfa-akış modelinden çıkmış olabilir.',
+        ).toBeGreaterThan(5);
+      }
+    });
+  }
+});
+
+// ─── SON DÜĞMEYE ULAŞILABİLİYOR MU ──────────────────────────────────────────
+//
+// NEDEN: Profil ekranının kart araları kullanıcı isteğiyle 12px'ten 18px'e
+// çıktı ("premium ve rahat olsun"). Boşluk arttıkça içerik uzar; kaydırıcının
+// alt dolgusu (`pb-safe-nav`) yetmezse EN ALTTAKİ düğme sonuna kadar
+// kaydırıldığında bile alt menünün ARKASINDA kalır — görünür ama basılamaz,
+// üstelik ekran görüntüsü testleri yalnız üst kısmı çektiği için sessizce
+// geçer. Bu blok o sessizliği kapatır: sonuna kadar kaydırıp son düğmenin
+// alt menünün ÜSTÜNDE bittiğini ölçer.
+test.describe('Son düğme alt menünün arkasında kalmamalı', () => {
+  test('Profil ekranı — "Maç bul" tam görünür', async ({ page }) => {
+    await hazirla(page);
+    await ekranaGit(page, 'PROFILE');
+    await page.waitForTimeout(1200);
+    await oturmasiniBekle(page).catch(() => {});
+
+    // Çentikli telefon: alt güvenli alan sıfır değilken en dar durum oluşur.
+    await page.addStyleTag({ content: ':root { --safe-bottom: 34px; --safe-top: 47px; }' });
+    await page.evaluate(() => new Promise<void>((r) => requestAnimationFrame(() => r())));
+
+    const olcum = await page.evaluate(() => {
+      const sc = [...document.querySelectorAll('*')]
+        .find((e) => e instanceof HTMLElement
+          && getComputedStyle(e).overflowY === 'auto'
+          && e.scrollHeight > e.clientHeight + 4) as HTMLElement | undefined;
+      if (!sc) return null;
+      sc.scrollTop = sc.scrollHeight;
+      const dugme = [...document.querySelectorAll('button')]
+        .find((b) => (b.textContent || '').trim() === 'Maç bul');
+      if (!dugme) return null;
+      const nav = document.querySelector('nav');
+      return {
+        dugmeAlt: Math.round(dugme.getBoundingClientRect().bottom),
+        navUst: Math.round(nav ? nav.getBoundingClientRect().top : window.innerHeight),
+      };
+    });
+
+    expect(olcum, 'Profil kaydırıcısı ya da "Maç bul" düğmesi bulunamadı').not.toBeNull();
+    expect(
+      olcum!.dugmeAlt,
+      `Sonuna kadar kaydırıldığında "Maç bul" düğmesinin alt kenarı ${olcum!.dugmeAlt}px, ` +
+      `alt menü ise ${olcum!.navUst}px'te başlıyor — düğme menünün arkasında kalıyor. ` +
+      'Kaydırıcının alt dolgusu (`pb-safe-nav`) içeriğe yetmiyor demektir.',
+    ).toBeLessThanOrEqual(olcum!.navUst);
+  });
+});
+
+// ─── "KONUMU AYARLA" GERÇEKTEN BÖLGE SAYFASINI AÇIYOR MU ────────────────────
+//
+// NEDEN: Düğme iki adımlı çalışıyor — önce store'a "Ayarlar'ı Bölgelerim ile
+// aç" isteği yazıyor, sonra Ayarlar ekranına gidiyor. İki adımdan biri
+// kopsa (ör. Ayarlar isteği tanımadığı bir değer diye yok sayarsa) düğme
+// kullanıcıyı Ayarlar'ın ANA listesine bırakır ve bölge satırını kendisi
+// aramak zorunda kalır. Ekran görüntüsü bunu göremez; bu test görür.
+test.describe('Ana sayfadaki "KONUMU AYARLA" düğmesi', () => {
+  test('Ayarlar → Bölgelerim sayfasını doğrudan açar', async ({ page }) => {
+    await hazirla(page);
+    await ekranaGit(page, 'DASHBOARD');
+    await kapsamsizTohumla(page);
+
+    await page.getByLabel('Konumu ayarla').click();
+
+    // Bölgelerim alt sayfasının kendi başlığı görünmeli.
+    await expect(
+      page.getByText(/Bölgelerim/i).first(),
+      '"KONUMU AYARLA" Ayarlar\'ı açtı ama Bölgelerim sayfası gelmedi — ' +
+      'derin bağlantı isteği (settingsSubPage = "region") tüketilmemiş olabilir.',
+    ).toBeVisible({ timeout: 15_000 });
+  });
 });

@@ -28,6 +28,7 @@ import {
 import { todayISO } from '../ownerPanelShared';
 import type { PitchBookingFull, PitchCourt, FlashDeal, PitchAvailabilityException } from '../../../types';
 import { trUpper } from '../../../utils/trUpper';
+import { olayYaz } from '../../../utils/olcum';
 
 // Takvim veri modeli (SALT TAŞIMA)
 interface CalendarBooking {
@@ -42,6 +43,8 @@ interface CalendarBooking {
     note?: string;
     pitchId: string;
     date?: string;
+    /** Rezervasyonu yapanın telefonu — sahibin "Ara" düğmesi bunu kullanır. */
+    phone?: string;
 }
 
 function formatDateISO(d: Date): string {
@@ -96,6 +99,7 @@ function mapDbBookingToCalendar(b: PitchBookingFull): CalendarBooking {
     note: b.note ?? undefined,
     pitchId: b.court_id ?? '',
     date: b.booking_date,
+    phone: b.customer_phone ?? undefined,
   };
 }
 
@@ -446,6 +450,8 @@ export const FinancialCalendarView: React.FC<{
     }, [dayHours, showAllHours, currentBookings, selectedCourtId, closedSlots]);
 
     const handleQuickCreate = async (time: string) => {
+        // ÖLÇÜM · tesis hunisi 3/5 — "rezervasyon girmeye başladı".
+        olayYaz('tesis_rezervasyon_basladi', { tekrarlanabilir: true });
         setIsQuickCreateOpen(time);
         setCustomerName('');
         setCustomerPhone('');
@@ -559,7 +565,7 @@ export const FinancialCalendarView: React.FC<{
             </div>
 
             {/* pb-40: çevrimdışı kuyruk şeridi (44px) + alt bar son saati örtmesin. */}
-            <div ref={dayScrollRef} className="flex-1 overflow-y-auto custom-scrollbar px-4 py-4 space-y-2 pb-40">
+            <div ref={dayScrollRef} className="flex-1 px-4 py-4 space-y-2 pb-40">
                 {isMonthlyView ? (
                     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
                         <div className="bg-[#161B22] rounded-3xl border border-white/10 p-6 mb-6">
@@ -951,6 +957,10 @@ export const FinancialCalendarView: React.FC<{
                                     paidAmount,
                                     paymentMethod: 'CASH',
                                 });
+                                // ÖLÇÜM · tesis hunisi 4/5 — "rezervasyonu kaydetti".
+                                // Kayıt BAŞARILI olduktan sonra yazılır: 3→4 düşüşü
+                                // "formu açtı ama tamamlayamadı" demektir.
+                                olayYaz('tesis_rezervasyon_kaydedildi', { tekrarlanabilir: true });
                                 await loadBookings();
                                 setIsQuickCreateOpen(null);
                                 setCustomerName('');

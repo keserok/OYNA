@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Banknote, MessageSquare, QrCode, UserX, XCircle } from 'lucide-react';
+import { Banknote, Phone, QrCode, UserX, XCircle } from 'lucide-react';
 import { cancelConfirmedBooking, recordBookingPayment, type PaymentMethod, toTurkishError } from '../../services/pitchOwnerService';
 import { bookingToDebtor } from '../../services/financeService';
 import { parseTRYAmount } from '../../shared/financeModel';
@@ -18,6 +18,8 @@ export interface BookingDetailData {
   price: number;
   paid: number;
   note?: string;
+  /** Rezervasyonu yapanın telefonu (pitch_bookings.customer_phone). */
+  phone?: string;
 }
 
 interface OwnerBookingDetailModalProps {
@@ -273,13 +275,23 @@ export const OwnerBookingDetailModal: React.FC<OwnerBookingDetailModalProps> = (
       {/* VIEW modu: hızlı aksiyonlar */}
       {mode === 'view' && (
         <div className="grid grid-cols-2 gap-3 mt-4">
-          <button
-            type="button"
-            onClick={() => notify('Kaptan mesajlaşması yakında aktif olacak.', 'info')}
-            className="min-h-[52px] py-3 bg-blue-500/10 border border-blue-500/30 text-blue-400 rounded-xl text-[0.6875rem] font-extrabold hover:bg-blue-500/20 transition-colors flex flex-col items-center gap-1.5 uppercase"
-          >
-            <MessageSquare size={16} /> Kaptana Mesaj
-          </button>
+          {/* [YAYIN] Buradaki düğme eskiden yalnız "yakında aktif olacak" uyarısı
+              gösteriyordu — yani hiçbir işe yaramıyordu. Rezervasyonun telefonu
+              zaten kayıtlı (pitch_bookings.customer_phone); düğme artık DOĞRUDAN
+              arama başlatıyor. Telefon yoksa (ör. eski kayıt) düğme HİÇ ÇİZİLMEZ:
+              çalışmayan bir düğme göstermektense hiç göstermemek doğrudur. */}
+          {booking.phone ? (
+            <a
+              href={`tel:${booking.phone.replace(/[^0-9+]/g, '')}`}
+              className="min-h-[52px] py-3 bg-blue-500/10 border border-blue-500/30 text-blue-400 rounded-xl text-[0.6875rem] font-extrabold hover:bg-blue-500/20 transition-colors flex flex-col items-center justify-center gap-1.5 uppercase"
+            >
+              <Phone size={16} /> Müşteriyi Ara
+            </a>
+          ) : (
+            <div className="min-h-[52px] py-3 bg-white/[0.03] border border-white/5 text-gray-600 rounded-xl text-[0.6875rem] font-extrabold flex flex-col items-center justify-center gap-1.5 uppercase">
+              <Phone size={16} /> Telefon Yok
+            </div>
+          )}
           <button
             type="button"
             onClick={() => { onClose(); onNavigateQr?.(); }}

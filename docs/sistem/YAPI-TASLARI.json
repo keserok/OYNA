@@ -194,12 +194,15 @@
       "garanti_ettigi": [
         "Kullanıcı başkasının verisini okuyamaz/yazamaz",
         "Kullanıcı kendi rolünü, bakiyesini, cezasını değiştiremez",
-        "Her SECURITY DEFINER fonksiyonun görünür bir yetki kontrolü vardır"
+        "Her SECURITY DEFINER fonksiyonun görünür bir yetki kontrolü vardır",
+        "Fonksiyonlar dışarıya KAPALI doğar; açık olması onaylanan liste gece denetlenir"
       ],
       "dosyalar": [
         "supabaseAuth.ts",
         "supabaseClient.ts",
-        "scripts/generate-rls-policy.ts"
+        "scripts/generate-rls-policy.ts",
+        "shared/adminKopru.ts",
+        "tests/unit/panelSizintisi.test.ts"
       ],
       "db_nesneleri": [
         "pg_policies",
@@ -210,12 +213,17 @@
         "can_staff_pitch",
         "notifications_insert_own_sender",
         "matches_update",
-        "matches_select_public"
+        "matches_select_public",
+        "kapi_kayitli_durum",
+        "kapi_denetimi",
+        "kapi_temeli_guncelle",
+        "pg_default_acl"
       ],
       "kontroller": [
         "K-KAPI-1",
         "K-KAPI-2",
-        "K-KAPI-3"
+        "K-KAPI-3",
+        "K-KAPI-4"
       ],
       "bilinen_acik_bulgular": []
     },
@@ -317,7 +325,8 @@
         "views/AuthScreen.tsx",
         "views/ProfileScreen.tsx",
         "components/profile/",
-        "components/settings/ProfileInfoPage.tsx"
+        "components/settings/ProfileInfoPage.tsx",
+        "services/ghostModeService.ts"
       ],
       "db_nesneleri": [
         "profiles",
@@ -358,7 +367,9 @@
         "services/dashboardHomeService.ts",
         "hooks/useDashboardHome.ts",
         "utils/imageVariants.ts",
-        "hooks/useImageUpload.ts"
+        "hooks/useImageUpload.ts",
+        "tests/unit/acilisBolgeDaraltmasi.test.ts",
+        "shared/matchMapper.ts"
       ],
       "db_nesneleri": [
         "admin_dashboard_stats",
@@ -368,12 +379,15 @@
         "pitches_geo_idx",
         "supabase_realtime",
         "image_variants",
-        "record_image_variants()"
+        "record_image_variants()",
+        "acilis_olcumu",
+        "acilis_olcumu_yaz()"
       ],
       "kontroller": [
         "K-YUK-1",
         "K-YUK-2",
-        "K-YUK-3"
+        "K-YUK-3",
+        "K-YUK-4"
       ],
       "bilinen_acik_bulgular": [
         "M-P0-9",
@@ -466,7 +480,8 @@
       "garanti_ettigi": [
         "Demo veri gerçek veriyle karışmaz",
         "Demo veri denetim raporlarını kirletmez (K-10.8)",
-        "Demo veri gerçek sistemin kurallarına uyar"
+        "Demo veri gerçek sistemin kurallarına uyar",
+        "Demo kullanicinin kurdugu mac otomatik demo isaretlenir (bir kez demo, hep demo)"
       ],
       "dosyalar": [
         "services/ownerDemoService.ts",
@@ -474,14 +489,16 @@
         "scripts/seeds/"
       ],
       "db_nesneleri": [
+        "demo_isareti_mac",
+        "demo_mode_enabled",
         "matches.isDemo",
-        "demo_mode_enabled"
+        "trg_demo_isareti_mac"
       ],
       "kontroller": [
         "K-DEMO-1"
       ],
       "bilinen_acik_bulgular": [],
-      "not": "P-3 (3 Agustos 2026): 6 tabloya is_demo sutunu + kandirilamayan tetikleyiciler eklendi. Demo olcutu: @oyna.app e-postasi (kaynak: demo_ekosistem_seed.sql, canlida 29/3/1 olarak dogrulandi). Artik denetim demo haric calisabiliyor. Olcum: panelde gorunen 15.860 TL'nin 13.940 TL'si demoymus, gercek para 1.920 TL."
+      "not": "P-3 (3 Agustos 2026): 6 tabloya is_demo sutunu + kandirilamayan tetikleyiciler eklendi. Demo olcutu: @oyna.app e-postasi (kaynak: demo_ekosistem_seed.sql, canlida 29/3/1 olarak dogrulandi). Artik denetim demo haric calisabiliyor. Olcum: panelde gorunen 15.860 TL'nin 13.940 TL'si demoymus, gercek para 1.920 TL.\n\n5 Agustos 2026 — K-DEMO-1 EKSIGI KAPATILDI: profiles.is_demo bir tetikleyiciyle otomatik doluyordu ama matches.\"isDemo\" boyle bir tetikleyiciye SAHIP DEGILDI. Demo bir kullanicinin kurdugu mac 'gercek' gorunuyordu (canlida 22 macin 1'i tam olarak bu durumdaydi) ve yeni kurulan 'basarili mac' metrigi onu gercek sayacakti. Tetikleyici eklendi, gecmis duzeltildi, metrige ikinci kat koruma kondu."
     },
     {
       "id": "B13",
@@ -510,7 +527,8 @@
         "views/OwnerPanel.tsx",
         "views/owner/",
         "hooks/useOwnerEntitlements.ts",
-        "supabase/functions/admin-owner-credentials/"
+        "supabase/functions/admin-owner-credentials/",
+        "views/owner/PitchManager.tsx"
       ],
       "db_nesneleri": [
         "pitches",
@@ -615,26 +633,42 @@
       "garanti_ettigi": [
         "Kritik tabloların her gece tam kopyası alınır ve 7 gün saklanır",
         "Yedek alınmazsa panel kırmızı yanar — sessizce durmuş bir yedek, yedeksizlikten kötüdür",
-        "Her migration dosyasında geri alma adımları yazılıdır"
+        "Her migration dosyasında geri alma adımları yazılıdır",
+        "Bozuk bir surum yayinlandiginda panelden ayni dakika durdurulabilir",
+        "Kapi ACIK arizalanir: sunucuya ulasilamazsa uygulama NORMAL acilir",
+        "Yonetim paneli kilitlenmez — bakimi acan kisi onu kapatabilir",
+        "Bakim acik kaldiginda panel uyarir (suresiz bakim ayrica isaretlenir)"
       ],
       "dosyalar": [
+        "admin-panel/views/components/KapiDurumu.tsx",
+        "components/UygulamaKapisi.tsx",
         "supabase/migrations/20260804120000_sre1_gecelik_yedek.sql",
-        "supabase/migrations/20260804130000_sre1_yedek_saglik_kontrolu.sql"
+        "supabase/migrations/20260804130000_sre1_yedek_saglik_kontrolu.sql",
+        "supabase/migrations/20260805183708_uygulama_kapisi.sql",
+        "supabase/migrations/20260805183804_uygulama_kapisi_bozuk_surum_kilitlemesin.sql",
+        "supabase/migrations/20260805190910_demo_sizintisi_ve_kapi_ayarlari.sql",
+        "utils/uygulamaKapisi.ts"
       ],
       "db_nesneleri": [
+        "gecelik_yedek",
+        "kapi_sagligi",
+        "settings.storeUrlAndroid",
+        "settings.storeUrlIos",
+        "surum_kucuk_mu",
+        "uygulama_kapisi",
         "yedek",
-        "yedek.kapsam",
         "yedek.gunluk_al",
-        "yedek_durumu",
-        "gecelik_yedek"
+        "yedek.kapsam",
+        "yedek_durumu"
       ],
       "kontroller": [
+        "K-KAPI-3",
         "K-YEDEK-1"
       ],
       "bilinen_acik_bulgular": [
         "SRE-8"
       ],
-      "not": "Bu yapi tasi 4 Agustos 2026'da dogdu. SRE turu tek GERI ALINAMAZ riski buldu: ucretsiz planda otomatik yedek garantisi yok ve veritabaninda artik GERCEK PARA var. Gecelik ic kopya (S-1=a) kuruldu. DURUST SINIR: yanlis migration / kazara silme / bozulan veri 7 gune kadar geri alinir; veritabaninin TAMAMEN gitmesi kapsanmaz (kopya ayni veritabaninda). Tam guvence icin haftalik DIS kopya (S-1=b) veya Pro plan gerekir. SRE-8 hala acik: geri yukleme hic PROVA edilmedi."
+      "not": "Bu yapi tasi 4 Agustos 2026'da dogdu. SRE turu tek GERI ALINAMAZ riski buldu: ucretsiz planda otomatik yedek garantisi yok ve veritabaninda artik GERCEK PARA var. Gecelik ic kopya (S-1=a) kuruldu. DURUST SINIR: yanlis migration / kazara silme / bozulan veri 7 gune kadar geri alinir; veritabaninin TAMAMEN gitmesi kapsanmaz (kopya ayni veritabaninda). Tam guvence icin haftalik DIS kopya (S-1=b) veya Pro plan gerekir. SRE-8 hala acik: geri yukleme hic PROVA edilmedi.\n\n5 Agustos 2026 — UYGULAMA KAPISI: bakim modu ve zorunlu guncelleme kuruldu. Once anahtar VARDI ama uygulama okumuyordu; zorunlu guncelleme hic yoktu. Kurucu kararlari: 1A tam kilit · 2A iki kademe (onerilen + zorunlu) · 3 magaza+destek cikisi · 4 herkese (oyuncu/tesis/gorevli). Canlida yakalanan hata: rakamsiz surum metni ('bozuk') kullaniciyi KILITLIYORDU (bos metin 0 sayilip esigin altinda kaliyordu); duzeltildi ve testle kilitlendi."
     },
     {
       "id": "B17",
@@ -645,16 +679,23 @@
         "Uygulama bir kullanıcının telefonunda çöktüğünde kayda geçer — kullanıcının bize yazmasını beklemeyiz",
         "Hata kayıtları üçüncü tarafa GÖNDERİLMEZ; kendi veritabanımızda kalır",
         "Kişisel bilgi (e-posta, telefon, kart, oturum anahtarı) kaydedilmeden önce hem tarayıcıda hem sunucuda silinir",
-        "Bozuk bir ekran sel gibi kayıt üretse bile sistem boğulmaz (saatte aynı hatadan 20, toplamda 500 sınırı)"
+        "Bozuk bir ekran sel gibi kayıt üretse bile sistem boğulmaz (saatte aynı hatadan 20, toplamda 500 sınırı)",
+        "Ana vaadin dort akisi (kaptan · oyuncu · kiralama · tesis) adim adim olculur",
+        "\"Basarili mac\" metrigi olay kaydindan degil GERCEK veriden hesaplanir",
+        "Uygulama olcum yazmayi birakirsa panel kirmizi yanar — sessizlik 'kimse kullanmiyor' diye okunmaz"
       ],
       "dosyalar": [
-        "utils/observability.ts",
-        "components/ErrorBoundary.tsx",
         "admin-panel/views/components/CokmeKayitlari.tsx",
+        "admin-panel/views/components/Huni.tsx",
         "admin-panel/views/components/SistemSagligi.tsx",
+        "components/ErrorBoundary.tsx",
+        "shared/olayKatalogu.ts",
         "supabase/migrations/20260804140000_sre3_cokme_kaydi.sql",
         "supabase/migrations/20260804150000_sre3_ek_bilgi_temizligi.sql",
-        "supabase/migrations/20260804160000_sre3_gizlendi_etiketi_duzeltmesi.sql"
+        "supabase/migrations/20260804160000_sre3_gizlendi_etiketi_duzeltmesi.sql",
+        "supabase/migrations/20260805181455_olcum_huni_sistemi.sql",
+        "utils/observability.ts",
+        "utils/olcum.ts"
       ],
       "db_nesneleri": [
         "istemci_hatalari",
@@ -668,16 +709,28 @@
         "sistem_saglik_calistir",
         "sistem_saglik_ozet",
         "sistem_saglik_gunluk",
-        "sistem_saglik_ek_kontroller"
+        "sistem_saglik_ek_kontroller",
+        "olay_tanimlari",
+        "urun_olaylari",
+        "urun_olaylari_gunluk",
+        "olay_yaz",
+        "huni_ozeti",
+        "basarili_mac_ozeti",
+        "olcum_sagligi",
+        "olcum_gunluk_ozet_uret",
+        "olcum_kayitlarini_temizle",
+        "olcum_gunluk_ozet",
+        "olcum_temizlik"
       ],
       "kontroller": [
-        "K-COKME-1"
+        "K-COKME-1",
+        "K-OLCUM-1"
       ],
       "bilinen_acik_bulgular": [
         "SRE-2",
         "SRE-5"
       ],
-      "not": "Bu yapi tasi 4 Agustos 2026'da dogdu. SRE turu olctu: 391 dosyada yalnizca 2 trackEvent ve 6 captureError vardi VE hicbiri bir yere gitmiyordu — utils/observability.ts Sentry icin yazilmis ama anahtar yoktu, yani her cagri sessiz no-op'tu. ErrorBoundary ekranda 'sorun Oyna tarafina iletildi' yazdigi halde iletilmiyordu. S-3 karari 'guvenli olsun': ucuncu tarafa veri gonderilmez, kendi veritabanimiza yazilir. Ayrica artik yalnizca elle cagrilan yerler degil, YAKALANMAMIS tum hatalar da toplanir (window.onerror + unhandledrejection). SRE-2 hala acik: alarm kurucunun telefonuna ULASAMAZ, panele bakmasi gerekir (S-2 = 'bu oturumda e-posta yok')."
+      "not": "Bu yapi tasi 4 Agustos 2026'da dogdu. SRE turu olctu: 391 dosyada yalnizca 2 trackEvent ve 6 captureError vardi VE hicbiri bir yere gitmiyordu — utils/observability.ts Sentry icin yazilmis ama anahtar yoktu, yani her cagri sessiz no-op'tu. ErrorBoundary ekranda 'sorun Oyna tarafina iletildi' yazdigi halde iletilmiyordu. S-3 karari 'guvenli olsun': ucuncu tarafa veri gonderilmez, kendi veritabanimiza yazilir. Ayrica artik yalnizca elle cagrilan yerler degil, YAKALANMAMIS tum hatalar da toplanir (window.onerror + unhandledrejection). SRE-2 hala acik: alarm kurucunun telefonuna ULASAMAZ, panele bakmasi gerekir (S-2 = 'bu oturumda e-posta yok').\n\n5 Agustos 2026 — OLCUM/HUNI: prensip 1.6'nin ('Olcum zorunludur') karsiligi kuruldu. 20 olay, 4 huni, kendi veritabanimiza yazilir. Kurucu kararlari: dort huni de olculur; 'basarili mac' = kadro doldu + para toplandi + saati gecti (+ iptal yok); kayitta kullanici kimligi tutulur; panel kirilimlari tarih/ilce/yeni-eski/telefon. P-0 geregi olcumun kendisi de denetlenir (olcum_sagligi)."
     }
   ]
 }

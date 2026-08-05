@@ -1,17 +1,25 @@
 // ════════════════════════════════════════════════════════════════════════════
-// PROFİL DÜZENLEME · TEK KAPI
+// PROFİL DÜZENLEME · İKİ KAPI, TEK KATMAN, TEK KAYIT YOLU
 // ════════════════════════════════════════════════════════════════════════════
 //
-// Kullanıcı kararı (2026-08): profili düzenlemenin TEK yeri Ayarlar →
-// Bilgilerim. Profil ekranı artık salt gösterir.
+// KARARIN GEÇMİŞİ (iki adım):
+//  1) 2026-08 başı — "profili düzenlemenin TEK yeri Ayarlar → Bilgilerim".
+//     Sebep: o gün İKİ kapı vardı ve ikisi FARKLI alan kümesi düzenliyordu
+//     (Profil → "Düzenle": mevki/tanıtım/doğum tarihi/cinsiyet/stil/seviye ·
+//     Ayarlar → "Profil Bilgileri": fotoğraf/ad/doğum tarihi/e-posta/şifre).
+//     Doğum tarihi ikisinde de vardı; hangisinin kazandığı sıraya bağlıydı.
+//  2) 2026-08 sonu — kullanıcı kararı: "Profil ekranında üstteki profil
+//     bilgilerinin olduğu kutuya basınca profili düzenleme ekranı gelsin."
+//     Kapı yeniden açıldı.
 //
-// NEDEN TEST: karar bir sorunu kapattı. Eskiden İKİ kapı vardı ve ikisi
-// FARKLI alan kümesi düzenliyordu —
-//   • Profil → "Düzenle": mevki, tanıtım, doğum tarihi, cinsiyet, oyun
-//     stili, seviye
-//   • Ayarlar → "Profil Bilgileri": fotoğraf, ad, doğum tarihi, e-posta, şifre
-// Doğum tarihi İKİSİNDE de vardı; hangisinin kazandığı sıraya bağlıydı.
-// Bir sonraki oturum "profilde düzenle düğmesi yok, ekleyeyim" derse burası
+// ASIL KORUNAN ŞEY KAPI SAYISI DEĞİLDİ: iki kapının farklı davranmasıydı.
+// Bu yüzden kural artık şudur ve test onu bekler:
+//   • İki kapı da AYNI katmanı açar (ProfileEditSheet).
+//   • İki kapı da AYNI kayıt yolundan geçer (userService · saveProfileEdit) —
+//     seviye beyanının ayrı RPC kapısı ve "fotoğrafı yalnız değiştiyse yaz"
+//     inceliği orada, tek yerde durur.
+//   • Kaydetme sözleşmesi (hata YUKARI fırlatılır) iki ekranda da aynıdır.
+// Bir sonraki oturum ekranlardan birine kendi kayıt kodunu yazarsa burası
 // kırmızıya döner.
 
 import { describe, it, expect } from 'vitest';
@@ -32,22 +40,31 @@ const yorumsuz = (s: string) => s.split('\n')
   })
   .join('\n');
 
-describe('profil düzenleme yalnız Ayarlar altında', () => {
-  it('Profil ekranı düzenleme katmanını AÇMIYOR', () => {
-    expect(yorumsuz(profil)).not.toContain('ProfileEditSheet');
+const servis = oku('services/userService.ts');
+
+describe('profil düzenleme — iki kapı, tek katman', () => {
+  it('Profil ekranındaki kimlik kutusu düzenleme katmanını açıyor', () => {
+    // Kullanıcı kararı: "kutuya basınca profili düzenleme ekranı gelsin".
+    expect(yorumsuz(profil)).toContain('ProfileEditSheet');
+    expect(yorumsuz(profil)).toContain('onPress=');
   });
 
-  it('Profil ekranı kayıt YAPMIYOR — salt gösterir', () => {
-    // Yazma çağrıları buradan tamamen çıktı; ekran yalnız okur.
-    for (const yazma of ['updateProfileBasics', 'setMySelfSkill', 'updateProfileName']) {
-      expect(yorumsuz(profil), `${yazma} profil ekranına geri gelmiş`).not.toContain(yazma);
-    }
-  });
-
-  it('Ayarlar → Bilgilerim düzenleme katmanının TEK sahibi', () => {
+  it('Ayarlar → Bilgilerim de AYNI katmanı açıyor', () => {
     expect(bilgilerim).toContain('ProfileEditSheet');
-    expect(bilgilerim).toContain('updateProfileBasics');
-    expect(bilgilerim).toContain('setMySelfSkill');
+  });
+
+  it('iki ekran da AYNI kayıt yolundan geçiyor', () => {
+    // Kayıt mantığı ekranların içinde ayrı ayrı yazılırsa er geç ayrışır.
+    for (const [ad, kaynak] of [['Profil', profil], ['Bilgilerim', bilgilerim]] as const) {
+      expect(yorumsuz(kaynak), `${ad} ekranı ortak kayıt yolunu kullanmıyor`).toContain('saveProfileEdit');
+      // `saveEdit` GÖVDESİ kendi yazma çağrılarını kurmamalı. (Bilgilerim'de
+      // ayrıca bir fotoğraf yükleme yolu var — o katmanın kaydı değil, kendi
+      // başına bir eylem; bu yüzden kural gövdeyle sınırlı.)
+      const govde = yorumsuz(kaynak).slice(yorumsuz(kaynak).indexOf('const saveEdit')).slice(0, 1600);
+      for (const yazma of ['updateProfileBasics(', 'setMySelfSkill(']) {
+        expect(govde, `${ad} ekranı kendi kaydını yazmış: ${yazma}`).not.toContain(yazma);
+      }
+    }
   });
 
   it('Ayarlar menüsündeki giriş "Bilgilerim" adını taşıyor', () => {
@@ -59,14 +76,20 @@ describe('profil düzenleme yalnız Ayarlar altında', () => {
     // `setMySelfSkill` RPC'si aralığı doğrular ve NULL'u reddeder: beyan bir
     // kez verildikten sonra silinemez (kadro çipi sözleşmesi). Düz
     // `updateProfileBasics` ile yazılırsa bu kapı atlanmış olur.
-    expect(bilgilerim).toMatch(/if \(v\.selfSkill != null[\s\S]{0,120}setMySelfSkill\(v\.selfSkill\)/);
+    expect(servis).toMatch(/if \(v\.selfSkill != null[\s\S]{0,140}setMySelfSkill\(v\.selfSkill\)/);
   });
 
-  it('kaydetme sözleşmesi korunuyor — hata YUKARI fırlatılır', () => {
+  it('fotoğraf yalnız DEĞİŞTİYSE yazılıyor', () => {
+    expect(servis).toContain('avatarChanged');
+  });
+
+  it('kaydetme sözleşmesi İKİ ekranda da korunuyor — hata YUKARI fırlatılır', () => {
     // Katman "hata fırlatmadı = kaydedildi" sözleşmesiyle çalışır. Yutulursa
     // sahte "Kaydedildi" gösterip değişiklikleri sessizce kaybederdi.
-    const govde = bilgilerim.slice(bilgilerim.indexOf('const saveEdit'));
-    expect(govde.slice(0, 1600)).toContain('throw e;');
+    for (const [ad, kaynak] of [['Profil', profil], ['Bilgilerim', bilgilerim]] as const) {
+      const govde = kaynak.slice(kaynak.indexOf('const saveEdit'));
+      expect(govde.slice(0, 1600), `${ad} ekranı hatayı yutuyor`).toContain('throw e;');
+    }
   });
 });
 
@@ -85,8 +108,10 @@ describe('profil ekranı — tasarım kararları', () => {
   it('kaydırıcı flex kolon DEĞİL — uzun içerik sıkışmaz', () => {
     // Flex kolonda çocuklar varsayılan olarak sıkışır ve kaydırma üretilmez;
     // tests/visual/icKaydirma bunu yakalamıştı.
+    // Aralık DEĞERİ değişebilir (kullanıcı 12px'ten 18px'e çıkarttı); kural
+    // "flex kolon değil, blok akış" olmasıdır — yani `space-y-*` kullanılması.
     const blok = profil.slice(profil.indexOf('overflow-y-auto') - 200, profil.indexOf('overflow-y-auto') + 200);
-    expect(blok).toContain('space-y-3');
+    expect(blok).toMatch(/space-y-\S+/);
     expect(blok).not.toMatch(/overflow-y-auto[^"]*flex flex-col/);
   });
 });

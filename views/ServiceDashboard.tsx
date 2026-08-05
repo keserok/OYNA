@@ -37,6 +37,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import ServiceProfile from './ServiceProfile';
 import ServiceSettings from './ServiceSettings';
 import { auth } from '../supabaseAuth';
+import { useAsagiCekYenile } from '../hooks/useAsagiCekYenile';
+import { YenileniyorSeridi } from '../components/common/YenileniyorSeridi';
 import { supabase } from '../supabaseClient';
 import { useAppStore } from '../store';
 import { subscribeToOpenMatches, getMatchDetails } from '../services/matchService';
@@ -77,8 +79,22 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
     setIsNotificationsOpen,
     updateOwnProvider,
     adminMatches,
+    myMatches: benimMaclarim,
     applyMatchLocal
   } = useAppStore();
+
+  // [YUK-2] ATAMA LİSTESİNİN KAYNAĞI.
+  // adminMatches artık BÖLGEYE DARALTILMIŞ bir listedir; tek başına
+  // kullanılsaydı kalecinin/hakemin BAŞKA İLÇEDEKİ görevi panelinden düşerdi.
+  // get_my_matches() RPC'si K-12.2 ile gk_id / away_gk_id / refereeId
+  // atamalarını kapsıyor ve bölgeden bağımsız. İkisinin BİRLEŞİMİ alınır:
+  // aşağıdaki sahiplik süzgeci ikisine de uygulandığından birleşim yanlış
+  // görev ekleyemez, yalnız eksiği tamamlar.
+  const tumMaclar = useMemo(() => {
+    const birlesim = new Map<string, any>();
+    [...adminMatches, ...benimMaclarim].forEach((m: any) => { if (m?.id) birlesim.set(m.id, m); });
+    return Array.from(birlesim.values());
+  }, [adminMatches, benimMaclarim]);
   const [activeTab, setActiveTab] = useState<Tab>('HOME');
   const [isAvailable, setIsAvailable] = useState(true);
   const [openMatches, setOpenMatches] = useState<any[]>([]);
@@ -193,7 +209,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
   // Bana atanmış, iptal/tamamlanmamış maçlar — başlangıca göre sıralı.
   const myAssignedMatches = useMemo(() => {
       if (!userProfile) return [];
-      return adminMatches.filter((m: any) => {
+      return tumMaclar.filter((m: any) => {
           const isMyMatch = isRef
               ? m.refereeId === userProfile.id
               : (m.gkId === userProfile.id || m.gk_id === userProfile.id
@@ -204,7 +220,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
       }).sort((a: any, b: any) =>
           (parseMatchDateTime(a.date, a.time)?.getTime() ?? Infinity) -
           (parseMatchDateTime(b.date, b.time)?.getTime() ?? Infinity));
-  }, [adminMatches, userProfile, isRef]);
+  }, [tumMaclar, userProfile, isRef]);
 
   // Henüz BİTMEMİŞ maçlar. Eskiden sınır maç BAŞLANGICIydı; maç saati gelince
   // maç listeden düşüyor, hakem skoru girecekken kartı kaybediyordu.
@@ -249,7 +265,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
       return incomingRequests
           .filter(r => r.status === 'APPLIED')
           .map(r => {
-              const m: any = adminMatches.find((am: any) => am.id === r.matchId) || {};
+              const m: any = tumMaclar.find((am: any) => am.id === r.matchId) || {};
               return {
                   requestId: r.id,
                   id: r.matchId,
@@ -260,7 +276,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                   fee: r.fee,
               };
           });
-  }, [incomingRequests, adminMatches]);
+  }, [incomingRequests, tumMaclar]);
 
   // Sağlayıcının zaten başvurduğu/atandığı maçlar → "BAŞVUR" butonu "Başvuruldu"ya döner
   const appliedMatchIds = useMemo(
@@ -418,6 +434,18 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
     };
   }, [role, isRef]);
 
+  // AŞAĞI ÇEKİP YENİLE (kullanıcı kararı: kaleci/hakem paneli de dâhil).
+  // Sağlayıcı gün içinde "yeni teklif geldi mi?" diye sık bakar; tazelemenin
+  // tek yolu ekrandan çıkıp girmekti. Hangi sekme açıksa ONUN verisi tazelenir —
+  // hepsini birden çekmek gereksiz istek ve yavaş bir jest demektir.
+  const cekerekYenileniyor = useAsagiCekYenile(async () => {
+    if (activeTab === 'WALLET') {
+      await Promise.all([fetchEarnings(), fetchPayoutData(), fetchWalletHistory()]);
+    } else {
+      await fetchOffers();
+    }
+  });
+
   const fetchOffers = async () => {
     // Bug A: cüzdan/teklif işlemlerinde kimlik daima gerçek oturum uid'i olmalı.
     const uid = auth.currentUser?.uid;
@@ -432,7 +460,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
         .eq('status', 'PENDING');
       if (!error && data) {
         const mappedOffers = data.map((o: any) => {
-          const match: any = adminMatches.find((m: any) => m.id === o.match_id);
+          const match: any = tumMaclar.find((m: any) => m.id === o.match_id);
           return {
             id: o.id,
             matchId: o.match_id,
@@ -765,7 +793,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
       if (!selectedOffer) return;
 
       // Local double-booking/conflict check
-      const match = adminMatches.find(m => m.id === selectedOffer.matchId);
+      const match = tumMaclar.find((m: any) => m.id === selectedOffer.matchId);
       if (match) {
           const hasConflict = myUpcomingMatches.some(um => um.date === match.date && um.time === match.time);
           if (hasConflict) {
@@ -2066,26 +2094,27 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
   );
 
   return (
-    <div className="h-full flex flex-col bg-[#0A0E14] relative overflow-hidden">
+    // KAYDIRMA KÖK ÇÖZÜMÜ (kullanıcı kararı, 4 Ağustos 2026 — üçüncü şikâyet):
+    // "Tüm ekran parmakla kaydırılabilir olmalı." Eski model "sabit kabuk +
+    // içte kayan kutu" idi; parmak başlığa, sekme çubuğuna ya da içeriği kısa
+    // bir sekmeye denk gelince HİÇBİR ŞEY kaymıyordu (html/body bilinçli
+    // kilitli, iç kutu da o noktada yok). Yeni model Ayarlar/Profil ile aynı:
+    // ekranın TAMAMI App'in görünüm kaydırıcısında akar — başlık dahil her
+    // nokta parmak yüzeyidir. Alt gezinme `fixed` olduğundan yerinde kalır.
+    <div className="min-h-screen flex flex-col bg-[#0A0E14] relative">
       
-      {/* Profil alt ekranı.
-          KAYDIRMA: Bu ekranların kökü `min-h-screen`dir — yani App'in görünüm
-          kaydırıcısında SAYFA BOYU akmak üzere yazılmışlar. Burada ise
-          `overflow-hidden` bir kabın içine konuyorlardı: taşan kısım kesiliyor
-          ve parmakla ULAŞILAMIYORDU (ölçüldü: Ayarlar'da 71px kesik, Profil'de
-          kaydırma hiç yok). Kendi kaydırıcılarına alındılar. */}
+      {/* Profil ve Ayarlar alt ekranları `min-h-screen` sayfalardır; kök artık
+          sayfa akışında olduğundan DOĞRUDAN akarlar — ara kaydırıcı gerekmez
+          (gerekseydi iki iç içe kaydırıcı parmak hareketini bölerdi). */}
       {activeTab === 'PROFILE_VIEW' && (
-        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain custom-scrollbar">
-          <ServiceProfile role={role} onBack={() => setActiveTab('MENU')} />
-        </div>
+        <ServiceProfile role={role} onBack={() => setActiveTab('MENU')} />
       )}
 
-      {/* Settings sub-view */}
       {activeTab === 'SETTINGS_VIEW' && (
-        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain custom-scrollbar">
-          <ServiceSettings role={role} onBack={() => setActiveTab('MENU')} onLogout={onLogout ?? onBack} />
-        </div>
+        <ServiceSettings role={role} onBack={() => setActiveTab('MENU')} onLogout={onLogout ?? onBack} />
       )}
+
+      <YenileniyorSeridi aktif={cekerekYenileniyor} />
 
       {activeTab !== 'PROFILE_VIEW' && activeTab !== 'SETTINGS_VIEW' && (<>
       {/* Animated Background - Color shifts based on role */}
@@ -2121,7 +2150,9 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
          </button>
       </header>
 
-      <main className="flex-1 overflow-y-auto custom-scrollbar relative z-10">
+      {/* İç kaydırıcı YOK: sekme içeriği sayfayla akar (kök yorumuna bak).
+          Alt gezinme payını sekme görünümleri kendileri taşıyor (pb-40). */}
+      <main className="flex-1 relative z-10">
          {activeTab === 'HOME' && renderHomeView()}
          {activeTab === 'JOBS' && renderJobFeedView()}
          {activeTab === 'WALLET' && renderWalletView()}

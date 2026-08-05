@@ -6,6 +6,8 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { MatchListing } from '../types';
 import { useAppStore } from '../store';
+import { useAsagiCekYenile } from '../hooks/useAsagiCekYenile';
+import { YenileniyorSeridi } from '../components/common/YenileniyorSeridi';
 import { supabase } from '../supabaseClient';
 import { subscribeToOpenMatches, fetchNearbyMatches, resolvePrivateMatch, toPrivateMatchErrorMessage, getMatchDetails } from '../services/matchService';
 import { EmptyState } from '../components/common/StatusState';
@@ -28,6 +30,7 @@ import { PLAY_STYLE_META } from './onboarding/onboardingShared';
 import { formatMatchDuration, realMatchMinutes, matchStartMs } from '../shared/matchTiming';
 import { trUpper } from '../utils/trUpper';
 import { formatTRYShort } from '../utils/formatTRY';
+import { olayYaz } from '../utils/olcum';
 
 // Normalize mentalite ('Ciddi'|'Taktiksel'|'Rahat') → PLAY_STYLE_META anahtarı.
 const MENTALITY_KEY = { Ciddi: 'ciddi', Taktiksel: 'taktiksel', Rahat: 'rahat' } as const;
@@ -37,6 +40,8 @@ interface MatchDiscoveryProps {
 }
 
 const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onSelect }) => {
+  // ÖLÇÜM · oyuncu hunisi 1/5 — "maç listesini açtı".
+  useEffect(() => { olayYaz('oyuncu_liste_acildi'); }, []);
   const {
     adminMatches,
     navigateTo,
@@ -98,6 +103,13 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onSelect }) => {
   const [dna, setDna] = useState<DiscoveryFilters>(EMPTY_FILTERS);
 
   const [nearbyMatches, setNearbyMatches] = useState<any[]>([]);
+  // AŞAĞI ÇEKİP YENİLE: yakındaki maç sorgusu bir efektle çalışıyor; jest bu
+  // sayacı artırarak onu yeniden koşturur (ayrı bir kopya sorgu yazmak, iki
+  // farklı "maç çekme" yolu demek olurdu — biri er geç geride kalırdı).
+  const [yenilemeSayaci, setYenilemeSayaci] = useState(0);
+  const cekerekYenileniyor = useAsagiCekYenile(
+    () => new Promise<void>((coz) => { setYenilemeSayaci((n) => n + 1); setTimeout(coz, 600); }),
+  );
   // [P-5 / S-1] Kapsam yoksa gosterilecek yonlendirme icin.
   const [showRegionPicker, setShowRegionPicker] = useState(false);
   const [konumIsteniyor, setKonumIsteniyor] = useState(false);
@@ -151,7 +163,7 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onSelect }) => {
     });
     }, 300);
     return () => { cancelled = true; clearTimeout(timer); };
-  }, [userLocation, selectedRegions, searchRadius]);
+  }, [userLocation, selectedRegions, searchRadius, yenilemeSayaci]);
 
   // [P-5 / K-12.1 / S-1] Kapsam yoksa ARTIK ÜLKE GENELİ GÖSTERİLMİYOR.
   // Eskiden bölge de konum da yoksa global adminMatches listesine düşülüyordu;
@@ -392,6 +404,7 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onSelect }) => {
               "Top Oyna" başlığı çentiğin/Dynamic Island'ın altına giriyordu.
               Kural ikisinden büyüğünü alır (bkz. index.css) — Sahalar ekranında
               da aynısı kullanılıyor. */}
+          <YenileniyorSeridi aktif={cekerekYenileniyor} />
           <header className="relative z-50 border-b border-white/5 px-5 pt-safe-baslik pb-4">
             <div className="flex items-center justify-between">
               {/* IP-14: sekme kökü — geri oku kaldırıldı. */}

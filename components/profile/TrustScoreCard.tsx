@@ -23,7 +23,7 @@ export const TrustScoreCard: React.FC<TrustScoreCardProps> = ({ score, note }) =
         <>
             <button
                 onClick={() => setSheetOpen(true)}
-                className="w-full rounded-3xl p-4 bg-surface-1 shadow-[0_10px_30px_rgba(0,0,0,0.3)] flex items-center gap-3.5 hover:bg-white/[0.06] active:scale-[0.99] transition-all"
+                className="w-full rounded-3xl p-[18px] bg-surface-1 flex items-center gap-3.5 hover:bg-white/[0.06] active:scale-[0.99] transition-all"
             >
                 <div className="relative w-[46px] h-[46px] flex items-center justify-center shrink-0">
                     <svg width="46" height="46" viewBox="0 0 46 46" className="absolute inset-0 -rotate-90">
@@ -36,23 +36,25 @@ export const TrustScoreCard: React.FC<TrustScoreCardProps> = ({ score, note }) =
                             strokeDashoffset={RING_C * (1 - clamped / 100)}
                         />
                     </svg>
-                    <span className="relative text-[0.9375rem] font-bold text-[#F5F3EE]">{clamped}</span>
+                    {/* Rakam Montserrat 800 italik — tasarımda halkanın içindeki
+                        puan başlık ailesiyle yazılır, gövde yazısıyla değil. */}
+                    <span className="relative text-[0.9375rem] font-[Montserrat] font-extrabold italic text-white">{clamped}</span>
                 </div>
                 <div className="flex-1 text-left min-w-0">
-                    <p className="text-[0.6875rem] font-semibold tracking-[0.14em] uppercase text-[#F5F3EE]/[0.55] mb-[3px]">Güven Puanı</p>
-                    <p className="text-[0.8125rem] italic text-[#F5F3EE]/[0.6] leading-[1.45]">
+                    <p className="text-[0.6875rem] tracking-[0.14em] uppercase text-[#F5F3EE]/[0.55] mb-[3px]">Güven Puanı</p>
+                    <p className="text-[0.8125rem] text-[#F5F3EE]/[0.6] leading-[1.45]">
                         {note || 'Fair-play geçmişin ve katılım disiplininle hesaplanır.'}
                     </p>
                 </div>
-                <span aria-hidden className="text-[#F5F3EE]/[0.5] shrink-0">→</span>
+                <span aria-hidden className="text-[#F5F3EE]/[0.5] shrink-0">›</span>
             </button>
 
             {/* Açıklama bottom-sheet'i — portal: üst motion sarmalayıcıların stacking
                 context'i sheet'i BottomNav'ın altına itmesin.
-                `pf-serif` BURAYA AYRICA yazılır: sayfa <body>'ye çizildiği için
-                profil ekranının yazı tipini miras alamaz. */}
+                Yazı tipi ayrıca yazılmaz: onaylı tasarımda profil akışı da
+                uygulamanın geri kalanıyla aynı gövde yazısını (Inter) kullanır. */}
             {sheetOpen && createPortal(
-                <div className="pf-serif fixed inset-0 z-[120] flex items-end justify-center bg-black/70 backdrop-blur-sm" onClick={() => setSheetOpen(false)}>
+                <div className="fixed inset-0 z-[120] flex items-end justify-center bg-black/70 backdrop-blur-sm" onClick={() => setSheetOpen(false)}>
                     <div onClick={(e) => e.stopPropagation()} className="w-full max-w-lg bg-bg-main text-[#F5F3EE] border-t border-white/10 rounded-t-[28px] p-6 pb-10 space-y-4">
                         <div className="w-10 h-1 rounded-full bg-white/20 mx-auto" />
                         <div className="flex items-center justify-between">
@@ -63,7 +65,7 @@ export const TrustScoreCard: React.FC<TrustScoreCardProps> = ({ score, note }) =
                                 <X size={15} />
                             </button>
                         </div>
-                        <p className="text-xs italic text-[#F5F3EE]/[0.6] leading-relaxed">
+                        <p className="text-xs text-[#F5F3EE]/[0.6] leading-relaxed">
                             Güven puanın 0–100 arasındadır ve sahadaki güvenilirliğini özetler. Maç sonu
                             değerlendirmeleri, fair-play geçmişin (kartlar, olaysız maçlar) ve katılım
                             disiplinin (maça gelme, zamanında iptal) puanını belirler.
@@ -76,7 +78,7 @@ export const TrustScoreCard: React.FC<TrustScoreCardProps> = ({ score, note }) =
                             ].map(([title, sub]) => (
                                 <div key={title} className="rounded-2xl p-3.5 bg-surface-1 border border-white/[0.08]">
                                     <p className="text-xs font-semibold text-[#F5F3EE]">{title}</p>
-                                    <p className="text-[0.75rem] italic text-[#F5F3EE]/[0.55] mt-0.5">{sub}</p>
+                                    <p className="text-[0.75rem] text-[#F5F3EE]/[0.55] mt-0.5">{sub}</p>
                                 </div>
                             ))}
                         </div>

@@ -7,9 +7,12 @@ import { auth } from './supabaseAuth';
 
 import { supabase } from './supabaseClient';
 import { trackEvent, captureException } from './utils/observability';
+import { APP_VERSION } from './utils/appVersion';
+import { Capacitor } from '@capacitor/core';
 import type { NotificationPreferences } from './notifications/pushService';
 import { DEFAULT_NOTIFICATION_PREFERENCES } from './notifications/pushService';
-import type { AdminSession } from './admin-panel/services/adminService';
+import type { AdminSession } from './shared/adminKopru';
+import { adminKoprusu, adminKoprusuHazirMi } from './shared/adminKopru';
 
 // (Tek lobi P4) Store'daki Friend tipi ve friends dizisi KALDIRILDI: hiçbir
 // yerde DB'den doldurulmuyordu ve lobi davet modalını boş/mock bırakıyordu.
@@ -517,16 +520,36 @@ export const useAppStore = create<AppState>((set, get) => ({
         new Promise<null>((resolve) => setTimeout(() => resolve(null), ms)),
       ]);
 
+    // [YUK-2] AÇILIŞ ARTIK BÖLGEYE DARALTILIYOR.
+    // activeRegion telefonda saklıdır (loadActiveRegion) — yani açılışın ilk
+    // anında, hiçbir istek beklenmeden bilinir. Bölge yoksa saha/maç sorguları
+    // BOŞ döner; prensip 4.5 gereği ülke geneline düşülmez.
+    const acilisBolgesi = get().activeRegion;
+
+    // [YUK-3] Açılış ölçümü — kaç istek atıldı, ne kadar sürdü.
+    // Amaç: bu görevdeki iyileştirme rakamla görünsün VE ileride biri açılışa
+    // yeni bir yük eklerse Sistem Sağlığı kartında fark edilsin (P-0).
+    const acilisBaslangic = Date.now();
+
     try {
-      const [sessionRes, pitchesRes, matchesRes, myMatchesRes, teamsRes, servicesRes, textsRes] = await Promise.allSettled([
+      // Liste ADLANDIRILDI: ölçümdeki "kaç istek atıldı" sayısı buradan TÜRETİLİR
+      // (`.length`). Elle yazılan bir sayı zamanla koddan sapar ve sessizce yalan
+      // söylerdi; böylece biri buraya yeni bir istek eklerse ölçüm kendiliğinden
+      // artar.  NOT: loadServices tek satır görünür ama İÇİNDE 2 istek yapar
+      // (kaleciler + hakemler) — bu yüzden ayrıca sayılır.
+      const acilisIstekleri = [
         withTimeout(supabase.auth.getSession()),
-        withTimeout(FB.fbGetPitches()),
-        withTimeout(FB.fbGetMatches()),
+        withTimeout(FB.fbGetPitches(acilisBolgesi)),
+        withTimeout(FB.fbGetMatches(acilisBolgesi)),
         withTimeout(FB.fbGetMyMatches()),
-        withTimeout(FB.fbGetTeams()),
         withTimeout(get().loadServices(), 4000),
         withTimeout<any>(Promise.resolve(supabase.from('texts').select('key, value'))),
-      ]);
+      ];
+      const LOADSERVICES_IC_ISTEK = 2; // kaleciler + hakemler
+      const acilisIstekSayisi = acilisIstekleri.length - 1 + LOADSERVICES_IC_ISTEK;
+
+      const [sessionRes, pitchesRes, matchesRes, myMatchesRes, servicesRes, textsRes] =
+        await Promise.allSettled(acilisIstekleri);
 
       if (pitchesRes.status === 'fulfilled' && pitchesRes.value) {
         set({ adminPitches: pitchesRes.value as Pitch[] });
@@ -537,9 +560,11 @@ export const useAppStore = create<AppState>((set, get) => ({
       if (myMatchesRes.status === 'fulfilled' && myMatchesRes.value) {
         set({ myMatches: myMatchesRes.value as MatchListing[] });
       }
-      if (teamsRes.status === 'fulfilled' && teamsRes.value) {
-        set({ adminTeams: teamsRes.value as Team[] });
-      }
+      // [YUK-2] TAKIMLAR AÇILIŞTAN ÇIKARILDI.
+      // fbGetTeams() burada her açılışta çağrılıyordu ama `adminTeams` state'ini
+      // uygulamada HİÇBİR ekran ve yönetim panelinin HİÇBİR sayfası okumuyor —
+      // yani indirilen veri hiç kullanılmıyordu. Takım ekranları kendi scoped
+      // sorgularını kullanıyor (TeamService.fetchMyTeams).
       if (textsRes.status === 'fulfilled' && textsRes.value && !(textsRes.value as any).error) {
         const rows = (textsRes.value as any).data as Array<{ key: string; value: string }> | null;
         if (rows?.length) {
@@ -556,6 +581,41 @@ export const useAppStore = create<AppState>((set, get) => ({
       const degraded = matchesEmpty || pitchesEmpty;
       set({ loadDegraded: degraded });
       if (degraded) trackEvent('initial_load_degraded', { matchesEmpty, pitchesEmpty });
+
+      // [YUK-3] AÇILIŞ ÖLÇÜMÜ.
+      // "Peki bu koruma bozulursa kim söyleyecek?" (P-0) sorusunun cevabı bu
+      // blok: açılışta kaç istek atıldığı ve ne kadar sürdüğü kaydedilir. Biri
+      // ileride buraya yeni bir yük eklerse `istek_sayisi` artar, gece denetimi
+      // (K-YUK-4) bunu görür ve Sistem Sağlığı kartı sarı/kırmızı yanar.
+      const acilisSuresi = Date.now() - acilisBaslangic;
+      const acilisOlcumu = {
+        istek_sayisi: acilisIstekSayisi,
+        sure_ms: acilisSuresi,
+        bolge_biliniyor: !!acilisBolgesi?.city,
+        // Bölge yoksa saha/maç listeleri BOŞ gelir; bu bir hata değil, kuraldır
+        // (prensip 4.5). Ayırt edilebilsin diye ayrıca yazılır.
+        saha_sayisi: (pitchesRes.status === 'fulfilled' && Array.isArray(pitchesRes.value)) ? pitchesRes.value.length : -1,
+        mac_sayisi: (matchesRes.status === 'fulfilled' && Array.isArray(matchesRes.value)) ? matchesRes.value.length : -1,
+      };
+      trackEvent('acilis_yuku', acilisOlcumu);
+
+      // Panelin Sistem Sağlığı kartını besleyen kayıt.
+      //
+      // ÖRNEKLEME: her açılışta yazılsaydı ölçüm sisteminin kendisi ölçtüğü
+      // yüke katkı yapardı (100.000 açılış = 100.000 satır/gün). 20 açılışta 1
+      // yazmak ortancayı bozmaz ama maliyeti 20'de bire indirir.
+      //
+      // ATEŞLE-UNUT: `void` ile beklenmez ve hatası yutulur — ölçüm hiçbir
+      // koşulda açılışı yavaşlatamaz ya da bozamaz.
+      if (Math.random() < 0.05) {
+        void supabase.rpc('acilis_olcumu_yaz', {
+          p_istek_sayisi: acilisIstekSayisi,
+          p_sure_ms: acilisSuresi,
+          p_bolge_biliniyor: !!acilisBolgesi?.city,
+          p_platform: Capacitor.getPlatform(),
+          p_surum: APP_VERSION,
+        }).then(() => { /* sessiz */ }, () => { /* sessiz */ });
+      }
     } catch (e) {
       console.error('Hydration error:', e);
       captureException(e, { where: 'retryInitialLoad' });
@@ -917,14 +977,14 @@ export const useAppStore = create<AppState>((set, get) => ({
     const prev = get().adminPitches;
     set({ adminPitches: [pitch, ...prev] });
     try {
-      const { createPitchAdmin, buildPitchPayloadFromUi } = await import('./admin-panel/services/adminService');
+      const { createPitchAdmin, buildPitchPayloadFromUi } = adminKoprusu();
       try {
         const newId = await createPitchAdmin(buildPitchPayloadFromUi(pitch));
         set({ adminPitches: [{ ...pitch, id: newId }, ...prev] });
       } catch {
         await FB.fbAddPitch(pitch);
         if (get().adminSession) {
-          const { persistAdminLog } = await import('./admin-panel/services/adminService');
+          const { persistAdminLog } = adminKoprusu();
           await persistAdminLog('PITCH_CREATE', 'pitch', pitch.id, pitch.name).catch(() => {});
         }
       }
@@ -934,13 +994,13 @@ export const useAppStore = create<AppState>((set, get) => ({
     const prev = get().adminPitches;
     set({ adminPitches: prev.map(p => p.id === pitch.id ? pitch : p) });
     try {
-      const { updatePitchAdmin, buildPitchPayloadFromUi } = await import('./admin-panel/services/adminService');
+      const { updatePitchAdmin, buildPitchPayloadFromUi } = adminKoprusu();
       try {
         await updatePitchAdmin(pitch.id, buildPitchPayloadFromUi(pitch));
       } catch {
         await FB.fbUpdatePitch(pitch);
         if (get().adminSession) {
-          const { persistAdminLog } = await import('./admin-panel/services/adminService');
+          const { persistAdminLog } = adminKoprusu();
           await persistAdminLog('PITCH_UPDATE', 'pitch', pitch.id, pitch.name).catch(() => {});
         }
       }
@@ -951,13 +1011,13 @@ export const useAppStore = create<AppState>((set, get) => ({
     const pitch = prev.find(p => p.id === id);
     set({ adminPitches: prev.filter(p => p.id !== id) });
     try {
-      const { deletePitchAdmin } = await import('./admin-panel/services/adminService');
+      const { deletePitchAdmin } = adminKoprusu();
       try {
         await deletePitchAdmin(id);
       } catch {
         await FB.fbDeletePitch(id);
         if (get().adminSession && pitch) {
-          const { persistAdminLog } = await import('./admin-panel/services/adminService');
+          const { persistAdminLog } = adminKoprusu();
           await persistAdminLog('PITCH_DELETE', 'pitch', id, pitch.name).catch(() => {});
         }
       }
@@ -976,7 +1036,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     // Kısmi payload tüm kaydı ezmesin: mevcut kayıtla merge et
     set({ adminGoalkeepers: prev.map(g => g.id === gk.id ? { ...g, ...gk } : g) });
     try {
-      const { updateGoalkeeperAdmin } = await import('./admin-panel/services/adminService');
+      const { updateGoalkeeperAdmin } = adminKoprusu();
       await updateGoalkeeperAdmin(gk);
     } catch (e) { set({ adminGoalkeepers: prev }); throw e; }
   },
@@ -1000,13 +1060,13 @@ export const useAppStore = create<AppState>((set, get) => ({
     const gk = prev.find(g => g.id === id);
     set({ adminGoalkeepers: prev.filter(g => g.id !== id) });
     try {
-      const { deleteGoalkeeperAdmin } = await import('./admin-panel/services/adminService');
+      const { deleteGoalkeeperAdmin } = adminKoprusu();
       try {
         await deleteGoalkeeperAdmin(id);
       } catch {
         await FB.fbDeleteGoalkeeper(id);
         if (get().adminSession && gk) {
-          const { persistAdminLog } = await import('./admin-panel/services/adminService');
+          const { persistAdminLog } = adminKoprusu();
           await persistAdminLog('GK_DELETE', 'goalkeeper', id, gk.name).catch(() => {});
         }
       }
@@ -1025,7 +1085,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     // Kısmi payload tüm kaydı ezmesin: mevcut kayıtla merge et
     set({ adminReferees: prev.map(r => r.id === ref.id ? { ...r, ...ref } : r) });
     try {
-      const { updateRefereeAdmin } = await import('./admin-panel/services/adminService');
+      const { updateRefereeAdmin } = adminKoprusu();
       await updateRefereeAdmin(ref);
     } catch (e) { set({ adminReferees: prev }); throw e; }
   },
@@ -1034,13 +1094,13 @@ export const useAppStore = create<AppState>((set, get) => ({
     const ref = prev.find(r => r.id === id);
     set({ adminReferees: prev.filter(r => r.id !== id) });
     try {
-      const { deleteRefereeAdmin } = await import('./admin-panel/services/adminService');
+      const { deleteRefereeAdmin } = adminKoprusu();
       try {
         await deleteRefereeAdmin(id);
       } catch {
         await FB.fbDeleteReferee(id);
         if (get().adminSession && ref) {
-          const { persistAdminLog } = await import('./admin-panel/services/adminService');
+          const { persistAdminLog } = adminKoprusu();
           await persistAdminLog('REF_DELETE', 'referee', id, ref.name).catch(() => {});
         }
       }
@@ -1048,10 +1108,26 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   // Load Services from DB
+  //
+  // [YUK-1] YÖNETİM PANELİ AÇILIŞ YOLUNDAN ÇIKARILDI.
+  // ────────────────────────────────────────────────────────────────────
+  // Eskiden burada admin-panel/services/adminService dinamik olarak import
+  // edilip fetchGoalkeepersAdmin/fetchRefereesAdmin çağrılıyordu. Bu fonksiyon
+  // açılışta (retryInitialLoad) HER kullanıcı için çalıştığından maliyeti şuydu:
+  //   • adminService yığını (57,3 kB) + matchMapper (4,0 kB) = ~61 kB panel kodu
+  //     her oyuncunun telefonuna HER AÇILIŞTA iniyordu,
+  //   • admin_fetch_goalkeepers/_referees RPC'leri `is_platform_admin()` değilse
+  //     'UNAUTHORIZED' fırlatır — yani yönetici olmayan herkes için bu iki çağrı
+  //     TASARIM GEREĞİ başarısız oluyor, sonra isRpcDenied yakalayıp zaten
+  //     aşağıdaki doğrudan tablo okumasına düşüyordu.
+  // Yani sonuç veri AYNIYDI; fark yalnız boşa inen kod ve boşa giden iki istekti.
+  //
+  // RPC `SETOF goalkeepers` döndürüyor, yani doğrudan okumayla kolon kolon aynı.
+  // Yönetici de veri kaybetmez: goalkeepers_select_auth / referees_select_auth
+  // politikaları `is_platform_admin()` dalıyla onaysız kayıtları da açar.
   loadServices: async () => {
     try {
-      const { fetchGoalkeepersAdmin, fetchRefereesAdmin } = await import('./admin-panel/services/adminService');
-      const [gks, refs] = await Promise.all([fetchGoalkeepersAdmin(), fetchRefereesAdmin()]);
+      const [gks, refs] = await Promise.all([FB.fbGetGoalkeepers(), FB.fbGetReferees()]);
       set({ adminGoalkeepers: gks || [], adminReferees: refs || [], servicesError: false });
     } catch (err) {
       console.error('Error loading services', err);
@@ -1064,7 +1140,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     const prev = get().adminMatches;
     set({ adminMatches: [match, ...prev] });
     try {
-      const { listingToMatchPayload } = await import('./admin-panel/utils/matchMapper');
+      const { listingToMatchPayload } = await import('./shared/matchMapper');
       const { data, error } = await supabase.rpc('player_create_match', { p_payload: listingToMatchPayload(match) });
       if (error) throw error;
       const newId = data as string;
@@ -1076,7 +1152,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     const prev = get().adminMatches;
     set({ adminMatches: prev.map(m => m.id === match.id ? match : m) });
     try {
-      const { listingToMatchPayload } = await import('./admin-panel/utils/matchMapper');
+      const { listingToMatchPayload } = await import('./shared/matchMapper');
       const { error } = await supabase.rpc('player_update_match', { p_match_id: match.id, p_payload: listingToMatchPayload(match) });
       if (error) throw error;
     } catch (e) { set({ adminMatches: prev }); throw e; }
@@ -1091,7 +1167,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     const prev = get().adminMatches;
     set({ adminMatches: prev.filter(m => m.id !== id) });
     try {
-      const { deleteMatchAdmin } = await import('./admin-panel/services/adminService');
+      const { deleteMatchAdmin } = adminKoprusu();
       await deleteMatchAdmin(id);
     } catch (e) { set({ adminMatches: prev }); throw e; }
   },
@@ -1109,7 +1185,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     const existing = prev.find(u => u.id === user.id);
     set({ adminUsers: prev.map(u => u.id === user.id ? user : u) });
     try {
-      const svc = await import('./admin-panel/services/adminService');
+      const svc = adminKoprusu();
       if (existing && existing.isBanned !== user.isBanned) {
         await svc.banUserAdmin(user.id, user.isBanned, user.banExpiresAt ?? null);
       }
@@ -1131,7 +1207,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     const prev = get().adminUsers;
     set({ adminUsers: prev.map(u => u.id === id ? { ...u, isBanned: true } : u) });
     try {
-      const { banUserAdmin } = await import('./admin-panel/services/adminService');
+      const { banUserAdmin } = adminKoprusu();
       await banUserAdmin(id, true);
     } catch (e) { set({ adminUsers: prev }); throw e; }
   },
@@ -1139,7 +1215,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     const prev = get().adminUsers;
     set({ adminUsers: prev.map(u => u.id === id ? { ...u, isBanned: false } : u) });
     try {
-      const { banUserAdmin } = await import('./admin-panel/services/adminService');
+      const { banUserAdmin } = adminKoprusu();
       await banUserAdmin(id, false);
     } catch (e) { set({ adminUsers: prev }); throw e; }
   },
@@ -1147,7 +1223,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     const prev = get().adminUsers;
     set({ adminUsers: prev.map(u => u.id === id ? { ...u, isVerified: true } : u) });
     try {
-      const { verifyUserAdmin } = await import('./admin-panel/services/adminService');
+      const { verifyUserAdmin } = adminKoprusu();
       await verifyUserAdmin(id);
     } catch (e) { set({ adminUsers: prev }); throw e; }
   },
@@ -1162,7 +1238,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     const prev = get().adminUsers;
     set({ adminUsers: prev.filter(u => u.id !== id) });
     try {
-      const { processAccountDeletion } = await import('./admin-panel/services/adminService');
+      const { processAccountDeletion } = adminKoprusu();
       await processAccountDeletion(id, true);
     } catch (e) { set({ adminUsers: prev }); throw e; }
   },
@@ -1213,7 +1289,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     const next = { ...prev, ...settings };
     set({ appSettings: next });
     try {
-      const { updateSettingsAdmin, settingsToDbPayload } = await import('./admin-panel/services/adminService');
+      const { updateSettingsAdmin, settingsToDbPayload } = adminKoprusu();
       await updateSettingsAdmin(settingsToDbPayload({
         ...settings,
         payoutMode: settings.payoutMode as 'cash' | 'online' | 'deposit' | undefined,
@@ -1232,16 +1308,21 @@ export const useAppStore = create<AppState>((set, get) => ({
       timestamp: new Date().toISOString(),
     };
     set((state) => ({ adminLogs: [entry, ...state.adminLogs] }));
-    import('./admin-panel/services/adminService').then(({ persistAdminLog }) => {
-      persistAdminLog(
-        log.action,
-        'system',
-        log.targetId || null,
-        log.targetName,
-        undefined,
-        { details: log.details },
-      ).catch((err) => console.warn('Audit log persist failed:', err));
-    });
+    // Yönetici denetim kaydı YALNIZ panelde kalıcılaştırılır. Panel kurulu
+    // değilse (oyuncu uygulaması) sessizce atlanır: burada hata fırlatmak
+    // çağıran akışı bozardı ve zaten yazacak bir yönetici oturumu yoktur.
+    if (adminKoprusuHazirMi()) {
+      adminKoprusu()
+        .persistAdminLog(
+          log.action,
+          'system',
+          log.targetId || null,
+          log.targetName,
+          undefined,
+          { details: log.details },
+        )
+        .catch((err) => console.warn('Audit log persist failed:', err));
+    }
   },
 
   // User Notifications

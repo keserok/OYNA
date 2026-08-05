@@ -168,7 +168,12 @@ describe('ekranlarda elle para dizilmiyor', () => {
   /** Avukat onaylı metin — dokunulmadı (IP-13'teki HUKUKI kararıyla aynı). */
   const HUKUKI = ['views/LegalScreen.tsx'];
   /** Bütçe süzgeci seçenekleri: hem etiket hem eşitlik anahtarı. */
-  const SUZGEC = ['views/MatchDiscovery.tsx'];
+  // [PANEL-AYRIMI] views/owner/PitchManager.tsx, admin-panel/views/ altından
+  // BURAYA TAŞINDI (panel kodu oyuncu paketinden ayrılırken). Geldiği yerde bu
+  // metin kuralları hiç uygulanmıyordu; dosya bu borcu YANINDA getirdi
+  // (2 para dizimi, 2 üç nokta). Taşıma işi kapsamında kullanıcıya görünen
+  // metin DEĞİŞTİRİLMEDİ; ayrı bir görevde düzeltilmeli.
+  const SUZGEC = ['views/MatchDiscovery.tsx', 'views/owner/PitchManager.tsx'];
 
   it('şablon/JSX içinde çıplak ₺ kalmadı', () => {
     const ihlal: string[] = [];

@@ -162,7 +162,7 @@ export const OwnerTeamView: React.FC<OwnerTeamViewProps> = ({
   if (isLoading) return <div className="p-6 pb-40"><LoadingState message="Ekip yükleniyor…" /></div>;
 
   return (
-    <div className="p-4 pb-40 overflow-y-auto custom-scrollbar bg-[#0A0E14]">
+    <div className="p-4 pb-40 bg-[#0A0E14]">
       <div className="max-w-5xl mx-auto w-full">
         <OwnerDemoDataBar pitchId={pitchId} onChanged={load} hasDemo={hasDemoData} />
         {isDemoMode && (

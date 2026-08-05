@@ -133,7 +133,7 @@ export const OwnerMenuView: React.FC<OwnerMenuViewProps> = ({
   const isManagerLvl = accessLevel === 'OWNER' || accessLevel === 'MANAGER';
 
   return (
-    <div className="p-6 pb-40 pt-safe-6 overflow-y-auto custom-scrollbar animate-in slide-in-from-right-10 duration-500">
+    <div className="p-6 pb-40 pt-safe-6 animate-in slide-in-from-right-10 duration-500">
       <div className="flex items-center gap-4 mb-8">
         <div className="relative">
           {facilityImage ? (

@@ -40,9 +40,11 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
   // A4: derin bağlantı (oyna://support) Ayarlar'ı doğrudan Destek alt sayfasıyla
   // açar. İstek TÜKETİLİR — okuyunca store'daki değer sıfırlanır, yoksa kullanıcı
   // Ayarlar'a her girdiğinde Destek sayfası tekrar açılırdı.
+  // ('region' de kabul edilir: ana sayfada bölge seçilmemişken çıkan
+  //  "KONUMU AYARLA" düğmesi kullanıcıyı doğrudan Bölgelerim'e getirir.)
   const [subPage, setSubPage] = useState<SubPage>(() => {
     const istek = useAppStore.getState().settingsSubPage;
-    return (istek === 'support' || istek === 'notifications') ? istek : null;
+    return (istek === 'support' || istek === 'notifications' || istek === 'region') ? istek : null;
   });
   useEffect(() => {
     if (useAppStore.getState().settingsSubPage) {
@@ -200,9 +202,9 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
 
   // Ana Ayarlar ekranı sadece butonlar gösterir; detaylar alt sayfalarda açılır.
   const SettingItem = ({ icon, title, value, onClick, color = 'text-ink-4' }: any) => (
-    <button onClick={onClick} className="w-full flex items-center justify-between p-4 bg-[#161B22] border border-white/5 first:rounded-t-2xl last:rounded-b-2xl border-b-0 last:border-b hover:bg-white/5 transition-colors">
+    <button onClick={onClick} className="w-full flex items-center justify-between px-[18px] py-[15px] min-h-[48px] bg-surface-1 border border-white/[0.08] first:rounded-t-3xl last:rounded-b-3xl border-b-0 last:border-b hover:bg-white/[0.03] transition-colors">
       <div className="flex items-center gap-4">
-        <div className="text-gray-400">{icon}</div>
+        <div className="text-[#F5F3EE]/[0.55]">{icon}</div>
         <span className="text-sm font-bold text-white">{title}</span>
       </div>
       <div className="flex items-center gap-2">
@@ -213,18 +215,18 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
   );
 
   // Tam ekran bir ayar sayfası açan büyük buton (Bildirimler, Gizlilik)
-  const PageButton = ({ icon, iconBg, iconColor, title, subtitle, onClick }: any) => (
+  const PageButton = ({ icon, title, subtitle, onClick }: any) => (
     <button
       onClick={onClick}
-      className="w-full flex items-center justify-between p-4 bg-[#161B22] border border-white/8 rounded-2xl hover:bg-white/5 transition-colors"
+      className="w-full flex items-center justify-between px-[18px] py-4 min-h-[48px] bg-surface-1 border border-white/[0.08] rounded-3xl hover:bg-white/[0.03] transition-colors"
     >
       <div className="flex items-center gap-3">
-        <div className="w-9 h-9 rounded-xl flex items-center justify-center border" style={{ background: iconBg, borderColor: iconColor + '40', color: iconColor }}>
+        <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-white/[0.06] border border-white/[0.12] text-[#F5F3EE]">
           {icon}
         </div>
         <div className="text-left">
           <span className="text-sm font-bold text-white block">{title}</span>
-          <span className="text-[0.6875rem] text-gray-400">{subtitle}</span>
+          <span className="text-[0.8125rem] text-[#F5F3EE]/[0.55]">{subtitle}</span>
         </div>
       </div>
       <ChevronRight size={18} className="text-ink-4" />
@@ -234,15 +236,20 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
   return (
     <div className="min-h-screen bg-[#0A0E14] pb-16">
       {/* Header */}
-      <header className="p-6 flex items-center gap-4 sticky top-0 bg-[#0A0E14]/90 backdrop-blur-xl z-20 border-b border-white/5">
+      {/* ÜST ÇUBUK — profil akışıyla AYNI desen (kullanıcı kararı: Ayarlar
+          ekranı profil ve ana sayfayla uyumlu olsun): 44px yuvarlak geri
+          düğmesi + küçük, harf aralıklı ekran adı. Eskiden 40px düğme ve
+          kalın 20px başlık vardı; iki ekran yan yana açıldığında başka bir
+          uygulamadan gelmiş gibi duruyordu. */}
+      <header className="px-5 pt-5 pb-3 flex items-center gap-3 sticky top-0 bg-[#0A0E14]/90 backdrop-blur-xl z-20">
         <button
           onClick={onBack}
-          className="w-10 h-10 flex items-center justify-center bg-[#161B22] rounded-full border border-white/5 text-white hover:bg-white/10 active:scale-95 transition-all"
+          className="w-11 h-11 shrink-0 flex items-center justify-center bg-surface-1/[0.75] rounded-full border border-white/[0.08] text-white hover:bg-white/10 active:scale-95 transition-all"
           aria-label="Geri Dön"
         >
-          <ArrowLeft size={20} />
+          <ArrowLeft size={18} />
         </button>
-        <h1 className="text-xl font-extrabold text-white">Ayarlar</h1>
+        <h1 className="text-[0.6875rem] tracking-[0.14em] uppercase text-[#F5F3EE]/[0.55] font-normal">Ayarlar</h1>
       </header>
 
       <main className="p-6 space-y-8">
@@ -256,23 +263,23 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
             geriye yalnız boş bir başlık kalırdı. */}
         {staffPitches.length > 0 && (
           <section className="space-y-3">
-            <h3 className="text-xs font-bold text-ink-4 uppercase mb-1 ml-2">İşletme</h3>
+            <h3 className="text-[0.6875rem] tracking-[0.14em] uppercase text-[#F5F3EE]/[0.55] mb-2.5 ml-0.5">İşletme</h3>
             {staffPitches.map((p) => (
               <button
                 key={p.member_id}
                 onClick={() => openStaffPanel(p)}
-                className="w-full flex items-center justify-between p-4 bg-[#161B22] border border-indigo-500/20 rounded-2xl hover:bg-white/5 transition-colors"
+                className="w-full flex items-center justify-between px-[18px] py-4 min-h-[48px] bg-surface-1 border border-white/[0.08] rounded-3xl hover:bg-white/[0.03] transition-colors"
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-indigo-500/15 border border-indigo-500/30 text-indigo-300">
+                  <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-white/[0.06] border border-white/[0.12] text-[#F5F3EE]">
                     {p.access_level === 'MANAGER' ? <Crown size={18} /> : <Building2 size={18} />}
                   </div>
                   <div className="text-left">
                     <span className="text-sm font-bold text-white block">{p.pitch_name}</span>
-                    <span className="text-[0.6875rem] text-gray-400">Tesis paneli · {p.access_level === 'MANAGER' ? 'Müdür' : 'Personel'}</span>
+                    <span className="text-[0.8125rem] text-[#F5F3EE]/[0.55]">Tesis paneli · {p.access_level === 'MANAGER' ? 'Müdür' : 'Personel'}</span>
                   </div>
                 </div>
-                <ChevronRight size={18} className="text-indigo-400" />
+                <ChevronRight size={18} className="text-ink-4" />
               </button>
             ))}
           </section>
@@ -280,7 +287,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
 
         {/* Hesap */}
         <section>
-          <h3 className="text-xs font-bold text-ink-4 uppercase mb-3 ml-2">Hesap</h3>
+          <h3 className="text-[0.6875rem] tracking-[0.14em] uppercase text-[#F5F3EE]/[0.55] mb-2.5 ml-0.5">Hesap</h3>
           <div className="flex flex-col">
             {/* Profili düzenlemenin TEK kapısı burası (kullanıcı kararı,
                 2026-08). Profil ekranındaki "Düzenle" düğmesi kaldırıldı. */}
@@ -294,16 +301,12 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
         <section className="space-y-3">
           <PageButton
             icon={<Bell size={18} />}
-            iconBg="rgba(57,255,20,0.15)"
-            iconColor="#39FF14"
             title="Bildirimler"
             subtitle={`${enabledNotifCount} bildirim açık · sessiz saatler, ön ayarlar`}
             onClick={() => setSubPage('notifications')}
           />
           <PageButton
             icon={<Lock size={18} />}
-            iconBg="rgba(139,92,246,0.15)"
-            iconColor="#8b5cf6"
             title="Gizlilik"
             subtitle="Görünürlük ve engellenenler"
             onClick={() => setSubPage('privacy')}
@@ -313,8 +316,8 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
 
         {/* Konum */}
         <section>
-          <h3 className="text-xs font-bold text-ink-4 uppercase mb-3 ml-2">Konum</h3>
-          <div className="bg-[#161B22] border border-white/5 rounded-2xl p-4 space-y-3">
+          <h3 className="text-[0.6875rem] tracking-[0.14em] uppercase text-[#F5F3EE]/[0.55] mb-2.5 ml-0.5">Konum</h3>
+          <div className="bg-surface-1 border border-white/[0.08] rounded-3xl p-[18px] space-y-3.5">
             <div>
               <span className="text-[0.6875rem] font-bold text-ink-4 uppercase tracking-wide block mb-2 ml-0.5">
                 Bölgelerim{selectedRegions.length > 1 ? ` (${selectedRegions.length})` : ''}
@@ -322,7 +325,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
               {selectedRegions.length > 1 ? (
                 <button
                   onClick={() => setSubPage('region')}
-                  className="w-full flex flex-wrap items-center gap-2 p-3 rounded-2xl bg-[#0F1318] border border-[#39FF14]/20 hover:bg-white/5 transition-colors text-left"
+                  className="w-full flex flex-wrap items-center gap-2 p-3 rounded-[20px] bg-[#0F1318] border border-[#39FF14]/20 hover:bg-white/5 transition-colors text-left"
                 >
                   {selectedRegions.map((r, i) => (
                     <span key={`${r.city}|${r.district ?? ''}|${i}`} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#39FF14]/10 border border-[#39FF14]/25 text-[#39FF14] text-xs font-bold">
@@ -340,15 +343,19 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
             <button
               onClick={handleUpdateLocation}
               disabled={isUpdatingLocation}
-              className="w-full flex items-center justify-center gap-2 p-3 rounded-2xl bg-[#00B0FF]/8 border border-[#00B0FF]/25 hover:bg-[#00B0FF]/12 transition-colors disabled:opacity-60"
+              /* Birincil eylem rengi tasarımdan: BEYAZ hap + koyu yazı
+                 (profildeki "Maç bul" ve düzenleme ekranındaki "Kaydet" ile
+                 aynı). Eskiden maviydi — uygulamanın hiçbir yerinde
+                 kullanılmayan bir renkti ve ekranı yabancılaştırıyordu. */
+              className="w-full flex items-center justify-center gap-2 min-h-[48px] px-4 rounded-full bg-white text-[#0A0E14] hover:opacity-90 active:scale-[0.99] transition-all disabled:opacity-60"
             >
-              {isUpdatingLocation ? <RefreshCw size={16} className="animate-spin text-[#00B0FF]" /> : <MapPin size={16} className="text-[#00B0FF]" />}
-              <span className="text-sm font-bold text-white">Konumumu Otomatik Bul</span>
+              {isUpdatingLocation ? <RefreshCw size={16} className="animate-spin" /> : <MapPin size={16} />}
+              <span className="text-[0.8125rem] font-semibold">Konumumu Otomatik Bul</span>
             </button>
 
             <div className="pt-1">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-bold text-gray-300">Arama Yarıçapı</span>
+                <span className="text-[0.8125rem] text-[#F5F3EE]">Arama Yarıçapı</span>
                 <span className="text-sm font-extrabold text-[#39FF14]">{searchRadius} KM</span>
               </div>
               <input
@@ -360,19 +367,19 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
                 onChange={(e) => setSearchRadius(Number(e.target.value))}
                 className="w-full accent-[#39FF14] cursor-pointer"
               />
-              <p className="text-[0.6875rem] text-ink-4 italic mt-1.5">Her seçili bölgenin merkezinden {searchRadius} KM çapındaki maçlar listelenir — 5 km adımlarla (5–50 KM).</p>
+              <p className="text-[0.6875rem] text-[#F5F3EE]/[0.55] mt-1.5">Her seçili bölgenin merkezinden {searchRadius} KM çapındaki maçlar listelenir — 5 km adımlarla (5–50 KM).</p>
             </div>
           </div>
         </section>
 
         {/* Tesis Verileri (KVKK) — yalnızca saha sahipleri */}
         {isOwner && (
-          <section className="bg-[#161B22] border border-white/5 rounded-2xl p-5 space-y-3">
+          <section className="bg-surface-1 border border-white/[0.08] rounded-3xl p-[18px] space-y-3">
             <div className="flex items-center gap-2 text-[#39FF14]">
               <Download size={16} />
               <h3 className="text-xs font-extrabold uppercase tracking-wider">Tesis Verilerim (KVKK)</h3>
             </div>
-            <p className="text-[0.6875rem] text-gray-400 leading-relaxed">
+            <p className="text-[0.8125rem] text-[#F5F3EE]/[0.55] leading-relaxed">
               Tesisine ait son 1 yıllık rezervasyon, gider, veresiye ve abonelik kayıtlarını JSON olarak indir. Tüm verilerin sana aittir.
             </p>
             {exportError && (
@@ -383,7 +390,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
             <button
               disabled={isExporting}
               onClick={handleExportOwnerData}
-              className="w-full flex items-center justify-center gap-2.5 p-3.5 bg-[#39FF14]/10 hover:bg-[#39FF14]/20 border border-[#39FF14]/30 rounded-xl text-[#39FF14] font-bold text-xs transition-all uppercase tracking-widest disabled:opacity-50"
+              className="w-full flex items-center justify-center gap-2.5 min-h-[48px] px-4 bg-[#39FF14]/10 hover:bg-[#39FF14]/20 border border-[#39FF14]/30 rounded-full text-[#39FF14] font-bold text-xs transition-all uppercase tracking-widest disabled:opacity-50"
             >
               {isExporting ? (
                 <><RefreshCw size={14} className="animate-spin" /> Hazırlanıyor…</>
@@ -396,10 +403,10 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
 
         {/* Hesap Silme (KVKK) */}
         <section>
-          <h3 className="text-xs font-bold text-ink-4 uppercase mb-3 ml-2">Hesap</h3>
+          <h3 className="text-[0.6875rem] tracking-[0.14em] uppercase text-[#F5F3EE]/[0.55] mb-2.5 ml-0.5">Hesap</h3>
           <button
             onClick={() => setShowDeleteModal(true)}
-            className="w-full flex items-center justify-between p-4 bg-red-500/8 border border-red-500/15 rounded-2xl hover:bg-red-500/15 transition-colors"
+            className="w-full flex items-center justify-between px-[18px] py-4 min-h-[48px] bg-[#FF4D4D]/[0.08] border border-[#FF4D4D]/25 rounded-3xl hover:bg-[#FF4D4D]/15 transition-colors"
           >
             <div className="flex items-center gap-4">
               <div className="text-red-400"><Trash2 size={20} /></div>
@@ -414,7 +421,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
 
         {/* Destek */}
         <section>
-          <h3 className="text-xs font-bold text-ink-4 uppercase mb-3 ml-2">Destek</h3>
+          <h3 className="text-[0.6875rem] tracking-[0.14em] uppercase text-[#F5F3EE]/[0.55] mb-2.5 ml-0.5">Destek</h3>
           <div className="flex flex-col">
             {/* Uygulama içi destek: talep aç → admin Destek Merkezi'nden yanıt gelir.
                 mailto yedeği SupportPage içinde durur. */}
@@ -437,7 +444,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
             />
             <button
               onClick={handleLogout}
-              className="w-full flex items-center justify-center gap-2 p-4 mt-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-500 font-bold text-sm hover:bg-red-500/20 transition-colors"
+              className="w-full flex items-center justify-center gap-2 p-4 mt-4 bg-[#FF4D4D]/10 border border-[#FF4D4D]/25 rounded-3xl text-[#FF4D4D] font-bold text-sm hover:bg-[#FF4D4D]/20 transition-colors"
             >
               <LogOut size={18} /> Çıkış Yap
             </button>
@@ -523,10 +530,10 @@ const JoinFacilityModal: React.FC<{ onClose: () => void; onJoined: (pitchName: s
       <div className="bg-[#161B22] w-full max-w-sm rounded-3xl p-6 pb-safe-6 border border-white/10" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Tesise Katıl">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-extrabold text-white">Tesise Katıl</h3>
-          <button type="button" onClick={onClose} aria-label="Kapat"><X size={20} className="text-gray-400" /></button>
+          <button type="button" onClick={onClose} aria-label="Kapat"><X size={20} className="text-ink-4" /></button>
         </div>
-        <div className="mx-auto w-14 h-14 rounded-2xl bg-indigo-500/15 flex items-center justify-center mb-3"><KeyRound size={26} className="text-indigo-400" /></div>
-        <p className="text-sm text-gray-400 text-center mb-4">Tesis sahibinin verdiği 6 haneli davet kodunu gir.</p>
+        <div className="mx-auto w-14 h-14 rounded-2xl bg-white/[0.06] border border-white/[0.12] flex items-center justify-center mb-3"><KeyRound size={26} className="text-[#F5F3EE]" /></div>
+        <p className="text-[0.8125rem] text-[#F5F3EE]/[0.55] text-center mb-4">Tesis sahibinin verdiği 6 haneli davet kodunu gir.</p>
         <input
           value={clean}
           onChange={(e) => { setCode(e.target.value); setError(null); }}
@@ -535,12 +542,12 @@ const JoinFacilityModal: React.FC<{ onClose: () => void; onJoined: (pitchName: s
           autoFocus
           className="w-full text-center text-3xl font-extrabold tracking-[0.4em] font-mono bg-[#0A0E14] border border-white/10 rounded-2xl p-4 text-white placeholder:text-ink-4"
         />
-        {error && <p className="text-xs text-red-400 mt-2 text-center">{error}</p>}
+        {error && <p className="text-xs text-[#FF4D4D] mt-2 text-center">{error}</p>}
         <button
           type="button"
           disabled={busy || clean.length !== 6}
           onClick={submit}
-          className="w-full mt-4 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-extrabold rounded-2xl disabled:opacity-50 flex items-center justify-center gap-2"
+          className="w-full mt-4 min-h-[50px] rounded-full bg-white text-[#0A0E14] text-[0.8125rem] font-semibold disabled:opacity-50 flex items-center justify-center gap-2 active:scale-[0.99] transition-all"
         >
           {busy ? 'Katılınıyor…' : <><Check size={16} /> Katıl</>}
         </button>

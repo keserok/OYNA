@@ -11,6 +11,7 @@ import {
 import { Spinner } from '../components/ui/Spinner';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Referee, Goalkeeper } from '../types';
+import type { MatchListing } from '../types';
 import { useAppStore } from '../store';
 import { MarketplaceCard, ROLE_THEME } from '../components/Marketplace/MarketplaceCard';
 import { EmptyState } from '../components/common/StatusState';
@@ -164,7 +165,7 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect, onCre
     useEffect(() => () => { if (successTimerRef.current) clearTimeout(successTimerRef.current); }, []);
 
     const {
-        adminGoalkeepers, adminReferees, adminMatches,
+        adminGoalkeepers, adminReferees, adminMatches, myMatches: benimMaclarim,
         activeRegion, selectedRegions, userLocation, initialLoadComplete,
     } = useAppStore();
     const profiles: (Goalkeeper | Referee)[] = type === 'GK' ? adminGoalkeepers : adminReferees;
@@ -268,16 +269,24 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect, onCre
     );
 
     // ─── Kiralama akışı (FAZ 8A — tek yol: create_service_request) ───────────
-    // Yalnız KULLANICININ KENDİ maçları: adminMatches küresel ve filtresizdir
-    // (herkesin DRAFT/ACTIVE maçları store'da). Sahiplik süzgeci olmadan kaptan
+    // Yalnız KULLANICININ KENDİ maçları. Sahiplik süzgeci olmadan kaptan
     // başkasının maçını seçip create_service_request'ten FORBIDDEN alıyordu.
+    //
+    // [YUK-2] KAYNAK GENİŞLETİLDİ — adminMatches artık BÖLGEYE DARALTILMIŞ bir
+    // listedir. Tek başına kullanılsaydı kaptanın başka ilçedeki kendi maçı bu
+    // seçicide kaybolurdu. Bu yüzden store'daki myMatches ile BİRLEŞİM alınır:
+    // o liste get_my_matches() RPC'sinden gelir, bölgeden bağımsızdır ve
+    // kurucu/kaptan maçlarını kapsar. İki kaynak da aynı sahiplik süzgecinden
+    // geçtiği için birleşim YANLIŞ maç ekleyemez, yalnız eksiği tamamlar.
     const myMatches = useMemo(() => {
         const uid = auth.currentUser?.uid;
         if (!uid) return [];
-        return adminMatches.filter(m =>
+        const birlesim = new Map<string, MatchListing>();
+        [...adminMatches, ...benimMaclarim].forEach(m => { if (m?.id) birlesim.set(m.id, m); });
+        return Array.from(birlesim.values()).filter(m =>
             (m.creatorId === uid || (m as any).captainId === uid) &&
             (m.status === 'DRAFT' || m.status === 'ACTIVE' || !m.status));
-    }, [adminMatches]);
+    }, [adminMatches, benimMaclarim]);
 
     // Bakiye yetmediğinde sunucu Türkçe "Yetersiz bakiye…" hatası döndürür;
     // bunu tanıyıp kullanıcıyı cüzdana yönlendiriyoruz (cüzdan-öncelikli sistem).

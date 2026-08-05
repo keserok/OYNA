@@ -4,6 +4,7 @@ import { UserRole, AppView, MatchListing, Goalkeeper, Referee } from './types';
 import { auth, onAuthStateChanged, logout, handleAuthCallbackUrl } from './supabaseAuth';
 import { supabase } from './supabaseClient';
 import { useAppStore } from './store';
+import { bolgeyiBildir } from './utils/olcum';
 import { roleToLandingView, pickLandingRole, hasMultipleSwitchableRoles, normalizeRole } from './shared/roles';
 import { setActiveRole } from './services/userService';
 import { getMatchDetails } from './services/matchService';
@@ -51,7 +52,10 @@ const WalletScreen = lazy(() => import('./views/WalletScreen'));
 // F4.2: MatchCalendar kaldırıldı — hiçbir navigasyon gitmiyordu; tüm işlevleri
 // MyMatchesHub + MatchDiscovery + Dashboard'da zaten var (içinde sahte pravatar
 // avatarları ve negatif sayaç kalıntısı da vardı).
-const AdminPanel = lazy(() => import('./views/AdminPanel'));
+// [PANEL-AYRIMI] Uygulama içi YÖNETİM PANELİ ROTASI KALDIRILDI.
+// Panel yalnız kendi sayfasından (admin.html) açılır. Böylece uygulamayı
+// indiren birinin paketinde panel ekranlarına ait TEK SATIR kod bulunmaz;
+// açılacak bir rota da yoktur. Sunucu tarafı ayrıca kapalıdır.
 // F4.2: TeamBuilder kaldırıldı — erişilemezdi; OVR-dengeleme çıktısı hiçbir
 // yere yazılmıyordu (salt-görsel hesap makinesi).
 const SocialView = lazy(() => import('./views/SocialView'));
@@ -202,6 +206,19 @@ const App: React.FC = () => {
 
   // MOB-S2: native klavye yöneticisi — alanlar klavye arkasında kalmaz.
   useEffect(() => initKeyboardManager(), []);
+
+  // ÖLÇÜM · bölge etiketi. Huni "ilçeye göre" okunabilsin diye (prensip
+  // 1.2/1.3 — ilçe bazlı doygunluk) her olay kullanıcının baktığı bölgeyle
+  // işaretlenir. Ölçüm modülü store'u DOĞRUDAN okumaz (döngüsel bağımlılık
+  // olurdu); bölge buradan bir kez bildirilir.
+  useEffect(() => {
+    const uygula = (b: { city?: string; district?: string | null } | null) =>
+      bolgeyiBildir(b?.city ?? null, b?.district ?? null);
+    uygula(useAppStore.getState().activeRegion);
+    return useAppStore.subscribe((st, onceki) => {
+      if (st.activeRegion !== onceki.activeRegion) uygula(st.activeRegion);
+    });
+  }, []);
 
 
   useEffect(() => {
@@ -370,13 +387,17 @@ const App: React.FC = () => {
                 if (isAdmin) {
                   const ghostName = params.get('name') || 'Kullanıcı';
                   void (async () => {
-                    const { fetchProfileById, logImpersonation } = await import('./admin-panel/services/adminService');
+                    // [PANEL-AYRIMI] Eskiden burada admin-panel/services/adminService
+                    // (3400 satır) import ediliyordu; tek bu bağlantı yüzünden panel
+                    // kodu oyuncu paketine giriyordu. Aynı iki iş artık uygulamanın
+                    // kendi servisinde — yetki kapısı yine sunucuda.
+                    const { taklitProfiliGetir, taklidiKaydet } = await import('./services/ghostModeService');
                     try {
-                      await logImpersonation(ghostId);
+                      await taklidiKaydet(ghostId);
                     } catch (e) {
                       console.error('[Ghost Mode] Impersonation audit log failed:', e);
                     }
-                    const ghostProfile = await fetchProfileById(ghostId);
+                    const ghostProfile = await taklitProfiliGetir(ghostId);
                     setOriginalRole(landingRole);
                     setImpersonatedUser(ghostProfile ?? {
                       id: ghostId,
@@ -702,8 +723,6 @@ const App: React.FC = () => {
           onLogout={() => resetNavigation('AUTH')}
           onReapply={(note) => { setVerificationNote(note); navigateTo('SERVICE_APPLICATION'); }}
         />;
-      case 'ADMIN_PANEL':
-        return <AdminPanel onBack={() => goBack(navigateBasedOnRole(role))} />;
       case 'OWNER_PANEL':
         return (
           <OwnerPanel
@@ -1012,7 +1031,11 @@ const App: React.FC = () => {
                 }
                 setImpersonatedUser(null);
                 setOriginalRole(null);
-                resetNavigation('ADMIN_PANEL');
+                // [PANEL-AYRIMI] Eskiden burada uygulama İÇİNDE panel açılıyordu
+                // (resetNavigation('ADMIN_PANEL')). O rota kaldırıldı: panel
+                // artık yalnız kendi sayfasında yaşıyor. Taklit bitince yönetici
+                // panel sayfasına DÖNDÜRÜLÜR.
+                window.location.href = '/admin.html';
               }}
               className="px-3.5 py-1.5 bg-red-500 hover:bg-red-600 text-white text-[0.625rem] font-extrabold tracking-widest uppercase rounded-full transition-all"
             >

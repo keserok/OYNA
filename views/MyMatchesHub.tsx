@@ -7,6 +7,8 @@ import {
 } from 'lucide-react';
 import { AppView, type MatchListing } from '../types';
 import { useAppStore } from '../store';
+import { useAsagiCekYenile } from '../hooks/useAsagiCekYenile';
+import { YenileniyorSeridi } from '../components/common/YenileniyorSeridi';
 import { supabase } from '../supabaseClient';
 import { SCREEN } from '../ui/labels';
 import { useMyAgenda, type MyAgendaItem } from '../hooks/useMyAgenda';
@@ -270,6 +272,8 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onNavigate }) => {
   // yüklü olduğu için ek istek gerekmez.
   const adminPitches = useAppStore((s) => s.adminPitches);
   const { items, past, counts, nextItem, bookingsLoading, bookingsError, refetchBookings, currentUserUid } = useMyAgenda();
+  // AŞAĞI ÇEKİP YENİLE — ajanda (maçlar + kiralamalar) tazelenir.
+  const cekerekYenileniyor = useAsagiCekYenile(refetchBookings);
 
   const [segment, setSegment] = useState<Segment>(
     () => useAppStore.getState().myMatchesInitialSegment ?? 'ALL'
@@ -570,6 +574,7 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onNavigate }) => {
       {/* Alt boşluk `pb-36` (sabit 144px) idi: güvenli alanı saymadığı için
           çentikli telefonda alt menü son kartın ucunu örtebiliyordu.
           `pb-safe-nav` payı cihaza göre ayarlar. */}
+      <YenileniyorSeridi aktif={cekerekYenileniyor} />
       <main className="flex-1 min-h-0 px-4 pt-4 overflow-y-auto overscroll-contain custom-scrollbar pb-safe-nav relative z-10">
         {bookingsError && (
           <div className="mb-4 flex items-center justify-between gap-3 px-4 py-3 rounded-2xl bg-red-950/30 border border-red-500/20">

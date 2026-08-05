@@ -1,4 +1,4 @@
-import type { MatchListing, PositionSlot } from '../../types';
+import type { MatchListing, PositionSlot } from '../types';
 
 export interface AdminMatchRow {
   id: string;

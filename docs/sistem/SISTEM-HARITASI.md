@@ -4,7 +4,7 @@
 > `docs/sistem/KONTROLLER.json` dosyalarından üretilir.
 > Değişiklik için o dosyaları düzenleyip `npm run sistem:harita` çalıştırın.
 
-> Kayıt sürümü: 1 · Son güncelleme: 2026-08-04 (P-0..P-5, P-7; CTO 5/5; PE-1; SRE-1 ve SRE-3 kapandi -> B16 KURTARMA + B17 GORUNURLUK dogdu)
+> Kayıt sürümü: 1 · Son güncelleme: 2026-08-04 (profil yeniden tasarimi: duzenleme Ayarlar > Bilgilerim'e tasindi, B08'e baglandi)
 
 ## Bu harita ne işe yarar?
 
@@ -216,6 +216,7 @@ Kimin neyi görebileceği ve değiştirebileceği. Satır kuralları (RLS), süt
 - Kullanıcı başkasının verisini okuyamaz/yazamaz
 - Kullanıcı kendi rolünü, bakiyesini, cezasını değiştiremez
 - Her SECURITY DEFINER fonksiyonun görünür bir yetki kontrolü vardır
+- Fonksiyonlar dışarıya KAPALI doğar; açık olması onaylanan liste gece denetlenir
 
 **Dosyalar:**
 
@@ -225,7 +226,7 @@ supabaseClient.ts
 scripts/generate-rls-policy.ts
 ```
 
-**Veritabanı nesneleri:** `pg_policies`, `protect_profile_columns`, `protect_profile_sensitive_fields`, `require_admin_role`, `require_admin_write`, `can_staff_pitch`, `notifications_insert_own_sender`, `matches_update`, `matches_select_public`
+**Veritabanı nesneleri:** `pg_policies`, `protect_profile_columns`, `protect_profile_sensitive_fields`, `require_admin_role`, `require_admin_write`, `can_staff_pitch`, `notifications_insert_own_sender`, `matches_update`, `matches_select_public`, `kapi_kayitli_durum`, `kapi_denetimi`, `kapi_temeli_guncelle`, `pg_default_acl`
 
 **Bu taşı koruyan kontroller:**
 
@@ -234,6 +235,7 @@ scripts/generate-rls-policy.ts
 | `K-KAPI-1` | Kullanıcının çağırabildiği fonksiyonlardan kaçında 'sen kimsin' kontrolü yok? | Fonksiyon çalışıyor ama kimin çağırdığına bakmıyor | HER_IKISI |
 | `K-KAPI-2` | Kullanıcı kendi rolünü, bakiyesini veya cezasını değiştirebiliyor mu? | Koruma bir tabloda var, yeni tabloda unutulmuş | HER_IKISI |
 | `K-KAPI-3` | Yetkili çalışan fonksiyonlar kandırılmaya açık mı? | Tek bir yeni fonksiyon kuralı bozar | HER_IKISI |
+| `K-KAPI-4` | Hangi fonksiyonun dışarıya açık olduğu onaylanmış bir listede tutulur. Gece bu liste canlı durumla karşılaştırılır; onaysız açılan kapı kırmızı yanar. | Yeni bir fonksiyon sessizce herkese açık doğuyor, kimse fark etmiyor | HER_IKISI |
 
 ---
 
@@ -291,9 +293,11 @@ utils/geo.ts
 utils/regionResolver.ts
 utils/orduData.ts
 views/MatchDiscovery.tsx
+admin-panel/views/pages/HomeBannersPage.tsx
+supabase/migrations/20260804190741_ana_sayfa_bolge_gorseli_ve_gorsel_varyantlari.sql
 ```
 
-**Veritabanı nesneleri:** `region_coverage`, `pitches_geo_idx`, `get_nearby_matches`, `get_nearby_pitches`
+**Veritabanı nesneleri:** `region_coverage`, `pitches_geo_idx`, `get_nearby_matches`, `get_nearby_pitches`, `home_banners`, `home_banner_for_region()`, `admin_upsert_home_banner()`, `admin_delete_home_banner()`
 
 **Bu taşı koruyan kontroller:**
 
@@ -324,6 +328,7 @@ services/guardianService.ts
 views/AuthScreen.tsx
 views/ProfileScreen.tsx
 components/profile/
+components/settings/ProfileInfoPage.tsx
 ```
 
 **Veritabanı nesneleri:** `profiles`, `_account_deletion_status`, `admin_process_account_deletion__core`, `process_expired_account_deletions`, `sync_admin_flags_trigger`, `trg_protect_profile_columns`
@@ -360,9 +365,13 @@ components/common/VirtualList.tsx
 utils/imageCompression.ts
 utils/imageTransform.ts
 services/pitchMediaService.ts
+services/dashboardHomeService.ts
+hooks/useDashboardHome.ts
+utils/imageVariants.ts
+hooks/useImageUpload.ts
 ```
 
-**Veritabanı nesneleri:** `admin_dashboard_stats`, `get_my_matches`, `get_nearby_pitches`, `pg_matviews`, `pitches_geo_idx`, `supabase_realtime`
+**Veritabanı nesneleri:** `admin_dashboard_stats`, `get_my_matches`, `get_nearby_pitches`, `pg_matviews`, `pitches_geo_idx`, `supabase_realtime`, `image_variants`, `record_image_variants()`
 
 **Bu taşı koruyan kontroller:**
 
@@ -456,6 +465,7 @@ Tanıtım ve deneme verileri. Boş ekran görünmesin diye duran sahte maçlar, 
 - Demo veri gerçek veriyle karışmaz
 - Demo veri denetim raporlarını kirletmez (K-10.8)
 - Demo veri gerçek sistemin kurallarına uyar
+- Demo kullanicinin kurdugu mac otomatik demo isaretlenir (bir kez demo, hep demo)
 
 **Dosyalar:**
 
@@ -465,7 +475,7 @@ scripts/owner-demo.mjs
 scripts/seeds/
 ```
 
-**Veritabanı nesneleri:** `matches.isDemo`, `demo_mode_enabled`
+**Veritabanı nesneleri:** `demo_isareti_mac`, `demo_mode_enabled`, `matches.isDemo`, `trg_demo_isareti_mac`
 
 **Bu taşı koruyan kontroller:**
 
@@ -474,6 +484,8 @@ scripts/seeds/
 | `K-DEMO-1` | Demo satırları gerçek sistemin kurallarına uyuyor mu, denetimi kirletiyor mu? | Demo veri gerçeği yanlış temsil ediyor, denemeler yanıltıyor | GUNLUK |
 
 > **Not:** P-3 (3 Agustos 2026): 6 tabloya is_demo sutunu + kandirilamayan tetikleyiciler eklendi. Demo olcutu: @oyna.app e-postasi (kaynak: demo_ekosistem_seed.sql, canlida 29/3/1 olarak dogrulandi). Artik denetim demo haric calisabiliyor. Olcum: panelde gorunen 15.860 TL'nin 13.940 TL'si demoymus, gercek para 1.920 TL.
+
+5 Agustos 2026 — K-DEMO-1 EKSIGI KAPATILDI: profiles.is_demo bir tetikleyiciyle otomatik doluyordu ama matches."isDemo" boyle bir tetikleyiciye SAHIP DEGILDI. Demo bir kullanicinin kurdugu mac 'gercek' gorunuyordu (canlida 22 macin 1'i tam olarak bu durumdaydi) ve yeni kurulan 'basarili mac' metrigi onu gercek sayacakti. Tetikleyici eklendi, gecmis duzeltildi, metrige ikinci kat koruma kondu.
 
 ---
 
@@ -609,25 +621,38 @@ Bir şey bozulduğunda geri dönebilmek. Yedekler, geri yükleme, migration geri
 - Kritik tabloların her gece tam kopyası alınır ve 7 gün saklanır
 - Yedek alınmazsa panel kırmızı yanar — sessizce durmuş bir yedek, yedeksizlikten kötüdür
 - Her migration dosyasında geri alma adımları yazılıdır
+- Bozuk bir surum yayinlandiginda panelden ayni dakika durdurulabilir
+- Kapi ACIK arizalanir: sunucuya ulasilamazsa uygulama NORMAL acilir
+- Yonetim paneli kilitlenmez — bakimi acan kisi onu kapatabilir
+- Bakim acik kaldiginda panel uyarir (suresiz bakim ayrica isaretlenir)
 
 **Dosyalar:**
 
 ```
+admin-panel/views/components/KapiDurumu.tsx
+components/UygulamaKapisi.tsx
 supabase/migrations/20260804120000_sre1_gecelik_yedek.sql
 supabase/migrations/20260804130000_sre1_yedek_saglik_kontrolu.sql
+supabase/migrations/20260805183708_uygulama_kapisi.sql
+supabase/migrations/20260805183804_uygulama_kapisi_bozuk_surum_kilitlemesin.sql
+supabase/migrations/20260805190910_demo_sizintisi_ve_kapi_ayarlari.sql
+utils/uygulamaKapisi.ts
 ```
 
-**Veritabanı nesneleri:** `yedek`, `yedek.kapsam`, `yedek.gunluk_al`, `yedek_durumu`, `gecelik_yedek`
+**Veritabanı nesneleri:** `gecelik_yedek`, `kapi_sagligi`, `settings.storeUrlAndroid`, `settings.storeUrlIos`, `surum_kucuk_mu`, `uygulama_kapisi`, `yedek`, `yedek.gunluk_al`, `yedek.kapsam`, `yedek_durumu`
 
 **Bu taşı koruyan kontroller:**
 
 | Kontrol | Ne sorar | Yakaladığı sessizlik | Ne zaman |
 |---|---|---|---|
+| `K-KAPI-3` | Yetkili çalışan fonksiyonlar kandırılmaya açık mı? | Tek bir yeni fonksiyon kuralı bozar | HER_IKISI |
 | `K-YEDEK-1` | Her gece 05:30'da kritik tabloların kopyası alınır. Bu kontrol o kopyanın BUGÜN alındığını ve içindeki tablo sayısının tam olduğunu doğrular. | Yedek aylar önce sessizce durmuş; kaza günü 'yedeğim var' sanıp yanılmak | GUNLUK |
 
 **⚠️ Bu taşta şu an açık olan bulgular:** SRE-8
 
 > **Not:** Bu yapi tasi 4 Agustos 2026'da dogdu. SRE turu tek GERI ALINAMAZ riski buldu: ucretsiz planda otomatik yedek garantisi yok ve veritabaninda artik GERCEK PARA var. Gecelik ic kopya (S-1=a) kuruldu. DURUST SINIR: yanlis migration / kazara silme / bozulan veri 7 gune kadar geri alinir; veritabaninin TAMAMEN gitmesi kapsanmaz (kopya ayni veritabaninda). Tam guvence icin haftalik DIS kopya (S-1=b) veya Pro plan gerekir. SRE-8 hala acik: geri yukleme hic PROVA edilmedi.
+
+5 Agustos 2026 — UYGULAMA KAPISI: bakim modu ve zorunlu guncelleme kuruldu. Once anahtar VARDI ama uygulama okumuyordu; zorunlu guncelleme hic yoktu. Kurucu kararlari: 1A tam kilit · 2A iki kademe (onerilen + zorunlu) · 3 magaza+destek cikisi · 4 herkese (oyuncu/tesis/gorevli). Canlida yakalanan hata: rakamsiz surum metni ('bozuk') kullaniciyi KILITLIYORDU (bos metin 0 sayilip esigin altinda kaliyordu); duzeltildi ve testle kilitlendi.
 
 ---
 
@@ -640,30 +665,40 @@ Bir şeyin bozulduğunu ÖĞRENEBİLMEK. Çökme kayıtları, hata izleme, siste
 - Hata kayıtları üçüncü tarafa GÖNDERİLMEZ; kendi veritabanımızda kalır
 - Kişisel bilgi (e-posta, telefon, kart, oturum anahtarı) kaydedilmeden önce hem tarayıcıda hem sunucuda silinir
 - Bozuk bir ekran sel gibi kayıt üretse bile sistem boğulmaz (saatte aynı hatadan 20, toplamda 500 sınırı)
+- Ana vaadin dort akisi (kaptan · oyuncu · kiralama · tesis) adim adim olculur
+- "Basarili mac" metrigi olay kaydindan degil GERCEK veriden hesaplanir
+- Uygulama olcum yazmayi birakirsa panel kirmizi yanar — sessizlik 'kimse kullanmiyor' diye okunmaz
 
 **Dosyalar:**
 
 ```
-utils/observability.ts
-components/ErrorBoundary.tsx
 admin-panel/views/components/CokmeKayitlari.tsx
+admin-panel/views/components/Huni.tsx
 admin-panel/views/components/SistemSagligi.tsx
+components/ErrorBoundary.tsx
+shared/olayKatalogu.ts
 supabase/migrations/20260804140000_sre3_cokme_kaydi.sql
 supabase/migrations/20260804150000_sre3_ek_bilgi_temizligi.sql
 supabase/migrations/20260804160000_sre3_gizlendi_etiketi_duzeltmesi.sql
+supabase/migrations/20260805181455_olcum_huni_sistemi.sql
+utils/observability.ts
+utils/olcum.ts
 ```
 
-**Veritabanı nesneleri:** `istemci_hatalari`, `hata_bildir`, `hata_ozeti`, `hata_temizle_metin`, `hata_temizle_json`, `hata_kayitlarini_temizle`, `hata_kayit_temizligi`, `sistem_saglik_kayitlari`, `sistem_saglik_calistir`, `sistem_saglik_ozet`, `sistem_saglik_gunluk`, `sistem_saglik_ek_kontroller`
+**Veritabanı nesneleri:** `istemci_hatalari`, `hata_bildir`, `hata_ozeti`, `hata_temizle_metin`, `hata_temizle_json`, `hata_kayitlarini_temizle`, `hata_kayit_temizligi`, `sistem_saglik_kayitlari`, `sistem_saglik_calistir`, `sistem_saglik_ozet`, `sistem_saglik_gunluk`, `sistem_saglik_ek_kontroller`, `olay_tanimlari`, `urun_olaylari`, `urun_olaylari_gunluk`, `olay_yaz`, `huni_ozeti`, `basarili_mac_ozeti`, `olcum_sagligi`, `olcum_gunluk_ozet_uret`, `olcum_kayitlarini_temizle`, `olcum_gunluk_ozet`, `olcum_temizlik`
 
 **Bu taşı koruyan kontroller:**
 
 | Kontrol | Ne sorar | Yakaladığı sessizlik | Ne zaman |
 |---|---|---|---|
 | `K-COKME-1` | Son 24 saatte kaç kişide, kaç farklı hata oluştu. Yeni bir sürümden sonra ani artış, o sürümün bir şeyi bozduğunu gösterir. | Uygulama bir grup kullanıcıda çöküyor ama kimse şikâyet etmediği için hiç öğrenilmiyor | GUNLUK |
+| `K-OLCUM-1` | Huni adımları son 24 saatte kaç olay yazdı, adımların hangisi tamamen sustu? Susan adım 'kimse buraya gelmiyor' sanılır ama aslında ölçüm kopmuştur. | Ölçüm sessizce durur, panel sıfır gösterir, sıfır 'talep yok' diye okunur | GUNLUK |
 
 **⚠️ Bu taşta şu an açık olan bulgular:** SRE-2, SRE-5
 
 > **Not:** Bu yapi tasi 4 Agustos 2026'da dogdu. SRE turu olctu: 391 dosyada yalnizca 2 trackEvent ve 6 captureError vardi VE hicbiri bir yere gitmiyordu — utils/observability.ts Sentry icin yazilmis ama anahtar yoktu, yani her cagri sessiz no-op'tu. ErrorBoundary ekranda 'sorun Oyna tarafina iletildi' yazdigi halde iletilmiyordu. S-3 karari 'guvenli olsun': ucuncu tarafa veri gonderilmez, kendi veritabanimiza yazilir. Ayrica artik yalnizca elle cagrilan yerler degil, YAKALANMAMIS tum hatalar da toplanir (window.onerror + unhandledrejection). SRE-2 hala acik: alarm kurucunun telefonuna ULASAMAZ, panele bakmasi gerekir (S-2 = 'bu oturumda e-posta yok').
+
+5 Agustos 2026 — OLCUM/HUNI: prensip 1.6'nin ('Olcum zorunludur') karsiligi kuruldu. 20 olay, 4 huni, kendi veritabanimiza yazilir. Kurucu kararlari: dort huni de olculur; 'basarili mac' = kadro doldu + para toplandi + saati gecti (+ iptal yok); kayitta kullanici kimligi tutulur; panel kirilimlari tarih/ilce/yeni-eski/telefon. P-0 geregi olcumun kendisi de denetlenir (olcum_sagligi).
 
 ---
 
@@ -684,6 +719,7 @@ supabase/migrations/20260804160000_sre3_gizlendi_etiketi_duzeltmesi.sql
 | `K-KAPI-1` **Yetki kontrolü görünmeyen fonksiyon var mı?** | Kullanıcının çağırabildiği fonksiyonlardan kaçında 'sen kimsin' kontrolü yok? | kapısız YAZAN fonksiyon = 0 | HER_IKISI |
 | `K-KAPI-2` **Hassas sütunlar korunuyor mu?** | Kullanıcı kendi rolünü, bakiyesini veya cezasını değiştirebiliyor mu? | korumasız hassas sütun = 0 | HER_IKISI |
 | `K-KAPI-3` **Her SECURITY DEFINER fonksiyonda search_path sabit mi?** | Yetkili çalışan fonksiyonlar kandırılmaya açık mı? | acik = 0 | HER_IKISI |
+| `K-KAPI-4` **Veritabanı kapısı kendiliğinden açıldı mı?** | Hangi fonksiyonun dışarıya açık olduğu onaylanmış bir listede tutulur. Gece bu liste canlı durumla karşılaştırılır; onaysız açılan kapı kırmızı yanar. | durum = 'YESIL' (kendiliğinden açılan kapı = 0) | HER_IKISI |
 | `K-BILDIRIM-1` **Dışarı giden çağrılar başarılı mı?** | Son 24 saatte gönderilmeye çalışılan bildirimlerin kaçı gerçekten gitti? | basarisiz = 0 | GUNLUK |
 | `K-BILDIRIM-2` **Bildirim üretilen her olay gerçekten bildirim üretmiş mi?** | Son 24 saatte biten/iptal olan maçların hepsi katılımcılarına haber verdi mi? | bildirimsiz olay = 0 | GUNLUK |
 | `K-KAPSAMA-1` **Coğrafi sorgular indeks kullanıyor mu?** | Yakındaki sahaları bulan sorgu tüm tabloyu mu tarıyor? | Seq Scan yok | DEGISIKLIKTE |
@@ -702,4 +738,5 @@ supabase/migrations/20260804160000_sre3_gizlendi_etiketi_duzeltmesi.sql
 | `K-DEMO-1` **Demo veri kurallara uyuyor mu?** | Demo satırları gerçek sistemin kurallarına uyuyor mu, denetimi kirletiyor mu? | kural dışı demo satırı = 0 | GUNLUK |
 | `K-YEDEK-1` **Gecelik yedek gerçekten alındı mı?** | Her gece 05:30'da kritik tabloların kopyası alınır. Bu kontrol o kopyanın BUGÜN alındığını ve içindeki tablo sayısının tam olduğunu doğrular. | son_yedek_tarihi = bugün VE son_gun_tablo = beklenen_tablo | GUNLUK |
 | `K-COKME-1` **Uygulama kimsede çöküyor mu?** | Son 24 saatte kaç kişide, kaç farklı hata oluştu. Yeni bir sürümden sonra ani artış, o sürümün bir şeyi bozduğunu gösterir. | etkilenen_kisi son 7 günün ortalamasının 3 katını aşmamalı | GUNLUK |
+| `K-OLCUM-1` **Ölçüm sistemi hâlâ kayıt tutuyor mu?** | Huni adımları son 24 saatte kaç olay yazdı, adımların hangisi tamamen sustu? Susan adım 'kimse buraya gelmiyor' sanılır ama aslında ölçüm kopmuştur. | durum = 'YESIL' (susan huni adımı = 0) | GUNLUK |
 | `K-SURUM-1` **Sürüm numarası her yerde aynı mı?** | Web, Android ve iOS aynı sürüm numarasını mı taşıyor? Biri geride kalırsa 'hangi sürümde bu hata vardı' sorusunun cevabı kaybolur. | Çıkış kodu 0 — üç yerde de package.json'daki sürüm yazıyor | DEGISIKLIKTE |

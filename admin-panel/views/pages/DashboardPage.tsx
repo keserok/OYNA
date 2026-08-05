@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAppStore } from '../../../store';
+import { supabase } from '../../../supabaseClient';
 import { Spinner } from '../../../components/ui/Spinner';
 import { StatCard } from '../components/StatCard';
 import { DataTable } from '../components/DataTable';
@@ -28,6 +29,22 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onRefresh, onNavig
     const [financeStats, setFinanceStats] = useState<{ booking_revenue: number; payment_count: number } | null>(null);
     const [revenueTrend, setRevenueTrend] = useState<Array<{ name: string; gelir: number; mac: number }>>([]);
     const { error: toastError } = useAdminToast();
+
+    // ── KUZEY YILDIZI · BAŞARILI MAÇ ────────────────────────────────────────
+    // Bu kart eskiden `stats.successful_matches` okuyordu; o alan sunucudan
+    // ARTIK DÖNMÜYOR, yani kart her zaman 0 gösteriyordu — ölü bir sayı.
+    // Artık kurucunun tanımıyla hesaplanan gerçek sayıyı okur:
+    // kadro doldu + para toplandı + saati geçti + iptal yok (demo hariç).
+    const [basariliMac, setBasariliMac] = useState<{
+        oynanan: number; basarili: number; iptal: number;
+        kadro_dolmadi: number; para_eksik: number; oran: number | null;
+    } | null>(null);
+    useEffect(() => {
+        let canli = true;
+        supabase.rpc('basarili_mac_ozeti', { p_gun: 365, p_ilce: null })
+            .then(({ data, error }) => { if (canli && !error) setBasariliMac(data as typeof basariliMac); });
+        return () => { canli = false; };
+    }, []);
 
     const stats = adminDashboardStats;
     // Komisyon tek kaynak (Karar #77): admin_dashboard_stats commission_config'ten okur.
@@ -138,17 +155,26 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onRefresh, onNavig
                         <p className="text-[11px] font-extrabold text-[#39FF14] uppercase tracking-[0.2em] mb-1">★ Kuzey Yıldızı — Başarılı Maç</p>
                         <div className="flex items-end gap-3">
                             <span className="text-5xl md:text-6xl font-extrabold text-white leading-none tabular-nums">
-                                {Number(stats?.successful_matches ?? 0).toLocaleString('tr')}
+                                {basariliMac ? basariliMac.basarili.toLocaleString('tr') : '—'}
                             </span>
-                            <span className="text-xs text-gray-400 mb-1.5 max-w-[220px] leading-snug">
-                                ödendi → toplanıldı → oynandı. Platformun gerçek başarı ölçütü.
+                            <span className="text-xs text-gray-400 mb-1.5 max-w-[240px] leading-snug">
+                                kadro doldu → para toplandı → oynandı.
+                                {basariliMac && basariliMac.oynanan > 0 && (
+                                    <> Son 1 yılda saati geçen {basariliMac.oynanan} maçın{' '}
+                                    {basariliMac.oran != null ? `%${basariliMac.oran}` : '—'}'i.</>
+                                )}
                             </span>
                         </div>
                     </div>
                     <div className="flex gap-5 text-right shrink-0">
                         <div>
-                            <p className="text-[10px] text-gray-500 uppercase font-bold">Tamamlanan</p>
-                            <p className="text-xl font-extrabold text-white tabular-nums">{Number(stats?.completed_matches ?? 0).toLocaleString('tr')}</p>
+                            {/* "Neden başarılı olmadı?" — sayının yanında sebebi de dursun. */}
+                            <p className="text-[10px] text-gray-500 uppercase font-bold">Kadro dolmadı</p>
+                            <p className="text-xl font-extrabold text-white tabular-nums">{basariliMac ? basariliMac.kadro_dolmadi.toLocaleString('tr') : '—'}</p>
+                        </div>
+                        <div>
+                            <p className="text-[10px] text-gray-500 uppercase font-bold">Para eksik</p>
+                            <p className="text-xl font-extrabold text-white tabular-nums">{basariliMac ? basariliMac.para_eksik.toLocaleString('tr') : '—'}</p>
                         </div>
                         <div>
                             <p className="text-[10px] text-gray-500 uppercase font-bold">Toplam Maç</p>

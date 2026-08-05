@@ -3,7 +3,7 @@ import {
   mapAdminMatchRowToListing,
   listingToMatchPayload,
   type AdminMatchRow,
-} from '../../admin-panel/utils/matchMapper';
+} from '../../shared/matchMapper';
 
 // Minimal geçerli bir satır üreten yardımcı
 function row(partial: Partial<AdminMatchRow>): AdminMatchRow {

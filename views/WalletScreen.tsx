@@ -7,6 +7,8 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../supabaseClient';
 import { useAppStore } from '../store';
+import { useAsagiCekYenile } from '../hooks/useAsagiCekYenile';
+import { YenileniyorSeridi } from '../components/common/YenileniyorSeridi';
 import { UserRole } from '../types';
 import { formatTRYAmount, formatTRYSigned } from '../utils/formatTRY';
 import {
@@ -202,6 +204,9 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
       setRefreshing(false);
     }
   }, [setSavedCards, isEarningsRole]);
+
+  // AŞAĞI ÇEKİP YENİLE — bakiye ve hareketler tazelenir.
+  const cekerekYenileniyor = useAsagiCekYenile(fetchData);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -1009,6 +1014,7 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
         </button>
       </header>
 
+      <YenileniyorSeridi aktif={cekerekYenileniyor} />
       <main className="flex-1 overflow-y-auto custom-scrollbar z-10 px-5 pt-2 pb-safe-nav space-y-[18px]">
         {/* Hata banner'ı — başarısız ödeme buraya düşer (hibrit UX'in cüzdan yarısı) */}
         {lastPaymentError && (

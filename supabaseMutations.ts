@@ -346,8 +346,50 @@ export const fbGetReferees = async () => {
 const PITCHES_MAX = 2000;
 const TEAMS_MAX = 2000;
 
-export const fbGetPitches = async () => {
-  const { data, error } = await supabase.from('pitches').select('*').limit(PITCHES_MAX);
+/**
+ * [YUK-2] VERİ TUTARSIZLIĞINA DAYANIKLILIK — kabul edilebilir "il" değerleri.
+ *
+ * GEÇMİŞ: 5 Ağustos 2026'da canlıda, ilin İLÇE ADIYLA yazıldığı bir kayıt
+ * bulundu — "Ahmet Kuru Tesisleri" → city='Altınordu' (doğrusu 'Ordu').
+ * Bölge daraltması düz `city='Ordu'` yazılsaydı bu saha ve ona bağlı 4 maç,
+ * Ordu/Altınordu'daki kullanıcının ekranından KAYBOLACAKTI.
+ * O kayıt kurucu onayıyla düzeltildi; bugün 6 sahanın 6'sı tutarlı.
+ *
+ * PEKİ NEDEN DURUYOR: veri bir kez böyle girildiyse tekrar girilebilir ve bu
+ * hata SESSİZ — kimse "sahalarım eksik" demeden fark edilmez. Bu yüzden kural
+ * savunma olarak kalır: ilçeye TAM eşleşme aranır, il ise "gerçek il VEYA ilçe
+ * adı" olarak esnetilir. İlçe eşleşmesi zorunlu kaldığı için bu esneklik başka
+ * bir ilin sahasını sızdıramaz (Ordu/Merkez ile Samsun/Merkez karışmaz, çünkü
+ * il adayları yalnız o bölgenin kendi il ve ilçe adıdır).
+ */
+const ilAdaylari = (bolge: { city?: string | null; district?: string | null }): string[] =>
+  [...new Set([bolge.city, bolge.district].filter((x): x is string => !!x))];
+
+/**
+ * [YUK-2] Açılışta çekilen saha listesi ARTIK BÖLGEYE DARALTILIR.
+ *
+ * Gerekçe (OYNA_PRENSIPLER 4.5): "Bölge de konum da yoksa ülke geneli
+ * gösterilmez." Eski hâli `select('*')` ile ülke genelini indiriyordu; tavan
+ * PITCHES_MAX=2000 satır ≈ 2,6 MB idi ve tek ilçedeyken bu görünmüyordu.
+ *
+ * Kapsam kuralı — çağıran (store.retryInitialLoad) kullanıcının birincil
+ * bölgesini geçirir:
+ *   • bölge + ilçe var → yalnız o ilçe
+ *   • yalnız il var    → o ilin tamamı
+ *   • bölge YOK        → HİÇBİR ŞEY çekilmez (boş döner). Kullanıcı önce konum
+ *                        izni ya da ilçe seçimine yönlendirilir; ülke geneline
+ *                        DÜŞÜLMEZ.
+ *
+ * Kullanıcının KENDİ sahaları bundan etkilenmez: onlar fbGetOwnerPitches ile
+ * ayrı ve bölgeden bağımsız çekilir.
+ */
+export const fbGetPitches = async (bolge?: { city?: string | null; district?: string | null } | null) => {
+  if (!bolge?.city) return [];
+  let sorgu = supabase.from('pitches').select('*');
+  sorgu = bolge.district
+    ? sorgu.eq('district', bolge.district).in('city', ilAdaylari(bolge))
+    : sorgu.eq('city', bolge.city);
+  const { data, error } = await sorgu.limit(PITCHES_MAX);
   if (error) throw new Error(`Sahalar yüklenemedi: ${error.message}`);
   return (data || []).map(mapFromSnakeCase);
 };
@@ -370,15 +412,37 @@ export const fbGetPitches = async () => {
 // kendi sunucu-taraflı sayfalı sorgusunu kullanıyor (fetchMatchesAdmin).
 //
 // Sınır: yaklaşan/yeni maçlar önce gelsin diye starts_at'e göre azalan sırada.
+//
+// [YUK-2] BÖLGE DARALTMASI EKLENDİ. matches tablosunda il/ilçe kolonu YOK;
+// bölge bilgisi sahadan gelir (matches.pitch_id → pitches.city/district).
+// Bu yüzden daraltma gömülü `pitches!inner(...)` ile sunucu tarafında yapılır —
+// iki ayrı istek yapılmaz, sahalar sorgusuyla paralel kalır.
+//
+// KAPSAM UYARISI: `!inner` sahasız maçı (pitch_id IS NULL) listeden düşürür.
+// Bugün canlıda böyle maç yok (22/22 maçın sahası var) ve sahasız bir maç zaten
+// konuma göre keşfedilemez. Kullanıcının KENDİ maçları bundan etkilenmez:
+// onlar get_my_matches() ile ayrı ve bölgeden bağımsız gelir.
+//
+// Bölge yoksa boş döner — prensip 4.5 gereği ülke geneline düşülmez.
 const MATCHES_MAX = 300;
-export const fbGetMatches = async () => {
-  const { data, error } = await supabase
+export const fbGetMatches = async (bolge?: { city?: string | null; district?: string | null } | null) => {
+  if (!bolge?.city) return [];
+  let sorgu = supabase
     .from('matches')
-    .select('*')
+    .select('*, pitches!inner(city, district)');
+  // Aynı dayanıklılık kuralı (bkz. ilAdaylari): ilçe tam eşleşir, il esnetilir.
+  sorgu = bolge.district
+    ? sorgu.eq('pitches.district', bolge.district).in('pitches.city', ilAdaylari(bolge))
+    : sorgu.eq('pitches.city', bolge.city);
+  const { data, error } = await sorgu
     .order('starts_at', { ascending: false, nullsFirst: false })
     .limit(MATCHES_MAX);
   if (error) throw new Error(`Maçlar yüklenemedi: ${error.message}`);
-  return (data || []).map(mapFromSnakeCase);
+  // Gömülü `pitches` alanı yalnız süzmek içindi; MatchListing şeklini bozmasın.
+  return (data || []).map((satir) => {
+    const { pitches: _bolgeSuzgeci, ...mac } = satir as Record<string, unknown>;
+    return mapFromSnakeCase(mac);
+  });
 };
 
 // [P-5 / M-P0-6] "Maçlarım" için KAPSAMLI sunucu sorgusu.

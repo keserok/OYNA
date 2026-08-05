@@ -217,6 +217,19 @@ describe('skorsuz maç beraberlik değil', () => {
     expect(s).not.toMatch(/homeScore \?\? .*?0/);
   });
 
+  it('kimlik kartında DOĞRULAMA TİKİ yok — bir daha da gelmez', () => {
+    // Kullanıcı kararı (2026-08): "Profil ekranındaki tik işaretini kaldır ve
+    // bir daha görünmemesini sağla." Onaylı tasarımın kimlik kartında da tik
+    // yoktur. Bileşen artık `verified` diye bir alan KABUL ETMİYOR; bu test
+    // hem alanın hem de rozet çiziminin geri gelmesini engeller.
+    const kart = oku('components/profile/ProfileIdentityCard.tsx');
+    expect(kart, 'ProfileIdentityCard yeniden `verified` alanı almış').not.toMatch(/verified\??:/);
+    expect(kart, 'kimlik kartına doğrulama rozeti geri çizilmiş').not.toContain('Doğrulanmış');
+    for (const dosya of ['views/ProfileScreen.tsx', 'components/settings/ProfileInfoPage.tsx']) {
+      expect(oku(dosya), `${dosya} karta yeniden \`verified\` gönderiyor`).not.toContain('verified=');
+    }
+  });
+
   it('NO_SCORE her yüzeyde tanınıyor', () => {
     expect(oku('services/userService.ts')).toContain("'WIN' | 'LOSS' | 'DRAW' | 'NO_SCORE'");
     expect(oku('components/profile/MatchHistorySection.tsx')).toContain('NO_SCORE:');

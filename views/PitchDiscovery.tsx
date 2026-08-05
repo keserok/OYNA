@@ -9,6 +9,8 @@ import {
 import { Pitch, Court } from '../types';
 import { SCREEN } from '../ui/labels';
 import { useAppStore } from '../store';
+import { useAsagiCekYenile } from '../hooks/useAsagiCekYenile';
+import { YenileniyorSeridi } from '../components/common/YenileniyorSeridi';
 import MapGL, { Marker as MapMarker, Source as MapSource, Layer as MapLayer, AttributionControl, type MapRef } from 'react-map-gl/maplibre';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { OYNA_MAPLIBRE_STYLE, OYNA_MAPLIBRE_CSS, isWebglAvailable } from '../components/map/mapBase';
@@ -53,6 +55,7 @@ import PhotoCarousel from '../components/common/PhotoCarousel';
 import { trUpper } from '../utils/trUpper';
 import { ActionSheet } from '../components/ui/ActionSheet';
 import { formatTRYShort } from '../utils/formatTRY';
+import { olayYaz } from '../utils/olcum';
 
 interface MapViewProps {
   pitches: Pitch[];
@@ -519,6 +522,9 @@ const dayOffsetFromToday = (d: Date) => Math.round((startOfDay(d).getTime() - st
 const DISTRICT_COORDINATES: Record<string, [number, number]> = ORDU_DISTRICTS;
 
 const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode, onSelectTime, onNavigate }) => {
+  // ÖLÇÜM · kiralama hunisi 1/5 — "saha listesini açtı". Seçim kipinde
+  // (maç kurarken saha seçme) yazılmaz: o akış kaptan hunisine aittir.
+  useEffect(() => { if (!isSelectionMode) olayYaz('kiralama_liste_acildi'); }, [isSelectionMode]);
   const {
     userLocation,
     setUserLocation,
@@ -592,6 +598,11 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
       setPitchesLoading(false);
     }
   }, [selectedRegions]);
+
+  // AŞAĞI ÇEKİP YENİLE — saha listesi tazelenir. Kanca BİLEREK burada:
+  // `fetchPitches` tanımından SONRA çağrılıyor ki ref üzerinden dolaylı
+  // erişime gerek kalmasın (dolaylı yol, bağın koptuğunu sessizce gizler).
+  const cekerekYenileniyor = useAsagiCekYenile(fetchPitches);
 
   /**
    * "Bugün X saat müsait" rozeti (Karar #7): doluluk kişisel-veri-içermeyen
@@ -912,6 +923,8 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
   const handleOpenDetail = (pitch: Pitch) => {
     setSelectedPitch(pitch);
     setIsDetailOpen(true);
+    // ÖLÇÜM · kiralama hunisi 2/5 — "bir tesisi açtı".
+    if (!isSelectionMode) olayYaz('kiralama_tesis_acildi', { tekrarlanabilir: true });
     // Kök tutarlılık kararı: her saha (court) ayrı seçilir — owner panelindeki
     // sıralamayla ilk saha varsayılan gelir, tip otomatik sahadan türer.
     const firstCourt = pitch.courts?.[0] ?? null;
@@ -1051,6 +1064,9 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
 
   const persistBookingSelection = () => {
     if (!selectedPitch || !selectedCourt || !selectedSlot || !selectedSlotQuote) return;
+    // ÖLÇÜM · kiralama hunisi 3/5 — "saat seçti". Fiyat teklifi de geldiği için
+    // bu, kullanıcının tutarı GÖRDÜĞÜ andır.
+    olayYaz('kiralama_saat_secildi', { tekrarlanabilir: true });
     setBookingPitch(selectedPitch);
     setBookingCourt(selectedCourt);
     setBookingDate(selectedDateISO);
@@ -1256,6 +1272,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
       {/* pt-safe-baslik: `pt-safe` güvenli alanı BİLDİRMEYEN cihazda 16px'e
           düşüyor ve başlık çentiğin altına giriyordu. Yeni kural ikisinden
           büyüğünü alır (bkz. index.css). */}
+      <YenileniyorSeridi aktif={cekerekYenileniyor} />
       <header className="px-6 pt-safe-baslik pb-3 bg-gradient-to-b from-[#0A0E14] to-transparent sticky top-0 z-40 backdrop-blur-md">
         <div className="flex items-start justify-between">
           <div className="min-w-0">

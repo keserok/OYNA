@@ -1,0 +1,14 @@
+-- ════════════════════════════════════════════════════════════════════════════
+-- ACILIS_OLCUMU — YÖNETİCİ OKUMA İZNİ GERİ VERİLDİ
+-- ════════════════════════════════════════════════════════════════════════════
+-- Bir önceki migration'daki `REVOKE ALL`, satır kuralının (RLS) dayandığı TABLO
+-- iznini de kaldırmıştı. Sonuç: `acilis_olcumu_select_admin` politikası
+-- işlevsiz kalıyor, YÖNETİCİ BİLE ham ölçüme bakamıyordu.
+--
+-- SELECT izni geri verilir; satır kuralı zaten yalnız yöneticiye açıyor.
+-- INSERT bilerek VERİLMEZ — yazım tek kapıdan, acilis_olcumu_yaz() ile yapılır.
+--
+-- (Panelin Sistem Sağlığı kartı bu tabloyu doğrudan okumaz; K-YUK-4 üzerinden
+--  besleniyor. Bu izin, ham veriye elle bakabilmek içindir.)
+-- ════════════════════════════════════════════════════════════════════════════
+GRANT SELECT ON public.acilis_olcumu TO authenticated;

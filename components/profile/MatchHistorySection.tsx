@@ -1,6 +1,28 @@
 import React, { useState } from 'react';
 import { MatchHistorySummary } from '../../services/userService';
 
+// ════════════════════════════════════════════════════════════════════════════
+// MAÇ GEÇMİŞİ — onaylı profil tasarımı ("Profil · dolu" / "Profil · boş")
+// ════════════════════════════════════════════════════════════════════════════
+//
+// SATIRIN OKUNUŞU (tasarımdan birebir):
+//     G   Altınordu Halı Saha            6 - 4
+//         02 Ağustos
+// Solda TEK HARF (renk yok, rozet yok), ortada saha adı ÜSTTE ve tarih ALTTA,
+// sağda skor. Önceki sürümde harf renkli bir daire içindeydi ve tarih üstte,
+// saha adı altta yazıyordu — tasarımın sırası tersiydi ve kart gürültülüydü.
+// Sonuç yine okunur: harfin kendisi (G/B/M) sonucu söylüyor, ekran renk
+// kalabalığına boğulmuyor.
+
+/** Sonucun tek harfi. Renk YOK — tasarım kararı. */
+const RESULT_LETTER: Record<MatchHistorySummary['result'], { harf: string; etiket: string }> = {
+    WIN: { harf: 'G', etiket: 'Galibiyet' },
+    DRAW: { harf: 'B', etiket: 'Beraberlik' },
+    LOSS: { harf: 'M', etiket: 'Mağlubiyet' },
+    // IP-18: skoru girilmemiş maç bir SONUÇ değildir — nötr tire ile çizilir.
+    NO_SCORE: { harf: '–', etiket: 'Skor girilmedi' },
+};
+
 export interface MatchHistorySectionProps {
     matches: MatchHistorySummary[];
     /** Verilmezse satırlar tıklanamaz (salt-okunur profil). */
@@ -9,69 +31,63 @@ export interface MatchHistorySectionProps {
     onFindMatch?: () => void;
 }
 
-/** Tasarım 3a: sonuç, skorun renginden değil soldaki harf rozetinden okunur. */
-const RESULT_BADGE: Record<MatchHistorySummary['result'], { harf: string; sinif: string; etiket: string }> = {
-    WIN: { harf: 'G', sinif: 'bg-primary/15 border-primary/35 text-primary', etiket: 'Galibiyet' },
-    DRAW: { harf: 'B', sinif: 'bg-warning/15 border-warning/35 text-warning', etiket: 'Beraberlik' },
-    LOSS: { harf: 'M', sinif: 'bg-error/15 border-error/35 text-error', etiket: 'Mağlubiyet' },
-    // IP-18: skoru girilmemiş maç bir SONUÇ değildir — nötr çizilir, yeşil/
-    // kırmızı/sarı üçlüsüne girmez.
-    NO_SCORE: { harf: '–', sinif: 'bg-white/[0.06] border-white/[0.15] text-[#F5F3EE]/[0.55]', etiket: 'Skor girilmedi' },
-};
-
 /** Başlangıçta gösterilen satır sayısı; gerisi "Tümü" ile yerinde açılır. */
 const ILK_GOSTERIM = 4;
 
 /**
- * Maç geçmişi listesi (tasarım 3a "İnce Neon"): tek kart içinde son 4 maç,
- * başlığın sağında "Tümü →". Kullanıcı kararı: ayrı bir "tüm maçlar" sayfası
- * açılmaz — liste yerinde uzayıp kısalır. Skorlar BEYAZ; kazandın/kaybettin
- * bilgisi soldaki renkli harf rozetinden okunur.
+ * Maç geçmişi listesi: tek kart içinde son 4 maç, başlığın sağında "Tümü (n) ›".
+ * Kullanıcı kararı: ayrı bir "tüm maçlar" sayfası açılmaz — liste yerinde
+ * uzayıp kısalır.
  */
 export const MatchHistorySection: React.FC<MatchHistorySectionProps> = ({ matches, onOpen, onFindMatch }) => {
     const [hepsiAcik, setHepsiAcik] = useState(false);
     const gorunen = hepsiAcik ? matches : matches.slice(0, ILK_GOSTERIM);
     const fazlasiVar = matches.length > ILK_GOSTERIM;
+    const bos = gorunen.length === 0;
 
     return (
         <div>
-            <div className="flex items-baseline justify-between mt-6 mb-2.5 px-0.5">
-                <span className="text-[1.0625rem] font-bold text-[#F5F3EE]">Maç Geçmişi</span>
+            {/* Başlık: küçük, harf aralıklı, soluk — bir bölüm etiketidir,
+                kartların kendisiyle yarışmaz. Üst boşluk KÜÇÜK tutulur:
+                ekranın kart araları artık 18px (kullanıcı kararı) ve buraya
+                ayrıca boşluk eklenirse başlık listeden kopuk durur. */}
+            <div className={`flex items-baseline justify-between ${bos ? 'mt-0.5' : 'mt-1'} mb-3 px-0.5`}>
+                <span className="text-[0.6875rem] tracking-[0.14em] uppercase text-[#F5F3EE]/[0.55]">Maç Geçmişi</span>
                 {fazlasiVar && (
                     <button
                         onClick={() => setHepsiAcik(a => !a)}
-                        className="text-[0.75rem] italic text-[#F5F3EE]/[0.55] hover:text-[#F5F3EE] transition-colors"
+                        className="text-[0.75rem] text-[#F5F3EE]/[0.55] hover:text-[#F5F3EE] transition-colors"
                     >
-                        {hepsiAcik ? 'Daha az ←' : `Tümü (${matches.length}) →`}
+                        {hepsiAcik ? '‹ Daha az' : `Tümü (${matches.length}) ›`}
                     </button>
                 )}
             </div>
 
-            {gorunen.length > 0 ? (
-                <div className="rounded-3xl bg-surface-1 shadow-[0_10px_30px_rgba(0,0,0,0.3)] overflow-hidden">
+            {!bos ? (
+                <div className="rounded-3xl bg-surface-1 overflow-hidden">
                     {gorunen.map((m, i) => {
-                        const rozet = RESULT_BADGE[m.result];
+                        const sonuc = RESULT_LETTER[m.result];
                         const sonSatir = i === gorunen.length - 1;
                         const rowContent = (
                             <>
                                 <span
-                                    aria-label={rozet.etiket}
-                                    className={`w-[22px] h-[22px] rounded-full border flex items-center justify-center text-[0.625rem] font-bold shrink-0 ${rozet.sinif}`}
+                                    aria-label={sonuc.etiket}
+                                    className="w-[14px] text-[0.875rem] text-white shrink-0"
                                 >
-                                    {rozet.harf}
+                                    {sonuc.harf}
                                 </span>
                                 <div className="flex-1 min-w-0">
-                                    <p className="text-[0.6875rem] tracking-[0.12em] uppercase text-[#F5F3EE]/[0.55]">{m.date}</p>
-                                    <p className="mt-0.5 text-[0.9375rem] font-semibold text-[#F5F3EE] truncate">{m.pitchName}</p>
+                                    <p className="m-0 text-base text-white truncate">{m.pitchName}</p>
+                                    <p className="mt-0.5 mb-0 text-[0.75rem] text-[#F5F3EE]/[0.55]">{m.date}</p>
                                 </div>
                                 {m.result === 'NO_SCORE' ? (
-                                    <span className="text-[0.8125rem] italic text-[#F5F3EE]/[0.55] shrink-0">{m.score}</span>
+                                    <span className="text-[0.8125rem] text-[#F5F3EE]/[0.55] shrink-0">{m.score}</span>
                                 ) : (
-                                    <span className="text-base font-bold italic tracking-tight text-[#F5F3EE] shrink-0">{m.score}</span>
+                                    <span className="text-base font-[Montserrat] font-extrabold italic text-white shrink-0">{m.score}</span>
                                 )}
                             </>
                         );
-                        const rowClass = `w-full flex items-center gap-3 py-3.5 px-4 text-left ${sonSatir ? '' : 'border-b border-white/[0.08]'}`;
+                        const rowClass = `w-full flex items-center gap-3.5 py-[17px] px-[18px] text-left ${sonSatir ? '' : 'border-b border-white/[0.06]'}`;
                         return onOpen ? (
                             <button key={m.id} onClick={() => onOpen(m.id)} className={`${rowClass} hover:bg-white/[0.03] transition-colors`}>
                                 {rowContent}
@@ -88,8 +104,8 @@ export const MatchHistorySection: React.FC<MatchHistorySectionProps> = ({ matche
                    kullanıcıyı çıkmaza sokuyordu; tasarım buraya "Maç bul"
                    düğmesini koydu. Düğme YALNIZ `onFindMatch` verilirse
                    çizilir — admin panelindeki salt-okunur aynada anlamsız. */
-                <div className="rounded-3xl bg-surface-1 shadow-[0_10px_30px_rgba(0,0,0,0.3)] py-7 px-6 flex flex-col items-center gap-3.5 text-center">
-                    <p className="text-[0.875rem] text-[#F5F3EE]/[0.55] leading-relaxed">Henüz oynanmış bir maçın yok.</p>
+                <div className="rounded-3xl bg-surface-1 py-6 px-6 flex flex-col items-center gap-4 text-center">
+                    <p className="m-0 text-[0.875rem] text-[#F5F3EE]/[0.55] leading-[1.5]">Henüz oynanmış bir maçın yok.</p>
                     {onFindMatch && (
                         <button
                             onClick={onFindMatch}
