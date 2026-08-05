@@ -326,14 +326,40 @@ export const mapFromSnakeCase = (obj: any) => {
   return mapped;
 };
 
+/**
+ * [B2 · anon maskeleme] Sağlayıcı kataloğu MİSAFİRE KONUMSUZ gelir.
+ *
+ * Kaleci/hakem ilanları `coordinates` ve `geohash` taşıyor — yani gerçek bir
+ * kişinin yaklaşık konumu. Bu, giriş yapmamış herkese (ve arama motorlarına)
+ * açıktı; sağlayıcının verdiği KVKK onayı ise yalnız "doğrulama amacıyla
+ * işleme"yi kapsıyor, konumun kamuya yayımlanmasını DEĞİL.
+ *
+ * Çözüm ham tabloyu misafire kapatmak ve aynı kolon adlarına sahip, hassas
+ * alanları BOŞ dönen `public_*` görünümünü vermek. Şekil aynı olduğu için
+ * aşağıdaki eşleme ve tüm ekranlar değişmeden çalışır; yalnız misafirde
+ * mesafe hesabı null döner ve Pazaryeri zaten "Konumunu aç" yazar.
+ *
+ * Kayıtlı kullanıcı hiçbir şey kaybetmez: ham tabloyu okur.
+ */
+const oturumVarMi = async (): Promise<boolean> => {
+  try {
+    const { data } = await supabase.auth.getSession();
+    return !!data.session;
+  } catch {
+    return false; // Bilinemiyorsa GÜVENLİ tarafta kal: maskeli görünümü kullan.
+  }
+};
+
 export const fbGetGoalkeepers = async () => {
-  const { data, error } = await supabase.from('goalkeepers').select('*');
+  const kaynak = (await oturumVarMi()) ? 'goalkeepers' : 'public_goalkeepers';
+  const { data, error } = await supabase.from(kaynak).select('*');
   if (error) throw new Error(`Kaleciler yüklenemedi: ${error.message}`);
   return (data || []).map(mapFromSnakeCase);
 };
 
 export const fbGetReferees = async () => {
-  const { data, error } = await supabase.from('referees').select('*');
+  const kaynak = (await oturumVarMi()) ? 'referees' : 'public_referees';
+  const { data, error } = await supabase.from(kaynak).select('*');
   if (error) throw new Error(`Hakemler yüklenemedi: ${error.message}`);
   return (data || []).map(mapFromSnakeCase);
 };
@@ -424,23 +450,36 @@ export const fbGetPitches = async (bolge?: { city?: string | null; district?: st
 // onlar get_my_matches() ile ayrı ve bölgeden bağımsız gelir.
 //
 // Bölge yoksa boş döner — prensip 4.5 gereği ülke geneline düşülmez.
+//
+// [B2 · anon maskeleme] MİSAFİR KADRODAKİ İSİMLERİ GÖRMEZ.
+// Ham `matches` tablosu artık misafire kapalı. Giriş yapmamış kullanıcı
+// `public_matches` görünümünü okur: maç meta verisi ve slot DOLULUĞU aynen
+// gelir, ama oyuncu adı/avatarı ve occupant/purchasedBy kimlikleri silinmiştir.
+// Görünümde bölge süzgeci için hazır `pitch_city` / `pitch_district` kolonları
+// var (görünümlerde gömülü `pitches!inner` çalışmaz).
 const MATCHES_MAX = 300;
 export const fbGetMatches = async (bolge?: { city?: string | null; district?: string | null } | null) => {
   if (!bolge?.city) return [];
-  let sorgu = supabase
-    .from('matches')
-    .select('*, pitches!inner(city, district)');
+  const uye = await oturumVarMi();
+  let sorgu = uye
+    ? supabase.from('matches').select('*, pitches!inner(city, district)')
+    : supabase.from('public_matches').select('*');
   // Aynı dayanıklılık kuralı (bkz. ilAdaylari): ilçe tam eşleşir, il esnetilir.
+  const ilAlan  = uye ? 'pitches.city'     : 'pitch_city';
+  const ilceAlan = uye ? 'pitches.district' : 'pitch_district';
   sorgu = bolge.district
-    ? sorgu.eq('pitches.district', bolge.district).in('pitches.city', ilAdaylari(bolge))
-    : sorgu.eq('pitches.city', bolge.city);
+    ? sorgu.eq(ilceAlan, bolge.district).in(ilAlan, ilAdaylari(bolge))
+    : sorgu.eq(ilAlan, bolge.city);
   const { data, error } = await sorgu
     .order('starts_at', { ascending: false, nullsFirst: false })
     .limit(MATCHES_MAX);
   if (error) throw new Error(`Maçlar yüklenemedi: ${error.message}`);
-  // Gömülü `pitches` alanı yalnız süzmek içindi; MatchListing şeklini bozmasın.
+  // Süzme amaçlı alanlar MatchListing şeklini bozmasın (üyede gömülü `pitches`,
+  // misafirde görünümün pitch_city / pitch_district kolonları).
   return (data || []).map((satir) => {
-    const { pitches: _bolgeSuzgeci, ...mac } = satir as Record<string, unknown>;
+    const {
+      pitches: _gomulu, pitch_city: _il, pitch_district: _ilce, ...mac
+    } = satir as Record<string, unknown>;
     return mapFromSnakeCase(mac);
   });
 };

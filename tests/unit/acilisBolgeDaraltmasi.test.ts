@@ -16,6 +16,9 @@ type Kayit = { yontem: string; args: unknown[] };
 
 let kayitlar: Kayit[] = [];
 let donenVeri: unknown[] = [];
+/** Oturum var mı? fbGetMatches/fbGetGoalkeepers buna göre ham tabloyu ya da
+ *  misafire açık maskeli görünümü seçer (B2 anon maskelemesi). */
+let oturumVar = true;
 
 function sorguKurucu() {
   const kurucu: Record<string, unknown> = {};
@@ -38,7 +41,9 @@ vi.mock('../../supabaseClient', () => ({
       return sorguKurucu();
     },
     rpc: vi.fn(),
-    auth: { getSession: vi.fn() },
+    auth: {
+      getSession: async () => ({ data: { session: oturumVar ? { user: { id: 'u' } } : null } }),
+    },
   },
   SUPABASE_URL: 'http://localhost',
 }));
@@ -51,6 +56,7 @@ const suzgec = (yontem: string, alan: string) =>
 beforeEach(() => {
   kayitlar = [];
   donenVeri = [];
+  oturumVar = true; // varsayılan: giriş yapmış kullanıcı
 });
 
 describe('[YUK-2] Bölge bilinmiyorsa ülke geneli ÇEKİLMEZ', () => {
@@ -82,7 +88,8 @@ describe('[YUK-2] Bölge biliniyorsa daraltma SUNUCUDA yapılır', () => {
     expect(suzgec('in', 'city')?.args[1]).toEqual(['Ordu', 'Altınordu']);
   });
 
-  it('maçlar: daraltma gömülü saha üzerinden yapılır (matches tablosunda il/ilçe yok)', async () => {
+  it('ÜYE — maçlar: daraltma gömülü saha üzerinden yapılır (matches tablosunda il/ilçe yok)', async () => {
+    oturumVar = true;
     await fbGetMatches({ city: 'Ordu', district: 'Altınordu' });
 
     expect(suzgec('from', 'matches')).toBeTruthy();
@@ -110,6 +117,38 @@ describe('[YUK-2] Maç listesi şekli bozulmaz', () => {
     const sonuc = await fbGetMatches({ city: 'Ordu', district: 'Altınordu' });
     expect(sonuc).toHaveLength(1);
     expect(sonuc[0]).not.toHaveProperty('pitches');
+    expect(sonuc[0].id).toBe('m1');
+  });
+});
+
+describe('[B2] MİSAFİR maskeli görünümü okur, kadro isimlerini görmez', () => {
+  it('giriş yoksa ham `matches` DEĞİL, `public_matches` sorgulanır', async () => {
+    oturumVar = false;
+    await fbGetMatches({ city: 'Ordu', district: 'Altınordu' });
+
+    // Ham tablo misafire kapalı; oraya gitmek hata verirdi.
+    expect(suzgec('from', 'matches')).toBeUndefined();
+    expect(suzgec('from', 'public_matches')).toBeTruthy();
+  });
+
+  it('misafirde bölge süzgeci görünümün kendi kolonlarını kullanır', async () => {
+    oturumVar = false;
+    await fbGetMatches({ city: 'Ordu', district: 'Altınordu' });
+
+    // Görünümlerde gömülü `pitches!inner` çalışmaz; hazır kolonlar kullanılır.
+    expect(suzgec('eq', 'pitch_district')?.args[1]).toBe('Altınordu');
+    expect(suzgec('in', 'pitch_city')?.args[1]).toEqual(['Ordu', 'Altınordu']);
+    const secim = kayitlar.find((k) => k.yontem === 'select');
+    expect(String(secim?.args[0])).not.toContain('pitches!inner');
+  });
+
+  it('misafir yolunda süzme kolonları sonuç şeklini bozmaz', async () => {
+    oturumVar = false;
+    donenVeri = [{ id: 'm1', title: 'Maç', pitch_city: 'Ordu', pitch_district: 'Altınordu' }];
+    const sonuc = await fbGetMatches({ city: 'Ordu', district: 'Altınordu' });
+    expect(sonuc).toHaveLength(1);
+    expect(sonuc[0]).not.toHaveProperty('pitch_city');
+    expect(sonuc[0]).not.toHaveProperty('pitch_district');
     expect(sonuc[0].id).toBe('m1');
   });
 });
