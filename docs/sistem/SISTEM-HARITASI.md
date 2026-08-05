@@ -216,6 +216,7 @@ Kimin neyi görebileceği ve değiştirebileceği. Satır kuralları (RLS), süt
 - Kullanıcı başkasının verisini okuyamaz/yazamaz
 - Kullanıcı kendi rolünü, bakiyesini, cezasını değiştiremez
 - Her SECURITY DEFINER fonksiyonun görünür bir yetki kontrolü vardır
+- Fonksiyonlar dışarıya KAPALI doğar; açık olması onaylanan liste gece denetlenir
 
 **Dosyalar:**
 
@@ -225,7 +226,7 @@ supabaseClient.ts
 scripts/generate-rls-policy.ts
 ```
 
-**Veritabanı nesneleri:** `pg_policies`, `protect_profile_columns`, `protect_profile_sensitive_fields`, `require_admin_role`, `require_admin_write`, `can_staff_pitch`, `notifications_insert_own_sender`, `matches_update`, `matches_select_public`
+**Veritabanı nesneleri:** `pg_policies`, `protect_profile_columns`, `protect_profile_sensitive_fields`, `require_admin_role`, `require_admin_write`, `can_staff_pitch`, `notifications_insert_own_sender`, `matches_update`, `matches_select_public`, `kapi_kayitli_durum`, `kapi_denetimi`, `kapi_temeli_guncelle`, `pg_default_acl`
 
 **Bu taşı koruyan kontroller:**
 
@@ -234,6 +235,7 @@ scripts/generate-rls-policy.ts
 | `K-KAPI-1` | Kullanıcının çağırabildiği fonksiyonlardan kaçında 'sen kimsin' kontrolü yok? | Fonksiyon çalışıyor ama kimin çağırdığına bakmıyor | HER_IKISI |
 | `K-KAPI-2` | Kullanıcı kendi rolünü, bakiyesini veya cezasını değiştirebiliyor mu? | Koruma bir tabloda var, yeni tabloda unutulmuş | HER_IKISI |
 | `K-KAPI-3` | Yetkili çalışan fonksiyonlar kandırılmaya açık mı? | Tek bir yeni fonksiyon kuralı bozar | HER_IKISI |
+| `K-KAPI-4` | Hangi fonksiyonun dışarıya açık olduğu onaylanmış bir listede tutulur. Gece bu liste canlı durumla karşılaştırılır; onaysız açılan kapı kırmızı yanar. | Yeni bir fonksiyon sessizce herkese açık doğuyor, kimse fark etmiyor | HER_IKISI |
 
 ---
 
@@ -690,7 +692,7 @@ utils/olcum.ts
 | Kontrol | Ne sorar | Yakaladığı sessizlik | Ne zaman |
 |---|---|---|---|
 | `K-COKME-1` | Son 24 saatte kaç kişide, kaç farklı hata oluştu. Yeni bir sürümden sonra ani artış, o sürümün bir şeyi bozduğunu gösterir. | Uygulama bir grup kullanıcıda çöküyor ama kimse şikâyet etmediği için hiç öğrenilmiyor | GUNLUK |
-| K-OLCUM-1 | ⚠️ tanım bulunamadı | — | — |
+| `K-OLCUM-1` | Huni adımları son 24 saatte kaç olay yazdı, adımların hangisi tamamen sustu? Susan adım 'kimse buraya gelmiyor' sanılır ama aslında ölçüm kopmuştur. | Ölçüm sessizce durur, panel sıfır gösterir, sıfır 'talep yok' diye okunur | GUNLUK |
 
 **⚠️ Bu taşta şu an açık olan bulgular:** SRE-2, SRE-5
 
@@ -717,6 +719,7 @@ utils/olcum.ts
 | `K-KAPI-1` **Yetki kontrolü görünmeyen fonksiyon var mı?** | Kullanıcının çağırabildiği fonksiyonlardan kaçında 'sen kimsin' kontrolü yok? | kapısız YAZAN fonksiyon = 0 | HER_IKISI |
 | `K-KAPI-2` **Hassas sütunlar korunuyor mu?** | Kullanıcı kendi rolünü, bakiyesini veya cezasını değiştirebiliyor mu? | korumasız hassas sütun = 0 | HER_IKISI |
 | `K-KAPI-3` **Her SECURITY DEFINER fonksiyonda search_path sabit mi?** | Yetkili çalışan fonksiyonlar kandırılmaya açık mı? | acik = 0 | HER_IKISI |
+| `K-KAPI-4` **Veritabanı kapısı kendiliğinden açıldı mı?** | Hangi fonksiyonun dışarıya açık olduğu onaylanmış bir listede tutulur. Gece bu liste canlı durumla karşılaştırılır; onaysız açılan kapı kırmızı yanar. | durum = 'YESIL' (kendiliğinden açılan kapı = 0) | HER_IKISI |
 | `K-BILDIRIM-1` **Dışarı giden çağrılar başarılı mı?** | Son 24 saatte gönderilmeye çalışılan bildirimlerin kaçı gerçekten gitti? | basarisiz = 0 | GUNLUK |
 | `K-BILDIRIM-2` **Bildirim üretilen her olay gerçekten bildirim üretmiş mi?** | Son 24 saatte biten/iptal olan maçların hepsi katılımcılarına haber verdi mi? | bildirimsiz olay = 0 | GUNLUK |
 | `K-KAPSAMA-1` **Coğrafi sorgular indeks kullanıyor mu?** | Yakındaki sahaları bulan sorgu tüm tabloyu mu tarıyor? | Seq Scan yok | DEGISIKLIKTE |
@@ -735,4 +738,5 @@ utils/olcum.ts
 | `K-DEMO-1` **Demo veri kurallara uyuyor mu?** | Demo satırları gerçek sistemin kurallarına uyuyor mu, denetimi kirletiyor mu? | kural dışı demo satırı = 0 | GUNLUK |
 | `K-YEDEK-1` **Gecelik yedek gerçekten alındı mı?** | Her gece 05:30'da kritik tabloların kopyası alınır. Bu kontrol o kopyanın BUGÜN alındığını ve içindeki tablo sayısının tam olduğunu doğrular. | son_yedek_tarihi = bugün VE son_gun_tablo = beklenen_tablo | GUNLUK |
 | `K-COKME-1` **Uygulama kimsede çöküyor mu?** | Son 24 saatte kaç kişide, kaç farklı hata oluştu. Yeni bir sürümden sonra ani artış, o sürümün bir şeyi bozduğunu gösterir. | etkilenen_kisi son 7 günün ortalamasının 3 katını aşmamalı | GUNLUK |
+| `K-OLCUM-1` **Ölçüm sistemi hâlâ kayıt tutuyor mu?** | Huni adımları son 24 saatte kaç olay yazdı, adımların hangisi tamamen sustu? Susan adım 'kimse buraya gelmiyor' sanılır ama aslında ölçüm kopmuştur. | durum = 'YESIL' (susan huni adımı = 0) | GUNLUK |
 | `K-SURUM-1` **Sürüm numarası her yerde aynı mı?** | Web, Android ve iOS aynı sürüm numarasını mı taşıyor? Biri geride kalırsa 'hangi sürümde bu hata vardı' sorusunun cevabı kaybolur. | Çıkış kodu 0 — üç yerde de package.json'daki sürüm yazıyor | DEGISIKLIKTE |

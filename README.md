@@ -26,7 +26,7 @@ Ana vaat *saha kiralamak değil* — **kaptanın para toplama derdini bitirmek.*
 | Kararların kanıtı ve gerekçesi (K-1…K-17) | [`docs/board/DECISIONS.md`](docs/board/DECISIONS.md) |
 | Danışma kurulu rol raporları (7 rol) | [`docs/board/`](docs/board/) |
 | Cevap bekleyen kararlar | [`docs/board/SON_KARARLAR.md`](docs/board/SON_KARARLAR.md) |
-| **Sistemin bağışıklık sistemi** (17 yapı taşı, 32 kontrol) | [`docs/sistem/MEKANIZMA.md`](docs/sistem/MEKANIZMA.md) |
+| **Sistemin bağışıklık sistemi** (17 yapı taşı, 34 kontrol) | [`docs/sistem/MEKANIZMA.md`](docs/sistem/MEKANIZMA.md) |
 | Bilinen sorunlar ve çözüm geçmişi | [`docs/master/PROBLEMLER_VE_COZUMLER.md`](docs/master/PROBLEMLER_VE_COZUMLER.md) |
 | Operasyon / panel soruları | [`docs/master/RUNBOOK.md`](docs/master/RUNBOOK.md) |
 | iOS'a çıkış rehberi | [`docs/master/IOS_CIKIS_REHBERI.md`](docs/master/IOS_CIKIS_REHBERI.md) |

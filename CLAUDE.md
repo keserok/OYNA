@@ -91,7 +91,7 @@ Görevin doğrudan parçası değilse şu alanlara girme; parçasıysa önce
 
 ## 6.5 Mekanizma — değişiklikten ÖNCE çalıştır
 
-Bu repoda kalıcı bir "bağışıklık sistemi" var: **17 yapı taşı, 32 kontrol.**
+Bu repoda kalıcı bir "bağışıklık sistemi" var: **17 yapı taşı, 34 kontrol.**
 Sade anlatımı: `docs/sistem/MEKANIZMA.md`
 
 **Kod ya da veritabanı değiştirmeden önce ZORUNLU:**

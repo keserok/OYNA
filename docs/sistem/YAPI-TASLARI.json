@@ -194,7 +194,8 @@
       "garanti_ettigi": [
         "Kullanıcı başkasının verisini okuyamaz/yazamaz",
         "Kullanıcı kendi rolünü, bakiyesini, cezasını değiştiremez",
-        "Her SECURITY DEFINER fonksiyonun görünür bir yetki kontrolü vardır"
+        "Her SECURITY DEFINER fonksiyonun görünür bir yetki kontrolü vardır",
+        "Fonksiyonlar dışarıya KAPALI doğar; açık olması onaylanan liste gece denetlenir"
       ],
       "dosyalar": [
         "supabaseAuth.ts",
@@ -210,12 +211,17 @@
         "can_staff_pitch",
         "notifications_insert_own_sender",
         "matches_update",
-        "matches_select_public"
+        "matches_select_public",
+        "kapi_kayitli_durum",
+        "kapi_denetimi",
+        "kapi_temeli_guncelle",
+        "pg_default_acl"
       ],
       "kontroller": [
         "K-KAPI-1",
         "K-KAPI-2",
-        "K-KAPI-3"
+        "K-KAPI-3",
+        "K-KAPI-4"
       ],
       "bilinen_acik_bulgular": []
     },

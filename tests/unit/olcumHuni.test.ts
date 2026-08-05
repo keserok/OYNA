@@ -227,3 +227,28 @@ describe('ölçüm · "başarılı maç" kurucunun tanımına uyuyor', () => {
     expect(govde).toContain('"isDemo" IS NOT TRUE');
   });
 });
+
+describe('ölçüm · demo işareti "bir kez demo, hep demo"', () => {
+  // Kuzey yıldızı ölçüsü ("başarılı maç") demo veriyi `isDemo` ile eler.
+  // O işaret silinebiliyorsa ölçü sessizce şişer — ölçmemekten kötüdür.
+  const sql = oku('supabase/migrations/20260805205221_demo_isareti_her_guncellemede_korunur.sql');
+
+  it('tetik HER güncellemede koşuyor (yalnız kaptan değişiminde değil)', () => {
+    // İlk kurulumda `UPDATE OF captain_id, "creatorId"` yazılmıştı; `isDemo`
+    // alanına dokunan bir güncelleme tetiği hiç uyandırmıyordu.
+    expect(sql).toMatch(
+      /CREATE TRIGGER trg_demo_isareti_mac\s*\n?\s*BEFORE INSERT OR UPDATE ON public\.matches/,
+    );
+    expect(sql).not.toMatch(/BEFORE INSERT OR UPDATE OF captain_id[^\n]*\n\s*FOR EACH ROW/);
+  });
+
+  it('düzeltme kendi sonucunu canlıda sınıyor', () => {
+    // Doğrulama bloğu: işareti silmeyi DENER, tetik geri koymazsa migration patlar.
+    expect(sql).toContain('UPDATE public.matches SET "isDemo" = false');
+    expect(sql).toMatch(/v_sonra IS NOT TRUE THEN[\s\S]{0,160}RAISE EXCEPTION/);
+  });
+
+  it('gerçek maçların yanlışlıkla demo işaretlenmediği de sınanıyor', () => {
+    expect(sql).toMatch(/gercek mac yanlislikla demo isaretli/);
+  });
+});

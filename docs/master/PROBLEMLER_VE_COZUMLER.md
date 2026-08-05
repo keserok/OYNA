@@ -5,7 +5,7 @@
 > ilerler. Her problem; veritabanı incelenerek, uygulamanın UI/UX yapısına uygun ve
 > gerektiğinde **tam yetkili admin paneline** entegre edilerek çözülür.
 
-**Son güncelleme:** 2026-06-30
+**Son güncelleme:** 2026-08-05
 **Proje:** OYNA (Supabase ref: `iikvzgyccvgcybzdfwlv`) · React 19 · Vite · Tailwind v4 · Zustand · Capacitor
 
 ---
@@ -170,6 +170,53 @@ _Henüz problem eklenmedi._
 > `payout_requests`, `owner_withdrawal_requests`
 
 _Henüz problem eklenmedi._
+
+---
+
+## 🧱 Altyapı / Güvenlik Problemleri
+
+### [ALTYAPI-01] Veritabanı fonksiyonlarının çoğu dışarıya gereksiz açıktı
+- **Durum:** ✔️ Tamamlandı
+- **Tarih:** 2026-08-05
+- **Problem:** PostgreSQL'de bir fonksiyon yazıldığında, aksi söylenmedikçe onu giriş
+  yapmış **herkes** çağırabilir. Zamanla 642 kendi fonksiyonumuzun 451'i `authenticated`,
+  39'u `anon` için açık kalmıştı — çoğunun dışarıdan çağrılabilir olmasının hiçbir karşılığı yoktu.
+- **Çözüm:** Uygulamadan / erişim kurallarından / görünümlerden / kolonlardan hiç
+  çağrılmayan 71 fonksiyonun yetkisi alındı (`20260805203555`, `20260805203651`,
+  `20260805203938`). Yeni fonksiyonlar artık **kapalı doğuyor** ve gece denetimi
+  (`K-KAPI-4`, `kapi_denetimi()`) sapmayı panele yazıyor (`20260805204225`).
+- **Kalıcı test:** `tests/unit/veritabaniKapilari.test.ts`
+- **⚠️ Bundan sonra:** uygulamadan çağrılacak **her yeni fonksiyonun** migration'ında
+  açıkça `GRANT EXECUTE ON FUNCTION ... TO authenticated;` yazılmalı. Unutulursa o
+  özellik çalışmaz; gece denetimi bunu "yeni fonksiyon eklendi" diye SARI bildirir.
+
+### [ALTYAPI-02] ⛔ Erişim kuralında (RLS) kullanılan fonksiyonun yetkisi ASLA alınmaz
+- **Durum:** ✔️ Tamamlandı (kural olarak kayda geçti)
+- **Tarih:** 2026-08-05
+- **Problem:** Erişim kuralı ifadeleri **sorguyu yapan kullanıcının yetkisiyle** çalışır.
+  Kuralın içinde geçen bir fonksiyonun `EXECUTE` yetkisi alınırsa o **tablo tamamen
+  okunamaz** hâle gelir — ekran boş gelir, sebebi de görünmez.
+- **Canlıda ölçüldü:** `_is_team_member` yetkisi geri alındığında `team_members`
+  tablosu `42501 permission denied for function _is_team_member` verdi. (Deney geri alındı.)
+- **Dokunulmayacak liste:** `_hire_side_for`, `_is_match_participant`, `_is_team_admin`,
+  `_is_team_member`, `is_admin`, `is_platform_admin`, `is_super_admin`, `can_manage_pitch`,
+  `can_staff_pitch`, `can_manage_pitch_content`, `get_config_bool`, `has_role`,
+  `profile_privileges_unchanged`, `try_uuid`
+- **Kalıcı test:** `tests/unit/veritabaniKapilari.test.ts` → "erişim kurallarında
+  kullanılan fonksiyonlara DOKUNULMADI"
+
+### [ALTYAPI-03] "Bir kez demo, hep demo" garantisi yarım kuruluydu
+- **Durum:** ✔️ Tamamlandı
+- **Tarih:** 2026-08-05
+- **Problem:** `trg_demo_isareti_mac` tetiği `BEFORE INSERT OR UPDATE **OF captain_id,
+  "creatorId"**` olarak kurulmuştu. `isDemo` alanına dokunan bir güncelleme tetiği hiç
+  uyandırmıyordu; demo işareti silinebiliyordu. Silinseydi o demo maç "gerçek maç"
+  sayılır ve kuzey yıldızı ölçüsünü ("başarılı maç") şişirirdi.
+- **Ne kadar tehlikeliydi:** Normal kullanıcı `matches` tablosuna doğrudan yazamıyor
+  (canlıda ölçüldü: 42501) — dışarıdan sömürülebilir bir açık değildi; risk kendi
+  yönetim işlemlerimizdeydi.
+- **Çözüm:** Aynı fonksiyon artık **her** güncellemede koşuyor (`20260805205221`).
+- **Kalıcı test:** `tests/unit/olcumHuni.test.ts` → "demo işareti bir kez demo, hep demo"
 
 ---
 
