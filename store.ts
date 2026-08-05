@@ -7,6 +7,8 @@ import { auth } from './supabaseAuth';
 
 import { supabase } from './supabaseClient';
 import { trackEvent, captureException } from './utils/observability';
+import { APP_VERSION } from './utils/appVersion';
+import { Capacitor } from '@capacitor/core';
 import type { NotificationPreferences } from './notifications/pushService';
 import { DEFAULT_NOTIFICATION_PREFERENCES } from './notifications/pushService';
 import type { AdminSession } from './shared/adminKopru';
@@ -582,18 +584,38 @@ export const useAppStore = create<AppState>((set, get) => ({
 
       // [YUK-3] AÇILIŞ ÖLÇÜMÜ.
       // "Peki bu koruma bozulursa kim söyleyecek?" (P-0) sorusunun cevabı bu
-      // satır: açılışta kaç istek atıldığı ve ne kadar sürdüğü her açılışta
-      // yazılır. Biri ileride buraya yeni bir yük eklerse `istek_sayisi` artar
-      // ve fark edilir — sessizce şişemez.
-      trackEvent('acilis_yuku', {
+      // blok: açılışta kaç istek atıldığı ve ne kadar sürdüğü kaydedilir. Biri
+      // ileride buraya yeni bir yük eklerse `istek_sayisi` artar, gece denetimi
+      // (K-YUK-4) bunu görür ve Sistem Sağlığı kartı sarı/kırmızı yanar.
+      const acilisSuresi = Date.now() - acilisBaslangic;
+      const acilisOlcumu = {
         istek_sayisi: acilisIstekSayisi,
-        sure_ms: Date.now() - acilisBaslangic,
+        sure_ms: acilisSuresi,
         bolge_biliniyor: !!acilisBolgesi?.city,
         // Bölge yoksa saha/maç listeleri BOŞ gelir; bu bir hata değil, kuraldır
         // (prensip 4.5). Ayırt edilebilsin diye ayrıca yazılır.
         saha_sayisi: (pitchesRes.status === 'fulfilled' && Array.isArray(pitchesRes.value)) ? pitchesRes.value.length : -1,
         mac_sayisi: (matchesRes.status === 'fulfilled' && Array.isArray(matchesRes.value)) ? matchesRes.value.length : -1,
-      });
+      };
+      trackEvent('acilis_yuku', acilisOlcumu);
+
+      // Panelin Sistem Sağlığı kartını besleyen kayıt.
+      //
+      // ÖRNEKLEME: her açılışta yazılsaydı ölçüm sisteminin kendisi ölçtüğü
+      // yüke katkı yapardı (100.000 açılış = 100.000 satır/gün). 20 açılışta 1
+      // yazmak ortancayı bozmaz ama maliyeti 20'de bire indirir.
+      //
+      // ATEŞLE-UNUT: `void` ile beklenmez ve hatası yutulur — ölçüm hiçbir
+      // koşulda açılışı yavaşlatamaz ya da bozamaz.
+      if (Math.random() < 0.05) {
+        void supabase.rpc('acilis_olcumu_yaz', {
+          p_istek_sayisi: acilisIstekSayisi,
+          p_sure_ms: acilisSuresi,
+          p_bolge_biliniyor: !!acilisBolgesi?.city,
+          p_platform: Capacitor.getPlatform(),
+          p_surum: APP_VERSION,
+        }).then(() => { /* sessiz */ }, () => { /* sessiz */ });
+      }
     } catch (e) {
       console.error('Hydration error:', e);
       captureException(e, { where: 'retryInitialLoad' });

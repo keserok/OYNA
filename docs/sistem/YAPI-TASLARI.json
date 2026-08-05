@@ -379,12 +379,15 @@
         "pitches_geo_idx",
         "supabase_realtime",
         "image_variants",
-        "record_image_variants()"
+        "record_image_variants()",
+        "acilis_olcumu",
+        "acilis_olcumu_yaz()"
       ],
       "kontroller": [
         "K-YUK-1",
         "K-YUK-2",
-        "K-YUK-3"
+        "K-YUK-3",
+        "K-YUK-4"
       ],
       "bilinen_acik_bulgular": [
         "M-P0-9",
