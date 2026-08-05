@@ -12,6 +12,8 @@ import {
 } from '../services/teamSocialService';
 import { getOrCreateConversation } from '../services/messageService';
 import { useAppStore } from '../store';
+import { useAsagiCekYenile } from '../hooks/useAsagiCekYenile';
+import { YenileniyorSeridi } from '../components/common/YenileniyorSeridi';
 import SegmentedTabs from '../components/ui/SegmentedTabs';
 import FriendsPanel from './social/FriendsPanel';
 import MyTeamsPanel from './social/MyTeamsPanel';
@@ -125,6 +127,13 @@ const SocialView: React.FC<SocialViewProps> = ({ onBack, onNavigate }) => {
       setLoadingTeams(false);
     }
   }, [userId]);
+
+  // AŞAĞI ÇEKİP YENİLE — arkadaşlar VE takımlar birlikte tazelenir; kullanıcı
+  // hangi sekmede olursa olsun jest aynı işi yapsın (iki ayrı davranış
+  // "bazen yeniliyor" hissi verirdi).
+  const cekerekYenileniyor = useAsagiCekYenile(
+    () => Promise.all([loadFriendData(true), loadTeamData(true)]),
+  );
 
   useEffect(() => {
     loadFriendData();
@@ -241,6 +250,8 @@ const SocialView: React.FC<SocialViewProps> = ({ onBack, onNavigate }) => {
           </div>
         )}
       </div>
+
+      <YenileniyorSeridi aktif={cekerekYenileniyor} />
 
       {/* ── Content ── */}
       <div className="flex-1 overflow-y-auto px-5 pt-5">

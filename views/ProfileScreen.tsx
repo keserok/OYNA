@@ -21,6 +21,8 @@ import React, { useState, useEffect } from 'react';
 import { UserRole, AppView } from '../types';
 import { Settings, ChevronRight } from 'lucide-react';
 import { useAppStore } from '../store';
+import { useAsagiCekYenile } from '../hooks/useAsagiCekYenile';
+import { YenileniyorSeridi } from '../components/common/YenileniyorSeridi';
 import { auth } from '../supabaseAuth';
 import { supabase } from '../supabaseClient';
 import { getFullUserProfile, getMatchHistory, MatchHistorySummary, OynaUser } from '../services/userService';
@@ -117,6 +119,11 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onNavigate, onOpenD
         }
     };
 
+    // AŞAĞI ÇEKİP YENİLE — profil, maç geçmişi ve sayaçlar tazelenir.
+    // Misafirde de açık: `loadProfile` misafir için hemen döner, ama kullanıcı
+    // parmağını çektiğinde bir karşılık görmeli — sessizlik "bozuk" hissettirir.
+    const cekerekYenileniyor = useAsagiCekYenile(loadProfile);
+
     useEffect(() => {
         loadProfile();
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -187,6 +194,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onNavigate, onOpenD
                 böyle bir garantileri yok. Aralar `space-y-3` ile veriliyor:
                 kaydırıcı düz blok kalır, `tests/visual/icKaydirma` yeşil. */}
             <div className="relative z-10 flex-1 overflow-y-auto px-5 pt-1.5 pb-safe-nav custom-scrollbar space-y-3">
+                <YenileniyorSeridi aktif={cekerekYenileniyor} />
                 {loading ? (
                     <LoadingState message="Profil yükleniyor…" />
                 ) : error ? (

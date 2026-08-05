@@ -27,6 +27,8 @@ import { OwnerToastProvider, useOwnerToast } from './owner/components/useOwnerTo
 import { OwnerKpiGrid, OwnerCommandStrip, kpiIcons, type OwnerKpiItem } from './owner/components/OwnerKpiGrid';
 import { OwnerStatusBar, type OwnerStatusBanner } from './owner/components/OwnerStatusBar';
 import { OwnerBottomNav } from './owner/components/OwnerBottomNav';
+import { useAsagiCekYenile } from '../hooks/useAsagiCekYenile';
+import { YenileniyorSeridi } from '../components/common/YenileniyorSeridi';
 import { OutboxBadge } from './owner/components/OutboxBadge';
 import { installOutboxAutoFlush, setOutboxDropNotifier } from '../services/offline/outbox';
 import { OwnerHomeSkeleton } from './owner/components/OwnerHomeSkeleton';
@@ -519,6 +521,14 @@ const tariffRowToPolicy = (t: PitchTariff) => ({
     }, 'panel');
   }, [realPitchId, refreshDashboard]);
 
+  // AŞAĞI ÇEKİP YENİLE (kullanıcı kararı: paneller de dâhil).
+  // Saha sahibi günün cirosunu/rezervasyonlarını sık kontrol eder; tazelemenin
+  // tek yolu ekrandan çıkıp girmekti. Artık parmakla çekmek yetiyor.
+  const cekerekYenileniyor = useAsagiCekYenile(async () => {
+    const pid = realPitchId ?? facilityData?.id;
+    if (pid) await refreshDashboard(pid);
+  });
+
   // Mock fallback kaldırıldı — tesis yoksa onboarding ekranı gösterilir
 
   const dynamicTotalRevenue = dailySummary?.collected_today ?? todayBookings.reduce((s, b) => s + (b.paid_amount ?? 0), 0);
@@ -702,6 +712,7 @@ const tariffRowToPolicy = (t: PitchTariff) => ({
     // kaydırır), OwnerBottomNav `fixed` (yerinde durur).
     <div className="min-h-screen flex flex-col bg-[#0A0E14] text-slate-200 font-sans selection:bg-blue-500 selection:text-white relative">
       <OwnerStatusBar banners={statusBanners} />
+      <YenileniyorSeridi aktif={cekerekYenileniyor} />
       
       {/* Header logic adjustment for Menu view */}
       {activeTab !== 'CALENDAR' && activeTab !== 'MORE' && (

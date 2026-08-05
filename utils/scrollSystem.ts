@@ -57,6 +57,25 @@ const FRICTION = 0.94;
 /** Harita ipucunun ekranda kalma süresi (ms). */
 const MAP_HINT_MS = 1600;
 
+/** AŞAĞI ÇEKİP YENİLE eşiği — esneme TAVANININ oranı olarak.
+ *
+ *  SABİT PİKSEL OLAMAZ: Tavan `stretchLimit()` ile kaydırıcının boyuna göre
+ *  hesaplanır (kısa kutuda küçülür). Önce 78px sabit denendi ve KISA
+ *  kaydırıcılarda jest hiç tetiklenmedi — ölçüldü: tavanı 84px olan bir kutuda
+ *  364px'lik çekiş sönümlenip yalnız 68px esneme üretiyor, yani eşiğe ulaşmak
+ *  FİZİKSEL OLARAK imkânsızdı. Oran, her boyda aynı "kararlı çekiş" hissini verir.
+ *
+ *  ORAN NEDEN 0.5: Sönümleme asimptotik — tavana yaklaşmak sonsuz yol ister.
+ *  Gereken parmak yolu = tavan·oran/(1−oran). Hesaplandı:
+ *      oran 0.72 → 132px tavanda 339px yol (bir ekran boyundan uzun, imkânsız)
+ *      oran 0.60 → 198px yol (hâlâ yorucu)
+ *      oran 0.50 → 132px yol  ✔ doğal bir "aşağı çek" hareketi
+ *  0.72 önce denendi ve JESTİ TÜMDEN ÖLDÜRDÜ (dokuz ekranın dokuzunda da
+ *  tetiklenmedi) — bu yorum o hatanın kaydıdır. */
+const REFRESH_PULL_RATIO = 0.5;
+/** Çok kısa kutularda eşiğin kazara aşılmaması için mutlak taban. */
+const REFRESH_PULL_MIN_PX = 32;
+
 /** Leaflet haritasında ipucu için açılan sınıf (CSS: mapBase.ts → OYNA_MAP_CSS). */
 const MAP_HINT_CLASS = 'oyna-hint-on';
 
@@ -86,6 +105,33 @@ type Grab = {
   /** Parmak hızı (px/ms; eksenin artı yönünde). */
   v: number;
 };
+
+// ── AŞAĞI ÇEKİP YENİLE kaydı ────────────────────────────────────────────────
+// Jesti AYRI bir dinleyiciyle kurmuyoruz: bu motor zaten uçtaki çekişi
+// devralıyor ve esnemeyi ölçüyor. İkinci bir dinleyici aynı parmağı iki kez
+// yorumlar ve ikisi de yarım çalışır. Ekran yalnız "ben yenilenebilirim" diye
+// kaydolur; ölçüm ve karar burada kalır.
+//
+// KAYIT ELEMANA DEĞİL EKRANA AİT. İlk tasarımda ekran kendi kaydırıcısını
+// seçiciyle bulup kaydediyordu; bu KIRILGANDI çünkü uygulamada iki yerleşim
+// modeli bir arada yaşıyor:
+//   • sayfa-akışı ekranları  → App'in görünüm kaydırıcısında akar
+//   • `h-full` + kendi listesi olan ekranlar (Cüzdan, Sosyal, Maçlarım, Profil)
+// Yanlış seçici veren ekran sessizce jestsiz kalırdı — hata görünmezdi.
+//
+// Şimdi: ekran yalnız "ben yenilenebilirim" der. Motor zaten hangi kaydırıcıyı
+// devraldığını BİLİYOR; üstten aşağı çekiş eşiği aşarsa onu çalıştırır.
+// Modal/alt sayfa içinde tetiklenmez: `findScroller` `position:fixed` katmanda
+// durup null döner, yani motor orada hareketi hiç devralmaz.
+//
+// Tek kayıt yeter — aynı anda tek ekran monte olur.
+let yenileKaydi: (() => void) | null = null;
+
+/** Ekranı "aşağı çekilince yenilenir" yap. Dönen işlev kaydı siler. */
+export function asagiCekYenileKaydet(calistir: () => void): () => void {
+  yenileKaydi = calistir;
+  return () => { if (yenileKaydi === calistir) yenileKaydi = null; };
+}
 
 let grab: Grab | null = null;
 let raf = 0;
@@ -426,6 +472,15 @@ function onTouchEnd(): void {
   const g = grab;
   release();
   if (!g || !g.owned || !g.el || !g.dir) return;
+
+  // AŞAĞI ÇEKİP YENİLE: yalnız DİKEY eksende, ÜSTTEN aşağı çekişte (offset > 0)
+  // ve eşik aşıldıysa. Yaylanma normal akışında devam eder — kullanıcı parmağını
+  // bıraktığında içerik yerine döner, üstte "YENİLENİYOR" şeridi açılır.
+  const yenileEsigi = Math.max(REFRESH_PULL_MIN_PX, g.stretch * REFRESH_PULL_RATIO);
+  if (g.dir === 'v' && g.offset >= yenileEsigi && yenileKaydi) {
+    try { yenileKaydi(); } catch { /* yenileme hatası jesti bozmasın */ }
+  }
+
   if (Math.abs(g.offset) > 0.5) {
     springBack(g.el, g.offset, g.dir);
   } else if (Math.abs(g.v) > FLING_MIN_V) {

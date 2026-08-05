@@ -37,6 +37,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import ServiceProfile from './ServiceProfile';
 import ServiceSettings from './ServiceSettings';
 import { auth } from '../supabaseAuth';
+import { useAsagiCekYenile } from '../hooks/useAsagiCekYenile';
+import { YenileniyorSeridi } from '../components/common/YenileniyorSeridi';
 import { supabase } from '../supabaseClient';
 import { useAppStore } from '../store';
 import { subscribeToOpenMatches, getMatchDetails } from '../services/matchService';
@@ -417,6 +419,18 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
         unsubscribe();
     };
   }, [role, isRef]);
+
+  // AŞAĞI ÇEKİP YENİLE (kullanıcı kararı: kaleci/hakem paneli de dâhil).
+  // Sağlayıcı gün içinde "yeni teklif geldi mi?" diye sık bakar; tazelemenin
+  // tek yolu ekrandan çıkıp girmekti. Hangi sekme açıksa ONUN verisi tazelenir —
+  // hepsini birden çekmek gereksiz istek ve yavaş bir jest demektir.
+  const cekerekYenileniyor = useAsagiCekYenile(async () => {
+    if (activeTab === 'WALLET') {
+      await Promise.all([fetchEarnings(), fetchPayoutData(), fetchWalletHistory()]);
+    } else {
+      await fetchOffers();
+    }
+  });
 
   const fetchOffers = async () => {
     // Bug A: cüzdan/teklif işlemlerinde kimlik daima gerçek oturum uid'i olmalı.
@@ -2085,6 +2099,8 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
       {activeTab === 'SETTINGS_VIEW' && (
         <ServiceSettings role={role} onBack={() => setActiveTab('MENU')} onLogout={onLogout ?? onBack} />
       )}
+
+      <YenileniyorSeridi aktif={cekerekYenileniyor} />
 
       {activeTab !== 'PROFILE_VIEW' && activeTab !== 'SETTINGS_VIEW' && (<>
       {/* Animated Background - Color shifts based on role */}

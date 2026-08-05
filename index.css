@@ -733,6 +733,14 @@ body.kb-open .pb-safe-6 {
   padding-bottom: calc(var(--kb-height, 0px) + 2rem);
 }
 
+/* "YENİLENİYOR" halkasının dönüşü (components/common/YenileniyorSeridi.tsx).
+   Tasarım: 720ms doğrusal, sonsuz. Azaltılmış hareket açıkken dönüş durur —
+   ama şerit GÖRÜNÜR kalır: kullanıcı yine de yenilendiğini bilmeli. */
+@keyframes oy-yenile-don { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  [data-oyna-yenileniyor] > span:first-child { animation: none !important; }
+}
+
 /* ─── Lobi VS şeridi — aktif takım kutusu yavaş nabız (MOB-S3) ───────────────
    O an sahası gösterilen takımın kutusu yavaşça parlar/söner. Renk, kutunun
    kendi --pulse-color değişkeninden gelir (ev: beyaz, deplasman: kırmızı). */

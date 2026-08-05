@@ -32,13 +32,15 @@
 // ════════════════════════════════════════════════════════════════════════════
 
 import React from 'react';
-import { Bell, ChevronRight, CircleAlert, CloudOff, Loader2, MapPin, Wallet } from 'lucide-react';
+import { Bell, ChevronRight, CircleAlert, CloudOff, MapPin, Wallet } from 'lucide-react';
 import { AppView } from '../types';
 import { useAppStore } from '../store';
 import { auth } from '../supabaseAuth';
 import { UserAvatar } from '../components/common/UserAvatar';
 import TeamCrest from '../components/social/TeamCrest';
 import { useDashboardHome } from '../hooks/useDashboardHome';
+import { useAsagiCekYenile } from '../hooks/useAsagiCekYenile';
+import { YenileniyorSeridi } from '../components/common/YenileniyorSeridi';
 import { useMyMatches, parseMatchDate } from '../hooks/useMyMatches';
 import { CARD, SCREEN } from '../ui/labels';
 import { TYPE_PX } from '../ui/type';
@@ -182,6 +184,11 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
   const adminMatches = useAppStore((s) => s.adminMatches);
 
   const home = useDashboardHome();
+  // AŞAĞI ÇEKİP YENİLE (kullanıcı kararı): tasarımdaki "Yenileniyor" modu
+  // artık gerçek bir jestle tetiklenir. Önceden yalnız hata şeridindeki
+  // "Tekrar Dene" düğmesi vardı — yani hata YOKKEN kullanıcının sayfayı
+  // tazelemesinin HİÇBİR yolu yoktu.
+  const cekerekYenileniyor = useAsagiCekYenile(home.refresh);
   const { loading, error, offline, refreshing, hasScope } = home;
 
   // Yaklaşan maç Maçlarım ekranıyla AYNI listeden okunur — iki ekran farklı
@@ -329,27 +336,19 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
           Üçü de başlığın ALTINDA, kaydırıcının DIŞINDA durur: kaydırırken
           kaybolmazlar ve içeriği itmezler (kart yüksekliği değişmez). */}
 
-      {/* Yenileniyor — içerik yerinde kalır, üstte 64px açılır. */}
-      {refreshing && !loading && (
-        <div
-          role="status"
-          aria-live="polite"
-          style={{
-            flex: 'none', height: 64, display: 'flex', alignItems: 'center',
-            justifyContent: 'center', gap: 10, background: 'var(--color-bg)',
-          }}
-        >
-          <Loader2 size={16} color="var(--color-cat-play)" className="animate-spin" aria-hidden />
-          <span
-            style={{
-              fontSize: px('caption'), fontWeight: 600, letterSpacing: '0.14em',
-              color: 'var(--color-ink-3)',
-            }}
-          >
-            YENİLENİYOR
-          </span>
-        </div>
-      )}
+      {/* Yenileniyor — içerik yerinde kalır, üstte 64px açılır.
+          Şerit ORTAK bileşenden gelir: aynı gösterge saha sahibi, kaleci ve
+          hakem panellerinde de kullanılıyor; ölçüler tek yerde tutuluyor.
+          İki kaynak: arka plandaki tazeleme (`refreshing`) VEYA kullanıcının
+          parmakla çekmesi (`cekerekYenileniyor`). */}
+      {/* İki ayrı kaynak, iki ayrı kural:
+          • `refreshing` (arka planda tazeleme) İLK YÜKLEMEDE gösterilmez —
+            zaten iskelet var, ikisi üst üste binerdi.
+          • `cekerekYenileniyor` (kullanıcı parmakla çekti) HER ZAMAN gösterilir.
+            Kullanıcı bir şey YAPTI; karşılık görmezse "tutmadı" sanıp tekrar
+            tekrar çeker. (Önce ikisi de `!loading` kapısındaydı ve jest
+            ilk yüklemede sessiz kalıyordu — ölçümle yakalandı.) */}
+      <YenileniyorSeridi aktif={cekerekYenileniyor || (refreshing && !loading)} />
 
       {/* Çevrimdışı — HATA DEĞİL. Önbellek içeriği olduğu gibi durur. */}
       {offline && (
