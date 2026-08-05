@@ -559,7 +559,7 @@ export const FinancialCalendarView: React.FC<{
             </div>
 
             {/* pb-40: çevrimdışı kuyruk şeridi (44px) + alt bar son saati örtmesin. */}
-            <div ref={dayScrollRef} className="flex-1 overflow-y-auto custom-scrollbar px-4 py-4 space-y-2 pb-40">
+            <div ref={dayScrollRef} className="flex-1 px-4 py-4 space-y-2 pb-40">
                 {isMonthlyView ? (
                     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
                         <div className="bg-[#161B22] rounded-3xl border border-white/10 p-6 mb-6">

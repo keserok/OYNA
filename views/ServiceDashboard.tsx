@@ -2066,25 +2066,24 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
   );
 
   return (
-    <div className="h-full flex flex-col bg-[#0A0E14] relative overflow-hidden">
+    // KAYDIRMA KÖK ÇÖZÜMÜ (kullanıcı kararı, 4 Ağustos 2026 — üçüncü şikâyet):
+    // "Tüm ekran parmakla kaydırılabilir olmalı." Eski model "sabit kabuk +
+    // içte kayan kutu" idi; parmak başlığa, sekme çubuğuna ya da içeriği kısa
+    // bir sekmeye denk gelince HİÇBİR ŞEY kaymıyordu (html/body bilinçli
+    // kilitli, iç kutu da o noktada yok). Yeni model Ayarlar/Profil ile aynı:
+    // ekranın TAMAMI App'in görünüm kaydırıcısında akar — başlık dahil her
+    // nokta parmak yüzeyidir. Alt gezinme `fixed` olduğundan yerinde kalır.
+    <div className="min-h-screen flex flex-col bg-[#0A0E14] relative">
       
-      {/* Profil alt ekranı.
-          KAYDIRMA: Bu ekranların kökü `min-h-screen`dir — yani App'in görünüm
-          kaydırıcısında SAYFA BOYU akmak üzere yazılmışlar. Burada ise
-          `overflow-hidden` bir kabın içine konuyorlardı: taşan kısım kesiliyor
-          ve parmakla ULAŞILAMIYORDU (ölçüldü: Ayarlar'da 71px kesik, Profil'de
-          kaydırma hiç yok). Kendi kaydırıcılarına alındılar. */}
+      {/* Profil ve Ayarlar alt ekranları `min-h-screen` sayfalardır; kök artık
+          sayfa akışında olduğundan DOĞRUDAN akarlar — ara kaydırıcı gerekmez
+          (gerekseydi iki iç içe kaydırıcı parmak hareketini bölerdi). */}
       {activeTab === 'PROFILE_VIEW' && (
-        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain custom-scrollbar">
-          <ServiceProfile role={role} onBack={() => setActiveTab('MENU')} />
-        </div>
+        <ServiceProfile role={role} onBack={() => setActiveTab('MENU')} />
       )}
 
-      {/* Settings sub-view */}
       {activeTab === 'SETTINGS_VIEW' && (
-        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain custom-scrollbar">
-          <ServiceSettings role={role} onBack={() => setActiveTab('MENU')} onLogout={onLogout ?? onBack} />
-        </div>
+        <ServiceSettings role={role} onBack={() => setActiveTab('MENU')} onLogout={onLogout ?? onBack} />
       )}
 
       {activeTab !== 'PROFILE_VIEW' && activeTab !== 'SETTINGS_VIEW' && (<>
@@ -2121,7 +2120,9 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
          </button>
       </header>
 
-      <main className="flex-1 overflow-y-auto custom-scrollbar relative z-10">
+      {/* İç kaydırıcı YOK: sekme içeriği sayfayla akar (kök yorumuna bak).
+          Alt gezinme payını sekme görünümleri kendileri taşıyor (pb-40). */}
+      <main className="flex-1 relative z-10">
          {activeTab === 'HOME' && renderHomeView()}
          {activeTab === 'JOBS' && renderJobFeedView()}
          {activeTab === 'WALLET' && renderWalletView()}

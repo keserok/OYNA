@@ -430,6 +430,23 @@ const ProfileInfoPage: React.FC<ProfileInfoPageProps> = ({ open, onClose }) => {
               </div>
             </div>
 
+            {/* ═══ PROFİLİ DÜZENLE ═══
+                Onaylı tasarımda istatistiklerin hemen altında duran satır.
+                Üstteki alanlar (Mevki/Cinsiyet/Yaş/Stil/Seviye) düzenleme
+                sayfasını tek tek açar; bu satır aynı sayfayı BAŞTAN açar ve
+                neyin düzenlenebildiğini tek cümlede söyler. */}
+            <button
+              type="button"
+              onClick={() => setEditOpen(true)}
+              className="w-full rounded-[24px] bg-surface-1 px-[18px] py-4 flex items-center gap-3 min-h-[48px] text-left hover:bg-white/[0.06] transition-colors"
+            >
+              <div className="flex-1 min-w-0">
+                <p className="m-0 text-[0.9375rem] text-white">Profili düzenle</p>
+                <p className="mt-0.5 mb-0 text-[0.8125rem] text-ink-4">Fotoğraf, mevki, seviye ve doğum tarihi</p>
+              </div>
+              <ChevronRight size={16} className="text-ink-4 shrink-0" />
+            </button>
+
             {/* ═══ HESAP ═══
                 Tasarımda yok; uygulamada başka yeri de yok. Kimlik/giriş
                 alanları olduğu için ayrı başlık altında, en altta duruyor. */}

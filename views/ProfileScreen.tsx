@@ -262,7 +262,18 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onNavigate, onOpenD
                 />
 
                 {/* ═══ GÜVEN PUANI ═══ */}
-                {!isGuest && <TrustScoreCard score={trustScore} />}
+                {/* Onaylı tasarım iki ayrı açıklama veriyor ve ayrım PUANIN
+                    KENDİSİNDEDİR: 100 ise "Herkes 100 ile başlar" (puan bir
+                    yargı değil, başlangıç noktası), düşmüşse neye göre değiştiği.
+                    Ayrımı maç sayısına bağlamak yanlıştı — puanı 92 olan bir
+                    profilde "herkes 100 ile başlar" yazıyordu (görsel test
+                    yakaladı). Puan tek doğru ölçüttür. */}
+                {!isGuest && (
+                  <TrustScoreCard
+                    score={trustScore}
+                    note={trustScore >= 100 ? 'Herkes 100 ile başlar. Maç oynadıkça değişir.' : undefined}
+                  />
+                )}
 
                 {/* ═══ KISAYOLLAR ═══ */}
                 <ProfileShortcuts items={shortcuts} />

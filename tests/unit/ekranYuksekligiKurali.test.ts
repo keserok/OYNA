@@ -12,6 +12,12 @@
 //   içerikle uzar, `flex-1` sınırlanacak bir alan bulamaz ve listenin kendi
 //   kaydırması HİÇ DEVREYE GİRMEZ. Doğrusu `h-full`.
 //
+// KAPSAM UYARISI (2026-08-04): Bu kural YALNIZ "sabit kabuk + iç kaydırıcı"
+//   modelini korur. Uygulamada bilinçli olarak SAYFA-AKIŞI modelini kullanan
+//   ekranlar da vardır (kök içerikle uzar, kaydırmayı dış görünüm kaydırıcısı
+//   yapar) ve onlarda `min-h-screen` DOĞRUDUR. Onlar `MUAF` listesindedir;
+//   listeye eklemeden önce şartın sağlandığı tek tek doğrulanmalıdır.
+//
 // BU TEST NE YAPAR:
 //   Kaynakta "gerilebilir kök + iç kaydırıcı" birlikteliğini arar. Yeni bir
 //   ekran bu ikiliyi getirirse burada kırmızı yanar — telefonda fark edilmeden
@@ -30,14 +36,28 @@ const KOK = process.cwd();
 const ATLA = new Set(['node_modules', '.git', 'dist', 'android', 'ios', 'coverage', '.vite', 'tests']);
 
 /**
- * BİLEREK MUAF.
+ * BİLEREK MUAF — "SAYFA-AKIŞI" EKRANLARI
  *
- * `views/Studio.tsx` sayfa boyu akan bir ekrandır: kökü İÇERİKLE UZAR ve
- * kaydırmayı dıştaki görünüm kaydırıcısı yapar (iç kaydırıcısı yoktur). İçindeki
- * `flex-1 overflow-y-auto` kutuların hepsi `fixed inset-0` kaplamaların
- * (modal/panel) içindedir — onların yüksekliği zaten ekrana sabitlidir.
+ * Bu kural İKİ MODELDEN yalnız birini korur: "sabit kabuk + kendi içinde kayan
+ * liste". Uygulamada bilinçli olarak DİĞER modeli kullanan ekranlar da var:
+ * kök içerikle uzar, kaydırmayı dıştaki görünüm kaydırıcısı yapar. Onlarda
+ * `min-h-screen` DOĞRU seçimdir; `h-full` sayfayı ekrana hapsedip içeriği
+ * keserdi. Aşağıdaki dosyaların hepsi bu ikinci modeldedir.
+ *
+ * Muafiyetin ŞARTI (her biri için tek tek doğrulandı): dosyada kalan
+ * `flex-1 overflow-y-auto` kutuların TAMAMI `fixed` kaplamaların (modal /
+ * alt sayfa) içindedir — onların yüksekliği zaten ekrana sabitlidir, kökün
+ * yüksekliğiyle ilgileri yoktur.
+ *
+ * • views/Studio.tsx — taktik stüdyosu.
+ * • views/ServiceDashboard.tsx — kaleci/hakem paneli. 4 Ağustos 2026'da kullanıcı
+ *   kararıyla sayfa-akışına geçirildi (BEŞİNCİ kaydırma şikâyeti): "tüm ekran
+ *   parmakla kaydırılabilir olmalı". Eski modelde parmak başlığa ya da içeriği
+ *   kısa bir sekmeye denk gelince hiçbir şey kaymıyordu. Kalan tek iç kaydırıcı
+ *   `fixed inset-0` bir modalin içindedir (doğrulandı).
+ *   Gerçek ölçüm: tests/visual/icKaydirma.visual.spec.ts → "Panel sekmeleri".
  */
-const MUAF = new Set(['views/Studio.tsx']);
+const MUAF = new Set(['views/Studio.tsx', 'views/ServiceDashboard.tsx']);
 
 function tsxDosyalari(dizin: string, biriktir: string[] = []): string[] {
   for (const ad of readdirSync(dizin)) {

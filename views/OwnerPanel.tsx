@@ -693,12 +693,14 @@ const tariffRowToPolicy = (t: PitchTariff) => ({
   }
 
   return (
-    // KAYDIRMA: Kök eskiden `min-h-dvh` idi — yalnız bir TABAN veriyor,
-    // yüksekliği serbest bırakıyordu. Bu yüzden içindeki `flex-1 overflow-y-auto`
-    // kutular sınırlanacak alan bulamıyor, kaydırma üretmiyor ve tüm sayfa
-    // dışarıdan kayıyordu (başlık ve alt bar da kayıyordu). Ölçüldü: iç kaydırma
-    // 0px, kök yük altında 3000px şişiyor. `h-full` sınırı netleştirir.
-    <div className="h-full flex flex-col bg-[#0A0E14] text-slate-200 font-sans selection:bg-blue-500 selection:text-white relative">
+    // KAYDIRMA KÖK ÇÖZÜMÜ (kullanıcı kararı, 4 Ağustos 2026 — üçüncü şikâyet):
+    // "Tüm ekran parmakla kaydırılabilir olmalı." Bir önceki düzeltme kökü
+    // `h-full` yapıp sekmeleri İÇ kaydırıcıya almıştı; gerçek cihazda parmak
+    // başlığa/duruma şeridine denk gelince yine hiçbir şey kaymıyordu.
+    // Yeni model Ayarlar/Profil ile aynı: ekranın TAMAMI App'in görünüm
+    // kaydırıcısında akar. OwnerStatusBar `sticky` (görünür kalır ama sayfayı
+    // kaydırır), OwnerBottomNav `fixed` (yerinde durur).
+    <div className="min-h-screen flex flex-col bg-[#0A0E14] text-slate-200 font-sans selection:bg-blue-500 selection:text-white relative">
       <OwnerStatusBar banners={statusBanners} />
       
       {/* Header logic adjustment for Menu view */}
@@ -764,7 +766,8 @@ const tariffRowToPolicy = (t: PitchTariff) => ({
 
       {activeTab === 'HOME' && !isLoading && (
           // pb-40: çevrimdışı kuyruk şeridi (44px) + alt bar son kartı örtmesin.
-          <main className="flex-1 px-6 pt-6 overflow-y-auto custom-scrollbar pb-40">
+          // İç kaydırıcı YOK — içerik sayfayla akar (kök yorumuna bak).
+          <main className="flex-1 px-6 pt-6 pb-40">
               <OwnerCommandStrip
                 isFacilityOpen={isFacilityOpen}
                 onCalendarClick={() => setActiveTab('CALENDAR')}

@@ -166,6 +166,14 @@ export function findScroller(start: EventTarget | null): HTMLElement | null {
       if ((oy === 'auto' || oy === 'scroll') && el.scrollHeight - el.clientHeight > EDGE_EPS) {
         return el;
       }
+      // GÖRÜNÜM KAYDIRICISI İSTİSNASI (kullanıcı kararı, 4 Ağustos 2026):
+      // İçerik ekrana sığıyorsa (taşma yok) yukarıdaki koşul onu atlar ve
+      // parmak sürüklemesi HİÇBİR karşılık bulmaz — kullanıcı bunu "ekran
+      // kaydırılamıyor/donuk" olarak yaşıyordu (üç kez bildirildi). Ana görünüm
+      // kaydırıcısı taşma olmasa da yakalanır: maxScroll 0 olduğundan her çekiş
+      // "uçtan taşan çekiş" sayılır, esner ve yaylanarak döner. Yani KISA
+      // içerikli ekran da parmağa cevap verir — iOS'un doğal hissiyle aynı.
+      if (el.hasAttribute('data-oyna-view-scroller')) return el;
     }
     el = el.parentElement;
   }
