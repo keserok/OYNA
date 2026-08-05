@@ -21,6 +21,10 @@ scripts/*
 !scripts/owner-demo.mjs
 !scripts/owner-menu-live-test.mjs
 !scripts/regenerate-migrations-from-ledger.mjs
+# Tasarım kiti üreticisi — design-kit/ klasörünü kaynaktan yeniden yazar.
+# Depoda durmalı: kit'in sapma denetimi (npm run tasarim:kit -- --kontrol)
+# bu dosya olmadan çalışmaz.
+!scripts/tasarim-kiti.mjs
 # Kılavuz ekran görüntüsü çekim aracı (tekrar üretilebilirlik için depoda)
 !scripts/kilavuz-gorselleri/
 !scripts/kilavuz-gorselleri/**

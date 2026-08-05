@@ -1,0 +1,1066 @@
+/* ─────────────────────────────────────────────────────────────────────────
+   OYNA TASARIM KİTİ · SALT OKUNUR AYNA — BU DOSYAYI DÜZENLEME.
+   Kaynak: index.css
+   Değişiklik kaynakta yapılır, sonra: npm run tasarim:kit
+   ───────────────────────────────────────────────────────────────────────── */
+@import "tailwindcss" source(none);
+/* tailwindcss-animate sınıflarını (animate-in/fade-in/zoom-in/slide-in-from-*) Tailwind v4'e
+   getirir — bunlar olmadan tüm modal/sheet/toast giriş animasyonları "pat" diye belirir. */
+@import "tw-animate-css";
+@source "./components/**/*.{ts,tsx}";
+@source "./views/**/*.{ts,tsx}";
+@source "./App.tsx";
+@source "./admin-panel/**/*.{ts,tsx}";
+@source "./admin-panel/admin.html";
+@source "./index.html";
+/* IP-08: tipografi ölçeğinin TEK kaynağı — burada taranmazsa ui/type.ts
+   içindeki arbitrary sınıflar (text-[0.6875rem] vb.) hiç üretilmez. */
+@source "./ui/**/*.{ts,tsx}";
+
+
+@source not "./node_modules_local/**";
+@source not "./node_modules_old/**";
+@source not "./android/**";
+@source not "./ios/**";
+@source not "./arsiv/**";
+@source not "./dist/**";
+
+/* ══════════════════════════════════════════════════════════════════════════
+   IP-08 — YAZI TİPLERİ (kendi sunucumuzdan, değişken eksenli)
+   ─────────────────────────────────────────────────────────────────────────
+   Önceden Google CDN'den çekiliyordu (index.html + admin.html). Üç sorunu vardı:
+     1. Çevrimdışıyken font hiç gelmiyor → TÜM arayüz sistem fontuna düşüyordu.
+        Uygulama telefonda (Capacitor) çalışıyor; metroda, sahada, kötü şebekede
+        arayüzün baştan aşağı değişmesi kabul edilemez. Artık dosyalar
+        uygulamanın içinde.
+     2. Yalnız 300–800 ağırlık yükleniyordu; kod 900 istiyordu → tarayıcı sessizce
+        800'e düşürüyordu. Değişken eksen 100–900'ün tamamını taşıyor.
+     3. İtalik ekseni HİÇ yüklenmiyordu; 160 italik kullanımı tarayıcının
+        ürettiği SAHTE eğimdi (harfler algoritmik yatırılıyordu). Artık gerçek
+        italik çizimi var.
+
+   Neden `opsz` (optik boyut) sürümü: Inter'in optik boyut ekseni küçük
+   puntolarda harf açıklıklarını genişletir, boşlukları açar. Bu arayüzde
+   metnin çoğu 10–14px arası; okunabilirlik kazancının en büyük kaldıracı bu.
+   `font-optical-sizing: auto` (tarayıcı varsayılanı) punto ile ekseni
+   otomatik eşler.
+
+   Türkçe kapsama: `ı` (U+0131) latin altkümesinde; `İ ğ Ğ ş Ş` ve `₺` (U+20BA)
+   latin-ext'te. İKİSİ de zorunlu — biri eksik kalırsa Türkçe metin bozulur.
+   `unicode-range` sayesinde tarayıcı yalnız gerçekten gereken dosyayı indirir.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('/fonts/inter-latin-opsz-normal.woff2') format('woff2-variations');
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('/fonts/inter-latin-ext-opsz-normal.woff2') format('woff2-variations');
+  unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Inter';
+  font-style: italic;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('/fonts/inter-latin-opsz-italic.woff2') format('woff2-variations');
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
+@font-face {
+  font-family: 'Inter';
+  font-style: italic;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('/fonts/inter-latin-ext-opsz-italic.woff2') format('woff2-variations');
+  unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;
+}
+
+/* Space Grotesk — tutar/kart/IBAN rakamları. İtalik yüzü YOKTUR (üretici
+   böyle çiziyor); bu yüzden hiçbir yerde italik ile birlikte kullanılmamalı. */
+@font-face {
+  font-family: 'Space Grotesk';
+  font-style: normal;
+  font-weight: 300 700;
+  font-display: swap;
+  src: url('/fonts/space-grotesk-latin-wght-normal.woff2') format('woff2-variations');
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
+@font-face {
+  font-family: 'Space Grotesk';
+  font-style: normal;
+  font-weight: 300 700;
+  font-display: swap;
+  src: url('/fonts/space-grotesk-latin-ext-wght-normal.woff2') format('woff2-variations');
+  unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   MONTSERRAT (başlık) + LORA (gövde/etiket) — onaylı ana sayfa tasarımının
+   resmî yazı tipleri. Inter KALDIRILMADI: `--font-sans` hâlâ Inter'dir ve
+   ana sayfa dışındaki tüm ekranlar onunla çizilir. Bu ikisi ek token'dır.
+
+   Inter ile AYNI kurallar: kendi sunucumuzdan (public/fonts), değişken
+   eksenli tek dosya, `font-display: swap`, Google CDN YOK. Çevrimdışıyken
+   arayüz sistem fontuna düşmez.
+
+   Türkçe kapsama: `ı` (U+0131) latin altkümesinde; `İ ğ Ğ ş Ş` ve `₺`
+   (U+20BA) latin-ext'te. İKİSİ de tanımlı — biri eksik kalırsa Türkçe metin
+   bozulur. `unicode-range` sayesinde tarayıcı yalnız gerekeni indirir.
+
+   Ağırlık aralıkları üreticinin çizdiği kadardır: Montserrat 100–900,
+   Lora 400–700. `font-synthesis: none` gövdede açık olduğu için bu aralığın
+   dışı SAHTE çizilmez — yanlışlık görünür olur.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('/fonts/montserrat-latin-wght-normal.woff2') format('woff2-variations');
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('/fonts/montserrat-latin-ext-wght-normal.woff2') format('woff2-variations');
+  unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Montserrat';
+  font-style: italic;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('/fonts/montserrat-latin-wght-italic.woff2') format('woff2-variations');
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
+@font-face {
+  font-family: 'Montserrat';
+  font-style: italic;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('/fonts/montserrat-latin-ext-wght-italic.woff2') format('woff2-variations');
+  unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;
+}
+
+/* Lora'nın İKİNCİ kullanıcısı: Profil ekranı (tasarım 3a "İnce Neon").
+   Orada gövde yazısı `.pf-serif` ile Lora'ya çevrilir; 400–700 ekseni
+   yüzünden o ekranda 800 (`font-extrabold`) KULLANILMAZ — `font-synthesis:
+   none` sahte kalın üretmez, yazı sessizce 700'e düşerdi. Gerçek italik
+   yüzü vardır: profildeki italik satırlar sahte eğim değildir. */
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('/fonts/lora-latin-wght-normal.woff2') format('woff2-variations');
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('/fonts/lora-latin-ext-wght-normal.woff2') format('woff2-variations');
+  unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('/fonts/lora-latin-wght-italic.woff2') format('woff2-variations');
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('/fonts/lora-latin-ext-wght-italic.woff2') format('woff2-variations');
+  unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;
+}
+
+/* Open Sans — ana sayfada TEK yerde kullanılır: Taktik Stüdyo şeridinin
+   yazısı (700). Onaylı tasarım o satırı bilerek diğerlerinden farklı bir
+   yazı tipiyle çizer; şerit ekranın en altında tek başına durduğu için
+   ayrı bir ses tonu taşır. Başka yerde kullanılmaz.
+   Değişken eksen 300–800 (üreticinin çizdiği aralık) — italik yüzü yoktur,
+   bu yüzden yalnız `normal` tanımlıdır. */
+@font-face {
+  font-family: 'Open Sans';
+  font-style: normal;
+  font-weight: 300 800;
+  font-display: swap;
+  src: url('/fonts/open-sans-latin-wght-normal.woff2') format('woff2-variations');
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
+@font-face {
+  font-family: 'Open Sans';
+  font-style: normal;
+  font-weight: 300 800;
+  font-display: swap;
+  src: url('/fonts/open-sans-latin-ext-wght-normal.woff2') format('woff2-variations');
+  unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;
+}
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  /* Onaylı ana sayfa tasarımının iki resmî yazı tipi. Yedekte Inter durur:
+     bir glif (ör. ₺) Montserrat/Lora'da yoksa metin kaybolmaz, Inter çizer. */
+  --font-display: "Montserrat", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-body: "Lora", "Inter", Georgia, ui-serif, serif;
+  /* Ana sayfada TEK satır kullanır: Taktik Stüdyo şeridi. Ayrı bir ses tonu
+     taşısın diye onaylı tasarım orada Open Sans ister. Başka yerde kullanma. */
+  --font-accent: "Open Sans", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --breakpoint-xs: 375px;
+  
+  /* ─── IP-09 · OYNA RENK-ROL TABLOSU ──────────────────────────────────────
+     #39FF14 YALNIZCA: (1) ekranın tek birincil CTA dolgusu, (2) gezinti/seçim
+     aktif durumu, (3) onaylanmış durum ikon+metni, (4) kullanıcıya DÖNEN para
+     (iade/bakiye/kazanç), (5) marka logosu.
+     #39FF14 ASLA: takım kimliği, dekoratif blur/glow, etkileşimsiz kart kenarı,
+     ikinci/üçüncü buton, üzerine beyaz metin.
+     #FACC15 YALNIZCA: bekleyen durum rozeti, sıra/kuyruk, geri sayım, yıldız,
+     uyarı bandı. #FACC15 ASLA buton dolgusu (yeşille kontrastı 1.13:1).
+     #FFFF00 ve #FFC107 KULLANILMAZ (yeşille kontrastları 1.26:1 ve 1.20:1).
+     Her durum göstergesi ÜÇ şeyi birden taşır: renk + lucide ikonu + Türkçe kelime.
+  ────────────────────────────────────────────────────────────────────────── */
+
+  /* ── ROL 1: Birincil aksiyon ───────────────────────────────────────────
+     Ekran başına EN FAZLA 1 dolu blok. Üzerindeki metin daima on-primary. */
+  --color-primary: #39FF14;         /* #0A0E14 üstünde 14.26:1 */
+  --color-on-primary: #0A0E14;      /* #39FF14 üstünde 14.26:1 */
+
+  /* ── Yüzey ölçeği: yükseklik arttıkça AÇILIR ───────────────────────── */
+  --color-bg: #0A0E14;
+  --color-bg-main: #0A0E14;         /* eski ad — 3 kullanım var, alias olarak kalır */
+  --color-surface-1: #161B22;       /* kart */
+  --color-surface-2: #1C2230;       /* sheet / dialog / yükseltilmiş panel */
+
+  /* ── Çizgi ölçeği: 2 basamak, üçüncüsü yok ─────────────────────────── */
+  --color-line: rgba(255,255,255,0.08);
+  --color-line-strong: rgba(255,255,255,0.16);
+
+  --color-text-main: #FFFFFF;
+  --color-text-muted: #8B949E;
+
+  /* ─── IP-08 · Mürekkep merdiveni (metin renkleri) ─────────────────────────
+     Dört basamağın TAMAMI, en zor zemin olan kart yüzeyinde (#161B22) WCAG AA
+     eşiğini (4.5:1) geçer — ölçülmüş değerler yanlarında. Daha soluk bir ton
+     EKLENMEYECEK: `text-gray-500` (4.00:1), `text-white/40` (3.79:1),
+     `text-gray-600` (2.56:1) gibi sınıflar tam da bu yüzden kaldırılıyor.
+     Metin rengi seçerken bu dörtlünün dışına çıkma.                          */
+  --color-ink:   #FFFFFF; /* 17.30:1 — başlık, birincil metin, rakam        */
+  --color-ink-2: #C9D1D9; /* 11.21:1 — ikincil metin, açıklama              */
+  --color-ink-3: #A9B4C0; /*  8.22:1 — üçüncül, yardım metni, birim etiketi */
+  --color-ink-4: #8B949E; /*  5.62:1 — EN SOLUK İZİNLİ; altına inilmez      */
+  
+  /* ── ROL 3: Onaylanmış / tamamlanmış ──────────────────────────────────
+     DEĞERİ BİRİNCİL İLE AYNIDIR. Ayrım renkte değil BİÇİMDEDİR:
+     birincil = dolu blok, başarı = ikon + metin (tint zemin). */
+  --color-success: #39FF14;
+  --color-success-bg: rgba(57,255,20,0.12);
+  --color-success-line: rgba(57,255,20,0.35);
+
+  /* ── "BEKLİYOR / SENİN SIRAN" — asla buton dolgusu değil ───────────── */
+  --color-warning: #FACC15;         /* #0A0E14 üstünde 12.63:1 */
+  --color-warning-bg: rgba(250,204,21,0.12);
+  --color-warning-line: rgba(250,204,21,0.35);
+
+  /* ── Hata ─────────────────────────────────────────────────────────────── */
+  --color-error: #F87171;           /* metin: 6.99:1 */
+  --color-error-fill: #DC2626;      /* yıkıcı buton dolgusu — METİN OLARAK KULLANMA */
+  --color-on-error-fill: #FFFFFF;   /* #DC2626 üstünde 4.83:1 */
+  --color-error-bg: rgba(248,113,113,0.12);
+  --color-error-line: rgba(248,113,113,0.35);
+
+  /* ── Bilgi ────────────────────────────────────────────────────────────── */
+  --color-info: #60A5FA;            /* metin: 7.61:1 */
+  --color-info-fill: #2563EB;       /* dolgu — METİN OLARAK KULLANMA */
+  --color-on-info-fill: #FFFFFF;    /* #2563EB üstünde 5.17:1 */
+  --color-info-bg: rgba(96,165,250,0.12);
+  --color-info-line: rgba(96,165,250,0.35);
+  
+  /* ─── ANA SAYFA · KATEGORİ AKSAN RENKLERİ ────────────────────────────────
+     Onaylı ana sayfa tasarımının kart kimliği. Her kartın kendi rengi var ki
+     kullanıcı ekranı taramadan "hangi kutu neydi"yi hatırlasın.
+
+     KULLANIM ALANI (üçü ile sınırlı):
+       1. kartın üst ışık çizgisi (2px),
+       2. ikon halkasının kenarı + ikonun kendisi,
+       3. bölüm etiketi ("REZERVASYON", "ORGANİZASYON").
+     KULLANILMAZ: buton dolgusu, gövde metni rengi, başka ekranların durum
+     göstergesi. Durum dili (başarı/bekliyor/hata/bilgi) YUKARIDAKİ dörtlüden
+     gelir; bu aksanlar yalnız KİMLİKTİR, ANLAM taşımaz.
+
+     Onaylanmış bilinçli istisna: --color-cat-keeper birincil yeşille aynı
+     tondadır. Kaleci kartı etkileşimlidir (role="button"), dekoratif değil —
+     "#39FF14 asla dekoratif" kuralı ihlal edilmiş olmaz.
+  ────────────────────────────────────────────────────────────────────────── */
+  --color-cat-play:   #FACC15;      /* Top Oyna      */
+  --color-cat-pitch:  #10B981;      /* Saha Kirala   */
+  --color-cat-create: #FF7A00;      /* Maç Kur       */
+  --color-cat-keeper: #39FF14;      /* Kaleci        */
+  --color-cat-ref:    #60A5FA;      /* Hakem         */
+  /* Taktik Stüdyo aksanı #F87171 DEĞİL #FF0000'dır (onaylı ana sayfa
+     tasarımı). Ayrım bilinçli: #F87171 HATA rengidir ve stüdyo şeridi hata
+     değildir — ikisi aynı tonda kalırsa kullanıcı kırmızıyı "bir şey ters
+     gitti" diye okur. #0A0E14 üstünde 4.83:1, 15px/700 metinde AA geçer.
+     Bu token YALNIZ ana sayfada kullanılır (tek kullanım yeri: stüdyo
+     şeridinin yazısı, üst aksan çizgisi ve radyal parıltısı). */
+  --color-cat-studio: #FF0000;      /* Taktik Stüdyo */
+
+  /* ── Cüzdan bakiyesi ────────────────────────────────────────────────────
+     Birincil yeşilden (#39FF14) AYRI bir ton. Sebep: #39FF14 "kullanıcıya
+     DÖNEN para"dır (iade, kazanç) — bir olayı anlatır. Bakiye ise olay değil
+     DURUMDUR; sürekli ekranda durur. İkisi aynı tonda olsaydı her bakış
+     "para geldi" gibi okunurdu. #0A0E14 üstünde 14.57:1. */
+  --color-money-balance: #00FFA5;
+
+  /* Custom Animations & Transitions */
+  --animate-pulse-slow: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+
+  /* ═══ ANA SAYFA · 4px TABANLI ÖLÇEK ═══════════════════════════════════════
+     Onaylı tasarımın TÜM boşluk, köşe ve kart yükseklikleri bu üç merdivenden
+     gelir. Ekranda serbest sayı bırakılmaz: bir ölçü buradaysa token'dır,
+     değilse tasarımda da yoktur.
+
+     Neden token: aynı ölçü ekranın altı ayrı yerinde tekrar ediyor. Elle
+     ikinci kez yazılan ölçü, er geç sapan ölçüdür — bu ekranın önceki
+     sürümünde tam olarak bu oldu.
+     ────────────────────────────────────────────────────────────────────── */
+
+  /* Boşluk merdiveni — 4'ün katları. */
+  --oy-space-1:  4px;
+  --oy-space-2:  8px;
+  --oy-space-3: 12px;
+  --oy-space-4: 16px;
+  --oy-space-6: 24px;   /* sayfa kenar boşluğu */
+  --oy-space-8: 32px;   /* bölümler arası */
+
+  /* Köşe merdiveni. `--oy-radius-pill` yuvarlak/kapsül öğeler içindir. */
+  --oy-radius-sm:   14px;
+  --oy-radius-md:   20px;   /* maç kartı, şerit kartları */
+  --oy-radius-lg:   24px;   /* kapı kartları, başlığın alt köşeleri */
+  --oy-radius-xl:   32px;   /* Top Oyna kartı — ekranın tek büyük köşesi */
+  --oy-radius-pill: 999px;
+
+  /* Kart yüksekliği merdiveni — tasarımdaki ALTI kart boyu.
+     DİKKAT: brifing metni stüdyo şeridini 72px diye anlatır, teslim edilen
+     HTML 64px çizer. Tek doğru kaynak HTML olduğu için 64 alındı. */
+  --oy-card-strip: 64px;    /* Taktik Stüdyo */
+  --oy-card-duo:   92px;    /* Kaleci · Hakem (yan yana) */
+  --oy-card-row:  104px;    /* Maç Kur */
+  --oy-card-hero: 118px;    /* Top Oyna */
+  --oy-card-wide: 136px;    /* Saha Kirala */
+  --oy-card-tall: 176px;    /* profil + cüzdan sırası */
+
+  /* Sabit ölçüler — tasarımda tek bir yerde geçen ama "sihirli sayı"
+     olmaması gereken değerler. */
+  --oy-header-h:     83px;  /* başlık; kaydırıcının DIŞINDA durur */
+  --oy-avatar:       56px;  /* profil kartındaki kişi yuvarlağı */
+  --oy-wallet-w:    128px;  /* cüzdan + maçlarım kolonu */
+  --oy-matchcard-w: 190px;  /* şerit maç kartı */
+  --oy-allcard-w:   128px;  /* şeritteki "TÜM MAÇLAR" kartı */
+  --oy-matchphoto-h: 86px;  /* maç kartı fotoğraf bandı */
+  --oy-tap-min:      48px;  /* en küçük dokunma hedefi (erişilebilirlik) */
+}
+
+/* ─── iOS Safe Area Desteği ─────────────────────────────────────────────────
+   iPhone X ve sonrası (notch / Dynamic Island) için gerekli.
+   viewport-fit=cover ile birlikte çalışır.
+────────────────────────────────────────────────────────────────────────────── */
+:root {
+  --safe-top:    env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left:   env(safe-area-inset-left, 0px);
+  --safe-right:  env(safe-area-inset-right, 0px);
+}
+
+/* Yardımcı sınıflar — BottomNav ve Header'da kullanılır */
+.safe-top    { padding-top:    var(--safe-top); }
+.safe-bottom { padding-bottom: var(--safe-bottom); }
+.pb-safe     { padding-bottom: calc(var(--safe-bottom) + 1rem); }
+.pt-safe     { padding-top:    calc(var(--safe-top) + 1rem); }
+.pb-safe-nav { padding-bottom: calc(var(--safe-bottom) + 7.5rem); }
+/* MOB-M1: OwnerBottomNav'ın kullandığı sınıf TANIMSIZDI (hayalet) — py-2'nin
+   alt yarısı + home-çubuğu boşluğu. Çentikli cihazda nav artık çakışmaz. */
+.safe-area-pb { padding-bottom: calc(var(--safe-bottom) + 0.5rem); }
+/* MOB-M4/M5/M6: üst/alt güvenli alan + bileşen dolgusu birleşimleri */
+.pt-safe-2   { padding-top:    calc(var(--safe-top) + 0.5rem); }
+.pt-safe-6   { padding-top:    calc(var(--safe-top) + 1.5rem); }
+/* Sahalar ekranının başlığı (views/PitchDiscovery.tsx).
+   `pt-safe` yalnız `env(safe-area-inset-top) + 1rem` verir. Güvenli alanı
+   BİLDİRMEYEN cihazda (bazı Android'ler, tarayıcı, webview yapılandırması
+   eksikse) bu 0 + 1rem = 16px'e düşer ve "Sahalar" başlığı çentiğin/Dynamic
+   Island'ın altına giriyordu — kullanıcı bildirdi.
+   Ana sayfadaki (satır ~385) ile AYNI karar: İKİSİNDEN BÜYÜĞÜ. Çentikli
+   cihazda güvenli alan kadar büyür, bildirmeyen cihazda 3,25rem taban kalır;
+   ne çakışma ne fazla boşluk. */
+.pt-safe-baslik { padding-top: max(calc(var(--safe-top) + 1rem), 3.25rem); }
+.pb-safe-6   { padding-bottom: calc(var(--safe-bottom) + 1.5rem); }
+/* FAZ0: hayalet sınıf — OwnerModalFrame/BankAccounts/Withdrawals/ImageCropModal
+   `safe-area-top` kullanıyordu ama TANIMSIZDI → çentikli cihazda modal başlığı
+   Dynamic Island altına giriyordu. (Unlayered kural, Tailwind p-4'ü ezer.) */
+.safe-area-top { padding-top: calc(var(--safe-top) + 1rem); }
+
+/* ─── "TAM EKRAN" = KAP, VİEWPORT DEĞİL ───────────────────────────────────────
+   SORUN: ekranlar yüksekliğini `min-h-screen` / `h-screen` ile istiyordu; bu
+   Tailwind sınıfları `100vh` yazar, yani TELEFON EKRANININ tamamı. Oysa hiçbir
+   ekran ekranın tamamında yaşamıyor: hepsi App.tsx'teki görünüm kaydırıcısının
+   içinde ve o kap, alt menü + güvenli alan (çentik / ana ekran çubuğu) payı
+   kadar DAHA KISA — pay kaydırıcının dolgusuna yazılı. Ekran kabına sığmıyor,
+   aradaki fark altta kaydırılabilir ama bomboş bir bant olarak kalıyordu:
+   kullanıcı parmağını sürüklediğinde sayfa boşluğa doğru kayıyordu.
+
+   Ölçüldü (çentikli telefon taklidi, 390×844): 12 ekranda tam 50px ölü bant
+   (= 34px güvenli alan + 16px dolgu). Bu kuralla hepsinde 0px.
+
+   ÇÖZÜM: `100vh` yerine `100%`. Yüzde, öğenin İÇİNDE YAŞADIĞI kabın iç
+   yüksekliğine göre çözülür — yani dolgular düşülmüş hâline. Zincir kurulu:
+   html → body → #root → kabuk hepsi `height: 100%`, kaydırıcı da
+   `absolute inset-0`. Böylece her ekran otomatik olarak kabına sığar; ekran
+   başına kod yazmak ya da muaf ekran listesi tutmak gerekmez, sonradan eklenen
+   ekranlar da doğru doğar.
+
+   EK KAZANÇ: `100vh` mobil tarayıcıda adres çubuğu GİZLİYKENKİ boyu verir; bu
+   yüzden çubuk görünürken ekran her zaman viewport'tan uzun olurdu. `100%`
+   gerçek kabı ölçtüğü için o fark da kapanır (`dvh`ye ihtiyaç kalmaz).
+
+   KAPSAM: yalnız `#root` — yönetim paneli (`#admin-root`) masaüstü için
+   tasarlandı, kendi `100vh` hesapları geçerli kalır. Katmansız (unlayered)
+   yazıldı: Tailwind yardımcıları `@layer utilities` içinde olduğundan bu kural
+   onları ezer — dosyadaki `.safe-area-top` ile aynı desen. ────────────────── */
+#root .min-h-screen { min-height: 100%; }
+#root .h-screen     { height: 100%; }
+#root .max-h-screen { max-height: 100%; }
+/* `dvh` de aynı aileden — kural yazıldığında kaynakta yoktu, sonradan girdi ve
+   sessizce kapsam dışında kaldı (OwnerPanel `min-h-dvh` kullanıyordu; saha
+   sahibi ekranlarında iç kaydırma bu yüzden hiç devreye girmiyordu). */
+#root .min-h-dvh { min-height: 100%; }
+#root .h-dvh     { height: 100%; }
+#root .max-h-dvh { max-height: 100%; }
+
+/* ─── KAYDIRMA GÜVENLİK AĞI (üç kez aynı şikâyet geldi) ───────────────────────
+   ŞİKÂYET: "Şu ekranda kaydırma çalışmıyor." Üç ayrı seferde, üç ayrı ekranda.
+   Her seferinde ekran ekran düzeltildi; dördüncüsü yine geldi.
+
+   TEK VE AYNI SEBEP: CSS'te bir esnek (flex) ya da ızgara (grid) çocuğunun
+   `min-height` VARSAYILANI `auto`dur — yani "içeriğimden küçülemem". Bu yüzden
+   `flex-1 overflow-y-auto` diye yazılmış bir kutu, kalan alana sığmak yerine
+   içerikle birlikte UZAR ve kaydırma çubuğu HİÇ DEVREYE GİRMEZ. Üstündeki kap
+   `overflow-hidden` ise içerik kesilir ve parmakla hiç ulaşılamaz.
+
+   Doğru kurulum `flex-1 min-h-0 overflow-y-auto`dur; kaynakta 10 yerde doğru,
+   49 yerde eksik yazılmıştı. Tek tek eklemek yerine kural buraya yazıldı:
+   kaydırması İSTENEN her kutunun `min-height`ı sıfırlanır.
+
+   NEDEN GÜVENLİ: Esnek/ızgara ÇOCUĞU OLMAYAN öğelerde `min-height`ın hesaplanan
+   değeri zaten 0'dır — onlarda hiçbir şey değişmez. Değişen tek durum, tam da
+   düzeltmek istediğimiz durumdur.
+
+   KAPSAM: yalnız `#root`. Yönetim paneli (`#admin-root`) masaüstü için ayrı
+   tasarlandı, kendi yerleşimi geçerli kalır. ─────────────────────────────── */
+#root .overflow-y-auto,
+#root .overflow-auto,
+#root .overflow-y-scroll { min-height: 0; }
+
+/* ═══ ANA SAYFA (views/Dashboard.tsx) ═════════════════════════════════════
+   Onaylı tasarımın davranış kuralları. Ölçüler @theme'deki `--oy-*`
+   token'larından gelir; burada yalnız DAVRANIŞ tanımlıdır.
+   ═════════════════════════════════════════════════════════════════════════ */
+
+/* ── Başlığın üst güvenli alanı ────────────────────────────────────────────
+   Tasarımda maket bir durum çubuğu var; üretimde onu OS çizer. Başlığın
+   kendi 83px'i sabittir, çentik payı ONUN ÜSTÜNE eklenir — yoksa iPhone'un
+   Dynamic Island'ı "ANA SAYFA" yazısının üstüne biner.
+   Çentiksiz Android'de env=0 olur ve tasarım birebir korunur. */
+.dash-safe-top {
+  padding-top: var(--safe-top);
+}
+/* Çevrimdışı şeridi açıkken diğer üst-boşluk sınıflarıyla aynı davranış. */
+body.offline-banner-on .dash-safe-top {
+  padding-top: calc(var(--safe-top) + var(--offline-banner-h));
+}
+
+/* ── Basma davranışı ───────────────────────────────────────────────────────
+   Basılınca 90ms'de %96,5'e iner, bırakılınca 420ms'de yerine oturur.
+   ÇERÇEVE YOK — klavye odağı dahil. Bu bilinçli bir karardır: kart zaten
+   ekranın tamamını kaplayan bir hedeftir, çerçeve tasarımı böler.
+   Erişilebilirlik kaybı yok: her hedef `role="button"` + `aria-label`
+   taşır ve Enter/Space ile açılır. */
+[data-tap] {
+  transition: transform 420ms cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: manipulation;
+  cursor: pointer;
+}
+[data-tap]:active { transition-duration: 90ms; transform: scale(0.965); }
+[data-tap]:focus, [data-tap]:focus-visible { outline: none; }
+/* Hareket hassasiyeti: ölçek animasyonu tamamen kapanır. Titreşim de
+   kapanır ama onun sorumlusu JS tarafı (useLowMotion). */
+@media (prefers-reduced-motion: reduce) {
+  [data-tap] { transition: none; will-change: auto; }
+  [data-tap]:active { transform: none; }
+}
+
+/* ── Profil kartındaki kişi yuvarlağı ──────────────────────────────────────
+   `UserAvatar` kendi yedek renklerini taşır (yeşil harf, koyu yeşil zemin) —
+   uygulamanın geri kalanında doğru olan budur. Ana sayfada tasarım şeffaf
+   zemin + beyaz harf ister. Eleman seçicisi (0,1,1) yardımcı sınıfı (0,1,0)
+   yener; ne `!important` ne de sınıf sırasına güvenmek gerekir. */
+.oy-home-avatar > div { background: transparent; color: var(--color-ink); }
+.oy-home-avatar > img { width: 100%; height: 100%; object-fit: cover; }
+
+/* ── Kaydırma çubuğu gizli, kaydırma zinciri kesik ─────────────────────────
+   `overscroll-behavior: contain`: ana sayfa dibine gelince arkadaki kabuk
+   kaymaz; yatay şerit sonuna gelince de sayfa yana kaymaz. Android'in kendi
+   aşağı-çek-yenile hareketiyle çakışmayı da bu keser. */
+[data-oy-scroll], [data-oy-strip] { scrollbar-width: none; }
+[data-oy-scroll]::-webkit-scrollbar, [data-oy-strip]::-webkit-scrollbar { width: 0; height: 0; }
+[data-oy-scroll] { overscroll-behavior-y: contain; -webkit-overflow-scrolling: touch; }
+[data-oy-strip] { overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; }
+
+/* ─── Çevrimdışı şeridi yer kaplar (components/OfflineBanner.tsx) ──────────
+   Şerit `fixed top-0 z-[100]` çizilir; kabuk yer açmazsa üstteki geri/kapat
+   düğmelerini örter. Yükseklik şeridin KENDİ dolgusuyla aynı formülden gelir:
+   üst dolgu + text-xs satır yüksekliği (1rem) + py-2'nin alt yarısı (0.5rem). */
+:root { --offline-banner-h: 0px; }
+body.offline-banner-on { --offline-banner-h: calc(max(var(--safe-top), 0.5rem) + 1.5rem); }
+body.offline-banner-on .safe-top      { padding-top: calc(var(--safe-top) + var(--offline-banner-h)); }
+body.offline-banner-on .pt-safe       { padding-top: calc(var(--safe-top) + 1rem   + var(--offline-banner-h)); }
+body.offline-banner-on .pt-safe-2     { padding-top: calc(var(--safe-top) + 0.5rem + var(--offline-banner-h)); }
+body.offline-banner-on .pt-safe-6     { padding-top: calc(var(--safe-top) + 1.5rem + var(--offline-banner-h)); }
+body.offline-banner-on .pt-safe-baslik { padding-top: calc(max(calc(var(--safe-top) + 1rem), 3.25rem) + var(--offline-banner-h)); }
+body.offline-banner-on .safe-area-top { padding-top: calc(var(--safe-top) + 1rem   + var(--offline-banner-h)); }
+/* FAZ0: hayalet sınıf — OwnerKpiGrid vb. `scrollbar-hide` kullanıyordu; `.no-scrollbar` ile aynı. */
+.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+/* FAZ0: hayalet sınıf — OwnerPanel başlık ("OYNA İŞLETME") legiblik için `text-shadow` kullanıyor. */
+.text-shadow { text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35); }
+
+/* Tutar / kart no / IBAN rakamları — tasarım tokenı (Space Grotesk yerel @font-face).
+   IP-08: `tabular-nums` eklendi — rakamlar eşit genişlikte olur, alt alta gelen
+   tutarlar birbiriyle hizalanır ve sayaç değişirken yatay zıplama olmaz.
+   İtalik EKLEME: Space Grotesk'in italik yüzü yok. */
+.font-numeric {
+  font-family: "Space Grotesk", "Inter", ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Ödeme "işleniyor" halkası (PaymentScreen SVG inline animasyonu) */
+@keyframes oy-spin { to { transform: rotate(360deg); } }
+
+/* ──────────────────────────────────────────────────────────────
+   OYNA yükleme halkası — pürüzsüz konik degrade "kuyruklu" spinner
+   (components/ui/Spinner.tsx). Sert kenarlı border-halka yerine
+   yumuşak sönümlenen kuyruk + soluk track + hafif neon parıltı.
+   ────────────────────────────────────────────────────────────── */
+@keyframes oy-spinner-rotate { to { transform: rotate(360deg); } }
+
+.oy-spinner {
+  --oy-spinner-size: 28px;
+  --oy-spinner-color: #39FF14;
+  --oy-spinner-thickness: 3px;
+  --oy-spinner-track: rgba(255, 255, 255, 0.09);
+  display: inline-block;
+  flex-shrink: 0;
+  width: var(--oy-spinner-size);
+  height: var(--oy-spinner-size);
+  border-radius: 50%;
+  /* Üstte parlayan konik yay (transparanttan renge sönümlenir),
+     altta soluk tam halka — mask ile diske değil halkaya kırpılır. */
+  background:
+    conic-gradient(from 0deg, transparent 0%, var(--oy-spinner-color) 100%),
+    var(--oy-spinner-track);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - var(--oy-spinner-thickness)), #000 calc(100% - var(--oy-spinner-thickness)));
+          mask: radial-gradient(farthest-side, transparent calc(100% - var(--oy-spinner-thickness)), #000 calc(100% - var(--oy-spinner-thickness)));
+  animation: oy-spinner-rotate 0.72s linear infinite;
+  will-change: transform;
+}
+
+.oy-spinner-glow {
+  filter: drop-shadow(0 0 3px color-mix(in srgb, var(--oy-spinner-color) 55%, transparent));
+}
+
+/* Yatay yöntem karuseli (ödeme ekranı) — scrollbar gizli */
+.oy-carousel { scrollbar-width: none; }
+.oy-carousel::-webkit-scrollbar { display: none; }
+
+/* Custom Scrollbar */
+.custom-scrollbar::-webkit-scrollbar { width: 4px; height: 4px; }
+.custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 99px; }
+.custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+
+/* ─── Profil ekranı — tasarım 3a "İnce Neon" ────────────────────────────────
+   Bu iki sınıf YALNIZ Profil ekranında (ve admin panelindeki birebir aynasında)
+   kullanılır; uygulamanın geri kalanı Inter + düz koyu zemin olarak kalır.
+
+   `.pf-serif`: kullanıcı kararı — profil tırnaklı (serif) yazıya geçer.
+   Rakamlar da Lora çizer; `tabular-nums` alt alta gelen skorların/tutarların
+   hizasını korur (Space Grotesk'e düşmez, tasarımın yüzü bozulmasın diye).
+   `.pf-canvas`: tasarımın üstten aşağı yeşile çalan zemin geçişi. */
+.pf-serif {
+  font-family: 'Lora', Georgia, 'Times New Roman', serif;
+  font-variant-numeric: tabular-nums;
+}
+.pf-canvas {
+  background: linear-gradient(175deg, #0D2318 0%, #0A1510 42%, #0A0E14 100%);
+}
+
+/* Profil — köşedeki ambient "nefes" ışıması (prefers-reduced-motion S50 ile kapanır) */
+@keyframes pf-breathe {
+  0%, 100% { opacity: 0.10; transform: scale(1); }
+  50% { opacity: 0.22; transform: scale(1.1); }
+}
+.pf-ambient {
+  position: absolute;
+  top: -70px;
+  right: -90px;
+  width: 360px;
+  height: 340px;
+  filter: blur(120px);
+  border-radius: 50%;
+  pointer-events: none;
+  background: var(--color-primary);
+  opacity: 0.10;
+  animation: pf-breathe 7s ease-in-out infinite;
+}
+
+/* Hide Scrollbar Utility */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+/* ─── Sabit kabuk (MOB-S1) ────────────────────────────────────────────────────
+   Belge (html/body) ASLA kaydırılamaz: tüm kaydırma, ekranların kendi koyu
+   iç konteynerlerinde olur (App.tsx'teki görünüm kaydırıcısı + PageLayout main).
+   Böylece iOS'un belge-seviyesi lastiklenmesi (üst/altta beyaz native katman)
+   kökten imkânsızlaşır; native tarafta scrollView.bounces=false ile eşleşir.
+   Yükseklik %100 zinciri bilinçli olarak !important'sız: Capacitor Keyboard
+   (resize:'body') klavye açılınca body yüksekliğini inline küçültür, kabuk da
+   onunla birlikte daralır. ─────────────────────────────────────────────────── */
+html {
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+  background-color: #0A0E14;
+}
+body {
+  font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  /* IP-08: punto ile optik boyut eksenini eşle (küçük metinde harf açıklıkları
+     genişler). `auto` tarayıcı varsayılanı; niyeti belgelemek için açık yazıldı. */
+  font-optical-sizing: auto;
+  /* IP-08: SAHTE yüz yasak. Gerçek italik ve 100–900 ağırlık artık yüklü;
+     tarayıcının kalın/eğik uydurmasına gerek yok. Bir gün eksik bir yüz
+     istenirse metin sahte çizilmek yerine düz kalır — hata GÖRÜNÜR olur. */
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: #0A0E14;
+  color: white;
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+#root {
+  height: 100%;
+}
+
+/* ─── Web'de telefon çerçevesi ────────────────────────────────────────────────
+   OYNA bir mobil uygulama; masaüstü tarayıcıda tam genişlikte açılınca kartlar
+   1440px'e yayılıyor ve tasarım dağılıyordu. Geniş pencerede kabuk ortada
+   telefon genişliğinde bir sütuna alınır.
+
+   `contain: paint` DEKORATİF DEĞİL, bu işin çalışmasının tek sebebi: kaynakta
+   77 dosya `position: fixed` kullanıyor (modallar, alt sayfalar, alt menü,
+   toast'lar). Fixed öğeler üstteki genişlik sınırlarını dinlemez; kapsayıcı
+   blok kurulmazsa ilk modalde çerçeve sızar ve overlay tüm pencereye yayılır.
+   Ölçüldü: en geniş fixed öğe 1440px → 448px.
+
+   Eşik 520px: gerçek telefonlar (en geniş ~430px CSS) ve Capacitor native
+   webview bu kuralın ALTINDA kalır — mobilde hiçbir şey değişmez. ────────── */
+@media (min-width: 520px) {
+  html { background-color: #05070b; }
+  #root {
+    max-width: 448px;
+    margin: 0 auto;
+    contain: paint;
+    box-shadow: 0 0 0 1px rgb(255 255 255 / 0.06), 0 24px 80px rgb(0 0 0 / 0.6);
+  }
+  /* Aşağıdaki "iOS yakınlaştırmasını engelle" kuralı `max-width: 768px` ile
+     sınırlı olduğu için masaüstünde alanlar 14px kalıyordu; çerçeve içinde
+     telefonla aynı 16px olsun. Yalnız #root — admin paneli (#admin-root) hariç. */
+  #root input[type="text"],
+  #root input[type="number"],
+  #root input[type="email"],
+  #root input[type="tel"],
+  #root input[type="search"],
+  #root input[type="password"],
+  #root select,
+  #root textarea {
+    font-size: 16px;
+  }
+}
+
+/* Kaydırma zincirlemesini kes: bir liste ucuna gelince hareket komşuya/belgeye
+   sızmaz. Dikey kaydırıcılar .custom-scrollbar, yatay şeritler .no-scrollbar
+   kullanır (yatayda sayfayı dikey sürüklemeyi de engeller). */
+.custom-scrollbar { overscroll-behavior: contain; }
+.no-scrollbar { overscroll-behavior-x: contain; }
+
+/* ─── Klavye yöneticisi (MOB-S2, services/keyboardManager.ts) ────────────────
+   Klavye açıkken kaydırılabilir gövdelere klavye kadar ek alt boşluk verilir;
+   odaklanan alan scrollIntoView(center) ile klavyenin üstünde tutulur. */
+body.kb-open .pb-safe,
+body.kb-open .pb-safe-nav,
+body.kb-open .pb-safe-6 {
+  padding-bottom: calc(var(--kb-height, 0px) + 2rem);
+}
+
+/* ─── Lobi VS şeridi — aktif takım kutusu yavaş nabız (MOB-S3) ───────────────
+   O an sahası gösterilen takımın kutusu yavaşça parlar/söner. Renk, kutunun
+   kendi --pulse-color değişkeninden gelir (ev: beyaz, deplasman: kırmızı). */
+@keyframes oy-team-pulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 transparent; }
+  50% { opacity: 0.78; box-shadow: 0 0 18px 1px var(--pulse-color, rgba(255,255,255,0.18)); }
+}
+.team-pulse-active {
+  animation: oy-team-pulse 2.6s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .team-pulse-active { animation: none !important; }
+}
+
+/* Mesh Gradient Background
+   Genişlik 100vw DEĞİL 100%: vw pencereyi ölçer, telefon çerçevesini değil —
+   masaüstünde arka plan çerçevenin dışına taşardı. */
+.mesh-bg {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
+  background-color: #0A0E14;
+  overflow: hidden;
+}
+
+/* Ölçüler vw DEĞİL kapsayıcı yüzdesi: vw pencereyi ölçer, telefon çerçevesini
+   değil — masaüstünde küreler telefondakinden 3 kat büyük çiziliyordu. */
+.mesh-blob {
+  position: absolute;
+  opacity: 0.5;
+  animation: float 20s infinite ease-in-out alternate;
+  will-change: transform;
+  backface-visibility: hidden;
+  transform: translateZ(0);
+}
+
+.mesh-blob-1 {
+  top: -10%;
+  left: -10%;
+  width: 50%;
+  aspect-ratio: 1;
+  background: radial-gradient(circle, rgba(20, 30, 60, 0.8) 0%, rgba(10, 14, 20, 0) 70%);
+  animation-delay: 0s;
+}
+
+.mesh-blob-2 {
+  bottom: -20%;
+  right: -10%;
+  width: 60%;
+  aspect-ratio: 1;
+  background: radial-gradient(circle, rgba(40, 10, 60, 0.6) 0%, rgba(10, 14, 20, 0) 70%);
+  animation-delay: -5s;
+}
+
+.mesh-blob-3 {
+  top: 40%;
+  left: 60%;
+  width: 40%;
+  aspect-ratio: 1;
+  background: radial-gradient(circle, rgba(10, 60, 40, 0.5) 0%, rgba(10, 14, 20, 0) 70%);
+  animation-delay: -10s;
+}
+
+@keyframes float {
+  0% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(5%, 10%) scale(1.1); }
+  66% { transform: translate(-5%, 5%) scale(0.9); }
+  100% { transform: translate(0, -5%) scale(1.05); }
+}
+
+/* Breathing Glows */
+.breathing-glow {
+  position: relative;
+}
+
+.breathing-glow::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  background: inherit;
+  filter: blur(15px);
+  opacity: 0.6;
+  z-index: -1;
+  border-radius: inherit;
+  animation: breathe 4s infinite ease-in-out alternate;
+}
+
+@keyframes breathe {
+  0% { opacity: 0.3; transform: scale(0.98); }
+  100% { opacity: 0.8; transform: scale(1.02); }
+}
+
+/* Ripple Effect */
+/* IP-10: `.ripple-container` silindi — repoda 0 kullanımı vardı (ölü kural). */
+.ripple {
+  position: absolute;
+  border-radius: 50%;
+  transform: scale(0);
+  animation: ripple-animation 600ms linear;
+  /* IP-10: sabit beyaz, birincil (#39FF14) zeminli butonda görünmüyordu.
+     currentColor butonun kendi metin rengini alır → her varyantta okunur. */
+  background-color: currentColor;
+  opacity: 0.28;
+  pointer-events: none;
+}
+
+@keyframes ripple-animation {
+  to {
+    /* 20px'lik tohum × 4 = 80px; tam genişlikli butonu kaplamıyordu. */
+    transform: scale(12);
+    opacity: 0;
+  }
+}
+
+/* Particles */
+.particle {
+  position: absolute;
+  border-radius: 50%;
+  background-color: white;
+  pointer-events: none;
+  animation: particle-float 3s ease-in forwards;
+}
+
+@keyframes particle-float {
+  0% { transform: translateY(0) scale(1); opacity: 1; }
+  100% { transform: translateY(-100px) scale(0); opacity: 0; }
+}
+
+/* ─── Premium Micro-animations ──────────────────────────────────────────────── */
+
+/* Shimmer scan line */
+@keyframes shimmer {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(200%); }
+}
+.animate-shimmer { animation: shimmer 1.4s ease-in-out; }
+
+/* Ana sayfa iskelet çubuğu (views/Dashboard.tsx · YÜKLENİYOR durumu).
+   Yukarıdaki `shimmer`dan farkı: o öğeyi KAYDIRIR (transform), bu ise
+   degradeyi öğenin İÇİNDE gezdirir (background-position) — çubuk yerinde
+   durur, üstünden ışık geçer. Kart yerleşimi hiç oynamaz.
+   `prefers-reduced-motion` bloğu (dosyanın sonunda) bunu da durdurur. */
+@keyframes oyna-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Ana sayfa kapı kartlarının basılı hâli. Kartlar framer-motion kullanmaz
+   (altı kart × çok katmanlı gradyan = gereksiz JS yükü); geri bildirim tek
+   satırlık bir CSS dönüşümüdür. Değer tasarımdan: 0.985. */
+.oy-dash-card:active { transform: scale(0.985); }
+
+/* Neon pulse ring */
+@keyframes neon-ring {
+  0%, 100% { box-shadow: 0 0 0 0 currentColor; opacity: 1; }
+  50%       { box-shadow: 0 0 0 8px transparent; opacity: 0.6; }
+}
+.neon-ring { animation: neon-ring 1.8s ease-in-out infinite; }
+
+/* Smooth counter bounce */
+@keyframes count-pop {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.18); }
+  70%  { transform: scale(0.92); }
+  100% { transform: scale(1); }
+}
+.count-pop { animation: count-pop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+
+/* Slide up enter */
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(24px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.slide-up { animation: slide-up 0.45s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+
+/* Fade in with blur */
+@keyframes fade-blur-in {
+  from { opacity: 0; filter: blur(8px); }
+  to   { opacity: 1; filter: blur(0); }
+}
+.fade-blur-in { animation: fade-blur-in 0.4s ease-out forwards; }
+
+/* Stagger children helper */
+.stagger-children > * { opacity: 0; animation: slide-up 0.45s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+.stagger-children > *:nth-child(1)  { animation-delay: 0.05s; }
+.stagger-children > *:nth-child(2)  { animation-delay: 0.10s; }
+.stagger-children > *:nth-child(3)  { animation-delay: 0.15s; }
+.stagger-children > *:nth-child(4)  { animation-delay: 0.20s; }
+.stagger-children > *:nth-child(5)  { animation-delay: 0.25s; }
+.stagger-children > *:nth-child(6)  { animation-delay: 0.30s; }
+
+/* Card hover lift */
+.card-lift { transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.25s ease; }
+.card-lift:hover { transform: translateY(-4px); box-shadow: 0 16px 40px rgba(0,0,0,0.4); }
+.card-lift:active { transform: scale(0.97); }
+
+/* Glow pulse for CTA buttons */
+/* Text reveal (char by char simulation with clip) */
+@keyframes text-reveal {
+  from { clip-path: inset(0 100% 0 0); }
+  to   { clip-path: inset(0 0% 0 0); }
+}
+.text-reveal { animation: text-reveal 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+
+/* Smooth font rendering */
+* {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Global tap highlight removal on mobile */
+button, a {
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+/* IP-10 — BASMA GERİ BİLDİRİMİ.
+   Yukarıdaki kural WebView'in kendi gri parlamasını kapatıyor ama yerine hiçbir
+   şey koymuyordu: 1052 butonun çoğunda dokunuşun görsel karşılığı yoktu.
+   `filter` seçildi çünkü Tailwind v4 `active:scale-*` bağımsız `scale`
+   özelliğini yazar — ikisi çakışmaz, üst üste biner. Ayrıca bu bir HAREKET
+   değil parlaklık değişimi olduğu için `prefers-reduced-motion` altında da
+   çalışır; o kullanıcı için tek geri bildirim buydu. */
+@layer base {
+  button:active:not(:disabled),
+  a:active,
+  [role="button"]:active:not([aria-disabled="true"]) {
+    filter: brightness(0.78);
+  }
+}
+
+/* Input base polish */
+input {
+  caret-color: currentColor;
+}
+input:-webkit-autofill,
+input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 1000px #0d1420 inset;
+  -webkit-text-fill-color: #fff;
+}
+
+/* Prevent iOS auto-zoom on form focus by forcing min 16px font-size on mobile viewports */
+@media (max-width: 768px) {
+  input[type="text"],
+  input[type="number"],
+  input[type="email"],
+  input[type="tel"],
+  input[type="search"],
+  input[type="password"],
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* OKLCH-based Smooth Neon Glow Shadows (Premium Gamut & Color Space) */
+.button-neon-glow-yellow {
+  --neon-color: oklch(85% 0.18 85 / 0.25);
+  --neon-hover: oklch(85% 0.18 85 / 0.5);
+  box-shadow: 0 0 20px 0 var(--neon-color), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.button-neon-glow-yellow:hover {
+  box-shadow: 0 0 35px 2px var(--neon-hover), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  transform: translateY(-2px) scale(1.01);
+}
+
+.button-neon-glow-green {
+  --neon-color: oklch(75% 0.22 145 / 0.2);
+  --neon-hover: oklch(75% 0.22 145 / 0.45);
+  box-shadow: 0 0 20px 0 var(--neon-color), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.button-neon-glow-green:hover {
+  box-shadow: 0 0 35px 2px var(--neon-hover), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px) scale(1.01);
+}
+
+.button-neon-glow-blue {
+  --neon-color: oklch(65% 0.2 250 / 0.2);
+  --neon-hover: oklch(65% 0.2 250 / 0.45);
+  box-shadow: 0 0 20px 0 var(--neon-color), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.button-neon-glow-blue:hover {
+  box-shadow: 0 0 35px 2px var(--neon-hover), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px) scale(1.01);
+}
+
+/* S50 – prefers-reduced-motion: hareket hassasiyeti olan kullanıcı için
+   yalnız CSS animasyonlarını kapatır. Framer Motion bu kurala BAKMAZ —
+   o inline style/WAAPI ile sürer; sorumlusu App.tsx'teki
+   <MotionConfig reducedMotion="user"> ve useLowMotion kancasıdır. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .animate-ping, .animate-pulse, .animate-bounce {
+    animation: none !important;
+  }
+  /* IP-11 · BEKLEME GÖSTERGELERİ MUAF. Dönen halka bir hareket efekti değil,
+     "işlem sürüyor" bilgisidir. Durdurulunca 95 spinner donmuş ikona dönüyor
+     ve kullanıcı uygulamanın kilitlendiğini sanıyordu — hareketi azaltmak
+     isteyen kullanıcıyı cezalandıran, amacın tam tersi bir sonuç.
+     Bu kurallar `*` kuralından SONRA gelir ve onu ezer; sıra bozulmamalı. */
+  .animate-spin {
+    animation-duration: 1s !important;
+    animation-iteration-count: infinite !important;
+  }
+  .oy-spinner {
+    animation-duration: 0.72s !important;
+    animation-iteration-count: infinite !important;
+  }
+}
+
+

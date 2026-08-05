@@ -1,0 +1,813 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OYNA · Tasarım Sistemi Önizlemesi</title>
+
+<!-- ══════════════════════════════════════════════════════════════════════════
+     Bu sayfanın renk, punto ve ölçü değerleri ELLE YAZILMAZ.
+     `npm run tasarim:kit` komutu aşağıdaki OYNA:BASLA / OYNA:BITIS işaretleri
+     arasını uygulamanın index.css dosyasından yeniden doldurur. Böylece
+     önizleme ile gerçek uygulama arasında sessiz bir fark oluşamaz.
+     ══════════════════════════════════════════════════════════════════════ -->
+
+<!-- OYNA:BASLA DEGISKENLER -->
+  <style>
+    :root {
+      --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+      --font-display: "Montserrat", "Inter", ui-sans-serif, system-ui, sans-serif;
+      --font-body: "Lora", "Inter", Georgia, ui-serif, serif;
+      --font-accent: "Open Sans", "Inter", ui-sans-serif, system-ui, sans-serif;
+      --breakpoint-xs: 375px;
+      --color-primary: #39FF14;
+      --color-on-primary: #0A0E14;
+      --color-bg: #0A0E14;
+      --color-bg-main: #0A0E14;
+      --color-surface-1: #161B22;
+      --color-surface-2: #1C2230;
+      --color-line: rgba(255,255,255,0.08);
+      --color-line-strong: rgba(255,255,255,0.16);
+      --color-text-main: #FFFFFF;
+      --color-text-muted: #8B949E;
+      --color-ink: #FFFFFF;
+      --color-ink-2: #C9D1D9;
+      --color-ink-3: #A9B4C0;
+      --color-ink-4: #8B949E;
+      --color-success: #39FF14;
+      --color-success-bg: rgba(57,255,20,0.12);
+      --color-success-line: rgba(57,255,20,0.35);
+      --color-warning: #FACC15;
+      --color-warning-bg: rgba(250,204,21,0.12);
+      --color-warning-line: rgba(250,204,21,0.35);
+      --color-error: #F87171;
+      --color-error-fill: #DC2626;
+      --color-on-error-fill: #FFFFFF;
+      --color-error-bg: rgba(248,113,113,0.12);
+      --color-error-line: rgba(248,113,113,0.35);
+      --color-info: #60A5FA;
+      --color-info-fill: #2563EB;
+      --color-on-info-fill: #FFFFFF;
+      --color-info-bg: rgba(96,165,250,0.12);
+      --color-info-line: rgba(96,165,250,0.35);
+      --color-cat-play: #FACC15;
+      --color-cat-pitch: #10B981;
+      --color-cat-create: #FF7A00;
+      --color-cat-keeper: #39FF14;
+      --color-cat-ref: #60A5FA;
+      --color-cat-studio: #FF0000;
+      --color-money-balance: #00FFA5;
+      --animate-pulse-slow: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+      --oy-space-1: 4px;
+      --oy-space-2: 8px;
+      --oy-space-3: 12px;
+      --oy-space-4: 16px;
+      --oy-space-6: 24px;
+      --oy-space-8: 32px;
+      --oy-radius-sm: 14px;
+      --oy-radius-md: 20px;
+      --oy-radius-lg: 24px;
+      --oy-radius-xl: 32px;
+      --oy-radius-pill: 999px;
+      --oy-card-strip: 64px;
+      --oy-card-duo: 92px;
+      --oy-card-row: 104px;
+      --oy-card-hero: 118px;
+      --oy-card-wide: 136px;
+      --oy-card-tall: 176px;
+      --oy-header-h: 83px;
+      --oy-avatar: 56px;
+      --oy-wallet-w: 128px;
+      --oy-matchcard-w: 190px;
+      --oy-allcard-w: 128px;
+      --oy-matchphoto-h: 86px;
+      --oy-tap-min: 48px;
+    }
+  </style>
+<!-- OYNA:BITIS DEGISKENLER -->
+
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    padding: 0 20px 96px;
+    background: var(--color-bg);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-synthesis: none;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .kap { max-width: 960px; margin: 0 auto; }
+
+  /* ── Başlık ─────────────────────────────────────────────────────────── */
+  header.kunye {
+    padding: 72px 0 40px;
+    border-bottom: 1px solid var(--color-line);
+  }
+  header.kunye .marka {
+    display: inline-flex; align-items: center; gap: 10px;
+    font-size: 11px; font-weight: 900; letter-spacing: .16em; text-transform: uppercase;
+    color: var(--color-primary);
+  }
+  header.kunye .marka::before {
+    content: ""; width: 8px; height: 8px; border-radius: 999px;
+    background: var(--color-primary); box-shadow: 0 0 16px var(--color-primary);
+  }
+  header.kunye h1 {
+    margin: 18px 0 0;
+    font-size: clamp(30px, 6vw, 46px); font-weight: 900; letter-spacing: -.035em; line-height: 1.04;
+  }
+  header.kunye p {
+    margin: 14px 0 0; max-width: 62ch;
+    font-size: 15px; line-height: 1.6; color: var(--color-ink-2);
+  }
+
+  /* ── Bölümler ───────────────────────────────────────────────────────── */
+  section { padding: 56px 0 8px; border-bottom: 1px solid var(--color-line); }
+  section:last-of-type { border-bottom: 0; }
+
+  .bolum-etiket {
+    font-size: 10px; font-weight: 900; letter-spacing: .14em; text-transform: uppercase;
+    color: var(--color-ink-4);
+  }
+  section > h2 {
+    margin: 12px 0 0;
+    font-size: 26px; font-weight: 900; letter-spacing: -.03em;
+  }
+  section > .aciklama {
+    margin: 12px 0 32px; max-width: 68ch;
+    font-size: 14px; line-height: 1.65; color: var(--color-ink-3);
+  }
+  h3.obek {
+    margin: 36px 0 16px;
+    font-size: 11px; font-weight: 900; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--color-ink-4);
+  }
+  h3.obek:first-of-type { margin-top: 0; }
+
+  /* ── Renk kartları ──────────────────────────────────────────────────── */
+  .izgara {
+    display: grid; gap: 12px;
+    grid-template-columns: repeat(auto-fill, minmax(184px, 1fr));
+  }
+  figure.renk {
+    margin: 0; overflow: hidden;
+    background: var(--color-surface-1);
+    border: 1px solid var(--color-line);
+    border-radius: var(--oy-radius-sm);
+  }
+  figure.renk .ornek {
+    display: block; height: 64px;
+    background-image:
+      linear-gradient(45deg, rgba(255,255,255,.06) 25%, transparent 25%, transparent 75%, rgba(255,255,255,.06) 75%),
+      linear-gradient(45deg, rgba(255,255,255,.06) 25%, transparent 25%, transparent 75%, rgba(255,255,255,.06) 75%);
+    background-size: 12px 12px; background-position: 0 0, 6px 6px;
+    border-bottom: 1px solid var(--color-line);
+  }
+  figure.renk figcaption { display: block; padding: 11px 13px 13px; }
+  figure.renk code {
+    display: block; font-size: 12px; font-weight: 700; color: var(--color-ink);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  figure.renk b {
+    display: block; margin-top: 3px;
+    font-size: 11px; font-weight: 600; color: var(--color-ink-4);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  figure.renk i {
+    display: block; margin-top: 7px;
+    font-size: 11px; line-height: 1.45; font-style: normal; color: var(--color-ink-3);
+  }
+
+  /* ── Punto ölçeği ───────────────────────────────────────────────────── */
+  .punto {
+    display: grid; gap: 4px 20px; align-items: baseline;
+    grid-template-columns: 150px minmax(0, 1fr);
+    padding: 14px 0; border-top: 1px solid var(--color-line);
+  }
+  .punto:first-child { border-top: 0; }
+  .punto-ad code {
+    font-size: 12px; font-weight: 700; color: var(--color-ink-2);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  .punto-ad b {
+    display: block; margin-top: 2px;
+    font-size: 11px; font-weight: 600; color: var(--color-ink-4);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  .punto-ornek { font-weight: 800; letter-spacing: -.02em; line-height: 1.15; }
+  .punto-not {
+    grid-column: 2; font-size: 11.5px; line-height: 1.5; color: var(--color-ink-4);
+  }
+  .punto-not code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    color: var(--color-ink-3);
+  }
+
+  /* ── Ölçü merdivenleri ──────────────────────────────────────────────── */
+  .merdiven { display: flex; flex-direction: column; gap: 10px; }
+  .basamak {
+    display: grid; gap: 16px; align-items: center;
+    grid-template-columns: 168px auto minmax(0, 1fr);
+  }
+  .basamak code {
+    font-size: 12px; color: var(--color-ink-2);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  .basamak b {
+    font-size: 11px; font-weight: 600; color: var(--color-ink-4);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  .basamak .bar { display: block; height: 12px; border-radius: 3px; background: var(--color-primary); }
+  .basamak .kose {
+    display: block; width: 104px; height: 68px;
+    background: var(--color-surface-2); border: 1px solid var(--color-line-strong);
+  }
+  .basamak .yukseklik {
+    display: block; width: 240px;
+    background: var(--color-surface-1); border: 1px solid var(--color-line);
+    border-radius: var(--oy-radius-md);
+  }
+
+  /* ── Bileşen örnekleri ──────────────────────────────────────────────── */
+  .vitrin {
+    display: grid; gap: 16px;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  }
+  .kutu {
+    padding: 20px;
+    background: var(--color-surface-1);
+    border: 1px solid var(--color-line);
+    border-radius: var(--oy-radius-md);
+  }
+  .kutu > .baslik {
+    margin: 0 0 16px;
+    font-size: 10px; font-weight: 900; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--color-ink-4);
+  }
+  .sira { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  .etiket-satiri {
+    margin: 8px 0 0; font-size: 10px; font-weight: 700; letter-spacing: .06em;
+    text-transform: uppercase; color: var(--color-ink-4);
+  }
+
+  .btn-birincil {
+    padding: 14px 22px; border: 0; cursor: default;
+    background: var(--color-primary); color: var(--color-on-primary);
+    border-radius: var(--oy-radius-sm);
+    font: 800 14px/1 var(--font-sans); letter-spacing: .02em;
+    box-shadow: 0 0 26px rgba(57, 255, 20, .24);
+  }
+  .btn-ikincil {
+    padding: 14px 22px; cursor: default;
+    background: transparent; color: var(--color-ink);
+    border: 1px solid var(--color-line-strong); border-radius: var(--oy-radius-sm);
+    font: 800 14px/1 var(--font-sans);
+  }
+  .btn-yikici {
+    padding: 14px 22px; border: 0; cursor: default;
+    background: var(--color-error-fill); color: var(--color-on-error-fill);
+    border-radius: var(--oy-radius-sm); font: 800 14px/1 var(--font-sans);
+  }
+  .btn-pasif {
+    padding: 14px 22px; border: 0; cursor: not-allowed; opacity: .4;
+    background: var(--color-primary); color: var(--color-on-primary);
+    border-radius: var(--oy-radius-sm); font: 800 14px/1 var(--font-sans);
+  }
+
+  .cip {
+    padding: 9px 15px; border-radius: var(--oy-radius-pill);
+    background: rgba(255,255,255,.05); color: var(--color-ink-3);
+    border: 1px solid var(--color-line);
+    font: 700 12px/1 var(--font-sans);
+  }
+  .cip.secili { background: #fff; color: var(--color-bg); border-color: #fff; }
+
+  .rozet {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 7px 12px; border-radius: var(--oy-radius-pill);
+    font: 900 10px/1 var(--font-sans); letter-spacing: .1em; text-transform: uppercase;
+  }
+  .rozet::before { content: ""; width: 6px; height: 6px; border-radius: 999px; background: currentColor; }
+  .rozet.onay   { color: var(--color-success); background: var(--color-success-bg); border: 1px solid var(--color-success-line); }
+  .rozet.bekle  { color: var(--color-warning); background: var(--color-warning-bg); border: 1px solid var(--color-warning-line); }
+  .rozet.hata   { color: var(--color-error);   background: var(--color-error-bg);   border: 1px solid var(--color-error-line); }
+  .rozet.bilgi  { color: var(--color-info);    background: var(--color-info-bg);    border: 1px solid var(--color-info-line); }
+
+  .mac-karti {
+    padding: 18px; border-radius: var(--oy-radius-xl);
+    background: var(--color-surface-1); border: 1px solid var(--color-line);
+    box-shadow: 0 18px 40px rgba(0,0,0,.45);
+  }
+  .mac-karti .ust { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+  .mac-karti h4 { margin: 0; font-size: 21px; font-weight: 900; letter-spacing: -.04em; }
+  .mac-karti .alt { margin: 6px 0 0; font-size: 12.5px; color: var(--color-ink-3); }
+  .mac-karti .tutar { font-size: 26px; font-weight: 900; letter-spacing: -.02em; white-space: nowrap; }
+  .mac-karti .serit { margin-top: 16px; height: 6px; border-radius: 999px; background: rgba(255,255,255,.08); overflow: hidden; }
+  .mac-karti .serit > span { display: block; height: 100%; width: 71%; background: var(--color-primary); border-radius: 999px; }
+  .mac-karti .doluluk { display: flex; justify-content: space-between; margin-top: 9px; font-size: 11px; color: var(--color-ink-4); }
+
+  .bakiye { font-size: 34px; font-weight: 900; letter-spacing: -.02em; color: var(--color-money-balance); }
+
+  .bos-durum { text-align: center; padding: 26px 12px; }
+  .bos-durum .halka {
+    display: block; width: 56px; height: 56px; margin: 0 auto 14px; border-radius: 999px;
+    border: 1px solid var(--color-line-strong); background: rgba(255,255,255,.03);
+  }
+  .bos-durum h4 { margin: 0 0 6px; font-size: 16px; font-weight: 900; }
+  .bos-durum p { margin: 0; font-size: 13px; line-height: 1.5; color: var(--color-ink-4); }
+
+  /* ── Kural listeleri ────────────────────────────────────────────────── */
+  .kurallar { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+  .kural-kutu {
+    padding: 20px 22px; border-radius: var(--oy-radius-md);
+    background: var(--color-surface-1); border: 1px solid var(--color-line);
+  }
+  .kural-kutu.evet { border-color: var(--color-success-line); background: var(--color-success-bg); }
+  .kural-kutu.hayir { border-color: var(--color-error-line); background: var(--color-error-bg); }
+  .kural-kutu h3 {
+    margin: 0 0 12px; font-size: 11px; font-weight: 900; letter-spacing: .12em; text-transform: uppercase;
+  }
+  .kural-kutu.evet h3 { color: var(--color-success); }
+  .kural-kutu.hayir h3 { color: var(--color-error); }
+  .kural-kutu ul { margin: 0; padding-left: 18px; }
+  .kural-kutu li { margin-bottom: 9px; font-size: 13px; line-height: 1.55; color: var(--color-ink-2); }
+  .kural-kutu li:last-child { margin-bottom: 0; }
+
+  footer.dipnot {
+    margin-top: 56px; padding-top: 24px; border-top: 1px solid var(--color-line);
+    font-size: 12px; line-height: 1.6; color: var(--color-ink-4);
+  }
+  footer.dipnot code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--color-ink-3); }
+
+  @media (max-width: 640px) {
+    .punto { grid-template-columns: 1fr; }
+    .punto-not { grid-column: 1; }
+    .basamak { grid-template-columns: 120px minmax(0, 1fr) 48px; }
+  }
+</style>
+</head>
+
+<body>
+<div class="kap">
+
+  <header class="kunye">
+    <span class="marka" lang="tr">OYNA Tasarım Sistemi</span>
+    <h1>Ekranın her ölçüsü bir token'dan gelir.</h1>
+    <p>
+      Bu sayfa uygulamanın gerçek değerlerini gösterir: renkler, punto ölçeği ve boşluk
+      merdivenleri <code>index.css</code> dosyasından üretilir, elle yazılmaz. Bir tasarımda
+      kullanılacak değer burada yoksa, önce buraya token olarak eklenir.
+    </p>
+  </header>
+
+  <!-- ── RENKLER ─────────────────────────────────────────────────────── -->
+  <section>
+    <span class="bolum-etiket">01</span>
+    <h2>Renk rolleri</h2>
+    <p class="aciklama">
+      Renkler ton olarak değil <b>rol</b> olarak seçilir. Neon yeşil (<code>primary</code>)
+      ekranda tek bir dolu blokta durur: birincil eylem. Altın sarısı beklemedir ve
+      <b>asla buton dolgusu olmaz</b> (yeşille kontrastı 1.13:1 — yan yana ayırt edilemez).
+      Her durum göstergesi üç şeyi birden taşır: renk + ikon + Türkçe kelime; renk tek
+      başına anlam taşımaz.
+    </p>
+<!-- OYNA:BASLA RENKLER -->
+      <h3 class="obek">Birincil aksiyon</h3>
+      <div class="izgara">
+        <figure class="renk">
+          <span class="ornek" style="background:var(--color-primary)"></span>
+          <figcaption><code>primary</code><b>#39FF14</b><i>#0A0E14 üstünde 14.26:1</i></figcaption>
+        </figure>
+        <figure class="renk">
+          <span class="ornek" style="background:var(--color-on-primary)"></span>
+          <figcaption><code>on-primary</code><b>#0A0E14</b><i>#39FF14 üstünde 14.26:1</i></figcaption>
+        </figure>
+      </div>
+      <h3 class="obek">Yüzeyler ve çizgiler</h3>
+      <div class="izgara">
+        <figure class="renk">
+          <span class="ornek" style="background:var(--color-bg)"></span>
+          <figcaption><code>bg</code><b>#0A0E14</b></figcaption>
+        </figure>
+        <figure class="renk">
+          <span class="ornek" style="background:var(--color-bg-main)"></span>
+          <figcaption><code>bg-main</code><b>#0A0E14</b><i>eski ad — 3 kullanım var, alias olarak kalır</i></figcaption>
+        </figure>
+        <figure class="renk">
+          <span class="ornek" style="background:var(--color-surface-1)"></span>
+          <figcaption><code>surface-1</code><b>#161B22</b><i>kart</i></figcaption>
+        </figure>
+        <figure class="renk">
+          <span class="ornek" style="background:var(--color-surface-2)"></span>
+          <figcaption><code>surface-2</code><b>#1C2230</b><i>sheet / dialog / yükseltilmiş panel</i></figcaption>
+        </figure>
+        <figure class="renk">
+          <span class="ornek" style="background:var(--color-line)"></span>
+          <figcaption><code>line</code><b>rgba(255,255,255,0.08)</b></figcaption>
+        </figure>
+        <figure class="renk">
+          <span class="ornek" style="background:var(--color-line-strong)"></span>
+          <figcaption><code>line-strong</code><b>rgba(255,255,255,0.16)</b></figcaption>
+        </figure>
+      </div>
+      <h3 class="obek">Mürekkep merdiveni (metin)</h3>
+      <div class="izgara">
+        <figure class="renk">
+          <span class="ornek" style="background:var(--color-text-main)"></span>
+          <figcaption><code>text-main</code><b>#FFFFFF</b></figcaption>
+        </figure>
+        <figure class="renk">
+          <span class="ornek" style="background:var(--color-text-muted)"></span>
+          <figcaption><code>text-muted</code><b>#8B949E</b></figcaption>
+        </figure>
+        <figure class="renk">
+          <span class="ornek" style="background:var(--color-ink)"></span>
+          <figcaption><code>ink</code><b>#FFFFFF</b><i>17.30:1 — başlık, birincil metin, rakam</i></figcaption>
+        </figure>
+        <figure class="renk">
+          <span class="ornek" style="background:var(--color-ink-2)"></span>
+          <figcaption><code>ink-2</code><b>#C9D1D9</b><i>11.21:1 — ikincil metin, açıklama</i></figcaption>
+        </figure>
+        <figure class="renk">
+          <span class="ornek" style="background:var(--color-ink-3)"></span>
+          <figcaption><code>ink-3</code><b>#A9B4C0</b><i>8.22:1 — üçüncül, yardım metni, birim etiketi</i></figcaption>
+        </figure>
+        <figure class="renk">
+          <span class="ornek" style="background:var(--color-ink-4)"></span>
+          <figcaption><code>ink-4</code><b>#8B949E</b><i>5.62:1 — EN SOLUK İZİNLİ; altına inilmez</i></figcaption>
+        </figure>
+      </div>
+      <h3 class="obek">Durum dili</h3>
+      <div class="izgara">
+        <figure class="renk">
+          <span class="ornek" style="background:var(--color-success)"></span>
+          <figcaption><code>success</code><b>#39FF14</b></figcaption>
+        </figure>
+        <figure class="renk">
+          <span class="ornek" style="background:var(--color-success-bg)"></span>
+          <figcaption><code>success-bg</code><b>rgba(57,255,20,0.12)</b></figcaption>
+        </figure>
+        <figure class="renk">
+          <span class="ornek" style="background:var(--color-success-line)"></span>
+          <figcaption><code>success-line</code><b>rgba(57,255,20,0.35)</b></figcaption>
+        </figure>
+        <figure class="renk">
+          <span class="ornek" style="background:var(--color-warning)"></span>
+          <figcaption><code>warning</code><b>#FACC15</b><i>#0A0E14 üstünde 12.63:1</i></figcaption>
+        </figure>
+        <figure class="renk">
+          <span class="ornek" style="background:var(--color-warning-bg)"></span>
+          <figcaption><code>warning-bg</code><b>rgba(250,204,21,0.12)</b></figcaption>
+        </figure>
+        <figure class="renk">
+          <span class="ornek" style="background:var(--color-warning-line)"></span>
+          <figcaption><code>warning-line</code><b>rgba(250,204,21,0.35)</b></figcaption>
+        </figure>
+        <figure class="renk">
+          <span class="ornek" style="background:var(--color-error)"></span>
+          <figcaption><code>error</code><b>#F87171</b><i>metin: 6.99:1</i></figcaption>
+        </figure>
+        <figure class="renk">
+          <span class="ornek" style="background:var(--color-error-fill)"></span>
+          <figcaption><code>error-fill</code><b>#DC2626</b><i>yıkıcı buton dolgusu — METİN OLARAK KULLANMA</i></figcaption>
+        </figure>
+        <figure class="renk">
+          <span class="ornek" style="background:var(--color-on-error-fill)"></span>
+          <figcaption><code>on-error-fill</code><b>#FFFFFF</b><i>#DC2626 üstünde 4.83:1</i></figcaption>
+        </figure>
+        <figure class="renk">
+          <span class="ornek" style="background:var(--color-error-bg)"></span>
+          <figcaption><code>error-bg</code><b>rgba(248,113,113,0.12)</b></figcaption>
+        </figure>
+        <figure class="renk">
+          <span class="ornek" style="background:var(--color-error-line)"></span>
+          <figcaption><code>error-line</code><b>rgba(248,113,113,0.35)</b></figcaption>
+        </figure>
+        <figure class="renk">
+          <span class="ornek" style="background:var(--color-info)"></span>
+          <figcaption><code>info</code><b>#60A5FA</b><i>metin: 7.61:1</i></figcaption>
+        </figure>
+        <figure class="renk">
+          <span class="ornek" style="background:var(--color-info-fill)"></span>
+          <figcaption><code>info-fill</code><b>#2563EB</b><i>dolgu — METİN OLARAK KULLANMA</i></figcaption>
+        </figure>
+        <figure class="renk">
+          <span class="ornek" style="background:var(--color-on-info-fill)"></span>
+          <figcaption><code>on-info-fill</code><b>#FFFFFF</b><i>#2563EB üstünde 5.17:1</i></figcaption>
+        </figure>
+        <figure class="renk">
+          <span class="ornek" style="background:var(--color-info-bg)"></span>
+          <figcaption><code>info-bg</code><b>rgba(96,165,250,0.12)</b></figcaption>
+        </figure>
+        <figure class="renk">
+          <span class="ornek" style="background:var(--color-info-line)"></span>
+          <figcaption><code>info-line</code><b>rgba(96,165,250,0.35)</b></figcaption>
+        </figure>
+      </div>
+      <h3 class="obek">Kategori aksanları (ana sayfa)</h3>
+      <div class="izgara">
+        <figure class="renk">
+          <span class="ornek" style="background:var(--color-cat-play)"></span>
+          <figcaption><code>cat-play</code><b>#FACC15</b><i>Top Oyna</i></figcaption>
+        </figure>
+        <figure class="renk">
+          <span class="ornek" style="background:var(--color-cat-pitch)"></span>
+          <figcaption><code>cat-pitch</code><b>#10B981</b><i>Saha Kirala</i></figcaption>
+        </figure>
+        <figure class="renk">
+          <span class="ornek" style="background:var(--color-cat-create)"></span>
+          <figcaption><code>cat-create</code><b>#FF7A00</b><i>Maç Kur</i></figcaption>
+        </figure>
+        <figure class="renk">
+          <span class="ornek" style="background:var(--color-cat-keeper)"></span>
+          <figcaption><code>cat-keeper</code><b>#39FF14</b><i>Kaleci</i></figcaption>
+        </figure>
+        <figure class="renk">
+          <span class="ornek" style="background:var(--color-cat-ref)"></span>
+          <figcaption><code>cat-ref</code><b>#60A5FA</b><i>Hakem</i></figcaption>
+        </figure>
+        <figure class="renk">
+          <span class="ornek" style="background:var(--color-cat-studio)"></span>
+          <figcaption><code>cat-studio</code><b>#FF0000</b><i>Taktik Stüdyo</i></figcaption>
+        </figure>
+      </div>
+      <h3 class="obek">Para</h3>
+      <div class="izgara">
+        <figure class="renk">
+          <span class="ornek" style="background:var(--color-money-balance)"></span>
+          <figcaption><code>money-balance</code><b>#00FFA5</b></figcaption>
+        </figure>
+      </div>
+<!-- OYNA:BITIS RENKLER -->
+  </section>
+
+  <!-- ── TİPOGRAFİ ───────────────────────────────────────────────────── -->
+  <section>
+    <span class="bolum-etiket">02</span>
+    <h2>Punto ölçeği</h2>
+    <p class="aciklama">
+      On sekiz basamak; ekranda serbest punto yoktur. Ölçek <code>rem</code> tabanlıdır —
+      kullanıcı telefonunun yazı boyutunu büyüttüğünde arayüz de büyür. Okunur metnin alt
+      sınırı 11px'tir; 10px yalnız büyük harf + harf aralıklı etiketlerde meşrudur.
+      Sayfada Inter yüklü değilse sistem yazı tipiyle çizilir; oranlar aynı kalır.
+    </p>
+<!-- OYNA:BASLA PUNTO -->
+      <div class="punto">
+        <span class="punto-ad"><code>microLabel</code><b>10px</b></span>
+        <span class="punto-ornek" style="font-size:10px">Halı saha maçı · 10px</span>
+        <span class="punto-not">10px — YALNIZ <code>uppercase</code> + tracking ile. Rozet, birim etiketi (GÜN/SAAT), bölüm üst başlığı. Cümle metni için KULLANILMAZ; onun tabanı <code>caption</code>.</span>
+      </div>
+      <div class="punto">
+        <span class="punto-ad"><code>caption</code><b>11px</b></span>
+        <span class="punto-ornek" style="font-size:11px">Halı saha maçı · 11px</span>
+        <span class="punto-not">11px — okunur metnin ALT SINIRI. Yardım satırı, ikincil rozet metni.</span>
+      </div>
+      <div class="punto">
+        <span class="punto-ad"><code>captionLg</code><b>11.5px</b></span>
+        <span class="punto-ornek" style="font-size:11.5px">Halı saha maçı · 11.5px</span>
+        <span class="punto-not">11.5px · ana sayfa — maçlarım kutusundaki "3 saat kaldı" geri sayımı.</span>
+      </div>
+      <div class="punto">
+        <span class="punto-ad"><code>footnote</code><b>12px</b></span>
+        <span class="punto-ornek" style="font-size:12px">Halı saha maçı · 12px</span>
+        <span class="punto-not">12px — dipnot, meta bilgi, liste alt satırı.</span>
+      </div>
+      <div class="punto">
+        <span class="punto-ad"><code>footnoteLg</code><b>12.5px</b></span>
+        <span class="punto-ornek" style="font-size:12.5px">Halı saha maçı · 12.5px</span>
+        <span class="punto-not">12.5px · ana sayfa — maç kartı alt satırı (gün, mesafe), takım adı.</span>
+      </div>
+      <div class="punto">
+        <span class="punto-ad"><code>body</code><b>13px</b></span>
+        <span class="punto-ornek" style="font-size:13px">Halı saha maçı · 13px</span>
+        <span class="punto-not">13px — yoğun listelerde gövde metni.</span>
+      </div>
+      <div class="punto">
+        <span class="punto-ad"><code>bodyLg</code><b>14px</b></span>
+        <span class="punto-ornek" style="font-size:14px">Halı saha maçı · 14px</span>
+        <span class="punto-not">14px — birincil gövde metni. Uzun açıklamaların varsayılanı.</span>
+      </div>
+      <div class="punto">
+        <span class="punto-ad"><code>bodyXl</code><b>15px</b></span>
+        <span class="punto-ornek" style="font-size:15px">Halı saha maçı · 15px</span>
+        <span class="punto-not">15px · ana sayfa — profil yaşı, yaklaşan maç saati, stüdyo şeridi.</span>
+      </div>
+      <div class="punto">
+        <span class="punto-ad"><code>title</code><b>16px</b></span>
+        <span class="punto-ornek" style="font-size:16px">Halı saha maçı · 16px</span>
+        <span class="punto-not">16px — kart başlığı, satır başlığı.</span>
+      </div>
+      <div class="punto">
+        <span class="punto-ad"><code>titleLg</code><b>18px</b></span>
+        <span class="punto-ornek" style="font-size:18px">Halı saha maçı · 18px</span>
+        <span class="punto-not">18px — bölüm başlığı.</span>
+      </div>
+      <div class="punto">
+        <span class="punto-ad"><code>titleXl</code><b>21px</b></span>
+        <span class="punto-ornek" style="font-size:21px">Halı saha maçı · 21px</span>
+        <span class="punto-not">21px · ana sayfa — profil kartındaki kullanıcı adı.</span>
+      </div>
+      <div class="punto">
+        <span class="punto-ad"><code>headline</code><b>22px</b></span>
+        <span class="punto-ornek" style="font-size:22px">Halı saha maçı · 22px</span>
+        <span class="punto-not">22px — ekran başlığı.</span>
+      </div>
+      <div class="punto">
+        <span class="punto-ad"><code>headlineLg</code><b>25px</b></span>
+        <span class="punto-ornek" style="font-size:25px">Halı saha maçı · 25px</span>
+        <span class="punto-not">25px · ana sayfa — "SAHA KİRALA" kart başlığı.</span>
+      </div>
+      <div class="punto">
+        <span class="punto-ad"><code>amount</code><b>26px</b></span>
+        <span class="punto-ornek" style="font-size:26px">Halı saha maçı · 26px</span>
+        <span class="punto-not">26px · ana sayfa — cüzdan bakiyesi (maçı olan kullanıcı).</span>
+      </div>
+      <div class="punto">
+        <span class="punto-ad"><code>headlineXl</code><b>27px</b></span>
+        <span class="punto-ornek" style="font-size:27px">Halı saha maçı · 27px</span>
+        <span class="punto-not">27px · ana sayfa — "TOP OYNA" hero başlığı.</span>
+      </div>
+      <div class="punto">
+        <span class="punto-ad"><code>display</code><b>28px</b></span>
+        <span class="punto-ornek" style="font-size:28px">Halı saha maçı · 28px</span>
+        <span class="punto-not">28px — vurgulanan tutar/rakam, boş durum başlığı.</span>
+      </div>
+      <div class="punto">
+        <span class="punto-ad"><code>amountLg</code><b>34px</b></span>
+        <span class="punto-ornek" style="font-size:34px">Halı saha maçı · 34px</span>
+        <span class="punto-not">34px · ana sayfa — cüzdan bakiyesi (maçı olmayan kullanıcı; kutu büyür).</span>
+      </div>
+      <div class="punto">
+        <span class="punto-ad"><code>displayLg</code><b>40px</b></span>
+        <span class="punto-ornek" style="font-size:40px">Halı saha maçı · 40px</span>
+        <span class="punto-not">40px — geri sayım rakamı, skor. Ekranda tek başına durur.</span>
+      </div>
+<!-- OYNA:BITIS PUNTO -->
+  </section>
+
+  <!-- ── ÖLÇÜLER ─────────────────────────────────────────────────────── -->
+  <section>
+    <span class="bolum-etiket">03</span>
+    <h2>Boşluk · köşe · yükseklik</h2>
+    <p class="aciklama">
+      Üç merdiven, hepsi 4 pikselin katları. Aynı ölçü ekranın altı ayrı yerinde tekrar
+      ettiği için elle yazılmaz: ikinci kez elle yazılan ölçü, er geç sapan ölçüdür.
+      En küçük dokunma hedefi 48px'tir (<code>--oy-tap-min</code>).
+    </p>
+<!-- OYNA:BASLA OLCULER -->
+      <h3 class="obek">Boşluk merdiveni</h3>
+      <div class="merdiven">
+        <div class="basamak"><code>--oy-space-1</code><span class="bar" style="width:var(--oy-space-1)"></span><b>4px</b></div>
+        <div class="basamak"><code>--oy-space-2</code><span class="bar" style="width:var(--oy-space-2)"></span><b>8px</b></div>
+        <div class="basamak"><code>--oy-space-3</code><span class="bar" style="width:var(--oy-space-3)"></span><b>12px</b></div>
+        <div class="basamak"><code>--oy-space-4</code><span class="bar" style="width:var(--oy-space-4)"></span><b>16px</b></div>
+        <div class="basamak"><code>--oy-space-6</code><span class="bar" style="width:var(--oy-space-6)"></span><b>24px</b></div>
+        <div class="basamak"><code>--oy-space-8</code><span class="bar" style="width:var(--oy-space-8)"></span><b>32px</b></div>
+      </div>
+      <h3 class="obek">Köşe merdiveni</h3>
+      <div class="merdiven">
+        <div class="basamak"><code>--oy-radius-sm</code><span class="kose" style="border-radius:var(--oy-radius-sm)"></span><b>14px</b></div>
+        <div class="basamak"><code>--oy-radius-md</code><span class="kose" style="border-radius:var(--oy-radius-md)"></span><b>20px</b></div>
+        <div class="basamak"><code>--oy-radius-lg</code><span class="kose" style="border-radius:var(--oy-radius-lg)"></span><b>24px</b></div>
+        <div class="basamak"><code>--oy-radius-xl</code><span class="kose" style="border-radius:var(--oy-radius-xl)"></span><b>32px</b></div>
+        <div class="basamak"><code>--oy-radius-pill</code><span class="kose" style="border-radius:var(--oy-radius-pill)"></span><b>999px</b></div>
+      </div>
+      <h3 class="obek">Kart yüksekliği merdiveni</h3>
+      <div class="merdiven">
+        <div class="basamak"><code>--oy-card-strip</code><span class="yukseklik" style="height:var(--oy-card-strip)"></span><b>64px</b></div>
+        <div class="basamak"><code>--oy-card-duo</code><span class="yukseklik" style="height:var(--oy-card-duo)"></span><b>92px</b></div>
+        <div class="basamak"><code>--oy-card-row</code><span class="yukseklik" style="height:var(--oy-card-row)"></span><b>104px</b></div>
+        <div class="basamak"><code>--oy-card-hero</code><span class="yukseklik" style="height:var(--oy-card-hero)"></span><b>118px</b></div>
+        <div class="basamak"><code>--oy-card-wide</code><span class="yukseklik" style="height:var(--oy-card-wide)"></span><b>136px</b></div>
+        <div class="basamak"><code>--oy-card-tall</code><span class="yukseklik" style="height:var(--oy-card-tall)"></span><b>176px</b></div>
+      </div>
+<!-- OYNA:BITIS OLCULER -->
+  </section>
+
+  <!-- ── BİLEŞENLER ──────────────────────────────────────────────────── -->
+  <section>
+    <span class="bolum-etiket">04</span>
+    <h2>Bileşen dili</h2>
+    <p class="aciklama">
+      Aşağıdakiler token'larla çizilmiş temsillerdir — gerçek React bileşenleri
+      <code>bilesenler/</code> klasöründedir. Amaç, yeni bir ekran tasarlanırken
+      "buton nasıl görünür, kart nasıl durur, hata nasıl söylenir" sorularının
+      tek bakışta cevaplanması.
+    </p>
+
+    <div class="vitrin">
+      <div class="kutu">
+        <p class="baslik">Butonlar</p>
+        <div class="sira">
+          <button class="btn-birincil" lang="tr">KATIL · 200₺</button>
+          <button class="btn-ikincil" lang="tr">Detay</button>
+        </div>
+        <p class="etiket-satiri">birincil (ekranda tek) · ikincil</p>
+        <div class="sira" style="margin-top:14px">
+          <button class="btn-yikici" lang="tr">Maçtan ayrıl</button>
+          <button class="btn-pasif" lang="tr">KATIL</button>
+        </div>
+        <p class="etiket-satiri">yıkıcı · pasif (%40 opaklık)</p>
+        <p style="margin:16px 0 0;font-size:11.5px;line-height:1.5;color:var(--color-ink-4)">
+          Ekran başına en fazla bir dolu yeşil blok. İkinci eylem daima çerçeveli.
+        </p>
+      </div>
+
+      <div class="kutu">
+        <p class="baslik">Çipler</p>
+        <div class="sira">
+          <span class="cip secili" lang="tr">Bugün</span>
+          <span class="cip" lang="tr">Yarın</span>
+          <span class="cip" lang="tr">Hafta sonu</span>
+          <span class="cip" lang="tr">7v7</span>
+        </div>
+        <p class="baslik" style="margin:20px 0 12px">Durum rozetleri</p>
+        <div class="sira">
+          <span class="rozet onay" lang="tr">Onaylandı</span>
+          <span class="rozet bekle" lang="tr">Bekliyor</span>
+          <span class="rozet hata" lang="tr">İptal</span>
+          <span class="rozet bilgi" lang="tr">Bilgi</span>
+        </div>
+      </div>
+
+      <div class="kutu" style="background:transparent;border:0;padding:0">
+        <div class="mac-karti">
+          <div class="ust">
+            <div>
+              <h4 lang="tr">Yıldız Halı Saha</h4>
+              <p class="alt" lang="tr">Bugün · 20:00 – 21:00 · 60 dk · 7v7</p>
+            </div>
+            <span class="tutar">200₺</span>
+          </div>
+          <div class="serit"><span></span></div>
+          <div class="doluluk">
+            <span lang="tr">10/14 yer dolu</span>
+            <span style="color:var(--color-error)" lang="tr">4 yer kaldı</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="kutu">
+        <p class="baslik">Cüzdan bakiyesi</p>
+        <p class="bakiye">1.250₺</p>
+        <p style="margin:8px 0 0;font-size:11.5px;line-height:1.5;color:var(--color-ink-4)">
+          Bakiye rengi birincil yeşilden ayrıdır: yeşil "para döndü" olayını anlatır,
+          bakiye ise sürekli duran bir durumdur.
+        </p>
+      </div>
+
+      <div class="kutu">
+        <div class="bos-durum">
+          <span class="halka"></span>
+          <h4 lang="tr">Henüz maçın yok</h4>
+          <p lang="tr">Top Oyna'dan bir maça katıl, burada görünsün.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── KURALLAR ────────────────────────────────────────────────────── -->
+  <section>
+    <span class="bolum-etiket">05</span>
+    <h2>Değişmeyen kurallar</h2>
+    <p class="aciklama">
+      Tamamı ve gerekçeleri <code>02-URUN-KURALLARI.md</code> dosyasındadır; buradakiler
+      bir tasarımı ilk bakışta yanlış yapan maddelerdir.
+    </p>
+    <div class="kurallar">
+      <div class="kural-kutu evet">
+        <h3 lang="tr">Böyle olacak</h3>
+        <ul>
+          <li>Yalnız koyu tema. Açık tema yok, ikinci tema yok.</li>
+          <li>Türkçe metin; büyük harf kullanılan her kök öğede <code>lang="tr"</code> — yoksa "İLERİ" kelimesi "ILERI" olur.</li>
+          <li>Para: sembol sonda ve boşluksuz — <code>1.250₺</code>; kuruş varsa <code>299,90₺</code>; sıfırsa <b>Ücretsiz</b>; değer yoksa <b>—</b>.</li>
+          <li>Dokunma hedefleri en az 48px.</li>
+          <li>Durum = renk + ikon + kelime (üçü birden).</li>
+          <li>Telefon önce: içerik genişliği ~402px, tek sütun.</li>
+        </ul>
+      </div>
+      <div class="kural-kutu hayir">
+        <h3 lang="tr">Böyle olmayacak</h3>
+        <ul>
+          <li>Veri yoksa o öğe hiç çizilmez — "—", "90 dakika" gibi uydurma varsayılan yazılmaz.</li>
+          <li>Oyuncu puanı, OVR sayısı, gold/silver/bronze kart seviyesi yok (sistemden sökülüyor).</li>
+          <li>Altın sarısı buton dolgusu olmaz; neon yeşil dekoratif parıltı olmaz.</li>
+          <li>Mürekkep merdiveninin dışında soluk metin rengi yok (en soluk izinli: <code>ink-4</code>).</li>
+          <li>Telefon çerçevesi/beze çizilmez — hedef ekranın kendisidir.</li>
+          <li>"Blokaj", "ön provizyon", "escrow" gibi kelimeler kullanıcıya gösterilmez.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <footer class="dipnot">
+    Bu sayfa <code>npm run tasarim:kit</code> ile üretilir; işaretli bölümleri elle düzenleme.
+    Sapma denetimi: <code>npm run tasarim:kit -- --kontrol</code>.
+  </footer>
+
+</div>
+</body>
+</html>

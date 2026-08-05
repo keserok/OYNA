@@ -28,6 +28,7 @@
     "owner:menu:live-test": "node scripts/owner-menu-live-test.mjs",
     "godview:demo:seed": "node scripts/godview-demo.mjs seed",
     "godview:demo:purge": "node scripts/godview-demo.mjs purge",
+    "tasarim:kit": "node scripts/tasarim-kiti.mjs",
     "etki": "node scripts/sistem/etki.mjs",
     "sistem:harita": "node scripts/sistem/harita.mjs",
     "sistem:kapsam": "node scripts/sistem/kapsam.mjs",

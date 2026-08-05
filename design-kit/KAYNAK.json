@@ -1,0 +1,206 @@
+{
+  "aciklama": "design-kit klasöründeki kod dosyaları kaynağın salt okunur aynasıdır. Elle düzenlenmez; \"npm run tasarim:kit\" ile yeniden üretilir.",
+  "uretenBetik": "scripts/tasarim-kiti.mjs",
+  "kaynakCommit": "b39703c",
+  "tokenSayisi": 67,
+  "aynalar": [
+    {
+      "ayna": "temel/type.ts",
+      "kaynak": "ui/type.ts",
+      "satir": 149,
+      "ozet": "f1635efdfca2"
+    },
+    {
+      "ayna": "temel/labels.ts",
+      "kaynak": "ui/labels.ts",
+      "satir": 100,
+      "ozet": "36cc76e75a68"
+    },
+    {
+      "ayna": "stil/index.css",
+      "kaynak": "index.css",
+      "satir": 1067,
+      "ozet": "1d913520c917"
+    },
+    {
+      "ayna": "bilesenler/ui/ActionSheet.tsx",
+      "kaynak": "components/ui/ActionSheet.tsx",
+      "satir": 192,
+      "ozet": "98b977f6d38f"
+    },
+    {
+      "ayna": "bilesenler/ui/Avatar.tsx",
+      "kaynak": "components/ui/Avatar.tsx",
+      "satir": 70,
+      "ozet": "90a406058d71"
+    },
+    {
+      "ayna": "bilesenler/ui/BottomSheet.tsx",
+      "kaynak": "components/ui/BottomSheet.tsx",
+      "satir": 74,
+      "ozet": "a8125dd74e00"
+    },
+    {
+      "ayna": "bilesenler/ui/Chip.tsx",
+      "kaynak": "components/ui/Chip.tsx",
+      "satir": 62,
+      "ozet": "9728f1a36f21"
+    },
+    {
+      "ayna": "bilesenler/ui/ConfirmDialog.tsx",
+      "kaynak": "components/ui/ConfirmDialog.tsx",
+      "satir": 77,
+      "ozet": "902c3438b8a5"
+    },
+    {
+      "ayna": "bilesenler/ui/ConfirmSheet.tsx",
+      "kaynak": "components/ui/ConfirmSheet.tsx",
+      "satir": 101,
+      "ozet": "9c1799b0c6e3"
+    },
+    {
+      "ayna": "bilesenler/ui/EmptyState.tsx",
+      "kaynak": "components/ui/EmptyState.tsx",
+      "satir": 58,
+      "ozet": "32be7d9f4a4f"
+    },
+    {
+      "ayna": "bilesenler/ui/FilterDropdown.tsx",
+      "kaynak": "components/ui/FilterDropdown.tsx",
+      "satir": 146,
+      "ozet": "2ccd78ec348b"
+    },
+    {
+      "ayna": "bilesenler/ui/GlassModal.tsx",
+      "kaynak": "components/ui/GlassModal.tsx",
+      "satir": 111,
+      "ozet": "e8aebc6e7d7a"
+    },
+    {
+      "ayna": "bilesenler/ui/IconButton.tsx",
+      "kaynak": "components/ui/IconButton.tsx",
+      "satir": 77,
+      "ozet": "488f2fa7ece1"
+    },
+    {
+      "ayna": "bilesenler/ui/OwnerIconButton.tsx",
+      "kaynak": "components/ui/OwnerIconButton.tsx",
+      "satir": 54,
+      "ozet": "f531d6a8adc4"
+    },
+    {
+      "ayna": "bilesenler/ui/SegmentedTabs.tsx",
+      "kaynak": "components/ui/SegmentedTabs.tsx",
+      "satir": 69,
+      "ozet": "08077dcddc5a"
+    },
+    {
+      "ayna": "bilesenler/ui/SkeletonList.tsx",
+      "kaynak": "components/ui/SkeletonList.tsx",
+      "satir": 43,
+      "ozet": "09fe8e1daa82"
+    },
+    {
+      "ayna": "bilesenler/ui/Spinner.tsx",
+      "kaynak": "components/ui/Spinner.tsx",
+      "satir": 60,
+      "ozet": "6494cb00377b"
+    },
+    {
+      "ayna": "bilesenler/ui/useConfirmSheet.tsx",
+      "kaynak": "components/ui/useConfirmSheet.tsx",
+      "satir": 63,
+      "ozet": "9ddfc79322f5"
+    },
+    {
+      "ayna": "bilesenler/common/PageLayout.tsx",
+      "kaynak": "components/common/PageLayout.tsx",
+      "satir": 88,
+      "ozet": "a22e39ca275a"
+    },
+    {
+      "ayna": "bilesenler/common/UserAvatar.tsx",
+      "kaynak": "components/common/UserAvatar.tsx",
+      "satir": 53,
+      "ozet": "604b69524d3a"
+    },
+    {
+      "ayna": "bilesenler/common/StatusState.tsx",
+      "kaynak": "components/common/StatusState.tsx",
+      "satir": 128,
+      "ozet": "9d1c43abd69e"
+    },
+    {
+      "ayna": "bilesenler/common/Toast.tsx",
+      "kaynak": "components/common/Toast.tsx",
+      "satir": 49,
+      "ozet": "d13a92268fd0"
+    },
+    {
+      "ayna": "bilesenler/common/PhotoCarousel.tsx",
+      "kaynak": "components/common/PhotoCarousel.tsx",
+      "satir": 189,
+      "ozet": "143f0c272d6a"
+    },
+    {
+      "ayna": "bilesenler/dashboard/HomePieces.tsx",
+      "kaynak": "components/dashboard/HomePieces.tsx",
+      "satir": 158,
+      "ozet": "daca67d587b7"
+    },
+    {
+      "ayna": "bilesenler/dashboard/OynaMarks.tsx",
+      "kaynak": "components/dashboard/OynaMarks.tsx",
+      "satir": 102,
+      "ozet": "a3c8dd7ec4b7"
+    },
+    {
+      "ayna": "bilesenler/AnimatedButton.tsx",
+      "kaynak": "components/AnimatedButton.tsx",
+      "satir": 142,
+      "ozet": "d06f2b732ae2"
+    },
+    {
+      "ayna": "bilesenler/BottomNav.tsx",
+      "kaynak": "components/BottomNav.tsx",
+      "satir": 171,
+      "ozet": "e4afe60b6924"
+    },
+    {
+      "ayna": "bilesenler/OynaLogo.tsx",
+      "kaynak": "components/OynaLogo.tsx",
+      "satir": 84,
+      "ozet": "04275925a160"
+    },
+    {
+      "ayna": "bilesenler/BookingCard.tsx",
+      "kaynak": "components/BookingCard.tsx",
+      "satir": 201,
+      "ozet": "4228c6453d19"
+    },
+    {
+      "ayna": "bilesenler/MatchJoinCard.tsx",
+      "kaynak": "components/MatchJoinCard.tsx",
+      "satir": 370,
+      "ozet": "12baa397df16"
+    },
+    {
+      "ayna": "ekranlar/Dashboard.tsx",
+      "kaynak": "views/Dashboard.tsx",
+      "satir": 1229,
+      "ozet": "02ab9f31cff6"
+    },
+    {
+      "ayna": "ekranlar/MatchDiscovery.tsx",
+      "kaynak": "views/MatchDiscovery.tsx",
+      "satir": 1036,
+      "ozet": "5a95089e1b4c"
+    },
+    {
+      "ayna": "ekranlar/ProfileScreen.tsx",
+      "kaynak": "views/ProfileScreen.tsx",
+      "satir": 315,
+      "ozet": "b3a0a985baca"
+    }
+  ]
+}
