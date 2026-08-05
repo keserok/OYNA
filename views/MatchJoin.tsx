@@ -16,6 +16,7 @@ import { isOnline, OFFLINE_JOIN } from '../shared/submitGuard';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MatchListing, PositionSlot, UserRole, Player, Team, ProviderType, ProviderSuggestion, ServiceRequest } from '../types';
 import { useAppStore } from '../store';
+import { pushIzniZamaniGeldi } from '../notifications/pushIzniKapisi';
 import { auth } from '../supabaseAuth';
 import { supabase } from '../supabaseClient';
 import { subscribeToMatchUpdates, getMatchDetails, getPitchCoordinates, getMatchLobbyParticipants, getFriendPlayerCard, getMatchProviders, getMyMatchPrivateCode, selfAssignSlot, assignSlotToFriend, unassignSlot, releaseSlot, kickSlot, updateFormationRpc, leaveMatchSlot, leaveQuoteMessage, iadeKademesiCumlesi, type LobbyParticipant, type FriendPlayerCard, type MatchProvider } from '../services/matchService';
@@ -821,6 +822,8 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
 
       // KN-3b: yedek listesi sunucuda güncellendi; taze çek, yerel uygula.
       const fresh = await macTazele();
+      // D2: kullanıcı maça girdi — bildirimin değerini şimdi görüyor.
+      void pushIzniZamaniGeldi();
     } catch (e: any) {
       console.error('Join reserve error:', e);
       showActionError('Yedek olarak katılırken bir hata oluştu.');
@@ -948,6 +951,8 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
       const fresh = await macTazele(); // KN-3b: taze veri DB'ye GERİ yazılmaz
       setActivePlayerSlotId(null);
       showActionSuccess('Slotu kabul ettin — kadrodasın! ⚽');
+      // D2: kadroya girdi — izni sormak için doğru an.
+      void pushIzniZamaniGeldi();
     } catch (e: any) {
       console.error('accept slot error', e);
       showActionError('Kabul edilemedi. Lütfen tekrar dene.');

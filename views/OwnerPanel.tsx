@@ -693,7 +693,12 @@ const tariffRowToPolicy = (t: PitchTariff) => ({
   }
 
   return (
-    <div className="min-h-dvh flex flex-col bg-[#0A0E14] text-slate-200 font-sans selection:bg-blue-500 selection:text-white relative">
+    // KAYDIRMA: Kök eskiden `min-h-dvh` idi — yalnız bir TABAN veriyor,
+    // yüksekliği serbest bırakıyordu. Bu yüzden içindeki `flex-1 overflow-y-auto`
+    // kutular sınırlanacak alan bulamıyor, kaydırma üretmiyor ve tüm sayfa
+    // dışarıdan kayıyordu (başlık ve alt bar da kayıyordu). Ölçüldü: iç kaydırma
+    // 0px, kök yük altında 3000px şişiyor. `h-full` sınırı netleştirir.
+    <div className="h-full flex flex-col bg-[#0A0E14] text-slate-200 font-sans selection:bg-blue-500 selection:text-white relative">
       <OwnerStatusBar banners={statusBanners} />
       
       {/* Header logic adjustment for Menu view */}

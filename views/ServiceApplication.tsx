@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Shield, Scale, User, Smartphone, FileText, MapPin,
   Check, ArrowRight, Banknote, Ruler, Calendar, Award, ChevronDown, Sparkles, XCircle, Search,
-  CreditCard, Mail,
+  CreditCard,
 } from 'lucide-react';
 import { UserRole } from '../types';
 import { auth } from '../supabaseAuth';
@@ -101,7 +101,6 @@ const ServiceApplication: React.FC<ServiceApplicationProps> = ({ role, onSubmitt
   const [fee, setFee] = useState('');
   const [bio, setBio] = useState('');
   const [idPhoto, setIdPhoto] = useState<File | null>(null);
-  const [intentLetter, setIntentLetter] = useState('');
   const [style, setStyle] = useState('');
   const [zones, setZones] = useState<string[]>([]);
   const [activeCity, setActiveCity] = useState('Ordu');
@@ -153,24 +152,36 @@ const ServiceApplication: React.FC<ServiceApplicationProps> = ({ role, onSubmitt
     markTouched('zones');
   };
 
+  // ─── BAŞVURU SADELEŞTİRİLDİ (CEO kararı, 4 Ağustos 2026) ──────────────────
+  // Eskiden 11 alanın TAMAMI zorunluydu; başvurmak bir formalite değil, engeldi.
+  // Artık zorunlu olanlar yalnızca beş tanesi:
+  //   ad soyad · telefon · not · kimlik fotoğrafı · KVKK onayı
+  // Kimlik fotoğrafı ve KVKK bilerek zorunlu KALDI: biri yasal, diğeri
+  // "bu para kime gidiyor" sorusunun tek cevabı.
+  //
+  // Kalan alanlar (ücret, tarz, bölge, boy/yaş, lisans/deneyim) DURUYOR ama
+  // isteğe bağlı; sağlayıcı sonra kendi panelinden doldurabilir.
+  //
+  // ÜCRET NOTU: Boş bırakılırsa profile 0 DEĞİL, BOŞ yazılır. Sunucudaki
+  // create_service_request ücreti belirlenmemiş sağlayıcının kiralanmasını
+  // reddeder (PROVIDER_NO_FEE) — kimse yanlışlıkla 0 ₺'ye çalışmaz.
+  const feeGirildi = fee.trim() !== '';
   const fieldErrors = {
     fullName: fullName.trim().length < 3 ? 'Ad soyad en az 3 karakter olmalı' : null,
     phone: phoneDigits.length !== 10 ? 'Telefon numarası 10 haneli olmalı' : null,
-    fee: !(Number(fee) > 0) ? 'Geçerli bir ücret girmelisin' : null,
-    bio: bio.trim().length < 10 ? `En az 10 karakter yaz (${bio.trim().length}/10)` : null,
+    fee: feeGirildi && !(Number(fee) > 0) ? 'Ücret 0’dan büyük olmalı' : null,
+    bio: bio.trim().length < 10 ? 'Kendinden kısaca bahset (en az 10 harf)' : null,
     idPhoto: !idPhoto ? 'Kimlik fotoğrafı yüklemelisin' : null,
-    intentLetter: intentLetter.trim().length < 10 ? `En az 10 karakter yaz (${intentLetter.trim().length}/10)` : null,
-    style: style.length === 0 ? `${theme.styleLabel} seçmelisin` : null,
-    zones: zones.length === 0 ? 'En az 1 bölge seçmelisin' : null,
+    style: null,
+    zones: null,
     agreed: !agreed ? 'Devam etmek için KVKK onayı vermelisin' : null,
-    height: isGk && !(Number(height) >= 140) ? 'Boy en az 140 cm olmalı' : null,
-    age: isGk && !(Number(age) >= 14) ? 'Yaş en az 14 olmalı' : null,
-    level: !isGk && level.length === 0 ? 'Lisans seviyesi seçmelisin' : null,
+    height: isGk && height.trim() !== '' && !(Number(height) >= 140) ? 'Boy en az 140 cm olmalı' : null,
+    age: isGk && age.trim() !== '' && !(Number(age) >= 14) ? 'Yaş en az 14 olmalı' : null,
+    level: null,
     // HR-D: hakem deneyimi (yıl) — dürüst, sınırlı tam sayı. Boş/negatif/ondalık
     // ya da mantıksız (>60) değerler engellenir; bu değer matchCount'a DEĞİL,
     // stats.experienceYears'a yazılır (serviceProviderService).
-    experience: !isGk && (
-      experienceYears.trim() === '' ||
+    experience: !isGk && experienceYears.trim() !== '' && (
       !/^\d+$/.test(experienceYears.trim()) ||
       Number(experienceYears) > 60
     ) ? 'Deneyimini 0-60 yıl arası tam sayı gir' : null,
@@ -209,13 +220,21 @@ const ServiceApplication: React.FC<ServiceApplicationProps> = ({ role, onSubmitt
       const payload: ServiceApplicationData = {
         fullName: fullName.trim(),
         phone: `${countryCode}${phoneDigits}`,
-        fee: Number(fee),
+        // Ücret boşsa 0 DEĞİL null: 0 "bedava çalışırım" demektir ve sunucu
+        // ücreti 0 olan sağlayıcıyı kiralatmaz sanılırdı — kiralatıyordu.
+        fee: feeGirildi ? Number(fee) : null,
         bio: bio.trim(),
         style,
         preferredZones: zones,
         ...(isGk
-          ? { height: `${height} cm`, age: Number(age) }
-          : { level, experienceYears: Number(experienceYears) || 0 }),
+          ? {
+              height: height.trim() !== '' ? `${height} cm` : null,
+              age: age.trim() !== '' ? Number(age) : null,
+            }
+          : {
+              level: level || null,
+              experienceYears: experienceYears.trim() !== '' ? Number(experienceYears) : 0,
+            }),
       };
       // Rol + profil provizyonu (submit_provider_application ön-koşulu: rol kurulmuş olmalı).
       await submitServiceApplication(role, payload);
@@ -229,7 +248,9 @@ const ServiceApplication: React.FC<ServiceApplicationProps> = ({ role, onSubmitt
             role,
             idPhotoPath,
             phone: `${countryCode}${phoneDigits}`,
-            intentLetter: intentLetter.trim(),
+            // Sunucudaki niyet mektubu alanı NOT ile beslenir: başvuran kişiden
+            // iki ayrı kompozisyon istemek yerine tek metin alınıyor.
+            intentLetter: bio.trim(),
             ...(isGk ? {} : { level }),
           });
           queueErr = null;
@@ -488,7 +509,7 @@ const ServiceApplication: React.FC<ServiceApplicationProps> = ({ role, onSubmitt
           )}
 
           {/* Maç başı ücret */}
-          <Field label="Maç Başı Ücret" icon={<Banknote size={20} />} color={color} error={visibleError('fee')}>
+          <Field label="Maç Başı Ücret (isteğe bağlı)" icon={<Banknote size={20} />} color={color} error={visibleError('fee')}>
             <span className="text-gray-400 font-bold text-sm shrink-0">₺</span>
             <input
               type="number"
@@ -503,7 +524,7 @@ const ServiceApplication: React.FC<ServiceApplicationProps> = ({ role, onSubmitt
 
           {/* Stil */}
           <div>
-            <label className="text-[0.625rem] text-ink-4 font-bold uppercase mb-2 block ml-1 tracking-wider">{theme.styleLabel}</label>
+            <label className="text-[0.625rem] text-ink-4 font-bold uppercase mb-2 block ml-1 tracking-wider">{theme.styleLabel} <span className="text-ink-4 normal-case">(isteğe bağlı)</span></label>
             <div className="flex flex-wrap gap-2">
               {theme.styles.map((s) => (
                 <button
@@ -527,7 +548,7 @@ const ServiceApplication: React.FC<ServiceApplicationProps> = ({ role, onSubmitt
           {/* Tercih edilen bölgeler */}
           <div>
             <label className="text-[0.625rem] text-ink-4 font-bold uppercase mb-2 block ml-1 tracking-wider flex items-center gap-1.5">
-              <MapPin size={12} style={{ color }} /> Tercih Edilen Bölgeler
+              <MapPin size={12} style={{ color }} /> Tercih Edilen Bölgeler (isteğe bağlı)
             </label>
             {/* Şehir seçici (aranabilir — 81 il) */}
             <div className="relative mb-3">
@@ -611,9 +632,12 @@ const ServiceApplication: React.FC<ServiceApplicationProps> = ({ role, onSubmitt
             {visibleError('zones') && <p className="text-[0.6875rem] text-red-400 font-bold mt-1.5 ml-1">{fieldErrors.zones}</p>}
           </div>
 
-          {/* Bio */}
+          {/* Not — ZORUNLU. Eskiden burada iki ayrı serbest yazı alanı vardı
+              ("Kısa Tanıtım" + "Niyet Mektubu"); ikisi de zorunluydu ve
+              başvuran kişiden iki ayrı kompozisyon isteniyordu. Tek alanda
+              birleştirildi. */}
           <div className="group">
-            <label className="text-[0.625rem] text-ink-4 font-bold uppercase mb-2 block ml-1 tracking-wider">Kısa Tanıtım</label>
+            <label className="text-[0.625rem] text-ink-4 font-bold uppercase mb-2 block ml-1 tracking-wider">Not <span className="text-red-400">*</span></label>
             <div className={`bg-[#0A0E14] border p-4 rounded-2xl flex items-start gap-3 focus-within:border-white/40 transition-colors ${visibleError('bio') ? 'border-red-500/50' : 'border-gray-800'}`}>
               <FileText size={20} className="text-ink-4 shrink-0 mt-0.5" />
               <textarea
@@ -624,8 +648,8 @@ const ServiceApplication: React.FC<ServiceApplicationProps> = ({ role, onSubmitt
                 maxLength={280}
                 className="bg-transparent w-full outline-none text-white font-medium placeholder:text-ink-4 text-sm resize-none"
                 placeholder={isGk
-                  ? 'Refleks ve pozisyon almada uzmanım. Penaltı kurtarma oranım %40…'
-                  : 'FIFA lisanslı hakem. 150+ maç deneyimi. Diyalog temelli yaklaşım…'}
+                  ? 'Kendinden kısaca bahset: nerede oynuyorsun, ne kadar zamandır kalecilik yapıyorsun?'
+                  : 'Kendinden kısaca bahset: nerede hakemlik yaptın, ne kadar deneyimin var?'}
               />
             </div>
             <div className="flex items-center justify-between mt-1 ml-1">
@@ -633,31 +657,6 @@ const ServiceApplication: React.FC<ServiceApplicationProps> = ({ role, onSubmitt
                 <p className="text-[0.6875rem] text-red-400 font-bold">{fieldErrors.bio}</p>
               ) : <span />}
               <p className="text-[0.6875rem] text-ink-4 text-right">{bio.length}/280</p>
-            </div>
-          </div>
-
-          {/* Niyet Mektubu */}
-          <div className="group">
-            <label className="text-[0.625rem] text-ink-4 font-bold uppercase mb-2 block ml-1 tracking-wider">Niyet Mektubu</label>
-            <div className={`bg-[#0A0E14] border p-4 rounded-2xl flex items-start gap-3 focus-within:border-white/40 transition-colors ${visibleError('intentLetter') ? 'border-red-500/50' : 'border-gray-800'}`}>
-              <Mail size={20} className="text-ink-4 shrink-0 mt-0.5" />
-              <textarea
-                value={intentLetter}
-                onChange={(e) => { setIntentLetter(e.target.value); setError(null); }}
-                onBlur={() => markTouched('intentLetter')}
-                rows={3}
-                maxLength={500}
-                className="bg-transparent w-full outline-none text-white font-medium placeholder:text-ink-4 text-sm resize-none"
-                placeholder={isGk
-                  ? 'Neden kaleci olmak istiyorsun? Kısaca anlat…'
-                  : 'Neden hakem olmak istiyorsun? Kısaca anlat…'}
-              />
-            </div>
-            <div className="flex items-center justify-between mt-1 ml-1">
-              {visibleError('intentLetter') ? (
-                <p className="text-[0.6875rem] text-red-400 font-bold">{fieldErrors.intentLetter}</p>
-              ) : <span />}
-              <p className="text-[0.6875rem] text-ink-4 text-right">{intentLetter.length}/500</p>
             </div>
           </div>
 

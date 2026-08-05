@@ -1,110 +1,104 @@
 // ⚡ GELİŞMİŞ ANİMASYON MODÜLÜ (lazy-loaded / on-demand indirilir)
 //
 // MİMARİ: Çekirdek stüdyo HAFİF kalır. Top & oyuncu hareketi animasyonu,
-// oynatma motoru, sekans/timeline ve ağır framer-motion zamanlama hesabı
-// (getAnimationProps) BURADA yaşar. Kullanıcı stüdyoda "⚡ Gelişmiş Animasyon"
-// butonuna basınca React.lazy ile bu chunk indirilir ve mount edilir.
+// oynatma motoru, sekans/timeline ve ağır zamanlama hesabı BURADA yaşar.
+// Stüdyo açılınca bu chunk arka planda indirilir ve mount edilir.
 //
 // Bu modül üç parça export eder:
-//  - getAnimationProps: framer-motion keyframe zamanlama hesabı. Çekirdek pitch
-//    bunu, animasyon yüklüyken slot/rakip markörlerini hareket ettirmek için
-//    kullanır (orijinal davranış birebir korunur).
+//  - getPlayerCssAnimation: oyuncu markörü için CSS @keyframes üretir. Çekirdek
+//    pitch bunu, animasyon yüklüyken slot/rakip markörlerini sürmek için kullanır.
 //  - AnimationToolbar: simülasyon kontrolleri (OYNAT ⇄ DURDUR, topu göster/gizle,
 //    sıralı/eşzamanlı oynatma).
 //  - default AdvancedAnimationModule: saha üzerine binen top animasyonu +
 //    sekans rozet/timeline editörü (additive overlay).
+//
+// ── NEDEN CSS, NEDEN framer-motion DEĞİL? (2026-08-04) ───────────────────────
+// Top ve bitiş sayacı zaten CSS @keyframes ile sürülüyordu; DURDUR bunları
+// `animation-play-state: paused` ile OLDUĞU YERDE donduruyordu. Oyuncular ise
+// framer-motion ile sürülüyordu ve framer-motion'da "olduğu yerde dondur" yok:
+// DURDUR'a basınca top duruyor ama oyuncular yürümeye devam ediyordu.
+// Ayrıca oyuncular rotayı İKİ tur yürürken (repeat: 1) top ve bitiş sayacı BİR
+// tur koşuyordu; buton "TEKRAR OYNAT"a döndüğünde oyuncular hâlâ hareketliydi.
+// Çözüm: oyuncular da topla AYNI motora (CSS keyframes) alındı ve herkes BİR tur
+// koşuyor. Böylece OYNAT/DURDUR anında ve topla eşzamanlı çalışıyor.
 
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Play, Square, Check, X, Trash2, Plus } from 'lucide-react';
 import type { DrawingLine, PlayMode, SeqInfo } from './types';
 
-// --- Ağır animasyon zamanlama hesabı (framer-motion keyframe üretimi) ---
-// fadeOutsideWindow: yalnız TOP markörü için — SIRALI oynatmada top, kendi pas
-// penceresi dışında gizlenir (sahada aynı anda tek top hissi). Oyuncu markörleri
-// bu bayrağı GEÇMEZ; koşu bitince oldukları yerde görünür kalırlar.
-export const getAnimationProps = (
+/** Bir oyuncu markörünü süren CSS animasyonu. */
+export interface PlayerCssAnimation {
+    /** @keyframes adı — CSS kimliği olarak güvenli (harf/rakam). */
+    name: string;
+    /** `@keyframes <name>{...}` metni; <style> içine basılır. */
+    css: string;
+    /** Bir turun saniye cinsinden süresi. */
+    duration: number;
+    /** Rotanın ilk noktası — animasyon başlamadan markör buraya oturur (sıçrama olmasın). */
+    startX: number;
+    startY: number;
+}
+
+/**
+ * Koşu rotasından oyuncu markörü için CSS @keyframes üretir.
+ *
+ * Zamanlama, önceki framer-motion hesabıyla BİREBİR aynıdır:
+ *  • SIRALI (SEQ): çizgi, toplam turun içinde yalnız kendi zaman penceresinde
+ *    (startTime → startTime+duration) ilerler; penceresinden önce başlangıç,
+ *    sonra bitiş noktasında bekler.
+ *  • EŞZAMANLI (SYNC): rota, kendi süresi boyunca eşit aralıklarla kat edilir.
+ *
+ * Saf fonksiyondur (DOM'a dokunmaz) — testlerde doğrudan çağrılabilir.
+ * Nokta sayısı 2'den azsa animasyon yoktur: null döner.
+ */
+export const getPlayerCssAnimation = (
     path: DrawingLine,
-    isSimulating: boolean,
     playMode: PlayMode,
     seqInfo: SeqInfo,
     totalSeqDur: number,
-    fadeOutsideWindow = false
-) => {
-    if (!isSimulating || !path) return { animate: {}, transition: {} };
-    const pathDur = seqInfo.duration;
+): PlayerCssAnimation | null => {
+    if (!path || !path.points || path.points.length < 2) return null;
+    const pathDur = seqInfo?.duration ?? 0;
     const totalCycle = playMode === 'SEQ' ? Math.max(0.1, totalSeqDur) : pathDur;
-    const startTime = playMode === 'SEQ' ? seqInfo.startTime : 0;
+    if (!(totalCycle > 0)) return null;
 
-    let times: number[] = [];
-    let lefts: string[] = [];
-    let tops: string[] = [];
-    const opacities: number[] = [];
+    const first = path.points[0];
+    const last = path.points[path.points.length - 1];
+    // Yüzde durakları: {at: 0..1, x, y}
+    const stops: { at: number; x: number; y: number }[] = [];
 
     if (playMode === 'SEQ') {
-        const normalizedStart = startTime / totalCycle;
-        const normalizedEnd = (startTime + pathDur) / totalCycle;
-        const EPS = 0.015; // ani belirme/kaybolma için pencere kenarı payı
-        const startLeft = `${path.points[0].x}%`;
-        const startTop = `${path.points[0].y}%`;
-        const endLeft = `${path.points[path.points.length - 1].x}%`;
-        const endTop = `${path.points[path.points.length - 1].y}%`;
-
-        if (normalizedStart > 0) {
-            times.push(0);
-            lefts.push(startLeft);
-            tops.push(startTop);
-            opacities.push(0);
-            if (fadeOutsideWindow && normalizedStart > EPS) {
-                // pencere açılana dek görünmez kal (yumuşak sızma yerine anlık belirme)
-                times.push(normalizedStart - EPS);
-                lefts.push(startLeft);
-                tops.push(startTop);
-                opacities.push(0);
-            }
-        }
-
-        path.points.forEach((p, idx) => {
-            const fraction = idx / Math.max(1, path.points.length - 1);
-            times.push(normalizedStart + fraction * (normalizedEnd - normalizedStart));
-            lefts.push(`${p.x}%`);
-            tops.push(`${p.y}%`);
-            opacities.push(1);
+        const start = seqInfo.startTime / totalCycle;
+        const end = (seqInfo.startTime + pathDur) / totalCycle;
+        // Penceresi başlamadan başlangıç noktasında bekle
+        if (start > 0) stops.push({ at: 0, x: first.x, y: first.y });
+        path.points.forEach((p, i) => {
+            const f = i / Math.max(1, path.points.length - 1);
+            stops.push({ at: start + f * (end - start), x: p.x, y: p.y });
         });
-
-        if (normalizedEnd < 1) {
-            if (fadeOutsideWindow && normalizedEnd + EPS < 1) {
-                times.push(normalizedEnd + EPS);
-                lefts.push(endLeft);
-                tops.push(endTop);
-                opacities.push(0);
-            }
-            times.push(1);
-            lefts.push(endLeft);
-            tops.push(endTop);
-            opacities.push(fadeOutsideWindow ? 0 : 1);
-        }
+        // Penceresi bitince bitiş noktasında bekle
+        if (end < 1) stops.push({ at: 1, x: last.x, y: last.y });
     } else {
-        lefts = path.points.map(p => `${p.x}%`);
-        tops = path.points.map(p => `${p.y}%`);
+        path.points.forEach((p, i) => {
+            stops.push({ at: i / Math.max(1, path.points.length - 1), x: p.x, y: p.y });
+        });
     }
 
-    return {
-        animate: {
-            left: lefts,
-            top: tops,
-            ...(fadeOutsideWindow && playMode === 'SEQ' ? { opacity: opacities } : {})
-        },
-        transition: {
-            duration: totalCycle,
-            ease: "linear",
-            // OYNAT başına toplam İKİ tur (ilk + 1 tekrar); sonra çekirdekteki
-            // otomatik durdurma (PLAY_TIMES zamanlayıcısı) simülasyonu kapatır.
-            repeat: 1,
-            repeatType: "loop" as const,
-            ...(playMode === 'SEQ' && { times })
-        }
-    };
+    // Yüzdeleri 0-100 aralığına sıkıştır, yuvarla ve artan sırayı koru.
+    // Aynı yüzdeye düşen duraklarda SONUNCU geçerlidir (CSS'in kendi kuralı).
+    const seen = new Map<string, string>();
+    stops.forEach(s => {
+        const pct = (Math.min(1, Math.max(0, s.at)) * 100).toFixed(3).replace(/\.?0+$/, '');
+        seen.set(pct || '0', `left:${s.x}%;top:${s.y}%`);
+    });
+    const frames = Array.from(seen.entries())
+        .sort((a, b) => Number(a[0]) - Number(b[0]))
+        .map(([pct, decl]) => `${pct}%{${decl}}`)
+        .join('');
+
+    const name = `oyRun${String(path.id).replace(/[^a-zA-Z0-9]/g, '')}`;
+    return { name, css: `@keyframes ${name}{${frames}}`, duration: totalCycle, startX: first.x, startY: first.y };
 };
 
 // --- Simülasyon Toolbar Kontrolleri ---
@@ -136,7 +130,7 @@ export const AnimationToolbar: React.FC<AnimationToolbarProps> = ({
             onClick={onPlayPause}
             title={title}
             aria-label={title}
-            className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-extrabold transition-all whitespace-nowrap shadow-lg ${playing ? 'bg-red-500 text-white shadow-red-500/30' : 'bg-[#FACC15] text-black shadow-[#FACC15]/30 hover:scale-105'}`}
+            className={`shrink-0 flex items-center gap-1 px-2.5 py-2 rounded-full text-xs font-extrabold transition-all whitespace-nowrap shadow-lg ${playing ? 'bg-red-500 text-white shadow-red-500/30' : 'bg-[#FACC15] text-black shadow-[#FACC15]/30 hover:scale-105'}`}
         >
             {playing ? (
                 <><Square size={14} className="fill-current" /> {label}</>
@@ -144,28 +138,37 @@ export const AnimationToolbar: React.FC<AnimationToolbarProps> = ({
                 <><Play size={14} className="fill-current" /> {label}</>
             )}
         </button>
+        {/* Düzenlemeye dön — yalnız oynatma sırasında görünen ek buton; araç
+            çubuğunun 3. satırı en kalabalık haliyle dar telefonda (360px) da
+            sığsın diye yazısız ve bir tık küçük. */}
         {isSimulating && onExit && (
             <button
                 onClick={onExit}
                 title="Düzenlemeye dön"
                 aria-label="Düzenlemeye dön"
-                className="flex items-center gap-2 px-3.5 py-2 rounded-full text-xs font-extrabold transition-all whitespace-nowrap bg-white/5 text-gray-300 hover:bg-white/10"
+                className="shrink-0 flex items-center justify-center w-8 h-8 rounded-full transition-all bg-white/5 text-gray-300 hover:bg-white/10"
             >
-                <X size={14} /> Düzenle
+                <X size={14} />
             </button>
         )}
+        {/* Top ve oynatma sırası — araç çubuğunun 3. satırına sığsın diye yazısız;
+            ne yaptıkları aria-label/title ile korunur, durum renkle okunur
+            (top açıkken turuncu, sıralı oynatmada mor). */}
         <button
             onClick={() => setShowBall(!showBall)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-extrabold transition-all whitespace-nowrap shadow-lg ${showBall ? 'bg-orange-500 text-white shadow-orange-500/30' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}
+            title={showBall ? 'Topu gizle' : 'Topu göster'}
+            aria-label={showBall ? 'Topu gizle' : 'Topu göster'}
+            className={`shrink-0 flex items-center justify-center w-9 h-9 rounded-full text-sm transition-all shadow-lg ${showBall ? 'bg-orange-500 text-white shadow-orange-500/30' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}
         >
-            ⚽ TOPU {showBall ? 'GİZLE' : 'GÖSTER'}
+            ⚽
         </button>
         <button
             onClick={() => setPlayMode(p => p === 'SYNC' ? 'SEQ' : 'SYNC')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-extrabold transition-all whitespace-nowrap shadow-lg ${playMode === 'SEQ' ? 'bg-indigo-500 text-white shadow-indigo-500/30' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}
-            title="Sıralı veya Eşzamanlı Simülasyon"
+            className={`shrink-0 flex items-center justify-center w-9 h-9 rounded-full text-sm transition-all shadow-lg ${playMode === 'SEQ' ? 'bg-indigo-500 text-white shadow-indigo-500/30' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}
+            title={playMode === 'SEQ' ? 'Sıralı oynatılıyor — eşzamanlıya geç' : 'Eşzamanlı oynatılıyor — sıralıya geç'}
+            aria-label={playMode === 'SEQ' ? 'Sıralı oynatılıyor — eşzamanlıya geç' : 'Eşzamanlı oynatılıyor — sıralıya geç'}
         >
-            {playMode === 'SEQ' ? '🔄 SIRALI OYNAT' : '👥 EŞZAMANLI OYNAT'}
+            {playMode === 'SEQ' ? '🔄' : '👥'}
         </button>
     </>
     );
@@ -241,6 +244,18 @@ const AdvancedAnimationModule: React.FC<AdvancedAnimationModuleProps> = ({
                 if (!midPoint) return null;
                 const isMuted = !!mutedLineIds?.includes(line.id);
                 const isSelected = !isMuted && selectedSeqBadge === line.id;
+                // Sıra paneli SAHANIN İÇİNDE kalmalı: saha `overflow-hidden` olduğu
+                // için ortalanmış panel, kenardaki rozetlerde dışarı taşıp kesiliyordu
+                // (sol kenardaki oyuncularda numaralar hiç görünmüyordu).
+                // Çözüm: rozet nerede duruyorsa panel oraya göre açılır —
+                //   sol üçte bir  → sağa doğru açılır (sol kenarı rozete yaslı)
+                //   sağ üçte bir  → sola doğru açılır (sağ kenarı rozete yaslı)
+                //   orta          → eskisi gibi ortalanır
+                // Alt kenarda da aynı sorun var: aşağıdaki rozetlerde panel yukarı açılır.
+                const panelX = midPoint.x < 33 ? 'left-0'
+                    : midPoint.x > 67 ? 'right-0'
+                    : 'left-1/2 -translate-x-1/2';
+                const panelY = midPoint.y > 70 ? 'bottom-10' : 'top-10';
                 return (
                     <div
                         key={`badge-${line.id}`}
@@ -261,8 +276,10 @@ const AdvancedAnimationModule: React.FC<AdvancedAnimationModuleProps> = ({
                         </div>
 
                         {isSelected && (
+                            // flex-wrap + max-w: numaralar çoksa panel sahayı aşmak
+                            // yerine İKİ SATIRA iner; daha da çoksa kendi içinde kayar.
                             <div
-                                className="absolute top-10 left-1/2 -translate-x-1/2 bg-[#161B22] border border-white/10 rounded-xl p-2 shadow-2xl flex gap-1 pointer-events-auto"
+                                className={`absolute ${panelY} ${panelX} w-max max-w-[13rem] max-h-24 overflow-y-auto no-scrollbar bg-[#161B22] border border-white/10 rounded-xl p-2 shadow-2xl flex flex-wrap gap-1 pointer-events-auto`}
                                 onPointerDown={(e) => e.stopPropagation()}
                             >
                                 {isCustomSeqInputOpen ? (

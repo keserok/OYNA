@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback, Suspense, lazy } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback, Suspense, lazy } from 'react';
 import { Spinner } from '../components/ui/Spinner';
 import {
     ChevronLeft, Users, Save, Plus, Trash2, Minus,
@@ -26,7 +26,7 @@ import {
     saveTeamTactic, approveTacticRpc, rejectTacticRpc, getTacticById,
     setTacticShareLink, tacticShareUrl, getTeamTacticsShowcase,
     setActiveTactic as setActiveTacticRpc, TacticConflictError, logStudioEvent,
-    assignMatchTactic,
+    assignMatchTactic, deleteMyTactic,
 } from '../services/tacticSocialService';
 // Takımın yaklaşan maçı — "kaydederken maça ata" için (teamService SSOT)
 import { fetchTeamNextMatch } from '../services/teamService';
@@ -55,14 +55,14 @@ import {
 import type { LibraryEntry, StatusTone } from './studio/tacticLibrary';
 // Performans katmanı — zayıf cihazda süs efektlerini kıs (içerik değişmez)
 import { perfTierFrom, readDeviceSignals, liteGate } from './studio/perf';
-// İlk kullanım — "Örnek taktiği yükle" içeriği (saf üretici)
-import { buildSampleTactic } from './studio/sampleTactic';
 import { trUpper } from '../utils/trUpper';
 
 // ⚡ ANİMASYON MODÜLÜ — ayrı chunk olarak lazy tutulur (ilk boya hafif kalır)
 // ama stüdyo açılır açılmaz arka planda otomatik indirilir: oynatma kontrolleri
 // araç çubuğunda her zaman doğrudan görünür, ayrıca bir "indir" kapısı yoktur.
 const AdvancedAnimationModule = lazy(() => import('./studio/AdvancedAnimationModule'));
+// Oyuncu markörünün CSS animasyon tarifi (yalnız tip — chunk'ı çekmez).
+import type { PlayerCssAnimation } from './studio/AdvancedAnimationModule';
 const AnimationToolbar = lazy(() =>
     import('./studio/AdvancedAnimationModule').then(m => ({ default: m.AnimationToolbar }))
 );
@@ -86,12 +86,28 @@ const resolvePlanColor = (plan: TacticState): PlanColor =>
     (!plan.groupColor || plan.groupColor === 'DEFAULT') ? mentalityColor(plan.mentality) : plan.groupColor;
 const PIP_HEX: Record<PlanColor, string> = { DEFAULT: '#39FF14', RED: '#ef4444', NAVY: '#6366f1', GREEN: '#10b981' };
 
+// Çizgi başlangıcının bir oyuncuya "tutunma" yarıçapı (saha yüzdesi cinsinden).
+// KOŞU bir oyuncudan başlamak ZORUNDA olduğu için alanı daha geniş: oyuncu
+// markörü sahanın ~%7'si kadar, dar bir alan çizmeyi imkânsızlaştırır.
+// PAS'ta eski değer korunur — boş alana pas serbest, geniş alan istemsiz
+// bağlanmaya yol açar.
+const RUN_ATTACH_RADIUS = 9;
+const PASS_ATTACH_RADIUS = 5;
+
+// Araç ipucu — araç çubuğunun ÇİZİM satırının altında, seçili aracın ne
+// yaptığını tek cümleyle anlatır. Stüdyoyu ilk kez açan biri deneme yanılma
+// yapmadan anlasın diye var; araç değişince yazı da değişir (aria-live).
+const TOOL_HINTS: Record<StudioTool, string> = {
+    move: 'TAŞI seçili — oyuncuya dokunup sürükle; boş mevkideki + işaretiyle oyuncu ekle.',
+    draw_run: 'KOŞU seçili — bir oyuncudan başlayıp parmağınla hareket çizgisini çek.',
+    draw_pass: 'PAS seçili — topun gideceği yolu çiz; arka arkaya çizersen pas zinciri olur.',
+    opponent: 'RAKİP seçili — sahaya dokunarak rakip oyuncu ekle.',
+};
+
 // Faz 9 — kalıcılık & mobil deneyim anahtarları
 const DRAFT_KEY = 'oyna_studio_draft_v1';   // S49 otomatik taslak
 const ONBOARD_KEY = 'oyna_studio_onboarded_v1'; // ilk kullanım turu bir kez gösterilir
 const ZOOM_STEPS = [1, 1.35, 1.7, 2.1] as const; // S46 pinch/pan yakınlaştırma kademeleri
-// OYNAT başına oynatma turu sayısı — modüldeki `repeat: 1` (ilk + 1 tekrar) ile eş.
-const PLAY_TIMES = 2;
 
 // Boyuta göre örnek satır deseni (kaleci hariç toplam = boyut-1).
 const exampleForSize = (size: SquadSize): string => {
@@ -176,7 +192,24 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
     const [customError, setCustomError] = useState<string | null>(null);
     // Faz 3 — etkileşim & animasyon motoru
     const [hideLines, setHideLines] = useState(false);              // "Sadece Hareket" (S12)
+    // Koşu kuralı: KOŞU bir oyuncudan başlamak zorunda. Boş sahadan denenirse
+    // çizgi OLUŞMAZ ve sahanın üstünde kırmızı uyarı belirir. Uyarı bir stüdyo
+    // oturumunda en fazla İKİ kez gösterilir — kural yine geçerlidir, yalnız
+    // mesaj susar (sayaç ref'te: yeniden çizim tetiklemesin).
+    const [showRunHint, setShowRunHint] = useState(false);
+    const runHintShownRef = useRef(0);
+    const RUN_HINT_MAX = 2;
+    // Uyarı yalnız KOŞU aracı seçiliyken anlamlı: başka araca geçilince kalkar.
+    useEffect(() => { if (tool !== 'draw_run') setShowRunHint(false); }, [tool]);
     const [showClearSheet, setShowClearSheet] = useState(false);    // granüler temizle (S13)
+    // Temizle sayfasının alt görünümü: null = ana menü, 'drawings'/'opponents' = seçim listesi.
+    // clearPicks: listede işaretlenen ögelerin id'leri ("Seçilenleri sil" bunları kaldırır).
+    const [clearMode, setClearMode] = useState<null | 'drawings' | 'opponents'>(null);
+    const [clearPicks, setClearPicks] = useState<string[]>([]);
+    const openClearSheet = () => { setClearMode(null); setClearPicks([]); setShowClearSheet(true); };
+    const closeClearSheet = () => { setShowClearSheet(false); setClearMode(null); setClearPicks([]); };
+    const toggleClearPick = (id: string) =>
+        setClearPicks(prev => prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id]);
     const [showTempoSheet, setShowTempoSheet] = useState(false);    // tempo ayar sayfası (araç çubuğu çipi)
     const [onboardStep, setOnboardStep] = useState<number | null>(null); // ilk kullanım turu adımı (null = kapalı)
     const [undoStack, setUndoStack] = useState<{ slots: Slot[]; opponents: Slot[]; drawings: DrawingLine[] }[]>([]);
@@ -196,20 +229,20 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
     const [showBall, setShowBall] = useState(false);
 
     // ⚡ Gelişmiş Animasyon Modülü durumu (lazy-load).
-    // isAdvancedAnimLoaded: kullanıcı modülü indirdi mi?
-    // advancedAnimApiRef: yüklenen modülün getAnimationProps fonksiyonu (saha
+    // isAdvancedAnimLoaded: modül indi mi?
+    // advancedAnimApiRef: yüklenen modülün getPlayerCssAnimation fonksiyonu (saha
     // slot/rakip markörlerini hareket ettirmek için çekirdekte kullanılır).
     const [isAdvancedAnimLoaded, setIsAdvancedAnimLoaded] = useState(false);
     const [isLoadingAdvancedAnim, setIsLoadingAdvancedAnim] = useState(false);
-    const advancedAnimApiRef = useRef<null | ((path: DrawingLine, isSimulating: boolean, playMode: PlayMode, seqInfo: { startTime: number, duration: number }, totalSeqDur: number) => any)>(null);
+    const advancedAnimApiRef = useRef<null | ((path: DrawingLine, playMode: PlayMode, seqInfo: { startTime: number, duration: number }, totalSeqDur: number) => PlayerCssAnimation | null)>(null);
 
-    // Modülü on-demand indirir; getAnimationProps API'sini ref'e bağlar.
+    // Modülü on-demand indirir; oyuncu animasyonu API'sini ref'e bağlar.
     const loadAdvancedAnimation = async () => {
         if (isAdvancedAnimLoaded || isLoadingAdvancedAnim) return;
         setIsLoadingAdvancedAnim(true);
         try {
             const mod = await import('./studio/AdvancedAnimationModule');
-            advancedAnimApiRef.current = mod.getAnimationProps;
+            advancedAnimApiRef.current = mod.getPlayerCssAnimation;
             setIsAdvancedAnimLoaded(true);
         } catch (e) {
             console.error('Gelişmiş animasyon modülü yüklenemedi:', e);
@@ -268,6 +301,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
     const [teamShowcases, setTeamShowcases] = useState<Record<string, LibraryEntry[]>>({});
     const [loadingShowcase, setLoadingShowcase] = useState<string | null>(null);
     const [openingTacticId, setOpeningTacticId] = useState<string | null>(null);
+    const [deletingTacticId, setDeletingTacticId] = useState<string | null>(null);
 
     // Global Store — stüdyo bağlamı
     const studioContext = useAppStore(s => s.studioContext);
@@ -654,13 +688,37 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
     // Oynatma hızı plan temposundan gelir: tempo 5 = 1.0x, 1 = 0.6x, 10 = 1.5x.
     const { seqMap, totalSeqDuration } = computeSeqMap(drawings, tempoSpeedFactor(activeTactic.tempo));
 
-    // ── OYNAT = İKİ tur: taktik iki kez oynar, sonra kendiliğinden durur; tekrar
-    // izlemek için yeniden OYNAT gerekir. (Modüldeki repeat: 1 ile uyumlu.)
+    // ── OYNAT = BİR tur: taktik bir kez oynar, sonra kendiliğinden durur; tekrar
+    // izlemek için "TEKRAR OYNAT" gerekir. Top, oyuncular ve bitiş sayacı AYNI
+    // süreyi paylaşır; üçü birlikte başlar ve birlikte biter.
     const playCycleSeconds = playMode === 'SEQ'
         ? totalSeqDuration
         : drawings.reduce((mx, d) => Math.max(mx, seqMap.get(d.id)?.duration || 0), 0);
     // Rota süresi (CSS top animasyonuyla eş): zincir sonuna varınca "bitti".
     const simTotalSeconds = Math.max(0.4, totalSeqDuration || playCycleSeconds || 2);
+
+    // ── Oyuncu markörlerinin CSS animasyonu (madde 18 — DONDUR/DEVAM) ────────
+    // Oyuncular topla AYNI motorla sürülür: CSS @keyframes + animationPlayState.
+    // Böylece DURDUR hepsini AYNI ANDA olduğu yerde dondurur, OYNAT kaldığı
+    // yerden devam ettirir. (framer-motion'da "dondur" yoktu; eskiden top donar,
+    // oyuncular yürümeye devam ederdi.)
+    // Anahtar: markörün id'si (slot ya da rakip) → animasyon tarifi.
+    const playerAnims = useMemo(() => {
+        const map = new Map<string, PlayerCssAnimation>();
+        const api = advancedAnimApiRef.current;
+        if (!isSimulating || !api) return map;
+        [...activeTactic.slots, ...activeTactic.opponents].forEach(el => {
+            const path = drawings.find(d => d.attachedTo === el.id && d.type === 'line');
+            if (!path) return;
+            const info = seqMap.get(path.id);
+            if (!info) return;
+            const anim = api(path, playMode, info, totalSeqDuration);
+            if (anim) map.set(el.id, anim);
+        });
+        return map;
+        // isAdvancedAnimLoaded: ref dolduğunda yeniden hesapla (ref tek başına tetiklemez).
+    }, [isSimulating, isAdvancedAnimLoaded, activeTactic.slots, activeTactic.opponents,
+        drawings, playMode, seqMap, totalSeqDuration]);
 
     // ── OYNAT / DURDUR / DEVAM durum makinesi (madde 18) ─────────────────────
     // Eski davranış (DURDUR → başa dön) KALDIRILDI. Artık:
@@ -833,26 +891,36 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
     };
     const openHelp = () => setOnboardStep(0);
 
-    // "Örnek taktiği yükle": çalışan bir taktiği yeni plana koyar; takım seçiliyse
-    // gerçek kadroyla dizer. Yükledikten sonra bir kez oynatır (hemen his verir).
-    const loadSampleTactic = async () => {
-        let players: Player[] | undefined;
-        if (selectedTeamId) {
-            try {
-                const squad = await ensureSquad(selectedTeamId);
-                if (squad.length) players = squad.slice(0, 7).map(squadRowToPlayer);
-            } catch { /* kadro yoksa yer-tutucu isimler */ }
+    // Takım seçimini onayla — TEK giriş noktası (eskiden iki ayrı düğme vardı).
+    // Üç durum:
+    //   • Takım yok (Kişisel): plan takımdan KOPARILIR, kayıt kişisel kütüphaneye gider.
+    //   • Takım var, kadro elle doldurulmuş: üzerine YAZMA, yalnız onayla.
+    //   • Takım var, kadro eksik: takımın gerçek kadrosunu diz ve onayla.
+    const confirmTeamSelection = async () => {
+        if (!selectedTeamId) {
+            setActiveTactic({ ...activeTactic, teamId: null, teamName: undefined });
+            setIsTeamConfirmed(true);
+            return;
         }
-        const sample = buildSampleTactic({ id: crypto.randomUUID(), players });
-        dismissOnboarding();
-        setPlans(prev => [...prev, sample]);
-        setActivePlanIndex(plans.length);
-        logStudioEvent('sample_load');
-        showToast('Örnek taktik yüklendi — OYNAT ile izle.');
-        await loadAdvancedAnimation();
-        setShowBall(true);
-        // Demo atağı OTOMATİK oynatMA (kullanıcı kararı): örnek yüklenir, izlemek
-        // için kullanıcı OYNAT'a basar. (Eski otomatik simülasyon kaldırıldı.)
+        const teamRow = studioTeams.find(t => t.team_id === selectedTeamId);
+        if (isSquadComplete) {
+            setActiveTactic({ ...activeTactic, teamId: selectedTeamId, teamName: teamRow?.name });
+            setIsTeamConfirmed(true);
+            return;
+        }
+        try {
+            const squad = await ensureSquad(selectedTeamId);
+            setActiveTactic({
+                ...activeTactic,
+                slots: populateSlotsWithSquad(squad, activeTactic.slots),
+                teamName: teamRow?.name,
+                teamId: selectedTeamId,
+            });
+            setIsTeamConfirmed(true);
+        } catch (e) {
+            console.error('[Studio] kadro yüklenemedi', e);
+            showToast('Kadro yüklenemedi.', 'error');
+        }
     };
 
     // Tempo (1-10, plana özel) — oynatma hızını da sürer (computeSeqMap çarpanı).
@@ -926,6 +994,31 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
         setPlans(prev => [...prev, tactic!]);
         setActivePlanIndex(plans.length);
         setShowTacticsModal(false);
+    };
+
+    // Kütüphaneden taktik sil — YALNIZ kişisel sekmede (kendi kaydettiklerin).
+    // Yetki veritabanındaki `tactics_delete` kuralına dayanır (userId = auth.uid());
+    // başkasının/takımın taktiği bu yolla silinemez. Geri alınamaz → önce onay sor.
+    // Açık plan silinen kayda bağlıysa sorun olmaz: kaydetme, listede bulunmayan
+    // id'yi "yeni kayıt" sayar (doSaveTactic'teki existingId kontrolü).
+    const handleDeleteLibraryEntry = async (entry: LibraryEntry) => {
+        const ok = await confirm({
+            title: 'Taktiği sil?',
+            message: <><b className="text-white">{entry.name}</b> kütüphanenden kalıcı olarak silinecek. Bu işlem geri alınamaz.</>,
+            confirmLabel: 'Sil',
+            destructive: true,
+        });
+        if (!ok) return;
+        setDeletingTacticId(entry.id);
+        try {
+            await deleteMyTactic(entry.id);
+            setDbTactics(prev => prev.filter(t => t.id !== entry.id));
+            showToast('Taktik silindi.');
+        } catch (e) {
+            showToast((e as Error)?.message || 'Taktik silinemedi.', 'error');
+        } finally {
+            setDeletingTacticId(null);
+        }
     };
 
     // Özel formasyon: satır sayısı deseninden üret, YALNIZ aktif plana uygula (anında).
@@ -1359,13 +1452,15 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
         const y = ((e.clientY - rect.top) / rect.height) * 100;
 
         if (tool.startsWith('draw')) {
-            setIsDrawing(true);
-            pushHistory(); // çizim öncesi sahneyi geçmişe al (S14)
+            const isPass = tool === 'draw_pass';
 
-            // Find nearest slot or opponent (within 5% radius)
-            // Çizim tarafına göre (BİZ/RAKİP) yalnız o tarafın ögelerine bağlan (S19)
+            // En yakın oyuncuyu/rakibi bul. Çizim tarafına göre (BİZ/RAKİP) yalnız
+            // o tarafın ögelerine bağlanılır (S19).
+            // Yakalama alanı: KOŞU'nun oyuncudan başlaması ZORUNLU olduğu için o
+            // araçta alan daha geniş tutulur — dar alan çizmeyi imkânsızlaştırır.
+            // PAS'ta eski davranış korunur (boş alana pas serbest).
             let attachedTo: string | undefined;
-            const threshold = 5;
+            const threshold = isPass ? PASS_ATTACH_RADIUS : RUN_ATTACH_RADIUS;
             let minDistance = Infinity;
             const attachCandidates = drawSide === 'OPP' ? activeTactic.opponents : activeTactic.slots;
             attachCandidates.forEach(el => {
@@ -1373,10 +1468,22 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                 if (dist < threshold && dist < minDistance) { minDistance = dist; attachedTo = el.id; }
             });
 
+            // KOŞU KURALI: oyuncudan başlamayan koşu OLUŞMAZ. Çizim hiç başlamaz,
+            // geçmişe de yazılmaz (boşuna "geri al" adımı üretmesin).
+            if (!isPass && !attachedTo) {
+                if (runHintShownRef.current < RUN_HINT_MAX) {
+                    runHintShownRef.current += 1;
+                    setShowRunHint(true);
+                }
+                return;
+            }
+
+            setIsDrawing(true);
+            pushHistory(); // çizim öncesi sahneyi geçmişe al (S14)
+
             // Koşu ('line'): aynı ögede aynı türden çizgi varsa değiştir (bir
             // oyuncunun tek koşusu olur). Pas ('arrow'): ZİNCİR olduğundan
             // dedup YOK — çok sayıda bağlı pas oku birikebilir.
-            const isPass = tool === 'draw_pass';
             if (attachedTo && !isPass) {
                 setDrawings(prev => prev.filter(d => d.attachedTo !== attachedTo || d.type !== 'line'));
             }
@@ -1565,6 +1672,8 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
             setDrawings([...drawings, finalLine]);
             setIsDrawing(false);
             setCurrentLine(null);
+            // Geçerli bir koşu oluştu → kırmızı uyarı görevini tamamladı, kalksın.
+            if (finalLine.type === 'line') setShowRunHint(false);
         }
         // Sürükleme mi, dokunuş mu? (S11) — taşındıysa geçmişe yaz; dokunuşsa SEÇ.
         if (draggedItem && dragStartRef.current) {
@@ -1634,17 +1743,45 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
     };
 
     // ── Granüler temizle (S13) ──
-    const clearDrawingsOnly = () => { pushHistory(); setDrawings([]); setShowClearSheet(false); setSelectedEl(null); showToast('Çizimler silindi · GERİ AL ile dön'); };
-    const clearOpponentsOnly = () => { pushHistory(); setActiveTactic({ ...activeTactic, opponents: [] }); setShowClearSheet(false); setSelectedEl(null); showToast('Rakipler silindi · GERİ AL ile dön'); };
+    // "Sadece çizimler" / "Sadece rakipler" artık DOĞRUDAN SİLMEZ: içeriği listeler,
+    // kullanıcı istediklerini işaretler ve alttaki "Seçilenleri sil" ile kaldırır;
+    // "Hepsini sil" düğmesi de aynı listede durur. Böylece tek bir çizimi silmek
+    // için her şeyi silmek gerekmez.
+    const clearDrawingsOnly = () => { pushHistory(); setDrawings([]); closeClearSheet(); setSelectedEl(null); showToast('Çizimler silindi · GERİ AL ile dön'); };
+    const clearOpponentsOnly = () => { pushHistory(); setActiveTactic({ ...activeTactic, opponents: [] }); closeClearSheet(); setSelectedEl(null); showToast('Rakipler silindi · GERİ AL ile dön'); };
+
+    // Seçili çizimleri sil (liste görünümü).
+    const deletePickedDrawings = () => {
+        if (clearPicks.length === 0) return;
+        pushHistory();
+        const n = clearPicks.length;
+        setDrawings(drawings.filter(d => !clearPicks.includes(d.id)));
+        closeClearSheet(); setSelectedEl(null);
+        showToast(`${n} çizim silindi · GERİ AL ile dön`);
+    };
+    // Seçili rakipleri sil. Rakip silinince ona BAĞLI çizimler de gider —
+    // "Seçili ögeyi sil" akışı da böyle davranıyor, iki yol ayrışmasın.
+    const deletePickedOpponents = () => {
+        if (clearPicks.length === 0) return;
+        pushHistory();
+        const n = clearPicks.length;
+        setActiveTactic({
+            ...activeTactic,
+            opponents: activeTactic.opponents.filter(o => !clearPicks.includes(o.id)),
+            drawings: drawings.filter(d => !d.attachedTo || !clearPicks.includes(d.attachedTo)),
+        });
+        closeClearSheet(); setSelectedEl(null);
+        showToast(`${n} rakip silindi · GERİ AL ile dön`);
+    };
     const clearSelected = () => {
         if (!selectedEl) return;
         pushHistory();
         if (selectedEl.type === 'line') setActiveTactic({ ...activeTactic, drawings: drawings.filter(d => d.id !== selectedEl.id) });
         else if (selectedEl.type === 'opponent') setActiveTactic({ ...activeTactic, opponents: activeTactic.opponents.filter(o => o.id !== selectedEl.id), drawings: drawings.filter(d => d.attachedTo !== selectedEl.id) });
         else if (selectedEl.type === 'slot') setActiveTactic({ ...activeTactic, drawings: drawings.filter(d => d.attachedTo !== selectedEl.id) });
-        setShowClearSheet(false); setSelectedEl(null); showToast('Seçili öge silindi · GERİ AL ile dön');
+        closeClearSheet(); setSelectedEl(null); showToast('Seçili öge silindi · GERİ AL ile dön');
     };
-    const clearAllScene = () => { pushHistory(); setIsSimulating(false); setActiveTactic({ ...activeTactic, opponents: [], drawings: [] }); setShowClearSheet(false); setSelectedEl(null); showToast('Tahta temizlendi · GERİ AL ile dön'); };
+    const clearAllScene = () => { pushHistory(); setIsSimulating(false); setActiveTactic({ ...activeTactic, opponents: [], drawings: [] }); closeClearSheet(); setSelectedEl(null); showToast('Tahta temizlendi · GERİ AL ile dön'); };
 
 
 
@@ -1758,14 +1895,11 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                             <p className="text-[0.625rem] text-[#39FF14] font-mono uppercase truncate tracking-widest">Sunum · Sadece Hareket</p>
                                         </>
                                     ) : (
-                                        <>
-                                            {/* Düzenlenebilir taktik adı (S43) */}
-                                            <button onClick={() => handleRenamePlan(activePlanIndex)} className="flex items-center gap-1.5 group max-w-full">
-                                                <h1 className="text-lg font-extrabold text-white truncate">{activeTactic.name}</h1>
-                                                <PenTool size={12} className="text-ink-4 group-hover:text-[#39FF14] transition-colors shrink-0" />
-                                            </button>
-                                            <p className="text-[0.6875rem] text-[#39FF14] font-mono uppercase truncate">{activeTactic.formation} · {activeTactic.size}</p>
-                                        </>
+                                        // Sabit başlık: yalnızca "Stüdyo". Plan adı ve diziliş/boyut
+                                        // satırı başlıktan kaldırıldı — ikisi de zaten plan kartında
+                                        // görünüyor. Plan adını değiştirme yolu da orada: karttaki
+                                        // kalem simgesi ya da karta çift dokunma.
+                                        <h1 className="text-lg font-extrabold text-white truncate">Stüdyo</h1>
                                     )}
                                 </div>
                             </div>
@@ -2000,62 +2134,131 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                 {openSelector && <div className="fixed inset-0 z-30" onClick={() => setOpenSelector(null)} />}
             </div>
 
-            {/* Toolbar */}
-            <div className="px-6 pb-4 flex gap-2 overflow-x-auto no-scrollbar">
-                    <button 
+            {/* Araç çubuğu — İŞE GÖRE 3 SATIR (ince ayraçla ayrılır).
+                Önceden 14 buton tek satırda yan yana kayıyordu; ekrana sığmayanı
+                görmek için yana sürüklemek gerekiyordu. Artık her satır tek bir
+                soruyu yanıtlar:
+                  1) ÇİZİM   — ne çiziyorum?      (TAŞI · KOŞU · PAS · sadece hareket)
+                  2) TAKIM   — kimi düzenliyorum? (BİZ/RAKİP · rakibi diz · geri/yinele/temizle)
+                  3) OYNATMA — nasıl izliyorum?   (OYNAT · top · sıra · TEMPO)
+                Satırlar dar telefonda da sığacak şekilde ölçülendi: 360/375/390 px
+                genişlikte, boş tahtada da oynatma sırasında da taşma yok. Yardımcı
+                butonlar yer kazanmak için yazısız/simgeli (anlamları title +
+                aria-label ile korunur). overflow-x-auto yalnız güvenlik ağıdır —
+                beklenmedik bir genişlikte hiçbir buton erişilemez kalmasın diye. */}
+            <div className="px-6 pb-4 space-y-2">
+
+                {/* ── 1. SATIR · ÇİZİM — hangi araç açık (3 eşit kutu, satırı doldurur) */}
+                <div className="flex gap-2">
+                    <button
                         onClick={() => setTool('move')}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold transition-all whitespace-nowrap ${tool === 'move' ? 'bg-[#39FF14] text-black' : 'bg-white/5 text-white hover:bg-white/10'}`}
+                        className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-full text-xs font-bold transition-all whitespace-nowrap ${tool === 'move' ? 'bg-[#39FF14] text-black' : 'bg-white/5 text-white hover:bg-white/10'}`}
                     >
                         <MousePointer2 size={14} /> TAŞI
                     </button>
-                    <button 
+                    <button
                         onClick={() => setTool('draw_run')}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold transition-all whitespace-nowrap ${tool === 'draw_run' ? 'bg-[#39FF14] text-black' : 'bg-white/5 text-white hover:bg-white/10'}`}
+                        className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-full text-xs font-bold transition-all whitespace-nowrap ${tool === 'draw_run' ? 'bg-[#39FF14] text-black' : 'bg-white/5 text-white hover:bg-white/10'}`}
                         title="Koşu Çiz"
                     >
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeDasharray="4 4"><path d="M5 12h14"></path></svg> KOŞU
                     </button>
-                    <button 
+                    <button
                         onClick={() => setTool('draw_pass')}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold transition-all whitespace-nowrap ${tool === 'draw_pass' ? 'bg-[#39FF14] text-black' : 'bg-white/5 text-white hover:bg-white/10'}`}
+                        className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-full text-xs font-bold transition-all whitespace-nowrap ${tool === 'draw_pass' ? 'bg-[#39FF14] text-black' : 'bg-white/5 text-white hover:bg-white/10'}`}
                         title="Pas Çiz"
                     >
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M5 12h14M12 5l7 7-7 7"></path></svg> PAS
                     </button>
-                    {/* Rakip takımı sahaya diz (ayna) + rakip düzenleme moduna geç */}
+                    {/* Sadece Hareket (S12) — çizgileri gizle, yalnız top+oyuncu hareketi
+                        görünür. Çizim satırında durur: çizgilerin GÖRÜNÜRLÜĞÜNÜ ayarlar. */}
                     <button
-                        onClick={placeOpponentTeam}
-                        title="Rakip takımı sahaya diz (mevcut dizilişin aynası)"
-                        className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold transition-all whitespace-nowrap ${drawSide === 'OPP' ? 'bg-red-500 text-white' : 'bg-white/5 text-white hover:bg-red-500/20 hover:text-red-400'}`}
+                        onClick={() => setHideLines(v => !v)}
+                        title={hideLines ? 'Çizgileri göster' : 'Sadece hareket (çizgileri gizle)'}
+                        aria-label={hideLines ? 'Çizgileri göster' : 'Sadece hareket (çizgileri gizle)'}
+                        className={`shrink-0 flex items-center justify-center w-9 h-9 ml-1 rounded-full transition-all ${hideLines ? 'bg-[#39FF14] text-black' : 'bg-white/5 text-white hover:bg-white/10'}`}
                     >
-                        <Swords size={14} /> RAKİP
+                        {hideLines ? <EyeOff size={14} /> : <Eye size={14} />}
                     </button>
+                </div>
+
+                {/* Araç ipucu — seçili aracın ne yaptığı tek cümle. aria-live ile
+                    ekran okuyucu da araç değişimini duyurur. */}
+                <p aria-live="polite" className="px-1 text-[0.6875rem] leading-snug text-ink-4">
+                    {TOOL_HINTS[tool]}
+                </p>
+
+                <div className="h-px bg-white/10" />
+
+                {/* ── 2. SATIR · TAKIM — kimi düzenliyorum (sol) + geri al/yinele/temizle (sağ) */}
+                <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
                     {/* BİZ / RAKİP — hangi takımı DÜZENLİYORUM (taşıma/isim/çizim yalnız o tarafta) */}
                     <div className="flex items-center rounded-full bg-white/5 border border-white/10 p-0.5 shrink-0">
                         <button
                             onClick={() => { setDrawSide('US'); setSelectedEl(null); setNamingOpp(null); setSelectedSeqBadge(null); }}
                             title="Bizim takımı düzenle"
-                            className={`px-3 py-1.5 rounded-full text-[0.6875rem] font-extrabold tracking-widest transition-all ${drawSide === 'US' ? 'bg-[#39FF14] text-black' : 'text-gray-400 hover:text-white'}`}
+                            className={`px-2.5 py-1.5 rounded-full text-[0.6875rem] font-extrabold tracking-widest transition-all ${drawSide === 'US' ? 'bg-[#39FF14] text-black' : 'text-gray-400 hover:text-white'}`}
                         >BİZ</button>
                         <button
                             onClick={() => { setDrawSide('OPP'); setSelectedEl(null); setHeldSub(null); setSelectedSeqBadge(null); }}
                             title="Rakibi düzenle"
-                            className={`px-3 py-1.5 rounded-full text-[0.6875rem] font-extrabold tracking-widest transition-all ${drawSide === 'OPP' ? 'bg-red-500 text-white' : 'text-gray-400 hover:text-white'}`}
+                            className={`px-2.5 py-1.5 rounded-full text-[0.6875rem] font-extrabold tracking-widest transition-all ${drawSide === 'OPP' ? 'bg-red-500 text-white' : 'text-gray-400 hover:text-white'}`}
                         >RAKİP</button>
                     </div>
-                    {/* Tempo — plana özel oynatma hızı (1-10); dokununca ayar sayfası açılır */}
+                    {/* Rakip takımı sahaya diz (ayna) + rakip düzenleme moduna geç.
+                        Yanındaki anahtarda zaten "RAKİP" yazdığı için burada yazı
+                        yinelenmiyor; kılıç simgesi + title yeterli ve satır sığıyor. */}
                     <button
-                        onClick={() => setShowTempoSheet(true)}
-                        title="Oynatma temposu (plana özel, 1-10)"
-                        className="flex items-center gap-2 px-4 py-2 rounded-full text-xs font-extrabold transition-all whitespace-nowrap shadow-lg bg-blue-500/15 text-blue-300 border border-blue-400/30 hover:bg-blue-500/25"
+                        onClick={placeOpponentTeam}
+                        title="Rakip takımı sahaya diz (mevcut dizilişin aynası)"
+                        aria-label="Rakip takımı sahaya diz (mevcut dizilişin aynası)"
+                        className={`shrink-0 flex items-center justify-center w-9 h-9 rounded-full transition-all ${drawSide === 'OPP' ? 'bg-red-500 text-white' : 'bg-white/5 text-white hover:bg-red-500/20 hover:text-red-400'}`}
                     >
-                        <Gauge size={14} /> TEMPO {normalizeTempo(activeTactic.tempo)}
+                        <Swords size={14} />
                     </button>
+                    {/* Esneyen boşluk — düzenleme yardımcılarını sağa yaslar */}
+                    <div className="flex-1 min-w-2" />
+                    {/* Geri Al / Yinele (S14) + Temizle — yer kazanmak için simge */}
+                    <button
+                        onClick={undo}
+                        disabled={undoStack.length === 0}
+                        title="Geri Al"
+                        aria-label="Geri Al"
+                        className="shrink-0 flex items-center justify-center w-9 h-9 rounded-full bg-white/5 text-white hover:bg-white/10 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                    >
+                        <RotateCw size={14} className="-scale-x-100" />
+                    </button>
+                    <button
+                        onClick={redo}
+                        disabled={redoStack.length === 0}
+                        title="Yinele"
+                        aria-label="Yinele"
+                        className="shrink-0 flex items-center justify-center w-9 h-9 rounded-full bg-white/5 text-white hover:bg-white/10 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                    >
+                        <RotateCw size={14} />
+                    </button>
+                    <button
+                        onClick={openClearSheet}
+                        title="Temizle"
+                        aria-label="Temizle"
+                        className="shrink-0 flex items-center justify-center w-9 h-9 rounded-full bg-white/5 text-white hover:bg-red-500/20 hover:text-red-500 transition-all"
+                    >
+                        <Trash2 size={14} />
+                    </button>
+                </div>
+
+                <div className="h-px bg-white/10" />
+
+                {/* ── 3. SATIR · OYNATMA — taktiği nasıl izliyorum.
+                    Oynatma sırasında "düzenlemeye dön" butonu da eklendiği için bu
+                    satır en kalabalık hale gelir; dar telefonda (360px) sığması için
+                    aralıklar ve iç boşluklar ölçülü tutuldu. */}
+                <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
                     {/* Oynatma kontrolleri — kapı butonu yok; modül açılışta arka planda yüklenir */}
                     {drawings.length > 0 && (
                         <Suspense fallback={
-                            <div className="flex items-center gap-2 px-4 py-2 rounded-full text-xs font-extrabold bg-white/5 text-gray-400 whitespace-nowrap">
-                                <Loader2 size={14} className="animate-spin" /> Oynatma kontrolleri yükleniyor…
+                            <div className="flex items-center gap-2 px-3 py-2 rounded-full text-xs font-extrabold bg-white/5 text-gray-400 whitespace-nowrap">
+                                <Loader2 size={14} className="animate-spin" /> Oynatma yükleniyor…
                             </div>
                         }>
                             <AnimationToolbar
@@ -2071,39 +2274,16 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                             />
                         </Suspense>
                     )}
-                    <div className="w-px h-8 bg-white/10 mx-1"></div>
-                    {/* Geri Al / Yinele (S14) */}
+                    {/* Tempo — plana özel oynatma hızı (1-10); dokununca ayar sayfası açılır */}
                     <button
-                        onClick={undo}
-                        disabled={undoStack.length === 0}
-                        title="Geri Al"
-                        className="flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-bold bg-white/5 text-white hover:bg-white/10 transition-all whitespace-nowrap disabled:opacity-30 disabled:cursor-not-allowed"
+                        onClick={() => setShowTempoSheet(true)}
+                        title="Oynatma temposu (plana özel, 1-10)"
+                        className="shrink-0 flex items-center gap-1 px-2.5 py-2 rounded-full text-xs font-extrabold transition-all whitespace-nowrap shadow-lg bg-blue-500/15 text-blue-300 border border-blue-400/30 hover:bg-blue-500/25"
                     >
-                        <RotateCw size={14} className="-scale-x-100" /> GERİ AL
-                    </button>
-                    <button
-                        onClick={redo}
-                        disabled={redoStack.length === 0}
-                        title="Yinele"
-                        className="flex items-center justify-center w-9 h-9 rounded-full text-xs font-bold bg-white/5 text-white hover:bg-white/10 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
-                    >
-                        <RotateCw size={14} />
-                    </button>
-                    {/* Sadece Hareket (S12) — çizgileri gizle, yalnız top+oyuncu hareketi görünür */}
-                    <button
-                        onClick={() => setHideLines(v => !v)}
-                        title={hideLines ? 'Çizgileri göster' : 'Sadece hareket (çizgileri gizle)'}
-                        className={`flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-bold transition-all whitespace-nowrap ${hideLines ? 'bg-[#39FF14] text-black' : 'bg-white/5 text-white hover:bg-white/10'}`}
-                    >
-                        {hideLines ? <EyeOff size={14} /> : <Eye size={14} />} SADECE HAREKET
-                    </button>
-                    <button
-                        onClick={() => setShowClearSheet(true)}
-                        className="flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold bg-white/5 text-white hover:bg-red-500/20 hover:text-red-500 transition-all whitespace-nowrap"
-                    >
-                        <Trash2 size={14} /> TEMİZLE
+                        <Gauge size={14} /> TEMPO {normalizeTempo(activeTactic.tempo)}
                     </button>
                 </div>
+            </div>
             </>)}
 
             {/* Bayat kadro uyarısı — takım oyuncusu artık kadroda değilse tek dokunuş eşitle */}
@@ -2123,22 +2303,20 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                 </div>
             )}
 
-            {/* Boş tahta → örnek taktik daveti (turu atlayanlar da deneyebilsin) */}
-            {!presentMode && onboardStep === null && plans.length === 1
-                && activeTactic.slots.every(s => !s.player)
-                && (activeTactic.drawings?.length ?? 0) === 0
-                && activeTactic.opponents.length === 0 && (
+            {/* Koşu uyarısı — KOŞU aracıyla bir oyuncudan başlamayan çizim denendiğinde
+                sahanın hemen üstünde belirir. Doğru bir koşu çizilince kaybolur.
+                Bir stüdyo oturumunda en fazla İKİ kez gösterilir (kural her zaman
+                geçerli, uyarı iki kezden sonra susar); KOŞU aracından çıkınca da
+                kalkar, çünkü mesaj yalnız o araç seçiliyken anlamlı. */}
+            {!presentMode && showRunHint && (
                 <div className="px-6 pb-3">
-                    <button
-                        onClick={() => void loadSampleTactic()}
-                        className="w-full flex items-center gap-3 bg-[#39FF14]/8 border border-dashed border-[#39FF14]/30 rounded-2xl p-3 hover:bg-[#39FF14]/12 active:scale-[0.99] transition-all text-left"
-                    >
-                        <span className="w-10 h-10 rounded-xl bg-[#39FF14]/15 border border-[#39FF14]/30 flex items-center justify-center text-[#39FF14] shrink-0"><Sparkles size={18} /></span>
-                        <span className="min-w-0">
-                            <span className="block text-sm font-extrabold text-white">Örnek taktiği yükle</span>
-                            <span className="block text-[0.6875rem] text-ink-4">Hazır bir taktik gör — OYNAT ile nasıl çalıştığını izle.</span>
-                        </span>
-                    </button>
+                    <div role="alert" className="flex items-center gap-3 bg-red-500/12 border border-red-500/40 rounded-2xl p-3">
+                        <ShieldAlert size={18} className="text-red-400 shrink-0" />
+                        <div className="min-w-0">
+                            <div className="text-[0.75rem] font-extrabold text-red-300">Koşu bir oyuncudan başlamalı</div>
+                            <div className="text-[0.6875rem] text-red-400/80">Parmağını bir oyuncunun üzerinden başlatıp çek; boş sahadan çizilen koşu oluşmaz.</div>
+                        </div>
+                    </div>
                 </div>
             )}
 
@@ -2290,11 +2468,16 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                         </div>
                     )}
 
+                    {/* Oyuncu/rakip koşu animasyonlarının @keyframes tanımları —
+                        tek <style> ile basılır; markörler bunlara ada göre bağlanır. */}
+                    {playerAnims.size > 0 && (
+                        <style>{Array.from(playerAnims.values()).map(a => a.css).join('')}</style>
+                    )}
+
                     {/* Opponents */}
                     {activeTactic.opponents.map(opp => {
-                        const path = drawings.find(d => d.attachedTo === opp.id && d.type === 'line');
-                        const isMoving = isSimulating && path && advancedAnimApiRef.current;
-                        const anim = path && isMoving ? advancedAnimApiRef.current!(path, isSimulating, playMode, seqMap.get(path.id)!, totalSeqDuration) : null;
+                        const anim = playerAnims.get(opp.id) || null;
+                        const isMoving = !!anim;
                         return (
                         <motion.div 
                             key={opp.id}
@@ -2303,12 +2486,22 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                             // değilken bu nokta taşınamaz, parmağı boşuna tutup sayfanın
                             // kaymasını engellememeli.
                             className={`absolute w-10 h-10 ${!oppLayer.interactive ? 'pointer-events-none' : (tool === 'move' ? `cursor-grab active:cursor-grabbing ${drawSide === 'OPP' ? 'touch-none' : ''}` : 'pointer-events-auto')} ${isMoving ? `brightness-125 ${liteGate(perfTier, 'drop-shadow-[0_0_15px_rgba(239,68,68,0.8)]')}` : ''} ${oppLayer.dimmed ? 'opacity-40' : ''}`}
-                            animate={anim ? anim.animate : {
-                                left: `${opp.x}%`,
-                                top: `${opp.y}%`
+                            // Simülasyonda konumu CSS animasyonu sürer; framer-motion
+                            // yalnız markörü rotanın BAŞINA oturtur (sıçrama olmasın).
+                            animate={anim
+                                ? { left: `${anim.startX}%`, top: `${anim.startY}%` }
+                                : { left: `${opp.x}%`, top: `${opp.y}%` }}
+                            transition={anim ? { duration: 0 } : (draggedItem?.id === opp.id ? { duration: 0 } : { type: "spring", stiffness: 300, damping: 30 })}
+                            // `animation` kısayolu play-state'i sıfırlar → animationPlayState
+                            // MUTLAKA sonra gelmeli (topla aynı desen).
+                            style={{
+                                x: "-50%", y: "-50%",
+                                zIndex: draggedItem?.id === opp.id ? 50 : oppLayer.z,
+                                ...(anim ? {
+                                    animation: `${anim.name} ${anim.duration}s linear forwards`,
+                                    animationPlayState: simPaused ? 'paused' as const : 'running' as const,
+                                } : {}),
                             }}
-                            transition={anim ? anim.transition as any : (draggedItem?.id === opp.id ? { duration: 0 } : { type: "spring", stiffness: 300, damping: 30 })}
-                            style={{ x: "-50%", y: "-50%", zIndex: draggedItem?.id === opp.id ? 50 : oppLayer.z }}
                         >
                             <div className={`relative w-full h-full rounded-full border-2 flex items-center justify-center shadow-lg bg-red-900/80 text-white transition-all ${selectedEl?.type === 'opponent' && selectedEl.id === opp.id ? 'border-white ring-2 ring-white/70 scale-110' : 'border-red-500'}`}>
                                 <Swords size={16} />
@@ -2328,18 +2521,18 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
 
                     {/* Slots */}
                     {activeTactic.slots.map(slot => {
-                        const path = drawings.find(d => d.attachedTo === slot.id && d.type === 'line');
-                        const isMoving = isSimulating && path && advancedAnimApiRef.current;
-                        const anim = path && isMoving ? advancedAnimApiRef.current!(path, isSimulating, playMode, seqMap.get(path.id)!, totalSeqDuration) : null;
+                        const anim = playerAnims.get(slot.id) || null;
+                        const isMoving = !!anim;
                         return (
-                        <motion.div 
+                        <motion.div
                             key={slot.id}
-                            layout={draggedItem ? false : !perfLite}
-                            animate={anim ? anim.animate : {
-                                left: `${slot.x}%`,
-                                top: `${slot.y}%`
-                            }}
-                            transition={anim ? anim.transition as any : (draggedItem?.id === slot.id ? { duration: 0 } : { type: "spring", stiffness: 300, damping: 30 })}
+                            // Simülasyonda `layout` kapalı: CSS animasyonu left/top'u
+                            // sürerken framer-motion layout ölçümü araya girmesin.
+                            layout={draggedItem || isMoving ? false : !perfLite}
+                            animate={anim
+                                ? { left: `${anim.startX}%`, top: `${anim.startY}%` }
+                                : { left: `${slot.x}%`, top: `${slot.y}%` }}
+                            transition={anim ? { duration: 0 } : (draggedItem?.id === slot.id ? { duration: 0 } : { type: "spring", stiffness: 300, damping: 30 })}
                             onPointerDown={(e) => {
                                 if (heldSub) return; // S26 — takas modunda sürükleme başlatma
                                 if (tool === 'move' && slot.player) {
@@ -2351,7 +2544,16 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                             // onPointerDown ile aynı koşul) — aksi hâlde bu kare parmağı
                             // boşuna tutar ve sayfa kaymaz.
                             className={`absolute w-12 h-12 ${!usLayer.interactive ? 'pointer-events-none' : (tool === 'move' && slot.player && drawSide === 'US' && !heldSub ? 'cursor-grab active:cursor-grabbing touch-none' : '')} ${isMoving ? `brightness-125 ${liteGate(perfTier, 'drop-shadow-[0_0_15px_rgba(57,255,20,0.8)]')}` : ''} ${usLayer.dimmed ? 'opacity-40' : ''} ${heldSub ? 'cursor-pointer ring-2 ring-[#39FF14] rounded-full ring-offset-1 ring-offset-black/40' : ''}`}
-                            style={{ x: "-50%", y: "-50%", zIndex: draggedItem?.id === slot.id ? 50 : usLayer.z }}
+                            // `animation` kısayolu play-state'i sıfırlar → animationPlayState
+                            // MUTLAKA sonra gelmeli (topla aynı desen).
+                            style={{
+                                x: "-50%", y: "-50%",
+                                zIndex: draggedItem?.id === slot.id ? 50 : usLayer.z,
+                                ...(anim ? {
+                                    animation: `${anim.name} ${anim.duration}s linear forwards`,
+                                    animationPlayState: simPaused ? 'paused' as const : 'running' as const,
+                                } : {}),
+                            }}
                         >
                             {slot.player ? (
                                 <motion.div
@@ -2466,8 +2668,41 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                         </h3>
                     </div>
                     
-                    {/* Horizontal Team List — kanonik get_my_teams (hayalet güç puanı öldü) */}
+                    {/* Takım şeridi — kanonik get_my_teams. Başta "Kişisel" kartı:
+                        takımsız çalışma yolu (kayıt kişisel kütüphaneye gider).
+                        Takım yoksa şerit yerine yol gösteren boş durum çıkar. */}
+                    {studioTeams.length === 0 ? (
+                        <div className="mb-4 rounded-2xl border border-dashed border-white/15 bg-white/[0.03] p-4">
+                            <p className="text-[0.8125rem] font-extrabold text-white">Henüz bir takımın yok</p>
+                            <p className="text-[0.6875rem] text-ink-4 leading-relaxed mt-1">
+                                Sorun değil — taktiğini kurup <b className="text-gray-300">kişisel kütüphanene</b> kaydedebilirsin.
+                                Takımla çalışmak istersen önce Sosyal'den bir takım kur ya da bir takıma katıl.
+                            </p>
+                            <button
+                                onClick={() => onNavigate('SOCIAL')}
+                                className="mt-3 inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white/5 border border-white/10 text-white text-[0.625rem] font-extrabold uppercase tracking-widest hover:bg-white/10 hover:border-[#39FF14]/40 transition-all"
+                            >
+                                <Users size={14} className="text-[#39FF14]" /> Sosyal'e git
+                            </button>
+                        </div>
+                    ) : (
                     <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2 mb-4">
+                        {/* Kişisel (takımsız) */}
+                        <button
+                            onClick={() => setSelectedTeamId(null)}
+                            className={`flex-shrink-0 w-[150px] p-3 rounded-2xl border transition-all text-left ${
+                                selectedTeamId === null
+                                    ? 'bg-[#39FF14]/10 border-[#39FF14]/50 shadow-[0_0_15px_rgba(57,255,20,0.2)]'
+                                    : 'bg-white/5 border-white/5 hover:bg-white/10'
+                            }`}
+                        >
+                            <div className="flex items-center gap-2 mb-1.5">
+                                <span className="w-6 h-6 rounded-lg bg-white/10 border border-white/15 flex items-center justify-center text-white shrink-0"><UserPlus size={13} /></span>
+                                <h4 className="text-white font-bold text-xs truncate flex-1">Kişisel</h4>
+                            </div>
+                            <div className="text-[0.6875rem] font-bold text-ink-4">Takımsız çalış</div>
+                        </button>
+
                         {studioTeams.map((team) => {
                             const need = activeTactic.slots.length;
                             const ready = Math.min(team.member_count, need);
@@ -2486,54 +2721,26 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                     <span className="w-6 h-6 rounded-lg flex items-center justify-center text-[0.6875rem] font-extrabold text-black shrink-0" style={{ background: team.color1 || '#39FF14' }}>{trUpper((team.short_name || team.name || '?').slice(0, 2))}</span>
                                     <h4 className="text-white font-bold text-xs truncate flex-1">{team.name}</h4>
                                 </div>
-                                <div className="flex items-center justify-between">
-                                    <div className="text-[0.6875rem] font-bold text-ink-4">
-                                        <span className={enough ? 'text-[#39FF14]' : 'text-amber-400'}>{ready}/{need}</span> hazır
-                                    </div>
-                                    <div className="text-[0.6875rem] text-ink-4 font-mono tabular-nums">{team.wins}G {team.draws}B {team.losses}M</div>
+                                <div className="text-[0.6875rem] font-bold text-ink-4">
+                                    <span className={enough ? 'text-[#39FF14]' : 'text-amber-400'}>{ready}/{need}</span> hazır
                                 </div>
                                 {!enough && <div className="mt-1 text-[0.625rem] font-extrabold text-amber-400 uppercase tracking-widest">Eksik kadro</div>}
                             </button>
                         );})}
                     </div>
+                    )}
 
                     <div className="flex flex-col gap-2">
-                        {selectedTeamId && !isSquadComplete && (
-                            <button
-                                onClick={() => {
-                                    void (async () => {
-                                        try {
-                                            const squad = await ensureSquad(selectedTeamId);
-                                            const teamRow = studioTeams.find(t => t.team_id === selectedTeamId);
-                                            setActiveTactic({
-                                                ...activeTactic,
-                                                slots: populateSlotsWithSquad(squad, activeTactic.slots),
-                                                teamName: teamRow?.name,
-                                                teamId: selectedTeamId,
-                                            });
-                                            setIsTeamConfirmed(true);
-                                        } catch (e) {
-                                            console.error('[Studio] kadro yüklenemedi', e);
-                                            showToast('Kadro yüklenemedi.', 'error');
-                                        }
-                                    })();
-                                }}
-                                className="w-full h-12 bg-gradient-to-r from-[#39FF14] to-emerald-600 rounded-2xl flex items-center justify-center gap-2 text-black font-extrabold text-[0.625rem] tracking-widest uppercase hover:scale-[1.02] active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(57,255,20,0.3)] animate-pulse"
-                            >
-                                <Users size={16} />
-                                SEÇİLİ TAKIMI ONAYLA
-                            </button>
-                        )}
-                        
-                        {isSquadComplete && (
-                            <button
-                                onClick={() => setIsTeamConfirmed(true)}
-                                className="w-full h-12 bg-gradient-to-r from-[#39FF14] to-emerald-600 rounded-2xl flex items-center justify-center gap-2 text-black font-extrabold text-[0.625rem] tracking-widest uppercase hover:scale-[1.02] active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(57,255,20,0.3)] animate-pulse"
-                            >
-                                <Users size={16} />
-                                KADROYU ONAYLA
-                            </button>
-                        )}
+                        {/* TEK onay düğmesi — etiketi bağlama göre değişir; kadro elle
+                            doldurulmuşsa üzerine YAZILMAZ, yalnız onaylanır. */}
+                        <button
+                            onClick={() => void confirmTeamSelection()}
+                            className="w-full h-12 bg-[#39FF14] rounded-2xl flex items-center justify-center gap-2 text-black font-extrabold text-[0.625rem] tracking-widest uppercase hover:brightness-110 active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(57,255,20,0.25)]"
+                        >
+                            <Users size={16} />
+                            {!selectedTeamId ? 'KİŞİSEL OLARAK DEVAM ET'
+                                : isSquadComplete ? 'KADROYU ONAYLA' : 'KADROYU DİZ VE ONAYLA'}
+                        </button>
 
                         <button
                             onClick={() => setShowPlayerSelect({ type: 'any' })}
@@ -2551,11 +2758,16 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
             {isTeamConfirmed && (
                 <div className="px-6 pb-3 mt-4">
                     <div className="flex items-center gap-3 bg-[#161B22] rounded-2xl border border-white/5 p-3">
-                        <span className="w-9 h-9 rounded-xl flex items-center justify-center text-xs font-extrabold text-black shrink-0" style={{ background: confirmedTeam?.color1 || '#39FF14' }}>
-                            {trUpper((confirmedTeam?.short_name || activeTactic.teamName || '?').slice(0, 2))}
-                        </span>
+                        {/* Kişisel modda takım arması yerine nötr simge */}
+                        {confirmedTeam ? (
+                            <span className="w-9 h-9 rounded-xl flex items-center justify-center text-xs font-extrabold text-black shrink-0" style={{ background: confirmedTeam.color1 || '#39FF14' }}>
+                                {trUpper((confirmedTeam.short_name || activeTactic.teamName || '?').slice(0, 2))}
+                            </span>
+                        ) : (
+                            <span className="w-9 h-9 rounded-xl bg-white/10 border border-white/15 flex items-center justify-center text-white shrink-0"><UserPlus size={16} /></span>
+                        )}
                         <div className="flex-1 min-w-0">
-                            <div className="text-sm font-extrabold text-white truncate">{activeTactic.teamName || 'Takımım'}</div>
+                            <div className="text-sm font-extrabold text-white truncate">{confirmedTeam ? (activeTactic.teamName || confirmedTeam.name) : 'Kişisel'}</div>
                             <div className="text-[0.6875rem] font-bold text-ink-4">
                                 <span className={missingCount === 0 ? 'text-[#39FF14]' : 'text-amber-400'}>{filledCount}/{activeTactic.slots.length}</span> dizili
                                 {missingCount > 0 && <span className="ml-2 text-amber-400 font-extrabold uppercase tracking-widest">· {missingCount} eksik</span>}
@@ -2705,11 +2917,11 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                 <div className="flex gap-2 w-full items-stretch">
                     <button
                         onClick={() => setShowTacticsModal(true)}
-                        title="Taktiklerim"
+                        title="Kütüphane"
                         className="w-16 shrink-0 min-h-[56px] rounded-2xl bg-[#161B22] border border-white/10 flex flex-col items-center justify-center gap-1 text-gray-400 hover:text-white hover:bg-white/5 transition-all"
                     >
                         <List size={18} />
-                        <span className="font-extrabold text-[0.6875rem] tracking-widest">TAKTİKLER</span>
+                        <span className="font-extrabold text-[0.625rem] tracking-widest">KÜTÜPHANE</span>
                     </button>
 
                     <div className="flex-1 relative group">
@@ -3291,7 +3503,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                             <div className="p-5 border-b border-white/5 bg-[#0A0E14]/50">
                                 <div className="flex justify-between items-center mb-4">
                                     <h3 className="text-lg font-extrabold text-white uppercase tracking-widest flex items-center gap-2.5">
-                                        <List size={20} className="text-[#39FF14]" /> TAKTİK KÜTÜPHANESİ
+                                        <List size={20} className="text-[#39FF14]" /> KÜTÜPHANE
                                     </h3>
                                     <button onClick={() => setShowTacticsModal(false)} aria-label="Kapat" className="p-2 text-gray-400 hover:text-white transition-colors bg-white/5 rounded-full"><X size={18} /></button>
                                 </div>
@@ -3351,12 +3563,16 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                             none: 'hidden',
                                         };
                                         const isOpening = openingTacticId === entry.id;
+                                        const isDeleting = deletingTacticId === entry.id;
+                                        // Onay rozeti YALNIZ takım defterlerinde anlamlı. Kişisel
+                                        // kütüphanede her şey zaten senin; "Onaylı" rozeti gürültü.
+                                        const showStatus = entry.source === 'TEAM' && sm.tone !== 'none';
                                         return (
+                                            <div key={entry.id} className="flex items-stretch gap-2">
                                             <button
-                                                key={entry.id}
                                                 onClick={() => void openLibraryEntry(entry)}
-                                                disabled={isOpening}
-                                                className="w-full text-left p-4 rounded-2xl border border-white/5 bg-[#0A0E14]/30 hover:bg-[#39FF14]/10 hover:border-[#39FF14]/30 transition-all group flex items-center justify-between disabled:opacity-60"
+                                                disabled={isOpening || isDeleting}
+                                                className="flex-1 min-w-0 text-left p-4 rounded-2xl border border-white/5 bg-[#0A0E14]/30 hover:bg-[#39FF14]/10 hover:border-[#39FF14]/30 transition-all group flex items-center justify-between disabled:opacity-60"
                                             >
                                                 <div className="min-w-0">
                                                     <div className="flex items-center gap-2">
@@ -3367,7 +3583,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                                     </div>
                                                     <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                                                         <span className="text-[0.6875rem] font-mono text-ink-4 uppercase">{entry.formation || '—'} · {entry.size || '—'}</span>
-                                                        {sm.tone !== 'none' && (
+                                                        {showStatus && (
                                                             <span className={`text-[0.625rem] font-extrabold uppercase tracking-widest border rounded-full px-2 py-0.5 ${toneClass[sm.tone]}`}>{sm.label}</span>
                                                         )}
                                                     </div>
@@ -3376,6 +3592,20 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                                     {isOpening ? <Loader2 size={16} className="animate-spin" /> : <ChevronRight size={16} />}
                                                 </div>
                                             </button>
+                                            {/* Sil — yalnız kişisel kütüphanede (kendi kaydettiklerin).
+                                                Takım defterinde çıkmaz: oradan silme yetkisi yok. */}
+                                            {entry.source === 'MINE' && (
+                                                <button
+                                                    onClick={() => void handleDeleteLibraryEntry(entry)}
+                                                    disabled={isDeleting || isOpening}
+                                                    title="Taktiği sil"
+                                                    aria-label={`${entry.name} taktiğini sil`}
+                                                    className="shrink-0 w-12 rounded-2xl border border-white/5 bg-[#0A0E14]/30 text-ink-4 hover:text-red-400 hover:bg-red-500/10 hover:border-red-500/30 transition-all flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed"
+                                                >
+                                                    {isDeleting ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
+                                                </button>
+                                            )}
+                                            </div>
                                         );
                                     })
                                 )}
@@ -3420,17 +3650,46 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                         className="w-full bg-[#0A0E14] border border-white/10 rounded-2xl px-5 py-4 text-sm text-white placeholder-gray-600 focus:border-[#39FF14] outline-none transition-colors"
                                     />
                                 </div>
+                                {/* Nereye kaydedilecek? Son anda değiştirilebilir —
+                                    eskiden yalnız gösteriliyordu, seçilemiyordu. */}
+                                {studioTeams.length > 0 && (
+                                    <div>
+                                        <label className="block text-[0.625rem] font-extrabold text-gray-400 uppercase tracking-widest mb-2 ml-2">Nereye kaydedilsin?</label>
+                                        <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+                                            <button
+                                                type="button"
+                                                onClick={() => setSelectedTeamId(null)}
+                                                className={`shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-full text-[0.625rem] font-extrabold uppercase tracking-widest border transition-all ${!selectedTeamId ? 'bg-[#39FF14] text-black border-[#39FF14]' : 'bg-white/5 text-gray-400 border-white/10 hover:text-white'}`}
+                                            >
+                                                <List size={12} /> Kütüphanem
+                                            </button>
+                                            {studioTeams.map(t => (
+                                                <button
+                                                    key={t.team_id}
+                                                    type="button"
+                                                    onClick={() => setSelectedTeamId(t.team_id)}
+                                                    className={`shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-full text-[0.625rem] font-extrabold uppercase tracking-widest border transition-all ${selectedTeamId === t.team_id ? 'bg-[#39FF14] text-black border-[#39FF14]' : 'bg-white/5 text-gray-400 border-white/10 hover:text-white'}`}
+                                                >
+                                                    <span className="w-3.5 h-3.5 rounded-[4px] flex items-center justify-center text-[0.6875rem] font-extrabold text-black leading-none" style={{ background: t.color1 || '#39FF14' }}>
+                                                        {trUpper((t.short_name || t.name).charAt(0))}
+                                                    </span>
+                                                    {t.short_name || t.name}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
                                 {/* Hedef bağlam: status sunucuda belirlenir — dürüst önizleme */}
                                 <div className="bg-[#0A0E14] border border-white/10 rounded-2xl px-5 py-4 text-xs">
                                     {(() => {
                                         const teamRow = studioTeams.find(t => t.team_id === selectedTeamId);
                                         if (!teamRow) {
-                                            return <span className="text-gray-400">📁 <b className="text-white">Kişisel kütüphanene</b> kaydedilir.</span>;
+                                            return <span className="flex items-center gap-2.5 text-gray-400"><List size={15} className="text-[#39FF14] shrink-0" /><span><b className="text-white">Kişisel kütüphanene</b> kaydedilir.</span></span>;
                                         }
                                         const admin = teamRow.my_role === 'CAPTAIN' || teamRow.my_role === 'ADMIN';
                                         return admin
-                                            ? <span className="text-gray-400">🛡️ <b className="text-white">{teamRow.name}</b> oyun defterine <b className="text-[#39FF14]">onaylı</b> kaydedilir.</span>
-                                            : <span className="text-gray-400">🛡️ <b className="text-white">{teamRow.name}</b> yöneticilerine <b className="text-amber-400">öneri</b> olarak gönderilir.</span>;
+                                            ? <span className="flex items-center gap-2.5 text-gray-400"><Shield size={15} className="text-[#39FF14] shrink-0" /><span><b className="text-white">{teamRow.name}</b> oyun defterine <b className="text-[#39FF14]">onaylı</b> kaydedilir.</span></span>
+                                            : <span className="flex items-center gap-2.5 text-gray-400"><Shield size={15} className="text-amber-400 shrink-0" /><span><b className="text-white">{teamRow.name}</b> yöneticilerine <b className="text-amber-400">öneri</b> olarak gönderilir.</span></span>;
                                     })()}
                                 </div>
                                 {/* Kaydederken maça ata — yalnız yönetici + takım + yaklaşan maç (nextMatch effect zaten gate'ler) */}
@@ -3628,27 +3887,29 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                     <motion.div
                         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                         className="fixed inset-0 z-[70] bg-black/70 backdrop-blur-sm flex items-end justify-center p-4"
-                        onClick={() => setShowClearSheet(false)}
+                        onClick={closeClearSheet}
                     >
                         <motion.div
                             initial={{ y: 40, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 40, opacity: 0 }}
                             onClick={e => e.stopPropagation()}
                             className="w-full max-w-sm bg-[#0E1420] border border-white/10 rounded-[24px] p-5 shadow-2xl"
                         >
+                            {clearMode === null ? (<>
                             <div className="flex items-center gap-2 mb-4">
                                 <Trash2 size={18} className="text-red-400" />
                                 <h3 className="text-sm font-extrabold text-white uppercase tracking-widest">Neyi temizleyelim?</h3>
                             </div>
                             <div className="space-y-2">
-                                <button onClick={clearDrawingsOnly} disabled={drawings.length === 0}
+                                {/* Artık doğrudan silmez: içeriği listeleyip seçtirir. */}
+                                <button onClick={() => { setClearPicks([]); setClearMode('drawings'); }} disabled={drawings.length === 0}
                                     className="w-full flex items-center justify-between px-4 py-3 rounded-2xl bg-white/5 text-white text-sm font-bold hover:bg-white/10 transition-all disabled:opacity-30 disabled:cursor-not-allowed">
                                     <span className="flex items-center gap-3"><PenTool size={16} className="text-[#39FF14]" /> Sadece çizimler</span>
-                                    <span className="text-[0.6875rem] text-ink-4 font-mono">{drawings.length}</span>
+                                    <span className="flex items-center gap-2 text-[0.6875rem] text-ink-4 font-mono">{drawings.length} <ChevronRight size={14} /></span>
                                 </button>
-                                <button onClick={clearOpponentsOnly} disabled={activeTactic.opponents.length === 0}
+                                <button onClick={() => { setClearPicks([]); setClearMode('opponents'); }} disabled={activeTactic.opponents.length === 0}
                                     className="w-full flex items-center justify-between px-4 py-3 rounded-2xl bg-white/5 text-white text-sm font-bold hover:bg-white/10 transition-all disabled:opacity-30 disabled:cursor-not-allowed">
                                     <span className="flex items-center gap-3"><Swords size={16} className="text-red-400" /> Sadece rakipler</span>
-                                    <span className="text-[0.6875rem] text-ink-4 font-mono">{activeTactic.opponents.length}</span>
+                                    <span className="flex items-center gap-2 text-[0.6875rem] text-ink-4 font-mono">{activeTactic.opponents.length} <ChevronRight size={14} /></span>
                                 </button>
                                 {selectedEl && (
                                     <button onClick={clearSelected}
@@ -3661,7 +3922,79 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                     <Trash2 size={16} /> Hepsini sil
                                 </button>
                             </div>
-                            <button onClick={() => setShowClearSheet(false)}
+                            </>) : (<>
+                            {/* ── Seçim listesi: tek tek işaretle, altta topluca sil ── */}
+                            {(() => {
+                                const isDraw = clearMode === 'drawings';
+                                const rows = isDraw
+                                    ? drawings.map((d, i) => {
+                                        const owner = [...activeTactic.slots, ...activeTactic.opponents]
+                                            .find(el => el.id === d.attachedTo)?.player?.name;
+                                        return {
+                                            id: d.id,
+                                            label: `${i + 1} · ${d.type === 'line' ? 'Koşu' : 'Pas'}${owner ? ` — ${owner}` : ''}`,
+                                        };
+                                    })
+                                    : activeTactic.opponents.map((o, i) => ({
+                                        id: o.id,
+                                        label: o.player?.name || `Rakip ${i + 1}`,
+                                    }));
+                                const total = rows.length;
+                                const picked = clearPicks.length;
+                                const allPicked = total > 0 && picked === total;
+                                return (<>
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <button onClick={() => { setClearMode(null); setClearPicks([]); }}
+                                            aria-label="Geri" title="Geri"
+                                            className="w-8 h-8 -ml-1 rounded-full bg-white/5 text-white flex items-center justify-center hover:bg-white/10 transition-all shrink-0">
+                                            <ChevronLeft size={16} />
+                                        </button>
+                                        <h3 className="text-sm font-extrabold text-white uppercase tracking-widest">
+                                            {isDraw ? 'Çizimler' : 'Rakipler'}
+                                        </h3>
+                                        <span className="text-[0.6875rem] text-ink-4 font-mono">{total}</span>
+                                    </div>
+                                    <p className="text-[0.6875rem] text-ink-4 mb-3 pl-1">
+                                        Silmek istediklerine dokunup işaretle, sonra alttaki düğmeye bas.
+                                    </p>
+                                    {/* Tümünü işaretle / kaldır */}
+                                    <button
+                                        onClick={() => setClearPicks(allPicked ? [] : rows.map(r => r.id))}
+                                        className="w-full mb-2 py-2 rounded-xl bg-white/5 text-gray-300 text-[0.6875rem] font-extrabold uppercase tracking-widest hover:bg-white/10 transition-all"
+                                    >{allPicked ? 'İşaretleri kaldır' : 'Tümünü işaretle'}</button>
+                                    <div data-testid="clear-pick-list" className="space-y-1.5 max-h-56 overflow-y-auto no-scrollbar">
+                                        {rows.map(r => {
+                                            const on = clearPicks.includes(r.id);
+                                            return (
+                                                <button
+                                                    key={r.id}
+                                                    onClick={() => toggleClearPick(r.id)}
+                                                    aria-pressed={on}
+                                                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-bold transition-all border ${on ? 'bg-red-500/15 text-red-300 border-red-500/40' : 'bg-white/5 text-white border-transparent hover:bg-white/10'}`}
+                                                >
+                                                    <span className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 ${on ? 'bg-red-500 border-red-500 text-white' : 'border-white/25'}`}>
+                                                        {on && <Check size={12} />}
+                                                    </span>
+                                                    <span className="truncate text-left">{r.label}</span>
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                    <button
+                                        onClick={isDraw ? deletePickedDrawings : deletePickedOpponents}
+                                        disabled={picked === 0}
+                                        className="w-full mt-3 flex items-center justify-center gap-2 py-3 rounded-2xl bg-red-500/15 text-red-400 text-sm font-extrabold hover:bg-red-500/25 transition-all border border-red-500/30 disabled:opacity-30 disabled:cursor-not-allowed"
+                                    >
+                                        <Trash2 size={16} /> Seçilenleri sil{picked > 0 ? ` (${picked})` : ''}
+                                    </button>
+                                    <button
+                                        onClick={isDraw ? clearDrawingsOnly : clearOpponentsOnly}
+                                        className="w-full mt-2 py-3 rounded-2xl bg-white/5 text-gray-300 text-xs font-extrabold uppercase tracking-widest hover:bg-red-500/20 hover:text-red-400 transition-all"
+                                    >Hepsini sil ({total})</button>
+                                </>);
+                            })()}
+                            </>)}
+                            <button onClick={closeClearSheet}
                                 className="w-full mt-3 py-3 rounded-2xl bg-white/5 text-gray-400 text-xs font-bold uppercase tracking-widest hover:bg-white/10 transition-all">
                                 Vazgeç
                             </button>

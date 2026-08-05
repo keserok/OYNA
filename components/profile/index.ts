@@ -1,4 +1,5 @@
 export { ProfileHero } from './ProfileHero';
+export { ProfileIdentityCard } from './ProfileIdentityCard';
 export { PlayerCardBack } from './PlayerCardBack';
 export { TrustScoreCard } from './TrustScoreCard';
 export { ProfileShortcuts } from './ProfileShortcuts';

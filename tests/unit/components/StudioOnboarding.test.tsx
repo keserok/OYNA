@@ -85,13 +85,17 @@ describe('Studio — ilk kullanım tanıtımı', () => {
     await waitFor(() => expect(screen.queryByText('Oyuncuları yerleştir')).not.toBeInTheDocument());
   });
 
-  it('tanıtım kapanınca boş tahta örnek taktik davet eder; tıklayınca plana koyar', async () => {
+  // Örnek taktik 2026-08-04'te KALDIRILDI (kullanıcı kararı): tanıtım zaten
+  // araçların tamamını anlatıyor, ayrıca hazır taktik önerilmiyor. Tanıtım
+  // kapanınca boş tahtada davet/öneri ÇIKMAMALI.
+  it('tanıtım kapanınca boş tahtada örnek taktik daveti çıkmaz', async () => {
     renderStudio();
     await screen.findByText('Oyuncuları yerleştir');
     fireEvent.click(screen.getByRole('button', { name: 'Başla' }));
 
-    fireEvent.click(await screen.findByText('Örnek taktiği yükle'));
-    await waitFor(() => expect(screen.getAllByText('Örnek Taktik').length).toBeGreaterThan(0));
+    await waitFor(() => expect(screen.queryByText('Oyuncuları yerleştir')).not.toBeInTheDocument());
+    expect(screen.queryByText('Örnek taktiği yükle')).not.toBeInTheDocument();
+    expect(screen.queryByText('Örnek Taktik')).not.toBeInTheDocument();
   });
 
   it('Yardım butonu tanıtımı yeniden açar', async () => {

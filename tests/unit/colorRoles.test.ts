@@ -68,6 +68,10 @@ const OYUNCU_DOSYALARI = [
   'components/pitch-showcase/PitchShowcaseCard.tsx',
   'components/pitch-editor/ShowcasePreview.tsx',
   'components/pitch-editor/PhotoManager.tsx',
+  // Profili Düzenle: BEYAZ seçim/Kaydet kararının bekçisi (aşağıdaki
+  // "beyaz seçim" bloğu). Eskiden bu dosya kural kapsamının DIŞINDAYDI —
+  // yani renk değişse kimse haber vermezdi (CLAUDE.md P-0).
+  'components/profile/ProfileEditSheet.tsx',
 ];
 
 describe('renk-rol tablosu — tokenlar', () => {
@@ -242,12 +246,53 @@ describe('marka logosu', () => {
     expect(logo, 'SVG içinde sabit hex kalmış').not.toMatch(/(stroke|fill)="#[0-9A-Fa-f]{3,6}"/);
   });
 
-  it('splash ve profil logoyu marka rengine bağlıyor', () => {
-    for (const dosya of ['views/SplashScreen.tsx', 'views/ProfileScreen.tsx']) {
+  // Profil ekranı, onaylı profil tasarımıyla birlikte üst bardaki logoyu
+  // KALDIRDI: alt menüde "Profil" sekmesi zaten yanıyordu, başlık + logo aynı
+  // şeyi ikinci kez söylüyordu. Kural değişmedi — logoyu ÇİZEN her yer rengi
+  // çağrı yerinden vermeye devam ediyor; profil artık çizenlerden biri değil.
+  it('logoyu çizen ekranlar marka rengine bağlıyor', () => {
+    for (const dosya of ['views/SplashScreen.tsx']) {
       const src = oku(dosya);
       const blok = src.slice(src.indexOf('<OynaLogo'));
       expect(blok.slice(0, 400), `${dosya} logoya text-primary vermiyor`).toContain('text-primary');
     }
+  });
+
+  it('profil ekranı logoyu artık çizmiyor (tasarım kararı)', () => {
+    // Geri sızarsa yukarıdaki listeye de eklenmeli — renksiz logo kaçağı olmasın.
+    expect(oku('views/ProfileScreen.tsx')).not.toContain('<OynaLogo');
+  });
+});
+
+// ─── BEYAZ SEÇİM — "Profili Düzenle" ekranının bilinçli istisnası ───────────
+//
+// O ekranda aynı anda ÜÇ seçim ızgarası var: cinsiyet, mevki ve oyun stili.
+// Oyun stili çipleri KENDİ kimlik renklerini taşır (Ciddi kırmızı, Taktiksel
+// turuncu, Rahat yeşil). "Seçili" durumu da yeşil olsaydı, "Rahat"ın yeşiliyle
+// "seçildi"nin yeşili aynı ekranda çakışır; hangisi kimlik hangisi durum
+// ayırt edilemezdi. Beyaz hiçbir kimliğe ait değil — yalnız "bunu sen seçtin"
+// der. Kaydet düğmesi de aynı dilde beyaz.
+//
+// BU BLOK NEDEN VAR: karar renk-rol tablosunda YAZILI DEĞİL, yalnız bu ekranda
+// geçerli. Bekçisi olmadan bir sonraki oturum "birincil eylem yeşil olmalı"
+// diyip sessizce geri çevirebilirdi (CLAUDE.md P-0).
+describe('beyaz seçim — Profili Düzenle', () => {
+  const sheet = oku('components/profile/ProfileEditSheet.tsx');
+
+  it('seçili kutu BEYAZ dolgu + koyu metin', () => {
+    expect(sheet).toMatch(/secili\s*\?\s*'bg-white border-white text-\[#0A0E14\]'/);
+    expect(sheet, 'seçim yeşile geri dönmüş').not.toMatch(/secili\s*\?\s*'bg-primary/);
+  });
+
+  it('Kaydet düğmesi BEYAZ, başarı anında yeşile döner', () => {
+    // Beyaz = "bas"; yeşil = "oldu". İkisi farklı şeyler söyler.
+    expect(sheet).toContain("'bg-white text-[#0A0E14] disabled:opacity-60'");
+    expect(sheet).toContain('Kaydedildi');
+  });
+
+  it('beyaz üstünde koyu metin fazlasıyla okunur', () => {
+    // WCAG'de üst sınır yok; ölçüyü yine de kayda geçiriyoruz.
+    expect(kontrast('#0A0E14', '#FFFFFF')).toBeGreaterThanOrEqual(4.5);
   });
 
   // Ana sayfa, onaylı tasarımla birlikte `OynaLogo` yerine tasarımın kendi

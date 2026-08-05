@@ -17,6 +17,7 @@ import PendingVerificationView from './views/PendingVerificationView';
 import { PAGE_TRANSITION } from './components/common/motion';
 import OfflineBanner from './components/OfflineBanner';
 import { GlobalToast, showToast } from './components/common/GlobalToast';
+import PushIzniModal from './components/common/PushIzniModal';
 import SignupGate from './components/common/SignupGate';
 import { Spinner } from './components/ui/Spinner';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -117,6 +118,9 @@ const ViewLoader = () => {
 };
 
 const App: React.FC = () => {
+  // D2: bildirim izni doğru anda istenir. setupPush kendini buraya kaydeder;
+  // PushIzniModal onay verilince onu izinIste=true ile çağırır.
+  const pushKurulumRef = React.useRef<((izinIste: boolean) => void) | null>(null);
   const [verificationNote, setVerificationNote] = React.useState<string | null>(null);
   // Oturum geri yüklemesi ilk kez çözüldü mü? (Splash otomatik geçişi bunu bekler)
   const [authResolved, setAuthResolved] = React.useState(false);
@@ -457,7 +461,10 @@ const App: React.FC = () => {
     let unsubscribeRealtime: (() => void) | undefined;
     let setupForUid: string | null = null;
 
-    const setupPush = async (uid: string) => {
+    const setupPush = async (uid: string, izinIste = false) => {
+      // D2: izin artık GİRİŞTE istenmiyor. Doğru an (maça katılma) geldiğinde
+      // PushIzniModal bu fonksiyonu izinIste=true ile yeniden çağırır.
+      pushKurulumRef.current = (yeniIzin: boolean) => setupPush(uid, yeniIzin);
       // 1. Kullanıcı tercihlerini Supabase'den çek
       const prefs = await fetchNotificationPreferences(uid);
       setNotificationPreferences(prefs);
@@ -503,6 +510,7 @@ const App: React.FC = () => {
             showToast, // IP-06: maç çekilemezse sessiz kalma, kullanıcıya söyle
           });
         },
+        izinIste,
       );
 
       // 3. Supabase Realtime ile in-app bildirimleri dinle
@@ -848,7 +856,14 @@ const App: React.FC = () => {
   // elle yazılan ikinci bir dizi olduğu sürece ikisi kaçınılmaz olarak ayrışıyordu.
   // Taktik Stüdyo listeden çıktı: sekmesi yoktu, çubuk çiziliyor ama hiçbir sekme
   // yanmıyordu. Artık tam ekran açılır ve kendi geri okuyla kapanır.
-  const showBottomNav = (TAB_IDS as readonly string[]).includes(view);
+  //
+  // ANA SAYFA MUAF (kullanıcı kararı, onaylı tasarım): ana sayfada alt menü
+  // ÇİZİLMEZ. Ekranın kendisi zaten altı kapının tamamını taşıyor; altına bir
+  // de aynı kapıların kısayolunu koymak ekranı ikiye bölüyordu. Çubuk kapı
+  // ekranlarında görünür ve eve dönüş oradaki "Ana Sayfa" sekmesinden olur —
+  // bu yüzden DASHBOARD `TAB_IDS`'ten ÇIKARILMADI, yalnız burada elenir.
+  // Çıkarılsaydı hiçbir ekrandan ana sayfaya dönülemezdi.
+  const showBottomNav = (TAB_IDS as readonly string[]).includes(view) && view !== 'DASHBOARD';
 
   return (
     // IP-11: framer-motion animasyonları CSS'teki prefers-reduced-motion
@@ -869,6 +884,7 @@ const App: React.FC = () => {
         </div>
       )}
       <GlobalToast />
+      <PushIzniModal onIzinIste={() => pushKurulumRef.current?.(true)} />
       <SignupGate />
       {/* Mesh Gradient Background */}
       <div className="mesh-bg">
@@ -890,11 +906,11 @@ const App: React.FC = () => {
           className={`w-full h-full absolute inset-0 overflow-y-auto overscroll-contain custom-scrollbar ${
             // MY_MATCHES kendi içinde kaydırır ve bar payını kendisi ayırır →
             // dış dolgu ölü bant yaratmasın, kartlar barın altından aksın.
-            // DASHBOARD aynı gerekçeyle muaf: ana sayfa TEK EKRANA sığan,
-            // kaydırmasız bir düzendir; yüksekliğini kapsayıcının tamamından
-            // (`height:100%` + container query) hesaplar ve alt menü payını
-            // kendi içinde ayırır. Dıştan `pb-safe-nav` eklenirse pay İKİ KEZ
-            // sayılır: kartlar sıkışır, altta ölü bant kalır.
+            // DASHBOARD aynı gerekçeyle muaf: ana sayfa kökü `height:100%` +
+            // `overflow:hidden`, içerik kendi kaydırıcısında akar ve alt
+            // güvenli alan payını orada ayırır. Ayrıca bu ekranda alt menü
+            // hiç çizilmez (yukarıdaki `showBottomNav`), yani ayrılacak bar
+            // payı da yoktur. Dıştan dolgu eklenirse yalnız ölü bant kalır.
             // MATCH_DISCOVERY de aynı ailede: ekran `max-h-screen` + kendi
             // iç kaydırması ile çalışır, kart listesi ve filtre paneli bar
             // payını kendileri ayırır. Dış dolgu bırakılırsa sayfa 120px

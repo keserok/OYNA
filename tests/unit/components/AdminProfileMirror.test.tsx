@@ -172,7 +172,10 @@ describe('Kullanıcı Profili Aynası (admin)', () => {
     expect(await screen.findByText('Doğum tarihi')).toBeInTheDocument();
     expect(screen.getByText('01 — Kimlik')).toBeInTheDocument();
     expect(screen.getByText('02 — Oyun')).toBeInTheDocument();
-    expect(screen.getByText('03 — Tanıtım')).toBeInTheDocument();
+    // "03 — Tanıtım" onaylı tasarımla KALDIRILDI (tanıtım yalnız
+    // kaleci/hakem kartında görünür ve orada düzenlenir). Kayıtlı değer
+    // silinmez: aşağıdaki `fields` denetiminde bio olduğu gibi geçer.
+    expect(screen.queryByText('03 — Tanıtım')).not.toBeInTheDocument();
     // Seviye, oyuncunun kendi beyanı — admin aynasında salt-okunur.
     expect(screen.getByText(/değiştirilemez/)).toBeInTheDocument();
 

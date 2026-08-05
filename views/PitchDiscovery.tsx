@@ -1,12 +1,13 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  ArrowLeft, Search, Filter, MapPin, Star,
+  ArrowLeft, Search, MapPin, Star,
   ChevronRight, ChevronLeft, X, Map as MapIcon, LayoutGrid,
   Thermometer, Wind, Flag, Calendar as CalendarIcon,
   LocateFixed, Loader2, Navigation2, MapPinOff, Bell, Send, Check, Plus,
 } from 'lucide-react';
 import { Pitch, Court } from '../types';
+import { SCREEN } from '../ui/labels';
 import { useAppStore } from '../store';
 import MapGL, { Marker as MapMarker, Source as MapSource, Layer as MapLayer, AttributionControl, type MapRef } from 'react-map-gl/maplibre';
 import 'maplibre-gl/dist/maplibre-gl.css';
@@ -395,7 +396,14 @@ const MapViewComponent = ({
                       <div className="flex-1 min-w-0 py-0.5">
                         <div className="flex items-start justify-between gap-2">
                           <h4 className="text-[0.75rem] font-extrabold italic uppercase text-white truncate">{p.name}</h4>
-                          <span className="flex items-center gap-0.5 text-[0.6875rem] font-extrabold text-[#FACC15] shrink-0">★ {p.rating}</span>
+                          {/* B1 (4 Ağustos 2026): değerlendirilmemiş saha "★ 0" gösteriyordu —
+                              "sıfır puan almış" gibi okunuyordu. PitchShowcaseCard'daki
+                              V-2 kuralı buraya da uygulandı: gerçek oy yoksa "Yeni". */}
+                          {(p.ratingCount > 0 || p.googleReviews > 0) ? (
+                            <span className="flex items-center gap-0.5 text-[0.6875rem] font-extrabold text-[#FACC15] shrink-0">★ {p.rating.toFixed(1)}</span>
+                          ) : (
+                            <span className="text-[0.625rem] font-extrabold uppercase tracking-wide text-ink-4 shrink-0">Yeni</span>
+                          )}
                         </div>
                         <div className="flex items-center gap-2 mt-1 text-[0.6875rem] font-bold text-white/50">
                           <span className="truncate">{p.district}</span>
@@ -546,11 +554,29 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
       // V-3: pitch_flash_deals SLOT-ÖZEL (court_id/booking_date/start_time). Vitrinde
       // tüm sahaya indirim yansıtmak yem-değiştirdi; bu yüzden burada çekilmiyor. Doğru
       // slot-özel indirim (rezervasyon takviminde ilgili slotta + booking fiyatında) OW-D.
-      const pitchRes = await supabase
+      // E1 (4 Ağustos 2026): Eskiden ülkedeki TÜM yayınlanmış sahalar çekilip
+      // filtreleme tarayıcıda yapılıyordu. Bugün 6 saha var, sorun değil; ~200
+      // sahada liste yavaşlar ve boşuna mobil veri harcanır.
+      //
+      // HİÇBİR ŞEYİ GİZLEMEZ: bölge filtresi (pitchInSelectedRegions) zaten
+      // tarayıcıda uygulanıyordu — bu satırlar sadece "nasılsa elenecek"
+      // satırların indirilmesini engeller. Şehri boş olan sahalar bilerek
+      // dışarıda bırakılmaz: eski filtre onları ilçeden eşleştirebiliyordu.
+      let sorgu = supabase
         .from('pitches')
         .select(PITCH_SHOWCASE_SELECT)
         .eq('is_open', true)
         .eq('is_published', true);
+
+      const secilenSehirler = Array.from(
+        new Set(selectedRegions.map((r) => r.city).filter(Boolean)),
+      ) as string[];
+      if (secilenSehirler.length > 0) {
+        const liste = secilenSehirler.map((c) => `"${c.replace(/"/g, '')}"`).join(',');
+        sorgu = sorgu.or(`city.is.null,city.in.(${liste})`);
+      }
+
+      const pitchRes = await sorgu;
 
       if (pitchRes.error) throw pitchRes.error;
 
@@ -565,7 +591,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
     } finally {
       setPitchesLoading(false);
     }
-  }, []);
+  }, [selectedRegions]);
 
   /**
    * "Bugün X saat müsait" rozeti (Karar #7): doluluk kişisel-veri-içermeyen
@@ -1227,7 +1253,10 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
     <div className="h-full bg-[#0A0E14] text-white flex flex-col font-sans overflow-hidden">
 
       {/* Header Section */}
-      <header className="px-6 pt-safe pb-3 bg-gradient-to-b from-[#0A0E14] to-transparent sticky top-0 z-40 backdrop-blur-md">
+      {/* pt-safe-baslik: `pt-safe` güvenli alanı BİLDİRMEYEN cihazda 16px'e
+          düşüyor ve başlık çentiğin altına giriyordu. Yeni kural ikisinden
+          büyüğünü alır (bkz. index.css). */}
+      <header className="px-6 pt-safe-baslik pb-3 bg-gradient-to-b from-[#0A0E14] to-transparent sticky top-0 z-40 backdrop-blur-md">
         <div className="flex items-start justify-between">
           <div className="min-w-0">
             {isSelectionMode && (
@@ -1240,7 +1269,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
               </button>
             )}
             <h1 className="mt-1 text-[2rem] font-extrabold italic uppercase tracking-[-0.04em] leading-[0.9]">
-              Sahalar
+              {SCREEN.pitchDiscovery}
             </h1>
           </div>
 
@@ -1259,59 +1288,49 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
                 <MapIcon size={11} /> Harita
               </button>
             </div>
-            <div className="flex gap-2">
-              {/* Favori filtresi: kapalıyken yıldız BOŞ, açılınca dolar ve yalnız favoriler listelenir */}
-              <button
-                onClick={() => setFavOnly(v => !v)}
-                title={favOnly ? 'Tüm sahaları göster' : 'Favori sahaları göster'}
-                aria-pressed={favOnly}
-                className={`relative w-10 h-10 rounded-[13px] flex items-center justify-center transition-all border ${
-                  favOnly
-                    ? 'bg-[#39FF14]/15 border-[#39FF14] shadow-[0_0_14px_rgba(57,255,20,0.4)]'
-                    : 'bg-white/5 border-white/10'
-                }`}
-              >
-                <Star
-                  size={19}
-                  strokeWidth={2}
-                  className={`transition-colors ${favOnly ? 'fill-[#39FF14] text-[#39FF14]' : 'fill-transparent text-[#39FF14]/80'}`}
-                />
-                {favorites.size > 0 && (
-                  <span className="absolute -top-1.5 -right-1.5 min-w-4 h-4 px-1 rounded-lg bg-[#39FF14] text-on-primary text-[0.6875rem] font-extrabold flex items-center justify-center border-2 border-[#0A0E14]">
-                    {favorites.size}
-                  </span>
-                )}
-              </button>
-              <button
-                onClick={() => setShowFilters(true)}
-                title="Filtrele"
-                className={`relative w-10 h-10 rounded-[13px] border flex items-center justify-center transition-all ${
-                  activeFilterCount > 0 ? 'bg-[#39FF14]/15 border-[#39FF14]/60 text-[#39FF14]' : 'bg-white/5 border-white/10'
-                }`}
-              >
-                <Filter size={17} />
-                {activeFilterCount > 0 && (
-                  <span className="absolute -top-1.5 -right-1.5 min-w-4 h-4 px-1 rounded-lg bg-[#39FF14] text-on-primary text-[0.6875rem] font-extrabold flex items-center justify-center border-2 border-[#0A0E14]">
-                    {activeFilterCount}
-                  </span>
-                )}
-              </button>
-            </div>
           </div>
         </div>
 
-        {/* Search Bar */}
-        <div className="relative group mt-4">
-          <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none text-ink-4 group-focus-within:text-[#39FF14] transition-colors">
-            <Search size={17} />
+        {/* Arama + favori yıldızı — TEK SATIR (kullanıcı kararı, 4 Ağustos 2026).
+            Yıldız eskiden başlığın altında, filtre tuşunun yanındaydı; filtre
+            tuşu kaldırılınca tek başına satır kaplıyordu. Artık aramanın
+            sağında, aynı yükseklikte (h-12) duruyor. */}
+        <div className="flex items-center gap-2 mt-4">
+          <div className="relative group flex-1 min-w-0">
+            <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none text-ink-4 group-focus-within:text-[#39FF14] transition-colors">
+              <Search size={17} />
+            </div>
+            <input
+              type="text"
+              placeholder="Saha veya bölge ara…"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full h-12 bg-[#161B22] border border-white/5 rounded-2xl pl-12 pr-5 text-sm font-bold outline-none focus:border-[#39FF14]/50 focus:bg-[#1C232B] transition-all shadow-inner"
+            />
           </div>
-          <input
-            type="text"
-            placeholder="Saha veya bölge ara…"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full h-12 bg-[#161B22] border border-white/5 rounded-2xl pl-12 pr-5 text-sm font-bold outline-none focus:border-[#39FF14]/50 focus:bg-[#1C232B] transition-all shadow-inner"
-          />
+
+          {/* Favori filtresi: kapalıyken yıldız BOŞ, açılınca dolar ve yalnız favoriler listelenir */}
+          <button
+            onClick={() => setFavOnly(v => !v)}
+            title={favOnly ? 'Tüm sahaları göster' : 'Favori sahaları göster'}
+            aria-pressed={favOnly}
+            className={`relative w-12 h-12 shrink-0 rounded-2xl flex items-center justify-center transition-all border ${
+              favOnly
+                ? 'bg-[#39FF14]/15 border-[#39FF14] shadow-[0_0_14px_rgba(57,255,20,0.4)]'
+                : 'bg-[#161B22] border-white/5'
+            }`}
+          >
+            <Star
+              size={19}
+              strokeWidth={2}
+              className={`transition-colors ${favOnly ? 'fill-[#39FF14] text-[#39FF14]' : 'fill-transparent text-[#39FF14]/80'}`}
+            />
+            {favorites.size > 0 && (
+              <span className="absolute -top-1.5 -right-1.5 min-w-4 h-4 px-1 rounded-lg bg-[#39FF14] text-on-primary text-[0.6875rem] font-extrabold flex items-center justify-center border-2 border-[#0A0E14]">
+                {favorites.size}
+              </span>
+            )}
+          </button>
         </div>
 
       </header>
@@ -1451,7 +1470,14 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
         )}
       </main>
 
-      {/* ── Filtre sheet: TÜM seçenekler gerçek vitrin verisinden türetilir ── */}
+      {/* ── Filtre sheet ─────────────────────────────────────────────────────
+          ⚠️ ŞU AN ERİŞİLEMEZ. Bu paneli açan TEK düğme (başlıktaki filtre
+          tuşu) 4 Ağustos 2026'da kullanıcı kararıyla kaldırıldı. Kod bilerek
+          silinmedi: paneli geri istemek kolay olsun diye duruyor — açmak için
+          `setShowFilters(true)` çağıran bir giriş eklemek yeterli.
+          Sıralama (sortOrder) seçimi de bu panelin içindedir; o da şu an
+          erişilemez, liste varsayılan sırada gelir.
+          TÜM seçenekler gerçek vitrin verisinden türetilir. ────────────── */}
       <AnimatePresence>
         {showFilters && (
           <div className="fixed inset-0 z-[100] flex items-end justify-center">

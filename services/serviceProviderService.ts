@@ -6,15 +6,19 @@ import { UserRole } from '../types';
 export interface ServiceApplicationData {
   fullName: string;
   phone: string;          // E.164 (+90...) formatında
-  fee: number;            // Maç başı ücret (₺)
+  /** Maç başı ücret (₺). null = HENÜZ BELİRLENMEDİ.
+   *  0 DEĞİL null olmasının sebebi: 0 "bedava çalışırım" demektir ve sunucu
+   *  bunu geçerli bir ücret sayıp sağlayıcıyı 0 ₺'ye kiralatıyordu. null olunca
+   *  create_service_request PROVIDER_NO_FEE ile reddeder. */
+  fee: number | null;
   bio: string;
   style: string;          // Kaleci stili / Hakem yaklaşımı
   preferredZones: string[];
-  // Kaleciye özel
-  height?: string;
-  age?: number;
-  // Hakeme özel
-  level?: string;         // İl / Bölgesel / Klasman / FIFA
+  // Kaleciye özel (başvuruda isteğe bağlı — sonradan doldurulabilir)
+  height?: string | null;
+  age?: number | null;
+  // Hakeme özel (başvuruda isteğe bağlı)
+  level?: string | null;  // İl / Bölgesel / Klasman / FIFA
   experienceYears?: number;
 }
 
@@ -75,7 +79,7 @@ export const submitServiceApplication = async (
         name: data.fullName.trim(),
         height: data.height ?? null,
         age: data.age ?? null,
-        fee: data.fee,
+        fee: data.fee,          // null = ücret belirlenmedi (kiralanamaz)
         bio: data.bio.trim(),
         style: data.style,
         preferredZones: data.preferredZones,
@@ -95,7 +99,7 @@ export const submitServiceApplication = async (
         authUid: uid,
         name: data.fullName.trim(),
         level: data.level ?? null,
-        fee: data.fee,
+        fee: data.fee,          // null = ücret belirlenmedi (kiralanamaz)
         bio: data.bio.trim(),
         style: data.style,
         preferredZones: data.preferredZones,

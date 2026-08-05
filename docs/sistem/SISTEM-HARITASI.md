@@ -68,6 +68,7 @@ Kullanıcıdan para almak, cüzdanda tutmak, saha sahibine ve hakem/kaleciye öd
 components/payment/
 hooks/useMacParaBilgisi.ts
 services/financeService.ts
+services/gkSozlesmeService.ts
 services/paymentModeService.ts
 services/paymentService.ts
 services/walletService.ts
@@ -248,14 +249,16 @@ Kullanıcıya haber vermek. Uygulama içi bildirim, telefon bildirimi (push), e-
 **Dosyalar:**
 
 ```
+components/common/PushIzniModal.tsx
 notifications/
+notifications/pushIzniKapisi.ts
 services/notificationService.ts
-supabase/functions/send-push/
-supabase/functions/send-email/
 supabase/functions/admin-broadcast/
+supabase/functions/send-email/
+supabase/functions/send-push/
 ```
 
-**Veritabanı nesneleri:** `notifications`, `notify_send_push_webhook`, `send_match_reminders`, `admin_broadcast_notification`, `net._http_response`
+**Veritabanı nesneleri:** `notifications`, `notify_send_push_webhook`, `send_match_reminders`, `admin_broadcast_notification`, `net._http_response`, `bildirim_gonderilsin_mi`, `bildirim_modu_bekcisi`, `bildirim_modum`, `bildirim_modu_ayarla`, `admin_bildirim_seviyeleri`, `admin_bildirim_seviyesi_ayarla`
 
 **Bu taşı koruyan kontroller:**
 
@@ -387,11 +390,12 @@ Kimse dokunmadan kendi kendine çalışan işler. Zamanlanmış görevler (cron)
 **Dosyalar:**
 
 ```
-supabase/functions/sweep-stale-payments/
+admin-panel/views/components/ElleBakilacaklar.tsx
 services/matchLifecycleService.ts
+supabase/functions/sweep-stale-payments/
 ```
 
-**Veritabanı nesneleri:** `cron.job`, `auto_process_matches`, `auto_finalize_matches`, `process_match_at_deadline`, `expire_service_requests`, `expire_stale_waitlists`, `release_owner_earnings`
+**Veritabanı nesneleri:** `cron.job`, `auto_process_matches`, `auto_finalize_matches`, `process_match_at_deadline`, `expire_service_requests`, `expire_stale_waitlists`, `release_owner_earnings`, `supurucu_hata_kaydet`, `admin_elle_bakilacaklar`, `admin_raftan_indir`
 
 **Bu taşı koruyan kontroller:**
 
@@ -649,7 +653,7 @@ supabase/migrations/20260804150000_sre3_ek_bilgi_temizligi.sql
 supabase/migrations/20260804160000_sre3_gizlendi_etiketi_duzeltmesi.sql
 ```
 
-**Veritabanı nesneleri:** `istemci_hatalari`, `hata_bildir`, `hata_ozeti`, `hata_temizle_metin`, `hata_temizle_json`, `hata_kayitlarini_temizle`, `hata_kayit_temizligi`, `sistem_saglik_kayitlari`, `sistem_saglik_calistir`, `sistem_saglik_ozet`, `sistem_saglik_gunluk`
+**Veritabanı nesneleri:** `istemci_hatalari`, `hata_bildir`, `hata_ozeti`, `hata_temizle_metin`, `hata_temizle_json`, `hata_kayitlarini_temizle`, `hata_kayit_temizligi`, `sistem_saglik_kayitlari`, `sistem_saglik_calistir`, `sistem_saglik_ozet`, `sistem_saglik_gunluk`, `sistem_saglik_ek_kontroller`
 
 **Bu taşı koruyan kontroller:**
 

@@ -164,6 +164,9 @@ describe('uygulamada tesis onayından eser kalmadı', () => {
       'views/ServiceApplication.tsx',
       'views/PendingVerificationView.tsx',
       'views/ProfileScreen.tsx',
+      // Profil düzenleme Ayarlar'a taşındı (2026-08); "doğrulanmış" rozeti
+      // kimlik kartıyla birlikte buraya da geldi — profil tarafı, tesis değil.
+      'components/settings/ProfileInfoPage.tsx',
       'components/settings/FieldRolePage.tsx',
       'admin-panel/services/adminService.ts',
       'admin-panel/views/PendingVerificationsTab.tsx',

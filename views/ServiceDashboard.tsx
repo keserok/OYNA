@@ -3,6 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { UserRole, AppView, JobListing, GkStyle, DirectOffer, Equipment, ServiceRequest, MatchListing } from '../types';
 import { MapPin, Navigation, Star, DollarSign, Calendar, Shield, Scale, Power, Bell, Wallet, List, User, Check, X, ChevronRight, Clock, Trophy, Search, MessageSquare, Send, ArrowRight, Hand, Briefcase, PlusCircle, Sparkles, Zap, Activity, Coins, Tag, Flame, RefreshCcw, Eye, Gauge, Flag, CreditCard, Banknote, Users, Settings, Award, AlertTriangle, CheckCircle2, BadgeCheck, Inbox, PenLine } from 'lucide-react';
 import { getWalletHistory, WalletHistoryItem } from '../services/userService';
+import { getGkSozlesme, YEDEK_SOZLESME, YEDEK_TEMINAT, type GkSozlesme } from '../services/gkSozlesmeService';
 import { formatTRYAmount, formatTRYSigned } from '../utils/formatTRY';
 import { parseMatchDateTime } from '../utils/matchDateTime';
 import { matchEndMs } from '../shared/matchTiming';
@@ -64,7 +65,8 @@ const money = formatTRYAmount;
 
 /** No-show teminatı — sunucudaki SSOT `app_config.gk_min_balance` (varsayılan 500).
  *  Sözleşme metninde iki ayrı yerde elle yazılıydı; tek sayı, tek yer. */
-const GK_MIN_TEMINAT = 500;
+// C3: Teminat tutarı sabiti KALDIRILDI — tek kaynak app_config.gk_min_balance
+// (gkSozlesmeService). Kod ile veritabanının ikiye ayrılma ihtimali kapatıldı.
 
 // Removed equipment mock data
 
@@ -146,6 +148,13 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
   const [reportingId, setReportingId] = useState<string | null>(null);
   // FAZ 4: kaleci kabul sözleşme onayı modalı
   const [contractModalReq, setContractModalReq] = useState<ServiceRequest | null>(null);
+  // C3: sözleşme metni ve teminat tutarı veritabanından — tek kaynak.
+  const [sozlesme, setSozlesme] = useState<GkSozlesme>(
+    { metin: YEDEK_SOZLESME, teminat: YEDEK_TEMINAT, yedekMi: true });
+  useEffect(() => {
+    // Sözleşme modalı açılınca güncel metni çek (panelden değişmiş olabilir).
+    if (contractModalReq) void getGkSozlesme().then(setSozlesme);
+  }, [contractModalReq]);
   const [contractChecked, setContractChecked] = useState(false);
 
   // Kaptan çok-sağlayıcı TEKLİFLERİ (match_service_offers) — kabul/red (FCFS)
@@ -2059,14 +2068,23 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
   return (
     <div className="h-full flex flex-col bg-[#0A0E14] relative overflow-hidden">
       
-      {/* Profile sub-view */}
+      {/* Profil alt ekranı.
+          KAYDIRMA: Bu ekranların kökü `min-h-screen`dir — yani App'in görünüm
+          kaydırıcısında SAYFA BOYU akmak üzere yazılmışlar. Burada ise
+          `overflow-hidden` bir kabın içine konuyorlardı: taşan kısım kesiliyor
+          ve parmakla ULAŞILAMIYORDU (ölçüldü: Ayarlar'da 71px kesik, Profil'de
+          kaydırma hiç yok). Kendi kaydırıcılarına alındılar. */}
       {activeTab === 'PROFILE_VIEW' && (
-        <ServiceProfile role={role} onBack={() => setActiveTab('MENU')} />
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain custom-scrollbar">
+          <ServiceProfile role={role} onBack={() => setActiveTab('MENU')} />
+        </div>
       )}
 
       {/* Settings sub-view */}
       {activeTab === 'SETTINGS_VIEW' && (
-        <ServiceSettings role={role} onBack={() => setActiveTab('MENU')} onLogout={onLogout ?? onBack} />
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain custom-scrollbar">
+          <ServiceSettings role={role} onBack={() => setActiveTab('MENU')} onLogout={onLogout ?? onBack} />
+        </div>
       )}
 
       {activeTab !== 'PROFILE_VIEW' && activeTab !== 'SETTINGS_VIEW' && (<>
@@ -2766,11 +2784,19 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                 <div className="p-2 rounded-xl bg-green-500/12 border border-green-500/25 text-green-400"><Shield size={18} /></div>
                 <h3 className="text-base font-extrabold text-white tracking-tight">Kaleci Hizmet Sözleşmesi</h3>
               </div>
+              {/* C3: metin app_config.gk_service_contract'tan gelir. Panelden
+                  değiştirilen metin, kalecinin gördüğü metindir. Okunamazsa
+                  yedek metin gösterilir ve bu AÇIKÇA söylenir — kaleci
+                  hangi metni onayladığını her zaman bilir. */}
+              {sozlesme.yedekMi && (
+                <div className="rounded-xl bg-amber-500/10 border border-amber-500/25 px-3 py-2 mb-2">
+                  <p className="text-[0.625rem] text-amber-200 leading-relaxed">
+                    Güncel sözleşme metnine ulaşılamadı; kayıtlı son sürüm gösteriliyor.
+                  </p>
+                </div>
+              )}
               <div className="rounded-2xl bg-black/30 border border-white/8 p-3.5 text-[0.6875rem] text-white/60 leading-relaxed max-h-52 overflow-y-auto custom-scrollbar space-y-2">
-                <p>Kabul ettiğin maça ilan edilen saatte katılmayı taahhüt edersin.</p>
-                <p><span className="text-red-400 font-extrabold">No-show (mazeretsiz katılmama)</span> durumunda, maçın kaleci slot ücreti hesabından otomatik tahsil edilip maç kaptanına tazminat olarak aktarılır.</p>
-                <p>Bu tahsilata karşı <span className="text-white font-bold">48 saat</span> içinde itiraz edebilirsin; itiraz halinde durum OYNA yönetimi tarafından incelenir.</p>
-                <p>Hizmet verebilmek için hesabında en az <span className="text-green-400 font-extrabold">{money(GK_MIN_TEMINAT)} teminat</span> bulundurmalısın — bu bakiye ceza tahsilatının güvencesidir.</p>
+                <p className="whitespace-pre-line">{sozlesme.metin}</p>
                 <p className="text-white/80 font-bold pt-1">Eline geçecek: {money(contractModalReq.providerAmount)} (brüt {money(contractModalReq.fee)})</p>
               </div>
               <label className="flex items-start gap-2.5 mt-4 cursor-pointer select-none">
@@ -2778,7 +2804,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                   className={`mt-0.5 w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-colors ${contractChecked ? 'bg-green-500 border-green-500' : 'border-white/25 bg-white/5'}`}>
                   {contractChecked && <Check size={13} className="text-black" strokeWidth={3} />}
                 </button>
-                <span className="text-[0.6875rem] text-white/70 leading-relaxed">Sözleşmeyi okudum, no-show cezasını ve {money(GK_MIN_TEMINAT)} teminat şartını kabul ediyorum.</span>
+                <span className="text-[0.6875rem] text-white/70 leading-relaxed">Sözleşmeyi okudum, no-show cezasını ve {money(sozlesme.teminat)} teminat şartını kabul ediyorum.</span>
               </label>
               <div className="flex gap-2 mt-5">
                 <button disabled={!!respondingId} onClick={() => setContractModalReq(null)}
