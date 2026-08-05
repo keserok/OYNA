@@ -1,98 +1,25 @@
 -- ════════════════════════════════════════════════════════════════════════════
--- AÇILIŞ YÜKÜ ÖLÇÜMÜ + K-YUK-4  (B09 YUK yapı taşı)
+-- K-YUK-4 · AÇILIŞ YÜKÜ KONTROLÜ  (B09 YUK yapı taşının İLK çalışan kontrolü)
 -- ════════════════════════════════════════════════════════════════════════════
 --
--- NEDEN:
--- Uygulama açılışında atılan istek sayısı, ölçülmediği için yıllarca sessizce
--- büyüdü: kullanılmayan bir takım listesi, panelin yönetici fonksiyonu, ülke
--- geneli saha/maç sorguları... Hepsi düzeltildi (10 istek → 7). Ama düzeltmenin
--- kendisi bir koruma değildir; koruma, BOZULDUĞUNDA HABER VERENDİR (P-0).
+-- Gece denetimi, `acilis_olcumu` tablosuna düşen ölçümleri okur ve Sistem
+-- Sağlığı kartına yeşil/sarı/kırmızı olarak yazar. Biri açılışa yeni bir istek
+-- eklerse ertesi sabah kartta görünür.
 --
--- Bu migration o haber verme yolunu kurar:
---   1. `acilis_olcumu` — uygulama açılışta kaç istek attığını ve ne kadar
---      sürdüğünü buraya yazar (örnekleme ile, her açılışta değil).
---   2. K-YUK-4 — gece denetimi bu ölçümleri okur ve Sistem Sağlığı kartına
---      yeşil/sarı/kırmızı olarak yazar. Biri açılışa yeni bir istek eklerse
---      ertesi sabah kartta görünür.
+-- ORTANCA kullanılır, ortalama değil: tek bir kötü ağ koşulu ortalamayı bozar
+-- ama ortancayı bozmaz.
+--     <= 7 YEŞİL · 8-9 SARI · >= 10 KIRMIZI
 --
--- B09 YUK yapı taşının bugüne dek HİÇ çalışan kontrolü yoktu; bu ilk olanı.
+-- "24 saattir ölçüm gelmedi" KIRMIZI değil SARI yazar. Kimsenin uygulamayı
+-- açmamış olması arıza değildir; kırmızı yazsaydık kart yalancı alarm üretir
+-- ve zamanla kimse bakmaz olurdu (K-11.3'ün amacı bunun tersi).
 --
--- GERİ ALMA:
---   DROP FUNCTION IF EXISTS public.acilis_olcumu_yaz(int,int,boolean,text,text);
---   DROP TABLE IF EXISTS public.acilis_olcumu;
---   -- sistem_saglik_ek_kontroller için bir önceki sürüm:
---   -- supabase/migrations/20260805204225_kapi_denetimi_ve_varsayilan_kapali.sql
+-- NOT: 18 KB'lık `sistem_saglik_calistir()` fonksiyonuna DOKUNULMADI. Sistemin
+-- kendi genişletme noktası `sistem_saglik_ek_kontroller()` kullanıldı; önceki
+-- dört kontrol (K-SUPURUCU-1, K-BILDIRIM-2/3, K-KAPI-4) birebir korunur.
+--
+-- ÖNCEKİ SÜRÜM: supabase/migrations/20260805204225_kapi_denetimi_ve_varsayilan_kapali.sql
 -- ════════════════════════════════════════════════════════════════════════════
-
--- ── 1) ÖLÇÜM TABLOSU ───────────────────────────────────────────────────────
--- Kişisel veri YOK: kim olduğu değil, açılışın kaça mal olduğu tutulur.
-CREATE TABLE IF NOT EXISTS public.acilis_olcumu (
-  id              bigserial PRIMARY KEY,
-  olustu_at       timestamptz NOT NULL DEFAULT now(),
-  istek_sayisi    int         NOT NULL,
-  sure_ms         int         NOT NULL,
-  bolge_biliniyor boolean     NOT NULL DEFAULT false,
-  platform        text,
-  surum           text,
-  CONSTRAINT acilis_olcumu_makul_istek CHECK (istek_sayisi BETWEEN 0 AND 200),
-  CONSTRAINT acilis_olcumu_makul_sure  CHECK (sure_ms      BETWEEN 0 AND 600000)
-);
-
-CREATE INDEX IF NOT EXISTS acilis_olcumu_zaman_idx
-  ON public.acilis_olcumu (olustu_at DESC);
-
-ALTER TABLE public.acilis_olcumu ENABLE ROW LEVEL SECURITY;
-
--- OKUMA: yalnız yönetici. Ölçüm kullanıcıya ait değildir, operasyon verisidir.
-DROP POLICY IF EXISTS acilis_olcumu_select_admin ON public.acilis_olcumu;
-CREATE POLICY acilis_olcumu_select_admin ON public.acilis_olcumu
-  FOR SELECT TO authenticated
-  USING (public.is_platform_admin());
-
--- YAZMA: doğrudan INSERT'e kapalı. Yazım yalnız aşağıdaki fonksiyonla yapılır;
--- böylece uydurma/aşırı kayıt tek noktadan sınırlanabilir.
--- (Politika yazılmadığı için normal kullanıcı INSERT edemez.)
-
-REVOKE ALL ON public.acilis_olcumu FROM anon, authenticated;
--- SELECT geri verilir: REVOKE ALL tablo iznini de kaldirdigi icin yukaridaki
--- RLS politikasi islevsiz kalir, yonetici bile ham olcume bakamazdi.
--- Satir kurali zaten yalniz yoneticiye aciyor. INSERT bilerek VERILMEZ —
--- yazim tek kapidan, acilis_olcumu_yaz() ile yapilir.
-GRANT SELECT ON public.acilis_olcumu TO authenticated;
-
--- ── 2) YAZIM KAPISI ────────────────────────────────────────────────────────
--- Uygulama bunu çağırır. Giriş yapılmamış olsa da çalışır (açılış ölçümü
--- misafirleri de kapsamalı), ama YALNIZ ölçüm satırı yazar; başka yetki vermez.
-CREATE OR REPLACE FUNCTION public.acilis_olcumu_yaz(
-  p_istek_sayisi    int,
-  p_sure_ms         int,
-  p_bolge_biliniyor boolean,
-  p_platform        text DEFAULT NULL,
-  p_surum           text DEFAULT NULL
-) RETURNS void
-LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public','pg_temp'
-AS $fn$
-BEGIN
-  -- Saçma değerleri sessizce ele: ölçüm hiçbir koşulda çağıranı bozmaz.
-  IF p_istek_sayisi IS NULL OR p_istek_sayisi < 0 OR p_istek_sayisi > 200 THEN RETURN; END IF;
-  IF p_sure_ms      IS NULL OR p_sure_ms      < 0 OR p_sure_ms      > 600000 THEN RETURN; END IF;
-
-  INSERT INTO public.acilis_olcumu
-    (istek_sayisi, sure_ms, bolge_biliniyor, platform, surum)
-  VALUES
-    (p_istek_sayisi, p_sure_ms, COALESCE(p_bolge_biliniyor,false),
-     left(COALESCE(p_platform,''), 20), left(COALESCE(p_surum,''), 20));
-END; $fn$;
-
--- Kapı politikası (§ kapi_kayitli_durum): bu fonksiyon BİLEREK açıktır —
--- misafir dahil her açılış ölçülebilmeli. Yetki vermez, yalnız sayı yazar.
-GRANT EXECUTE ON FUNCTION public.acilis_olcumu_yaz(int,int,boolean,text,text)
-  TO anon, authenticated;
-
--- ── 3) K-YUK-4 · gece denetimine ekle ──────────────────────────────────────
--- NOT: büyük `sistem_saglik_calistir()` fonksiyonuna DOKUNULMADI. Sistemin
--- kendi genişletme noktası olan `sistem_saglik_ek_kontroller()` kullanıldı;
--- eski kontroller birebir korunur, sonuna K-YUK-4 eklenir.
 CREATE OR REPLACE FUNCTION public.sistem_saglik_ek_kontroller()
 RETURNS jsonb
 LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public','pg_temp'
@@ -106,7 +33,7 @@ DECLARE
   v_kapi    jsonb;
   v_ortanca numeric;
   v_sure    numeric;
-  v_beklenen CONSTANT int := 7;   -- bugünkü açılış: oturum+saha+maç+maçlarım+metin + kaleci+hakem
+  v_beklenen CONSTANT int := 7;   -- oturum+saha+maç+maçlarım+metin + kaleci+hakem
 BEGIN
   SELECT max(calisma_at) INTO v_calisma FROM public.sistem_saglik_kayitlari;
   IF v_calisma IS NULL THEN
@@ -193,9 +120,7 @@ BEGIN
     v_eklenen := v_eklenen + 1;
   END;
 
-  -- ── K-YUK-4 · acilista atilan istek sayisi arttı mı ───────────────────────
-  -- ORTANCA kullanilir, ortalama degil: tek bir kotu ag kosulu ortalamayi
-  -- bozar ama ortancayi bozmaz.
+  -- K-YUK-4 - acilista atilan istek sayisi artti mi
   BEGIN
     SELECT percentile_disc(0.5) WITHIN GROUP (ORDER BY istek_sayisi),
            percentile_disc(0.9) WITHIN GROUP (ORDER BY sure_ms),
@@ -205,9 +130,6 @@ BEGIN
      WHERE olustu_at > now() - interval '24 hours';
 
     IF v_adet = 0 THEN
-      -- DIKKAT: burada KIRMIZI YAZILMAZ. "24 saattir kimse uygulamayi acmadi"
-      -- bir ariza degildir; kirmizi yazsaydik kart yalanci alarm uretir ve
-      -- zamanla kimse bakmaz olurdu (K-11.3'un amaci bunun tersi).
       v_renk := 'SARI';
       v_mesaj := 'Son 24 saatte acilis olcumu gelmedi - uygulama hic acilmamis olabilir';
       INSERT INTO public.sistem_saglik_kayitlari(calisma_at,kontrol_id,yapi_tasi,durum,olculen,beklenen,mesaj)

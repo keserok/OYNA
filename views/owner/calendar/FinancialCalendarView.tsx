@@ -43,6 +43,8 @@ interface CalendarBooking {
     note?: string;
     pitchId: string;
     date?: string;
+    /** Rezervasyonu yapanın telefonu — sahibin "Ara" düğmesi bunu kullanır. */
+    phone?: string;
 }
 
 function formatDateISO(d: Date): string {
@@ -97,6 +99,7 @@ function mapDbBookingToCalendar(b: PitchBookingFull): CalendarBooking {
     note: b.note ?? undefined,
     pitchId: b.court_id ?? '',
     date: b.booking_date,
+    phone: b.customer_phone ?? undefined,
   };
 }
 
