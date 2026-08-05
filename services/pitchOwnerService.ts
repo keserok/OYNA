@@ -19,6 +19,7 @@ import { resolveTariffForSlot } from './tariffService';
 // istemci ikizinden (SSOT) okur; süre tek kaynaktan gelir (pitch_tariffs.slot_minutes).
 import { buildSlotGrid, bookingCoversSlot, hmToMinutes, type SlotTariffInput } from '../shared/slotGrid';
 import { formatTRYAmount } from '../utils/formatTRY';
+import { olayYaz } from '../utils/olcum';
 import type {
   OwnerPitch,
   OwnerDailySummary,
@@ -723,6 +724,10 @@ export async function addExpense(pitchId: string, expense: ExpenseInput): Promis
       created_by: uid,
     });
     if (error) throw error;
+    // ÖLÇÜM · tesis hunisi 5/5 — "deftere kayıt işledi". Gider, veresiye ve
+    // abonelik AYNI adımı besler: üçü de "panel gerçekten defter olarak
+    // kullanılıyor mu?" sorusunun cevabıdır.
+    olayYaz('tesis_defter_islendi', { tekrarlanabilir: true, ek: { tur: 'gider' } });
   } catch (error) {
     console.error('addExpense:', error);
     throw new Error(toTurkishError(error));
@@ -761,6 +766,7 @@ export async function addDebtor(pitchId: string, debtor: DebtorInput): Promise<v
       oyna_user_id: debtor.oyna_user_id ?? null,
     });
     if (error) throw error;
+    olayYaz('tesis_defter_islendi', { tekrarlanabilir: true, ek: { tur: 'veresiye' } });
   } catch (error) {
     console.error('addDebtor:', error);
     throw new Error(toTurkishError(error));

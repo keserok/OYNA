@@ -4,6 +4,7 @@ import { UserRole, AppView, MatchListing, Goalkeeper, Referee } from './types';
 import { auth, onAuthStateChanged, logout, handleAuthCallbackUrl } from './supabaseAuth';
 import { supabase } from './supabaseClient';
 import { useAppStore } from './store';
+import { bolgeyiBildir } from './utils/olcum';
 import { roleToLandingView, pickLandingRole, hasMultipleSwitchableRoles, normalizeRole } from './shared/roles';
 import { setActiveRole } from './services/userService';
 import { getMatchDetails } from './services/matchService';
@@ -202,6 +203,19 @@ const App: React.FC = () => {
 
   // MOB-S2: native klavye yöneticisi — alanlar klavye arkasında kalmaz.
   useEffect(() => initKeyboardManager(), []);
+
+  // ÖLÇÜM · bölge etiketi. Huni "ilçeye göre" okunabilsin diye (prensip
+  // 1.2/1.3 — ilçe bazlı doygunluk) her olay kullanıcının baktığı bölgeyle
+  // işaretlenir. Ölçüm modülü store'u DOĞRUDAN okumaz (döngüsel bağımlılık
+  // olurdu); bölge buradan bir kez bildirilir.
+  useEffect(() => {
+    const uygula = (b: { city?: string; district?: string | null } | null) =>
+      bolgeyiBildir(b?.city ?? null, b?.district ?? null);
+    uygula(useAppStore.getState().activeRegion);
+    return useAppStore.subscribe((st, onceki) => {
+      if (st.activeRegion !== onceki.activeRegion) uygula(st.activeRegion);
+    });
+  }, []);
 
 
   useEffect(() => {

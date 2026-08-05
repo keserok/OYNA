@@ -30,6 +30,7 @@ import { PLAY_STYLE_META } from './onboarding/onboardingShared';
 import { formatMatchDuration, realMatchMinutes, matchStartMs } from '../shared/matchTiming';
 import { trUpper } from '../utils/trUpper';
 import { formatTRYShort } from '../utils/formatTRY';
+import { olayYaz } from '../utils/olcum';
 
 // Normalize mentalite ('Ciddi'|'Taktiksel'|'Rahat') → PLAY_STYLE_META anahtarı.
 const MENTALITY_KEY = { Ciddi: 'ciddi', Taktiksel: 'taktiksel', Rahat: 'rahat' } as const;
@@ -39,6 +40,8 @@ interface MatchDiscoveryProps {
 }
 
 const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onSelect }) => {
+  // ÖLÇÜM · oyuncu hunisi 1/5 — "maç listesini açtı".
+  useEffect(() => { olayYaz('oyuncu_liste_acildi'); }, []);
   const {
     adminMatches,
     navigateTo,

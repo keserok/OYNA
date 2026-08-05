@@ -55,6 +55,7 @@ import PhotoCarousel from '../components/common/PhotoCarousel';
 import { trUpper } from '../utils/trUpper';
 import { ActionSheet } from '../components/ui/ActionSheet';
 import { formatTRYShort } from '../utils/formatTRY';
+import { olayYaz } from '../utils/olcum';
 
 interface MapViewProps {
   pitches: Pitch[];
@@ -521,6 +522,9 @@ const dayOffsetFromToday = (d: Date) => Math.round((startOfDay(d).getTime() - st
 const DISTRICT_COORDINATES: Record<string, [number, number]> = ORDU_DISTRICTS;
 
 const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode, onSelectTime, onNavigate }) => {
+  // ÖLÇÜM · kiralama hunisi 1/5 — "saha listesini açtı". Seçim kipinde
+  // (maç kurarken saha seçme) yazılmaz: o akış kaptan hunisine aittir.
+  useEffect(() => { if (!isSelectionMode) olayYaz('kiralama_liste_acildi'); }, [isSelectionMode]);
   const {
     userLocation,
     setUserLocation,
@@ -919,6 +923,8 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
   const handleOpenDetail = (pitch: Pitch) => {
     setSelectedPitch(pitch);
     setIsDetailOpen(true);
+    // ÖLÇÜM · kiralama hunisi 2/5 — "bir tesisi açtı".
+    if (!isSelectionMode) olayYaz('kiralama_tesis_acildi', { tekrarlanabilir: true });
     // Kök tutarlılık kararı: her saha (court) ayrı seçilir — owner panelindeki
     // sıralamayla ilk saha varsayılan gelir, tip otomatik sahadan türer.
     const firstCourt = pitch.courts?.[0] ?? null;
@@ -1058,6 +1064,9 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
 
   const persistBookingSelection = () => {
     if (!selectedPitch || !selectedCourt || !selectedSlot || !selectedSlotQuote) return;
+    // ÖLÇÜM · kiralama hunisi 3/5 — "saat seçti". Fiyat teklifi de geldiği için
+    // bu, kullanıcının tutarı GÖRDÜĞÜ andır.
+    olayYaz('kiralama_saat_secildi', { tekrarlanabilir: true });
     setBookingPitch(selectedPitch);
     setBookingCourt(selectedCourt);
     setBookingDate(selectedDateISO);

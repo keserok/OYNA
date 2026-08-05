@@ -23,6 +23,25 @@ import AddCardScreen, { CollectedCard } from '../components/payment/AddCardScree
 import ThreeDSSheet, { ThreeDSOutcome } from '../components/payment/ThreeDSSheet';
 import type { PaymentContext } from '../types';
 import { formatTRYAmount } from '../utils/formatTRY';
+import { olayYaz } from '../utils/olcum';
+
+// ── ÖLÇÜM · bu ekran ÜÇ huninin de 4. ve 5. adımını taşır ───────────────────
+// Ödeme ekranı tek ekrandır ama üç farklı akıştan gelinir. Hangi huninin adımı
+// olduğu bağlamdan (`ctx.kind`) okunur; aşağıdaki iki tablo o eşlemenin tek
+// kaynağıdır — üç ayrı yere `if` yazılırsa biri unutulur ve o huni sessizce
+// eksik ölçülür.
+const OLCUM_EKRAN: Record<PaymentContext['kind'], string> = {
+  MATCH_JOIN:           'oyuncu_odeme_ekrani',
+  MATCH_CREATE_DEPOSIT: 'kaptan_kapora_ekrani',
+  PITCH_DEPOSIT:        'kiralama_kapora_ekrani',
+  BOOKING_DEPOSIT:      'kiralama_kapora_ekrani',
+};
+const OLCUM_ODENDI: Record<PaymentContext['kind'], string> = {
+  MATCH_JOIN:           'oyuncu_odedi',
+  MATCH_CREATE_DEPOSIT: 'kaptan_kapora_odendi',
+  PITCH_DEPOSIT:        'kiralama_kapora_odendi',
+  BOOKING_DEPOSIT:      'kiralama_kapora_odendi',
+};
 import {
   safeUuid, isOnline, withSubmitTimeout, SubmitTimeoutError,
   CARD_TIMEOUT_MS, OFFLINE_PAY, TIMEOUT_PAY,
@@ -94,6 +113,14 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
     }
     return null;
   }, [paymentContext, bookingPitch, bookingCourt, bookingDate, bookingSlot, bookingPrice, bookingDeposit]);
+
+  // ÖLÇÜM — "ödeme ekranına geldi". `ctx.kind` belli olduktan SONRA yazılır;
+  // yoksa hangi huninin adımı olduğu bilinemez. Yalnız tür değişince tekrar
+  // yazılır (aynı ekranın yeniden çizilmesi olayı çoğaltmaz).
+  const olcumOdemeTuru = ctx?.kind;
+  useEffect(() => {
+    if (olcumOdemeTuru) olayYaz(OLCUM_EKRAN[olcumOdemeTuru], { tekrarlanabilir: true });
+  }, [olcumOdemeTuru]);
 
   const [screen, setScreen] = useState<Screen>('PAY');
   const [summary, setSummary] = useState<WalletSummary | null>(null);
@@ -508,6 +535,12 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
       : ctx?.kind === 'BOOKING_DEPOSIT' ? (ctx.bookingId ?? null)
       : null;
     if (bid) useAppStore.getState().setTicketBookingId(bid);
+    // ÖLÇÜM — huninin son adımı. Bu işlev ÜÇ başarı noktasının da (düz ödeme,
+    // 3DS sonrası, askıda kalan niyetin sorgulanması) çağırdığı TEK yerdir;
+    // ölçüm burada durursa üç yolun hiçbiri unutulmaz.
+    // Bağlam yoksa HİÇBİR ŞEY yazılmaz: yanlış huniye yazılmış bir ödeme,
+    // hiç yazılmamış olmaktan daha kötüdür (sayı yanlış olur, eksik değil).
+    if (ctx) olayYaz(OLCUM_ODENDI[ctx.kind], { tekrarlanabilir: true });
   };
 
   const handlePay = async () => {

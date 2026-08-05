@@ -28,6 +28,7 @@ import {
 import { todayISO } from '../ownerPanelShared';
 import type { PitchBookingFull, PitchCourt, FlashDeal, PitchAvailabilityException } from '../../../types';
 import { trUpper } from '../../../utils/trUpper';
+import { olayYaz } from '../../../utils/olcum';
 
 // Takvim veri modeli (SALT TAŞIMA)
 interface CalendarBooking {
@@ -446,6 +447,8 @@ export const FinancialCalendarView: React.FC<{
     }, [dayHours, showAllHours, currentBookings, selectedCourtId, closedSlots]);
 
     const handleQuickCreate = async (time: string) => {
+        // ÖLÇÜM · tesis hunisi 3/5 — "rezervasyon girmeye başladı".
+        olayYaz('tesis_rezervasyon_basladi', { tekrarlanabilir: true });
         setIsQuickCreateOpen(time);
         setCustomerName('');
         setCustomerPhone('');
@@ -951,6 +954,10 @@ export const FinancialCalendarView: React.FC<{
                                     paidAmount,
                                     paymentMethod: 'CASH',
                                 });
+                                // ÖLÇÜM · tesis hunisi 4/5 — "rezervasyonu kaydetti".
+                                // Kayıt BAŞARILI olduktan sonra yazılır: 3→4 düşüşü
+                                // "formu açtı ama tamamlayamadı" demektir.
+                                olayYaz('tesis_rezervasyon_kaydedildi', { tekrarlanabilir: true });
                                 await loadBookings();
                                 setIsQuickCreateOpen(null);
                                 setCustomerName('');

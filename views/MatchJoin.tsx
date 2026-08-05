@@ -46,6 +46,7 @@ import { OYNA_TILE_URL, oynaTileProps, oynaMapProps, OYNA_MAP_CSS } from '../com
 import { Toast } from '../components/common/Toast';
 import { mapError } from '../utils/errorMap';
 import { trUpper } from '../utils/trUpper';
+import { olayYaz } from '../utils/olcum';
 
 // Fix leaflet default icon path issues
 if (typeof window !== 'undefined') {
@@ -205,6 +206,9 @@ const generateDefaultSlots = (size: string, prefixId: string): PositionSlot[] =>
 // ─── Ana Bileşen ─────────────────────────────────────────────────────────────
 
 const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJoin }) => {
+  // ÖLÇÜM · oyuncu hunisi 2/5 — "bir maçın detayına girdi". `tekrarlanabilir`:
+  // kullanıcı listeye dönüp başka bir maç açarsa bu gerçek bir adımdır.
+  useEffect(() => { olayYaz('oyuncu_mac_acildi', { tekrarlanabilir: true }); }, []);
   const match = useMemo(() => {
     if (!originalMatch) return null as any;
     const badgeFormat = originalMatch.badges?.find(b => /^\d+v\d+$/i.test(b.trim()))?.toLowerCase();
@@ -727,6 +731,9 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
     if (selectedSlotIds.length === 0) return;
     if (!requireAccount()) return;
     if (!beginWrite()) return;
+    // ÖLÇÜM · oyuncu hunisi 3/5 — "katıl dedi, yerini seçti". Kapıların
+    // (misafir/yazma kilidi) ARDINDAN yazılır: gerçekten devam eden sayılır.
+    olayYaz('oyuncu_katil_secildi', { tekrarlanabilir: true });
     const total = (match.price || 0) * selectedSlotIds.length;
 
     // Ücretli slot → birleşik ödeme ekranı (bakiye + kart bölüşümü, tasarım 1b).

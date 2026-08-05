@@ -101,6 +101,7 @@ import { OwnerSetupProgress, type SetupStep } from './owner/home/OwnerSetupProgr
 import { OwnerBottomSheet } from './owner/components/OwnerBottomSheet';
 import { useConfirmSheet } from './owner/components/useConfirmSheet';
 import { todayISO } from './owner/ownerPanelShared';
+import { olayYaz } from '../utils/olcum';
 
 type OwnerTab = 'HOME' | 'CALENDAR' | 'FINANCE' | 'TEAM' | 'MORE' | 'PITCHES';
 
@@ -186,6 +187,9 @@ const tariffRowToPolicy = (t: PitchTariff) => ({
     return () => setOutboxDropNotifier(null);
   }, [notify]);
 
+  // ÖLÇÜM · tesis hunisi 1/5 — "paneli açtı".
+  useEffect(() => { olayYaz('tesis_panel_acildi'); }, []);
+
   const handleTabSelect = (tab: OwnerTab) => {
     // Finans & Ekip her owner'a açık — plan kilidi yok.
     // STAFF-3: personel Finans/Sahalar sekmesini açamaz (yönetim yetkisi ister).
@@ -194,6 +198,9 @@ const tariffRowToPolicy = (t: PitchTariff) => ({
       setActiveTab('HOME');
       return;
     }
+    // ÖLÇÜM · tesis hunisi 2/5 — "takvimi açtı". Takvim bu panelin asıl işidir;
+    // paneli açıp takvime hiç girmeyen sahibi, paneli kullanmıyor demektir.
+    if (tab === 'CALENDAR') olayYaz('tesis_takvim_acildi');
     setActiveTab(tab);
   };
   const [showCancellationPolicy, setShowCancellationPolicy] = useState(false);
