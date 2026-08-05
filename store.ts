@@ -517,16 +517,36 @@ export const useAppStore = create<AppState>((set, get) => ({
         new Promise<null>((resolve) => setTimeout(() => resolve(null), ms)),
       ]);
 
+    // [YUK-2] AÇILIŞ ARTIK BÖLGEYE DARALTILIYOR.
+    // activeRegion telefonda saklıdır (loadActiveRegion) — yani açılışın ilk
+    // anında, hiçbir istek beklenmeden bilinir. Bölge yoksa saha/maç sorguları
+    // BOŞ döner; prensip 4.5 gereği ülke geneline düşülmez.
+    const acilisBolgesi = get().activeRegion;
+
+    // [YUK-3] Açılış ölçümü — kaç istek atıldı, ne kadar sürdü.
+    // Amaç: bu görevdeki iyileştirme rakamla görünsün VE ileride biri açılışa
+    // yeni bir yük eklerse Sistem Sağlığı kartında fark edilsin (P-0).
+    const acilisBaslangic = Date.now();
+
     try {
-      const [sessionRes, pitchesRes, matchesRes, myMatchesRes, teamsRes, servicesRes, textsRes] = await Promise.allSettled([
+      // Liste ADLANDIRILDI: ölçümdeki "kaç istek atıldı" sayısı buradan TÜRETİLİR
+      // (`.length`). Elle yazılan bir sayı zamanla koddan sapar ve sessizce yalan
+      // söylerdi; böylece biri buraya yeni bir istek eklerse ölçüm kendiliğinden
+      // artar.  NOT: loadServices tek satır görünür ama İÇİNDE 2 istek yapar
+      // (kaleciler + hakemler) — bu yüzden ayrıca sayılır.
+      const acilisIstekleri = [
         withTimeout(supabase.auth.getSession()),
-        withTimeout(FB.fbGetPitches()),
-        withTimeout(FB.fbGetMatches()),
+        withTimeout(FB.fbGetPitches(acilisBolgesi)),
+        withTimeout(FB.fbGetMatches(acilisBolgesi)),
         withTimeout(FB.fbGetMyMatches()),
-        withTimeout(FB.fbGetTeams()),
         withTimeout(get().loadServices(), 4000),
         withTimeout<any>(Promise.resolve(supabase.from('texts').select('key, value'))),
-      ]);
+      ];
+      const LOADSERVICES_IC_ISTEK = 2; // kaleciler + hakemler
+      const acilisIstekSayisi = acilisIstekleri.length - 1 + LOADSERVICES_IC_ISTEK;
+
+      const [sessionRes, pitchesRes, matchesRes, myMatchesRes, servicesRes, textsRes] =
+        await Promise.allSettled(acilisIstekleri);
 
       if (pitchesRes.status === 'fulfilled' && pitchesRes.value) {
         set({ adminPitches: pitchesRes.value as Pitch[] });
@@ -537,9 +557,11 @@ export const useAppStore = create<AppState>((set, get) => ({
       if (myMatchesRes.status === 'fulfilled' && myMatchesRes.value) {
         set({ myMatches: myMatchesRes.value as MatchListing[] });
       }
-      if (teamsRes.status === 'fulfilled' && teamsRes.value) {
-        set({ adminTeams: teamsRes.value as Team[] });
-      }
+      // [YUK-2] TAKIMLAR AÇILIŞTAN ÇIKARILDI.
+      // fbGetTeams() burada her açılışta çağrılıyordu ama `adminTeams` state'ini
+      // uygulamada HİÇBİR ekran ve yönetim panelinin HİÇBİR sayfası okumuyor —
+      // yani indirilen veri hiç kullanılmıyordu. Takım ekranları kendi scoped
+      // sorgularını kullanıyor (TeamService.fetchMyTeams).
       if (textsRes.status === 'fulfilled' && textsRes.value && !(textsRes.value as any).error) {
         const rows = (textsRes.value as any).data as Array<{ key: string; value: string }> | null;
         if (rows?.length) {
@@ -556,6 +578,21 @@ export const useAppStore = create<AppState>((set, get) => ({
       const degraded = matchesEmpty || pitchesEmpty;
       set({ loadDegraded: degraded });
       if (degraded) trackEvent('initial_load_degraded', { matchesEmpty, pitchesEmpty });
+
+      // [YUK-3] AÇILIŞ ÖLÇÜMÜ.
+      // "Peki bu koruma bozulursa kim söyleyecek?" (P-0) sorusunun cevabı bu
+      // satır: açılışta kaç istek atıldığı ve ne kadar sürdüğü her açılışta
+      // yazılır. Biri ileride buraya yeni bir yük eklerse `istek_sayisi` artar
+      // ve fark edilir — sessizce şişemez.
+      trackEvent('acilis_yuku', {
+        istek_sayisi: acilisIstekSayisi,
+        sure_ms: Date.now() - acilisBaslangic,
+        bolge_biliniyor: !!acilisBolgesi?.city,
+        // Bölge yoksa saha/maç listeleri BOŞ gelir; bu bir hata değil, kuraldır
+        // (prensip 4.5). Ayırt edilebilsin diye ayrıca yazılır.
+        saha_sayisi: (pitchesRes.status === 'fulfilled' && Array.isArray(pitchesRes.value)) ? pitchesRes.value.length : -1,
+        mac_sayisi: (matchesRes.status === 'fulfilled' && Array.isArray(matchesRes.value)) ? matchesRes.value.length : -1,
+      });
     } catch (e) {
       console.error('Hydration error:', e);
       captureException(e, { where: 'retryInitialLoad' });
@@ -1048,10 +1085,26 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   // Load Services from DB
+  //
+  // [YUK-1] YÖNETİM PANELİ AÇILIŞ YOLUNDAN ÇIKARILDI.
+  // ────────────────────────────────────────────────────────────────────
+  // Eskiden burada admin-panel/services/adminService dinamik olarak import
+  // edilip fetchGoalkeepersAdmin/fetchRefereesAdmin çağrılıyordu. Bu fonksiyon
+  // açılışta (retryInitialLoad) HER kullanıcı için çalıştığından maliyeti şuydu:
+  //   • adminService yığını (57,3 kB) + matchMapper (4,0 kB) = ~61 kB panel kodu
+  //     her oyuncunun telefonuna HER AÇILIŞTA iniyordu,
+  //   • admin_fetch_goalkeepers/_referees RPC'leri `is_platform_admin()` değilse
+  //     'UNAUTHORIZED' fırlatır — yani yönetici olmayan herkes için bu iki çağrı
+  //     TASARIM GEREĞİ başarısız oluyor, sonra isRpcDenied yakalayıp zaten
+  //     aşağıdaki doğrudan tablo okumasına düşüyordu.
+  // Yani sonuç veri AYNIYDI; fark yalnız boşa inen kod ve boşa giden iki istekti.
+  //
+  // RPC `SETOF goalkeepers` döndürüyor, yani doğrudan okumayla kolon kolon aynı.
+  // Yönetici de veri kaybetmez: goalkeepers_select_auth / referees_select_auth
+  // politikaları `is_platform_admin()` dalıyla onaysız kayıtları da açar.
   loadServices: async () => {
     try {
-      const { fetchGoalkeepersAdmin, fetchRefereesAdmin } = await import('./admin-panel/services/adminService');
-      const [gks, refs] = await Promise.all([fetchGoalkeepersAdmin(), fetchRefereesAdmin()]);
+      const [gks, refs] = await Promise.all([FB.fbGetGoalkeepers(), FB.fbGetReferees()]);
       set({ adminGoalkeepers: gks || [], adminReferees: refs || [], servicesError: false });
     } catch (err) {
       console.error('Error loading services', err);

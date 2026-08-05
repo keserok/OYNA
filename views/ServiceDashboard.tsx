@@ -79,8 +79,22 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
     setIsNotificationsOpen,
     updateOwnProvider,
     adminMatches,
+    myMatches: benimMaclarim,
     applyMatchLocal
   } = useAppStore();
+
+  // [YUK-2] ATAMA LİSTESİNİN KAYNAĞI.
+  // adminMatches artık BÖLGEYE DARALTILMIŞ bir listedir; tek başına
+  // kullanılsaydı kalecinin/hakemin BAŞKA İLÇEDEKİ görevi panelinden düşerdi.
+  // get_my_matches() RPC'si K-12.2 ile gk_id / away_gk_id / refereeId
+  // atamalarını kapsıyor ve bölgeden bağımsız. İkisinin BİRLEŞİMİ alınır:
+  // aşağıdaki sahiplik süzgeci ikisine de uygulandığından birleşim yanlış
+  // görev ekleyemez, yalnız eksiği tamamlar.
+  const tumMaclar = useMemo(() => {
+    const birlesim = new Map<string, any>();
+    [...adminMatches, ...benimMaclarim].forEach((m: any) => { if (m?.id) birlesim.set(m.id, m); });
+    return Array.from(birlesim.values());
+  }, [adminMatches, benimMaclarim]);
   const [activeTab, setActiveTab] = useState<Tab>('HOME');
   const [isAvailable, setIsAvailable] = useState(true);
   const [openMatches, setOpenMatches] = useState<any[]>([]);
@@ -195,7 +209,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
   // Bana atanmış, iptal/tamamlanmamış maçlar — başlangıca göre sıralı.
   const myAssignedMatches = useMemo(() => {
       if (!userProfile) return [];
-      return adminMatches.filter((m: any) => {
+      return tumMaclar.filter((m: any) => {
           const isMyMatch = isRef
               ? m.refereeId === userProfile.id
               : (m.gkId === userProfile.id || m.gk_id === userProfile.id
@@ -206,7 +220,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
       }).sort((a: any, b: any) =>
           (parseMatchDateTime(a.date, a.time)?.getTime() ?? Infinity) -
           (parseMatchDateTime(b.date, b.time)?.getTime() ?? Infinity));
-  }, [adminMatches, userProfile, isRef]);
+  }, [tumMaclar, userProfile, isRef]);
 
   // Henüz BİTMEMİŞ maçlar. Eskiden sınır maç BAŞLANGICIydı; maç saati gelince
   // maç listeden düşüyor, hakem skoru girecekken kartı kaybediyordu.
@@ -251,7 +265,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
       return incomingRequests
           .filter(r => r.status === 'APPLIED')
           .map(r => {
-              const m: any = adminMatches.find((am: any) => am.id === r.matchId) || {};
+              const m: any = tumMaclar.find((am: any) => am.id === r.matchId) || {};
               return {
                   requestId: r.id,
                   id: r.matchId,
@@ -262,7 +276,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                   fee: r.fee,
               };
           });
-  }, [incomingRequests, adminMatches]);
+  }, [incomingRequests, tumMaclar]);
 
   // Sağlayıcının zaten başvurduğu/atandığı maçlar → "BAŞVUR" butonu "Başvuruldu"ya döner
   const appliedMatchIds = useMemo(
@@ -446,7 +460,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
         .eq('status', 'PENDING');
       if (!error && data) {
         const mappedOffers = data.map((o: any) => {
-          const match: any = adminMatches.find((m: any) => m.id === o.match_id);
+          const match: any = tumMaclar.find((m: any) => m.id === o.match_id);
           return {
             id: o.id,
             matchId: o.match_id,
@@ -779,7 +793,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
       if (!selectedOffer) return;
 
       // Local double-booking/conflict check
-      const match = adminMatches.find(m => m.id === selectedOffer.matchId);
+      const match = tumMaclar.find((m: any) => m.id === selectedOffer.matchId);
       if (match) {
           const hasConflict = myUpcomingMatches.some(um => um.date === match.date && um.time === match.time);
           if (hasConflict) {

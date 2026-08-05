@@ -364,7 +364,8 @@
         "services/dashboardHomeService.ts",
         "hooks/useDashboardHome.ts",
         "utils/imageVariants.ts",
-        "hooks/useImageUpload.ts"
+        "hooks/useImageUpload.ts",
+        "tests/unit/acilisBolgeDaraltmasi.test.ts"
       ],
       "db_nesneleri": [
         "admin_dashboard_stats",
