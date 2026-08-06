@@ -49,6 +49,10 @@ jobs:
     name: AAB uret
     runs-on: ubuntu-latest
     timeout-minutes: 40
+    # GECICI: asagidaki "teslimat" adiminin gecici dala islem yapabilmesi icin.
+    # Teslimat bitince bu blok da adim da kaldirilir.
+    permissions:
+      contents: write
 
     steps:
       - uses: actions/checkout@v4
@@ -209,6 +213,42 @@ jobs:
           path: cikti/*
           retention-days: 30
           if-no-files-found: error
+
+      # ── GECICI TESLIMAT KANCASI ──────────────────────────────────────────
+      # NEDEN VAR: Actions "artifact" dosyalari Azure blob adresinden sunuluyor.
+      # Kurucuya paketi hazirlayan calisma ortamlarinda o adres kapali olabiliyor;
+      # git ise acik. Bu adim, kurulabilir APK'yi gecici bir dala koyar ki paket
+      # git uzerinden alinip kurucuya dogrudan verilebilsin.
+      #
+      # SADECE asagidaki dalda calisir; ana dala karisirsa kendiliginden atil kalir.
+      # Teslimattan sonra hem bu adim hem de "teslimat/apk" dali SILINIR.
+      - name: APK'yi gecici git dalina koy (teslimat)
+        if: github.ref_name == 'claude/oyna-advisory-prompt-8s4x3m'
+        run: |
+          set -e
+          APK=$(ls cikti/*TELEFONA-KUR.apk | head -1)
+          echo "Teslim edilecek: $APK ($(du -h "$APK" | cut -f1))"
+
+          cp "$APK" /tmp/teslim.apk
+          git config user.name  "OYNA Teslimat"
+          git config user.email "noreply@anthropic.com"
+
+          # Gecmisi olmayan tek islemelik dal: depo gecmisi sismesin.
+          git checkout --orphan teslimat/apk
+          git rm -rf --cached . >/dev/null 2>&1 || true
+          find . -maxdepth 1 -mindepth 1 -not -name .git -exec rm -rf {} +
+
+          cp /tmp/teslim.apk "$(basename "$APK")"
+          printf '%s\n' \
+            "# OYNA — kurulabilir APK" "" \
+            "Bu dal GECICIDIR, yalniz paketi tasimak icin var." \
+            "Alindiktan sonra silinmeli:" "" \
+            "    git push origin --delete teslimat/apk" > README.md
+
+          git add -A
+          git commit -q -m "APK teslim: $(basename "$APK")"
+          git push -f origin teslimat/apk
+          echo "::notice::teslimat/apk dalina konuldu: $(basename "$APK")"
 
       - name: Ozet
         run: |
