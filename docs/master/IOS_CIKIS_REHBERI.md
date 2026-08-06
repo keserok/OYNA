@@ -20,7 +20,8 @@
 | Derin bağlantılar (`oyna://` — bildirime tıklayınca doğru ekrana gider) | ✅ |
 | Çentik/Dynamic Island güvenli alanları, klavye davranışı, 16px yazı (iOS'un otomatik yakınlaşmasını önler) | ✅ |
 | İhracat/şifreleme sorusu otomatik cevaplandı (`ITSAppUsesNonExemptEncryption`) — her yüklemede soru çıkmaz | ✅ |
-| Sağlık kontrolleri: tip denetimi temiz · 488/488 birim testi · üretim derlemesi · iOS senkronu (12 eklenti) | ✅ |
+| Sağlık kontrolleri: tip denetimi temiz · 1685 birim testi · üretim derlemesi · iOS senkronu (13 eklenti) | ✅ |
+| Supabase bağlantısı derlemeye **gömülü** — `.env` dosyası oluşturmana gerek yok (§3.1 notu) | ✅ |
 | Hesap silme akışı (Apple zorunlu şartı) ve yasal sayfalar (`/gizlilik` vb.) | ✅ |
 
 **Senden beklenenler (bu rehberin konusu):** bir Mac'te derleme + Apple panellerinde 30–40 dakikalık ayar + mağaza formları.
@@ -70,9 +71,9 @@ cd OYNA
 GitHub şifre sorarsa: github.com → sağ üst profil → Settings → Developer settings → Personal access tokens'tan
 bir token üretip şifre yerine onu kullan. (Kolay alternatif: **GitHub Desktop** uygulamasıyla klonla.)
 
-> **Not:** Bu rehberdeki iyileştirmeler `claude/ios-app-preparation-6l18jy` dalındadır. GitHub'da bu dalın
-> PR'ını **main'e birleştirdikten sonra** klonlarsan ekstra bir şey yapmana gerek yok. Birleştirmediysen:
-> `git checkout claude/ios-app-preparation-6l18jy` komutuyla bu dala geç.
+> **Not (2026-08-06 itibarıyla):** Her şey `main` dalındadır — dal değiştirmene gerek YOK.
+> Yukarıdaki `git clone` seni doğrudan `main`'e getirir. İleride tekrar derleyeceksen, klasörün
+> içindeyken önce `git pull` yapman yeterli.
 
 ---
 
@@ -88,6 +89,11 @@ pod install          # iOS eklentilerini bağlar (ilk seferde birkaç dakika)
 cd ../..
 npx cap open ios     # Xcode'da projeyi açar
 ```
+
+> **`.env` dosyası oluşturmana GEREK YOK.** Uygulamanın canlı Supabase adresi ve herkese açık
+> (anon) anahtarı derlemenin içine gömülüdür (`supabaseClient.ts`). Yani yukarıdaki dört komut
+> yeterli; hiçbir gizli anahtar girmen gerekmiyor. (Depodaki `.env.example` yalnız yerel
+> geliştirme ve sunucu tarafı anahtarları içindir — telefona derleme için kullanılmaz.)
 
 ### 3.2 Xcode'da imzalama (ilk seferde bir kez)
 1. Xcode açıldığında sol paneldeki en üstte **mavi "App"** simgesine tıkla.
