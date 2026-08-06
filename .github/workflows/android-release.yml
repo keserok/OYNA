@@ -155,7 +155,7 @@ jobs:
             -PoynaVersionCode=${{ steps.ver.outputs.code }} \
             -PoynaVersionName=${{ steps.ver.outputs.name }}
 
-      - name: APK derle (istege bagli)
+      - name: APK derle (istege bagli, YAYIN surumu)
         if: ${{ inputs.buildApkToo }}
         working-directory: android
         run: |
@@ -163,16 +163,43 @@ jobs:
             -PoynaVersionCode=${{ steps.ver.outputs.code }} \
             -PoynaVersionName=${{ steps.ver.outputs.name }}
 
+      # ── TELEFONA KURULABILEN APK ─────────────────────────────────────────
+      # NEDEN AYRI BIR "debug" PAKETI: yayin (release) paketi, imzalama
+      # secret'lari tanimli DEGILSE IMZASIZ cikar. Android imzasiz bir APK'yi
+      # KURMAZ — yani anahtar yokken uretilen release APK telefonda ise
+      # yaramaz, sadece "derleme calisiyor" demektir.
+      #
+      # Debug paketini Android'in kendi hazir anahtariyla otomatik imzalar.
+      # Play'e yuklenemez ama TELEFONA KURULUR. Kurucu uygulamayi kendi
+      # cihazinda gormek istediginde ihtiyaci olan tam olarak budur.
+      # Bu yuzden anahtar olsun olmasin HER CALISMADA uretilir.
+      - name: Telefona kurulabilen APK derle (debug, otomatik imzali)
+        working-directory: android
+        run: |
+          ./gradlew assembleDebug --no-daemon \
+            -PoynaVersionCode=${{ steps.ver.outputs.code }} \
+            -PoynaVersionName=${{ steps.ver.outputs.name }}
+
       - name: Paketleri isimlendir
         id: out
         run: |
+          S="${{ steps.ver.outputs.name }}-${{ steps.ver.outputs.code }}"
           mkdir -p cikti
-          cp android/app/build/outputs/bundle/release/*.aab \
-             "cikti/oyna-${{ steps.ver.outputs.name }}-${{ steps.ver.outputs.code }}.aab"
+
+          # 1) Play'e yuklenecek paket
+          cp android/app/build/outputs/bundle/release/*.aab "cikti/oyna-$S-PLAY.aab"
+
+          # 2) Yayin APK'si (yalniz istendiyse)
           if [ -d android/app/build/outputs/apk/release ]; then
             cp android/app/build/outputs/apk/release/*.apk \
-               "cikti/oyna-${{ steps.ver.outputs.name }}-${{ steps.ver.outputs.code }}.apk" 2>/dev/null || true
+               "cikti/oyna-$S-release.apk" 2>/dev/null || true
           fi
+
+          # 3) Telefona kurulabilen paket — dosya adi ne ise yaradigini SOYLESIN,
+          #    kurucu uc dosya arasinda hangisini kuracagini tahmin etmesin.
+          cp android/app/build/outputs/apk/debug/*.apk \
+             "cikti/oyna-$S-TELEFONA-KUR.apk"
+
           ls -lh cikti
 
       - name: Paketi yukle (indirilebilir cikti)
@@ -195,11 +222,24 @@ jobs:
             echo "| Imzali mi | \`${{ steps.signing.outputs.signed }}\` |"
             echo "| Paket kimligi | \`com.oyna.app\` |"
             echo ""
+            echo "### Hangi dosya ne ise yarar"
+            echo ""
+            echo "| Dosya | Ne icin |"
+            echo "|---|---|"
+            echo "| \`...-TELEFONA-KUR.apk\` | **Kendi Android telefonuna kurmak icin.** Her zaman calisir. |"
+            echo "| \`...-PLAY.aab\` | Google Play Console'a yuklemek icin. |"
+            echo "| \`...-release.apk\` | Yayin surumu APK (yalniz istendiginde uretilir). |"
+            echo ""
+            echo "**Telefona nasil kurulur:** APK'yi telefona gonder (WhatsApp/Drive/e-posta),"
+            echo "dosyaya dokun, \"Bilinmeyen kaynaklara izin ver\" cikarsa izin ver, Kur."
+            echo ""
             if [ "${{ steps.signing.outputs.signed }}" = "true" ]; then
-              echo "**Sirada ne var:** Yukaridaki \"Artifacts\" bolumunden .aab dosyasini indir,"
+              echo "**Play icin:** \`-PLAY.aab\` dosyasini indir ->"
               echo "Play Console -> Uretim (Production) -> Yeni surum olustur -> dosyayi surukle."
             else
-              echo "**DIKKAT:** Bu paket IMZASIZ. Play Console kabul etmez."
-              echo "Once imzalama secret'larini ekleyip isi tekrar calistir."
+              echo "**DIKKAT:** \`-PLAY.aab\` ve \`-release.apk\` IMZASIZ uretildi;"
+              echo "Play Console kabul etmez ve release APK telefona KURULMAZ."
+              echo "Imzalama secret'larini ekleyip isi tekrar calistir."
+              echo "Telefonda denemek icin \`-TELEFONA-KUR.apk\` dosyasini kullan — o imzali."
             fi
           } >> "$GITHUB_STEP_SUMMARY"
