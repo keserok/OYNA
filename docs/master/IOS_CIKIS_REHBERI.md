@@ -66,8 +66,10 @@ brew install node cocoapods
 ```bash
 cd ~/Desktop
 git clone https://github.com/keserok/OYNA.git
-cd OYNA
+cd ~/Desktop/OYNA
 ```
+> ⚠️ Bu üçünü de **tek tek** yapıştır (bkz. §3.1 uyarısı). Toplu yapıştırma satırları birleştirip
+> `cd: string not in pwd: OYNAnpm` gibi hatalara yol açıyor.
 GitHub şifre sorarsa: github.com → sağ üst profil → Settings → Developer settings → Personal access tokens'tan
 bir token üretip şifre yerine onu kullan. (Kolay alternatif: **GitHub Desktop** uygulamasıyla klonla.)
 
@@ -79,16 +81,50 @@ bir token üretip şifre yerine onu kullan. (Kolay alternatif: **GitHub Desktop*
 
 ## 3. Uygulamayı derle ve KENDİ iPhone'unda çalıştır (~30 dk)
 
-### 3.1 Derleme (Terminal'de, proje klasöründeyken)
+### 3.1 Derleme
+
+> ⚠️ **KOMUTLARI TEK TEK YAPIŞTIR.** Hepsini birden kopyalayınca satırlar birbirine yapışıyor
+> (`cd OYNA` + `npm install` → `cd OYNAnpm install`) ve komutlar YANLIŞ KLASÖRDE çalışıyor.
+> Belirti: `npm error path /Users/<sen>/package.json` ve `cd: no such file or directory: ios/App`.
+> Her komuttan sonra Enter'a bas, **bitmesini bekle** (`%` işareti geri gelir), sonra diğerine geç.
+
+**Önce doğru klasörde olduğunu doğrula:**
 ```bash
-npm install          # bağımlılıkları indirir (birkaç dakika)
-npm run build        # uygulamanın web katmanını üretir
-npx cap sync ios     # ürettiklerini iOS projesine kopyalar
-cd ios/App
-pod install          # iOS eklentilerini bağlar (ilk seferde birkaç dakika)
-cd ../..
-npx cap open ios     # Xcode'da projeyi açar
+cd ~/Desktop/OYNA
 ```
+```bash
+pwd
+```
+Ekranda `/Users/<kullanıcı-adın>/Desktop/OYNA` yazmalı. Yazmıyorsa devam etme.
+
+**Sonra sırayla (her biri ayrı):**
+```bash
+npm install
+```
+```bash
+npm run build
+```
+```bash
+npx cap sync ios
+```
+```bash
+cd ~/Desktop/OYNA/ios/App
+```
+```bash
+pod install
+```
+```bash
+cd ~/Desktop/OYNA
+```
+```bash
+npx cap open ios
+```
+
+Ne beklemeli: `npm run build` sonunda `✓ built in …` · `npx cap sync ios` sonunda `Sync finished` ·
+son komut **Xcode'u açar**.
+
+> `cd` komutları bilerek TAM ADRESLE yazıldı (`~/Desktop/OYNA` gibi). Böylece satırlar yapışsa
+> ya da başka bir klasörde olsan bile doğru yere gider.
 
 > **`.env` dosyası oluşturmana GEREK YOK.** Uygulamanın canlı Supabase adresi ve herkese açık
 > (anon) anahtarı derlemenin içine gömülüdür (`supabaseClient.ts`). Yani yukarıdaki dört komut
