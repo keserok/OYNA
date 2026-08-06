@@ -45,6 +45,11 @@ Doğrulama (2026-07-05, canlı DB'de sorgulandı — hepsi mevcut):
 > **463/463 migration dosyası boş bir PG16 veritabanında sıfırdan hatasız
 > koşuyor** ve oluşan şema canlıyla birebir eşleşiyor:
 > **tablo 121=121 · görünüm 7=7 · fonksiyon 648=648 · satır kuralı 278=278**
+>
+> **GERÇEK SUPABASE'DE DE DOĞRULANDI:** PR #165'in önizleme dalı sıfırlanıp
+> baştan kuruldu; `schema_migrations` → **463 kayıt**, son `20260904000003`.
+> Yani onarım yalnız yerel taklitte değil, Supabase'in kendi altyapısında da
+> uçtan uca çalışıyor. (Önizleme daha önce 324'te duruyordu.)
 
 **NE OLDU:** 20 Temmuz'da kapatılan kayma, 3–4 Ağustos'ta yeniden oluştu.
 Depoda **42 migration dosyası** vardı ki canlıda HİÇ çalışmamıştı. Aynı işler
