@@ -194,7 +194,7 @@ BEGIN
       INTO v_adres_var
       FROM public.app_config WHERE key = 'functions_base_url';
     v_adres_var := coalesce(v_adres_var, false);
-    IF NOT v_adres_var THEN v_eksik := v_eksik || 'adres'; END IF;
+    IF NOT v_adres_var THEN v_eksik := array_append(v_eksik, 'adres'); END IF;
 
     -- 2) Parola - degerin kendisi HICBIR YERE yazilmaz, yalniz yer tutucu mu
     --    diye bakilir.
@@ -208,16 +208,16 @@ BEGIN
     EXCEPTION WHEN OTHERS THEN
       v_parola_ok := NULL;   -- Vault okunamadi: "yok" demek yanlis olur
     END;
-    IF v_parola_ok IS FALSE THEN v_eksik := v_eksik || 'parola'; END IF;
+    IF v_parola_ok IS FALSE THEN v_eksik := array_append(v_eksik, 'parola'); END IF;
 
     -- 3) Saat basi is kaydi
     SELECT EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'sweep_stale_payments'),
            EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'sweep_stale_payments' AND active)
       INTO v_cron_var, v_cron_aktif;
     IF NOT v_cron_var THEN
-      v_eksik := v_eksik || 'saat basi is';
+      v_eksik := array_append(v_eksik, 'saat basi is');
     ELSIF NOT v_cron_aktif THEN
-      v_eksik := v_eksik || 'is duraklatilmis';
+      v_eksik := array_append(v_eksik, 'is duraklatilmis');
     END IF;
 
     -- Supurucu acik mi? Acikken eksik olmasi ACIL; kapaliyken degil.
