@@ -13,11 +13,20 @@ CREATE TABLE IF NOT EXISTS public.goalkeepers (
   -- Doğru olan üretim: services/matchService.ts:279 "matchCount" sorguluyor.
   "matchCount" INTEGER DEFAULT 0,
   avatar TEXT,
-  recent_awards TEXT,
+  -- [2026-08-06 onarım] Aynı sınıf hata, aynı tablo: üretimde bu kolonun adı
+  -- "recentAwards" (camelCase, tırnaklı) — canlı şemadan doğrulandı. Repo
+  -- burada snake_case yaratıyordu; sıfırdan kurulumda 20260805233714
+  -- (misafire açık sağlayıcı görünümü) bu kolonu bulamayıp duruyordu.
+  -- matchCount ile birebir aynı durum; oradaki düzeltmeyle tutarlı yapıldı.
+  "recentAwards" TEXT,
   style TEXT,
   bio TEXT,
-  preferred_zones JSONB,
-  is_elite BOOLEAN DEFAULT FALSE,
+  -- [2026-08-06 onarim] Uretimde bu iki kolon camelCase: "preferredZones"
+  -- ve "isElite" (canli semadan dogrulandi). Repo snake_case yaratiyordu;
+  -- sifirdan kurulumda misafire acik saglayici gorunumu bu kolonlari
+  -- bulamayip duruyordu. matchCount/recentAwards ile ayni sinif hata.
+  "preferredZones" JSONB,
+  "isElite" BOOLEAN DEFAULT FALSE,
   coordinates JSONB, -- { lat, lng }
   stats JSONB,
   skills JSONB,
@@ -43,8 +52,12 @@ CREATE TABLE IF NOT EXISTS public.referees (
   rating NUMERIC DEFAULT 0,
   style TEXT,
   bio TEXT,
-  preferred_zones JSONB,
-  is_elite BOOLEAN DEFAULT FALSE,
+  -- [2026-08-06 onarim] Uretimde bu iki kolon camelCase: "preferredZones"
+  -- ve "isElite" (canli semadan dogrulandi). Repo snake_case yaratiyordu;
+  -- sifirdan kurulumda misafire acik saglayici gorunumu bu kolonlari
+  -- bulamayip duruyordu. matchCount/recentAwards ile ayni sinif hata.
+  "preferredZones" JSONB,
+  "isElite" BOOLEAN DEFAULT FALSE,
   coordinates JSONB, -- { lat, lng }
   stats JSONB,
   is_available BOOLEAN DEFAULT true,
@@ -63,6 +76,22 @@ CREATE TABLE IF NOT EXISTS public.service_offers (
   status TEXT DEFAULT 'PENDING', -- PENDING, ACCEPTED, REJECTED
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
+
+-- ── [2026-08-06 onarım] CANLIDA VAR OLAN AMA DEPODA YARATILMAYAN KOLONLAR ──
+-- `reviews`, `geohash` ve `verification_status` canlı `goalkeepers`/`referees`
+-- tablolarında mevcut (canlı şemadan doğrulandı) ama onları ekleyen bir
+-- migration yok — elle eklenmişler. Sıfırdan kurulan bir veritabanında bu
+-- kolonlar oluşmuyor ve 20260805233714 (misafire açık sağlayıcı görünümü)
+-- "column does not exist" ile duruyordu.
+--
+-- CANLIYA ETKİSİ YOK: `IF NOT EXISTS` üçünde de sessizce geçer.
+ALTER TABLE public.goalkeepers ADD COLUMN IF NOT EXISTS reviews             jsonb DEFAULT '[]'::jsonb;
+ALTER TABLE public.goalkeepers ADD COLUMN IF NOT EXISTS geohash             text;
+ALTER TABLE public.goalkeepers ADD COLUMN IF NOT EXISTS verification_status text NOT NULL DEFAULT 'pending';
+
+ALTER TABLE public.referees    ADD COLUMN IF NOT EXISTS reviews             jsonb DEFAULT '[]'::jsonb;
+ALTER TABLE public.referees    ADD COLUMN IF NOT EXISTS geohash             text;
+ALTER TABLE public.referees    ADD COLUMN IF NOT EXISTS verification_status text NOT NULL DEFAULT 'pending';
 
 -- RLS ayarları
 ALTER TABLE public.goalkeepers ENABLE ROW LEVEL SECURITY;

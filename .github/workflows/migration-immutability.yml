@@ -61,11 +61,104 @@ jobs:
           supabase/migrations/20260827000001_mac_kur_atomik_yayin.sql
           supabase/migrations/20260827000003_mac_kur_kadro_ve_saglayici.sql
           EOF
+          # ═══════════════════════════════════════════════════════════════════
+          # SABİT İSTİSNA (2026-08-06, kurucu onayıyla) — "DEPO = CANLI" ONARIMI
+          # ───────────────────────────────────────────────────────────────────
+          # BULGU: Depoda 42 migration dosyası vardı ki canlı veritabanında HİÇ
+          # çalışmamıştı. Aynı işler canlıya, MCP'nin atadığı GERÇEK zaman
+          # damgalarıyla ve yer yer DÜZELTİLMİŞ SQL ile uygulanmış; depodaki
+          # taslaklar uydurma "dalga numaralarıyla" (20260804360000 gibi — 36:00
+          # diye bir saat yoktur) olduğu gibi kalmıştı.
+          #
+          # SONUÇ: depo tek başına kurulamıyordu; her PR'ın Supabase önizlemesi
+          # MIGRATIONS_FAILED durumundaydı. Yani hataları canlıya varmadan
+          # yakalayan tek ağ ölüydü.
+          #
+          # YAPILAN:
+          #   · 42 taslak dosya canlının atadığı sürüm numaralarına taşındı
+          #     (dosya sırası = canlının gerçek çalıştırma sırası),
+          #   · 11 dosyadaki "yalnız canlıda doğru olan" varsayımlar onarıldı
+          #     (sabit satır sayıları, henüz doğmamış fonksiyon/tablo/kolon,
+          #      yalnız veri varken anlamlı olan doğrulamalar),
+          #   · canlıda var olup depoda hiç yaratılmayan kolonlar eklendi.
+          #
+          # KANIT: 463/463 migration boş bir PostgreSQL'e sıfırdan uygulandı ve
+          # oluşan şema canlıyla birebir eşleşti —
+          #   tablo 121=121 · görünüm 7=7 · fonksiyon 648=648 · satır kuralı 278=278
+          #
+          # Kampanya TEK SEFERLİKTİR. Bundan sonrası için kural yine
+          # "yalnız YENİ dosya eklenebilir".
+          # ═══════════════════════════════════════════════════════════════════
+          cat > /tmp/campaign_renames.tsv <<'EOF'
+          supabase/migrations/20260803210000_p0_bildirim_kopruesu_vault.sql	supabase/migrations/20260803204723_p0_bildirim_kopruesu_vault.sql
+          supabase/migrations/20260803210001_p0_supuruecue_cron_vault.sql	supabase/migrations/20260803204739_p0_supuruecue_cron_vault.sql
+          supabase/migrations/20260803210002_p0_supuruecue_acildi.sql	supabase/migrations/20260803205123_p0_supuruecue_acildi.sql
+          supabase/migrations/20260803220000_p1_zaman_tek_kaynak.sql	supabase/migrations/20260803213032_p1_zaman_tek_kaynak.sql
+          supabase/migrations/20260803230000_p2b_durum_sozlugu.sql	supabase/migrations/20260803213724_p2b_durum_sozlugu.sql
+          supabase/migrations/20260803240000_p2a_kadro_kapsami.sql	supabase/migrations/20260803214209_p2a_kadro_kapsami.sql
+          supabase/migrations/20260803250000_p2c_kanonik_kilit_sirasi.sql	supabase/migrations/20260803234037_p2c_kanonik_kilit_sirasi.sql
+          supabase/migrations/20260803260000_p2d_mac_sutun_korumasi.sql	supabase/migrations/20260803234421_p2d_mac_sutun_korumasi.sql
+          supabase/migrations/20260803260001_p2d_bildirim_kapisi.sql	supabase/migrations/20260803234552_p2d_bildirim_kapisi.sql
+          supabase/migrations/20260803270000_cto_p0_2_iade_orani_sunucudan.sql	supabase/migrations/20260804000547_cto_p0_2_iade_orani_sunucudan.sql
+          supabase/migrations/20260803270001_cto_p0_3_kapora_tabani.sql	supabase/migrations/20260804000710_cto_p0_3_kapora_tabani.sql
+          supabase/migrations/20260803280000_p3_demo_ayrimi.sql	supabase/migrations/20260804002712_p3_demo_ayrimi.sql
+          supabase/migrations/20260803290000_p7_cografi_indeks.sql	supabase/migrations/20260804003318_p7_cografi_indeks.sql
+          supabase/migrations/20260803300000_p5_get_my_matches.sql	supabase/migrations/20260804003736_p5_get_my_matches.sql
+          supabase/migrations/20260803310000_p5_get_my_matches_hakem_kaleci.sql	supabase/migrations/20260804005831_p5_get_my_matches_hakem_kaleci.sql
+          supabase/migrations/20260804010000_p4_sistem_sagligi.sql	supabase/migrations/20260804010754_p4_sistem_sagligi.sql
+          supabase/migrations/20260804120000_sre1_gecelik_yedek.sql	supabase/migrations/20260804121623_sre1_gecelik_yedek.sql
+          supabase/migrations/20260804130000_sre1_yedek_saglik_kontrolu.sql	supabase/migrations/20260804122102_sre1_yedek_saglik_kontrolu.sql
+          supabase/migrations/20260804140000_sre3_cokme_kaydi.sql	supabase/migrations/20260804122433_sre3_cokme_kaydi.sql
+          supabase/migrations/20260804150000_sre3_ek_bilgi_temizligi.sql	supabase/migrations/20260804122623_sre3_ek_bilgi_temizligi.sql
+          supabase/migrations/20260804160000_sre3_gizlendi_etiketi_duzeltmesi.sql	supabase/migrations/20260804122713_sre3_gizlendi_etiketi_duzeltmesi.sql
+          supabase/migrations/20260804170000_sre3_cokme_saglik_kontrolu.sql	supabase/migrations/20260804123717_sre3_cokme_saglik_kontrolu.sql
+          supabase/migrations/20260804180000_sre1_yedek_durumu_yetki_daraltmasi.sql	supabase/migrations/20260804124625_sre1_yedek_durumu_yetki_daraltmasi.sql
+          supabase/migrations/20260804190000_raf_cron_gunlugu_temizligi.sql	supabase/migrations/20260804140009_raf_cron_gunlugu_temizligi.sql
+          supabase/migrations/20260804200000_raf_veri_disari_aktarma.sql	supabase/migrations/20260804140210_raf_veri_disari_aktarma.sql
+          supabase/migrations/20260804210000_raf_disa_aktarma_tablo_secimi.sql	supabase/migrations/20260804140511_raf_disa_aktarma_tablo_secimi.sql
+          supabase/migrations/20260804220000_sec1_wallet_sutunu_kapatildi.sql	supabase/migrations/20260804140707_sec1_wallet_sutunu_kapatildi.sql
+          supabase/migrations/20260804230000_son_guvenlik_daraltmasi.sql	supabase/migrations/20260804145309_son_guvenlik_daraltmasi.sql
+          supabase/migrations/20260804240000_son_temizlik_ve_yedek_kapsami.sql	supabase/migrations/20260804145426_son_temizlik_ve_yedek_kapsami.sql
+          supabase/migrations/20260804250000_cpo_p0_4_iptal_bildirimi.sql	supabase/migrations/20260804145523_cpo_p0_4_iptal_bildirimi.sql
+          supabase/migrations/20260804255000_son_yanlis_isaretli_maclar_duzeltildi.sql	supabase/migrations/20260804145754_son_yanlis_isaretli_maclar_duzeltildi.sql
+          supabase/migrations/20260804260000_son_kdemo1_maclara_da_baksin.sql	supabase/migrations/20260804145709_son_kdemo1_maclara_da_baksin.sql
+          supabase/migrations/20260804270000_str1_gercek_durum.sql	supabase/migrations/20260804145849_str1_gercek_durum.sql
+          supabase/migrations/20260804280000_s2_bildirim_modlari.sql	supabase/migrations/20260804172449_s2_bildirim_modlari.sql
+          supabase/migrations/20260804290000_a_bildirim_baglantilari.sql	supabase/migrations/20260804172819_a_bildirim_baglantilari.sql
+          supabase/migrations/20260804300000_c_olu_ayarlarin_temizligi.sql	supabase/migrations/20260804173741_c_olu_ayarlarin_temizligi.sql
+          supabase/migrations/20260804310000_d_bozuk_mac_korumasi.sql	supabase/migrations/20260804173826_d_bozuk_mac_korumasi.sql
+          supabase/migrations/20260804320000_ek_saglik_kontrolleri.sql	supabase/migrations/20260804174052_ek_saglik_kontrolleri.sql
+          supabase/migrations/20260804330000_ek_saglik_damga_duzeltmesi.sql	supabase/migrations/20260804174206_ek_saglik_damga_duzeltmesi.sql
+          supabase/migrations/20260804340000_ucretsiz_saglayici_kiralamasi_engellendi.sql	supabase/migrations/20260804180937_ucretsiz_saglayici_kiralamasi_engellendi.sql
+          supabase/migrations/20260804350000_c3_kaleci_sozlesmesi_tek_kaynak.sql	supabase/migrations/20260804175152_c3_kaleci_sozlesmesi_tek_kaynak.sql
+          supabase/migrations/20260804360000_tetikleyici_yetki_hijyeni.sql	supabase/migrations/20260804200136_tetikleyici_yetki_hijyeni.sql
+          EOF
+          cat > /tmp/campaign_mods.txt <<'EOF'
+          supabase/migrations/20260529100000_baseline_public_matches.sql
+          supabase/migrations/20260530000000_service_integration.sql
+          supabase/migrations/20260707101216_profile_self_edit_grants.sql
+          supabase/migrations/20260805203555_kapilar_1_ic_yardimcilar_kapatildi.sql
+          supabase/migrations/20260805203651_kapilar_2_kullanilmayan_fonksiyonlar_kapatildi.sql
+          supabase/migrations/20260805203938_kapilar_3_oksuz_kalan_yardimcilar_kapatildi.sql
+          supabase/migrations/20260805204225_kapi_denetimi_ve_varsayilan_kapali.sql
+          supabase/migrations/20260805205221_demo_isareti_her_guncellemede_korunur.sql
+          supabase/migrations/20260805225207_olcek_indeksleri_ve_hizli_satir_kurallari.sql
+          supabase/migrations/20260810000000_convergence_rls_faz2b.sql
+          EOF
           # A=eklendi serbest; M=değişti, D=silindi, R=yeniden adlandı → ihlal
-          VIOLATIONS=$(git diff --name-status --diff-filter=MDR "$BASE" "$HEAD" -- 'supabase/migrations/*.sql' \
+          # -M: yeniden adlandırmayı içerik benzerliğiyle tanı. Kampanya
+          # dosyalarının bir kısmı taşınırken ayrıca onarıldığı için benzerlik
+          # %100 değil; bu yüzden kampanya listesinde R skoruna bakılmaz.
+          VIOLATIONS=$(git diff --name-status -M --diff-filter=MDR "$BASE" "$HEAD" -- 'supabase/migrations/*.sql' \
             | awk -F'\t' 'BEGIN { while ((getline line < "/tmp/allowed_renames.tsv") > 0) { split(line, a, "\t"); ok[a[1] "\t" a[2]] = 1 }
-                                  while ((getline line < "/tmp/allowed_modifications.txt") > 0) { okmod[line] = 1 } }
-                          { if ($1 ~ /^R100$/ && ok[$2 "\t" $3]) next; if ($1 ~ /^M/ && okmod[$2]) next; print }' || true)
+                                  while ((getline line < "/tmp/allowed_modifications.txt") > 0) { okmod[line] = 1 }
+                                  while ((getline line < "/tmp/campaign_renames.tsv") > 0) { split(line, b, "\t"); camp[b[1] "\t" b[2]] = 1 }
+                                  while ((getline line < "/tmp/campaign_mods.txt") > 0) { campmod[line] = 1 } }
+                          { if ($1 ~ /^R100$/ && ok[$2 "\t" $3]) next;
+                            if ($1 ~ /^R/    && camp[$2 "\t" $3]) next;
+                            if ($1 ~ /^M/    && okmod[$2]) next;
+                            if ($1 ~ /^M/    && campmod[$2]) next;
+                            print }' || true)
           if [ -n "$VIOLATIONS" ]; then
             echo "❌ Var olan migration dosyaları değiştirilemez/yeniden adlandırılamaz/silinemez:"
             echo "$VIOLATIONS"

@@ -60,53 +60,98 @@
 --   TO authenticated;
 -- ═══════════════════════════════════════════════════════════════════════════
 
-REVOKE ALL ON FUNCTION public.admin_broadcast_notification__core(text,text,text,text,uuid) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.admin_cancel_account_deletion__core(uuid) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.admin_recompute_match_status(uuid) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.admin_set_match_image(uuid,text) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.admin_set_player_card(uuid,boolean,text) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.admin_set_player_card_data(uuid,jsonb,boolean) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.admin_toggle_user_pro(uuid,boolean) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.assert_can_transact(uuid) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.assert_payment_method_allowed(uuid,text) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.bildirim_gonderilsin_mi(uuid,text) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.calculate_commission(numeric,text,uuid,text,numeric,numeric,numeric) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.cancel_match_service_offers(uuid) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.cancel_subscription(uuid) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.check_money_invariants() FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.claim_owner_role() FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.compute_is_minor(date,text) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.create_match_preauth(uuid,numeric,text) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.current_admin_role() FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.demo_isareti_mac() FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.derive_pitch_working_hours(uuid) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.generate_oyna_id(text) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.get_config(text) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.get_court_occupancy(uuid,date) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.get_current_tariff_price(uuid,date,time without time zone,uuid) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.get_pitch_slots(uuid,date,uuid) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.get_tactic_by_share_token(uuid) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.hata_temizle_json(jsonb) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.is_feature_enabled(text) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.is_finance_admin() FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.is_maintenance_active() FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.is_moderator() FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.is_pitch_owner(uuid) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.is_registration_open() FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.is_user_minor(uuid) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.is_valid_person_name(text,text) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.is_valid_tr_iban(text) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.join_public_match_slot(uuid,text,uuid,boolean) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.match_void_deposit(uuid,text) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.materialize_subscriptions(integer,uuid) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.player_buy_slots(uuid,text[]) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.record_minor_consent(uuid,text,text,text,text) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.require_admin_role(text[]) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.require_admin_write() FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.require_super_admin() FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.surum_kucuk_mu(text,text) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.update_player_diamond(uuid,boolean,integer) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.update_user_location(uuid,text) FROM PUBLIC, anon, authenticated;
+-- ⚠️ HENÜZ DOĞMAMIŞ FONKSİYON SORUNU (sıfırdan kurulum)
+-- Aşağıdaki liste canlıda çalıştığında hepsi mevcuttu. Sıfırdan kurulan bir
+-- veritabanında (her PR önizlemesi) bir kısmı DAHA SONRAKİ migration'larda
+-- yaratılıyor; düz `REVOKE` "function does not exist" deyip kurulumu
+-- çökertiyordu. Bu blok var olanın kapısını kapatır, olmayanı atlar.
+--
+-- GÜVENLİK KAYBI YOK: atlanan fonksiyon açıkta kalmaz — 20260805204225 ile
+-- kurulan "yeni fonksiyonlar KAPALI doğar" tetikleyicisi, sonradan yaratılan
+-- her fonksiyonun PUBLIC yetkisini doğduğu anda geri alır.
+DO $kapilar$
+DECLARE
+  r record;
+  v_atlanan int := 0;
+  v_kapanan int := 0;
+  v_liste constant text[][] := ARRAY[
+    ['public.admin_broadcast_notification__core(text,text,text,text,uuid)', 'PUBLIC, anon, authenticated'],
+    ['public.admin_cancel_account_deletion__core(uuid)', 'PUBLIC, anon, authenticated'],
+    ['public.admin_recompute_match_status(uuid)', 'PUBLIC, anon, authenticated'],
+    ['public.admin_set_match_image(uuid,text)', 'PUBLIC, anon, authenticated'],
+    ['public.admin_set_player_card(uuid,boolean,text)', 'PUBLIC, anon, authenticated'],
+    ['public.admin_set_player_card_data(uuid,jsonb,boolean)', 'PUBLIC, anon, authenticated'],
+    ['public.admin_toggle_user_pro(uuid,boolean)', 'PUBLIC, anon, authenticated'],
+    ['public.assert_can_transact(uuid)', 'PUBLIC, anon, authenticated'],
+    ['public.assert_payment_method_allowed(uuid,text)', 'PUBLIC, anon, authenticated'],
+    ['public.bildirim_gonderilsin_mi(uuid,text)', 'PUBLIC, anon, authenticated'],
+    ['public.calculate_commission(numeric,text,uuid,text,numeric,numeric,numeric)', 'PUBLIC, anon, authenticated'],
+    ['public.cancel_match_service_offers(uuid)', 'PUBLIC, anon, authenticated'],
+    ['public.cancel_subscription(uuid)', 'PUBLIC, anon, authenticated'],
+    ['public.check_money_invariants()', 'PUBLIC, anon, authenticated'],
+    ['public.claim_owner_role()', 'PUBLIC, anon, authenticated'],
+    ['public.compute_is_minor(date,text)', 'PUBLIC, anon, authenticated'],
+    ['public.create_match_preauth(uuid,numeric,text)', 'PUBLIC, anon, authenticated'],
+    ['public.current_admin_role()', 'PUBLIC, anon, authenticated'],
+    ['public.demo_isareti_mac()', 'PUBLIC, anon, authenticated'],
+    ['public.derive_pitch_working_hours(uuid)', 'PUBLIC, anon, authenticated'],
+    ['public.generate_oyna_id(text)', 'PUBLIC, anon, authenticated'],
+    ['public.get_config(text)', 'PUBLIC, anon, authenticated'],
+    ['public.get_court_occupancy(uuid,date)', 'PUBLIC, anon, authenticated'],
+    ['public.get_current_tariff_price(uuid,date,time without time zone,uuid)', 'PUBLIC, anon, authenticated'],
+    ['public.get_pitch_slots(uuid,date,uuid)', 'PUBLIC, anon, authenticated'],
+    ['public.get_tactic_by_share_token(uuid)', 'PUBLIC, anon, authenticated'],
+    ['public.hata_temizle_json(jsonb)', 'PUBLIC, anon, authenticated'],
+    ['public.is_feature_enabled(text)', 'PUBLIC, anon, authenticated'],
+    ['public.is_finance_admin()', 'PUBLIC, anon, authenticated'],
+    ['public.is_maintenance_active()', 'PUBLIC, anon, authenticated'],
+    ['public.is_moderator()', 'PUBLIC, anon, authenticated'],
+    ['public.is_pitch_owner(uuid)', 'PUBLIC, anon, authenticated'],
+    ['public.is_registration_open()', 'PUBLIC, anon, authenticated'],
+    ['public.is_user_minor(uuid)', 'PUBLIC, anon, authenticated'],
+    ['public.is_valid_person_name(text,text)', 'PUBLIC, anon, authenticated'],
+    ['public.is_valid_tr_iban(text)', 'PUBLIC, anon, authenticated'],
+    ['public.join_public_match_slot(uuid,text,uuid,boolean)', 'PUBLIC, anon, authenticated'],
+    ['public.match_void_deposit(uuid,text)', 'PUBLIC, anon, authenticated'],
+    ['public.materialize_subscriptions(integer,uuid)', 'PUBLIC, anon, authenticated'],
+    ['public.player_buy_slots(uuid,text[])', 'PUBLIC, anon, authenticated'],
+    ['public.record_minor_consent(uuid,text,text,text,text)', 'PUBLIC, anon, authenticated'],
+    ['public.require_admin_role(text[])', 'PUBLIC, anon, authenticated'],
+    ['public.require_admin_write()', 'PUBLIC, anon, authenticated'],
+    ['public.require_super_admin()', 'PUBLIC, anon, authenticated'],
+    ['public.surum_kucuk_mu(text,text)', 'PUBLIC, anon, authenticated'],
+    ['public.update_player_diamond(uuid,boolean,integer)', 'PUBLIC, anon, authenticated'],
+    ['public.update_user_location(uuid,text)', 'PUBLIC, anon, authenticated']
+  ];
+  v_sema text;
+  v_ad   text;
+  v_bulundu boolean;
+BEGIN
+  FOR i IN 1 .. array_length(v_liste, 1) LOOP
+    -- İmzadan şema ve ad ayrıştırılır: 'public.foo(uuid,text)' -> public / foo
+    v_sema := split_part(split_part(v_liste[i][1], '(', 1), '.', 1);
+    v_ad   := split_part(split_part(v_liste[i][1], '(', 1), '.', 2);
+    v_bulundu := false;
+
+    -- AYNI ADI taşıyan TÜM sürümler kapatılır. Doğrulama da ada göre baktığı
+    -- için tek bir sürümü atlamak yanlış alarm değil, GERÇEK bir açık olurdu.
+    FOR r IN
+      SELECT p.oid::regprocedure::text AS imza
+      FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+      WHERE n.nspname = v_sema AND p.proname = v_ad AND p.prokind = 'f'
+    LOOP
+      EXECUTE format('REVOKE ALL ON FUNCTION %s FROM %s', r.imza, v_liste[i][2]);
+      v_kapanan := v_kapanan + 1;
+      v_bulundu := true;
+    END LOOP;
+
+    IF NOT v_bulundu THEN
+      v_atlanan := v_atlanan + 1;
+    END IF;
+  END LOOP;
+  RAISE NOTICE '[KAPILAR] % kapi kapatildi, % fonksiyon henuz yok (atlandi).',
+               v_kapanan, v_atlanan;
+END $kapilar$;
 
 DO $dogrulama$
 DECLARE

@@ -114,7 +114,13 @@ CREATE POLICY feature_flags_update_admin ON public.feature_flags AS PERMISSIVE F
 -- goalkeepers
 CREATE POLICY goalkeepers_delete ON public.goalkeepers AS PERMISSIVE FOR DELETE TO authenticated USING (is_platform_admin());
 CREATE POLICY goalkeepers_insert ON public.goalkeepers AS PERMISSIVE FOR INSERT TO authenticated WITH CHECK (((( SELECT auth.uid() AS uid) = id) OR is_platform_admin()));
-CREATE POLICY goalkeepers_select_anon ON public.goalkeepers AS PERMISSIVE FOR SELECT TO anon USING (((verification_status = 'approved'::text) AND (("isDemo" IS NOT TRUE) OR get_config_bool('demo_mode_enabled'::text))));
+-- [2026-08-06 onarım] `goalkeepers_select_anon` ARTIK YARATILMIYOR.
+-- Misafirin ham `goalkeepers` tablosunu okuma yolu 20260805233714 ile kapatıldı;
+-- giriş yapmamış kullanıcı artık maskeli `public_goalkeepers` görünümünü okur
+-- (koordinat, geohash ve kimlik bağı gizli). Canlıda bu kural YOK — doğrulandı.
+-- Dosya sırası canlıdaki uygulama sırasının tersi olduğu için burada yeniden
+-- yaratılıyordu ve sıfırdan kurulan veritabanında misafire ham tabloyu geri
+-- açıyordu. Yani bu satır bir GÜVENLİK GERİLEMESİ üretiyordu.
 CREATE POLICY goalkeepers_select_auth ON public.goalkeepers AS PERMISSIVE FOR SELECT TO authenticated USING ((((verification_status = 'approved'::text) AND (("isDemo" IS NOT TRUE) OR get_config_bool('demo_mode_enabled'::text))) OR (id = ( SELECT auth.uid() AS uid)) OR is_platform_admin()));
 CREATE POLICY goalkeepers_update ON public.goalkeepers AS PERMISSIVE FOR UPDATE TO authenticated USING (((( SELECT auth.uid() AS uid) = id) OR is_platform_admin())) WITH CHECK (((( SELECT auth.uid() AS uid) = id) OR is_platform_admin()));
 
@@ -161,7 +167,10 @@ CREATE POLICY mt_select_member ON public.match_tactics AS PERMISSIVE FOR SELECT 
 -- matches
 CREATE POLICY matches_delete ON public.matches AS PERMISSIVE FOR DELETE TO authenticated USING (((( SELECT auth.uid() AS uid) = captain_id) OR is_platform_admin()));
 CREATE POLICY matches_insert ON public.matches AS PERMISSIVE FOR INSERT TO authenticated WITH CHECK (((( SELECT auth.uid() AS uid) = captain_id) OR (captain_id IS NULL) OR is_platform_admin()));
-CREATE POLICY matches_select_anon ON public.matches AS PERMISSIVE FOR SELECT TO anon USING ((("isDemo" IS NOT TRUE) OR get_config_bool('demo_mode_enabled'::text)));
+-- [2026-08-06 onarım] `matches_select_anon` ARTIK YARATILMIYOR — yukarıdaki
+-- gerekçenin aynısı. Misafir artık maskeli `public_matches` görünümünü okur
+-- (kadro isimleri, avatarlar ve saha koordinatı gizli; dolu/boş bilgisi kalır).
+-- Kuralı 20260805233918 düşürüyor; canlıda YOK.
 CREATE POLICY matches_select_auth ON public.matches AS PERMISSIVE FOR SELECT TO authenticated USING ((("isDemo" IS NOT TRUE) OR get_config_bool('demo_mode_enabled'::text) OR is_platform_admin()));
 CREATE POLICY matches_update ON public.matches AS PERMISSIVE FOR UPDATE TO authenticated USING (((( SELECT auth.uid() AS uid) = captain_id) OR is_platform_admin()));
 
@@ -292,7 +301,9 @@ CREATE POLICY "Users can view own push logs" ON public.push_log AS PERMISSIVE FO
 -- referees
 CREATE POLICY referees_delete ON public.referees AS PERMISSIVE FOR DELETE TO authenticated USING (is_platform_admin());
 CREATE POLICY referees_insert ON public.referees AS PERMISSIVE FOR INSERT TO authenticated WITH CHECK (((( SELECT auth.uid() AS uid) = id) OR is_platform_admin()));
-CREATE POLICY referees_select_anon ON public.referees AS PERMISSIVE FOR SELECT TO anon USING (((verification_status = 'approved'::text) AND (("isDemo" IS NOT TRUE) OR get_config_bool('demo_mode_enabled'::text))));
+-- [2026-08-06 onarım] `referees_select_anon` ARTIK YARATILMIYOR — yukarıdaki
+-- gerekçenin aynısı. Misafir artık maskeli `public_referees` görünümünü okur.
+-- Kuralı 20260805233714 düşürüyor; canlıda YOK.
 CREATE POLICY referees_select_auth ON public.referees AS PERMISSIVE FOR SELECT TO authenticated USING ((((verification_status = 'approved'::text) AND (("isDemo" IS NOT TRUE) OR get_config_bool('demo_mode_enabled'::text))) OR (id = ( SELECT auth.uid() AS uid)) OR is_platform_admin()));
 CREATE POLICY referees_update ON public.referees AS PERMISSIVE FOR UPDATE TO authenticated USING (((( SELECT auth.uid() AS uid) = id) OR is_platform_admin())) WITH CHECK (((( SELECT auth.uid() AS uid) = id) OR is_platform_admin()));
 

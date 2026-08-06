@@ -46,26 +46,71 @@
 --   TO anon, authenticated;
 -- ═══════════════════════════════════════════════════════════════════════════
 
-REVOKE ALL ON FUNCTION public._admin_patch_slot(jsonb,text,jsonb) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public._are_friends(uuid,uuid) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public._assert_account_old_enough_for_cashout(uuid) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public._eval_window_open(uuid) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public._gk_side_taken(uuid,text) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public._in_quiet_hours(uuid) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public._is_blocked_between(uuid,uuid) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public._markup_tutari(numeric,numeric,numeric) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public._match_both_sides_present(uuid) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public._match_participant_ids(uuid) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public._normalize_person_name(text) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public._notification_pref_enabled(uuid,text) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public._owner_screen_demo_authz(uuid) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public._provider_has_conflict(uuid,timestamptz,uuid) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public._provider_serves_schedule(jsonb,timestamptz) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public._provider_serves_zone(jsonb,text) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public._req_ip() FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public._req_ua() FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public._social_config_int(text,integer) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public._tc_hash(text,uuid) FROM PUBLIC, anon, authenticated;
+-- ⚠️ HENÜZ DOĞMAMIŞ FONKSİYON SORUNU (sıfırdan kurulum)
+-- Aşağıdaki liste canlıda çalıştığında hepsi mevcuttu. Sıfırdan kurulan bir
+-- veritabanında (her PR önizlemesi) bir kısmı DAHA SONRAKİ migration'larda
+-- yaratılıyor; düz `REVOKE` "function does not exist" deyip kurulumu
+-- çökertiyordu. Bu blok var olanın kapısını kapatır, olmayanı atlar.
+--
+-- GÜVENLİK KAYBI YOK: atlanan fonksiyon açıkta kalmaz — 20260805204225 ile
+-- kurulan "yeni fonksiyonlar KAPALI doğar" tetikleyicisi, sonradan yaratılan
+-- her fonksiyonun PUBLIC yetkisini doğduğu anda geri alır.
+DO $kapilar$
+DECLARE
+  r record;
+  v_atlanan int := 0;
+  v_kapanan int := 0;
+  v_liste constant text[][] := ARRAY[
+    ['public._admin_patch_slot(jsonb,text,jsonb)', 'PUBLIC, anon, authenticated'],
+    ['public._are_friends(uuid,uuid)', 'PUBLIC, anon, authenticated'],
+    ['public._assert_account_old_enough_for_cashout(uuid)', 'PUBLIC, anon, authenticated'],
+    ['public._eval_window_open(uuid)', 'PUBLIC, anon, authenticated'],
+    ['public._gk_side_taken(uuid,text)', 'PUBLIC, anon, authenticated'],
+    ['public._in_quiet_hours(uuid)', 'PUBLIC, anon, authenticated'],
+    ['public._is_blocked_between(uuid,uuid)', 'PUBLIC, anon, authenticated'],
+    ['public._markup_tutari(numeric,numeric,numeric)', 'PUBLIC, anon, authenticated'],
+    ['public._match_both_sides_present(uuid)', 'PUBLIC, anon, authenticated'],
+    ['public._match_participant_ids(uuid)', 'PUBLIC, anon, authenticated'],
+    ['public._normalize_person_name(text)', 'PUBLIC, anon, authenticated'],
+    ['public._notification_pref_enabled(uuid,text)', 'PUBLIC, anon, authenticated'],
+    ['public._owner_screen_demo_authz(uuid)', 'PUBLIC, anon, authenticated'],
+    ['public._provider_has_conflict(uuid,timestamptz,uuid)', 'PUBLIC, anon, authenticated'],
+    ['public._provider_serves_schedule(jsonb,timestamptz)', 'PUBLIC, anon, authenticated'],
+    ['public._provider_serves_zone(jsonb,text)', 'PUBLIC, anon, authenticated'],
+    ['public._req_ip()', 'PUBLIC, anon, authenticated'],
+    ['public._req_ua()', 'PUBLIC, anon, authenticated'],
+    ['public._social_config_int(text,integer)', 'PUBLIC, anon, authenticated'],
+    ['public._tc_hash(text,uuid)', 'PUBLIC, anon, authenticated']
+  ];
+  v_sema text;
+  v_ad   text;
+  v_bulundu boolean;
+BEGIN
+  FOR i IN 1 .. array_length(v_liste, 1) LOOP
+    -- İmzadan şema ve ad ayrıştırılır: 'public.foo(uuid,text)' -> public / foo
+    v_sema := split_part(split_part(v_liste[i][1], '(', 1), '.', 1);
+    v_ad   := split_part(split_part(v_liste[i][1], '(', 1), '.', 2);
+    v_bulundu := false;
+
+    -- AYNI ADI taşıyan TÜM sürümler kapatılır. Doğrulama da ada göre baktığı
+    -- için tek bir sürümü atlamak yanlış alarm değil, GERÇEK bir açık olurdu.
+    FOR r IN
+      SELECT p.oid::regprocedure::text AS imza
+      FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+      WHERE n.nspname = v_sema AND p.proname = v_ad AND p.prokind = 'f'
+    LOOP
+      EXECUTE format('REVOKE ALL ON FUNCTION %s FROM %s', r.imza, v_liste[i][2]);
+      v_kapanan := v_kapanan + 1;
+      v_bulundu := true;
+    END LOOP;
+
+    IF NOT v_bulundu THEN
+      v_atlanan := v_atlanan + 1;
+    END IF;
+  END LOOP;
+  RAISE NOTICE '[KAPILAR] % kapi kapatildi, % fonksiyon henuz yok (atlandi).',
+               v_kapanan, v_atlanan;
+END $kapilar$;
 
 -- ── DOĞRULAMA ─────────────────────────────────────────────────────────────
 -- Kapandı mı, açık kalması gerekenler açık mı, tablolar hâlâ okunuyor mu?

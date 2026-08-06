@@ -46,26 +46,57 @@ DROP FUNCTION IF EXISTS public.pay_public_match_deposit(uuid, uuid, numeric);
 -- hâli tam olarak bu yüzden doğrulama adımında durdu ve geri alındı.
 -- Doğrusu: önce PUBLIC'ten al, sonra gerçekten ihtiyacı olan role geri ver.
 
--- Yönetici işlemleri: yalnız giriş yapmış kullanıcı çağırabilsin
--- (fonksiyonun kendi içinde ayrıca `is_platform_admin()` kontrolü var).
-REVOKE ALL ON FUNCTION public.admin_pitch_agreements() FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION public.admin_pitch_agreements() TO authenticated;
+-- ⚠️ HENÜZ DOĞMAMIŞ FONKSİYON SORUNU (sıfırdan kurulum)
+-- Aşağıdaki fonksiyonların bir kısmı depoda DAHA SONRAKİ bir migration'da
+-- yaratılıyor (ör. `admin_pitch_agreements` → 20260904000000). Canlıda bu
+-- dosya çalıştığında hepsi mevcuttu; ama SIFIRDAN kurulan bir veritabanında
+-- (her PR önizlemesi) henüz yoklar ve düz `REVOKE` "function does not exist"
+-- diyip kurulumu çökertiyordu.
+--
+-- Çözüm: var olanın yetkisi ALINIR, olmayan ATLANIR ve adı NOTICE ile yazılır.
+-- Atlanan hiçbir şey açıkta kalmaz — çünkü 20260805204225 ile kurulan
+-- "yeni fonksiyonlar KAPALI doğar" tetikleyicisi, sonradan yaratılan
+-- fonksiyonların PUBLIC yetkisini doğduğu anda geri alır; o fonksiyonu
+-- yaratan migration da gereken GRANT'i kendisi verir.
+DO $kapat$
+DECLARE
+  r record;
+  -- imza · yalnız bu rollerden alınacak · geri verilecek rol (NULL = yok)
+  v_liste constant text[][] := ARRAY[
+    ['public.admin_pitch_agreements()',                                              'PUBLIC, anon', 'authenticated'],
+    ['public.admin_set_pitch_agreement(uuid,text,numeric,numeric,numeric,text)',     'PUBLIC, anon', 'authenticated'],
+    ['public.admin_set_pitch_cancel_policy(uuid,numeric,numeric,numeric)',           'PUBLIC, anon', 'authenticated'],
+    ['public.calculate_commission(numeric,text,uuid,text,numeric,numeric,numeric)',  'PUBLIC, anon', 'authenticated'],
+    ['public._kullanici_demo_mu(uuid)',                    'PUBLIC, anon, authenticated', NULL],
+    ['public.demo_isareti_ata()',                          'PUBLIC, anon, authenticated', NULL],
+    ['public.demo_isareti_profil()',                       'PUBLIC, anon, authenticated', NULL]
+  ];
+  v_imza text; v_alinacak text; v_verilecek text; v_atlanan int := 0;
+BEGIN
+  FOR i IN 1 .. array_length(v_liste, 1) LOOP
+    v_imza      := v_liste[i][1];
+    v_alinacak  := v_liste[i][2];
+    v_verilecek := v_liste[i][3];
 
-REVOKE ALL ON FUNCTION public.admin_set_pitch_agreement(uuid,text,numeric,numeric,numeric,text) FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION public.admin_set_pitch_agreement(uuid,text,numeric,numeric,numeric,text) TO authenticated;
+    -- Fonksiyon var mı? (imzayı regprocedure'a çevirmek yoksa hata verir)
+    BEGIN
+      PERFORM v_imza::regprocedure;
+    EXCEPTION WHEN undefined_function OR invalid_text_representation THEN
+      RAISE NOTICE '[SON-1] % henuz yok - atlandi (sonraki migration yaratacak).', v_imza;
+      v_atlanan := v_atlanan + 1;
+      CONTINUE;
+    END;
 
-REVOKE ALL ON FUNCTION public.admin_set_pitch_cancel_policy(uuid,numeric,numeric,numeric) FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION public.admin_set_pitch_cancel_policy(uuid,numeric,numeric,numeric) TO authenticated;
+    EXECUTE format('REVOKE ALL ON FUNCTION %s FROM %s', v_imza, v_alinacak);
+    IF v_verilecek IS NOT NULL THEN
+      EXECUTE format('GRANT EXECUTE ON FUNCTION %s TO %s', v_imza, v_verilecek);
+    END IF;
+  END LOOP;
 
--- Komisyon hesabı: giriş yapmış kullanıcıya lazım, anonime değil.
-REVOKE ALL ON FUNCTION public.calculate_commission(numeric,text,uuid,text,numeric,numeric,numeric) FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION public.calculate_commission(numeric,text,uuid,text,numeric,numeric,numeric) TO authenticated;
-
--- İç yardımcı ve tetikleyici fonksiyonları: hiçbir kullanıcı rolü çağırmamalı.
--- (SECURITY DEFINER fonksiyonlar bunları sahibi yetkisiyle yine çağırabilir.)
-REVOKE ALL ON FUNCTION public._kullanici_demo_mu(uuid)  FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.demo_isareti_ata()        FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.demo_isareti_profil()     FROM PUBLIC, anon, authenticated;
+  IF v_atlanan > 0 THEN
+    RAISE NOTICE '[SON-1] % fonksiyon henuz yaratilmamisti; kapilari kendi migration''larinda kurulur.', v_atlanan;
+  END IF;
+END $kapat$;
 
 -- BİLEREK DOKUNULMADI — giriş yapmamış kullanıcının gördüğü ekranlar bunlara
 -- ihtiyaç duyuyor; kapatmak vitrini bozardı:
@@ -95,7 +126,11 @@ BEGIN
     RAISE EXCEPTION 'SON-1 eksik: pay_public_match_deposit hala duruyor';
   END IF;
 
-  IF has_function_privilege('anon','public.admin_pitch_agreements()','EXECUTE') THEN
+  -- Fonksiyon henüz yaratılmamış olabilir (sıfırdan kurulum: onu yaratan
+  -- migration Eylül'de). `to_regprocedure` yoksa NULL döner, hata vermez;
+  -- böylece kontrol VARSA sınar, YOKSA sessizce geçer.
+  IF to_regprocedure('public.admin_pitch_agreements()') IS NOT NULL
+     AND has_function_privilege('anon','public.admin_pitch_agreements()','EXECUTE') THEN
     RAISE EXCEPTION 'SON-1 eksik: admin fonksiyonu hala anon''a acik';
   END IF;
 END

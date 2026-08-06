@@ -68,4 +68,22 @@ CREATE TABLE IF NOT EXISTS public.matches (
   deferred_providers jsonb NOT NULL DEFAULT '[]'::jsonb
 );
 
+-- ── [2026-08-06 onarım] CANLIDA ERKEN VAR OLAN KOLON ───────────────────────
+-- `is_platform` canlı `matches` tablosunda mevcut ve 5 Ağustos'taki misafir
+-- maskeleme görünümü (20260805233918) onu okuyor. Depoda ise onu ekleyen
+-- migration 26 Ağustos tarihli (20260826000003) — yani ihtiyaçtan ÜÇ HAFTA
+-- SONRA. Canlıda kolon elle daha erken eklenmişti; sıfırdan kurulumda
+-- oluşmadığı için maskeleme görünümü "column does not exist" ile duruyordu.
+--
+-- CANLIYA ETKİSİ YOK: `IF NOT EXISTS` sessizce geçer; 26 Ağustos'taki satır da
+-- aynı korumayı kullandığı için çakışma olmaz.
+ALTER TABLE public.matches ADD COLUMN IF NOT EXISTS is_platform boolean NOT NULL DEFAULT false;
+
+-- Aynı sınıf: bu üç komisyon kolonu da canlıda var ama hiçbir migration
+-- yaratmıyor (elle eklenmiş). Maskeleme görünümü üçünü de okuyor.
+-- Tipler canlı şemadan alındı: numeric, NULL serbest, varsayılan yok.
+ALTER TABLE public.matches ADD COLUMN IF NOT EXISTS commission_rate_pct     numeric;
+ALTER TABLE public.matches ADD COLUMN IF NOT EXISTS commission_markup_pct   numeric;
+ALTER TABLE public.matches ADD COLUMN IF NOT EXISTS commission_markup_amount numeric;
+
 ALTER TABLE public.matches ENABLE ROW LEVEL SECURITY;
