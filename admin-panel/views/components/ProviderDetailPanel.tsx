@@ -4,6 +4,7 @@ import { MapPin, Shield, Scale, Award, Zap, Clock, Edit3, Eye, Smartphone, Power
 import { MarketplaceCard } from '../../../components/Marketplace/MarketplaceCard';
 import { fetchProviderOpsAdmin, updateProviderOpsAdmin, toTurkishAdminError, type ProviderOpsInfo } from '../../services/adminService';
 import { useAdminToast } from '../context/AdminToastContext';
+import { providerStyles } from '../../../shared/providerStyles';
 
 type Provider = Goalkeeper | Referee;
 
@@ -53,7 +54,7 @@ export const ProviderDetailPanel: React.FC<ProviderDetailPanelProps> = ({ provid
   const gk = provider as Goalkeeper;
   const ref = provider as Referee;
   const stats = (provider.stats || {}) as Record<string, number | string>;
-  const skills = (gk.skills || {}) as Record<string, number>;
+  const tarzlar = providerStyles(isGk ? 'GK' : 'REF', provider);
   const zones = provider.preferredZones || [];
   const isDemo = Boolean((provider as Goalkeeper & { isDemo?: boolean }).isDemo);
   const { success, error: toastError } = useAdminToast();
@@ -217,25 +218,32 @@ export const ProviderDetailPanel: React.FC<ProviderDetailPanelProps> = ({ provid
               </section>
             )}
 
+            {/* TARZ — eskiden burada Refleks/Dalış/Pozisyon (kaleci) ve
+                Otorite/Kondisyon/İletişim (hakem) çubukları vardı. Kurucu
+                kararı (2026-08-06): o sayılar hiçbir ölçümden gelmiyordu,
+                yalnız panelden elle yazılıyorlardı. Kaldırıldı; yerlerine
+                sağlayıcının kendi seçtiği tarzlar geldi. GERÇEK maç
+                istatistikleri (kurtarış %, penaltı, ort. kart) duruyor. */}
             <section>
-              <h4 className="text-[10px] font-extrabold text-gray-500 uppercase tracking-widest mb-3 flex items-center gap-1"><Award size={12} /> İstatistikler</h4>
-              <div className="space-y-2">
-                {isGk ? (
-                  <>
-                    <StatBar label="Refleks" value={statNum(skills.reflexes ?? stats.reflexes)} />
-                    <StatBar label="Dalış" value={statNum(skills.diving ?? stats.diving)} />
-                    <StatBar label="Pozisyon" value={statNum(skills.positioning ?? stats.positioning)} />
-                    <p className="text-[10px] text-gray-500 mt-2">Kurtarış %: {stats.savePercentage ?? '—'} • Penaltı: {stats.penaltySaveRate ?? '—'}</p>
-                  </>
-                ) : (
-                  <>
-                    <StatBar label="Otorite" value={statNum(stats.authority)} />
-                    <StatBar label="Kondisyon" value={statNum(stats.fitness)} />
-                    <StatBar label="İletişim" value={statNum(stats.communication)} />
-                    <p className="text-[10px] text-gray-500 mt-2">Ort. kart: {stats.avgCards ?? '—'}</p>
-                  </>
-                )}
-              </div>
+              <h4 className="text-[10px] font-extrabold text-gray-500 uppercase tracking-widest mb-3 flex items-center gap-1">
+                <Award size={12} /> {isGk ? 'Kaleci Tarzı' : 'Yönetim Tarzı'}
+              </h4>
+              {tarzlar.length > 0 ? (
+                <div className="flex flex-wrap gap-1.5">
+                  {tarzlar.map(t => (
+                    <span key={t} className="px-2.5 py-1.5 rounded-lg text-[10px] font-extrabold bg-white/5 border border-white/10 text-gray-200">
+                      {t}
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-[10px] text-gray-500">Tarz seçilmemiş.</p>
+              )}
+              <p className="text-[10px] text-gray-500 mt-3">
+                {isGk
+                  ? `Kurtarış %: ${stats.savePercentage ?? '—'} • Penaltı: ${stats.penaltySaveRate ?? '—'}`
+                  : `Ort. kart: ${stats.avgCards ?? '—'}`}
+              </p>
             </section>
           </div>
 

@@ -35,6 +35,7 @@ import {
 } from '../services/walletService';
 import { motion, AnimatePresence } from 'framer-motion';
 import ServiceProfile from './ServiceProfile';
+import { providerStyles } from '../shared/providerStyles';
 import ServiceSettings from './ServiceSettings';
 import { auth } from '../supabaseAuth';
 import { useAsagiCekYenile } from '../hooks/useAsagiCekYenile';
@@ -964,7 +965,16 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
   const idRatingText = idRated ? Number(userProfile.rating).toFixed(1) : '—';
   const idFilledBars = idRated ? Math.round(Number(userProfile.rating) / 2) : 0; // 0-10 → 0-5
   const idFirstName = trUpper(userProfile?.fullName?.split(' ')[0]);
-  const idStyle: string | null = (typeof userProfile?.style === 'string' && userProfile.style.trim()) ? userProfile.style : null;
+  /**
+   * Sağlayıcının kendi seçtiği TARZLAR (en fazla 2).
+   *
+   * Kurucu kararı (2026-08-06): kimlik kartındaki "REAKSİYON 87 / UÇUŞ 84 /
+   * KONUM 91" gibi sayılar KALDIRILDI — o değerleri kaleci hiçbir yerden
+   * giremiyordu, oyuncu oyu beslemiyordu; tek kaynak yönetim panelinde elle
+   * yazılan tohum veriydi. Yerlerine, tam da o kutulara, kalecinin kendi
+   * "Bilgilerim" ekranından seçtiği tarzlar geliyor.
+   */
+  const idStyles: string[] = providerStyles(isRef ? 'REF' : 'GK', userProfile);
   // Sabit "A-CLASS" yerine puandan türetilen sınıf (rookie → YENİ).
   const idClass = !idRated ? 'YENİ' : Number(userProfile.rating) >= 8 ? 'A SINIF' : Number(userProfile.rating) >= 6 ? 'B SINIF' : 'C SINIF';
   // HR-B: hakem kartı için gerçek seviye + VAR (varCallAccuracy string).
@@ -998,12 +1008,14 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                       </div>
                       <div className="flex-1">
                           <h2 className="text-3xl font-extrabold text-white leading-[1.2] mb-1 truncate max-w-[150px]">{idFirstName}</h2>
-                          {/* Sabit "PANTER / Altınordu" yerine gerçek stil (varsa). */}
-                          {idStyle && (
-                            <div className="flex items-center gap-2 mb-3">
-                              <span className="bg-green-500 text-black text-[0.6875rem] font-extrabold px-2 py-0.5 rounded flex items-center gap-1">
-                                  <Shield size={10} fill="black" /> {idStyle.toLocaleUpperCase('tr-TR')}
-                              </span>
+                          {/* Kalecinin kendi seçtiği tarzlar (en fazla 2). */}
+                          {idStyles.length > 0 && (
+                            <div className="flex flex-wrap items-center gap-1.5 mb-3">
+                              {idStyles.map(t => (
+                                <span key={t} className="bg-green-500 text-black text-[0.6875rem] font-extrabold px-2 py-0.5 rounded flex items-center gap-1">
+                                    <Shield size={10} fill="black" /> {trUpper(t)}
+                                </span>
+                              ))}
                             </div>
                           )}
 
@@ -1013,9 +1025,11 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                                   <p className="text-[0.6875rem] text-ink-4 font-bold">MAÇ</p>
                                   <p className="text-sm font-extrabold text-white">{idNum(userProfile?.matchesPlayed)}</p>
                               </div>
+                              {/* Ayarlanamayan "REAKSİYON" sayısı kaldırıldı; yerine
+                                  kalecinin gerçekten seçtiği tarz sayısı. */}
                               <div className="bg-[#0A0E14] rounded-xl p-2 text-center border border-white/5">
-                                  <p className="text-[0.6875rem] text-ink-4 font-bold">REAKSİYON</p>
-                                  <p className="text-sm font-extrabold text-white">{idNum(gkCardStats.reflexes)}</p>
+                                  <p className="text-[0.6875rem] text-ink-4 font-bold">TARZ</p>
+                                  <p className="text-sm font-extrabold text-white font-numeric">{idStyles.length || '—'}</p>
                               </div>
                               <div className="bg-[#0A0E14] rounded-xl p-2 text-center border border-white/5">
                                   <p className="text-[0.6875rem] text-ink-4 font-bold">PUAN</p>
@@ -1079,20 +1093,27 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                     </div>
                   </div>
 
-                  {/* Stats row */}
-                  <div className="grid grid-cols-3 gap-2">
-                    {[
-                      { label: 'Uçuş', value: idNum(gkCardStats.diving), glow: '#22c55e' },
-                      { label: 'Konum', value: idNum(gkCardStats.positioning), glow: '#facc15' },
-                      { label: 'Bire Bir', value: idNum(gkCardStats.oneOnOne), glow: '#22c55e' },
-                    ].map(s => (
-                      <div key={s.label} className="rounded-xl py-2 px-1 text-center border border-white/8"
-                        style={{ background: 'rgba(0,0,0,0.5)' }}>
-                        <div className="text-lg font-extrabold" style={{ color: s.glow, textShadow: `0 0 12px ${s.glow}80` }}>{s.value}</div>
-                        <div className="text-[0.6875rem] text-ink-4 font-bold uppercase">{s.label}</div>
-                      </div>
-                    ))}
-                  </div>
+                  {/* TARZ — eskiden burada "Uçuş / Konum / Bire Bir" sayıları
+                      vardı; hiçbir yerden ayarlanamıyorlardı (kurucu kararı,
+                      2026-08-06). Yerlerine kalecinin kendi seçtiği tarzlar. */}
+                  {idStyles.length > 0 ? (
+                    <div className="flex flex-wrap gap-2 justify-center">
+                      {idStyles.map(t => (
+                        <div key={t} className="rounded-xl py-2 px-3 border border-green-400/40"
+                          style={{ background: 'rgba(0,0,0,0.5)' }}>
+                          <div className="text-[0.8125rem] font-extrabold" style={{ color: '#22c55e', textShadow: '0 0 12px #22c55e80' }}>{t}</div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setActiveTab('PROFILE_VIEW'); }}
+                      className="w-full rounded-xl py-2.5 px-3 border border-white/12 text-[0.75rem] font-extrabold text-gray-300"
+                      style={{ background: 'rgba(0,0,0,0.5)' }}
+                    >
+                      Tarzını seç → Bilgilerim
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -1133,20 +1154,24 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                       </div>
                       <div className="flex-1">
                           <h2 className="text-3xl font-extrabold text-white leading-[1.2] mb-1 truncate max-w-[150px]">{idFirstName}</h2>
-                          {/* Sabit "OTORİTER / Ordu" yerine gerçek stil (varsa). */}
-                          {idStyle && (
-                            <div className="flex items-center gap-2 mb-3">
-                              <span className="bg-red-600 text-white text-[0.6875rem] font-extrabold px-2 py-0.5 rounded flex items-center gap-1">
-                                  <Scale size={10} /> {idStyle.toLocaleUpperCase('tr-TR')}
-                              </span>
+                          {/* Hakemin kendi seçtiği tarzlar (en fazla 2). */}
+                          {idStyles.length > 0 && (
+                            <div className="flex flex-wrap items-center gap-1.5 mb-3">
+                              {idStyles.map(t => (
+                                <span key={t} className="bg-red-600 text-white text-[0.6875rem] font-extrabold px-2 py-0.5 rounded flex items-center gap-1">
+                                    <Scale size={10} /> {trUpper(t)}
+                                </span>
+                              ))}
                             </div>
                           )}
 
                           {/* Stats Grid — gerçek veri / "—" (sabit 150/%98/4.9 değil) */}
                           <div className="grid grid-cols-3 gap-2 mt-2">
+                              {/* Ayarlanamayan "YÖNETİM" sayısı kaldırıldı; yerine
+                                  hakemin gerçekten seçtiği tarz sayısı. */}
                               <div className="bg-[#0A0E14] rounded-xl p-2 text-center border border-white/5">
-                                  <p className="text-[0.6875rem] text-ink-4 font-bold">YÖNETİM</p>
-                                  <p className="text-sm font-extrabold text-white">{idNum(gkCardStats.authority)}</p>
+                                  <p className="text-[0.6875rem] text-ink-4 font-bold">TARZ</p>
+                                  <p className="text-sm font-extrabold text-white font-numeric">{idStyles.length || '—'}</p>
                               </div>
                               <div className="bg-[#0A0E14] rounded-xl p-2 text-center border border-white/5">
                                   <p className="text-[0.6875rem] text-ink-4 font-bold">VAR</p>
@@ -2242,7 +2267,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                                        </div>}
                                    <div>
                                        <p className="text-sm font-bold text-white">
-                                         {idFirstName || '—'}{(isRef ? idLevel : idStyle) ? ` (${(isRef ? idLevel : idStyle)!.toLocaleUpperCase('tr-TR')})` : ''}
+                                         {idFirstName || '—'}{(isRef ? idLevel : idStyles[0]) ? ` (${trUpper(isRef ? idLevel! : idStyles[0])})` : ''}
                                        </p>
                                        <p className={`text-[0.6875rem] ${isRef ? 'text-red-400' : 'text-green-400'}`}>
                                          Puan: {idRatingText} • Maç: {typeof userProfile?.matchesPlayed === 'number' ? userProfile.matchesPlayed : '—'}

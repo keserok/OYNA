@@ -505,18 +505,29 @@ export interface Referee {
   fee: number;
   avatar: string;
   rating: number;
+  /** Eski TEK serbest metin tarz. Uygulama artık okumuyor. */
   style: string;
+  /** Hakemin kendi seçtiği tarzlar — en fazla 2 (shared/providerStyles.ts). */
+  styles?: string[];
   bio: string;
   preferredZones: string[];
   isElite?: boolean;
   coordinates: { lat: number; lng: number };
+  /**
+   * GERÇEK maç istatistikleri. Hepsi opsiyoneldir — yeni hakem sıfırdan
+   * uydurma sayıyla doğmaz (kurucu kararı, 2026-08-06).
+   *
+   * `authority`/`fitness`/`communication` ARTIK GÖSTERİLMİYOR: hiçbir ölçümden
+   * gelmiyorlardı. Eski kayıtlarda durdukları için tip korundu; yerlerine
+   * `styles` geçti.
+   */
   stats: {
-    avgCards: number;
+    avgCards?: number;
     varCallAccuracy?: string;
-    avgDistance: string;
-    authority: number; // 0-100
-    fitness: number; // 0-100
-    communication: number; // 0-100
+    avgDistance?: string;
+    authority?: number;
+    fitness?: number;
+    communication?: number;
   };
   reviews: ServiceReview[];
   isAvailable?: boolean;
@@ -543,28 +554,40 @@ export interface Goalkeeper {
   matchCount?: number;
   avatar: string;
   recentAwards: string;
+  /** Eski TEK serbest metin tarz ('Panter'…). Uygulama artık okumuyor. */
   style: GkStyle | string;
+  /** Kalecinin kendi seçtiği tarzlar — en fazla 2 (shared/providerStyles.ts). */
+  styles?: string[];
   bio: string;
   preferredZones: string[];
   isElite?: boolean;
   coordinates: { lat: number; lng: number };
+  /**
+   * GERÇEK maç istatistikleri. Hepsi opsiyoneldir — yeni kaleci sıfırdan
+   * uydurma sayıyla doğmaz (kurucu kararı, 2026-08-06).
+   *
+   * `reflexes`/`diving`/… alanları ARTIK HİÇBİR EKRANDA GÖSTERİLMİYOR: onları
+   * kimse ölçmüyordu, yalnız yönetim panelinden elle yazılıyorlardı. Eski
+   * kayıtlarda durdukları için tip korundu; yerlerine `styles` geçti.
+   */
   stats: {
-    savePercentage: string;
-    penaltySaveRate: string;
-    reflexes: number;
-    diving: number;
-    positioning: number;
-    distribution: number;
-    oneOnOne: number;
-    aerialReach: number;
+    savePercentage?: string;
+    penaltySaveRate?: string;
+    reflexes?: number;
+    diving?: number;
+    positioning?: number;
+    distribution?: number;
+    oneOnOne?: number;
+    aerialReach?: number;
   };
+  /** Eski yetenek sayıları — gösterilmiyor; alanlar opsiyonel. */
   skills: {
-    reflexes: number;
-    diving: number;
-    handling: number;
-    positioning: number;
-    kicking: number;
-    speed: number;
+    reflexes?: number;
+    diving?: number;
+    handling?: number;
+    positioning?: number;
+    kicking?: number;
+    speed?: number;
   };
   equipment: {
     gloves: string;

@@ -7,7 +7,8 @@ import * as FB from '../../supabaseMutations';
 import { X, Save, Image as ImageIcon, UploadCloud, Loader2, Check, Wallet, Star, Shield, Phone, Mail, AlertTriangle, Plus, Zap, MapPin, Clock } from 'lucide-react';
 import { useImageUpload } from '../../hooks/useImageUpload';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FifaCard } from '../../components/FifaCard';
+import { MarketplaceCard } from '../../components/Marketplace/MarketplaceCard';
+import { GK_STYLES, REF_STYLES, MAX_PROVIDER_STYLES, providerStyles, type ProviderKind } from '../../shared/providerStyles';
 
 interface ModalProps { onClose: () => void; }
 
@@ -167,6 +168,72 @@ const GradePicker: React.FC<{ label: string; desc?: string; value?: 'A' | 'B' | 
 // ═══════════════════════════════════════════════════════════════
 // GOALKEEPER / REFEREE DEEP EDIT
 // ═══════════════════════════════════════════════════════════════
+/**
+ * SAĞLAYICI TARZ SEÇİCİ (panel) — kaleci/hakem tarzlarını yönetimden düzenler.
+ *
+ * Kurucu kararı (2026-08-06): tarz hem sağlayıcının kendi "Bilgilerim"
+ * ekranından hem de yönetim panelinden ayarlanabilmeli. İki yüzey de AYNI
+ * listeden beslenir (shared/providerStyles.ts) ve aynı kuralı uygular:
+ * en fazla iki tarz.
+ *
+ * Üçüncüye basılınca en eski seçim düşer — sağlayıcı ekranındaki davranışın
+ * aynısı. Panel ile uygulamanın farklı davranması, "panelde oluyor uygulamada
+ * olmuyor" şikâyetlerinin kaynağıdır.
+ */
+const ProviderStyleSecici: React.FC<{
+    kind: ProviderKind;
+    edit: any;
+    setEdit: React.Dispatch<React.SetStateAction<any>>;
+    accent: 'emerald' | 'blue';
+}> = ({ kind, edit, setEdit, accent }) => {
+    const secili: string[] = providerStyles(kind, edit);
+    const liste = kind === 'GK' ? GK_STYLES : REF_STYLES;
+    const renk = accent === 'emerald' ? '#34d399' : '#60a5fa';
+
+    const degistir = (tarz: string) => {
+        const yeni = secili.includes(tarz)
+            ? secili.filter(t => t !== tarz)
+            : secili.length < MAX_PROVIDER_STYLES
+                ? [...secili, tarz]
+                : [...secili.slice(1), tarz];
+        setEdit((prev: any) => ({ ...prev, styles: yeni }));
+    };
+
+    return (
+        <div>
+            <p className="text-[10px] font-extrabold uppercase tracking-widest flex items-center gap-1.5 mb-1"
+               style={{ color: renk }}>
+                <Zap size={11} /> {kind === 'GK' ? 'KALECİ TARZI' : 'YÖNETİM TARZI'}
+                <span className="ml-auto font-mono text-gray-500">{secili.length}/{MAX_PROVIDER_STYLES}</span>
+            </p>
+            <p className="text-[9px] text-gray-500 mb-2.5">
+                En fazla iki tarz. Sağlayıcı bunları kendi ekranından da değiştirebilir.
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+                {liste.map(tarz => {
+                    const aktif = secili.includes(tarz);
+                    return (
+                        <button
+                            key={tarz}
+                            type="button"
+                            onClick={() => degistir(tarz)}
+                            aria-pressed={aktif}
+                            className="px-2.5 py-1.5 rounded-lg text-[10px] font-extrabold border transition-all"
+                            style={{
+                                background: aktif ? renk : 'rgba(255,255,255,0.04)',
+                                color: aktif ? '#0A0E14' : '#9ca3af',
+                                borderColor: aktif ? renk : 'rgba(255,255,255,0.1)',
+                            }}
+                        >
+                            {tarz}
+                        </button>
+                    );
+                })}
+            </div>
+        </div>
+    );
+};
+
 export const DeepEditProviderModal: React.FC<ModalProps & { item: Goalkeeper | Referee; typeParam: 'GK' | 'REF' }> = ({ item, typeParam, onClose }) => {
     const [edit, setEdit] = useState<any>(item);
     const [saving, setSaving] = useState(false);
@@ -213,55 +280,12 @@ export const DeepEditProviderModal: React.FC<ModalProps & { item: Goalkeeper | R
         }
     };
 
-    // GK Specific stats adjustments
-    const handleGkStatChange = (key: string, value: number) => {
-        // HR-H: eksik statları sahte 80/75 ile TOHUMLAMA. Admin bir slider'ı
-        // oynattığında dokunmadığı statlar 80'e çözülüp DB'ye uydurma değer
-        // yazılıyordu. Artık yalnız gerçekten girilmiş statlar tutulur; rating
-        // sadece MEVCUT sayısal statlardan hesaplanır, hiçbiri yoksa korunur.
-        // (#107'nin yeni inputları — GK penaltySaveRate, REF varCallAccuracy —
-        //  bu boş obje ile de çalışır; kullanıcı girdikçe edit.stats'a yazılır.)
-        const stats = edit.stats || {};
-        const skills = edit.skills || {};
-
-        const updatedStats = { ...stats, [key]: value };
-        const updatedSkills = { ...skills, [key]: value };
-
-        const basis = ['reflexes', 'diving', 'positioning', 'distribution', 'oneOnOne', 'aerialReach']
-            .map((k) => updatedStats[k])
-            .filter((v: any): v is number => typeof v === 'number' && Number.isFinite(v));
-        const nextRating = basis.length
-            ? Number((basis.reduce((a, b) => a + b, 0) / basis.length / 20).toFixed(1))
-            : (edit.rating ?? 0);
-
-        setEdit((prev: any) => ({
-            ...prev,
-            rating: nextRating,
-            stats: updatedStats,
-            skills: updatedSkills
-        }));
-    };
-
-    // REF Specific stats adjustments
-    const handleRefStatChange = (key: string, value: number) => {
-        // HR-H: eksik statları sahte 80 ile TOHUMLAMA (bkz. handleGkStatChange).
-        // Rating yalnız gerçekten girilmiş statlardan; hiçbiri yoksa korunur.
-        const stats = edit.stats || {};
-        const updatedStats = { ...stats, [key]: value };
-
-        const basis = ['authority', 'fitness', 'communication']
-            .map((k) => updatedStats[k])
-            .filter((v: any): v is number => typeof v === 'number' && Number.isFinite(v));
-        const nextRating = basis.length
-            ? Number((basis.reduce((a, b) => a + b, 0) / basis.length / 20).toFixed(1))
-            : (edit.rating ?? 0);
-
-        setEdit((prev: any) => ({
-            ...prev,
-            rating: nextRating,
-            stats: updatedStats
-        }));
-    };
+    // NOT: Buradaki `handleGkStatChange` / `handleRefStatChange` kaldırıldı.
+    // Refleks/dalış/otorite gibi 10–99 arası "yetenek" sayılarını yalnız bu
+    // ekran üretiyordu; hiçbir ölçümden gelmiyor, oyuncuya ise ölçülmüş
+    // performansmış gibi çubuk çubuk gösteriliyorlardı (kurucu kararı,
+    // 2026-08-06). Puan (`rating`) artık yalnız kullanıcı değerlendirmesinden
+    // gelir ve yukarıdaki alandan elle düzeltilebilir.
 
     return (
         <AnimatePresence>
@@ -303,16 +327,6 @@ export const DeepEditProviderModal: React.FC<ModalProps & { item: Goalkeeper | R
                                 </FI>
                             </div>
                             <div className="grid grid-cols-2 gap-4 mt-4">
-                                {typeParam === 'GK' && (
-                                    <FI label="Oyun Stili">
-                                        <Sel value={edit.style || ''} onChange={e => setEdit({ ...edit, style: e.target.value })}>
-                                            <option>Sweeper</option>
-                                            <option>Shot-Stopper</option>
-                                            <option>Pençe</option>
-                                            <option>Komutan</option>
-                                        </Sel>
-                                    </FI>
-                                )}
                                 {typeParam === 'REF' && (
                                     <FI label="Deneyim Seviyesi">
                                         <Sel value={edit.level || ''} onChange={e => setEdit({ ...edit, level: e.target.value })}>
@@ -329,35 +343,17 @@ export const DeepEditProviderModal: React.FC<ModalProps & { item: Goalkeeper | R
                             </div>
                         </div>
 
-                        {/* Interactive Sliders for Goalkeeper or Referee */}
+                        {/* TARZ SEÇİCİ — eski "yetenek slider"larının yerine.
+                            Kurucu kararı (2026-08-06): refleks/dalış/pozisyon
+                            slider'ları kaldırıldı. O sayıların arkasında ölçüm
+                            yoktu; yalnız buradan elle yazılıyor, oyuncuya ise
+                            ölçülmüş performansmış gibi gösteriliyordu.
+                            Yerine sağlayıcının kendi ekranından da seçebildiği
+                            kapalı tarz listesi geldi (shared/providerStyles.ts
+                            + veritabanı CHECK kısıtı). */}
                         {typeParam === 'GK' && (
                             <div className="p-4 bg-[#161B22]/80 border border-emerald-500/20 rounded-2xl space-y-3">
-                                <p className="text-[10px] font-extrabold text-emerald-400 uppercase tracking-widest flex items-center gap-1.5"><Zap size={11} /> KALECİ YETENEK KONTROLLERİ</p>
-                                {[
-                                    { key: 'reflexes', label: 'Refleksler (REF)', color: 'text-emerald-400' },
-                                    { key: 'diving', label: 'Dalış (DIV)', color: 'text-teal-400' },
-                                    { key: 'positioning', label: 'Pozisyon (POS)', color: 'text-cyan-400' },
-                                    { key: 'distribution', label: 'Dağıtım (DIS)', color: 'text-blue-400' },
-                                    { key: 'oneOnOne', label: 'Bire Bir (1v1)', color: 'text-indigo-400' },
-                                    { key: 'aerialReach:80', keyReal: 'aerialReach', label: 'Hava Hakimiyeti', color: 'text-purple-400' }
-                                ].map(item => {
-                                    const realKey = (item.keyReal || item.key) as any;
-                                    const val = edit.stats?.[realKey] || 80;
-                                    return (
-                                        <div key={item.key} className="flex items-center gap-3">
-                                            <span className="text-[10px] font-bold text-gray-400 w-28 uppercase">{item.label}</span>
-                                            <input 
-                                                type="range" 
-                                                min="10" 
-                                                max="99" 
-                                                value={val}
-                                                onChange={e => handleGkStatChange(realKey, parseInt(e.target.value))}
-                                                className="flex-1 accent-emerald-500 cursor-pointer"
-                                            />
-                                            <span className={`text-xs font-extrabold w-8 text-right ${item.color}`}>{val}</span>
-                                        </div>
-                                    );
-                                })}
+                                <ProviderStyleSecici kind="GK" edit={edit} setEdit={setEdit} accent="emerald" />
 
                                 {/* Gerçek maç istatistikleri (Marketplace "Performans" karoları) */}
                                 <div className="grid grid-cols-2 gap-4 mt-2">
@@ -373,28 +369,7 @@ export const DeepEditProviderModal: React.FC<ModalProps & { item: Goalkeeper | R
 
                         {typeParam === 'REF' && (
                             <div className="p-4 bg-[#161B22]/80 border border-blue-500/20 rounded-2xl space-y-3">
-                                <p className="text-[10px] font-extrabold text-blue-400 uppercase tracking-widest flex items-center gap-1.5"><Zap size={11} /> HAKEM YETENEK KONTROLLERİ</p>
-                                {[
-                                    { key: 'authority', label: 'Otorite (OTO)', color: 'text-red-400' },
-                                    { key: 'fitness', label: 'Kondisyon (KON)', color: 'text-emerald-400' },
-                                    { key: 'communication', label: 'İletişim (İLE)', color: 'text-blue-400' }
-                                ].map(item => {
-                                    const val = edit.stats?.[item.key] || 80;
-                                    return (
-                                        <div key={item.key} className="flex items-center gap-3">
-                                            <span className="text-[10px] font-bold text-gray-400 w-28 uppercase">{item.label}</span>
-                                            <input 
-                                                type="range" 
-                                                min="10" 
-                                                max="99" 
-                                                value={val}
-                                                onChange={e => handleRefStatChange(item.key, parseInt(e.target.value))}
-                                                className="flex-1 accent-blue-500 cursor-pointer"
-                                            />
-                                            <span className={`text-xs font-extrabold w-8 text-right ${item.color}`}>{val}</span>
-                                        </div>
-                                    );
-                                })}
+                                <ProviderStyleSecici kind="REF" edit={edit} setEdit={setEdit} accent="blue" />
                                 
                                 <div className="grid grid-cols-2 gap-4 mt-2">
                                     <FI label="Ort. Kart Sayısı">
@@ -452,42 +427,27 @@ export const DeepEditProviderModal: React.FC<ModalProps & { item: Goalkeeper | R
                         </div>
                     </div>
 
-                    {/* Right Column - FifaCard Interactive Preview */}
-                    <div className="w-full lg:w-80 flex flex-col items-center justify-start py-4 bg-[#121820] rounded-3xl border border-white/5 self-start">
-                        <p className="text-[9px] font-extrabold text-purple-400 uppercase tracking-widest mb-3">CANLI KART ÖNİZLEMESİ</p>
-                        {typeParam === 'GK' ? (
-                            <FifaCard
-                                rating={edit.rating}
-                                role="GOALKEEPER"
-                                name={edit.name}
-                                avatar={edit.avatar}
-                                isElite={edit.isElite}
-                                stats={{
-                                    label1: 'REF', val1: edit.stats?.reflexes || 80,
-                                    label2: 'DAL', val2: edit.stats?.diving || 80,
-                                    label3: 'POZ', val3: edit.stats?.positioning || 80,
-                                    label4: 'DAĞ', val4: edit.stats?.distribution || 75,
-                                    label5: 'BİR', val5: edit.stats?.oneOnOne || 80,
-                                    label6: 'HAY', val6: edit.stats?.aerialReach || 80
-                                }}
+                    {/* Sağ Sütun — OYUNCUNUN GÖRDÜĞÜ ÖNİZLEME
+                        Burada eskiden altı sayılı bir "FIFA kartı" duruyordu ve
+                        boş alanları `|| 80` ile dolduruyordu: yeni kaydedilmiş,
+                        hiç istatistiği olmayan bir kaleci panelde 80/80/80 diye
+                        görünüyordu. Yani önizleme, olmayan veriyi varmış gibi
+                        gösteriyordu (kurucu kararı, 2026-08-06: uydurma sayı yok).
+                        Yerine oyuncunun pazaryerinde GERÇEKTEN gördüğü kart
+                        koyuldu — panelde yapılan değişikliğin oyuncuya nasıl
+                        yansıdığı birebir görünür. */}
+                    <div className="w-full lg:w-80 flex flex-col items-center justify-start py-4 px-3 bg-[#121820] rounded-3xl border border-white/5 self-start gap-3">
+                        <p className="text-[9px] font-extrabold text-purple-400 uppercase tracking-widest">OYUNCUNUN GÖRDÜĞÜ</p>
+                        <div className="w-full">
+                            <MarketplaceCard
+                                item={{ ...(item as any), ...edit } as any}
+                                type={typeParam}
+                                onClick={() => { /* önizleme — tıklanmaz */ }}
                             />
-                        ) : (
-                            <FifaCard
-                                rating={edit.rating}
-                                role="REFEREE"
-                                name={edit.name}
-                                avatar={edit.avatar}
-                                isElite={edit.isElite}
-                                stats={{
-                                    label1: 'OTO', val1: edit.stats?.authority || 80,
-                                    label2: 'KON', val2: edit.stats?.fitness || 80,
-                                    label3: 'İLE', val3: edit.stats?.communication || 80,
-                                    label4: 'KRT', val4: Math.round((edit.stats?.avgCards || 3.5) * 10),
-                                    label5: 'MES', val5: Math.round(parseFloat(edit.stats?.avgDistance || '10') * 8),
-                                    label6: 'DEC', val6: 85
-                                }}
-                            />
-                        )}
+                        </div>
+                        <p className="text-[9px] text-gray-500 text-center leading-relaxed px-1">
+                            Kaydettiğin ad, ücret, puan ve tarz oyuncuya bu kartta görünür.
+                        </p>
                     </div>
                 </div>
             </Shell>

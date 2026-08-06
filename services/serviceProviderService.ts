@@ -127,7 +127,10 @@ export interface OwnProviderProfileUpdate {
   name?: string;
   bio?: string;
   fee?: number;
+  /** Eski TEK serbest metin tarz. Uygulama artık yazmıyor; alan uyumluluk için duruyor. */
   style?: string;
+  /** Kanonik tarz listesinden en fazla iki değer (shared/providerStyles.ts). */
+  styles?: string[];
   avatar?: string;
   height?: string;
   age?: number;

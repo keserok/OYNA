@@ -20,6 +20,7 @@ import BottomSheet from '../components/ui/BottomSheet';
 import Chip from '../components/ui/Chip';
 import { getInitials } from '../components/ui/Avatar';
 import { UserAvatar } from '../components/common/UserAvatar';
+import { providerStyles } from '../shared/providerStyles';
 import { createServiceRequest, fundServiceRequest } from '../services/serviceRequestService';
 import { auth } from '../supabaseAuth';
 import { trCapitalize } from '../utils/trUpper';
@@ -398,25 +399,21 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect, onCre
     // Çalışma günlerinden türetilmiş dürüst sinyal: bugün çalışıyor mu?
     const detailAvailableToday = !detailUnavailable && !!detail?.workingHours?.activeDays?.includes(TODAY_SHORT);
 
-    const skillRows: { label: string; value: number }[] = useMemo(() => {
-        if (!detail) return [];
-        const rows = type === 'GK'
-            ? [
-                { label: 'Refleksler', value: detailStats.reflexes },
-                { label: 'Uçuş (Diving)', value: detailStats.diving },
-                { label: 'Pozisyon Alma', value: detailStats.positioning },
-                { label: 'Oyun Kurma', value: detailStats.distribution },
-                { label: 'Bire Bir', value: detailStats.oneOnOne },
-                { label: 'Hava Hakimiyeti', value: detailStats.aerialReach },
-            ]
-            : [
-                { label: 'Otorite', value: detailStats.authority },
-                { label: 'Kondisyon', value: detailStats.fitness },
-                { label: 'İletişim', value: detailStats.communication },
-            ];
-        // Yalnız gerçekten kayıtlı değerler — sahte/uydurma bar yok.
-        return rows.filter(r => typeof r.value === 'number' && r.value > 0);
-    }, [detail, detailStats, type]);
+    /**
+     * TARZLAR — "Refleksler 87 / Uçuş 84" çubuklarının yerine geçti.
+     *
+     * Kurucu kararı (2026-08-06): o çubukların arkasında ÖLÇÜM YOKTU. Kaleci
+     * kendi ekranından giremiyordu, oyuncu oyu onları beslemiyordu; tek kaynak
+     * yönetim panelinde elle yazılmış tohum veriydi. Oyuncuya "bu kaleci 87
+     * refleks" demek, ölçmediğimiz bir şeyi ölçtüğümüzü iddia etmekti.
+     *
+     * Yerine sağlayıcının KENDİ beyan ettiği, kapalı listeden seçilmiş en
+     * fazla iki tarz geliyor (shared/providerStyles.ts + veritabanı kısıtı).
+     */
+    const detailStyles: string[] = useMemo(
+        () => (detail ? providerStyles(type === 'GK' ? 'GK' : 'REF', detail) : []),
+        [detail, type],
+    );
 
     const factRows: { label: string; value: string }[] = useMemo(() => {
         if (!detail) return [];
@@ -1088,27 +1085,36 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect, onCre
                                         </div>
                                     )}
 
+                                    {/* Tarz — sağlayıcının kendi beyanı (en fazla 2) */}
+                                    {detailStyles.length > 0 && (
+                                        <div className="px-5 mt-8">
+                                            <SectionTitle icon={<Award size={14} />} title={type === 'GK' ? 'Kaleci Tarzı' : 'Yönetim Tarzı'} />
+                                            <div className="flex flex-wrap gap-2">
+                                                {detailStyles.map(t => (
+                                                    <span
+                                                        key={t}
+                                                        className="px-3.5 py-2 rounded-2xl text-[0.75rem] font-extrabold border"
+                                                        style={{ background: theme.soft, borderColor: theme.border, color: theme.accent }}
+                                                    >
+                                                        {t}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
                                     {/* Performans — yalnız gerçek kayıtlı veriler */}
-                                    {(skillRows.length > 0 || factRows.length > 0) && (
+                                    {factRows.length > 0 && (
                                         <div className="px-5 mt-8">
                                             <SectionTitle icon={<Award size={14} />} title="Performans" />
-                                            {factRows.length > 0 && (
-                                                <div className="flex gap-2.5 mb-5">
-                                                    {factRows.map(f => (
-                                                        <div key={f.label} className="flex-1 min-w-0 bg-[#11161F] border border-white/[0.06] rounded-2xl px-2 py-3 text-center">
-                                                            <div className="text-[0.8125rem] font-extrabold text-white font-numeric truncate">{f.value}</div>
-                                                            <div className="text-[0.625rem] font-extrabold text-ink-4 uppercase tracking-wider mt-1">{f.label}</div>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            )}
-                                            {skillRows.length > 0 && (
-                                                <div className="space-y-3.5">
-                                                    {skillRows.map(r => (
-                                                        <SkillBar key={r.label} label={r.label} value={r.value} color={theme.accent} />
-                                                    ))}
-                                                </div>
-                                            )}
+                                            <div className="flex gap-2.5">
+                                                {factRows.map(f => (
+                                                    <div key={f.label} className="flex-1 min-w-0 bg-[#11161F] border border-white/[0.06] rounded-2xl px-2 py-3 text-center">
+                                                        <div className="text-[0.8125rem] font-extrabold text-white font-numeric truncate">{f.value}</div>
+                                                        <div className="text-[0.625rem] font-extrabold text-ink-4 uppercase tracking-wider mt-1">{f.label}</div>
+                                                    </div>
+                                                ))}
+                                            </div>
                                         </div>
                                     )}
 

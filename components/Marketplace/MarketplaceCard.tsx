@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { Star, MapPin, ChevronRight, BadgeCheck, Shield, Scale } from 'lucide-react';
 import { Goalkeeper, Referee } from '../../types';
 import { UserAvatar } from '../common/UserAvatar';
+import { providerStyles } from '../../shared/providerStyles';
 import { formatTRYShort } from '../../utils/formatTRY';
 
 // Rol bazlı tema — Dashboard giriş kartlarıyla tutarlı: Kaleci = neon yeşil,
@@ -50,7 +51,10 @@ export const MarketplaceCard: React.FC<MarketplaceCardProps> = ({ item, type, on
   const unavailable = item.isAvailable === false;
   const reviewCount = item.reviews?.length ?? 0;
   const matchCount = (item as Referee).matchCount ?? (item as Goalkeeper).matchCount ?? 0;
-  const styleLabel = typeof item.style === 'string' && item.style.trim() ? item.style : null;
+  // Kartın alt satırında görünen tarz: sağlayıcının kendi seçtiği kanonik
+  // tarzlar (en fazla 2). Eski serbest metin `style` doğrudan basılıyordu ve
+  // 'Panter' gibi artık desteklenmeyen değerler ekranda kalıyordu.
+  const styleLabel = providerStyles(type, item).join(' · ') || null;
   const subMeta = isGK
     ? ((item as Goalkeeper).age ? `${(item as Goalkeeper).age} yaş` : null)
     : ((item as Referee).level || null);

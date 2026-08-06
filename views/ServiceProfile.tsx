@@ -18,6 +18,7 @@ import { auth } from '../supabaseAuth';
 import { useImageUpload } from '../hooks/useImageUpload';
 import { showToast } from '../components/common/GlobalToast';
 import { UserAvatar } from '../components/common/UserAvatar';
+import { GK_STYLES, REF_STYLES, MAX_PROVIDER_STYLES, providerStyles } from '../shared/providerStyles';
 import { Goalkeeper, Referee } from '../types';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -38,8 +39,9 @@ L.Icon.Default.mergeOptions({
 // pazaryerinde kaptanlara kimlikmiş gibi gösteriliyordu (yanıltma + telif).
 // Tek yol: cihazdan gerçek fotoğraf yükleme; yoksa baş harf avatarı.
 
-const GK_STYLES = ['Panter', 'Duvar', 'Libero', 'Atak', 'Dengeli'];
-const REF_STYLES = ['Otoriter', 'Diyalogcu', 'Teknisyen', 'Hızlı Karar'];
+// Tarz listeleri TEK kaynaktan (shared/providerStyles.ts) ve veritabanının
+// CHECK kısıtıyla birebir. Burada eskiden kendi kopyası vardı ('Panter',
+// 'Duvar', 'Libero'…) ve kurucunun onayladığı yeni sözlükle ilgisi yoktu.
 
 const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
   const isRef = role === UserRole.REFEREE;
@@ -62,7 +64,9 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
   const defaultName = userProfile?.name || '';
   const defaultBio = userProfile?.bio || '';
   const defaultFee = userProfile?.fee || 0;
-  const defaultStyle = typeof userProfile?.style === 'string' ? userProfile.style : '';
+  // Kayıtlı tarzlar: yeni çoklu alan (`styles`) okunur; boşsa eski serbest
+  // metin YALNIZ kanonik listeye uyuyorsa kabul edilir (shared/providerStyles).
+  const defaultStyles = providerStyles(isRef ? 'REF' : 'GK', userProfile);
 
   // Mevcut avatar stok Unsplash URL'siyse yok say (F3d veri temizliği migration'ı
   // canlıyı NULL'a çeker; UI de defansif davranır).
@@ -74,7 +78,17 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
   const [editingBio, setEditingBio] = useState(false);
   const [bio, setBio] = useState(defaultBio);
   const [tempBio, setTempBio] = useState(bio);
-  const [selectedStyle, setSelectedStyle] = useState(defaultStyle);
+  // Kurucu kararı: bir ya da İKİ tarz seçilebilir. Üçüncüye basılınca EN ESKİ
+  // seçim düşer — kullanıcı önce "birini kaldır" diye uğraşmasın, dokunduğu
+  // tarz her zaman seçili hâle gelsin.
+  const [selectedStyles, setSelectedStyles] = useState<string[]>(defaultStyles);
+  const toggleStyle = (tarz: string) => {
+    setSelectedStyles((onceki) => {
+      if (onceki.includes(tarz)) return onceki.filter((s) => s !== tarz);
+      if (onceki.length < MAX_PROVIDER_STYLES) return [...onceki, tarz];
+      return [...onceki.slice(1), tarz];
+    });
+  };
   
   // Hizmet bölgesi editörü: gerçek profil konumu → activeRegion şehri → ülke merkezi.
   // Sabit ORDU_CENTER kaldırıldı (Ordu dışı sağlayıcı yanlış merkez görmesin).
@@ -112,7 +126,10 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
           if (userProfile.name) setDisplayName(userProfile.name);
           if (userProfile.bio) setBio(userProfile.bio);
           if (userProfile.fee) setFee(userProfile.fee);
-          if (userProfile.style) setSelectedStyle(typeof userProfile.style === 'string' ? userProfile.style : 'Dengeli');
+          // Tarzlar: profil geç yüklenirse de senkronla. Kanonik listeye
+          // uymayan eski değerler `providerStyles` içinde zaten eleniyor.
+          const kayitliTarzlar = providerStyles(isRef ? 'REF' : 'GK', userProfile);
+          if (kayitliTarzlar.length > 0) setSelectedStyles(kayitliTarzlar);
           if (userProfile.avatar) setCustomPhoto(userProfile.avatar);
           // KD-6: kayıtlı radius'u geri oku (mount'tan sonra yüklenirse de senkronla).
           const r = (userProfile as any).settings?.radiusKm;
@@ -150,7 +167,9 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
         bio: tempBio,
         fee,
         name: displayName,
-        style: selectedStyle,
+        // Tarzlar tek kaydetme yolundan gider (provider_update_own_profile);
+        // ayrı bir "tarzı kaydet" düğmesi YOK, yarım kayıt olamaz.
+        styles: selectedStyles,
         // WYSIWYG: ekranda görünen (yüklenmiş) fotoğraf kaydedilir; stok havuz yok.
         avatar: currentPhoto,
         coordinates: { lat: mapCenter[0], lng: mapCenter[1] },
@@ -195,7 +214,9 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
   const strOrDash = (v: unknown) => (typeof v === 'string' && v.trim() ? v : '—');
   const stats = isRef
     ? [
-        { label: 'Yönetim', value: numOrDash((userProfile as Referee)?.stats?.authority), icon: <Scale size={14} /> },
+        // "Yönetim 85" karosu kaldırıldı (kurucu kararı, 2026-08-06): o sayı
+        // hiçbir ölçümden gelmiyordu. Yerine hakemin kendi seçtiği tarz sayısı.
+        { label: 'Tarz', value: selectedStyles.length ? String(selectedStyles.length) : '—', icon: <Scale size={14} /> },
         { label: 'VAR %', value: strOrDash((userProfile as Referee)?.stats?.varCallAccuracy), icon: <Target size={14} /> },
         { label: 'Puan', value: ratingDisplay, icon: <Star size={14} /> },
         { label: 'Sarı Kart Ort.', value: numOrDash((userProfile as Referee)?.stats?.avgCards), icon: <Award size={14} /> },
@@ -205,7 +226,9 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
         // değerleri (matchDisplay/strOrDash/ratingDisplay — sahte 42/94/9.2 yok)
         // korunur. İki niyet birleşti: CS satırı gitti, dürüstlük kaldı.
         { label: 'Maç', value: matchDisplay, icon: <Shield size={14} /> },
-        { label: 'Refleks %', value: strOrDash((userProfile as Goalkeeper)?.stats?.savePercentage), icon: <Zap size={14} /> },
+        // Etiket düzeltildi: gösterilen değer `savePercentage` yani KURTARIŞ
+        // yüzdesi; "Refleks %" yazmak başka bir şeyi ölçüyormuş izlenimi veriyordu.
+        { label: 'Kurtarış %', value: strOrDash((userProfile as Goalkeeper)?.stats?.savePercentage), icon: <Zap size={14} /> },
         { label: 'Puan', value: ratingDisplay, icon: <Star size={14} /> },
       ];
 
@@ -500,27 +523,47 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
           transition={{ delay: 0.17 }}
           className="rounded-[24px] p-5 border border-white/8 bg-[#0d1420]"
         >
-          <h3 className="text-[0.625rem] font-extrabold uppercase tracking-widest mb-3" style={{ color: accentColor }}>
-            {isRef ? 'Yönetim Tarzı' : 'Oyun Tarzı'}
-          </h3>
-          <div className="flex flex-wrap gap-2">
-            {(isRef ? REF_STYLES : GK_STYLES).map(style => (
-              <motion.button
-                key={style}
-                whileTap={{ scale: 0.94 }}
-                onClick={() => setSelectedStyle(style)}
-                className="px-4 py-2 rounded-2xl text-xs font-extrabold transition-all border"
-                style={{
-                  background: selectedStyle === style ? accentColor : 'rgba(255,255,255,0.04)',
-                  color: selectedStyle === style ? '#000' : '#9ca3af',
-                  borderColor: selectedStyle === style ? accentColor : 'rgba(255,255,255,0.08)',
-                  boxShadow: selectedStyle === style ? `0 0 14px ${accentColor}50` : 'none'
-                }}
-              >
-                {style}
-              </motion.button>
-            ))}
+          <div className="flex items-baseline justify-between gap-2 mb-1">
+            <h3 className="text-[0.625rem] font-extrabold uppercase tracking-widest" style={{ color: accentColor }}>
+              {isRef ? 'Yönetim Tarzım' : 'Kaleci Tarzım'}
+            </h3>
+            <span className="text-[0.625rem] font-bold text-ink-4 font-numeric">
+              {selectedStyles.length}/{MAX_PROVIDER_STYLES}
+            </span>
           </div>
+          {/* Kuralı kullanıcıya SÖYLÜYORUZ: sessizce eskiyi düşüren bir arayüz,
+              kullanıcıya "seçimim neden kayboldu" dedirtir. */}
+          <p className="text-[0.6875rem] text-ink-4 leading-relaxed mb-3">
+            En fazla iki tarz seçebilirsin. Seçtiklerin kendi ana ekranında ve
+            seni kiralayacak oyuncunun gördüğü profilde görünür.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {(isRef ? REF_STYLES : GK_STYLES).map(style => {
+              const secili = selectedStyles.includes(style);
+              return (
+                <motion.button
+                  key={style}
+                  whileTap={{ scale: 0.94 }}
+                  onClick={() => toggleStyle(style)}
+                  aria-pressed={secili}
+                  className="px-4 py-2 rounded-2xl text-xs font-extrabold transition-all border"
+                  style={{
+                    background: secili ? accentColor : 'rgba(255,255,255,0.04)',
+                    color: secili ? '#000' : '#9ca3af',
+                    borderColor: secili ? accentColor : 'rgba(255,255,255,0.08)',
+                    boxShadow: secili ? `0 0 14px ${accentColor}50` : 'none'
+                  }}
+                >
+                  {style}
+                </motion.button>
+              );
+            })}
+          </div>
+          {selectedStyles.length === 0 && (
+            <p className="text-[0.6875rem] text-ink-4 mt-3">
+              Henüz tarz seçmedin — profilinde bu alan boş görünüyor.
+            </p>
+          )}
         </motion.div>
 
         {/* ─── Bölge Tercihleri (Harita) ─── */}

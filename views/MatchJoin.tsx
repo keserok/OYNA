@@ -33,6 +33,7 @@ import { formatTRYAmount, formatTRYShort } from '../utils/formatTRY';
 const money = formatTRYAmount;
 import { showToast } from '../components/common/GlobalToast';
 import { FORMATIONS as FORMATIONS_SSOT, type SquadSize } from '../utils/formations';
+import { providerStyles } from '../shared/providerStyles';
 import { playStyleMetaForDifficulty } from './onboarding/onboardingShared';
 import TeamPlanBanner from '../components/social/TeamPlanBanner';
 // Tek kaynak lobi mantığı — admin paneli (MatchLobbyPitch) ile AYNI fonksiyonlar (drift yok).
@@ -132,28 +133,17 @@ const getInitials = (name?: string): string => {
 const isRealPhoto = (url?: string): boolean =>
   !!url && !/ui-avatars\.com|pravatar\.cc/i.test(url);
 
-// Kaleci/hakem REYTİNGLERİ — admin panelindeki yetenek sliderlarının TAM listesi
-// (DeepEditModals: KALECİ/HAKEM YETENEK KONTROLLERİ). Değerler 10–99 ölçeğinde.
-const GK_RATING_KEYS: [string, string][] = [
-  ['reflexes', 'REFLEKSLER'], ['diving', 'DALIŞ'], ['positioning', 'POZİSYON'],
-  ['distribution', 'DAĞITIM'], ['oneOnOne', 'BİRE BİR'], ['aerialReach', 'HAVA HÂKİMİYETİ'],
-];
-const REF_RATING_KEYS: [string, string][] = [
-  ['authority', 'OTORİTE'], ['fitness', 'KONDİSYON'], ['communication', 'İLETİŞİM'],
-];
-// Sağlayıcının skills/stats jsonb'undan admin reyting anahtarlarını sırayla çıkarır.
-// (Kaleci panelde hem stats hem skills'e yazar; hakemde yalnız stats.)
-const extractProviderRatings = (
-  skills?: Record<string, any> | null,
-  stats?: Record<string, any> | null,
+// Sağlayıcının TARZLARI — "REFLEKSLER 87 / DALIŞ 84" reyting çubuklarının yerine.
+//
+// Kurucu kararı (2026-08-06): o çubukların arkasında ölçüm yoktu. Kaleci kendi
+// ekranından giremiyor, oyuncu oyu beslemiyordu; tek kaynak yönetim panelinde
+// elle yazılmış tohum veriydi. Kaptan, kiralayacağı kaleciye bakarken ölçmediğimiz
+// bir sayıya güveniyordu. Artık sağlayıcının KENDİ seçtiği, kapalı listeden gelen
+// en fazla iki tarz gösteriliyor (shared/providerStyles.ts + veritabanı kısıtı).
+const extractProviderStyles = (
+  provider: unknown,
   isRef?: boolean,
-): { label: string; value: number }[] => {
-  const src: Record<string, any> = { ...(stats || {}), ...(skills || {}) };
-  const keys = isRef ? REF_RATING_KEYS : GK_RATING_KEYS;
-  return keys
-    .map(([k, label]) => ({ label, value: Number(src[k]) }))
-    .filter(r => Number.isFinite(r.value));
-};
+): string[] => providerStyles(isRef ? 'REF' : 'GK', provider);
 
 // Dolu slotların KİMLİĞİNİ tazeler (public_profiles) — occupant/player.id birebir.
 // Eski sıralı-kuyruk tahmini KALDIRILDI: occupant'sız TAKEN slot artık REZERVE'dir
@@ -1758,7 +1748,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                 const isRef = providerModalType === 'REF';
                 const accent = isRef ? '#A78BFA' : '#FF9F43';
                 const submitting = providerSubmittingId === p.id;
-                const ratings = extractProviderRatings(p.skills as any, p.stats as any, isRef);
+                const tarzlar = extractProviderStyles(p, isRef);
                 const st = (p.stats || {}) as Record<string, any>;
                 const infoRow = isRef
                   ? [
@@ -1815,18 +1805,18 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                       ))}
                     </div>
 
-                    {ratings.length > 0 && (
+                    {tarzlar.length > 0 && (
                       <div className="w-full mt-5">
-                        <span className="text-[0.625rem] font-extrabold uppercase tracking-[0.2em] text-ink-4 ml-1">{isRef ? 'Hakemlik Reytingleri' : 'Kalecilik Reytingleri'}</span>
-                        <div className="mt-2 space-y-2">
-                          {ratings.map(r => (
-                            <div key={r.label} className="flex items-center gap-2">
-                              <span className="text-[0.625rem] font-extrabold text-white/50 uppercase tracking-wide w-28 shrink-0 truncate">{r.label}</span>
-                              <div className="flex-1 h-2 rounded-full bg-white/8 overflow-hidden">
-                                <div className="h-full rounded-full" style={{ width: `${Math.max(0, Math.min(100, r.value))}%`, background: `linear-gradient(90deg, ${accent}99, ${accent})` }} />
-                              </div>
-                              <span className="text-[0.6875rem] font-extrabold tabular-nums w-7 text-right" style={{ color: accent }}>{r.value}</span>
-                            </div>
+                        <span className="text-[0.625rem] font-extrabold uppercase tracking-[0.2em] text-ink-4 ml-1">{isRef ? 'Yönetim Tarzı' : 'Kaleci Tarzı'}</span>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {tarzlar.map(t => (
+                            <span
+                              key={t}
+                              className="px-3 py-1.5 rounded-xl text-[0.6875rem] font-extrabold border"
+                              style={{ background: accent + '1a', borderColor: accent + '55', color: accent }}
+                            >
+                              {t}
+                            </span>
                           ))}
                         </div>
                       </div>
@@ -1878,7 +1868,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
               const accent = isRef ? '#A78BFA' : '#FF9F43';
               const cardBg = isRef ? 'from-[#15111f] to-[#0d1117]' : 'from-[#1c1207] to-[#0d1117]';
               const initialsBg = isRef ? 'bg-violet-950/60 text-violet-300' : 'bg-orange-950/60 text-orange-300';
-              const ratings = extractProviderRatings(p.skills as any, p.stats as any, isRef);
+              const tarzlar = extractProviderStyles(p, isRef);
               const st = (p.stats || {}) as Record<string, any>;
               const infoRow = isRef
                 ? [
@@ -1946,18 +1936,18 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                     </div>
 
                     {/* Reytingler — admin panelindeki tüm yetenekler */}
-                    {ratings.length > 0 && (
+                    {tarzlar.length > 0 && (
                       <div className="w-full mt-5">
-                        <span className="text-[0.625rem] font-extrabold uppercase tracking-[0.2em] text-ink-4 ml-1">{isRef ? 'Hakemlik Reytingleri' : 'Kalecilik Reytingleri'}</span>
-                        <div className="mt-2 space-y-2">
-                          {ratings.map(r => (
-                            <div key={r.label} className="flex items-center gap-2">
-                              <span className="text-[0.625rem] font-extrabold text-white/50 uppercase tracking-wide w-28 shrink-0 truncate">{r.label}</span>
-                              <div className="flex-1 h-2 rounded-full bg-white/8 overflow-hidden">
-                                <div className="h-full rounded-full" style={{ width: `${Math.max(0, Math.min(100, r.value))}%`, background: `linear-gradient(90deg, ${accent}99, ${accent})` }} />
-                              </div>
-                              <span className="text-[0.6875rem] font-extrabold tabular-nums w-7 text-right" style={{ color: accent }}>{r.value}</span>
-                            </div>
+                        <span className="text-[0.625rem] font-extrabold uppercase tracking-[0.2em] text-ink-4 ml-1">{isRef ? 'Yönetim Tarzı' : 'Kaleci Tarzı'}</span>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {tarzlar.map(t => (
+                            <span
+                              key={t}
+                              className="px-3 py-1.5 rounded-xl text-[0.6875rem] font-extrabold border"
+                              style={{ background: accent + '1a', borderColor: accent + '55', color: accent }}
+                            >
+                              {t}
+                            </span>
                           ))}
                         </div>
                       </div>

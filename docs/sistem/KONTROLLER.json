@@ -366,6 +366,16 @@
       "nasil": "SELECT public.sistem_saglik_ek_kontroller();",
       "basari_olcutu": "K-PARA-4 satırı 'YESIL' (süpürücü açıkken eksik = KIRMIZI, kapalıyken = SARI)",
       "sessizlik_tipi": "Cron silinir ya da parola yanlış yenilenir; hata çıkmaz, ödemeler sessizce toplanmaz"
+    },
+    {
+      "id": "K-TARZ-1",
+      "ad": "Eski tarz dilinde takılı kalan sağlayıcı var mı?",
+      "sade_anlatim": "Kaleci ve hakemlerin tarzı artık kapalı bir listeden seçiliyor. Eski serbest metni olup yeni listeden hiçbir şey seçmemiş bir sağlayıcı, vitrinde TARZSIZ görünür — kimse fark etmeden kaybolan bir bilgi. Bu kontrol onları her gece sayar.",
+      "ne_zaman": "GUNLUK",
+      "tur": "SQL",
+      "nasil": "SELECT * FROM public.k_tarz_1_eski_tarz_dili();",
+      "basari_olcutu": "durum = 'YESIL' (eski metinde takılı kalan sağlayıcı yok)",
+      "sessizlik_tipi": "Sağlayıcı tarzını hiç seçmez; hata çıkmaz, vitrinde yalnızca bir alan boş kalır"
     }
   ]
 }
