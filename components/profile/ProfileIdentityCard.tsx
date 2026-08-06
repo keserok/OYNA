@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Camera } from 'lucide-react';
 import { PLAY_STYLE_META, GENDER_LABEL } from '../../views/onboarding/onboardingShared';
 import { formatPosition } from '../../shared/profilePresentation';
+import { UserAvatar } from '../common/UserAvatar';
 
 // ════════════════════════════════════════════════════════════════════════════
 // KİMLİK KARTI — onaylı profil tasarımı
@@ -22,9 +23,6 @@ import { formatPosition } from '../../shared/profilePresentation';
 // Profili Aynası'nın kimlik kartıdır ve kendi kilitli testleri vardır.
 // Bu dosya UYGULAMANIN yeni tasarımıdır; ikisi bilerek ayrı duruyor.
 // ════════════════════════════════════════════════════════════════════════════
-
-const initialsOf = (name: string) =>
-  name.split(' ').filter(Boolean).map((w) => w[0]).join('').slice(0, 2).toLocaleUpperCase('tr-TR') || '•';
 
 export interface ProfileIdentityCardProps {
   name: string;
@@ -60,9 +58,9 @@ export const ProfileIdentityCard: React.FC<ProfileIdentityCardProps> = ({
   name, avatarUrl, position, age, ageRange, gender, playStyle,
   selfSkill, layout = 'row', onEditAvatar, showAddPhotoRow = true, onPress,
 }) => {
-  // Kırık/erişilemeyen fotoğraf adresi → baş harflere düş.
-  const [broken, setBroken] = useState(false);
-  const showImg = !!avatarUrl && !broken;
+  // Kırık/erişilemeyen fotoğraf adresine düşmeyi UserAvatar üstlenir; burada
+  // yalnız "fotoğraf var mı" sorusu var (kamera rozeti onunla çiziliyor).
+  const showImg = !!avatarUrl;
 
   const styleMeta = playStyle ? PLAY_STYLE_META[playStyle as keyof typeof PLAY_STYLE_META] : undefined;
   const ageText = age != null ? `${age}` : (ageRange ? ageRange.replace('-', '–') : null);
@@ -78,19 +76,16 @@ export const ProfileIdentityCard: React.FC<ProfileIdentityCardProps> = ({
 
   const avatar = (
     <div className="relative shrink-0">
-      {showImg ? (
-        <img
-          src={avatarUrl!}
-          alt={name}
-          referrerPolicy="no-referrer"
-          onError={() => setBroken(true)}
-          className="w-[88px] h-[88px] rounded-full object-cover bg-white/[0.12]"
-        />
-      ) : (
-        <div className="w-[88px] h-[88px] rounded-full bg-white/[0.12] flex items-center justify-center text-[1.75rem] font-extrabold italic text-white font-[Montserrat]">
-          {initialsOf(name)}
-        </div>
-      )}
+      {/* Yuvarlak TEK bileşenden gelir (components/common/UserAvatar): zemin,
+          harf rengi, italik ve yazı tipi orada kilitli. Burada yalnız BOYUT
+          söyleniyor. `showImg` yine de gerekiyor — kamera rozeti fotoğraf
+          yokken çizilir. */}
+      <UserAvatar
+        name={name}
+        avatarUrl={avatarUrl}
+        className="w-[88px] h-[88px] rounded-full"
+        textClassName="text-[1.75rem]"
+      />
       {/* Kamera rozeti YALNIZ fotoğraf yokken: fotoğrafı olan kullanıcı için
           değiştirme yolu zaten "Fotoğrafını değiştir" satırıdır ve rozet
           yüzü kapatıyordu. */}

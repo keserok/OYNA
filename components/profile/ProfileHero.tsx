@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Camera } from 'lucide-react';
 import { PLAY_STYLE_META, GENDER_LABEL } from '../../views/onboarding/onboardingShared';
+import { UserAvatar } from '../common/UserAvatar';
 
 export interface ProfileHeroProps {
     name: string;
@@ -26,9 +27,6 @@ export interface ProfileHeroProps {
     /** undefined → düzenleme yok (salt okunur profil / misafir) */
     onEditAvatar?: () => void;
 }
-
-const initialsOf = (name: string) =>
-    name.split(' ').filter(Boolean).map(w => w[0]).join('').slice(0, 2).toLocaleUpperCase('tr-TR');
 
 /**
  * Profil kimlik kartı (tasarım 3a "İnce Neon"): solda avatar, sağında isim;
@@ -58,9 +56,8 @@ export const ProfileHero: React.FC<ProfileHeroProps> = ({
         { etiket: 'CİNSİYET', deger: genderText },
         { etiket: 'OYUN STİLİ', deger: styleMeta?.label },
     ].filter((b): b is { etiket: string; deger: string } => !!b.deger);
-    // Avatar yüklenemezse (kırık URL / erişilemeyen host) baş harflere düş.
-    const [avatarBroken, setAvatarBroken] = useState(false);
-    const showAvatarImg = !!avatarUrl && !avatarBroken;
+    // Avatar yüklenemezse (kırık URL / erişilemeyen host) baş harflere düşme
+    // sorumluluğu artık UserAvatar'da — burada ayrı bir durum tutulmuyor.
 
     return (
         <div
@@ -69,19 +66,16 @@ export const ProfileHero: React.FC<ProfileHeroProps> = ({
         >
             <div className="flex items-center gap-3.5">
                 <div className="relative shrink-0">
-                    {showAvatarImg ? (
-                        <img
-                            src={avatarUrl!}
-                            alt={name}
-                            referrerPolicy="no-referrer"
-                            onError={() => setAvatarBroken(true)}
-                            className="w-[62px] h-[62px] rounded-full object-cover bg-white/[0.12]"
-                        />
-                    ) : (
-                        <div className="w-[62px] h-[62px] rounded-full bg-white/[0.12] flex items-center justify-center text-[1.375rem] font-bold">
-                            {initialsOf(name)}
-                        </div>
-                    )}
+                    {/* Yuvarlak TEK bileşenden (components/common/UserAvatar).
+                        Burada eskiden ayrı bir kopya vardı ve İTALİK DEĞİLDİ —
+                        aynı kişi profil kartında italik, panel aynasında düz
+                        harflerle görünüyordu. */}
+                    <UserAvatar
+                        name={name}
+                        avatarUrl={avatarUrl}
+                        className="w-[62px] h-[62px] rounded-full"
+                        textClassName="text-[1.375rem]"
+                    />
                     {onEditAvatar && (
                         <button
                             onClick={onEditAvatar}

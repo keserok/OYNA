@@ -17,6 +17,7 @@ import { useAppStore } from '../store';
 import { auth } from '../supabaseAuth';
 import { useImageUpload } from '../hooks/useImageUpload';
 import { showToast } from '../components/common/GlobalToast';
+import { UserAvatar } from '../components/common/UserAvatar';
 import { Goalkeeper, Referee } from '../types';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -296,6 +297,11 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
                     className="w-24 h-28 rounded-[20px] overflow-hidden border-2 shadow-2xl"
                     style={{ borderColor: accentColor, boxShadow: `0 0 24px ${accentColor}50` }}
                   >
+                    {/* Baş harfler TEK bileşenden (components/common/UserAvatar):
+                        iki harf, beyaz, italik. Burada eskiden TEK harf vardı ve
+                        italik değildi — aynı kaleci kendi ekranında "M", oyuncu
+                        arayüzünde "MK" görünüyordu. Rol rengi kaybolmuyor:
+                        çerçeve ve ışıması hâlâ kaleci yeşili / hakem mavisi. */}
                     {currentPhoto ? (
                       <img
                         src={currentPhoto}
@@ -303,9 +309,11 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
                         alt="profile"
                       />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center text-3xl font-extrabold text-white/80" style={{ background: accentBg }}>
-                        {(displayName || '?').trim().charAt(0).toLocaleUpperCase('tr-TR')}
-                      </div>
+                      <UserAvatar
+                        name={displayName}
+                        className="w-full h-full"
+                        textClassName="text-3xl"
+                      />
                     )}
                   </div>
                   <button

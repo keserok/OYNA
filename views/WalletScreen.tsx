@@ -641,8 +641,33 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
     const others = savedCards.filter(c => c.id !== defaultCard?.id);
     return (
       <div lang="tr" className="h-full bg-[#0A0E14] flex flex-col font-sans">
-        <SubHeader title="Kartlarım" subtitle="Kayıtlı ödeme yöntemleri" onBack={() => setView('MAIN')} />
+        <SubHeader title="Paramı Yönet" subtitle="Kayıtlı kartlar ve para çekme" onBack={() => setView('MAIN')} />
         <main className="flex-1 overflow-y-auto p-5 space-y-3.5">
+          {/* ── PARAYI HESABA ÇEKME ───────────────────────────────────────────
+              [2026-08-06] Bu blok ana cüzdan ekranından buraya taşındı.
+              Kullanıcı kararı: para hareketinin iki yönü (kart eklemek ve
+              parayı çekmek) tek ekranda toplansın. Çekilebilir bakiye yoksa
+              ya da zaten bekleyen bir talep varsa buton görünmez — basınca
+              hata veren buton göstermek, hiç göstermemekten kötüdür. */}
+          {walletBalance > 0 && !pendingPayout && (
+            <div className="rounded-2xl border border-white/8 bg-[#161B22] p-4">
+              <p className="text-[0.6875rem] text-ink-4 uppercase tracking-[0.08em] font-bold">Çekilebilir bakiye</p>
+              <p className="text-[1.75rem] font-extrabold leading-none mt-1.5 text-white font-numeric">{money(walletBalance)}</p>
+              <button onClick={() => { setCashoutError(''); setCashoutDone(null); setCashoutAmount(''); setView('CASHOUT'); }}
+                className="mt-3.5 w-full py-3.5 bg-[#0A0E14] text-white border border-white/12 rounded-xl font-extrabold text-[0.8125rem] flex items-center justify-center gap-2 active:scale-[0.98] transition-all hover:border-white/25">
+                <ArrowUpRight size={18} /> Paramı Hesabıma Çek
+              </button>
+            </div>
+          )}
+          {pendingPayout && (
+            <div className="rounded-2xl border border-[#FACC15]/30 bg-[#FACC15]/8 p-4">
+              <p className="text-[0.8125rem] font-extrabold text-[#FACC15]">Çekim talebin işleniyor</p>
+              <p className="text-[0.75rem] text-ink-3 mt-1">
+                Talebin sonuçlanmadan yeni çekim başlatılamaz. Durumu cüzdan ekranından izleyebilirsin.
+              </p>
+            </div>
+          )}
+
           {defaultCard && (
             <div className={`rounded-[20px] p-5 min-h-[172px] flex flex-col justify-between bg-gradient-to-br ${brandGradient(defaultCard.brand)} relative overflow-hidden shadow-[0_16px_36px_-12px_rgba(0,0,0,0.6)]`}>
               <div className="absolute -top-8 -right-6 w-40 h-40 bg-white/10 blur-[56px] rounded-full" />
@@ -1182,7 +1207,7 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
               </button>
               <button onClick={() => setView('CARDS')}
                 className="flex-1 py-3.5 bg-[#161B22] text-white border border-white/8 rounded-2xl font-extrabold text-[0.8125rem] flex flex-col items-center gap-1.5 active:scale-[0.98] transition-all">
-                <CreditCard size={20} /> Kart Yönet
+                <CreditCard size={20} /> Paramı Yönet
               </button>
               <button onClick={() => setView('HISTORY')}
                 className="flex-1 py-3.5 bg-[#161B22] text-white border border-white/8 rounded-2xl font-extrabold text-[0.8125rem] flex flex-col items-center gap-1.5 active:scale-[0.98] transition-all">
@@ -1190,15 +1215,14 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
               </button>
             </div>
 
-            {/* K1 — çekim artık gerçek bir eylem: gri metin bağlantı değil,
-                tam genişlikte ikincil buton. Kullanıcı parasını çekebildiğini
-                görmeden cüzdana para yüklemeye ikna olmuyor. */}
-            {walletBalance > 0 && !pendingPayout && (
-              <button onClick={() => { setCashoutError(''); setCashoutDone(null); setCashoutAmount(''); setView('CASHOUT'); }}
-                className="w-full py-3.5 bg-[#161B22] text-white border border-white/12 rounded-2xl font-extrabold text-[0.8125rem] flex items-center justify-center gap-2 active:scale-[0.98] transition-all hover:border-white/25">
-                <ArrowUpRight size={18} /> Paramı Hesabıma Çek
-              </button>
-            )}
+            {/* [2026-08-06 kullanıcı kararı] Çekim butonu buradan KALDIRILDI ve
+                "Paramı Yönet" ekranının içine taşındı. Gerekçe: ana cüzdan
+                ekranında dört eylem yan yana duruyordu (yükle / yönet / geçmiş
+                / çek) ve hiçbiri diğerinden ayrışmıyordu. Artık para hareketinin
+                iki yönü tek yerde toplanıyor: kart eklemek de, parayı hesaba
+                çekmek de "Paramı Yönet"in içinde.
+                Bekleyen çekim TALEBİ kartı burada KALDI — o bir eylem değil,
+                kullanıcının "param nerede" sorusunun cevabı. */}
 
             {/* K1 — bekleyen çekim talebi kartı. Oyuncu dalında hiç yoktu;
                 para bakiyeden anında düştüğü için kullanıcı "param nerede"

@@ -33,9 +33,22 @@ export const trCapitalize = (s: string | null | undefined): string => {
   return v ? trUpper(v.charAt(0)) + v.slice(1) : '';
 };
 
-/** Ad soyaddan baş harf rozeti: `irem yılmaz` → `İY` (en fazla 2 harf). */
-export const trInitials = (name: string | null | undefined, max = 2): string => {
-  const parts = (name ?? '').split(' ').filter(Boolean).slice(0, max);
+/**
+ * Ad soyaddan baş harf rozeti: `irem yılmaz` → `İY` (en fazla 2 harf).
+ *
+ * `bos`: ad hiç yoksa basılacak karakter. Varsayılan `?`; avatar yuvarlağı
+ * gibi kimlik göstermeyen yerlerde `•` geçilir — orada soru işareti kullanıcıya
+ * "bir şey ters gitti" dedirtiyor, oysa yalnızca ad henüz girilmemiştir.
+ *
+ * Baş harf üretimi TEK yerde: eskiden altı dosyada altı ayrı kopyası vardı ve
+ * ikisi `toUpperCase()` kullandığı için `irem` → `IR` yazıyordu.
+ */
+export const trInitials = (
+  name: string | null | undefined,
+  max = 2,
+  bos = '?',
+): string => {
+  const parts = (name ?? '').trim().split(/\s+/).filter(Boolean).slice(0, max);
   const out = parts.map((w) => trUpper(w.charAt(0))).join('');
-  return out || '?';
+  return out || bos;
 };

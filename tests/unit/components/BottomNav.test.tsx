@@ -5,7 +5,12 @@ import { BottomNav, TAB_IDS } from '../../../components/BottomNav';
 
 // IP-14 · Kullanıcı kararı: alt menünün beş yuvası yeniden dağıtıldı.
 //
-//   Ana Sayfa · Top Oyna · **Maçlarım (orta tuş)** · Saha Kirala · Profil
+//   Ana Sayfa · Oyna · **Maçlarım (orta tuş)** · Saha · Profil
+//
+// Kullanıcı kararı (2026-08-06): iki sekme kısaltıldı — "Top Oyna" → "Oyna",
+// "Saha Kirala" → "Saha". Beş sekme yan yana duruyor; iki kelimelik adlar dar
+// telefonlarda satır kırıyordu. Ekranların TAM adları değişmedi (SCREEN);
+// sekme adları ui/labels.ts içindeki TAB'den gelir ve tam adın başlangıcıdır.
 //
 // Gerekçe: bilet, kapora ödemesi ve maç değerlendirmesi Maçlarım'dan geçiyor —
 // en kolay erişilen yuvayı o hak ediyor. SOSYAL sekmeden çıktı; girişi Profil
@@ -16,7 +21,7 @@ describe('BottomNav — beş yuva', () => {
   it('beş sekmeyi de çiziyor', () => {
     render(<BottomNav currentView="DASHBOARD" onNavigate={vi.fn()} />);
     expect(screen.getByRole('navigation')).toBeInTheDocument();
-    for (const etiket of ['Ana Sayfa', 'Top Oyna', 'Maçlarım', 'Saha Kirala', 'Profil']) {
+    for (const etiket of ['Ana Sayfa', 'Oyna', 'Maçlarım', 'Saha', 'Profil']) {
       expect(screen.getByText(etiket)).toBeInTheDocument();
     }
   });
@@ -73,7 +78,7 @@ describe('BottomNav — dokunuş', () => {
     const git = vi.fn();
     render(<BottomNav currentView="DASHBOARD" onNavigate={git} />);
 
-    fireEvent.click(screen.getByRole('button', { name: /top oyna/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^oyna$/i }));
     expect(git).toHaveBeenCalledWith('MATCH_DISCOVERY');
 
     fireEvent.click(screen.getByRole('button', { name: /maçlarım/i }));

@@ -8,6 +8,7 @@ import {
   MENTALITY_VALUES,
   ROLE_IDS,
 } from '../../utils/discoveryFilterOptions';
+import { matchOnDay, startOfDayMs } from '../../utils/discoveryDays';
 
 // enhancedMatches biçiminde asgari maç nesnesi üretir (difficulty normalize edilmiş).
 const match = (over: Record<string, any> = {}) => ({
@@ -184,6 +185,60 @@ describe('cinsiyet / yaş / süre / ücret seçenekleri veriden türer', () => {
     expect(matchInBudget({ price: 300 }, '250-350')).toBe(true);
     expect(matchInBudget({ price: 400 }, 'o350')).toBe(true);
     expect(matchInBudget({ price: 100 }, 'o350')).toBe(false);
+  });
+});
+
+// ─── GÜN KAPSAMI × FİLTRE SEÇENEKLERİ ────────────────────────────────────────
+//
+// Kullanıcı bildirimi (2026-08-06): "format tuşuna bastığımda 5v5 maç
+// olmamasına rağmen 5v5 filtresi çıkıyor". Sebep: seçenekler TÜM günlerin
+// maçlarından türetiliyor, liste ise SEÇİLİ GÜNE göre daralıyordu. Yarınki 5v5
+// maç, bugünün format listesinde görünüyor; seçilince liste bomboş kalıyordu.
+//
+// Kural: Top Oyna ekranı seçenekleri gün kapsamı UYGULANDIKTAN sonra türetir.
+// Aşağıdaki testler o bileşimi (matchOnDay → deriveDiscoveryFilterOptions)
+// ekrandaki sırayla doğrular.
+describe('gün kapsamı — seçenekler yalnız o günün maçlarından türer', () => {
+  const gun = 86_400_000;
+  const bugun = startOfDayMs(new Date());
+  const iso = (ms: number) => {
+    const d = new Date(ms);
+    const p = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+  };
+  const gunSecenekleri = (list: any[], dayMs: number | null) =>
+    deriveDiscoveryFilterOptions(list.filter((m) => matchOnDay(m, dayMs)));
+
+  const liste = [
+    match({ format: '4v4', difficulty: 'Rahat', date: iso(bugun), time: '20:00' }),
+    match({ format: '8v8', difficulty: 'Taktiksel', date: iso(bugun), time: '21:00' }),
+    match({ format: '5v5', difficulty: 'Ciddi', date: iso(bugun + gun), time: '20:00' }),
+  ];
+
+  it('bugünde yalnız bugünün formatları sunulur (yarınki 5v5 sızmaz)', () => {
+    expect(gunSecenekleri(liste, bugun).formats).toEqual(['4v4', '8v8']);
+  });
+
+  it('mentalite de aynı kapsamdan türer — yarınki "Ciddi" bugün sunulmaz', () => {
+    expect(gunSecenekleri(liste, bugun).mentalities).toEqual(['Taktiksel', 'Rahat']);
+  });
+
+  it('yarına geçilince seçenekler yarınla değişir', () => {
+    const o = gunSecenekleri(liste, bugun + gun);
+    expect(o.formats).toEqual(['5v5']);
+    expect(o.mentalities).toEqual(['Ciddi']);
+  });
+
+  it('"Tüm Günler" (null) seçiliyken kapsam yoktur — hepsi sunulur', () => {
+    const o = gunSecenekleri(liste, null);
+    expect(o.formats).toEqual(['4v4', '5v5', '8v8']);
+    expect(o.mentalities).toEqual(['Ciddi', 'Taktiksel', 'Rahat']);
+  });
+
+  it('maçsız günde hiçbir seçenek sunulmaz (dropdownlar disabled)', () => {
+    const o = gunSecenekleri(liste, bugun + 5 * gun);
+    expect(o.formats).toEqual([]);
+    expect(o.mentalities).toEqual([]);
   });
 });
 

@@ -12,7 +12,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { trUpper, trLower, trCapitalize, trInitials } from '../../utils/trUpper';
-import { SCREEN, WAIT, CONFIRM } from '../../ui/labels';
+import { SCREEN, TAB, WAIT, CONFIRM } from '../../ui/labels';
 import { TAB_IDS } from '../../components/BottomNav';
 
 const KOK = process.cwd();
@@ -113,9 +113,31 @@ describe('toUpperCase kullanımı — yalnız teknik alanlarda', () => {
 
 describe('ekran adı tekliği', () => {
   it('sekme etiketleri tek kaynaktan geliyor', () => {
+    // Sekme etiketleri artık TAB'den gelir (ui/labels.ts). Kullanıcı kararı
+    // (2026-08-06) iki sekmeyi kısalttı: "Top Oyna" → "Oyna", "Saha Kirala" →
+    // "Saha". Kısalan adlar da elle yazılmaz; kaynağı yine ui/labels.ts.
     const s = oku('components/BottomNav.tsx');
     expect(s).toContain("from '../ui/labels'");
-    expect(s).toContain('SCREEN.pitchDiscovery');
+    expect(s).toContain('TAB.pitchDiscovery');
+    // Etiket dizisinde elle yazılmış metin olmasın — hepsi TAB.* olmalı.
+    expect(s).not.toMatch(/label:\s*'/);
+  });
+
+  it('kısaltılan sekme adı, tam ekran adının BİR KELİMESİ olmalı', () => {
+    // Bu dosyanın var oluş sebebi "sekmede gördüğün kelimeyi ekranda bul"
+    // kuralıydı: alt menüde "Sahalar" yazarken ekran kendini "Saha Vitrini"
+    // diye tanıtıyordu ve kullanıcı aradığını hiç bulamıyordu.
+    //
+    // Kısaltma bu kuralı BOZMAZ: sekmede "Oyna" gören kullanıcı ekranda
+    // "Top Oyna", "Saha" gören "Saha Kirala" görür. Test tam da bunu kilitler
+    // — biri "Oyna"yı "Maç Ara" yapmaya kalkarsa burada patlar.
+    const kelimeler = (ad: string) => ad.split(' ');
+    expect(kelimeler(SCREEN.matchDiscovery)).toContain(TAB.matchDiscovery);
+    expect(kelimeler(SCREEN.pitchDiscovery)).toContain(TAB.pitchDiscovery);
+    // Kısaltılmayan sekmeler zaten SCREEN'den türetilir, ikinci kez yazılmaz.
+    expect(TAB.dashboard).toBe(SCREEN.dashboard);
+    expect(TAB.myMatches).toBe(SCREEN.myMatches);
+    expect(TAB.profile).toBe(SCREEN.profile);
   });
 
   it('sekme sayısı ile etiket sayısı tutuyor', () => {

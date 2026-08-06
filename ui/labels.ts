@@ -37,6 +37,31 @@ export const SCREEN = {
 } as const;
 
 /**
+ * ALT MENÜ sekme etiketleri.
+ *
+ * Kullanıcı kararı (2026-08-06): alt bardaki iki sekme kısaltıldı —
+ * "Top Oyna" → "Oyna", "Saha Kirala" → "Saha". Alt barda beş sekme yan yana
+ * duruyor; iki kelimelik adlar dar telefonlarda satır kırıyor ya da puntoyu
+ * ölçeğin (ui/type.ts) altına düşürmeye zorluyordu.
+ *
+ * Bu, dosyanın başındaki "sekme ile ekran adı aynı olsun" kuralını BOZMAZ:
+ * kısa ad, tam adın KELİMELERİNDEN BİRİDİR. Eski hata "Sahalar" ↔ "Saha
+ * Vitrini" gibi BİRBİRİNDEN FARKLI iki addı; kullanıcı sekmede gördüğü
+ * kelimeyi ekranda hiç bulamıyordu. Burada sekmede "Oyna" gören kullanıcı
+ * ekranda "Top Oyna", "Saha" gören "Saha Kirala" görür — aradığı kelime
+ * yerinde duruyor. (tests/unit/turkishText.test.ts bunu kilitler.)
+ *
+ * Kısaltılmayan sekmeler SCREEN'den türetilir, elle ikinci kez yazılmaz.
+ */
+export const TAB = {
+  dashboard: SCREEN.dashboard,
+  matchDiscovery: 'Oyna',
+  myMatches: SCREEN.myMatches,
+  pitchDiscovery: 'Saha',
+  profile: SCREEN.profile,
+} as const;
+
+/**
  * Ana sayfadaki KAPI KARTLARININ adı.
  *
  * Neden ayrı: Kaleci ve Hakem kartları ekranın yarısı genişliğinde. "Kaleci

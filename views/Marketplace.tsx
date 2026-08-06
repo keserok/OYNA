@@ -19,6 +19,7 @@ import SkeletonList from '../components/ui/SkeletonList';
 import BottomSheet from '../components/ui/BottomSheet';
 import Chip from '../components/ui/Chip';
 import { getInitials } from '../components/ui/Avatar';
+import { UserAvatar } from '../components/common/UserAvatar';
 import { createServiceRequest, fundServiceRequest } from '../services/serviceRequestService';
 import { auth } from '../supabaseAuth';
 import { trCapitalize } from '../utils/trUpper';
@@ -114,24 +115,17 @@ const SkillBar: React.FC<{ label: string; value: number; color: string }> = ({ l
     </div>
 );
 
-// Küçük avatar — foto yoksa/yüklenemezse baş harfler (kırık görsel karesi görünmesin)
-const SafeAvatar: React.FC<{ src?: string | null; name: string; className?: string }> = ({ src, name, className = 'w-10 h-10 rounded-xl' }) => {
-    const [broken, setBroken] = React.useState(false);
-    React.useEffect(() => { setBroken(false); }, [src]);
-    return src && !broken ? (
-        <img
-            src={src}
-            alt={name}
-            referrerPolicy="no-referrer"
-            onError={() => setBroken(true)}
-            className={`${className} object-cover bg-white/5 border border-white/10`}
-        />
-    ) : (
-        <div className={`${className} bg-white/[0.06] border border-white/10 flex items-center justify-center`}>
-            <span className="text-[0.6875rem] font-extrabold text-white/70">{getInitials(name)}</span>
-        </div>
-    );
-};
+// Küçük avatar — foto yoksa/yüklenemezse baş harfler (kırık görsel karesi
+// görünmesin). Görünüm dili TEK bileşenden (components/common/UserAvatar);
+// burada yalnız kutu ölçüsü ve çerçeve söyleniyor.
+const SafeAvatar: React.FC<{ src?: string | null; name: string; className?: string }> = ({ src, name, className = 'w-10 h-10 rounded-xl' }) => (
+    <UserAvatar
+        name={name}
+        avatarUrl={src}
+        className={`${className} border border-white/10`}
+        textClassName="text-[0.6875rem]"
+    />
+);
 
 const StatTile: React.FC<{ label: string; value: React.ReactNode; sub?: string }> = ({ label, value, sub }) => (
     <div className="flex-1 min-w-0 bg-[#11161F] border border-white/[0.06] rounded-2xl px-3 py-3.5 text-center">
