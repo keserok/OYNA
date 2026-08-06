@@ -77,7 +77,9 @@ export const createTeam = async (input: NewTeamInput): Promise<Team> => {
   const color2 = input.color2Hex || '#0A0E14';
   const resolvedShortName = input.shortName || toShortName(input.name);
   const resolvedCrest = input.crest || 'shield';
-  const resolvedFormation = input.formation || '7+1';
+  // Kurucu kararı (2026-08-06): "+1" dili kaldırıldı — takım kaç kişiyse o
+  // yazılır. Varsayılan eskiden '7+1' idi.
+  const resolvedFormation = input.formation || '7v7';
 
   const captainPlayer = {
     id: user.uid,

@@ -91,6 +91,30 @@ pahalı onarımı gerektirdi.
 
 ---
 
+## 1.1.5 ✅ 2026-08-06 (aynı gün, sonraki tur): DEPO-ÖNCE akış işledi
+
+Kaleci/hakem tarzları (`20260905000000_kaleci_hakem_tarzlari.sql`) **canlıya
+elle uygulanmadan** doğrudan depoya yazıldı; canlıya `main` bütünleşmesi
+uygulayacak. 1.1.4'ün "DERS" satırının gereği budur: kayma ancak canlı ile
+depo arasında ZAMAN FARKI oluşursa doğar; fark hiç oluşmazsa onarılacak bir
+şey de olmaz.
+
+**Doğrulama, uygulamadan ÖNCE yapıldı:** 469 dosyanın tamamı boş bir PG16
+veritabanına sırayla uygulandı (469/469 geçti), sonra yeni kısıtlar ve RPC'ler
+o veritabanında tek tek denendi — üç tarz reddedildi, listede olmayan tarz
+reddedildi, hakem tarzı kaleciye yazılamadı, alan gönderilmediğinde mevcut
+değer korundu, gece denetimi (K-TARZ-1) satırını üretti.
+
+**BİR TUZAK YAKALANDI:** dosya ilk olarak `20260806140000` adıyla yazılmıştı.
+Depoda **Eylül tarihli** migration'lar var (`20260904000003`'e kadar), yani
+Ağustos numarası onlardan ÖNCE sıralanıyor ve `admin_update_goalkeeper__core`
+değişikliği daha sonraki bir dosya tarafından geri alınıyordu. Sıfırdan kurulum
+denemesinde yakalandı (fonksiyon gövdesinde `styles` yoktu), dosya
+`20260905000000`'a taşındı. **Ders:** yeni migration'ın numarası dizindeki EN
+SON dosyadan büyük olmalı; "bugünün tarihi" yeterli değildir.
+
+---
+
 ## 1.1.5 ✅ SONUÇ (2026-07-20): SIFIRDAN REPLAY TAMAMEN YEŞİL — drift kapatıldı
 
 > **271/271 migration dosyası, tamamen taze bir PG16 cluster'ında sıfırdan

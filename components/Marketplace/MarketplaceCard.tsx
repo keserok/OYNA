@@ -3,7 +3,8 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Star, MapPin, ChevronRight, BadgeCheck, Shield, Scale } from 'lucide-react';
 import { Goalkeeper, Referee } from '../../types';
-import { getInitials } from '../ui/Avatar';
+import { UserAvatar } from '../common/UserAvatar';
+import { providerStyles } from '../../shared/providerStyles';
 import { formatTRYShort } from '../../utils/formatTRY';
 
 // Rol bazlı tema — Dashboard giriş kartlarıyla tutarlı: Kaleci = neon yeşil,
@@ -50,7 +51,10 @@ export const MarketplaceCard: React.FC<MarketplaceCardProps> = ({ item, type, on
   const unavailable = item.isAvailable === false;
   const reviewCount = item.reviews?.length ?? 0;
   const matchCount = (item as Referee).matchCount ?? (item as Goalkeeper).matchCount ?? 0;
-  const styleLabel = typeof item.style === 'string' && item.style.trim() ? item.style : null;
+  // Kartın alt satırında görünen tarz: sağlayıcının kendi seçtiği kanonik
+  // tarzlar (en fazla 2). Eski serbest metin `style` doğrudan basılıyordu ve
+  // 'Panter' gibi artık desteklenmeyen değerler ekranda kalıyordu.
+  const styleLabel = providerStyles(type, item).join(' · ') || null;
   const subMeta = isGK
     ? ((item as Goalkeeper).age ? `${(item as Goalkeeper).age} yaş` : null)
     : ((item as Referee).level || null);
@@ -93,9 +97,14 @@ export const MarketplaceCard: React.FC<MarketplaceCardProps> = ({ item, type, on
               className="w-full h-full object-cover rounded-[14px] bg-white/5"
             />
           ) : (
-            <div className="w-full h-full rounded-[14px] bg-gradient-to-br from-white/10 to-white/[0.03] flex items-center justify-center">
-              <span className="text-sm font-extrabold text-white/80">{getInitials(item.name)}</span>
-            </div>
+            /* Baş harf dili TEK bileşenden (components/common/UserAvatar):
+               yarı saydam zemin + beyaz italik harfler. Burada eskiden kendi
+               gradyanı ve soluk `text-white/80` harfleri vardı. */
+            <UserAvatar
+              name={item.name}
+              className="w-full h-full rounded-[14px]"
+              textClassName="text-sm"
+            />
           )}
         </div>
         {/* Müsaitlik noktası */}

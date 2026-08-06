@@ -1,7 +1,18 @@
 import React from 'react';
+import { UserAvatar } from '../common/UserAvatar';
+import { trInitials } from '../../utils/trUpper';
 
-// Paylaşılan Avatar — baş harf yedeği + çevrimiçi nokta yuvası (Spec §4).
+// Liste avatarı — baş harf yedeği + çevrimiçi nokta yuvası (Spec §4).
 // SocialView/MessagesView/MyTeam'deki kopyaların yerine tek bileşen.
+//
+// GÖRÜNÜM BURADA TANIMLI DEĞİL: zemin, harf rengi, italik ve yazı tipi
+// `UserAvatar`dan gelir. Bu dosya yalnız LİSTE ÖLÇÜSÜNÜ (kutu boyu, köşe
+// yuvarlaklığı, punto) ve çevrimiçi noktasını ekler.
+//
+// Neden böyle: burada eskiden kendi rengi vardı (`from-white/10 to-white/5`
+// gradyan + `text-white/80` soluk harf) ve İTALİK DEĞİLDİ. Aynı oyuncu
+// Mesajlar'da soluk düz harfle, profilinde parlak italik harfle görünüyordu —
+// kurucunun "birinin yuvarlağı bir türlü, birininki başka türlü" dediği kayma.
 
 const SIZES = {
   sm: { box: 'w-8 h-8 rounded-xl', text: 'text-[0.6875rem]', dot: 'w-2 h-2 border' },
@@ -12,14 +23,12 @@ const SIZES = {
 
 export type AvatarSize = keyof typeof SIZES;
 
-export const getInitials = (name?: string | null): string =>
-  (name || 'O')
-    .trim()
-    .split(/\s+/)
-    .map(w => w[0])
-    .slice(0, 2)
-    .join('')
-    .toLocaleUpperCase('tr-TR');
+/**
+ * Baş harf üretimi TEK kaynaktan (utils/trUpper). Buradaki eski kopya düz
+ * `toLocaleUpperCase('tr-TR')` kullanıyordu ama boş adı 'O' harfine
+ * çeviriyordu — adı olmayan kullanıcı listede "O" diye görünüyordu.
+ */
+export const getInitials = (name?: string | null): string => trInitials(name, 2, '•');
 
 interface AvatarProps {
   name?: string | null;
@@ -31,26 +40,14 @@ interface AvatarProps {
 
 const Avatar: React.FC<AvatarProps> = ({ name, src, size = 'md', online, className = '' }) => {
   const s = SIZES[size];
-  // Görsel yüklenemezse baş harflere düş (kırık/boş kare görünmesin)
-  const [broken, setBroken] = React.useState(false);
-  React.useEffect(() => { setBroken(false); }, [src]);
   return (
     <div className={`relative shrink-0 ${className}`}>
-      {src && !broken ? (
-        <img
-          src={src}
-          alt={name || 'Oyuncu'}
-          className={`${s.box} object-cover bg-white/5`}
-          loading="lazy"
-          onError={() => setBroken(true)}
-        />
-      ) : (
-        <div
-          className={`${s.box} flex items-center justify-center bg-gradient-to-br from-white/10 to-white/5 border border-white/10`}
-        >
-          <span className={`${s.text} font-extrabold text-white/80`}>{getInitials(name)}</span>
-        </div>
-      )}
+      <UserAvatar
+        name={name}
+        avatarUrl={src}
+        className={`${s.box} border border-white/10`}
+        textClassName={s.text}
+      />
       {online === true && (
         <span
           className={`absolute -bottom-0.5 -right-0.5 ${s.dot} rounded-full bg-[#39FF14] border-[#0A0E14]`}

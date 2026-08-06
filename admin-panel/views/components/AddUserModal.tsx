@@ -56,13 +56,18 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, onA
                 onAddUser(user);
             } else if (roleType === 'KALECİLER') {
                 const coordinates = { lat: 40.9839, lng: 37.8764 };
-                const stats = { savePercentage: '80', penaltySaveRate: '50', reflexes: 85, diving: 80, positioning: 80, distribution: 75, oneOnOne: 82, aerialReach: 78 };
-                const skills = { reflexes: 85, diving: 80, handling: 78, positioning: 80, kicking: 70, speed: 75 };
+                // Kurucu kararı (2026-08-06): uydurma yetenek sayıları (reflexes:85,
+                // diving:80…) ARTIK TOHUMLANMIYOR. O sayılar hiçbir ölçümden
+                // gelmiyor ama oyuncuya ölçülmüş performansmış gibi gösteriliyordu.
+                // Yeni kaleci tarzsız ve istatistiksiz doğar; tarzını kendi
+                // "Bilgilerim" ekranından ya da panelden seçer.
+                const stats = {};
+                const skills = {};
                 const equipment = { gloves: 'Standart', boots: 'Standart', jersey: 'Standart' };
                 const account = await createGoalkeeperAccountAdmin({
                     email, password, fullName: name,
                     fee: Number(gkFee), rating: Number(rating),
-                    height: '1.85m', age: 25, style: 'PANTER', bio: 'Admin panel kaydı.',
+                    height: '1.85m', age: 25, style: '', bio: 'Admin panel kaydı.',
                     avatar, matchCount: 0, preferredZones: ['Ordu'], coordinates,
                     stats, skills, equipment, recentAwards: '',
                 });
@@ -74,7 +79,10 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, onA
                     rating: Number(rating),
                     fee: Number(gkFee),
                     avatar,
-                    style: 'PANTER',
+                    // Tarz seçilmemiş doğar (kurucu kararı, 2026-08-06):
+                    // uydurma bir tarz atamak, sağlayıcının beyanını yalanlar.
+                    style: '',
+                    styles: [],
                     bio: 'Admin panel kaydı.',
                     matchCount: 0,
                     preferredZones: ['Ordu'],
@@ -88,11 +96,14 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, onA
                 onAddGoalkeeper(gk);
             } else {
                 const coordinates = { lat: 40.9839, lng: 37.8764 };
-                const stats = { avgCards: 2.1, avgDistance: '8km', varCallAccuracy: '98', authority: 85, fitness: 80, communication: 90 };
+                // Uydurma otorite/kondisyon/iletişim sayıları TOHUMLANMIYOR
+                // (kurucu kararı, 2026-08-06). Gerçek maç istatistikleri de
+                // ilk maçlarla dolar; sıfırdan uydurulmaz.
+                const stats = {};
                 const account = await createRefereeAccountAdmin({
                     email, password, fullName: name,
                     fee: Number(refFee), rating: Number(rating), level: refLevel,
-                    avatar, matchCount: 0, style: 'Otoriter', bio: 'Admin panel kaydı.',
+                    avatar, matchCount: 0, style: '', bio: 'Admin panel kaydı.',
                     preferredZones: ['Ordu'], coordinates, stats,
                 });
                 const ref: Referee = {
@@ -104,7 +115,8 @@ export const AddUserModal: React.FC<AddUserModalProps> = ({ isOpen, onClose, onA
                     fee: Number(refFee),
                     avatar,
                     rating: Number(rating),
-                    style: 'Otoriter',
+                    style: '',
+                    styles: [],
                     bio: 'Admin panel kaydı.',
                     preferredZones: ['Ordu'],
                     coordinates,

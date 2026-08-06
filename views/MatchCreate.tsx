@@ -1072,7 +1072,11 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                   </div>
                 </div>
                 <div className="flex-1 min-w-0 ml-1">
-                  <p className="text-xs font-extrabold">{invited.length > 0 ? `Sen + ${invited.length} kişi çağrıldı` : 'Kadroya kimseyi çağırmadın'}</p>
+                  {/* [2026-08-06 kullanıcı kararı] Boş durumda "Kadroya kimseyi
+                      çağırmadın" yazıyordu — bir eksiklik bildirimi. Oysa bu
+                      bölüm İSTEĞE BAĞLI; kimseyi çağırmamak bir hata değil.
+                      Buton artık ne yapacağını söylüyor: "Kadroya davet et". */}
+                  <p className="text-xs font-extrabold">{invited.length > 0 ? `Sen + ${invited.length} kişi çağrıldı` : 'Kadroya davet et'}</p>
                   <p className="mt-0.5 text-[0.6875rem] font-bold text-white/[0.42]">
                     {(teamInvite || visibility === 'PRIVATE')
                       ? `Kalan ${Math.max(0, per * 2 - 1 - invited.length)} kişi sadece kodla katılabilir`
@@ -1623,8 +1627,12 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                   </div>
                 </div>
               ))}
+              {/* [2026-08-06 kullanıcı kararı] Buton büyütüldü: 52 → 60 px,
+                  punto 0.8125 → 0.9375 rem. Bu sayfa altı sayfa uzunluğunda
+                  kapora kuralı anlatıyor; en altta kullanıcıyı çıkaran tek
+                  eylem bu ve parmakla rahat bulunacak boyutta olmalıydı. */}
               <button onClick={() => setSheet(null)}
-                className="mt-1 w-full h-[52px] rounded-2xl bg-[#FACC15] text-[#0A0E14] text-sm font-extrabold italic uppercase active:scale-[0.98] transition-transform">
+                className="mt-1 w-full h-[60px] rounded-2xl bg-[#FACC15] text-[#0A0E14] text-[0.9375rem] font-extrabold italic uppercase active:scale-[0.98] transition-transform">
                 Anladım
               </button>
             </div>

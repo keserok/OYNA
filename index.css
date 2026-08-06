@@ -514,11 +514,17 @@ body.offline-banner-on .dash-safe-top {
 }
 
 /* ── Profil kartındaki kişi yuvarlağı ──────────────────────────────────────
-   `UserAvatar` kendi yedek renklerini taşır (yeşil harf, koyu yeşil zemin) —
-   uygulamanın geri kalanında doğru olan budur. Ana sayfada tasarım şeffaf
-   zemin + beyaz harf ister. Eleman seçicisi (0,1,1) yardımcı sınıfı (0,1,0)
-   yener; ne `!important` ne de sınıf sırasına güvenmek gerekir. */
-.oy-home-avatar > div { background: transparent; color: var(--color-ink); }
+   Burada eskiden `UserAvatar`ın rengini ezen bir kural vardı: bileşen koyu
+   yeşil zemin + yeşil harf taşıyordu, ana sayfa ise şeffaf zemin + beyaz harf
+   istiyordu. Yani AYNI kişi ana sayfada bir türlü, profilde başka türlü
+   görünüyordu — kurucunun "bir oyuncunun yuvarlağı mavi, birininki değil"
+   diye tarif ettiği kayma tam olarak buydu.
+
+   Kural kaldırıldı: renk artık TEK yerde, bileşenin kendisinde (yarı saydam
+   beyaz zemin, altındaki kartın rengini alır). Ezmeye gerek yok — hangi
+   butonun üstüne konursa onunla uyumlu çıkıyor.
+
+   Kalan tek kural boyut içindir: fotoğraf yolunda `<img>` kutuyu tam doldursun. */
 .oy-home-avatar > img { width: 100%; height: 100%; object-fit: cover; }
 
 /* ── Kaydırma çubuğu gizli, kaydırma zinciri kesik ─────────────────────────

@@ -24,7 +24,7 @@ import {
 import { supabase } from '../supabaseClient';
 import { useAppStore } from '../store';
 import TeamCrest from '../components/social/TeamCrest';
-import { trInitials } from '../utils/trUpper';
+import { UserAvatar } from '../components/common/UserAvatar';
 
 // ================================================================
 // MessagesView — BİRLEŞİK gelen kutusu (Spec §3.10 / N90):
@@ -45,9 +45,6 @@ interface MessagesViewProps {
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
-const getInitials = (name: string | null) =>
-  trInitials(name);
-
 const timeAgo = (iso: string | null): string => {
   if (!iso) return '';
   const diff = Date.now() - new Date(iso).getTime();
@@ -64,23 +61,31 @@ const timeAgo = (iso: string | null): string => {
 const clockTime = (iso: string): string =>
   new Date(iso).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
 
+/**
+ * Sohbet avatarı — görünüm dili TEK bileşenden (components/common/UserAvatar).
+ * Burada eskiden koyu yeşil gradyanlı kendi kopyası vardı: aynı kişi
+ * Mesajlar'da yeşil kutuda, profilinde açık gri yuvarlakta görünüyordu.
+ * Sohbet listesinin kare-yumuşak (rounded-2xl) biçimi korundu; değişen yalnız
+ * renk ve harf dili.
+ */
 const Avatar: React.FC<{ name: string | null; url: string | null; size?: number }> = ({
   name, url, size = 48,
-}) => {
-  const s = `${size}px`;
-  if (url) return (
-    <img src={url} alt={name || ''} style={{ width: s, height: s }}
-      className="rounded-2xl object-cover flex-shrink-0" />
-  );
-  return (
-    <div style={{ width: s, height: s }}
-      className="rounded-2xl bg-gradient-to-br from-emerald-700 to-emerald-900 flex items-center justify-center flex-shrink-0">
-      <span className="text-white font-extrabold" style={{ fontSize: size * 0.33 }}>
-        {getInitials(name)}
-      </span>
-    </div>
-  );
-};
+}) => (
+  /* Punto kutu boyuyla orantılı (size × 0.33) — sınıf değil satır içi ölçü,
+     çünkü `size` bir sayı olarak geliyor. UserAvatar puntoyu miras alsın diye
+     `textClassName` boş geçiliyor. */
+  <div
+    style={{ width: `${size}px`, height: `${size}px`, fontSize: size * 0.33 }}
+    className="flex-shrink-0"
+  >
+    <UserAvatar
+      name={name}
+      avatarUrl={url}
+      className="w-full h-full rounded-2xl"
+      textClassName=""
+    />
+  </div>
+);
 
 // Sohbette taktik kartı — "[taktik:ID] Ad · Diziliş" gövdesi zengin çizilir
 const TacticCard: React.FC<{ tacticId: string; label: string; mine: boolean }> = ({

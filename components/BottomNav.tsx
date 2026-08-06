@@ -14,7 +14,7 @@ import { OynaMark, PlayBallMark } from './dashboard/OynaMarks';
 // birincil gezinti çubuğu asla iki satıra taşmaz.
 import { type_ } from '../ui/type';
 // IP-13: sekme etiketi ile ekran başlığı AYNI kaynaktan gelir.
-import { SCREEN } from '../ui/labels';
+import { TAB } from '../ui/labels';
 
 /** Alt menünün BEŞ yuvası — TEK KAYNAK.
  *  App.tsx `showBottomNav`'ı bu listeden türetir; ikisi ayrı yazıldığında
@@ -75,11 +75,11 @@ interface BottomNavProps {
 
 export const BottomNav: React.FC<BottomNavProps> = ({ currentView, onNavigate, hidden = false }) => {
   const navItems: { id: TabId; icon: NavIcon; label: string; isCenter?: boolean }[] = [
-    { id: 'DASHBOARD', icon: Home, label: SCREEN.dashboard },
-    { id: 'MATCH_DISCOVERY', icon: PlayTabIcon, label: SCREEN.matchDiscovery },
-    { id: 'MY_MATCHES', icon: MyMatchesTabIcon, label: SCREEN.myMatches, isCenter: true },
-    { id: 'PITCH_DISCOVERY', icon: PitchTabIcon, label: SCREEN.pitchDiscovery },
-    { id: 'PROFILE', icon: User, label: SCREEN.profile },
+    { id: 'DASHBOARD', icon: Home, label: TAB.dashboard },
+    { id: 'MATCH_DISCOVERY', icon: PlayTabIcon, label: TAB.matchDiscovery },
+    { id: 'MY_MATCHES', icon: MyMatchesTabIcon, label: TAB.myMatches, isCenter: true },
+    { id: 'PITCH_DISCOVERY', icon: PitchTabIcon, label: TAB.pitchDiscovery },
+    { id: 'PROFILE', icon: User, label: TAB.profile },
   ];
 
   return (

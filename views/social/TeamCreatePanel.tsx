@@ -6,6 +6,7 @@ import CrestKitEditor from '../../components/social/CrestKitEditor';
 import Avatar from '../../components/ui/Avatar';
 import {
   createTeamRpc, formatLabel, parseTeamError, TeamFormat, TeamVisibility,
+  TEAM_FORMATS,
 } from '../../services/teamSocialService';
 import { FriendRow } from '../../services/socialService';
 
@@ -42,7 +43,8 @@ let savedDraft: Draft = { ...EMPTY_DRAFT };
 export const hasTeamDraft = () =>
   savedDraft.name.trim().length > 0 || savedDraft.step > 1;
 
-const FORMATS: TeamFormat[] = ['3v3', '4v4', '5v5', '6v6', '7v7', '8v8', '9v9', '10v10', '11v11'];
+/** Seçilebilir formatlar TEK listeden (services/teamSocialService). */
+const FORMATS: TeamFormat[] = TEAM_FORMATS;
 
 const STEP_TITLES = ['Kimlik', 'Arma & Renk', 'Kuruluş', 'Önizleme'];
 

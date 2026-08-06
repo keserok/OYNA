@@ -242,10 +242,23 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onSelect }) => {
   const activeFilterCount = useMemo(() => countActiveFilters(dna), [dna]);
   const isFilterActive = activeFilterCount > 0;
 
-  // Dropdown seçenekleri: yalnız listelenen açık maçlarda fiilen bulunan değerler.
-  // matchingMatches değil enhancedMatches üzerinden türetilir ki bir seçim diğer
-  // dropdown'ların seçenek kümesini çökertmesin.
-  const filterOptions = useMemo(() => deriveDiscoveryFilterOptions(enhancedMatches), [enhancedMatches]);
+  // Dropdown seçenekleri: yalnız EKRANDA GÖRÜLEBİLECEK maçlarda fiilen bulunan
+  // değerler.
+  //
+  // İki kural birlikte çalışır:
+  //  1) GÜN KAPSAMA DAHİL. Seçenekler seçili günün maçlarından türetilir.
+  //     Eskiden tüm günler üzerinden türetiliyordu; bugün yalnız 4v4 ve 8v8 maç
+  //     varken FORMAT listesinde 5v5 görünüyordu (çünkü 5v5 yarındaydı) ve
+  //     seçilince liste bomboş kalıyordu. Gün, yarıçap gibi bir KAPSAM kısıtıdır
+  //     — listeyi daraltıyorsa seçenekleri de daraltmalı.
+  //  2) SEÇİLİ FİLTRELER HARİÇ. matchingMatches üzerinden türetilmez; yoksa
+  //     "4v4" seçildiği anda MENTALİTE listesi tek değere çöker ve kullanıcı
+  //     bir filtreyi değiştirmek için önce diğerini temizlemek zorunda kalırdı.
+  const dayScopedMatches = useMemo(
+    () => enhancedMatches.filter((m) => matchOnDay(m, selectedDay)),
+    [enhancedMatches, selectedDay],
+  );
+  const filterOptions = useMemo(() => deriveDiscoveryFilterOptions(dayScopedMatches), [dayScopedMatches]);
 
   // Realtime güncellemeyle seçili değer seçeneklerden düşerse sessizce Tümü'ye dön;
   // açık panelin listesi boşaldıysa paneli kapat.
@@ -332,12 +345,12 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onSelect }) => {
   const { matchingMatches, otherMatches, dayScopedCount } = useMemo(() => {
     // Gün, yarıçap gibi bir KAPSAM kısıtıdır: hem eşleşen hem "diğer" listesi
     // seçili güne göre daraltılır, yoksa çipte 5 Ağustos yazarken listede
-    // başka günün maçları görünürdü.
-    const scoped = enhancedMatches.filter((m) => matchOnDay(m, selectedDay));
+    // başka günün maçları görünürdü. (Aynı kapsam filtre seçeneklerini de
+    // besler — dayScopedMatches TEK yerde hesaplanır.)
     // Gün içinde doğal sıra saat sırasıdır; saati çözülemeyen maç sona düşer.
     const byTime = (a: any, b: any) =>
       (matchStartMs(a) ?? Infinity) - (matchStartMs(b) ?? Infinity);
-    const sorted = [...scoped].sort(byTime);
+    const sorted = [...dayScopedMatches].sort(byTime);
 
     if (!isFilterActive) {
       return { matchingMatches: [], otherMatches: sorted, dayScopedCount: sorted.length };
@@ -345,7 +358,7 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onSelect }) => {
     const matching = sorted.filter(checkMatchFilters);
     const other = sorted.filter((m) => !checkMatchFilters(m));
     return { matchingMatches: matching, otherMatches: other, dayScopedCount: sorted.length };
-  }, [enhancedMatches, isFilterActive, dna, selectedDay]);
+  }, [dayScopedMatches, isFilterActive, dna]);
 
   const handleClearFilters = () => setDna(EMPTY_FILTERS);
 
@@ -768,47 +781,33 @@ const MatchCard: React.FC<{
   const slotRemaining = totalSlots - slotFilled;
   const fillPct = totalSlots > 0 ? Math.round((slotFilled / totalSlots) * 100) : 0;
 
-  // Maça kalan süre ticking timer state & effect
-  const [timeLeft, setTimeLeft] = useState<string>('');
+  // ── "SON DAKİKA" aciliyeti ──
+  // Kartta artık saniye saniye işleyen geri sayım YOK (kullanıcı kararı,
+  // 2026-08-06: mesafe çipiyle üst üste biniyordu). Ama başlamasına 2 saatten
+  // az kalan maçın rozeti duruyor; o rozet için tek bir mantıksal değer yeter.
+  //
+  // Bu yüzden tik aralığı saniyeden DAKİKAYA çekildi: ekranda saniye gösteren
+  // bir şey kalmadığı için saniyede bir render etmenin karşılığı yok — listede
+  // 20 kart varsa bu, saniyede 20 gereksiz render demekti.
   const [isUrgentTime, setIsUrgentTime] = useState(false);
 
   useEffect(() => {
-    // Geri sayım da gün filtresiyle AYNI tarihi çözer (shared/matchTiming).
+    // Aciliyet de gün filtresiyle AYNI tarihi çözer (shared/matchTiming).
     // Eskiden burada ayrı bir metin çözücü vardı ve veritabanının ISO tarihini
     // ('2026-08-01') tanımadığı için her maçı BUGÜN sanıyordu.
     const targetMs = matchStartMs(match);
     if (targetMs === null) {
-      setTimeLeft('');
       setIsUrgentTime(false);
       return;
     }
 
-    const updateTimer = () => {
-      const now = new Date().getTime();
-      const diff = targetMs - now;
-
+    const updateUrgency = () => {
+      const diff = targetMs - new Date().getTime();
       setIsUrgentTime(diff > 0 && diff < 2 * 60 * 60 * 1000);
-      if (diff <= 0) {
-        setTimeLeft('BAŞLADI');
-        return;
-      }
-
-      const hours = Math.floor(diff / (1000 * 60 * 60));
-      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-      
-      const pad = (n: number) => String(n).padStart(2, '0');
-      
-      if (hours > 24) {
-        const days = Math.floor(hours / 24);
-        setTimeLeft(`${days} GÜN KALDI`);
-      } else {
-        setTimeLeft(`${pad(hours)}:${pad(minutes)}:${pad(seconds)}`);
-      }
     };
-    
-    updateTimer();
-    const interval = setInterval(updateTimer, 1000);
+
+    updateUrgency();
+    const interval = setInterval(updateUrgency, 30_000);
     return () => clearInterval(interval);
   }, [match.date, match.time]);
 
@@ -852,20 +851,17 @@ const MatchCard: React.FC<{
       {/* ── İÇERİK (ESNEK DİKEY AKIŞ — mobilde bloklar üst üste binmez) ── */}
       <div className="relative z-10 flex flex-1 flex-col p-5 gap-3">
 
-      {/* ── ÜST KISIM (SAAT & GERİ SAYIM) ── */}
+      {/* ── ÜST KISIM (SAAT) ──
+           Kullanıcı kararı (2026-08-06): sağ üstteki geri sayım çipi kaldırıldı.
+           Mesafe çipi (yukarıda, absolute top-4 right-4) ile aynı köşeye
+           düşüyor ve dar telefonlarda ÜST ÜSTE BİNİYORDU. Kalan tek çip: km.
+           Zaman bilgisi zaten solda saat olarak ve kartın altındaki gün
+           etiketinde duruyor; aciliyet ise "SON DAKİKA" rozetiyle veriliyor. */}
       <div className="flex justify-between items-start gap-2 flex-wrap">
         {/* Dijital Saat (Sol Üst) */}
         <div className="flex items-center gap-1.5 px-3 py-1.5 bg-black/60 backdrop-blur-md rounded-xl border border-white/10 shadow-lg">
           <Clock size={12} className="text-[#39FF14]" />
           <span className="text-xs font-extrabold text-white tracking-[0.1em] drop-shadow-[0_0_8px_rgba(255,255,255,0.5)]">{match.time}</span>
-        </div>
- 
-        {/* Maça Kalan Süre Ticking Geri Sayım (Sağ Üst) */}
-        <div className="flex items-center gap-1.5 px-3.5 py-1.5 bg-black/70 backdrop-blur-md border border-[#39FF14]/30 rounded-xl shadow-[0_0_15px_rgba(57,255,20,0.1)]">
-          <span className="w-1.5 h-1.5 bg-[#39FF14] rounded-full animate-ping shrink-0" />
-          <span className="text-[0.6875rem] font-extrabold tracking-widest text-[#39FF14] drop-shadow-[0_0_8px_rgba(57,255,20,0.5)]">
-            {timeLeft}
-          </span>
         </div>
       </div>
 

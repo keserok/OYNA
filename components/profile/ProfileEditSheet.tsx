@@ -6,6 +6,7 @@ import { POSITION_LABEL, POSITION_ABBR, PLAY_STYLE_META, GENDER_LABEL } from '..
 import { skillBand, SELF_SKILL_MAX } from '../../utils/skillBand';
 import { BirthdatePicker, AYLAR, parseISODate } from './BirthdatePicker';
 import { useBackDismiss } from '../../hooks/useBackDismiss';
+import { UserAvatar } from '../common/UserAvatar';
 import profileAmbient from '../../assets/profile/profile-ambient.png';
 
 // ════════════════════════════════════════════════════════════════════════
@@ -82,9 +83,6 @@ export interface ProfileEditSheetProps {
     errorText?: string | null;
 }
 
-const initialsOf = (name: string) =>
-    name.split(' ').filter(Boolean).map(w => w[0]).join('').slice(0, 2).toLocaleUpperCase('tr-TR');
-
 /** Numaralı bölüm başlığı: "01 — Kimlik" + sağa uzanan ince çizgi. */
 const Bolum: React.FC<{ no: string; ad: string; ilk?: boolean }> = ({ no, ad, ilk }) => (
     <div className={`flex items-center gap-2.5 ${ilk ? 'mt-1.5' : 'mt-[22px]'}`}>
@@ -128,7 +126,6 @@ export const ProfileEditSheet: React.FC<ProfileEditSheetProps> = ({
     const [style, setStyle] = useState(initial.playStyle);
     const [selfSkill, setSelfSkill] = useState<number | null>(initial.selfSkill);
     const [kaydedildi, setKaydedildi] = useState(false);
-    const [avatarBroken, setAvatarBroken] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const kapatmaSayaci = useRef<ReturnType<typeof setTimeout> | null>(null);
     const { uploadImage, uploading } = useImageUpload('avatars', { minWidth: 200 });
@@ -144,7 +141,6 @@ export const ProfileEditSheet: React.FC<ProfileEditSheetProps> = ({
         if (!open) return;
         setPhotoError(null);
         setKaydedildi(false);
-        setAvatarBroken(false);
         setTarihAcik(false);
         setPos(initial.position);
         setAvatar(initial.avatarUrl);
@@ -166,7 +162,6 @@ export const ProfileEditSheet: React.FC<ProfileEditSheetProps> = ({
         try {
             const url = await uploadImage(file);
             setAvatar(url);
-            setAvatarBroken(false);
         } catch (err: any) {
             // D5: eskiden yalnız console.error → kullanıcı neden yüklenmediğini
             // bilmiyordu. imageCompression açıklayıcı mesaj verir (HEIC/boyut/…).
@@ -200,7 +195,8 @@ export const ProfileEditSheet: React.FC<ProfileEditSheetProps> = ({
 
     const band = skillBand(selfSkill);
     const gosterilenAd = name?.trim() || '';
-    const fotoVar = !!avatar && !avatarBroken;
+    // Kırık fotoğraf adresine düşmeyi UserAvatar üstlenir.
+    const fotoVar = !!avatar;
     const kaydetKilitli = saving || uploading || kaydedildi;
 
     // z-[260]: uygulamada BottomNav'ın, admin panelde 360 drawer'ının (z-[240]) üstünde kalmalı.
@@ -241,19 +237,14 @@ export const ProfileEditSheet: React.FC<ProfileEditSheetProps> = ({
                 {/* ─── 01 — KİMLİK ─── */}
                 <Bolum no="01" ad="Kimlik" ilk />
                 <div className="mt-3.5 flex items-center gap-3.5">
-                    {fotoVar ? (
-                        <img
-                            src={avatar}
-                            alt={gosterilenAd || 'Profil'}
-                            referrerPolicy="no-referrer"
-                            onError={() => setAvatarBroken(true)}
-                            className="w-16 h-16 rounded-full object-cover bg-white/[0.12] border border-white/[0.14] shrink-0"
-                        />
-                    ) : (
-                        <div className="w-16 h-16 rounded-full bg-white/[0.12] border border-white/[0.14] flex items-center justify-center text-[1.375rem] font-[Montserrat] font-extrabold italic shrink-0">
-                            {gosterilenAd ? initialsOf(gosterilenAd) : '👤'}
-                        </div>
-                    )}
+                    {/* Yuvarlak TEK bileşenden (components/common/UserAvatar):
+                        zemin, harf rengi, italik ve yazı tipi orada kilitli. */}
+                    <UserAvatar
+                        name={gosterilenAd}
+                        avatarUrl={fotoVar ? avatar : null}
+                        className="w-16 h-16 rounded-full border border-white/[0.14] shrink-0"
+                        textClassName="text-[1.375rem]"
+                    />
                     <div className="flex-1 min-w-0 flex flex-col gap-1 items-start">
                         {gosterilenAd && <span className="block max-w-full text-base truncate">{gosterilenAd}</span>}
                         <button
