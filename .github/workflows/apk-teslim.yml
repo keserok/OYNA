@@ -1,0 +1,84 @@
+# ═══════════════════════════════════════════════════════════════════════════
+# OYNA — APK'yi git dalina koyarak teslim et
+#
+# NE ISE YARAR: Android derlemesinin urettigi kurulabilir APK'yi, gecici bir
+# git dalina koyar. Boylece paket, GitHub'in dosya sunucusuna erisemeyen
+# ortamlardan da (yalniz git'in acik oldugu yerler) alinabilir.
+#
+# NEDEN GEREKTI: Actions "artifact" dosyalari Azure blob adresinden sunuluyor.
+# Bazi kisitli aglarda o adres kapali; artifact indirilemiyor. Git ise acik.
+#
+# NASIL CALISTIRILIR: Actions -> "APK teslim (git dalina koy)" -> Run workflow
+#   -> "runId" alanina APK'yi ureten Android derlemesinin calisma numarasini yaz.
+#   (Calisma numarasi, o derlemenin adres cubugundaki son sayidir.)
+#
+# TEMIZLIK: Dal gecicidir. Paket alindiktan sonra silinmelidir:
+#   git push origin --delete teslimat/apk
+# Silinince git nesneleri sahipsiz kalir ve GitHub zamanla temizler.
+# ═══════════════════════════════════════════════════════════════════════════
+name: APK teslim (git dalina koy)
+
+on:
+  workflow_dispatch:
+    inputs:
+      runId:
+        description: 'APK ureten Android derlemesinin calisma numarasi (run id)'
+        required: true
+
+permissions:
+  contents: write   # gecici dala islemek icin
+  actions: read     # baska bir calismanin paketini indirmek icin
+
+jobs:
+  teslim:
+    name: APK'yi dala koy
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Paketleri indir
+        uses: actions/download-artifact@v4
+        with:
+          run-id: ${{ inputs.runId }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: gelen
+          merge-multiple: true
+
+      - name: Ne geldigini goster
+        run: ls -lhR gelen
+
+      - name: Yalniz kurulabilir APK'yi dala koy
+        run: |
+          set -e
+          APK=$(find gelen -name "*TELEFONA-KUR.apk" | head -1)
+          if [ -z "$APK" ]; then
+            echo "::error::Kurulabilir APK bulunamadi. Once Android derlemesini calistir."
+            exit 1
+          fi
+          echo "Bulunan: $APK ($(du -h "$APK" | cut -f1))"
+
+          # Gecmisi olmayan tek islemelik dal: depo gecmisini sismekten korur.
+          git config user.name  "OYNA Teslimat"
+          git config user.email "noreply@anthropic.com"
+          git checkout --orphan teslimat/apk
+          git rm -rf --cached . >/dev/null 2>&1 || true
+          find . -maxdepth 1 -mindepth 1 -not -name .git -not -name gelen -exec rm -rf {} +
+
+          mkdir -p teslim
+          cp "$APK" "teslim/$(basename "$APK")"
+          rm -rf gelen
+          {
+            echo "# OYNA — kurulabilir APK"
+            echo ""
+            echo "Bu dal GECICIDIR. Yalniz paketi tasimak icin var."
+            echo "Alindiktan sonra silinmeli:"
+            echo ""
+            echo '    git push origin --delete teslimat/apk'
+          } > README.md
+
+          git add -A
+          git commit -q -m "APK teslim: $(basename "$APK")"
+          git push -f origin teslimat/apk
+          echo "::notice::teslimat/apk dalina konuldu: $(basename "$APK")"
