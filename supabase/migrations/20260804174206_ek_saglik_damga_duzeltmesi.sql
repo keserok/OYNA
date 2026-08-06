@@ -131,7 +131,7 @@ DELETE FROM public.sistem_saglik_kayitlari a
 
 -- DOGRULAMA
 DO $$
-DECLARE v_toplam int; v_kirmizi int; v_ek int;
+DECLARE v_toplam int; v_kirmizi int; v_ek int; v_veri int;
 BEGIN
   PERFORM public.sistem_saglik_calistir();
   PERFORM public.sistem_saglik_ek_kontroller();
@@ -151,9 +151,27 @@ BEGIN
   IF v_toplam < 17 THEN
     RAISE EXCEPTION 'DOGRULAMA: son turda % kontrol var, 17 bekleniyordu.', v_toplam;
   END IF;
-  IF v_kirmizi > 0 THEN
-    RAISE EXCEPTION 'DOGRULAMA: % kontrol kirmizi.', v_kirmizi;
-  END IF;
+  -- ── KIRMIZI SAYISI: yalnız İÇİNDE VERİ OLAN veritabanında anlamlıdır ──────
+  -- Bu blok iki ayrı şeyi sınıyor:
+  --   (a) MEKANİZMA — kontroller çalıştı mı, ek kontroller ana tura bağlandı
+  --       mı, toplam kontrol sayısı tuttu mu. Yukarıdaki iki kontrol bunlar;
+  --       boş veritabanında da geçerli, bu yüzden koşulsuz kaldı.
+  --   (b) VERİ SAĞLIĞI — "hiç kırmızı yok". Bu, canlının O ANKİ durumuna ait
+  --       bir ölçümdür. Sıfırdan kurulan bir veritabanında (her PR önizlemesi)
+  --       hiç kullanıcı, hiç ödeme, hiç gece işi geçmişi yoktur; birkaç kontrol
+  --       DOĞRU biçimde kırmızı/ölçülemedi yanar. Eskiden burası koşulsuzdu ve
+  --       temiz kurulumu "4 kontrol kirmizi" diyerek çökertiyordu.
+  --
+  -- Kontrol kaldırılmadı, KOŞULA bağlandı: içinde kullanıcı olan bir
+  -- veritabanında tek bir kırmızı bile yine migration'ı durdurur.
+  SELECT count(*) INTO v_veri FROM public.profiles;
 
-  RAISE NOTICE 'Saglik denetimi: % kontrol tek turda, 0 kirmizi.', v_toplam;
+  IF v_veri = 0 THEN
+    RAISE NOTICE 'Saglik denetimi: % kontrol tek turda (bos veritabani - % kirmizi beklenen, sayim atlandi).',
+                 v_toplam, v_kirmizi;
+  ELSIF v_kirmizi > 0 THEN
+    RAISE EXCEPTION 'DOGRULAMA: % kontrol kirmizi.', v_kirmizi;
+  ELSE
+    RAISE NOTICE 'Saglik denetimi: % kontrol tek turda, 0 kirmizi.', v_toplam;
+  END IF;
 END $$;

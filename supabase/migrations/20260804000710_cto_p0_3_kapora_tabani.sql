@@ -67,7 +67,13 @@ BEGIN
     || E'      -- Istemcinin yuvarlamasini kapsamak icin 10''un altina yuvarla\n'
     || E'      v_floor := floor(v_b.price * v_pct / 100.0 / 10.0) * 10;\n'
     || E'      IF v_floor > 0 AND p_amount < v_floor THEN\n'
-    || E'        RAISE EXCEPTION ''DEPOSIT_BELOW_MINIMUM: En az %% TL kapora gerekli (fiyatin %%%%%s''''i).'', v_floor, v_pct;\n'
+    -- [DÜZELTME] Eski satır iki değer (v_floor, v_pct) veriyordu ama biçim
+    -- dizisinde tek bir yer tutucu vardı: `%%` ve `%%%%` PostgreSQL'de düz
+    -- yüzde işaretidir, yer tutucu değildir. Sonuç: fonksiyon DERLENMİYOR
+    -- ("too many parameters specified for RAISE") ve migration çöküyordu.
+    -- Canlıda bu dosya hiç çalışmadı; oraya elle DOĞRU hali uygulanmıştı.
+    -- Aşağıdaki satır canlıdaki gövdenin birebir aynısıdır.
+    || E'        RAISE EXCEPTION ''DEPOSIT_BELOW_MINIMUM: En az % TL kapora gerekli.'', v_floor;\n'
     || E'      END IF;\n'
     || E'    END;\n'
     || E'  END IF;';

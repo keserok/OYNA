@@ -49,7 +49,12 @@ BEGIN
   FOR r IN
     SELECT p.oid, p.proname, pg_get_functiondef(p.oid) AS src
     FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
-    WHERE n.nspname = 'public'
+    -- prokind='f': YALNIZ sıradan fonksiyonlar. Toplama (aggregate) ve pencere
+    -- fonksiyonlarında pg_get_functiondef() hata verir ("array_agg is an
+    -- aggregate function"); planlayıcı şema süzgecini sonraya bırakırsa bu
+    -- sorgu pg_catalog'daki toplama fonksiyonlarına da uzanır ve migration
+    -- çöker. Süzgeç, plandan bağımsız olarak güvenli kılar.
+    WHERE n.nspname = 'public' AND p.prokind = 'f'
       AND position($q$'GATHERING','CONFIRMED','PLAYING','LIVE'$q$ in pg_get_functiondef(p.oid)) > 0
   LOOP
     v_yeni := replace(
@@ -62,9 +67,22 @@ BEGIN
     RAISE NOTICE '[P-2b] Sozluk duzeltildi: %', r.proname;
   END LOOP;
 
-  -- Sessiz geçme yok: beklenenden farklıysa migration başarısız olsun.
-  IF v_sayi <> 3 THEN
-    RAISE EXCEPTION '[P-2b] Beklenen 3 fonksiyon, bulunan %. Durum degismis - elle incelenmeli.', v_sayi;
+  -- ── SESSİZ GEÇME YOK — ama doğru şeyi sına ────────────────────────────────
+  -- Eskiden burada "tam 3 fonksiyon bulunmalı" yazıyordu. O sayı, migration'ın
+  -- canlıda çalıştığı ANDAKİ duruma aitti: o an üç fonksiyon hayalet sözlüğü
+  -- taşıyordu. Sıfırdan kurulan bir veritabanında (her PR önizlemesi) o ana
+  -- kadar yalnız BİR fonksiyon oluşuyor, sayı tutmuyor ve kurulum çöküyordu.
+  --
+  -- Asıl garanti "kaç tane değiştirdim" değil, "geriye hayalet kaldı mı".
+  -- Aşağıdaki kontrol bunu sınar: hem canlıda hem temiz kurulumda doğrudur ve
+  -- hayalet sözlük geri gelirse yine hata verir.
+  SELECT count(*) INTO v_sayi
+  FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+  WHERE n.nspname = 'public' AND p.prokind = 'f'
+    AND position($q$'GATHERING','CONFIRMED','PLAYING','LIVE'$q$ in pg_get_functiondef(p.oid)) > 0;
+
+  IF v_sayi <> 0 THEN
+    RAISE EXCEPTION '[P-2b] % fonksiyonda hayalet sozluk HALA duruyor - elle incelenmeli.', v_sayi;
   END IF;
 END $do$;
 

@@ -36,13 +36,24 @@ DECLARE v_demo uuid; v_mac uuid; v_sonra boolean; v_gercek int;
 BEGIN
   SELECT p.id INTO v_demo FROM public.profiles p WHERE COALESCE(p.is_demo,false) LIMIT 1;
   SELECT m.id INTO v_mac FROM public.matches m WHERE m.captain_id = v_demo AND m."isDemo" IS TRUE LIMIT 1;
-  IF v_mac IS NULL THEN RAISE EXCEPTION 'DOGRULAMA: sinanacak demo mac bulunamadi.'; END IF;
 
-  -- Demo isaretini silmeye calis: tetik geri koymali.
-  UPDATE public.matches SET "isDemo" = false WHERE id = v_mac;
-  SELECT "isDemo" INTO v_sonra FROM public.matches WHERE id = v_mac;
-  IF v_sonra IS NOT TRUE THEN
-    RAISE EXCEPTION 'DOGRULAMA: demo isareti silinebildi - tetik hala korumuyor.';
+  -- ── CANLI DENEME: yalnız sınanacak veri VARSA yapılabilir ─────────────────
+  -- Bu blok tetikleyiciyi gerçek bir satır üzerinde deniyor: demo işaretini
+  -- silmeye çalışıyor ve tetiğin geri koymasını bekliyor. Sıfırdan kurulan bir
+  -- veritabanında (her PR önizlemesi) hiç demo maç yoktur; eski hali burada
+  -- "sinanacak demo mac bulunamadi" diyerek kurulumu çökertiyordu.
+  --
+  -- Deneme kaldırılmadı, KOŞULA bağlandı: demo verisi olan bir veritabanında
+  -- tetik korumazsa migration yine durur.
+  IF v_mac IS NULL THEN
+    RAISE NOTICE 'DOGRULAMA: sinanacak demo mac yok (bos veritabani) - canli deneme atlandi.';
+  ELSE
+    -- Demo isaretini silmeye calis: tetik geri koymali.
+    UPDATE public.matches SET "isDemo" = false WHERE id = v_mac;
+    SELECT "isDemo" INTO v_sonra FROM public.matches WHERE id = v_mac;
+    IF v_sonra IS NOT TRUE THEN
+      RAISE EXCEPTION 'DOGRULAMA: demo isareti silinebildi - tetik hala korumuyor.';
+    END IF;
   END IF;
 
   -- Gercek (demo olmayan) mac YANLISLIKLA demo isaretlenmemeli.

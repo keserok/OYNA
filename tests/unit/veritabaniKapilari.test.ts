@@ -42,11 +42,24 @@ const RLS_ICINDE_KULLANILANLAR = [
   'profile_privileges_unchanged', 'try_uuid',
 ];
 
-/** Kapatılan fonksiyon adlarını migration dosyalarından çıkar. */
+/**
+ * Kapatılan fonksiyon adlarını migration dosyalarından çıkar.
+ *
+ * [2026-08-06] Bu üç migration'daki düz `REVOKE ALL ON FUNCTION ...;` satırları,
+ * sıfırdan kurulumu çökertmemeleri için tek bir korumalı bloğa alındı: imzalar
+ * artık bir dizide duruyor ve henüz yaratılmamış fonksiyonlar atlanıyor.
+ * Bu yüzden okuma deseni iki biçimi de tanımalı:
+ *   1) eski düz satır  : REVOKE ALL ON FUNCTION public.foo(uuid) FROM ...
+ *   2) yeni dizi girdisi: ['public.foo(uuid)', 'PUBLIC, anon', NULL]
+ */
 const kapatilanlar = (): string[] => {
   const adlar = new Set<string>();
   for (const dosya of KAPATMA_MIGRATIONLARI) {
-    for (const m of oku(dosya).matchAll(/REVOKE ALL ON FUNCTION public\.([a-z0-9_]+)\s*\(/gi)) {
+    const metin = oku(dosya);
+    for (const m of metin.matchAll(/REVOKE ALL ON FUNCTION public\.([a-z0-9_]+)\s*\(/gi)) {
+      adlar.add(m[1]);
+    }
+    for (const m of metin.matchAll(/\['public\.([a-z0-9_]+)\s*\(/gi)) {
       adlar.add(m[1]);
     }
   }

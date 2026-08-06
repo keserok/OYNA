@@ -20,8 +20,11 @@ import { join } from 'path';
 
 const oku = (p: string) => readFileSync(join(process.cwd(), p), 'utf8');
 
-const GOC_A = 'supabase/migrations/20260804290000_a_bildirim_baglantilari.sql';
-const GOC_S2 = 'supabase/migrations/20260804280000_s2_bildirim_modlari.sql';
+// [2026-08-06] Dosya adları değişti: bu migration'lar canlıda HİÇ çalışmamış
+// uydurma "dalga numaralarıyla" duruyordu; canlının gerçekten kullandığı sürüm
+// numaralarına taşındılar. İçerik aynı, yalnız ad değişti.
+const GOC_A = 'supabase/migrations/20260804172819_a_bildirim_baglantilari.sql';
+const GOC_S2 = 'supabase/migrations/20260804172449_s2_bildirim_modlari.sql';
 
 describe('A1 — maç hatırlatması tıklanabilir olmalı', () => {
   it('sunucu oyna:// biçiminde adres üretir', () => {
@@ -122,7 +125,7 @@ describe('D2 — bildirim izni doğru anda istenir', () => {
 });
 
 describe('D1 — bozuk maç koruması', () => {
-  const GOC_D = 'supabase/migrations/20260804310000_d_bozuk_mac_korumasi.sql';
+  const GOC_D = 'supabase/migrations/20260804173826_d_bozuk_mac_korumasi.sql';
 
   it('maç durumuna DEĞİL ayrı sütuna yazar (mevcut ekranlar etkilenmesin)', () => {
     const s = oku(GOC_D);
@@ -168,7 +171,7 @@ describe('Başvuru sadeleştirmesi — zorunluluk kapıları doğru yerde', () =
   });
 
   it('sunucu ücreti belirlenmemiş sağlayıcıyı kiralatmaz', () => {
-    const s = oku('supabase/migrations/20260804340000_ucretsiz_saglayici_kiralamasi_engellendi.sql');
+    const s = oku('supabase/migrations/20260804180937_ucretsiz_saglayici_kiralamasi_engellendi.sql');
     expect(s).toContain('PROVIDER_NO_FEE');
     expect(s).toContain('v_fee <= 0');
     // Mevcut müsaitlik kapısı korunmalı

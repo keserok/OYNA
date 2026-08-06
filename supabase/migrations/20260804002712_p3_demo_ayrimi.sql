@@ -166,9 +166,22 @@ CREATE INDEX IF NOT EXISTS idx_wallet_transactions_is_demo ON public.wallet_tran
 DO $do$
 DECLARE
   v_profil_demo int; v_odeme_demo int; v_odeme_gercek int; v_siniflanmamis int;
+  v_profil_toplam int;
 BEGIN
-  SELECT count(*) INTO v_profil_demo FROM public.profiles WHERE is_demo;
-  IF v_profil_demo <> 29 THEN
+  -- ── VERİ VARSA SINA, YOKSA ATLA ───────────────────────────────────────────
+  -- Bu doğrulama "var olan demo kullanıcılar doğru işaretlendi mi" sorusunu
+  -- sorar. SIFIRDAN kurulan bir veritabanında (her PR önizlemesi) hiç profil
+  -- yoktur; işaretlenecek bir şey de yoktur. Eski hali koşulsuz "29 olmalı"
+  -- diyordu ve temiz kurulumu çökertiyordu.
+  --
+  -- Kontrol kaldırılmadı, KOŞULA bağlandı: içinde kullanıcı olan bir
+  -- veritabanında beklenen sayı tutmazsa yine hata verir.
+  SELECT count(*) INTO v_profil_toplam FROM public.profiles;
+  SELECT count(*) INTO v_profil_demo   FROM public.profiles WHERE is_demo;
+
+  IF v_profil_toplam = 0 THEN
+    RAISE NOTICE '[P-3] Bos veritabani - demo profil sayimi atlandi.';
+  ELSIF v_profil_demo <> 29 THEN
     RAISE EXCEPTION '[P-3] Beklenen 29 demo profil, bulunan %.', v_profil_demo;
   END IF;
 

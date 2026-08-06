@@ -40,6 +40,57 @@ Doğrulama (2026-07-05, canlı DB'de sorgulandı — hepsi mevcut):
 
 ---
 
+## 1.1.4 ✅ SONUÇ (2026-08-06): KAYMA TEKRARLADI, YENİDEN KAPATILDI
+
+> **463/463 migration dosyası boş bir PG16 veritabanında sıfırdan hatasız
+> koşuyor** ve oluşan şema canlıyla birebir eşleşiyor:
+> **tablo 121=121 · görünüm 7=7 · fonksiyon 648=648 · satır kuralı 278=278**
+>
+> **GERÇEK SUPABASE'DE DE DOĞRULANDI:** PR #165'in önizleme dalı sıfırlanıp
+> baştan kuruldu; `schema_migrations` → **463 kayıt**, son `20260904000003`.
+> Yani onarım yalnız yerel taklitte değil, Supabase'in kendi altyapısında da
+> uçtan uca çalışıyor. (Önizleme daha önce 324'te duruyordu.)
+
+**NE OLDU:** 20 Temmuz'da kapatılan kayma, 3–4 Ağustos'ta yeniden oluştu.
+Depoda **42 migration dosyası** vardı ki canlıda HİÇ çalışmamıştı. Aynı işler
+canlıya MCP ile, gerçek zaman damgalarıyla ve yer yer **düzeltilmiş SQL** ile
+uygulanmış; depodaki taslaklar uydurma "dalga numaralarıyla" bırakılmıştı
+(`20260804360000` gibi — 36:00 diye bir saat yoktur). Sonuç: depo tek başına
+kurulamıyordu ve her PR'ın Supabase önizlemesi `MIGRATIONS_FAILED` durumundaydı.
+
+**NASIL BULUNDU (tahminle değil, ölçerek):** önizleme veritabanının kendi
+defteri sorgulandı (`schema_migrations` → 324 kayıt, son `20260803210000`), aynı
+sonuç 463 dosyanın boş bir PostgreSQL'e sırayla uygulanmasıyla doğrulandı.
+
+**YAPILAN:**
+
+| Onarım | Kapsam |
+|---|---|
+| 42 taslak dosya canlının atadığı sürüm numaralarına taşındı | dosya sırası = canlının gerçek çalıştırma sırası |
+| Sabit sayı beklentileri **kapsama** kontrolüne çevrildi | "600 satır olmalı" → "her fonksiyon listede mi"; "3 fonksiyon" → "geriye hayalet kaldı mı" |
+| Henüz doğmamış nesnelere dokunan adımlar "yoksa atla" yapıldı | 71 REVOKE, 13 CREATE INDEX, 1 CREATE POLICY |
+| Veriye bağlı doğrulamalar boş veritabanında atlanıyor | 29 demo profil · 0 kırmızı kontrol · demo maç üzerinde canlı deneme |
+| Canlıda olup depoda yaratılmayan alanlar eklendi | `goalkeepers`/`referees`: reviews, geohash, verification_status, preferredZones, isElite, recentAwards · `matches`: is_platform + 3 komisyon kolonu · `profiles`: tablo düzeyi UPDATE daraltması |
+
+**BONUS — gerçek bir güvenlik gerilemesi yakalandı:** `20260810000000`,
+misafirin **ham** `goalkeepers`/`referees`/`matches` tablolarını okuma kuralını
+yeniden yaratıyordu. Canlıda bu kurallar YOK (5 Ağustos'ta maskeli görünümlere
+geçildi) ama dosya sırası canlıdaki uygulama sırasının tersi olduğu için
+sıfırdan kurulan her veritabanında misafire ham tablo geri açılıyordu. Üç kural
+kaldırıldı.
+
+**KALAN BİLİNEN FARK (4 fonksiyon, hepsi ölü yardımcı, tetikleyiciye bağlı
+değil):** depoda olup canlıda olmayan `_validate_tariff_days`,
+`update_user_skill_rating`; canlıda olup depoda olmayan `join_public_match_slot`,
+`player_buy_slots`. Dördü de kullanılmıyor ve kapalı; işlevsel etkisi yoktur.
+
+**DERS:** `apply_migration` ile canlıya uygulanan her değişiklik, canlının
+atadığı `<version>_<name>.sql` adıyla AYNI commit'te depoya yazılmalı
+(MIGRATION_DRIFT_POLITIKASI kural 2). Bu kural iki kez atlandı, iki kez aynı
+pahalı onarımı gerektirdi.
+
+---
+
 ## 1.1.5 ✅ SONUÇ (2026-07-20): SIFIRDAN REPLAY TAMAMEN YEŞİL — drift kapatıldı
 
 > **271/271 migration dosyası, tamamen taze bir PG16 cluster'ında sıfırdan

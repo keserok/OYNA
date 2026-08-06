@@ -224,6 +224,8 @@ Kimin neyi görebileceği ve değiştirebileceği. Satır kuralları (RLS), süt
 supabaseAuth.ts
 supabaseClient.ts
 scripts/generate-rls-policy.ts
+shared/adminKopru.ts
+tests/unit/panelSizintisi.test.ts
 ```
 
 **Veritabanı nesneleri:** `pg_policies`, `protect_profile_columns`, `protect_profile_sensitive_fields`, `require_admin_role`, `require_admin_write`, `can_staff_pitch`, `notifications_insert_own_sender`, `matches_update`, `matches_select_public`, `kapi_kayitli_durum`, `kapi_denetimi`, `kapi_temeli_guncelle`, `pg_default_acl`
@@ -329,6 +331,7 @@ views/AuthScreen.tsx
 views/ProfileScreen.tsx
 components/profile/
 components/settings/ProfileInfoPage.tsx
+services/ghostModeService.ts
 ```
 
 **Veritabanı nesneleri:** `profiles`, `_account_deletion_status`, `admin_process_account_deletion__core`, `process_expired_account_deletions`, `sync_admin_flags_trigger`, `trg_protect_profile_columns`
@@ -369,9 +372,11 @@ services/dashboardHomeService.ts
 hooks/useDashboardHome.ts
 utils/imageVariants.ts
 hooks/useImageUpload.ts
+tests/unit/acilisBolgeDaraltmasi.test.ts
+shared/matchMapper.ts
 ```
 
-**Veritabanı nesneleri:** `admin_dashboard_stats`, `get_my_matches`, `get_nearby_pitches`, `pg_matviews`, `pitches_geo_idx`, `supabase_realtime`, `image_variants`, `record_image_variants()`
+**Veritabanı nesneleri:** `admin_dashboard_stats`, `get_my_matches`, `get_nearby_pitches`, `pg_matviews`, `pitches_geo_idx`, `supabase_realtime`, `image_variants`, `record_image_variants()`, `acilis_olcumu`, `acilis_olcumu_yaz()`
 
 **Bu taşı koruyan kontroller:**
 
@@ -380,6 +385,7 @@ hooks/useImageUpload.ts
 | `K-YUK-1` | Tablonun tamamını indiren bir sorgu eklenmiş mi? | Az veriyle sorunsuz, çok veriyle kotayı patlatıyor | HER_IKISI |
 | `K-YUK-2` | Bir tablonun tüm değişikliklerini herkese gönderen abonelik var mı? | Tek kullanıcıda görünmez, 500 kullanıcıda kotayı 3'e katlar | HER_IKISI |
 | `K-YUK-3` | Uygulama ilk açıldığında inen dosya boyutu kabul edilebilir mi? | Her yeni kütüphane biraz ekler, kimse toplamı ölçmez | DEGISIKLIKTE |
+| `K-YUK-4` | Uygulama her açıldığında kaç istek attığı ölçülür. Biri açılışa yeni bir istek eklerse ertesi sabah kartta görünür. | Açılış yavaş yavaş şişer; tek tek kimse fark etmez, toplamı kimse ölçmez | GUNLUK |
 
 **⚠️ Bu taşta şu an açık olan bulgular:** M-P0-9, M-18
 
@@ -518,6 +524,7 @@ views/OwnerPanel.tsx
 views/owner/
 hooks/useOwnerEntitlements.ts
 supabase/functions/admin-owner-credentials/
+views/owner/PitchManager.tsx
 ```
 
 **Veritabanı nesneleri:** `pitches`, `pitch_staff`, `can_staff_pitch`, `get_facility_schedule`, `owner_cancel_confirmed_booking`, `release_owner_earnings`
@@ -740,3 +747,5 @@ utils/olcum.ts
 | `K-COKME-1` **Uygulama kimsede çöküyor mu?** | Son 24 saatte kaç kişide, kaç farklı hata oluştu. Yeni bir sürümden sonra ani artış, o sürümün bir şeyi bozduğunu gösterir. | etkilenen_kisi son 7 günün ortalamasının 3 katını aşmamalı | GUNLUK |
 | `K-OLCUM-1` **Ölçüm sistemi hâlâ kayıt tutuyor mu?** | Huni adımları son 24 saatte kaç olay yazdı, adımların hangisi tamamen sustu? Susan adım 'kimse buraya gelmiyor' sanılır ama aslında ölçüm kopmuştur. | durum = 'YESIL' (susan huni adımı = 0) | GUNLUK |
 | `K-SURUM-1` **Sürüm numarası her yerde aynı mı?** | Web, Android ve iOS aynı sürüm numarasını mı taşıyor? Biri geride kalırsa 'hangi sürümde bu hata vardı' sorusunun cevabı kaybolur. | Çıkış kodu 0 — üç yerde de package.json'daki sürüm yazıyor | DEGISIKLIKTE |
+| `K-YUK-4` **Açılışta atılan istek sayısı arttı mı?** | Uygulama her açıldığında kaç istek attığı ölçülür. Biri açılışa yeni bir istek eklerse ertesi sabah kartta görünür. | ortanca <= 7 (8-9 sarı, 10+ kırmızı) | GUNLUK |
+| `K-PARA-4` **Yarım kalan ödemeleri toplayan gece işçisi bağlı mı?** | Süpürücünün çalışması üç şeye bağlı: adres, parola ve saat başı iş kaydı. Üçü de her gece kontrol edilir; biri eksikse para bankada bloke kalır, saha boş kalır. | K-PARA-4 satırı 'YESIL' (süpürücü açıkken eksik = KIRMIZI, kapalıyken = SARI) | GUNLUK |

@@ -268,9 +268,33 @@ REVOKE ALL ON FUNCTION public.sistem_saglik_ek_kontroller() FROM PUBLIC, anon, a
 DO $dogrulama$
 DECLARE
   v_temel int; v_kapi jsonb; v_ek int; v_toplam int; v_kirmizi int; v_varsayilan text;
+  v_beklenen int; v_veri int;
 BEGIN
+  -- ── TEMEL LİSTE HER FONKSİYONU KAPSIYOR MU? ───────────────────────────────
+  -- Eskiden burada "en az 600 satır olmalı" yazıyordu. O sayı, migration'ın
+  -- canlıda çalıştığı ANDAKİ fonksiyon adediydi. Sıfırdan kurulan bir
+  -- veritabanında (her PR önizlemesi) o ana kadar daha az fonksiyon oluşur
+  -- (587) ve kurulum "temel liste eksik" diyerek çöküyordu — oysa liste
+  -- eksik değildi, veritabanı henüz o kadar büyümemişti.
+  --
+  -- Asıl garanti sabit bir sayı değil, KAPSAMA: public şemasındaki (eklentiye
+  -- ait olmayan) HER fonksiyon temel listede bulunmalı. Bu hem canlıda hem
+  -- temiz kurulumda doğrudur ve bir fonksiyon listeye girmezse yine hata verir.
   SELECT count(*) INTO v_temel FROM public.kapi_kayitli_durum;
-  IF v_temel < 600 THEN RAISE EXCEPTION 'DOGRULAMA: temel liste eksik (% satir).', v_temel; END IF;
+
+  SELECT count(*) INTO v_beklenen
+  FROM pg_proc p
+  JOIN pg_namespace n ON n.oid = p.pronamespace
+  LEFT JOIN pg_depend d ON d.objid = p.oid AND d.classid = 'pg_proc'::regclass AND d.deptype = 'e'
+  WHERE n.nspname = 'public' AND d.objid IS NULL;
+
+  IF v_temel = 0 THEN
+    RAISE EXCEPTION 'DOGRULAMA: temel liste BOS - kapi denetimi kurulamadi.';
+  END IF;
+  IF v_temel <> v_beklenen THEN
+    RAISE EXCEPTION 'DOGRULAMA: temel liste % satir, ama public semada % fonksiyon var - kapsam eksik.',
+                    v_temel, v_beklenen;
+  END IF;
 
   v_kapi := public.kapi_denetimi();
   IF v_kapi->>'durum' <> 'YESIL' THEN
@@ -300,7 +324,15 @@ BEGIN
 
   IF v_ek <> 4 THEN RAISE EXCEPTION 'DOGRULAMA: ek kontroller ana tura baglanmadi (% adet).', v_ek; END IF;
   IF v_toplam < 18 THEN RAISE EXCEPTION 'DOGRULAMA: son turda % kontrol var, 18 bekleniyordu.', v_toplam; END IF;
-  IF v_kirmizi > 0 THEN RAISE EXCEPTION 'DOGRULAMA: % kontrol kirmizi.', v_kirmizi; END IF;
+
+  -- Kırmızı sayısı yalnız İÇİNDE VERİ OLAN veritabanında anlamlıdır: boş bir
+  -- kurulumda kullanıcı, ödeme ve gece işi geçmişi olmadığı için birkaç kontrol
+  -- DOĞRU biçimde kırmızı yanar. Mekanizma kontrolleri (yukarıdaki ikisi)
+  -- koşulsuz kaldı; veri sağlığı koşula bağlandı.
+  SELECT count(*) INTO v_veri FROM public.profiles;
+  IF v_veri > 0 AND v_kirmizi > 0 THEN
+    RAISE EXCEPTION 'DOGRULAMA: % kontrol kirmizi.', v_kirmizi;
+  END IF;
 
   RAISE NOTICE 'Kapi denetimi kuruldu: % fonksiyon onayli temelde, saglik turunda % kontrol, 0 kirmizi.', v_temel, v_toplam;
 END

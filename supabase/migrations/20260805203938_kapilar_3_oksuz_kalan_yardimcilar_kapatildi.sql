@@ -20,10 +20,55 @@
 --   TO anon, authenticated;
 -- ═══════════════════════════════════════════════════════════════════════════
 
-REVOKE ALL ON FUNCTION public._iban_mod97(text) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public._name_part_ok(text) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public._tr_day_index(text) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.hata_temizle_metin(text,integer) FROM PUBLIC, anon, authenticated;
+-- ⚠️ HENÜZ DOĞMAMIŞ FONKSİYON SORUNU (sıfırdan kurulum)
+-- Aşağıdaki liste canlıda çalıştığında hepsi mevcuttu. Sıfırdan kurulan bir
+-- veritabanında (her PR önizlemesi) bir kısmı DAHA SONRAKİ migration'larda
+-- yaratılıyor; düz `REVOKE` "function does not exist" deyip kurulumu
+-- çökertiyordu. Bu blok var olanın kapısını kapatır, olmayanı atlar.
+--
+-- GÜVENLİK KAYBI YOK: atlanan fonksiyon açıkta kalmaz — 20260805204225 ile
+-- kurulan "yeni fonksiyonlar KAPALI doğar" tetikleyicisi, sonradan yaratılan
+-- her fonksiyonun PUBLIC yetkisini doğduğu anda geri alır.
+DO $kapilar$
+DECLARE
+  r record;
+  v_atlanan int := 0;
+  v_kapanan int := 0;
+  v_liste constant text[][] := ARRAY[
+    ['public._iban_mod97(text)', 'PUBLIC, anon, authenticated'],
+    ['public._name_part_ok(text)', 'PUBLIC, anon, authenticated'],
+    ['public._tr_day_index(text)', 'PUBLIC, anon, authenticated'],
+    ['public.hata_temizle_metin(text,integer)', 'PUBLIC, anon, authenticated']
+  ];
+  v_sema text;
+  v_ad   text;
+  v_bulundu boolean;
+BEGIN
+  FOR i IN 1 .. array_length(v_liste, 1) LOOP
+    -- İmzadan şema ve ad ayrıştırılır: 'public.foo(uuid,text)' -> public / foo
+    v_sema := split_part(split_part(v_liste[i][1], '(', 1), '.', 1);
+    v_ad   := split_part(split_part(v_liste[i][1], '(', 1), '.', 2);
+    v_bulundu := false;
+
+    -- AYNI ADI taşıyan TÜM sürümler kapatılır. Doğrulama da ada göre baktığı
+    -- için tek bir sürümü atlamak yanlış alarm değil, GERÇEK bir açık olurdu.
+    FOR r IN
+      SELECT p.oid::regprocedure::text AS imza
+      FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+      WHERE n.nspname = v_sema AND p.proname = v_ad AND p.prokind = 'f'
+    LOOP
+      EXECUTE format('REVOKE ALL ON FUNCTION %s FROM %s', r.imza, v_liste[i][2]);
+      v_kapanan := v_kapanan + 1;
+      v_bulundu := true;
+    END LOOP;
+
+    IF NOT v_bulundu THEN
+      v_atlanan := v_atlanan + 1;
+    END IF;
+  END LOOP;
+  RAISE NOTICE '[KAPILAR] % kapi kapatildi, % fonksiyon henuz yok (atlandi).',
+               v_kapanan, v_atlanan;
+END $kapilar$;
 
 DO $dogrulama$
 DECLARE v_acik int; v_kalan int;
