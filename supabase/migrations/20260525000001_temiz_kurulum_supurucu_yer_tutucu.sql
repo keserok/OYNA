@@ -35,7 +35,7 @@
 -- ── ÇÖZÜM (iki parça, ikisi birlikte anlamlı) ─────────────────────────────
 -- 1) BU DOSYA: sır YOKSA tanınabilir bir YER TUTUCU koyar, böylece kurulum
 --    devam eder. Sır VARSA (canlıdaki durum) hiçbir şeye dokunmaz.
--- 2) 20260806001500: K-PARA-3 gece kontrolü. Yer tutucu duruyorsa, cron
+-- 2) 20260806001500: K-PARA-4 gece kontrolü. Yer tutucu duruyorsa, cron
 --    kaybolmuşsa ya da adres boşsa Sistem Sağlığı kartını KIRMIZI yakar.
 --
 -- Yani "sessizce vazgeçme" yasağı kaldırılmadı, YERİ DEĞİŞTİRİLDİ: kurulum
@@ -52,7 +52,7 @@
 
 DO $$
 DECLARE
-  -- Yer tutucu değeri K-PARA-3 tarafından aranır; DEĞİŞTİRİLİRSE kontrol
+  -- Yer tutucu değeri K-PARA-4 tarafından aranır; DEĞİŞTİRİLİRSE kontrol
   -- de güncellenmeli (20260806001500 dosyasındaki aynı sabit).
   c_yer_tutucu CONSTANT text := 'OYNA-KURULMADI-YER-TUTUCU';
 BEGIN
@@ -77,14 +77,14 @@ BEGIN
       c_yer_tutucu,
       'webhook_secret',
       'YER TUTUCU - gercek parola Supabase panosundan Vault a girilmeli. '
-      || 'K-PARA-3 bu deger durdugu surece KIRMIZI yanar.'
+      || 'K-PARA-4 bu deger durdugu surece KIRMIZI yanar.'
     );
   ELSE
     -- Vault eklentisi olmayan ortam (yerel deneme): düz satır yeter.
     INSERT INTO vault.secrets (name, secret, description)
-    VALUES ('webhook_secret', c_yer_tutucu, 'YER TUTUCU - K-PARA-3 kontrol eder.');
+    VALUES ('webhook_secret', c_yer_tutucu, 'YER TUTUCU - K-PARA-4 kontrol eder.');
   END IF;
 
   RAISE NOTICE '[TEMIZ-KURULUM] webhook_secret YER TUTUCU ile dolduruldu. '
-               'Bu veritabaninda supurucu GERCEKTE CALISMAZ; K-PARA-3 kirmizi yanacak.';
+               'Bu veritabaninda supurucu GERCEKTE CALISMAZ; K-PARA-4 kirmizi yanacak.';
 END $$;

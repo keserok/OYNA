@@ -1,5 +1,5 @@
 -- ════════════════════════════════════════════════════════════════════════════
--- K-PARA-3 · SÜPÜRÜCÜ BAĞLANTISI KONTROLÜ  (B01 PARA)
+-- K-PARA-4 · SÜPÜRÜCÜ BAĞLANTISI KONTROLÜ  (B01 PARA)
 -- ════════════════════════════════════════════════════════════════════════════
 --
 -- NE İŞE YARAR (sade): Yarıda kalan ödemeleri toplayan gece işçisinin
@@ -15,7 +15,7 @@
 --   · parola yanlış yenilense     → kimse haber vermez
 --   · adres boşaltılsa            → kimse haber vermez
 -- Üçünde de sonuç aynı: para bankada bloke kalır, saha boş kalır, kullanıcı
--- ne parasını görür ne yerini. K-PARA-3 bu üç sessizliği de bozar.
+-- ne parasını görür ne yerini. K-PARA-4 bu üç sessizliği de bozar.
 --
 -- YER TUTUCU DURUMU: Temiz kurulan bir veritabanında gerçek parola olmaz;
 -- 20260525000001 oraya tanınabilir bir yer tutucu koyar. Bu kontrol yer
@@ -50,7 +50,7 @@ DECLARE
   v_ortanca numeric;
   v_sure    numeric;
   v_beklenen CONSTANT int := 7;   -- oturum+saha+maç+maçlarım+metin + kaleci+hakem
-  -- K-PARA-3 için
+  -- K-PARA-4 için
   v_adres_var   boolean;
   v_parola_ok   boolean;
   v_cron_var    boolean;
@@ -66,7 +66,7 @@ BEGIN
 
   DELETE FROM public.sistem_saglik_kayitlari
    WHERE calisma_at = v_calisma
-     AND kontrol_id IN ('K-SUPURUCU-1','K-BILDIRIM-2','K-BILDIRIM-3','K-KAPI-4','K-YUK-4','K-PARA-3');
+     AND kontrol_id IN ('K-SUPURUCU-1','K-BILDIRIM-2','K-BILDIRIM-3','K-KAPI-4','K-YUK-4','K-PARA-4');
 
   -- K-SUPURUCU-1 - elle bakilmasi gereken mac var mi
   BEGIN
@@ -185,7 +185,7 @@ BEGIN
     v_eklenen := v_eklenen + 1;
   END;
 
-  -- ── K-PARA-3 · YENI · supurucu gercekten bagli mi ────────────────────────
+  -- ── K-PARA-4 · YENI · supurucu gercekten bagli mi ────────────────────────
   BEGIN
     v_eksik := ARRAY[]::text[];
 
@@ -243,12 +243,12 @@ BEGIN
     END IF;
 
     INSERT INTO public.sistem_saglik_kayitlari(calisma_at,kontrol_id,yapi_tasi,durum,olculen,beklenen,mesaj)
-    VALUES (v_calisma,'K-PARA-3','B01 PARA',v_renk,
+    VALUES (v_calisma,'K-PARA-4','B01 PARA',v_renk,
             coalesce(array_length(v_eksik,1),0),'0',v_mesaj);
     v_eklenen := v_eklenen + 1;
   EXCEPTION WHEN OTHERS THEN
     INSERT INTO public.sistem_saglik_kayitlari(calisma_at,kontrol_id,yapi_tasi,durum,beklenen,mesaj)
-    VALUES (v_calisma,'K-PARA-3','B01 PARA','OLCULEMEDI','0','Kontrol calistirilamadi: '||SQLERRM);
+    VALUES (v_calisma,'K-PARA-4','B01 PARA','OLCULEMEDI','0','Kontrol calistirilamadi: '||SQLERRM);
     v_eklenen := v_eklenen + 1;
   END;
 

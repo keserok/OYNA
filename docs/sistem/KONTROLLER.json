@@ -346,6 +346,26 @@
       "nasil": "npm run sistem:surum",
       "basari_olcutu": "Çıkış kodu 0 — üç yerde de package.json'daki sürüm yazıyor",
       "sessizlik_tipi": "package.json yükseltilir, telefon uygulamaları eski numarayla yayınlanır; kimse fark etmez"
+    },
+    {
+      "id": "K-YUK-4",
+      "ad": "Açılışta atılan istek sayısı arttı mı?",
+      "sade_anlatim": "Uygulama her açıldığında kaç istek attığı ölçülür. Biri açılışa yeni bir istek eklerse ertesi sabah kartta görünür.",
+      "ne_zaman": "GUNLUK",
+      "tur": "SQL",
+      "nasil": "SELECT percentile_disc(0.5) WITHIN GROUP (ORDER BY istek_sayisi) AS ortanca FROM public.acilis_olcumu WHERE olustu_at > now() - interval '24 hours';",
+      "basari_olcutu": "ortanca <= 7 (8-9 sarı, 10+ kırmızı)",
+      "sessizlik_tipi": "Açılış yavaş yavaş şişer; tek tek kimse fark etmez, toplamı kimse ölçmez"
+    },
+    {
+      "id": "K-PARA-4",
+      "ad": "Yarım kalan ödemeleri toplayan gece işçisi bağlı mı?",
+      "sade_anlatim": "Süpürücünün çalışması üç şeye bağlı: adres, parola ve saat başı iş kaydı. Üçü de her gece kontrol edilir; biri eksikse para bankada bloke kalır, saha boş kalır.",
+      "ne_zaman": "GUNLUK",
+      "tur": "SQL",
+      "nasil": "SELECT public.sistem_saglik_ek_kontroller();",
+      "basari_olcutu": "K-PARA-4 satırı 'YESIL' (süpürücü açıkken eksik = KIRMIZI, kapalıyken = SARI)",
+      "sessizlik_tipi": "Cron silinir ya da parola yanlış yenilenir; hata çıkmaz, ödemeler sessizce toplanmaz"
     }
   ]
 }
