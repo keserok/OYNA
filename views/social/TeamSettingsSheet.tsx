@@ -12,7 +12,7 @@ import {
   MyTeamRow, TeamSquadRow, TeamFormat, TeamVisibility, CreateTeamPayload,
   formatLabel, updateTeamSettings, getTeamPublicProfile, parseTeamError,
   getTeamInviteLink, setTeamInviteLink, inviteLinkUrl,
-  transferCaptaincy, leaveTeam, disbandTeam,
+  transferCaptaincy, leaveTeam, disbandTeam, TEAM_FORMATS,
 } from '../../services/teamSocialService';
 
 // ================================================================
@@ -23,7 +23,8 @@ import {
 // Yazım tek kapıdan: update_team_settings_v2 (yalnız değişen alanlar).
 // ================================================================
 
-const FORMATS: TeamFormat[] = ['3v3', '4v4', '5v5', '6v6', '7v7', '8v8', '9v9', '10v10', '11v11'];
+/** Seçilebilir formatlar TEK listeden (services/teamSocialService). */
+const FORMATS: TeamFormat[] = TEAM_FORMATS;
 
 const SectionTitle: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <h4 className="text-[0.625rem] font-extrabold uppercase tracking-widest text-ink-4 mb-2 mt-5 first:mt-0">

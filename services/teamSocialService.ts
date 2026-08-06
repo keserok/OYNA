@@ -11,12 +11,44 @@ export type TeamVisibility = 'PUBLIC' | 'PRIVATE';
 export type TeamFormat =
   | '3v3' | '4v4' | '5v5' | '6v6' | '7v7' | '8v8' | '9v9' | '10v10' | '11v11';
 
-/** Türk halı saha dili: "6v6" → "5+1" (Spec J59). */
+/**
+ * Seçilebilir takım formatlarının TEK listesi.
+ *
+ * Kurucu kararı (2026-08-06): "takımlar toplam kaç kişiyse onun seçilebilmesini
+ * sağlayalım, her tarafta da böyle olsun."
+ *
+ * Neden tek liste: aynı dizinin ÜÇ kopyası vardı ve biri eksikti — Takımlar
+ * Vitrini yalnız 5v5/6v6/7v7/8v8/11v11 sunuyordu. 3v3, 4v4, 9v9 ya da 10v10
+ * kurulan bir takım o filtreyle HİÇ bulunamıyordu; kullanıcı kurabildiği bir
+ * formatı arayamıyordu. Artık üç ekran da (Takım Kur, Takım Ayarları, Vitrin)
+ * bu listeden besleniyor.
+ */
+export const TEAM_FORMATS: TeamFormat[] = [
+  '3v3', '4v4', '5v5', '6v6', '7v7', '8v8', '9v9', '10v10', '11v11',
+];
+
+/**
+ * Takım formatının kullanıcıya görünen adı: "6v6" → "6v6".
+ *
+ * KURUCU KARARI (2026-08-06): "+1" ibaresi KALDIRILDI; takım toplam kaç
+ * kişiyse o seçilebilir ve o yazılır. Eski hâl `6v6` → `5+1` idi (saha dilinde
+ * "5 oyuncu + 1 kaleci"). İki sorunu vardı:
+ *
+ *  1) SAYI YANILTIYORDU. Kullanıcı takımını 6 kişilik kurduğunu bilirken
+ *     ekranda "5+1" görüyordu; kadro sayısıyla kafa kafaya gelen bir 5 vardı.
+ *  2) UYGULAMANIN GERİ KALANIYLA ÇELİŞİYORDU. Top Oyna filtreleri, maç
+ *     kartları ve Maç Kur ekranı hep "6v6" diyor. Aynı şey iki yerde iki
+ *     kelimeyle anlatılıyordu; kullanıcı takımına "5+1" diye kurup maç
+ *     ararken "6v6" seçmek zorunda kalıyordu.
+ *
+ * Fonksiyon yine de duruyor (kaldırılmadı): tek geçiş noktası olarak kalması,
+ * yarın format dili yine değişirse tek yerden değişmesini garanti eder.
+ * Tanınmayan/boş değerde varsayılan yine '7v7'.
+ */
 export const formatLabel = (f?: string | null): string => {
-  const m = /^(\d+)v\d+$/.exec(f || '');
+  const m = /^(\d+)v(\d+)$/.exec(f || '');
   if (!m) return f || '7v7';
-  const n = parseInt(m[1], 10);
-  return `${n - 1}+1`;
+  return `${m[1]}v${m[2]}`;
 };
 
 export interface MyTeamRow {

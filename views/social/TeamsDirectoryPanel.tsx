@@ -11,7 +11,7 @@ import BottomSheet from '../../components/ui/BottomSheet';
 import Chip from '../../components/ui/Chip';
 import {
   PublicTeamRow, TeamPublicProfile, listPublicTeams, getTeamPublicProfile,
-  requestToJoinTeam, formatLabel, parseTeamError, TeamFormat,
+  requestToJoinTeam, formatLabel, parseTeamError, TeamFormat, TEAM_FORMATS,
 } from '../../services/teamSocialService';
 
 // ================================================================
@@ -25,7 +25,15 @@ interface TeamsDirectoryPanelProps {
   onToast: (msg: string) => void;
 }
 
-const FORMATS: TeamFormat[] = ['5v5', '6v6', '7v7', '8v8', '11v11'];
+/**
+ * Filtre çipleri TEK listeden (services/teamSocialService).
+ *
+ * Buradaki liste eskiden BEŞ formatlıydı (5v5·6v6·7v7·8v8·11v11) — oysa Takım
+ * Kur ekranı DOKUZ format sunuyor. 3v3, 4v4, 9v9 veya 10v10 kurulan takımlar
+ * vitrinde hiçbir filtreyle bulunamıyordu: kullanıcı kurabildiği bir formatı
+ * arayamıyordu.
+ */
+const FORMATS: TeamFormat[] = TEAM_FORMATS;
 
 const TeamsDirectoryPanel: React.FC<TeamsDirectoryPanelProps> = ({ onOpenTeam, onToast }) => {
   const [q, setQ] = useState('');
