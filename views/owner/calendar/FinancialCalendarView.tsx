@@ -859,9 +859,12 @@ export const FinancialCalendarView: React.FC<{
                                                     <span className={`text-[10px] font-extrabold px-1.5 py-0.5 rounded ${styles?.text} bg-black/20`}>
                                                         {booking.status === 'PAID' ? 'ÖDENDİ' : 'BEKLEYEN'}
                                                     </span>
+                                                    {/* Denetim bulgusu 2: "OYNA HAKEMİ ATANDI" rozeti kaldırıldı —
+                                                        arkasında veri yoktu, her APP rezervasyonunda uydurma basılıyordu.
+                                                        Yerine dürüst kaynak rozeti: UYGULAMADAN. */}
                                                     {booking.type === 'APP' && (
-                                                        <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded text-indigo-400 bg-indigo-500/20 border border-indigo-500/30 flex items-center gap-1 shadow-[0_0_8px_rgba(99,102,241,0.2)]">
-                                                            <Shield size={10} /> OYNA HAKEMİ ATANDI
+                                                        <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded text-blue-300 bg-blue-500/15 border border-blue-500/25">
+                                                            UYGULAMADAN
                                                         </span>
                                                     )}
                                                     {booking.note && <span className="text-[10px] text-gray-400 truncate max-w-[100px]">{booking.note}</span>}
@@ -972,8 +975,11 @@ export const FinancialCalendarView: React.FC<{
                             setIsAddingSlot(true);
                             try {
                                 const startTime = isQuickCreateOpen.replace('.', ':');
-                                const hour = parseInt(startTime.split(':')[0], 10);
-                                const endTime = `${((hour + 1) % 24).toString().padStart(2, '0')}:00`;
+                                // Denetim bulgusu 1 (9 Ağu 2026): süre TARİFEDEN gelir —
+                                // 90/120 dk'lık slot artık 60 dk'lık kayda düşmez.
+                                const gridSlot = daySlots.find((s) => s.startTime === startTime);
+                                const endTime = gridSlot?.endTime
+                                    ?? `${((parseInt(startTime.split(':')[0], 10) + 1) % 24).toString().padStart(2, '0')}:00`;
                                 // Fiyat GERÇEK tarifeden; tarife yoksa kayıt engellenir (uydurma tutar yazılmaz).
                                 const rateVal = isQuickCreateOpen ? getSlotPrice(isQuickCreateOpen) : null;
                                 if (rateVal == null) {

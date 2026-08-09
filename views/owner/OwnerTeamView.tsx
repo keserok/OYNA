@@ -164,7 +164,8 @@ export const OwnerTeamView: React.FC<OwnerTeamViewProps> = ({
   return (
     <div className="p-4 pb-40 bg-[#0A0E14]">
       <div className="max-w-5xl mx-auto w-full">
-        <OwnerDemoDataBar pitchId={pitchId} onChanged={load} hasDemo={hasDemoData} />
+        {/* Denetim bulgusu 3: demo çubuğu yalnız demo modda — gerçek ekibe demo satırı karışmaz. */}
+        {isDemoMode && <OwnerDemoDataBar pitchId={pitchId} onChanged={load} hasDemo={hasDemoData} />}
         {isDemoMode && (
           <div className="mb-4 px-4 py-2 rounded-xl bg-amber-500/10 border border-amber-500/20 text-[10px] font-bold text-amber-300 uppercase tracking-wide">
             Demo tesis — ekip verileri örnek kayıtlardır

@@ -163,7 +163,9 @@ export const OwnerFinanceView: React.FC<OwnerFinanceViewProps> = ({ pitchId, isD
     // bu görünüm İÇ kaydırıcı değildir, sayfayla akar. Alt bar payı: pb-40.
     <div className="p-4 pb-40 bg-[#0A0E14]">
       <div className="max-w-5xl mx-auto w-full">
-        <OwnerDemoDataBar pitchId={pitchId} onChanged={load} hasDemo={hasDemoData} />
+        {/* Denetim bulgusu 3: demo çubuğu GERÇEK tesiste çizilmez (kurucu kararı,
+            9 Ağu 2026) — gerçek deftere demo satırı karışmaz. */}
+        {isDemoMode && <OwnerDemoDataBar pitchId={pitchId} onChanged={load} hasDemo={hasDemoData} />}
         {isDemoMode && (
           <div className="mb-4 px-4 py-2 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-[11px] font-bold text-center">
             DEMO MODU — Finans verileri demo tesise aittir
