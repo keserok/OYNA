@@ -20,7 +20,6 @@ import { OwnerBankAccountsModal } from './owner/OwnerBankAccountsModal';
 import { OwnerSubscriptionModal } from './owner/OwnerSubscriptionModal';
 import { OwnerFlashDealModal } from './owner/OwnerFlashDealModal';
 import { OwnerCloseSlotModal } from './owner/OwnerCloseSlotModal';
-import { OwnerBookingDetailModal } from './owner/OwnerBookingDetailModal';
 import { OwnerSpecialPriceModal } from './owner/OwnerSpecialPriceModal';
 import { useOwnerEntitlements } from '../hooks/useOwnerEntitlements';
 import { OwnerToastProvider, useOwnerToast } from './owner/components/useOwnerToast';
@@ -851,6 +850,7 @@ const tariffRowToPolicy = (t: PitchTariff) => ({
           readOnly={effReadOnly}
           canFlashDeals={can.flashDeals}
           workingHours={facilityData?.workingHours}
+          facilityName={facilityData?.name}
           onNavigate={onNavigate}
           onPricingUpdated={async () => {
             if (!realPitchId || !facilityData?.ownerId) return;

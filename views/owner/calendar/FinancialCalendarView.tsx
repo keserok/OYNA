@@ -115,9 +115,11 @@ export const FinancialCalendarView: React.FC<{
   readOnly?: boolean;
   canFlashDeals?: boolean;
   workingHours?: unknown;
+  /** C2 — rezervasyon detayındaki WhatsApp hatırlatma mesajında geçen tesis adı. */
+  facilityName?: string;
   onNavigate?: (view: string) => void;
   onPricingUpdated?: () => void;
-}> = ({ pitchId, pricingPolicy, courts = [], readOnly = false, canFlashDeals = true, workingHours, onNavigate, onPricingUpdated }) => {
+}> = ({ pitchId, pricingPolicy, courts = [], readOnly = false, canFlashDeals = true, workingHours, facilityName, onNavigate, onPricingUpdated }) => {
     const notify = useOwnerToast();
     const { confirm, confirmElement } = useConfirmSheet();
     const dayStrip = useMemo(() => buildDayStrip(), []);
@@ -1139,6 +1141,8 @@ export const FinancialCalendarView: React.FC<{
                     onClose={() => setSelectedBooking(null)}
                     onChanged={loadBookings}
                     onNavigateQr={() => onNavigate?.('QR_SCANNER')}
+                    dateISO={selectedBooking.date ?? selectedDateISO}
+                    facilityName={facilityName}
                 />
             )}
             {confirmElement}

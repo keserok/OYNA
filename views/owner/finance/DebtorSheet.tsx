@@ -5,6 +5,7 @@ import type { PitchDebtor } from '../../../types';
 import { parseTRYAmount, methodLabel } from '../../../shared/financeModel';
 import { money } from './financeUi';
 import { BottomSheetModal } from './BottomSheetModal';
+import { waLink } from '../../../utils/whatsapp';
 
 // ─── FI-2 — Veresiye kişi sayfası: hareket defteri + kısmi ödeme + WhatsApp ───
 
@@ -14,13 +15,8 @@ const METHODS = [
   { id: 'BANK_TRANSFER', label: 'Havale' },
 ];
 
-/** TR telefonu wa.me formatına: rakamları al, 0 baş → 90, 10 hane → 90 ekle. */
-function waNumber(phone: string): string {
-  let d = phone.replace(/\D/g, '');
-  if (d.startsWith('0')) d = '90' + d.slice(1);
-  else if (d.length === 10) d = '90' + d;
-  return d;
-}
+// Numara biçimleme utils/whatsapp'a taşındı — rezervasyon hatırlatması (C2)
+// ile aynı kural, tek kopya.
 
 interface Props {
   debtor: PitchDebtor;
@@ -72,8 +68,7 @@ export const DebtorSheet: React.FC<Props> = ({ debtor, readOnly, onClose, onChan
 
   const remind = () => {
     if (!debtor.phone) return;
-    const msg = encodeURIComponent(`Merhaba, güncel veresiye bakiyeniz ${money(balance)}. İyi günler.`);
-    window.open(`https://wa.me/${waNumber(debtor.phone)}?text=${msg}`, '_blank');
+    window.open(waLink(debtor.phone, `Merhaba, güncel veresiye bakiyeniz ${money(balance)}. İyi günler.`), '_blank');
     markDebtorReminded(debtor.id).catch(() => {});
   };
 

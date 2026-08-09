@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Coins, ChevronLeft, ChevronRight, ArrowUpRight, Loader2, AlertTriangle, Download } from 'lucide-react';
 import { LoadingState } from '../../components/common/StatusState';
 import {
@@ -34,7 +34,23 @@ interface OwnerFinanceViewProps {
 
 export const OwnerFinanceView: React.FC<OwnerFinanceViewProps> = ({ pitchId, isDemoMode, readOnly = false, onOpenCalendar }) => {
   const notify = useOwnerToast();
-  const currentMonth = useMemo(() => localDateISO().slice(0, 7), []);
+  // P-CILA: "içinde bulunduğumuz ay" bir kez hesaplanıyordu; panel gece yarısını
+  // açık geçirirse ertesi sabah eski ayda uyanıyordu. Uygulama öne gelince
+  // yeniden hesaplanır — kullanıcının BAKTIĞI ay değiştirilmez, yalnız "güncel
+  // ay" tanımı tazelenir ("Bu ay" kısayolu ve ileri-ok kilidi doğru çalışır).
+  const [currentMonth, setCurrentMonth] = useState(() => localDateISO().slice(0, 7));
+  useEffect(() => {
+    const tazele = () => setCurrentMonth((prev) => {
+      const simdiki = localDateISO().slice(0, 7);
+      return simdiki === prev ? prev : simdiki;
+    });
+    window.addEventListener('focus', tazele);
+    document.addEventListener('visibilitychange', tazele);
+    return () => {
+      window.removeEventListener('focus', tazele);
+      document.removeEventListener('visibilitychange', tazele);
+    };
+  }, []);
   const [month, setMonth] = useState(currentMonth);
   const [tab, setTab] = useState<FinTab>('SUMMARY');
   const [summary, setSummary] = useState<FinanceSummary | null>(null);

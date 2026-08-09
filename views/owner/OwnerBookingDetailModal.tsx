@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Banknote, Phone, QrCode, UserX, XCircle } from 'lucide-react';
+import { Banknote, MessageCircle, Phone, QrCode, UserX, XCircle } from 'lucide-react';
+import { waLink, bookingReminderMessage } from '../../utils/whatsapp';
 import { cancelConfirmedBooking, recordBookingPayment, type PaymentMethod, toTurkishError } from '../../services/pitchOwnerService';
 import { bookingToDebtor } from '../../services/financeService';
 import { parseTRYAmount } from '../../shared/financeModel';
@@ -29,6 +30,10 @@ interface OwnerBookingDetailModalProps {
   /** Takvimi yenile — hem iptal hem tahsilat sonrası. */
   onChanged: () => void;
   onNavigateQr?: () => void;
+  /** C2 — WhatsApp hatırlatma mesajı için: rezervasyonun günü (ISO). */
+  dateISO?: string;
+  /** C2 — mesajda "X hatırlatması:" diye geçen tesis adı. */
+  facilityName?: string;
 }
 
 const METHODS: { id: PaymentMethod; label: string }[] = [
@@ -43,6 +48,8 @@ export const OwnerBookingDetailModal: React.FC<OwnerBookingDetailModalProps> = (
   onClose,
   onChanged,
   onNavigateQr,
+  dateISO,
+  facilityName,
 }) => {
   const notify = useOwnerToast();
   const { confirm, confirmElement } = useConfirmSheet();
@@ -274,7 +281,7 @@ export const OwnerBookingDetailModal: React.FC<OwnerBookingDetailModalProps> = (
 
       {/* VIEW modu: hızlı aksiyonlar */}
       {mode === 'view' && (
-        <div className="grid grid-cols-2 gap-3 mt-4">
+        <div className={`grid ${booking.phone ? 'grid-cols-3' : 'grid-cols-2'} gap-3 mt-4`}>
           {/* [YAYIN] Buradaki düğme eskiden yalnız "yakında aktif olacak" uyarısı
               gösteriyordu — yani hiçbir işe yaramıyordu. Rezervasyonun telefonu
               zaten kayıtlı (pitch_bookings.customer_phone); düğme artık DOĞRUDAN
@@ -291,6 +298,23 @@ export const OwnerBookingDetailModal: React.FC<OwnerBookingDetailModalProps> = (
             <div className="min-h-[52px] py-3 bg-white/[0.03] border border-white/5 text-gray-600 rounded-xl text-[0.6875rem] font-extrabold flex flex-col items-center justify-center gap-1.5 uppercase">
               <Phone size={16} /> Telefon Yok
             </div>
+          )}
+          {/* C2 — no-show panzehiri: hazır mesajlı WhatsApp hatırlatması.
+              Telefon yoksa çizilmez (arama düğmesiyle aynı ilke). */}
+          {booking.phone && (
+            <a
+              href={waLink(booking.phone, bookingReminderMessage({
+                customerName: booking.user,
+                time: booking.time,
+                facilityName,
+                dateISO,
+              }))}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="min-h-[52px] py-3 bg-[#25D366]/10 border border-[#25D366]/30 text-[#25D366] rounded-xl text-[0.6875rem] font-extrabold hover:bg-[#25D366]/20 transition-colors flex flex-col items-center justify-center gap-1.5 uppercase"
+            >
+              <MessageCircle size={16} /> WhatsApp Hatırlat
+            </a>
           )}
           <button
             type="button"
