@@ -45,6 +45,7 @@ import {
   OwnerSecurityModal,
   OwnerSupportModal,
   OwnerCustomersModal,
+  OwnerShowcasePreviewModal,
   OwnerLogoutModal,
   type WidgetType,
   type OwnerMenuStats,
@@ -77,6 +78,8 @@ import {
   computeOverallOccupancy,
   getPaymentSettings,
   getBankAccounts,
+  getLatestWeeklySummary,
+  type WeeklySummary,
   getActiveFlashDeals,
   getAvailabilityExceptions,
   toTurkishError,
@@ -98,6 +101,8 @@ interface OwnerPanelProps {
 import { FinancialCalendarView } from './owner/calendar/FinancialCalendarView';
 import { PitchOccupancyGrid } from './owner/home/OwnerHomeWidgets';
 import { OwnerSetupProgress, type SetupStep } from './owner/home/OwnerSetupProgress';
+import { OwnerWeeklySummaryCard } from './owner/home/OwnerWeeklySummaryCard';
+import { vitrinSkoru } from '../shared/vitrinSkoru';
 import { OwnerBottomSheet } from './owner/components/OwnerBottomSheet';
 import { useConfirmSheet } from './owner/components/useConfirmSheet';
 import { todayISO } from './owner/ownerPanelShared';
@@ -147,6 +152,9 @@ const tariffRowToPolicy = (t: PitchTariff) => ({
   const [calendarFocus, setCalendarFocus] = useState<{ dateISO: string; bookingId?: string; courtName?: string | null } | null>(null);
   // Müşteri defteri (C1) — Menü → Müşteriler; personel dahil tüm ekip kullanır.
   const [customersOpen, setCustomersOpen] = useState(false);
+  // Köprü paketi (9 Ağu 2026): vitrin önizleme + haftalık özet.
+  const [showcaseOpen, setShowcaseOpen] = useState(false);
+  const [weekly, setWeekly] = useState<WeeklySummary | null>(null);
   const [courts, setCourts] = useState<PitchCourt[]>([]);
   const [dailySummary, setDailySummary] = useState<OwnerDailySummary | null>(null);
   const [todayBookings, setTodayBookings] = useState<PitchBookingFull[]>([]);
@@ -346,6 +354,7 @@ const tariffRowToPolicy = (t: PitchTariff) => ({
       ownerId: uid,
       name: pitch.name ?? 'Tesisim',
       description: pitch.description ?? '',
+      cancellationPolicy: (pitch as { cancellation_policy?: unknown }).cancellation_policy ?? null,
       images: pitch.images?.length ? pitch.images : pitch.image ? [pitch.image] : [],
       amenities: Array.isArray(pitch.amenities) ? pitch.amenities : [],
       isFacilityOpen: pitch.is_open ?? true,
@@ -688,8 +697,12 @@ const tariffRowToPolicy = (t: PitchTariff) => ({
         onFix: () => { if (managerGuard()) setActiveTab('PITCHES'); } },
       { key: 'location', label: 'Konumu işaretle', hint: 'Haritada pin — vitrin için şart', done: fd?.latitude != null && fd?.longitude != null,
         onFix: () => openProfile('location') },
-      { key: 'photo', label: 'Fotoğraf yükle', hint: 'Tesis ve saha görselleri', done: (fd?.images?.length ?? 0) > 0,
+      { key: 'photo', label: 'En az 3 fotoğraf', hint: 'Oyuncu ilk fotoğrafa bakar — saha, soyunma, gece ışığı', done: (fd?.images?.length ?? 0) >= 3,
         onFix: () => openProfile('general') },
+      { key: 'description', label: 'Tesis açıklaması', hint: 'Bir-iki cümle: ulaşım, otopark, çay ocağı', done: !!(fd?.description ?? '').trim(),
+        onFix: () => openProfile('general') },
+      { key: 'cancellation', label: 'İptal politikası', hint: 'Oyuncu ödeme öncesi iade kuralını görür', done: fd?.cancellationPolicy != null,
+        onFix: () => { if (managerGuard()) setShowCancellationPolicy(true); } },
       // Her saha kendi tarifesini girer: adım, tarifesiz saha kalmayınca tamamlanır.
       { key: 'tariff', label: 'Saha fiyat politikası', hint: 'Her saha için saat/gün bazlı ücret',
         done: menuStats.courtCount > 0 && menuStats.courtsWithoutTariff === 0,
@@ -699,6 +712,23 @@ const tariffRowToPolicy = (t: PitchTariff) => ({
     ];
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [facilityData, menuStats.courtCount, menuStats.courtsWithoutTariff]);
+
+  // Köprü paketi #2: vitrin kalite skoru — tek kaynak shared/vitrinSkoru.
+  const vitrin = useMemo(() => vitrinSkoru({
+    photoCount: facilityData?.images?.length ?? 0,
+    hasDescription: !!(facilityData?.description ?? '').trim(),
+    courtCount: menuStats.courtCount,
+    courtsWithoutTariff: menuStats.courtsWithoutTariff,
+    hasWorkingHours: (facilityData?.workingHours?.length ?? 0) > 0,
+    hasCancellationPolicy: facilityData?.cancellationPolicy != null,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), [facilityData, menuStats.courtCount, menuStats.courtsWithoutTariff]);
+
+  // Köprü paketi #5: son haftalık özet (gece işi üretir, panel okur).
+  useEffect(() => {
+    if (!realPitchId) { setWeekly(null); return; }
+    getLatestWeeklySummary(realPitchId).then(setWeekly).catch(() => setWeekly(null));
+  }, [realPitchId]);
 
   if (needsOnboarding && !isLoading) {
     // IP-22: kendi kendine tesis başvurusu kaldırıldı. Tesisler OYNA ekibi
@@ -800,7 +830,10 @@ const tariffRowToPolicy = (t: PitchTariff) => ({
 
               {/* Kurulum Sihirbazı — yalnız gerçek tesiste ve eksik adım varken (Faz 7) */}
               {!isDemoMode && !isAdminPreview && realPitchId && (
-                <OwnerSetupProgress steps={setupSteps} />
+                <>
+                  {weekly && <OwnerWeeklySummaryCard summary={weekly} />}
+                  <OwnerSetupProgress steps={setupSteps} title={`Vitrin puanın: ${vitrin.puan}/${vitrin.max}`} />
+                </>
               )}
 
               {activeWidgets.includes('QUICK_STATS') && (
@@ -910,6 +943,8 @@ const tariffRowToPolicy = (t: PitchTariff) => ({
           onNavigate={onNavigate}
           onBack={onBack}
           onCustomers={() => setCustomersOpen(true)}
+          onShowcasePreview={() => setShowcaseOpen(true)}
+          vitrinPuan={vitrin.puan}
           pitchId={realPitchId ?? facilityData?.id ?? ''}
           facilityName={facilityData?.name}
           facilityDistrict={[facilityData?.district, facilityData?.city].filter(Boolean).join(', ')}
@@ -1042,6 +1077,12 @@ const tariffRowToPolicy = (t: PitchTariff) => ({
       )}
       {showSecurity && <OwnerSecurityModal onClose={() => setShowSecurity(false)} />}
       {showSupport && <OwnerSupportModal onClose={() => setShowSupport(false)} />}
+      {showcaseOpen && (
+        <OwnerShowcasePreviewModal
+          pitchId={realPitchId ?? facilityData?.id ?? ''}
+          onClose={() => setShowcaseOpen(false)}
+        />
+      )}
       {customersOpen && (
         <OwnerCustomersModal
           pitchId={realPitchId ?? facilityData?.id ?? ''}

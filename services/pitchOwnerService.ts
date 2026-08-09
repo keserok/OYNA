@@ -36,6 +36,8 @@ import type {
   PitchStaffMember,
   PitchStaffTask,
 } from '../types';
+import { PITCH_SHOWCASE_SELECT, mapDbPitchToUiPitch } from '../shared/pitchShowcaseMapper';
+import type { Pitch } from '../types';
 
 // ----------------------------------------------------------------------------
 // Girdi (Input) tipleri
@@ -2245,5 +2247,49 @@ export function subscribeToOwnerBookings(
 
   return () => {
     supabase.removeChannel(channel);
+  };
+}
+
+
+// ─── Köprü paketi (kurucu kararları, 9 Ağu 2026) ────────────────────────────
+
+/** "Oyuncu beni nasıl görüyor?" — oyuncu keşfiyle AYNI seçki ve eşleme. */
+export async function getPitchShowcase(pitchId: string): Promise<Pitch | null> {
+  const { data, error } = await supabase
+    .from('pitches')
+    .select(PITCH_SHOWCASE_SELECT)
+    .eq('id', pitchId)
+    .maybeSingle();
+  if (error || !data) return null;
+  return mapDbPitchToUiPitch(data as never);
+}
+
+export interface WeeklySummaryData {
+  rezervasyon: number; tahsilat: number;
+  onceki_rezervasyon: number; onceki_tahsilat: number;
+  yogun_gun: number | null; yogun_saat: number | null;
+}
+export interface WeeklySummary { week_start: string; data: WeeklySummaryData; }
+
+/** Haftalık işletme özeti — gece işi üretir, panel yalnız okur. */
+export async function getLatestWeeklySummary(pitchId: string): Promise<WeeklySummary | null> {
+  const { data, error } = await supabase
+    .from('owner_weekly_summaries')
+    .select('week_start, data')
+    .eq('pitch_id', pitchId)
+    .order('week_start', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error || !data) return null;
+  const d = ((data as { data?: Record<string, unknown> }).data ?? {}) as Record<string, unknown>;
+  const num = (v: unknown) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
+  return {
+    week_start: String((data as { week_start: string }).week_start),
+    data: {
+      rezervasyon: num(d.rezervasyon), tahsilat: num(d.tahsilat),
+      onceki_rezervasyon: num(d.onceki_rezervasyon), onceki_tahsilat: num(d.onceki_tahsilat),
+      yogun_gun: d.yogun_gun == null ? null : num(d.yogun_gun),
+      yogun_saat: d.yogun_saat == null ? null : num(d.yogun_saat),
+    },
   };
 }

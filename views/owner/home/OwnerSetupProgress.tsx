@@ -15,7 +15,7 @@ export interface SetupStep {
   onFix: () => void;
 }
 
-export const OwnerSetupProgress: React.FC<{ steps: SetupStep[] }> = ({ steps }) => {
+export const OwnerSetupProgress: React.FC<{ steps: SetupStep[]; title?: string }> = ({ steps, title }) => {
   const doneCount = steps.filter((s) => s.done).length;
   const pct = steps.length ? Math.round((doneCount / steps.length) * 100) : 100;
   if (doneCount === steps.length) return null; // tamamlandıysa gizle
@@ -26,7 +26,7 @@ export const OwnerSetupProgress: React.FC<{ steps: SetupStep[] }> = ({ steps }) 
     <div className="bg-gradient-to-br from-[#12203a] to-[#161B22] border border-blue-500/20 rounded-3xl p-5 mb-6 shadow-xl">
       <div className="flex items-center justify-between mb-3">
         <div>
-          <h3 className="text-sm font-extrabold text-white">Tesisini yayına hazırla</h3>
+          <h3 className="text-sm font-extrabold text-white">{title ?? 'Tesisini yayına hazırla'}</h3>
           <p className="text-[11px] text-blue-200/70 mt-0.5">
             %{pct} tamamlandı · {steps.length - doneCount} adım kaldı
           </p>

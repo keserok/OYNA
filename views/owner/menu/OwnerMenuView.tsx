@@ -6,6 +6,7 @@ import {
   ChevronRight,
   CreditCard,
   Users,
+  Eye,
   Globe,
   Handshake,
   HelpCircle,
@@ -35,6 +36,9 @@ export interface OwnerMenuViewProps {
   onWorkingHours: () => void;
   onMatches: () => void;
   onCustomers: () => void;
+  onShowcasePreview?: () => void;
+  /** Köprü paketi #2: üst karttaki vitrin puanı hapı (0-5). */
+  vitrinPuan?: number | null;
   onBankAccounts: () => void;
   onWithdrawals: () => void;
   onCancellationPolicy: () => void;
@@ -147,6 +151,8 @@ export const OwnerMenuView: React.FC<OwnerMenuViewProps> = ({
   onWorkingHours,
   onMatches,
   onCustomers,
+  onShowcasePreview,
+  vitrinPuan = null,
   onBankAccounts,
   onWithdrawals,
   onCancellationPolicy,
@@ -209,6 +215,9 @@ export const OwnerMenuView: React.FC<OwnerMenuViewProps> = ({
               label={stats.isFacilityOpen ? 'Yayında' : 'Kapalı'}
               tone={stats.isFacilityOpen ? 'success' : 'warning'}
             />
+            {vitrinPuan != null && (
+              <StatusBadge label={`Vitrin ${vitrinPuan}/5`} tone={vitrinPuan >= 5 ? 'success' : 'warning'} />
+            )}
             {todayBookings != null && (
               <StatusBadge
                 label={todayBookings === 0 ? 'Bugün rezervasyon yok' : `Bugün ${todayBookings} rezervasyon`}
@@ -304,6 +313,14 @@ export const OwnerMenuView: React.FC<OwnerMenuViewProps> = ({
             {/* Yayın durumu üst kartın hapında — burada yinelenmez. Fiyat/süre
                 politikası Sahalarım → saha → "Aktif Saatler ve Ücretler"dedir;
                 "Ekip Yönetimi" alt barda (Ekip), menüde mükerrer tutulmuyor. */}
+            {onShowcasePreview && (
+              <MenuRow
+                icon={<Eye size={18} />}
+                label="Vitrin Önizleme"
+                desc="Oyuncunun gördüğü kart ve sayfa"
+                onClick={onShowcasePreview}
+              />
+            )}
             <MenuRow
               icon={<Building2 size={18} />}
               label="Tesis Ayarları"
