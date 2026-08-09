@@ -1,4 +1,5 @@
 import { tarihKisaTR } from '../utils/tarih';
+import { openDirectionsByQuery } from '../utils/directions';
 import React, { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import {
@@ -449,9 +450,10 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onNavigate }) => {
     navigateTo('MATCH_CREATE');
   };
 
+  // Denetim bulgusu 25: yol tarifi tek yerden — utils/directions (iOS'ta
+  // Apple/Google seçimi oradaki desenle yönetilir, burada tek kapı kullanılır).
   const handleDirections = (query: string) => {
-    const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
-    window.open(url, '_blank', 'noopener,noreferrer');
+    openDirectionsByQuery(query);
   };
 
   const openMatchLobby = (item: MyAgendaItem) => {

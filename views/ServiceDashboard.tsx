@@ -176,6 +176,8 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
 
   // Kaptan çok-sağlayıcı TEKLİFLERİ (match_service_offers) — kabul/red (FCFS)
   const [matchOffers, setMatchOffers] = useState<MatchServiceOffer[]>([]);
+  // Denetim bulgusu 19: kazanç/teklif/kimlik yüklemeleri sessizce düşüyordu.
+  const [veriHatasi, setVeriHatasi] = useState(false);
   const [respondingOfferId, setRespondingOfferId] = useState<string | null>(null);
 
   // FAZ 5 — TC kimlik doğrulama
@@ -496,6 +498,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
           setPendingPayout(pending);
       } catch (err) {
           console.error('fetchPayoutData:', err);
+          setVeriHatasi(true);
       }
   };
 
@@ -537,6 +540,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
       setMatchOffers(await getMyMatchServiceOffers());
     } catch (err) {
       console.error('fetchMatchOffers:', err);
+      setVeriHatasi(true);
     }
   };
 
@@ -567,6 +571,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
       setReservedBalance(summary.reservedBalance);
     } catch (err) {
       console.error('fetchEarnings:', err);
+      setVeriHatasi(true);
     }
   };
 
@@ -577,6 +582,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
       setIdentityStatus(status);
     } catch (err) {
       console.error('fetchIdentityStatus:', err);
+      setVeriHatasi(true);
     }
   };
 
@@ -2127,6 +2133,13 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
     // ekranın TAMAMI App'in görünüm kaydırıcısında akar — başlık dahil her
     // nokta parmak yüzeyidir. Alt gezinme `fixed` olduğundan yerinde kalır.
     <div className="min-h-screen flex flex-col bg-[#0A0E14] relative">
+      {/* Denetim bulgusu 19: kazanç/teklif/kimlik verisi yüklenemediyse ekran
+          sessizce boş/bayat kalıyordu — durum artık dürüstçe söyleniyor. */}
+      {veriHatasi && (
+        <div className="mx-4 mt-3 rounded-2xl bg-amber-500/10 border border-amber-500/25 px-3.5 py-2.5 text-[0.6875rem] font-bold text-amber-300">
+          Bazı bilgiler yüklenemedi (kazanç, teklif ya da doğrulama durumu). Aşağı çekip yenilemeyi dene.
+        </div>
+      )}
       
       {/* Profil ve Ayarlar alt ekranları `min-h-screen` sayfalardır; kök artık
           sayfa akışında olduğundan DOĞRUDAN akarlar — ara kaydırıcı gerekmez

@@ -688,6 +688,8 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
       setTodayAvailability(result);
     } catch (e) {
       console.warn('Bugünkü müsaitlik hesaplanamadı:', e);
+      // Denetim bulgusu 28: rozet sebepsiz kaybolmasın — bilinmiyor işareti.
+      setTodayAvailability({});
     }
   };
 

@@ -162,11 +162,18 @@ const MatchTicket: React.FC<MatchTicketProps> = ({ onBack }) => {
   const handleShare = async () => {
     const text = `OYNA rezervasyonum: ${pitchName}${courtName ? ' · ' + courtName : ''} · ${dateStr} ${timeStr}`;
     try {
-      if (navigator.share) { await navigator.share({ title: 'OYNA Rezervasyon', text }); return; }
+      if (navigator.share) {
+        try { await navigator.share({ title: 'OYNA Rezervasyon', text }); return; }
+        catch { return; } // kullanıcı paylaşımı iptal etti — sessiz
+      }
+      // Denetim bulgusu 27: pano yazılamazsa "kopyalandı" yalanı söylenmez.
       await navigator.clipboard?.writeText(text);
       setShareMsg('Rezervasyon bilgisi kopyalandı.');
       setTimeout(() => setShareMsg(''), 2500);
-    } catch { /* kullanıcı iptal etti */ }
+    } catch {
+      setShareMsg('Kopyalanamadı — bilgileri elle not alabilirsin.');
+      setTimeout(() => setShareMsg(''), 3000);
+    }
   };
 
   const handleSaveImage = () => {
@@ -215,7 +222,8 @@ const MatchTicket: React.FC<MatchTicketProps> = ({ onBack }) => {
               <ShieldCheck size={24} style={{ color: style.text }} className="opacity-50" />
             </div>
             <div className="mt-4">
-              <h2 className="text-3xl font-extrabold leading-none uppercase" style={{ color: style.text }}>
+              {/* Denetim bulgusu 18: tek uzun kelime bileti taşırıyordu. */}
+              <h2 className="text-3xl font-extrabold leading-tight uppercase break-words line-clamp-2" style={{ color: style.text }}>
                 {pitchNameParts[0]}
                 {pitchNameParts.length > 1 && <><br />{pitchNameParts.slice(1).join(' ')}</>}
               </h2>

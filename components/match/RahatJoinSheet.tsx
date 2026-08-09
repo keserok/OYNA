@@ -182,7 +182,7 @@ export const RahatJoinSheet: React.FC<RahatJoinSheetProps> = ({
 
         <div style={{ padding: '4px 20px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <h2 style={{ margin: 0, fontSize: 16, fontWeight: 900, letterSpacing: '.16em', color: '#FFFFFF' }}>MAÇA KATIL</h2>
-          <button type="button" onClick={onClose} aria-label="Kapat" style={{ width: 34, height: 34, borderRadius: '50%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 }}>
+          <button type="button" onClick={onClose} aria-label="Kapat" style={{ width: 44, height: 44, borderRadius: '50%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 }}>
             <X size={15} color="#9CA3AF" />
           </button>
         </div>

@@ -40,6 +40,7 @@ const TeamSquadTab: React.FC<TeamSquadTabProps> = ({
   const isAdmin = isCaptain || team.my_role === 'ADMIN';
 
   const [requests, setRequests] = useState<TeamJoinRequestRow[]>([]);
+  const [bekleyenHatasi, setBekleyenHatasi] = useState(false);
   const [outgoing, setOutgoing] = useState<TeamInviteRow[]>([]);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [member, setMember] = useState<TeamSquadRow | null>(null);
@@ -54,9 +55,10 @@ const TeamSquadTab: React.FC<TeamSquadTabProps> = ({
         getTeamJoinRequests(team.team_id),
         getTeamOutgoingInvites(team.team_id),
       ]);
-      setRequests(reqs); setOutgoing(outs);
+      setRequests(reqs); setOutgoing(outs); setBekleyenHatasi(false);
     } catch (e) {
       console.error('[TeamSquad] bekleyenler yüklenemedi', e);
+      setBekleyenHatasi(true);
     }
   }, [team.team_id, isAdmin]);
 
@@ -154,6 +156,11 @@ const TeamSquadTab: React.FC<TeamSquadTabProps> = ({
 
   return (
     <div className="space-y-5">
+      {isAdmin && bekleyenHatasi && (
+        <div className="rounded-2xl bg-amber-500/10 border border-amber-500/25 px-3.5 py-2.5 text-[0.6875rem] font-bold text-amber-300">
+          Bekleyen istekler yüklenemedi — liste eksik görünüyor olabilir.
+        </div>
+      )}
       {/* ── Bekleyenler (yalnız yönetici — Spec §3.8 Kadro) ── */}
       {isAdmin && (requests.length > 0 || outgoing.length > 0) && (
         <div className="rounded-2xl bg-[#39FF14]/6 border border-[#39FF14]/20 p-3.5">

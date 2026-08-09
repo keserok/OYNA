@@ -110,6 +110,7 @@ const MyTeamsPanel: React.FC<MyTeamsPanelProps> = ({
   teams, invites, loading, onRefresh, onOpenTeam, onCreate, onExplore, onToast,
 }) => {
   const [busyInvite, setBusyInvite] = useState<string | null>(null);
+  const [siralamaHatasi, setSiralamaHatasi] = useState(false);
   const [busyRestore, setBusyRestore] = useState<string | null>(null);
   const [archiveOpen, setArchiveOpen] = useState(false);
 
@@ -148,7 +149,10 @@ const MyTeamsPanel: React.FC<MyTeamsPanelProps> = ({
       ...(captainOrder ?? captainTeams.map(t => t.team_id)),
       ...(memberOrder ?? memberTeams.map(t => t.team_id)),
     ];
-    try { await saveMyTeamOrder(ids); } catch { /* en-iyi-çaba */ }
+    // Denetim bulgusu 20: kaydedilemeyen sıralama sessizce yutuluyordu;
+    // kullanıcı kaydettim sanıp sonraki açılışta eski sırayı görüyordu.
+    try { await saveMyTeamOrder(ids); }
+    catch { setSiralamaHatasi(true); setTimeout(() => setSiralamaHatasi(false), 4000); }
   }, [captainOrder, memberOrder, captainTeams, memberTeams]);
 
   const handleInvite = useCallback(async (inv: TeamInviteRow, accept: boolean) => {
@@ -172,6 +176,11 @@ const MyTeamsPanel: React.FC<MyTeamsPanelProps> = ({
 
   return (
     <div className="pb-safe-nav space-y-5">
+      {siralamaHatasi && (
+        <div className="rounded-2xl bg-amber-500/10 border border-amber-500/25 px-3.5 py-2.5 text-[0.6875rem] font-bold text-amber-300">
+          Sıralama kaydedilemedi — internetin gelince tekrar dene.
+        </div>
+      )}
       {/* Davetlerin şeridi (K69) */}
       {invites.length > 0 && (
         <div className="rounded-2xl bg-[#39FF14]/6 border border-[#39FF14]/20 p-3.5">

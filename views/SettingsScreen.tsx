@@ -551,7 +551,7 @@ const JoinFacilityModal: React.FC<{ onClose: () => void; onJoined: (pitchName: s
       <div className="bg-[#161B22] w-full max-w-sm rounded-3xl p-6 pb-safe-6 border border-white/10" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Tesise Katıl">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-extrabold text-white">Tesise Katıl</h3>
-          <button type="button" onClick={onClose} aria-label="Kapat"><X size={20} className="text-ink-4" /></button>
+          <button type="button" onClick={onClose} aria-label="Kapat" className="w-11 h-11 -mr-2 flex items-center justify-center"><X size={20} className="text-ink-4" /></button>
         </div>
         <div className="mx-auto w-14 h-14 rounded-2xl bg-white/[0.06] border border-white/[0.12] flex items-center justify-center mb-3"><KeyRound size={26} className="text-[#F5F3EE]" /></div>
         <p className="text-[0.8125rem] text-[#F5F3EE]/[0.55] text-center mb-4">Tesis sahibinin verdiği 6 haneli davet kodunu gir.</p>
@@ -613,7 +613,7 @@ const RedeemReferralModal: React.FC<{ onClose: () => void; onRedeemed: () => voi
       <div className="bg-[#161B22] w-full max-w-sm rounded-3xl p-6 pb-safe-6 border border-white/10" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Davet Kodu">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-extrabold text-white">Davet Kodu</h3>
-          <button type="button" onClick={onClose} aria-label="Kapat"><X size={20} className="text-ink-4" /></button>
+          <button type="button" onClick={onClose} aria-label="Kapat" className="w-11 h-11 -mr-2 flex items-center justify-center"><X size={20} className="text-ink-4" /></button>
         </div>
         <div className="mx-auto w-14 h-14 rounded-2xl bg-white/[0.06] border border-white/[0.12] flex items-center justify-center mb-3"><Gift size={26} className="text-[#F5F3EE]" /></div>
         <p className="text-[0.8125rem] text-[#F5F3EE]/[0.55] text-center mb-4">Arkadaşının paylaştığı davet kodunu ya da bağlantıyı yapıştır.</p>

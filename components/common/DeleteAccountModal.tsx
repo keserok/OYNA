@@ -90,7 +90,7 @@ const DeleteAccountModal: React.FC<{
           <h3 className="font-extrabold text-white text-lg">
             {blocked ? 'Hesap Silinemiyor' : step === 1 ? 'Hesabı Sil' : 'Son Adım'}
           </h3>
-          <button onClick={onClose} className="text-ink-4 hover:text-white p-1" aria-label="Kapat">
+          <button onClick={onClose} className="w-11 h-11 -mr-2 flex items-center justify-center text-ink-4 hover:text-white" aria-label="Kapat">
             <X size={18} />
           </button>
         </div>

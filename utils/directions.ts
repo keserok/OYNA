@@ -15,3 +15,10 @@ export const appleMapsDirectionsUrl = (lat: number, lng: number, label?: string)
 export const openDirections = (lat: number, lng: number): void => {
   window.open(googleMapsDirectionsUrl(lat, lng), '_blank', 'noreferrer');
 };
+
+/** Serbest metin (saha adı/adres) ile yol tarifi — koordinat yoksa kullanılır.
+ *  Denetim bulgusu 25: aynı iş uygulamanın iki yerinde farklı davranıyordu. */
+export const openDirectionsByQuery = (query: string): void => {
+  const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
+  window.open(url, '_blank', 'noopener,noreferrer');
+};

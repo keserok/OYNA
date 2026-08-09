@@ -3060,11 +3060,13 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
               className="w-full max-w-md bg-[#0A0E14] border border-white/10 rounded-3xl overflow-hidden shadow-2xl relative"
             >
               <div className="px-5 py-4 border-b border-white/5 flex items-center justify-between bg-black/20">
-                <h3 className="text-sm font-extrabold text-white italic uppercase flex items-center gap-2">
-                  <MapPin size={16} className="text-ink-4" />
-                  {match?.location} KONUMU
+                {/* Denetim bulgusu 16: uzun saha adı tek çıkış düğmesini ekran
+                    dışına itiyordu — başlık kırpılır, düğme küçülmez (44px). */}
+                <h3 className="text-sm font-extrabold text-white italic uppercase flex items-center gap-2 min-w-0">
+                  <MapPin size={16} className="text-ink-4 shrink-0" />
+                  <span className="truncate">{match?.location} KONUMU</span>
                 </h3>
-                <button onClick={() => setShowMapModal(false)} className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-white/50 hover:bg-white/10 transition-colors">
+                <button onClick={() => setShowMapModal(false)} aria-label="Kapat" className="w-11 h-11 shrink-0 rounded-full bg-white/5 flex items-center justify-center text-white/50 hover:bg-white/10 transition-colors">
                   <X size={16} />
                 </button>
               </div>

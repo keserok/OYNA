@@ -86,9 +86,11 @@ const RoleHeroCard: React.FC<{
   const handleEntry = () => {
     if (isEntering) return;
     setIsEntering(true);
+    // Denetim bulgusu 26: rastgele ilerleyen sahte çubuk yerine sabit ritimli
+    // geçiş — hiçbir gerçek işe bağlı olmadığı için "ölçüyormuş" gibi yapmaz.
     let p = 0;
     const iv = setInterval(() => {
-      p += Math.random() * 22 + 12;
+      p += 10;
       if (p >= 100) {
         p = 100; clearInterval(iv); setProgress(100);
         setTimeout(onComplete, 280);

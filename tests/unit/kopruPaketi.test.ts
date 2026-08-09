@@ -5,7 +5,7 @@
 // ════════════════════════════════════════════════════════════════════════════
 
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { vitrinSkoru } from '../../shared/vitrinSkoru';
 
@@ -66,5 +66,32 @@ describe('ekran ve veri bağları', () => {
     expect(migration).toContain('DOGRULAMA');
     // Boş haftada bildirim spam'i yok:
     expect(migration).toContain('v_rez > 0 OR v_tah > 0');
+  });
+});
+
+// ─── Oyuncu denetimi turu 3 bekçileri (9 Ağustos 2026) ──────────────────────
+describe('oyuncu denetimi turu 3', () => {
+  const oku2 = (p: string) => readFileSync(join(process.cwd(), p), 'utf8');
+
+  it('kapsam varken yarıçap sorgusu tek kaynak — boşsa açılış listesine düşülmez', () => {
+    const md = oku2('views/MatchDiscovery.tsx');
+    expect(md).toContain('nearbyFetched ? nearbyMatches : adminMatches');
+  });
+
+  it('yol tarifi tek kapıdan geçiyor (iki farklı davranış yok)', () => {
+    expect(oku2('views/MyMatchesHub.tsx')).toContain('openDirectionsByQuery');
+    expect(oku2('utils/directions.ts')).toContain('openDirectionsByQuery');
+  });
+
+  it('ölü bileşenler depodan silindi', () => {
+    for (const p of ['components/BookingCard.tsx', 'components/FifaCard.tsx', 'components/Particles.tsx',
+                     'components/SharedPitch.tsx', 'components/common/VirtualList.tsx',
+                     'components/social/ProviderOfferPicker.tsx']) {
+      expect(existsSync(join(process.cwd(), p)), `${p} hâlâ duruyor`).toBe(false);
+    }
+  });
+
+  it('bilet paylaşımında pano hatası "kopyalandı" yalanına dönüşmüyor', () => {
+    expect(oku2('views/MatchTicket.tsx')).toContain('Kopyalanamadı');
   });
 });

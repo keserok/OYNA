@@ -104,6 +104,8 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onSelect }) => {
 
   const [nearbyMatches, setNearbyMatches] = useState<any[]>([]);
   const [nearbyLoading, setNearbyLoading] = useState(false);
+  // Yarıçap sorgusu en az bir kez sonuçlandı mı? (kurucu kararı 9 Ağu 2026)
+  const [nearbyFetched, setNearbyFetched] = useState(false);
   // AŞAĞI ÇEKİP YENİLE: yakındaki maç sorgusu bir efektle çalışıyor; jest bu
   // sayacı artırarak onu yeniden koşturur (ayrı bir kopya sorgu yazmak, iki
   // farklı "maç çekme" yolu demek olurdu — biri er geç geride kalırdı).
@@ -163,6 +165,7 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onSelect }) => {
       });
       setNearbyMatches(Array.from(byId.values()));
       setNearbyLoading(false);
+      setNearbyFetched(true);
     }).catch(() => {
       // Denetim bulgusu 8: RPC düşerse yakalanmamış hata + yanlış "maç yok" boş
       // durumu kalıyordu — artık yükleme biter, liste mevcut haliyle kalır.
@@ -183,10 +186,14 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onSelect }) => {
   const enhancedMatches = useMemo(() => {
     if (kapsamYok) return [];
     const hasScope = selectedRegions.length > 0 || !!userLocation;
-    // Denetim bulgusu 9 NOTU: kapsam varken yakın liste boşsa adminMatches'e
-    // düşülüyor; mevcut birim testi bu davranışı bilinçli koruyor — değiştirmek
-    // ürün kararı ister (kurucuya soruldu, cevaba kadar davranış aynı).
-    const sourceMatches = (hasScope && nearbyMatches.length > 0) ? nearbyMatches : adminMatches;
+    // KURUCU KARARI (9 Ağu 2026 — denetim bulgusu 9): kapsam varken YARIÇAP
+    // SORGUSU TEK KAYNAKTIR. Sonuç boşsa açılıştaki listeye düşülmez; "bu
+    // bölgede maç yok" dürüstçe gösterilir (uzak şehrin maçı teklif edilmez).
+    // Sorgu henüz sonuçlanmadıysa açılış listesi köprü olarak kullanılır ki
+    // ekran ilk saniyede boş yanıp sönmesin.
+    const sourceMatches = hasScope
+      ? (nearbyFetched ? nearbyMatches : adminMatches)
+      : adminMatches;
     // Sadece oynanabilir maçları göster — DRAFT/CANCELLED/COMPLETED gizle.
     // Özel maçlar (PRIVATE) vitrinde GÖRÜNMEZ; yalnız kodla erişilir.
     const activeMatches = sourceMatches.filter(
@@ -248,7 +255,7 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onSelect }) => {
         distance: m.distance
       };
     });
-  }, [adminMatches, nearbyMatches, userLocation, selectedRegions, kapsamYok]);
+  }, [adminMatches, nearbyMatches, nearbyFetched, userLocation, selectedRegions, kapsamYok]);
 
   const activeFilterCount = useMemo(() => countActiveFilters(dna), [dna]);
   const isFilterActive = activeFilterCount > 0;
