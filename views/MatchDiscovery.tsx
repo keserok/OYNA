@@ -176,6 +176,9 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onSelect }) => {
   const enhancedMatches = useMemo(() => {
     if (kapsamYok) return [];
     const hasScope = selectedRegions.length > 0 || !!userLocation;
+    // Denetim bulgusu 9 NOTU: kapsam varken yakın liste boşsa adminMatches'e
+    // düşülüyor; mevcut birim testi bu davranışı bilinçli koruyor — değiştirmek
+    // ürün kararı ister (kurucuya soruldu, cevaba kadar davranış aynı).
     const sourceMatches = (hasScope && nearbyMatches.length > 0) ? nearbyMatches : adminMatches;
     // Sadece oynanabilir maçları göster — DRAFT/CANCELLED/COMPLETED gizle.
     // Özel maçlar (PRIVATE) vitrinde GÖRÜNMEZ; yalnız kodla erişilir.
@@ -183,8 +186,8 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onSelect }) => {
       m => (!m.status || m.status === 'OPEN' || m.status === 'ACTIVE' || m.status === 'LIVE') && m.visibility !== 'PRIVATE'
     );
     return activeMatches.map((m, i) => {
-      // Demo price adjustment for index 2 if not set, else keep DB price
-      const price = m.price !== undefined ? m.price : (i === 2 ? 0 : 200);
+      // Denetim bulgusu 2: fiyat uydurulmaz — veri yoksa kart fiyat rozeti çizmez.
+      const price = m.price;
       // Difficulty DB'de Türkçe zorluk (Kolay/Orta/Zor) ya da mentalite
       // (Ciddi/Taktiksel/Rahat) olarak gelebilir. Tek bir mentalite uzayına
       // normalize et ki hem kartta görünen rozet hem de MENTALİTE filtresi
@@ -223,8 +226,9 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onSelect }) => {
 
       return {
         ...m,
-        date: m.date || '18.05.2026',
-        time: m.time || '22:00 - 23:00',
+        // Denetim bulgusu 3: sahte tarih/saat basılmaz; alan yoksa boş kalır.
+        date: m.date || '',
+        time: m.time || '',
         openCount,
         price,
         difficulty: normalizedMentality,

@@ -1,3 +1,4 @@
+import { tarihKisaTR } from '../utils/tarih';
 import React, { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import {
@@ -414,7 +415,7 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onNavigate }) => {
       // bookingPitch bu akışta ya boş ya da Sahalar'da bakılan BAŞKA tesisti.
       pitchId: b.pitch_id,
       title: b.pitches?.name || 'Saha Rezervasyonu',
-      subtitle: `${b.courts?.name ? `${b.courts.name} · ` : ''}${b.booking_date} · ${shortTime(b.start_time)}`,
+      subtitle: `${b.courts?.name ? `${b.courts.name} · ` : ''}${prettyDate} · ${shortTime(b.start_time)}`,
       details: [
         ...(b.courts?.name ? [{ icon: 'court' as const, text: `${b.courts.name}${courtRange ? ` · ${courtRange}` : ''}` }] : []),
         { icon: 'calendar' as const, text: prettyDate },
@@ -1061,7 +1062,7 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onNavigate }) => {
               </div>
               <h2 className="text-xl font-extrabold text-white mb-2">Rezervasyonu İptal Et</h2>
               <p className="text-sm text-gray-400 leading-relaxed mb-1">
-                {cancelTarget.pitches?.name} — {cancelTarget.booking_date} {shortTime(cancelTarget.start_time)}
+                {cancelTarget.pitches?.name} — {tarihKisaTR(cancelTarget.booking_date)} {shortTime(cancelTarget.start_time)}
               </p>
               <p className="text-xs text-ink-4 mb-6">
                 {previewLoading ? (

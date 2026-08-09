@@ -7,7 +7,7 @@ import {
   isDemoLoginEnabled, isDemoLoginInput, isDemoAccountPickerEnabled, loginDemoAccount,
   signInWithEmailPassword, signUpWithPassword, requestPasswordReset, confirmPasswordReset,
 } from '../supabaseAuth';
-import { DEMO_ACCOUNT_GROUPS } from '../data/demoAccounts';
+import { loadDemoAccountGroups, type DemoRoleGroup } from '../data/demoAccounts';
 import { getHasAccount } from '../supabaseClient';
 import { useAppStore } from '../store';
 import { validateFullName, normalizeNameInput } from '../shared/personName';
@@ -185,7 +185,13 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
 
   // Dev/demo modunda "mirackerem" gibi @ içermeyen kısayollar da geçerli sayılır
   const demoMode = isDemoLoginEnabled();
-  const showDemoPicker = isDemoAccountPickerEnabled() && DEMO_ACCOUNT_GROUPS.length > 0;
+  const [demoGroups, setDemoGroups] = useState<DemoRoleGroup[]>([]);
+  useEffect(() => {
+    if (isDemoAccountPickerEnabled()) {
+      loadDemoAccountGroups().then(setDemoGroups).catch(() => setDemoGroups([]));
+    }
+  }, []);
+  const showDemoPicker = isDemoAccountPickerEnabled() && demoGroups.length > 0;
   const contactValid = isValidEmail(email) || isDemoLoginInput(email);
   const contactLabel = email.trim() || 'E-posta';
   // S8: kayıtta ad soyad zorunlu — kural shared/personName'de (sunucu ikiziyle aynı).
@@ -906,7 +912,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
                             Giriş için yukarıdaki KVKK ve Kullanım Şartları kutusunu onayla.
                           </p>
                         )}
-                        {DEMO_ACCOUNT_GROUPS.map((group) => (
+                        {demoGroups.map((group) => (
                           <div key={group.role}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0 2px', marginBottom: 8 }}>
                               <span style={{ width: 6, height: 6, borderRadius: '50%', background: group.color }} />

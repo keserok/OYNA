@@ -1099,7 +1099,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
       // İptal/iade kademesi bu tesisten okunur (BULGU-088).
       pitchId: selectedPitch.id,
       title: selectedPitch.name,
-      subtitle: `${selectedCourt.name} · ${selectedDateISO} · ${selectedSlot}`,
+      subtitle: `${selectedCourt.name} · ${prettyDate} · ${selectedSlot}`,
       details: [
         // Kort adı + format aralığı rozeti ("6v6–8v8"); rozet null ise yalın ad.
         { icon: 'court', text: [selectedCourt.name, formatCapacityRange(selectedCourt.minCapacity, selectedCourt.maxCapacity, selectedCourt.capacity)].filter(Boolean).join(' · ') },

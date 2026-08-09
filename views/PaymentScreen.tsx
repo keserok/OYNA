@@ -1,3 +1,4 @@
+import { tarihKisaTR } from '../utils/tarih';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertTriangle, ArrowLeft, Calendar, Check, CheckCircle2, Clock, Info,
@@ -100,7 +101,7 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
         // gizli bağımlılıkla değil, bağlamdan okunur (BULGU-088).
         pitchId: bookingPitch.id,
         title: bookingPitch.name,
-        subtitle: `${bookingCourt.name} · ${bookingDate} · ${bookingSlot}`,
+        subtitle: `${bookingCourt.name} · ${tarihKisaTR(bookingDate)} · ${bookingSlot}`,
         amount: deposit,
         amountLabel: 'Ödenecek Kapora',
         amountHint: bookingPrice ? `Saha ücreti ${money(bookingPrice)} · kalan tesiste ödenir` : undefined,

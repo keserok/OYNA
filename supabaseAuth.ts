@@ -331,10 +331,12 @@ export const demoLogin = async (raw: string) => {
 // `demoLogin`'in aksine bu, standart e-posta+şifre girişini kullanır; demo
 // hesapları üretim Supabase'inde gerçek hesap olarak var olduğundan `main`
 // domain'inde de çalışır. Yalnız @oyna.app demo hesaplarını kabul eder.
-// KILL-SWITCH: build ortamında `VITE_DEMO_ACCOUNTS='false'` → seçici tümüyle
-// kapanır (kod değişikliği gerekmeden lansman öncesi kapatma).
+// Denetim bulgusu 1 (kurucu onayı, 9 Ağu 2026): seçici artık VARSAYILAN KAPALI —
+// yalnız build ortamında `VITE_DEMO_ACCOUNTS='true'` iken açılır. Eski hali
+// tam tersiydi ve üretim girişinde demo hesap listesi + ortak şifre pakete
+// giriyordu. Demo çalışmak isteyen, .env.local dosyasına bayrağı yazar.
 export const isDemoAccountPickerEnabled = (): boolean => {
-  return import.meta.env.VITE_DEMO_ACCOUNTS !== 'false';
+  return import.meta.env.VITE_DEMO_ACCOUNTS === 'true';
 };
 
 export const loginDemoAccount = async (email: string, password: string = DEMO_PASSWORD) => {

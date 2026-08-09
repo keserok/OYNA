@@ -5,7 +5,9 @@
 // ekranındaki demo seçici otomatik güncellenir (aynı e-posta Supabase Auth'ta da
 // mevcut olmak kaydıyla). Ayrıştırıcı sözleşmesi md dosyasında belgelidir:
 //   | Rol | E-posta | İsim | Açıklama |
-import rosterMd from '../docs/OYNA_DEMO_HESAPLARI.md?raw';
+// Denetim bulgusu 1: md dosyası (adlar + ortak şifre) SABİT import edilmez —
+// yalnız VITE_DEMO_ACCOUNTS='true' iken aşağıdaki dinamik import ile yüklenir;
+// bayrak kapalı build'de bu dal derlemede ölü koda dönüşüp paketten düşer.
 
 export type DemoRole = 'PLAYER' | 'OWNER' | 'GOALKEEPER' | 'REFEREE';
 
@@ -75,8 +77,7 @@ function parseAccounts(md: string): DemoAccount[] {
   return out;
 }
 
-/** md dosyasından ayrıştırılan tüm demo hesapları (giriş ekranı seçicisinin kaynağı). */
-export const DEMO_ACCOUNTS: DemoAccount[] = parseAccounts(rosterMd);
+
 
 /** UI gruplaması: rol → başlık/renk/aksan. Sıra listede görüneceği sıradır. */
 export interface DemoRoleGroup {
@@ -93,12 +94,17 @@ const ROLE_META: Record<DemoRole, { label: string; color: string }> = {
   REFEREE: { label: 'Hakemler', color: '#FF3333' },
 };
 
-/** Rol bazında gruplanmış demo hesaplar (boş gruplar atlanır). */
-export const DEMO_ACCOUNT_GROUPS: DemoRoleGroup[] = VALID_ROLES
-  .map((role) => ({
-    role,
-    label: ROLE_META[role].label,
-    color: ROLE_META[role].color,
-    accounts: DEMO_ACCOUNTS.filter((a) => a.role === role),
-  }))
-  .filter((g) => g.accounts.length > 0);
+/** Rol bazında gruplanmış demo hesaplar — YALNIZ bayrak açıkken yüklenir. */
+export async function loadDemoAccountGroups(): Promise<DemoRoleGroup[]> {
+  if (import.meta.env.VITE_DEMO_ACCOUNTS !== 'true') return [];
+  const { default: rosterMd } = await import('../docs/OYNA_DEMO_HESAPLARI.md?raw');
+  const accounts = parseAccounts(rosterMd);
+  return VALID_ROLES
+    .map((role) => ({
+      role,
+      label: ROLE_META[role].label,
+      color: ROLE_META[role].color,
+      accounts: accounts.filter((a) => a.role === role),
+    }))
+    .filter((g) => g.accounts.length > 0);
+}

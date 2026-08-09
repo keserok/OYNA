@@ -43,15 +43,8 @@ interface PostMatchEvalProps {
 
 interface EvalPlayer { id: string; name: string; pos: string; initials: string }
 
-const MOCK_PLAYERS: EvalPlayer[] = [
-  { id: 'p1', name: 'Burak Şen', pos: 'KL', initials: 'BŞ' },
-  { id: 'p2', name: 'Emre Duran', pos: 'SAV', initials: 'ED' },
-  { id: 'p3', name: 'Serkan Taş', pos: 'SAV', initials: 'ST' },
-  { id: 'p4', name: 'Caner Kılıç', pos: 'ORT', initials: 'CK' },
-  { id: 'p5', name: 'Mert Aksu', pos: 'ORT', initials: 'MA' },
-  { id: 'p6', name: 'Onur Bulut', pos: 'ORT', initials: 'OB' },
-  { id: 'p7', name: 'Ahmet Yıldız', pos: 'HÜC', initials: 'AY' },
-];
+// Denetim bulgusu 7: sahte oyuncu listesi kaldırıldı — maç/kadro yoksa
+// değerlendirme listesi BOŞ kalır, uydurma kişi puanlanamaz.
 
 // IP-13: baş harf üretimi tek kaynaktan — düz toUpperCase 'İ'yi 'I' yapardı.
 const initialsOf = (name: string) => trInitials(name, 2);
@@ -225,7 +218,7 @@ const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => 
   }, [selectedMatch]);
 
   const PLAYERS = useMemo<EvalPlayer[]>(() => {
-    if (!selectedMatch) return MOCK_PLAYERS;
+    if (!selectedMatch) return [];
     const uid = auth.currentUser?.uid;
     const source: PositionSlot[] =
       mySide === 'home' ? (selectedMatch.slots ?? [])
@@ -240,8 +233,7 @@ const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => 
         pos: s.player!.position || s.role || '—',
         initials: initialsOf(s.player!.name),
       }));
-    if (real.length > 0) return real;
-    return isRealMatch ? [] : MOCK_PLAYERS;
+    return real;
   }, [selectedMatch, isRealMatch, mySide]);
 
   const [step, setStep] = useState<1 | 2>(1);
