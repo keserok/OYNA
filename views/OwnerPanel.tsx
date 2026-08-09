@@ -140,7 +140,10 @@ const tariffRowToPolicy = (t: PitchTariff) => ({
   const isManagerLevel = accessLevel === 'OWNER' || accessLevel === 'MANAGER';
   const isOwnerLevel = accessLevel === 'OWNER';
   const canSwitchRole = hasMultipleSwitchableRoles(myRoles);
-  const [activeTab, setActiveTab] = useState<OwnerTab>('HOME'); 
+  const [activeTab, setActiveTab] = useState<OwnerTab>('HOME');
+  // Finans → takvim köprüsü (kurucu isteği, 9 Ağu 2026): tahsilat/ödeme
+  // satırından ilgili güne atlanır; rezervasyon kimliği varsa detayı da açılır.
+  const [calendarFocus, setCalendarFocus] = useState<{ dateISO: string; bookingId?: string; courtName?: string | null } | null>(null);
   const [courts, setCourts] = useState<PitchCourt[]>([]);
   const [dailySummary, setDailySummary] = useState<OwnerDailySummary | null>(null);
   const [todayBookings, setTodayBookings] = useState<PitchBookingFull[]>([]);
@@ -851,6 +854,8 @@ const tariffRowToPolicy = (t: PitchTariff) => ({
           canFlashDeals={can.flashDeals}
           workingHours={facilityData?.workingHours}
           facilityName={facilityData?.name}
+          focus={calendarFocus}
+          onFocusConsumed={() => setCalendarFocus(null)}
           onNavigate={onNavigate}
           onPricingUpdated={async () => {
             if (!realPitchId || !facilityData?.ownerId) return;
@@ -884,6 +889,7 @@ const tariffRowToPolicy = (t: PitchTariff) => ({
           isDemoMode={isDemoMode}
           readOnly={effReadOnly}
           onOpenCalendar={() => setActiveTab('CALENDAR')}
+          onOpenCalendarAt={(t) => { setCalendarFocus(t); setActiveTab('CALENDAR'); }}
         />
       )}
       {activeTab === 'TEAM' && (

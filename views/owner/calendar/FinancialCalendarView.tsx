@@ -15,7 +15,7 @@ import { OwnerFlashDealModal } from '../OwnerFlashDealModal';
 import { OwnerCloseSlotModal } from '../OwnerCloseSlotModal';
 import { OwnerBookingDetailModal } from '../OwnerBookingDetailModal';
 import { OwnerSpecialPriceModal } from '../OwnerSpecialPriceModal';
-import { findFlashDealForSlot, isSlotClosed, localDateISO, resolveHourlyPrice, resolveHourlyDeposit } from '../ownerCalendarHelpers';
+import { buildDayStrip, findFlashDealForSlot, isSlotClosed, localDateISO, resolveHourlyPrice, resolveHourlyDeposit } from '../ownerCalendarHelpers';
 import { parseTRYAmount } from '../../../shared/financeModel';
 import { resolveWorkingHoursForDate, isHourWithinWorkingHours, openHourCount } from '../../../shared/workingHours';
 import { buildSlotGrid, sellableMinutesForDate, type SlotTariffInput } from '../../../shared/slotGrid';
@@ -51,18 +51,8 @@ function formatDateISO(d: Date): string {
   return localDateISO(d);
 }
 
-/** Üst gün şeridi: bugünden itibaren 30 gün (kaydırılabilir). */
-const DAY_STRIP_LENGTH = 30;
-
-function buildDayStrip(base = new Date()): Date[] {
-  const start = new Date(base);
-  start.setHours(0, 0, 0, 0);
-  return Array.from({ length: DAY_STRIP_LENGTH }, (_, i) => {
-    const d = new Date(start);
-    d.setDate(start.getDate() + i);
-    return d;
-  });
-}
+// Gün şeridi ownerCalendarHelpers.buildDayStrip'ten gelir: 30 gün geçmiş +
+// bugün + 30 gün gelecek. Geçmiş günlerin kayıtları da veritabanından yüklenir.
 
 /** Aylık grid: Pazartesi başlangıçlı hafta dizileri (ay dışı hücreler null). */
 function buildMonthWeeks(year: number, month: number): (Date | null)[][] {
@@ -117,9 +107,14 @@ export const FinancialCalendarView: React.FC<{
   workingHours?: unknown;
   /** C2 — rezervasyon detayındaki WhatsApp hatırlatma mesajında geçen tesis adı. */
   facilityName?: string;
+  /** Finans → takvim köprüsü: hedef gün seçilir; bookingId verilmişse o günün
+   *  verisi yüklendikten sonra rezervasyon detayı kendiliğinden açılır. */
+  focus?: { dateISO: string; bookingId?: string; courtName?: string | null } | null;
+  /** Köprü hedefi işlendikten sonra çağrılır — üst bileşen state'i temizler. */
+  onFocusConsumed?: () => void;
   onNavigate?: (view: string) => void;
   onPricingUpdated?: () => void;
-}> = ({ pitchId, pricingPolicy, courts = [], readOnly = false, canFlashDeals = true, workingHours, facilityName, onNavigate, onPricingUpdated }) => {
+}> = ({ pitchId, pricingPolicy, courts = [], readOnly = false, canFlashDeals = true, workingHours, facilityName, focus, onFocusConsumed, onNavigate, onPricingUpdated }) => {
     const notify = useOwnerToast();
     const { confirm, confirmElement } = useConfirmSheet();
     const dayStrip = useMemo(() => buildDayStrip(), []);
@@ -166,11 +161,40 @@ export const FinancialCalendarView: React.FC<{
         setIsMonthlyView(false);
     };
 
-    // Seçili gün şeridin içindeyse görünür konuma kaydır.
+    // Seçili gün şeridin içindeyse görünür konuma kaydır. Şerit artık 30 gün
+    // geçmişle başladığı için İLK konumlama animasyonsuz yapılır — açılışta
+    // "bugün" anında ortada durur, sonraki seçimler yumuşak kayar.
+    const stripFirstScrollRef = useRef(true);
     useEffect(() => {
         const el = dayStripRef.current?.querySelector<HTMLButtonElement>(`[data-date="${selectedDateISO}"]`);
-        el?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+        el?.scrollIntoView({ behavior: stripFirstScrollRef.current ? 'auto' : 'smooth', inline: 'center', block: 'nearest' });
+        stripFirstScrollRef.current = false;
     }, [selectedDateISO]);
+
+    // Finans → takvim köprüsü: hedef günü (ve gerekiyorsa kortu) seç; açılacak
+    // rezervasyonu TARİHİYLE birlikte beklet — eski günün listesi yüklenmişken
+    // yanlış listede arama yapılmasın.
+    const pendingOpenRef = useRef<{ bookingId: string; dateISO: string } | null>(null);
+    useEffect(() => {
+        if (!focus) return;
+        if (focus.courtName) {
+            const c = courts.find((x) => x.name === focus.courtName && x.is_active !== false);
+            if (c) setSelectedCourtId(c.id);
+        }
+        setSelectedDateISO(focus.dateISO);
+        setIsMonthlyView(false);
+        pendingOpenRef.current = focus.bookingId ? { bookingId: focus.bookingId, dateISO: focus.dateISO } : null;
+        onFocusConsumed?.();
+    }, [focus]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    useEffect(() => {
+        const pending = pendingOpenRef.current;
+        if (!pending || isLoadingBookings || selectedDateISO !== pending.dateISO) return;
+        pendingOpenRef.current = null;
+        const b = bookings.find((x) => x.id === pending.bookingId);
+        if (b) setSelectedBooking(b);
+        else notify('Rezervasyon bu günün takviminde bulunamadı — iptal edilmiş olabilir.', 'warning');
+    }, [bookings, isLoadingBookings, selectedDateISO]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // UX (Faz 5): bugün seçiliyken gün ekranı açılınca ŞU ANKİ saate kaydır —
     // owner geçmiş saatleri geçip doğrudan güncel/yaklaşan slotları görsün.
@@ -512,13 +536,14 @@ export const FinancialCalendarView: React.FC<{
                                 const iso = formatDateISO(d);
                                 const isSel = iso === selectedDateISO;
                                 const isToday = iso === todayISO();
+                                const isPast = iso < todayISO();
                                 const showMonth = i === 0 || d.getDate() === 1;
                                 return (
                                     <button
                                         key={iso}
                                         data-date={iso}
                                         onClick={() => selectDay(iso)}
-                                        className={`flex-shrink-0 w-[52px] py-2 rounded-xl flex flex-col items-center gap-0.5 transition-all border snap-start ${isSel ? 'bg-white/10 text-white border-white/25 shadow-lg' : 'bg-[#161B22] border-transparent text-gray-500 hover:bg-white/5'}`}
+                                        className={`flex-shrink-0 w-[52px] py-2 rounded-xl flex flex-col items-center gap-0.5 transition-all border snap-start ${isSel ? 'bg-white/10 text-white border-white/25 shadow-lg' : 'bg-[#161B22] border-transparent text-gray-500 hover:bg-white/5'} ${isPast && !isSel ? 'opacity-60' : ''}`}
                                     >
                                         <span className={`text-[9px] font-extrabold uppercase ${isToday && !isSel ? 'text-[#FACC15]' : ''}`}>
                                             {isToday ? 'Bugün' : d.toLocaleDateString('tr-TR', { weekday: 'short' })}

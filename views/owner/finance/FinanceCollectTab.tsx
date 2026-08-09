@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Clock, Banknote, HandCoins, ChevronRight } from 'lucide-react';
+import { Plus, Clock, Banknote, CalendarDays, HandCoins, ChevronRight } from 'lucide-react';
 import type { FinanceSummary, PendingBooking } from '../../../services/financeService';
 import type { PitchDebtor } from '../../../types';
 import { methodLabel, parseTRYAmount } from '../../../shared/financeModel';
@@ -19,9 +19,11 @@ interface Props {
   onAddDebtor: (d: { name: string; phone?: string; amount_owed: number }) => Promise<void>;
   onChanged: () => void;
   notify: (msg: string, type?: 'success' | 'error' | 'warning') => void;
+  /** Finans → takvim köprüsü: satırın gününü (varsa rezervasyonunu) takvimde aç. */
+  onOpenCalendarAt?: (t: { dateISO: string; bookingId?: string; courtName?: string | null }) => void;
 }
 
-export const FinanceCollectTab: React.FC<Props> = ({ summary, debtors, readOnly, onAddDebtor, onChanged, notify }) => {
+export const FinanceCollectTab: React.FC<Props> = ({ summary, debtors, readOnly, onAddDebtor, onChanged, notify, onOpenCalendarAt }) => {
   const { income } = summary;
   const [addOpen, setAddOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -54,21 +56,37 @@ export const FinanceCollectTab: React.FC<Props> = ({ summary, debtors, readOnly,
         {income.pending_bookings.length === 0 ? (
           <p className="text-sm text-gray-500 px-2">Bu ay bekleyen tahsilat yok — her rezervasyon tam ödendi. 👏</p>
         ) : income.pending_bookings.map((b) => (
-          <button
+          // Satırın gövdesi tahsilat açar; sağdaki takvim düğmesi köprüdür —
+          // rezervasyonu kendi gününün takviminde (detayı açık) gösterir.
+          <div
             key={b.id}
-            type="button"
-            onClick={() => { if (readOnly) { notify('Salt okunur mod.', 'warning'); return; } setCollectBooking(b); }}
-            className="w-full bg-[#161B22] p-4 rounded-2xl border border-amber-500/15 flex justify-between items-center gap-3 text-left hover:border-amber-500/40 transition-colors"
+            className="w-full bg-[#161B22] p-4 rounded-2xl border border-amber-500/15 flex items-center gap-3 hover:border-amber-500/40 transition-colors"
           >
-            <div className="min-w-0">
-              <p className="text-sm font-bold text-white truncate">{b.customer_name ?? 'Müşteri'}</p>
-              <p className="text-[10px] text-gray-500">{b.date} · {b.time} · {b.court ?? 'Saha'} · {money(b.paid)} / {money(b.price)}</p>
-            </div>
-            <div className="flex items-center gap-2 shrink-0">
-              <span className="text-amber-400 font-extrabold tabular-nums">{money(b.balance)}</span>
-              {!readOnly && <ChevronRight size={16} className="text-gray-600" />}
-            </div>
-          </button>
+            <button
+              type="button"
+              onClick={() => { if (readOnly) { notify('Salt okunur mod.', 'warning'); return; } setCollectBooking(b); }}
+              className="flex-1 min-w-0 flex justify-between items-center gap-3 text-left"
+            >
+              <div className="min-w-0">
+                <p className="text-sm font-bold text-white truncate">{b.customer_name ?? 'Müşteri'}</p>
+                <p className="text-[10px] text-gray-500">{b.date} · {b.time} · {b.court ?? 'Saha'} · {money(b.paid)} / {money(b.price)}</p>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="text-amber-400 font-extrabold tabular-nums">{money(b.balance)}</span>
+                {!readOnly && <ChevronRight size={16} className="text-gray-600" />}
+              </div>
+            </button>
+            {onOpenCalendarAt && (
+              <button
+                type="button"
+                aria-label="Takvimde aç"
+                onClick={() => onOpenCalendarAt({ dateISO: b.date, bookingId: b.id, courtName: b.court })}
+                className="w-11 h-11 shrink-0 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-gray-400 hover:text-white transition-colors active:scale-95"
+              >
+                <CalendarDays size={16} />
+              </button>
+            )}
+          </div>
         ))}
       </div>
 
@@ -118,13 +136,25 @@ export const FinanceCollectTab: React.FC<Props> = ({ summary, debtors, readOnly,
         {income.recent_payments.length === 0 ? (
           <p className="text-sm text-gray-500 px-2">Bu ay ödeme kaydı yok.</p>
         ) : income.recent_payments.map((p) => (
-          <div key={p.id} className="bg-[#161B22] p-4 rounded-2xl border border-white/5 flex justify-between items-center">
+          // Köprü: ödemenin gününü takvimde açar (özet RPC'si ödeme→rezervasyon
+          // kimliği taşımadığı için satır gün seviyesinde atlar; geçmiş günler
+          // artık takvimden okunabildiğinden kayıt orada görünür).
+          <button
+            key={p.id}
+            type="button"
+            disabled={!onOpenCalendarAt}
+            onClick={() => onOpenCalendarAt?.({ dateISO: p.booking_date })}
+            className="w-full bg-[#161B22] p-4 rounded-2xl border border-white/5 flex justify-between items-center gap-2 text-left enabled:hover:border-white/20 transition-colors"
+          >
             <div className="min-w-0">
               <p className="text-sm font-bold text-white truncate">{p.customer_name ?? 'Müşteri'}</p>
               <p className="text-[10px] text-gray-500">{p.booking_date} · {methodLabel(p.method)}</p>
             </div>
-            <span className="text-emerald-400 font-extrabold shrink-0 tabular-nums">+{money(p.amount)}</span>
-          </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="text-emerald-400 font-extrabold tabular-nums">+{money(p.amount)}</span>
+              {onOpenCalendarAt && <CalendarDays size={14} className="text-gray-600" />}
+            </div>
+          </button>
         ))}
       </div>
 

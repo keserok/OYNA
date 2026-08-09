@@ -30,9 +30,11 @@ interface OwnerFinanceViewProps {
   readOnly?: boolean;
   /** Takvim (Hafta) görünümüne geçiş — doluluk için (heatmap buradan kaldırıldı). */
   onOpenCalendar?: () => void;
+  /** Finans → takvim köprüsü: satırdan ilgili güne (ve rezervasyona) atla. */
+  onOpenCalendarAt?: (t: { dateISO: string; bookingId?: string; courtName?: string | null }) => void;
 }
 
-export const OwnerFinanceView: React.FC<OwnerFinanceViewProps> = ({ pitchId, isDemoMode, readOnly = false, onOpenCalendar }) => {
+export const OwnerFinanceView: React.FC<OwnerFinanceViewProps> = ({ pitchId, isDemoMode, readOnly = false, onOpenCalendar, onOpenCalendarAt }) => {
   const notify = useOwnerToast();
   // P-CILA: "içinde bulunduğumuz ay" bir kez hesaplanıyordu; panel gece yarısını
   // açık geçirirse ertesi sabah eski ayda uyanıyordu. Uygulama öne gelince
@@ -331,6 +333,7 @@ export const OwnerFinanceView: React.FC<OwnerFinanceViewProps> = ({ pitchId, isD
             onAddDebtor={onAddDebtor}
             onChanged={load}
             notify={notify}
+            onOpenCalendarAt={onOpenCalendarAt}
           />
         )}
         {tab === 'EXPENSE' && (

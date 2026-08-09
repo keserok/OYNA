@@ -171,6 +171,21 @@ export function addMonthsISO(isoDate: string, months: number): string {
  * `toISOString()` UTC'ye çevirdiği için TR'de (UTC+3) gece yarısı–03:00 arası
  * bir önceki günü döndürüyordu; bu helper yerel bileşenleri kullanarak o kaymayı önler.
  */
+/** Gün şeridi: geçmiş `pastDays` gün + bugün + gelecek `futureDays` gün.
+ *  Kurucu isteği (9 Ağu 2026): geçmiş rezervasyonlar da takvimden okunabilsin —
+ *  geçmiş günler şeritte durur, kayıtları seçilince veritabanından yüklenir.
+ *  Şerit açılışta "bugün"e kaydırılır (görünüm tarafı halleder). */
+export function buildDayStrip(base: Date = new Date(), pastDays = 30, futureDays = 30): Date[] {
+  const start = new Date(base);
+  start.setHours(0, 0, 0, 0);
+  start.setDate(start.getDate() - pastDays);
+  return Array.from({ length: pastDays + futureDays + 1 }, (_, i) => {
+    const d = new Date(start);
+    d.setDate(start.getDate() + i);
+    return d;
+  });
+}
+
 export function localDateISO(d: Date = new Date()): string {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, '0');
