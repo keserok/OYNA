@@ -177,6 +177,7 @@ const FriendAddView: React.FC<FriendAddViewProps> = ({ onBack, onNavigate }) => 
         })));
       } catch (e) {
         console.error('[FriendAdd] kanallar yüklenemedi', e);
+        if (alive) showToast(parseSocialError(e));
       } finally {
         if (alive) setLoadingChannels(false);
       }
@@ -199,6 +200,7 @@ const FriendAddView: React.FC<FriendAddViewProps> = ({ onBack, onNavigate }) => 
         })));
       } catch (e) {
         console.error('[FriendAdd] arama hatası', e);
+        showToast(parseSocialError(e));
       } finally {
         setSearching(false);
       }

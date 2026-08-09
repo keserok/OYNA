@@ -161,7 +161,7 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect, onCre
 
     const {
         adminGoalkeepers, adminReferees, adminMatches, myMatches: benimMaclarim,
-        activeRegion, selectedRegions, userLocation, initialLoadComplete,
+        activeRegion, selectedRegions, userLocation, initialLoadComplete, loadDegraded,
     } = useAppStore();
     const profiles: (Goalkeeper | Referee)[] = type === 'GK' ? adminGoalkeepers : adminReferees;
 
@@ -543,7 +543,9 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect, onCre
                             <EmptyState
                                 icon={<RoleIcon size={44} strokeWidth={1.2} />}
                                 title={`${roleLabel} Bulunamadı`}
-                                message={activeFilterCount > 0 || search
+                                message={loadDegraded
+                                    ? 'Veriler yüklenemedi — internetini kontrol edip aşağı çekerek yenile.'
+                                    : activeFilterCount > 0 || search
                                     ? 'Bu kriterlere uyan profil yok. Filtreleri gevşetmeyi dene.'
                                     : `Bölgende henüz onaylı ${roleLabel.toLocaleLowerCase('tr-TR')} yok. Yakında burada olacaklar.`}
                             />

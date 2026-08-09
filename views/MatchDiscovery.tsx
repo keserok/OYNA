@@ -103,6 +103,7 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onSelect }) => {
   const [dna, setDna] = useState<DiscoveryFilters>(EMPTY_FILTERS);
 
   const [nearbyMatches, setNearbyMatches] = useState<any[]>([]);
+  const [nearbyLoading, setNearbyLoading] = useState(false);
   // AŞAĞI ÇEKİP YENİLE: yakındaki maç sorgusu bir efektle çalışıyor; jest bu
   // sayacı artırarak onu yeniden koşturur (ayrı bir kopya sorgu yazmak, iki
   // farklı "maç çekme" yolu demek olurdu — biri er geç geride kalırdı).
@@ -146,6 +147,7 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onSelect }) => {
     // [P-7 / M-20] Yarıçap kaydırıcısı her oynatıldığında bu efekt tetikleniyor
     // ve bölge başına 1 RPC atıyordu (3 bölge = 3 sorgu, her piksel hareketinde).
     // 300 ms gecikme ile kullanıcı kaydırmayı bitirene kadar bekleniyor.
+    setNearbyLoading(true);
     const timer = setTimeout(() => {
     Promise.all(centers.map((c) => fetchNearbyMatches(c.lat, c.lng, searchRadius))).then((perCenter) => {
       if (cancelled) return;
@@ -160,6 +162,11 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onSelect }) => {
         }
       });
       setNearbyMatches(Array.from(byId.values()));
+      setNearbyLoading(false);
+    }).catch(() => {
+      // Denetim bulgusu 8: RPC düşerse yakalanmamış hata + yanlış "maç yok" boş
+      // durumu kalıyordu — artık yükleme biter, liste mevcut haliyle kalır.
+      if (!cancelled) setNearbyLoading(false);
     });
     }, 300);
     return () => { cancelled = true; clearTimeout(timer); };
@@ -664,8 +671,10 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onSelect }) => {
                       />
                     ) : otherMatches.length === 0 ? (
                       <EmptyState
-                        title={dayLabel ? `${dayLabel} İçin Maç Yok` : 'Aktif Maç Bulunamadı'}
-                        message={dayLabel
+                        title={nearbyLoading ? 'Maçlar Yükleniyor' : dayLabel ? `${dayLabel} İçin Maç Yok` : 'Aktif Maç Bulunamadı'}
+                        message={nearbyLoading
+                          ? 'Bölgendeki açık maçlar getiriliyor…'
+                          : dayLabel
                           ? 'Bu güne açık maç yok. Şeritten başka bir gün seçebilir ya da kendi maçını kurabilirsin.'
                           : 'Bu bölgede şu an açık bir maç yok. Sen kurabilirsin.'}
                         actions={selectedDay !== null

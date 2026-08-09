@@ -336,7 +336,9 @@ export const demoLogin = async (raw: string) => {
 // tam tersiydi ve üretim girişinde demo hesap listesi + ortak şifre pakete
 // giriyordu. Demo çalışmak isteyen, .env.local dosyasına bayrağı yazar.
 export const isDemoAccountPickerEnabled = (): boolean => {
-  return import.meta.env.VITE_DEMO_ACCOUNTS === 'true';
+  // Kurucu isteği (9 Ağu 2026): geliştirme ortamında (npm run dev) seçici
+  // OTOMATİK açık — üretim build'inde yalnız bayrak 'true' ise açılır.
+  return import.meta.env.VITE_DEMO_ACCOUNTS === 'true' || import.meta.env.DEV === true;
 };
 
 export const loginDemoAccount = async (email: string, password: string = DEMO_PASSWORD) => {

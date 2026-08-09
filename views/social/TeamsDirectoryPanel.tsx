@@ -40,6 +40,7 @@ const TeamsDirectoryPanel: React.FC<TeamsDirectoryPanelProps> = ({ onOpenTeam, o
   const [format, setFormat] = useState<TeamFormat | null>(null);
   const [recruitingOnly, setRecruitingOnly] = useState(false);
   const [rows, setRows] = useState<PublicTeamRow[]>([]);
+  const [loadError, setLoadError] = useState(false);
   const [loading, setLoading] = useState(true);
   const [moreLoading, setMoreLoading] = useState(false);
   const [hasMore, setHasMore] = useState(false);
@@ -60,10 +61,12 @@ const TeamsDirectoryPanel: React.FC<TeamsDirectoryPanelProps> = ({ onOpenTeam, o
         limit: 20,
         offset,
       });
+      setLoadError(false);
       setRows(prev => reset ? page : [...prev, ...page]);
       setHasMore(page.length === 20);
     } catch (e) {
       console.error('[Dizin] yüklenemedi', e);
+      setLoadError(true);
     } finally {
       setLoading(false); setMoreLoading(false);
     }
@@ -134,8 +137,10 @@ const TeamsDirectoryPanel: React.FC<TeamsDirectoryPanelProps> = ({ onOpenTeam, o
       ) : rows.length === 0 ? (
         <EmptyState
           icon={Swords}
-          title="Takım bulunamadı"
-          description="Filtreleri değiştir ya da kendi takımını kurup dizine ilk sen çık."
+          title={loadError ? 'Liste yüklenemedi' : 'Takım bulunamadı'}
+          description={loadError
+            ? 'İnternetini kontrol edip tekrar dene — takımlar kaybolmadı, yalnız yüklenemedi.'
+            : 'Filtreleri değiştir ya da kendi takımını kurup dizine ilk sen çık.'}
         />
       ) : (
         <div className="space-y-2.5">

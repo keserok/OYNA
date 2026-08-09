@@ -156,6 +156,8 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
   const [payoutIban, setPayoutIban] = useState('');
   const [payoutHolder, setPayoutHolder] = useState('');
   const [payoutBusy, setPayoutBusy] = useState(false);
+  // Denetim bulgusu 10: hızlı çift dokunuşta iki payout RPC'si gitmesin (topup deseni).
+  const payoutBusyRef = useRef(false);
   const [payoutError, setPayoutError] = useState('');
   const [payoutDone, setPayoutDone] = useState(false);
 
@@ -338,12 +340,14 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
   };
 
   const handleRequestPayout = async () => {
+    if (payoutBusyRef.current || payoutBusy) return;
     setPayoutError('');
     const amount = parseFloat(payoutAmount);
     if (!amount || amount <= 0) { setPayoutError('Geçerli bir tutar girin.'); return; }
     if (!validateIBAN(payoutIban)) { setPayoutError('Geçerli bir IBAN girin (TR + 24 hane).'); return; }
     if (!payoutHolder.trim()) { setPayoutError('IBAN sahibi adı zorunludur.'); return; }
     setPayoutBusy(true);
+    payoutBusyRef.current = true;
     const { error } = await supabase.rpc('request_payout', {
       p_amount: amount,
       p_iban: payoutIban.replace(/\s/g, ''),
@@ -351,6 +355,7 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
       p_payout_type: 'MANUAL',
     });
     setPayoutBusy(false);
+    payoutBusyRef.current = false;
     if (error) {
       setPayoutError(mapPayoutError(error));
     } else {
@@ -946,10 +951,20 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
                   {/* Bu ekran daha önce "Profil ayarlarından doğrulayabilirsin"
                       diyordu ama oyuncu için böyle bir ekran YOK — yanlış
                       yönlendirmektense dürüst ol. */}
-                  <p className="text-[0.75rem] text-gray-300 leading-relaxed">
-                    Güvenliğin için para çekmeden önce bir kez <span className="text-white font-semibold">TC kimlik doğrulaması</span> gerekiyor.
-                    Bu adım henüz açılmadı; destek ekibiyle iletişime geçebilirsin.
-                  </p>
+                  <div className="min-w-0">
+                    <p className="text-[0.75rem] text-gray-300 leading-relaxed">
+                      Güvenliğin için para çekmeden önce bir kez <span className="text-white font-semibold">TC kimlik doğrulaması</span> gerekiyor.
+                      Bu adım henüz açılmadı.
+                    </p>
+                    {/* Denetim bulgusu 15: çıkışsız uyarı — artık destek kanalına düğme var. */}
+                    <button
+                      type="button"
+                      onClick={() => { const st = useAppStore.getState(); st.setSettingsSubPage('support'); st.navigateTo('SETTINGS'); }}
+                      className="mt-2 min-h-[40px] px-3 rounded-xl bg-blue-500/10 border border-blue-500/30 text-blue-300 text-[0.75rem] font-bold"
+                    >
+                      Destek ekibine yaz →
+                    </button>
+                  </div>
                 </div>
               )}
 

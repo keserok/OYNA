@@ -96,7 +96,7 @@ const ROLE_META: Record<DemoRole, { label: string; color: string }> = {
 
 /** Rol bazında gruplanmış demo hesaplar — YALNIZ bayrak açıkken yüklenir. */
 export async function loadDemoAccountGroups(): Promise<DemoRoleGroup[]> {
-  if (import.meta.env.VITE_DEMO_ACCOUNTS !== 'true') return [];
+  if (import.meta.env.VITE_DEMO_ACCOUNTS !== 'true' && !import.meta.env.DEV) return [];
   const { default: rosterMd } = await import('../docs/OYNA_DEMO_HESAPLARI.md?raw');
   const accounts = parseAccounts(rosterMd);
   return VALID_ROLES

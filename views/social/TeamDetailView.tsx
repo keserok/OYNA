@@ -346,6 +346,7 @@ const TeamDetailView: React.FC<TeamDetailViewProps> = ({ onBack, onNavigate }) =
   const setTeamInitialTab = useAppStore(s => s.setTeamInitialTab);
 
   const [team, setTeam] = useState<MyTeamRow | null>(null);
+  const [loadError, setLoadError] = useState(false);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<DetailTab>('GENEL');
   const [squad, setSquad] = useState<TeamSquadRow[]>([]);
@@ -373,9 +374,11 @@ const TeamDetailView: React.FC<TeamDetailViewProps> = ({ onBack, onNavigate }) =
     if (!silent) setLoading(true);
     try {
       const teams = await getMyTeams();
+      setLoadError(false);
       setTeam(teams.find(t => t.team_id === teamId) ?? null);
     } catch (e) {
       console.error('[TeamDetail] takım yüklenemedi', e);
+      setLoadError(true);
     } finally { setLoading(false); }
   }, [teamId]);
 
@@ -519,8 +522,10 @@ const TeamDetailView: React.FC<TeamDetailViewProps> = ({ onBack, onNavigate }) =
         </div>
         <EmptyState
           icon={Shield}
-          title="Takım bulunamadı"
-          description="Bu takım arşivlenmiş ya da artık üyesi olmayabilirsin."
+          title={loadError ? 'Takım yüklenemedi' : 'Takım bulunamadı'}
+          description={loadError
+            ? 'İnternetini kontrol edip tekrar aç — takım kaybolmadı, yalnız yüklenemedi.'
+            : 'Bu takım arşivlenmiş ya da artık üyesi olmayabilirsin.'}
           actions={[{ label: 'Takımlarıma Dön', onClick: onBack, primary: true }]}
         />
       </div>
