@@ -12,6 +12,29 @@ Toplu da yazabilirsin: *"1-8 arası hepsi evet, 9 b, 10 sonra"*
 
 ---
 
+## ✅ 9 Ağustos 2026 — soru-cevap turu kararları
+
+Kurucu, uzaktan bir oturumda bekleyen kararların bir bölümünü cevapladı:
+
+| Konu | Karar | Durum |
+|---|---|---|
+| Çalışma biçimi | `CLAUDE.md` sıfırdan yazıldı: yalnız **iki onay kapısı** (canlıya yazmak + para kuralları); küçük sorunlar anında düzeltilir, büyükler sorulur; test+lint zorunlu kaldı; sade Türkçe, biçim serbest | ✅ uygulandı (`OYNA_PRENSIPLER` 9.2 · 10.5–10.7) |
+| **52** Sıradaki odak | **(c) Saha sahibi paneli** — danışmanın (a) lansman önerisi yerine | 📌 sıradaki iş |
+| Demo vitrini (S-2) | İlk gerçek kullanıcıdan hemen önce kapanacak (öneri teyit edildi) | bekliyor (lansman günü 1. maddesi) |
+| **B2** Davet kodu ekranı | Kayıt ekranı DEĞİL, **Ayarlar → Hesap → "Davet Kodu"** | ✅ uygulandı (9 Ağu 2026) |
+| **33** Ahmet Kuru 2. Saha 0 ₺ | **Bilerek 0 ₺** — tarife doğru, dokunulmayacak | ✅ kapandı |
+| **15** Gerçek ad görünürlüğü (SEC-3b) | **(c) Yalnız aynı maçtakiler** görecek | karar alındı · uygulama deneme ortamı (21) bekliyor |
+| **16** Sızmış parola koruması (SEC-6) | Lansmandan önce açılacak | bekliyor |
+| **18** Panel 2FA | Lansman öncesi kurulacak (önce kurtarma kodları) | bekliyor |
+| **20** iyzico güvenlik ayarları | Sonra — lansman gündeme gelince | bekliyor |
+
+Ayrıca bu oturumda iki tespit yapıldı: `CLAUDE.md` 4 Ağustos sonrasında
+yanlışlıkla boşalmıştı (yeniden yazıldı) ve `npm run etki` / `sistem:*`
+komutlarının script dosyaları (`scripts/sistem/`) depoya **hiç girmemiş** —
+komutlar çalışmıyor, yeniden yazılmaları bekleyen iş listesinde.
+
+---
+
 ## A · RAFA KALDIRMA (bunlar şimdi karar ister)
 
 **1. 🟡 Yedek dosyasını indirecek misin?**

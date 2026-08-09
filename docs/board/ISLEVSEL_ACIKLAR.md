@@ -21,7 +21,7 @@
 | A6 | Panelde kullanılmayan şablonlar | ✅ "Kullanılmıyor" rozeti eklendi |
 | A8 | Sessiz saatler | ℹ️ zarar yok — push açıldığında çalışıyor, aksiyon gerekmedi |
 | B1 | Sahte/sıfır puan görünümü | ✅ harita şeridindeki kart da "Yeni" gösteriyor |
-| **B2** | **Referans kodu girme ekranı yok** | ⛔ **YAPILMADI** — kayıt ekranı onayı verilmedi |
+| **B2** | **Referans kodu girme ekranı yok** | ✅ kapandı (9 Ağu 2026) — kurucu kararıyla **Ayarlar → Hesap → "Davet Kodu"** olarak eklendi; kayıt ekranı seçeneği bilinçli tercih edilmedi |
 | C1/C2 | 8 ölü ayar | ✅ silindi; çalışan `fairplay_late_cancel_penalty` korundu |
 | C3 | Kaleci sözleşmesi iki yerde | ✅ tek kaynağa indirildi (veritabanı), metin sadeleştirildi |
 | D1 | Bozuk maç sonsuz tekrar | ✅ 3 denemeden sonra raf + panelde liste |

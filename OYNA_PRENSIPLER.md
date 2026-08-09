@@ -196,13 +196,15 @@ Bunlar eksik değil, **karar**dır. Açılma zamanı geldiğinde bilinçli açı
 Tam liste ve gerekçeler: **`docs/board/SON_KARARLAR.md`** · Raf durumu: **`RAF.md`**
 
 **Kurucunun elinde:** deneme ortamı kurulumu · alarm e-postası · gerçek kart işlemi ·
-yasal metinler (KVKK/sözleşme) · mağaza hesapları · alan adı · sızmış parola koruması ·
-gerçek ad görünürlüğü kararı (KVKK)
+yasal metinler (KVKK/sözleşme) · mağaza hesapları · alan adı · sızmış parola koruması
+*(karar 9 Ağu 2026: lansmandan önce açılacak)*
 
-**Sırada bekleyen teknik işler:** `public_profiles` sıkılaştırması · uzantıların
-`public` şemasından taşınması · geri alma provası · bölge göçü · testlerin tip kontrolü ·
-harita parçasının bölünmesi · mekanizma scriptlerinin yeniden yazılması
-(`scripts/sistem/` depoya hiç girmemiş, `npm run etki` vb. çalışmıyor)
+**Sırada bekleyen teknik işler:** `public_profiles` sıkılaştırması + gerçek ad
+görünürlüğü uygulaması *(karar 9 Ağu 2026: yalnız aynı maçtakiler görecek; deneme
+ortamı ister)* · uzantıların `public` şemasından taşınması · geri alma provası ·
+bölge göçü · testlerin tip kontrolü · harita parçasının bölünmesi · mekanizma
+scriptlerinin yeniden yazılması (`scripts/sistem/` depoya hiç girmemiş,
+`npm run etki` vb. çalışmıyor)
 
 ---
 

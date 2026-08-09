@@ -172,15 +172,15 @@ Bunlar bilinçli olarak ertelendi; acil değiller.
 | # | İş | Kimde | Not |
 |---|---|---|---|
 | — | **Yedek dosyasını indir** | 🟡 sen | Bölüm 4 · rafa kaldırmadan önceki TEK zorunlu iş |
-| SEC-3 | `public_profiles` sıkılaştırma + gerçek ad kararı | 🟡 sen | KVKK kararın · ekran boşaltabilir, deneme ortamı ister |
-| SEC-6 | Sızmış parola koruması | 🟡 sen | Supabase panelinde 5 dakika |
+| SEC-3 | `public_profiles` sıkılaştırma | ⏸️ | Gerçek ad kararı ALINDI (9 Ağu 2026): **yalnız aynı maçtakiler** görecek · uygulama deneme ortamı (SRE-4) bekliyor |
+| SEC-6 | Sızmış parola koruması | 🟡 sen | Supabase panelinde 5 dakika · kurucu kararı (9 Ağu 2026): lansmandan önce |
 | SEC-8 | Uzantıların `public`ten taşınması | ⏸️ | Coğrafi indeksi bozabilir |
 | SRE-2 | Alarmın sana ulaşması (e-posta) | 🟡 sen | Lansmandan önce |
 | SRE-4 | Deneme ortamı (`oyna-staging` boş) | 🟡 sen | ~20 dakika · SEC-3, SEC-8 ve SRE-8'i açar |
 | SRE-8 | Geri alma provası | ⏸️ | SRE-4'e bağlı |
 | STR-3 | İlk gerçek kart işlemi | 🟡 birlikte | Kart ödemesi canlıda hiç çalışmadı |
 | CPO-P0-1 | `demo_mode_enabled` açık | ⏸️ | **Lansman gününün 1. maddesi** |
-| CPO-P0-6 | Ahmet Kuru 2. Saha 0 ₺ tarifesi | 🟡 sen | Gerçek fiyatı söyle, girerim |
+| CPO-P0-6 | Ahmet Kuru 2. Saha 0 ₺ tarifesi | ✅ | Kapandı (9 Ağu 2026): kurucu "0 ₺ bilerek böyle" dedi — tarife doğru |
 | — | Yasal metinler · mağaza hesapları · alan adı | 🟡 sen | Lansmanın ön şartları |
 
 **Bu turda KAPANANLAR:** STR-1 (Gerçek Durum kartı) · SEC-1 (wallet) ·
