@@ -1,7 +1,10 @@
 # Müşteri (Müdavim) Defteri — Tasarım Kararları ve Kurulum Planı
 
 **Tarih:** 9 Ağustos 2026 · **Karar sahibi:** kurucu (soru-cevap turu)
-**Durum:** ✅ Tasarım onaylandı — kurulum bekliyor
+**Durum:** ✅ **KURULDU ve CANLIYA UYGULANDI** (aynı gün, kurucu onayıyla)
+**Canlı kanıt:** migration `20260906000000` deftere işlendi · defter 9 müşteriyle
+doğdu (5 telefonlu + 4 "telefonu eksik", 0 demo; 25 ham kayıt tekilleşti) ·
+4 RLS politikası aktif · kimliksiz `musteri_karti` çağrısı UNAUTHORIZED aldı.
 **Kaynak ihtiyaç:** `SAHA_SAHIBI_PANEL_IYILESTIRME_KATALOGU.md` C1 (+ C5 müşteri 360, + C6 tekrar rezervasyon)
 
 > Amaç: "Bu adam kim, kaç kere geldi, borcu var mı?" sorusunun tek cevabı olsun.

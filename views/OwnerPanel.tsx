@@ -44,6 +44,7 @@ import {
   OwnerPaymentSettingsModal,
   OwnerSecurityModal,
   OwnerSupportModal,
+  OwnerCustomersModal,
   OwnerLogoutModal,
   type WidgetType,
   type OwnerMenuStats,
@@ -144,6 +145,8 @@ const tariffRowToPolicy = (t: PitchTariff) => ({
   // Finans → takvim köprüsü (kurucu isteği, 9 Ağu 2026): tahsilat/ödeme
   // satırından ilgili güne atlanır; rezervasyon kimliği varsa detayı da açılır.
   const [calendarFocus, setCalendarFocus] = useState<{ dateISO: string; bookingId?: string; courtName?: string | null } | null>(null);
+  // Müşteri defteri (C1) — Menü → Müşteriler; personel dahil tüm ekip kullanır.
+  const [customersOpen, setCustomersOpen] = useState(false);
   const [courts, setCourts] = useState<PitchCourt[]>([]);
   const [dailySummary, setDailySummary] = useState<OwnerDailySummary | null>(null);
   const [todayBookings, setTodayBookings] = useState<PitchBookingFull[]>([]);
@@ -905,6 +908,7 @@ const tariffRowToPolicy = (t: PitchTariff) => ({
         <OwnerMenuView
           onNavigate={onNavigate}
           onBack={onBack}
+          onCustomers={() => setCustomersOpen(true)}
           facilityName={facilityData?.name}
           facilityDistrict={[facilityData?.district, facilityData?.city].filter(Boolean).join(', ')}
           facilityImage={facilityData?.images?.[0]}
@@ -1036,6 +1040,14 @@ const tariffRowToPolicy = (t: PitchTariff) => ({
       )}
       {showSecurity && <OwnerSecurityModal onClose={() => setShowSecurity(false)} />}
       {showSupport && <OwnerSupportModal onClose={() => setShowSupport(false)} />}
+      {customersOpen && (
+        <OwnerCustomersModal
+          pitchId={realPitchId ?? facilityData?.id ?? ''}
+          readOnly={effReadOnly}
+          onClose={() => setCustomersOpen(false)}
+          onOpenCalendarAt={(t) => { setCustomersOpen(false); setCalendarFocus(t); setActiveTab('CALENDAR'); }}
+        />
+      )}
       {showWidgetSettings && (
         <OwnerWidgetSettingsModal
           onClose={() => setShowWidgetSettings(false)}

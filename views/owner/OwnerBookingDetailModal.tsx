@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Banknote, MessageCircle, Phone, QrCode, UserX, XCircle } from 'lucide-react';
 import { waLink, bookingReminderMessage } from '../../utils/whatsapp';
+import { markBookingNoShow } from '../../services/customerService';
 import { cancelConfirmedBooking, recordBookingPayment, type PaymentMethod, toTurkishError } from '../../services/pitchOwnerService';
 import { bookingToDebtor } from '../../services/financeService';
 import { parseTRYAmount } from '../../shared/financeModel';
@@ -141,6 +142,9 @@ export const OwnerBookingDetailModal: React.FC<OwnerBookingDetailModalProps> = (
     setBusy(true);
     try {
       await bookingToDebtor(booking.id, booking.user);
+      // Müşteri kartındaki "gelmedi" sayacı için işaret — veresiye kaydı ayakta
+      // kalırken bu işaret düşse bile para tarafı etkilenmez (yalnız istatistik).
+      markBookingNoShow(booking.id).catch(() => {});
       notify(`Gelmedi olarak işaretlendi. ${money(balance)} veresiyeye yazıldı — Finans → Veresiye'den takip et.`, 'success');
       onChanged();
       onClose();

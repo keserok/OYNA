@@ -5,6 +5,7 @@ import {
   Building2,
   ChevronRight,
   CreditCard,
+  Users,
   Globe,
   Handshake,
   HelpCircle,
@@ -31,6 +32,7 @@ export interface OwnerMenuViewProps {
   onEditProfile: () => void;
   onWorkingHours: () => void;
   onMatches: () => void;
+  onCustomers: () => void;
   onBankAccounts: () => void;
   onWithdrawals: () => void;
   onCancellationPolicy: () => void;
@@ -113,6 +115,7 @@ export const OwnerMenuView: React.FC<OwnerMenuViewProps> = ({
   onEditProfile,
   onWorkingHours,
   onMatches,
+  onCustomers,
   onBankAccounts,
   onWithdrawals,
   onCancellationPolicy,
@@ -187,6 +190,21 @@ export const OwnerMenuView: React.FC<OwnerMenuViewProps> = ({
       )}
 
       <div className="space-y-6">
+        {/* Müdavim defteri (kurucu kararı 4, 9 Ağu 2026): personel dahil TÜM
+            ekip görür — rezervasyon almak kasanın işi. Bu yüzden yönetim
+            kapısının (isManagerLvl) DIŞINDA durur. */}
+        <section>
+          <h3 className="text-xs font-bold text-gray-500 uppercase mb-3 ml-1">Müşteriler</h3>
+          <div className="bg-[#161B22] border border-white/5 rounded-[24px] overflow-hidden">
+            <MenuRow
+              icon={<Users size={18} />}
+              iconClass="text-emerald-400"
+              label="Müşteri Defteri"
+              onClick={onCustomers}
+            />
+          </div>
+        </section>
+
         {isManagerLvl && (
         <section>
           <h3 className="text-xs font-bold text-gray-500 uppercase mb-3 ml-1">İşletme Yönetimi</h3>

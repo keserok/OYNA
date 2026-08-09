@@ -15,4 +15,5 @@ export { OwnerNotificationsModal } from './OwnerNotificationsModal';
 export { OwnerBillingSettingsModal } from './OwnerBillingSettingsModal';
 export { OwnerSecurityModal } from './OwnerSecurityModal';
 export { OwnerSupportModal } from './OwnerSupportModal';
+export { OwnerCustomersModal } from './OwnerCustomersModal';
 export { OwnerLogoutModal } from './OwnerLogoutModal';

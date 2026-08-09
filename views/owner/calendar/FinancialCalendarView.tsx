@@ -26,6 +26,7 @@ import {
   getAvailabilityExceptions, getMonthlyBookingDensity, toTurkishError,
 } from '../../../services/pitchOwnerService';
 import { todayISO } from '../ownerPanelShared';
+import { searchPitchCustomers, type PitchCustomer } from '../../../services/customerService';
 import type { PitchBookingFull, PitchCourt, FlashDeal, PitchAvailabilityException } from '../../../types';
 import { trUpper } from '../../../utils/trUpper';
 import { olayYaz } from '../../../utils/olcum';
@@ -149,11 +150,34 @@ export const FinancialCalendarView: React.FC<{
     const [bookings, setBookings] = useState<CalendarBooking[]>([]);
     const [customerName, setCustomerName] = useState('');
     const [customerPhone, setCustomerPhone] = useState('');
+    // C1 — müdavim önerisi: ad/telefon yazarken defterden eşleşme düşer.
+    const [custSuggestions, setCustSuggestions] = useState<PitchCustomer[]>([]);
+    const custPickRef = useRef(''); // seçilen ad|tel imzası — seçim sonrası yeniden arama açılmaz
     const [paymentStatus, setPaymentStatus] = useState<'PAID' | 'PARTIAL' | 'PENDING'>('PENDING');
     // BULGU-123: elden alınan kapora TUTARI — sahibi girer, uydurulmaz.
     const [depositStr, setDepositStr] = useState('');
 
     const isRealPitch = !!pitchId && !pitchId.startsWith('mock-');
+
+    // C1 — müdavim defteri önerisi (250ms beklemeli). Ad en az 2 harf ya da
+    // telefon en az 3 rakamsa arar; öneri seçildiyse aynı değerlerle aramaz.
+    useEffect(() => {
+        if (!isQuickCreateOpen || !isRealPitch) { setCustSuggestions([]); return; }
+        const phoneDigits = customerPhone.replace(/\D/g, '');
+        const q = customerName.trim().length >= 2 ? customerName.trim() : (phoneDigits.length >= 3 ? customerPhone : '');
+        if (!q || custPickRef.current === `${customerName}|${customerPhone}`) { setCustSuggestions([]); return; }
+        const t = setTimeout(() => {
+            searchPitchCustomers(pitchId, q).then(setCustSuggestions).catch(() => setCustSuggestions([]));
+        }, 250);
+        return () => clearTimeout(t);
+    }, [customerName, customerPhone, isQuickCreateOpen, isRealPitch, pitchId]);
+
+    const pickCustomer = (c: PitchCustomer) => {
+        custPickRef.current = `${c.name}|${c.phone ?? ''}`;
+        setCustomerName(c.name);
+        setCustomerPhone(c.phone ?? '');
+        setCustSuggestions([]);
+    };
 
     // Aylıktan/şeritten gün seçimi: doğrudan o günün saat ekranı açılır.
     const selectDay = (iso: string) => {
@@ -1045,6 +1069,24 @@ export const FinancialCalendarView: React.FC<{
                           />
                         </div>
                     </div>
+                    {/* C1 — defterden öneriler: dokununca ad+telefon birlikte dolar */}
+                    {custSuggestions.length > 0 && (
+                        <div className="space-y-1.5">
+                            {custSuggestions.map((c) => (
+                                <button
+                                    key={c.id}
+                                    type="button"
+                                    onClick={() => pickCustomer(c)}
+                                    className="w-full flex justify-between items-center gap-2 px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 text-left hover:bg-white/10 transition-colors"
+                                >
+                                    <span className="text-sm font-bold text-white truncate">{c.name}</span>
+                                    <span className={`text-[10px] font-mono shrink-0 ${c.phone_missing ? 'text-amber-400' : 'text-gray-500'}`}>
+                                        {c.phone_missing ? 'telefonu eksik' : c.phone}
+                                    </span>
+                                </button>
+                            ))}
+                        </div>
+                    )}
                     <div className="flex gap-2">
                         <button
                             type="button"
