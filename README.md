@@ -14,7 +14,7 @@ Ana vaat *saha kiralamak değil* — **kaptanın para toplama derdini bitirmek.*
 |---|---|
 | **Uygulama rafta, nasıl uyandırırım?** | **[`RAF.md`](RAF.md)** ← aylar sonra dönüyorsan buradan başla |
 | **Bir karar nasıl verilmişti?** | **[`OYNA_PRENSIPLER.md`](OYNA_PRENSIPLER.md)** ← tek pusula |
-| **Claude ile çalışacağım** | [`CLAUDE.md`](CLAUDE.md) — oturum kuralları |
+| **Claude ile çalışacağım** | [`CLAUDE.md`](CLAUDE.md) — pusula: iki onay kapısı + çalışma tarzı |
 | **Yeni iş vereceğim** | [`GOREV_SABLONU.md`](GOREV_SABLONU.md) |
 
 ---
@@ -57,8 +57,10 @@ npm run sistem:kapsam   # harita gerçeği yansıtıyor mu?
 npm run sistem:surum    # sürüm numarası her yerde aynı mı?
 ```
 
-> `npm run etki`, 🔴 KRİTİK yapı taşlarına (PARA · KAPILAR · KİMLİK · AYARLAR ·
-> KURTARMA) dokunuyorsan **DUR** der ve onay ister. Bu bilerek böyle.
+> ⚠️ Bu üç komutun script dosyaları (`scripts/sistem/`) depoya hiç girmemiş —
+> şu an **çalışmıyorlar**; harita `docs/sistem/` altından elle okunur.
+> Onay yalnız iki yerde istenir: canlı veritabanına yazmadan ve para kurallarını
+> değiştirmeden önce (bkz. [`CLAUDE.md`](CLAUDE.md) §2 — kurucu kararı, 9 Ağu 2026).
 
 ---
 

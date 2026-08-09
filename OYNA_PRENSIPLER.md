@@ -139,7 +139,7 @@ Kaynak: `docs/sistem/` · Kılavuz: `docs/sistem/MEKANIZMA.md`
 | # | Prensip |
 |---|---|
 | 9.1 | **17 yapı taşı, 32 kontrol.** Tek makine-okur kaynak: `docs/sistem/YAPI-TASLARI.json`. Harita elle düzenlenmez, üretilir. |
-| 9.2 | **Değişiklikten önce `npm run etki` çalıştırılır.** 🔴 KRİTİK taşlara (PARA · KAPILAR · KİMLİK · AYARLAR · KURTARMA) dokunuluyorsa iş **durur**, CEO onayı gerekir. |
+| 9.2 | **Değişiklikten önce etki alanına bakılır** (`docs/sistem/YAPI-TASLARI.json`; 🔴 KRİTİK: PARA · KAPILAR · KİMLİK · AYARLAR · KURTARMA). Kritik taşa dokunmak işi durdurmaz; onay yalnız 10.7'deki iki kapıda istenir. *(Kurucu kararı, 9 Ağu 2026 — eski "DUR + CEO onayı" kuralının yerine geçer.)* Not: `npm run etki` script dosyaları depoya hiç girmemiş; komut şu an çalışmıyor, yeniden yazılması bekleyen iştir. |
 | 9.3 | **Harita çürürse denetim durur.** Haritada yazan bir dosya diskte yoksa `npm run sistem:kapsam` hata verir. |
 | 9.4 | **Sürüm numarası tek kaynaktan gelir** (`package.json`); sapma `npm run sistem:surum` ile yakalanır. |
 | 9.5 | **Sürekli yanan uyarı, görülmeyen uyarıdır.** Yanlış alarm üreten kontrol düzeltilir ya da kaldırılır. |
@@ -154,8 +154,9 @@ Kaynak: `docs/sistem/` · Kılavuz: `docs/sistem/MEKANIZMA.md`
 | 10.2 | **Kurucu kod okumaz.** Her açıklama sade Türkçe olur; kod yalnız kanıt olarak gösterilir. |
 | 10.3 | **Canlı veritabanını okumak serbest, yazmak onaya bağlıdır.** |
 | 10.4 | **`main` dalına doğrudan push edilmez.** İşler kendi dalında yapılır. |
-| 10.5 | **Kapsam disiplini:** yalnız istenen iş yapılır. Yol üstünde görülen başka sorun **düzeltilmez**, özetin "fark ettiklerim" bölümünde bildirilir. |
-| 10.6 | **Her görev sabit ÖZET ile biter:** Ne değişti · Neden · Nasıl kontrol edersin (tıklama adımlarıyla, terminal komutu olmadan) · Riskler & fark ettiklerim. |
+| 10.5 | **Kapsam:** istenen iş yapılır; yol üstünde görülen **küçük ve riski düşük** sorunlar anında düzeltilip özette bildirilir, **büyük/rizikolu** olanlar önce sorulur. *(Kurucu kararı, 9 Ağu 2026 — eski "düzeltilmez, yalnız bildirilir" kuralının yerine geçer.)* |
+| 10.6 | **Her görevin sonunda** ne değiştiği ve kurucunun bunu uygulamada nasıl kontrol edeceği sade dille anlatılır; sabit şablon zorunlu değildir. *(Kurucu kararı, 9 Ağu 2026.)* |
+| 10.7 | **Yalnız iki onay kapısı:** 1) canlı veritabanına yazmak (10.3) · 2) para kurallarını (ödeme · komisyon · iade · payout) değiştirmek. Bunların dışında Claude onay beklemeden çalışır. Ayrıntı: `CLAUDE.md` §2. *(Kurucu kararı, 9 Ağu 2026.)* |
 
 ---
 
@@ -200,7 +201,8 @@ gerçek ad görünürlüğü kararı (KVKK)
 
 **Sırada bekleyen teknik işler:** `public_profiles` sıkılaştırması · uzantıların
 `public` şemasından taşınması · geri alma provası · bölge göçü · testlerin tip kontrolü ·
-harita parçasının bölünmesi
+harita parçasının bölünmesi · mekanizma scriptlerinin yeniden yazılması
+(`scripts/sistem/` depoya hiç girmemiş, `npm run etki` vb. çalışmıyor)
 
 ---
 
