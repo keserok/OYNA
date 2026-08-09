@@ -854,7 +854,6 @@ const tariffRowToPolicy = (t: PitchTariff) => ({
           pricingPolicy={facilityData?.pricingPolicy}
           courts={courts}
           readOnly={effReadOnly}
-          canFlashDeals={can.flashDeals}
           workingHours={facilityData?.workingHours}
           facilityName={facilityData?.name}
           focus={calendarFocus}

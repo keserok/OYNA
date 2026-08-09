@@ -117,6 +117,22 @@ export const OwnerWithdrawalsModal: React.FC<Props> = ({
         </div>
       </div>
 
+      {/* SaaS süpürgesi (kurucu kararı, 9 Ağu 2026): çekim kapalıyken form HİÇ
+          çizilmez — doldurulup gönderilemeyen form yerine dürüst bilgi kartı.
+          Özellik açıldığında (cashout.enabled) form kendiliğinden döner. */}
+      {!cashout.enabled ? (
+        <div className="flex-1 p-6 max-w-2xl mx-auto w-full">
+          <div className="bg-[#161B22] border border-white/10 rounded-3xl p-6 text-center space-y-3 mt-6">
+            <div className="mx-auto w-14 h-14 rounded-2xl bg-white/[0.06] border border-white/[0.12] flex items-center justify-center"><Lock size={26} className="text-[#F5F3EE]/80" /></div>
+            <h3 className="text-white font-extrabold text-lg">Para çekme lansmanla açılacak</h3>
+            <p className="text-[13px] text-gray-400 leading-relaxed">
+              Kazançların hesabında birikmeye devam ediyor{availableBalance > 0 ? ` (şu an ${money(availableBalance)})` : ''}.
+              Çekim özelliği açıldığında buradan IBAN'ına aktarabileceksin.
+              Şimdiden Menü → Banka Hesapları'ndan IBAN ekleyebilirsin.
+            </p>
+          </div>
+        </div>
+      ) : (
       <div className="flex-1 overflow-y-auto custom-scrollbar p-6 max-w-2xl mx-auto w-full space-y-8">
         <div className="bg-gradient-to-br from-blue-900/40 to-emerald-900/30 p-6 rounded-3xl border border-blue-500/20 relative overflow-hidden">
           <Wallet size={64} className="absolute top-0 right-0 p-4 opacity-10 text-white" />
@@ -214,6 +230,7 @@ export const OwnerWithdrawalsModal: React.FC<Props> = ({
           )}
         </button>
       </div>
+      )}
     </div>
   );
 };

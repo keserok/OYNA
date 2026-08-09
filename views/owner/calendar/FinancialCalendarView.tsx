@@ -104,7 +104,7 @@ export const FinancialCalendarView: React.FC<{
   pricingPolicy?: any[];
   courts?: PitchCourt[];
   readOnly?: boolean;
-  canFlashDeals?: boolean;
+  // SaaS süpürgesi (9 Ağu 2026): flash indirim plan kapısı kaldırıldı — owner abonelik ödemez.
   workingHours?: unknown;
   /** C2 — rezervasyon detayındaki WhatsApp hatırlatma mesajında geçen tesis adı. */
   facilityName?: string;
@@ -115,7 +115,7 @@ export const FinancialCalendarView: React.FC<{
   onFocusConsumed?: () => void;
   onNavigate?: (view: string) => void;
   onPricingUpdated?: () => void;
-}> = ({ pitchId, pricingPolicy, courts = [], readOnly = false, canFlashDeals = true, workingHours, facilityName, focus, onFocusConsumed, onNavigate, onPricingUpdated }) => {
+}> = ({ pitchId, pricingPolicy, courts = [], readOnly = false, workingHours, facilityName, focus, onFocusConsumed, onNavigate, onPricingUpdated }) => {
     const notify = useOwnerToast();
     const { confirm, confirmElement } = useConfirmSheet();
     const dayStrip = useMemo(() => buildDayStrip(), []);
@@ -906,13 +906,7 @@ export const FinancialCalendarView: React.FC<{
                                         </button>
 
                                         <button 
-                                            onClick={() => {
-                                              if (!canFlashDeals) {
-                                                notify('Flash deal mevcut planında aktif değil.', 'warning');
-                                                return;
-                                              }
-                                              setFlashDealModalOpen(time);
-                                            }}
+                                            onClick={() => setFlashDealModalOpen(time)}
                                             disabled={!selectedCourtId || readOnly}
                                             className={`w-16 rounded-xl border border-white/5 flex flex-col items-center justify-center gap-1 transition-all ${
                                                 hasFlashDeal

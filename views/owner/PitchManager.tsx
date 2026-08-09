@@ -166,7 +166,7 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
     const handleAddNew = () => {
         if (readOnly) return;
         if (pitches.length >= maxCourts) {
-            setSaveError(`Mevcut planın en fazla ${maxCourts} saha destekliyor. Daha fazla saha için Menü → Faturalandırma'dan planını yükselt ya da destekle iletişime geç.`);
+            setSaveError(`En fazla ${maxCourts} saha eklenebilir. Daha fazlası için Menü → Destek Merkezi'nden OYNA ekibine yaz.`);
             return;
         }
         const newPitch: PitchCourt = {
