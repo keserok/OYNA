@@ -1,7 +1,7 @@
 # Saha Sahibi Paneli — Menü Cilası Tasarım Kararları
 
 **Tarih:** 9 Ağustos 2026 · **Karar sahibi:** kurucu (8 soru, soru-cevap turu)
-**Durum:** ✅ Tasarım onaylandı — kurulum bekliyor
+**Durum:** ✅ KURULDU (9 Ağu 2026) — 1.740 test yeşil, 7 yeni bekçi testi
 **Hedef:** Menü ekranını kusursuz bir B2B SaaS ayar sayfası standardına getirmek.
 
 ## Kurucu kararları

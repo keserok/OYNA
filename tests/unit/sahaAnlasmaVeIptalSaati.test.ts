@@ -98,11 +98,16 @@ describe('Ekranlarda gömülü sayı KALMADI', () => {
 });
 
 describe('Paneller: anlaşma doğru kişiye görünür', () => {
-  it('saha sahibi anlaşma satırı YALNIZ sahip seviyesinde çizilir (müdür/personel görmez)', () => {
+  it('anlaşma satırı sahip DIŞINDA kilitli — içerik ve rozet açılmaz', () => {
+    // Menü cilası (karar 4, 9 Ağu 2026): gizleme yerine kilit. Güvence aynı:
+    // locked satırda onClick çağrılmaz, rozet ("Salt okunur" dahil) çizilmez;
+    // modal zaten OwnerPanel'de ownerOnlyGuard arkasında (alttaki test).
     const s = oku('views/owner/menu/OwnerMenuView.tsx');
-    const blok = s.split('OYNA Anlaşmam')[0];
-    // Satırın hemen üstündeki koşul sahip kontrolü olmalı.
-    expect(blok.slice(-400)).toContain('{isOwnerLvl && (');
+    const blok = s.split('label="OYNA Anlaşmam"')[1].slice(0, 400);
+    expect(blok).toContain('locked={!isOwnerLvl}');
+    expect(blok).toContain('kilitliSahip');
+    // MenuRow kilitliyken badge yerine kilit rozeti basar:
+    expect(s).toContain('{locked ? <StatusBadge label={lockedLabel} tone="neutral" /> : badge}');
   });
 
   it('panel anlaşma modalını sahip kapısından açar', () => {

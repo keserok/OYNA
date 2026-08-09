@@ -909,6 +909,7 @@ const tariffRowToPolicy = (t: PitchTariff) => ({
           onNavigate={onNavigate}
           onBack={onBack}
           onCustomers={() => setCustomersOpen(true)}
+          pitchId={realPitchId ?? facilityData?.id ?? ''}
           facilityName={facilityData?.name}
           facilityDistrict={[facilityData?.district, facilityData?.city].filter(Boolean).join(', ')}
           facilityImage={facilityData?.images?.[0]}

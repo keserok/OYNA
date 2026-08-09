@@ -88,12 +88,12 @@ describe('ekran bağları', () => {
     expect(takvim).toContain('pickCustomer');
   });
 
-  it('Menüdeki "Müşteri Defteri" satırı yönetim kapısının DIŞINDA (personel de görür)', () => {
-    const satir = menu.indexOf('Müşteri Defteri');
-    const kapi = menu.indexOf('{isManagerLvl && (');
+  it('Menüdeki "Müşteri Defteri" satırı KİLİTSİZ (personel de kullanır)', () => {
+    // Menü cilasından sonra yönetim satırları gizlenmek yerine "locked" rozetiyle
+    // duruyor; Müşteri Defteri ise herkese açık — satırında kilit olmamalı.
+    const satir = menu.indexOf('label="Müşteri Defteri"');
     expect(satir).toBeGreaterThan(-1);
-    expect(kapi).toBeGreaterThan(-1);
-    expect(satir).toBeLessThan(kapi);
+    expect(menu.slice(satir, satir + 220)).not.toContain('locked');
   });
 
   it('müşteri kartı: gelmedi/iptal + veresiye + tekrar rezervasyon + telefon tamamlama', () => {
