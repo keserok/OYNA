@@ -33,6 +33,11 @@ yanlışlıkla boşalmıştı (yeniden yazıldı) ve `npm run etki` / `sistem:*`
 komutlarının script dosyaları (`scripts/sistem/`) depoya **hiç girmemiş** —
 komutlar çalışmıyor, yeniden yazılmaları bekleyen iş listesinde.
 
+**Aynı günün devamı — saha sahibi paneli odağı:** WhatsApp rezervasyon
+hatırlatması (C2) ve finans→takvim köprüsü + geçmiş günlerin takvimde
+görünmesi uygulandı. **Müşteri (müdavim) defteri** için 8 tasarım sorusu
+soruldu ve karara bağlandı → `docs/master/MUSTERI_DEFTERI_TASARIMI.md`.
+
 ---
 
 ## A · RAFA KALDIRMA (bunlar şimdi karar ister)
