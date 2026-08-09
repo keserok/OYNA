@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   ArrowLeft, User, Shield, HelpCircle, LogOut, ChevronRight,
   RefreshCw, MapPin, Bell, Lock, AlertCircle, Download, Trash2, Repeat, ShieldCheck,
-  Building2, KeyRound, Crown, X, Check } from 'lucide-react';
+  Building2, KeyRound, Crown, X, Check, Gift } from 'lucide-react';
 import { AnimatePresence } from 'framer-motion';
 import { AppView } from '../types';
 import { logout, auth } from '../supabaseAuth';
@@ -22,6 +22,8 @@ import FieldRolePage from '../components/settings/FieldRolePage';
 import SupportPage from '../components/settings/SupportPage';
 import { APP_VERSION } from '../utils/appVersion';
 import { getMyStaffPitches, staffAcceptInvite, type StaffPitch } from '../services/staffService';
+import { redeemReferralCode, parseSocialError } from '../services/socialService';
+import { normalizeReferralCodeInput, REFERRAL_CODE_LENGTH } from '../utils/referral';
 
 interface SettingsScreenProps {
   onBack: () => void;
@@ -37,6 +39,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
   const [isExporting, setIsExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
+  const [toastVariant, setToastVariant] = useState<'error' | 'success'>('error');
   // A4: derin bağlantı (oyna://support) Ayarlar'ı doğrudan Destek alt sayfasıyla
   // açar. İstek TÜKETİLİR — okuyunca store'daki değer sıfırlanır, yoksa kullanıcı
   // Ayarlar'a her girdiğinde Destek sayfası tekrar açılırdı.
@@ -54,8 +57,12 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
   // STAFF-3: kullanıcının personel/müdür olduğu tesisler + davet kodu kullan
   const [staffPitches, setStaffPitches] = useState<StaffPitch[]>([]);
   const [showJoinModal, setShowJoinModal] = useState(false);
+  // B2 (kurucu kararı, 9 Ağu 2026): arkadaş davet kodunun giriş ucu — kayıt
+  // ekranı değil, burası. Tesis davet koduyla (JoinFacilityModal) karışmaz.
+  const [showReferralModal, setShowReferralModal] = useState(false);
 
-  const showToast = (message: string) => {
+  const showToast = (message: string, variant: 'error' | 'success' = 'error') => {
+    setToastVariant(variant);
     setToastMsg(message);
     setTimeout(() => setToastMsg(null), 4000);
   };
@@ -294,6 +301,10 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
             <SettingItem icon={<User size={20} />} title="Bilgilerim" value="Düzenle" onClick={() => setSubPage('profile')} />
             <SettingItem icon={<ShieldCheck size={20} />} title="Veli Onayı" value="" onClick={() => onNavigate('GUARDIAN_CHILD')} />
             <SettingItem icon={<Shield size={20} />} title="Yasal & Sözleşmeler" value="" onClick={() => onNavigate('LEGAL')} />
+            {/* B2 (kurucu kararı, 9 Ağu 2026): davet zincirinin giriş ucu.
+                Kod ÜRETME zaten Sosyal → Arkadaş Ekle'de; burada yalnız
+                arkadaştan gelen kod KULLANILIR. */}
+            <SettingItem icon={<Gift size={20} />} title="Davet Kodu" value="Kodu gir" onClick={() => setShowReferralModal(true)} />
           </div>
         </section>
 
@@ -457,9 +468,9 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
 
       </main>
 
-      {/* Aksiyon hatası toast */}
+      {/* Aksiyon sonucu toast — hata kırmızı, başarı yeşil */}
       <AnimatePresence>
-        {toastMsg && <Toast message={toastMsg} variant="error" />}
+        {toastMsg && <Toast message={toastMsg} variant={toastVariant} />}
       </AnimatePresence>
 
       {/* Alt sayfalar — tam ekran, içeriye girilir */}
@@ -498,8 +509,18 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
           onClose={() => setShowJoinModal(false)}
           onJoined={async (name) => {
             setShowJoinModal(false);
-            showToast(`${name} ekibine katıldın! "İşletme" bölümünden panele girebilirsin.`);
+            showToast(`${name} ekibine katıldın! "İşletme" bölümünden panele girebilirsin.`, 'success');
             await loadStaffPitches();
+          }}
+        />
+      )}
+
+      {showReferralModal && (
+        <RedeemReferralModal
+          onClose={() => setShowReferralModal(false)}
+          onRedeemed={() => {
+            setShowReferralModal(false);
+            showToast('Davet kodu kullanıldı — davet eden arkadaşına haber verildi 🎉', 'success');
           }}
         />
       )}
@@ -550,6 +571,70 @@ const JoinFacilityModal: React.FC<{ onClose: () => void; onJoined: (pitchName: s
           className="w-full mt-4 min-h-[50px] rounded-full bg-white text-[#0A0E14] text-[0.8125rem] font-semibold disabled:opacity-50 flex items-center justify-center gap-2 active:scale-[0.99] transition-all"
         >
           {busy ? 'Katılınıyor…' : <><Check size={16} /> Katıl</>}
+        </button>
+      </div>
+    </div>
+  );
+};
+
+// ── Davet Kodu — arkadaş davet (referans) kodunu kullanma ───────────────────
+// B2 kararı (kurucu, 9 Ağu 2026): sunucu tarafı (redeem_referral_code)
+// baştan beri hazırdı; kopuk olan tek şey bu giriş ekranıydı. Yukarıdaki
+// 6 haneli TESİS koduyla karışmaz — o kod tesis personeli içindir.
+const REDEEM_REASON_TR: Record<string, string> = {
+  INVALID_CODE: 'Bu kod geçersiz görünüyor. Kodu kontrol edip tekrar dene.',
+  SELF_CODE: 'Bu senin kendi kodun — arkadaşının paylaştığı kodu girmelisin.',
+  ALREADY_ATTRIBUTED: 'Daha önce bir davet kodu kullanmışsın; ikinci kez kullanılamıyor.',
+};
+
+const RedeemReferralModal: React.FC<{ onClose: () => void; onRedeemed: () => void }> = ({ onClose, onRedeemed }) => {
+  const [raw, setRaw] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const code = normalizeReferralCodeInput(raw);
+
+  const submit = async () => {
+    if (code.length !== REFERRAL_CODE_LENGTH) {
+      setError('Kod 8 karakterli olmalı. Davet mesajındaki bağlantıyı olduğu gibi de yapıştırabilirsin.');
+      return;
+    }
+    setBusy(true); setError(null);
+    try {
+      const r = await redeemReferralCode(code);
+      if (r.ok) onRedeemed();
+      else setError(REDEEM_REASON_TR[r.reason ?? ''] ?? 'Kod kullanılamadı. Biraz sonra tekrar dene.');
+    } catch (err) {
+      setError(parseSocialError(err));
+    } finally { setBusy(false); }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[60] bg-black/80 flex items-end justify-center p-4" onClick={onClose} role="presentation">
+      <div className="bg-[#161B22] w-full max-w-sm rounded-3xl p-6 pb-safe-6 border border-white/10" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Davet Kodu">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg font-extrabold text-white">Davet Kodu</h3>
+          <button type="button" onClick={onClose} aria-label="Kapat"><X size={20} className="text-ink-4" /></button>
+        </div>
+        <div className="mx-auto w-14 h-14 rounded-2xl bg-white/[0.06] border border-white/[0.12] flex items-center justify-center mb-3"><Gift size={26} className="text-[#F5F3EE]" /></div>
+        <p className="text-[0.8125rem] text-[#F5F3EE]/[0.55] text-center mb-4">Arkadaşının paylaştığı davet kodunu ya da bağlantıyı yapıştır.</p>
+        <input
+          value={raw}
+          onChange={(e) => { setRaw(e.target.value); setError(null); }}
+          autoFocus
+          autoCapitalize="none"
+          autoCorrect="off"
+          spellCheck={false}
+          placeholder="örn. a1b2c3d4"
+          className="w-full text-center text-xl font-extrabold tracking-[0.2em] font-mono bg-[#0A0E14] border border-white/10 rounded-2xl p-4 text-white placeholder:text-ink-4"
+        />
+        {error && <p className="text-xs text-[#FF4D4D] mt-2 text-center">{error}</p>}
+        <button
+          type="button"
+          disabled={busy || code.length !== REFERRAL_CODE_LENGTH}
+          onClick={submit}
+          className="w-full mt-4 min-h-[50px] rounded-full bg-white text-[#0A0E14] text-[0.8125rem] font-semibold disabled:opacity-50 flex items-center justify-center gap-2 active:scale-[0.99] transition-all"
+        >
+          {busy ? 'Kontrol ediliyor…' : <><Check size={16} /> Kodu Kullan</>}
         </button>
       </div>
     </div>
