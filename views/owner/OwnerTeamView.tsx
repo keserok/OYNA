@@ -275,8 +275,10 @@ export const OwnerTeamView: React.FC<OwnerTeamViewProps> = ({
                         )}
                       </div>
                       {(m.account_status === 'ACTIVE' || m.account_status === 'ROSTER') && (
-                        <span onClick={(e) => { e.stopPropagation(); handleToggleDuty(m); }}
-                          className={`text-[10px] font-extrabold px-3 py-1.5 rounded-lg uppercase shrink-0 ${
+                        <span role="button" tabIndex={0}
+                          onClick={(e) => { e.stopPropagation(); handleToggleDuty(m); }}
+                          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); handleToggleDuty(m); } }}
+                          className={`text-[10px] font-extrabold px-3 min-h-[44px] inline-flex items-center rounded-lg uppercase shrink-0 ${
                             m.status === 'ON_DUTY' ? 'bg-green-500/20 text-green-400' : 'bg-white/5 text-gray-500'} ${writable ? 'cursor-pointer' : ''}`}>
                           {m.status === 'ON_DUTY' ? 'Görevde' : 'İzinli'}
                         </span>

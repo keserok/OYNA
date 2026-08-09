@@ -6,6 +6,7 @@ import { parseTRYAmount, methodLabel } from '../../../shared/financeModel';
 import { money } from './financeUi';
 import { BottomSheetModal } from './BottomSheetModal';
 import { waLink } from '../../../utils/whatsapp';
+import { tarihKisaTR } from '../../../utils/tarih';
 
 // ─── FI-2 — Veresiye kişi sayfası: hareket defteri + kısmi ödeme + WhatsApp ───
 
@@ -34,8 +35,10 @@ export const DebtorSheet: React.FC<Props> = ({ debtor, readOnly, onClose, onChan
   const [method, setMethod] = useState('CASH');
   const [busy, setBusy] = useState(false);
 
+  const [loadError, setLoadError] = useState(false);
   const loadEntries = () => {
-    getDebtorEntries(debtor.id).then(setEntries).catch(() => setEntries([]));
+    setLoadError(false);
+    getDebtorEntries(debtor.id).then(setEntries).catch(() => { setEntries([]); setLoadError(true); });
   };
   useEffect(loadEntries, [debtor.id]);
 
@@ -116,6 +119,10 @@ export const DebtorSheet: React.FC<Props> = ({ debtor, readOnly, onClose, onChan
       <p className="text-[10px] font-extrabold text-gray-500 uppercase mb-2">Hareketler</p>
       {entries === null ? (
         <div className="flex justify-center py-6 text-gray-500"><Loader2 size={16} className="animate-spin" /></div>
+      ) : loadError ? (
+        <button type="button" onClick={loadEntries} className="w-full text-left text-xs text-amber-300 bg-amber-500/10 border border-amber-500/25 rounded-xl px-3 py-2.5">
+          Hareketler yüklenemedi — dokunup tekrar dene.
+        </button>
       ) : entries.length === 0 ? (
         <p className="text-xs text-gray-600">Hareket yok.</p>
       ) : (
@@ -128,7 +135,7 @@ export const DebtorSheet: React.FC<Props> = ({ debtor, readOnly, onClose, onChan
                   {isPay ? <ArrowDownCircle size={16} className="text-emerald-400 shrink-0" /> : <ArrowUpCircle size={16} className="text-red-400 shrink-0" />}
                   <div className="min-w-0">
                     <p className="text-gray-300 truncate">{isPay ? 'Ödeme' : 'Borç'}{e.note ? ` · ${e.note}` : ''}</p>
-                    <p className="text-[10px] text-gray-600">{e.created_at.slice(0, 10)}{isPay && e.payment_method ? ` · ${methodLabel(e.payment_method)}` : ''}</p>
+                    <p className="text-[10px] text-gray-600">{tarihKisaTR(e.created_at)}{isPay && e.payment_method ? ` · ${methodLabel(e.payment_method)}` : ''}</p>
                   </div>
                 </div>
                 <span className={`font-extrabold tabular-nums shrink-0 ${isPay ? 'text-emerald-400' : 'text-red-400'}`}>{isPay ? '−' : '+'}{money(e.amount)}</span>

@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { Wallet, Users, PieChart, AlertTriangle, CalendarRange, ChevronRight } from 'lucide-react';
 import type { FinanceSummary } from '../../../services/financeService';
 import { buildMonthSeries, methodLabel, sourceLabel, monthLabel } from '../../../shared/financeModel';
+import { tarihKisaTR } from '../../../utils/tarih';
 import { money, BreakdownList, DailyBars } from './financeUi';
 
 // ─── FI-1 — ÖZET sekmesi: grafik + tutar-bazlı kırılımlar + dürüstlük sayacı ──
@@ -56,7 +57,7 @@ export const FinanceSummaryTab: React.FC<Props> = ({ summary, onOpenCalendarWeek
               </p>
             ) : methodPayments.slice(0, 8).map((p) => (
               <div key={p.id} className="flex justify-between items-center text-sm">
-                <span className="text-gray-300 truncate">{p.customer_name ?? 'Müşteri'}<span className="text-gray-600"> · {p.booking_date}</span></span>
+                <span className="text-gray-300 truncate">{p.customer_name ?? 'Müşteri'}<span className="text-gray-600"> · {tarihKisaTR(p.booking_date)}</span></span>
                 <span className="text-white font-bold tabular-nums">{money(p.amount)}</span>
               </div>
             ))}
@@ -105,7 +106,7 @@ export const FinanceSummaryTab: React.FC<Props> = ({ summary, onOpenCalendarWeek
           <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center"><CalendarRange size={18} className="text-emerald-400" /></div>
           <div>
             <p className="text-sm font-bold text-white">Doluluk & yoğunluk</p>
-            <p className="text-[11px] text-gray-500">Takvim → Hafta görünümünde kort×gün ısı-haritası</p>
+            <p className="text-[11px] text-gray-500">Takvimde günlerin doluluk noktalarını gör (Aylık görünüm)</p>
           </div>
         </div>
         {onOpenCalendarWeek && <ChevronRight size={18} className="text-gray-500" />}

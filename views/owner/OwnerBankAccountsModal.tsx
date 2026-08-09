@@ -164,7 +164,7 @@ export const OwnerBankAccountsModal: React.FC<OwnerBankAccountsModalProps> = ({
                 <div className="flex items-start gap-3 min-w-0">
                   <Banknote size={20} className="text-emerald-400 shrink-0 mt-0.5" />
                   <div className="min-w-0">
-                    <p className="text-sm font-extrabold text-white">{acc.bank_name}</p>
+                    <p className="text-sm font-extrabold text-white truncate">{acc.bank_name}</p>
                     <p className="text-xs text-gray-400">{acc.account_holder}</p>
                     <p className="text-[10px] font-mono text-gray-500 mt-1 break-all">{acc.iban}</p>
                     {acc.is_primary && (
@@ -179,7 +179,7 @@ export const OwnerBankAccountsModal: React.FC<OwnerBankAccountsModalProps> = ({
                     <button
                       type="button"
                       onClick={() => handleSetPrimary(acc)}
-                      className="text-[10px] font-bold text-amber-400 px-2 py-1 bg-amber-500/10 rounded-lg"
+                      className="text-[10px] font-bold text-amber-400 px-3 min-h-[44px] bg-amber-500/10 rounded-lg"
                     >
                       Birincil yap
                     </button>
@@ -187,7 +187,7 @@ export const OwnerBankAccountsModal: React.FC<OwnerBankAccountsModalProps> = ({
                   <button
                     type="button"
                     onClick={() => handleDelete(acc.id)}
-                    className="p-2 text-gray-600 hover:text-red-400"
+                    aria-label="Hesabı sil" className="w-11 h-11 flex items-center justify-center text-gray-600 hover:text-red-400"
                   >
                     <Trash2 size={16} />
                   </button>

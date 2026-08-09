@@ -84,12 +84,15 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
     }, [isRealFacility, facilityId]);
     useEffect(() => { loadInactive(); }, [loadInactive, pitches.length]);
 
+    const [tariffStatusFailed, setTariffStatusFailed] = useState(false);
     // Tarife durumu — "bu saha için önce fiyat politikası gir" çağrısının kaynağı.
     const loadTariffCounts = React.useCallback(() => {
         if (!isRealFacility || !facilityId) { setTariffCounts({}); return; }
         getCourtsTariffStatus(facilityId)
-            .then((rows) => setTariffCounts(Object.fromEntries(rows.map((r) => [r.courtId, r.ownTariffCount]))))
-            .catch(() => setTariffCounts({}));
+            .then((rows) => { setTariffCounts(Object.fromEntries(rows.map((r) => [r.courtId, r.ownTariffCount]))); setTariffStatusFailed(false); })
+            // Denetim bulgusu 6: ağ hatasında tüm sahalar "tarifesiz" görünüp
+            // sahte uyarı basılıyordu — bilinmeyen durum uyarı ÜRETMEZ.
+            .catch(() => { setTariffCounts({}); setTariffStatusFailed(true); setSaveError('Tarife durumu yüklenemedi — sahayı açınca yeniden denenir.'); });
     }, [isRealFacility, facilityId]);
     useEffect(() => { loadTariffCounts(); }, [loadTariffCounts, pitches.length]);
 
@@ -318,7 +321,7 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
 
     if (editingPitch) {
         return (
-            <div className="flex flex-col h-full bg-[#0A0E14] animate-in slide-in-from-right-8 duration-300">
+            <div className="min-h-full bg-[#0A0E14] animate-in slide-in-from-right-8 duration-300">
                 <div className="bg-[#161B22] p-4 flex justify-between items-center border-b border-white/5 safe-area-top shadow-lg z-10">
                     <div className="flex items-center gap-3">
                         <button onClick={() => setEditingPitch(null)} className="p-2 rounded-full bg-white/5 hover:bg-white/10 text-white transition-colors">
@@ -335,7 +338,7 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
                     </button>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                <div className="p-6 space-y-6 pb-40">
                     {saveError && (
                         <div className="bg-red-500/10 border border-red-500/30 text-red-400 text-sm p-4 rounded-xl">
                             {saveError}
@@ -577,15 +580,17 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
                                             setSaveError(null);
                                             setEditingPitch({ ...editingPitch, is_active: next });
                                         }}
-                                        className={`shrink-0 w-14 h-8 rounded-full transition-colors relative disabled:opacity-40 ${
-                                            editingPitch.is_active !== false ? 'bg-[#10B981]' : 'bg-white/10'
-                                        }`}
+                                        className="shrink-0 w-16 min-h-[44px] flex items-center justify-center disabled:opacity-40"
                                     >
-                                        <span
-                                            className={`absolute top-1 w-6 h-6 rounded-full bg-white transition-all ${
-                                                editingPitch.is_active !== false ? 'left-7' : 'left-1'
-                                            }`}
-                                        />
+                                        <span className={`relative block w-14 h-8 rounded-full transition-colors ${
+                                            editingPitch.is_active !== false ? 'bg-[#10B981]' : 'bg-white/10'
+                                        }`}>
+                                            <span
+                                                className={`absolute top-1 w-6 h-6 rounded-full bg-white transition-all ${
+                                                    editingPitch.is_active !== false ? 'left-7' : 'left-1'
+                                                }`}
+                                            />
+                                        </span>
                                     </button>
                                 </div>
                             </>
@@ -732,7 +737,7 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
     }
 
     return (
-        <div className="flex flex-col h-full bg-[#0A0E14] animate-in slide-in-from-right-8 duration-300">
+        <div className="min-h-full bg-[#0A0E14] animate-in slide-in-from-right-8 duration-300">
             <div className="bg-[#161B22] p-4 flex justify-between items-center border-b border-white/5 safe-area-top shadow-lg z-10">
                 <div className="flex items-center gap-3">
                     {showBack && (
@@ -760,9 +765,9 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
                 </div>
             )}
 
-            <div className="flex-1 overflow-y-auto p-6">
+            <div className="p-6 pb-40">
                 {pitches.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center h-full text-center">
+                    <div className="flex flex-col items-center justify-center min-h-[50vh] text-center">
                         <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center text-gray-600 mb-4">
                             <ImageIcon size={40} />
                         </div>

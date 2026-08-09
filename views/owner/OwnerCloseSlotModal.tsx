@@ -1,3 +1,4 @@
+import { tarihKisaTR } from '../../utils/tarih';
 import React, { useState } from 'react';
 import { X, Lock } from 'lucide-react';
 import { closeSlot, toTurkishError } from '../../services/pitchOwnerService';
@@ -73,7 +74,7 @@ export const OwnerCloseSlotModal: React.FC<OwnerCloseSlotModalProps> = ({
               <Lock size={20} className="text-red-400" /> Slot Kapat
             </h3>
             <p className="text-xs text-gray-400 mt-1">
-              {courtName ?? 'Saha'} • {bookingDate} • {closeFullDay ? 'Tüm gün' : `${timeKey} - ${endTime.replace(':', '.')}`}
+              {courtName ?? 'Saha'} • {tarihKisaTR(bookingDate)} • {closeFullDay ? 'Tüm gün' : `${timeKey} - ${endTime.replace(':', '.')}`}
             </p>
           </div>
           <button type="button" onClick={onClose} className="p-2 bg-white/5 rounded-full text-gray-400 hover:text-white">

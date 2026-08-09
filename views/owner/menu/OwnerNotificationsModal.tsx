@@ -98,9 +98,11 @@ export const OwnerNotificationsModal: React.FC<{ onClose: () => void }> = ({ onC
                     type="button"
                     disabled={busy === ev.key}
                     onClick={() => toggle(ev.key)}
-                    className={`relative w-12 h-7 rounded-full transition-colors shrink-0 disabled:opacity-50 ${enabled ? 'bg-emerald-500' : 'bg-gray-600'}`}
+                    className="relative w-14 min-h-[44px] flex items-center justify-center shrink-0 disabled:opacity-50"
                   >
-                    <span className={`absolute top-0.5 w-6 h-6 rounded-full bg-white transition-all ${enabled ? 'left-[22px]' : 'left-0.5'}`} />
+                    <span className={`relative block w-12 h-7 rounded-full transition-colors ${enabled ? 'bg-emerald-500' : 'bg-gray-600'}`}>
+                      <span className={`absolute top-0.5 w-6 h-6 rounded-full bg-white transition-all ${enabled ? 'left-[22px]' : 'left-0.5'}`} />
+                    </span>
                   </button>
                 </div>
               );

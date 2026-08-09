@@ -10,6 +10,7 @@ import {
 import { parseTRYAmount } from '../../../shared/financeModel';
 import { localDateISO } from '../ownerCalendarHelpers';
 import { money, BreakdownList } from './financeUi';
+import { tarihKisaTR } from '../../../utils/tarih';
 import { BottomSheetModal } from './BottomSheetModal';
 
 // ─── FI-3 — GİDER v2: düzenle/sil + tarih + sabit gider şablonları ────────────
@@ -180,14 +181,14 @@ export const FinanceExpenseTab: React.FC<Props> = ({
                     {e.template_id && <Repeat size={11} className="text-blue-400 shrink-0" />}
                     {e.is_demo && <span className="text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/25 shrink-0">DEMO</span>}
                   </p>
-                  <p className="text-[10px] text-gray-500">{e.category} • {e.expense_date}</p>
+                  <p className="text-[10px] text-gray-500">{e.category} • {tarihKisaTR(e.expense_date)}</p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   <span className="text-red-400 font-extrabold tabular-nums">{money(e.amount ?? 0)}</span>
                   {!readOnly && (
                     <>
-                      <button type="button" onClick={() => openEdit(e)} className="p-1.5 text-gray-400 hover:text-white"><Pencil size={14} /></button>
-                      <button type="button" onClick={() => removeExpense(e)} className="p-1.5 text-red-500/70 hover:text-red-400"><Trash2 size={14} /></button>
+                      <button type="button" aria-label="Düzenle" onClick={() => openEdit(e)} className="w-11 h-11 flex items-center justify-center text-gray-400 hover:text-white"><Pencil size={14} /></button>
+                      <button type="button" aria-label="Sil" onClick={() => removeExpense(e)} className="w-11 h-11 flex items-center justify-center text-red-500/70 hover:text-red-400"><Trash2 size={14} /></button>
                     </>
                   )}
                 </div>
@@ -223,7 +224,7 @@ export const FinanceExpenseTab: React.FC<Props> = ({
             ) : templates.map((t) => (
               <div key={t.id} className="flex items-center justify-between bg-white/[0.03] border border-white/5 rounded-xl px-3 py-2">
                 <div className="min-w-0"><p className="text-sm font-bold text-white truncate">{t.title}</p><p className="text-[10px] text-gray-500">{t.category} · {money(t.amount)}</p></div>
-                <button type="button" onClick={() => { deleteExpenseTemplate(t.id).then(loadTemplates).catch(() => {}); }} className="p-1.5 text-red-500/70 hover:text-red-400"><Trash2 size={14} /></button>
+                <button type="button" onClick={() => { deleteExpenseTemplate(t.id).then(loadTemplates).catch(() => notify('Sabit gider silinemedi. Tekrar dene.', 'error')); }} aria-label="Sabit gideri sil" className="w-11 h-11 flex items-center justify-center text-red-500/70 hover:text-red-400"><Trash2 size={14} /></button>
               </div>
             ))}
           </div>

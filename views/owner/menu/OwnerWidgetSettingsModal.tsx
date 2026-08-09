@@ -39,15 +39,17 @@ export const OwnerWidgetSettingsModal: React.FC<Props> = ({
             <button
               type="button"
               onClick={() => onToggleWidget(widget.id)}
-              className={`w-12 h-6 rounded-full relative transition-colors ${
-                isActive ? 'bg-blue-600' : 'bg-gray-600'
-              }`}
+              className="w-14 min-h-[44px] relative flex items-center justify-center"
             >
-              <div
-                className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${
-                  isActive ? 'right-1' : 'left-1'
-                }`}
-              />
+              <div className={`w-12 h-6 rounded-full relative transition-colors ${
+                isActive ? 'bg-blue-600' : 'bg-gray-600'
+              }`}>
+                <div
+                  className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${
+                    isActive ? 'right-1' : 'left-1'
+                  }`}
+                />
+              </div>
             </button>
           </div>
         );

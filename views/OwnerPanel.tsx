@@ -391,6 +391,7 @@ const tariffRowToPolicy = (t: PitchTariff) => ({
         } : prev));
       } catch (e) {
         console.warn('Ödeme/banka/hesap ayarları yüklenemedi (kortlar/takvim etkilenmez):', e);
+        notify('Ödeme/banka bilgileri yüklenemedi — Menü rozetleri eksik görünebilir.', 'warning');
       }
     })();
   }, [refreshDashboard]);
@@ -645,7 +646,8 @@ const tariffRowToPolicy = (t: PitchTariff) => ({
     }
     getOwnerBalance(realPitchId)
       .then((b) => setMenuBalance(b.available))
-      .catch(() => setMenuBalance(0));
+      // Denetim bulgusu 16: hata ₺0 gibi görünmesin — rozet "Bakiye" yazısına düşer.
+      .catch(() => setMenuBalance(undefined));
   }, [activeTab, realPitchId]);
 
   const menuStats: OwnerMenuStats = useMemo(

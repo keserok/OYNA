@@ -339,7 +339,7 @@ export const OwnerMenuView: React.FC<OwnerMenuViewProps> = ({
                       ? money(stats.availableBalance)
                       : 'Bakiye'
                   }
-                  tone="success"
+                  tone="neutral"
                 />
               }
               locked={!isOwnerLvl}

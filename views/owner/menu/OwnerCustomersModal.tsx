@@ -6,6 +6,7 @@ import { useConfirmSheet } from '../components/useConfirmSheet';
 import { Spinner } from '../../../components/ui/Spinner';
 import { money } from '../finance/financeUi';
 import { waLink } from '../../../utils/whatsapp';
+import { tarihKisaTR } from '../../../utils/tarih';
 import { ownerCreateManualBooking, toTurkishError } from '../../../services/pitchOwnerService';
 import {
   listPitchCustomers, createPitchCustomer, setCustomerPhone, getCustomerCard,
@@ -218,7 +219,7 @@ export const OwnerCustomersModal: React.FC<Props> = ({ pitchId, readOnly = false
                 disabled={!onOpenCalendarAt}
                 onClick={() => { onClose(); onOpenCalendarAt?.({ dateISO: b.booking_date, courtName: b.court }); }}
                 className="w-full bg-[#0A0E14] border border-white/5 rounded-xl px-3 py-2.5 flex justify-between items-center text-left enabled:hover:border-white/20">
-                <span className="text-xs font-bold text-white">{b.booking_date} · {b.start_time} · {b.court ?? 'Saha'}</span>
+                <span className="text-xs font-bold text-white">{tarihKisaTR(b.booking_date)} · {b.start_time} · {b.court ?? 'Saha'}</span>
                 <span className={`text-[10px] font-extrabold ${b.status === 'CANCELLED' ? 'text-red-400' : b.no_show ? 'text-amber-400' : 'text-emerald-400'}`}>
                   {b.status === 'CANCELLED' ? 'İPTAL' : b.no_show ? 'GELMEDİ' : money(b.price)}
                 </span>
@@ -283,7 +284,7 @@ export const OwnerCustomersModal: React.FC<Props> = ({ pitchId, readOnly = false
                 </p>
               </div>
               <div className="flex items-center gap-2 shrink-0 text-gray-500">
-                {c.last_seen_on && <span className="text-[10px]">{c.last_seen_on}</span>}
+                {c.last_seen_on && <span className="text-[10px]">{tarihKisaTR(c.last_seen_on)}</span>}
                 <CalendarDays size={14} />
               </div>
             </button>
