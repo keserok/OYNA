@@ -25,7 +25,7 @@ const STATUS_LABELS: Record<string, { label: string; cls: string }> = {
 };
 
 const ScoreStepper: React.FC<{ value: number; onChange: (v: number) => void; label: string }> = ({ value, onChange, label }) => (
-  <div className="flex-1 bg-[#0A0E14] border border-white/10 rounded-2xl p-3 text-center">
+  <div className="flex-1 bg-bg border border-white/10 rounded-2xl p-3 text-center">
     <p className="text-[9px] font-extrabold uppercase tracking-wider text-gray-500 truncate">{label}</p>
     <div className="flex items-center justify-center gap-3 mt-2">
       <button
@@ -112,7 +112,7 @@ export const OwnerMatchesModal: React.FC<{
                   key={key}
                   onClick={() => setFilter(key)}
                   className={`px-3 py-1.5 rounded-full text-[11px] font-extrabold uppercase tracking-wider border transition-colors ${
-                    filter === key ? 'bg-white/10 text-white border-white/20' : 'bg-[#161B22] text-gray-500 border-white/5'
+                    filter === key ? 'bg-white/10 text-white border-white/20' : 'bg-surface-1 text-gray-500 border-white/5'
                   }`}
                 >
                   {label}{count > 0 ? ` (${count})` : ''}
@@ -134,7 +134,7 @@ export const OwnerMatchesModal: React.FC<{
             <Loader2 size={22} className="animate-spin" />
           </div>
         ) : (filter === 'PENDING' ? matches.filter((m) => !m.hasScore) : matches).length === 0 ? (
-          <div className="bg-[#161B22] border border-white/5 rounded-3xl p-8 text-center">
+          <div className="bg-surface-1 border border-white/5 rounded-3xl p-8 text-center">
             <Trophy size={28} className="mx-auto text-gray-600" />
             <p className="text-sm font-bold text-gray-400 mt-3">
               {filter === 'PENDING' ? 'Skor bekleyen maç yok.' : 'Henüz maç yok.'}
@@ -148,7 +148,7 @@ export const OwnerMatchesModal: React.FC<{
             const st = STATUS_LABELS[m.status] ?? { label: m.status, cls: 'text-gray-400 bg-white/5 border-white/10' };
             const isEntering = scoreEntryId === m.matchId;
             return (
-              <div key={m.matchId} className="bg-[#161B22] border border-white/5 rounded-3xl p-4">
+              <div key={m.matchId} className="bg-surface-1 border border-white/5 rounded-3xl p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="text-sm font-extrabold text-white truncate">{m.title}</p>
@@ -162,7 +162,7 @@ export const OwnerMatchesModal: React.FC<{
                 </div>
 
                 {m.hasScore ? (
-                  <div className="mt-3 flex items-center justify-center gap-3 bg-[#0A0E14] border border-white/10 rounded-2xl py-3">
+                  <div className="mt-3 flex items-center justify-center gap-3 bg-bg border border-white/10 rounded-2xl py-3">
                     <span className="text-2xl font-extrabold text-white font-mono">{m.homeScore}</span>
                     <span className="text-sm font-extrabold text-gray-600">—</span>
                     <span className="text-2xl font-extrabold text-white font-mono">{m.awayScore}</span>
@@ -183,7 +183,7 @@ export const OwnerMatchesModal: React.FC<{
                       <button
                         onClick={() => submitScore(m.matchId)}
                         disabled={submitting}
-                        className="flex-1 py-3 rounded-xl bg-[#FACC15] text-black text-xs font-extrabold disabled:opacity-50"
+                        className="flex-1 py-3 rounded-xl bg-warning text-black text-xs font-extrabold disabled:opacity-50"
                       >
                         {submitting ? 'KAYDEDİLİYOR…' : 'SKORU KAYDET'}
                       </button>

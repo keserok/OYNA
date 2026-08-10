@@ -15,7 +15,7 @@ import { formatTRYShort, formatTRYAmount } from '../utils/formatTRY';
 
 const STATUS_META: Record<MyBooking['status'], { label: string; color: string; bg: string; icon: React.ElementType }> = {
   PENDING:   { label: 'Onay Bekliyor', color: 'text-yellow-400',  bg: 'bg-yellow-500/10 border-yellow-500/30', icon: Hourglass },
-  CONFIRMED: { label: 'Onaylandı',     color: 'text-[#39FF14]',   bg: 'bg-[#39FF14]/10 border-[#39FF14]/30',   icon: CheckCircle2 },
+  CONFIRMED: { label: 'Onaylandı',     color: 'text-primary',   bg: 'bg-primary/10 border-primary/30',   icon: CheckCircle2 },
   CANCELLED: { label: 'İptal Edildi',  color: 'text-red-400',     bg: 'bg-red-500/10 border-red-500/30',       icon: XCircle },
 };
 
@@ -54,11 +54,11 @@ export const BookingCard: React.FC<BookingCardProps> = ({
   const courtRange = formatCapacityRange(b.courts?.min_capacity, b.courts?.max_capacity, b.courts?.capacity);
 
   return (
-    <div className={`bg-[#161B22] rounded-[24px] border border-white/5 overflow-hidden ${isCancelled ? 'opacity-80' : ''}`}>
+    <div className={`bg-surface-1 rounded-[24px] border border-white/5 overflow-hidden ${isCancelled ? 'opacity-80' : ''}`}>
       <div className="p-5">
         {/* Üst satır: saha görseli + isim/ilçe + durum rozeti */}
         <div className="flex items-start gap-3 mb-4">
-          <div className="w-14 h-14 rounded-xl shrink-0 overflow-hidden border border-white/10 bg-gradient-to-br from-[#0D121F] to-[#161B22] flex items-center justify-center">
+          <div className="w-14 h-14 rounded-xl shrink-0 overflow-hidden border border-white/10 bg-gradient-to-br from-[#0D121F] to-surface-1 flex items-center justify-center">
             {b.pitches?.image ? (
               <img src={b.pitches.image} alt={b.pitches?.name ?? 'Saha'} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
             ) : (
@@ -84,10 +84,10 @@ export const BookingCard: React.FC<BookingCardProps> = ({
         {/* Takvim kutusu — rakamlar Space Grotesk */}
         <div className="flex items-center gap-4 text-sm text-gray-300 bg-black/30 rounded-2xl px-4 py-3 border border-white/5">
           <span className="flex items-center gap-1.5 font-bold font-numeric">
-            <Calendar size={14} className="text-[#39FF14]" /> {formatBookingDate(b.booking_date)}
+            <Calendar size={14} className="text-primary" /> {formatBookingDate(b.booking_date)}
           </span>
           <span className="flex items-center gap-1.5 font-bold font-numeric">
-            <Clock size={14} className="text-[#39FF14]" /> {shortTime(b.start_time)}–{shortTime(b.end_time)}
+            <Clock size={14} className="text-primary" /> {shortTime(b.start_time)}–{shortTime(b.end_time)}
           </span>
         </div>
 
@@ -95,7 +95,7 @@ export const BookingCard: React.FC<BookingCardProps> = ({
         {b.price > 0 && (
           <div className="flex items-center justify-between mt-3 text-xs">
             <span className="text-ink-4 font-bold uppercase tracking-wide">Tutar</span>
-            <span className="text-[#FACC15] font-extrabold font-numeric">
+            <span className="text-warning font-extrabold font-numeric">
               {formatTRYShort(b.price)}
               {b.deposit_amount > 0 && (
                 <span className="text-ink-4 font-bold"> · Kapora {formatTRYAmount(b.deposit_amount)}</span>
@@ -107,7 +107,7 @@ export const BookingCard: React.FC<BookingCardProps> = ({
           <div className="flex items-center justify-between mt-2 text-xs">
             <span className="text-ink-4 font-bold uppercase tracking-wide">Kapora durumu</span>
             {depositPaid ? (
-              <span className="text-[#39FF14] font-bold flex items-center gap-1"><CheckCircle2 size={12} /> Ödendi</span>
+              <span className="text-primary font-bold flex items-center gap-1"><CheckCircle2 size={12} /> Ödendi</span>
             ) : (
               <span className="text-yellow-400 font-bold">Ödenmedi</span>
             )}
@@ -124,7 +124,7 @@ export const BookingCard: React.FC<BookingCardProps> = ({
           <button
             onClick={() => onPayDeposit(b)}
             disabled={paying}
-            className={`w-full h-12 rounded-xl bg-[#FACC15] text-black text-xs font-extrabold uppercase tracking-widest flex items-center justify-center gap-2 transition-transform ${
+            className={`w-full h-12 rounded-xl bg-warning text-black text-xs font-extrabold uppercase tracking-widest flex items-center justify-center gap-2 transition-transform ${
               paying ? 'opacity-60 cursor-wait' : 'active:scale-95 hover:bg-yellow-300'
             }`}
           >
@@ -140,7 +140,7 @@ export const BookingCard: React.FC<BookingCardProps> = ({
         {!isCancelled && onViewTicket && (
           <button
             onClick={() => onViewTicket(b)}
-            className="flex flex-col items-center justify-center gap-1 min-h-[44px] py-2 rounded-xl bg-[#FACC15]/[0.06] border border-[#FACC15]/25 text-[#FACC15] hover:bg-[#FACC15]/12 active:scale-95 transition-all"
+            className="flex flex-col items-center justify-center gap-1 min-h-[44px] py-2 rounded-xl bg-warning/[0.06] border border-warning/25 text-warning hover:bg-warning/12 active:scale-95 transition-all"
           >
             <QrCode size={15} />
             <span className="text-[0.625rem] font-extrabold uppercase tracking-wider">Bilet</span>
@@ -149,7 +149,7 @@ export const BookingCard: React.FC<BookingCardProps> = ({
         {!isCancelled && (
           <button
             onClick={() => onConvertToMatch(b)}
-            className="flex flex-col items-center justify-center gap-1 min-h-[44px] py-2 rounded-xl bg-[#39FF14]/[0.06] border border-[#39FF14]/20 text-[#39FF14] hover:bg-[#39FF14]/12 active:scale-95 transition-all"
+            className="flex flex-col items-center justify-center gap-1 min-h-[44px] py-2 rounded-xl bg-primary/[0.06] border border-primary/20 text-primary hover:bg-primary/12 active:scale-95 transition-all"
           >
             <Swords size={15} />
             <span className="text-[0.625rem] font-extrabold uppercase tracking-wider">Maça Çevir</span>

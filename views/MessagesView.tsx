@@ -103,14 +103,14 @@ const TacticCard: React.FC<{ tacticId: string; label: string; mine: boolean }> =
         mine ? 'bg-emerald-600/60 border-white/20' : 'bg-white/6 border-white/12'
       }`}
     >
-      <span className="w-9 h-9 rounded-xl bg-[#39FF14]/12 border border-[#39FF14]/25 flex items-center justify-center shrink-0">
-        <ClipboardList size={16} className="text-[#39FF14]" />
+      <span className="w-9 h-9 rounded-xl bg-primary/12 border border-primary/25 flex items-center justify-center shrink-0">
+        <ClipboardList size={16} className="text-primary" />
       </span>
       <span className="flex-1 min-w-0">
         <span className="block text-[0.625rem] font-extrabold uppercase tracking-widest text-white/50">Taktik</span>
         <span className="block text-sm font-bold text-white truncate">{label}</span>
       </span>
-      <span className="text-[0.6875rem] font-extrabold text-[#39FF14] shrink-0 flex items-center">
+      <span className="text-[0.6875rem] font-extrabold text-primary shrink-0 flex items-center">
         Stüdyo'da Aç <ChevronRight size={12} />
       </span>
     </button>
@@ -693,7 +693,7 @@ const TeamChatView: React.FC<{
                   onClick={toggleMute}
                   className="w-full flex items-center gap-2.5 px-4 py-3 text-sm font-bold text-gray-200 hover:bg-white/8 transition-colors"
                 >
-                  {muted ? <Bell size={16} className="text-[#39FF14]" /> : <BellOff size={16} className="text-amber-400" />}
+                  {muted ? <Bell size={16} className="text-primary" /> : <BellOff size={16} className="text-amber-400" />}
                   {muted ? 'Sesi Aç' : 'Sessize Al'}
                 </button>
                 <div className="h-px bg-white/8" />

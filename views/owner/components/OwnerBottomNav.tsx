@@ -35,7 +35,7 @@ export const OwnerBottomNav: React.FC<OwnerBottomNavProps> = ({
   const shownTabs = tabs.filter((t) => !hiddenTabs.includes(t.id));
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-[#0A0E14]/95 backdrop-blur-xl border-t border-white/5 px-2 py-2 z-40 safe-area-pb">
+    <nav className="fixed bottom-0 left-0 right-0 bg-bg/95 backdrop-blur-xl border-t border-white/5 px-2 py-2 z-40 safe-area-pb">
       <div className="flex justify-around items-center max-w-lg mx-auto">
         {shownTabs.map((tab) => {
           const isActive = highlightTab === tab.id;
@@ -58,7 +58,7 @@ export const OwnerBottomNav: React.FC<OwnerBottomNavProps> = ({
               <span className={`relative ${isActive ? 'scale-110' : ''} transition-transform`}>
                 {tab.icon}
                 {locked && (
-                  <span className="absolute -bottom-0.5 -right-1 w-2 h-2 bg-slate-600 rounded-full border border-[#0A0E14]" />
+                  <span className="absolute -bottom-0.5 -right-1 w-2 h-2 bg-slate-600 rounded-full border border-bg" />
                 )}
               </span>
               <span className="text-[10px] font-bold">{tab.label}</span>

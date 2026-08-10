@@ -144,7 +144,7 @@ export const PitchAgreementsPanel: React.FC = () => {
     <section className="mt-10">
       <div className="flex flex-wrap items-center gap-3 mb-4">
         <div className="flex items-center gap-2 mr-auto">
-          <Building2 size={18} className="text-[#39FF14]" />
+          <Building2 size={18} className="text-primary" />
           <h2 className="text-white font-extrabold text-base">Saha Anlaşmaları</h2>
           <span className="text-gray-500 text-xs">
             Sahaya ödenen tutar, oyuncudan toplanan tutar ve serbest iptal süresi
@@ -192,11 +192,11 @@ export const PitchAgreementsPanel: React.FC = () => {
                 </td>
                 <td className="px-4 py-3 whitespace-nowrap">
                   {r.sahaya_ozel
-                    ? <span className="text-[10px] font-extrabold px-2 py-1 rounded-full text-[#39FF14] bg-[#39FF14]/10">SAHAYA ÖZEL</span>
+                    ? <span className="text-[10px] font-extrabold px-2 py-1 rounded-full text-primary bg-primary/10">SAHAYA ÖZEL</span>
                     : <span className="text-[10px] font-extrabold px-2 py-1 rounded-full text-gray-400 bg-white/5">GLOBAL</span>}
                   <span className="ml-2 text-gray-500 text-xs">{r.model === 'MODEL_B' ? 'Model B' : 'Model A'}</span>
                 </td>
-                <td className="px-4 py-3 text-[#39FF14] font-extrabold whitespace-nowrap">%{r.rate_pct}</td>
+                <td className="px-4 py-3 text-primary font-extrabold whitespace-nowrap">%{r.rate_pct}</td>
                 <td className="px-4 py-3 text-gray-300 whitespace-nowrap">
                   {r.markup_amount > 0 ? para(r.markup_amount) : r.markup_pct > 0 ? `%${r.markup_pct}` : '—'}
                 </td>
@@ -208,7 +208,7 @@ export const PitchAgreementsPanel: React.FC = () => {
                   <span className="text-white font-bold">{para(r.ornek_oyuncudan)}</span>
                   <span className="text-gray-600"> · </span>
                   <span className="text-gray-400">OYNA </span>
-                  <span className="text-[#39FF14] font-bold">{para(r.ornek_oyna)}</span>
+                  <span className="text-primary font-bold">{para(r.ornek_oyna)}</span>
                 </td>
                 <td className="px-4 py-3 text-gray-300 whitespace-nowrap">{r.iptal_saati ?? 24} saat</td>
                 <td className="px-4 py-3">
@@ -233,7 +233,7 @@ export const PitchAgreementsPanel: React.FC = () => {
 
       {taslak && (
         <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-6 overflow-y-auto">
-          <div className="bg-[#161B22] border border-white/10 rounded-[28px] p-6 w-full max-w-lg space-y-5 my-auto">
+          <div className="bg-surface-1 border border-white/10 rounded-[28px] p-6 w-full max-w-lg space-y-5 my-auto">
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-white font-extrabold text-lg">{taslak.pitch_name}</h2>
@@ -245,7 +245,7 @@ export const PitchAgreementsPanel: React.FC = () => {
             <Alan label="Anlaşma modeli">
               <select value={taslak.model}
                 onChange={e => setTaslak(t => ({ ...t!, model: e.target.value as 'MODEL_A' | 'MODEL_B' }))}
-                className="w-full bg-[#0A0E14] border border-white/10 rounded-xl px-3 py-2 text-white text-sm">
+                className="w-full bg-bg border border-white/10 rounded-xl px-3 py-2 text-white text-sm">
                 <option value="MODEL_A">Model A — tarifedeki tutar sahanın fiyatıdır</option>
                 <option value="MODEL_B">Model B — sahayı biz kiralarız, üstüne fark koyarız</option>
               </select>
@@ -254,7 +254,7 @@ export const PitchAgreementsPanel: React.FC = () => {
             <Alan label="Komisyon oranı (%) — sahanın hakedişinden düşülür">
               <input type="number" min="0" max="100" step="0.5" value={taslak.rate_pct}
                 onChange={e => setTaslak(t => ({ ...t!, rate_pct: parseFloat(e.target.value) || 0 }))}
-                className="w-full bg-[#0A0E14] border border-white/10 rounded-xl px-3 py-2 text-white text-sm" />
+                className="w-full bg-bg border border-white/10 rounded-xl px-3 py-2 text-white text-sm" />
             </Alan>
 
             <Alan label="Oyuncudan alınan fark">
@@ -262,7 +262,7 @@ export const PitchAgreementsPanel: React.FC = () => {
                 {(['YUZDE','SABIT'] as const).map(tip => (
                   <button key={tip} onClick={() => setTaslak(t => ({ ...t!, markup_tipi: tip }))}
                     className={`flex-1 py-2 rounded-xl text-xs font-extrabold transition-colors ${
-                      taslak.markup_tipi === tip ? 'bg-[#39FF14] text-black' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}>
+                      taslak.markup_tipi === tip ? 'bg-primary text-black' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}>
                     {tip === 'YUZDE' ? 'Yüzde (%)' : 'Sabit tutar (₺)'}
                   </button>
                 ))}
@@ -270,11 +270,11 @@ export const PitchAgreementsPanel: React.FC = () => {
               {taslak.markup_tipi === 'YUZDE' ? (
                 <input type="number" min="0" max="200" step="0.5" value={taslak.markup_pct}
                   onChange={e => setTaslak(t => ({ ...t!, markup_pct: parseFloat(e.target.value) || 0 }))}
-                  className="w-full bg-[#0A0E14] border border-white/10 rounded-xl px-3 py-2 text-white text-sm" />
+                  className="w-full bg-bg border border-white/10 rounded-xl px-3 py-2 text-white text-sm" />
               ) : (
                 <input type="number" min="0" step="10" value={taslak.markup_amount}
                   onChange={e => setTaslak(t => ({ ...t!, markup_amount: parseFloat(e.target.value) || 0 }))}
-                  className="w-full bg-[#0A0E14] border border-white/10 rounded-xl px-3 py-2 text-white text-sm" />
+                  className="w-full bg-bg border border-white/10 rounded-xl px-3 py-2 text-white text-sm" />
               )}
             </Alan>
 
@@ -282,11 +282,11 @@ export const PitchAgreementsPanel: React.FC = () => {
             {(() => {
               const p = onizle(taslak);
               return (
-                <div className="rounded-2xl border border-[#39FF14]/20 bg-[#1a2000] p-4 text-sm space-y-1">
+                <div className="rounded-2xl border border-primary/20 bg-[#1a2000] p-4 text-sm space-y-1">
                   <p className="text-[11px] font-extrabold uppercase tracking-wider text-gray-500">2.000 ₺&apos;lik bir saat</p>
                   <p className="text-gray-300">Sahaya ödenir: <b className="text-white">{para(p.sahaya)}</b></p>
                   <p className="text-gray-300">Oyunculardan toplanır: <b className="text-white">{para(p.oyuncudan)}</b></p>
-                  <p className="text-gray-300">OYNA&apos;da kalan: <b className="text-[#39FF14]">{para(p.oyna)}</b></p>
+                  <p className="text-gray-300">OYNA&apos;da kalan: <b className="text-primary">{para(p.oyna)}</b></p>
                 </div>
               );
             })()}
@@ -295,17 +295,17 @@ export const PitchAgreementsPanel: React.FC = () => {
               <Alan label="Serbest iptal (saat)">
                 <input type="number" min="0" max="336" step="1" value={taslak.iptal_saati}
                   onChange={e => setTaslak(t => ({ ...t!, iptal_saati: parseFloat(e.target.value) || 0 }))}
-                  className="w-full bg-[#0A0E14] border border-white/10 rounded-xl px-3 py-2 text-white text-sm" />
+                  className="w-full bg-bg border border-white/10 rounded-xl px-3 py-2 text-white text-sm" />
               </Alan>
               <Alan label="Yarım iade (saat)">
                 <input type="number" min="0" max="336" step="1" value={taslak.yarim_saat}
                   onChange={e => setTaslak(t => ({ ...t!, yarim_saat: parseFloat(e.target.value) || 0 }))}
-                  className="w-full bg-[#0A0E14] border border-white/10 rounded-xl px-3 py-2 text-white text-sm" />
+                  className="w-full bg-bg border border-white/10 rounded-xl px-3 py-2 text-white text-sm" />
               </Alan>
               <Alan label="Yarım iade (%)">
                 <input type="number" min="0" max="100" step="5" value={taslak.yarim_yuzde}
                   onChange={e => setTaslak(t => ({ ...t!, yarim_yuzde: parseFloat(e.target.value) || 0 }))}
-                  className="w-full bg-[#0A0E14] border border-white/10 rounded-xl px-3 py-2 text-white text-sm" />
+                  className="w-full bg-bg border border-white/10 rounded-xl px-3 py-2 text-white text-sm" />
               </Alan>
             </div>
             <p className="text-[11px] text-gray-500 leading-relaxed">
@@ -318,7 +318,7 @@ export const PitchAgreementsPanel: React.FC = () => {
               <input type="text" value={taslak.notes}
                 onChange={e => setTaslak(t => ({ ...t!, notes: e.target.value }))}
                 placeholder="ör. 2026 sezonu sözleşmesi"
-                className="w-full bg-[#0A0E14] border border-white/10 rounded-xl px-3 py-2 text-white text-sm" />
+                className="w-full bg-bg border border-white/10 rounded-xl px-3 py-2 text-white text-sm" />
             </Alan>
 
             <div className="flex gap-3 pt-1">
@@ -327,7 +327,7 @@ export const PitchAgreementsPanel: React.FC = () => {
                 Vazgeç
               </button>
               <button onClick={() => void kaydet()} disabled={saving}
-                className="flex-1 py-3 bg-[#39FF14] text-black font-extrabold rounded-xl hover:brightness-110 active:scale-95 transition-all text-sm disabled:opacity-50 flex items-center justify-center gap-2">
+                className="flex-1 py-3 bg-primary text-black font-extrabold rounded-xl hover:brightness-110 active:scale-95 transition-all text-sm disabled:opacity-50 flex items-center justify-center gap-2">
                 {saving ? <RefreshCw size={14} className="animate-spin" /> : <Check size={14} />}
                 {saving ? 'Kaydediliyor…' : 'Kaydet'}
               </button>

@@ -63,7 +63,7 @@ export const ElleBakilacaklar: React.FC = () => {
   };
 
   return (
-    <section className="bg-[#161B22] border border-white/[0.08] rounded-2xl p-5">
+    <section className="bg-surface-1 border border-white/[0.08] rounded-2xl p-5">
       <div className="flex items-center justify-between gap-3 mb-1">
         <h3 className="text-sm font-extrabold text-white flex items-center gap-2">
           <AlertTriangle size={15} className="text-amber-400" />

@@ -131,7 +131,7 @@ export const OwnerBankAccountsModal: React.FC<OwnerBankAccountsModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex flex-col">
-      <div className="bg-[#161B22] p-4 flex justify-between items-center border-b border-white/5 safe-area-top">
+      <div className="bg-surface-1 p-4 flex justify-between items-center border-b border-white/5 safe-area-top">
         <button type="button" onClick={onClose} aria-label="Kapat" className="w-11 h-11 flex items-center justify-center rounded-full bg-white/5 text-white">
           <X size={20} />
         </button>
@@ -159,7 +159,7 @@ export const OwnerBankAccountsModal: React.FC<OwnerBankAccountsModalProps> = ({
             {accounts.map((acc) => (
               <div
                 key={acc.id}
-                className="bg-[#161B22] p-4 rounded-2xl border border-white/5 flex items-start justify-between gap-3"
+                className="bg-surface-1 p-4 rounded-2xl border border-white/5 flex items-start justify-between gap-3"
               >
                 <div className="flex items-start gap-3 min-w-0">
                   <Banknote size={20} className="text-emerald-400 shrink-0 mt-0.5" />
@@ -201,22 +201,22 @@ export const OwnerBankAccountsModal: React.FC<OwnerBankAccountsModalProps> = ({
         )}
 
         {canUseDb && !readOnly && (
-          <div className="bg-[#161B22] p-5 rounded-3xl border border-white/5 space-y-3">
+          <div className="bg-surface-1 p-5 rounded-3xl border border-white/5 space-y-3">
             <h3 className="text-xs font-extrabold text-gray-500 uppercase tracking-widest">Yeni Hesap</h3>
             <input
-              className="w-full bg-[#0A0E14] border border-white/5 rounded-xl p-3 text-white text-sm"
+              className="w-full bg-bg border border-white/5 rounded-xl p-3 text-white text-sm"
               placeholder="Banka adı"
               value={form.bank_name}
               onChange={(e) => setForm({ ...form, bank_name: e.target.value })}
             />
             <input
-              className="w-full bg-[#0A0E14] border border-white/5 rounded-xl p-3 text-white text-sm"
+              className="w-full bg-bg border border-white/5 rounded-xl p-3 text-white text-sm"
               placeholder="Hesap sahibi"
               value={form.account_holder}
               onChange={(e) => setForm({ ...form, account_holder: e.target.value })}
             />
             <input
-              className="w-full bg-[#0A0E14] border border-white/5 rounded-xl p-3 text-white text-sm font-mono"
+              className="w-full bg-bg border border-white/5 rounded-xl p-3 text-white text-sm font-mono"
               placeholder="IBAN (TR…)"
               value={form.iban}
               onChange={(e) => setForm({ ...form, iban: e.target.value })}

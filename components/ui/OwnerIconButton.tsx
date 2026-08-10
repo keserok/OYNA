@@ -18,7 +18,7 @@ interface IconButtonProps
 
 const VARIANTS: Record<Variant, string> = {
   ghost: 'bg-white/5 text-white hover:bg-white/10',
-  surface: 'bg-[#161B22] text-white border border-white/10 hover:border-white/20',
+  surface: 'bg-surface-1 text-white border border-white/10 hover:border-white/20',
   danger: 'bg-red-500/10 text-red-400 hover:bg-red-500/20',
   primary: 'bg-blue-600 text-white hover:bg-blue-500',
 };
@@ -37,7 +37,7 @@ export const IconButton: React.FC<IconButtonProps> = ({
     <button
       type={type}
       aria-label={ariaLabel}
-      className={`${dim} shrink-0 inline-flex items-center justify-center rounded-full transition-all active:scale-[0.94] outline-none focus-visible:ring-2 focus-visible:ring-blue-500/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0A0E14] disabled:opacity-40 disabled:pointer-events-none ${VARIANTS[variant]} ${className}`}
+      className={`${dim} shrink-0 inline-flex items-center justify-center rounded-full transition-all active:scale-[0.94] outline-none focus-visible:ring-2 focus-visible:ring-blue-500/70 focus-visible:ring-offset-2 focus-visible:ring-offset-bg disabled:opacity-40 disabled:pointer-events-none ${VARIANTS[variant]} ${className}`}
       {...rest}
     >
       {children}

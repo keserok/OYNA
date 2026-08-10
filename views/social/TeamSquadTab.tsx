@@ -156,8 +156,8 @@ const TeamSquadTab: React.FC<TeamSquadTabProps> = ({
     <div className="space-y-5">
       {/* ── Bekleyenler (yalnız yönetici — Spec §3.8 Kadro) ── */}
       {isAdmin && (requests.length > 0 || outgoing.length > 0) && (
-        <div className="rounded-2xl bg-[#39FF14]/6 border border-[#39FF14]/20 p-3.5">
-          <div className="text-[0.625rem] font-extrabold uppercase tracking-widest text-[#39FF14]/80 mb-2.5">
+        <div className="rounded-2xl bg-primary/6 border border-primary/20 p-3.5">
+          <div className="text-[0.625rem] font-extrabold uppercase tracking-widest text-primary/80 mb-2.5">
             Bekleyenler ({requests.length + outgoing.length})
           </div>
           <div className="space-y-2">
@@ -186,7 +186,7 @@ const TeamSquadTab: React.FC<TeamSquadTabProps> = ({
                     </button>
                     <button
                       onClick={() => handleRequest(req, true)}
-                      className="h-9 px-3 rounded-xl bg-[#39FF14] text-[#0A0E14] text-[0.6875rem] font-extrabold flex items-center gap-1 active:scale-95"
+                      className="h-9 px-3 rounded-xl bg-primary text-on-primary text-[0.6875rem] font-extrabold flex items-center gap-1 active:scale-95"
                     >
                       <Check size={12} /> Onayla
                     </button>
@@ -223,7 +223,7 @@ const TeamSquadTab: React.FC<TeamSquadTabProps> = ({
           {isAdmin && (
             <button
               onClick={onOpenInvite}
-              className="h-9 px-3 rounded-xl bg-[#39FF14] text-[#0A0E14] text-[0.6875rem] font-extrabold flex items-center gap-1.5 active:scale-95"
+              className="h-9 px-3 rounded-xl bg-primary text-on-primary text-[0.6875rem] font-extrabold flex items-center gap-1.5 active:scale-95"
             >
               <UserPlus size={13} /> Davet Et
             </button>
@@ -311,7 +311,7 @@ const TeamSquadTab: React.FC<TeamSquadTabProps> = ({
                     value={jersey}
                     onChange={e => setJersey(e.target.value.replace(/\D/g, '').slice(0, 2))}
                     placeholder="—"
-                    className="w-20 h-11 rounded-xl bg-white/5 border border-white/10 text-center text-base font-extrabold tabular-nums placeholder:text-ink-4 focus:outline-none focus:border-[#39FF14]/50"
+                    className="w-20 h-11 rounded-xl bg-white/5 border border-white/10 text-center text-base font-extrabold tabular-nums placeholder:text-ink-4 focus:outline-none focus:border-primary/50"
                   />
                   <button
                     onClick={saveJersey}
@@ -332,7 +332,7 @@ const TeamSquadTab: React.FC<TeamSquadTabProps> = ({
                     disabled={sheetBusy}
                     className="w-full min-h-[46px] rounded-2xl bg-white/5 border border-white/10 text-sm font-bold text-white/80 flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-50"
                   >
-                    <ShieldCheck size={15} className="text-[#39FF14]" />
+                    <ShieldCheck size={15} className="text-primary" />
                     {member.role === 'ADMIN' ? 'Yöneticiliği Al' : 'Yönetici Yap'}
                   </button>
                 )}

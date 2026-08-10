@@ -106,7 +106,7 @@ export function DataTable<T>({
     const hasToolbar = exportable || columnToggle;
 
     return (
-        <div className="w-full bg-[#161B22]/40 border border-white/[0.06] rounded-xl overflow-hidden">
+        <div className="w-full bg-surface-1/40 border border-white/[0.06] rounded-xl overflow-hidden">
             {hasToolbar && (
                 <div className="flex items-center justify-end gap-2 px-3 py-2 border-b border-white/[0.06] bg-white/[0.02]">
                     {columnToggle && (

@@ -322,7 +322,7 @@ export const FinancePage: React.FC<{ onNavigate?: AdminNavigateFn }> = ({ onNavi
   };
 
   const statCards = stats ? [
-    { label: 'Rezervasyon Geliri (30g)', value: `₺${Number(stats.booking_revenue).toLocaleString('tr')}`, color: 'text-[#39FF14]' },
+    { label: 'Rezervasyon Geliri (30g)', value: `₺${Number(stats.booking_revenue).toLocaleString('tr')}`, color: 'text-primary' },
     { label: 'Cüzdan Giriş', value: `₺${Number(stats.wallet_credits).toLocaleString('tr')}`, color: 'text-blue-400' },
     { label: 'Cüzdan Çıkış', value: `₺${Number(stats.wallet_debits).toLocaleString('tr')}`, color: 'text-red-400' },
     { label: 'Bekleyen Çekim', value: `₺${Number(stats.withdrawal_pending).toLocaleString('tr')}`, color: 'text-yellow-400' },
@@ -426,7 +426,7 @@ export const FinancePage: React.FC<{ onNavigate?: AdminNavigateFn }> = ({ onNavi
         </div>
       }
       stats={statCards?.map((k) => (
-        <div key={k.label} className="bg-[#161B22]/60 border border-white/[0.06] rounded-xl p-4">
+        <div key={k.label} className="bg-surface-1/60 border border-white/[0.06] rounded-xl p-4">
           <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">{k.label}</p>
           <p className={`text-lg font-extrabold mt-1 ${k.color}`}>{k.value}</p>
         </div>

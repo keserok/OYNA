@@ -171,7 +171,7 @@ export const OwnerMenuView: React.FC<OwnerMenuViewProps> = ({
           tabIndex={0}
           onClick={onSwitchRole}
           onKeyDown={(e) => e.key === 'Enter' && onSwitchRole()}
-          className="bg-gradient-to-r from-blue-900/30 to-[#161B22] p-5 rounded-[24px] border border-blue-500/20 mb-8 flex items-center justify-between group cursor-pointer hover:border-blue-500/50 transition-all active:scale-[0.98]"
+          className="bg-gradient-to-r from-blue-900/30 to-surface-1 p-5 rounded-[24px] border border-blue-500/20 mb-8 flex items-center justify-between group cursor-pointer hover:border-blue-500/50 transition-all active:scale-[0.98]"
         >
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 bg-blue-500/15 rounded-xl flex items-center justify-center text-blue-400">
@@ -190,7 +190,7 @@ export const OwnerMenuView: React.FC<OwnerMenuViewProps> = ({
         {isManagerLvl && (
         <section>
           <h3 className="text-xs font-bold text-gray-500 uppercase mb-3 ml-1">İşletme Yönetimi</h3>
-          <div className="bg-[#161B22] border border-white/5 rounded-[24px] overflow-hidden">
+          <div className="bg-surface-1 border border-white/5 rounded-[24px] overflow-hidden">
             <MenuRow
               icon={<Building2 size={18} />}
               label="Tesis Ayarları"
@@ -231,7 +231,7 @@ export const OwnerMenuView: React.FC<OwnerMenuViewProps> = ({
         {isManagerLvl && (
         <section>
           <h3 className="text-xs font-bold text-gray-500 uppercase mb-3 ml-1">Finansal</h3>
-          <div className="bg-[#161B22] border border-white/5 rounded-[24px] overflow-hidden">
+          <div className="bg-surface-1 border border-white/5 rounded-[24px] overflow-hidden">
             {/* Banka + Para Çekme SAHİP-only (para-güvenliği); müdür/personel görmez. */}
             {isOwnerLvl && (
               <MenuRow
@@ -289,7 +289,7 @@ export const OwnerMenuView: React.FC<OwnerMenuViewProps> = ({
 
         <section>
           <h3 className="text-xs font-bold text-gray-500 uppercase mb-3 ml-1">Uygulama</h3>
-          <div className="bg-[#161B22] border border-white/5 rounded-[24px] overflow-hidden">
+          <div className="bg-surface-1 border border-white/5 rounded-[24px] overflow-hidden">
             <MenuRow icon={<LayoutDashboard size={18} />} label="Özet Widgetları" onClick={onWidgetSettings} />
             <MenuRow icon={<Bell size={18} />} label="Bildirimler" onClick={onNotifications} />
             <MenuRow icon={<Shield size={18} />} label="Güvenlik & Şifre" onClick={onSecurity} />

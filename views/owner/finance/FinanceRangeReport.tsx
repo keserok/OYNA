@@ -61,7 +61,7 @@ export const FinanceRangeReport: React.FC<{
   }, [report]);
 
   return (
-    <div className="bg-[#161B22] border border-emerald-500/15 rounded-[32px] p-6">
+    <div className="bg-surface-1 border border-emerald-500/15 rounded-[32px] p-6">
       <h3 className="text-xs font-extrabold text-gray-400 uppercase mb-1 flex items-center gap-2">
         <Calendar size={16} className="text-emerald-400" /> TARİH ARALIKLI FİNANS RAPORU
       </h3>
@@ -76,7 +76,7 @@ export const FinanceRangeReport: React.FC<{
             value={reportFrom}
             max={today}
             onChange={(e) => setReportFrom(e.target.value)}
-            className="w-full bg-[#0A0E14] border border-white/10 rounded-xl p-2.5 text-white text-sm"
+            className="w-full bg-bg border border-white/10 rounded-xl p-2.5 text-white text-sm"
           />
         </div>
         <div>
@@ -86,7 +86,7 @@ export const FinanceRangeReport: React.FC<{
             value={reportTo}
             max={today}
             onChange={(e) => setReportTo(e.target.value)}
-            className="w-full bg-[#0A0E14] border border-white/10 rounded-xl p-2.5 text-white text-sm"
+            className="w-full bg-bg border border-white/10 rounded-xl p-2.5 text-white text-sm"
           />
         </div>
       </div>

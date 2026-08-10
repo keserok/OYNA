@@ -187,7 +187,7 @@ export const MatchesPage: React.FC<MatchesPageProps> = ({ onRefresh, onNavigate 
     },
     {
       header: 'FİYAT',
-      render: (m: MatchListing) => <span className="text-[#39FF14] font-bold font-mono text-sm">₺{m.price}</span>,
+      render: (m: MatchListing) => <span className="text-primary font-bold font-mono text-sm">₺{m.price}</span>,
     },
     {
       header: 'DURUM',

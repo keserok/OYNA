@@ -21,7 +21,7 @@ export const OwnerWidgetSettingsModal: React.FC<Props> = ({
         return (
           <div
             key={widget.id}
-            className="bg-[#0A0E14] border border-white/5 p-4 rounded-2xl flex items-center justify-between"
+            className="bg-bg border border-white/5 p-4 rounded-2xl flex items-center justify-between"
           >
             <div className="flex items-center gap-4">
               <div

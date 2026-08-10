@@ -121,7 +121,7 @@ const RoleSwitcher: React.FC<RoleSwitcherProps> = ({ roles, onClose, onSwitched 
                   <p className="text-[0.6875rem] text-gray-400 truncate">{meta.sub}</p>
                 </div>
                 {isActive ? (
-                  <span className="flex items-center gap-1 text-[0.625rem] font-extrabold uppercase tracking-widest text-[#39FF14] shrink-0">
+                  <span className="flex items-center gap-1 text-[0.625rem] font-extrabold uppercase tracking-widest text-primary shrink-0">
                     <Check size={12} /> Aktif
                   </span>
                 ) : (

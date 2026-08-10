@@ -119,14 +119,14 @@ const MatchSquadPicker: React.FC<MatchSquadPickerProps> = ({
   return (
     <motion.div
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 bg-[#0A0E14] flex flex-col"
+      className="fixed inset-0 z-50 bg-bg flex flex-col"
     >
       {/* ── Başlık ── */}
       <div className="pt-safe px-5 pt-5 pb-3 border-b border-white/8 shrink-0">
         <div className="flex items-center justify-between mb-4">
           <div>
             <h2 className="text-xl font-extrabold text-white italic tracking-tight uppercase">Kadroyu Kur</h2>
-            <p className="text-[0.6875rem] text-[#39FF14] font-bold uppercase tracking-widest mt-0.5">Arkadaş çağır · takım diz</p>
+            <p className="text-[0.6875rem] text-primary font-bold uppercase tracking-widest mt-0.5">Arkadaş çağır · takım diz</p>
           </div>
           <button
             onClick={onClose}
@@ -194,7 +194,7 @@ const MatchSquadPicker: React.FC<MatchSquadPickerProps> = ({
                           already
                             ? 'bg-white/[0.02] border-white/6 opacity-45'
                             : sel
-                              ? 'bg-[#39FF14]/6 border-[#39FF14]/40'
+                              ? 'bg-primary/6 border-primary/40'
                               : 'bg-white/4 border-white/6'
                         }`}
                       >
@@ -209,7 +209,7 @@ const MatchSquadPicker: React.FC<MatchSquadPickerProps> = ({
                         <span className={`w-6 h-6 shrink-0 rounded-full border-2 flex items-center justify-center transition-all ${
                           already
                             ? 'border-white/15 text-ink-4'
-                            : sel ? 'bg-[#39FF14] border-[#39FF14] text-[#0A0E14]' : 'border-white/20 text-transparent'
+                            : sel ? 'bg-primary border-primary text-on-primary' : 'border-white/20 text-transparent'
                         }`}>
                           <Check size={14} strokeWidth={3} />
                         </span>
@@ -261,10 +261,10 @@ const MatchSquadPicker: React.FC<MatchSquadPickerProps> = ({
                           <div className="text-[0.6875rem] text-ink-4 mt-0.5">
                             {t.wins}G {t.draws}B {t.losses}M · {t.member_count} oyuncu
                           </div>
-                          <div className="text-[0.6875rem] text-[#39FF14] font-bold mt-1">Kadroyu sahaya diz →</div>
+                          <div className="text-[0.6875rem] text-primary font-bold mt-1">Kadroyu sahaya diz →</div>
                         </div>
                         {busy
-                          ? <Loader2 size={18} className="animate-spin text-[#39FF14] shrink-0" />
+                          ? <Loader2 size={18} className="animate-spin text-primary shrink-0" />
                           : <ChevronRight size={18} className="text-ink-4 shrink-0" />}
                       </button>
                     );
@@ -279,10 +279,10 @@ const MatchSquadPicker: React.FC<MatchSquadPickerProps> = ({
 
       {/* ── Sabit seçim çubuğu (yalnız Arkadaşlar sekmesi) ── */}
       {tab === 'FRIENDS' && selected.length > 0 && (
-        <div className="absolute bottom-0 inset-x-0 p-5 pb-safe bg-gradient-to-t from-[#0A0E14] via-[#0A0E14]/95 to-transparent">
+        <div className="absolute bottom-0 inset-x-0 p-5 pb-safe bg-gradient-to-t from-bg via-bg/95 to-transparent">
           <button
             onClick={confirmFriends}
-            className="w-full min-h-[54px] rounded-2xl bg-[#39FF14] text-[#0A0E14] font-extrabold text-base uppercase tracking-widest active:scale-[0.98] flex items-center justify-center gap-2 shadow-[0_0_30px_rgba(57,255,20,0.3)]"
+            className="w-full min-h-[54px] rounded-2xl bg-primary text-on-primary font-extrabold text-base uppercase tracking-widest active:scale-[0.98] flex items-center justify-center gap-2 shadow-[0_0_30px_rgba(57,255,20,0.3)]"
           >
             Seçili {selected.length} Oyuncuyu Ekle
             {typeof openSlotCount === 'number' && (

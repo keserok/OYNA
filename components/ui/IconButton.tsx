@@ -36,7 +36,7 @@ const variantClasses: Record<IconButtonVariant, string> = {
   surface: 'bg-white/5 border border-white/10 text-white hover:bg-white/10',
   primary: 'bg-primary border border-primary text-on-primary',
   // #DC2626 üstünde beyaz 4.83:1 (AA geçer). #EF4444 3.76:1 kaldığı için kullanılmaz.
-  danger: 'bg-[#DC2626] border border-[#DC2626] text-white',
+  danger: 'bg-error-fill border border-error-fill text-white',
 };
 
 const sizeClasses: Record<IconButtonSize, string> = {
@@ -59,8 +59,8 @@ export const IconButton: React.FC<IconButtonProps> = ({
     title={label}
     className={`shrink-0 ${sizeClasses[size]} rounded-full inline-flex items-center justify-center
       transition-all active:scale-95 disabled:opacity-40 disabled:pointer-events-none
-      outline-none focus-visible:ring-2 focus-visible:ring-[#39FF14]
-      focus-visible:ring-offset-2 focus-visible:ring-offset-[#0A0E14]
+      outline-none focus-visible:ring-2 focus-visible:ring-primary
+      focus-visible:ring-offset-2 focus-visible:ring-offset-bg
       ${variantClasses[variant]} ${className}`}
     {...rest}
   >

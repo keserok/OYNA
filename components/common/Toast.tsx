@@ -15,9 +15,9 @@ const VARIANT_STYLES = {
     text: 'text-red-100',
   },
   success: {
-    container: 'bg-[#0A0E14]/95 border-[#39FF14]/40',
+    container: 'bg-bg/95 border-primary/40',
     icon: CheckCircle2,
-    iconColor: 'text-[#39FF14]',
+    iconColor: 'text-primary',
     text: 'text-white',
   },
 };

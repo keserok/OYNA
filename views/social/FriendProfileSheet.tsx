@@ -141,7 +141,7 @@ const FriendProfileSheet: React.FC<FriendProfileSheetProps> = ({
                   {friend.oyna_id ? `@${friend.oyna_id}` : 'OYNA oyuncusu'}
                   {friend.pos ? ` · ${friend.pos}` : ''}
                 </div>
-                <div className={`text-xs mt-0.5 ${online ? 'text-[#39FF14]' : 'text-ink-4'}`}>
+                <div className={`text-xs mt-0.5 ${online ? 'text-primary' : 'text-ink-4'}`}>
                   {friend.last_active_at
                     ? (online ? 'Şimdi aktif' : `Son görülme: ${formatLastSeen(friend.last_active_at)}`)
                     : ' '}
@@ -166,7 +166,7 @@ const FriendProfileSheet: React.FC<FriendProfileSheetProps> = ({
             {/* BİRİNCİL: Maça Çağır (D23 — çekirdek döngü) */}
             <button
               onClick={() => setPanel('MATCH_PICKER')}
-              className="mt-5 w-full min-h-[52px] rounded-2xl bg-[#39FF14] text-[#0A0E14] font-extrabold text-sm flex items-center justify-center gap-2 active:scale-[0.98]"
+              className="mt-5 w-full min-h-[52px] rounded-2xl bg-primary text-on-primary font-extrabold text-sm flex items-center justify-center gap-2 active:scale-[0.98]"
             >
               ⚽ MAÇA ÇAĞIR
             </button>
@@ -233,8 +233,8 @@ const FriendProfileSheet: React.FC<FriendProfileSheetProps> = ({
                         </div>
                       </div>
                       {busy === m.id
-                        ? <Loader2 size={16} className="animate-spin text-[#39FF14]" />
-                        : <span className="text-[0.6875rem] font-extrabold text-[#39FF14]">ÇAĞIR</span>}
+                        ? <Loader2 size={16} className="animate-spin text-primary" />
+                        : <span className="text-[0.6875rem] font-extrabold text-primary">ÇAĞIR</span>}
                     </button>
                   );
                 })}
@@ -263,12 +263,12 @@ const FriendProfileSheet: React.FC<FriendProfileSheetProps> = ({
                       key={l.id}
                       onClick={() => toggleList(l.id)}
                       className={`w-full min-h-[48px] rounded-2xl border px-4 flex items-center gap-2.5 text-sm font-bold active:scale-[0.98] ${
-                        has ? 'bg-[#39FF14]/8 border-[#39FF14]/30 text-white' : 'bg-white/4 border-white/8 text-white/70'
+                        has ? 'bg-primary/8 border-primary/30 text-white' : 'bg-white/4 border-white/8 text-white/70'
                       }`}
                     >
                       {l.emoji && <span>{l.emoji}</span>}
                       <span className="flex-1 text-left">{l.name}</span>
-                      {has && <Check size={15} className="text-[#39FF14]" />}
+                      {has && <Check size={15} className="text-primary" />}
                     </button>
                   );
                 })}

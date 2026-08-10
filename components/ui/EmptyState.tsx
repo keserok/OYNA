@@ -37,7 +37,7 @@ const EmptyState: React.FC<EmptyStateProps> = ({
             onClick={a.onClick}
             className={`min-h-[44px] rounded-2xl font-bold text-sm transition-transform active:scale-[0.97] ${
               a.primary
-                ? 'bg-[#39FF14] text-[#0A0E14]'
+                ? 'bg-primary text-on-primary'
                 : 'bg-white/5 border border-white/10 text-white/80'
             }`}
           >

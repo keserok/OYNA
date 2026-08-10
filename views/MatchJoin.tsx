@@ -501,17 +501,17 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
   // hata ekranı.
   if (!match) {
     return (
-      <div className="h-full w-full bg-[#0A0E14] flex flex-col items-center justify-center px-8 text-center">
-        <div className="w-20 h-20 rounded-3xl bg-[#F87171]/10 border border-[#F87171]/30 flex items-center justify-center mb-5">
-          <AlertCircle size={32} className="text-[#F87171]" />
+      <div className="h-full w-full bg-bg flex flex-col items-center justify-center px-8 text-center">
+        <div className="w-20 h-20 rounded-3xl bg-error/10 border border-error/30 flex items-center justify-center mb-5">
+          <AlertCircle size={32} className="text-error" />
         </div>
         <h2 className="text-[1.25rem] font-bold text-white mb-2">Maç açılamadı</h2>
-        <p className="text-[0.9375rem] text-[#A9B4C0] leading-relaxed mb-6">
+        <p className="text-[0.9375rem] text-ink-3 leading-relaxed mb-6">
           Bu maç artık mevcut değil ya da yüklenemedi.
         </p>
         <button
           onClick={onBack}
-          className="min-h-[44px] px-6 rounded-2xl bg-[#39FF14] text-on-primary text-[0.9375rem] font-bold active:scale-[0.98] transition-transform"
+          className="min-h-[44px] px-6 rounded-2xl bg-primary text-on-primary text-[0.9375rem] font-bold active:scale-[0.98] transition-transform"
         >
           Geri Dön
         </button>
@@ -1237,7 +1237,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
   // ─── RENDER ─────────────────────────────────────────────────────────────────
 
   return (
-    <div className="h-full bg-[#0A0E14] flex flex-col relative overflow-hidden font-sans">
+    <div className="h-full bg-bg flex flex-col relative overflow-hidden font-sans">
 
       {/* Ambiyans arka plan */}
 
@@ -1255,7 +1255,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
               exit={{ scale: 0.8, y: 30, opacity: 0 }}
               transition={{ type: 'spring', damping: 24, stiffness: 300 }}
               onClick={e => e.stopPropagation()}
-              className="relative w-[19rem] rounded-[28px] overflow-hidden bg-gradient-to-b from-[#161B22] to-[#0d1117] border border-white/10 shadow-[0_30px_70px_rgba(0,0,0,0.85)]">
+              className="relative w-[19rem] rounded-[28px] overflow-hidden bg-gradient-to-b from-surface-1 to-[#0d1117] border border-white/10 shadow-[0_30px_70px_rgba(0,0,0,0.85)]">
               {(() => {
                 const isHome = pitchSide === 'home';
                 const accent = isHome ? '#FFFFFF' : '#F87171';
@@ -1277,7 +1277,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                   <div className="p-6 pt-8 flex flex-col items-center">
                     <div className="w-24 h-24 rounded-full overflow-hidden border-2 shadow-lg mb-3" style={{ borderColor: accent + '66' }}>
                       {isRealPhoto((activePlayer as any).avatar) ? (
-                        <img src={(activePlayer as any).avatar} alt={(activePlayer as any).name} className="w-full h-full object-cover bg-[#0A0E14]" />
+                        <img src={(activePlayer as any).avatar} alt={(activePlayer as any).name} className="w-full h-full object-cover bg-bg" />
                       ) : (
                         <div className={`w-full h-full flex items-center justify-center text-3xl font-extrabold tracking-tight ${initialsCls}`}>
                           {getInitials((activePlayer as any).name)}
@@ -1347,7 +1347,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                         {/* Legacy INVITED davetini davetli kabul eder */}
                         {activePlayerSlot && (activePlayerSlot as any).inviteeId === currentUserProfile.id && (activePlayerSlot as any).assignmentStatus === 'INVITED' && (
                           <button onClick={() => handleAcceptSlot(activePlayerSlot.id)} disabled={isProcessing}
-                            className="w-full py-3.5 rounded-2xl font-extrabold text-xs uppercase tracking-widest text-on-primary bg-[#39FF14] active:scale-95 transition-all shadow-[0_0_20px_rgba(57,255,20,0.35)] flex items-center justify-center gap-2">
+                            className="w-full py-3.5 rounded-2xl font-extrabold text-xs uppercase tracking-widest text-on-primary bg-primary active:scale-95 transition-all shadow-[0_0_20px_rgba(57,255,20,0.35)] flex items-center justify-center gap-2">
                             <CheckCircle2 size={15} /> Slotu Kabul Et
                           </button>
                         )}
@@ -1394,7 +1394,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
               initial={{ scale: 0.9, y: 20, opacity: 0 }}
               animate={{ scale: 1, y: 0, opacity: 1 }}
               exit={{ scale: 0.9, y: 20, opacity: 0 }}
-              className="bg-[#161B22] border border-red-500/30 w-full max-w-sm rounded-[32px] p-6 shadow-[0_0_50px_rgba(239,68,68,0.2)] text-center">
+              className="bg-surface-1 border border-red-500/30 w-full max-w-sm rounded-[32px] p-6 shadow-[0_0_50px_rgba(239,68,68,0.2)] text-center">
               
               <div className="w-16 h-16 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center mx-auto mb-4">
                 <AlertCircle size={32} className="text-red-500" />
@@ -1463,7 +1463,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
               initial={{ scale: 0.9, y: 20, opacity: 0 }}
               animate={{ scale: 1, y: 0, opacity: 1 }}
               exit={{ scale: 0.9, y: 20, opacity: 0 }}
-              className="bg-[#161B22] border border-red-500/30 w-full max-w-sm rounded-[32px] p-6 shadow-[0_0_50px_rgba(239,68,68,0.2)] text-center">
+              className="bg-surface-1 border border-red-500/30 w-full max-w-sm rounded-[32px] p-6 shadow-[0_0_50px_rgba(239,68,68,0.2)] text-center">
               <div className="w-16 h-16 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center mx-auto mb-4">
                 <AlertCircle size={32} className="text-red-500" />
               </div>
@@ -1478,7 +1478,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                 <p className={`text-[0.6875rem] font-bold rounded-xl px-3 py-2 mb-3 text-left ${
                   gecIptal
                     ? 'text-red-300 bg-red-500/[0.09] border border-red-500/25'
-                    : 'text-[#8fe87a] bg-[#39FF14]/[0.07] border border-[#39FF14]/20'
+                    : 'text-[#8fe87a] bg-primary/[0.07] border border-primary/20'
                 }`}>
                   {kaporaBloke && <>Kaporan <b>{money(kaporaTutari)}</b> henüz tahsil edilmedi — <b>tamamı</b> cüzdanına geri döner.</>}
                   {kaporaTahsil && !gecIptal && <>Kaporan tahsil edilmişti; maça {serbestIptalSaati} saatten fazla olduğu için <b>{money(kaporaTutari)} iade edilir</b>.</>}
@@ -1521,7 +1521,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
               initial={{ scale: 0.9, y: 20, opacity: 0 }}
               animate={{ scale: 1, y: 0, opacity: 1 }}
               exit={{ scale: 0.9, y: 20, opacity: 0 }}
-              className="bg-[#161B22] border border-red-500/30 w-full max-w-sm rounded-[32px] p-6 shadow-[0_0_50px_rgba(239,68,68,0.2)] text-center">
+              className="bg-surface-1 border border-red-500/30 w-full max-w-sm rounded-[32px] p-6 shadow-[0_0_50px_rgba(239,68,68,0.2)] text-center">
               
               <div className="w-16 h-16 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center mx-auto mb-4">
                 <AlertCircle size={32} className="text-red-500" />
@@ -1569,7 +1569,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
               initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
               transition={{ type: 'spring', damping: 26, stiffness: 280 }}
               onClick={e => e.stopPropagation()}
-              className="bg-[#161B22] border-t border-line-strong w-full max-w-md rounded-t-[36px] p-6 pb-10 shadow-[0_-20px_50px_rgba(0,0,0,0.8)]">
+              className="bg-surface-1 border-t border-line-strong w-full max-w-md rounded-t-[36px] p-6 pb-10 shadow-[0_-20px_50px_rgba(0,0,0,0.8)]">
               <div className="w-12 h-1 bg-white/20 rounded-full mx-auto mb-5" />
               <h3 className="text-lg font-extrabold text-white italic uppercase tracking-tighter text-center">Slotu Doldur</h3>
               <p className="text-[0.625rem] text-ink-4 font-bold uppercase tracking-widest text-center mt-1 mb-5">
@@ -1577,7 +1577,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
               </p>
               <div className="space-y-3">
                 <button onClick={() => handleSelfAssign(fillSlot.id)} disabled={isProcessing}
-                  className="w-full py-3.5 rounded-2xl font-extrabold text-sm uppercase tracking-widest text-on-primary bg-[#39FF14] active:scale-95 transition-all shadow-[0_0_20px_rgba(57,255,20,0.3)] flex items-center justify-center gap-2 disabled:opacity-60">
+                  className="w-full py-3.5 rounded-2xl font-extrabold text-sm uppercase tracking-widest text-on-primary bg-primary active:scale-95 transition-all shadow-[0_0_20px_rgba(57,255,20,0.3)] flex items-center justify-center gap-2 disabled:opacity-60">
                   {isProcessing ? <Loader2 size={16} className="animate-spin" /> : <><UserPlus size={15} /> KENDİMİ EKLE</>}
                 </button>
                 <button onClick={() => { setAssignPickerSlotId(fillSlot.id); setFillSlot(null); }}
@@ -1585,7 +1585,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                   <Users size={15} /> ARKADAŞ EKLE
                 </button>
                 <button onClick={() => handleMakeSlotCode(fillSlot.id)}
-                  className="w-full py-3.5 rounded-2xl font-extrabold text-sm uppercase tracking-widest text-[#FACC15] bg-[#FACC15]/8 border border-[#FACC15]/25 active:scale-95 transition-all flex items-center justify-center gap-2">
+                  className="w-full py-3.5 rounded-2xl font-extrabold text-sm uppercase tracking-widest text-warning bg-warning/8 border border-warning/25 active:scale-95 transition-all flex items-center justify-center gap-2">
                   <KeyRound size={15} /> DEVRALMA KODU ÜRET
                 </button>
                 <button onClick={() => handleRelease(fillSlot.id)} disabled={isProcessing}
@@ -1620,7 +1620,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
               initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
               transition={{ type: 'spring', damping: 26, stiffness: 280 }}
               onClick={e => e.stopPropagation()}
-              className="bg-[#161B22] border-t border-white/10 w-full max-w-md rounded-t-[36px] p-6 pb-10 shadow-[0_-20px_50px_rgba(0,0,0,0.8)]">
+              className="bg-surface-1 border-t border-white/10 w-full max-w-md rounded-t-[36px] p-6 pb-10 shadow-[0_-20px_50px_rgba(0,0,0,0.8)]">
               <div className="w-12 h-1 bg-white/20 rounded-full mx-auto mb-5" />
               <h3 className="text-lg font-extrabold text-white italic uppercase tracking-tighter text-center">Taktik Öner</h3>
               <p className="text-[0.625rem] text-ink-4 font-bold uppercase tracking-widest text-center mt-1 mb-4">
@@ -1669,7 +1669,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
               exit={{ y: '100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 250 }}
               onClick={e => e.stopPropagation()}
-              className="bg-[#161B22] border-t border-white/10 w-full max-w-md rounded-t-[36px] p-6 pb-10 shadow-[0_-20px_50px_rgba(0,0,0,0.8)]"
+              className="bg-surface-1 border-t border-white/10 w-full max-w-md rounded-t-[36px] p-6 pb-10 shadow-[0_-20px_50px_rgba(0,0,0,0.8)]"
             >
               <div className="w-12 h-1 bg-white/20 rounded-full mx-auto mb-6" />
 
@@ -1733,7 +1733,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                                     </div>
                                   )}
                                   {p.is_elite && (
-                                    <div className="absolute -bottom-1 -right-1 p-0.5 rounded-md bg-warning-bg border-2 border-[#161B22]">
+                                    <div className="absolute -bottom-1 -right-1 p-0.5 rounded-md bg-warning-bg border-2 border-surface-1">
                                       <Award size={10} className="text-warning" />
                                     </div>
                                   )}
@@ -1795,7 +1795,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
               exit={{ scale: 0.8, y: 30, opacity: 0 }}
               transition={{ type: 'spring', damping: 24, stiffness: 300 }}
               onClick={e => e.stopPropagation()}
-              className="relative w-[20rem] max-h-[85vh] overflow-y-auto custom-scrollbar rounded-[28px] bg-gradient-to-b from-[#161B22] to-[#0d1117] border shadow-[0_30px_70px_rgba(0,0,0,0.85)]"
+              className="relative w-[20rem] max-h-[85vh] overflow-y-auto custom-scrollbar rounded-[28px] bg-gradient-to-b from-surface-1 to-[#0d1117] border shadow-[0_30px_70px_rgba(0,0,0,0.85)]"
               style={{ borderColor: (providerModalType === 'REF' ? '#A78BFA' : '#FF9F43') + '33' }}>
               {(() => {
                 const p = marketDetailProvider;
@@ -1819,7 +1819,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                   <div className="p-6 pt-8 flex flex-col items-center">
                     <div className="w-24 h-24 rounded-full overflow-hidden border-2 shadow-lg mb-3" style={{ borderColor: accent + '80' }}>
                       {isRealPhoto(p.avatar) ? (
-                        <img src={p.avatar!} alt={p.name} className="w-full h-full object-cover bg-[#0A0E14]" />
+                        <img src={p.avatar!} alt={p.name} className="w-full h-full object-cover bg-bg" />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-3xl font-extrabold" style={{ background: accent + '22', color: accent }}>
                           {getInitials(p.name)}
@@ -1828,7 +1828,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                     </div>
                     <div className="flex items-center gap-2">
                       <h3 className="text-xl font-extrabold text-white tracking-tight text-center leading-tight">{p.name}</h3>
-                      {p.is_elite && <Award size={16} className="text-[#FACC15] shrink-0" />}
+                      {p.is_elite && <Award size={16} className="text-warning shrink-0" />}
                     </div>
                     <div className="flex items-center gap-2 mt-1">
                       <span className="text-[0.625rem] font-extrabold uppercase tracking-[0.25em]" style={{ color: accent }}>{isRef ? 'HAKEM' : 'KİRALIK KALECİ'}</span>
@@ -1947,7 +1947,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                   <div className="p-6 pt-8 flex flex-col items-center">
                     <div className="w-24 h-24 rounded-full overflow-hidden border-2 shadow-lg mb-3" style={{ borderColor: accent + '80' }}>
                       {isRealPhoto(p.avatar) ? (
-                        <img src={p.avatar!} alt={p.name} className="w-full h-full object-cover bg-[#0A0E14]" />
+                        <img src={p.avatar!} alt={p.name} className="w-full h-full object-cover bg-bg" />
                       ) : (
                         <div className={`w-full h-full flex items-center justify-center text-3xl font-extrabold ${initialsBg}`}>
                           {getInitials(p.name)}
@@ -1956,7 +1956,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                     </div>
                     <div className="flex items-center gap-2">
                       <h3 className="text-xl font-extrabold text-white tracking-tight text-center leading-tight">{p.name}</h3>
-                      {p.isElite && <Award size={16} className="text-[#FACC15] shrink-0" />}
+                      {p.isElite && <Award size={16} className="text-warning shrink-0" />}
                     </div>
                     <div className="flex items-center gap-2 mt-1">
                       <span className="text-[0.625rem] font-extrabold uppercase tracking-[0.25em]" style={{ color: accent }}>{isRef ? 'ATANAN HAKEM' : 'KİRALIK KALECİ'}</span>
@@ -2054,7 +2054,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
       </AnimatePresence>
 
       {/* ── HEADER ─────────────────────────────────────────────────────────── */}
-      <header className="sticky top-0 z-20 bg-[#0A0E14]/90 backdrop-blur-2xl border-b border-white/5 shadow-[0_4px_30px_rgba(0,0,0,0.4)]">
+      <header className="sticky top-0 z-20 bg-bg/90 backdrop-blur-2xl border-b border-white/5 shadow-[0_4px_30px_rgba(0,0,0,0.4)]">
         {/* Navigasyon Satırı */}
         <div className="flex items-center gap-3 px-5 pt-safe pt-2 pb-3">
           <button onClick={onBack}
@@ -2093,12 +2093,12 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
           <div className="px-4 pb-3">
             <div className={`flex items-start gap-2.5 px-3.5 py-3 rounded-2xl border ${
               kaporaBloke
-                ? 'bg-[#FACC15]/[0.07] border-[#FACC15]/25'
-                : 'bg-[#39FF14]/[0.06] border-[#39FF14]/22'
+                ? 'bg-warning/[0.07] border-warning/25'
+                : 'bg-primary/[0.06] border-primary/22'
             }`}>
               {kaporaBloke
-                ? <Lock size={14} className="text-[#FACC15] shrink-0 mt-0.5" />
-                : <CheckCircle2 size={14} className="text-[#39FF14] shrink-0 mt-0.5" />}
+                ? <Lock size={14} className="text-warning shrink-0 mt-0.5" />
+                : <CheckCircle2 size={14} className="text-primary shrink-0 mt-0.5" />}
               <div className="min-w-0">
                 <p className="text-[0.75rem] font-extrabold text-white leading-tight">
                   {kaporaBloke
@@ -2160,18 +2160,18 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                   showActionSuccess(`Kod: ${code}`);
                 }
               }}
-              className="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-2xl bg-[#FACC15]/[0.06] border border-[#FACC15]/25 hover:bg-[#FACC15]/10 active:scale-[0.98] transition-all"
+              className="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-2xl bg-warning/[0.06] border border-warning/25 hover:bg-warning/10 active:scale-[0.98] transition-all"
             >
               <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-8 h-8 rounded-full bg-[#FACC15]/10 border border-[#FACC15]/30 flex items-center justify-center shrink-0">
-                  <KeyRound size={14} className="text-[#FACC15]" />
+                <div className="w-8 h-8 rounded-full bg-warning/10 border border-warning/30 flex items-center justify-center shrink-0">
+                  <KeyRound size={14} className="text-warning" />
                 </div>
                 <div className="text-left min-w-0">
-                  <p className="text-[0.625rem] font-extrabold uppercase tracking-[0.2em] text-[#FACC15]/70">Özel Maç Kodu</p>
+                  <p className="text-[0.625rem] font-extrabold uppercase tracking-[0.2em] text-warning/70">Özel Maç Kodu</p>
                   <p className="text-lg font-extrabold tracking-[0.3em] text-white truncate">{privateCode}</p>
                 </div>
               </div>
-              <span className="flex items-center gap-1 text-[0.625rem] font-extrabold uppercase tracking-widest text-[#FACC15] shrink-0">
+              <span className="flex items-center gap-1 text-[0.625rem] font-extrabold uppercase tracking-widest text-warning shrink-0">
                 <Copy size={12} /> Paylaş
               </span>
             </button>
@@ -2297,9 +2297,9 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
             {/* Kadro Durumu Mesajı */}
             {isAlreadyJoined && (
               <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
-                className="mb-4 flex items-center gap-3 bg-[#39FF14]/10 border border-[#39FF14]/20 rounded-2xl px-4 py-3">
-                <CheckCircle2 size={16} className="text-[#39FF14] shrink-0" />
-                <p className="text-xs font-bold text-[#39FF14]">
+                className="mb-4 flex items-center gap-3 bg-primary/10 border border-primary/20 rounded-2xl px-4 py-3">
+                <CheckCircle2 size={16} className="text-primary shrink-0" />
+                <p className="text-xs font-bold text-primary">
                   Kadrodasın! Satın aldığın rezerve slotları Maçlarım lobisinden doldurabilirsin.
                 </p>
               </motion.div>
@@ -2327,7 +2327,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                 {tacticProposals.map(p => (
                   <button key={p.proposer_id}
                     onClick={() => { setStudioContext({ tacticId: p.tactic_id }); navigateTo('STUDIO'); }}
-                    className="shrink-0 min-w-[150px] text-left bg-[#161B22]/80 border border-white/8 rounded-2xl p-3 hover:border-line-strong active:scale-[0.98] transition-all">
+                    className="shrink-0 min-w-[150px] text-left bg-surface-1/80 border border-white/8 rounded-2xl p-3 hover:border-line-strong active:scale-[0.98] transition-all">
                     <p className="text-[0.6875rem] font-extrabold text-white truncate">{p.tactic_name || 'Taktik'}</p>
                     <p className="text-[0.625rem] text-ink-4 font-bold uppercase tracking-wide truncate mt-0.5">
                       {[p.formation, p.size].filter(Boolean).join(' · ') || '—'}
@@ -2372,7 +2372,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
           </div>
 
           {/* Saha Kapsayıcısı */}
-          <div className="relative w-full max-w-[380px] mx-auto rounded-[28px] overflow-hidden aspect-[3/4] border-4 border-[#161B22] shadow-[0_0_60px_rgba(0,0,0,0.8),inset_0_0_80px_rgba(0,0,0,0.6)]"
+          <div className="relative w-full max-w-[380px] mx-auto rounded-[28px] overflow-hidden aspect-[3/4] border-4 border-surface-1 shadow-[0_0_60px_rgba(0,0,0,0.8),inset_0_0_80px_rgba(0,0,0,0.6)]"
             style={{ background: '#0B2815' }}>
 
             {/* Çim desen (Studio.tsx stili dikey koyu çizgiler) */}
@@ -2439,7 +2439,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                             <img
                               src={viewGoalkeeper.avatar!}
                               alt={viewGoalkeeper.name}
-                              className="w-full h-full object-cover bg-[#0A0E14]"
+                              className="w-full h-full object-cover bg-bg"
                             />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center font-extrabold text-[0.9375rem] tracking-tight bg-orange-950/60 text-orange-300">
@@ -2467,7 +2467,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                         className="relative w-full h-full flex flex-col items-center justify-center">
                         <div className={`relative w-12 h-12 rounded-full overflow-hidden border-2 shadow-lg transition-all ${
                           isMyOwnSlot
-                            ? 'border-[#39FF14] shadow-[0_0_16px_rgba(57,255,20,0.7)]'
+                            ? 'border-primary shadow-[0_0_16px_rgba(57,255,20,0.7)]'
                             : normalizeRole(slot.role) === 'GK'
                               ? 'border-orange-400 hover:shadow-[0_0_14px_rgba(249,115,22,0.6)]'
                               : 'border-white/25 hover:border-[#00f2fe] hover:shadow-[0_0_14px_rgba(0,242,254,0.5)]'
@@ -2476,7 +2476,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                             <img
                               src={player.avatar}
                               alt={player.name || 'Oyuncu'}
-                              className="w-full h-full object-cover bg-[#0A0E14]"
+                              className="w-full h-full object-cover bg-bg"
                             />
                           ) : (
                             <div className={`w-full h-full flex items-center justify-center font-extrabold text-[0.9375rem] tracking-tight ${
@@ -2488,14 +2488,14 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                             </div>
                           )}
                           {isMyOwnSlot && (
-                            <div className="absolute inset-0 bg-[#39FF14]/10" />
+                            <div className="absolute inset-0 bg-primary/10" />
                           )}
                         </div>
                         {/* C9 — split ödeme görünürlüğü: bu slotu SEN ödedin (oyuncu başkası) */}
                         {!isMyOwnSlot && (slot as any).purchasedBy === currentUserProfile?.id && (
-                          <div className="absolute -top-1 -right-1 w-[15px] h-[15px] rounded-full bg-[#39FF14] border border-[#0A0E14] flex items-center justify-center z-30 pointer-events-none shadow-[0_0_8px_rgba(57,255,20,0.6)]"
+                          <div className="absolute -top-1 -right-1 w-[15px] h-[15px] rounded-full bg-primary border border-bg flex items-center justify-center z-30 pointer-events-none shadow-[0_0_8px_rgba(57,255,20,0.6)]"
                                title="Bu slotu sen ödedin">
-                            <span className="text-[0.6875rem] font-extrabold text-[#0A0E14] leading-none">₺</span>
+                            <span className="text-[0.6875rem] font-extrabold text-on-primary leading-none">₺</span>
                           </div>
                         )}
                         <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-1.5 bg-black/90 backdrop-blur-sm px-2 py-0.5 rounded-full border border-white/10 shadow-md max-w-[64px] z-20 pointer-events-none">
@@ -2519,8 +2519,8 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                         >
                           <div className={`w-12 h-12 rounded-full flex items-center justify-center border-2 shadow-lg transition-all duration-200 relative ${
                             isSelected
-                              ? 'bg-[#39FF14] border-white text-on-primary shadow-[0_0_28px_rgba(57,255,20,0.9)] scale-110'
-                              : 'bg-black/50 border-white/25 text-white/60 hover:border-[#39FF14]/50 backdrop-blur-md'
+                              ? 'bg-primary border-white text-on-primary shadow-[0_0_28px_rgba(57,255,20,0.9)] scale-110'
+                              : 'bg-black/50 border-white/25 text-white/60 hover:border-primary/50 backdrop-blur-md'
                           }`}>
                             {isSelected ? (
                               <CheckCircle2 size={20} className="drop-shadow-md" />
@@ -2530,7 +2530,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                                   { { 'GK': 'KL', 'DEF': 'SAV', 'MID': 'ORT', 'FWD': 'HÜC' }[normalizeRole(slot.role)] || 'ORT' }
                                 </span>
                                 <div className={`absolute -top-1 -right-1 w-4.5 h-4.5 rounded-full text-on-primary flex items-center justify-center border border-black shadow-md z-20 ${
-                                  isSelected ? 'bg-white' : 'bg-[#39FF14]'
+                                  isSelected ? 'bg-white' : 'bg-primary'
                                 }`}>
                                   <Plus size={10} strokeWidth={3} />
                                 </div>
@@ -2539,7 +2539,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                           </div>
                           <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-1.5 bg-black/70 px-1.5 py-0.5 rounded-full border border-white/10 max-w-[64px] z-20 pointer-events-none">
                             <span className={`text-[0.6875rem] font-extrabold uppercase truncate block whitespace-nowrap ${
-                              isSelected ? 'text-[#39FF14]' : 'text-ink-4'
+                              isSelected ? 'text-primary' : 'text-ink-4'
                             }`}>
                               {isSelected ? 'SEÇİLDİ' : (
                                 { GOALKEEPER: 'KAL', MIDFIELDER: 'ORT', DEFENDER: 'DEF', FORWARD: 'FOR' }[slot.role] ?? slot.role?.slice(0,3) ?? 'BOŞ'
@@ -2554,11 +2554,11 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                     <button onClick={() => handleSlotClick(slot)} className="w-full h-full rounded-full focus:outline-none cursor-pointer">
                       <motion.div whileHover={{ scale: 1.15 }} whileTap={{ scale: 0.9 }}
                         className="relative w-full h-full flex flex-col items-center justify-center">
-                        <div className="w-12 h-12 rounded-full flex items-center justify-center border-2 border-[#39FF14] bg-[#39FF14]/15 text-[#39FF14] shadow-[0_0_18px_rgba(57,255,20,0.45)] animate-pulse">
+                        <div className="w-12 h-12 rounded-full flex items-center justify-center border-2 border-primary bg-primary/15 text-primary shadow-[0_0_18px_rgba(57,255,20,0.45)] animate-pulse">
                           <Plus size={18} strokeWidth={3} />
                         </div>
-                        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1.5 bg-black/85 px-2.5 py-0.5 rounded-full border border-[#39FF14]/40 z-20 pointer-events-none">
-                          <span className="text-[0.625rem] font-extrabold text-[#39FF14] uppercase tracking-widest whitespace-nowrap">EKLE</span>
+                        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1.5 bg-black/85 px-2.5 py-0.5 rounded-full border border-primary/40 z-20 pointer-events-none">
+                          <span className="text-[0.625rem] font-extrabold text-primary uppercase tracking-widest whitespace-nowrap">EKLE</span>
                         </div>
                       </motion.div>
                     </button>
@@ -2597,13 +2597,13 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
           </p>
 
           {/* Yedek Kulübesi (Reserve List) */}
-          <div className="mt-4 bg-[#161B22]/60 border border-white/5 rounded-3xl p-4 max-w-[380px] mx-auto shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
+          <div className="mt-4 bg-surface-1/60 border border-white/5 rounded-3xl p-4 max-w-[380px] mx-auto shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
             <div className="flex items-center justify-between mb-3 px-1">
               <span className="text-[0.625rem] font-extrabold text-ink-4 uppercase tracking-[0.25em]">
                 Yedek Kulübesi ({match.reservePlayers?.length || 0})
               </span>
               {isAlreadyJoinedReserve && (
-                <span className="text-[0.625rem] font-extrabold text-[#FACC15] uppercase tracking-widest animate-pulse">
+                <span className="text-[0.625rem] font-extrabold text-warning uppercase tracking-widest animate-pulse">
                   Sıranız: {(match.reservePlayers || []).findIndex(p => p.id === currentUserProfile.id) + 1}
                 </span>
               )}
@@ -2629,7 +2629,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
 
           {/* Taktik / Diziliş Seçimi (Yalnızca Kaptanlara Özel) */}
           {isManageMode && isCaptain && (
-            <div className="mt-4 bg-[#161B22]/60 border border-white/5 rounded-3xl p-4 max-w-[380px] mx-auto">
+            <div className="mt-4 bg-surface-1/60 border border-white/5 rounded-3xl p-4 max-w-[380px] mx-auto">
               <span className="block text-[0.625rem] font-extrabold text-ink-4 uppercase tracking-[0.25em] mb-2 px-1">
                 TAKIM DİZİLİŞİNİ GÜNCELLE
               </span>
@@ -2702,7 +2702,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                   return (
                     <div
                       key={type}
-                      className="p-4 rounded-2xl bg-[#161B22]/80 border transition-all flex flex-col items-start gap-2.5 text-left relative group overflow-hidden"
+                      className="p-4 rounded-2xl bg-surface-1/80 border transition-all flex flex-col items-start gap-2.5 text-left relative group overflow-hidden"
                       style={{ borderColor: accent + '40' }}
                     >
                       <div className="absolute top-0 right-0 w-12 h-12 pointer-events-none"
@@ -2746,7 +2746,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                   return (
                     <div
                       key={type}
-                      className="p-4 rounded-2xl bg-[#161B22]/80 border border-amber-500/30 flex flex-col items-start gap-2.5 text-left relative overflow-hidden"
+                      className="p-4 rounded-2xl bg-surface-1/80 border border-amber-500/30 flex flex-col items-start gap-2.5 text-left relative overflow-hidden"
                     >
                       <div className="absolute top-0 right-0 w-12 h-12 bg-gradient-to-bl from-amber-500/10 to-transparent pointer-events-none" />
                       <div className="p-2.5 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20">
@@ -2769,7 +2769,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.97 }}
                     onClick={() => handleOpenProviderModal(type)}
-                    className="p-4 rounded-2xl bg-[#161B22]/80 border border-white/5 transition-all flex flex-col items-start gap-2.5 text-left relative group overflow-hidden"
+                    className="p-4 rounded-2xl bg-surface-1/80 border border-white/5 transition-all flex flex-col items-start gap-2.5 text-left relative group overflow-hidden"
                     style={{ ['--accent' as any]: accent }}
                   >
                     <div className="absolute top-0 right-0 w-12 h-12 pointer-events-none"
@@ -2797,7 +2797,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                   const applicant = (adminUsers || []).find(u => u?.id === req.providerId);
                   const label = req.providerType === 'GK' ? 'Kaleci' : 'Hakem';
                   return (
-                    <div key={req.id} className="p-3 rounded-2xl bg-[#161B22]/80 border border-white/8 flex items-center gap-3">
+                    <div key={req.id} className="p-3 rounded-2xl bg-surface-1/80 border border-white/8 flex items-center gap-3">
                       <img src={applicant?.avatar || `https://i.pravatar.cc/150?u=${req.providerId}`} alt="" className="w-9 h-9 rounded-xl object-cover border border-white/10" />
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-extrabold text-white truncate">{applicant?.name || label}</p>
@@ -2821,7 +2821,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                   const applicant = (adminUsers || []).find(u => u?.id === req.providerId);
                   const label = req.providerType === 'GK' ? 'Kaleci' : 'Hakem';
                   return (
-                    <div key={req.id} className="p-3 rounded-2xl bg-[#161B22]/80 border border-green-500/20 flex items-center gap-3">
+                    <div key={req.id} className="p-3 rounded-2xl bg-surface-1/80 border border-green-500/20 flex items-center gap-3">
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-extrabold text-white truncate">{applicant?.name || label} geldi mi?</p>
                         <p className="text-[0.625rem] text-ink-4 font-bold uppercase tracking-wide">
@@ -2874,7 +2874,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
               <React.Fragment key={side}>
               <button
                 onClick={() => setProviderDetail({ p: gk, isRef: false })}
-                className="w-full p-4 rounded-2xl bg-[#161B22]/80 border border-[#FF9F43]/30 flex items-center gap-3 text-left relative overflow-hidden active:scale-[0.99] transition-transform">
+                className="w-full p-4 rounded-2xl bg-surface-1/80 border border-[#FF9F43]/30 flex items-center gap-3 text-left relative overflow-hidden active:scale-[0.99] transition-transform">
                 <div className="absolute top-0 right-0 w-16 h-16 pointer-events-none" style={{ background: 'linear-gradient(to bottom left, rgba(255,159,67,0.14), transparent)' }} />
                 <div className="relative shrink-0">
                   {isRealPhoto(gk.avatar) ? (
@@ -2884,14 +2884,14 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                       {getInitials(gk.name)}
                     </div>
                   )}
-                  <div className="absolute -bottom-1 -right-1 p-1 rounded-lg bg-[#FF9F43] border-2 border-[#161B22]">
+                  <div className="absolute -bottom-1 -right-1 p-1 rounded-lg bg-[#FF9F43] border-2 border-surface-1">
                     <Hand size={10} className="text-on-primary" />
                   </div>
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <h4 className="text-sm font-extrabold text-white uppercase tracking-tight truncate">{gk.name}</h4>
-                    {gk.isElite && <Award size={12} className="text-[#FACC15] shrink-0" />}
+                    {gk.isElite && <Award size={12} className="text-warning shrink-0" />}
                     {liveBadge(gk.id)}
                   </div>
                   <p className="text-[0.625rem] font-extrabold uppercase tracking-widest mt-0.5 text-[#FF9F43]">Kiralık Kaleci · {teamName}</p>
@@ -2923,7 +2923,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
             {assignedReferee && (
               <button
                 onClick={() => setProviderDetail({ p: assignedReferee, isRef: true })}
-                className="w-full p-4 rounded-2xl bg-[#161B22]/80 border border-[#A78BFA]/30 flex items-center gap-3 text-left relative overflow-hidden active:scale-[0.99] transition-transform">
+                className="w-full p-4 rounded-2xl bg-surface-1/80 border border-[#A78BFA]/30 flex items-center gap-3 text-left relative overflow-hidden active:scale-[0.99] transition-transform">
                 <div className="absolute top-0 right-0 w-16 h-16 pointer-events-none" style={{ background: 'linear-gradient(to bottom left, rgba(167,139,250,0.14), transparent)' }} />
                 <div className="relative shrink-0">
                   {isRealPhoto(assignedReferee.avatar) ? (
@@ -2933,14 +2933,14 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                       {getInitials(assignedReferee.name)}
                     </div>
                   )}
-                  <div className="absolute -bottom-1 -right-1 p-1 rounded-lg bg-[#A78BFA] border-2 border-[#161B22]">
+                  <div className="absolute -bottom-1 -right-1 p-1 rounded-lg bg-[#A78BFA] border-2 border-surface-1">
                     <Scale size={10} className="text-on-primary" />
                   </div>
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <h4 className="text-sm font-extrabold text-white uppercase tracking-tight truncate">{assignedReferee.name}</h4>
-                    {assignedReferee.isElite && <Award size={12} className="text-[#FACC15] shrink-0" />}
+                    {assignedReferee.isElite && <Award size={12} className="text-warning shrink-0" />}
                     {liveBadge(assignedReferee.id)}
                   </div>
                   <p className="text-[0.625rem] font-extrabold uppercase tracking-widest mt-0.5 text-[#A78BFA]">Atanan Hakem</p>
@@ -3030,9 +3030,9 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
               if (isAlreadyJoined) {
                 return (
                   <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-                    className="flex items-center justify-center gap-3 h-16 rounded-[24px] border border-[#39FF14]/20 bg-[#39FF14]/5 px-4">
-                    <CheckCircle2 size={18} className="text-[#39FF14] shrink-0" />
-                    <span className="font-extrabold text-[0.6875rem] text-[#39FF14] uppercase tracking-widest text-center leading-tight">
+                    className="flex items-center justify-center gap-3 h-16 rounded-[24px] border border-primary/20 bg-primary/5 px-4">
+                    <CheckCircle2 size={18} className="text-primary shrink-0" />
+                    <span className="font-extrabold text-[0.6875rem] text-primary uppercase tracking-widest text-center leading-tight">
                       KADRODASIN — arkadaşların için slot almaya devam edebilirsin
                     </span>
                   </motion.div>
@@ -3115,7 +3115,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="w-full max-w-md bg-[#0A0E14] border border-white/10 rounded-3xl overflow-hidden shadow-2xl relative"
+              className="w-full max-w-md bg-bg border border-white/10 rounded-3xl overflow-hidden shadow-2xl relative"
             >
               <div className="px-5 py-4 border-b border-white/5 flex items-center justify-between bg-black/20">
                 <h3 className="text-sm font-extrabold text-white italic uppercase flex items-center gap-2">
@@ -3134,7 +3134,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                       <ChangeView center={pitchCoordinates} />
                       <Marker position={pitchCoordinates}>
                           <Popup closeButton={false}>
-                              <div className="bg-[#161B22]/90 backdrop-blur-md p-3 rounded-2xl border border-white/10 shadow-xl text-center min-w-[120px]">
+                              <div className="bg-surface-1/90 backdrop-blur-md p-3 rounded-2xl border border-white/10 shadow-xl text-center min-w-[120px]">
                                   <h4 className="text-white font-extrabold text-[0.625rem] uppercase tracking-widest mb-1">{match?.location}</h4>
                                   <a href={`https://www.google.com/maps/dir/?api=1&destination=${pitchCoordinates[0]},${pitchCoordinates[1]}`} target="_blank" rel="noreferrer" className="inline-block mt-2 px-3 py-1.5 bg-white/[0.06] border border-line-strong text-ink text-[0.6875rem] font-extrabold uppercase rounded-lg">Yol Tarifi Al</a>
                               </div>
@@ -3170,7 +3170,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
               exit={{ y: '100%' }}
               transition={{ type: 'spring', damping: 28, stiffness: 280 }}
               onClick={e => e.stopPropagation()}
-              className="bg-[#0A0E14] border-t border-white/10 w-full max-w-lg rounded-t-[40px] shadow-[0_-20px_50px_rgba(0,0,0,0.8)]"
+              className="bg-bg border-t border-white/10 w-full max-w-lg rounded-t-[40px] shadow-[0_-20px_50px_rgba(0,0,0,0.8)]"
             >
               {/* Başlık */}
               <div className="flex items-center justify-between px-6 pt-7 pb-5">

@@ -25,7 +25,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.95 }}
           onClick={(e) => e.stopPropagation()}
-          className="w-full max-w-md bg-[#161B22] border border-white/10 rounded-2xl p-6 shadow-2xl"
+          className="w-full max-w-md bg-surface-1 border border-white/10 rounded-2xl p-6 shadow-2xl"
         >
           <div className="flex items-start gap-3 mb-4">
             <div className={`p-2 rounded-xl ${destructive ? 'bg-red-500/10' : 'bg-blue-500/10'}`}>

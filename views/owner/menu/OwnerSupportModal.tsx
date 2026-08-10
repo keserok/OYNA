@@ -143,7 +143,7 @@ export const OwnerSupportModal: React.FC<Props> = ({ onClose }) => {
                     key={t.id}
                     type="button"
                     onClick={() => { setReplyError(null); setActiveId(t.id); setMode('thread'); }}
-                    className="w-full p-3 bg-[#0A0E14] border border-white/5 rounded-2xl text-left hover:border-white/15 transition-colors"
+                    className="w-full p-3 bg-bg border border-white/5 rounded-2xl text-left hover:border-white/15 transition-colors"
                   >
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-sm font-bold text-white truncate">{t.subject}</span>
@@ -162,7 +162,7 @@ export const OwnerSupportModal: React.FC<Props> = ({ onClose }) => {
 
             <a
               href={`mailto:${SUPPORT_EMAIL}?subject=OYNA%20İşletme%20Paneli%20Destek`}
-              className="flex items-center gap-4 p-4 bg-[#0A0E14] border border-white/5 rounded-2xl hover:border-blue-500/30 transition-colors"
+              className="flex items-center gap-4 p-4 bg-bg border border-white/5 rounded-2xl hover:border-blue-500/30 transition-colors"
             >
               <div className="w-10 h-10 rounded-xl bg-blue-500/15 flex items-center justify-center text-blue-400">
                 <Mail size={20} />
@@ -191,7 +191,7 @@ export const OwnerSupportModal: React.FC<Props> = ({ onClose }) => {
                   value={subject}
                   onChange={(e) => setSubject(e.target.value)}
                   placeholder="Örn. Rezervasyon onayı görünmüyor"
-                  className="w-full bg-[#0A0E14] border border-white/10 rounded-2xl px-4 py-3 text-white text-sm outline-none focus:border-emerald-500/50"
+                  className="w-full bg-bg border border-white/10 rounded-2xl px-4 py-3 text-white text-sm outline-none focus:border-emerald-500/50"
                 />
               </div>
               <div>
@@ -199,7 +199,7 @@ export const OwnerSupportModal: React.FC<Props> = ({ onClose }) => {
                 <select
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
-                  className="w-full bg-[#0A0E14] border border-white/10 rounded-2xl px-4 py-3 text-white text-sm outline-none focus:border-emerald-500/50"
+                  className="w-full bg-bg border border-white/10 rounded-2xl px-4 py-3 text-white text-sm outline-none focus:border-emerald-500/50"
                 >
                   {SUPPORT_CATEGORIES.map((c) => (
                     <option key={c.key} value={c.key}>{c.label}</option>
@@ -213,7 +213,7 @@ export const OwnerSupportModal: React.FC<Props> = ({ onClose }) => {
                   onChange={(e) => setBody(e.target.value)}
                   rows={5}
                   placeholder="Sorunu olabildiğince ayrıntılı anlat."
-                  className="w-full bg-[#0A0E14] border border-white/10 rounded-2xl px-4 py-3 text-white text-sm outline-none focus:border-emerald-500/50"
+                  className="w-full bg-bg border border-white/10 rounded-2xl px-4 py-3 text-white text-sm outline-none focus:border-emerald-500/50"
                 />
               </div>
               {formError && <p className="text-xs text-red-400">{formError}</p>}
@@ -248,7 +248,7 @@ export const OwnerSupportModal: React.FC<Props> = ({ onClose }) => {
               <ChevronLeft size={14} /> Taleplerim
             </button>
 
-            <div className="bg-[#0A0E14] border border-white/5 rounded-2xl p-3">
+            <div className="bg-bg border border-white/5 rounded-2xl p-3">
               <p className="text-sm font-bold text-white">{active.subject}</p>
               <p className="text-[11px] text-gray-500">{SUPPORT_STATUS_LABEL[active.status] ?? active.status}</p>
             </div>
@@ -279,7 +279,7 @@ export const OwnerSupportModal: React.FC<Props> = ({ onClose }) => {
                   onChange={(e) => setReply(e.target.value)}
                   rows={3}
                   placeholder="Yanıt yaz…"
-                  className="w-full bg-[#0A0E14] border border-white/10 rounded-2xl px-4 py-3 text-white text-sm outline-none focus:border-emerald-500/50"
+                  className="w-full bg-bg border border-white/10 rounded-2xl px-4 py-3 text-white text-sm outline-none focus:border-emerald-500/50"
                 />
                 {replyError && <p className="text-xs text-red-400">{replyError}</p>}
                 <button

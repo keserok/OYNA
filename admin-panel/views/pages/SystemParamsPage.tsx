@@ -153,7 +153,7 @@ export const SystemParamsPage: React.FC<{ onRefresh?: () => Promise<void> }> = (
           </div>
 
           {Object.entries(grouped).map(([cat, rows]) => (
-            <section key={cat} className="bg-[#161B22]/60 border border-white/[0.06] rounded-2xl p-5">
+            <section key={cat} className="bg-surface-1/60 border border-white/[0.06] rounded-2xl p-5">
               <h3 className="text-[10px] font-extrabold text-gray-400 uppercase tracking-wider mb-4">
                 {CATEGORY_LABELS[cat] ?? cat}
               </h3>
@@ -217,7 +217,7 @@ export const SystemParamsPage: React.FC<{ onRefresh?: () => Promise<void> }> = (
           <PaymentModePanel />
 
           {flags.length > 0 && (
-            <section className="bg-[#161B22]/60 border border-white/[0.06] rounded-2xl p-5">
+            <section className="bg-surface-1/60 border border-white/[0.06] rounded-2xl p-5">
               <h3 className="text-[10px] font-extrabold text-gray-400 uppercase tracking-wider mb-1">
                 Modül Anahtarları
               </h3>

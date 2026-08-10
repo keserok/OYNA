@@ -85,7 +85,7 @@ export const OwnerNotificationsModal: React.FC<{ onClose: () => void }> = ({ onC
             <Loader2 size={22} className="animate-spin" />
           </div>
         ) : (
-          <div className="bg-[#161B22] border border-white/5 rounded-3xl overflow-hidden">
+          <div className="bg-surface-1 border border-white/5 rounded-3xl overflow-hidden">
             {OWNER_EVENTS.map((ev) => {
               const enabled = prefs?.[ev.key]?.enabled ?? true;
               return (

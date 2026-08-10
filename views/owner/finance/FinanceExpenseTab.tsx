@@ -121,7 +121,7 @@ export const FinanceExpenseTab: React.FC<Props> = ({
   return (
     <div className="space-y-6">
       {/* Kategori özeti */}
-      <div className="bg-[#161B22] border border-white/5 rounded-[32px] p-6">
+      <div className="bg-surface-1 border border-white/5 rounded-[32px] p-6">
         <div className="flex justify-between items-baseline mb-4">
           <h3 className="text-xs font-extrabold text-gray-400 uppercase">Bu Ay Gider</h3>
           <span className="text-lg font-extrabold text-red-400">{money(summary.expenses.total)}</span>
@@ -131,7 +131,7 @@ export const FinanceExpenseTab: React.FC<Props> = ({
 
       {/* Sabit gider banner'ı */}
       {templates.length > 0 && (
-        <div className="bg-[#161B22] border border-white/5 rounded-2xl p-4">
+        <div className="bg-surface-1 border border-white/5 rounded-2xl p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-xs font-extrabold text-gray-300">
               <Repeat size={14} className="text-blue-400" />
@@ -173,7 +173,7 @@ export const FinanceExpenseTab: React.FC<Props> = ({
         ) : (
           <div className="space-y-3">
             {expenses.map((e) => (
-              <div key={e.id} className="bg-[#161B22] p-4 rounded-2xl border border-white/5 flex justify-between items-center gap-3">
+              <div key={e.id} className="bg-surface-1 p-4 rounded-2xl border border-white/5 flex justify-between items-center gap-3">
                 <div className="min-w-0">
                   <p className="text-sm font-bold text-white flex items-center gap-2">
                     <span className="truncate">{e.title}</span>
@@ -200,13 +200,13 @@ export const FinanceExpenseTab: React.FC<Props> = ({
       {/* Ekle / Düzenle modalı */}
       {(addOpen || editing) && (
         <BottomSheetModal title={editing ? 'Gideri Düzenle' : 'Yeni Gider'} onClose={() => { setAddOpen(false); setEditing(null); setForm(emptyForm); }}>
-          <input className="w-full bg-[#0A0E14] border border-white/10 rounded-xl p-3 text-white mb-3" placeholder="Başlık" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
-          <input inputMode="decimal" className="w-full bg-[#0A0E14] border border-white/10 rounded-xl p-3 text-white mb-3" placeholder="Tutar" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} />
+          <input className="w-full bg-bg border border-white/10 rounded-xl p-3 text-white mb-3" placeholder="Başlık" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
+          <input inputMode="decimal" className="w-full bg-bg border border-white/10 rounded-xl p-3 text-white mb-3" placeholder="Tutar" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} />
           <div className="grid grid-cols-2 gap-3 mb-4">
-            <select className="bg-[#0A0E14] border border-white/10 rounded-xl p-3 text-white" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
+            <select className="bg-bg border border-white/10 rounded-xl p-3 text-white" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
               {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
-            <input type="date" className="bg-[#0A0E14] border border-white/10 rounded-xl p-3 text-white" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
+            <input type="date" className="bg-bg border border-white/10 rounded-xl p-3 text-white" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
           </div>
           <button type="button" onClick={saveExpense} disabled={busy || !canSave} className="w-full py-4 bg-emerald-600 text-white font-extrabold rounded-2xl disabled:opacity-40">
             {busy ? 'KAYDEDİLİYOR…' : editing ? 'GÜNCELLE' : 'GİDERİ KAYDET'}
@@ -229,10 +229,10 @@ export const FinanceExpenseTab: React.FC<Props> = ({
           </div>
           <div className="border-t border-white/5 pt-3">
             <p className="text-[10px] font-extrabold text-gray-500 uppercase mb-2">Yeni sabit gider</p>
-            <input className="w-full bg-[#0A0E14] border border-white/10 rounded-xl p-2.5 text-white mb-2 text-sm" placeholder="Başlık (ör. Kira)" value={tplForm.title} onChange={(e) => setTplForm({ ...tplForm, title: e.target.value })} />
+            <input className="w-full bg-bg border border-white/10 rounded-xl p-2.5 text-white mb-2 text-sm" placeholder="Başlık (ör. Kira)" value={tplForm.title} onChange={(e) => setTplForm({ ...tplForm, title: e.target.value })} />
             <div className="grid grid-cols-2 gap-2 mb-3">
-              <input inputMode="decimal" className="bg-[#0A0E14] border border-white/10 rounded-xl p-2.5 text-white text-sm" placeholder="Tutar" value={tplForm.amount} onChange={(e) => setTplForm({ ...tplForm, amount: e.target.value })} />
-              <select className="bg-[#0A0E14] border border-white/10 rounded-xl p-2.5 text-white text-sm" value={tplForm.category} onChange={(e) => setTplForm({ ...tplForm, category: e.target.value })}>
+              <input inputMode="decimal" className="bg-bg border border-white/10 rounded-xl p-2.5 text-white text-sm" placeholder="Tutar" value={tplForm.amount} onChange={(e) => setTplForm({ ...tplForm, amount: e.target.value })} />
+              <select className="bg-bg border border-white/10 rounded-xl p-2.5 text-white text-sm" value={tplForm.category} onChange={(e) => setTplForm({ ...tplForm, category: e.target.value })}>
                 {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>

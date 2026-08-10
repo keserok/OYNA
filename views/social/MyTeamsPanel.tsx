@@ -174,8 +174,8 @@ const MyTeamsPanel: React.FC<MyTeamsPanelProps> = ({
     <div className="pb-safe-nav space-y-5">
       {/* Davetlerin şeridi (K69) */}
       {invites.length > 0 && (
-        <div className="rounded-2xl bg-[#39FF14]/6 border border-[#39FF14]/20 p-3.5">
-          <div className="text-[0.625rem] font-extrabold uppercase tracking-widest text-[#39FF14]/80 mb-2.5 flex items-center gap-1.5">
+        <div className="rounded-2xl bg-primary/6 border border-primary/20 p-3.5">
+          <div className="text-[0.625rem] font-extrabold uppercase tracking-widest text-primary/80 mb-2.5 flex items-center gap-1.5">
             <Mail size={11} /> Davetlerin ({invites.length})
           </div>
           <div className="space-y-2">
@@ -201,7 +201,7 @@ const MyTeamsPanel: React.FC<MyTeamsPanelProps> = ({
                     </button>
                     <button
                       onClick={() => handleInvite(inv, true)}
-                      className="h-9 px-3 rounded-xl bg-[#39FF14] text-[#0A0E14] text-[0.6875rem] font-extrabold flex items-center gap-1 active:scale-95"
+                      className="h-9 px-3 rounded-xl bg-primary text-on-primary text-[0.6875rem] font-extrabold flex items-center gap-1 active:scale-95"
                     >
                       <Check size={12} /> Katıl
                     </button>

@@ -97,7 +97,7 @@ export const FilterDropdown: React.FC<FilterDropdownProps> = ({
             exit={reduceMotion ? { opacity: 0 } : { opacity: 0, scaleY: 0.96, y: -4 }}
             transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
             style={{ originY: 0 }}
-            className="absolute inset-x-0 top-[calc(100%+6px)] z-30 rounded-2xl bg-[#161B22]/[0.98] border border-white/10 backdrop-blur-xl shadow-2xl overflow-hidden"
+            className="absolute inset-x-0 top-[calc(100%+6px)] z-30 rounded-2xl bg-surface-1/[0.98] border border-white/10 backdrop-blur-xl shadow-2xl overflow-hidden"
           >
             <div className="max-h-[40vh] overflow-y-auto py-1.5">
               {rows.map((row) => {

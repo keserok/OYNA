@@ -35,7 +35,7 @@ const SignupGate: React.FC = () => {
       <motion.div
         initial={{ opacity: 0, y: 60 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative w-full bg-[#161B22] border border-white/[0.08] rounded-t-[28px] p-6 pb-10"
+        className="relative w-full bg-surface-1 border border-white/[0.08] rounded-t-[28px] p-6 pb-10"
         style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 2.5rem)' }}
       >
         <button
@@ -45,8 +45,8 @@ const SignupGate: React.FC = () => {
         >
           <X size={18} />
         </button>
-        <div className="w-14 h-14 rounded-2xl bg-[#39FF14]/12 flex items-center justify-center mb-4">
-          <Zap size={26} className="text-[#39FF14]" />
+        <div className="w-14 h-14 rounded-2xl bg-primary/12 flex items-center justify-center mb-4">
+          <Zap size={26} className="text-primary" />
         </div>
         <h3 className="text-white font-extrabold text-xl mb-2">Sahaya çıkmaya hazır mısın?</h3>
         <p className="text-sm text-gray-400 leading-relaxed mb-6">
@@ -54,7 +54,7 @@ const SignupGate: React.FC = () => {
         </p>
         <button
           onClick={() => go('register')}
-          className="w-full py-4 bg-[#39FF14] text-[#0A0E14] font-extrabold text-base rounded-2xl flex items-center justify-center gap-2 active:scale-95 transition-all"
+          className="w-full py-4 bg-primary text-on-primary font-extrabold text-base rounded-2xl flex items-center justify-center gap-2 active:scale-95 transition-all"
         >
           <UserPlus size={18} /> ÜCRETSİZ HESAP AÇ
         </button>

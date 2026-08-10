@@ -90,7 +90,7 @@ const ProviderOfferPicker: React.FC<ProviderOfferPickerProps> = ({ onClose, onCo
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 bg-[#0A0E14] flex flex-col">
+      className="fixed inset-0 z-50 bg-bg flex flex-col">
       {/* Başlık */}
       <div className="pt-safe px-5 pt-5 pb-3 border-b border-white/8 shrink-0">
         <div className="flex items-center justify-between mb-4">
@@ -106,13 +106,13 @@ const ProviderOfferPicker: React.FC<ProviderOfferPickerProps> = ({ onClose, onCo
           </button>
         </div>
         {/* Sekmeler */}
-        <div className="bg-[#161B22] p-1.5 rounded-2xl flex border border-white/5">
+        <div className="bg-surface-1 p-1.5 rounded-2xl flex border border-white/5">
           <button onClick={() => setTab('GK')}
-            className={`flex-1 py-2.5 text-[0.6875rem] font-extrabold rounded-xl transition-all flex items-center justify-center gap-2 ${tab === 'GK' ? 'bg-[#39FF14] text-[#0A0E14]' : 'text-ink-4'}`}>
+            className={`flex-1 py-2.5 text-[0.6875rem] font-extrabold rounded-xl transition-all flex items-center justify-center gap-2 ${tab === 'GK' ? 'bg-primary text-on-primary' : 'text-ink-4'}`}>
             <Shield size={14} /> KALECİ{totalSelected.g > 0 ? ` · ${allGK ? 'Tümü' : selGK.size}` : ''}
           </button>
           <button onClick={() => setTab('REF')}
-            className={`flex-1 py-2.5 text-[0.6875rem] font-extrabold rounded-xl transition-all flex items-center justify-center gap-2 ${tab === 'REF' ? 'bg-[#FACC15] text-[#0A0E14]' : 'text-ink-4'}`}>
+            className={`flex-1 py-2.5 text-[0.6875rem] font-extrabold rounded-xl transition-all flex items-center justify-center gap-2 ${tab === 'REF' ? 'bg-warning text-on-primary' : 'text-ink-4'}`}>
             <Scale size={14} /> HAKEM{totalSelected.r > 0 ? ` · ${allREF ? 'Tümü' : selREF.size}` : ''}
           </button>
         </div>
@@ -191,7 +191,7 @@ const ProviderOfferPicker: React.FC<ProviderOfferPickerProps> = ({ onClose, onCo
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5">
                       <span className="text-sm font-bold text-white truncate">{p.name}</span>
-                      {p.isElite && <Zap size={12} className="text-[#FACC15] shrink-0" />}
+                      {p.isElite && <Zap size={12} className="text-warning shrink-0" />}
                     </div>
                     <div className="flex items-center gap-2 mt-0.5 text-[0.6875rem] text-ink-4">
                       <span className="flex items-center gap-1"><Star size={11} className="fill-white/60 text-white/60" /> {p.rating}</span>
@@ -215,14 +215,14 @@ const ProviderOfferPicker: React.FC<ProviderOfferPickerProps> = ({ onClose, onCo
       </div>
 
       {/* Sabit onay çubuğu */}
-      <div className="absolute bottom-0 inset-x-0 p-5 pb-safe bg-gradient-to-t from-[#0A0E14] via-[#0A0E14]/95 to-transparent">
+      <div className="absolute bottom-0 inset-x-0 p-5 pb-safe bg-gradient-to-t from-bg via-bg/95 to-transparent">
         {totalSelected.any && (
           <p className="text-[0.6875rem] text-ink-4 font-bold text-center mb-2">
             Teklifler, kaporayı ödeyip maçı aktifleştirdiğinde gönderilir.
           </p>
         )}
         <button onClick={confirm} disabled={!totalSelected.any}
-          className="w-full min-h-[54px] rounded-2xl bg-[#39FF14] text-[#0A0E14] font-extrabold text-sm uppercase tracking-widest active:scale-[0.98] disabled:opacity-40 disabled:bg-white/10 disabled:text-ink-4 flex items-center justify-center gap-2 shadow-[0_0_30px_rgba(57,255,20,0.25)]">
+          className="w-full min-h-[54px] rounded-2xl bg-primary text-on-primary font-extrabold text-sm uppercase tracking-widest active:scale-[0.98] disabled:opacity-40 disabled:bg-white/10 disabled:text-ink-4 flex items-center justify-center gap-2 shadow-[0_0_30px_rgba(57,255,20,0.25)]">
           <Zap size={16} />
           {totalSelected.any ? 'Kaporayı Ödediğinde Teklif Gönder' : 'Kaleci veya hakem seç'}
         </button>

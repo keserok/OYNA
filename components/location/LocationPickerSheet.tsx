@@ -110,7 +110,7 @@ const LocationPickerSheet: React.FC<LocationPickerSheetProps> = ({
             transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
             onClick={(e) => e.stopPropagation()}
             className="w-full flex flex-col max-h-[85vh]
-                       bg-gradient-to-b from-[#161B22] to-[#0A0E14]
+                       bg-gradient-to-b from-surface-1 to-bg
                        border border-white/10 border-b-0
                        rounded-t-[28px]
                        shadow-[0_-10px_60px_rgba(0,0,0,0.6)] overflow-hidden"
@@ -131,7 +131,7 @@ const LocationPickerSheet: React.FC<LocationPickerSheetProps> = ({
                   <ChevronLeft size={18} />
                 </button>
               ) : (
-                <div className="w-9 h-9 rounded-xl bg-[#39FF14]/10 border border-[#39FF14]/25 flex items-center justify-center text-[#39FF14]">
+                <div className="w-9 h-9 rounded-xl bg-primary/10 border border-primary/25 flex items-center justify-center text-primary">
                   <MapPin size={18} />
                 </div>
               )}
@@ -188,7 +188,7 @@ const LocationPickerSheet: React.FC<LocationPickerSheetProps> = ({
 
                 {/* search */}
                 <div className="px-5 pb-3">
-                  <div className="flex items-center gap-2.5 px-3.5 h-12 rounded-2xl bg-[#0A0E14] border border-white/10 focus-within:border-[#39FF14]/40 transition-colors">
+                  <div className="flex items-center gap-2.5 px-3.5 h-12 rounded-2xl bg-bg border border-white/10 focus-within:border-primary/40 transition-colors">
                     <Search size={18} className="text-ink-4 flex-shrink-0" />
                     <input
                       value={search}
@@ -219,8 +219,8 @@ const LocationPickerSheet: React.FC<LocationPickerSheetProps> = ({
                         </span>
                         <span className="flex-1 text-sm font-bold text-white">{r.city}</span>
                         {covered ? (
-                          <span className="flex items-center gap-1.5 text-[0.625rem] font-extrabold uppercase tracking-wide text-[#39FF14]">
-                            <span className="w-1.5 h-1.5 rounded-full bg-[#39FF14] shadow-[0_0_8px_#39FF14]" />
+                          <span className="flex items-center gap-1.5 text-[0.625rem] font-extrabold uppercase tracking-wide text-primary">
+                            <span className="w-1.5 h-1.5 rounded-full bg-primary shadow-[0_0_8px_#39FF14]" />
                             Aktif
                           </span>
                         ) : (
@@ -255,10 +255,10 @@ const LocationPickerSheet: React.FC<LocationPickerSheetProps> = ({
                   {/* İl geneli */}
                   <button
                     onClick={() => pickDistrict(null)}
-                    className="w-full flex items-center justify-between p-3.5 mb-3 rounded-2xl bg-[#39FF14]/8 border border-[#39FF14]/25 hover:bg-[#39FF14]/12 transition-colors"
+                    className="w-full flex items-center justify-between p-3.5 mb-3 rounded-2xl bg-primary/8 border border-primary/25 hover:bg-primary/12 transition-colors"
                   >
                     <span className="flex items-center gap-2.5">
-                      <MapPin size={16} className="text-[#39FF14]" />
+                      <MapPin size={16} className="text-primary" />
                       <span className="text-sm font-extrabold text-white">Tüm {selectedCity}</span>
                     </span>
                     <span className="text-[0.6875rem] font-bold text-gray-400">il geneli</span>
@@ -273,7 +273,7 @@ const LocationPickerSheet: React.FC<LocationPickerSheetProps> = ({
                         key={d}
                         onClick={() => pickDistrict(d)}
                         className="min-h-[38px] px-4 rounded-xl bg-white/4 border border-white/10 text-[0.8125rem] font-bold text-gray-200
-                                   hover:bg-[#39FF14]/12 hover:border-[#39FF14]/40 hover:text-[#39FF14] active:scale-95 transition-all
+                                   hover:bg-primary/12 hover:border-primary/40 hover:text-primary active:scale-95 transition-all
                                    inline-flex items-center gap-1.5"
                       >
                         {d}

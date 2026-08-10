@@ -40,7 +40,7 @@ const Chip: React.FC<ChipProps> = ({
       onContextMenu={e => { e.preventDefault(); }}
       className={`shrink-0 min-h-[36px] px-3.5 rounded-full text-xs font-bold whitespace-nowrap border transition-colors active:scale-[0.96] ${
         selected
-          ? 'bg-white text-[#0A0E14] border-white'
+          ? 'bg-white text-on-primary border-white'
           : 'bg-white/5 text-white/60 border-white/10'
       } ${className}`}
     >

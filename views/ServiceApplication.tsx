@@ -74,7 +74,7 @@ const Field: React.FC<{ label: string; icon: React.ReactNode; children: React.Re
   <div className="group">
     <label className="text-[0.625rem] text-ink-4 font-bold uppercase mb-2 block ml-1 tracking-wider">{label}</label>
     <div
-      className={`bg-[#0A0E14] border p-4 rounded-2xl flex items-center gap-3 transition-colors focus-within:border-white/40 ${error ? 'border-red-500/50' : 'border-gray-800'}`}
+      className={`bg-bg border p-4 rounded-2xl flex items-center gap-3 transition-colors focus-within:border-white/40 ${error ? 'border-red-500/50' : 'border-gray-800'}`}
       style={{ ['--tw-ring-color' as any]: color }}
     >
       <span className="shrink-0 text-ink-4">{icon}</span>
@@ -360,7 +360,7 @@ const ServiceApplication: React.FC<ServiceApplicationProps> = ({ role, onSubmitt
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1, type: 'spring', stiffness: 200, damping: 26 }}
-          className="rounded-[28px] border border-white/5 p-5 bg-[#161B22]/80 backdrop-blur-2xl shadow-2xl space-y-5"
+          className="rounded-[28px] border border-white/5 p-5 bg-surface-1/80 backdrop-blur-2xl shadow-2xl space-y-5"
         >
           {/* Ad Soyad */}
           <Field label="Ad Soyad" icon={<User size={20} />} color={color} error={visibleError('fullName')}>
@@ -424,7 +424,7 @@ const ServiceApplication: React.FC<ServiceApplicationProps> = ({ role, onSubmitt
           <div className="group">
             <label className="text-[0.625rem] text-ink-4 font-bold uppercase mb-2 block ml-1 tracking-wider">Kimlik Fotoğrafı</label>
             <label
-              className={`bg-[#0A0E14] border p-4 rounded-2xl flex items-center gap-3 cursor-pointer transition-colors hover:border-white/40 ${visibleError('idPhoto') ? 'border-red-500/50' : 'border-gray-800'}`}
+              className={`bg-bg border p-4 rounded-2xl flex items-center gap-3 cursor-pointer transition-colors hover:border-white/40 ${visibleError('idPhoto') ? 'border-red-500/50' : 'border-gray-800'}`}
             >
               <CreditCard size={20} className="shrink-0 text-ink-4" />
               <span className={`text-sm font-bold truncate ${idPhoto ? 'text-white' : 'text-ink-4'}`}>
@@ -555,7 +555,7 @@ const ServiceApplication: React.FC<ServiceApplicationProps> = ({ role, onSubmitt
               <button
                 type="button"
                 onClick={() => setShowCityList((v) => !v)}
-                className="w-full h-11 px-3 rounded-2xl flex items-center justify-between text-sm font-bold text-white bg-[#0A0E14] border border-gray-800 outline-none focus:border-white/40 transition-colors"
+                className="w-full h-11 px-3 rounded-2xl flex items-center justify-between text-sm font-bold text-white bg-bg border border-gray-800 outline-none focus:border-white/40 transition-colors"
               >
                 <span className="flex items-center gap-2">
                   <MapPin size={14} style={{ color }} /> {activeCity}
@@ -572,7 +572,7 @@ const ServiceApplication: React.FC<ServiceApplicationProps> = ({ role, onSubmitt
                     style={{ background: '#161B22' }}
                   >
                     <div className="p-2 border-b border-white/5">
-                      <div className="flex items-center gap-2 bg-[#0A0E14] rounded-xl px-3 h-9 border border-gray-800">
+                      <div className="flex items-center gap-2 bg-bg rounded-xl px-3 h-9 border border-gray-800">
                         <Search size={14} className="text-ink-4 shrink-0" />
                         <input
                           autoFocus
@@ -638,7 +638,7 @@ const ServiceApplication: React.FC<ServiceApplicationProps> = ({ role, onSubmitt
               birleştirildi. */}
           <div className="group">
             <label className="text-[0.625rem] text-ink-4 font-bold uppercase mb-2 block ml-1 tracking-wider">Not <span className="text-red-400">*</span></label>
-            <div className={`bg-[#0A0E14] border p-4 rounded-2xl flex items-start gap-3 focus-within:border-white/40 transition-colors ${visibleError('bio') ? 'border-red-500/50' : 'border-gray-800'}`}>
+            <div className={`bg-bg border p-4 rounded-2xl flex items-start gap-3 focus-within:border-white/40 transition-colors ${visibleError('bio') ? 'border-red-500/50' : 'border-gray-800'}`}>
               <FileText size={20} className="text-ink-4 shrink-0 mt-0.5" />
               <textarea
                 value={bio}

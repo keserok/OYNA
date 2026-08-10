@@ -25,16 +25,16 @@ export const ownerColors = {
   textDim: '#64748B',
 } as const;
 
-export const ownerCard = 'bg-[#161B22] border border-white/5 rounded-2xl';
+export const ownerCard = 'bg-surface-1 border border-white/5 rounded-2xl';
 export const ownerCardInteractive =
-  'bg-[#161B22] border border-white/5 rounded-2xl hover:border-blue-500/30 transition-all active:scale-[0.98]';
+  'bg-surface-1 border border-white/5 rounded-2xl hover:border-blue-500/30 transition-all active:scale-[0.98]';
 export const ownerSectionLabel =
   'text-[0.6875rem] font-bold uppercase tracking-widest text-slate-500';
 export const ownerModalOverlay =
   'fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-6';
 // FAZ0: 90vh → 90dvh (mobil tarayıcı adres-çubuğu daralımında panel taşmaz).
 export const ownerModalPanel =
-  'bg-[#161B22] w-full max-w-md rounded-[32px] border border-white/10 p-8 max-h-[90dvh] overflow-y-auto custom-scrollbar';
+  'bg-surface-1 w-full max-w-md rounded-[32px] border border-white/10 p-8 max-h-[90dvh] overflow-y-auto custom-scrollbar';
 
 /**
  * Tipografi ölçeği — IP-08'den beri TEK KAYNAK `ui/type.ts`'tir.

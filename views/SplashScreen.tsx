@@ -74,19 +74,19 @@ export default function SplashScreen({ onStart, ready = true }: SplashScreenProp
         <motion.div
           animate={{ scale: [1, 1.4, 1], opacity: [0.08, 0.18, 0.08] }}
           transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
-          className="absolute w-[500px] h-[500px] rounded-full border border-[#39FF14]/20 pointer-events-none"
+          className="absolute w-[500px] h-[500px] rounded-full border border-primary/20 pointer-events-none"
         />
         <motion.div
           animate={{ scale: [1.2, 1.6, 1.2], opacity: [0.04, 0.12, 0.04] }}
           transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut', delay: 0.5 }}
-          className="absolute w-[700px] h-[700px] rounded-full border border-[#39FF14]/10 pointer-events-none"
+          className="absolute w-[700px] h-[700px] rounded-full border border-primary/10 pointer-events-none"
         />
 
         {/* ── Merkez Glow ── */}
         <motion.div
           animate={{ opacity: [0.1, 0.3, 0.1] }}
           transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
-          className="absolute w-[300px] h-[300px] rounded-full bg-[#39FF14]/15 blur-[80px] pointer-events-none"
+          className="absolute w-[300px] h-[300px] rounded-full bg-primary/15 blur-[80px] pointer-events-none"
         />
 
         {/* ── Logo ── */}
@@ -137,7 +137,7 @@ export default function SplashScreen({ onStart, ready = true }: SplashScreenProp
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 1.2, duration: 0.5 }}
-            className="mt-3 text-[0.625rem] font-bold tracking-[0.4em] text-[#39FF14]/70 uppercase"
+            className="mt-3 text-[0.625rem] font-bold tracking-[0.4em] text-primary/70 uppercase"
           >
             Potansiyel zaferler için
           </motion.p>
@@ -153,7 +153,7 @@ export default function SplashScreen({ onStart, ready = true }: SplashScreenProp
             initial={{ width: 0 }}
             animate={{ width: '120px' }}
             transition={{ delay: 0.8, duration: 1.4, ease: 'easeOut' }}
-            className="mt-8 h-[2px] bg-gradient-to-r from-transparent via-[#39FF14] to-transparent rounded-full"
+            className="mt-8 h-[2px] bg-gradient-to-r from-transparent via-primary to-transparent rounded-full"
           />
         </motion.div>
       </motion.div>

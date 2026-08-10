@@ -58,7 +58,7 @@ export const FinanceCollectTab: React.FC<Props> = ({ summary, debtors, readOnly,
             key={b.id}
             type="button"
             onClick={() => { if (readOnly) { notify('Salt okunur mod.', 'warning'); return; } setCollectBooking(b); }}
-            className="w-full bg-[#161B22] p-4 rounded-2xl border border-amber-500/15 flex justify-between items-center gap-3 text-left hover:border-amber-500/40 transition-colors"
+            className="w-full bg-surface-1 p-4 rounded-2xl border border-amber-500/15 flex justify-between items-center gap-3 text-left hover:border-amber-500/40 transition-colors"
           >
             <div className="min-w-0">
               <p className="text-sm font-bold text-white truncate">{b.customer_name ?? 'Müşteri'}</p>
@@ -95,7 +95,7 @@ export const FinanceCollectTab: React.FC<Props> = ({ summary, debtors, readOnly,
             key={d.id}
             type="button"
             onClick={() => setOpenDebtor(d)}
-            className="w-full bg-[#161B22] p-4 rounded-2xl border border-red-500/20 flex justify-between items-center text-left hover:border-red-500/40 transition-colors"
+            className="w-full bg-surface-1 p-4 rounded-2xl border border-red-500/20 flex justify-between items-center text-left hover:border-red-500/40 transition-colors"
           >
             <div className="min-w-0">
               <p className="text-sm font-bold text-white flex items-center gap-2">
@@ -118,7 +118,7 @@ export const FinanceCollectTab: React.FC<Props> = ({ summary, debtors, readOnly,
         {income.recent_payments.length === 0 ? (
           <p className="text-sm text-gray-500 px-2">Bu ay ödeme kaydı yok.</p>
         ) : income.recent_payments.map((p) => (
-          <div key={p.id} className="bg-[#161B22] p-4 rounded-2xl border border-white/5 flex justify-between items-center">
+          <div key={p.id} className="bg-surface-1 p-4 rounded-2xl border border-white/5 flex justify-between items-center">
             <div className="min-w-0">
               <p className="text-sm font-bold text-white truncate">{p.customer_name ?? 'Müşteri'}</p>
               <p className="text-[10px] text-gray-500">{p.booking_date} · {methodLabel(p.method)}</p>
@@ -139,13 +139,13 @@ export const FinanceCollectTab: React.FC<Props> = ({ summary, debtors, readOnly,
       {addOpen && (
         <BottomSheetModal title="Veresiye Ekle" onClose={() => setAddOpen(false)}>
           <input
-            className="w-full bg-[#0A0E14] border border-white/10 rounded-xl p-3 text-white mb-3"
+            className="w-full bg-bg border border-white/10 rounded-xl p-3 text-white mb-3"
             placeholder="Müşteri adı"
             value={form.name}
             onChange={(e) => setForm({ ...form, name: e.target.value })}
           />
           <input
-            className="w-full bg-[#0A0E14] border border-white/10 rounded-xl p-3 text-white mb-3"
+            className="w-full bg-bg border border-white/10 rounded-xl p-3 text-white mb-3"
             placeholder="Telefon (opsiyonel)"
             inputMode="tel"
             value={form.phone}
@@ -153,7 +153,7 @@ export const FinanceCollectTab: React.FC<Props> = ({ summary, debtors, readOnly,
           />
           <input
             inputMode="decimal"
-            className="w-full bg-[#0A0E14] border border-white/10 rounded-xl p-3 text-white mb-4"
+            className="w-full bg-bg border border-white/10 rounded-xl p-3 text-white mb-4"
             placeholder="Borç tutarı (₺)"
             value={form.amount}
             onChange={(e) => setForm({ ...form, amount: e.target.value })}

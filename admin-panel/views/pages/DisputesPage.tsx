@@ -134,7 +134,7 @@ export const DisputesPage: React.FC<DisputesPageProps> = ({ onNavigate }) => {
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
               onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-md bg-[#161B22] border border-white/10 rounded-2xl p-6 shadow-2xl"
+              className="w-full max-w-md bg-surface-1 border border-white/10 rounded-2xl p-6 shadow-2xl"
             >
               <h3 className="text-sm font-extrabold text-white mb-1">
                 {resolveTarget.status === 'RESOLVED' ? 'İhtilafı çöz' : 'İhtilafı reddet'}

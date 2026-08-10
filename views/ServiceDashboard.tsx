@@ -991,7 +991,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
           <div className={`relative w-full h-full transition-transform duration-700 transform-style-3d ${flipCard ? 'rotate-y-180' : ''}`}>
               
               {/* FRONT SIDE */}
-              <div className="absolute inset-0 backface-hidden rounded-[32px] bg-[#161B22]/90 backdrop-blur-xl border border-green-500/30 shadow-2xl p-5 overflow-hidden">
+              <div className="absolute inset-0 backface-hidden rounded-[32px] bg-surface-1/90 backdrop-blur-xl border border-green-500/30 shadow-2xl p-5 overflow-hidden">
                   {/* Background FX */}
                   <div className="absolute -right-10 -top-10 w-40 h-40 bg-green-500/20 blur-[50px] rounded-full pointer-events-none"></div>
                   <div className="absolute top-4 right-4 bg-black/40 px-2 py-1 rounded-lg border border-white/10 text-[0.6875rem] text-gray-400 flex items-center gap-1">
@@ -1021,17 +1021,17 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
 
                           {/* Stats Grid */}
                           <div className="grid grid-cols-3 gap-2 mt-2">
-                              <div className="bg-[#0A0E14] rounded-xl p-2 text-center border border-white/5">
+                              <div className="bg-bg rounded-xl p-2 text-center border border-white/5">
                                   <p className="text-[0.6875rem] text-ink-4 font-bold">MAÇ</p>
                                   <p className="text-sm font-extrabold text-white">{idNum(userProfile?.matchesPlayed)}</p>
                               </div>
                               {/* Ayarlanamayan "REAKSİYON" sayısı kaldırıldı; yerine
                                   kalecinin gerçekten seçtiği tarz sayısı. */}
-                              <div className="bg-[#0A0E14] rounded-xl p-2 text-center border border-white/5">
+                              <div className="bg-bg rounded-xl p-2 text-center border border-white/5">
                                   <p className="text-[0.6875rem] text-ink-4 font-bold">TARZ</p>
                                   <p className="text-sm font-extrabold text-white font-numeric">{idStyles.length || '—'}</p>
                               </div>
-                              <div className="bg-[#0A0E14] rounded-xl p-2 text-center border border-white/5">
+                              <div className="bg-bg rounded-xl p-2 text-center border border-white/5">
                                   <p className="text-[0.6875rem] text-ink-4 font-bold">PUAN</p>
                                   <p className="text-sm font-extrabold text-green-400">{idRatingText}</p>
                               </div>
@@ -1130,7 +1130,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
           <div className={`relative w-full h-full transition-transform duration-700 transform-style-3d ${flipCard ? 'rotate-y-180' : ''}`}>
               
               {/* FRONT SIDE */}
-              <div className="absolute inset-0 backface-hidden rounded-[32px] bg-[#161B22]/90 backdrop-blur-xl border border-red-500/30 shadow-2xl p-5 overflow-hidden">
+              <div className="absolute inset-0 backface-hidden rounded-[32px] bg-surface-1/90 backdrop-blur-xl border border-red-500/30 shadow-2xl p-5 overflow-hidden">
                   {/* Background FX */}
                   <div className="absolute -right-10 -top-10 w-40 h-40 bg-red-500/20 blur-[50px] rounded-full pointer-events-none"></div>
                   <div className="absolute top-4 right-4 bg-black/40 px-2 py-1 rounded-lg border border-white/10 text-[0.6875rem] text-gray-400 flex items-center gap-1">
@@ -1147,7 +1147,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                           </div>
                           {/* Sabit "FIFA" yerine gerçek seviye (varsa). */}
                           {idLevel && (
-                            <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-[#FACC15] text-black text-[0.6875rem] font-extrabold px-3 py-1 rounded-full shadow-lg whitespace-nowrap border-2 border-[#161B22]">
+                            <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-warning text-black text-[0.6875rem] font-extrabold px-3 py-1 rounded-full shadow-lg whitespace-nowrap border-2 border-surface-1">
                                 {idLevel.toLocaleUpperCase('tr-TR')}
                             </div>
                           )}
@@ -1169,15 +1169,15 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                           <div className="grid grid-cols-3 gap-2 mt-2">
                               {/* Ayarlanamayan "YÖNETİM" sayısı kaldırıldı; yerine
                                   hakemin gerçekten seçtiği tarz sayısı. */}
-                              <div className="bg-[#0A0E14] rounded-xl p-2 text-center border border-white/5">
+                              <div className="bg-bg rounded-xl p-2 text-center border border-white/5">
                                   <p className="text-[0.6875rem] text-ink-4 font-bold">TARZ</p>
                                   <p className="text-sm font-extrabold text-white font-numeric">{idStyles.length || '—'}</p>
                               </div>
-                              <div className="bg-[#0A0E14] rounded-xl p-2 text-center border border-white/5">
+                              <div className="bg-bg rounded-xl p-2 text-center border border-white/5">
                                   <p className="text-[0.6875rem] text-ink-4 font-bold">VAR</p>
                                   <p className="text-sm font-extrabold text-white">{idVar}</p>
                               </div>
-                              <div className="bg-[#0A0E14] rounded-xl p-2 text-center border border-white/5">
+                              <div className="bg-bg rounded-xl p-2 text-center border border-white/5">
                                   <p className="text-[0.6875rem] text-ink-4 font-bold">PUAN</p>
                                   <p className="text-sm font-extrabold text-red-400">{idRatingText}</p>
                               </div>
@@ -1187,7 +1187,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
               </div>
 
               {/* BACK SIDE */}
-              <div className="absolute inset-0 backface-hidden rotate-y-180 rounded-[32px] bg-gradient-to-br from-[#7F1D1D] to-[#161B22] border-[3px] border-red-500/50 shadow-[0_0_30px_rgba(239,68,68,0.2)] p-5 flex flex-col justify-between overflow-hidden">
+              <div className="absolute inset-0 backface-hidden rotate-y-180 rounded-[32px] bg-gradient-to-br from-[#7F1D1D] to-surface-1 border-[3px] border-red-500/50 shadow-[0_0_30px_rgba(239,68,68,0.2)] p-5 flex flex-col justify-between overflow-hidden">
                   {/* Glowing Effects */}
                   <div className="absolute -right-20 -top-20 w-64 h-64 bg-red-500/20 blur-[60px] rounded-full pointer-events-none animate-pulse-slow"></div>
                   <div className="absolute -left-20 -bottom-20 w-64 h-64 bg-orange-500/10 blur-[60px] rounded-full pointer-events-none animate-float-y"></div>
@@ -1291,7 +1291,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
           ) : requestsError ? (
               <ErrorState message={requestsError} onRetry={fetchIncomingRequests} />
           ) : (newRequests.length === 0 && activeRequests.length === 0) ? (
-              <div className="bg-[#161B22] border border-dashed border-white/10 rounded-[24px] p-8 text-center">
+              <div className="bg-surface-1 border border-dashed border-white/10 rounded-[24px] p-8 text-center">
                   <div className="w-12 h-12 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-3">
                       <Inbox size={24} className="text-ink-4" />
                   </div>
@@ -1304,7 +1304,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                       <div className="space-y-3">
                           <p className="text-[0.625rem] font-extrabold text-ink-4 uppercase tracking-widest">Yeni Talepler</p>
                           {newRequests.map(req => (
-                              <div key={req.id} className={`bg-gradient-to-r to-[#161B22] border rounded-[24px] p-4 ${isRef ? 'from-red-900/30 border-red-500/30' : 'from-green-900/30 border-green-500/30'}`}>
+                              <div key={req.id} className={`bg-gradient-to-r to-surface-1 border rounded-[24px] p-4 ${isRef ? 'from-red-900/30 border-red-500/30' : 'from-green-900/30 border-green-500/30'}`}>
                                   <div className="flex items-start justify-between">
                                       <div>
                                           <h4 className="font-extrabold text-white text-sm">{req.providerType === 'REF' ? 'Hakemlik Talebi' : 'Kalecilik Talebi'}</h4>
@@ -1385,7 +1385,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                       <div className="space-y-3">
                           <p className="text-[0.625rem] font-extrabold text-ink-4 uppercase tracking-widest">Yaklaşan</p>
                           {activeRequests.map(req => (
-                              <div key={req.id} className="bg-[#161B22] border border-white/6 rounded-[24px] p-4">
+                              <div key={req.id} className="bg-surface-1 border border-white/6 rounded-[24px] p-4">
                                   <div className="flex items-start justify-between">
                                       <div>
                                           <h4 className="font-extrabold text-white text-sm">{req.providerType === 'REF' ? 'Hakemlik' : 'Kalecilik'}</h4>
@@ -1451,7 +1451,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                       <div className="space-y-3">
                           <p className="text-[0.625rem] font-extrabold text-ink-4 uppercase tracking-widest">Tamamlanan</p>
                           {completedRequests.map(req => (
-                              <div key={req.id} className="bg-[#161B22] border border-white/6 rounded-[24px] p-4">
+                              <div key={req.id} className="bg-surface-1 border border-white/6 rounded-[24px] p-4">
                                   <div className="flex items-start justify-between">
                                       <div>
                                           <h4 className="font-extrabold text-white text-sm">{req.providerType === 'REF' ? 'Hakemlik' : 'Kalecilik'}</h4>
@@ -1574,24 +1574,24 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
           {matchOffers.length > 0 && (
             <div className="mb-6">
               <div className="flex items-center gap-2 mb-3 px-1">
-                <Inbox size={16} className={isRef ? 'text-red-400' : 'text-[#39FF14]'} />
+                <Inbox size={16} className={isRef ? 'text-red-400' : 'text-primary'} />
                 <h3 className="text-sm font-extrabold text-white uppercase tracking-wide">Gelen Teklifler</h3>
-                <span className={`text-[0.6875rem] font-extrabold rounded-full px-2 py-0.5 ${isRef ? 'text-white bg-red-500' : 'text-[#0A0E14] bg-[#39FF14]'}`}>{matchOffers.length}</span>
+                <span className={`text-[0.6875rem] font-extrabold rounded-full px-2 py-0.5 ${isRef ? 'text-white bg-red-500' : 'text-on-primary bg-primary'}`}>{matchOffers.length}</span>
               </div>
               <div className="space-y-3">
                 {matchOffers.map(o => {
                   const busy = respondingOfferId === o.id;
                   return (
-                    <div key={o.id} className={`rounded-[24px] p-4 bg-gradient-to-br to-[#161B22] border ${isRef ? 'from-red-900/30 border-red-500/30' : 'from-green-900/30 border-green-500/30'}`}>
+                    <div key={o.id} className={`rounded-[24px] p-4 bg-gradient-to-br to-surface-1 border ${isRef ? 'from-red-900/30 border-red-500/30' : 'from-green-900/30 border-green-500/30'}`}>
                       <div className="flex items-start justify-between mb-3">
                         <div className="min-w-0">
                           <p className="text-sm font-extrabold text-white uppercase italic">{o.provider_type === 'GK' ? 'Kalecilik' : 'Hakemlik'} Teklifi</p>
                           <p className="text-[0.6875rem] text-white/50 truncate mt-0.5">{o.location || o.match_title || 'Maç'}{o.date ? ` · ${o.date}` : ''}{o.time ? ` ${o.time}` : ''}</p>
-                          <p className={`text-[0.6875rem] font-bold mt-1 ${isRef ? 'text-red-400' : 'text-[#39FF14]'}`}>İlk kabul eden işi alır</p>
+                          <p className={`text-[0.6875rem] font-bold mt-1 ${isRef ? 'text-red-400' : 'text-primary'}`}>İlk kabul eden işi alır</p>
                         </div>
                         <div className="text-right shrink-0 pl-3">
                           <p className="text-[0.625rem] font-extrabold uppercase text-ink-4 tracking-widest">Bedel</p>
-                          <p className={`text-lg font-extrabold ${isRef ? 'text-red-400' : 'text-[#39FF14]'}`}>{money(o.fee)}</p>
+                          <p className={`text-lg font-extrabold ${isRef ? 'text-red-400' : 'text-primary'}`}>{money(o.fee)}</p>
                         </div>
                       </div>
                       <div className="flex gap-2">
@@ -1600,7 +1600,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                           <X size={14} /> Reddet
                         </button>
                         <button disabled={busy} onClick={() => handleRespondMatchOffer(o.id, true)}
-                          className={`flex-[1.5] h-11 rounded-xl text-xs font-extrabold flex items-center justify-center gap-1.5 active:scale-95 disabled:opacity-40 ${isRef ? 'bg-red-500 text-white' : 'bg-[#39FF14] text-[#0A0E14]'}`}>
+                          className={`flex-[1.5] h-11 rounded-xl text-xs font-extrabold flex items-center justify-center gap-1.5 active:scale-95 disabled:opacity-40 ${isRef ? 'bg-red-500 text-white' : 'bg-primary text-on-primary'}`}>
                           {busy ? <Activity size={14} className="animate-spin" /> : <Check size={14} />} Kabul Et
                         </button>
                       </div>
@@ -1615,7 +1615,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
           {renderIncomingRequestsSection()}
 
           <div className="px-6">
-              <div className="bg-[#161B22] border border-white/5 rounded-[32px] p-6 relative overflow-hidden group">
+              <div className="bg-surface-1 border border-white/5 rounded-[32px] p-6 relative overflow-hidden group">
                   <motion.div 
                     className="absolute -right-4 -bottom-4 w-24 h-24 bg-blue-500/10 blur-3xl rounded-full group-hover:bg-blue-500/20 transition-colors"
                   />
@@ -1630,7 +1630,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                       </div>
                       <div className="text-right">
                           <p className="text-[0.6875rem] text-ink-4 font-bold uppercase">Sıradaki Maç</p>
-                          <p className="text-lg font-extrabold text-[#FACC15]">{myUpcomingMatches[0]?.time || '--:--'}</p>
+                          <p className="text-lg font-extrabold text-warning">{myUpcomingMatches[0]?.time || '--:--'}</p>
                       </div>
                   </div>
               </div>
@@ -1643,15 +1643,15 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
           {isRef && myMatchesAwaitingScore.length > 0 && (
               <div className="px-6 mb-6">
                   <div className="flex items-center gap-2 mb-3">
-                      <PenLine size={16} className="text-[#FACC15]" />
+                      <PenLine size={16} className="text-warning" />
                       <h3 className="font-extrabold text-white text-sm tracking-wide uppercase">SKOR BEKLİYOR</h3>
-                      <span className="px-2 py-0.5 rounded-full bg-[#FACC15]/15 text-[#FACC15] text-[0.6875rem] font-extrabold">
+                      <span className="px-2 py-0.5 rounded-full bg-warning/15 text-warning text-[0.6875rem] font-extrabold">
                           {myMatchesAwaitingScore.length}
                       </span>
                   </div>
                   <div className="flex flex-col gap-2">
                       {myMatchesAwaitingScore.map((m: any) => (
-                          <div key={m.id} className="bg-[#161B22] border border-[#FACC15]/25 rounded-[20px] p-4 flex items-center justify-between gap-3">
+                          <div key={m.id} className="bg-surface-1 border border-warning/25 rounded-[20px] p-4 flex items-center justify-between gap-3">
                               <div className="min-w-0">
                                   <h4 className="font-extrabold text-white text-sm truncate">
                                       {m.pitchName || m.location || 'Saha bilinmiyor'}
@@ -1662,7 +1662,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                               </div>
                               <button
                                   onClick={() => { setScoreTargetMatch(m); setRefScore({ home: '', away: '' }); setShowPostMatchReport(true); }}
-                                  className="shrink-0 px-4 py-2 rounded-xl bg-[#FACC15] text-black text-[0.6875rem] font-extrabold uppercase hover:brightness-110 transition-all"
+                                  className="shrink-0 px-4 py-2 rounded-xl bg-warning text-black text-[0.6875rem] font-extrabold uppercase hover:brightness-110 transition-all"
                               >
                                   SKOR GİR
                               </button>
@@ -1682,7 +1682,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
               </div>
               
               {myUpcomingMatches.length > 0 ? (
-                  <div className={`bg-gradient-to-r to-[#161B22] border rounded-[24px] p-5 relative overflow-hidden ${isRef ? 'from-red-900/40 border-red-500/30' : 'from-green-900/40 border-green-500/30'}`}>
+                  <div className={`bg-gradient-to-r to-surface-1 border rounded-[24px] p-5 relative overflow-hidden ${isRef ? 'from-red-900/40 border-red-500/30' : 'from-green-900/40 border-green-500/30'}`}>
                       <div className="flex justify-between items-start">
                           <div>
                               <h4 className="font-extrabold text-white text-lg">{myUpcomingMatches[0].pitchName || myUpcomingMatches[0].location || 'Saha Bilinmiyor'}</h4>
@@ -1690,7 +1690,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                           </div>
                           <div className="text-right">
                               <p className="text-[0.6875rem] text-ink-4 font-bold uppercase">KALAN SÜRE</p>
-                              <p className="text-xl font-extrabold text-[#FACC15] font-mono">{timeLeft}</p>
+                              <p className="text-xl font-extrabold text-warning font-mono">{timeLeft}</p>
                           </div>
                       </div>
                       <div className="mt-4 pt-4 border-t border-white/5 flex flex-col gap-3">
@@ -1747,7 +1747,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                       </div>
                   </div>
               ) : (
-                  <div className="bg-[#161B22] border border-dashed border-white/10 rounded-[24px] p-8 text-center">
+                  <div className="bg-surface-1 border border-dashed border-white/10 rounded-[24px] p-8 text-center">
                       <div className="w-12 h-12 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-3">
                           <Calendar size={24} className="text-ink-4" />
                       </div>
@@ -1769,7 +1769,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
           {myOffers.length > 0 && (
           <div className="px-6">
               <div className="flex items-center gap-2 mb-3">
-                  <Sparkles size={16} className="text-[#FACC15]" />
+                  <Sparkles size={16} className="text-warning" />
                   <h3 className="font-extrabold text-white text-sm tracking-wide uppercase">ÖZEL TEKLİFLER</h3>
               </div>
               <div className="flex gap-3 overflow-x-auto pb-4 custom-scrollbar snap-x">
@@ -1781,14 +1781,14 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                       <motion.div 
                         key={offer.id} 
                         whileHover={{ y: -5 }}
-                        className="snap-center shrink-0 w-72 bg-gradient-to-br from-yellow-900/40 to-[#161B22] border border-[#FACC15]/30 rounded-[24px] p-4 relative overflow-hidden"
+                        className="snap-center shrink-0 w-72 bg-gradient-to-br from-yellow-900/40 to-surface-1 border border-warning/30 rounded-[24px] p-4 relative overflow-hidden"
                       >
-                          <div className="absolute top-0 right-0 px-2 py-1 bg-[#FACC15] text-black text-[0.6875rem] font-extrabold rounded-bl-xl">
+                          <div className="absolute top-0 right-0 px-2 py-1 bg-warning text-black text-[0.6875rem] font-extrabold rounded-bl-xl">
                               {offer.expiresIn} KALDI
                           </div>
                           
                           <div className="flex gap-3 mb-3">
-                              <div className="w-10 h-10 bg-[#FACC15]/10 rounded-full flex items-center justify-center text-[#FACC15] font-extrabold border border-[#FACC15]/20">
+                              <div className="w-10 h-10 bg-warning/10 rounded-full flex items-center justify-center text-warning font-extrabold border border-warning/20">
                                   {offer.captainName.charAt(0)}
                               </div>
                               <div>
@@ -1806,11 +1806,11 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                           <div className="flex items-center justify-between">
                               <div className="flex flex-col">
                                   <span className="text-[0.6875rem] text-ink-4 uppercase font-bold">Teklif</span>
-                                  <span className="text-xl font-extrabold text-[#FACC15]">{money(offer.offerAmount)}</span>
+                                  <span className="text-xl font-extrabold text-warning">{money(offer.offerAmount)}</span>
                               </div>
                               <button 
                                 onClick={() => handleOpenOffer(offer)}
-                                className="bg-[#FACC15] text-black px-4 py-2 rounded-xl text-xs font-extrabold hover:scale-105 transition-transform"
+                                className="bg-warning text-black px-4 py-2 rounded-xl text-xs font-extrabold hover:scale-105 transition-transform"
                               >
                                   İNCELE
                               </button>
@@ -1848,7 +1848,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                  {pendingApplications.map(job => (
                      <motion.div
                          key={job.id}
-                         className="bg-[#161B22]/60 border border-yellow-500/30 rounded-[24px] overflow-hidden"
+                         className="bg-surface-1/60 border border-yellow-500/30 rounded-[24px] overflow-hidden"
                      >
                          <div className="p-4 flex items-center justify-between">
                              <div>
@@ -1879,7 +1879,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
             {/* Açık maç yoksa net boş durum (eskiden hep bir sahte "SOS" kartı
                 gösteriliyordu — gerçek veri değildi, kaldırıldı). */}
             {openMatches.length === 0 && (
-              <div className="bg-[#161B22] border border-dashed border-white/10 rounded-[24px] p-8 text-center">
+              <div className="bg-surface-1 border border-dashed border-white/10 rounded-[24px] p-8 text-center">
                 <div className="w-12 h-12 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-3">
                   <Search size={22} className="text-ink-4" />
                 </div>
@@ -1892,13 +1892,13 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                     key={job.id}
                     initial={{ opacity: 0, y: 12 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className={`bg-[#161B22] border border-white/6 rounded-[24px] overflow-hidden transition-all ${isRef ? 'hover:border-red-500/30' : 'hover:border-green-500/30'}`}
+                    className={`bg-surface-1 border border-white/6 rounded-[24px] overflow-hidden transition-all ${isRef ? 'hover:border-red-500/30' : 'hover:border-green-500/30'}`}
                 >
                     <div className="p-4">
                       <div className="flex items-start justify-between">
                         <div className="flex items-center gap-3">
                           {/* Date box */}
-                          <div className="w-12 shrink-0 bg-[#0A0E14] rounded-xl py-2 text-center border border-white/5">
+                          <div className="w-12 shrink-0 bg-bg rounded-xl py-2 text-center border border-white/5">
                             <p className="text-[0.6875rem] text-ink-4 font-bold uppercase">{job.date ? (job.date.includes('-') ? job.date.slice(5).replace('-', '/') : job.date) : '—'}</p>
                             <p className="text-xs font-extrabold text-white">{job.time || '—'}</p>
                           </div>
@@ -1954,7 +1954,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
         animate={{ opacity: 1 }}
         className="space-y-6 px-6 pt-6 pb-40"
       >
-          <div className="bg-gradient-to-br from-gray-800 to-[#161B22] p-6 rounded-[32px] border border-white/10 relative overflow-hidden">
+          <div className="bg-gradient-to-br from-gray-800 to-surface-1 p-6 rounded-[32px] border border-white/10 relative overflow-hidden">
               <div className="absolute top-0 right-0 p-6 opacity-5"><Wallet size={120} /></div>
               <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Toplam Kazanç</p>
               <h2 className="text-4xl font-extrabold text-white mt-2">{money(earningsBalance + reservedBalance)}</h2>
@@ -1991,7 +1991,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                           <div className="flex gap-2">
                               <button
                                   onClick={() => { if (!guardGuest()) return; setShowCardOptions(true); }}
-                                  className="flex-1 py-3 bg-[#161B22] border border-white/10 text-white rounded-2xl font-extrabold text-sm shadow-lg hover:bg-white/5 transition-all active:scale-95 flex items-center justify-center gap-2"
+                                  className="flex-1 py-3 bg-surface-1 border border-white/10 text-white rounded-2xl font-extrabold text-sm shadow-lg hover:bg-white/5 transition-all active:scale-95 flex items-center justify-center gap-2"
                               >
                                   <CreditCard size={18} /> {methodLabel}
                               </button>
@@ -2044,7 +2044,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
               ) : (
               <div className="space-y-3">
                   {walletHistory.map((tx) => (
-                      <div key={tx.id} className="bg-[#161B22] border border-white/5 p-4 rounded-2xl flex items-center justify-between">
+                      <div key={tx.id} className="bg-surface-1 border border-white/5 p-4 rounded-2xl flex items-center justify-between">
                           <div>
                               <p className="font-bold text-sm text-white">{tx.description}</p>
                               <p className="text-[0.6875rem] text-ink-4">{tx.date}</p>
@@ -2073,9 +2073,9 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
         animate={{ opacity: 1 }}
         className="space-y-3 px-6 pt-6 pb-40"
       >
-          <button onClick={() => setActiveTab('PROFILE_VIEW')} className="w-full bg-[#161B22] border border-white/5 p-4 rounded-2xl flex items-center justify-between group hover:border-[#FACC15]/30 transition-all">
+          <button onClick={() => setActiveTab('PROFILE_VIEW')} className="w-full bg-surface-1 border border-white/5 p-4 rounded-2xl flex items-center justify-between group hover:border-warning/30 transition-all">
               <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 bg-white/5 rounded-full flex items-center justify-center text-gray-400 group-hover:text-[#FACC15] transition-colors"><User size={20} /></div>
+                  <div className="w-10 h-10 bg-white/5 rounded-full flex items-center justify-center text-gray-400 group-hover:text-warning transition-colors"><User size={20} /></div>
                   <div className="text-left">
                     <span className="font-bold text-white block">Profilim</span>
                     <span className="text-[0.6875rem] text-ink-4">Fotoğraf, açıklama ve tercihler</span>
@@ -2083,9 +2083,9 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
               </div>
               <ChevronRight size={20} className="text-ink-4 group-hover:translate-x-1 transition-transform" />
           </button>
-          <button onClick={() => setActiveTab('SETTINGS_VIEW')} className="w-full bg-[#161B22] border border-white/5 p-4 rounded-2xl flex items-center justify-between group hover:border-[#FACC15]/30 transition-all">
+          <button onClick={() => setActiveTab('SETTINGS_VIEW')} className="w-full bg-surface-1 border border-white/5 p-4 rounded-2xl flex items-center justify-between group hover:border-warning/30 transition-all">
               <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 bg-white/5 rounded-full flex items-center justify-center text-gray-400 group-hover:text-[#FACC15] transition-colors"><Settings size={20} /></div>
+                  <div className="w-10 h-10 bg-white/5 rounded-full flex items-center justify-center text-gray-400 group-hover:text-warning transition-colors"><Settings size={20} /></div>
                   <div className="text-left">
                     <span className="font-bold text-white block">Ayarlar</span>
                     <span className="text-[0.6875rem] text-ink-4">Bildirim, gizlilik ve hesap</span>
@@ -2095,9 +2095,9 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
           </button>
           {/* F3e: alert() yerine gerçek kanal — Ayarlar'daki çalışan Destek
               bölümüne (SSS / Canlı Destek / Hata Bildir, mailto) yönlendirir. */}
-          <button onClick={() => setActiveTab('SETTINGS_VIEW')} className="w-full bg-[#161B22] border border-white/5 p-4 rounded-2xl flex items-center justify-between group hover:border-[#FACC15]/30 transition-all">
+          <button onClick={() => setActiveTab('SETTINGS_VIEW')} className="w-full bg-surface-1 border border-white/5 p-4 rounded-2xl flex items-center justify-between group hover:border-warning/30 transition-all">
               <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 bg-white/5 rounded-full flex items-center justify-center text-gray-400 group-hover:text-[#FACC15] transition-colors"><MessageSquare size={20} /></div>
+                  <div className="w-10 h-10 bg-white/5 rounded-full flex items-center justify-center text-gray-400 group-hover:text-warning transition-colors"><MessageSquare size={20} /></div>
                   <div className="text-left">
                     <span className="font-bold text-white block">Destek</span>
                     <span className="text-[0.6875rem] text-ink-4">SSS, canlı destek ve hata bildirimi</span>
@@ -2126,7 +2126,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
     // kilitli, iç kutu da o noktada yok). Yeni model Ayarlar/Profil ile aynı:
     // ekranın TAMAMI App'in görünüm kaydırıcısında akar — başlık dahil her
     // nokta parmak yüzeyidir. Alt gezinme `fixed` olduğundan yerinde kalır.
-    <div className="min-h-screen flex flex-col bg-[#0A0E14] relative">
+    <div className="min-h-screen flex flex-col bg-bg relative">
       
       {/* Profil ve Ayarlar alt ekranları `min-h-screen` sayfalardır; kök artık
           sayfa akışında olduğundan DOĞRUDAN akarlar — ara kaydırıcı gerekmez
@@ -2165,12 +2165,12 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
          </div>
          <button 
             onClick={() => setIsNotificationsOpen(true)}
-            className="p-2 bg-[#161B22] rounded-full text-gray-400 border border-white/5 relative hover:text-white transition-colors"
+            className="p-2 bg-surface-1 rounded-full text-gray-400 border border-white/5 relative hover:text-white transition-colors"
          >
              <Bell size={20} />
              {/* F3f: rozet artık koşullu — eskiden okunmamış bildirim olmasa da yanıyordu */}
              {unreadNotificationsCount > 0 && (
-               <span className="absolute top-0 right-0 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-[#0A0E14]"></span>
+               <span className="absolute top-0 right-0 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-bg"></span>
              )}
          </button>
       </header>
@@ -2185,12 +2185,12 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
       </main>
 
       {/* Service Navigation */}
-      <nav className="fixed bottom-0 left-0 w-full bg-[#0A0E14]/95 backdrop-blur-2xl border-t border-white/5 pb-8 pt-4 px-4 flex justify-between items-center z-30">
+      <nav className="fixed bottom-0 left-0 w-full bg-bg/95 backdrop-blur-2xl border-t border-white/5 pb-8 pt-4 px-4 flex justify-between items-center z-30">
          <button 
             onClick={() => setActiveTab('HOME')}
-            className={`flex flex-col items-center gap-1.5 transition-all ${activeTab === 'HOME' ? 'text-[#FACC15] scale-110' : 'text-ink-4 hover:text-gray-300'}`}
+            className={`flex flex-col items-center gap-1.5 transition-all ${activeTab === 'HOME' ? 'text-warning scale-110' : 'text-ink-4 hover:text-gray-300'}`}
          >
-            <div className={`p-1 rounded-lg ${activeTab === 'HOME' ? 'bg-[#FACC15]/10' : ''}`}>
+            <div className={`p-1 rounded-lg ${activeTab === 'HOME' ? 'bg-warning/10' : ''}`}>
                 <List size={20} />
             </div>
             <span className="text-[0.625rem] font-extrabold uppercase tracking-tighter">Ana Sayfa</span>
@@ -2198,9 +2198,9 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
 
          <button
             onClick={() => setActiveTab('JOBS')}
-            className={`flex flex-col items-center gap-1.5 transition-all ${activeTab === 'JOBS' ? 'text-[#FACC15] scale-110' : 'text-ink-4 hover:text-gray-300'}`}
+            className={`flex flex-col items-center gap-1.5 transition-all ${activeTab === 'JOBS' ? 'text-warning scale-110' : 'text-ink-4 hover:text-gray-300'}`}
          >
-            <div className={`p-1 rounded-lg ${activeTab === 'JOBS' ? 'bg-[#FACC15]/10' : ''}`}>
+            <div className={`p-1 rounded-lg ${activeTab === 'JOBS' ? 'bg-warning/10' : ''}`}>
                 <Search size={20} />
             </div>
             <span className="text-[0.625rem] font-extrabold uppercase tracking-tighter">Maç Bul</span>
@@ -2208,9 +2208,9 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
 
          <button
             onClick={() => setActiveTab('WALLET')}
-            className={`flex flex-col items-center gap-1.5 transition-all ${activeTab === 'WALLET' ? 'text-[#FACC15] scale-110' : 'text-ink-4 hover:text-gray-300'}`}
+            className={`flex flex-col items-center gap-1.5 transition-all ${activeTab === 'WALLET' ? 'text-warning scale-110' : 'text-ink-4 hover:text-gray-300'}`}
          >
-            <div className={`p-1 rounded-lg ${activeTab === 'WALLET' ? 'bg-[#FACC15]/10' : ''}`}>
+            <div className={`p-1 rounded-lg ${activeTab === 'WALLET' ? 'bg-warning/10' : ''}`}>
                 <Wallet size={20} />
             </div>
             <span className="text-[0.625rem] font-extrabold uppercase tracking-tighter">Cüzdan</span>
@@ -2218,9 +2218,9 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
 
          <button
             onClick={() => setActiveTab('MENU')}
-            className={`flex flex-col items-center gap-1.5 transition-all ${activeTab === 'MENU' ? 'text-[#FACC15] scale-110' : 'text-ink-4 hover:text-gray-300'}`}
+            className={`flex flex-col items-center gap-1.5 transition-all ${activeTab === 'MENU' ? 'text-warning scale-110' : 'text-ink-4 hover:text-gray-300'}`}
          >
-            <div className={`p-1 rounded-lg ${activeTab === 'MENU' ? 'bg-[#FACC15]/10' : ''}`}>
+            <div className={`p-1 rounded-lg ${activeTab === 'MENU' ? 'bg-warning/10' : ''}`}>
                 <PlusCircle size={20} />
             </div>
             <span className="text-[0.625rem] font-extrabold uppercase tracking-tighter">Menü</span>
@@ -2230,7 +2230,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
       {/* BID / OFFER MODAL */}
       {(selectedJob || selectedOffer) && (
           <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-end justify-center animate-in fade-in duration-200">
-              <div className="bg-[#161B22] w-full max-w-md rounded-t-[32px] border-t border-white/10 p-6 shadow-2xl relative animate-in slide-in-from-bottom duration-300">
+              <div className="bg-surface-1 w-full max-w-md rounded-t-[32px] border-t border-white/10 p-6 shadow-2xl relative animate-in slide-in-from-bottom duration-300">
                    {showBidSuccess ? (
                        <div className="py-12 flex flex-col items-center text-center">
                            <div className="w-20 h-20 bg-green-500 rounded-full flex items-center justify-center mb-6 shadow-[0_0_40px_rgba(34,197,94,0.4)]">
@@ -2254,7 +2254,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                                <p className="text-gray-400 text-sm mt-1">{selectedOffer ? selectedOffer.time : selectedJob?.time}</p>
                            </div>
 
-                           <div className="bg-[#0A0E14] border border-white/5 rounded-2xl p-4 mb-4">
+                           <div className="bg-bg border border-white/5 rounded-2xl p-4 mb-4">
                                <h4 className="text-xs font-bold text-ink-4 uppercase mb-2">Kaptana Gidecek Kartın</h4>
                                {/* HR-E: kaptana gidecek kart artık GERÇEK kimlik — sabit
                                    "Cüneyt (FIFA) 4.9/150" / "Volkan (Panter)" ve yabancı
@@ -2279,10 +2279,10 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                            <div className="space-y-4">
                                {/* F3b: "Karşı Teklifin" alanı kaldırıldı — değeri hiçbir payload'a
                                    girmiyordu ve model pazarlıksız sabit ücret. Tutar salt-okunur. */}
-                               <div className="bg-[#0A0E14] p-4 rounded-2xl border border-white/5">
+                               <div className="bg-bg p-4 rounded-2xl border border-white/5">
                                    <label className="text-xs text-ink-4 font-bold uppercase block mb-2">Hizmet Ücreti</label>
                                    <div className="flex items-center gap-2">
-                                       <span className="text-2xl font-extrabold text-[#FACC15]">₺</span>
+                                       <span className="text-2xl font-extrabold text-warning">₺</span>
                                        <span className="text-3xl font-extrabold text-white">
                                            {selectedOffer ? selectedOffer.offerAmount : (selectedJob?.offeredFee ?? '—')}
                                        </span>
@@ -2292,7 +2292,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
 
                                <button 
                                 onClick={submitBid}
-                                className="w-full py-4 bg-[#FACC15] text-black font-extrabold text-lg rounded-2xl hover:bg-yellow-300 transition-colors shadow-lg shadow-yellow-900/20"
+                                className="w-full py-4 bg-warning text-black font-extrabold text-lg rounded-2xl hover:bg-yellow-300 transition-colors shadow-lg shadow-yellow-900/20"
                                >
                                    {selectedOffer ? 'DAVETİ KABUL ET' : 'TEKLİFİ GÖNDER'}
                                </button>
@@ -2309,9 +2309,9 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
       {/* UPCOMING MATCH DETAIL MODAL */}
       {selectedUpcomingJob && (
           <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-sm flex items-end justify-center animate-in fade-in duration-200">
-              <div className="bg-[#161B22] w-full max-w-md h-[85vh] rounded-t-[32px] border-t border-white/10 p-0 shadow-2xl relative flex flex-col overflow-hidden animate-in slide-in-from-bottom duration-300">
+              <div className="bg-surface-1 w-full max-w-md h-[85vh] rounded-t-[32px] border-t border-white/10 p-0 shadow-2xl relative flex flex-col overflow-hidden animate-in slide-in-from-bottom duration-300">
                   {/* Header */}
-                  <div className="p-6 border-b border-white/5 flex justify-between items-center bg-[#0A0E14]">
+                  <div className="p-6 border-b border-white/5 flex justify-between items-center bg-bg">
                       <h3 className="text-lg font-extrabold text-white uppercase tracking-wide">Maç Detayı</h3>
                       <button onClick={() => setSelectedUpcomingJob(null)} className="p-2 bg-white/5 rounded-full text-gray-400 hover:text-white">
                           <X size={20} />
@@ -2330,7 +2330,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                       </div>
 
                       {/* Location & Directions */}
-                      <div className="bg-[#0A0E14] border border-white/5 rounded-2xl p-4">
+                      <div className="bg-bg border border-white/5 rounded-2xl p-4">
                           <div className="flex items-center gap-3 mb-4">
                               <div className="w-10 h-10 bg-blue-500/10 rounded-full flex items-center justify-center text-blue-400">
                                   <MapPin size={20} />
@@ -2358,7 +2358,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
       {/* HOURS SETTING MODAL */}
       {showOnlineSetupModal && (
           <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-end justify-center animate-in fade-in duration-200">
-              <div className="bg-[#161B22] w-full max-w-md rounded-t-[32px] border-t border-white/10 p-6 shadow-2xl relative animate-in slide-in-from-bottom duration-300 max-h-[90vh] overflow-y-auto custom-scrollbar">
+              <div className="bg-surface-1 w-full max-w-md rounded-t-[32px] border-t border-white/10 p-6 shadow-2xl relative animate-in slide-in-from-bottom duration-300 max-h-[90vh] overflow-y-auto custom-scrollbar">
                   <div className="flex justify-between items-center mb-6">
                       <h3 className="text-xl font-extrabold text-white uppercase tracking-wide">AKTİFLİK AYARLARI</h3>
                       <button onClick={() => setShowOnlineSetupModal(false)} className="p-2 bg-white/5 rounded-full text-gray-400 hover:text-white"><X size={20} /></button>
@@ -2435,7 +2435,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
               <motion.div
                 initial={{ y: 80, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
-                className="w-full bg-[#161B22] rounded-t-[32px] border-t border-white/10 p-6"
+                className="w-full bg-surface-1 rounded-t-[32px] border-t border-white/10 p-6"
               >
                   <div className="w-10 h-1 bg-white/20 rounded-full mx-auto mb-5" />
                   <div className="flex justify-between items-center mb-5">
@@ -2451,7 +2451,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                               Henüz kayıtlı yöntem yok
                           </p>
                       ) : payoutMethods.map(m => (
-                          <div key={m.id} className={`p-4 bg-[#0A0E14] border rounded-2xl flex items-center gap-3 ${m.isDefault ? 'border-green-500/40' : 'border-white/5'}`}>
+                          <div key={m.id} className={`p-4 bg-bg border rounded-2xl flex items-center gap-3 ${m.isDefault ? 'border-green-500/40' : 'border-white/5'}`}>
                               {m.kind === 'IBAN' ? <Banknote size={20} className="text-green-400" /> : <CreditCard size={20} className="text-blue-400" />}
                               <button
                                   onClick={async () => {
@@ -2494,14 +2494,14 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
               <motion.div
                 initial={{ y: 80, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
-                className="w-full bg-[#161B22] rounded-t-[32px] border-t border-white/10 p-6 space-y-4"
+                className="w-full bg-surface-1 rounded-t-[32px] border-t border-white/10 p-6 space-y-4"
               >
                   <div className="w-10 h-1 bg-white/20 rounded-full mx-auto" />
                   <div className="flex justify-between items-center">
                       <h3 className="text-xl font-extrabold text-white">Yeni Ödeme Yöntemi</h3>
                       <button onClick={() => setShowAddCard(false)} className="p-2 bg-white/5 rounded-xl text-gray-400"><X size={18} /></button>
                   </div>
-                  <div className="bg-[#0A0E14] p-1.5 rounded-2xl flex border border-white/5">
+                  <div className="bg-bg p-1.5 rounded-2xl flex border border-white/5">
                       <button
                           onClick={() => setNewMethodKind('IBAN')}
                           className={`flex-1 py-3 text-[0.6875rem] font-extrabold rounded-xl transition-all ${newMethodKind === 'IBAN' ? 'bg-green-500 text-black' : 'text-ink-4'}`}
@@ -2581,7 +2581,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
         {/* F1.7: İş bırakma onay modalı — ceza tutarı sunucu önizlemesinden */}
         {cancelPreview && (
             <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-6" onClick={() => setCancelPreview(null)}>
-                <div className="bg-[#161B22] border border-white/10 rounded-[24px] p-6 w-full max-w-sm" onClick={e => e.stopPropagation()}>
+                <div className="bg-surface-1 border border-white/10 rounded-[24px] p-6 w-full max-w-sm" onClick={e => e.stopPropagation()}>
                     <h3 className="text-white font-extrabold text-base mb-2">İşi bırakmak üzeresin</h3>
                     <p className="text-xs text-gray-400 leading-relaxed mb-4">
                         {cancelPreview.penalty > 0 ? (
@@ -2613,7 +2613,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
             />
             <motion.div 
               initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-[#161B22] border border-white/10 rounded-3xl p-6 w-full max-w-sm relative z-10 overflow-hidden"
+              className="bg-surface-1 border border-white/10 rounded-3xl p-6 w-full max-w-sm relative z-10 overflow-hidden"
             >
               <div className={`absolute top-0 left-0 w-full h-1 ${theme.bg}`} />
               
@@ -2634,7 +2634,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
               <div className="space-y-4 mb-6">
                 {(
                   /* HR-A: kontrollü skor alanları — girilen değer gerçekten finalize_match'e yazılır. */
-                  <div className="bg-[#0A0E14] p-4 rounded-2xl border border-white/5">
+                  <div className="bg-bg p-4 rounded-2xl border border-white/5">
                     <label className="text-xs text-gray-400 font-bold uppercase block mb-3 text-center">Maç Skoru</label>
                     <div className="flex items-center justify-center gap-4">
                       <input
@@ -2645,7 +2645,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                           setRefScore(p => ({ ...p, home: v }));
                         }}
                         aria-label="Ev sahibi skoru"
-                        className="w-16 h-16 bg-[#161B22] border border-white/10 rounded-xl text-center text-3xl font-extrabold text-white outline-none focus:border-red-500/50 transition-colors"
+                        className="w-16 h-16 bg-surface-1 border border-white/10 rounded-xl text-center text-3xl font-extrabold text-white outline-none focus:border-red-500/50 transition-colors"
                       />
                       <span className="text-xl font-extrabold text-ink-4">-</span>
                       <input
@@ -2656,7 +2656,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                           setRefScore(p => ({ ...p, away: v }));
                         }}
                         aria-label="Deplasman skoru"
-                        className="w-16 h-16 bg-[#161B22] border border-white/10 rounded-xl text-center text-3xl font-extrabold text-white outline-none focus:border-red-500/50 transition-colors"
+                        className="w-16 h-16 bg-surface-1 border border-white/10 rounded-xl text-center text-3xl font-extrabold text-white outline-none focus:border-red-500/50 transition-colors"
                       />
                     </div>
                     <p className="text-[0.6875rem] text-ink-4 font-bold uppercase text-center mt-3">Resmi hakem skoru — maç bu skorla tamamlanır</p>
@@ -2714,7 +2714,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
       {/* FAZ 5 — TC KİMLİK DOĞRULAMA MODAL */}
       {showIdentityModal && (
           <div className="fixed inset-0 z-[60] bg-black/80 backdrop-blur-sm flex items-end justify-center animate-in fade-in duration-200">
-              <div className="bg-[#161B22] w-full max-w-md rounded-t-[32px] border-t border-white/10 p-6 shadow-2xl relative animate-in slide-in-from-bottom duration-300">
+              <div className="bg-surface-1 w-full max-w-md rounded-t-[32px] border-t border-white/10 p-6 shadow-2xl relative animate-in slide-in-from-bottom duration-300">
                   <div className="flex justify-between items-center mb-2">
                       <h3 className="text-xl font-extrabold text-white uppercase tracking-wide">KİMLİK DOĞRULA</h3>
                       <button onClick={() => setShowIdentityModal(false)} className="p-2 bg-white/5 rounded-full text-gray-400 hover:text-white"><X size={20} /></button>
@@ -2792,14 +2792,14 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
               initial={{ scale: 0.92, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.92, opacity: 0 }}
-              className="w-full max-w-sm bg-[#0A0E14] border border-[#FACC15]/30 rounded-3xl p-6 shadow-2xl relative overflow-hidden"
+              className="w-full max-w-sm bg-bg border border-warning/30 rounded-3xl p-6 shadow-2xl relative overflow-hidden"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="absolute -top-10 -right-10 w-32 h-32 bg-[#FACC15]/10 blur-[40px] rounded-full pointer-events-none" />
+              <div className="absolute -top-10 -right-10 w-32 h-32 bg-warning/10 blur-[40px] rounded-full pointer-events-none" />
               <div className="relative z-10 flex flex-col gap-3">
                 <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-[#FACC15] animate-pulse" />
-                  <p className="text-[0.6875rem] font-extrabold uppercase tracking-widest text-[#FACC15]">Misafir Modundasın</p>
+                  <span className="w-2 h-2 rounded-full bg-warning animate-pulse" />
+                  <p className="text-[0.6875rem] font-extrabold uppercase tracking-widest text-warning">Misafir Modundasın</p>
                 </div>
                 <p className="text-[0.6875rem] text-gray-400 leading-relaxed">
                   Para çekme, ödeme yöntemi ekleme, kimlik doğrulama ve maç başvuruları için
@@ -2808,7 +2808,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                 <div className="flex gap-2.5 mt-1">
                   <button
                     onClick={() => onNavigate('AUTH')}
-                    className="flex-1 h-11 rounded-2xl bg-[#FACC15] text-black font-extrabold text-[0.6875rem] uppercase tracking-widest active:scale-95 transition-all shadow-[0_0_15px_rgba(250,204,21,0.3)] hover:bg-yellow-300"
+                    className="flex-1 h-11 rounded-2xl bg-warning text-black font-extrabold text-[0.6875rem] uppercase tracking-widest active:scale-95 transition-all shadow-[0_0_15px_rgba(250,204,21,0.3)] hover:bg-yellow-300"
                   >
                     Giriş Yap
                   </button>
@@ -2835,7 +2835,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
               initial={{ scale: 0.88, y: 20, opacity: 0 }} animate={{ scale: 1, y: 0, opacity: 1 }} exit={{ scale: 0.88, y: 20, opacity: 0 }}
               transition={{ type: 'spring', damping: 24, stiffness: 300 }}
               onClick={e => e.stopPropagation()}
-              className="w-full max-w-sm rounded-[28px] bg-gradient-to-b from-[#161B22] to-[#0d1117] border border-green-500/25 shadow-[0_30px_70px_rgba(0,0,0,0.85)] p-6">
+              className="w-full max-w-sm rounded-[28px] bg-gradient-to-b from-surface-1 to-[#0d1117] border border-green-500/25 shadow-[0_30px_70px_rgba(0,0,0,0.85)] p-6">
               <div className="flex items-center gap-2.5 mb-3">
                 <div className="p-2 rounded-xl bg-green-500/12 border border-green-500/25 text-green-400"><Shield size={18} /></div>
                 <h3 className="text-base font-extrabold text-white tracking-tight">Kaleci Hizmet Sözleşmesi</h3>

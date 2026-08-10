@@ -130,7 +130,7 @@ export const AnimationToolbar: React.FC<AnimationToolbarProps> = ({
             onClick={onPlayPause}
             title={title}
             aria-label={title}
-            className={`shrink-0 flex items-center gap-1 px-2.5 py-2 rounded-full text-xs font-extrabold transition-all whitespace-nowrap shadow-lg ${playing ? 'bg-red-500 text-white shadow-red-500/30' : 'bg-[#FACC15] text-black shadow-[#FACC15]/30 hover:scale-105'}`}
+            className={`shrink-0 flex items-center gap-1 px-2.5 py-2 rounded-full text-xs font-extrabold transition-all whitespace-nowrap shadow-lg ${playing ? 'bg-red-500 text-white shadow-red-500/30' : 'bg-warning text-black shadow-[#FACC15]/30 hover:scale-105'}`}
         >
             {playing ? (
                 <><Square size={14} className="fill-current" /> {label}</>
@@ -279,7 +279,7 @@ const AdvancedAnimationModule: React.FC<AdvancedAnimationModuleProps> = ({
                             // flex-wrap + max-w: numaralar çoksa panel sahayı aşmak
                             // yerine İKİ SATIRA iner; daha da çoksa kendi içinde kayar.
                             <div
-                                className={`absolute ${panelY} ${panelX} w-max max-w-[13rem] max-h-24 overflow-y-auto no-scrollbar bg-[#161B22] border border-white/10 rounded-xl p-2 shadow-2xl flex flex-wrap gap-1 pointer-events-auto`}
+                                className={`absolute ${panelY} ${panelX} w-max max-w-[13rem] max-h-24 overflow-y-auto no-scrollbar bg-surface-1 border border-white/10 rounded-xl p-2 shadow-2xl flex flex-wrap gap-1 pointer-events-auto`}
                                 onPointerDown={(e) => e.stopPropagation()}
                             >
                                 {isCustomSeqInputOpen ? (
@@ -296,7 +296,7 @@ const AdvancedAnimationModule: React.FC<AdvancedAnimationModuleProps> = ({
                                                     setIsCustomSeqInputOpen(false);
                                                 }
                                             }}
-                                            className="w-12 h-8 bg-black/50 text-white text-xs font-bold text-center rounded-lg border border-white/20 outline-none focus:border-[#39FF14]"
+                                            className="w-12 h-8 bg-black/50 text-white text-xs font-bold text-center rounded-lg border border-white/20 outline-none focus:border-primary"
                                             placeholder="#"
                                         />
                                         <button
@@ -308,7 +308,7 @@ const AdvancedAnimationModule: React.FC<AdvancedAnimationModuleProps> = ({
                                                     setIsCustomSeqInputOpen(false);
                                                 }
                                             }}
-                                            className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold bg-[#39FF14]/20 text-[#39FF14] hover:bg-[#39FF14] hover:text-black transition-all"
+                                            className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold bg-primary/20 text-primary hover:bg-primary hover:text-black transition-all"
                                             title="Onayla"
                                         >
                                             <Check size={14} />
@@ -356,7 +356,7 @@ const AdvancedAnimationModule: React.FC<AdvancedAnimationModuleProps> = ({
                                                 setIsCustomSeqInputOpen(true);
                                                 setCustomSeqValue('');
                                             }}
-                                            className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold bg-white/5 text-gray-400 hover:bg-[#39FF14]/20 hover:text-[#39FF14] transition-all ml-1"
+                                            className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold bg-white/5 text-gray-400 hover:bg-primary/20 hover:text-primary transition-all ml-1"
                                             title="Özel Sıra Numarası Gir"
                                         >
                                             <Plus size={14} />

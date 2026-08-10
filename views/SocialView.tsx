@@ -182,7 +182,7 @@ const SocialView: React.FC<SocialViewProps> = ({ onBack, onNavigate }) => {
   const captainCount = activeTeams.filter(t => t.my_role === 'CAPTAIN').length;
 
   return (
-    <div className="h-full bg-[#0A0E14] text-white flex flex-col font-sans">
+    <div className="h-full bg-bg text-white flex flex-col font-sans">
       {/* ── Header ── */}
       <div className="pt-safe px-5 pb-0 flex-shrink-0">
         <div
@@ -225,7 +225,7 @@ const SocialView: React.FC<SocialViewProps> = ({ onBack, onNavigate }) => {
               {t.label}
               {t.count > 0 && (
                 <span className={`min-w-[20px] h-5 px-1.5 rounded-full flex items-center justify-center text-[0.6875rem] font-extrabold ${
-                  tab === t.id ? 'bg-[#39FF14] text-[#0A0E14]' : 'bg-white/10 text-gray-400'
+                  tab === t.id ? 'bg-primary text-on-primary' : 'bg-white/10 text-gray-400'
                 }`}>
                   {t.count}
                 </span>
@@ -233,7 +233,7 @@ const SocialView: React.FC<SocialViewProps> = ({ onBack, onNavigate }) => {
               {tab === t.id && (
                 <motion.div
                   layoutId="tabUnderline"
-                  className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#39FF14] rounded-full"
+                  className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-full"
                 />
               )}
             </button>
@@ -339,7 +339,7 @@ const SocialView: React.FC<SocialViewProps> = ({ onBack, onNavigate }) => {
       {/* Mini toast */}
       {toast && (
         <div className="fixed bottom-24 inset-x-5 z-50 flex justify-center pointer-events-none">
-          <div className="px-4 py-2.5 rounded-2xl bg-[#161B22] border border-white/10 text-sm font-semibold shadow-xl">
+          <div className="px-4 py-2.5 rounded-2xl bg-surface-1 border border-white/10 text-sm font-semibold shadow-xl">
             {toast}
           </div>
         </div>

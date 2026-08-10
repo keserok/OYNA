@@ -55,7 +55,7 @@ const IdentityCard = memo<{
   const joinDate = new Date(v.created_at).toLocaleDateString('tr-TR');
 
   return (
-    <div className="bg-[#161B22] border border-white/5 rounded-2xl p-4">
+    <div className="bg-surface-1 border border-white/5 rounded-2xl p-4">
       <div className="flex items-start gap-3">
         <div className="w-12 h-12 rounded-xl overflow-hidden bg-gray-800 shrink-0">
           {v.avatar_url ? (

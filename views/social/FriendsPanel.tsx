@@ -171,7 +171,7 @@ const FriendsPanel: React.FC<FriendsPanelProps> = ({
         <button
           onClick={() => onNavigate('FRIEND_ADD')}
           aria-label="Arkadaş ekle"
-          className="w-11 h-11 shrink-0 rounded-2xl bg-[#39FF14] text-[#0A0E14] flex items-center justify-center active:scale-95"
+          className="w-11 h-11 shrink-0 rounded-2xl bg-primary text-on-primary flex items-center justify-center active:scale-95"
         >
           <UserPlus size={18} />
         </button>
@@ -203,7 +203,7 @@ const FriendsPanel: React.FC<FriendsPanelProps> = ({
             <button
               onClick={acceptAll}
               disabled={busyReq === 'ALL'}
-              className="mb-2.5 text-[0.6875rem] font-bold text-[#39FF14] min-h-[32px]"
+              className="mb-2.5 text-[0.6875rem] font-bold text-primary min-h-[32px]"
             >
               {busyReq === 'ALL' ? 'Kabul ediliyor…' : 'Tümünü Kabul Et'}
             </button>
@@ -232,7 +232,7 @@ const FriendsPanel: React.FC<FriendsPanelProps> = ({
                     </button>
                     <button
                       onClick={() => handleRespond(r, true)}
-                      className="h-9 px-3 rounded-xl bg-[#39FF14] text-[#0A0E14] text-[0.6875rem] font-extrabold flex items-center gap-1 active:scale-95"
+                      className="h-9 px-3 rounded-xl bg-primary text-on-primary text-[0.6875rem] font-extrabold flex items-center gap-1 active:scale-95"
                     >
                       <Check size={12} /> Kabul Et
                     </button>
@@ -278,7 +278,7 @@ const FriendsPanel: React.FC<FriendsPanelProps> = ({
       {activeList && (
         <button
           onClick={() => setInvitePicker(true)}
-          className="mb-4 w-full min-h-[46px] rounded-2xl bg-[#39FF14]/10 border border-[#39FF14]/30 text-[#39FF14] text-sm font-extrabold flex items-center justify-center gap-2 active:scale-[0.98]"
+          className="mb-4 w-full min-h-[46px] rounded-2xl bg-primary/10 border border-primary/30 text-primary text-sm font-extrabold flex items-center justify-center gap-2 active:scale-[0.98]"
         >
           ⚽ Listeyi Maça Çağır
         </button>
@@ -342,7 +342,7 @@ const FriendsPanel: React.FC<FriendsPanelProps> = ({
                     className="w-10 h-10 shrink-0 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-white/60 active:scale-95"
                   >
                     {messagingId === f.friend_id
-                      ? <Loader2 size={15} className="animate-spin text-[#39FF14]" />
+                      ? <Loader2 size={15} className="animate-spin text-primary" />
                       : <MessageCircle size={16} />}
                   </span>
                 </motion.button>
@@ -383,13 +383,13 @@ const FriendsPanel: React.FC<FriendsPanelProps> = ({
               onChange={e => setListName(e.target.value.slice(0, 30))}
               placeholder="Liste adı (ör. Halı Saha Tayfası)"
               autoFocus
-              className="flex-1 h-12 px-4 rounded-2xl bg-white/5 border border-white/10 text-sm font-semibold placeholder:text-ink-4 focus:outline-none focus:border-[#39FF14]/50"
+              className="flex-1 h-12 px-4 rounded-2xl bg-white/5 border border-white/10 text-sm font-semibold placeholder:text-ink-4 focus:outline-none focus:border-primary/50"
             />
           </div>
           <button
             disabled={listBusy || listName.trim().length < 1}
             onClick={saveList}
-            className="mt-3 w-full min-h-[48px] rounded-2xl bg-[#39FF14] text-[#0A0E14] font-extrabold text-sm disabled:opacity-40 active:scale-[0.98]"
+            className="mt-3 w-full min-h-[48px] rounded-2xl bg-primary text-on-primary font-extrabold text-sm disabled:opacity-40 active:scale-[0.98]"
           >
             {listBusy ? 'Kaydediliyor…' : listSheet === 'CREATE' ? 'Oluştur' : 'Kaydet'}
           </button>
@@ -438,8 +438,8 @@ const FriendsPanel: React.FC<FriendsPanelProps> = ({
                       </div>
                     </div>
                     {inviteBusy === m.id
-                      ? <Loader2 size={16} className="animate-spin text-[#39FF14]" />
-                      : <span className="text-[0.6875rem] font-extrabold text-[#39FF14]">DAVET ET</span>}
+                      ? <Loader2 size={16} className="animate-spin text-primary" />
+                      : <span className="text-[0.6875rem] font-extrabold text-primary">DAVET ET</span>}
                   </button>
                 );
               })}

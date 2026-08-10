@@ -124,10 +124,10 @@ const AddCardScreen: React.FC<AddCardScreenProps> = ({ onBack, onSaved, collectM
   };
 
   return (
-    <div lang="tr" className="h-full bg-[#0A0E14] flex flex-col font-sans">
-      <header className="px-5 pt-safe py-4 flex items-center gap-4 border-b border-white/5 sticky top-0 bg-[#0A0E14]/90 backdrop-blur-xl z-20">
+    <div lang="tr" className="h-full bg-bg flex flex-col font-sans">
+      <header className="px-5 pt-safe py-4 flex items-center gap-4 border-b border-white/5 sticky top-0 bg-bg/90 backdrop-blur-xl z-20">
         <button onClick={onBack}
-          className="w-11 h-11 flex items-center justify-center bg-[#161B22] rounded-full border border-white/5 text-white active:scale-95 transition-all">
+          className="w-11 h-11 flex items-center justify-center bg-surface-1 rounded-full border border-white/5 text-white active:scale-95 transition-all">
           <ArrowLeft size={20} />
         </button>
         <div>
@@ -185,7 +185,7 @@ const AddCardScreen: React.FC<AddCardScreenProps> = ({ onBack, onSaved, collectM
               placeholder="1234 5678 9012 3456"
               inputMode="numeric"
               autoComplete="cc-number"
-              className="w-full bg-[#161B22] border border-white/8 rounded-xl px-4 py-3.5 text-white font-bold tracking-[0.08em] font-numeric text-[0.9375rem] outline-none focus:border-[#39FF14]/40 transition-colors placeholder:text-ink-4"
+              className="w-full bg-surface-1 border border-white/8 rounded-xl px-4 py-3.5 text-white font-bold tracking-[0.08em] font-numeric text-[0.9375rem] outline-none focus:border-primary/40 transition-colors placeholder:text-ink-4"
             />
             {clean.length >= 15 && !numberOk && (
               <p className="text-xs text-red-400 font-bold mt-1.5">Kart numarası geçersiz görünüyor.</p>
@@ -198,7 +198,7 @@ const AddCardScreen: React.FC<AddCardScreenProps> = ({ onBack, onSaved, collectM
               onChange={e => setHolder(e.target.value.toLocaleUpperCase('tr-TR'))}
               placeholder="AD SOYAD"
               autoComplete="cc-name"
-              className="w-full bg-[#161B22] border border-white/8 rounded-xl px-4 py-3.5 text-white font-bold text-[0.9375rem] outline-none focus:border-[#39FF14]/40 transition-colors placeholder:text-ink-4"
+              className="w-full bg-surface-1 border border-white/8 rounded-xl px-4 py-3.5 text-white font-bold text-[0.9375rem] outline-none focus:border-primary/40 transition-colors placeholder:text-ink-4"
             />
           </div>
           <div className="grid grid-cols-2 gap-3">
@@ -213,7 +213,7 @@ const AddCardScreen: React.FC<AddCardScreenProps> = ({ onBack, onSaved, collectM
                 placeholder="AA/YY"
                 inputMode="numeric"
                 autoComplete="cc-exp"
-                className="w-full bg-[#161B22] border border-white/8 rounded-xl px-4 py-3.5 text-white font-bold font-numeric text-[0.9375rem] outline-none focus:border-[#39FF14]/40 transition-colors placeholder:text-ink-4"
+                className="w-full bg-surface-1 border border-white/8 rounded-xl px-4 py-3.5 text-white font-bold font-numeric text-[0.9375rem] outline-none focus:border-primary/40 transition-colors placeholder:text-ink-4"
               />
             </div>
             <div>
@@ -225,7 +225,7 @@ const AddCardScreen: React.FC<AddCardScreenProps> = ({ onBack, onSaved, collectM
                 inputMode="numeric"
                 type="password"
                 autoComplete="cc-csc"
-                className="w-full bg-[#161B22] border border-white/8 rounded-xl px-4 py-3.5 text-white font-bold font-numeric text-[0.9375rem] outline-none focus:border-[#39FF14]/40 transition-colors placeholder:text-ink-4"
+                className="w-full bg-surface-1 border border-white/8 rounded-xl px-4 py-3.5 text-white font-bold font-numeric text-[0.9375rem] outline-none focus:border-primary/40 transition-colors placeholder:text-ink-4"
               />
             </div>
           </div>
@@ -236,15 +236,15 @@ const AddCardScreen: React.FC<AddCardScreenProps> = ({ onBack, onSaved, collectM
 
         {collectMode && (
           <button onClick={() => setSave(s => !s)} className="flex gap-2.5 items-center px-0.5">
-            <span className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 border-2 transition-colors ${save ? 'bg-[#39FF14] border-[#39FF14]' : 'border-white/20 bg-transparent'}`}>
-              <Check size={13} strokeWidth={3} className={`text-[#0A0E14] ${save ? 'opacity-100' : 'opacity-0'}`} />
+            <span className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 border-2 transition-colors ${save ? 'bg-primary border-primary' : 'border-white/20 bg-transparent'}`}>
+              <Check size={13} strokeWidth={3} className={`text-on-primary ${save ? 'opacity-100' : 'opacity-0'}`} />
             </span>
             <span className="text-xs text-gray-300 font-semibold">Bu kartı sonraki ödemeler için kaydet</span>
           </button>
         )}
 
         <div className="flex items-center gap-2 px-0.5">
-          <Shield size={14} className="text-[#39FF14]" />
+          <Shield size={14} className="text-primary" />
           <p className="text-[0.6875rem] text-ink-4">
             {collectMode
               ? 'Kart bilgilerin şifreli iletilir; banka doğrulaması (3D Secure) ile tahsil edilir.'
@@ -264,7 +264,7 @@ const AddCardScreen: React.FC<AddCardScreenProps> = ({ onBack, onSaved, collectM
           disabled={!valid || busy}
           onClick={handleSubmit}
           className={`w-full py-4 font-extrabold text-base rounded-2xl flex items-center justify-center gap-2 transition-all active:scale-[0.98] ${
-            valid && !busy ? 'bg-[#39FF14] text-[#0A0E14]' : 'bg-gray-800 text-ink-4'
+            valid && !busy ? 'bg-primary text-on-primary' : 'bg-gray-800 text-ink-4'
           }`}
         >
           <Plus size={18} />

@@ -193,7 +193,7 @@ export const OwnerPaymentSettingsModal: React.FC<Props> = ({
             )}
 
             {/* ── Mod seçimi ───────────────────────────────────────────────── */}
-            <div className="bg-[#161B22] p-5 rounded-3xl border border-white/5 space-y-3">
+            <div className="bg-surface-1 p-5 rounded-3xl border border-white/5 space-y-3">
               <h3 className="text-xs font-bold text-gray-400 uppercase">Tesisinizin Ödeme Modu</h3>
               <div className="grid grid-cols-3 gap-2">
                 {MODE_CHOICES.map((c) => (
@@ -224,7 +224,7 @@ export const OwnerPaymentSettingsModal: React.FC<Props> = ({
 
             {/* ── Online alt tercihleri: yalnız online açıkken anlamlı ─────── */}
             {onlineAllowed && (
-              <div className="bg-[#161B22] p-5 rounded-3xl border border-white/5 space-y-4">
+              <div className="bg-surface-1 p-5 rounded-3xl border border-white/5 space-y-4">
                 <h3 className="text-xs font-bold text-gray-400 uppercase">Online Tahsilat Biçimi</h3>
                 <div className="flex items-center justify-between pb-3 border-b border-white/5">
                   <div>
@@ -251,7 +251,7 @@ export const OwnerPaymentSettingsModal: React.FC<Props> = ({
             )}
 
             {onlineAllowed && (online || deposit) && (
-              <div className="bg-[#161B22] p-6 rounded-3xl border border-white/5 space-y-4">
+              <div className="bg-surface-1 p-6 rounded-3xl border border-white/5 space-y-4">
                 <h3 className="text-xs font-bold text-gray-500 uppercase">Param Sanal POS</h3>
                 <input
                   type="text"

@@ -162,7 +162,7 @@ const ScoreSheet: React.FC<{
                 <button
                   onClick={approve}
                   disabled={busy}
-                  className="w-full mt-3 min-h-[48px] rounded-2xl bg-[#39FF14] text-[#0A0E14] font-extrabold text-sm flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-50"
+                  className="w-full mt-3 min-h-[48px] rounded-2xl bg-primary text-on-primary font-extrabold text-sm flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-50"
                 >
                   {busy ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />} Skoru Onayla
                 </button>
@@ -186,7 +186,7 @@ const ScoreSheet: React.FC<{
                         value={f.value}
                         onChange={e => f.set(e.target.value.replace(/\D/g, '').slice(0, 2))}
                         placeholder="0"
-                        className="w-full h-14 mt-1.5 rounded-2xl bg-white/5 border border-white/10 text-center text-2xl font-extrabold tabular-nums placeholder:text-ink-4 focus:outline-none focus:border-[#39FF14]/50"
+                        className="w-full h-14 mt-1.5 rounded-2xl bg-white/5 border border-white/10 text-center text-2xl font-extrabold tabular-nums placeholder:text-ink-4 focus:outline-none focus:border-primary/50"
                       />
                     </div>
                   </React.Fragment>
@@ -198,7 +198,7 @@ const ScoreSheet: React.FC<{
               <button
                 onClick={submit}
                 disabled={busy || us === '' || them === ''}
-                className="w-full mt-3 min-h-[48px] rounded-2xl bg-[#39FF14] text-[#0A0E14] font-extrabold text-sm flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-40"
+                className="w-full mt-3 min-h-[48px] rounded-2xl bg-primary text-on-primary font-extrabold text-sm flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-40"
               >
                 {busy ? <Loader2 size={15} className="animate-spin" /> : null} Skor Öner
               </button>
@@ -285,7 +285,7 @@ const InviteSheet: React.FC<{
           disabled={linkBusy}
           className="w-full mt-3 min-h-[46px] rounded-2xl bg-white/5 border border-white/10 text-sm font-bold text-white/80 flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-50"
         >
-          {linkBusy ? <Loader2 size={14} className="animate-spin" /> : <Link2 size={14} className="text-[#39FF14]" />}
+          {linkBusy ? <Loader2 size={14} className="animate-spin" /> : <Link2 size={14} className="text-primary" />}
           Davet Linkini Paylaş
         </button>
 
@@ -311,13 +311,13 @@ const InviteSheet: React.FC<{
                   </div>
                   {sent ? (
                     <span className="text-[0.6875rem] font-bold text-ink-4 flex items-center gap-1">
-                      <Check size={11} className="text-[#39FF14]" /> Davet edildi
+                      <Check size={11} className="text-primary" /> Davet edildi
                     </span>
                   ) : (
                     <button
                       onClick={() => invite(f.friend_id)}
                       disabled={busyId === f.friend_id || openSlots === 0}
-                      className="h-9 px-3 rounded-xl bg-[#39FF14] text-[#0A0E14] text-[0.6875rem] font-extrabold active:scale-95 disabled:opacity-40"
+                      className="h-9 px-3 rounded-xl bg-primary text-on-primary text-[0.6875rem] font-extrabold active:scale-95 disabled:opacity-40"
                     >
                       {busyId === f.friend_id ? '…' : 'Davet Et'}
                     </button>
@@ -511,7 +511,7 @@ const TeamDetailView: React.FC<TeamDetailViewProps> = ({ onBack, onNavigate }) =
 
   if (!loading && !team) {
     return (
-      <div className="h-full bg-[#0A0E14] text-white flex flex-col font-sans">
+      <div className="h-full bg-bg text-white flex flex-col font-sans">
         <div className="pt-safe px-5 pt-5">
           <button onClick={onBack} aria-label="Geri" className="w-10 h-10 -ml-2 rounded-xl flex items-center justify-center text-white/70 active:scale-95">
             <ChevronLeft size={22} />
@@ -528,7 +528,7 @@ const TeamDetailView: React.FC<TeamDetailViewProps> = ({ onBack, onNavigate }) =
   }
 
   return (
-    <div className="h-full bg-[#0A0E14] text-white flex flex-col font-sans">
+    <div className="h-full bg-bg text-white flex flex-col font-sans">
       {/* ── Başlık — takım-rengi kimlik alanı ── */}
       <div className="pt-safe px-5 pb-3 relative overflow-hidden flex-shrink-0">
         <div
@@ -617,7 +617,7 @@ const TeamDetailView: React.FC<TeamDetailViewProps> = ({ onBack, onNavigate }) =
                         <span className="text-[0.625rem] font-extrabold uppercase tracking-widest text-ink-4">
                           Sıradaki Maç
                         </span>
-                        <span className="text-[0.6875rem] font-extrabold px-2 py-1 rounded-full bg-[#39FF14]/10 text-[#39FF14]">
+                        <span className="text-[0.6875rem] font-extrabold px-2 py-1 rounded-full bg-primary/10 text-primary">
                           ⏱ {countdownLabel(nextMatch.date)}
                         </span>
                       </div>
@@ -685,7 +685,7 @@ const TeamDetailView: React.FC<TeamDetailViewProps> = ({ onBack, onNavigate }) =
                         onClick={a.onClick}
                         className="rounded-2xl bg-white/4 border border-white/8 py-3.5 flex flex-col items-center gap-1.5 active:scale-[0.97]"
                       >
-                        <a.icon size={18} className="text-[#39FF14]" />
+                        <a.icon size={18} className="text-primary" />
                         <span className="text-[0.6875rem] font-bold text-white/80">{a.label}</span>
                       </button>
                     ))}
@@ -705,9 +705,9 @@ const TeamDetailView: React.FC<TeamDetailViewProps> = ({ onBack, onNavigate }) =
                         ].map(s => (
                           <div key={s.label} className="flex items-center gap-2.5 text-[0.8125rem]">
                             <span className={`w-5 h-5 rounded-full flex items-center justify-center border ${
-                              s.done ? 'bg-[#39FF14] border-[#39FF14]' : 'border-white/20'
+                              s.done ? 'bg-primary border-primary' : 'border-white/20'
                             }`}>
-                              {s.done && <Check size={11} className="text-[#0A0E14]" />}
+                              {s.done && <Check size={11} className="text-on-primary" />}
                             </span>
                             <span className={s.done ? 'text-ink-4 line-through' : 'text-white/80 font-semibold'}>
                               {s.label}
@@ -755,7 +755,7 @@ const TeamDetailView: React.FC<TeamDetailViewProps> = ({ onBack, onNavigate }) =
                               {t.name || 'Adsız Taktik'}
                             </span>
                             {t.is_active && (
-                              <span className="shrink-0 text-[0.6875rem] font-extrabold px-2 py-0.5 rounded-full bg-[#39FF14]/12 text-[#39FF14]">
+                              <span className="shrink-0 text-[0.6875rem] font-extrabold px-2 py-0.5 rounded-full bg-primary/12 text-primary">
                                 AKTİF
                               </span>
                             )}
@@ -780,10 +780,10 @@ const TeamDetailView: React.FC<TeamDetailViewProps> = ({ onBack, onNavigate }) =
                             <div className="mt-2.5">
                               <div className="flex items-center justify-between text-[0.6875rem] mb-1">
                                 <span className="text-ink-4 font-bold uppercase tracking-widest">Güven</span>
-                                <span className="font-extrabold text-[#39FF14]">%{Math.round(t.avg_vote)} · {t.vote_count} oy</span>
+                                <span className="font-extrabold text-primary">%{Math.round(t.avg_vote)} · {t.vote_count} oy</span>
                               </div>
                               <div className="h-1.5 rounded-full bg-white/8 overflow-hidden">
-                                <div className="h-full bg-[#39FF14] rounded-full transition-all" style={{ width: `${Math.min(100, Math.max(3, Math.round(t.avg_vote)))}%` }} />
+                                <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${Math.min(100, Math.max(3, Math.round(t.avg_vote)))}%` }} />
                               </div>
                             </div>
                           )}
@@ -795,7 +795,7 @@ const TeamDetailView: React.FC<TeamDetailViewProps> = ({ onBack, onNavigate }) =
                                 <button
                                   key={o.v}
                                   onClick={() => voteOnTactic(t, o.v)}
-                                  className={`flex-1 h-8 rounded-lg text-[0.6875rem] font-extrabold transition-all active:scale-95 ${t.my_vote === o.v ? 'bg-[#39FF14] text-black' : 'bg-white/6 text-white/55 hover:bg-white/10'}`}
+                                  className={`flex-1 h-8 rounded-lg text-[0.6875rem] font-extrabold transition-all active:scale-95 ${t.my_vote === o.v ? 'bg-primary text-black' : 'bg-white/6 text-white/55 hover:bg-white/10'}`}
                                 >
                                   {o.l}
                                 </button>
@@ -810,7 +810,7 @@ const TeamDetailView: React.FC<TeamDetailViewProps> = ({ onBack, onNavigate }) =
                                 <button
                                   onClick={() => approveT(t)}
                                   disabled={tacticBusy === t.id}
-                                  className="flex-1 h-10 rounded-xl bg-[#39FF14]/12 border border-[#39FF14]/30 text-[#39FF14] text-xs font-extrabold active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-1.5"
+                                  className="flex-1 h-10 rounded-xl bg-primary/12 border border-primary/30 text-primary text-xs font-extrabold active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-1.5"
                                 >
                                   <Check size={14} /> {tacticBusy === t.id ? '…' : 'Onayla'}
                                 </button>
@@ -840,7 +840,7 @@ const TeamDetailView: React.FC<TeamDetailViewProps> = ({ onBack, onNavigate }) =
                                   <button
                                     onClick={() => activateTactic(t)}
                                     disabled={tacticBusy === t.id}
-                                    className="h-10 px-3 rounded-xl bg-[#39FF14]/10 border border-[#39FF14]/25 text-[#39FF14] text-xs font-extrabold active:scale-95 disabled:opacity-50"
+                                    className="h-10 px-3 rounded-xl bg-primary/10 border border-primary/25 text-primary text-xs font-extrabold active:scale-95 disabled:opacity-50"
                                   >
                                     {tacticBusy === t.id ? '…' : 'Aktif Yap'}
                                   </button>
@@ -893,14 +893,14 @@ const TeamDetailView: React.FC<TeamDetailViewProps> = ({ onBack, onNavigate }) =
                                 {nextMatch.location ? ` · ${nextMatch.location}` : ''}
                               </div>
                             </div>
-                            <span className="text-[0.6875rem] font-extrabold px-2 py-1 rounded-full bg-[#39FF14]/10 text-[#39FF14] shrink-0">
+                            <span className="text-[0.6875rem] font-extrabold px-2 py-1 rounded-full bg-primary/10 text-primary shrink-0">
                               {countdownLabel(nextMatch.date)}
                             </span>
                           </div>
                           {/* Maç planı — atanmışsa herkes görür; yönetici atar/değiştirir (L76) */}
                           {(assignedPlan || isAdmin) && (
                             <div className="flex items-center gap-2 mt-2.5 pt-2.5 border-t border-white/6">
-                              <ClipboardList size={13} className="text-[#39FF14] shrink-0" />
+                              <ClipboardList size={13} className="text-primary shrink-0" />
                               {assignedPlan ? (
                                 <button
                                   onClick={() => openStudio(assignedPlan.tacticId)}
@@ -977,7 +977,7 @@ const TeamDetailView: React.FC<TeamDetailViewProps> = ({ onBack, onNavigate }) =
                                   {unscored ? (
                                     <button
                                       onClick={() => setScoreMatch(m)}
-                                      className="h-9 px-3 rounded-xl bg-[#39FF14] text-[#0A0E14] text-[0.6875rem] font-extrabold active:scale-95 shrink-0"
+                                      className="h-9 px-3 rounded-xl bg-primary text-on-primary text-[0.6875rem] font-extrabold active:scale-95 shrink-0"
                                     >
                                       Skoru Gir
                                     </button>
@@ -1075,7 +1075,7 @@ const TeamDetailView: React.FC<TeamDetailViewProps> = ({ onBack, onNavigate }) =
                                 } finally { setAssignBusy(null); }
                               }}
                               className={`w-full flex items-center gap-3 rounded-2xl border p-3 text-left active:scale-[0.99] disabled:opacity-60 ${
-                                current ? 'border-[#39FF14]/40 bg-[#39FF14]/6' : 'border-white/8 bg-white/4'
+                                current ? 'border-primary/40 bg-primary/6' : 'border-white/8 bg-white/4'
                               }`}
                             >
                               <div className="flex-1 min-w-0">
@@ -1088,7 +1088,7 @@ const TeamDetailView: React.FC<TeamDetailViewProps> = ({ onBack, onNavigate }) =
                               {assignBusy === t.id ? (
                                 <Loader2 size={14} className="animate-spin text-ink-4" />
                               ) : current ? (
-                                <Check size={15} className="text-[#39FF14]" />
+                                <Check size={15} className="text-primary" />
                               ) : null}
                             </button>
                           );
@@ -1116,7 +1116,7 @@ const TeamDetailView: React.FC<TeamDetailViewProps> = ({ onBack, onNavigate }) =
       {/* Mini toast */}
       {toast && (
         <div className="fixed bottom-24 inset-x-5 z-[70] flex justify-center pointer-events-none">
-          <div className="px-4 py-2.5 rounded-2xl bg-[#161B22] border border-white/10 text-sm font-semibold shadow-xl">
+          <div className="px-4 py-2.5 rounded-2xl bg-surface-1 border border-white/10 text-sm font-semibold shadow-xl">
             {toast}
           </div>
         </div>

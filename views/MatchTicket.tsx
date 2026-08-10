@@ -190,7 +190,7 @@ const MatchTicket: React.FC<MatchTicketProps> = ({ onBack }) => {
         : style.note;
 
   return (
-    <div className="min-h-screen bg-[#0A0E14] flex flex-col items-center justify-center p-6 relative">
+    <div className="min-h-screen bg-bg flex flex-col items-center justify-center p-6 relative">
 
       <div className="w-full max-w-md animate-in slide-in-from-bottom duration-700">
         <div className="text-center mb-6">
@@ -228,8 +228,8 @@ const MatchTicket: React.FC<MatchTicketProps> = ({ onBack }) => {
 
           {/* Kesik efekti */}
           <div className="relative h-4 bg-white">
-            <div className="absolute -left-4 top-1/2 -translate-y-1/2 w-8 h-8 bg-[#0A0E14] rounded-full" />
-            <div className="absolute -right-4 top-1/2 -translate-y-1/2 w-8 h-8 bg-[#0A0E14] rounded-full" />
+            <div className="absolute -left-4 top-1/2 -translate-y-1/2 w-8 h-8 bg-bg rounded-full" />
+            <div className="absolute -right-4 top-1/2 -translate-y-1/2 w-8 h-8 bg-bg rounded-full" />
             <div className="absolute top-1/2 left-4 right-4 h-0.5 border-t-2 border-dashed border-gray-300" />
           </div>
 
@@ -278,7 +278,7 @@ const MatchTicket: React.FC<MatchTicketProps> = ({ onBack }) => {
                   {loadError ? (
                     <button
                       onClick={() => setReloadKey(k => k + 1)}
-                      className="mt-2 h-11 px-4 rounded-xl bg-[#0A0E14] text-white text-[0.8125rem] font-extrabold active:scale-95 transition-transform">
+                      className="mt-2 h-11 px-4 rounded-xl bg-bg text-white text-[0.8125rem] font-extrabold active:scale-95 transition-transform">
                       Tekrar Dene
                     </button>
                   ) : booking ? (
@@ -295,7 +295,7 @@ const MatchTicket: React.FC<MatchTicketProps> = ({ onBack }) => {
                   {new Date(fromCache).toLocaleString('tr-TR', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}
                 </p>
                 <button onClick={() => setReloadKey(k => k + 1)}
-                  className="shrink-0 h-9 px-3 rounded-lg bg-[#0A0E14] text-white text-[0.6875rem] font-extrabold active:scale-95 transition-transform">
+                  className="shrink-0 h-9 px-3 rounded-lg bg-bg text-white text-[0.6875rem] font-extrabold active:scale-95 transition-transform">
                   Yenile
                 </button>
               </div>
@@ -306,12 +306,12 @@ const MatchTicket: React.FC<MatchTicketProps> = ({ onBack }) => {
         {/* Aksiyonlar — gerçekten çalışır */}
         <div className="flex gap-4 mt-8">
           <button onClick={handleShare}
-            className="flex-1 bg-[#161B22] border border-white/10 text-white py-4 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-white/5 transition-colors">
+            className="flex-1 bg-surface-1 border border-white/10 text-white py-4 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-white/5 transition-colors">
             <Share2 size={18} /> Paylaş
           </button>
           <button onClick={handleSaveImage} disabled={!qrDataUrl}
             className={`flex-1 py-4 rounded-2xl font-extrabold text-sm flex items-center justify-center gap-2 transition-colors ${
-              qrDataUrl ? 'bg-[#FACC15] text-black hover:bg-yellow-300 shadow-lg shadow-yellow-900/20' : 'bg-gray-700 text-gray-400'
+              qrDataUrl ? 'bg-warning text-black hover:bg-yellow-300 shadow-lg shadow-yellow-900/20' : 'bg-gray-700 text-gray-400'
             }`}>
             <Download size={18} /> QR'ı Kaydet
           </button>
@@ -320,10 +320,10 @@ const MatchTicket: React.FC<MatchTicketProps> = ({ onBack }) => {
             ikon butonunu çevrimdışı şeridi (fixed top-0 z-[100]) tamamen örtüyordu
             ve bu ekranda başka çıkış yolu yoktu (BULGU-110). */}
         <button onClick={onBack}
-          className="w-full mt-3 py-4 rounded-2xl bg-[#161B22] border border-white/10 text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-95 transition-transform">
+          className="w-full mt-3 py-4 rounded-2xl bg-surface-1 border border-white/10 text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-95 transition-transform">
           <ArrowLeft size={18} /> Maçlarım'a Dön
         </button>
-        {shareMsg && <p className="text-center text-[0.6875rem] text-[#39FF14] mt-3">{shareMsg}</p>}
+        {shareMsg && <p className="text-center text-[0.6875rem] text-primary mt-3">{shareMsg}</p>}
       </div>
     </div>
   );

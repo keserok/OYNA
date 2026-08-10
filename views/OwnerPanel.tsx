@@ -697,8 +697,8 @@ const tariffRowToPolicy = (t: PitchTariff) => ({
     // IP-22: kendi kendine tesis başvurusu kaldırıldı. Tesisler OYNA ekibi
     // tarafından eklenir; panel de artık olmayan bir kayıt akışını vaat etmez.
     return (
-      <div className="min-h-dvh flex flex-col items-center justify-center bg-[#0A0E14] text-white p-8 text-center safe-top safe-bottom">
-        <Building2 size={64} className="text-[#FACC15] mb-6" />
+      <div className="min-h-dvh flex flex-col items-center justify-center bg-bg text-white p-8 text-center safe-top safe-bottom">
+        <Building2 size={64} className="text-warning mb-6" />
         <h1 className="text-2xl font-extrabold mb-3">Hesabına bağlı tesis yok</h1>
         <p className="text-gray-400 text-sm max-w-sm mb-8">
           Tesisler OYNA ekibi tarafından tanımlanır ve yetkileri buradan verilir.
@@ -717,13 +717,13 @@ const tariffRowToPolicy = (t: PitchTariff) => ({
     // Yeni model Ayarlar/Profil ile aynı: ekranın TAMAMI App'in görünüm
     // kaydırıcısında akar. OwnerStatusBar `sticky` (görünür kalır ama sayfayı
     // kaydırır), OwnerBottomNav `fixed` (yerinde durur).
-    <div className="min-h-screen flex flex-col bg-[#0A0E14] text-slate-200 font-sans selection:bg-blue-500 selection:text-white relative">
+    <div className="min-h-screen flex flex-col bg-bg text-slate-200 font-sans selection:bg-blue-500 selection:text-white relative">
       <OwnerStatusBar banners={statusBanners} />
       <YenileniyorSeridi aktif={cekerekYenileniyor} />
       
       {/* Header logic adjustment for Menu view */}
       {activeTab !== 'CALENDAR' && activeTab !== 'MORE' && (
-          <header className={`px-6 py-4 ${statusBanners.length ? '' : 'pt-safe'} bg-[#0A0E14] border-b border-white/5 flex justify-between items-center sticky top-0 z-30`}>
+          <header className={`px-6 py-4 ${statusBanners.length ? '' : 'pt-safe'} bg-bg border-b border-white/5 flex justify-between items-center sticky top-0 z-30`}>
               <div className="flex items-center gap-3">
                   <div className="flex flex-col relative">
                       {ownedFacilities.length > 1 && !isDemoMode ? (
@@ -743,7 +743,7 @@ const tariffRowToPolicy = (t: PitchTariff) => ({
                         </>
                       )}
                       {showFacilityPicker && ownedFacilities.length > 1 && (
-                        <div className="absolute top-full left-0 mt-2 w-56 bg-[#161B22] border border-white/10 rounded-xl shadow-2xl z-50 overflow-hidden">
+                        <div className="absolute top-full left-0 mt-2 w-56 bg-surface-1 border border-white/10 rounded-xl shadow-2xl z-50 overflow-hidden">
                           {ownedFacilities.map((f) => (
                             <button
                               key={f.id}
@@ -775,7 +775,7 @@ const tariffRowToPolicy = (t: PitchTariff) => ({
 
       {/* Simplified Header for Menu View */}
       {activeTab === 'MORE' && (
-          <header className={`px-6 py-4 ${statusBanners.length ? '' : 'pt-safe'} bg-[#0A0E14] border-b border-white/5 flex items-center sticky top-0 z-30`}>
+          <header className={`px-6 py-4 ${statusBanners.length ? '' : 'pt-safe'} bg-bg border-b border-white/5 flex items-center sticky top-0 z-30`}>
               <h1 className="text-lg font-extrabold text-white tracking-wide">MENÜ & AYARLAR</h1>
           </header>
       )}
@@ -815,7 +815,7 @@ const tariffRowToPolicy = (t: PitchTariff) => ({
                     </button>
                     <button 
                       onClick={() => setActiveTab('CALENDAR')}
-                      className="flex flex-col items-center justify-center p-6 bg-[#161B22] rounded-3xl border border-white/5 hover:border-white/10 transition-all group active:scale-95"
+                      className="flex flex-col items-center justify-center p-6 bg-surface-1 rounded-3xl border border-white/5 hover:border-white/10 transition-all group active:scale-95"
                     >
                       <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
                         <Plus size={24} className="text-white" />
@@ -827,7 +827,7 @@ const tariffRowToPolicy = (t: PitchTariff) => ({
               )}
 
               {activeWidgets.includes('OCCUPANCY_ANALYSIS') && (
-                  <div className="bg-[#161B22] border border-white/5 rounded-2xl p-6 mb-6 shadow-xl relative overflow-hidden">
+                  <div className="bg-surface-1 border border-white/5 rounded-2xl p-6 mb-6 shadow-xl relative overflow-hidden">
                     <button
                       onClick={() => setActiveTab('CALENDAR')}
                       className="w-full font-bold text-white text-base flex items-center justify-between mb-6 group"
@@ -1053,7 +1053,7 @@ const tariffRowToPolicy = (t: PitchTariff) => ({
               {courtStats.length === 0 ? (
                   <p className="text-sm text-ink-4 text-center py-6">Bugün için saha bazlı ciro verisi yok.</p>
               ) : courtStats.map((item) => (
-                  <div key={item.courtId} className="bg-[#0A0E14] p-4 rounded-2xl border border-white/5 flex justify-between items-center">
+                  <div key={item.courtId} className="bg-bg p-4 rounded-2xl border border-white/5 flex justify-between items-center">
                       <span className="text-sm font-bold text-gray-400">{item.courtName}</span>
                       <span className="text-lg font-extrabold text-emerald-400 tabular-nums">{money(item.collected)}</span>
                   </div>

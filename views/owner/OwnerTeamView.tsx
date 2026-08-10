@@ -162,7 +162,7 @@ export const OwnerTeamView: React.FC<OwnerTeamViewProps> = ({
   if (isLoading) return <div className="p-6 pb-40"><LoadingState message="Ekip yükleniyor…" /></div>;
 
   return (
-    <div className="p-4 pb-40 bg-[#0A0E14]">
+    <div className="p-4 pb-40 bg-bg">
       <div className="max-w-5xl mx-auto w-full">
         <OwnerDemoDataBar pitchId={pitchId} onChanged={load} hasDemo={hasDemoData} />
         {isDemoMode && (
@@ -181,7 +181,7 @@ export const OwnerTeamView: React.FC<OwnerTeamViewProps> = ({
           </div>
         )}
         {!canUseDb && (
-          <div className="mb-6 p-4 rounded-2xl bg-[#161B22] border border-white/5 text-center text-sm text-gray-500">
+          <div className="mb-6 p-4 rounded-2xl bg-surface-1 border border-white/5 text-center text-sm text-gray-500">
             Ekip yönetimi için önce tesisinizi oluşturun veya demo modunu açın.
           </div>
         )}
@@ -189,7 +189,7 @@ export const OwnerTeamView: React.FC<OwnerTeamViewProps> = ({
         {/* HERO */}
         <div className="relative group mb-6">
           <div className="absolute -inset-0.5 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-[32px] opacity-20 blur" />
-          <div className="relative bg-[#161B22] border border-white/10 rounded-[32px] p-5 shadow-2xl overflow-hidden">
+          <div className="relative bg-surface-1 border border-white/10 rounded-[32px] p-5 shadow-2xl overflow-hidden">
             <div className="absolute top-0 right-0 p-6 opacity-5 pointer-events-none"><Users size={120} className="text-indigo-500" /></div>
             <div className="relative z-10">
               <div className="flex justify-between items-start mb-5 gap-3">
@@ -206,8 +206,8 @@ export const OwnerTeamView: React.FC<OwnerTeamViewProps> = ({
                 <div className="flex -space-x-4">
                   {onDuty.slice(0, 4).map((s) => (
                     <div key={s.id} className="relative">
-                      <img src={avatarFor(s)} className="w-12 h-12 rounded-2xl border-4 border-[#161B22] object-cover" alt={s.name} />
-                      <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-[#161B22]" />
+                      <img src={avatarFor(s)} className="w-12 h-12 rounded-2xl border-4 border-surface-1 object-cover" alt={s.name} />
+                      <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-surface-1" />
                     </div>
                   ))}
                   {onDuty.length === 0 && <div className="text-xs text-gray-600 py-4">Şu an görevde kimse yok</div>}
@@ -223,7 +223,7 @@ export const OwnerTeamView: React.FC<OwnerTeamViewProps> = ({
         </div>
 
         {/* SEKME */}
-        <div className="flex bg-[#161B22] p-1.5 rounded-2xl mb-6 border border-white/5">
+        <div className="flex bg-surface-1 p-1.5 rounded-2xl mb-6 border border-white/5">
           {(['STAFF', 'TASKS'] as const).map((t) => (
             <button key={t} type="button" onClick={() => setTeamTab(t)}
               className={`flex-1 py-3 rounded-xl text-[11px] font-extrabold uppercase tracking-widest flex items-center justify-center gap-2 ${
@@ -255,11 +255,11 @@ export const OwnerTeamView: React.FC<OwnerTeamViewProps> = ({
                   return (
                     <button key={m.id} type="button" disabled={!tappable}
                       onClick={() => tappable && setMemberSheet(m)}
-                      className={`text-left bg-[#161B22] p-4 rounded-2xl border border-white/5 flex items-center gap-3 ${tappable ? 'hover:border-purple-500/30 active:scale-[0.995]' : ''} transition-all`}>
+                      className={`text-left bg-surface-1 p-4 rounded-2xl border border-white/5 flex items-center gap-3 ${tappable ? 'hover:border-purple-500/30 active:scale-[0.995]' : ''} transition-all`}>
                       <div className="relative shrink-0">
                         <img src={avatarFor(m)} className="w-12 h-12 rounded-xl object-cover" alt={m.name} />
                         {m.staff_role === 'MANAGER' && (
-                          <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-indigo-500 flex items-center justify-center border-2 border-[#161B22]"><Crown size={10} className="text-white" /></div>
+                          <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-indigo-500 flex items-center justify-center border-2 border-surface-1"><Crown size={10} className="text-white" /></div>
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
@@ -310,7 +310,7 @@ export const OwnerTeamView: React.FC<OwnerTeamViewProps> = ({
           <div className="text-center">
             <div className="mx-auto w-14 h-14 rounded-2xl bg-emerald-500/15 flex items-center justify-center mb-3"><KeyRound size={26} className="text-emerald-400" /></div>
             <p className="text-sm text-gray-400 mb-1">{codeSheet.name} · {codeSheet.staff_role === 'MANAGER' ? 'Müdür' : 'Personel'}</p>
-            <div className="my-4 py-4 rounded-2xl bg-[#0A0E14] border border-white/10">
+            <div className="my-4 py-4 rounded-2xl bg-bg border border-white/10">
               <p className="text-4xl font-extrabold text-white tracking-[0.3em] tabular-nums font-mono">{codeSheet.invite_code}</p>
               <p className="text-[11px] text-gray-500 mt-2 flex items-center justify-center gap-1"><Clock size={11} /> {expiryText(codeSheet.expires_at)}</p>
             </div>
@@ -389,7 +389,7 @@ const InviteModal: React.FC<{
     <BottomSheetModal title={canInviteLogin ? 'Ekibe Kişi Ekle' : 'Listeye Kişi Ekle'} onClose={onClose}>
       <div className="space-y-4">
         {canInviteLogin && (
-          <div className="grid grid-cols-2 gap-2 p-1 bg-[#0A0E14] rounded-2xl border border-white/5">
+          <div className="grid grid-cols-2 gap-2 p-1 bg-bg rounded-2xl border border-white/5">
             <button type="button" onClick={() => setMode('LOGIN')}
               className={`py-2.5 rounded-xl text-xs font-extrabold ${mode === 'LOGIN' ? 'bg-indigo-500/15 text-indigo-300' : 'text-gray-500'}`}>
               🔑 Giriş yetkili
@@ -406,19 +406,19 @@ const InviteModal: React.FC<{
             : 'Sadece görünüm kartı — giriş yetkisi verilmez (nöbet/gösterim için).'}
         </p>
 
-        <input className="w-full bg-[#0A0E14] border border-white/5 rounded-xl p-3 text-white text-sm" placeholder="Ad Soyad" value={name} onChange={(e) => setName(e.target.value)} autoFocus />
-        <input className="w-full bg-[#0A0E14] border border-white/5 rounded-xl p-3 text-white text-sm" placeholder="Telefon (opsiyonel)" value={phone} onChange={(e) => setPhone(e.target.value)} inputMode="tel" />
+        <input className="w-full bg-bg border border-white/5 rounded-xl p-3 text-white text-sm" placeholder="Ad Soyad" value={name} onChange={(e) => setName(e.target.value)} autoFocus />
+        <input className="w-full bg-bg border border-white/5 rounded-xl p-3 text-white text-sm" placeholder="Telefon (opsiyonel)" value={phone} onChange={(e) => setPhone(e.target.value)} inputMode="tel" />
 
         <div>
           <p className="text-[10px] font-extrabold text-gray-500 uppercase mb-2">Rol</p>
           <div className="grid grid-cols-2 gap-2">
             <button type="button" onClick={() => setRole('STAFF')}
-              className={`p-3 rounded-xl border text-left ${role === 'STAFF' ? 'bg-purple-500/10 border-purple-500/40' : 'bg-[#0A0E14] border-white/5'}`}>
+              className={`p-3 rounded-xl border text-left ${role === 'STAFF' ? 'bg-purple-500/10 border-purple-500/40' : 'bg-bg border-white/5'}`}>
               <p className="text-sm font-extrabold text-white flex items-center gap-1.5"><Shield size={14} className="text-purple-400" /> Personel</p>
               <p className="text-[10px] text-gray-500 mt-0.5">Kasa: rezervasyon, tahsilat, veresiye</p>
             </button>
             <button type="button" onClick={() => setRole('MANAGER')} disabled={mode === 'LOGIN' && !canInviteLogin}
-              className={`p-3 rounded-xl border text-left ${role === 'MANAGER' ? 'bg-indigo-500/10 border-indigo-500/40' : 'bg-[#0A0E14] border-white/5'}`}>
+              className={`p-3 rounded-xl border text-left ${role === 'MANAGER' ? 'bg-indigo-500/10 border-indigo-500/40' : 'bg-bg border-white/5'}`}>
               <p className="text-sm font-extrabold text-white flex items-center gap-1.5"><Crown size={14} className="text-indigo-400" /> Müdür</p>
               <p className="text-[10px] text-gray-500 mt-0.5">Sahip gibi (banka/para-çekme hariç)</p>
             </button>
@@ -457,7 +457,7 @@ const MemberSheet: React.FC<{
 
       {/* Davet kodu (INVITED) */}
       {m.account_status === 'INVITED' && m.invite_code && (
-        <div className="p-4 rounded-2xl bg-[#0A0E14] border border-amber-500/20">
+        <div className="p-4 rounded-2xl bg-bg border border-amber-500/20">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-2xl font-extrabold text-white tracking-[0.25em] font-mono">{m.invite_code}</p>
@@ -486,11 +486,11 @@ const MemberSheet: React.FC<{
               <p className="text-[10px] font-extrabold text-gray-500 uppercase mb-2">Yetki</p>
               <div className="grid grid-cols-2 gap-2">
                 <button type="button" disabled={isSaving || m.staff_role === 'STAFF'} onClick={() => onSetRole('STAFF')}
-                  className={`p-3 rounded-xl border text-sm font-extrabold flex items-center justify-center gap-1.5 ${m.staff_role === 'STAFF' ? 'bg-purple-500/10 border-purple-500/40 text-purple-300' : 'bg-[#0A0E14] border-white/5 text-gray-400'}`}>
+                  className={`p-3 rounded-xl border text-sm font-extrabold flex items-center justify-center gap-1.5 ${m.staff_role === 'STAFF' ? 'bg-purple-500/10 border-purple-500/40 text-purple-300' : 'bg-bg border-white/5 text-gray-400'}`}>
                   <Shield size={14} /> Personel
                 </button>
                 <button type="button" disabled={isSaving || m.staff_role === 'MANAGER'} onClick={() => onSetRole('MANAGER')}
-                  className={`p-3 rounded-xl border text-sm font-extrabold flex items-center justify-center gap-1.5 ${m.staff_role === 'MANAGER' ? 'bg-indigo-500/10 border-indigo-500/40 text-indigo-300' : 'bg-[#0A0E14] border-white/5 text-gray-400'}`}>
+                  className={`p-3 rounded-xl border text-sm font-extrabold flex items-center justify-center gap-1.5 ${m.staff_role === 'MANAGER' ? 'bg-indigo-500/10 border-indigo-500/40 text-indigo-300' : 'bg-bg border-white/5 text-gray-400'}`}>
                   <Crown size={14} /> Müdür
                 </button>
               </div>
@@ -569,7 +569,7 @@ const TasksPanel: React.FC<{
         <div className="grid gap-3">
           {tasks.map((task) => (
             <button key={task.id} type="button" onClick={() => toggle(task)}
-              className="w-full text-left bg-[#161B22] p-4 rounded-2xl border border-white/5 flex items-start gap-4 hover:border-indigo-500/30 transition-all">
+              className="w-full text-left bg-surface-1 p-4 rounded-2xl border border-white/5 flex items-start gap-4 hover:border-indigo-500/30 transition-all">
               {task.status === 'COMPLETED' ? <CheckCircle2 size={22} className="text-green-500 shrink-0 mt-0.5" /> : <Circle size={22} className="text-gray-600 shrink-0 mt-0.5" />}
               <div className="flex-1 min-w-0">
                 <p className={`text-sm font-bold ${task.status === 'COMPLETED' ? 'text-gray-500 line-through' : 'text-white'}`}>{task.title}</p>
@@ -588,12 +588,12 @@ const TasksPanel: React.FC<{
       {isAddOpen && (
         <BottomSheetModal title="Yeni Görev" onClose={() => setAddOpen(false)}>
           <div className="space-y-4">
-            <input className="w-full bg-[#0A0E14] border border-white/5 rounded-xl p-3 text-white text-sm" placeholder="Görev başlığı" value={newTask.title} onChange={(e) => setNewTask({ ...newTask, title: e.target.value })} autoFocus />
-            <select className="w-full bg-[#0A0E14] border border-white/5 rounded-xl p-3 text-white text-sm" value={newTask.assignedTo} onChange={(e) => setNewTask({ ...newTask, assignedTo: e.target.value })}>
+            <input className="w-full bg-bg border border-white/5 rounded-xl p-3 text-white text-sm" placeholder="Görev başlığı" value={newTask.title} onChange={(e) => setNewTask({ ...newTask, title: e.target.value })} autoFocus />
+            <select className="w-full bg-bg border border-white/5 rounded-xl p-3 text-white text-sm" value={newTask.assignedTo} onChange={(e) => setNewTask({ ...newTask, assignedTo: e.target.value })}>
               <option value="">Personel seç (opsiyonel)</option>
               {members.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
             </select>
-            <input className="w-full bg-[#0A0E14] border border-white/5 rounded-xl p-3 text-white text-sm" placeholder="Saat (örn. 18:00)" value={newTask.dueTime} onChange={(e) => setNewTask({ ...newTask, dueTime: e.target.value })} />
+            <input className="w-full bg-bg border border-white/5 rounded-xl p-3 text-white text-sm" placeholder="Saat (örn. 18:00)" value={newTask.dueTime} onChange={(e) => setNewTask({ ...newTask, dueTime: e.target.value })} />
             <button type="button" disabled={saving} onClick={create} className="w-full py-4 bg-indigo-600 text-white font-extrabold rounded-2xl disabled:opacity-50">{saving ? 'Kaydediliyor…' : 'GÖREVİ OLUŞTUR'}</button>
           </div>
         </BottomSheetModal>

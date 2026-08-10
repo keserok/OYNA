@@ -357,9 +357,9 @@ export const OwnerPricingPolicyModal: React.FC<Props> = ({
 
         {/* TÜRETİLMİŞ ÇALIŞMA SAATLERİ — tarifelerden doğar, elle girilmez.
             Sahip hangi günün hangi saatte açık olacağını burada anında görür. */}
-        <div className="bg-[#0A0E14] border border-white/8 rounded-2xl p-4">
+        <div className="bg-bg border border-white/8 rounded-2xl p-4">
           <div className="flex items-center gap-2 mb-3">
-            <Clock size={14} className="text-[#39FF14]" />
+            <Clock size={14} className="text-primary" />
             <h4 className="text-[11px] font-extrabold uppercase tracking-wider text-white">
               {isCourtScoped ? 'Bu Sahanın Açık Saatleri' : 'Tesisin Açık Saatleri'}
             </h4>
@@ -398,11 +398,11 @@ export const OwnerPricingPolicyModal: React.FC<Props> = ({
                     type="button"
                     onClick={() => setScope(s.key)}
                     className={`flex-shrink-0 px-4 py-2 rounded-xl text-xs font-extrabold transition-all border ${
-                      isSel ? 'bg-white/10 text-white border-white/25' : 'bg-[#161B22] text-gray-400 border-white/5'
+                      isSel ? 'bg-white/10 text-white border-white/25' : 'bg-surface-1 text-gray-400 border-white/5'
                     }`}
                   >
                     {s.label}
-                    {s.key !== ALL_SCOPE && count > 0 && <span className="ml-1.5 text-[#10B981]">•</span>}
+                    {s.key !== ALL_SCOPE && count > 0 && <span className="ml-1.5 text-cat-pitch">•</span>}
                   </button>
                 );
               },
@@ -438,7 +438,7 @@ export const OwnerPricingPolicyModal: React.FC<Props> = ({
             {rows.map((tariff) => (
               <div
                 key={tariff.id}
-                className="bg-[#161B22] p-5 rounded-3xl border border-white/5 space-y-4 relative group"
+                className="bg-surface-1 p-5 rounded-3xl border border-white/5 space-y-4 relative group"
               >
                 {!readOnly && (
                   <button
@@ -477,8 +477,8 @@ export const OwnerPricingPolicyModal: React.FC<Props> = ({
                           onClick={() => toggleDay(tariff.id, d.iso)}
                           className={`flex-1 py-2 rounded-xl text-[11px] font-extrabold border transition-colors disabled:opacity-50 ${
                             on
-                              ? 'bg-[#39FF14]/15 border-[#39FF14]/40 text-[#39FF14]'
-                              : 'bg-[#0A0E14] border-white/5 text-gray-600 hover:text-gray-400'
+                              ? 'bg-primary/15 border-primary/40 text-primary'
+                              : 'bg-bg border-white/5 text-gray-600 hover:text-gray-400'
                           }`}
                         >
                           {d.short}
@@ -495,7 +495,7 @@ export const OwnerPricingPolicyModal: React.FC<Props> = ({
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <label className="text-[10px] text-gray-500 font-bold uppercase">Başlangıç</label>
-                    <div className="flex items-center gap-2 bg-[#0A0E14] border border-white/5 p-3 rounded-xl">
+                    <div className="flex items-center gap-2 bg-bg border border-white/5 p-3 rounded-xl">
                       <Clock size={14} className="text-gray-400" />
                       <input
                         type="time"
@@ -508,7 +508,7 @@ export const OwnerPricingPolicyModal: React.FC<Props> = ({
                   </div>
                   <div className="space-y-2">
                     <label className="text-[10px] text-gray-500 font-bold uppercase">Bitiş</label>
-                    <div className="flex items-center gap-2 bg-[#0A0E14] border border-white/5 p-3 rounded-xl">
+                    <div className="flex items-center gap-2 bg-bg border border-white/5 p-3 rounded-xl">
                       <Clock size={14} className="text-gray-400" />
                       <input
                         type="time"
@@ -533,8 +533,8 @@ export const OwnerPricingPolicyModal: React.FC<Props> = ({
                         onClick={() => updateRow(tariff.id, 'slotMinutes', m)}
                         className={`flex-1 py-2.5 rounded-xl text-[12px] font-extrabold transition-colors disabled:opacity-50 ${
                           tariff.slotMinutes === m
-                            ? 'bg-[#39FF14] text-[#0A0E14]'
-                            : 'bg-[#0A0E14] border border-white/8 text-gray-400 hover:text-white'
+                            ? 'bg-primary text-on-primary'
+                            : 'bg-bg border border-white/8 text-gray-400 hover:text-white'
                         }`}
                       >
                         {m} dk
@@ -557,7 +557,7 @@ export const OwnerPricingPolicyModal: React.FC<Props> = ({
                       value={tariff.price}
                       disabled={readOnly}
                       onChange={(e) => updateRow(tariff.id, 'price', parseInt(e.target.value, 10) || 0)}
-                      className="w-full bg-[#0A0E14] border border-white/5 p-3 rounded-xl text-white text-lg font-extrabold outline-none"
+                      className="w-full bg-bg border border-white/5 p-3 rounded-xl text-white text-lg font-extrabold outline-none"
                     />
                   </div>
                   <div className="space-y-2">
@@ -570,7 +570,7 @@ export const OwnerPricingPolicyModal: React.FC<Props> = ({
                       disabled={readOnly}
                       onChange={(e) => updateRow(tariff.id, 'deposit', parseInt(e.target.value, 10) || 0)}
                       onBlur={() => clampRowDeposit(tariff.id)}
-                      className="w-full bg-[#0A0E14] border border-white/5 p-3 rounded-xl text-white text-lg font-extrabold outline-none"
+                      className="w-full bg-bg border border-white/5 p-3 rounded-xl text-white text-lg font-extrabold outline-none"
                     />
                   </div>
                 </div>

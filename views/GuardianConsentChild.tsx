@@ -52,9 +52,9 @@ const GuardianConsentChild: React.FC<GuardianConsentChildProps> = ({ onBack, onG
   };
 
   return (
-    <div className="min-h-screen bg-[#0A0E14] text-white font-sans">
-      <header className="sticky top-0 z-20 bg-[#0A0E14]/90 backdrop-blur-xl border-b border-white/5 px-6 py-5 flex items-center gap-4">
-        <button onClick={onBack} aria-label="Geri" className="w-11 h-11 flex items-center justify-center bg-[#161B22] rounded-full border border-white/5 text-white hover:bg-white/10 active:scale-95 transition-all">
+    <div className="min-h-screen bg-bg text-white font-sans">
+      <header className="sticky top-0 z-20 bg-bg/90 backdrop-blur-xl border-b border-white/5 px-6 py-5 flex items-center gap-4">
+        <button onClick={onBack} aria-label="Geri" className="w-11 h-11 flex items-center justify-center bg-surface-1 rounded-full border border-white/5 text-white hover:bg-white/10 active:scale-95 transition-all">
           <ArrowLeft size={20} />
         </button>
         <h1 className="text-lg font-extrabold italic tracking-tight">VELİ ONAYI</h1>
@@ -66,9 +66,9 @@ const GuardianConsentChild: React.FC<GuardianConsentChildProps> = ({ onBack, onG
         ) : err ? (
           <div className="text-center text-red-400 py-16">{err}</div>
         ) : status === 'ACTIVE' ? (
-          <div className="bg-[#161B22] border border-[#39FF14]/30 rounded-3xl p-8 text-center">
-            <div className="w-16 h-16 mx-auto rounded-full bg-[#39FF14]/15 flex items-center justify-center mb-4">
-              <ShieldCheck size={32} className="text-[#39FF14]" />
+          <div className="bg-surface-1 border border-primary/30 rounded-3xl p-8 text-center">
+            <div className="w-16 h-16 mx-auto rounded-full bg-primary/15 flex items-center justify-center mb-4">
+              <ShieldCheck size={32} className="text-primary" />
             </div>
             <h2 className="text-xl font-extrabold mb-2">Veli onayın tamamlandı</h2>
             <p className="text-sm text-gray-400 leading-relaxed">
@@ -77,7 +77,7 @@ const GuardianConsentChild: React.FC<GuardianConsentChildProps> = ({ onBack, onG
           </div>
         ) : !isMinor ? (
           // Reşit kullanıcı → kendisi için onaya gerek yok; bir çocuğu onaylayabilir.
-          <div className="bg-[#161B22] border border-white/5 rounded-3xl p-8 text-center">
+          <div className="bg-surface-1 border border-white/5 rounded-3xl p-8 text-center">
             <div className="w-16 h-16 mx-auto rounded-full bg-white/5 flex items-center justify-center mb-4">
               <ShieldCheck size={32} className="text-gray-400" />
             </div>
@@ -86,13 +86,13 @@ const GuardianConsentChild: React.FC<GuardianConsentChildProps> = ({ onBack, onG
               Hesabın reşit görünüyor. 18 yaşından küçük bir çocuğu onaylamak istiyorsanız
               aşağıdan devam edebilirsin.
             </p>
-            <button onClick={onGoVeliForm} className="px-6 py-3 rounded-xl bg-[#39FF14] text-[#06210A] font-extrabold text-sm active:scale-95 transition">
+            <button onClick={onGoVeliForm} className="px-6 py-3 rounded-xl bg-primary text-[#06210A] font-extrabold text-sm active:scale-95 transition">
               Çocuğumu Onayla →
             </button>
           </div>
         ) : (
           <>
-            <div className="bg-[#161B22] border border-white/5 rounded-3xl p-6 mb-4">
+            <div className="bg-surface-1 border border-white/5 rounded-3xl p-6 mb-4">
               <div className="flex items-center gap-2 mb-3">
                 <Clock size={16} className="text-amber-400" />
                 <span className="text-xs font-bold uppercase tracking-widest text-amber-400">
@@ -107,21 +107,21 @@ const GuardianConsentChild: React.FC<GuardianConsentChildProps> = ({ onBack, onG
             </div>
 
             {/* Kod */}
-            <div className="bg-gradient-to-b from-[#39FF14]/10 to-transparent border border-[#39FF14]/25 rounded-3xl p-6 mb-4 text-center">
+            <div className="bg-gradient-to-b from-primary/10 to-transparent border border-primary/25 rounded-3xl p-6 mb-4 text-center">
               <div className="text-[0.6875rem] font-bold uppercase tracking-widest text-gray-400 mb-2">Veli Bağlantı Kodun</div>
-              <div className="text-4xl font-extrabold tracking-[0.25em] text-[#39FF14] mb-4" style={{ textShadow: '0 0 24px rgba(57,255,20,0.4)' }}>
+              <div className="text-4xl font-extrabold tracking-[0.25em] text-primary mb-4" style={{ textShadow: '0 0 24px rgba(57,255,20,0.4)' }}>
                 {code ?? '—'}
               </div>
               <button
                 onClick={copy}
                 className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 text-sm font-bold text-white hover:bg-white/10 active:scale-95 transition-all"
               >
-                {copied ? <><Check size={15} className="text-[#39FF14]" /> Kopyalandı</> : <><Copy size={15} /> Kodu Kopyala</>}
+                {copied ? <><Check size={15} className="text-primary" /> Kopyalandı</> : <><Copy size={15} /> Kodu Kopyala</>}
               </button>
             </div>
 
             {/* Adımlar */}
-            <div className="bg-[#161B22] border border-white/5 rounded-3xl p-6">
+            <div className="bg-surface-1 border border-white/5 rounded-3xl p-6">
               <div className="flex items-center gap-2 mb-4">
                 <Info size={16} className="text-gray-400" />
                 <span className="text-xs font-bold uppercase tracking-widest text-gray-400">Nasıl Onaylanır?</span>
@@ -134,7 +134,7 @@ const GuardianConsentChild: React.FC<GuardianConsentChildProps> = ({ onBack, onG
                   'Kimlik bilgilerini doldurup onaylasın — hesabın anında açılır.',
                 ].map((s, i) => (
                   <li key={i} className="flex gap-3 items-start">
-                    <span className="shrink-0 w-6 h-6 rounded-full bg-[#39FF14]/15 text-[#39FF14] text-xs font-extrabold flex items-center justify-center">{i + 1}</span>
+                    <span className="shrink-0 w-6 h-6 rounded-full bg-primary/15 text-primary text-xs font-extrabold flex items-center justify-center">{i + 1}</span>
                     <span className="text-sm text-gray-300 leading-relaxed">{s}</span>
                   </li>
                 ))}
@@ -145,7 +145,7 @@ const GuardianConsentChild: React.FC<GuardianConsentChildProps> = ({ onBack, onG
               onClick={onGoVeliForm}
               className="w-full mt-4 text-center text-sm text-gray-400 hover:text-white transition-colors py-2"
             >
-              Veli misin? <span className="text-[#39FF14] font-bold">Çocuğunu onayla →</span>
+              Veli misin? <span className="text-primary font-bold">Çocuğunu onayla →</span>
             </button>
           </>
         )}

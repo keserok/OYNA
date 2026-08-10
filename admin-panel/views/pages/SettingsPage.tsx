@@ -62,7 +62,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ subRoute, onRefresh 
                 icon={<Type size={20} />}
                 actions={<ModuleCrudBar moduleKey="texts" onRefresh={onRefresh} showDemo />}
             >
-                <div className="bg-[#161B22]/60 border border-white/[0.06] rounded-2xl p-5">
+                <div className="bg-surface-1/60 border border-white/[0.06] rounded-2xl p-5">
                     <p className="text-xs text-gray-500 mb-6">texts tablosu — uygulama genelinde görünen metinler</p>
                     <div className="space-y-4">
                         {Object.entries(globalTexts).map(([key, value]) => (
@@ -102,7 +102,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ subRoute, onRefresh 
     if (subRoute === 'SETTINGS') {
         return (
             <PageShell route="SETTINGS" icon={<Settings size={20} />}>
-                <div className="bg-[#161B22]/60 border border-white/[0.06] rounded-2xl p-5">
+                <div className="bg-surface-1/60 border border-white/[0.06] rounded-2xl p-5">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="bg-black/30 border border-white/[0.06] rounded-xl p-5">
                             <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-3 block">Ödeme Yöntemi (Param)</label>

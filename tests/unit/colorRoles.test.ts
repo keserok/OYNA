@@ -279,14 +279,16 @@ describe('marka logosu', () => {
 describe('beyaz seçim — Profili Düzenle', () => {
   const sheet = oku('components/profile/ProfileEditSheet.tsx');
 
+  // NOT: koyu metin artık `text-on-primary` token'ıyla yazılıyor (değeri
+  // #0A0E14 — birebir aynı renk, yalnız yazılışı token'a taşındı).
   it('seçili kutu BEYAZ dolgu + koyu metin', () => {
-    expect(sheet).toMatch(/secili\s*\?\s*'bg-white border-white text-\[#0A0E14\]'/);
+    expect(sheet).toMatch(/secili\s*\?\s*'bg-white border-white text-on-primary'/);
     expect(sheet, 'seçim yeşile geri dönmüş').not.toMatch(/secili\s*\?\s*'bg-primary/);
   });
 
   it('Kaydet düğmesi BEYAZ, başarı anında yeşile döner', () => {
     // Beyaz = "bas"; yeşil = "oldu". İkisi farklı şeyler söyler.
-    expect(sheet).toContain("'bg-white text-[#0A0E14] disabled:opacity-60'");
+    expect(sheet).toContain("'bg-white text-on-primary disabled:opacity-60'");
     expect(sheet).toContain('Kaydedildi');
   });
 

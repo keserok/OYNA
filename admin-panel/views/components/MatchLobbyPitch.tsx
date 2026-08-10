@@ -39,7 +39,7 @@ const PlayerPicker: React.FC<PlayerPickerProps> = ({ users, assignedIds, busy, o
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="Oyuncu ara (isim / e-posta)…"
-          className="w-full h-9 bg-black/40 border border-white/15 rounded-lg pl-8 pr-3 text-xs text-white focus:border-[#39FF14]/40 focus:outline-none"
+          className="w-full h-9 bg-black/40 border border-white/15 rounded-lg pl-8 pr-3 text-xs text-white focus:border-primary/40 focus:outline-none"
         />
       </div>
       <div className="max-h-52 overflow-y-auto custom-scrollbar space-y-1 pr-1">
@@ -53,7 +53,7 @@ const PlayerPicker: React.FC<PlayerPickerProps> = ({ users, assignedIds, busy, o
               type="button"
               disabled={busy}
               onClick={() => onPick(u.id)}
-              className="w-full flex items-center gap-2.5 p-1.5 rounded-lg bg-black/30 border border-white/5 hover:border-[#39FF14]/40 hover:bg-[#39FF14]/5 transition-colors disabled:opacity-40 text-left"
+              className="w-full flex items-center gap-2.5 p-1.5 rounded-lg bg-black/30 border border-white/5 hover:border-primary/40 hover:bg-primary/5 transition-colors disabled:opacity-40 text-left"
             >
               <img src={u.avatar || avatarFor(u.id, u.name)} alt="" className="w-8 h-8 rounded-full object-cover border border-white/10 shrink-0" />
               <div className="min-w-0 flex-1">
@@ -138,7 +138,7 @@ export const MatchLobbyPitch: React.FC<MatchLobbyPitchProps> = ({ slots, awaySlo
                 key={s}
                 type="button"
                 onClick={() => { setSide(s); setActiveSlotId(null); setSwapSource(null); }}
-                className={`px-3 py-1 text-[10px] font-extrabold uppercase rounded-lg transition-colors ${side === s ? 'bg-[#39FF14]/20 text-[#39FF14]' : 'text-gray-500 hover:text-white'}`}
+                className={`px-3 py-1 text-[10px] font-extrabold uppercase rounded-lg transition-colors ${side === s ? 'bg-primary/20 text-primary' : 'text-gray-500 hover:text-white'}`}
               >
                 {s === 'home' ? 'Ev Sahibi' : 'Deplasman'}
               </button>
@@ -164,7 +164,7 @@ export const MatchLobbyPitch: React.FC<MatchLobbyPitchProps> = ({ slots, awaySlo
 
       {/* Slot aksiyon paneli */}
       {activeSlot && (
-        <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="bg-[#0D1117] border border-[#39FF14]/30 rounded-2xl p-3 space-y-3">
+        <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="bg-[#0D1117] border border-primary/30 rounded-2xl p-3 space-y-3">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 min-w-0">
               <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-white/5 text-gray-300 uppercase">{normalizeRole(activeSlot.role)}</span>

@@ -1872,7 +1872,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
 
     return (
         <MotionConfig reducedMotion="user">
-        <div className="min-h-screen flex flex-col font-sans selection:bg-[#39FF14] selection:text-black pb-10">
+        <div className="min-h-screen flex flex-col font-sans selection:bg-primary selection:text-black pb-10">
             <AnimatePresence mode="wait">
                 {(
                     <motion.div 
@@ -1892,7 +1892,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                     {presentMode ? (
                                         <>
                                             <h1 className="text-lg font-extrabold text-white truncate">{activeTactic.name}</h1>
-                                            <p className="text-[0.625rem] text-[#39FF14] font-mono uppercase truncate tracking-widest">Sunum · Sadece Hareket</p>
+                                            <p className="text-[0.625rem] text-primary font-mono uppercase truncate tracking-widest">Sunum · Sadece Hareket</p>
                                         </>
                                     ) : (
                                         // Sabit başlık: yalnızca "Stüdyo". Plan adı ve diziliş/boyut
@@ -1926,7 +1926,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                     <button
                                         onClick={() => setShowExportModal(true)}
                                         aria-label="Paylaş"
-                                        className="flex items-center gap-2 px-4 py-2 rounded-full bg-[#39FF14] text-black font-extrabold text-[0.6875rem] tracking-widest hover:brightness-110 active:scale-95 transition-all shadow-[0_0_18px_rgba(57,255,20,0.25)]"
+                                        className="flex items-center gap-2 px-4 py-2 rounded-full bg-primary text-black font-extrabold text-[0.6875rem] tracking-widest hover:brightness-110 active:scale-95 transition-all shadow-[0_0_18px_rgba(57,255,20,0.25)]"
                                     >
                                         <Share2 size={15} /> PAYLAŞ
                                     </button>
@@ -1957,7 +1957,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                 case 'GREEN': base = 'bg-gradient-to-br from-emerald-500/20 to-green-900/40 border-emerald-500/80'; break;
                                 case 'DEFAULT':
                                 default:
-                                    base = 'bg-gradient-to-br from-[#39FF14]/20 to-emerald-900/40 border-[#39FF14]/80';
+                                    base = 'bg-gradient-to-br from-primary/20 to-emerald-900/40 border-primary/80';
                                     break;
                             }
                             if (isAct) {
@@ -1967,7 +1967,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                     case 'GREEN': return base + ' shadow-[0_0_20px_rgba(16,185,129,0.25)] ring-1 ring-emerald-500/50';
                                     case 'DEFAULT':
                                     default:
-                                        return base + ' shadow-[0_0_20px_rgba(57,255,20,0.25)] ring-1 ring-[#39FF14]/50';
+                                        return base + ' shadow-[0_0_20px_rgba(57,255,20,0.25)] ring-1 ring-primary/50';
                                 }
                             }
                             return base + ' hover:brightness-110';
@@ -1980,7 +1980,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                     case 'NAVY': return 'text-indigo-400 hover:text-indigo-300';
                                     case 'GREEN': return 'text-emerald-500 hover:text-emerald-400';
                                     case 'DEFAULT':
-                                    default: return 'text-[#39FF14]/60 hover:text-[#39FF14]';
+                                    default: return 'text-primary/60 hover:text-primary';
                                 }
                             } else {
                                 return 'text-white drop-shadow-[0_0_5px_rgba(255,255,255,0.5)]';
@@ -2025,7 +2025,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                         onChange={(e) => setEditingPlanName(e.target.value)}
                                         onBlur={savePlanName}
                                         onKeyDown={(e) => e.key === 'Enter' && savePlanName()}
-                                        className={`text-center text-sm font-extrabold bg-transparent outline-none w-full uppercase tracking-tighter text-[#39FF14]`}
+                                        className={`text-center text-sm font-extrabold bg-transparent outline-none w-full uppercase tracking-tighter text-primary`}
                                         placeholder="PLAN İSMİ"
                                     />
                                 ) : (
@@ -2063,7 +2063,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                             onClick={() => setOpenSelector(openSelector === 'size' ? null : 'size')}
                             className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-xs font-extrabold tracking-widest hover:bg-white/10 transition-all"
                         >
-                            <Users size={14} className="text-[#39FF14]" /> {activeTactic.size}
+                            <Users size={14} className="text-primary" /> {activeTactic.size}
                             <ChevronDown size={14} className={`transition-transform ${openSelector === 'size' ? 'rotate-180' : ''}`} />
                         </button>
                         {openSelector === 'size' && (
@@ -2072,7 +2072,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                     <button
                                         key={sz}
                                         onClick={() => { handleSizeChange(sz); setOpenSelector(null); }}
-                                        className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition-colors ${activeTactic.size === sz ? 'bg-[#39FF14]/15 text-[#39FF14]' : 'text-gray-300 hover:bg-white/5'}`}
+                                        className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition-colors ${activeTactic.size === sz ? 'bg-primary/15 text-primary' : 'text-gray-300 hover:bg-white/5'}`}
                                     >
                                         <span>{sz}</span>
                                         <span className="text-[0.6875rem] text-ink-4 font-mono">{parseInt(String(sz), 10)} kişi</span>
@@ -2088,7 +2088,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                             onClick={() => setOpenSelector(openSelector === 'formation' ? null : 'formation')}
                             className="w-full flex items-center justify-between gap-2 px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-xs font-extrabold tracking-widest hover:bg-white/10 transition-all"
                         >
-                            <span className="flex items-center gap-2 min-w-0"><Layout size={14} className="text-[#39FF14] shrink-0" /><span className="truncate">{activeTactic.formation}</span></span>
+                            <span className="flex items-center gap-2 min-w-0"><Layout size={14} className="text-primary shrink-0" /><span className="truncate">{activeTactic.formation}</span></span>
                             <ChevronDown size={14} className={`shrink-0 transition-transform ${openSelector === 'formation' ? 'rotate-180' : ''}`} />
                         </button>
                         {openSelector === 'formation' && (
@@ -2098,7 +2098,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                         <button
                                             key={f}
                                             onClick={() => { handleFormationChange(f); setOpenSelector(null); }}
-                                            className={`w-full text-left px-3 py-2 rounded-xl text-xs font-bold transition-colors ${activeTactic.formation === f ? 'bg-[#39FF14] text-black' : 'text-gray-300 hover:bg-white/5'}`}
+                                            className={`w-full text-left px-3 py-2 rounded-xl text-xs font-bold transition-colors ${activeTactic.formation === f ? 'bg-primary text-black' : 'text-gray-300 hover:bg-white/5'}`}
                                         >
                                             {f}
                                         </button>
@@ -2113,11 +2113,11 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                             onKeyDown={e => e.key === 'Enter' && handleCustomFormation()}
                                             placeholder={`örn. ${exampleForSize(activeTactic.size)}`}
                                             inputMode="numeric"
-                                            className="flex-1 min-w-0 bg-[#0A0E14] border border-white/10 rounded-xl px-3 py-2 text-xs text-white placeholder-gray-600 focus:border-[#39FF14] outline-none transition-colors"
+                                            className="flex-1 min-w-0 bg-bg border border-white/10 rounded-xl px-3 py-2 text-xs text-white placeholder-gray-600 focus:border-primary outline-none transition-colors"
                                         />
                                         <button
                                             onClick={handleCustomFormation}
-                                            className="px-3 py-2 rounded-xl bg-[#39FF14] text-black text-[0.6875rem] font-extrabold tracking-widest hover:scale-[1.02] active:scale-[0.98] transition-all shrink-0"
+                                            className="px-3 py-2 rounded-xl bg-primary text-black text-[0.6875rem] font-extrabold tracking-widest hover:scale-[1.02] active:scale-[0.98] transition-all shrink-0"
                                         >
                                             UYGULA
                                         </button>
@@ -2152,20 +2152,20 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                 <div className="flex gap-2">
                     <button
                         onClick={() => setTool('move')}
-                        className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-full text-xs font-bold transition-all whitespace-nowrap ${tool === 'move' ? 'bg-[#39FF14] text-black' : 'bg-white/5 text-white hover:bg-white/10'}`}
+                        className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-full text-xs font-bold transition-all whitespace-nowrap ${tool === 'move' ? 'bg-primary text-black' : 'bg-white/5 text-white hover:bg-white/10'}`}
                     >
                         <MousePointer2 size={14} /> TAŞI
                     </button>
                     <button
                         onClick={() => setTool('draw_run')}
-                        className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-full text-xs font-bold transition-all whitespace-nowrap ${tool === 'draw_run' ? 'bg-[#39FF14] text-black' : 'bg-white/5 text-white hover:bg-white/10'}`}
+                        className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-full text-xs font-bold transition-all whitespace-nowrap ${tool === 'draw_run' ? 'bg-primary text-black' : 'bg-white/5 text-white hover:bg-white/10'}`}
                         title="Koşu Çiz"
                     >
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeDasharray="4 4"><path d="M5 12h14"></path></svg> KOŞU
                     </button>
                     <button
                         onClick={() => setTool('draw_pass')}
-                        className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-full text-xs font-bold transition-all whitespace-nowrap ${tool === 'draw_pass' ? 'bg-[#39FF14] text-black' : 'bg-white/5 text-white hover:bg-white/10'}`}
+                        className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-full text-xs font-bold transition-all whitespace-nowrap ${tool === 'draw_pass' ? 'bg-primary text-black' : 'bg-white/5 text-white hover:bg-white/10'}`}
                         title="Pas Çiz"
                     >
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M5 12h14M12 5l7 7-7 7"></path></svg> PAS
@@ -2176,7 +2176,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                         onClick={() => setHideLines(v => !v)}
                         title={hideLines ? 'Çizgileri göster' : 'Sadece hareket (çizgileri gizle)'}
                         aria-label={hideLines ? 'Çizgileri göster' : 'Sadece hareket (çizgileri gizle)'}
-                        className={`shrink-0 flex items-center justify-center w-9 h-9 ml-1 rounded-full transition-all ${hideLines ? 'bg-[#39FF14] text-black' : 'bg-white/5 text-white hover:bg-white/10'}`}
+                        className={`shrink-0 flex items-center justify-center w-9 h-9 ml-1 rounded-full transition-all ${hideLines ? 'bg-primary text-black' : 'bg-white/5 text-white hover:bg-white/10'}`}
                     >
                         {hideLines ? <EyeOff size={14} /> : <Eye size={14} />}
                     </button>
@@ -2197,7 +2197,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                         <button
                             onClick={() => { setDrawSide('US'); setSelectedEl(null); setNamingOpp(null); setSelectedSeqBadge(null); }}
                             title="Bizim takımı düzenle"
-                            className={`px-2.5 py-1.5 rounded-full text-[0.6875rem] font-extrabold tracking-widest transition-all ${drawSide === 'US' ? 'bg-[#39FF14] text-black' : 'text-gray-400 hover:text-white'}`}
+                            className={`px-2.5 py-1.5 rounded-full text-[0.6875rem] font-extrabold tracking-widest transition-all ${drawSide === 'US' ? 'bg-primary text-black' : 'text-gray-400 hover:text-white'}`}
                         >BİZ</button>
                         <button
                             onClick={() => { setDrawSide('OPP'); setSelectedEl(null); setHeldSub(null); setSelectedSeqBadge(null); }}
@@ -2335,7 +2335,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                         </button>
                         {zoom > 1 && (
                             <button onClick={resetZoom} aria-label="Sıfırla" title="Görünümü sıfırla"
-                                className="w-11 h-11 rounded-full bg-black/70 backdrop-blur border border-white/15 text-[#39FF14] flex items-center justify-center hover:bg-black/85 active:scale-95 transition shadow-lg">
+                                className="w-11 h-11 rounded-full bg-black/70 backdrop-blur border border-white/15 text-primary flex items-center justify-center hover:bg-black/85 active:scale-95 transition shadow-lg">
                                 <Maximize2 size={16} />
                             </button>
                         )}
@@ -2346,7 +2346,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                     <button
                         onClick={replayPresent}
                         aria-label="Tekrar oynat"
-                        className="absolute left-1/2 -translate-x-1/2 bottom-4 z-40 flex items-center gap-2 px-5 py-2.5 rounded-full bg-[#39FF14] text-black font-extrabold text-[0.6875rem] tracking-widest hover:brightness-110 active:scale-95 transition-all shadow-[0_6px_24px_rgba(57,255,20,0.35)]"
+                        className="absolute left-1/2 -translate-x-1/2 bottom-4 z-40 flex items-center gap-2 px-5 py-2.5 rounded-full bg-primary text-black font-extrabold text-[0.6875rem] tracking-widest hover:brightness-110 active:scale-95 transition-all shadow-[0_6px_24px_rgba(57,255,20,0.35)]"
                     >
                         <RotateCcw size={15} /> TEKRAR OYNAT
                     </button>
@@ -2371,13 +2371,13 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                     // pinch'te parmakların ORTASI yer değiştirmediği için
                     // tarayıcı 'pan-y' hareketini kaydırma sanmaz.
                     style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`, transformOrigin: 'center center', touchAction: (tool.startsWith('draw') || zoom > 1) ? 'none' : 'pan-y', transition: (pinchRef.current || panStartRef.current) ? 'none' : 'transform 0.18s ease-out' }}
-                    className={`relative w-full aspect-[3/4] bg-[#0B2815] rounded-[24px] border-4 border-[#161B22] ${liteGate(perfTier, 'shadow-[inset_0_0_60px_rgba(0,0,0,0.8)]')} overflow-hidden ${tool.startsWith('draw') ? 'cursor-crosshair' : ''} ${tool === 'opponent' ? 'cursor-copy' : ''}`}
+                    className={`relative w-full aspect-[3/4] bg-[#0B2815] rounded-[24px] border-4 border-surface-1 ${liteGate(perfTier, 'shadow-[inset_0_0_60px_rgba(0,0,0,0.8)]')} overflow-hidden ${tool.startsWith('draw') ? 'cursor-crosshair' : ''} ${tool === 'opponent' ? 'cursor-copy' : ''}`}
                 >
                     {/* S44 — hafif kimlik vinyeti (WCAG: yalnız dekoratif, kontrastı bozmaz) */}
                     <div className="absolute inset-0 pointer-events-none z-[1]" style={{ boxShadow: 'inset 0 0 90px rgba(0,0,0,0.55)' }} />
                     {/* S46 — yakınlaştırma göstergesi */}
                     {zoom > 1 && (
-                        <div className="absolute top-2 right-2 z-30 px-2 py-0.5 rounded-full bg-black/60 text-[#39FF14] text-[0.6875rem] font-extrabold font-mono pointer-events-none">
+                        <div className="absolute top-2 right-2 z-30 px-2 py-0.5 rounded-full bg-black/60 text-primary text-[0.6875rem] font-extrabold font-mono pointer-events-none">
                             {Math.round(zoom * 100)}%
                         </div>
                     )}
@@ -2463,8 +2463,8 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                             className="absolute z-[55] pointer-events-none"
                             style={{ left: `${passChainEnd.x}%`, top: `${passChainEnd.y}%`, transform: 'translate(-50%,-50%)' }}
                         >
-                            <span className="block w-5 h-5 rounded-full border-2 border-[#39FF14] bg-[#39FF14]/20 animate-ping" />
-                            <span className="absolute inset-0 m-auto w-2 h-2 rounded-full bg-[#39FF14]" />
+                            <span className="block w-5 h-5 rounded-full border-2 border-primary bg-primary/20 animate-ping" />
+                            <span className="absolute inset-0 m-auto w-2 h-2 rounded-full bg-primary" />
                         </div>
                     )}
 
@@ -2543,7 +2543,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                             // `touch-none` YALNIZ gerçekten sürüklenebilirken (yukarıdaki
                             // onPointerDown ile aynı koşul) — aksi hâlde bu kare parmağı
                             // boşuna tutar ve sayfa kaymaz.
-                            className={`absolute w-12 h-12 ${!usLayer.interactive ? 'pointer-events-none' : (tool === 'move' && slot.player && drawSide === 'US' && !heldSub ? 'cursor-grab active:cursor-grabbing touch-none' : '')} ${isMoving ? `brightness-125 ${liteGate(perfTier, 'drop-shadow-[0_0_15px_rgba(57,255,20,0.8)]')}` : ''} ${usLayer.dimmed ? 'opacity-40' : ''} ${heldSub ? 'cursor-pointer ring-2 ring-[#39FF14] rounded-full ring-offset-1 ring-offset-black/40' : ''}`}
+                            className={`absolute w-12 h-12 ${!usLayer.interactive ? 'pointer-events-none' : (tool === 'move' && slot.player && drawSide === 'US' && !heldSub ? 'cursor-grab active:cursor-grabbing touch-none' : '')} ${isMoving ? `brightness-125 ${liteGate(perfTier, 'drop-shadow-[0_0_15px_rgba(57,255,20,0.8)]')}` : ''} ${usLayer.dimmed ? 'opacity-40' : ''} ${heldSub ? 'cursor-pointer ring-2 ring-primary rounded-full ring-offset-1 ring-offset-black/40' : ''}`}
                             // `animation` kısayolu play-state'i sıfırlar → animationPlayState
                             // MUTLAKA sonra gelmeli (topla aynı desen).
                             style={{
@@ -2570,18 +2570,18 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                     )}
                                     {/* Artık kadroda değil — sol alt uyarı */}
                                     {staleSlotIds.has(slot.id) && (
-                                        <div className="absolute -bottom-1.5 -left-1.5 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center text-white border-2 border-[#161B22] shadow-sm" title="Artık kadroda değil">
+                                        <div className="absolute -bottom-1.5 -left-1.5 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center text-white border-2 border-surface-1 shadow-sm" title="Artık kadroda değil">
                                             <ShieldAlert size={9} />
                                         </div>
                                     )}
                                     {activeTactic.captainId === slot.player.id && (
-                                        <div className="absolute -top-2 -right-2 w-5 h-5 bg-gradient-to-br from-yellow-300 to-yellow-500 rounded-full flex items-center justify-center text-black text-[0.6875rem] font-extrabold border-2 border-[#161B22] shadow-sm">
+                                        <div className="absolute -top-2 -right-2 w-5 h-5 bg-gradient-to-br from-yellow-300 to-yellow-500 rounded-full flex items-center justify-center text-black text-[0.6875rem] font-extrabold border-2 border-surface-1 shadow-sm">
                                             K
                                         </div>
                                     )}
                                     {slot.archetype && slot.archetype !== 'NONE' && (
                                         <div 
-                                            className="absolute -bottom-2 -right-2 w-6 h-6 bg-gradient-to-br from-yellow-400 to-amber-600 rounded-full flex items-center justify-center text-black text-xs border-2 border-[#161B22] shadow-lg z-30"
+                                            className="absolute -bottom-2 -right-2 w-6 h-6 bg-gradient-to-br from-yellow-400 to-amber-600 rounded-full flex items-center justify-center text-black text-xs border-2 border-surface-1 shadow-lg z-30"
                                         >
                                             {ARCHETYPES[slot.archetype].icon}
                                         </div>
@@ -2596,7 +2596,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                         if (drawSide === 'OPP') return; // RAKİP katmanı önde — bizim mevkiler kilitli
                                         if (heldSub) placeHeldSub(slot.id); else setShowPlayerSelect({ type: 'slot', slotId: slot.id });
                                     }}
-                                    className={`relative w-full h-full rounded-full border-2 border-dashed flex items-center justify-center bg-black/20 backdrop-blur-sm transition-colors ${slot.role === 'GK' ? 'border-orange-500/50 text-orange-500 hover:border-orange-400' : 'border-[#39FF14]/50 text-[#39FF14]/70 hover:border-[#39FF14] hover:text-[#39FF14]'}`}
+                                    className={`relative w-full h-full rounded-full border-2 border-dashed flex items-center justify-center bg-black/20 backdrop-blur-sm transition-colors ${slot.role === 'GK' ? 'border-orange-500/50 text-orange-500 hover:border-orange-400' : 'border-primary/50 text-primary/70 hover:border-primary hover:text-primary'}`}
                                 >
                                     <Plus size={20} />
                                 </motion.button>
@@ -2608,7 +2608,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                     </span>
                                 )}
                                 {slot.instruction && (
-                                    <span className={`text-[0.6875rem] font-bold mt-0.5 bg-black/40 px-1 rounded text-[#39FF14]`}>
+                                    <span className={`text-[0.6875rem] font-bold mt-0.5 bg-black/40 px-1 rounded text-primary`}>
                                         {slot.instruction}
                                     </span>
                                 )}
@@ -2661,10 +2661,10 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
             {/* Team Selection & Auto Fill */}
             {!isTeamConfirmed && !presentMode && (
             <div className="px-6 pb-6 mt-4">
-                <div className="bg-[#161B22] rounded-[32px] border border-white/5 p-5 shadow-[0_4px_40px_rgba(0,0,0,0.5)]">
+                <div className="bg-surface-1 rounded-[32px] border border-white/5 p-5 shadow-[0_4px_40px_rgba(0,0,0,0.5)]">
                     <div className="flex items-center justify-between mb-4">
                         <h3 className="text-[0.625rem] font-extrabold text-white uppercase tracking-widest flex items-center gap-2">
-                            <Users size={14} className="text-[#39FF14]" /> TAKIM SEÇİMİ
+                            <Users size={14} className="text-primary" /> TAKIM SEÇİMİ
                         </h3>
                     </div>
                     
@@ -2680,9 +2680,9 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                             </p>
                             <button
                                 onClick={() => onNavigate('SOCIAL')}
-                                className="mt-3 inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white/5 border border-white/10 text-white text-[0.625rem] font-extrabold uppercase tracking-widest hover:bg-white/10 hover:border-[#39FF14]/40 transition-all"
+                                className="mt-3 inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white/5 border border-white/10 text-white text-[0.625rem] font-extrabold uppercase tracking-widest hover:bg-white/10 hover:border-primary/40 transition-all"
                             >
-                                <Users size={14} className="text-[#39FF14]" /> Sosyal'e git
+                                <Users size={14} className="text-primary" /> Sosyal'e git
                             </button>
                         </div>
                     ) : (
@@ -2692,7 +2692,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                             onClick={() => setSelectedTeamId(null)}
                             className={`flex-shrink-0 w-[150px] p-3 rounded-2xl border transition-all text-left ${
                                 selectedTeamId === null
-                                    ? 'bg-[#39FF14]/10 border-[#39FF14]/50 shadow-[0_0_15px_rgba(57,255,20,0.2)]'
+                                    ? 'bg-primary/10 border-primary/50 shadow-[0_0_15px_rgba(57,255,20,0.2)]'
                                     : 'bg-white/5 border-white/5 hover:bg-white/10'
                             }`}
                         >
@@ -2713,7 +2713,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                 onClick={() => { setSelectedTeamId(team.team_id); void ensureSquad(team.team_id); }}
                                 className={`flex-shrink-0 w-[150px] p-3 rounded-2xl border transition-all text-left ${
                                     selectedTeamId === team.team_id
-                                        ? 'bg-[#39FF14]/10 border-[#39FF14]/50 shadow-[0_0_15px_rgba(57,255,20,0.2)]'
+                                        ? 'bg-primary/10 border-primary/50 shadow-[0_0_15px_rgba(57,255,20,0.2)]'
                                         : 'bg-white/5 border-white/5 hover:bg-white/10'
                                 }`}
                             >
@@ -2722,7 +2722,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                     <h4 className="text-white font-bold text-xs truncate flex-1">{team.name}</h4>
                                 </div>
                                 <div className="text-[0.6875rem] font-bold text-ink-4">
-                                    <span className={enough ? 'text-[#39FF14]' : 'text-amber-400'}>{ready}/{need}</span> hazır
+                                    <span className={enough ? 'text-primary' : 'text-amber-400'}>{ready}/{need}</span> hazır
                                 </div>
                                 {!enough && <div className="mt-1 text-[0.625rem] font-extrabold text-amber-400 uppercase tracking-widest">Eksik kadro</div>}
                             </button>
@@ -2735,7 +2735,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                             doldurulmuşsa üzerine YAZILMAZ, yalnız onaylanır. */}
                         <button
                             onClick={() => void confirmTeamSelection()}
-                            className="w-full h-12 bg-[#39FF14] rounded-2xl flex items-center justify-center gap-2 text-black font-extrabold text-[0.625rem] tracking-widest uppercase hover:brightness-110 active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(57,255,20,0.25)]"
+                            className="w-full h-12 bg-primary rounded-2xl flex items-center justify-center gap-2 text-black font-extrabold text-[0.625rem] tracking-widest uppercase hover:brightness-110 active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(57,255,20,0.25)]"
                         >
                             <Users size={16} />
                             {!selectedTeamId ? 'KİŞİSEL OLARAK DEVAM ET'
@@ -2744,9 +2744,9 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
 
                         <button
                             onClick={() => setShowPlayerSelect({ type: 'any' })}
-                            className="w-full h-12 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center gap-2 text-white font-extrabold text-[0.625rem] tracking-widest uppercase hover:bg-white/10 hover:border-[#39FF14]/40 active:scale-[0.98] transition-all"
+                            className="w-full h-12 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center gap-2 text-white font-extrabold text-[0.625rem] tracking-widest uppercase hover:bg-white/10 hover:border-primary/40 active:scale-[0.98] transition-all"
                         >
-                            <UserPlus size={16} className="text-[#39FF14]" />
+                            <UserPlus size={16} className="text-primary" />
                             ARKADAŞ / OYUNCU EKLE
                         </button>
                     </div>
@@ -2757,7 +2757,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
             {/* Onaylı takım çipi (S21) + eksik kadro rozeti (S23) */}
             {isTeamConfirmed && (
                 <div className="px-6 pb-3 mt-4">
-                    <div className="flex items-center gap-3 bg-[#161B22] rounded-2xl border border-white/5 p-3">
+                    <div className="flex items-center gap-3 bg-surface-1 rounded-2xl border border-white/5 p-3">
                         {/* Kişisel modda takım arması yerine nötr simge */}
                         {confirmedTeam ? (
                             <span className="w-9 h-9 rounded-xl flex items-center justify-center text-xs font-extrabold text-black shrink-0" style={{ background: confirmedTeam.color1 || '#39FF14' }}>
@@ -2769,13 +2769,13 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                         <div className="flex-1 min-w-0">
                             <div className="text-sm font-extrabold text-white truncate">{confirmedTeam ? (activeTactic.teamName || confirmedTeam.name) : 'Kişisel'}</div>
                             <div className="text-[0.6875rem] font-bold text-ink-4">
-                                <span className={missingCount === 0 ? 'text-[#39FF14]' : 'text-amber-400'}>{filledCount}/{activeTactic.slots.length}</span> dizili
+                                <span className={missingCount === 0 ? 'text-primary' : 'text-amber-400'}>{filledCount}/{activeTactic.slots.length}</span> dizili
                                 {missingCount > 0 && <span className="ml-2 text-amber-400 font-extrabold uppercase tracking-widest">· {missingCount} eksik</span>}
                             </div>
                         </div>
                         <button
                             onClick={() => setIsTeamConfirmed(false)}
-                            className="text-[0.625rem] font-extrabold text-[#39FF14] uppercase tracking-widest px-3 py-2 rounded-xl bg-[#39FF14]/10 hover:bg-[#39FF14]/20 transition-all"
+                            className="text-[0.625rem] font-extrabold text-primary uppercase tracking-widest px-3 py-2 rounded-xl bg-primary/10 hover:bg-primary/20 transition-all"
                         >Değiştir</button>
                     </div>
                 </div>
@@ -2788,7 +2788,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                     <List size={12} className="text-ink-4" />
                     <span className="text-[0.625rem] font-extrabold text-ink-4 uppercase tracking-widest">Yedekler ({activeTactic.subs.length})</span>
                     {heldSub && (
-                        <span className="text-[0.625rem] font-extrabold text-[#39FF14] uppercase tracking-widest flex items-center gap-1 animate-pulse">
+                        <span className="text-[0.625rem] font-extrabold text-primary uppercase tracking-widest flex items-center gap-1 animate-pulse">
                             · bir mevkiye dokun
                             <button onClick={() => setHeldSub(null)} className="ml-1 text-gray-400 hover:text-white" aria-label="Vazgeç"><X size={11} /></button>
                         </span>
@@ -2798,7 +2798,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                     {activeTactic.subs.map(sub => {
                         const held = heldSub === sub.id;
                         return (
-                        <div key={sub.id} className={`flex-shrink-0 flex items-center gap-2 rounded-full pl-1 pr-2 py-1 border transition-all ${held ? 'bg-[#39FF14]/15 border-[#39FF14] ring-2 ring-[#39FF14]/40' : 'bg-white/5 border-white/10'}`}>
+                        <div key={sub.id} className={`flex-shrink-0 flex items-center gap-2 rounded-full pl-1 pr-2 py-1 border transition-all ${held ? 'bg-primary/15 border-primary ring-2 ring-primary/40' : 'bg-white/5 border-white/10'}`}>
                             <button
                                 onClick={() => setHeldSub(held ? null : sub.id)}
                                 disabled={drawSide === 'OPP'}
@@ -2806,7 +2806,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                 className="flex items-center gap-2 min-h-[36px] disabled:opacity-40 disabled:cursor-not-allowed"
                             >
                                 <span className="w-6 h-6 rounded-full bg-gradient-to-br from-[#1e2532] to-[#11151c] border border-white/20 flex items-center justify-center text-[0.6875rem] font-extrabold text-white">{sub.name.charAt(0)}</span>
-                                <span className={`text-[0.6875rem] font-bold max-w-[90px] truncate ${held ? 'text-[#39FF14]' : 'text-white'}`}>{sub.name}</span>
+                                <span className={`text-[0.6875rem] font-bold max-w-[90px] truncate ${held ? 'text-primary' : 'text-white'}`}>{sub.name}</span>
                             </button>
                             <button onClick={() => handleRemoveSub(sub.id)} className="text-ink-4 hover:text-red-400 transition-colors" aria-label={`${sub.name} yedeği sil`}><X size={12} /></button>
                         </div>
@@ -2828,10 +2828,10 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
             {/* Player List & Instructions Panel */}
             {allPlayersOnPitch.length > 0 && (
                 <div className="px-6 mt-6">
-                    <div className="bg-[#161B22] rounded-2xl border border-white/10 overflow-hidden">
+                    <div className="bg-surface-1 rounded-2xl border border-white/10 overflow-hidden">
                         <div className="p-4 border-b border-white/5 bg-white/5 flex items-center justify-between">
                             <h3 className="text-sm font-extrabold text-white uppercase tracking-widest flex items-center gap-2">
-                                <Users size={16} className={'text-[#39FF14]'} /> 
+                                <Users size={16} className={'text-primary'} /> 
                                 Oyuncular
                             </h3>
                             {/* IP-23: eskiden 32px, metinsiz ve erişilebilir adsız bir artı
@@ -2840,7 +2840,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                             <button 
                                 onClick={() => setShowPlayerSelect({ type: 'any' })}
                                 aria-label="Oyuncu ekle"
-                                className="min-h-11 px-3.5 rounded-full bg-[#39FF14]/20 flex items-center gap-1.5 text-[#39FF14] text-xs font-extrabold hover:bg-[#39FF14]/30 transition-colors"
+                                className="min-h-11 px-3.5 rounded-full bg-primary/20 flex items-center gap-1.5 text-primary text-xs font-extrabold hover:bg-primary/30 transition-colors"
                             >
                                 <Plus size={16} /> Oyuncu Ekle
                             </button>
@@ -2849,7 +2849,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                             {allPlayersOnPitch.map((item) => (
                                 <div key={item.id} className="p-4 flex items-center justify-between hover:bg-white/5 transition-colors">
                                     <div className="flex items-center gap-3">
-                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center font-extrabold text-white ${item.type === 'opponent' ? 'bg-red-500' : (item.role === 'GK' ? 'bg-orange-500' : 'bg-[#39FF14] text-black')}`}>
+                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center font-extrabold text-white ${item.type === 'opponent' ? 'bg-red-500' : (item.role === 'GK' ? 'bg-orange-500' : 'bg-primary text-black')}`}>
                                             {item.type === 'opponent' ? <Swords size={16} /> : item.player?.name.charAt(0)}
                                         </div>
                                         <div>
@@ -2870,7 +2870,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                                     )
                                                 ) : (
                                                     item.instruction ? (
-                                                        <span className={item.type === 'opponent' ? 'text-red-400' : 'text-[#39FF14]'}>
+                                                        <span className={item.type === 'opponent' ? 'text-red-400' : 'text-primary'}>
                                                             Görev: {item.instruction}
                                                         </span>
                                                     ) : (
@@ -2892,7 +2892,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                         )}
                                         <button 
                                             onClick={() => item.type === 'slot' ? setSelectedSlotForArchetype(item.id) : setInstructionModal({ type: item.type, id: item.id })}
-                                            className={`p-2 rounded-lg transition-all ${((item.type === 'slot' && item.archetype && item.archetype !== 'NONE') || (item.type !== 'slot' && item.instruction)) ? 'bg-[#39FF14]/20 text-[#39FF14]' : 'bg-white/5 text-gray-400 hover:text-white'}`}
+                                            className={`p-2 rounded-lg transition-all ${((item.type === 'slot' && item.archetype && item.archetype !== 'NONE') || (item.type !== 'slot' && item.instruction)) ? 'bg-primary/20 text-primary' : 'bg-white/5 text-gray-400 hover:text-white'}`}
                                         >
                                             {item.type === 'slot' ? <Brain size={16} /> : <MessageSquare size={16} />}
                                         </button>
@@ -2918,7 +2918,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                     <button
                         onClick={() => setShowTacticsModal(true)}
                         title="Kütüphane"
-                        className="w-16 shrink-0 min-h-[56px] rounded-2xl bg-[#161B22] border border-white/10 flex flex-col items-center justify-center gap-1 text-gray-400 hover:text-white hover:bg-white/5 transition-all"
+                        className="w-16 shrink-0 min-h-[56px] rounded-2xl bg-surface-1 border border-white/10 flex flex-col items-center justify-center gap-1 text-gray-400 hover:text-white hover:bg-white/5 transition-all"
                     >
                         <List size={18} />
                         <span className="font-extrabold text-[0.625rem] tracking-widest">KÜTÜPHANE</span>
@@ -2928,7 +2928,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                         <button
                             disabled={!canSave}
                             onClick={() => { setSaveTacticName(activeTactic.name || ''); setShowSaveModal(true); }}
-                            className="w-full h-full min-h-[56px] rounded-2xl flex flex-col items-center justify-center text-black font-extrabold disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.01] active:scale-[0.98] transition-all bg-[#39FF14] shadow-[0_0_24px_rgba(57,255,20,0.25)] px-2 text-center"
+                            className="w-full h-full min-h-[56px] rounded-2xl flex flex-col items-center justify-center text-black font-extrabold disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.01] active:scale-[0.98] transition-all bg-primary shadow-[0_0_24px_rgba(57,255,20,0.25)] px-2 text-center"
                         >
                             <span className="text-[0.6875rem] tracking-widest leading-tight">{primaryLabel}</span>
                             <span className="text-[0.6875rem] font-bold text-black/55 tracking-wide mt-0.5">→ {primaryTarget}</span>
@@ -2957,7 +2957,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                             initial={{ scale: 0.9, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
                             exit={{ scale: 0.9, opacity: 0 }}
-                            className="bg-[#161B22] border border-white/10 rounded-[32px] w-full max-w-sm p-6 shadow-2xl" 
+                            className="bg-surface-1 border border-white/10 rounded-[32px] w-full max-w-sm p-6 shadow-2xl" 
                             onClick={e => e.stopPropagation()}
                         >
                         <div className="flex justify-between items-center mb-6">
@@ -3011,7 +3011,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                             initial={{ scale: 0.9, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
                             exit={{ scale: 0.9, opacity: 0 }}
-                            className="bg-[#161B22] border border-white/10 rounded-2xl p-6 w-full max-w-sm"
+                            className="bg-surface-1 border border-white/10 rounded-2xl p-6 w-full max-w-sm"
                         >
                             <div className="flex justify-between items-center mb-6">
                                 <h3 className="text-lg font-extrabold text-white uppercase tracking-widest">Görev Ver</h3>
@@ -3024,7 +3024,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                     <button 
                                         key={inst}
                                         onClick={() => handleSetInstruction(instructionModal.type, instructionModal.id, inst)}
-                                        className={`py-3 rounded-xl text-xs font-bold transition-all ${instructionModal.type === 'opponent' ? 'bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20' : 'bg-[#39FF14]/10 text-[#39FF14] hover:bg-[#39FF14]/20 border border-[#39FF14]/20'}`}
+                                        className={`py-3 rounded-xl text-xs font-bold transition-all ${instructionModal.type === 'opponent' ? 'bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20' : 'bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20'}`}
                                     >
                                         {inst}
                                     </button>
@@ -3056,7 +3056,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                             <div className="flex justify-between items-center mb-4 pt-4 gap-3">
                                 <div className="min-w-0">
                                     <h2 className="text-xl font-extrabold text-white uppercase tracking-widest italic">Oyuncu Seç</h2>
-                                    <p className="text-[0.625rem] font-bold uppercase tracking-widest text-[#39FF14] truncate">{pickContextLabel}</p>
+                                    <p className="text-[0.625rem] font-bold uppercase tracking-widest text-primary truncate">{pickContextLabel}</p>
                                 </div>
                                 <button
                                     onClick={closePlayerSelect}
@@ -3073,7 +3073,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                     onChange={(e) => setPlayerSearch(e.target.value)}
                                     placeholder="Ara ya da isim yazıp manuel ekle…"
                                     maxLength={20}
-                                    className="w-full bg-black/40 border border-white/10 rounded-2xl pl-11 pr-10 py-3 text-sm text-white placeholder:text-ink-4 focus:border-[#39FF14]/50 focus:outline-none"
+                                    className="w-full bg-black/40 border border-white/10 rounded-2xl pl-11 pr-10 py-3 text-sm text-white placeholder:text-ink-4 focus:border-primary/50 focus:outline-none"
                                 />
                                 {playerSearch && (
                                     <button onClick={() => setPlayerSearch('')} aria-label="Aramayı temizle" className="absolute right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-white/10 flex items-center justify-center text-gray-400 hover:text-white">
@@ -3094,9 +3094,9 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                         <button
                                             key={group}
                                             onClick={() => setSelectedGroup(group)}
-                                            className={`whitespace-nowrap px-3.5 py-2 rounded-full text-[0.625rem] font-extrabold uppercase tracking-widest border transition-all flex items-center gap-1.5 shrink-0 ${sel ? 'bg-[#39FF14] text-black border-[#39FF14] shadow-[0_0_15px_rgba(57,255,20,0.25)]' : 'bg-white/5 text-gray-400 border-white/10 hover:border-white/30 hover:text-white'}`}
+                                            className={`whitespace-nowrap px-3.5 py-2 rounded-full text-[0.625rem] font-extrabold uppercase tracking-widest border transition-all flex items-center gap-1.5 shrink-0 ${sel ? 'bg-primary text-black border-primary shadow-[0_0_15px_rgba(57,255,20,0.25)]' : 'bg-white/5 text-gray-400 border-white/10 hover:border-white/30 hover:text-white'}`}
                                         >
-                                            {group === 'Favorilerim' && <Star size={11} fill={sel ? 'black' : 'currentColor'} className={sel ? 'text-black' : 'text-[#FACC15]'} />}
+                                            {group === 'Favorilerim' && <Star size={11} fill={sel ? 'black' : 'currentColor'} className={sel ? 'text-black' : 'text-warning'} />}
                                             {emoji && <span className="text-[0.6875rem] leading-none">{emoji}</span>}
                                             {group}
                                         </button>
@@ -3110,7 +3110,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                         <button
                                             key={key}
                                             onClick={() => setSelectedGroup(sel ? 'Tümü' : key)}
-                                            className={`whitespace-nowrap px-3.5 py-2 rounded-full text-[0.625rem] font-extrabold uppercase tracking-widest border transition-all flex items-center gap-1.5 shrink-0 ${sel ? 'bg-[#39FF14] text-black border-[#39FF14] shadow-[0_0_15px_rgba(57,255,20,0.25)]' : 'bg-white/5 text-gray-400 border-white/10 hover:border-white/30 hover:text-white'}`}
+                                            className={`whitespace-nowrap px-3.5 py-2 rounded-full text-[0.625rem] font-extrabold uppercase tracking-widest border transition-all flex items-center gap-1.5 shrink-0 ${sel ? 'bg-primary text-black border-primary shadow-[0_0_15px_rgba(57,255,20,0.25)]' : 'bg-white/5 text-gray-400 border-white/10 hover:border-white/30 hover:text-white'}`}
                                         >
                                             <span className="w-3.5 h-3.5 rounded-[4px] flex items-center justify-center text-[0.6875rem] font-extrabold text-black leading-none" style={{ background: team.color1 || '#39FF14' }}>
                                                 {trUpper((team.short_name || team.name).charAt(0))}
@@ -3125,9 +3125,9 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                             {canManualAdd && !pickHasMatches && (
                                 <button
                                     onClick={handleManualAdd}
-                                    className="w-full bg-[#39FF14]/10 border border-dashed border-[#39FF14]/40 rounded-2xl p-3.5 flex items-center gap-3 hover:bg-[#39FF14]/15 active:scale-[0.99] transition-all text-left mb-2.5"
+                                    className="w-full bg-primary/10 border border-dashed border-primary/40 rounded-2xl p-3.5 flex items-center gap-3 hover:bg-primary/15 active:scale-[0.99] transition-all text-left mb-2.5"
                                 >
-                                    <span className="w-11 h-11 rounded-2xl bg-[#39FF14]/15 border border-[#39FF14]/30 flex items-center justify-center text-[#39FF14] shrink-0"><UserPlus size={18} /></span>
+                                    <span className="w-11 h-11 rounded-2xl bg-primary/15 border border-primary/30 flex items-center justify-center text-primary shrink-0"><UserPlus size={18} /></span>
                                     <span className="min-w-0">
                                         <span className="block text-sm font-bold text-white truncate">“{pickQuery}” adıyla manuel ekle</span>
                                         <span className="block text-[0.6875rem] text-ink-4 mt-0.5">Kayıtsız oyuncu — yalnız bu taktik tahtasında yaşar.</span>
@@ -3144,11 +3144,11 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                             key={friend.friend_id}
                                             onClick={() => handleSelectPlayer({ id: friend.friend_id, name: friend.full_name, role: friend.pos || 'CM', isCustom: false })}
                                             disabled={inSquad}
-                                            className="w-full bg-[#161B22] border border-white/5 rounded-2xl p-3 flex items-center justify-between transition-all text-left group enabled:hover:border-[#39FF14]/50 enabled:hover:bg-[#39FF14]/[0.04] disabled:opacity-45 disabled:cursor-not-allowed"
+                                            className="w-full bg-surface-1 border border-white/5 rounded-2xl p-3 flex items-center justify-between transition-all text-left group enabled:hover:border-primary/50 enabled:hover:bg-primary/[0.04] disabled:opacity-45 disabled:cursor-not-allowed"
                                         >
                                             <div className="flex items-center gap-3 min-w-0 pointer-events-none">
                                                 <div className="relative w-11 h-11 shrink-0">
-                                                    <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-[#1e2532] to-[#11151c] flex items-center justify-center font-extrabold text-base text-white border border-white/10 shadow-lg group-hover:text-[#39FF14] transition-colors">
+                                                    <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-[#1e2532] to-[#11151c] flex items-center justify-center font-extrabold text-base text-white border border-white/10 shadow-lg group-hover:text-primary transition-colors">
                                                         {trUpper(friend.full_name.charAt(0))}
                                                     </div>
                                                     {friend.avatar_url && (
@@ -3156,12 +3156,12 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                                     )}
                                                 </div>
                                                 <div className="min-w-0">
-                                                    <h4 className="text-sm font-extrabold text-white tracking-tight flex items-center gap-1.5 truncate group-hover:text-[#39FF14] transition-colors">
+                                                    <h4 className="text-sm font-extrabold text-white tracking-tight flex items-center gap-1.5 truncate group-hover:text-primary transition-colors">
                                                         {friend.full_name}
-                                                        {friend.is_favorite && <Star size={12} className="text-[#FACC15] shrink-0" fill="#FACC15" />}
+                                                        {friend.is_favorite && <Star size={12} className="text-warning shrink-0" fill="#FACC15" />}
                                                     </h4>
                                                     <div className="flex items-center gap-2 mt-0.5">
-                                                        {friend.pos && <span className="text-[0.625rem] font-extrabold text-[#39FF14] bg-[#39FF14]/10 border border-[#39FF14]/20 rounded px-1.5 py-0.5 uppercase tracking-widest">{friend.pos}</span>}
+                                                        {friend.pos && <span className="text-[0.625rem] font-extrabold text-primary bg-primary/10 border border-primary/20 rounded px-1.5 py-0.5 uppercase tracking-widest">{friend.pos}</span>}
                                                         <span className="text-[0.6875rem] font-bold text-ink-4 flex items-center gap-1">
                                                             <Users size={10} /> {friend.matches_together} maç birlikte
                                                         </span>
@@ -3169,9 +3169,9 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                                 </div>
                                             </div>
                                             {inSquad ? (
-                                                <span className="flex items-center gap-1.5 text-[0.625rem] font-extrabold uppercase tracking-widest text-[#39FF14] bg-[#39FF14]/10 border border-[#39FF14]/30 rounded-full px-2.5 py-1 shrink-0 ml-2 pointer-events-none"><Check size={11} /> Kadroda</span>
+                                                <span className="flex items-center gap-1.5 text-[0.625rem] font-extrabold uppercase tracking-widest text-primary bg-primary/10 border border-primary/30 rounded-full px-2.5 py-1 shrink-0 ml-2 pointer-events-none"><Check size={11} /> Kadroda</span>
                                             ) : (
-                                                <div className="w-8 h-8 rounded-full border border-white/20 flex items-center justify-center text-white/50 group-hover:border-[#39FF14] group-hover:text-[#39FF14] group-hover:bg-[#39FF14]/10 transition-all shrink-0 ml-2 pointer-events-none">
+                                                <div className="w-8 h-8 rounded-full border border-white/20 flex items-center justify-center text-white/50 group-hover:border-primary group-hover:text-primary group-hover:bg-primary/10 transition-all shrink-0 ml-2 pointer-events-none">
                                                     <Plus size={16} />
                                                 </div>
                                             )}
@@ -3201,24 +3201,24 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                                             key={m.user_id}
                                                             onClick={() => handleSelectPlayer(squadRowToPlayer(m))}
                                                             disabled={inSquad}
-                                                            className="w-full bg-[#161B22] border border-white/5 rounded-2xl p-3 flex items-center justify-between transition-all text-left group enabled:hover:border-[#39FF14]/50 enabled:hover:bg-[#39FF14]/[0.04] disabled:opacity-45 disabled:cursor-not-allowed"
+                                                            className="w-full bg-surface-1 border border-white/5 rounded-2xl p-3 flex items-center justify-between transition-all text-left group enabled:hover:border-primary/50 enabled:hover:bg-primary/[0.04] disabled:opacity-45 disabled:cursor-not-allowed"
                                                         >
                                                             <div className="flex items-center gap-3 min-w-0 pointer-events-none">
-                                                                <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-[#1e2532] to-[#11151c] flex items-center justify-center font-extrabold text-base text-white border border-white/10 shadow-lg group-hover:text-[#39FF14] transition-colors shrink-0">
+                                                                <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-[#1e2532] to-[#11151c] flex items-center justify-center font-extrabold text-base text-white border border-white/10 shadow-lg group-hover:text-primary transition-colors shrink-0">
                                                                     {trUpper(m.full_name.charAt(0))}
                                                                 </div>
                                                                 <div className="min-w-0">
-                                                                    <h4 className="text-sm font-extrabold text-white tracking-tight truncate group-hover:text-[#39FF14] transition-colors">{m.full_name}</h4>
+                                                                    <h4 className="text-sm font-extrabold text-white tracking-tight truncate group-hover:text-primary transition-colors">{m.full_name}</h4>
                                                                     <div className="flex items-center gap-2 mt-0.5">
-                                                                        {m.pos && <span className="text-[0.625rem] font-extrabold text-[#39FF14] bg-[#39FF14]/10 border border-[#39FF14]/20 rounded px-1.5 py-0.5 uppercase tracking-widest">{m.pos}</span>}
+                                                                        {m.pos && <span className="text-[0.625rem] font-extrabold text-primary bg-primary/10 border border-primary/20 rounded px-1.5 py-0.5 uppercase tracking-widest">{m.pos}</span>}
                                                                         {m.jersey_number != null && <span className="text-[0.6875rem] font-bold text-ink-4 font-mono">#{m.jersey_number}</span>}
                                                                     </div>
                                                                 </div>
                                                             </div>
                                                             {inSquad ? (
-                                                                <span className="flex items-center gap-1.5 text-[0.625rem] font-extrabold uppercase tracking-widest text-[#39FF14] bg-[#39FF14]/10 border border-[#39FF14]/30 rounded-full px-2.5 py-1 shrink-0 ml-2 pointer-events-none"><Check size={11} /> Kadroda</span>
+                                                                <span className="flex items-center gap-1.5 text-[0.625rem] font-extrabold uppercase tracking-widest text-primary bg-primary/10 border border-primary/30 rounded-full px-2.5 py-1 shrink-0 ml-2 pointer-events-none"><Check size={11} /> Kadroda</span>
                                                             ) : (
-                                                                <div className="w-8 h-8 rounded-full border border-white/20 flex items-center justify-center text-white/50 group-hover:border-[#39FF14] group-hover:text-[#39FF14] group-hover:bg-[#39FF14]/10 transition-all shrink-0 ml-2 pointer-events-none">
+                                                                <div className="w-8 h-8 rounded-full border border-white/20 flex items-center justify-center text-white/50 group-hover:border-primary group-hover:text-primary group-hover:bg-primary/10 transition-all shrink-0 ml-2 pointer-events-none">
                                                                     <Plus size={16} />
                                                                 </div>
                                                             )}
@@ -3233,7 +3233,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
 
                             {/* Boş durum — arama yok ve hiç kaynak yoksa yönlendir */}
                             {!pickHasMatches && !canManualAdd && (
-                                <div className="text-center py-10 bg-[#161B22]/60 border border-white/5 rounded-2xl flex flex-col items-center gap-2 mt-1">
+                                <div className="text-center py-10 bg-surface-1/60 border border-white/5 rounded-2xl flex flex-col items-center gap-2 mt-1">
                                     <Users size={22} className="text-ink-4" />
                                     <p className="text-ink-4 font-bold text-xs uppercase tracking-wider">
                                         {pickQuery ? 'Eşleşen oyuncu yok' : 'Listelenecek oyuncu yok'}
@@ -3246,9 +3246,9 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                             {canManualAdd && pickHasMatches && (
                                 <button
                                     onClick={handleManualAdd}
-                                    className="w-full bg-[#39FF14]/10 border border-dashed border-[#39FF14]/40 rounded-2xl p-3.5 flex items-center gap-3 hover:bg-[#39FF14]/15 active:scale-[0.99] transition-all text-left mt-2.5"
+                                    className="w-full bg-primary/10 border border-dashed border-primary/40 rounded-2xl p-3.5 flex items-center gap-3 hover:bg-primary/15 active:scale-[0.99] transition-all text-left mt-2.5"
                                 >
-                                    <span className="w-11 h-11 rounded-2xl bg-[#39FF14]/15 border border-[#39FF14]/30 flex items-center justify-center text-[#39FF14] shrink-0"><UserPlus size={18} /></span>
+                                    <span className="w-11 h-11 rounded-2xl bg-primary/15 border border-primary/30 flex items-center justify-center text-primary shrink-0"><UserPlus size={18} /></span>
                                     <span className="min-w-0">
                                         <span className="block text-sm font-bold text-white truncate">“{pickQuery}” adıyla manuel ekle</span>
                                         <span className="block text-[0.6875rem] text-ink-4 mt-0.5">Kayıtsız oyuncu — yalnız bu taktik tahtasında yaşar.</span>
@@ -3294,31 +3294,31 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                 </button>
                                 <div className="text-right">
                                     <h3 className="text-lg font-extrabold text-white uppercase tracking-tighter italic">TAKTİK PAYLAŞ</h3>
-                                    <p className="text-[0.625rem] text-[#39FF14] font-bold uppercase tracking-widest">Maç Günü Kartı</p>
+                                    <p className="text-[0.625rem] text-primary font-bold uppercase tracking-widest">Maç Günü Kartı</p>
                                 </div>
                             </div>
                             
                             {/* The Card to Export */}
-                            <div id="match-day-card" className="w-full max-w-sm bg-[#0B2815] rounded-[40px] overflow-hidden border-4 border-[#161B22] shadow-[0_20px_60px_rgba(0,0,0,0.8)] relative group">
+                            <div id="match-day-card" className="w-full max-w-sm bg-[#0B2815] rounded-[40px] overflow-hidden border-4 border-surface-1 shadow-[0_20px_60px_rgba(0,0,0,0.8)] relative group">
                                 {/* Decorative Glow */}
-                                <div className="absolute -top-20 -left-20 w-40 h-40 bg-[#39FF14]/10 blur-[80px] rounded-full pointer-events-none"></div>
+                                <div className="absolute -top-20 -left-20 w-40 h-40 bg-primary/10 blur-[80px] rounded-full pointer-events-none"></div>
                                 <div className="absolute -bottom-20 -right-20 w-40 h-40 bg-emerald-500/10 blur-[80px] rounded-full pointer-events-none"></div>
 
                                 {/* Header */}
                                 <div className="p-8 text-center border-b border-white/10 bg-black/40 relative overflow-hidden">
-                                    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#39FF14] to-transparent opacity-50"></div>
+                                    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary to-transparent opacity-50"></div>
                                     <div className="absolute top-6 left-6 text-[0.625rem] font-extrabold text-ink-4 tracking-[0.2em] uppercase">OFFICIAL LINEUP</div>
                                     <div className="absolute top-6 right-6 text-[0.625rem] font-extrabold text-ink-4 tracking-[0.2em] uppercase">MATCH DAY</div>
                                     
-                                    <div className="w-20 h-20 mx-auto bg-gradient-to-br from-[#39FF14] to-emerald-600 rounded-[24px] flex items-center justify-center shadow-[0_10px_30px_rgba(57,255,20,0.3)] mb-4 relative group-hover:scale-110 transition-transform duration-500">
+                                    <div className="w-20 h-20 mx-auto bg-gradient-to-br from-primary to-emerald-600 rounded-[24px] flex items-center justify-center shadow-[0_10px_30px_rgba(57,255,20,0.3)] mb-4 relative group-hover:scale-110 transition-transform duration-500">
                                         <Shield size={40} className="text-black" />
                                         <div className="absolute inset-0 rounded-[24px] border-2 border-white/20"></div>
                                     </div>
                                     
                                     <h2 className="text-3xl font-extrabold text-white uppercase tracking-tighter italic leading-none">{activeTactic.name}</h2>
-                                    <div className="inline-flex items-center gap-2 mt-3 px-3 py-1 bg-[#39FF14]/10 rounded-full border border-[#39FF14]/20">
-                                        <div className="w-1.5 h-1.5 rounded-full bg-[#39FF14] animate-pulse"></div>
-                                        <span className="text-[0.625rem] text-[#39FF14] font-extrabold uppercase tracking-widest">{activeTactic.formation} SİSTEMİ</span>
+                                    <div className="inline-flex items-center gap-2 mt-3 px-3 py-1 bg-primary/10 rounded-full border border-primary/20">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></div>
+                                        <span className="text-[0.625rem] text-primary font-extrabold uppercase tracking-widest">{activeTactic.formation} SİSTEMİ</span>
                                     </div>
                                 </div>
 
@@ -3358,18 +3358,18 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                                 <div className={`relative w-full h-full rounded-full border-2 flex items-center justify-center shadow-[0_4px_15px_rgba(0,0,0,0.5)] ${slot.role === 'GK' ? 'bg-gradient-to-br from-orange-400 to-orange-600 border-orange-300' : 'bg-gradient-to-br from-[#1e2532] to-[#11151c] border-white/30'}`}>
                                                     <span className="text-white font-extrabold text-sm drop-shadow-md">{slot.player.name.charAt(0)}</span>
                                                     {activeTactic.captainId === slot.player.id && (
-                                                        <div className="absolute -top-2 -right-2 w-5 h-5 bg-gradient-to-br from-yellow-300 to-yellow-500 rounded-full flex items-center justify-center text-black text-[0.6875rem] font-extrabold border-2 border-[#161B22] shadow-sm">
+                                                        <div className="absolute -top-2 -right-2 w-5 h-5 bg-gradient-to-br from-yellow-300 to-yellow-500 rounded-full flex items-center justify-center text-black text-[0.6875rem] font-extrabold border-2 border-surface-1 shadow-sm">
                                                             K
                                                         </div>
                                                     )}
                                                     {slot.archetype && slot.archetype !== 'NONE' && (
-                                                        <div className="absolute -bottom-2 -right-2 w-6 h-6 bg-gradient-to-br from-yellow-400 to-amber-600 rounded-full flex items-center justify-center text-black text-xs border-2 border-[#161B22] shadow-lg">
+                                                        <div className="absolute -bottom-2 -right-2 w-6 h-6 bg-gradient-to-br from-yellow-400 to-amber-600 rounded-full flex items-center justify-center text-black text-xs border-2 border-surface-1 shadow-lg">
                                                             {ARCHETYPES[slot.archetype].icon}
                                                         </div>
                                                     )}
                                                 </div>
                                             ) : (
-                                                <div className={`relative w-full h-full rounded-full border-2 border-dashed bg-black/20 ${slot.role === 'GK' ? 'border-orange-500/50' : 'border-[#39FF14]/50'}`} />
+                                                <div className={`relative w-full h-full rounded-full border-2 border-dashed bg-black/20 ${slot.role === 'GK' ? 'border-orange-500/50' : 'border-primary/50'}`} />
                                             )}
                                             <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-1 flex flex-col items-center pointer-events-none">
                                                 {slot.player && (
@@ -3407,7 +3407,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                     {/* Dürüst veri: uydurma yaş/reyting satırı öldü (Spec §11) */}
                                     <div className="mt-4 pt-4 border-t border-white/5 flex justify-between items-center text-[0.625rem] text-ink-4 font-mono uppercase tracking-widest">
                                         <span>{activeTactic.formation} · {formatLabel(activeTactic.size)}</span>
-                                        <span className="text-[#39FF14]">Powered by OYNA</span>
+                                        <span className="text-primary">Powered by OYNA</span>
                                     </div>
                                 </div>
                             </div>
@@ -3416,7 +3416,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                 {/* BİRİNCİL: görsel (+ varsa link) → cihazın paylaş menüsü (WhatsApp/Instagram/…) */}
                                 <button
                                     onClick={handleShareTactic}
-                                    className="w-full py-5 bg-[#39FF14] text-black font-extrabold rounded-[24px] text-sm tracking-widest uppercase hover:scale-[1.02] active:scale-[0.98] transition-all shadow-[0_10px_30px_rgba(57,255,20,0.3)] flex items-center justify-center gap-3"
+                                    className="w-full py-5 bg-primary text-black font-extrabold rounded-[24px] text-sm tracking-widest uppercase hover:scale-[1.02] active:scale-[0.98] transition-all shadow-[0_10px_30px_rgba(57,255,20,0.3)] flex items-center justify-center gap-3"
                                 >
                                     <Share2 size={20} /> PAYLAŞ
                                 </button>
@@ -3426,7 +3426,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                     onClick={enterPresentMovement}
                                     className="w-full py-4 bg-white/8 border border-white/12 text-white font-extrabold rounded-[20px] text-xs tracking-widest uppercase hover:bg-white/12 transition-all flex items-center justify-center gap-2"
                                 >
-                                    <Eye size={16} className="text-[#39FF14]" /> SADECE HAREKETLE OYNAT
+                                    <Eye size={16} className="text-primary" /> SADECE HAREKETLE OYNAT
                                 </button>
 
                                 {/* İkincil aksiyonlar: görseli indir + linki kopyala */}
@@ -3435,13 +3435,13 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                         onClick={handleDownloadImage}
                                         className="py-4 bg-white/5 border border-white/10 text-white font-extrabold rounded-[20px] text-xs tracking-widest uppercase hover:bg-white/10 transition-all flex items-center justify-center gap-2"
                                     >
-                                        <SaveAll size={16} className="text-[#39FF14]" /> GÖRSELİ İNDİR
+                                        <SaveAll size={16} className="text-primary" /> GÖRSELİ İNDİR
                                     </button>
                                     <button
                                         onClick={handleCopyLink}
                                         className="py-4 bg-white/5 border border-white/10 text-white font-extrabold rounded-[20px] text-xs tracking-widest uppercase hover:bg-white/10 transition-all flex items-center justify-center gap-2"
                                     >
-                                        <Layers size={16} className="text-[#39FF14]" /> LİNKİ KOPYALA
+                                        <Layers size={16} className="text-primary" /> LİNKİ KOPYALA
                                     </button>
                                 </div>
 
@@ -3467,7 +3467,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                         }}
                                         className="w-full py-4 bg-white/8 border border-white/12 text-white font-extrabold rounded-[20px] text-xs tracking-widest uppercase hover:bg-white/12 transition-all flex items-center justify-center gap-2"
                                     >
-                                        <MessageSquare size={16} className="text-[#39FF14]" /> TAKIM SOHBETİNE GÖNDER
+                                        <MessageSquare size={16} className="text-primary" /> TAKIM SOHBETİNE GÖNDER
                                     </button>
                                 )}
 
@@ -3497,13 +3497,13 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                             initial={{ scale: 0.9, opacity: 0, y: 20 }}
                             animate={{ scale: 1, opacity: 1, y: 0 }}
                             exit={{ scale: 0.9, opacity: 0, y: 20 }}
-                            className="bg-[#161B22] border border-white/10 rounded-[32px] w-full max-w-lg overflow-hidden shadow-[0_0_60px_rgba(57,255,20,0.1)] flex flex-col max-h-[80vh]"
+                            className="bg-surface-1 border border-white/10 rounded-[32px] w-full max-w-lg overflow-hidden shadow-[0_0_60px_rgba(57,255,20,0.1)] flex flex-col max-h-[80vh]"
                             onClick={e => e.stopPropagation()}
                         >
-                            <div className="p-5 border-b border-white/5 bg-[#0A0E14]/50">
+                            <div className="p-5 border-b border-white/5 bg-bg/50">
                                 <div className="flex justify-between items-center mb-4">
                                     <h3 className="text-lg font-extrabold text-white uppercase tracking-widest flex items-center gap-2.5">
-                                        <List size={20} className="text-[#39FF14]" /> KÜTÜPHANE
+                                        <List size={20} className="text-primary" /> KÜTÜPHANE
                                     </h3>
                                     <button onClick={() => setShowTacticsModal(false)} aria-label="Kapat" className="p-2 text-gray-400 hover:text-white transition-colors bg-white/5 rounded-full"><X size={18} /></button>
                                 </div>
@@ -3511,14 +3511,14 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                 <div className="flex gap-2 overflow-x-auto no-scrollbar mb-3">
                                     <button
                                         onClick={() => setLibraryTab('MINE')}
-                                        className={`whitespace-nowrap px-3.5 py-2 rounded-full text-[0.625rem] font-extrabold uppercase tracking-widest border transition-all shrink-0 ${libraryTab === 'MINE' ? 'bg-[#39FF14] text-black border-[#39FF14]' : 'bg-white/5 text-gray-400 border-white/10 hover:text-white'}`}
+                                        className={`whitespace-nowrap px-3.5 py-2 rounded-full text-[0.625rem] font-extrabold uppercase tracking-widest border transition-all shrink-0 ${libraryTab === 'MINE' ? 'bg-primary text-black border-primary' : 'bg-white/5 text-gray-400 border-white/10 hover:text-white'}`}
                                     >Kütüphanem</button>
                                     {studioTeams.map(team => (
                                         <button
                                             key={team.team_id}
                                             onClick={() => setLibraryTab(team.team_id)}
                                             title={`Takım kütüphanesi: ${team.name}`}
-                                            className={`whitespace-nowrap px-3.5 py-2 rounded-full text-[0.625rem] font-extrabold uppercase tracking-widest border transition-all flex items-center gap-1.5 shrink-0 ${libraryTab === team.team_id ? 'bg-[#39FF14] text-black border-[#39FF14]' : 'bg-white/5 text-gray-400 border-white/10 hover:text-white'}`}
+                                            className={`whitespace-nowrap px-3.5 py-2 rounded-full text-[0.625rem] font-extrabold uppercase tracking-widest border transition-all flex items-center gap-1.5 shrink-0 ${libraryTab === team.team_id ? 'bg-primary text-black border-primary' : 'bg-white/5 text-gray-400 border-white/10 hover:text-white'}`}
                                         >
                                             <span className="w-3.5 h-3.5 rounded-[4px] flex items-center justify-center text-[0.6875rem] font-extrabold text-black leading-none" style={{ background: team.color1 || '#39FF14' }}>
                                                 {trUpper((team.short_name || team.name).charAt(0))}
@@ -3535,7 +3535,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                         onChange={(e) => setLibrarySearch(e.target.value)}
                                         placeholder="Taktik ara…"
                                         aria-label="Taktik ara"
-                                        className="w-full bg-black/40 border border-white/10 rounded-2xl pl-10 pr-9 py-2.5 text-sm text-white placeholder:text-ink-4 focus:border-[#39FF14]/50 focus:outline-none"
+                                        className="w-full bg-black/40 border border-white/10 rounded-2xl pl-10 pr-9 py-2.5 text-sm text-white placeholder:text-ink-4 focus:border-primary/50 focus:outline-none"
                                     />
                                     {librarySearch && (
                                         <button onClick={() => setLibrarySearch('')} aria-label="Aramayı temizle" className="absolute right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-white/10 flex items-center justify-center text-gray-400 hover:text-white"><X size={12} /></button>
@@ -3557,7 +3557,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                     libraryEntries.map((entry) => {
                                         const sm = statusMeta(entry.status);
                                         const toneClass: Record<StatusTone, string> = {
-                                            ok: 'bg-[#39FF14]/10 text-[#39FF14] border-[#39FF14]/25',
+                                            ok: 'bg-primary/10 text-primary border-primary/25',
                                             wait: 'bg-amber-400/10 text-amber-400 border-amber-400/25',
                                             no: 'bg-red-500/10 text-red-400 border-red-500/25',
                                             none: 'hidden',
@@ -3572,14 +3572,14 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                             <button
                                                 onClick={() => void openLibraryEntry(entry)}
                                                 disabled={isOpening || isDeleting}
-                                                className="flex-1 min-w-0 text-left p-4 rounded-2xl border border-white/5 bg-[#0A0E14]/30 hover:bg-[#39FF14]/10 hover:border-[#39FF14]/30 transition-all group flex items-center justify-between disabled:opacity-60"
+                                                className="flex-1 min-w-0 text-left p-4 rounded-2xl border border-white/5 bg-bg/30 hover:bg-primary/10 hover:border-primary/30 transition-all group flex items-center justify-between disabled:opacity-60"
                                             >
                                                 <div className="min-w-0">
                                                     <div className="flex items-center gap-2">
                                                         {entry.isActive && (
-                                                            <span title="Takımın aktif maç planı" className="shrink-0"><Star size={14} className="text-[#FACC15]" fill="#FACC15" /></span>
+                                                            <span title="Takımın aktif maç planı" className="shrink-0"><Star size={14} className="text-warning" fill="#FACC15" /></span>
                                                         )}
-                                                        <h4 className="text-white font-bold text-base group-hover:text-[#39FF14] transition-colors truncate">{entry.name}</h4>
+                                                        <h4 className="text-white font-bold text-base group-hover:text-primary transition-colors truncate">{entry.name}</h4>
                                                     </div>
                                                     <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                                                         <span className="text-[0.6875rem] font-mono text-ink-4 uppercase">{entry.formation || '—'} · {entry.size || '—'}</span>
@@ -3588,7 +3588,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                                         )}
                                                     </div>
                                                 </div>
-                                                <div className="w-9 h-9 rounded-full bg-white/5 flex items-center justify-center group-hover:bg-[#39FF14] group-hover:text-black transition-colors text-white/50 shrink-0 ml-3">
+                                                <div className="w-9 h-9 rounded-full bg-white/5 flex items-center justify-center group-hover:bg-primary group-hover:text-black transition-colors text-white/50 shrink-0 ml-3">
                                                     {isOpening ? <Loader2 size={16} className="animate-spin" /> : <ChevronRight size={16} />}
                                                 </div>
                                             </button>
@@ -3600,7 +3600,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                                     disabled={isDeleting || isOpening}
                                                     title="Taktiği sil"
                                                     aria-label={`${entry.name} taktiğini sil`}
-                                                    className="shrink-0 w-12 rounded-2xl border border-white/5 bg-[#0A0E14]/30 text-ink-4 hover:text-red-400 hover:bg-red-500/10 hover:border-red-500/30 transition-all flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed"
+                                                    className="shrink-0 w-12 rounded-2xl border border-white/5 bg-bg/30 text-ink-4 hover:text-red-400 hover:bg-red-500/10 hover:border-red-500/30 transition-all flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed"
                                                 >
                                                     {isDeleting ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
                                                 </button>
@@ -3629,12 +3629,12 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                             initial={{ scale: 0.9, opacity: 0, y: 20 }}
                             animate={{ scale: 1, opacity: 1, y: 0 }}
                             exit={{ scale: 0.9, opacity: 0, y: 20 }}
-                            className="bg-[#161B22] border border-white/10 rounded-[32px] w-full max-w-sm overflow-hidden shadow-[0_0_60px_rgba(57,255,20,0.1)] p-6"
+                            className="bg-surface-1 border border-white/10 rounded-[32px] w-full max-w-sm overflow-hidden shadow-[0_0_60px_rgba(57,255,20,0.1)] p-6"
                             onClick={e => e.stopPropagation()}
                         >
                             <div className="flex justify-between items-center mb-6">
                                 <h3 className="text-lg font-extrabold text-white uppercase tracking-widest flex items-center gap-2">
-                                    <Save size={20} className="text-[#39FF14]" /> TAKTİĞİ KAYDET
+                                    <Save size={20} className="text-primary" /> TAKTİĞİ KAYDET
                                 </h3>
                                 <button onClick={() => setShowSaveModal(false)} className="p-2 text-gray-400 hover:text-white transition-colors"><X size={20} /></button>
                             </div>
@@ -3647,7 +3647,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                         value={saveTacticName}
                                         onChange={(e) => setSaveTacticName(e.target.value)}
                                         placeholder="Bu taktiğin adı ne olsun?"
-                                        className="w-full bg-[#0A0E14] border border-white/10 rounded-2xl px-5 py-4 text-sm text-white placeholder-gray-600 focus:border-[#39FF14] outline-none transition-colors"
+                                        className="w-full bg-bg border border-white/10 rounded-2xl px-5 py-4 text-sm text-white placeholder-gray-600 focus:border-primary outline-none transition-colors"
                                     />
                                 </div>
                                 {/* Nereye kaydedilecek? Son anda değiştirilebilir —
@@ -3659,7 +3659,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                             <button
                                                 type="button"
                                                 onClick={() => setSelectedTeamId(null)}
-                                                className={`shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-full text-[0.625rem] font-extrabold uppercase tracking-widest border transition-all ${!selectedTeamId ? 'bg-[#39FF14] text-black border-[#39FF14]' : 'bg-white/5 text-gray-400 border-white/10 hover:text-white'}`}
+                                                className={`shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-full text-[0.625rem] font-extrabold uppercase tracking-widest border transition-all ${!selectedTeamId ? 'bg-primary text-black border-primary' : 'bg-white/5 text-gray-400 border-white/10 hover:text-white'}`}
                                             >
                                                 <List size={12} /> Kütüphanem
                                             </button>
@@ -3668,7 +3668,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                                     key={t.team_id}
                                                     type="button"
                                                     onClick={() => setSelectedTeamId(t.team_id)}
-                                                    className={`shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-full text-[0.625rem] font-extrabold uppercase tracking-widest border transition-all ${selectedTeamId === t.team_id ? 'bg-[#39FF14] text-black border-[#39FF14]' : 'bg-white/5 text-gray-400 border-white/10 hover:text-white'}`}
+                                                    className={`shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-full text-[0.625rem] font-extrabold uppercase tracking-widest border transition-all ${selectedTeamId === t.team_id ? 'bg-primary text-black border-primary' : 'bg-white/5 text-gray-400 border-white/10 hover:text-white'}`}
                                                 >
                                                     <span className="w-3.5 h-3.5 rounded-[4px] flex items-center justify-center text-[0.6875rem] font-extrabold text-black leading-none" style={{ background: t.color1 || '#39FF14' }}>
                                                         {trUpper((t.short_name || t.name).charAt(0))}
@@ -3680,15 +3680,15 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                     </div>
                                 )}
                                 {/* Hedef bağlam: status sunucuda belirlenir — dürüst önizleme */}
-                                <div className="bg-[#0A0E14] border border-white/10 rounded-2xl px-5 py-4 text-xs">
+                                <div className="bg-bg border border-white/10 rounded-2xl px-5 py-4 text-xs">
                                     {(() => {
                                         const teamRow = studioTeams.find(t => t.team_id === selectedTeamId);
                                         if (!teamRow) {
-                                            return <span className="flex items-center gap-2.5 text-gray-400"><List size={15} className="text-[#39FF14] shrink-0" /><span><b className="text-white">Kişisel kütüphanene</b> kaydedilir.</span></span>;
+                                            return <span className="flex items-center gap-2.5 text-gray-400"><List size={15} className="text-primary shrink-0" /><span><b className="text-white">Kişisel kütüphanene</b> kaydedilir.</span></span>;
                                         }
                                         const admin = teamRow.my_role === 'CAPTAIN' || teamRow.my_role === 'ADMIN';
                                         return admin
-                                            ? <span className="flex items-center gap-2.5 text-gray-400"><Shield size={15} className="text-[#39FF14] shrink-0" /><span><b className="text-white">{teamRow.name}</b> oyun defterine <b className="text-[#39FF14]">onaylı</b> kaydedilir.</span></span>
+                                            ? <span className="flex items-center gap-2.5 text-gray-400"><Shield size={15} className="text-primary shrink-0" /><span><b className="text-white">{teamRow.name}</b> oyun defterine <b className="text-primary">onaylı</b> kaydedilir.</span></span>
                                             : <span className="flex items-center gap-2.5 text-gray-400"><Shield size={15} className="text-amber-400 shrink-0" /><span><b className="text-white">{teamRow.name}</b> yöneticilerine <b className="text-amber-400">öneri</b> olarak gönderilir.</span></span>;
                                     })()}
                                 </div>
@@ -3698,9 +3698,9 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                         type="button"
                                         onClick={() => setAssignToMatch(v => !v)}
                                         aria-pressed={assignToMatch}
-                                        className={`w-full flex items-center gap-3 rounded-2xl px-4 py-3.5 border transition-all text-left ${assignToMatch ? 'bg-[#39FF14]/10 border-[#39FF14]/40' : 'bg-[#0A0E14] border-white/10 hover:border-white/25'}`}
+                                        className={`w-full flex items-center gap-3 rounded-2xl px-4 py-3.5 border transition-all text-left ${assignToMatch ? 'bg-primary/10 border-primary/40' : 'bg-bg border-white/10 hover:border-white/25'}`}
                                     >
-                                        <span className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-all ${assignToMatch ? 'bg-[#39FF14] border-[#39FF14]' : 'border-white/30'}`}>
+                                        <span className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-all ${assignToMatch ? 'bg-primary border-primary' : 'border-white/30'}`}>
                                             {assignToMatch && <Check size={13} className="text-black" />}
                                         </span>
                                         <span className="min-w-0 flex-1">
@@ -3709,7 +3709,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                                 {nextMatch.opponentName} · {nextMatch.date}{nextMatch.time ? ` ${nextMatch.time}` : ''}
                                             </span>
                                         </span>
-                                        <Calendar size={16} className={assignToMatch ? 'text-[#39FF14]' : 'text-ink-4'} />
+                                        <Calendar size={16} className={assignToMatch ? 'text-primary' : 'text-ink-4'} />
                                     </button>
                                 )}
                             </div>
@@ -3717,7 +3717,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                             <button
                                 onClick={handleSaveTactic}
                                 disabled={!saveTacticName.trim()}
-                                className="w-full h-14 bg-[#39FF14] text-black font-extrabold text-xs tracking-widest uppercase rounded-2xl hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_20px_rgba(57,255,20,0.2)]"
+                                className="w-full h-14 bg-primary text-black font-extrabold text-xs tracking-widest uppercase rounded-2xl hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_20px_rgba(57,255,20,0.2)]"
                             >
                                 {(() => {
                                     const teamRow = studioTeams.find(t => t.team_id === selectedTeamId);
@@ -3745,7 +3745,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                             initial={{ scale: 0.9, opacity: 0, y: 20 }}
                             animate={{ scale: 1, opacity: 1, y: 0 }}
                             exit={{ scale: 0.9, opacity: 0, y: 20 }}
-                            className="bg-[#161B22] border border-red-500/30 rounded-[32px] w-full max-w-sm overflow-hidden shadow-[0_0_60px_rgba(239,68,68,0.1)] p-6 text-center"
+                            className="bg-surface-1 border border-red-500/30 rounded-[32px] w-full max-w-sm overflow-hidden shadow-[0_0_60px_rgba(239,68,68,0.1)] p-6 text-center"
                             onClick={e => e.stopPropagation()}
                         >
                             <div className="w-16 h-16 rounded-full bg-red-500/10 text-red-500 flex items-center justify-center mx-auto mb-4 border border-red-500/20">
@@ -3788,7 +3788,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                         initial={{ opacity: 0, y: 40 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 40 }}
-                        className="fixed bottom-20 left-1/2 -translate-x-1/2 z-[90] w-[calc(100%-2.5rem)] max-w-md rounded-3xl bg-[#161B22] border border-amber-400/30 shadow-[0_8px_40px_rgba(0,0,0,0.6)] p-4"
+                        className="fixed bottom-20 left-1/2 -translate-x-1/2 z-[90] w-[calc(100%-2.5rem)] max-w-md rounded-3xl bg-surface-1 border border-amber-400/30 shadow-[0_8px_40px_rgba(0,0,0,0.6)] p-4"
                     >
                         <div className="text-[0.625rem] font-extrabold uppercase tracking-widest text-amber-400 mb-1">
                             Onay Bekleyen Öneri
@@ -3807,7 +3807,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                             <button
                                 onClick={() => decideProposal(true)}
                                 disabled={decidingProposal}
-                                className="flex-1 min-h-[44px] rounded-2xl bg-[#39FF14] text-[#0A0E14] text-sm font-extrabold active:scale-[0.97] disabled:opacity-50"
+                                className="flex-1 min-h-[44px] rounded-2xl bg-primary text-on-primary text-sm font-extrabold active:scale-[0.97] disabled:opacity-50"
                             >
                                 {decidingProposal ? '…' : 'Onayla'}
                             </button>
@@ -3848,7 +3848,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                     maxLength={14}
                                     autoFocus
                                     placeholder="ör. Ahmet, 10 no"
-                                    className="w-full bg-[#0A0E14] border border-white/10 rounded-2xl px-4 py-3 text-sm text-white placeholder-gray-600 focus:border-red-500 outline-none transition-colors mb-4"
+                                    className="w-full bg-bg border border-white/10 rounded-2xl px-4 py-3 text-sm text-white placeholder-gray-600 focus:border-red-500 outline-none transition-colors mb-4"
                                 />
 
                                 {/* Not */}
@@ -3861,7 +3861,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                     onChange={e => updateOpponent(opp.id, { note: e.target.value })}
                                     maxLength={10}
                                     placeholder="ör. hızlı, sağ ayak"
-                                    className="w-full bg-[#0A0E14] border border-white/10 rounded-2xl px-4 py-3 text-sm text-white placeholder-gray-600 focus:border-red-500 outline-none transition-colors mb-1.5"
+                                    className="w-full bg-bg border border-white/10 rounded-2xl px-4 py-3 text-sm text-white placeholder-gray-600 focus:border-red-500 outline-none transition-colors mb-1.5"
                                 />
                                 <p className="text-[0.6875rem] text-ink-4 mb-5 px-1">İsim ve not sahada rakibin altında görünür (not maks 10 karakter).</p>
 
@@ -3872,7 +3872,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                     ><Trash2 size={14} /> Sil</button>
                                     <button
                                         onClick={() => setNamingOpp(null)}
-                                        className="flex-1 py-3 rounded-2xl bg-[#39FF14] text-black text-xs font-extrabold uppercase tracking-widest hover:scale-[1.02] active:scale-[0.98] transition-all"
+                                        className="flex-1 py-3 rounded-2xl bg-primary text-black text-xs font-extrabold uppercase tracking-widest hover:scale-[1.02] active:scale-[0.98] transition-all"
                                     >Tamam</button>
                                 </div>
                             </motion.div>
@@ -3903,7 +3903,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                 {/* Artık doğrudan silmez: içeriği listeleyip seçtirir. */}
                                 <button onClick={() => { setClearPicks([]); setClearMode('drawings'); }} disabled={drawings.length === 0}
                                     className="w-full flex items-center justify-between px-4 py-3 rounded-2xl bg-white/5 text-white text-sm font-bold hover:bg-white/10 transition-all disabled:opacity-30 disabled:cursor-not-allowed">
-                                    <span className="flex items-center gap-3"><PenTool size={16} className="text-[#39FF14]" /> Sadece çizimler</span>
+                                    <span className="flex items-center gap-3"><PenTool size={16} className="text-primary" /> Sadece çizimler</span>
                                     <span className="flex items-center gap-2 text-[0.6875rem] text-ink-4 font-mono">{drawings.length} <ChevronRight size={14} /></span>
                                 </button>
                                 <button onClick={() => { setClearPicks([]); setClearMode('opponents'); }} disabled={activeTactic.opponents.length === 0}
@@ -4094,7 +4094,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                 <button
                                     onClick={() => void reloadConflict()}
                                     disabled={reloadingConflict}
-                                    className="w-full py-3 rounded-2xl bg-[#39FF14] text-black font-extrabold text-sm hover:brightness-110 transition flex items-center justify-center gap-2 disabled:opacity-60"
+                                    className="w-full py-3 rounded-2xl bg-primary text-black font-extrabold text-sm hover:brightness-110 transition flex items-center justify-center gap-2 disabled:opacity-60"
                                 >
                                     {reloadingConflict ? <Loader2 size={16} className="animate-spin" /> : <RotateCcw size={16} />} Güncel sürümü getir
                                 </button>
@@ -4123,12 +4123,12 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                     // TEK SAYFA kapsamlı araç tanıtımı (demo/örnek-oynatma yok):
                     // tüm araçlar bir ekranda; kullanıcı-başına bir kez görünür.
                     const rows = [
-                        { icon: <Users size={18} className="text-[#39FF14]" />, title: 'Oyuncuları yerleştir', body: 'Sahadaki + işaretine dokun; arkadaşını/takımını ekle ya da isim yazıp elle koy.' },
-                        { icon: <PenTool size={18} className="text-[#39FF14]" />, title: 'KOŞU çiz', body: 'KOŞU aracını seç, bir oyuncudan başlayıp parmağınla hareket çizgisini çek.' },
-                        { icon: <Radio size={18} className="text-[#39FF14]" />, title: 'PAS çiz — tek top, zincir', body: 'Sahada tek top vardır. İlk pası çiz; sonraki pas otomatik önceki pasın bittiği yerden başlar (vurgulu nokta).' },
-                        { icon: <Play size={18} className="text-[#39FF14]" />, title: 'OYNAT / DURDUR', body: "OYNAT taktiği canlandırır. DURDUR olduğu yerde DONDURUR; OYNAT kaldığı yerden devam eder." },
-                        { icon: <Gauge size={18} className="text-[#39FF14]" />, title: 'Tempo & taraf', body: 'TEMPO ile hızı ayarla. BİZ/RAKİP ile takım değiştir; boş sahaya uzun bas → rakip ekle.' },
-                        { icon: <Share2 size={18} className="text-[#39FF14]" />, title: 'Paylaş', body: 'PAYLAŞ ile taktiğini takımına gönder ya da dışa aktar.' },
+                        { icon: <Users size={18} className="text-primary" />, title: 'Oyuncuları yerleştir', body: 'Sahadaki + işaretine dokun; arkadaşını/takımını ekle ya da isim yazıp elle koy.' },
+                        { icon: <PenTool size={18} className="text-primary" />, title: 'KOŞU çiz', body: 'KOŞU aracını seç, bir oyuncudan başlayıp parmağınla hareket çizgisini çek.' },
+                        { icon: <Radio size={18} className="text-primary" />, title: 'PAS çiz — tek top, zincir', body: 'Sahada tek top vardır. İlk pası çiz; sonraki pas otomatik önceki pasın bittiği yerden başlar (vurgulu nokta).' },
+                        { icon: <Play size={18} className="text-primary" />, title: 'OYNAT / DURDUR', body: "OYNAT taktiği canlandırır. DURDUR olduğu yerde DONDURUR; OYNAT kaldığı yerden devam eder." },
+                        { icon: <Gauge size={18} className="text-primary" />, title: 'Tempo & taraf', body: 'TEMPO ile hızı ayarla. BİZ/RAKİP ile takım değiştir; boş sahaya uzun bas → rakip ekle.' },
+                        { icon: <Share2 size={18} className="text-primary" />, title: 'Paylaş', body: 'PAYLAŞ ile taktiğini takımına gönder ya da dışa aktar.' },
                     ];
                     return (
                         <motion.div
@@ -4140,8 +4140,8 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                 className="w-full max-w-sm max-h-[88vh] flex flex-col rounded-3xl bg-[#0B1120] border border-white/10 shadow-2xl overflow-hidden"
                             >
                                 <div className="px-6 pt-6 pb-3 shrink-0">
-                                    <div className="w-12 h-12 rounded-2xl bg-[#39FF14]/12 border border-[#39FF14]/25 flex items-center justify-center mb-3">
-                                        <Sparkles size={22} className="text-[#39FF14]" />
+                                    <div className="w-12 h-12 rounded-2xl bg-primary/12 border border-primary/25 flex items-center justify-center mb-3">
+                                        <Sparkles size={22} className="text-primary" />
                                     </div>
                                     <h3 className="text-white text-xl font-extrabold leading-tight">Taktik Stüdyo</h3>
                                     <p className="text-gray-400 text-[0.75rem] leading-relaxed mt-1">Sahayı diz, hareketleri çiz, izle ve paylaş. Araçların tamamı:</p>
@@ -4149,7 +4149,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                 <div className="flex-1 overflow-y-auto overscroll-contain px-6 space-y-2.5 custom-scrollbar">
                                     {rows.map((r, k) => (
                                         <div key={k} className="flex gap-3 rounded-2xl border border-white/8 bg-white/[0.03] p-3">
-                                            <div className="w-9 h-9 rounded-xl bg-[#39FF14]/10 border border-[#39FF14]/25 flex items-center justify-center shrink-0">{r.icon}</div>
+                                            <div className="w-9 h-9 rounded-xl bg-primary/10 border border-primary/25 flex items-center justify-center shrink-0">{r.icon}</div>
                                             <div className="min-w-0">
                                                 <p className="text-[0.8125rem] font-extrabold text-white leading-tight">{r.title}</p>
                                                 <p className="text-[0.6875rem] text-gray-400 leading-relaxed mt-0.5">{r.body}</p>
@@ -4158,7 +4158,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                     ))}
                                 </div>
                                 <div className="p-5 pt-4 shrink-0">
-                                    <button onClick={dismissOnboarding} className="w-full py-3.5 rounded-2xl bg-[#39FF14] text-black font-extrabold text-sm hover:brightness-110 transition">
+                                    <button onClick={dismissOnboarding} className="w-full py-3.5 rounded-2xl bg-primary text-black font-extrabold text-sm hover:brightness-110 transition">
                                         Başla
                                     </button>
                                 </div>
@@ -4179,8 +4179,8 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                             initial={reduceMotion ? false : { scale: 0.92, y: 12 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.92, opacity: 0 }}
                             className="w-full max-w-sm rounded-3xl bg-[#0B1120] border border-white/10 p-6 shadow-2xl"
                         >
-                            <div className="w-12 h-12 rounded-2xl bg-[#39FF14]/15 border border-[#39FF14]/30 flex items-center justify-center mb-4">
-                                <RotateCcw size={22} className="text-[#39FF14]" />
+                            <div className="w-12 h-12 rounded-2xl bg-primary/15 border border-primary/30 flex items-center justify-center mb-4">
+                                <RotateCcw size={22} className="text-primary" />
                             </div>
                             <h3 className="text-white text-lg font-extrabold mb-1">Kaldığın yerden devam?</h3>
                             <p className="text-gray-400 text-[0.8125rem] leading-relaxed mb-5">
@@ -4190,7 +4190,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                 <button onClick={discardResumeDraft} className="flex-1 py-3 rounded-2xl bg-white/5 text-gray-300 font-extrabold text-sm hover:bg-white/10 transition">
                                     Yeni Başla
                                 </button>
-                                <button onClick={applyResumeDraft} className="flex-1 py-3 rounded-2xl bg-[#39FF14] text-black font-extrabold text-sm hover:brightness-110 transition flex items-center justify-center gap-2">
+                                <button onClick={applyResumeDraft} className="flex-1 py-3 rounded-2xl bg-primary text-black font-extrabold text-sm hover:brightness-110 transition flex items-center justify-center gap-2">
                                     <RotateCcw size={16} /> Devam Et
                                 </button>
                             </div>
@@ -4204,9 +4204,9 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                 {isLandscape && (
                     <motion.div
                         initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 20 }}
-                        className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[90] px-4 py-2 rounded-full bg-black/80 backdrop-blur border border-[#39FF14]/30 flex items-center gap-2 pointer-events-none"
+                        className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[90] px-4 py-2 rounded-full bg-black/80 backdrop-blur border border-primary/30 flex items-center gap-2 pointer-events-none"
                     >
-                        <Sparkles size={14} className="text-[#39FF14]" />
+                        <Sparkles size={14} className="text-primary" />
                         <span className="text-[0.6875rem] text-white font-bold">Sunum modu — sahayı büyütmek için yakınlaştır</span>
                     </motion.div>
                 )}

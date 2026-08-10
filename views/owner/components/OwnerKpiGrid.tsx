@@ -23,31 +23,31 @@ export interface OwnerKpiItem {
 
 const accentMap = {
   emerald: {
-    card: 'from-emerald-900/35 to-[#161B22] border-emerald-500/20 hover:border-emerald-500/40',
+    card: 'from-emerald-900/35 to-surface-1 border-emerald-500/20 hover:border-emerald-500/40',
     label: 'text-emerald-400',
     value: 'text-white group-hover:text-emerald-200',
     badge: 'text-emerald-500 bg-emerald-500/10',
   },
   blue: {
-    card: 'from-blue-900/30 to-[#161B22] border-blue-500/20 hover:border-blue-500/40',
+    card: 'from-blue-900/30 to-surface-1 border-blue-500/20 hover:border-blue-500/40',
     label: 'text-blue-400',
     value: 'text-white group-hover:text-blue-200',
     badge: 'text-blue-400 bg-blue-500/10',
   },
   amber: {
-    card: 'from-amber-900/25 to-[#161B22] border-amber-500/20 hover:border-amber-500/40',
+    card: 'from-amber-900/25 to-surface-1 border-amber-500/20 hover:border-amber-500/40',
     label: 'text-amber-400',
     value: 'text-amber-300 group-hover:text-amber-200',
     badge: 'text-amber-400 bg-amber-500/10',
   },
   red: {
-    card: 'from-red-900/25 to-[#161B22] border-red-500/20 hover:border-red-500/40',
+    card: 'from-red-900/25 to-surface-1 border-red-500/20 hover:border-red-500/40',
     label: 'text-red-400',
     value: 'text-red-400 group-hover:text-red-300',
     badge: 'text-red-400 bg-red-500/10',
   },
   slate: {
-    card: 'from-[#161B22] to-[#12161f] border-white/5 hover:border-white/15',
+    card: 'from-surface-1 to-[#12161f] border-white/5 hover:border-white/15',
     label: 'text-slate-400',
     value: 'text-white group-hover:text-slate-200',
     badge: 'text-slate-500 bg-white/5',

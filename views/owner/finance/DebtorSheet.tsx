@@ -97,7 +97,7 @@ export const DebtorSheet: React.FC<Props> = ({ debtor, readOnly, onClose, onChan
         payOpen ? (
           <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-4 mb-4">
             <label className="text-[10px] font-extrabold text-gray-500 uppercase block mb-1.5">Alınan tutar</label>
-            <input inputMode="decimal" className="w-full bg-[#0A0E14] border border-white/10 rounded-xl p-3 text-white mb-3" value={amountStr} onChange={(e) => setAmountStr(e.target.value)} />
+            <input inputMode="decimal" className="w-full bg-bg border border-white/10 rounded-xl p-3 text-white mb-3" value={amountStr} onChange={(e) => setAmountStr(e.target.value)} />
             <div className="flex gap-2 mb-3">
               {METHODS.map((m) => (
                 <button key={m.id} type="button" onClick={() => setMethod(m.id)}

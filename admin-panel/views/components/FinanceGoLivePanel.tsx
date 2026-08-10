@@ -205,9 +205,9 @@ export const FinanceGoLivePanel: React.FC = () => {
   if (loading) {
     return (
       <div className="space-y-4">
-        <div className="h-40 bg-[#161B22]/60 border border-white/[0.06] rounded-2xl animate-pulse" />
-        <div className="h-32 bg-[#161B22]/60 border border-white/[0.06] rounded-2xl animate-pulse" />
-        <div className="h-48 bg-[#161B22]/60 border border-white/[0.06] rounded-2xl animate-pulse" />
+        <div className="h-40 bg-surface-1/60 border border-white/[0.06] rounded-2xl animate-pulse" />
+        <div className="h-32 bg-surface-1/60 border border-white/[0.06] rounded-2xl animate-pulse" />
+        <div className="h-48 bg-surface-1/60 border border-white/[0.06] rounded-2xl animate-pulse" />
       </div>
     );
   }
@@ -230,7 +230,7 @@ export const FinanceGoLivePanel: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* 1) Gerçek Ödemeye Geçiş — Ön-Uçuş */}
-      <section className="bg-[#161B22]/60 border border-white/[0.06] rounded-2xl p-5">
+      <section className="bg-surface-1/60 border border-white/[0.06] rounded-2xl p-5">
         <div className="flex items-start justify-between gap-4 mb-4">
           <div className="flex items-start gap-3 min-w-0">
             <div className="shrink-0 w-9 h-9 rounded-xl bg-cyan-500/10 border border-cyan-500/15 flex items-center justify-center">
@@ -310,7 +310,7 @@ export const FinanceGoLivePanel: React.FC = () => {
       </section>
 
       {/* 2) Ödeme Sağlayıcısı */}
-      <section className="bg-[#161B22]/60 border border-white/[0.06] rounded-2xl p-5">
+      <section className="bg-surface-1/60 border border-white/[0.06] rounded-2xl p-5">
         <div className="flex items-start gap-3 mb-4">
           <div className="shrink-0 w-9 h-9 rounded-xl bg-cyan-500/10 border border-cyan-500/15 flex items-center justify-center">
             <CreditCard size={18} className="text-cyan-400" />
@@ -416,7 +416,7 @@ export const FinanceGoLivePanel: React.FC = () => {
       </section>
 
       {/* F5.7 — Cashout (para çekme) açılış hazırlığı */}
-      <section className="bg-[#161B22]/60 border border-white/[0.06] rounded-2xl p-5">
+      <section className="bg-surface-1/60 border border-white/[0.06] rounded-2xl p-5">
         <div className="flex items-start gap-3 mb-4">
           <div className="shrink-0 w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/15 flex items-center justify-center">
             <Banknote size={18} className="text-emerald-400" />
@@ -469,7 +469,7 @@ export const FinanceGoLivePanel: React.FC = () => {
       </section>
 
       {/* 3) Mutabakat (Son 30 gün) */}
-      <section className="bg-[#161B22]/60 border border-white/[0.06] rounded-2xl p-5">
+      <section className="bg-surface-1/60 border border-white/[0.06] rounded-2xl p-5">
         <div className="flex items-start gap-3 mb-4">
           <div className="shrink-0 w-9 h-9 rounded-xl bg-cyan-500/10 border border-cyan-500/15 flex items-center justify-center">
             <Scale size={18} className="text-cyan-400" />

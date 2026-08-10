@@ -55,7 +55,7 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
             <button
               onClick={onConfirm}
               className={`flex-1 min-h-[44px] rounded-2xl text-sm font-bold active:scale-[0.97] ${
-                danger ? 'bg-[#FF4D4D] text-white' : 'bg-[#39FF14] text-[#0A0E14]'
+                danger ? 'bg-[#FF4D4D] text-white' : 'bg-primary text-on-primary'
               }`}
             >
               {confirmLabel}

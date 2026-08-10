@@ -183,7 +183,7 @@ export const ProviderDetailPanel: React.FC<ProviderDetailPanelProps> = ({ provid
               <h4 className="text-[10px] font-extrabold text-gray-500 uppercase tracking-widest mb-3 flex items-center gap-1">
                 <Smartphone size={12} /> Uygulama Önizlemesi — kaptanın gördüğü
               </h4>
-              <div className="mx-auto max-w-[360px] bg-[#0A0E14] rounded-[28px] border border-white/10 p-4 shadow-inner">
+              <div className="mx-auto max-w-[360px] bg-bg rounded-[28px] border border-white/10 p-4 shadow-inner">
                 <MarketplaceCard item={provider} type={type} onClick={() => {}} />
               </div>
             </section>

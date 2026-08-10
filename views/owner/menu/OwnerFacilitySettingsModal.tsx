@@ -308,7 +308,7 @@ export const OwnerFacilitySettingsModal: React.FC<Props> = ({
   };
 
   const descLen = description.trim().length;
-  const descTone = descLen === 0 ? 'text-gray-600' : descLen < DESC_MIN ? 'text-red-400' : 'text-[#10B981]';
+  const descTone = descLen === 0 ? 'text-gray-600' : descLen < DESC_MIN ? 'text-red-400' : 'text-cat-pitch';
   const mapCenter: [number, number] = latLng ?? [ORDU_CENTER.lat, ORDU_CENTER.lng];
 
   const TABS: { id: Tab; label: string }[] = [
@@ -326,7 +326,7 @@ export const OwnerFacilitySettingsModal: React.FC<Props> = ({
       isSaving={isSaving}
     >
       <div className="max-w-xl mx-auto space-y-6">
-        <div className="flex gap-1.5 p-1 bg-[#0A0E14] rounded-2xl border border-white/5">
+        <div className="flex gap-1.5 p-1 bg-bg rounded-2xl border border-white/5">
           {TABS.map((tab) => (
             <button
               key={tab.id}
@@ -360,7 +360,7 @@ export const OwnerFacilitySettingsModal: React.FC<Props> = ({
               <input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full bg-[#161B22] border border-white/5 rounded-xl px-4 py-3 text-white font-bold outline-none focus:border-blue-500/40"
+                className="w-full bg-surface-1 border border-white/5 rounded-xl px-4 py-3 text-white font-bold outline-none focus:border-blue-500/40"
                 placeholder="Tesis adı"
               />
             </div>
@@ -373,7 +373,7 @@ export const OwnerFacilitySettingsModal: React.FC<Props> = ({
                 value={description}
                 onChange={(e) => setDescription(e.target.value.slice(0, DESC_MAX))}
                 rows={4}
-                className="w-full bg-[#161B22] border border-white/5 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-blue-500/40 resize-none"
+                className="w-full bg-surface-1 border border-white/5 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-blue-500/40 resize-none"
                 placeholder="Zemini, aydınlatmayı, ulaşım kolaylığını ve öne çıkan imkanları anlat. Örn: 'Kapalı ve açık iki saha, profesyonel zemin ve ışıklandırma var; duş ve soyunma odaları tam donanımlı.'"
               />
             </div>
@@ -383,7 +383,7 @@ export const OwnerFacilitySettingsModal: React.FC<Props> = ({
                 <select
                   value={city}
                   onChange={(e) => { setCity(e.target.value); setDistrict(''); }}
-                  className="w-full bg-[#161B22] border border-white/5 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-blue-500/40 appearance-none"
+                  className="w-full bg-surface-1 border border-white/5 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-blue-500/40 appearance-none"
                 >
                   <option value="" disabled>İl seçin</option>
                   {cityOptions.map((c) => (
@@ -396,7 +396,7 @@ export const OwnerFacilitySettingsModal: React.FC<Props> = ({
                 <select
                   value={district}
                   onChange={(e) => setDistrict(e.target.value)}
-                  className="w-full bg-[#161B22] border border-white/5 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-blue-500/40 appearance-none"
+                  className="w-full bg-surface-1 border border-white/5 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-blue-500/40 appearance-none"
                 >
                   <option value="" disabled>İlçe seçin</option>
                   {districtOptions.map((d) => (
@@ -413,7 +413,7 @@ export const OwnerFacilitySettingsModal: React.FC<Props> = ({
                 <input
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
-                  className="flex-1 bg-[#161B22] border border-white/5 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-blue-500/40"
+                  className="flex-1 bg-surface-1 border border-white/5 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-blue-500/40"
                   placeholder="Mahalle, sokak, no"
                 />
                 <button
@@ -453,7 +453,7 @@ export const OwnerFacilitySettingsModal: React.FC<Props> = ({
                     className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold border transition-colors ${
                       active
                         ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300'
-                        : 'bg-[#161B22] border-white/5 text-gray-400 hover:text-white'
+                        : 'bg-surface-1 border-white/5 text-gray-400 hover:text-white'
                     }`}
                   >
                     {active ? <Check size={12} /> : <Icon size={12} />}
@@ -487,7 +487,7 @@ export const OwnerFacilitySettingsModal: React.FC<Props> = ({
                 value={customAmenity}
                 onChange={(e) => setCustomAmenity(e.target.value)}
                 placeholder="Özel olanak ekle (vitrinde 'Diğer' altında görünür)"
-                className="flex-1 bg-[#161B22] border border-white/5 rounded-xl px-4 py-3 text-white text-sm outline-none"
+                className="flex-1 bg-surface-1 border border-white/5 rounded-xl px-4 py-3 text-white text-sm outline-none"
               />
               <button
                 type="button"
@@ -522,7 +522,7 @@ export const OwnerFacilitySettingsModal: React.FC<Props> = ({
               </MapContainer>
             </div>
             <div className="flex items-center justify-between text-[11px] font-bold">
-              <span className={latLng ? 'text-[#10B981]' : 'text-red-400'}>
+              <span className={latLng ? 'text-cat-pitch' : 'text-red-400'}>
                 {latLng ? `Pin: ${latLng[0].toFixed(5)}, ${latLng[1].toFixed(5)}` : 'Pin henüz yerleştirilmedi — vitrin için zorunlu'}
               </span>
             </div>
@@ -558,7 +558,7 @@ export const OwnerFacilitySettingsModal: React.FC<Props> = ({
         {activeTab === 'showcase' && isRealPitch && (
           <div className="space-y-4">
             {/* Yayın anahtarı (Karar #28) */}
-            <div className="bg-[#0A0E14] border border-white/5 rounded-2xl p-5 flex items-center justify-between">
+            <div className="bg-bg border border-white/5 rounded-2xl p-5 flex items-center justify-between">
               <div>
                 <p className="text-sm font-bold text-white">Vitrinde Göster</p>
                 <p className="text-[11px] text-gray-500 mt-1 max-w-[220px] leading-relaxed">
@@ -568,7 +568,7 @@ export const OwnerFacilitySettingsModal: React.FC<Props> = ({
               <button
                 type="button"
                 onClick={handleTogglePublished}
-                className={`relative w-14 h-8 rounded-full transition-colors ${isPublished ? 'bg-[#10B981]' : 'bg-gray-700'}`}
+                className={`relative w-14 h-8 rounded-full transition-colors ${isPublished ? 'bg-cat-pitch' : 'bg-gray-700'}`}
               >
                 <span className={`absolute top-1 w-6 h-6 rounded-full bg-white transition-all ${isPublished ? 'left-7' : 'left-1'}`} />
               </button>
@@ -577,7 +577,7 @@ export const OwnerFacilitySettingsModal: React.FC<Props> = ({
             <button
               type="button"
               onClick={() => setShowPreview(true)}
-              className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-[#FACC15]/10 border border-[#FACC15]/40 text-[#FACC15] text-xs font-extrabold uppercase tracking-wider"
+              className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-warning/10 border border-warning/40 text-warning text-xs font-extrabold uppercase tracking-wider"
             >
               <Eye size={15} /> Vitrinde Önizle
             </button>
@@ -589,7 +589,7 @@ export const OwnerFacilitySettingsModal: React.FC<Props> = ({
                   <button
                     type="button"
                     onClick={onOpenCourts}
-                    className="py-3 rounded-2xl bg-[#161B22] border border-white/5 text-gray-300 text-[11px] font-bold hover:border-white/20 transition-colors"
+                    className="py-3 rounded-2xl bg-surface-1 border border-white/5 text-gray-300 text-[11px] font-bold hover:border-white/20 transition-colors"
                   >
                     Kortlar
                   </button>
@@ -598,7 +598,7 @@ export const OwnerFacilitySettingsModal: React.FC<Props> = ({
                   <button
                     type="button"
                     onClick={onOpenPricing}
-                    className="py-3 rounded-2xl bg-[#161B22] border border-white/5 text-gray-300 text-[11px] font-bold hover:border-white/20 transition-colors"
+                    className="py-3 rounded-2xl bg-surface-1 border border-white/5 text-gray-300 text-[11px] font-bold hover:border-white/20 transition-colors"
                   >
                     Saha Tarifeleri
                   </button>
@@ -607,7 +607,7 @@ export const OwnerFacilitySettingsModal: React.FC<Props> = ({
                   <button
                     type="button"
                     onClick={onOpenHours}
-                    className="py-3 rounded-2xl bg-[#161B22] border border-white/5 text-gray-300 text-[11px] font-bold hover:border-white/20 transition-colors"
+                    className="py-3 rounded-2xl bg-surface-1 border border-white/5 text-gray-300 text-[11px] font-bold hover:border-white/20 transition-colors"
                   >
                     Çalışma Saatleri
                   </button>

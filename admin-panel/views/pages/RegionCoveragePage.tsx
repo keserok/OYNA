@@ -95,7 +95,7 @@ export const RegionCoveragePage: React.FC = () => {
               <h2 className="text-xs font-extrabold text-gray-500 uppercase tracking-widest mb-2 flex items-center gap-1.5"><MapPin size={12} /> {city}</h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {items.map((r) => (
-                  <div key={r.id} className={`flex items-center justify-between p-3 rounded-xl border ${r.is_active ? 'bg-[#161B22] border-white/10' : 'bg-[#0D1117] border-white/5 opacity-70'}`}>
+                  <div key={r.id} className={`flex items-center justify-between p-3 rounded-xl border ${r.is_active ? 'bg-surface-1 border-white/10' : 'bg-[#0D1117] border-white/5 opacity-70'}`}>
                     <div className="min-w-0">
                       <div className="text-sm font-bold text-white truncate">{r.district ?? 'Tüm il'}</div>
                       <div className={`text-[10px] font-bold ${r.has_boundary ? 'text-green-400' : 'text-gray-500'}`}>

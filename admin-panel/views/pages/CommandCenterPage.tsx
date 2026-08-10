@@ -115,7 +115,7 @@ export const CommandCenterPage: React.FC<CommandCenterPageProps> = ({ mode = 'em
   const QueueSection: React.FC<{ title: string; count: number; children: React.ReactNode; route?: GodViewSubRoute }> = ({
     title, count, children, route,
   }) => (
-    <div className="bg-[#161B22]/60 border border-white/[0.06] rounded-2xl p-4">
+    <div className="bg-surface-1/60 border border-white/[0.06] rounded-2xl p-4">
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-xs font-bold text-white">{title} <span className="text-gray-500">({count})</span></h3>
         {route && onNavigate && (
@@ -248,7 +248,7 @@ export const CommandCenterPage: React.FC<CommandCenterPageProps> = ({ mode = 'em
 
             <QueueSection title="Para Çekme" count={queue.pending_withdrawals?.length ?? 0} route="MODERATION">
               {(queue.pending_withdrawals ?? []).slice(0, 5).map((w) => (
-                <p key={w.id} className="text-[11px] text-[#39FF14] py-1 border-b border-white/[0.06]">{Number(w.amount).toLocaleString('tr')}₺</p>
+                <p key={w.id} className="text-[11px] text-primary py-1 border-b border-white/[0.06]">{Number(w.amount).toLocaleString('tr')}₺</p>
               ))}
             </QueueSection>
 

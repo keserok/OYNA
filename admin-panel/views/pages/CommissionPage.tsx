@@ -115,7 +115,7 @@ export const CommissionPage: React.FC = () => {
           </button>
           <button
             onClick={() => setEditRow({ _isNew: true, scope: 'GLOBAL', model: 'MODEL_A', rate_pct: 15, markup_pct: 0, markup_amount: 0, is_active: true })}
-            className="h-9 px-3 rounded-xl bg-[#39FF14] text-black font-bold flex items-center gap-2 text-sm hover:brightness-110 active:scale-95 transition-all">
+            className="h-9 px-3 rounded-xl bg-primary text-black font-bold flex items-center gap-2 text-sm hover:brightness-110 active:scale-95 transition-all">
             <Plus size={14} /> Yeni Kural
           </button>
         </div>
@@ -125,9 +125,9 @@ export const CommissionPage: React.FC = () => {
       {(() => {
         const global = rows.find(r => r.scope === 'GLOBAL' && r.is_active);
         return global ? (
-          <div className="mb-6 bg-[#1a2000] border border-[#39FF14]/20 rounded-2xl p-5 flex items-center gap-4">
-            <div className="w-14 h-14 bg-[#39FF14]/10 rounded-2xl flex items-center justify-center shrink-0">
-              <span className="text-[#39FF14] font-extrabold text-xl">%{global.rate_pct}</span>
+          <div className="mb-6 bg-[#1a2000] border border-primary/20 rounded-2xl p-5 flex items-center gap-4">
+            <div className="w-14 h-14 bg-primary/10 rounded-2xl flex items-center justify-center shrink-0">
+              <span className="text-primary font-extrabold text-xl">%{global.rate_pct}</span>
             </div>
             <div>
               <p className="text-white font-extrabold">Aktif Global Oran</p>
@@ -162,7 +162,7 @@ export const CommissionPage: React.FC = () => {
               <tr key={row.id} className={`border-b border-white/5 hover:bg-white/[0.02] transition-colors ${!row.is_active ? 'opacity-50' : ''}`}>
                 <td className="px-4 py-3 font-bold text-white whitespace-nowrap">{SCOPE_LABELS[row.scope] ?? row.scope}</td>
                 <td className="px-4 py-3 text-gray-400 whitespace-nowrap">{MODEL_LABELS[row.model] ?? row.model}</td>
-                <td className="px-4 py-3 text-[#39FF14] font-extrabold">{row.rate_pct}%</td>
+                <td className="px-4 py-3 text-primary font-extrabold">{row.rate_pct}%</td>
                 <td className="px-4 py-3 text-gray-400">
                   {row.markup_amount > 0
                     ? `${Math.round(row.markup_amount).toLocaleString('tr-TR')} ₺`
@@ -200,7 +200,7 @@ export const CommissionPage: React.FC = () => {
       {/* Edit modal */}
       {editRow && (
         <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-6">
-          <div className="bg-[#161B22] border border-white/10 rounded-[28px] p-6 w-full max-w-md space-y-5">
+          <div className="bg-surface-1 border border-white/10 rounded-[28px] p-6 w-full max-w-md space-y-5">
             <div className="flex items-center justify-between">
               <h2 className="text-white font-extrabold text-lg">{editRow._isNew ? 'Yeni Komisyon Kuralı' : 'Kuralı Düzenle'}</h2>
               <button onClick={() => setEditRow(null)} className="text-gray-500 hover:text-white"><X size={20} /></button>
@@ -209,7 +209,7 @@ export const CommissionPage: React.FC = () => {
             {editRow._isNew && (
               <Field label="Kapsam">
                 <select value={editRow.scope ?? 'GLOBAL'} onChange={e => setEditRow(r => ({ ...r!, scope: e.target.value as CommissionConfigRow['scope'], scope_id: e.target.value === 'GLOBAL' ? null : r!.scope_id }))}
-                  className="w-full bg-[#0A0E14] border border-white/10 rounded-xl px-3 py-2 text-white text-sm">
+                  className="w-full bg-bg border border-white/10 rounded-xl px-3 py-2 text-white text-sm">
                   {Object.entries(SCOPE_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
                 </select>
               </Field>
@@ -222,13 +222,13 @@ export const CommissionPage: React.FC = () => {
                   value={editRow.scope_id ?? ''}
                   onChange={e => setEditRow(r => ({ ...r!, scope_id: e.target.value.trim() || null }))}
                   placeholder="Saha/Maç/Sağlayıcı UUID — boş bırakılırsa kapsam geneli geçerli"
-                  className="w-full bg-[#0A0E14] border border-white/10 rounded-xl px-3 py-2 text-white text-sm font-mono" />
+                  className="w-full bg-bg border border-white/10 rounded-xl px-3 py-2 text-white text-sm font-mono" />
               </Field>
             )}
 
             <Field label="Model">
               <select value={editRow.model ?? 'MODEL_A'} onChange={e => setEditRow(r => ({ ...r!, model: e.target.value as 'MODEL_A' | 'MODEL_B' }))}
-                className="w-full bg-[#0A0E14] border border-white/10 rounded-xl px-3 py-2 text-white text-sm">
+                className="w-full bg-bg border border-white/10 rounded-xl px-3 py-2 text-white text-sm">
                 {Object.entries(MODEL_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
               </select>
             </Field>
@@ -237,14 +237,14 @@ export const CommissionPage: React.FC = () => {
               <input type="number" min="0" max="100" step="0.5"
                 value={editRow.rate_pct ?? 0}
                 onChange={e => setEditRow(r => ({ ...r!, rate_pct: parseFloat(e.target.value) || 0 }))}
-                className="w-full bg-[#0A0E14] border border-white/10 rounded-xl px-3 py-2 text-white text-sm" />
+                className="w-full bg-bg border border-white/10 rounded-xl px-3 py-2 text-white text-sm" />
             </Field>
 
             <Field label="Fiyat farkı — yüzde (%)">
               <input type="number" min="0" max="200" step="0.5"
                 value={editRow.markup_pct ?? 0}
                 onChange={e => setEditRow(r => ({ ...r!, markup_pct: parseFloat(e.target.value) || 0 }))}
-                className="w-full bg-[#0A0E14] border border-white/10 rounded-xl px-3 py-2 text-white text-sm" />
+                className="w-full bg-bg border border-white/10 rounded-xl px-3 py-2 text-white text-sm" />
             </Field>
 
             {/* Sabit tutar doluysa yüzde YOK SAYILIR (sunucudaki _markup_tutari). */}
@@ -252,7 +252,7 @@ export const CommissionPage: React.FC = () => {
               <input type="number" min="0" step="10"
                 value={editRow.markup_amount ?? 0}
                 onChange={e => setEditRow(r => ({ ...r!, markup_amount: parseFloat(e.target.value) || 0 }))}
-                className="w-full bg-[#0A0E14] border border-white/10 rounded-xl px-3 py-2 text-white text-sm" />
+                className="w-full bg-bg border border-white/10 rounded-xl px-3 py-2 text-white text-sm" />
             </Field>
 
             <Field label="Notlar (opsiyonel)">
@@ -260,13 +260,13 @@ export const CommissionPage: React.FC = () => {
                 value={editRow.notes ?? ''}
                 onChange={e => setEditRow(r => ({ ...r!, notes: e.target.value }))}
                 placeholder="Açıklama..."
-                className="w-full bg-[#0A0E14] border border-white/10 rounded-xl px-3 py-2 text-white text-sm" />
+                className="w-full bg-bg border border-white/10 rounded-xl px-3 py-2 text-white text-sm" />
             </Field>
 
             <label className="flex items-center gap-3 cursor-pointer">
               <input type="checkbox" checked={editRow.is_active ?? true}
                 onChange={e => setEditRow(r => ({ ...r!, is_active: e.target.checked }))}
-                className="accent-[#39FF14] w-4 h-4" />
+                className="accent-primary w-4 h-4" />
               <span className="text-white text-sm font-bold">Aktif</span>
             </label>
 
@@ -276,7 +276,7 @@ export const CommissionPage: React.FC = () => {
                 İptal
               </button>
               <button onClick={handleSave} disabled={saving}
-                className="flex-1 py-3 bg-[#39FF14] text-black font-extrabold rounded-xl hover:brightness-110 active:scale-95 transition-all text-sm disabled:opacity-50 flex items-center justify-center gap-2">
+                className="flex-1 py-3 bg-primary text-black font-extrabold rounded-xl hover:brightness-110 active:scale-95 transition-all text-sm disabled:opacity-50 flex items-center justify-center gap-2">
                 {saving ? <RefreshCw size={14} className="animate-spin" /> : <Check size={14} />}
                 {saving ? 'Kaydediliyor...' : 'Kaydet'}
               </button>

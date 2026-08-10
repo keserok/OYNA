@@ -60,7 +60,7 @@ const CrestKitEditor: React.FC<CrestKitEditorProps> = ({ crest, color1, color2, 
         onClick={() => onChange({ crest: randomCrest() })}
         className="w-full min-h-[44px] rounded-2xl bg-white/5 border border-white/10 text-sm font-bold text-white/80 flex items-center justify-center gap-2 active:scale-[0.98]"
       >
-        <Dices size={16} className="text-[#39FF14]" /> Rastgele Arma
+        <Dices size={16} className="text-primary" /> Rastgele Arma
       </button>
 
       <div>
@@ -71,7 +71,7 @@ const CrestKitEditor: React.FC<CrestKitEditorProps> = ({ crest, color1, color2, 
               key={s}
               onClick={() => onChange({ crest: { ...crest, shape: s } })}
               className={`aspect-square rounded-xl border flex items-center justify-center ${
-                crest.shape === s ? 'border-[#39FF14] bg-[#39FF14]/10' : 'border-white/10 bg-white/4'
+                crest.shape === s ? 'border-primary bg-primary/10' : 'border-white/10 bg-white/4'
               }`}
             >
               <TeamCrest
@@ -91,7 +91,7 @@ const CrestKitEditor: React.FC<CrestKitEditorProps> = ({ crest, color1, color2, 
               key={p}
               onClick={() => onChange({ crest: { ...crest, pattern: p as CrestPattern } })}
               className={`aspect-square rounded-xl border flex items-center justify-center ${
-                crest.pattern === p ? 'border-[#39FF14] bg-[#39FF14]/10' : 'border-white/10 bg-white/4'
+                crest.pattern === p ? 'border-primary bg-primary/10' : 'border-white/10 bg-white/4'
               }`}
             >
               <TeamCrest
@@ -112,7 +112,7 @@ const CrestKitEditor: React.FC<CrestKitEditorProps> = ({ crest, color1, color2, 
               title={label}
               onClick={() => onChange({ crest: { ...crest, symbol: key } })}
               className={`aspect-square rounded-xl border flex items-center justify-center ${
-                crest.symbol === key ? 'border-[#39FF14] bg-[#39FF14]/10 text-white' : 'border-white/10 bg-white/4 text-white/50'
+                crest.symbol === key ? 'border-primary bg-primary/10 text-white' : 'border-white/10 bg-white/4 text-white/50'
               }`}
             >
               <Icon size={17} />
@@ -129,7 +129,7 @@ const CrestKitEditor: React.FC<CrestKitEditorProps> = ({ crest, color1, color2, 
               key={i}
               onClick={() => onChange({ color1: a, color2: b })}
               className={`shrink-0 w-12 h-9 rounded-xl border overflow-hidden flex ${
-                color1 === a && color2 === b ? 'border-[#39FF14]' : 'border-white/15'
+                color1 === a && color2 === b ? 'border-primary' : 'border-white/15'
               }`}
             >
               <span className="flex-1" style={{ backgroundColor: a }} />

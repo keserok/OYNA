@@ -46,7 +46,7 @@ export const OwnerBillingSettingsModal: React.FC<Props> = ({
   return (
     <OwnerCenteredModal title="SaaS & Fatura" onClose={onClose}>
       <div className="space-y-5">
-        <div className="p-4 bg-[#0A0E14] rounded-2xl border border-white/5">
+        <div className="p-4 bg-bg rounded-2xl border border-white/5">
           <p className="text-[10px] text-gray-500 uppercase font-bold">Mevcut Plan</p>
           <p className="text-lg font-extrabold text-white mt-1">{planTier}</p>
         </div>
@@ -58,7 +58,7 @@ export const OwnerBillingSettingsModal: React.FC<Props> = ({
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full bg-[#0A0E14] border border-white/5 rounded-xl px-4 py-3 text-white outline-none focus:border-blue-500/40"
+            className="w-full bg-bg border border-white/5 rounded-xl px-4 py-3 text-white outline-none focus:border-blue-500/40"
             placeholder="fatura@sirket.com"
           />
           <p className="text-[10px] text-gray-500">

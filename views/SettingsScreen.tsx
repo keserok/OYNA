@@ -234,14 +234,14 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
   );
 
   return (
-    <div className="min-h-screen bg-[#0A0E14] pb-16">
+    <div className="min-h-screen bg-bg pb-16">
       {/* Header */}
       {/* ÜST ÇUBUK — profil akışıyla AYNI desen (kullanıcı kararı: Ayarlar
           ekranı profil ve ana sayfayla uyumlu olsun): 44px yuvarlak geri
           düğmesi + küçük, harf aralıklı ekran adı. Eskiden 40px düğme ve
           kalın 20px başlık vardı; iki ekran yan yana açıldığında başka bir
           uygulamadan gelmiş gibi duruyordu. */}
-      <header className="px-5 pt-5 pb-3 flex items-center gap-3 sticky top-0 bg-[#0A0E14]/90 backdrop-blur-xl z-20">
+      <header className="px-5 pt-5 pb-3 flex items-center gap-3 sticky top-0 bg-bg/90 backdrop-blur-xl z-20">
         <button
           onClick={onBack}
           className="w-11 h-11 shrink-0 flex items-center justify-center bg-surface-1/[0.75] rounded-full border border-white/[0.08] text-white hover:bg-white/10 active:scale-95 transition-all"
@@ -325,10 +325,10 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
               {selectedRegions.length > 1 ? (
                 <button
                   onClick={() => setSubPage('region')}
-                  className="w-full flex flex-wrap items-center gap-2 p-3 rounded-[20px] bg-[#0F1318] border border-[#39FF14]/20 hover:bg-white/5 transition-colors text-left"
+                  className="w-full flex flex-wrap items-center gap-2 p-3 rounded-[20px] bg-[#0F1318] border border-primary/20 hover:bg-white/5 transition-colors text-left"
                 >
                   {selectedRegions.map((r, i) => (
-                    <span key={`${r.city}|${r.district ?? ''}|${i}`} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#39FF14]/10 border border-[#39FF14]/25 text-[#39FF14] text-xs font-bold">
+                    <span key={`${r.city}|${r.district ?? ''}|${i}`} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/10 border border-primary/25 text-primary text-xs font-bold">
                       <MapPin size={11} /> {r.label}
                     </span>
                   ))}
@@ -347,7 +347,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
                  (profildeki "Maç bul" ve düzenleme ekranındaki "Kaydet" ile
                  aynı). Eskiden maviydi — uygulamanın hiçbir yerinde
                  kullanılmayan bir renkti ve ekranı yabancılaştırıyordu. */
-              className="w-full flex items-center justify-center gap-2 min-h-[48px] px-4 rounded-full bg-white text-[#0A0E14] hover:opacity-90 active:scale-[0.99] transition-all disabled:opacity-60"
+              className="w-full flex items-center justify-center gap-2 min-h-[48px] px-4 rounded-full bg-white text-on-primary hover:opacity-90 active:scale-[0.99] transition-all disabled:opacity-60"
             >
               {isUpdatingLocation ? <RefreshCw size={16} className="animate-spin" /> : <MapPin size={16} />}
               <span className="text-[0.8125rem] font-semibold">Konumumu Otomatik Bul</span>
@@ -356,7 +356,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
             <div className="pt-1">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-[0.8125rem] text-[#F5F3EE]">Arama Yarıçapı</span>
-                <span className="text-sm font-extrabold text-[#39FF14]">{searchRadius} KM</span>
+                <span className="text-sm font-extrabold text-primary">{searchRadius} KM</span>
               </div>
               <input
                 type="range"
@@ -365,7 +365,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
                 step={5}
                 value={searchRadius}
                 onChange={(e) => setSearchRadius(Number(e.target.value))}
-                className="w-full accent-[#39FF14] cursor-pointer"
+                className="w-full accent-primary cursor-pointer"
               />
               <p className="text-[0.6875rem] text-[#F5F3EE]/[0.55] mt-1.5">Her seçili bölgenin merkezinden {searchRadius} KM çapındaki maçlar listelenir — 5 km adımlarla (5–50 KM).</p>
             </div>
@@ -375,7 +375,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
         {/* Tesis Verileri (KVKK) — yalnızca saha sahipleri */}
         {isOwner && (
           <section className="bg-surface-1 border border-white/[0.08] rounded-3xl p-[18px] space-y-3">
-            <div className="flex items-center gap-2 text-[#39FF14]">
+            <div className="flex items-center gap-2 text-primary">
               <Download size={16} />
               <h3 className="text-xs font-extrabold uppercase tracking-wider">Tesis Verilerim (KVKK)</h3>
             </div>
@@ -390,7 +390,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
             <button
               disabled={isExporting}
               onClick={handleExportOwnerData}
-              className="w-full flex items-center justify-center gap-2.5 min-h-[48px] px-4 bg-[#39FF14]/10 hover:bg-[#39FF14]/20 border border-[#39FF14]/30 rounded-full text-[#39FF14] font-bold text-xs transition-all uppercase tracking-widest disabled:opacity-50"
+              className="w-full flex items-center justify-center gap-2.5 min-h-[48px] px-4 bg-primary/10 hover:bg-primary/20 border border-primary/30 rounded-full text-primary font-bold text-xs transition-all uppercase tracking-widest disabled:opacity-50"
             >
               {isExporting ? (
                 <><RefreshCw size={14} className="animate-spin" /> Hazırlanıyor…</>
@@ -527,7 +527,7 @@ const JoinFacilityModal: React.FC<{ onClose: () => void; onJoined: (pitchName: s
 
   return (
     <div className="fixed inset-0 z-[60] bg-black/80 flex items-end justify-center p-4" onClick={onClose} role="presentation">
-      <div className="bg-[#161B22] w-full max-w-sm rounded-3xl p-6 pb-safe-6 border border-white/10" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Tesise Katıl">
+      <div className="bg-surface-1 w-full max-w-sm rounded-3xl p-6 pb-safe-6 border border-white/10" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Tesise Katıl">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-extrabold text-white">Tesise Katıl</h3>
           <button type="button" onClick={onClose} aria-label="Kapat"><X size={20} className="text-ink-4" /></button>
@@ -540,14 +540,14 @@ const JoinFacilityModal: React.FC<{ onClose: () => void; onJoined: (pitchName: s
           inputMode="numeric"
           placeholder="______"
           autoFocus
-          className="w-full text-center text-3xl font-extrabold tracking-[0.4em] font-mono bg-[#0A0E14] border border-white/10 rounded-2xl p-4 text-white placeholder:text-ink-4"
+          className="w-full text-center text-3xl font-extrabold tracking-[0.4em] font-mono bg-bg border border-white/10 rounded-2xl p-4 text-white placeholder:text-ink-4"
         />
         {error && <p className="text-xs text-[#FF4D4D] mt-2 text-center">{error}</p>}
         <button
           type="button"
           disabled={busy || clean.length !== 6}
           onClick={submit}
-          className="w-full mt-4 min-h-[50px] rounded-full bg-white text-[#0A0E14] text-[0.8125rem] font-semibold disabled:opacity-50 flex items-center justify-center gap-2 active:scale-[0.99] transition-all"
+          className="w-full mt-4 min-h-[50px] rounded-full bg-white text-on-primary text-[0.8125rem] font-semibold disabled:opacity-50 flex items-center justify-center gap-2 active:scale-[0.99] transition-all"
         >
           {busy ? 'Katılınıyor…' : <><Check size={16} /> Katıl</>}
         </button>

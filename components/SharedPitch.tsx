@@ -84,7 +84,7 @@ const SharedPitch: React.FC<SharedPitchProps> = ({ mode, slots, orientation = 'v
   return (
       <div
         ref={pitchRef}
-        className={`relative w-full ${orientation === 'horizontal' ? 'aspect-[4/3]' : 'aspect-[3/4]'} bg-[#0B2815] rounded-[24px] border-4 border-[#161B22] shadow-[inset_0_0_60px_rgba(0,0,0,0.8)] overflow-hidden transition-all duration-300`}
+        className={`relative w-full ${orientation === 'horizontal' ? 'aspect-[4/3]' : 'aspect-[3/4]'} bg-[#0B2815] rounded-[24px] border-4 border-surface-1 shadow-[inset_0_0_60px_rgba(0,0,0,0.8)] overflow-hidden transition-all duration-300`}
       >
         <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 10%, rgba(0,0,0,0.2) 10%, rgba(0,0,0,0.2) 20%)' }}></div>
         <div className="absolute inset-0 pointer-events-none opacity-40">
@@ -165,7 +165,7 @@ const SharedPitch: React.FC<SharedPitchProps> = ({ mode, slots, orientation = 'v
             <div className="relative flex flex-col items-center">
               {slot.status === 'PENDING' && (
                 <motion.div 
-                  className="absolute inset-[-6px] rounded-full border border-dashed border-[#FACC15]/80 opacity-70 pointer-events-none"
+                  className="absolute inset-[-6px] rounded-full border border-dashed border-warning/80 opacity-70 pointer-events-none"
                   animate={{ rotate: 360 }}
                   transition={{ duration: 4, repeat: Infinity, ease: 'linear' }}
                 />
@@ -174,7 +174,7 @@ const SharedPitch: React.FC<SharedPitchProps> = ({ mode, slots, orientation = 'v
                 <motion.div
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.9 }}
-                    className={`relative w-12 h-12 rounded-full border-2 flex items-center justify-center shadow-[0_4px_15px_rgba(0,0,0,0.5)] transition-all ${slot.status === 'PENDING' ? 'opacity-80 grayscale-[30%] border-[#FACC15]/50' : slot.role === 'GK' || slot.role === 'KL' ? 'bg-gradient-to-br from-orange-400 to-orange-600 border-orange-300' : 'bg-gradient-to-br from-[#1e2532] to-[#11151c] border-[#FACC15]/50'}`}
+                    className={`relative w-12 h-12 rounded-full border-2 flex items-center justify-center shadow-[0_4px_15px_rgba(0,0,0,0.5)] transition-all ${slot.status === 'PENDING' ? 'opacity-80 grayscale-[30%] border-warning/50' : slot.role === 'GK' || slot.role === 'KL' ? 'bg-gradient-to-br from-orange-400 to-orange-600 border-orange-300' : 'bg-gradient-to-br from-[#1e2532] to-[#11151c] border-warning/50'}`}
                 >
                     {slot.player.avatar ? (
                         <img src={slot.player.avatar} className="w-full h-full rounded-full object-cover" alt={slot.player.name}/>
@@ -186,7 +186,7 @@ const SharedPitch: React.FC<SharedPitchProps> = ({ mode, slots, orientation = 'v
                 <motion.div
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.9 }}
-                    className={`relative w-12 h-12 rounded-full border-2 border-dashed flex items-center justify-center bg-black/20 backdrop-blur-sm transition-colors group-hover:border-[#39FF14] group-hover:bg-[#39FF14]/20 ${mode === 'join' ? 'border-[#39FF14]/50 text-[#39FF14] animate-pulse' : slot.role === 'GK' || slot.role === 'KL' ? 'border-orange-500/50 text-orange-500 hover:border-orange-400' : 'border-[#39FF14]/50 text-[#39FF14]/70 hover:border-[#39FF14]'}`}
+                    className={`relative w-12 h-12 rounded-full border-2 border-dashed flex items-center justify-center bg-black/20 backdrop-blur-sm transition-colors group-hover:border-primary group-hover:bg-primary/20 ${mode === 'join' ? 'border-primary/50 text-primary animate-pulse' : slot.role === 'GK' || slot.role === 'KL' ? 'border-orange-500/50 text-orange-500 hover:border-orange-400' : 'border-primary/50 text-primary/70 hover:border-primary'}`}
                 >
                     <Plus size={20} />
                 </motion.div>
@@ -194,7 +194,7 @@ const SharedPitch: React.FC<SharedPitchProps> = ({ mode, slots, orientation = 'v
 
               {slot.player ? (
                  <div className="absolute top-full mt-1 flex flex-col items-center pointer-events-none">
-                    <span className={`text-[0.6875rem] font-bold px-2 py-0.5 rounded ${slot.status === 'PENDING' ? 'bg-[#FACC15]/20 text-[#FACC15] border-[#FACC15]/50' : 'bg-black/80 text-white border-white/10'} whitespace-nowrap border shadow-sm`}>
+                    <span className={`text-[0.6875rem] font-bold px-2 py-0.5 rounded ${slot.status === 'PENDING' ? 'bg-warning/20 text-warning border-warning/50' : 'bg-black/80 text-white border-white/10'} whitespace-nowrap border shadow-sm`}>
                         {slot.status === 'PENDING' ? '⏳ ' : ''}{slot.player.name.split(' ')[0]}
                     </span>
                  </div>

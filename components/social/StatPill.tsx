@@ -12,10 +12,10 @@ interface StatPillProps {
 const StatPill: React.FC<StatPillProps> = ({ value, label, accent = false, className = '' }) => (
   <div
     className={`flex-1 rounded-2xl border px-3 py-2.5 text-center ${
-      accent ? 'bg-[#39FF14]/8 border-[#39FF14]/25' : 'bg-white/4 border-white/8'
+      accent ? 'bg-primary/8 border-primary/25' : 'bg-white/4 border-white/8'
     } ${className}`}
   >
-    <div className={`text-lg font-extrabold ${accent ? 'text-[#39FF14]' : 'text-white'}`}>{value}</div>
+    <div className={`text-lg font-extrabold ${accent ? 'text-primary' : 'text-white'}`}>{value}</div>
     <div className="text-[0.625rem] font-bold uppercase tracking-widest text-ink-4 mt-0.5">{label}</div>
   </div>
 );

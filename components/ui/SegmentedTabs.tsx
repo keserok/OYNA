@@ -51,7 +51,7 @@ const SegmentedTabs: React.FC<SegmentedTabsProps> = ({
             {item.icon}
             {item.label}
             {item.badge && (
-              <span className="w-1.5 h-1.5 rounded-full bg-[#39FF14]" aria-label="Taslak var" />
+              <span className="w-1.5 h-1.5 rounded-full bg-primary" aria-label="Taslak var" />
             )}
           </span>
         </button>

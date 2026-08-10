@@ -323,7 +323,7 @@ const Notifications: React.FC<NotificationsProps> = ({ onBack, role }) => {
         animate={{ y: 0 }}
         exit={{ y: '100%' }}
         transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-        className="relative w-full h-[85vh] bg-[#0A0E14] rounded-t-3xl overflow-hidden flex flex-col shadow-[0_-10px_40px_rgba(0,0,0,0.5)] border-t border-white/10"
+        className="relative w-full h-[85vh] bg-bg rounded-t-3xl overflow-hidden flex flex-col shadow-[0_-10px_40px_rgba(0,0,0,0.5)] border-t border-white/10"
       >
         {/* Notch */}
         <div className="absolute top-3 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-white/20 rounded-full z-30 pointer-events-none" />
@@ -420,7 +420,7 @@ const Notifications: React.FC<NotificationsProps> = ({ onBack, role }) => {
                 {canOpenAppSettings() ? (
                   <button
                     onClick={() => { void openAppSettings(); }}
-                    className="mt-2.5 min-h-11 px-4 rounded-xl bg-warning text-[#0A0E14] text-[0.75rem] font-extrabold active:scale-95 transition-transform"
+                    className="mt-2.5 min-h-11 px-4 rounded-xl bg-warning text-on-primary text-[0.75rem] font-extrabold active:scale-95 transition-transform"
                   >
                     Ayarları Aç
                   </button>
@@ -535,7 +535,7 @@ const Notifications: React.FC<NotificationsProps> = ({ onBack, role }) => {
                           {n.body && <p className="text-[0.6875rem] text-gray-400 leading-relaxed">{n.body}</p>}
 
                           {isInvite ? (
-                            <div className="mt-3 flex items-center gap-1 text-[0.6875rem] font-extrabold uppercase text-[#39FF14] bg-[#39FF14]/10 w-max px-3 py-1.5 rounded-xl border border-[#39FF14]/20">
+                            <div className="mt-3 flex items-center gap-1 text-[0.6875rem] font-extrabold uppercase text-primary bg-primary/10 w-max px-3 py-1.5 rounded-xl border border-primary/20">
                               Daveti İncele <ChevronRight size={14} />
                             </div>
                           ) : (n.deepLink || n.matchId) ? (
@@ -569,8 +569,8 @@ const Notifications: React.FC<NotificationsProps> = ({ onBack, role }) => {
               <div className="w-full h-64 relative shrink-0">
                 {/* F3d: stok Unsplash hero kaldırıldı — davet gerçek maç görseli
                     taşımıyor; nötr gradient zemin kullanılır. */}
-                <div className="w-full h-full bg-gradient-to-br from-[#123321] via-[#0f1b2d] to-[#0A0E14]" />
-                <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-[#0A0E14]/60 to-[#0A0E14]" />
+                <div className="w-full h-full bg-gradient-to-br from-[#123321] via-[#0f1b2d] to-bg" />
+                <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-bg/60 to-bg" />
                 <button
                   onClick={() => setSelectedInvite(null)}
                   className="absolute top-12 right-5 w-10 h-10 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center text-white border border-white/20"
@@ -579,7 +579,7 @@ const Notifications: React.FC<NotificationsProps> = ({ onBack, role }) => {
                 </button>
 
                 <div className="absolute bottom-6 left-6 right-6">
-                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#39FF14]/20 border border-[#39FF14]/30 text-[#39FF14] text-[0.625rem] font-extrabold uppercase tracking-widest mb-3">
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/20 border border-primary/30 text-primary text-[0.625rem] font-extrabold uppercase tracking-widest mb-3">
                     <CheckCircle size={12} /> Davet Edildin
                   </div>
                   <h2 className="text-2xl font-extrabold text-white italic tracking-tighter uppercase drop-shadow-lg">
@@ -587,7 +587,7 @@ const Notifications: React.FC<NotificationsProps> = ({ onBack, role }) => {
                   </h2>
                   <div className="flex items-center gap-4 mt-2">
                     <span className="flex items-center gap-1.5 text-xs text-white/70 font-medium">
-                      <Calendar size={14} className="text-[#39FF14]" /> {relativeTime(selectedInvite.createdAt)}
+                      <Calendar size={14} className="text-primary" /> {relativeTime(selectedInvite.createdAt)}
                     </span>
                   </div>
                 </div>
@@ -595,8 +595,8 @@ const Notifications: React.FC<NotificationsProps> = ({ onBack, role }) => {
 
               <div className="px-6 py-6 flex-1 flex flex-col gap-6">
                 {selectedInvite.body && (
-                  <div className="bg-[#161B22] border border-white/5 rounded-3xl p-5 flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-full bg-[#39FF14]/10 flex items-center justify-center text-[#39FF14] shrink-0">
+                  <div className="bg-surface-1 border border-white/5 rounded-3xl p-5 flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary shrink-0">
                       <MapPin size={24} />
                     </div>
                     <div>
@@ -605,18 +605,18 @@ const Notifications: React.FC<NotificationsProps> = ({ onBack, role }) => {
                   </div>
                 )}
 
-                <p className="text-[0.8125rem] text-[#8B949E] text-center px-4 leading-relaxed mt-auto">
+                <p className="text-[0.8125rem] text-ink-4 text-center px-4 leading-relaxed mt-auto">
                   Geliyorum dersen maç lobisine gidersin. Yerin, ödemeni tamamlayınca kesinleşir.
                 </p>
               </div>
 
-              <div className="fixed bottom-0 left-0 right-0 px-6 pt-6 pb-safe bg-gradient-to-t from-[#0A0E14] via-[#0A0E14]/95 to-transparent z-20">
+              <div className="fixed bottom-0 left-0 right-0 px-6 pt-6 pb-safe bg-gradient-to-t from-bg via-bg/95 to-transparent z-20">
                 {/* BULGU-070: üç gerçek aksiyon — "Gelemem" sunucuya yazılır. */}
                 <div className="flex flex-col gap-2.5">
                   <button
                     onClick={() => { const inv = selectedInvite; setSelectedInvite(null); void routeTo(inv); }}
                     disabled={inviteBusy}
-                    className="w-full h-14 rounded-2xl bg-[#39FF14] text-[#0A0E14] text-[0.9375rem] font-bold uppercase flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-60"
+                    className="w-full h-14 rounded-2xl bg-primary text-on-primary text-[0.9375rem] font-bold uppercase flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-60"
                   >
                     <CheckCircle size={20} /> Geliyorum
                   </button>
@@ -624,14 +624,14 @@ const Notifications: React.FC<NotificationsProps> = ({ onBack, role }) => {
                     <button
                       onClick={handleDeclineInvite}
                       disabled={inviteBusy}
-                      className="flex-1 h-14 rounded-2xl bg-[#F87171]/10 border border-[#F87171]/40 text-[#F87171] text-[0.9375rem] font-bold flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-60"
+                      className="flex-1 h-14 rounded-2xl bg-error/10 border border-error/40 text-error text-[0.9375rem] font-bold flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-60"
                     >
                       {inviteBusy ? <Spinner size={18} color="#F87171" /> : <><X size={18} /> Gelemem</>}
                     </button>
                     <button
                       onClick={() => setSelectedInvite(null)}
                       disabled={inviteBusy}
-                      className="flex-1 h-14 rounded-2xl bg-white/5 border border-white/10 text-[#A9B4C0] text-[0.9375rem] font-bold active:scale-[0.98] transition-transform disabled:opacity-60"
+                      className="flex-1 h-14 rounded-2xl bg-white/5 border border-white/10 text-ink-3 text-[0.9375rem] font-bold active:scale-[0.98] transition-transform disabled:opacity-60"
                     >
                       Sonra Bakarım
                     </button>

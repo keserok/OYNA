@@ -217,13 +217,13 @@ export const NotificationTemplatesPage: React.FC<{ onRefresh?: () => Promise<voi
           </div>
 
           {templates.length === 0 ? (
-            <div className="bg-[#161B22]/60 border border-white/[0.06] rounded-2xl p-10 text-center">
+            <div className="bg-surface-1/60 border border-white/[0.06] rounded-2xl p-10 text-center">
               <MessageSquare size={28} className="text-gray-600 mx-auto mb-3" />
               <p className="text-sm text-gray-400 font-bold">Henüz bildirim şablonu yok</p>
             </div>
           ) : (
             Object.entries(grouped).map(([cat, rows]) => (
-              <section key={cat} className="bg-[#161B22]/60 border border-white/[0.06] rounded-2xl p-5">
+              <section key={cat} className="bg-surface-1/60 border border-white/[0.06] rounded-2xl p-5">
                 <h3 className="text-[10px] font-extrabold text-gray-400 uppercase tracking-wider mb-4">
                   {CATEGORY_LABELS[cat] ?? cat}
                 </h3>
@@ -337,10 +337,10 @@ export const NotificationTemplatesPage: React.FC<{ onRefresh?: () => Promise<voi
           onClick={() => !saving && setDraft(null)}
         >
           <div
-            className="bg-[#161B22] border border-white/[0.08] rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl"
+            className="bg-surface-1 border border-white/[0.08] rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="sticky top-0 z-10 flex items-center justify-between gap-3 px-5 py-4 bg-[#161B22] border-b border-white/[0.06]">
+            <div className="sticky top-0 z-10 flex items-center justify-between gap-3 px-5 py-4 bg-surface-1 border-b border-white/[0.06]">
               <div className="min-w-0">
                 <h2 className="text-sm font-extrabold text-white truncate">Şablonu Düzenle</h2>
                 <p className="text-[10px] font-mono text-gray-500 mt-0.5">{draft.type_key}</p>
@@ -398,7 +398,7 @@ export const NotificationTemplatesPage: React.FC<{ onRefresh?: () => Promise<voi
               </div>
             </div>
 
-            <div className="sticky bottom-0 flex items-center justify-end gap-2 px-5 py-4 bg-[#161B22] border-t border-white/[0.06]">
+            <div className="sticky bottom-0 flex items-center justify-end gap-2 px-5 py-4 bg-surface-1 border-t border-white/[0.06]">
               <button
                 type="button"
                 disabled={saving}

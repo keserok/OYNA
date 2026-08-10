@@ -94,7 +94,7 @@ export const ProfileIdentityCard: React.FC<ProfileIdentityCardProps> = ({
           type="button"
           onClick={onEditAvatar}
           aria-label="Profil fotoğrafı ekle"
-          className="absolute bottom-px right-px w-[26px] h-[26px] rounded-full bg-white border-2 border-[#161B22] flex items-center justify-center text-[#0A0E14] active:scale-95 transition-transform"
+          className="absolute bottom-px right-px w-[26px] h-[26px] rounded-full bg-white border-2 border-surface-1 flex items-center justify-center text-on-primary active:scale-95 transition-transform"
         >
           <Camera size={12} strokeWidth={2.6} />
         </button>
@@ -139,7 +139,7 @@ export const ProfileIdentityCard: React.FC<ProfileIdentityCardProps> = ({
   );
 
   return (
-    <div className="rounded-[24px] border border-white/[0.08] bg-[#161B22]/[0.92] p-5 flex flex-col">
+    <div className="rounded-[24px] border border-white/[0.08] bg-surface-1/[0.92] p-5 flex flex-col">
       {onPress ? (
         <div
           role="button"

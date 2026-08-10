@@ -380,7 +380,7 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onSelect }) => {
     .filter(Boolean).join(' · ') || 'TÜM MAÇLAR';
 
   return (
-    <div className="min-h-screen max-h-screen bg-[#0A0E14] flex flex-col relative overflow-hidden font-sans selection:bg-primary selection:text-on-primary">
+    <div className="min-h-screen max-h-screen bg-bg flex flex-col relative overflow-hidden font-sans selection:bg-primary selection:text-on-primary">
       
       {/* ── ARKA PLAN ── */}
       <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-20 mix-blend-overlay pointer-events-none" />
@@ -413,7 +413,7 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onSelect }) => {
       {!showWizard && (
         <motion.div 
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }}
-          className="absolute inset-0 flex flex-col z-40 bg-[#0A0E14]"
+          className="absolute inset-0 flex flex-col z-40 bg-bg"
         >
           {/* HEADER
               ZEMİN YOK (bilinçli): burada `bg-black/40 + backdrop-blur` vardı;
@@ -448,7 +448,7 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onSelect }) => {
                 )}
                 <button
                   onClick={() => { setShowPrivateModal(true); setPrivateError(null); setPrivateCode(''); }}
-                  className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-full bg-[#FACC15]/[0.06] backdrop-blur-md border border-[#FACC15]/25 text-[#FACC15] hover:bg-[#FACC15]/10 transition-all"
+                  className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-full bg-warning/[0.06] backdrop-blur-md border border-warning/25 text-warning hover:bg-warning/10 transition-all"
                   title="Özel maça kodla katıl"
                 >
                   <KeyRound size={13} />
@@ -457,7 +457,7 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onSelect }) => {
                 <button onClick={() => { setOpenDropdown(null); setShowWizard(true); }} className="flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-white/[0.03] backdrop-blur-md border border-white/10 text-white hover:bg-white/10 transition-all">
                   <span className="text-[0.625rem] font-extrabold uppercase tracking-widest drop-shadow-md">Filtre</span>
                   {isFilterActive && (
-                    <span className="w-2 h-2 bg-[#FACC15] rounded-full shadow-[0_0_10px_rgba(250,204,21,0.8)]" />
+                    <span className="w-2 h-2 bg-warning rounded-full shadow-[0_0_10px_rgba(250,204,21,0.8)]" />
                   )}
                 </button>
               </div>
@@ -584,8 +584,8 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onSelect }) => {
                   <>
                     {/* Filtreye Uygun Maçlar Section */}
                     <div>
-                      <h2 className="text-sm font-extrabold italic uppercase tracking-widest text-[#39FF14] mb-4 flex items-center gap-2 drop-shadow-[0_0_8px_rgba(57,255,20,0.4)]">
-                        <span className="inline-block w-1.5 h-3 bg-[#39FF14] rounded-sm" />
+                      <h2 className="text-sm font-extrabold italic uppercase tracking-widest text-primary mb-4 flex items-center gap-2 drop-shadow-[0_0_8px_rgba(57,255,20,0.4)]">
+                        <span className="inline-block w-1.5 h-3 bg-primary rounded-sm" />
                         Filtreye Uygun Maçlar
                       </h2>
                       
@@ -620,7 +620,7 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onSelect }) => {
                                   setShowWizard(true);
                                 }
                               }}
-                              className="px-5 py-2.5 rounded-full bg-[#39FF14]/10 hover:bg-[#39FF14]/20 border border-[#39FF14]/40 text-[0.625rem] font-extrabold uppercase tracking-widest text-[#39FF14] transition-all active:scale-95"
+                              className="px-5 py-2.5 rounded-full bg-primary/10 hover:bg-primary/20 border border-primary/40 text-[0.625rem] font-extrabold uppercase tracking-widest text-primary transition-all active:scale-95"
                             >
                               Çapı Genişlet
                             </button>
@@ -654,7 +654,7 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onSelect }) => {
      
                 {!isFilterActive && (
                   <div className="space-y-6">
-                    <h2 className="text-sm font-extrabold italic uppercase tracking-widest text-[#39FF14] mb-4 flex items-center gap-2 drop-shadow-[0_0_8px_rgba(57,255,20,0.4)]">
+                    <h2 className="text-sm font-extrabold italic uppercase tracking-widest text-primary mb-4 flex items-center gap-2 drop-shadow-[0_0_8px_rgba(57,255,20,0.4)]">
                       <MapPin size={16} />
                       {scopeLabel}
                     </h2>
@@ -712,14 +712,14 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onSelect }) => {
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 20 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-[#161B22] w-full max-w-sm rounded-[32px] border border-[#FACC15]/20 p-7 text-center"
+              className="bg-surface-1 w-full max-w-sm rounded-[32px] border border-warning/20 p-7 text-center"
             >
-              <div className="w-16 h-16 mx-auto rounded-full bg-[#FACC15]/10 border-2 border-[#FACC15]/40 flex items-center justify-center mb-5">
-                <KeyRound size={28} className="text-[#FACC15]" />
+              <div className="w-16 h-16 mx-auto rounded-full bg-warning/10 border-2 border-warning/40 flex items-center justify-center mb-5">
+                <KeyRound size={28} className="text-warning" />
               </div>
               <h2 className="text-xl font-extrabold text-white mb-2 italic uppercase tracking-tight">Özel Maça Katıl</h2>
               <p className="text-xs text-gray-400 leading-relaxed mb-5">
-                Sana iletilen <span className="text-[#FACC15] font-bold">özel maç kodunu</span> gir. Sadece davetlilerin görebildiği maçlara böyle katılırsın.
+                Sana iletilen <span className="text-warning font-bold">özel maç kodunu</span> gir. Sadece davetlilerin görebildiği maçlara böyle katılırsın.
               </p>
 
               <input
@@ -729,7 +729,7 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onSelect }) => {
                 onKeyDown={(e) => { if (e.key === 'Enter' && !privateLoading) handleJoinPrivate(); }}
                 placeholder="ÖRN. A1B2C3"
                 maxLength={8}
-                className="w-full bg-black/40 border border-white/15 rounded-2xl px-4 py-4 text-center text-2xl font-extrabold tracking-[0.4em] text-white placeholder:text-ink-4 placeholder:tracking-widest placeholder:text-base focus:border-[#FACC15]/50 focus:outline-none transition-all uppercase"
+                className="w-full bg-black/40 border border-white/15 rounded-2xl px-4 py-4 text-center text-2xl font-extrabold tracking-[0.4em] text-white placeholder:text-ink-4 placeholder:tracking-widest placeholder:text-base focus:border-warning/50 focus:outline-none transition-all uppercase"
               />
 
               {privateError && (
@@ -838,7 +838,7 @@ const MatchCard: React.FC<{
           Koordinatsız/GPS'siz yolda hiç çizilmez; sahte '1.5 km' basılmaz. */}
       {match.difficulty === 'Rahat' && Number.isFinite(Number(match.distance)) && Number(match.distance) > 0 && (
         <div className="absolute top-4 right-4 z-20 flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-black/70 backdrop-blur-md border border-white/10">
-          <MapPin size={11} className="text-[#39FF14]" />
+          <MapPin size={11} className="text-primary" />
           <span className="font-numeric text-[0.6875rem] font-semibold text-[#D1D5DB]">
             {(Number(match.distance) / 1000).toLocaleString('tr-TR', { maximumFractionDigits: 1 })} km
           </span>
@@ -871,7 +871,7 @@ const MatchCard: React.FC<{
       <div className="flex justify-between items-start gap-2 flex-wrap">
         {/* Dijital Saat (Sol Üst) */}
         <div className="flex items-center gap-1.5 px-3 py-1.5 bg-black/60 backdrop-blur-md rounded-xl border border-white/10 shadow-lg">
-          <Clock size={12} className="text-[#39FF14]" />
+          <Clock size={12} className="text-primary" />
           <span className="text-xs font-extrabold text-white tracking-[0.1em] drop-shadow-[0_0_8px_rgba(255,255,255,0.5)]">{match.time}</span>
         </div>
       </div>
@@ -971,7 +971,7 @@ const MatchCard: React.FC<{
                 Eskiden veritabanının ham biçimi basılıyordu ("2026-08-01"),
                 üstteki şerit güzel tarih gösterirken kart uyumsuz kalıyordu. */}
             <div className="flex items-center gap-1.5 flex-wrap mb-3">
-              <span className="text-[0.625rem] font-extrabold text-[#FACC15] italic uppercase tracking-widest drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]">
+              <span className="text-[0.625rem] font-extrabold text-warning italic uppercase tracking-widest drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]">
                 {(() => {
                   const gun = matchStartDayMs(match);
                   return gun === null ? trUpper(match.date) : formatDayLabel(gun);
@@ -1001,7 +1001,7 @@ const MatchCard: React.FC<{
               </span>
               {/* MAÇ SÜRESİ — gerçek veri (duration_minutes). Yoksa hiç çizilmez. */}
               {match.durationLabel && (
-                <span className="px-2 py-0.5 rounded border border-[#39FF14]/25 bg-[#39FF14]/10 text-[0.625rem] font-extrabold text-[#39FF14] uppercase tracking-widest backdrop-blur-sm">
+                <span className="px-2 py-0.5 rounded border border-primary/25 bg-primary/10 text-[0.625rem] font-extrabold text-primary uppercase tracking-widest backdrop-blur-sm">
                   {match.durationLabel}
                 </span>
               )}
@@ -1019,13 +1019,13 @@ const MatchCard: React.FC<{
           {/* Fiyat (Sağ Altta) & Katıl Aksiyon Butonu */}
           <div className="flex flex-col items-end gap-2.5 shrink-0">
             {match.price === 0 ? (
-              <div className="px-3.5 py-1.5 bg-gradient-to-br from-[#39FF14]/20 to-[#10b981]/10 backdrop-blur-xl border border-[#39FF14]/50 rounded-xl shadow-[0_0_20px_rgba(57,255,20,0.25)]">
-                <span className="text-[0.625rem] font-extrabold italic uppercase tracking-widest text-[#39FF14] drop-shadow-[0_0_8px_rgba(57,255,20,0.6)]">ÜCRETSİZ</span>
+              <div className="px-3.5 py-1.5 bg-gradient-to-br from-primary/20 to-cat-pitch/10 backdrop-blur-xl border border-primary/50 rounded-xl shadow-[0_0_20px_rgba(57,255,20,0.25)]">
+                <span className="text-[0.625rem] font-extrabold italic uppercase tracking-widest text-primary drop-shadow-[0_0_8px_rgba(57,255,20,0.6)]">ÜCRETSİZ</span>
               </div>
             ) : (
               <div className="px-3 py-1.5 bg-black/70 backdrop-blur-md border border-white/10 rounded-xl shadow-lg flex flex-col items-center gap-0.5">
                 <span className="text-[0.625rem] font-extrabold uppercase tracking-wider text-ink-4">KİŞİ BAŞI</span>
-                <span className="text-[0.8125rem] font-extrabold text-[#FACC15] tracking-wider drop-shadow-md">{formatTRYShort(match.price)}</span>
+                <span className="text-[0.8125rem] font-extrabold text-warning tracking-wider drop-shadow-md">{formatTRYShort(match.price)}</span>
               </div>
             )}
 

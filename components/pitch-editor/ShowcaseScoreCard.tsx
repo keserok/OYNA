@@ -40,11 +40,11 @@ export const ShowcaseScoreCard: React.FC<Props> = ({ pitchId, onTaskClick, refre
 
   if (!score) return null;
 
-  const tone = score.score >= 85 ? 'text-[#39FF14]' : score.score >= 60 ? 'text-yellow-400' : 'text-red-400';
+  const tone = score.score >= 85 ? 'text-primary' : score.score >= 60 ? 'text-yellow-400' : 'text-red-400';
 
   return (
     <div className="space-y-4">
-      <div className="bg-[#0A0E14] border border-white/5 rounded-2xl p-5">
+      <div className="bg-bg border border-white/5 rounded-2xl p-5">
         <div className="flex items-center justify-between">
           <div>
             <p className="text-[0.625rem] font-extrabold text-ink-4 uppercase tracking-widest">Vitrin Skoru</p>
@@ -56,7 +56,7 @@ export const ShowcaseScoreCard: React.FC<Props> = ({ pitchId, onTaskClick, refre
         </div>
         <div className="mt-3 h-2 bg-white/5 rounded-full overflow-hidden">
           <div
-            className={`h-full rounded-full transition-all ${score.score >= 85 ? 'bg-[#39FF14]' : score.score >= 60 ? 'bg-yellow-400' : 'bg-red-400'}`}
+            className={`h-full rounded-full transition-all ${score.score >= 85 ? 'bg-primary' : score.score >= 60 ? 'bg-yellow-400' : 'bg-red-400'}`}
             style={{ width: `${score.score}%` }}
           />
         </div>
@@ -69,7 +69,7 @@ export const ShowcaseScoreCard: React.FC<Props> = ({ pitchId, onTaskClick, refre
               className={`w-full flex items-center gap-2.5 text-left text-xs font-semibold ${t.done ? 'text-ink-4' : 'text-white'}`}
             >
               {t.done
-                ? <CheckCircle2 size={15} className="text-[#39FF14] shrink-0" />
+                ? <CheckCircle2 size={15} className="text-primary shrink-0" />
                 : <Circle size={15} className="text-ink-4 shrink-0" />}
               <span className={t.done ? 'line-through' : ''}>{t.label}</span>
               <span className="ml-auto text-[0.6875rem] font-extrabold text-ink-4">+{t.points}</span>
@@ -85,8 +85,8 @@ export const ShowcaseScoreCard: React.FC<Props> = ({ pitchId, onTaskClick, refre
             { icon: Star, label: 'Favori', sub: 'toplam', value: engagement.favorites },
             { icon: Ticket, label: 'Rezervasyon', sub: '30 gün · app', value: engagement.appBookings30d },
           ].map(({ icon: Icon, label, sub, value }) => (
-            <div key={label} className="bg-[#0A0E14] border border-white/5 rounded-2xl p-3.5 text-center">
-              <Icon size={15} className="mx-auto text-[#39FF14]" />
+            <div key={label} className="bg-bg border border-white/5 rounded-2xl p-3.5 text-center">
+              <Icon size={15} className="mx-auto text-primary" />
               <div className="text-xl font-extrabold text-white mt-1.5">{value}</div>
               <div className="text-[0.625rem] font-bold text-ink-4 uppercase tracking-wider">{label}</div>
               <div className="text-[0.6875rem] text-ink-4">{sub}</div>

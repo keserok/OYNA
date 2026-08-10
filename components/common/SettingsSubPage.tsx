@@ -28,13 +28,13 @@ const SettingsSubPage: React.FC<SettingsSubPageProps> = ({ open, onClose, title,
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className="fixed inset-0 z-[60] bg-[#0A0E14] flex flex-col"
+        className="fixed inset-0 z-[60] bg-bg flex flex-col"
       >
         {/* Sticky başlık */}
-        <header className="shrink-0 px-5 pt-[calc(env(safe-area-inset-top)+14px)] pb-4 flex items-center gap-4 bg-[#0A0E14]/95 backdrop-blur-xl border-b border-white/5">
+        <header className="shrink-0 px-5 pt-[calc(env(safe-area-inset-top)+14px)] pb-4 flex items-center gap-4 bg-bg/95 backdrop-blur-xl border-b border-white/5">
           <button
             onClick={onClose}
-            className="w-10 h-10 flex items-center justify-center bg-[#161B22] rounded-full border border-white/5 text-white hover:bg-white/10 active:scale-95 transition-all"
+            className="w-10 h-10 flex items-center justify-center bg-surface-1 rounded-full border border-white/5 text-white hover:bg-white/10 active:scale-95 transition-all"
             aria-label="Geri"
           >
             <ArrowLeft size={20} />

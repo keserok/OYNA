@@ -206,7 +206,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onNavigate, onOpenD
         // (serif) yazıyla ve yeşile çalan zeminle çiziliyordu ("tasarım 3a");
         // teslim edilen yeni tasarım gövdeyi Inter, başlıkları Montserrat ve
         // zemini düz koyu yapıyor — uygulamanın geri kalanıyla aynı dil.
-        <div className="fixed inset-0 bg-[#0A0E14] flex flex-col h-screen overflow-hidden selection:bg-primary selection:text-black">
+        <div className="fixed inset-0 bg-bg flex flex-col h-screen overflow-hidden selection:bg-primary selection:text-black">
             {/* Ambient ışıma — tasarımın üstteki saha çizimi + köşe parıltısı.
                 Görsel `mix-blend-mode: screen` ile zemine karışır ve aşağı
                 doğru maskeyle söner; içeriğin okunurluğunu bozmaz. */}
@@ -258,12 +258,12 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onNavigate, onOpenD
                 <>
                 {/* ═══ MİSAFİR ŞERİDİ — oturumsuz kullanıcıya kaydolma çağrısı ═══ */}
                 {isGuest && (
-                    <div className="bg-[#FACC15]/[0.06] border border-[#FACC15]/30 rounded-3xl p-5 shadow-[0_8px_30px_rgba(0,0,0,0.4)] relative overflow-hidden">
-                        <div className="absolute -top-10 -right-10 w-32 h-32 bg-[#FACC15]/10 blur-[40px] rounded-full pointer-events-none" />
+                    <div className="bg-warning/[0.06] border border-warning/30 rounded-3xl p-5 shadow-[0_8px_30px_rgba(0,0,0,0.4)] relative overflow-hidden">
+                        <div className="absolute -top-10 -right-10 w-32 h-32 bg-warning/10 blur-[40px] rounded-full pointer-events-none" />
                         <div className="relative z-10 flex flex-col gap-3">
                             <div className="flex items-center gap-2">
-                                <span className="w-2 h-2 rounded-full bg-[#FACC15] animate-pulse" />
-                                <p className="text-[0.75rem] font-bold uppercase tracking-widest text-[#FACC15]">Misafir Modundasın</p>
+                                <span className="w-2 h-2 rounded-full bg-warning animate-pulse" />
+                                <p className="text-[0.75rem] font-bold uppercase tracking-widest text-warning">Misafir Modundasın</p>
                             </div>
                             <p className="text-[0.8125rem] text-[#F5F3EE]/[0.6] leading-relaxed">
                                 Profilini oluşturmak, maçlara katılmak ve istatistiklerini biriktirmek için giriş yap.
@@ -292,7 +292,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onNavigate, onOpenD
                 {!isGuest && profile && profile.hasCompletedOnboarding === false && (
                     <button
                         onClick={() => onNavigate && onNavigate('ONBOARDING')}
-                        className="w-full text-left bg-[#161B22]/[0.92] border border-white/[0.14] rounded-[24px] p-4 flex items-center gap-3.5 min-h-[48px] active:scale-[0.99] transition-all"
+                        className="w-full text-left bg-surface-1/[0.92] border border-white/[0.14] rounded-[24px] p-4 flex items-center gap-3.5 min-h-[48px] active:scale-[0.99] transition-all"
                     >
                         <div className="flex-1 min-w-0">
                             <p className="text-[0.9375rem] text-[#F5F3EE]">Profil tamamlanmadı</p>

@@ -471,9 +471,9 @@ export const FinancialCalendarView: React.FC<{
     };
 
     return (
-        <div className="flex flex-col h-full bg-[#0A0E14] relative">
-            <div className="sticky top-0 z-20 bg-[#0A0E14] border-b border-white/10 shadow-2xl">
-                <div className="grid grid-cols-3 gap-2 p-4 pb-2 pt-safe border-b border-white/5 bg-[#161B22]">
+        <div className="flex flex-col h-full bg-bg relative">
+            <div className="sticky top-0 z-20 bg-bg border-b border-white/10 shadow-2xl">
+                <div className="grid grid-cols-3 gap-2 p-4 pb-2 pt-safe border-b border-white/5 bg-surface-1">
                     <div className="flex flex-col">
                         <span className="text-[10px] text-gray-500 font-bold uppercase">Tahsilat</span>
                         <span className="text-lg font-extrabold text-emerald-400 tracking-tight font-mono">{money(dailyCollected)}</span>
@@ -516,9 +516,9 @@ export const FinancialCalendarView: React.FC<{
                                         key={iso}
                                         data-date={iso}
                                         onClick={() => selectDay(iso)}
-                                        className={`flex-shrink-0 w-[52px] py-2 rounded-xl flex flex-col items-center gap-0.5 transition-all border snap-start ${isSel ? 'bg-white/10 text-white border-white/25 shadow-lg' : 'bg-[#161B22] border-transparent text-gray-500 hover:bg-white/5'}`}
+                                        className={`flex-shrink-0 w-[52px] py-2 rounded-xl flex flex-col items-center gap-0.5 transition-all border snap-start ${isSel ? 'bg-white/10 text-white border-white/25 shadow-lg' : 'bg-surface-1 border-transparent text-gray-500 hover:bg-white/5'}`}
                                     >
-                                        <span className={`text-[9px] font-extrabold uppercase ${isToday && !isSel ? 'text-[#FACC15]' : ''}`}>
+                                        <span className={`text-[9px] font-extrabold uppercase ${isToday && !isSel ? 'text-warning' : ''}`}>
                                             {isToday ? 'Bugün' : d.toLocaleDateString('tr-TR', { weekday: 'short' })}
                                         </span>
                                         <span className="text-sm font-bold">{d.getDate()}</span>
@@ -530,13 +530,13 @@ export const FinancialCalendarView: React.FC<{
                             })}
                         </div>
                         {/* sol fade — yalnız kaydırılmışken */}
-                        <div className={`pointer-events-none absolute inset-y-0 left-0 w-8 bg-gradient-to-r from-[#0A0E14] to-transparent transition-opacity ${stripAtStart ? 'opacity-0' : 'opacity-100'}`} />
+                        <div className={`pointer-events-none absolute inset-y-0 left-0 w-8 bg-gradient-to-r from-bg to-transparent transition-opacity ${stripAtStart ? 'opacity-0' : 'opacity-100'}`} />
                         {/* sağ fade — devamında gün olduğunu gösterir */}
-                        <div className={`pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-[#0A0E14] to-transparent transition-opacity ${stripAtEnd ? 'opacity-0' : 'opacity-100'}`} />
+                        <div className={`pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-bg to-transparent transition-opacity ${stripAtEnd ? 'opacity-0' : 'opacity-100'}`} />
                     </div>
 
                     <div className="flex items-center gap-2">
-                        <div className="flex-1 flex bg-[#161B22] p-1 rounded-xl overflow-x-auto">
+                        <div className="flex-1 flex bg-surface-1 p-1 rounded-xl overflow-x-auto">
                             {activeCourts.length === 0 ? (
                                 <span className="text-xs text-gray-500 px-3 py-2">Saha ekleyin (Menü → Sahalarım)</span>
                             ) : activeCourts.map(p => {
@@ -555,7 +555,7 @@ export const FinancialCalendarView: React.FC<{
                         </div>
                         <button
                             onClick={() => setIsMonthlyView(!isMonthlyView)}
-                            className={`h-full px-3 py-2 border rounded-xl transition-colors flex items-center justify-center gap-2 ${isMonthlyView ? 'bg-[#FACC15] text-black border-[#FACC15]' : 'bg-[#161B22] border-white/5 text-gray-400 hover:text-white hover:bg-white/5'}`}
+                            className={`h-full px-3 py-2 border rounded-xl transition-colors flex items-center justify-center gap-2 ${isMonthlyView ? 'bg-warning text-black border-warning' : 'bg-surface-1 border-white/5 text-gray-400 hover:text-white hover:bg-white/5'}`}
                         >
                             <CalendarDays size={20} />
                             {isMonthlyView && <span className="text-[10px] font-extrabold uppercase">Aylık</span>}
@@ -568,7 +568,7 @@ export const FinancialCalendarView: React.FC<{
             <div ref={dayScrollRef} className="flex-1 px-4 py-4 space-y-2 pb-40">
                 {isMonthlyView ? (
                     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                        <div className="bg-[#161B22] rounded-3xl border border-white/10 p-6 mb-6">
+                        <div className="bg-surface-1 rounded-3xl border border-white/10 p-6 mb-6">
                             <div className="flex justify-between items-center mb-6">
                                 <div className="flex items-center gap-2">
                                     <button
@@ -589,7 +589,7 @@ export const FinancialCalendarView: React.FC<{
                                     {/* Takvim 2: aylık gezinirken hızlı bugüne dönüş — bugünün gün ekranını açar. */}
                                     <button
                                         onClick={() => { const now = new Date(); setMonthCursor({ y: now.getFullYear(), m: now.getMonth() }); selectDay(todayISO()); }}
-                                        className="ml-1 px-4 h-11 rounded-xl bg-[#FACC15]/10 border border-[#FACC15]/25 text-[#FACC15] text-[10px] font-extrabold uppercase tracking-wide hover:bg-[#FACC15]/20 transition-colors"
+                                        className="ml-1 px-4 h-11 rounded-xl bg-warning/10 border border-warning/25 text-warning text-[10px] font-extrabold uppercase tracking-wide hover:bg-warning/20 transition-colors"
                                     >
                                         Bugün
                                     </button>
@@ -628,7 +628,7 @@ export const FinancialCalendarView: React.FC<{
                                                 onClick={() => selectDay(iso)}
                                                 className={`aspect-square rounded-xl flex flex-col items-center justify-center relative transition-all border ${
                                                     isSelected ? 'bg-white/10 text-white border-white/30 shadow-lg scale-110 z-10' :
-                                                    isToday ? 'text-[#FACC15] border-[#FACC15]/30' :
+                                                    isToday ? 'text-warning border-warning/30' :
                                                     'text-gray-500 border-transparent hover:bg-white/5'
                                                 }`}
                                             >
@@ -653,7 +653,7 @@ export const FinancialCalendarView: React.FC<{
                                 const isPaused = sub.status === 'PAUSED';
                                 const autoRenew = sub.auto_renew !== false;
                                 return (
-                                <div key={sub.id} className={`bg-[#161B22] p-4 rounded-2xl border flex justify-between items-center group ${isPaused ? 'border-amber-500/20 opacity-70' : 'border-white/5'}`}>
+                                <div key={sub.id} className={`bg-surface-1 p-4 rounded-2xl border flex justify-between items-center group ${isPaused ? 'border-amber-500/20 opacity-70' : 'border-white/5'}`}>
                                     <div className="flex items-center gap-4 min-w-0">
                                         <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${isPaused ? 'bg-amber-500/10 text-amber-400' : 'bg-blue-500/10 text-blue-400'}`}>
                                             <RefreshCw size={20} />
@@ -679,7 +679,7 @@ export const FinancialCalendarView: React.FC<{
                                         {subMenuId === sub.id && (
                                             <>
                                                 <div className="fixed inset-0 z-10" onClick={() => setSubMenuId(null)} />
-                                                <div className="absolute right-0 top-10 z-20 w-52 bg-[#0A0E14] border border-white/10 rounded-2xl p-1.5 shadow-2xl">
+                                                <div className="absolute right-0 top-10 z-20 w-52 bg-bg border border-white/10 rounded-2xl p-1.5 shadow-2xl">
                                                     <button
                                                         disabled={subActionBusy}
                                                         onClick={() => handleSubAutoRenew(sub.id, !autoRenew)}
@@ -724,13 +724,13 @@ export const FinancialCalendarView: React.FC<{
                         </div>
                         <button
                             onClick={() => setShowAllHours(v => !v)}
-                            className={`min-h-[44px] px-4 rounded-full border text-[0.75rem] font-extrabold uppercase tracking-wider transition-colors ${showAllHours ? 'bg-white/10 text-white border-white/20' : 'bg-[#161B22] text-gray-500 border-white/5 hover:text-gray-300'}`}
+                            className={`min-h-[44px] px-4 rounded-full border text-[0.75rem] font-extrabold uppercase tracking-wider transition-colors ${showAllHours ? 'bg-white/10 text-white border-white/20' : 'bg-surface-1 text-gray-500 border-white/5 hover:text-gray-300'}`}
                         >
                             {showAllHours ? 'Aktif saatler' : 'Tüm saatler'}
                         </button>
                     </div>
                     {dayHours.closed && visibleTimeSlots.length === 0 && (
-                        <div className="rounded-2xl border border-white/10 bg-[#161B22] p-6 text-center">
+                        <div className="rounded-2xl border border-white/10 bg-surface-1 p-6 text-center">
                             <p className="text-sm font-bold text-gray-400">Bu gün çalışma saatlerinde kapalı.</p>
                             <p className="text-[11px] text-gray-600 mt-1">Sahalarım → saha → Aktif Saatler ve Ücretler'den bu güne tarife ekleyerek açabilirsin.</p>
                         </div>
@@ -770,7 +770,7 @@ export const FinancialCalendarView: React.FC<{
                                         {slot.startTime} - {slot.endTime}
                                     </span>
                                     {slot.minutes !== 60 && (
-                                        <span className="text-[9px] font-extrabold text-[#39FF14]/70 mt-0.5">{slot.minutes} dk</span>
+                                        <span className="text-[9px] font-extrabold text-primary/70 mt-0.5">{slot.minutes} dk</span>
                                     )}
                                 </div>
 
@@ -863,7 +863,7 @@ export const FinancialCalendarView: React.FC<{
                                             className={`w-16 rounded-xl border border-white/5 flex flex-col items-center justify-center gap-1 transition-all ${
                                                 hasFlashDeal
                                                 ? 'bg-green-900/20 text-green-500 border-green-500/30 hover:bg-green-900/40' 
-                                                : 'bg-[#161B22] text-gray-500 hover:text-white'
+                                                : 'bg-surface-1 text-gray-500 hover:text-white'
                                             }`}
                                             title="Flash deal"
                                         >
@@ -877,7 +877,7 @@ export const FinancialCalendarView: React.FC<{
                                               setSpecialPriceModalOpen(time);
                                             }}
                                             disabled={!selectedCourtId || readOnly}
-                                            className="w-14 rounded-xl border border-white/5 bg-[#161B22] text-gray-500 hover:text-amber-400 hover:border-amber-500/30 flex items-center justify-center transition-all"
+                                            className="w-14 rounded-xl border border-white/5 bg-surface-1 text-gray-500 hover:text-amber-400 hover:border-amber-500/30 flex items-center justify-center transition-all"
                                             title="Özel fiyat (prime time)"
                                         >
                                             <TrendingUp size={14} />
@@ -889,7 +889,7 @@ export const FinancialCalendarView: React.FC<{
                                               setCloseSlotModalOpen(time);
                                             }}
                                             disabled={!selectedCourtId || readOnly}
-                                            className="w-14 rounded-xl border border-white/5 bg-[#161B22] text-gray-500 hover:text-red-400 hover:border-red-500/30 flex items-center justify-center transition-all"
+                                            className="w-14 rounded-xl border border-white/5 bg-surface-1 text-gray-500 hover:text-red-400 hover:border-red-500/30 flex items-center justify-center transition-all"
                                             title="Slotu kapat"
                                         >
                                             <Lock size={14} />
@@ -974,13 +974,13 @@ export const FinancialCalendarView: React.FC<{
                             }
                         }}
                         disabled={isAddingSlot || (paymentStatus === 'PARTIAL' && !isDepositValid)}
-                        className="w-full py-4 min-h-[52px] bg-[#FACC15] text-black font-extrabold text-lg rounded-2xl hover:bg-yellow-300 active:scale-[0.98] transition-all disabled:opacity-50"
+                        className="w-full py-4 min-h-[52px] bg-warning text-black font-extrabold text-lg rounded-2xl hover:bg-yellow-300 active:scale-[0.98] transition-all disabled:opacity-50"
                     >
                         {isAddingSlot ? 'KAYDEDİLİYOR…' : 'KAYDET'}
                     </button>
                 }
             >
-                <div className="bg-[#0A0E14] p-4 rounded-2xl border border-white/5 mb-6 text-center">
+                <div className="bg-bg p-4 rounded-2xl border border-white/5 mb-6 text-center">
                     <p className="text-xs text-gray-500 uppercase font-bold">Seçilen Saat</p>
                     <p className="text-3xl font-extrabold text-white mt-1 font-mono tabular-nums">{isQuickCreateOpen}</p>
                     {(() => {
@@ -994,7 +994,7 @@ export const FinancialCalendarView: React.FC<{
                 </div>
 
                 <div className="space-y-4">
-                    <div className="bg-[#0A0E14] flex flex-col px-4 py-3 rounded-xl border border-white/10 focus-within:border-[#FACC15] transition-colors gap-3">
+                    <div className="bg-bg flex flex-col px-4 py-3 rounded-xl border border-white/10 focus-within:border-warning transition-colors gap-3">
                         <div className="flex items-center w-full">
                           <User size={18} className="text-gray-500 mr-3" />
                           <input
@@ -1049,7 +1049,7 @@ export const FinancialCalendarView: React.FC<{
                                 Elden alınan kapora
                             </label>
                             <div className="flex gap-2">
-                                <div className="flex-1 bg-[#0A0E14] border border-white/10 rounded-xl px-4 flex items-center focus-within:border-[#FACC15]">
+                                <div className="flex-1 bg-bg border border-white/10 rounded-xl px-4 flex items-center focus-within:border-warning">
                                     <input
                                         type="text"
                                         inputMode="decimal"
@@ -1071,7 +1071,7 @@ export const FinancialCalendarView: React.FC<{
                                 )}
                             </div>
                             {isDepositTooBig ? (
-                                <p className="text-[11px] font-bold text-[#F87171]">Kapora, saat ücretinden ({money(quickSlotRate)}) fazla olamaz.</p>
+                                <p className="text-[11px] font-bold text-error">Kapora, saat ücretinden ({money(quickSlotRate)}) fazla olamaz.</p>
                             ) : (
                                 <p className="text-[11px] text-[#9CA3AF]">Deftere bu tutar yazılır. Kalanı sonra &quot;Tahsilat Al&quot; ile alırsın.</p>
                             )}

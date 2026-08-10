@@ -81,7 +81,7 @@ export const PaymentModePanel: React.FC = () => {
   const divergent = rows.filter((r) => r.pitch_mode !== r.effective_mode).length;
 
   return (
-    <section className="bg-[#161B22]/60 border border-white/[0.06] rounded-2xl p-5">
+    <section className="bg-surface-1/60 border border-white/[0.06] rounded-2xl p-5">
       <div className="flex items-start justify-between gap-4 mb-1 flex-wrap">
         <h3 className="text-[10px] font-extrabold text-gray-400 uppercase tracking-wider">
           Tesis Bazlı Ödeme Modu

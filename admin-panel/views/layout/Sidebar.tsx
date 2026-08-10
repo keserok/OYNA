@@ -87,7 +87,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         .filter((group) => group.items.length > 0);
 
     return (
-        <aside className={`${collapsed ? 'w-16' : 'w-56'} bg-[#161B22]/90 backdrop-blur border-r border-white/5 flex flex-col shrink-0 overflow-hidden font-sans transition-[width] duration-200`}>
+        <aside className={`${collapsed ? 'w-16' : 'w-56'} bg-surface-1/90 backdrop-blur border-r border-white/5 flex flex-col shrink-0 overflow-hidden font-sans transition-[width] duration-200`}>
             {/* Sidebar Logo Header */}
             <div className={`py-4.5 border-b border-white/5 flex items-center ${collapsed ? 'px-2 justify-center' : 'px-5 justify-between'}`}>
                 {!collapsed && (

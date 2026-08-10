@@ -435,14 +435,14 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect, onCre
     }, [detail, detailStats, type]);
 
     return (
-        <div className="h-full bg-[#0A0E14] relative flex flex-col font-sans overflow-hidden">
+        <div className="h-full bg-bg relative flex flex-col font-sans overflow-hidden">
 
             {/* 1. Başlık */}
-            <header className="px-5 pt-6 pb-4 flex items-center gap-3 bg-[#0A0E14]/90 backdrop-blur-xl sticky top-0 z-30 border-b border-white/5">
+            <header className="px-5 pt-6 pb-4 flex items-center gap-3 bg-bg/90 backdrop-blur-xl sticky top-0 z-30 border-b border-white/5">
                 <button
                     onClick={onBack}
                     aria-label="Geri"
-                    className="w-11 h-11 shrink-0 flex items-center justify-center bg-[#161B22] rounded-full text-white border border-white/5 hover:bg-white/10 active:scale-95 transition-all"
+                    className="w-11 h-11 shrink-0 flex items-center justify-center bg-surface-1 rounded-full text-white border border-white/5 hover:bg-white/10 active:scale-95 transition-all"
                 >
                     <ChevronLeft size={20} />
                 </button>
@@ -641,7 +641,7 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect, onCre
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 100 }}
                         transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-                        className="fixed inset-0 z-50 bg-[#0A0E14] flex flex-col overflow-hidden"
+                        className="fixed inset-0 z-50 bg-bg flex flex-col overflow-hidden"
                     >
                         {showSuccessScreen ? (
                             /* ── Başarı ekranı — "talep gönderildi", "kiralandı" değil (sağlayıcı onayı gerçek) ── */
@@ -813,7 +813,7 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect, onCre
                                                     <button
                                                         type="button"
                                                         onClick={goToTopup}
-                                                        className="w-full h-10 rounded-xl bg-[#39FF14] text-[#0A0E14] text-[0.6875rem] font-extrabold uppercase tracking-wider active:scale-95 transition-transform"
+                                                        className="w-full h-10 rounded-xl bg-primary text-on-primary text-[0.6875rem] font-extrabold uppercase tracking-wider active:scale-95 transition-transform"
                                                     >
                                                         Cüzdana Yükle
                                                     </button>
@@ -974,7 +974,7 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect, onCre
                                         {detail.avatar && !heroBroken ? (
                                             <img src={detail.avatar} className="w-full h-full object-cover" alt={detail.name} referrerPolicy="no-referrer" onError={() => setHeroBroken(true)} />
                                         ) : (
-                                            <div className="relative w-full h-full flex items-center justify-center bg-gradient-to-br from-[#131A24] to-[#0A0E14] overflow-hidden">
+                                            <div className="relative w-full h-full flex items-center justify-center bg-gradient-to-br from-[#131A24] to-bg overflow-hidden">
                                                 {/* Rol filigranı + yumuşak parıltı — boş kapak ucuz görünmesin */}
                                                 <RoleIcon
                                                     size={280}
@@ -994,7 +994,7 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect, onCre
                                                 </div>
                                             </div>
                                         )}
-                                        <div className="absolute inset-x-0 bottom-0 h-44 bg-gradient-to-t from-[#0A0E14] via-[#0A0E14]/75 to-transparent" />
+                                        <div className="absolute inset-x-0 bottom-0 h-44 bg-gradient-to-t from-bg via-bg/75 to-transparent" />
                                     </div>
 
                                     {/* Kimlik bloğu */}
@@ -1214,7 +1214,7 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect, onCre
                                 </div>
 
                                 {/* Alt aksiyon çubuğu — tek yol: sabit ücretle talep gönder (Prensipler §4.3) */}
-                                <div className="absolute bottom-0 left-0 w-full px-5 pt-4 pb-safe bg-[#0A0E14]/95 backdrop-blur-md border-t border-white/5 flex gap-3 items-center z-20">
+                                <div className="absolute bottom-0 left-0 w-full px-5 pt-4 pb-safe bg-bg/95 backdrop-blur-md border-t border-white/5 flex gap-3 items-center z-20">
                                     <div className="flex flex-col items-start pr-1 shrink-0">
                                         <span className="text-[0.625rem] font-extrabold text-ink-4 uppercase tracking-widest">Hizmet Bedeli</span>
                                         <span className="text-xl font-extrabold text-white font-numeric leading-tight">{formatTRYShort(detail.fee)}</span>

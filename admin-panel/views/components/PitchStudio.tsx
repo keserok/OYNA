@@ -737,7 +737,7 @@ export const PitchStudio: React.FC<PitchStudioProps> = ({ pitchId, onClose, onSa
   return (
     <div className="fixed inset-0 z-[90] bg-[#0A0D14] flex flex-col">
       {/* Başlık */}
-      <div className="h-14 shrink-0 bg-[#161B22] border-b border-white/5 flex items-center justify-between px-4 md:px-6">
+      <div className="h-14 shrink-0 bg-surface-1 border-b border-white/5 flex items-center justify-between px-4 md:px-6">
         <div className="flex items-center gap-3 min-w-0">
           <div className="w-8 h-8 rounded-lg bg-red-600/20 border border-red-500/30 flex items-center justify-center shrink-0">
             <Building2 size={15} className="text-red-400" />
@@ -957,7 +957,7 @@ export const PitchStudio: React.FC<PitchStudioProps> = ({ pitchId, onClose, onSa
                           className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold border transition-colors ${
                             active
                               ? 'bg-green-500/15 border-green-500/40 text-green-300'
-                              : 'bg-[#161B22] border-white/5 text-gray-400 hover:text-white'
+                              : 'bg-surface-1 border-white/5 text-gray-400 hover:text-white'
                           }`}
                         >
                           {active ? <Check size={12} /> : <Icon size={12} />}
@@ -1517,7 +1517,7 @@ export const PitchStudio: React.FC<PitchStudioProps> = ({ pitchId, onClose, onSa
                         <button type="button" onClick={() => void loadMirror()} className="text-xs text-red-400 font-bold inline-flex items-center gap-1.5"><RefreshCcw size={12} /> Tekrar dene</button>
                       </div>
                     ) : mirrorPitch ? (
-                      <div className="bg-[#0A0E14] rounded-3xl p-4">
+                      <div className="bg-bg rounded-3xl p-4">
                         <div className="max-w-[400px] mx-auto">
                           <PitchShowcaseCard pitch={mirrorPitch} />
                         </div>
@@ -1593,7 +1593,7 @@ export const PitchStudio: React.FC<PitchStudioProps> = ({ pitchId, onClose, onSa
                     </div>
                     <div className="bg-black/30 border border-white/[0.06] rounded-2xl p-5 flex items-center justify-between">
                       <div>
-                        <p className="text-sm font-bold text-white flex items-center gap-1.5"><Clock size={14} className="text-[#39FF14]" /> Müsaitlik Rozeti</p>
+                        <p className="text-sm font-bold text-white flex items-center gap-1.5"><Clock size={14} className="text-primary" /> Müsaitlik Rozeti</p>
                         <p className="text-[11px] text-gray-500 mt-1 leading-relaxed max-w-[200px]">
                           Kartta "Bugün X saat müsait / dolu" rozeti gösterilir.
                         </p>
@@ -1601,14 +1601,14 @@ export const PitchStudio: React.FC<PitchStudioProps> = ({ pitchId, onClose, onSa
                       <button
                         type="button"
                         onClick={() => void handleToggleShowcaseFlag('show_availability_badge', availabilityBadge, setAvailabilityBadge, ['Müsaitlik rozeti açıldı.', 'Müsaitlik rozeti kapatıldı.'])}
-                        className={`relative w-14 h-8 rounded-full transition-colors shrink-0 ${availabilityBadge ? 'bg-[#39FF14]' : 'bg-gray-700'}`}
+                        className={`relative w-14 h-8 rounded-full transition-colors shrink-0 ${availabilityBadge ? 'bg-primary' : 'bg-gray-700'}`}
                       >
                         <span className={`absolute top-1 w-6 h-6 rounded-full bg-white transition-all ${availabilityBadge ? 'left-7' : 'left-1'}`} />
                       </button>
                     </div>
                     <div className="bg-black/30 border border-white/[0.06] rounded-2xl p-5 flex items-center justify-between">
                       <div>
-                        <p className="text-sm font-bold text-white flex items-center gap-1.5"><CalendarCheck size={14} className="text-[#39FF14]" /> Online Rezervasyon</p>
+                        <p className="text-sm font-bold text-white flex items-center gap-1.5"><CalendarCheck size={14} className="text-primary" /> Online Rezervasyon</p>
                         <p className="text-[11px] text-gray-500 mt-1 leading-relaxed max-w-[200px]">
                           Kapalıyken oyuncular bu tesise uygulamadan rezervasyon YAPAMAZ (sunucu reddeder);
                           tesisin kendi manuel kayıtları etkilenmez.

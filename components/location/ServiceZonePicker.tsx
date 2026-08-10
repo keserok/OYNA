@@ -40,12 +40,12 @@ const ServiceZonePicker: React.FC<ServiceZonePickerProps> = ({
         <select
           value={city}
           onChange={(e) => onCityChange(e.target.value)}
-          className="w-full appearance-none bg-[#0A0E14] border border-white/10 rounded-xl pl-3.5 pr-9 py-3
-                     text-sm font-semibold text-white outline-none focus:border-[#39FF14]/40 transition-colors"
+          className="w-full appearance-none bg-bg border border-white/10 rounded-xl pl-3.5 pr-9 py-3
+                     text-sm font-semibold text-white outline-none focus:border-primary/40 transition-colors"
         >
-          <option value="" className="bg-[#161B22] text-white">İl seç…</option>
+          <option value="" className="bg-surface-1 text-white">İl seç…</option>
           {TURKEY_CITIES.map((c) => (
-            <option key={c} value={c} className="bg-[#161B22] text-white">
+            <option key={c} value={c} className="bg-surface-1 text-white">
               {c}
             </option>
           ))}
@@ -80,7 +80,7 @@ const ServiceZonePicker: React.FC<ServiceZonePickerProps> = ({
                 disabled={disabled}
                 className={`min-h-[36px] px-3.5 rounded-xl text-[0.8125rem] font-bold inline-flex items-center gap-1.5 transition-all active:scale-95
                   ${on
-                    ? 'bg-[#39FF14]/14 border border-[#39FF14]/45 text-[#39FF14] shadow-[0_0_14px_rgba(57,255,20,0.15)]'
+                    ? 'bg-primary/14 border border-primary/45 text-primary shadow-[0_0_14px_rgba(57,255,20,0.15)]'
                     : disabled
                       ? 'bg-white/[0.02] border border-white/5 text-ink-4 cursor-not-allowed'
                       : 'bg-white/4 border border-white/10 text-gray-200 hover:border-white/20'}`}

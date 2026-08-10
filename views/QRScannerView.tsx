@@ -148,9 +148,9 @@ const QRScannerView: React.FC<QRScannerViewProps> = ({ onBack, pitchId }) => {
   };
 
   return (
-    <div className="min-h-screen bg-[#0A0E14] text-white flex flex-col">
+    <div className="min-h-screen bg-bg text-white flex flex-col">
       {/* Header */}
-      <div className="p-6 flex items-center justify-between border-b border-white/5 bg-[#161B22]/50 backdrop-blur-xl sticky top-0 z-50">
+      <div className="p-6 flex items-center justify-between border-b border-white/5 bg-surface-1/50 backdrop-blur-xl sticky top-0 z-50">
         <button onClick={onBack} aria-label="Panele dön" className="p-2 hover:bg-white/5 rounded-full transition-colors">
           <ArrowLeft size={24} />
         </button>
@@ -234,7 +234,7 @@ const QRScannerView: React.FC<QRScannerViewProps> = ({ onBack, pitchId }) => {
                     </div>
                   ) : (
                     ownerMatches.map((m) => (
-                      <button key={m.matchId} type="button" disabled={!!pickingId} onClick={() => handlePickMatch(m)} className="w-full bg-[#161B22] border border-white/5 rounded-2xl p-4 flex items-center justify-between gap-3 hover:border-blue-500/30 transition-all disabled:opacity-50 text-left">
+                      <button key={m.matchId} type="button" disabled={!!pickingId} onClick={() => handlePickMatch(m)} className="w-full bg-surface-1 border border-white/5 rounded-2xl p-4 flex items-center justify-between gap-3 hover:border-blue-500/30 transition-all disabled:opacity-50 text-left">
                         <div className="min-w-0">
                           <p className="text-sm font-extrabold text-white truncate">{m.title}</p>
                           <p className="text-[0.6875rem] text-ink-4 font-bold uppercase truncate">{m.courtName} · {m.when}</p>
@@ -259,7 +259,7 @@ const QRScannerView: React.FC<QRScannerViewProps> = ({ onBack, pitchId }) => {
               key="score-entry"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="w-full max-w-md bg-[#161B22] rounded-[40px] border border-white/10 p-8 shadow-2xl"
+              className="w-full max-w-md bg-surface-1 rounded-[40px] border border-white/10 p-8 shadow-2xl"
             >
               <div className="text-center mb-8">
                 <div className="inline-flex p-4 rounded-3xl bg-green-500/10 text-green-400 mb-4">

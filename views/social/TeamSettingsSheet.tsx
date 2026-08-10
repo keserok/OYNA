@@ -215,7 +215,7 @@ const TeamSettingsSheet: React.FC<TeamSettingsSheetProps> = ({
               value={name}
               onChange={e => setName(e.target.value.slice(0, 32))}
               placeholder="Takım adı"
-              className="w-full h-12 px-4 rounded-2xl bg-white/5 border border-white/10 text-sm font-semibold placeholder:text-ink-4 focus:outline-none focus:border-[#39FF14]/50"
+              className="w-full h-12 px-4 rounded-2xl bg-white/5 border border-white/10 text-sm font-semibold placeholder:text-ink-4 focus:outline-none focus:border-primary/50"
             />
             <div className="flex gap-2">
               <input
@@ -261,7 +261,7 @@ const TeamSettingsSheet: React.FC<TeamSettingsSheetProps> = ({
                   onClick={() => setFormat(f)}
                   className={`min-h-[40px] rounded-xl text-xs font-extrabold border ${
                     format === f
-                      ? 'bg-[#39FF14] text-[#0A0E14] border-[#39FF14]'
+                      ? 'bg-primary text-on-primary border-primary'
                       : 'bg-white/5 text-white/60 border-white/10'
                   }`}
                 >
@@ -284,17 +284,17 @@ const TeamSettingsSheet: React.FC<TeamSettingsSheetProps> = ({
               <button
                 onClick={() => setVisibility('PUBLIC')}
                 className={`rounded-2xl border p-3 text-left ${
-                  visibility === 'PUBLIC' ? 'border-[#39FF14]/50 bg-[#39FF14]/8' : 'border-white/10 bg-white/4'
+                  visibility === 'PUBLIC' ? 'border-primary/50 bg-primary/8' : 'border-white/10 bg-white/4'
                 }`}
               >
-                <Globe2 size={15} className="text-[#39FF14]" />
+                <Globe2 size={15} className="text-primary" />
                 <div className="text-[0.8125rem] font-bold mt-1">Herkese Açık</div>
                 <div className="text-[0.6875rem] text-ink-4">Dizinde görünür</div>
               </button>
               <button
                 onClick={() => setVisibility('PRIVATE')}
                 className={`rounded-2xl border p-3 text-left ${
-                  visibility === 'PRIVATE' ? 'border-[#39FF14]/50 bg-[#39FF14]/8' : 'border-white/10 bg-white/4'
+                  visibility === 'PRIVATE' ? 'border-primary/50 bg-primary/8' : 'border-white/10 bg-white/4'
                 }`}
               >
                 <Lock size={15} className="text-white/60" />
@@ -304,7 +304,7 @@ const TeamSettingsSheet: React.FC<TeamSettingsSheetProps> = ({
             </div>
 
             <label className="flex items-center gap-3 rounded-2xl bg-white/4 border border-white/8 p-3">
-              <Zap size={15} className="text-[#39FF14]" />
+              <Zap size={15} className="text-primary" />
               <div className="flex-1">
                 <div className="text-[0.8125rem] font-bold">Oyuncu Arıyoruz</div>
                 <div className="text-[0.6875rem] text-ink-4">Dizinde ⚡ rozetiyle görünür</div>
@@ -313,7 +313,7 @@ const TeamSettingsSheet: React.FC<TeamSettingsSheetProps> = ({
                 role="switch"
                 aria-checked={recruiting}
                 onClick={() => setRecruiting(v => !v)}
-                className={`w-12 h-7 rounded-full p-0.5 transition-colors ${recruiting ? 'bg-[#39FF14]' : 'bg-white/10'}`}
+                className={`w-12 h-7 rounded-full p-0.5 transition-colors ${recruiting ? 'bg-primary' : 'bg-white/10'}`}
               >
                 <span className={`block w-6 h-6 rounded-full bg-white transition-transform ${recruiting ? 'translate-x-5' : ''}`} />
               </button>
@@ -322,7 +322,7 @@ const TeamSettingsSheet: React.FC<TeamSettingsSheetProps> = ({
             {/* Davet linki — token deny-all tabloda; yalnız yönetici RPC'yle okur */}
             <div className="rounded-2xl bg-white/4 border border-white/8 p-3">
               <div className="flex items-center gap-2">
-                <Link2 size={14} className="text-[#39FF14]" />
+                <Link2 size={14} className="text-primary" />
                 <span className="text-[0.8125rem] font-bold flex-1">Davet Linki</span>
                 {linkLoading && <Loader2 size={13} className="animate-spin text-ink-4" />}
               </div>
@@ -378,7 +378,7 @@ const TeamSettingsSheet: React.FC<TeamSettingsSheetProps> = ({
           <button
             onClick={save}
             disabled={saving || name.trim().length < 2}
-            className="w-full mt-5 min-h-[50px] rounded-2xl bg-[#39FF14] text-[#0A0E14] font-extrabold text-sm flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-40"
+            className="w-full mt-5 min-h-[50px] rounded-2xl bg-primary text-on-primary font-extrabold text-sm flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-40"
           >
             {saving ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />} Kaydet
           </button>

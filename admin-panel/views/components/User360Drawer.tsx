@@ -167,7 +167,7 @@ export const User360Drawer: React.FC<Props> = ({ user, onClose, onBanToggle, onV
                 type="button"
                 onClick={() => setTab(key)}
                 className={`flex-1 px-3 py-2.5 text-[10px] font-extrabold uppercase tracking-wide border-b-2 transition-colors ${
-                  tab === key ? 'border-[#39FF14] text-white' : 'border-transparent text-gray-500 hover:text-gray-300'
+                  tab === key ? 'border-primary text-white' : 'border-transparent text-gray-500 hover:text-gray-300'
                 }`}
               >
                 {label}
@@ -183,7 +183,7 @@ export const User360Drawer: React.FC<Props> = ({ user, onClose, onBanToggle, onV
 
           <div className={`flex-1 overflow-y-auto custom-scrollbar p-5 space-y-4 ${tab !== 'operasyon' ? 'hidden' : ''}`}>
             {/* İletişim (PII — maskeli) */}
-            <div className="bg-[#161B22]/60 border border-white/[0.06] rounded-2xl p-4 space-y-2.5">
+            <div className="bg-surface-1/60 border border-white/[0.06] rounded-2xl p-4 space-y-2.5">
               <p className="text-[10px] font-extrabold text-gray-400 uppercase tracking-wider">İletişim (KVKK — görüntüleme kayıt altına alınır)</p>
               <div className="flex items-center justify-between gap-2">
                 <span className="flex items-center gap-2 text-xs text-gray-300 font-mono min-w-0">
@@ -222,12 +222,12 @@ export const User360Drawer: React.FC<Props> = ({ user, onClose, onBanToggle, onV
             </div>
 
             {/* Cüzdan */}
-            <div className="bg-[#161B22]/60 border border-white/[0.06] rounded-2xl p-4 space-y-3">
+            <div className="bg-surface-1/60 border border-white/[0.06] rounded-2xl p-4 space-y-3">
               <div className="flex items-center justify-between">
                 <p className="text-[10px] font-extrabold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
                   <Wallet size={12} /> Cüzdan
                 </p>
-                <span className="text-sm font-extrabold font-mono text-[#39FF14]">
+                <span className="text-sm font-extrabold font-mono text-primary">
                   {walletBalance !== null ? fmtMoney(walletBalance) : '—'}
                 </span>
               </div>
@@ -256,7 +256,7 @@ export const User360Drawer: React.FC<Props> = ({ user, onClose, onBanToggle, onV
             </div>
 
             {/* Bu kullanıcıya dokunan admin işlemleri */}
-            <div className="bg-[#161B22]/60 border border-white/[0.06] rounded-2xl p-4 space-y-2">
+            <div className="bg-surface-1/60 border border-white/[0.06] rounded-2xl p-4 space-y-2">
               <p className="text-[10px] font-extrabold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
                 <ScrollText size={12} /> Admin İşlem Geçmişi (bu kullanıcı)
               </p>

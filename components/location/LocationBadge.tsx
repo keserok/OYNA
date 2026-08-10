@@ -38,7 +38,7 @@ const LocationBadge: React.FC<LocationBadgeProps> = ({ region, onClick, classNam
     <Wrapper
       {...wrapperProps}
       className={`flex items-center gap-2.5 min-h-[44px] px-3 py-2 rounded-2xl
-                  bg-[#161B22]/80 backdrop-blur-md shadow-[0_8px_32px_rgba(0,0,0,0.25)]
+                  bg-surface-1/80 backdrop-blur-md shadow-[0_8px_32px_rgba(0,0,0,0.25)]
                   ${className}`}
       style={{ border: `1px solid ${s.border}` }}
     >
@@ -49,7 +49,7 @@ const LocationBadge: React.FC<LocationBadgeProps> = ({ region, onClick, classNam
         <MapPin size={16} />
         {s.live && (
           <span
-            className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-[#0A0E14] animate-pulse"
+            className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-bg animate-pulse"
             style={{ background: s.color, boxShadow: `0 0 8px ${s.color}` }}
           />
         )}

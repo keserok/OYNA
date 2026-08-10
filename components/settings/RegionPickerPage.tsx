@@ -88,7 +88,7 @@ const RegionPickerPage: React.FC<RegionPickerPageProps> = ({ open, onClose }) =>
             {selectedRegions.map((r, i) => (
               <span
                 key={`${r.city}|${r.district ?? ''}|${i}`}
-                className="inline-flex items-center gap-1.5 pl-3 pr-1.5 py-1.5 rounded-full bg-[#39FF14]/10 border border-[#39FF14]/25 text-[#39FF14] text-xs font-bold"
+                className="inline-flex items-center gap-1.5 pl-3 pr-1.5 py-1.5 rounded-full bg-primary/10 border border-primary/25 text-primary text-xs font-bold"
               >
                 <MapPin size={12} />
                 {r.label}
@@ -112,7 +112,7 @@ const RegionPickerPage: React.FC<RegionPickerPageProps> = ({ open, onClose }) =>
           value={query}
           onChange={e => setQuery(e.target.value)}
           placeholder={selectedCity ? 'İlçe ara…' : 'İl ara…'}
-          className="w-full h-12 bg-[#161B22] border border-white/8 rounded-2xl pl-11 pr-10 text-sm font-medium text-white outline-none focus:border-[#39FF14]/40 transition-colors"
+          className="w-full h-12 bg-surface-1 border border-white/8 rounded-2xl pl-11 pr-10 text-sm font-medium text-white outline-none focus:border-primary/40 transition-colors"
         />
         {query && (
           <button
@@ -136,7 +136,7 @@ const RegionPickerPage: React.FC<RegionPickerPageProps> = ({ open, onClose }) =>
                 key={region.plate}
                 onClick={() => { setSelectedCity(region.city); setQuery(''); }}
                 className={`w-full flex items-center justify-between p-3.5 rounded-2xl border transition-colors ${
-                  cityHasSelection ? 'bg-[#39FF14]/8 border-[#39FF14]/25' : 'bg-[#161B22] border-white/6 hover:bg-white/5'
+                  cityHasSelection ? 'bg-primary/8 border-primary/25' : 'bg-surface-1 border-white/6 hover:bg-white/5'
                 }`}
               >
                 <div className="flex items-center gap-3">
@@ -145,7 +145,7 @@ const RegionPickerPage: React.FC<RegionPickerPageProps> = ({ open, onClose }) =>
                   </span>
                   <span className="text-sm font-bold text-white">{region.city}</span>
                   {covered && (
-                    <span className="text-[0.625rem] font-extrabold uppercase tracking-wide text-[#39FF14] bg-[#39FF14]/12 px-1.5 py-0.5 rounded">
+                    <span className="text-[0.625rem] font-extrabold uppercase tracking-wide text-primary bg-primary/12 px-1.5 py-0.5 rounded">
                       Aktif
                     </span>
                   )}
@@ -196,11 +196,11 @@ const RegionPickerPage: React.FC<RegionPickerPageProps> = ({ open, onClose }) =>
                 key={district}
                 onClick={() => toggleRegion(selectedCity, district)}
                 className={`w-full flex items-center justify-between p-3.5 rounded-2xl border transition-colors ${
-                  on ? 'bg-[#39FF14]/8 border-[#39FF14]/30' : 'bg-[#161B22] border-white/6 hover:bg-white/5'
+                  on ? 'bg-primary/8 border-primary/30' : 'bg-surface-1 border-white/6 hover:bg-white/5'
                 }`}
               >
                 <span className="text-sm font-bold text-white">{district}</span>
-                {on ? <Check size={16} className="text-[#39FF14]" /> : <Plus size={16} className="text-ink-4" />}
+                {on ? <Check size={16} className="text-primary" /> : <Plus size={16} className="text-ink-4" />}
               </button>
             );
           })}
@@ -213,7 +213,7 @@ const RegionPickerPage: React.FC<RegionPickerPageProps> = ({ open, onClose }) =>
       {/* Bitti */}
       <button
         onClick={() => { setSelectedCity(null); setQuery(''); onClose(); }}
-        className="w-full h-12 mt-5 rounded-2xl font-extrabold text-sm bg-[#39FF14] text-black active:scale-[0.99] transition-transform"
+        className="w-full h-12 mt-5 rounded-2xl font-extrabold text-sm bg-primary text-black active:scale-[0.99] transition-transform"
       >
         Bitti{selectedRegions.length > 0 ? ` (${selectedRegions.length} bölge)` : ''}
       </button>

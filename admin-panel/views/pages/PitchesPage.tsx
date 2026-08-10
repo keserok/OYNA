@@ -176,7 +176,7 @@ export const PitchesPage: React.FC<PitchesPageProps> = ({ onRefresh }) => {
             header: 'FİYAT',
             render: (p: Pitch) => (
                 <div className="font-mono text-[10px]">
-                    <span className="text-[#39FF14] font-bold">₺{p.pricePerPerson}</span> / <span className="text-gray-400">₺{p.totalPrice}</span>
+                    <span className="text-primary font-bold">₺{p.pricePerPerson}</span> / <span className="text-gray-400">₺{p.totalPrice}</span>
                 </div>
             ),
         },
@@ -228,7 +228,7 @@ export const PitchesPage: React.FC<PitchesPageProps> = ({ onRefresh }) => {
                             type="button"
                             onClick={() => void toggleShowcaseFlag(p.id, 'availability')}
                             title={f.availability ? 'Müsaitlik rozetini kapat' : 'Müsaitlik rozetini aç'}
-                            className={`p-1.5 rounded-lg border ${f.availability ? 'bg-[#39FF14]/15 text-[#39FF14] border-[#39FF14]/40' : 'bg-white/5 text-gray-500 border-white/10'}`}
+                            className={`p-1.5 rounded-lg border ${f.availability ? 'bg-primary/15 text-primary border-primary/40' : 'bg-white/5 text-gray-500 border-white/10'}`}
                         >
                             <Clock size={14} />
                         </button>
@@ -272,8 +272,8 @@ export const PitchesPage: React.FC<PitchesPageProps> = ({ onRefresh }) => {
                 <ModuleCrudBar moduleKey="pitches" addLabel="Yeni Tesis Kur" onAdd={() => setStudio({ pitchId: null })} onRefresh={refresh} />
             }
         >
-            <div className="bg-[#161B22]/60 border border-white/5 rounded-2xl p-4 mb-4 flex items-center gap-4">
-                <MapPin size={24} className="text-[#39FF14] shrink-0" />
+            <div className="bg-surface-1/60 border border-white/5 rounded-2xl p-4 mb-4 flex items-center gap-4">
+                <MapPin size={24} className="text-primary shrink-0" />
                 <div>
                     <p className="text-sm font-bold text-white">{total} Tesis</p>
                     <p className="text-[10px] text-gray-500 mt-0.5">

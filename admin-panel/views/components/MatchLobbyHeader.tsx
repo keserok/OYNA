@@ -120,7 +120,7 @@ export const MatchLobbyHeader: React.FC<Props> = ({ match, busy, onSave, allowed
       {/* Ayna etiketi + başlık düzenleme */}
       <div className="flex items-center justify-between gap-2">
         <p className="text-[9px] font-extrabold uppercase tracking-widest text-gray-500">
-          <span className="text-[#39FF14]">LOBİ AYNASI</span> — oyuncular böyle görüyor · öğeye tıkla → düzenle
+          <span className="text-primary">LOBİ AYNASI</span> — oyuncular böyle görüyor · öğeye tıkla → düzenle
         </p>
         <button type="button" disabled={busy} onClick={() => open('title')} aria-label="Başlığı düzenle" className="w-6 h-6 rounded-lg bg-white/5 text-gray-500 hover:text-white flex items-center justify-center shrink-0">
           <Pencil size={11} />
@@ -154,7 +154,7 @@ export const MatchLobbyHeader: React.FC<Props> = ({ match, busy, onSave, allowed
       {/* Bilgi + Badge Şeridi — her öğe düzenlenebilir */}
       <div className="flex items-center gap-2 flex-wrap">
         <button type="button" disabled={busy} onClick={() => open('location')} className={`flex items-center gap-1 text-[10px] font-bold text-white/50 min-w-0 flex-1 ${chipBtn}`}>
-          <MapPin size={9} className="text-[#39FF14] shrink-0" />
+          <MapPin size={9} className="text-primary shrink-0" />
           <span className="truncate">{match.location || 'Konum ekle'}</span>
         </button>
         <div className="flex items-center gap-1 text-[10px] font-bold text-white/40 shrink-0">
@@ -182,7 +182,7 @@ export const MatchLobbyHeader: React.FC<Props> = ({ match, busy, onSave, allowed
 
       <div className="flex items-center gap-1.5 flex-wrap">
         <button type="button" disabled={busy} onClick={() => open('price')} className={`flex items-center gap-1 px-2 py-1 rounded-lg bg-white/5 border border-white/10 text-[10px] font-extrabold text-white/70 ${chipBtn}`}>
-          <Wallet size={10} className="text-[#39FF14]" /> {Number(match.price ?? 0).toLocaleString('tr-TR')} ₺ / kişi
+          <Wallet size={10} className="text-primary" /> {Number(match.price ?? 0).toLocaleString('tr-TR')} ₺ / kişi
         </button>
         <button
           type="button" disabled={busy} onClick={() => open('visibility')}
@@ -198,7 +198,7 @@ export const MatchLobbyHeader: React.FC<Props> = ({ match, busy, onSave, allowed
 
       {/* Tek-alan düzenleyici */}
       {active && (
-        <motion.div initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} className="bg-[#0D1117] border border-[#39FF14]/25 rounded-xl p-3 space-y-2.5">
+        <motion.div initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} className="bg-[#0D1117] border border-primary/25 rounded-xl p-3 space-y-2.5">
           <div className="flex items-center justify-between">
             <p className="text-[10px] font-extrabold uppercase tracking-wider text-gray-400">
               {{
@@ -232,7 +232,7 @@ export const MatchLobbyHeader: React.FC<Props> = ({ match, busy, onSave, allowed
                   <button
                     key={v} type="button" onClick={() => setDraft(v)}
                     className={`py-2 rounded-lg text-[10px] font-extrabold uppercase border transition-all ${
-                      draft === v ? 'bg-[#39FF14] text-black border-[#39FF14]' : 'bg-white/5 text-white/60 border-white/10 hover:bg-white/10'
+                      draft === v ? 'bg-primary text-black border-primary' : 'bg-white/5 text-white/60 border-white/10 hover:bg-white/10'
                     }`}
                   >
                     {v}
@@ -240,7 +240,7 @@ export const MatchLobbyHeader: React.FC<Props> = ({ match, busy, onSave, allowed
                 ))}
               </div>
               {formatRangeHint && (
-                <p className="text-[10px] text-gray-500">Bu sahanın kortlarında <span className="text-[#39FF14]/80 font-extrabold">{formatRangeHint}</span> oynanabilir.</p>
+                <p className="text-[10px] text-gray-500">Bu sahanın kortlarında <span className="text-primary/80 font-extrabold">{formatRangeHint}</span> oynanabilir.</p>
               )}
             </div>
           ) : active === 'visibility' ? (
@@ -250,7 +250,7 @@ export const MatchLobbyHeader: React.FC<Props> = ({ match, busy, onSave, allowed
                   <button
                     key={v} type="button" onClick={() => setDraft(v)}
                     className={`py-2 rounded-lg text-[10px] font-extrabold uppercase border transition-all ${
-                      draft === v ? 'bg-[#39FF14] text-black border-[#39FF14]' : 'bg-white/5 text-white/60 border-white/10 hover:bg-white/10'
+                      draft === v ? 'bg-primary text-black border-primary' : 'bg-white/5 text-white/60 border-white/10 hover:bg-white/10'
                     }`}
                   >
                     {v === 'OPEN' ? 'Herkese Açık' : 'Özel (Kodlu)'}
@@ -263,7 +263,7 @@ export const MatchLobbyHeader: React.FC<Props> = ({ match, busy, onSave, allowed
                   onChange={(e) => setCodeDraft(e.target.value.toUpperCase())}
                   maxLength={6}
                   placeholder="Kod (boş → otomatik üretilir)"
-                  className="w-full h-9 bg-black/40 border border-white/15 rounded-lg px-3 text-xs text-white font-mono tracking-widest focus:border-[#39FF14]/40 focus:outline-none"
+                  className="w-full h-9 bg-black/40 border border-white/15 rounded-lg px-3 text-xs text-white font-mono tracking-widest focus:border-primary/40 focus:outline-none"
                 />
               )}
             </div>
@@ -274,7 +274,7 @@ export const MatchLobbyHeader: React.FC<Props> = ({ match, busy, onSave, allowed
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter') void save(); }}
-              className="w-full h-10 bg-black/40 border border-white/15 rounded-lg px-3 text-sm text-white focus:border-[#39FF14]/40 focus:outline-none [color-scheme:dark]"
+              className="w-full h-10 bg-black/40 border border-white/15 rounded-lg px-3 text-sm text-white focus:border-primary/40 focus:outline-none [color-scheme:dark]"
             />
           )}
 
@@ -282,7 +282,7 @@ export const MatchLobbyHeader: React.FC<Props> = ({ match, busy, onSave, allowed
             type="button"
             disabled={busy}
             onClick={() => void save()}
-            className="w-full py-2 rounded-lg bg-[#39FF14]/15 border border-[#39FF14]/40 text-[#39FF14] text-[10px] font-extrabold uppercase tracking-widest hover:bg-[#39FF14]/25 disabled:opacity-40 flex items-center justify-center gap-1.5"
+            className="w-full py-2 rounded-lg bg-primary/15 border border-primary/40 text-primary text-[10px] font-extrabold uppercase tracking-widest hover:bg-primary/25 disabled:opacity-40 flex items-center justify-center gap-1.5"
           >
             <Check size={12} /> Kaydet — anında yayına geçer
           </button>

@@ -143,7 +143,7 @@ export const OwnerFinanceView: React.FC<OwnerFinanceViewProps> = ({ pitchId, isD
   return (
     // KAYDIRMA: OwnerPanel sayfa-akış modeline geçti (kökündeki yoruma bak) —
     // bu görünüm İÇ kaydırıcı değildir, sayfayla akar. Alt bar payı: pb-40.
-    <div className="p-4 pb-40 bg-[#0A0E14]">
+    <div className="p-4 pb-40 bg-bg">
       <div className="max-w-5xl mx-auto w-full">
         <OwnerDemoDataBar pitchId={pitchId} onChanged={load} hasDemo={hasDemoData} />
         {isDemoMode && (
@@ -162,7 +162,7 @@ export const OwnerFinanceView: React.FC<OwnerFinanceViewProps> = ({ pitchId, isD
           <button
             type="button"
             onClick={() => setMonth((m) => shiftMonth(m, -1))}
-            className="w-11 h-11 rounded-xl bg-[#161B22] border border-white/5 text-gray-300 flex items-center justify-center hover:bg-white/5 touch-manipulation"
+            className="w-11 h-11 rounded-xl bg-surface-1 border border-white/5 text-gray-300 flex items-center justify-center hover:bg-white/5 touch-manipulation"
             aria-label="Önceki ay"
           >
             <ChevronLeft size={18} />
@@ -182,7 +182,7 @@ export const OwnerFinanceView: React.FC<OwnerFinanceViewProps> = ({ pitchId, isD
             type="button"
             onClick={() => { if (!nextLocked) setMonth((m) => shiftMonth(m, 1)); }}
             disabled={nextLocked}
-            className="w-11 h-11 rounded-xl bg-[#161B22] border border-white/5 text-gray-300 flex items-center justify-center hover:bg-white/5 disabled:opacity-30 touch-manipulation"
+            className="w-11 h-11 rounded-xl bg-surface-1 border border-white/5 text-gray-300 flex items-center justify-center hover:bg-white/5 disabled:opacity-30 touch-manipulation"
             aria-label="Sonraki ay"
           >
             <ChevronRight size={18} />
@@ -195,7 +195,7 @@ export const OwnerFinanceView: React.FC<OwnerFinanceViewProps> = ({ pitchId, isD
             type="button"
             onClick={exportCsv}
             disabled={exporting}
-            className="inline-flex items-center gap-1.5 text-[10px] font-extrabold text-gray-400 hover:text-white bg-[#161B22] border border-white/5 px-3 py-1.5 rounded-lg disabled:opacity-40"
+            className="inline-flex items-center gap-1.5 text-[10px] font-extrabold text-gray-400 hover:text-white bg-surface-1 border border-white/5 px-3 py-1.5 rounded-lg disabled:opacity-40"
           >
             {exporting ? <Loader2 size={12} className="animate-spin" /> : <Download size={12} />} CSV indir
           </button>
@@ -212,7 +212,7 @@ export const OwnerFinanceView: React.FC<OwnerFinanceViewProps> = ({ pitchId, isD
         {/* Hero: dönem bakiyesi (tahsilat − gider) + kıyas.
             Bilinçli olarak "net kazanç" DEĞİL: collected app rezervasyonlarında brüt
             olabildiği için OYNA komisyonu bu rakamdan düşülmez (aşağıda ayrı gösterilir). */}
-        <div className="bg-[#161B22] border border-white/10 rounded-[32px] p-6 shadow-2xl mb-6">
+        <div className="bg-surface-1 border border-white/10 rounded-[32px] p-6 shadow-2xl mb-6">
           <div className="flex items-center justify-between mb-1">
             <p className="text-[10px] font-extrabold text-emerald-400 uppercase tracking-[0.2em]">DÖNEM BAKİYESİ</p>
             <GrowthBadge growth={growth} label="geçen aya göre" />
@@ -243,7 +243,7 @@ export const OwnerFinanceView: React.FC<OwnerFinanceViewProps> = ({ pitchId, isD
 
         {/* OYNA kazançları — komisyon şeffaflığı (korunur) + çekim */}
         {oynaEarn && (
-          <div className="bg-[#161B22] border border-emerald-500/15 rounded-[32px] p-6 mb-6">
+          <div className="bg-surface-1 border border-emerald-500/15 rounded-[32px] p-6 mb-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-xs font-extrabold text-gray-400 uppercase flex items-center gap-2">
                 <Coins size={16} className="text-emerald-400" /> OYNA KAZANÇLARIN
@@ -285,7 +285,7 @@ export const OwnerFinanceView: React.FC<OwnerFinanceViewProps> = ({ pitchId, isD
         )}
 
         {/* Sekmeler */}
-        <div className="flex bg-[#161B22] p-1.5 rounded-2xl mb-8 border border-white/5">
+        <div className="flex bg-surface-1 p-1.5 rounded-2xl mb-8 border border-white/5">
           {([['SUMMARY', 'Özet'], ['COLLECT', 'Tahsilat'], ['EXPENSE', 'Gider']] as const).map(([id, label]) => (
             <button
               key={id}

@@ -172,7 +172,7 @@ const TeamsDirectoryPanel: React.FC<TeamsDirectoryPanelProps> = ({ onOpenTeam, o
                     {full ? (
                       <span className="text-ink-4">Kadro dolu · {t.member_count}/{t.roster_max}</span>
                     ) : t.is_recruiting ? (
-                      <span className="text-[#39FF14] font-bold flex items-center gap-1">
+                      <span className="text-primary font-bold flex items-center gap-1">
                         <Zap size={10} /> Oyuncu arıyor
                       </span>
                     ) : (
@@ -187,7 +187,7 @@ const TeamsDirectoryPanel: React.FC<TeamsDirectoryPanelProps> = ({ onOpenTeam, o
                     <Clock size={11} /> BEKLİYOR
                   </span>
                 ) : (
-                  <span className="shrink-0 text-[0.6875rem] font-extrabold text-[#39FF14]">İncele ›</span>
+                  <span className="shrink-0 text-[0.6875rem] font-extrabold text-primary">İncele ›</span>
                 )}
               </button>
             );
@@ -264,13 +264,13 @@ const TeamsDirectoryPanel: React.FC<TeamsDirectoryPanelProps> = ({ onOpenTeam, o
             {profile.is_member ? (
               <button
                 onClick={() => { onOpenTeam(profile.team_id); setProfile(null); }}
-                className="mt-5 w-full min-h-[50px] rounded-2xl bg-[#39FF14] text-[#0A0E14] font-extrabold text-sm active:scale-[0.98]"
+                className="mt-5 w-full min-h-[50px] rounded-2xl bg-primary text-on-primary font-extrabold text-sm active:scale-[0.98]"
               >
                 Takımına Git
               </button>
             ) : profile.my_request_pending ? (
               <div className="mt-5 w-full min-h-[50px] rounded-2xl bg-white/5 border border-white/10 text-white/60 font-bold text-sm flex items-center justify-center gap-2">
-                <Check size={15} className="text-[#39FF14]" /> İsteğin kaptana iletildi
+                <Check size={15} className="text-primary" /> İsteğin kaptana iletildi
               </div>
             ) : profile.member_count >= profile.roster_max ? (
               <div className="mt-5 w-full min-h-[50px] rounded-2xl bg-white/5 border border-white/10 text-white/50 font-bold text-sm flex items-center justify-center">
@@ -291,7 +291,7 @@ const TeamsDirectoryPanel: React.FC<TeamsDirectoryPanelProps> = ({ onOpenTeam, o
                 <button
                   onClick={sendRequest}
                   disabled={requesting}
-                  className="mt-2.5 w-full min-h-[50px] rounded-2xl bg-[#39FF14] text-[#0A0E14] font-extrabold text-sm flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-50"
+                  className="mt-2.5 w-full min-h-[50px] rounded-2xl bg-primary text-on-primary font-extrabold text-sm flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-50"
                 >
                   {requesting ? <Loader2 size={16} className="animate-spin" /> : <Send size={15} />}
                   Katılma İsteği Gönder

@@ -61,7 +61,7 @@ export const AdminToastProvider: React.FC<{ children: React.ReactNode }> = ({ ch
               initial={{ opacity: 0, y: 16, scale: 0.96 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -8, scale: 0.96 }}
-              className={`pointer-events-auto px-4 py-3 rounded-xl bg-[#161B22]/95 border ${borderMap[item.kind]} shadow-[0_12px_40px_rgba(0,0,0,0.45)] backdrop-blur-xl flex items-center gap-2.5 max-w-sm`}
+              className={`pointer-events-auto px-4 py-3 rounded-xl bg-surface-1/95 border ${borderMap[item.kind]} shadow-[0_12px_40px_rgba(0,0,0,0.45)] backdrop-blur-xl flex items-center gap-2.5 max-w-sm`}
             >
               {iconMap[item.kind]}
               <span className="text-xs font-semibold text-white leading-snug">{item.text}</span>

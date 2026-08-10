@@ -165,7 +165,7 @@ export const DeletionQueuePage: React.FC<{ onRefresh?: () => Promise<void> }> = 
       icon={<UserX size={20} />}
       actions={<ModuleCrudBar moduleKey={null} onRefresh={refresh} />}
     >
-      <div className="bg-[#161B22]/60 border border-white/5 rounded-2xl p-4 mb-4 flex items-center gap-3">
+      <div className="bg-surface-1/60 border border-white/5 rounded-2xl p-4 mb-4 flex items-center gap-3">
         <RefreshCw size={20} className="text-gray-500 shrink-0" />
         <p className="text-[11px] text-gray-400 leading-relaxed">
           Kullanıcının talebiyle başlayan silme kuyruğu. Bekleme süresi dolan talepler <b>SİLİNEBİLİR</b> olarak

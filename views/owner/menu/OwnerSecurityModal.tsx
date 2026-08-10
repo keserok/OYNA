@@ -118,7 +118,7 @@ export const OwnerSecurityModal: React.FC<Props> = ({ onClose }) => {
     <OwnerCenteredModal title="Güvenlik & Şifre" onClose={onClose}>
       <div className="space-y-5">
         {/* Hesap / oturum bilgisi */}
-        <div className="p-4 bg-[#0A0E14] rounded-2xl border border-white/5 space-y-2">
+        <div className="p-4 bg-bg rounded-2xl border border-white/5 space-y-2">
           <div className="flex items-center gap-2 text-xs text-gray-300">
             <Mail size={15} className="text-blue-400" />
             <span className="font-bold truncate">{email || '—'}</span>
@@ -138,7 +138,7 @@ export const OwnerSecurityModal: React.FC<Props> = ({ onClose }) => {
             value={currentPassword}
             onChange={(e) => setCurrentPassword(e.target.value)}
             autoComplete="current-password"
-            className="w-full bg-[#0A0E14] border border-white/5 rounded-xl px-4 py-3 text-white outline-none focus:border-blue-500/40"
+            className="w-full bg-bg border border-white/5 rounded-xl px-4 py-3 text-white outline-none focus:border-blue-500/40"
             placeholder="••••••••"
           />
         </div>
@@ -150,7 +150,7 @@ export const OwnerSecurityModal: React.FC<Props> = ({ onClose }) => {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             autoComplete="new-password"
-            className="w-full bg-[#0A0E14] border border-white/5 rounded-xl px-4 py-3 text-white outline-none focus:border-blue-500/40"
+            className="w-full bg-bg border border-white/5 rounded-xl px-4 py-3 text-white outline-none focus:border-blue-500/40"
             placeholder="••••••••"
           />
           {password.length > 0 && (
@@ -172,7 +172,7 @@ export const OwnerSecurityModal: React.FC<Props> = ({ onClose }) => {
             value={confirm}
             onChange={(e) => setConfirm(e.target.value)}
             autoComplete="new-password"
-            className={`w-full bg-[#0A0E14] border rounded-xl px-4 py-3 text-white outline-none focus:border-blue-500/40 ${
+            className={`w-full bg-bg border rounded-xl px-4 py-3 text-white outline-none focus:border-blue-500/40 ${
               confirm.length > 0 && !matchOk ? 'border-red-500/40' : 'border-white/5'
             }`}
             placeholder="••••••••"

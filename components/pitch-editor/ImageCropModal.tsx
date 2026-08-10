@@ -54,7 +54,7 @@ export const ImageCropModal: React.FC<Props> = ({ file, index, total, onConfirm,
         </span>
         <button
           onClick={() => onConfirm(focus)}
-          className="px-4 py-2 rounded-xl bg-[#39FF14] text-black font-extrabold text-xs flex items-center gap-1.5"
+          className="px-4 py-2 rounded-xl bg-primary text-black font-extrabold text-xs flex items-center gap-1.5"
         >
           <Check size={16} /> KULLAN
         </button>

@@ -73,7 +73,7 @@ export const OwnerWorkingHoursModal: React.FC<Props> = ({
       isSaving={isSaving}
     >
       <div className="max-w-xl mx-auto space-y-6">
-        <div className="bg-[#161B22] p-6 rounded-[32px] border border-white/5 flex items-center justify-between">
+        <div className="bg-surface-1 p-6 rounded-[32px] border border-white/5 flex items-center justify-between">
           <div>
             <h3 className="text-lg font-extrabold text-white">Tesis Durumu</h3>
             <p className="text-[10px] text-gray-500 font-bold uppercase">Anlık açık / kapalı</p>
@@ -111,7 +111,7 @@ export const OwnerWorkingHoursModal: React.FC<Props> = ({
           {days.map((day, idx) => (
             <div
               key={day.name}
-              className={`bg-[#161B22] p-4 rounded-2xl border border-white/5 ${
+              className={`bg-surface-1 p-4 rounded-2xl border border-white/5 ${
                 day.closed ? 'opacity-60' : ''
               }`}
             >
@@ -133,14 +133,14 @@ export const OwnerWorkingHoursModal: React.FC<Props> = ({
                     type="time"
                     value={day.open}
                     onChange={(e) => updateDay(idx, 'open', e.target.value)}
-                    className="flex-1 bg-[#0A0E14] border border-white/5 px-3 py-2 rounded-xl text-white text-sm font-mono outline-none"
+                    className="flex-1 bg-bg border border-white/5 px-3 py-2 rounded-xl text-white text-sm font-mono outline-none"
                   />
                   <span className="text-gray-600">—</span>
                   <input
                     type="time"
                     value={day.close}
                     onChange={(e) => updateDay(idx, 'close', e.target.value)}
-                    className="flex-1 bg-[#0A0E14] border border-white/5 px-3 py-2 rounded-xl text-white text-sm font-mono outline-none"
+                    className="flex-1 bg-bg border border-white/5 px-3 py-2 rounded-xl text-white text-sm font-mono outline-none"
                   />
                 </div>
               )}

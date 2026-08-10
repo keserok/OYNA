@@ -28,7 +28,7 @@ export const PageLayout: React.FC<PageLayoutProps> = ({
     // olduğunda çalışır. Yalnız taban verilirse kutu içerikle uzar, <main> hiç
     // sınırlanmaz ve kendi kaydırması DEVREYE GİRMEZ.
     <div
-      className={`flex flex-col w-full h-full bg-[#0A0E14] text-white overflow-hidden max-w-lg mx-auto relative ${className}`}
+      className={`flex flex-col w-full h-full bg-bg text-white overflow-hidden max-w-lg mx-auto relative ${className}`}
     >
       {/* Dynamic top safe area header */}
       {(title || onBack || rightElement) && (
@@ -36,7 +36,7 @@ export const PageLayout: React.FC<PageLayoutProps> = ({
           className={`sticky top-0 z-40 px-4 flex items-center transition-all pt-safe relative ${
             transparentHeader
               ? 'bg-transparent'
-              : 'bg-[#0A0E14]/80 backdrop-blur-xl border-b border-white/5'
+              : 'bg-bg/80 backdrop-blur-xl border-b border-white/5'
           }`}
           style={{ height: 'calc(env(safe-area-inset-top, 0px) + 56px)' }}
         >
@@ -46,7 +46,7 @@ export const PageLayout: React.FC<PageLayoutProps> = ({
               <button
                 onClick={onBack}
                 aria-label="Geri git"
-                className="w-10 h-10 rounded-full flex items-center justify-center bg-white/5 hover:bg-white/10 active:scale-95 transition-all outline-none focus-visible:ring-2 focus-visible:ring-[#39FF14]"
+                className="w-10 h-10 rounded-full flex items-center justify-center bg-white/5 hover:bg-white/10 active:scale-95 transition-all outline-none focus-visible:ring-2 focus-visible:ring-primary"
               >
                 <ChevronLeft size={20} className="text-white" />
               </button>

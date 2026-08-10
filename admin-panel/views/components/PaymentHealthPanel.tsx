@@ -59,15 +59,15 @@ export const PaymentHealthPanel: React.FC = () => {
   if (loading && !health) {
     return (
       <div className="space-y-4">
-        <div className="h-24 bg-[#161B22]/60 border border-white/[0.06] rounded-2xl animate-pulse" />
-        <div className="h-40 bg-[#161B22]/60 border border-white/[0.06] rounded-2xl animate-pulse" />
+        <div className="h-24 bg-surface-1/60 border border-white/[0.06] rounded-2xl animate-pulse" />
+        <div className="h-40 bg-surface-1/60 border border-white/[0.06] rounded-2xl animate-pulse" />
       </div>
     );
   }
 
   if (!health) {
     return (
-      <div className="bg-[#161B22]/60 border border-white/[0.06] rounded-2xl p-6 text-center">
+      <div className="bg-surface-1/60 border border-white/[0.06] rounded-2xl p-6 text-center">
         <p className="text-sm text-gray-400 mb-3">Sağlık verisi yüklenemedi.</p>
         <button onClick={() => void load(windowH)} className="px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-xs font-bold text-gray-300">
           Tekrar dene
@@ -158,7 +158,7 @@ export const PaymentHealthPanel: React.FC = () => {
       {/* Metrik kartları */}
       <section className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {metricCards.map((c) => (
-          <div key={c.label} className="bg-[#161B22]/60 border border-white/[0.06] rounded-xl p-4">
+          <div key={c.label} className="bg-surface-1/60 border border-white/[0.06] rounded-xl p-4">
             <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider leading-tight">{c.label}</p>
             <p className={`text-xl font-extrabold mt-1 ${c.tone}`}>{c.value}</p>
             <p className="text-[10px] text-gray-600 mt-0.5">{c.hint}</p>
@@ -167,7 +167,7 @@ export const PaymentHealthPanel: React.FC = () => {
       </section>
 
       {/* Para değişmezleri (G1) */}
-      <section className="bg-[#161B22]/60 border border-white/[0.06] rounded-2xl p-5">
+      <section className="bg-surface-1/60 border border-white/[0.06] rounded-2xl p-5">
         <div className="flex items-start gap-3 mb-4">
           <div className="shrink-0 w-9 h-9 rounded-xl bg-cyan-500/10 border border-cyan-500/15 flex items-center justify-center">
             <ShieldCheck size={18} className="text-cyan-400" />

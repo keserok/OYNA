@@ -68,7 +68,7 @@ export const ShowcasePreview: React.FC<{ pitchId: string; onClose: () => void }>
 
   return (
     <div className="fixed inset-0 z-[120] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="relative w-full max-w-sm max-h-[90vh] bg-[#0A0E14] border border-white/10 rounded-[32px] overflow-hidden flex flex-col">
+      <div className="relative w-full max-w-sm max-h-[90vh] bg-bg border border-white/10 rounded-[32px] overflow-hidden flex flex-col">
         <div className="absolute top-3 left-0 right-0 z-10 flex items-center justify-between px-4">
           <span className="px-2.5 py-1 rounded-full bg-warning-bg text-warning border border-warning-line text-[0.625rem] font-extrabold uppercase tracking-wider">
             Oyuncu Gözüyle Önizleme
@@ -90,7 +90,7 @@ export const ShowcasePreview: React.FC<{ pitchId: string; onClose: () => void }>
                   className="w-full h-full object-cover"
                 />
               )}
-              <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-[#0A0E14] to-transparent" />
+              <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-bg to-transparent" />
               {(data.images?.length ?? 0) > 1 && (
                 <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
                   {data.images!.map((_, i) => (
@@ -128,7 +128,7 @@ export const ShowcasePreview: React.FC<{ pitchId: string; onClose: () => void }>
                       const Icon = a.icon;
                       return (
                         <span key={a.value} className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white/[0.04] border border-white/10 text-[0.6875rem] font-semibold text-white/80">
-                          <Icon size={12} className="text-[#39FF14]" /> {a.value}
+                          <Icon size={12} className="text-primary" /> {a.value}
                         </span>
                       );
                     })}
@@ -155,9 +155,9 @@ export const ShowcasePreview: React.FC<{ pitchId: string; onClose: () => void }>
                         formatCapacityRange(court.min_capacity, court.max_capacity, court.capacity),
                       ].filter(Boolean).join(' · ');
                       return (
-                        <div key={court.id} className="flex items-center justify-between p-3 rounded-2xl bg-[#161B22] border border-white/5">
+                        <div key={court.id} className="flex items-center justify-between p-3 rounded-2xl bg-surface-1 border border-white/5">
                           <div className="flex items-center gap-2.5 min-w-0">
-                            <div className="w-9 h-9 rounded-xl overflow-hidden bg-black/40 border border-white/10 flex items-center justify-center text-[#39FF14] flex-shrink-0">
+                            <div className="w-9 h-9 rounded-xl overflow-hidden bg-black/40 border border-white/10 flex items-center justify-center text-primary flex-shrink-0">
                               {thumb ? (
                                 <img src={transformedImageUrl(thumb, 'thumb')} alt={court.name} className="w-full h-full object-cover" />
                               ) : (
@@ -170,7 +170,7 @@ export const ShowcasePreview: React.FC<{ pitchId: string; onClose: () => void }>
                               {normalizeCourtFeatures(court.features).length > 0 && (
                                 <div className="flex flex-wrap gap-1 mt-1">
                                   {normalizeCourtFeatures(court.features).slice(0, 4).map((fv) => (
-                                    <span key={fv} className="px-1.5 py-0.5 rounded-md bg-[#39FF14]/10 text-[0.6875rem] font-bold text-[#39FF14]/90">
+                                    <span key={fv} className="px-1.5 py-0.5 rounded-md bg-primary/10 text-[0.6875rem] font-bold text-primary/90">
                                       {courtFeatureLabel(fv)}
                                     </span>
                                   ))}
@@ -193,12 +193,12 @@ export const ShowcasePreview: React.FC<{ pitchId: string; onClose: () => void }>
                 <div className="mt-4 flex items-center justify-around bg-[#0D111A] border border-white/[0.06] rounded-2xl p-3.5">
                   <div className="text-center">
                     <div className="text-[0.625rem] font-extrabold uppercase tracking-widest text-ink-4">Aydınlatma</div>
-                    <div className="text-lg font-extrabold text-[#39FF14] mt-0.5">{graded.lighting_grade ?? '—'}</div>
+                    <div className="text-lg font-extrabold text-primary mt-0.5">{graded.lighting_grade ?? '—'}</div>
                   </div>
                   <div className="w-px h-7 bg-white/10" />
                   <div className="text-center">
                     <div className="text-[0.625rem] font-extrabold uppercase tracking-widest text-ink-4">Zemin</div>
-                    <div className="text-lg font-extrabold text-[#39FF14] mt-0.5">{graded.grass_grade ?? '—'}</div>
+                    <div className="text-lg font-extrabold text-primary mt-0.5">{graded.grass_grade ?? '—'}</div>
                   </div>
                 </div>
               )}

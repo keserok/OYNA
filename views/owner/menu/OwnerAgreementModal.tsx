@@ -48,7 +48,7 @@ export const OwnerAgreementModal: React.FC<Props> = ({ onClose, facilityId }) =>
       ) : (
         <div className="space-y-5">
           {/* Örnek hesap önce: sahip için asıl soru "bana ne kalıyor". */}
-          <div className="p-4 rounded-2xl bg-[#0A0E14] border border-emerald-500/20">
+          <div className="p-4 rounded-2xl bg-bg border border-emerald-500/20">
             <p className="text-[10px] text-gray-500 uppercase font-bold">
               {para(veri.ornekTaban)}&apos;lik bir saatte
             </p>
@@ -65,19 +65,19 @@ export const OwnerAgreementModal: React.FC<Props> = ({ onClose, facilityId }) =>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <div className="p-4 rounded-2xl bg-[#0A0E14] border border-white/5">
+            <div className="p-4 rounded-2xl bg-bg border border-white/5">
               <p className="text-[10px] text-gray-500 uppercase font-bold">Komisyon</p>
               <p className="text-lg font-extrabold text-white mt-1">%{veri.ratePct}</p>
               <p className="text-[10px] text-gray-500 mt-0.5">saat ücretinden düşülür</p>
             </div>
-            <div className="p-4 rounded-2xl bg-[#0A0E14] border border-white/5">
+            <div className="p-4 rounded-2xl bg-bg border border-white/5">
               <p className="text-[10px] text-gray-500 uppercase font-bold">Serbest iptal</p>
               <p className="text-lg font-extrabold text-white mt-1">{veri.iptalSaati} saat</p>
               <p className="text-[10px] text-gray-500 mt-0.5">bu süreden sonra iade yok</p>
             </div>
           </div>
 
-          <div className="p-4 rounded-2xl bg-[#0A0E14] border border-white/5 space-y-1.5">
+          <div className="p-4 rounded-2xl bg-bg border border-white/5 space-y-1.5">
             <p className="text-xs text-gray-400">
               Anlaşma türü:{' '}
               <b className="text-white">

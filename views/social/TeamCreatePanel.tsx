@@ -165,7 +165,7 @@ const TeamCreatePanel: React.FC<TeamCreatePanelProps> = ({ friends, onCreated, o
         {STEP_TITLES.map((t, i) => (
           <React.Fragment key={t}>
             <span className={`text-[0.625rem] font-extrabold uppercase tracking-wide ${
-              draft.step === i + 1 ? 'text-[#39FF14]' : 'text-ink-4'
+              draft.step === i + 1 ? 'text-primary' : 'text-ink-4'
             }`}>
               {i + 1}. {t}
             </span>
@@ -189,7 +189,7 @@ const TeamCreatePanel: React.FC<TeamCreatePanelProps> = ({ friends, onCreated, o
                 value={draft.name}
                 onChange={e => setDraft({ name: e.target.value.slice(0, 32) })}
                 placeholder="Takım adı *"
-                className="w-full h-12 px-4 rounded-2xl bg-white/5 border border-white/10 text-sm font-semibold placeholder:text-ink-4 focus:outline-none focus:border-[#39FF14]/50"
+                className="w-full h-12 px-4 rounded-2xl bg-white/5 border border-white/10 text-sm font-semibold placeholder:text-ink-4 focus:outline-none focus:border-primary/50"
               />
               <div className="flex gap-2">
                 <input
@@ -216,7 +216,7 @@ const TeamCreatePanel: React.FC<TeamCreatePanelProps> = ({ friends, onCreated, o
                       onClick={() => setDraft({ format: f })}
                       className={`min-h-[40px] rounded-xl text-xs font-extrabold border ${
                         draft.format === f
-                          ? 'bg-[#39FF14] text-[#0A0E14] border-[#39FF14]'
+                          ? 'bg-primary text-on-primary border-primary'
                           : 'bg-white/5 text-white/60 border-white/10'
                       }`}
                     >
@@ -245,17 +245,17 @@ const TeamCreatePanel: React.FC<TeamCreatePanelProps> = ({ friends, onCreated, o
                 <button
                   onClick={() => setDraft({ visibility: 'PUBLIC' })}
                   className={`rounded-2xl border p-3.5 text-left ${
-                    draft.visibility === 'PUBLIC' ? 'border-[#39FF14]/50 bg-[#39FF14]/8' : 'border-white/10 bg-white/4'
+                    draft.visibility === 'PUBLIC' ? 'border-primary/50 bg-primary/8' : 'border-white/10 bg-white/4'
                   }`}
                 >
-                  <Globe2 size={17} className="text-[#39FF14]" />
+                  <Globe2 size={17} className="text-primary" />
                   <div className="text-sm font-bold mt-1.5">Herkese Açık</div>
                   <div className="text-[0.6875rem] text-ink-4">Dizinde görünür, istek alır</div>
                 </button>
                 <button
                   onClick={() => setDraft({ visibility: 'PRIVATE' })}
                   className={`rounded-2xl border p-3.5 text-left ${
-                    draft.visibility === 'PRIVATE' ? 'border-[#39FF14]/50 bg-[#39FF14]/8' : 'border-white/10 bg-white/4'
+                    draft.visibility === 'PRIVATE' ? 'border-primary/50 bg-primary/8' : 'border-white/10 bg-white/4'
                   }`}
                 >
                   <Lock size={17} className="text-white/60" />
@@ -265,7 +265,7 @@ const TeamCreatePanel: React.FC<TeamCreatePanelProps> = ({ friends, onCreated, o
               </div>
 
               <label className="flex items-center gap-3 rounded-2xl bg-white/4 border border-white/8 p-3.5">
-                <Zap size={16} className="text-[#39FF14]" />
+                <Zap size={16} className="text-primary" />
                 <div className="flex-1">
                   <div className="text-sm font-bold">Oyuncu Arıyoruz</div>
                   <div className="text-[0.6875rem] text-ink-4">Dizinde ⚡ rozetiyle görünür</div>
@@ -274,7 +274,7 @@ const TeamCreatePanel: React.FC<TeamCreatePanelProps> = ({ friends, onCreated, o
                   role="switch"
                   aria-checked={draft.recruiting}
                   onClick={() => setDraft({ recruiting: !draft.recruiting })}
-                  className={`w-12 h-7 rounded-full p-0.5 transition-colors ${draft.recruiting ? 'bg-[#39FF14]' : 'bg-white/10'}`}
+                  className={`w-12 h-7 rounded-full p-0.5 transition-colors ${draft.recruiting ? 'bg-primary' : 'bg-white/10'}`}
                 >
                   <span className={`block w-6 h-6 rounded-full bg-white transition-transform ${draft.recruiting ? 'translate-x-5' : ''}`} />
                 </button>
@@ -298,12 +298,12 @@ const TeamCreatePanel: React.FC<TeamCreatePanelProps> = ({ friends, onCreated, o
                           key={f.friend_id}
                           onClick={() => toggleInvite(f.friend_id)}
                           className={`w-full flex items-center gap-2.5 rounded-xl border p-2.5 ${
-                            sel ? 'border-[#39FF14]/40 bg-[#39FF14]/6' : 'border-white/8 bg-white/4'
+                            sel ? 'border-primary/40 bg-primary/6' : 'border-white/8 bg-white/4'
                           }`}
                         >
                           <Avatar name={f.full_name} src={f.avatar_url} size="sm" />
                           <span className="flex-1 text-left text-[0.8125rem] font-bold truncate">{f.full_name}</span>
-                          {sel && <Check size={14} className="text-[#39FF14]" />}
+                          {sel && <Check size={14} className="text-primary" />}
                         </button>
                       );
                     })}
@@ -334,7 +334,7 @@ const TeamCreatePanel: React.FC<TeamCreatePanelProps> = ({ friends, onCreated, o
               <button
                 onClick={create}
                 disabled={creating}
-                className="w-full min-h-[52px] rounded-2xl bg-[#39FF14] text-[#0A0E14] font-extrabold text-sm flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-50"
+                className="w-full min-h-[52px] rounded-2xl bg-primary text-on-primary font-extrabold text-sm flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-50"
               >
                 {creating ? <Loader2 size={16} className="animate-spin" /> : '🛡️'} Takımı Kur
               </button>

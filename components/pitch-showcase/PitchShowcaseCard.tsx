@@ -82,7 +82,7 @@ export const PitchShowcaseCard: React.FC<{
         {/* Mesafe */}
         {pitch.distance && (
           <div className="absolute left-3 bottom-3 flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-black/50 backdrop-blur-md border border-white/10">
-            <MapPin size={11} className="text-[#39FF14]" />
+            <MapPin size={11} className="text-primary" />
             <span className="text-[0.6875rem] font-extrabold text-white">{pitch.distance}</span>
           </div>
         )}
@@ -94,7 +94,7 @@ export const PitchShowcaseCard: React.FC<{
           {/* V-2: gerçek değerlendirme (platform veya Google) yoksa "5.0" değil "Yeni". */}
           {(pitch.ratingCount > 0 || pitch.googleReviews > 0) ? (
             <>
-              <Star size={12} className="fill-[#FACC15] text-[#FACC15]" />
+              <Star size={12} className="fill-warning text-warning" />
               <span className="text-sm font-extrabold text-white">{pitch.rating.toFixed(1)}</span>
               {pitch.googleReviews > 0 && (
                 <span className="text-xs font-medium text-ink-4">({pitch.googleReviews})</span>
@@ -111,7 +111,7 @@ export const PitchShowcaseCard: React.FC<{
         <div>
           <span className="block text-[0.625rem] font-extrabold uppercase tracking-[0.12em] text-ink-4 mb-0.5">Ort. Saatlik</span>
           <span className="flex items-baseline gap-2">
-            <span className={`text-lg font-extrabold ${pitch.originalPrice ? 'text-[#39FF14]' : 'text-white'}`}>~{formatTRYShort(pitch.totalPrice)}</span>
+            <span className={`text-lg font-extrabold ${pitch.originalPrice ? 'text-primary' : 'text-white'}`}>~{formatTRYShort(pitch.totalPrice)}</span>
             {pitch.originalPrice && (
               <span className="text-[0.8125rem] font-semibold text-ink-4 line-through">{formatTRYShort(pitch.originalPrice)}</span>
             )}
@@ -120,7 +120,7 @@ export const PitchShowcaseCard: React.FC<{
         {/* Müsaitlik rozeti: yalnız admin show_availability_badge açtıysa gösterilir */}
         {pitch.showAvailabilityBadge && pitch.todayAvailableCount !== undefined && (
           pitch.todayAvailableCount > 0 ? (
-            <span className="px-3 py-2 rounded-xl bg-[#39FF14]/10 border border-[#39FF14]/35 text-[#39FF14] text-[0.6875rem] font-extrabold">
+            <span className="px-3 py-2 rounded-xl bg-primary/10 border border-primary/35 text-primary text-[0.6875rem] font-extrabold">
               Bugün {pitch.todayAvailableCount} saat müsait
             </span>
           ) : (

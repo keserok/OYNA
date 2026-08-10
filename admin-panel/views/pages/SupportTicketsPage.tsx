@@ -175,7 +175,7 @@ export const SupportTicketsPage: React.FC = () => {
                 type="button"
                 onClick={() => setChannel(c.value)}
                 className={`h-8 px-4 rounded-lg text-[11px] font-extrabold uppercase tracking-wider transition-colors ${
-                  channel === c.value ? 'bg-[#39FF14]/10 text-[#39FF14]' : 'text-gray-500 hover:text-white'
+                  channel === c.value ? 'bg-primary/10 text-primary' : 'text-gray-500 hover:text-white'
                 }`}
               >
                 {c.label}
@@ -224,7 +224,7 @@ export const SupportTicketsPage: React.FC = () => {
               <Loader2 size={20} className="animate-spin" />
             </div>
           ) : rows.length === 0 ? (
-            <div className="bg-[#161B22]/60 border border-white/10 rounded-2xl p-8 text-center">
+            <div className="bg-surface-1/60 border border-white/10 rounded-2xl p-8 text-center">
               <Inbox size={24} className="mx-auto text-gray-600 mb-3" />
               <p className="text-sm font-extrabold text-white">Bu kanalda talep yok</p>
               <p className="text-[11px] text-gray-500 mt-2 leading-relaxed">
@@ -239,12 +239,12 @@ export const SupportTicketsPage: React.FC = () => {
                   key={t.id}
                   type="button"
                   onClick={() => setSelectedId(t.id)}
-                  className={`relative w-full text-left bg-[#161B22]/60 border rounded-2xl px-4 py-3 transition-colors ${
-                    selected ? 'border-[#39FF14]/40 bg-[#161B22]' : 'border-white/10 hover:border-white/20'
+                  className={`relative w-full text-left bg-surface-1/60 border rounded-2xl px-4 py-3 transition-colors ${
+                    selected ? 'border-primary/40 bg-surface-1' : 'border-white/10 hover:border-white/20'
                   }`}
                 >
                   {t.unread_for_admin && (
-                    <span className="absolute left-1.5 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-[#39FF14] animate-pulse" aria-label="Okunmamış" />
+                    <span className="absolute left-1.5 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-primary animate-pulse" aria-label="Okunmamış" />
                   )}
                   <div className="flex items-start justify-between gap-2 pl-1.5">
                     <p className="text-sm font-bold text-white truncate">{t.subject || 'Konu yok'}</p>
@@ -273,7 +273,7 @@ export const SupportTicketsPage: React.FC = () => {
         </div>
 
         {/* Sağ: seçili talep dizisi */}
-        <div className="bg-[#161B22]/60 border border-white/10 rounded-2xl flex flex-col min-h-[420px] max-h-[70vh]">
+        <div className="bg-surface-1/60 border border-white/10 rounded-2xl flex flex-col min-h-[420px] max-h-[70vh]">
           {!selectedId ? (
             <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
               <LifeBuoy size={24} className="text-gray-600 mb-3" />
@@ -332,7 +332,7 @@ export const SupportTicketsPage: React.FC = () => {
                         className={`max-w-[85%] rounded-2xl border px-3.5 py-2.5 ${
                           isAdmin
                             ? 'bg-purple-500/10 border-purple-500/25 rounded-tr-md'
-                            : 'bg-[#161B22] border-white/10 rounded-tl-md'
+                            : 'bg-surface-1 border-white/10 rounded-tl-md'
                         }`}
                       >
                         <div className="flex items-center gap-2 mb-1">

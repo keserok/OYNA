@@ -262,7 +262,7 @@ export const CommunitiesPage: React.FC<CommunitiesPageProps> = ({
         <section className="space-y-2 mb-6">
           <h3 className="text-[10px] font-extrabold text-yellow-400 uppercase tracking-widest">Oluşturma Talepleri ({requests.length})</h3>
           {requests.map((req) => (
-            <div key={req.id} className="bg-[#161B22] border border-yellow-500/20 rounded-xl p-4 flex items-center justify-between gap-3">
+            <div key={req.id} className="bg-surface-1 border border-yellow-500/20 rounded-xl p-4 flex items-center justify-between gap-3">
               <div>
                 <p className="text-sm font-bold text-white">{req.name}</p>
                 <p className="text-[10px] text-gray-400">{req.type} • {req.requesterName} • {req.location || '—'}</p>

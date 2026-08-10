@@ -86,7 +86,7 @@ export const ACLPage: React.FC = () => {
         </button>
       }
     >
-      <div className="bg-[#161B22]/60 border border-white/[0.06] rounded-2xl p-5 max-w-2xl space-y-3">
+      <div className="bg-surface-1/60 border border-white/[0.06] rounded-2xl p-5 max-w-2xl space-y-3">
         <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Yeni ekip üyesi</p>
         <AdminSearchBar
           value={userQuery}

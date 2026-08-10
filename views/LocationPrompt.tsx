@@ -51,13 +51,13 @@ const LocationPrompt: React.FC<LocationPromptProps> = ({ onPermissionGranted, on
   };
 
   return (
-    <div className="min-h-screen bg-[#0A0E14] flex flex-col relative overflow-hidden">
+    <div className="min-h-screen bg-bg flex flex-col relative overflow-hidden">
       
       {/* MAP BACKGROUND */}
       <div className="absolute inset-0 opacity-20 grayscale mix-blend-luminosity">
           {/* F3d: harici stok görsel yerine yerel gradient (çevrimdışı/karanlıkta da tutarlı) */}
-          <div className="absolute inset-0 bg-gradient-to-br from-[#123321] via-[#0f1b2d] to-[#0A0E14]"></div>
-          <div className="absolute inset-0 bg-gradient-to-b from-[#0A0E14] via-transparent to-[#0A0E14]"></div>
+          <div className="absolute inset-0 bg-gradient-to-br from-[#123321] via-[#0f1b2d] to-bg"></div>
+          <div className="absolute inset-0 bg-gradient-to-b from-bg via-transparent to-bg"></div>
       </div>
 
       {/* RADAR EFFECT */}
@@ -75,7 +75,7 @@ const LocationPrompt: React.FC<LocationPromptProps> = ({ onPermissionGranted, on
               )}
 
               {/* Center Icon */}
-              <div className={`w-16 h-16 rounded-full flex items-center justify-center shadow-[0_0_30px_rgba(0,0,0,0.5)] border-4 transition-all duration-500 z-20 ${status === 'FOUND' ? 'bg-green-500 border-green-400 scale-110' : 'bg-[#161B22] border-white/10'}`}>
+              <div className={`w-16 h-16 rounded-full flex items-center justify-center shadow-[0_0_30px_rgba(0,0,0,0.5)] border-4 transition-all duration-500 z-20 ${status === 'FOUND' ? 'bg-green-500 border-green-400 scale-110' : 'bg-surface-1 border-white/10'}`}>
                   {status === 'SCANNING' ? (
                       <Spinner size={32} color="#22C55E" />
                   ) : status === 'FOUND' ? (
@@ -109,7 +109,7 @@ const LocationPrompt: React.FC<LocationPromptProps> = ({ onPermissionGranted, on
           {status === 'DENIED' ? (
               <button 
                 onClick={handleSkip}
-                className="w-full h-14 bg-[#161B22] text-white font-bold rounded-2xl border border-white/10 hover:bg-white/5 transition-colors"
+                className="w-full h-14 bg-surface-1 text-white font-bold rounded-2xl border border-white/10 hover:bg-white/5 transition-colors"
               >
                   MANUEL DEVAM ET
               </button>
@@ -118,7 +118,7 @@ const LocationPrompt: React.FC<LocationPromptProps> = ({ onPermissionGranted, on
                   <button 
                     onClick={handleGrantPermission}
                     disabled={status !== 'IDLE'}
-                    className={`w-full h-16 rounded-2xl font-extrabold text-lg flex items-center justify-center gap-2 transition-all ${status === 'IDLE' ? 'bg-[#39FF14] text-black hover:scale-[1.02] shadow-[0_0_30px_rgba(57,255,20,0.2)]' : 'bg-gray-800 text-ink-4 cursor-not-allowed'}`}
+                    className={`w-full h-16 rounded-2xl font-extrabold text-lg flex items-center justify-center gap-2 transition-all ${status === 'IDLE' ? 'bg-primary text-black hover:scale-[1.02] shadow-[0_0_30px_rgba(57,255,20,0.2)]' : 'bg-gray-800 text-ink-4 cursor-not-allowed'}`}
                   >
                       {status === 'IDLE' ? <><Navigation size={20} fill="black" /> RADARI AÇ</> : 'BEKLEYİNİZ…'}
                   </button>

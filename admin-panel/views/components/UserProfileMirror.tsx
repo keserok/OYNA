@@ -138,7 +138,7 @@ const Anahtar: React.FC<{
     <span
       className={`shrink-0 w-9 h-5 rounded-full border transition-colors relative ${
         value
-          ? danger ? 'bg-red-500/70 border-red-400/60' : 'bg-[#39FF14]/70 border-[#39FF14]/60'
+          ? danger ? 'bg-red-500/70 border-red-400/60' : 'bg-primary/70 border-primary/60'
           : 'bg-white/10 border-white/15'
       } ${disabled ? 'opacity-50' : ''}`}
     >
@@ -461,7 +461,7 @@ export const UserProfileMirror: React.FC<Props> = ({ userId, onUpdated }) => {
       {/* Ayna şeridi — bu bir uygulama ekranı, admin krom değil */}
       <div className="flex items-center justify-between gap-2 px-1">
         <p className="text-[10px] text-gray-500 leading-relaxed">
-          <span className="text-[#39FF14] font-extrabold">CANLI AYNA</span> — kullanıcı profilini uygulamada böyle görüyor.
+          <span className="text-primary font-extrabold">CANLI AYNA</span> — kullanıcı profilini uygulamada böyle görüyor.
           Kalem simgeleri admin düzenlemesidir; her kayıt denetime düşer.
         </p>
         <button type="button" onClick={() => void load()} aria-label="Aynayı yenile" className="w-7 h-7 rounded-lg bg-white/5 text-gray-500 hover:text-white flex items-center justify-center shrink-0">
@@ -475,8 +475,8 @@ export const UserProfileMirror: React.FC<Props> = ({ userId, onUpdated }) => {
         <div className="relative z-10 space-y-3">
           {/* Profil tamamlanmadı sinyali (uygulamadaki şeridin bilgilendirme hâli) */}
           {profile.hasCompletedOnboarding === false && (
-            <div className="bg-[#FACC15]/[0.07] border border-[#FACC15]/30 rounded-2xl px-3.5 py-2.5">
-              <p className="text-[10px] font-extrabold text-[#FACC15] uppercase tracking-wider">Profil tamamlanmadı</p>
+            <div className="bg-warning/[0.07] border border-warning/30 rounded-2xl px-3.5 py-2.5">
+              <p className="text-[10px] font-extrabold text-warning uppercase tracking-wider">Profil tamamlanmadı</p>
               <p className="text-[10px] text-gray-400 mt-0.5">Kullanıcı onboarding'i bitirmemiş — rozetler eksik görünebilir.</p>
             </div>
           )}
@@ -521,7 +521,7 @@ export const UserProfileMirror: React.FC<Props> = ({ userId, onUpdated }) => {
       </div>
 
       {/* ═══ YÖNETİCİ ALANLARI — uygulamada görünmeyen admin yüzeyi ═══ */}
-      <div className="bg-[#161B22]/60 border border-purple-500/15 rounded-2xl p-4 space-y-3">
+      <div className="bg-surface-1/60 border border-purple-500/15 rounded-2xl p-4 space-y-3">
         <button type="button" onClick={() => setAdminOpen((o) => !o)} className="w-full flex items-center justify-between gap-2">
           <p className="text-[10px] font-extrabold text-purple-300 uppercase tracking-wider flex items-center gap-1.5">
             <Sparkles size={12} /> Yönetici Alanları (kullanıcı görmez)
@@ -550,7 +550,7 @@ export const UserProfileMirror: React.FC<Props> = ({ userId, onUpdated }) => {
                   type="range" min={0} max={100} step={1}
                   value={trustDraft}
                   onChange={(e) => setTrustDraft(Number(e.target.value))}
-                  className="mt-2 w-full accent-[#39FF14]"
+                  className="mt-2 w-full accent-primary"
                 />
                 <p className="text-[9px] text-gray-600 mt-1">DB'de 0–5 saklanır (÷20). Master 3.4: güven 100'den başlar, yalnız düşer — artışı istisnai durumda kullanın.</p>
               </div>
@@ -729,7 +729,7 @@ export const UserProfileMirror: React.FC<Props> = ({ userId, onUpdated }) => {
 
       {/* ═══ ALINAN AKRAN PUANLARI — puan sistemi söküldü; skorlar yalnız burada,
            salt-okunur görünür. Puanlayan kimliği RPC çıktısında bile YOK (anonim). ═══ */}
-      <div className="bg-[#161B22]/60 border border-purple-500/15 rounded-2xl p-4 space-y-3">
+      <div className="bg-surface-1/60 border border-purple-500/15 rounded-2xl p-4 space-y-3">
         <button type="button" onClick={togglePeer} className="w-full flex items-center justify-between gap-2">
           <p className="text-[10px] font-extrabold text-purple-300 uppercase tracking-wider flex items-center gap-1.5">
             <Star size={12} /> Alınan Akran Puanları (kullanıcı görmez)
@@ -821,13 +821,13 @@ export const UserProfileMirror: React.FC<Props> = ({ userId, onUpdated }) => {
       {/* ═══ Ledger'lı bakiye düzeltme ═══ */}
       {walletOpen && (
         <div className="fixed inset-0 z-[260] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setWalletOpen(false)}>
-          <div onClick={(e) => e.stopPropagation()} className="bg-[#161B22] border border-white/10 rounded-2xl w-full max-w-sm p-5 space-y-4">
+          <div onClick={(e) => e.stopPropagation()} className="bg-surface-1 border border-white/10 rounded-2xl w-full max-w-sm p-5 space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-extrabold text-white uppercase flex items-center gap-2"><Wallet size={14} /> Bakiye Düzeltme</h3>
               <button type="button" onClick={() => setWalletOpen(false)} className="w-7 h-7 rounded-lg bg-white/5 text-gray-400 hover:text-white flex items-center justify-center"><X size={14} /></button>
             </div>
             <p className="text-[11px] text-gray-400 leading-relaxed">
-              Mevcut bakiye: <span className="font-extrabold text-[#39FF14] font-mono">{fmtMoney(profile.walletBalance ?? 0)}</span>.
+              Mevcut bakiye: <span className="font-extrabold text-primary font-mono">{fmtMoney(profile.walletBalance ?? 0)}</span>.
               Düzeltme <span className="text-white font-bold">wallet_transactions</span>'a ADMIN_ADJUST olarak işlenir — profil bakiyesi elle ezilmez, finans raporları bozulmaz. FINANCE yetkisi gerekir.
             </p>
             <div className="flex gap-1.5">
@@ -842,20 +842,20 @@ export const UserProfileMirror: React.FC<Props> = ({ userId, onUpdated }) => {
               onChange={(e) => setWalletAmount(e.target.value)}
               inputMode="decimal"
               placeholder="Tutar (örn. 250 veya -50)"
-              className="w-full h-11 bg-black/40 border border-white/15 rounded-xl px-3 text-sm text-white font-mono focus:border-[#39FF14]/40 focus:outline-none"
+              className="w-full h-11 bg-black/40 border border-white/15 rounded-xl px-3 text-sm text-white font-mono focus:border-primary/40 focus:outline-none"
             />
             <textarea
               value={walletReason}
               onChange={(e) => setWalletReason(e.target.value)}
               rows={2}
               placeholder="Sebep (zorunlu — ledger açıklamasında görünür)…"
-              className="w-full bg-black/40 border border-white/15 rounded-xl px-3 py-2 text-sm text-white focus:border-[#39FF14]/40 focus:outline-none resize-none"
+              className="w-full bg-black/40 border border-white/15 rounded-xl px-3 py-2 text-sm text-white focus:border-primary/40 focus:outline-none resize-none"
             />
             <button
               type="button"
               disabled={walletBusy}
               onClick={() => void handleWallet()}
-              className="w-full h-11 rounded-xl bg-[#39FF14]/15 border border-[#39FF14]/40 text-[#39FF14] text-[11px] font-extrabold uppercase tracking-widest hover:bg-[#39FF14]/25 disabled:opacity-40 flex items-center justify-center gap-2"
+              className="w-full h-11 rounded-xl bg-primary/15 border border-primary/40 text-primary text-[11px] font-extrabold uppercase tracking-widest hover:bg-primary/25 disabled:opacity-40 flex items-center justify-center gap-2"
             >
               {walletBusy ? <Loader2 size={13} className="animate-spin" /> : null} Düzeltmeyi İşle
             </button>

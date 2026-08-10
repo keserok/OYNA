@@ -68,7 +68,7 @@ export const OutboxBadge: React.FC<{ variant?: 'chip' | 'strip' }> = ({ variant 
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
               transition={{ type: 'spring', damping: 26, stiffness: 220 }}
-              className="relative w-full max-w-md bg-[#161B22] border-t border-white/10 rounded-t-[36px] shadow-2xl p-6 pb-8"
+              className="relative w-full max-w-md bg-surface-1 border-t border-white/10 rounded-t-[36px] shadow-2xl p-6 pb-8"
             >
               <div className="w-12 h-1.5 bg-gray-800 rounded-full mx-auto mb-4" />
               <div className="flex items-center justify-between mb-1">
@@ -78,7 +78,7 @@ export const OutboxBadge: React.FC<{ variant?: 'chip' | 'strip' }> = ({ variant 
                 <button
                   type="button"
                   onClick={() => setOpen(false)}
-                  className="w-9 h-9 bg-[#0A0E14] rounded-full flex items-center justify-center text-gray-400"
+                  className="w-9 h-9 bg-bg rounded-full flex items-center justify-center text-gray-400"
                 >
                   <X size={16} />
                 </button>
@@ -92,7 +92,7 @@ export const OutboxBadge: React.FC<{ variant?: 'chip' | 'strip' }> = ({ variant 
                 {items.map((it) => (
                   <div
                     key={it.id}
-                    className="flex items-center justify-between gap-3 px-4 py-3 rounded-2xl bg-[#0A0E14] border border-white/5"
+                    className="flex items-center justify-between gap-3 px-4 py-3 rounded-2xl bg-bg border border-white/5"
                   >
                     <div className="min-w-0">
                       <p className="text-[13px] font-bold text-white truncate">{it.label}</p>

@@ -39,7 +39,7 @@ const Toggle: React.FC<{ label: string; desc?: string; value: boolean; onChange:
             <p className={`text-sm font-bold truncate ${danger ? 'text-red-400' : 'text-white'}`}>{label}</p>
             {desc && <p className="text-[9px] text-gray-500 mt-0.5 truncate" title={desc}>{desc}</p>}
         </div>
-        <div className={`w-11 h-6 rounded-full relative flex items-center transition-colors duration-300 flex-shrink-0 ${value ? (danger ? 'bg-red-600 shadow-[0_0_10px_rgba(239,68,68,0.4)]' : 'bg-[#39FF14] shadow-[0_0_10px_rgba(57,255,20,0.3)]') : 'bg-white/10'}`}>
+        <div className={`w-11 h-6 rounded-full relative flex items-center transition-colors duration-300 flex-shrink-0 ${value ? (danger ? 'bg-red-600 shadow-[0_0_10px_rgba(239,68,68,0.4)]' : 'bg-primary shadow-[0_0_10px_rgba(57,255,20,0.3)]') : 'bg-white/10'}`}>
             <motion.div 
                 layout
                 transition={{ type: 'spring', stiffness: 500, damping: 30 }}
@@ -352,7 +352,7 @@ export const DeepEditProviderModal: React.FC<ModalProps & { item: Goalkeeper | R
                             kapalı tarz listesi geldi (shared/providerStyles.ts
                             + veritabanı CHECK kısıtı). */}
                         {typeParam === 'GK' && (
-                            <div className="p-4 bg-[#161B22]/80 border border-emerald-500/20 rounded-2xl space-y-3">
+                            <div className="p-4 bg-surface-1/80 border border-emerald-500/20 rounded-2xl space-y-3">
                                 <ProviderStyleSecici kind="GK" edit={edit} setEdit={setEdit} accent="emerald" />
 
                                 {/* Gerçek maç istatistikleri (Marketplace "Performans" karoları) */}
@@ -368,7 +368,7 @@ export const DeepEditProviderModal: React.FC<ModalProps & { item: Goalkeeper | R
                         )}
 
                         {typeParam === 'REF' && (
-                            <div className="p-4 bg-[#161B22]/80 border border-blue-500/20 rounded-2xl space-y-3">
+                            <div className="p-4 bg-surface-1/80 border border-blue-500/20 rounded-2xl space-y-3">
                                 <ProviderStyleSecici kind="REF" edit={edit} setEdit={setEdit} accent="blue" />
                                 
                                 <div className="grid grid-cols-2 gap-4 mt-2">

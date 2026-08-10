@@ -122,7 +122,7 @@ export const DiscoveryFilterSheet: React.FC<Props> = ({
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -50, filter: 'blur(10px)' }}
       transition={{ duration: 0.4, ease: 'easeOut' }}
-      className="absolute inset-0 z-50 flex flex-col h-full bg-[#0A0E14]"
+      className="absolute inset-0 z-50 flex flex-col h-full bg-bg"
     >
       {/* ÜST BAR */}
       <div className="px-5 pt-safe pb-4 flex items-center justify-between gap-3 shrink-0 border-b border-white/5 bg-black/20 backdrop-blur-lg">
@@ -152,7 +152,7 @@ export const DiscoveryFilterSheet: React.FC<Props> = ({
       <div className="flex-1 overflow-y-auto no-scrollbar px-5 py-5 space-y-7">
 
         {/* ── ARAMA YARIÇAPI (Ayarlar'daki sistemin aynısı) ── */}
-        <section className="rounded-2xl bg-[#161B22] border border-white/8 p-4 space-y-3">
+        <section className="rounded-2xl bg-surface-1 border border-white/8 p-4 space-y-3">
           <div className="flex items-center justify-between gap-3">
             <span className="text-[0.625rem] font-extrabold uppercase tracking-[0.16em] text-white/55">Arama Yarıçapı</span>
             <span className="font-numeric text-sm font-extrabold" style={{ color: ACCENT }}>{searchRadius} KM</span>
@@ -165,7 +165,7 @@ export const DiscoveryFilterSheet: React.FC<Props> = ({
             value={searchRadius}
             aria-label="Arama yarıçapı (kilometre)"
             onChange={(e) => setSearchRadius(Number(e.target.value))}
-            className="w-full h-2 rounded-lg appearance-none cursor-pointer accent-[#39FF14]"
+            className="w-full h-2 rounded-lg appearance-none cursor-pointer accent-primary"
             style={{
               background: `linear-gradient(to right, ${ACCENT} 0%, ${ACCENT} ${((searchRadius - 5) / 45) * 100}%, #0A0E14 ${((searchRadius - 5) / 45) * 100}%, #0A0E14 100%)`,
             }}

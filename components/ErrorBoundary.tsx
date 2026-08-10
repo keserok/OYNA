@@ -68,14 +68,14 @@ export class ErrorBoundary extends Component<Props, State> {
 
       return (
         <div
-          className={`w-full ${fullScreen ? 'min-h-screen' : 'min-h-[70vh]'} bg-[#0A0E14] text-white flex flex-col items-center justify-center p-6`}
+          className={`w-full ${fullScreen ? 'min-h-screen' : 'min-h-[70vh]'} bg-bg text-white flex flex-col items-center justify-center p-6`}
         >
           <div className="w-full max-w-sm text-center">
             {/* İkon */}
             <div className="relative w-20 h-20 mx-auto mb-6">
-              <div className="absolute inset-0 rounded-full bg-[#FACC15]/10 blur-xl" />
-              <div className="relative w-20 h-20 rounded-3xl bg-[#161B22] border border-[#FACC15]/25 flex items-center justify-center shadow-2xl">
-                <svg className="w-9 h-9 text-[#FACC15]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <div className="absolute inset-0 rounded-full bg-warning/10 blur-xl" />
+              <div className="relative w-20 h-20 rounded-3xl bg-surface-1 border border-warning/25 flex items-center justify-center shadow-2xl">
+                <svg className="w-9 h-9 text-warning" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m0 3.75h.007M10.34 3.94l-8.06 13.5A1.5 1.5 0 003.57 19.5h16.86a1.5 1.5 0 001.29-2.06l-8.06-13.5a1.5 1.5 0 00-2.58 0z" />
                 </svg>
               </div>
@@ -90,7 +90,7 @@ export class ErrorBoundary extends Component<Props, State> {
             <button
               type="button"
               onClick={this.handleBack}
-              className="w-full h-14 rounded-2xl bg-[#FACC15] text-black font-extrabold text-sm uppercase tracking-widest hover:bg-yellow-300 active:scale-95 transition-all outline-none inline-flex items-center justify-center gap-2"
+              className="w-full h-14 rounded-2xl bg-warning text-black font-extrabold text-sm uppercase tracking-widest hover:bg-yellow-300 active:scale-95 transition-all outline-none inline-flex items-center justify-center gap-2"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />

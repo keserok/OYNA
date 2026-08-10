@@ -493,7 +493,7 @@ export const UsersPage: React.FC<UsersPageProps> = ({ subRoute, mode = 'embedded
             )}
             {ghostTarget && (
                 <div className="fixed inset-0 z-[200] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-                    <div className="bg-[#161B22] border border-red-500/30 rounded-2xl w-full max-w-sm p-5 space-y-4">
+                    <div className="bg-surface-1 border border-red-500/30 rounded-2xl w-full max-w-sm p-5 space-y-4">
                         <div>
                             <h3 className="text-sm font-extrabold text-white uppercase">Ghost Mode Girişi</h3>
                             <p className="text-[11px] text-gray-400 mt-1">

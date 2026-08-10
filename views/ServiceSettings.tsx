@@ -287,7 +287,7 @@ const ServiceSettings: React.FC<ServiceSettingsProps> = ({ role, onBack, onLogou
         <motion.button
           whileTap={{ scale: 0.98 }}
           onClick={() => setShowNotifPage(true)}
-          className="w-full bg-[#161B22] border border-white/5 rounded-2xl p-4 flex items-center gap-3 text-left hover:border-white/15 transition-all"
+          className="w-full bg-surface-1 border border-white/5 rounded-2xl p-4 flex items-center gap-3 text-left hover:border-white/15 transition-all"
         >
           <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: '#f59e0b20', color: '#f59e0b' }}>
             <Bell size={18} />

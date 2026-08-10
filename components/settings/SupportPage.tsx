@@ -144,7 +144,7 @@ const SupportPage: React.FC<Props> = ({ open, onClose }) => {
                                 <div className={`max-w-[85%] rounded-2xl px-4 py-3 border ${
                                     m.sender_role === 'USER'
                                         ? 'bg-primary/10 border-primary/25 rounded-br-md'
-                                        : 'bg-[#161B22] border-white/10 rounded-bl-md'
+                                        : 'bg-surface-1 border-white/10 rounded-bl-md'
                                 }`}>
                                     <p className="text-[0.625rem] font-extrabold uppercase tracking-wider mb-1 text-ink-4">
                                         {m.sender_role === 'USER' ? 'Sen' : (m.sender_name || 'OYNA Destek')}
@@ -162,7 +162,7 @@ const SupportPage: React.FC<Props> = ({ open, onClose }) => {
                             Bu talep kapatıldı. Yeni bir sorun için yeni talep açabilirsin.
                         </p>
                     ) : (
-                        <div className="sticky bottom-0 bg-[#0A0E14] pt-2 space-y-2">
+                        <div className="sticky bottom-0 bg-bg pt-2 space-y-2">
                         {replyError && (
                             <p className="text-[0.6875rem] font-bold text-red-400 bg-red-500/10 border border-red-500/20 rounded-2xl px-4 py-2.5">
                                 {replyError}
@@ -174,7 +174,7 @@ const SupportPage: React.FC<Props> = ({ open, onClose }) => {
                                 onChange={(e) => setReply(e.target.value)}
                                 rows={2}
                                 placeholder="Yanıtını yaz…"
-                                className="flex-1 bg-[#161B22] border border-white/10 rounded-2xl px-4 py-3 text-white text-sm outline-none focus:border-primary/40 resize-none"
+                                className="flex-1 bg-surface-1 border border-white/10 rounded-2xl px-4 py-3 text-white text-sm outline-none focus:border-primary/40 resize-none"
                             />
                             <button
                                 type="button"
@@ -199,7 +199,7 @@ const SupportPage: React.FC<Props> = ({ open, onClose }) => {
                             onChange={(e) => setSubject(e.target.value)}
                             maxLength={120}
                             placeholder="Örn. İade hesabıma geçmedi"
-                            className="mt-1.5 w-full bg-[#161B22] border border-white/10 rounded-2xl px-4 py-3 text-white text-sm outline-none focus:border-primary/40"
+                            className="mt-1.5 w-full bg-surface-1 border border-white/10 rounded-2xl px-4 py-3 text-white text-sm outline-none focus:border-primary/40"
                         />
                     </div>
                     <div>
@@ -213,7 +213,7 @@ const SupportPage: React.FC<Props> = ({ open, onClose }) => {
                                     className={`px-3 py-2 rounded-2xl text-[0.6875rem] font-extrabold border transition-all active:scale-95 ${
                                         category === c.key
                                             ? 'bg-primary text-black border-primary'
-                                            : 'bg-[#161B22] text-white/60 border-white/10 hover:bg-white/5'
+                                            : 'bg-surface-1 text-white/60 border-white/10 hover:bg-white/5'
                                     }`}
                                 >
                                     {c.label}
@@ -229,7 +229,7 @@ const SupportPage: React.FC<Props> = ({ open, onClose }) => {
                             rows={5}
                             maxLength={2000}
                             placeholder="Sorununu olabildiğince ayrıntılı anlat — maç adı, tarih, tutar gibi bilgiler çözümü hızlandırır."
-                            className="mt-1.5 w-full bg-[#161B22] border border-white/10 rounded-2xl px-4 py-3 text-white text-sm outline-none focus:border-primary/40 resize-none"
+                            className="mt-1.5 w-full bg-surface-1 border border-white/10 rounded-2xl px-4 py-3 text-white text-sm outline-none focus:border-primary/40 resize-none"
                         />
                     </div>
                     {formError && (
@@ -277,7 +277,7 @@ const SupportPage: React.FC<Props> = ({ open, onClose }) => {
                                 key={t.id}
                                 type="button"
                                 onClick={() => setActiveId(t.id)}
-                                className="w-full text-left bg-[#161B22] border border-white/10 rounded-2xl p-4 hover:bg-white/5 active:scale-[0.99] transition-all"
+                                className="w-full text-left bg-surface-1 border border-white/10 rounded-2xl p-4 hover:bg-white/5 active:scale-[0.99] transition-all"
                             >
                                 <div className="flex items-center justify-between gap-2 mb-1.5">
                                     <p className="text-[0.8125rem] font-bold text-white truncate flex items-center gap-2 min-w-0">

@@ -109,7 +109,7 @@ export const MatchHistorySection: React.FC<MatchHistorySectionProps> = ({ matche
                     {onFindMatch && (
                         <button
                             onClick={onFindMatch}
-                            className="min-h-[44px] px-[18px] rounded-full bg-white text-[#0A0E14] text-[0.8125rem] active:opacity-85 transition-opacity"
+                            className="min-h-[44px] px-[18px] rounded-full bg-white text-on-primary text-[0.8125rem] active:opacity-85 transition-opacity"
                         >
                             Maç bul
                         </button>

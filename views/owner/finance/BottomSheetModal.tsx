@@ -54,7 +54,7 @@ export const BottomSheetModal: React.FC<Props> = ({ title, onClose, children }) 
         aria-label={title}
         onClick={(e) => e.stopPropagation()}
         style={{ maxHeight: kbInset ? `calc(85dvh - ${kbInset}px)` : undefined }}
-        className="bg-[#161B22] w-full max-w-md rounded-t-3xl p-6 pb-safe-6 border border-white/10 max-h-[85dvh] overflow-y-auto custom-scrollbar"
+        className="bg-surface-1 w-full max-w-md rounded-t-3xl p-6 pb-safe-6 border border-white/10 max-h-[85dvh] overflow-y-auto custom-scrollbar"
       >
         <div className="flex justify-between mb-4">
           <h3 className="text-lg font-extrabold text-white">{title}</h3>

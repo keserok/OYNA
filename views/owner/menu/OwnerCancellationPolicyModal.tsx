@@ -87,7 +87,7 @@ export const OwnerCancellationPolicyModal: React.FC<Props> = ({ onClose, facilit
           </div>
 
           {/* Özel politika anahtarı */}
-          <div className="bg-[#0A0E14] p-5 rounded-2xl border border-white/5 flex items-center justify-between">
+          <div className="bg-bg p-5 rounded-2xl border border-white/5 flex items-center justify-between">
             <div>
               <h4 className="text-sm font-bold text-white">Özel Politika</h4>
               <p className="text-[10px] text-gray-500 mt-0.5">Kapalı: OYNA varsayılanı kullanılır</p>
@@ -112,7 +112,7 @@ export const OwnerCancellationPolicyModal: React.FC<Props> = ({ onClose, facilit
                     value={fullHours}
                     disabled={readOnly}
                     onChange={(e) => setFullHours(num(e.target.value, 24))}
-                    className="w-full bg-[#0A0E14] border border-white/5 rounded-xl px-4 py-3 text-white font-bold outline-none disabled:opacity-50"
+                    className="w-full bg-bg border border-white/5 rounded-xl px-4 py-3 text-white font-bold outline-none disabled:opacity-50"
                   />
                   <span className="text-xs text-gray-500 font-bold">saat</span>
                 </div>
@@ -125,7 +125,7 @@ export const OwnerCancellationPolicyModal: React.FC<Props> = ({ onClose, facilit
                     value={halfHours}
                     disabled={readOnly}
                     onChange={(e) => setHalfHours(num(e.target.value, 6))}
-                    className="w-full bg-[#0A0E14] border border-white/5 rounded-xl px-4 py-3 text-white font-bold outline-none disabled:opacity-50"
+                    className="w-full bg-bg border border-white/5 rounded-xl px-4 py-3 text-white font-bold outline-none disabled:opacity-50"
                   />
                   <span className="text-xs text-gray-500 font-bold">saat</span>
                 </div>
@@ -138,7 +138,7 @@ export const OwnerCancellationPolicyModal: React.FC<Props> = ({ onClose, facilit
                     value={halfPct}
                     disabled={readOnly}
                     onChange={(e) => setHalfPct(num(e.target.value, 50))}
-                    className="w-full bg-[#0A0E14] border border-white/5 rounded-xl px-4 py-3 text-white font-bold outline-none disabled:opacity-50"
+                    className="w-full bg-bg border border-white/5 rounded-xl px-4 py-3 text-white font-bold outline-none disabled:opacity-50"
                   />
                   <span className="text-xs text-gray-500 font-bold">%</span>
                 </div>

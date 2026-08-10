@@ -176,7 +176,7 @@ export const OwnerBookingDetailModal: React.FC<OwnerBookingDetailModalProps> = (
       </button>
       {balance > 0 && (
         <button type="button" onClick={handleNoShow} disabled={busy}
-          className="h-12 rounded-2xl bg-[#FACC15]/10 border border-[#FACC15]/30 text-[#FACC15] font-extrabold text-[11px] flex items-center justify-center gap-1.5 active:scale-[0.98] transition-transform disabled:opacity-50">
+          className="h-12 rounded-2xl bg-warning/10 border border-warning/30 text-warning font-extrabold text-[11px] flex items-center justify-center gap-1.5 active:scale-[0.98] transition-transform disabled:opacity-50">
           {busy ? <Spinner size={16} color="currentColor" glow={false} /> : <><UserX size={16} /> Gelmedi</>}
         </button>
       )}
@@ -198,7 +198,7 @@ export const OwnerBookingDetailModal: React.FC<OwnerBookingDetailModalProps> = (
       footer={footer}
     >
       {/* Durum kartı */}
-      <div className="bg-[#0A0E14] p-4 rounded-2xl border border-white/5 space-y-3">
+      <div className="bg-bg p-4 rounded-2xl border border-white/5 space-y-3">
         <div className="flex justify-between items-center">
           <span className="text-[0.6875rem] text-gray-500 font-bold uppercase">Durum</span>
           <span className={`text-[0.6875rem] font-extrabold px-2 py-1 rounded ${statusCls}`}>{statusLabel}</span>
@@ -229,7 +229,7 @@ export const OwnerBookingDetailModal: React.FC<OwnerBookingDetailModalProps> = (
         <div className="mt-4 space-y-3">
           <label className="text-[0.6875rem] font-extrabold text-gray-500 uppercase tracking-widest">Tahsil edilecek tutar</label>
           <div className="flex gap-2">
-            <div className="flex-1 bg-[#0A0E14] border border-white/10 rounded-2xl px-4 flex items-center focus-within:border-emerald-500/50">
+            <div className="flex-1 bg-bg border border-white/10 rounded-2xl px-4 flex items-center focus-within:border-emerald-500/50">
               <input
                 type="text"
                 inputMode="decimal"
@@ -248,7 +248,7 @@ export const OwnerBookingDetailModal: React.FC<OwnerBookingDetailModalProps> = (
           <div className="grid grid-cols-3 gap-2">
             {METHODS.map((m) => (
               <button key={m.id} type="button" onClick={() => setMethod(m.id)}
-                className={`min-h-[44px] py-2.5 rounded-xl border text-xs font-extrabold transition-colors ${method === m.id ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300' : 'bg-[#0A0E14] border-white/5 text-gray-400 hover:text-white'}`}>
+                className={`min-h-[44px] py-2.5 rounded-xl border text-xs font-extrabold transition-colors ${method === m.id ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300' : 'bg-bg border-white/5 text-gray-400 hover:text-white'}`}>
                 {m.label}
               </button>
             ))}
@@ -266,7 +266,7 @@ export const OwnerBookingDetailModal: React.FC<OwnerBookingDetailModalProps> = (
             onChange={(e) => setCancelReason(e.target.value)}
             rows={2}
             placeholder="Örn: Hava koşulları, bakım çalışması"
-            className="w-full bg-[#0A0E14] border border-white/5 p-4 rounded-2xl text-white text-sm outline-none resize-none focus:border-red-500/40"
+            className="w-full bg-bg border border-white/5 p-4 rounded-2xl text-white text-sm outline-none resize-none focus:border-red-500/40"
             autoFocus
           />
         </div>

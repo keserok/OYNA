@@ -93,7 +93,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({ currentView, onNavigate, h
       className="fixed bottom-0 left-0 right-0 z-50 px-4 pt-2 pb-safe max-w-lg mx-auto"
     >
       <div
-        className="bg-[#161B22]/80 backdrop-blur-xl border border-white/10 rounded-[32px] px-2 py-2 flex items-center justify-between shadow-[0_-10px_40px_rgba(0,0,0,0.5)]"
+        className="bg-surface-1/80 backdrop-blur-xl border border-white/10 rounded-[32px] px-2 py-2 flex items-center justify-between shadow-[0_-10px_40px_rgba(0,0,0,0.5)]"
       >
         {navItems.map((item) => {
           // Artık beş sekmenin beşi de gerçek bir görünüme karşılık geliyor;
@@ -108,7 +108,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({ currentView, onNavigate, h
                 onClick={() => onNavigate(item.id as AppView)}
                 aria-label={item.label}
                 aria-current={isActive ? 'page' : undefined}
-                className="flex-1 relative -top-6 flex flex-col items-center justify-center group outline-none focus-visible:ring-2 focus-visible:ring-[#39FF14] focus-visible:ring-offset-2 focus-visible:ring-offset-[#161B22] rounded-full min-h-[48px]"
+                className="flex-1 relative -top-6 flex flex-col items-center justify-center group outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-1 rounded-full min-h-[48px]"
               >
                 <motion.div
                   whileHover={{ scale: 1.05 }}
@@ -118,12 +118,12 @@ export const BottomNav: React.FC<BottomNavProps> = ({ currentView, onNavigate, h
                      amblem, koyu zemin, neon yeşil kenar. Aktif hâl mevcut
                      kuralda kalır: dolu yeşil zemin, siyah amblem. */
                   className={`w-14 h-14 rounded-full flex items-center justify-center shadow-[0_0_20px_rgba(57,255,20,0.3)] transition-colors ${
-                    isActive ? 'bg-[#39FF14] text-black' : 'bg-[#0A0E14] border-2 border-[#39FF14] text-[#F1CA1D]'
+                    isActive ? 'bg-primary text-black' : 'bg-bg border-2 border-primary text-[#F1CA1D]'
                   }`}
                 >
                   <Icon size={29} strokeWidth={isActive ? 3 : 2} />
                 </motion.div>
-                <span className={`${type_.caption} font-extrabold tracking-wide mt-1 whitespace-nowrap transition-colors ${isActive ? 'text-[#39FF14]' : 'text-ink-4'}`}>
+                <span className={`${type_.caption} font-extrabold tracking-wide mt-1 whitespace-nowrap transition-colors ${isActive ? 'text-primary' : 'text-ink-4'}`}>
                   {item.label}
                 </span>
               </button>

@@ -180,7 +180,7 @@ const OwnerAccountsTab: React.FC = () => {
             return (
               <div
                 key={row.id}
-                className="bg-[#161B22] border border-white/5 rounded-2xl p-5 space-y-4"
+                className="bg-surface-1 border border-white/5 rounded-2xl p-5 space-y-4"
               >
                 <div className="flex flex-wrap items-start justify-between gap-4">
                   <div>
@@ -196,7 +196,7 @@ const OwnerAccountsTab: React.FC = () => {
                     <select
                       value={draft.plan_tier}
                       onChange={(e) => updateDraft(row.owner_user_id, 'plan_tier', e.target.value)}
-                      className="bg-[#0A0E14] border border-white/10 rounded-lg px-3 py-2 text-xs text-white"
+                      className="bg-bg border border-white/10 rounded-lg px-3 py-2 text-xs text-white"
                     >
                       {PLAN_OPTIONS.map((p) => (
                         <option key={p} value={p}>{planTierLabel(p)}</option>
@@ -205,7 +205,7 @@ const OwnerAccountsTab: React.FC = () => {
                     <select
                       value={draft.status}
                       onChange={(e) => updateDraft(row.owner_user_id, 'status', e.target.value)}
-                      className="bg-[#0A0E14] border border-white/10 rounded-lg px-3 py-2 text-xs text-white"
+                      className="bg-bg border border-white/10 rounded-lg px-3 py-2 text-xs text-white"
                     >
                       {STATUS_OPTIONS.map((s) => (
                         <option key={s} value={s}>{accountStatusLabel(s)}</option>
@@ -231,7 +231,7 @@ const OwnerAccountsTab: React.FC = () => {
                         onChange={(e) =>
                           updateEntitlement(row.owner_user_id, key, parseInt(e.target.value, 10) || 0)
                         }
-                        className="w-full bg-[#0A0E14] border border-white/10 rounded-lg px-3 py-2 text-xs text-white"
+                        className="w-full bg-bg border border-white/10 rounded-lg px-3 py-2 text-xs text-white"
                       />
                     </label>
                   ))}
@@ -287,7 +287,7 @@ const OwnerAccountsTab: React.FC = () => {
                       {cred.open && (
                         <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
                           {/* E-posta değiştir */}
-                          <div className="space-y-2 bg-[#0A0E14] border border-white/5 rounded-xl p-3">
+                          <div className="space-y-2 bg-bg border border-white/5 rounded-xl p-3">
                             <span className="text-[10px] text-gray-500 font-bold uppercase flex items-center gap-1.5">
                               <Mail size={11} /> E-postayı Değiştir
                             </span>
@@ -296,7 +296,7 @@ const OwnerAccountsTab: React.FC = () => {
                               value={cred.email}
                               onChange={(e) => setCredDraft(row.owner_user_id, { email: e.target.value })}
                               placeholder={row.owner_email ?? 'yeni@eposta.com'}
-                              className="w-full bg-[#161B22] border border-white/10 rounded-lg px-3 py-2 text-xs text-white"
+                              className="w-full bg-surface-1 border border-white/10 rounded-lg px-3 py-2 text-xs text-white"
                             />
                             <button
                               type="button"
@@ -316,7 +316,7 @@ const OwnerAccountsTab: React.FC = () => {
                           </div>
 
                           {/* Yeni şifre belirle */}
-                          <div className="space-y-2 bg-[#0A0E14] border border-white/5 rounded-xl p-3">
+                          <div className="space-y-2 bg-bg border border-white/5 rounded-xl p-3">
                             <span className="text-[10px] text-gray-500 font-bold uppercase flex items-center gap-1.5">
                               <KeyRound size={11} /> Yeni Şifre Belirle
                             </span>
@@ -326,7 +326,7 @@ const OwnerAccountsTab: React.FC = () => {
                                 value={cred.password}
                                 onChange={(e) => setCredDraft(row.owner_user_id, { password: e.target.value })}
                                 placeholder="En az 8 karakter"
-                                className="flex-1 min-w-0 bg-[#161B22] border border-white/10 rounded-lg px-3 py-2 text-xs text-white font-mono"
+                                className="flex-1 min-w-0 bg-surface-1 border border-white/10 rounded-lg px-3 py-2 text-xs text-white font-mono"
                               />
                               <button
                                 type="button"
@@ -355,7 +355,7 @@ const OwnerAccountsTab: React.FC = () => {
                           </div>
 
                           {/* Sıfırlama kodu gönder */}
-                          <div className="sm:col-span-2 flex flex-wrap items-center justify-between gap-2 bg-[#0A0E14] border border-white/5 rounded-xl p-3">
+                          <div className="sm:col-span-2 flex flex-wrap items-center justify-between gap-2 bg-bg border border-white/5 rounded-xl p-3">
                             <p className="text-[11px] text-gray-500">
                               Ya da tesise kendi şifresini belirlemesi için <span className="text-gray-300 font-bold">{row.owner_email ?? 'kayıtlı e-postasına'}</span> sıfırlama kodu gönderin.
                             </p>

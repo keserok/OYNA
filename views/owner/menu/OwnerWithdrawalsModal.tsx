@@ -108,7 +108,7 @@ export const OwnerWithdrawalsModal: React.FC<Props> = ({
 
   return (
     <div className="fixed inset-0 z-50 bg-[#0A0D14] flex flex-col animate-in slide-in-from-bottom-4 duration-300">
-      <div className="bg-[#161B22] p-4 flex justify-between items-center border-b border-white/5 safe-area-top">
+      <div className="bg-surface-1 p-4 flex justify-between items-center border-b border-white/5 safe-area-top">
         <div className="flex items-center gap-3">
           <button type="button" onClick={onClose} aria-label="Kapat" className="w-11 h-11 flex items-center justify-center rounded-full bg-white/5 text-white">
             <X size={20} />
@@ -151,7 +151,7 @@ export const OwnerWithdrawalsModal: React.FC<Props> = ({
         )}
 
         <div className="space-y-4">
-          <div className="bg-[#161B22] p-5 rounded-2xl border border-white/5">
+          <div className="bg-surface-1 p-5 rounded-2xl border border-white/5">
             <label className="text-xs font-bold text-gray-400 uppercase block mb-2">Tutar (TL)</label>
             <input
               type="number"
@@ -162,7 +162,7 @@ export const OwnerWithdrawalsModal: React.FC<Props> = ({
               placeholder="0"
             />
           </div>
-          <div className="bg-[#161B22] p-5 rounded-2xl border border-white/5">
+          <div className="bg-surface-1 p-5 rounded-2xl border border-white/5">
             <label className="text-xs font-bold text-gray-400 uppercase block mb-2">IBAN</label>
             <input
               type="text"
@@ -173,7 +173,7 @@ export const OwnerWithdrawalsModal: React.FC<Props> = ({
               placeholder="TR00 0000 0000 0000 0000 0000 00"
             />
           </div>
-          <div className="bg-[#161B22] p-5 rounded-2xl border border-white/5">
+          <div className="bg-surface-1 p-5 rounded-2xl border border-white/5">
             <label className="text-xs font-bold text-gray-400 uppercase block mb-2">IBAN Sahibi (Ad Soyad / Ünvan)</label>
             <input
               type="text"

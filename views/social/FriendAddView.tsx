@@ -77,7 +77,7 @@ const RelationButton: React.FC<{
       return (
         <button
           onClick={onAccept}
-          className="h-9 px-3 rounded-xl bg-[#39FF14] text-[#0A0E14] text-[0.6875rem] font-bold active:scale-[0.96]"
+          className="h-9 px-3 rounded-xl bg-primary text-on-primary text-[0.6875rem] font-bold active:scale-[0.96]"
         >
           Kabul Et
         </button>
@@ -86,7 +86,7 @@ const RelationButton: React.FC<{
       return (
         <button
           onClick={onAdd}
-          className="h-9 px-3.5 rounded-xl bg-[#39FF14] text-[#0A0E14] text-[0.6875rem] font-bold flex items-center gap-1 active:scale-[0.96]"
+          className="h-9 px-3.5 rounded-xl bg-primary text-on-primary text-[0.6875rem] font-bold flex items-center gap-1 active:scale-[0.96]"
         >
           <UserPlus size={12} /> Ekle
         </button>
@@ -287,7 +287,7 @@ const FriendAddView: React.FC<FriendAddViewProps> = ({ onBack, onNavigate }) => 
   const isSearchActive = query.trim().replace(/^@/, '').length >= 2;
 
   return (
-    <div className="h-full bg-[#0A0E14] text-white flex flex-col font-sans">
+    <div className="h-full bg-bg text-white flex flex-col font-sans">
       {/* Başlık */}
       <div className="pt-safe px-5 flex items-center gap-3 pb-2">
         <button
@@ -309,7 +309,7 @@ const FriendAddView: React.FC<FriendAddViewProps> = ({ onBack, onNavigate }) => 
             value={query}
             onChange={e => setQuery(e.target.value)}
             placeholder="OYNA-ID veya isimle ara…"
-            className="w-full h-14 pl-11 pr-4 rounded-2xl bg-white/6 border border-white/10 text-[0.9375rem] font-semibold placeholder:text-ink-4 focus:outline-none focus:border-[#39FF14]/50"
+            className="w-full h-14 pl-11 pr-4 rounded-2xl bg-white/6 border border-white/10 text-[0.9375rem] font-semibold placeholder:text-ink-4 focus:outline-none focus:border-primary/50"
           />
         </div>
 
@@ -322,7 +322,7 @@ const FriendAddView: React.FC<FriendAddViewProps> = ({ onBack, onNavigate }) => 
             onClick={copyMyId}
             className="ml-auto h-8 px-2.5 rounded-lg bg-white/5 border border-white/10 text-[0.6875rem] font-bold text-white/60 flex items-center gap-1 active:scale-95"
           >
-            {copied ? <Check size={11} className="text-[#39FF14]" /> : <Copy size={11} />}
+            {copied ? <Check size={11} className="text-primary" /> : <Copy size={11} />}
             {copied ? 'Kopyalandı' : 'Kopyala'}
           </button>
           <button
@@ -361,7 +361,7 @@ const FriendAddView: React.FC<FriendAddViewProps> = ({ onBack, onNavigate }) => 
               >
                 {contactsBusy
                   ? <Spinner size={20} />
-                  : <BookUser size={20} className="text-[#39FF14]" />}
+                  : <BookUser size={20} className="text-primary" />}
                 <div className="text-sm font-bold mt-2">Rehberini Bağla</div>
                 <div className="text-[0.6875rem] text-ink-4 mt-0.5">
                   {isContactsAvailable() ? 'OYNA\'daki tanıdıklarını bul' : 'Yalnız uygulamada kullanılabilir'}
@@ -376,7 +376,7 @@ const FriendAddView: React.FC<FriendAddViewProps> = ({ onBack, onNavigate }) => 
                 onClick={shareInvite}
                 className="min-h-[44px] rounded-2xl bg-white/4 border border-white/8 p-4 text-left active:scale-[0.98]"
               >
-                <Share2 size={20} className="text-[#39FF14]" />
+                <Share2 size={20} className="text-primary" />
                 <div className="text-sm font-bold mt-2">Davet Linki Gönder</div>
                 <div className="text-[0.6875rem] text-ink-4 mt-0.5">WhatsApp, SMS veya kopyala</div>
               </button>
@@ -461,7 +461,7 @@ const FriendAddView: React.FC<FriendAddViewProps> = ({ onBack, onNavigate }) => 
       {/* Mini toast */}
       {toast && (
         <div className="fixed bottom-24 inset-x-5 z-50 flex justify-center pointer-events-none">
-          <div className="px-4 py-2.5 rounded-2xl bg-[#161B22] border border-white/10 text-sm font-semibold shadow-xl">
+          <div className="px-4 py-2.5 rounded-2xl bg-surface-1 border border-white/10 text-sm font-semibold shadow-xl">
             {toast}
           </div>
         </div>
@@ -483,7 +483,7 @@ const FriendAddView: React.FC<FriendAddViewProps> = ({ onBack, onNavigate }) => 
           >
             <div className="flex justify-between items-center mb-4">
               <div className="flex items-center gap-2">
-                <BookUser size={18} className="text-[#39FF14]" />
+                <BookUser size={18} className="text-primary" />
                 <h3 className="font-extrabold text-white text-base">Rehberini Bağla</h3>
               </div>
               <button onClick={() => setShowContactsConsent(false)} className="text-ink-4 hover:text-white p-1" aria-label="Kapat">
@@ -501,7 +501,7 @@ const FriendAddView: React.FC<FriendAddViewProps> = ({ onBack, onNavigate }) => 
             <div className="space-y-3">
               <button
                 onClick={runContactsSync}
-                className="w-full h-12 rounded-2xl font-extrabold text-sm bg-[#39FF14] text-black active:scale-95 transition-all"
+                className="w-full h-12 rounded-2xl font-extrabold text-sm bg-primary text-black active:scale-95 transition-all"
               >
                 İzin Ver ve Devam Et
               </button>

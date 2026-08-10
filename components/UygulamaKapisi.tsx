@@ -36,7 +36,7 @@ const KilitEkrani: React.FC<{
   <div
     role="dialog"
     aria-modal="true"
-    className="fixed inset-0 z-[300] bg-[#0A0E14] text-white flex flex-col items-center justify-center px-8 text-center"
+    className="fixed inset-0 z-[300] bg-bg text-white flex flex-col items-center justify-center px-8 text-center"
   >
     <div className="w-16 h-16 rounded-full bg-white/[0.06] border border-white/[0.12] flex items-center justify-center mb-6">
       {ikon}
@@ -56,7 +56,7 @@ const BeyazDugme: React.FC<{ onClick: () => void; children: React.ReactNode }> =
   <button
     type="button"
     onClick={onClick}
-    className="w-full min-h-[50px] rounded-full bg-white text-[#0A0E14] text-[0.8125rem] font-semibold active:scale-[0.99] transition-transform"
+    className="w-full min-h-[50px] rounded-full bg-white text-on-primary text-[0.8125rem] font-semibold active:scale-[0.99] transition-transform"
   >
     {children}
   </button>
@@ -163,7 +163,7 @@ export const UygulamaKapisi: React.FC<UygulamaKapisiProps> = ({ children }) => {
       {durum.onerilenGuncelleme && !seritKapatildi && (
         <div
           role="status"
-          className="fixed top-0 inset-x-0 z-[90] bg-white text-[#0A0E14] px-4 py-2 pt-safe-2 flex items-center gap-3"
+          className="fixed top-0 inset-x-0 z-[90] bg-white text-on-primary px-4 py-2 pt-safe-2 flex items-center gap-3"
         >
           <ArrowUpCircle size={16} className="shrink-0" />
           <span className="min-w-0 flex-1 text-[0.75rem] font-semibold truncate">
@@ -172,7 +172,7 @@ export const UygulamaKapisi: React.FC<UygulamaKapisiProps> = ({ children }) => {
           <button
             type="button"
             onClick={magazayaGit}
-            className="shrink-0 rounded-full bg-[#0A0E14] text-white text-[0.6875rem] font-bold px-3 py-1.5"
+            className="shrink-0 rounded-full bg-bg text-white text-[0.6875rem] font-bold px-3 py-1.5"
           >
             Güncelle
           </button>

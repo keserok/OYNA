@@ -148,11 +148,11 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onRefresh, onNavig
             }
         >
             {/* Kuzey yıldızı KPI (Karar #61): başarılı oynatılan maç — platformun ana metriği */}
-            <div className="relative overflow-hidden rounded-2xl border border-[#39FF14]/25 bg-gradient-to-br from-[#39FF14]/[0.08] via-[#161B22]/60 to-[#161B22]/60 p-6 shadow-[0_0_40px_rgba(57,255,20,0.06)]">
-                <div className="absolute -right-8 -top-8 w-40 h-40 rounded-full bg-[#39FF14]/10 blur-3xl pointer-events-none" />
+            <div className="relative overflow-hidden rounded-2xl border border-primary/25 bg-gradient-to-br from-primary/[0.08] via-surface-1/60 to-surface-1/60 p-6 shadow-[0_0_40px_rgba(57,255,20,0.06)]">
+                <div className="absolute -right-8 -top-8 w-40 h-40 rounded-full bg-primary/10 blur-3xl pointer-events-none" />
                 <div className="relative flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
                     <div>
-                        <p className="text-[11px] font-extrabold text-[#39FF14] uppercase tracking-[0.2em] mb-1">★ Kuzey Yıldızı — Başarılı Maç</p>
+                        <p className="text-[11px] font-extrabold text-primary uppercase tracking-[0.2em] mb-1">★ Kuzey Yıldızı — Başarılı Maç</p>
                         <div className="flex items-end gap-3">
                             <span className="text-5xl md:text-6xl font-extrabold text-white leading-none tabular-nums">
                                 {basariliMac ? basariliMac.basarili.toLocaleString('tr') : '—'}
@@ -207,9 +207,9 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onRefresh, onNavig
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="lg:col-span-2 bg-[#161B22]/60 backdrop-blur-md border border-white/5 rounded-2xl p-5 shadow-xl">
+                <div className="lg:col-span-2 bg-surface-1/60 backdrop-blur-md border border-white/5 rounded-2xl p-5 shadow-xl">
                     <div className="flex items-center gap-2 mb-6">
-                        <TrendingUp size={16} className="text-[#39FF14]" />
+                        <TrendingUp size={16} className="text-primary" />
                         <h3 className="text-xs font-extrabold uppercase tracking-widest text-white">Gelir Trendi (Rezervasyon)</h3>
                     </div>
                     {financeLoading ? (
@@ -244,7 +244,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onRefresh, onNavig
                     )}
                 </div>
 
-                <div className="bg-[#161B22]/60 backdrop-blur-md border border-white/5 rounded-2xl p-5 flex flex-col shadow-xl">
+                <div className="bg-surface-1/60 backdrop-blur-md border border-white/5 rounded-2xl p-5 flex flex-col shadow-xl">
                     <div className="flex items-center gap-2 mb-6">
                         <Activity size={16} className="text-blue-400" />
                         <h3 className="text-xs font-extrabold uppercase tracking-widest text-white">Operasyon Kuyruğu</h3>
@@ -256,7 +256,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onRefresh, onNavig
                         </div>
                         <div className="bg-black/20 border border-white/5 rounded-xl p-3 flex items-center justify-between">
                             <span className="text-[10px] font-bold text-gray-400 uppercase">BAKIM MODU</span>
-                            <span className={`text-[9px] font-extrabold px-2 py-1 rounded border uppercase ${appSettings.maintenanceMode ? 'bg-red-500/20 text-red-400 border-red-500/30' : 'bg-green-500/20 text-[#39FF14] border-[#39FF14]/30'}`}>
+                            <span className={`text-[9px] font-extrabold px-2 py-1 rounded border uppercase ${appSettings.maintenanceMode ? 'bg-red-500/20 text-red-400 border-red-500/30' : 'bg-green-500/20 text-primary border-primary/30'}`}>
                                 {appSettings.maintenanceMode ? 'AKTİF' : 'PASİF'}
                             </span>
                         </div>
@@ -280,7 +280,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onRefresh, onNavig
                         { header: 'ZAMAN', key: 'time', className: 'font-mono' },
                         { header: 'KİŞİ BAŞI ₺', key: 'rev', className: 'text-green-400 font-mono font-bold' },
                         { header: 'DURUM', render: (row) => (
-                            <span className={`text-[9px] font-extrabold px-2 py-1 rounded border uppercase ${row.status === 'EKSİK KADRO' ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/30' : 'bg-green-500/10 text-[#39FF14] border-[#39FF14]/30'}`}>
+                            <span className={`text-[9px] font-extrabold px-2 py-1 rounded border uppercase ${row.status === 'EKSİK KADRO' ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/30' : 'bg-green-500/10 text-primary border-primary/30'}`}>
                                 {row.status}
                             </span>
                         )},

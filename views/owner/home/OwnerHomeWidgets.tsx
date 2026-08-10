@@ -69,7 +69,7 @@ export const PitchOccupancyGrid: React.FC<{
     const innerCls = 'w-max';
     const seritCls = 'shrink-0';
     // Saha adı sütunu yatay kaydırmada SABİT kalır (sticky) — hangi saha olduğu kaybolmaz.
-    const nameColCls = 'sticky left-0 z-10 bg-[#161B22] w-14 shrink-0';
+    const nameColCls = 'sticky left-0 z-10 bg-surface-1 w-14 shrink-0';
 
     return (
         <div>
@@ -97,7 +97,7 @@ export const PitchOccupancyGrid: React.FC<{
                 <button
                     type="button"
                     onClick={() => { setShowAll((v) => !v); setSelected(null); }}
-                    className={`shrink-0 px-2.5 py-1.5 rounded-full border text-[9px] font-extrabold uppercase tracking-wider transition-colors ${showAll ? 'bg-white/10 text-white border-white/20' : 'bg-[#0A0E14] text-gray-500 border-white/10 hover:text-gray-300'}`}
+                    className={`shrink-0 px-2.5 py-1.5 rounded-full border text-[9px] font-extrabold uppercase tracking-wider transition-colors ${showAll ? 'bg-white/10 text-white border-white/20' : 'bg-bg text-gray-500 border-white/10 hover:text-gray-300'}`}
                 >
                     {showAll ? 'Tüm saatler' : 'Aktif saatler'}
                 </button>
@@ -189,7 +189,7 @@ export const PitchOccupancyGrid: React.FC<{
                 </div>
                 {/* Sağ kenar solma — "Tüm saatler"de daha fazla saat olduğunu sezdirir */}
                 {showAll && (
-                    <div className="pointer-events-none absolute top-0 right-0 bottom-1 w-8 bg-gradient-to-l from-[#161B22] to-transparent" />
+                    <div className="pointer-events-none absolute top-0 right-0 bottom-1 w-8 bg-gradient-to-l from-surface-1 to-transparent" />
                 )}
             </div>
 

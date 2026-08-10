@@ -88,7 +88,7 @@ export const FinanceReportPanel: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Tarih aralığı seçici */}
-      <section className="bg-[#161B22]/60 border border-white/[0.06] rounded-2xl p-5">
+      <section className="bg-surface-1/60 border border-white/[0.06] rounded-2xl p-5">
         <div className="flex items-start gap-3 mb-4">
           <div className="shrink-0 w-9 h-9 rounded-xl bg-cyan-500/10 border border-cyan-500/15 flex items-center justify-center">
             <CalendarRange size={18} className="text-cyan-400" />
@@ -138,7 +138,7 @@ export const FinanceReportPanel: React.FC = () => {
           {/* Özet kartları */}
           <section className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {summaryCards.map((c) => (
-              <div key={c.label} className="bg-[#161B22]/60 border border-white/[0.06] rounded-xl p-4">
+              <div key={c.label} className="bg-surface-1/60 border border-white/[0.06] rounded-xl p-4">
                 <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">{c.label}</p>
                 <p className={`text-base font-extrabold mt-1 ${c.tone}`}>{c.value}</p>
               </div>
@@ -146,7 +146,7 @@ export const FinanceReportPanel: React.FC = () => {
           </section>
 
           {/* Gün kırılımı tablosu + CSV */}
-          <section className="bg-[#161B22]/60 border border-white/[0.06] rounded-2xl p-5">
+          <section className="bg-surface-1/60 border border-white/[0.06] rounded-2xl p-5">
             <div className="flex items-center justify-between gap-3 mb-4">
               <div className="min-w-0">
                 <h3 className="text-sm font-extrabold text-white">Gün Kırılımı</h3>

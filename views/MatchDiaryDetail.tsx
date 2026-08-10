@@ -157,11 +157,11 @@ const MatchDiaryDetail: React.FC<MatchDiaryDetailProps> = ({ diaryId, onBack }) 
     };
 
     const header = (
-        <header className="px-6 py-6 sticky top-0 bg-[#0A0E14]/90 backdrop-blur-xl z-30 border-b border-white/5 flex items-center justify-center">
+        <header className="px-6 py-6 sticky top-0 bg-bg/90 backdrop-blur-xl z-30 border-b border-white/5 flex items-center justify-center">
             <button
                 onClick={onBack}
                 aria-label="Geri"
-                className="absolute left-6 w-11 h-11 flex items-center justify-center bg-[#161B22] rounded-full border border-white/5 text-white hover:bg-white/10 active:scale-95 transition-all"
+                className="absolute left-6 w-11 h-11 flex items-center justify-center bg-surface-1 rounded-full border border-white/5 text-white hover:bg-white/10 active:scale-95 transition-all"
             >
                 <ArrowLeft size={20} />
             </button>
@@ -172,7 +172,7 @@ const MatchDiaryDetail: React.FC<MatchDiaryDetailProps> = ({ diaryId, onBack }) 
             <button
                 onClick={handleShare}
                 aria-label="Maç raporunu paylaş"
-                className="absolute right-6 w-11 h-11 flex items-center justify-center bg-[#161B22] rounded-full border border-white/5 text-white hover:bg-white/10 active:scale-95 transition-all"
+                className="absolute right-6 w-11 h-11 flex items-center justify-center bg-surface-1 rounded-full border border-white/5 text-white hover:bg-white/10 active:scale-95 transition-all"
             >
                 <Share2 size={20} />
             </button>
@@ -181,7 +181,7 @@ const MatchDiaryDetail: React.FC<MatchDiaryDetailProps> = ({ diaryId, onBack }) 
 
     if (loading) {
         return (
-            <div className="h-full bg-[#0A0E14] flex flex-col relative font-sans">
+            <div className="h-full bg-bg flex flex-col relative font-sans">
                 {header}
                 <div className="flex-1 flex items-center justify-center">
                     <LoadingState message="Maç detayları yükleniyor…" />
@@ -192,7 +192,7 @@ const MatchDiaryDetail: React.FC<MatchDiaryDetailProps> = ({ diaryId, onBack }) 
 
     if (error || !match) {
         return (
-            <div className="h-full bg-[#0A0E14] flex flex-col relative font-sans">
+            <div className="h-full bg-bg flex flex-col relative font-sans">
                 {header}
                 <div className="flex-1 flex items-center justify-center">
                     <ErrorState message={error || 'Maç bulunamadı.'} onRetry={loadMatch} />
@@ -211,13 +211,13 @@ const MatchDiaryDetail: React.FC<MatchDiaryDetailProps> = ({ diaryId, onBack }) 
     const badgeLabel = noScore ? 'SKOR GİRİLMEDİ' : isWin ? 'GALİBİYET' : isLoss ? 'MAĞLUBİYET' : 'BERABERLİK';
 
     return (
-        <div className="h-full bg-[#0A0E14] flex flex-col relative font-sans">
+        <div className="h-full bg-bg flex flex-col relative font-sans">
             {header}
 
             <main className="flex-1 p-6 space-y-8 overflow-y-auto custom-scrollbar flex flex-col items-center">
 
                 {/* 1. Score & Result Monolith */}
-                <div className="w-full max-w-sm bg-[#161B22] border border-white/5 rounded-[40px] p-8 text-center relative overflow-hidden shadow-2xl flex flex-col items-center">
+                <div className="w-full max-w-sm bg-surface-1 border border-white/5 rounded-[40px] p-8 text-center relative overflow-hidden shadow-2xl flex flex-col items-center">
                     {/* Perfect symmetric glow */}
                     <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 blur-[80px] pointer-events-none" style={{ backgroundColor: glowColor }}></div>
 
@@ -257,7 +257,7 @@ const MatchDiaryDetail: React.FC<MatchDiaryDetailProps> = ({ diaryId, onBack }) 
                         <div className="h-px w-12 bg-white/10"></div>
                     </div>
 
-                    <div className="relative w-full aspect-[2/3] bg-[#1B4332] rounded-[32px] border-4 border-[#161B22] shadow-[inset_0_0_80px_rgba(0,0,0,0.9)] overflow-hidden">
+                    <div className="relative w-full aspect-[2/3] bg-[#1B4332] rounded-[32px] border-4 border-surface-1 shadow-[inset_0_0_80px_rgba(0,0,0,0.9)] overflow-hidden">
                         {/* Grass Stripes Symmetric */}
                         <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 10%, rgba(0,0,0,0.2) 10%, rgba(0,0,0,0.2) 20%)' }}></div>
 
@@ -317,7 +317,7 @@ const MatchDiaryDetail: React.FC<MatchDiaryDetailProps> = ({ diaryId, onBack }) 
                                         transform: 'translate(-50%, -50%)'
                                     }}
                                 >
-                                    <div className={`relative w-11 h-11 rounded-full border-2 shadow-2xl overflow-hidden ${isMe ? 'border-[#FACC15] ring-4 ring-[#FACC15]/30 scale-110 z-10' : 'border-white'}`}>
+                                    <div className={`relative w-11 h-11 rounded-full border-2 shadow-2xl overflow-hidden ${isMe ? 'border-warning ring-4 ring-warning/30 scale-110 z-10' : 'border-white'}`}>
                                         {/* IP-18: onError yedeği yoktu — kırık görsel bozuk ikon olarak kalıyordu. */}
                                         <img
                                             src={player.avatar}
@@ -330,14 +330,14 @@ const MatchDiaryDetail: React.FC<MatchDiaryDetailProps> = ({ diaryId, onBack }) 
                                                 if (kap && !kap.querySelector('[data-bas-harf]')) {
                                                     const rozet = document.createElement('span');
                                                     rozet.setAttribute('data-bas-harf', '1');
-                                                    rozet.className = 'w-full h-full flex items-center justify-center bg-[#161B22] text-white text-[0.6875rem] font-extrabold';
+                                                    rozet.className = 'w-full h-full flex items-center justify-center bg-surface-1 text-white text-[0.6875rem] font-extrabold';
                                                     rozet.textContent = getInitials(player.name);
                                                     kap.appendChild(rozet);
                                                 }
                                             }}
                                         />
                                     </div>
-                                    <div className={`px-2.5 py-1 rounded-md text-[0.6875rem] font-extrabold text-center whitespace-nowrap shadow-lg ${isMe ? 'bg-[#FACC15] text-black' : 'bg-[#161B22]/90 backdrop-blur-md text-white border border-white/10'}`}>
+                                    <div className={`px-2.5 py-1 rounded-md text-[0.6875rem] font-extrabold text-center whitespace-nowrap shadow-lg ${isMe ? 'bg-warning text-black' : 'bg-surface-1/90 backdrop-blur-md text-white border border-white/10'}`}>
                                         {player.name}
                                     </div>
                                 </div>
@@ -357,19 +357,19 @@ const MatchDiaryDetail: React.FC<MatchDiaryDetailProps> = ({ diaryId, onBack }) 
                     </div>
 
                     {!isEditingNote ? (
-                        <div className="bg-[#161B22] border border-white/5 rounded-[32px] p-8 relative overflow-hidden flex flex-col items-center text-center">
+                        <div className="bg-surface-1 border border-white/5 rounded-[32px] p-8 relative overflow-hidden flex flex-col items-center text-center">
                             {note ? (
                                 <>
-                                    <div className="absolute top-4 left-6 text-6xl text-[#FACC15]/5 font-serif pointer-events-none">"</div>
-                                    <div className="absolute bottom-[-10px] right-6 text-6xl text-[#FACC15]/5 font-serif pointer-events-none">"</div>
-                                    <p className="text-[0.625rem] font-extrabold text-[#FACC15] uppercase tracking-widest mb-4">KİŞİSEL NOTUN</p>
+                                    <div className="absolute top-4 left-6 text-6xl text-warning/5 font-serif pointer-events-none">"</div>
+                                    <div className="absolute bottom-[-10px] right-6 text-6xl text-warning/5 font-serif pointer-events-none">"</div>
+                                    <p className="text-[0.625rem] font-extrabold text-warning uppercase tracking-widest mb-4">KİŞİSEL NOTUN</p>
                                     <p className="text-gray-300 font-serif text-sm italic leading-relaxed px-4 whitespace-pre-wrap">
                                         "{note}"
                                     </p>
                                 </>
                             ) : (
                                 <>
-                                    <div className="w-12 h-12 rounded-2xl bg-[#FACC15]/10 border border-[#FACC15]/20 flex items-center justify-center text-[#FACC15] mb-4">
+                                    <div className="w-12 h-12 rounded-2xl bg-warning/10 border border-warning/20 flex items-center justify-center text-warning mb-4">
                                         <PenLine size={22} />
                                     </div>
                                     <p className="text-sm font-bold text-white mb-1">Bu maç için not almadın</p>
@@ -380,13 +380,13 @@ const MatchDiaryDetail: React.FC<MatchDiaryDetailProps> = ({ diaryId, onBack }) 
                                 onClick={() => { setDraftNote(note); setIsEditingNote(true); }}
                                 className="mt-6 px-5 py-2.5 rounded-full bg-white/5 border border-white/15 text-white text-[0.6875rem] font-extrabold uppercase tracking-widest hover:bg-white/10 active:scale-95 transition-all flex items-center gap-2"
                             >
-                                {justSaved ? <><Check size={13} className="text-[#39FF14]" /> Kaydedildi</> : <><PenLine size={13} /> {note ? 'Notu Düzenle' : 'Not Ekle'}</>}
+                                {justSaved ? <><Check size={13} className="text-primary" /> Kaydedildi</> : <><PenLine size={13} /> {note ? 'Notu Düzenle' : 'Not Ekle'}</>}
                             </button>
                         </div>
                     ) : (
-                        <div className="bg-[#161B22] border border-white/10 rounded-[32px] p-6 flex flex-col">
+                        <div className="bg-surface-1 border border-white/10 rounded-[32px] p-6 flex flex-col">
                             <div className="flex justify-between items-center mb-4">
-                                <p className="text-[0.625rem] font-extrabold text-[#FACC15] uppercase tracking-widest">KİŞİSEL NOTUN</p>
+                                <p className="text-[0.625rem] font-extrabold text-warning uppercase tracking-widest">KİŞİSEL NOTUN</p>
                                 <span className="flex items-center gap-1 text-[0.6875rem] text-ink-4"><Shield size={12} /> Sadece sen görürsün</span>
                             </div>
                             <textarea
@@ -407,7 +407,7 @@ const MatchDiaryDetail: React.FC<MatchDiaryDetailProps> = ({ diaryId, onBack }) 
                                 <button
                                     onClick={handleSaveNote}
                                     disabled={savingNote}
-                                    className="flex-[1.5] h-12 rounded-2xl bg-[#FACC15] text-black font-extrabold text-xs uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-50"
+                                    className="flex-[1.5] h-12 rounded-2xl bg-warning text-black font-extrabold text-xs uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-50"
                                 >
                                     <Save size={16} /> {savingNote ? 'Kaydediliyor…' : 'Kaydet'}
                                 </button>

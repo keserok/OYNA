@@ -140,7 +140,7 @@ const PendingCard = memo<{
   const ageLabel = ageHours < 24 ? `${Math.floor(ageHours)} saat` : `${Math.floor(ageHours / 24)} gün`;
 
   return (
-    <div className={`bg-[#161B22] border rounded-2xl p-4 ${slaBreached ? 'border-red-500/40 shadow-[0_0_0_1px_rgba(239,68,68,0.15)]' : 'border-white/5'}`}>
+    <div className={`bg-surface-1 border rounded-2xl p-4 ${slaBreached ? 'border-red-500/40 shadow-[0_0_0_1px_rgba(239,68,68,0.15)]' : 'border-white/5'}`}>
       <div className="flex items-start gap-3">
         <div className="w-12 h-12 rounded-xl overflow-hidden bg-gray-800 shrink-0">
           {v.avatar_url ? (

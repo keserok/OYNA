@@ -95,10 +95,10 @@ const PrivacySection: React.FC<PrivacySectionProps> = ({ embedded = false }) => 
     <section>
       {!embedded && (
         <h3 className="text-xs font-bold text-ink-4 uppercase mb-3 ml-2 flex items-center gap-2">
-          <Lock size={12} className="text-[#39FF14]" /> Gizlilik
+          <Lock size={12} className="text-primary" /> Gizlilik
         </h3>
       )}
-      <div className="bg-[#161B22] border border-white/5 rounded-2xl divide-y divide-white/5">
+      <div className="bg-surface-1 border border-white/5 rounded-2xl divide-y divide-white/5">
         {ROWS.map(r => (
           <div key={r.key} className="flex items-center gap-3 p-4">
             <span className="text-white/50">{r.icon}</span>
@@ -112,7 +112,7 @@ const PrivacySection: React.FC<PrivacySectionProps> = ({ embedded = false }) => 
               onClick={() => toggle(r.key)}
               disabled={!flags}
               className={`w-12 h-7 rounded-full p-0.5 transition-colors ${
-                (flags?.[r.key] ?? true) ? 'bg-[#39FF14]' : 'bg-white/10'
+                (flags?.[r.key] ?? true) ? 'bg-primary' : 'bg-white/10'
               }`}
             >
               <span className={`block w-6 h-6 rounded-full bg-white transition-transform ${

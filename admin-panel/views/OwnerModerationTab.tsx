@@ -107,7 +107,7 @@ const OwnerModerationTab: React.FC<OwnerModerationTabProps> = ({ onBadgeCount })
         ) : (
           <div className="space-y-2">
             {changeRequests.map((req) => (
-              <div key={req.id} className="bg-[#161B22] border border-white/5 rounded-2xl p-4 flex items-center justify-between gap-3">
+              <div key={req.id} className="bg-surface-1 border border-white/5 rounded-2xl p-4 flex items-center justify-between gap-3">
                 <div className="min-w-0">
                   <p className="text-sm font-bold text-white truncate">{req.pitches?.name ?? req.pitch_id.slice(0, 8)}</p>
                   <div className="mt-1 flex flex-wrap gap-1.5">

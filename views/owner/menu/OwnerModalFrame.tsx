@@ -24,7 +24,7 @@ export const OwnerFullscreenModal: React.FC<OwnerFullscreenModalProps> = ({
   useBackDismiss(true, onClose, 'owner-fullscreen-modal');
   return (
     <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-sm flex flex-col animate-in fade-in duration-300">
-      <div className="bg-[#161B22] p-4 grid grid-cols-[auto_1fr_auto] items-center gap-3 border-b border-white/5 safe-area-top">
+      <div className="bg-surface-1 p-4 grid grid-cols-[auto_1fr_auto] items-center gap-3 border-b border-white/5 safe-area-top">
         <button
           type="button"
           onClick={onClose}
@@ -75,7 +75,7 @@ export const OwnerCenteredModal: React.FC<OwnerCenteredModalProps> = ({
     <div className={`${ownerModalOverlay} animate-in fade-in duration-200`} onClick={onClose}>
       <div
         onClick={(e) => e.stopPropagation()}
-        className={`bg-[#161B22] w-full ${maxWidth} rounded-[32px] border border-white/10 p-8 flex flex-col max-h-[90dvh] animate-in zoom-in duration-300`}
+        className={`bg-surface-1 w-full ${maxWidth} rounded-[32px] border border-white/10 p-8 flex flex-col max-h-[90dvh] animate-in zoom-in duration-300`}
       >
         {/* Kapatma butonu SOLDA: tek elle telefon tutan kullanıcı için sağ üst
             köşe erişilemez bölge. Üç sütunlu ızgara başlığı gerçekten ortalar

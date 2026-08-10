@@ -28,12 +28,12 @@ export const FinanceSummaryTab: React.FC<Props> = ({ summary, onOpenCalendarWeek
   return (
     <div className="space-y-6">
       {/* Günlük tahsilat grafiği */}
-      <div className="bg-[#161B22] border border-white/5 rounded-[32px] p-6">
+      <div className="bg-surface-1 border border-white/5 rounded-[32px] p-6">
         <DailyBars series={series} monthLabelText={monthText} />
       </div>
 
       {/* Ödeme yöntemi kırılımı — tıkla → o yöntemin ödemeleri */}
-      <div className="bg-[#161B22] border border-white/5 rounded-[32px] p-6">
+      <div className="bg-surface-1 border border-white/5 rounded-[32px] p-6">
         <h3 className="text-xs font-extrabold text-gray-400 uppercase mb-4 flex items-center gap-2">
           <Wallet size={16} className="text-blue-400" /> Ödeme Yöntemi
         </h3>
@@ -65,7 +65,7 @@ export const FinanceSummaryTab: React.FC<Props> = ({ summary, onOpenCalendarWeek
       </div>
 
       {/* Gelir kaynağı (tutar bazlı — D4) */}
-      <div className="bg-[#161B22] border border-white/5 rounded-[32px] p-6">
+      <div className="bg-surface-1 border border-white/5 rounded-[32px] p-6">
         <h3 className="text-xs font-extrabold text-gray-400 uppercase mb-4 flex items-center gap-2">
           <Users size={16} className="text-emerald-400" /> Gelir Kaynağı
         </h3>
@@ -73,7 +73,7 @@ export const FinanceSummaryTab: React.FC<Props> = ({ summary, onOpenCalendarWeek
       </div>
 
       {/* Gider dağılımı */}
-      <div className="bg-[#161B22] border border-white/5 rounded-[32px] p-6">
+      <div className="bg-surface-1 border border-white/5 rounded-[32px] p-6">
         <h3 className="text-xs font-extrabold text-gray-400 uppercase mb-4 flex items-center gap-2">
           <PieChart size={16} className="text-fuchsia-400" /> Gider Dağılımı
         </h3>
@@ -99,7 +99,7 @@ export const FinanceSummaryTab: React.FC<Props> = ({ summary, onOpenCalendarWeek
         type="button"
         onClick={onOpenCalendarWeek}
         disabled={!onOpenCalendarWeek}
-        className="w-full bg-[#161B22] border border-white/5 rounded-2xl p-4 flex items-center justify-between text-left disabled:opacity-60"
+        className="w-full bg-surface-1 border border-white/5 rounded-2xl p-4 flex items-center justify-between text-left disabled:opacity-60"
       >
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center"><CalendarRange size={18} className="text-emerald-400" /></div>

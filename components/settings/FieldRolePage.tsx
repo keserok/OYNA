@@ -119,7 +119,7 @@ const FieldRolePage: React.FC<FieldRolePageProps> = ({ open, onClose, onNavigate
                   {owned ? (
                     <span className="text-[0.6875rem] font-extrabold px-3 py-1.5 rounded-full shrink-0" style={{ color: opt.color, background: `${opt.color}1a`, border: `1px solid ${opt.color}40` }}>SAHİP</span>
                   ) : (
-                    <span className="text-[0.6875rem] font-extrabold px-3 py-1.5 rounded-full shrink-0 text-[#39FF14] bg-[#39FF14]/10 border border-[#39FF14]/40">Başvur →</span>
+                    <span className="text-[0.6875rem] font-extrabold px-3 py-1.5 rounded-full shrink-0 text-primary bg-primary/10 border border-primary/40">Başvur →</span>
                   )}
                 </button>
               );
@@ -138,7 +138,7 @@ const FieldRolePage: React.FC<FieldRolePageProps> = ({ open, onClose, onNavigate
               <h3 className="text-xs font-bold text-ink-4 uppercase mb-2.5 ml-1">Tesis Ekibi</h3>
               <button
                 onClick={() => { onClose(); onJoinPitch(); }}
-                className="w-full flex items-center gap-3 p-4 bg-[#161B22] border border-white/8 rounded-2xl hover:bg-white/5 transition-colors active:scale-[0.99]"
+                className="w-full flex items-center gap-3 p-4 bg-surface-1 border border-white/8 rounded-2xl hover:bg-white/5 transition-colors active:scale-[0.99]"
               >
                 <div className="w-11 h-11 rounded-xl flex items-center justify-center bg-white/5 border border-white/10 text-gray-300 shrink-0">
                   <KeyRound size={20} />

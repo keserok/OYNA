@@ -530,7 +530,7 @@ export const MatchDetailDrawer: React.FC<Props> = ({ match, onClose, onUpdated, 
                 type="button"
                 onClick={() => setTab(key)}
                 className={`flex items-center gap-1.5 px-3 py-2.5 text-[10px] font-bold uppercase tracking-wide whitespace-nowrap border-b-2 transition-colors ${
-                  tab === key ? 'border-[#39FF14] text-white' : 'border-transparent text-gray-500 hover:text-gray-300'
+                  tab === key ? 'border-primary text-white' : 'border-transparent text-gray-500 hover:text-gray-300'
                 }`}
               >
                 <Icon size={12} /> {label}
@@ -552,7 +552,7 @@ export const MatchDetailDrawer: React.FC<Props> = ({ match, onClose, onUpdated, 
                 </div>
                 <div className="bg-black/30 rounded-lg p-2 border border-white/5">
                   <p className="text-[9px] text-gray-500 uppercase">Durum</p>
-                  <p className="font-bold text-[#39FF14]">{local.status || 'ACTIVE'}</p>
+                  <p className="font-bold text-primary">{local.status || 'ACTIVE'}</p>
                 </div>
                 <div className="bg-black/30 rounded-lg p-2 border border-white/5">
                   <p className="text-[9px] text-gray-500 uppercase">Kapora</p>
@@ -573,7 +573,7 @@ export const MatchDetailDrawer: React.FC<Props> = ({ match, onClose, onUpdated, 
                     type="button"
                     disabled={busy}
                     onClick={() => void handleStatus('ACTIVE')}
-                    className="w-full py-2.5 rounded-xl bg-[#39FF14]/15 border border-[#39FF14]/40 text-[#39FF14] text-[11px] font-extrabold uppercase tracking-widest flex items-center justify-center gap-1.5 hover:bg-[#39FF14]/25 transition-colors"
+                    className="w-full py-2.5 rounded-xl bg-primary/15 border border-primary/40 text-primary text-[11px] font-extrabold uppercase tracking-widest flex items-center justify-center gap-1.5 hover:bg-primary/25 transition-colors"
                   >
                     ✓ ONAYLA — YAYINA AL
                   </button>
@@ -707,7 +707,7 @@ export const MatchDetailDrawer: React.FC<Props> = ({ match, onClose, onUpdated, 
                 </div>
 
                 {/* Sağlayıcı talepleri (kaleci/hakem başvuruları + kiralama, escrow durumu) */}
-                <div className="bg-[#161B22]/60 border border-white/[0.06] rounded-2xl p-4 space-y-2">
+                <div className="bg-surface-1/60 border border-white/[0.06] rounded-2xl p-4 space-y-2">
                   <div className="flex items-center justify-between">
                     <p className="text-[10px] font-extrabold text-gray-400 uppercase tracking-wider">Sağlayıcı Talepleri</p>
                     <button type="button" onClick={() => void loadServiceReqs()} className="text-[10px] text-gray-500 hover:text-white">Yenile</button>
@@ -736,14 +736,14 @@ export const MatchDetailDrawer: React.FC<Props> = ({ match, onClose, onUpdated, 
                   )}
                 </div>
 
-                <div className="bg-[#161B22]/60 border border-white/[0.06] rounded-2xl p-4 space-y-3">
+                <div className="bg-surface-1/60 border border-white/[0.06] rounded-2xl p-4 space-y-3">
                   <p className="text-[10px] font-extrabold text-gray-400 uppercase tracking-wider">Skor Düzeltme (Override)</p>
                   <div className="flex items-center justify-center gap-3">
-                    <input type="number" min={0} value={homeScore} onChange={(e) => setHomeScore(e.target.value)} placeholder="Ev" className="w-16 h-12 text-center text-lg font-extrabold bg-black/40 border border-white/15 rounded-lg text-white focus:border-[#39FF14]/50 focus:outline-none" />
+                    <input type="number" min={0} value={homeScore} onChange={(e) => setHomeScore(e.target.value)} placeholder="Ev" className="w-16 h-12 text-center text-lg font-extrabold bg-black/40 border border-white/15 rounded-lg text-white focus:border-primary/50 focus:outline-none" />
                     <span className="text-gray-600 font-extrabold">-</span>
-                    <input type="number" min={0} value={awayScore} onChange={(e) => setAwayScore(e.target.value)} placeholder="Dep" className="w-16 h-12 text-center text-lg font-extrabold bg-black/40 border border-white/15 rounded-lg text-white focus:border-[#39FF14]/50 focus:outline-none" />
+                    <input type="number" min={0} value={awayScore} onChange={(e) => setAwayScore(e.target.value)} placeholder="Dep" className="w-16 h-12 text-center text-lg font-extrabold bg-black/40 border border-white/15 rounded-lg text-white focus:border-primary/50 focus:outline-none" />
                   </div>
-                  <button type="button" disabled={busy} onClick={askScore} className="w-full py-2.5 rounded-xl bg-[#39FF14]/15 border border-[#39FF14]/40 text-[#39FF14] text-[11px] font-extrabold uppercase tracking-widest hover:bg-[#39FF14]/25 disabled:opacity-40">
+                  <button type="button" disabled={busy} onClick={askScore} className="w-full py-2.5 rounded-xl bg-primary/15 border border-primary/40 text-primary text-[11px] font-extrabold uppercase tracking-widest hover:bg-primary/25 disabled:opacity-40">
                     Skoru Kaydet & Tamamla
                   </button>
                   <p className="text-[10px] text-gray-500 leading-relaxed">Kaydedince maç tamamlanır, kayıtlı takımların W/L geçmişine işlenir ve kadro otomatik bilgilendirilir.</p>
@@ -776,9 +776,9 @@ export const MatchDetailDrawer: React.FC<Props> = ({ match, onClose, onUpdated, 
                         <p className="text-[9px] text-blue-300/70 uppercase font-bold">İade Edilen</p>
                         <p className="text-sm font-extrabold text-blue-300 font-mono">{fmtMoney(refunded)}</p>
                       </div>
-                      <div className="bg-[#39FF14]/10 border border-[#39FF14]/20 rounded-xl p-2.5">
-                        <p className="text-[9px] text-[#39FF14]/70 uppercase font-bold">Platform Komisyonu</p>
-                        <p className="text-sm font-extrabold text-[#39FF14] font-mono">{fmtMoney(commission)}</p>
+                      <div className="bg-primary/10 border border-primary/20 rounded-xl p-2.5">
+                        <p className="text-[9px] text-primary/70 uppercase font-bold">Platform Komisyonu</p>
+                        <p className="text-sm font-extrabold text-primary font-mono">{fmtMoney(commission)}</p>
                       </div>
                     </div>
                   );
@@ -820,8 +820,8 @@ export const MatchDetailDrawer: React.FC<Props> = ({ match, onClose, onUpdated, 
             {tab === 'bildirim' && (
               <div className="space-y-3">
                 <p className="text-[10px] font-extrabold text-gray-400 uppercase tracking-wider">Kadroya Bildirim Gönder</p>
-                <input value={notifyTitle} onChange={(e) => setNotifyTitle(e.target.value)} placeholder="Başlık (örn. Maç saati değişti)" className="w-full h-10 bg-black/40 border border-white/15 rounded-lg px-3 text-sm text-white focus:border-[#39FF14]/40 focus:outline-none" />
-                <textarea value={notifyBody} onChange={(e) => setNotifyBody(e.target.value)} placeholder="Mesaj…" rows={4} className="w-full bg-black/40 border border-white/15 rounded-lg px-3 py-2 text-sm text-white focus:border-[#39FF14]/40 focus:outline-none resize-none" />
+                <input value={notifyTitle} onChange={(e) => setNotifyTitle(e.target.value)} placeholder="Başlık (örn. Maç saati değişti)" className="w-full h-10 bg-black/40 border border-white/15 rounded-lg px-3 text-sm text-white focus:border-primary/40 focus:outline-none" />
+                <textarea value={notifyBody} onChange={(e) => setNotifyBody(e.target.value)} placeholder="Mesaj…" rows={4} className="w-full bg-black/40 border border-white/15 rounded-lg px-3 py-2 text-sm text-white focus:border-primary/40 focus:outline-none resize-none" />
                 <div className="flex flex-wrap gap-1.5">
                   {[
                     ['Maç iptal edildi', 'Maçınız iptal edildi. Ödemeniz iade sürecine alındı.'],
@@ -831,7 +831,7 @@ export const MatchDetailDrawer: React.FC<Props> = ({ match, onClose, onUpdated, 
                     <button key={t} type="button" onClick={() => { setNotifyTitle(t); setNotifyBody(b); }} className="text-[10px] text-gray-400 border border-white/10 rounded-lg px-2 py-1 hover:text-white">{t}</button>
                   ))}
                 </div>
-                <button type="button" disabled={busy} onClick={() => void handleNotify()} className="w-full py-2.5 rounded-xl bg-[#39FF14]/15 border border-[#39FF14]/40 text-[#39FF14] text-[11px] font-extrabold uppercase tracking-widest hover:bg-[#39FF14]/25 disabled:opacity-40">Kadroya Gönder</button>
+                <button type="button" disabled={busy} onClick={() => void handleNotify()} className="w-full py-2.5 rounded-xl bg-primary/15 border border-primary/40 text-primary text-[11px] font-extrabold uppercase tracking-widest hover:bg-primary/25 disabled:opacity-40">Kadroya Gönder</button>
               </div>
             )}
 
@@ -898,7 +898,7 @@ export const MatchDetailDrawer: React.FC<Props> = ({ match, onClose, onUpdated, 
 
           {cancelOpen && (
             <div className="absolute inset-0 z-20 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-              <div className="bg-[#161B22] border border-red-500/30 rounded-2xl w-full max-w-sm p-5 space-y-4">
+              <div className="bg-surface-1 border border-red-500/30 rounded-2xl w-full max-w-sm p-5 space-y-4">
                 <div>
                   <h3 className="text-sm font-extrabold text-white uppercase">Maçı İptal Et</h3>
                   <p className="text-[11px] text-gray-400 mt-1">"{local.title}" iptal edilecek. Sebep zorunludur ve denetim kaydına yazılır.</p>

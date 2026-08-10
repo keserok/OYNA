@@ -114,9 +114,9 @@ const ThreeDSSheet: React.FC<ThreeDSSheetProps> = ({ htmlBase64, intentId, onDon
   };
 
   return (
-    <div lang="tr" className="fixed inset-0 z-[70] bg-[#0A0E14] flex flex-col">
-      <header className="px-5 pt-safe py-3.5 flex items-center gap-3 border-b border-white/8 bg-[#0A0E14] shrink-0">
-        <span className="w-9 h-9 rounded-xl bg-[#39FF14]/12 flex items-center justify-center text-[#39FF14] shrink-0">
+    <div lang="tr" className="fixed inset-0 z-[70] bg-bg flex flex-col">
+      <header className="px-5 pt-safe py-3.5 flex items-center gap-3 border-b border-white/8 bg-bg shrink-0">
+        <span className="w-9 h-9 rounded-xl bg-primary/12 flex items-center justify-center text-primary shrink-0">
           <ShieldCheck size={18} />
         </span>
         <div className="flex-1 min-w-0">
@@ -126,7 +126,7 @@ const ThreeDSSheet: React.FC<ThreeDSSheetProps> = ({ htmlBase64, intentId, onDon
         <button
           onClick={handleClose}
           className={`h-9 px-3.5 rounded-full text-[0.75rem] font-extrabold flex items-center gap-1.5 active:scale-95 transition-all ${
-            failed ? 'bg-red-400 text-[#0A0E14]' : 'bg-[#161B22] border border-white/8 text-gray-300'
+            failed ? 'bg-red-400 text-on-primary' : 'bg-surface-1 border border-white/8 text-gray-300'
           }`}
         >
           <X size={14} /> {failed ? 'Kapat' : 'Vazgeç'}
@@ -137,7 +137,7 @@ const ThreeDSSheet: React.FC<ThreeDSSheetProps> = ({ htmlBase64, intentId, onDon
         srcDoc={html.current}
         className="flex-1 w-full border-0 bg-white"
       />
-      <div className="px-5 py-2.5 pb-safe border-t border-white/8 bg-[#0A0E14] shrink-0">
+      <div className="px-5 py-2.5 pb-safe border-t border-white/8 bg-bg shrink-0">
         <p className="text-[0.6875rem] text-ink-4 text-center leading-relaxed">
           Bankanın gönderdiği SMS kodunu bu sayfada gir. Onaylanmayan tutar kartına yansımaz.
         </p>

@@ -50,7 +50,7 @@ const Avatar: React.FC<AvatarProps> = ({ name, src, size = 'md', online, classNa
       />
       {online === true && (
         <span
-          className={`absolute -bottom-0.5 -right-0.5 ${s.dot} rounded-full bg-[#39FF14] border-[#0A0E14]`}
+          className={`absolute -bottom-0.5 -right-0.5 ${s.dot} rounded-full bg-primary border-bg`}
           aria-label="Çevrimiçi"
         />
       )}

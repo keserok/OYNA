@@ -181,8 +181,9 @@ describe('oyuncu seçme paneli', () => {
   it('"Oyuncu Ekle" girişi 44px ve etiketli', () => {
     // Eskiden 32px, metinsiz, erişilebilir adsız bir artı ikonuydu.
     expect(s).toContain('aria-label="Oyuncu ekle"');
-    expect(s).toContain('min-h-11 px-3.5 rounded-full bg-[#39FF14]/20');
-    expect(s).not.toContain('className="w-8 h-8 rounded-full bg-[#39FF14]/20');
+    // #39FF14 → `primary` token'ına taşındı (değer birebir aynı).
+    expect(s).toContain('min-h-11 px-3.5 rounded-full bg-primary/20');
+    expect(s).not.toContain('className="w-8 h-8 rounded-full bg-primary/20');
   });
 
   it('çıkış tuşu kaç mevkinin dolduğunu söylüyor', () => {

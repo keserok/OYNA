@@ -37,7 +37,7 @@ export const PageShell: React.FC<PageShellProps> = ({
       <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
         <div className="flex items-start gap-4 min-w-0">
           {icon && (
-            <div className={`shrink-0 w-11 h-11 rounded-2xl bg-[#161B22] border border-white/10 flex items-center justify-center ring-1 ${accentStyle.ring}`}>
+            <div className={`shrink-0 w-11 h-11 rounded-2xl bg-surface-1 border border-white/10 flex items-center justify-center ring-1 ${accentStyle.ring}`}>
               <span className={accentStyle.icon}>{icon}</span>
             </div>
           )}

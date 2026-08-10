@@ -65,7 +65,7 @@ export const CollectModal: React.FC<Props> = ({ booking, onClose, onChanged, not
       <label className="text-[10px] font-extrabold text-gray-500 uppercase block mb-1.5">Tahsil edilecek tutar</label>
       <input
         inputMode="decimal"
-        className="w-full bg-[#0A0E14] border border-white/10 rounded-xl p-3 text-white mb-3"
+        className="w-full bg-bg border border-white/10 rounded-xl p-3 text-white mb-3"
         value={amountStr}
         onChange={(e) => setAmountStr(e.target.value)}
       />

@@ -196,7 +196,7 @@ const NotificationSettingsPage: React.FC<NotificationSettingsPageProps> = ({ ope
               className={`w-full text-left rounded-2xl p-4 border transition-all active:scale-[0.99] disabled:opacity-60 ${
                 secili
                   ? 'bg-white/[0.06] border-white/20'
-                  : 'bg-[#161B22] border-white/8 hover:bg-white/[0.03]'
+                  : 'bg-surface-1 border-white/8 hover:bg-white/[0.03]'
               }`}
               style={secili ? { borderColor: `${m.renk}66`, boxShadow: `0 0 22px ${m.renk}1a` } : undefined}
             >
@@ -230,7 +230,7 @@ const NotificationSettingsPage: React.FC<NotificationSettingsPageProps> = ({ ope
 
       {/* ─── Seçimin ne anlama geldiği (şeffaflık) ──────────────────────── */}
       {templates.length > 0 && (
-        <div className="mb-5 bg-[#161B22] border border-white/8 rounded-2xl overflow-hidden">
+        <div className="mb-5 bg-surface-1 border border-white/8 rounded-2xl overflow-hidden">
           <button
             onClick={() => setListeAcik((v) => !v)}
             className="w-full flex items-center justify-between p-4 hover:bg-white/[0.03] transition-colors"
@@ -257,7 +257,7 @@ const NotificationSettingsPage: React.FC<NotificationSettingsPageProps> = ({ ope
               >
                 <div className="p-4 space-y-3">
                   <div>
-                    <p className="text-[0.625rem] font-extrabold uppercase tracking-widest text-[#39FF14] mb-1.5">
+                    <p className="text-[0.625rem] font-extrabold uppercase tracking-widest text-primary mb-1.5">
                       Gelecek
                     </p>
                     <p className="text-[0.6875rem] text-gray-300 leading-relaxed">
@@ -282,7 +282,7 @@ const NotificationSettingsPage: React.FC<NotificationSettingsPageProps> = ({ ope
       )}
 
       {/* ─── Sessiz saatler ─────────────────────────────────────────────── */}
-      <div className="mb-5 bg-[#161B22] border border-white/8 rounded-2xl overflow-hidden">
+      <div className="mb-5 bg-surface-1 border border-white/8 rounded-2xl overflow-hidden">
         <div className="flex items-center justify-between p-4">
           <div className="flex items-center gap-3">
             <span className="w-9 h-9 rounded-xl bg-indigo-500/15 border border-indigo-500/25 flex items-center justify-center text-indigo-300">
@@ -299,7 +299,7 @@ const NotificationSettingsPage: React.FC<NotificationSettingsPageProps> = ({ ope
             aria-label="Sessiz saatler"
             onClick={() => { const v = !quietEnabled; setQuietEnabled(v); void saveQuietHours(v, quietStart, quietEnd); }}
             disabled={saving}
-            className={`relative w-11 h-6 rounded-full transition-all duration-200 shrink-0 ${quietEnabled ? 'bg-[#39FF14] shadow-[0_0_10px_rgba(57,255,20,0.4)]' : 'bg-gray-700'}`}
+            className={`relative w-11 h-6 rounded-full transition-all duration-200 shrink-0 ${quietEnabled ? 'bg-primary shadow-[0_0_10px_rgba(57,255,20,0.4)]' : 'bg-gray-700'}`}
           >
             <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-all duration-200 ${quietEnabled ? 'translate-x-5' : 'translate-x-0'}`} />
           </button>
@@ -320,7 +320,7 @@ const NotificationSettingsPage: React.FC<NotificationSettingsPageProps> = ({ ope
                     type="time"
                     value={quietStart}
                     onChange={(e) => { setQuietStart(e.target.value); void saveQuietHours(true, e.target.value, quietEnd); }}
-                    className="w-full bg-[#0A0E14] border border-white/10 rounded-xl px-3 py-2 text-sm font-bold text-white"
+                    className="w-full bg-bg border border-white/10 rounded-xl px-3 py-2 text-sm font-bold text-white"
                   />
                 </label>
                 <label className="flex-1">
@@ -329,7 +329,7 @@ const NotificationSettingsPage: React.FC<NotificationSettingsPageProps> = ({ ope
                     type="time"
                     value={quietEnd}
                     onChange={(e) => { setQuietEnd(e.target.value); void saveQuietHours(true, quietStart, e.target.value); }}
-                    className="w-full bg-[#0A0E14] border border-white/10 rounded-xl px-3 py-2 text-sm font-bold text-white"
+                    className="w-full bg-bg border border-white/10 rounded-xl px-3 py-2 text-sm font-bold text-white"
                   />
                 </label>
               </div>

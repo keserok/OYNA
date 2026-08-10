@@ -98,7 +98,7 @@ export const PromoCodesPage: React.FC<PromoCodesPageProps> = ({ onRefresh }) => 
         }
       >
         {showForm && (
-          <div className="bg-[#161B22]/60 border border-white/[0.06] rounded-2xl p-5 grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl">
+          <div className="bg-surface-1/60 border border-white/[0.06] rounded-2xl p-5 grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl">
             <input value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} placeholder="KOD" className="h-10 bg-black/40 border border-white/10 rounded-xl px-3 text-white font-mono text-sm focus:outline-none focus:border-purple-500/40" />
             <select value={discountType} onChange={(e) => setDiscountType(e.target.value as 'PERCENT' | 'FIXED')} className="h-10 bg-black/40 border border-white/10 rounded-xl px-3 text-white text-sm">
               <option value="PERCENT">Yüzde</option>

@@ -249,7 +249,7 @@ export const BirthdatePicker: React.FC<BirthdatePickerProps> = ({ open, value, o
   const yas = yasHesapla(y, m1, d, bugun);
 
   return createPortal(
-    <div className="fixed inset-0 z-[270] flex flex-col bg-[#0A0E14] text-white">
+    <div className="fixed inset-0 z-[270] flex flex-col bg-bg text-white">
       {/* Üstteki saha ışıması — tasarımın `.oyna-saha` katmanı. */}
       <img
         src={profileAmbient}
@@ -310,7 +310,7 @@ export const BirthdatePicker: React.FC<BirthdatePickerProps> = ({ open, value, o
         <button
           type="button"
           onClick={() => onConfirm(iso)}
-          className="w-full h-[50px] rounded-full bg-white text-[#0A0E14] text-[0.8125rem] font-semibold active:scale-95 transition-transform"
+          className="w-full h-[50px] rounded-full bg-white text-on-primary text-[0.8125rem] font-semibold active:scale-95 transition-transform"
         >
           Kaydet
         </button>

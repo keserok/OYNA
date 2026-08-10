@@ -107,7 +107,7 @@ export const CampaignsPage: React.FC<{ route?: 'NOTIFICATIONS' }> = ({ route = '
       )}
 
       <div className="grid md:grid-cols-2 gap-4 max-w-4xl">
-        <div className="bg-[#161B22]/60 border border-white/[0.06] rounded-2xl p-5 space-y-2">
+        <div className="bg-surface-1/60 border border-white/[0.06] rounded-2xl p-5 space-y-2">
           <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">Hedef Segment</p>
           {SEGMENTS.map((s) => (
             <button
@@ -124,7 +124,7 @@ export const CampaignsPage: React.FC<{ route?: 'NOTIFICATIONS' }> = ({ route = '
           ))}
         </div>
 
-        <div className="bg-[#161B22]/60 border border-white/[0.06] rounded-2xl p-6 space-y-4">
+        <div className="bg-surface-1/60 border border-white/[0.06] rounded-2xl p-6 space-y-4">
           <div className="flex items-center justify-between">
             <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Önizleme & Gönder</p>
             {count !== null && (
@@ -154,7 +154,7 @@ export const CampaignsPage: React.FC<{ route?: 'NOTIFICATIONS' }> = ({ route = '
       </div>
 
       {history.length > 0 && (
-        <div className="mt-6 max-w-4xl bg-[#161B22]/60 border border-white/[0.06] rounded-2xl p-5">
+        <div className="mt-6 max-w-4xl bg-surface-1/60 border border-white/[0.06] rounded-2xl p-5">
           <div className="flex items-center gap-2 mb-4">
             <History size={14} className="text-gray-400" />
             <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Son Gönderimler</p>

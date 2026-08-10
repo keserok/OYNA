@@ -97,7 +97,7 @@ export const OwnerFlashDealModal: React.FC<OwnerFlashDealModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-end justify-center animate-in fade-in duration-200">
-      <div className="bg-[#161B22] w-full max-w-md rounded-t-[32px] border-t border-white/10 p-6 animate-in slide-in-from-bottom duration-300">
+      <div className="bg-surface-1 w-full max-w-md rounded-t-[32px] border-t border-white/10 p-6 animate-in slide-in-from-bottom duration-300">
         <div className="flex justify-between items-center mb-6">
           <div>
             <h3 className="text-lg font-extrabold text-white">Flash Deal</h3>
@@ -110,7 +110,7 @@ export const OwnerFlashDealModal: React.FC<OwnerFlashDealModalProps> = ({
           </button>
         </div>
 
-        <div className="bg-[#0A0E14] p-6 rounded-3xl border border-white/10 mb-6 text-center">
+        <div className="bg-bg p-6 rounded-3xl border border-white/10 mb-6 text-center">
           <label className="text-xs text-gray-500 font-bold uppercase mb-2 block">İndirimli Fiyat</label>
           <div className="flex items-center justify-center gap-2">
             <span className="text-2xl font-extrabold text-gray-500">₺</span>
@@ -118,7 +118,7 @@ export const OwnerFlashDealModal: React.FC<OwnerFlashDealModalProps> = ({
               type="number"
               value={customPrice}
               onChange={(e) => setCustomPrice(e.target.value)}
-              className="bg-transparent text-5xl font-extrabold text-white outline-none w-40 text-center border-b border-white/20 focus:border-[#FACC15] transition-colors"
+              className="bg-transparent text-5xl font-extrabold text-white outline-none w-40 text-center border-b border-white/20 focus:border-warning transition-colors"
             />
           </div>
           {discountPercent >= 5 && discountPercent <= 80 && (
@@ -171,7 +171,7 @@ export const OwnerFlashDealModal: React.FC<OwnerFlashDealModalProps> = ({
             type="button"
             onClick={handleSave}
             disabled={saving}
-            className="flex-[2] py-4 bg-[#FACC15] text-black font-extrabold text-lg rounded-2xl hover:bg-yellow-300 active:scale-95 transition-all disabled:opacity-50"
+            className="flex-[2] py-4 bg-warning text-black font-extrabold text-lg rounded-2xl hover:bg-yellow-300 active:scale-95 transition-all disabled:opacity-50"
           >
             {saving ? 'KAYDEDİLİYOR…' : 'FLASH DEAL OLUŞTUR'}
           </button>

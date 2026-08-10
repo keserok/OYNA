@@ -66,7 +66,7 @@ export const OwnerCloseSlotModal: React.FC<OwnerCloseSlotModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-end justify-center animate-in fade-in duration-200">
-      <div className="bg-[#161B22] w-full max-w-md rounded-t-[32px] border-t border-white/10 p-6 animate-in slide-in-from-bottom duration-300">
+      <div className="bg-surface-1 w-full max-w-md rounded-t-[32px] border-t border-white/10 p-6 animate-in slide-in-from-bottom duration-300">
         <div className="flex justify-between items-center mb-6">
           <div>
             <h3 className="text-lg font-extrabold text-white flex items-center gap-2">
@@ -84,7 +84,7 @@ export const OwnerCloseSlotModal: React.FC<OwnerCloseSlotModalProps> = ({
         <div className="space-y-4 mb-6">
           <div className="space-y-2">
             <label className="text-[10px] font-extrabold text-gray-500 uppercase tracking-widest ml-1">Kapanma nedeni</label>
-            <div className="bg-[#0A0E14] border border-white/5 p-4 rounded-2xl">
+            <div className="bg-bg border border-white/5 p-4 rounded-2xl">
               <select
                 value={exceptionType}
                 onChange={(e) => setExceptionType(e.target.value as ExceptionType)}
@@ -106,11 +106,11 @@ export const OwnerCloseSlotModal: React.FC<OwnerCloseSlotModalProps> = ({
               onChange={(e) => setReason(e.target.value)}
               rows={2}
               placeholder="Örn: Çim bakımı"
-              className="w-full bg-[#0A0E14] border border-white/5 p-4 rounded-2xl text-white text-sm outline-none resize-none"
+              className="w-full bg-bg border border-white/5 p-4 rounded-2xl text-white text-sm outline-none resize-none"
             />
           </div>
 
-          <div className="flex items-center justify-between bg-[#0A0E14] p-4 rounded-2xl border border-white/5">
+          <div className="flex items-center justify-between bg-bg p-4 rounded-2xl border border-white/5">
             <div>
               <p className="text-xs font-extrabold text-white uppercase">Tüm günü kapat</p>
               <p className="text-[9px] text-gray-500 font-bold mt-1">Seçili saha için gün boyunca rezervasyon alınmaz</p>

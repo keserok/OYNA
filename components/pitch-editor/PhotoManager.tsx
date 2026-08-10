@@ -152,7 +152,7 @@ export const PhotoManager: React.FC<Props> = ({ pitchId, courtId = null, readOnl
         <label className="text-[0.6875rem] font-bold text-ink-4 uppercase">
           Fotoğraflar <span className="text-ink-4">({items.length}/{maxPhotos})</span>
         </label>
-        {busy && <span className="text-[0.6875rem] font-bold text-[#39FF14] animate-pulse">YÜKLENİYOR…</span>}
+        {busy && <span className="text-[0.6875rem] font-bold text-primary animate-pulse">YÜKLENİYOR…</span>}
       </div>
 
       <input
@@ -170,7 +170,7 @@ export const PhotoManager: React.FC<Props> = ({ pitchId, courtId = null, readOnl
             type="button"
             disabled={busy}
             onClick={() => fileInputRef.current?.click()}
-            className="shrink-0 w-28 h-36 bg-[#161B22] border-2 border-dashed border-white/10 rounded-2xl flex flex-col items-center justify-center gap-2 text-ink-4 hover:text-white hover:border-white/30 disabled:opacity-50"
+            className="shrink-0 w-28 h-36 bg-surface-1 border-2 border-dashed border-white/10 rounded-2xl flex flex-col items-center justify-center gap-2 text-ink-4 hover:text-white hover:border-white/30 disabled:opacity-50"
           >
             <ImagePlus size={22} />
             <span className="text-[0.6875rem] font-bold">EKLE</span>
@@ -250,7 +250,7 @@ export const PhotoManager: React.FC<Props> = ({ pitchId, courtId = null, readOnl
                         key={l.value}
                         type="button"
                         onClick={() => void applyLabel(item, l.value)}
-                        className={`text-[0.6875rem] font-bold py-1 rounded ${item.label === l.value ? 'bg-[#39FF14] text-black' : 'bg-white/10 text-white'}`}
+                        className={`text-[0.6875rem] font-bold py-1 rounded ${item.label === l.value ? 'bg-primary text-black' : 'bg-white/10 text-white'}`}
                       >
                         {l.label}
                       </button>

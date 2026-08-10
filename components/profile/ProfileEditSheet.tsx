@@ -104,7 +104,7 @@ const Bolum: React.FC<{ no: string; ad: string; ilk?: boolean }> = ({ no, ad, il
 const secimSinifi = (secili: boolean) =>
     `rounded-[14px] border transition-all active:scale-95 ${
         secili
-            ? 'bg-white border-white text-[#0A0E14]'
+            ? 'bg-white border-white text-on-primary'
             : 'bg-surface-1 border-white/[0.08] text-[#F5F3EE]/[0.6] hover:bg-white/[0.05]'
     }`;
 
@@ -201,7 +201,7 @@ export const ProfileEditSheet: React.FC<ProfileEditSheetProps> = ({
 
     // z-[260]: uygulamada BottomNav'ın, admin panelde 360 drawer'ının (z-[240]) üstünde kalmalı.
     return createPortal(
-        <div className="fixed inset-0 z-[260] flex flex-col bg-[#0A0E14] text-white">
+        <div className="fixed inset-0 z-[260] flex flex-col bg-bg text-white">
             {/* Üstteki saha ışıması — tasarımın `.oyna-saha` katmanı. */}
             <img
                 src={profileAmbient}
@@ -432,7 +432,7 @@ export const ProfileEditSheet: React.FC<ProfileEditSheetProps> = ({
             </div>
 
             {/* ═══ SABİT KAYDET ÇUBUĞU ═══ */}
-            <div className="absolute left-0 right-0 bottom-0 z-20 px-5 pt-8 pb-safe bg-gradient-to-t from-[#0A0E14] from-55% to-transparent">
+            <div className="absolute left-0 right-0 bottom-0 z-20 px-5 pt-8 pb-safe bg-gradient-to-t from-bg from-55% to-transparent">
                 {errorText && (
                     <p className="mb-2.5 text-[0.6875rem] text-error text-center bg-error/10 border border-error/25 rounded-xl px-3 py-2">
                         {errorText}
@@ -447,8 +447,8 @@ export const ProfileEditSheet: React.FC<ProfileEditSheetProps> = ({
                     disabled={kaydetKilitli}
                     className={`w-full h-[50px] rounded-full text-[0.8125rem] font-semibold transition-all active:scale-95 disabled:active:scale-100 ${
                         kaydedildi
-                            ? 'bg-[#10b981] text-[#0A0E14] shadow-[0_0_24px_rgba(16,185,129,0.3)]'
-                            : 'bg-white text-[#0A0E14] disabled:opacity-60'
+                            ? 'bg-cat-pitch text-on-primary shadow-[0_0_24px_rgba(16,185,129,0.3)]'
+                            : 'bg-white text-on-primary disabled:opacity-60'
                     }`}
                 >
                     {kaydedildi ? 'Kaydedildi' : saving ? 'Kaydediliyor…' : 'Kaydet'}

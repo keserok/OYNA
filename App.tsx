@@ -113,7 +113,7 @@ const ViewLoader = () => {
     <div
       role="status"
       aria-live="polite"
-      className="flex flex-col items-center justify-center min-h-screen bg-[#0A0E14]"
+      className="flex flex-col items-center justify-center min-h-screen bg-bg"
     >
       <Spinner size={48} thickness={4} />
       <p className="mt-4 text-[0.8125rem] font-bold text-white/60">Yükleniyor…</p>
@@ -986,14 +986,14 @@ const App: React.FC = () => {
     // bloğuna BAKMAZ (inline style/WAAPI ile sürerler). Sistem tercihini
     // onlara taşıyan tek şey bu sarmalayıcıdır.
     <MotionConfig reducedMotion="user">
-    <div className="h-full bg-[#0A0E14] text-white font-['Inter'] relative overflow-hidden">
+    <div className="h-full bg-bg text-white font-['Inter'] relative overflow-hidden">
       <OfflineBanner />
       {loadDegraded && (
-        <div role="alert" className="fixed top-0 inset-x-0 z-[60] bg-amber-500/90 backdrop-blur-sm text-[#0A0E14] text-[0.75rem] font-bold px-4 py-2 pt-safe-2 flex items-center justify-between gap-3">
+        <div role="alert" className="fixed top-0 inset-x-0 z-[60] bg-amber-500/90 backdrop-blur-sm text-on-primary text-[0.75rem] font-bold px-4 py-2 pt-safe-2 flex items-center justify-between gap-3">
           <span className="min-w-0 truncate">Bağlantı zayıf — bazı veriler yüklenemedi.</span>
           <button
             onClick={() => useAppStore.getState().retryInitialLoad()}
-            className="shrink-0 bg-[#0A0E14]/85 text-white rounded-md px-2.5 py-1 font-extrabold active:scale-95 transition-transform"
+            className="shrink-0 bg-bg/85 text-white rounded-md px-2.5 py-1 font-extrabold active:scale-95 transition-transform"
           >
             Yeniden dene
           </button>

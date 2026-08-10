@@ -271,8 +271,12 @@ describe('kapı — davet, uyarı değil', () => {
 
   it('sarı dolgu birincil buton kalmadı', () => {
     // Tasarım sistemi 5.1.4: #FACC15 ↔ #39FF14 kontrastı 1,13:1.
+    // Renkler token'a taşındı: #FACC15→warning, #39FF14→primary,
+    // #0A0E14→on-primary (değerler birebir aynı). Eski hex yazımı da
+    // yasaklı kalsın ki geri sızmasın.
     expect(s).not.toContain('bg-[#FACC15]');
-    expect(s).toContain('bg-[#39FF14] text-[#0A0E14]');
+    expect(s).not.toContain('bg-warning');
+    expect(s).toContain('bg-primary text-on-primary');
   });
 
   it('hesabı olan kullanıcı kayıt formuna düşmüyor', () => {

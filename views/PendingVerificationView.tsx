@@ -112,7 +112,7 @@ const PendingVerificationView: React.FC<PendingVerificationViewProps> = ({ onApp
   }));
 
   return (
-    <div className="min-h-screen bg-[#0A0E14] flex flex-col items-center justify-center relative overflow-hidden px-6 py-12">
+    <div className="min-h-screen bg-bg flex flex-col items-center justify-center relative overflow-hidden px-6 py-12">
 
       {/* Arka plan ambient glow */}
       <div className="absolute inset-0 pointer-events-none">
@@ -189,7 +189,7 @@ const PendingVerificationView: React.FC<PendingVerificationViewProps> = ({ onApp
               boxShadow: '0 0 40px rgba(250,204,21,0.15)',
             }}
           >
-            <Clock size={48} className="text-[#FACC15]" />
+            <Clock size={48} className="text-warning" />
           </motion.div>
         </div>
 
@@ -258,7 +258,7 @@ const PendingVerificationView: React.FC<PendingVerificationViewProps> = ({ onApp
             {/* KA-M3/KA-M2 dürüstlük: "bildirim göndereceğiz" karşılıksızdı (sağlayıcıya
                 bildirim tetikleyicisi yok). A3 ile ekran zaten kendini güncelliyor. */}
             Platform güvenliği için başvurun ekibimiz tarafından inceleniyor —
-            genellikle <span className="text-[#FACC15] font-bold">24 saat</span> içinde
+            genellikle <span className="text-warning font-bold">24 saat</span> içinde
             sonuçlanır. Sonuç bu ekranda otomatik görünür; dilediğin an “Durumu Yenile”
             ile de kontrol edebilirsin.
           </p>
@@ -277,7 +277,7 @@ const PendingVerificationView: React.FC<PendingVerificationViewProps> = ({ onApp
             border: '1px solid rgba(250,204,21,0.1)',
           }}
         >
-          <p className="text-[0.625rem] font-extrabold uppercase tracking-widest text-[#FACC15] mb-4">
+          <p className="text-[0.625rem] font-extrabold uppercase tracking-widest text-warning mb-4">
             İnceleme Adımları
           </p>
           <div className="space-y-3">
@@ -287,7 +287,7 @@ const PendingVerificationView: React.FC<PendingVerificationViewProps> = ({ onApp
               { done: false, text: 'Sonuç bu ekrana düşecek' },
             ].map((item, i) => (
               <div key={i} className="flex items-center gap-3 text-gray-300 text-sm">
-                <span className={item.done ? 'text-[#39FF14]' : 'text-ink-4'}>
+                <span className={item.done ? 'text-primary' : 'text-ink-4'}>
                   {item.done ? <CheckCircle2 size={16} /> : <Clock size={16} />}
                 </span>
                 <span className={item.done ? 'text-white' : 'text-gray-400'}>{item.text}</span>
@@ -353,7 +353,7 @@ const PendingVerificationView: React.FC<PendingVerificationViewProps> = ({ onApp
                     setShowRejectedModal(false);
                     if (onReapply) onReapply(rejectionNotes);
                   }}
-                  className="w-full h-12 rounded-2xl font-extrabold text-sm bg-[#FACC15] text-black"
+                  className="w-full h-12 rounded-2xl font-extrabold text-sm bg-warning text-black"
                 >
                   Tekrar Başvur
                 </button>

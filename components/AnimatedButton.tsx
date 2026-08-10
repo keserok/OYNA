@@ -66,11 +66,11 @@ export const AnimatedButton = <T extends React.ElementType = 'button'>({
   const baseClasses = 'relative overflow-hidden font-extrabold uppercase tracking-wider transition-all duration-200 outline-none flex items-center justify-center select-none';
   
   // Accessibility focus styling
-  const focusClasses = 'focus-visible:ring-2 focus-visible:ring-[#39FF14] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0A0E14]';
+  const focusClasses = 'focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-bg';
 
   // Variant design systems
   const variantClasses = {
-    primary: 'bg-[#39FF14] text-[#0A0E14] hover:bg-[#70ff56] disabled:bg-gray-800 disabled:text-ink-4 disabled:border-transparent button-neon-glow-green',
+    primary: 'bg-primary text-on-primary hover:bg-[#70ff56] disabled:bg-gray-800 disabled:text-ink-4 disabled:border-transparent button-neon-glow-green',
     secondary: 'bg-white/5 border border-white/10 text-white hover:bg-white/10 hover:border-white/20 disabled:bg-white/2 disabled:text-ink-4 disabled:border-white/5',
     danger: 'bg-red-500/10 border border-red-500/30 text-red-400 hover:bg-red-500/20 hover:border-red-500/50 disabled:bg-red-950/5 disabled:text-red-900 disabled:border-red-950/20',
     ghost: 'bg-transparent text-gray-400 hover:text-white hover:bg-white/5 disabled:bg-transparent disabled:text-ink-4'

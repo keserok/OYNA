@@ -23,7 +23,7 @@ export const OwnerSetupProgress: React.FC<{ steps: SetupStep[] }> = ({ steps }) 
   const nextStep = steps.find((s) => !s.done);
 
   return (
-    <div className="bg-gradient-to-br from-[#12203a] to-[#161B22] border border-blue-500/20 rounded-3xl p-5 mb-6 shadow-xl">
+    <div className="bg-gradient-to-br from-[#12203a] to-surface-1 border border-blue-500/20 rounded-3xl p-5 mb-6 shadow-xl">
       <div className="flex items-center justify-between mb-3">
         <div>
           <h3 className="text-sm font-extrabold text-white">Tesisini yayına hazırla</h3>
@@ -55,7 +55,7 @@ export const OwnerSetupProgress: React.FC<{ steps: SetupStep[] }> = ({ steps }) 
             }`}
           >
             {s.done ? (
-              <CheckCircle2 size={18} className="text-[#10B981] shrink-0" />
+              <CheckCircle2 size={18} className="text-cat-pitch shrink-0" />
             ) : (
               <Circle size={18} className="text-blue-400 shrink-0" />
             )}

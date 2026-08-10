@@ -809,10 +809,10 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
   // ─── Bağlam yoksa güvenli çıkış ────────────────────────────────────────────
   if (!ctx) {
     return (
-      <div className="h-full bg-[#0A0E14] flex flex-col items-center justify-center gap-4 p-6">
+      <div className="h-full bg-bg flex flex-col items-center justify-center gap-4 p-6">
         <AlertTriangle size={32} className="text-yellow-400" />
         <p className="text-gray-400 text-sm text-center">Ödeme bağlamı bulunamadı. Lütfen geri dönüp tekrar deneyin.</p>
-        <button onClick={onBack} className="px-6 py-3 bg-[#161B22] border border-white/10 text-white font-bold rounded-2xl">Geri Dön</button>
+        <button onClick={onBack} className="px-6 py-3 bg-surface-1 border border-white/10 text-white font-bold rounded-2xl">Geri Dön</button>
       </div>
     );
   }
@@ -836,7 +836,7 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
 
   if (screen === 'PROCESSING') {
     return (
-      <div lang="tr" className="h-full bg-[#0A0E14] flex flex-col items-center justify-center p-8">
+      <div lang="tr" className="h-full bg-bg flex flex-col items-center justify-center p-8">
         <div className="relative w-[170px] h-[170px] mb-10">
           <svg width="170" height="170" viewBox="0 0 100 100" className="-rotate-90">
             <circle cx="50" cy="50" r="44" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="5" />
@@ -859,7 +859,7 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
           {ctx.isDeposit ? 'Kapora İşleniyor' : 'Ödeme İşleniyor'}
         </p>
         <p className="text-[0.8125rem] text-ink-4 mt-2.5 flex items-center gap-1.5">
-          <Shield size={13} className="text-[#39FF14] animate-pulse" />
+          <Shield size={13} className="text-primary animate-pulse" />
           {needsCard ? 'Banka doğrulaması hazırlanıyor…' : 'Cüzdanından ödeme alınıyor…'}
         </p>
         {/* Banka SMS doğrulaması — uygulama içinde tam ekran (Uber standardı) */}
@@ -877,7 +877,7 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
 
   if (screen === 'SUCCESS') {
     return (
-      <div lang="tr" className="h-full bg-[#0A0E14] flex flex-col relative overflow-hidden">
+      <div lang="tr" className="h-full bg-bg flex flex-col relative overflow-hidden">
         <div className="absolute top-0 inset-x-0 h-[340px] pointer-events-none"
           style={{ background: 'radial-gradient(circle at 50% 30%, rgba(57,255,20,0.16), transparent 65%)' }} />
         <main className="flex-1 overflow-y-auto flex flex-col items-center px-6 pt-20 pb-6 relative">
@@ -885,7 +885,7 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
             initial={{ scale: 0.4, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ type: 'spring', stiffness: 320, damping: 18 }}
-            className="w-[104px] h-[104px] rounded-full bg-[#39FF14] flex items-center justify-center shadow-[0_0_60px_rgba(57,255,20,0.5)] mb-7 text-[#0A0E14]"
+            className="w-[104px] h-[104px] rounded-full bg-primary flex items-center justify-center shadow-[0_0_60px_rgba(57,255,20,0.5)] mb-7 text-on-primary"
           >
             <Check size={52} strokeWidth={3} />
           </motion.div>
@@ -894,11 +894,11 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
             {ctx.successTitle}
           </motion.h2>
           <motion.p initial={{ y: 14, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.18 }}
-            className="text-[0.8125rem] text-[#39FF14] font-bold mt-2 uppercase tracking-[0.14em]">
+            className="text-[0.8125rem] text-primary font-bold mt-2 uppercase tracking-[0.14em]">
             {money(amount)} · {ctx.successSubtitle}
           </motion.p>
           <motion.div initial={{ y: 14, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.24 }}
-            className="w-full bg-[#161B22] border border-white/8 rounded-3xl p-5 mt-8 space-y-3">
+            className="w-full bg-surface-1 border border-white/8 rounded-3xl p-5 mt-8 space-y-3">
             <SummaryRow label={ctx.kind === 'MATCH_JOIN' ? 'Maç' : 'Saha'} value={ctx.title} />
             <SummaryRow label="Yer & Saat" value={ctx.subtitle} />
             <SummaryRow label="Ödeme" value={
@@ -921,7 +921,7 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
           {ctx.isDeposit && refundTierText && (
             <motion.div initial={{ y: 14, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.28 }}
               className="w-full mt-3.5 bg-yellow-400/6 border border-yellow-400/20 rounded-2xl p-3.5 flex gap-2.5">
-              <Shield size={15} className="text-[#FACC15] shrink-0 mt-0.5" />
+              <Shield size={15} className="text-warning shrink-0 mt-0.5" />
               <p className="text-[0.75rem] text-gray-400 leading-relaxed">{refundTierText}</p>
             </motion.div>
           )}
@@ -935,7 +935,7 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
         </main>
         <div className="shrink-0 px-5 pb-safe pt-3 flex flex-col gap-2.5">
           <button onClick={handleSuccessPrimary}
-            className="w-full py-4 bg-[#39FF14] text-[#0A0E14] font-extrabold text-[0.9375rem] rounded-2xl active:scale-[0.98] transition-all">
+            className="w-full py-4 bg-primary text-on-primary font-extrabold text-[0.9375rem] rounded-2xl active:scale-[0.98] transition-all">
             {ctx.kind === 'MATCH_JOIN' ? 'SLOTLARINI DOLDUR → MAÇLARIM'
               : ctx.kind === 'MATCH_CREATE_DEPOSIT' ? 'MAÇ LOBİSİNE GİT'
               : 'REZERVASYONLARIMA GİT'}
@@ -951,10 +951,10 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
 
   // ─── Ana ödeme ekranı (1b) ─────────────────────────────────────────────────
   return (
-    <div lang="tr" className="h-full bg-[#0A0E14] flex flex-col font-sans">
-      <header className="px-5 pt-safe py-4 flex items-center gap-4 border-b border-white/5 sticky top-0 bg-[#0A0E14]/90 backdrop-blur-xl z-20">
+    <div lang="tr" className="h-full bg-bg flex flex-col font-sans">
+      <header className="px-5 pt-safe py-4 flex items-center gap-4 border-b border-white/5 sticky top-0 bg-bg/90 backdrop-blur-xl z-20">
         <button onClick={() => { setPaymentContext(null); onBack(); }}
-          className="w-11 h-11 flex items-center justify-center bg-[#161B22] rounded-full border border-white/5 text-white active:scale-95 transition-all shrink-0">
+          className="w-11 h-11 flex items-center justify-center bg-surface-1 rounded-full border border-white/5 text-white active:scale-95 transition-all shrink-0">
           <ArrowLeft size={20} />
         </button>
         <div>
@@ -982,7 +982,7 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
               <button
                 onClick={() => loadWallet.current()}
                 disabled={summaryLoading}
-                className="mt-2.5 inline-flex items-center gap-1.5 text-[0.6875rem] font-extrabold text-[#0A0E14] bg-yellow-400 disabled:opacity-50 rounded-[9px] px-3 py-[7px] active:scale-95 transition-transform">
+                className="mt-2.5 inline-flex items-center gap-1.5 text-[0.6875rem] font-extrabold text-on-primary bg-yellow-400 disabled:opacity-50 rounded-[9px] px-3 py-[7px] active:scale-95 transition-transform">
                 <RefreshCw size={12} className={summaryLoading ? 'animate-spin' : ''} /> Yeniden Dene
               </button>
             </div>
@@ -991,8 +991,8 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
 
         {/* S1.2/C6 — 3 dk oturum tazelendi: güncel bakiye/slot ile devam bilgisi */}
         {sessionRefreshed && !balanceUnknown && (
-          <div className="mx-5 bg-[#39FF14]/8 border border-[#39FF14]/25 rounded-2xl p-3 flex items-center gap-2.5">
-            <RefreshCw size={14} className="text-[#39FF14] shrink-0" />
+          <div className="mx-5 bg-primary/8 border border-primary/25 rounded-2xl p-3 flex items-center gap-2.5">
+            <RefreshCw size={14} className="text-primary shrink-0" />
             <p className="text-[0.75rem] text-gray-300 leading-relaxed">
               Güncel bilgilerle tazelendi — bakiye ve uygunluk şu an geçerli.
             </p>
@@ -1021,7 +1021,7 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
                 <button
                   onClick={handlePay}
                   disabled={!canPay}
-                  className="min-h-[44px] inline-flex items-center gap-1.5 text-[0.6875rem] font-extrabold text-[#0A0E14] bg-red-400 disabled:opacity-50 rounded-[11px] px-4 active:scale-95 transition-transform">
+                  className="min-h-[44px] inline-flex items-center gap-1.5 text-[0.6875rem] font-extrabold text-on-primary bg-red-400 disabled:opacity-50 rounded-[11px] px-4 active:scale-95 transition-transform">
                   <RefreshCw size={12} /> Tekrar Dene
                 </button>
                 {/* BULGU-093 — 3DS kesildiyse paranın akıbeti SUNUCUDAN sorulur. */}
@@ -1029,7 +1029,7 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
                   <button
                     onClick={handleCheckIntentStatus}
                     disabled={statusChecking}
-                    className="min-h-[44px] inline-flex items-center gap-1.5 text-[0.6875rem] font-extrabold text-[#0A0E14] bg-[#39FF14] disabled:opacity-50 rounded-[11px] px-4 active:scale-95 transition-transform">
+                    className="min-h-[44px] inline-flex items-center gap-1.5 text-[0.6875rem] font-extrabold text-on-primary bg-primary disabled:opacity-50 rounded-[11px] px-4 active:scale-95 transition-transform">
                     <RefreshCw size={12} className={statusChecking ? 'animate-spin' : ''} /> Durumu Kontrol Et
                   </button>
                 )}
@@ -1042,17 +1042,17 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
         {/* Bağlam özet kartı — dikey ve belirgin (saha kiralamada pin ikonu) */}
         <div className={`mx-5 rounded-[22px] p-5 border ${
           ctx.isDeposit
-            ? 'bg-gradient-to-br from-yellow-400/10 to-[#161B22] border-yellow-400/20'
-            : 'bg-gradient-to-br from-green-900/25 to-[#161B22] border-[#39FF14]/20'
+            ? 'bg-gradient-to-br from-yellow-400/10 to-surface-1 border-yellow-400/20'
+            : 'bg-gradient-to-br from-green-900/25 to-surface-1 border-primary/20'
         }`}>
           <div className="flex items-center gap-3 mb-3.5">
             <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 border ${
-              ctx.isDeposit ? 'bg-yellow-400/10 border-yellow-400/20 text-[#FACC15]' : 'bg-[#39FF14]/10 border-[#39FF14]/20 text-[#39FF14]'
+              ctx.isDeposit ? 'bg-yellow-400/10 border-yellow-400/20 text-warning' : 'bg-primary/10 border-primary/20 text-primary'
             }`}>
               {ctx.kind === 'MATCH_JOIN' ? <Users size={24} /> : <MapPin size={24} />}
             </div>
             <span className={`inline-flex items-center text-[0.625rem] font-extrabold uppercase tracking-[0.12em] px-2.5 py-1 rounded-lg ${
-              ctx.isDeposit ? 'text-[#FACC15] bg-yellow-400/12' : 'text-[#39FF14] bg-[#39FF14]/12'
+              ctx.isDeposit ? 'text-warning bg-yellow-400/12' : 'text-primary bg-primary/12'
             }`}>
               {ctx.badge}
             </span>
@@ -1062,7 +1062,7 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
             <div className="mt-3.5 flex flex-col gap-2.5">
               {ctx.details.map((d, i) => (
                 <div key={i} className="flex items-center gap-2.5">
-                  <span className={`shrink-0 ${ctx.isDeposit ? 'text-[#FACC15]/80' : 'text-[#39FF14]/80'}`}>
+                  <span className={`shrink-0 ${ctx.isDeposit ? 'text-warning/80' : 'text-primary/80'}`}>
                     {detailIcon(d.icon)}
                   </span>
                   <span className="text-[0.875rem] text-gray-100 font-semibold">{d.text}</span>
@@ -1077,7 +1077,7 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
         {/* Tutar */}
         <div className="text-center px-5 py-0.5">
           <p className="text-[0.6875rem] text-gray-400 font-bold uppercase tracking-[0.1em] mb-1.5">{ctx.amountLabel}</p>
-          <p className={`text-[2.75rem] font-extrabold leading-none font-numeric ${ctx.isDeposit ? 'text-[#FACC15]' : 'text-white'}`}>
+          <p className={`text-[2.75rem] font-extrabold leading-none font-numeric ${ctx.isDeposit ? 'text-warning' : 'text-white'}`}>
             {money(amount)}
           </p>
           {ctx.amountHint && <p className="text-[0.6875rem] text-ink-4 mt-2">{ctx.amountHint}</p>}
@@ -1091,7 +1091,7 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
               </div>
               <div className="flex items-center justify-between text-[0.75rem]">
                 <span className="text-gray-400 font-semibold">Kart işlem bedeli (%{cardFeePct})</span>
-                <span className="text-[#FACC15] font-bold font-numeric">+{money(cardFee)}</span>
+                <span className="text-warning font-bold font-numeric">+{money(cardFee)}</span>
               </div>
               <div className="h-px bg-white/8" />
               <div className="flex items-center justify-between text-[0.8125rem]">
@@ -1099,7 +1099,7 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
                 <span className="text-white font-extrabold font-numeric">{money(grandTotal)}</span>
               </div>
               {allowBalance && !balanceOnly && (
-                <p className="text-[0.6875rem] text-[#39FF14]/80 font-semibold pt-0.5">
+                <p className="text-[0.6875rem] text-primary/80 font-semibold pt-0.5">
                   Cüzdanından ödersen bu bedel alınmaz.
                 </p>
               )}
@@ -1116,27 +1116,27 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
               disabled={!allowBalance || balanceOnly}
               onClick={() => allowBalance && !balanceOnly && setUseBalance(v => !v)}
               style={{ scrollSnapAlign: 'start' }}
-              className={`shrink-0 rounded-[20px] p-4 text-left bg-gradient-to-br from-green-900/40 to-[#161B22] relative transition-all ${
+              className={`shrink-0 rounded-[20px] p-4 text-left bg-gradient-to-br from-green-900/40 to-surface-1 relative transition-all ${
                 balanceOnly ? 'w-full' : 'w-[158px]'
               } ${
                 !allowBalance ? 'opacity-45 border border-white/8'
-                : balanceApplied > 0 || balanceOnly ? 'border-2 border-[#39FF14] shadow-[0_0_22px_rgba(57,255,20,0.18)]'
+                : balanceApplied > 0 || balanceOnly ? 'border-2 border-primary shadow-[0_0_22px_rgba(57,255,20,0.18)]'
                 : 'border border-white/8'
               }`}
             >
               {(balanceApplied > 0 || balanceOnly) && !insufficientBalance && (
-                <span className="absolute top-3 right-3 w-[22px] h-[22px] rounded-full bg-[#39FF14] flex items-center justify-center">
-                  <Check size={14} strokeWidth={3} className="text-[#0A0E14]" />
+                <span className="absolute top-3 right-3 w-[22px] h-[22px] rounded-full bg-primary flex items-center justify-center">
+                  <Check size={14} strokeWidth={3} className="text-on-primary" />
                 </span>
               )}
               {!allowBalance && (
                 <span className="absolute top-3 right-3 text-ink-4"><Lock size={14} /></span>
               )}
-              <span className="w-10 h-10 rounded-xl bg-[#39FF14]/14 flex items-center justify-center text-[#39FF14] mb-8 block">
+              <span className="w-10 h-10 rounded-xl bg-primary/14 flex items-center justify-center text-primary mb-8 block">
                 <Wallet size={20} />
               </span>
               <p className="text-xs font-extrabold text-white">Cüzdan</p>
-              <p className="text-xl font-extrabold text-[#39FF14] mt-1 font-numeric">{money(spendable)}</p>
+              <p className="text-xl font-extrabold text-primary mt-1 font-numeric">{money(spendable)}</p>
               <p className="text-[0.6875rem] text-ink-4 mt-0.5">
                 {!allowBalance ? 'Bu ödemede kullanılamaz'
                   : spendable >= amount ? 'Tamamını karşılar'
@@ -1146,7 +1146,7 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
               {allowBalance && spendable < amount && (
                 <span
                   onClick={(e) => { e.stopPropagation(); goToTopup(); }}
-                  className="mt-2 inline-flex items-center gap-1 text-[0.6875rem] font-extrabold text-[#0A0E14] bg-[#39FF14] rounded-lg px-2.5 py-1.5 active:scale-95 transition-transform"
+                  className="mt-2 inline-flex items-center gap-1 text-[0.6875rem] font-extrabold text-on-primary bg-primary rounded-lg px-2.5 py-1.5 active:scale-95 transition-transform"
                 >
                   <Plus size={11} strokeWidth={3} /> Yükle
                 </span>
@@ -1159,13 +1159,13 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
               return (
                 <button key={card.id} onClick={() => setSelectedCardId(card.id)}
                   style={{ scrollSnapAlign: 'start' }}
-                  className={`shrink-0 w-[158px] rounded-[20px] p-4 text-left bg-[#161B22] relative transition-all ${
-                    selected ? 'border-2 border-[#39FF14] shadow-[0_0_22px_rgba(57,255,20,0.18)]' : 'border border-white/8'
+                  className={`shrink-0 w-[158px] rounded-[20px] p-4 text-left bg-surface-1 relative transition-all ${
+                    selected ? 'border-2 border-primary shadow-[0_0_22px_rgba(57,255,20,0.18)]' : 'border border-white/8'
                   } ${!needsCard ? 'opacity-45' : ''}`}
                 >
                   {selected && (
-                    <span className="absolute top-3 right-3 w-[22px] h-[22px] rounded-full bg-[#39FF14] flex items-center justify-center">
-                      <Check size={14} strokeWidth={3} className="text-[#0A0E14]" />
+                    <span className="absolute top-3 right-3 w-[22px] h-[22px] rounded-full bg-primary flex items-center justify-center">
+                      <Check size={14} strokeWidth={3} className="text-on-primary" />
                     </span>
                   )}
                   <span className={`w-11 h-[30px] rounded-md bg-gradient-to-br ${brandGradient(card.brand)} flex items-center justify-center mb-10 border border-white/10`}>
@@ -1185,13 +1185,13 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
             {!balanceOnly && tempCard && (
               <button onClick={() => setSelectedCardId('temp')}
                 style={{ scrollSnapAlign: 'start' }}
-                className={`shrink-0 w-[158px] rounded-[20px] p-4 text-left bg-[#161B22] relative transition-all ${
-                  needsCard && selectedCardId === 'temp' ? 'border-2 border-[#39FF14] shadow-[0_0_22px_rgba(57,255,20,0.18)]' : 'border border-white/8'
+                className={`shrink-0 w-[158px] rounded-[20px] p-4 text-left bg-surface-1 relative transition-all ${
+                  needsCard && selectedCardId === 'temp' ? 'border-2 border-primary shadow-[0_0_22px_rgba(57,255,20,0.18)]' : 'border border-white/8'
                 } ${!needsCard ? 'opacity-45' : ''}`}
               >
                 {needsCard && selectedCardId === 'temp' && (
-                  <span className="absolute top-3 right-3 w-[22px] h-[22px] rounded-full bg-[#39FF14] flex items-center justify-center">
-                    <Check size={14} strokeWidth={3} className="text-[#0A0E14]" />
+                  <span className="absolute top-3 right-3 w-[22px] h-[22px] rounded-full bg-primary flex items-center justify-center">
+                    <Check size={14} strokeWidth={3} className="text-on-primary" />
                   </span>
                 )}
                 <span className={`w-11 h-[30px] rounded-md bg-gradient-to-br ${brandGradient(tempCard.brand)} flex items-center justify-center mb-10 border border-white/10`}>
@@ -1218,9 +1218,9 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
 
         {/* Bilgi notu — canlı bakiye/kart dağılımı */}
         <div className={`mx-5 flex gap-2.5 items-start rounded-2xl p-3.5 border ${
-          !allowBalance ? 'bg-yellow-400/6 border-yellow-400/16' : 'bg-[#39FF14]/6 border-[#39FF14]/16'
+          !allowBalance ? 'bg-yellow-400/6 border-yellow-400/16' : 'bg-primary/6 border-primary/16'
         }`}>
-          <span className={`shrink-0 mt-0.5 ${!allowBalance ? 'text-[#FACC15]' : 'text-[#39FF14]'}`}>
+          <span className={`shrink-0 mt-0.5 ${!allowBalance ? 'text-warning' : 'text-primary'}`}>
             {!allowBalance ? <Shield size={15} /> : <Info size={15} />}
           </span>
           <p className="text-[0.75rem] text-gray-300 leading-relaxed">{noteText}</p>
@@ -1230,15 +1230,15 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
         {/* İade/iptal koşulu HER bağlamda görünür: maça katılımda da para
             hareketi var, koşulu yalnız kapora akışında göstermek eksikti (BULGU-083). */}
         {ctx.infoNote && (
-          <div className="mx-5 bg-[#161B22] border border-white/8 rounded-2xl p-3.5 flex gap-2.5 items-start">
-            <Shield size={15} className="text-[#FACC15] shrink-0 mt-0.5" />
+          <div className="mx-5 bg-surface-1 border border-white/8 rounded-2xl p-3.5 flex gap-2.5 items-start">
+            <Shield size={15} className="text-warning shrink-0 mt-0.5" />
             <p className="text-[0.75rem] text-gray-300 leading-relaxed">{ctx.infoNote}</p>
           </div>
         )}
 
         {/* S3 — iptal/iade kademesi (ödemeden ÖNCE, tesis politikasıyla birebir) */}
         {ctx.isDeposit && refundTierText && (
-          <div className="mx-5 bg-[#161B22] border border-white/8 rounded-2xl p-3.5 flex gap-2.5 items-start">
+          <div className="mx-5 bg-surface-1 border border-white/8 rounded-2xl p-3.5 flex gap-2.5 items-start">
             <Info size={15} className="text-blue-400 shrink-0 mt-0.5" />
             <p className="text-[0.75rem] text-gray-300 leading-relaxed">{refundTierText}</p>
           </div>
@@ -1247,7 +1247,7 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
         {/* 3D Secure + taksit güven notu (kart gerektiğinde) */}
         {needsCard && (
           <div className="mx-5 flex items-center gap-2 px-1">
-            <ShieldCheck size={14} className="text-[#39FF14] shrink-0" />
+            <ShieldCheck size={14} className="text-primary shrink-0" />
             <p className="text-[0.6875rem] text-gray-400 leading-relaxed">
               <span className="text-gray-200 font-semibold">3D Secure</span> ile güvenli doğrulama · banka SMS onayı uygulama içinde açılır
             </p>
@@ -1265,17 +1265,17 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
       </main>
 
       {/* Sabit footer */}
-      <div className="fixed bottom-0 inset-x-0 max-w-lg mx-auto px-5 pb-safe pt-4 bg-gradient-to-t from-[#0A0E14] via-[#0A0E14]/95 to-transparent border-t border-white/5 z-20">
+      <div className="fixed bottom-0 inset-x-0 max-w-lg mx-auto px-5 pb-safe pt-4 bg-gradient-to-t from-bg via-bg/95 to-transparent border-t border-white/5 z-20">
         <div className="flex items-center justify-between mb-3 px-0.5">
           <span className="text-[0.6875rem] text-ink-4 font-semibold">{breakdown}</span>
           <span className="text-[0.8125rem] font-extrabold text-white">
-            Toplam <span className={ctx.isDeposit ? 'text-[#FACC15]' : 'text-[#39FF14]'}>{money(grandTotal)}</span>
+            Toplam <span className={ctx.isDeposit ? 'text-warning' : 'text-primary'}>{money(grandTotal)}</span>
           </span>
         </div>
         {insufficientBalance ? (
           <button
             onClick={goToTopup}
-            className="w-full py-4 font-extrabold text-base rounded-2xl flex items-center justify-center gap-2 transition-all active:scale-[0.98] bg-[#39FF14] text-[#0A0E14] shadow-[0_0_30px_rgba(57,255,20,0.28)]"
+            className="w-full py-4 font-extrabold text-base rounded-2xl flex items-center justify-center gap-2 transition-all active:scale-[0.98] bg-primary text-on-primary shadow-[0_0_30px_rgba(57,255,20,0.28)]"
           >
             <Wallet size={17} /> CÜZDANA YÜKLE
           </button>
@@ -1285,7 +1285,7 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
             onClick={handlePay}
             className={`w-full py-4 font-extrabold text-base rounded-2xl flex items-center justify-center gap-2 transition-all active:scale-[0.98] ${
               canPay
-                ? 'bg-[#39FF14] text-[#0A0E14] shadow-[0_0_30px_rgba(57,255,20,0.28)]'
+                ? 'bg-primary text-on-primary shadow-[0_0_30px_rgba(57,255,20,0.28)]'
                 : 'bg-gray-800 text-ink-4'
             }`}
           >
@@ -1301,7 +1301,7 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
           <p className="text-center text-[0.6875rem] text-ink-4 mt-2">
             Devam etmek için bir kart seç, yeni kart ekle
             {allowBalance && (
-              <> veya <button onClick={goToTopup} className="text-[#39FF14] font-bold underline">cüzdanına yükle</button></>
+              <> veya <button onClick={goToTopup} className="text-primary font-bold underline">cüzdanına yükle</button></>
             )}.
           </p>
         )}

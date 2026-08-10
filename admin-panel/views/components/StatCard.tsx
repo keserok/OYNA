@@ -51,7 +51,7 @@ export const StatCard: React.FC<StatCardProps> = ({
             onClick={onClick}
             whileHover={{ scale: 1.02, y: -2 }}
             whileTap={onClick ? { scale: 0.98 } : undefined}
-            className={`w-full bg-[#161B22]/60 backdrop-blur-md border border-white/5 rounded-2xl p-5 flex flex-col justify-between transition-all duration-300 hover:bg-[#161B22]/90 hover:border-white/10 hover:shadow-[0_8px_30px_rgba(0,0,0,0.4)] ${
+            className={`w-full bg-surface-1/60 backdrop-blur-md border border-white/5 rounded-2xl p-5 flex flex-col justify-between transition-all duration-300 hover:bg-surface-1/90 hover:border-white/10 hover:shadow-[0_8px_30px_rgba(0,0,0,0.4)] ${
                 onClick ? 'cursor-pointer text-left' : ''
             }`}
         >
