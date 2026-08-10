@@ -456,6 +456,42 @@ export async function taktikBaglamiTohumla(page: Page) {
 }
 
 /**
+ * TESİS SAHİBİ paneline geç.
+ *
+ * NEDEN VAR: görsel kayıt bugüne dek yalnız OYUNCU ekranlarını koruyordu.
+ * Tesis sahibi paneli — kullanıcının PARA rakamlarını (tahsilat/bekleyen/
+ * doluluk) okuduğu yer — hiç kapsanmıyordu; o yüzden oradaki bir bozulma
+ * hiçbir testi kırmıyordu.
+ *
+ * Hermetik ortamda tesis sorguları boş döner: panel "henüz saha eklenmedi"
+ * hâlini çizer. Bu da kilitlenmeye değer — boş durum yerleşimi de üründür.
+ */
+export async function tesisSahibiTohumla(page: Page) {
+  await storeIle(page, `(store) => store.setState({ role: 'OWNER', myRoles: ['OWNER'] })`);
+}
+
+/**
+ * Tesis panelinde alt sekmeye geç.
+ *
+ * Panel sekmesi OwnerPanel'in YEREL state'inde tutulur (store'da değil), bu
+ * yüzden store'dan sürülemez — gerçek dokunuş simüle edilir. Panelin ilk
+ * yüklemesi async olduğu için önce alt menünün belirmesi beklenir.
+ */
+export async function tesisSekmesineGit(page: Page, etiket: string) {
+  const dugme = page.getByRole('button', { name: etiket, exact: true });
+  await dugme.waitFor({ state: 'visible', timeout: 20000 });
+  await dugme.click();
+  await page.waitForTimeout(600);
+}
+
+/** Tesis panelinin ilk yüklemesi bitene kadar bekle (alt menü belirir). */
+export async function tesisPaneliniBekle(page: Page) {
+  await page.getByRole('button', { name: 'Özet', exact: true })
+    .waitFor({ state: 'visible', timeout: 20000 });
+  await page.waitForTimeout(1200);
+}
+
+/**
  * Ekran görüntüsünden ÖNCE her şeyin oturmasını bekle:
  * yazı tipleri + bir sonraki boya karesi + kısa bir yerleşim payı.
  */

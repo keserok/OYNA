@@ -2,6 +2,7 @@ import { test, expect, type Page } from '@playwright/test';
 import {
   hazirla, ekranaGit, bildirimleriAc, odemeBaglamiTohumla, doluProfilTohumla, oturmasiniBekle,
   degerlendirmeBaglamiTohumla, rahatBaglamiTohumla, kapsamsizTohumla, kapsamliTohumla,
+  tesisSahibiTohumla, tesisSekmesineGit, tesisPaneliniBekle,
 } from './harness';
 
 // ─── OYNA — Ana ekran görsel regresyonu ──────────────────────────────────────
@@ -260,6 +261,72 @@ const EKRANLAR: Ekran[] = [
       await hazirla(page);
       await rahatBaglamiTohumla(page, { dolu: true });
       await ekranaGit(page, 'MATCH_JOIN');
+    },
+  },
+
+  // ── TESİS SAHİBİ PANELİ (21-25) ────────────────────────────────────────────
+  // Bu beş kalem bir BOŞLUĞU kapatıyor: görsel kayıt bugüne dek yalnız oyuncu
+  // ekranlarını koruyordu, oysa tesis sahibi paneli kullanıcının PARA
+  // rakamlarını okuduğu yer. Denetimde düşük kontrastlı metin ihlallerinin en
+  // yoğun olduğu dosyalar da tam burada çıkmıştı (FinancialCalendarView,
+  // OwnerTeamView, OwnerHomeWidgets) — artık bir bozulma testi kırar.
+  {
+    ad: '21-tesis-ozet',
+    // ÇAPA NOTU: ekranda "BUGÜNKÜ CİRO" görünür ama büyütme CSS'ten gelir
+    // (`uppercase`); DOM'daki metin OwnerPanel.tsx:577'deki 'Bugünkü Ciro'dur.
+    // getByText DOM metnine bakar — çapalar kaynaktaki hâliyle yazılmalı.
+    capa: /Bugünkü Ciro/,
+    ac: async (page) => {
+      await hazirla(page);
+      await tesisSahibiTohumla(page);
+      await ekranaGit(page, 'OWNER_PANEL');
+      await tesisPaneliniBekle(page);
+    },
+  },
+  {
+    // Denetimin işaret ettiği etiketler burada: Tahsilat / Bekleyen / Doluluk
+    // (ekranda büyük görünürler, DOM'da böyle yazılıdırlar).
+    ad: '22-tesis-takvim',
+    capa: /Tahsilat/,
+    ac: async (page) => {
+      await hazirla(page);
+      await tesisSahibiTohumla(page);
+      await ekranaGit(page, 'OWNER_PANEL');
+      await tesisPaneliniBekle(page);
+      await tesisSekmesineGit(page, 'Takvim');
+    },
+  },
+  {
+    ad: '23-tesis-ekip',
+    capa: /OPERASYON MERKEZİ/,
+    ac: async (page) => {
+      await hazirla(page);
+      await tesisSahibiTohumla(page);
+      await ekranaGit(page, 'OWNER_PANEL');
+      await tesisPaneliniBekle(page);
+      await tesisSekmesineGit(page, 'Ekip');
+    },
+  },
+  {
+    ad: '24-tesis-finans',
+    capa: /Finans modülü için/,
+    ac: async (page) => {
+      await hazirla(page);
+      await tesisSahibiTohumla(page);
+      await ekranaGit(page, 'OWNER_PANEL');
+      await tesisPaneliniBekle(page);
+      await tesisSekmesineGit(page, 'Finans');
+    },
+  },
+  {
+    ad: '25-tesis-menu',
+    capa: /MENÜ & AYARLAR/,
+    ac: async (page) => {
+      await hazirla(page);
+      await tesisSahibiTohumla(page);
+      await ekranaGit(page, 'OWNER_PANEL');
+      await tesisPaneliniBekle(page);
+      await tesisSekmesineGit(page, 'Menü');
     },
   },
 ];
