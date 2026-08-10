@@ -172,6 +172,12 @@ const RahatMatchLobby: React.FC<Props> = ({ match: matchProp, onBack }) => {
         footwearRule: (r.footwear_rule as MatchListing['footwearRule']) ?? (r.footwearRule as MatchListing['footwearRule']) ?? null,
         pitchId: (r.pitch_id as string) || (r.pitchId as string) || undefined,
       } as MatchListing);
+    }, () => {
+      // Kopukluk telafisi: soket düşerken gelen slot değişimleri bir daha
+      // yayınlanmaz; yeniden bağlanınca yetkili satırı baştan çekeriz.
+      getMatchDetails(matchProp.id).then((fresh) => {
+        if (!cancelled && fresh) applyMatchLocal(fresh);
+      }).catch(() => { /* telafi en-iyi-çaba */ });
     });
     return () => { cancelled = true; unsub(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps

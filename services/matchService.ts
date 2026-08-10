@@ -44,6 +44,9 @@ export interface Match {
 // konsaydı sorgu 400 ile komple düşerdi (hakem kimliği `"refereeId"`).
 // Tavan fbGetMatches'teki MATCHES_MAX ile aynı büyüklükte tutuldu; bu bir iş
 // panosudur, 300'den fazlası zaten ekranda taranamaz.
+// SIRALAMA: `starts_at` ARTAN — sağlayıcının alabileceği EN YAKIN maç başta.
+// Azalan sıralama (ilk yazım) tavan bağladığında tam tersini yapıyordu: en uzak
+// gelecekteki 300 maç inip bu akşamki iş listeden düşüyordu.
 const OPEN_MATCHES_MAX = 300;
 const OPEN_MATCH_COLS = 'id,status,date,time,title,location,price,duration,slots,gk_id,away_gk_id,"refereeId"';
 /** Olay seli tek sorguya insin diye tazeleme penceresi. */
@@ -56,7 +59,7 @@ export const subscribeToOpenMatches = (callback: (matches: Match[]) => void) => 
       .from('matches')
       .select(OPEN_MATCH_COLS)
       .eq('status', 'OPEN')
-      .order('starts_at', { ascending: false, nullsFirst: false })
+      .order('starts_at', { ascending: true, nullsFirst: false })
       .limit(OPEN_MATCHES_MAX);
     // Hata dalında callback ÇAĞRILMAZ. Boş liste geçmek, tek bir ağ titremesinde
     // sağlayıcının iş listesini "hiç iş yok"a çevirirdi; bayat liste yanlış

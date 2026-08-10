@@ -189,6 +189,15 @@ const Notifications: React.FC<NotificationsProps> = ({ onBack, role }) => {
     load();
   }, [load]);
 
+  // Kopukluk telafisi: soket düşerken INSERT edilen bildirimler bir daha
+  // yayınlanmaz. Kanal yeniden bağlanınca listeyi sessizce tazeleriz —
+  // `load` gibi iskelet yakmaz ki açık ekran gözle görülür şekilde sıfırlanmasın.
+  const resyncNotifs = useCallback(async () => {
+    try {
+      setNotifs(await fetchNotifications(50));
+    } catch { /* telafi en-iyi-çaba */ }
+  }, []);
+
   // Realtime — yeni bildirim gelince listeye ekle + global rozeti artır
   const incrementRef = useRef(incrementUnreadNotifications);
   incrementRef.current = incrementUnreadNotifications;
@@ -196,9 +205,9 @@ const Notifications: React.FC<NotificationsProps> = ({ onBack, role }) => {
     const unsubscribe = subscribeToNotifications((n) => {
       setNotifs((prev) => (prev.some((x) => x.id === n.id) ? prev : [n, ...prev]));
       if (incrementRef.current) incrementRef.current();
-    });
+    }, () => { void resyncNotifs(); });
     return unsubscribe;
-  }, []);
+  }, [resyncNotifs]);
 
   // ─── Okundu işaretleme + yönlendirme ──────────────────────────────────────
   const routeTo = useCallback(

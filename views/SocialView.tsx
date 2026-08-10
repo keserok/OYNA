@@ -146,6 +146,12 @@ const SocialView: React.FC<SocialViewProps> = ({ onBack, onNavigate }) => {
     const unsub = subscribeSocialEvents(userId, typeKey => {
       if (typeKey.startsWith('friend_')) void loadFriendData(true);
       if (typeKey.startsWith('team_')) void loadTeamData(true);
+    }, () => {
+      // Kopukluk telafisi: soket düşerken gelen arkadaşlık/takım olayları bir
+      // daha yayınlanmaz. Hangi olayın kaçtığını bilemediğimiz için iki alanı
+      // da sessizce (silent=true) tazeleriz.
+      void loadFriendData(true);
+      void loadTeamData(true);
     });
     return unsub;
   }, [userId, loadFriendData, loadTeamData]);

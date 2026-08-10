@@ -290,6 +290,18 @@ const ChatView: React.FC<{
     return () => { active = false; };
   }, [conversation.id, scrollToBottom]);
 
+  // Kopukluk telafisi: soket düşerken gelen mesajlar bir daha yayınlanmaz.
+  // Kanal yeniden bağlanınca (ya da uygulama öne gelince) geçmişi baştan çekip
+  // aradaki boşluğu kapatırız. Sessiz çalışır — `loading` iskeleti yakılmaz ki
+  // açık sohbet ekranı gözle görülür şekilde sıfırlanmasın.
+  const resyncMessages = useCallback(async () => {
+    try {
+      const history = await getMessages(conversation.id);
+      seenIdsRef.current = new Set(history.map(m => m.id));
+      setMessages(history);
+    } catch { /* telafi en-iyi-çaba; sonraki olay ya da ekran açılışı tazeler */ }
+  }, [conversation.id]);
+
   useEffect(() => {
     const unsubscribe = subscribeToConversation(conversation.id, (m) => {
       pushMessage(m);
@@ -297,9 +309,9 @@ const ChatView: React.FC<{
       if (m.senderId !== myUid) {
         markConversationRead(conversation.id);
       }
-    });
+    }, () => { void resyncMessages(); });
     return () => unsubscribe();
-  }, [conversation.id, myUid, pushMessage, scrollToBottom]);
+  }, [conversation.id, myUid, pushMessage, scrollToBottom, resyncMessages]);
 
   useEffect(() => {
     const onVisible = () => {
@@ -570,6 +582,20 @@ const TeamChatView: React.FC<{
     return () => { active = false; };
   }, [team.team_id, scrollToBottom]);
 
+  // Kopukluk telafisi: DM tarafındaki resyncMessages ile aynı gerekçe —
+  // soket düşerken gelen takım mesajları bir daha yayınlanmaz, geçmişi
+  // yeniden çekip boşluğu kapatırız (sessiz: iskelet yakılmaz).
+  const resyncTeamMessages = useCallback(async () => {
+    try {
+      const history = await getTeamMessages(team.team_id);
+      seenIdsRef.current = new Set(history.map(m => m.id));
+      history.forEach(m => {
+        senderCacheRef.current.set(m.senderId, { name: m.senderName, avatar: m.senderAvatar });
+      });
+      setMessages(history);
+    } catch { /* telafi en-iyi-çaba */ }
+  }, [team.team_id]);
+
   // Realtime — gönderen bilinmiyorsa profili bir kez çek
   useEffect(() => {
     const unsubscribe = subscribeTeamChat(team.team_id, async (raw) => {
@@ -583,9 +609,9 @@ const TeamChatView: React.FC<{
       pushMessage({ ...raw, senderName: sender.name, senderAvatar: sender.avatar });
       scrollToBottom(true);
       if (raw.senderId !== myUid) markTeamChatRead(team.team_id);
-    });
+    }, () => { void resyncTeamMessages(); });
     return () => unsubscribe();
-  }, [team.team_id, myUid, pushMessage, scrollToBottom]);
+  }, [team.team_id, myUid, pushMessage, scrollToBottom, resyncTeamMessages]);
 
   const handleSend = useCallback(async () => {
     const body = draft.trim();

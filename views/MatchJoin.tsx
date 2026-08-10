@@ -12,7 +12,10 @@ import {
   Megaphone
 } from 'lucide-react';
 import { broadcastOpenSlot } from '../services/socialService';
-import { isOnline, OFFLINE_JOIN } from '../shared/submitGuard';
+import {
+  isOnline, OFFLINE_JOIN, OFFLINE_FORMATION, TIMEOUT_JOIN,
+  withSubmitTimeout, SubmitTimeoutError, RPC_TIMEOUT_MS,
+} from '../shared/submitGuard';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MatchListing, PositionSlot, UserRole, Player, Team, ProviderType, ProviderSuggestion, ServiceRequest } from '../types';
 import { useAppStore } from '../store';
@@ -239,14 +242,36 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
     setTimeout(() => setActionSuccess(null), 4000);
   };
 
-  /** Yazma handler'ları için tek giriş kapısı: senkron kilit + çevrimiçi kontrolü. */
-  const beginWrite = (): boolean => {
+  /** Yazma handler'ları için tek giriş kapısı: senkron kilit + çevrimiçi kontrolü.
+   *  `cevrimdisiMesaji` akışa göre değişir (katılım / diziliş). */
+  const beginWrite = (cevrimdisiMesaji: string = OFFLINE_JOIN): boolean => {
     if (writeBusyRef.current) return false;
-    if (!isOnline()) { showActionError(OFFLINE_JOIN); return false; }
+    if (!isOnline()) { showActionError(cevrimdisiMesaji); return false; }
     writeBusyRef.current = true;
     return true;
   };
   const endWrite = () => { writeBusyRef.current = false; };
+
+  /**
+   * Yanıt penceresi: yarı-kopuk ağda (istek gidiyor, yanıt gelmiyor) lobi
+   * "işleniyor" hâlinde SÜRESİZ kilitli kalıyordu. withSubmitTimeout isteği
+   * İPTAL ETMEZ — sunucuda tamamlanmış olabilir; bu yüzden zaman aşımında
+   * kullanıcıya "yerin ayrılmış olabilir, ekranı yenile" denir ve lobi tazelenir.
+   */
+  // NOT: supabase sorgu nesneleri gerçek Promise DEĞİL, "thenable"dır; bu yüzden
+  // PromiseLike alıp Promise.resolve ile gerçek Promise'e çeviriyoruz (bu aynı
+  // zamanda tembel duran sorguyu çalıştırır).
+  const rpcPencere = <T,>(p: PromiseLike<T>): Promise<T> =>
+    withSubmitTimeout(Promise.resolve(p), RPC_TIMEOUT_MS);
+
+  /** Zaman aşımını handler'ların genel hata mesajından ayırır (o mesajlar
+   *  "işlem yapılmadı" ima eder — burada yapılmış OLABİLİR). */
+  const zamanAsimiIsePaylas = (e: unknown): boolean => {
+    if (!(e instanceof SubmitTimeoutError)) return false;
+    showActionError(TIMEOUT_JOIN);
+    void macTazele();
+    return true;
+  };
 
   // Taktik Kenarı — saha tarafı + ilk açılışta otomatik taraf seçimi (bir kez)
   const [pitchSide, setPitchSide] = useState<'home' | 'away'>('home');
@@ -384,6 +409,14 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
       // (Eski updateMatch çağrısı her tick'te player_update_match tetikleyip
       // yankı döngüsü + eşzamanlı katılımcıları ezme üretiyordu.)
       applyMatchLocal({ ...originalMatch, ...mapped } as MatchListing);
+    }, () => {
+      // Kopukluk telafisi: soket düşerken gelen slot değişimleri bir daha
+      // yayınlanmaz — lobide dolu bir mevki BOŞ görünür ve oyuncu var olmayan
+      // yere katılmaya kalkar. Yeniden bağlanınca yetkili satırı baştan çekeriz
+      // (hidrasyonla aynı SALT-OKUR yol).
+      getMatchDetails(originalMatch.id).then((full) => {
+        if (full) applyMatchLocal({ ...originalMatch, ...full } as MatchListing);
+      }).catch(() => { /* telafi en-iyi-çaba */ });
     });
     return () => { unsubscribe(); };
   }, [originalMatch?.id]);
@@ -775,11 +808,11 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
     // geri alınır, realtime (subscribeToMatchUpdates) zaten yakınsar.
     const geriAl = optimistikDoldur();
     try {
-      const { error } = await supabase.rpc('player_buy_slots_v2', {
+      const { error } = await rpcPencere(supabase.rpc('player_buy_slots_v2', {
         p_match_id: match.id,
         p_slot_ids: selectedSlotIds,
         p_use_balance: true,
-      });
+      }));
       if (error) throw error;
 
       // Escrow: eşik (toplam−2) dolduysa maçı LIVE yap + kaporayı capture et (best-effort).
@@ -795,6 +828,9 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
       useAppStore.getState().setLobbyMode('MANAGE');
       showActionSuccess('Slotların rezerve edildi — kendini veya arkadaşlarını ekle.');
     } catch (e: any) {
+      // Zaman aşımında iyimser doldurmayı GERİ ALMA: sunucu slotu almış
+      // olabilir. macTazele (zamanAsimiIsePaylas içinde) doğruyu getirir.
+      if (e instanceof SubmitTimeoutError) { zamanAsimiIsePaylas(e); return; }
       geriAl?.();
       console.error('Buy slots error:', e);
       const msg = e?.message || '';
@@ -807,13 +843,16 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
   const handleJoinAsReserve = async () => {
     if (!requireAccount()) return;
     if (isAlreadyJoined || isAlreadyJoinedReserve) return;
+    // Kilidi ALMADAN endWrite() çağıran eski hâl, çevrimdışı kapısını da
+    // atlıyordu: bağlantı yokken istek kurulup ekran "işleniyor"da kalıyordu.
+    if (!beginWrite()) return;
     setIsProcessing(true);
 
     try {
-      const { error } = await supabase.rpc('join_public_match_reserve', {
+      const { error } = await rpcPencere(supabase.rpc('join_public_match_reserve', {
         p_match_id: match.id,
         p_user_id: currentUserProfile.id
-      });
+      }));
 
       if (error) throw error;
 
@@ -822,6 +861,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
       // D2: kullanıcı maça girdi — bildirimin değerini şimdi görüyor.
       void pushIzniZamaniGeldi();
     } catch (e: any) {
+      if (zamanAsimiIsePaylas(e)) return;
       console.error('Join reserve error:', e);
       showActionError('Yedek olarak katılırken bir hata oluştu.');
     } finally {
@@ -831,16 +871,19 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
 
   const handleLeaveReserves = async () => {
     if (!isAlreadyJoinedReserve) return;
+    // handleJoinAsReserve ile aynı kusur: kilit alınmadan endWrite() çağrılıyordu.
+    if (!beginWrite()) return;
     setIsProcessing(true);
 
     try {
-      await leaveMatchSlot(match.id, currentUserProfile.id);
+      await rpcPencere(leaveMatchSlot(match.id, currentUserProfile.id));
 
       // KN-3b: sunucu çıkardı; taze çek, yerel uygula.
       const fresh = await macTazele();
       setShowLeaveConfirm(false);
       showActionSuccess('Yedek listesinden çıktın.');
     } catch (e: any) {
+      if (zamanAsimiIsePaylas(e)) return;
       console.error('Leave reserves error:', e);
       showActionError('Yedek listesinden çıkamadın. İnternetin zayıf olabilir, tekrar dene.');
     } finally {
@@ -853,11 +896,12 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
     if (!beginWrite()) return;
     setIsProcessing(true);
     try {
-      await selfAssignSlot(match.id, slotId);
+      await rpcPencere(selfAssignSlot(match.id, slotId));
       const fresh = await macTazele(); // KN-3b
       setFillSlot(null);
       showActionSuccess('Sahadasın! ⚽');
     } catch (e: any) {
+      if (zamanAsimiIsePaylas(e)) return;
       showActionError((e?.message || '').includes('ALREADY_ON_FIELD')
         ? 'Zaten sahada bir slotun var.' : 'Slota eklenemedin. Lütfen tekrar dene.');
     } finally { setIsProcessing(false); endWrite(); }
@@ -893,11 +937,14 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
     if (!beginWrite()) return;
     setIsProcessing(true);
     try {
-      await unassignSlot(match.id, slotId);
+      await rpcPencere(unassignSlot(match.id, slotId));
       const fresh = await macTazele();
       setActivePlayerSlotId(null);
       showActionSuccess('Slot yeniden rezervine döndü.');
-    } catch { showActionError('İşlem tamamlanamadı. Lütfen tekrar dene.'); }
+    } catch (e) {
+      if (zamanAsimiIsePaylas(e)) return;
+      showActionError('İşlem tamamlanamadı. Lütfen tekrar dene.');
+    }
     finally { setIsProcessing(false); endWrite(); }
   };
 
@@ -905,13 +952,16 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
     if (!beginWrite()) return;
     setIsProcessing(true);
     try {
-      const refunded = await releaseSlot(match.id, slotId);
+      const refunded = await rpcPencere(releaseSlot(match.id, slotId));
       const fresh = await macTazele();
       setFillSlot(null);
       showActionSuccess(refunded > 0
         ? `Slot iade edildi — ${money(refunded)} cüzdanına iade edildi.`
         : 'Slot vitrine iade edildi.');
-    } catch { showActionError('Slot iade edilemedi.'); }
+    } catch (e) {
+      if (zamanAsimiIsePaylas(e)) return;
+      showActionError('Slot iade edilemedi.');
+    }
     finally { setIsProcessing(false); endWrite(); }
   };
 
@@ -943,7 +993,9 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
     if (!beginWrite()) return;
     setIsProcessing(true);
     try {
-      const { error } = await supabase.rpc('player_accept_slot', { p_match_id: match.id, p_slot_id: slotId });
+      const { error } = await rpcPencere(
+        supabase.rpc('player_accept_slot', { p_match_id: match.id, p_slot_id: slotId })
+      );
       if (error) throw error;
       const fresh = await macTazele(); // KN-3b: taze veri DB'ye GERİ yazılmaz
       setActivePlayerSlotId(null);
@@ -951,6 +1003,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
       // D2: kadroya girdi — izni sormak için doğru an.
       void pushIzniZamaniGeldi();
     } catch (e: any) {
+      if (zamanAsimiIsePaylas(e)) return;
       console.error('accept slot error', e);
       showActionError('Kabul edilemedi. Lütfen tekrar dene.');
     } finally {
@@ -1025,7 +1078,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
     if (!beginWrite()) return;
     setIsProcessing(true);
     try {
-      const res = await cancelMatchByCaptain(match.id);
+      const res = await rpcPencere(cancelMatchByCaptain(match.id));
       const fresh = await macTazele();
       showActionSuccess(
         res?.outcome && String(res.outcome).toUpperCase().includes('REFUND')
@@ -1035,6 +1088,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
       setShowCancelConfirm(false);
       setTimeout(() => onBack(), 900);
     } catch (e: any) {
+      if (zamanAsimiIsePaylas(e)) return;
       console.error('Cancel match error:', e);
       showActionError((e?.message || '').includes('UNAUTHORIZED')
         ? 'Bu maçı yalnız kurucusu iptal edebilir.'
@@ -2584,6 +2638,9 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                   <button
                     key={fName}
                     onClick={async () => {
+                      // Kilit ALINMADAN endWrite() çağrılıyordu: çevrimdışı
+                      // kapısı yoktu ve çift tık iki yazım gönderebiliyordu.
+                      if (!beginWrite(OFFLINE_FORMATION)) return;
                       try {
                         setIsProcessing(true);
                         const sizeVal = pitchSide === 'home' ? squadSize : inferSquadSize(match.awaySlots?.length || match.slots.length);
@@ -2596,10 +2653,11 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                             const coord = coords[index] || { x: 50, y: 50, role: 'MID' };
                             return { id: s.id, x: coord.x, y: coord.y, role: coord.role };
                           });
-                          await updateFormationRpc(match.id, pitchSide, payload);
+                          await rpcPencere(updateFormationRpc(match.id, pitchSide, payload));
                           const fresh = await macTazele();
                         }
                       } catch (err) {
+                        if (zamanAsimiIsePaylas(err)) return;
                         console.error(err);
                         showActionError('Diziliş güncellenemedi. Lütfen tekrar dene.');
                       } finally {
