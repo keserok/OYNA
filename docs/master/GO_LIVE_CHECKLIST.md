@@ -66,6 +66,26 @@ Bunlar canlıyı kırmamak için kasıtlı olarak ertelendi; secret gerektirir:
    koordineli güncelleme** gerektirir (kamusal `public_profiles` görünümüne geçiş). Bu yüzden
    tek başına DB değişikliği yapılmadı — mobil ekiple/sürümle birlikte planlanmalı.
 
+4. **`payment-webhook` simülasyon arka kapısı** (denetim bulgusu BE-12 · `supabase/functions/payment-webhook/index.ts:100-115`):
+   `PAYMENT_PROVIDER=SIMULATION` **ve** `SIMULATION_WEBHOOK_ALLOW` birlikte set iken webhook,
+   gelen POST gövdesini **hiçbir imza/secret doğrulaması olmadan** kabul edip
+   `apply_booking_payment` çalıştırır — intent UUID'sini bilen biri ödemesiz "ödendi" durumu üretebilir.
+   Bugün güvenlik yalnızca env hijyenine bağlı.
+   - **Lansmanda zorunlu:** `PAYMENT_PROVIDER=IYZICO`'ya geçerken `SIMULATION_WEBHOOK_ALLOW`
+     secret'ının **silindiğini** doğrula (§A adım 2'den sonra kontrol et).
+   - **Kalıcı çözüm (ertelendi, karar: kurucu):** SIMULATION dalına da `WEBHOOK_SECRET` benzeri
+     bir Bearer kontrolü ekle; ayrıca fonksiyon açılışında `PROVIDER=IYZICO` iken
+     `SIMULATION_WEBHOOK_ALLOW` set ise uyarı loglayıp bayrağı yok say.
+
+5. **Demo hesap girişi — bilinçli olarak AÇIK bırakıldı** (denetim bulgusu BE-1 · `supabaseAuth.ts:298, 336-338`):
+   Test hesaplarının şifresi kodda sabit (`password123`) ve seçicinin kill-switch'i *fail-open*
+   kurulu (`VITE_DEMO_ACCOUNTS !== 'false'` → env tanımlı olmadığı için üretimde açık).
+   Bu hesaplar üretim Supabase'inde **gerçek RLS yetkileriyle** var.
+   - Kurucu kararı: özellik şimdilik açık kalacak.
+   - **Kapatmak istendiğinde tek hamle:** build ortamına `VITE_DEMO_ACCOUNTS=false` ekle
+     (kod değişikliği gerektirmez). Kalıcı çözüm istenirse mantığı `=== 'true'` ile tersine çevir
+     ve demo hesap şifrelerini rotasyonla değiştir.
+
 ---
 
 ## E. Dayanıklılık (KURUCU AKSİYONU)
