@@ -61,9 +61,9 @@ export const OwnerSetupProgress: React.FC<{ steps: SetupStep[] }> = ({ steps }) 
             )}
             <div className="flex-1 min-w-0">
               <div className={`text-[13px] font-bold ${s.done ? 'text-gray-400 line-through' : 'text-white'}`}>{s.label}</div>
-              {!s.done && <div className="text-[10px] text-gray-500 truncate">{s.hint}</div>}
+              {!s.done && <div className="text-[10px] text-ink-4 truncate">{s.hint}</div>}
             </div>
-            {!s.done && <ArrowRight size={15} className="text-gray-500 shrink-0" />}
+            {!s.done && <ArrowRight size={15} className="text-ink-4 shrink-0" />}
           </button>
         ))}
       </div>

@@ -65,7 +65,7 @@ function StatusBadge({
     success: 'text-emerald-400',
     danger: 'text-red-400',
     warning: 'text-amber-400',
-    neutral: 'text-gray-500',
+    neutral: 'text-ink-4',
     info: 'text-blue-400',
   };
   return <span className={`text-[10px] font-bold ${tones[tone]}`}>{label}</span>;
@@ -97,7 +97,7 @@ function MenuRow({
         <span className={iconClass ?? 'text-gray-400'}>{icon}</span>
         <span className="text-sm font-bold text-white text-left">{label}</span>
       </div>
-      {badge ?? <ChevronRight size={16} className="text-gray-600" />}
+      {badge ?? <ChevronRight size={16} className="text-ink-4" />}
     </button>
   );
 }
@@ -144,7 +144,7 @@ export const OwnerMenuView: React.FC<OwnerMenuViewProps> = ({
             />
           ) : (
             <div className="w-16 h-16 rounded-2xl bg-white/5 border-2 border-white/10 flex items-center justify-center">
-              <Building2 size={28} className="text-gray-500" />
+              <Building2 size={28} className="text-ink-4" />
             </div>
           )}
         </div>
@@ -189,7 +189,7 @@ export const OwnerMenuView: React.FC<OwnerMenuViewProps> = ({
       <div className="space-y-6">
         {isManagerLvl && (
         <section>
-          <h3 className="text-xs font-bold text-gray-500 uppercase mb-3 ml-1">İşletme Yönetimi</h3>
+          <h3 className="text-xs font-bold text-ink-4 uppercase mb-3 ml-1">İşletme Yönetimi</h3>
           <div className="bg-surface-1 border border-white/5 rounded-[24px] overflow-hidden">
             <MenuRow
               icon={<Building2 size={18} />}
@@ -230,7 +230,7 @@ export const OwnerMenuView: React.FC<OwnerMenuViewProps> = ({
 
         {isManagerLvl && (
         <section>
-          <h3 className="text-xs font-bold text-gray-500 uppercase mb-3 ml-1">Finansal</h3>
+          <h3 className="text-xs font-bold text-ink-4 uppercase mb-3 ml-1">Finansal</h3>
           <div className="bg-surface-1 border border-white/5 rounded-[24px] overflow-hidden">
             {/* Banka + Para Çekme SAHİP-only (para-güvenliği); müdür/personel görmez. */}
             {isOwnerLvl && (
@@ -288,7 +288,7 @@ export const OwnerMenuView: React.FC<OwnerMenuViewProps> = ({
         )}
 
         <section>
-          <h3 className="text-xs font-bold text-gray-500 uppercase mb-3 ml-1">Uygulama</h3>
+          <h3 className="text-xs font-bold text-ink-4 uppercase mb-3 ml-1">Uygulama</h3>
           <div className="bg-surface-1 border border-white/5 rounded-[24px] overflow-hidden">
             <MenuRow icon={<LayoutDashboard size={18} />} label="Özet Widgetları" onClick={onWidgetSettings} />
             <MenuRow icon={<Bell size={18} />} label="Bildirimler" onClick={onNotifications} />
@@ -320,7 +320,7 @@ export const OwnerMenuView: React.FC<OwnerMenuViewProps> = ({
         </section>
 
         <div className="text-center pt-4">
-          <p className="text-[10px] text-gray-600 font-mono">OYNA Business v{APP_VERSION}</p>
+          <p className="text-[10px] text-ink-4 font-mono">OYNA Business v{APP_VERSION}</p>
         </div>
       </div>
     </div>

@@ -308,7 +308,7 @@ export const OwnerFacilitySettingsModal: React.FC<Props> = ({
   };
 
   const descLen = description.trim().length;
-  const descTone = descLen === 0 ? 'text-gray-600' : descLen < DESC_MIN ? 'text-red-400' : 'text-cat-pitch';
+  const descTone = descLen === 0 ? 'text-ink-4' : descLen < DESC_MIN ? 'text-red-400' : 'text-cat-pitch';
   const mapCenter: [number, number] = latLng ?? [ORDU_CENTER.lat, ORDU_CENTER.lng];
 
   const TABS: { id: Tab; label: string }[] = [
@@ -353,7 +353,7 @@ export const OwnerFacilitySettingsModal: React.FC<Props> = ({
         {activeTab === 'general' && (
           <div className="space-y-4">
             <div className="space-y-2">
-              <label className="text-[10px] font-bold text-gray-500 uppercase flex items-center gap-1.5">
+              <label className="text-[10px] font-bold text-ink-4 uppercase flex items-center gap-1.5">
                 Tesis Adı
                 {requiresApproval && <span className="text-blue-400 normal-case font-semibold">(değişiklik onay gerektirir)</span>}
               </label>
@@ -366,7 +366,7 @@ export const OwnerFacilitySettingsModal: React.FC<Props> = ({
             </div>
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <label className="text-[10px] font-bold text-gray-500 uppercase">Açıklama</label>
+                <label className="text-[10px] font-bold text-ink-4 uppercase">Açıklama</label>
                 <span className={`text-[10px] font-bold ${descTone}`}>{descLen}/{DESC_MAX} · en az {DESC_MIN}</span>
               </div>
               <textarea
@@ -379,7 +379,7 @@ export const OwnerFacilitySettingsModal: React.FC<Props> = ({
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <label className="text-[10px] font-bold text-gray-500 uppercase">İl</label>
+                <label className="text-[10px] font-bold text-ink-4 uppercase">İl</label>
                 <select
                   value={city}
                   onChange={(e) => { setCity(e.target.value); setDistrict(''); }}
@@ -392,7 +392,7 @@ export const OwnerFacilitySettingsModal: React.FC<Props> = ({
                 </select>
               </div>
               <div className="space-y-2">
-                <label className="text-[10px] font-bold text-gray-500 uppercase">İlçe</label>
+                <label className="text-[10px] font-bold text-ink-4 uppercase">İlçe</label>
                 <select
                   value={district}
                   onChange={(e) => setDistrict(e.target.value)}
@@ -406,7 +406,7 @@ export const OwnerFacilitySettingsModal: React.FC<Props> = ({
               </div>
             </div>
             <div className="space-y-2">
-              <label className="text-[10px] font-bold text-gray-500 uppercase flex items-center gap-1">
+              <label className="text-[10px] font-bold text-ink-4 uppercase flex items-center gap-1">
                 <MapPin size={12} /> Adres
               </label>
               <div className="flex gap-2">
@@ -425,7 +425,7 @@ export const OwnerFacilitySettingsModal: React.FC<Props> = ({
                   <MapPin size={14} /> {geocoding ? 'Bulunuyor…' : 'Haritada Bul'}
                 </button>
               </div>
-              <p className="text-[10px] text-gray-500">Adresi yazıp "Haritada Bul"a dokun; pin otomatik konumlanır, Konum sekmesinden ince ayar yapabilirsin.</p>
+              <p className="text-[10px] text-ink-4">Adresi yazıp "Haritada Bul"a dokun; pin otomatik konumlanır, Konum sekmesinden ince ayar yapabilirsin.</p>
             </div>
 
             {isRealPitch ? (
@@ -435,7 +435,7 @@ export const OwnerFacilitySettingsModal: React.FC<Props> = ({
                 onChanged={(urls) => { setImages(urls); setScoreRefresh((v) => v + 1); }}
               />
             ) : (
-              <p className="text-xs text-gray-500">Fotoğraf yüklemek için tesisinizin kaydı tamamlanmalı.</p>
+              <p className="text-xs text-ink-4">Fotoğraf yüklemek için tesisinizin kaydı tamamlanmalı.</p>
             )}
           </div>
         )}
@@ -465,7 +465,7 @@ export const OwnerFacilitySettingsModal: React.FC<Props> = ({
 
             {customAmenities.length > 0 && (
               <div>
-                <p className="text-[10px] font-bold text-gray-500 uppercase mb-2">Diğer</p>
+                <p className="text-[10px] font-bold text-ink-4 uppercase mb-2">Diğer</p>
                 <div className="flex flex-wrap gap-2">
                   {customAmenities.map((item) => (
                     <button
@@ -561,7 +561,7 @@ export const OwnerFacilitySettingsModal: React.FC<Props> = ({
             <div className="bg-bg border border-white/5 rounded-2xl p-5 flex items-center justify-between">
               <div>
                 <p className="text-sm font-bold text-white">Vitrinde Göster</p>
-                <p className="text-[11px] text-gray-500 mt-1 max-w-[220px] leading-relaxed">
+                <p className="text-[11px] text-ink-4 mt-1 max-w-[220px] leading-relaxed">
                   Tadilat veya sezon kapanışında tesisi geçici gizleyin; mevcut rezervasyonlar etkilenmez.
                 </p>
               </div>

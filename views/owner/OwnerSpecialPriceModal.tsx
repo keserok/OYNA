@@ -86,9 +86,9 @@ export const OwnerSpecialPriceModal: React.FC<OwnerSpecialPriceModalProps> = ({
         </div>
 
         <div className="bg-bg p-6 rounded-3xl border border-white/10 mb-6 text-center">
-          <label className="text-xs text-gray-500 font-bold uppercase mb-2 block">Prime Time Fiyatı</label>
+          <label className="text-xs text-ink-4 font-bold uppercase mb-2 block">Prime Time Fiyatı</label>
           <div className="flex items-center justify-center gap-2">
-            <span className="text-2xl font-extrabold text-gray-500">₺</span>
+            <span className="text-2xl font-extrabold text-ink-4">₺</span>
             <input
               type="number"
               value={customPrice}
@@ -103,7 +103,7 @@ export const OwnerSpecialPriceModal: React.FC<OwnerSpecialPriceModalProps> = ({
           )}
         </div>
 
-        <p className="text-[11px] text-gray-500 mb-4 leading-relaxed">
+        <p className="text-[11px] text-ink-4 mb-4 leading-relaxed">
           Bu gün ve saat için özel tarife oluşturulur. Kalıcı tarife değişikliği için Menü → Tarife Politikası kullanın.
         </p>
 

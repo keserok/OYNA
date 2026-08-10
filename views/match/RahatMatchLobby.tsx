@@ -58,7 +58,7 @@ const CARD: React.CSSProperties = {
 };
 
 const SECTION_LABEL: React.CSSProperties = {
-  margin: '0 0 12px', fontSize: 11, fontWeight: 900, letterSpacing: '.14em', color: '#6B7280',
+  margin: '0 0 12px', fontSize: 11, fontWeight: 900, letterSpacing: '.14em', color: 'var(--color-ink-4)',
 };
 
 // ─── Kadro satırı: bir "yer"in beş görsel durumu (tek tanım) ────────────────
@@ -475,7 +475,7 @@ const RahatMatchLobby: React.FC<Props> = ({ match: matchProp, onBack }) => {
           {row.kind === 'open' && (
             <>
               <span style={{ width: 40, height: 40, borderRadius: '50%', border: '1.5px dashed rgba(255,255,255,0.16)', flexShrink: 0 }} />
-              <span style={{ flex: 1, fontSize: 13, fontWeight: 700, color: '#4B5563' }}>+ Boş yer</span>
+              <span style={{ flex: 1, fontSize: 13, fontWeight: 700, color: 'var(--color-ink-4)' }}>+ Boş yer</span>
             </>
           )}
           {row.kind === 'lock' && (
@@ -520,7 +520,7 @@ const RahatMatchLobby: React.FC<Props> = ({ match: matchProp, onBack }) => {
   const InfoTile: React.FC<{ icon: React.ReactNode; label: string; value: string; numeric?: boolean }> = ({ icon, label, value, numeric }) => (
     <div style={{ background: '#0f1419', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 16, padding: '13px 14px' }}>
       {icon}
-      <p style={{ margin: '9px 0 3px', fontSize: 10, fontWeight: 900, letterSpacing: '.12em', color: '#6B7280' }}>{label}</p>
+      <p style={{ margin: '9px 0 3px', fontSize: 10, fontWeight: 900, letterSpacing: '.12em', color: 'var(--color-ink-4)' }}>{label}</p>
       <p className={numeric ? 'font-numeric' : undefined} style={{ margin: 0, fontSize: numeric ? 14 : 13, fontWeight: numeric ? 600 : 700, color: '#FFFFFF' }}>{value}</p>
     </div>
   );
@@ -623,7 +623,7 @@ const RahatMatchLobby: React.FC<Props> = ({ match: matchProp, onBack }) => {
                   ) : (
                     <>
                       <span className="font-numeric" style={{ fontSize: 28, fontWeight: 700, letterSpacing: '-0.02em', color: '#FFFFFF' }}>{filled}/{cap}</span>
-                      <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.06em', color: '#6B7280', marginTop: 1 }}>yer dolu</span>
+                      <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.06em', color: 'var(--color-ink-4)', marginTop: 1 }}>yer dolu</span>
                     </>
                   )}
                 </div>
@@ -730,7 +730,7 @@ const RahatMatchLobby: React.FC<Props> = ({ match: matchProp, onBack }) => {
                             Takımı değiştir
                           </button>
                         ) : (
-                          <span title="Karşı takım dolu" style={{ display: 'inline-block', marginTop: 9, fontSize: 11, fontWeight: 700, color: '#4B5563', cursor: 'not-allowed' }}>
+                          <span title="Karşı takım dolu" style={{ display: 'inline-block', marginTop: 9, fontSize: 11, fontWeight: 700, color: 'var(--color-ink-4)', cursor: 'not-allowed' }}>
                             Takımı değiştir
                           </span>
                         )
@@ -825,7 +825,7 @@ const RahatMatchLobby: React.FC<Props> = ({ match: matchProp, onBack }) => {
                     <span className="font-numeric" style={{ fontSize: 22, fontWeight: 700, color: '#FFFFFF' }}>{cap}</span>
                   </div>
                 </div>
-                <p style={{ margin: 0, fontSize: 12, fontWeight: 600, lineHeight: 1.5, color: '#6B7280' }}>
+                <p style={{ margin: 0, fontSize: 12, fontWeight: 600, lineHeight: 1.5, color: 'var(--color-ink-4)' }}>
                   Kadro {match.minPlayers ?? Math.max(cap - 2, 2)} kişiye ulaşmazsa maç iptal olur ve ödemeler iade edilir.
                 </p>
               </div>
@@ -860,7 +860,7 @@ const RahatMatchLobby: React.FC<Props> = ({ match: matchProp, onBack }) => {
               <div style={{ ...CARD, padding: 15, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 12 }}>
                 <Footprints size={20} color="#39FF14" strokeWidth={1.8} style={{ flexShrink: 0 }} />
                 <div>
-                  <p style={{ margin: '0 0 3px', fontSize: 11, fontWeight: 900, letterSpacing: '.14em', color: '#6B7280' }}>AYAKKABI</p>
+                  <p style={{ margin: '0 0 3px', fontSize: 11, fontWeight: 900, letterSpacing: '.14em', color: 'var(--color-ink-4)' }}>AYAKKABI</p>
                   <p style={{ margin: 0, fontSize: 13, fontWeight: 900, letterSpacing: '.06em', color: '#FFFFFF' }}>
                     {match.footwearRule === 'CLEATS_OK' ? 'KRAMPON SERBEST' : 'HALI SAHA AYAKKABISI'}
                   </p>
@@ -930,7 +930,7 @@ const RahatMatchLobby: React.FC<Props> = ({ match: matchProp, onBack }) => {
         <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 10, padding: '14px 20px 30px', background: 'linear-gradient(180deg, rgba(10,14,20,0) 0%, rgba(10,14,20,0.92) 34%, #0A0E14 100%)' }}>
           {isConfirmed ? (
             <div style={{ width: '100%', height: 54, borderRadius: 16, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <span style={{ fontSize: 13, fontWeight: 900, letterSpacing: '.1em', color: '#4B5563' }}>MAÇ ONAYLANDI — KADRO KİLİTLİ</span>
+              <span style={{ fontSize: 13, fontWeight: 900, letterSpacing: '.1em', color: 'var(--color-ink-4)' }}>MAÇ ONAYLANDI — KADRO KİLİTLİ</span>
             </div>
           ) : isJoined ? (
             <>
@@ -1050,7 +1050,7 @@ const RahatMatchLobby: React.FC<Props> = ({ match: matchProp, onBack }) => {
                     </p>
                   </div>
                 )}
-                <p style={{ margin: '12px 20px 0', fontSize: 11.5, fontWeight: 600, lineHeight: 1.5, color: '#6B7280' }}>
+                <p style={{ margin: '12px 20px 0', fontSize: 11.5, fontWeight: 600, lineHeight: 1.5, color: 'var(--color-ink-4)' }}>
                   {leaveQuoteMessage(leaveQuote, false, !leaveQuote.inSquad).text}
                 </p>
               </>

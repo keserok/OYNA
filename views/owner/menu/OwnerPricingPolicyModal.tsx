@@ -367,18 +367,18 @@ export const OwnerPricingPolicyModal: React.FC<Props> = ({
           <div className="space-y-1.5">
             {derivedHours.map((d) => (
               <div key={d.iso} className="flex items-center justify-between text-[12px]">
-                <span className={d.closed ? 'text-gray-600 font-semibold' : 'text-gray-300 font-semibold'}>
+                <span className={d.closed ? 'text-ink-4 font-semibold' : 'text-gray-300 font-semibold'}>
                   {d.long}
                 </span>
                 {d.closed ? (
-                  <span className="text-gray-600 font-bold">Kapalı</span>
+                  <span className="text-ink-4 font-bold">Kapalı</span>
                 ) : (
                   <span className="text-white font-extrabold font-mono">{d.open} – {d.close}</span>
                 )}
               </div>
             ))}
           </div>
-          <p className="text-[10.5px] text-gray-500 mt-3 leading-relaxed">
+          <p className="text-[10.5px] text-ink-4 mt-3 leading-relaxed">
             Bu saatler tarifelerinden hesaplanır ve kullanıcıya böyle görünür.
             Bir günü kapatmak için o güne ait tarifeyi kaldır.
           </p>
@@ -432,7 +432,7 @@ export const OwnerPricingPolicyModal: React.FC<Props> = ({
         )}
 
         {isLoading ? (
-          <p className="text-center text-gray-500 text-sm py-8">Tarifeler yükleniyor…</p>
+          <p className="text-center text-ink-4 text-sm py-8">Tarifeler yükleniyor…</p>
         ) : (
           <div className="space-y-4">
             {rows.map((tariff) => (
@@ -464,7 +464,7 @@ export const OwnerPricingPolicyModal: React.FC<Props> = ({
                     saatini belirler (pencere = tarifelerin en erken başlangıcı
                     .. en geç bitişi). Hiç gün seçilmemiş tarife kaydedilemez. */}
                 <div className="space-y-2">
-                  <label className="text-[10px] text-gray-500 font-bold uppercase">Geçerli Günler</label>
+                  <label className="text-[10px] text-ink-4 font-bold uppercase">Geçerli Günler</label>
                   <div className="flex gap-1.5">
                     {DAY_LABELS.map((d) => {
                       const on = tariff.days.includes(d.iso);
@@ -478,7 +478,7 @@ export const OwnerPricingPolicyModal: React.FC<Props> = ({
                           className={`flex-1 py-2 rounded-xl text-[11px] font-extrabold border transition-colors disabled:opacity-50 ${
                             on
                               ? 'bg-primary/15 border-primary/40 text-primary'
-                              : 'bg-bg border-white/5 text-gray-600 hover:text-gray-400'
+                              : 'bg-bg border-white/5 text-ink-4 hover:text-gray-400'
                           }`}
                         >
                           {d.short}
@@ -494,7 +494,7 @@ export const OwnerPricingPolicyModal: React.FC<Props> = ({
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <label className="text-[10px] text-gray-500 font-bold uppercase">Başlangıç</label>
+                    <label className="text-[10px] text-ink-4 font-bold uppercase">Başlangıç</label>
                     <div className="flex items-center gap-2 bg-bg border border-white/5 p-3 rounded-xl">
                       <Clock size={14} className="text-gray-400" />
                       <input
@@ -507,7 +507,7 @@ export const OwnerPricingPolicyModal: React.FC<Props> = ({
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] text-gray-500 font-bold uppercase">Bitiş</label>
+                    <label className="text-[10px] text-ink-4 font-bold uppercase">Bitiş</label>
                     <div className="flex items-center gap-2 bg-bg border border-white/5 p-3 rounded-xl">
                       <Clock size={14} className="text-gray-400" />
                       <input
@@ -523,7 +523,7 @@ export const OwnerPricingPolicyModal: React.FC<Props> = ({
                 {/* SLOT SÜRESİ — ızgarayı bu belirler. Sahip 90 seçince kullanıcı
                     ekranında saatler 20:00-21:30, 21:30-23:00 diye görünür. */}
                 <div className="space-y-2">
-                  <label className="text-[10px] text-gray-500 font-bold uppercase">Maç / Kiralama Süresi</label>
+                  <label className="text-[10px] text-ink-4 font-bold uppercase">Maç / Kiralama Süresi</label>
                   <div className="flex gap-2">
                     {ALLOWED_SLOT_MINUTES.map((m) => (
                       <button
@@ -542,14 +542,14 @@ export const OwnerPricingPolicyModal: React.FC<Props> = ({
                     ))}
                   </div>
                   {slotPreview(tariff) && (
-                    <p className="text-[10.5px] text-gray-500 leading-relaxed">
+                    <p className="text-[10.5px] text-ink-4 leading-relaxed">
                       Oluşacak saatler: <span className="text-gray-300 font-semibold">{slotPreview(tariff)}</span>
                     </p>
                   )}
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <label className="text-[10px] text-gray-500 font-bold uppercase">
+                    <label className="text-[10px] text-ink-4 font-bold uppercase">
                       {tariff.slotMinutes} Dakikalık Ücret
                     </label>
                     <input
@@ -561,8 +561,8 @@ export const OwnerPricingPolicyModal: React.FC<Props> = ({
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] text-gray-500 font-bold uppercase">
-                      Kapora {tariff.price > 0 && <span className="text-gray-600 normal-case">({depositRange(tariff.price)})</span>}
+                    <label className="text-[10px] text-ink-4 font-bold uppercase">
+                      Kapora {tariff.price > 0 && <span className="text-ink-4 normal-case">({depositRange(tariff.price)})</span>}
                     </label>
                     <input
                       type="number"

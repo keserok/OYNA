@@ -81,7 +81,7 @@ export const OwnerNotificationsModal: React.FC<{ onClose: () => void }> = ({ onC
         </div>
 
         {loading ? (
-          <div className="flex items-center justify-center py-16 text-gray-500">
+          <div className="flex items-center justify-center py-16 text-ink-4">
             <Loader2 size={22} className="animate-spin" />
           </div>
         ) : (
@@ -92,7 +92,7 @@ export const OwnerNotificationsModal: React.FC<{ onClose: () => void }> = ({ onC
                 <div key={ev.key} className="flex items-center justify-between p-4 border-b border-white/5 last:border-b-0">
                   <div className="min-w-0 pr-3">
                     <p className="text-sm font-bold text-white">{ev.label}</p>
-                    <p className="text-[11px] text-gray-500 mt-0.5">{ev.hint}</p>
+                    <p className="text-[11px] text-ink-4 mt-0.5">{ev.hint}</p>
                   </div>
                   <button
                     type="button"

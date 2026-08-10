@@ -26,14 +26,14 @@ export const OwnerWidgetSettingsModal: React.FC<Props> = ({
             <div className="flex items-center gap-4">
               <div
                 className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                  isActive ? 'bg-blue-500/20 text-blue-400' : 'bg-white/5 text-gray-500'
+                  isActive ? 'bg-blue-500/20 text-blue-400' : 'bg-white/5 text-ink-4'
                 }`}
               >
                 <Icon size={20} />
               </div>
               <div>
                 <h4 className="text-sm font-bold text-white">{widget.title}</h4>
-                <p className="text-[10px] text-gray-500">{widget.description}</p>
+                <p className="text-[10px] text-ink-4">{widget.description}</p>
               </div>
             </div>
             <button

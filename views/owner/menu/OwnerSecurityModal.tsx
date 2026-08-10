@@ -124,7 +124,7 @@ export const OwnerSecurityModal: React.FC<Props> = ({ onClose }) => {
             <span className="font-bold truncate">{email || '—'}</span>
           </div>
           {lastSignIn && (
-            <div className="flex items-center gap-2 text-[11px] text-gray-500">
+            <div className="flex items-center gap-2 text-[11px] text-ink-4">
               <ShieldCheck size={14} className="text-emerald-400" />
               <span>Son giriş: {lastSignIn}</span>
             </div>
@@ -132,7 +132,7 @@ export const OwnerSecurityModal: React.FC<Props> = ({ onClose }) => {
         </div>
 
         <div className="space-y-2">
-          <label className="text-[10px] font-bold text-gray-500 uppercase">Mevcut Şifre</label>
+          <label className="text-[10px] font-bold text-ink-4 uppercase">Mevcut Şifre</label>
           <input
             type="password"
             value={currentPassword}
@@ -144,7 +144,7 @@ export const OwnerSecurityModal: React.FC<Props> = ({ onClose }) => {
         </div>
 
         <div className="space-y-2">
-          <label className="text-[10px] font-bold text-gray-500 uppercase">Yeni Şifre</label>
+          <label className="text-[10px] font-bold text-ink-4 uppercase">Yeni Şifre</label>
           <input
             type="password"
             value={password}
@@ -156,7 +156,7 @@ export const OwnerSecurityModal: React.FC<Props> = ({ onClose }) => {
           {password.length > 0 && (
             <div className="grid grid-cols-2 gap-1.5 pt-1">
               {checks.map((c) => (
-                <div key={c.label} className={`flex items-center gap-1.5 text-[10px] font-bold ${c.ok ? 'text-emerald-400' : 'text-gray-500'}`}>
+                <div key={c.label} className={`flex items-center gap-1.5 text-[10px] font-bold ${c.ok ? 'text-emerald-400' : 'text-ink-4'}`}>
                   {c.ok ? <Check size={12} /> : <X size={12} />}
                   {c.label}
                 </div>
@@ -166,7 +166,7 @@ export const OwnerSecurityModal: React.FC<Props> = ({ onClose }) => {
         </div>
 
         <div className="space-y-2">
-          <label className="text-[10px] font-bold text-gray-500 uppercase">Yeni Şifre (Tekrar)</label>
+          <label className="text-[10px] font-bold text-ink-4 uppercase">Yeni Şifre (Tekrar)</label>
           <input
             type="password"
             value={confirm}
@@ -200,7 +200,7 @@ export const OwnerSecurityModal: React.FC<Props> = ({ onClose }) => {
           >
             <LogOut size={16} /> {signingOutAll ? 'Çıkış yapılıyor…' : 'Tüm Cihazlardan Çıkış Yap'}
           </button>
-          <p className="text-[10px] text-gray-500 mt-2 text-center">
+          <p className="text-[10px] text-ink-4 mt-2 text-center">
             Şüpheli bir giriş fark ettiyseniz tüm oturumları kapatın.
           </p>
         </div>

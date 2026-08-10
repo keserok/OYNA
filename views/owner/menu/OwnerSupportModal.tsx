@@ -124,18 +124,18 @@ export const OwnerSupportModal: React.FC<Props> = ({ onClose }) => {
               </div>
               <div className="flex-1 text-left">
                 <h4 className="text-sm font-bold text-white">Yeni Talep Aç</h4>
-                <p className="text-xs text-gray-500">Konuyu yaz, ekibimiz yanıtlasın</p>
+                <p className="text-xs text-ink-4">Konuyu yaz, ekibimiz yanıtlasın</p>
               </div>
             </button>
 
             {loading ? (
-              <div className="flex items-center justify-center py-10 text-gray-500">
+              <div className="flex items-center justify-center py-10 text-ink-4">
                 <Loader2 size={20} className="animate-spin" />
               </div>
             ) : loadError ? (
               <p className="text-xs text-red-400 px-1">{loadError}</p>
             ) : tickets.length === 0 ? (
-              <p className="text-xs text-gray-600 px-1">Henüz destek talebin yok.</p>
+              <p className="text-xs text-ink-4 px-1">Henüz destek talebin yok.</p>
             ) : (
               <div className="space-y-2">
                 {tickets.map((t) => (
@@ -147,11 +147,11 @@ export const OwnerSupportModal: React.FC<Props> = ({ onClose }) => {
                   >
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-sm font-bold text-white truncate">{t.subject}</span>
-                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-gray-500 shrink-0">
+                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-ink-4 shrink-0">
                         {SUPPORT_STATUS_LABEL[t.status] ?? t.status}
                       </span>
                     </div>
-                    <p className="text-[11px] text-gray-500 mt-0.5">
+                    <p className="text-[11px] text-ink-4 mt-0.5">
                       {new Date(t.last_message_at ?? t.created_at).toLocaleString('tr-TR')}
                       {t.unread_for_user ? ' · yeni yanıt' : ''}
                     </p>
@@ -169,7 +169,7 @@ export const OwnerSupportModal: React.FC<Props> = ({ onClose }) => {
               </div>
               <div className="flex-1">
                 <h4 className="text-sm font-bold text-white">E-posta ile yaz</h4>
-                <p className="text-xs text-gray-500">{SUPPORT_EMAIL}</p>
+                <p className="text-xs text-ink-4">{SUPPORT_EMAIL}</p>
               </div>
             </a>
 
@@ -186,7 +186,7 @@ export const OwnerSupportModal: React.FC<Props> = ({ onClose }) => {
           <>
             <div className="space-y-3">
               <div>
-                <label className="text-[10px] font-extrabold uppercase tracking-widest text-gray-500 block mb-1.5">Konu</label>
+                <label className="text-[10px] font-extrabold uppercase tracking-widest text-ink-4 block mb-1.5">Konu</label>
                 <input
                   value={subject}
                   onChange={(e) => setSubject(e.target.value)}
@@ -195,7 +195,7 @@ export const OwnerSupportModal: React.FC<Props> = ({ onClose }) => {
                 />
               </div>
               <div>
-                <label className="text-[10px] font-extrabold uppercase tracking-widest text-gray-500 block mb-1.5">Kategori</label>
+                <label className="text-[10px] font-extrabold uppercase tracking-widest text-ink-4 block mb-1.5">Kategori</label>
                 <select
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
@@ -207,7 +207,7 @@ export const OwnerSupportModal: React.FC<Props> = ({ onClose }) => {
                 </select>
               </div>
               <div>
-                <label className="text-[10px] font-extrabold uppercase tracking-widest text-gray-500 block mb-1.5">Mesaj</label>
+                <label className="text-[10px] font-extrabold uppercase tracking-widest text-ink-4 block mb-1.5">Mesaj</label>
                 <textarea
                   value={body}
                   onChange={(e) => setBody(e.target.value)}
@@ -250,7 +250,7 @@ export const OwnerSupportModal: React.FC<Props> = ({ onClose }) => {
 
             <div className="bg-bg border border-white/5 rounded-2xl p-3">
               <p className="text-sm font-bold text-white">{active.subject}</p>
-              <p className="text-[11px] text-gray-500">{SUPPORT_STATUS_LABEL[active.status] ?? active.status}</p>
+              <p className="text-[11px] text-ink-4">{SUPPORT_STATUS_LABEL[active.status] ?? active.status}</p>
             </div>
 
             <div className="space-y-2 max-h-[46vh] overflow-y-auto pr-1">
@@ -263,7 +263,7 @@ export const OwnerSupportModal: React.FC<Props> = ({ onClose }) => {
                       : 'bg-white/[0.04] border border-white/10 text-white'
                   }`}
                 >
-                  <p className="text-[10px] font-extrabold uppercase tracking-wider text-gray-500 mb-1">
+                  <p className="text-[10px] font-extrabold uppercase tracking-wider text-ink-4 mb-1">
                     {m.sender_role === 'ADMIN' ? 'OYNA Destek' : 'Sen'} · {new Date(m.created_at).toLocaleString('tr-TR')}
                   </p>
                   <p className="whitespace-pre-wrap leading-relaxed">{m.body}</p>

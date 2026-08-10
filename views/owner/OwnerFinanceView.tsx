@@ -126,7 +126,7 @@ export const OwnerFinanceView: React.FC<OwnerFinanceViewProps> = ({ pitchId, isD
   }
   if (isMock) {
     return (
-      <div className="p-6 pb-40 text-center text-gray-500">
+      <div className="p-6 pb-40 text-center text-ink-4">
         <p className="text-sm">Finans modülü için tesisinizi oluşturun veya demo modunu başlatın.</p>
       </div>
     );
@@ -218,7 +218,7 @@ export const OwnerFinanceView: React.FC<OwnerFinanceViewProps> = ({ pitchId, isD
             <GrowthBadge growth={growth} label="geçen aya göre" />
           </div>
           <h2 className={`text-3xl font-extrabold tracking-tight tabular-nums ${net >= 0 ?'text-white' :'text-red-400'}`}>{money(net)}</h2>
-          <p className="text-[10px] text-gray-500 mt-1">Tahsilat − Gider · OYNA komisyonu hariç</p>
+          <p className="text-[10px] text-ink-4 mt-1">Tahsilat − Gider · OYNA komisyonu hariç</p>
           {/* sm+: 3'lü kutu. Mobil: satır listesi — dar sütunda PARA ASLA KIRPILMAZ. */}
           <div className="hidden grid-cols-3 gap-3 mt-6">
             <StatTile label="Tahsilat" value={money(summary.income.collected_total)} accent="text-emerald-400" />
@@ -232,8 +232,8 @@ export const OwnerFinanceView: React.FC<OwnerFinanceViewProps> = ({ pitchId, isD
               { label: 'Bu ay bekleyen', value: money(summary.income.pending_total), cls: 'text-amber-400', sub: `${summary.income.pending_bookings.length} rez.` },
             ].map((r) => (
               <div key={r.label} className="flex items-center justify-between px-4 py-2.5 gap-3">
-                <span className="text-[11px] font-extrabold uppercase text-gray-500 truncate">
-                  {r.label}{r.sub ? <span className="normal-case font-bold text-gray-600"> · {r.sub}</span> : null}
+                <span className="text-[11px] font-extrabold uppercase text-ink-4 truncate">
+                  {r.label}{r.sub ? <span className="normal-case font-bold text-ink-4"> · {r.sub}</span> : null}
                 </span>
                 <span className={`text-base font-extrabold tabular-nums shrink-0 ${r.cls}`}>{r.value}</span>
               </div>
@@ -265,7 +265,7 @@ export const OwnerFinanceView: React.FC<OwnerFinanceViewProps> = ({ pitchId, isD
                 owner_earnings_summary güncel-ay döner). Geçmiş aya bakınca yanıltmasın. */}
             {month === currentMonth ? (
               <div className="mt-4 bg-white/[0.03] border border-white/5 rounded-2xl p-4">
-                <p className="text-[10px] text-gray-500 font-extrabold uppercase mb-3">
+                <p className="text-[10px] text-ink-4 font-extrabold uppercase mb-3">
                   Bu Ay Uygulama Tahsilatı{oynaEarn.monthCount > 0 ? ` · ${oynaEarn.monthCount} ödeme` : ''}
                 </p>
                 <div className="space-y-2 text-sm">
@@ -276,7 +276,7 @@ export const OwnerFinanceView: React.FC<OwnerFinanceViewProps> = ({ pitchId, isD
                 </div>
               </div>
             ) : (
-              <p className="text-[11px] text-gray-500 mt-4">Çekilebilir/güvence tutarları günceldir; aylık uygulama kırılımı yalnız içinde bulunduğumuz ayda gösterilir.</p>
+              <p className="text-[11px] text-ink-4 mt-4">Çekilebilir/güvence tutarları günceldir; aylık uygulama kırılımı yalnız içinde bulunduğumuz ayda gösterilir.</p>
             )}
             {oynaEarn.reserved > 0 && (
               <p className="text-[11px] text-yellow-300/90 mt-3">{money(oynaEarn.reserved)} bekleyen çekim talebinde rezerve.</p>
@@ -291,7 +291,7 @@ export const OwnerFinanceView: React.FC<OwnerFinanceViewProps> = ({ pitchId, isD
               key={id}
               onClick={() => setTab(id)}
               className={`flex-1 py-2.5 rounded-xl text-[11px] font-extrabold uppercase tracking-widest transition-colors ${
-                tab === id ? 'bg-blue-500/15 text-blue-300 border border-blue-500/20' : 'text-gray-500 hover:text-gray-300'
+                tab === id ? 'bg-blue-500/15 text-blue-300 border border-blue-500/20' : 'text-ink-4 hover:text-gray-300'
               }`}
             >
               {label}

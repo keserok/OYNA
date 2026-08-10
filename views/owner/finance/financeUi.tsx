@@ -16,7 +16,7 @@ export const GrowthBadge: React.FC<{ growth: GrowthResult; label?: string }> = (
     return <span className="text-[11px] font-extrabold text-emerald-400">Yeni{label ? ` ${label}` : ''}</span>;
   }
   if (growth.direction === 'flat') {
-    return <span className="text-[11px] font-bold text-gray-500">Değişim yok</span>;
+    return <span className="text-[11px] font-bold text-ink-4">Değişim yok</span>;
   }
   const up = growth.direction === 'up';
   const Icon = up ? TrendingUp : TrendingDown;
@@ -32,10 +32,10 @@ export const StatTile: React.FC<{ label: string; value: string; accent?: string;
   label, value, accent = 'text-white', sub,
 }) => (
   <div className="bg-white/5 p-3 rounded-2xl border border-white/5 min-w-0">
-    <p className="text-[10px] text-gray-500 font-extrabold uppercase mb-1">{label}</p>
+    <p className="text-[10px] text-ink-4 font-extrabold uppercase mb-1">{label}</p>
     {/* MOB-M7: dar sütunda büyük tutar taşmasın — küçük ekranda ufalt + kırp. */}
     <p className={`text-lg font-extrabold tabular-nums truncate ${accent}`} title={value}>{value}</p>
-    {sub && <p className="text-[10px] text-gray-500 mt-1 truncate">{sub}</p>}
+    {sub && <p className="text-[10px] text-ink-4 mt-1 truncate">{sub}</p>}
   </div>
 );
 
@@ -48,7 +48,7 @@ export const BreakdownList: React.FC<{
   onRowClick?: (key: string) => void;
   activeKey?: string | null;
 }> = ({ rows, total, color = '#3B82F6', emptyText = 'Kayıt yok', onRowClick, activeKey }) => {
-  if (rows.length === 0) return <p className="text-sm text-gray-500 px-1">{emptyText}</p>;
+  if (rows.length === 0) return <p className="text-sm text-ink-4 px-1">{emptyText}</p>;
   return (
     <div className="space-y-2.5">
       {rows.map((r) => {
@@ -63,7 +63,7 @@ export const BreakdownList: React.FC<{
           >
             <div className="flex justify-between items-baseline mb-1">
               <span className={`text-xs font-bold ${active ? 'text-white' : 'text-gray-300'}`}>
-                {r.label}{typeof r.count === 'number' && r.count > 0 ? <span className="text-gray-600"> · {r.count}</span> : ''}
+                {r.label}{typeof r.count === 'number' && r.count > 0 ? <span className="text-ink-4"> · {r.count}</span> : ''}
               </span>
               <span className="text-sm font-extrabold text-white tabular-nums">{money(r.amount)}</span>
             </div>
@@ -95,7 +95,7 @@ export const DailyBars: React.FC<{ series: DayBar[]; monthLabelText: string }> =
             {String(shown.day).padStart(2, '0')} {monthLabelText.split(' ')[0]} · <span className="text-emerald-400 font-extrabold">{money(shown.collected)}</span>
           </span>
         ) : (
-          <span className="text-[11px] text-gray-600">Bu ay tahsilat yok</span>
+          <span className="text-[11px] text-ink-4">Bu ay tahsilat yok</span>
         )}
       </div>
       <div className="h-32 flex items-end gap-[3px]">
@@ -116,7 +116,7 @@ export const DailyBars: React.FC<{ series: DayBar[]; monthLabelText: string }> =
           );
         })}
       </div>
-      <div className="flex justify-between mt-1.5 text-[9px] text-gray-600 font-bold tabular-nums">
+      <div className="flex justify-between mt-1.5 text-[9px] text-ink-4 font-bold tabular-nums">
         <span>1</span><span>{Math.ceil(series.length / 2)}</span><span>{series.length}</span>
       </div>
     </div>

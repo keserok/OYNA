@@ -35,7 +35,7 @@ export const PitchOccupancyGrid: React.FC<{
         return (
             <div className="py-8 text-center">
                 <p className="text-sm font-bold text-gray-400">Henüz saha eklenmedi</p>
-                <p className="text-[0.6875rem] text-gray-500 mt-1">Doluluk analizini görmek için Sahalarım&apos;dan saha ekleyin.</p>
+                <p className="text-[0.6875rem] text-ink-4 mt-1">Doluluk analizini görmek için Sahalarım&apos;dan saha ekleyin.</p>
             </div>
         );
     }
@@ -82,29 +82,29 @@ export const PitchOccupancyGrid: React.FC<{
                             <span className={`shrink-0 text-[10px] font-extrabold px-2 py-0.5 rounded-md ${selected.type === 'ABONMAN' ? 'bg-blue-500/20 text-blue-300' : selected.type === 'GÜNLÜK' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-white/10 text-gray-400'}`}>{selected.type}</span>
                         </div>
                         <p className="mt-1 text-[11px] font-bold text-gray-300 truncate">
-                            <span className="text-gray-500 font-medium">Süre: </span>{selected.sure} dakika
+                            <span className="text-ink-4 font-medium">Süre: </span>{selected.sure} dakika
                             {selected.name && (
                                 <>
-                                    <span className="text-gray-600"> · </span>
-                                    <span className="text-gray-500 font-medium">Rezerve eden: </span>{selected.name}
+                                    <span className="text-ink-4"> · </span>
+                                    <span className="text-ink-4 font-medium">Rezerve eden: </span>{selected.name}
                                 </>
                             )}
                         </p>
                     </div>
                 ) : (
-                    <p className="min-w-0 flex-1 text-[11px] text-gray-500 font-medium truncate">Bir slota dokun → süresini ve rezerve edeni gör</p>
+                    <p className="min-w-0 flex-1 text-[11px] text-ink-4 font-medium truncate">Bir slota dokun → süresini ve rezerve edeni gör</p>
                 )}
                 <button
                     type="button"
                     onClick={() => { setShowAll((v) => !v); setSelected(null); }}
-                    className={`shrink-0 px-2.5 py-1.5 rounded-full border text-[9px] font-extrabold uppercase tracking-wider transition-colors ${showAll ? 'bg-white/10 text-white border-white/20' : 'bg-bg text-gray-500 border-white/10 hover:text-gray-300'}`}
+                    className={`shrink-0 px-2.5 py-1.5 rounded-full border text-[9px] font-extrabold uppercase tracking-wider transition-colors ${showAll ? 'bg-white/10 text-white border-white/20' : 'bg-bg text-ink-4 border-white/10 hover:text-gray-300'}`}
                 >
                     {showAll ? 'Tüm saatler' : 'Aktif saatler'}
                 </button>
             </div>
 
             {bosSerit && (
-                <p className="mb-3 text-[11px] font-medium text-gray-500">
+                <p className="mb-3 text-[11px] font-medium text-ink-4">
                     Bugün için tanımlı slot yok — Aktif saatler ve ücretler bölümünden tarife ekleyin.
                 </p>
             )}
@@ -124,7 +124,7 @@ export const PitchOccupancyGrid: React.FC<{
                                     return (
                                         <span
                                             key={dk}
-                                            className="absolute bottom-0 text-[10px] font-extrabold text-gray-500 tabular-nums leading-none"
+                                            className="absolute bottom-0 text-[10px] font-extrabold text-ink-4 tabular-nums leading-none"
                                             // Etiket, temsil ettiği ANIN tam üstünde durur; dilim de
                                             // aynı noktadan başlar. Sıfır noktasında sola taşmasın diye
                                             // yalnız ilk etiket ortalanmaz.
@@ -143,7 +143,7 @@ export const PitchOccupancyGrid: React.FC<{
                                 <div key={row.courtId} className="flex gap-[2px] items-stretch group">
                                     <div className={`${nameColCls} flex flex-col justify-center pr-2`}>
                                         <p className="text-[11px] font-bold text-gray-300 truncate leading-tight group-hover:text-white transition-colors">{row.courtName}</p>
-                                        <p className={`text-[9px] font-extrabold tabular-nums leading-tight ${row.occupancyPercent >= 50 ? 'text-emerald-400' : row.occupancyPercent > 0 ? 'text-gray-400' : 'text-gray-600'}`}>%{row.occupancyPercent}</p>
+                                        <p className={`text-[9px] font-extrabold tabular-nums leading-tight ${row.occupancyPercent >= 50 ? 'text-emerald-400' : row.occupancyPercent > 0 ? 'text-gray-400' : 'text-ink-4'}`}>%{row.occupancyPercent}</p>
                                     </div>
                                     <div
                                         className={`${seritCls} relative rounded-[4px] bg-white/[0.015]`}
@@ -197,20 +197,20 @@ export const PitchOccupancyGrid: React.FC<{
             <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-5 px-0.5">
                 <div className="flex items-center gap-2">
                     <div className="w-3 h-3 rounded-sm bg-blue-500/40 border border-blue-500/50"></div>
-                    <span className="text-[10px] font-bold text-gray-500 uppercase">Abonman</span>
+                    <span className="text-[10px] font-bold text-ink-4 uppercase">Abonman</span>
                 </div>
                 <div className="flex items-center gap-2">
                     <div className="w-3 h-3 rounded-sm bg-emerald-500/40 border border-emerald-500/50"></div>
-                    <span className="text-[10px] font-bold text-gray-500 uppercase">Günlük</span>
+                    <span className="text-[10px] font-bold text-ink-4 uppercase">Günlük</span>
                 </div>
                 <div className="flex items-center gap-2">
                     <div className="w-3 h-3 rounded-sm bg-white/[0.06] border border-white/5"></div>
-                    <span className="text-[10px] font-bold text-gray-500 uppercase">Boş</span>
+                    <span className="text-[10px] font-bold text-ink-4 uppercase">Boş</span>
                 </div>
                 {/* E3(a): süreye tam bölünmeyen artık slot ÜRETMEZ — şeritte boşluk kalır. */}
                 <div className="flex items-center gap-2">
                     <div className="w-3 h-3 rounded-sm bg-white/[0.015] border border-white/5"></div>
-                    <span className="text-[10px] font-bold text-gray-500 uppercase">Slot yok</span>
+                    <span className="text-[10px] font-bold text-ink-4 uppercase">Slot yok</span>
                 </div>
             </div>
         </div>

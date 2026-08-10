@@ -151,7 +151,7 @@ export const OwnerPaymentSettingsModal: React.FC<Props> = ({
     >
       <div className="max-w-xl mx-auto space-y-6">
         {isLoading ? (
-          <p className="text-center text-gray-500 text-sm py-8">Ayarlar yükleniyor…</p>
+          <p className="text-center text-ink-4 text-sm py-8">Ayarlar yükleniyor…</p>
         ) : (
           <>
             {/* ── Fiilî durum: sahibin gördüğü tek dürüst kaynak ───────────── */}
@@ -213,7 +213,7 @@ export const OwnerPaymentSettingsModal: React.FC<Props> = ({
                   </button>
                 ))}
               </div>
-              <p className="text-[11px] text-gray-500 leading-relaxed">{paymentModeDescription(mode)}</p>
+              <p className="text-[11px] text-ink-4 leading-relaxed">{paymentModeDescription(mode)}</p>
               {!modeHasEffect && !modeLocked && (
                 <p className="text-[11px] text-amber-400/80 leading-relaxed">
                   Seçimin kaydedilir, ancak platform şu anda tesis tercihine izin vermediği için hemen
@@ -229,21 +229,21 @@ export const OwnerPaymentSettingsModal: React.FC<Props> = ({
                 <div className="flex items-center justify-between pb-3 border-b border-white/5">
                   <div>
                     <h4 className="text-sm font-bold text-white">%100 Online Ödeme</h4>
-                    <p className="text-[10px] text-gray-500 mt-0.5">Rezervasyonda tam tutar tahsil edilir</p>
+                    <p className="text-[10px] text-ink-4 mt-0.5">Rezervasyonda tam tutar tahsil edilir</p>
                   </div>
                   <Toggle value={online} onChange={setOnline} disabled={readOnly} />
                 </div>
                 <div className="flex items-center justify-between py-3 border-b border-white/5">
                   <div>
                     <h4 className="text-sm font-bold text-white">Kapora ile Ödeme</h4>
-                    <p className="text-[10px] text-gray-500 mt-0.5">Yalnızca kapora online alınır</p>
+                    <p className="text-[10px] text-ink-4 mt-0.5">Yalnızca kapora online alınır</p>
                   </div>
                   <Toggle value={deposit} onChange={setDeposit} disabled={readOnly} />
                 </div>
                 <div className="flex items-center justify-between pt-3">
                   <div>
                     <h4 className="text-sm font-bold text-white">Kalanı Sahada</h4>
-                    <p className="text-[10px] text-gray-500 mt-0.5">Bakiye tesiste tahsil edilir</p>
+                    <p className="text-[10px] text-ink-4 mt-0.5">Bakiye tesiste tahsil edilir</p>
                   </div>
                   <Toggle value={cash} onChange={setCash} disabled={readOnly} />
                 </div>
@@ -252,7 +252,7 @@ export const OwnerPaymentSettingsModal: React.FC<Props> = ({
 
             {onlineAllowed && (online || deposit) && (
               <div className="bg-surface-1 p-6 rounded-3xl border border-white/5 space-y-4">
-                <h3 className="text-xs font-bold text-gray-500 uppercase">Param Sanal POS</h3>
+                <h3 className="text-xs font-bold text-ink-4 uppercase">Param Sanal POS</h3>
                 <input
                   type="text"
                   value={paramMerchantId}

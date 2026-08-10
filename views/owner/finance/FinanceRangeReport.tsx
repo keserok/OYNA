@@ -65,12 +65,12 @@ export const FinanceRangeReport: React.FC<{
       <h3 className="text-xs font-extrabold text-gray-400 uppercase mb-1 flex items-center gap-2">
         <Calendar size={16} className="text-emerald-400" /> TARİH ARALIKLI FİNANS RAPORU
       </h3>
-      <p className="text-[11px] text-gray-500 mb-4">
+      <p className="text-[11px] text-ink-4 mb-4">
         Seçtiğiniz tarih aralığındaki uygulama tahsilatlarını gün-gün analiz edin, CSV olarak indirin.
       </p>
       <div className="grid grid-cols-2 gap-3 mb-3">
         <div>
-          <label className="block text-[10px] font-extrabold text-gray-500 uppercase mb-1">Başlangıç</label>
+          <label className="block text-[10px] font-extrabold text-ink-4 uppercase mb-1">Başlangıç</label>
           <input
             type="date"
             value={reportFrom}
@@ -80,7 +80,7 @@ export const FinanceRangeReport: React.FC<{
           />
         </div>
         <div>
-          <label className="block text-[10px] font-extrabold text-gray-500 uppercase mb-1">Bitiş</label>
+          <label className="block text-[10px] font-extrabold text-ink-4 uppercase mb-1">Bitiş</label>
           <input
             type="date"
             value={reportTo}
@@ -103,23 +103,23 @@ export const FinanceRangeReport: React.FC<{
         <div className="mt-5">
           <div className="grid grid-cols-2 gap-2 mb-4">
             <div className="bg-white/5 p-3 rounded-xl border border-white/5">
-              <p className="text-[9px] text-gray-500 font-extrabold uppercase mb-1">Brüt Tahsilat</p>
+              <p className="text-[9px] text-ink-4 font-extrabold uppercase mb-1">Brüt Tahsilat</p>
               <p className="text-base font-extrabold text-white">{money(report.totals.gross_captured)}</p>
             </div>
             <div className="bg-white/5 p-3 rounded-xl border border-white/5">
-              <p className="text-[9px] text-gray-500 font-extrabold uppercase mb-1">Net Kazanç</p>
+              <p className="text-[9px] text-ink-4 font-extrabold uppercase mb-1">Net Kazanç</p>
               <p className="text-base font-extrabold text-emerald-400">{money(report.totals.owner_net)}</p>
             </div>
             <div className="bg-white/5 p-3 rounded-xl border border-white/5">
-              <p className="text-[9px] text-gray-500 font-extrabold uppercase mb-1">OYNA Komisyonu</p>
+              <p className="text-[9px] text-ink-4 font-extrabold uppercase mb-1">OYNA Komisyonu</p>
               <p className="text-base font-extrabold text-red-300">−{money(report.totals.commission)}</p>
             </div>
             <div className="bg-white/5 p-3 rounded-xl border border-white/5">
-              <p className="text-[9px] text-gray-500 font-extrabold uppercase mb-1">İade Edilen</p>
+              <p className="text-[9px] text-ink-4 font-extrabold uppercase mb-1">İade Edilen</p>
               <p className="text-base font-extrabold text-yellow-300">{money(report.totals.refunded)}</p>
             </div>
           </div>
-          <p className="text-[11px] text-gray-500 mb-3">
+          <p className="text-[11px] text-ink-4 mb-3">
             {report.from} → {report.to} · {report.totals.count} ödeme
           </p>
 
@@ -127,7 +127,7 @@ export const FinanceRangeReport: React.FC<{
             <div className="overflow-x-auto -mx-2 px-2">
               <table className="w-full text-[11px] min-w-[420px]">
                 <thead>
-                  <tr className="text-gray-500 uppercase text-[9px] font-extrabold border-b border-white/10">
+                  <tr className="text-ink-4 uppercase text-[9px] font-extrabold border-b border-white/10">
                     <th className="text-left py-2 pr-2">Gün</th>
                     <th className="text-right py-2 px-1">Adet</th>
                     <th className="text-right py-2 px-1">Brüt</th>
@@ -153,7 +153,7 @@ export const FinanceRangeReport: React.FC<{
               </table>
             </div>
           ) : (
-            <p className="text-sm text-gray-500 text-center py-4">Bu aralıkta uygulama tahsilatı yok.</p>
+            <p className="text-sm text-ink-4 text-center py-4">Bu aralıkta uygulama tahsilatı yok.</p>
           )}
 
           <button

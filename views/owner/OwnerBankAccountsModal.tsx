@@ -147,13 +147,13 @@ export const OwnerBankAccountsModal: React.FC<OwnerBankAccountsModalProps> = ({
         )}
 
         {!canUseDb && (
-          <p className="text-sm text-gray-500 text-center py-8">
+          <p className="text-sm text-ink-4 text-center py-8">
             Banka hesabı eklemek için önce tesisinizi oluşturun.
           </p>
         )}
 
         {isLoading ? (
-          <p className="text-sm text-gray-500 text-center animate-pulse">Yükleniyor…</p>
+          <p className="text-sm text-ink-4 text-center animate-pulse">Yükleniyor…</p>
         ) : (
           <div className="space-y-3">
             {accounts.map((acc) => (
@@ -166,7 +166,7 @@ export const OwnerBankAccountsModal: React.FC<OwnerBankAccountsModalProps> = ({
                   <div className="min-w-0">
                     <p className="text-sm font-extrabold text-white">{acc.bank_name}</p>
                     <p className="text-xs text-gray-400">{acc.account_holder}</p>
-                    <p className="text-[10px] font-mono text-gray-500 mt-1 break-all">{acc.iban}</p>
+                    <p className="text-[10px] font-mono text-ink-4 mt-1 break-all">{acc.iban}</p>
                     {acc.is_primary && (
                       <span className="inline-flex items-center gap-1 text-[10px] font-extrabold text-amber-400 mt-2">
                         <Star size={10} fill="currentColor" /> Birincil hesap
@@ -187,7 +187,7 @@ export const OwnerBankAccountsModal: React.FC<OwnerBankAccountsModalProps> = ({
                   <button
                     type="button"
                     onClick={() => handleDelete(acc.id)}
-                    className="p-2 text-gray-600 hover:text-red-400"
+                    className="p-2 text-ink-4 hover:text-red-400"
                   >
                     <Trash2 size={16} />
                   </button>
@@ -195,14 +195,14 @@ export const OwnerBankAccountsModal: React.FC<OwnerBankAccountsModalProps> = ({
               </div>
             ))}
             {accounts.length === 0 && canUseDb && (
-              <p className="text-sm text-gray-500 text-center py-4">Henüz banka hesabı yok.</p>
+              <p className="text-sm text-ink-4 text-center py-4">Henüz banka hesabı yok.</p>
             )}
           </div>
         )}
 
         {canUseDb && !readOnly && (
           <div className="bg-surface-1 p-5 rounded-3xl border border-white/5 space-y-3">
-            <h3 className="text-xs font-extrabold text-gray-500 uppercase tracking-widest">Yeni Hesap</h3>
+            <h3 className="text-xs font-extrabold text-ink-4 uppercase tracking-widest">Yeni Hesap</h3>
             <input
               className="w-full bg-bg border border-white/5 rounded-xl p-3 text-white text-sm"
               placeholder="Banka adı"

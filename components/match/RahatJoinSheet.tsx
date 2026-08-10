@@ -199,7 +199,7 @@ export const RahatJoinSheet: React.FC<RahatJoinSheetProps> = ({
 
         {/* ── Adet ── */}
         <div style={{ padding: '20px 20px 0' }}>
-          <p style={{ margin: '0 0 12px', fontSize: 11, fontWeight: 900, letterSpacing: '.14em', color: '#6B7280' }}>KAÇ KİŞİ İÇİN YER ALIYORSUN?</p>
+          <p style={{ margin: '0 0 12px', fontSize: 11, fontWeight: 900, letterSpacing: '.14em', color: 'var(--color-ink-4)' }}>KAÇ KİŞİ İÇİN YER ALIYORSUN?</p>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 26 }}>
             <button type="button" aria-label="Azalt" onClick={() => setQty(q => Math.max(1, q - 1))}
               style={{ width: 48, height: 48, borderRadius: 14, background: '#0f172a', border: '1px solid rgba(255,255,255,0.10)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 }}>
@@ -211,19 +211,19 @@ export const RahatJoinSheet: React.FC<RahatJoinSheetProps> = ({
               <Plus size={19} strokeWidth={2.4} color="#39FF14" />
             </button>
           </div>
-          <p style={{ margin: '12px 0 0', textAlign: 'center', fontSize: 11, fontWeight: 600, color: '#6B7280' }}>
+          <p style={{ margin: '12px 0 0', textAlign: 'center', fontSize: 11, fontWeight: 600, color: 'var(--color-ink-4)' }}>
             Aldığın fazladan yerlere sonra arkadaşlarını ekleyebilirsin.{' '}
-            <span style={{ color: '#4B5563' }}>Üst sınır: {maxQty} yer</span>
+            <span style={{ color: 'var(--color-ink-4)' }}>Üst sınır: {maxQty} yer</span>
           </p>
         </div>
 
         {/* ── Takım seçimi ── */}
         <div style={{ padding: '22px 20px 0' }}>
-          <p style={{ margin: '0 0 12px', fontSize: 11, fontWeight: 900, letterSpacing: '.14em', color: '#6B7280' }}>HANGİ TAKIM?</p>
+          <p style={{ margin: '0 0 12px', fontSize: 11, fontWeight: 900, letterSpacing: '.14em', color: 'var(--color-ink-4)' }}>HANGİ TAKIM?</p>
           {rows.map(row => (
             <div key={row.i} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 9 }}>
               {qty > 1 && (
-                <span className="font-numeric" style={{ width: 42, flexShrink: 0, fontSize: 11, fontWeight: 600, color: '#6B7280' }}>{row.i + 1}. yer</span>
+                <span className="font-numeric" style={{ width: 42, flexShrink: 0, fontSize: 11, fontWeight: 600, color: 'var(--color-ink-4)' }}>{row.i + 1}. yer</span>
               )}
               <div style={{ flex: 1, display: 'flex', gap: 9, minWidth: 0 }}>
                 <TeamOption

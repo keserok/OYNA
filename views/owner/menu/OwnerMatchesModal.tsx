@@ -26,7 +26,7 @@ const STATUS_LABELS: Record<string, { label: string; cls: string }> = {
 
 const ScoreStepper: React.FC<{ value: number; onChange: (v: number) => void; label: string }> = ({ value, onChange, label }) => (
   <div className="flex-1 bg-bg border border-white/10 rounded-2xl p-3 text-center">
-    <p className="text-[9px] font-extrabold uppercase tracking-wider text-gray-500 truncate">{label}</p>
+    <p className="text-[9px] font-extrabold uppercase tracking-wider text-ink-4 truncate">{label}</p>
     <div className="flex items-center justify-center gap-3 mt-2">
       <button
         type="button"
@@ -112,7 +112,7 @@ export const OwnerMatchesModal: React.FC<{
                   key={key}
                   onClick={() => setFilter(key)}
                   className={`px-3 py-1.5 rounded-full text-[11px] font-extrabold uppercase tracking-wider border transition-colors ${
-                    filter === key ? 'bg-white/10 text-white border-white/20' : 'bg-surface-1 text-gray-500 border-white/5'
+                    filter === key ? 'bg-white/10 text-white border-white/20' : 'bg-surface-1 text-ink-4 border-white/5'
                   }`}
                 >
                   {label}{count > 0 ? ` (${count})` : ''}
@@ -130,16 +130,16 @@ export const OwnerMatchesModal: React.FC<{
         </div>
 
         {loading ? (
-          <div className="flex items-center justify-center py-16 text-gray-500">
+          <div className="flex items-center justify-center py-16 text-ink-4">
             <Loader2 size={22} className="animate-spin" />
           </div>
         ) : (filter === 'PENDING' ? matches.filter((m) => !m.hasScore) : matches).length === 0 ? (
           <div className="bg-surface-1 border border-white/5 rounded-3xl p-8 text-center">
-            <Trophy size={28} className="mx-auto text-gray-600" />
+            <Trophy size={28} className="mx-auto text-ink-4" />
             <p className="text-sm font-bold text-gray-400 mt-3">
               {filter === 'PENDING' ? 'Skor bekleyen maç yok.' : 'Henüz maç yok.'}
             </p>
-            <p className="text-[11px] text-gray-600 mt-1">
+            <p className="text-[11px] text-ink-4 mt-1">
               Uygulama üzerinden sahanda kurulan maçlar burada listelenir.
             </p>
           </div>
@@ -152,7 +152,7 @@ export const OwnerMatchesModal: React.FC<{
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="text-sm font-extrabold text-white truncate">{m.title}</p>
-                    <p className="text-[11px] text-gray-500 font-bold mt-0.5">
+                    <p className="text-[11px] text-ink-4 font-bold mt-0.5">
                       {m.when} · {m.courtName}
                     </p>
                   </div>
@@ -164,7 +164,7 @@ export const OwnerMatchesModal: React.FC<{
                 {m.hasScore ? (
                   <div className="mt-3 flex items-center justify-center gap-3 bg-bg border border-white/10 rounded-2xl py-3">
                     <span className="text-2xl font-extrabold text-white font-mono">{m.homeScore}</span>
-                    <span className="text-sm font-extrabold text-gray-600">—</span>
+                    <span className="text-sm font-extrabold text-ink-4">—</span>
                     <span className="text-2xl font-extrabold text-white font-mono">{m.awayScore}</span>
                   </div>
                 ) : isEntering ? (

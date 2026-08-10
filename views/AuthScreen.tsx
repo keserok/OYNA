@@ -825,7 +825,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
                       type="button"
                       onClick={() => setShowPassword((v) => !v)}
                       aria-label={showPassword ? 'Şifreyi gizle' : 'Şifreyi göster'}
-                      style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: '#6b7280', display: 'flex', flexShrink: 0 }}
+                      style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: 'var(--color-ink-4)', display: 'flex', flexShrink: 0 }}
                     >
                       {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                     </button>
@@ -1056,7 +1056,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
                   </p>
                 </div>
 
-                <label htmlFor="auth-otp-input" style={{ display: 'block', textAlign: 'center', fontSize: 10, fontWeight: 800, letterSpacing: '.22em', textTransform: 'uppercase', color: '#6b7280', marginBottom: 10 }}>
+                <label htmlFor="auth-otp-input" style={{ display: 'block', textAlign: 'center', fontSize: 10, fontWeight: 800, letterSpacing: '.22em', textTransform: 'uppercase', color: 'var(--color-ink-4)', marginBottom: 10 }}>
                   {isReset ? 'Sıfırlama kodu' : 'Doğrulama kodu'}
                 </label>
                 <input
@@ -1079,7 +1079,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
 
                 {isReset && (
                   <div style={{ marginTop: 16 }}>
-                    <label htmlFor="auth-newpass-input" style={{ display: 'block', fontSize: 10, fontWeight: 800, letterSpacing: '.22em', textTransform: 'uppercase', color: '#6b7280', margin: '0 2px 9px' }}>
+                    <label htmlFor="auth-newpass-input" style={{ display: 'block', fontSize: 10, fontWeight: 800, letterSpacing: '.22em', textTransform: 'uppercase', color: 'var(--color-ink-4)', margin: '0 2px 9px' }}>
                       Yeni Şifre
                     </label>
                     <div className="au-field">
@@ -1098,7 +1098,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
                         type="button"
                         onClick={() => setShowPassword((v) => !v)}
                         aria-label={showPassword ? 'Şifreyi gizle' : 'Şifreyi göster'}
-                        style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: '#6b7280', display: 'flex', flexShrink: 0 }}
+                        style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: 'var(--color-ink-4)', display: 'flex', flexShrink: 0 }}
                       >
                         {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                       </button>

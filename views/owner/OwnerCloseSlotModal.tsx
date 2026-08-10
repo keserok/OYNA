@@ -83,7 +83,7 @@ export const OwnerCloseSlotModal: React.FC<OwnerCloseSlotModalProps> = ({
 
         <div className="space-y-4 mb-6">
           <div className="space-y-2">
-            <label className="text-[10px] font-extrabold text-gray-500 uppercase tracking-widest ml-1">Kapanma nedeni</label>
+            <label className="text-[10px] font-extrabold text-ink-4 uppercase tracking-widest ml-1">Kapanma nedeni</label>
             <div className="bg-bg border border-white/5 p-4 rounded-2xl">
               <select
                 value={exceptionType}
@@ -100,7 +100,7 @@ export const OwnerCloseSlotModal: React.FC<OwnerCloseSlotModalProps> = ({
           </div>
 
           <div className="space-y-2">
-            <label className="text-[10px] font-extrabold text-gray-500 uppercase tracking-widest ml-1">Not (opsiyonel)</label>
+            <label className="text-[10px] font-extrabold text-ink-4 uppercase tracking-widest ml-1">Not (opsiyonel)</label>
             <textarea
               value={reason}
               onChange={(e) => setReason(e.target.value)}
@@ -113,7 +113,7 @@ export const OwnerCloseSlotModal: React.FC<OwnerCloseSlotModalProps> = ({
           <div className="flex items-center justify-between bg-bg p-4 rounded-2xl border border-white/5">
             <div>
               <p className="text-xs font-extrabold text-white uppercase">Tüm günü kapat</p>
-              <p className="text-[9px] text-gray-500 font-bold mt-1">Seçili saha için gün boyunca rezervasyon alınmaz</p>
+              <p className="text-[9px] text-ink-4 font-bold mt-1">Seçili saha için gün boyunca rezervasyon alınmaz</p>
             </div>
             <button
               type="button"

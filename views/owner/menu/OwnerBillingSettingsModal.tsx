@@ -47,11 +47,11 @@ export const OwnerBillingSettingsModal: React.FC<Props> = ({
     <OwnerCenteredModal title="SaaS & Fatura" onClose={onClose}>
       <div className="space-y-5">
         <div className="p-4 bg-bg rounded-2xl border border-white/5">
-          <p className="text-[10px] text-gray-500 uppercase font-bold">Mevcut Plan</p>
+          <p className="text-[10px] text-ink-4 uppercase font-bold">Mevcut Plan</p>
           <p className="text-lg font-extrabold text-white mt-1">{planTier}</p>
         </div>
         <div className="space-y-2">
-          <label className="text-[10px] font-bold text-gray-500 uppercase flex items-center gap-1">
+          <label className="text-[10px] font-bold text-ink-4 uppercase flex items-center gap-1">
             <Mail size={12} /> Fatura E-postası
           </label>
           <input
@@ -61,7 +61,7 @@ export const OwnerBillingSettingsModal: React.FC<Props> = ({
             className="w-full bg-bg border border-white/5 rounded-xl px-4 py-3 text-white outline-none focus:border-blue-500/40"
             placeholder="fatura@sirket.com"
           />
-          <p className="text-[10px] text-gray-500">
+          <p className="text-[10px] text-ink-4">
             Plan yükseltme ve fatura bildirimleri bu adrese gönderilir.
           </p>
         </div>

@@ -102,7 +102,7 @@ export const OutboxBadge: React.FC<{ variant?: 'chip' | 'strip' }> = ({ variant 
                         </p>
                       )}
                     </div>
-                    <span className="shrink-0 flex items-center gap-1 text-[11px] text-gray-500 tabular-nums">
+                    <span className="shrink-0 flex items-center gap-1 text-[11px] text-ink-4 tabular-nums">
                       <Clock size={11} /> {timeOf(it.createdAt)}
                     </span>
                   </div>

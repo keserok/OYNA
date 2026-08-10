@@ -106,9 +106,9 @@ export const OwnerSubscriptionModal: React.FC<OwnerSubscriptionModalProps> = ({
 
         <div className="space-y-5">
           <div className="space-y-2">
-            <label className="text-[10px] font-extrabold text-gray-500 uppercase tracking-widest ml-1">Müşteri</label>
+            <label className="text-[10px] font-extrabold text-ink-4 uppercase tracking-widest ml-1">Müşteri</label>
             <div className="bg-bg border border-white/5 p-4 rounded-2xl flex items-center gap-3">
-              <User size={20} className="text-gray-500 shrink-0" />
+              <User size={20} className="text-ink-4 shrink-0" />
               <input
                 type="text"
                 value={customerName}
@@ -120,9 +120,9 @@ export const OwnerSubscriptionModal: React.FC<OwnerSubscriptionModalProps> = ({
           </div>
 
           <div className="space-y-2">
-            <label className="text-[10px] font-extrabold text-gray-500 uppercase tracking-widest ml-1">Telefon (opsiyonel)</label>
+            <label className="text-[10px] font-extrabold text-ink-4 uppercase tracking-widest ml-1">Telefon (opsiyonel)</label>
             <div className="bg-bg border border-white/5 p-4 rounded-2xl flex items-center gap-3">
-              <Phone size={20} className="text-gray-500 shrink-0" />
+              <Phone size={20} className="text-ink-4 shrink-0" />
               <input
                 type="tel"
                 value={customerPhone}
@@ -134,7 +134,7 @@ export const OwnerSubscriptionModal: React.FC<OwnerSubscriptionModalProps> = ({
           </div>
 
           <div className="space-y-2">
-            <label className="text-[10px] font-extrabold text-gray-500 uppercase tracking-widest ml-1">Saha</label>
+            <label className="text-[10px] font-extrabold text-ink-4 uppercase tracking-widest ml-1">Saha</label>
             <div className="bg-bg border border-white/5 p-4 rounded-2xl">
               <select
                 value={courtId}
@@ -156,7 +156,7 @@ export const OwnerSubscriptionModal: React.FC<OwnerSubscriptionModalProps> = ({
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <label className="text-[10px] font-extrabold text-gray-500 uppercase tracking-widest ml-1">Gün</label>
+              <label className="text-[10px] font-extrabold text-ink-4 uppercase tracking-widest ml-1">Gün</label>
               <div className="bg-bg border border-white/5 p-4 rounded-2xl">
                 <select
                   value={weekdayIdx}
@@ -172,7 +172,7 @@ export const OwnerSubscriptionModal: React.FC<OwnerSubscriptionModalProps> = ({
               </div>
             </div>
             <div className="space-y-2">
-              <label className="text-[10px] font-extrabold text-gray-500 uppercase tracking-widest ml-1">Saat</label>
+              <label className="text-[10px] font-extrabold text-ink-4 uppercase tracking-widest ml-1">Saat</label>
               <div className="bg-bg border border-white/5 p-4 rounded-2xl">
                 <select
                   value={timeSlot}
@@ -190,7 +190,7 @@ export const OwnerSubscriptionModal: React.FC<OwnerSubscriptionModalProps> = ({
           </div>
 
           <div className="space-y-2">
-            <label className="text-[10px] font-extrabold text-gray-500 uppercase tracking-widest ml-1">Saatlik ücret (₺)</label>
+            <label className="text-[10px] font-extrabold text-ink-4 uppercase tracking-widest ml-1">Saatlik ücret (₺)</label>
             <div className="bg-bg border border-white/5 p-4 rounded-2xl">
               <input
                 type="number"
@@ -203,7 +203,7 @@ export const OwnerSubscriptionModal: React.FC<OwnerSubscriptionModalProps> = ({
           </div>
 
           <div className="space-y-2">
-            <label className="text-[10px] font-extrabold text-gray-500 uppercase tracking-widest ml-1">Süre</label>
+            <label className="text-[10px] font-extrabold text-ink-4 uppercase tracking-widest ml-1">Süre</label>
             <div className="flex gap-2">
               {DURATION_OPTIONS.map((m) => (
                 <button
@@ -232,10 +232,10 @@ export const OwnerSubscriptionModal: React.FC<OwnerSubscriptionModalProps> = ({
             }`}
           >
             <div className="flex items-center gap-3">
-              <RefreshCw size={18} className={autoRenew ? 'text-blue-400' : 'text-gray-500'} />
+              <RefreshCw size={18} className={autoRenew ? 'text-blue-400' : 'text-ink-4'} />
               <div className="text-left">
                 <p className="text-xs font-extrabold text-white">Otomatik Yenileme</p>
-                <p className="text-[10px] text-gray-500 font-bold">Süre dolunca abonelik kendiliğinden uzar</p>
+                <p className="text-[10px] text-ink-4 font-bold">Süre dolunca abonelik kendiliğinden uzar</p>
               </div>
             </div>
             <div className={`w-11 h-6 rounded-full p-0.5 transition-colors ${autoRenew ? 'bg-blue-600' : 'bg-white/10'}`}>

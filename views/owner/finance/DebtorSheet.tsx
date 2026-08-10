@@ -81,9 +81,9 @@ export const DebtorSheet: React.FC<Props> = ({ debtor, readOnly, onClose, onChan
     <BottomSheetModal title={debtor.name} onClose={onClose}>
       <div className="flex items-center justify-between mb-4">
         <div>
-          {debtor.phone && <p className="text-[11px] text-gray-500">{debtor.phone}</p>}
+          {debtor.phone && <p className="text-[11px] text-ink-4">{debtor.phone}</p>}
           <p className={`text-2xl font-extrabold ${balance > 0 ? 'text-red-400' : 'text-emerald-400'}`}>{money(balance)}</p>
-          <p className="text-[10px] text-gray-500">{balance > 0 ? 'açık bakiye' : 'kapandı'}</p>
+          <p className="text-[10px] text-ink-4">{balance > 0 ? 'açık bakiye' : 'kapandı'}</p>
         </div>
         {debtor.phone && (
           <button type="button" onClick={remind} className="inline-flex items-center gap-1.5 text-[11px] font-extrabold text-emerald-400 bg-emerald-500/10 border border-emerald-500/25 px-3 py-2 rounded-xl">
@@ -96,7 +96,7 @@ export const DebtorSheet: React.FC<Props> = ({ debtor, readOnly, onClose, onChan
       {balance > 0 && !readOnly && (
         payOpen ? (
           <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-4 mb-4">
-            <label className="text-[10px] font-extrabold text-gray-500 uppercase block mb-1.5">Alınan tutar</label>
+            <label className="text-[10px] font-extrabold text-ink-4 uppercase block mb-1.5">Alınan tutar</label>
             <input inputMode="decimal" className="w-full bg-bg border border-white/10 rounded-xl p-3 text-white mb-3" value={amountStr} onChange={(e) => setAmountStr(e.target.value)} />
             <div className="flex gap-2 mb-3">
               {METHODS.map((m) => (
@@ -118,11 +118,11 @@ export const DebtorSheet: React.FC<Props> = ({ debtor, readOnly, onClose, onChan
       )}
 
       {/* Hareket defteri */}
-      <p className="text-[10px] font-extrabold text-gray-500 uppercase mb-2">Hareketler</p>
+      <p className="text-[10px] font-extrabold text-ink-4 uppercase mb-2">Hareketler</p>
       {entries === null ? (
-        <div className="flex justify-center py-6 text-gray-500"><Loader2 size={16} className="animate-spin" /></div>
+        <div className="flex justify-center py-6 text-ink-4"><Loader2 size={16} className="animate-spin" /></div>
       ) : entries.length === 0 ? (
-        <p className="text-xs text-gray-600">Hareket yok.</p>
+        <p className="text-xs text-ink-4">Hareket yok.</p>
       ) : (
         <div className="space-y-2 max-h-64 overflow-y-auto custom-scrollbar">
           {entries.map((e) => {
@@ -133,7 +133,7 @@ export const DebtorSheet: React.FC<Props> = ({ debtor, readOnly, onClose, onChan
                   {isPay ? <ArrowDownCircle size={16} className="text-emerald-400 shrink-0" /> : <ArrowUpCircle size={16} className="text-red-400 shrink-0" />}
                   <div className="min-w-0">
                     <p className="text-gray-300 truncate">{isPay ? 'Ödeme' : 'Borç'}{e.note ? ` · ${e.note}` : ''}</p>
-                    <p className="text-[10px] text-gray-600">{e.created_at.slice(0, 10)}{isPay && e.payment_method ? ` · ${methodLabel(e.payment_method)}` : ''}</p>
+                    <p className="text-[10px] text-ink-4">{e.created_at.slice(0, 10)}{isPay && e.payment_method ? ` · ${methodLabel(e.payment_method)}` : ''}</p>
                   </div>
                 </div>
                 <span className={`font-extrabold tabular-nums shrink-0 ${isPay ? 'text-emerald-400' : 'text-red-400'}`}>{isPay ? '−' : '+'}{money(e.amount)}</span>

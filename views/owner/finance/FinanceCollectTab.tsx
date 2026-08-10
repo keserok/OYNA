@@ -48,11 +48,11 @@ export const FinanceCollectTab: React.FC<Props> = ({ summary, debtors, readOnly,
       {/* Bekleyen tahsilatlar — dokun → Tahsil Et / Veresiyeye Yaz */}
       <div className="space-y-3">
         <div className="flex justify-between items-center px-1">
-          <h3 className="text-[10px] font-extrabold text-gray-500 uppercase flex items-center gap-1.5"><Clock size={12} /> Bekleyen Tahsilatlar</h3>
+          <h3 className="text-[10px] font-extrabold text-ink-4 uppercase flex items-center gap-1.5"><Clock size={12} /> Bekleyen Tahsilatlar</h3>
           <span className="text-xs font-extrabold text-amber-400">{money(income.pending_total)}</span>
         </div>
         {income.pending_bookings.length === 0 ? (
-          <p className="text-sm text-gray-500 px-2">Bu ay bekleyen tahsilat yok — her rezervasyon tam ödendi. 👏</p>
+          <p className="text-sm text-ink-4 px-2">Bu ay bekleyen tahsilat yok — her rezervasyon tam ödendi. 👏</p>
         ) : income.pending_bookings.map((b) => (
           <button
             key={b.id}
@@ -62,11 +62,11 @@ export const FinanceCollectTab: React.FC<Props> = ({ summary, debtors, readOnly,
           >
             <div className="min-w-0">
               <p className="text-sm font-bold text-white truncate">{b.customer_name ?? 'Müşteri'}</p>
-              <p className="text-[10px] text-gray-500">{b.date} · {b.time} · {b.court ?? 'Saha'} · {money(b.paid)} / {money(b.price)}</p>
+              <p className="text-[10px] text-ink-4">{b.date} · {b.time} · {b.court ?? 'Saha'} · {money(b.paid)} / {money(b.price)}</p>
             </div>
             <div className="flex items-center gap-2 shrink-0">
               <span className="text-amber-400 font-extrabold tabular-nums">{money(b.balance)}</span>
-              {!readOnly && <ChevronRight size={16} className="text-gray-600" />}
+              {!readOnly && <ChevronRight size={16} className="text-ink-4" />}
             </div>
           </button>
         ))}
@@ -75,7 +75,7 @@ export const FinanceCollectTab: React.FC<Props> = ({ summary, debtors, readOnly,
       {/* Veresiye v2 — kişiye dokun → defter + kısmi ödeme + WhatsApp */}
       <div className="space-y-3">
         <div className="flex justify-between items-center px-1">
-          <h3 className="text-[10px] font-extrabold text-gray-500 uppercase flex items-center gap-1.5">
+          <h3 className="text-[10px] font-extrabold text-ink-4 uppercase flex items-center gap-1.5">
             <HandCoins size={12} /> Veresiye
             {summary.debt.open_total > 0 && <span className="text-red-400 normal-case">· {money(summary.debt.open_total)} açık</span>}
           </h3>
@@ -89,7 +89,7 @@ export const FinanceCollectTab: React.FC<Props> = ({ summary, debtors, readOnly,
           </button>
         </div>
         {debtors.length === 0 ? (
-          <p className="text-sm text-gray-500 px-2">Açık veresiye kaydı yok.</p>
+          <p className="text-sm text-ink-4 px-2">Açık veresiye kaydı yok.</p>
         ) : debtors.map((d) => (
           <button
             key={d.id}
@@ -102,11 +102,11 @@ export const FinanceCollectTab: React.FC<Props> = ({ summary, debtors, readOnly,
                 <span className="truncate">{d.name}</span>
                 {d.is_demo && <span className="text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/25 shrink-0">DEMO</span>}
               </p>
-              <p className="text-[10px] text-gray-500">{d.phone ?? ''}</p>
+              <p className="text-[10px] text-ink-4">{d.phone ?? ''}</p>
             </div>
             <div className="flex items-center gap-2 shrink-0">
               <span className="text-red-400 font-extrabold tabular-nums">{money(d.amount_owed)}</span>
-              <ChevronRight size={16} className="text-gray-600" />
+              <ChevronRight size={16} className="text-ink-4" />
             </div>
           </button>
         ))}
@@ -114,14 +114,14 @@ export const FinanceCollectTab: React.FC<Props> = ({ summary, debtors, readOnly,
 
       {/* Son ödemeler */}
       <div className="space-y-3">
-        <h3 className="text-[10px] font-extrabold text-gray-500 uppercase px-1 flex items-center gap-1.5"><Banknote size={12} /> Son Ödemeler</h3>
+        <h3 className="text-[10px] font-extrabold text-ink-4 uppercase px-1 flex items-center gap-1.5"><Banknote size={12} /> Son Ödemeler</h3>
         {income.recent_payments.length === 0 ? (
-          <p className="text-sm text-gray-500 px-2">Bu ay ödeme kaydı yok.</p>
+          <p className="text-sm text-ink-4 px-2">Bu ay ödeme kaydı yok.</p>
         ) : income.recent_payments.map((p) => (
           <div key={p.id} className="bg-surface-1 p-4 rounded-2xl border border-white/5 flex justify-between items-center">
             <div className="min-w-0">
               <p className="text-sm font-bold text-white truncate">{p.customer_name ?? 'Müşteri'}</p>
-              <p className="text-[10px] text-gray-500">{p.booking_date} · {methodLabel(p.method)}</p>
+              <p className="text-[10px] text-ink-4">{p.booking_date} · {methodLabel(p.method)}</p>
             </div>
             <span className="text-emerald-400 font-extrabold shrink-0 tabular-nums">+{money(p.amount)}</span>
           </div>

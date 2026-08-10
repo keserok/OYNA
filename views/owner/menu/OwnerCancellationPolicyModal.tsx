@@ -74,7 +74,7 @@ export const OwnerCancellationPolicyModal: React.FC<Props> = ({ onClose, facilit
   return (
     <OwnerCenteredModal title="İptal / İade Politikası" onClose={onClose}>
       {isLoading ? (
-        <p className="text-center text-gray-500 text-sm py-6">Yükleniyor…</p>
+        <p className="text-center text-ink-4 text-sm py-6">Yükleniyor…</p>
       ) : (
         <div className="space-y-6">
           <div className="bg-blue-500/10 border border-blue-500/20 p-4 rounded-2xl flex items-start gap-3">
@@ -90,7 +90,7 @@ export const OwnerCancellationPolicyModal: React.FC<Props> = ({ onClose, facilit
           <div className="bg-bg p-5 rounded-2xl border border-white/5 flex items-center justify-between">
             <div>
               <h4 className="text-sm font-bold text-white">Özel Politika</h4>
-              <p className="text-[10px] text-gray-500 mt-0.5">Kapalı: OYNA varsayılanı kullanılır</p>
+              <p className="text-[10px] text-ink-4 mt-0.5">Kapalı: OYNA varsayılanı kullanılır</p>
             </div>
             <button
               type="button"
@@ -105,7 +105,7 @@ export const OwnerCancellationPolicyModal: React.FC<Props> = ({ onClose, facilit
           {custom && (
             <div className="space-y-4">
               <div className="space-y-2">
-                <label className="text-[10px] font-bold text-gray-500 uppercase">Tam iade (%100) — bu saatten önce iptalde</label>
+                <label className="text-[10px] font-bold text-ink-4 uppercase">Tam iade (%100) — bu saatten önce iptalde</label>
                 <div className="flex items-center gap-2">
                   <input
                     type="number" min={0} max={720} inputMode="numeric"
@@ -114,11 +114,11 @@ export const OwnerCancellationPolicyModal: React.FC<Props> = ({ onClose, facilit
                     onChange={(e) => setFullHours(num(e.target.value, 24))}
                     className="w-full bg-bg border border-white/5 rounded-xl px-4 py-3 text-white font-bold outline-none disabled:opacity-50"
                   />
-                  <span className="text-xs text-gray-500 font-bold">saat</span>
+                  <span className="text-xs text-ink-4 font-bold">saat</span>
                 </div>
               </div>
               <div className="space-y-2">
-                <label className="text-[10px] font-bold text-gray-500 uppercase">Yarım iade — bu saatten önce iptalde</label>
+                <label className="text-[10px] font-bold text-ink-4 uppercase">Yarım iade — bu saatten önce iptalde</label>
                 <div className="flex items-center gap-2">
                   <input
                     type="number" min={0} max={720} inputMode="numeric"
@@ -127,11 +127,11 @@ export const OwnerCancellationPolicyModal: React.FC<Props> = ({ onClose, facilit
                     onChange={(e) => setHalfHours(num(e.target.value, 6))}
                     className="w-full bg-bg border border-white/5 rounded-xl px-4 py-3 text-white font-bold outline-none disabled:opacity-50"
                   />
-                  <span className="text-xs text-gray-500 font-bold">saat</span>
+                  <span className="text-xs text-ink-4 font-bold">saat</span>
                 </div>
               </div>
               <div className="space-y-2">
-                <label className="text-[10px] font-bold text-gray-500 uppercase">Yarım iade yüzdesi</label>
+                <label className="text-[10px] font-bold text-ink-4 uppercase">Yarım iade yüzdesi</label>
                 <div className="flex items-center gap-2">
                   <input
                     type="number" min={0} max={100} inputMode="numeric"
@@ -140,10 +140,10 @@ export const OwnerCancellationPolicyModal: React.FC<Props> = ({ onClose, facilit
                     onChange={(e) => setHalfPct(num(e.target.value, 50))}
                     className="w-full bg-bg border border-white/5 rounded-xl px-4 py-3 text-white font-bold outline-none disabled:opacity-50"
                   />
-                  <span className="text-xs text-gray-500 font-bold">%</span>
+                  <span className="text-xs text-ink-4 font-bold">%</span>
                 </div>
               </div>
-              <p className="text-[11px] text-gray-500 leading-relaxed bg-white/5 rounded-xl p-3">
+              <p className="text-[11px] text-ink-4 leading-relaxed bg-white/5 rounded-xl p-3">
                 Özet: <b>≥{fullHours} saat</b> önce iptal → %100 · <b>{halfHours}–{fullHours} saat</b> → %{halfPct} · <b>&lt;{halfHours} saat</b> → iade yok.
                 <br />İade edilen tutardan ödeme altyapısı kesintisi düşülür (oyuncuya net gösterilir).
               </p>

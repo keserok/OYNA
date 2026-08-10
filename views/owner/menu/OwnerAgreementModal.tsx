@@ -49,7 +49,7 @@ export const OwnerAgreementModal: React.FC<Props> = ({ onClose, facilityId }) =>
         <div className="space-y-5">
           {/* Örnek hesap önce: sahip için asıl soru "bana ne kalıyor". */}
           <div className="p-4 rounded-2xl bg-bg border border-emerald-500/20">
-            <p className="text-[10px] text-gray-500 uppercase font-bold">
+            <p className="text-[10px] text-ink-4 uppercase font-bold">
               {para(veri.ornekTaban)}&apos;lik bir saatte
             </p>
             <p className="text-2xl font-extrabold text-emerald-400 mt-1">{para(veri.ornekSahaya)}</p>
@@ -58,7 +58,7 @@ export const OwnerAgreementModal: React.FC<Props> = ({ onClose, facilityId }) =>
               <p className="text-xs text-gray-400">
                 Oyunculardan toplanan: <b className="text-white">{para(veri.ornekOyuncudan)}</b>
               </p>
-              <p className="text-[10px] text-gray-500 mt-1">
+              <p className="text-[10px] text-ink-4 mt-1">
                 Aradaki fark OYNA&apos;nın komisyonu ve uygulama payıdır.
               </p>
             </div>
@@ -66,14 +66,14 @@ export const OwnerAgreementModal: React.FC<Props> = ({ onClose, facilityId }) =>
 
           <div className="grid grid-cols-2 gap-3">
             <div className="p-4 rounded-2xl bg-bg border border-white/5">
-              <p className="text-[10px] text-gray-500 uppercase font-bold">Komisyon</p>
+              <p className="text-[10px] text-ink-4 uppercase font-bold">Komisyon</p>
               <p className="text-lg font-extrabold text-white mt-1">%{veri.ratePct}</p>
-              <p className="text-[10px] text-gray-500 mt-0.5">saat ücretinden düşülür</p>
+              <p className="text-[10px] text-ink-4 mt-0.5">saat ücretinden düşülür</p>
             </div>
             <div className="p-4 rounded-2xl bg-bg border border-white/5">
-              <p className="text-[10px] text-gray-500 uppercase font-bold">Serbest iptal</p>
+              <p className="text-[10px] text-ink-4 uppercase font-bold">Serbest iptal</p>
               <p className="text-lg font-extrabold text-white mt-1">{veri.iptalSaati} saat</p>
-              <p className="text-[10px] text-gray-500 mt-0.5">bu süreden sonra iade yok</p>
+              <p className="text-[10px] text-ink-4 mt-0.5">bu süreden sonra iade yok</p>
             </div>
           </div>
 
@@ -84,7 +84,7 @@ export const OwnerAgreementModal: React.FC<Props> = ({ onClose, facilityId }) =>
                 {veri.ozel ? 'Sahana özel anlaşma' : 'Genel OYNA koşulları'}
               </b>
             </p>
-            <p className="text-[11px] text-gray-500 leading-relaxed">
+            <p className="text-[11px] text-ink-4 leading-relaxed">
               {veri.model === 'MODEL_B'
                 ? 'Saatini OYNA kiralar, oyunculara kendi belirlediğimiz fiyattan sunar. Sen anlaştığımız tutarı alırsın.'
                 : 'Tarifende yazan tutar sahanın fiyatıdır; oyunculardan toplanan tutarın üstüne uygulama payı eklenir.'}
@@ -100,7 +100,7 @@ export const OwnerAgreementModal: React.FC<Props> = ({ onClose, facilityId }) =>
             </p>
           </div>
 
-          <div className="flex items-center gap-2 justify-center text-gray-600">
+          <div className="flex items-center gap-2 justify-center text-ink-4">
             <Handshake size={13} />
             <span className="text-[10px] font-bold uppercase tracking-wider">Salt okunur</span>
           </div>

@@ -200,16 +200,16 @@ export const OwnerBookingDetailModal: React.FC<OwnerBookingDetailModalProps> = (
       {/* Durum kartı */}
       <div className="bg-bg p-4 rounded-2xl border border-white/5 space-y-3">
         <div className="flex justify-between items-center">
-          <span className="text-[0.6875rem] text-gray-500 font-bold uppercase">Durum</span>
+          <span className="text-[0.6875rem] text-ink-4 font-bold uppercase">Durum</span>
           <span className={`text-[0.6875rem] font-extrabold px-2 py-1 rounded ${statusCls}`}>{statusLabel}</span>
         </div>
         <div className="flex justify-between items-center">
-          <span className="text-[0.6875rem] text-gray-500 font-bold uppercase">Tutar</span>
+          <span className="text-[0.6875rem] text-ink-4 font-bold uppercase">Tutar</span>
           <span className="text-lg font-extrabold text-white font-mono tabular-nums">{money(booking.price)}</span>
         </div>
         {booking.paid > 0 && (
           <div className="flex justify-between items-center">
-            <span className="text-[0.6875rem] text-gray-500 font-bold uppercase">Tahsil edilen</span>
+            <span className="text-[0.6875rem] text-ink-4 font-bold uppercase">Tahsil edilen</span>
             <span className="text-sm font-extrabold text-emerald-400 font-mono tabular-nums">{money(booking.paid)}</span>
           </div>
         )}
@@ -227,7 +227,7 @@ export const OwnerBookingDetailModal: React.FC<OwnerBookingDetailModalProps> = (
       {/* COLLECT modu: tutar + yöntem */}
       {mode === 'collect' && (
         <div className="mt-4 space-y-3">
-          <label className="text-[0.6875rem] font-extrabold text-gray-500 uppercase tracking-widest">Tahsil edilecek tutar</label>
+          <label className="text-[0.6875rem] font-extrabold text-ink-4 uppercase tracking-widest">Tahsil edilecek tutar</label>
           <div className="flex gap-2">
             <div className="flex-1 bg-bg border border-white/10 rounded-2xl px-4 flex items-center focus-within:border-emerald-500/50">
               <input
@@ -238,7 +238,7 @@ export const OwnerBookingDetailModal: React.FC<OwnerBookingDetailModalProps> = (
                 className="w-full bg-transparent text-white font-extrabold text-xl py-3 outline-none tabular-nums"
                 autoFocus
               />
-              <span className="text-gray-500 font-bold">₺</span>
+              <span className="text-ink-4 font-bold">₺</span>
             </div>
             <button type="button" onClick={() => setAmountStr(String(balance))}
               className="px-4 rounded-2xl bg-white/5 border border-white/10 text-white text-xs font-extrabold uppercase active:scale-95">
@@ -253,14 +253,14 @@ export const OwnerBookingDetailModal: React.FC<OwnerBookingDetailModalProps> = (
               </button>
             ))}
           </div>
-          <p className="text-[0.6875rem] text-gray-500">Tahsilat denetimli ve idempotent kaydedilir; kalan tutar kadar tahsil edebilirsin.</p>
+          <p className="text-[0.6875rem] text-ink-4">Tahsilat denetimli ve idempotent kaydedilir; kalan tutar kadar tahsil edebilirsin.</p>
         </div>
       )}
 
       {/* CANCEL modu: neden */}
       {mode === 'cancel' && (
         <div className="mt-4 space-y-2">
-          <label className="text-[0.6875rem] font-extrabold text-gray-500 uppercase tracking-widest">İptal nedeni</label>
+          <label className="text-[0.6875rem] font-extrabold text-ink-4 uppercase tracking-widest">İptal nedeni</label>
           <textarea
             value={cancelReason}
             onChange={(e) => setCancelReason(e.target.value)}
@@ -288,7 +288,7 @@ export const OwnerBookingDetailModal: React.FC<OwnerBookingDetailModalProps> = (
               <Phone size={16} /> Müşteriyi Ara
             </a>
           ) : (
-            <div className="min-h-[52px] py-3 bg-white/[0.03] border border-white/5 text-gray-600 rounded-xl text-[0.6875rem] font-extrabold flex flex-col items-center justify-center gap-1.5 uppercase">
+            <div className="min-h-[52px] py-3 bg-white/[0.03] border border-white/5 text-ink-4 rounded-xl text-[0.6875rem] font-extrabold flex flex-col items-center justify-center gap-1.5 uppercase">
               <Phone size={16} /> Telefon Yok
             </div>
           )}

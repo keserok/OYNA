@@ -76,7 +76,7 @@ export const OwnerWorkingHoursModal: React.FC<Props> = ({
         <div className="bg-surface-1 p-6 rounded-[32px] border border-white/5 flex items-center justify-between">
           <div>
             <h3 className="text-lg font-extrabold text-white">Tesis Durumu</h3>
-            <p className="text-[10px] text-gray-500 font-bold uppercase">Anlık açık / kapalı</p>
+            <p className="text-[10px] text-ink-4 font-bold uppercase">Anlık açık / kapalı</p>
           </div>
           <button
             type="button"
@@ -135,7 +135,7 @@ export const OwnerWorkingHoursModal: React.FC<Props> = ({
                     onChange={(e) => updateDay(idx, 'open', e.target.value)}
                     className="flex-1 bg-bg border border-white/5 px-3 py-2 rounded-xl text-white text-sm font-mono outline-none"
                   />
-                  <span className="text-gray-600">—</span>
+                  <span className="text-ink-4">—</span>
                   <input
                     type="time"
                     value={day.close}

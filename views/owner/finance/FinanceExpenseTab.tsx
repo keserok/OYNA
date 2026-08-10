@@ -138,7 +138,7 @@ export const FinanceExpenseTab: React.FC<Props> = ({
               Sabit giderler: {templates.length - unapplied.length}/{templates.length} eklendi
             </div>
             {!readOnly && (
-              <button type="button" onClick={() => setTplOpen(true)} className="text-[10px] font-extrabold text-gray-500 hover:text-gray-300">Yönet</button>
+              <button type="button" onClick={() => setTplOpen(true)} className="text-[10px] font-extrabold text-ink-4 hover:text-gray-300">Yönet</button>
             )}
           </div>
           {unapplied.length > 0 && !readOnly && (
@@ -163,13 +163,13 @@ export const FinanceExpenseTab: React.FC<Props> = ({
       {/* Gider kayıtları */}
       <div className="space-y-3">
         <div className="flex justify-between items-center px-1">
-          <h3 className="text-[10px] font-extrabold text-gray-500 uppercase">Gider Kayıtları</h3>
+          <h3 className="text-[10px] font-extrabold text-ink-4 uppercase">Gider Kayıtları</h3>
           <button type="button" onClick={openAdd} disabled={readOnly} className="p-2 bg-white/5 rounded-xl text-white disabled:opacity-40">
             <Plus size={18} />
           </button>
         </div>
         {expenses.length === 0 ? (
-          <p className="text-sm text-gray-500 px-2">Bu ay gider kaydı yok.</p>
+          <p className="text-sm text-ink-4 px-2">Bu ay gider kaydı yok.</p>
         ) : (
           <div className="space-y-3">
             {expenses.map((e) => (
@@ -180,7 +180,7 @@ export const FinanceExpenseTab: React.FC<Props> = ({
                     {e.template_id && <Repeat size={11} className="text-blue-400 shrink-0" />}
                     {e.is_demo && <span className="text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/25 shrink-0">DEMO</span>}
                   </p>
-                  <p className="text-[10px] text-gray-500">{e.category} • {e.expense_date}</p>
+                  <p className="text-[10px] text-ink-4">{e.category} • {e.expense_date}</p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   <span className="text-red-400 font-extrabold tabular-nums">{money(e.amount ?? 0)}</span>
@@ -219,16 +219,16 @@ export const FinanceExpenseTab: React.FC<Props> = ({
         <BottomSheetModal title="Sabit Giderler" onClose={() => setTplOpen(false)}>
           <div className="space-y-2 mb-4 max-h-52 overflow-y-auto custom-scrollbar">
             {templates.length === 0 ? (
-              <p className="text-xs text-gray-500">Henüz sabit gider yok. Kira, personel gibi her ay tekrarlayan giderleri ekle.</p>
+              <p className="text-xs text-ink-4">Henüz sabit gider yok. Kira, personel gibi her ay tekrarlayan giderleri ekle.</p>
             ) : templates.map((t) => (
               <div key={t.id} className="flex items-center justify-between bg-white/[0.03] border border-white/5 rounded-xl px-3 py-2">
-                <div className="min-w-0"><p className="text-sm font-bold text-white truncate">{t.title}</p><p className="text-[10px] text-gray-500">{t.category} · {money(t.amount)}</p></div>
+                <div className="min-w-0"><p className="text-sm font-bold text-white truncate">{t.title}</p><p className="text-[10px] text-ink-4">{t.category} · {money(t.amount)}</p></div>
                 <button type="button" onClick={() => { deleteExpenseTemplate(t.id).then(loadTemplates).catch(() => {}); }} className="p-1.5 text-red-500/70 hover:text-red-400"><Trash2 size={14} /></button>
               </div>
             ))}
           </div>
           <div className="border-t border-white/5 pt-3">
-            <p className="text-[10px] font-extrabold text-gray-500 uppercase mb-2">Yeni sabit gider</p>
+            <p className="text-[10px] font-extrabold text-ink-4 uppercase mb-2">Yeni sabit gider</p>
             <input className="w-full bg-bg border border-white/10 rounded-xl p-2.5 text-white mb-2 text-sm" placeholder="Başlık (ör. Kira)" value={tplForm.title} onChange={(e) => setTplForm({ ...tplForm, title: e.target.value })} />
             <div className="grid grid-cols-2 gap-2 mb-3">
               <input inputMode="decimal" className="bg-bg border border-white/10 rounded-xl p-2.5 text-white text-sm" placeholder="Tutar" value={tplForm.amount} onChange={(e) => setTplForm({ ...tplForm, amount: e.target.value })} />

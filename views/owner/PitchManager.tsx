@@ -367,7 +367,7 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
                                     <option value="OPEN">Açık Saha</option>
                                     <option value="CLOSED">Kapalı Saha</option>
                                 </select>
-                                <p className="text-[10px] text-gray-600">Vitrindeki Kapalı/Açık seçimini belirler.</p>
+                                <p className="text-[10px] text-ink-4">Vitrindeki Kapalı/Açık seçimini belirler.</p>
                             </div>
                             <div className="space-y-2">
                                 <label className="text-xs font-bold text-gray-400 uppercase">Zemin</label>
@@ -392,7 +392,7 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
                                     className="flex-1 bg-bg border border-white/10 rounded-xl p-3 text-white font-bold focus:border-warning/50 outline-none transition-colors text-center"
                                     placeholder="En (30)"
                                 />
-                                <span className="text-gray-500 font-extrabold">×</span>
+                                <span className="text-ink-4 font-extrabold">×</span>
                                 <input
                                     type="number"
                                     value={editSize.l}
@@ -413,7 +413,7 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
                                     className="w-full bg-bg border border-white/10 rounded-xl p-3 text-white font-bold focus:border-warning/50 outline-none transition-colors"
                                     placeholder="Örn: 2000"
                                 />
-                                <p className="text-[10px] text-gray-600">
+                                <p className="text-[10px] text-ink-4">
                                     Yalnız vitrindeki kaba etiket. Gerçek fiyat, süre ve kapora aşağıdaki
                                     <b> Aktif Saatler ve Ücretler</b> bölümünden gelir (tek kaynak).
                                 </p>
@@ -521,7 +521,7 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
                         </div>
 
                         {!editingPitch.id ? (
-                            <p className="text-xs text-gray-500 leading-relaxed">
+                            <p className="text-xs text-ink-4 leading-relaxed">
                                 Fiyat politikası girmek için önce sahayı kaydedin. Saha kaydedildikten
                                 sonra bu bölümden saat aralıklarını, süreyi (60/90/120 dk) ve ücreti
                                 tanımlarsın.
@@ -551,7 +551,7 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
                                 <div className="flex items-center justify-between gap-4 pt-2 border-t border-white/5">
                                     <div className="min-w-0">
                                         <p className="text-xs font-bold text-gray-300">Yayında</p>
-                                        <p className="text-[10px] text-gray-500 leading-relaxed">
+                                        <p className="text-[10px] text-ink-4 leading-relaxed">
                                             {editingPitch.is_active !== false
                                                 ? 'Bu saha uygulamada görünüyor ve rezervasyon alabiliyor.'
                                                 : 'Taslak — uygulamada görünmez, rezervasyon almaz.'}
@@ -672,13 +672,13 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
                                     ] as const).map(([label, grade]) => (
                                         <div key={label} className="space-y-2">
                                             <span className="text-xs font-bold text-gray-400 uppercase block">{label}</span>
-                                            <div className={`w-full rounded-xl p-3 text-center font-extrabold border ${grade ? 'bg-cat-pitch/10 border-cat-pitch/30 text-cat-pitch' : 'bg-bg border-white/10 text-gray-600'}`}>
+                                            <div className={`w-full rounded-xl p-3 text-center font-extrabold border ${grade ? 'bg-cat-pitch/10 border-cat-pitch/30 text-cat-pitch' : 'bg-bg border-white/10 text-ink-4'}`}>
                                                 {grade || '—'}
                                             </div>
                                         </div>
                                     ))}
                                 </div>
-                                <p className="text-[10px] text-gray-500 leading-relaxed">
+                                <p className="text-[10px] text-ink-4 leading-relaxed">
                                     Kalite notları OYNA ekibi tarafından yerinde değerlendirilir ve yalnızca yönetim panelinden güncellenir. Değişiklik talebi için destek ekibiyle iletişime geçin.
                                 </p>
                             </>
@@ -714,13 +714,13 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
                                 />
                             </>
                         ) : isRealFacility ? (
-                            <p className="text-xs text-gray-500 leading-relaxed">
+                            <p className="text-xs text-ink-4 leading-relaxed">
                                 Fotoğraf eklemek için önce sahayı kaydedin; ardından düzenleyip fotoğraflarını yükleyin.
                             </p>
                         ) : (
                             /* Demo/mock tesiste yükleme yok: tüm fotoğraflar tek boru
                                hattından (pitch_media) geçer; base64 yolu kaldırıldı. */
-                            <p className="text-xs text-gray-500 leading-relaxed">
+                            <p className="text-xs text-ink-4 leading-relaxed">
                                 Fotoğraf yükleme yalnızca kayıtlı (gerçek) tesislerde kullanılabilir.
                             </p>
                         )}
@@ -763,11 +763,11 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
             <div className="flex-1 overflow-y-auto p-6">
                 {pitches.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-full text-center">
-                        <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center text-gray-600 mb-4">
+                        <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center text-ink-4 mb-4">
                             <ImageIcon size={40} />
                         </div>
                         <h3 className="text-white font-bold text-lg mb-2">Henüz saha eklemedin</h3>
-                        <p className="text-gray-500 text-sm max-w-[250px] mb-6">Müşterilerinin rezervasyon yapabilmesi için en az bir saha eklemelisin.</p>
+                        <p className="text-ink-4 text-sm max-w-[250px] mb-6">Müşterilerinin rezervasyon yapabilmesi için en az bir saha eklemelisin.</p>
                         <button
                             onClick={handleAddNew}
                             disabled={!facilityId || readOnly}
@@ -786,7 +786,7 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
                                     ) : (
                                         <button
                                             onClick={() => handleEdit(pitch)}
-                                            className="w-full h-full flex flex-col items-center justify-center gap-1 bg-black/30 text-gray-500 hover:text-warning transition-colors"
+                                            className="w-full h-full flex flex-col items-center justify-center gap-1 bg-black/30 text-ink-4 hover:text-warning transition-colors"
                                         >
                                             <Camera size={28} />
                                             <span className="text-[10px] font-extrabold uppercase tracking-wider">Fotoğraf ekle</span>
@@ -844,7 +844,7 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
                     doğrudan fiyat politikası ekranına götürülür (sessiz hata YOK). */}
                 {!readOnly && inactiveCourts.length > 0 && (
                     <div className="mt-8">
-                        <h3 className="text-[11px] font-extrabold text-gray-500 uppercase tracking-widest mb-3">Yayında Olmayan Sahalar</h3>
+                        <h3 className="text-[11px] font-extrabold text-ink-4 uppercase tracking-widest mb-3">Yayında Olmayan Sahalar</h3>
                         <div className="space-y-2">
                             {inactiveCourts.map((court) => {
                                 const ready = hasOwnTariff(court.id);
@@ -856,7 +856,7 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
                                             className="min-w-0 text-left flex-1"
                                         >
                                             <p className="text-sm font-bold text-gray-300 truncate">{court.name}</p>
-                                            <p className="text-[11px] text-gray-600">
+                                            <p className="text-[11px] text-ink-4">
                                                 {court.court_type === 'CLOSED' ? 'Kapalı' : 'Açık'} • {SURFACE_LABELS[court.surface ?? 'TURF'] ?? court.surface}
                                                 {' • '}{ready ? 'Yayına hazır' : 'Tarife yok'}
                                             </p>
