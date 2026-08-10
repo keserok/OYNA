@@ -207,3 +207,36 @@ Bu denetim, oturum içinde daha önce verilen "demo girişi kapatıldı" bilgisi
 (b) koda gömülü ortak şifre sabiti ve (c) canlıda gerçekten geçerli 29 hesap yerinde kaldı.
 Saldırgan uygulamayı hiç açmadan doğrudan Supabase giriş adresine istek atabildiği için
 **açık ancak canlı tarafta kapanır**. Kayda geçirilmiştir (P-0: "bu koruma bozulursa kim söyleyecek?").
+
+---
+
+## Kurucu kararları (9 Ağustos 2026, denetim sonrası)
+
+| Konu | Karar | Sonuç |
+|---|---|---|
+| Demo hesapların şifresi | **DOKUNULMAYACAK** — oldukları gibi kalsın | P0-1a askıya alındı; kalıcı riski aşağıda ölçüldü |
+| Demo hesapların sahip olduğu 5 saha | **DOKUNULMAYACAK** — bu sahalar da demo | P0-1b askıya alındı |
+| Yönetici sertleştirmesi (P0-3) | Uygulamadan önce **kapsamlı bilgi** istendi | Brifing hazırlandı (aşağıda) |
+| Para iade fonksiyonları (P0-2) | Karar bekliyor | — |
+
+### Kararın gerçek riski — ölçülmüş sınırlar (salt-okunur doğrulama)
+
+Kararı güvenli kılan en önemli gerçek: **yönetici hesabı demo hesap DEĞİL.**
+
+| Ölçüm | Değer | Anlamı |
+|---|---|---|
+| Demo hesap olan yönetici | **0** | Ortak şifreyle platform yöneticisi olunamaz |
+| Gerçek hesaplı yönetici | 1 | Yönetici zinciri demo şifresinden bağımsız |
+| Personel yetkisi olan demo hesap | **0** | Yatay yayılım yok |
+| OWNER rollü demo hesap | 3 | Erişim yalnız demo sahalarla sınırlı |
+| Demo sahibin görebildiği telefonlu rezervasyon | 16 kayıt · **2 farklı telefon** | Kişisel veri teması çok küçük |
+| Demo sahibin görebildiği müşteri defteri kaydı | 9 | Aynı iki telefondan türemiş |
+
+**Kalan risk (kabul edilmiş):** İnternetteki biri demo hesapla girip demo sahaların
+ayarlarını/takvimini değiştirebilir, sahte rezervasyon/maç açabilir ve **2 farklı telefon
+numarasını** görebilir. Ulaşamadıkları: platform yöneticiliği, başka kullanıcıların hesapları,
+para (kart ödemesi `CASH_ONLY` ile kapalı, gerçek tahsilat 0 ₺).
+
+**Lansman kapısı:** Bu kabul yalnız rafta olduğu sürece geçerlidir. Lansman gününün
+kontrol listesine şu madde eklenmiştir: *"Demo hesapların şifreleri döndürülmeden ya da
+demo hesaplar staging projesine taşınmadan gerçek kullanıcı alınmaz."*
