@@ -230,6 +230,10 @@ const App: React.FC = () => {
   const initApp = useAppStore(s => s.initApp);
   const isHydrated = useAppStore(s => s.isHydrated);
   const loadDegraded = useAppStore(s => s.loadDegraded);
+  // QR ekranına geçilen saha. Eskiden render içinde getState() ile okunuyordu;
+  // App tüm store'a abone olduğu için her set() bunu kazara tazeliyordu. Dar
+  // seçicilere geçince o güvenlik ağı kalktı — bu yüzden artık ABONE okunuyor.
+  const ownerActivePitchId = useAppStore(s => s.ownerActivePitchId);
 
   useEffect(() => {
     initApp();
@@ -836,7 +840,7 @@ const App: React.FC = () => {
       case 'QR_SCANNER':
         return <QRScannerView
           onBack={() => goBack('OWNER_PANEL')}
-          pitchId={useAppStore.getState().ownerActivePitchId}
+          pitchId={ownerActivePitchId}
         />;
       case 'MY_MATCHES':
         return <MyMatchesHub onNavigate={(v) => navigateTo(v)} />;
