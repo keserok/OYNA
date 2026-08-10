@@ -77,7 +77,17 @@ Bunlar canlıyı kırmamak için kasıtlı olarak ertelendi; secret gerektirir:
      bir Bearer kontrolü ekle; ayrıca fonksiyon açılışında `PROVIDER=IYZICO` iken
      `SIMULATION_WEBHOOK_ALLOW` set ise uyarı loglayıp bayrağı yok say.
 
-5. **Demo hesap girişi — bilinçli olarak AÇIK bırakıldı** (denetim bulgusu BE-1 · `supabaseAuth.ts:298, 336-338`):
+5. **Yayın sırası — `20260906000000` migration'ı UYGULAMADAN ÖNCE gitmeli:**
+   Bu migration PSP sırlarını `pitches` tablosundan çıkarıp sahip-only iki RPC'nin
+   arkasına aldı (denetim bulgusu SEC-1). Uygulama önce yayınlanırsa o RPC'ler
+   henüz yoktur ve **tesis sahibi ödeme ayarlarını kaydedemez**.
+   - Doğru sıra: `supabase db push` (veya migration deploy) → sonra uygulama derlemesi.
+   - Ters sıra veri kaybettirmez; yalnız o ekranı migration uygulanana kadar kilitler.
+     İstemci bu durumu tanıyıp sebebi ve çözümü söyleyen Türkçe hata gösterir.
+   - Uygulandığını doğrulamak için: `get_pitch_payment_settings` ve
+     `set_pitch_payment_settings` fonksiyonları veritabanında görünmeli.
+
+6. **Demo hesap girişi — bilinçli olarak AÇIK bırakıldı** (denetim bulgusu BE-1 · `supabaseAuth.ts:298, 336-338`):
    Test hesaplarının şifresi kodda sabit (`password123`) ve seçicinin kill-switch'i *fail-open*
    kurulu (`VITE_DEMO_ACCOUNTS !== 'false'` → env tanımlı olmadığı için üretimde açık).
    Bu hesaplar üretim Supabase'inde **gerçek RLS yetkileriyle** var.

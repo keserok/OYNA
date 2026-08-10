@@ -1764,6 +1764,22 @@ export async function getMonthlyBookingDensity(
 // Dışa açılan imza ve dönüş şekli DEĞİŞMEDİ — çağıranlar (OwnerPanel,
 // OwnerPaymentSettingsModal) olduğu gibi çalışır.
 
+/** PostgREST: RPC şema önbelleğinde yok. Yalnız "migration henüz uygulanmadı"
+ *  penceresinde görülür — canlıda kalıcı olarak görülmemelidir. */
+const rpcYok = (e: unknown): boolean => {
+  const h = e as { code?: string; message?: string } | null;
+  return h?.code === 'PGRST202' || /Could not find the function/i.test(h?.message || '');
+};
+
+const yetkisiz = (e: unknown): boolean =>
+  /UNAUTHORIZED/i.test((e as { message?: string } | null)?.message || '');
+
+/** Sır okuma hatasını dıştaki "hepsini yut → defaults" dalından AYIRIR.
+ *  Bu ayrım olmadan aşağıdaki throw da yutulur ve boş sırlar geri döner. */
+class SirOkunamadi extends Error {
+  constructor(readonly asil: unknown) { super('SIR_OKUNAMADI'); this.name = 'SirOkunamadi'; }
+}
+
 export async function getPaymentSettings(pitchId: string): Promise<PitchPaymentSettings> {
   const defaults: PitchPaymentSettings = {
     paymentOptions: { online: true, deposit: false, cash: true },
@@ -1774,12 +1790,25 @@ export async function getPaymentSettings(pitchId: string): Promise<PitchPaymentS
   try {
     const [tesis, sirlar] = await Promise.all([
       supabase.from('pitches').select('payment_options').eq('id', pitchId).single(),
-      // Sahip olmayan bağlamda (müdür/personel/başkasının demo tesisi) RPC
-      // UNAUTHORIZED atar. Bu, ödeme SEÇENEKLERİNİ kaybettirmemeli: hata
-      // yutulur, yalnız sır alanları boş kalır.
       supabase.rpc('get_pitch_payment_settings', { p_pitch_id: pitchId }),
     ]);
     if (tesis.error) throw tesis.error;
+    // SIR OKUMA HATASI — ayrımı yapmak ŞART, yoksa sessiz veri kaybı olur:
+    // sırlar boş '' gelirse kullanıcı başka bir alanı değiştirip Kaydet'e
+    // bastığında savePaymentSettings o boşları NULL diye yazar ve CANLI PSP
+    // anahtarlarını siler.
+    //   * UNAUTHORIZED  → beklenen (müdür/personel/başkasının tesisi). Sırlar
+    //                     boş kalır, ödeme SEÇENEKLERİ yine gösterilir.
+    //   * RPC yok       → yalnız yayın sırası hatası penceresi; tolere edilir.
+    //   * diğer HER hata→ geçici/altyapısal olabilir; FIRLAT. Çağıran modal
+    //                     (OwnerPaymentSettingsModal:76) hatayı bildirim olarak
+    //                     gösterir; kullanıcı boş alan görüp üzerine yazmaz.
+    if (sirlar.error && !yetkisiz(sirlar.error) && !rpcYok(sirlar.error)) {
+      throw new SirOkunamadi(sirlar.error);
+    }
+    if (sirlar.error && rpcYok(sirlar.error)) {
+      console.warn('[pitchOwner] ödeme sırları RPC\'si yok — migration uygulanmamış olabilir.');
+    }
     const opts =
       (tesis.data as { payment_options?: { online?: boolean; deposit?: boolean; cash?: boolean } | null } | null)
         ?.payment_options ?? {};
@@ -1799,6 +1828,14 @@ export async function getPaymentSettings(pitchId: string): Promise<PitchPaymentS
       paramApiKey: sir?.param_api_key ?? '',
     };
   } catch (error) {
+    // Sır okunamadıysa YUTMA: boş alan göstermek, kullanıcının bir sonraki
+    // kaydında canlı PSP anahtarlarını silmesine yol açar (bkz. yukarıdaki not).
+    if (error instanceof SirOkunamadi) {
+      console.error('getPaymentSettings (sır okunamadı):', error.asil);
+      throw new Error(toTurkishError(error.asil));
+    }
+    // Diğer hatalar eskisi gibi varsayılana düşer: ödeme seçenekleri GÖRÜNÜR
+    // alanlardır, yanlış durumda kullanıcı fark eder; sırlar ise görünmez.
     console.error('getPaymentSettings:', error);
     return defaults;
   }
@@ -1818,6 +1855,15 @@ export async function savePaymentSettings(
       p_client_id: settings.paramClientId || null,
       p_api_key: settings.paramApiKey || null,
     });
+    // YAYIN SIRASI: migration uygulanmadan önce uygulama yayınlanırsa bu RPC
+    // yoktur. Ham PostgREST metni ("Could not find the function…") operatöre
+    // hiçbir şey anlatmaz; sebebi ve çözümü söyleyen bir mesaj veriyoruz.
+    if (sirHatasi && rpcYok(sirHatasi)) {
+      throw new Error(
+        'Ödeme ayarları kaydedilemedi: veritabanı güncellemesi henüz uygulanmamış. ' +
+        'Yayın sırası şudur — ÖNCE migration (20260906000000), SONRA uygulama.',
+      );
+    }
     if (sirHatasi) throw sirHatasi;
 
     const { error } = await supabase

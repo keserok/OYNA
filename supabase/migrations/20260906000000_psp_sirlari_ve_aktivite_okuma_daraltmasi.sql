@@ -2,6 +2,14 @@
 -- [SEC-1 + DB-4] PSP SIRLARI HERKESE-AÇIK TABLODAN ÇIKARILDI +
 --                KULLANICI-AKTİVİTE TABLOLARININ OKUMASI DARALTILDI
 -- ----------------------------------------------------------------------------
+-- ⚠️ YAYIN SIRASI — ÖNCE BU MIGRATION, SONRA UYGULAMA.
+--   Uygulama önce yayınlanırsa `set_pitch_payment_settings` /
+--   `get_pitch_payment_settings` RPC'leri HENÜZ YOKTUR ve tesis sahibi ödeme
+--   ayarları ekranını kaydedemez. İstemci bu durumu tanıyıp sebebi söyleyen
+--   Türkçe bir hata gösterir (services/pitchOwnerService.ts · rpcYok), ama
+--   doğru sıra yine de budur. Ters sıra veri KAYBETTİRMEZ, yalnız o ekranı
+--   migration uygulanana kadar kilitler.
+-- ----------------------------------------------------------------------------
 -- SORUN 1 (SEC-1) — `pitches` tablosundaki ödeme sağlayıcı (PSP) sırları:
 --   `pitches_select_anon` / `pitches_select_auth` politikaları YALNIZ SATIR
 --   bazlı süzüyor (is_demo). Sütun düzeyinde hiçbir koruma yok; bu yüzden
