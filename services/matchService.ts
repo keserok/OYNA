@@ -1,6 +1,7 @@
 import { supabase } from '../supabaseClient';
 import { MatchListing, PositionSlot } from '../types';
 import { formatTRYAmount } from '../utils/formatTRY';
+import { subscribeWithResync } from './realtimeResync';
 
 export interface Match {
   id?: string;
@@ -30,24 +31,85 @@ export interface Match {
 // oluşturma tek yol player_create_match / admin_create_match RPC'leridir;
 // kaleci-hakem akışı serviceRequestService üzerinden yürür.
 
+// ─── [DB-3 / FE-3 / BE-3] Açık maç listesi — tavanlı sorgu + debounce'lu tazeleme ──
+// Eski hâli `select('*')` idi: limitsiz, tüm kolonlar ve HER olayda anında tam
+// refetch. Tablo büyüdükçe paneli açık olan her sağlayıcı bütün açık maçları
+// (şişkin `chatMessages`/`awaySlots` jsonb'leri dâhil) baştan indiriyordu; bir
+// maçın slotları peş peşe dolarken aynı sorgu saniyede birkaç kez koşuyordu.
+//
+// AÇIK KOLON LİSTESİ: aşağıdaki alanların tamamını ServiceDashboard okur
+// (mevki doluluğu için `slots`, kart başlığı için `title`/`location`, ücret için
+// `price`…). Listede OLMAYAN ama panelin yokluğa dayanıklı okuduğu iki ad var:
+// `captain_name` ve `ref_id` — bunlar canlı `matches` şemasında YOK, select'e
+// konsaydı sorgu 400 ile komple düşerdi (hakem kimliği `"refereeId"`).
+// Tavan fbGetMatches'teki MATCHES_MAX ile aynı büyüklükte tutuldu; bu bir iş
+// panosudur, 300'den fazlası zaten ekranda taranamaz.
+const OPEN_MATCHES_MAX = 300;
+const OPEN_MATCH_COLS = 'id,status,date,time,title,location,price,duration,slots,gk_id,away_gk_id,"refereeId"';
+/** Olay seli tek sorguya insin diye tazeleme penceresi. */
+const OPEN_MATCHES_REFETCH_MS = 2500;
+
 export const subscribeToOpenMatches = (callback: (matches: Match[]) => void) => {
   // İlk veriyi çek
   const fetchMatches = async () => {
-    const { data } = await supabase.from('matches').select('*').eq('status', 'OPEN');
-    if (data) callback(data as Match[]);
+    const { data, error } = await supabase
+      .from('matches')
+      .select(OPEN_MATCH_COLS)
+      .eq('status', 'OPEN')
+      .order('starts_at', { ascending: false, nullsFirst: false })
+      .limit(OPEN_MATCHES_MAX);
+    // Hata dalında callback ÇAĞRILMAZ. Boş liste geçmek, tek bir ağ titremesinde
+    // sağlayıcının iş listesini "hiç iş yok"a çevirirdi; bayat liste yanlış
+    // listeden iyidir — sonraki olay ya da kopukluk telafisi zaten tazeler.
+    if (error) {
+      console.warn('[matchService] açık maçlar çekilemedi:', error.message);
+      return;
+    }
+    callback((data ?? []) as unknown as Match[]);
   };
 
-  fetchMatches();
+  void fetchMatches();
 
-  // Değişimleri dinle
-  const channel = supabase.channel('public:matches')
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'matches', filter: 'status=eq.OPEN' }, () => {
-      fetchMatches();
-    })
-    .subscribe();
+  // Debounce: pencere İLK olayla açılır, pencere içindeki olaylar yutulur.
+  // Klasik "her olayda zamanlayıcıyı sıfırla" deseni burada yanlış olurdu —
+  // 14 slotluk bir maç dolarken olaylar aralıktan sık gelir ve tazeleme süresiz
+  // ertelenirdi (liste hiç güncellenmez).
+  let refetchTimer: ReturnType<typeof setTimeout> | null = null;
+  const scheduleRefetch = () => {
+    if (refetchTimer) return;
+    refetchTimer = setTimeout(() => {
+      refetchTimer = null;
+      void fetchMatches();
+    }, OPEN_MATCHES_REFETCH_MS);
+  };
+
+  // Değişimleri dinle — FİLTRESİZ, bilerek.
+  // Kanal eskiden `status=eq.OPEN` ile süzülüyordu; postgres_changes filtreyi
+  // UPDATE'te YENİ satıra uyguladığı için OPEN'dan çıkan (CONFIRMED/CANCELLED)
+  // maç HİÇ olay üretmiyordu → dolan/iptal olan iş listede açık kalıyor, kaleci
+  // var olmayan işe başvuruyordu. DELETE'te de (replica identity default) yalnız
+  // birincil anahtar yayınlandığından status süzgeci hiçbir zaman tutmaz.
+  // Olay hacmini yukarıdaki debounce, veri hacmini `status=OPEN` + tavanlı sorgu
+  // sınırlar. K-12.1'de kapatılan küresel abonelikten farkı: o kanal HER
+  // kullanıcıda açıktı, bu yalnız çevrimiçi kaleci/hakem panelinde açık — mesaj
+  // çarpanı toplam kullanıcı değil, o an panelde olan sağlayıcı sayısıdır.
+  const unsubscribe = subscribeWithResync({
+    kanal: 'public:matches',
+    baglan: (ch) => ch.on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'matches' },
+      () => scheduleRefetch(),
+    ),
+    // DB-2 telafisi: kopukluk penceresinde kaçan olaylar aynı tam sorguyla kapanır.
+    yenidenYukle: fetchMatches,
+  });
 
   return () => {
-    supabase.removeChannel(channel);
+    if (refetchTimer) {
+      clearTimeout(refetchTimer);
+      refetchTimer = null;
+    }
+    unsubscribe();
   };
 };
 
@@ -423,17 +485,31 @@ export const getMyMatchPrivateCode = async (matchId: string): Promise<string | n
   }
 };
 
-export const subscribeToMatchUpdates = (matchId: string, callback: (match: MatchListing) => void) => {
-  const channel = supabase.channel(`match_${matchId}`)
-    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'matches', filter: `id=eq.${matchId}` }, (payload) => {
-      callback(payload.new as unknown as MatchListing);
-    })
-    .subscribe();
-
-  return () => {
-    supabase.removeChannel(channel);
-  };
-};
+/**
+ * Maç lobisinin canlı satır aboneliği.
+ *
+ * DB-2: kanal koptuğunda o penceredeki UPDATE'ler bir daha yayınlanmaz — lobi
+ * dolmuş slotu boş göstermeye devam eder. Yeniden bağlanınca (ve uygulama öne
+ * geldiğinde kanal sağlıksızsa) `onResync` çağrılır; ekran KENDİ tam yüklemesini
+ * yapar. Burada getMatchDetails çağırıp callback'e beslemek yanlış olurdu:
+ * callback ham realtime satırını bekliyor, ekranın eşleme (map) disiplini farklı.
+ *
+ * @param onResync Kopukluk sonrası tazeleme (opsiyonel, geriye uyumlu).
+ */
+export const subscribeToMatchUpdates = (
+  matchId: string,
+  callback: (match: MatchListing) => void,
+  onResync?: () => void,
+): (() => void) =>
+  subscribeWithResync({
+    kanal: `match_${matchId}`,
+    baglan: (ch) => ch.on(
+      'postgres_changes',
+      { event: 'UPDATE', schema: 'public', table: 'matches', filter: `id=eq.${matchId}` },
+      (payload) => { callback(payload.new as unknown as MatchListing); },
+    ),
+    yenidenYukle: () => { onResync?.(); },
+  });
 
 // ============================================================================
 // 4. ÖZEL MAÇ (PRIVATE MATCH) — kod ile katılım (FAZ 3)

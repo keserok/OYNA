@@ -140,7 +140,15 @@ const Notifications: React.FC<NotificationsProps> = ({ onBack, role }) => {
 
   const accentColor = isRef ? '#ef4444' : isGK ? '#22c55e' : '#f59e0b';
 
-  const { navigateTo, setSelectedMatch, clearUnreadNotifications, incrementUnreadNotifications } = useAppStore();
+  // FE-1: burada seçicisiz `useAppStore()` vardı; Zustand v5'te bu TÜM store'a
+  // abone olmaktır — bildirim paneli, store'daki HERHANGİ bir `set()`te (ki
+  // gelen her bildirim rozeti de bir `set()`) tüm listeyi yeniden çiziyordu.
+  // Buradan okunan dördü de AKSİYON: referansları store ömrü boyunca sabittir,
+  // dar seçiciyle alındıklarında hiçbir render tetiklenmez (`useShallow` gerekmez).
+  const navigateTo = useAppStore(s => s.navigateTo);
+  const setSelectedMatch = useAppStore(s => s.setSelectedMatch);
+  const clearUnreadNotifications = useAppStore(s => s.clearUnreadNotifications);
+  const incrementUnreadNotifications = useAppStore(s => s.incrementUnreadNotifications);
 
   // IP-16 (kullanıcı kararı) — konum izni kapalıysa bildirim listesinin en
   // üstünde KALICI bir hatırlatma durur. Sunucudan bildirim GÖNDERİLMEZ:

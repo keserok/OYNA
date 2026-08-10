@@ -4,6 +4,7 @@ import { UserRole, AppView, MatchListing, Goalkeeper, Referee } from './types';
 import { auth, onAuthStateChanged, logout, handleAuthCallbackUrl } from './supabaseAuth';
 import { supabase } from './supabaseClient';
 import { useAppStore } from './store';
+import { useShallow } from 'zustand/react/shallow';
 import { bolgeyiBildir } from './utils/olcum';
 import { roleToLandingView, pickLandingRole, hasMultipleSwitchableRoles, normalizeRole } from './shared/roles';
 import { setActiveRole } from './services/userService';
@@ -147,42 +148,72 @@ const App: React.FC = () => {
     if (delta > 8) setNavHidden(true);
     else if (delta < -8) setNavHidden(false);
   }, []);
-  const {
-    view,
-    role,
-    isAuthReady,
-    selectedMatch,
-    selectedDiaryId,
-    selectedConversationId,
-    selectedTeamChatId,
-    setSelectedTeamChatId,
-    selectedGk,
-    selectedRef,
-    navigateTo,
-    goBack,
-    resetNavigation,
-    setRole,
-    serviceAppRole,
-    setIsAuthReady,
-    setSelectedMatch,
-    setSelectedDiaryId,
-    setSelectedConversationId,
-    setSelectedGk,
-    setSelectedRef,
-    impersonatedUser,
-    setImpersonatedUser,
-    originalRole,
-    setOriginalRole,
-    isNotificationsOpen,
-    setIsNotificationsOpen,
-    isRoleSwitcherOpen,
-    setIsRoleSwitcherOpen,
-    myRoles,
-    addUserNotification,
-    setNotificationPreferences,
-    updateSingleNotificationPref,
-    navOverlayOpen,
-  } = useAppStore();
+
+  // ─── STORE ABONELİKLERİ — DAR SEÇİCİLER ────────────────────────────────────
+  // FE-1: burada eskiden SEÇİCİSİZ tek bir `useAppStore()` çağrısı vardı ve ~35
+  // alan ondan destructure ediliyordu. Zustand v5'te seçicisiz çağrı TÜM store'a
+  // abone olur → store'daki HERHANGİ bir `set()` (bildirim gelişi, rozet artışı,
+  // maç listesi tazelemesi, cüzdan alanı…) uygulama KÖKÜNÜ, dolayısıyla o an
+  // açık olan ekranın TAMAMINI yeniden render ediyordu.
+  //
+  // Ayrım iki başlıkta:
+  //  1) Render'a giren state → `useShallow` ile mantıksal gruplar hâlinde alınır.
+  //     Grup içindeki alanlardan hiçbiri değişmediyse render tetiklenmez.
+  //  2) Aksiyonlar → aboneliğe HİÇ gerek yok: store'da bir kez tanımlanırlar ve
+  //     referansları uygulama ömrü boyunca sabittir. Tek tek dar seçiciyle okunur
+  //     (aşağıdaki initApp/isHydrated/loadDegraded ile aynı üslup).
+  //
+  // Bu bileşende HİÇ okunmayan alanlar (`isAuthReady`, `selectedGk`, `selectedRef`,
+  // `updateSingleNotificationPref`) listeden ÇIKARILDI: okunmayan bir alana abone
+  // olmak yalnız gereksiz render üretiyordu.
+
+  // Görünüm + o görünüme veri taşıyan seçimler.
+  const { view, selectedMatch, selectedDiaryId, selectedConversationId, selectedTeamChatId } =
+    useAppStore(useShallow((s) => ({
+      view: s.view,
+      selectedMatch: s.selectedMatch,
+      selectedDiaryId: s.selectedDiaryId,
+      selectedConversationId: s.selectedConversationId,
+      selectedTeamChatId: s.selectedTeamChatId,
+    })));
+
+  // Rol/kimlik bağlamı: açılış yönlendirmesi, rol değiştirici ve ghost mode şeridi.
+  const { role, serviceAppRole, myRoles, impersonatedUser, originalRole } =
+    useAppStore(useShallow((s) => ({
+      role: s.role,
+      serviceAppRole: s.serviceAppRole,
+      myRoles: s.myRoles,
+      impersonatedUser: s.impersonatedUser,
+      originalRole: s.originalRole,
+    })));
+
+  // Kabuğun üstündeki katmanlar (bildirim paneli, rol değiştirici, alt bara yol verme).
+  const { isNotificationsOpen, isRoleSwitcherOpen, navOverlayOpen } =
+    useAppStore(useShallow((s) => ({
+      isNotificationsOpen: s.isNotificationsOpen,
+      isRoleSwitcherOpen: s.isRoleSwitcherOpen,
+      navOverlayOpen: s.navOverlayOpen,
+    })));
+
+  // Aksiyonlar — referansları sabit olduğundan bu seçiciler asla yeniden render
+  // tetiklemez; useEffect bağımlılık dizilerinde de güvenle kullanılabilirler.
+  const navigateTo = useAppStore(s => s.navigateTo);
+  const goBack = useAppStore(s => s.goBack);
+  const resetNavigation = useAppStore(s => s.resetNavigation);
+  const setRole = useAppStore(s => s.setRole);
+  const setIsAuthReady = useAppStore(s => s.setIsAuthReady);
+  const setSelectedMatch = useAppStore(s => s.setSelectedMatch);
+  const setSelectedDiaryId = useAppStore(s => s.setSelectedDiaryId);
+  const setSelectedConversationId = useAppStore(s => s.setSelectedConversationId);
+  const setSelectedTeamChatId = useAppStore(s => s.setSelectedTeamChatId);
+  const setSelectedGk = useAppStore(s => s.setSelectedGk);
+  const setSelectedRef = useAppStore(s => s.setSelectedRef);
+  const setImpersonatedUser = useAppStore(s => s.setImpersonatedUser);
+  const setOriginalRole = useAppStore(s => s.setOriginalRole);
+  const setIsNotificationsOpen = useAppStore(s => s.setIsNotificationsOpen);
+  const setIsRoleSwitcherOpen = useAppStore(s => s.setIsRoleSwitcherOpen);
+  const addUserNotification = useAppStore(s => s.addUserNotification);
+  const setNotificationPreferences = useAppStore(s => s.setNotificationPreferences);
 
   // Görünüm değişince alt bar her zaman görünür başlasın; kalmış overlay
   // bayrağı da temizlensin (asıl temizlik görünümün kendi unmount'unda).
@@ -578,28 +609,41 @@ const App: React.FC = () => {
   // Push tıklaması dışındaki gerçek URL açılışları: @capacitor/app appUrlOpen.
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
-    let remove: (() => void) | undefined;
-    import('@capacitor/app').then(({ App: CapApp }) => {
-      CapApp.addListener('appUrlOpen', ({ url }) => {
-        void (async () => {
-          // OAuth dönüşü (oyna://auth-callback?code=...) — kodu oturuma bozdur;
-          // navigasyonu onAuthStateChanged üstlenir. Diğer deep link'lere gitmez.
-          if (await handleAuthCallbackUrl(url)) return;
-          const s = useAppStore.getState();
-          void handleDeepLink(url, (v) => s.navigateTo(v as AppView), {
-            setSelectedMatch: (m) => s.setSelectedMatch(m),
-            setSelectedTeamId: s.setSelectedTeamId,
-            setStudioContext: s.setStudioContext,
-            setSocialTarget: s.setSocialTarget,
-            setSelectedConversationId: s.setSelectedConversationId,
-            setSelectedTeamChatId: s.setSelectedTeamChatId,
-            setTeamInitialTab: s.setTeamInitialTab,
-            showToast, // IP-06: maç çekilemezse sessiz kalma, kullanıcıya söyle
-          });
-        })();
-      }).then((handle) => { remove = () => handle.remove(); });
-    });
-    return () => { if (remove) remove(); };
+    // Kurulum asenkron (dinamik import + addListener promise'i). Eskiden `remove`
+    // yalnız promise ÇÖZÜLÜNCE atandığı için, temizlik önce koşarsa dinleyici
+    // SIZIYORDU. keyboardManager'daki desen: `cancelled` bayrağı + promise
+    // çözüldüğünde iptal kontrolü — geç gelen handle hemen kaldırılır.
+    let cancelled = false;
+    let remove: (() => void) | null = null;
+    void (async () => {
+      try {
+        const { App: CapApp } = await import('@capacitor/app');
+        if (cancelled) return;
+        const handle = await CapApp.addListener('appUrlOpen', ({ url }) => {
+          void (async () => {
+            // OAuth dönüşü (oyna://auth-callback?code=...) — kodu oturuma bozdur;
+            // navigasyonu onAuthStateChanged üstlenir. Diğer deep link'lere gitmez.
+            if (await handleAuthCallbackUrl(url)) return;
+            const s = useAppStore.getState();
+            void handleDeepLink(url, (v) => s.navigateTo(v as AppView), {
+              setSelectedMatch: (m) => s.setSelectedMatch(m),
+              setSelectedTeamId: s.setSelectedTeamId,
+              setStudioContext: s.setStudioContext,
+              setSocialTarget: s.setSocialTarget,
+              setSelectedConversationId: s.setSelectedConversationId,
+              setSelectedTeamChatId: s.setSelectedTeamChatId,
+              setTeamInitialTab: s.setTeamInitialTab,
+              showToast, // IP-06: maç çekilemezse sessiz kalma, kullanıcıya söyle
+            });
+          })();
+        });
+        if (cancelled) { void handle.remove(); return; }
+        remove = () => { void handle.remove(); };
+      } catch (err) {
+        console.warn('[App] appUrlOpen dinleyicisi kurulamadı:', err);
+      }
+    })();
+    return () => { cancelled = true; remove?.(); };
   }, []);
 
   // ─── Android donanım geri tuşu ─────────────────────────────────────────────
@@ -610,22 +654,71 @@ const App: React.FC = () => {
   //   4) Kök ekran → uygulamayı arka plana al (Play incelemesinin beklediği davranış)
   useEffect(() => {
     if (Capacitor.getPlatform() !== 'android') return;
-    let remove: (() => void) | undefined;
-    import('@capacitor/app').then(({ App: CapApp }) => {
-      CapApp.addListener('backButton', () => {
-        const s = useAppStore.getState();
-        // 1) Banka doğrulaması (3DS) açık — geri tuşu hiçbir şey yapmaz.
-        //    PaymentScreen unmount olursa 3DS sonucu bir daha okunamaz (BULGU-084).
-        if (s.paymentLockActive) return;
-        // 2) Açık overlay varsa yalnız onu kapat, ekranı DEĞİŞTİRME (BULGU-020/021/132).
-        if (s.closeTopOverlay()) return;
-        // 3) Yığında ekran varsa geri git.
-        if (s.navigationStack.length > 0) { s.goBack(); return; }
-        // 4) Kök ekran → uygulamayı arka plana al (kapatmak yerine).
-        CapApp.minimizeApp();
-      }).then((handle) => { remove = () => handle.remove(); });
-    });
-    return () => { if (remove) remove(); };
+    // appUrlOpen'daki aynı yarış burada da vardı: `cancelled` bayrağı + geç gelen
+    // handle'ın hemen kaldırılması ile dinleyici sızıntısı kapatıldı.
+    let cancelled = false;
+    let remove: (() => void) | null = null;
+    void (async () => {
+      try {
+        const { App: CapApp } = await import('@capacitor/app');
+        if (cancelled) return;
+        const handle = await CapApp.addListener('backButton', () => {
+          const s = useAppStore.getState();
+          // 1) Banka doğrulaması (3DS) açık — geri tuşu hiçbir şey yapmaz.
+          //    PaymentScreen unmount olursa 3DS sonucu bir daha okunamaz (BULGU-084).
+          if (s.paymentLockActive) return;
+          // 2) Açık overlay varsa yalnız onu kapat, ekranı DEĞİŞTİRME (BULGU-020/021/132).
+          if (s.closeTopOverlay()) return;
+          // 3) Yığında ekran varsa geri git.
+          if (s.navigationStack.length > 0) { s.goBack(); return; }
+          // 4) Kök ekran → uygulamayı arka plana al (kapatmak yerine).
+          CapApp.minimizeApp();
+        });
+        if (cancelled) { void handle.remove(); return; }
+        remove = () => { void handle.remove(); };
+      } catch (err) {
+        console.warn('[App] backButton dinleyicisi kurulamadı:', err);
+      }
+    })();
+    return () => { cancelled = true; remove?.(); };
+  }, []);
+
+  // ─── BE-6 · Ön plana dönüşte oturum tazeleme ───────────────────────────────
+  // iOS/Android WebView arka plandayken JS zamanlayıcıları askıya alınır; bu
+  // yüzden supabase-js'in kendi otomatik token yenileme saati de DURUR. Uzun
+  // süre arka planda kalıp dönen kullanıcının ilk istekleri süresi dolmuş JWT
+  // ile gidip 401 alıyordu (ekranlar boş/hatalı açılıyordu).
+  //   isActive=true  → otomatik yenilemeyi yeniden başlat + getSession() ile
+  //                    HEMEN tazele (ekranların ilk sorgusundan önce).
+  //   isActive=false → arka planda boşuna zamanlayıcı çalıştırma.
+  // Not: temizlikte stopAutoRefresh ÇAĞRILMAZ — bu efekt yalnız uygulama kökü
+  // sökülürken biter ve StrictMode'un çift bağlamasında yenilemeyi kalıcı olarak
+  // kapatmış olurduk (supabase istemcisi zaten autoRefreshToken:true ile açılıyor).
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+    let cancelled = false;
+    let remove: (() => void) | null = null;
+    void (async () => {
+      try {
+        const { App: CapApp } = await import('@capacitor/app');
+        if (cancelled) return;
+        const handle = await CapApp.addListener('appStateChange', ({ isActive }) => {
+          if (isActive) {
+            void supabase.auth.startAutoRefresh().catch(() => { /* en iyi çaba */ });
+            // getSession süresi dolmuş belirteci kendisi yeniler; hata akışı bozmaz
+            // (asıl 401 kurtarması zaten onAuthStateChanged tarafında).
+            void supabase.auth.getSession().catch(() => { /* en iyi çaba */ });
+          } else {
+            void supabase.auth.stopAutoRefresh().catch(() => { /* en iyi çaba */ });
+          }
+        });
+        if (cancelled) { void handle.remove(); return; }
+        remove = () => { void handle.remove(); };
+      } catch (err) {
+        console.warn('[App] appStateChange dinleyicisi kurulamadı:', err);
+      }
+    })();
+    return () => { cancelled = true; remove?.(); };
   }, []);
   // Aktif role göre açılış ekranı — tek kaynak (shared/roles.roleToLandingView).
   // PLAYER→Dashboard, GK/REF→ServiceDashboard, OWNER→OwnerPanel.

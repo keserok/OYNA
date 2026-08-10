@@ -6,6 +6,7 @@ import {
   Thermometer, Wind, Flag, Calendar as CalendarIcon,
   LocateFixed, Loader2, Navigation2, MapPinOff, Bell, Send, Check, Plus,
 } from 'lucide-react';
+import { useShallow } from 'zustand/react/shallow';
 import { Pitch, Court } from '../types';
 import { SCREEN } from '../ui/labels';
 import { useAppStore } from '../store';
@@ -525,21 +526,29 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
   // ÖLÇÜM · kiralama hunisi 1/5 — "saha listesini açtı". Seçim kipinde
   // (maç kurarken saha seçme) yazılmaz: o akış kaptan hunisine aittir.
   useEffect(() => { if (!isSelectionMode) olayYaz('kiralama_liste_acildi'); }, [isSelectionMode]);
-  const {
-    userLocation,
-    setUserLocation,
-    activeRegion,
-    selectedRegions,
-    addUserNotification,
-    setBookingPitch,
-    setBookingCourt,
-    setBookingDate,
-    setBookingSlot,
-    setBookingPrice,
-    setBookingDeposit,
-    navigateTo,
-    setPaymentContext,
-  } = useAppStore();
+  // ─── STORE ABONELİKLERİ — DAR SEÇİCİLER ────────────────────────────────────
+  // FE-1: burada seçicisiz `useAppStore()` vardı; Zustand v5'te bu TÜM store'a
+  // abone olmak demektir. Bu ekran harita (MapLibre), takvim şeridi ve saha
+  // kartlarını birlikte taşıyor — store'daki ilgisiz her `set()` hepsini birden
+  // yeniden çizdiriyordu. Render'a giren üç alan `useShallow` ile tek grupta;
+  // aksiyonlar (referansları sabit) tek tek alınır ve render tetiklemez.
+  const { userLocation, activeRegion, selectedRegions } =
+    useAppStore(useShallow((s) => ({
+      userLocation: s.userLocation,
+      activeRegion: s.activeRegion,
+      selectedRegions: s.selectedRegions,
+    })));
+
+  const setUserLocation = useAppStore(s => s.setUserLocation);
+  const addUserNotification = useAppStore(s => s.addUserNotification);
+  const setBookingPitch = useAppStore(s => s.setBookingPitch);
+  const setBookingCourt = useAppStore(s => s.setBookingCourt);
+  const setBookingDate = useAppStore(s => s.setBookingDate);
+  const setBookingSlot = useAppStore(s => s.setBookingSlot);
+  const setBookingPrice = useAppStore(s => s.setBookingPrice);
+  const setBookingDeposit = useAppStore(s => s.setBookingDeposit);
+  const navigateTo = useAppStore(s => s.navigateTo);
+  const setPaymentContext = useAppStore(s => s.setPaymentContext);
 
   // Canlı saha verisi (onaylı + açık + yayında). Mock'a düşme — vitrin yalnızca gerçek veriyi gösterir.
   const [realPitches, setRealPitches] = useState<Pitch[]>([]);

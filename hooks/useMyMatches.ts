@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { useAppStore } from '../store';
 import { auth } from '../supabaseAuth';
 import type { MatchListing } from '../types';
@@ -20,7 +21,16 @@ export interface MyMatchesResult {
 }
 
 export function useMyMatches(): MyMatchesResult {
-  const { adminMatches, myMatches } = useAppStore();
+  // FE-1 — SEÇİCİSİZ `useAppStore()` YOK. Bu kanca Dashboard/Maçlarım/ajanda
+  // gibi ağır ekranlarda çağrılıyor; tüm store'a abone olması, o ekranlardaki
+  // özenli dar seçicilerin kazandırdığı her şeyi tek başına geri veriyordu
+  // (store'daki HERHANGİ bir set() → kancayı çağıran bileşen yeniden render).
+  // Burada gereken yalnız iki liste: `useShallow` ikisinin de referansı
+  // değişmediyse aboneyi hiç uyandırmaz.
+  const { adminMatches, myMatches } = useAppStore(useShallow(s => ({
+    adminMatches: s.adminMatches,
+    myMatches: s.myMatches,
+  })));
   // Demo 'u1' fallback'i YOK: oturum yoksa (misafir) liste boştur — başka
   // kullanıcıların verisi asla "benim maçlarım" gibi görünmez.
   const currentUserUid = auth.currentUser?.uid ?? '';

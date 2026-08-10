@@ -1754,6 +1754,15 @@ export async function getMonthlyBookingDensity(
 // ----------------------------------------------------------------------------
 // ÖDEME AYARLARI
 // ----------------------------------------------------------------------------
+// [SEC-1 · 20260906000000] Ayar İKİ AYRI KAYNAKTAN gelir, çünkü ikisi aynı
+// gizlilik sınıfında değil:
+//   * payment_options — sır değil, `pitches` tablosundan okunur/yazılır (RLS
+//     zaten yazmayı saha yöneticisiyle sınırlıyor).
+//   * param_* (Param PSP kimlik bilgileri) — SIRDIR. `pitches` giriş yapmamış
+//     ziyaretçiye bile okunabildiği için bu üç değer tablodan ÇIKARILDI ve
+//     sahip-only `pitch_payment_credentials`a taşındı; tek kapı iki RPC.
+// Dışa açılan imza ve dönüş şekli DEĞİŞMEDİ — çağıranlar (OwnerPanel,
+// OwnerPaymentSettingsModal) olduğu gibi çalışır.
 
 export async function getPaymentSettings(pitchId: string): Promise<PitchPaymentSettings> {
   const defaults: PitchPaymentSettings = {
@@ -1763,28 +1772,31 @@ export async function getPaymentSettings(pitchId: string): Promise<PitchPaymentS
     paramApiKey: '',
   };
   try {
-    const { data, error } = await supabase
-      .from('pitches')
-      .select('payment_options, param_merchant_id, param_client_id, param_api_key')
-      .eq('id', pitchId)
-      .single();
-    if (error) throw error;
-    const row = data as {
-      payment_options?: { online?: boolean; deposit?: boolean; cash?: boolean } | null;
+    const [tesis, sirlar] = await Promise.all([
+      supabase.from('pitches').select('payment_options').eq('id', pitchId).single(),
+      // Sahip olmayan bağlamda (müdür/personel/başkasının demo tesisi) RPC
+      // UNAUTHORIZED atar. Bu, ödeme SEÇENEKLERİNİ kaybettirmemeli: hata
+      // yutulur, yalnız sır alanları boş kalır.
+      supabase.rpc('get_pitch_payment_settings', { p_pitch_id: pitchId }),
+    ]);
+    if (tesis.error) throw tesis.error;
+    const opts =
+      (tesis.data as { payment_options?: { online?: boolean; deposit?: boolean; cash?: boolean } | null } | null)
+        ?.payment_options ?? {};
+    const sir = (sirlar.error ? null : sirlar.data) as {
       param_merchant_id?: string | null;
       param_client_id?: string | null;
       param_api_key?: string | null;
-    };
-    const opts = row.payment_options ?? {};
+    } | null;
     return {
       paymentOptions: {
         online: opts.online ?? true,
         deposit: opts.deposit ?? false,
         cash: opts.cash ?? true,
       },
-      paramMerchantId: row.param_merchant_id ?? '',
-      paramClientId: row.param_client_id ?? '',
-      paramApiKey: row.param_api_key ?? '',
+      paramMerchantId: sir?.param_merchant_id ?? '',
+      paramClientId: sir?.param_client_id ?? '',
+      paramApiKey: sir?.param_api_key ?? '',
     };
   } catch (error) {
     console.error('getPaymentSettings:', error);
@@ -1797,14 +1809,20 @@ export async function savePaymentSettings(
   settings: PitchPaymentSettings,
 ): Promise<void> {
   try {
+    // Sırlar ÖNCE yazılır: kapısı daha dar (yalnız tesis sahibi). Yetkisiz
+    // çağrı burada durur ve payment_options da hiç değişmemiş olur — yarım
+    // kaydetme oluşmaz.
+    const { error: sirHatasi } = await supabase.rpc('set_pitch_payment_settings', {
+      p_pitch_id: pitchId,
+      p_merchant_id: settings.paramMerchantId || null,
+      p_client_id: settings.paramClientId || null,
+      p_api_key: settings.paramApiKey || null,
+    });
+    if (sirHatasi) throw sirHatasi;
+
     const { error } = await supabase
       .from('pitches')
-      .update({
-        payment_options: settings.paymentOptions,
-        param_merchant_id: settings.paramMerchantId || null,
-        param_client_id: settings.paramClientId || null,
-        param_api_key: settings.paramApiKey || null,
-      })
+      .update({ payment_options: settings.paymentOptions })
       .eq('id', pitchId);
     if (error) throw error;
   } catch (error) {

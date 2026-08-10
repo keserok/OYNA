@@ -10,6 +10,7 @@ import {
   type TimeSlotAvailability,
 } from './availabilityService';
 import * as FB from '../supabaseMutations';
+import { subscribeWithResync } from './realtimeResync';
 
 // Yalnızca açıkça VITE_DEV_MODE=true ise dev modu; env eksikliği dev moda DÜŞÜRMEZ
 // (supabaseClient prod fallback'i ile gerçek backend'e bağlıyken mock moda geçmek tehlikeli).
@@ -81,23 +82,25 @@ export function subscribeToPitchBookings(
     return () => window.removeEventListener(LOCAL_BOOKINGS_EVENT, handler);
   }
 
-  const channel = supabase
-    .channel(`pitch-bookings-${pitchId}`)
-    .on(
-      'postgres_changes',
-      {
-        event: '*',
-        schema: 'public',
-        table: 'pitch_bookings',
-        filter: `pitch_id=eq.${pitchId}`,
-      },
-      () => onChange()
-    )
-    .subscribe();
-
-  return () => {
-    supabase.removeChannel(channel);
-  };
+  // DB-2: kanal koptuğunda o aralıktaki rezervasyonlar bir daha yayınlanmaz —
+  // kullanıcı DOLU slotu boş sanıp çakışan rezervasyon denemesine girerdi.
+  // onChange zaten tam tazeleme (yeniden fetch) yaptığı için kopukluk telafisi
+  // de doğrudan onChange'dir; ek parametreye gerek yok.
+  return subscribeWithResync({
+    kanal: `pitch-bookings-${pitchId}`,
+    baglan: (ch) =>
+      ch.on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'pitch_bookings',
+          filter: `pitch_id=eq.${pitchId}`,
+        },
+        () => onChange()
+      ),
+    yenidenYukle: onChange,
+  });
 }
 
 export type OccupancyCell = 'DAILY' | 'SUB' | null;

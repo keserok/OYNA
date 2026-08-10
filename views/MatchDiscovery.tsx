@@ -4,6 +4,7 @@ import {
   ChevronRight, KeyRound, Loader2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useShallow } from 'zustand/react/shallow';
 import { MatchListing } from '../types';
 import { useAppStore } from '../store';
 import { useAsagiCekYenile } from '../hooks/useAsagiCekYenile';
@@ -42,15 +43,25 @@ interface MatchDiscoveryProps {
 const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onSelect }) => {
   // ÖLÇÜM · oyuncu hunisi 1/5 — "maç listesini açtı".
   useEffect(() => { olayYaz('oyuncu_liste_acildi'); }, []);
-  const {
-    adminMatches,
-    navigateTo,
-    userLocation,
-    selectedRegions,
-    searchRadius,
-    setSearchRadius,
-    setUserLocation
-  } = useAppStore();
+  // ─── STORE ABONELİKLERİ — DAR SEÇİCİLER ────────────────────────────────────
+  // FE-1: burada seçicisiz `useAppStore()` vardı. Zustand v5'te bu, TÜM store'a
+  // abone olmak demek: bildirim rozeti, cüzdan alanı, sohbet sayacı… hiçbiri bu
+  // ekranda okunmadığı hâlde her `set()`te onlarca poster kart yeniden çiziliyordu.
+  //  • Render'a giren alanlar → `useShallow` ile tek grup (hiçbiri değişmediyse
+  //    render tetiklenmez).
+  //  • Aksiyonlar → store'da bir kez tanımlanır, referansları sabittir; tek tek
+  //    dar seçiciyle alınır ve asla render tetiklemezler.
+  const { adminMatches, userLocation, selectedRegions, searchRadius } =
+    useAppStore(useShallow((s) => ({
+      adminMatches: s.adminMatches,
+      userLocation: s.userLocation,
+      selectedRegions: s.selectedRegions,
+      searchRadius: s.searchRadius,
+    })));
+
+  const navigateTo = useAppStore(s => s.navigateTo);
+  const setSearchRadius = useAppStore(s => s.setSearchRadius);
+  const setUserLocation = useAppStore(s => s.setUserLocation);
 
   // ── Özel maç (kodla katılım) ──
   const [showPrivateModal, setShowPrivateModal] = useState(false);

@@ -5,6 +5,7 @@
 // Eski friendService yalnız miras tüketiciler için yaşar (Küme 2'de ölür).
 // ================================================================
 import { supabase } from '../supabaseClient';
+import { subscribeWithResync } from './realtimeResync';
 
 // ─── Tipler ─────────────────────────────────────────────────────
 
@@ -362,13 +363,18 @@ export const reportUser = async (
 // Sosyal ekran, kendi ayrık kanalıyla bildirim INSERT'lerini dinler;
 // friend_*/team_* olayı gelince ekran verisini yeniden çeker.
 
+/** DB-2: kopukluk penceresindeki bildirimler tekrar yayınlanmadığı için
+ *  arkadaşlık istekleri/kabul olayları kaçabilir — ekran bayat kalır.
+ *  Yeniden bağlanınca `onResync` çağrılır; ekran kendi tam yüklemesini yapar.
+ *  @param onResync Kopukluk sonrası tazeleme (opsiyonel, geriye uyumlu). */
 export const subscribeSocialEvents = (
   userId: string,
   onEvent: (typeKey: string) => void,
-): (() => void) => {
-  const channel = supabase
-    .channel(`social-events:${userId}`)
-    .on(
+  onResync?: () => void,
+): (() => void) =>
+  subscribeWithResync({
+    kanal: `social-events:${userId}`,
+    baglan: ch => ch.on(
       'postgres_changes',
       { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${userId}` },
       payload => {
@@ -377,16 +383,20 @@ export const subscribeSocialEvents = (
         if (row?.inbox === false || row?.type_key === 'team_chat_message') return;
         onEvent(String(row?.type_key || ''));
       },
-    )
-    .subscribe();
-  return () => { void supabase.removeChannel(channel); };
-};
+    ),
+    yenidenYukle: () => { onResync?.(); },
+  });
 
 // ─── Heartbeat (Spec F34) ───────────────────────────────────────
 // Ön planda ~2,5 dk'da bir + görünürlüğe dönüşte çağrılır; arka planda durur.
 
 const HEARTBEAT_MS = 150_000;
 let heartbeatTimer: ReturnType<typeof setInterval> | null = null;
+// FE-4: visibilitychange dinleyicisi modül düzeyinde tutulur. Çağıran (App.tsx)
+// dönen cleanup'ı kullanmıyor ve startPresenceHeartbeat token yenilemesinde
+// (saatlik) yeniden koşuyor; referans saklanmayınca her turda bir dinleyici
+// birikiyor, her görünürlük değişiminde N kez profil UPDATE'i atılıyordu.
+let heartbeatVisibilityHandler: (() => void) | null = null;
 
 export const touchLastActive = async (userId: string): Promise<void> => {
   try {
@@ -398,7 +408,7 @@ export const touchLastActive = async (userId: string): Promise<void> => {
 };
 
 export const startPresenceHeartbeat = (userId: string): (() => void) => {
-  stopPresenceHeartbeat();
+  stopPresenceHeartbeat(); // önceki timer VE dinleyici burada düşer
   void touchLastActive(userId);
   heartbeatTimer = setInterval(() => {
     if (typeof document === 'undefined' || document.visibilityState === 'visible') {
@@ -408,13 +418,17 @@ export const startPresenceHeartbeat = (userId: string): (() => void) => {
   const onVisible = () => {
     if (document.visibilityState === 'visible') void touchLastActive(userId);
   };
+  heartbeatVisibilityHandler = onVisible;
   document.addEventListener('visibilitychange', onVisible);
-  return () => {
-    stopPresenceHeartbeat();
-    document.removeEventListener('visibilitychange', onVisible);
-  };
+  // Cleanup sözleşmesi korunur; temizliğin tamamı stopPresenceHeartbeat'te.
+  return () => { stopPresenceHeartbeat(); };
 };
 
 export const stopPresenceHeartbeat = (): void => {
   if (heartbeatTimer) { clearInterval(heartbeatTimer); heartbeatTimer = null; }
+  // Cleanup çağrılmayan yollar için tek durak: dinleyici de burada kaldırılır.
+  if (heartbeatVisibilityHandler) {
+    document.removeEventListener('visibilitychange', heartbeatVisibilityHandler);
+    heartbeatVisibilityHandler = null;
+  }
 };

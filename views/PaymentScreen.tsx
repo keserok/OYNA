@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import CardBrandMark, { brandGradient } from '../components/payment/CardBrandMark';
 import { motion } from 'framer-motion';
+import { useShallow } from 'zustand/react/shallow';
 import { useAppStore } from '../store';
 import { supabase } from '../supabaseClient';
 import { auth } from '../supabaseAuth';
@@ -82,11 +83,35 @@ const money = formatTRYAmount;
 const delay = (ms: number) => new Promise<void>(r => setTimeout(r, ms));
 
 const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
-  const {
-    paymentContext, setPaymentContext, setLastPaymentError,
-    bookingPitch, bookingCourt, bookingDate, bookingSlot, bookingPrice, bookingDeposit,
-    savedCards, setSavedCards, updateMatch,
-  } = useAppStore();
+  // ─── STORE ABONELİKLERİ — DAR SEÇİCİLER ────────────────────────────────────
+  // FE-1: burada seçicisiz `useAppStore()` vardı; Zustand v5'te bu TÜM store'a
+  // abone olmaktır. Ödeme ekranı 3DS beklerken veya 3 dk'lık tazeleme sayacı
+  // koşarken gelen HER bildirim/maç güncellemesi tüm formu (kart karuseli dâhil)
+  // yeniden çizdiriyordu — para ekranında en istenmeyen şey.
+  // `updateMatch` listeden ÇIKARILDI: bu dosyada hiç çağrılmıyor (taze veri
+  // yerele `applyMatchLocal` ile uygulanıyor, bkz. refreshMatch) — okunmayan bir
+  // alana abone olmak yalnız gereksiz render üretiyordu.
+  const { paymentContext, savedCards } = useAppStore(useShallow((s) => ({
+    paymentContext: s.paymentContext,
+    savedCards: s.savedCards,
+  })));
+
+  // Yedek (legacy) saha-kaporası akışının rezervasyon alanları — yalnız
+  // `paymentContext` boşken okunur. Altısı da aynı akışın parçası olduğu için
+  // ayrı ayrı değil tek grupta alınır (okunaklılık; abonelik maliyeti aynı).
+  const { bookingPitch, bookingCourt, bookingDate, bookingSlot, bookingPrice, bookingDeposit } =
+    useAppStore(useShallow((s) => ({
+      bookingPitch: s.bookingPitch,
+      bookingCourt: s.bookingCourt,
+      bookingDate: s.bookingDate,
+      bookingSlot: s.bookingSlot,
+      bookingPrice: s.bookingPrice,
+      bookingDeposit: s.bookingDeposit,
+    })));
+
+  const setPaymentContext = useAppStore(s => s.setPaymentContext);
+  const setLastPaymentError = useAppStore(s => s.setLastPaymentError);
+  const setSavedCards = useAppStore(s => s.setSavedCards);
 
   // Bağlam: store'dan; yoksa legacy saha-kaporası akışı (booking* alanları)
   const ctx: PaymentContext | null = useMemo(() => {

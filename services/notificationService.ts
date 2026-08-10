@@ -1,5 +1,6 @@
 import { supabase } from '../supabaseClient';
 import { auth } from '../supabaseAuth';
+import { subscribeWithResync } from './realtimeResync';
 
 // ─── FAZ 7.2 — In-app Bildirim Merkezi (gerçek DB + realtime) ────────────────
 
@@ -99,17 +100,25 @@ export const markAllNotificationsRead = async (): Promise<void> => {
 
 /**
  * Kullanıcıya gelen yeni bildirimlere realtime abone ol.
+ *
+ * DB-2: kanal koptuğunda o aralıkta düşen bildirimler tekrar yayınlanmaz —
+ * zil rozeti eksik sayar. Yeniden bağlanınca `onResync` çağrılır; ekran kendi
+ * fetchNotifications/fetchUnreadCount çiftini yeniden koşturur. Servis içinde
+ * çekip onInsert'e beslemek listede çift satır üretirdi.
+ *
+ * @param onResync Kopukluk sonrası tazeleme (opsiyonel, geriye uyumlu).
  * @returns aboneliği iptal eden fonksiyon.
  */
 export const subscribeToNotifications = (
   onInsert: (n: AppNotification) => void,
+  onResync?: () => void,
 ): (() => void) => {
   const uid = auth.currentUser?.uid;
   if (!uid) return () => {};
 
-  const channel = supabase
-    .channel(`notif:${uid}`)
-    .on(
+  return subscribeWithResync({
+    kanal: `notif:${uid}`,
+    baglan: (ch) => ch.on(
       'postgres_changes',
       { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${uid}` },
       (payload) => {
@@ -117,10 +126,9 @@ export const subscribeToNotifications = (
         if ((payload.new as any)?.inbox === false) return;
         onInsert(mapNotification(payload.new));
       },
-    )
-    .subscribe();
-
-  return () => { void supabase.removeChannel(channel); };
+    ),
+    yenidenYukle: () => { onResync?.(); },
+  });
 };
 
 /** IP-06 yedeği: payload.invite_id taşımayan ESKİ davet satırları için, maç

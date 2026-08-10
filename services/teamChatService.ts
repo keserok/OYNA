@@ -1,4 +1,5 @@
 import { supabase } from '../supabaseClient';
+import { subscribeWithResync } from './realtimeResync';
 
 // ================================================================
 // teamChatService — takım sohbeti veri katmanı (Küme 4 / Spec §N90)
@@ -110,14 +111,20 @@ export const setTeamChatMuted = async (teamId: string, muted: boolean): Promise<
 
 /** Takım sohbetinin yeni mesajlarına realtime abone ol.
     Not: payload profil içermez — gönderen adı çağıranın kadro haritasından
-    ya da ayrı sorgudan tamamlanır. */
+    ya da ayrı sorgudan tamamlanır.
+
+    DB-2: kopukluk penceresindeki INSERT'ler tekrar yayınlanmaz; yeniden
+    bağlanınca `onResync` ile ekran kendi geçmiş sorgusunu (getTeamMessages)
+    atar. Servisin kendi içinde çekip onMessage'a beslemek çift ekleme olurdu.
+    @param onResync Kopukluk sonrası tazeleme (opsiyonel, geriye uyumlu). */
 export const subscribeTeamChat = (
   teamId: string,
   onMessage: (m: Omit<TeamMessage, 'senderName' | 'senderAvatar'>) => void,
-): (() => void) => {
-  const channel = supabase
-    .channel(`team-chat:${teamId}`)
-    .on(
+  onResync?: () => void,
+): (() => void) =>
+  subscribeWithResync({
+    kanal: `team-chat:${teamId}`,
+    baglan: ch => ch.on(
       'postgres_changes',
       { event: 'INSERT', schema: 'public', table: 'team_messages', filter: `team_id=eq.${teamId}` },
       payload => {
@@ -127,10 +134,9 @@ export const subscribeTeamChat = (
           body: r.body, createdAt: r.created_at,
         });
       },
-    )
-    .subscribe();
-  return () => { void supabase.removeChannel(channel); };
-};
+    ),
+    yenidenYukle: () => { onResync?.(); },
+  });
 
 // ── Taktik kartı işaretçisi — sohbette zengin kart (Küme 4 / P çıktısı) ──
 // Gövde deseni: "[taktik:UUID] Ad · Diziliş"

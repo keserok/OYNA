@@ -5,6 +5,7 @@ import {
   RefreshCw, RotateCcw, Shield, Trash2, TrendingUp, Users, Wallet, X, Zap,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useShallow } from 'zustand/react/shallow';
 import { supabase } from '../supabaseClient';
 import { useAppStore } from '../store';
 import { useAsagiCekYenile } from '../hooks/useAsagiCekYenile';
@@ -112,10 +113,26 @@ const txMeta = (tx: WalletTx): { icon: React.ReactNode; bg: string; color: strin
 };
 
 const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
-  const {
-    role, savedCards, setSavedCards, walletInitialTab, setWalletInitialTab,
-    lastPaymentError, setLastPaymentError, paymentContext,
-  } = useAppStore();
+  // ─── STORE ABONELİKLERİ — DAR SEÇİCİLER ────────────────────────────────────
+  // FE-1: burada seçicisiz `useAppStore()` vardı; Zustand v5'te bu TÜM store'a
+  // abone olmaktır. Cüzdan uzun listeler (100 hareket + kartlar + talepler)
+  // çiziyor; store'daki ilgisiz her `set()` bu ekranı baştan render ediyordu.
+  // Render'a giren alanlar tek `useShallow` grubunda, aksiyonlar (referansları
+  // sabit) tek tek. Aksiyonların dar seçiciyle alınması aynı zamanda
+  // `fetchData`nın `setSavedCards` bağımlılığını stabil tutar: `fetchData`
+  // kimliği değişmediği için onu koşturan efekt yeniden tetiklenmez.
+  const { role, savedCards, walletInitialTab, lastPaymentError, paymentContext } =
+    useAppStore(useShallow((s) => ({
+      role: s.role,
+      savedCards: s.savedCards,
+      walletInitialTab: s.walletInitialTab,
+      lastPaymentError: s.lastPaymentError,
+      paymentContext: s.paymentContext,
+    })));
+
+  const setSavedCards = useAppStore(s => s.setSavedCards);
+  const setWalletInitialTab = useAppStore(s => s.setWalletInitialTab);
+  const setLastPaymentError = useAppStore(s => s.setLastPaymentError);
 
   const isEarningsRole = role === UserRole.GOALKEEPER || role === UserRole.REFEREE || role === UserRole.OWNER;
   const roleBadge = role === UserRole.GOALKEEPER ? 'Kaleci' : role === UserRole.REFEREE ? 'Hakem' : role === UserRole.OWNER ? 'Tesis' : null;
