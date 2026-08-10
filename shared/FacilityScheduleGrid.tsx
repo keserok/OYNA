@@ -8,7 +8,7 @@ import type { CellStatus, GridCell, FacilityDayGrid } from './facilityScheduleMo
 // tıklanamaz. `interactive=true` → owner: boş hücre → hızlı rezervasyon.
 
 const CELL_STYLE: Record<CellStatus, string> = {
-  AVAILABLE: 'bg-[#0A0E14] border-white/5',
+  AVAILABLE: 'bg-bg border-white/5',
   BOOKED:    'bg-blue-500/15 border-blue-500/30 text-blue-200',
   PENDING:   'bg-amber-500/15 border-amber-500/30 text-amber-200',
   CLOSED:    'bg-white/[0.03] border-white/5 text-slate-600',
@@ -50,7 +50,7 @@ export const FacilityScheduleGrid: React.FC<FacilityScheduleGridProps> = ({
       <div className="overflow-x-auto custom-scrollbar -mx-1 px-1">
         <div className="inline-grid gap-1" style={{ gridTemplateColumns: `48px repeat(${grid.courts.length}, minmax(84px, 1fr))` }}>
           {/* Başlık satırı */}
-          <div className="sticky left-0 z-10 bg-[#161B22]" />
+          <div className="sticky left-0 z-10 bg-surface-1" />
           {grid.courts.map((c) => (
             <div key={c.courtId} className="text-center text-[10px] font-black text-slate-300 uppercase truncate px-1 pb-1">{c.courtName}</div>
           ))}
@@ -58,7 +58,7 @@ export const FacilityScheduleGrid: React.FC<FacilityScheduleGridProps> = ({
           {/* Saat satırları */}
           {grid.hours.map((hour, rowIdx) => (
             <React.Fragment key={hour}>
-              <div className="sticky left-0 z-10 bg-[#161B22] text-[10px] font-bold text-slate-500 tabular-nums flex items-center justify-end pr-2">
+              <div className="sticky left-0 z-10 bg-surface-1 text-[10px] font-bold text-slate-500 tabular-nums flex items-center justify-end pr-2">
                 {String(hour).padStart(2, '0')}:00
               </div>
               {grid.courts.map((col) => {
@@ -100,7 +100,7 @@ export const FacilityScheduleGrid: React.FC<FacilityScheduleGridProps> = ({
         <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded bg-purple-500/40 border border-purple-500/40" /> Alınıyor</span>
         <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded bg-white/10 border border-white/10" /> Kapalı</span>
         {interactive && (
-          <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded bg-[#0A0E14] border border-white/10" /> Boş → dokun</span>
+          <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded bg-bg border border-white/10" /> Boş → dokun</span>
         )}
       </div>
     </div>

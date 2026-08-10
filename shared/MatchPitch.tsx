@@ -64,12 +64,12 @@ export const MatchPitch: React.FC<MatchPitchProps> = ({ slots, activeSlotId, onS
             <motion.div whileHover={clickable ? { scale: 1.12 } : undefined} whileTap={clickable ? { scale: 0.9 } : undefined} className="relative w-full h-full flex flex-col items-center justify-center">
               {taken && player ? (
                 <>
-                  <div className={`relative w-12 h-12 rounded-full overflow-hidden border-2 shadow-lg transition-all ${takenRing(slot.role)} ${isActive ? 'ring-2 ring-[#39FF14] shadow-[0_0_16px_rgba(57,255,20,0.7)]' : ''}`}>
-                    <img src={player.avatar || avatarFor(player.id || slot.id, player.name)} alt={player.name || 'Oyuncu'} className="w-full h-full object-cover bg-[#0A0E14]" />
+                  <div className={`relative w-12 h-12 rounded-full overflow-hidden border-2 shadow-lg transition-all ${takenRing(slot.role)} ${isActive ? 'ring-2 ring-primary shadow-[0_0_16px_rgba(57,255,20,0.7)]' : ''}`}>
+                    <img src={player.avatar || avatarFor(player.id || slot.id, player.name)} alt={player.name || 'Oyuncu'} className="w-full h-full object-cover bg-bg" />
                   </div>
                   {/* Ödeme rozeti */}
                   {showPayment && (
-                    <div className={`absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center border border-black shadow z-20 ${paid ? 'bg-[#39FF14] text-black' : 'bg-amber-500 text-black'}`}>
+                    <div className={`absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center border border-black shadow z-20 ${paid ? 'bg-primary text-black' : 'bg-amber-500 text-black'}`}>
                       {paid ? <Check size={11} strokeWidth={3} /> : <Clock size={10} strokeWidth={3} />}
                     </div>
                   )}
@@ -82,11 +82,11 @@ export const MatchPitch: React.FC<MatchPitchProps> = ({ slots, activeSlotId, onS
                 </>
               ) : (
                 <div className={`w-12 h-12 rounded-full flex items-center justify-center border-2 shadow-lg transition-all relative backdrop-blur-md ${
-                  isActive ? 'bg-[#39FF14] border-white text-black shadow-[0_0_22px_rgba(57,255,20,0.85)] scale-110' : 'bg-black/45 border-white/25 text-white/70 hover:border-[#39FF14]/60'
+                  isActive ? 'bg-primary border-white text-black shadow-[0_0_22px_rgba(57,255,20,0.85)] scale-110' : 'bg-black/45 border-white/25 text-white/70 hover:border-primary/60'
                 }`}>
                   <span className="text-[10px] font-black uppercase tracking-wider leading-none">{roleShort(slot.role)}</span>
                   {clickable && (
-                    <div className={`absolute -top-1 -right-1 w-4 h-4 rounded-full text-black flex items-center justify-center border border-black shadow-md z-20 ${isActive ? 'bg-white' : 'bg-[#39FF14]'}`}>
+                    <div className={`absolute -top-1 -right-1 w-4 h-4 rounded-full text-black flex items-center justify-center border border-black shadow-md z-20 ${isActive ? 'bg-white' : 'bg-primary'}`}>
                       <Plus size={9} strokeWidth={3} />
                     </div>
                   )}

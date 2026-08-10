@@ -11,6 +11,11 @@
 /* IP-08: tipografi ölçeğinin TEK kaynağı — burada taranmazsa ui/type.ts
    içindeki arbitrary sınıflar (text-[0.6875rem] vb.) hiç üretilmez. */
 @source "./ui/**/*.{ts,tsx}";
+/* shared/ burada YOKTU: shared/MatchPitch.tsx ve shared/FacilityScheduleGrid.tsx
+   içindeki sınıflar hiç üretilmiyordu — yani o bileşenler stilsiz çiziliyordu.
+   İkisini de yalnız admin paneli kullanıyor (MatchLobbyPitch, PitchStudio),
+   bu yüzden oyuncu uygulamasının görünümü bu satırdan etkilenmez. */
+@source "./shared/**/*.{ts,tsx}";
 
 
 @source not "./node_modules_local/**";
