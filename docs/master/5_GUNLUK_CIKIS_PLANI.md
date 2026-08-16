@@ -1,5 +1,14 @@
 # OYNA — 5 Günlük App Store & Google Play Çıkış Planı
 
+> ## ⛔ GEÇERSİZ — 16 Ağustos 2026 kurucu kararıyla yerini aldı:
+> ## → **`docs/master/LANSMAN_PLANI.md`** (ödemeli lansman)
+>
+> Bu plan "Nakit Mod v1" (ödemesiz sürüm) öngörüyordu; kurucu 16 Ağustos
+> 2026'da **ödemeli lansman** kararını verdi (kart kaporası + karta iade,
+> cüzdansız — `OYNA_PRENSIPLER.md` §2.10). Buradaki mağaza kuralları
+> doğrulamaları (§0, §7) ve doğrulanmış engelleyici listesi (§2) hâlâ değerli
+> kaynak — yeni plan onlara işaret eder; ama İŞ SIRASI artık burada değil.
+
 > **Tarih:** 28 Temmuz 2026
 > **Kaynak:** 10 boyutlu otomatik kod denetimi (129 bulgu) + düşman gözlü doğrulama
 > (41 engelleyici iddiadan 15'i doğrulandı, 15'i çürütüldü) + güncel mağaza kuralları doğrulaması

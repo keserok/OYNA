@@ -1,11 +1,15 @@
 # 🅿️ OYNA — RAF DURUMU ve UYANDIRMA KILAVUZU
 
+> ## ⛔ TARİHSEL BELGE — raf dönemi bitti
+> **Raf dönemi:** 4–16 Ağustos 2026. Kurucu 16 Ağustos 2026'da projeyi raftan
+> indirdi ve **ödemeli lansman** kararını verdi. Bu dosya artık yol
+> GÖSTERMEZ; raf döneminin kaydı olarak durur. Güncel yol haritası:
+> **`docs/master/LANSMAN_PLANI.md`** · güncel kararlar: **`OYNA_PRENSIPLER.md`**.
+> (Aşağıdaki "uyanık tutma" işi ve gecelik işler hâlâ çalışıyor — onlara
+> dokunma kararı lansman planında ele alınır.)
+
 **Rafa kaldırılma tarihi:** 4 Ağustos 2026
 **Durum:** Sistem sağlıklı kapatıldı — **14 kontrol yeşil, 0 kırmızı**
-
-> Bu dosya tek başına yeterlidir. Aylar sonra geri döndüğünde başka hiçbir şey
-> okumadan buradan devam edebilirsin. Terminal komutu yazman gereken tek yer
-> "Uygulamayı yeniden çalıştırma" bölümüdür.
 
 ---
 

@@ -3,8 +3,9 @@
 **Halı saha rezervasyon platformu.** Çift taraflı pazar: saha sahipleri ↔ oyuncular.
 Ana vaat *saha kiralamak değil* — **kaptanın para toplama derdini bitirmek.**
 
-**Durum:** 🅿️ **Rafta** (4 Ağustos 2026) · henüz lansman yapılmadı
-**Kapsama:** Ordu · 19 ilçe hazır · 4 saha yayında
+**Faz:** 🚀 **Lansmana hazırlanıyor** (16 Ağustos 2026'da raftan indirildi — ödemeli lansman kararı alındı)
+**Canlı sayılar:** Yönetim paneli → Komuta Merkezi → **"Gerçek Durum"** kartı
+(sayılar bilerek burada değil — README bayatlamasın, tek doğru kaynak panel olsun)
 
 ---
 
@@ -12,8 +13,8 @@ Ana vaat *saha kiralamak değil* — **kaptanın para toplama derdini bitirmek.*
 
 | Sorun ne? | Dosya |
 |---|---|
-| **Uygulama rafta, nasıl uyandırırım?** | **[`RAF.md`](RAF.md)** ← aylar sonra dönüyorsan buradan başla |
-| **Bir karar nasıl verilmişti?** | **[`OYNA_PRENSIPLER.md`](OYNA_PRENSIPLER.md)** ← tek pusula |
+| **Lansmana ne kaldı? Sıradaki iş ne?** | **[`docs/master/LANSMAN_PLANI.md`](docs/master/LANSMAN_PLANI.md)** ← tek yol haritası |
+| **Bir karar nasıl verilmişti?** | **[`OYNA_PRENSIPLER.md`](OYNA_PRENSIPLER.md)** ← tek pusula (bilerek kapalı olanlar: §11) |
 | **Claude ile çalışacağım** | [`CLAUDE.md`](CLAUDE.md) — oturum kuralları |
 | **Yeni iş vereceğim** | [`GOREV_SABLONU.md`](GOREV_SABLONU.md) |
 
@@ -25,13 +26,20 @@ Ana vaat *saha kiralamak değil* — **kaptanın para toplama derdini bitirmek.*
 |---|---|
 | Kararların kanıtı ve gerekçesi (K-1…K-17) | [`docs/board/DECISIONS.md`](docs/board/DECISIONS.md) |
 | Danışma kurulu rol raporları (7 rol) | [`docs/board/`](docs/board/) |
-| Cevap bekleyen kararlar | [`docs/board/SON_KARARLAR.md`](docs/board/SON_KARARLAR.md) |
-| **Sistemin bağışıklık sistemi** (17 yapı taşı, 34 kontrol) | [`docs/sistem/MEKANIZMA.md`](docs/sistem/MEKANIZMA.md) |
 | Bilinen sorunlar ve çözüm geçmişi | [`docs/master/PROBLEMLER_VE_COZUMLER.md`](docs/master/PROBLEMLER_VE_COZUMLER.md) |
 | Operasyon / panel soruları | [`docs/master/RUNBOOK.md`](docs/master/RUNBOOK.md) |
 | iOS'a çıkış rehberi | [`docs/master/IOS_CIKIS_REHBERI.md`](docs/master/IOS_CIKIS_REHBERI.md) |
 | Kılavuzlar | [`docs/kilavuzlar/`](docs/kilavuzlar/) |
+| Raf dönemi kaydı (4–16 Ağu 2026) — **tarihsel** | [`RAF.md`](RAF.md) |
 | ⛔ Arşiv — **bağlayıcı değil** | [`docs/eski/`](docs/eski/) |
+
+> **Mekanizma araçları hakkında not:** Eski README'nin "değişiklikten önce
+> zorunlu" dediği `npm run etki` / `sistem:kapsam` / `sistem:harita` /
+> `sistem:surum` betikleri depoda YOK (hiç commit edilmemişler — 16 Ağu 2026
+> tespiti). Kurucu kararı: şimdilik listeden çıkarıldılar, **ileride yeniden
+> yazılacaklar**. Belgeleri duruyor: [`docs/sistem/`](docs/sistem/).
+> O güne dek kritik alanlara (PARA · KAPILAR · KİMLİK) dokunan işlerde
+> `docs/sistem/YAPI-TASLARI.json` elle kontrol edilir.
 
 ---
 
@@ -46,19 +54,13 @@ npm run dev   # uygulamayı aç
 
 ```bash
 npm run lint       # tip kontrolü — temiz olmalı
-npm run test:unit  # 1.437 test — hepsi geçmeli
+npm run test:unit  # birim testleri — hepsi geçmeli
+npm run build      # üretim derlemesi — kırmızı görmeden bitirme
 ```
 
-**Değişiklikten ÖNCE — mekanizma:**
-
-```bash
-npm run etki            # hangi temel yapı taşlarına dokunuyorum?
-npm run sistem:kapsam   # harita gerçeği yansıtıyor mu?
-npm run sistem:surum    # sürüm numarası her yerde aynı mı?
-```
-
-> `npm run etki`, 🔴 KRİTİK yapı taşlarına (PARA · KAPILAR · KİMLİK · AYARLAR ·
-> KURTARMA) dokunuyorsan **DUR** der ve onay ister. Bu bilerek böyle.
+Diğer her komut (yönetici paneli, demo veri, görsel testler, mağaza
+varlıkları…) `package.json` içinde tanımlı ve oradan keşfedilir — README yalnız
+her gün kullanılanları taşır.
 
 ---
 
@@ -69,15 +71,14 @@ npm run sistem:surum    # sürüm numarası her yerde aynı mı?
 | `views/` · `components/` · `shared/` · `ui/` | Oyuncu uygulaması arayüzü |
 | `admin-panel/` | Yönetici paneli (Komuta Merkezi · Sistem Sağlığı · Gerçek Durum) |
 | `services/` · `hooks/` · `utils/` | İş mantığı ve yardımcılar |
-| `supabase/migrations/` | **Veritabanı şeması — tek doğru kaynak** (430+ dosya) |
-| `supabase/functions/` | Edge Function'lar (ödeme · bildirim · süpürücü) |
+| `supabase/migrations/` | **Veritabanı şeması — tek doğru kaynak** |
+| `supabase/functions/` | Edge Function'lar (ödeme · iade kuyruğu · bildirim · süpürücü) |
 | `sozlesmeler/` | Yasal metinlerin kaynağı → `npm run build:legal` HTML üretir |
-| `scripts/sistem/` | Mekanizma araçları (etki · kapsam · harita · sürüm) |
-| `tests/` | 1.437 birim testi + Playwright |
+| `tests/` | Birim testleri (Vitest) + Playwright |
 
 **Kök dizindeki ortak `.ts` dosyaları** — `store.ts`, `types.ts`, `supabaseClient.ts`,
-`supabaseAuth.ts`, `supabaseMutations.ts` — geniş etki yaratır. Değiştirmeden önce
-kullanım yerlerini ara (bkz. `CLAUDE.md` §4).
+`supabaseAuth.ts`, `supabaseMutations.ts`, `shared/featureFlags.ts` — geniş etki
+yaratır. Değiştirmeden önce kullanım yerlerini ara (bkz. `CLAUDE.md`).
 
 ---
 
@@ -89,30 +90,11 @@ Vitest + Playwright
 
 ---
 
-## 🔒 Bilerek kapalı olanlar
+## 🔒 Para modeli (tek cümleyle)
 
-Bunlar eksik değil, **karar**dır. Tam liste: [`OYNA_PRENSIPLER.md`](OYNA_PRENSIPLER.md) §11
-
-| Ayar | Durum | Ne zaman açılır |
-|---|---|---|
-| `demo_mode_enabled` | **açık** | Lansman gününün 1. maddesi: kapatılır |
-| `payment_mode_global` | `CASH_ONLY` | İlk gerçek kart işlemi denendikten sonra |
-| `push_live_enabled` | kapalı | Lansmanda APNs/FCM hazır olunca |
-| `wallet_cashout_enabled` | kapalı | Kimlik doğrulama + sözleşmeler yayınlanınca |
-
----
-
-## 📊 Bugünkü durum (4 Ağustos 2026)
-
-| Ölçüm | Değer |
-|---|---|
-| Sağlık denetimi | **14 yeşil / 0 kırmızı** |
-| Para değişmezleri (8 kural) | temiz |
-| Birim testleri | **1.437 / 1.437** |
-| Veritabanı | 37 MB · 18 zamanlanmış iş · son 24 saatte **0 hata** |
-| Gerçek kullanıcı 6 · gerçek maç 1 | **tahsil edilen para: 0 ₺** |
-
-> Son satır kasten böyle yazıldı: OYNA bugüne kadar **tek kuruş gerçek para
-> işlemedi.** Mühendislik kalitesi yüksek ama ürün henüz tek bir müşteriye
-> dokunmadı. Ayrıntı:
-> [`docs/board/07-stratejik-danisman.md`](docs/board/07-stratejik-danisman.md)
+OYNA **kullanıcı adına bakiye tutmaz** (cüzdan yok — 6493 kararı, §2.10):
+ödemeler işlem başına **karttan** alınır, iadeler **karta** döner; kapora hem
+maç kurmada hem saha kiralamada karttan tahsil edilir ve varsayılan
+serbest-iptal penceresi **24 saattir** (iadeye ödeme altyapısı kesintisi
+yansır). Bilerek kapalı olan her anahtarın tam listesi ve açılma koşulu:
+**[`OYNA_PRENSIPLER.md` §11](OYNA_PRENSIPLER.md)**.
