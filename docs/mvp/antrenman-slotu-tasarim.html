@@ -1,0 +1,515 @@
+<title>Antrenman Slotu Tasarımı</title>
+<style>
+  :root {
+    --zemin: #0A0E14;
+    --yuzey: #161B22;
+    --yuzey-2: #1D2430;
+    --cizgi: rgba(255, 255, 255, 0.09);
+    --cizgi-guclu: rgba(255, 255, 255, 0.16);
+    --metin: #E6EDF3;
+    --metin-2: #8792A2;
+    --metin-3: #5A6472;
+    --neon: #39FF14;
+    --sari: #F1CA1D;
+    --mercan: #FF6B4A;
+    --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--zemin);
+    color: var(--metin);
+    font-family: var(--sans);
+    font-size: 16px;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .sayfa {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 56px 24px 96px;
+    display: flex;
+    flex-direction: column;
+    gap: 72px;
+  }
+
+  /* ---------- Tipografi ---------- */
+  .goz {
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--neon);
+    margin: 0;
+  }
+  h1 {
+    font-size: clamp(34px, 5.5vw, 52px);
+    font-weight: 800;
+    font-style: italic;
+    letter-spacing: -0.02em;
+    line-height: 1.05;
+    text-transform: uppercase;
+    text-wrap: balance;
+    margin: 12px 0 0;
+  }
+  h2 {
+    font-size: clamp(22px, 3vw, 28px);
+    font-weight: 800;
+    font-style: italic;
+    letter-spacing: -0.01em;
+    text-transform: uppercase;
+    text-wrap: balance;
+    margin: 0;
+  }
+  h3 {
+    font-size: 17px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    margin: 0;
+  }
+  p { margin: 0; max-width: 68ch; }
+  .yumusak { color: var(--metin-2); }
+  strong { color: var(--metin); font-weight: 700; }
+
+  .baslik-blok { display: flex; flex-direction: column; gap: 16px; }
+  .bolum { display: flex; flex-direction: column; gap: 28px; }
+
+  /* ---------- Kurallar şeridi ---------- */
+  .kurallar {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1px;
+    background: var(--cizgi);
+    border: 1px solid var(--cizgi);
+    border-radius: 20px;
+    overflow: hidden;
+  }
+  .kural { background: var(--yuzey); padding: 20px 22px; display: flex; flex-direction: column; gap: 6px; }
+  .kural dt { font-size: 11px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--metin-3); }
+  .kural dd { margin: 0; font-size: 15px; font-weight: 600; color: var(--metin); }
+
+  /* ---------- Seçenek ızgarası ---------- */
+  .secenekler {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 32px;
+    align-items: start;
+  }
+  .secenek { display: flex; flex-direction: column; gap: 20px; }
+  .secenek-basi { display: flex; flex-direction: column; gap: 8px; }
+  .rozet {
+    align-self: flex-start;
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: var(--zemin);
+    background: var(--metin-2);
+    padding: 3px 9px;
+    border-radius: 6px;
+  }
+  .secenek.onerilen .rozet { background: var(--neon); }
+  .secenek.onerilen .telefon { border-color: rgba(57, 255, 20, 0.4); box-shadow: 0 0 0 1px rgba(57,255,20,0.18), 0 30px 60px -30px rgba(57,255,20,0.35); }
+
+  .artilar { display: flex; flex-direction: column; gap: 10px; margin: 0; padding: 0; list-style: none; font-size: 14.5px; }
+  .artilar li { display: flex; gap: 10px; align-items: flex-start; color: var(--metin-2); line-height: 1.5; }
+  .isaret { flex: none; width: 16px; font-weight: 800; font-family: var(--mono); }
+  .arti .isaret { color: var(--neon); }
+  .eksi .isaret { color: var(--mercan); }
+
+  /* ---------- Telefon çerçevesi ---------- */
+  .telefon {
+    width: 100%;
+    max-width: 330px;
+    aspect-ratio: 330 / 660;
+    background: var(--zemin);
+    border: 1px solid var(--cizgi-guclu);
+    border-radius: 34px;
+    padding: 10px 10px 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 30px 60px -30px rgba(0, 0, 0, 0.9);
+  }
+  .ekran { flex: 1; display: flex; flex-direction: column; gap: 12px; padding: 8px 10px 0; overflow: hidden; }
+
+  .cubuk { display: flex; justify-content: space-between; align-items: center; padding: 2px 6px 4px; }
+  .cubuk span { font-family: var(--mono); font-size: 10px; color: var(--metin-3); letter-spacing: 0.04em; }
+
+  .ekran-basligi { font-size: 19px; font-weight: 800; font-style: italic; text-transform: uppercase; letter-spacing: -0.01em; }
+
+  /* Segment kontrolü */
+  .segment { display: flex; gap: 4px; background: var(--yuzey); border: 1px solid var(--cizgi); border-radius: 14px; padding: 4px; }
+  .segment div {
+    flex: 1; text-align: center; font-size: 11.5px; font-weight: 800; text-transform: uppercase;
+    letter-spacing: 0.04em; padding: 7px 4px; border-radius: 10px; color: var(--metin-3);
+  }
+  .segment div.acik { background: var(--neon); color: #06210A; }
+
+  /* Slot kartı */
+  .kart {
+    background: var(--yuzey); border: 1px solid var(--cizgi); border-radius: 18px;
+    padding: 12px; display: flex; flex-direction: column; gap: 10px;
+  }
+  .kart-ust { display: flex; gap: 10px; align-items: center; }
+  .gorsel { flex: none; width: 46px; height: 46px; border-radius: 12px; background: linear-gradient(145deg, #223 0%, #16351f 100%); border: 1px solid var(--cizgi); }
+  .kart-ad { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .kart-ad b { font-size: 13.5px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .kart-ad span { font-size: 11px; color: var(--metin-3); }
+
+  .cip-sira { display: flex; gap: 6px; flex-wrap: wrap; }
+  .cip {
+    font-size: 10.5px; font-weight: 700; padding: 4px 8px; border-radius: 8px;
+    border: 1px solid var(--cizgi); color: var(--metin-2); font-variant-numeric: tabular-nums;
+  }
+  .cip.acele { color: var(--sari); border-color: rgba(241, 202, 29, 0.35); background: rgba(241, 202, 29, 0.08); }
+  .cip.dolu { color: var(--neon); border-color: rgba(57, 255, 20, 0.3); background: rgba(57, 255, 20, 0.07); }
+
+  .kart-alt { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .fiyat { font-size: 16px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .fiyat small { font-size: 10.5px; font-weight: 600; color: var(--metin-3); }
+  .dugme {
+    font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em;
+    background: var(--neon); color: #06210A; padding: 8px 14px; border-radius: 10px; white-space: nowrap;
+  }
+  .dugme.sessiz { background: transparent; border: 1px solid var(--cizgi-guclu); color: var(--metin-2); }
+
+  /* Ana sayfa parçaları */
+  .profil-satiri { display: flex; align-items: center; gap: 10px; }
+  .avatar { width: 34px; height: 34px; border-radius: 50%; background: var(--yuzey-2); border: 1px solid var(--cizgi); flex: none; }
+  .profil-satiri b { font-size: 13px; font-weight: 700; }
+  .profil-satiri span { font-size: 11px; color: var(--metin-3); display: block; }
+
+  .hero {
+    background: linear-gradient(135deg, var(--sari) 0%, #E0A800 100%);
+    border-radius: 20px; padding: 14px 16px; color: #241C00;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .hero b { font-size: 17px; font-weight: 800; font-style: italic; text-transform: uppercase; display: block; letter-spacing: -0.01em; }
+  .hero span { font-size: 11px; font-weight: 600; opacity: 0.75; }
+
+  .serit-basligi { display: flex; justify-content: space-between; align-items: baseline; }
+  .serit-basligi b { font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; }
+  .serit-basligi span { font-size: 10.5px; color: var(--metin-3); }
+  .serit { display: flex; gap: 10px; overflow: hidden; }
+  .mini {
+    flex: none; width: 148px; background: var(--yuzey); border: 1px solid var(--cizgi);
+    border-radius: 16px; padding: 11px; display: flex; flex-direction: column; gap: 7px;
+  }
+  .mini.sicak { border-color: rgba(241, 202, 29, 0.4); }
+  .geri-sayim { font-family: var(--mono); font-size: 17px; font-weight: 700; color: var(--sari); font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+  .mini b { font-size: 12px; font-weight: 700; line-height: 1.3; }
+  .mini span { font-size: 10.5px; color: var(--metin-3); }
+
+  /* Alt bar */
+  .altbar {
+    margin-top: auto; display: flex; justify-content: space-between; align-items: center;
+    background: var(--yuzey); border: 1px solid var(--cizgi); border-radius: 22px;
+    padding: 9px 12px; margin-bottom: 10px;
+  }
+  .altbar div { display: flex; flex-direction: column; align-items: center; gap: 3px; flex: 1; }
+  .nokta { width: 17px; height: 17px; border-radius: 5px; background: var(--metin-3); opacity: 0.55; }
+  .altbar div.acik .nokta { background: var(--neon); opacity: 1; }
+  .altbar small { font-size: 8.5px; font-weight: 700; color: var(--metin-3); text-transform: uppercase; letter-spacing: 0.03em; }
+  .altbar div.acik small { color: var(--neon); }
+  .orta .nokta { width: 30px; height: 30px; border-radius: 50%; background: var(--sari); opacity: 1; }
+
+  .uyari { font-size: 10px; color: var(--metin-3); text-align: center; padding: 6px 8px; border: 1px dashed var(--cizgi); border-radius: 10px; line-height: 1.4; }
+
+  /* ---------- Öneri kutusu ---------- */
+  .oneri {
+    border: 1px solid rgba(57, 255, 20, 0.28);
+    background: linear-gradient(180deg, rgba(57, 255, 20, 0.06) 0%, rgba(57, 255, 20, 0.01) 100%);
+    border-radius: 22px; padding: 30px 32px; display: flex; flex-direction: column; gap: 16px;
+  }
+  .oneri h2 { color: var(--neon); }
+
+  .isim-izgara { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 16px; }
+  .isim {
+    background: var(--yuzey); border: 1px solid var(--cizgi); border-radius: 16px;
+    padding: 18px 20px; display: flex; flex-direction: column; gap: 6px;
+  }
+  .isim b { font-size: 18px; font-weight: 800; font-style: italic; text-transform: uppercase; letter-spacing: -0.01em; }
+  .isim span { font-size: 13.5px; color: var(--metin-2); line-height: 1.5; }
+
+  .ayrac { height: 1px; background: var(--cizgi); border: 0; margin: 0; }
+
+  @media (max-width: 640px) {
+    .sayfa { padding: 40px 18px 72px; gap: 56px; }
+    .telefon { max-width: 100%; }
+  }
+</style>
+
+<div class="sayfa">
+
+  <header class="baslik-blok">
+    <p class="goz">OYNA MVP · Ürün Tasarımı</p>
+    <h1>Antrenman slotu<br>nerede yaşayacak?</h1>
+    <p class="yumusak">Saha sahibinin uygulamaya açtığı, başlamasına az kalmış boş saatleri
+      <strong>kişi başı</strong> satıyoruz. Alan herkes sahayı ve kaleleri diğer alanlarla paylaşmayı
+      kabul etmiş oluyor. Ürün iki saatlik bir pencerede yaşayıp kayboluyor — bu yüzden
+      <strong>nerede durduğu, ne olduğu kadar önemli.</strong></p>
+  </header>
+
+  <section class="bolum">
+    <h2>Ürünün kuralları</h2>
+    <dl class="kurallar">
+      <div class="kural"><dt>Satış birimi</dt><dd>Kişi başı</dd></div>
+      <div class="kural"><dt>Açılma anı</dt><dd>Saha sahibi belirler</dd></div>
+      <div class="kural"><dt>Saha kullanımı</dt><dd>Ortak — kaleler paylaşılır</dd></div>
+      <div class="kural"><dt>İade</dt><dd>Yok</dd></div>
+      <div class="kural"><dt>Maç mı?</dt><dd>Hayır — Top Oyna'ya girmez</dd></div>
+    </dl>
+  </section>
+
+  <section class="bolum">
+    <h2>Üç seçenek</h2>
+    <p class="yumusak">Üçü de aynı ürünü satıyor; fark, kullanıcının onu <em>nasıl bulduğu</em>.
+      Telefon görselleri uygulamanın gerçek renk ve biçim diliyle çizildi.</p>
+
+    <div class="secenekler">
+
+      <!-- A -->
+      <article class="secenek">
+        <div class="secenek-basi">
+          <span class="rozet">A</span>
+          <h3>Saha Kirala içinde ikinci sekme</h3>
+          <p class="yumusak" style="font-size:14.5px">Kiralama zaten burada oluyor. Antrenman, sahanın
+            yanına kendi sekmesiyle yerleşiyor.</p>
+        </div>
+
+        <div class="telefon">
+          <div class="cubuk"><span>21:14</span><span>OYNA</span></div>
+          <div class="ekran">
+            <div class="ekran-basligi">Saha Kirala</div>
+            <div class="segment"><div>Saha</div><div class="acik">Antrenman</div></div>
+
+            <div class="kart">
+              <div class="kart-ust">
+                <div class="gorsel"></div>
+                <div class="kart-ad"><b>Beşiktaş Spor Tesisi</b><span>Beşiktaş · 1,2 km</span></div>
+              </div>
+              <div class="cip-sira">
+                <span class="cip acele">23:00'te başlıyor</span>
+                <span class="cip dolu">6/12 kişi</span>
+              </div>
+              <div class="kart-alt">
+                <div class="fiyat">₺120 <small>/ kişi</small></div>
+                <div class="dugme">Katıl</div>
+              </div>
+            </div>
+
+            <div class="kart">
+              <div class="kart-ust">
+                <div class="gorsel"></div>
+                <div class="kart-ad"><b>Şişli Halı Saha</b><span>Şişli · 3,4 km</span></div>
+              </div>
+              <div class="cip-sira">
+                <span class="cip acele">22:30'da başlıyor</span>
+                <span class="cip">2/10 kişi</span>
+              </div>
+              <div class="kart-alt">
+                <div class="fiyat">₺90 <small>/ kişi</small></div>
+                <div class="dugme">Katıl</div>
+              </div>
+            </div>
+
+            <p class="uyari">Antrenman saatinde saha ortaktır — gelen diğer<br>oyuncularla birlikte kullanılır.</p>
+
+            <div class="altbar">
+              <div><span class="nokta"></span><small>Ana</small></div>
+              <div><span class="nokta"></span><small>Oyna</small></div>
+              <div class="orta"><span class="nokta"></span><small>Maçlarım</small></div>
+              <div class="acik"><span class="nokta"></span><small>Saha</small></div>
+              <div><span class="nokta"></span><small>Profil</small></div>
+            </div>
+          </div>
+        </div>
+
+        <ul class="artilar">
+          <li class="arti"><span class="isaret">+</span>Kiralama niyetiyle gelen kullanıcı doğru yerde bulur.</li>
+          <li class="arti"><span class="isaret">+</span>Maçlarla karışma riski sıfır.</li>
+          <li class="arti"><span class="isaret">+</span>Kalıcı ve öngörülebilir bir adres — "hep oradadır".</li>
+          <li class="eksi"><span class="isaret">−</span>Bir dokunuş derinde; kimse bakmazsa slot boş gider.</li>
+          <li class="eksi"><span class="isaret">−</span>Aciliyet hissi zayıf — kullanıcı ancak arayınca görür.</li>
+        </ul>
+      </article>
+
+      <!-- B -->
+      <article class="secenek onerilen">
+        <div class="secenek-basi">
+          <span class="rozet">B · ÖNERİM</span>
+          <h3>Ana sayfada aciliyet şeridi</h3>
+          <p class="yumusak" style="font-size:14.5px">Ana sayfaya geri sayımlı bir şerit gelir;
+            dokununca antrenman listesi açılır. Kalıcı adresi yine Saha Kirala'dır.</p>
+        </div>
+
+        <div class="telefon">
+          <div class="cubuk"><span>21:14</span><span>OYNA</span></div>
+          <div class="ekran">
+            <div class="profil-satiri">
+              <div class="avatar"></div>
+              <div><b>Mirac K.</b><span>Beşiktaş, İstanbul</span></div>
+            </div>
+
+            <div class="hero">
+              <div><b>Top Oyna</b><span>14 maç yakınında</span></div>
+              <span class="dugme sessiz">Bak</span>
+            </div>
+
+            <div class="serit-basligi"><b style="color:var(--sari)">Bugün son saatler</b><span>Tümü →</span></div>
+            <div class="serit">
+              <div class="mini sicak">
+                <div class="geri-sayim">1:46</div>
+                <b>Beşiktaş Spor Tesisi</b>
+                <span>6/12 kişi · ₺120</span>
+              </div>
+              <div class="mini sicak">
+                <div class="geri-sayim">1:16</div>
+                <b>Şişli Halı Saha</b>
+                <span>2/10 kişi · ₺90</span>
+              </div>
+            </div>
+
+            <div class="serit-basligi"><b>Yakınındaki maçlar</b><span>Tümü →</span></div>
+            <div class="serit">
+              <div class="mini"><b>Cuma Akşamı 7v7</b><span>Yarın 21:00 · ₺200</span></div>
+              <div class="mini"><b>Sabah Maçı 5v5</b><span>Cts 10:00 · ₺150</span></div>
+            </div>
+
+            <div class="altbar">
+              <div class="acik"><span class="nokta"></span><small>Ana</small></div>
+              <div><span class="nokta"></span><small>Oyna</small></div>
+              <div class="orta"><span class="nokta"></span><small>Maçlarım</small></div>
+              <div><span class="nokta"></span><small>Saha</small></div>
+              <div><span class="nokta"></span><small>Profil</small></div>
+            </div>
+          </div>
+        </div>
+
+        <ul class="artilar">
+          <li class="arti"><span class="isaret">+</span>Kullanıcı aramadan görür — iki saatlik ürün için belirleyici olan bu.</li>
+          <li class="arti"><span class="isaret">+</span>Geri sayım, "şimdi karar ver" duygusunu doğrudan veriyor.</li>
+          <li class="arti"><span class="isaret">+</span>Slot yoksa şerit hiç çizilmez; ana sayfa boş yere kalabalıklaşmaz.</li>
+          <li class="arti"><span class="isaret">+</span>Kalıcı adres yine Saha Kirala'dadır — A'nın faydası kaybolmaz.</li>
+          <li class="eksi"><span class="isaret">−</span>Ana sayfada Top Oyna ile ilgi çekmek için yarışır.</li>
+        </ul>
+      </article>
+
+      <!-- C -->
+      <article class="secenek">
+        <div class="secenek-basi">
+          <span class="rozet">C</span>
+          <h3>Top Oyna içinde ikinci sekme</h3>
+          <p class="yumusak" style="font-size:14.5px">"Oynamak istiyorum" niyeti tek yerde toplanır:
+            maçlar ve antrenman aynı ekranın iki sekmesi olur.</p>
+        </div>
+
+        <div class="telefon">
+          <div class="cubuk"><span>21:14</span><span>OYNA</span></div>
+          <div class="ekran">
+            <div class="ekran-basligi">Top Oyna</div>
+            <div class="segment"><div>Maçlar</div><div class="acik">Antrenman</div></div>
+
+            <div class="kart">
+              <div class="kart-ust">
+                <div class="gorsel"></div>
+                <div class="kart-ad"><b>Beşiktaş Spor Tesisi</b><span>Bugün 23:00 · 1,2 km</span></div>
+              </div>
+              <div class="cip-sira">
+                <span class="cip acele">1s 46dk kaldı</span>
+                <span class="cip dolu">6/12 kişi</span>
+                <span class="cip">Ortak saha</span>
+              </div>
+              <div class="kart-alt">
+                <div class="fiyat">₺120 <small>/ kişi</small></div>
+                <div class="dugme">Katıl</div>
+              </div>
+            </div>
+
+            <div class="kart">
+              <div class="kart-ust">
+                <div class="gorsel"></div>
+                <div class="kart-ad"><b>Şişli Halı Saha</b><span>Bugün 22:30 · 3,4 km</span></div>
+              </div>
+              <div class="cip-sira">
+                <span class="cip acele">1s 16dk kaldı</span>
+                <span class="cip">2/10 kişi</span>
+                <span class="cip">Ortak saha</span>
+              </div>
+              <div class="kart-alt">
+                <div class="fiyat">₺90 <small>/ kişi</small></div>
+                <div class="dugme">Katıl</div>
+              </div>
+            </div>
+
+            <p class="uyari">Antrenman bir maç değildir: takım kurulmaz,<br>skor tutulmaz, saha ortak kullanılır.</p>
+
+            <div class="altbar">
+              <div><span class="nokta"></span><small>Ana</small></div>
+              <div class="acik"><span class="nokta"></span><small>Oyna</small></div>
+              <div class="orta"><span class="nokta"></span><small>Maçlarım</small></div>
+              <div><span class="nokta"></span><small>Saha</small></div>
+              <div><span class="nokta"></span><small>Profil</small></div>
+            </div>
+          </div>
+        </div>
+
+        <ul class="artilar">
+          <li class="arti"><span class="isaret">+</span>"Oynamak istiyorum" diyen kullanıcının ilk durağı burası.</li>
+          <li class="arti"><span class="isaret">+</span>Tek ekranda iki ürün — keşif kolay.</li>
+          <li class="eksi"><span class="isaret">−</span><strong>Maçla karışma riski yüksek.</strong> Kullanıcı takım bekler, ortak saha bulur.</li>
+          <li class="eksi"><span class="isaret">−</span>"Ne satın aldım?" sorusu destek yükü ve iade talebi üretir — ama iade yok.</li>
+          <li class="eksi"><span class="isaret">−</span>Saha kiralama akışından tamamen kopar.</li>
+        </ul>
+      </article>
+
+    </div>
+  </section>
+
+  <section class="oneri">
+    <h2>Önerim: B — ama A ile birlikte</h2>
+    <p>Antrenman slotu <strong>iki saat yaşayan bir üründür.</strong> Kullanıcı onu arayarak bulmak
+      zorunda kalırsa, çoğu slot boş gider. Bu yüzden <strong>keşif ana sayfada</strong> olmalı:
+      geri sayımlı şerit, kullanıcı uygulamayı açtığı anda "bu akşam oynayabilirsin" diyor.</p>
+    <p><strong>Kalıcı adresi ise Saha Kirala'nın ikinci sekmesi</strong> (A). Böylece hem
+      "aklıma geldi, bakayım" diyen kullanıcı nereye bakacağını biliyor, hem de slot varken
+      herkes görüyor. Şerit yalnızca satışa açık slot varken çizilir — yoksa ana sayfa
+      bugünkü sadeliğinde kalır.</p>
+    <p><strong>C'yi önermiyorum.</strong> Top Oyna maç demek. Antrenmanı oraya koymak, kullanıcının
+      "takım kurulacak, maç oynanacak" beklentisiyle ortak sahaya para vermesine yol açar.
+      İadesi olmayan bir üründe bu, ilk haftadan güven kaybı demek.</p>
+  </section>
+
+  <hr class="ayrac">
+
+  <section class="bolum">
+    <h2>Bir de isim kararı</h2>
+    <p class="yumusak">"Antrenman slotu" iç konuşmamızın dili — kullanıcıya söylenecek bir ad değil.
+      Uygulamanın dili kısa ve oyuncu ("Top Oyna", "Saha Kirala"). Üç aday:</p>
+    <div class="isim-izgara">
+      <div class="isim">
+        <b>Top At</b>
+        <span>"Top Oyna"nın küçük kardeşi. Türkçede tam olarak bu ürünü anlatıyor:
+          maç değil, gidip top atmak. Akılda kalıcı ve markaya ait.</span>
+      </div>
+      <div class="isim">
+        <b>Açık Saha</b>
+        <span>Ortak kullanımı doğrudan söylüyor. Net ama biraz düz — bir ürün adından çok
+          bir durum tarifi gibi.</span>
+      </div>
+      <div class="isim">
+        <b>Son Saat</b>
+        <span>Aciliyeti adına taşıyor. Güçlü ama ürünün ne olduğunu değil, ne zaman
+          olduğunu anlatıyor.</span>
+      </div>
+    </div>
+    <p><strong>Önerim: Top At.</strong> Alt bardaki "Oyna" ile aynı aileden; kullanıcı ilk duyuşta
+      ne olduğunu anlıyor ve iki ürün birbirine karışmıyor.</p>
+  </section>
+
+</div>
