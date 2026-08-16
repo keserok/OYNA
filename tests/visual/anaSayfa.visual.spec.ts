@@ -26,7 +26,7 @@ test.describe('Ana Sayfa — düzen sözleri', () => {
 
   test('yatay taşma YOK', async ({ page }) => {
     // Belge genişliği görüntü alanını aşarsa sayfa yana kayar. 360px'lik
-    // cihazda profil kartı + 128px'lik cüzdan kolonu tam sınırda duruyor;
+    // cihazda profil kartı + 128px'lik maç kolonu tam sınırda duruyor;
     // bir kartın `min-width: 0` unutulması bu testi kırar.
     const tasma = await page.evaluate(() => ({
       belge: document.documentElement.scrollWidth,

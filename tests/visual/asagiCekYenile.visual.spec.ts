@@ -32,7 +32,7 @@ const EKRANLAR: { gorunum: string; ad: string }[] = [
   { gorunum: 'MATCH_DISCOVERY',   ad: 'Top Oyna' },
   { gorunum: 'PITCH_DISCOVERY',   ad: 'Sahalar' },
   { gorunum: 'MY_MATCHES',        ad: 'Maçlarım' },
-  { gorunum: 'WALLET',            ad: 'Cüzdan' },
+  // Cüzdan kaldırıldı: lansmanda kapalı (shared/featureFlags.ts).
   { gorunum: 'PROFILE',           ad: 'Profil' },
   { gorunum: 'SOCIAL',            ad: 'Sosyal' },
   { gorunum: 'SERVICE_DASHBOARD', ad: 'Kaleci/hakem paneli' },
