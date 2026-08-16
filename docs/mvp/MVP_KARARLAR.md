@@ -188,3 +188,18 @@ topluluklar, turnuvalar, promosyon kodları, SaaS abonelik, demo yüzeyi.
 | K-72 | Uygulama sürümü **1.0.0**'dan başlar. |
 | K-73 | Admin paneli **aynı repoda** kalır. Admin maç kurma formuna kaleci/hakem atama eklenir. Saha sahibi hesap/şifre yönetimi **Sahalar** sayfasına taşınır. |
 | K-74 | Admin panelde kalanlar: doğrulama merkezi, silme kuyruğu, veli onayları, destek merkezi, bölge kapsama, bildirim şablonları. Çıkanlar: kampanyalar, CMS metinler, anlaşmazlıklar, ana sayfa görseli. Komuta merkezi sadeleşir (yalnız kapı durumu + gerçek durum). |
+
+---
+
+# TUR 3 KARARLARI (K-75…K-82)
+
+| # | Karar |
+|---|---|
+| K-75 | **Ödeme anında tahsil edilir**; iptalde otomatik tam iade yapılır. Ön provizyon (bloke) **v2'ye** bırakıldı — kritik yola ikinci test edilmemiş entegrasyon konmayacak. |
+| K-76 | Fiyat ve anlaşma **iki katmanlıdır**: (1) **tarife** katmanı (kural bazlı), (2) **saat** katmanı (somut gün+saat). **Saat katmanı tarifeden üstündür.** Tarife kaydedildiğinde saat katmanına yazılır; ancak bir saat **elle** düzenlenmişse tarife değişikliği o saati **ezmez**. |
+| K-77 | Saha sahibine ödeme periyodu **sabit değildir** (günlük / 3 günlük / haftalık / aylık); saha başına ayarlanır. Mutabakat defteri buna göre **eklemeli (append-only)** ve denetlenebilir kurulur. |
+| K-78 | Kaleci/hakem ücreti: admin panelde **liste fiyatı** + maça atarken **o maça özel değiştirme**. |
+| K-79 | Maçlar en fazla **14 gün** öncesinden satışa açılabilir. |
+| K-80 | Çalışma saatleri **iki katmanlıdır**: (1) tesisin açık olduğu saatler, (2) bunların içinden **uygulamaya açılan** saatler. İkinci katman varsayılan kapalıdır. |
+| K-81 | Apple Developer ve Google Play hesapları temin edilecek (kurucu). |
+| K-82 | Pilot saha anlaşmaları kurucu tarafından yapılacak (İstanbul). |
