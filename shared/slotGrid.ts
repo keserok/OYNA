@@ -25,6 +25,13 @@
 //      dakikalık tarifeden fiyatlanıp o süreyle kurulurdu.)
 //   4. Tarife hiç yoksa çalışma saatlerinden 60 dakikalık ızgara kurulur
 //      (eski davranış — tarifesiz tesis boş ekran görmesin).
+//   5. LİSTELEME SINIRI (kurucu kararı 16 Ağu 2026): `listingCutoff`
+//      verilirse, bitişi sınırı aşan slot ızgaraya GİRMEZ (bitiş ≤ sınır).
+//      Gece ekseni: saat < 06:00 "o günün gecesi" sayılır — sınır 20:00 iken
+//      00:00-02:00 slotları da elenir; sınır 02:00 "gece 2'ye kadar" demektir.
+//      Sınır YALNIZ oyuncu yüzeylerinde geçilir; sahip takvimi bu parametreyi
+//      GEÇMEZ ve akşamını elle yönetmeye devam eder. Sunucu ikizi sınırı
+//      pitches.listing_cutoff kolonundan kendisi okur (20260905000002).
 // ════════════════════════════════════════════════════════════════════════════
 
 export const ALLOWED_SLOT_MINUTES = [60, 90, 120] as const;
@@ -87,6 +94,30 @@ export function minutesToHM(total: number): string {
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 }
 
+/**
+ * 06:00 çıpalı "gece ekseni" dakikası: 06:00→360 … 23:00→1380 … 01:30→1530.
+ * Saat < 06:00 o günün GECESİ sayılır (sunucu ikizi: _listeleme_eksen_dk).
+ */
+export function listingAxisMinutes(t: string): number {
+  const m = hmToMinutes(t);
+  return m < 360 ? m + 1440 : m;
+}
+
+/**
+ * Kural 5: slotun TAMAMI sınırdan önce bitiyor mu? (bitiş ≤ sınır)
+ * `cutoff` yok/boşsa sınır yoktur — her slot listelenebilir.
+ */
+export function isSlotWithinListingCutoff(
+  slot: Pick<GridSlot, 'startTime' | 'endTime'>,
+  cutoff: string | null | undefined,
+): boolean {
+  if (!cutoff) return true;
+  const start = listingAxisMinutes(slot.startTime);
+  let end = listingAxisMinutes(slot.endTime);
+  if (end <= start) end += 1440; // gece yarısını aşan slot (23:00 → 00:30)
+  return end <= listingAxisMinutes(cutoff);
+}
+
 /** ISO hafta günü: 1 = Pazartesi … 7 = Pazar */
 export function isoDayOfWeek(dateISO: string): number {
   const [y, mo, d] = String(dateISO).split('-').map(Number);
@@ -146,12 +177,16 @@ export function activeTariffsFor(
  * `fallbackWorkingHours` yalnız HİÇ tarife yoksa kullanılır: tarifesiz tesiste
  * kullanıcı boş ekran görmesin diye çalışma saatlerinden 60 dakikalık ızgara
  * kurulur.
+ *
+ * `listingCutoff` (Kural 5) yalnız OYUNCU yüzeylerinde geçilir: bitişi sınırı
+ * aşan slot elenir. Sahip takvimi geçmez — akşamını görmeye devam eder.
  */
 export function buildSlotGrid(
   tariffs: SlotTariffInput[] | null | undefined,
   dateISO: string,
   courtId?: string | null,
   fallbackWorkingHours?: { open?: string; close?: string; slotDuration?: number } | null,
+  listingCutoff?: string | null,
 ): GridSlot[] {
   const active = activeTariffsFor(tariffs, dateISO, courtId);
 
@@ -172,7 +207,7 @@ export function buildSlotGrid(
         crossesMidnight: m + step >= 1440,
       });
     }
-    return out;
+    return out.filter((s) => isSlotWithinListingCutoff(s, listingCutoff));
   }
 
   // Öncelik sırasına göre üret. Her tarifenin penceresi önce çıkarılır: bir
@@ -215,7 +250,10 @@ export function buildSlotGrid(
     }
   });
 
-  return [...byStart.entries()].sort((a, b) => a[0] - b[0]).map(([, s]) => s);
+  return [...byStart.entries()]
+    .sort((a, b) => a[0] - b[0])
+    .map(([, s]) => s)
+    .filter((s) => isSlotWithinListingCutoff(s, listingCutoff));
 }
 
 /** Bir günün toplam slot sayısı — doluluk oranının PAYDASI. */

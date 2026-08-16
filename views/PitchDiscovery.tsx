@@ -35,7 +35,7 @@ import {
 import { resolveTariffForSlot } from '../services/tariffService';
 import {
   DEFAULT_SLOT_MINUTES, activeTariffsFor, normalizeSlotMinutes,
-  slotMinutesFromLabel, slotPriceUnitLabel,
+  slotMinutesFromLabel, slotPriceUnitLabel, isSlotWithinListingCutoff,
 } from '../shared/slotGrid';
 import { fetchMyFavoritePitchIds, togglePitchFavorite } from '../services/pitchFavoritesService';
 import { recordPitchView } from '../services/pitchShowcaseService';
@@ -649,7 +649,10 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
           today,
         );
         if (wh.closed) { result[p.id] = 0; return; }
-        const ranges = generateSlotRanges(wh);
+        // Listeleme sınırı: rozet de vitrinle aynı gerçeği saymalı — bitişi
+        // sınırı aşan slot "müsait" SAYILMAZ (slotGrid Kural 5).
+        const ranges = generateSlotRanges(wh)
+          .filter((r) => isSlotWithinListingCutoff(r, p.listingCutoff ?? null));
         // V-7: gece-sarkması sabit "h<6" yerine çalışma penceresinden türetilir.
         // Pencere gece yarısını aşıyorsa (kapanış ≤ açılış) açılış saatinin altındaki
         // slotlar ertesi güne sarkan (gelecek) slotlardır.
@@ -2067,6 +2070,14 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
                     ))}
                   </div>
                 </div>
+
+                {/* Listeleme sınırı — dürüst beyan: akşam saatleri "dolu" değil,
+                    uygulama kanalına hiç açılmamış. Oyuncu sebepsiz boşluk görmesin. */}
+                {selectedPitch?.listingCutoff && (
+                  <p className="mb-3 text-[0.6875rem] font-semibold text-ink-4 leading-relaxed">
+                    Bu tesis uygulamadan <b className="text-white/80">{selectedPitch.listingCutoff}</b>&apos;a kadar rezervasyon alıyor; sonraki saatler için tesisi arayabilirsin.
+                  </p>
+                )}
 
                 <div className="grid grid-cols-3 gap-2.5">
                   {filteredSlots.map(slot => {

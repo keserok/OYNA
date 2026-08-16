@@ -4,6 +4,7 @@ import {
   Bell,
   Building2,
   ChevronRight,
+  Clock,
   CreditCard,
   Globe,
   Handshake,
@@ -34,6 +35,7 @@ export interface OwnerMenuViewProps {
   onBankAccounts: () => void;
   onWithdrawals: () => void;
   onCancellationPolicy: () => void;
+  onListingWindow: () => void;
   /** OYNA ile yapılan ticari anlaşmayı gösterir — YALNIZ tesis sahibi. */
   onAgreement: () => void;
   /** Ödeme modu (sahada / online / oyuncu seçsin) ayar modalını açar. */
@@ -116,6 +118,7 @@ export const OwnerMenuView: React.FC<OwnerMenuViewProps> = ({
   onBankAccounts,
   onWithdrawals,
   onCancellationPolicy,
+  onListingWindow,
   onAgreement,
   onPaymentMode,
   onLogout,
@@ -277,6 +280,13 @@ export const OwnerMenuView: React.FC<OwnerMenuViewProps> = ({
               icon={<RotateCcw size={18} />}
               label="İptal / İade Politikası"
               onClick={onCancellationPolicy}
+            />
+            {/* Kurucu kararı (16 Ağu 2026): akşam saatleri ilk dönemde sahibinde
+                kalabilir — vitrine çıkan son saat buradan belirlenir. */}
+            <MenuRow
+              icon={<Clock size={18} />}
+              label="Uygulamada Listeleme Saati"
+              onClick={onListingWindow}
             />
             <MenuRow
               icon={<CreditCard size={18} />}

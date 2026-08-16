@@ -453,6 +453,9 @@ export interface Pitch {
   mapLabel?: string;
   /** Admin panelden tesis bazlı online rezervasyon kapatma (sunucu: BOOKING_DISABLED). */
   bookingDisabledByAdmin?: boolean;
+  /** Listeleme saat sınırı 'HH:MM' — bitişi bu saati aşan slot vitrine çıkmaz
+   *  (saha sahibi/admin belirler; boşsa sınırsız — slotGrid Kural 5). */
+  listingCutoff?: string;
   /** Admin kontrollü: "Bugün X saat müsait" rozeti gösterilsin mi */
   showAvailabilityBadge?: boolean;
   /** Bugün için müsait saat sayısı (liste rozetinde, tek toplu sorgudan) */

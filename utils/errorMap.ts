@@ -92,6 +92,7 @@ export const BARE_CODE_TR: Record<string, string> = {
   // Saha / rezervasyon / tarife
   NO_TARIFF: 'Bu saatin fiyatı tanımlı değil. Tesisle iletişime geç.',
   BOOKING_DISABLED: 'Bu saha şu an rezervasyona kapalı.',
+  LISTING_CUTOFF: 'Bu saat uygulamadan rezervasyona kapalı — tesis daha erken saatleri listeliyor.',
   BOOKING_NOT_FOUND: 'Rezervasyon bulunamadı.',
   BOOKING_CANCELLED: 'Bu rezervasyon iptal edilmiş.',
   COURT_NOT_FOUND: 'Saha bulunamadı.',

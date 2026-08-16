@@ -32,6 +32,8 @@ export interface PitchAgreement {
   iptal_saati: number | null;
   yarim_saat: number | null;
   yarim_yuzde: number | null;
+  /** Uygulamada listelenen son saat 'HH:MM'; null = sınırsız (pitches.listing_cutoff). */
+  listeleme_siniri: string | null;
 }
 
 interface Taslak {
@@ -46,6 +48,8 @@ interface Taslak {
   iptal_saati: number;
   yarim_saat: number;
   yarim_yuzde: number;
+  /** '' = sınırsız; 'HH:MM' = bitişi bu saati aşan slot vitrine çıkmaz. */
+  listeleme_siniri: string;
 }
 
 const para = (n: number) => `${Math.round(n).toLocaleString('tr-TR')} ₺`;
@@ -73,8 +77,14 @@ export const PitchAgreementsPanel: React.FC = () => {
   const load = useCallback(async () => {
     setLoading(true);
     const { data, error } = await supabase.rpc('admin_pitch_agreements');
-    if (error) toastError(error.message);
-    else setRows((data ?? []) as PitchAgreement[]);
+    if (error) { toastError(error.message); setLoading(false); return; }
+    let list = (data ?? []) as PitchAgreement[];
+    // Listeleme sınırı anlaşma RPC'sinde yok; pitches'tan okunup birleştirilir.
+    const { data: cutoffs } = await supabase.from('pitches').select('id, listing_cutoff');
+    const byId = new Map((cutoffs ?? []).map((p: { id: string; listing_cutoff: string | null }) =>
+      [p.id, p.listing_cutoff ? String(p.listing_cutoff).slice(0, 5) : null]));
+    list = list.map(r => ({ ...r, listeleme_siniri: byId.get(r.pitch_id) ?? null }));
+    setRows(list);
     setLoading(false);
   }, [toastError]);
 
@@ -99,6 +109,7 @@ export const PitchAgreementsPanel: React.FC = () => {
     iptal_saati: r.iptal_saati ?? 24,
     yarim_saat: r.yarim_saat ?? 6,
     yarim_yuzde: r.yarim_yuzde ?? 50,
+    listeleme_siniri: r.listeleme_siniri ?? '',
   });
 
   const kaydet = async () => {
@@ -122,6 +133,13 @@ export const PitchAgreementsPanel: React.FC = () => {
         p_half_pct: taslak.yarim_yuzde,
       });
       if (e2) throw e2;
+
+      // Listeleme sınırı anlaşmanın parçası: boş = sınırsız (NULL).
+      const { error: e3 } = await supabase.rpc('admin_set_pitch_listing_cutoff', {
+        p_pitch_id: taslak.pitch_id,
+        p_cutoff: taslak.listeleme_siniri || null,
+      });
+      if (e3) throw e3;
 
       success(`${taslak.pitch_name} anlaşması güncellendi.`);
       setTaslak(null);
@@ -165,7 +183,7 @@ export const PitchAgreementsPanel: React.FC = () => {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-white/5 bg-white/[0.02]">
-              {['Saha','Anlaşma','Komisyon','Fiyat farkı','2.000₺’lik saat','Serbest iptal',''].map(h => (
+              {['Saha','Anlaşma','Komisyon','Fiyat farkı','2.000₺’lik saat','Serbest iptal','Listeleme',''].map(h => (
                 <th key={h} className="px-4 py-3 text-left text-[11px] font-extrabold text-gray-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
               ))}
             </tr>
@@ -174,13 +192,13 @@ export const PitchAgreementsPanel: React.FC = () => {
             {loading ? (
               Array.from({ length: 3 }).map((_, i) => (
                 <tr key={i} className="border-b border-white/5">
-                  {Array.from({ length: 7 }).map((_, j) => (
+                  {Array.from({ length: 8 }).map((_, j) => (
                     <td key={j} className="px-4 py-3"><div className="h-4 bg-white/5 rounded animate-pulse" /></td>
                   ))}
                 </tr>
               ))
             ) : gorunen.length === 0 ? (
-              <tr><td colSpan={7} className="text-center py-12 text-gray-600">Saha bulunamadı.</td></tr>
+              <tr><td colSpan={8} className="text-center py-12 text-gray-600">Saha bulunamadı.</td></tr>
             ) : gorunen.map(r => (
               <tr key={r.pitch_id} className="border-b border-white/5 hover:bg-white/[0.02] transition-colors">
                 <td className="px-4 py-3 whitespace-nowrap">
@@ -211,6 +229,11 @@ export const PitchAgreementsPanel: React.FC = () => {
                   <span className="text-[#39FF14] font-bold">{para(r.ornek_oyna)}</span>
                 </td>
                 <td className="px-4 py-3 text-gray-300 whitespace-nowrap">{r.iptal_saati ?? 24} saat</td>
+                <td className="px-4 py-3 whitespace-nowrap">
+                  {r.listeleme_siniri
+                    ? <span className="text-[10px] font-extrabold px-2 py-1 rounded-full text-amber-300 bg-amber-400/10">{r.listeleme_siniri}&apos;a kadar</span>
+                    : <span className="text-xs text-gray-500">Sınırsız</span>}
+                </td>
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-2">
                     <button onClick={() => ac(r)} title="Anlaşmayı düzenle"
@@ -313,6 +336,26 @@ export const PitchAgreementsPanel: React.FC = () => {
               {' '}<b className="text-gray-300">{taslak.yarim_saat}–{taslak.iptal_saati} saat</b> arasında %{taslak.yarim_yuzde}&apos;si iade edilir;
               {' '}<b className="text-gray-300">{taslak.yarim_saat} saatten</b> az kala iade yapılmaz. Bu saatler oyuncu ekranlarında da bu şekilde görünür.
             </p>
+
+            <Alan label="Uygulamada listelenen son saat (boş = sınırsız)">
+              <div className="flex items-center gap-2">
+                <input type="time" value={taslak.listeleme_siniri}
+                  onChange={e => setTaslak(t => ({ ...t!, listeleme_siniri: e.target.value }))}
+                  className="w-full bg-[#0A0E14] border border-white/10 rounded-xl px-3 py-2 text-white text-sm" />
+                {taslak.listeleme_siniri && (
+                  <button type="button" onClick={() => setTaslak(t => ({ ...t!, listeleme_siniri: '' }))}
+                    className="h-9 px-3 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white text-xs font-bold whitespace-nowrap">
+                    Sınırsız yap
+                  </button>
+                )}
+              </div>
+              <p className="mt-1.5 text-[11px] text-gray-500 leading-relaxed">
+                Anlaşma gereği saha akşamını vitrine vermiyorsa buraya son saati yaz
+                (ör. 20:00): bitişi bu saati aşan slotlar oyuncuya görünmez ve uygulamadan
+                rezerve edilemez. Saha sahibi kendi panelindeki &quot;Uygulamada Listeleme
+                Saati&quot; ekranından da değiştirebilir; elle yönetimi etkilenmez.
+              </p>
+            </Alan>
 
             <Alan label="Not (opsiyonel)">
               <input type="text" value={taslak.notes}

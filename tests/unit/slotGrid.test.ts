@@ -8,6 +8,8 @@ import {
   slotPriceUnitLabel,
   normalizeSlotMinutes,
   isoDayOfWeek,
+  isSlotWithinListingCutoff,
+  listingAxisMinutes,
   type SlotTariffInput,
 } from '../../shared/slotGrid';
 
@@ -277,5 +279,86 @@ describe('slotPriceUnitLabel', () => {
     expect(slotPriceUnitLabel(slotMinutesFromLabel('20:00 - 21:30'))).toBe('/ 1,5 saat');
     expect(slotPriceUnitLabel(slotMinutesFromLabel('23:00 - 00:30'))).toBe('/ 1,5 saat');
     expect(slotPriceUnitLabel(slotMinutesFromLabel('20:00 - 21:00'))).toBe('/ saat');
+  });
+});
+
+// ─── Kural 5 · LİSTELEME SINIRI (kurucu kararı 16 Ağu 2026) ─────────────────
+// Saha "uygulamada şu saate kadar listelenirim" der: bitişi sınırı aşan slot
+// vitrine çıkmaz. Gece < 06:00 "o günün gecesi" sayılır (sunucu ikizi:
+// get_pitch_slots + _listeleme_eksen_dk, 20260905000002).
+describe('listingAxisMinutes — gece 06:00 eksenine sarar', () => {
+  it('gunduz/aksam saatleri oldugu gibi', () => {
+    expect(listingAxisMinutes('06:00')).toBe(360);
+    expect(listingAxisMinutes('20:00')).toBe(1200);
+    expect(listingAxisMinutes('23:00')).toBe(1380);
+  });
+  it('gece yarisi sonrasi ertesi gune sayilir', () => {
+    expect(listingAxisMinutes('00:00')).toBe(1440);
+    expect(listingAxisMinutes('01:30')).toBe(1530);
+    expect(listingAxisMinutes('05:59')).toBe(1799);
+  });
+});
+
+describe('isSlotWithinListingCutoff — bitis ≤ sinir', () => {
+  it('sinir yoksa her slot listelenir', () => {
+    expect(isSlotWithinListingCutoff({ startTime: '22:00', endTime: '23:00' }, null)).toBe(true);
+    expect(isSlotWithinListingCutoff({ startTime: '22:00', endTime: '23:00' }, undefined)).toBe(true);
+    expect(isSlotWithinListingCutoff({ startTime: '22:00', endTime: '23:00' }, '')).toBe(true);
+  });
+  it('sinir 20:00: 19:00-20:00 girer, 20:00-21:00 girmez', () => {
+    expect(isSlotWithinListingCutoff({ startTime: '19:00', endTime: '20:00' }, '20:00')).toBe(true);
+    expect(isSlotWithinListingCutoff({ startTime: '20:00', endTime: '21:00' }, '20:00')).toBe(false);
+  });
+  it('90 dakikalik slot siniri TASAMAZ: 19:30-21:00 sinir 20:00 iken elenir', () => {
+    expect(isSlotWithinListingCutoff({ startTime: '19:30', endTime: '21:00' }, '20:00')).toBe(false);
+  });
+  it('GECE TUZAGI: 00:00-01:00 slotu sinir 20:00 iken elenir (aksamdan sonra)', () => {
+    expect(isSlotWithinListingCutoff({ startTime: '00:00', endTime: '01:00' }, '20:00')).toBe(false);
+    expect(isSlotWithinListingCutoff({ startTime: '01:00', endTime: '02:00' }, '20:00')).toBe(false);
+  });
+  it('sinir gece olabilir: 01:00 siniri 00:00-01:00 slotunu listeler, 01:00-02:00 slotunu eler', () => {
+    expect(isSlotWithinListingCutoff({ startTime: '00:00', endTime: '01:00' }, '01:00')).toBe(true);
+    expect(isSlotWithinListingCutoff({ startTime: '01:00', endTime: '02:00' }, '01:00')).toBe(false);
+    expect(isSlotWithinListingCutoff({ startTime: '23:00', endTime: '00:00' }, '01:00')).toBe(true);
+  });
+  it('gece yarisini asan slot dogru okunur: 23:00-00:30 siniri 00:30 gecmez, 00:00 gecer', () => {
+    expect(isSlotWithinListingCutoff({ startTime: '23:00', endTime: '00:30' }, '00:30')).toBe(true);
+    expect(isSlotWithinListingCutoff({ startTime: '23:00', endTime: '00:30' }, '00:00')).toBe(false);
+  });
+});
+
+describe('buildSlotGrid + listingCutoff', () => {
+  it('sinir 20:00: 18:00-23:00 tarifesinden yalniz 18 ve 19 kalir', () => {
+    const g = buildSlotGrid([tarife({})], CARSAMBA, null, null, '20:00');
+    expect(g.map(slotLabel)).toEqual(['18:00 - 19:00', '19:00 - 20:00']);
+  });
+  it('sinir gecilmezse izgara degismez (imza geriye uyumlu)', () => {
+    const tam = buildSlotGrid([tarife({})], CARSAMBA);
+    expect(tam.map(slotLabel)).toEqual([
+      '18:00 - 19:00', '19:00 - 20:00', '20:00 - 21:00', '21:00 - 22:00', '22:00 - 23:00',
+    ]);
+  });
+  it('90dk tarife sinir 20:00: 18:00-19:30 girer, 19:30-21:00 elenir', () => {
+    const g = buildSlotGrid(
+      [tarife({ start_time: '18:00', end_time: '23:00', slot_minutes: 90 })],
+      CARSAMBA, null, null, '20:00',
+    );
+    expect(g.map(slotLabel)).toEqual(['18:00 - 19:30']);
+  });
+  it('gece sarkan tarife (22:00-02:00) sinir 23:00 iken yalniz 22:00-23:00 birakir', () => {
+    const g = buildSlotGrid(
+      [tarife({ start_time: '22:00', end_time: '02:00' })],
+      CARSAMBA, null, null, '23:00',
+    );
+    expect(g.map(slotLabel)).toEqual(['22:00 - 23:00']);
+  });
+  it('tarifesiz yedek izgara da siniri uygular', () => {
+    const g = buildSlotGrid([], CARSAMBA, null, { open: '10:00', close: '23:00' }, '13:00');
+    expect(g.map(slotLabel)).toEqual(['10:00 - 11:00', '11:00 - 12:00', '12:00 - 13:00']);
+  });
+  it('SAHIP TAKVIMI KORUNUR: slotCountForDate sinir bilmez (payda tam gun kalir)', () => {
+    // Doluluk paydasi sahibin SATABILECEGI tum slotlardir — akşamı elle
+    // satmaya devam ediyor; sinir yalniz oyuncu vitrinini daraltir.
+    expect(slotCountForDate([tarife({})], CARSAMBA)).toBe(5);
   });
 });
