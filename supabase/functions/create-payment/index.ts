@@ -7,8 +7,8 @@
 // iyzico kimlik doğrulama: IYZWSv2 (HMAC-SHA256).
 //
 // Aksiyonlar:
-//   pay           → 3 akış: BOOKING_DEPOSIT | TOP_UP | MATCH_JOIN (yeni kart
-//                   veya kayıtlı kart token'ı ile; 3DS HTML döner)
+//   pay           → 4 akış: BOOKING_DEPOSIT | TOP_UP | MATCH_JOIN | MATCH_DEPOSIT
+//                   (yeni kart veya kayıtlı kart token'ı ile; 3DS HTML döner)
 //   register-card → cüzdandan bağımsız kart kaydetme (iyzico kart deposu)
 //   create        → eski barındırılan Checkout Form (yedek akış)
 //   confirm-sim   → simülasyon onayı (yalnız SIMULATION modunda)
@@ -110,6 +110,7 @@ const FLOW_BASKET_NAME: Record<string, string> = {
   BOOKING_DEPOSIT: 'Saha Kapora',
   TOP_UP: 'Cuzdan Yukleme',
   MATCH_JOIN: 'Mac Katilim',
+  MATCH_DEPOSIT: 'Mac Kaporasi',
 }
 
 // Kart verisi: yalnız bellek içinde, iyzico isteğine gömülür — log/DB'ye girmez.
@@ -219,7 +220,7 @@ Deno.serve(async (req: Request) => {
       if (!user) return json({ error: 'UNAUTHORIZED' }, 401)
 
       const flow = payload.flow ?? ''
-      if (!['BOOKING_DEPOSIT', 'TOP_UP', 'MATCH_JOIN'].includes(flow)) {
+      if (!['BOOKING_DEPOSIT', 'TOP_UP', 'MATCH_JOIN', 'MATCH_DEPOSIT'].includes(flow)) {
         return json({ error: 'INVALID_FLOW' }, 400)
       }
 

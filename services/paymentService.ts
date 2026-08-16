@@ -115,7 +115,7 @@ export interface NewCardInput {
 }
 
 export interface InAppPayInput {
-  flow: 'BOOKING_DEPOSIT' | 'TOP_UP' | 'MATCH_JOIN';
+  flow: 'BOOKING_DEPOSIT' | 'TOP_UP' | 'MATCH_JOIN' | 'MATCH_DEPOSIT';
   amount?: number;
   bookingId?: string;
   matchId?: string;

@@ -432,11 +432,16 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
         });
       }
       case 'MATCH_CREATE_DEPOSIT': {
-        // Kapora akışı lansmanda KAPALI: cüzdan kalktı (bloke edilecek bakiye
-        // yok) ve kart-kaporası henüz yazılmadı. Sunucu da kaporayı beklemiyor
-        // (app_config.match_deposit_enabled = false → maç kaporasız yayınlanır);
-        // bu dala normalde hiç gelinmez. Gelinirse dürüst mesajla durdur.
-        throw new Error('Kapora ödemesi şu an kapalı — maç kaporasız yayınlanıyor. Ekranı kapatıp tekrar dene.');
+        // KART KAPORASI (16 Ağu 2026): maç AWAITING_PAYMENT durumunda bekliyor;
+        // tutarı sunucu bilir (matches.deposit_amount), buradaki amount yalnız
+        // gösterim içindir. Tahsilat onaylanınca sunucu maçı BLOCKED'a alır ve
+        // kaptanı kadroya oturtur (apply_card_payment · MATCH_DEPOSIT).
+        if (!ctx.matchId) throw new Error('Maç bilgisi eksik. Lütfen geri dönüp tekrar deneyin.');
+        return await payWithCard({
+          flow: 'MATCH_DEPOSIT',
+          matchId: ctx.matchId,
+          useBalance: false,
+        });
       }
     }
   };

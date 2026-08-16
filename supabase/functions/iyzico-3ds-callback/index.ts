@@ -124,10 +124,17 @@ Deno.serve(async (req: Request) => {
   }
 
   // ── Para hareketini uygula (idempotent) ──────────────────────────────────
+  // itemTransactions saklanır: karta İADE iyzico'da paymentTransactionId ile
+  // yapılır (refund-payment kuyruğu buradan okur). Tek ürünlü sepette tek satır.
+  const itemTx = Array.isArray(auth.itemTransactions)
+    ? auth.itemTransactions.map((t: { paymentTransactionId?: string; price?: unknown }) => ({
+        paymentTransactionId: t.paymentTransactionId ?? null, price: t.price ?? null,
+      }))
+    : null
   const { data: applied, error: applyErr } = await admin.rpc('apply_card_payment', {
     p_intent_id: intentId,
     p_provider_ref: auth.paymentId ?? paymentId,
-    p_raw: { threeds: true, mdStatus, fraudStatus: auth.fraudStatus ?? null },
+    p_raw: { threeds: true, mdStatus, fraudStatus: auth.fraudStatus ?? null, itemTransactions: itemTx },
   })
   if (applyErr) {
     console.error('[iyzico-3ds-callback] apply_card_payment hatası:', applyErr.message)

@@ -25,9 +25,10 @@ describe('1 · Cüzdan lansmanda kapalı', () => {
     expect(isWalletEnabled()).toBe(false);
   });
 
-  it('sunucu anahtarları göçte: wallet_enabled + match_deposit_enabled = false', () => {
+  it('sunucu anahtarları göçte: wallet_enabled=false; kapora önce kapalı doğar', () => {
     const s = oku(CUZDAN_GOCU);
     expect(s).toContain("'wallet_enabled', 'false'::jsonb");
+    // Kapora anahtarı kapalı doğar; kart kaporası göçü (20260905000003) açar.
     expect(s).toContain("'match_deposit_enabled', 'false'::jsonb");
   });
 
@@ -112,5 +113,74 @@ describe('2 · Listeleme saat sınırı', () => {
 
   it('istemci hata sözlüğü sunucu kodunu tanır', () => {
     expect(oku('utils/errorMap.ts')).toContain('LISTING_CUTOFF:');
+  });
+});
+
+describe('3 · Kart kaporası + karta iade (16 Ağu 2026 — ikinci tur)', () => {
+  const KART_GOCU = 'supabase/migrations/20260905000003_kart_kaporasi_ve_karta_iade.sql';
+
+  it('kapora anahtarı kart göçüyle AÇILIR (maçlar yeniden kaporalı)', () => {
+    const s = oku(KART_GOCU);
+    expect(s).toMatch(/UPDATE public\.app_config\s+SET value = 'true'::jsonb\s+WHERE key = 'match_deposit_enabled'/);
+  });
+
+  it('karta iade kuyruğu + zehirli iş sınırı (7.5) kurulu', () => {
+    const s = oku(KART_GOCU);
+    expect(s).toContain('CREATE TABLE IF NOT EXISTS public.card_refund_queue');
+    expect(s).toContain("CHECK (status IN ('PENDING','DONE','FAILED'))");
+    // Kuyruk istemciye kapalı (6.1): anon/authenticated yetkisi geri alınır.
+    expect(s).toContain('REVOKE ALL ON public.card_refund_queue FROM PUBLIC, anon, authenticated');
+  });
+
+  it('kapora akışı kart rayında: prepare + apply MATCH_DEPOSIT taşır', () => {
+    const s = oku(KART_GOCU);
+    expect(s).toContain("p_flow = 'MATCH_DEPOSIT'");
+    expect(s).toContain("v_flow = 'MATCH_DEPOSIT'");
+    // Blokaj fonksiyonu artık para OYNATMAZ — beklemeye alır. Fonksiyonun
+    // KENDİ gövdesi kesilip bakılır (dosya genelinde arama yanlış pozitif
+    // verir: doğrulama bloğu iki adı da anar).
+    const bas = s.indexOf('CREATE OR REPLACE FUNCTION public.match_block_deposit');
+    expect(bas).toBeGreaterThan(-1);
+    const govde = s.slice(bas, s.indexOf('$function$;', bas));
+    expect(govde).toContain("'AWAITING_PAYMENT'");
+    expect(govde).not.toContain('wallet_spend_balance');
+    expect(govde).not.toContain('payment_intents');
+  });
+
+  it('iade yazarları karta bağlandı; cüzdan emaneti (legacy) korunur', () => {
+    const s = oku(KART_GOCU);
+    for (const fn of ['process_match_refund', '_match_refund_partial', 'process_tiered_refund', 'cancel_app_booking']) {
+      expect(s).toContain(`CREATE OR REPLACE FUNCTION public.${fn}`);
+    }
+    expect(s).toContain('_iade_karta_kuyruga');
+    expect(s).toContain("provider = 'WALLET'");
+  });
+
+  it('kaptan iptali 24 saat kuralına bağlı ve PSP kesintisi düşülür', () => {
+    const s = oku(KART_GOCU);
+    expect(s).toContain('_pitch_refund_tiers');
+    expect(s).toContain('_psp_fee');
+    expect(s).toMatch(/v_hours < COALESCE\(v_full_hours, 24\)/);
+  });
+
+  it('ödeme bekleyen maç süpürücüsü kurulu (7.4: alınmadıysa alınmasın)', () => {
+    const s = oku(KART_GOCU);
+    expect(s).toContain('sweep_awaiting_deposit_matches');
+    expect(s).toContain('kapora_bekleyen_mac_supuruecuesu');
+  });
+
+  it('uçlar kart kaporasını tanır; iade ucu kuyruk işlemcisi oldu', () => {
+    expect(oku('supabase/functions/create-payment/index.ts')).toContain("'MATCH_DEPOSIT'");
+    const r = oku('supabase/functions/refund-payment/index.ts');
+    expect(r).toContain("'process-queue'");
+    expect(r).toContain('card_refund_queue');
+    // Fail-closed: env yoksa sağlayıcı DISABLED (SIMULATION varsayılamaz).
+    expect(r).toContain("Deno.env.get('PAYMENT_PROVIDER') ?? 'DISABLED'");
+  });
+
+  it('istemci kapora akışı kart rayında (PaymentScreen → MATCH_DEPOSIT)', () => {
+    expect(oku('views/PaymentScreen.tsx')).toContain("flow: 'MATCH_DEPOSIT'");
+    expect(oku('views/MatchCreate.tsx')).toContain("'AWAITING_PAYMENT'");
+    expect(oku('services/paymentService.ts')).toContain("'MATCH_DEPOSIT'");
   });
 });

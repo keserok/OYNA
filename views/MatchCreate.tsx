@@ -456,8 +456,36 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
       if (seeded) setSeed(null);
       setResult(res);
       setCopied(false);
+
+      // KART KAPORASI (16 Ağu 2026): sunucu maçı "kapora bekliyor" durumuna
+      // aldıysa kaptan ödeme ekranına gider — kapora KARTTAN tahsil edilir,
+      // onaylanınca kaptan kadroya oturur. Ödeme 30 dk içinde tamamlanmazsa
+      // sunucu maçı ve rezervasyonu kendiliğinden iptal eder (para çekilmez).
+      if (res.depositStatus === 'AWAITING_PAYMENT' && res.deposit > 0) {
+        const store = useAppStore.getState();
+        store.setPaymentContext({
+          kind: 'MATCH_CREATE_DEPOSIT',
+          badge: 'MAÇ KAPORASI',
+          title: title.trim() || `${fac?.name ?? 'Saha'} Maçı`,
+          subtitle: `${venueTxt} · ${whenTxt}`,
+          amount: res.deposit,
+          amountLabel: 'Ödenecek Kapora',
+          amountHint: `Maç dolunca ${money(Math.max(0, res.deposit - res.perPerson))} iade edilir — yalnız kendi payın (${money(res.perPerson)}) sende kalır`,
+          isDeposit: true,
+          allowBalance: false,
+          successTitle: 'Maçın Yayında!',
+          successSubtitle: 'Kapora güvencede',
+          matchId: res.matchId,
+          pitchId: selFacId ?? undefined,
+          infoNote: `Kapora kartından tahsil edilir ve maçın güvencesidir. Maça ${sahaFiyat.fullHours} saatten fazla varken iptal edersen ödeme altyapısı kesintisi düşülerek kartına iade edilir; daha geç iptalde iade yapılmaz. Ödemeyi şimdi tamamlamazsan maç 30 dakika içinde kendiliğinden iptal olur ve kartından para çekilmez.`,
+        });
+        olayYaz('kaptan_mac_yayinda');
+        store.navigateTo('PAYMENT');
+        return; // finally bloğu kilidi ve sayaçları yine de temizler
+      }
+
       // ÖLÇÜM · kaptan hunisi 4/5 ve 5/5. Olay adları huni sürekliliği için
-      // korunur; kapora kapalıyken 4/5 "yayın sunucuda kabul edildi" demektir.
+      // korunur; kapora yoksa 4/5 "yayın sunucuda kabul edildi" demektir.
       olayYaz('kaptan_kapora_odendi');
       olayYaz('kaptan_mac_yayinda');
       setSheet('SUCCESS');
@@ -1098,10 +1126,10 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
               <span className="text-[0.6875rem] font-extrabold text-[#39FF14] shrink-0">Değiştir</span>
             </button>
 
-            {/* Kesinleşme ve kapora kuralı. Lansman döneminde kapora ALINMIYOR
-                (sunucu: match_deposit_enabled=false → şerit kaporayı 0 döner);
-                deposit > 0 dalı, kart-kaporası v1.1'de açıldığında yeniden
-                canlanır ve kanal iddiası taşımaz ("cüzdandan/karttan" demez). */}
+            {/* Kesinleşme ve kapora kuralı (kart kaporası — 16 Ağu 2026):
+                kapora yayın anında KARTTAN tahsil edilir; maç dolunca fazlası
+                iade edilir, iptal iadesi sahanın serbest-iptal saatine bağlıdır
+                ve ödeme altyapısı kesintisi düşülür. */}
             <button onClick={() => setSheet('RULES')}
               className="flex items-center gap-3 rounded-[20px] border p-4 text-left min-h-[60px] active:scale-[0.99] transition-transform border-[#FACC15]/25 bg-[#FACC15]/5">
               <div className="w-[38px] h-[38px] rounded-[13px] shrink-0 flex items-center justify-center bg-[#FACC15]/[0.12] text-[#FACC15]">
@@ -1111,13 +1139,13 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                 <p className="text-[0.8125rem] font-extrabold">
                   {seeded ? 'Kapora yok — rezervasyon güvencesi zaten ödendi'
                     : deposit == null ? 'Kurallar saat seçince netleşir'
-                    : deposit > 0 ? `Kapora ${money(deposit)} · yayında güvenceye alınır`
+                    : deposit > 0 ? `Kapora ${money(deposit)} · yayında kartından tahsil edilir`
                     : 'Kapora alınmıyor — maç doğrudan yayınlanır'}
                 </p>
                 <p className="mt-0.5 text-[0.6875rem] font-bold leading-snug text-[#FACC15]/85">
                   {seeded ? 'Oyuncu payları maç kesinleşince toplanır'
                     : deposit != null && deposit > 0
-                      ? `Maç dolunca ${money(Math.max(0, deposit - (perPerson ?? 0)))} iade · dolmazsa tamamı`
+                      ? `Maç dolunca ${money(Math.max(0, deposit - (perPerson ?? 0)))} iade · dolmazsa tamamı (kesinti düşülür)`
                       : 'Kesinleşme ve iade kuralları için dokun'}
                 </p>
               </div>
@@ -1181,7 +1209,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
           <p className="text-center text-[0.6875rem] font-bold text-white/[0.32] pb-1">
             {publishing ? 'Kapatma — işlem birkaç saniye sürebilir'
               : seeded ? 'Rezervasyonun maça çevrilecek · ek ödeme yok'
-              : deposit != null && deposit > 0 ? `${money(deposit)} kapora yayında güvenceye alınır · maç dolmazsa tam iade`
+              : deposit != null && deposit > 0 ? `${money(deposit)} kapora kartından tahsil edilir · maç dolmazsa tamamı iade (işlem kesintisi düşülür)`
               : deposit === 0 ? 'Kapora yok — yayınla ve kadroyu kurmaya başla'
               : 'Saha ve saat seçince kurallar netleşir'}
           </p>
@@ -1580,23 +1608,23 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                 </div>
                 <div className="text-right">
                   <p className="mt-0.5 text-[0.6875rem] font-extrabold text-[#39FF14]">
-                    {seeded ? 'Gerekmiyor — güvence ödendi' : !deposit ? 'Bu dönemde alınmıyor' : 'Yayında güvenceye alınır'}
+                    {seeded ? 'Gerekmiyor — güvence ödendi' : !deposit ? 'Bu maçta alınmıyor' : 'Yayında kartından tahsil edilir'}
                   </p>
                 </div>
               </div>
-              {/* Kurallar kanal iddiası taşımaz ("cüzdan/kart" demez): iadenin
-                  NEREYE döneceği ödeme yöntemine bağlıdır ve onu ödeme ekranı
-                  söyler. Kapora kapalıyken (lansman) 1 ve 3 hiç çizilmez. */}
+              {/* Kart kaporası kuralları (16 Ağu 2026): tahsilat karttan,
+                  iadeler karta — iptal iadesinde ödeme altyapısı kesintisi
+                  düşülür. Kapora yoksa 1 ve 3 hiç çizilmez. */}
               {[
                 ...(deposit != null && deposit > 0 ? [
-                  { n: '1', t: 'Kapora yayında güvenceye alınır', b: 'Yayınladığın anda tutar güvenceye alınır — saha sana kilitlenir.' },
+                  { n: '1', t: 'Kapora yayında kartından tahsil edilir', b: 'Yayınladığın anda tutar kartından çekilir ve maçın güvencesi olur — saha sana kilitlenir. Ödemeyi tamamlamazsan maç 30 dakika içinde kendiliğinden iptal olur.' },
                 ] : []),
                 { n: '2', t: `Maç ${threshold} oyuncuda kesinleşir`, b: 'Toplam kadronun 2 eksiği kadar oyuncu katıldığında maç kesinleşir ve saha kesin olarak senin olur.' },
                 ...(deposit != null && deposit > 0 ? [
-                  { n: '3', t: 'Maç dolunca payın dışındaki tutar döner', b: perPerson != null ? `${money(deposit)} − ${money(perPerson)} = ${money(Math.max(0, deposit - perPerson))} iade edilir; sen de herkes gibi yalnız kendi payını ödersin.` : 'Sen de herkes gibi yalnız kendi payını ödersin; kalanı iade edilir.' },
+                  { n: '3', t: 'Maç dolunca payın dışındaki tutar döner', b: perPerson != null ? `${money(deposit)} − ${money(perPerson)} = ${money(Math.max(0, deposit - perPerson))} kartına iade edilir; sen de herkes gibi yalnız kendi payını ödersin.` : 'Sen de herkes gibi yalnız kendi payını ödersin; kalanı kartına iade edilir.' },
                 ] : []),
                 { n: '4', t: 'Son çağrı: maça 8 saat kala', b: 'Kadro hâlâ eşiğin altındaysa sana bildirim gelir — maç bu adımda iptal EDİLMEZ, doldurmak için hâlâ vaktin vardır.' },
-                { n: '5', t: 'Kesin karar: maça 90 dakika kala', b: `Kadro eşiği tutuyorsa maç kesinleşir. Tutmuyorsa maç iptal olur${deposit != null && deposit > 0 ? ' ve ödemen eksiksiz iade edilir' : ''}. ${sahaFiyat.fullHours} saatten az kala sen iptal edersen iade yapılmaz.` },
+                { n: '5', t: 'Kesin karar: maça 90 dakika kala', b: `Kadro eşiği tutuyorsa maç kesinleşir. Tutmuyorsa maç iptal olur${deposit != null && deposit > 0 ? ' ve ödemen (işlem kesintisi düşülerek) kartına iade edilir' : ''}. ${sahaFiyat.fullHours} saatten az kala sen iptal edersen iade yapılmaz.` },
                 // IP-04 — saatler SAHANIN ayarından (pitch_price_preview); kaptan
                 // iptali kuralıyla bilerek aynı sayı, ikisi de aynı kaynaktan okur.
                 { n: '6', t: 'Oyuncu ayrılması — iade kademesi', b: `Kadrodaki bir oyuncu maça ${sahaFiyat.fullHours} saatten fazla varken ayrılırsa ödediği tutar iade edilir. ${sahaFiyat.halfHours}–${sahaFiyat.fullHours} saat kala %${sahaFiyat.halfPct} iade edilir, ${sahaFiyat.halfHours} saatten az kala iade yapılmaz. Tam iade penceresi kapandıktan sonra ayrılanın güvenilirlik puanı düşer; sana bildirim gider, boşalan yer vitrine açılır.` },
