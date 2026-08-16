@@ -25,6 +25,8 @@ export const SCREEN = {
   profile: 'Profil',
   social: 'Sosyal',
   messages: 'Mesajlar',
+  // Tüketici cüzdanı lansmanda kapalı (shared/featureFlags.ts); etiket eski
+  // bildirim/derin bağlantı metinleri için duruyor, yeni yüzey bunu kullanmaz.
   wallet: 'Cüzdan',
   settings: 'Ayarlar',
   studio: 'Taktik Stüdyo',

@@ -64,9 +64,12 @@ describe('A3/A4 — yeni ekran adresleri tanınmalı', () => {
     }
   });
 
-  it('cüzdan adresi WALLET ekranını açar', () => {
+  it('cüzdan adresi tanınır ama kapalı cüzdana DEĞİL maç listesine gider', () => {
+    // Cüzdan lansmanda kapalı (shared/featureFlags.ts): eski iade bildirimi
+    // ölü bir ekrana düşmesin, kullanıcı parasının bağlamını görsün.
     const s = oku('notifications/pushService.ts');
-    expect(s).toMatch(/case 'wallet':[\s\S]{0,220}setView\('WALLET'\)/);
+    expect(s).toMatch(/case 'wallet':[\s\S]{0,320}setView\('MY_MATCHES'\)/);
+    expect(s).not.toMatch(/case 'wallet':[\s\S]{0,320}setView\('WALLET'\)/);
   });
 });
 

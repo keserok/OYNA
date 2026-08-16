@@ -331,7 +331,7 @@ const RahatMatchLobby: React.FC<Props> = ({ match: matchProp, onBack }) => {
         pitchId: match.pitchId,
         // İade dili sunucu davranışıyla birebir; kademeler CANLI konfigden.
         infoNote: cfg
-          ? `Kadro dolmazsa veya maç iptal olursa ödediğin tutarın tamamı cüzdanına döner. Maçtan kendin ayrılırsan iade kademeye tabidir: maça ${cfg.refundFullHours} saatten fazla varsa tamamı, ${cfg.refundHalfHours}–${cfg.refundFullHours} saat kala %${cfg.refundHalfPct}'i cüzdanına döner; ${cfg.refundHalfHours} saatten az kala iade yapılmaz. Tam iade penceresi kapandıktan sonra ayrılırsan güvenilirlik puanın da düşer.`
+          ? `Kadro dolmazsa veya maç iptal olursa ödediğin tutarın tamamı iade edilir. Maçtan kendin ayrılırsan iade kademeye tabidir: maça ${cfg.refundFullHours} saatten fazla varsa tamamı, ${cfg.refundHalfHours}–${cfg.refundFullHours} saat kala %${cfg.refundHalfPct}'i iade edilir; ${cfg.refundHalfHours} saatten az kala iade yapılmaz. Tam iade penceresi kapandıktan sonra ayrılırsan güvenilirlik puanın da düşer.`
           : undefined,
       });
       setSheet('');
@@ -557,7 +557,7 @@ const RahatMatchLobby: React.FC<Props> = ({ match: matchProp, onBack }) => {
         {isCancelled && (
           <div style={{ margin: '12px 20px 0', display: 'flex', alignItems: 'flex-start', gap: 9, padding: '12px 14px', borderRadius: 14, background: 'rgba(248,113,113,0.10)', border: '1px solid rgba(248,113,113,0.35)' }}>
             <AlertTriangle size={15} color="#F87171" style={{ flexShrink: 0, marginTop: 1 }} />
-            <p style={{ margin: 0, fontSize: 12, fontWeight: 700, lineHeight: 1.45, color: '#F87171' }}>Maç iptal edildi — ödemen cüzdanına döndü.</p>
+            <p style={{ margin: 0, fontSize: 12, fontWeight: 700, lineHeight: 1.45, color: '#F87171' }}>Maç iptal edildi — ödemen sana iade edilecek.</p>
           </div>
         )}
         {isConfirmed && !isCancelled && (

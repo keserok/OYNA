@@ -16,7 +16,11 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
-const PROVIDER = Deno.env.get('PAYMENT_PROVIDER') ?? 'SIMULATION'
+// FAIL-CLOSED (lansman kararı, 16 Ağu 2026): env verilmemişse ödeme YOLU YOK.
+// Eski varsayılan SIMULATION'dı — env unutulursa sahte kartla GERÇEK harcanabilir
+// bakiye üretilebiliyordu (5_GUNLUK_CIKIS_PLANI engelleyici #5). Simülasyon
+// artık yalnız BİLEREK PAYMENT_PROVIDER=SIMULATION yazılan ortamlarda çalışır.
+const PROVIDER = Deno.env.get('PAYMENT_PROVIDER') ?? 'DISABLED'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -202,6 +206,11 @@ Deno.serve(async (req: Request) => {
   let payload: Payload
   try { payload = await req.json() } catch { return json({ error: 'INVALID_BODY' }, 400) }
   const action = payload.action ?? 'create'
+
+  // Kapı en önde: sağlayıcı bilinçli seçilmemişse hiçbir aksiyon çalışmaz.
+  if (PROVIDER === 'DISABLED') {
+    return json({ error: 'PAYMENTS_DISABLED', message: 'Ödeme altyapısı bu ortamda kapalı.' }, 503)
+  }
 
   try {
     // ── PAY: uygulama-içi kart ödemesi (3 akış) ────────────────────────────

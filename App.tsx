@@ -46,7 +46,6 @@ const SettingsScreen = lazy(() => import('./views/SettingsScreen'));
 const MatchTicket = lazy(() => import('./views/MatchTicket'));
 const MatchDiaryDetail = lazy(() => import('./views/MatchDiaryDetail'));
 const Studio = lazy(() => import('./views/Studio'));
-const WalletScreen = lazy(() => import('./views/WalletScreen'));
 // MatchLobby kaldırıldı — MatchJoin artık tek ekran
 // OpponentFinder (Rakip Bul haritası) kaldırıldı — rakip yalnız maç oluştur'dan davet edilir
 // F4.2: MatchCalendar kaldırıldı — hiçbir navigasyon gitmiyordu; tüm işlevleri
@@ -747,6 +746,9 @@ const App: React.FC = () => {
         />;
       case 'MY_MATCHES':
         return <MyMatchesHub onNavigate={(v) => navigateTo(v)} />;
+      // Cüzdan lansmanda KAPALI (e-para mevzuatı — shared/featureFlags.ts).
+      // Rota ölmedi: eski derin bağlantı/bildirim WALLET derse ana ekran açılır.
+      case 'WALLET':
       case 'DASHBOARD':
         return <Dashboard
           onNavigate={(newView) => navigateTo(newView)}
@@ -802,13 +804,6 @@ const App: React.FC = () => {
           onOpenDiaryEntry={(id) => {
             setSelectedDiaryId(id);
             navigateTo('MATCH_DIARY_DETAIL');
-          }}
-        />;
-      case 'WALLET':
-        return <WalletScreen
-          onBack={() => {
-            useAppStore.getState().setWalletInitialTab('MAIN');
-            goBack('DASHBOARD');
           }}
         />;
       // MATCH_LOBBY kaldırıldı — tüm işlemler MatchJoin'de yapılıyor

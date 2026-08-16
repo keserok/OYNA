@@ -100,10 +100,12 @@ describe('ana sayfa — renk disiplini', () => {
     expect(ihlal, `metin rengi token'dan gelmeli:\n${ihlal.join('\n')}`).toEqual([]);
   });
 
-  it('cüzdan bakiyesi kendi rolünü kullanır, birincil yeşili DEĞİL', () => {
-    // #39FF14 "kullanıcıya DÖNEN para"dır (bir olay); bakiye ise durumdur.
-    // İkisi aynı tonda olsaydı her bakış "para geldi" gibi okunurdu.
-    expect(kaynak).toContain('var(--color-money-balance)');
+  it('cüzdan kutusu ana sayfadan kaldırıldı (lansman kararı: bakiye yok)', () => {
+    // Cüzdan kapatıldı (shared/featureFlags.ts): ana sayfada bakiye kutusu
+    // kalmadı — bakiye rengi de bu ekranda artık kullanılmaz. Token, cüzdan
+    // lisanslı bir modelle geri açılırsa diye index.css'te tanımlı durur.
+    expect(kaynak).not.toContain('CÜZDANIM');
+    expect(kaynak).not.toContain('var(--color-money-balance)');
     expect(css).toMatch(/--color-money-balance:\s*#00FFA5/);
   });
 });

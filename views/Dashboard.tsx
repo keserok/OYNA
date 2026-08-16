@@ -32,7 +32,7 @@
 // ════════════════════════════════════════════════════════════════════════════
 
 import React from 'react';
-import { Bell, ChevronRight, CircleAlert, CloudOff, MapPin, Wallet } from 'lucide-react';
+import { Bell, ChevronRight, CircleAlert, CloudOff, MapPin } from 'lucide-react';
 import { AppView } from '../types';
 import { useAppStore } from '../store';
 import { auth } from '../supabaseAuth';
@@ -44,7 +44,6 @@ import { YenileniyorSeridi } from '../components/common/YenileniyorSeridi';
 import { useMyMatches, parseMatchDate } from '../hooks/useMyMatches';
 import { CARD, SCREEN } from '../ui/labels';
 import { TYPE_PX } from '../ui/type';
-import { formatTRYAmount } from '../utils/formatTRY';
 import { Accent, Photo, Skeleton, Tap } from '../components/dashboard/HomePieces';
 import {
   KeeperGloveMark,
@@ -112,19 +111,6 @@ const providerText = (error: boolean, n: number | null, hasScope: boolean): stri
   if (n === null) return '—';
   return n === 0 ? 'Müsait yok' : `${n} müsait`;
 };
-
-/**
- * Bakiye biçimi.
- *
- * TASARIMDAN BİLİNÇLİ SAPMA: teslim edilen HTML "₺340" yazıyor (simge önde),
- * uygulamanın kanonik biçimi ise "340₺"dir (simge sonda) — `utils/formatTRY.ts`
- * ve onu kilitleyen `tests/unit/formatTRY.test.ts`. Ana sayfada tek başına
- * farklı bir para biçimi kullanmak, kullanıcının aynı akışta iki ayrı yazım
- * görmesi demekti; o modül tam olarak bunu önlemek için var. Veri yoksa
- * `formatTRYAmount` zaten "—" döndürür (sayı kuralı).
- */
-const money = (n: number | null, error: boolean): string =>
-  formatTRYAmount(error ? null : n);
 
 const GUN = ['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt'];
 const AY = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
@@ -538,65 +524,19 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
             </div>
           </Tap>
 
-          {/* Cüzdan + Maçlarım — sabit 128px kolon.
-              Maçı YOKSA Maçlarım kutusu HİÇ ÇİZİLMEZ ve cüzdan 176px'in
-              tamamını alır; tutar 26 → 34px büyür. Boş kutu göstermek yerine
-              yer vermemek bilinçli: ekranda "eksik bir şey var" hissi olmaz. */}
-          <div
-            style={{
-              flex: '0 0 var(--oy-wallet-w)', height: 'var(--oy-card-tall)',
-              display: 'flex', flexDirection: 'column', gap: 'var(--oy-space-2)',
-            }}
-          >
-            <Tap
-              onClick={() => onNavigate('WALLET')}
-              label={SCREEN.wallet}
+          {/* Maçlarım — sabit 128px kolon. Cüzdan kutusu lansmanda KALDIRILDI
+              (e-para mevzuatı — shared/featureFlags.ts): bakiye diye bir şey
+              yok, gösterilecek tutar da yok. Yaklaşan maç YOKSA kolon HİÇ
+              ÇİZİLMEZ ve profil kartı genişliğin tamamını alır. Boş kutu
+              göstermek yerine yer vermemek bilinçli: "eksik bir şey var"
+              hissi olmaz. */}
+          {hasNextMatch && (
+            <div
               style={{
-                flex: 1, minHeight: 0, position: 'relative', overflow: 'hidden',
-                borderRadius: 'var(--oy-radius-lg)', border: BOX_BORDER,
+                flex: '0 0 var(--oy-wallet-w)', height: 'var(--oy-card-tall)',
+                display: 'flex', flexDirection: 'column', gap: 'var(--oy-space-2)',
               }}
             >
-              <div
-                style={{
-                  height: '100%', padding: 'var(--oy-space-3)', display: 'flex',
-                  flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                  gap: 'var(--oy-space-2)', textAlign: 'center', boxSizing: 'border-box',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <Wallet size={15} color="var(--color-ink-2)" strokeWidth={2} style={{ flex: 'none' }} aria-hidden />
-                  <span
-                    style={{
-                      fontSize: px('caption'), fontWeight: 600, letterSpacing: '0.1em',
-                      color: 'var(--color-ink-4)',
-                    }}
-                  >
-                    CÜZDANIM
-                  </span>
-                </div>
-                {loading ? (
-                  <Skeleton w={72} h={22} />
-                ) : (
-                  <span
-                    style={{
-                      fontFamily: 'var(--font-display)', fontWeight: 300,
-                      fontSize: hasNextMatch ? px('amount') : px('amountLg'),
-                      lineHeight: 1, fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.02em',
-                      // Yeni kullanıcıda bakiye ₺0'dır ve NÖTR tonda durur:
-                      // para rengiyle yazılan bir sıfır, olmayan parayı
-                      // varmış gibi öne çıkarır.
-                      color: home.balance && home.balance > 0
-                        ? 'var(--color-money-balance)'
-                        : 'var(--color-ink-2)',
-                    }}
-                  >
-                    {money(home.balance, error)}
-                  </span>
-                )}
-              </div>
-            </Tap>
-
-            {hasNextMatch && (
               <Tap
                 onClick={() => onNavigate('MY_MATCHES')}
                 label={SCREEN.myMatches}
@@ -640,8 +580,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                   </span>
                 </div>
               </Tap>
-            )}
-          </div>
+            </div>
+          )}
         </div>
 
         {/* ── TOP OYNA + MAÇ ŞERİDİ ──────────────────────────────────────────

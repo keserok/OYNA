@@ -368,12 +368,12 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onNavigate }) => {
       // IP-04 — sonuç sessiz kalmaz: ne yandı, ne döndü, kullanıcı görsün.
       if (leaveQuote?.late) {
         const geri = leaveQuote.refundable > 0
-          ? `${formatTRYAmount(leaveQuote.refundable)} cüzdanına döndü, ` : '';
+          ? `${formatTRYAmount(leaveQuote.refundable)} iade edildi, ` : '';
         const yanan = leaveQuote.forfeited > 0
           ? `${formatTRYAmount(leaveQuote.forfeited)} iade edilmedi, ` : '';
         showToast(`Maçtan ayrıldın. ${geri}${yanan}güvenilirlik puanın ${leaveQuote.penalty} düştü.`, 'error');
       } else if ((leaveQuote?.refundable ?? 0) > 0) {
-        showToast(`Maçtan ayrıldın. ${formatTRYAmount(leaveQuote!.refundable)} cüzdanına geri döndü.`, 'success');
+        showToast(`Maçtan ayrıldın. ${formatTRYAmount(leaveQuote!.refundable)} sana iade edilecek.`, 'success');
       } else {
         showToast('Maçtan ayrıldın.', 'success');
       }
@@ -1073,7 +1073,7 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onNavigate }) => {
                 ) : cancelPreview.refund_amount > 0 ? (
                   <>Ödediğin tutarın <span className="text-[#39FF14] font-bold">%{cancelPreview.refund_percent}</span>'i
                     {' '}(<span className="font-numeric text-[#39FF14] font-bold">{money(cancelPreview.refund_amount)}</span>){' '}
-                    cüzdanına döner
+                    sana iade edilir
                     {cancelPreview.psp_fee > 0 && <> (ödeme altyapısı kesintisi −<span className="font-numeric">{money(cancelPreview.psp_fee)}</span>)</>}.</>
                 ) : (
                   <>Rezervasyon saatine az kaldığı için <span className="text-red-400 font-bold">iade yapılmayacak</span>.</>
@@ -1122,7 +1122,7 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onNavigate }) => {
               <p className="text-sm text-gray-400 leading-relaxed mb-6">
                 Rezervasyonun iptal edildi.
                 {cancelResult.refund_amount > 0
-                  ? <> <span className="font-numeric text-[#39FF14] font-bold">{money(cancelResult.refund_amount)}</span> (%{cancelResult.refund_percent}) cüzdanına eklendi.</>
+                  ? <> <span className="font-numeric text-[#39FF14] font-bold">{money(cancelResult.refund_amount)}</span> (%{cancelResult.refund_percent}) sana iade edilecek.</>
                   : ' İade edilecek ödeme bulunmuyor.'}
               </p>
               <button onClick={() => setCancelResult(null)} className="w-full py-3.5 bg-[#FACC15] text-black font-extrabold rounded-2xl text-sm uppercase tracking-wide active:scale-95 transition-transform">

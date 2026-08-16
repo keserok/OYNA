@@ -89,9 +89,10 @@ describe('Maç Kur ekranı, sunucudaki eşik kuralını yazar', () => {
 
 describe('Kapora dili — verilen söz tutulabilir olmalı', () => {
   it('"tamamı iade" sözü veren metin varsa sunucu tarafı da iade yazıyor olmalı', () => {
-    // Ekranda geçen söz:
+    // Ekranda geçen söz (lansman metni kanal iddiasız: "cüzdanına" demez —
+    // kapora > 0 dalı "maç dolmazsa tam iade / dolmazsa tamamı" sözünü verir):
     const ekran = readFileSync(join(process.cwd(), 'views/MatchCreate.tsx'), 'utf8');
-    expect(/kapora.{0,40}(tam iade|TAMAMI cüzdanına|tamamı iade)/is.test(ekran)).toBe(true);
+    expect(/kapora[\s\S]{0,80}(tam iade|tamamı iade|dolmazsa tamamı)/i.test(ekran)).toBe(true);
 
     // Sunucu karşılığı: iptal yolunda kaporayı serbest bırakan çağrı DURMALI.
     const migrasyonlar = join(process.cwd(), 'supabase/migrations');

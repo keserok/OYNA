@@ -8,7 +8,7 @@ import {
   X, Loader2, ChevronRight, UserPlus,
   Plus, CheckCircle2, Users, Star,
   AlertCircle, Shield, Layers, Award,
-  DollarSign, Info, KeyRound, Copy, Ruler, Activity, Wallet, CreditCard, Lock,
+  DollarSign, Info, KeyRound, Copy, Ruler, Activity, CreditCard, Lock,
   Megaphone
 } from 'lucide-react';
 import { broadcastOpenSlot } from '../services/socialService';
@@ -23,7 +23,7 @@ import { subscribeToMatchUpdates, getMatchDetails, getPitchCoordinates, getMatch
 import { sendFriendRequest } from '../services/friendService';
 import MatchSquadPicker, { type PickedPlayer } from '../components/social/MatchSquadPicker';
 import { getMatchTacticProposals, proposeMatchTactic, listMyTacticsLite, type MatchTacticProposal, type MyTacticLite } from '../services/tacticSocialService';
-import { findProvidersForMatch, createServiceRequest, getMatchServiceRequests, acceptProviderApplication, declineProviderApplication, captainConfirmService, fundServiceRequest, captainReportNoShow } from '../services/serviceRequestService';
+import { findProvidersForMatch, getMatchServiceRequests, acceptProviderApplication, declineProviderApplication, captainConfirmService, captainReportNoShow } from '../services/serviceRequestService';
 import { checkMatchThreshold, cancelMatchByCaptain } from '../services/matchLifecycleService';
 import { formatTRYAmount, formatTRYShort } from '../utils/formatTRY';
 
@@ -754,9 +754,10 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
         // BULGU-083 — maça katılımda ekranda tek bir iade cümlesi bile yoktu.
         // Metin sunucunun gerçek davranışıyla birebir: leave_public_match_slot /
         // process_match_at_deadline zaman kademesi UYGULAMADAN kalanı iade eder.
-        // Cüzdanda tek bakiye var — "iade kredisi" DENMEZ (karar defteri S6/K-0.3).
+        // Kanal iddiası yok ("cüzdan/kart" denmez): cüzdan lansmanda kapalı,
+        // iadenin nereye döneceğini ödeme yöntemi belirler.
         // Kademe sayıları SAHADAN gelir (match_cancel_policy) — metne gömülmez.
-        infoNote: `Kadro dolmazsa veya maç iptal olursa ödediğin tutarın tamamı cüzdanına döner. Maçtan kendin ayrılırsan iade kademeye tabidir: ${iadeKademesiCumlesi(iptalPolitikasi)}. Tam iade penceresi kapandıktan sonra ayrılırsan güvenilirlik puanın da düşer. Cüzdanındaki tutar OYNA içindeki saha, maç ve hizmet ödemelerinde kullanılır.`,
+        infoNote: `Kadro dolmazsa veya maç iptal olursa ödediğin tutarın tamamı iade edilir. Maçtan kendin ayrılırsan iade kademeye tabidir: ${iadeKademesiCumlesi(iptalPolitikasi)}. Tam iade penceresi kapandıktan sonra ayrılırsan güvenilirlik puanın da düşer.`,
       });
       setSelectedSlotIds([]);
       // Bu dal try/finally'ye GİRMEDEN dönüyor: kilidi elle bırakmazsak
@@ -798,7 +799,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
       geriAl?.();
       console.error('Buy slots error:', e);
       const msg = e?.message || '';
-      showActionError(msg.includes('Yetersiz') ? 'Cüzdan bakiyen yetersiz.' : 'Slot satın alınamadı. Lütfen tekrar dene.');
+      showActionError(msg.includes('Yetersiz') ? 'Ödeme alınamadı. Lütfen tekrar dene.' : 'Slot satın alınamadı. Lütfen tekrar dene.');
     } finally {
       setIsProcessing(false); endWrite();
     }
@@ -909,7 +910,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
       const fresh = await macTazele();
       setFillSlot(null);
       showActionSuccess(refunded > 0
-        ? `Slot iade edildi — ${money(refunded)} cüzdanına iade edildi.`
+        ? `Slot iade edildi — ${money(refunded)} sana iade edilecek.`
         : 'Slot vitrine iade edildi.');
     } catch { showActionError('Slot iade edilemedi.'); }
     finally { setIsProcessing(false); endWrite(); }
@@ -968,7 +969,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
       const refunded = await kickSlot(match.id, slotId);
       const fresh = await macTazele(); // KN-3b: taze veri DB'ye GERİ yazılmaz
       setActivePlayerSlotId(null);
-      showActionSuccess(refunded > 0 ? `Oyuncu çıkarıldı — ${money(refunded)} cüzdanına iade edildi.` : 'Oyuncu kadrodan çıkarıldı.');
+      showActionSuccess(refunded > 0 ? `Oyuncu çıkarıldı — ${money(refunded)} kendisine iade edilecek.` : 'Oyuncu kadrodan çıkarıldı.');
     } catch (e: any) {
       console.error(e);
       const msg = String(e?.message || '');
@@ -1001,12 +1002,12 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
       // söktüğü için YEREL toast görünmez; sonucu GLOBAL kanaldan söylüyoruz.
       if (leaveQuote?.late) {
         const geri = leaveQuote.refundable > 0
-          ? `${formatTRYAmount(leaveQuote.refundable)} cüzdanına döndü, ` : '';
+          ? `${formatTRYAmount(leaveQuote.refundable)} iade edildi, ` : '';
         const yanan = leaveQuote.forfeited > 0
           ? `${formatTRYAmount(leaveQuote.forfeited)} iade edilmedi, ` : '';
         showToast(`Maçtan ayrıldın. ${geri}${yanan}güvenilirlik puanın ${leaveQuote.penalty} düştü.`, 'error');
       } else if ((leaveQuote?.refundable ?? 0) > 0) {
-        showToast(`Maçtan ayrıldın. ${formatTRYAmount(leaveQuote!.refundable)} cüzdanına geri döndü.`, 'success');
+        showToast(`Maçtan ayrıldın. ${formatTRYAmount(leaveQuote!.refundable)} sana iade edilecek.`, 'success');
       } else {
         showToast('Maçtan ayrıldın.', 'success');
       }
@@ -1131,27 +1132,14 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
     }
   };
 
-  // FAZ 4: talep oluştur + hemen fonla (emanet). Kaleci ancak fonlanınca kabul edebilir.
-  const handleSelectProvider = async (provider: ProviderSuggestion, source: 'WALLET' | 'CARD' = 'WALLET') => {
-    if (!providerModalType) return;
-    setProviderSubmittingId(provider.id);
-    try {
-      // GK kaptanın KENDİ tarafına kiralanır; REF maç-tekil (taraf gönderilmez).
-      const { requestId } = await createServiceRequest(
-        match.id, provider.id, providerModalType,
-        providerModalType === 'GK' ? myCaptainSideUpper : undefined,
-      );
-      await fundServiceRequest(requestId, source);
-      await refreshServiceRequests();
-      setMarketDetailProvider(null);
-      setProviderModalType(null);
-      showActionSuccess(`Ödeme alındı — ${provider.name} onayı bekleniyor`);
-    } catch (err: any) {
-      console.error('[MatchJoin] talep/ödeme:', err);
-      showActionError(mapError(err, 'Hizmet talebi oluşturulamadı.'));
-    } finally {
-      setProviderSubmittingId(null);
-    }
+  // FAZ 4 kiralama akışı LANSMANDA KAPALI. Eski akış talebi cüzdandan/"Kartla"
+  // fonluyordu; "Kartla" yolu kart formu açmadan sağlayıcıya kazanç yazıyordu
+  // (hayalet ödeme — 5_GUNLUK_CIKIS_PLANI engelleyici #2) ve cüzdan artık yok
+  // (shared/featureFlags.ts). Gerçek kartlı emanet akışı iyzico canlıya
+  // alınınca v1.1'de yazılacak; o güne dek buton dürüstçe "yakında" der ve
+  // sağlayıcıya ASLA karşılıksız kazanç yazılmaz.
+  const handleSelectProvider = async (_provider: ProviderSuggestion) => {
+    showActionError('Kaleci/hakem kiralama çok yakında: online ödeme altyapısı canlıya alınınca açılacak.');
   };
 
   // FAZ 4: aktif (tahsil edilmiş) kaleci hizmeti → kaptan no-show bildirebilir.
@@ -1426,7 +1414,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                     ? 'text-red-300 bg-red-500/[0.09] border border-red-500/25'
                     : 'text-[#8fe87a] bg-[#39FF14]/[0.07] border border-[#39FF14]/20'
                 }`}>
-                  {kaporaBloke && <>Kaporan <b>{money(kaporaTutari)}</b> henüz tahsil edilmedi — <b>tamamı</b> cüzdanına geri döner.</>}
+                  {kaporaBloke && <>Kaporan <b>{money(kaporaTutari)}</b> henüz tahsil edilmedi — <b>tamamı</b> sana geri döner.</>}
                   {kaporaTahsil && !gecIptal && <>Kaporan tahsil edilmişti; maça {serbestIptalSaati} saatten fazla olduğu için <b>{money(kaporaTutari)} iade edilir</b>.</>}
                   {gecIptal && (
                     <>Maça <b>{Math.max(0, Math.floor(macaKalanSaat ?? 0))} saat</b> kaldı. Kaporan tahsil edilmişti:
@@ -1536,7 +1524,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                 </button>
                 <button onClick={() => handleRelease(fillSlot.id)} disabled={isProcessing}
                   className="w-full py-3 rounded-2xl font-extrabold text-[0.6875rem] uppercase tracking-widest text-red-400/80 hover:text-red-400 transition-colors">
-                  Slotu İade Et (ücret cüzdanına döner)
+                  Slotu İade Et (ücretin iade edilir)
                 </button>
               </div>
             </motion.div>
@@ -1712,7 +1700,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                                     className="px-4 py-2.5 rounded-xl font-extrabold text-[0.625rem] uppercase tracking-widest text-on-primary transition-all flex items-center justify-center gap-1.5 disabled:opacity-50"
                                     style={{ background: accent, boxShadow: `0 0 15px ${accent}55` }}
                                   >
-                                    {submitting ? <Loader2 size={13} className="animate-spin" /> : 'TALEP GÖNDER'}
+                                    {submitting ? <Loader2 size={13} className="animate-spin" /> : 'YAKINDA'}
                                   </motion.button>
                                 </div>
                               </div>
@@ -1822,27 +1810,16 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                       </div>
                     )}
 
-                    {/* Ödeme — kaptan cüzdan veya kart ile emanete öder (FAZ 4) */}
-                    <div className="w-full mt-6 flex gap-2">
-                      <motion.button
-                        whileTap={submitting ? undefined : { scale: 0.97 }}
-                        disabled={!!providerSubmittingId}
-                        onClick={() => handleSelectProvider(p, 'WALLET')}
-                        className="flex-1 py-3.5 rounded-2xl font-extrabold text-[0.6875rem] uppercase tracking-widest text-on-primary transition-all flex items-center justify-center gap-1.5 disabled:opacity-60"
-                        style={{ background: accent, boxShadow: `0 0 20px ${accent}55` }}>
-                        {submitting ? <Loader2 size={15} className="animate-spin" /> : <><Wallet size={14} /> Cüzdanla</>}
-                      </motion.button>
-                      <motion.button
-                        whileTap={submitting ? undefined : { scale: 0.97 }}
-                        disabled={!!providerSubmittingId}
-                        onClick={() => handleSelectProvider(p, 'CARD')}
-                        className="flex-1 py-3.5 rounded-2xl font-extrabold text-[0.6875rem] uppercase tracking-widest text-white bg-white/8 border border-white/15 transition-all flex items-center justify-center gap-1.5 disabled:opacity-60">
-                        <CreditCard size={14} /> Kartla
-                      </motion.button>
+                    {/* Kiralama LANSMANDA KAPALI — online ödeme canlıya alınınca
+                        kartlı emanet akışıyla açılacak (v1.1). Hayalet ödeme yok. */}
+                    <div className="w-full mt-6">
+                      <div className="w-full py-3.5 rounded-2xl font-extrabold text-[0.6875rem] uppercase tracking-widest text-white/60 bg-white/8 border border-white/15 flex items-center justify-center gap-1.5">
+                        <CreditCard size={14} /> Kiralama çok yakında
+                      </div>
                     </div>
                     <p className="text-center mt-2 text-sm font-extrabold" style={{ color: accent }}>{money(p.fee)}</p>
                     <p className="text-[0.6875rem] text-ink-4 text-center mt-1 leading-relaxed px-2">
-                      Ücret emanete alınır; {isRef ? 'hakem' : 'kaleci'} onaylayınca aktarılır. Reddedilir/no-show olursa iade edilir.
+                      Online ödeme altyapısı canlıya alındığında {isRef ? 'hakemi' : 'kaleciyi'} buradan kartla kiralayabileceksin; ücret emanete alınır, onaylayınca aktarılır.
                     </p>
                   </div>
                 );
@@ -2032,9 +2009,10 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
         </div>
 
         {/* ── 7c: KAPORA DURUMU (yalnız kaptan) ────────────────────────────────
-            Kapora ödendiğinde para cüzdandan çıkıyor ama nereye gittiği ve ne
-            zaman döneceği hiçbir oyuncu ekranında yazmıyordu; bilgi yalnız
-            yönetim panelindeydi. Kaptan artık kendi parasını burada görür. */}
+            Kapora ödendiğinde paranın nereye gittiği ve ne zaman döneceği
+            hiçbir oyuncu ekranında yazmıyordu; bilgi yalnız yönetim
+            panelindeydi. Kaptan artık kendi parasını burada görür.
+            (Lansman döneminde kapora alınmadığı için bu blok hiç çizilmez.) */}
         {isManageMode && isCaptain && kaporaTutari > 0 && (kaporaBloke || kaporaTahsil) && (
           <div className="px-4 pb-3">
             <div className={`flex items-start gap-2.5 px-3.5 py-3 rounded-2xl border ${
@@ -2054,10 +2032,10 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                 <p className="text-[0.6875rem] font-semibold text-ink-4 leading-snug mt-0.5">
                   {kaporaBloke
                     ? (kaporaIadesi > 0
-                        ? `Kadro dolarsa ${money(kaporaIadesi)} cüzdanına döner; dolmazsa tamamı iade edilir.`
-                        : 'Kadro dolmazsa tamamı cüzdanına iade edilir.')
+                        ? `Kadro dolarsa ${money(kaporaIadesi)} iade edilir; dolmazsa tamamı iade edilir.`
+                        : 'Kadro dolmazsa tamamı iade edilir.')
                     : (kaporaIadesi > 0
-                        ? `${money(kaporaIadesi)} cüzdanına iade edildi.`
+                        ? `${money(kaporaIadesi)} iade edildi.`
                         : 'Kaporanın tamamı katılım payına sayıldı.')}
                 </p>
               </div>

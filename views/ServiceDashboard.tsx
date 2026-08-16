@@ -2158,7 +2158,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                  <p className="text-[0.625rem] text-gray-400 font-bold tracking-widest uppercase mt-1">
                     {activeTab === 'HOME' && 'Ana Sayfa'}
                     {activeTab === 'JOBS' && 'Maç Bul'}
-                    {activeTab === 'WALLET' && 'Cüzdan'}
+                    {activeTab === 'WALLET' && 'Kazançlarım'}
                     {activeTab === 'MENU' && 'Menü'}
                  </p>
              </div>
@@ -2213,7 +2213,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
             <div className={`p-1 rounded-lg ${activeTab === 'WALLET' ? 'bg-[#FACC15]/10' : ''}`}>
                 <Wallet size={20} />
             </div>
-            <span className="text-[0.625rem] font-extrabold uppercase tracking-tighter">Cüzdan</span>
+            <span className="text-[0.625rem] font-extrabold uppercase tracking-tighter">Kazançlarım</span>
          </button>
 
          <button

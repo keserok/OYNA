@@ -21,7 +21,6 @@ import Chip from '../components/ui/Chip';
 import { getInitials } from '../components/ui/Avatar';
 import { UserAvatar } from '../components/common/UserAvatar';
 import { providerStyles } from '../shared/providerStyles';
-import { createServiceRequest, fundServiceRequest } from '../services/serviceRequestService';
 import { auth } from '../supabaseAuth';
 import { trCapitalize } from '../utils/trUpper';
 import { formatTRYShort } from '../utils/formatTRY';
@@ -283,17 +282,6 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect, onCre
             (m.status === 'DRAFT' || m.status === 'ACTIVE' || !m.status));
     }, [adminMatches, benimMaclarim]);
 
-    // Bakiye yetmediğinde sunucu Türkçe "Yetersiz bakiye…" hatası döndürür;
-    // bunu tanıyıp kullanıcıyı cüzdana yönlendiriyoruz (cüzdan-öncelikli sistem).
-    const isBalanceError = (msg: string) =>
-        /yetersiz bakiye|insufficient/i.test(msg);
-
-    const goToTopup = () => {
-        const store = useAppStore.getState();
-        store.setWalletInitialTab('TOPUP');
-        store.navigateTo('WALLET');
-    };
-
     const matchNeedsRole = useCallback((m: any) => (
         type === 'GK'
             ? m.missingPositions?.some((pos: any) => pos.role === 'GK' && pos.count > 0)
@@ -366,28 +354,14 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect, onCre
         } catch { /* kullanıcı paylaşımı iptal etti */ }
     };
 
-    // FAZ 8A — gerçek kiralama: create_service_request RPC (blokaj intenti + %10
-    // komisyon + bildirim) ARDINDAN fund_service_request (emanete alma). MatchJoin
-    // ile aynı iki-adımlı akış: sağlayıcı ancak FONLANMIŞ talebi kabul edebilir;
-    // fonlanmazsa talep sessizce askıda kalır (denetim bulgusu). Kabul + tahsilat
-    // sonrası backend gk_id/refereeId'yi yazar.
+    // FAZ 8A kiralama LANSMANDA KAPALI (MatchJoin ile parite): eski akış
+    // emaneti cüzdandan fonluyordu, cüzdan artık yok (shared/featureFlags.ts).
+    // Kartlı emanet, iyzico canlıya alınınca v1.1'de yazılacak; o güne dek
+    // sağlayıcıya karşılıksız kazanç yazılmaz, talep de askıda bırakılmaz.
     const handleConfirmMatch = async (match: any) => {
         if (!selectedProfile || isHiring) return;
         setSelectedMatchForHire(match);
-        setIsHiring(true);
-        setHireError(null);
-        try {
-            const result = await createServiceRequest(match.id, selectedProfile.id, type);
-            // Cüzdandan emanete al (MatchJoin ile paritede varsayılan WALLET).
-            await fundServiceRequest(result.requestId, 'WALLET');
-            setHireResult({ fee: result.fee, providerAmount: result.providerAmount });
-            setShowSuccessScreen(true);
-            successTimerRef.current = setTimeout(finishSuccess, 6000);
-        } catch (err: any) {
-            setHireError(err?.message || 'Talep oluşturulamadı. Lütfen tekrar dene.');
-        } finally {
-            setIsHiring(false);
-        }
+        setHireError('Kaleci/hakem kiralama çok yakında: online ödeme altyapısı canlıya alınınca açılacak.');
     };
 
     // ─── Detay için türetilmiş veriler ────────────────────────────────────────
@@ -805,19 +779,8 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect, onCre
                                         </div>
 
                                         {hireError && (
-                                            <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 space-y-2">
+                                            <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30">
                                                 <p className="text-[0.6875rem] font-bold text-red-400">{hireError}</p>
-                                                {/* Hizmet ücreti cüzdandan emanete alınır; bakiye yetmiyorsa
-                                                    kullanıcı burada tıkanıyordu — çıkış yolunu göster. */}
-                                                {isBalanceError(hireError) && (
-                                                    <button
-                                                        type="button"
-                                                        onClick={goToTopup}
-                                                        className="w-full h-10 rounded-xl bg-[#39FF14] text-[#0A0E14] text-[0.6875rem] font-extrabold uppercase tracking-wider active:scale-95 transition-transform"
-                                                    >
-                                                        Cüzdana Yükle
-                                                    </button>
-                                                )}
                                             </div>
                                         )}
                                     </div>

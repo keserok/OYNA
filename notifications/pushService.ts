@@ -258,8 +258,10 @@ export const handleDeepLink = async (
       return true;
     // ─── A3/A4 (4 Ağustos 2026) — daha önce hiçbiri tanınmıyordu ───────────
     case 'wallet':
-      // İade bildirimi: kullanıcı parasını görmek istiyor, ana ekranı değil.
-      setView('WALLET');
+      // Cüzdan lansmanda kapalı (shared/featureFlags.ts). Eski bir iade/ödeme
+      // bildirimi bu adresi taşıyorsa kullanıcıyı parasının bağlamına götür:
+      // maç/rezervasyon listesi. Adres tanınmaya devam eder — bildirim ölmez.
+      setView('MY_MATCHES');
       return true;
     case 'owner':
       // Saha sahibine giden bildirimler (yeni rezervasyon · iptal · talep sonucu).
