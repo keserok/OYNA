@@ -113,3 +113,78 @@ topluluklar, turnuvalar, promosyon kodları, SaaS abonelik, demo yüzeyi.
    arayüzünde yeni ekran/alan gerektirir; slot ızgarası SSOT'u (sunucu + istemci ikizi) birlikte güncellenmeli.
 5. **Yaş kademeleri** matches tablosunda yeni bir katılım kısıtı ve join RPC'lerinde yeni guard demek.
 6. **Saha sahibi başına komisyon** admin panelde yeni bir yönetim yüzeyi + fiyat hesabında yeni bir katman demek.
+
+---
+
+# TUR 2 KARARLARI (K-41…K-70)
+
+> Kaynak: kurucunun `MVP_KARAR_SORULARI_TUR2.md` sorularına verdiği cevaplar.
+
+## 9. Maç modeli
+
+| # | Karar |
+|---|---|
+| K-41 | Maçın oyuncu tarafında **sorumlusu/kaptanı yoktur**. Yönetim yetkileri (iptal, oyuncu çıkarma, diziliş) **yalnız admin ve saha sahibi panelindedir**. Bugünkü "kaptan ayrılınca otomatik kaptan devri" kodu kaldırılacak. |
+| K-42 | Slotlar **çoklu satın alınabilir**; satın alan kişi slotu kendine ya da bir arkadaşına atayabilir — **atama tercihe bağlıdır**, zorunlu değildir. |
+| K-43 | Maçı kuran (admin/saha sahibi) **minimum kişi sayısı** belirler. Dolmazsa maç iptal edilir ve **tam iade** yapılır. Minimum 1 yapılarak "her hâlükârda oynanır" da denebilir. |
+| K-44 | **Pozisyon dizilişi ve ev/deplasman ayrımı korunur** (Rahat mod dâhil). |
+| K-45 | **Skoru saha sahibi/müdür** kendi panelinden girer; **admin** düzeltebilir. Oyuncu tarafında skor girişi yoktur. |
+| K-46 | **Maç sonu değerlendirmenin tamamı kalır**: oyuncu puanlama, MOTM ve tesis puanı. |
+| K-47 | Oyuncu ayrılırsa: **24 saatten fazla kala tam iade (karta)**, sonrasında iade yok. |
+| K-48 | Admin maçı iptal ederse: **koşulsuz tam iade**, otomatik, herkese bildirim. |
+| K-49 | **Saha sahibi maçı iptal ederse**: kullanıcıya ücret **tam** iade edilir; iade edilen komisyon **saha sahibine borç olarak yansıtılır** ve elden ödeme mutabakatında tahsil edilir. |
+
+## 10. Ödeme mimarisi
+
+| # | Karar |
+|---|---|
+| K-50 | Tercih: ödeme **maç onaylanana kadar blokede (ön provizyon)** tutulsun — teknik olarak mümkünse. Değilse anında tahsil + otomatik iade. *(Teknik değerlendirme aşağıda; nihai karar Tur 3'te.)* |
+| K-51 | Ödeme ekranında **toplam ücret** gösterilir; kırılım (maç payı, kaleci/hakem payı) **ücret ayrıntısına girildiğinde** açılır. |
+
+## 11. Fiyatlandırma ve anlaşmalar
+
+| # | Karar |
+|---|---|
+| K-52 | Saha sahipleriyle **slot bazında özel anlaşmalar** yapılabilir; tamamı **admin panelinden yönetilir**. |
+| K-53 | Fiyatı **saha sahibi ve admin belirler**; ayrıca **otomatik hesaplama seçeneği** bulunur. |
+| K-54 | Saha ücreti, ek ücretler ve komisyon oranları **admin panelinde değiştirilebilir finansal parametreler** olarak durur (SaaS mantığı). |
+| K-55 | Yuvarlama artığı platformda kalır; admin raporunda **ayrı satır** olarak görünür. |
+| K-56 | Kaleci/hakem **hem kişisi hem ücreti admin panelinden** belirlenir. Kişiye ait sabit ücret modeli kullanılmaz. |
+| K-57 | Antrenman slotu gelir paylaşımı **admin panelinden ayarlanabilir yüzde** ile yönetilir; **her sahayla farklı anlaşma** yapılabilir (Sahalar bölümünden). |
+
+## 12. Antrenman slotu
+
+| # | Karar |
+|---|---|
+| K-58 | Satın alma birimi **kişi başıdır**. |
+| K-59 | Antrenman kurallarının **tamamı saha sahibi arayüzünden ayarlanabilir**: satış açık/kapalı, kaç saat kala açılacağı, kişi başı ücret, maksimum kişi, hangi kortlar, hangi gün/saatler. |
+| K-60 | Antrenman slotunda **iade yoktur**; satın alma ekranında açıkça belirtilir. |
+| K-61 | Antrenman slotunun oyuncu arayüzündeki yeri **tasarım seçenekleri sunulup seçilerek** belirlenecek. |
+| K-62 | Kaleci ile yarı saha ayırma özelliği **v2**; veri modeli buna hazır kurulacak. |
+
+## 13. Saha sahibi paneli
+
+| # | Karar |
+|---|---|
+| K-63 | Saha sahibi maç kurarken **kullanıcının göreceği/seçeceği her şeyi** belirleyebilir. |
+| K-64 | **Müdür (MANAGER) maç kurabilir**; personel (STAFF) kuramaz. |
+| K-65 | Uygulamadan kiralanabilir saatler **mevcut "çalışma saatleri" yapısı üzerine** kurulur. |
+| K-66 | Panelde kalanlar: takvim, maç kur, tarife, saat açma, manuel rezervasyon, antrenman kuralları, sahalarım, ekip, skor girişi, anlaşmam, bildirimler, güvenlik, destek. **Çıkanlar**: banka, para çekme, veresiye, gider, **abonelik**, **flash indirim**, finans raporları, ödeme modu. |
+
+## 14. Yaş, kayıt, kimlik
+
+| # | Karar |
+|---|---|
+| K-67 | **Asgari yaş 14**; sözleşme buna göre güncellenir. |
+| K-68 | **Doğum tarihi kayıtta zorunludur** ve kullanıcı sonradan değiştiremez (yalnız admin/destek). |
+| K-69 | Maçı kuran "Yaş grubu: Herkes / 14-18" seçer; yaş kapıları sunucuda zorlanır. |
+| K-70 | Veli onayı **mevcut kod tabanlı akışla** kalır (çocuk kod üretir, veli kendi hesabından onaylar). Kayıtta rol seçimi yoktur. Profilde **"Mirac K." biçimi** görünür; tam ad yalnız arkadaşlara. Kaleci/hakem başvurusu Ayarlar'da tek bağlantı + kısa formdur. |
+
+## 15. Kuruluş
+
+| # | Karar |
+|---|---|
+| K-71 | Yeni repo ve Supabase projesi adı: **OynaMVP**. |
+| K-72 | Uygulama sürümü **1.0.0**'dan başlar. |
+| K-73 | Admin paneli **aynı repoda** kalır. Admin maç kurma formuna kaleci/hakem atama eklenir. Saha sahibi hesap/şifre yönetimi **Sahalar** sayfasına taşınır. |
+| K-74 | Admin panelde kalanlar: doğrulama merkezi, silme kuyruğu, veli onayları, destek merkezi, bölge kapsama, bildirim şablonları. Çıkanlar: kampanyalar, CMS metinler, anlaşmazlıklar, ana sayfa görseli. Komuta merkezi sadeleşir (yalnız kapı durumu + gerçek durum). |
