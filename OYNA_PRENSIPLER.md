@@ -44,7 +44,7 @@ diğer hepsinin üstündedir:
 |---|---|
 | 2.1 | **Online ödeme kusursuz çalışır.** Oyuncu kapora, maç ücreti, kaleci ve hakem ücretini online öder. "Nakit moda geç" önerisi **reddedildi** — 1.1'deki vaat nakit modda çalışmaz. |
 | 2.2 | **"Nakit mod" yalnız saha sahibinin elle kapattığı slottur.** Oyuncu tarafı için nakit mod yoktur. |
-| 2.3 | **Elle kapatılan slotta komisyon alacağı doğar** ve hem admin hem saha sahibi panelinde görünür. |
+| 2.3 | ~~Elle kapatılan slotta komisyon alacağı doğar~~ → **DEĞİŞTİ (kurucu kararı, 17 Ağu 2026): elle kapatılan/nakit slottan komisyon DOĞMAZ.** Tesis kendi ekranından bir saati kapattığında o saat OYNA'nın dışında sayılır: ne komisyon alacağı oluşur ne de tesisin finansal tablolarına girer. Finansal tablolar YALNIZ uygulama üzerinden kartla alınan ödemeleri gösterir. |
 | 2.4 | **Hiçbir maç zararına kesinleşmez.** Kadro eşiği başabaş formülünden türetilir. |
 | 2.5 | **Kârlılık görünür olur.** Kârsız maçta panelde kırmızı tehlike işareti çıkar. |
 | 2.6 | **Saha anlaşması tesise özeldir.** Her tesisle ayrı ticari şart mümkündür. |
@@ -53,7 +53,10 @@ diğer hepsinin üstündedir:
 | 2.9 | **Para değişmezleri her gece sınanır.** 8 kuralın biri bile bozulursa panel kırmızı yanar. |
 | 2.10 | **OYNA kullanıcı adına bakiye TUTMAZ** *(kurucu kararı, 16 Ağu 2026)*. Uygulama içi saklı bakiye ("cüzdan") 6493 sayılı Kanun kapsamında e-para ihracı sayılır; lisans yok → cüzdan yok. Ödeme İŞLEM BAŞINA karttan alınır, iadeler KARTA döner (karta-iade kodu iyzico canlısıyla birlikte v1.1). Cüzdan ancak lisanslı bir modelle ve kurucu kararıyla geri açılır. K-3.3'ün "cüzdana döner" ifadesi bu kararla "ödeme yöntemine iade edilir" olarak okunur. |
 | 2.11 | **Saha, vitrine çıkacak SON saati belirleyebilir** *(kurucu kararı, 16 Ağu 2026)*. Listeleme sınırı saha bazlıdır (2.6 ile uyumlu), saha sahibi veya admin panelinden yazılır; yazılmamışsa sınır yoktur. Bitişi sınırı aşan slot oyuncuya görünmez ve uygulamadan rezerve edilemez; saha sahibinin elle yönetimi (akşam saatleri dahil) serbesttir. |
-| 2.12 | **Uygulamadan rezervasyon YALNIZ kartla kapora ödenerek yapılır** *(kurucu kararı, 17 Ağu 2026)*. "Tesiste ödemeli" (nakit) rezervasyon uygulamadan alınmaz: online ödemesi kapalı sahada vitrin açık kalır, oyuncu rezervasyon için tesisi arar. Kapı sunucudadır (`b_nakit_rezervasyon_kapisi`, hata: `CASH_BOOKING_DISABLED`) ve yalnız `APP_BOOKING` kaynağını kısar — maç rezervasyonu (güvencesi kapora motoru) ve sahibin elle yönetimi serbesttir. İade kesintisi TEK modeldir: iade tabanı karttan çekilen TOPLAM (kapora + işlem bedeli), üzerinden tek PSP kesintisi düşülür — her akışta aynı (`20260905000009`). |
+| 2.13 | **İadeden HİÇBİR kesinti yapılmaz** *(kurucu kararı, 17 Ağu 2026 — 16 Ağu kararını tersine çevirir)*. Kademe oranları (%100/%50/%0) durur ve ödeme ÖNCESİ gösterilir (2.7); o orandan sonra ikinci bir kesinti yoktur. Ödeme altyapısının kestiği bedeli OYNA üstlenir. Uygulama: `settings.refund_psp_fee_pct = 0` (`20260909000001`) — `_psp_fee` gövdesine dokunulmaz, tüm iade yolları tek yerden kesintisiz olur. |
+| 2.14 | **Kart işlem bedeli kullanıcıya AYRI SATIR gösterilmez** *(kurucu kararı, 17 Ağu 2026)*. Kullanıcı tek rakam görür: karttan çekilecek toplam. Kırılım (hizmet tabanı + bedel) yönetici panelinde durur — Kullanıcı 360 → Tahsilat ve Finans → Kart İşlem Bedeli. Hesap değişmedi; ekranda yazan rakam ile çekilen rakam hâlâ birebir aynıdır. |
+| 2.15 | **Taksit yoktur; kimseden TC kimlik numarası istenmez** *(kurucu kararı, 17 Ağu 2026)*. Ödeme tek çekimdir. iyzico'nun zorunlu tuttuğu kimlik alanına nötr yer tutucu gider; koda gerçek biçimde bir TC numarası gömülmez. |
+| 2.12 | **Uygulamadan rezervasyon YALNIZ kartla kapora ödenerek yapılır** *(kurucu kararı, 17 Ağu 2026)*. "Tesiste ödemeli" (nakit) rezervasyon uygulamadan alınmaz: online ödemesi kapalı sahada vitrin açık kalır, oyuncu rezervasyon için tesisi arar. Kapı sunucudadır (`b_nakit_rezervasyon_kapisi`, hata: `CASH_BOOKING_DISABLED`) ve yalnız `APP_BOOKING` kaynağını kısar — maç rezervasyonu (güvencesi kapora motoru) ve sahibin elle yönetimi serbesttir. İade tabanı TEK modeldir: karttan çekilen TOPLAM (kapora + işlem bedeli) — her akışta aynı (`20260905000009`). ⚠️ O tabandan düşülen PSP kesintisi **2.13 ile kaldırıldı**; taban kuralı durur, kesinti yoktur. |
 
 ---
 
@@ -80,6 +83,11 @@ diğer hepsinin üstündedir:
 | 4.3 | **Taktik Stüdyo kalır ama öne çıkarılmaz.** |
 | 4.4 | **Saha değerlendirmesi önce yalnız puandır**; yazılı yorum ikinci aşamadır. |
 | 4.5 | **Bölge de konum da yoksa ülke geneli gösterilmez:** önce konum izni, verilmezse ilçe seçimi. |
+| 4.6 | **Telefon ANA giriş yöntemidir** *(kurucu kararı, 17 Ağu 2026)*. Numara + SMS kodu. Google ve Apple ikincil yollardır; onlarla girenden de numara istenir (tesis ve kaptan oyuncuya numaradan ulaşır). 17 Ağustos ÖNCESİ e-posta hesapları MUAFTIR — çalışan bir hesap kilitlenmez. |
+| 4.7 | **Şifre kavramı YOKTUR** *(kurucu kararı, 17 Ağu 2026)*. E-posta+şifre girişi, kayıt ve "şifremi unuttum" akışları kaldırıldı. Tek kimlik yolu, iki kat saldırı yüzeyinden ve iki kat bakımdan iyidir. |
+| 4.8 | **Oturum çıkış yapılana kadar açıktır** *(kurucu kararı, 17 Ağu 2026)*. Süre sınırı yoktur; belirteç hem tarayıcı deposunda hem telefonun kendi deposunda tutulur ki işletim sistemi depolamayı temizlese de kullanıcı giriş ekranı görmesin. |
+| 4.9 | **Misafir gezinme YOKTUR** *(kurucu kararı, 17 Ağu 2026)*. "Önce göz at" yolu kapatıldı; uygulamaya girmek için hesap gerekir. Kayıt zaten tek ekranda ve numarayla bittiği için ayrı bir vitrin moduna gerek kalmadı. |
+| 4.10 | **Yurt dışı numaraya SMS gönderilmez** *(kurucu kararı, 17 Ağu 2026)*. Türkiye'ye SMS (Netgsm), yurt dışına WhatsApp — WhatsApp Business hesabı açılana dek o kanal KAPALIDIR ve ekran dürüstçe "şu an desteklenmiyor, Google/Apple ile girebilirsin" der. Sessizce "gönderildi" denmez. |
 
 ---
 

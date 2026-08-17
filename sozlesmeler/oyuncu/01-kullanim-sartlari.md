@@ -66,7 +66,8 @@ Uygulamaya üye olabilmek için doğru, güncel ve eksiksiz bilgi verilmesi zoru
 
 ### 3.2 Hesap Güvenliği
 
-- Kullanıcı, hesabına ait kullanıcı adı, şifre ve varsa çok faktörlü doğrulama bilgilerinin gizliliğinden bizzat sorumludur.
+- Platforma giriş, Kullanıcının **telefon numarasına gönderilen tek kullanımlık doğrulama koduyla** ya da Kullanıcının tercihine göre **Google/Apple hesabıyla** yapılır; OYNA'nın ayrıca bir şifre sistemi yoktur.
+- Kullanıcı, telefonuna gelen doğrulama kodunun ve giriş için kullandığı Google/Apple hesabının gizliliğinden bizzat sorumludur. Doğrulama kodu hiç kimseyle paylaşılmamalıdır; OYNA hiçbir koşulda Kullanıcıdan bu kodu istemez.
 - Hesap üzerinden gerçekleştirilen tüm işlemler, aksi ispat edilmedikçe hesap sahibi tarafından yapılmış sayılır.
 - Kullanıcı, hesabının yetkisiz kişilerce kullanıldığını fark ettiği anda destek@oyna.app üzerinden OYNA'ya derhal bildirimde bulunmakla yükümlüdür.
 - Bildirim yapılana kadar geçen sürede hesap üzerinden gerçekleştirilen yetkisiz işlemlerden Kullanıcının sorumluluğu; OYNA'nın Platformda makul ve sektör standartlarına uygun güvenlik önlemlerini (şifreleme, güvenli oturum yönetimi ve isteğe bağlı çok faktörlü doğrulama imkânı dahil) sunmuş olması ve Kullanıcının kendi ağır kusuru (ör. hesap bilgilerini bilerek üçüncü kişiyle paylaşması) bulunmaması kaydıyla, her hâlükârda ilgili bildirim öncesi dönemde gerçekleşen işlem başına, Kullanıcının o işlem için ödediği bedeli aşmayacak şekilde sınırlıdır. OYNA'nın yukarıda belirtilen makul güvenlik önlemlerini sağlamadığının tespit edilmesi hâlinde, bildirim öncesi yetkisiz işlemlerden doğan sorumluluk Kullanıcıya tam olarak yansıtılamaz; bu durumda sorumluluk taraflar arasında kusur oranına göre paylaştırılır.
@@ -156,7 +157,7 @@ Rezervasyon bedeline ilişkin fatura veya e-arşiv fatura/makbuz düzenleme yük
 
 Rezervasyon iptali ve iadeye ilişkin esaslar, **Kullanıcının kendi iradesiyle gerçekleştirdiği iptallerde**, aşağıdaki kademeli yapıya göre uygulanır (kademeler arasında çakışma bulunmayacak şekilde, saat aralıkları birbirini dışlayıcı olarak tanımlanmıştır):
 
-- Rezervasyon/maç saatine **24 saat ve üzerinde (≥ 24 saat)** kala yapılan iptallerde: ödenen tutarın **tamamı**, ödemenin yapıldığı karta iade edilir (yalnızca ödeme altyapısı sağlayıcısının kestiği işlem bedeli iade dışıdır).
+- Rezervasyon/maç saatine **24 saat ve üzerinde (≥ 24 saat)** kala yapılan iptallerde: ödenen tutarın **tamamı**, ödemenin yapıldığı karta iade edilir. **Hiçbir kesinti yapılmaz** — ödeme altyapısı sağlayıcısının kestiği işlem bedeli dâhil; o maliyeti OYNA üstlenir.
 - Rezervasyon/maç saatine **6 saat ile 24 saat arasında (6. saat dahil, 24. saat hariç)** kala yapılan iptallerde: ödenen tutarın **%50**'si, ödemenin yapıldığı karta iade edilir.
 - Rezervasyon/maç saatine **6 saatten az** kala yapılan iptallerde: iade yapılmaz.
 
