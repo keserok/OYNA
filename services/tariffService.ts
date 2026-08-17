@@ -47,10 +47,22 @@ export function isoDayOfWeek(dateISO: string): number {
 }
 
 function timeMatchesTariff(startTime: string, tariff: TariffLike): boolean {
-  const hhmm = normalizeTime(startTime);
-  const start = tariff.start_time.slice(0, 5);
-  const end = tariff.end_time.slice(0, 5);
-  return hhmm >= start && (hhmm < end || end === '00:00');
+  // GECE EKSENİ (BULGU-10, 17 Ağu 2026): sunucu ikizi get_current_tariff_price
+  // (20260905000008) ile BİREBİR — gece yarısını aşan pencere (17:00→02:00)
+  // end≤start → +1440 ile açılır; 06:00 öncesi dilim önceki akşamın devamıdır.
+  // Düz karşılaştırma akşam 21:00'i bile bulamıyor, ekran ortalama fiyata
+  // düşüp sunucudan farklı kapora gösteriyordu (2.9 ihlali).
+  const toMin = (t: string) => {
+    const [h, m] = t.split(':').map(Number);
+    return (Number.isFinite(h) ? h : 0) * 60 + (Number.isFinite(m) ? m : 0);
+  };
+  let slot = toMin(normalizeTime(startTime));
+  if (slot < 360) slot += 1440;
+  const bas = toMin(tariff.start_time.slice(0, 5));
+  const endHM = tariff.end_time.slice(0, 5);
+  const rawEnd = toMin(endHM);
+  const bit = endHM === '00:00' ? 1440 : rawEnd <= bas ? rawEnd + 1440 : rawEnd;
+  return slot >= bas && slot < bit;
 }
 
 /** Owner tarifelerinin ortalama saatlik ücreti (liste kartları için).
