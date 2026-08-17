@@ -17,6 +17,13 @@
 -- Böylece 08:00→02:00 penceresinde hem 21:00 hem 01:00 doğru fiyat bulur.
 -- ═══════════════════════════════════════════════════════════════════════════
 
+-- Sıfırdan kurulum onarımı (2026-08-17): depo zincirindeki önceki sürümün
+-- dönüş tipi farklı (window_start kolonu yok) — CREATE OR REPLACE bu durumda
+-- "cannot change return type of existing function" ile düşer. Canlıda eski
+-- tip zaten yeniyle aynı olduğundan DROP gerekmemişti; burada önce düşürülür,
+-- ardından canlıdaki yetki duruşu (tüm API rollerine kapalı) aynen kurulur.
+DROP FUNCTION IF EXISTS public.get_current_tariff_price(uuid, date, time without time zone, uuid);
+
 CREATE OR REPLACE FUNCTION public.get_current_tariff_price(
   p_pitch_id uuid, p_booking_date date, p_start_time time without time zone,
   p_court_id uuid DEFAULT NULL::uuid)
@@ -69,6 +76,11 @@ BEGIN
 END;
 $function$;
 
+-- Canlıdaki yetki duruşu: yalnız SECURITY DEFINER çağıranlar erişir
+-- (2026-08-17 canlı kontrolü: anon_exec=false, auth_exec=false).
+REVOKE ALL ON FUNCTION public.get_current_tariff_price(uuid, date, time without time zone, uuid)
+  FROM PUBLIC, anon, authenticated;
+
 -- ── KENDİNİ DOĞRULAMA: kendi geçici tarifesiyle uçtan uca ─────────────────
 DO $$
 DECLARE
@@ -80,7 +92,10 @@ BEGIN
   FROM public.pitches s JOIN public.courts c ON c.pitch_id = s.id
   WHERE s.is_demo LIMIT 1;
   IF v_pitch IS NULL THEN
-    RAISE EXCEPTION 'DOĞRULAMA: demo saha yok — kanıt kurulamadı';
+    -- Sıfırdan kurulum (preview replay): demo veri yok — veri kanıtı atlanır.
+    -- Canlıda bu iş 20260817003602 olarak veriyle kanıtlandı.
+    RAISE NOTICE 'DOĞRULAMA ATLANDI: demo saha yok (sıfırdan kurulum) — veri kanıtı canlıda verildi';
+    RETURN;
   END IF;
 
   INSERT INTO public.pitch_tariffs (id, pitch_id, court_id, name, tariff_type,

@@ -155,7 +155,10 @@ BEGIN
   FROM public.pitches s JOIN public.courts c ON c.pitch_id = s.id
   WHERE s.name LIKE 'Denek%' AND s.refund_full_hours IS NULL LIMIT 1;
   IF v_user IS NULL OR v_pitch IS NULL THEN
-    RAISE EXCEPTION 'DOĞRULAMA: demo profil/saha yok — kanıt kurulamadı';
+    -- Sıfırdan kurulum (preview replay): demo veri yok — veri kanıtı atlanır.
+    -- Canlıda bu iş 20260817094634 olarak veriyle kanıtlandı.
+    RAISE NOTICE 'DOĞRULAMA ATLANDI: demo profil/saha yok (sıfırdan kurulum) — veri kanıtı canlıda verildi';
+    RETURN;
   END IF;
 
   INSERT INTO public.pitch_bookings (id, pitch_id, court_id, user_id, booking_date,

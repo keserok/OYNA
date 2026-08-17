@@ -43,7 +43,10 @@ BEGIN
   FROM public.pitches s JOIN public.courts c ON c.pitch_id = s.id
   WHERE s.is_demo LIMIT 1;
   IF v_pitch IS NULL THEN
-    RAISE EXCEPTION 'DOĞRULAMA: demo saha yok — kanıt kurulamadı';
+    -- Sıfırdan kurulum (preview replay): demo veri yok — veri kanıtı atlanır.
+    -- Canlıda bu iş 20260817003120 olarak veriyle kanıtlandı.
+    RAISE NOTICE 'DOĞRULAMA ATLANDI: demo saha yok (sıfırdan kurulum) — veri kanıtı canlıda verildi';
+    RETURN;
   END IF;
 
   -- 1) Gece yarısını aşan pencere artık yazılabiliyor
