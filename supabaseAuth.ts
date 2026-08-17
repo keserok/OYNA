@@ -7,6 +7,10 @@ export interface OynaCurrentUser {
   uid: string;
   email: string | null;
   phone?: string | null;
+  /** Numara DOĞRULANMIŞ mı? Numara kapısının tek ölçüsü budur. */
+  phoneVerified: boolean;
+  /** Bu oturum hangi yolla açıldı: 'phone' | 'google' | 'apple' | 'email' | … */
+  provider: string;
   displayName: string;
   photoURL: string;
   roles: string[];
@@ -23,12 +27,17 @@ async function buildCurrentUser(user: {
   id: string;
   email?: string | null;
   phone?: string | null;
+  phone_confirmed_at?: string | null;
+  confirmed_at?: string | null;
+  app_metadata?: Record<string, any>;
   user_metadata?: Record<string, any>;
 }): Promise<OynaCurrentUser> {
   const base: OynaCurrentUser = {
     uid: user.id,
     email: user.email ?? null,
     phone: user.phone ?? null,
+    phoneVerified: !!user.phone && (user.phone_confirmed_at != null || user.confirmed_at != null),
+    provider: String(user.app_metadata?.provider ?? 'unknown'),
     displayName: user.user_metadata?.full_name || user.user_metadata?.name || '',
     photoURL: user.user_metadata?.avatar_url || user.user_metadata?.picture || '',
     roles: ['PLAYER'],
@@ -96,8 +105,81 @@ supabase.auth.onAuthStateChange((_event, session) => {
 // listesine "oyna://auth-callback" eklenmeli (yoksa Supabase dönüşü reddeder).
 export const OAUTH_NATIVE_REDIRECT = 'oyna://auth-callback';
 
+// ─── NATIVE GOOGLE (tercih edilen yol) ───────────────────────────────────────
+// Tarayıcı yaprağı yerine telefonun KENDİ Google hesap seçicisi açılır:
+//   • Kullanıcı adres çubuğunda Supabase adresini görmez; ekranda uygulamanın
+//     Google Cloud'da tanımlı adı ("OYNA") ve logosu yazar.
+//   • Uygulamadan hiç çıkılmaz — dönüşte deep link beklenmez.
+// Akış: plugin idToken üretir → supabase.auth.signInWithIdToken ile oturuma
+// çevrilir. Sunucu jetonun imzasını Google'a doğrulatır; istemciye güvenilmez.
+//
+// FAIL-SAFE: istemci kimlikleri (env) yoksa ya da plugin bir sebeple açılmazsa
+// ESKİ tarayıcı yolu devreye girer. Yani yanlış/eksik ayar girişi ÖLDÜRMEZ,
+// yalnız görünümü eski hâline düşürür.
+const GOOGLE_WEB_CLIENT_ID = import.meta.env.VITE_GOOGLE_WEB_CLIENT_ID as string | undefined;
+const GOOGLE_IOS_CLIENT_ID = import.meta.env.VITE_GOOGLE_IOS_CLIENT_ID as string | undefined;
+
+let socialLoginInit: Promise<boolean> | null = null;
+
+/** Plugin'i bir kez kurar. Dönüş: native Google kullanılabilir mi? */
+const ensureNativeGoogle = (): Promise<boolean> => {
+  if (socialLoginInit) return socialLoginInit;
+  socialLoginInit = (async () => {
+    if (!Capacitor.isNativePlatform()) return false;
+    const platform = Capacitor.getPlatform();
+    // Android web istemci kimliğini, iOS kendi kimliğini ister.
+    if (platform === 'ios' ? !GOOGLE_IOS_CLIENT_ID : !GOOGLE_WEB_CLIENT_ID) return false;
+    try {
+      const { SocialLogin } = await import('@capgo/capacitor-social-login');
+      await SocialLogin.initialize({
+        google: {
+          webClientId: GOOGLE_WEB_CLIENT_ID,
+          iOSClientId: GOOGLE_IOS_CLIENT_ID,
+          mode: 'online',
+        },
+      });
+      return true;
+    } catch (err) {
+      console.warn('[Auth] Native Google kurulamadı, tarayıcı yoluna düşülüyor:', err);
+      return false;
+    }
+  })();
+  return socialLoginInit;
+};
+
 export const loginWithGoogle = async (): Promise<void> => {
   if (Capacitor.isNativePlatform()) {
+    // 1) Native hesap seçici
+    if (await ensureNativeGoogle()) {
+      try {
+        const { SocialLogin } = await import('@capgo/capacitor-social-login');
+        // NONCE: ham değeri Supabase'e veririz, Google'a SHA-256 özetini —
+        // Apple akışındaki sözleşmenin aynısı (bkz. aşağıdaki not).
+        const rawNonce = crypto.randomUUID();
+        const res = await SocialLogin.login({
+          provider: 'google',
+          options: { scopes: ['profile', 'email'], nonce: await sha256Hex(rawNonce) },
+        });
+        const result = res?.result as { idToken?: string | null } | undefined;
+        const idToken = result?.idToken ?? null;
+        if (idToken) {
+          const { error } = await supabase.auth.signInWithIdToken({
+            provider: 'google',
+            token: idToken,
+            nonce: rawNonce,
+          });
+          if (error) throw error;
+          return; // Navigasyonu onAuthStateChanged dinleyicisi yapar.
+        }
+        console.warn('[Auth] Native Google idToken döndürmedi; tarayıcı yoluna düşülüyor.');
+      } catch (err) {
+        // Kullanıcı seçiciyi kapattıysa sessizce çık — "hata" göstermek yanlış olur.
+        const m = String((err as { message?: string })?.message ?? err).toLowerCase();
+        if (m.includes('cancel') || m.includes('iptal') || m.includes('12501')) return;
+        console.warn('[Auth] Native Google başarısız, tarayıcı yoluna düşülüyor:', err);
+      }
+    }
+    // 2) Yedek: sistem tarayıcısı + deep link (PKCE)
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
@@ -372,114 +454,27 @@ export const loginDemoAccount = async (email: string, password: string = DEMO_PA
   return data;
 };
 
-// ─── E-posta OTP ─────────────────────────────────────────────────────────────
-// shouldCreateUser: true → hesap yoksa otomatik oluşturur (kayıt + giriş tek akış)
-export const sendEmailOtp = async (email: string) => {
-  const { error } = await supabase.auth.signInWithOtp({
-    email,
-    options: { shouldCreateUser: true },
-  });
-  if (error) throw error;
-};
+// ═══════════════════════════════════════════════════════════════════════════
+// TELEFON OTP — ANA GİRİŞ YOLU (kurucu kararı, 17 Ağustos 2026)
+// ═══════════════════════════════════════════════════════════════════════════
+// Kullanıcı numarasını yazar → SMS ile 6 haneli kod gelir → girer. Şifre YOKTUR.
+//
+// E-POSTA + ŞİFRE YOLU KALDIRILDI. Silinenler: sendEmailOtp / verifyEmailOtp /
+// signInWithEmailPassword / signUpWithPassword / requestPasswordReset /
+// confirmPasswordReset / updateUserPassword. Gerekçe: iki paralel kimlik yolu
+// iki kat saldırı yüzeyi ve iki kat bakım demekti; kurucu kararıyla tek yol
+// kaldı. ESKİ KULLANICILAR ETKİLENMEZ: e-posta kimlikleri auth tarafında
+// duruyor, oturumları açık; yalnız GİRİŞ EKRANINDA o yol artık sunulmuyor.
+//
+// `shouldCreateUser: true` → numarası olmayan biri ilk kez kod isteyince hesabı
+// açılır. Yani "kayıt" ile "giriş" tek akıştır; kullanıcıya iki ayrı sekme
+// göstermeye gerek kalmaz.
+//
+// SMS'i Supabase kendi sağlayıcısıyla değil, bizim `send-sms` uç fonksiyonumuzla
+// gönderir (Auth → Hooks → Send SMS). Kanal seçimi orada: Türkiye → SMS,
+// yurt dışı → WhatsApp (bugün kapalı, bkz. shared/phone.ts).
 
-export const verifyEmailOtp = async (email: string, token: string) => {
-  const { data, error } = await supabase.auth.verifyOtp({
-    email,
-    token,
-    type: 'email',
-  });
-  if (error) throw error;
-  return data;
-};
-
-// ─── E-posta + Şifre ile giriş ───────────────────────────────────────────────
-export const signInWithEmailPassword = async (email: string, password: string) => {
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email: email.trim().toLowerCase(),
-    password,
-  });
-  if (error) throw error;
-  if (data?.user) auth.currentUser = await buildCurrentUser(data.user);
-  return data;
-};
-
-// ─── E-posta + Şifre ile kayıt ───────────────────────────────────────────────
-// config.toml: enable_confirmations=false → signUp anında oturum döndürür;
-// App.tsx'teki onAuthStateChanged yeni kullanıcı için profil satırını otomatik
-// oluşturur (rol PLAYER). E-posta onayı ileride açılırsa signUp oturum yerine
-// doğrulama bekletir; UI bu durumu (session yoksa) "e-postanı doğrula" olarak
-// ele almalıdır.
-export const signUpWithPassword = async (email: string, password: string, fullName: string) => {
-  const temizEposta = email.trim().toLowerCase();
-  const { data, error } = await supabase.auth.signUp({
-    email: temizEposta,
-    password,
-    options: { data: { full_name: fullName } },
-  });
-  if (error) throw error;
-
-  // ÖLÜ UÇ KORUMASI: kayıt başarılı ama oturum gelmediyse kullanıcı, gelmesi
-  // belirsiz bir doğrulama e-postasını beklemek zorunda kalır. Bu durumda
-  // ŞİFREYLE GİRİŞİ hemen deneriz: proje ayarında onay kapalıysa (bugünkü
-  // üretim ayarı) giriş açılır ve kullanıcı doğrudan uygulamaya girer; onay
-  // gerçekten zorunluysa bu deneme sessizce başarısız olur ve ekran "e-postanı
-  // doğrula" mesajını gösterir. Hiçbir güvenlik kuralı gevşetilmez — parolayı
-  // zaten kullanıcının kendisi bu ekranda belirledi.
-  if (data?.user && !data.session) {
-    const { data: giris } = await supabase.auth.signInWithPassword({
-      email: temizEposta,
-      password,
-    });
-    if (giris?.session && giris.user) {
-      auth.currentUser = await buildCurrentUser(giris.user);
-      return giris;
-    }
-  }
-
-  if (data?.user && data.session) auth.currentUser = await buildCurrentUser(data.user);
-  return data;
-};
-
-// ─── Şifremi unuttum — Adım 1: sıfırlama kodu iste ───────────────────────────
-// Güvenlik: e-posta kayıtlı olsun olmasın her zaman başarı döner (enumeration
-// yok). Kod, password-reset-request edge fonksiyonu ile e-postaya yollanır.
-export const requestPasswordReset = async (email: string): Promise<void> => {
-  const { error } = await supabase.functions.invoke('password-reset-request', {
-    body: { email: email.trim().toLowerCase() },
-  });
-  if (error) {
-    // Ağ/altyapı hatası — akışı kesmiyoruz; kullanıcı kod ekranına geçebilir.
-    console.error('[Auth] password-reset-request hatası:', error);
-  }
-};
-
-// ─── Şifremi unuttum — Adım 2: kodu doğrula + yeni şifreyi yaz ────────────────
-export const confirmPasswordReset = async (
-  email: string,
-  code: string,
-  newPassword: string,
-): Promise<void> => {
-  const { data, error } = await supabase.functions.invoke('password-reset-confirm', {
-    body: { email: email.trim().toLowerCase(), code: code.trim(), newPassword },
-  });
-  if (error) {
-    // functions.invoke non-2xx'te error verir; gövdedeki sebep koduna ulaş.
-    let msg = 'reset_failed';
-    try {
-      const ctx: any = (error as any).context;
-      if (ctx && typeof ctx.json === 'function') {
-        const body = await ctx.json();
-        msg = body?.error || msg;
-      }
-    } catch { /* gövde okunamadı — genel hata */ }
-    throw new Error(msg);
-  }
-  if (!(data as any)?.ok) throw new Error((data as any)?.error || 'reset_failed');
-};
-
-// ─── Telefon OTP (SMS) ───────────────────────────────────────────────────────
-// Numara E.164 formatında olmalı: +905551112233
-// Supabase panelinde SMS sağlayıcısı (Twilio vb.) tanımlanmalıdır.
+/** E.164 zorunlu: +905321234567. Doğrulaması `shared/phone.ts` içinde. */
 export const sendPhoneOtp = async (phone: string) => {
   const { error } = await supabase.auth.signInWithOtp({
     phone,
@@ -495,20 +490,60 @@ export const verifyPhoneOtp = async (phone: string, token: string) => {
     type: 'sms',
   });
   if (error) throw error;
+  if (data?.user) auth.currentUser = await buildCurrentUser(data.user);
   return data;
 };
 
-// ─── Hesap kimliği: kayıt/giriş yöntemi + şifre var mı ───────────────────────
-// Ayarlar → Profil Bilgileri için: kullanıcı Google/Apple/e-posta ile mi
-// kayıtlı, e-posta+şifre kimliği (yani parolası) var mı?
+// ─── Google/Apple ile girene numara bağlama ──────────────────────────────────
+// Kurucu kararı: sosyal yolla girenden de numara istenir — tesis sahibinin
+// oyuncuya ulaşabilmesi buna bağlı. Akış oturum AÇIKKEN işler:
+//   updateUser({phone}) → numaraya kod gider → verifyOtp(type:'phone_change')
+// Numara başkasında kayıtlıysa Supabase hata verir; ekran bunu dürüstçe söyler.
+export const requestPhoneLink = async (phone: string): Promise<void> => {
+  const { error } = await supabase.auth.updateUser({ phone });
+  if (error) throw error;
+};
+
+export const confirmPhoneLink = async (phone: string, token: string) => {
+  const { data, error } = await supabase.auth.verifyOtp({
+    phone,
+    token,
+    type: 'phone_change',
+  });
+  if (error) throw error;
+  if (data?.user) auth.currentUser = await buildCurrentUser(data.user);
+  return data;
+};
+
+/**
+ * Oturum sahibinin DOĞRULANMIŞ numarası var mı?
+ * App açılışında "numara iste" kapısının tek ölçüsü budur; profiles.phone
+ * kullanıcı tarafından yazılabilen bir alandır ve doğrulama kanıtı sayılmaz.
+ */
+export const hasVerifiedPhone = async (): Promise<boolean> => {
+  const { data } = await supabase.auth.getUser();
+  const u = data.user;
+  if (!u) return false;
+  return !!u.phone && (u.phone_confirmed_at != null || u.confirmed_at != null);
+};
+
+// ─── Hesap kimliği: hangi yolla girildi ──────────────────────────────────────
+// Ayarlar → Profil Bilgileri için: kullanıcı telefon/Google/Apple ile mi
+// kayıtlı, doğrulanmış numarası var mı?
+//
+// `hasPassword` alanı KALDIRILDI: şifre kavramı yok (17 Ağu 2026 kararı).
+// Eski e-posta kimliği olan hesaplar `providers` içinde 'email' görür — bu
+// tarihsel bir kayıttır, giriş ekranında o yol artık sunulmaz.
 export interface AuthIdentityInfo {
   email: string | null;
-  /** Bağlı tüm sağlayıcılar (ör. ['email'], ['google'], ['apple','email']). */
+  /** Doğrulanmış telefon (E.164) — yoksa null. */
+  phone: string | null;
+  /** Bağlı tüm sağlayıcılar (ör. ['phone'], ['google'], ['apple','phone']). */
   providers: string[];
   /** Birincil/görünen kayıt yöntemi. */
-  primaryProvider: 'email' | 'google' | 'apple' | 'phone' | 'unknown';
-  /** E-posta+şifre kimliği var mı? (yoksa şifre "oluştur" akışı gerekir) */
-  hasPassword: boolean;
+  primaryProvider: 'phone' | 'google' | 'apple' | 'email' | 'unknown';
+  /** Numarası doğrulanmış mı? Ödeme ve tesis iletişimi buna bakar. */
+  phoneVerified: boolean;
 }
 
 export const getAuthIdentity = async (): Promise<AuthIdentityInfo> => {
@@ -517,15 +552,15 @@ export const getAuthIdentity = async (): Promise<AuthIdentityInfo> => {
   const identities = (user?.identities ?? []) as { provider: string }[];
   const providers = identities.map((i) => i.provider);
   const metaProvider = (user?.app_metadata?.provider as string | undefined) ?? providers[0] ?? 'unknown';
-  const primaryProvider = (['email', 'google', 'apple', 'phone'] as const).includes(metaProvider as any)
+  const primaryProvider = (['phone', 'google', 'apple', 'email'] as const).includes(metaProvider as any)
     ? (metaProvider as AuthIdentityInfo['primaryProvider'])
     : 'unknown';
   return {
     email: user?.email ?? null,
+    phone: user?.phone ? `+${String(user.phone).replace(/\D/g, '')}` : null,
     providers,
     primaryProvider,
-    // 'email' kimliği = e-posta+şifre ile oluşturulmuş → parolası var.
-    hasPassword: providers.includes('email'),
+    phoneVerified: !!user?.phone && (user.phone_confirmed_at != null || user.confirmed_at != null),
   };
 };
 
@@ -542,12 +577,4 @@ export const updateUserEmail = async (email: string): Promise<{ applied: boolean
   const applied = (current ?? '').toLowerCase() === clean; // anında değiştiyse eşittir
   if (applied && auth.currentUser) auth.currentUser.email = current; // bellek-içi senkron
   return { applied, email: current ?? clean };
-};
-
-// ─── Şifre güncelle / oluştur ────────────────────────────────────────────────
-// Oturum geçerliyse yeter. OAuth-only kullanıcıda parola OLUŞTURUR (böylece
-// e-posta+şifre girişi de kazanır).
-export const updateUserPassword = async (password: string): Promise<void> => {
-  const { error } = await supabase.auth.updateUser({ password });
-  if (error) throw error;
 };

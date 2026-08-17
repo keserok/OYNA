@@ -28,9 +28,10 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
-  Mail, Lock, KeyRound, RefreshCw, Check, AlertCircle, ChevronRight, Plus,
+  Mail, Lock, Phone, RefreshCw, Check, AlertCircle, ChevronRight, Plus,
 } from 'lucide-react';
-import { auth, getAuthIdentity, updateUserEmail, updateUserPassword, AuthIdentityInfo } from '../../supabaseAuth';
+import { auth, getAuthIdentity, updateUserEmail, AuthIdentityInfo } from '../../supabaseAuth';
+import { formatPhoneDisplay } from '../../shared/phone';
 import {
   getFullUserProfile, getMatchHistory, updateProfileBasics, updateProfileName,
   saveProfileEdit, type MatchHistorySummary, type OynaUser,
@@ -121,10 +122,6 @@ const ProfileInfoPage: React.FC<ProfileInfoPageProps> = ({ open, onClose }) => {
   const [savingEmail, setSavingEmail] = useState(false);
   const [emailMsg, setEmailMsg] = useState<Msg>(null);
 
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [savingPass, setSavingPass] = useState(false);
-  const [passMsg, setPassMsg] = useState<Msg>(null);
 
   const [avatarMsg, setAvatarMsg] = useState<Msg>(null);
 
@@ -173,8 +170,9 @@ const ProfileInfoPage: React.FC<ProfileInfoPageProps> = ({ open, onClose }) => {
 
   useEffect(() => { if (open) void load(); }, [open, load]);
 
-  const isOAuthEmail = !!identity && !identity.hasPassword; // e-posta sağlayıcı-yönetimli
-  const hasPassword = !!identity?.hasPassword;
+  // Google/Apple ile girenin e-postası ORADA yönetilir; buradan değiştirilemez.
+  // (Şifre kavramı 17 Ağu 2026'da kaldırıldı — ölçüt artık sağlayıcının kendisi.)
+  const isOAuthEmail = identity?.primaryProvider === 'google' || identity?.primaryProvider === 'apple';
 
   const handleAvatarPick = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -228,22 +226,6 @@ const ProfileInfoPage: React.FC<ProfileInfoPageProps> = ({ open, onClose }) => {
     } catch (err) {
       setEmailMsg({ text: err instanceof Error ? err.message : 'E-posta güncellenemedi.', variant: 'error' });
     } finally { setSavingEmail(false); }
-  };
-
-  const handleSavePassword = async () => {
-    if (savingPass) return;
-    if (newPassword.length < 6) { setPassMsg({ text: 'Şifre en az 6 karakter olmalı.', variant: 'error' }); return; }
-    if (newPassword !== confirmPassword) { setPassMsg({ text: 'Şifreler eşleşmiyor.', variant: 'error' }); return; }
-    setSavingPass(true); setPassMsg(null);
-    try {
-      await updateUserPassword(newPassword);
-      const wasCreate = !hasPassword;
-      setNewPassword(''); setConfirmPassword('');
-      setPassMsg({ text: wasCreate ? 'Şifren oluşturuldu. Artık e-posta + şifre ile de giriş yapabilirsin.' : 'Şifren güncellendi.', variant: 'success' });
-      if (wasCreate) getAuthIdentity().then(setIdentity).catch(() => {});
-    } catch (err) {
-      setPassMsg({ text: err instanceof Error ? err.message : 'Şifre kaydedilemedi.', variant: 'error' });
-    } finally { setSavingPass(false); }
   };
 
   /**
@@ -492,39 +474,31 @@ const ProfileInfoPage: React.FC<ProfileInfoPageProps> = ({ open, onClose }) => {
               )}
             </div>
 
+            {/* ─── TELEFON ───────────────────────────────────────────────────
+                Şifre kartı KALDIRILDI (17 Ağu 2026): OYNA'da şifre yok, giriş
+                telefona gelen kodla yapılıyor. Kullanıcının burada görmesi
+                gereken tek kimlik bilgisi doğrulanmış numarasıdır — tesis
+                sahibi ona bu numaradan ulaşır. */}
             <div className="rounded-[24px] bg-surface-1 p-4">
               <label className="text-[0.6875rem] tracking-[0.14em] text-ink-4 flex items-center gap-1.5 mb-2">
-                <KeyRound size={12} /> {hasPassword ? 'ŞİFRE DEĞİŞTİR' : 'ŞİFRE OLUŞTUR'}
+                <Phone size={12} /> TELEFON
               </label>
-              {!hasPassword && (
-                <p className="text-[0.6875rem] text-ink-4 mb-2 leading-relaxed">
-                  Şu an sadece {PROVIDER_LABEL[identity?.primaryProvider ?? 'unknown'].replace(' ile kayıt', '')} ile giriş yapıyorsun. Bir şifre oluşturursan e-posta + şifre ile de girebilirsin.
-                </p>
-              )}
-              <div className="space-y-2">
-                <input
-                  type="password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="Yeni şifre (en az 6 karakter)"
-                  className="w-full h-11 bg-black/30 border border-white/10 rounded-xl px-3 text-sm text-white outline-none focus:border-primary/40"
-                />
-                <input
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="Yeni şifre (tekrar)"
-                  className="w-full h-11 bg-black/30 border border-white/10 rounded-xl px-3 text-sm text-white outline-none focus:border-primary/40"
-                />
-                <button
-                  onClick={handleSavePassword}
-                  disabled={savingPass || !newPassword || !confirmPassword}
-                  className="w-full h-11 rounded-xl font-extrabold text-sm bg-info-fill text-on-info-fill disabled:opacity-40"
-                >
-                  {savingPass ? 'Kaydediliyor…' : (hasPassword ? 'Şifreyi Güncelle' : 'Şifre Oluştur')}
-                </button>
-                <MsgLine msg={passMsg} />
+              <div className="flex items-center gap-2 h-11 bg-black/20 border border-white/5 rounded-xl px-3">
+                <Lock size={14} className="text-ink-4 shrink-0" />
+                <span className="text-sm font-bold text-ink-2 truncate font-numeric">
+                  {identity?.phone ? formatPhoneDisplay(identity.phone) : 'Numara bağlı değil'}
+                </span>
+                {identity?.phoneVerified && (
+                  <span className="ml-auto shrink-0 text-[0.625rem] font-extrabold uppercase tracking-wide text-[#39FF14] bg-[#39FF14]/10 px-2 py-1 rounded">
+                    Doğrulandı
+                  </span>
+                )}
               </div>
+              <p className="text-[0.6875rem] text-ink-4 mt-1.5 leading-relaxed">
+                {identity?.phone
+                  ? 'Girişte kullandığın numara. Değiştirmek için destekle iletişime geç.'
+                  : 'Numaranı bağlamadan ödeme yapamaz ve maça katılamazsın.'}
+              </p>
             </div>
           </div>
         )}

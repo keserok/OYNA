@@ -71,6 +71,8 @@ const ServiceApplication = lazy(() => import('./views/ServiceApplication'));
 const QRScannerView = lazy(() => import('./views/QRScannerView'));
 const LegalScreen = lazy(() => import('./views/LegalScreen'));
 const MessagesView = lazy(() => import('./views/MessagesView'));
+// Numara bağlama — yalnız Google/Apple ile girenler görür (tembel yüklenir).
+const PhoneLinkScreen = lazy(() => import('./views/PhoneLinkScreen'));
 import { BottomNav, TAB_IDS } from './components/BottomNav';
 const RoleSwitcher = lazy(() => import('./components/RoleSwitcher'));
 
@@ -436,7 +438,19 @@ const App: React.FC = () => {
               // arka-plan yenilemesi onaysız kullanıcıyı panele bounce edemez.
               const providerRole = landingRole === UserRole.GOALKEEPER || landingRole === UserRole.REFEREE;
               const vstatus = (profile.verification_status as string | null) ?? null;
-              if (providerRole && (vstatus === 'pending' || vstatus === 'rejected')) {
+              // ─── NUMARA KAPISI (17 Ağu 2026 kurucu kararı) ────────────────
+              // Telefon ANA giriş yöntemi olduğu için Google/Apple ile girenden
+              // de numara istenir: tesis sahibi ve kaptan oyuncuya numaradan
+              // ulaşır. Kapı YALNIZ sosyal yollara kurulur —
+              //   • telefonla girenin numarası zaten doğrulanmıştır,
+              //   • 17 Ağu ÖNCESİ e-posta hesapları MUAFTIR (kurucu kararı:
+              //     "onlar kalsınlar, telefon zorunlu tutulmasın") — çalışan bir
+              //     hesabı kilitlemek kabul edilemez.
+              const numaraGerekli = (user.provider === 'google' || user.provider === 'apple')
+                && !user.phoneVerified;
+              if (numaraGerekli) {
+                resetNavigation('PHONE_LINK');
+              } else if (providerRole && (vstatus === 'pending' || vstatus === 'rejected')) {
                 // Tekrar-başvuru akışının doğru rolü hedeflemesi için serviceAppRole'ü kur.
                 useAppStore.getState().setServiceAppRole(landingRole);
                 resetNavigation('PENDING_VERIFICATION');
@@ -696,6 +710,11 @@ const App: React.FC = () => {
         />;
       case 'AUTH':
         return <AuthScreen role={role} onSuccess={() => resetNavigation(navigateBasedOnRole(role))} onBack={() => goBack('SPLASH')} />;
+      case 'PHONE_LINK':
+        // Google/Apple ile giren kullanıcının son adımı. Doğrulanınca App'in
+        // auth dinleyicisi yeniden koşar ve doğru panele yönlendirir; burada
+        // elle bir hedef seçmiyoruz (rol-doğru yönlendirmenin tek yeri orası).
+        return <PhoneLinkScreen onLinked={() => resetNavigation(navigateBasedOnRole(role))} />;
       case 'GUARDIAN_CHILD':
         return <GuardianConsentChild onBack={() => goBack('SETTINGS')} onGoVeliForm={() => navigateTo('GUARDIAN_FORM')} />;
       case 'GUARDIAN_FORM':
