@@ -85,6 +85,20 @@ async function iyzicoPost(uriPath: string, bodyObj: unknown): Promise<any> {
 
 interface Buyer { name: string; surname: string; email: string; identityNumber: string; gsmNumber: string; }
 
+// ─── Kimlik numarası ────────────────────────────────────────────────────────
+// iyzico alıcı bloğunda `identityNumber` alanını ZORUNLU tutar ama bu alanı
+// doğrulamaz; kart sahipliği zaten 3DS ile bankada kanıtlanır.
+//
+// KURUCU KARARI (17 Ağustos 2026): OYNA HİÇ KİMSEDEN TC KİMLİK NUMARASI
+// İSTEMEZ. Sebebi ikili: (a) kayıt sürtünmesi, (b) KVKK'da özel nitelikli
+// olmayan ama gereksiz bir kişisel veriyi saklama sorumluluğu.
+//
+// Buraya eskiden GERÇEK BİÇİMDE bir TC numarası gömülüydü (74300864791).
+// Rastgele seçilmiş olsa bile geçerli formatta bir numaranın her ödemeye
+// iliştirilmesi kabul edilemez: o numara birinin olabilir. Yerine iyzico'nun
+// örneklerinde de kullandığı NÖTR yer tutucu konuldu — kimseye ait değil.
+const IDENTITY_PLACEHOLDER = '11111111111'
+
 function splitName(full?: string | null): { name: string; surname: string } {
   const clean = (full ?? '').trim().replace(/\s+/g, ' ')
   if (!clean) return { name: 'OYNA', surname: 'Kullanici' }
@@ -159,7 +173,10 @@ async function iyzicoCheckout(
   const body: Record<string, unknown> = {
     locale: 'tr', conversationId: intent.id, price, paidPrice: price,
     currency: intent.currency || 'TRY', basketId: intent.id, paymentGroup: 'PRODUCT',
-    callbackUrl, enabledInstallments: [1, 2, 3, 6],
+    // TAKSİT YOK (kurucu kararı, 17 Ağu 2026): tek çekim. Taksit, tahsilatı
+    // aylara yayıp iade/iptal muhasebesini ikiye katlıyordu; halı saha
+    // ücretinde de karşılığı yok.
+    callbackUrl, enabledInstallments: [1],
     ...buyerBlock(intent.id, buyer),
     basketItems: [{ id: `svc-${intent.id}`, name: 'Saha Kapora', category1: 'Spor Hizmeti', itemType: 'VIRTUAL', price }],
   }
@@ -256,7 +273,7 @@ Deno.serve(async (req: Request) => {
       const buyer: Buyer = {
         name: nm.name, surname: nm.surname,
         email: profile?.email || user.email || 'oyuncu@oyna.app',
-        identityNumber: '74300864791',
+        identityNumber: IDENTITY_PLACEHOLDER,
         gsmNumber: digits ? `+90${digits.slice(-10)}` : '+905000000000',
       }
       const cardUserKey = profile?.iyzico_card_user_key ?? null
@@ -437,7 +454,7 @@ Deno.serve(async (req: Request) => {
       const buyer = {
         name: nm.name, surname: nm.surname,
         email: profile?.email || user?.email || 'oyuncu@oyna.app',
-        identityNumber: '74300864791',
+        identityNumber: IDENTITY_PLACEHOLDER,
         gsmNumber: digits ? `+90${digits.slice(-10)}` : '+905000000000',
       }
       const callbackUrl = Deno.env.get('IYZICO_CALLBACK_URL') ?? `${supabaseUrl}/functions/v1/payment-webhook`
