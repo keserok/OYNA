@@ -50,19 +50,22 @@
 | 8 | Sunucu tarife eşleştiricisi gece ekseni bilmiyordu — **vitrin slotu gösteriyor, rezervasyon NO_TARIFF veriyordu** | Göç `000008`; ızgara motoruyla birebir aynı eksen |
 | 10 | İstemci tarife ikizi de gece-körüydü — ekran ortalama fiyat + %30 kapora gösterirken sunucu gerçek tarifeyi yazıyordu (ekrana 330₺, kasada 360₺) | `services/tariffService.ts` + 6 birim testi; UI'da yeniden test edildi: ekran artık 360₺ = sunucu |
 
-### Kurucu kararı bekleyen öneriler
+### Sabah kararlarıyla kapananlar (17 Ağu, kurucu onayı)
 
-- **BULGU-9 · Kesinti tutarlılığı:** Maç iptali iadesi kesintiyi ücret-dahil
-  toplamdan düşüyor (461,25 → 449,72), rezervasyon iptali ise kart işlem
-  bedelini de yakıp kalanından düşüyor (307,50 ödeyen 292,50 alıyor).
-  İki akış iki farklı "kesinti" modeli kullanıyor. Öneri: tek model seç
-  (maç modeli kullanıcıya daha adil). Ekranlar kendi akışlarının sözünü
-  doğru veriyor — tutarsızlık akışlar ARASINDA.
-- **BULGU-11 · Nakit sahada "Kapora bekliyor":** CASH_ONLY sahada
-  Maçlarım kartı "Kapora bekliyor" yazıyor; kapora yalnız tesiste
-  ödenebilir. Öneri: nakit modda "Ödeme tesiste" etiketi. (Karttaki
-  "Kaporayı Öde" düğmesi nakit sahada "online kapalı" mesajına çıkıyor —
-  yanlış değil ama çıkmaz sokak.)
+- **BULGU-9 · ÇÖZÜLDÜ (göç `000009`):** Kurucu maç modelini seçti — iade
+  tabanı karttan çekilen TOPLAM (kapora + işlem bedeli), üzerinden TEK
+  PSP kesintisi; her akışta aynı. Canlı yeniden test: 307,50 ödeyen artık
+  **299,81** alıyor (eskiden 292,50), önizleme = gerçek iptal = kuyruk
+  satırı. Eski cüzdan-emanet ödemelerinin davranışı değişmedi.
+- **BULGU-11 · KARARLA KAPANDI (kurucu kararı §2.12, göç `000010`):**
+  Etiket düzeltmesi yerine kökten karar — **uygulamadan rezervasyon
+  YALNIZ kartla kapora ödenerek yapılır; nakit rezervasyon kaldırıldı.**
+  Online ödemesi kapalı sahada vitrin açık kalır, "Kaporayı Öde" yerine
+  "Tesisi Ara" görünür, sunucu kapısı `CASH_BOOKING_DISABLED` ile reddeder.
+  Yalnız `APP_BOOKING` kısılır: maç kurma (güvencesi kapora motoru) ve
+  sahibin elle yönetimi serbest. "Kapora bekliyor" çıkmazı artık doğamaz.
+  **Sonuç:** kart günü gelene dek uygulamadan saha kiralanamaz (bilinçli;
+  lansman öncesi gerçek kullanıcı yok).
 
 ## 4 · Uçtan uca KANITLANAN akışlar
 
