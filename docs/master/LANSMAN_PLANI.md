@@ -43,13 +43,26 @@ kesintisizdir (iptal değil, tasarlanmış akış).
 - Ödeme ucu fail-closed: sağlayıcı bilinçli seçilmemişse hiçbir tahsilat yolu
   çalışmaz; hayalet "Kartla" kazançları tamamen kapatıldı.
 
-**Kodun beklediği ama HENÜZ yapılmamış canlı işlemler** (aşağıda Faz A):
+**Canlı işlemler — YAPILDI (17 Ağu 2026 gecesi):**
 
-1. 3 göç dosyasının canlıya uygulanması (`20260905000001..3`).
-2. Edge fonksiyonlarının yeniden yayınlanması: `create-payment` ·
-   `refund-payment` · `iyzico-3ds-callback`.
-3. `PAYMENT_PROVIDER` ortam değişkeni kararı: deneme döneminde `SIMULATION`
-   (bilerek), canlı kart günü `IYZICO`.
+1. ✅ 8 göç canlıda (`20260905000001..8` — 3 karar göçü + gece testinin
+   bulduğu 5 onarım; her biri kendi doğrulamasını geçti).
+2. ✅ Üç uç yayınlandı: `create-payment` v11 · `refund-payment` v7 ·
+   `iyzico-3ds-callback` v6. Karta iade cron'u canlıda ÇALIŞIYOR
+   (5 dk'da bir; zehirli satır 3 denemede FAILED durur — kanıtlandı).
+3. ⚠️ `PAYMENT_PROVIDER` uçlarda **IYZICO** olarak ayarlı bulundu (eski
+   kurulum). SIMULATION duman provası bu yüzden veritabanı katmanında
+   yapıldı (apply_card_payment doğrudan) ve GEÇTİ. Uçtan uca simülasyon
+   istersen: Supabase paneli → Edge Functions → Secrets →
+   `PAYMENT_PROVIDER=SIMULATION` (test bitince IYZICO'ya geri).
+4. ⚠️ İade PSP kesintisi `settings.refund_psp_fee_pct = %2,5` yapıldı
+   (0'dı — kesinti kararın ölü kalıyordu). iyzico sözleşmesi imzalanınca
+   GERÇEK orana güncelle (Faz B-2 ile birlikte).
+
+**Lansmana kadar bekleme duruşu (gece sonu geri alındı):**
+`payment_mode_global=CASH_ONLY` + `match_deposit_enabled=false` — kart günü
+gelene dek hiçbir yüzey online tahsilat teklif etmez, maçlar kaporasız
+kurulur (ödeme ekranına çıkmaz, süpürücüye düşmez).
 
 ---
 
@@ -105,8 +118,12 @@ Her satır: **[K]** kurucu işi · **[G]** geliştirici (Claude) işi · **[B]**
 1. `demo_mode_enabled = false` + demo verisi purge (**1. madde** — CPO-P0-1).
 2. Demo hesap seçici fail-closed + `?demo=1` arka kapısı kaldır **[G]** (eski
    planın Gün-2 maddeleri — hâlâ açık).
-3. `PAYMENT_PROVIDER=IYZICO` (Faz B bitmiş olmalı) · `payment_mode_global`
-   kararı: kart canlı → `ONLINE_ONLY`.
+3. Ödeme anahtarları (Faz B bitmiş olmalı, ÜÇÜ BİRLİKTE açılır):
+   `PAYMENT_PROVIDER=IYZICO` (uçlarda zaten ayarlı — anahtarların gerçek
+   olduğunu Faz B-3 STR-3 kanıtlar) · `payment_mode_global` kararı: kart
+   canlı → `ONLINE_ONLY` (veya saha saha `HYBRID`) ·
+   **`match_deposit_enabled=true`** (kart kaporası motoru bununla açılır;
+   kapalıyken maçlar kaporasız kurulur).
 4. Bildirim izni akışı (CPO-P0-8) + `push_live_enabled` (APNs/FCM hazırsa).
 5. Alarm e-postası (Resend anahtarı) — bozulunca kurucuya ulaşsın.
 6. Sızmış parola koruması (Supabase panelinde 5 dk).
