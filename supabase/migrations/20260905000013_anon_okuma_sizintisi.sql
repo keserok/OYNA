@@ -25,6 +25,15 @@ DROP POLICY IF EXISTS "Registrations are viewable by everyone." ON public.match_
 DROP POLICY IF EXISTS "Waitlist viewable by everyone."          ON public.waitlist;
 DROP POLICY IF EXISTS "Holds are viewable by everyone"          ON public.pitch_slot_holds;
 
+-- ── Yeniden uygulanabilirlik (playbook Kural 4) ────────────────────────────
+-- Bu üç politikayı 20260908000000_anon_acik_tablolar_kapatildi de kurabiliyor.
+-- Çıplak CREATE POLICY, ikisinin de uygulandığı bir ortamda (ör. sıfırdan
+-- kurulan önizleme veritabanı) 42710 "already exists" ile göçü durduruyordu.
+-- Önce düşür, sonra kur: davranış aynı, tekrar uygulama güvenli.
+DROP POLICY IF EXISTS match_registrations_select_own ON public.match_registrations;
+DROP POLICY IF EXISTS waitlist_select_own            ON public.waitlist;
+DROP POLICY IF EXISTS slot_holds_select_own          ON public.pitch_slot_holds;
+
 -- ── Yerine dar kapılar ─────────────────────────────────────────────────────
 -- Kayıtlar ve bekleme listesi: kullanıcının kendi satırı + yönetici.
 -- (Uygulama bunları zaten fonksiyonlardan okuyor; bu politika "ileride biri
