@@ -11,8 +11,9 @@
 --   • Tüm kimlikler 'cafe7e57' önekiyle deterministik → temizlik cerrahidir
 --     (tests/canli-test/temizlik.sql tek harf gerçek veriye dokunmaz).
 --   • Sahalar yalnız aktif kapsama bölgesinde (Altınordu) — keşifte görünsün.
---   • Şifre (hepsi): Oyna!Denek-2026  (yalnız demo hesap; canlıda gerçek
---     kullanıcı bu şifreyle DOĞMAZ, e-posta alanı @oyna.app'e kilitli).
+--   • Şifre (hepsi): password123 — uygulamanın demo giriş kapısı (demoLogin,
+--     yalnız demo_mode_enabled açıkken ve yalnız @oyna.app) SABİT bu şifreyle
+--     girer; mevcut demo hesap kalıbıyla aynı. Prod alan adında kapı kapalı.
 --
 -- Kimlik şeması:
 --   sahipler  cafe7e57-0000-4000-8000-000000000101..105  denek-sahibi1..5@oyna.app
@@ -44,7 +45,7 @@ INSERT INTO auth.users (instance_id, id, aud, role, email, encrypted_password,
   email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at,
   confirmation_token, email_change, email_change_token_new, recovery_token)
 SELECT '00000000-0000-0000-0000-000000000000', id, 'authenticated', 'authenticated',
-  email, extensions.crypt('Oyna!Denek-2026', extensions.gen_salt('bf')), now(),
+  email, extensions.crypt('password123', extensions.gen_salt('bf')), now(),
   '{"provider":"email","providers":["email"]}'::jsonb,
   jsonb_build_object('full_name', ad), now(), now(), '', '', '', ''
 FROM yeni
@@ -65,7 +66,7 @@ INSERT INTO auth.users (instance_id, id, aud, role, email, encrypted_password,
   email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at,
   confirmation_token, email_change, email_change_token_new, recovery_token)
 SELECT '00000000-0000-0000-0000-000000000000', id, 'authenticated', 'authenticated',
-  email, extensions.crypt('Oyna!Denek-2026', extensions.gen_salt('bf')), now(),
+  email, extensions.crypt('password123', extensions.gen_salt('bf')), now(),
   '{"provider":"email","providers":["email"]}'::jsonb,
   jsonb_build_object('full_name', ad_soyad), now(), now(), '', '', '', ''
 FROM yeni
@@ -185,6 +186,16 @@ UPDATE public.courts SET is_active = true WHERE id::text LIKE 'cafe7e57-%';
 UPDATE public.pitches SET is_active = true, is_published = true
 WHERE id::text LIKE 'cafe7e57-%';
 
+-- ── 8c) Keşif sözleşmesi: is_open + görsel + is_demo=false (ev deseni) ────
+-- get_nearby_pitches yalnız is_open, görselli ve is_demo=false sahaları
+-- listeler. Modül-demo sahaları da (Capo Arena) aynen böyle: saha "gerçek
+-- görünümlü" olur, demo ayrımı KULLANICI üzerinden yürür (demo_isareti_ata
+-- önce kullanıcıya bakar → denek kullanıcılarının tüm rezervasyon/maç/ödeme
+-- satırları yine demo işaretlenir). Temizlik cafe7e57 önekiyle cerrahidir.
+UPDATE public.pitches SET is_open = true, is_demo = false,
+  image = 'https://images.unsplash.com/photo-1459865264687-595d652de67e?w=1200'
+WHERE id::text LIKE 'cafe7e57-%';
+
 -- ── 9) KENDİNİ DOĞRULAMA (7.7): sayılar tutmazsa hiçbir şey kalmaz ─────────
 DO $$
 DECLARE
@@ -198,7 +209,7 @@ BEGIN
   SELECT count(*) INTO v_onboard_beklemede FROM public.profiles WHERE id::text LIKE 'cafe7e57-%' AND NOT has_completed_onboarding;
   SELECT count(*) INTO v_owners   FROM public.profiles WHERE id::text LIKE 'cafe7e57-0000-4000-8000-0000000001%' AND roles ? 'OWNER';
   SELECT count(*) INTO v_accounts FROM public.owner_accounts WHERE owner_user_id::text LIKE 'cafe7e57-%';
-  SELECT count(*) INTO v_pitches  FROM public.pitches  WHERE id::text LIKE 'cafe7e57-%' AND is_demo AND is_active AND is_published;
+  SELECT count(*) INTO v_pitches  FROM public.pitches  WHERE id::text LIKE 'cafe7e57-%' AND is_open AND is_active AND is_published;
   SELECT count(*) INTO v_courts   FROM public.courts   WHERE id::text LIKE 'cafe7e57-%' AND is_active;
   SELECT count(*) INTO v_tariffs  FROM public.pitch_tariffs WHERE id::text LIKE 'cafe7e57-%' AND is_active;
 
