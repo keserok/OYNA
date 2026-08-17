@@ -7,6 +7,7 @@ import { supabase } from '../supabaseClient';
 import { formatTRY } from '../utils/formatTRY';
 import { readTicketCache, writeTicketCache, type TicketSnapshot } from '../utils/ticketCache';
 import { formatTRYAmount } from '../utils/formatTRY';
+import { dosyaKaydetVeyaPaylas } from '../utils/dosyaKaydet';
 
 /**
  * DİJİTAL BİLET — DÜRÜST (C4).
@@ -169,12 +170,23 @@ const MatchTicket: React.FC<MatchTicketProps> = ({ onBack }) => {
     } catch { /* kullanıcı iptal etti */ }
   };
 
-  const handleSaveImage = () => {
+  const handleSaveImage = async () => {
     if (!qrDataUrl) return;
-    const a = document.createElement('a');
-    a.href = qrDataUrl;
-    a.download = `oyna-bilet-${refShort || 'qr'}.png`;
-    document.body.appendChild(a); a.click(); a.remove();
+    // `<a download>` paketlenmiş uygulamada SESSİZCE çalışmaz (iOS WKWebView /
+    // Android WebView) — bilet QR'ı hiç kaydedilemiyordu. Ortak yardımcı önce
+    // platformun paylaşım sayfasını açar, olmazsa indirmeye düşer.
+    try {
+      const blob = await (await fetch(qrDataUrl)).blob();
+      const sonuc = await dosyaKaydetVeyaPaylas(
+        blob, `oyna-bilet-${refShort || 'qr'}.png`, 'OYNA Bilet',
+      );
+      if (sonuc === 'PAYLASILDI') setShareMsg('Bilet paylaşıma hazır.');
+      else if (sonuc === 'INDIRILDI') setShareMsg('Bilet kaydedildi.');
+      else if (sonuc === 'DESTEKLENMIYOR') setShareMsg('Bilet bu cihazda kaydedilemedi.');
+    } catch {
+      setShareMsg('Bilet kaydedilemedi.');
+    }
+    setTimeout(() => setShareMsg(''), 2500);
   };
 
   const canEnter = payState === 'PAID' || payState === 'PARTIAL';

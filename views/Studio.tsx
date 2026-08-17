@@ -650,8 +650,12 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
     const handleDownloadImage = async () => {
         try {
             const blob = await buildShareBlob();
-            downloadBlob(blob, tacticImageFilename(activeTactic));
-            showToast('Taktik görseli indirildi.');
+            // Sonuca göre konuş: pakette paylaşım sayfası açılır ("kaydedildi"
+            // demek yalan olurdu), kullanıcı vazgeçerse hiçbir şey söylenmez.
+            const sonuc = await downloadBlob(blob, tacticImageFilename(activeTactic));
+            if (sonuc === 'PAYLASILDI') showToast('Taktik görseli paylaşıma hazır.');
+            else if (sonuc === 'INDIRILDI') showToast('Taktik görseli indirildi.');
+            else if (sonuc === 'DESTEKLENMIYOR') showToast('Görsel bu cihazda kaydedilemedi.', 'error');
         } catch (e) { showToast((e as Error)?.message || 'Görsel üretilemedi.', 'error'); }
     };
     const handleCopyLink = async () => {
@@ -675,7 +679,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                     ...(url ? { url } : {}),
                 });
             } else {
-                downloadBlob(blob, tacticImageFilename(activeTactic));
+                await downloadBlob(blob, tacticImageFilename(activeTactic));
                 if (url) { try { await navigator.clipboard.writeText(url); } catch { /* yok say */ } showToast('Görsel indirildi, link kopyalandı.'); }
                 else showToast('Görsel indirildi. Link için taktiği kaydet.');
             }

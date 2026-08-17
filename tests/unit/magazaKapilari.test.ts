@@ -114,3 +114,61 @@ describe('Mağaza kapıları · platform yapılandırması', () => {
     }
   });
 });
+
+// ════════════════════════════════════════════════════════════════════════════
+// DOSYA KAYDETME — PAKETTE ÇALIŞIR OLMALI
+// ════════════════════════════════════════════════════════════════════════════
+//
+// `<a download>` deseni TARAYICIDA çalışır, PAKETLENMİŞ uygulamada çalışmaz:
+// iOS WKWebView `download` özniteliğini desteklemez; Android Capacitor
+// WebView'ına DownloadListener bağlı değildir. İkisinde de tıklama SESSİZCE
+// hiçbir şey yapmaz — kullanıcı düğmeye basar, dosya ortada yoktur.
+// Etkilenen yüzeyler: bilet QR'ı, taktik görseli, KVKK veri dışa aktarımı,
+// sahip finans CSV'leri.
+
+describe('Mağaza kapıları · dosya kaydetme', () => {
+  it('ortak yardımcı önce paylaşım sayfasını dener, sonra indirmeye düşer', () => {
+    const y = oku('utils/dosyaKaydet.ts');
+    expect(y).toContain('navigator');
+    expect(y).toContain('canShare');
+    expect(y).toContain('AbortError');   // kullanıcı vazgeçince indirmeye DÜŞME
+    expect(y).toContain('klasikIndir');  // yedek yol duruyor
+  });
+
+  it('kullanıcıya dosya veren HER yüzey ortak yardımcıdan geçer', () => {
+    for (const yol of [
+      'views/MatchTicket.tsx',                     // bilet QR
+      'views/studio/shareImage.ts',                // taktik görseli
+      'views/SettingsScreen.tsx',                  // KVKK veri dışa aktarımı
+      'views/owner/OwnerFinanceView.tsx',          // aylık finans CSV
+      'views/owner/finance/FinanceRangeReport.tsx',// tarih aralıklı rapor CSV
+    ]) {
+      expect(oku(yol), `${yol} ortak yardımcıyı kullanmıyor`).toContain('dosyaKaydetVeyaPaylas');
+    }
+  });
+
+  it('ham `<a download>` deseni tüketici yüzeylerinde KALMADI', () => {
+    for (const yol of [
+      'views/MatchTicket.tsx',
+      'views/studio/shareImage.ts',
+      'views/SettingsScreen.tsx',
+      'views/owner/OwnerFinanceView.tsx',
+      'views/owner/finance/FinanceRangeReport.tsx',
+    ]) {
+      // Yorumlarda geçebilir; KOD satırında olmamalı.
+      const kod = oku(yol)
+        .split('\n')
+        .filter((s) => !/^\s*(\/\/|\*|\/\*)/.test(s))
+        .join('\n');
+      expect(kod, `${yol} hâlâ ham indirme kullanıyor`).not.toMatch(/\.download\s*=/);
+    }
+  });
+
+  it('3DS banka sayfası uygulama İÇİNDE kalır (allowNavigation tanımlı)', () => {
+    // Tanımsızsa Capacitor bankanın adresini sistem tarayıcısına atabilir;
+    // kullanıcı ödemenin ortasında uygulamadan düşer ve 3DS sonucu okunamaz.
+    const c = oku('capacitor.config.ts');
+    expect(c).toContain('allowNavigation');
+    expect(c).toContain('iyzipay.com');
+  });
+});

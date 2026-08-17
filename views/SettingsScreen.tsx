@@ -22,6 +22,7 @@ import FieldRolePage from '../components/settings/FieldRolePage';
 import SupportPage from '../components/settings/SupportPage';
 import { APP_VERSION } from '../utils/appVersion';
 import { getMyStaffPitches, staffAcceptInvite, type StaffPitch } from '../services/staffService';
+import { dosyaKaydetVeyaPaylas } from '../utils/dosyaKaydet';
 
 interface SettingsScreenProps {
   onBack: () => void;
@@ -155,14 +156,9 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
       };
 
       const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `oyna-tesis-${Date.now()}.json`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      // Pakette `<a download>` sessizce çalışmaz (iOS/Android WebView) — KVKK
+      // veri dışa aktarımı hiç inmiyordu. Ortak yardımcı paylaşım sayfasına düşer.
+      await dosyaKaydetVeyaPaylas(blob, `oyna-tesis-${Date.now()}.json`, 'OYNA Tesis Verisi');
     } catch (err) {
       console.error('handleExportOwnerData:', err);
       const raw = err instanceof Error ? err.message : String(err);

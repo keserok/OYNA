@@ -47,6 +47,21 @@ const config: CapacitorConfig = {
   // ─── Deep Links ─────────────────────────────────────────────────
   server: {
     androidScheme: 'https',
+    // 3D SECURE GEZİNME İZNİ (17 Ağu 2026 — mağaza öncesi denetim).
+    // Banka doğrulaması uygulama İÇİNDE bir iframe'de açılır
+    // (components/payment/ThreeDSSheet.tsx · srcDoc). Capacitor, izin
+    // listesinde OLMAYAN adreslere gitmeyi WebView dışına (sistem tarayıcısı)
+    // atabilir; bu olursa kullanıcı ödemenin ortasında uygulamadan düşer ve
+    // 3DS sonucu bir daha okunamaz (para bankada çekilmiş olabilir).
+    // Buraya ödeme altyapısının alan adları yazılır; bankaların ACS adresleri
+    // sağlayıcı üzerinden geldiği için asıl kapı iyzico'dur.
+    // NOT: gerçek cihazda ilk kart provası (LANSMAN_PLANI Faz B-3 · STR-3)
+    // İKİ PLATFORMDA da bu akışı doğrulamadan kart günü açılmamalı.
+    allowNavigation: [
+      '*.iyzipay.com',
+      '*.iyzico.com',
+      'sandbox-api.iyzipay.com',
+    ],
   },
 
   android: {

@@ -4,6 +4,7 @@ import { money } from './financeUi';
 import {
   ownerFinanceReport, toTurkishError, type OwnerFinanceReport,
 } from '../../../services/pitchOwnerService';
+import { dosyaKaydetVeyaPaylas } from '../../../utils/dosyaKaydet';
 
 // ─── [S4 portu] Tarih aralıklı finans raporu ─────────────────────────────────
 // main'deki S4.1 özelliği FI modülüne bileşen olarak taşındı: uygulama-içi
@@ -53,11 +54,9 @@ export const FinanceRangeReport: React.FC<{
     // UTF-8 BOM → Excel Türkçe karakter/ayraç uyumu.
     const csv = '﻿' + [header, ...rows].map((r) => r.join(';')).join('\r\n');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = `oyna-finans-${report.from}_${report.to}.csv`;
-    a.click();
-    URL.revokeObjectURL(a.href);
+    // Pakette `<a download>` sessizce çalışmaz (iOS/Android WebView) — rapor
+    // dışa aktarımı ölü düğmeydi. Ortak yardımcı paylaşım sayfasına düşer.
+    void dosyaKaydetVeyaPaylas(blob, `oyna-finans-${report.from}_${report.to}.csv`, 'OYNA Finans Raporu');
   }, [report]);
 
   return (

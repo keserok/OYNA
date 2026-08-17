@@ -17,6 +17,7 @@ import { FinanceSummaryTab } from './finance/FinanceSummaryTab';
 import { FinanceRangeReport } from './finance/FinanceRangeReport';
 import { FinanceCollectTab } from './finance/FinanceCollectTab';
 import { FinanceExpenseTab } from './finance/FinanceExpenseTab';
+import { dosyaKaydetVeyaPaylas } from '../../utils/dosyaKaydet';
 
 // ─── FI-1 — Finans kabuğu: ay seçici + kıyaslı hero + OYNA kartı + 3 sekme ────
 // Tek doğruluk kaynağı: get_pitch_finance_summary RPC (dönem tutarlı). Sekmeler
@@ -105,11 +106,8 @@ export const OwnerFinanceView: React.FC<OwnerFinanceViewProps> = ({ pitchId, isD
       rows.sort((a, b) => a.date.localeCompare(b.date));
       const csv = buildFinanceCsv(month, rows);
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url; a.download = `finans_${month}.csv`;
-      document.body.appendChild(a); a.click(); a.remove();
-      URL.revokeObjectURL(url);
+      // Pakette `<a download>` sessizce çalışmaz — CSV dışa aktarımı ölü düğmeydi.
+      await dosyaKaydetVeyaPaylas(blob, `finans_${month}.csv`, 'OYNA Finans');
     } catch (err) {
       notify(toTurkishError(err), 'error');
     } finally { setExporting(false); }
