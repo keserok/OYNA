@@ -7,7 +7,18 @@
 -- depoya eklendi. 20260908000000_anon_acik_tablolar_kapatildi ile uyumludur:
 -- oradaki DROP/CREATE'ler idempotenttir, bu dosyanın kurduğu _select_own
 -- politikalarına dokunmaz.
+--
+-- İDEMPOTENTLİK EKİ (playbook Kural 4): canlıdaki özgün SQL çıplak
+-- CREATE POLICY kullanıyordu; 20260908000000'ın slot_holds_select_own'u
+-- önceden kurduğu ortamlarda (örn. bu PR'ın preview'ının artımlı uygulaması)
+-- 42710 "already exists" üretti. Aşağıdaki DROP IF EXISTS satırları bu
+-- yüzden eklendi — canlı defterde bu sürüm zaten kayıtlı olduğundan üretime
+-- hiçbir zaman yeniden uygulanmaz, davranış değişmez.
 -- ════════════════════════════════════════════════════════════════════════════
+
+DROP POLICY IF EXISTS match_registrations_select_own ON public.match_registrations;
+DROP POLICY IF EXISTS waitlist_select_own ON public.waitlist;
+DROP POLICY IF EXISTS slot_holds_select_own ON public.pitch_slot_holds;
 
 DROP POLICY IF EXISTS "Registrations are viewable by everyone." ON public.match_registrations;
 DROP POLICY IF EXISTS "Waitlist viewable by everyone."          ON public.waitlist;
