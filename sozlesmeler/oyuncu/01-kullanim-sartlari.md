@@ -155,17 +155,17 @@ Rezervasyon bedeline ilişkin fatura veya e-arşiv fatura/makbuz düzenleme yük
 
 Rezervasyon iptali ve iadeye ilişkin esaslar, **Kullanıcının kendi iradesiyle gerçekleştirdiği iptallerde**, aşağıdaki kademeli yapıya göre uygulanır (kademeler arasında çakışma bulunmayacak şekilde, saat aralıkları birbirini dışlayıcı olarak tanımlanmıştır):
 
-- Rezervasyon/maç saatine **24 saat ve üzerinde (≥ 24 saat)** kala yapılan iptallerde: ödenen tutarın **tamamı** OYNA cüzdanına iade edilir (yalnızca ödeme altyapısı sağlayıcısının kestiği işlem bedeli iade dışıdır).
-- Rezervasyon/maç saatine **6 saat ile 24 saat arasında (6. saat dahil, 24. saat hariç)** kala yapılan iptallerde: ödenen tutarın **%50**'si OYNA cüzdanına iade edilir.
+- Rezervasyon/maç saatine **24 saat ve üzerinde (≥ 24 saat)** kala yapılan iptallerde: ödenen tutarın **tamamı**, ödemenin yapıldığı karta iade edilir (yalnızca ödeme altyapısı sağlayıcısının kestiği işlem bedeli iade dışıdır).
+- Rezervasyon/maç saatine **6 saat ile 24 saat arasında (6. saat dahil, 24. saat hariç)** kala yapılan iptallerde: ödenen tutarın **%50**'si, ödemenin yapıldığı karta iade edilir.
 - Rezervasyon/maç saatine **6 saatten az** kala yapılan iptallerde: iade yapılmaz.
 
-**İadenin yapılacağı yer:** Bu maddedeki tüm iadeler, ödemenin yapıldığı karta değil, Kullanıcının **OYNA cüzdanına** işlenir. Cüzdandaki tutar Platform içindeki tüm ödemelerde kullanılabilir; para çekimi özelliği açıldığında ayrıca madde 6.5'teki koşullarla banka hesabına çekilebilir (madde 6.5.3 yürürlük durumu).
+**İadenin yapılacağı yer:** Bu maddedeki tüm iadeler, **ödemenin yapıldığı karta** işlenir (Mesafeli Sözleşmeler Yönetmeliği m.15/2). OYNA, Kullanıcı adına bakiye tutmaz; iade tutarı Platform içinde harcanmak üzere bir bakiyeye aktarılmaz. Tutarın karta yansıma süresi bankaya bağlıdır.
 
 Yukarıdaki kademeli yapı yalnızca Kullanıcı kaynaklı iptallere uygulanır. Tesis veya OYNA kaynaklı, mücbir sebep dışındaki iptal/ifa edilememe hâllerinde madde 6.4; mücbir sebep hâllerinde ise madde 12.3 uygulanır.
 
 ### 6.2 Ayrıntılı Düzenleme
 
-İptal/iade süreçlerine, ödeme yöntemine ve iade tutarının OYNA cüzdanına işlenmesine ilişkin ayrıntılı hükümler Mesafeli Satış ve İptal/İade Koşulları belgesinde; cüzdanın kullanımı ve cüzdandan para çekimine ilişkin hükümler ise işbu Sözleşmenin madde 6.5'inde ("Cüzdan ve Para Çekimi") düzenlenmiştir. Her iki belge de işbu Sözleşmenin ayrılmaz parçasıdır ve çelişki hâlinde iptal/iade konusunda özel hüküm niteliğindeki Mesafeli Satış ve İptal/İade Koşulları esas alınır.
+İptal/iade süreçlerine, ödeme yöntemine ve iadenin karta işlenmesine ilişkin ayrıntılı hükümler Mesafeli Satış ve İptal/İade Koşulları belgesinde düzenlenmiştir. Bu belge işbu Sözleşmenin ayrılmaz parçasıdır ve çelişki hâlinde iptal/iade konusunda özel hüküm niteliğindeki Mesafeli Satış ve İptal/İade Koşulları esas alınır.
 
 ### 6.3 Mücbir Sebep ile Bağlantı
 
@@ -175,7 +175,7 @@ Mücbir sebep hâllerinde iptal/iade esasları madde 12.3'te düzenlenen ilkeler
 
 Rezervasyonun; Kullanıcıdan kaynaklanmayan bir sebeple, ilgili Tesisin veya OYNA'nın inisiyatifiyle ve **mücbir sebep dışında** (madde 12'de tanımlanan mücbir sebep hâlleri hariç) iptal edilmesi veya ifa edilememesi hâlinde, Kullanıcıya:
 
-**(a) Tam iade:** Ödediği bedelin tamamı, herhangi bir kesinti yapılmaksızın ve derhal Kullanıcının OYNA cüzdanına iade edilir; VE
+**(a) Tam iade:** Ödediği bedelin tamamı, herhangi bir kesinti yapılmaksızın ve derhal ödemenin yapıldığı karta iade edilir; VE
 
 **(b) Simetrik telafi bedeli:** Bunun yanında, iptalin/ifa edilemezliğin Kullanıcıya bildirildiği an ile rezervasyon saati arasında kalan süreye göre, madde 6.1'deki kademeli yapıyla simetrik olarak işleyen aşağıdaki oranda ayrı bir telafi bedeli, Kullanıcının OYNA cüzdanına ödenir. Kullanıcı bu tutarı Platform içinde harcayabilir; para çekimi özelliği açıldığında madde 6.5 uyarınca banka hesabına da çekebilir (madde 6.5.3 yürürlük durumu):
 
@@ -186,6 +186,12 @@ Rezervasyonun; Kullanıcıdan kaynaklanmayan bir sebeple, ilgili Tesisin veya OY
 Bu telafi bedelinin nihai olarak Tesis ile OYNA arasında hangi oranda paylaşılacağı, OYNA ile ilgili Tesis arasındaki ayrı sözleşmede belirlenir; ancak Kullanıcıya karşı ödeme yükümlülüğü bakımından OYNA, telafi bedelinin Kullanıcıya eksiksiz ve zamanında ödenmesini sağlamakla yükümlüdür.
 
 ### 6.5 Cüzdan ve Para Çekimi
+
+> **YÜRÜRLÜKTE DEĞİLDİR (17 Ağustos 2026).** OYNA, 6493 sayılı Kanun kapsamındaki
+> elektronik para/ödeme hizmeti lisansına sahip olmadığından **Kullanıcı adına
+> bakiye tutmamaktadır**. Bu madde, cüzdan özelliği ileride lisanslı bir modelle
+> açılırsa uygulanmak üzere metinde bırakılmıştır. Yürürlükte olduğu sürece
+> ödemeler işlem başına karttan alınır ve iadeler karta yapılır (madde 6.1-6.2).
 
 **6.5.1 Cüzdan nedir?**
 
