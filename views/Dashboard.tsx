@@ -180,7 +180,17 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
   // artık gerçek bir jestle tetiklenir. Önceden yalnız hata şeridindeki
   // "Tekrar Dene" düğmesi vardı — yani hata YOKKEN kullanıcının sayfayı
   // tazelemesinin HİÇBİR yolu yoktu.
-  const cekerekYenileniyor = useAsagiCekYenile(home.refresh);
+  // Parmakla çekince ana sayfa verisi VE "Maçlarım" birlikte tazelenir: maç
+  // kutusu bu ekranda duruyor, kullanıcının elinde bir kurtarma yolu olmalı
+  // (17 Ağu 2026 — mağaza öncesi denetim).
+  const cekerekYenileniyor = useAsagiCekYenile(
+    React.useCallback(async () => {
+      await Promise.all([
+        home.refresh(),
+        useAppStore.getState().refreshMyMatches(),
+      ]);
+    }, [home.refresh]),
+  );
   const { loading, error, offline, refreshing, hasScope } = home;
 
   // Yaklaşan maç Maçlarım ekranıyla AYNI listeden okunur — iki ekran farklı
@@ -524,64 +534,114 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
             </div>
           </Tap>
 
-          {/* Maçlarım — sabit 128px kolon. Cüzdan kutusu lansmanda KALDIRILDI
-              (e-para mevzuatı — shared/featureFlags.ts): bakiye diye bir şey
-              yok, gösterilecek tutar da yok. Yaklaşan maç YOKSA kolon HİÇ
-              ÇİZİLMEZ ve profil kartı genişliğin tamamını alır. Boş kutu
-              göstermek yerine yer vermemek bilinçli: "eksik bir şey var"
-              hissi olmaz. */}
-          {hasNextMatch && (
-            <div
+          {/* MAÇ KUTUSU — profil kartının yanındaki kolon.
+              Cüzdan kutusu lansmanda KALDIRILDI (e-para mevzuatı —
+              shared/featureFlags.ts): bakiye diye bir şey yok. Boşalan yeri
+              maç kutusu aldı, yani kutu artık kolonun TAMAMI kadar yüksek
+              (eski tasarımdaki yarım kutunun iki katı — kurucu kararı,
+              17 Ağu 2026).
+
+              KUTU HER ZAMAN ÇİZİLİR; iki durumu vardır:
+                • Yaklaşan maç VAR → "MAÇ YAKLAŞIYOR" + gün/saat + geri sayım
+                  (başlık sarı: ekranda ilk yakalanan şey bu olsun).
+                • Maç YOK          → "MAÇ YOK" + tek satırlık çıkış yolu.
+              Önceden maç yokken kutu hiç çizilmiyordu; kullanıcı "maçım var mı
+              yok mu" sorusunun cevabını ana sayfada göremiyordu. */}
+          <div
+            style={{
+              flex: '0 0 var(--oy-wallet-w)', height: 'var(--oy-card-tall)',
+              display: 'flex', flexDirection: 'column',
+            }}
+          >
+            <Tap
+              onClick={() => onNavigate('MY_MATCHES')}
+              label={hasNextMatch
+                ? `${SCREEN.myMatches} · maç yaklaşıyor`
+                : `${SCREEN.myMatches} · yaklaşan maç yok`}
               style={{
-                flex: '0 0 var(--oy-wallet-w)', height: 'var(--oy-card-tall)',
-                display: 'flex', flexDirection: 'column', gap: 'var(--oy-space-2)',
+                flex: 1, minHeight: 0, position: 'relative', overflow: 'hidden',
+                borderRadius: 'var(--oy-radius-lg)', border: BOX_BORDER,
               }}
             >
-              <Tap
-                onClick={() => onNavigate('MY_MATCHES')}
-                label={SCREEN.myMatches}
+              {/* Maç varken kutunun içine çok hafif bir sarı parıltı düşer —
+                  dikkat çeker ama kutu rengini değiştirmez. */}
+              {hasNextMatch && (
+                <span
+                  aria-hidden
+                  style={{
+                    position: 'absolute', top: -40, right: -30, width: 120, height: 120,
+                    borderRadius: 'var(--oy-radius-pill)', background: 'var(--color-warning)',
+                    opacity: 0.13, filter: 'blur(38px)', pointerEvents: 'none',
+                  }}
+                />
+              )}
+              <div
                 style={{
-                  flex: 1, minHeight: 0, position: 'relative', overflow: 'hidden',
-                  borderRadius: 'var(--oy-radius-lg)', border: BOX_BORDER,
+                  position: 'relative', height: '100%', padding: 'var(--oy-space-3)',
+                  display: 'flex', flexDirection: 'column', alignItems: 'center',
+                  justifyContent: 'center', gap: 7, textAlign: 'center', boxSizing: 'border-box',
                 }}
               >
-                <div
-                  style={{
-                    height: '100%', padding: 'var(--oy-space-3)', display: 'flex',
-                    flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                    gap: 7, textAlign: 'center', boxSizing: 'border-box',
-                  }}
-                >
-                  <span
-                    style={{
-                      fontSize: px('caption'), fontWeight: 600, letterSpacing: '0.1em',
-                      color: 'var(--color-ink-4)',
-                    }}
-                  >
-                    MAÇ
-                  </span>
-                  <span
-                    style={{
-                      fontFamily: 'var(--font-display)', fontWeight: 800, fontStyle: 'italic',
-                      fontSize: px('bodyXl'), lineHeight: 1.15, letterSpacing: '-0.03em',
-                      color: 'var(--color-ink)',
-                    }}
-                  >
-                    {dayLabel(nextMatchAt as Date)} {clock(nextMatchAt as Date)}
-                  </span>
-                  {/* Bilet sayısı DEĞİL, kalan süre. */}
-                  <span
-                    style={{
-                      fontSize: px('captionLg'), fontVariantNumeric: 'tabular-nums',
-                      color: 'var(--color-ink-2)',
-                    }}
-                  >
-                    {remainingText(nextMatchAt as Date)}
-                  </span>
-                </div>
-              </Tap>
-            </div>
-          )}
+                {hasNextMatch ? (
+                  <>
+                    <span
+                      style={{
+                        fontSize: px('caption'), fontWeight: 800, letterSpacing: '0.1em',
+                        color: 'var(--color-warning)',
+                      }}
+                    >
+                      MAÇ YAKLAŞIYOR
+                    </span>
+                    <span
+                      style={{
+                        fontFamily: 'var(--font-display)', fontWeight: 800, fontStyle: 'italic',
+                        fontSize: px('bodyXl'), lineHeight: 1.15, letterSpacing: '-0.03em',
+                        color: 'var(--color-ink)',
+                      }}
+                    >
+                      {dayLabel(nextMatchAt as Date)} {clock(nextMatchAt as Date)}
+                    </span>
+                    {/* Bilet sayısı DEĞİL, kalan süre. */}
+                    <span
+                      style={{
+                        fontSize: px('captionLg'), fontVariantNumeric: 'tabular-nums',
+                        color: 'var(--color-ink-2)',
+                      }}
+                    >
+                      {remainingText(nextMatchAt as Date)}
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <span
+                      style={{
+                        fontSize: px('caption'), fontWeight: 600, letterSpacing: '0.1em',
+                        color: 'var(--color-ink-4)',
+                      }}
+                    >
+                      MAÇ
+                    </span>
+                    <span
+                      style={{
+                        fontFamily: 'var(--font-display)', fontWeight: 800, fontStyle: 'italic',
+                        fontSize: px('bodyXl'), lineHeight: 1.15, letterSpacing: '-0.03em',
+                        color: 'var(--color-ink)',
+                      }}
+                    >
+                      MAÇ YOK
+                    </span>
+                    <span
+                      style={{
+                        fontSize: px('captionLg'), color: 'var(--color-ink-3)', lineHeight: 1.3,
+                      }}
+                    >
+                      Maçlarıma git
+                    </span>
+                  </>
+                )}
+              </div>
+            </Tap>
+          </div>
         </div>
 
         {/* ── TOP OYNA + MAÇ ŞERİDİ ──────────────────────────────────────────

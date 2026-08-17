@@ -337,6 +337,13 @@ const App: React.FC = () => {
               avatar: (profile.avatar_url as string) || user.photoURL || '',
             });
 
+            // MAÇLARIM'I GİRİŞTE TAZELE (17 Ağu 2026 — mağaza öncesi denetim).
+            // Açılış yüklemesi kullanıcı giriş yapmadan ÖNCE koşuyor; oturum
+            // gerektiren `get_my_matches` o anda ya reddediliyor ya boş dönüyordu
+            // ve bir daha çağrılmıyordu. Sonuç: kaptan kendi kurduğu maçı ana
+            // sayfada ve Maçlarım'da göremiyordu. Best-effort: akışı bloke etmez.
+            useAppStore.getState().refreshMyMatches().catch(() => {});
+
             // onAuthStateChanged HER auth olayında tetiklenir (SIGNED_IN +
             // TOKEN_REFRESHED + yeniden INITIAL_SESSION…). Açılış-rolü OVERRIDE'ı
             // YALNIZ uygulamaya giriş anında (splash/auth/…) uygulanır. Aksi halde

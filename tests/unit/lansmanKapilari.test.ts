@@ -211,9 +211,13 @@ describe('4 · Nakit rezervasyon kapalı + iade kesintisi tek model (17 Ağu 202
     // "Rezervasyonun kaydedilir, ücreti tesiste ödersin" yolu KALKTI (2.12).
     expect(oku('views/PaymentScreen.tsx')).toContain('const cashBooking: boolean = false');
     expect(oku('utils/errorMap.ts')).toContain('CASH_BOOKING_DISABLED:');
-    // Keşif ekranı online ödemesi olmayan tesiste ödeme CTA'sını kilitler.
+  });
+
+  it('vitrinde "tesisi ara" istisna metni YOK (kurucu kararı 17 Ağu)', () => {
+    // Kapı sunucuda; keşif ekranı istisna anlatımıyla kalabalıklaşmaz.
+    // Lansmanda anlaşmalı sahaların hepsinde online ödeme açık olacak.
     const p = oku('views/PitchDiscovery.tsx');
-    expect(p).toContain('phoneOnlyPitch');
-    expect(p).toContain("'Tesisi Ara'");
+    expect(p).not.toContain('Tesisi Ara');
+    expect(p).not.toContain('phoneOnlyPitch');
   });
 });
