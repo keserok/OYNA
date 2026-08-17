@@ -2027,7 +2027,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
       {/* ── HEADER ─────────────────────────────────────────────────────────── */}
       <header className="sticky top-0 z-20 bg-[#0A0E14]/90 backdrop-blur-2xl border-b border-white/5 shadow-[0_4px_30px_rgba(0,0,0,0.4)]">
         {/* Navigasyon Satırı */}
-        <div className="flex items-center gap-3 px-5 pt-safe pt-2 pb-3">
+        <div className="flex items-center gap-3 px-5 pt-safe-baslik pb-3">
           <button onClick={onBack}
             aria-label="Geri"
             className="w-11 h-11 flex items-center justify-center bg-white/5 rounded-full border border-white/10 text-white hover:bg-white/10 active:scale-95 transition-all">

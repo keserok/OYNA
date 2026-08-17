@@ -1906,7 +1906,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                         className="flex flex-col min-h-[calc(100vh-6rem)]"
                     >
                         {/* Header */}
-                        <header className="px-6 pt-safe pb-4 flex justify-between items-center gap-3 sticky top-0 bg-[#050812]/90 backdrop-blur-xl z-30 border-b border-white/5">
+                        <header className="px-6 pt-safe-baslik pb-4 flex justify-between items-center gap-3 sticky top-0 bg-[#050812]/90 backdrop-blur-xl z-30 border-b border-white/5">
                             <div className="flex items-center gap-3 min-w-0">
                                 <button id="studio-back-button" onClick={handleBack} className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-white hover:bg-white/10 shrink-0">
                                     <ChevronLeft size={20} />
@@ -3075,7 +3075,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                         className="fixed inset-0 z-[60] bg-black/85 backdrop-blur-md flex flex-col"
                     >
                         {/* Sabit üst bölge: bağlam başlığı + kapat + arama */}
-                        <div className="pt-safe px-6 pb-3 max-w-md mx-auto w-full shrink-0">
+                        <div className="pt-safe-baslik px-6 pb-3 max-w-md mx-auto w-full shrink-0">
                             <div className="flex justify-between items-center mb-4 pt-4 gap-3">
                                 <div className="min-w-0">
                                     <h2 className="text-xl font-extrabold text-white uppercase tracking-widest italic">Oyuncu Seç</h2>

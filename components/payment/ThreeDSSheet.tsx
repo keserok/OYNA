@@ -115,7 +115,7 @@ const ThreeDSSheet: React.FC<ThreeDSSheetProps> = ({ htmlBase64, intentId, onDon
 
   return (
     <div lang="tr" className="fixed inset-0 z-[70] bg-[#0A0E14] flex flex-col">
-      <header className="px-5 pt-safe py-3.5 flex items-center gap-3 border-b border-white/8 bg-[#0A0E14] shrink-0">
+      <header className="px-5 pt-safe-baslik pb-3.5 flex items-center gap-3 border-b border-white/8 bg-[#0A0E14] shrink-0">
         <span className="w-9 h-9 rounded-xl bg-[#39FF14]/12 flex items-center justify-center text-[#39FF14] shrink-0">
           <ShieldCheck size={18} />
         </span>

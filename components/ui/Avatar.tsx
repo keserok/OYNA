@@ -45,7 +45,7 @@ const Avatar: React.FC<AvatarProps> = ({ name, src, size = 'md', online, classNa
       <UserAvatar
         name={name}
         avatarUrl={src}
-        className={`${s.box} border border-white/10`}
+        className={s.box}
         textClassName={s.text}
       />
       {online === true && (

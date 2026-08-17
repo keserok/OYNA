@@ -178,7 +178,7 @@ const SocialView: React.FC<SocialViewProps> = ({ onBack, onNavigate }) => {
   return (
     <div className="h-full bg-[#0A0E14] text-white flex flex-col font-sans">
       {/* ── Header ── */}
-      <div className="pt-safe px-5 pb-0 flex-shrink-0">
+      <div className="pt-safe-baslik px-5 pb-0 flex-shrink-0">
         <div
           className="absolute top-0 right-0 w-64 h-64 pointer-events-none opacity-[0.07] blur-[80px]"
           style={{ background: 'radial-gradient(circle, #39FF14 0%, transparent 70%)' }}

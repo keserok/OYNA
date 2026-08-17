@@ -421,7 +421,9 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                   style={{
                     width: 'var(--oy-avatar)', height: 'var(--oy-avatar)', flex: 'none',
                     borderRadius: 'var(--oy-radius-pill)', overflow: 'hidden',
-                    border: '1.5px solid rgba(255,255,255,0.18)',
+                    // Çerçeve BURADA DEĞİL: ince beyaz halkayı artık UserAvatar
+                    // kendi çiziyor (tek kaynak). Burada da olsaydı çift halka
+                    // görünürdü.
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     fontFamily: 'var(--font-display)',
                   }}

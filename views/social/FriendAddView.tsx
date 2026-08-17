@@ -331,7 +331,7 @@ const FriendAddView: React.FC<FriendAddViewProps> = ({ onBack, onNavigate }) => 
   return (
     <div className="h-full bg-[#0A0E14] text-white flex flex-col font-sans">
       {/* Başlık */}
-      <div className="pt-safe px-5 flex items-center gap-3 pb-2">
+      <div className="pt-safe-baslik px-5 flex items-center gap-3 pb-2">
         <button
           onClick={onBack}
           aria-label="Geri"

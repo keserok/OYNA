@@ -1020,7 +1020,7 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
         <div className={`absolute top-[-10%] left-[-10%] w-[50%] h-[30%] blur-[120px] rounded-full ${isEarningsRole ? 'bg-[#FACC15]/8' : 'bg-[#39FF14]/8'}`} />
       </div>
 
-      <header className="px-5 pt-safe py-4 flex justify-between items-center sticky top-0 z-20 bg-[#0A0E14]/80 backdrop-blur-xl border-b border-white/5">
+      <header className="px-5 pt-safe-baslik pb-4 flex justify-between items-center sticky top-0 z-20 bg-[#0A0E14]/80 backdrop-blur-xl border-b border-white/5">
         <button onClick={onBack}
           className="w-[42px] h-[42px] flex items-center justify-center bg-[#161B22] rounded-full border border-white/5 text-white active:scale-95 transition-all">
           <ArrowLeft size={20} />
@@ -1389,7 +1389,7 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
 // ─── Yardımcı bileşenler ─────────────────────────────────────────────────────
 
 const SubHeader = ({ title, subtitle, onBack }: { title: string; subtitle: string; onBack: () => void }) => (
-  <header className="px-5 pt-safe py-4 flex items-center gap-4 border-b border-white/5 sticky top-0 bg-[#0A0E14]/90 backdrop-blur-xl z-20">
+  <header className="px-5 pt-safe-baslik pb-4 flex items-center gap-4 border-b border-white/5 sticky top-0 bg-[#0A0E14]/90 backdrop-blur-xl z-20">
     <button onClick={onBack}
       className="w-[42px] h-[42px] flex items-center justify-center bg-[#161B22] rounded-full border border-white/5 text-white active:scale-95 transition-all shrink-0">
       <ArrowLeft size={20} />

@@ -725,7 +725,7 @@ const tariffRowToPolicy = (t: PitchTariff) => ({
       
       {/* Header logic adjustment for Menu view */}
       {activeTab !== 'CALENDAR' && activeTab !== 'MORE' && (
-          <header className={`px-6 py-4 ${statusBanners.length ? '' : 'pt-safe'} bg-[#0A0E14] border-b border-white/5 flex justify-between items-center sticky top-0 z-30`}>
+          <header className={`px-6 py-4 ${statusBanners.length ? '' : 'pt-safe-baslik'} bg-[#0A0E14] border-b border-white/5 flex justify-between items-center sticky top-0 z-30`}>
               <div className="flex items-center gap-3">
                   <div className="flex flex-col relative">
                       {ownedFacilities.length > 1 && !isDemoMode ? (
@@ -777,7 +777,7 @@ const tariffRowToPolicy = (t: PitchTariff) => ({
 
       {/* Simplified Header for Menu View */}
       {activeTab === 'MORE' && (
-          <header className={`px-6 py-4 ${statusBanners.length ? '' : 'pt-safe'} bg-[#0A0E14] border-b border-white/5 flex items-center sticky top-0 z-30`}>
+          <header className={`px-6 py-4 ${statusBanners.length ? '' : 'pt-safe-baslik'} bg-[#0A0E14] border-b border-white/5 flex items-center sticky top-0 z-30`}>
               <h1 className="text-lg font-extrabold text-white tracking-wide">MENÜ & AYARLAR</h1>
           </header>
       )}

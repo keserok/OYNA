@@ -217,7 +217,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onNavigate, onOpenD
             />
 
             {/* ═══ ÜST BAR — yalnız ayarlar dişlisi ═══ */}
-            <div className="px-6 pb-2.5 pt-safe flex justify-end items-center shrink-0 z-50">
+            <div className="px-6 pb-2.5 pt-safe-baslik flex justify-end items-center shrink-0 z-50">
                 {/* IP-14: sekme kökünde geri oku YOK — alt menü zaten her yere
                     götürüyor, ok kullanıcıyı yığında geriye atıp şaşırtıyordu. */}
                 <button

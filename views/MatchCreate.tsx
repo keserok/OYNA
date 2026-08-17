@@ -729,7 +729,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
   return (
     <div className="h-full bg-[#0A0E14] text-white flex flex-col relative overflow-hidden font-sans">
       {/* ── Header (sabit) ── */}
-      <header className="shrink-0 pt-safe border-b border-white/5 bg-[#0A0E14]/80 backdrop-blur-xl relative z-10">
+      <header className="shrink-0 pt-safe-baslik border-b border-white/5 bg-[#0A0E14]/80 backdrop-blur-xl relative z-10">
         <div className="h-[60px] px-4 flex items-center relative">
           <button onClick={onBack} aria-label="Geri"
             className="w-11 h-11 rounded-full bg-white/5 border border-white/5 flex items-center justify-center active:scale-95 transition-transform">
@@ -1280,7 +1280,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
           <motion.div key="adv" initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
             transition={{ type: 'spring', damping: 28, stiffness: 300 }}
             className="absolute inset-0 z-[60] bg-[#0A0E14] flex flex-col">
-            <header className="shrink-0 pt-safe border-b border-white/5">
+            <header className="shrink-0 pt-safe-baslik border-b border-white/5">
               <div className="px-5 py-4 flex items-center justify-between">
                 <h2 className="text-[1.0625rem] font-extrabold italic uppercase tracking-tight">Tercihe Bağlı Detaylar</h2>
                 <button onClick={() => setSheet(null)} aria-label="Kapat" className="w-[42px] h-[42px] rounded-full bg-white/5 border border-white/5 flex items-center justify-center"><X size={18} /></button>
@@ -1387,7 +1387,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
           <motion.div key="friends" initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
             transition={{ type: 'spring', damping: 28, stiffness: 300 }}
             className="absolute inset-0 z-[60] bg-[#0A0E14] flex flex-col">
-            <header className="shrink-0 pt-safe border-b border-white/5">
+            <header className="shrink-0 pt-safe-baslik border-b border-white/5">
               <div className="px-5 py-4 flex items-center justify-between">
                 <h2 className="text-[1.0625rem] font-extrabold italic uppercase tracking-tight">Kadronu Çağır</h2>
                 <button onClick={() => setSheet(null)} aria-label="Kapat" className="w-[42px] h-[42px] rounded-full bg-white/5 border border-white/5 flex items-center justify-center"><X size={18} /></button>
@@ -1535,7 +1535,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
           <motion.div key="providers" initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
             transition={{ type: 'spring', damping: 28, stiffness: 300 }}
             className="absolute inset-0 z-[60] bg-[#0A0E14] flex flex-col">
-            <header className="shrink-0 pt-safe border-b border-white/5">
+            <header className="shrink-0 pt-safe-baslik border-b border-white/5">
               <div className="px-5 py-4 flex items-center justify-between">
                 <div>
                   <h2 className="text-[1.0625rem] font-extrabold italic uppercase tracking-tight">Kaleci &amp; Hakem</h2>
@@ -1652,7 +1652,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
           <motion.div key="rules" initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
             transition={{ type: 'spring', damping: 28, stiffness: 300 }}
             className="absolute inset-0 z-[60] bg-[#0A0E14] flex flex-col">
-            <header className="shrink-0 pt-safe border-b border-white/5">
+            <header className="shrink-0 pt-safe-baslik border-b border-white/5">
               <div className="px-5 py-4 flex items-center justify-between">
                 <h2 className="text-[1.0625rem] font-extrabold italic uppercase tracking-tight">Maç Kuralları</h2>
                 <button onClick={() => setSheet(null)} aria-label="Kapat" className="w-[42px] h-[42px] rounded-full bg-white/5 border border-white/5 flex items-center justify-center"><X size={18} /></button>
@@ -1710,7 +1710,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
         {sheet === 'SUCCESS' && result && (
           <motion.div key="success" initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
             transition={{ type: 'spring', damping: 28, stiffness: 300 }}
-            className="absolute inset-0 z-[60] bg-[#0A0E14] flex flex-col px-5 pt-safe pb-safe">
+            className="absolute inset-0 z-[60] bg-[#0A0E14] flex flex-col px-5 pt-safe-baslik pb-safe">
             <div className="flex-1 flex flex-col items-center justify-center gap-5 min-h-0 overflow-y-auto custom-scrollbar">
               <motion.div initial={{ scale: 0.4, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
                 transition={{ type: 'spring', damping: 14 }}
