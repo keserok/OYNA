@@ -27,6 +27,7 @@ import { fetchPitchBookings, computeAvailability, subscribeToPitchBookings, toda
 import { PitchBookingRow, toISODate, parseSlotLabel, generateSlotRanges } from '../services/availabilityService';
 import { resolveWorkingHoursForDate } from '../shared/workingHours';
 import { recordDemandSignal, mapDemandError, type DemandSignalType } from '../services/demandService';
+import { resolvePaymentMode } from '../services/paymentModeService';
 import {
   derivePitchFilterOptions,
   filterAndSortPitches,
@@ -1257,6 +1258,24 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
   // zaten reddeder; arayüz baştan kapatır ki oyuncu boşa uğraşmasın).
   const bookingDisabled = selectedPitch?.bookingDisabledByAdmin === true;
 
+  // NAKİT REZERVASYON KAPALI (kurucu kararı, 17 Ağu 2026 — BULGU-11):
+  // uygulamadan rezervasyon yalnız kartla kapora ile alınır. Online ödemesi
+  // olmayan tesiste vitrin açık kalır, "Kaporayı Öde" kilitlenir ve oyuncu
+  // tesisi aramaya yönlendirilir (sunucu ikizi: b_nakit_rezervasyon_kapisi,
+  // CASH_BOOKING_DISABLED). Maç kurma akışı bundan ETKİLENMEZ (APP_MATCH
+  // serbest — güvencesi kapora motorudur).
+  const [pitchOnlineAllowed, setPitchOnlineAllowed] = useState<boolean | null>(null);
+  useEffect(() => {
+    let alive = true;
+    setPitchOnlineAllowed(null);
+    if (!selectedPitch?.id) return;
+    resolvePaymentMode(selectedPitch.id)
+      .then((m) => { if (alive) setPitchOnlineAllowed(m.online_allowed === true); })
+      .catch(() => { if (alive) setPitchOnlineAllowed(null); });
+    return () => { alive = false; };
+  }, [selectedPitch?.id]);
+  const phoneOnlyPitch = pitchOnlineAllowed === false;
+
   const amenitySplit = useMemo(() => splitAmenities(selectedPitch?.amenities ?? []), [selectedPitch]);
 
   return (
@@ -1916,6 +1935,16 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
                 </div>
               )}
 
+              {/* Nakit rezervasyon kapalı (BULGU-11): vitrin açık, ödeme yolu telefon */}
+              {!bookingDisabled && phoneOnlyPitch && (
+                <div className="mx-6 mt-7 p-4 rounded-[18px] bg-amber-500/[0.08] border border-amber-500/25">
+                  <p className="text-[0.8125rem] font-extrabold text-amber-300">Rezervasyon için tesisi ara</p>
+                  <p className="text-[0.6875rem] font-medium text-amber-200/70 mt-1 leading-relaxed">
+                    Uygulamadan rezervasyon kartla kapora ödenerek yapılır; bu tesiste online ödeme şu anda kapalı. Saatleri buradan görebilir, rezervasyonu telefonla yapabilirsin.
+                  </p>
+                </div>
+              )}
+
               {/* Tarih Seç — kaydırılabilir 14 gün, şeridin SONUNDA takvim.
                   Önceden yalnız 5 gün vardı ve takvim ayrı bir başlık düğmesindeydi;
                   oyuncu iki haftalık planını şeritte göremiyordu. Artık iki hafta
@@ -2180,15 +2209,15 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
                   </button>
                 ) : (
                   <button
-                    disabled={!selectedSlot || !selectedCourtId || bookingDisabled}
+                    disabled={!selectedSlot || !selectedCourtId || bookingDisabled || phoneOnlyPitch}
                     onClick={handlePayDeposit}
                     className={`px-6 h-14 rounded-2xl bg-[#39FF14] text-on-primary text-[0.8125rem] font-extrabold uppercase tracking-wide whitespace-nowrap transition-all ${
-                      selectedSlot && selectedCourtId
+                      selectedSlot && selectedCourtId && !phoneOnlyPitch
                         ? 'shadow-[0_0_24px_rgba(57,255,20,0.22)] active:scale-95'
                         : 'opacity-60 cursor-not-allowed'
                     }`}
                   >
-                    Kaporayı Öde
+                    {phoneOnlyPitch ? 'Tesisi Ara' : 'Kaporayı Öde'}
                   </button>
                 )}
               </div>
