@@ -206,6 +206,26 @@
 				<string>NSPrivacyCollectedDataTypePurposeAnalytics</string>
 			</array>
 		</dict>
+		<!-- Cihaz kimliği: push bildirim jetonu (APNs/FCM device token).
+		     notifications/pushService.ts · savePushTokenToSupabase, jetonu
+		     kullanıcı satırına `push_token` olarak YAZAR — yani cihaza ait bir
+		     kimlik toplanıp hesaba bağlanıyor. Her iki mağazanın formunda bu
+		     "Cihaz veya diğer kimlikler" kategorisidir ve beyan edilmezse
+		     gizlilik formu gerçek davranışla çelişir.
+		     İzleme için KULLANILMAZ: jeton yalnız bildirim göndermeye yarar,
+		     reklam/ölçüm ağına verilmez (Tracking = false). -->
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeDeviceID</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
 		<!-- Çökme/performans verisi: hata izleme. -->
 		<dict>
 			<key>NSPrivacyCollectedDataType</key>

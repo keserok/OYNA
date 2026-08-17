@@ -107,7 +107,13 @@ export const OwnerFinanceView: React.FC<OwnerFinanceViewProps> = ({ pitchId, isD
       const csv = buildFinanceCsv(month, rows);
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
       // Pakette `<a download>` sessizce çalışmaz — CSV dışa aktarımı ölü düğmeydi.
-      await dosyaKaydetVeyaPaylas(blob, `finans_${month}.csv`, 'OYNA Finans');
+      // SONUCU YOK SAYMA: eskiden dönen değere bakılmadığı için Android'de
+      // dosya hiç oluşmasa bile ekran hiçbir şey söylemiyordu.
+      const sonuc = await dosyaKaydetVeyaPaylas(blob, `finans_${month}.csv`, 'OYNA Finans');
+      if (sonuc === 'PAYLASILDI') notify('CSV paylaşıma hazır. Açılan pencereden kaydedebilirsin.', 'success');
+      else if (sonuc === 'INDIRILDI') notify('CSV indirildi.', 'success');
+      else if (sonuc === 'DESTEKLENMIYOR') notify('Bu cihazda dosya kaydedilemedi. Uygulamayı güncelle veya web sürümünden dene.', 'error');
+      // 'IPTAL' → kullanıcı vazgeçti; başarı da hata da yazılmaz.
     } catch (err) {
       notify(toTurkishError(err), 'error');
     } finally { setExporting(false); }

@@ -1,12 +1,12 @@
 # Mesafeli Satış ve İptal/İade Koşulları
 
-> **Durum:** Yayında · **Son güncelleme:** 12.07.2026 · **PR:** #74
+> **Durum:** Yayında · **Son güncelleme:** 15.07.2026 · **PR:** #74
 > **Uygulandığı yer:** `views/LegalScreen.tsx → SALES` (uygulama içi "Yasal" ekranı)
 > **Kaynak:** İptal/iade kademeleri, `docs/master/OYNA_GO_LIVE_IYZICO.md` §5'te tanımlanan ve migration'larda (000006/000007/000008) kodlanmış gerçek ödeme motoruyla birebir hizalıdır.
 
 ---
 
-**Son güncelleme: 12.07.2026**
+**Son güncelleme: 15.07.2026**
 
 ### 1. Satıcı / Aracı
 Saha kiralama hizmetinin sağlayıcısı ilgili tesistir. Miraç Kerem Çürüksulu (OYNA), ödeme ve rezervasyon sürecinde aracı hizmet sağlayıcıdır.
@@ -21,10 +21,11 @@ Kapora, uygulama üzerinden güvenli ödeme altyapısı ile tahsil edilir. Kalan
 - Rezervasyon/maç saatine **24 saatten fazla** süre kala yapılan iptallerde: ödenen tutarın tamamına yakını iade edilir (yalnızca ödeme altyapısı sağlayıcısının kestiği işlem bedeli hariç).
 - Rezervasyon/maç saatine **6-24 saat** kala yapılan iptallerde: ödenen tutarın %50'si iade edilir.
 - Rezervasyon/maç saatine **6 saatten az** kala yapılan iptallerde: iade yapılmaz.
+- Yukarıdaki saatler Platform varsayılanıdır; tesis kendi ücretsiz iptal süresini farklı belirleyebilir. O rezervasyon/maç için geçerli süre, ödeme yapmadan önce ilgili ekranda gösterilir.
 
 ### 4.1 İade Nereye Yapılır?
 - İade, **ödemenin yapıldığı karta** yapılır (Mesafeli Sözleşmeler Yönetmeliği m.15/2 uyarınca ödemede kullanılan araca iade esastır).
-- İade talebiniz iptal anında işleme alınır; tutarın kartınıza/hesabınıza yansıma süresi bankanıza bağlıdır (genellikle 1-3 iş günü, bazı bankalarda daha uzun sürebilir).
+- İade talebiniz iptal anında işleme alınır; tutarın kartınıza yansıma süresi bankanıza bağlıdır (genellikle 1-3 iş günü, bazı bankalarda daha uzun sürebilir).
 - İade tutarından yalnızca **ödeme altyapısı sağlayıcısının işlem bedeli** düşülür; OYNA ayrıca bir kesinti yapmaz.
 - OYNA, kullanıcı adına bakiye (cüzdan) tutmaz; iadeler Platform içinde harcanmak üzere bir bakiyeye DEĞİL, doğrudan ödeme aracınıza döner.
 
@@ -33,7 +34,3 @@ Belirli bir tarih/saat için yapılan rezervasyonlar, Mesafeli Sözleşmeler Yö
 
 ### 6. Uyuşmazlık
 Şikayetlerinizde destek@oyna.app ile iletişime geçebilir, çözülemeyen uyuşmazlıklarda Tüketici Hakem Heyetleri'ne başvurabilirsiniz.
-
----
-
-> **Bilinen açık:** İşlem hacmi/satıcı (tesis) sayısı belli eşikleri aşarsa, 6563 sayılı Kanun kapsamında "elektronik ticaret aracı hizmet sağlayıcısı" bildirimi Ticaret Bakanlığı'na yapılmalı olabilir — bu henüz değerlendirilmedi (bkz. uyum takip paneli, madde E2).

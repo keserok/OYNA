@@ -92,6 +92,44 @@ function mobilPaketBekcisi(): Plugin {
   };
 }
 
+/**
+ * B10 — ÜRETİM PAKETİNDE KONSOL ÇIKTISI TEMİZLİĞİ.
+ *
+ * Kaynakta 400'ü aşkın `console` çağrısı var; bunların ~65'i bilgi amaçlı
+ * log/debug/info. Hepsi üretim paketine olduğu gibi giriyordu ve iki ayrı
+ * zarar veriyorlardı:
+ *   1. GİZLİLİK — cihaz günlüğüne (Android logcat / iOS Console) bildirim
+ *      başlıkları, mesaj önizlemeleri, kimlikler düşüyor. Telefona kablo takan
+ *      ya da günlük okuyan başka bir uygulama bunları görebilir.
+ *   2. AĞIRLIK — metinleriyle birlikte paketin içinde yer kaplıyorlar.
+ *
+ * NEDEN error VE warn KALIYOR: çökme/teşhis kaydı bunlara dayanıyor. Bir
+ * kullanıcı "uygulama kapandı" dediğinde elimizde kalan tek iz `console.error`
+ * satırlarıdır; onları da silersek sahada hata ayıklamak imkânsız hale gelir.
+ * Bilgi amaçlı gürültü (log/debug/info) gider, arıza izi kalır.
+ *
+ * NASIL: `pure` esbuild'e "bu çağrının sonucu kullanılmıyorsa tamamen at" der;
+ * `drop: ['debugger']` ise unutulmuş kesme noktalarını temizler.
+ *
+ * `apply: 'build'` + mode kontrolü sayesinde GELİŞTİRME (npm run dev) davranışı
+ * hiç değişmez — geliştirirken tüm console çıktıları yerinde durur.
+ */
+function uretimKonsolTemizleyici(): Plugin {
+  return {
+    name: 'oyna-uretim-konsol-temizleyici',
+    apply: 'build',
+    config(_config, { mode }) {
+      if (mode !== 'production') return;
+      return {
+        esbuild: {
+          pure: ['console.log', 'console.debug', 'console.info'],
+          drop: ['debugger'] as ('debugger')[],
+        },
+      };
+    },
+  };
+}
+
 export default defineConfig({
   server: {
     port: Number(process.env.PORT) || (ADMIN_DEV ? 4005 : 4000),
@@ -118,7 +156,7 @@ export default defineConfig({
   define: {
     'import.meta.env.VITE_APP_VERSION': JSON.stringify(APP_VERSION),
   },
-  plugins: [mobilPaketBekcisi(), adminDevRedirect(), react(), tailwindcss()],
+  plugins: [mobilPaketBekcisi(), uretimKonsolTemizleyici(), adminDevRedirect(), react(), tailwindcss()],
   build: {
     rollupOptions: {
       input: MOBIL_PAKET

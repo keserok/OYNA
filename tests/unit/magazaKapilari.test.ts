@@ -339,10 +339,15 @@ describe('Mağaza kapıları · klavye ve dokunma hedefleri', () => {
     expect(km).not.toMatch(/setProperty\('--kb-height', `\$\{info\.keyboardHeight/);
   });
 
-  it('onay kutularının dokunma alanı 44px', () => {
-    expect(oku('index.css')).toContain('.hit-44::before');
-    expect(oku('views/AuthScreen.tsx')).toContain('className="hit-44"');
-    expect(oku('views/ServiceApplication.tsx')).toContain('hit-44 mt-0.5 w-5 h-5');
+  it('onay kutularının dokunma alanı projenin kendi ölçüsünde (48px)', () => {
+    // Görünen kutu 20px kalır; büyüyen yalnız dokunma alanıdır.
+    // Ölçü Apple'ın 44pt'sinden değil, projenin kendi --oy-tap-min (48px)
+    // belirteçinden gelir — Google'ın 48dp şartını da karşılar.
+    const css = oku('index.css');
+    expect(css).toContain('.dokunma-hedefi::before');
+    expect(css).toMatch(/\.dokunma-hedefi::before[\s\S]{0,400}var\(--oy-tap-min/);
+    expect(oku('views/AuthScreen.tsx')).toContain('className="dokunma-hedefi"');
+    expect(oku('views/ServiceApplication.tsx')).toContain('dokunma-hedefi mt-0.5 w-5 h-5');
   });
 
   it('hareket azaltmada aşağı çekip yenileme ÖLMEZ', () => {

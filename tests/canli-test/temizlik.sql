@@ -26,8 +26,12 @@ CREATE TEMP TABLE _cafe_intents ON COMMIT DROP AS
 
 -- ── Maç zinciri ────────────────────────────────────────────────────────────
 DELETE FROM public.match_service_offers  WHERE match_id IN (SELECT id FROM _cafe_matches);
+-- NOT (17 Ağu): kolon adları canlı şemayla eşleşmiyordu ve betik bugüne dek
+-- hiç çalıştırılmamıştı — ilk çalıştırmada üç yerde hata verdi. Doğru adlar:
+-- service_requests.requested_by · friendships.requester_id/addressee_id ·
+-- pitch_ratings.rater_id.
 DELETE FROM public.service_requests     WHERE match_id IN (SELECT id FROM _cafe_matches)
-                                            OR requester_id IN (SELECT id FROM _cafe_users);
+                                            OR requested_by IN (SELECT id FROM _cafe_users);
 DELETE FROM public.match_participants   WHERE match_id IN (SELECT id FROM _cafe_matches)
                                             OR user_id IN (SELECT id FROM _cafe_users);
 DELETE FROM public.match_registrations  WHERE match_id IN (SELECT id FROM _cafe_matches)
@@ -54,12 +58,14 @@ DELETE FROM public.payment_intents      WHERE id IN (SELECT id FROM _cafe_intent
 -- ── Sosyal / bildirim türevleri ───────────────────────────────────────────
 DELETE FROM public.notifications  WHERE user_id IN (SELECT id FROM _cafe_users);
 DELETE FROM public.messages       WHERE sender_id IN (SELECT id FROM _cafe_users);
-DELETE FROM public.friendships    WHERE user_id IN (SELECT id FROM _cafe_users)
-                                      OR friend_id IN (SELECT id FROM _cafe_users);
+DELETE FROM public.friendships    WHERE requester_id IN (SELECT id FROM _cafe_users)
+                                      OR addressee_id IN (SELECT id FROM _cafe_users)
+                                      OR sender_id     IN (SELECT id FROM _cafe_users)
+                                      OR receiver_id   IN (SELECT id FROM _cafe_users);
 DELETE FROM public.team_members   WHERE user_id IN (SELECT id FROM _cafe_users);
 DELETE FROM public.teams          WHERE captain_id IN (SELECT id FROM _cafe_users);
 DELETE FROM public.pitch_favorites WHERE user_id IN (SELECT id FROM _cafe_users);
-DELETE FROM public.pitch_ratings   WHERE user_id IN (SELECT id FROM _cafe_users)
+DELETE FROM public.pitch_ratings   WHERE rater_id IN (SELECT id FROM _cafe_users)
                                        OR pitch_id IN (SELECT id FROM _cafe_pitches);
 DELETE FROM public.pitch_customers WHERE pitch_id IN (SELECT id FROM _cafe_pitches);
 DELETE FROM public.pitch_views     WHERE pitch_id IN (SELECT id FROM _cafe_pitches);

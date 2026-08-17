@@ -1,4 +1,5 @@
 import { supabase } from '../supabaseClient';
+import { uygunsuzMu, UYGUNSUZ_ICERIK_MESAJI } from '../shared/icerikSuzgeci';
 
 // ================================================================
 // teamChatService — takım sohbeti veri katmanı (Küme 4 / Spec §N90)
@@ -101,6 +102,11 @@ export const getTeamMessages = async (teamId: string, limit = 100): Promise<Team
 
 /** Mesaj gönder — sunucu üyelik/arşiv doğrular, push taşıyıcılarını üretir. */
 export const sendTeamMessage = async (teamId: string, body: string): Promise<TeamMessage> => {
+  // App Store 1.2 — uygunsuz içerik SÜZGECİ. Takım sohbetinde bir mesaj tüm
+  // kadroya push bildirimi olarak da gider; bu yüzden sunucuya HİÇ ulaşmadan
+  // burada durdurulur.
+  if (uygunsuzMu(body)) throw new Error(UYGUNSUZ_ICERIK_MESAJI);
+
   const { data, error } = await supabase.rpc('send_team_message', {
     p_team_id: teamId, p_body: body,
   });

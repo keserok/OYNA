@@ -157,8 +157,14 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
 
       const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
       // Pakette `<a download>` sessizce çalışmaz (iOS/Android WebView) — KVKK
-      // veri dışa aktarımı hiç inmiyordu. Ortak yardımcı paylaşım sayfasına düşer.
-      await dosyaKaydetVeyaPaylas(blob, `oyna-tesis-${Date.now()}.json`, 'OYNA Tesis Verisi');
+      // veri dışa aktarımı hiç inmiyordu. Ortak yardımcı önce native paylaşım
+      // sayfasını açar. SONUCU YOK SAYMA: eskiden dönen değere bakılmıyordu,
+      // dosya hiç kaydedilmese bile ekran sessizce "olmuş gibi" duruyordu.
+      const sonuc = await dosyaKaydetVeyaPaylas(blob, `oyna-tesis-${Date.now()}.json`, 'OYNA Tesis Verisi');
+      if (sonuc === 'PAYLASILDI') showToast('Verilerin paylaşıma hazır. Açılan pencereden kaydedebilirsin.');
+      else if (sonuc === 'INDIRILDI') showToast('Tesis verilerin indirildi.');
+      else if (sonuc === 'DESTEKLENMIYOR') setExportError('Bu cihazda dosya kaydedilemedi. Uygulamayı güncelle veya web sürümünden dene.');
+      // 'IPTAL' → kullanıcı kendisi vazgeçti; ne başarı ne hata mesajı verilir.
     } catch (err) {
       console.error('handleExportOwnerData:', err);
       const raw = err instanceof Error ? err.message : String(err);

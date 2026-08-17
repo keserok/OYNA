@@ -1,8 +1,8 @@
 # Hesap ve Veri Silme Bilgilendirmesi
 
-> **Durum:** Yayında · **Son güncelleme:** (tarihsiz — içerik değişmedi) · İncelendi: 12.07.2026
+> **Durum:** Yayında · **Son güncelleme:** 15.07.2026 (cüzdan bölümü, Kullanım Şartları md. 6.5'in "yürürlükte değildir" damgasına hizalandı) · İlk inceleme: 12.07.2026
 > **Uygulandığı yer:** `public/hesap-silme.html` (herkese açık — https://oyna.app/hesap-silme.html; her iki mağazanın da "hesap silme URL'i" şartını karşılar)
-> Bu sayfa şirket/vergi bilgisi içermediği için placeholder doldurma gerektirmedi; 12.07.2026'daki incelemede içerik olarak sağlam bulundu, değişiklik yapılmadı.
+> Bu sayfa şirket/vergi bilgisi içermediği için placeholder doldurma gerektirmedi. 12.07.2026 incelemesinde içerik sağlam bulunmuştu; 17.08.2026'da yalnızca cüzdan bölümü, artık tutulmayan bakiyeyi vaat etmesin diye yeniden yazıldı.
 
 ---
 
@@ -21,10 +21,11 @@ Uygulamaya erişemiyorsanız, kayıtlı e-posta adresinizden destek@oyna.app adr
 - Kimlik/iletişim bilgileri, konum verisi, profil fotoğrafı ve cihaz token'ları silinir.
 - Yasal yükümlülük gerektiren kayıtlar (ör. ödeme/fatura kayıtları) mevzuatın öngördüğü süre boyunca, yalnızca bu amaçla saklanabilir.
 
-### Cüzdanımdaki para ne olur?
+### Param ne olur?
 
-- Cüzdanınızda bakiye varsa veya sonuçlanmamış bir çekim talebiniz varsa, **hesabınız silinemez**. Bu, paranızın kaybolmaması için konulmuş bir korumadır.
-- Silme talebinden önce bakiyenizi OYNA içinde harcayabilir veya banka hesabınıza çekebilirsiniz. Çekim koşulları Kullanım Şartları madde 6.5'te düzenlenmiştir.
-- Bakiyeniz sıfırlandığında ve açık çekim talebiniz kalmadığında silme talebiniz işleme alınır.
+- OYNA **sizin adınıza bakiye (cüzdan) tutmaz**. Ödemeler işlem başına kartınızdan alınır, iadeler de aynı karta yapılır.
+- Bu nedenle hesabınızın silinmesini engelleyen bir bakiye ya da bekleyen çekim talebi söz konusu değildir.
+- Kullanım Şartları madde 6.5'teki cüzdan ve para çekimi düzenlemesi **yürürlükte değildir**; cüzdan ileride lisanslı bir modelle açılırsa bu bölüm yeniden düzenlenecektir.
+- Silme talebiniz sırasında henüz kartınıza yansımamış bir iadeniz varsa, iade süreci hesabınızın silinmesinden etkilenmez ve tamamlanır.
 
 Detaylar için [Gizlilik Politikamıza](02-gizlilik-politikasi.md) bakabilirsiniz.

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertTriangle, ArrowLeft, Calendar, Check, CheckCircle2, Clock, Info,
   LayoutGrid, Lock, MapPin, Plus, RefreshCw, Shield, ShieldCheck, Users, X,
@@ -217,6 +217,33 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
     getCardFeePct().then(pct => { if (alive) setCardFeePct(pct); }).catch(() => {});
     return () => { alive = false; };
   }, []);
+
+  // ── Sabit alt çubuğun GERÇEK yüksekliği (denetim B6) ───────────────────────
+  // Kaydırılan gövdenin alt boşluğu `pb-40` ile 160px'e ÇİVİLENMİŞTİ. Alt çubuk
+  // ise sabit yükseklikte değil: toplam satırı + "ÖDE" düğmesi + "Devam etmek
+  // için bir kart seç" uyarısı + çentikli cihazda `pb-safe` payı üst üste
+  // binince 160px'i aşıyor. Aştığı anda gövdenin SON öğesi olan "Mesafeli satış
+  // ve iptal/iade koşulları" bağlantısı çubuğun ALTINDA kalıyor ve tıklanamaz
+  // oluyordu. Mevzuat ödeme ÖNCESİ sözleşmeye erişimi şart koşar — bu yüzden
+  // sayı tahmin edilmez, ÖLÇÜLÜR. `pb-safe` çubuğun kendi içinde olduğundan
+  // ölçülen yükseklik güvenli alanı da kapsar; ayrıca eklemek çift sayardı.
+  const [footerH, setFooterH] = useState<number | null>(null);
+  const footerGozlemci = useRef<ResizeObserver | null>(null);
+  // Geri çağırmalı ref: çubuk DOM'a girip çıktıkça (başarı ekranı gibi başka bir
+  // dala geçildiğinde hiç çizilmiyor) ölçüm kendiliğinden kurulur ve sökülür.
+  const footerRef = useCallback((el: HTMLDivElement | null) => {
+    footerGozlemci.current?.disconnect();
+    footerGozlemci.current = null;
+    // ResizeObserver yoksa (çok eski motor / jsdom) ölçüm yapılmaz ve aşağıdaki
+    // yedek boşluk yürürlükte kalır — boşluk sessizce 0'a düşmez.
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const olc = () => setFooterH(el.getBoundingClientRect().height);
+    olc();
+    const g = new ResizeObserver(olc);
+    g.observe(el);
+    footerGozlemci.current = g;
+  }, []);
+  const govdeAltBosluk = odemeGovdeAltBoslugu(footerH);
 
   // S3 — kapora akışında tesis iptal/iade kademesini SUNUCUDAN çek (göster).
   useEffect(() => {
@@ -861,7 +888,9 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
         </div>
       </header>
 
-      <main className="flex-1 overflow-y-auto py-5 space-y-[18px] pb-40">
+      {/* B6: alt boşluk sabit `pb-40` (160px) değil, sabit çubuğun ÖLÇÜLEN
+          yüksekliği — sözleşme bağlantısı çubuğun altında kalmasın. */}
+      <main className="flex-1 overflow-y-auto py-5 space-y-[18px]" style={{ paddingBottom: govdeAltBosluk }}>
         {/* S1.2/C6 — 3 dk oturum tazelendi: güncel fiyat/slot ile devam bilgisi */}
         {sessionRefreshed && (
           <div className="mx-5 bg-[#39FF14]/8 border border-[#39FF14]/25 rounded-2xl p-3 flex items-center gap-2.5">
@@ -1107,8 +1136,8 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
         </button>
       </main>
 
-      {/* Sabit footer */}
-      <div className="fixed bottom-0 inset-x-0 max-w-lg mx-auto px-5 pb-safe pt-4 bg-gradient-to-t from-[#0A0E14] via-[#0A0E14]/95 to-transparent border-t border-white/5 z-20">
+      {/* Sabit footer — yüksekliği ÖLÇÜLÜR (bkz. footerRef / govdeAltBosluk) */}
+      <div ref={footerRef} className="fixed bottom-0 inset-x-0 max-w-lg mx-auto px-5 pb-safe pt-4 bg-gradient-to-t from-[#0A0E14] via-[#0A0E14]/95 to-transparent border-t border-white/5 z-20">
         <div className="flex items-center justify-between mb-3 px-0.5">
           <span className="text-[0.6875rem] text-ink-4 font-semibold">{breakdown}</span>
           <span className="text-[0.8125rem] font-extrabold text-white">
@@ -1142,6 +1171,31 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
 };
 
 // ─── Yardımcılar ──────────────────────────────────────────────────────────────
+
+/** Sabit alt çubuk ile gövdenin son öğesi arasında bırakılan nefes payı (px). */
+export const ODEME_CUBUK_PAYI = 24;
+
+/**
+ * Kaydırılan gövdenin alt boşluğu (denetim B6).
+ *
+ * NEDEN SABİT SAYI OLAMAZ: gövdenin SON öğesi "Mesafeli satış ve iptal/iade
+ * koşulları" bağlantısıdır ve mevzuat ödeme ÖNCESİ o sözleşmeye erişimi şart
+ * koşar. Alt çubuğun yüksekliği ise sabit değil — "Devam etmek için bir kart
+ * seç" uyarısı, uzun toplam satırı ve çentikli cihazdaki `pb-safe` payı onu
+ * büyütür. Eski `pb-40` (160px) çubuk büyüdüğü anda bağlantıyı çubuğun ALTINDA
+ * bırakıyordu. Bu yüzden boşluk ÖLÇÜLEN yükseklikten türetilir.
+ *
+ * Ölçüm yoksa (ilk boyama, ResizeObserver desteklenmeyen motor) eski 160px
+ * güvenli alanla birlikte yedek kalır — boşluk sessizce 0'a düşmez.
+ *
+ * Saf fonksiyon; testi: tests/unit/yerlesimVeKlavye.test.ts
+ */
+export function odemeGovdeAltBoslugu(cubukYuksekligi: number | null): string {
+  if (cubukYuksekligi === null || !Number.isFinite(cubukYuksekligi) || cubukYuksekligi <= 0) {
+    return 'calc(var(--safe-bottom, 0px) + 160px)';
+  }
+  return `${Math.round(cubukYuksekligi) + ODEME_CUBUK_PAYI}px`;
+}
 
 // Bağlam kartı dikey satır ikonu
 const detailIcon = (kind: 'pin' | 'court' | 'calendar' | 'clock' | 'users') => {

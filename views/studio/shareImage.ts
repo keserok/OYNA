@@ -184,15 +184,17 @@ export async function svgToPngBlob(svg: string): Promise<Blob> {
 export const tacticToPngBlob = (t: TacticState, opts?: TacticImageOpts): Promise<Blob> =>
   svgToPngBlob(buildTacticSvg(t, opts));
 
-/** Blob'u dosya olarak indirir. */
 /**
  * Görseli kullanıcıya ver.
  *
  * Eskiden düz `<a download>` kullanıyordu; bu desen PAKETLENMİŞ uygulamada
  * (iOS WKWebView / Android Capacitor WebView) SESSİZCE hiçbir şey yapmaz —
  * "indirildi" toast'ı çıkar, dosya ortada yoktur. Artık ortak yardımcıdan
- * geçer: önce platformun paylaşım sayfası, olmazsa klasik indirme
+ * geçer: pakette native yaz+paylaş, tarayıcıda Web Share → klasik indirme
  * (utils/dosyaKaydet.ts).
+ *
+ * DÖNEN DEĞER YOK SAYILMAMALI: 'IPTAL' ve 'DESTEKLENMIYOR' başarı değildir,
+ * çağıran ekran bu iki durumda "indirildi" DEMEMELİDİR.
  */
 export async function downloadBlob(blob: Blob, filename: string): Promise<KaydetSonucu> {
   return dosyaKaydetVeyaPaylas(blob, filename, 'OYNA Taktik');

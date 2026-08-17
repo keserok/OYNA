@@ -91,6 +91,10 @@ export const BARE_CODE_TR: Record<string, string> = {
 
   // Saha / rezervasyon / tarife
   NO_TARIFF: 'Bu saatin fiyatı tanımlı değil. Tesisle iletişime geç.',
+  // Tarife VAR ama ücreti 0 ₺: ödeme adımı tutar bulamaz. Sunucu rezervasyonu
+  // hiç yazmaz (create_pitch_booking · satılamaz saat kapısı) — yoksa saat dolu
+  // görünür, karşılığında tahsilat olmazdı.
+  SLOT_NOT_SELLABLE: 'Bu saat için fiyat henüz tanımlanmamış, rezervasyon alınamıyor. Başka bir saat seçebilirsin.',
   BOOKING_DISABLED: 'Bu saha şu an rezervasyona kapalı.',
   LISTING_CUTOFF: 'Bu saat uygulamadan rezervasyona kapalı — tesis daha erken saatleri listeliyor.',
   CASH_BOOKING_DISABLED: 'Uygulamadan rezervasyon kartla kapora ödenerek yapılır. Bu tesiste uygulama içi ödeme şu anda kapalı.',

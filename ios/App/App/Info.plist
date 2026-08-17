@@ -52,14 +52,61 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+	<!--
+	  ════════════════════════════════════════════════════════════════════════
+	  İZİN GEREKÇELERİ — HER BİRİNİN KANITI (17 Ağu 2026 denetimi · B8)
+	  ════════════════════════════════════════════════════════════════════════
+
+	  NEDEN BU NOT VAR: Apple, beyan edilip KULLANILMAYAN bir izni sorabilir ve
+	  gizlilik formuyla çelişki çıkarır. Tersi çok daha kötüdür — beyanı silinen
+	  bir izin istendiği anda iOS uygulamayı ANINDA ÖLDÜRÜR (TCC ihlali). Bu
+	  yüzden aşağıdaki her satırın kaynak koddaki karşılığı yazılıdır. Bir satırı
+	  silmeden önce buradaki kanıtın hâlâ geçerli olup olmadığına bakılmalıdır.
+
+	  • NSCameraUsageDescription — GEREKLİ.
+	    Kanıt: `<input type="file" accept="image/*">` (ProfileEditSheet,
+	    ProfileInfoPage, PhotoManager, ServiceProfile, ServiceApplication).
+	    WKWebView bu girdide "Fotoğraf Çek" seçeneğini sunar; seçenek kamerayı
+	    açar ve bu beyan yoksa uygulama ÇÖKER.
+	    METİN DÜZELTİLDİ: eski metin "QR kod taramak" diyordu; QR kamera
+	    tarayıcısı koddan kaldırıldı (views/QRScannerView.tsx — yalnız elle kod
+	    girişi ve maç listesi var). Var olmayan bir özelliği gerekçe göstermek
+	    incelemede doğrudan soru konusudur.
+
+	  • NSLocationWhenInUseUsageDescription — GEREKLİ.
+	    Kanıt: services/locationService.ts · Geolocation.getCurrentPosition.
+	    Arka planda konum ALINMAZ; "Always" beyanı bilerek yoktur.
+
+	  • NSPhotoLibraryUsageDescription (OKUMA/seçme) — GEREKLİ.
+	    Kanıt: yukarıdaki dosya girdilerinde kullanıcı "Fotoğraf Kitaplığı"
+	    diyerek profil/saha görseli seçiyor (hooks/useImageUpload.ts yükler).
+
+	  • NSPhotoLibraryAddUsageDescription (KİTAPLIĞA YAZMA) — GEREKLİ.
+	    Denetimde "kullanılmıyor" diye işaretlenmişti; KOD BUNU YALANLIYOR.
+	    Kanıt: utils/dosyaKaydet.ts, paketlenmiş uygulamada dosyayı diske yazıp
+	    Share.share({ files: [...] }) ile iOS paylaşım sayfasını açıyor.
+	    Paylaşılan dosyalar PNG GÖRSEL: views/MatchTicket.tsx `oyna-bilet-*.png`
+	    ve views/studio/shareImage.ts taktik PNG'si. iOS bu sayfada "Görseli
+	    Kaydet" seçeneğini gösterir ve o seçenek uygulamanın KENDİ sürecinden
+	    Fotoğraflar'a yazar. Bu beyan silinseydi kullanıcı biletini kaydetmeye
+	    çalıştığı anda uygulama ÇÖKERDİ. Bu yüzden KALDI, metni gerçek kullanıma
+	    göre düzeltildi.
+
+	  • NSContactsUsageDescription — GEREKLİ.
+	    Kanıt: services/contactsService.ts · Contacts.requestPermissions.
+
+	  BEYAN EDİLMEYENLER (bilerek): mikrofon, takvim, hatırlatıcı, sağlık,
+	  Bluetooth, konuşma tanıma, FaceID. Kodda hiçbir çağrısı yok; `accept`
+	  değerleri yalnız `image/*` olduğu için video/ses yakalama da yok.
+	-->
 	<key>NSCameraUsageDescription</key>
-	<string>OYNA, QR kod taramak ve profil fotoğrafı çekmek için kameranıza erişmek istiyor.</string>
+	<string>OYNA, profil ve saha fotoğrafını doğrudan çekebilmen için kameranı kullanmak istiyor.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>OYNA, yakınındaki sahaları ve maçları gösterebilmek için konumunuza erişmek istiyor.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>OYNA, profil fotoğrafınızı değiştirmek için fotoğraf kütüphanenize erişmek istiyor.</string>
+	<string>OYNA, profil ve saha fotoğrafını seçebilmen için fotoğraf kitaplığına erişmek istiyor.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>OYNA, maç istatistiklerini ve taktik görsellerini kaydetmek istiyor.</string>
+	<string>OYNA, maç biletini ve taktik görselini Fotoğraflar'a kaydedebilmen için izin istiyor.</string>
 	<key>NSContactsUsageDescription</key>
 	<string>OYNA, rehberinizdeki arkadaşlarınızı bulup maça davet edebilmeniz için kişilerinize erişmek istiyor. Numaralar cihazınızda şifrelenir; rehberiniz olduğu gibi sunucuya yüklenmez.</string>
 	<key>ITSAppUsesNonExemptEncryption</key>

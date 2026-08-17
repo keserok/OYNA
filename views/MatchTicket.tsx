@@ -173,8 +173,10 @@ const MatchTicket: React.FC<MatchTicketProps> = ({ onBack }) => {
   const handleSaveImage = async () => {
     if (!qrDataUrl) return;
     // `<a download>` paketlenmiş uygulamada SESSİZCE çalışmaz (iOS WKWebView /
-    // Android WebView) — bilet QR'ı hiç kaydedilemiyordu. Ortak yardımcı önce
-    // platformun paylaşım sayfasını açar, olmazsa indirmeye düşer.
+    // Android WebView) — bilet QR'ı hiç kaydedilemiyordu. Ortak yardımcı pakette
+    // dosyayı diske yazıp sistemin paylaşım sayfasını açar, tarayıcıda indirmeye
+    // düşer. Mesaj DÖNEN SONUCA göre verilir: 'IPTAL'de (kullanıcı vazgeçti) ve
+    // 'DESTEKLENMIYOR'da asla "kaydedildi" YAZILMAZ.
     try {
       const blob = await (await fetch(qrDataUrl)).blob();
       const sonuc = await dosyaKaydetVeyaPaylas(

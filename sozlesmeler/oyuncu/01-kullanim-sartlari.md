@@ -93,7 +93,7 @@ Bu madde, 18 yaşından küçük (reşit olmayan) kullanıcıların Platformu g�
 Kullanıcı, kayıt sırasında 18 yaşından küçük olduğunu beyan ederse veya OYNA bunu başka bir şekilde (ör. beyan edilen doğum tarihi, kimlik doğrulama süreci) tespit ederse, hesap otomatik olarak **"sınırlı mod"**da açılır. Sınırlı moddaki bir hesapla:
 
 - (a) Uygulamada gezinme, saha/maç arama, profil oluşturma, **ödeme gerektirmeyen maçlara katılım** ve Platform içi mesajlaşma gibi işlevler **serbesttir**;
-- (b) **Ödeme gerektiren tüm işlemler** — kapora/rezervasyon bedeli ödemesi, ücretli maça katılım için slot/pay satın alımı ve cüzdana bakiye yükleme dahil — işbu maddede tanımlanan veli onayı tamamlanana kadar **kapalıdır** ve Kullanıcı tarafından kullanılamaz. Reşit olmayan kullanıcının maça katılımı, yalnızca o katılımın bir ödeme (slot/pay satın alımı) gerektirdiği ölçüde bu kapsamdadır; ödeme gerektirmeyen katılım kısıtlanmaz;
+- (b) **Ödeme gerektiren tüm işlemler** — kapora/rezervasyon bedeli ödemesi ve ücretli maça katılım için slot/pay satın alımı dahil — işbu maddede tanımlanan veli onayı tamamlanana kadar **kapalıdır** ve Kullanıcı tarafından kullanılamaz. Reşit olmayan kullanıcının maça katılımı, yalnızca o katılımın bir ödeme (slot/pay satın alımı) gerektirdiği ölçüde bu kapsamdadır; ödeme gerektirmeyen katılım kısıtlanmaz;
 - (c) Madde 3.4 uyarınca veli/vasi tarafından bizzat oluşturulmuş 13 yaş altı hesaplarda, Platform içi mesajlaşma işlevi ve profilin diğer kullanıcılara görünürlüğü de, işbu maddede düzenlenen veli onayı tamamlanana kadar ayrıca kısıtlanabilir; bu kısıtlamanın kapsamı OYNA tarafından Uygulama üzerinden belirlenir ve duyurulur.
 
 ### 4.3 Veli/Vasi Onay Süreci
@@ -123,6 +123,7 @@ Onay veren veli/vasi; madde 4.4'te tanımlanan **olağan** işlem hacmi ve nitel
 
 ### 4.7 Uygulama Notu
 
+<!-- YAYINLA -->
 > İşbu maddede tarif edilen veli doğrulama akışı — sınırlı mod; küçüğün hesabında görünen Veli Bağlantı Kodu; velinin kendi hesabından bu kodu girerek ad-soyad / T.C. Kimlik No / doğum tarihi beyanı ve muvafakat onayı; T.C. bilgilerinin şifrelenerek (hash) saklanması; çocuğun 18 yaşını doldurmasıyla sınırlı modun otomatik kalkması — **Uygulamada fiilen uygulanmaktadır**. Onayın hukuken geçerli sayılması bu akışın eksiksiz işletilmesine bağlıdır; salt sözleşme metninin varlığı tek başına yeterli değildir. Bu belgenin eki niteliğindeki tam metin için bkz. [Veli Muvafakatnamesi](08-veli-muvafakatnamesi.md).
 
 ---
@@ -163,9 +164,11 @@ Rezervasyon iptali ve iadeye ilişkin esaslar, **Kullanıcının kendi iradesiyl
 
 Yukarıdaki kademeli yapı yalnızca Kullanıcı kaynaklı iptallere uygulanır. Tesis veya OYNA kaynaklı, mücbir sebep dışındaki iptal/ifa edilememe hâllerinde madde 6.4; mücbir sebep hâllerinde ise madde 12.3 uygulanır.
 
+**Tesise özel süre:** Yukarıdaki 24/6 saat eşikleri Platform varsayılanıdır. Bir Tesis kendi rezervasyon ve maçları için daha uzun ya da daha kısa bir ücretsiz iptal süresi belirleyebilir. Bu durumda o rezervasyon/maç için Tesisin belirlediği süre uygulanır ve ilgili süre, ödeme yapılmadan önce ilgili ekranda Kullanıcıya gösterilir.
+
 ### 6.2 Ayrıntılı Düzenleme
 
-İptal/iade süreçlerine, ödeme yöntemine ve iadenin karta işlenmesine ilişkin ayrıntılı hükümler Mesafeli Satış ve İptal/İade Koşulları belgesinde düzenlenmiştir. Bu belge işbu Sözleşmenin ayrılmaz parçasıdır ve çelişki hâlinde iptal/iade konusunda özel hüküm niteliğindeki Mesafeli Satış ve İptal/İade Koşulları esas alınır.
+İptal/iade süreçlerine, ödeme yöntemine ve iadenin karta işlenmesine ilişkin ayrıntılı hükümler Mesafeli Satış ve İptal/İade Koşulları belgesinde düzenlenmiştir. Bu belge işbu Sözleşmenin ayrılmaz parçasıdır ve çelişki hâlinde iptal/iade konusunda özel hüküm niteliğindeki Mesafeli Satış ve İptal/İade Koşulları esas alınır. Madde 6.5'teki cüzdan düzenlemesi **YÜRÜRLÜKTE DEĞİLDİR**.
 
 ### 6.3 Mücbir Sebep ile Bağlantı
 
@@ -187,6 +190,7 @@ Bu telafi bedelinin nihai olarak Tesis ile OYNA arasında hangi oranda paylaşı
 
 ### 6.5 Cüzdan ve Para Çekimi
 
+<!-- YAYINLA -->
 > **YÜRÜRLÜKTE DEĞİLDİR (17 Ağustos 2026).** OYNA, 6493 sayılı Kanun kapsamındaki
 > elektronik para/ödeme hizmeti lisansına sahip olmadığından **Kullanıcı adına
 > bakiye tutmamaktadır**. Bu madde, cüzdan özelliği ileride lisanslı bir modelle

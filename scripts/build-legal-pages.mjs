@@ -4,11 +4,34 @@
 //   node scripts/build-legal-pages.mjs
 // Elle tutulan gizlilik.html / cerez-politikasi.html / hesap-silme.html DOKUNULMAZ;
 // yalnızca aşağıdaki DOCS listesindeki sayfalar + yasal.html indeksi üretilir.
+//
+// ─── ALINTI (>) BLOKLARI İÇİN "VARSAYILAN GİZLİ" KURALI ──────────────────────
+// Kanonik md dosyalarındaki `>` ile başlayan bloklar iki farklı amaçla kullanılıyor:
+//   (1) şirketin kendi iç notları  — "Durum:", "Bilinen açık:", "PR:" gibi;
+//   (2) kullanıcıya gösterilmesi GEREKEN uyarı damgaları — ör. Kullanım Şartları
+//       md. 6.5'in "YÜRÜRLÜKTE DEĞİLDİR" damgası.
+//
+// Eskiden süzgeç yalnızca "Durum:" geçen blokları atıyordu. Bu ters çalışıyordu:
+// biri ileride yeni bir iç not eklediğinde (o kalıbı kullanmazsa) not sessizce
+// yayına ve oradan uygulama paketine çıkıyordu. Nitekim çıktı da: "Bilinen açık:
+// ... henüz değerlendirilmedi" notu public/mesafeli-satis.html'de yayınlanmıştı.
+//
+// Kural artık TERS: bir `>` bloğu, hemen öncesindeki satırda `<!-- YAYINLA -->`
+// işareti YOKSA yayınlanmaz. Yani unutulan/yeni eklenen her not varsayılan olarak
+// GİZLİ kalır; yayınlanması için bilinçli bir işaret gerekir. Tüm HTML yorumları
+// (işaretin kendisi dahil) çıktıdan atılır.
+//
+// İç notların kalıcı yeri: sozlesmeler/ic-notlar/ — bu script o klasörü hiç
+// okumaz; aşağıdaki KAYNAK_DIZIN kontrolü bunu sert biçimde garanti eder.
 import { readFileSync, writeFileSync } from 'node:fs';
-import { join, dirname } from 'node:path';
+import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
+
+// Yayına girebilecek TEK kaynak klasör. Başka bir klasörden (ör. ic-notlar)
+// okuma denemesi derlemeyi patlatır — sessizce yayına sızmasındansa build çöksün.
+const KAYNAK_DIZIN = resolve(ROOT, 'sozlesmeler', 'oyuncu');
 
 // Kanonik md dosya adı → public slug (çapraz-atıf linklerini yeniden yazmak için)
 const SLUG_BY_MD = {
@@ -111,20 +134,37 @@ function inline(s) {
   return s;
 }
 
-function stripMetadata(lines) {
+const YAYIN_ISARETI = /^\s*<!--\s*YAYINLA\s*-->\s*$/;
+const HTML_YORUMU = /^\s*<!--[\s\S]*-->\s*$/;
+
+// Varsayılan gizli: `>` blokları yalnızca hemen öncesinde <!-- YAYINLA --> varsa
+// çıktıya girer. (Gerekçe dosyanın başındaki açıklamada.)
+function alintiBloklariniSuz(lines) {
   const out = [];
   let i = 0;
+  let isaretli = false; // bir önceki anlamlı satır <!-- YAYINLA --> mıydı?
+
   while (i < lines.length) {
-    if (lines[i].startsWith('>')) {
+    const line = lines[i];
+
+    if (YAYIN_ISARETI.test(line)) { isaretli = true; i++; continue; }
+    // İşaret dışındaki her HTML yorumu da çıktıya girmez: yorum = iç iletişim.
+    if (HTML_YORUMU.test(line)) { i++; continue; }
+
+    if (line.startsWith('>')) {
       const run = [];
       let j = i;
       while (j < lines.length && lines[j].startsWith('>')) { run.push(lines[j]); j++; }
-      if (run.some((l) => /Durum:/.test(l))) { i = j; continue; } // dahili metadata bloğu → at
-      out.push(...run);
+      if (isaretli) out.push(...run); // açıkça yayına işaretlenmiş → geçer
+      isaretli = false;               // işaret tek bloğu kapsar, devretmez
       i = j;
       continue;
     }
-    out.push(lines[i]);
+
+    // Boş satır işareti bozmaz (işaret ile blok arasında boşluk bırakılabilsin);
+    // dolu bir satır araya girerse işaret düşer.
+    if (!/^\s*$/.test(line)) isaretli = false;
+    out.push(line);
     i++;
   }
   return out;
@@ -132,7 +172,7 @@ function stripMetadata(lines) {
 
 function mdToHtml(md) {
   let lines = md.replace(/\r/g, '').split('\n');
-  lines = stripMetadata(lines);
+  lines = alintiBloklariniSuz(lines);
   const html = [];
   let i = 0;
   let seenSection = false;
@@ -218,7 +258,13 @@ function mdToHtml(md) {
 }
 
 for (const d of DOCS) {
-  const md = readFileSync(join(ROOT, 'sozlesmeler/oyuncu', d.md), 'utf8');
+  // Yayına yalnızca sozlesmeler/oyuncu altındaki kanonik dosyalar çıkar.
+  // ic-notlar/ gibi bir klasöre uzanan yol (ör. "../ic-notlar/...") burada durur.
+  const yol = resolve(KAYNAK_DIZIN, d.md);
+  if (!yol.startsWith(KAYNAK_DIZIN + '/')) {
+    throw new Error(`Yayın kaynağı sozlesmeler/oyuncu dışında: ${d.md} — iç notlar yayınlanamaz.`);
+  }
+  const md = readFileSync(yol, 'utf8');
   const out = pageHtml(d.title, d.desc, mdToHtml(md));
   const slug = SLUG_BY_MD[d.md];
   writeFileSync(join(ROOT, 'public', slug + '.html'), out);

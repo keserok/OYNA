@@ -679,9 +679,28 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                     ...(url ? { url } : {}),
                 });
             } else {
-                await downloadBlob(blob, tacticImageFilename(activeTactic));
-                if (url) { try { await navigator.clipboard.writeText(url); } catch { /* yok say */ } showToast('Görsel indirildi, link kopyalandı.'); }
-                else showToast('Görsel indirildi. Link için taktiği kaydet.');
+                // Buradaki mesaj eskiden KOŞULSUZ "Görsel indirildi" diyordu; Android'de
+                // dosya hiç oluşmadığı hâlde başarı yazıyordu. Artık dönen sonuca bakıyoruz:
+                // link kopyalama görselden BAĞIMSIZ başarabilir, bu yüzden ikisi ayrı anlatılır.
+                const sonuc = await downloadBlob(blob, tacticImageFilename(activeTactic));
+                let linkKopyalandi = false;
+                if (url) {
+                    try { await navigator.clipboard.writeText(url); linkKopyalandi = true; } catch { /* yok say */ }
+                }
+                const gorselOldu = sonuc === 'PAYLASILDI' || sonuc === 'INDIRILDI';
+                const gorselMetni = sonuc === 'PAYLASILDI' ? 'Görsel paylaşıma hazır' : 'Görsel indirildi';
+                if (gorselOldu) {
+                    showToast(linkKopyalandi
+                        ? `${gorselMetni}, link kopyalandı.`
+                        : url ? `${gorselMetni}. Link kopyalanamadı.` : `${gorselMetni}. Link için taktiği kaydet.`);
+                } else if (sonuc === 'DESTEKLENMIYOR') {
+                    showToast(linkKopyalandi
+                        ? 'Görsel bu cihazda kaydedilemedi; link kopyalandı.'
+                        : 'Görsel bu cihazda kaydedilemedi.', 'error');
+                } else if (linkKopyalandi) {
+                    // 'IPTAL' → görsel için başarı YAZILMAZ; yalnız gerçekten olan iş söylenir.
+                    showToast('Paylaşım linki kopyalandı.');
+                }
             }
         } catch (e) {
             if ((e as Error)?.name !== 'AbortError') showToast((e as Error)?.message || 'Paylaşılamadı.', 'error');

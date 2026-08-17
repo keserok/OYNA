@@ -43,7 +43,7 @@ export const FinanceRangeReport: React.FC<{
     }
   }, [pitchId, reportFrom, reportTo, notify]);
 
-  const handleDownloadCsv = useCallback(() => {
+  const handleDownloadCsv = useCallback(async () => {
     if (!report) return;
     const header = ['Gun', 'Odeme Adedi', 'Brut Tahsilat', 'OYNA Komisyonu', 'Net Kazanc', 'Iade'];
     const rows = report.days.map((d) => [
@@ -55,9 +55,15 @@ export const FinanceRangeReport: React.FC<{
     const csv = '﻿' + [header, ...rows].map((r) => r.join(';')).join('\r\n');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
     // Pakette `<a download>` sessizce çalışmaz (iOS/Android WebView) — rapor
-    // dışa aktarımı ölü düğmeydi. Ortak yardımcı paylaşım sayfasına düşer.
-    void dosyaKaydetVeyaPaylas(blob, `oyna-finans-${report.from}_${report.to}.csv`, 'OYNA Finans Raporu');
-  }, [report]);
+    // dışa aktarımı ölü düğmeydi. Ortak yardımcı önce native paylaşım sayfasını
+    // açar. `void` ile sonucu ATMAK, Android'de hiç oluşmayan dosya için
+    // kullanıcıyı habersiz bırakıyordu; artık sonuca göre konuşuyoruz.
+    const sonuc = await dosyaKaydetVeyaPaylas(blob, `oyna-finans-${report.from}_${report.to}.csv`, 'OYNA Finans Raporu');
+    if (sonuc === 'PAYLASILDI') notify('Rapor paylaşıma hazır. Açılan pencereden kaydedebilirsin.', 'success');
+    else if (sonuc === 'INDIRILDI') notify('Rapor indirildi.', 'success');
+    else if (sonuc === 'DESTEKLENMIYOR') notify('Bu cihazda dosya kaydedilemedi. Uygulamayı güncelle veya web sürümünden dene.', 'error');
+    // 'IPTAL' → kullanıcı vazgeçti; mesaj yok.
+  }, [report, notify]);
 
   return (
     <div className="bg-[#161B22] border border-emerald-500/15 rounded-[32px] p-6">
