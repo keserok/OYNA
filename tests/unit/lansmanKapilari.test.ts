@@ -184,3 +184,36 @@ describe('3 · Kart kaporası + karta iade (16 Ağu 2026 — ikinci tur)', () =>
     expect(oku('services/paymentService.ts')).toContain("'MATCH_DEPOSIT'");
   });
 });
+
+describe('4 · Nakit rezervasyon kapalı + iade kesintisi tek model (17 Ağu 2026)', () => {
+  const IADE_GOCU = 'supabase/migrations/20260905000009_iade_kesintisi_tek_model.sql';
+  const KAPI_GOCU = 'supabase/migrations/20260905000010_nakit_rezervasyon_kapisi.sql';
+
+  it('iade tabanı karttan çekilen TOPLAM: iki çağıran da işlem bedelini katar', () => {
+    const s = oku(IADE_GOCU);
+    // preview + cancel: taban = paid + kart işlem bedelleri (tek model)
+    expect(s.match(/card_fee_amount/g)?.length ?? 0).toBeGreaterThanOrEqual(2);
+    // Dağıtım tavanı kartın GERÇEK çekim tutarı (işlem bedeli payı da dönebilsin)
+    expect(s).toContain('v_taban := r.amount');
+  });
+
+  it('nakit rezervasyon kapısı: yalnız APP_BOOKING kısılır, tek kaynak resolve_payment_mode', () => {
+    const s = oku(KAPI_GOCU);
+    expect(s).toContain("NEW.source = 'APP_BOOKING'");
+    expect(s).toContain('resolve_payment_mode(NEW.pitch_id)');
+    expect(s).toContain('CASH_BOOKING_DISABLED');
+    // Maç ve elle yönetim kapının DIŞINDA (doğrulama bloğu ikisini de kanıtlar)
+    expect(s).toContain("'OWNER_MANUAL'");
+    expect(s).toContain("'APP_MATCH'");
+  });
+
+  it('istemcide nakit yolu kilitli: cashBooking sabit false, hata sözlükte', () => {
+    // "Rezervasyonun kaydedilir, ücreti tesiste ödersin" yolu KALKTI (2.12).
+    expect(oku('views/PaymentScreen.tsx')).toContain('const cashBooking: boolean = false');
+    expect(oku('utils/errorMap.ts')).toContain('CASH_BOOKING_DISABLED:');
+    // Keşif ekranı online ödemesi olmayan tesiste ödeme CTA'sını kilitler.
+    const p = oku('views/PitchDiscovery.tsx');
+    expect(p).toContain('phoneOnlyPitch');
+    expect(p).toContain("'Tesisi Ara'");
+  });
+});

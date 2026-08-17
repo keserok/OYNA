@@ -255,11 +255,12 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
   // Ödeme modu bilinmeden düğme canlanmaz; online kapalıyken kart akışı hiç yok.
   const modeKnown = payMode !== null;
   const onlineAllowed = payMode?.online_allowed === true;
-  // Online kapalıyken SAHA KAPORASI bağlamı ödemesiz rezervasyona dönüşür
-  // (sunucunun CASH_ONLY tanımı: "rezervasyon taleptir, ücret tesiste").
-  // Var olan rezervasyonun kapora bağlamında (BOOKING_DEPOSIT) yeni bir kayıt
-  // oluşmaz; o yalnız bilgilendirilir. Diğer bağlamlar dürüstçe kilitlenir.
-  const cashBooking = modeKnown && !onlineAllowed && ctx?.kind === 'PITCH_DEPOSIT';
+  // NAKİT REZERVASYON KAPALI (kurucu kararı, 17 Ağu 2026 — BULGU-11):
+  // uygulamadan rezervasyon YALNIZ kartla kapora ödenerek yapılır;
+  // "rezervasyonun kaydedilir, ücreti tesiste ödersin" yolu kaldırıldı.
+  // Online kapalıyken saha kaporası bağlamı da diğerleri gibi dürüstçe
+  // KİLİTLENİR (sunucu ikizi: b_nakit_rezervasyon_kapisi — 20260905000010).
+  const cashBooking: boolean = false;
   const onlineBlocked = modeKnown && !onlineAllowed && !cashBooking;
   const needsCard = !cashBooking && amount > 0;
   // Kart işlem bedeli sunucudaki yuvarlamanın aynısıyla hesaplanır; böylece
@@ -283,7 +284,9 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
   const noteText = cashBooking
     ? 'Şu an uygulama içinde ödeme alınmıyor. Rezervasyonun kaydedilir; ücreti sahaya gittiğinde tesise ödersin.'
     : onlineBlocked
-      ? (paymentModeReasonText(payMode!) ?? 'Online ödeme şu anda kapalı.')
+      ? (ctx?.kind === 'PITCH_DEPOSIT' || ctx?.kind === 'BOOKING_DEPOSIT'
+          ? 'Uygulamadan rezervasyon kartla kapora ödenerek yapılır; bu tesiste online ödeme şu anda kapalı. Rezervasyon için tesisi arayabilirsin.'
+          : (paymentModeReasonText(payMode!) ?? 'Online ödeme şu anda kapalı.'))
       : cardFee > 0
         ? `Kartla ödemede ödeme altyapısı komisyonu için %${cardFeePct} işlem bedeli eklenir.`
         : 'Tutarın tamamı seçtiğin karttan tahsil edilir.';
