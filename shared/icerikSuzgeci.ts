@@ -28,6 +28,18 @@
 //
 //   · "s*ktir" gibi kendini sansürlemiş yazımlar KASITLI olarak geçer:
 //     kullanıcı zaten yumuşatmış demektir.
+//
+// ══ 17 Ağustos 2026 · denetimde bulunan DELİKLER kapatıldı ══════════════════
+//   1. TÜRKÇE KARAKTERSİZ yazımlar (telefon klavyesinde en yaygın hâl) geçiyordu:
+//      pic, serefsiz, yavsak, got, gotveren, surtuk, pust, oc. Listede yalnız
+//      'orospu/amcik' gibi birkaç ASCII eşi vardı; ç/ş/ğ/ö taşıyan köklerin
+//      ASCII ikizleri eksikti.
+//   2. Yaygın çekimler (sikti, siktin, siktiler, siktiğimin, sikeceğim) hiçbir
+//      köke takılmıyordu.
+//   3. Harf aralayarak yazma ("s i k t i r", "a.m.k") süzgeci atlatıyordu.
+// Ve iki YANLIŞ POZİTİF giderildi:
+//   4. "51k TL ceza" engelleniyordu (5→s, 1→i çevrimi "sik" üretiyordu).
+//   5. Büyük harfli "SIKIYIM" (= sıkıyım) engelleniyordu.
 
 /** Rakam/işaret oyunlarını harfe çevirir (l33t): "s1kt1r" → "siktir". */
 const HARF_OYUNLARI: Record<string, string> = {
@@ -36,10 +48,34 @@ const HARF_OYUNLARI: Record<string, string> = {
   'â': 'a', 'î': 'i', 'û': 'u',
 };
 
-// Bütün rakamları tarar; karşılığı olmayan rakam (2, 6, 8, 9) olduğu gibi kalır.
+// Rakam OLMAYAN oyunlar (işaretler ve şapkalı harfler): bunlar hiçbir zaman
+// "sayı" anlamına gelmez, o yüzden koşulsuz çevrilir.
 // DİKKAT: bu deseni "anahtarlardan otomatik üret" diye kurmaya çalışma —
 // karakter sınıfı içinde kaçışlı rakam (\1) sekizlik koda dönüşüp sessizce bozar.
-const BIRIM_DESENI = /[0-9@$âîû]/g;
+const ISARET_DESENI = /[@$âîû]/g;
+const RAKAM_DESENI = /[0-9]/g;
+/** Türkçe alfabe + şapkalı harfler — "bu parça ne kadar harf?" sayımında kullanılır. */
+const HARF_DESENI = /[a-zçğıiöşüâîû]/g;
+
+/**
+ * Rakam→harf çevrimini YALNIZ harf ağırlıklı parçalara uygular.
+ *
+ * NEDEN (denetim, yanlış pozitif): eskiden çevrim metnin tamamına körlemesine
+ * uygulanıyordu; "51k TL ceza" cümlesindeki "51k" → "sik" olup ENGELLENİYORDU.
+ * Kural artık dar: bir parçada harf sayısı rakam sayısını GEÇMİYORSA o parça
+ * bir SAYIDIR (51k, 5-0, 21:00, 2026, 0532...) ve dokunulmaz. Geçiyorsa l33t
+ * yazımdır (s1kt1r → 4 harf / 2 rakam) ve çevrilir.
+ */
+function rakamlariCevir(metin: string): string {
+  // Boşluklar korunarak bölünür; her parça KENDİ başına değerlendirilir.
+  return metin.split(/(\s+)/).map((parca) => {
+    const rakam = (parca.match(RAKAM_DESENI) ?? []).length;
+    if (rakam === 0) return parca;
+    const harf = (parca.match(HARF_DESENI) ?? []).length;
+    if (harf <= rakam) return parca;
+    return parca.replace(RAKAM_DESENI, (c) => HARF_OYUNLARI[c] ?? c);
+  }).join('');
+}
 
 /**
  * Karşılaştırma için metni sadeleştirir.
@@ -47,14 +83,15 @@ const BIRIM_DESENI = /[0-9@$âîû]/g;
  * çıkar; o nokta temizlenmezse "SİKTİR" hiçbir kökle eşleşmez.
  */
 export function metniNormalize(metin: string): string {
-  return String(metin ?? '')
+  const kucuk = String(metin ?? '')
     .toLowerCase()
     // U+0307 = 'İ' küçültülünce ayrı düşen nokta işareti.
-    .split('\u0307').join('')
-    .replace(BIRIM_DESENI, (c) => HARF_OYUNLARI[c] ?? c)
-    // "siiiktir" gibi uzatmaları kısaltır. Yalnız 3+ tekrar sadeleşir; masum
-    // Türkçe kelimeler ("dikkat", "anne") en fazla 2 aynı harf yan yana taşır.
-    .replace(/(.)\1{2,}/g, '$1');
+    .split('̇').join('')
+    .replace(ISARET_DESENI, (c) => HARF_OYUNLARI[c] ?? c);
+  // Rakam çevrimi parça parça yapılır (bkz. rakamlariCevir — "51k TL" korunur).
+  // Ardından "siiiktir" gibi uzatmalar kısaltılır: yalnız 3+ tekrar sadeleşir,
+  // masum Türkçe kelimeler ("dikkat", "anne") en fazla 2 aynı harf taşır.
+  return rakamlariCevir(kucuk).replace(/(.)\1{2,}/g, '$1');
 }
 
 /**
@@ -62,29 +99,48 @@ export function metniNormalize(metin: string): string {
  * ("orospu" → orospusun, orospular). Buraya eklenecek her kök için tek soru:
  * "Bu harflerle başlayan masum bir Türkçe kelime var mı?" Varsa kök buraya
  * DEĞİL, aşağıdaki TAM_KELIME listesine yazılmalı.
+ *
+ * ASCII İKİZLERİ: Türkçe karakter tuşu olmayan klavyede yazılan hâller de
+ * listede ('şerefsiz' yanında 'serefsiz' gibi). Bunlar ayrı satırlarda durur,
+ * çünkü ç/ş/ğ/ö'yü otomatik katlamak "sürtünme → surtunme" gibi masum
+ * kelimeleri de köke yaklaştırırdı; tek tek yazmak kontrolü bizde tutar.
  */
 const KOK_BASLANGIC: readonly string[] = [
   'orospu', 'oruspu',
-  'amcık', 'amcik', 'amcığ',
+  'amcık', 'amcik', 'amcığ', 'amcig',
   // 'amına' yalnız noktasız 'ı' ile: noktalı "amina" yazımı "Amina" adıyla
   // çakışıyordu, bir insanın adını engellemektense kaçırmayı seçtik.
   // Bitişik yazılan "aminakoyayım" için aşağıdaki BITISIK_KALIPLAR var.
   'amına',
-  'siktir', 'sikey', 'siker', 'sikim', 'sikik', 'sikiyim', 'siktim',
-  'yarrak', 'yarrağ', 'yarak',
+  // 'sikti' geniş bilerek: sikti, siktin, siktiler, siktim, siktir, siktiğimin.
+  // 'sıktı' (sıkmak) NOKTASIZ ı taşır, bu yüzden buraya takılmaz.
+  'sikti', 'siktir',
+  // 'sikeceğim/sikecegim' için. DİKKAT: kök 'sike' ya da 'sikec' YAPILMADI —
+  // futbol uygulamasında "şike" ve "şikeci" ASCII yazılınca ("sike", "sikeci")
+  // masum cümleler engellenirdi. Aynı sebeple 'sikey' yerine tam 'sikeyim':
+  // "şikeyi" ASCII'de "sikeyi" olur ve 'sikey' köküne takılıyordu.
+  'sikeceğ', 'sikeceg', 'sikeyim',
+  'siker', 'sikim', 'sikik',
+  'yarrak', 'yarrağ', 'yarrag', 'yarak',
   'piç',
-  'pezevenk', 'kahpe', 'yavşak', 'puşt', 'şerefsiz',
-  'ibne', 'sürtük', 'kaltak', 'gavat', 'godoş',
+  // ASCII 'pic' TEK BAŞINA kök yapılamadı: "Picasso" (ve picnic/pickup) o kökle
+  // başlıyor, masum bir cümle engelleniyordu. Bu yüzden yalnız Türkçe EKLERİYLE
+  // aranır; ek almamış "pic" aşağıda TAM kelime olarak listelidir.
+  'pici', 'pice', 'picl', 'picti',
+  'pezevenk', 'kahpe', 'yavşak', 'yavsak', 'puşt', 'pust',
+  'şerefsiz', 'serefsiz',
+  'ibne', 'sürtük', 'surtuk', 'kaltak', 'gavat', 'godoş', 'godos',
   'gerizekal', 'dangalak', 'dallama',
-  'götver', 'götlek', 'götoş',
+  'götver', 'gotver', 'götlek', 'gotlek', 'götoş', 'gotos',
 ];
 
 /**
  * Yalnız TAM kelime olarak aranan sözler. Baştan arasak masum kelimeleri
- * yutarlardı: göt→götürmek, sikiş→sikişik, sik→sikke.
+ * yutarlardı: göt→götürmek, got→goturdum, sikiş→sikişik, sik→sikke,
+ * oç/oc→ocak.
  */
 const TAM_KELIME: ReadonlySet<string> = new Set([
-  'göt', 'sik', 'sikiş', 'sikis', 'oç',
+  'göt', 'got', 'sik', 'sikiş', 'sikis', 'oç', 'oc', 'pic',
   'amk', 'amq', 'aq',
 ]);
 
@@ -92,6 +148,11 @@ const TAM_KELIME: ReadonlySet<string> = new Set([
  * Boşluk/işaret koyarak bölünen kalıplar. Mesajın YALNIZ harfleri bitiştirilip
  * burada aranır; böylece "amina koyayım" da "aminakoyim" de yakalanır ama tek
  * başına "Amina" adı serbest kalır.
+ *
+ * NEDEN kısa kökler (sik, göt...) bu birleştirilmiş metinde ARANMAZ: tüm mesaj
+ * bitiştiğinde masum cümleler de küfür üretir — "bas ikili oyna" → "basikili"
+ * içinde "sik" geçer. Harf aralayarak yazma için aşağıdaki, çok daha dar olan
+ * `aralananlariBirlestir` kullanılır.
  */
 const BITISIK_KALIPLAR: readonly string[] = [
   'aminakoy', 'amınakoy', 'aminaqoy',
@@ -103,21 +164,111 @@ const kelimelereAyir = (normal: string): string[] =>
   normal.split(/[^a-zçğıiöşü]+/).filter(Boolean);
 
 /**
+ * HARF ARALAYARAK yazma: "s i k t i r", "a.m.k", "s-i-k-t-i-r".
+ * Yalnız ART ARDA GELEN TEK HARFLİK parçalar birleştirilir; üç ve daha uzun
+ * diziler aday sayılır. Böylece "a.m.k" yakalanırken normal cümleler
+ * ("bas ikili oyna") asla birleştirilmez — birleştirme tüm mesaja uygulansaydı
+ * masum cümleler küfür üretirdi.
+ */
+function aralananlariBirlestir(kelimeler: readonly string[]): string[] {
+  const adaylar: string[] = [];
+  let dizi: string[] = [];
+  const bosalt = () => {
+    if (dizi.length >= 3) adaylar.push(dizi.join(''));
+    dizi = [];
+  };
+  for (const kelime of kelimeler) {
+    if (kelime.length === 1) dizi.push(kelime);
+    else bosalt();
+  }
+  bosalt();
+  return adaylar;
+}
+
+/**
+ * Büyük ASCII 'I' harfi BELİRSİZDİR: Türkçe klavyede 'ı', ASCII klavyede 'i'
+ * demektir. `toLowerCase()` onu her zaman 'i' yapıyordu ve "SIKIYIM" (= sıkıyım)
+ * ENGELLENİYORDU. Bu yüzden metin iki kez süzülür:
+ *   1) BELİRSİZ okuma — büyük 'I' hiçbir kökle eşleşmeyen bir ayraca çevrilir;
+ *      burada TÜM kökler aranır (küçük harfli metinler bu turdan geçer, yani
+ *      davranış eskisiyle birebir aynıdır).
+ *   2) ASCII okuması — büyük 'I' = 'i'; burada yalnız 'ı/i' belirsizliğinden
+ *      etkilenmeyen kökler aranır. Böylece "SEREFSIZ" ve "PIC" yakalanmaya
+ *      devam ederken "SIKIYIM" ve "AMINA" masum kalır.
+ *
+ * BİLEREK KAÇAN: tamamı büyük ASCII harfle yazılmış "SIKTIR" da bu kuralla
+ * geçer — çünkü "sıktır" (sıkmak) gerçek ve masum bir kelimedir, ikisini
+ * ayırmanın bir yolu yoktur. Dosyanın felsefesi gereği masum olan kazanır.
+ */
+// Boşluk seçildi: kelime ayracıdır, yani büyük 'I' geçen yer hiçbir köke
+// harf olarak katılamaz ("SIKIYIM" → "s k y m").
+const BELIRSIZ_I_AYRACI = ' ';
+/** 'ı/i' belirsizliğine duyarlı kökler: ASCII okumasında ARANMAZ. */
+const iBelirsizKok = (kok: string): boolean => kok.startsWith('sik') || kok === 'amına';
+const KOK_BASLANGIC_ASCII = KOK_BASLANGIC.filter((k) => !iBelirsizKok(k));
+const TAM_KELIME_ASCII = new Set([...TAM_KELIME].filter((k) => !iBelirsizKok(k)));
+
+/** Tek kelime köklerden birine takılıyor mu? (tam eşleşme ya da kök başlangıcı) */
+function kelimeUygunsuzMu(
+  kelime: string,
+  kokler: readonly string[],
+  tamKelimeler: ReadonlySet<string>,
+): boolean {
+  return tamKelimeler.has(kelime) || kokler.some((k) => kelime.startsWith(k));
+}
+
+/**
+ * Tek bir okuma üzerinde tarama yapar.
+ * `aralananKokler`/`aralananTam`: harf aralayarak yazılmış adaylar için ayrı
+ * liste verilebilir — harf aralamak KASITLI atlatma kanıtıdır, orada büyük 'I'
+ * belirsizliğini sanığın lehine yorumlamayız ("S I K T I R" yakalanır, ama
+ * normal yazılmış "SIKTIR" = sıktır masum sayılmaya devam eder).
+ */
+function tara(
+  normal: string,
+  kokler: readonly string[],
+  tamKelimeler: ReadonlySet<string>,
+  aralananKokler: readonly string[] = kokler,
+  aralananTam: ReadonlySet<string> = tamKelimeler,
+): string | null {
+  const kelimeler = kelimelereAyir(normal);
+
+  for (const kelime of kelimeler) {
+    if (kelimeUygunsuzMu(kelime, kokler, tamKelimeler)) return kelime;
+  }
+
+  // Harf aralayarak yazılmış olabilir: "s i k t i r" → "siktir".
+  for (const aday of aralananlariBirlestir(kelimeler)) {
+    if (kelimeUygunsuzMu(aday, aralananKokler, aralananTam)) return aday;
+  }
+
+  const bitisik = kelimeler.join('');
+  return BITISIK_KALIPLAR.find((k) => bitisik.includes(k)) ?? null;
+}
+
+/**
  * Metindeki İLK uygunsuz ifadeyi döndürür (normalleştirilmiş hali), yoksa null.
  * Saf fonksiyon — ağ, depolama, yan etki yok; testten doğrudan çağrılabilir.
  */
 export function ilkUygunsuzKelime(metin: string): string | null {
-  const normal = metniNormalize(metin);
+  const ham = String(metin ?? '');
+  // Büyük ASCII 'I' (U+0049) — Türkçe 'İ' (U+0130) BAŞKA bir karakterdir, ona
+  // dokunulmaz; o zaten tartışmasız 'i' demektir.
+  const belirsizIVar = ham.includes('I');
 
-  for (const kelime of kelimelereAyir(normal)) {
-    if (TAM_KELIME.has(kelime)) return kelime;
-    const kok = KOK_BASLANGIC.find((k) => kelime.startsWith(k));
-    if (kok) return kelime;
-  }
+  const belirsizOkuma = metniNormalize(
+    belirsizIVar ? ham.split('I').join(BELIRSIZ_I_AYRACI) : ham,
+  );
+  const bulunan = tara(belirsizOkuma, KOK_BASLANGIC, TAM_KELIME);
+  if (bulunan) return bulunan;
 
-  const bitisik = kelimelereAyir(normal).join('');
-  const kalip = BITISIK_KALIPLAR.find((k) => bitisik.includes(k));
-  return kalip ?? null;
+  if (!belirsizIVar) return null;
+  return tara(
+    metniNormalize(ham),
+    KOK_BASLANGIC_ASCII, TAM_KELIME_ASCII,
+    // Aralanmış adaylarda tüm kökler geçerli — gerekçe `tara`nın başında.
+    KOK_BASLANGIC, TAM_KELIME,
+  );
 }
 
 /** Metin açık küfür/hakaret içeriyor mu? */

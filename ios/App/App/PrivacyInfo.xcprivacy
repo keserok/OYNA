@@ -179,6 +179,38 @@
 				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
 			</array>
 		</dict>
+		<!-- Hesap kimliği: her kullanıcının bir hesap numarası (UUID) var ve
+		     maç/rezervasyon kayıtları bu numaraya bağlanıyor. Apple bunu
+		     "User ID" kategorisinde sayar; beyan etmemek formla kod arasında
+		     fark yaratır. -->
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeUserID</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
+		<!-- Satın alma geçmişi: ödenen kaporalar ve maç katılım payları kayıt
+		     altında tutuluyor (payment_intents) — kullanıcı bunları "Ödemelerim"
+		     ekranında görüyor ve iade hesabı buradan yapılıyor. "Ödeme bilgisi"
+		     ile AYNI ŞEY DEĞİLDİR: o kartın kendisi, bu ne satın alındığı. -->
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypePurchaseHistory</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
 		<!-- Ödeme bilgisi: kart verisi OYNA sunucusunda SAKLANMAZ; ödeme
 		     altyapısına (iyzico) iletilir. İşlem kayıtları hesaba bağlıdır. -->
 		<dict>

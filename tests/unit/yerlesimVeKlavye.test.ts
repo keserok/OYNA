@@ -181,9 +181,14 @@ describe('B5 · uyarı balonu klavyenin ve alt menünün ÖNÜNDE durur', () => 
     // İki ölçünün BÜYÜĞÜ alınır — toplanırsa çift telafi olurdu.
     expect(taban![1]).toContain('max(var(--kb-height, 0px), var(--balon-klavye, 0px))');
     expect(menuliKural![1]).toContain('max(var(--kb-height, 0px), var(--balon-klavye, 0px))');
-    // Ölçen taraf: balonun kendisi.
+    // Ölçen taraf: balonun kendisi. Ölçüm 17 Ağustos'ta `sabitOgeKlavyeOrtusu`
+    // saf fonksiyonuna taşındı (giriş ekranı da AYNI kaynaktan okusun diye);
+    // hesap değişmedi, yalnız tek yere toplandı — davranış kilidi artık
+    // tests/unit/girisKlavyesiVeSuzgecDelikleri.test.tsx içinde gerçek render
+    // ile doğrulanıyor.
     expect(toast).toContain("'--balon-klavye'");
-    expect(toast).toContain('window.innerHeight - vv.height - vv.offsetTop');
+    expect(toast).toContain('sabitOgeKlavyeOrtusu(window.innerHeight, vv.height, vv.offsetTop)');
+    expect(toast).toContain('pencereYuk - gorunurYuk - gorunurUst');
   });
 
   it('alt menü çizildiğinde menü yüksekliği de eklenir', () => {

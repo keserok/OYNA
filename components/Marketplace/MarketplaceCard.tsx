@@ -5,6 +5,7 @@ import { Star, MapPin, ChevronRight, BadgeCheck, Shield, Scale } from 'lucide-re
 import { Goalkeeper, Referee } from '../../types';
 import { UserAvatar } from '../common/UserAvatar';
 import { providerStyles } from '../../shared/providerStyles';
+import { hakemSeviyeRozeti } from '../../shared/hakemSeviyesi';
 import { formatTRYShort } from '../../utils/formatTRY';
 
 // Rol bazlı tema — Dashboard giriş kartlarıyla tutarlı: Kaleci = neon yeşil,
@@ -55,9 +56,16 @@ export const MarketplaceCard: React.FC<MarketplaceCardProps> = ({ item, type, on
   // tarzlar (en fazla 2). Eski serbest metin `style` doğrudan basılıyordu ve
   // 'Panter' gibi artık desteklenmeyen değerler ekranda kalıyordu.
   const styleLabel = providerStyles(type, item).join(' · ') || null;
+  // B11 — hakem kartının alt satırında eskiden ham `level` ("FIFA Kokart")
+  // duruyordu; kaptan bunu OYNA'nın doğruladığı bir yetki sanıyordu. Değer
+  // hakemin başvuruda KENDİ seçtiği satırdır. Metin ortak yardımcıdan
+  // "BEYAN: …" biçiminde gelir (shared/hakemSeviyesi.ts).
+  // Taşma: satır zaten `truncate`; uzun adlarda kesme SONDAN olduğu için
+  // "BEYAN:" öneki her zaman görünür kalır, kesilen kısım iddianın kendisidir —
+  // yani taşma dürüst yönde bozulur.
   const subMeta = isGK
     ? ((item as Goalkeeper).age ? `${(item as Goalkeeper).age} yaş` : null)
-    : ((item as Referee).level || null);
+    : hakemSeviyeRozeti((item as Referee).level);
   const zone = item.preferredZones?.[0]?.split('/').pop()?.trim() || null;
   const hasRating = (item.rating ?? 0) > 0;
 

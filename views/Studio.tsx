@@ -3305,10 +3305,16 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: 20 }}
-                            className="min-h-screen w-full flex flex-col items-center p-6 pb-12"
+                            className="min-h-screen w-full flex flex-col items-center p-6 pb-12 pt-safe-6"
                         >
-                            {/* Modal Header */}
-                            <div className="w-full max-w-sm flex items-center justify-between mb-8 sticky top-0 z-10 py-2">
+                            {/* Modal Header
+                                ÇENTİK: bu katman `fixed inset-0`, yani EKRANIN tepesinden başlar;
+                                `p-6`nın 24px'i Dynamic Island'ın (59px) altında kalıyordu ve geri
+                                düğmesi durum çubuğunun ARKASINA giriyordu. `pt-safe-6` aynı 24px'i
+                                korur, üstüne güvenli alanı (ve varsa çevrimdışı şeridini) ekler.
+                                `top-safe`: başlık yapışkan; kaydırınca ekranın tepesine yapışıp
+                                yine çentiğin altına giriyordu — artık güvenli alana yapışır. */}
+                            <div className="w-full max-w-sm flex items-center justify-between mb-8 sticky top-safe z-10 py-2">
                                 <button 
                                     onClick={() => setShowExportModal(false)} 
                                     className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white hover:bg-white/10 transition-all active:scale-90"
@@ -4242,7 +4248,25 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                         initial={{ opacity: 0, y: 50 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 50 }}
-                        className="fixed bottom-32 left-1/2 -translate-x-1/2 z-[100] px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3 min-w-[280px]"
+                        // KONUM: `bottom-32` (128px) çivilenmişti. Stüdyonun kendi balonu
+                        // ortak Toast bileşenini kullanmadığı için bu gece yapılan
+                        // `.uyari-balonu` düzeltmesi buraya ulaşmamıştı: klavye açıkken
+                        // (taktik adı yazılırken) ya da çentikli cihazın ana ekran
+                        // çubuğunda balon ARKADA kalıyordu. Asıl tehlike, dosya kaydetme
+                        // dürüstleştirmesinin "Görsel bu cihazda kaydedilemedi." mesajının
+                        // tam buradan çıkması: görünmeyen dürüst hata = kullanıcı düğmeyi
+                        // bozuk sanır. Konum artık index.css'teki ortak kuraldan gelir.
+                        //
+                        // YATAY ORTALAMA neden `transform` ile YAPILMIYOR: bu öğe
+                        // framer-motion ile `y` üzerinden canlandırılıyor; kitaplık
+                        // öğenin `style.transform` değerini KENDİ yazıyor (animasyon
+                        // bitince "none"). Satır içi stil, sınıfı her zaman ezer —
+                        // yani `-translate-x-1/2` sessizce düşerdi ve 280px'lik balon
+                        // ekranın ortasından SAĞA taşıp kesilirdi (mesajın yarısı
+                        // görünmez). Ortalama artık transform'a hiç dokunmayan
+                        // yoldan: `left-0 right-0` + `w-fit` + `mx-auto`. Genişlik
+                        // aynı (içerik kadar, en az 280px), yalnız ortalama güvenli.
+                        className="uyari-balonu fixed left-0 right-0 mx-auto w-fit z-[100] px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3 min-w-[280px]"
                         style={{ 
                             backgroundColor: toast.type === 'success' ? '#10B981' : '#EF4444',
                             color: 'white'

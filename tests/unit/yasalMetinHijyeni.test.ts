@@ -14,8 +14,10 @@
 //      demek zorundadır — uygulama içi metin ile yayındaki metin çelişemez.
 
 import { describe, it, expect } from 'vitest';
-import { readFileSync, existsSync, readdirSync } from 'node:fs';
+import { readFileSync, existsSync, readdirSync, mkdtempSync, mkdirSync, writeFileSync, copyFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
+import { tmpdir } from 'node:os';
+import { execFileSync } from 'node:child_process';
 import { DOCS } from '../../shared/legalDocs';
 import { LEGAL_UPDATED_TR } from '../../shared/legalVersion';
 
@@ -151,6 +153,139 @@ describe('alıntı blokları varsayılan olarak gizli', () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
+// 2b. ÜRETİCİYE karşı test — kuralın kendisi kilitleniyor, çıktısı değil
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// NEDEN BU BLOK VAR (17 Ağustos 2026 denetimi): yukarıdaki 2. bölüm yalnızca
+// public/*.html'in BUGÜNKÜ hâlini kanonik md ile karşılaştırıyor. Denetçi şunu
+// deneyle gösterdi: build-legal-pages.mjs'teki "varsayılan gizli" kuralı eski
+// hâline ("yalnız 'Durum:' geçen blokları at") geri çevrildiğinde altı sayfa da
+// BAYT BAYT AYNI çıkıyor — çünkü bugün kanonik dosyalarda kalan işaretsiz
+// blokların hepsi zaten "Durum:" içeriyor. Yani düzeltme sessizce geri
+// alınabiliyordu ve test paketi yeşil kalıyordu.
+//
+// Buradaki testler o boşluğu kapatıyor: gerçek üretici script'i geçici bir
+// klasöre kopyalanıp UYDURMA bir sözleşme dosyası üzerinde çalıştırılıyor.
+// Fixture bilerek hiçbir "yasak kelime" (Durum:, PR:, Bilinen açık…) içermiyor;
+// bu yüzden eski süzgeç geri gelirse işaretsiz not yayına çıkar ve test KIRMIZI
+// döner. Depodaki public/ dosyalarına dokunulmaz.
+describe('üretici: alıntı süzgeci kuralı gerçekten uyguluyor', () => {
+  // Fixture izleri: gerçek metinde asla geçmeyecek benzersiz damgalar.
+  const IZ = {
+    isaretsiz: 'IZ-ISARETSIZ-ALINTI',
+    isaretli: 'IZ-ISARETLI-ALINTI',
+    girintili: 'IZ-GIRINTILI-ALINTI',
+    cokSatirliYorum: 'IZ-COK-SATIRLI-YORUM',
+    duzParagraf: 'IZ-DUZ-PARAGRAF',
+  };
+
+  // Dikkat: hiçbir satırda "Durum:", "PR:", "Bilinen açık" gibi eski süzgecin
+  // tanıdığı kalıp YOK. Süzgeç kuralı geri alınırsa notlar yayına çıkar.
+  const FIXTURE = [
+    '# Deneme Sözleşmesi',
+    '',
+    '**Son güncelleme: ' + LEGAL_UPDATED_TR + '**',
+    '',
+    '## 1. Genel',
+    '',
+    'Kullanıcıya gösterilen normal bir paragraf.',
+    '',
+    '> Şirket içi hatırlatma ' + IZ.isaretsiz + ' — yayına çıkmamalı.',
+    '',
+    '<!-- YAYINLA -->',
+    '> Kullanıcıya gösterilmesi gereken uyarı ' + IZ.isaretli + ' — yayına çıkmalı.',
+    '',
+    '  > Girintili şirket içi hatırlatma ' + IZ.girintili + ' — yayına çıkmamalı.',
+    '',
+    '<!--',
+    '  Çok satırlı şirket içi yorum ' + IZ.cokSatirliYorum + ' — yayına çıkmamalı.',
+    '-->',
+    '',
+    'Serbest paragraf hâlinde yazılmış not ' + IZ.duzParagraf + '.',
+    '',
+  ].join('\n');
+
+  /**
+   * GERÇEK üreticiyi geçici bir kum havuzunda fixture üzerinde çalıştırır ve
+   * ürettiği tüm sayfaları tek metin olarak döndürür.
+   */
+  function ureticidenGecir(mdIcerik: string): string {
+    const script = 'scripts/build-legal-pages.mjs';
+    // Üreticinin hangi md dosyalarını beklediğini kaynağından okuyoruz; liste
+    // ileride büyürse test kendi kendini uydurur, ENOENT ile patlamaz.
+    const beklenen = [...oku(script).matchAll(/\{\s*md:\s*'([^']+)'/g)].map((m) => m[1]!);
+    expect(beklenen.length, 'üreticide DOCS listesi bulunamadı').toBeGreaterThan(0);
+
+    const kum = mkdtempSync(join(tmpdir(), 'oyna-yasal-'));
+    try {
+      mkdirSync(join(kum, 'scripts'), { recursive: true });
+      mkdirSync(join(kum, 'sozlesmeler', 'oyuncu'), { recursive: true });
+      mkdirSync(join(kum, 'public'), { recursive: true });
+      copyFileSync(join(KOK, script), join(kum, script));
+      for (const ad of beklenen) writeFileSync(join(kum, 'sozlesmeler', 'oyuncu', ad), mdIcerik, 'utf8');
+
+      execFileSync(process.execPath, [join(kum, script)], { stdio: 'pipe' });
+
+      return readdirSync(join(kum, 'public'))
+        .filter((f) => f.endsWith('.html') && f !== 'yasal.html')
+        .map((f) => readFileSync(join(kum, 'public', f), 'utf8'))
+        .join('\n');
+    } finally {
+      rmSync(kum, { recursive: true, force: true });
+    }
+  }
+
+  const cikti = ureticidenGecir(FIXTURE);
+
+  it('işaretsiz alıntı bloğu YAYINLANMAZ (süzgeç eski hâline dönerse kırmızı)', () => {
+    expect(
+      cikti.includes(IZ.isaretsiz),
+      'İşaretsiz `>` bloğu yayına sızdı — "varsayılan gizli" kuralı çalışmıyor.',
+    ).toBe(false);
+  });
+
+  it('<!-- YAYINLA --> işaretli blok YAYINLANIR (süzgeç metni kesmiyor)', () => {
+    // Karşı yön: kural fazla agresifleşip kullanıcıya gösterilmesi GEREKEN
+    // damgayı da yutarsa (ör. md. 6.5 "YÜRÜRLÜKTE DEĞİLDİR"), bu test yakalar.
+    expect(
+      cikti.includes(IZ.isaretli),
+      'İşaretli blok yayına çıkmadı — kullanıcıya gösterilmesi gereken uyarı kayboluyor.',
+    ).toBe(true);
+  });
+
+  it('GİRİNTİLİ işaretsiz alıntı da YAYINLANMAZ', () => {
+    // Delik 1: süzgeç `startsWith('>')` kullanırken "  > not" satırı kaçıyordu.
+    expect(
+      cikti.includes(IZ.girintili),
+      'Girintili `>` bloğu yayına sızdı — süzgeç satır başındaki boşluğu atlamıyor.',
+    ).toBe(false);
+  });
+
+  it('ÇOK SATIRLI HTML yorumu YAYINLANMAZ', () => {
+    // Delik 2: tek satırlık yorum kalıbı çok satırlı yorumun hiçbir satırıyla
+    // eşleşmiyordu; yorum gövdesi olduğu gibi yayına çıkıyordu.
+    expect(
+      cikti.includes(IZ.cokSatirliYorum),
+      'Çok satırlı `<!-- ... -->` yorumu yayına sızdı.',
+    ).toBe(false);
+  });
+
+  it('düz paragraf hâlindeki not YAYINLANIR — bu bilinçli bir sınır', () => {
+    // DÜRÜSTLÜK NOTU: bu bir kusur DEĞİL, kabul edilmiş bir sınır. Her paragrafı
+    // şüpheli sayan bir kural sözleşme metnini keser ve kullanıcıya eksik metin
+    // gösterir. Koruma kural değil YER ile sağlanıyor: iç notlar
+    // sozlesmeler/ic-notlar/ altında durur, üretici o klasörü hiç okumaz.
+    // Bu test o sınırı KAYIT ALTINA alıyor; biri ileride paragraf kuralı yazarsa
+    // burası kırmızı döner ve kararın bilinçli olduğu hatırlanır.
+    expect(cikti.includes(IZ.duzParagraf)).toBe(true);
+
+    // Sınırın karşılığı: iç not klasörü gerçekten var ve üretici onu okumuyor.
+    expect(existsSync(join(KOK, 'sozlesmeler/ic-notlar/ACIK-KONULAR.md'))).toBe(true);
+    expect(oku('scripts/build-legal-pages.mjs')).toContain('sozlesmeler/ic-notlar/');
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
 // 3. Tarih tutarlılığı
 // ─────────────────────────────────────────────────────────────────────────────
 describe('yürürlük tarihi tek', () => {
@@ -163,7 +298,27 @@ describe('yürürlük tarihi tek', () => {
     for (const t of bulunanlar) expect(t).toBe(LEGAL_UPDATED_TR);
   });
 
-  it.each(URETILEN)('%s sayfası (%s) aynı tarihi gösteriyor', (_md, htmlAd) => {
+  // ÜRETİLEN sayfalarla sınırlı kalmak yetmedi: public/cerez-politikasi.html
+  // ELLE tutuluyor, üretici listesinde değil ve diğer 8 belge 15.07.2026'ya
+  // çekilirken 12.07.2026'da kalmıştı. Uygulama içi metin bir gün, paketteki
+  // sayfa başka bir gün diyordu. Bu yüzden tarama artık public altındaki HER
+  // .html'i kapsıyor — elle tutulanlar dahil.
+  it.each(yayinSayfalari())('%s içindeki her "Son güncelleme" tarihi LEGAL_UPDATED_TR', (yol, icerik) => {
+    const bulunanlar = [...icerik.matchAll(/Son güncelleme:?\**\s*(\d{2}\.\d{2}\.\d{4})/g)].map((m) => m[1]);
+    for (const t of bulunanlar) expect(t, `${yol}: sayfadaki tarih diğer belgelerden farklı`).toBe(LEGAL_UPDATED_TR);
+  });
+
+  // Yukarıdaki test tarih SATIRI SİLİNEREK de susturulabilirdi. Bu yüzden hangi
+  // sayfaların tarih taşımak ZORUNDA olduğu ayrıca kilitleniyor.
+  // (public/hesap-silme.html ve public/yasal.html listede yok: ikisi de sözleşme
+  //  metni değil — biri adım adım yol tarifi, diğeri belge indeksi.)
+  const TARIH_ZORUNLU = [
+    ...URETILEN.map(([, htmlAd]) => htmlAd),
+    'gizlilik.html',        // elle tutuluyor
+    'cerez-politikasi.html', // elle tutuluyor
+  ];
+
+  it.each(TARIH_ZORUNLU)('public/%s "Son güncelleme" satırını taşıyor', (htmlAd) => {
     const html = oku('public/' + htmlAd);
     const m = html.match(/<p class="meta">Son güncelleme: (\d{2}\.\d{2}\.\d{4})/);
     expect(m, `${htmlAd}: meta satırında tarih yok`).not.toBeNull();

@@ -455,6 +455,17 @@
    Alt menünün varlığını `:has()` ile DOM'dan okuyoruz: nav yalnız sekme
    köklerinde render edilir (App.tsx · showBottomNav), o yüzden sabit bir pay
    ayırmak maç kurma / ödeme gibi menüsüz ekranlarda balonu boşluğa iterdi.
+
+   ÜÇ ALT MENÜNÜN ÜÇÜ DE SAYILIR: oyuncu (components/BottomNav.tsx), kaleci/hakem
+   (views/ServiceDashboard.tsx) ve işletme (views/owner/.../OwnerBottomNav.tsx)
+   artık aynı `aria-label="Ana Gezinti"` etiketini taşır — etiket zaten doğruydu,
+   üçü de bulunduğu panelin ANA gezintisidir ve aynı anda yalnız biri çizilir
+   (App.tsx: `showBottomNav` sekme köklerine bakar; işletme ve servis panelleri
+   sekme kökü değildir). Eskiden yalnız oyuncu menüsü etiketliydi ve kaleci/hakem
+   ekranında geri bildirim balonu menünün ARKASINDA kalıyordu.
+   Pay `--oy-nav-h` ile hesaplanır — bu, üç menünün EN UZUNU olan oyuncu
+   menüsünün ölçüsüdür; kısa menülerde balon birkaç piksel daha yukarıda durur.
+   Bilinçli tercih: fazladan boşluk görünür kalır, eksik boşluk mesajı GİZLER.
    `:has()` desteklemeyen eski bir motorda taban kural geçerli kalır — bugünkü
    davranıştan yine de iyidir (güvenli alan + klavye payı orada da var).
 ────────────────────────────────────────────────────────────────────────────── */
@@ -472,9 +483,28 @@ body:has(nav[aria-label="Ana Gezinti"]) .uyari-balonu {
 /* MOB-M1: OwnerBottomNav'ın kullandığı sınıf TANIMSIZDI (hayalet) — py-2'nin
    alt yarısı + home-çubuğu boşluğu. Çentikli cihazda nav artık çakışmaz. */
 .safe-area-pb { padding-bottom: calc(var(--safe-bottom) + 0.5rem); }
-/* MOB-M4/M5/M6: üst/alt güvenli alan + bileşen dolgusu birleşimleri */
+/* MOB-M4/M5/M6: üst/alt güvenli alan + bileşen dolgusu birleşimleri.
+
+   NEDEN 5 ve 8 SONRADAN EKLENDİ: bazı başlıklar aynı hesabı SATIR İÇİNDE
+   yazıyordu (`pt-[calc(var(--safe-top)+1.25rem)]`). Ölçü doğruydu ama satır içi
+   yazılan bir değer CSS'ten hedeflenemez — aşağıdaki çevrimdışı şeridi telafisi
+   (`body.offline-banner-on .pt-safe-*`) o başlıklara ULAŞMIYORDU: uçak modunda
+   kırmızı şerit açılınca geri düğmesinin üstü şeridin altında kalıyordu.
+   Sayılar Tailwind ölçeğiyle aynıdır (5 = 1.25rem, 8 = 2rem), böylece satır içi
+   değerler BİREBİR aynı boşlukla sınıfa çevrilebildi — tasarım değişmedi. */
 .pt-safe-2   { padding-top:    calc(var(--safe-top) + 0.5rem); }
+.pt-safe-5   { padding-top:    calc(var(--safe-top) + 1.25rem); }
 .pt-safe-6   { padding-top:    calc(var(--safe-top) + 1.5rem); }
+.pt-safe-8   { padding-top:    calc(var(--safe-top) + 2rem); }
+/* Servis (kaleci/hakem) başlıkları: taban 3rem, çentik payı büyükse o kazanır.
+   `.pt-safe-baslik` ile aynı fikir, yalnız tabanı 3.25rem değil 3rem — mevcut
+   ölçüyü 4px bile oynatmamak için ayrı sınıf açıldı. */
+.pt-safe-baslik-3 { padding-top: max(calc(var(--safe-top) + 1rem), 3rem); }
+/* YAPIŞKAN başlık için üst dayanak. `sticky top-0` yazan bir başlık kaydırma
+   sırasında ekranın en TEPESİNE yapışır — yani Dynamic Island'ın altına girer;
+   başlığın kendi dolgusu bunu kurtarmaz (dolgu yalnız İÇERİĞİ aşağı iter, kutu
+   yine 0'a yapışır). Güvenli alan 0 olan cihazda `top: 0px` olur: değişiklik yok. */
+.top-safe { top: var(--safe-top); }
 /* Sahalar ekranının başlığı (views/PitchDiscovery.tsx).
    `pt-safe` yalnız `env(safe-area-inset-top) + 1rem` verir. Güvenli alanı
    BİLDİRMEYEN cihazda (bazı Android'ler, tarayıcı, webview yapılandırması
@@ -625,9 +655,15 @@ body.offline-banner-on { --offline-banner-h: calc(max(var(--safe-top), 0.5rem) +
 body.offline-banner-on .safe-top      { padding-top: calc(var(--safe-top) + var(--offline-banner-h)); }
 body.offline-banner-on .pt-safe       { padding-top: calc(var(--safe-top) + 1rem   + var(--offline-banner-h)); }
 body.offline-banner-on .pt-safe-2     { padding-top: calc(var(--safe-top) + 0.5rem + var(--offline-banner-h)); }
+body.offline-banner-on .pt-safe-5     { padding-top: calc(var(--safe-top) + 1.25rem + var(--offline-banner-h)); }
 body.offline-banner-on .pt-safe-6     { padding-top: calc(var(--safe-top) + 1.5rem + var(--offline-banner-h)); }
+body.offline-banner-on .pt-safe-8     { padding-top: calc(var(--safe-top) + 2rem   + var(--offline-banner-h)); }
 body.offline-banner-on .pt-safe-baslik { padding-top: calc(max(calc(var(--safe-top) + 1rem), 3.25rem) + var(--offline-banner-h)); }
+body.offline-banner-on .pt-safe-baslik-3 { padding-top: calc(max(calc(var(--safe-top) + 1rem), 3rem) + var(--offline-banner-h)); }
 body.offline-banner-on .safe-area-top { padding-top: calc(var(--safe-top) + 1rem   + var(--offline-banner-h)); }
+/* Yapışkan başlık şeridin de altına inmeli — yoksa şerit açıkken başlık kaydırma
+   sırasında kırmızı şeridin arkasına girer. */
+body.offline-banner-on .top-safe      { top: calc(var(--safe-top) + var(--offline-banner-h)); }
 /* FAZ0: hayalet sınıf — OwnerKpiGrid vb. `scrollbar-hide` kullanıyordu; `.no-scrollbar` ile aynı. */
 .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
 .scrollbar-hide::-webkit-scrollbar { display: none; }

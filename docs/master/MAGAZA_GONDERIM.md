@@ -29,6 +29,8 @@
 | 16 | **3DS dönüşü uygulamadan çıkabilirdi**: banka doğrulaması bitince iyzico bizim uç fonksiyonumuza (`*.supabase.co`) döner; o adres izin listesinde olmadığı için Capacitor son adımı **Chrome'a** atabilirdi — para çekilmiş, sonuç okunamamış olurdu. | Adres izin listesine eklendi. (`'*'` YAZILMADI: o zaman harita/WhatsApp bağlantıları da uygulama içinde açılırdı.) |
 | 17 | **Yasal metin kendisiyle çelişiyordu**: iadeler karta denirken hemen altındaki maddeler "cüzdanınızdaki tutarı harcayabilirsiniz / %5 kesintiyle çekebilirsiniz" diyordu; mücbir sebep ve tesis kaynaklı iptal maddeleri de parayı cüzdana gönderiyordu. | Uygulama içi metin + kaynak sözleşme hizalandı: **tüm iadeler ve telafi bedeli karta**; cüzdan maddesi "YÜRÜRLÜKTE DEĞİLDİR" damgalı. |
 | 18 | **Push bildirim jetonu beyan DIŞIydı**: uygulama cihazın bildirim jetonunu sunucuya yazıyor (bu, mağaza formlarında "Cihaz veya diğer kimlikler"), gizlilik manifestosunda karşılığı yoktu. Ayrıca kamera izninin gerekçesi **koddan kaldırılmış** bir özelliği ("QR kod taramak") vaat ediyordu. | `PrivacyInfo.xcprivacy`'ye **cihaz kimliği** eklendi (İzleme: hayır) → **12 veri türü**. iOS izin gerekçeleri gerçek kullanıma göre yeniden yazıldı ve her birinin kaynak koddaki kanıtı dosyaya işlendi. **Fotoğraf kitaplığına yazma izni İNCELENDİ ve KALDI** — silinseydi bilet/taktik görselini "Görseli Kaydet" ile kaydeden kullanıcıda uygulama çökerdi. |
+| 19 | **Beyan hâlâ eksikti**: uygulama hesap kimliği (UUID) ve satın alma geçmişi (ödenen kaporalar) tutuyor; gizlilik manifestosunda ikisinin de karşılığı yoktu. Play "Veri Güvenliği" formu bu dosyadan doldurulacağı için eksik burada başlayıp forma yayılıyordu. | `NSPrivacyCollectedDataTypeUserID` ve `...PurchaseHistory` eklendi → **14 veri türü** (ikisi de İzleme: hayır). |
+| 20 | **Sahte kaleci/hakem gerçek vitrinde görünüyordu**: kaleci/hakem vitrini demo süzgecini yanlış yerden (tablo sütunu) okuyordu; demo işareti ise KİMLİKTE (`profiles.is_demo`) tutuluyor. Canlıda 1 sahte kaleci + 2 sahte hakem listeleniyordu. | Vitrin artık kimliği soruyor ve mevcut satırlardaki işaret kimlikle eşitlendi. Doğrulandı: vitrinde 0 sahte sağlayıcı, 4 gerçek tesis. |
 
 ## 2 · Kurucu kararlarıyla yapılan ürün değişiklikleri (17 Ağu)
 
@@ -72,7 +74,7 @@
    > içi ödemeler **fiziksel hizmet** bedelidir (saha kiralama kaporası, maç
    > katılım payı); dijital ürün veya abonelik satışı yoktur — Kural 3.1.5(a).
    > Ödeme altyapısı iyzico'dur.
-6. **Gizlilik etiketleri**: `PrivacyInfo.xcprivacy` içindeki **12 veri türüyle**
+6. **Gizlilik etiketleri**: `PrivacyInfo.xcprivacy` içindeki **14 veri türüyle**
    birebir doldurulmalı (dosya kaynak olarak kullanılabilir).
    Sayı 17 Ağu'da 12'ye çıktı: **kesin konum** ve **cihaz kimliği** eklendi.
    *Cihaz kimliği = push bildirim jetonu.* Uygulama bildirim gönderebilmek için
@@ -90,7 +92,7 @@
     Bildirim, halı saha uygulamasında kullanıcıyı geri getiren ana mekanizmadır.
 
 8. **Veri güvenliği (Data Safety) formu** — `PrivacyInfo.xcprivacy` içindeki
-   **12 veri türü** ile birebir. Dikkat: **Kişiler (rehber)**, **kesin konum**
+   **14 veri türü** ile birebir. Dikkat: **Kişiler (rehber)**, **kesin konum**
    ve **cihaz kimliği (push jetonu)** satırları mutlaka işaretlenmeli — izin
    listesinde isteyip formda beyan etmeyen sürümler otomatik takılıyor.
    *(`docs/master/PLAY_STORE_YUKLEME_ADIMLARI.md` içindeki eski tabloyu

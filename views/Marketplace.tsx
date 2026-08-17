@@ -21,6 +21,7 @@ import Chip from '../components/ui/Chip';
 import { getInitials } from '../components/ui/Avatar';
 import { UserAvatar } from '../components/common/UserAvatar';
 import { providerStyles } from '../shared/providerStyles';
+import { hakemSeviyeRozeti, HAKEM_SEVIYE_NOTU } from '../shared/hakemSeviyesi';
 import { auth } from '../supabaseAuth';
 import { trCapitalize } from '../utils/trUpper';
 import { formatTRYShort } from '../utils/formatTRY';
@@ -377,6 +378,10 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect, onCre
     const detailDistance = detail ? distanceOf(detail) : null;
     const detailUnavailable = detail?.isAvailable === false;
     const detailReviews = detail?.reviews || [];
+    // B11 — hakem seviyesi ekranda ham basılmaz; ortak yardımcı "BEYAN: …"
+    // etiketini üretir. Seviye girilmemişse null döner (rozet/karo "—" gösterir
+    // ve altına dürüstlük notu düşmez — ortada bir iddia yoktur).
+    const detailSeviyeRozeti = hakemSeviyeRozeti((detail as Referee | null)?.level);
     // Çalışma günlerinden türetilmiş dürüst sinyal: bugün çalışıyor mu?
     const detailAvailableToday = !detailUnavailable && !!detail?.workingHours?.activeDays?.includes(TODAY_SHORT);
 
@@ -1039,10 +1044,25 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect, onCre
                                                 sub={(detail as Goalkeeper).height || undefined}
                                             />
                                         ) : (
+                                            /* B11 — burada eskiden ham `level` ("FIFA Kokart")
+                                               basılıyordu ve altındaki "klasman" yazısı bunu
+                                               resmî bir sınıflandırma gibi gösteriyordu. Değer
+                                               hakemin başvuruda KENDİ seçtiği satırdır; OYNA
+                                               doğrulamıyor. Metin artık ortak yardımcıdan
+                                               "BEYAN: …" biçiminde geliyor.
+                                               Karo dar (üçte bir genişlik): metin `text-sm` ile
+                                               tek satıra sığmaz, StatTile'ın `truncate`ı da onu
+                                               "BEYAN: FIF…" diye keserdi. Bu yüzden bu karoda
+                                               metin küçültülüp SARMASINA izin verildi — karonun
+                                               rengi, çerçevesi ve satırdaki yeri aynı. */
                                             <StatTile
                                                 label="Seviye"
-                                                value={<span className="text-sm leading-tight">{(detail as Referee).level || '—'}</span>}
-                                                sub="klasman"
+                                                value={
+                                                    <span className="block text-[0.6875rem] leading-tight whitespace-normal break-words">
+                                                        {detailSeviyeRozeti || '—'}
+                                                    </span>
+                                                }
+                                                sub={detailSeviyeRozeti ? HAKEM_SEVIYE_NOTU : undefined}
                                             />
                                         )}
                                     </div>

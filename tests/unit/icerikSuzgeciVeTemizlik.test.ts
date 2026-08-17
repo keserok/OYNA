@@ -107,6 +107,20 @@ describe('B10 · üretim derlemesi konsol çıktısını ayıklar', () => {
 // ═══════════════════════════════════════════════════════════════════════════
 // B11 — doğrulanmamış FIFA iddiası
 // ═══════════════════════════════════════════════════════════════════════════
+/**
+ * NOT (17 Ağustos 2026, ikinci tur): bu blok eskiden metnin ServiceProfile
+ * DOSYASININ İÇİNDE yazılı olmasını şart koşuyordu ve rozetin `isElite`
+ * bayrağına bağlı kalmasını "tasarım korundu" diye kilitliyordu. Denetim
+ * ikisinin de yanlış olduğunu gösterdi:
+ *   · Metin 7 ekranda tekrar ediyordu; biri güncellenip biri unutulabiliyordu.
+ *     Artık TEK kaynak var: shared/hakemSeviyesi.ts.
+ *   · `isElite` yönetim panelinden verilen bir VİTRİN bayrağıdır; hakemin
+ *     seviyesiyle ilgisi yok. Rozet ona bağlıyken, seviyesi 'İl Hakemi' olan
+ *     bir hakem admin onu elite işaretlediyse ekranda "FIFA" görünüyordu.
+ * Asıl kilit artık tests/unit/hakemSeviyeBeyani.test.tsx içinde ve gerçek
+ * render ile doğruluyor. Burada yalnız kusurun ServiceProfile'a geri
+ * dönmediğine bakılır.
+ */
 describe('B11 · hakem rozeti doğrulanmış gibi görünmez', () => {
   const ekran = koduAl('views/ServiceProfile.tsx');
 
@@ -114,12 +128,14 @@ describe('B11 · hakem rozeti doğrulanmış gibi görünmez', () => {
     expect(ekran).not.toContain('FIFA LİSANSLI');
   });
 
-  it('yerine beyan olduğu açık bir metin var', () => {
-    expect(ekran).toContain('BEYAN: FIFA KOKARTI');
+  it('ekranda elle yazılmış hiçbir "FIFA" metni yok (tek kaynak: yardımcı)', () => {
+    expect(ekran).not.toMatch(/FIFA/);
+    expect(ekran).toMatch(/from ['"][^'"]*shared\/hakemSeviyesi['"]/);
   });
 
-  it('rozet hâlâ yalnız isElite sağlayıcıda gösteriliyor (tasarım korundu)', () => {
+  it('kaleci rozeti hâlâ isElite ile (kaleci tarafı değişmedi)', () => {
     expect(ekran).toContain('userProfile?.isElite &&');
+    expect(ekran).toContain('ELİT KALECİ');
   });
 });
 

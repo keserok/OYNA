@@ -34,6 +34,8 @@ const money = formatTRYAmount;
 import { showToast } from '../components/common/GlobalToast';
 import { FORMATIONS as FORMATIONS_SSOT, type SquadSize } from '../utils/formations';
 import { providerStyles } from '../shared/providerStyles';
+// B11 — hakem seviyesi ham basılmaz; ekranda görünen metin tek kaynaktan gelir.
+import { hakemSeviyeRozeti } from '../shared/hakemSeviyesi';
 import { playStyleMetaForDifficulty } from './onboarding/onboardingShared';
 import TeamPlanBanner from '../components/social/TeamPlanBanner';
 // Tek kaynak lobi mantığı — admin paneli (MatchLobbyPitch) ile AYNI fonksiyonlar (drift yok).
@@ -1716,8 +1718,11 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                                       <Star size={10} fill="currentColor" /> {Number(p.rating).toFixed(1)}
                                     </div>
                                   </div>
+                                  {/* B11 — seviye satırı: ham "FIFA Kokart" yerine
+                                      "BEYAN: FIFA KOKARTI". Doğrulanmamış bir iddia,
+                                      doğrulanmış gibi görünmemeli. */}
                                   <p className="text-[0.625rem] text-ink-4 font-bold uppercase tracking-wide mt-0.5 truncate">
-                                    {[p.level, `${p.match_count} Maç`].filter(Boolean).join(' • ')}
+                                    {[hakemSeviyeRozeti(p.level), `${p.match_count} Maç`].filter(Boolean).join(' • ')}
                                   </p>
                                 </div>
                               </div>
@@ -1801,9 +1806,13 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                       <h3 className="text-xl font-extrabold text-white tracking-tight text-center leading-tight">{p.name}</h3>
                       {p.is_elite && <Award size={16} className="text-[#FACC15] shrink-0" />}
                     </div>
-                    <div className="flex items-center gap-2 mt-1">
+                    {/* B11 — ham "FIFA Kokart" yerine "BEYAN: FIFA KOKARTI" (ortak
+                        yardımcı). Metin uzadığı için satıra `flex-wrap` eklendi:
+                        sığdığı sürece görünüm birebir aynı, sığmazsa kırpılmak
+                        yerine alt satıra iner (iddia yarım gösterilmesin). */}
+                    <div className="flex flex-wrap items-center justify-center gap-2 mt-1">
                       <span className="text-[0.625rem] font-extrabold uppercase tracking-[0.25em]" style={{ color: accent }}>{isRef ? 'HAKEM' : 'KİRALIK KALECİ'}</span>
-                      {isRef && p.level && <span className="text-[0.625rem] font-bold text-ink-4 uppercase tracking-wide">· {p.level}</span>}
+                      {isRef && hakemSeviyeRozeti(p.level) && <span className="text-[0.625rem] font-bold text-ink-4 uppercase tracking-wide">· {hakemSeviyeRozeti(p.level)}</span>}
                     </div>
 
                     <div className="w-full grid grid-cols-2 gap-2 mt-5">
@@ -1918,9 +1927,11 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                       <h3 className="text-xl font-extrabold text-white tracking-tight text-center leading-tight">{p.name}</h3>
                       {p.isElite && <Award size={16} className="text-[#FACC15] shrink-0" />}
                     </div>
-                    <div className="flex items-center gap-2 mt-1">
+                    {/* B11 — ham "FIFA Kokart" yerine "BEYAN: FIFA KOKARTI" (ortak
+                        yardımcı). `flex-wrap`: sığmazsa kırpma yerine alt satır. */}
+                    <div className="flex flex-wrap items-center justify-center gap-2 mt-1">
                       <span className="text-[0.625rem] font-extrabold uppercase tracking-[0.25em]" style={{ color: accent }}>{isRef ? 'ATANAN HAKEM' : 'KİRALIK KALECİ'}</span>
-                      {isRef && p.level && <span className="text-[0.625rem] font-bold text-ink-4 uppercase tracking-wide">· {p.level}</span>}
+                      {isRef && hakemSeviyeRozeti(p.level) && <span className="text-[0.625rem] font-bold text-ink-4 uppercase tracking-wide">· {hakemSeviyeRozeti(p.level)}</span>}
                     </div>
 
                     {/* Reyting + Ücret */}
@@ -2901,15 +2912,19 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                     {liveBadge(assignedReferee.id)}
                   </div>
                   <p className="text-[0.625rem] font-extrabold uppercase tracking-widest mt-0.5 text-[#A78BFA]">Atanan Hakem</p>
-                  <div className="flex items-center gap-3 mt-1.5">
+                  {/* B11 — ham "FIFA Kokart" yerine "BEYAN: FIFA KOKARTI" (ortak
+                      yardımcı). Bu satır dar (puan + ücret + seviye yan yana) ve
+                      `truncate` taşıyor: uzayan metin "BEYAN: FIFA K…" diye
+                      kesilirdi. `flex-wrap` ile kesilmek yerine alt satıra iniyor. */}
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5">
                     {assignedReferee.rating != null && (
                       <span className="flex items-center gap-1 text-[0.6875rem] font-extrabold text-yellow-400"><Star size={10} fill="currentColor" />{assignedReferee.rating.toFixed(1)}</span>
                     )}
                     {assignedReferee.fee != null && (
                       <span className="text-[0.6875rem] font-extrabold text-white/70">{money(assignedReferee.fee)}</span>
                     )}
-                    {assignedReferee.level && (
-                      <span className="text-[0.625rem] font-bold text-ink-4 uppercase tracking-wide truncate">{assignedReferee.level}</span>
+                    {hakemSeviyeRozeti(assignedReferee.level) && (
+                      <span className="text-[0.625rem] font-bold text-ink-4 uppercase tracking-wide truncate">{hakemSeviyeRozeti(assignedReferee.level)}</span>
                     )}
                   </div>
                 </div>

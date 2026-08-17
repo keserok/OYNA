@@ -24,7 +24,12 @@ const LegalScreen: React.FC<LegalScreenProps> = ({ onBack, initialDoc }) => {
     const d = DOCS[doc];
     return (
       <div className="min-h-screen bg-[#0A0E14] text-white font-sans">
-        <header className="sticky top-0 z-20 bg-[#0A0E14]/90 backdrop-blur-xl border-b border-white/5 px-6 pt-[calc(var(--safe-top)+1.25rem)] pb-5 flex items-center gap-4">
+        {/* `pt-safe-5` satır içi `pt-[calc(var(--safe-top)+1.25rem)]` ile AYNI
+            boşluğu verir (5 = 1.25rem). Sınıfa çevrildi çünkü çevrimdışı şeridi
+            telafisi (index.css · body.offline-banner-on) yalnız sınıflara
+            yazılabiliyor: uçak modunda kırmızı şerit açılınca sözleşme
+            ekranından ÇIKIŞ düğmesinin üstü şeridin altında kalıyordu. */}
+        <header className="sticky top-0 z-20 bg-[#0A0E14]/90 backdrop-blur-xl border-b border-white/5 px-6 pt-safe-5 pb-5 flex items-center gap-4">
           <button onClick={() => setDoc(null)} aria-label="Geri" className="w-11 h-11 flex items-center justify-center bg-[#161B22] rounded-full border border-white/5 text-white hover:bg-white/10 active:scale-95 transition-all">
             <ArrowLeft size={20} />
           </button>
@@ -44,7 +49,8 @@ const LegalScreen: React.FC<LegalScreenProps> = ({ onBack, initialDoc }) => {
 
   return (
     <div className="min-h-screen bg-[#0A0E14] text-white font-sans">
-      <header className="sticky top-0 z-20 bg-[#0A0E14]/90 backdrop-blur-xl border-b border-white/5 px-6 pt-[calc(var(--safe-top)+1.25rem)] pb-5 flex items-center gap-4">
+      {/* Aynı gerekçe (bkz. yukarıdaki başlık): sınıf = çevrimdışı şeridi telafisi. */}
+      <header className="sticky top-0 z-20 bg-[#0A0E14]/90 backdrop-blur-xl border-b border-white/5 px-6 pt-safe-5 pb-5 flex items-center gap-4">
         <button onClick={onBack} aria-label="Geri" className="w-11 h-11 flex items-center justify-center bg-[#161B22] rounded-full border border-white/5 text-white hover:bg-white/10 active:scale-95 transition-all">
           <ArrowLeft size={20} />
         </button>

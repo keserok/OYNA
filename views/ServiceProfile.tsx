@@ -19,6 +19,7 @@ import { useImageUpload } from '../hooks/useImageUpload';
 import { showToast } from '../components/common/GlobalToast';
 import { UserAvatar } from '../components/common/UserAvatar';
 import { GK_STYLES, REF_STYLES, MAX_PROVIDER_STYLES, providerStyles } from '../shared/providerStyles';
+import { hakemSeviyeRozeti } from '../shared/hakemSeviyesi';
 import { Goalkeeper, Referee } from '../types';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -210,6 +211,10 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
       ? userProfile.rating.toFixed(1)
       : '—';
   const matchDisplay = userProfile?.matchCount != null ? String(userProfile.matchCount) : '—';
+  // B11 — hakem rozetinin metni: hakemin BAŞVURUDA KENDİ seçtiği seviyeden
+  // türer, metin ortak yardımcıdan gelir (shared/hakemSeviyesi.ts). Seviye
+  // girilmemişse null döner ve rozet hiç çizilmez.
+  const seviyeRozeti = isRef ? hakemSeviyeRozeti((userProfile as Referee | undefined)?.level) : null;
   const numOrDash = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? String(v) : '—');
   const strOrDash = (v: unknown) => (typeof v === 'string' && v.trim() ? v : '—');
   const stats = isRef
@@ -375,22 +380,36 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
                     </div>
                   )}
                   <div className="flex items-center gap-2 mt-1">
-                    {/* "Elit/FIFA" rozeti yalnız gerçekten elit sağlayıcıda (isElite);
+                    {/* Kaleci rozeti: "ELİT KALECİ" yalnız gerçekten elit kalecide
+                        (isElite — yönetim panelinden verilen vitrin bayrağı);
                         herkese "ELİT KALECİ" demek dürüst değil (KS0).
 
-                        B11 — hakem rozeti eskiden "FIFA LİSANSLI" yazıyordu. OYNA
-                        hiçbir hakemin FIFA kokartını doğrulamıyor: bu bilgi başvuru
-                        formunda kişinin KENDİ seçtiği bir satır. Doğrulanmış gibi
-                        duran bir üçüncü taraf markası hem kullanıcıyı yanıltır hem de
-                        mağaza incelemesinde "doğrulanmamış iddia" sayılır. Rozet
-                        kaldırılmadı; yalnız kimin söylediği açık hale getirildi. */}
-                    {userProfile?.isElite && (
-                      <span
-                        className="text-[0.625rem] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider text-black"
-                        style={{ background: accentColor }}
-                      >
-                        {isRef ? 'BEYAN: FIFA KOKARTI' : 'ELİT KALECİ'}
-                      </span>
+                        B11 — HAKEM rozeti eskiden aynı `isElite` bayrağına bağlıydı ve
+                        metni sabit "FIFA" yazıyordu. Yani seviyesi 'İl Hakemi' olan bir
+                        hakem, admin onu elite işaretlediyse ekranda FIFA görünüyordu:
+                        bu beyan bile değil, uydurmaydı. Rozet artık hakemin BAŞVURUDA
+                        KENDİ seçtiği seviyeden beslenir ve metin "BEYAN:" önekiyle
+                        gelir — OYNA hiçbir kokartı doğrulamıyor, kimin söylediği
+                        ekranda yazıyor. Metin tek kaynaktan: shared/hakemSeviyesi.ts.
+                        Rozetin rengi/boyutu/yeri değişmedi. */}
+                    {isRef ? (
+                      seviyeRozeti && (
+                        <span
+                          className="text-[0.625rem] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider text-black whitespace-nowrap"
+                          style={{ background: accentColor }}
+                        >
+                          {seviyeRozeti}
+                        </span>
+                      )
+                    ) : (
+                      userProfile?.isElite && (
+                        <span
+                          className="text-[0.625rem] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider text-black"
+                          style={{ background: accentColor }}
+                        >
+                          ELİT KALECİ
+                        </span>
+                      )
                     )}
                     <span className="text-[0.6875rem] text-gray-400 font-bold flex items-center gap-1">
                       <Star size={9} className="text-yellow-400" fill="currentColor" /> {ratingDisplay}

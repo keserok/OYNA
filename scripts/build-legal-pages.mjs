@@ -135,26 +135,66 @@ function inline(s) {
 }
 
 const YAYIN_ISARETI = /^\s*<!--\s*YAYINLA\s*-->\s*$/;
-const HTML_YORUMU = /^\s*<!--[\s\S]*-->\s*$/;
+
+// Tek satırda açılıp AYNI satırda kapanan yorum.
+const TEK_SATIR_YORUMU = /^\s*<!--[\s\S]*?-->\s*$/;
+
+// Satır bir yorum AÇIYOR. Aynı satırda `-->` yoksa çok satırlı yorum başlamıştır.
+//
+// NEDEN: eski süzgeç yalnızca `^\s*<!--[\s\S]*-->\s*$` kalıbına bakıyordu ve bu
+// kalıp satır satır uygulandığı için ÇOK SATIRLI bir yorumun hiçbir satırıyla
+// eşleşmiyordu. Yani
+//     <!--
+//       İç not: bu madde avukata soruldu.
+//     -->
+// biçiminde yazılmış bir iç not olduğu gibi yayına ve oradan uygulama paketine
+// çıkıyordu. Artık `-->` görülene kadar tüm satırlar atılır.
+const YORUM_ACILISI = /^\s*<!--/;
+
+// Alıntı satırı: GİRİNTİLİ olsa da alıntıdır.
+//
+// NEDEN: eski süzgeç `line.startsWith('>')` kullanıyordu; başında iki boşluk
+// olan `  > iç not` satırı bu kontrolden kaçıyor, süzgece hiç uğramadan
+// mdToHtml'e düşüyor ve yayınlanıyordu. Markdown zaten üç boşluğa kadar girintili
+// `>` işaretini alıntı sayar — süzgeç de aynı şeyi saymak zorunda.
+const ALINTI_SATIRI = /^\s*>/;
 
 // Varsayılan gizli: `>` blokları yalnızca hemen öncesinde <!-- YAYINLA --> varsa
 // çıktıya girer. (Gerekçe dosyanın başındaki açıklamada.)
+//
+// BİLEREK KAPSAM DIŞI — DÜZ PARAGRAF HÂLİNDE YAZILMIŞ NOT: "Bu maddeyi avukata
+// soralım" gibi bir cümle normal bir paragraf olarak yazılırsa bu süzgeç onu
+// yakalayamaz ve yakalamaya ÇALIŞMAMALIDIR: her paragrafı şüpheli sayan bir kural
+// sözleşme metnini keser, kullanıcıya eksik metin gösterir — yani ilaç hastalıktan
+// beter olur. Doğru çözüm kural değil YER: iç notlar sozlesmeler/ic-notlar/
+// klasöründe durur (bkz. ACIK-KONULAR.md), bu script o klasörü hiç okumaz.
+// Kanonik sözleşme dosyalarına iç not YAZILMAZ; yazılması gerekiyorsa `>` bloğu
+// veya HTML yorumu olarak yazılır — ikisi de burada varsayılan olarak gizlidir.
 function alintiBloklariniSuz(lines) {
   const out = [];
   let i = 0;
-  let isaretli = false; // bir önceki anlamlı satır <!-- YAYINLA --> mıydı?
+  let isaretli = false;    // bir önceki anlamlı satır <!-- YAYINLA --> mıydı?
+  let yorumIcinde = false; // çok satırlı bir <!-- ... --> yorumunun ortasında mıyız?
 
   while (i < lines.length) {
     const line = lines[i];
 
+    // Çok satırlı yorumun gövdesi: kapanış görülene kadar hiçbir satır çıkmaz.
+    if (yorumIcinde) {
+      if (line.includes('-->')) yorumIcinde = false;
+      i++;
+      continue;
+    }
+
     if (YAYIN_ISARETI.test(line)) { isaretli = true; i++; continue; }
     // İşaret dışındaki her HTML yorumu da çıktıya girmez: yorum = iç iletişim.
-    if (HTML_YORUMU.test(line)) { i++; continue; }
+    if (TEK_SATIR_YORUMU.test(line)) { i++; continue; }
+    if (YORUM_ACILISI.test(line)) { yorumIcinde = true; i++; continue; }
 
-    if (line.startsWith('>')) {
+    if (ALINTI_SATIRI.test(line)) {
       const run = [];
       let j = i;
-      while (j < lines.length && lines[j].startsWith('>')) { run.push(lines[j]); j++; }
+      while (j < lines.length && ALINTI_SATIRI.test(lines[j])) { run.push(lines[j]); j++; }
       if (isaretli) out.push(...run); // açıkça yayına işaretlenmiş → geçer
       isaretli = false;               // işaret tek bloğu kapsar, devretmez
       i = j;
@@ -198,9 +238,11 @@ function mdToHtml(md) {
       continue;
     }
 
-    if (line.startsWith('>')) {
+    // Alıntı tanımı süzgeçle AYNI olmalı (girintili `>` de alıntıdır); yoksa
+    // süzgeçten geçen işaretli bir girintili blok burada paragrafa dönüşürdü.
+    if (ALINTI_SATIRI.test(line)) {
       const buf = [];
-      while (i < lines.length && lines[i].startsWith('>')) { buf.push(lines[i].replace(/^>\s?/, '')); i++; }
+      while (i < lines.length && ALINTI_SATIRI.test(lines[i])) { buf.push(lines[i].replace(/^\s*>\s?/, '')); i++; }
       html.push(`<blockquote>${inline(buf.join(' ').trim())}</blockquote>`);
       continue;
     }
@@ -238,7 +280,7 @@ function mdToHtml(md) {
       !/^\s*$/.test(lines[i]) &&
       !/^(#{1,6})\s/.test(lines[i]) &&
       !/^(-{3,}|\*{3,}|_{3,})\s*$/.test(lines[i]) &&
-      !lines[i].startsWith('>') &&
+      !ALINTI_SATIRI.test(lines[i]) &&
       !/^\s*([-*]|\d+\.)\s+/.test(lines[i])
     ) {
       buf.push(lines[i]);

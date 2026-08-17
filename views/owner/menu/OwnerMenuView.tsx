@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { AnimatePresence } from 'framer-motion';
 import {
   Banknote,
   Bell,
@@ -15,9 +16,11 @@ import {
   RotateCcw,
   Shield,
   Tag,
+  Trash2,
   Trophy,
 } from 'lucide-react';
 import { APP_VERSION } from '../../../utils/appVersion';
+import DeleteAccountModal from '../../../components/common/DeleteAccountModal';
 import type { OwnerMenuStats } from './ownerMenuTypes';
 import { money } from '../finance/financeUi';
 
@@ -134,8 +137,13 @@ export const OwnerMenuView: React.FC<OwnerMenuViewProps> = ({
 }) => {
   const isOwnerLvl = accessLevel === 'OWNER';
   const isManagerLvl = accessLevel === 'OWNER' || accessLevel === 'MANAGER';
+  // Hesap silme modalı BU ekranın kendi durumu: üst panele yeni prop eklemeden
+  // saha sahibi menüsünden de silmeye ulaşılsın (App Store 5.1.1(v) — hesap
+  // açabilen her rol uygulama İÇİNDEN silebilmeli).
+  const [showDeleteAccount, setShowDeleteAccount] = useState(false);
 
   return (
+    <>
     <div className="p-6 pb-40 pt-safe-6 animate-in slide-in-from-right-10 duration-500">
       <div className="flex items-center gap-4 mb-8">
         <div className="relative">
@@ -320,6 +328,21 @@ export const OwnerMenuView: React.FC<OwnerMenuViewProps> = ({
           >
             <HelpCircle size={18} /> Destek Merkezi
           </button>
+          {/* App Store 5.1.1(v): hesap açabilen kullanıcı hesabını uygulama
+              İÇİNDEN silebilmeli. Oyuncu (SettingsScreen) ve kaleci/hakem
+              (ServiceSettings) ekranlarında bu giriş vardı, saha sahibi
+              menüsünde YOKTU — rolün birinde eksik olması ret sebebi.
+              Aynı DeleteAccountModal açılır; buton iskeleti üstteki "Destek
+              Merkezi" ile birebir aynı, yalnız rengi kırmızıya çekildi.
+              isReadOnly'de bile AÇIK: hesabını silmek kullanıcının hakkı,
+              salt-okunur mod bunu kilitlememeli. */}
+          <button
+            type="button"
+            onClick={() => setShowDeleteAccount(true)}
+            className="w-full flex items-center justify-center gap-2 p-4 bg-white/5 border border-red-500/20 rounded-2xl text-red-400 font-bold text-sm hover:bg-red-500/10 transition-colors"
+          >
+            <Trash2 size={18} /> Hesabı Kalıcı Olarak Sil
+          </button>
           <button
             type="button"
             onClick={onLogout}
@@ -334,5 +357,25 @@ export const OwnerMenuView: React.FC<OwnerMenuViewProps> = ({
         </div>
       </div>
     </div>
+
+    {/* Modal, animasyonlu menü kabının DIŞINDA: `animate-in` sırasında kaba
+        transform uygulanır, transform'lu bir atanın içindeki `position: fixed`
+        çocuk ekrana değil o kaba göre konumlanır. Kardeş olarak render edilince
+        tam ekran kaplaması her durumda doğru kalır. */}
+    <AnimatePresence>
+      {showDeleteAccount && (
+        <DeleteAccountModal
+          onClose={() => setShowDeleteAccount(false)}
+          onConfirmed={() => {
+            // Silme talebi alındıktan sonra oturumu kapat — oyuncu/kaleci
+            // ekranlarındaki davranışın aynısı. Üst paneldeki onLogout önce
+            // "çıkış onayı" modalını açar; kullanıcı tek dokunuşla onaylar.
+            setShowDeleteAccount(false);
+            onLogout();
+          }}
+        />
+      )}
+    </AnimatePresence>
+    </>
   );
 };

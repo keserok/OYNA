@@ -72,6 +72,47 @@ interface InvitedPerson {
   source: 'FRIEND' | 'TEAM';
 }
 
+// ─── Pano (kopyala) — DÜRÜST ─────────────────────────────────────────────────
+/**
+ * Metni panoya GERÇEKTEN kopyalar; kopyalandıysa `true` döner.
+ *
+ * NEDEN: eski kod boş bir `catch` bloğu ("pano yok") ile hatayı yutuyordu —
+ * kullanıcı kopyala'ya basıyor, hiçbir şey olmuyor, hiçbir şey söylenmiyor.
+ * Pano API'si paketlenmiş uygulamada çoğu zaman YOKTUR (iOS'ta uygulama özel
+ * şemadan yüklendiği için güvenli bağlam değildir; Android WebView'da da yok),
+ * yani bu "nadir" değil MUTAT durumdur.
+ */
+export async function panoyaKopyala(metin: string): Promise<boolean> {
+  const pano = navigator.clipboard as Clipboard | undefined;
+  if (!pano || typeof pano.writeText !== 'function') return false;
+  try {
+    // `await` ŞART: reddedilen promise ancak beklenirse yakalanabilir.
+    await pano.writeText(metin);
+    return true;
+  } catch {
+    return false;                       // izin reddedildi / belge odakta değil
+  }
+}
+
+/**
+ * Panoya kopyala VE sonucu kullanıcıya söyle.
+ *
+ * Dönen değer, çağıranın kendi başarı göstergesini ("Kod kopyalandı ✓") açıp
+ * açmayacağını belirler — gösterge asla koşulsuz açılmamalıdır.
+ * `basariMesaji` null geçilirse başarıda toast çıkmaz (ekranda zaten görsel
+ * bir onay varsa gereksiz gürültü olmasın diye).
+ */
+export async function kopyalaVeBildir(
+  metin: string,
+  basariMesaji: string | null,
+  hataMesaji: string,
+): Promise<boolean> {
+  const oldu = await panoyaKopyala(metin);
+  if (oldu) { if (basariMesaji) showToast(basariMesaji, 'success'); }
+  else showToast(hataMesaji, 'error');
+  return oldu;
+}
+
 // ÖLÇÜM — kaptan hunisi (prensip 1.1'in ana akışı).
 
 const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
@@ -641,15 +682,32 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
     const text = result.privateCode
       ? `OYNA'da maç kurdum! Katılım kodu: ${result.privateCode} — oyna://match/${result.matchId}`
       : `OYNA'da maç kurdum! Kadroda yerini al: oyna://match/${result.matchId}`;
-    try {
-      if (navigator.share) await navigator.share({ text });
-      else { await navigator.clipboard.writeText(text); showToast('Davet metni kopyalandı', 'success'); }
-    } catch { /* kullanıcı vazgeçti */ }
+    if (typeof navigator.share === 'function') {
+      try {
+        await navigator.share({ text });
+        return;
+      } catch (e) {
+        // Kullanıcı paylaşım sayfasını kapattı → vazgeçti; panoya DÜŞÜLMEZ.
+        if ((e as Error)?.name === 'AbortError') return;
+        // Başka bir hata: aşağıdaki pano yolu denenir.
+      }
+    }
+    // Pano yolu: "kopyalandı" YALNIZ gerçekten kopyalandığında yazılır.
+    await kopyalaVeBildir(
+      text,
+      'Davet metni kopyalandı',
+      result.privateCode
+        ? `Kopyalanamadı — katılım kodu: ${result.privateCode}`
+        : 'Davet metni bu cihazda kopyalanamadı.',
+    );
   };
 
   const copyCode = async () => {
     if (!result?.privateCode) return;
-    try { await navigator.clipboard.writeText(result.privateCode); setCopied(true); } catch { /* pano yok */ }
+    const kod = result.privateCode;
+    // Kart üzerinde zaten "Kod kopyalandı ✓" yazısı beliriyor; başarıda ayrıca
+    // toast çıkarmaya gerek yok. Ama o yazı YALNIZ gerçek kopyalamada açılır.
+    if (await kopyalaVeBildir(kod, null, `Kod kopyalanamadı, elle gir: ${kod}`)) setCopied(true);
   };
 
   // ── Görsel yardımcılar ────────────────────────────────────────────────────

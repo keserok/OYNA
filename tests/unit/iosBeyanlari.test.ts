@@ -308,23 +308,112 @@ describe('MAGAZA_GONDERIM.md · kurucuya söylenen sayı dosyayla aynı', () => 
   });
 });
 
-describe('Podfile ↔ Podfile.lock · kilit dosyası gerçekten eski mi', () => {
+// ════════════════════════════════════════════════════════════════════════════
+// Podfile ↔ Podfile.lock
+// ════════════════════════════════════════════════════════════════════════════
+//
+// NEDEN BU BLOK YENİDEN YAZILDI (17 Ağustos 2026 denetimi):
+// Önceki hâli kilit dosyasının BOZUK KALMASINI ŞART KOŞUYORDU
+// (`expect(eksikler.length).toBeGreaterThan(0)` ve kilitte doğru yolun
+// BULUNMAMASI). Yani kurucu gönderimden hemen önce `npm run sync:ios` +
+// `pod install` çalıştırdığı anda — her şeyi DOĞRU yaptığı anda — iki test
+// birden kırmızıya dönüyordu. Ekranda çıkan "expected 0 to be greater than 0"
+// mesajı kod okumayan bir insana hiçbir şey anlatmaz; tam gönderim anında
+// "bir şeyi bozdum" paniği üretirdi. Bu bir tuzaktı, bekçi değil.
+//
+// YENİ KURAL İLERİ YÖNLÜ: korunan şey "kilit eski olsun" değil, asıl tehlike:
+// "kilit eski OLDUĞU HÂLDE kimse kurucuya söylemiyor" — o durumda eklentiler
+// pakete girmez ve uygulama mağazada çalışmaz.
+//   • kilit Podfile ile uyuşuyorsa (pod install çalışmış)     → YEŞİL
+//   • uyuşmuyorsa ama MAGAZA_GONDERIM.md kurucuya söylüyorsa  → YEŞİL
+//   • uyuşmuyor ve belge de susuyorsa                         → KIRMIZI
+//
+// `it.skip` KULLANILMADI: atlanan test hiçbir şey korumaz ve kimse .skip'i
+// kaldırmayı hatırlamaz. Bunun yerine aşağıdaki iki sentetik test, süzgecin
+// "senkron kilit" dünyasında da doğru davrandığını BUGÜN kanıtlıyor.
+describe('Podfile ↔ Podfile.lock · kilit dosyası ile Podfile aynı şeyi söylüyor mu', () => {
   const podfile = oku('ios/App/Podfile');
   const kilit = oku('ios/App/Podfile.lock');
 
-  it('kilit dosyası Podfile ile UYUŞMUYOR — kurucu pod install çalıştırmalı', () => {
-    // Bu test bir KUSURU değil, bilinen bir DURUMU kilitliyor: kilit dosyası
-    // elle düzeltilmez (`pod install` üretir). Uyuşma sağlandığında test
-    // beklentisi tersine çevrilmeli — o zaman gerçekten senkron demektir.
-    const podlar = [...podfile.matchAll(/^\s*pod '([^']+)'/gm)].map((m) => m[1]!);
-    expect(podlar.length).toBeGreaterThan(4);
-    const eksikler = podlar.filter((p) => !kilit.includes(`${p} (`));
-    expect(eksikler.length, `kilitte eksik pod: ${eksikler.join(', ')}`).toBeGreaterThan(0);
+  /** Podfile'daki `pod 'Ad', :path => 'yol'` satırları. */
+  function podGirisleri(kaynak: string): Array<{ ad: string; yol: string }> {
+    return [...kaynak.matchAll(/^\s*pod '([^']+)',\s*:path\s*=>\s*'([^']+)'/gm)].map((m) => ({
+      ad: m[1]!,
+      yol: m[2]!,
+    }));
+  }
+
+  /**
+   * Kilit dosyası Podfile ile senkron mu? Senkron ise BOŞ dizi, değilse
+   * farkların insan okuyabilir listesi döner. (Tersini değil, doğrusunu ölçer.)
+   */
+  function kilitFarklari(kaynakPodfile: string, kaynakKilit: string): string[] {
+    const farklar: string[] = [];
+    for (const { ad, yol } of podGirisleri(kaynakPodfile)) {
+      // "- Capacitor (8.3.4):" — satır başına sabitli, böylece CapacitorApp
+      // ararken Capacitor satırı yanlışlıkla eşleşmez.
+      if (!new RegExp(`^\\s*-\\s${ad} \\(`, 'm').test(kaynakKilit)) farklar.push(`kilitte yok: ${ad}`);
+      // Podfile yolları bu depoya göreli; kilitte başka bir yol görünüyorsa
+      // kilit BAŞKA BİR BİLGİSAYARDA üretilmiş demektir.
+      else if (!kaynakKilit.includes(`:path: "${yol}"`)) farklar.push(`yol eşleşmiyor: ${ad} → ${yol}`);
+    }
+    return farklar;
+  }
+
+  it('Podfile eklentileri BU deponun node_modules klasöründen alıyor', () => {
+    // Bu, kilitten bağımsız gerçek bir değişmez: yol bozulursa `pod install`
+    // bile durumu kurtaramaz.
+    const girisler = podGirisleri(podfile);
+    expect(girisler.length, 'Podfile içinde pod satırı bulunamadı').toBeGreaterThan(4);
+    for (const { ad, yol } of girisler) {
+      expect(yol.startsWith('../../node_modules/'), `${ad} yolu depo dışını gösteriyor: ${yol}`).toBe(true);
+    }
   });
 
-  it('kilit dosyasındaki yollar bu depoya ait DEĞİL (yabancı makine izi)', () => {
-    // Podfile `../../node_modules/...` diyor; kilit başka bir klasörü gösteriyor.
-    expect(podfile).toContain('../../node_modules/@capacitor/ios');
-    expect(kilit).not.toContain(':path: "../../node_modules/@capacitor/ios"');
+  it('kilit ya Podfile ile uyuşur ya da kurucuya "pod install" açıkça söylenmiştir', () => {
+    const farklar = kilitFarklari(podfile, kilit);
+    if (farklar.length === 0) return; // pod install çalışmış — istenen son durum.
+
+    // Kilit eski. Bu tek başına felaket değil; FELAKET, kurucunun bunu
+    // bilmemesidir. O yüzden belgedeki uyarının yerinde durduğu kilitlenir.
+    const belge = oku('docs/master/MAGAZA_GONDERIM.md');
+    const bolum = belge.slice(belge.indexOf('### Her iOS yüklemesinde'));
+    const mesaj =
+      `ios/App/Podfile.lock Podfile ile uyuşmuyor (${farklar.join(' · ')}) ve ` +
+      'docs/master/MAGAZA_GONDERIM.md kurucuya "npm run sync:ios + pod install" demiyor. ' +
+      'Bu hâliyle derlenen pakette eklentiler EKSİK kalır.';
+    expect(bolum, mesaj).toContain('npm run sync:ios');
+    expect(bolum, mesaj).toContain('pod install');
+  });
+
+  it('pod install sonrası SENKRON kilit bu bekçiyi kırmızıya çevirmez', () => {
+    // Bu test, yukarıdaki ölçümün "ileri yönlü" olduğunun kanıtı: Podfile'dan
+    // türetilmiş, tam uyumlu bir kilit dosyası SIFIR fark vermelidir. Eski tuzak
+    // mantığı geri getirilirse (kilitte pod EKSİK OLMALI) bu test kırmızı döner.
+    const sentetik = [
+      'PODS:',
+      ...podGirisleri(podfile).map(({ ad }) => `  - ${ad} (8.3.4)`),
+      '',
+      'EXTERNAL SOURCES:',
+      ...podGirisleri(podfile).map(({ ad, yol }) => `  ${ad}:\n    :path: "${yol}"`),
+      '',
+    ].join('\n');
+    expect(kilitFarklari(podfile, sentetik)).toEqual([]);
+  });
+
+  it('eksik pod ya da yabancı yol taşıyan kilit YAKALANIR', () => {
+    // Ölçüm gerçekten ayırt ediyor mu? Boş kilit → her pod eksik.
+    expect(kilitFarklari(podfile, 'PODS:\n').length).toBeGreaterThan(0);
+
+    // Adlar doğru ama yollar başka bir makineden → yine fark verir.
+    const yabanci = [
+      'PODS:',
+      ...podGirisleri(podfile).map(({ ad }) => `  - ${ad} (8.3.4)`),
+      '',
+      'EXTERNAL SOURCES:',
+      ...podGirisleri(podfile).map(({ ad }) => `  ${ad}:\n    :path: "/baska/bilgisayar/node_modules"`),
+      '',
+    ].join('\n');
+    expect(kilitFarklari(podfile, yabanci).length).toBeGreaterThan(0);
   });
 });

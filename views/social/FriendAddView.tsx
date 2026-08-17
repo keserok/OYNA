@@ -42,6 +42,29 @@ type RowPerson = {
   meta?: string; // "3 maç birlikte" / "2 ortak arkadaş"
 };
 
+/**
+ * Metni panoya GERÇEKTEN kopyalar; kopyalandıysa `true` döner.
+ *
+ * NEDEN: eski kod boş bir `catch` bloğu ("pano izni yoksa sessiz") ile hatayı
+ * yutuyordu. Kullanıcı "Kopyala"ya basıyor, hiçbir şey olmuyor, hiçbir şey
+ * söylenmiyor.
+ * Pano API'si paketlenmiş uygulamada çoğu zaman YOKTUR (iOS'ta uygulama özel
+ * şemadan yüklendiği için güvenli bağlam değildir; Android WebView'da da yok),
+ * yani bu "nadir" değil, MUTAT durumdur. Sonuç döndürülür ki çağıran taraf
+ * başarı göstergesini yalnız gerçekten kopyalandığında açsın.
+ */
+async function panoyaKopyala(metin: string): Promise<boolean> {
+  const pano = navigator.clipboard as Clipboard | undefined;
+  if (!pano || typeof pano.writeText !== 'function') return false;
+  try {
+    // `await` ŞART: reddedilen promise ancak beklenirse yakalanabilir.
+    await pano.writeText(metin);
+    return true;
+  } catch {
+    return false;                       // izin reddedildi / belge odakta değil
+  }
+}
+
 // Durum-farkındalı tek buton (Spec B10)
 const RelationButton: React.FC<{
   person: RowPerson;
@@ -239,24 +262,36 @@ const FriendAddView: React.FC<FriendAddViewProps> = ({ onBack, onNavigate }) => 
 
   const copyMyId = useCallback(async () => {
     if (!myOynaId) return;
-    try {
-      await navigator.clipboard.writeText(`@${myOynaId}`);
+    const metin = `@${myOynaId}`;
+    // "Kopyalandı ✓" göstergesi YALNIZ gerçekten kopyalandığında açılır;
+    // olmadıysa kullanıcı ID'yi elle yazabilsin diye toast'ta gösterilir
+    // (aynı desen: views/owner/OwnerTeamView.tsx — "Kod kopyalanamadı, elle girin.").
+    if (await panoyaKopyala(metin)) {
       setCopied(true);
       setTimeout(() => setCopied(false), 1600);
-    } catch { /* pano izni yoksa sessiz */ }
-  }, [myOynaId]);
+      return;
+    }
+    showToast(`Kopyalanamadı — ID'in: ${metin}`);
+  }, [myOynaId, showToast]);
 
   const shareInvite = useCallback(async () => {
     try {
       const code = await getOrCreateReferralCode();
       const url = `https://oyna.app/davet/${code}`;
       const text = `OYNA'da beraber maç yapalım! ⚽ Beni @${myOynaId || ''} olarak ekle: ${url}`;
-      if (navigator.share) {
-        await navigator.share({ title: 'OYNA Daveti', text, url });
-      } else {
-        await navigator.clipboard.writeText(text);
-        showToast('Davet linki kopyalandı');
+      if (typeof navigator.share === 'function') {
+        try {
+          await navigator.share({ title: 'OYNA Daveti', text, url });
+          return;
+        } catch (e) {
+          // Kullanıcı paylaşım sayfasını kapattı → vazgeçti; panoya DÜŞÜLMEZ.
+          if ((e as Error)?.name === 'AbortError') return;
+          // Başka bir hata: aşağıdaki pano yolu denenir.
+        }
       }
+      // Pano yolu: başarı mesajı yalnız GERÇEKTEN kopyalandığında yazılır.
+      if (await panoyaKopyala(text)) showToast('Davet linki kopyalandı');
+      else showToast(`Kopyalanamadı — davet bağlantın: ${url}`);
     } catch (e) {
       if ((e as Error)?.name !== 'AbortError') showToast(parseSocialError(e));
     }
