@@ -86,7 +86,41 @@ tahsilat teklif etmemesi için bilinçli.
 düğmesine basınca "bu tesiste uygulama içi ödeme şu anda kapalı" mesajı alır ve
 rezervasyonu tamamlayamaz. Maç kurma, keşif, sosyal, profil akışları tam çalışır.
 
-**Karar gerekiyor:** inceleme sırasında ödeme akışının **uçtan uca çalışır**
-görünmesi isteniyorsa, iyzico anahtarları hazır olduğunda (Faz B) bir saha
-`ONLINE_ONLY` yapılıp incelemeciye o saha gösterilir. Aksi halde inceleme notunda
-"ödeme altyapısı bölge açılışıyla birlikte etkinleşecektir" denmelidir.
+**Bu, bağımsız denetimde ONAYLANAN TEK gerçek engeldir** (diğer aday engellerin
+tamamı doğrulamada yanlış pozitif çıktı ya da bu gece kapatıldı). Apple, kural
+2.1'e göre uygulamanın ana işlevinin incelemede **çalışmasını** ister.
+
+**Bilinen durum (17 Ağu, canlıda yoklandı):**
+- Ödeme ucu **kapalı değil**: `create-payment` çağrısı `PAYMENTS_DISABLED`
+  değil `INVALID_FLOW` döndürüyor → `PAYMENT_PROVIDER` tanımlı (IYZICO).
+- Engelleyen tek şey `app_config.payment_mode_global = CASH_ONLY`.
+
+**Çözüm (yeni derleme GEREKTİRMEZ — tek satır sunucu ayarı):**
+
+```sql
+UPDATE public.app_config SET value = '"ONLINE_ONLY"'::jsonb
+WHERE key = 'payment_mode_global';
+
+-- Doğrula: hepsi true dönmeli
+SELECT p.name, public.resolve_payment_mode(p.id)->>'online_allowed'
+FROM public.pitches p ORDER BY 1;
+```
+
+> **`HYBRID` YAZMA.** Global `HYBRID`'de etkin mod tesisin kendi tercihine
+> düşer; sahaların çoğu `CASH_ONLY` olduğu için o sahalar kapalı kalır ve
+> incelemeci yine çıkmaz sokağa girer. `ONLINE_ONLY` hepsini açar.
+
+**ÖN ŞART:** bunu açmadan önce iyzico **canlı anahtarlarının** uç fonksiyonlarda
+tanımlı ve geçerli olduğu teyit edilmeli. Anahtar yoksa çıkmaz sokak bu kez
+"ödeme hatası"na dönüşür — aynı ret, farklı ekran. Sıra: **Faz B (iyzico
+sözleşmesi + anahtarlar + küçük tutarlı gerçek kart provası) → sonra bu ayar →
+sonra gönderim.**
+
+**Ek:** inceleme notuna demo değil **gerçek** hesap bilgisi ve adım adım akış
+yaz ("saha seç → saat seç → kaporayı öde"); ayrıca en az bir tesiste gerçek boş
+slot bulunduğundan emin ol.
+
+> **Not:** denetim, "online kapalıyken düğmeyi kilitle" biçiminde bir arayüz
+> koruması da önerdi; kurucu kararı gereği o uyarı yüzeyi KALDIRILDI ve geri
+> eklenmedi. Doğru çözüm zaten yukarıdaki 1. maddedir — o açıldığında bu durum
+> kullanıcıda hiç oluşmaz.
