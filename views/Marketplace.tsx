@@ -155,6 +155,8 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect, onCre
     const [selectedMatchForHire, setSelectedMatchForHire] = useState<any>(null);
     const [showSuccessScreen, setShowSuccessScreen] = useState(false);
     const [shareCopied, setShareCopied] = useState(false);
+    // Paylaşım/pano çalışmazsa kullanıcıya söylenecek metin (sessiz vazgeçme yok).
+    const [paylasHatasi, setPaylasHatasi] = useState<string | null>(null);
     const [heroBroken, setHeroBroken] = useState(false);
     const successTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     useEffect(() => () => { if (successTimerRef.current) clearTimeout(successTimerRef.current); }, []);
@@ -344,15 +346,23 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect, onCre
 
     const handleShare = async (p: Goalkeeper | Referee) => {
         const text = `${p.name} — OYNA'da ${roleLabel}. Maç başı ücret: ${formatTRYShort(p.fee)}${p.rating > 0 ? `, puan: ${p.rating.toFixed(1)}` : ''}.`;
+        // Sessiz vazgeçme YOK: pano da paylaşım da yoksa kullanıcıya söylenir.
+        // (Pakette `navigator.share`/`clipboard` bulunmayabilir — utils/dosyaKaydet.ts
+        // başındaki açıklama.) Vazgeçmek hata değildir, sessizce çıkılır.
         try {
             if (navigator.share) {
                 await navigator.share({ title: `OYNA · ${p.name}`, text });
-            } else {
-                await navigator.clipboard.writeText(text);
-                setShareCopied(true);
-                setTimeout(() => setShareCopied(false), 1800);
+                return;
             }
-        } catch { /* kullanıcı paylaşımı iptal etti */ }
+            if (!navigator.clipboard?.writeText) throw new Error('pano yok');
+            await navigator.clipboard.writeText(text);
+            setShareCopied(true);
+            setTimeout(() => setShareCopied(false), 1800);
+        } catch (e: any) {
+            if (e?.name === 'AbortError') return; // kullanıcı vazgeçti
+            setPaylasHatasi('Bu cihazda paylaşılamadı — bilgileri ekrandan okuyabilirsin.');
+            setTimeout(() => setPaylasHatasi(null), 4000);
+        }
     };
 
     // KİRALAMA AÇIK MI? Tek kaynak: aşağıdaki handleConfirmMatch zaten
@@ -941,6 +951,16 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect, onCre
                                         {shareCopied ? <Check size={16} style={{ color: theme.accent }} /> : <Share2 size={16} />}
                                     </button>
                                 </div>
+
+                                {/* Paylaşım/pano çalışmadıysa kullanıcı bunu GÖRÜR.
+                                    Eskiden hata sessizce yutuluyordu: düğmeye basılıyor,
+                                    hiçbir şey olmuyor, hiçbir şey söylenmiyordu. */}
+                                {paylasHatasi && (
+                                    <div role="status"
+                                        className="absolute top-16 left-4 right-4 z-30 px-3 py-2 rounded-xl bg-red-950/90 border border-red-500/40 text-red-300 text-[0.6875rem] font-bold text-center backdrop-blur-md">
+                                        {paylasHatasi}
+                                    </div>
+                                )}
 
                                 {/* Kaydırılabilir içerik */}
                                 <div className="flex-1 overflow-y-auto custom-scrollbar pb-36">

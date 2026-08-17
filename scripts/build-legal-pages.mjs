@@ -149,6 +149,13 @@ const TEK_SATIR_YORUMU = /^\s*<!--[\s\S]*?-->\s*$/;
 //     -->
 // biçiminde yazılmış bir iç not olduğu gibi yayına ve oradan uygulama paketine
 // çıkıyordu. Artık `-->` görülene kadar tüm satırlar atılır.
+//
+// DİKKAT — BU KALIP DAR OLMAK ZORUNDA: satır `<!--` ile başlayıp AYNI satırda
+// kapanıyorsa (`<!-- not --> Madde metni`) çok satırlı yorum BAŞLAMAMIŞTIR.
+// Geniş yazılırsa o satırdan dosya SONUNA kadar her şey — yani gerçek sözleşme
+// maddeleri — sessizce silinir. Bir kez oldu: üç maddelik bir denemede son iki
+// madde yok oldu ve script yine "başarılı" dedi. Bu yüzden aşağıda `-->` içerip
+// içermediği ayrıca sorulur ve kapanmamış yorum derlemeyi DURDURUR.
 const YORUM_ACILISI = /^\s*<!--/;
 
 // Alıntı satırı: GİRİNTİLİ olsa da alıntıdır.
@@ -170,7 +177,7 @@ const ALINTI_SATIRI = /^\s*>/;
 // klasöründe durur (bkz. ACIK-KONULAR.md), bu script o klasörü hiç okumaz.
 // Kanonik sözleşme dosyalarına iç not YAZILMAZ; yazılması gerekiyorsa `>` bloğu
 // veya HTML yorumu olarak yazılır — ikisi de burada varsayılan olarak gizlidir.
-function alintiBloklariniSuz(lines) {
+function alintiBloklariniSuz(lines, dosyaAdi = '(bilinmiyor)') {
   const out = [];
   let i = 0;
   let isaretli = false;    // bir önceki anlamlı satır <!-- YAYINLA --> mıydı?
@@ -189,7 +196,20 @@ function alintiBloklariniSuz(lines) {
     if (YAYIN_ISARETI.test(line)) { isaretli = true; i++; continue; }
     // İşaret dışındaki her HTML yorumu da çıktıya girmez: yorum = iç iletişim.
     if (TEK_SATIR_YORUMU.test(line)) { i++; continue; }
-    if (YORUM_ACILISI.test(line)) { yorumIcinde = true; i++; continue; }
+    if (YORUM_ACILISI.test(line)) {
+      // Aynı satırda kapanmışsa (ve arkasında metin varsa) yorum sürmüyordur:
+      // yalnız yorumun kendisi atılır, ARDINDAKİ METİN KORUNUR.
+      const kapanis = line.indexOf('-->');
+      if (kapanis >= 0) {
+        const kalan = line.slice(kapanis + 3);
+        if (kalan.trim() !== '') out.push(kalan);
+        i++;
+        continue;
+      }
+      yorumIcinde = true;
+      i++;
+      continue;
+    }
 
     if (ALINTI_SATIRI.test(line)) {
       const run = [];
@@ -207,12 +227,20 @@ function alintiBloklariniSuz(lines) {
     out.push(line);
     i++;
   }
+  // Kapanmamış `<!--`: buraya kadar gelen her satır atılmış demektir. Sessizce
+  // eksik metin yayınlamaktansa derleme ÇÖKSÜN — kurucu eksik sözleşmeyi fark etmez.
+  if (yorumIcinde) {
+    throw new Error(
+      `${dosyaAdi}: kapatılmamış <!-- yorumu var; o satırdan sonraki metin yayına ` +
+      'giremezdi. Yorumu kapatın ya da notu sozlesmeler/ic-notlar/ altına taşıyın.',
+    );
+  }
   return out;
 }
 
-function mdToHtml(md) {
+function mdToHtml(md, dosyaAdi) {
   let lines = md.replace(/\r/g, '').split('\n');
-  lines = alintiBloklariniSuz(lines);
+  lines = alintiBloklariniSuz(lines, dosyaAdi);
   const html = [];
   let i = 0;
   let seenSection = false;
@@ -307,7 +335,7 @@ for (const d of DOCS) {
     throw new Error(`Yayın kaynağı sozlesmeler/oyuncu dışında: ${d.md} — iç notlar yayınlanamaz.`);
   }
   const md = readFileSync(yol, 'utf8');
-  const out = pageHtml(d.title, d.desc, mdToHtml(md));
+  const out = pageHtml(d.title, d.desc, mdToHtml(md, d.md));
   const slug = SLUG_BY_MD[d.md];
   writeFileSync(join(ROOT, 'public', slug + '.html'), out);
   console.log('wrote public/' + slug + '.html (' + out.length + ' bytes)');

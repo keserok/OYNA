@@ -395,7 +395,10 @@ const MatchTicket: React.FC<MatchTicketProps> = ({ onBack }) => {
         </button>
         {shareMsg && (
           <p role="status"
-            className={`text-center text-[0.6875rem] mt-3 ${shareMsg.hata ? 'text-[#FACC15]' : 'text-[#39FF14]'}`}>
+            /* Hata rengi KIRMIZI: uygulamanın kendi kuralında altın (#FACC15)
+               PARA demektir (components/BookingCard.tsx). Hata mesajını altınla
+               yazmak, uygulamanın renk dilini bozar. Başarı yeşil kalır. */
+            className={`text-center text-[0.6875rem] mt-3 ${shareMsg.hata ? 'text-red-400' : 'text-[#39FF14]'}`}>
             {shareMsg.metin}
           </p>
         )}

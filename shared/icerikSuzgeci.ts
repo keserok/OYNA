@@ -120,6 +120,10 @@ const KOK_BASLANGIC: readonly string[] = [
   // masum cümleler engellenirdi. Aynı sebeple 'sikey' yerine tam 'sikeyim':
   // "şikeyi" ASCII'de "sikeyi" olur ve 'sikey' köküne takılıyordu.
   'sikeceğ', 'sikeceg', 'sikeyim',
+  // 'sikiyim' AYRI YAZILDI (kısaltma denemesi 'siki' MASUM kelimeleri yerdi:
+  // "sıkıyım" noktasız yazılır ama "şikiyi" gibi ASCII yazımlar 'siki' köküne
+  // takılırdı). Bir ara listeden düşmüştü ve en yaygın küfür biçimi geçiyordu.
+  'sikiyim', 'sikiyorum',
   'siker', 'sikim', 'sikik',
   'yarrak', 'yarrağ', 'yarrag', 'yarak',
   'piç',
@@ -132,6 +136,10 @@ const KOK_BASLANGIC: readonly string[] = [
   'ibne', 'sürtük', 'surtuk', 'kaltak', 'gavat', 'godoş', 'godos',
   'gerizekal', 'dangalak', 'dallama',
   'götver', 'gotver', 'götlek', 'gotlek', 'götoş', 'gotos',
+  // 'götü/gotu' KÖK YAPILAMAZ — denenip GERİ ALINDI: "götürdüm topu",
+  // "götürüyorum" gibi çok sık kullanılan masum cümleler engelleniyordu.
+  // Bedeli: ASCII "gotune" gibi ekli hakaretler kaçıyor. Dosyanın kuralı
+  // gereği masum olan kazanır; kaçan için şikayet + engelleme yolu var.
 ];
 
 /**
@@ -140,6 +148,15 @@ const KOK_BASLANGIC: readonly string[] = [
  * oç/oc→ocak.
  */
 const TAM_KELIME: ReadonlySet<string> = new Set([
+  // ASCII 'got' ÇIKARILDI: "got it", "I got this" gibi masum İngilizce
+  // cümleler engelleniyordu. Türkçe 'göt' (noktalı ö) tam kelime olarak
+  // kalıyor; ASCII yazımın ekli hâlleri ('gotu', 'gotune', 'gotver'…)
+  // aşağıdaki kök listesinden yakalanıyor. Aynı sebeple ASCII 'oc' de
+  // çıkarıldı ("OC" kısaltması masum); Türkçe 'oç' duruyor.
+  // ASCII 'got' / 'pic' / 'oc' LİSTEDE KALIYOR: Türkçe klavyede noktasız yazan
+  // kullanıcı çoğunlukta ve "got herif", "pic herif" gerçek hakaret. Bunların
+  // masum İngilizce anlamları ("got it", "nice pic") ayrı bir komşuluk
+  // kuralıyla korunuyor (bkz. INGILIZCE_KOMSU).
   'göt', 'got', 'sik', 'sikiş', 'sikis', 'oç', 'oc', 'pic',
   'amk', 'amq', 'aq',
 ]);
@@ -208,6 +225,29 @@ const iBelirsizKok = (kok: string): boolean => kok.startsWith('sik') || kok === 
 const KOK_BASLANGIC_ASCII = KOK_BASLANGIC.filter((k) => !iBelirsizKok(k));
 const TAM_KELIME_ASCII = new Set([...TAM_KELIME].filter((k) => !iBelirsizKok(k)));
 
+/**
+ * İNGİLİZCE KOMŞULUK İSTİSNASI.
+ *
+ * 'got', 'pic' ve 'oc' ASCII yazımları hem hakaret hem masum İngilizce
+ * olabiliyor. Bağımsız denetim iki gerçek yanlış pozitif ölçtü: "got it" ve
+ * "nice pic" engelleniyordu — üstelik fotoğraf paylaşılan bir uygulamada.
+ * Kelimenin KOMŞUSU tipik bir İngilizce işaretçiyse hakaret sayılmaz.
+ * Liste dar: yalnız bu üç kelimeyle birlikte sık geçen İngilizce sözcükler.
+ * ("got herif", "pic herif" gibi Türkçe komşuluklar YAKALANMAYA devam eder.)
+ */
+const INGILIZCE_ISTISNA: ReadonlyMap<string, ReadonlySet<string>> = new Map([
+  ['got', new Set(['it', 'this', 'that', 'you', 'we', 'they', 'i', 'ive', 'have', 'has', 'the', 'a', 'my', 'your', 'me'])],
+  ['pic', new Set(['nice', 'the', 'a', 'this', 'that', 'my', 'your', 'good', 'cool', 'great', 'send', 'sent'])],
+  ['oc', new Set(['the', 'a', 'my', 'your', 'is', 'in', 'of'])],
+]);
+
+/** Bu tam-kelime isabeti, komşusuna bakınca masum İngilizce mi? */
+function ingilizceMasumMu(kelimeler: readonly string[], i: number): boolean {
+  const izinli = INGILIZCE_ISTISNA.get(kelimeler[i]);
+  if (!izinli) return false;
+  return izinli.has(kelimeler[i - 1] ?? '') || izinli.has(kelimeler[i + 1] ?? '');
+}
+
 /** Tek kelime köklerden birine takılıyor mu? (tam eşleşme ya da kök başlangıcı) */
 function kelimeUygunsuzMu(
   kelime: string,
@@ -233,8 +273,12 @@ function tara(
 ): string | null {
   const kelimeler = kelimelereAyir(normal);
 
-  for (const kelime of kelimeler) {
-    if (kelimeUygunsuzMu(kelime, kokler, tamKelimeler)) return kelime;
+  for (let i = 0; i < kelimeler.length; i++) {
+    const kelime = kelimeler[i];
+    if (!kelimeUygunsuzMu(kelime, kokler, tamKelimeler)) continue;
+    // Komşusu İngilizce işaretçiyse ("got it", "nice pic") hakaret sayılmaz.
+    if (ingilizceMasumMu(kelimeler, i)) continue;
+    return kelime;
   }
 
   // Harf aralayarak yazılmış olabilir: "s i k t i r" → "siktir".

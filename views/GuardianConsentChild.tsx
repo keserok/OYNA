@@ -40,14 +40,24 @@ const GuardianConsentChild: React.FC<GuardianConsentChildProps> = ({ onBack, onG
     })();
   }, []);
 
+  // Pano hatası SESSİZ YUTULMAZ (ev kuralı 2). Bu ekran veli onayı akışının
+  // parçası: kullanıcı kodu kopyalayamadığını anlamazsa akışın tamamı durur.
+  // Uygulama pakette özel şemadan yüklendiği için (iOS) pano API'si hiç
+  // olmayabilir — o zaman kod zaten ekranda büyük yazıyor, kullanıcıya onu
+  // söylüyoruz.
+  const [kopyaHatasi, setKopyaHatasi] = useState(false);
+
   const copy = async () => {
     if (!code) return;
+    setKopyaHatasi(false);
     try {
+      if (!navigator.clipboard?.writeText) throw new Error('pano yok');
       await navigator.clipboard.writeText(code);
       setCopied(true);
       setTimeout(() => setCopied(false), 1800);
     } catch {
-      /* pano erişimi yoksa yoksay */
+      setKopyaHatasi(true);
+      setTimeout(() => setKopyaHatasi(false), 4000);
     }
   };
 
@@ -118,6 +128,13 @@ const GuardianConsentChild: React.FC<GuardianConsentChildProps> = ({ onBack, onG
               >
                 {copied ? <><Check size={15} className="text-[#39FF14]" /> Kopyalandı</> : <><Copy size={15} /> Kodu Kopyala</>}
               </button>
+              {/* Kopyalanamadıysa kullanıcı bunu GÖRÜR ve ne yapacağını bilir:
+                  kod zaten yukarıda büyük yazıyor, elle yazabilir. */}
+              {kopyaHatasi && (
+                <p role="status" className="mt-2 text-center text-[0.6875rem] font-bold text-red-400">
+                  Bu cihazda kopyalanamadı — kodu yukarıdan elle yazabilirsin.
+                </p>
+              )}
             </div>
 
             {/* Adımlar */}

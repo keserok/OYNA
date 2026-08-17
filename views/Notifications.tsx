@@ -321,13 +321,15 @@ const Notifications: React.FC<NotificationsProps> = ({ onBack, role }) => {
           />
         </div>
 
-        {/* Header — `pt-safe-8` satır içi `pt-[calc(var(--safe-top)+2rem)]` ile
-            AYNI boşluğu verir (8 = 2rem). Sınıfa çevrildi çünkü çevrimdışı şeridi
-            telafisi (index.css · body.offline-banner-on) yalnız sınıflara
-            yazılabiliyor: uçak modunda kırmızı şerit açılınca geri düğmesinin üstü
-            şeridin altında kalıyordu. */}
+        {/* Header — güvenli alan + 2rem. ÇEVRİMDIŞI ŞERİT TELAFİSİ BİLEREK YOK:
+            bu ekran tam ekran bir sayfa değil, `h-[85vh]` ile ekranın ALTINA
+            yapışan bir çekmece (yukarıdaki `justify-end`). Kırmızı şerit y=0..83
+            arasında duruyor, çekmece ise y=127'de başlıyor — şerit bu başlığa
+            hiç değmiyor. Telafi eklendiğinde 83px ölü bant açılıyor ve bildirim
+            listesi o kadar kısalıyordu (gerçek tarayıcıda ölçüldü). Bu yüzden
+            telafili sınıf (`pt-safe-8`) DEĞİL, satır içi hesap kullanılıyor. */}
         <div
-          className="sticky top-0 z-20 px-5 pt-safe-8 pb-4 flex items-center gap-3 border-b border-white/5"
+          className="sticky top-0 z-20 px-5 pt-[calc(var(--safe-top)+2rem)] pb-4 flex items-center gap-3 border-b border-white/5"
           style={{ background: 'rgba(10,14,20,0.95)', backdropFilter: 'blur(24px)' }}
         >
           <motion.button

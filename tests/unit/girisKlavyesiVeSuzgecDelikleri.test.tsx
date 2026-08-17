@@ -351,3 +351,53 @@ describe('B5 · eski davranış korundu (dosyanın felsefesi bozulmadı)', () =>
     expect(ilkUygunsuzKelime(undefined as unknown as string)).toBeNull();
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// B6 · DENETÇİ BULGULARI (17 Ağustos 2026) — kaybolan kök + İngilizce yanlış pozitif
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// Bağımsız denetim, süzgeci canlı çalıştırıp iki şey buldu ve ikisi de gerçekti:
+//   1. Kök listesi sadeleştirilirken 'sikiyim' DÜŞMÜŞTÜ — en yaygın Türkçe küfür
+//      biçimlerinden biri sessizce geçiyordu (bildirilmemiş bir kayıp).
+//   2. ASCII 'got' ve 'pic' TAM KELİME olarak aranıyordu; "got it" ve "nice pic"
+//      gibi masum İngilizce mesajlar engelleniyordu — hem de fotoğraf paylaşılan
+//      bir uygulamada.
+// Aşağısı bu iki kararı da kilitler: biri geri alınırsa test kırmızı döner.
+describe('B6 · denetçi bulguları geri gelmesin', () => {
+  const engellenmeli = [
+    'sikiyim böyle işi',
+    'sikiyorum artık bu işi',
+    'sikerim seni',
+    'sikik herif',
+  ];
+  it.each(engellenmeli)('engellenir: %s', (metin) => {
+    expect(uygunsuzMu(metin), `süzgeçten kaçtı: ${metin}`).toBe(true);
+  });
+
+  const masumKalmali = [
+    'got it',            // İngilizce "anladım"
+    'I got this',
+    'nice pic',          // İngilizce "güzel fotoğraf"
+    'send me a pic',
+    'götürdüm topu',     // 'götü' kökü denendi, bu yüzden GERİ ALINDI
+    'götürüyorum arabayı',
+  ];
+  it.each(masumKalmali)('masum kalır: %s', (metin) => {
+    expect(uygunsuzMu(metin), `yanlış pozitif: ${metin}`).toBe(false);
+  });
+
+  it('İngilizce istisnası YALNIZ komşuluğa bakar — Türkçe hakaret geçmez', () => {
+    // İstisna "got/pic/oc kelimesini tamamen serbest bırak" DEĞİL: yalnız
+    // tipik İngilizce komşusu varsa masum sayılır.
+    expect(uygunsuzMu('got herif')).toBe(true);
+    expect(uygunsuzMu('pic herif')).toBe(true);
+    expect(uygunsuzMu('got')).toBe(true);
+  });
+
+  it('Türkçe yazımlar bu esnetmeden ETKİLENMEDİ', () => {
+    // ASCII gevşetmesi Türkçe karakterli asıl biçimleri korumalı.
+    expect(uygunsuzMu('piç kurusu')).toBe(true);
+    expect(uygunsuzMu('göt')).toBe(true);
+    expect(uygunsuzMu('oç')).toBe(true);
+  });
+});

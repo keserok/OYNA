@@ -1161,11 +1161,16 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                               taşıp kartın `overflow-hidden`ı tarafından KESİLİYORDU.
                               Kesilen bir "BEYAN:" öneki, kusurun ta kendisini geri
                               getirirdi. Bu yüzden: yatay boşluk 3 → 2.5, harf aralığı
-                              biraz sıkı (uzun etiket tek satıra sığsın) ve `max-w`
-                              güvenlik sınırı — sığmazsa kesilmek yerine alta sarar.
+                              biraz sıkı ve `max-w` güvenlik sınırı.
+                              `whitespace-nowrap` ZORUNLU: rozet `absolute left-1/2`
+                              ile 96px'lik fotoğrafa göre konumlanıyor, yani sarmaya
+                              izin verilirse kullanılabilir genişlik 48px'e düşüyor ve
+                              ince altın şerit ÜÇ SATIRLIK kalın bir bloğa dönüşüp
+                              fotoğrafın yarısını kapatıyor (ölçüldü: 72.7x53.3px).
+                              Tek satırda 136x25.8px — kart kenarına taşma yok.
                               Rozetin rengi, konumu ve yazı boyu aynı. */}
                           {idLevel && (
-                            <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-[#FACC15] text-black text-[0.6875rem] font-extrabold px-2.5 py-1 rounded-full shadow-lg border-2 border-[#161B22] max-w-[8.5rem] text-center leading-tight tracking-tight">
+                            <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-[#FACC15] text-black text-[0.6875rem] font-extrabold px-2.5 py-1 rounded-full shadow-lg border-2 border-[#161B22] max-w-[8.5rem] text-center leading-tight tracking-tight whitespace-nowrap">
                                 {idLevel}
                             </div>
                           )}

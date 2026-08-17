@@ -4257,16 +4257,16 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                         // tam buradan çıkması: görünmeyen dürüst hata = kullanıcı düğmeyi
                         // bozuk sanır. Konum artık index.css'teki ortak kuraldan gelir.
                         //
-                        // YATAY ORTALAMA neden `transform` ile YAPILMIYOR: bu öğe
-                        // framer-motion ile `y` üzerinden canlandırılıyor; kitaplık
-                        // öğenin `style.transform` değerini KENDİ yazıyor (animasyon
-                        // bitince "none"). Satır içi stil, sınıfı her zaman ezer —
-                        // yani `-translate-x-1/2` sessizce düşerdi ve 280px'lik balon
-                        // ekranın ortasından SAĞA taşıp kesilirdi (mesajın yarısı
-                        // görünmez). Ortalama artık transform'a hiç dokunmayan
-                        // yoldan: `left-0 right-0` + `w-fit` + `mx-auto`. Genişlik
-                        // aynı (içerik kadar, en az 280px), yalnız ortalama güvenli.
-                        className="uyari-balonu fixed left-0 right-0 mx-auto w-fit z-[100] px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3 min-w-[280px]"
+                        // YATAY ORTALAMA `left-1/2 + -translate-x-1/2` ile YAPILIR.
+                        // Bir ara "framer-motion transform'u ezer" gerekçesiyle
+                        // `left-0 right-0 w-fit` denendi; ÖLÇÜM bunun YANLIŞ olduğunu
+                        // gösterdi: Tailwind v4 `-translate-x-1/2`yi `transform`a
+                        // değil ayrı `translate` özelliğine derliyor, framer-motion
+                        // ise yalnız `style.transform` yazıyor — ikisi çakışmıyor.
+                        // Üstelik `left-0 right-0`, balonun daralma alanını ekranın
+                        // yarısından TAMAMINA çıkardığı için uzun mesajlarda balon
+                        // iki kenara birden yapışıyordu (390px ekranda ölçüldü).
+                        className="uyari-balonu fixed left-1/2 -translate-x-1/2 z-[100] px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3 min-w-[280px]"
                         style={{ 
                             backgroundColor: toast.type === 'success' ? '#10B981' : '#EF4444',
                             color: 'white'

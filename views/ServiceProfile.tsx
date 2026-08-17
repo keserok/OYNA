@@ -395,7 +395,12 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
                     {isRef ? (
                       seviyeRozeti && (
                         <span
-                          className="text-[0.625rem] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider text-black whitespace-nowrap"
+                          /* `whitespace-nowrap` KALDIRILDI: rozet uzun ("BEYAN: FIFA
+                             KOKARTI") ve yanında ★ puan var; tek satıra zorlanınca
+                             360px ekranda (ve Android'de sistem yazı ölçeği %112+
+                             olduğunda) puan kartın `overflow-hidden`ı tarafından
+                             kesiliyordu. Sarmasına izin vermek hiçbir şeyi kırpmıyor. */
+                          className="text-[0.625rem] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider text-black"
                           style={{ background: accentColor }}
                         >
                           {seviyeRozeti}

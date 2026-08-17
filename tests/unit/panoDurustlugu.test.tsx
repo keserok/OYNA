@@ -25,6 +25,8 @@
  * mesajı / boş catch) bu testler KIRMIZI döner.
  */
 import React from 'react';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 
@@ -219,12 +221,18 @@ describe('Arkadaş Ekle · "Kopyala" sessizce yutmuyor', () => {
     expect(screen.queryByRole('button', { name: /^Kopyalandı$/ })).toBeNull();
   });
 
-  it('davet paylaşımı: pano yoksa "kopyalandı" DEMEZ, bağlantıyı verir', async () => {
+  it('davet paylaşımı: pano yoksa "kopyalandı" DEMEZ, bağlantıyı EKRANDA BIRAKIR', async () => {
     ekrani();
     fireEvent.click(await screen.findByRole('button', { name: /^Paylaş$/ }));
 
-    const bildirim = await screen.findByText(BASARISIZ);
-    expect(bildirim.textContent ?? '').toContain('https://oyna.app/davet/KEREM7');
+    // Kurtarma yolu KALICI olmalı: bildirim şeridi 2,4 saniyede kayboluyor ve
+    // `pointer-events-none` olduğu için metni seçmek de mümkün değil. Yani
+    // bağlantı yalnız orada yazsaydı "elle paylaş" önerisi gerçekte işlemezdi.
+    const kalici = await screen.findByText('https://oyna.app/davet/KEREM7');
+    expect(kalici.className, 'bağlantı seçilebilir olmalı').toContain('select-all');
+
+    // Ve hiçbir yerde sahte başarı yok.
+    expect(screen.queryByText(/kopyalandı(?!.*—)/i)).toBeNull();
   });
 });
 
@@ -286,5 +294,29 @@ describe('Maç Kur · kod kopyalama sonucu söyleniyor', () => {
       value: {}, configurable: true, writable: true,
     });
     await expect(panoyaKopyala('x')).resolves.toBe(false);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 3b · DÜĞMENİN EKRANA BAĞLANDIĞI SATIR da kilitli olmalı
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// Denetçi somut bir boşluk gösterdi: yardımcı fonksiyon testliydi ama onu
+// "Kod kopyalandı ✓" göstergesine bağlayan satır değildi. O satır koşulsuz
+// `setCopied(true)` hâline döndürüldüğünde 15 testin 15'i de yeşil kalıyordu —
+// yani kullanıcının GÖRDÜĞÜ yalan geri gelebiliyordu.
+describe('Maç Kur · onay göstergesi sonuca BAĞLI', () => {
+  const kaynak = readFileSync(join(process.cwd(), 'views/MatchCreate.tsx'), 'utf8');
+
+  it('"Kod kopyalandı ✓" yazısı yalnız kopyalama BAŞARILIYSA açılır', () => {
+    // Kritik satır: setCopied(true) koşulsuz çağrılmamalı.
+    const govde = kaynak.slice(kaynak.indexOf('const copyCode'), kaynak.indexOf('// ── Görsel yardımcılar'));
+    expect(govde).toMatch(/if\s*\(await kopyalaVeBildir\([^)]*\)\)\s*setCopied\(true\)/);
+    // Koşulsuz kullanım geri gelirse burası kırmızı döner.
+    expect(govde).not.toMatch(/^\s*setCopied\(true\);/m);
+  });
+
+  it('gösterge metni gerçekten bu duruma bağlı çiziliyor', () => {
+    expect(kaynak).toMatch(/copied \? 'Kod kopyalandı ✓'/);
   });
 });

@@ -177,6 +177,8 @@ describe('üretici: alıntı süzgeci kuralı gerçekten uyguluyor', () => {
     girintili: 'IZ-GIRINTILI-ALINTI',
     cokSatirliYorum: 'IZ-COK-SATIRLI-YORUM',
     duzParagraf: 'IZ-DUZ-PARAGRAF',
+    ayniSatirMetin: 'IZ-AYNI-SATIR-METIN',
+    sonMadde: 'IZ-SON-MADDE',
   };
 
   // Dikkat: hiçbir satırda "Durum:", "PR:", "Bilinen açık" gibi eski süzgecin
@@ -202,6 +204,15 @@ describe('üretici: alıntı süzgeci kuralı gerçekten uyguluyor', () => {
     '-->',
     '',
     'Serbest paragraf hâlinde yazılmış not ' + IZ.duzParagraf + '.',
+    '',
+    // Yorum AYNI SATIRDA kapanıyor ve ardından GERÇEK SÖZLEŞME METNİ geliyor.
+    // Bu satır yanlış ele alınırsa yorumdan sonrası "çok satırlı yorum gövdesi"
+    // sanılır ve dosyanın SONUNA kadar her şey sessizce silinir.
+    '<!-- kısa iç not --> Bu madde ' + IZ.ayniSatirMetin + ' yayında kalmalı.',
+    '',
+    '## 2. Son Madde',
+    '',
+    'Dosyanın son maddesi ' + IZ.sonMadde + ' — silinmemeli.',
     '',
   ].join('\n');
 
@@ -282,6 +293,32 @@ describe('üretici: alıntı süzgeci kuralı gerçekten uyguluyor', () => {
     // Sınırın karşılığı: iç not klasörü gerçekten var ve üretici onu okumuyor.
     expect(existsSync(join(KOK, 'sozlesmeler/ic-notlar/ACIK-KONULAR.md'))).toBe(true);
     expect(oku('scripts/build-legal-pages.mjs')).toContain('sozlesmeler/ic-notlar/');
+  });
+
+  // ── SÜZGEÇ METNİ YEMESİN: susturmak, sızdırmaktan DAHA TEHLİKELİ ──────────
+  // Yorum bekçisi bir kez fazla geniş yazıldı: `<!-- not --> Madde metni` gibi
+  // bir satır "çok satırlı yorum başladı" sanıldı ve o satırdan dosya SONUNA
+  // kadar her şey — gerçek sözleşme maddeleri — sessizce silindi. Script yine
+  // "başarılı" dedi. Sızan bir not GÖRÜNÜR; silinen bir madde GÖRÜNMEZ.
+  it('yorum AYNI SATIRDA kapanıyorsa ardındaki METİN KORUNUR', () => {
+    expect(
+      cikti.includes(IZ.ayniSatirMetin),
+      'Yorumdan sonraki sözleşme metni silindi — bekçi fazla geniş yazılmış.',
+    ).toBe(true);
+  });
+
+  it('yorumdan SONRAKİ maddeler de yerinde durur (dosya sonuna kadar silinmez)', () => {
+    expect(
+      cikti.includes(IZ.sonMadde),
+      'Yorum satırından sonrası tamamen uçmuş — sessiz metin kaybı.',
+    ).toBe(true);
+  });
+
+  it('KAPATILMAMIŞ yorum sessizce metin yutmaz, derlemeyi DURDURUR', () => {
+    // Bu durumda doğru davranış "elinden geleni yap" değil, DURMAK: eksik bir
+    // sözleşmeyi yayınlamaktansa derleme çöksün, kurucu hatayı görsün.
+    const bozuk = FIXTURE.replace('<!-- kısa iç not -->', '<!-- kapatilmamis yorum');
+    expect(() => ureticidenGecir(bozuk)).toThrow();
   });
 });
 

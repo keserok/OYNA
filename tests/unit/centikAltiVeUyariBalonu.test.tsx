@@ -253,23 +253,16 @@ describe('2 · Stüdyo\u2019nun kendi uyarı balonu ortak konumlandırmayı kull
     expect(olc('bottom', balon, { safeTop: ADA, safeBottom: ALT })).toBeGreaterThan(ALT);
   });
 
-  it('yatay ortalama transform’a BAĞLI DEĞİL (framer transform’u kendi yazıyor)', () => {
-    // framer-motion `y` canlandırdığı öğenin `style.transform` değerini kendisi
-    // yazar (animasyon bitince "none"); satır içi stil sınıfı her zaman ezer.
-    // Yani `-translate-x-1/2` sessizce düşer ve 280px'lik balon ekranın
-    // ortasından sağa taşıp KESİLİRDİ — mesajın yarısı görünmezdi.
-    // (Bu, jsdom'da ölçülemez: framer stil yazımı burada hiç çalışmıyor.
-    //  Bu yüzden kural kaynakta kilitleniyor.)
-    const studio = oku('views/Studio.tsx');
-    const i = studio.indexOf('uyari-balonu fixed');
-    const blok = studio.slice(studio.lastIndexOf('<motion.div', i), i);
-    expect(blok, 'balon y ekseninde canlandırılmıyor mu? kural gözden geçirilmeli')
-      .toMatch(/animate=\{\{[^}]*\by:/);
-    expect(balon, 'transform tabanlı ortalama framer tarafından ezilir').not.toMatch(/-translate-x-/);
-    expect(balon).toContain('mx-auto');
-    expect(balon).toContain('w-fit');
-    expect(balon).toMatch(/\bleft-0\b/);
-    expect(balon).toMatch(/\bright-0\b/);
+  it('yatay ortalama ekranın YARISINA göre yapılır (iki kenara yapışmaz)', () => {
+    // Bir ara "framer-motion transform'u ezer" gerekçesiyle `left-0 right-0 w-fit`
+    // denendi. Gerçek tarayıcıda ölçüldü, gerekçe YANLIŞ çıktı: Tailwind v4
+    // `-translate-x-1/2`yi `transform`a değil ayrı `translate` özelliğine
+    // derliyor; framer-motion ise yalnız `style.transform` yazıyor — çakışmıyorlar.
+    // Asıl zarar `left-0 right-0`dı: balonun daralma alanı ekranın yarısından
+    // TAMAMINA çıktığı için uzun mesajlarda balon iki kenara birden yapışıyordu.
+    expect(balon).toMatch(/\bleft-1\/2\b/);
+    expect(balon).toMatch(/-translate-x-1\/2/);
+    expect(balon, 'left-0 right-0 balonu kenardan kenara yayar').not.toMatch(/\bleft-0\b/);
   });
 
   it('"kaydedilemedi" dürüst mesajı gerçekten bu balondan çıkıyor', () => {
@@ -338,13 +331,16 @@ describe('4 · çevrimdışı şeridi telafisi satır içi başlıkları da kaps
   // kırmızı bant üstlerine biniyordu.
   // [ad, dosya, etiket ipucu, kaçıncı eşleşme] — LegalScreen'de İKİ başlık var
   // (belge görünümü ve liste görünümü); ikisi de ayrı ayrı ölçülür.
+  // NOT: Bildirimler LİSTEDE YOK ve bu bilinçli. O ekran tam ekran bir sayfa
+  // değil, `h-[85vh]` ile ekranın ALTINA yapışan bir çekmece: çevrimdışı şerit
+  // (y=0..83) çekmecenin başlığına (y=127) hiç değmiyor. Telafi eklenince
+  // 83px ölü bant açılıyor ve bildirim listesi kısalıyordu (ölçüldü).
   const basliklar: [string, string, string, number][] = [
     ['Ayarlar', 'views/SettingsScreen.tsx', '<header', 0],
     ['Yasal · belge', 'views/LegalScreen.tsx', '<header', 0],
     ['Yasal · liste', 'views/LegalScreen.tsx', '<header', 1],
     ['Servis ayarları', 'views/ServiceSettings.tsx', 'sticky top-0 z-30 px-4', 0],
     ['Kaleci/hakem paneli', 'views/ServiceDashboard.tsx', 'bg-transparent sticky top-0 z-20', 0],
-    ['Bildirimler', 'views/Notifications.tsx', 'sticky top-0 z-20 px-5', 0],
   ];
 
   const satirBul = (dosya: string, ipucu: string, sira: number): string => {
@@ -377,8 +373,12 @@ describe('4 · çevrimdışı şeridi telafisi satır içi başlıkları da kaps
   });
 
   it('bu dosyalarda satır içi güvenli alan hesabı KALMADI (telafi dışında kalan yok)', () => {
+    // Notifications.tsx BİLEREK LİSTEDE YOK: orası ekranın altına yapışan bir
+    // çekmece, çevrimdışı şerit başlığına hiç değmiyor ve telafili sınıf
+    // kullanılırsa 83px ölü bant açılıyor (yukarıdaki nota bakın). Onun satır
+    // içi hesabı doğru olanıdır.
     for (const dosya of ['views/SettingsScreen.tsx', 'views/LegalScreen.tsx', 'views/ServiceSettings.tsx',
-                         'views/ServiceDashboard.tsx', 'views/Notifications.tsx']) {
+                         'views/ServiceDashboard.tsx']) {
       const kod = oku(dosya).replace(/\{\/\*[\s\S]*?\*\/\}/g, ''); // JSX yorumları hariç
       expect(kod, `${dosya} · başlık dolgusu hâlâ satır içi yazılmış`)
         .not.toMatch(/\bpt-\[[^\]]*var\(--safe-top/);

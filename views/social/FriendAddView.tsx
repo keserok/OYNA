@@ -152,6 +152,9 @@ const FriendAddView: React.FC<FriendAddViewProps> = ({ onBack, onNavigate }) => 
   const userId = auth.currentUser?.uid || '';
 
   const [query, setQuery] = useState('');
+  // Pano çalışmadığında davet bağlantısı EKRANDA KALIR (kaybolan bir toast
+  // yerine): kullanıcı seçip kopyalayabilsin ya da elle yazabilsin.
+  const [elleDavetLinki, setElleDavetLinki] = useState<string | null>(null);
   const [results, setResults] = useState<RowPerson[]>([]);
   const [searching, setSearching] = useState(false);
   const [teammates, setTeammates] = useState<RowPerson[]>([]);
@@ -290,8 +293,12 @@ const FriendAddView: React.FC<FriendAddViewProps> = ({ onBack, onNavigate }) => 
         }
       }
       // Pano yolu: başarı mesajı yalnız GERÇEKTEN kopyalandığında yazılır.
-      if (await panoyaKopyala(text)) showToast('Davet linki kopyalandı');
-      else showToast(`Kopyalanamadı — davet bağlantın: ${url}`);
+      if (await panoyaKopyala(text)) { showToast('Davet linki kopyalandı'); return; }
+      // Kopyalanamadıysa bağlantıyı EKRANDA KALICI göster. Toast yetmez:
+      // 2,4 saniyede kayboluyor ve `pointer-events-none` olduğu için kullanıcı
+      // metni seçemiyor bile — yani "elle yaz" kurtarma yolu fiilen yoktu.
+      setElleDavetLinki(url);
+      showToast('Kopyalanamadı — bağlantı aşağıda yazıyor.');
     } catch (e) {
       if ((e as Error)?.name !== 'AbortError') showToast(parseSocialError(e));
     }
@@ -367,6 +374,16 @@ const FriendAddView: React.FC<FriendAddViewProps> = ({ onBack, onNavigate }) => 
             <Share2 size={11} /> Paylaş
           </button>
         </div>
+
+        {/* Kopyalanamayan davet bağlantısı — SEÇİLEBİLİR ve KALICI. */}
+        {elleDavetLinki && (
+          <div className="mt-2 mx-1 px-3 py-2 rounded-xl bg-amber-950/30 border border-amber-500/25">
+            <p className="text-[0.625rem] font-bold text-amber-300/80 mb-1">
+              Bu cihazda kopyalanamadı — bağlantıyı elle paylaşabilirsin:
+            </p>
+            <p className="text-[0.6875rem] font-bold text-white break-all select-all">{elleDavetLinki}</p>
+          </div>
+        )}
 
         {isSearchActive ? (
           /* ── Arama sonuçları ── */
