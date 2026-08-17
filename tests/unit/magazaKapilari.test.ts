@@ -199,3 +199,39 @@ describe('Mağaza kapıları · demo kimlikleri pakette değil', () => {
     expect(oku('data/demoAccounts.ts')).not.toMatch(/\|\|\s*'password123'/);
   });
 });
+
+// ════════════════════════════════════════════════════════════════════════════
+// YAŞ KAPISI — VARSAYILAN YETİŞKİN YOK
+// ════════════════════════════════════════════════════════════════════════════
+//
+// Onboarding'de yaş çarkı "24-30"da başlıyor ve DOKUNULMADAN seçili
+// sayılıyordu. Sonuç: 15 yaşındaki kullanıcı hiçbir şeye dokunmadan yetişkin
+// kaydediliyor, sunucudaki reşit-olmayan kuralı ('13-17') hiç tetiklenmiyor ve
+// uygulamanın kendi veli onayı akışı ÖLÜ kalıyordu. Mağaza yaş derecelendirmesi
+// ve çocuk koruması açısından engelleyici.
+
+describe('Mağaza kapıları · yaş beyanı', () => {
+  const ob = oku('views/Onboarding.tsx');
+
+  it('yaş seçimi NÖTR başlar (varsayılan aralık yok)', () => {
+    expect(ob).toContain('useState<number | null>(null)');
+    expect(ob).toContain('const [ageTouched, setAgeTouched] = useState(false)');
+  });
+
+  it('yaş seçilmeden ilerlenemez', () => {
+    expect(ob).toMatch(/case 1: return ageIndex !== null/);
+  });
+
+  it('seçilmemiş yaş profile YAZILMAZ', () => {
+    expect(ob).toContain("ageRange: ageIndex === null ? '' : AGE_RANGES[ageIndex]");
+  });
+
+  it('çark seçim yokken hiçbir aralığı "seçili" göstermez', () => {
+    const sa = oku('views/onboarding/StepAge.tsx');
+    expect(sa).toContain('index: number | null');
+    expect(sa).toContain('const secildi = index !== null');
+    expect(sa).toContain('secildi && Math.round(cur) === i');
+    // Ölü düğme bırakmayız: ekran neden pasif olduğunu söyler.
+    expect(sa).toContain('Devam etmek için yaş aralığını seç');
+  });
+});

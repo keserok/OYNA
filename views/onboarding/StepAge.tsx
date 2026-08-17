@@ -2,10 +2,16 @@ import React, { useRef, useState, useCallback } from 'react';
 import { AGE_RANGES } from './onboardingShared';
 
 interface StepAgeProps {
-  index: number;
+  /** null = HENÜZ SEÇİLMEDİ. Varsayılan yaş yoktur (mağaza öncesi denetim,
+   *  17 Ağu 2026): dokunulmadan seçili sayılan bir aralık, reşit olmayan
+   *  kullanıcıyı sessizce "yetişkin" yapıyordu. */
+  index: number | null;
   onChange: (i: number) => void;
   onFirstTouch: () => void;
 }
+
+/** Nötr durumda çarkın ortalayacağı aralık (SEÇİM DEĞİL, yalnız konum). */
+const NOTR_ODAK = 2;
 
 const ITEM_H = 54;
 const clamp = (n: number) => Math.min(AGE_RANGES.length - 1, Math.max(0, n));
@@ -16,18 +22,22 @@ const clamp = (n: number) => Math.min(AGE_RANGES.length - 1, Math.max(0, n));
  * CTA ilk etkileşime kadar pasif (onFirstTouch).
  */
 const StepAge: React.FC<StepAgeProps> = ({ index, onChange, onFirstTouch }) => {
-  const [floatIdx, setFloatIdx] = useState(index);
+  // Seçim yokken çark yine de bir yere bakar (boş ekran olmasın) ama HİÇBİR
+  // aralık "seçili" çizilmez — görünen ile geçerli olan ayrışmasın.
+  const secildi = index !== null;
+  const odak = index ?? NOTR_ODAK;
+  const [floatIdx, setFloatIdx] = useState(odak);
   const [dragging, setDragging] = useState(false);
-  const drag = useRef({ startY: 0, startIdx: index, moved: false, active: false });
+  const drag = useRef({ startY: 0, startIdx: odak, moved: false, active: false });
 
-  const cur = dragging ? floatIdx : index;
+  const cur = dragging ? floatIdx : odak;
 
   const beginDrag = useCallback((clientY: number) => {
-    drag.current = { startY: clientY, startIdx: index, moved: false, active: true };
+    drag.current = { startY: clientY, startIdx: odak, moved: false, active: true };
     setDragging(true);
-    setFloatIdx(index);
+    setFloatIdx(odak);
     onFirstTouch();
-  }, [index, onFirstTouch]);
+  }, [odak, onFirstTouch]);
 
   const moveDrag = useCallback((clientY: number) => {
     if (!drag.current.active) return;
@@ -67,7 +77,9 @@ const StepAge: React.FC<StepAgeProps> = ({ index, onChange, onFirstTouch }) => {
       <div
         style={{
           position: 'absolute', left: 16, right: 16, top: '50%', height: ITEM_H, marginTop: -ITEM_H / 2,
-          borderRadius: 16, background: 'rgba(57,255,20,0.06)', border: '1.5px solid rgba(57,255,20,0.35)',
+          borderRadius: 16,
+          background: secildi ? 'rgba(57,255,20,0.06)' : 'rgba(255,255,255,0.03)',
+          border: secildi ? '1.5px solid rgba(57,255,20,0.35)' : '1.5px dashed rgba(255,255,255,0.22)',
           pointerEvents: 'none',
         }}
       />
@@ -77,7 +89,7 @@ const StepAge: React.FC<StepAgeProps> = ({ index, onChange, onFirstTouch }) => {
             const d = i - cur;
             const ad = Math.abs(d);
             const opacity = ad > 2.2 ? 0 : Math.max(0, 1 - 0.34 * ad);
-            const selected = Math.round(cur) === i;
+            const selected = secildi && Math.round(cur) === i;
             return (
               <div
                 key={label}
@@ -103,6 +115,20 @@ const StepAge: React.FC<StepAgeProps> = ({ index, onChange, onFirstTouch }) => {
           })}
         </div>
       </div>
+
+      {/* Devam Et neden pasif? Ekran bunu SÖYLER — sessiz ölü düğme bırakmayız
+          (IP-16 · 4b'nin UX kaygısı bu satırla karşılanıyor). */}
+      {!secildi && (
+        <p
+          style={{
+            position: 'absolute', left: 0, right: 0, bottom: 18, margin: 0,
+            textAlign: 'center', fontSize: 12.5, fontWeight: 700,
+            color: 'rgba(255,255,255,0.55)', pointerEvents: 'none',
+          }}
+        >
+          Devam etmek için yaş aralığını seç
+        </p>
+      )}
     </div>
   );
 };
