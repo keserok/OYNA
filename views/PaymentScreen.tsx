@@ -285,7 +285,10 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
     ? 'Şu an uygulama içinde ödeme alınmıyor. Rezervasyonun kaydedilir; ücreti sahaya gittiğinde tesise ödersin.'
     : onlineBlocked
       ? (ctx?.kind === 'PITCH_DEPOSIT' || ctx?.kind === 'BOOKING_DEPOSIT'
-          ? 'Uygulamadan rezervasyon kartla kapora ödenerek yapılır; bu tesiste online ödeme şu anda kapalı. Rezervasyon için tesisi arayabilirsin.'
+          // Kurucu kararı (17 Ağu 2026): "tesisi ara" yönlendirmesi YOK.
+          // Durum sade anlatılır; lansmanda anlaşmalı sahaların hepsinde
+          // online ödeme açık olacağı için kullanıcı bunu normalde görmez.
+          ? 'Uygulamadan rezervasyon kartla kapora ödenerek yapılır. Bu tesiste uygulama içi ödeme şu anda kapalı.'
           : (paymentModeReasonText(payMode!) ?? 'Online ödeme şu anda kapalı.'))
       : cardFee > 0
         ? `Kartla ödemede ödeme altyapısı komisyonu için %${cardFeePct} işlem bedeli eklenir.`
