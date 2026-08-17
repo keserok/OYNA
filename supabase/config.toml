@@ -385,6 +385,14 @@ deno_version = 2
 # [edge_runtime.secrets]
 # secret_key = "env(SECRET_VALUE)"
 
+# ─── Uç fonksiyon ayarları ──────────────────────────────────────────────────
+# send-sms, Supabase Auth'un "Send SMS" KANCASIDIR: çağrıyı Auth servisi yapar
+# ve JWT GÖNDERMEZ. verify_jwt açık kalırsa kanca her seferinde 401 alır ve
+# kullanıcıya kod hiç gitmez. Kapı kapanmıyor: fonksiyon kendi içinde
+# standard-webhooks imzasını doğruluyor (sır yoksa çalışmıyor bile).
+[functions.send-sms]
+verify_jwt = false
+
 [analytics]
 enabled = true
 port = 54327
