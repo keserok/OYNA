@@ -309,7 +309,12 @@ export const isDemoLoginEnabled = (): boolean => {
 };
 
 const DEMO_DOMAIN = '@oyna.app';
-const DEMO_PASSWORD = 'password123';
+// ÜRETİM PAKETİNE GİRMEZ (17 Ağu 2026 — mağaza öncesi denetim).
+// Ortak demo şifresi paketin JS'ine harfi harfine gömülüyordu; demo hesap
+// e-postalarıyla birlikte gerçek hesaplara (saha1..4 = SAHA SAHİBİ) giriş
+// anahtarı oluyordu. Sabit, derleme zamanında çözülür: `VITE_DEMO_ACCOUNTS`
+// açıkça 'true' değilse boş kalır ve demo yolları zaten çalışmaz.
+const DEMO_PASSWORD = import.meta.env.VITE_DEMO_ACCOUNTS === 'true' ? 'password123' : '';
 
 /** Girilen değer demo giriş için uygun mu? (tam e-posta ya da bare kullanıcı adı) */
 export const isDemoLoginInput = (raw: string): boolean => {

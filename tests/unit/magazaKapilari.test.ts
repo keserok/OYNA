@@ -172,3 +172,30 @@ describe('Mağaza kapıları · dosya kaydetme', () => {
     expect(c).toContain('iyzipay.com');
   });
 });
+
+// ════════════════════════════════════════════════════════════════════════════
+// DEMO KİMLİKLERİ ÜRETİM PAKETİNE GİRMEZ
+// ════════════════════════════════════════════════════════════════════════════
+//
+// En ağır bulgu: demo hesap kataloğu (`docs/OYNA_DEMO_HESAPLARI.md`) `?raw` ile
+// statik içe aktarılıyordu ve ORTAK ŞİFRE ayrı bir sabitteydi. İkisi de mağaza
+// paketinin JS'ine harfi harfine giriyordu; katalogda saha1..4 gibi GERÇEK
+// SAHA SAHİBİ hesapları var. Paketi açan biri kimlikleri okuyup web/API
+// üzerinden gerçek hesaplara girebilirdi — arayüzdeki native kapı bunu
+// KAPATMAZ. Artık ikisi de yalnız VITE_DEMO_ACCOUNTS='true' ile derlenen
+// geliştirici paketlerine girer.
+
+describe('Mağaza kapıları · demo kimlikleri pakette değil', () => {
+  it('katalog derleme bayrağına bağlı (statik ?raw içe aktarma YOK)', () => {
+    const d = oku('data/demoAccounts.ts');
+    expect(d).not.toMatch(/^import rosterMd from .*\?raw';/m);
+    expect(d).toContain("import.meta.env.VITE_DEMO_ACCOUNTS === 'true'");
+  });
+
+  it('ortak şifre sabiti üretimde BOŞ (gömülü şifre yok)', () => {
+    const s = oku('supabaseAuth.ts');
+    expect(s).toContain("const DEMO_PASSWORD = import.meta.env.VITE_DEMO_ACCOUNTS === 'true'");
+    // Ayrıştırıcıdaki yedek sabit de kaldırıldı.
+    expect(oku('data/demoAccounts.ts')).not.toMatch(/\|\|\s*'password123'/);
+  });
+});

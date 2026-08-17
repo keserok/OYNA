@@ -5,7 +5,31 @@
 // ekranındaki demo seçici otomatik güncellenir (aynı e-posta Supabase Auth'ta da
 // mevcut olmak kaydıyla). Ayrıştırıcı sözleşmesi md dosyasında belgelidir:
 //   | Rol | E-posta | İsim | Açıklama |
-import rosterMd from '../docs/OYNA_DEMO_HESAPLARI.md?raw';
+// ÜRETİM PAKETİNE GİRMEZ (17 Ağu 2026 — mağaza öncesi denetim).
+//
+// SORUN: bu dosya demo hesap kataloğunu `?raw` ile içe aktarıyordu; katalog
+// GERÇEK üretim hesaplarının e-postalarını (saha1..4 = SAHA SAHİBİ rolü) ve
+// ORTAK ŞİFREYİ taşıyor. Statik içe aktarma, mağaza paketinin JS'ine harfi
+// harfine gömülüyordu — paketi açan herkes bu kimlikleri okuyup web/API
+// üzerinden gerçek hesaplara girebilirdi. Arayüzdeki native kapı bunu
+// KAPATMAZ; kimlik pakette olduğu sürece açık kalır.
+//
+// ÇÖZÜM: katalog yalnız AÇIKÇA `VITE_DEMO_ACCOUNTS=true` ile derlenen
+// geliştirici paketlerine girer. Sabit derleme zamanında değişmez bir değere
+// indiği için, üretim derlemesinde aşağıdaki koşul `false` olur ve toplayıcı
+// (Rollup) hem katalogu hem ayrıştırıcıyı ölü kod olarak ATAR.
+const KATALOG_PAKETE_GIRSIN = import.meta.env.VITE_DEMO_ACCOUNTS === 'true';
+
+// Not: glob, statik `import ... from` gibi koşulsuz gömme yapmaz; `eager`
+// olsa bile yukarıdaki sabit false iken erişilen hiçbir yer kalmadığından
+// içerik üretim çıktısına taşınmaz.
+const rosterModulleri = import.meta.glob('../docs/OYNA_DEMO_HESAPLARI.md', {
+  query: '?raw', import: 'default', eager: true,
+}) as Record<string, string>;
+
+const rosterMd: string = KATALOG_PAKETE_GIRSIN
+  ? (Object.values(rosterModulleri)[0] ?? '')
+  : '';
 
 export type DemoRole = 'PLAYER' | 'OWNER' | 'GOALKEEPER' | 'REFEREE';
 
@@ -14,7 +38,7 @@ export interface DemoAccount {
   name: string;
   role: DemoRole;
   note: string;
-  /** Ortak demo şifresi (md'den okunur, yedeği 'password123'). */
+  /** Ortak demo şifresi — YALNIZ katalog pakete girdiğinde dolar (üretimde boş). */
   password: string;
 }
 
@@ -26,7 +50,10 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 function parsePassword(md: string): string {
   const line = md.split('\n').find((l) => /ortak şifre/i.test(l));
   const m = line?.match(/`([^`]+)`/);
-  return (m?.[1] ?? '').trim() || 'password123';
+  // Yedek sabit KALDIRILDI: üretim paketine gömülen bir şifre, demo hesap
+  // e-postalarıyla birlikte gerçek hesaplara giriş anahtarına dönüşüyordu.
+  // Katalog yoksa boş döner; demo yolları zaten kapalıdır.
+  return (m?.[1] ?? '').trim();
 }
 
 /** "| a | b | c |" biçimli bir satırı hücrelere böler (baş/son boşları atar). */
