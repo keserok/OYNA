@@ -35,7 +35,14 @@ export const OwnerBottomNav: React.FC<OwnerBottomNavProps> = ({
   const shownTabs = tabs.filter((t) => !hiddenTabs.includes(t.id));
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-[#0A0E14]/95 backdrop-blur-xl border-t border-white/5 px-2 py-2 z-40 safe-area-pb">
+    // aria-label="Ana Gezinti": İKİ işi birden yapar.
+    // 1) Erişilebilirlik — ekran okuyucu bölgeyi "Ana Gezinti, gezinme" diye
+    //    duyurur; bu çubuk işletme panelinin ANA gezintisidir (oyuncu menüsüyle
+    //    aynı rol, aynı ad) ve aynı anda yalnız bir menü çizilir.
+    // 2) Uyarı balonu — index.css'teki `body:has(nav[aria-label="Ana Gezinti"])`
+    //    kuralı balonu menünün ÜSTÜNE kaldırır. Etiket yokken işletme
+    //    geri bildirimi bu çubuğun ARKASINDA kalıyordu.
+    <nav aria-label="Ana Gezinti" className="fixed bottom-0 left-0 right-0 bg-[#0A0E14]/95 backdrop-blur-xl border-t border-white/5 px-2 py-2 z-40 safe-area-pb">
       <div className="flex justify-around items-center max-w-lg mx-auto">
         {shownTabs.map((tab) => {
           const isActive = highlightTab === tab.id;

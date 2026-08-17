@@ -100,9 +100,10 @@ async function olc(page: Page): Promise<Olcum> {
 
 // Kaydırıcının doğrudan içinde yaşayan ekranlar. Tohumlama gerektirmeyenler
 // seçildi: boş-durum hâlleri de kabına sığmak zorunda (hata asıl orada çıkar).
+// WALLET listeden çıkarıldı: cüzdan lansmanda kapalı — rota ana ekrana düşer.
 const GORUNUMLER = [
   'LEGAL', 'SOCIAL', 'FRIEND_ADD', 'MESSAGES', 'QR_SCANNER', 'LOCATION_PROMPT',
-  'ROLE_SELECTION', 'GUARDIAN_CHILD', 'MATCH_TICKET', 'SETTINGS', 'WALLET',
+  'ROLE_SELECTION', 'GUARDIAN_CHILD', 'MATCH_TICKET', 'SETTINGS',
   'DASHBOARD', 'MY_MATCHES', 'MATCH_DISCOVERY', 'PITCH_DISCOVERY', 'PROFILE',
   'MATCH_CREATE', 'STUDIO',
 ];

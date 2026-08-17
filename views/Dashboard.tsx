@@ -32,7 +32,7 @@
 // ════════════════════════════════════════════════════════════════════════════
 
 import React from 'react';
-import { Bell, ChevronRight, CircleAlert, CloudOff, MapPin, Wallet } from 'lucide-react';
+import { Bell, ChevronRight, CircleAlert, CloudOff, MapPin } from 'lucide-react';
 import { AppView } from '../types';
 import { useAppStore } from '../store';
 import { auth } from '../supabaseAuth';
@@ -44,7 +44,6 @@ import { YenileniyorSeridi } from '../components/common/YenileniyorSeridi';
 import { useMyMatches, parseMatchDate } from '../hooks/useMyMatches';
 import { CARD, SCREEN } from '../ui/labels';
 import { TYPE_PX } from '../ui/type';
-import { formatTRYAmount } from '../utils/formatTRY';
 import { Accent, Photo, Skeleton, Tap } from '../components/dashboard/HomePieces';
 import {
   KeeperGloveMark,
@@ -112,19 +111,6 @@ const providerText = (error: boolean, n: number | null, hasScope: boolean): stri
   if (n === null) return '—';
   return n === 0 ? 'Müsait yok' : `${n} müsait`;
 };
-
-/**
- * Bakiye biçimi.
- *
- * TASARIMDAN BİLİNÇLİ SAPMA: teslim edilen HTML "₺340" yazıyor (simge önde),
- * uygulamanın kanonik biçimi ise "340₺"dir (simge sonda) — `utils/formatTRY.ts`
- * ve onu kilitleyen `tests/unit/formatTRY.test.ts`. Ana sayfada tek başına
- * farklı bir para biçimi kullanmak, kullanıcının aynı akışta iki ayrı yazım
- * görmesi demekti; o modül tam olarak bunu önlemek için var. Veri yoksa
- * `formatTRYAmount` zaten "—" döndürür (sayı kuralı).
- */
-const money = (n: number | null, error: boolean): string =>
-  formatTRYAmount(error ? null : n);
 
 const GUN = ['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt'];
 const AY = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
@@ -194,7 +180,17 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
   // artık gerçek bir jestle tetiklenir. Önceden yalnız hata şeridindeki
   // "Tekrar Dene" düğmesi vardı — yani hata YOKKEN kullanıcının sayfayı
   // tazelemesinin HİÇBİR yolu yoktu.
-  const cekerekYenileniyor = useAsagiCekYenile(home.refresh);
+  // Parmakla çekince ana sayfa verisi VE "Maçlarım" birlikte tazelenir: maç
+  // kutusu bu ekranda duruyor, kullanıcının elinde bir kurtarma yolu olmalı
+  // (17 Ağu 2026 — mağaza öncesi denetim).
+  const cekerekYenileniyor = useAsagiCekYenile(
+    React.useCallback(async () => {
+      await Promise.all([
+        home.refresh(),
+        useAppStore.getState().refreshMyMatches(),
+      ]);
+    }, [home.refresh]),
+  );
   const { loading, error, offline, refreshing, hasScope } = home;
 
   // Yaklaşan maç Maçlarım ekranıyla AYNI listeden okunur — iki ekran farklı
@@ -538,109 +534,113 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
             </div>
           </Tap>
 
-          {/* Cüzdan + Maçlarım — sabit 128px kolon.
-              Maçı YOKSA Maçlarım kutusu HİÇ ÇİZİLMEZ ve cüzdan 176px'in
-              tamamını alır; tutar 26 → 34px büyür. Boş kutu göstermek yerine
-              yer vermemek bilinçli: ekranda "eksik bir şey var" hissi olmaz. */}
+          {/* MAÇ KUTUSU — profil kartının yanındaki kolon.
+              Cüzdan kutusu lansmanda KALDIRILDI (e-para mevzuatı —
+              shared/featureFlags.ts): bakiye diye bir şey yok. Boşalan yeri
+              maç kutusu aldı, yani kutu artık kolonun TAMAMI kadar yüksek
+              (eski tasarımdaki yarım kutunun iki katı — kurucu kararı,
+              17 Ağu 2026).
+
+              KUTU HER ZAMAN ÇİZİLİR; iki durumu vardır:
+                • Yaklaşan maç VAR → "MAÇ YAKLAŞIYOR" + gün/saat + geri sayım
+                  (başlık sarı: ekranda ilk yakalanan şey bu olsun).
+                • Maç YOK          → "MAÇ YOK" + tek satırlık çıkış yolu.
+              Önceden maç yokken kutu hiç çizilmiyordu; kullanıcı "maçım var mı
+              yok mu" sorusunun cevabını ana sayfada göremiyordu. */}
           <div
             style={{
               flex: '0 0 var(--oy-wallet-w)', height: 'var(--oy-card-tall)',
-              display: 'flex', flexDirection: 'column', gap: 'var(--oy-space-2)',
+              display: 'flex', flexDirection: 'column',
             }}
           >
             <Tap
-              onClick={() => onNavigate('WALLET')}
-              label={SCREEN.wallet}
+              onClick={() => onNavigate('MY_MATCHES')}
+              label={hasNextMatch
+                ? `${SCREEN.myMatches} · maç yaklaşıyor`
+                : `${SCREEN.myMatches} · yaklaşan maç yok`}
               style={{
                 flex: 1, minHeight: 0, position: 'relative', overflow: 'hidden',
                 borderRadius: 'var(--oy-radius-lg)', border: BOX_BORDER,
               }}
             >
+              {/* Maç varken kutunun içine çok hafif bir sarı parıltı düşer —
+                  dikkat çeker ama kutu rengini değiştirmez. */}
+              {hasNextMatch && (
+                <span
+                  aria-hidden
+                  style={{
+                    position: 'absolute', top: -40, right: -30, width: 120, height: 120,
+                    borderRadius: 'var(--oy-radius-pill)', background: 'var(--color-warning)',
+                    opacity: 0.13, filter: 'blur(38px)', pointerEvents: 'none',
+                  }}
+                />
+              )}
               <div
                 style={{
-                  height: '100%', padding: 'var(--oy-space-3)', display: 'flex',
-                  flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                  gap: 'var(--oy-space-2)', textAlign: 'center', boxSizing: 'border-box',
+                  position: 'relative', height: '100%', padding: 'var(--oy-space-3)',
+                  display: 'flex', flexDirection: 'column', alignItems: 'center',
+                  justifyContent: 'center', gap: 7, textAlign: 'center', boxSizing: 'border-box',
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <Wallet size={15} color="var(--color-ink-2)" strokeWidth={2} style={{ flex: 'none' }} aria-hidden />
-                  <span
-                    style={{
-                      fontSize: px('caption'), fontWeight: 600, letterSpacing: '0.1em',
-                      color: 'var(--color-ink-4)',
-                    }}
-                  >
-                    CÜZDANIM
-                  </span>
-                </div>
-                {loading ? (
-                  <Skeleton w={72} h={22} />
+                {hasNextMatch ? (
+                  <>
+                    <span
+                      style={{
+                        fontSize: px('caption'), fontWeight: 800, letterSpacing: '0.1em',
+                        color: 'var(--color-warning)',
+                      }}
+                    >
+                      MAÇ YAKLAŞIYOR
+                    </span>
+                    <span
+                      style={{
+                        fontFamily: 'var(--font-display)', fontWeight: 800, fontStyle: 'italic',
+                        fontSize: px('bodyXl'), lineHeight: 1.15, letterSpacing: '-0.03em',
+                        color: 'var(--color-ink)',
+                      }}
+                    >
+                      {dayLabel(nextMatchAt as Date)} {clock(nextMatchAt as Date)}
+                    </span>
+                    {/* Bilet sayısı DEĞİL, kalan süre. */}
+                    <span
+                      style={{
+                        fontSize: px('captionLg'), fontVariantNumeric: 'tabular-nums',
+                        color: 'var(--color-ink-2)',
+                      }}
+                    >
+                      {remainingText(nextMatchAt as Date)}
+                    </span>
+                  </>
                 ) : (
-                  <span
-                    style={{
-                      fontFamily: 'var(--font-display)', fontWeight: 300,
-                      fontSize: hasNextMatch ? px('amount') : px('amountLg'),
-                      lineHeight: 1, fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.02em',
-                      // Yeni kullanıcıda bakiye ₺0'dır ve NÖTR tonda durur:
-                      // para rengiyle yazılan bir sıfır, olmayan parayı
-                      // varmış gibi öne çıkarır.
-                      color: home.balance && home.balance > 0
-                        ? 'var(--color-money-balance)'
-                        : 'var(--color-ink-2)',
-                    }}
-                  >
-                    {money(home.balance, error)}
-                  </span>
+                  <>
+                    <span
+                      style={{
+                        fontSize: px('caption'), fontWeight: 600, letterSpacing: '0.1em',
+                        color: 'var(--color-ink-4)',
+                      }}
+                    >
+                      MAÇ
+                    </span>
+                    <span
+                      style={{
+                        fontFamily: 'var(--font-display)', fontWeight: 800, fontStyle: 'italic',
+                        fontSize: px('bodyXl'), lineHeight: 1.15, letterSpacing: '-0.03em',
+                        color: 'var(--color-ink)',
+                      }}
+                    >
+                      MAÇ YOK
+                    </span>
+                    <span
+                      style={{
+                        fontSize: px('captionLg'), color: 'var(--color-ink-3)', lineHeight: 1.3,
+                      }}
+                    >
+                      Maçlarıma git
+                    </span>
+                  </>
                 )}
               </div>
             </Tap>
-
-            {hasNextMatch && (
-              <Tap
-                onClick={() => onNavigate('MY_MATCHES')}
-                label={SCREEN.myMatches}
-                style={{
-                  flex: 1, minHeight: 0, position: 'relative', overflow: 'hidden',
-                  borderRadius: 'var(--oy-radius-lg)', border: BOX_BORDER,
-                }}
-              >
-                <div
-                  style={{
-                    height: '100%', padding: 'var(--oy-space-3)', display: 'flex',
-                    flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                    gap: 7, textAlign: 'center', boxSizing: 'border-box',
-                  }}
-                >
-                  <span
-                    style={{
-                      fontSize: px('caption'), fontWeight: 600, letterSpacing: '0.1em',
-                      color: 'var(--color-ink-4)',
-                    }}
-                  >
-                    MAÇ
-                  </span>
-                  <span
-                    style={{
-                      fontFamily: 'var(--font-display)', fontWeight: 800, fontStyle: 'italic',
-                      fontSize: px('bodyXl'), lineHeight: 1.15, letterSpacing: '-0.03em',
-                      color: 'var(--color-ink)',
-                    }}
-                  >
-                    {dayLabel(nextMatchAt as Date)} {clock(nextMatchAt as Date)}
-                  </span>
-                  {/* Bilet sayısı DEĞİL, kalan süre. */}
-                  <span
-                    style={{
-                      fontSize: px('captionLg'), fontVariantNumeric: 'tabular-nums',
-                      color: 'var(--color-ink-2)',
-                    }}
-                  >
-                    {remainingText(nextMatchAt as Date)}
-                  </span>
-                </div>
-              </Tap>
-            )}
           </div>
         </div>
 

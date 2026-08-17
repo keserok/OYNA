@@ -241,14 +241,15 @@ export interface AtomicCreateResult {
 export type CreateMatchErrorCode =
   | 'SLOT_TAKEN' | 'INSUFFICIENT_BALANCE' | 'FORMAT_OUT_OF_RANGE' | 'NO_TARIFF'
   | 'PAST_TIME' | 'COURT_NOT_FOUND' | 'SEED_NOT_FOUND' | 'SEED_NOT_READY'
-  | 'BOOKING_DISABLED' | 'SLOT_UNAVAILABLE' | 'DUPLICATE_IN_FLIGHT' | 'UNKNOWN';
+  | 'BOOKING_DISABLED' | 'SLOT_UNAVAILABLE' | 'LISTING_CUTOFF'
+  | 'DUPLICATE_IN_FLIGHT' | 'UNKNOWN';
 
 export function parseCreateMatchError(err: unknown): { code: CreateMatchErrorCode; message: string } {
   const msg = err instanceof Error ? err.message : String((err as { message?: string })?.message ?? err ?? '');
   const codes: CreateMatchErrorCode[] = [
     'SLOT_TAKEN', 'INSUFFICIENT_BALANCE', 'FORMAT_OUT_OF_RANGE', 'NO_TARIFF',
     'PAST_TIME', 'COURT_NOT_FOUND', 'SEED_NOT_READY', 'SEED_NOT_FOUND',
-    'BOOKING_DISABLED', 'SLOT_UNAVAILABLE', 'DUPLICATE_IN_FLIGHT',
+    'BOOKING_DISABLED', 'SLOT_UNAVAILABLE', 'LISTING_CUTOFF', 'DUPLICATE_IN_FLIGHT',
   ];
   for (const c of codes) {
     if (msg.includes(c)) return { code: c, message: msg };

@@ -21,7 +21,7 @@ import Chip from '../components/ui/Chip';
 import { getInitials } from '../components/ui/Avatar';
 import { UserAvatar } from '../components/common/UserAvatar';
 import { providerStyles } from '../shared/providerStyles';
-import { createServiceRequest, fundServiceRequest } from '../services/serviceRequestService';
+import { hakemSeviyeRozeti, HAKEM_SEVIYE_NOTU } from '../shared/hakemSeviyesi';
 import { auth } from '../supabaseAuth';
 import { trCapitalize } from '../utils/trUpper';
 import { formatTRYShort } from '../utils/formatTRY';
@@ -155,6 +155,8 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect, onCre
     const [selectedMatchForHire, setSelectedMatchForHire] = useState<any>(null);
     const [showSuccessScreen, setShowSuccessScreen] = useState(false);
     const [shareCopied, setShareCopied] = useState(false);
+    // Paylaşım/pano çalışmazsa kullanıcıya söylenecek metin (sessiz vazgeçme yok).
+    const [paylasHatasi, setPaylasHatasi] = useState<string | null>(null);
     const [heroBroken, setHeroBroken] = useState(false);
     const successTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     useEffect(() => () => { if (successTimerRef.current) clearTimeout(successTimerRef.current); }, []);
@@ -283,17 +285,6 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect, onCre
             (m.status === 'DRAFT' || m.status === 'ACTIVE' || !m.status));
     }, [adminMatches, benimMaclarim]);
 
-    // Bakiye yetmediğinde sunucu Türkçe "Yetersiz bakiye…" hatası döndürür;
-    // bunu tanıyıp kullanıcıyı cüzdana yönlendiriyoruz (cüzdan-öncelikli sistem).
-    const isBalanceError = (msg: string) =>
-        /yetersiz bakiye|insufficient/i.test(msg);
-
-    const goToTopup = () => {
-        const store = useAppStore.getState();
-        store.setWalletInitialTab('TOPUP');
-        store.navigateTo('WALLET');
-    };
-
     const matchNeedsRole = useCallback((m: any) => (
         type === 'GK'
             ? m.missingPositions?.some((pos: any) => pos.role === 'GK' && pos.count > 0)
@@ -355,39 +346,40 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect, onCre
 
     const handleShare = async (p: Goalkeeper | Referee) => {
         const text = `${p.name} — OYNA'da ${roleLabel}. Maç başı ücret: ${formatTRYShort(p.fee)}${p.rating > 0 ? `, puan: ${p.rating.toFixed(1)}` : ''}.`;
+        // Sessiz vazgeçme YOK: pano da paylaşım da yoksa kullanıcıya söylenir.
+        // (Pakette `navigator.share`/`clipboard` bulunmayabilir — utils/dosyaKaydet.ts
+        // başındaki açıklama.) Vazgeçmek hata değildir, sessizce çıkılır.
         try {
             if (navigator.share) {
                 await navigator.share({ title: `OYNA · ${p.name}`, text });
-            } else {
-                await navigator.clipboard.writeText(text);
-                setShareCopied(true);
-                setTimeout(() => setShareCopied(false), 1800);
+                return;
             }
-        } catch { /* kullanıcı paylaşımı iptal etti */ }
+            if (!navigator.clipboard?.writeText) throw new Error('pano yok');
+            await navigator.clipboard.writeText(text);
+            setShareCopied(true);
+            setTimeout(() => setShareCopied(false), 1800);
+        } catch (e: any) {
+            if (e?.name === 'AbortError') return; // kullanıcı vazgeçti
+            setPaylasHatasi('Bu cihazda paylaşılamadı — bilgileri ekrandan okuyabilirsin.');
+            setTimeout(() => setPaylasHatasi(null), 4000);
+        }
     };
 
-    // FAZ 8A — gerçek kiralama: create_service_request RPC (blokaj intenti + %10
-    // komisyon + bildirim) ARDINDAN fund_service_request (emanete alma). MatchJoin
-    // ile aynı iki-adımlı akış: sağlayıcı ancak FONLANMIŞ talebi kabul edebilir;
-    // fonlanmazsa talep sessizce askıda kalır (denetim bulgusu). Kabul + tahsilat
-    // sonrası backend gk_id/refereeId'yi yazar.
+    // KİRALAMA AÇIK MI? Tek kaynak: aşağıdaki handleConfirmMatch zaten
+    // "çok yakında" diyor. Arayüz bu bayrağı okur; ikisi ayrı yerlerden
+    // karar verirse ekran "talep gönder" der, tıklayınca hata çıkar.
+    // Kart altyapısı canlıya alınınca burası true olur (ve handleConfirmMatch
+    // gerçek akışa döner) — iki satır, tek yerde.
+    const KIRALAMA_ACIK = false;
+
+    // FAZ 8A kiralama LANSMANDA KAPALI (MatchJoin ile parite): eski akış
+    // emaneti cüzdandan fonluyordu, cüzdan artık yok (shared/featureFlags.ts).
+    // Kartlı emanet, iyzico canlıya alınınca v1.1'de yazılacak; o güne dek
+    // sağlayıcıya karşılıksız kazanç yazılmaz, talep de askıda bırakılmaz.
     const handleConfirmMatch = async (match: any) => {
         if (!selectedProfile || isHiring) return;
         setSelectedMatchForHire(match);
-        setIsHiring(true);
-        setHireError(null);
-        try {
-            const result = await createServiceRequest(match.id, selectedProfile.id, type);
-            // Cüzdandan emanete al (MatchJoin ile paritede varsayılan WALLET).
-            await fundServiceRequest(result.requestId, 'WALLET');
-            setHireResult({ fee: result.fee, providerAmount: result.providerAmount });
-            setShowSuccessScreen(true);
-            successTimerRef.current = setTimeout(finishSuccess, 6000);
-        } catch (err: any) {
-            setHireError(err?.message || 'Talep oluşturulamadı. Lütfen tekrar dene.');
-        } finally {
-            setIsHiring(false);
-        }
+        setHireError('Kaleci/hakem kiralama çok yakında: online ödeme altyapısı canlıya alınınca açılacak.');
     };
 
     // ─── Detay için türetilmiş veriler ────────────────────────────────────────
@@ -396,6 +388,10 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect, onCre
     const detailDistance = detail ? distanceOf(detail) : null;
     const detailUnavailable = detail?.isAvailable === false;
     const detailReviews = detail?.reviews || [];
+    // B11 — hakem seviyesi ekranda ham basılmaz; ortak yardımcı "BEYAN: …"
+    // etiketini üretir. Seviye girilmemişse null döner (rozet/karo "—" gösterir
+    // ve altına dürüstlük notu düşmez — ortada bir iddia yoktur).
+    const detailSeviyeRozeti = hakemSeviyeRozeti((detail as Referee | null)?.level);
     // Çalışma günlerinden türetilmiş dürüst sinyal: bugün çalışıyor mu?
     const detailAvailableToday = !detailUnavailable && !!detail?.workingHours?.activeDays?.includes(TODAY_SHORT);
 
@@ -438,7 +434,7 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect, onCre
         <div className="h-full bg-[#0A0E14] relative flex flex-col font-sans overflow-hidden">
 
             {/* 1. Başlık */}
-            <header className="px-5 pt-6 pb-4 flex items-center gap-3 bg-[#0A0E14]/90 backdrop-blur-xl sticky top-0 z-30 border-b border-white/5">
+            <header className="px-5 pt-[calc(var(--safe-top)+1.5rem)] pb-4 flex items-center gap-3 bg-[#0A0E14]/90 backdrop-blur-xl sticky top-0 z-30 border-b border-white/5">
                 <button
                     onClick={onBack}
                     aria-label="Geri"
@@ -799,25 +795,14 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect, onCre
                                                 <span className="text-xl font-extrabold font-numeric text-white">{formatTRYShort(detail.fee)}</span>
                                             </div>
                                             <p className="text-[0.6875rem] font-semibold text-ink-4 mt-2 leading-relaxed">
-                                                Onaylayınca <span className="text-white font-bold">emanete alınır</span> — {roleLabel.toLocaleLowerCase('tr-TR')} kabul edip
-                                                maç kesinleşince sağlayıcıya aktarılır, gelmezse iade edilir. Sabit ücret; %10 platform komisyonu bedele dahildir.
+                                                Kiralama açıldığında onayladığın bedel <span className="text-white font-bold">emanete alınacak</span> — {roleLabel.toLocaleLowerCase('tr-TR')} kabul edip
+                                                maç kesinleşince sağlayıcıya aktarılacak, gelmezse iade edilecek. Sabit ücret; %10 platform komisyonu bedele dahil olacak.
                                             </p>
                                         </div>
 
                                         {hireError && (
-                                            <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 space-y-2">
+                                            <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30">
                                                 <p className="text-[0.6875rem] font-bold text-red-400">{hireError}</p>
-                                                {/* Hizmet ücreti cüzdandan emanete alınır; bakiye yetmiyorsa
-                                                    kullanıcı burada tıkanıyordu — çıkış yolunu göster. */}
-                                                {isBalanceError(hireError) && (
-                                                    <button
-                                                        type="button"
-                                                        onClick={goToTopup}
-                                                        className="w-full h-10 rounded-xl bg-[#39FF14] text-[#0A0E14] text-[0.6875rem] font-extrabold uppercase tracking-wider active:scale-95 transition-transform"
-                                                    >
-                                                        Cüzdana Yükle
-                                                    </button>
-                                                )}
                                             </div>
                                         )}
                                     </div>
@@ -967,6 +952,16 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect, onCre
                                     </button>
                                 </div>
 
+                                {/* Paylaşım/pano çalışmadıysa kullanıcı bunu GÖRÜR.
+                                    Eskiden hata sessizce yutuluyordu: düğmeye basılıyor,
+                                    hiçbir şey olmuyor, hiçbir şey söylenmiyordu. */}
+                                {paylasHatasi && (
+                                    <div role="status"
+                                        className="absolute top-16 left-4 right-4 z-30 px-3 py-2 rounded-xl bg-red-950/90 border border-red-500/40 text-red-300 text-[0.6875rem] font-bold text-center backdrop-blur-md">
+                                        {paylasHatasi}
+                                    </div>
+                                )}
+
                                 {/* Kaydırılabilir içerik */}
                                 <div className="flex-1 overflow-y-auto custom-scrollbar pb-36">
                                     {/* Kapak görseli / fallback */}
@@ -1069,10 +1064,25 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect, onCre
                                                 sub={(detail as Goalkeeper).height || undefined}
                                             />
                                         ) : (
+                                            /* B11 — burada eskiden ham `level` ("FIFA Kokart")
+                                               basılıyordu ve altındaki "klasman" yazısı bunu
+                                               resmî bir sınıflandırma gibi gösteriyordu. Değer
+                                               hakemin başvuruda KENDİ seçtiği satırdır; OYNA
+                                               doğrulamıyor. Metin artık ortak yardımcıdan
+                                               "BEYAN: …" biçiminde geliyor.
+                                               Karo dar (üçte bir genişlik): metin `text-sm` ile
+                                               tek satıra sığmaz, StatTile'ın `truncate`ı da onu
+                                               "BEYAN: FIF…" diye keserdi. Bu yüzden bu karoda
+                                               metin küçültülüp SARMASINA izin verildi — karonun
+                                               rengi, çerçevesi ve satırdaki yeri aynı. */
                                             <StatTile
                                                 label="Seviye"
-                                                value={<span className="text-sm leading-tight">{(detail as Referee).level || '—'}</span>}
-                                                sub="klasman"
+                                                value={
+                                                    <span className="block text-[0.6875rem] leading-tight whitespace-normal break-words">
+                                                        {detailSeviyeRozeti || '—'}
+                                                    </span>
+                                                }
+                                                sub={detailSeviyeRozeti ? HAKEM_SEVIYE_NOTU : undefined}
                                             />
                                         )}
                                     </div>
@@ -1192,13 +1202,18 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect, onCre
                                         <div className="rounded-3xl border border-white/[0.07] bg-[#11161F] p-5">
                                             <div className="flex items-center gap-2 mb-3.5">
                                                 <ShieldCheck size={16} style={{ color: theme.accent }} />
-                                                <h3 className="text-[0.8125rem] font-extrabold text-white uppercase tracking-widest">Güvenli Kiralama</h3>
+                                                <h3 className="text-[0.8125rem] font-extrabold text-white uppercase tracking-widest">Kiralama Nasıl Çalışacak</h3>
                                             </div>
+                                            {/* DİKKAT: kiralama henüz AÇIK DEĞİL (handleConfirmMatch).
+                                                Bu blok eskiden "Güvenli Kiralama" başlığıyla ŞİMDİKİ zamanda
+                                                yazılmıştı: var olmayan bir kart-bloke/emanet mekanizması
+                                                anlatıyordu. Özelliğin kapalı olması sorun değil, olmayan
+                                                bir şeyi varmış gibi anlatmak sorundur. */}
                                             <div className="space-y-3">
                                                 {[
-                                                    { icon: <Wallet size={13} />, text: 'Ücret önce kartında güvenle bloke edilir — anında tahsil edilmez.' },
-                                                    { icon: <Hourglass size={13} />, text: `${roleLabel} talebini görür ve onaylar; onaysız işlem yapılmaz.` },
-                                                    { icon: <CheckCircle2 size={13} />, text: 'Ödeme maç kesinleşince tahsil edilir; gelmezse ücretin iade edilir.' },
+                                                    { icon: <Wallet size={13} />, text: 'Ücret önce kartında bloke edilecek — anında tahsil edilmeyecek.' },
+                                                    { icon: <Hourglass size={13} />, text: `${roleLabel} talebini görecek ve onaylayacak; onaysız işlem yapılmayacak.` },
+                                                    { icon: <CheckCircle2 size={13} />, text: 'Ödeme maç kesinleşince tahsil edilecek; gelmezse ücretin iade edilecek.' },
                                                 ].map((s, i) => (
                                                     <div key={i} className="flex items-start gap-2.5">
                                                         <span className="mt-0.5 shrink-0 text-ink-4">{s.icon}</span>
@@ -1207,7 +1222,10 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect, onCre
                                                 ))}
                                             </div>
                                             <p className="text-[0.6875rem] font-bold text-ink-4 mt-4 pt-3 border-t border-white/[0.06]">
-                                                Sabit ücret · Pazarlık yok · %10 platform komisyonu şeffaftır
+                                                Sabit ücret · Pazarlık yok · %10 platform komisyonu şeffaf olacak
+                                            </p>
+                                            <p className="text-[0.6875rem] font-extrabold mt-2" style={{ color: theme.accent }}>
+                                                Kiralama çok yakında açılıyor. Şimdilik profilleri inceleyebilirsin.
                                             </p>
                                         </div>
                                     </div>
@@ -1220,15 +1238,19 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect, onCre
                                         <span className="text-xl font-extrabold text-white font-numeric leading-tight">{formatTRYShort(detail.fee)}</span>
                                         <span className="text-[0.6875rem] font-bold text-ink-4">maç başı</span>
                                     </div>
+                                    {/* Kiralama kapalıyken kullanıcıyı 4 adım yürütüp sonunda
+                                        hata ekranına çarpmıyoruz: durum EN BAŞTA söyleniyor. */}
                                     <button
                                         onClick={openHireFlow}
-                                        disabled={detailUnavailable}
+                                        disabled={detailUnavailable || !KIRALAMA_ACIK}
                                         className="flex-1 h-14 rounded-2xl font-extrabold text-xs uppercase tracking-widest flex items-center justify-center gap-1.5 transition-all active:scale-[0.97] disabled:active:scale-100"
-                                        style={detailUnavailable
+                                        style={(detailUnavailable || !KIRALAMA_ACIK)
                                             ? { backgroundColor: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.3)' }
                                             : { backgroundColor: theme.accent, color: '#0A0E14', boxShadow: `0 8px 24px ${theme.accent}30` }}
                                     >
-                                        {detailUnavailable ? (
+                                        {!KIRALAMA_ACIK ? (
+                                            <><Hourglass size={14} /> Kiralama Çok Yakında</>
+                                        ) : detailUnavailable ? (
                                             'Şu An Müsait Değil'
                                         ) : (
                                             <><Zap size={14} /> Maç Seç ve Talep Gönder</>

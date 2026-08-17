@@ -124,10 +124,17 @@ Deno.serve(async (req: Request) => {
   }
 
   // ── Para hareketini uygula (idempotent) ──────────────────────────────────
+  // itemTransactions saklanır: karta İADE iyzico'da paymentTransactionId ile
+  // yapılır (refund-payment kuyruğu buradan okur). Tek ürünlü sepette tek satır.
+  const itemTx = Array.isArray(auth.itemTransactions)
+    ? auth.itemTransactions.map((t: { paymentTransactionId?: string; price?: unknown }) => ({
+        paymentTransactionId: t.paymentTransactionId ?? null, price: t.price ?? null,
+      }))
+    : null
   const { data: applied, error: applyErr } = await admin.rpc('apply_card_payment', {
     p_intent_id: intentId,
     p_provider_ref: auth.paymentId ?? paymentId,
-    p_raw: { threeds: true, mdStatus, fraudStatus: auth.fraudStatus ?? null },
+    p_raw: { threeds: true, mdStatus, fraudStatus: auth.fraudStatus ?? null, itemTransactions: itemTx },
   })
   if (applyErr) {
     console.error('[iyzico-3ds-callback] apply_card_payment hatası:', applyErr.message)
@@ -169,15 +176,17 @@ Deno.serve(async (req: Request) => {
   }
 
   // ── Sonuç sayfası ─────────────────────────────────────────────────────────
+  // Kart dönemi (16 Ağu 2026): bu iki yarış-durumu iadesi KARTA döner
+  // (apply_card_payment karta iade kuyruğuna yazar) — "cüzdan/iade kredisi" deme.
   const reason = (applied?.reason as string | undefined) ?? null
   if (reason === 'SLOT_TAKEN_REFUNDED') {
-    return resultPage(true, 'Yer Doldu — Paran İade Kredisinde',
-      'Sen doğrulama yaparken maçtaki yer doldu. Ödediğin tutar anında cüzdanına iade kredisi olarak eklendi; dilediğin ödemede kullanabilirsin.',
+    return resultPage(true, 'Yer Doldu — Paran Kartına İade Ediliyor',
+      'Sen doğrulama yaparken maçtaki yer doldu. Ödediğin tutarın tamamı kartına iade edilmek üzere işleme alındı; bankana göre 1-3 iş günü içinde kartında görünür.',
       intentId, reason)
   }
   if (reason === 'BOOKING_CLOSED_REFUNDED') {
-    return resultPage(true, 'Rezervasyon Kapandı — Paran İade Kredisinde',
-      'Rezervasyon bu sırada kapandığı için ödediğin tutar cüzdanına iade kredisi olarak eklendi; dilediğin ödemede kullanabilirsin.',
+    return resultPage(true, 'Rezervasyon Kapandı — Paran Kartına İade Ediliyor',
+      'Rezervasyon bu sırada kapandığı için ödediğin tutarın tamamı kartına iade edilmek üzere işleme alındı; bankana göre 1-3 iş günü içinde kartında görünür.',
       intentId, reason)
   }
   return resultPage(true, 'Ödemen Alındı!',

@@ -157,7 +157,7 @@ const MatchDiaryDetail: React.FC<MatchDiaryDetailProps> = ({ diaryId, onBack }) 
     };
 
     const header = (
-        <header className="px-6 py-6 sticky top-0 bg-[#0A0E14]/90 backdrop-blur-xl z-30 border-b border-white/5 flex items-center justify-center">
+        <header className="px-6 pt-[calc(var(--safe-top)+1.5rem)] pb-6 sticky top-0 bg-[#0A0E14]/90 backdrop-blur-xl z-30 border-b border-white/5 flex items-center justify-center">
             <button
                 onClick={onBack}
                 aria-label="Geri"

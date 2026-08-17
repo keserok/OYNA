@@ -650,8 +650,12 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
     const handleDownloadImage = async () => {
         try {
             const blob = await buildShareBlob();
-            downloadBlob(blob, tacticImageFilename(activeTactic));
-            showToast('Taktik görseli indirildi.');
+            // Sonuca göre konuş: pakette paylaşım sayfası açılır ("kaydedildi"
+            // demek yalan olurdu), kullanıcı vazgeçerse hiçbir şey söylenmez.
+            const sonuc = await downloadBlob(blob, tacticImageFilename(activeTactic));
+            if (sonuc === 'PAYLASILDI') showToast('Taktik görseli paylaşıma hazır.');
+            else if (sonuc === 'INDIRILDI') showToast('Taktik görseli indirildi.');
+            else if (sonuc === 'DESTEKLENMIYOR') showToast('Görsel bu cihazda kaydedilemedi.', 'error');
         } catch (e) { showToast((e as Error)?.message || 'Görsel üretilemedi.', 'error'); }
     };
     const handleCopyLink = async () => {
@@ -675,9 +679,28 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                     ...(url ? { url } : {}),
                 });
             } else {
-                downloadBlob(blob, tacticImageFilename(activeTactic));
-                if (url) { try { await navigator.clipboard.writeText(url); } catch { /* yok say */ } showToast('Görsel indirildi, link kopyalandı.'); }
-                else showToast('Görsel indirildi. Link için taktiği kaydet.');
+                // Buradaki mesaj eskiden KOŞULSUZ "Görsel indirildi" diyordu; Android'de
+                // dosya hiç oluşmadığı hâlde başarı yazıyordu. Artık dönen sonuca bakıyoruz:
+                // link kopyalama görselden BAĞIMSIZ başarabilir, bu yüzden ikisi ayrı anlatılır.
+                const sonuc = await downloadBlob(blob, tacticImageFilename(activeTactic));
+                let linkKopyalandi = false;
+                if (url) {
+                    try { await navigator.clipboard.writeText(url); linkKopyalandi = true; } catch { /* yok say */ }
+                }
+                const gorselOldu = sonuc === 'PAYLASILDI' || sonuc === 'INDIRILDI';
+                const gorselMetni = sonuc === 'PAYLASILDI' ? 'Görsel paylaşıma hazır' : 'Görsel indirildi';
+                if (gorselOldu) {
+                    showToast(linkKopyalandi
+                        ? `${gorselMetni}, link kopyalandı.`
+                        : url ? `${gorselMetni}. Link kopyalanamadı.` : `${gorselMetni}. Link için taktiği kaydet.`);
+                } else if (sonuc === 'DESTEKLENMIYOR') {
+                    showToast(linkKopyalandi
+                        ? 'Görsel bu cihazda kaydedilemedi; link kopyalandı.'
+                        : 'Görsel bu cihazda kaydedilemedi.', 'error');
+                } else if (linkKopyalandi) {
+                    // 'IPTAL' → görsel için başarı YAZILMAZ; yalnız gerçekten olan iş söylenir.
+                    showToast('Paylaşım linki kopyalandı.');
+                }
             }
         } catch (e) {
             if ((e as Error)?.name !== 'AbortError') showToast((e as Error)?.message || 'Paylaşılamadı.', 'error');
@@ -3282,10 +3305,16 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: 20 }}
-                            className="min-h-screen w-full flex flex-col items-center p-6 pb-12"
+                            className="min-h-screen w-full flex flex-col items-center p-6 pb-12 pt-safe-6"
                         >
-                            {/* Modal Header */}
-                            <div className="w-full max-w-sm flex items-center justify-between mb-8 sticky top-0 z-10 py-2">
+                            {/* Modal Header
+                                ÇENTİK: bu katman `fixed inset-0`, yani EKRANIN tepesinden başlar;
+                                `p-6`nın 24px'i Dynamic Island'ın (59px) altında kalıyordu ve geri
+                                düğmesi durum çubuğunun ARKASINA giriyordu. `pt-safe-6` aynı 24px'i
+                                korur, üstüne güvenli alanı (ve varsa çevrimdışı şeridini) ekler.
+                                `top-safe`: başlık yapışkan; kaydırınca ekranın tepesine yapışıp
+                                yine çentiğin altına giriyordu — artık güvenli alana yapışır. */}
+                            <div className="w-full max-w-sm flex items-center justify-between mb-8 sticky top-safe z-10 py-2">
                                 <button 
                                     onClick={() => setShowExportModal(false)} 
                                     className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white hover:bg-white/10 transition-all active:scale-90"
@@ -4219,7 +4248,25 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                         initial={{ opacity: 0, y: 50 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 50 }}
-                        className="fixed bottom-32 left-1/2 -translate-x-1/2 z-[100] px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3 min-w-[280px]"
+                        // KONUM: `bottom-32` (128px) çivilenmişti. Stüdyonun kendi balonu
+                        // ortak Toast bileşenini kullanmadığı için bu gece yapılan
+                        // `.uyari-balonu` düzeltmesi buraya ulaşmamıştı: klavye açıkken
+                        // (taktik adı yazılırken) ya da çentikli cihazın ana ekran
+                        // çubuğunda balon ARKADA kalıyordu. Asıl tehlike, dosya kaydetme
+                        // dürüstleştirmesinin "Görsel bu cihazda kaydedilemedi." mesajının
+                        // tam buradan çıkması: görünmeyen dürüst hata = kullanıcı düğmeyi
+                        // bozuk sanır. Konum artık index.css'teki ortak kuraldan gelir.
+                        //
+                        // YATAY ORTALAMA `left-1/2 + -translate-x-1/2` ile YAPILIR.
+                        // Bir ara "framer-motion transform'u ezer" gerekçesiyle
+                        // `left-0 right-0 w-fit` denendi; ÖLÇÜM bunun YANLIŞ olduğunu
+                        // gösterdi: Tailwind v4 `-translate-x-1/2`yi `transform`a
+                        // değil ayrı `translate` özelliğine derliyor, framer-motion
+                        // ise yalnız `style.transform` yazıyor — ikisi çakışmıyor.
+                        // Üstelik `left-0 right-0`, balonun daralma alanını ekranın
+                        // yarısından TAMAMINA çıkardığı için uzun mesajlarda balon
+                        // iki kenara birden yapışıyordu (390px ekranda ölçüldü).
+                        className="uyari-balonu fixed left-1/2 -translate-x-1/2 z-[100] px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3 min-w-[280px]"
                         style={{ 
                             backgroundColor: toast.type === 'success' ? '#10B981' : '#EF4444',
                             color: 'white'

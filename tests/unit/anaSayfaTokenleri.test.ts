@@ -100,10 +100,12 @@ describe('ana sayfa — renk disiplini', () => {
     expect(ihlal, `metin rengi token'dan gelmeli:\n${ihlal.join('\n')}`).toEqual([]);
   });
 
-  it('cüzdan bakiyesi kendi rolünü kullanır, birincil yeşili DEĞİL', () => {
-    // #39FF14 "kullanıcıya DÖNEN para"dır (bir olay); bakiye ise durumdur.
-    // İkisi aynı tonda olsaydı her bakış "para geldi" gibi okunurdu.
-    expect(kaynak).toContain('var(--color-money-balance)');
+  it('cüzdan kutusu ana sayfadan kaldırıldı (lansman kararı: bakiye yok)', () => {
+    // Cüzdan kapatıldı (shared/featureFlags.ts): ana sayfada bakiye kutusu
+    // kalmadı — bakiye rengi de bu ekranda artık kullanılmaz. Token, cüzdan
+    // lisanslı bir modelle geri açılırsa diye index.css'te tanımlı durur.
+    expect(kaynak).not.toContain('CÜZDANIM');
+    expect(kaynak).not.toContain('var(--color-money-balance)');
     expect(css).toMatch(/--color-money-balance:\s*#00FFA5/);
   });
 });
@@ -189,5 +191,78 @@ describe('ana sayfa — erişilebilirlik sözü', () => {
   it('titreşim eklenmemiş (uygulama genelindeki karar korunuyor)', () => {
     expect(yorumsuz).not.toContain('Haptics');
     expect(yorumsuz).not.toContain('navigator.vibrate');
+  });
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+// MAÇ KUTUSU — İKİ DURUM (kurucu kararı, 17 Ağu 2026)
+// ════════════════════════════════════════════════════════════════════════════
+//
+// Profil kartı YERİNDE kalır; yanındaki kolon cüzdan kalktığı için tek başına
+// maç kutusudur ve kolonun TAMAMI kadar yüksektir. Kutu HER ZAMAN çizilir:
+//   • yaklaşan maç varsa → "MAÇ YAKLAŞIYOR" + gün/saat + geri sayım
+//   • yoksa              → "MAÇ YOK"
+// Önceden maç yokken kutu hiç çizilmiyordu (kullanıcı cevabı göremiyordu).
+
+describe('Ana sayfa · maç kutusu', () => {
+  const dash = oku('views/Dashboard.tsx');
+
+  it('profil kartı KALDIRILMADI (kurucu: kart yerinde kalacak)', () => {
+    expect(dash).toContain("onNavigate('PROFILE')");
+    expect(dash).toContain('POZİSYON · SEÇ →');
+  });
+
+  it('maç kutusu koşulsuz çizilir — "maç yoksa kolon yok" davranışı bitti', () => {
+    // Eski kod: `{hasNextMatch && ( … kolon … )}`. Kutu artık her zaman var,
+    // içeriği hasNextMatch'e göre dallanır.
+    expect(dash).not.toMatch(/\{hasNextMatch && \(\s*\n\s*<div/);
+    expect(dash).toContain('hasNextMatch ? (');
+  });
+
+  it('iki durumun metni de sabit: MAÇ YAKLAŞIYOR / MAÇ YOK', () => {
+    expect(dash).toContain('MAÇ YAKLAŞIYOR');
+    expect(dash).toContain('MAÇ YOK');
+  });
+
+  it('kutu kolonun tamamını kaplar (cüzdan kutusu kalktı, yer maça geçti)', () => {
+    expect(dash).toContain("flex: '0 0 var(--oy-wallet-w)', height: 'var(--oy-card-tall)'");
+  });
+
+  it('maç varken geri sayım ve gün/saat basılır', () => {
+    expect(dash).toContain('remainingText(nextMatchAt as Date)');
+    expect(dash).toContain('dayLabel(nextMatchAt as Date)');
+  });
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+// "MAÇLARIM" VERİSİ — GİRİŞTEN SONRA TAZELENİR
+// ════════════════════════════════════════════════════════════════════════════
+//
+// Açılış yüklemesi kullanıcı GİRİŞ YAPMADAN koşuyor; oturum isteyen
+// get_my_matches o anda reddediliyor ve bir daha çağrılmıyordu. Sonuç: maç
+// kutusu ve Maçlarım, kullanıcının kendi maçını hiç görmüyordu.
+
+describe('Maçlarım verisi · oturum yarışı (17 Ağu 2026)', () => {
+  it('fbGetMyMatches önce oturumu çözer; oturum yoksa istek atmaz', () => {
+    const s = oku('supabaseMutations.ts');
+    const bas = s.indexOf('export const fbGetMyMatches');
+    const govde = s.slice(bas, s.indexOf('};', bas));
+    expect(govde).toContain('supabase.auth.getSession()');
+    expect(govde).toContain('if (!session) return []');
+    // Oturum çözümü RPC'den ÖNCE olmalı.
+    expect(govde.indexOf('getSession')).toBeLessThan(govde.indexOf("rpc('get_my_matches')"));
+  });
+
+  it('store ayrı bir tazeleme eylemi sunar', () => {
+    expect(oku('store.ts')).toContain('refreshMyMatches: async () =>');
+  });
+
+  it('giriş anında tazeleme çağrılır (App.tsx auth dinleyicisi)', () => {
+    expect(oku('App.tsx')).toContain('refreshMyMatches()');
+  });
+
+  it('ana sayfada parmakla çekince de tazelenir (kullanıcının kurtarma yolu)', () => {
+    const dash = oku('views/Dashboard.tsx');
+    expect(dash).toContain('refreshMyMatches()');
   });
 });

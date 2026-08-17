@@ -1621,6 +1621,41 @@ export async function getPitchRefundPolicy(pitchId: string): Promise<PitchRefund
   }
 }
 
+// ── Listeleme saat sınırı (kurucu kararı 16 Ağu 2026) ───────────────────────
+// Saha sahibi "uygulamada şu saate kadar listelenirim" der; bitişi sınırı aşan
+// slot vitrine çıkmaz (shared/slotGrid Kural 5 + sunucu 20260905000002).
+// NULL = sınırsız. Sahibin kendi takvimi sınırdan ETKİLENMEZ (elle yönetim sürer).
+
+export async function getListingCutoff(pitchId: string): Promise<string | null> {
+  try {
+    const { data, error } = await supabase
+      .from('pitches')
+      .select('listing_cutoff')
+      .eq('id', pitchId)
+      .single();
+    if (error) throw error;
+    const raw = (data as { listing_cutoff?: string | null } | null)?.listing_cutoff ?? null;
+    return raw ? raw.slice(0, 5) : null;
+  } catch (error) {
+    console.error('getListingCutoff:', error);
+    throw new Error(toTurkishError(error));
+  }
+}
+
+/** Sınırı kaydeder ('HH:MM') ya da kaldırır (null → her saat listelenir). */
+export async function setListingCutoff(pitchId: string, cutoff: string | null): Promise<void> {
+  try {
+    const { error } = await supabase.rpc('owner_set_listing_cutoff', {
+      p_pitch_id: pitchId,
+      p_cutoff: cutoff,
+    });
+    if (error) throw error;
+  } catch (error) {
+    console.error('setListingCutoff:', error);
+    throw new Error(toTurkishError(error));
+  }
+}
+
 /** Politikayı kaydeder. custom=false → override temizlenir (global varsayılana döner). */
 export async function setPitchRefundPolicy(
   pitchId: string,

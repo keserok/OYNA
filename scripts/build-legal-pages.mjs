@@ -4,11 +4,34 @@
 //   node scripts/build-legal-pages.mjs
 // Elle tutulan gizlilik.html / cerez-politikasi.html / hesap-silme.html DOKUNULMAZ;
 // yalnızca aşağıdaki DOCS listesindeki sayfalar + yasal.html indeksi üretilir.
+//
+// ─── ALINTI (>) BLOKLARI İÇİN "VARSAYILAN GİZLİ" KURALI ──────────────────────
+// Kanonik md dosyalarındaki `>` ile başlayan bloklar iki farklı amaçla kullanılıyor:
+//   (1) şirketin kendi iç notları  — "Durum:", "Bilinen açık:", "PR:" gibi;
+//   (2) kullanıcıya gösterilmesi GEREKEN uyarı damgaları — ör. Kullanım Şartları
+//       md. 6.5'in "YÜRÜRLÜKTE DEĞİLDİR" damgası.
+//
+// Eskiden süzgeç yalnızca "Durum:" geçen blokları atıyordu. Bu ters çalışıyordu:
+// biri ileride yeni bir iç not eklediğinde (o kalıbı kullanmazsa) not sessizce
+// yayına ve oradan uygulama paketine çıkıyordu. Nitekim çıktı da: "Bilinen açık:
+// ... henüz değerlendirilmedi" notu public/mesafeli-satis.html'de yayınlanmıştı.
+//
+// Kural artık TERS: bir `>` bloğu, hemen öncesindeki satırda `<!-- YAYINLA -->`
+// işareti YOKSA yayınlanmaz. Yani unutulan/yeni eklenen her not varsayılan olarak
+// GİZLİ kalır; yayınlanması için bilinçli bir işaret gerekir. Tüm HTML yorumları
+// (işaretin kendisi dahil) çıktıdan atılır.
+//
+// İç notların kalıcı yeri: sozlesmeler/ic-notlar/ — bu script o klasörü hiç
+// okumaz; aşağıdaki KAYNAK_DIZIN kontrolü bunu sert biçimde garanti eder.
 import { readFileSync, writeFileSync } from 'node:fs';
-import { join, dirname } from 'node:path';
+import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
+
+// Yayına girebilecek TEK kaynak klasör. Başka bir klasörden (ör. ic-notlar)
+// okuma denemesi derlemeyi patlatır — sessizce yayına sızmasındansa build çöksün.
+const KAYNAK_DIZIN = resolve(ROOT, 'sozlesmeler', 'oyuncu');
 
 // Kanonik md dosya adı → public slug (çapraz-atıf linklerini yeniden yazmak için)
 const SLUG_BY_MD = {
@@ -111,28 +134,113 @@ function inline(s) {
   return s;
 }
 
-function stripMetadata(lines) {
+const YAYIN_ISARETI = /^\s*<!--\s*YAYINLA\s*-->\s*$/;
+
+// Tek satırda açılıp AYNI satırda kapanan yorum.
+const TEK_SATIR_YORUMU = /^\s*<!--[\s\S]*?-->\s*$/;
+
+// Satır bir yorum AÇIYOR. Aynı satırda `-->` yoksa çok satırlı yorum başlamıştır.
+//
+// NEDEN: eski süzgeç yalnızca `^\s*<!--[\s\S]*-->\s*$` kalıbına bakıyordu ve bu
+// kalıp satır satır uygulandığı için ÇOK SATIRLI bir yorumun hiçbir satırıyla
+// eşleşmiyordu. Yani
+//     <!--
+//       İç not: bu madde avukata soruldu.
+//     -->
+// biçiminde yazılmış bir iç not olduğu gibi yayına ve oradan uygulama paketine
+// çıkıyordu. Artık `-->` görülene kadar tüm satırlar atılır.
+//
+// DİKKAT — BU KALIP DAR OLMAK ZORUNDA: satır `<!--` ile başlayıp AYNI satırda
+// kapanıyorsa (`<!-- not --> Madde metni`) çok satırlı yorum BAŞLAMAMIŞTIR.
+// Geniş yazılırsa o satırdan dosya SONUNA kadar her şey — yani gerçek sözleşme
+// maddeleri — sessizce silinir. Bir kez oldu: üç maddelik bir denemede son iki
+// madde yok oldu ve script yine "başarılı" dedi. Bu yüzden aşağıda `-->` içerip
+// içermediği ayrıca sorulur ve kapanmamış yorum derlemeyi DURDURUR.
+const YORUM_ACILISI = /^\s*<!--/;
+
+// Alıntı satırı: GİRİNTİLİ olsa da alıntıdır.
+//
+// NEDEN: eski süzgeç `line.startsWith('>')` kullanıyordu; başında iki boşluk
+// olan `  > iç not` satırı bu kontrolden kaçıyor, süzgece hiç uğramadan
+// mdToHtml'e düşüyor ve yayınlanıyordu. Markdown zaten üç boşluğa kadar girintili
+// `>` işaretini alıntı sayar — süzgeç de aynı şeyi saymak zorunda.
+const ALINTI_SATIRI = /^\s*>/;
+
+// Varsayılan gizli: `>` blokları yalnızca hemen öncesinde <!-- YAYINLA --> varsa
+// çıktıya girer. (Gerekçe dosyanın başındaki açıklamada.)
+//
+// BİLEREK KAPSAM DIŞI — DÜZ PARAGRAF HÂLİNDE YAZILMIŞ NOT: "Bu maddeyi avukata
+// soralım" gibi bir cümle normal bir paragraf olarak yazılırsa bu süzgeç onu
+// yakalayamaz ve yakalamaya ÇALIŞMAMALIDIR: her paragrafı şüpheli sayan bir kural
+// sözleşme metnini keser, kullanıcıya eksik metin gösterir — yani ilaç hastalıktan
+// beter olur. Doğru çözüm kural değil YER: iç notlar sozlesmeler/ic-notlar/
+// klasöründe durur (bkz. ACIK-KONULAR.md), bu script o klasörü hiç okumaz.
+// Kanonik sözleşme dosyalarına iç not YAZILMAZ; yazılması gerekiyorsa `>` bloğu
+// veya HTML yorumu olarak yazılır — ikisi de burada varsayılan olarak gizlidir.
+function alintiBloklariniSuz(lines, dosyaAdi = '(bilinmiyor)') {
   const out = [];
   let i = 0;
+  let isaretli = false;    // bir önceki anlamlı satır <!-- YAYINLA --> mıydı?
+  let yorumIcinde = false; // çok satırlı bir <!-- ... --> yorumunun ortasında mıyız?
+
   while (i < lines.length) {
-    if (lines[i].startsWith('>')) {
+    const line = lines[i];
+
+    // Çok satırlı yorumun gövdesi: kapanış görülene kadar hiçbir satır çıkmaz.
+    if (yorumIcinde) {
+      if (line.includes('-->')) yorumIcinde = false;
+      i++;
+      continue;
+    }
+
+    if (YAYIN_ISARETI.test(line)) { isaretli = true; i++; continue; }
+    // İşaret dışındaki her HTML yorumu da çıktıya girmez: yorum = iç iletişim.
+    if (TEK_SATIR_YORUMU.test(line)) { i++; continue; }
+    if (YORUM_ACILISI.test(line)) {
+      // Aynı satırda kapanmışsa (ve arkasında metin varsa) yorum sürmüyordur:
+      // yalnız yorumun kendisi atılır, ARDINDAKİ METİN KORUNUR.
+      const kapanis = line.indexOf('-->');
+      if (kapanis >= 0) {
+        const kalan = line.slice(kapanis + 3);
+        if (kalan.trim() !== '') out.push(kalan);
+        i++;
+        continue;
+      }
+      yorumIcinde = true;
+      i++;
+      continue;
+    }
+
+    if (ALINTI_SATIRI.test(line)) {
       const run = [];
       let j = i;
-      while (j < lines.length && lines[j].startsWith('>')) { run.push(lines[j]); j++; }
-      if (run.some((l) => /Durum:/.test(l))) { i = j; continue; } // dahili metadata bloğu → at
-      out.push(...run);
+      while (j < lines.length && ALINTI_SATIRI.test(lines[j])) { run.push(lines[j]); j++; }
+      if (isaretli) out.push(...run); // açıkça yayına işaretlenmiş → geçer
+      isaretli = false;               // işaret tek bloğu kapsar, devretmez
       i = j;
       continue;
     }
-    out.push(lines[i]);
+
+    // Boş satır işareti bozmaz (işaret ile blok arasında boşluk bırakılabilsin);
+    // dolu bir satır araya girerse işaret düşer.
+    if (!/^\s*$/.test(line)) isaretli = false;
+    out.push(line);
     i++;
+  }
+  // Kapanmamış `<!--`: buraya kadar gelen her satır atılmış demektir. Sessizce
+  // eksik metin yayınlamaktansa derleme ÇÖKSÜN — kurucu eksik sözleşmeyi fark etmez.
+  if (yorumIcinde) {
+    throw new Error(
+      `${dosyaAdi}: kapatılmamış <!-- yorumu var; o satırdan sonraki metin yayına ` +
+      'giremezdi. Yorumu kapatın ya da notu sozlesmeler/ic-notlar/ altına taşıyın.',
+    );
   }
   return out;
 }
 
-function mdToHtml(md) {
+function mdToHtml(md, dosyaAdi) {
   let lines = md.replace(/\r/g, '').split('\n');
-  lines = stripMetadata(lines);
+  lines = alintiBloklariniSuz(lines, dosyaAdi);
   const html = [];
   let i = 0;
   let seenSection = false;
@@ -158,9 +266,11 @@ function mdToHtml(md) {
       continue;
     }
 
-    if (line.startsWith('>')) {
+    // Alıntı tanımı süzgeçle AYNI olmalı (girintili `>` de alıntıdır); yoksa
+    // süzgeçten geçen işaretli bir girintili blok burada paragrafa dönüşürdü.
+    if (ALINTI_SATIRI.test(line)) {
       const buf = [];
-      while (i < lines.length && lines[i].startsWith('>')) { buf.push(lines[i].replace(/^>\s?/, '')); i++; }
+      while (i < lines.length && ALINTI_SATIRI.test(lines[i])) { buf.push(lines[i].replace(/^\s*>\s?/, '')); i++; }
       html.push(`<blockquote>${inline(buf.join(' ').trim())}</blockquote>`);
       continue;
     }
@@ -198,7 +308,7 @@ function mdToHtml(md) {
       !/^\s*$/.test(lines[i]) &&
       !/^(#{1,6})\s/.test(lines[i]) &&
       !/^(-{3,}|\*{3,}|_{3,})\s*$/.test(lines[i]) &&
-      !lines[i].startsWith('>') &&
+      !ALINTI_SATIRI.test(lines[i]) &&
       !/^\s*([-*]|\d+\.)\s+/.test(lines[i])
     ) {
       buf.push(lines[i]);
@@ -218,8 +328,14 @@ function mdToHtml(md) {
 }
 
 for (const d of DOCS) {
-  const md = readFileSync(join(ROOT, 'sozlesmeler/oyuncu', d.md), 'utf8');
-  const out = pageHtml(d.title, d.desc, mdToHtml(md));
+  // Yayına yalnızca sozlesmeler/oyuncu altındaki kanonik dosyalar çıkar.
+  // ic-notlar/ gibi bir klasöre uzanan yol (ör. "../ic-notlar/...") burada durur.
+  const yol = resolve(KAYNAK_DIZIN, d.md);
+  if (!yol.startsWith(KAYNAK_DIZIN + '/')) {
+    throw new Error(`Yayın kaynağı sozlesmeler/oyuncu dışında: ${d.md} — iç notlar yayınlanamaz.`);
+  }
+  const md = readFileSync(yol, 'utf8');
+  const out = pageHtml(d.title, d.desc, mdToHtml(md, d.md));
   const slug = SLUG_BY_MD[d.md];
   writeFileSync(join(ROOT, 'public', slug + '.html'), out);
   console.log('wrote public/' + slug + '.html (' + out.length + ' bytes)');

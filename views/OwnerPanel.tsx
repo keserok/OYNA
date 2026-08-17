@@ -37,6 +37,7 @@ import {
   OwnerFacilitySettingsModal,
   OwnerWorkingHoursModal,
   OwnerCancellationPolicyModal,
+  OwnerListingWindowModal,
   OwnerAgreementModal,
   OwnerWithdrawalsModal,
   OwnerWidgetSettingsModal,
@@ -204,6 +205,7 @@ const tariffRowToPolicy = (t: PitchTariff) => ({
     setActiveTab(tab);
   };
   const [showCancellationPolicy, setShowCancellationPolicy] = useState(false);
+  const [showListingWindow, setShowListingWindow] = useState(false);
   // OYNA ile yapılan ticari anlaşma — salt okunur, YALNIZ tesis sahibi (karar 6a).
   const [showAgreement, setShowAgreement] = useState(false);
   const [showPaymentMode, setShowPaymentMode] = useState(false);
@@ -921,6 +923,11 @@ const tariffRowToPolicy = (t: PitchTariff) => ({
             // Karar: iade politikası yönetim ayarı — sahip + müdür düzenler.
             if (managerGuard()) setShowCancellationPolicy(true);
           }}
+          onListingWindow={() => {
+            // Listeleme sınırı OYNA ile yapılan anlaşmanın parçası → yalnız sahip
+            // (sunucu da owner_set_listing_cutoff içinde aynı kapıyı uygular).
+            if (ownerOnlyGuard()) setShowListingWindow(true);
+          }}
           onAgreement={() => {
             // Ticari anlaşma YALNIZ tesis sahibine açıktır (karar 6a).
             if (ownerOnlyGuard()) setShowAgreement(true);
@@ -1014,6 +1021,13 @@ const tariffRowToPolicy = (t: PitchTariff) => ({
       {showCancellationPolicy && (
         <OwnerCancellationPolicyModal
           onClose={() => setShowCancellationPolicy(false)}
+          facilityId={facilityData?.id ?? ''}
+          readOnly={isReadOnly}
+        />
+      )}
+      {showListingWindow && (
+        <OwnerListingWindowModal
+          onClose={() => setShowListingWindow(false)}
           facilityId={facilityData?.id ?? ''}
           readOnly={isReadOnly}
         />

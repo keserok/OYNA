@@ -158,9 +158,15 @@ export function buildAvailabilitySlots(
   // IZGARA TEK KAYNAK: slot süresi tarife bazlıdır (60/90/120) ve ızgara
   // sunucudaki get_pitch_slots ile aynı kuralla kurulur. Tarifesiz tesiste
   // çalışma saatinden 60'lık yedek ızgara üretilir.
+  // LİSTELEME SINIRI (slotGrid Kural 5): burası OYUNCU yüzeyi — sahanın
+  // listeleme sınırı geçilir, bitişi sınırı aşan slot vitrine hiç girmez
+  // (sunucu ikizi: get_pitch_slots + b_listeleme_siniri tetikleyicisi).
   const grid = resolved.closed
     ? []
-    : buildSlotGrid(pitch.tariffs as SlotTariffInput[] | undefined, bookingDate, courtId, wh);
+    : buildSlotGrid(
+        pitch.tariffs as SlotTariffInput[] | undefined, bookingDate, courtId, wh,
+        pitch.listingCutoff ?? null,
+      );
   const ranges = grid.map((g) => ({ startTime: g.startTime, endTime: g.endTime }));
   const pitchBookings = bookings.filter(
     b =>

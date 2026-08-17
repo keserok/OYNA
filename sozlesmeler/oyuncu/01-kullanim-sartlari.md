@@ -93,7 +93,7 @@ Bu madde, 18 yaşından küçük (reşit olmayan) kullanıcıların Platformu g�
 Kullanıcı, kayıt sırasında 18 yaşından küçük olduğunu beyan ederse veya OYNA bunu başka bir şekilde (ör. beyan edilen doğum tarihi, kimlik doğrulama süreci) tespit ederse, hesap otomatik olarak **"sınırlı mod"**da açılır. Sınırlı moddaki bir hesapla:
 
 - (a) Uygulamada gezinme, saha/maç arama, profil oluşturma, **ödeme gerektirmeyen maçlara katılım** ve Platform içi mesajlaşma gibi işlevler **serbesttir**;
-- (b) **Ödeme gerektiren tüm işlemler** — kapora/rezervasyon bedeli ödemesi, ücretli maça katılım için slot/pay satın alımı ve cüzdana bakiye yükleme dahil — işbu maddede tanımlanan veli onayı tamamlanana kadar **kapalıdır** ve Kullanıcı tarafından kullanılamaz. Reşit olmayan kullanıcının maça katılımı, yalnızca o katılımın bir ödeme (slot/pay satın alımı) gerektirdiği ölçüde bu kapsamdadır; ödeme gerektirmeyen katılım kısıtlanmaz;
+- (b) **Ödeme gerektiren tüm işlemler** — kapora/rezervasyon bedeli ödemesi ve ücretli maça katılım için slot/pay satın alımı dahil — işbu maddede tanımlanan veli onayı tamamlanana kadar **kapalıdır** ve Kullanıcı tarafından kullanılamaz. Reşit olmayan kullanıcının maça katılımı, yalnızca o katılımın bir ödeme (slot/pay satın alımı) gerektirdiği ölçüde bu kapsamdadır; ödeme gerektirmeyen katılım kısıtlanmaz;
 - (c) Madde 3.4 uyarınca veli/vasi tarafından bizzat oluşturulmuş 13 yaş altı hesaplarda, Platform içi mesajlaşma işlevi ve profilin diğer kullanıcılara görünürlüğü de, işbu maddede düzenlenen veli onayı tamamlanana kadar ayrıca kısıtlanabilir; bu kısıtlamanın kapsamı OYNA tarafından Uygulama üzerinden belirlenir ve duyurulur.
 
 ### 4.3 Veli/Vasi Onay Süreci
@@ -123,6 +123,7 @@ Onay veren veli/vasi; madde 4.4'te tanımlanan **olağan** işlem hacmi ve nitel
 
 ### 4.7 Uygulama Notu
 
+<!-- YAYINLA -->
 > İşbu maddede tarif edilen veli doğrulama akışı — sınırlı mod; küçüğün hesabında görünen Veli Bağlantı Kodu; velinin kendi hesabından bu kodu girerek ad-soyad / T.C. Kimlik No / doğum tarihi beyanı ve muvafakat onayı; T.C. bilgilerinin şifrelenerek (hash) saklanması; çocuğun 18 yaşını doldurmasıyla sınırlı modun otomatik kalkması — **Uygulamada fiilen uygulanmaktadır**. Onayın hukuken geçerli sayılması bu akışın eksiksiz işletilmesine bağlıdır; salt sözleşme metninin varlığı tek başına yeterli değildir. Bu belgenin eki niteliğindeki tam metin için bkz. [Veli Muvafakatnamesi](08-veli-muvafakatnamesi.md).
 
 ---
@@ -155,17 +156,19 @@ Rezervasyon bedeline ilişkin fatura veya e-arşiv fatura/makbuz düzenleme yük
 
 Rezervasyon iptali ve iadeye ilişkin esaslar, **Kullanıcının kendi iradesiyle gerçekleştirdiği iptallerde**, aşağıdaki kademeli yapıya göre uygulanır (kademeler arasında çakışma bulunmayacak şekilde, saat aralıkları birbirini dışlayıcı olarak tanımlanmıştır):
 
-- Rezervasyon/maç saatine **24 saat ve üzerinde (≥ 24 saat)** kala yapılan iptallerde: ödenen tutarın **tamamı** OYNA cüzdanına iade edilir (yalnızca ödeme altyapısı sağlayıcısının kestiği işlem bedeli iade dışıdır).
-- Rezervasyon/maç saatine **6 saat ile 24 saat arasında (6. saat dahil, 24. saat hariç)** kala yapılan iptallerde: ödenen tutarın **%50**'si OYNA cüzdanına iade edilir.
+- Rezervasyon/maç saatine **24 saat ve üzerinde (≥ 24 saat)** kala yapılan iptallerde: ödenen tutarın **tamamı**, ödemenin yapıldığı karta iade edilir (yalnızca ödeme altyapısı sağlayıcısının kestiği işlem bedeli iade dışıdır).
+- Rezervasyon/maç saatine **6 saat ile 24 saat arasında (6. saat dahil, 24. saat hariç)** kala yapılan iptallerde: ödenen tutarın **%50**'si, ödemenin yapıldığı karta iade edilir.
 - Rezervasyon/maç saatine **6 saatten az** kala yapılan iptallerde: iade yapılmaz.
 
-**İadenin yapılacağı yer:** Bu maddedeki tüm iadeler, ödemenin yapıldığı karta değil, Kullanıcının **OYNA cüzdanına** işlenir. Cüzdandaki tutar Platform içindeki tüm ödemelerde kullanılabilir; para çekimi özelliği açıldığında ayrıca madde 6.5'teki koşullarla banka hesabına çekilebilir (madde 6.5.3 yürürlük durumu).
+**İadenin yapılacağı yer:** Bu maddedeki tüm iadeler, **ödemenin yapıldığı karta** işlenir (Mesafeli Sözleşmeler Yönetmeliği m.15/2). OYNA, Kullanıcı adına bakiye tutmaz; iade tutarı Platform içinde harcanmak üzere bir bakiyeye aktarılmaz. Tutarın karta yansıma süresi bankaya bağlıdır.
 
 Yukarıdaki kademeli yapı yalnızca Kullanıcı kaynaklı iptallere uygulanır. Tesis veya OYNA kaynaklı, mücbir sebep dışındaki iptal/ifa edilememe hâllerinde madde 6.4; mücbir sebep hâllerinde ise madde 12.3 uygulanır.
 
+**Tesise özel süre:** Yukarıdaki 24/6 saat eşikleri Platform varsayılanıdır. Bir Tesis kendi rezervasyon ve maçları için daha uzun ya da daha kısa bir ücretsiz iptal süresi belirleyebilir. Bu durumda o rezervasyon/maç için Tesisin belirlediği süre uygulanır ve ilgili süre, ödeme yapılmadan önce ilgili ekranda Kullanıcıya gösterilir.
+
 ### 6.2 Ayrıntılı Düzenleme
 
-İptal/iade süreçlerine, ödeme yöntemine ve iade tutarının OYNA cüzdanına işlenmesine ilişkin ayrıntılı hükümler Mesafeli Satış ve İptal/İade Koşulları belgesinde; cüzdanın kullanımı ve cüzdandan para çekimine ilişkin hükümler ise işbu Sözleşmenin madde 6.5'inde ("Cüzdan ve Para Çekimi") düzenlenmiştir. Her iki belge de işbu Sözleşmenin ayrılmaz parçasıdır ve çelişki hâlinde iptal/iade konusunda özel hüküm niteliğindeki Mesafeli Satış ve İptal/İade Koşulları esas alınır.
+İptal/iade süreçlerine, ödeme yöntemine ve iadenin karta işlenmesine ilişkin ayrıntılı hükümler Mesafeli Satış ve İptal/İade Koşulları belgesinde düzenlenmiştir. Bu belge işbu Sözleşmenin ayrılmaz parçasıdır ve çelişki hâlinde iptal/iade konusunda özel hüküm niteliğindeki Mesafeli Satış ve İptal/İade Koşulları esas alınır. Madde 6.5'teki cüzdan düzenlemesi **YÜRÜRLÜKTE DEĞİLDİR**.
 
 ### 6.3 Mücbir Sebep ile Bağlantı
 
@@ -175,9 +178,9 @@ Mücbir sebep hâllerinde iptal/iade esasları madde 12.3'te düzenlenen ilkeler
 
 Rezervasyonun; Kullanıcıdan kaynaklanmayan bir sebeple, ilgili Tesisin veya OYNA'nın inisiyatifiyle ve **mücbir sebep dışında** (madde 12'de tanımlanan mücbir sebep hâlleri hariç) iptal edilmesi veya ifa edilememesi hâlinde, Kullanıcıya:
 
-**(a) Tam iade:** Ödediği bedelin tamamı, herhangi bir kesinti yapılmaksızın ve derhal Kullanıcının OYNA cüzdanına iade edilir; VE
+**(a) Tam iade:** Ödediği bedelin tamamı, herhangi bir kesinti yapılmaksızın ve derhal ödemenin yapıldığı karta iade edilir; VE
 
-**(b) Simetrik telafi bedeli:** Bunun yanında, iptalin/ifa edilemezliğin Kullanıcıya bildirildiği an ile rezervasyon saati arasında kalan süreye göre, madde 6.1'deki kademeli yapıyla simetrik olarak işleyen aşağıdaki oranda ayrı bir telafi bedeli, Kullanıcının OYNA cüzdanına ödenir. Kullanıcı bu tutarı Platform içinde harcayabilir; para çekimi özelliği açıldığında madde 6.5 uyarınca banka hesabına da çekebilir (madde 6.5.3 yürürlük durumu):
+**(b) Simetrik telafi bedeli:** Bunun yanında, iptalin/ifa edilemezliğin Kullanıcıya bildirildiği an ile rezervasyon saati arasında kalan süreye göre, madde 6.1'deki kademeli yapıyla simetrik olarak işleyen aşağıdaki oranda ayrı bir telafi bedeli, **ödemenin yapıldığı karta** ödenir (madde 6.5 yürürlükte olmadığından Kullanıcı adına bakiye tutulmaz):
 
   - Rezervasyon saatine **24 saat ve öncesinde** bildirilen iptal/ifa edilememe: ek telafi bedeli aranmaz; yalnızca (a) bendindeki tam iade uygulanır.
   - Rezervasyon saatine **24 saatten az** kala bildirilen iptal/ifa edilememe: bedelin **%50**'si tutarında telafi bedeli ayrıca ödenir.
@@ -186,6 +189,13 @@ Rezervasyonun; Kullanıcıdan kaynaklanmayan bir sebeple, ilgili Tesisin veya OY
 Bu telafi bedelinin nihai olarak Tesis ile OYNA arasında hangi oranda paylaşılacağı, OYNA ile ilgili Tesis arasındaki ayrı sözleşmede belirlenir; ancak Kullanıcıya karşı ödeme yükümlülüğü bakımından OYNA, telafi bedelinin Kullanıcıya eksiksiz ve zamanında ödenmesini sağlamakla yükümlüdür.
 
 ### 6.5 Cüzdan ve Para Çekimi
+
+<!-- YAYINLA -->
+> **YÜRÜRLÜKTE DEĞİLDİR (17 Ağustos 2026).** OYNA, 6493 sayılı Kanun kapsamındaki
+> elektronik para/ödeme hizmeti lisansına sahip olmadığından **Kullanıcı adına
+> bakiye tutmamaktadır**. Bu madde, cüzdan özelliği ileride lisanslı bir modelle
+> açılırsa uygulanmak üzere metinde bırakılmıştır. Yürürlükte olduğu sürece
+> ödemeler işlem başına karttan alınır ve iadeler karta yapılır (madde 6.1-6.2).
 
 **6.5.1 Cüzdan nedir?**
 
@@ -359,7 +369,7 @@ Mücbir sebep hâlinin varlığı, etkilediği ölçüde ve süreyle, tarafları
 
 ### 12.3 İade Yükümlülüğünün Devamı
 
-Mücbir sebep hâli, madde 6'da düzenlenen **iade yükümlülüklerini ortadan kaldırmaz**. Mücbir sebep nedeniyle rezervasyon/maçın gerçekleştirilememesi hâlinde, Kullanıcının bu konuda herhangi bir kusuru bulunmadığından, madde 6.1'de düzenlenen ve **Kullanıcı kaynaklı iptallere özgü** kademeli (yüzdesel) iade tablosu **uygulanmaz**; bu durumda Kullanıcının ödediği tutarın (kapora dahil) **tamamı**, iptal/imkânsızlık hâlinin OYNA tarafından öğrenilmesinden itibaren makul süre içinde ve her hâlükârda **14 (on dört) gün içinde**, herhangi bir kesinti yapılmaksızın Kullanıcının OYNA cüzdanına iade edilir. Kullanıcı bu tutarı Platform içinde harcayabilir; para çekimi özelliği açıldığında madde 6.5 uyarınca banka hesabına da çekebilir (madde 6.5.3 yürürlük durumu). Mücbir sebep, yalnızca OYNA'nın ayrıca tazminat ödeme yükümlülüğünü (madde 10 ve 12.2 çerçevesinde) etkiler; ödenmiş bedelin tam iadesini hiçbir şekilde engellemez veya sınırlamaz.
+Mücbir sebep hâli, madde 6'da düzenlenen **iade yükümlülüklerini ortadan kaldırmaz**. Mücbir sebep nedeniyle rezervasyon/maçın gerçekleştirilememesi hâlinde, Kullanıcının bu konuda herhangi bir kusuru bulunmadığından, madde 6.1'de düzenlenen ve **Kullanıcı kaynaklı iptallere özgü** kademeli (yüzdesel) iade tablosu **uygulanmaz**; bu durumda Kullanıcının ödediği tutarın (kapora dahil) **tamamı**, iptal/imkânsızlık hâlinin OYNA tarafından öğrenilmesinden itibaren makul süre içinde ve her hâlükârda **14 (on dört) gün içinde**, herhangi bir kesinti yapılmaksızın **ödemenin yapıldığı karta** iade edilir (madde 6.5 yürürlükte olmadığından Kullanıcı adına bakiye tutulmaz). Mücbir sebep, yalnızca OYNA'nın ayrıca tazminat ödeme yükümlülüğünü (madde 10 ve 12.2 çerçevesinde) etkiler; ödenmiş bedelin tam iadesini hiçbir şekilde engellemez veya sınırlamaz.
 
 ---
 

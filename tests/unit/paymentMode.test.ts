@@ -1,4 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import type { PaymentModeResolution } from '../../types';
 
 // supabaseClient'ı izole et — bu testler ağ çağrısı yapmaz.
@@ -97,5 +99,45 @@ describe('paymentModeReasonText — sahibe dürüst gerekçe', () => {
   it('tesis kendi tercihiyle çalışıyorsa ek açıklama göstermez', () => {
     expect(paymentModeReasonText({ ...baseRes, reason: 'PITCH_CHOICE' })).toBeNull();
     expect(paymentModeReasonText({ ...baseRes, reason: 'GLOBAL_HYBRID' })).toBeNull();
+  });
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+// SATILAMAZ SAAT KAPISI (17 Ağustos 2026 — ödeme ONLINE_ONLY'ye alınırken)
+// ════════════════════════════════════════════════════════════════════════════
+//
+// Canlı veride saat ücreti 0 ₺ olan bir tarife vardı. Nakit modunda zararsızdı;
+// kart açılınca zincir kırılıyordu: rezervasyon CONFIRMED yazılıyor, ödeme
+// adımı 0 tutarla durduğu için para alınamıyordu — saat dolu, kasa boş.
+// Kapı, rezervasyon YAZILMADAN önce durur.
+describe('Satılamaz saat kapısı · göç ve hata sözlüğü', () => {
+  const goc = readFileSync(
+    join(process.cwd(), 'supabase/migrations/20260905000011_satilamaz_saat_kapisi.sql'),
+    'utf8',
+  );
+
+  it('kapı rezervasyon INSERT edilmeden ÖNCE çalışır', () => {
+    const kapiIdx = goc.indexOf('SLOT_NOT_SELLABLE');
+    const insertIdx = goc.indexOf('INSERT INTO public.pitch_bookings');
+    expect(kapiIdx).toBeGreaterThan(-1);
+    expect(insertIdx).toBeGreaterThan(-1);
+    expect(kapiIdx).toBeLessThan(insertIdx);
+  });
+
+  it('yalnız uygulama rezervasyonunu ve yalnız online açıkken kapatır', () => {
+    expect(goc).toContain("p_source = 'APP_BOOKING'");
+    expect(goc).toContain("resolve_payment_mode(p_pitch_id)->>'online_allowed'");
+  });
+
+  it('KAPORA 0 olan tarifeyi kapatmaz (istemci %30 hesaplıyor)', () => {
+    // Bu kural bilerek dar: kaporaya da bakarsak bugün ÇALIŞAN saatler kapanır.
+    expect(goc).not.toContain('COALESCE(v_deposit, 0) <= 0');
+    expect(goc).toContain('COALESCE(v_price, 0) <= 0');
+  });
+
+  it('kullanıcı ham hata kodu görmez', () => {
+    const em = readFileSync(join(process.cwd(), 'utils/errorMap.ts'), 'utf8');
+    expect(em).toContain('SLOT_NOT_SELLABLE:');
+    expect(em).toContain('fiyat henüz tanımlanmamış');
   });
 });

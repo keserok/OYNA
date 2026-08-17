@@ -35,7 +35,7 @@ import {
 import { resolveTariffForSlot } from '../services/tariffService';
 import {
   DEFAULT_SLOT_MINUTES, activeTariffsFor, normalizeSlotMinutes,
-  slotMinutesFromLabel, slotPriceUnitLabel,
+  slotMinutesFromLabel, slotPriceUnitLabel, isSlotWithinListingCutoff,
 } from '../shared/slotGrid';
 import { fetchMyFavoritePitchIds, togglePitchFavorite } from '../services/pitchFavoritesService';
 import { recordPitchView } from '../services/pitchShowcaseService';
@@ -649,7 +649,10 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
           today,
         );
         if (wh.closed) { result[p.id] = 0; return; }
-        const ranges = generateSlotRanges(wh);
+        // Listeleme sınırı: rozet de vitrinle aynı gerçeği saymalı — bitişi
+        // sınırı aşan slot "müsait" SAYILMAZ (slotGrid Kural 5).
+        const ranges = generateSlotRanges(wh)
+          .filter((r) => isSlotWithinListingCutoff(r, p.listingCutoff ?? null));
         // V-7: gece-sarkması sabit "h<6" yerine çalışma penceresinden türetilir.
         // Pencere gece yarısını aşıyorsa (kapanış ≤ açılış) açılış saatinin altındaki
         // slotlar ertesi güne sarkan (gelecek) slotlardır.
@@ -1253,6 +1256,14 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
   // Admin tesis bazlı online rezervasyon kapatması (sunucu BOOKING_DISABLED ile
   // zaten reddeder; arayüz baştan kapatır ki oyuncu boşa uğraşmasın).
   const bookingDisabled = selectedPitch?.bookingDisabledByAdmin === true;
+
+  // NAKİT REZERVASYON KAPALI (kurucu kararı, 17 Ağu 2026 — §2.12): uygulamadan
+  // rezervasyon yalnız kartla kapora ile alınır. Kapı SUNUCUDADIR
+  // (b_nakit_rezervasyon_kapisi → CASH_BOOKING_DISABLED, hata sözlüğünde
+  // Türkçesi var). Vitrine ayrı bir "tesisi ara" uyarısı KONMAZ (kurucu
+  // kararı, 17 Ağu): lansmanda anlaşmalı sahaların hepsinde online ödeme
+  // açık olacağı için bu durum kullanıcıya normalde hiç görünmez; ekranı
+  // istisna metniyle kalabalıklaştırmak yerine tek dürüst hata mesajı yeter.
 
   const amenitySplit = useMemo(() => splitAmenities(selectedPitch?.amenities ?? []), [selectedPitch]);
 
@@ -1913,6 +1924,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
                 </div>
               )}
 
+
               {/* Tarih Seç — kaydırılabilir 14 gün, şeridin SONUNDA takvim.
                   Önceden yalnız 5 gün vardı ve takvim ayrı bir başlık düğmesindeydi;
                   oyuncu iki haftalık planını şeritte göremiyordu. Artık iki hafta
@@ -2067,6 +2079,14 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
                     ))}
                   </div>
                 </div>
+
+                {/* Listeleme sınırı — dürüst beyan: akşam saatleri "dolu" değil,
+                    uygulama kanalına hiç açılmamış. Oyuncu sebepsiz boşluk görmesin. */}
+                {selectedPitch?.listingCutoff && (
+                  <p className="mb-3 text-[0.6875rem] font-semibold text-ink-4 leading-relaxed">
+                    Bu tesis uygulamadan <b className="text-white/80">{selectedPitch.listingCutoff}</b>&apos;a kadar rezervasyon alıyor; sonraki saatler için tesisi arayabilirsin.
+                  </p>
+                )}
 
                 <div className="grid grid-cols-3 gap-2.5">
                   {filteredSlots.map(slot => {

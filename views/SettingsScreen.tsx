@@ -22,6 +22,7 @@ import FieldRolePage from '../components/settings/FieldRolePage';
 import SupportPage from '../components/settings/SupportPage';
 import { APP_VERSION } from '../utils/appVersion';
 import { getMyStaffPitches, staffAcceptInvite, type StaffPitch } from '../services/staffService';
+import { dosyaKaydetVeyaPaylas } from '../utils/dosyaKaydet';
 
 interface SettingsScreenProps {
   onBack: () => void;
@@ -155,14 +156,15 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
       };
 
       const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `oyna-tesis-${Date.now()}.json`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      // Pakette `<a download>` sessizce çalışmaz (iOS/Android WebView) — KVKK
+      // veri dışa aktarımı hiç inmiyordu. Ortak yardımcı önce native paylaşım
+      // sayfasını açar. SONUCU YOK SAYMA: eskiden dönen değere bakılmıyordu,
+      // dosya hiç kaydedilmese bile ekran sessizce "olmuş gibi" duruyordu.
+      const sonuc = await dosyaKaydetVeyaPaylas(blob, `oyna-tesis-${Date.now()}.json`, 'OYNA Tesis Verisi');
+      if (sonuc === 'PAYLASILDI') showToast('Verilerin paylaşıma hazır. Açılan pencereden kaydedebilirsin.');
+      else if (sonuc === 'INDIRILDI') showToast('Tesis verilerin indirildi.');
+      else if (sonuc === 'DESTEKLENMIYOR') setExportError('Bu cihazda dosya kaydedilemedi. Uygulamayı güncelle veya web sürümünden dene.');
+      // 'IPTAL' → kullanıcı kendisi vazgeçti; ne başarı ne hata mesajı verilir.
     } catch (err) {
       console.error('handleExportOwnerData:', err);
       const raw = err instanceof Error ? err.message : String(err);
@@ -240,8 +242,13 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
           ekranı profil ve ana sayfayla uyumlu olsun): 44px yuvarlak geri
           düğmesi + küçük, harf aralıklı ekran adı. Eskiden 40px düğme ve
           kalın 20px başlık vardı; iki ekran yan yana açıldığında başka bir
-          uygulamadan gelmiş gibi duruyordu. */}
-      <header className="px-5 pt-5 pb-3 flex items-center gap-3 sticky top-0 bg-[#0A0E14]/90 backdrop-blur-xl z-20">
+          uygulamadan gelmiş gibi duruyordu.
+          `pt-safe-5` satır içi `pt-[calc(var(--safe-top)+1.25rem)]` ile AYNI
+          boşluğu verir (5 = 1.25rem). Sınıfa çevrildi çünkü çevrimdışı şeridi
+          telafisi (index.css · body.offline-banner-on) yalnız sınıflara
+          yazılabiliyor: uçak modunda kırmızı şerit geri düğmesinin üstünü
+          örtüyordu. */}
+      <header className="px-5 pt-safe-5 pb-3 flex items-center gap-3 sticky top-0 bg-[#0A0E14]/90 backdrop-blur-xl z-20">
         <button
           onClick={onBack}
           className="w-11 h-11 shrink-0 flex items-center justify-center bg-surface-1/[0.75] rounded-full border border-white/[0.08] text-white hover:bg-white/10 active:scale-95 transition-all"

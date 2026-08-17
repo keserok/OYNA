@@ -1,12 +1,13 @@
 # Çerez Politikası
 
-> **Durum:** Yayında · **Son güncelleme:** 12.07.2026 · **PR:** #76
+> **Durum:** Yayında · **Son güncelleme:** 15.07.2026 · **PR:** #76
+> **AÇIK KONU:** `public/cerez-politikasi.html` elle tutuluyor ve hâlâ 12.07.2026 diyor — bkz. `sozlesmeler/ic-notlar/ACIK-KONULAR.md` A3.
 > **Uygulandığı yerler:** `public/cerez-politikasi.html` (herkese açık — https://oyna.app/cerez-politikasi.html) ve `views/LegalScreen.tsx → CEREZ` (uygulama içi, aynı içerik)
 > **Kaynak:** Listelenen depolama teknolojileri kod tabanı taranarak doğrulanmıştır (`utils/observability.ts`, `supabaseClient.ts`).
 
 ---
 
-**Son güncelleme: 12.07.2026**
+**Son güncelleme: 15.07.2026**
 
 Bu politika, OYNA'nın web yüzeylerinde (oyna.app ve alt sayfaları, web uygulaması) kullanılan çerezleri ve tarayıcı depolama teknolojilerini (localStorage/sessionStorage gibi) açıklar. Mobil uygulamada çerez kullanılmaz; cihaz izinleri ve veri işleme [Gizlilik Politikası'nda](02-gizlilik-politikasi.md) ayrıca açıklanmıştır.
 

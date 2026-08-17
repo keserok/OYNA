@@ -370,17 +370,59 @@
   --oy-allcard-w:   128px;  /* şeritteki "TÜM MAÇLAR" kartı */
   --oy-matchphoto-h: 86px;  /* maç kartı fotoğraf bandı */
   --oy-tap-min:      48px;  /* en küçük dokunma hedefi (erişilebilirlik) */
+  /* Alt menünün (components/BottomNav.tsx) kapladığı yükseklik — GÜVENLİ ALAN
+     HARİÇ. Nav kendi içinde `pb-safe` kullandığı için çentik payını zaten
+     kendisi ekler; bu değere bir kez daha eklenirse çift sayılır.
+     Değer 7.5rem: `.pb-safe-nav` yıllardır bu sayıyı kullanıyordu, tek fark
+     artık TEK YERDE duruyor — uyarı balonu da aynı sayıyı okuyabilsin diye
+     (aksi hâlde balon nav'ın arkasında kalıyordu, bkz. .uyari-balonu). */
+  --oy-nav-h:      7.5rem;
 }
 
-/* ─── iOS Safe Area Desteği ─────────────────────────────────────────────────
-   iPhone X ve sonrası (notch / Dynamic Island) için gerekli.
-   viewport-fit=cover ile birlikte çalışır.
+/* ─── Güvenli alanlar (iOS çentiği + Android 15/16 kenardan kenara) ──────────
+   iOS: `env(safe-area-inset-*)` + viewport-fit=cover.
+
+   ANDROID 15+ (hedef sürüm 35 ve üstü): sistem artık uygulamayı ZORLA
+   kenardan kenara çizer — durum çubuğu ve gezinme çubuğu web içeriğinin
+   ÜSTÜNE biner, `overlaysWebView: false` ayarı yok sayılır. Capacitor 8 bunun
+   için gömülü `SystemBars` eklentisiyle gelir ve gerçek ölçüleri
+   `--safe-area-inset-*` değişkenlerine YAZAR:
+     · Yeni WebView (140+) → ölçüler WebView'a da geçirilir; `env()` çalışır.
+     · Eski WebView       → WebView fiziksel olarak içeri alınır ve
+                            değişkenler 0 yazılır (çift boşluk olmaz).
+   İki kaynağın `max()`'ını almak her iki yolda da DOĞRU sonucu verir; tek
+   başına `env()` eski WebView'da 0 döndüğü için başlık durum çubuğunun
+   altında kalıyordu.
 ────────────────────────────────────────────────────────────────────────────── */
 :root {
-  --safe-top:    env(safe-area-inset-top, 0px);
-  --safe-bottom: env(safe-area-inset-bottom, 0px);
-  --safe-left:   env(safe-area-inset-left, 0px);
-  --safe-right:  env(safe-area-inset-right, 0px);
+  --safe-top:    max(env(safe-area-inset-top, 0px),    var(--safe-area-inset-top, 0px));
+  --safe-bottom: max(env(safe-area-inset-bottom, 0px), var(--safe-area-inset-bottom, 0px));
+  --safe-left:   max(env(safe-area-inset-left, 0px),   var(--safe-area-inset-left, 0px));
+  --safe-right:  max(env(safe-area-inset-right, 0px),  var(--safe-area-inset-right, 0px));
+}
+
+/* ─── Küçük ama ZORUNLU dokunma hedefleri ────────────────────────────────────
+   Onay kutuları tasarımda 20px'tir (metnin yanında büyük bir kare çirkin
+   durur). Ama Apple 44pt, Google 48dp altındaki hedefleri "dokunulamaz"
+   sayar; parmakla ıskalanan bir KVKK kutusu kaydı tamamen durdurur.
+   Çözüm: GÖRÜNEN kutu 20px kalır, DOKUNMA alanı görünmez bir katmanla
+   büyür. Kapsayıcı `position: relative` olur.
+
+   NEDEN 44px DEĞİL, `--oy-tap-min` (48px): iki mağazanın alt sınırı farklı
+   (Apple 44, Google 48). 44 yazılırsa Android'de sınırın ALTINDA kalınır ve
+   projenin geri kalanı (Dashboard vb. `var(--oy-tap-min)` kullanır) ile iki
+   ayrı standart oluşur. Tek ölçüyle ikisini birden karşılıyoruz.
+   Sınıf adı da ölçüyü içermez — ölçü değişince ad yalan söylemesin.
+────────────────────────────────────────────────────────────────────────────── */
+.dokunma-hedefi { position: relative; }
+.dokunma-hedefi::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: var(--oy-tap-min);
+  height: var(--oy-tap-min);
+  transform: translate(-50%, -50%);
 }
 
 /* Yardımcı sınıflar — BottomNav ve Header'da kullanılır */
@@ -388,13 +430,81 @@
 .safe-bottom { padding-bottom: var(--safe-bottom); }
 .pb-safe     { padding-bottom: calc(var(--safe-bottom) + 1rem); }
 .pt-safe     { padding-top:    calc(var(--safe-top) + 1rem); }
-.pb-safe-nav { padding-bottom: calc(var(--safe-bottom) + 7.5rem); }
+.pb-safe-nav { padding-bottom: calc(var(--safe-bottom) + var(--oy-nav-h)); }
+
+/* ─── Uyarı balonu (toast) konumu ────────────────────────────────────────────
+   SORUN (denetim B5): balon `bottom: 24px` ile sabitlenmişti. "Saha adı
+   gerekli" gibi doğrulama uyarıları klavye açıkken KLAVYENİN ARKASINDA,
+   sekme köklerinde ise ALT MENÜNÜN ARKASINDA kalıyordu. Kullanıcı hiçbir şey
+   göremediği için düğmeyi bozuk sanıyor ve tekrar tekrar basıyordu.
+
+   ÇÖZÜM — üç payı da hesaba kat:
+     · `--safe-bottom`  : çentikli cihazın ana ekran çubuğu.
+     · Klavye payı      : İKİ ölçünün BÜYÜĞÜ (toplamı değil — toplamak çift
+       telafi olurdu):
+         `--kb-height`     KABUĞA göre ölçülür; kabuğu sistem küçülttüyse 0'dır
+                           (services/keyboardManager.ts · ortulenYukseklik).
+         `--balon-klavye`  PENCEREYE göre ölçülür ve balonun kendisine yazılır
+                           (components/common/Toast.tsx). Gerekli, çünkü
+                           `position: fixed` öğeler kabuğa değil pencereye
+                           yerleşir: iOS'ta `resize: Body` ile body kısalınca
+                           --kb-height haklı olarak 0 olur ama balon yine
+                           klavyenin altında kalırdı.
+     · `--oy-nav-h`     : alt menü YALNIZ çizildiğinde eklenir.
+
+   Alt menünün varlığını `:has()` ile DOM'dan okuyoruz: nav yalnız sekme
+   köklerinde render edilir (App.tsx · showBottomNav), o yüzden sabit bir pay
+   ayırmak maç kurma / ödeme gibi menüsüz ekranlarda balonu boşluğa iterdi.
+
+   ÜÇ ALT MENÜNÜN ÜÇÜ DE SAYILIR: oyuncu (components/BottomNav.tsx), kaleci/hakem
+   (views/ServiceDashboard.tsx) ve işletme (views/owner/.../OwnerBottomNav.tsx)
+   artık aynı `aria-label="Ana Gezinti"` etiketini taşır — etiket zaten doğruydu,
+   üçü de bulunduğu panelin ANA gezintisidir ve aynı anda yalnız biri çizilir
+   (App.tsx: `showBottomNav` sekme köklerine bakar; işletme ve servis panelleri
+   sekme kökü değildir). Eskiden yalnız oyuncu menüsü etiketliydi ve kaleci/hakem
+   ekranında geri bildirim balonu menünün ARKASINDA kalıyordu.
+   Pay `--oy-nav-h` ile hesaplanır — bu, üç menünün EN UZUNU olan oyuncu
+   menüsünün ölçüsüdür; kısa menülerde balon birkaç piksel daha yukarıda durur.
+   Bilinçli tercih: fazladan boşluk görünür kalır, eksik boşluk mesajı GİZLER.
+   `:has()` desteklemeyen eski bir motorda taban kural geçerli kalır — bugünkü
+   davranıştan yine de iyidir (güvenli alan + klavye payı orada da var).
+────────────────────────────────────────────────────────────────────────────── */
+.uyari-balonu {
+  bottom: calc(
+    var(--safe-bottom, 0px) + max(var(--kb-height, 0px), var(--balon-klavye, 0px)) + 1.5rem
+  );
+}
+body:has(nav[aria-label="Ana Gezinti"]) .uyari-balonu {
+  bottom: calc(
+    var(--safe-bottom, 0px) + max(var(--kb-height, 0px), var(--balon-klavye, 0px))
+    + var(--oy-nav-h) + 0.75rem
+  );
+}
 /* MOB-M1: OwnerBottomNav'ın kullandığı sınıf TANIMSIZDI (hayalet) — py-2'nin
    alt yarısı + home-çubuğu boşluğu. Çentikli cihazda nav artık çakışmaz. */
 .safe-area-pb { padding-bottom: calc(var(--safe-bottom) + 0.5rem); }
-/* MOB-M4/M5/M6: üst/alt güvenli alan + bileşen dolgusu birleşimleri */
+/* MOB-M4/M5/M6: üst/alt güvenli alan + bileşen dolgusu birleşimleri.
+
+   NEDEN 5 ve 8 SONRADAN EKLENDİ: bazı başlıklar aynı hesabı SATIR İÇİNDE
+   yazıyordu (`pt-[calc(var(--safe-top)+1.25rem)]`). Ölçü doğruydu ama satır içi
+   yazılan bir değer CSS'ten hedeflenemez — aşağıdaki çevrimdışı şeridi telafisi
+   (`body.offline-banner-on .pt-safe-*`) o başlıklara ULAŞMIYORDU: uçak modunda
+   kırmızı şerit açılınca geri düğmesinin üstü şeridin altında kalıyordu.
+   Sayılar Tailwind ölçeğiyle aynıdır (5 = 1.25rem, 8 = 2rem), böylece satır içi
+   değerler BİREBİR aynı boşlukla sınıfa çevrilebildi — tasarım değişmedi. */
 .pt-safe-2   { padding-top:    calc(var(--safe-top) + 0.5rem); }
+.pt-safe-5   { padding-top:    calc(var(--safe-top) + 1.25rem); }
 .pt-safe-6   { padding-top:    calc(var(--safe-top) + 1.5rem); }
+.pt-safe-8   { padding-top:    calc(var(--safe-top) + 2rem); }
+/* Servis (kaleci/hakem) başlıkları: taban 3rem, çentik payı büyükse o kazanır.
+   `.pt-safe-baslik` ile aynı fikir, yalnız tabanı 3.25rem değil 3rem — mevcut
+   ölçüyü 4px bile oynatmamak için ayrı sınıf açıldı. */
+.pt-safe-baslik-3 { padding-top: max(calc(var(--safe-top) + 1rem), 3rem); }
+/* YAPIŞKAN başlık için üst dayanak. `sticky top-0` yazan bir başlık kaydırma
+   sırasında ekranın en TEPESİNE yapışır — yani Dynamic Island'ın altına girer;
+   başlığın kendi dolgusu bunu kurtarmaz (dolgu yalnız İÇERİĞİ aşağı iter, kutu
+   yine 0'a yapışır). Güvenli alan 0 olan cihazda `top: 0px` olur: değişiklik yok. */
+.top-safe { top: var(--safe-top); }
 /* Sahalar ekranının başlığı (views/PitchDiscovery.tsx).
    `pt-safe` yalnız `env(safe-area-inset-top) + 1rem` verir. Güvenli alanı
    BİLDİRMEYEN cihazda (bazı Android'ler, tarayıcı, webview yapılandırması
@@ -545,9 +655,15 @@ body.offline-banner-on { --offline-banner-h: calc(max(var(--safe-top), 0.5rem) +
 body.offline-banner-on .safe-top      { padding-top: calc(var(--safe-top) + var(--offline-banner-h)); }
 body.offline-banner-on .pt-safe       { padding-top: calc(var(--safe-top) + 1rem   + var(--offline-banner-h)); }
 body.offline-banner-on .pt-safe-2     { padding-top: calc(var(--safe-top) + 0.5rem + var(--offline-banner-h)); }
+body.offline-banner-on .pt-safe-5     { padding-top: calc(var(--safe-top) + 1.25rem + var(--offline-banner-h)); }
 body.offline-banner-on .pt-safe-6     { padding-top: calc(var(--safe-top) + 1.5rem + var(--offline-banner-h)); }
+body.offline-banner-on .pt-safe-8     { padding-top: calc(var(--safe-top) + 2rem   + var(--offline-banner-h)); }
 body.offline-banner-on .pt-safe-baslik { padding-top: calc(max(calc(var(--safe-top) + 1rem), 3.25rem) + var(--offline-banner-h)); }
+body.offline-banner-on .pt-safe-baslik-3 { padding-top: calc(max(calc(var(--safe-top) + 1rem), 3rem) + var(--offline-banner-h)); }
 body.offline-banner-on .safe-area-top { padding-top: calc(var(--safe-top) + 1rem   + var(--offline-banner-h)); }
+/* Yapışkan başlık şeridin de altına inmeli — yoksa şerit açıkken başlık kaydırma
+   sırasında kırmızı şeridin arkasına girer. */
+body.offline-banner-on .top-safe      { top: calc(var(--safe-top) + var(--offline-banner-h)); }
 /* FAZ0: hayalet sınıf — OwnerKpiGrid vb. `scrollbar-hide` kullanıyordu; `.no-scrollbar` ile aynı. */
 .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
 .scrollbar-hide::-webkit-scrollbar { display: none; }
@@ -712,6 +828,7 @@ body {
   /* Aşağıdaki "iOS yakınlaştırmasını engelle" kuralı `max-width: 768px` ile
      sınırlı olduğu için masaüstünde alanlar 14px kalıyordu; çerçeve içinde
      telefonla aynı 16px olsun. Yalnız #root — admin paneli (#admin-root) hariç. */
+  #root input:not([type]),
   #root input[type="text"],
   #root input[type="number"],
   #root input[type="email"],
@@ -995,8 +1112,25 @@ input:-webkit-autofill:focus {
   -webkit-text-fill-color: #fff;
 }
 
-/* Prevent iOS auto-zoom on form focus by forcing min 16px font-size on mobile viewports */
+/* ─── iOS'un odakta ZIPLAYARAK yakınlaştırmasını engelle ─────────────────────
+   iOS Safari/WKWebView, yazı boyutu 16px'in ALTINDA olan bir alana odaklanınca
+   sayfayı kendiliğinden yakınlaştırır. Yakınlaşan sayfada alt menü ve "ÖDE"
+   düğmesi ekranın dışına kayar; kullanıcı ne yazdığını da göremez.
+
+   EKSİK OLAN (denetim B2): kural yalnız `type` YAZILMIŞ alanları sayıyordu.
+   Oysa React'te `type` belirtilmeyen alan varsayılan olarak metin alanıdır ve
+   kaynakta 83 tane var — kart numarası (components/payment/AddCardScreen.tsx,
+   `text-[0.9375rem]` = 15px) dâhil. Ödeme ekranında bugün yaşanan zıplama tam
+   olarak buydu. `input:not([type])` bu boşluğu kapatır.
+
+   Liste neden hâlâ beyaz liste: onay kutusu / radyo / kaydırıcı / dosya
+   seçici gibi alanların yazı boyutu tasarımda görünen ölçülerini etkileyebilir
+   ve bunlar zaten yakınlaştırma tetiklemez. Tarih/saat alanları da hariç —
+   iOS onları tekerlek seçiciyle açar, yakınlaştırmaz; 16px yazmak yalnız
+   tasarımı bozardı. Kural yalnız dokunmatik/dar ekran bağlamında geçerli.
+────────────────────────────────────────────────────────────────────────────── */
 @media (max-width: 768px) {
+  input:not([type]),
   input[type="text"],
   input[type="number"],
   input[type="email"],

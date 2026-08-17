@@ -47,6 +47,26 @@
         -->
         <property android:name="android.window.PROPERTY_COMPAT_ALLOW_RESTRICTED_ORIENTATION" android:value="true" />
 
+        <!--
+          PUSH BİLDİRİM GÖRÜNÜMÜ (FCM).
+          Bu üç beyan olmadan Android, bildirimin küçük ikonu için UYGULAMA
+          İKONUNU kullanır; uygulama ikonu renkli olduğu için durum çubuğunda
+          BEYAZ BİR KARE olarak çizilir (Android 5'ten beri küçük ikon tek renk
+          olmak zorundadır). Kanal kimliği de burada bildirilmezse FCM kendi
+          "Miscellaneous" kanalını uydurur — kullanıcı bildirim ayarlarında
+          uygulamanın kanalını göremez. Kanalın kendisi açılışta kurulur
+          (notifications/pushService.ts · createChannel), kimlikler aynıdır.
+        -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@drawable/ic_stat_oyna" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_color"
+            android:resource="@color/oyna_bildirim" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="oyna_main" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"

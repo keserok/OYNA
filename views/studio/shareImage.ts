@@ -4,6 +4,7 @@
 // canvas tainting olmaz; dış font gömülmez (sistem yazı tipi yığını).
 import type { TacticState, Slot } from './types';
 import { trUpper } from '../../utils/trUpper';
+import { dosyaKaydetVeyaPaylas, type KaydetSonucu } from '../../utils/dosyaKaydet';
 
 const FONT = "'Inter','Segoe UI',system-ui,-apple-system,Roboto,sans-serif";
 
@@ -183,16 +184,20 @@ export async function svgToPngBlob(svg: string): Promise<Blob> {
 export const tacticToPngBlob = (t: TacticState, opts?: TacticImageOpts): Promise<Blob> =>
   svgToPngBlob(buildTacticSvg(t, opts));
 
-/** Blob'u dosya olarak indirir. */
-export function downloadBlob(blob: Blob, filename: string): void {
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 1500);
+/**
+ * Görseli kullanıcıya ver.
+ *
+ * Eskiden düz `<a download>` kullanıyordu; bu desen PAKETLENMİŞ uygulamada
+ * (iOS WKWebView / Android Capacitor WebView) SESSİZCE hiçbir şey yapmaz —
+ * "indirildi" toast'ı çıkar, dosya ortada yoktur. Artık ortak yardımcıdan
+ * geçer: pakette native yaz+paylaş, tarayıcıda Web Share → klasik indirme
+ * (utils/dosyaKaydet.ts).
+ *
+ * DÖNEN DEĞER YOK SAYILMAMALI: 'IPTAL' ve 'DESTEKLENMIYOR' başarı değildir,
+ * çağıran ekran bu iki durumda "indirildi" DEMEMELİDİR.
+ */
+export async function downloadBlob(blob: Blob, filename: string): Promise<KaydetSonucu> {
+  return dosyaKaydetVeyaPaylas(blob, filename, 'OYNA Taktik');
 }
 
 /** Dosya adı: taktik-adi.png (güvenli). */

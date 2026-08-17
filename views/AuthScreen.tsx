@@ -18,6 +18,9 @@ import { validateFullName, normalizeNameInput } from '../shared/personName';
 const LegalModal = lazy(() =>
   import('../components/common/LegalModal').then((m) => ({ default: m.LegalModal })));
 import type { LegalModalKind } from '../components/common/LegalModal';
+// Klavye örtüşmesinin TEK kaynağı: ölçüm de kural da orada yazılı, burada
+// ikinci bir ölçüm yapılmaz (bkz. components/common/Toast.tsx).
+import { useKlavyeOrtusu, klavyeliAltDolgu } from '../components/common/Toast';
 import heroEmblem from '../assets/auth/hero-emblem.webp';
 import oynaLogo from '../assets/onboarding/oyna-logo.webp';
 import { mapAuthError } from '../utils/errorMap';
@@ -182,6 +185,12 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
   // Demo hesap seçici (main'de aktif): açık/kapalı + o an giriş yapılan hesap
   const [demoPickerOpen, setDemoPickerOpen] = useState(false);
   const [demoLoggingIn, setDemoLoggingIn] = useState<string | null>(null);
+
+  // Bu ekranın kökü `fixed inset-0` — yani PENCEREYE tutunur, kabuğa (body) DEĞİL.
+  // iOS'ta klavye açılınca body kısalır ve `--kb-height` haklı olarak 0 olur;
+  // pencere kısalmadığı için form alanları klavyenin ARKASINDA kalıyordu.
+  // Doğru pay, --kb-height ile pencereye göre ÖLÇÜLEN örtüşmenin büyüğüdür.
+  const klavyeOrtusu = useKlavyeOrtusu();
 
   // Dev/demo modunda "mirackerem" gibi @ içermeyen kısayollar da geçerli sayılır
   const demoMode = isDemoLoginEnabled();
@@ -698,7 +707,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
                 // başlıyor; bu dolgu olmazsa başlık şeridin altında kalır.
                 // Hesap: güvenli alan + şeridin 18px üst boşluğu + 40px yüksekliği + nefes payı.
                 paddingTop: 'calc(var(--safe-top, 0px) + 82px)',
-                paddingBottom: 'calc(var(--safe-bottom, 0px) + var(--kb-height, 0px) + 26px)',
+                paddingBottom: klavyeliAltDolgu(klavyeOrtusu, 26),
               }}
             >
               {/* Başlık — sola hizalı ve sakin. Ortalanmış italik-versal
@@ -859,6 +868,9 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
                     onClick={() => { setAgreed((v) => !v); setError(null); }}
                     aria-label="Yasal onay"
                     aria-pressed={agreed}
+                    /* dokunma-hedefi: görünen kutu 20px kalır, dokunma alanı
+                       48px'e (--oy-tap-min) genişler — index.css */
+                    className="dokunma-hedefi"
                     style={{
                       marginTop: 1, width: 20, height: 20, borderRadius: 6, flexShrink: 0,
                       display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
@@ -1032,7 +1044,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
                 style={{
                   flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden',
                   display: 'flex', flexDirection: 'column', padding: '0 26px',
-                  paddingBottom: 'calc(var(--safe-bottom, 0px) + var(--kb-height, 0px) + 30px)',
+                  paddingBottom: klavyeliAltDolgu(klavyeOrtusu, 30),
                 }}
               >
                 <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 18 }}>

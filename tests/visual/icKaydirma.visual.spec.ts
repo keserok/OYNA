@@ -99,7 +99,7 @@ const SENARYOLAR: Senaryo[] = [
   { gorunum: 'PITCH_DISCOVERY', capa: /TESİS BULUNDU/i },
   { gorunum: 'MATCH_DISCOVERY', capa: /Kodla Katıl/i },
   { gorunum: 'MY_MATCHES', capa: /Saha Kiralamalarım/i },
-  { gorunum: 'WALLET', capa: /Cüzdan Bakiyesi/i },
+  // WALLET kaldırıldı: cüzdan lansmanda kapalı — rota ana ekrana düşer.
   { gorunum: 'PROFILE', capa: /Profil|Güv/i },
   { gorunum: 'SOCIAL', capa: /Arkadaş|Takım/i },
   { gorunum: 'MESSAGES', capa: /Mesaj/i },
@@ -182,7 +182,7 @@ test.describe('İç kaydırıcı — yük altında boyunu korumalı', () => {
 const PANEL_SEKMELERI: { panel: string; sekme: string; ard?: string }[] = [
   { panel: 'SERVICE_DASHBOARD', sekme: 'Ana Sayfa' },
   { panel: 'SERVICE_DASHBOARD', sekme: 'Maç Bul' },
-  { panel: 'SERVICE_DASHBOARD', sekme: 'Cüzdan' },
+  { panel: 'SERVICE_DASHBOARD', sekme: 'Kazançlarım' },
   { panel: 'SERVICE_DASHBOARD', sekme: 'Menü' },
   { panel: 'SERVICE_DASHBOARD', sekme: 'Menü', ard: 'Profilim' },
   { panel: 'SERVICE_DASHBOARD', sekme: 'Menü', ard: 'Ayarlar' },

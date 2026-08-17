@@ -71,6 +71,8 @@ export interface DbPitchRow {
   show_availability_badge?: boolean | null;
   map_label?: string | null;
   booking_disabled_by_admin?: boolean | null;
+  /** Uygulamada listelenen son saat ('HH:MM[:SS]'); null = sınırsız (20260905000002). */
+  listing_cutoff?: string | null;
   working_hours?: { open?: string; close?: string; slot_duration?: number; slotDuration?: number } | null;
   courts?: DbCourtRow[];
   pitch_tariffs?: DbTariff[];
@@ -264,6 +266,9 @@ export const mapDbPitchToUiPitch = (
     showAvailabilityBadge: row.show_availability_badge === true,
     mapLabel: row.map_label?.trim() || undefined,
     bookingDisabledByAdmin: row.booking_disabled_by_admin === true,
+    // Listeleme saat sınırı: oyuncu ızgarası bu değerle süzülür (slotGrid
+    // Kural 5). 'HH:MM:SS' gelirse 'HH:MM'e kırpılır; null = sınırsız.
+    listingCutoff: row.listing_cutoff ? row.listing_cutoff.slice(0, 5) : undefined,
     // Ham working_hours korunur (dizi ya da nesne); gün-bazlı çözümleme
     // buildAvailabilitySlots içinde rezervasyon tarihine göre yapılır.
     workingHoursRaw: wh ?? null,

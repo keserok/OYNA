@@ -140,6 +140,17 @@ let animEl: HTMLElement | null = null;
 /** Animasyonun ekseni — yarıda kesilince doğru özelliği silebilmek için. */
 let animEksen: Eksen = 'v';
 let installed = false;
+/**
+ * Sistemin "hareketi azalt" tercihi AÇIK mı?
+ *
+ * Eskiden bu tercih açıkken kaydırma sistemi HİÇ kurulmuyordu. Yaylanma
+ * gerçekten kalkıyordu — ama aşağı çekip yenileme de aynı motorda olduğu için
+ * 9 ekranda YENİLEME ÖZELLİĞİ birlikte ölüyordu. Yenileme bir süs değil,
+ * işlevdir: hareket duyarlılığı olan kullanıcı da listesini tazeleyebilmeli.
+ * Artık motor kurulur, yalnız ANİMASYON kısmı (esneme + yaylanma + atış)
+ * atlanır.
+ */
+let hareketAzalt = false;
 
 // ── Yardımcılar ──────────────────────────────────────────────────────────
 
@@ -465,7 +476,8 @@ function onTouchMove(e: TouchEvent): void {
   const next = scrollStep(g.pinned, g.anchor, p, g.maxScroll, g.stretch);
   konumYaz(el, eksen, next.scrollTop);
   g.offset = next.offset;
-  setOffset(el, g.offset, eksen);
+  // Hareket azaltmada esneme ÇİZİLMEZ; ölçüm sürer (yenileme eşiği için).
+  if (!hareketAzalt) setOffset(el, g.offset, eksen);
 }
 
 function onTouchEnd(): void {
@@ -481,7 +493,10 @@ function onTouchEnd(): void {
     try { yenileKaydi(); } catch { /* yenileme hatası jesti bozmasın */ }
   }
 
-  if (Math.abs(g.offset) > 0.5) {
+  if (hareketAzalt) {
+    // Animasyon yok: içerik anında yerine oturur (çizilmiş esneme de yoktu).
+    setOffset(g.el, 0, g.dir);
+  } else if (Math.abs(g.offset) > 0.5) {
     springBack(g.el, g.offset, g.dir);
   } else if (Math.abs(g.v) > FLING_MIN_V) {
     fling(g.el, g.v, g.maxScroll, g.stretch, g.dir);
@@ -496,16 +511,16 @@ function onTouchEnd(): void {
  * Kaydırma sistemini kurar. index.tsx'te BİR KEZ çağrılır; ekran başına
  * bir şey yapmak gerekmez.
  *
- * `prefers-reduced-motion` açıksa yaylanma kurulmaz — hareket duyarlılığı
- * olan kullanıcı için bu bir süs değil, rahatsızlık kaynağıdır. Haritanın
- * "tek parmak sayfayı kaydırır" davranışı bundan bağımsızdır (CSS/harita
- * ayarı), yani o kullanıcı da her yerden kaydırabilir.
+ * `prefers-reduced-motion` açıksa YAYLANMA çizilmez — hareket duyarlılığı olan
+ * kullanıcı için esneme bir süs değil, rahatsızlık kaynağıdır. Ama motorun
+ * kendisi yine kurulur: aşağı çekip yenileme aynı jest üzerinden çalışır ve
+ * o kullanıcıdan alınamaz. Haritanın "tek parmak sayfayı kaydırır" davranışı
+ * bundan bağımsızdır (CSS/harita ayarı).
  */
 export function installOynaScrollSystem(): void {
   if (installed || typeof window === 'undefined' || typeof document === 'undefined') return;
   installed = true;
-  const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
-  if (reduced) return;
+  hareketAzalt = !!window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
   // Dokunmatik olmayan cihazda (masaüstü tarayıcı, admin paneli) kurmayız:
   // yaylanacak bir parmak yok, ama `passive:false` dinleyici tarayıcının hızlı
   // kaydırma yolunu gereksiz yere yavaşlatırdı.

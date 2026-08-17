@@ -521,8 +521,10 @@ export const fetchPitchCancelPolicy = async (pitchId: string): Promise<MatchCanc
  * Katılım/ayrılma iade cümlesi — TEK kaynak. Sayılar sahadan gelir.
  * MatchJoin (ödeme bilgi notu) ve MatchCreate (adım metni) aynı cümleyi kurar.
  */
+// Kanal iddiası yok ("cüzdanına" denmez): cüzdan lansmanda kapalı
+// (shared/featureFlags.ts); iadenin nereye döneceğini ödeme yöntemi belirler.
 export const iadeKademesiCumlesi = (p: MatchCancelPolicy): string =>
-  `maça ${p.fullHours} saatten fazla varsa tamamı, ${p.halfHours}–${p.fullHours} saat kala %${p.halfPct}'si cüzdanına döner; ${p.halfHours} saatten az kala iade yapılmaz`;
+  `maça ${p.fullHours} saatten fazla varsa tamamı, ${p.halfHours}–${p.fullHours} saat kala %${p.halfPct}'si iade edilir; ${p.halfHours} saatten az kala iade yapılmaz`;
 
 // ─── IP-04 — Maçtan ayrılma sözleşmesi ──────────────────────────────────────
 // Sunucudaki `_leave_match_quote` çıktısıyla BİREBİR. Ayrılma ekranlarının

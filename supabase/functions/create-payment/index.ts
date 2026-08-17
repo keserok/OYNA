@@ -7,8 +7,8 @@
 // iyzico kimlik doğrulama: IYZWSv2 (HMAC-SHA256).
 //
 // Aksiyonlar:
-//   pay           → 3 akış: BOOKING_DEPOSIT | TOP_UP | MATCH_JOIN (yeni kart
-//                   veya kayıtlı kart token'ı ile; 3DS HTML döner)
+//   pay           → 4 akış: BOOKING_DEPOSIT | TOP_UP | MATCH_JOIN | MATCH_DEPOSIT
+//                   (yeni kart veya kayıtlı kart token'ı ile; 3DS HTML döner)
 //   register-card → cüzdandan bağımsız kart kaydetme (iyzico kart deposu)
 //   create        → eski barındırılan Checkout Form (yedek akış)
 //   confirm-sim   → simülasyon onayı (yalnız SIMULATION modunda)
@@ -16,7 +16,11 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
-const PROVIDER = Deno.env.get('PAYMENT_PROVIDER') ?? 'SIMULATION'
+// FAIL-CLOSED (lansman kararı, 16 Ağu 2026): env verilmemişse ödeme YOLU YOK.
+// Eski varsayılan SIMULATION'dı — env unutulursa sahte kartla GERÇEK harcanabilir
+// bakiye üretilebiliyordu (5_GUNLUK_CIKIS_PLANI engelleyici #5). Simülasyon
+// artık yalnız BİLEREK PAYMENT_PROVIDER=SIMULATION yazılan ortamlarda çalışır.
+const PROVIDER = Deno.env.get('PAYMENT_PROVIDER') ?? 'DISABLED'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -106,6 +110,7 @@ const FLOW_BASKET_NAME: Record<string, string> = {
   BOOKING_DEPOSIT: 'Saha Kapora',
   TOP_UP: 'Cuzdan Yukleme',
   MATCH_JOIN: 'Mac Katilim',
+  MATCH_DEPOSIT: 'Mac Kaporasi',
 }
 
 // Kart verisi: yalnız bellek içinde, iyzico isteğine gömülür — log/DB'ye girmez.
@@ -203,6 +208,11 @@ Deno.serve(async (req: Request) => {
   try { payload = await req.json() } catch { return json({ error: 'INVALID_BODY' }, 400) }
   const action = payload.action ?? 'create'
 
+  // Kapı en önde: sağlayıcı bilinçli seçilmemişse hiçbir aksiyon çalışmaz.
+  if (PROVIDER === 'DISABLED') {
+    return json({ error: 'PAYMENTS_DISABLED', message: 'Ödeme altyapısı bu ortamda kapalı.' }, 503)
+  }
+
   try {
     // ── PAY: uygulama-içi kart ödemesi (3 akış) ────────────────────────────
     if (action === 'pay') {
@@ -210,7 +220,7 @@ Deno.serve(async (req: Request) => {
       if (!user) return json({ error: 'UNAUTHORIZED' }, 401)
 
       const flow = payload.flow ?? ''
-      if (!['BOOKING_DEPOSIT', 'TOP_UP', 'MATCH_JOIN'].includes(flow)) {
+      if (!['BOOKING_DEPOSIT', 'TOP_UP', 'MATCH_JOIN', 'MATCH_DEPOSIT'].includes(flow)) {
         return json({ error: 'INVALID_FLOW' }, 400)
       }
 

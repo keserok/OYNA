@@ -258,8 +258,10 @@ export const handleDeepLink = async (
       return true;
     // ─── A3/A4 (4 Ağustos 2026) — daha önce hiçbiri tanınmıyordu ───────────
     case 'wallet':
-      // İade bildirimi: kullanıcı parasını görmek istiyor, ana ekranı değil.
-      setView('WALLET');
+      // Cüzdan lansmanda kapalı (shared/featureFlags.ts). Eski bir iade/ödeme
+      // bildirimi bu adresi taşıyorsa kullanıcıyı parasının bağlamına götür:
+      // maç/rezervasyon listesi. Adres tanınmaya devam eder — bildirim ölmez.
+      setView('MY_MATCHES');
       return true;
     case 'owner':
       // Saha sahibine giden bildirimler (yeni rezervasyon · iptal · talep sonucu).
@@ -332,6 +334,29 @@ export const initPushNotifications = async (
     PushNotifications.addListener('registrationError', (error) => {
       console.error('[PushService] Kayıt hatası:', error.error);
     });
+
+    // 3b. ANDROID BİLDİRİM KANALI (Android 8+ zorunlu).
+    // Kanal yoksa FCM kendi "Miscellaneous" kanalını uydurur: kullanıcı ayarlarda
+    // uygulamamızın bildirimlerini anlamsız bir başlık altında görür ve sesi/
+    // önceliği bizim belirlediğimiz gibi olmaz. Kanal kimliği AndroidManifest'teki
+    // `default_notification_channel_id` ve SUNUCUNUN gönderdiği channel_id ile
+    // (supabase/functions/send-push · 'oyna_main') BİREBİR aynı olmalıdır.
+    if (Capacitor.getPlatform() === 'android') {
+      try {
+        await PushNotifications.createChannel({
+          id: 'oyna_main',
+          name: 'OYNA bildirimleri',
+          description: 'Maç, rezervasyon ve arkadaşlık bildirimleri',
+          importance: 4, // HIGH — ekranda belirir
+          visibility: 1, // PUBLIC — kilit ekranında içerik görünür
+          lights: true,
+          lightColor: '#FACC15',
+          vibration: true,
+        });
+      } catch (e) {
+        console.warn('[PushService] Bildirim kanalı kurulamadı:', e);
+      }
+    }
 
     // 4. Cihazı push servisine kaydet
     await PushNotifications.register();

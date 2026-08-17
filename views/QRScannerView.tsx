@@ -150,7 +150,7 @@ const QRScannerView: React.FC<QRScannerViewProps> = ({ onBack, pitchId }) => {
   return (
     <div className="min-h-screen bg-[#0A0E14] text-white flex flex-col">
       {/* Header */}
-      <div className="p-6 flex items-center justify-between border-b border-white/5 bg-[#161B22]/50 backdrop-blur-xl sticky top-0 z-50">
+      <div className="p-6 pt-[calc(var(--safe-top)+1.5rem)] flex items-center justify-between border-b border-white/5 bg-[#161B22]/50 backdrop-blur-xl sticky top-0 z-50">
         <button onClick={onBack} aria-label="Panele dön" className="p-2 hover:bg-white/5 rounded-full transition-colors">
           <ArrowLeft size={24} />
         </button>

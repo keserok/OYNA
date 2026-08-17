@@ -279,6 +279,20 @@ if (typeof window !== 'undefined') {
 }
 
 export const isDemoLoginEnabled = (): boolean => {
+  // ── MAĞAZA KAPISI (17 Ağu 2026 — gönderim öncesi denetimde yakalandı) ──────
+  // NATIVE derlemede (App Store / Play Store) demo girişi HER DURUMDA kapalıdır.
+  //
+  // NEDEN ŞART: aşağıdaki 3. kapı `window.location.hostname`e bakıyor. Capacitor
+  // uygulamayı Android'de `https://localhost`, iOS'ta `capacitor://localhost`
+  // üzerinden servis eder — yani MAĞAZADAN İNDİRİLEN uygulamada da hostname
+  // 'localhost' görünür ve kapı AÇIK kalırdı. Sonuç: e-posta alanına "saha1"
+  // yazan herkes ŞİFRESİZ olarak gerçek bir SAHA SAHİBİ hesabına girebilirdi
+  // (demoLogin sabit şifreyi kendisi kullanıyor). Hesap ele geçirme sınıfı bir
+  // açık ve mağaza incelemesinde ret sebebi.
+  //
+  // Kural: yalnız TARAYICIDA geliştirme/test için açılır; pakette asla.
+  if (Capacitor.isNativePlatform()) return false;
+
   // 1) Açık bayrak (Vercel'de env ile de açılabilir)
   if (import.meta.env.VITE_DEV_MODE === 'true') return true;
   if (typeof window !== 'undefined') {
@@ -295,7 +309,12 @@ export const isDemoLoginEnabled = (): boolean => {
 };
 
 const DEMO_DOMAIN = '@oyna.app';
-const DEMO_PASSWORD = 'password123';
+// ÜRETİM PAKETİNE GİRMEZ (17 Ağu 2026 — mağaza öncesi denetim).
+// Ortak demo şifresi paketin JS'ine harfi harfine gömülüyordu; demo hesap
+// e-postalarıyla birlikte gerçek hesaplara (saha1..4 = SAHA SAHİBİ) giriş
+// anahtarı oluyordu. Sabit, derleme zamanında çözülür: `VITE_DEMO_ACCOUNTS`
+// açıkça 'true' değilse boş kalır ve demo yolları zaten çalışmaz.
+const DEMO_PASSWORD = import.meta.env.VITE_DEMO_ACCOUNTS === 'true' ? 'password123' : '';
 
 /** Girilen değer demo giriş için uygun mu? (tam e-posta ya da bare kullanıcı adı) */
 export const isDemoLoginInput = (raw: string): boolean => {
@@ -334,6 +353,11 @@ export const demoLogin = async (raw: string) => {
 // KILL-SWITCH: build ortamında `VITE_DEMO_ACCOUNTS='false'` → seçici tümüyle
 // kapanır (kod değişikliği gerekmeden lansman öncesi kapatma).
 export const isDemoAccountPickerEnabled = (): boolean => {
+  // MAĞAZA KAPISI (17 Ağu 2026): pakette demo hesap seçici YOKTUR.
+  // Kill-switch'in (VITE_DEMO_ACCOUNTS=false) derleme anında yazılmayı
+  // unutulması ihtimaline karşı native'de kod düzeyinde kapatılır — seçici
+  // gerçek saha sahibi hesaplarına tek dokunuşla giriş sunuyordu.
+  if (Capacitor.isNativePlatform()) return false;
   return import.meta.env.VITE_DEMO_ACCOUNTS !== 'false';
 };
 

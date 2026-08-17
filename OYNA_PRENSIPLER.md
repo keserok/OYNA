@@ -1,7 +1,7 @@
 # 🏛️ OYNA — MASTER PRENSİPLER
 
-**Yürürlük:** 4 Ağustos 2026 · **Durum:** BAĞLAYICI
-**Kaynak:** Danışma kurulu süreci (7 rol) sonunda alınan K-1…K-17 kararları
+**Yürürlük:** 4 Ağustos 2026 · **Son güncelleme:** 16 Ağustos 2026 (kurucu lansman kararları — §2.10, §2.11, §11) · **Durum:** BAĞLAYICI
+**Kaynak:** Danışma kurulu süreci (7 rol) sonunda alınan K-1…K-17 kararları + 16 Ağustos 2026 kurucu kararları
 
 > Bu dosya, K-6.5 ve K-11.6 gereği **danışma kurulu süreci tamamlandığında** yazıldı ve
 > `OYNA_MASTER_PRENSIPLER.md` (arşiv) dosyasının yerine geçer.
@@ -51,6 +51,9 @@ diğer hepsinin üstündedir:
 | 2.7 | **İptal/iade kuralı ödeme ÖNCESİ kullanıcıya gösterilir.** Tesise göre değişebilir ama gizlenemez. |
 | 2.8 | **Fiyat ve iade oranı sunucuda hesaplanır.** İstemciden gelen tutara asla güvenilmez. |
 | 2.9 | **Para değişmezleri her gece sınanır.** 8 kuralın biri bile bozulursa panel kırmızı yanar. |
+| 2.10 | **OYNA kullanıcı adına bakiye TUTMAZ** *(kurucu kararı, 16 Ağu 2026)*. Uygulama içi saklı bakiye ("cüzdan") 6493 sayılı Kanun kapsamında e-para ihracı sayılır; lisans yok → cüzdan yok. Ödeme İŞLEM BAŞINA karttan alınır, iadeler KARTA döner (karta-iade kodu iyzico canlısıyla birlikte v1.1). Cüzdan ancak lisanslı bir modelle ve kurucu kararıyla geri açılır. K-3.3'ün "cüzdana döner" ifadesi bu kararla "ödeme yöntemine iade edilir" olarak okunur. |
+| 2.11 | **Saha, vitrine çıkacak SON saati belirleyebilir** *(kurucu kararı, 16 Ağu 2026)*. Listeleme sınırı saha bazlıdır (2.6 ile uyumlu), saha sahibi veya admin panelinden yazılır; yazılmamışsa sınır yoktur. Bitişi sınırı aşan slot oyuncuya görünmez ve uygulamadan rezerve edilemez; saha sahibinin elle yönetimi (akşam saatleri dahil) serbesttir. |
+| 2.12 | **Uygulamadan rezervasyon YALNIZ kartla kapora ödenerek yapılır** *(kurucu kararı, 17 Ağu 2026)*. "Tesiste ödemeli" (nakit) rezervasyon uygulamadan alınmaz: online ödemesi kapalı sahada vitrin açık kalır, oyuncu rezervasyon için tesisi arar. Kapı sunucudadır (`b_nakit_rezervasyon_kapisi`, hata: `CASH_BOOKING_DISABLED`) ve yalnız `APP_BOOKING` kaynağını kısar — maç rezervasyonu (güvencesi kapora motoru) ve sahibin elle yönetimi serbesttir. İade kesintisi TEK modeldir: iade tabanı karttan çekilen TOPLAM (kapora + işlem bedeli), üzerinden tek PSP kesintisi düşülür — her akışta aynı (`20260905000009`). |
 
 ---
 
@@ -168,7 +171,9 @@ Bunlar eksik değil, **karar**dır. Açılma zamanı geldiğinde bilinçli açı
 | `demo_mode_enabled` | **AÇIK** (vitrinde demo maç var) | Lansman gününün 1. maddesi: **kapatılır** |
 | `payment_mode_global` | **CASH_ONLY** | İlk gerçek kart işlemi denendikten sonra |
 | `push_live_enabled` | kapalı | Lansmanda APNs/FCM hazır olunca |
-| `wallet_cashout_enabled` | kapalı | Kimlik doğrulama ekranı + sözleşme metinleri yayınlanınca |
+| `wallet_enabled` | **kapalı — kalıcı karar** (16 Ağu 2026, §2.10) | Ancak lisanslı modelle + kurucu kararıyla; istemci bayrağı (`shared/featureFlags.ts`) ile BİRLİKTE |
+| `wallet_cashout_enabled` | kapalı | Cüzdan kararına bağlı (§2.10) — cüzdan yokken çekim konusu doğmaz |
+| `match_deposit_enabled` | kapalı (16 Ağu 2026) | Kart-kaporası kodu yazılınca (v1.1); o güne dek maçlar kaporasız yayınlanır |
 | `admin_mfa_required` | kapalı | Bir SUPER_ADMIN kurtarma kodlarını indirdikten sonra |
 | Alarm e-postası | kapalı | Lansmandan önce (kod hazır, Resend anahtarı eksik) |
 | Kayıt | **AÇIK** | — (kurucu kararı, 4 Ağu 2026) |

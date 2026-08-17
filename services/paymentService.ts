@@ -64,7 +64,21 @@ async function invokeEdge(action: string, body: Record<string, unknown>): Promis
   return data;
 }
 
-/** Rezervasyon kaporası için ödeme başlatır. */
+// B9 — `payBookingDeposit` BURADAN SİLİNDİ (kaldırma tarihi: 2026-08-17).
+//
+// NEDEN: Fonksiyon `window.location.href = checkoutUrl` yapıyordu. Telefonda bu,
+// kullanıcıyı OYNA'nın webview'ından koparıp harici bir ödeme sayfasına atar:
+// geri dönüş yolu yoktur, uygulama durumu kaybolur ve mağaza incelemesi bunu
+// "uygulama dışına yönlendiren ödeme" sayar. Bugün kimse çağırmıyordu (tüm
+// depoda tek geçen yer kendi tanımıydı) — yani bağlandığı gün patlayacak,
+// uyuyan bir tuzaktı.
+//
+// YERİNE NE VAR: Uygulama-içi kart ödemesi (aşağıdaki `startInAppCardPayment`
+// → 3DS iframe). Kullanıcı OYNA'dan hiç çıkmaz. Kapora akışı da bunu kullanır
+// (flow: 'BOOKING_DEPOSIT'). Yeniden bir "checkoutUrl'e git" yolu açılacaksa
+// tarayıcıya atmak yerine uygulama içi görünümde açılmalıdır.
+
+/** Rezervasyon kaporası için ödeme başlatır (edge 'create' niyeti). */
 export async function startBookingPayment(bookingId: string): Promise<CreatePaymentResponse> {
   return await invokeEdge('create', { bookingId }) as CreatePaymentResponse;
 }
@@ -72,29 +86,6 @@ export async function startBookingPayment(bookingId: string): Promise<CreatePaym
 /** SIMULATION modunda ödemeyi onaylar (gerçek sağlayıcıda webhook yapar). */
 export async function confirmSimPayment(intentId: string): Promise<PaymentResult> {
   return await invokeEdge('confirm-sim', { intentId }) as PaymentResult;
-}
-
-/**
- * Kaporayı uçtan uca öde.
- * - Gerçek sağlayıcı: checkoutUrl'e yönlendirir (kullanıcı orada öder, webhook tamamlar).
- * - SIMULATION: niyet oluşturup hemen onaylar; sonucu döndürür.
- */
-export async function payBookingDeposit(bookingId: string): Promise<{ redirected: boolean; result?: PaymentResult }> {
-  const created = await startBookingPayment(bookingId);
-
-  if (created.checkoutUrl) {
-    // Gerçek sağlayıcı ödeme sayfası
-    window.location.href = created.checkoutUrl;
-    return { redirected: true };
-  }
-
-  if (created.requiresClientConfirm) {
-    const result = await confirmSimPayment(created.intentId);
-    return { redirected: false, result };
-  }
-
-  // checkoutUrl yok ve confirm gerekmiyorsa (beklenmedik) — niyet beklemede kalır
-  return { redirected: false };
 }
 
 // ═══ UYGULAMA-İÇİ KART ÖDEMESİ (Uber standardı — iyzico görünmez) ═══════════
@@ -115,7 +106,7 @@ export interface NewCardInput {
 }
 
 export interface InAppPayInput {
-  flow: 'BOOKING_DEPOSIT' | 'TOP_UP' | 'MATCH_JOIN';
+  flow: 'BOOKING_DEPOSIT' | 'TOP_UP' | 'MATCH_JOIN' | 'MATCH_DEPOSIT';
   amount?: number;
   bookingId?: string;
   matchId?: string;

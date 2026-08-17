@@ -35,7 +35,6 @@ import type { ShortcutItem } from '../components/profile';
 // Türetme mantığı TEK KAYNAK: admin panelin Kullanıcı Profili Aynası da aynı
 // modülü kullanır — kart/rozet/puan hesapları iki yüzeyde asla ayrışmaz.
 import { ageFromBirthdate, trustScoreTo100 } from '../shared/profilePresentation';
-import { formatTRYAmount } from '../utils/formatTRY';
 import profileAmbient from '../assets/profile/profile-ambient.png';
 
 interface ProfileScreenProps {
@@ -146,13 +145,9 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ role, onNavigate, onOpenD
     // Tasarım: ikon yok, değerler çıplak sayı — etiket zaten ne olduğunu söylüyor.
     // `dim`: tasarımın yeni kullanıcı ekranında üç değer de SOLUK çiziliyor —
     // sıfır bir başarı değil, henüz doldurulmamış bir yer.
+    // Cüzdan kısayolu lansmanda KALDIRILDI (e-para mevzuatı —
+    // shared/featureFlags.ts): bakiye kavramı yokken tutar göstermek yalan olur.
     const shortcuts: ShortcutItem[] = [
-        {
-            label: 'Cüzdan',
-            value: formatTRYAmount(profile?.walletBalance ?? 0),
-            dim: !profile?.walletBalance,
-            onClick: () => onNavigate && onNavigate('WALLET'),
-        },
         {
             label: 'Takımlarım',
             value: `${teamsCount}`,

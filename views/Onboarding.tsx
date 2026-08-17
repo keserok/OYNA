@@ -68,12 +68,22 @@ const KEYFRAMES = `
 const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
   const [step, setStep] = useState(0);
   const [phase, setPhase] = useState<LocState>('idle');
-  const [ageIndex, setAgeIndex] = useState(2); // 24-30
-  // IP-16 · karar 4b: çark dokunulmadan da "24-30" seçili SAYILIR. Eskiden
-  // ekranda seçili görünüyor ama sayılmıyordu; "Devam Et" ölü kalıyor ve
-  // kullanıcı neyi eksik yaptığını anlamıyordu. Artık görünen ile geçerli olan
-  // aynı: ekranda ne yazıyorsa profile o yazılır.
-  const [ageTouched, setAgeTouched] = useState(true);
+  // YAŞ KAPISI (17 Ağu 2026 — mağaza öncesi denetim).
+  //
+  // Eskiden çark "24-30"da başlıyor ve DOKUNULMADAN seçili sayılıyordu
+  // (IP-16 · karar 4b). Gerekçesi UX'ti: "Devam Et ölü kalıyor, kullanıcı
+  // neyi eksik yaptığını anlamıyor". Sonucu ise şuydu: 15 yaşındaki bir
+  // kullanıcı hiçbir şeye dokunmadan YETİŞKİN olarak kaydediliyor; sunucudaki
+  // reşit-olmayan kuralı yalnız '13-17' seçimine baktığı için `is_minor` ve
+  // veli onayı akışı HİÇ tetiklenmiyordu. Yaş beyanı, uygulamanın kendi
+  // koruma mekanizmasının tek girdisi — varsayılan kabul edilemez.
+  //
+  // Yeni kural: seçim NÖTR başlar, kullanıcı seçmeden ilerlenemez. 4b'nin UX
+  // kaygısı korunur: çarkta hiçbir aralık "seçili" görünmez ve altındaki
+  // satır Devam Et'in neden pasif olduğunu SÖYLER — yani kullanıcı sessiz bir
+  // ölü düğmeyle değil, açık bir istekle karşılaşır.
+  const [ageIndex, setAgeIndex] = useState<number | null>(null);
+  const [ageTouched, setAgeTouched] = useState(false);
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   // Cinsiyet ve pozisyon OPSİYONEL: kullanıcı seçmeden varsayılan yazma
@@ -173,7 +183,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
   const ctaEnabled = (() => {
     switch (step) {
       case 0: return phase === 'idle';
-      case 1: return true;   // varsayılan yaş geçerli sayılır (4b)
+      case 1: return ageIndex !== null;   // yaş beyanı ZORUNLU (varsayılan yok)
       case 2: return nameCheck.valid;
       case 3: return playStyle !== '';
       case 4: return isValidSelfSkill(selfSkill);
@@ -183,7 +193,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
 
   // IP-16 · karar 5a: '13-17' seçimi sunucuda `is_minor` + veli onayı bekleyen
   // durum yazıyor; kullanıcı bunu ekranda hiçbir yerde görmüyordu.
-  const recitDegil = isMinorAgeRange(AGE_RANGES[ageIndex]);
+  const recitDegil = ageIndex !== null && isMinorAgeRange(AGE_RANGES[ageIndex]);
 
   const ctaLabel = (() => {
     switch (step) {
@@ -213,7 +223,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
   // seçici gerçekten dokunulduysa gönderilir → atlamada varsayılan yaş
   // yazılmaz. RPC forward-only olduğundan boş alanlar mevcut değeri silmez.
   const buildDraft = (): OnboardingDraft => ({
-    ageRange: ageTouched ? AGE_RANGES[ageIndex] : '',
+    ageRange: ageIndex === null ? '' : AGE_RANGES[ageIndex],
     firstName: firstName.trim(),
     lastName: lastName.trim(),
     gender,
@@ -262,6 +272,16 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
     if (!isValidSelfSkill(selfSkill)) {
       setStep(4);
       showToast('Devam etmek için seviyeni seç.');
+      return;
+    }
+    // YAŞ BEYANI da atlanamaz. Çark "İleri" yolunda kapatılmıştı ama "Atla"
+    // aynı adımı sormadan geçiyordu: 15 yaşındaki kullanıcı yaşını hiç
+    // bildirmeden içeri giriyor, reşit-olmayan akışı (veli onayı, sınırlı
+    // mod) HİÇ tetiklenmiyordu. İki mağazanın da yaş derecelendirme beyanı
+    // bunun üstüne kuruluyor — kapı tek yerde değil, HER yolda olmalı.
+    if (ageIndex === null) {
+      setStep(1);
+      showToast('Devam etmek için yaş aralığını seç.');
       return;
     }
     setSaving(true);
@@ -378,7 +398,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
         <PlayerCardReveal
           firstName={firstName}
           lastName={lastName}
-          ageRange={AGE_RANGES[ageIndex]}
+          ageRange={ageIndex === null ? '' : AGE_RANGES[ageIndex]}
           gender={gender}
           position={position}
           playStyle={playStyle}

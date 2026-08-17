@@ -13,6 +13,16 @@
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
         <item name="android:background">@null</item>
+        <!--
+          Android 15+ kenardan kenara çizimde WebView, durum/gezinme çubuğunun
+          altına ALINMAZ; boşta kalan şeritlerde PENCERE ZEMİNİ görünür.
+          Bu tema DayNight'tan türediği için pencere zemini AÇIK temadaki
+          telefonlarda BEYAZDI: koyu uygulamanın üstünde ve altında beyaz
+          bantlar oluşuyordu (Capacitor 8 SystemBars, dekor zeminini bu
+          nitelikten okur). Zemin uygulamanın kendi rengine sabitlendi.
+        -->
+        <item name="android:windowBackground">@color/oyna_zemin</item>
+        <item name="android:colorBackground">@color/oyna_zemin</item>
     </style>
 
 

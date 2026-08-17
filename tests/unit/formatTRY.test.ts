@@ -243,10 +243,12 @@ describe('cüzdan tek sayı, tek isim', () => {
     expect(ihlal, 'iade ayrı bir para türü değil').toEqual([]);
   });
 
-  it('profil kısayolu bakiyeyi biçimleyiciden geçiriyor', () => {
+  it('profil kısayolunda cüzdan YOK (lansman kararı: bakiye kavramı kapalı)', () => {
+    // Cüzdan kapatıldı (shared/featureFlags.ts): profil ekranı bakiye
+    // göstermez — gösterseydi olmayan bir hesabı varmış gibi anlatırdı.
     const s = oku('views/ProfileScreen.tsx');
-    expect(s).toContain("label: 'Cüzdan'");
-    expect(s).toContain('value: formatTRYAmount(profile?.walletBalance ?? 0)');
+    expect(s).not.toContain("label: 'Cüzdan'");
+    expect(s).not.toContain('walletBalance');
   });
 });
 

@@ -36,6 +36,8 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import ServiceProfile from './ServiceProfile';
 import { providerStyles } from '../shared/providerStyles';
+// B11 — hakem seviyesi ham basılmaz; ekranda görünen metin tek kaynaktan gelir.
+import { hakemSeviyeRozeti } from '../shared/hakemSeviyesi';
 import ServiceSettings from './ServiceSettings';
 import { auth } from '../supabaseAuth';
 import { useAsagiCekYenile } from '../hooks/useAsagiCekYenile';
@@ -978,7 +980,12 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
   // Sabit "A-CLASS" yerine puandan türetilen sınıf (rookie → YENİ).
   const idClass = !idRated ? 'YENİ' : Number(userProfile.rating) >= 8 ? 'A SINIF' : Number(userProfile.rating) >= 6 ? 'B SINIF' : 'C SINIF';
   // HR-B: hakem kartı için gerçek seviye + VAR (varCallAccuracy string).
-  const idLevel: string | null = (typeof userProfile?.level === 'string' && userProfile.level.trim()) ? userProfile.level : null;
+  // B11: seviye artık ham basılmıyor. Hakem bu satırı başvuruda KENDİ seçiyor,
+  // OYNA hiçbir belge doğrulamıyor; bu yüzden ekrana ortak yardımcının ürettiği
+  // "BEYAN: …" etiketi çıkar (shared/hakemSeviyesi.ts). Aynı değişken hem kimlik
+  // kartında hem "Kaptana Gidecek Kartın" önizlemesinde kullanılıyor — tek
+  // yerden beslendiği için ikisi birden dürüstleşir.
+  const idLevel: string | null = hakemSeviyeRozeti(userProfile?.level);
   const idVar: string = (typeof gkCardStats.varCallAccuracy === 'string' && (gkCardStats.varCallAccuracy as string).trim())
     ? `%${(gkCardStats.varCallAccuracy as string).replace('%', '')}` : '—';
 
@@ -1145,10 +1152,26 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                                 ? <img src={auth.currentUser.photoURL} className="w-full h-full object-cover object-top" alt="Hakem" referrerPolicy="no-referrer" />
                                 : <Scale size={40} className="text-red-500/40" />}
                           </div>
-                          {/* Sabit "FIFA" yerine gerçek seviye (varsa). */}
+                          {/* Sabit "FIFA" yerine gerçek seviye (varsa) — B11'den sonra
+                              metin "BEYAN: …" olarak ortak yardımcıdan geliyor, burada
+                              büyütme/biçimlendirme YAPILMAZ (tek kaynak bozulmasın).
+
+                              TAŞMA: rozet, kartın SOL kenarına yakın duran 96px'lik
+                              fotoğrafın altına ortalanıyor; metin uzayınca sol tarafa
+                              taşıp kartın `overflow-hidden`ı tarafından KESİLİYORDU.
+                              Kesilen bir "BEYAN:" öneki, kusurun ta kendisini geri
+                              getirirdi. Bu yüzden: yatay boşluk 3 → 2.5, harf aralığı
+                              biraz sıkı ve `max-w` güvenlik sınırı.
+                              `whitespace-nowrap` ZORUNLU: rozet `absolute left-1/2`
+                              ile 96px'lik fotoğrafa göre konumlanıyor, yani sarmaya
+                              izin verilirse kullanılabilir genişlik 48px'e düşüyor ve
+                              ince altın şerit ÜÇ SATIRLIK kalın bir bloğa dönüşüp
+                              fotoğrafın yarısını kapatıyor (ölçüldü: 72.7x53.3px).
+                              Tek satırda 136x25.8px — kart kenarına taşma yok.
+                              Rozetin rengi, konumu ve yazı boyu aynı. */}
                           {idLevel && (
-                            <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-[#FACC15] text-black text-[0.6875rem] font-extrabold px-3 py-1 rounded-full shadow-lg whitespace-nowrap border-2 border-[#161B22]">
-                                {idLevel.toLocaleUpperCase('tr-TR')}
+                            <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-[#FACC15] text-black text-[0.6875rem] font-extrabold px-2.5 py-1 rounded-full shadow-lg border-2 border-[#161B22] max-w-[8.5rem] text-center leading-tight tracking-tight whitespace-nowrap">
+                                {idLevel}
                             </div>
                           )}
                       </div>
@@ -2148,7 +2171,11 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
           <div className={`absolute bottom-[-20%] right-[-20%] w-[80%] h-[80%] rounded-full blur-[120px] animate-pulse-slow delay-700 ${isRef ? 'bg-orange-900/10' : 'bg-blue-900/10'}`}></div>
       </div>
 
-      <header className="p-6 flex justify-between items-center bg-transparent sticky top-0 z-20">
+      {/* `pt-safe-6` satır içi `pt-[calc(var(--safe-top)+1.5rem)]` ile AYNI boşluğu
+          verir (6 = 1.5rem = p-6). Sınıfa çevrildi çünkü çevrimdışı şeridi telafisi
+          (index.css · body.offline-banner-on) yalnız sınıflara yazılabiliyor:
+          uçak modunda kırmızı şerit "KALECİ/HAKEM" başlığının üstünü örtüyordu. */}
+      <header className="p-6 pt-safe-6 flex justify-between items-center bg-transparent sticky top-0 z-20">
          {/* Kök panel: sekmeler alt navigasyonla değişir → geri butonu YOK
              (oyuncu Dashboard'ıyla tutarlı). Geri butonu yalnız alt-sayfalarda
              (Profil/Ayarlar) bulunur; onlar kendi başlıklarında taşır. */}
@@ -2158,7 +2185,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                  <p className="text-[0.625rem] text-gray-400 font-bold tracking-widest uppercase mt-1">
                     {activeTab === 'HOME' && 'Ana Sayfa'}
                     {activeTab === 'JOBS' && 'Maç Bul'}
-                    {activeTab === 'WALLET' && 'Cüzdan'}
+                    {activeTab === 'WALLET' && 'Kazançlarım'}
                     {activeTab === 'MENU' && 'Menü'}
                  </p>
              </div>
@@ -2184,8 +2211,17 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
          {activeTab === 'MENU' && renderMenuView()}
       </main>
 
-      {/* Service Navigation */}
-      <nav className="fixed bottom-0 left-0 w-full bg-[#0A0E14]/95 backdrop-blur-2xl border-t border-white/5 pb-8 pt-4 px-4 flex justify-between items-center z-30">
+      {/* Service Navigation
+          aria-label="Ana Gezinti": İKİ işi birden yapar.
+          1) Erişilebilirlik — ekran okuyucu bu bölgeyi "Ana Gezinti, gezinme"
+             diye duyurur; bu çubuk kaleci/hakem panelinin ANA gezintisidir
+             (oyuncu menüsüyle aynı rol, aynı ad). Aynı anda yalnız bir menü
+             çizildiği için iki aynı adlı bölge oluşmaz.
+          2) Uyarı balonu — index.css'teki `body:has(nav[aria-label="Ana Gezinti"])`
+             kuralı balonu menünün ÜSTÜNE kaldırır. Etiket yokken kaleci/hakem
+             geri bildirimi ("Başvurun alındı" vb.) bu çubuğun ARKASINDA kalıyor,
+             kullanıcı hiçbir şey olmadı sanıyordu. */}
+      <nav aria-label="Ana Gezinti" className="fixed bottom-0 left-0 w-full bg-[#0A0E14]/95 backdrop-blur-2xl border-t border-white/5 pb-[max(2rem,calc(var(--safe-bottom)+0.75rem))] pt-4 px-4 flex justify-between items-center z-30">
          <button 
             onClick={() => setActiveTab('HOME')}
             className={`flex flex-col items-center gap-1.5 transition-all ${activeTab === 'HOME' ? 'text-[#FACC15] scale-110' : 'text-ink-4 hover:text-gray-300'}`}
@@ -2213,7 +2249,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
             <div className={`p-1 rounded-lg ${activeTab === 'WALLET' ? 'bg-[#FACC15]/10' : ''}`}>
                 <Wallet size={20} />
             </div>
-            <span className="text-[0.625rem] font-extrabold uppercase tracking-tighter">Cüzdan</span>
+            <span className="text-[0.625rem] font-extrabold uppercase tracking-tighter">Kazançlarım</span>
          </button>
 
          <button

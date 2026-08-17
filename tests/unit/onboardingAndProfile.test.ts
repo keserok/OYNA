@@ -124,11 +124,21 @@ describe('konum reddi ekranda kalıcı', () => {
 describe('görünen ile geçerli olan aynı — yaş çarkı', () => {
   const s = oku('views/Onboarding.tsx');
 
-  it('varsayılan seçim gerçekten sayılıyor (karar 4b)', () => {
-    // Ekranda "24-30" seçili görünüyor ama sayılmıyordu; "Devam Et" ölü
-    // kalıyor ve kullanıcı neyi eksik yaptığını anlamıyordu.
-    expect(s).toContain('useState(true)');
-    expect(s).toContain('case 1: return true;');
+  it('varsayılan yaş YOK — beyan zorunlu (4b geçersiz, 17 Ağu 2026)', () => {
+    // ESKİ KURAL (karar 4b): çark "24-30"da başlar ve DOKUNULMADAN seçili
+    // sayılırdı; gerekçesi "Devam Et ölü kalmasın" idi. Mağaza öncesi
+    // denetimde bunun bedeli görüldü: 15 yaşındaki kullanıcı hiçbir şeye
+    // dokunmadan YETİŞKİN kaydediliyor, sunucudaki reşit-olmayan kuralı
+    // ('13-17') ve veli onayı akışı HİÇ tetiklenmiyordu.
+    //
+    // YENİ KURAL: seçim nötr başlar, seçilmeden ilerlenemez. 4b'nin UX
+    // kaygısı ölü düğmeyle değil, ekrandaki yönlendirmeyle karşılanır.
+    expect(s).toContain('useState<number | null>(null)');
+    expect(s).toContain('const [ageTouched, setAgeTouched] = useState(false)');
+    expect(s).toMatch(/case 1: return ageIndex !== null/);
+    expect(s).not.toContain('case 1: return true;');
+    // Ekran, Devam Et'in neden pasif olduğunu SÖYLER.
+    expect(oku('views/onboarding/StepAge.tsx')).toContain('Devam etmek için yaş aralığını seç');
   });
 
   it('18 yaş altı seçimi ekranda söyleniyor', () => {

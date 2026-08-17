@@ -21,6 +21,7 @@ Aşağıdaki altı kural, uygulamayı kullanan herkes için geçerlidir. Kısaca
 5. **Çocukları koru.** 18 yaşından küçüklere yönelik her türlü uygunsuz davranışta sıfır tolerans uygulanır.
 6. **Kötüye kullanma.** Spam, dolandırıcılık, başkasının kişisel bilgisini ifşa etme ve kimlik taklidi yasaktır — ihlal görürsen bildir.
 
+<!-- YAYINLA -->
 > Bu altı kuralın hukuki dayanakları ve ayrıntıları aşağıda düzenlenmiştir. Kısa özet ile ayrıntı arasında çelişki olursa **ayrıntılı hükümler** esas alınır.
 
 ---
@@ -116,7 +117,7 @@ Aşağıdaki içerik ve davranışlar — uygulama içi mesajlaşma, takım sohb
 
 10.1. Hesabın askıya alınması veya kapatılması; askı/kapatma tarihinden önce usulünce **tamamlanmış işlemleri** ve kullanıcının **hak kazandığı iadeleri** etkilemez (Kullanım Şartları m.13.3).
 
-10.2. Cüzdan bakiyesi veya bekleyen ödemeler, ancak **somut bir dolandırıcılık/ödeme sahtekârlığı şüphesi** ya da yasal yükümlülük gibi haklı bir sebeple ve **geçici** olarak dondurulabilir; bu, cezai bir el koyma niteliği taşımaz ve inceleme sonucunda haksız bulunursa kaldırılır.
+10.2. Bekleyen ödemeler ve sonuçlanmamış iade işlemleri, ancak **somut bir dolandırıcılık/ödeme sahtekârlığı şüphesi** ya da yasal yükümlülük gibi haklı bir sebeple ve **geçici** olarak dondurulabilir; bu, cezai bir el koyma niteliği taşımaz ve inceleme sonucunda haksız bulunursa kaldırılır. OYNA kullanıcı adına bakiye tutmadığından (Kullanım Şartları md. 6.5 yürürlükte değildir), dondurulabilecek bir cüzdan bakiyesi bulunmamaktadır.
 
 ## 11. İçeriğin Kaldırılması ve Saklanması
 

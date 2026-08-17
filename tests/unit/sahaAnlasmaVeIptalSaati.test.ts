@@ -46,9 +46,11 @@ describe('Kişi başı tutar — sunucu formülüyle birebir', () => {
 });
 
 describe('İade kademesi cümlesi sahadan kurulur', () => {
-  it('varsayılan kademe bugünkü metni verir', () => {
+  it('varsayılan kademe bugünkü metni verir (kanal iddiasız — cüzdan kapalı)', () => {
     expect(iadeKademesiCumlesi(CANCEL_POLICY_FALLBACK))
-      .toBe("maça 24 saatten fazla varsa tamamı, 6–24 saat kala %50'si cüzdanına döner; 6 saatten az kala iade yapılmaz");
+      .toBe("maça 24 saatten fazla varsa tamamı, 6–24 saat kala %50'si iade edilir; 6 saatten az kala iade yapılmaz");
+    // Cüzdan lansmanda kapalı: iade cümlesi kanal (cüzdan/kart) İDDİA EDEMEZ.
+    expect(iadeKademesiCumlesi(CANCEL_POLICY_FALLBACK)).not.toContain('cüzdan');
   });
 
   it('saha 48 saate çekince cümledeki HER sayı değişir', () => {

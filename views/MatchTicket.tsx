@@ -7,6 +7,7 @@ import { supabase } from '../supabaseClient';
 import { formatTRY } from '../utils/formatTRY';
 import { readTicketCache, writeTicketCache, type TicketSnapshot } from '../utils/ticketCache';
 import { formatTRYAmount } from '../utils/formatTRY';
+import { dosyaKaydetVeyaPaylas } from '../utils/dosyaKaydet';
 
 /**
  * DİJİTAL BİLET — DÜRÜST (C4).
@@ -21,6 +22,40 @@ import { formatTRYAmount } from '../utils/formatTRY';
  */
 
 type PayState = 'PAID' | 'PARTIAL' | 'PENDING' | 'CANCELLED' | 'UNKNOWN';
+
+/**
+ * PANO SONUCU — utils/dosyaKaydet.ts'teki `KaydetSonucu` deseninin panoya
+ * uyarlanmışı: "oldu mu?" sorusunun cevabı ÇAĞIRANA DÖNER, çünkü mesajı
+ * yazacak olan çağıran taraftır.
+ */
+type PanoSonucu = 'KOPYALANDI' | 'DESTEKLENMIYOR' | 'HATA';
+
+/**
+ * Metni panoya GERÇEKTEN kopyalar; olmadıysa dürüstçe söyler.
+ *
+ * NEDEN: eski kod `await navigator.clipboard?.writeText(text)` yazıp hemen
+ * ardından KOŞULSUZ "kopyalandı" diyordu. `?.` erişimi API yoksa HATA ATMAZ —
+ * sessizce `undefined` döner, `await undefined` de sorunsuz geçer. Yani hiçbir
+ * şey kopyalanmadan başarı mesajı yazılıyordu.
+ *
+ * Pano API'si bizim iki hedefimizde de YOKTUR:
+ *   · iOS: uygulama özel şemadan yüklenir (capacitor.config.ts · scheme 'OYNA'),
+ *     bu güvenli bağlam sayılmaz → `navigator.clipboard` tanımsız.
+ *   · Android WebView: yine yok (bkz. utils/dosyaKaydet.ts başındaki açıklama).
+ * Bu yüzden önce VARLIK kontrolü, sonra `await` + try/catch şart.
+ */
+async function panoyaKopyala(metin: string): Promise<PanoSonucu> {
+  const pano = navigator.clipboard as Clipboard | undefined;
+  if (!pano || typeof pano.writeText !== 'function') return 'DESTEKLENMIYOR';
+  try {
+    // `await` ŞART: reddedilen promise ancak beklenirse yakalanabilir.
+    await pano.writeText(metin);
+    return 'KOPYALANDI';
+  } catch {
+    // Pano izni reddedildi ya da belge odakta değil — yine de "oldu" DENMEZ.
+    return 'HATA';
+  }
+}
 
 interface BookingRow {
   id: string;
@@ -72,7 +107,10 @@ const MatchTicket: React.FC<MatchTicketProps> = ({ onBack }) => {
   const [booking, setBooking] = useState<BookingRow | null>(null);
   const [loading, setLoading] = useState<boolean>(!!ticketBookingId);
   const [qrDataUrl, setQrDataUrl] = useState<string>('');
-  const [shareMsg, setShareMsg] = useState('');
+  // Alt bilgi şeridi: metin + bunun bir BAŞARISIZLIK olup olmadığı. Tek bir
+  // düz metin tutulduğunda "kaydedilemedi" cümlesi de başarı yeşiliyle
+  // yazılıyordu; renk de mesaj kadar bilgi taşır, ikisi birlikte gitmeli.
+  const [shareMsg, setShareMsg] = useState<{ metin: string; hata: boolean } | null>(null);
   // BULGU-109: sorgu düşerse hata okunuyor, çevrimdışı kopyaya düşülüyor ve
   // kullanıcıya gerçek bir kurtarma yolu ("Tekrar Dene") veriliyor.
   const [loadError, setLoadError] = useState(false);
@@ -159,22 +197,54 @@ const MatchTicket: React.FC<MatchTicketProps> = ({ onBack }) => {
   const captainName = currentUserProfile?.name || auth.currentUser?.displayName || '—';
   const refShort = (booking?.id ?? ticketBookingId ?? '').slice(0, 8).toUpperCase();
 
-  const handleShare = async () => {
-    const text = `OYNA rezervasyonum: ${pitchName}${courtName ? ' · ' + courtName : ''} · ${dateStr} ${timeStr}`;
-    try {
-      if (navigator.share) { await navigator.share({ title: 'OYNA Rezervasyon', text }); return; }
-      await navigator.clipboard?.writeText(text);
-      setShareMsg('Rezervasyon bilgisi kopyalandı.');
-      setTimeout(() => setShareMsg(''), 2500);
-    } catch { /* kullanıcı iptal etti */ }
+  /** Alt şeride mesaj yaz; 2.5 sn sonra kaldır. */
+  const bildir = (metin: string, hata = false) => {
+    setShareMsg({ metin, hata });
+    setTimeout(() => setShareMsg(null), 2500);
   };
 
-  const handleSaveImage = () => {
+  const handleShare = async () => {
+    const text = `OYNA rezervasyonum: ${pitchName}${courtName ? ' · ' + courtName : ''} · ${dateStr} ${timeStr}`;
+
+    // 1) Sistem paylaşım sayfası — iOS özel şemada ve Android WebView'da
+    //    çoğu zaman YOKTUR; varsa kullanılır.
+    if (typeof navigator.share === 'function') {
+      try {
+        await navigator.share({ title: 'OYNA Rezervasyon', text });
+        return;                       // paylaşıldı — ayrıca mesaj gerekmez
+      } catch (e) {
+        // Kullanıcı sayfayı kapattıysa (AbortError) bu HATA DEĞİL: sessizce çık,
+        // arkasından panoya kopyalayıp "kopyalandı" DEME — vazgeçmişti.
+        if ((e as Error)?.name === 'AbortError') return;
+        // Başka bir hata: panoya düşülür.
+      }
+    }
+
+    // 2) Pano — mesaj GERÇEK SONUCA göre yazılır.
+    const sonuc = await panoyaKopyala(text);
+    if (sonuc === 'KOPYALANDI') bildir('Rezervasyon bilgisi kopyalandı.');
+    else bildir('Bu cihazda kopyalanamadı. Bilgiler biletin üzerinde yazılı.', true);
+  };
+
+  const handleSaveImage = async () => {
     if (!qrDataUrl) return;
-    const a = document.createElement('a');
-    a.href = qrDataUrl;
-    a.download = `oyna-bilet-${refShort || 'qr'}.png`;
-    document.body.appendChild(a); a.click(); a.remove();
+    // `<a download>` paketlenmiş uygulamada SESSİZCE çalışmaz (iOS WKWebView /
+    // Android WebView) — bilet QR'ı hiç kaydedilemiyordu. Ortak yardımcı pakette
+    // dosyayı diske yazıp sistemin paylaşım sayfasını açar, tarayıcıda indirmeye
+    // düşer. Mesaj DÖNEN SONUCA göre verilir: 'IPTAL'de (kullanıcı vazgeçti) ve
+    // 'DESTEKLENMIYOR'da asla "kaydedildi" YAZILMAZ.
+    try {
+      const blob = await (await fetch(qrDataUrl)).blob();
+      const sonuc = await dosyaKaydetVeyaPaylas(
+        blob, `oyna-bilet-${refShort || 'qr'}.png`, 'OYNA Bilet',
+      );
+      if (sonuc === 'PAYLASILDI') bildir('Bilet paylaşıma hazır.');
+      else if (sonuc === 'INDIRILDI') bildir('Bilet kaydedildi.');
+      else if (sonuc === 'DESTEKLENMIYOR') bildir('Bilet bu cihazda kaydedilemedi.', true);
+      // 'IPTAL' → kullanıcı vazgeçti; ne başarı ne hata mesajı yazılır.
+    } catch {
+      bildir('Bilet kaydedilemedi.', true);
+    }
   };
 
   const canEnter = payState === 'PAID' || payState === 'PARTIAL';
@@ -323,7 +393,15 @@ const MatchTicket: React.FC<MatchTicketProps> = ({ onBack }) => {
           className="w-full mt-3 py-4 rounded-2xl bg-[#161B22] border border-white/10 text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-95 transition-transform">
           <ArrowLeft size={18} /> Maçlarım'a Dön
         </button>
-        {shareMsg && <p className="text-center text-[0.6875rem] text-[#39FF14] mt-3">{shareMsg}</p>}
+        {shareMsg && (
+          <p role="status"
+            /* Hata rengi KIRMIZI: uygulamanın kendi kuralında altın (#FACC15)
+               PARA demektir (components/BookingCard.tsx). Hata mesajını altınla
+               yazmak, uygulamanın renk dilini bozar. Başarı yeşil kalır. */
+            className={`text-center text-[0.6875rem] mt-3 ${shareMsg.hata ? 'text-red-400' : 'text-[#39FF14]'}`}>
+            {shareMsg.metin}
+          </p>
+        )}
       </div>
     </div>
   );

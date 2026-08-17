@@ -42,6 +42,29 @@ type RowPerson = {
   meta?: string; // "3 maç birlikte" / "2 ortak arkadaş"
 };
 
+/**
+ * Metni panoya GERÇEKTEN kopyalar; kopyalandıysa `true` döner.
+ *
+ * NEDEN: eski kod boş bir `catch` bloğu ("pano izni yoksa sessiz") ile hatayı
+ * yutuyordu. Kullanıcı "Kopyala"ya basıyor, hiçbir şey olmuyor, hiçbir şey
+ * söylenmiyor.
+ * Pano API'si paketlenmiş uygulamada çoğu zaman YOKTUR (iOS'ta uygulama özel
+ * şemadan yüklendiği için güvenli bağlam değildir; Android WebView'da da yok),
+ * yani bu "nadir" değil, MUTAT durumdur. Sonuç döndürülür ki çağıran taraf
+ * başarı göstergesini yalnız gerçekten kopyalandığında açsın.
+ */
+async function panoyaKopyala(metin: string): Promise<boolean> {
+  const pano = navigator.clipboard as Clipboard | undefined;
+  if (!pano || typeof pano.writeText !== 'function') return false;
+  try {
+    // `await` ŞART: reddedilen promise ancak beklenirse yakalanabilir.
+    await pano.writeText(metin);
+    return true;
+  } catch {
+    return false;                       // izin reddedildi / belge odakta değil
+  }
+}
+
 // Durum-farkındalı tek buton (Spec B10)
 const RelationButton: React.FC<{
   person: RowPerson;
@@ -129,6 +152,9 @@ const FriendAddView: React.FC<FriendAddViewProps> = ({ onBack, onNavigate }) => 
   const userId = auth.currentUser?.uid || '';
 
   const [query, setQuery] = useState('');
+  // Pano çalışmadığında davet bağlantısı EKRANDA KALIR (kaybolan bir toast
+  // yerine): kullanıcı seçip kopyalayabilsin ya da elle yazabilsin.
+  const [elleDavetLinki, setElleDavetLinki] = useState<string | null>(null);
   const [results, setResults] = useState<RowPerson[]>([]);
   const [searching, setSearching] = useState(false);
   const [teammates, setTeammates] = useState<RowPerson[]>([]);
@@ -239,24 +265,40 @@ const FriendAddView: React.FC<FriendAddViewProps> = ({ onBack, onNavigate }) => 
 
   const copyMyId = useCallback(async () => {
     if (!myOynaId) return;
-    try {
-      await navigator.clipboard.writeText(`@${myOynaId}`);
+    const metin = `@${myOynaId}`;
+    // "Kopyalandı ✓" göstergesi YALNIZ gerçekten kopyalandığında açılır;
+    // olmadıysa kullanıcı ID'yi elle yazabilsin diye toast'ta gösterilir
+    // (aynı desen: views/owner/OwnerTeamView.tsx — "Kod kopyalanamadı, elle girin.").
+    if (await panoyaKopyala(metin)) {
       setCopied(true);
       setTimeout(() => setCopied(false), 1600);
-    } catch { /* pano izni yoksa sessiz */ }
-  }, [myOynaId]);
+      return;
+    }
+    showToast(`Kopyalanamadı — ID'in: ${metin}`);
+  }, [myOynaId, showToast]);
 
   const shareInvite = useCallback(async () => {
     try {
       const code = await getOrCreateReferralCode();
       const url = `https://oyna.app/davet/${code}`;
       const text = `OYNA'da beraber maç yapalım! ⚽ Beni @${myOynaId || ''} olarak ekle: ${url}`;
-      if (navigator.share) {
-        await navigator.share({ title: 'OYNA Daveti', text, url });
-      } else {
-        await navigator.clipboard.writeText(text);
-        showToast('Davet linki kopyalandı');
+      if (typeof navigator.share === 'function') {
+        try {
+          await navigator.share({ title: 'OYNA Daveti', text, url });
+          return;
+        } catch (e) {
+          // Kullanıcı paylaşım sayfasını kapattı → vazgeçti; panoya DÜŞÜLMEZ.
+          if ((e as Error)?.name === 'AbortError') return;
+          // Başka bir hata: aşağıdaki pano yolu denenir.
+        }
       }
+      // Pano yolu: başarı mesajı yalnız GERÇEKTEN kopyalandığında yazılır.
+      if (await panoyaKopyala(text)) { showToast('Davet linki kopyalandı'); return; }
+      // Kopyalanamadıysa bağlantıyı EKRANDA KALICI göster. Toast yetmez:
+      // 2,4 saniyede kayboluyor ve `pointer-events-none` olduğu için kullanıcı
+      // metni seçemiyor bile — yani "elle yaz" kurtarma yolu fiilen yoktu.
+      setElleDavetLinki(url);
+      showToast('Kopyalanamadı — bağlantı aşağıda yazıyor.');
     } catch (e) {
       if ((e as Error)?.name !== 'AbortError') showToast(parseSocialError(e));
     }
@@ -332,6 +374,16 @@ const FriendAddView: React.FC<FriendAddViewProps> = ({ onBack, onNavigate }) => 
             <Share2 size={11} /> Paylaş
           </button>
         </div>
+
+        {/* Kopyalanamayan davet bağlantısı — SEÇİLEBİLİR ve KALICI. */}
+        {elleDavetLinki && (
+          <div className="mt-2 mx-1 px-3 py-2 rounded-xl bg-amber-950/30 border border-amber-500/25">
+            <p className="text-[0.625rem] font-bold text-amber-300/80 mb-1">
+              Bu cihazda kopyalanamadı — bağlantıyı elle paylaşabilirsin:
+            </p>
+            <p className="text-[0.6875rem] font-bold text-white break-all select-all">{elleDavetLinki}</p>
+          </div>
+        )}
 
         {isSearchActive ? (
           /* ── Arama sonuçları ── */

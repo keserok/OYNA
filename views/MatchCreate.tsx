@@ -2,10 +2,10 @@
 // "Tesis → Saha → Saat → Kaç kişi" tek ekranı. Tasarım: Maç Oluştur - 2a (Final).
 // Her alanın arkasında gerçek tablo var; fiyat/kapora rakamları SUNUCUDAN gelir
 // (get_court_day_quote), yayın TEK RPC ile atomiktir (create_match_atomic:
-// maç + saha rezervasyonu + kapora blokajı — çakışmada SLOT_TAKEN, bakiye
-// yetmezse INSUFFICIENT_BALANCE; form asla kaybolmaz, öksüz maç kalmaz).
-import React, { useCallback, useEffect, useMemo, useRef, useState, Suspense, lazy } from 'react';
-import { createPortal } from 'react-dom';
+// maç + saha rezervasyonu — çakışmada SLOT_TAKEN; form asla kaybolmaz, öksüz
+// maç kalmaz). Kapora lansman döneminde KAPALI: match_deposit_enabled=false
+// iken sunucu kaporayı 0 döndürür ve maç kaporasız yayınlanır.
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ChevronLeft, ChevronRight, Search, Check, MapPin, Bell, Plus, X,
@@ -25,7 +25,6 @@ import {
   type BookableProvider, type PitchPricePreview,
 } from '../services/matchCreateService';
 import { fetchPitchAvailability, buildBusyMap, isSlotBusy, toISODate, type BusyMap } from '../services/playerBookingService';
-import { getWalletSummary, type WalletSummary } from '../services/walletService';
 import { getFriends, type FriendRow } from '../services/socialService';
 import { getMyTeams, getTeamSquad, type MyTeamRow } from '../services/teamSocialService';
 import { getMatchDetails } from '../services/matchService';
@@ -36,9 +35,6 @@ import { auth } from '../supabaseAuth';
 import { formatTRYAmount } from '../utils/formatTRY';
 import { useLowMotion } from '../hooks/useLowMotion';
 import { olayYaz } from '../utils/olcum';
-
-// Cüzdan yükleme overlay'i — form kaybolmadan bakiye tamamlanır (gerçek akış).
-const WalletScreen = lazy(() => import('./WalletScreen'));
 
 interface MatchCreateProps {
   onBack: () => void;
@@ -63,13 +59,10 @@ const MAX_FACILITIES = 6;
 
 const trLower = (s: string) => s.toLocaleLowerCase('tr-TR');
 
-// IP-19: buradaki yerel biçimleyici tutarı YUVARLIYORDU. 299,60₺ bakiye "300₺"
-// yazılıyor, eksik hesabı ise gerçek değerden yapıldığı için ekranda aynı anda
-// "bakiyen 300₺" ve "1₺ eksik" görünüyordu. Artık gösterilen sayı ile hesaba
-// giren sayı aynı: ikisi de ham `spendable`.
+// IP-19: para biçimi tek kaynaktan — gösterilen sayı ile hesaba giren sayı aynı.
 const money = formatTRYAmount;
 
-type SheetKind = 'ADV' | 'FRIENDS' | 'PROVIDERS' | 'RULES' | 'TOPUP' | 'SUCCESS' | null;
+type SheetKind = 'ADV' | 'FRIENDS' | 'PROVIDERS' | 'RULES' | 'SUCCESS' | null;
 
 /** Kadroya çağrılan kişi — arkadaş listesinden ya da takım kadrosundan gelir. */
 interface InvitedPerson {
@@ -77,6 +70,47 @@ interface InvitedPerson {
   name: string;
   meta: string;
   source: 'FRIEND' | 'TEAM';
+}
+
+// ─── Pano (kopyala) — DÜRÜST ─────────────────────────────────────────────────
+/**
+ * Metni panoya GERÇEKTEN kopyalar; kopyalandıysa `true` döner.
+ *
+ * NEDEN: eski kod boş bir `catch` bloğu ("pano yok") ile hatayı yutuyordu —
+ * kullanıcı kopyala'ya basıyor, hiçbir şey olmuyor, hiçbir şey söylenmiyor.
+ * Pano API'si paketlenmiş uygulamada çoğu zaman YOKTUR (iOS'ta uygulama özel
+ * şemadan yüklendiği için güvenli bağlam değildir; Android WebView'da da yok),
+ * yani bu "nadir" değil MUTAT durumdur.
+ */
+export async function panoyaKopyala(metin: string): Promise<boolean> {
+  const pano = navigator.clipboard as Clipboard | undefined;
+  if (!pano || typeof pano.writeText !== 'function') return false;
+  try {
+    // `await` ŞART: reddedilen promise ancak beklenirse yakalanabilir.
+    await pano.writeText(metin);
+    return true;
+  } catch {
+    return false;                       // izin reddedildi / belge odakta değil
+  }
+}
+
+/**
+ * Panoya kopyala VE sonucu kullanıcıya söyle.
+ *
+ * Dönen değer, çağıranın kendi başarı göstergesini ("Kod kopyalandı ✓") açıp
+ * açmayacağını belirler — gösterge asla koşulsuz açılmamalıdır.
+ * `basariMesaji` null geçilirse başarıda toast çıkmaz (ekranda zaten görsel
+ * bir onay varsa gereksiz gürültü olmasın diye).
+ */
+export async function kopyalaVeBildir(
+  metin: string,
+  basariMesaji: string | null,
+  hataMesaji: string,
+): Promise<boolean> {
+  const oldu = await panoyaKopyala(metin);
+  if (oldu) { if (basariMesaji) showToast(basariMesaji, 'success'); }
+  else showToast(hataMesaji, 'error');
+  return oldu;
 }
 
 // ÖLÇÜM — kaptan hunisi (prensip 1.1'in ana akışı).
@@ -101,7 +135,6 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
   // ── Veri durumu ───────────────────────────────────────────────────────────
   const [loading, setLoading] = useState(true);
   const [facilities, setFacilities] = useState<CreateFacility[]>([]);
-  const [wallet, setWallet] = useState<WalletSummary | null>(null);
   const [busyMaps, setBusyMaps] = useState<Record<string, BusyMap>>({});
   const [quotes, setQuotes] = useState<Record<string, DayQuote>>({});
   const [localBusy, setLocalBusy] = useState<Set<string>>(new Set()); // SLOT_TAKEN sonrası anlık işaret
@@ -162,7 +195,6 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
   const publishIdemRef = useRef<string | null>(null);
   const [result, setResult] = useState<AtomicCreateResult | null>(null);
   const [conflict, setConflict] = useState<{ time: string; next: string | null } | null>(null);
-  const [missingTL, setMissingTL] = useState(0);
   const [copied, setCopied] = useState(false);
   const [notified, setNotified] = useState(false);
   const [suggestOpen, setSuggestOpen] = useState(false);
@@ -247,22 +279,19 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
   // Kişi başı tutar SAHANIN anlaşmasından hesaplanır (eski gömülü %5 kaldırıldı);
   // formül sunucudaki create_match_atomic ile birebir aynı.
   const perPerson = total != null ? kisiBasiTutar(total, per * 2, sahaFiyat) : null;
-  const spendable = wallet?.spendableBalance ?? 0;
-  const missing = deposit != null ? Math.max(0, Math.ceil(deposit - spendable)) : 0;
   const threshold = per * 2 - 2;
 
   const canPublish = !loading && !publishing && !!format
     && (seeded || (!!selCourtId && !!selTime && !!selHour?.tariffOk && !hourBlocked(selTime ?? '', selHour?.endTime)));
 
-  // ── Yükleme: tesisler + cüzdan + sıralama ─────────────────────────────────
+  // ── Yükleme: tesisler + sıralama ──────────────────────────────────────────
   useEffect(() => {
     let alive = true;
     (async () => {
       try {
-        const [facs, favIds, summary] = await Promise.all([
+        const [facs, favIds] = await Promise.all([
           fetchCreateFacilities(),
           fetchMyFavoritePitchIds().catch(() => new Set<string>()),
-          getWalletSummary().catch(() => null),
         ]);
         if (!alive) return;
         // Sıra: favoriler → daha önce maç kurduğun tesisler → puan
@@ -275,7 +304,6 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
         const rank = (f: CreateFacility) => (favIds.has(f.id) ? 0 : history.has(f.id) ? 1 : 2);
         facs.sort((a, b) => rank(a) - rank(b) || b.rating - a.rating || a.name.localeCompare(b.name, 'tr'));
         setFacilities(facs);
-        if (summary) setWallet(summary);
 
         // Rezervasyondan çevirme: saha + saat kilitli gel
         if (seed?.bookingId) {
@@ -422,10 +450,10 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
     // StrictMode/eşzamanlı render'da çift tetiklenmeye karşı kilit
     if (publishBusyRef.current) return;
     publishBusyRef.current = true;
-    // ÖLÇÜM · kaptan hunisi 3/5 — "kapora ekranına geldi". Bu akışta kapora
-    // AYRI bir ekranda değil, yayınlama anında cüzdandan alınıyor; kullanıcının
-    // paraya taahhüt ettiği an burasıdır. (Bakiye yetmezse ödeme ekranına
-    // gidilir ve orası da AYNI olayı yazar — iki yol tek adımda birleşir.)
+    // ÖLÇÜM · kaptan hunisi 3/5 — "yayına taahhüt etti". Olay adı huni
+    // sürekliliği için korunur; lansman döneminde kapora alınmadığından bu
+    // adım "yayınla dedi" anlamına gelir (match_deposit_enabled açılınca
+    // yeniden para taahhüdü olur).
     olayYaz('kaptan_kapora_ekrani');
     setPublishing(true);
     setPubStep(0);
@@ -463,16 +491,42 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
           })
           .catch(() => showToast('Bazı davetler gönderilemedi.', 'error'));
       }
-      // Maçı yerel akışa işle + seed'i temizle + cüzdanı tazele
+      // Maçı yerel akışa işle + seed'i temizle
       const fresh = await getMatchDetails(res.matchId).catch(() => null);
       if (fresh) { applyMatchLocal(fresh); setSelectedMatch(fresh); }
       if (seeded) setSeed(null);
-      getWalletSummary().then(setWallet).catch(() => {});
       setResult(res);
       setCopied(false);
-      // ÖLÇÜM · kaptan hunisi 4/5 ve 5/5. Kapora bu çağrının İÇİNDE bloke
-      // edildiği için ikisi birlikte yazılır; 3→4 düşüşü "para adımında
-      // vazgeçti/yetmedi", 4→5 düşüşü ise sunucu tarafı hatası demektir.
+
+      // KART KAPORASI (16 Ağu 2026): sunucu maçı "kapora bekliyor" durumuna
+      // aldıysa kaptan ödeme ekranına gider — kapora KARTTAN tahsil edilir,
+      // onaylanınca kaptan kadroya oturur. Ödeme 30 dk içinde tamamlanmazsa
+      // sunucu maçı ve rezervasyonu kendiliğinden iptal eder (para çekilmez).
+      if (res.depositStatus === 'AWAITING_PAYMENT' && res.deposit > 0) {
+        const store = useAppStore.getState();
+        store.setPaymentContext({
+          kind: 'MATCH_CREATE_DEPOSIT',
+          badge: 'MAÇ KAPORASI',
+          title: title.trim() || `${fac?.name ?? 'Saha'} Maçı`,
+          subtitle: `${venueTxt} · ${whenTxt}`,
+          amount: res.deposit,
+          amountLabel: 'Ödenecek Kapora',
+          amountHint: `Maç dolunca ${money(Math.max(0, res.deposit - res.perPerson))} iade edilir — yalnız kendi payın (${money(res.perPerson)}) sende kalır`,
+          isDeposit: true,
+          allowBalance: false,
+          successTitle: 'Maçın Yayında!',
+          successSubtitle: 'Kapora güvencede',
+          matchId: res.matchId,
+          pitchId: selFacId ?? undefined,
+          infoNote: `Kapora kartından tahsil edilir ve maçın güvencesidir. Maça ${sahaFiyat.fullHours} saatten fazla varken iptal edersen ödeme altyapısı kesintisi düşülerek kartına iade edilir; daha geç iptalde iade yapılmaz. Ödemeyi şimdi tamamlamazsan maç 30 dakika içinde kendiliğinden iptal olur ve kartından para çekilmez.`,
+        });
+        olayYaz('kaptan_mac_yayinda');
+        store.navigateTo('PAYMENT');
+        return; // finally bloğu kilidi ve sayaçları yine de temizler
+      }
+
+      // ÖLÇÜM · kaptan hunisi 4/5 ve 5/5. Olay adları huni sürekliliği için
+      // korunur; kapora yoksa 4/5 "yayın sunucuda kabul edildi" demektir.
       olayYaz('kaptan_kapora_odendi');
       olayYaz('kaptan_mac_yayinda');
       setSheet('SUCCESS');
@@ -483,9 +537,10 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
         setLocalBusy(prev => new Set(prev).add(`${selCourtId}|${dateISO}|${selTime}`));
         setConflict({ time: selTime, next: firstFree(selTime) });
       } else if (code === 'INSUFFICIENT_BALANCE') {
-        setMissingTL(deposit != null ? Math.max(1, Math.ceil(deposit - spendable)) : 1);
-        showToast('Kapora için bakiyen yetersiz — formun korundu.', 'error');
-      } else if (code === 'NO_TARIFF' || code === 'BOOKING_DISABLED' || code === 'SLOT_UNAVAILABLE') {
+        // Kapora lansmanda kapalı (match_deposit_enabled=false) — bu hata ancak
+        // sunucu ayarı yanlışlıkla açılırsa gelir. Dürüst mesaj, form korunur.
+        showToast('Kapora ödemesi şu an alınamıyor — formun korundu, birazdan tekrar dene.', 'error');
+      } else if (code === 'NO_TARIFF' || code === 'BOOKING_DISABLED' || code === 'SLOT_UNAVAILABLE' || code === 'LISTING_CUTOFF') {
         showToast(message.split(':').slice(1).join(':').trim() || 'Bu saat şu an kullanılamıyor.', 'error');
       } else if (code === 'FORMAT_OUT_OF_RANGE' || code === 'COURT_NOT_FOUND') {
         showToast('Saha bilgisi güncellendi, liste tazeleniyor.', 'error');
@@ -518,7 +573,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [teamInvite, visibility, seeded, selCourtId, dateISO, selTime, format, title, gender, age,
-      mental, offers, seed?.bookingId, invited, deposit, spendable, firstFree]);
+      mental, offers, seed?.bookingId, invited, deposit, firstFree]);
   publishRef.current = publish;
 
   // ── Yayınla ───────────────────────────────────────────────────────────────
@@ -615,11 +670,6 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
     return `Toplam ${money(sum)}${unknown ? '+' : ''} · onaylanınca tahsil edilir`;
   }, [offers, providers]);
 
-  // Cüzdan overlay'i doğrudan YÜKLEME sekmesinde açılsın
-  useEffect(() => {
-    if (sheet === 'TOPUP') useAppStore.getState().setWalletInitialTab('TOPUP');
-  }, [sheet]);
-
   const goLobby = async () => {
     if (!result) return;
     const fresh = await getMatchDetails(result.matchId).catch(() => null);
@@ -632,15 +682,32 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
     const text = result.privateCode
       ? `OYNA'da maç kurdum! Katılım kodu: ${result.privateCode} — oyna://match/${result.matchId}`
       : `OYNA'da maç kurdum! Kadroda yerini al: oyna://match/${result.matchId}`;
-    try {
-      if (navigator.share) await navigator.share({ text });
-      else { await navigator.clipboard.writeText(text); showToast('Davet metni kopyalandı', 'success'); }
-    } catch { /* kullanıcı vazgeçti */ }
+    if (typeof navigator.share === 'function') {
+      try {
+        await navigator.share({ text });
+        return;
+      } catch (e) {
+        // Kullanıcı paylaşım sayfasını kapattı → vazgeçti; panoya DÜŞÜLMEZ.
+        if ((e as Error)?.name === 'AbortError') return;
+        // Başka bir hata: aşağıdaki pano yolu denenir.
+      }
+    }
+    // Pano yolu: "kopyalandı" YALNIZ gerçekten kopyalandığında yazılır.
+    await kopyalaVeBildir(
+      text,
+      'Davet metni kopyalandı',
+      result.privateCode
+        ? `Kopyalanamadı — katılım kodu: ${result.privateCode}`
+        : 'Davet metni bu cihazda kopyalanamadı.',
+    );
   };
 
   const copyCode = async () => {
     if (!result?.privateCode) return;
-    try { await navigator.clipboard.writeText(result.privateCode); setCopied(true); } catch { /* pano yok */ }
+    const kod = result.privateCode;
+    // Kart üzerinde zaten "Kod kopyalandı ✓" yazısı beliriyor; başarıda ayrıca
+    // toast çıkarmaya gerek yok. Ama o yazı YALNIZ gerçek kopyalamada açılır.
+    if (await kopyalaVeBildir(kod, null, `Kod kopyalanamadı, elle gir: ${kod}`)) setCopied(true);
   };
 
   // ── Görsel yardımcılar ────────────────────────────────────────────────────
@@ -650,8 +717,6 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
 
   const banner = conflict
     ? { tone: '#F87171', box: 'bg-red-400/10 border-red-400/25', title: `${conflict.time} az önce doldu`, sub: conflict.next ? `Bu sahada en yakın müsait saat ${conflict.next}` : 'Bugün için başka müsait saat kalmadı', btn: conflict.next ? `${conflict.next}'e geç` : null, act: () => { if (conflict.next) { pickTime(conflict.next); } } }
-    : missingTL > 0 && missing > 0
-    ? { tone: '#FCA5A5', box: 'bg-red-400/10 border-red-400/25', title: `Kapora için ${money(missing)} eksik`, sub: 'Formun kaybolmaz — yükleyip kaldığın yerden devam et', btn: 'Yükle', act: () => setSheet('TOPUP') }
     : seeded
     ? { tone: '#39FF14', box: 'bg-[#39FF14]/[0.07] border-[#39FF14]/25', title: 'Rezervasyonun maça çevriliyor', sub: 'Saha ve saat kilitli — sadece kadroyu kur', btn: 'Detay', act: () => setSheet('RULES') }
     : null;
@@ -1119,31 +1184,27 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
               <span className="text-[0.6875rem] font-extrabold text-[#39FF14] shrink-0">Değiştir</span>
             </button>
 
-            {/* Kapora kuralı */}
+            {/* Kesinleşme ve kapora kuralı (kart kaporası — 16 Ağu 2026):
+                kapora yayın anında KARTTAN tahsil edilir; maç dolunca fazlası
+                iade edilir, iptal iadesi sahanın serbest-iptal saatine bağlıdır
+                ve ödeme altyapısı kesintisi düşülür. */}
             <button onClick={() => setSheet('RULES')}
-              className={`flex items-center gap-3 rounded-[20px] border p-4 text-left min-h-[60px] active:scale-[0.99] transition-transform ${
-                missing > 0 && deposit != null && !seeded
-                  ? 'border-red-400/30 bg-red-400/[0.07]'
-                  : 'border-[#FACC15]/25 bg-[#FACC15]/5'}`}>
-              <div className={`w-[38px] h-[38px] rounded-[13px] shrink-0 flex items-center justify-center ${missing > 0 && deposit != null && !seeded ? 'bg-red-400/[0.14] text-red-300' : 'bg-[#FACC15]/[0.12] text-[#FACC15]'}`}>
+              className="flex items-center gap-3 rounded-[20px] border p-4 text-left min-h-[60px] active:scale-[0.99] transition-transform border-[#FACC15]/25 bg-[#FACC15]/5">
+              <div className="w-[38px] h-[38px] rounded-[13px] shrink-0 flex items-center justify-center bg-[#FACC15]/[0.12] text-[#FACC15]">
                 <Lock size={17} />
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-[0.8125rem] font-extrabold">
                   {seeded ? 'Kapora yok — rezervasyon güvencesi zaten ödendi'
-                    : deposit != null
-                      ? missing > 0
-                        ? `Kapora ${money(deposit)} · bakiyen ${money(spendable)}`
-                        : `Kapora ${money(deposit)} · cüzdanından bloke`
-                      : 'Kapora saat seçince hesaplanır'}
+                    : deposit == null ? 'Kurallar saat seçince netleşir'
+                    : deposit > 0 ? `Kapora ${money(deposit)} · yayında kartından tahsil edilir`
+                    : 'Kapora alınmıyor — maç doğrudan yayınlanır'}
                 </p>
-                <p className={`mt-0.5 text-[0.6875rem] font-bold leading-snug ${missing > 0 && deposit != null && !seeded ? 'text-red-300' : 'text-[#FACC15]/85'}`}>
-                  {seeded ? 'Maç dolunca oyuncu payları cüzdanına gelir'
-                    : deposit != null
-                      ? missing > 0
-                        ? `${money(missing)} yükle, kapora anında bloke edilsin`
-                        : `Maç dolunca ${money(Math.max(0, deposit - (perPerson ?? 0)))} iade · dolmazsa tamamı`
-                      : 'Kapora ve iade kuralları için dokun'}
+                <p className="mt-0.5 text-[0.6875rem] font-bold leading-snug text-[#FACC15]/85">
+                  {seeded ? 'Oyuncu payları maç kesinleşince toplanır'
+                    : deposit != null && deposit > 0
+                      ? `Maç dolunca ${money(Math.max(0, deposit - (perPerson ?? 0)))} iade · dolmazsa tamamı (kesinti düşülür)`
+                      : 'Kesinleşme ve iade kuralları için dokun'}
                 </p>
               </div>
               <ChevronRight size={15} className="text-ink-4 shrink-0" />
@@ -1161,7 +1222,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                 <span className="w-4 h-4 rounded-full border-2 border-[#39FF14]/25 border-t-[#39FF14] animate-spin shrink-0" />
                 <span className="text-xs font-extrabold uppercase tracking-widest text-[#39FF14]">Yayınlanıyor</span>
               </div>
-              {[['Maç oluşturuldu', 'matches'], ['Saha kilitlendi', 'pitch_bookings'], ['Kapora bloke ediliyor', 'payment_intents']].map(([t, src], i) => (
+              {[['Maç oluşturuldu', 'matches'], ['Saha kilitlendi', 'pitch_bookings'], ['Kadro hazırlanıyor', 'match_participants']].map(([t, src], i) => (
                 <div key={src} className="flex items-center gap-2.5">
                   <span className={`w-3 text-[0.6875rem] font-extrabold shrink-0 ${pubStep > i ? 'text-[#39FF14]' : 'text-ink-4'}`}>{pubStep > i ? '✓' : '⟳'}</span>
                   <span className={`flex-1 text-[0.6875rem] font-bold ${pubStep > i ? 'text-[#39FF14]' : 'text-white/55'}`}>{t}</span>
@@ -1206,7 +1267,9 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
           <p className="text-center text-[0.6875rem] font-bold text-white/[0.32] pb-1">
             {publishing ? 'Kapatma — işlem birkaç saniye sürebilir'
               : seeded ? 'Rezervasyonun maça çevrilecek · ek ödeme yok'
-              : deposit != null ? `${money(deposit)} kapora cüzdanından bloke edilir · maç dolmazsa tam iade` : 'Saha ve saat seçince kapora hesaplanır'}
+              : deposit != null && deposit > 0 ? `${money(deposit)} kapora kartından tahsil edilir · maç dolmazsa tamamı iade (işlem kesintisi düşülür)`
+              : deposit === 0 ? 'Kapora yok — yayınla ve kadroyu kurmaya başla'
+              : 'Saha ve saat seçince kurallar netleşir'}
           </p>
         </div>
       )}
@@ -1591,7 +1654,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
             className="absolute inset-0 z-[60] bg-[#0A0E14] flex flex-col">
             <header className="shrink-0 pt-safe border-b border-white/5">
               <div className="px-5 py-4 flex items-center justify-between">
-                <h2 className="text-[1.0625rem] font-extrabold italic uppercase tracking-tight">Kapora &amp; İade</h2>
+                <h2 className="text-[1.0625rem] font-extrabold italic uppercase tracking-tight">Maç Kuralları</h2>
                 <button onClick={() => setSheet(null)} aria-label="Kapat" className="w-[42px] h-[42px] rounded-full bg-white/5 border border-white/5 flex items-center justify-center"><X size={18} /></button>
               </div>
             </header>
@@ -1599,25 +1662,30 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
               <div className="rounded-[20px] border border-[#FACC15]/25 bg-[#FACC15]/5 p-[18px] flex items-center justify-between gap-3.5">
                 <div>
                   <p className="text-[0.625rem] font-extrabold uppercase tracking-[0.16em] text-[#FACC15]/70">Bu maçın kaporası</p>
-                  <p className="font-numeric mt-1 text-3xl font-extrabold text-[#FACC15]">{seeded ? money(0) : money(deposit)}</p>
+                  <p className="font-numeric mt-1 text-3xl font-extrabold text-[#FACC15]">{seeded || deposit == null ? money(0) : money(deposit)}</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-[0.625rem] font-extrabold uppercase tracking-[0.16em] text-ink-4">Cüzdan bakiyen</p>
-                  <p className={`font-numeric mt-1 text-[1.1875rem] font-extrabold ${missing > 0 && !seeded ? 'text-red-400' : 'text-[#39FF14]'}`}>{money(spendable)}</p>
-                  <p className={`mt-0.5 text-[0.6875rem] font-extrabold ${missing > 0 && !seeded ? 'text-red-400' : 'text-[#39FF14]'}`}>
-                    {seeded ? 'Gerekmiyor' : missing > 0 ? `${money(missing)} eksik` : 'Yeterli ✓'}
+                  <p className="mt-0.5 text-[0.6875rem] font-extrabold text-[#39FF14]">
+                    {seeded ? 'Gerekmiyor — güvence ödendi' : !deposit ? 'Bu maçta alınmıyor' : 'Yayında kartından tahsil edilir'}
                   </p>
                 </div>
               </div>
+              {/* Kart kaporası kuralları (16 Ağu 2026): tahsilat karttan,
+                  iadeler karta — iptal iadesinde ödeme altyapısı kesintisi
+                  düşülür. Kapora yoksa 1 ve 3 hiç çizilmez. */}
               {[
-                { n: '1', t: 'Kapora cüzdanından bloke edilir', b: 'Yayınladığın anda tutar güvenceye alınır — para çekilmez, saha sana kilitlenir.' },
-                { n: '2', t: `Maç ${threshold} oyuncuda kesinleşir`, b: 'Toplam kadronun 2 eksiği kadar oyuncu katıldığında maç aktifleşir ve kapora tahsil edilir.' },
-                { n: '3', t: 'Maç dolunca payın dışındaki tutar döner', b: deposit != null && perPerson != null ? `${money(deposit)} − ${money(perPerson)} = ${money(Math.max(0, deposit - perPerson))} cüzdanına iade edilir; sen de herkes gibi yalnız kendi payını ödersin.` : 'Sen de herkes gibi yalnız kendi payını ödersin; kalanı iade edilir.' },
+                ...(deposit != null && deposit > 0 ? [
+                  { n: '1', t: 'Kapora yayında kartından tahsil edilir', b: 'Yayınladığın anda tutar kartından çekilir ve maçın güvencesi olur — saha sana kilitlenir. Ödemeyi tamamlamazsan maç 30 dakika içinde kendiliğinden iptal olur.' },
+                ] : []),
+                { n: '2', t: `Maç ${threshold} oyuncuda kesinleşir`, b: 'Toplam kadronun 2 eksiği kadar oyuncu katıldığında maç kesinleşir ve saha kesin olarak senin olur.' },
+                ...(deposit != null && deposit > 0 ? [
+                  { n: '3', t: 'Maç dolunca payın dışındaki tutar döner', b: perPerson != null ? `${money(deposit)} − ${money(perPerson)} = ${money(Math.max(0, deposit - perPerson))} kartına iade edilir; sen de herkes gibi yalnız kendi payını ödersin.` : 'Sen de herkes gibi yalnız kendi payını ödersin; kalanı kartına iade edilir.' },
+                ] : []),
                 { n: '4', t: 'Son çağrı: maça 8 saat kala', b: 'Kadro hâlâ eşiğin altındaysa sana bildirim gelir — maç bu adımda iptal EDİLMEZ, doldurmak için hâlâ vaktin vardır.' },
-                { n: '5', t: 'Kesin karar: maça 90 dakika kala', b: `Kadro eşiği tutuyorsa maç kesinleşir. Tutmuyorsa maç iptal olur ve kaporanın TAMAMI cüzdanına döner. ${sahaFiyat.fullHours} saatten az kala sen iptal edersen iade yapılmaz.` },
+                { n: '5', t: 'Kesin karar: maça 90 dakika kala', b: `Kadro eşiği tutuyorsa maç kesinleşir. Tutmuyorsa maç iptal olur${deposit != null && deposit > 0 ? ' ve ödemen (işlem kesintisi düşülerek) kartına iade edilir' : ''}. ${sahaFiyat.fullHours} saatten az kala sen iptal edersen iade yapılmaz.` },
                 // IP-04 — saatler SAHANIN ayarından (pitch_price_preview); kaptan
                 // iptali kuralıyla bilerek aynı sayı, ikisi de aynı kaynaktan okur.
-                { n: '6', t: 'Oyuncu ayrılması — iade kademesi', b: `Kadrodaki bir oyuncu maça ${sahaFiyat.fullHours} saatten fazla varken ayrılırsa ödediği tutar cüzdanına döner. ${sahaFiyat.halfHours}–${sahaFiyat.fullHours} saat kala %${sahaFiyat.halfPct} iade edilir, ${sahaFiyat.halfHours} saatten az kala iade yapılmaz. Tam iade penceresi kapandıktan sonra ayrılanın güvenilirlik puanı düşer; sana bildirim gider, boşalan yer vitrine açılır.` },
+                { n: '6', t: 'Oyuncu ayrılması — iade kademesi', b: `Kadrodaki bir oyuncu maça ${sahaFiyat.fullHours} saatten fazla varken ayrılırsa ödediği tutar iade edilir. ${sahaFiyat.halfHours}–${sahaFiyat.fullHours} saat kala %${sahaFiyat.halfPct} iade edilir, ${sahaFiyat.halfHours} saatten az kala iade yapılmaz. Tam iade penceresi kapandıktan sonra ayrılanın güvenilirlik puanı düşer; sana bildirim gider, boşalan yer vitrine açılır.` },
               ].map(r => (
                 <div key={r.n} className="flex gap-3 rounded-[18px] border border-white/[0.08] bg-white/[0.03] p-4">
                   <div className="font-numeric w-9 h-9 rounded-xl bg-[#39FF14]/10 border border-[#39FF14]/25 text-[#39FF14] text-sm font-extrabold flex items-center justify-center shrink-0">{r.n}</div>
@@ -1666,7 +1734,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                   <Undo2 size={14} className="text-[#39FF14] shrink-0 mt-0.5" />
                   <p className="text-[0.6875rem] leading-relaxed text-white/55">
                     {result.deposit > 0
-                      ? `Maç dolduğunda ${money(Math.max(0, result.deposit - result.perPerson))} cüzdanına döner — sen de yalnız ${money(result.perPerson)} kendi payını ödemiş olursun. Maç dolmazsa tamamı iade.`
+                      ? `Maç dolduğunda ${money(Math.max(0, result.deposit - result.perPerson))} iade edilir — sen de yalnız ${money(result.perPerson)} kendi payını ödemiş olursun. Maç dolmazsa tamamı iade.`
                       : `Kişi başı ücret ${money(result.perPerson)} — oyuncular katıldıkça ödemeler güvenceye alınır.`}
                   </p>
                 </div>
@@ -1703,19 +1771,6 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
         )}
       </AnimatePresence>
 
-      {/* Cüzdan yükleme overlay'i — form kaybolmadan */}
-      {sheet === 'TOPUP' && createPortal(
-        <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-          className="fixed inset-0 z-[70] bg-[#0A0E14] overflow-y-auto overscroll-contain custom-scrollbar">
-          <Suspense fallback={<div className="h-full min-h-screen flex items-center justify-center"><Spinner /></div>}>
-            <WalletScreen onBack={() => {
-              setSheet(null);
-              getWalletSummary().then(s => { setWallet(s); if ((s?.spendableBalance ?? 0) >= (deposit ?? 0)) setMissingTL(0); }).catch(() => {});
-            }} />
-          </Suspense>
-        </motion.div>,
-        document.body,
-      )}
     </div>
   );
 };

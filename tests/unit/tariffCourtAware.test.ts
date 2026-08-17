@@ -166,3 +166,43 @@ describe('tarih-özel tarife (valid_on) — özel fiyat önceliği', () => {
     expect(resolveHourlyPrice(20, policy)).toBe(1000);
   });
 });
+
+// ── GECE EKSENİ (BULGU-10, 17 Ağu 2026 canlı testi) ─────────────────────────
+// Sunucu ikizi get_current_tariff_price (20260905000008) ile aynı kural:
+// gece yarısını aşan pencere end≤start → +1440; 06:00 öncesi dilim önceki
+// akşamın devamı. Düz kıyas akşam 21:00'i bile bulamıyor, ekran ortalama
+// fiyata düşüp sunucudan farklı kapora gösteriyordu (2.9 ihlali).
+describe('Gece penceresi (08:00→02:00) — istemci ikizi sunucuyla aynı ekseni kullanır', () => {
+  const geceTarifeleri = [
+    {
+      id: 't-gece', tariff_type: 'WEEKDAY', applies_to_days: [1, 2, 3, 4, 5, 6, 7],
+      start_time: '08:00', end_time: '02:00', slot_price: 1200, deposit_amount: 360,
+      slot_minutes: 60, court_id: null,
+    },
+  ];
+  const GUN = '2026-08-18';
+
+  it('akşam 21:00 pencereyi bulur (1200/360) — vitrin-kasa ayrışması biter', () => {
+    const q = resolveTariffForSlot(geceTarifeleri, GUN, '21:00');
+    expect(q?.price).toBe(1200);
+    expect(q?.deposit).toBe(360);
+  });
+
+  it('gece uzantısı 01:00 aynı pencerede (1200)', () => {
+    expect(resolveTariffForSlot(geceTarifeleri, GUN, '01:00')?.price).toBe(1200);
+  });
+
+  it('06:00 pencere dışı (08:00 başlangıçlı pencere) — eşleşme yok', () => {
+    expect(resolveTariffForSlot(geceTarifeleri, GUN, '06:00')).toBeNull();
+  });
+
+  it('00:00 biten klasik pencere davranışı DEĞİŞMEDİ (17:00→00:00, 23:00 içeride, 00:30 dışarıda)', () => {
+    const klasik = [{
+      id: 't-aksam', tariff_type: 'WEEKDAY', applies_to_days: [1, 2, 3, 4, 5, 6, 7],
+      start_time: '17:00', end_time: '00:00', slot_price: 1500, deposit_amount: 450,
+      slot_minutes: 60, court_id: null,
+    }];
+    expect(resolveTariffForSlot(klasik, GUN, '23:00')?.price).toBe(1500);
+    expect(resolveTariffForSlot(klasik, GUN, '00:30')).toBeNull();
+  });
+});

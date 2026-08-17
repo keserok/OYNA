@@ -1,6 +1,7 @@
 import { supabase } from '../supabaseClient';
 import { auth } from '../supabaseAuth';
 import { mapError } from '../utils/errorMap';
+import { uygunsuzMu, UYGUNSUZ_ICERIK_MESAJI } from '../shared/icerikSuzgeci';
 
 // ─── FAZ 6 — 1-1 Mesajlaşma (yalnız arkadaşlar, realtime) ────────────────────
 
@@ -85,6 +86,10 @@ export const getMessages = async (conversationId: string, limit = 100): Promise<
 
 /** Mesaj gönder. */
 export const sendMessage = async (conversationId: string, body: string): Promise<Message> => {
+  // App Store 1.2 — uygunsuz içerik SÜZGECİ. Sunucuya gitmeden burada durur:
+  // engellenen mesaj hiç kaydedilmez, karşı tarafa bildirim de düşmez.
+  if (uygunsuzMu(body)) throw new Error(UYGUNSUZ_ICERIK_MESAJI);
+
   const { data, error } = await supabase.rpc('send_message', {
     p_conversation_id: conversationId,
     p_body: body,

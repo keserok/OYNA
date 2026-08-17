@@ -321,9 +321,15 @@ const Notifications: React.FC<NotificationsProps> = ({ onBack, role }) => {
           />
         </div>
 
-        {/* Header */}
+        {/* Header — güvenli alan + 2rem. ÇEVRİMDIŞI ŞERİT TELAFİSİ BİLEREK YOK:
+            bu ekran tam ekran bir sayfa değil, `h-[85vh]` ile ekranın ALTINA
+            yapışan bir çekmece (yukarıdaki `justify-end`). Kırmızı şerit y=0..83
+            arasında duruyor, çekmece ise y=127'de başlıyor — şerit bu başlığa
+            hiç değmiyor. Telafi eklendiğinde 83px ölü bant açılıyor ve bildirim
+            listesi o kadar kısalıyordu (gerçek tarayıcıda ölçüldü). Bu yüzden
+            telafili sınıf (`pt-safe-8`) DEĞİL, satır içi hesap kullanılıyor. */}
         <div
-          className="sticky top-0 z-20 px-5 pt-8 pb-4 flex items-center gap-3 border-b border-white/5"
+          className="sticky top-0 z-20 px-5 pt-[calc(var(--safe-top)+2rem)] pb-4 flex items-center gap-3 border-b border-white/5"
           style={{ background: 'rgba(10,14,20,0.95)', backdropFilter: 'blur(24px)' }}
         >
           <motion.button
@@ -554,9 +560,16 @@ const Notifications: React.FC<NotificationsProps> = ({ onBack, role }) => {
                     taşımıyor; nötr gradient zemin kullanılır. */}
                 <div className="w-full h-full bg-gradient-to-br from-[#123321] via-[#0f1b2d] to-[#0A0E14]" />
                 <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-[#0A0E14]/60 to-[#0A0E14]" />
+                {/* KAPAT düğmesi: bu katman `fixed inset-0`, yani ekranın tepesinden
+                    başlar. `top-12` (48px) Dynamic Island'lı iPhone'da (güvenli alan
+                    59px) durum çubuğunun ALTINDA kalıyordu — davet penceresi
+                    kapatılamıyordu. `max(...)` iki cihazı birden doğru tutar: güvenli
+                    alanı bildirmeyen cihazda eski 48px aynen korunur, bildiren cihazda
+                    çentiğin altına iner. (Çevrimdışı şeridi telafisi gerekmez: bu
+                    katman z-[110] ile şeridin (z-[100]) ÜSTÜNDE çizilir.) */}
                 <button
                   onClick={() => setSelectedInvite(null)}
-                  className="absolute top-12 right-5 w-10 h-10 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center text-white border border-white/20"
+                  className="absolute top-[max(3rem,calc(var(--safe-top)+1rem))] right-5 w-10 h-10 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center text-white border border-white/20"
                 >
                   <X size={20} />
                 </button>

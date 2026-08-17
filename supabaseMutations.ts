@@ -491,6 +491,23 @@ export const fbGetMatches = async (bolge?: { city?: string | null; district?: st
 // Hata durumunda BOŞ döner (throw etmez): eski global liste yedek olarak durur,
 // yani bu ekleme hiçbir maçı kaybettiremez.
 export const fbGetMyMatches = async () => {
+  // OTURUM YARIŞI (17 Ağu 2026 — mağaza öncesi denetimde yakalandı):
+  // Açılışta bu sorgu `supabase.auth.getSession()` ile PARALEL atılıyordu.
+  // Oturum henüz belleğe alınmadıysa istek ANON kimlikle gider ve sunucu
+  // "permission denied for function get_my_matches" der (fonksiyon yalnız
+  // authenticated'a açık — doğrusu da bu). Sonuç: kullanıcının KENDİ maçları
+  // boş döner.
+  //
+  // Yukarıdaki "eski global liste yedek olarak durur" varsayımı YUK-2'den beri
+  // GEÇERSİZ: global maç listesi bölgeye daraltıldı, bölge seçilmemiş kullanıcıda
+  // o da boş. İki emniyet ağı aynı anda çöküyordu → kaptan kendi kurduğu maçı
+  // ne ana sayfada ne Maçlarım'da görüyordu.
+  //
+  // ÇÖZÜM: önce oturum ÇÖZÜLÜR (yerel depodan okunur, ağ gerektirmez), sonra
+  // istek atılır. Oturum yoksa istek HİÇ atılmaz — misafirde gereksiz hata
+  // gürültüsü de biter.
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) return [];
   const { data, error } = await supabase.rpc('get_my_matches');
   if (error) { console.warn('[fbGetMyMatches] scoped sorgu basarisiz:', error.message); return []; }
   return (data || []).map(mapFromSnakeCase);

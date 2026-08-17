@@ -81,11 +81,8 @@ const EKRANLAR: Ekran[] = [
     capa: /Saha Kiralamalarım/i,
     ac: async (page) => { await hazirla(page); await ekranaGit(page, 'MY_MATCHES'); },
   },
-  {
-    ad: '06-cuzdan',
-    capa: /Cüzdan Bakiyesi/i,
-    ac: async (page) => { await hazirla(page); await ekranaGit(page, 'WALLET'); },
-  },
+  // 06-cuzdan KALDIRILDI: cüzdan lansmanda kapalı (shared/featureFlags.ts) —
+  // WALLET rotası artık ana ekrana düşer, çekilecek ayrı ekran yok.
   {
     ad: '07-odeme',
     capa: /Ödenecek Kapora/i,

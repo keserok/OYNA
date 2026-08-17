@@ -178,6 +178,17 @@ interface AppState {
   initApp: () => Promise<void>;
   /** Zayıf-bağlantı afişinden tetiklenir: kritik verileri yeniden yükler. */
   retryInitialLoad: () => Promise<void>;
+  /**
+   * "Maçlarım"ı sunucudan tazeler (get_my_matches).
+   *
+   * NEDEN AYRI EYLEM (17 Ağu 2026 — mağaza öncesi denetim): açılış yüklemesi
+   * (`retryInitialLoad`) uygulama açılırken BİR KEZ, çoğu zaman kullanıcı
+   * GİRİŞ YAPMADAN ÖNCE koşar. Girişten sonra bu sorgu yeniden atılmıyordu →
+   * kullanıcı kendi kurduğu/katıldığı maçı ne ana sayfada ne Maçlarım'da
+   * görüyordu (bölgeye daralan global liste de yedek olamıyordu, YUK-2).
+   * Artık giriş anında ve ana sayfayı parmakla çekince bu eylem çağrılır.
+   */
+  refreshMyMatches: () => Promise<void>;
   view: AppView;
   navigationStack: AppView[];
   /** Açık overlay'ler (sheet, modal, tam ekran katman) — LIFO.
@@ -622,6 +633,17 @@ export const useAppStore = create<AppState>((set, get) => ({
       set({ loadDegraded: true });
     } finally {
       set({ isHydrated: true, initialLoadComplete: true });
+    }
+  },
+  refreshMyMatches: async () => {
+    try {
+      const mine = await FB.fbGetMyMatches();
+      // Boş dizi de geçerli cevaptır (kullanıcının maçı yok) — set edilir ki
+      // iptal edilen/geçmişe düşen maç ekranda asılı kalmasın.
+      set({ myMatches: (mine ?? []) as MatchListing[] });
+    } catch (e) {
+      // Sessiz geç: bu tazeleme bir EK yoldur, açılışı/girişi bloke etmez.
+      console.warn('[store] Maçlarım tazelenemedi:', e);
     }
   },
   initApp: async () => {

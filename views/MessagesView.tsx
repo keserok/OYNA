@@ -18,7 +18,7 @@ import {
 import { blockUserFully, reportUser } from '../services/socialService';
 import {
   getTeamChatOverview, getTeamMessages, sendTeamMessage, markTeamChatRead,
-  setTeamChatMuted, subscribeTeamChat, parseTacticMessage,
+  setTeamChatMuted, subscribeTeamChat, parseTacticMessage, getBlockedSenderIds,
   TeamChatOverviewRow, TeamMessage,
 } from '../services/teamChatService';
 import { supabase } from '../supabaseClient';
@@ -526,9 +526,20 @@ const TeamChatView: React.FC<{
   const [menuOpen, setMenuOpen] = useState(false);
   const [muted, setMuted] = useState(team.muted);
   const [error, setError] = useState<string | null>(null);
+  // ── Denetim (App Store 1.2): takım sohbetinde şikayet + engelleme ──
+  // DM'de vardı, TAKIM sohbetinde yoktu: yabancı üyeyle aynı odadasın ama
+  // ne şikayet edebiliyor ne engelleyebiliyordun. İki giriş noktası:
+  // (1) mesaj balonuna uzun basma, (2) üst menü → "Üyeyi şikayet et".
+  const [modTarget, setModTarget] = useState<{ id: string; name: string } | null>(null);
+  const [modPicker, setModPicker] = useState(false);
+  const [modBusy, setModBusy] = useState(false);
+  const [actionInfo, setActionInfo] = useState<string | null>(null);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const seenIdsRef = useRef<Set<string>>(new Set());
+  // Engellediklerim — canlı akış süzgeci ref'ten okur (state kapanışa takılır)
+  const blockedRef = useRef<Set<string>>(new Set());
+  const uzunBasRef = useRef<number | null>(null);
   // Gönderen ad/avatar önbelleği — realtime payload profil taşımaz
   const senderCacheRef = useRef<Map<string, { name: string; avatar: string | null }>>(new Map());
 
@@ -552,6 +563,7 @@ const TeamChatView: React.FC<{
     seenIdsRef.current = new Set();
     (async () => {
       try {
+        blockedRef.current = await getBlockedSenderIds();
         const history = await getTeamMessages(team.team_id);
         if (!active) return;
         history.forEach(m => {
@@ -583,7 +595,7 @@ const TeamChatView: React.FC<{
       pushMessage({ ...raw, senderName: sender.name, senderAvatar: sender.avatar });
       scrollToBottom(true);
       if (raw.senderId !== myUid) markTeamChatRead(team.team_id);
-    });
+    }, (senderId) => blockedRef.current.has(senderId));
     return () => unsubscribe();
   }, [team.team_id, myUid, pushMessage, scrollToBottom]);
 
@@ -620,6 +632,58 @@ const TeamChatView: React.FC<{
     s.setSelectedTeamId(team.team_id);
     s.navigateTo('MY_TEAM');
   }, [team.team_id]);
+
+  // ── Denetim eylemleri ───────────────────────────────────────────────
+  /** Sohbette mesajı olan diğer üyeler — menüden şikayet için liste. */
+  const sohbetUyeleri = useMemo(() => {
+    const m = new Map<string, { id: string; name: string; avatar: string | null }>();
+    messages.forEach(x => {
+      if (x.senderId !== myUid && !m.has(x.senderId)) {
+        m.set(x.senderId, { id: x.senderId, name: x.senderName, avatar: x.senderAvatar });
+      }
+    });
+    return [...m.values()];
+  }, [messages, myUid]);
+
+  const uzunBasBasla = useCallback((m: TeamMessage) => {
+    if (m.senderId === myUid) return;
+    uzunBasRef.current = window.setTimeout(() => {
+      setModTarget({ id: m.senderId, name: m.senderName });
+    }, 450);
+  }, [myUid]);
+
+  const uzunBasBitir = useCallback(() => {
+    if (uzunBasRef.current !== null) {
+      clearTimeout(uzunBasRef.current);
+      uzunBasRef.current = null;
+    }
+  }, []);
+
+  const handleBlock = useCallback(async () => {
+    if (!modTarget) return;
+    setModBusy(true); setError(null);
+    try {
+      await blockUserFully(myUid, modTarget.id);
+      blockedRef.current.add(modTarget.id);
+      setMessages(prev => prev.filter(m => m.senderId !== modTarget.id));
+      setActionInfo(`${modTarget.name} engellendi. Mesajları artık sana görünmeyecek.`);
+      setModTarget(null);
+    } catch (e: any) {
+      setError(e?.message || 'Kullanıcı engellenemedi.');
+    } finally { setModBusy(false); }
+  }, [modTarget, myUid]);
+
+  const handleReport = useCallback(async () => {
+    if (!modTarget) return;
+    setModBusy(true); setError(null);
+    try {
+      await reportUser(myUid, modTarget.id, 'HARASSMENT', undefined, 'CHAT');
+      setActionInfo('Şikayetin alındı. Ekibimiz 24 saat içinde inceleyecek.');
+      setModTarget(null);
+    } catch (e: any) {
+      setError(e?.message || 'Şikayet gönderilemedi.');
+    } finally { setModBusy(false); }
+  }, [modTarget, myUid]);
 
   return (
     <div className="flex flex-col h-full">
@@ -678,6 +742,14 @@ const TeamChatView: React.FC<{
                   <Shield size={16} className="text-white/50" />
                   Takım Detayı
                 </button>
+                <div className="h-px bg-white/8" />
+                <button
+                  onClick={() => { setMenuOpen(false); setModPicker(true); }}
+                  className="w-full flex items-center gap-2.5 px-4 py-3 text-sm font-bold text-red-300 hover:bg-white/8 transition-colors"
+                >
+                  <Flag size={16} className="text-red-400" />
+                  Üyeyi Şikayet Et / Engelle
+                </button>
               </motion.div>
             </>
           )}
@@ -696,6 +768,11 @@ const TeamChatView: React.FC<{
           </div>
         ) : (
           <div className="space-y-2">
+            {sohbetUyeleri.length > 0 && (
+              <p className="text-center text-[0.625rem] text-ink-4 pb-2">
+                Uygunsuz bir mesaj mı gördün? Mesaja uzun bas → şikayet et veya engelle.
+              </p>
+            )}
             {messages.map((m, i) => {
               const mine = m.senderId === myUid;
               const prev = messages[i - 1];
@@ -707,6 +784,15 @@ const TeamChatView: React.FC<{
                   initial={{ opacity: 0, y: 6 }}
                   animate={{ opacity: 1, y: 0 }}
                   className={`flex items-end gap-2 ${mine ? 'justify-end' : 'justify-start'}`}
+                  onPointerDown={() => uzunBasBasla(m)}
+                  onPointerUp={uzunBasBitir}
+                  onPointerLeave={uzunBasBitir}
+                  onPointerCancel={uzunBasBitir}
+                  onContextMenu={(e) => {
+                    if (mine) return;
+                    e.preventDefault();
+                    setModTarget({ id: m.senderId, name: m.senderName });
+                  }}
                 >
                   {!mine && (
                     showHeader
@@ -743,8 +829,115 @@ const TeamChatView: React.FC<{
         )}
       </div>
 
-      {/* ── Hata ── */}
+      {/* ── Üye seçici (menüden) ── */}
       <AnimatePresence>
+        {modPicker && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xl flex items-end sm:items-center justify-center p-4"
+            onClick={() => setModPicker(false)}
+          >
+            <motion.div
+              initial={{ y: 24, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 24, opacity: 0 }}
+              onClick={e => e.stopPropagation()}
+              className="w-full max-w-sm bg-[#0D1117] border border-white/12 rounded-3xl overflow-hidden pb-safe"
+            >
+              <div className="px-5 pt-5 pb-3">
+                <h4 className="text-sm font-extrabold text-white">Bir üyeyi şikayet et veya engelle</h4>
+                <p className="text-[0.6875rem] text-ink-4 mt-1">
+                  Şikayetler 24 saat içinde incelenir. Engellediğin kişinin mesajları sana görünmez.
+                </p>
+              </div>
+              <div className="max-h-[46vh] overflow-y-auto custom-scrollbar">
+                {sohbetUyeleri.length === 0 ? (
+                  <p className="px-5 py-6 text-sm text-ink-4 text-center">
+                    Bu sohbette henüz başka bir üyenin mesajı yok.
+                  </p>
+                ) : sohbetUyeleri.map(u => (
+                  <button
+                    key={u.id}
+                    onClick={() => { setModPicker(false); setModTarget({ id: u.id, name: u.name }); }}
+                    className="w-full flex items-center gap-3 px-5 py-3 hover:bg-white/6 transition-colors text-left"
+                  >
+                    <Avatar name={u.name} url={u.avatar} size={32} />
+                    <span className="flex-1 min-w-0 truncate text-sm font-bold text-gray-100">{u.name}</span>
+                    <ChevronRight size={16} className="text-ink-4" />
+                  </button>
+                ))}
+              </div>
+              <button
+                onClick={() => setModPicker(false)}
+                className="w-full py-4 text-sm font-extrabold text-gray-300 border-t border-white/8 hover:bg-white/6 transition-colors"
+              >
+                Vazgeç
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Denetim eylem sayfası (App Store 1.2) ── */}
+      <AnimatePresence>
+        {modTarget && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xl flex items-end sm:items-center justify-center p-4"
+            onClick={() => { if (!modBusy) setModTarget(null); }}
+          >
+            <motion.div
+              initial={{ y: 24, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 24, opacity: 0 }}
+              onClick={e => e.stopPropagation()}
+              className="w-full max-w-sm bg-[#0D1117] border border-white/12 rounded-3xl overflow-hidden pb-safe"
+            >
+              <div className="px-5 pt-5 pb-4">
+                <h4 className="text-sm font-extrabold text-white truncate">{modTarget.name}</h4>
+                <p className="text-[0.6875rem] text-ink-4 mt-1">
+                  Uygunsuz davranış mı? Şikayet et — ekibimiz 24 saat içinde inceler. Engellersen
+                  bu kişinin mesajlarını bir daha görmezsin.
+                </p>
+              </div>
+              <div className="h-px bg-white/8" />
+              <button
+                disabled={modBusy}
+                onClick={handleReport}
+                className="w-full flex items-center gap-2.5 px-5 py-4 text-sm font-bold text-amber-300 hover:bg-white/6 transition-colors disabled:opacity-50"
+              >
+                <Flag size={16} className="text-amber-400" /> Şikayet Et
+              </button>
+              <div className="h-px bg-white/8" />
+              <button
+                disabled={modBusy}
+                onClick={handleBlock}
+                className="w-full flex items-center gap-2.5 px-5 py-4 text-sm font-bold text-red-300 hover:bg-white/6 transition-colors disabled:opacity-50"
+              >
+                {modBusy ? <Loader2 size={16} className="animate-spin text-red-400" /> : <Ban size={16} className="text-red-400" />}
+                Engelle
+              </button>
+              <button
+                disabled={modBusy}
+                onClick={() => setModTarget(null)}
+                className="w-full py-4 text-sm font-extrabold text-gray-300 border-t border-white/8 hover:bg-white/6 transition-colors disabled:opacity-50"
+              >
+                Vazgeç
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Bilgi / Hata ── */}
+      <AnimatePresence>
+        {actionInfo && (
+          <motion.div
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 6 }}
+            onAnimationComplete={() => { window.setTimeout(() => setActionInfo(null), 4000); }}
+            className="mx-4 mb-2 px-3.5 py-2 rounded-xl text-xs font-semibold border bg-emerald-500/10 border-emerald-500/30 text-emerald-300"
+          >
+            {actionInfo}
+          </motion.div>
+        )}
         {error && (
           <motion.div
             initial={{ opacity: 0, y: 6 }}

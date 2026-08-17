@@ -157,9 +157,12 @@ describe('Maça katılım ödemesinde iade cümlesi (BULGU-083)', () => {
     expect(matchJoin).toMatch(/infoNote: `Kadro dolmazsa veya maç iptal olursa/);
   });
 
-  it('metin "iade kredisi" DEMEZ — tek bakiye var (karar defteri)', () => {
+  it('metin "iade kredisi" DEMEZ ve kanal iddia etmez (cüzdan kapalı)', () => {
     expect(infoNote).not.toContain('iade kredisi');
-    expect(infoNote).toContain('cüzdanına döner');
+    // Cüzdan lansmanda kapalı (shared/featureFlags.ts): iadenin NEREYE
+    // döneceğini ödeme yöntemi belirler — metin "cüzdanına" diyemez.
+    expect(infoNote).not.toContain('cüzdan');
+    expect(infoNote).toContain('tamamı iade edilir');
   });
 
   it('iade saatleri metne GÖMÜLÜ değil — sahanın ayarından gelir', () => {
