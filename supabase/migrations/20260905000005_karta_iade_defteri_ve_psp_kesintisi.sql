@@ -46,7 +46,11 @@ BEGIN
   -- 1) NULL balance_type satırı artık yazılabiliyor (kart iadesi deseni)
   SELECT id INTO v_uid FROM public.profiles WHERE is_demo LIMIT 1;
   IF v_uid IS NULL THEN
-    RAISE EXCEPTION 'DOĞRULAMA: demo profil yok — satır kanıtı atlanamaz';
+    -- Sıfırdan kurulum (preview replay): demo veri yok — veri kanıtı atlanır.
+    -- Canlıda bu iş 20260817002217 olarak veriyle kanıtlandı; şema garantileri
+    -- (kolon/CHECK/fonksiyon) dosyanın DDL bölümünde zaten uygulandı.
+    RAISE NOTICE 'DOĞRULAMA ATLANDI: demo profil yok (sıfırdan kurulum) — veri kanıtı canlıda verildi';
+    RETURN;
   END IF;
 
   INSERT INTO public.wallet_transactions

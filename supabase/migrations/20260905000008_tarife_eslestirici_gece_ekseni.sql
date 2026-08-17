@@ -80,7 +80,10 @@ BEGIN
   FROM public.pitches s JOIN public.courts c ON c.pitch_id = s.id
   WHERE s.is_demo LIMIT 1;
   IF v_pitch IS NULL THEN
-    RAISE EXCEPTION 'DOĞRULAMA: demo saha yok — kanıt kurulamadı';
+    -- Sıfırdan kurulum (preview replay): demo veri yok — veri kanıtı atlanır.
+    -- Canlıda bu iş 20260817003602 olarak veriyle kanıtlandı.
+    RAISE NOTICE 'DOĞRULAMA ATLANDI: demo saha yok (sıfırdan kurulum) — veri kanıtı canlıda verildi';
+    RETURN;
   END IF;
 
   INSERT INTO public.pitch_tariffs (id, pitch_id, court_id, name, tariff_type,
