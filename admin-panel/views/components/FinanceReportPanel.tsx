@@ -56,19 +56,19 @@ export const FinanceReportPanel: React.FC = () => {
       String(d.commission),
       String(d.owner_share),
       String(d.refunded),
-      String(d.topups),
+      String(d.card_fees),
     ]);
     const t = report.totals;
-    rows.push(['TOPLAM', String(t.count), String(t.gross_captured), String(t.commission), String(t.owner_share), String(t.refunded), String(report.topups)]);
+    rows.push(['TOPLAM', String(t.count), String(t.gross_captured), String(t.commission), String(t.owner_share), String(t.refunded), String(t.card_fees)]);
     downloadCsv(
       `oyna-finans-${report.from}_${report.to}.csv`,
-      ['Gun', 'Odeme Adedi', 'Brut Tahsilat', 'OYNA Komisyonu', 'Saha Sahibi Payi', 'Iade', 'Cuzdan Yukleme'],
+      ['Gun', 'Odeme Adedi', 'Brut Tahsilat', 'OYNA Komisyonu', 'Saha Sahibi Payi', 'Iade', 'Kart Islem Bedeli'],
       rows,
     );
   }, [report]);
 
   const activeDays = useMemo(
-    () => (report ? report.days.filter((d) => d.count > 0 || d.refunded > 0 || d.topups > 0) : []),
+    () => (report ? report.days.filter((d) => d.count > 0 || d.refunded > 0 || d.card_fees > 0) : []),
     [report],
   );
 
@@ -78,8 +78,11 @@ export const FinanceReportPanel: React.FC = () => {
         { label: 'OYNA Komisyonu', value: fmtTry(report.totals.commission), tone: 'text-amber-400' },
         { label: 'Saha Sahibi Payı', value: fmtTry(report.totals.owner_share), tone: 'text-white' },
         { label: 'İade', value: fmtTry(report.totals.refunded), tone: report.totals.refunded > 0 ? 'text-red-400' : 'text-gray-400' },
-        { label: 'Cüzdan Yükleme', value: fmtTry(report.topups), tone: 'text-blue-400' },
-        { label: 'Çekim (net)', value: fmtTry(report.cashouts?.net), tone: 'text-white' },
+        // KART İŞLEM BEDELİ (17 Ağu 2026): kullanıcı ekranda TEK rakam görüyor
+        // (bedel fiyatın içinde). Kırılımı gösterecek tek yer burası — "kullanıcı
+        // ne ödedi, ne kadarı bize kaldı" sorusu buradan cevaplanır.
+        { label: 'Kart İşlem Bedeli', value: fmtTry(report.totals.card_fees), tone: 'text-amber-300' },
+        { label: 'Karttan Çekilen', value: fmtTry(report.totals.gross_captured + report.totals.card_fees), tone: 'text-blue-400' },
         { label: 'Ödenen Payout', value: fmtTry(report.payouts_completed), tone: 'text-green-400' },
         { label: 'Ödeme Adedi', value: String(report.totals.count), tone: 'text-white' },
       ]
@@ -176,7 +179,7 @@ export const FinanceReportPanel: React.FC = () => {
                       <th className="text-right py-2 px-2">Komisyon</th>
                       <th className="text-right py-2 px-2">Saha Payı</th>
                       <th className="text-right py-2 px-2">İade</th>
-                      <th className="text-right py-2 pl-2">Yükleme</th>
+                      <th className="text-right py-2 pl-2">Kart Bedeli</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -188,7 +191,7 @@ export const FinanceReportPanel: React.FC = () => {
                         <td className="text-right py-2 px-2 text-amber-300">{fmtTry(d.commission)}</td>
                         <td className="text-right py-2 px-2 text-emerald-400 font-bold">{fmtTry(d.owner_share)}</td>
                         <td className="text-right py-2 px-2 text-red-300">{fmtTry(d.refunded)}</td>
-                        <td className="text-right py-2 pl-2 text-blue-300">{fmtTry(d.topups)}</td>
+                        <td className="text-right py-2 pl-2 text-amber-300">{fmtTry(d.card_fees)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -200,7 +203,7 @@ export const FinanceReportPanel: React.FC = () => {
                       <td className="text-right py-2 px-2 text-amber-300">{fmtTry(report.totals.commission)}</td>
                       <td className="text-right py-2 px-2 text-emerald-400">{fmtTry(report.totals.owner_share)}</td>
                       <td className="text-right py-2 px-2 text-red-300">{fmtTry(report.totals.refunded)}</td>
-                      <td className="text-right py-2 pl-2 text-blue-300">{fmtTry(report.topups)}</td>
+                      <td className="text-right py-2 pl-2 text-amber-300">{fmtTry(report.totals.card_fees)}</td>
                     </tr>
                   </tfoot>
                 </table>

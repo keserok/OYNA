@@ -153,9 +153,10 @@ describe('Kullanıcı Profili Aynası (admin)', () => {
     expect(await screen.findByText('Deneme Oyuncu')).toBeInTheDocument();
     expect(screen.getByText('Merhaba dünya')).toBeInTheDocument();
     expect(screen.getByText('CANLI AYNA')).toBeInTheDocument();
-    // Kısayollar: cüzdan bakiyesi + en-iyi-çaba sayaçlar.
+    // Kısayollar: en-iyi-çaba sayaçlar. CÜZDAN KISAYOLU KALDIRILDI
+    // (17 Ağu 2026): tüketici cüzdanı kapandı, bakiye her kullanıcıda 0.
     // Tasarım 3a: değerler çıplak sayı — etiket ("Takımları") zaten ne olduğunu söylüyor.
-    expect(screen.getByText('150 ₺')).toBeInTheDocument();
+    expect(screen.queryByText('150 ₺')).not.toBeInTheDocument();
     expect(screen.getByText('Takımları').closest('div')?.textContent).toContain('2');
     expect(screen.getByText('Arkadaşları').closest('div')?.textContent).toContain('1');
     // Maç geçmişi kartı (uygulamadaki bileşen)
@@ -192,18 +193,15 @@ describe('Kullanıcı Profili Aynası (admin)', () => {
     });
   });
 
-  it('Cüzdan kısayolu ledger\'lı bakiye düzeltme akışını açar ve RPC\'yi çağırır', async () => {
+  it('bakiye düzeltme akışı KALDIRILDI — kapalı cüzdana para yazan yol yok', async () => {
+    // Kapalı bir sistemde açık bırakılan tek kapı, o sistemin kapalı olmadığı
+    // anlamına gelir. İade gerekiyorsa doğru yol karta iadedir.
     render(<UserProfileMirror userId="u1" />);
     await screen.findByText('Deneme Oyuncu');
 
-    fireEvent.click(screen.getByRole('button', { name: /Cüzdan/ }));
-    expect(await screen.findByText('Bakiye Düzeltme')).toBeInTheDocument();
-
-    fireEvent.change(screen.getByPlaceholderText(/Tutar/), { target: { value: '250' } });
-    fireEvent.change(screen.getByPlaceholderText(/Sebep/), { target: { value: 'test iadesi' } });
-    fireEvent.click(screen.getByRole('button', { name: /Düzeltmeyi İşle/ }));
-
-    await waitFor(() => expect(adjustWalletBalanceAdmin).toHaveBeenCalledWith('u1', 250, 'test iadesi'));
+    expect(screen.queryByRole('button', { name: /Cüzdan/ })).not.toBeInTheDocument();
+    expect(screen.queryByText('Bakiye Düzeltme')).not.toBeInTheDocument();
+    expect(adjustWalletBalanceAdmin).not.toHaveBeenCalled();
   });
 
   it('Yönetici Alanları: güven puanı /20 ölçeğiyle gönderilir (beceri alanı SÖKÜLDÜ)', async () => {
