@@ -9,9 +9,9 @@ import {
   Plus, CheckCircle2, Users, Star,
   AlertCircle, Shield, Layers, Award,
   DollarSign, Info, KeyRound, Copy, Ruler, Activity, CreditCard, Lock,
-  Megaphone
+  Megaphone, Flag, Ban
 } from 'lucide-react';
-import { broadcastOpenSlot } from '../services/socialService';
+import { broadcastOpenSlot, blockUserFully, reportUser } from '../services/socialService';
 import { isOnline, OFFLINE_JOIN } from '../shared/submitGuard';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MatchListing, PositionSlot, UserRole, Player, Team, ProviderType, ProviderSuggestion, ServiceRequest } from '../types';
@@ -259,6 +259,9 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
   const [playerCard, setPlayerCard] = useState<FriendPlayerCard | null>(null);
   const [playerCardLoading, setPlayerCardLoading] = useState(false);
   const [friendRequestSent, setFriendRequestSent] = useState(false);
+  // Lobide tanımadığın oyuncularla eşleşiyorsun: App Store 1.2 gereği şikayet
+  // ve engelleme buradan da erişilebilir olmalı (arkadaş olmayı beklemeden).
+  const [modBusy, setModBusy] = useState(false);
 
   // Rezerve slot doldurma sayfası (MANAGE): Kendimi Ekle / Arkadaş / Kod / İade
   const [fillSlot, setFillSlot] = useState<PositionSlot | null>(null);
@@ -1264,6 +1267,40 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                             className="w-full mt-3 py-3 rounded-2xl font-extrabold text-[0.6875rem] uppercase tracking-widest text-ink bg-white/[0.06] border border-line-strong active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-60">
                             {friendRequestSent ? <><CheckCircle2 size={14} /> İSTEK GÖNDERİLDİ</> : <><UserPlus size={14} /> ARKADAŞ OL</>}
                           </button>
+                        )}
+                        {/* Denetim (App Store 1.2) — lobide tanımadığın oyuncu için */}
+                        {!isMySlot && !isSelf && activePlayer.id && (
+                          <div className="w-full mt-3 grid grid-cols-2 gap-2">
+                            <button
+                              disabled={modBusy}
+                              onClick={async () => {
+                                setModBusy(true);
+                                try {
+                                  await reportUser(currentUserUid, activePlayer.id, 'HARASSMENT', undefined, 'MATCH');
+                                  showActionSuccess('Şikayetin alındı. Ekibimiz 24 saat içinde inceleyecek.');
+                                } catch (e: any) {
+                                  showActionError(mapError(e, 'Şikayet gönderilemedi.'));
+                                } finally { setModBusy(false); }
+                              }}
+                              className="py-3 rounded-2xl font-extrabold text-[0.625rem] uppercase tracking-widest text-amber-300 bg-amber-950/25 border border-amber-500/20 active:scale-95 transition-all flex items-center justify-center gap-1.5 disabled:opacity-60">
+                              <Flag size={13} /> ŞİKAYET ET
+                            </button>
+                            <button
+                              disabled={modBusy}
+                              onClick={async () => {
+                                setModBusy(true);
+                                try {
+                                  await blockUserFully(currentUserUid, activePlayer.id);
+                                  setActivePlayerSlotId(null);
+                                  showActionSuccess('Kullanıcı engellendi. Mesajları sana görünmeyecek.');
+                                } catch (e: any) {
+                                  showActionError(mapError(e, 'Kullanıcı engellenemedi.'));
+                                } finally { setModBusy(false); }
+                              }}
+                              className="py-3 rounded-2xl font-extrabold text-[0.625rem] uppercase tracking-widest text-red-300 bg-red-950/25 border border-red-500/20 active:scale-95 transition-all flex items-center justify-center gap-1.5 disabled:opacity-60">
+                              <Ban size={13} /> ENGELLE
+                            </button>
+                          </div>
                         )}
                       </>
                     )}

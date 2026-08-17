@@ -666,7 +666,7 @@ const ServiceApplication: React.FC<ServiceApplicationProps> = ({ role, onSubmitt
               <button
                 type="button"
                 onClick={() => { setAgreed(!agreed); markTouched('agreed'); }}
-                className="mt-0.5 w-5 h-5 rounded-md border shrink-0 flex items-center justify-center transition-all outline-none"
+                className="hit-44 mt-0.5 w-5 h-5 rounded-md border shrink-0 flex items-center justify-center transition-all outline-none"
                 style={{
                   background: agreed ? color : 'transparent',
                   borderColor: agreed ? color : (visibleError('agreed') ? 'rgba(239,68,68,0.6)' : 'rgba(255,255,255,0.2)'),

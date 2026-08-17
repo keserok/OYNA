@@ -14,6 +14,21 @@
 | 2 | **iOS gizlilik manifestosu yoktu** (Apple, Mayıs 2024'ten beri zorunlu tutuyor; eksikse yükleme ITMS-91053 ile reddedilir). | `ios/App/App/PrivacyInfo.xcprivacy` yazıldı: 4 "required reason" API beyanı (UserDefaults CA92.1 · FileTimestamp C617.1 · DiskSpace E174.1 · SystemBootTime 35F9.1) + 10 veri türü. **Xcode projesine de kaydedildi** — kayıtsız dosya pakete girmez ve aynı retle döner. |
 | 3 | **Kullanıcı kendi maçını göremiyordu** — açılış yüklemesi kullanıcı giriş yapmadan koşuyor, oturum isteyen `get_my_matches` anon gidip reddediliyor ve bir daha çağrılmıyordu. İncelemeci "maç kur → maç kayboldu" görürdü. | `fbGetMyMatches` önce oturumu çözer; `refreshMyMatches` eylemi giriş anında ve ana sayfa parmakla çekilince çağrılır. |
 
+| 4 | **Takım sohbetinde şikayet/engelleme YOKTU** (App Store 1.2 — sosyal uygulamalarda en sık ret gerekçesi). Birebir sohbette vardı, takım sohbetinde yoktu; ayrıca engellenen kişinin mesajları görünmeye devam ediyordu (engelleme o ekranda çalışmıyordu). | Mesaja **uzun basma** + üst menüde **"Üyeyi Şikayet Et / Engelle"**. Engel süzgeci hem geçmişte hem canlı akışta. Maç lobisindeki oyuncu kartına da aynı iki eylem eklendi (yabancıyla orada eşleşiliyor). |
+| 5 | **Klavye açılınca kart formu ve sohbet kullanılamıyordu** — kabuk klavye kadar küçülüyor, CSS bir klavye boyu daha boşluk ekliyordu (çift telafi). Kart girme ekranı incelemecinin kesin açacağı ekran. | Telafi artık **ölçülüyor**: kabuk küçüldüyse 0, küçülmediyse tam klavye boyu. iOS/Android, eski/yeni WebView — dördünde de doğru. |
+| 6 | **Android 15/16 kenardan kenara**: sistem uygulamayı zorla çubukların altına çiziyor, `overlaysWebView:false` yok sayılıyor. Açık temalı telefonda durum çubuğu simgeleri görünmüyor, koyu uygulamanın üstünde/altında beyaz bantlar oluşuyordu. | Capacitor 8'in gömülü `SystemBars` eklentisi yapılandırıldı (`style: 'DARK'`), güvenli alan iki kaynaktan (`env()` + eklenti değişkeni) okunuyor, pencere zemini koyuya sabitlendi. |
+| 7 | **11 ekranda başlık/geri düğmesi çentiğin altındaydı** — aralarında incelemecinin ilk açtığı **gizlilik/sözleşme** ekranı ve **veli onayı** ekranları. iPhone'da geri düğmesi görünmüyordu. | Hepsi güvenli alana bağlandı. Kaleci/hakem panelinin alt menüsü de Android'in 3 tuşlu çubuğunun altından çıkarıldı. |
+| 8 | **Yaş kapısı yarım kapatılmıştı**: çark düzeltilmişti ama **"Atla"** tuşu yaşı sormadan geçiyordu. | "Atla" da aynı kapıdan geçiyor (ad-soyad ve seviye kapılarının ikizi). |
+| 9 | **`npm run sync:ios/android` uygulamayı YENİDEN DERLEMİYORDU** — diskte ne varsa onu pakete kopyalıyordu. Son düzeltmeler mağazaya hiç gitmeyebilirdi. Ayrıca **yönetim paneli (~1 MB)** her oyuncunun telefonuna iniyordu. | Komutlar önce `build:mobile` çalıştırıyor; mobil derlemede admin girişi pakete **hiç alınmıyor**. Doğrulandı: `dist/` içinde admin dosyası yok. |
+| 10 | **Yanlış `.env` ile paket derlenebiliyordu** (demo şifreleri gömülü ya da sunucu adresi `localhost`). İkisi de sessiz: paket derlenir, imzalanır, hata ancak kullanıcıda görülür. | **Derleme bekçisi**: mobil pakette bu iki durumdan biri varsa derleme DURUR ve sebebi Türkçe yazar. (Bu gece ikisini de gerçekten yakaladı.) |
+| 11 | **Android bildirimleri**: sunucu `oyna_main` kanalına gönderiyordu, o kanal hiç oluşturulmamıştı; küçük ikon beyan edilmediği için bildirimler **beyaz kare** ikonla ve "Diğer" başlığı altında çıkıyordu. | Kanal açılışta kuruluyor (kimlik sunucuyla birebir), manifest'te ikon + renk + varsayılan kanal beyan edildi. |
+| 12 | **"Hareketi azalt" açık olan kullanıcıda 9 ekranda aşağı çekip yenileme ÖLÜYORDU** (kaydırma motoru hiç kurulmuyordu). Yenileme süs değil, işlev. | Motor kuruluyor, yalnız animasyon atlanıyor. |
+| 13 | **KVKK onay kutusu 20×20 px** — Apple 44pt, Google 48dp altı "dokunulamaz" sayılır; ıskalanan kutu kaydı tamamen durdurur. | Görünen kutu aynı, **dokunma alanı 44px**. |
+| 14 | **Kaleci/hakem sayfasında olmayan bir ödeme güvencesi vaat ediliyordu** ("kartında bloke edilir", "maç kesinleşince tahsil edilir") ama işlem sonunda "çok yakında" hatası çıkıyordu (Apple 2.1 / Google yanıltıcı beyan). | Metin gelecek zamana çevrildi, düğme **"Kiralama Çok Yakında"** oldu; kullanıcı 4 adım yürüyüp duvara çarpmıyor. |
+| 15 | **Gizlilik beyanı gerçek davranışla uyuşmuyordu**: uygulama GPS ile **kesin konum** alıyor, beyanda yalnız "yaklaşık konum" vardı. | `PrivacyInfo.xcprivacy`'ye kesin konum eklendi (11 veri türü). İki mağazanın formu da bu dosyadan doldurulacak. |
+| 16 | **3DS dönüşü uygulamadan çıkabilirdi**: banka doğrulaması bitince iyzico bizim uç fonksiyonumuza (`*.supabase.co`) döner; o adres izin listesinde olmadığı için Capacitor son adımı **Chrome'a** atabilirdi — para çekilmiş, sonuç okunamamış olurdu. | Adres izin listesine eklendi. (`'*'` YAZILMADI: o zaman harita/WhatsApp bağlantıları da uygulama içinde açılırdı.) |
+| 17 | **Yasal metin kendisiyle çelişiyordu**: iadeler karta denirken hemen altındaki maddeler "cüzdanınızdaki tutarı harcayabilirsiniz / %5 kesintiyle çekebilirsiniz" diyordu; mücbir sebep ve tesis kaynaklı iptal maddeleri de parayı cüzdana gönderiyordu. | Uygulama içi metin + kaynak sözleşme hizalandı: **tüm iadeler ve telafi bedeli karta**; cüzdan maddesi "YÜRÜRLÜKTE DEĞİLDİR" damgalı. |
+
 ## 2 · Kurucu kararlarıyla yapılan ürün değişiklikleri (17 Ağu)
 
 - **Ana sayfa maç kutusu**: profil kartı yerinde; yanındaki kutu (cüzdan kalktığı için) kolonun tamamını kaplar ve **her zaman** çizilir — maç varsa "MAÇ YAKLAŞIYOR + gün/saat + geri sayım", yoksa "MAÇ YOK".
@@ -61,7 +76,20 @@
 7. Sign in with Apple yapılandırması (Bundle ID eşleşmesi) Apple Developer'da.
 
 ### Play Store'a özel
-8. **Veri güvenliği (Data Safety) formu** — aynı 10 veri türü.
+7b. **`google-services.json` (Firebase) — BİLDİRİMLER BUNA BAĞLI.**
+    Dosya depoda yok (doğru, gizli dosya). Ama derleme betiği dosya yoksa
+    **sessizce devam ediyor** ve "imzalı paket üretildi" der; bildirimlerin ölü
+    olduğunu hiçbir yerde söylemez. Firebase Console → `com.oyna.app` →
+    `google-services.json` indir → `android/app/` altına koy (ya da CI'da
+    `GOOGLE_SERVICES_JSON` gizli değişkenine yapıştır) → paketi **yeniden** üret.
+    Bildirim, halı saha uygulamasında kullanıcıyı geri getiren ana mekanizmadır.
+
+8. **Veri güvenliği (Data Safety) formu** — `PrivacyInfo.xcprivacy` içindeki
+   **11 veri türü** ile birebir. Dikkat: **Kişiler (rehber)** ve **kesin konum**
+   satırları mutlaka işaretlenmeli — izin listesinde isteyip formda beyan
+   etmeyen sürümler otomatik takılıyor.
+   *(`docs/master/PLAY_STORE_YUKLEME_ADIMLARI.md` içindeki eski tabloyu
+   KULLANMA: orada "Kişiler" satırı yok ve konum "yaklaşık" yazıyor.)*
 9. **Hassas izin beyanı**: `READ_CONTACTS` için Play Console'da amaç beyanı
    ("rehberden arkadaş bulma"; numaralar cihazda şifrelenir, rehber olduğu gibi
    sunucuya yüklenmez).
@@ -70,9 +98,12 @@
 11. İmzalı AAB için keystore.
 
 ### Derleme anında
-12. `VITE_DEMO_ACCOUNTS=false` (native'de kod düzeyinde de kapalı ama iki kat emniyet)
-    ve `.env` dosyasında **yerel test adresi kalmamalı** (üretimde gömülü canlı
-    adrese düşülür; yanlış `.env` ile derleme uygulamayı bozar).
+12. **Paketi `npm run sync:ios` / `npm run sync:android` ile üret.** Bu komutlar
+    artık önce uygulamayı yeniden derler, yönetim panelini pakete almaz ve
+    yanlış `.env` varsa **derlemeyi durdurur** (demo hesapları açık ya da sunucu
+    adresi yerel ise sebebini yazar). Yani "derleme geçtiyse paket doğrudur".
+13. iOS'ta her yüklemede **Build numarasını artır** (Xcode → `CURRENT_PROJECT_VERSION`).
+    Aynı numarayla ikinci kez yükleme yapılamaz.
 
 ---
 

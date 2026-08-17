@@ -56,19 +56,39 @@ export const getTeamChatOverview = async (): Promise<TeamChatOverviewRow[]> => {
   }));
 };
 
-/** Takım sohbet geçmişi (eskiden yeniye; RLS: yalnız üyeler). */
-export const getTeamMessages = async (teamId: string, limit = 100): Promise<TeamMessage[]> => {
+/** Engellediklerimin kimlikleri (App Store 1.2 — engellenen kişinin içeriği
+    kullanıcıya BİR DAHA görünmemeli; yoksa "Engelle" düğmesi yalan olur). */
+export const getBlockedSenderIds = async (): Promise<Set<string>> => {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) return new Set();
   const { data, error } = await supabase
-    .from('team_messages')
-    .select('id, team_id, sender_id, body, created_at, profiles(full_name, avatar_url)')
-    .eq('team_id', teamId)
-    .order('created_at', { ascending: false })
-    .limit(limit);
+    .from('user_blocks')
+    .select('blocked_id')
+    .eq('blocker_id', session.user.id);
+  if (error) {
+    console.warn('[teamChat] engel listesi okunamadı:', error.message);
+    return new Set();
+  }
+  return new Set(((data as any[]) ?? []).map(r => r.blocked_id as string));
+};
+
+/** Takım sohbet geçmişi (eskiden yeniye; RLS: yalnız üyeler).
+    Engellediğim üyelerin mesajları listede HİÇ görünmez. */
+export const getTeamMessages = async (teamId: string, limit = 100): Promise<TeamMessage[]> => {
+  const [{ data, error }, blocked] = await Promise.all([
+    supabase
+      .from('team_messages')
+      .select('id, team_id, sender_id, body, created_at, profiles(full_name, avatar_url)')
+      .eq('team_id', teamId)
+      .order('created_at', { ascending: false })
+      .limit(limit),
+    getBlockedSenderIds(),
+  ]);
   if (error) {
     console.warn('[teamChat] mesajlar okunamadı:', error.message);
     return [];
   }
-  return ((data as any[]) ?? []).reverse().map(r => ({
+  return ((data as any[]) ?? []).reverse().filter(r => !blocked.has(r.sender_id)).map(r => ({
     id: r.id,
     teamId: r.team_id,
     senderId: r.sender_id,
@@ -110,10 +130,12 @@ export const setTeamChatMuted = async (teamId: string, muted: boolean): Promise<
 
 /** Takım sohbetinin yeni mesajlarına realtime abone ol.
     Not: payload profil içermez — gönderen adı çağıranın kadro haritasından
-    ya da ayrı sorgudan tamamlanır. */
+    ya da ayrı sorgudan tamamlanır.
+    `engelliMi`: canlı akışta da engel süzgeci (geçmişteki süzgecin eşi). */
 export const subscribeTeamChat = (
   teamId: string,
   onMessage: (m: Omit<TeamMessage, 'senderName' | 'senderAvatar'>) => void,
+  engelliMi?: (senderId: string) => boolean,
 ): (() => void) => {
   const channel = supabase
     .channel(`team-chat:${teamId}`)
@@ -122,6 +144,7 @@ export const subscribeTeamChat = (
       { event: 'INSERT', schema: 'public', table: 'team_messages', filter: `team_id=eq.${teamId}` },
       payload => {
         const r = payload.new as any;
+        if (engelliMi?.(r.sender_id)) return;
         onMessage({
           id: r.id, teamId: r.team_id, senderId: r.sender_id,
           body: r.body, createdAt: r.created_at,

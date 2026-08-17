@@ -323,7 +323,7 @@ const Notifications: React.FC<NotificationsProps> = ({ onBack, role }) => {
 
         {/* Header */}
         <div
-          className="sticky top-0 z-20 px-5 pt-8 pb-4 flex items-center gap-3 border-b border-white/5"
+          className="sticky top-0 z-20 px-5 pt-[calc(var(--safe-top)+2rem)] pb-4 flex items-center gap-3 border-b border-white/5"
           style={{ background: 'rgba(10,14,20,0.95)', backdropFilter: 'blur(24px)' }}
         >
           <motion.button

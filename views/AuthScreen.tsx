@@ -859,6 +859,8 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
                     onClick={() => { setAgreed((v) => !v); setError(null); }}
                     aria-label="Yasal onay"
                     aria-pressed={agreed}
+                    /* hit-44: görünen kutu 20px, dokunma alanı 44px (index.css) */
+                    className="hit-44"
                     style={{
                       marginTop: 1, width: 20, height: 20, borderRadius: 6, flexShrink: 0,
                       display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',

@@ -259,7 +259,7 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
       </div>
 
       {/* Header */}
-      <div className="sticky top-0 z-30 px-4 pt-12 pb-4 flex items-center justify-between bg-[#060A12]/80 backdrop-blur-xl border-b border-white/5">
+      <div className="sticky top-0 z-30 px-4 pt-[max(3rem,calc(var(--safe-top)+1rem))] pb-4 flex items-center justify-between bg-[#060A12]/80 backdrop-blur-xl border-b border-white/5">
         <button onClick={onBack} className="p-2.5 rounded-2xl bg-white/5 border border-white/10">
           <ArrowLeft size={20} />
         </button>

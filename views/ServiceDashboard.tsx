@@ -2148,7 +2148,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
           <div className={`absolute bottom-[-20%] right-[-20%] w-[80%] h-[80%] rounded-full blur-[120px] animate-pulse-slow delay-700 ${isRef ? 'bg-orange-900/10' : 'bg-blue-900/10'}`}></div>
       </div>
 
-      <header className="p-6 flex justify-between items-center bg-transparent sticky top-0 z-20">
+      <header className="p-6 pt-[calc(var(--safe-top)+1.5rem)] flex justify-between items-center bg-transparent sticky top-0 z-20">
          {/* Kök panel: sekmeler alt navigasyonla değişir → geri butonu YOK
              (oyuncu Dashboard'ıyla tutarlı). Geri butonu yalnız alt-sayfalarda
              (Profil/Ayarlar) bulunur; onlar kendi başlıklarında taşır. */}
@@ -2185,7 +2185,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
       </main>
 
       {/* Service Navigation */}
-      <nav className="fixed bottom-0 left-0 w-full bg-[#0A0E14]/95 backdrop-blur-2xl border-t border-white/5 pb-8 pt-4 px-4 flex justify-between items-center z-30">
+      <nav className="fixed bottom-0 left-0 w-full bg-[#0A0E14]/95 backdrop-blur-2xl border-t border-white/5 pb-[max(2rem,calc(var(--safe-bottom)+0.75rem))] pt-4 px-4 flex justify-between items-center z-30">
          <button 
             onClick={() => setActiveTab('HOME')}
             className={`flex flex-col items-center gap-1.5 transition-all ${activeTab === 'HOME' ? 'text-[#FACC15] scale-110' : 'text-ink-4 hover:text-gray-300'}`}

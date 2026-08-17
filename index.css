@@ -372,15 +372,44 @@
   --oy-tap-min:      48px;  /* en küçük dokunma hedefi (erişilebilirlik) */
 }
 
-/* ─── iOS Safe Area Desteği ─────────────────────────────────────────────────
-   iPhone X ve sonrası (notch / Dynamic Island) için gerekli.
-   viewport-fit=cover ile birlikte çalışır.
+/* ─── Güvenli alanlar (iOS çentiği + Android 15/16 kenardan kenara) ──────────
+   iOS: `env(safe-area-inset-*)` + viewport-fit=cover.
+
+   ANDROID 15+ (hedef sürüm 35 ve üstü): sistem artık uygulamayı ZORLA
+   kenardan kenara çizer — durum çubuğu ve gezinme çubuğu web içeriğinin
+   ÜSTÜNE biner, `overlaysWebView: false` ayarı yok sayılır. Capacitor 8 bunun
+   için gömülü `SystemBars` eklentisiyle gelir ve gerçek ölçüleri
+   `--safe-area-inset-*` değişkenlerine YAZAR:
+     · Yeni WebView (140+) → ölçüler WebView'a da geçirilir; `env()` çalışır.
+     · Eski WebView       → WebView fiziksel olarak içeri alınır ve
+                            değişkenler 0 yazılır (çift boşluk olmaz).
+   İki kaynağın `max()`'ını almak her iki yolda da DOĞRU sonucu verir; tek
+   başına `env()` eski WebView'da 0 döndüğü için başlık durum çubuğunun
+   altında kalıyordu.
 ────────────────────────────────────────────────────────────────────────────── */
 :root {
-  --safe-top:    env(safe-area-inset-top, 0px);
-  --safe-bottom: env(safe-area-inset-bottom, 0px);
-  --safe-left:   env(safe-area-inset-left, 0px);
-  --safe-right:  env(safe-area-inset-right, 0px);
+  --safe-top:    max(env(safe-area-inset-top, 0px),    var(--safe-area-inset-top, 0px));
+  --safe-bottom: max(env(safe-area-inset-bottom, 0px), var(--safe-area-inset-bottom, 0px));
+  --safe-left:   max(env(safe-area-inset-left, 0px),   var(--safe-area-inset-left, 0px));
+  --safe-right:  max(env(safe-area-inset-right, 0px),  var(--safe-area-inset-right, 0px));
+}
+
+/* ─── Küçük ama ZORUNLU dokunma hedefleri ────────────────────────────────────
+   Onay kutuları tasarımda 20px'tir (metnin yanında büyük bir kare çirkin
+   durur). Ama Apple 44pt, Google 48dp altındaki hedefleri "dokunulamaz"
+   sayar; parmakla ıskalanan bir KVKK kutusu kaydı tamamen durdurur.
+   Çözüm: GÖRÜNEN kutu 20px kalır, DOKUNMA alanı görünmez bir katmanla
+   44px'e genişler. Kapsayıcı `position: relative` olur.
+────────────────────────────────────────────────────────────────────────────── */
+.hit-44 { position: relative; }
+.hit-44::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 44px;
+  height: 44px;
+  transform: translate(-50%, -50%);
 }
 
 /* Yardımcı sınıflar — BottomNav ve Header'da kullanılır */

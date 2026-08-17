@@ -177,7 +177,7 @@ Rezervasyonun; Kullanıcıdan kaynaklanmayan bir sebeple, ilgili Tesisin veya OY
 
 **(a) Tam iade:** Ödediği bedelin tamamı, herhangi bir kesinti yapılmaksızın ve derhal ödemenin yapıldığı karta iade edilir; VE
 
-**(b) Simetrik telafi bedeli:** Bunun yanında, iptalin/ifa edilemezliğin Kullanıcıya bildirildiği an ile rezervasyon saati arasında kalan süreye göre, madde 6.1'deki kademeli yapıyla simetrik olarak işleyen aşağıdaki oranda ayrı bir telafi bedeli, Kullanıcının OYNA cüzdanına ödenir. Kullanıcı bu tutarı Platform içinde harcayabilir; para çekimi özelliği açıldığında madde 6.5 uyarınca banka hesabına da çekebilir (madde 6.5.3 yürürlük durumu):
+**(b) Simetrik telafi bedeli:** Bunun yanında, iptalin/ifa edilemezliğin Kullanıcıya bildirildiği an ile rezervasyon saati arasında kalan süreye göre, madde 6.1'deki kademeli yapıyla simetrik olarak işleyen aşağıdaki oranda ayrı bir telafi bedeli, **ödemenin yapıldığı karta** ödenir (madde 6.5 yürürlükte olmadığından Kullanıcı adına bakiye tutulmaz):
 
   - Rezervasyon saatine **24 saat ve öncesinde** bildirilen iptal/ifa edilememe: ek telafi bedeli aranmaz; yalnızca (a) bendindeki tam iade uygulanır.
   - Rezervasyon saatine **24 saatten az** kala bildirilen iptal/ifa edilememe: bedelin **%50**'si tutarında telafi bedeli ayrıca ödenir.
@@ -365,7 +365,7 @@ Mücbir sebep hâlinin varlığı, etkilediği ölçüde ve süreyle, tarafları
 
 ### 12.3 İade Yükümlülüğünün Devamı
 
-Mücbir sebep hâli, madde 6'da düzenlenen **iade yükümlülüklerini ortadan kaldırmaz**. Mücbir sebep nedeniyle rezervasyon/maçın gerçekleştirilememesi hâlinde, Kullanıcının bu konuda herhangi bir kusuru bulunmadığından, madde 6.1'de düzenlenen ve **Kullanıcı kaynaklı iptallere özgü** kademeli (yüzdesel) iade tablosu **uygulanmaz**; bu durumda Kullanıcının ödediği tutarın (kapora dahil) **tamamı**, iptal/imkânsızlık hâlinin OYNA tarafından öğrenilmesinden itibaren makul süre içinde ve her hâlükârda **14 (on dört) gün içinde**, herhangi bir kesinti yapılmaksızın Kullanıcının OYNA cüzdanına iade edilir. Kullanıcı bu tutarı Platform içinde harcayabilir; para çekimi özelliği açıldığında madde 6.5 uyarınca banka hesabına da çekebilir (madde 6.5.3 yürürlük durumu). Mücbir sebep, yalnızca OYNA'nın ayrıca tazminat ödeme yükümlülüğünü (madde 10 ve 12.2 çerçevesinde) etkiler; ödenmiş bedelin tam iadesini hiçbir şekilde engellemez veya sınırlamaz.
+Mücbir sebep hâli, madde 6'da düzenlenen **iade yükümlülüklerini ortadan kaldırmaz**. Mücbir sebep nedeniyle rezervasyon/maçın gerçekleştirilememesi hâlinde, Kullanıcının bu konuda herhangi bir kusuru bulunmadığından, madde 6.1'de düzenlenen ve **Kullanıcı kaynaklı iptallere özgü** kademeli (yüzdesel) iade tablosu **uygulanmaz**; bu durumda Kullanıcının ödediği tutarın (kapora dahil) **tamamı**, iptal/imkânsızlık hâlinin OYNA tarafından öğrenilmesinden itibaren makul süre içinde ve her hâlükârda **14 (on dört) gün içinde**, herhangi bir kesinti yapılmaksızın **ödemenin yapıldığı karta** iade edilir (madde 6.5 yürürlükte olmadığından Kullanıcı adına bakiye tutulmaz). Mücbir sebep, yalnızca OYNA'nın ayrıca tazminat ödeme yükümlülüğünü (madde 10 ve 12.2 çerçevesinde) etkiler; ödenmiş bedelin tam iadesini hiçbir şekilde engellemez veya sınırlamaz.
 
 ---
 

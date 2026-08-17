@@ -44,6 +44,36 @@ export function kaydirmaMiktari(
 }
 
 /**
+ * Klavyenin, uygulama kabuğunun NE KADARINI örttüğünü ölçer.
+ *
+ * NEDEN ÖLÇÜYORUZ, EKLENTİNİN VERDİĞİ YÜKSEKLİĞİ YAZMIYORUZ:
+ * Klavye açılınca kabuğu KİM küçültüyor sorusunun cevabı platforma göre değişir.
+ *   · iOS + `resize: body` → eklenti `document.body.style.height`'ı klavye kadar
+ *     KISALTIR. Kabuk zaten klavyenin üstünde biter.
+ *   · Android → pencereyi sistem küçültür (adjustResize); sonuç aynı.
+ *   · `resize: none` / küçültmenin çalışmadığı durumlar → kabuk tam ekran kalır,
+ *     alttaki alanları web katmanı kendisi yukarı itmek ZORUNDADIR.
+ * Eskiden ilk iki durumda da klavye yüksekliği alt boşluk olarak EKLENİYORDU:
+ * kabuk bir kez küçülüyor, üstüne bir klavye boyu daha boşluk giriyordu. Sohbet
+ * yazma alanı ve kart formu ekranın ortasına fırlıyor, mesaj listesine yer
+ * kalmıyordu (çift telafi). Artık fark ÖLÇÜLÜR: kabuk küçüldüyse 0 döner.
+ *
+ * @param kabukYuk   kabuğun yerleşim yüksekliği (document.body.clientHeight)
+ * @param gorselYuk  görsel alanın yüksekliği (visualViewport.height)
+ * @param gorselUst  görsel alanın üst kayması (visualViewport.offsetTop)
+ * @returns web katmanının telafi etmesi gereken px (örtülmüyorsa 0)
+ */
+export function ortulenYukseklik(
+  kabukYuk: number,
+  gorselYuk: number,
+  gorselUst: number = 0,
+): number {
+  const fark = kabukYuk - gorselYuk - gorselUst;
+  // 4px tolerans: cihaz pikseli yuvarlamaları "1px örtülü" yanılsaması yapmasın.
+  return fark > 4 ? Math.round(fark) : 0;
+}
+
+/**
  * En yakın GERÇEKTEN kaydırılabilir atayı bulur.
  * `overflow-y` uygun olsa bile içerik sığıyorsa o eleman kaymaz; bu yüzden
  * scrollHeight/clientHeight karşılaştırması da yapılır. Aksi hâlde yanlış
@@ -117,7 +147,19 @@ export const initKeyboardManager = (): (() => void) => {
   // yüksekliği sonradan değiştirir. visualViewport küçüldüğünde alanı yeniden
   // konumlandırırız — eklenti olayı gelmese de alan klavyenin altında kalmaz.
   const vv = window.visualViewport;
-  const onViewportResize = () => { later(scrollFocusedIntoView, 60); };
+
+  /** --kb-height'ı ÖLÇÜMLE tazeler (yedek: eklentinin bildirdiği yükseklik). */
+  const kbOlc = (yedek = 0) => {
+    const ortulen = vv
+      ? ortulenYukseklik(document.body.clientHeight, vv.height, vv.offsetTop)
+      : yedek;
+    root.style.setProperty('--kb-height', `${ortulen}px`);
+  };
+
+  const onViewportResize = () => {
+    kbOlc();
+    later(scrollFocusedIntoView, 60);
+  };
   vv?.addEventListener('resize', onViewportResize);
 
   void (async () => {
@@ -125,8 +167,13 @@ export const initKeyboardManager = (): (() => void) => {
       const { Keyboard } = await import('@capacitor/keyboard');
       if (cancelled) return;
       const show = await Keyboard.addListener('keyboardWillShow', (info) => {
-        root.style.setProperty('--kb-height', `${info.keyboardHeight || 0}px`);
+        const yedek = info.keyboardHeight || 0;
         document.body.classList.add('kb-open');
+        // Kabuğun küçültülmesi bu olaydan SONRA yerleşir; bu yüzden ölçüm
+        // animasyon boyunca birkaç kez tekrarlanır (son ölçüm geçerlidir).
+        kbOlc(yedek);
+        later(() => kbOlc(yedek), 120);
+        later(() => kbOlc(yedek), 360);
         // iOS bazı durumlarda odak alanını göstermek için belgeyi kaydırır;
         // sabit kabukta bu görsel kaymayı geri al ve alanı biz konumlandıralım.
         window.scrollTo(0, 0);

@@ -274,6 +274,16 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
       showToast('Devam etmek için seviyeni seç.');
       return;
     }
+    // YAŞ BEYANI da atlanamaz. Çark "İleri" yolunda kapatılmıştı ama "Atla"
+    // aynı adımı sormadan geçiyordu: 15 yaşındaki kullanıcı yaşını hiç
+    // bildirmeden içeri giriyor, reşit-olmayan akışı (veli onayı, sınırlı
+    // mod) HİÇ tetiklenmiyordu. İki mağazanın da yaş derecelendirme beyanı
+    // bunun üstüne kuruluyor — kapı tek yerde değil, HER yolda olmalı.
+    if (ageIndex === null) {
+      setStep(1);
+      showToast('Devam etmek için yaş aralığını seç.');
+      return;
+    }
     setSaving(true);
     // Bilerek atlandı: açılışta bir daha tanıtıma zorlanmaz. Kurtarma yolu
     // Profil'deki "Profil tamamlanmadı → Tamamla" şeridi olarak kalır.

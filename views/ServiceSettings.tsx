@@ -224,7 +224,7 @@ const ServiceSettings: React.FC<ServiceSettingsProps> = ({ role, onBack, onLogou
       </div>
 
       {/* Header */}
-      <div className={`sticky top-0 z-30 px-4 pt-12 pb-4 flex items-center gap-3 ${darkMode ? 'bg-[#060A12]/80' : 'bg-slate-100/80'} backdrop-blur-xl border-b border-white/5`}>
+      <div className={`sticky top-0 z-30 px-4 pt-[max(3rem,calc(var(--safe-top)+1rem))] pb-4 flex items-center gap-3 ${darkMode ? 'bg-[#060A12]/80' : 'bg-slate-100/80'} backdrop-blur-xl border-b border-white/5`}>
         <button onClick={onBack} className="p-2.5 rounded-2xl bg-white/5 border border-white/10">
           <ArrowLeft size={20} />
         </button>

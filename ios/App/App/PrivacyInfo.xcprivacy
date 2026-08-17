@@ -121,11 +121,28 @@
 				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
 			</array>
 		</dict>
-		<!-- Konum: yakındaki saha/maç keşfi. Hassas olmayan (yaklaşık + kesin,
-		     yalnız kullanım sırasında; arka planda konum ALINMAZ). -->
+		<!-- Konum — YAKLAŞIK: arka plan tazelemesi "şehir değişti mi?" için
+		     düşük hassasiyetle sorar (services/locationService.ts · SILENT_DETECT). -->
 		<dict>
 			<key>NSPrivacyCollectedDataType</key>
 			<string>NSPrivacyCollectedDataTypeCoarseLocation</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
+		<!-- Konum — KESİN: kullanıcı "yakınımdakiler" dediğinde GPS ile sorulur
+		     (locationService.ts · DEFAULT_DETECT · enableHighAccuracy: true).
+		     Yalnız kullanım sırasında; arka planda konum ALINMAZ.
+		     Bu satır olmadan beyan uygulamanın gerçek davranışıyla uyuşmuyordu —
+		     her iki mağazanın gizlilik formu da bu dosyadan doldurulacak. -->
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypePreciseLocation</string>
 			<key>NSPrivacyCollectedDataTypeLinked</key>
 			<true/>
 			<key>NSPrivacyCollectedDataTypeTracking</key>

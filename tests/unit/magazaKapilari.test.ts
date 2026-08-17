@@ -235,3 +235,190 @@ describe('Mağaza kapıları · yaş beyanı', () => {
     expect(sa).toContain('Devam etmek için yaş aralığını seç');
   });
 });
+
+// ════════════════════════════════════════════════════════════════════════════
+// KULLANICI İÇERİĞİ DENETİMİ (App Store Kural 1.2)
+// ════════════════════════════════════════════════════════════════════════════
+//
+// Apple, kullanıcı içeriği barındıran uygulamalarda ÜÇ şeyi birden ister:
+// (a) uygunsuz içeriği bildirme, (b) tacizciyi engelleme, (c) engellenenin
+// içeriğinin bir daha görünmemesi. DM'de üçü de vardı; TAKIM SOHBETİ ve MAÇ
+// LOBİSİ boştu — yabancı bir üyeyle aynı odadasın ama ne şikayet edebiliyor
+// ne engelleyebiliyordun. "Engelle" düğmesi koyup mesajları süzmemek de aynı
+// retle döner (engel yalan olur), o yüzden süzgeç ayrıca kilitleniyor.
+
+describe('Mağaza kapıları · takım sohbetinde şikayet + engelleme', () => {
+  const mv = oku('views/MessagesView.tsx');
+  const svc = oku('services/teamChatService.ts');
+
+  it('takım sohbeti gerçek engelleme/şikayet makinesine bağlı', () => {
+    expect(mv).toContain("await blockUserFully(myUid, modTarget.id)");
+    expect(mv).toContain("await reportUser(myUid, modTarget.id, 'HARASSMENT', undefined, 'CHAT')");
+  });
+
+  it('iki giriş noktası var: mesaja uzun basma + üst menü', () => {
+    expect(mv).toContain('onPointerDown={() => uzunBasBasla(m)}');
+    expect(mv).toContain('Üyeyi Şikayet Et / Engelle');
+    // Keşfedilebilirlik: incelemeci uzun basmayı tahmin etmek zorunda kalmaz.
+    expect(mv).toContain('Mesaja uzun bas');
+  });
+
+  it('geçmiş mesajlarda engel süzgeci var', () => {
+    expect(svc).toContain('export const getBlockedSenderIds');
+    expect(svc).toContain('.filter(r => !blocked.has(r.sender_id))');
+  });
+
+  it('canlı akışta da engel süzgeci var (geçmişin eşi)', () => {
+    expect(svc).toContain('if (engelliMi?.(r.sender_id)) return;');
+    expect(mv).toContain('(senderId) => blockedRef.current.has(senderId)');
+  });
+
+  it('engellenen kişinin ekrandaki mesajları anında düşer', () => {
+    expect(mv).toContain('setMessages(prev => prev.filter(m => m.senderId !== modTarget.id))');
+  });
+});
+
+describe('Mağaza kapıları · maç lobisinde şikayet + engelleme', () => {
+  const mj = oku('views/MatchJoin.tsx');
+
+  it('lobideki oyuncu kartında iki eylem de var', () => {
+    expect(mj).toContain("await reportUser(currentUserUid, activePlayer.id, 'HARASSMENT', undefined, 'MATCH')");
+    expect(mj).toContain('await blockUserFully(currentUserUid, activePlayer.id)');
+  });
+
+  it('eylemler yalnız BAŞKA oyuncular için görünür', () => {
+    expect(mj).toContain('{!isMySlot && !isSelf && activePlayer.id && (');
+  });
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+// PLATFORM UYUMU — iOS 18/26 + Android 15/16 (kenardan kenara)
+// ════════════════════════════════════════════════════════════════════════════
+
+describe('Mağaza kapıları · güvenli alan ve sistem çubukları', () => {
+  const cfg = oku('capacitor.config.ts');
+  const css = oku('index.css');
+
+  it('Android 15+ sistem çubukları yapılandırılmış (SystemBars · Capacitor 8)', () => {
+    // Hedef sürüm 35+ olduğunda StatusBar eklentisinin Android yolu ETKİSİZ:
+    // stil cihazın temasına düşer, açık temalı telefonda simgeler görünmez.
+    expect(cfg).toMatch(/SystemBars:\s*\{[^}]*style:\s*'DARK'/);
+  });
+
+  it('güvenli alan iki kaynaktan okunur (env + SystemBars değişkeni)', () => {
+    expect(css).toContain('max(env(safe-area-inset-top, 0px),    var(--safe-area-inset-top, 0px))');
+    expect(css).toContain('max(env(safe-area-inset-bottom, 0px), var(--safe-area-inset-bottom, 0px))');
+  });
+
+  it('pencere zemini koyu — açık temalı Android telefonda beyaz bant olmaz', () => {
+    const st = oku('android/app/src/main/res/values/styles.xml');
+    expect(st).toContain('<item name="android:windowBackground">@color/oyna_zemin</item>');
+    expect(oku('android/app/src/main/res/values/colors.xml')).toContain('name="oyna_zemin"');
+  });
+
+  it('incelemecinin gördüğü ekranların başlığı çentiğin altında kalmaz', () => {
+    // Gizlilik/sözleşme ekranı: incelemecinin uygulama içinde açtığı ilk yer.
+    for (const dosya of ['views/LegalScreen.tsx', 'views/SettingsScreen.tsx',
+                         'views/GuardianConsentChild.tsx', 'views/Notifications.tsx']) {
+      expect(oku(dosya)).toContain('pt-[calc(var(--safe-top)+');
+    }
+  });
+
+  it('3DS dönüş adresi uygulama içinde kalır (allowNavigation)', () => {
+    expect(cfg).toContain("'*.supabase.co'");
+    // Serbest bırakmak bir sorunu düzeltip üç yenisini açar.
+    expect(cfg).not.toMatch(/allowNavigation:\s*\[\s*'\*'/);
+  });
+});
+
+describe('Mağaza kapıları · klavye ve dokunma hedefleri', () => {
+  it('klavye telafisi ÖLÇÜLÜR (çift boşluk yok)', () => {
+    const km = oku('services/keyboardManager.ts');
+    expect(km).toContain('export function ortulenYukseklik');
+    // Eklentinin bildirdiği yükseklik doğrudan CSS'e YAZILMAZ.
+    expect(km).not.toMatch(/setProperty\('--kb-height', `\$\{info\.keyboardHeight/);
+  });
+
+  it('onay kutularının dokunma alanı 44px', () => {
+    expect(oku('index.css')).toContain('.hit-44::before');
+    expect(oku('views/AuthScreen.tsx')).toContain('className="hit-44"');
+    expect(oku('views/ServiceApplication.tsx')).toContain('hit-44 mt-0.5 w-5 h-5');
+  });
+
+  it('hareket azaltmada aşağı çekip yenileme ÖLMEZ', () => {
+    const ss = oku('utils/scrollSystem.ts');
+    // Eskiden tercih açıkken motor hiç kurulmuyordu → 9 ekranda yenileme gitti.
+    expect(ss).not.toMatch(/const reduced = .*\n\s*if \(reduced\) return;/);
+    expect(ss).toContain('hareketAzalt = !!window.matchMedia');
+    expect(ss).toContain('if (!hareketAzalt) setOffset(el, g.offset, eksen);');
+  });
+});
+
+describe('Mağaza kapıları · Android bildirimleri', () => {
+  it('bildirim kanalı SUNUCUYLA aynı kimliği taşır', () => {
+    const sunucu = oku('supabase/functions/send-push/index.ts');
+    expect(sunucu).toContain("channel_id: 'oyna_main'");
+    expect(oku('notifications/pushService.ts')).toContain("id: 'oyna_main'");
+    expect(oku('android/app/src/main/AndroidManifest.xml')).toContain('android:value="oyna_main"');
+  });
+
+  it('küçük ikon beyaz kare olmasın diye beyan edilmiş', () => {
+    const m = oku('android/app/src/main/AndroidManifest.xml');
+    expect(m).toContain('com.google.firebase.messaging.default_notification_icon');
+    expect(m).toContain('@drawable/ic_stat_oyna');
+  });
+});
+
+describe('Mağaza kapıları · paket üretimi', () => {
+  const pkg = JSON.parse(oku('package.json'));
+
+  it('sync komutları uygulamayı YENİDEN DERLER (bayat paket gitmez)', () => {
+    expect(pkg.scripts['sync:ios']).toContain('build:mobile');
+    expect(pkg.scripts['sync:android']).toContain('build:mobile');
+  });
+
+  it('mobil pakette yönetim paneli YOKTUR', () => {
+    expect(pkg.scripts['build:mobile']).toBe('node scripts/build-mobile.mjs');
+    expect(oku('vite.config.ts')).toContain("process.env.OYNA_MOBILE === '1'");
+    expect(oku('vite.config.ts')).toContain('MOBIL_PAKET\n        ? { main:');
+  });
+
+  it('yanlış .env ile mobil paket derlenemez', () => {
+    const v = oku('vite.config.ts');
+    expect(v).toContain('mobilPaketBekcisi');
+    expect(v).toContain("env.VITE_DEMO_ACCOUNTS === 'true'");
+    expect(v).toContain('MOBİL PAKET DERLEMESİ DURDURULDU');
+  });
+});
+
+describe('Mağaza kapıları · beyan ile gerçek davranış uyumu', () => {
+  it('kesin konum beyan edilmiş (uygulama GPS istiyor)', () => {
+    expect(oku('services/locationService.ts')).toContain('highAccuracy: true');
+    expect(oku('ios/App/App/PrivacyInfo.xcprivacy'))
+      .toContain('NSPrivacyCollectedDataTypePreciseLocation');
+  });
+
+  it('kaleci/hakem kiralaması olmayan bir güvence VAAT ETMEZ', () => {
+    const mp = oku('views/Marketplace.tsx');
+    expect(mp).toContain('const KIRALAMA_ACIK = false');
+    expect(mp).toContain('Kiralama Çok Yakında');
+    // Şimdiki zamanda "bloke edilir / tahsil edilir" kalmamalı.
+    expect(mp).not.toContain('Ücret önce kartında güvenle bloke edilir');
+    expect(mp).not.toContain('Ödeme maç kesinleşince tahsil edilir; gelmezse ücretin iade edilir.');
+  });
+
+  it('yasal metinde olmayan cüzdana para gönderilmez', () => {
+    const ld = oku('shared/legalDocs.ts');
+    expect(ld).toContain('YÜRÜRLÜKTE DEĞİLDİR (17 Ağustos 2026)');
+    expect(ld).not.toContain('ödediği bedelin tamamı derhal OYNA cüzdanına iade edilir');
+    expect(ld).not.toContain('kesintisiz olarak OYNA cüzdanına iade edilir');
+  });
+
+  it('yaş kapısı HER yolda kapalı (Atla dahil)', () => {
+    const ob = oku('views/Onboarding.tsx');
+    expect(ob).toMatch(/case 1: return ageIndex !== null/);
+    // "Atla" yolu da aynı kapıdan geçer.
+    const atla = ob.slice(ob.indexOf('const handleSkip'), ob.indexOf('const aura'));
+    expect(atla).toContain('if (ageIndex === null)');
+  });
+});
