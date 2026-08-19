@@ -15,12 +15,11 @@
 // ═══════════════════════════════════════════════════════════════
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { resolvePaymentProvider } from '../_shared/paymentProvider.ts'
 
-// FAIL-CLOSED (lansman kararı, 16 Ağu 2026): env verilmemişse ödeme YOLU YOK.
-// Eski varsayılan SIMULATION'dı — env unutulursa sahte kartla GERÇEK harcanabilir
-// bakiye üretilebiliyordu (5_GUNLUK_CIKIS_PLANI engelleyici #5). Simülasyon
-// artık yalnız BİLEREK PAYMENT_PROVIDER=SIMULATION yazılan ortamlarda çalışır.
-const PROVIDER = Deno.env.get('PAYMENT_PROVIDER') ?? 'DISABLED'
+// Sağlayıcı çözümlemesi TEK KAYNAKTA: bkz. _shared/paymentProvider.ts.
+// Kural: panel (app_config) daraltır, secret genişletmez — gerçek para için
+// ikisinin de aynı anda IYZICO demesi şart. Her istekte çözülür (60 sn önbellek).
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -220,6 +219,7 @@ Deno.serve(async (req: Request) => {
   const serviceKey  = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
   const userClient = createClient(supabaseUrl, anonKey, { global: { headers: { Authorization: authHeader } }, auth: { persistSession: false } })
   const admin = createClient(supabaseUrl, serviceKey, { auth: { persistSession: false } })
+  const PROVIDER = await resolvePaymentProvider(admin)
 
   let payload: Payload
   try { payload = await req.json() } catch { return json({ error: 'INVALID_BODY' }, 400) }

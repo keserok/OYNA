@@ -13,7 +13,7 @@ import { listSavedCards, SavedCard } from '../services/walletService';
 import { resolvePaymentMode, paymentModeReasonText } from '../services/paymentModeService';
 import type { PaymentModeResolution } from '../types';
 import {
-  startInAppCardPayment, InAppPayInput, getCardFeePct, computeCardFee,
+  startInAppCardPayment, InAppPayInput, getCardFeePct, computeCardFee, computeCardTotal,
   getIntentStatus, rawErrorMessage, humanizePaymentError,
 } from '../services/paymentService';
 import { getMyGuardianState } from '../services/guardianService';
@@ -270,8 +270,16 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
   }, [ctx?.isDeposit, ctx?.pitchId, (bookingPitch as any)?.id]);
 
   // İptal kademesi kullanıcı-dostu metin (tesis politikasıyla birebir).
+  //
+  // ALTYAPI BEDELİ CÜMLESİ ZORUNLU: 19 Ağu 2026 kurucu kararıyla iadeden ödeme
+  // altyapısının işlem bedeli düşülüyor ve sözleşme metni bunun "ödeme ekranında
+  // ödemeden ÖNCE" yazılı olacağını taahhüt ediyor (Mesafeli Satış md. 6).
+  // Kullanıcı geri alacağı tutarı, ödemeden önce bilmek zorunda.
   const refundTierText = refundPolicy
     ? `İptalde iade: ${refundPolicy.full_hours} saat öncesi %100 · ${refundPolicy.half_hours}–${refundPolicy.full_hours} saat arası %${refundPolicy.half_pct} · sonrası iade yok.`
+      + (cardFeePct > 0
+          ? ` İade edilen tutardan ödeme altyapısının işlem bedeli (%${cardFeePct}) düşülür; OYNA komisyon almaz.`
+          : '')
     : null;
 
   // ─── Türetilen tutarlar (canlı güncellenir) ────────────────────────────────
@@ -294,7 +302,10 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
   // burada yazan toplam ile karttan çekilen tutar birebir örtüşür. Tahsilat
   // olmayan (sahada ödeme / kilitli) durumlarda bedel diye bir şey yoktur.
   const cardFee = needsCard && onlineAllowed ? computeCardFee(amount, cardFeePct) : 0;
-  const grandTotal = amount + cardFee;
+  // Toplam `amount + cardFee` DEĞİLDİR: kurucu kararı gereği karttan çekilen
+  // tutar 10'un katına yukarı tamamlanır (400 + 14 → 420). O farkı yalnız
+  // computeCardTotal biliyor; elle toplarsak ekran ile kart ayrışır.
+  const grandTotal = needsCard && onlineAllowed ? computeCardTotal(amount, cardFeePct) : amount;
   const selectedCard = selectedCardId === 'temp'
     ? tempCard
     : savedCards.find(c => c.id === selectedCardId) ?? null;

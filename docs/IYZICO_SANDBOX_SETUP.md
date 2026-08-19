@@ -19,6 +19,37 @@ girilir; PAN sizin sunucunuza gelmez → PCI yükü minimum, App Store/Play uyum
 
 Biri IYZICO diğeri SIMULATION kalırsa akış tutarsız olur. **İkisini birlikte** çevirin.
 
+### 19 Ağu 2026 — bu tutarsızlık artık PARA ÇEKEMEZ
+
+Canlıda tam bu ikisi ayrışmıştı: panel `SIMULATION` derken secret `IYZICO`'ydu.
+Uygulama "ödeyebilirsin" diyor, arkada **gerçek kart çekimi** deneniyordu.
+Artık edge fonksiyonları sağlayıcıyı tek bir yerden çözüyor
+(`supabase/functions/_shared/paymentProvider.ts`) ve kural şu:
+
+| config (`app_config`) | secret (`PAYMENT_PROVIDER`) | `simulation_counts_as_live` | Sonuç |
+|---|---|---|---|
+| IYZICO | IYZICO | — | **IYZICO** (gerçek para) |
+| SIMULATION | herhangi | `true` | **SIMULATION** (para çekilmez) |
+| SIMULATION | herhangi | `false` | **DISABLED** |
+| IYZICO | yok / başka | — | **DISABLED** |
+
+Okunuşu: **panel daraltır, asla genişletmez.** Gerçek para için ikisinin de
+aynı anda IYZICO demesi şarttır; panelden `SIMULATION`'a çekmek secret IYZICO
+kalsa bile para akışını durdurur. Panelin tek başına gerçek para yolunu açması
+mümkün değildir.
+
+### Canlıya geçiş — ÜÇ anahtar birden
+
+1. `PAYMENT_PROVIDER=IYZICO` secret'ı (+ iyzico anahtarları, `IYZICO_BASE_URL`)
+2. `app_config.payment_provider = 'IYZICO'`
+3. `app_config.simulation_counts_as_live = false` ← **unutulan bu oluyor**
+
+3'ü kapatmadan 1 ve 2 yapılırsa sonuç yine IYZICO olur (tablo), ama
+`simulation_counts_as_live` açık kalmış bir sistemde iade kuyruğu sahte iade
+yazmasın diye ayrıca bir kapı daha var: `refund-payment` bir satırı ancak
+tahsilatın kendisi de simülasyonsa (`payment_intents.raw.simulated`) DONE
+yazar; gerçek çekilmiş bir tahsilat sessizce "iade edildi" olamaz.
+
 Sandbox testinde bile mod **IYZICO**'dur — fark, `IYZICO_BASE_URL`'in sandbox'a
 işaret etmesidir (`https://sandbox-api.iyzipay.com`). Gerçek kart çekilmez.
 

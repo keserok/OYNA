@@ -50,6 +50,7 @@ import { APP_VERSION } from '../utils/appVersion';
 import { LoadingState, ErrorState } from '../components/common/StatusState';
 import { Toast } from '../components/common/Toast';
 import { trUpper } from '../utils/trUpper';
+import { cekimUygulamadanAcikMi, CEKIM_KAPALI_ACIKLAMA } from '../shared/featureFlags';
 
 interface ServiceDashboardProps {
   role: UserRole;
@@ -760,10 +761,14 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
   // FİNANS kuyruğu (admin_process_payout) talebi sonuçlandırınca bildirim düşer.
   const handleTransfer = async () => {
       if (!guardGuest()) return;
+      // KURUCU KARARI (19 Ağu 2026): uygulamadan çekim yok — ödemeyi OYNA elle
+      // yapıyor. Düğme zaten gizli; buraya yine de bir kapı konuyor ki eski bir
+      // ekran ya da derin bağlantı kalırsa kullanıcı sunucu hatasıyla değil
+      // açıklamayla karşılaşsın.
+      if (!cekimUygulamadanAcikMi()) { showActionError(CEKIM_KAPALI_ACIKLAMA); return; }
       const method = payoutMethods.find(m => m.isDefault) ?? payoutMethods[0];
       if (!method) { setShowCardOptions(true); return; }
       if (earningsBalance <= 0) { showActionError('Çekilebilir bakiyen bulunmuyor.'); return; }
-      if (identityStatus !== 'VERIFIED') { setShowIdentityModal(true); return; }
       setIsTransferring(true);
       try {
           await requestPayoutWithMethod(earningsBalance, method.id);

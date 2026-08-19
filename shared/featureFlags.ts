@@ -24,3 +24,28 @@ export const WALLET_ENABLED = false;
  * düşünmeden tek soruyu sorsun; gerekçe ve açılış koşulu burada, tek yerde.
  */
 export const isWalletEnabled = (): boolean => WALLET_ENABLED;
+
+// ════════════════════════════════════════════════════════════════════════════
+// UYGULAMADAN PARA ÇEKME
+//
+// KURUCU KARARI (19 Ağustos 2026):
+//   "Tesislerin hak edişlerini uygulamadan çekme gibi bir durumları şu anlık
+//    olmayacak; biz kendimiz bize ödenen miktardan onlara ödeme yapacağız."
+//   "Kaleci ve hakemlerin işlemlerini biz halledeceğiz manuel olarak,
+//    uygulamadan çekim yapamasınlar."
+//
+// KAPANAN ŞEY YALNIZ ÇEKİM TALEBİ AÇMAK. Hakediş defteri aynen durur: kim ne
+// kazandı, ne zaman ödenebilir hâle geldi — hepsi görünmeye devam eder. Tesis,
+// saha kiralanıp maç oynandıktan sonra ödemesini OYNA'dan alır.
+//
+// Sunucu ikizi: request_payout / request_payout_with_method artık PAYOUT_MANUAL
+// hatası döndürüyor. İki katman bilinçli (prensip 6.1): arayüz düğmeyi hiç
+// göstermez, sunucu yine de kapıyı tutar.
+export const CEKIM_UYGULAMADAN_ACIK = false;
+
+/** Kullanıcı uygulamadan para çekme talebi açabilir mi? */
+export const cekimUygulamadanAcikMi = (): boolean => CEKIM_UYGULAMADAN_ACIK;
+
+/** Çekim kapalıyken ekranlarda gösterilecek TEK cümle. */
+export const CEKIM_KAPALI_ACIKLAMA =
+  'Kazancın OYNA tarafından hesabına aktarılır. Maç oynandıktan sonra ödemen yapılır — uygulamadan çekim talebi açmana gerek yok.';

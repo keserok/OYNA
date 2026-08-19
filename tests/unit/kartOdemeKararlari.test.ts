@@ -44,7 +44,12 @@ describe('B4 · kart bedeli fiyatın içinde', () => {
   it('hesap yine de sunucunun ikizidir — ekrandaki rakam çekilenle aynı', () => {
     // Kırılımı gizlemek, YANLIŞ rakam göstermek demek değildir.
     expect(odemeEkrani()).toContain('computeCardFee(amount, cardFeePct)');
-    expect(odemeEkrani()).toContain('const grandTotal = amount + cardFee');
+    // 19 Ağu 2026: toplam artık `amount + cardFee` DEĞİL. Kurucu kararı gereği
+    // karttan çekilen tutar 10'un katına yukarı tamamlanıyor (400 + 14 → 420);
+    // o farkı yalnız computeCardTotal biliyor. Elle toplama geri gelirse ekran
+    // sunucudan DÜŞÜK bir rakam yazar ve kullanıcı sürprizle karşılaşır.
+    expect(odemeEkrani()).toContain('computeCardTotal(amount, cardFeePct)');
+    expect(odemeEkrani()).not.toContain('const grandTotal = amount + cardFee');
     expect(computeCardFee(1000, 2.5)).toBe(25);
   });
 });
