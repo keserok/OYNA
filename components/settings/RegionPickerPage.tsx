@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Search, MapPin, ChevronRight, Check, X, Plus } from 'lucide-react';
 import { TURKEY_REGIONS } from '../../data/turkeyRegions';
 import { makeManualLocation } from '../../utils/regionResolver';
-import { isCoveredCity } from '../../data/regionCenters';
+import { isCoveredCity, coveredRegionPairs } from '../../data/regionCenters';
 import { useAppStore } from '../../store';
 import { auth } from '../../supabaseAuth';
 import { fbUpdateUserLocation } from '../../supabaseMutations';
@@ -37,6 +37,20 @@ const RegionPickerPage: React.FC<RegionPickerPageProps> = ({ open, onClose }) =>
     if (!q) return region.districts;
     return region.districts.filter(d => d.toLocaleLowerCase('tr').includes(q));
   }, [selectedCity, query]);
+
+  // AKTİF BÖLGELER — listenin en üstünde, tek dokunuşla seçilebilir.
+  // Seçici 81 ili plaka sırasıyla veriyordu; tepede hep "01 Adana · 02
+  // Adıyaman" duruyor, OYNA'nın gerçekten açık olduğu il çok aşağıda kalıyordu.
+  // İlk kez giren biri (ve mağaza incelemecisi) içeriğin olduğu bölgeyi
+  // bulmak için önce kaydırmak, sonra ilçeye girmek zorundaydı.
+  const activePairs = useMemo(() => {
+    const q = query.trim().toLocaleLowerCase('tr');
+    const all = coveredRegionPairs();
+    if (!q) return all;
+    return all.filter(
+      p => p.city.toLocaleLowerCase('tr').includes(q) || p.district.toLocaleLowerCase('tr').includes(q),
+    );
+  }, [query]);
 
   const isSelected = (city: string, district: string | null) =>
     selectedRegions.some(r => r.city === city && (r.district ?? null) === district);
@@ -126,7 +140,44 @@ const RegionPickerPage: React.FC<RegionPickerPageProps> = ({ open, onClose }) =>
       </div>
 
       {!selectedCity ? (
-        /* İl listesi */
+        <>
+          {/* ── AKTİF BÖLGELER — tek dokunuşla seçim ────────────────────────
+              OYNA'nın maç/saha verisi olan il+ilçe çiftleri. Plaka sıralı 81
+              illik listenin ÜSTÜNDE durur: aşağıdaki liste "nerede oturuyorsun"
+              sorusunu, bu blok "nerede oynayabilirsin" sorusunu yanıtlar. */}
+          {activePairs.length > 0 && (
+            <div className="mb-5">
+              <p className="text-[0.6875rem] font-extrabold uppercase tracking-widest text-[#39FF14] mb-2 ml-1">
+                Şu an aktif ({activePairs.length})
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {activePairs.map(({ city, district }) => {
+                  const on = isSelected(city, district);
+                  return (
+                    <button
+                      key={`aktif-${city}-${district}`}
+                      onClick={() => toggleRegion(city, district)}
+                      aria-pressed={on}
+                      className={`inline-flex items-center gap-1.5 pl-3 pr-3 py-2.5 rounded-2xl border text-xs font-bold transition-colors ${
+                        on
+                          ? 'bg-[#39FF14]/12 border-[#39FF14]/40 text-[#39FF14]'
+                          : 'bg-[#161B22] border-white/8 text-white hover:bg-white/5'
+                      }`}
+                    >
+                      {on ? <Check size={13} /> : <Plus size={13} />}
+                      {district}
+                      <span className="text-ink-4 font-semibold">· {city}</span>
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="text-[0.6875rem] text-ink-4 mt-2 ml-1">
+                Maç ve saha yalnız bu bölgelerde var. Diğer illeri aşağıdan seçebilirsin.
+              </p>
+            </div>
+          )}
+
+        {/* İl listesi */}
         <div className="space-y-1.5">
           {cities.map(region => {
             const covered = isCoveredCity(region.city);
@@ -163,6 +214,7 @@ const RegionPickerPage: React.FC<RegionPickerPageProps> = ({ open, onClose }) =>
             <p className="text-center text-sm text-ink-4 py-8">"{query}" ile eşleşen il yok.</p>
           )}
         </div>
+        </>
       ) : (
         /* İlçe listesi */
         <div className="space-y-1.5">
