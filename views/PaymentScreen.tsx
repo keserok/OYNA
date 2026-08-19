@@ -13,7 +13,7 @@ import { listSavedCards, SavedCard } from '../services/walletService';
 import { resolvePaymentMode, paymentModeReasonText } from '../services/paymentModeService';
 import type { PaymentModeResolution } from '../types';
 import {
-  startInAppCardPayment, InAppPayInput, getCardFeePct, computeCardFee,
+  startInAppCardPayment, InAppPayInput, getCardFeePct, computeCardFee, computeCardTotal,
   getIntentStatus, rawErrorMessage, humanizePaymentError,
 } from '../services/paymentService';
 import { getMyGuardianState } from '../services/guardianService';
@@ -294,7 +294,10 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
   // burada yazan toplam ile karttan çekilen tutar birebir örtüşür. Tahsilat
   // olmayan (sahada ödeme / kilitli) durumlarda bedel diye bir şey yoktur.
   const cardFee = needsCard && onlineAllowed ? computeCardFee(amount, cardFeePct) : 0;
-  const grandTotal = amount + cardFee;
+  // Toplam `amount + cardFee` DEĞİLDİR: kurucu kararı gereği karttan çekilen
+  // tutar 10'un katına yukarı tamamlanır (400 + 14 → 420). O farkı yalnız
+  // computeCardTotal biliyor; elle toplarsak ekran ile kart ayrışır.
+  const grandTotal = needsCard && onlineAllowed ? computeCardTotal(amount, cardFeePct) : amount;
   const selectedCard = selectedCardId === 'temp'
     ? tempCard
     : savedCards.find(c => c.id === selectedCardId) ?? null;
