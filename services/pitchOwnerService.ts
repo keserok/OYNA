@@ -20,6 +20,7 @@ import { resolveTariffForSlot } from './tariffService';
 import { buildSlotGrid, bookingCoversSlot, hmToMinutes, type SlotTariffInput } from '../shared/slotGrid';
 import { formatTRYAmount } from '../utils/formatTRY';
 import { olayYaz } from '../utils/olcum';
+import { cekimUygulamadanAcikMi, CEKIM_KAPALI_ACIKLAMA } from '../shared/featureFlags';
 import type {
   OwnerPitch,
   OwnerDailySummary,
@@ -858,6 +859,11 @@ export async function requestWithdrawal(
   iban: string,
   ibanHolderName: string,
 ): Promise<void> {
+  // KURUCU KARARI (19 Ağu 2026): tesisler hakedişlerini uygulamadan çekmiyor —
+  // saha kiralanıp maç oynandıktan sonra ödemeyi OYNA elle yapıyor. Kapı servis
+  // katmanında: hangi ekran çağırırsa çağırsın kullanıcı sunucu hatası değil,
+  // ne olduğunu anlatan bir cümle görür.
+  if (!cekimUygulamadanAcikMi()) throw new Error(CEKIM_KAPALI_ACIKLAMA);
   try {
     const { error } = await supabase.rpc('request_payout', {
       p_amount: amount,

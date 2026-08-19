@@ -58,47 +58,91 @@ describe('sayaç hizmetten sonra işler', () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
-// PROVİZYON ÖMRÜ KAPISI — karar kilidi (19 Ağustos 2026)
+// PROVİZYON ÖMRÜ KAPISI KALDIRILDI (kurucu kararı, 19 Ağustos 2026)
 //
-// KAÇAK: maç kaporası karttaki BLOKE ile tutulur; banka blokeyi ~1 ay içinde
-// kendiliğinden çözer. Maç takvimi ise 90 gün açıktı. 60 gün sonrasına
-// kurulan maçta blokeden geriye bir şey kalmıyor, tahsilat MAÇ GÜNÜ
-// başarısız oluyordu — düzeltmek için en geç an.
+// Aynı gün eklenmiş, aynı gün kalkmıştır. Sebebi: kod okununca kapora akışında
+// GERÇEK BİR PROVİZYON OLMADIĞI ortaya çıktı — para `/payment/3dsecure/auth`
+// ile doğrudan TAHSİL ediliyor, `BLOCKED` yalnız OYNA'nın kendi etiketi.
+// "Banka blokeyi çözer" riski bu akışta yok; kapı, olmayan bir riske karşılık
+// uzak tarihli maçların kaporasını gerekçesiz engelliyordu.
+//
+// Kurucu kararı: "Provizyon sistemi komple iptal, direkt ödeme alıp parayı
+// kendimiz yöneteceğiz herhangi bir iptal durumunda."
 // ═══════════════════════════════════════════════════════════════════════════
-const gocKapi = () => readFileSync(
-  path.join(KOK, 'supabase/migrations/20260910000003_provizyon_omru_kapisi.sql'), 'utf-8');
+const gocKapora = () => readFileSync(
+  path.join(KOK, 'supabase/migrations/20260911000002_kapora_dogrudan_tahsilat_ve_manuel_iade.sql'), 'utf-8');
 
-describe('provizyon ömrü kapısı', () => {
-  it('süre koda gömülü değil, ayardan okunur', () => {
-    const s = gocKapi();
-    expect(s).toContain("public.get_config_number('preauth_max_days', 20)");
-    expect(s).toContain("'preauth_max_days'");
+describe('provizyon kaldırıldı, iade elle yapılıyor', () => {
+  it('provizyon ömrü ayarı siliniyor', () => {
+    expect(gocKapora()).toContain("DELETE FROM public.app_config WHERE key = 'preauth_max_days'");
   });
 
-  it('0 yazılırsa kapı kapanır (sınırsız anlaşma mümkün)', () => {
-    expect(gocKapi()).toContain('IF v_max_days > 0');
+  it('kapora başlatmada artık uzaklık kapısı yok', () => {
+    // Doğrulama bloğu kapının YOKLUĞUNU sınıyor, orada geçmesi normal.
+    const govde = gocKapora().slice(0, gocKapora().indexOf('-- ── Doğrulama'));
+    expect(govde).not.toContain('PREAUTH_TOO_FAR');
   });
 
-  it('kapı kaporanın BAŞLANGICINDA duruyor — maç günü değil', () => {
-    const s = gocKapi();
-    const kapi = s.indexOf('PREAUTH_TOO_FAR');
-    const yazma = s.indexOf("deposit_status     = 'AWAITING_PAYMENT'", kapi);
-    expect(kapi).toBeGreaterThan(-1);
-    expect(yazma, 'kapı, maça yazma işleminden ÖNCE olmalı').toBeGreaterThan(kapi);
+  it('iade OTOMATİK DEĞİL — kuyruğa düşüyor', () => {
+    const s = gocKapora();
+    expect(s).toContain("deposit_status = 'REFUND_PENDING'");
+    // Otomatik iade çağrısı gövdeden çıkmalı; para hareketini insan yapar.
+    expect(s).toContain('_refund_wallet_escrow');       // yalnız doğrulama bloğunda
+    const govde = s.slice(0, s.indexOf('-- ── Doğrulama'));
+    expect(govde).not.toContain('_refund_wallet_escrow');
   });
 
-  it('hata mesajı sebebi ve çıkışı birlikte söylüyor', () => {
-    const s = gocKapi();
-    const m = s.slice(s.indexOf('PREAUTH_TOO_FAR'), s.indexOf('PREAUTH_TOO_FAR') + 300);
-    expect(m).toContain('banka');            // sebep
-    expect(m).toContain('başlatabilirsin');  // çıkış
+  it('yönetici bekleyen iadeleri görebiliyor', () => {
+    const s = gocKapora();
+    expect(s).toContain('admin_bekleyen_kapora_iadeleri');
+    expect(s).toContain('is_platform_admin');
+    expect(s).toContain('FROM PUBLIC, anon');
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// UYGULAMADAN ÇEKİM KAPALI (kurucu kararı, 19 Ağustos 2026)
+// ═══════════════════════════════════════════════════════════════════════════
+const gocCekim = () => readFileSync(
+  path.join(KOK, 'supabase/migrations/20260911000003_uygulamadan_cekim_kapatildi.sql'), 'utf-8');
+const bayraklar = () => readFileSync(path.join(KOK, 'shared/featureFlags.ts'), 'utf-8');
+
+describe('uygulamadan para çekme kapalı', () => {
+  it('iki çekim yolu da kapalı ve sebebi yazıyor', () => {
+    const s = gocCekim();
+    expect(s).toContain('CREATE OR REPLACE FUNCTION public.request_payout(');
+    expect(s).toContain('CREATE OR REPLACE FUNCTION public.request_payout_with_method(');
+    expect((s.match(/PAYOUT_MANUAL:/g) ?? []).length).toBeGreaterThanOrEqual(2);
   });
 
-  it('maç kurma / uzak tarihe rezervasyon kısıtlanmadı (kapsam dar)', () => {
-    const s = gocKapi();
-    // Yalnız match_block_deposit değiştirildi.
-    expect(s).toContain('CREATE OR REPLACE FUNCTION public.match_block_deposit');
-    expect(s).not.toContain('CREATE OR REPLACE FUNCTION public.create_pitch_booking');
-    expect(s).not.toContain('CREATE OR REPLACE FUNCTION public.create_match_atomic');
+  it('mesaj kullanıcıya NE OLACAĞINI söylüyor', () => {
+    const s = gocCekim();
+    expect(s).toContain('OYNA tarafından aktarılır');
+    expect(s).toContain('Maç oynandıktan sonra');
+  });
+
+  it('TC kimlik kapısı çekim yolundan kalktı', () => {
+    expect(gocCekim()).toContain('IDENTITY_REQUIRED');   // yalnız doğrulama bloğunda
+    const govde = gocCekim().slice(0, gocCekim().indexOf('-- ── Doğrulama'));
+    expect(govde).not.toContain('IDENTITY_REQUIRED');
+  });
+
+  it('gelmeme cezası asgari tutarı panelden yönetiliyor ve sağlayıcıya görünür', () => {
+    const s = gocCekim();
+    expect(s).toContain('provider_noshow_penalty_min');
+    expect(s).toContain('true, 0, 5000');   // is_public = true
+  });
+
+  it('arayüz katmanı da kapalı (prensip 6.1 — iki katman)', () => {
+    expect(bayraklar()).toContain('export const CEKIM_UYGULAMADAN_ACIK = false');
+    expect(bayraklar()).toContain('CEKIM_KAPALI_ACIKLAMA');
+  });
+
+  it('kapı servis katmanında — her ekran aynı cümleyi gösterir', () => {
+    for (const f of ['services/walletService.ts', 'services/pitchOwnerService.ts']) {
+      const s = readFileSync(path.join(KOK, f), 'utf-8');
+      expect(s, f).toContain('cekimUygulamadanAcikMi()');
+      expect(s, f).toContain('CEKIM_KAPALI_ACIKLAMA');
+    }
   });
 });
