@@ -219,7 +219,19 @@ SET avatar_url = 'https://ui-avatars.com/api/?background=0D8ABC&color=fff&name='
                  || replace(COALESCE(full_name, name, 'Oyuncu'), ' ', '+')
 WHERE is_demo AND (avatar_url IS NULL OR avatar_url = '');
 
-SELECT public.demo_ekosistem_kur(10, 14);
+-- BURADA ESKİDEN `SELECT public.demo_ekosistem_kur(10, 14);` VARDI.
+--
+-- Bu tek satır, sıfırdan kurulan her ortamda göç zincirini kilitliyordu:
+-- demo kadrosu olmayan bir veritabanında fonksiyon 'DEMO_YOK' fırlatıyor,
+-- satır bir DO bloğunun içinde OLMADIĞI için de hiçbir hata yakalayıcısı
+-- devreye giremiyordu. Aşağıdaki doğrulamayı üç kez "düzeltmeme" rağmen
+-- önizleme dalı kırmızı kalmasının sebebi buydu — hata hep bu satırdandı.
+--
+-- Kaldırıldı, çünkü kural şu: TOHUMLAMA BİR GÖÇ İŞİ DEĞİL, OPERATÖR İŞİDİR.
+-- Demo verisi hiçbir ortama (üretim geri yüklemesi dâhil) kendiliğinden
+-- yazılmamalı. Kurmak isteyen tek satır çalıştırır:
+--     SELECT public.demo_ekosistem_kur();          -- 10 gün ileri, 14 gün geri
+--     SELECT public.demo_ekosistem_kur(21, 14);    -- daha uzun ufuk
 
 -- ── Doğrulama (prensip 7.7) ────────────────────────────────────────────────
 DO $dog$

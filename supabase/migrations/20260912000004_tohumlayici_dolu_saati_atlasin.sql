@@ -66,47 +66,48 @@ BEGIN
 END $gov$;
 
 -- ── Doğrulama (prensip 7.7) ────────────────────────────────────────────────
--- Hatayı BİREBİR yeniden üret: bir saati elle doldur, sonra tohumla. Eski kod
--- burada 23P01 ile komple geri alınırdı; yeni kod o saati atlayıp devam eder.
+-- Bu göç bir FONKSİYON GÖVDESİNİ dönüştürüyor; doğrulaması da tam olarak
+-- bunu sınar: kapı gövdeye girdi mi ve DOĞRU YERE mi girdi?
+--
+-- Bilerek ÇALIŞTIRMIYOR. `demo_ekosistem_kur()` çağırmak, göçü ortamda demo
+-- kadrosu olup olmamasına bağlar (boş bir CI/önizleme veritabanında
+-- 'DEMO_YOK' ile durur) — yani göçün kendi işiyle ilgisi olmayan bir sebeple
+-- kırmızı olurdu. Tohumlama bir operatör işi; göç yalnız kodu kurar.
+--
+-- "Doğru yer" tek bir şeye indirgeniyor: kapı `v_saat` ATANDIKTAN SONRA
+-- gelmeli. İlk denemede bir satır yukarıdaydı ve `v_saat` henüz atanmamış
+-- olduğu için yanlış saate bakıyordu; canlıda 23P01 ile tekrar patladı.
+-- Aşağıdaki sıra iddiası tam olarak o hatayı yakalar.
 DO $dog$
-DECLARE
-  v_court uuid; v_pitch uuid; v_user uuid; v_rez uuid; v_ozet jsonb; v_saat time;
+DECLARE v_src text; v_kapi int; v_atama int;
 BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
-    WHERE n.nspname = 'public' AND p.proname = 'demo_ekosistem_kur'
-      AND p.prosrc LIKE '%b.status <> ''CANCELLED''%'
-  ) THEN
+  SELECT p.prosrc INTO v_src
+  FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+  WHERE n.nspname = 'public' AND p.proname = 'demo_ekosistem_kur';
+
+  IF v_src IS NULL THEN
+    RAISE EXCEPTION 'DOGRULAMA: demo_ekosistem_kur bulunamadi';
+  END IF;
+
+  v_kapi  := position('pitch_bookings b' in v_src);
+  v_atama := position('v_saat := 17 + v_i;' in v_src);
+
+  IF v_kapi = 0 THEN
     RAISE EXCEPTION 'DOGRULAMA: dolu-saat kapisi govdeye girmedi';
   END IF;
-
-  SELECT c.id, c.pitch_id INTO v_court, v_pitch FROM public.courts c LIMIT 1;
-  SELECT id INTO v_user FROM public.profiles WHERE is_demo AND role = 'PLAYER' LIMIT 1;
-  IF v_court IS NULL OR v_user IS NULL THEN
-    RAISE NOTICE 'DOGRULAMA ATLANDI: kort/demo oyuncu yok.';
-    RETURN;
+  IF v_atama = 0 THEN
+    RAISE EXCEPTION 'DOGRULAMA: v_saat atamasi bulunamadi — govde degismis';
+  END IF;
+  IF v_kapi < v_atama THEN
+    RAISE EXCEPTION 'DOGRULAMA: kapi v_saat atanmadan ONCE geliyor — yanlis saate bakar';
   END IF;
 
-  -- Tohumlayıcının kullandığı saat aralığından birini elle kapat.
-  v_saat := '19:00'::time;
-  v_rez := gen_random_uuid();
-  INSERT INTO public.pitch_bookings (
-    id, pitch_id, court_id, user_id, booking_date, start_time, end_time,
-    status, source, price, paid_amount, deposit_amount, payment_status,
-    cancellation_reason)
-  VALUES (
-    v_rez, v_pitch, v_court, v_user, current_date + 1, v_saat, v_saat + interval '1 hour',
-    'CONFIRMED', 'APP_MATCH', 100, 0, 0, 'PARTIAL', '_dogrulama_dolu_saat')
-  ON CONFLICT DO NOTHING;
-
-  -- Eski kod burada patlardı.
-  v_ozet := public.demo_ekosistem_kur(3, 1);
-  IF COALESCE((v_ozet->>'mac')::int, 0) < 1 THEN
-    RAISE EXCEPTION 'DOGRULAMA: dolu saat varken hic mac tohumlanamadi (%)', v_ozet;
+  -- Kapı, kısıtın kendisiyle aynı üç şeye bakmalı: kort, gün, saat.
+  IF position('b.court_id = v_kortlar.court_id' in v_src) = 0
+     OR position('b.booking_date = (current_date + v_gun)' in v_src) = 0
+     OR position('b.status <> ' in v_src) = 0 THEN
+    RAISE EXCEPTION 'DOGRULAMA: kapi kisitla ayni kosullara bakmiyor';
   END IF;
 
-  DELETE FROM public.pitch_bookings WHERE id = v_rez;
-  PERFORM public.demo_ekosistem_temizle();
-
-  RAISE NOTICE 'DOGRULAMA TAMAM: dolu saat atlaniyor, tohumlama devam ediyor.';
+  RAISE NOTICE 'DOGRULAMA TAMAM: dolu-saat kapisi v_saat atamasindan SONRA ve kisitla ayni kosullarda.';
 END $dog$;
