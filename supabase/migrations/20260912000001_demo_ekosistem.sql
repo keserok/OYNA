@@ -223,26 +223,43 @@ SELECT public.demo_ekosistem_kur(10, 14);
 
 -- ── Doğrulama (prensip 7.7) ────────────────────────────────────────────────
 DO $dog$
-DECLARE
-  v_oyuncu int; v_kort int;
-  v_gelecek int; v_gecmis int; v_gorselsiz int; v_avatarsiz int;
+DECLARE v_gelecek int; v_gecmis int; v_gorselsiz int; v_avatarsiz int;
 BEGIN
-  -- Bu göç İKİ FONKSİYON TANIMLAR; veriyi kendisi kurmadan "veri var mı" diye
-  -- sormak, kendi yapmadığı bir işi doğrulamak olurdu. Nitekim ilk yazımda tam
-  -- bunu yapıyordu ve sıfırdan kurulan her ortamda "gelecek mac sayisi
-  -- yetersiz (0)" ile patlıyordu — canlıda geçmesinin tek sebebi verinin elle
-  -- önceden tohumlanmış olmasıydı. Doğrulama artık İDDİASINI KENDİ KURUYOR.
-  SELECT count(*)::int INTO v_oyuncu FROM public.profiles WHERE is_demo AND role = 'PLAYER';
-  SELECT count(*)::int INTO v_kort   FROM public.courts;
-
-  IF v_oyuncu < 4 OR v_kort < 1 THEN
-    -- Demo hesabı ya da sahası olmayan bir ortam (boş CI veritabanı):
-    -- tohumlanacak bir ekosistem yok, fonksiyonlar tanımlı kaldı.
-    RAISE NOTICE 'DOGRULAMA ATLANDI: demo oyuncu (%) / kort (%) yetersiz', v_oyuncu, v_kort;
-    RETURN;
+  -- ── KESİN İDDİALAR: bu göçün GERÇEKTEN yaptığı şey ────────────────────────
+  -- Göç iki fonksiyon tanımlar. Doğrulaması da bunu sınamalı. İlk yazımda
+  -- "en az 20 gelecek maç var mı" diye soruyordu — kendi kurmadığı bir veri
+  -- durumu. Canlıda geçmesinin tek sebebi verinin elle önceden tohumlanmış
+  -- olmasıydı; sıfırdan kurulan her ortamda göç "gelecek mac sayisi yetersiz
+  -- (0)" ile patlıyordu.
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+    WHERE n.nspname = 'public' AND p.proname = 'demo_ekosistem_kur'
+  ) THEN
+    RAISE EXCEPTION 'DOGRULAMA: demo_ekosistem_kur kurulmadi';
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+    WHERE n.nspname = 'public' AND p.proname = 'demo_ekosistem_temizle'
+  ) THEN
+    RAISE EXCEPTION 'DOGRULAMA: demo_ekosistem_temizle kurulmadi';
+  END IF;
+  IF has_function_privilege('anon', 'public.demo_ekosistem_kur(int, int)', 'EXECUTE')
+     OR has_function_privilege('authenticated', 'public.demo_ekosistem_kur(int, int)', 'EXECUTE') THEN
+    RAISE EXCEPTION 'DOGRULAMA: demo tohumlayici uygulama rollerine acik kalmis';
   END IF;
 
-  PERFORM public.demo_ekosistem_kur();
+  -- ── FIRSATÇI: ortamda demo kadrosu varsa gerçekten tohumla ve say ────────
+  -- Demo hesapları ayrı bir tohum yolundan gelir; boş bir CI/önizleme
+  -- veritabanında henüz yoktur. Bu durumda göç BAŞARISIZ SAYILMAZ — tohumlanacak
+  -- bir şey olmaması bir hata değil. Bilinen tek durum yakalanır; başka her hata
+  -- olduğu gibi yükselir (sessiz yutma yok).
+  BEGIN
+    PERFORM public.demo_ekosistem_kur();
+  EXCEPTION WHEN raise_exception THEN
+    IF SQLERRM NOT LIKE 'DEMO_YOK%' THEN RAISE; END IF;
+    RAISE NOTICE 'DOGRULAMA: demo kadrosu yok — fonksiyonlar kurulu, ekosistem tohumlanmadi';
+    RETURN;
+  END;
 
   SELECT count(*)::int INTO v_gelecek FROM public.matches
    WHERE cancel_reason = '_demo_ekosistem' AND starts_at > now();

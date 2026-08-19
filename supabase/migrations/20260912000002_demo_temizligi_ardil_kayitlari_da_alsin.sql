@@ -99,4 +99,16 @@ BEGIN
   END IF;
 
   RAISE NOTICE 'DOGRULAMA TAMAM: ardil defter satirlari da temizleniyor.';
+
+  -- Doğrulama ekosistemi SİLEREK kanıtlıyor; sıfırdan kurulan bir ortam bu
+  -- göçten sonra boş bir vitrinle kalmasın diye geri kuruluyor. Kadrosu
+  -- olmayan ortamda tohumlanacak bir şey yok — bilinen tek durum yakalanır,
+  -- başka her hata olduğu gibi yükselir.
+  BEGIN
+    PERFORM public.demo_ekosistem_kur();
+    RAISE NOTICE 'Ekosistem geri kuruldu.';
+  EXCEPTION WHEN raise_exception THEN
+    IF SQLERRM NOT LIKE 'DEMO_YOK%' THEN RAISE; END IF;
+    RAISE NOTICE 'Demo kadrosu yok — ekosistem geri kurulmadi.';
+  END;
 END $dog$;
