@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { DataTable } from '../components/DataTable';
+import { KaporaPanel } from '../components/KaporaPanel';
 import {
   fetchFinanceStats, fetchWalletLedger, fetchBookingPayments, fetchOwnerBillingEvents,
   fetchProfileNameMap, toTurkishAdminError, fetchPayouts, processPayout, fetchPayoutIdentityChecks,
@@ -64,7 +65,7 @@ export const FinancePage: React.FC<{ onNavigate?: AdminNavigateFn }> = ({ onNavi
   const [nameMap, setNameMap] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [billingUnavailable, setBillingUnavailable] = useState(false);
-  const [tab, setTab] = useState<'ledger' | 'payments' | 'intents' | 'billing' | 'payouts' | 'withdrawals' | 'report' | 'health' | 'golive'>('ledger');
+  const [tab, setTab] = useState<'kapora' | 'ledger' | 'payments' | 'intents' | 'billing' | 'payouts' | 'withdrawals' | 'report' | 'health' | 'golive'>('kapora');
   const [query, setQuery] = useState('');
   const { success, error: toastError } = useAdminToast();
 
@@ -391,6 +392,8 @@ export const FinancePage: React.FC<{ onNavigate?: AdminNavigateFn }> = ({ onNavi
   };
 
   const tabs = useMemo(() => ([
+    // Kapora en başta: iade kuyruğu bir İŞ listesidir, yönetici onu ilk görmeli.
+    { id: 'kapora' as const, label: 'Kapora' },
     { id: 'ledger' as const, label: 'Cüzdan Ledger' },
     { id: 'payments' as const, label: 'Rezervasyon Ödemeleri' },
     { id: 'intents' as const, label: 'Ödeme Müdahale' },
@@ -415,7 +418,7 @@ export const FinancePage: React.FC<{ onNavigate?: AdminNavigateFn }> = ({ onNavi
           <button
             type="button"
             onClick={tab === 'ledger' ? exportLedger : tab === 'payments' ? exportPayments : tab === 'payouts' ? exportPayouts : tab === 'intents' ? exportIntents : exportBilling}
-            disabled={loading || (tab === 'billing' && billing.length === 0) || (tab === 'payouts' && payouts.length === 0) || (tab === 'intents' && intents.length === 0) || tab === 'golive' || tab === 'report' || tab === 'health' || tab === 'withdrawals'}
+            disabled={loading || (tab === 'billing' && billing.length === 0) || (tab === 'payouts' && payouts.length === 0) || (tab === 'intents' && intents.length === 0) || tab === 'golive' || tab === 'report' || tab === 'health' || tab === 'withdrawals' || tab === 'kapora'}
             className="flex items-center gap-2 h-9 px-4 text-xs font-bold text-gray-400 hover:text-white rounded-xl bg-white/5 border border-white/10 disabled:opacity-40"
           >
             <Download size={14} /> CSV
@@ -465,7 +468,8 @@ export const FinancePage: React.FC<{ onNavigate?: AdminNavigateFn }> = ({ onNavi
             </button>
           ))}
         </div>
-        {tab !== 'golive' && tab !== 'report' && tab !== 'health' && (
+        {/* Kapora paneli kendi süzgeçlerini taşıyor — genel arama kutusu orada yanıltıcı olurdu. */}
+        {tab !== 'golive' && tab !== 'report' && tab !== 'health' && tab !== 'kapora' && (
           <AdminSearchBar
             value={query}
             onChange={setQuery}
@@ -476,6 +480,8 @@ export const FinancePage: React.FC<{ onNavigate?: AdminNavigateFn }> = ({ onNavi
           />
         )}
       </div>
+
+      {tab === 'kapora' && <KaporaPanel />}
 
       {tab === 'report' && <FinanceReportPanel />}
 

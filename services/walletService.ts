@@ -1,5 +1,6 @@
 import { supabase } from '../supabaseClient';
 import { mapError } from '../utils/errorMap';
+import { cekimUygulamadanAcikMi, CEKIM_KAPALI_ACIKLAMA } from '../shared/featureFlags';
 
 // ─── Tipler ───────────────────────────────────────────────────────────────────
 export interface WalletSummary {
@@ -273,6 +274,11 @@ export const requestPayoutWithMethod = async (
   amount: number,
   methodId: string,
 ): Promise<PayoutRequestRow> => {
+  // KURUCU KARARI (19 Ağu 2026): uygulamadan çekim yok — kazanç OYNA
+  // tarafından elle aktarılıyor. Kapı SERVİS katmanında: hangi ekran çağırırsa
+  // çağırsın kullanıcı sunucu hatası değil, ne olduğunu anlatan bir cümle görür.
+  if (!cekimUygulamadanAcikMi()) throw new Error(CEKIM_KAPALI_ACIKLAMA);
+
   const { data, error } = await supabase.rpc('request_payout_with_method', {
     p_amount: amount,
     p_method_id: methodId,

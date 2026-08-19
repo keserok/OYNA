@@ -476,7 +476,37 @@ const DEMO_DOMAIN = '@oyna.app';
 // e-postalarıyla birlikte gerçek hesaplara (saha1..4 = SAHA SAHİBİ) giriş
 // anahtarı oluyordu. Sabit, derleme zamanında çözülür: `VITE_DEMO_ACCOUNTS`
 // açıkça 'true' değilse boş kalır ve demo yolları zaten çalışmaz.
-const DEMO_PASSWORD = import.meta.env.VITE_DEMO_ACCOUNTS === 'true' ? 'password123' : '';
+// MAĞAZA İNCELEME PAKETİ (19 Ağu 2026 — kurucu kararı)
+//
+// İncelemecinin Türk numarası yok; telefon kodu ona ulaşmıyor ve uygulamayı
+// açamıyor. Bu, gönderimin en olası ret sebebi. Kurucu kararı: inceleme
+// paketinde demo hesap seçici AÇIK olsun.
+//
+// NEDEN AYRI BİR BAYRAK: `VITE_DEMO_ACCOUNTS` geliştirme bayrağıdır ve mobil
+// paket bekçisi onu bilerek engelliyor. Aynı bayrağı zorlamak, o bekçiyi
+// tümüyle devre dışı bırakmak olurdu. `VITE_MAGAZA_INCELEME` YALNIZ inceleme
+// için derlenen pakette yazılır; normal yayın derlemesinde tanımsızdır ve
+// hiçbir şey değişmez.
+//
+// RİSK NE KADAR: seçici yalnız @oyna.app demo hesaplarını açar. Bu hesaplar
+// tohum tesislere sahip, gerçek parası yok ve inceleme bitince silinecek.
+// Platform yöneticisi hesabı bu kadronun DIŞINDA (ayrı bir Google hesabı) ve
+// ortak şifreyi kullanmıyor — seçici onu açmaz.
+const INCELEME_PAKETI = import.meta.env.VITE_MAGAZA_INCELEME === 'true';
+
+/**
+ * Bu paket mağaza incelemesi için mi derlendi?
+ *
+ * Giriş ekranı bunu okuyup incelemeciye NE YAPACAĞINI yazar. İncelemecinin
+ * Türk numarası yok; ekranda yalnız "numaranı gir" yazsaydı, demo düğmesini
+ * fark etmeyip uygulamayı "çalışmıyor" diye reddedebilirdi. Normal yayın
+ * paketinde bu not hiç render edilmez.
+ */
+export const isIncelemePaketi = (): boolean => INCELEME_PAKETI;
+
+const DEMO_PASSWORD =
+  (import.meta.env.VITE_DEMO_ACCOUNTS === 'true' || import.meta.env.VITE_MAGAZA_INCELEME === 'true')
+    ? 'password123' : '';
 
 /** Girilen değer demo giriş için uygun mu? (tam e-posta ya da bare kullanıcı adı) */
 export const isDemoLoginInput = (raw: string): boolean => {
@@ -517,9 +547,13 @@ export const demoLogin = async (raw: string) => {
 export const isDemoAccountPickerEnabled = (): boolean => {
   // MAĞAZA KAPISI (17 Ağu 2026): pakette demo hesap seçici YOKTUR.
   // Kill-switch'in (VITE_DEMO_ACCOUNTS=false) derleme anında yazılmayı
-  // unutulması ihtimaline karşı native'de kod düzeyinde kapatılır — seçici
-  // gerçek saha sahibi hesaplarına tek dokunuşla giriş sunuyordu.
-  if (Capacitor.isNativePlatform()) return false;
+  // unutulması ihtimaline karşı native'de kod düzeyinde kapatılır.
+  //
+  // TEK İSTİSNA (19 Ağu 2026 — kurucu kararı): inceleme paketi. İncelemecinin
+  // Türk numarası olmadığı için telefon kodu ona ulaşmıyor; seçici olmadan
+  // uygulamayı hiç açamaz ve "çalışmıyor" diye reddeder. Bayrak YALNIZ
+  // inceleme derlemesinde yazılır — normal yayın paketinde tanımsızdır.
+  if (Capacitor.isNativePlatform() && !INCELEME_PAKETI) return false;
   return import.meta.env.VITE_DEMO_ACCOUNTS !== 'false';
 };
 

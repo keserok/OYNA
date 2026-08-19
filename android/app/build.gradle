@@ -12,7 +12,7 @@ if (keystorePropertiesFile.exists()) {
 //   ORG_GRADLE_PROJECT_oynaVersionCode / -PoynaVersionCode  -> Play'in her yuklemede
 //   ARTAN olmasini istedigi tam sayi. GitHub Actions bunu otomatik uretir.
 def oynaVersionCode = (project.findProperty('oynaVersionCode') ?: '1').toString().toInteger()
-def oynaVersionName = (project.findProperty('oynaVersionName') ?: '3.0.0').toString()
+def oynaVersionName = (project.findProperty('oynaVersionName') ?: '1.0.0').toString()
 
 android {
     namespace "com.oyna.app"

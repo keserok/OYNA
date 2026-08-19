@@ -5,6 +5,8 @@
 
 import { supabase } from '../supabaseClient';
 import { mapError, isNetworkError, AG_HATASI } from '../utils/errorMap';
+// Yuvarlama ve bedel hesabının TEK kaynağı — sunucudaki `_odeme_yuvarla`nın ikizi.
+import { odemeKirilimi } from '../shared/odemeYuvarlama';
 
 export interface CreatePaymentResponse {
   intentId: string;
@@ -127,18 +129,35 @@ export interface InAppPayInput {
 // birebir aynı yuvarlamayla hesaplar; tahsil edilen otoriter tutar yine
 // sunucudan (startInAppCardPayment → cardAmount) döner.
 
-/** Yüzdeyi tek çağrıda öğren (100₺ üzerinden sorar; 0 → özellik kapalı). */
+/**
+ * Yüzdeyi tek çağrıda öğren (100₺ üzerinden sorar).
+ *
+ * Sunucu cevap veremezse 0 DEĞİL, sunucunun kendi varsayılanı döner. 0 dönmek
+ * "bedel yok" demektir ve ekranda sunucunun çekeceğinden DÜŞÜK bir toplam
+ * yazdırırdı — kullanıcı 420 ₺ beklerken 410 ₺ görürdü. Panelde oran gerçekten
+ * 0'a çekildiyse RPC başarıyla 0 döner ve bu yol hiç çalışmaz.
+ */
+const VARSAYILAN_ORAN = 3.5; // sunucudaki get_card_fee_quote ile aynı
+
 export async function getCardFeePct(): Promise<number> {
   const { data, error } = await supabase.rpc('get_card_fee_quote', { p_amount: 100 });
-  if (error || !data) return 0;
+  if (error || !data) return VARSAYILAN_ORAN;
   const pct = Number((data as { pct?: unknown }).pct);
-  return Number.isFinite(pct) && pct > 0 ? pct : 0;
+  return Number.isFinite(pct) && pct >= 0 ? pct : VARSAYILAN_ORAN;
 }
 
-/** Sunucudaki round(base*pct/100, 2) ile birebir aynı sonuç. */
+/** Yalnız altyapı bedeli. Toplam için computeCardTotal kullanılır. */
 export function computeCardFee(base: number, pct: number): number {
-  if (!(base > 0) || !(pct > 0)) return 0;
-  return Math.round(base * pct) / 100;
+  return odemeKirilimi(base, pct).bedel;
+}
+
+/**
+ * Karttan ÇEKİLECEK toplam — daima 10'un katı (kurucu kararı, 19 Ağu 2026).
+ * Ekranda yazan büyük rakam budur; `computeCardFee` yalnız altyapı bedelini
+ * verir ve tek başına toplamı OLUŞTURMAZ (aradaki yuvarlama farkı eksik kalır).
+ */
+export function computeCardTotal(base: number, pct: number): number {
+  return odemeKirilimi(base, pct).toplam;
 }
 
 /**
