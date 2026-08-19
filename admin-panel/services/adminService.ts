@@ -2856,6 +2856,63 @@ export async function fetchPaymentHealth(windowHours = 24): Promise<PaymentHealt
   return (data || {}) as PaymentHealth;
 }
 
+// ─── Kapora görünürlüğü (kurucu isteği, 19 Ağu 2026) ────────────────────────
+// "Uygulamadan yapılan kapora ödemelerinin admin panelinden çok net görünmesi
+// şart." + "İptal edilme durumunda admin panelinden maç kapora iptali olarak
+// gözüksün, iadeyi manuel gerçekleştirelim."
+
+/** Bir maçın kapora satırı — tahsilat kırılımıyla. */
+export interface KaporaSatiri {
+  mac_id: string;
+  mac_adi: string | null;
+  mac_saati: string | null;
+  /** NONE dışındaki kapora durumu: AWAITING_PAYMENT · BLOCKED · CAPTURED · REFUND_PENDING · REFUNDED · VOIDED */
+  durum: string;
+  kapora_taban: number | null;
+  niyet_id: string | null;
+  /** Karttan çekilen TOPLAM (taban + kart bedeli + yuvarlama). */
+  cekilen: number | null;
+  kart_bedeli: number;
+  yuvarlama: number;
+  niyet_durumu: string | null;
+  saglayici: string | null;
+  odendi: string | null;
+  iade_sebebi: string | null;
+  /** iyzico'nun bizden kestiği oransal komisyon — 3DS cevabından. Boş olabilir. */
+  iyzico_komisyon: string;
+  kaptan_id: string | null;
+  kaptan: string | null;
+  kaptan_telefon: string | null;
+  tesis: string | null;
+}
+
+export interface KaporaOzeti {
+  satirlar: KaporaSatiri[];
+  /** Durum → { adet, tutar }. Yalnız tahsil edilmiş niyetlerin tutarı sayılır. */
+  ozet: Record<string, { adet: number; tutar: number }>;
+}
+
+/** Kapora tablosu. `durum` verilirse yalnız o durumdakiler döner. */
+export async function fetchKaporaOzeti(durum?: string, limit = 200): Promise<KaporaOzeti> {
+  const { data, error } = await supabase.rpc('admin_kapora_ozeti', {
+    p_durum: durum ?? null, p_limit: limit,
+  });
+  if (error) throw new Error(isRpcMissing(error) ? 'admin_kapora_ozeti RPC deploy edilmedi' : error.message);
+  const d = (data || {}) as Partial<KaporaOzeti>;
+  return { satirlar: d.satirlar ?? [], ozet: d.ozet ?? {} };
+}
+
+/**
+ * İadesi ELLE yapılacak kaporalar. Sistem artık kendiliğinden iade geçmiyor
+ * (kurucu kararı); bu liste yöneticinin iş kuyruğudur. Parayı fiilen geri
+ * göndermek için satırdaki niyet `forceRefundIntentAdmin` ile iade edilir.
+ */
+export async function fetchBekleyenKaporaIadeleri(limit = 100): Promise<KaporaSatiri[]> {
+  const { data, error } = await supabase.rpc('admin_bekleyen_kapora_iadeleri', { p_limit: limit });
+  if (error) throw new Error(isRpcMissing(error) ? 'admin_bekleyen_kapora_iadeleri RPC deploy edilmedi' : error.message);
+  return (data || []) as KaporaSatiri[];
+}
+
 // ─── Wave 12: Toplu bildirim geçmişi + şablon editörü ───────────────────────
 export interface BroadcastCampaignRow {
   id: string; created_by_name: string; segment: string; type_key: string | null;
