@@ -255,18 +255,37 @@ otp_expiry = 3600
 # content_path = "./templates/password_changed_notification.html"
 
 [auth.sms]
-# Allow/disallow new user signups via SMS to your project.
-enable_signup = false
+# TELEFON ARTIK BİRİNCİL KAYIT YOLU (17 Ağu 2026 kurucu kararı) — bu bayrak
+# `false` kalırsa yeni hiç kimse kayıt olamaz: kod gider, doğrulama "Signups
+# not allowed for otp" ile döner. Şifre/e-posta yolu kaldırıldığı için bu, tek
+# başına bir LANSMAN ENGELİDİR. Panelde de aynı ayar açık olmalı
+# (Auth → Sign In / Providers → Phone → "Allow new users to sign up").
+enable_signup = true
 # If enabled, users need to confirm their phone number before signing in.
 enable_confirmations = false
 # Template for sending OTP to users
 template = "Your code is {{ .Code }}"
-# Controls the minimum amount of time that must pass before sending another sms otp.
-max_frequency = "5s"
+# Aynı numaraya iki SMS arasındaki EN AZ süre. 5 sn, "tekrar gönder"e basılı
+# tutan (ya da betikle basan) birinin kontörümüzü dakikada 12 SMS hızıyla
+# yakmasına izin veriyordu — her SMS'in parayla karşılığı var. 60 sn hem
+# sektör standardı hem de ekrandaki geri sayımla (resendIn) uyumlu.
+max_frequency = "60s"
 
-# Use pre-defined map of phone number to OTP for testing.
-# [auth.sms.test_otp]
-# 4152127777 = "123456"
+# ── SABİT KODLU TEST NUMARALARI ───────────────────────────────────────────
+# Buradaki numaralar için Supabase SMS ÜRETMEZ ve GÖNDERMEZ; yalnız yazan kodu
+# kabul eder. İki faydası var: (a) mağaza incelemecisi ve kurucu, gerçek bir
+# hattı olmadan giriş yapabilir, (b) her denemede Netgsm kontörü yanmaz.
+#
+# 500 000 00 00 — kurucunun kaleci+hakem demo hesabı
+# (bkz. migrations/20260910000000_demo_kaleci_hakem_hesabi.sql).
+# 500'lü ön ek Türkiye'de operatörlere tahsis edilmemiştir: gerçek bir
+# kullanıcının numarasıyla ÇAKIŞMAZ.
+#
+# DİKKAT: bu liste yalnız `supabase config push` ile ya da panelden
+# (Auth → Sign In / Providers → Phone → "Test OTP") uygulanır. Panelde yoksa
+# numara çalışmaz — kod bekler, SMS gelmez.
+[auth.sms.test_otp]
+905000000000 = "500000"
 
 # Configure logged in session timeouts.
 # [auth.sessions]
