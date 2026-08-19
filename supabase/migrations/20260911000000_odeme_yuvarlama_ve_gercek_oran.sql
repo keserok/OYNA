@@ -204,7 +204,7 @@ BEGIN
       SELECT 1 FROM generate_series(1, 997, 7) g
       WHERE ((public._odeme_yuvarla(g::numeric, v_pct)->>'toplam')::numeric) % 10 <> 0
     ) THEN
-      RAISE EXCEPTION 'DOGRULAMA: %% oraninda 10un kati olmayan toplam uretildi', v_pct;
+      RAISE EXCEPTION 'DOGRULAMA: yuzde % oraninda 10un kati olmayan toplam uretildi', v_pct;
     END IF;
   END LOOP;
 
