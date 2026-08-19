@@ -52,10 +52,38 @@ describe('Mağaza kapıları · demo girişi', () => {
     expect(g).toMatch(/isNativePlatform\(\)\)\s*return false/);
   });
 
-  it('demo hesap seçici native pakette KAPALI (kill-switch unutulsa bile)', () => {
+  /**
+   * KARAR DEĞİŞTİ (19 Ağustos 2026 — kurucu kararı).
+   *
+   * Seçici artık native'de KOŞULSUZ kapalı değil: mağaza inceleme paketinde
+   * AÇIK. Sebebi somut — incelemecinin Türk numarası yok, telefon kodu ona
+   * ulaşmıyor ve uygulamayı hiç açamıyor; bu, gönderimin en olası ret sebebi.
+   *
+   * Kilit ARTIK ŞUNU KORUYOR: kapı yalnız AYRI ve AÇIKÇA yazılmış bir bayrakla
+   * (`VITE_MAGAZA_INCELEME`) açılabilir. Geliştirme bayrağı `VITE_DEMO_ACCOUNTS`
+   * tek başına native'de seçiciyi AÇAMAZ — yoksa bir .env unutması paketi
+   * demo kimlikleriyle yayına gönderirdi.
+   */
+  it('demo hesap seçici native pakette YALNIZ inceleme bayrağıyla açılır', () => {
     const g = govde('isDemoAccountPickerEnabled');
     expect(g).toContain('Capacitor.isNativePlatform()');
-    expect(g).toMatch(/isNativePlatform\(\)\)\s*return false/);
+    expect(g).toContain('INCELEME_PAKETI');
+    expect(g).toMatch(/isNativePlatform\(\)\s*&&\s*!INCELEME_PAKETI\)\s*return false/);
+  });
+
+  it('inceleme bayrağı ayrı — geliştirme bayrağı tek başına native\'de açamaz', () => {
+    expect(s).toContain("import.meta.env.VITE_MAGAZA_INCELEME === 'true'");
+    // Bayrak adı GELİŞTİRME bayrağından farklı olmalı; aynısı olsaydı mobil
+    // paket bekçisinin engeli anlamsızlaşırdı.
+    expect(s).not.toMatch(/INCELEME_PAKETI\s*=\s*import\.meta\.env\.VITE_DEMO_ACCOUNTS/);
+  });
+
+  it('mobil paket bekçisi inceleme paketini AYIRT EDİYOR', () => {
+    const v = oku('vite.config.ts');
+    // Normal derlemede demo kataloğu hâlâ ENGEL; yalnız beyan edilmiş inceleme
+    // paketinde geçiyor ve o zaman da yüksek sesle uyarıyor.
+    expect(v).toContain("env.VITE_DEMO_ACCOUNTS === 'true' && !incelemePaketi");
+    expect(v).toContain('İNCELEME PAKETİ DERLENİYOR');
   });
 
   it('demo girişi yalnız @oyna.app hesaplarını kabul eder (ikinci emniyet)', () => {
@@ -192,9 +220,15 @@ describe('Mağaza kapıları · demo kimlikleri pakette değil', () => {
     expect(d).toContain("import.meta.env.VITE_DEMO_ACCOUNTS === 'true'");
   });
 
-  it('ortak şifre sabiti üretimde BOŞ (gömülü şifre yok)', () => {
+  it('ortak şifre sabiti NORMAL üretim paketinde BOŞ', () => {
     const s = oku('supabaseAuth.ts');
-    expect(s).toContain("const DEMO_PASSWORD = import.meta.env.VITE_DEMO_ACCOUNTS === 'true'");
+    // Şifre iki bayraktan BİRİ açıkken doluyor: geliştirme (VITE_DEMO_ACCOUNTS)
+    // ya da mağaza inceleme paketi (VITE_MAGAZA_INCELEME). İkisi de yoksa BOŞ —
+    // yani normal yayın paketinde gömülü şifre yok.
+    expect(s).toMatch(
+      /const DEMO_PASSWORD =\s*\n?\s*\(import\.meta\.env\.VITE_DEMO_ACCOUNTS === 'true' \|\| import\.meta\.env\.VITE_MAGAZA_INCELEME === 'true'\)/,
+    );
+    expect(s).toContain("? 'password123' : '';");
     // Ayrıştırıcıdaki yedek sabit de kaldırıldı.
     expect(oku('data/demoAccounts.ts')).not.toMatch(/\|\|\s*'password123'/);
   });
