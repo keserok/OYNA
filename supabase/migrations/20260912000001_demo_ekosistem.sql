@@ -223,14 +223,18 @@ SELECT public.demo_ekosistem_kur(10, 14);
 
 -- ── Doğrulama (prensip 7.7) ────────────────────────────────────────────────
 DO $dog$
-DECLARE v_gelecek int; v_gecmis int; v_gorselsiz int; v_avatarsiz int;
 BEGIN
-  -- ── KESİN İDDİALAR: bu göçün GERÇEKTEN yaptığı şey ────────────────────────
-  -- Göç iki fonksiyon tanımlar. Doğrulaması da bunu sınamalı. İlk yazımda
-  -- "en az 20 gelecek maç var mı" diye soruyordu — kendi kurmadığı bir veri
-  -- durumu. Canlıda geçmesinin tek sebebi verinin elle önceden tohumlanmış
-  -- olmasıydı; sıfırdan kurulan her ortamda göç "gelecek mac sayisi yetersiz
-  -- (0)" ile patlıyordu.
+  -- Bu göç İKİ FONKSİYON TANIMLAR. Doğrulaması da tam olarak bunu sınar.
+  --
+  -- İki kez yanlış yazdım, ikisini de sıfırdan kurulan ortam yakaladı:
+  --   1) "en az 20 gelecek maç var mı" — göçün kendi kurmadığı bir veri durumu.
+  --      Canlıda geçmesinin tek sebebi verinin elle önceden tohumlanmış olmasıydı.
+  --   2) Doğrulamanın içinden `demo_ekosistem_kur()` çağırmak — çalışan bir
+  --      göçü, ortamda demo kadrosu olup olmamasına bağlı hâle getiriyordu.
+  --
+  -- Doğru ayrım şu: TOHUMLAMA BİR GÖÇ İŞİ DEĞİL, BİR OPERATÖR İŞİDİR. Demo
+  -- verisi her ortama (üretim geri yüklemesi dâhil) kendiliğinden yazılmamalı.
+  -- Kurulum tek satır:  SELECT public.demo_ekosistem_kur();
   IF NOT EXISTS (
     SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
     WHERE n.nspname = 'public' AND p.proname = 'demo_ekosistem_kur'
@@ -243,37 +247,17 @@ BEGIN
   ) THEN
     RAISE EXCEPTION 'DOGRULAMA: demo_ekosistem_temizle kurulmadi';
   END IF;
+
+  -- Tohumlayıcı uygulama rollerine KAPALI olmalı: açık kalsaydı herhangi bir
+  -- oturum canlı veritabanına 90 sahte maç yazabilirdi.
   IF has_function_privilege('anon', 'public.demo_ekosistem_kur(int, int)', 'EXECUTE')
      OR has_function_privilege('authenticated', 'public.demo_ekosistem_kur(int, int)', 'EXECUTE') THEN
     RAISE EXCEPTION 'DOGRULAMA: demo tohumlayici uygulama rollerine acik kalmis';
   END IF;
+  IF has_function_privilege('anon', 'public.demo_ekosistem_temizle()', 'EXECUTE')
+     OR has_function_privilege('authenticated', 'public.demo_ekosistem_temizle()', 'EXECUTE') THEN
+    RAISE EXCEPTION 'DOGRULAMA: demo temizleyici uygulama rollerine acik kalmis';
+  END IF;
 
-  -- ── FIRSATÇI: ortamda demo kadrosu varsa gerçekten tohumla ve say ────────
-  -- Demo hesapları ayrı bir tohum yolundan gelir; boş bir CI/önizleme
-  -- veritabanında henüz yoktur. Bu durumda göç BAŞARISIZ SAYILMAZ — tohumlanacak
-  -- bir şey olmaması bir hata değil. Bilinen tek durum yakalanır; başka her hata
-  -- olduğu gibi yükselir (sessiz yutma yok).
-  BEGIN
-    PERFORM public.demo_ekosistem_kur();
-  EXCEPTION WHEN raise_exception THEN
-    IF SQLERRM NOT LIKE 'DEMO_YOK%' THEN RAISE; END IF;
-    RAISE NOTICE 'DOGRULAMA: demo kadrosu yok — fonksiyonlar kurulu, ekosistem tohumlanmadi';
-    RETURN;
-  END;
-
-  SELECT count(*)::int INTO v_gelecek FROM public.matches
-   WHERE cancel_reason = '_demo_ekosistem' AND starts_at > now();
-  SELECT count(*)::int INTO v_gecmis FROM public.matches
-   WHERE cancel_reason = '_demo_ekosistem' AND starts_at <= now();
-  SELECT count(*)::int INTO v_gorselsiz FROM public.pitches
-   WHERE COALESCE(jsonb_array_length(images), 0) = 0;
-  SELECT count(*)::int INTO v_avatarsiz FROM public.profiles
-   WHERE is_demo AND (avatar_url IS NULL OR avatar_url = '');
-
-  IF v_gelecek < 20 THEN RAISE EXCEPTION 'DOGRULAMA: gelecek mac sayisi yetersiz (%)', v_gelecek; END IF;
-  IF v_gecmis  < 20 THEN RAISE EXCEPTION 'DOGRULAMA: gecmis mac sayisi yetersiz (%)', v_gecmis; END IF;
-  IF v_gorselsiz > 0 THEN RAISE EXCEPTION 'DOGRULAMA: % tesis hala gorselsiz', v_gorselsiz; END IF;
-  IF v_avatarsiz > 0 THEN RAISE EXCEPTION 'DOGRULAMA: % demo profil hala avatarsiz', v_avatarsiz; END IF;
-
-  RAISE NOTICE 'DOGRULAMA TAMAM: % gelecek, % gecmis mac tohumlandi', v_gelecek, v_gecmis;
+  RAISE NOTICE 'DOGRULAMA TAMAM: tohumlayici ve temizleyici kurulu, uygulama rollerine kapali.';
 END $dog$;
