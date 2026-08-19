@@ -131,10 +131,33 @@ Deno.serve(async (req: Request) => {
         paymentTransactionId: t.paymentTransactionId ?? null, price: t.price ?? null,
       }))
     : null
+  // ── ÖDEME ALTYAPISININ GERÇEK MALİYETİ (19 Ağu 2026) ─────────────────────
+  // Buraya kadar iyzico'nun kestiği tutar HİÇBİR YERDE saklanmıyordu: elimizde
+  // yalnız bizim eklediğimiz `card_fee_pct` (%2,5) vardı. Yani "eklediğimiz
+  // bedel gerçek maliyeti karşılıyor mu?" sorusunun cevabı ölçülemiyordu —
+  // ölçülmeyen bir kaçak, sessizce büyür. iyzico cevabında bu rakamlar zaten
+  // geliyor; tek yaptığımız onları niyetin yanına yazmak. Para yolu DEĞİŞMEZ,
+  // yalnız görünürlük artar (yönetici paneli bu alanları okur).
+  const num = (v: unknown): number | null => {
+    const n = typeof v === 'string' ? Number(v) : typeof v === 'number' ? v : NaN
+    return Number.isFinite(n) ? n : null
+  }
+  const psp = {
+    // iyzico'nun bizden kestiği toplam: oransal komisyon + sabit işlem bedeli.
+    komisyon_oransal: num(auth.iyziCommissionRateAmount),
+    komisyon_sabit:   num(auth.iyziCommissionFee),
+    // iyzico'nun bize ödeyeceğini söylediği net tutar (mutabakatın çıpası).
+    net_odenecek:     num(auth.merchantPayoutAmount),
+    cekilen:          num(auth.paidPrice),
+    taksit:           num(auth.installment),
+  }
   const { data: applied, error: applyErr } = await admin.rpc('apply_card_payment', {
     p_intent_id: intentId,
     p_provider_ref: auth.paymentId ?? paymentId,
-    p_raw: { threeds: true, mdStatus, fraudStatus: auth.fraudStatus ?? null, itemTransactions: itemTx },
+    p_raw: {
+      threeds: true, mdStatus, fraudStatus: auth.fraudStatus ?? null,
+      itemTransactions: itemTx, psp,
+    },
   })
   if (applyErr) {
     console.error('[iyzico-3ds-callback] apply_card_payment hatası:', applyErr.message)
