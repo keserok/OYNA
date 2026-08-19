@@ -27,6 +27,12 @@ scripts/*
 # Kılavuz ekran görüntüsü çekim aracı (tekrar üretilebilirlik için depoda)
 !scripts/kilavuz-gorselleri/
 !scripts/kilavuz-gorselleri/**
+# Mağaza gönderim araçları — depoda OLMAK ZORUNDA. `scripts/*` kalıbı bunları
+# sessizce yutuyordu: `npm run magaza:denetim` ve `npm run surum:artir` temiz
+# bir kopyada çalışmıyor, gönderim kapısını sınayan testler CI'da ENOENT
+# veriyordu. Gönderimin geçtiği kapı, depoda duran bir kapı olmalı.
+!scripts/magaza-denetim.mjs
+!scripts/surum-artir.mjs
 !admin-panel/scripts/admin-panel-verify.mjs
 !admin-panel/scripts/admin-supabase-deploy.mjs
 !admin-panel/scripts/start-admin-local.mjs
