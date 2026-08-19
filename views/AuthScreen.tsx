@@ -5,6 +5,7 @@ import { UserRole } from '../types';
 import {
   loginWithGoogle, loginWithApple, sendPhoneOtp, verifyPhoneOtp, demoLogin,
   isDemoLoginEnabled, isDemoLoginInput, isDemoAccountPickerEnabled, loginDemoAccount,
+  oauthDonusunuOku,
 } from '../supabaseAuth';
 import { DEMO_ACCOUNT_GROUPS } from '../data/demoAccounts';
 import { useAppStore } from '../store';
@@ -24,7 +25,7 @@ import type { LegalModalKind } from '../components/common/LegalModal';
 import { useKlavyeOrtusu, klavyeliAltDolgu } from '../components/common/Toast';
 import heroEmblem from '../assets/auth/hero-emblem.webp';
 import oynaLogo from '../assets/onboarding/oyna-logo.webp';
-import { mapAuthError } from '../utils/errorMap';
+import { mapAuthError, mapOAuthDonusu } from '../utils/errorMap';
 // Alan/buton dili PhoneLinkScreen ile ORTAK — tek kaynak.
 import { AUTH_FIELD_CSS } from './authFieldStyles';
 
@@ -124,7 +125,16 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
   const { color, light } = getTheme(role);
   const ctaGradient = `linear-gradient(120deg, ${color} 0%, ${light} 100%)`;
 
-  const [stage, setStage] = useState<Stage>(introShownThisSession ? 'input' : 'intro');
+  // ── Sağlayıcı dönüşü İLK RENDER'DAN ÖNCE okunur ───────────────────────────
+  // Web'de Google/Apple girişi tam sayfa yönlendirmesidir; dönüş oturumsuzsa
+  // uygulama sıfırdan açılır. O açılışta tanıtım ekranı gösterilirse kullanıcı
+  // "uygulama beni attı, başka bir ekrana düştüm" diye okur. Bu yüzden dönüş
+  // varsa TANITIM ATLANIR: aynı telefon ekranına, sebebi yazılı olarak dönülür.
+  // useState'in tembel biçimi kullanılır — okuma (ve adres temizliği) bir kez.
+  const [oauthDonusu] = useState(() => oauthDonusunuOku());
+
+  const [stage, setStage] = useState<Stage>(
+    (oauthDonusu || introShownThisSession) ? 'input' : 'intro');
   // Tanıtım → giriş "itme" geçişi: iki ekran kısa süre BİRLİKTE durur; gelen
   // sağdan girerken giden sola kayar. Tek ekran anında değişseydi hareket
   // kesik görünürdü. Süre CSS'teki .42sn ile aynı tutulur.
@@ -155,7 +165,8 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
   const [isLoading, setIsLoading] = useState<
     'send' | 'verify' | 'google' | 'apple' | null
   >(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(
+    oauthDonusu ? mapOAuthDonusu(oauthDonusu.saglayici, oauthDonusu.kod, oauthDonusu.aciklama) : null);
   const [info, setInfo] = useState<string | null>(null);
   const [resendIn, setResendIn] = useState(0);
   // IP-15: anahtarlar artık resmi belge anahtarları — modal tam metni

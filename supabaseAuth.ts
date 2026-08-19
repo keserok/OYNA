@@ -105,6 +105,82 @@ supabase.auth.onAuthStateChange((_event, session) => {
 // listesine "oyna://auth-callback" eklenmeli (yoksa Supabase dönüşü reddeder).
 export const OAUTH_NATIVE_REDIRECT = 'oyna://auth-callback';
 
+// ─── WEB'DE SAĞLAYICI DÖNÜŞÜ: "sayfa yenilendi, hiçbir şey olmadı" sorunu ───
+// Web'de Google/Apple girişi TAM SAYFA yönlendirmesidir: tarayıcı OYNA'dan
+// çıkar, sağlayıcıya gider, sonra geri döner. Dönüş oturumsuzsa (kullanıcı
+// vazgeçti, sağlayıcı panelde açık değil, dönüş adresi izinli listede yok)
+// uygulama SIFIRDAN açılır ve kullanıcı kendini yeniden giriş ekranında bulur
+// — ekranda tek kelime açıklama olmadan. Kurucunun bildirdiği hata tam budur.
+//
+// ÇÖZÜM İKİ PARÇA:
+//   1) Yönlendirmeden ÖNCE bu oturuma bir işaret bırakılır (hangi sağlayıcı,
+//      ne zaman). sessionStorage aynı sekmedeki yönlendirmeyi aşar.
+//   2) Dönüşte `oauthDonusunuOku()` bu işareti ve adresteki hata alanlarını
+//      okur, adresi temizler ve ekrana NE OLDUĞUNU söyleyecek bir kayıt döner.
+// Böylece kullanıcı "yenilenmiş boş ekran" yerine sebebi yazan aynı telefon
+// ekranıyla karşılaşır.
+const OAUTH_ISARET = 'oyna.oauth.bekleyen';
+// İşaret bayatlarsa (sekme günlerce açık kaldı) yeni bir girişi yanlışlıkla
+// "başarısız dönüş" sanmayalım: 10 dakikadan eski işaret yok sayılır.
+const OAUTH_ISARET_OMRU_MS = 10 * 60 * 1000;
+
+export type OAuthSaglayici = 'google' | 'apple';
+
+export interface OAuthDonusu {
+  saglayici: OAuthSaglayici;
+  /** Sağlayıcı/Supabase'in verdiği ham hata kodu (`access_denied` gibi) — yoksa null. */
+  kod: string | null;
+  /** Ham açıklama; ekrana ÇIPLAK basılmaz, errorMap'ten geçer. */
+  aciklama: string | null;
+}
+
+const oauthIsaretiBirak = (saglayici: OAuthSaglayici): void => {
+  try {
+    sessionStorage.setItem(OAUTH_ISARET, JSON.stringify({ saglayici, t: Date.now() }));
+  } catch { /* özel sekme / kota — işaret olmadan da akış çalışır */ }
+};
+
+/**
+ * Bu sayfa açılışı bir OAuth dönüşü mü? Öyleyse kaydı döner ve İZLERİ SİLER
+ * (işaret + adresteki hata alanları). Değilse null.
+ *
+ * Yalnız AuthScreen çağırır: oturum açılmışsa o ekran zaten görünmez, dolayısıyla
+ * BAŞARILI dönüşte bu fonksiyon hiç çalışmaz — işaret ömrüyle kendiliğinden düşer.
+ */
+export const oauthDonusunuOku = (): OAuthDonusu | null => {
+  if (typeof window === 'undefined') return null;
+
+  let isaret: { saglayici?: string; t?: number } | null = null;
+  try {
+    const ham = sessionStorage.getItem(OAUTH_ISARET);
+    if (ham) {
+      sessionStorage.removeItem(OAUTH_ISARET);
+      isaret = JSON.parse(ham);
+    }
+  } catch { /* okunamadıysa adres alanlarına bakmaya devam */ }
+
+  // Supabase hatayı akışa göre ya sorgu dizisinde ya da çapa (#) kısmında verir.
+  const sorgu = new URLSearchParams(window.location.search);
+  const capa = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+  const kod = sorgu.get('error') ?? capa.get('error');
+  const aciklama = sorgu.get('error_description') ?? capa.get('error_description');
+
+  const bayat = !isaret?.t || Date.now() - isaret.t > OAUTH_ISARET_OMRU_MS;
+  if (!kod && (!isaret || bayat)) return null;
+
+  // Adres temizlenir: kullanıcı sayfayı yenilerse aynı hata bir daha çıkmasın
+  // ve hata metni adres çubuğunda asılı kalmasın.
+  if (kod || aciklama) {
+    try {
+      window.history.replaceState({}, document.title, window.location.pathname);
+    } catch { /* replaceState yoksa sorun değil */ }
+  }
+
+  const saglayici: OAuthSaglayici = isaret?.saglayici === 'apple' ? 'apple' : 'google';
+  return { saglayici, kod, aciklama };
+};
+
+
 // ─── NATIVE GOOGLE (tercih edilen yol) ───────────────────────────────────────
 // Tarayıcı yaprağı yerine telefonun KENDİ Google hesap seçicisi açılır:
 //   • Kullanıcı adres çubuğunda Supabase adresini görmez; ekranda uygulamanın
@@ -194,6 +270,9 @@ export const loginWithGoogle = async (): Promise<void> => {
     await Browser.open({ url: data.url, presentationStyle: 'popover' });
     return; // Oturum, deep link dönüşünde açılır (handleAuthCallbackUrl).
   }
+  // Web — TAM SAYFA yönlendirmesi. İşaret önce bırakılır: yönlendirme
+  // başladıktan sonra bu satırlara dönüş yoktur.
+  oauthIsaretiBirak('google');
   const { error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: { redirectTo: window.location.origin },
@@ -267,7 +346,8 @@ export const loginWithApple = async (): Promise<void> => {
       throw err;
     }
   } else {
-    // Web — OAuth redirect
+    // Web — OAuth redirect (Google ile aynı işaret deseni)
+    oauthIsaretiBirak('apple');
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'apple',
       options: { redirectTo: window.location.origin },

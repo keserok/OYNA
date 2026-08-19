@@ -34,10 +34,15 @@ const EKRANLAR: Ekran[] = [
     ac: async (page) => { await hazirla(page, { authAskida: true }); },
   },
   {
-    // AUTH artık tanıtım perdesiyle açılıyor; giriş/kayıt formu ok düğmesinin
-    // ardında. Bu kayıt formu ekranını çeker, tanıtım ayrı kalem (12).
+    // AUTH artık tanıtım perdesiyle açılıyor; giriş formu ok düğmesinin
+    // ardında. Bu formu çeker, tanıtım ayrı kalem (12).
+    //
+    // ÇAPA GÜNCELLENDİ (17 Ağu 2026): "Hesap oluştur"/"Hoş geldin" başlıkları,
+    // giriş-kayıt ayrımı kaldırılıp telefon tek akış olunca ekrandan kalktı
+    // (4.6). Yeni başlık "Numaranla gir" — çapa da onu arar. Eski çapa
+    // kalsaydı test, ekranın açılmadığını değil METNİN değiştiğini bildirirdi.
     ad: '02-giris-auth',
-    capa: /Hesap oluştur|Hoş geldin/i,
+    capa: /Numaranla gir/i,
     ac: async (page) => {
       await hazirla(page, { oturumsuz: true });
       await ekranaGit(page, 'AUTH');

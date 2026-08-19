@@ -44,6 +44,9 @@ vi.mock('../../supabaseAuth', () => ({
   sendPhoneOtp: vi.fn(), verifyPhoneOtp: vi.fn(), demoLogin: vi.fn(),
   isDemoLoginEnabled: () => false, isDemoLoginInput: () => false,
   isDemoAccountPickerEnabled: () => false, loginDemoAccount: vi.fn(),
+  // Sağlayıcı dönüşü okuyucusu (19 Ağu 2026): ekran İLK render'da bunu çağırır.
+  // Bu testte OAuth dönüşü yok → null; klavye ölçümleri etkilenmez.
+  oauthDonusunuOku: () => null,
 }));
 vi.mock('../../store', () => ({
   useAppStore: {
