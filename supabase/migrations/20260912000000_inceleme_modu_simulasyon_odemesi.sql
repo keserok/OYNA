@@ -98,6 +98,13 @@ $fn$;
 -- ── İNCELEME AYARLARI (canlıya geçerken geri alınacak) ─────────────────────
 UPDATE public.app_config SET value = '"SIMULATION"'::jsonb WHERE key = 'payment_provider';
 UPDATE public.app_config SET value = 'true'::jsonb        WHERE key = 'simulation_counts_as_live';
+-- Küresel mod da ONLINE_ONLY olmalı: sağlayıcıyı canlı saymak TEK BAŞINA
+-- yetmiyor, `resolve_payment_mode` önce küresel moda bakıyor. Canlıda bu ayar
+-- zaten ONLINE_ONLY'ydi, bu yüzden eksikliği fark edilmedi; sıfırdan kurulan
+-- bir ortamda varsayılan CASH_ONLY olduğu için doğrulama haklı olarak
+-- 'GLOBAL_CASH_ONLY' diyip patlıyordu. Göç artık iddia ettiği durumu
+-- kendisi kuruyor.
+UPDATE public.app_config SET value = '"ONLINE_ONLY"'::jsonb WHERE key = 'payment_mode_global';
 -- Altı tesisin altısı da CASH_ONLY'ydi: uygulamadan rezervasyon tetikleyici
 -- tarafından reddediliyordu, yani incelemeci hiçbir saha tutamazdı.
 -- Hepsi tohum veri (sahipleri demo hesaplar); gerçek bir tesisin ayarı değişmiyor.

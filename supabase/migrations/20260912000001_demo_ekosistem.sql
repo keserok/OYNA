@@ -223,8 +223,27 @@ SELECT public.demo_ekosistem_kur(10, 14);
 
 -- ── Doğrulama (prensip 7.7) ────────────────────────────────────────────────
 DO $dog$
-DECLARE v_gelecek int; v_gecmis int; v_gorselsiz int; v_avatarsiz int;
+DECLARE
+  v_oyuncu int; v_kort int;
+  v_gelecek int; v_gecmis int; v_gorselsiz int; v_avatarsiz int;
 BEGIN
+  -- Bu göç İKİ FONKSİYON TANIMLAR; veriyi kendisi kurmadan "veri var mı" diye
+  -- sormak, kendi yapmadığı bir işi doğrulamak olurdu. Nitekim ilk yazımda tam
+  -- bunu yapıyordu ve sıfırdan kurulan her ortamda "gelecek mac sayisi
+  -- yetersiz (0)" ile patlıyordu — canlıda geçmesinin tek sebebi verinin elle
+  -- önceden tohumlanmış olmasıydı. Doğrulama artık İDDİASINI KENDİ KURUYOR.
+  SELECT count(*)::int INTO v_oyuncu FROM public.profiles WHERE is_demo AND role = 'PLAYER';
+  SELECT count(*)::int INTO v_kort   FROM public.courts;
+
+  IF v_oyuncu < 4 OR v_kort < 1 THEN
+    -- Demo hesabı ya da sahası olmayan bir ortam (boş CI veritabanı):
+    -- tohumlanacak bir ekosistem yok, fonksiyonlar tanımlı kaldı.
+    RAISE NOTICE 'DOGRULAMA ATLANDI: demo oyuncu (%) / kort (%) yetersiz', v_oyuncu, v_kort;
+    RETURN;
+  END IF;
+
+  PERFORM public.demo_ekosistem_kur();
+
   SELECT count(*)::int INTO v_gelecek FROM public.matches
    WHERE cancel_reason = '_demo_ekosistem' AND starts_at > now();
   SELECT count(*)::int INTO v_gecmis FROM public.matches
@@ -239,5 +258,5 @@ BEGIN
   IF v_gorselsiz > 0 THEN RAISE EXCEPTION 'DOGRULAMA: % tesis hala gorselsiz', v_gorselsiz; END IF;
   IF v_avatarsiz > 0 THEN RAISE EXCEPTION 'DOGRULAMA: % demo profil hala avatarsiz', v_avatarsiz; END IF;
 
-  RAISE NOTICE 'DOGRULAMA TAMAM';
+  RAISE NOTICE 'DOGRULAMA TAMAM: % gelecek, % gecmis mac tohumlandi', v_gelecek, v_gecmis;
 END $dog$;
