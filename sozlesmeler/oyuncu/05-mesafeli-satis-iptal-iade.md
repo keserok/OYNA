@@ -26,7 +26,7 @@ Kapora, uygulama üzerinden güvenli ödeme altyapısı ile tahsil edilir. Kalan
 ### 4.1 İade Nereye Yapılır?
 - İade, **ödemenin yapıldığı karta** yapılır (Mesafeli Sözleşmeler Yönetmeliği m.15/2 uyarınca ödemede kullanılan araca iade esastır).
 - İade talebiniz iptal anında işleme alınır; tutarın kartınıza yansıma süresi bankanıza bağlıdır (genellikle 1-3 iş günü, bazı bankalarda daha uzun sürebilir).
-- İade tutarından **hiçbir kesinti yapılmaz**: ne OYNA komisyonu ne de ödeme altyapısı işlem bedeli düşülür. Ödediğiniz rakamın aynısı kartınıza döner (yukarıdaki kademeli oranlar saklıdır).
+- İade tutarından **yalnızca ödeme altyapısının işlem bedeli** düşülür; **OYNA komisyonu düşülmez**. Bu bedel, karttan çekilen **toplam** tutar üzerinden hesaplanır — kısmi iadede de böyledir, çünkü ödeme kuruluşu komisyonunu iade işleminde geri vermez. Oran ve tutar, ödeme ekranında **ödemeden önce** gösterilir (yukarıdaki kademeli oranlar saklıdır).
 - OYNA, kullanıcı adına bakiye (cüzdan) tutmaz; iadeler Platform içinde harcanmak üzere bir bakiyeye DEĞİL, doğrudan ödeme aracınıza döner.
 
 ### 5. Cayma Hakkı İstisnası

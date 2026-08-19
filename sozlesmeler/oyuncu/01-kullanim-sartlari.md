@@ -157,7 +157,7 @@ Rezervasyon bedeline ilişkin fatura veya e-arşiv fatura/makbuz düzenleme yük
 
 Rezervasyon iptali ve iadeye ilişkin esaslar, **Kullanıcının kendi iradesiyle gerçekleştirdiği iptallerde**, aşağıdaki kademeli yapıya göre uygulanır (kademeler arasında çakışma bulunmayacak şekilde, saat aralıkları birbirini dışlayıcı olarak tanımlanmıştır):
 
-- Rezervasyon/maç saatine **24 saat ve üzerinde (≥ 24 saat)** kala yapılan iptallerde: ödenen tutarın **tamamı**, ödemenin yapıldığı karta iade edilir. **Hiçbir kesinti yapılmaz** — ödeme altyapısı sağlayıcısının kestiği işlem bedeli dâhil; o maliyeti OYNA üstlenir.
+- Rezervasyon/maç saatine **24 saat ve üzerinde (≥ 24 saat)** kala yapılan iptallerde: ödenen tutardan **yalnızca ödeme altyapısının işlem bedeli** düşülür ve kalan tutar ödemenin yapıldığı karta iade edilir. OYNA bu iadeden **kendi komisyonunu almaz**. İşlem bedelinin oranı ve tutarı, ödeme ekranında **ödemeden önce** yazılıdır.
 - Rezervasyon/maç saatine **6 saat ile 24 saat arasında (6. saat dahil, 24. saat hariç)** kala yapılan iptallerde: ödenen tutarın **%50**'si, ödemenin yapıldığı karta iade edilir.
 - Rezervasyon/maç saatine **6 saatten az** kala yapılan iptallerde: iade yapılmaz.
 

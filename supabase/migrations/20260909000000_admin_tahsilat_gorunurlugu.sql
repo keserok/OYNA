@@ -45,8 +45,10 @@ BEGIN
     COALESCE(SUM(amount)          FILTER (WHERE status IN ('PAID','CAPTURED')), 0),
     COALESCE(SUM(card_fee_amount) FILTER (WHERE status IN ('PAID','CAPTURED')), 0),
     COALESCE(SUM(amount)          FILTER (WHERE status = 'REFUNDED'), 0),
-    COUNT(*)::int                 FILTER (WHERE status IN ('PAID','CAPTURED')),
-    COUNT(*)::int                 FILTER (WHERE status = 'FAILED'),
+    -- NOT: cast, FILTER'dan SONRA gelmeli. `COUNT(*)::int FILTER (...)` sözdizimi
+    -- hatasıdır ve göçü ilk uygulamada durdurur.
+    (COUNT(*) FILTER (WHERE status IN ('PAID','CAPTURED')))::int,
+    (COUNT(*) FILTER (WHERE status = 'FAILED'))::int,
     MAX(created_at)               FILTER (WHERE status IN ('PAID','CAPTURED'))
   INTO v_collected, v_fees, v_refunded, v_count, v_failed, v_last
   FROM public.payment_intents
