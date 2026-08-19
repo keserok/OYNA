@@ -270,8 +270,16 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
   }, [ctx?.isDeposit, ctx?.pitchId, (bookingPitch as any)?.id]);
 
   // İptal kademesi kullanıcı-dostu metin (tesis politikasıyla birebir).
+  //
+  // ALTYAPI BEDELİ CÜMLESİ ZORUNLU: 19 Ağu 2026 kurucu kararıyla iadeden ödeme
+  // altyapısının işlem bedeli düşülüyor ve sözleşme metni bunun "ödeme ekranında
+  // ödemeden ÖNCE" yazılı olacağını taahhüt ediyor (Mesafeli Satış md. 6).
+  // Kullanıcı geri alacağı tutarı, ödemeden önce bilmek zorunda.
   const refundTierText = refundPolicy
     ? `İptalde iade: ${refundPolicy.full_hours} saat öncesi %100 · ${refundPolicy.half_hours}–${refundPolicy.full_hours} saat arası %${refundPolicy.half_pct} · sonrası iade yok.`
+      + (cardFeePct > 0
+          ? ` İade edilen tutardan ödeme altyapısının işlem bedeli (%${cardFeePct}) düşülür; OYNA komisyon almaz.`
+          : '')
     : null;
 
   // ─── Türetilen tutarlar (canlı güncellenir) ────────────────────────────────
