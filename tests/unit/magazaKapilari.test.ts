@@ -427,3 +427,69 @@ describe('Mağaza kapıları · beyan ile gerçek davranış uyumu', () => {
     expect(atla).toContain('if (ageIndex === null)');
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// GÖNDERİM DENETİMİ BETİĞİ (19 Ağustos 2026)
+//
+// Mağaza reddi çoğu zaman büyük bir hatadan değil, unutulmuş küçük bir
+// dosyadan gelir. `npm run magaza:denetim` bunları mekanik olarak sınar.
+// Buradaki testler betiğin KENDİSİNİ korur: kapılardan biri sessizce
+// silinirse gönderim öncesi kimse fark etmez.
+// ═══════════════════════════════════════════════════════════════════════════
+describe('Mağaza gönderim denetimi betiği', () => {
+  const betik = () => oku('scripts/magaza-denetim.mjs');
+
+  it('yedi denetim başlığının hepsi duruyor', () => {
+    const s = betik();
+    for (const ad of [
+      'Sürüm numaraları', 'Uygulama simgeleri', 'iOS gizlilik ve izinler',
+      'Android gönderim ayarları', 'Yasal sayfalar',
+      'Pakete sızmaması gerekenler', 'Uygulama içi hesap silme',
+    ]) {
+      expect(s, ad).toContain(`denetle('${ad}'`);
+    }
+  });
+
+  it('reddin en sık sebepleri tek tek sınanıyor', () => {
+    const s = betik();
+    // Her biri gerçek bir ret kodu / mağaza kuralıdır.
+    expect(s).toContain('PrivacyInfo.xcprivacy');        // ITMS-91053
+    expect(s).toContain('com.apple.developer.applesignin'); // Apple kuralı 4.8
+    expect(s).toContain('NSCameraUsageDescription');      // izinsiz çökme
+    expect(s).toContain('hesap-silme.html');             // Play hesap silme şartı
+    expect(s).toContain('VITE_DEMO_ACCOUNTS');           // demo kimlik sızıntısı
+    expect(s).toContain('targetSdkVersion');             // Play hedef sürüm şartı
+  });
+
+  it('derlenmiş pakette demo kimliği aranıyor (kill-switch unutulsa bile)', () => {
+    const s = betik();
+    expect(s).toContain('password123');
+    expect(s).toContain('dist/assets');
+  });
+
+  it('engel varsa çıkış kodu 1 — CI takabilsin', () => {
+    expect(betik()).toContain('process.exit(engeller.length > 0 ? 1 : 0)');
+  });
+
+  it('elle tutulan yasal sayfalar üreticiyle karşılaştırılmıyor', () => {
+    // gizlilik.html / hesap-silme.html üreticiden çıkmaz; legalDocs.ts ile
+    // kıyaslamak her yasal düzenlemeden sonra sahte alarm üretirdi.
+    const s = betik();
+    expect(s).toContain('sozlesmeler/oyuncu/01-kullanim-sartlari.md');
+    expect(s).toContain('ELLE');
+  });
+
+  it('sürüm artırma betiği iki platformu BİRLİKTE yükseltiyor', () => {
+    const s = oku('scripts/surum-artir.mjs');
+    expect(s).toContain('CURRENT_PROJECT_VERSION');
+    expect(s).toContain('oynaVersionCode');
+    // Sürüm ADI otomatik artmamalı: kullanıcının gördüğü numaradır.
+    expect(s).toContain('yalnız `--ad` verilirse');
+  });
+
+  it('iki betik de package.json üzerinden çağrılabiliyor', () => {
+    const pkg = JSON.parse(oku('package.json'));
+    expect(pkg.scripts['magaza:denetim']).toBe('node scripts/magaza-denetim.mjs');
+    expect(pkg.scripts['surum:artir']).toBe('node scripts/surum-artir.mjs');
+  });
+});
