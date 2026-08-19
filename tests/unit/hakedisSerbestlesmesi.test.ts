@@ -56,3 +56,49 @@ describe('sayaç hizmetten sonra işler', () => {
     expect(goc()).toContain('owner_payout_days');
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PROVİZYON ÖMRÜ KAPISI — karar kilidi (19 Ağustos 2026)
+//
+// KAÇAK: maç kaporası karttaki BLOKE ile tutulur; banka blokeyi ~1 ay içinde
+// kendiliğinden çözer. Maç takvimi ise 90 gün açıktı. 60 gün sonrasına
+// kurulan maçta blokeden geriye bir şey kalmıyor, tahsilat MAÇ GÜNÜ
+// başarısız oluyordu — düzeltmek için en geç an.
+// ═══════════════════════════════════════════════════════════════════════════
+const gocKapi = () => readFileSync(
+  path.join(KOK, 'supabase/migrations/20260910000003_provizyon_omru_kapisi.sql'), 'utf-8');
+
+describe('provizyon ömrü kapısı', () => {
+  it('süre koda gömülü değil, ayardan okunur', () => {
+    const s = gocKapi();
+    expect(s).toContain("public.get_config_number('preauth_max_days', 20)");
+    expect(s).toContain("'preauth_max_days'");
+  });
+
+  it('0 yazılırsa kapı kapanır (sınırsız anlaşma mümkün)', () => {
+    expect(gocKapi()).toContain('IF v_max_days > 0');
+  });
+
+  it('kapı kaporanın BAŞLANGICINDA duruyor — maç günü değil', () => {
+    const s = gocKapi();
+    const kapi = s.indexOf('PREAUTH_TOO_FAR');
+    const yazma = s.indexOf("deposit_status     = 'AWAITING_PAYMENT'", kapi);
+    expect(kapi).toBeGreaterThan(-1);
+    expect(yazma, 'kapı, maça yazma işleminden ÖNCE olmalı').toBeGreaterThan(kapi);
+  });
+
+  it('hata mesajı sebebi ve çıkışı birlikte söylüyor', () => {
+    const s = gocKapi();
+    const m = s.slice(s.indexOf('PREAUTH_TOO_FAR'), s.indexOf('PREAUTH_TOO_FAR') + 300);
+    expect(m).toContain('banka');            // sebep
+    expect(m).toContain('başlatabilirsin');  // çıkış
+  });
+
+  it('maç kurma / uzak tarihe rezervasyon kısıtlanmadı (kapsam dar)', () => {
+    const s = gocKapi();
+    // Yalnız match_block_deposit değiştirildi.
+    expect(s).toContain('CREATE OR REPLACE FUNCTION public.match_block_deposit');
+    expect(s).not.toContain('CREATE OR REPLACE FUNCTION public.create_pitch_booking');
+    expect(s).not.toContain('CREATE OR REPLACE FUNCTION public.create_match_atomic');
+  });
+});
