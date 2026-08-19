@@ -561,3 +561,82 @@ describe('Mağaza incelemecisine yönerge', () => {
     expect(a).toContain('export const isIncelemePaketi = (): boolean => INCELEME_PAKETI');
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ÖDEME SAĞLAYICISI ÇÖZÜMLEMESİ (19 Ağustos 2026)
+//
+// Sağlayıcı iki yerde tutuluyordu ve canlıda İKİSİ AYRI cevap veriyordu:
+// panel (`app_config.payment_provider`) SIMULATION derken edge fonksiyonu
+// PAYMENT_PROVIDER secret'ı yüzünden IYZICO'ydu. Yani uygulama "ödeyebilirsin"
+// diyor, arkada GERÇEK kart çekimi deneniyordu — incelemecinin hayali kartı
+// reddedilir, gerçek kart giren biri gerçekten öderdi.
+//
+// Kural: PANEL DARALTIR, ASLA GENİŞLETMEZ. Gerçek para için iki tarafın da
+// aynı anda IYZICO demesi şart. Aşağısı bu sınırı kilitler.
+// ═══════════════════════════════════════════════════════════════════════════
+describe('Ödeme sağlayıcısı · panel daraltır, genişletmez', () => {
+  const cozumleyici = () => oku('supabase/functions/_shared/paymentProvider.ts');
+
+  it('IYZICO yalnız İKİSİ birden IYZICO iken seçilir', () => {
+    expect(cozumleyici()).toContain(
+      "if (config === 'IYZICO' && ENV_PROVIDER === 'IYZICO') {");
+  });
+
+  it('secret TEK BAŞINA gerçek para yolunu açamaz — config her zaman okunur', () => {
+    const s = cozumleyici();
+    const govde = s.slice(s.indexOf('export async function resolvePaymentProvider'));
+    // Erken dönüş olmamalı: env'e bakıp config'i atlayan bir kısayol,
+    // panelin daraltma yetkisini yok eder (canlıdaki hata tam buydu).
+    expect(govde).not.toContain('if (ENV_PROVIDER) return ENV_PROVIDER');
+    expect(govde).toContain("p_key: 'payment_provider'");
+  });
+
+  it('SIMULATION için adı konmuş demo anahtarı da şart', () => {
+    expect(cozumleyici()).toContain(
+      "} else if (config === 'SIMULATION' && simCanli.data === true) {");
+    expect(cozumleyici()).toContain("p_key: 'simulation_counts_as_live'");
+  });
+
+  it('başka her hâl DISABLED', () => {
+    expect(cozumleyici()).toContain("} else {\n      sonuc = 'DISABLED'\n    }");
+  });
+
+  it('config okunamazsa: bilinen değer sürer, hiç yoksa DISABLED', () => {
+    const s = cozumleyici();
+    expect(s).toContain('if (onbellek) return onbellek.value');
+    expect(s).toMatch(/if \(onbellek\) return onbellek\.value\n\s*sonuc = 'DISABLED'/);
+  });
+
+  it('iki ödeme fonksiyonu da aynı kaynağı kullanıyor — kopya kural yok', () => {
+    for (const f of ['supabase/functions/create-payment/index.ts',
+                     'supabase/functions/refund-payment/index.ts']) {
+      const s = oku(f);
+      expect(s, `${f} paylaşılan çözümleyiciyi kullanmıyor`)
+        .toContain("import { resolvePaymentProvider } from '../_shared/paymentProvider.ts'");
+      expect(s, `${f} hâlâ kendi env okumasını yapıyor`)
+        .not.toContain("Deno.env.get('PAYMENT_PROVIDER')");
+      expect(s).toContain('await resolvePaymentProvider(admin)');
+    }
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SAHTE İADE KAPISI (19 Ağustos 2026)
+//
+// Kuyruk işlemcisi "sağlayıcı SIMULATION" görünce satırı DONE yazıyordu.
+// Sağlayıcı artık panelden de gelebildiği için, canlıya geçerken demo anahtarı
+// kapatılmayı unutulursa GERÇEK ÇEKİLMİŞ bir tahsilat "iade edildi" diye
+// işaretlenir, müşterinin parası bizde kalırdı.
+// ═══════════════════════════════════════════════════════════════════════════
+describe('İade kuyruğu · sahte iade yalnız sahte tahsilata', () => {
+  const s = () => oku('supabase/functions/refund-payment/index.ts');
+
+  it('DONE yazmak için tahsilatın kendisi de simülasyon olmalı', () => {
+    expect(s()).toContain("const sahteTahsilat = intent?.raw?.simulated === true");
+    expect(s()).toContain("if (PROVIDER === 'SIMULATION' && sahteTahsilat) {");
+  });
+
+  it('gerçek tahsilat + simülasyon modu = sessiz DONE değil, insana kalır', () => {
+    expect(s()).toContain('GERCEK_TAHSILAT_SIM_MODDA');
+  });
+});

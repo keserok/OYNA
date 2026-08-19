@@ -54,11 +54,32 @@ describe('1 · Cüzdan lansmanda kapalı', () => {
     expect(s).toMatch(/deposit\s+:= CASE WHEN NOT public\.get_config_bool\('match_deposit_enabled', false\) THEN 0/);
   });
 
-  it('ödeme ucu fail-closed: env yokken sağlayıcı DISABLED ve kapı en önde', () => {
+  /**
+   * 19 Ağu 2026 — kural YERİNDE, ADRESİ DEĞİŞTİ.
+   *
+   * "env yoksa DISABLED" iddiası artık create-payment'ın kendi gövdesinde
+   * aranamaz: sağlayıcı çözümlemesi _shared/paymentProvider.ts'e taşındı,
+   * çünkü sağlayıcının İKİ yerde (panel + secret) ayrışabilmesi canlıda
+   * gerçek bir hataya yol açtı (panel SIMULATION, fonksiyon IYZICO).
+   *
+   * Fail-closed gevşemedi, SIKILAŞTI: gerçek para artık secret'ın TEK
+   * BAŞINA açamadığı bir yol. Kuralın kendisi magazaKapilari.test.ts →
+   * "panel daraltır, genişletmez" başlığında kilitleniyor; burada yalnız
+   * ucun o tek kaynağa bağlı olduğu ve kapının en önde durduğu sınanır.
+   */
+  it('ödeme ucu fail-closed: sağlayıcı tek kaynaktan gelir, kapı en önde', () => {
     const s = oku('supabase/functions/create-payment/index.ts');
-    expect(s).toContain("Deno.env.get('PAYMENT_PROVIDER') ?? 'DISABLED'");
+    expect(s).toContain("import { resolvePaymentProvider } from '../_shared/paymentProvider.ts'");
+    expect(s).toContain('const PROVIDER = await resolvePaymentProvider(admin)');
     expect(s).toContain("PAYMENTS_DISABLED");
+    // Uç kendi başına sağlayıcı UYDURAMAZ — ne env okur ne varsayılan seçer.
+    expect(s).not.toContain("Deno.env.get('PAYMENT_PROVIDER')");
     expect(s).not.toContain("?? 'SIMULATION'");
+
+    // Tek kaynağın kendisi hâlâ fail-closed.
+    const ortak = oku('supabase/functions/_shared/paymentProvider.ts');
+    expect(ortak).toContain("sonuc = 'DISABLED'");
+    expect(ortak).not.toContain("?? 'SIMULATION'");
   });
 
   it('tüketici yüzeyinde cüzdan rotası ölü: WALLET ana ekrana düşer', () => {
@@ -174,8 +195,10 @@ describe('3 · Kart kaporası + karta iade (16 Ağu 2026 — ikinci tur)', () =>
     const r = oku('supabase/functions/refund-payment/index.ts');
     expect(r).toContain("'process-queue'");
     expect(r).toContain('card_refund_queue');
-    // Fail-closed: env yoksa sağlayıcı DISABLED (SIMULATION varsayılamaz).
-    expect(r).toContain("Deno.env.get('PAYMENT_PROVIDER') ?? 'DISABLED'");
+    // Fail-closed kuralı _shared/paymentProvider.ts'e taşındı (19 Ağu 2026):
+    // iade ucu de sağlayıcıyı kendi başına uyduramaz.
+    expect(r).toContain("import { resolvePaymentProvider } from '../_shared/paymentProvider.ts'");
+    expect(r).not.toContain("Deno.env.get('PAYMENT_PROVIDER')");
   });
 
   it('istemci kapora akışı kart rayında (PaymentScreen → MATCH_DEPOSIT)', () => {
