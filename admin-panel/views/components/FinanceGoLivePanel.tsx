@@ -182,8 +182,10 @@ export const FinanceGoLivePanel: React.FC = () => {
           hint: formatTry(recon.refunded_sum),
           tone: recon.refunded_count > 0 ? 'red' : 'default',
         },
-        { label: 'Cüzdan — bekleyen', value: formatTry(recon.wallet_pending) },
-        { label: 'Cüzdan — tamamlanan', value: formatTry(recon.wallet_completed) },
+        // Defter satırları artık YALNIZ hakediştir (tüketici cüzdanı kapalı;
+        // eski TOP_UP/REFUND_CREDIT kayıtları tarihsel olarak duruyor).
+        { label: 'Hakediş defteri — bekleyen', value: formatTry(recon.wallet_pending) },
+        { label: 'Hakediş defteri — tamamlanan', value: formatTry(recon.wallet_completed) },
         { label: 'Ödeme talebi (payout)', value: formatTry(recon.payout_requested) },
         { label: 'Ödenen (payout)', value: formatTry(recon.payout_completed), tone: 'green' },
       ]
@@ -422,10 +424,15 @@ export const FinanceGoLivePanel: React.FC = () => {
             <Banknote size={18} className="text-emerald-400" />
           </div>
           <div className="min-w-0">
-            <h3 className="text-sm font-extrabold text-white">Para Çekme (Cashout) Hazırlığı</h3>
+            <h3 className="text-sm font-extrabold text-white">Hakediş Ödemesi (Payout) Hazırlığı</h3>
             <p className="text-[11px] text-gray-500 mt-0.5 leading-relaxed">
-              Otomatik havale entegrasyonu yoktur: talep onaylandığında transferi banka üzerinden
-              ELLE yapıp referansı Payout Talepleri ekranına girersiniz.
+              Tesis · kaleci · hakem hakedişinin banka hesabına aktarımı. Otomatik havale
+              entegrasyonu yoktur: talep onaylandığında transferi banka üzerinden ELLE yapıp
+              referansı Payout Talepleri ekranına girersiniz.
+              <br />
+              <b className="text-amber-300">Tüketici cüzdanı 17 Ağustos 2026'da kapatıldı</b> — oyuncu
+              bakiye tutmaz, dolayısıyla "cüzdandan çekim" diye bir yol da yoktur. Aşağıdaki
+              sayılar yalnız HAKEDİŞ tarafını gösterir.
             </p>
           </div>
         </div>
@@ -436,14 +443,12 @@ export const FinanceGoLivePanel: React.FC = () => {
           <>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="flex items-center justify-between gap-4 bg-black/30 border border-white/[0.06] rounded-xl px-4 py-3">
-                <span className="text-xs font-bold text-gray-400">Durum</span>
-                <span className={`text-sm font-extrabold ${cashoutCfg.enabled ? 'text-green-400' : 'text-amber-400'}`}>
-                  {cashoutCfg.enabled ? 'AÇIK' : 'KAPALI'}
-                </span>
+                <span className="text-xs font-bold text-gray-400">Tüketici cüzdanı</span>
+                <span className="text-sm font-extrabold text-gray-400">KAPALI (kalıcı)</span>
               </div>
               <div className="flex items-center justify-between gap-4 bg-black/30 border border-white/[0.06] rounded-xl px-4 py-3">
-                <span className="text-xs font-bold text-gray-400">Kesinti / asgari</span>
-                <span className="text-sm font-extrabold text-white">%{cashoutCfg.feePct} · ₺{cashoutCfg.min}</span>
+                <span className="text-xs font-bold text-gray-400">Hakediş aktarımında kesinti</span>
+                <span className="text-sm font-extrabold text-white">yok</span>
               </div>
               <div className="flex items-center justify-between gap-4 bg-black/30 border border-white/[0.06] rounded-xl px-4 py-3">
                 <span className="text-xs font-bold text-gray-400">Bekleyen çekim talebi</span>
@@ -455,15 +460,13 @@ export const FinanceGoLivePanel: React.FC = () => {
               </div>
             </div>
 
-            {!cashoutCfg.enabled && (
-              <div className="mt-4 bg-amber-500/5 border border-amber-500/20 rounded-xl p-4">
-                <p className="text-[11px] text-amber-200 leading-relaxed">
-                  <b>Açmadan önce:</b> iyzico sözleşmesi/KYC tamam · manuel havale prosedürü (SOP) yazılı ·
-                  Payout Talepleri ekranında <b>Geri Al</b> butonu çalışır durumda (yanlış işaretlemeyi düzeltmek için) ·
-                  muhasebe CSV dışa aktarımı test edilmiş. Anahtar: <code className="text-amber-300">wallet_cashout_enabled</code> (Sistem Parametreleri).
-                </p>
-              </div>
-            )}
+            <div className="mt-4 bg-amber-500/5 border border-amber-500/20 rounded-xl p-4">
+              <p className="text-[11px] text-amber-200 leading-relaxed">
+                <b>Hakediş ödemeden önce:</b> iyzico sözleşmesi/KYC tamam · manuel havale prosedürü (SOP)
+                yazılı · Payout Talepleri ekranında <b>Geri Al</b> butonu çalışır durumda (yanlış
+                işaretlemeyi düzeltmek için) · muhasebe CSV dışa aktarımı test edilmiş.
+              </p>
+            </div>
           </>
         )}
       </section>

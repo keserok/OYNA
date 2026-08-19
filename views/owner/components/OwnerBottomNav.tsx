@@ -42,7 +42,10 @@ export const OwnerBottomNav: React.FC<OwnerBottomNavProps> = ({
     // 2) Uyarı balonu — index.css'teki `body:has(nav[aria-label="Ana Gezinti"])`
     //    kuralı balonu menünün ÜSTÜNE kaldırır. Etiket yokken işletme
     //    geri bildirimi bu çubuğun ARKASINDA kalıyordu.
-    <nav aria-label="Ana Gezinti" className="fixed bottom-0 left-0 right-0 bg-[#0A0E14]/95 backdrop-blur-xl border-t border-white/5 px-2 py-2 z-40 safe-area-pb">
+    // 3) Oyuncu menüsüyle AYNI dil (17 Ağu 2026): ekranın altıyla birleşik,
+    //    yalnız üst köşeler yuvarlak. Üç menü ayrı görünürse rol değiştiren
+    //    kullanıcı her seferinde "başka bir uygulamaya girdim" hissediyor.
+    <nav aria-label="Ana Gezinti" className="fixed bottom-0 left-0 right-0 bg-[#0A0E14]/95 backdrop-blur-xl border-t border-white/10 rounded-t-[28px] px-2 py-2 z-40 safe-area-pb">
       <div className="flex justify-around items-center max-w-lg mx-auto">
         {shownTabs.map((tab) => {
           const isActive = highlightTab === tab.id;

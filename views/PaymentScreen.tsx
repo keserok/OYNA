@@ -13,7 +13,7 @@ import { listSavedCards, SavedCard } from '../services/walletService';
 import { resolvePaymentMode, paymentModeReasonText } from '../services/paymentModeService';
 import type { PaymentModeResolution } from '../types';
 import {
-  startInAppCardPayment, InAppPayInput, getCardFeePct, computeCardFee, cardFeeOf,
+  startInAppCardPayment, InAppPayInput, getCardFeePct, computeCardFee,
   getIntentStatus, rawErrorMessage, humanizePaymentError,
 } from '../services/paymentService';
 import { getMyGuardianState } from '../services/guardianService';
@@ -317,9 +317,7 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
           // online ödeme açık olacağı için kullanıcı bunu normalde görmez.
           ? 'Uygulamadan rezervasyon kartla kapora ödenerek yapılır. Bu tesiste uygulama içi ödeme şu anda kapalı.'
           : (paymentModeReasonText(payMode!) ?? 'Online ödeme şu anda kapalı.'))
-      : cardFee > 0
-        ? `Kartla ödemede ödeme altyapısı komisyonu için %${cardFeePct} işlem bedeli eklenir.`
-        : 'Tutarın tamamı seçtiğin karttan tahsil edilir.';
+      : 'Yukarıdaki tutarın tamamı seçtiğin karttan tek seferde tahsil edilir.';
 
   // Lobi state'ini tazele (lost-update önleme — sunucu SSOT).
   // KN-3: taze veri YERELE uygulanır, DB'ye GERİ YAZILMAZ (eski updateMatch
@@ -820,21 +818,16 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
           </motion.h2>
           <motion.p initial={{ y: 14, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.18 }}
             className="text-[0.8125rem] text-[#39FF14] font-bold mt-2 uppercase tracking-[0.14em]">
-            {money(amount)} · {cashBooking ? 'Ödeme tesiste' : ctx.successSubtitle}
+            {money(result ? result.cardAmount : grandTotal)} · {cashBooking ? 'Ödeme tesiste' : ctx.successSubtitle}
           </motion.p>
           <motion.div initial={{ y: 14, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.24 }}
             className="w-full bg-[#161B22] border border-white/8 rounded-3xl p-5 mt-8 space-y-3">
             <SummaryRow label={ctx.kind === 'MATCH_JOIN' ? 'Maç' : 'Saha'} value={ctx.title} />
             <SummaryRow label="Yer & Saat" value={ctx.subtitle} />
             <SummaryRow label="Ödeme" value={cashBooking ? 'Tesiste ödenecek' : 'Kart'} />
-            {/* TAHSİL EDİLEN gerçek bedel (tahmin değil): sunucunun çektiği
-                toplamdan hizmet tabanı düşülerek bulunur. */}
-            {result && cardFeeOf(amount, result.cardAmount, result.balanceApplied) > 0 && (
-              <SummaryRow
-                label="Kart işlem bedeli"
-                value={money(cardFeeOf(amount, result.cardAmount, result.balanceApplied))}
-              />
-            )}
+            {/* Kart işlem bedeli satırı KALDIRILDI (17 Ağu 2026): kullanıcı tek
+                rakam görür, bedel fiyatın içindedir. Kırılım yönetici panelinde
+                (Finans → tahsilat kırılımı) durmaya devam eder. */}
             <div className="h-px bg-white/8" />
             <SummaryRow label="İşlem No" value={(result?.intentId ?? '').slice(0, 8).toUpperCase() || '—'} dim mono />
           </motion.div>
@@ -873,7 +866,7 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
   // ─── Ana ödeme ekranı (1b) ─────────────────────────────────────────────────
   return (
     <div lang="tr" className="h-full bg-[#0A0E14] flex flex-col font-sans">
-      <header className="px-5 pt-safe py-4 flex items-center gap-4 border-b border-white/5 sticky top-0 bg-[#0A0E14]/90 backdrop-blur-xl z-20">
+      <header className="px-5 pt-safe-baslik pb-4 flex items-center gap-4 border-b border-white/5 sticky top-0 bg-[#0A0E14]/90 backdrop-blur-xl z-20">
         <button onClick={() => { setPaymentContext(null); onBack(); }}
           className="w-11 h-11 flex items-center justify-center bg-[#161B22] rounded-full border border-white/5 text-white active:scale-95 transition-all shrink-0">
           <ArrowLeft size={20} />
@@ -979,29 +972,17 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
         {/* Tutar */}
         <div className="text-center px-5 py-0.5">
           <p className="text-[0.6875rem] text-gray-400 font-bold uppercase tracking-[0.1em] mb-1.5">{ctx.amountLabel}</p>
+          {/* TEK RAKAM (kurucu kararı, 17 Ağu 2026): kullanıcı karttan
+              çekilecek TOPLAMI görür. Kart işlem bedeli ayrı satır olarak
+              gösterilmez — fiyatın içindedir. Kırılım (hizmet tutarı + bedel)
+              yönetici panelinde durur; para nereye gidiyor sorusunun cevabı
+              orada, kullanıcıda değil.
+              ÖNEMLİ: burada yazan rakam ile karttan çekilen rakam BİREBİR
+              aynıdır — hesap sunucudaki yuvarlamanın ikiziyle yapılır. */}
           <p className={`text-[2.75rem] font-extrabold leading-none font-numeric ${ctx.isDeposit ? 'text-[#FACC15]' : 'text-white'}`}>
-            {money(amount)}
+            {money(grandTotal)}
           </p>
           {ctx.amountHint && <p className="text-[0.6875rem] text-ink-4 mt-2">{ctx.amountHint}</p>}
-          {/* Kart işlem bedeli — yalnız kart kısmı varsa ve oran > 0 iken çıkar.
-              Cüzdana geçildiği anda bu blok kaybolur; fark böyle görünür olur. */}
-          {cardFee > 0 && (
-            <div className="mt-3 mx-auto max-w-[320px] rounded-2xl border border-white/8 bg-white/[0.03] px-4 py-3 space-y-1.5">
-              <div className="flex items-center justify-between text-[0.75rem]">
-                <span className="text-gray-400 font-semibold">Hizmet tutarı</span>
-                <span className="text-white font-bold font-numeric">{money(amount)}</span>
-              </div>
-              <div className="flex items-center justify-between text-[0.75rem]">
-                <span className="text-gray-400 font-semibold">Kart işlem bedeli (%{cardFeePct})</span>
-                <span className="text-[#FACC15] font-bold font-numeric">+{money(cardFee)}</span>
-              </div>
-              <div className="h-px bg-white/8" />
-              <div className="flex items-center justify-between text-[0.8125rem]">
-                <span className="text-white font-extrabold">Karttan çekilecek</span>
-                <span className="text-white font-extrabold font-numeric">{money(grandTotal)}</span>
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Ödeme yöntemi karuseli — tek yöntem KART (cüzdan kapalı).

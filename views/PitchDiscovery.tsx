@@ -1737,7 +1737,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
             className="fixed inset-0 z-[60] bg-[#0A0E14] flex flex-col overflow-hidden"
           >
             {/* Üst aksiyonlar */}
-            <div className="absolute top-0 left-0 w-full p-4 pt-safe flex justify-between items-center z-20">
+            <div className="absolute top-0 left-0 w-full p-4 pt-safe-baslik flex justify-between items-center z-20">
               <button
                 onClick={() => setIsDetailOpen(false)}
                 aria-label="Geri"

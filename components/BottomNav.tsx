@@ -90,10 +90,20 @@ export const BottomNav: React.FC<BottomNavProps> = ({ currentView, onNavigate, h
       animate={{ y: hidden ? '130%' : 0 }}
       exit={{ y: '130%' }}
       transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-      className="fixed bottom-0 left-0 right-0 z-50 px-4 pt-2 pb-safe max-w-lg mx-auto"
+      /* EKRANIN ALTIYLA BİRLEŞİK (kurucu isteği, 17 Ağustos 2026):
+         Çubuk eskiden HAVADA DURAN bir hapdı — yanlarda 16px, altta güvenli
+         alan kadar boşluk vardı ve dört köşesi de yuvarlaktı. Telefonun alt
+         kenarıyla arasındaki o şerit, uygulamanın "bitmemiş" görünmesine yol
+         açıyordu. Artık çubuk ekranın altına YAPIŞIK: yalnız ÜST köşeleri
+         yuvarlak, alt köşeler ve yan boşluklar yok.
+
+         GÜVENLİ ALAN ARTIK İÇERİDE: `pb-safe` sarmalayıcıdan çubuğun kendisine
+         taşındı. Böylece çubuğun zemini ana ekran çubuğunun (home indicator)
+         ARKASINA kadar iner; aksi hâlde altta bir şerit boyasız kalırdı. */
+      className="fixed bottom-0 left-0 right-0 z-50 max-w-lg mx-auto"
     >
       <div
-        className="bg-[#161B22]/80 backdrop-blur-xl border border-white/10 rounded-[32px] px-2 py-2 flex items-center justify-between shadow-[0_-10px_40px_rgba(0,0,0,0.5)]"
+        className="bg-[#161B22]/92 backdrop-blur-xl border-t border-white/10 rounded-t-[28px] px-2 pt-2 pb-safe-2 flex items-center justify-between shadow-[0_-10px_40px_rgba(0,0,0,0.5)]"
       >
         {navItems.map((item) => {
           // Artık beş sekmenin beşi de gerçek bir görünüme karşılık geliyor;

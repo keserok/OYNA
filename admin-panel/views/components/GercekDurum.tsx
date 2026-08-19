@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { supabase } from '../../../supabaseClient';
-import { RefreshCw, Users, CalendarDays, Wallet, MapPin } from 'lucide-react';
+import { RefreshCw, Users, CalendarDays, Receipt, MapPin } from 'lucide-react';
 
 // ════════════════════════════════════════════════════════════════════════════
 // [STR-1] GERÇEK DURUM
@@ -106,7 +106,7 @@ export const GercekDurum: React.FC = () => {
           not={`gelecek tarihli: ${d.mac.gelecek}`}
         />
         <Satir
-          ikon={<Wallet size={15} />}
+          ikon={<Receipt size={15} />}
           baslik="Tahsil edilen para"
           gercek={tl(d.para.tahsil_edilen)}
           demo={tl(d.para.demo_hacim)}

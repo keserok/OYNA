@@ -1,18 +1,26 @@
 /**
- * Kullanıcı 360 (Karar #58): profil + PII (maskeli, audit'li göster) + cüzdan
- * özeti/ledger + güvenilirlik + bu kullanıcıya dokunan admin işlemleri —
- * hepsi tek drawer'da. Aksiyonlar (ban/doğrula/ghost/düzenle) UsersPage'in
+ * Kullanıcı 360 (Karar #58): profil + PII (maskeli, audit'li göster) + TAHSİLAT
+ * özeti + güvenilirlik + bu kullanıcıya dokunan admin işlemleri —
+ * hepsi tek drawer'da.
+ *
+ * CÜZDAN BLOĞU KALDIRILDI (17 Ağu 2026): tüketici cüzdanı kapandı, bakiye artık
+ * her kullanıcıda 0 — panel para hakkında yalnız anlamsız bir sıfır gösteriyordu.
+ * Yerine kurucunun istediği soru cevaplanıyor: bu kişiden ne kadar tahsil
+ * edildi, ne kadarı iade edildi, hangi kartla ödüyor. Aksiyonlar (ban/doğrula/ghost/düzenle) UsersPage'in
  * mevcut onaylı akışlarına delege edilir; burada yeni bir yetki yolu açılmaz.
  */
 import React, { useCallback, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  X, Ban, ShieldCheck, PlayCircle, Eye, Wallet, ScrollText,
-  BadgeCheck, Loader2, Mail, Phone,
+  X, Ban, ShieldCheck, PlayCircle, Eye, CreditCard, ScrollText,
+  BadgeCheck, Loader2, Mail, Phone, Receipt, ShieldCheck as ShieldLock,
 } from 'lucide-react';
 import { supabase } from '../../../supabaseClient';
-import { toTurkishAdminError } from '../../services/adminService';
+import {
+  toTurkishAdminError, fetchUserPaymentSummaryAdmin,
+  type AdminUserPaymentSummary,
+} from '../../services/adminService';
 import { useAdminToast } from '../context/AdminToastContext';
 import { StatusBadge } from './StatusBadge';
 import { UserProfileMirror } from './UserProfileMirror';
@@ -29,15 +37,6 @@ interface Props {
   onUpdated?: () => void;
 }
 
-interface WalletRow {
-  id: string;
-  amount: number;
-  balance_type: string | null;
-  status: string | null;
-  reference_type: string | null;
-  created_at: string;
-}
-
 interface AuditRow {
   id: string;
   action: string;
@@ -47,12 +46,36 @@ interface AuditRow {
 
 const fmtMoney = (n: number) => `${Number(n).toLocaleString('tr-TR')}₺`;
 
+/** Ödeme türü etiketleri — ham anahtar yerine sade Türkçe. */
+const ODEME_TURU: Record<string, string> = {
+  BOOKING: 'Saha kaporası',
+  MATCH_JOIN: 'Maça katılım',
+  MATCH: 'Maç ödemesi',
+  SERVICE: 'Kaleci/hakem hizmeti',
+  TOP_UP: 'Cüzdan yükleme (eski)',
+};
+
+const ODEME_DURUMU: Record<string, string> = {
+  PAID: 'Tahsil edildi',
+  CAPTURED: 'Tahsil edildi',
+  BLOCKED: 'Güvencede',
+  PENDING: 'Beklemede',
+  FAILED: 'Başarısız',
+  REFUNDED: 'İade edildi',
+  VOIDED: 'İptal',
+};
+
+const ODEME_DURUM_RENK: Record<string, string> = {
+  PAID: 'text-green-400', CAPTURED: 'text-green-400', BLOCKED: 'text-amber-300',
+  PENDING: 'text-gray-400', FAILED: 'text-red-400',
+  REFUNDED: 'text-blue-300', VOIDED: 'text-gray-500',
+};
+
 export const User360Drawer: React.FC<Props> = ({ user, onClose, onBanToggle, onVerify, onGhost, onUpdated }) => {
   const { error: toastError } = useAdminToast();
   // Varsayılan sekme PROFİL: kullanıcıyı uygulamadaki hâliyle gör + düzenle (ayna).
   const [tab, setTab] = useState<'profil' | 'operasyon'>('profil');
-  const [wallet, setWallet] = useState<WalletRow[]>([]);
-  const [walletBalance, setWalletBalance] = useState<number | null>(null);
+  const [odeme, setOdeme] = useState<AdminUserPaymentSummary | null>(null);
   const [audit, setAudit] = useState<AuditRow[]>([]);
   const [loading, setLoading] = useState(false);
   // PII yalnızca audit'li "göster" tıklamasından sonra açılır (Karar #39).
@@ -65,28 +88,19 @@ export const User360Drawer: React.FC<Props> = ({ user, onClose, onBanToggle, onV
     if (!userId) return;
     setLoading(true);
     try {
-      const [walletRes, auditRes, profileRes] = await Promise.all([
-        supabase
-          .from('wallet_transactions')
-          .select('id, amount, balance_type, status, reference_type, created_at')
-          .eq('user_id', userId)
-          .order('created_at', { ascending: false })
-          .limit(15),
+      const [odemeRes, auditRes] = await Promise.all([
+        // Özet RPC henüz yayınlanmamışsa drawer'ın TAMAMI çökmesin: tahsilat
+        // bloğu boş görünür, profil ve işlem geçmişi çalışmaya devam eder.
+        fetchUserPaymentSummaryAdmin(userId).catch(() => null),
         supabase
           .from('admin_audit_log')
           .select('id, action, admin_name, created_at')
           .eq('target_id', userId)
           .order('created_at', { ascending: false })
           .limit(10),
-        supabase
-          .from('profiles')
-          .select('wallet_balance')
-          .eq('id', userId)
-          .single(),
       ]);
-      setWallet((walletRes.data ?? []) as WalletRow[]);
+      setOdeme(odemeRes);
       setAudit((auditRes.data ?? []) as AuditRow[]);
-      setWalletBalance(profileRes.data ? Number(profileRes.data.wallet_balance ?? 0) : null);
     } catch (err) {
       toastError(toTurkishAdminError(err));
     } finally {
@@ -96,9 +110,8 @@ export const User360Drawer: React.FC<Props> = ({ user, onClose, onBanToggle, onV
 
   useEffect(() => {
     setRevealed({ email: null, phone: null });
-    setWallet([]);
+    setOdeme(null);
     setAudit([]);
-    setWalletBalance(null);
     setTab('profil');
     if (userId) void load();
   }, [userId, load]);
@@ -221,38 +234,105 @@ export const User360Drawer: React.FC<Props> = ({ user, onClose, onBanToggle, onV
               </div>
             </div>
 
-            {/* Cüzdan */}
+            {/* ── TAHSİLAT — "bu kişiden ne kadar aldık?" ──────────────────
+                Cüzdan bloğunun yerini aldı. Kaynak: payment_intents (tek
+                doğruluk kaynağı); kırılım kullanıcıya değil BURAYA gösterilir. */}
             <div className="bg-[#161B22]/60 border border-white/[0.06] rounded-2xl p-4 space-y-3">
               <div className="flex items-center justify-between">
                 <p className="text-[10px] font-extrabold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
-                  <Wallet size={12} /> Cüzdan
+                  <Receipt size={12} /> Tahsilat
                 </p>
                 <span className="text-sm font-extrabold font-mono text-[#39FF14]">
-                  {walletBalance !== null ? fmtMoney(walletBalance) : '—'}
+                  {odeme ? fmtMoney(odeme.collected) : '—'}
                 </span>
               </div>
+
               {loading ? (
                 <p className="text-[11px] text-gray-600 py-3 text-center flex items-center justify-center gap-2"><Loader2 size={12} className="animate-spin" /> Yükleniyor…</p>
-              ) : wallet.length === 0 ? (
-                <p className="text-[11px] text-gray-600 py-3 text-center">Cüzdan hareketi yok.</p>
+              ) : !odeme ? (
+                <p className="text-[11px] text-gray-600 py-3 text-center">Tahsilat özeti okunamadı.</p>
               ) : (
-                <div className="space-y-1.5">
-                  {wallet.map((w) => (
-                    <div key={w.id} className="flex items-center justify-between gap-2 bg-black/30 border border-white/[0.04] rounded-lg px-3 py-2">
-                      <div className="min-w-0">
-                        <p className="text-[11px] font-bold text-white truncate">
-                          {w.reference_type || w.balance_type || 'Hareket'}
-                          {w.status && <span className="text-gray-500 font-normal"> · {w.status}</span>}
-                        </p>
-                        <p className="text-[9px] text-gray-600 font-mono">{new Date(w.created_at).toLocaleString('tr-TR')}</p>
-                      </div>
-                      <span className={`text-xs font-extrabold font-mono shrink-0 ${Number(w.amount) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                        {Number(w.amount) >= 0 ? '+' : ''}{fmtMoney(Number(w.amount))}
-                      </span>
+                <>
+                  {/* Kırılım: karttan çekilen = hizmet tabanı + kart işlem bedeli.
+                      Kullanıcı ekranda tek rakam görür (kurucu kararı B4); panelin
+                      görevi tam olarak bu kırılımı göstermek. */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="bg-black/30 border border-white/[0.04] rounded-lg px-3 py-2">
+                      <p className="text-[9px] text-gray-500 uppercase font-bold">Hizmet tabanı</p>
+                      <p className="text-xs font-extrabold font-mono text-white">{fmtMoney(odeme.net)}</p>
                     </div>
-                  ))}
-                </div>
+                    <div className="bg-black/30 border border-white/[0.04] rounded-lg px-3 py-2">
+                      <p className="text-[9px] text-gray-500 uppercase font-bold">Kart işlem bedeli</p>
+                      <p className="text-xs font-extrabold font-mono text-amber-300">{fmtMoney(odeme.card_fees)}</p>
+                    </div>
+                    <div className="bg-black/30 border border-white/[0.04] rounded-lg px-3 py-2">
+                      <p className="text-[9px] text-gray-500 uppercase font-bold">İade edilen</p>
+                      <p className="text-xs font-extrabold font-mono text-blue-300">{fmtMoney(odeme.refunded)}</p>
+                    </div>
+                    <div className="bg-black/30 border border-white/[0.04] rounded-lg px-3 py-2">
+                      <p className="text-[9px] text-gray-500 uppercase font-bold">İşlem · Başarısız</p>
+                      <p className="text-xs font-extrabold font-mono text-white">
+                        {odeme.count} <span className={odeme.failed > 0 ? 'text-red-400' : 'text-gray-600'}>· {odeme.failed}</span>
+                      </p>
+                    </div>
+                  </div>
+
+                  {odeme.recent.length === 0 ? (
+                    <p className="text-[11px] text-gray-600 py-2 text-center">Ödeme hareketi yok.</p>
+                  ) : (
+                    <div className="space-y-1.5">
+                      {odeme.recent.map((r) => (
+                        <div key={r.id} className="flex items-center justify-between gap-2 bg-black/30 border border-white/[0.04] rounded-lg px-3 py-2">
+                          <div className="min-w-0">
+                            <p className="text-[11px] font-bold text-white truncate">
+                              {ODEME_TURU[r.related_entity_type ?? ''] ?? (r.related_entity_type || 'Ödeme')}
+                              {r.pitch_name ? <span className="text-gray-500 font-normal"> · {r.pitch_name}</span> : null}
+                            </p>
+                            <p className="text-[9px] text-gray-600 font-mono">
+                              {new Date(r.created_at).toLocaleString('tr-TR')}
+                              {r.card_fee > 0 ? ` · taban ${fmtMoney(r.taban)} + bedel ${fmtMoney(r.card_fee)}` : ''}
+                            </p>
+                          </div>
+                          <div className="text-right shrink-0">
+                            <p className="text-xs font-extrabold font-mono text-white">{fmtMoney(r.amount)}</p>
+                            <p className={`text-[9px] font-bold ${ODEME_DURUM_RENK[r.status] ?? 'text-gray-500'}`}>
+                              {ODEME_DURUMU[r.status] ?? r.status}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </>
               )}
+            </div>
+
+            {/* ── KAYITLI KARTLAR (maskeli) ───────────────────────────────────
+                Kart numarası ve CVV OYNA'da HİÇ saklanmaz; sağlayıcı token'ı da
+                bu ekrana gelmez (özet fonksiyonu onu dışarıda bırakır). Burada
+                görünen tek şey markanın adı, son 4 hane ve son kullanma. */}
+            <div className="bg-[#161B22]/60 border border-white/[0.06] rounded-2xl p-4 space-y-2">
+              <p className="text-[10px] font-extrabold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
+                <CreditCard size={12} /> Kayıtlı Kartlar
+              </p>
+              {!odeme || odeme.cards.length === 0 ? (
+                <p className="text-[11px] text-gray-600 py-2 text-center">Kayıtlı kart yok.</p>
+              ) : odeme.cards.map((c, i) => (
+                <div key={`${c.last4}-${i}`} className="flex items-center justify-between gap-2 bg-black/30 border border-white/[0.04] rounded-lg px-3 py-2">
+                  <span className="text-[11px] font-bold text-white font-mono">
+                    {c.brand || 'KART'} ···· {c.last4 ?? '????'}
+                  </span>
+                  <span className="text-[9px] text-gray-600 font-mono">
+                    {c.exp_month && c.exp_year ? `${String(c.exp_month).padStart(2, '0')}/${String(c.exp_year).slice(-2)}` : '—'}
+                    {c.is_default ? ' · varsayılan' : ''}
+                  </span>
+                </div>
+              ))}
+              <p className="text-[9px] text-gray-600 leading-relaxed flex items-start gap-1.5 pt-1">
+                <ShieldLock size={10} className="shrink-0 mt-0.5" />
+                Kart numarası ve güvenlik kodu OYNA'da saklanmaz; ödeme sağlayıcısındaki
+                token bu ekrana da gelmez. Görünen bilgi maskelidir.
+              </p>
             </div>
 
             {/* Bu kullanıcıya dokunan admin işlemleri */}

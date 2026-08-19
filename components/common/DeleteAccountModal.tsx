@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { X, AlertTriangle, ShieldAlert, Wallet } from 'lucide-react';
 import { supabase, clearHasAccount } from '../../supabaseClient';
 import { MODAL_BACKDROP, MODAL_CARD } from './motion';
+import { mapError } from '../../utils/errorMap';
 
 // ─── İki adımlı hesap silme modal — hangi rolden açılırsa açılsın aynı akış ────
 // Tek yerde tanımlı: Oyuncu (SettingsScreen) ve Kaleci/Hakem (ServiceSettings)
@@ -59,7 +60,14 @@ const DeleteAccountModal: React.FC<{
     const { error } = await supabase.rpc('request_account_deletion');
     if (error) {
       // Sunucunun Türkçe yönlendirme mesajını göster (bakiye/rezervasyon engeli).
-      setToast({ message: error.message || 'Bir hata oluştu. Lütfen tekrar deneyin.', variant: 'error' });
+      // AMA ham mesajı doğrudan basmayız: ağ koptuğunda buraya "Failed to fetch"
+      // düşüyordu ve kullanıcı kendi hesabını silemediğini İngilizce bir cümleyle
+      // öğreniyordu. mapError ağ/kod hatalarını Türkçeye çevirir, tanımadığı
+      // (yani sunucunun zaten Türkçe yazdığı) mesajı olduğu gibi geçirir.
+      setToast({
+        message: mapError(error, 'Hesap silme talebin şu an alınamadı. Bağlantını kontrol edip tekrar dene.'),
+        variant: 'error',
+      });
       setLoading(false);
       return;
     }

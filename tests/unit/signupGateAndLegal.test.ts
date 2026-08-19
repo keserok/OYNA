@@ -112,7 +112,9 @@ describe('sessiz pasiflik yok', () => {
   });
 
   it('hiçbir handler sessizce dönmüyor — eksik olan söyleniyor', () => {
-    for (const h of ['handleSendOtp', 'handlePasswordLogin', 'handleRegister']) {
+    // Tek giriş yolu kaldı: telefon + kod. handlePasswordLogin/handleRegister
+    // (e-posta + şifre) 17 Ağu 2026 kararıyla SİLİNDİ.
+    for (const h of ['handleSendOtp']) {
       const i = auth.indexOf(`const ${h} = async`);
       expect(i, h).toBeGreaterThan(0);
       const bas = auth.slice(i, i + 700);
@@ -131,19 +133,19 @@ describe('sessiz pasiflik yok', () => {
   });
 });
 
-describe('misafir gezinme rıza istemiyor', () => {
-  it('"ÖNCE MAÇLARA GÖZ AT" onaysız da çalışıyor', () => {
-    // Karar 6a: gezinme yazma eylemi değil, sunucuya rıza kaydı gitmiyor.
+describe('misafir modu kapatıldı (17 Ağu 2026 kurucu kararı)', () => {
+  it('giriş ekranında "önce göz at" yolu YOK', () => {
     const auth = oku('views/AuthScreen.tsx');
-    const i = auth.indexOf('id="guest-login-button"');
-    expect(i).toBeGreaterThan(0);
-    expect(auth.slice(i, i + 500)).not.toContain('!agreed');
+    expect(auth).not.toContain('id="guest-login-button"');
+    expect(auth).not.toContain('ÖNCE MAÇLARA GÖZ AT');
+    expect(auth).not.toContain('const handleGuestLogin');
   });
 
-  it('misafir girişi sunucuya rıza yazmıyor', () => {
-    const auth = oku('views/AuthScreen.tsx');
-    const i = auth.indexOf('const handleGuestLogin');
-    expect(auth.slice(i, i + 500)).not.toContain('recordUserConsent');
+  it('hiçbir ekran misafir modunu AÇMIYOR', () => {
+    // setIsGuest(true) tek bir yerde bile kalırsa kapı yeniden açılır.
+    for (const f of ['views/AuthScreen.tsx', 'components/common/SignupGate.tsx', 'App.tsx']) {
+      expect(oku(f), f).not.toContain('setIsGuest(true)');
+    }
   });
 });
 
@@ -281,9 +283,10 @@ describe('kapı — davet, uyarı değil', () => {
     expect(s).toContain('setAuthStartMode');
   });
 
-  it('AuthScreen kapıdan gelen modu okuyor ve temizliyor', () => {
+  it('AuthScreen kapıdan gelen modu TEMİZLİYOR', () => {
+    // Kayıt/giriş ayrımı kalktığı için mod artık ekranı değiştirmiyor; yine de
+    // bayrak okunup temizlenmeli ki sonraki açılış eski bir niyetle gelmesin.
     const a = oku('views/AuthScreen.tsx');
-    expect(a).toContain('const zorlanan = useAppStore.getState().authStartMode;');
     expect(a).toContain('setAuthStartMode(null)');
   });
 

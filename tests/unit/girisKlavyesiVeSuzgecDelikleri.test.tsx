@@ -39,12 +39,14 @@ vi.mock('../../supabaseClient', () => ({
   getHasAccount: () => true,
 }));
 vi.mock('../../supabaseAuth', () => ({
-  loginWithGoogle: vi.fn(), loginWithApple: vi.fn(), sendEmailOtp: vi.fn(),
-  verifyEmailOtp: vi.fn(), demoLogin: vi.fn(),
+  loginWithGoogle: vi.fn(), loginWithApple: vi.fn(),
+  // Telefon ANA giriş yolu (17 Ağu 2026): e-posta/şifre yolları kaldırıldı.
+  sendPhoneOtp: vi.fn(), verifyPhoneOtp: vi.fn(), demoLogin: vi.fn(),
   isDemoLoginEnabled: () => false, isDemoLoginInput: () => false,
   isDemoAccountPickerEnabled: () => false, loginDemoAccount: vi.fn(),
-  signInWithEmailPassword: vi.fn(), signUpWithPassword: vi.fn(),
-  requestPasswordReset: vi.fn(), confirmPasswordReset: vi.fn(),
+  // Sağlayıcı dönüşü okuyucusu (19 Ağu 2026): ekran İLK render'da bunu çağırır.
+  // Bu testte OAuth dönüşü yok → null; klavye ölçümleri etkilenmez.
+  oauthDonusunuOku: () => null,
 }));
 vi.mock('../../store', () => ({
   useAppStore: {
@@ -182,7 +184,9 @@ describe('A3 · giriş ekranı klavyenin ARKASINDA kalmıyor (gerçek render)', 
   it('form alanları gerçekten ekranda (panel açıldı, boş DOM ölçmüyoruz)', () => {
     klavyeyiAc(KLAVYE);
     girisFormunuAc();
-    expect(screen.getByLabelText('E-posta adresi')).toBeTruthy();
+    // Tek alan var: telefon numarası (+ ülke kodu). Şifre/e-posta kaldırıldı.
+    expect(screen.getByLabelText('Telefon numarası')).toBeTruthy();
+    expect(screen.getByLabelText('Ülke kodu')).toBeTruthy();
   });
 });
 

@@ -10,12 +10,12 @@
  * Yazma yolu farklıdır: kullanıcı kendi satırını doğrudan günceller, admin ise
  * audit'li admin_update_user_profile RPC'siyle yazar (her kayıt USER_UPDATE
  * olarak denetim kaydına düşer). Bakiye düzeltmesi ledger'lı
- * admin_adjust_wallet_balance RPC'sinden geçer (FINANCE yetkisi ister).
+ * Cüzdan/bakiye düzeltme KALDIRILDI (17 Ağu 2026): tüketici cüzdanı kapalı.
  */
 import React, { useCallback, useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
-  Loader2, Pencil, RefreshCw, ShieldAlert, Sparkles, Star, Wallet, X,
+  Loader2, Pencil, RefreshCw, ShieldAlert, Sparkles, Star, X,
 } from 'lucide-react';
 import { supabase } from '../../../supabaseClient';
 import {
@@ -30,7 +30,7 @@ import {
   ageFromBirthdate, formatPosition, trustScoreTo100, winStats,
 } from '../../../shared/profilePresentation';
 import {
-  adjustWalletBalanceAdmin, banUserAdmin, fetchPlayerPeerScoresAdmin, updateUserAppProfileAdmin,
+  banUserAdmin, fetchPlayerPeerScoresAdmin, updateUserAppProfileAdmin,
   toTurkishAdminError, type AppProfileAdminFields, type PlayerPeerScores,
 } from '../../services/adminService';
 import { useAdminToast } from '../context/AdminToastContext';
@@ -48,7 +48,6 @@ interface Props {
   onUpdated?: () => void;
 }
 
-const fmtMoney = (n: number) => `${Number(n).toLocaleString('tr-TR')} ₺`;
 
 // ═══ v4 · Aynada düzenlenebilir yönetici alanları ═══════════════════════════
 // Kullanıcı kararı: "üç düzenleme yeri tek yerde birleşsin". Eskiden Kullanıcılar
@@ -183,10 +182,6 @@ export const UserProfileMirror: React.FC<Props> = ({ userId, onUpdated }) => {
   // admin panelinde `match_reminder_24h` gibi ham anahtar okutmamak için.
   // En-iyi-çaba: gelmezse ham anahtar gösterilir, panel yine çalışır.
   const [bildirimAdlari, setBildirimAdlari] = useState<Record<string, { ad: string; zorunlu: boolean }>>({});
-  const [walletOpen, setWalletOpen] = useState(false);
-  const [walletAmount, setWalletAmount] = useState('');
-  const [walletReason, setWalletReason] = useState('');
-  const [walletBusy, setWalletBusy] = useState(false);
 
   // Alınan akran puanları (salt-okunur; puanlayan kimliği RPC'de bile yok)
   const [peerOpen, setPeerOpen] = useState(false);
@@ -395,25 +390,6 @@ export const UserProfileMirror: React.FC<Props> = ({ userId, onUpdated }) => {
     });
   };
 
-  const handleWallet = async () => {
-    const amount = Number(walletAmount.replace(',', '.'));
-    if (!Number.isFinite(amount) || amount === 0) { toastError('Geçerli bir tutar girin (± ₺).'); return; }
-    if (walletReason.trim().length < 3) { toastError('Sebep zorunlu (en az 3 karakter) — ledger açıklamasına yazılır.'); return; }
-    setWalletBusy(true);
-    try {
-      await adjustWalletBalanceAdmin(userId, amount, walletReason.trim());
-      success(`Bakiye ${amount > 0 ? '+' : ''}${fmtMoney(amount)} düzeltildi (ledger'a işlendi)`);
-      setWalletOpen(false);
-      setWalletAmount('');
-      setWalletReason('');
-      await load();
-      onUpdated?.();
-    } catch (err) {
-      toastError(toTurkishAdminError(err));
-    } finally {
-      setWalletBusy(false);
-    }
-  };
 
   if (loading) {
     return (
@@ -440,12 +416,10 @@ export const UserProfileMirror: React.FC<Props> = ({ userId, onUpdated }) => {
   const trustScore = trustScoreTo100(profile.trustScore);
 
   // Tasarım 3a: kısayollarda ikon yok, değer çıplak sayı — uygulamayla birebir.
+  // CÜZDAN KISAYOLU KALDIRILDI (17 Ağu 2026): tüketici cüzdanı kapandı, bakiye
+  // her kullanıcıda 0 — panelde anlamsız bir sıfır duruyordu. Para bilgisi artık
+  // Kullanıcı 360 → Tahsilat bloğunda ("bu kişiden ne kadar aldık?").
   const shortcuts: ShortcutItem[] = [
-    {
-      label: 'Cüzdan',
-      value: fmtMoney(profile.walletBalance ?? 0),
-      onClick: () => setWalletOpen(true),
-    },
     {
       label: 'Takımları',
       value: teamsCount === null ? '—' : `${teamsCount}`,
@@ -818,50 +792,6 @@ export const UserProfileMirror: React.FC<Props> = ({ userId, onUpdated }) => {
         selfSkillEditable={false}
       />
 
-      {/* ═══ Ledger'lı bakiye düzeltme ═══ */}
-      {walletOpen && (
-        <div className="fixed inset-0 z-[260] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setWalletOpen(false)}>
-          <div onClick={(e) => e.stopPropagation()} className="bg-[#161B22] border border-white/10 rounded-2xl w-full max-w-sm p-5 space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-extrabold text-white uppercase flex items-center gap-2"><Wallet size={14} /> Bakiye Düzeltme</h3>
-              <button type="button" onClick={() => setWalletOpen(false)} className="w-7 h-7 rounded-lg bg-white/5 text-gray-400 hover:text-white flex items-center justify-center"><X size={14} /></button>
-            </div>
-            <p className="text-[11px] text-gray-400 leading-relaxed">
-              Mevcut bakiye: <span className="font-extrabold text-[#39FF14] font-mono">{fmtMoney(profile.walletBalance ?? 0)}</span>.
-              Düzeltme <span className="text-white font-bold">wallet_transactions</span>'a ADMIN_ADJUST olarak işlenir — profil bakiyesi elle ezilmez, finans raporları bozulmaz. FINANCE yetkisi gerekir.
-            </p>
-            <div className="flex gap-1.5">
-              {[100, 500, -100].map((v) => (
-                <button key={v} type="button" onClick={() => setWalletAmount(String(v))} className="flex-1 py-1.5 rounded-lg border border-white/10 text-[10px] font-extrabold text-gray-300 hover:text-white">
-                  {v > 0 ? `+${v}` : v} ₺
-                </button>
-              ))}
-            </div>
-            <input
-              value={walletAmount}
-              onChange={(e) => setWalletAmount(e.target.value)}
-              inputMode="decimal"
-              placeholder="Tutar (örn. 250 veya -50)"
-              className="w-full h-11 bg-black/40 border border-white/15 rounded-xl px-3 text-sm text-white font-mono focus:border-[#39FF14]/40 focus:outline-none"
-            />
-            <textarea
-              value={walletReason}
-              onChange={(e) => setWalletReason(e.target.value)}
-              rows={2}
-              placeholder="Sebep (zorunlu — ledger açıklamasında görünür)…"
-              className="w-full bg-black/40 border border-white/15 rounded-xl px-3 py-2 text-sm text-white focus:border-[#39FF14]/40 focus:outline-none resize-none"
-            />
-            <button
-              type="button"
-              disabled={walletBusy}
-              onClick={() => void handleWallet()}
-              className="w-full h-11 rounded-xl bg-[#39FF14]/15 border border-[#39FF14]/40 text-[#39FF14] text-[11px] font-extrabold uppercase tracking-widest hover:bg-[#39FF14]/25 disabled:opacity-40 flex items-center justify-center gap-2"
-            >
-              {walletBusy ? <Loader2 size={13} className="animate-spin" /> : null} Düzeltmeyi İşle
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

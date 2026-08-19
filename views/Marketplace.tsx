@@ -123,7 +123,7 @@ const SafeAvatar: React.FC<{ src?: string | null; name: string; className?: stri
     <UserAvatar
         name={name}
         avatarUrl={src}
-        className={`${className} border border-white/10`}
+        className={className}
         textClassName="text-[0.6875rem]"
     />
 );
@@ -434,7 +434,7 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect, onCre
         <div className="h-full bg-[#0A0E14] relative flex flex-col font-sans overflow-hidden">
 
             {/* 1. Başlık */}
-            <header className="px-5 pt-[calc(var(--safe-top)+1.5rem)] pb-4 flex items-center gap-3 bg-[#0A0E14]/90 backdrop-blur-xl sticky top-0 z-30 border-b border-white/5">
+            <header className="px-5 pt-safe-baslik pb-4 flex items-center gap-3 bg-[#0A0E14]/90 backdrop-blur-xl sticky top-0 z-30 border-b border-white/5">
                 <button
                     onClick={onBack}
                     aria-label="Geri"

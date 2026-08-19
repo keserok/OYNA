@@ -2221,7 +2221,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
              kuralı balonu menünün ÜSTÜNE kaldırır. Etiket yokken kaleci/hakem
              geri bildirimi ("Başvurun alındı" vb.) bu çubuğun ARKASINDA kalıyor,
              kullanıcı hiçbir şey olmadı sanıyordu. */}
-      <nav aria-label="Ana Gezinti" className="fixed bottom-0 left-0 w-full bg-[#0A0E14]/95 backdrop-blur-2xl border-t border-white/5 pb-[max(2rem,calc(var(--safe-bottom)+0.75rem))] pt-4 px-4 flex justify-between items-center z-30">
+      <nav aria-label="Ana Gezinti" className="fixed bottom-0 left-0 w-full bg-[#0A0E14]/95 backdrop-blur-2xl border-t border-white/10 rounded-t-[28px] pb-[max(2rem,calc(var(--safe-bottom)+0.75rem))] pt-4 px-4 flex justify-between items-center z-30">
          <button 
             onClick={() => setActiveTab('HOME')}
             className={`flex flex-col items-center gap-1.5 transition-all ${activeTab === 'HOME' ? 'text-[#FACC15] scale-110' : 'text-ink-4 hover:text-gray-300'}`}

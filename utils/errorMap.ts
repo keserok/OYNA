@@ -217,6 +217,13 @@ export const mapError = (err: unknown, yedek?: string, ozel?: Record<string, str
   const kod = codeOf(err);
   if (kod && BARE_CODE_TR[kod]) return BARE_CODE_TR[kod];
 
+  // Sunucu kod ÖNEKİ OLMADAN düz Türkçe yazdıysa o cümle geçer. Bazı RPC'ler
+  // (hesap silme engelleri gibi) kullanıcıya doğrudan hitap eden, duruma özel
+  // bir cümle döndürür — "Cüzdanında çekilebilir 1.250,00₺ var. Silmeden önce
+  // IBAN'ına çek." gibi. Bunu genel bir yedekle değiştirmek, kullanıcıdan tam
+  // olarak İHTİYACI OLAN bilgiyi saklamak olurdu.
+  if (turkceMi(m)) return m;
+
   return yedek || GENEL_HATA;
 };
 
@@ -246,7 +253,39 @@ const AUTH_TR: [RegExp, string][] = [
   [/user not found/i, 'Bu e-postayla kayıtlı bir hesap bulunamadı.'],
   [/signups? not allowed|signup is disabled/i, 'Kayıt şu an kapalı.'],
   [/popup closed|cancell?ed|aborted/i, 'İşlem yarıda kaldı.'],
+  // ── Sağlayıcı (Google/Apple) tarafı ────────────────────────────────────────
+  // Bu satırlar OLMADAN kullanıcı ekranda ya İngilizce ham metin ya da hiçbir
+  // şey görüyordu; sayfa yenilenip giriş ekranına döndüğü için de "uygulama
+  // beni attı" hissi doğuyordu. Her satır SEBEBİ ve ÇIKIŞI birlikte söyler.
+  [/provider is not enabled|unsupported provider|provider.*disabled/i,
+    'Bu giriş yöntemi şu anda kullanılamıyor. Telefon numaranla saniyeler içinde girebilirsin.'],
+  [/redirect.*not allowed|invalid.*redirect|requested path is invalid/i,
+    'Giriş dönüşü tamamlanamadı. Telefon numaranla devam edebilirsin.'],
+  [/access.?denied|user denied|consent.*denied/i,
+    'Giriş iznini vermedin, o yüzden devam edilemedi. İstersen tekrar dene ya da numaranla gir.'],
+  [/bad_oauth_state|flow.?state|state.*(expired|not found)/i,
+    'Giriş çok uzun sürdüğü için bağlantı düştü. Tekrar dener misin?'],
+  [/server_error|temporarily unavailable|upstream/i,
+    'Sağlayıcı şu an cevap vermiyor. Birazdan tekrar dene ya da numaranla gir.'],
 ];
+
+// ── Web'de sağlayıcı dönüşü: ekranda görünecek TEK cümle ────────────────────
+// Kural: kullanıcı ne olduğunu ve şimdi ne yapabileceğini aynı cümlede okusun.
+// Hata kodu hiç yoksa (kullanıcı sağlayıcı ekranını kapatıp geri geldi) da
+// sessiz kalmayız — sessizlik, "uygulama kendini yeniledi" hissinin kaynağı.
+export const mapOAuthDonusu = (
+  saglayici: 'google' | 'apple',
+  kod: string | null,
+  aciklama: string | null,
+): string => {
+  const ad = saglayici === 'apple' ? 'Apple' : 'Google';
+  const ham = `${kod ?? ''} ${aciklama ?? ''}`.trim();
+  if (ham) {
+    for (const [desen, tr] of AUTH_TR) if (desen.test(ham)) return `${ad} ile giriş tamamlanamadı. ${tr}`;
+    return `${ad} ile giriş tamamlanamadı. Telefon numaranla saniyeler içinde girebilirsin.`;
+  }
+  return `${ad} ile giriş tamamlanmadı — hesabına geçilmedi. Tekrar deneyebilir ya da telefon numaranla girebilirsin.`;
+};
 
 export const mapAuthError = (err: unknown, yedek?: string): string => {
   if (isNetworkError(err)) return AG_HATASI;

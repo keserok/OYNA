@@ -112,7 +112,6 @@ const mapProfileRow = (row: Record<string, unknown>): AdminUser => {
     isBanned: Boolean(row.is_banned),
     joinDate: (row.created_at as string) || (row.join_date as string) || new Date().toISOString(),
     matchCount: Number(row.match_count ?? 0),
-    wallet: Number(row.wallet_balance ?? 0),
     banExpiresAt: (row.ban_expires_at as string) || null,
   };
 };
@@ -488,7 +487,7 @@ export async function fetchAdminProfiles(options?: {
 
   let q = supabase
     .from('profiles')
-    .select('id, full_name, name, email, phone, avatar_url, role, roles, match_count, is_verified, is_banned, wallet_balance, ban_expires_at, created_at, join_date', { count: 'exact' })
+    .select('id, full_name, name, email, phone, avatar_url, role, roles, match_count, is_verified, is_banned, ban_expires_at, created_at, join_date', { count: 'exact' })
     .order('created_at', { ascending: false });
 
   if (search) {
@@ -503,7 +502,7 @@ export async function fetchAdminProfiles(options?: {
   if (fbErr) {
     let retryQ = supabase
       .from('profiles')
-      .select('id, full_name, name, email, phone, avatar_url, role, roles, match_count, is_verified, is_banned, wallet_balance, ban_expires_at, created_at, join_date', { count: 'exact' })
+      .select('id, full_name, name, email, phone, avatar_url, role, roles, match_count, is_verified, is_banned, ban_expires_at, created_at, join_date', { count: 'exact' })
       .order('join_date', { ascending: false });
     if (search) {
       retryQ = retryQ.or(`full_name.ilike.%${search}%,name.ilike.%${search}%,email.ilike.%${search}%`);
@@ -1998,7 +1997,7 @@ export async function searchStaffCandidatesAdmin(query: string): Promise<OwnerCa
 export async function fetchProfileById(userId: string): Promise<AdminUser | null> {
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, full_name, name, email, phone, avatar_url, role, roles, match_count, is_verified, is_banned, wallet_balance, ban_expires_at, created_at')
+    .select('id, full_name, name, email, phone, avatar_url, role, roles, match_count, is_verified, is_banned, ban_expires_at, created_at')
     .eq('id', userId)
     .maybeSingle();
   if (error || !data) return null;
@@ -2493,6 +2492,64 @@ export interface PaymentIntentRow {
   total_count: number;
 }
 
+// ─── Kullanıcı bazında tahsilat özeti (17 Ağu 2026 kurucu isteği) ───────────
+// Cüzdan kapandıktan sonra panelde bir kullanıcıya bakınca görülen tek para
+// bilgisi "cüzdan bakiyesi"ydi ve o değer artık HER ZAMAN 0. Gerçek soru:
+// bu kişiden ne kadar tahsil ettik, ne kadarını iade ettik, hangi kartla ödüyor?
+export interface AdminUserPaymentRecent {
+  id: string;
+  amount: number;
+  card_fee: number;
+  taban: number;
+  status: string;
+  provider: string | null;
+  related_entity_type: string | null;
+  created_at: string;
+  pitch_name: string | null;
+}
+
+export interface AdminUserSavedCard {
+  brand: string | null;
+  last4: string | null;
+  exp_month: number | null;
+  exp_year: number | null;
+  is_default: boolean;
+  created_at: string;
+}
+
+export interface AdminUserPaymentSummary {
+  collected: number;
+  card_fees: number;
+  net: number;
+  refunded: number;
+  count: number;
+  failed: number;
+  last_paid_at: string | null;
+  recent: AdminUserPaymentRecent[];
+  cards: AdminUserSavedCard[];
+}
+
+export async function fetchUserPaymentSummaryAdmin(userId: string): Promise<AdminUserPaymentSummary> {
+  const { data, error } = await supabase.rpc('admin_user_payment_summary', { p_user_id: userId });
+  if (error) {
+    throw new Error(isRpcMissing(error)
+      ? 'admin_user_payment_summary RPC deploy edilmedi'
+      : error.message);
+  }
+  const d = (data ?? {}) as Record<string, unknown>;
+  return {
+    collected: Number(d.collected) || 0,
+    card_fees: Number(d.card_fees) || 0,
+    net: Number(d.net) || 0,
+    refunded: Number(d.refunded) || 0,
+    count: Number(d.count) || 0,
+    failed: Number(d.failed) || 0,
+    last_paid_at: (d.last_paid_at as string) ?? null,
+    recent: (d.recent as AdminUserPaymentRecent[]) ?? [],
+    cards: (d.cards as AdminUserSavedCard[]) ?? [],
+  };
+}
+
 /** Genel ödeme intent araması (Karar #73) — maç dışı müdahale için de. */
 export async function fetchPaymentIntentsAdmin(params: {
   search?: string; status?: string; limit?: number; offset?: number;
@@ -2908,9 +2965,9 @@ export function buildUserProfilePayload(user: import('../../types').AdminUser): 
     role: user.role,
     is_verified: user.isVerified,
     match_count: user.matchCount,
-    // wallet_balance BİLEREK GÖNDERİLMEZ: modal açıkken gerçekleşen cüzdan
-    // hareketini bayat değerle geri alma riski vardı; bakiye düzeltmesi artık
-    // ledger'lı admin_adjust_wallet_balance ile yapılır (Profil Aynası → Cüzdan).
+    // wallet_balance GÖNDERİLMEZ — artık okunmuyor da: tüketici cüzdanı
+    // 17 Ağustos 2026'da kapandı, bakiye her kullanıcıda 0. Para bilgisi
+    // Kullanıcı 360 → Tahsilat bloğundan (payment_intents) okunur.
   };
   if (user.phone) payload.phone = user.phone;
   return payload;
@@ -3011,19 +3068,15 @@ export async function updateUserAppProfileAdmin(userId: string, fields: AppProfi
   if (error) throw new Error(error.message);
 }
 
-/**
- * Ledger'li bakiye düzeltme (FINANCE yetkisi ister): profiles.wallet_balance'ı
- * elle ezmek yerine wallet_transactions'a ADMIN_ADJUST kaydı açar — finans
- * raporları ve mutabakat bozulmaz. Pozitif tutar yükleme, negatif düşümdür.
- */
-export async function adjustWalletBalanceAdmin(userId: string, amount: number, reason: string): Promise<void> {
-  const { error } = await supabase.rpc('admin_adjust_wallet_balance', {
-    p_user_id: userId,
-    p_amount: amount,
-    p_reason: reason,
-  });
-  if (error) throw new Error(error.message);
-}
+// BAKİYE DÜZELTME KALDIRILDI (17 Ağustos 2026)
+// `adjustWalletBalanceAdmin` / `admin_adjust_wallet_balance` yolu panelden
+// koparıldı. Gerekçe: tüketici cüzdanı kapandı (6493 e-para kararı), kullanıcı
+// adına bakiye tutulmuyor. "Bakiye düzelt" düğmesi kapalı bir kovaya para
+// yazabilen tek yoldu; kapalı bir sistemde açık bırakılan tek kapı, o sistemin
+// kapalı olmadığı anlamına gelir.
+// Bir kullanıcıya para İADE etmek gerekiyorsa doğru yol karta iadedir
+// (Ödemeler → ilgili işlem → İade). Sunucudaki RPC yerinde duruyor ama artık
+// panelden çağrılmıyor; kaldırılması ayrı bir göç işidir.
 
 export async function verifyUserAdmin(userId: string): Promise<void> {
   const { error } = await supabase.rpc('admin_verify_user', { p_user_id: userId });

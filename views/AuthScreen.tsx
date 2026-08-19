@@ -1,16 +1,18 @@
 import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
 import { AnimatePresence } from 'framer-motion';
-import { Check, Mail, ArrowRight, ChevronLeft, KeyRound, Lock, User, Eye, EyeOff, Users, ChevronDown, CheckCircle2 } from 'lucide-react';
+import { Check, Phone, ArrowRight, ChevronLeft, KeyRound, Users, ChevronDown, CheckCircle2 } from 'lucide-react';
 import { UserRole } from '../types';
 import {
-  loginWithGoogle, loginWithApple, sendEmailOtp, verifyEmailOtp, demoLogin,
+  loginWithGoogle, loginWithApple, sendPhoneOtp, verifyPhoneOtp, demoLogin,
   isDemoLoginEnabled, isDemoLoginInput, isDemoAccountPickerEnabled, loginDemoAccount,
-  signInWithEmailPassword, signUpWithPassword, requestPasswordReset, confirmPasswordReset,
+  oauthDonusunuOku,
 } from '../supabaseAuth';
 import { DEMO_ACCOUNT_GROUPS } from '../data/demoAccounts';
-import { getHasAccount } from '../supabaseClient';
 import { useAppStore } from '../store';
-import { validateFullName, normalizeNameInput } from '../shared/personName';
+import {
+  DEFAULT_DIAL_CODE, checkPhone, formatPhoneInput, formatPhoneDisplay,
+  canSendOtpTo, otpChannelFor,
+} from '../shared/phone';
 // IP-15: yasal belgeler artık ÖZET değil TAM metin (karar 7b) — 39 KB. Statik
 // import edilirse giriş paketine girer ve belgeyi hiç açmayan kullanıcı da
 // indirir. Modal yalnız bağlantıya dokununca yüklenir; tip import'u derlemede
@@ -23,7 +25,9 @@ import type { LegalModalKind } from '../components/common/LegalModal';
 import { useKlavyeOrtusu, klavyeliAltDolgu } from '../components/common/Toast';
 import heroEmblem from '../assets/auth/hero-emblem.webp';
 import oynaLogo from '../assets/onboarding/oyna-logo.webp';
-import { mapAuthError } from '../utils/errorMap';
+import { mapAuthError, mapOAuthDonusu } from '../utils/errorMap';
+// Alan/buton dili PhoneLinkScreen ile ORTAK — tek kaynak.
+import { AUTH_FIELD_CSS } from './authFieldStyles';
 
 interface AuthScreenProps {
   /** App tarafından geçilir ama BİLEREK çağrılmaz: başarı sonrası yönlendirmeyi
@@ -35,12 +39,18 @@ interface AuthScreenProps {
 }
 
 // ─── Akış ────────────────────────────────────────────────────────────────────
-// SPLASH (ilk animasyon) → [intro → input → (otp | reset)] → ONBOARDING
+// SPLASH (ilk animasyon) → [intro → input → otp] → ONBOARDING
 //   intro : cam amblem perdesi + "İSTEDİĞİN ZAMAN oyna!" tanıtımı
-//   input : giriş/kayıt alt sayfası (Google/Apple + e-posta & şifre)
-//   otp   : "kod ile giriş" — 6 haneli e-posta kodu
-//   reset : şifremi unuttum — kod + yeni şifre (tek ekran)
-type Stage = 'intro' | 'input' | 'otp' | 'reset';
+//   input : TELEFON NUMARASI (+ ikincil yollar: Google · Apple)
+//   otp   : numaraya gelen 6 haneli kod
+//
+// TEK YOL (kurucu kararı, 17 Ağustos 2026): telefon ANA giriş yöntemidir.
+// "Giriş yap / Kayıt ol" ayrımı KALDIRILDI — numarası olmayan biri kod
+// isteyince hesabı zaten açılır; kullanıcıya iki sekme göstermek yapay bir
+// seçim yaratıyordu. Şifre, e-posta ile giriş ve "şifremi unuttum" akışları da
+// kaldırıldı; ad soyad artık onboarding'in kendi adımında sorulur.
+// Misafir gezinme ("önce göz at") de kapatıldı — kurucu kararı.
+type Stage = 'intro' | 'input' | 'otp';
 
 // Tanıtım, giriş akışının GİRİŞ KAPISI: uygulama oturumunda AUTH ilk kez
 // göründüğünde (splash'ten hemen sonra) açılır. Aynı oturumda AUTH'a yeniden
@@ -82,45 +92,22 @@ const KEYFRAMES = `
 @keyframes auSwing { from { transform: translateX(0); } to { transform: translateX(calc(100% - 56px)); } }
 @keyframes auSpinLogo { from { transform: rotate(0deg); } to { transform: rotate(342deg); } }
 @keyframes auToast { from { opacity: 0; transform: translateY(-18px) scale(.94); } to { opacity: 1; transform: translateY(0) scale(1); } }
-@keyframes auRing { to { transform: rotate(360deg); } }
 
 /* Alanlar: yükseklik 58px (rahat dokunma), yumuşak köşe, odakta marka rengiyle
    ince bir halka. Odak halkası kenarlığı kalınlaştırmaz — kutu titremesin. */
-.au-field { height: 58px; padding: 0 18px; border-radius: 18px; background: rgba(8,11,17,.85); border: 1px solid rgba(255,255,255,.07); display: flex; align-items: center; gap: 12px; transition: border-color .18s ease, box-shadow .18s ease, background .18s ease; }
-.au-field:focus-within { border-color: var(--au-accent, rgba(255,255,255,.4)); background: rgba(8,11,17,1); box-shadow: 0 0 0 3px var(--au-accent-soft, rgba(255,255,255,.08)); }
 /* Metin 16px: iOS'ta bundan küçük yazı alanına dokununca Safari sayfayı
    otomatik yakınlaştırır ve düzen bozulur. Güven veren okunaklılık da bu boyutta. */
-.au-input { flex: 1; min-width: 0; background: transparent; border: none; outline: none; color: #fff; font-size: 16px; font-weight: 600; letter-spacing: -.01em; }
-.au-input::placeholder { color: #4b5563; font-weight: 500; letter-spacing: 0; }
 /* Alan başlığı — küçük, harf aralıklı, sakin. Formu "okunur" hâle getirir. */
-.au-label { display: block; margin: 0 0 8px 4px; font-size: 10.5px; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; color: #6b7684; }
-/* Giriş / Kaydol seçici — tek dokunuşla mod değişir; kaydırma (slide) göstergesi
-   hangi modda olunduğunu net söyler. */
-.au-seg { position: relative; display: grid; grid-template-columns: 1fr 1fr; padding: 4px; border-radius: 16px; background: rgba(8,11,17,.8); border: 1px solid rgba(255,255,255,.06); }
-.au-seg-ind { position: absolute; top: 4px; bottom: 4px; width: calc(50% - 4px); border-radius: 12px; background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.08); transition: transform .32s cubic-bezier(.32,.72,0,1); }
-.au-seg-btn { position: relative; z-index: 1; height: 42px; border: none; background: none; cursor: pointer; font-size: 13px; font-weight: 800; letter-spacing: -.01em; color: #7d8894; transition: color .22s ease; }
-.au-seg-btn[aria-selected="true"] { color: #fff; }
 .au-social { flex: 1; height: 54px; border-radius: 999px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 9px; background: rgba(22,27,34,.55); border: 1px solid rgba(255,255,255,.08); color: #fff; font-size: 13px; font-weight: 700; transition: background .3s cubic-bezier(.16,1,.3,1), border-color .3s, transform .3s cubic-bezier(.16,1,.3,1); }
 .au-social:hover:not(:disabled) { background: rgba(30,36,45,.8); border-color: rgba(255,255,255,.15); transform: translateY(-2px); }
 .au-social:active:not(:disabled) { transform: scale(.97); }
 .au-social:disabled { opacity: .55; cursor: default; }
-.au-cta { width: 100%; height: 58px; border-radius: 999px; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 9px; font-size: 13px; font-weight: 900; letter-spacing: .1em; transition: box-shadow .35s cubic-bezier(.16,1,.3,1), transform .35s cubic-bezier(.16,1,.3,1); }
-.au-cta:not(:disabled):hover { transform: translateY(-2px) scale(1.01); }
-.au-cta:not(:disabled):active { transform: scale(.98); }
-.au-cta:disabled { cursor: default; }
-.au-ghost { width: 100%; height: 50px; border-radius: 999px; cursor: pointer; background: transparent; border: 1px solid rgba(255,255,255,.1); color: #8B949E; font-size: 11px; font-weight: 900; letter-spacing: .12em; display: flex; align-items: center; justify-content: center; gap: 8px; transition: background .25s, color .25s; }
-.au-ghost:hover:not(:disabled) { background: rgba(255,255,255,.05); color: #fff; }
-.au-ghost:disabled { opacity: .45; cursor: default; }
-.au-link { background: none; border: none; padding: 2px; cursor: pointer; font: inherit; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
 .au-iconbtn { width: 40px; height: 40px; border-radius: 50%; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,.07); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); color: #fff; transition: background .2s, transform .2s; }
 .au-iconbtn:hover { background: rgba(255,255,255,.14); }
 .au-iconbtn:active { transform: scale(.95); }
 .au-next { width: 64px; height: 64px; border-radius: 50%; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #0A0E14; transition: box-shadow .35s cubic-bezier(.16,1,.3,1), transform .35s cubic-bezier(.16,1,.3,1); }
 .au-next:hover { transform: translateY(-2px); }
 .au-next:active { transform: scale(.96); }
-.au-spin { width: 15px; height: 15px; border-radius: 50%; border: 2px solid currentColor; border-top-color: transparent; animation: auRing .7s linear infinite; flex-shrink: 0; }
-.au-switch { width: 100%; background: none; border: none; padding: 4px; cursor: pointer; font-size: 11.5px; font-weight: 700; color: #8B949E; transition: color .2s; }
-.au-switch:hover { color: #fff; }
 .au-footlink { background: none; border: none; padding: 0; cursor: pointer; font-size: 10px; font-weight: 600; color: #59636e; text-decoration: underline; text-underline-offset: 3px; }
 .au-footlink:hover { color: #8B949E; }
 `;
@@ -138,7 +125,16 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
   const { color, light } = getTheme(role);
   const ctaGradient = `linear-gradient(120deg, ${color} 0%, ${light} 100%)`;
 
-  const [stage, setStage] = useState<Stage>(introShownThisSession ? 'input' : 'intro');
+  // ── Sağlayıcı dönüşü İLK RENDER'DAN ÖNCE okunur ───────────────────────────
+  // Web'de Google/Apple girişi tam sayfa yönlendirmesidir; dönüş oturumsuzsa
+  // uygulama sıfırdan açılır. O açılışta tanıtım ekranı gösterilirse kullanıcı
+  // "uygulama beni attı, başka bir ekrana düştüm" diye okur. Bu yüzden dönüş
+  // varsa TANITIM ATLANIR: aynı telefon ekranına, sebebi yazılı olarak dönülür.
+  // useState'in tembel biçimi kullanılır — okuma (ve adres temizliği) bir kez.
+  const [oauthDonusu] = useState(() => oauthDonusunuOku());
+
+  const [stage, setStage] = useState<Stage>(
+    (oauthDonusu || introShownThisSession) ? 'input' : 'intro');
   // Tanıtım → giriş "itme" geçişi: iki ekran kısa süre BİRLİKTE durur; gelen
   // sağdan girerken giden sola kayar. Tek ekran anında değişseydi hareket
   // kesik görünürdü. Süre CSS'teki .42sn ile aynı tutulur.
@@ -154,29 +150,23 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
     if (gecisSayaci.current) clearTimeout(gecisSayaci.current);
     gecisSayaci.current = setTimeout(() => setPushing(false), gecisSure);
   };
-  // Kayıt-öncelikli akış: bu cihazda daha önce hiç oturum açılmadıysa KAYIT,
-  // açıldıysa (çıkış yapmış kullanıcı) GİRİŞ ekranıyla başla.
-  // IP-15: kayıt kapısı hangi butondan gelindiyse ekranı o modda açar —
-  // "Zaten hesabım var" diyen kullanıcı kayıt formuna düşmez.
-  const [isRegister, setIsRegister] = useState(() => {
-    const zorlanan = useAppStore.getState().authStartMode;
-    if (zorlanan) return zorlanan === 'register';
-    return !getHasAccount();
-  });
-  // Tek seferlik: mod okundu, bayrak temizlenir (sonraki açılış kendi kararını verir).
+  // Kayıt/giriş ayrımı KALDIRILDI: telefonla tek akış var. `authStartMode`
+  // bayrağı (kayıt kapısından "kaydol"a mı "giriş"e mi basıldığı) artık ekranın
+  // görünümünü değiştirmiyor, ama kapı onu hâlâ yazıyor — okunup TEMİZLENİR ki
+  // bir sonraki açılış eski bir niyetle karşılaşmasın.
   useEffect(() => { useAppStore.getState().setAuthStartMode(null); }, []);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [name, setName] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
+  // Ülke kodu ayrı tutulur: Türkiye varsayılan, diğer ülkeler elle yazılabilir
+  // (bayrak listesi YOK — kurucu kararı: sade kalsın).
+  const [dial, setDial] = useState(DEFAULT_DIAL_CODE);
+  const [phone, setPhone] = useState('');
   const [otp, setOtp] = useState('');
   // Yasal onay OPT-IN olmalı: kutu önceden işaretli gelemez (KVKK/mağaza incelemesi)
   const [agreed, setAgreed] = useState(false);
   const [isLoading, setIsLoading] = useState<
-    'send' | 'verify' | 'guest' | 'google' | 'apple' | 'password' | 'register' | 'forgot' | 'reset' | null
+    'send' | 'verify' | 'google' | 'apple' | null
   >(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(
+    oauthDonusu ? mapOAuthDonusu(oauthDonusu.saglayici, oauthDonusu.kod, oauthDonusu.aciklama) : null);
   const [info, setInfo] = useState<string | null>(null);
   const [resendIn, setResendIn] = useState(0);
   // IP-15: anahtarlar artık resmi belge anahtarları — modal tam metni
@@ -192,13 +182,16 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
   // Doğru pay, --kb-height ile pencereye göre ÖLÇÜLEN örtüşmenin büyüğüdür.
   const klavyeOrtusu = useKlavyeOrtusu();
 
-  // Dev/demo modunda "mirackerem" gibi @ içermeyen kısayollar da geçerli sayılır
+  // Dev/demo modunda numara alanına demo hesabın kısa adı ("mirackerem")
+  // yazılabilir; prod pakette bu yol kapalıdır (isDemoLoginEnabled).
   const demoMode = isDemoLoginEnabled();
   const showDemoPicker = isDemoAccountPickerEnabled() && DEMO_ACCOUNT_GROUPS.length > 0;
-  const contactValid = isValidEmail(email) || isDemoLoginInput(email);
-  const contactLabel = email.trim() || 'E-posta';
-  // S8: kayıtta ad soyad zorunlu — kural shared/personName'de (sunucu ikiziyle aynı).
-  const nameCheck = validateFullName(name);
+  const phoneCheck = checkPhone(phone, dial);
+  const demoInput = demoMode && isDemoLoginInput(phone);
+  const contactValid = phoneCheck.valid || demoInput;
+  const contactLabel = phoneCheck.e164 ? formatPhoneDisplay(phoneCheck.e164) : 'numaran';
+  // Yurt dışı numara: WhatsApp kanalı açılana dek kod gönderemiyoruz.
+  const kanalKapali = !demoInput && !!dial && !canSendOtpTo(dial);
 
   // Tanıtım bir kez görüldü: aynı oturumda AUTH'a tekrar düşülürse atlanır.
   useEffect(() => { introShownThisSession = true; }, []);
@@ -210,30 +203,38 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
   }, [resendIn]);
 
   const requestOtp = async () => {
-    await sendEmailOtp(email.trim());
+    // Numara E.164'e çevrilmiş hâlde gider (+905321234567). Doğrulama kuralı
+    // shared/phone.ts'te; sunucudaki ikizi de aynı biçimi bekler.
+    await sendPhoneOtp(phoneCheck.e164!);
   };
 
   const handleSendOtp = async () => {
-    // IP-15: eskiden `!agreed || !contactValid` iken SESSİZCE dönüyordu.
-    // Diğer handler'lar gibi eksik olan tek şeyi söyler.
+    // Buton form eksikken de CANLI durur; dokununca eksik olan TEK şeyi söyler.
+    // (Sessizce pasif buton, kullanıcıya "bozuk" hissettiriyordu.)
     if (isLoading) return;
-    if (!contactValid) { setError('Geçerli bir e-posta adresi gir.'); return; }
+    if (!contactValid) { setError(phoneCheck.reason ?? 'Telefon numaranı gir.'); return; }
     if (!requireAgreement()) return;
     setError(null);
-    // Dev/demo modu: demo hesabı (veya "mirackerem") → OTP'siz anında giriş.
-    // onSuccess() ÇAĞIRMA: o anda yerel `role` hâlâ eski (PLAYER) olduğundan owner'ı
-    // yanlışlıkla DASHBOARD'a yönlendirir. Bunun yerine App'teki onAuthStateChanged
-    // dinleyicisi profildeki GERÇEK rolü (OWNER/PLAYER) okuyup doğru panele yönlendirir.
-    if (demoMode && isDemoLoginInput(email)) {
+    // Dev/demo modu: numara alanına demo kısayolu ("mirackerem") yazılırsa
+    // kodsuz anında giriş. onSuccess() ÇAĞIRMA: o anda yerel `role` hâlâ eski
+    // (PLAYER) olduğundan tesis sahibini yanlışlıkla oyuncu ekranına atar.
+    // Navigasyonu App'teki onAuthStateChanged dinleyicisi yapar (gerçek role göre).
+    if (demoInput) {
       setIsLoading('send');
       try {
-        await demoLogin(email.trim());
+        await demoLogin(phone.trim());
         // navigasyonu auth dinleyicisine bırak (rol-doğru yönlendirme)
       } catch (err: any) {
         console.error('Demo giriş hatası:', err);
         setError(mapAuthError(err, 'Demo giriş başarısız.'));
         setIsLoading(null);
       }
+      return;
+    }
+    // Yurt dışı numara: WhatsApp kanalı açılana dek kod gönderilemiyor.
+    // Ölü uç bırakma — ne yapabileceğini söyle.
+    if (kanalKapali) {
+      setError('Şu an yalnız Türkiye numaralarına kod gönderebiliyoruz. Google veya Apple ile devam edebilirsin.');
       return;
     }
     setIsLoading('send');
@@ -253,11 +254,9 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
   const handleResend = async () => {
     if (resendIn > 0 || isLoading) return;
     setError(null);
-    setIsLoading(stage === 'reset' ? 'forgot' : 'send');
+    setIsLoading('send');
     try {
-      // reset aşamasında "tekrar gönder" şifre sıfırlama kodunu yeniden yollar.
-      if (stage === 'reset') await requestPasswordReset(email.trim());
-      else await requestOtp();
+      await requestOtp();
       setResendIn(60);
       setInfo('Yeni kod gönderildi.');
     } catch (err: any) {
@@ -272,7 +271,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
     setError(null);
     setIsLoading('verify');
     try {
-      await verifyEmailOtp(email.trim(), otp);
+      await verifyPhoneOtp(phoneCheck.e164!, otp);
       // onSuccess() ÇAĞIRMA: yerel `role` hâlâ eski (PLAYER) olduğundan kaleci/
       // hakem/tesis'i yanlışlıkla oyuncu Dashboard'ına düşürür. Navigasyonu App'teki
       // onAuthStateChanged dinleyicisine bırak (profildeki GERÇEK role göre yönlendirir).
@@ -280,129 +279,6 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
     } catch (err: any) {
       console.error('OTP doğrulama hatası:', err);
       setError(mapAuthError(err, 'Kod hatalı veya süresi dolmuş.'));
-      setIsLoading(null);
-    }
-  };
-
-  // ─── E-posta + Şifre ile giriş ─────────────────────────────────────────────
-  const handlePasswordLogin = async () => {
-    if (!requireAgreement()) return;
-    if (!contactValid) { setError('Geçerli bir e-posta adresi gir.'); return; }
-    if (!password) { setError('Şifreni gir.'); return; }
-    if (isLoading) return;
-    setError(null);
-    setInfo(null);
-    // Dev/demo modu: demo hesabı (veya "mirackerem") → şifre kontrolü olmadan
-    // sabit demo şifresiyle anında giriş. Prod'da isDemoLoginEnabled=false.
-    if (demoMode && isDemoLoginInput(email)) {
-      setIsLoading('password');
-      try {
-        await demoLogin(email.trim());
-        // navigasyonu auth dinleyicisine bırak (rol-doğru yönlendirme)
-      } catch (err: any) {
-        console.error('Demo giriş hatası:', err);
-        setError(mapAuthError(err, 'Demo giriş başarısız.'));
-        setIsLoading(null);
-      }
-      return;
-    }
-    setIsLoading('password');
-    try {
-      await signInWithEmailPassword(email.trim(), password);
-      // onSuccess() ÇAĞIRMA: yerel `role` hâlâ eski (PLAYER) olduğundan kaleci/
-      // hakem/tesis'i yanlışlıkla oyuncu Dashboard'ına düşürür (dinleyici sonra
-      // gerçek rolü okusa da view artık allowlist'te olmadığından düzeltemez).
-      // Navigasyonu App'teki onAuthStateChanged dinleyicisine bırak. Spinner,
-      // dinleyici doğru panele yönlendirip bu ekranı kaldırana dek döner.
-    } catch (err: any) {
-      console.error('[Auth] Şifreli giriş hatası:', err);
-      setError('E-posta veya şifre hatalı. Şifreni unuttuysan sıfırlayabilir ya da kod ile girebilirsin.');
-      setIsLoading(null);
-    }
-  };
-
-  // ─── E-posta + Şifre ile kayıt ─────────────────────────────────────────────
-  const handleRegister = async () => {
-    if (!requireAgreement()) return;
-    if (!isValidEmail(email)) { setError('Geçerli bir e-posta adresi gir.'); return; }
-    // S8: ad soyad zorunlu — soyadsız ya da harf dışı karakterli kayıt kabul edilmez.
-    if (!nameCheck.valid) { setError(nameCheck.reason ?? 'Ad soyad zorunlu.'); return; }
-    if (password.length < 6) { setError('Şifre en az 6 karakter olmalı.'); return; }
-    if (isLoading) return;
-    setError(null);
-    setInfo(null);
-    setIsLoading('register');
-    try {
-      const res = await signUpWithPassword(email.trim(), password, normalizeNameInput(name));
-      if (res?.session) {
-        // Oturum açıldı → navigasyonu App'teki onAuthStateChanged dinleyicisine bırak:
-        // yeni kullanıcıda profili oluşturup ONBOARDING'e yönlendirir. onSuccess()
-        // burada DASHBOARD'a zorlarsa hem onboarding atlanır hem stale-role sorunu
-        // yaşanır. Spinner, dinleyici yönlendirene dek döner.
-      } else {
-        // E-posta onayı açık: oturum yok → doğrulama beklenir.
-        setInfo('Hesabın oluşturuldu. Giriş yapmak için e-postana gönderilen bağlantıyı onayla.');
-        setIsRegister(false);
-        setIsLoading(null);
-      }
-    } catch (err: any) {
-      const m = String(err?.message || '').toLowerCase();
-      if (m.includes('already') || m.includes('registered') || m.includes('exists')) {
-        // Ölü uç bırakma: e-postası korunmuş hâlde giriş moduna geçir.
-        setIsRegister(false);
-        setInfo('Bu e-posta zaten kayıtlı — şifrenle giriş yapabilirsin.');
-      } else {
-        setError(mapAuthError(err, 'Kayıt başarısız. Lütfen tekrar dene.'));
-      }
-      setIsLoading(null);
-    }
-  };
-
-  // ─── Şifremi unuttum — kodu iste ve tek ekranda sıfırlamaya geç ────────────
-  const handleForgot = async () => {
-    if (isLoading) return;
-    if (!isValidEmail(email)) {
-      setError('Sıfırlama kodu gönderebilmemiz için önce e-posta adresini gir.');
-      return;
-    }
-    setError(null);
-    setInfo(null);
-    setIsLoading('forgot');
-    try {
-      await requestPasswordReset(email.trim());
-      setStage('reset');
-      setOtp('');
-      setNewPassword('');
-      setResendIn(60);
-      setInfo('Bu e-posta kayıtlıysa, 6 haneli sıfırlama kodu gönderildi.');
-    } catch {
-      setError('Kod gönderilemedi. Lütfen tekrar dene.');
-    } finally {
-      setIsLoading(null);
-    }
-  };
-
-  // ─── Şifremi unuttum — kodu doğrula + yeni şifreyi yaz ─────────────────────
-  const handleResetConfirm = async () => {
-    if (otp.length < 6 || newPassword.length < 6 || isLoading) return;
-    setError(null);
-    setInfo(null);
-    setIsLoading('reset');
-    try {
-      await confirmPasswordReset(email.trim(), otp, newPassword);
-      setStage('input');
-      setIsRegister(false);
-      setPassword('');
-      setOtp('');
-      setNewPassword('');
-      setInfo('Şifren güncellendi. Yeni şifrenle giriş yapabilirsin.');
-    } catch (err: any) {
-      const m = String(err?.message || '');
-      if (m === 'invalid_or_expired') setError('Kod hatalı veya süresi dolmuş.');
-      else if (m === 'too_many_attempts') setError('Çok fazla hatalı deneme. Yeni kod iste.');
-      else if (m === 'weak_password') setError('Yeni şifre en az 6 karakter olmalı.');
-      else setError('Şifre güncellenemedi. Lütfen tekrar dene.');
-    } finally {
       setIsLoading(null);
     }
   };
@@ -469,23 +345,16 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
     }
   };
 
-  const handleGuestLogin = () => {
-    if (isLoading) return;
-    setIsLoading('guest');
-    // Misafir modu: oturum yok, salt-okur gezinme. Buton vaadiyle tutarlı
-    // şekilde MAÇLARA götür; yazma aksiyonlarında kayıt kapısı açılır.
-    const { setIsGuest, resetNavigation } = useAppStore.getState();
-    setIsGuest(true);
-    resetNavigation('MATCH_DISCOVERY');
-  };
+  // MİSAFİR MODU KALDIRILDI (kurucu kararı, 17 Ağu 2026): "önce göz at" yolu
+  // kapatıldı. Uygulamaya girmek için hesap gerekiyor; kayıt zaten tek ekranda
+  // ve numarayla bitiyor, o yüzden ayrı bir "vitrin" moduna gerek kalmadı.
 
   const clearFeedback = () => { setError(null); setInfo(null); };
 
   const handleHeaderBack = () => {
-    if (stage === 'otp' || stage === 'reset') {
+    if (stage === 'otp') {
       setStage('input');
       setOtp('');
-      setNewPassword('');
       clearFeedback();
     } else if (stage === 'input') {
       // Alt sayfadan tanıtıma dön (tasarımdaki geri davranışı).
@@ -496,14 +365,12 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
     }
   };
 
-  const isReset = stage === 'reset';
-  const authReady = agreed && contactValid && password.length >= (isRegister ? 6 : 1)
-    && (!isRegister || nameCheck.valid);
-  const otpReady = otp.length === 6 && (!isReset || newPassword.length >= 6);
+  const authReady = agreed && contactValid && !kanalKapali;
+  const otpReady = otp.length === 6;
   const busy = isLoading !== null || demoLoggingIn !== null;
-  const ctaLabel = isRegister ? 'KAYIT OL' : 'GİRİŞ YAP';
-  const ctaBusy = isLoading === (isRegister ? 'register' : 'password');
-  const codeBusy = isLoading === (isReset ? 'reset' : 'verify');
+  const ctaLabel = 'KOD GÖNDER';
+  const ctaBusy = isLoading === 'send';
+  const codeBusy = isLoading === 'verify';
 
   // Devre dışı görünüm: onay/alanlar eksikken buton sönük ama TIKLANABİLİR kalır
   // (dokununca eksik olanı söyler). Yükleme sırasında gerçekten kilitlenir.
@@ -556,7 +423,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
         ['--au-accent-soft' as string]: `${color}24`,
       } as React.CSSProperties}
     >
-      <style>{KEYFRAMES}</style>
+      <style>{AUTH_FIELD_CSS}{KEYFRAMES}</style>
 
       <div style={{
         position: 'relative', height: '100%', width: '100%', maxWidth: 448, margin: '0 auto',
@@ -712,36 +579,21 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
             >
               {/* Başlık — sola hizalı ve sakin. Ortalanmış italik-versal
                   başlık "kampanya afişi" hissi veriyordu; giriş ekranında
-                  güven veren şey sadelik. */}
+                  güven veren şey sadelik.
+
+                  TEK CÜMLE: "giriş" ile "kayıt" ayrımı yok. Numarası olmayan
+                  kişinin hesabı ilk kodda açılır; kullanıcıya iki sekme
+                  göstermek olmayan bir seçim yaratıyordu. */}
               <div style={{ marginBottom: 26 }}>
                 <h1 style={{
                   margin: 0, fontSize: 32, lineHeight: 1.1, fontWeight: 800,
                   letterSpacing: '-.035em', color: '#fff',
                 }}>
-                  {isRegister ? 'Hesap oluştur' : 'Tekrar hoş geldin'}
+                  Numaranla gir
                 </h1>
                 <p style={{ margin: '10px 0 0', fontSize: 14, lineHeight: 1.5, fontWeight: 500, color: '#8B949E', letterSpacing: '-.01em' }}>
-                  {isRegister
-                    ? 'Bilgilerini gir, sahaya çıkmaya hazır ol.'
-                    : 'Hesabına gir, kaldığın yerden devam et.'}
+                  Sana bir kod göndereceğiz. Şifre yok, uğraş yok.
                 </p>
-              </div>
-
-              {/* Giriş / Kaydol seçici — mod hangisiyse gösterge oraya kayar. */}
-              <div className="au-seg" role="tablist" aria-label="Giriş veya kayıt" style={{ marginBottom: 22 }}>
-                <span className="au-seg-ind" style={{ transform: isRegister ? 'translateX(100%)' : 'translateX(0)' }} aria-hidden="true" />
-                <button
-                  type="button" role="tab" aria-selected={!isRegister} className="au-seg-btn"
-                  onClick={() => { if (isRegister) { setIsRegister(false); clearFeedback(); } }}
-                >
-                  Giriş Yap
-                </button>
-                <button
-                  type="button" role="tab" aria-selected={isRegister} className="au-seg-btn"
-                  onClick={() => { if (!isRegister) { setIsRegister(true); clearFeedback(); } }}
-                >
-                  Kaydol
-                </button>
               </div>
 
               {/* Sosyal giriş — BİRİNCİL (§3.1: Google + Apple) */}
@@ -767,92 +619,74 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '22px 0' }}>
                   <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,.07)' }} />
                   <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: '.18em', textTransform: 'uppercase', color: '#59636e' }}>
-                    {isRegister ? 'veya e-posta ile kayıt' : 'veya e-posta ile'}
+                    veya telefon numaranla
                   </span>
                   <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,.07)' }} />
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 13 }}>
-                  {/* Ad Soyad — yalnız kayıt akışında, S8 gereği zorunlu */}
-                  {isRegister && (
-                    <div>
-                      <label className="au-label" htmlFor="au-name">Ad Soyad</label>
-                      <div className="au-field">
-                        <User size={19} color="#6b7280" style={{ flexShrink: 0 }} />
+                  <div>
+                    <label className="au-label" htmlFor="au-phone">Telefon numaran</label>
+                    {/* Ülke kodu + numara TEK kutuda durur: iki ayrı kutu,
+                        "hangisine yazacağım?" sorusu doğuruyordu. Türkiye
+                        varsayılan seçilidir; başka ülke için kodu elle
+                        değiştirmek yeter (bayrak listesi yok — kurucu kararı). */}
+                    <div className="au-field">
+                      <Phone size={19} color="#6b7280" style={{ flexShrink: 0 }} />
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 2, flexShrink: 0 }}>
+                        <span style={{ color: '#6b7280', fontSize: 16, fontWeight: 600 }}>+</span>
                         <input
-                          id="au-name"
+                          id="au-dial"
                           type="text"
-                          autoComplete="name"
-                          className="au-input"
-                          placeholder="Ad Soyad"
-                          aria-label="Ad Soyad"
-                          value={name}
-                          onChange={(e) => { setName(e.target.value); clearFeedback(); }}
+                          inputMode="numeric"
+                          aria-label="Ülke kodu"
+                          value={dial}
+                          onChange={(e) => { setDial(e.target.value.replace(/\D/g, '').slice(0, 4)); clearFeedback(); }}
+                          style={{
+                            width: `${Math.max(dial.length, 2)}ch`, minWidth: '2ch', background: 'transparent',
+                            border: 'none', outline: 'none', color: '#fff', fontSize: 16, fontWeight: 600,
+                          }}
                         />
-                      </div>
-                      {/* Aynı gerekçe aşağıdaki hata satırında da duruyorsa iki kez yazma. */}
-                      {name.trim().length > 0 && !nameCheck.valid && error !== nameCheck.reason && (
-                        <p style={{ margin: '6px 2px 0', fontSize: 10, fontWeight: 700, color: '#FBBF24' }}>
-                          {nameCheck.reason}
-                        </p>
-                      )}
+                      </span>
+                      <span aria-hidden="true" style={{ width: 1, height: 22, background: 'rgba(255,255,255,.1)', flexShrink: 0 }} />
+                      <input
+                        id="au-phone"
+                        type="tel"
+                        inputMode={demoMode ? 'text' : 'numeric'}
+                        autoComplete="tel-national"
+                        className="au-input"
+                        placeholder={demoMode ? '532 123 45 67 · veya "mirackerem"' : '532 123 45 67'}
+                        aria-label="Telefon numarası"
+                        value={phone}
+                        onChange={(e) => {
+                          const ham = e.target.value;
+                          // Demo kısayolu harf içerir; onu bozmadan geçir.
+                          setPhone(demoMode && /[a-zA-Z@]/.test(ham) ? ham : formatPhoneInput(ham, dial));
+                          clearFeedback();
+                        }}
+                        onKeyDown={(e) => { if (e.key === 'Enter') void handleSendOtp(); }}
+                      />
                     </div>
-                  )}
-                  <div>
-                    <label className="au-label" htmlFor="au-email">E-posta</label>
-                    <div className="au-field">
-                    <Mail size={19} color="#6b7280" style={{ flexShrink: 0 }} />
-                    <input
-                      id="au-email"
-                      type="email"
-                      inputMode="email"
-                      autoComplete="email"
-                      className="au-input"
-                      placeholder={demoMode ? 'demo e-postası veya "mirackerem"' : 'ornek@oyna.app'}
-                      aria-label="E-posta adresi"
-                      value={email}
-                      onChange={(e) => { setEmail(e.target.value); clearFeedback(); }}
-                    />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="au-label" htmlFor="au-password">Şifre</label>
-                    <div className="au-field">
-                    <Lock size={19} color="#6b7280" style={{ flexShrink: 0 }} />
-                    <input
-                      id="au-password"
-                      type={showPassword ? 'text' : 'password'}
-                      autoComplete={isRegister ? 'new-password' : 'current-password'}
-                      className="au-input"
-                      placeholder={isRegister ? 'Şifre (en az 6 karakter)' : 'Şifre'}
-                      aria-label="Şifre"
-                      value={password}
-                      onChange={(e) => { setPassword(e.target.value); clearFeedback(); }}
-                      onKeyDown={(e) => { if (e.key === 'Enter') { void (isRegister ? handleRegister() : handlePasswordLogin()); } }}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword((v) => !v)}
-                      aria-label={showPassword ? 'Şifreyi gizle' : 'Şifreyi göster'}
-                      style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: '#6b7280', display: 'flex', flexShrink: 0 }}
-                    >
-                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                    </button>
-                    </div>
+                    {/* Yazarken beliren tek satırlık yardım — hata satırıyla
+                        aynı şeyi iki kez söylemez. */}
+                    {phone.trim().length > 0 && !contactValid && error !== phoneCheck.reason && (
+                      <p style={{ margin: '6px 2px 0', fontSize: 10, fontWeight: 700, color: '#FBBF24' }}>
+                        {phoneCheck.reason}
+                      </p>
+                    )}
+                    {kanalKapali && (
+                      <p style={{ margin: '6px 2px 0', fontSize: 10, fontWeight: 700, color: '#FBBF24' }}>
+                        {otpChannelFor(dial) === 'WHATSAPP'
+                          ? 'Yurt dışı numaralara kod gönderimi henüz açık değil — Google veya Apple ile devam edebilirsin.'
+                          : 'Bu ülke kodu şu an desteklenmiyor.'}
+                      </p>
+                    )}
                   </div>
                 </div>
 
-                {!isRegister && (
-                  <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 9 }}>
-                    <button type="button" className="au-link" onClick={handleForgot} disabled={busy} style={{ fontSize: 11, color }}>
-                      {isLoading === 'forgot' ? 'Kod gönderiliyor…' : 'Şifremi unuttum'}
-                    </button>
-                  </div>
-                )}
-
-                {demoMode && !isRegister && (
+                {demoMode && (
                   <p style={{ margin: '10px 2px 0', fontSize: 10, fontWeight: 700, color: '#39FF14' }}>
-                    🧪 DEMO MODU: demo e-postasını yaz, şifre gerekmez. Sahip için "mirackerem".
+                    🧪 DEMO MODU: numara yerine demo kısayolunu yaz, kod gerekmez. Sahip için "mirackerem".
                   </p>
                 )}
 
@@ -967,11 +801,15 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
                 )}
 
                 {/* ─── Aksiyonlar ─── */}
+                {/* TEK BUTON: "kod gönder". Eskiden burada KAYIT OL / GİRİŞ YAP /
+                    KOD İLE GİRİŞ / mod değiştir / MİSAFİR olmak üzere beş yol
+                    vardı; hepsi tek yola indi. Misafir modu kurucu kararıyla
+                    kapatıldı, kayıt/giriş ayrımı da kalktı. */}
                 <div style={{ marginTop: 'auto', paddingTop: 20, display: 'flex', flexDirection: 'column', gap: 12 }}>
                   <button
                     type="button"
                     className="au-cta"
-                    onClick={isRegister ? handleRegister : handlePasswordLogin}
+                    onClick={handleSendOtp}
                     disabled={busy}
                     style={ctaStyle(authReady)}
                   >
@@ -981,31 +819,6 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
                         <ArrowRight size={16} strokeWidth={2.8} />
                       </>
                     )}
-                  </button>
-
-                  {/* Kod ile giriş — ikincil (yalnız giriş modunda) */}
-                  {!isRegister && (
-                    <button type="button" className="au-ghost" onClick={handleSendOtp} disabled={busy}>
-                      {isLoading === 'send' ? spinner : 'KOD İLE GİRİŞ YAP'}
-                    </button>
-                  )}
-
-                  <button type="button" className="au-switch" onClick={() => { setIsRegister((v) => !v); clearFeedback(); }}>
-                    {isRegister ? 'Zaten hesabın var mı? Giriş yap' : 'Hesabın yok mu? Kayıt ol'}
-                  </button>
-
-                  {/* Önce göz at — kayıt olmadan keşfet (değer-kapısı modeli) */}
-                  <button
-                    id="guest-login-button"
-                    type="button"
-                    className="au-ghost"
-                    onClick={handleGuestLogin}
-                    // IP-15 · karar 6a: misafir GEZİNME yazma eylemi değil,
-                    // sunucuya rıza kaydı gitmiyor → KVKK onayı istenmez.
-                    // Onay yalnız hesap açılırken zorunlu.
-                    disabled={busy}
-                  >
-                    {isLoading === 'guest' ? spinner : 'ÖNCE MAÇLARA GÖZ AT'}
                   </button>
 
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, paddingTop: 2 }}>
@@ -1018,8 +831,8 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
           </div>
         )}
 
-        {/* ═══ KOD DOĞRULAMA / ŞİFRE SIFIRLAMA ═══ */}
-        {(stage === 'otp' || stage === 'reset') && (
+        {/* ═══ KOD DOĞRULAMA ═══ */}
+        {stage === 'otp' && (
           <div style={{ position: 'absolute', inset: 0 }}>
             <div style={{
               position: 'absolute', top: 0, left: 0, right: 0, height: CURTAIN,
@@ -1059,17 +872,15 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
 
                 <div style={{ textAlign: 'center', marginBottom: 22 }}>
                   <div style={{ fontSize: 26, lineHeight: 1.1, fontWeight: 900, fontStyle: 'italic', textTransform: 'uppercase', letterSpacing: '-.02em', color: '#fff' }}>
-                    {isReset ? 'Şifreyi sıfırla' : 'E-postanı doğrula'}
+                    Numaranı doğrula
                   </div>
                   <p style={{ margin: '9px 0 0', fontSize: 12.5, lineHeight: 1.55, color: '#8B949E' }}>
-                    {isReset
-                      ? `${contactLabel} adresine gelen kodu gir ve yeni şifreni belirle.`
-                      : `${contactLabel} adresine gönderdiğimiz 6 haneli kodu gir.`}
+                    {contactLabel} numarasına gönderdiğimiz 6 haneli kodu gir.
                   </p>
                 </div>
 
                 <label htmlFor="auth-otp-input" style={{ display: 'block', textAlign: 'center', fontSize: 10, fontWeight: 800, letterSpacing: '.22em', textTransform: 'uppercase', color: '#6b7280', marginBottom: 10 }}>
-                  {isReset ? 'Sıfırlama kodu' : 'Doğrulama kodu'}
+                  Doğrulama kodu
                 </label>
                 <input
                   id="auth-otp-input"
@@ -1078,7 +889,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
                   autoComplete="one-time-code"
                   maxLength={6}
                   placeholder="••••••"
-                  aria-label={isReset ? '6 haneli sıfırlama kodu' : '6 haneli doğrulama kodu'}
+                  aria-label="6 haneli doğrulama kodu"
                   value={otp}
                   autoFocus
                   onChange={(e) => { setOtp(e.target.value.replace(/\D/g, '').slice(0, 6)); setError(null); }}
@@ -1088,35 +899,6 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
                     color: '#fff', fontSize: 30, fontWeight: 900, letterSpacing: '.5em', textIndent: '.5em',
                   }}
                 />
-
-                {isReset && (
-                  <div style={{ marginTop: 16 }}>
-                    <label htmlFor="auth-newpass-input" style={{ display: 'block', fontSize: 10, fontWeight: 800, letterSpacing: '.22em', textTransform: 'uppercase', color: '#6b7280', margin: '0 2px 9px' }}>
-                      Yeni Şifre
-                    </label>
-                    <div className="au-field">
-                      <Lock size={19} color="#6b7280" style={{ flexShrink: 0 }} />
-                      <input
-                        id="auth-newpass-input"
-                        type={showPassword ? 'text' : 'password'}
-                        autoComplete="new-password"
-                        className="au-input"
-                        placeholder="En az 6 karakter"
-                        aria-label="Yeni şifre"
-                        value={newPassword}
-                        onChange={(e) => { setNewPassword(e.target.value); setError(null); }}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword((v) => !v)}
-                        aria-label={showPassword ? 'Şifreyi gizle' : 'Şifreyi göster'}
-                        style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: '#6b7280', display: 'flex', flexShrink: 0 }}
-                      >
-                        {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                      </button>
-                    </div>
-                  </div>
-                )}
 
                 {error && (
                   <p role="alert" aria-live="assertive" style={{ margin: '13px 2px 0', fontSize: 11.5, fontWeight: 700, lineHeight: 1.5, textAlign: 'center', color: '#FF4D4D' }}>{error}</p>
@@ -1136,19 +918,19 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
                   <button
                     type="button"
                     className="au-cta"
-                    onClick={isReset ? handleResetConfirm : handleVerify}
+                    onClick={handleVerify}
                     disabled={busy || !otpReady}
                     style={ctaStyle(otpReady)}
                   >
                     {codeBusy ? spinner : (
                       <>
-                        <span>{isReset ? 'ŞİFREYİ GÜNCELLE' : 'DOĞRULA VE GİRİŞ YAP'}</span>
+                        <span>DOĞRULA VE GİRİŞ YAP</span>
                         <ArrowRight size={16} strokeWidth={2.8} />
                       </>
                     )}
                   </button>
                   <button type="button" className="au-ghost" onClick={handleHeaderBack} disabled={busy}>
-                    E-POSTAYI DEĞİŞTİR
+                    NUMARAYI DEĞİŞTİR
                   </button>
                 </div>
               </div>

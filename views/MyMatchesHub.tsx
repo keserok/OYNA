@@ -536,7 +536,7 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onNavigate }) => {
       <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-15 mix-blend-overlay pointer-events-none" />
 
       {/* ── Başlık ── */}
-      <header className="sticky top-0 z-30 bg-[#0A0E14]/[0.92] backdrop-blur-xl border-b border-white/5 pt-safe">
+      <header className="sticky top-0 z-30 bg-[#0A0E14]/[0.92] backdrop-blur-xl border-b border-white/5 pt-safe-baslik">
         <div className="px-4 py-3 flex items-center justify-between gap-3">
           {/* IP-14: Maçlarım artık alt menünün orta tuşu — sekme kökünde
               geri oku olmaz. */}

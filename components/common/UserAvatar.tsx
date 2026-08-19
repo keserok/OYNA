@@ -8,19 +8,28 @@ import { trInitials } from '../../utils/trUpper';
  * mavi olmaması gibi durumlar yaşanmasın." Aynı kişi, aynı harfler, aynı
  * yuvarlak; ekran değişince görünüm değişmesin.
  *
- * ZEMİN NEDEN YARI SAYDAM BEYAZ (rgba(255,255,255,0.12))?
- * Kurucu isteği: "yuvarlak daire içerisindeki arka plan rengi butonun genel
- * arka planıyla uyumlu olsun." Sabit bir renk (eskiden `#0d1712` koyu yeşil)
- * bunu YAPAMAZ — ana sayfanın koyu kartında koyu yeşil bir leke gibi duruyor,
- * profil ekranının gradyanlı zemininde bambaşka görünüyordu. Yarı saydam beyaz
- * ise ALTINDAKİ zeminden beslenir: hangi butonun/kartın üstüne konursa onun
- * rengini bir ton açar. Yani tek bir değer her yerde "uyumlu" çıkar.
+ * ZEMİN NEDEN TAMAMEN SAYDAM?
+ * Kurucu isteği (17 Ağustos 2026): "bu butonun tamamen saydam olması ve
+ * harflerin görünmesi." Önceki değer yarı saydam beyazdı (rgba(255,255,255,.12))
+ * ve altındaki koyu lacivert kartın üstünde AÇIK MAVİ bir daire gibi
+ * görünüyordu — kurucunun "profil fotoğrafının rengini açık mavi görüyorum"
+ * dediği şey buydu.
+ *
+ * Tam saydam zemin, "altındaki neyse o" kuralının en saf hâlidir: daire artık
+ * hiçbir renk katmaz. Dairenin varlığını İNCE BEYAZ ÇERÇEVE taşır (çağırandan
+ * `className` ile gelir) — çerçeve olmasaydı havada duran harfler kalırdı.
+ *
+ * FOTOĞRAF YOLUNDA DA SAYDAM: fotoğraf yüklenirken arkada renkli bir kutu
+ * belirip sonra kaybolmaz; yükleme sessiz geçer.
  *
  * HARFLER İTALİK: kurucu isteği. Başlık yazı tipiyle (Montserrat 800) birlikte
  * uygulamanın rozet dilini taşır.
  *
- * ÇERÇEVE ÇAĞIRANDAN GELMEZ ZORUNLU DEĞİL: boyut/yuvarlaklık/çerçeve
- * `className` ile dışarıdan verilir; renk ve harf dili BURADA kilitlidir.
+ * ÇERÇEVE ARTIK BURADA: zemin saydam olunca çerçeve dairenin TEK sınırı oldu.
+ * Çağıranların yarısında çerçeve vardı, yarısında yoktu; saydamlıkla birlikte
+ * çerçevesiz olanlar "havada duran harfler"e dönüşürdü. Bu yüzden ince beyaz
+ * halka bileşenin kendisine alındı — boyut ve yuvarlaklık hâlâ dışarıdan
+ * (`className`) gelir, renk ve sınır BURADA kilitlidir.
  * Dışarıdan renk ezmek isteyen bir çağıran çıkarsa o, bu bileşenin varlık
  * sebebini bozar — o yüzden zemin ve harf rengi sınıf olarak değil satır içi
  * stille yazılır (yardımcı sınıf sırası Tailwind v4'te güvenilir değil).
@@ -36,7 +45,14 @@ interface UserAvatarProps {
 }
 
 /** Tek yerde tanımlı avatar zemini — dokümantasyon ve testler bunu okur. */
-export const AVATAR_BG = 'rgba(255,255,255,0.12)';
+export const AVATAR_BG = 'transparent';
+
+/**
+ * Dairenin tek sınırı. Saydam zeminde çerçeve olmazsa yuvarlak kaybolur ve
+ * geriye yalnız harfler kalır (kurucu isteği: "ince beyaz çerçeve ve baş
+ * harfler görünsün").
+ */
+export const AVATAR_BORDER = '1px solid rgba(255,255,255,0.22)';
 
 export const UserAvatar: React.FC<UserAvatarProps> = ({
   name,
@@ -57,9 +73,9 @@ export const UserAvatar: React.FC<UserAvatarProps> = ({
         loading="lazy"
         onError={() => setBroken(true)}
         className={`object-cover ${className}`}
-        // Fotoğraf yüklenene kadar aynı zemin görünsün — yükleme sırasında
-        // boş/koyu bir delik açılmasın.
-        style={{ background: AVATAR_BG }}
+        // Zemin saydam: yükleme sırasında arkada renkli bir kutu belirip
+        // sonra kaybolmaz. Sınırı ince beyaz halka çizer.
+        style={{ background: AVATAR_BG, border: AVATAR_BORDER, boxSizing: 'border-box' }}
       />
     );
   }
@@ -69,6 +85,8 @@ export const UserAvatar: React.FC<UserAvatarProps> = ({
       className={`flex items-center justify-center font-extrabold italic ${textClassName} ${className}`}
       style={{
         background: AVATAR_BG,
+        border: AVATAR_BORDER,
+        boxSizing: 'border-box',
         color: 'var(--color-ink)',
         fontFamily: 'var(--font-display)',
       }}

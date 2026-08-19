@@ -74,7 +74,7 @@ Tesisler ve Hizmet Sağlayıcılar, OYNA ile ayrı sözleşmesel ilişki içinde
 Uygulamaya üye olabilmek için doğru, güncel ve eksiksiz bilgi verilmesi zorunludur. Kullanıcı, kayıt sırasında beyan ettiği ad-soyad, e-posta, telefon numarası ve yaş bilgisinin doğruluğundan sorumludur.
 
 3.2 Hesap Güvenliği
-Kullanıcı, hesabına ait kullanıcı adı, şifre ve varsa çok faktörlü doğrulama bilgilerinin gizliliğinden bizzat sorumludur. Hesap üzerinden gerçekleştirilen tüm işlemler, aksi ispat edilmedikçe hesap sahibi tarafından yapılmış sayılır. Kullanıcı, hesabının yetkisiz kişilerce kullanıldığını fark ettiği anda ${CONTACT_EMAIL} üzerinden OYNA'ya derhal bildirimde bulunmakla yükümlüdür. Bildirim yapılana kadar geçen sürede hesap üzerinden gerçekleştirilen yetkisiz işlemlerden Kullanıcının sorumluluğu; OYNA'nın Platformda makul ve sektör standartlarına uygun güvenlik önlemlerini (şifreleme, güvenli oturum yönetimi ve isteğe bağlı çok faktörlü doğrulama imkânı dahil) sunmuş olması ve Kullanıcının kendi ağır kusuru bulunmaması kaydıyla, ilgili bildirim öncesi dönemde gerçekleşen işlem başına, Kullanıcının o işlem için ödediği bedeli aşmayacak şekilde sınırlıdır. Kullanıcının hesap bilgilerini kasten üçüncü kişiyle paylaşması veya ağır ihmali hâlinde bu sınırlama uygulanmaz.
+Platforma giriş, Kullanıcının telefon numarasına gönderilen tek kullanımlık doğrulama koduyla ya da Kullanıcının tercihine göre Google/Apple hesabıyla yapılır; OYNA'nın ayrıca bir şifre sistemi yoktur. Kullanıcı, telefonuna gelen doğrulama kodunun ve giriş için kullandığı Google/Apple hesabının gizliliğinden bizzat sorumludur. Hesap üzerinden gerçekleştirilen tüm işlemler, aksi ispat edilmedikçe hesap sahibi tarafından yapılmış sayılır. Kullanıcı, hesabının yetkisiz kişilerce kullanıldığını fark ettiği anda ${CONTACT_EMAIL} üzerinden OYNA'ya derhal bildirimde bulunmakla yükümlüdür. Bildirim yapılana kadar geçen sürede hesap üzerinden gerçekleştirilen yetkisiz işlemlerden Kullanıcının sorumluluğu; OYNA'nın Platformda makul ve sektör standartlarına uygun güvenlik önlemlerini (şifreleme, güvenli oturum yönetimi ve isteğe bağlı çok faktörlü doğrulama imkânı dahil) sunmuş olması ve Kullanıcının kendi ağır kusuru bulunmaması kaydıyla, ilgili bildirim öncesi dönemde gerçekleşen işlem başına, Kullanıcının o işlem için ödediği bedeli aşmayacak şekilde sınırlıdır. Kullanıcının hesap bilgilerini kasten üçüncü kişiyle paylaşması veya ağır ihmali hâlinde bu sınırlama uygulanmaz.
 
 3.3 Hesabın Kişisel Niteliği
 Hesap, yalnızca kayıt sahibi Kullanıcı tarafından kullanılabilir; başka bir kişiye devredilemez, satılamaz veya kiralanamaz. Bir kişinin birden fazla hesap açması, yalnızca OYNA'nın önceden yazılı (e-posta ile) onayı ile ve meşru bir amaca dayanması hâlinde mümkündür.
@@ -122,7 +122,7 @@ Fatura düzenleme yükümlülüğü, hizmeti fiilen sunan tarafa (Tesis) veya ka
 6. İPTAL VE İADE
 
 6.1 Genel Kurallar (Kullanıcı Kaynaklı İptaller)
-- Rezervasyon/maç saatine 24 saat ve üzerinde kala yapılan iptallerde: ödenen tutarın tamamı, ödemenin yapıldığı karta iade edilir (yalnızca ödeme altyapısı işlem bedeli hariç).
+- Rezervasyon/maç saatine 24 saat ve üzerinde kala yapılan iptallerde: ödenen tutardan YALNIZCA ödeme altyapısının işlem bedeli düşülür ve kalan tutar ödemenin yapıldığı karta iade edilir. OYNA bu iadeden kendi komisyonunu almaz. İşlem bedelinin oranı ve tutarı, ödeme ekranında ödemeden ÖNCE yazılıdır.
 - 6-24 saat arasında (6. saat dahil, 24. saat hariç) kala yapılan iptallerde: %50, ödemenin yapıldığı karta iade edilir.
 - 6 saatten az kala yapılan iptallerde: iade yapılmaz.
 İadenin yapılacağı yer: Bu maddedeki tüm iadeler, ödemenin yapıldığı karta işlenir (Mesafeli Sözleşmeler Yönetmeliği m.15/2). OYNA, Kullanıcı adına bakiye tutmaz; iade tutarı Platform içinde harcanmak üzere bir bakiyeye aktarılmaz. Tutarın karta yansıma süresi bankaya bağlıdır.
@@ -388,7 +388,7 @@ Hizmet, seçtiğiniz tesis ve saatteki saha kiralamasıdır. Kapora tutarı ve t
 Kapora, uygulama üzerinden güvenli ödeme altyapısı ile tahsil edilir. Kalan tutarın ödeme şekli tesise göre değişebilir.
 
 4. İPTAL VE İADE KOŞULLARI
-- Rezervasyon/maç saatine 24 SAATTEN FAZLA süre kala yapılan iptallerde: ödenen tutarın tamamına yakını iade edilir (yalnızca ödeme altyapısı sağlayıcısının kestiği işlem bedeli hariç).
+- Rezervasyon/maç saatine 24 SAATTEN FAZLA süre kala yapılan iptallerde: ödediğiniz tutarın TAMAMI iade edilir. Ödeme altyapısı sağlayıcısının kestiği işlem bedeli de size yansıtılmaz; o maliyeti OYNA üstlenir.
 - Rezervasyon/maç saatine 6-24 SAAT kala yapılan iptallerde: ödenen tutarın %50'si iade edilir.
 - Rezervasyon/maç saatine 6 SAATTEN AZ kala yapılan iptallerde: iade yapılmaz.
 - Yukarıdaki saatler Platform varsayılanıdır; tesis kendi ücretsiz iptal süresini farklı belirleyebilir. O rezervasyon/maç için geçerli süre, ödeme yapmadan önce ilgili ekranda gösterilir.
@@ -396,7 +396,7 @@ Kapora, uygulama üzerinden güvenli ödeme altyapısı ile tahsil edilir. Kalan
 4.1 İADE NEREYE YAPILIR?
 - İade, ödemenin yapıldığı karta yapılır (Mesafeli Sözleşmeler Yönetmeliği m.15/2 uyarınca ödemede kullanılan araca iade esastır).
 - İade talebiniz iptal anında işleme alınır; tutarın kartınıza yansıma süresi bankanıza bağlıdır (genellikle 1-3 iş günü, bazı bankalarda daha uzun sürebilir).
-- İade tutarından yalnızca ödeme altyapısı sağlayıcısının işlem bedeli düşülür; OYNA ayrıca bir kesinti yapmaz.
+- İade tutarından YALNIZCA ödeme altyapısının işlem bedeli düşülür; OYNA komisyonu düşülmez. Bu bedel, karttan çekilen TOPLAM tutar üzerinden hesaplanır — kısmi iadede de böyledir, çünkü ödeme kuruluşu komisyonunu iade işleminde geri vermez. Oran ve tutar, ödeme ekranında ödemeden ÖNCE gösterilir (yukarıdaki kademeli oranlar saklıdır).
 - OYNA, kullanıcı adına bakiye (cüzdan) tutmaz; iadeler Platform içinde harcanmak üzere bir bakiyeye DEĞİL, doğrudan ödeme aracınıza döner.
 
 5. CAYMA HAKKI İSTİSNASI

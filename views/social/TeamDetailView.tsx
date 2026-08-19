@@ -512,7 +512,7 @@ const TeamDetailView: React.FC<TeamDetailViewProps> = ({ onBack, onNavigate }) =
   if (!loading && !team) {
     return (
       <div className="h-full bg-[#0A0E14] text-white flex flex-col font-sans">
-        <div className="pt-safe px-5 pt-5">
+        <div className="pt-safe-baslik px-5">
           <button onClick={onBack} aria-label="Geri" className="w-10 h-10 -ml-2 rounded-xl flex items-center justify-center text-white/70 active:scale-95">
             <ChevronLeft size={22} />
           </button>
@@ -530,7 +530,7 @@ const TeamDetailView: React.FC<TeamDetailViewProps> = ({ onBack, onNavigate }) =
   return (
     <div className="h-full bg-[#0A0E14] text-white flex flex-col font-sans">
       {/* ── Başlık — takım-rengi kimlik alanı ── */}
-      <div className="pt-safe px-5 pb-3 relative overflow-hidden flex-shrink-0">
+      <div className="pt-safe-baslik px-5 pb-3 relative overflow-hidden flex-shrink-0">
         <div
           className="absolute inset-0 pointer-events-none"
           style={{ background: `linear-gradient(160deg, ${c1}29 0%, transparent 55%)` }}

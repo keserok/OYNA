@@ -242,7 +242,7 @@ export const ProfileEditSheet: React.FC<ProfileEditSheetProps> = ({
                     <UserAvatar
                         name={gosterilenAd}
                         avatarUrl={fotoVar ? avatar : null}
-                        className="w-16 h-16 rounded-full border border-white/[0.14] shrink-0"
+                        className="w-16 h-16 rounded-full shrink-0"
                         textClassName="text-[1.375rem]"
                     />
                     <div className="flex-1 min-w-0 flex flex-col gap-1 items-start">
