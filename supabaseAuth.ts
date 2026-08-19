@@ -494,6 +494,16 @@ const DEMO_DOMAIN = '@oyna.app';
 // ortak şifreyi kullanmıyor — seçici onu açmaz.
 const INCELEME_PAKETI = import.meta.env.VITE_MAGAZA_INCELEME === 'true';
 
+/**
+ * Bu paket mağaza incelemesi için mi derlendi?
+ *
+ * Giriş ekranı bunu okuyup incelemeciye NE YAPACAĞINI yazar. İncelemecinin
+ * Türk numarası yok; ekranda yalnız "numaranı gir" yazsaydı, demo düğmesini
+ * fark etmeyip uygulamayı "çalışmıyor" diye reddedebilirdi. Normal yayın
+ * paketinde bu not hiç render edilmez.
+ */
+export const isIncelemePaketi = (): boolean => INCELEME_PAKETI;
+
 const DEMO_PASSWORD =
   (import.meta.env.VITE_DEMO_ACCOUNTS === 'true' || import.meta.env.VITE_MAGAZA_INCELEME === 'true')
     ? 'password123' : '';

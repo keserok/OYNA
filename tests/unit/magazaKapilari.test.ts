@@ -527,3 +527,37 @@ describe('Mağaza gönderim denetimi betiği', () => {
     expect(pkg.scripts['surum:artir']).toBe('node scripts/surum-artir.mjs');
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// İNCELEMECİYE YÖNERGE (19 Ağustos 2026)
+//
+// İncelemecinin Türk numarası yok; SMS kodu ona ulaşmıyor. Ekranda yalnız
+// "numaranı gir" yazsaydı demo düğmesini fark etmeyip uygulamayı "çalışmıyor"
+// diye reddedebilirdi — gönderimin en olası ret sebebi buydu.
+// ═══════════════════════════════════════════════════════════════════════════
+describe('Mağaza incelemecisine yönerge', () => {
+  const ekran = () => oku('views/AuthScreen.tsx');
+
+  it('yönerge YALNIZ inceleme paketinde render ediliyor', () => {
+    const s = ekran();
+    expect(s).toContain('isIncelemePaketi() && showDemoPicker');
+  });
+
+  it('İngilizce yazıyor — incelemecinin Türkçe okuduğu varsayılamaz', () => {
+    const s = ekran();
+    expect(s).toContain('SMS codes are sent to Turkish numbers only');
+    expect(s).toContain('DEMO HESABIYLA GİR');
+  });
+
+  it('ne yapılacağını adım adım söylüyor', () => {
+    const s = ekran();
+    // Onay kutusu şart; söylenmezse incelemeci düğmeye basıp tepki alamaz.
+    expect(s).toContain('tick the consent box');
+    expect(s).toContain('onay kutusunu');
+  });
+
+  it('yönergenin kapısı normal pakette kapalı', () => {
+    const a = oku('supabaseAuth.ts');
+    expect(a).toContain('export const isIncelemePaketi = (): boolean => INCELEME_PAKETI');
+  });
+});

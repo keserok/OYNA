@@ -5,6 +5,7 @@ import { UserRole } from '../types';
 import {
   loginWithGoogle, loginWithApple, sendPhoneOtp, verifyPhoneOtp, demoLogin,
   isDemoLoginEnabled, isDemoLoginInput, isDemoAccountPickerEnabled, loginDemoAccount,
+  isIncelemePaketi,
   oauthDonusunuOku,
 } from '../supabaseAuth';
 import { DEMO_ACCOUNT_GROUPS } from '../data/demoAccounts';
@@ -726,6 +727,35 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
                 <p style={{ margin: '10px 2px 0', fontSize: 10, color: '#59636e' }}>
                   Çıkış yapana kadar oturumun bu cihazda açık kalır.
                 </p>
+
+                {/* ─── Mağaza incelemecisine yönerge ───────────────────────
+                    YALNIZ inceleme paketinde görünür. İncelemecinin Türk
+                    numarası yok; kod ona ulaşmıyor. Bu not olmasaydı demo
+                    düğmesini fark etmeyip uygulamayı "çalışmıyor" diye
+                    reddedebilirdi — gönderimin en olası ret sebebi buydu.
+                    İki dilde: incelemecinin Türkçe okuduğunu varsayamayız. */}
+                {isIncelemePaketi() && showDemoPicker && (
+                  <div
+                    style={{
+                      marginTop: 16, padding: '12px 14px', borderRadius: 14,
+                      border: '1px solid rgba(250,204,21,.28)',
+                      background: 'rgba(250,204,21,.07)',
+                    }}
+                  >
+                    <p style={{ margin: 0, fontSize: 11, fontWeight: 800, letterSpacing: '.06em', color: '#FACC15' }}>
+                      APP REVIEW · İNCELEME
+                    </p>
+                    <p style={{ margin: '6px 0 0', fontSize: 11.5, lineHeight: 1.55, color: 'rgba(255,255,255,.82)' }}>
+                      SMS codes are sent to Turkish numbers only. To review the app,
+                      tick the consent box below and use <b>“DEMO HESABIYLA GİR”</b> —
+                      it opens player, goalkeeper, referee and facility accounts.
+                    </p>
+                    <p style={{ margin: '6px 0 0', fontSize: 11.5, lineHeight: 1.55, color: 'rgba(255,255,255,.6)' }}>
+                      Kod yalnız Türkiye numaralarına gider. İncelemek için onay kutusunu
+                      işaretleyip “DEMO HESABIYLA GİR”i kullan.
+                    </p>
+                  </div>
+                )}
 
                 {/* ─── Demo hesap seçici — GEÇİCİ (sonra kaldırılacak) ─── */}
                 {showDemoPicker && (
