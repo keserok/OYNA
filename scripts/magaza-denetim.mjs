@@ -70,6 +70,21 @@ denetle('Sürüm numaraları', () => {
     tamam(`Sürüm adı iki platformda da ${aVarsayilanAd}`);
   }
 
+  // package.json sürümü de AYNI olmalı: vite onu `VITE_APP_VERSION` olarak
+  // gömüyor ve BEŞ kullanıcı ekranı bu rozeti gösteriyor (Ayarlar, Hizmet
+  // paneli, Hizmet ayarları, İşletme menüsü, Uygulama kapısı). Ayrışırsa
+  // mağazada "1.0.0" yazan uygulama, kendi Ayarlar ekranında "v3.0.0" der —
+  // Apple 2.3 "Accurate Metadata" için gereksiz bir soru işareti. Gerçekte
+  // ayrışmıştı: package.json 3.0.0, yerel sürümler 1.0.0.
+  const pkgAd = JSON.parse(readFileSync(join(KOK, 'package.json'), 'utf8')).version;
+  if (pkgAd !== aVarsayilanAd) {
+    engel('package.json sürümü yerel sürümle ayrışmış',
+      `package.json ${pkgAd}, paket ${aVarsayilanAd}. Uygulama içi sürüm rozeti ` +
+      `package.json'dan okunuyor; kullanıcı mağazadakinden farklı bir numara görür.`);
+  } else {
+    tamam(`Uygulama içi sürüm rozeti de ${pkgAd}`);
+  }
+
   const iKodBenzersiz = [...new Set(iKod)];
   if (iKodBenzersiz.length > 1) {
     engel('iOS derleme numarası tutarsız', `Farklı CURRENT_PROJECT_VERSION değerleri: ${iKodBenzersiz.join(', ')}`);
