@@ -58,6 +58,8 @@ const RPC_CHECKS = [
   { name: 'admin_psp_costs', body: { p_days: 1 } },
   { name: 'admin_notification_type_stats', body: { p_days: 1 } },
   { name: 'admin_commission_health', body: {} },
+  // 20260915000003 — kokpit "durumu yeniden hesapla" kapısı
+  { name: 'admin_recompute_match_status', body: { p_match_id: '00000000-0000-0000-0000-000000000001' } },
 ];
 
 const env = loadEnv();

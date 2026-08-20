@@ -20,7 +20,10 @@ import { pushIzniZamaniGeldi } from '../notifications/pushIzniKapisi';
 import { auth } from '../supabaseAuth';
 import { supabase } from '../supabaseClient';
 import { subscribeToMatchUpdates, getMatchDetails, getPitchCoordinates, getMatchLobbyParticipants, getFriendPlayerCard, getMatchProviders, getMyMatchPrivateCode, selfAssignSlot, assignSlotToFriend, unassignSlot, releaseSlot, kickSlot, updateFormationRpc, leaveMatchSlot, leaveQuoteMessage, iadeKademesiCumlesi, type LobbyParticipant, type FriendPlayerCard, type MatchProvider } from '../services/matchService';
-import { sendFriendRequest } from '../services/friendService';
+// Arkadaşlık isteği TEK yoldan gider: send_friend_request RPC'si (RLS bunu
+// şart koşar — friendships'e istemciden doğrudan INSERT politikası bilinçli
+// olarak yok; eski friendService.sendFriendRequest bu yüzden hep 42501 düşüyordu).
+import { sendFriendRequest, parseSocialError } from '../services/socialService';
 import MatchSquadPicker, { type PickedPlayer } from '../components/social/MatchSquadPicker';
 import { getMatchTacticProposals, proposeMatchTactic, listMyTacticsLite, type MatchTacticProposal, type MyTacticLite } from '../services/tacticSocialService';
 import { findProvidersForMatch, getMatchServiceRequests, acceptProviderApplication, declineProviderApplication, captainConfirmService, captainReportNoShow } from '../services/serviceRequestService';
@@ -1259,11 +1262,13 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                             disabled={friendRequestSent}
                             onClick={async () => {
                               try {
-                                await sendFriendRequest(currentUserUid, activePlayer.id);
+                                const res = await sendFriendRequest(activePlayer.id);
                                 setFriendRequestSent(true);
-                                showActionSuccess('Arkadaşlık isteği gönderildi.');
-                              } catch (e: any) {
-                                showActionError(mapError(e, 'İstek gönderilemedi.'));
+                                showActionSuccess(res.auto_accepted
+                                  ? 'Artık arkadaşsınız 🤝'
+                                  : 'Arkadaşlık isteği gönderildi.');
+                              } catch (e: unknown) {
+                                showActionError(parseSocialError(e));
                               }
                             }}
                             className="w-full mt-3 py-3 rounded-2xl font-extrabold text-[0.6875rem] uppercase tracking-widest text-ink bg-white/[0.06] border border-line-strong active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-60">

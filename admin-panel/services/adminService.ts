@@ -2249,6 +2249,17 @@ export async function setMatchStatusAdmin(matchId: string, status: string): Prom
   if (error) throw new Error(error.message);
 }
 
+/**
+ * Maç durumunu doluluk/eşik kurallarından YENİDEN hesaplatır (sunucu otoritesi).
+ * Slot müdahaleleri bunu zaten içeriden çağırır; bu sarmalayıcı "durum takılı
+ * kaldı" vakaları için kokpitteki elle tetiği besler. Dönen değer yeni durumdur.
+ */
+export async function recomputeMatchStatusAdmin(matchId: string): Promise<string> {
+  const { data, error } = await supabase.rpc('admin_recompute_match_status', { p_match_id: matchId });
+  if (error) throw new Error(isRpcMissing(error) ? 'admin_recompute_match_status kapısı açık değil — 20260915000003 göçü uygulanmalı' : error.message);
+  return String(data ?? '');
+}
+
 export async function deleteMatchAdmin(matchId: string): Promise<void> {
   const { error } = await supabase.rpc('admin_delete_match', { p_match_id: matchId });
   if (error) {

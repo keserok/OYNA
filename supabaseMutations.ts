@@ -216,11 +216,6 @@ export const fbDeleteNotification = async (id: string) => {
   if (error) throw new Error(`Bildirim silinemedi: ${error.message}`);
 };
 
-export const fbToggleNotificationAlert = async (id: string, isActive: boolean) => {
-  const { error } = await supabase.from('notifications').update({ isActive }).eq('id', id);
-  if (error) throw new Error(`Bildirim durumu değiştirilemedi: ${error.message}`);
-};
-
 export const fbProcessMatchPayment = async (userId: string, matchId: string, amount: number) => {
   if (amount <= 0) return { success: true };
 
