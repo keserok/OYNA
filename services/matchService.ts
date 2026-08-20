@@ -533,8 +533,8 @@ export const iadeKademesiCumlesi = (p: MatchCancelPolicy): string =>
 
 /** Ayrılınca ne olacağının sunucu tarafından hesaplanmış tam cevabı. */
 export interface LeaveMatchQuote {
-  refundable: number;       // ayrılınca cüzdana dönecek tutar (₺) — kademe uygulanmış
-  paid: number;             // bu maça bugüne dek ödenen tutar (₺)
+  refundable: number;       // ayrılınca KARTA dönecek tutar (₺) — kademe + kesinti uygulanmış
+  paid: number;             // bu maç için karttan ÇEKİLEN toplam (₺) — kurucu kararı 20 Ağu
   alreadyRefunded: boolean; // daha önce iade alınmış mı
   inSquad: boolean;         // sahada mı (false = yedek kulübesi / slotu arkadaşında)
   hoursToStart: number;     // maç başlangıcına kalan saat
@@ -544,7 +544,17 @@ export interface LeaveMatchQuote {
   halfPct: number;          // yarım kademe yüzdesi (varsayılan 50)
   late: boolean;            // tam iade penceresi kapandı mı → güvenilirlik cezası
   penalty: number;          // düşecek güvenilirlik puanı
-  forfeited: number;        // kademe nedeniyle iade EDİLMEYEN tutar (₺)
+  forfeited: number;        // kademe nedeniyle iade EDİLMEYEN tutar (₺, kesinti hariç)
+  pspFee: number;           // ödeme altyapısı kesintisi (₺) — yalnız kart ödemesinde
+  // ── Kaptan bağlamı (kurucu kararı, 20 Ağu 2026) ──
+  isCaptain: boolean;            // ayrılan kişi maçın kaptanı mı
+  squadOthers: number;           // kadroda kendisinden başka oturan oyuncu sayısı
+  captainCancelsMatch: boolean;  // kaptan + kimse yok → ayrılış maçı iptal eder
+  depositStatus: string;         // maç kaporasının durumu (BLOCKED/NONE/…)
+  depositAmount: number;         // kapora tabanı (₺) — matches.deposit_amount
+  depositCharged: number;        // kapora için karttan çekilen toplam (₺)
+  depositRefundable: number;     // iptalde kaporadan dönecek tutar (₺, kesinti düşülmüş)
+  depositLate: boolean;          // serbest-iptal penceresi kapandı mı (kapora yanar)
 }
 
 /**
@@ -569,6 +579,15 @@ export const previewLeaveMatch = async (matchId: string): Promise<LeaveMatchQuot
     late: !!d.late,
     penalty: Number(d.penalty) || 0,
     forfeited: Number(d.forfeited) || 0,
+    pspFee: Number(d.psp_fee) || 0,
+    isCaptain: !!d.is_captain,
+    squadOthers: Number(d.squad_others) || 0,
+    captainCancelsMatch: !!d.captain_cancels_match,
+    depositStatus: String(d.deposit_status ?? 'NONE'),
+    depositAmount: Number(d.deposit_amount) || 0,
+    depositCharged: Number(d.deposit_charged) || 0,
+    depositRefundable: Number(d.deposit_refundable) || 0,
+    depositLate: !!d.deposit_late,
   };
 };
 
@@ -602,32 +621,60 @@ export const leaveQuoteMessage = (
     };
   }
 
+  // ── Kaptan yalnız: ayrılış maçı İPTAL eder (kurucu kararı, 20 Ağu 2026).
+  // Sunucu bu durumda match_cancel_by_captain'ı çalıştırır; kapora kuralı da
+  // burada dürüstçe söylenir — sürpriz yok.
+  if (quote.captainCancelsMatch) {
+    const kapora =
+      quote.depositStatus === 'BLOCKED' && quote.depositCharged > 0
+        ? (quote.depositLate
+            ? ` Maça ${quote.fullHours} saatten az kaldığı için ödediğin ${formatTRYAmount(quote.depositCharged)} kapora iade edilmez.`
+            : ` Ödediğin kaporadan ${formatTRYAmount(quote.depositRefundable)} kartına iade edilir (ödeme altyapısı kesintisi düşülür).`)
+        : quote.depositStatus === 'AWAITING_PAYMENT'
+          ? ' Kapora ödenmediği için kartından para çekilmez.'
+          : '';
+    return {
+      tone: quote.depositLate ? 'late' : 'refund',
+      text: `Kadroda senden başka oyuncu yok: ayrılırsan maç iptal edilir ve saha saati serbest kalır.${kapora}`,
+    };
+  }
+
   // Tam iade penceresi kapandı: kademe ve/veya güvenilirlik cezası devrede.
   if (quote.late) {
     const esik = quote.refundPct > 0
       ? `Maça ${quote.fullHours} saatten az kaldı`
       : `Maça ${quote.halfHours} saatten az kaldı`;
+    const kesinti = quote.pspFee > 0
+      ? `, ödeme altyapısı kesintisi (${formatTRYAmount(quote.pspFee)}) düşülerek,`
+      : '';
     const para =
-      quote.forfeited <= 0 ? ''
+      quote.forfeited <= 0 && quote.refundable <= 0 ? ''
       : quote.refundable > 0
-        ? ` Ödediğinin %${quote.refundPct}'i (${formatTRYAmount(quote.refundable)}) cüzdanına döner, ${formatTRYAmount(quote.forfeited)} iade edilmez.`
-        : ` Ödediğin ${formatTRYAmount(quote.forfeited)} iade edilmez.`;
+        ? ` İade kademesi %${quote.refundPct}: ödediğin ${formatTRYAmount(quote.paid)} üzerinden${kesinti} ${formatTRYAmount(quote.refundable)} kartına iade edilir. Kalanı iade edilmez.`
+        : ` Ödediğin ${formatTRYAmount(quote.paid)} iade edilmez.`;
+    const devir = quote.isCaptain ? ' Kaptanlık kadrodaki en güvenilir oyuncuya devredilir.' : '';
     return {
       tone: 'late',
-      text: `${esik}.${para} Güvenilirlik puanın ${quote.penalty} düşer ve kaptana haber verilecek.`,
+      text: `${esik}.${para}${devir} Güvenilirlik puanın ${quote.penalty} düşer ve kaptana haber verilecek.`,
     };
   }
 
   if (quote.refundable > 0) {
+    const kesinti = quote.pspFee > 0
+      ? ` (ödediğin ${formatTRYAmount(quote.paid)} − ${formatTRYAmount(quote.pspFee)} ödeme altyapısı kesintisi)`
+      : '';
+    const devir = quote.isCaptain ? ' Kaptanlık kadrodaki en güvenilir oyuncuya devredilir.' : '';
     return {
       tone: 'refund',
-      text: `Ödediğin ${formatTRYAmount(quote.refundable)} ayrılınca cüzdanına döner.`,
+      text: `Ayrılırsan ${formatTRYAmount(quote.refundable)} kartına iade edilir${kesinti}.${devir}`,
     };
   }
   return {
     tone: 'none',
     text: quote.alreadyRefunded
       ? 'Bu maçın ödemesi zaten iade edilmişti; yeni iade yapılmayacak.'
-      : 'Bu maç için iade edilecek tutar yok.',
+      : quote.isCaptain && quote.squadOthers > 0
+        ? 'Bu maç için iade edilecek tutar yok. Kaptanlık kadrodaki en güvenilir oyuncuya devredilir.'
+        : 'Bu maç için iade edilecek tutar yok.',
   };
 };

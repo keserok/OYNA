@@ -14,6 +14,9 @@ import { formatMatchDuration } from '../../shared/matchTiming';
 // IP-19: para tek kaynaktan yazılır — fiyat bağlamında formatTRYShort
 // ("Ücretsiz" karşılığını kendi verir), iade/bakiye bağlamında formatTRYAmount.
 import { formatTRYShort, formatTRYAmount } from '../../utils/formatTRY';
+// Kurucu kararı (20 Ağu 2026): KATIL düğmesindeki rakam karttan ÇEKİLECEK
+// tutardır (tek yer için taban + işlem bedeli, 10'a yuvarlı).
+import { getCardFeePctCached, computeCardTotal } from '../../services/paymentService';
 import {
   getMatchDetails, subscribeToMatchUpdates, getMatchLobbyParticipants,
   selfAssignSlot, unassignSlot, previewLeaveMatch, leaveMatchSlot, leaveQuoteMessage,
@@ -142,6 +145,12 @@ const RahatMatchLobby: React.FC<Props> = ({ match: matchProp, onBack }) => {
 
   const [tab, setTab] = useState<'durum' | 'hakkinda'>('durum');
   const [sheet, setSheet] = useState<'' | 'join' | 'reserve' | 'leave'>('');
+  const [cardFeePct, setCardFeePct] = useState(0);
+  useEffect(() => {
+    let alive = true;
+    getCardFeePctCached().then(p => { if (alive) setCardFeePct(p); }).catch(() => {});
+    return () => { alive = false; };
+  }, []);
   const [busy, setBusy] = useState(false);
   const [loadingRoster, setLoadingRoster] = useState(true);
   const [participants, setParticipants] = useState<LobbyParticipant[]>([]);
@@ -957,7 +966,7 @@ const RahatMatchLobby: React.FC<Props> = ({ match: matchProp, onBack }) => {
           ) : (
             <button type="button" onClick={() => setSheet('join')}
               style={{ width: '100%', height: 54, borderRadius: 16, border: 'none', background: '#39FF14', color: '#0A0E14', fontSize: 14, fontWeight: 900, letterSpacing: '.1em', cursor: 'pointer', boxShadow: '0 0 28px rgba(57,255,20,0.26)' }}>
-              {price === 0 ? 'KATIL · ÜCRETSİZ' : `KATIL · ${formatTRYShort(price)}`}
+              {price === 0 ? 'KATIL · ÜCRETSİZ' : `KATIL · ${formatTRYShort(computeCardTotal(price, cardFeePct))}`}
             </button>
           )}
         </div>

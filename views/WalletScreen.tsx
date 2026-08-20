@@ -949,8 +949,8 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
                       diyordu ama oyuncu için böyle bir ekran YOK — yanlış
                       yönlendirmektense dürüst ol. */}
                   <p className="text-[0.75rem] text-gray-300 leading-relaxed">
-                    Güvenliğin için para çekmeden önce bir kez <span className="text-white font-semibold">TC kimlik doğrulaması</span> gerekiyor.
-                    Bu adım henüz açılmadı; destek ekibiyle iletişime geçebilirsin.
+                    Uygulamadan para çekme kapalı: kazançların OYNA tarafından
+                    IBAN'ına ödenir. Kimlik numarası istenmez.
                   </p>
                 </div>
               )}
@@ -1194,7 +1194,7 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
                       {blockedMatchCount > 1
                         ? `${blockedMatchCount} maçın kaporası bekliyor. `
                         : 'Kurduğun maçın kaporası bekliyor. '}
-                      Kadro dolunca payın düşülüp kalanı, dolmazsa tamamı cüzdanına döner.
+                      Kadro dolunca payın düşülüp kalanı, dolmazsa kesinti düşülerek tamamı kartına iade edilir.
                     </p>
                   </div>
                 </div>

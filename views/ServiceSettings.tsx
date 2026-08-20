@@ -354,7 +354,7 @@ const ServiceSettings: React.FC<ServiceSettingsProps> = ({ role, onBack, onLogou
           sectionKey="security"
           icon={<KeyRound size={18} />}
           title="Hesap Güvenliği"
-          subtitle="Şifre değiştir, hesabı sil"
+          subtitle="Oturumunu yönet, hesabı sil"
           color="#ef4444"
         >
           <div className="space-y-4 pb-1">

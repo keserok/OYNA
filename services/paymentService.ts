@@ -146,6 +146,18 @@ export async function getCardFeePct(): Promise<number> {
   return Number.isFinite(pct) && pct >= 0 ? pct : VARSAYILAN_ORAN;
 }
 
+// Oran oturum boyunca değişmez (panel ayarı); her ödeme-öncesi ekranın ayrı
+// RPC atması gereksiz. İlk çağrı sunucudan okur, sonrakiler bellekten döner.
+// Kurucu kararı (20 Ağu 2026): "Çekilen neyse ekrana onu yaz" — ödeme ÖNCESİ
+// tüm yüzeyler (saha kapora barı, maç kur, maça katıl, kapora öde) bu oranla
+// computeCardTotal kullanır; ekrandaki rakam sunucunun çekeceği rakamdır.
+let _cardFeePctCache: number | null = null;
+export async function getCardFeePctCached(): Promise<number> {
+  if (_cardFeePctCache != null) return _cardFeePctCache;
+  _cardFeePctCache = await getCardFeePct();
+  return _cardFeePctCache;
+}
+
 /** Yalnız altyapı bedeli. Toplam için computeCardTotal kullanılır. */
 export function computeCardFee(base: number, pct: number): number {
   return odemeKirilimi(base, pct).bedel;

@@ -88,11 +88,12 @@ describe('Maç Kur ekranı, sunucudaki eşik kuralını yazar', () => {
 });
 
 describe('Kapora dili — verilen söz tutulabilir olmalı', () => {
-  it('"tamamı iade" sözü veren metin varsa sunucu tarafı da iade yazıyor olmalı', () => {
-    // Ekranda geçen söz (kart dönemi: iade karta döner, "cüzdanına" denmez —
-    // kapora > 0 dalı "maç dolmazsa tamamı iade" sözünü verir):
+  it('"dolmazsa iade" sözü veren metin varsa sunucu tarafı da iade yazıyor olmalı', () => {
+    // Ekranda geçen söz (kart dönemi, 20 Ağu 2026: iade KARTA döner ve ödeme
+    // altyapısı kesintisi DÜŞÜLÜR — "tamamı" ya da "cüzdan" sözü verilmez;
+    // kapora > 0 dalı "maç dolmazsa kesinti düşülerek iade" sözünü verir):
     const ekran = readFileSync(join(process.cwd(), 'views/MatchCreate.tsx'), 'utf8');
-    expect(/kapora[\s\S]{0,80}(tam iade|tamamı iade|dolmazsa tamamı)/i.test(ekran)).toBe(true);
+    expect(/kapora[\s\S]{0,80}dolmazsa kesinti düşülerek (tamamı|iade)/i.test(ekran)).toBe(true);
 
     // Sunucu karşılığı: iptal yolunda kaporayı serbest bırakan çağrı DURMALI.
     const migrasyonlar = join(process.cwd(), 'supabase/migrations');

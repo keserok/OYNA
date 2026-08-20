@@ -12,7 +12,6 @@ import {
   respondServiceRequest,
   reportServiceAttendance,
   getProviderIdentityStatus,
-  submitProviderIdentity,
   applyToMatchAsProvider,
   withdrawProviderApplication,
   providerConfirmService,
@@ -183,12 +182,6 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
 
   // FAZ 5 — TC kimlik doğrulama
   const [identityStatus, setIdentityStatus] = useState<'PENDING' | 'VERIFIED' | 'REJECTED' | null>(null);
-  const [showIdentityModal, setShowIdentityModal] = useState(false);
-  const [identityTc, setIdentityTc] = useState('');
-  const [identityName, setIdentityName] = useState('');
-  const [identityBirthYear, setIdentityBirthYear] = useState('');
-  const [identitySubmitting, setIdentitySubmitting] = useState(false);
-  const [identityFormError, setIdentityFormError] = useState<string | null>(null);
 
   // FAZ 5 — Kazanç bakiyesi (get_wallet_summary → earnings_balance)
   const [earningsBalance, setEarningsBalance] = useState(0);
@@ -638,36 +631,8 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
     }
   };
 
-  // FAZ 5 — TC kimlik doğrulama gönder
-  const handleSubmitIdentity = async () => {
-    if (!guardGuest()) return;
-    setIdentityFormError(null);
-    const tc = identityTc.trim();
-    if (!/^\d{11}$/.test(tc)) {
-      setIdentityFormError('TC kimlik numarası 11 haneli olmalıdır.');
-      return;
-    }
-    if (!identityName.trim()) {
-      setIdentityFormError('Ad soyad zorunludur.');
-      return;
-    }
-    const birthYear = identityBirthYear.trim() ? parseInt(identityBirthYear.trim(), 10) : undefined;
-    setIdentitySubmitting(true);
-    try {
-      await submitProviderIdentity(tc, identityName.trim(), birthYear);
-      showActionSuccess('Kimlik doğrulama talebin gönderildi.');
-      setShowIdentityModal(false);
-      setIdentityTc('');
-      setIdentityName('');
-      setIdentityBirthYear('');
-      await fetchIdentityStatus();
-    } catch (err: any) {
-      console.error('handleSubmitIdentity:', err);
-      setIdentityFormError(err?.message || 'Kimlik doğrulama gönderilemedi. Lütfen tekrar dene.');
-    } finally {
-      setIdentitySubmitting(false);
-    }
-  };
+  // TC kimlik gönderimi SÖKÜLDÜ (kurucu kararı 2.15): kimlik numarası
+  // istenmez, saklanmaz. Sağlayıcı onayı yönetici panelinden verilir.
 
   useEffect(() => {
     if (!userProfile?.id) return;
@@ -777,7 +742,6 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
           await Promise.all([fetchEarnings(), fetchPayoutData(), fetchWalletHistory()]);
       } catch (err: any) {
           console.error('Transfer error:', err);
-          if (String(err?.message || '').includes('kimlik')) setShowIdentityModal(true);
           showActionError(err?.message || 'Çekim talebi oluşturulamadı. Lütfen tekrar dene.');
       } finally {
           setIsTransferring(false);
@@ -1257,7 +1221,11 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
       </div>
   );
 
-  // FAZ 5 — TC kimlik doğrulama CTA / rozet
+  // Profil onayı rozeti — kurucu kararı 2.15 (20 Ağu 2026): TC kimlik numarası
+  // HİÇBİR yerde istenmez. Eski "TC kimlik doğrulama" modülü söküldü; burada
+  // yalnız yöneticinin verdiği profil onayının durumu gösterilir. Ödeme
+  // çerçevesi de kalktı: çekim uygulamadan yapılmaz, kazançlar OYNA
+  // tarafından elden ödenir (shared/featureFlags.ts).
   const renderIdentitySection = () => (
       <div className="px-6">
           {identityStatus === 'VERIFIED' ? (
@@ -1266,8 +1234,8 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                       <BadgeCheck size={18} />
                   </div>
                   <div>
-                      <p className="text-sm font-extrabold text-green-400">Kimlik doğrulandı</p>
-                      <p className="text-[0.6875rem] text-gray-400 font-bold">Ödemelerini alabilirsin.</p>
+                      <p className="text-sm font-extrabold text-green-400">Profil onaylı</p>
+                      <p className="text-[0.6875rem] text-gray-400 font-bold">Kaptanlardan teklif alabilirsin; kazancın OYNA tarafından ödenir.</p>
                   </div>
               </div>
           ) : (
@@ -1278,21 +1246,13 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                       </div>
                       <div className="flex-1">
                           <p className="text-sm font-extrabold text-white">
-                              {identityStatus === 'PENDING' ? 'Kimlik doğrulaması inceleniyor' : identityStatus === 'REJECTED' ? 'Kimlik doğrulaması reddedildi' : 'Kimlik doğrulaması gerekli'}
+                              {identityStatus === 'PENDING' ? 'Profil onayı inceleniyor' : identityStatus === 'REJECTED' ? 'Profil onayı reddedildi' : 'Profil onayı bekleniyor'}
                           </p>
                           <p className="text-[0.6875rem] text-gray-300 font-bold mt-0.5">
-                              Ödemelerini alabilmek için TC kimlik doğrulaması gerekli.
+                              Onay tamamlanınca kaptanlardan teklif almaya başlarsın. Belge ya da kimlik numarası istenmez.
                           </p>
                       </div>
                   </div>
-                  {identityStatus !== 'PENDING' && (
-                      <button
-                          onClick={() => { if (!guardGuest()) return; setIdentityName(userProfile?.fullName || ''); setIdentityFormError(null); setShowIdentityModal(true); }}
-                          className="w-full mt-3 py-2.5 rounded-xl bg-yellow-500 hover:bg-yellow-400 text-black text-xs font-extrabold uppercase tracking-wider transition-colors"
-                      >
-                          Kimlik Doğrula
-                      </button>
-                  )}
               </div>
           )}
       </div>
@@ -1987,13 +1947,16 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
               <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Toplam Kazanç</p>
               <h2 className="text-4xl font-extrabold text-white mt-2">{money(earningsBalance + reservedBalance)}</h2>
 
+              {/* Kurucu kararı (19-20 Ağu 2026): uygulamadan çekim yok — kazanç
+                  OYNA tarafından ödenir. Etiketler de aynı dili konuşur:
+                  "çekilebilir" değil "ödenecek". */}
               <div className="mt-6 flex gap-4">
                   <div className="flex-1">
-                      <p className="text-[0.6875rem] text-ink-4 uppercase font-bold">Çekilebilir</p>
+                      <p className="text-[0.6875rem] text-ink-4 uppercase font-bold">Ödenecek</p>
                       <p className="text-xl font-bold text-green-400">{money(earningsBalance)}</p>
                   </div>
                   <div className="flex-1 border-l border-white/10 pl-4">
-                      <p className="text-[0.6875rem] text-ink-4 uppercase font-bold">Çekim Bekleyen</p>
+                      <p className="text-[0.6875rem] text-ink-4 uppercase font-bold">Onay Bekleyen</p>
                       <p className="text-xl font-bold text-gray-300">{money(reservedBalance)}</p>
                   </div>
               </div>
@@ -2007,44 +1970,15 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                   </div>
               )}
 
-              <div className="mt-6 flex flex-col gap-3">
-                  {(() => {
-                      const defaultMethod = payoutMethods.find(m => m.isDefault) ?? payoutMethods[0];
-                      const methodLabel = defaultMethod
-                          ? (defaultMethod.kind === 'IBAN'
-                              ? `IBAN •• ${defaultMethod.iban?.slice(-4)}`
-                              : `${defaultMethod.cardBrand ?? 'KART'} **** ${defaultMethod.cardLast4}`)
-                          : 'ÖDEME YÖNTEMİ EKLE';
-                      return (
-                          <div className="flex gap-2">
-                              <button
-                                  onClick={() => { if (!guardGuest()) return; setShowCardOptions(true); }}
-                                  className="flex-1 py-3 bg-[#161B22] border border-white/10 text-white rounded-2xl font-extrabold text-sm shadow-lg hover:bg-white/5 transition-all active:scale-95 flex items-center justify-center gap-2"
-                              >
-                                  <CreditCard size={18} /> {methodLabel}
-                              </button>
-                              <button
-                                onClick={handleTransfer}
-                                disabled={isTransferring || !!pendingPayout || earningsBalance <= 0}
-                                className={`flex-1 py-3 ${isTransferring || !!pendingPayout || earningsBalance <= 0 ? 'bg-gray-600 opacity-50 cursor-not-allowed' : 'bg-[#34C759] hover:bg-[#2dbb4f]'} text-white rounded-2xl font-extrabold text-sm shadow-lg shadow-green-900/20 transition-all active:scale-95 flex items-center justify-center gap-2`}
-                              >
-                                  {isTransferring ? (
-                                      <RefreshCcw size={18} className="animate-spin" />
-                                  ) : transferSuccess ? (
-                                      <Check size={18} />
-                                  ) : (
-                                      <Banknote size={18} />
-                                  )}
-                                  {isTransferring ? 'GÖNDERİLİYOR…' : transferSuccess ? 'TALEP ALINDI' : 'PARAYI ÇEK'}
-                              </button>
-                          </div>
-                      );
-                  })()}
-                  {identityStatus !== 'VERIFIED' && (
-                      <p className="text-center text-[0.625rem] font-bold text-yellow-500/80 uppercase tracking-widest">
-                          İlk çekim öncesi TC kimlik doğrulaması gerekir
-                      </p>
-                  )}
+              {/* ÇEKİM KAPALI (kurucu kararı, 19-20 Ağu 2026): uygulamadan
+                  çekim talebi YOKTUR; kazanç OYNA tarafından elden ödenir.
+                  Defter aynen görünür — kapanan tek şey düğmeydi. TC kimlik
+                  şartı da gövdesiyle birlikte kalktı (2.15). */}
+              <div className="mt-6 flex items-start gap-3 bg-[#39FF14]/[0.06] border border-[#39FF14]/20 rounded-2xl px-4 py-3.5">
+                  <Banknote size={18} className="text-[#39FF14] shrink-0 mt-0.5" />
+                  <p className="text-[0.75rem] font-bold leading-relaxed text-gray-300">
+                      {CEKIM_KAPALI_ACIKLAMA}
+                  </p>
               </div>
 
               <AnimatePresence>
@@ -2752,63 +2686,9 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
         )}
       </AnimatePresence>
 
-      {/* FAZ 5 — TC KİMLİK DOĞRULAMA MODAL */}
-      {showIdentityModal && (
-          <div className="fixed inset-0 z-[60] bg-black/80 backdrop-blur-sm flex items-end justify-center animate-in fade-in duration-200">
-              <div className="bg-[#161B22] w-full max-w-md rounded-t-[32px] border-t border-white/10 p-6 shadow-2xl relative animate-in slide-in-from-bottom duration-300">
-                  <div className="flex justify-between items-center mb-2">
-                      <h3 className="text-xl font-extrabold text-white uppercase tracking-wide">KİMLİK DOĞRULA</h3>
-                      <button onClick={() => setShowIdentityModal(false)} className="p-2 bg-white/5 rounded-full text-gray-400 hover:text-white"><X size={20} /></button>
-                  </div>
-                  <p className="text-[0.6875rem] text-gray-400 font-bold mb-6">Ödemelerini alabilmek için TC kimlik doğrulaması gerekli.</p>
-
-                  <div className="space-y-4">
-                      <div>
-                          <p className="text-[0.625rem] font-extrabold uppercase tracking-widest text-gray-400 mb-1.5">TC Kimlik No</p>
-                          <input
-                              value={identityTc}
-                              onChange={e => setIdentityTc(e.target.value.replace(/\D/g, '').slice(0, 11))}
-                              inputMode="numeric"
-                              placeholder="11 haneli TC kimlik no"
-                              className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white font-mono text-sm outline-none focus:border-yellow-500/50 transition-colors"
-                          />
-                      </div>
-                      <div>
-                          <p className="text-[0.625rem] font-extrabold uppercase tracking-widest text-gray-400 mb-1.5">Ad Soyad</p>
-                          <input
-                              value={identityName}
-                              onChange={e => setIdentityName(e.target.value)}
-                              placeholder="AD SOYAD"
-                              className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white font-bold text-sm outline-none focus:border-yellow-500/50 transition-colors"
-                          />
-                      </div>
-                      <div>
-                          <p className="text-[0.625rem] font-extrabold uppercase tracking-widest text-gray-400 mb-1.5">Doğum Yılı (opsiyonel)</p>
-                          <input
-                              value={identityBirthYear}
-                              onChange={e => setIdentityBirthYear(e.target.value.replace(/\D/g, '').slice(0, 4))}
-                              inputMode="numeric"
-                              placeholder="örn. 1995"
-                              className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white font-mono text-sm outline-none focus:border-yellow-500/50 transition-colors"
-                          />
-                      </div>
-
-                      {identityFormError && (
-                          <p className="text-[0.6875rem] text-red-400 font-bold">{identityFormError}</p>
-                      )}
-
-                      <button
-                          onClick={handleSubmitIdentity}
-                          disabled={identitySubmitting}
-                          className="w-full py-4 bg-yellow-500 hover:bg-yellow-400 text-black font-extrabold text-sm rounded-2xl transition-colors shadow-lg disabled:opacity-50 flex items-center justify-center gap-2 uppercase tracking-wider"
-                      >
-                          {identitySubmitting ? <RefreshCcw size={16} className="animate-spin" /> : <BadgeCheck size={16} />}
-                          {identitySubmitting ? 'Gönderiliyor…' : 'Doğrulamayı Gönder'}
-                      </button>
-                  </div>
-              </div>
-          </div>
-      )}
+      {/* TC kimlik doğrulama modalı SÖKÜLDÜ (kurucu kararı 2.15, 20 Ağu 2026):
+          TC kimlik numarası hiçbir ekranda İSTENMEZ ve SAKLANMAZ. Sağlayıcı
+          onayı yönetici tarafından, belge/kimlik numarası olmadan verilir. */}
 
       {/* Custom Styles for 3D Flip */}
       <style>{`

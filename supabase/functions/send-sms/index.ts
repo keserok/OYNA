@@ -28,10 +28,13 @@
 //   NETGSM_PASSWORD        Netgsm API şifresi
 //   NETGSM_MSGHEADER       Onaylı gönderici başlığı (ör. OYNA)
 //   WHATSAPP_ENABLED       'true' yapılınca yurt dışı kanalı açılır (bugün kapalı)
+//   SMS_SIMULATION         YALNIZ geliştirme: 'true' ise anahtarsız ortamda istek
+//                          başarılı sayılır (gerçek SMS yok, kod loglanmaz)
 //
-// ANAHTARLAR EKSİKSE: SİMÜLASYON çalışır — gerçek SMS gitmez, kod sunucu
-// logunda GÖRÜNMEZ, istek başarılı döner. Bu YALNIZ geliştirme içindir;
-// üretimde anahtarlar tanımlıdır ve simülasyon dalına hiç girilmez.
+// ANAHTARLAR EKSİKSE (kurucu onayı, 20 Ağu 2026): istek REDDEDİLİR (503) —
+// fail-closed. "Gönderildi" deyip sessizce yutmak, kullanıcıyı hiç gelmeyecek
+// bir kodla bekletmek demektir. Tek istisna, SMS_SIMULATION='true' yazılmış
+// geliştirme ortamıdır; üretimde bu değişken tanımlanmaz.
 // ═══════════════════════════════════════════════════════════════════════════
 
 const corsHeaders = {
@@ -183,10 +186,18 @@ Deno.serve(async (req: Request) => {
     && !!Deno.env.get('NETGSM_MSGHEADER')
 
   if (!netgsmReady) {
-    // Geliştirme: gerçek SMS yok. KOD LOGLANMAZ — loga düşen kod, log okuma
-    // yetkisi olan herkes için hesap anahtarıdır.
-    console.warn('[send-sms] SİMÜLASYON (Netgsm anahtarları yok):', maskPhone(phone))
-    return json({ ok: true, simulated: true })
+    // FAIL-CLOSED (kurucu onayı, 20 Ağu 2026): anahtarlar yoksa istek
+    // REDDEDİLİR — "gönderildi" deyip sessizce yutmak, kullanıcıyı hiç
+    // gelmeyecek bir kodla bekletmek demektir. Supabase hata alınca kullanıcı
+    // ekranda "kod gönderilemedi" görür ve tekrar deneyebilir.
+    // TEK İSTİSNA: SMS_SIMULATION='true' açıkça yazılmış geliştirme ortamı —
+    // orada gerçek SMS yok, kod loglanmaz, istek başarı döner.
+    if (Deno.env.get('SMS_SIMULATION') === 'true') {
+      console.warn('[send-sms] SİMÜLASYON (SMS_SIMULATION=true):', maskPhone(phone))
+      return json({ ok: true, simulated: true })
+    }
+    console.error('[send-sms] Netgsm anahtarları tanımlı değil — istek reddedildi:', maskPhone(phone))
+    return json({ error: 'SMS_NOT_CONFIGURED' }, 503)
   }
 
   try {

@@ -23,6 +23,9 @@ import {
   type MyBooking, type CancelResult, type CancelPreview,
 } from '../services/playerBookingService';
 import { formatTRYAmount, formatTRYShort } from '../utils/formatTRY';
+// Kurucu kararı (20 Ağu 2026): ödeme düğmelerindeki rakam karttan ÇEKİLECEK
+// tutardır (taban + işlem bedeli, 10'a yuvarlı) — sunucu motoruyla birebir.
+import { getCardFeePctCached, computeCardTotal } from '../services/paymentService';
 
 // IP-19 — para tek biçimde. `fiyat` FİYAT bağlamı (sıfır = "Ücretsiz"),
 // `money` muhasebe bağlamı (sıfır = "0₺"): iade, kapora, kalan tutar.
@@ -344,6 +347,13 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onNavigate }) => {
   const [leaving, setLeaving] = useState(false);
   const [leaveError, setLeaveError] = useState<string | null>(null);
 
+  // ── Kaptan bağlamı (kurucu kararı, 20 Ağu 2026) ───────────────────────────
+  // Kaptan kendi maçının sheet'ini açınca sözleşme arka planda okunur:
+  //   • kapora AWAITING_PAYMENT ise "Kaporayı Öde" yolu görünür (yarım kalan
+  //     ödeme süpürücüyü beklemek zorunda değildir),
+  //   • kadroda kimse yoksa ayrılma düğmesi dürüstçe "Maçı İptal Et" olur.
+  const [sheetQuote, setSheetQuote] = useState<LeaveMatchQuote | null>(null);
+
   useEffect(() => {
     if (!leaveTarget || leaveTarget.kind !== 'MATCH') {
       setLeaveQuote(null); setLeaveQuoteLoading(false); return;
@@ -366,7 +376,16 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onNavigate }) => {
       const fresh = await getMatchDetails(leaveTarget.match.id);
       if (fresh) applyMatchLocal(fresh);
       // IP-04 — sonuç sessiz kalmaz: ne yandı, ne döndü, kullanıcı görsün.
-      if (leaveQuote?.late) {
+      if (leaveQuote?.captainCancelsMatch) {
+        const kapora = leaveQuote.depositStatus === 'AWAITING_PAYMENT'
+          ? ' Kartından para çekilmedi.'
+          : leaveQuote.depositLate
+            ? ` Geç iptal: ${formatTRYAmount(leaveQuote.depositCharged)} kapora iade edilmez.`
+            : leaveQuote.depositRefundable > 0
+              ? ` ${formatTRYAmount(leaveQuote.depositRefundable)} kartına iade edilmek üzere işleme alındı.`
+              : '';
+        showToast(`Maç iptal edildi.${kapora}`, leaveQuote.depositLate ? 'error' : 'success');
+      } else if (leaveQuote?.late) {
         const geri = leaveQuote.refundable > 0
           ? `${formatTRYAmount(leaveQuote.refundable)} iade edildi, ` : '';
         const yanan = leaveQuote.forfeited > 0
@@ -485,6 +504,30 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onNavigate }) => {
   const sheetMatchStats = sheet?.kind === 'MATCH' ? matchStats(sheet as MyAgendaItem & { kind: 'MATCH' }) : null;
   const sheetHeading = sheet ? dayHeading(sheet.when) : null;
   const bookingRemaining = sheetBooking ? Math.max((sheetBooking.deposit_amount || 0) - (sheetBooking.paid_amount || 0), 0) : 0;
+
+  // Kart işlem bedeli oranı — "Kapora Öde" düğmesindeki rakam ÇEKİLECEK
+  // tutardır (kurucu kararı, 20 Ağu 2026: ekranda yazan = çekilen).
+  const [cardFeePct, setCardFeePct] = useState(0);
+  useEffect(() => {
+    let alive = true;
+    getCardFeePctCached().then(p => { if (alive) setCardFeePct(p); }).catch(() => {});
+    return () => { alive = false; };
+  }, []);
+
+  // Kaptanın kendi maçı: sözleşmeyi arka planda oku (Kaporayı Öde + dürüst
+  // ayrılma etiketi için). Başkasının maçında gereksiz çağrı yapılmaz.
+  useEffect(() => {
+    let alive = true;
+    setSheetQuote(null);
+    if (sheetMatch && currentUserUid && sheetMatch.creatorId === currentUserUid
+        && !['CANCELLED', 'COMPLETED'].includes(sheetMatch.status as string)) {
+      previewLeaveMatch(sheetMatch.id)
+        .then(q => { if (alive) setSheetQuote(q); })
+        .catch(() => { /* sözleşme okunamadıysa varsayılan etiketler kalır */ });
+    }
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sheetMatch?.id, currentUserUid]);
   // F2.1: tamamlanmış ve henüz puanlanmamış maçta değerlendirme girişi açılır.
   /**
    * Puanlanabilir mi? Üç koşul:
@@ -521,10 +564,15 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onNavigate }) => {
     [past, evaluatedMatchIds],
   );
   // Ayrılma yalnız gerçekten kaydı olan için: sahada oturuyor, slot satın almış veya yedekte.
+  // KAPTAN İSTİSNASI (kurucu kararı, 20 Ağu 2026): kapora ödenmeden kaptan kadroda
+  // OTURMAZ (0/10) ama maçını iptal edebilmeli — sunucu tarafında
+  // leave_public_match_slot'un (b0) dalı, kadroda başkası yokken kaptan çağrısını
+  // match_cancel_by_captain'a çevirir; kayıt şartı aramaz.
   const sheetMatchLeaveable = !!sheetMatch && !!currentUserUid
     && !['CANCELLED', 'COMPLETED'].includes(sheetMatch.status as string)
     && (
-      [...(sheetMatch.slots || []), ...(sheetMatch.awaySlots || [])].some(s =>
+      sheetMatch.creatorId === currentUserUid
+      || [...(sheetMatch.slots || []), ...(sheetMatch.awaySlots || [])].some(s =>
         (s as { occupant?: string })?.occupant === currentUserUid ||
         s?.player?.id === currentUserUid ||
         (s as { purchasedBy?: string })?.purchasedBy === currentUserUid)
@@ -825,7 +873,7 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onNavigate }) => {
                 <span className="text-ink-4 font-bold uppercase tracking-[0.03em]">Tutar</span>
                 <span className="font-numeric text-[#FACC15] font-extrabold">
                   {fiyat(Number(sheetBooking.price) || 0)}
-                  {sheetBooking.deposit_amount > 0 && <span className="text-ink-4 font-bold"> · Kapora {money(Number(sheetBooking.deposit_amount))}</span>}
+                  {sheetBooking.deposit_amount > 0 && <span className="text-ink-4 font-bold"> · Kapora {money(computeCardTotal(Number(sheetBooking.deposit_amount), cardFeePct))}</span>}
                 </span>
               </div>
               <div className="flex items-center justify-between mt-2 text-[0.75rem]">
@@ -833,7 +881,7 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onNavigate }) => {
                 {bookingRemaining <= 0 && (sheetBooking.deposit_amount || 0) > 0 ? (
                   <span className="text-[#39FF14] font-bold flex items-center gap-1"><CheckCircle2 size={12} />Ödendi</span>
                 ) : bookingRemaining > 0 ? (
-                  <span className="font-numeric text-[#FACC15] font-bold">{money(bookingRemaining)} bekliyor</span>
+                  <span className="font-numeric text-[#FACC15] font-bold">{money(computeCardTotal(bookingRemaining, cardFeePct))} bekliyor</span>
                 ) : (
                   <span className="text-ink-4 font-bold">—</span>
                 )}
@@ -844,7 +892,7 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onNavigate }) => {
                   onClick={() => { const b = sheetBooking; setSheet(null); handlePayDeposit(b); }}
                   className="w-full h-[52px] mt-5 rounded-2xl bg-[#39FF14] text-[#0A0E14] text-xs font-extrabold uppercase tracking-[0.12em] shadow-[0_0_22px_rgba(57,255,20,0.22)] active:scale-[0.98] transition-transform"
                 >
-                  Kapora Öde · {money(bookingRemaining)}
+                  Kapora Öde · {money(computeCardTotal(bookingRemaining, cardFeePct))}
                 </button>
               )}
 
@@ -938,9 +986,40 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onNavigate }) => {
                   {fiyat(Number(sheetMatch.price))}
                 </span>
               </div>
+              {/* Kaptanın yarım kalan kaporası: süpürücüyü beklemek zorunda
+                  değil — ödemeyi buradan tamamlar, maç yayına girer. Rakam
+                  ÇEKİLECEK tutardır (kurucu kararı, 20 Ağu 2026). */}
+              {sheetQuote?.isCaptain && sheetQuote.depositStatus === 'AWAITING_PAYMENT' && sheetQuote.depositAmount > 0 && (
+                <button
+                  onClick={() => {
+                    const m = sheetMatch; if (!m) return;
+                    const store = useAppStore.getState();
+                    store.setPaymentContext({
+                      kind: 'MATCH_CREATE_DEPOSIT',
+                      badge: 'MAÇ KAPORASI',
+                      title: m.title || 'Maç',
+                      subtitle: [m.location, m.time].filter(Boolean).join(' · '),
+                      amount: sheetQuote.depositAmount,
+                      amountLabel: 'Ödenecek Kapora',
+                      amountHint: 'Kapora onaylanınca maç yayına girer ve kadroya oturursun',
+                      isDeposit: true,
+                      allowBalance: false,
+                      successTitle: 'Maçın Yayında!',
+                      successSubtitle: 'Kapora güvencede',
+                      matchId: m.id,
+                      infoNote: 'Kapora kartından tahsil edilir ve maçın güvencesidir. Ödemeyi tamamlamazsan maç 30 dakika içinde kendiliğinden iptal olur ve kartından para çekilmez.',
+                    });
+                    setSheet(null);
+                    store.navigateTo('PAYMENT');
+                  }}
+                  className="w-full h-[52px] mt-5 rounded-2xl bg-[#FACC15] text-[#0A0E14] text-xs font-extrabold uppercase tracking-[0.12em] shadow-[0_0_22px_rgba(250,204,21,0.25)] active:scale-[0.98] transition-transform"
+                >
+                  Kaporayı Öde · {fiyat(computeCardTotal(sheetQuote.depositAmount, cardFeePct))}
+                </button>
+              )}
               <button
                 onClick={() => sheet && openMatchLobby(sheet)}
-                className="w-full h-[52px] mt-5 rounded-2xl bg-[#39FF14] text-[#0A0E14] text-xs font-extrabold uppercase tracking-[0.12em] shadow-[0_0_22px_rgba(57,255,20,0.22)] active:scale-[0.98] transition-transform"
+                className={`w-full h-[52px] rounded-2xl bg-[#39FF14] text-[#0A0E14] text-xs font-extrabold uppercase tracking-[0.12em] shadow-[0_0_22px_rgba(57,255,20,0.22)] active:scale-[0.98] transition-transform ${sheetQuote?.depositStatus === 'AWAITING_PAYMENT' ? 'mt-2.5' : 'mt-5'}`}
               >
                 Lobiyi Aç
               </button>
@@ -969,7 +1048,7 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onNavigate }) => {
                   onClick={() => { if (sheet) { setLeaveError(null); setLeaveTarget(sheet); setSheet(null); } }}
                   className="flex items-center justify-center gap-[7px] min-h-[48px] rounded-[14px] bg-red-300/[0.06] border border-red-300/20 text-red-300 text-[0.625rem] font-extrabold uppercase tracking-[0.08em] active:scale-[0.97] transition-transform disabled:opacity-35"
                 >
-                  <LogOut size={15} />Maçtan Ayrıl
+                  <LogOut size={15} />{sheetQuote?.captainCancelsMatch ? 'Maçı İptal Et' : 'Maçtan Ayrıl'}
                 </button>
               </div>
             </motion.div>
@@ -993,13 +1072,17 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onNavigate }) => {
               <div className="w-16 h-16 mx-auto rounded-full bg-red-500/15 border-2 border-red-500/40 flex items-center justify-center mb-5">
                 <LogOut size={26} className="text-red-400" />
               </div>
-              <h2 className="text-xl font-extrabold text-white mb-2">Maçtan Ayrıl</h2>
+              <h2 className="text-xl font-extrabold text-white mb-2">
+                {leaveQuote?.captainCancelsMatch ? 'Maçı İptal Et' : 'Maçtan Ayrıl'}
+              </h2>
               <p className="text-sm text-gray-400 leading-relaxed mb-1">
                 {leaveTarget.match.title} — {leaveTarget.match.time}
               </p>
-              <p className="text-xs text-ink-4 mb-3">
-                Kadrodaki yerin ve doldurulmamış rezerve slotların serbest bırakılır. Arkadaşlarına atadığın slotlar korunur.
-              </p>
+              {!leaveQuote?.captainCancelsMatch && (
+                <p className="text-xs text-ink-4 mb-3">
+                  Kadrodaki yerin ve doldurulmamış rezerve slotların serbest bırakılır. Arkadaşlarına atadığın slotlar korunur.
+                </p>
+              )}
 
               {/* IP-04 — ayrılmanın para/puan sonucu; lobi modalıyla AYNI metin
                   kaynağı (leaveQuoteMessage). Hiçbir dal sessiz değil. */}
@@ -1032,7 +1115,9 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onNavigate }) => {
                   disabled={leaving || leaveQuoteLoading || leaveQuote == null}
                   className={`w-full py-3.5 bg-red-500 text-white font-extrabold rounded-2xl text-sm uppercase tracking-wide transition-transform flex items-center justify-center gap-2 disabled:opacity-40 disabled:pointer-events-none ${leaving ? 'opacity-60 cursor-wait' : 'active:scale-95 hover:bg-red-600'}`}
                 >
-                  {leaving ? <><Loader2 size={16} className="animate-spin" /> Ayrılıyor…</> : 'Maçtan Ayrıl'}
+                  {leaving
+                    ? <><Loader2 size={16} className="animate-spin" /> {leaveQuote?.captainCancelsMatch ? 'İptal ediliyor…' : 'Ayrılıyor…'}</>
+                    : (leaveQuote?.captainCancelsMatch ? 'Maçı İptal Et' : 'Maçtan Ayrıl')}
                 </button>
                 <button onClick={() => { if (!leaving) setLeaveTarget(null); }} className="w-full py-3 text-gray-400 font-bold text-sm hover:text-white transition-colors">
                   Vazgeç
