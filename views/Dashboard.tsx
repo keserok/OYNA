@@ -860,9 +860,13 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
         </div>
 
         {/* ── KAPI KARTLARI ──────────────────────────────────────────────── */}
+        {/* Üst marj space-4 (16px), space-8 DEĞİL: maç şeridinin kendi alt
+            dolgusu (16px) ile birlikte toplam 32px eder — yani standart
+            "bölümler arası" ritim. Eskiden 16+32=48px'ti ve Saha Kirala kartı
+            şeritten kopuk duruyordu (kurucu bulgusu, 20 Ağu 2026). */}
         <div
           style={{
-            margin: `var(--oy-space-8) ${PAGE_X} var(--oy-space-8)`,
+            margin: `var(--oy-space-4) ${PAGE_X} var(--oy-space-8)`,
             display: 'flex', flexDirection: 'column', gap: 'var(--oy-space-4)',
           }}
         >
