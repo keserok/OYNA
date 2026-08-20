@@ -51,7 +51,6 @@ import {
   OynaMark,
   RefereeWhistleMark,
 } from '../components/dashboard/OynaMarks';
-import arenaLines from '../assets/dashboard/arena-lines-white.png';
 import studioBackdrop from '../assets/dashboard/studio-backdrop.png';
 
 interface DashboardProps {
@@ -70,10 +69,6 @@ const CARD_BG = 'linear-gradient(135deg,#11161d 0%,#0a0e14 55%,#05070a 100%)';
 const CARD_BORDER = '1px solid rgba(255,255,255,0.08)';
 const CARD_SHADOW = 'inset 0 1px 0 rgba(255,255,255,0.05)';
 const BOX_BORDER = '1px solid rgba(255,255,255,0.16)';
-
-/** Tasarımda arena çizimi ÜÇ kartın arkasına bölünmüş tek görseldir. */
-const ARENA_SIZE = '470px 197px';
-const ARENA_POS = { create: '-64px 4px', keeper: '-64px -116px', ref: '-243px -116px' } as const;
 
 const px = (step: keyof typeof TYPE_PX) => `${TYPE_PX[step] / 16}rem`;
 
@@ -938,9 +933,9 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
             </div>
           </Tap>
 
-          {/* MAÇ KUR — arka plandaki arena çizimi ÜÇ kartın arkasına
-              bölünmüştür (tek görsel, farklı `background-position`).
-              SIRA DEĞİŞİRSE DESEN KIRILIR: dizilim sabittir. */}
+          {/* MAÇ KUR — arkadaki arena çizimi KALDIRILDI (kullanıcı kararı,
+              20 Ağu 2026): üç karta bölünmüş tek görsel üç karttan da çıktı,
+              zemin yalnız kart gradyanı. */}
           <Tap
             onClick={() => onNavigate('MATCH_CREATE')}
             label={CARD.matchCreate}
@@ -951,7 +946,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
             }}
           >
             <Accent from="#FF7A00" to="#E64A19" glow="rgba(255,122,0,0.5)" />
-            <ArenaLayer position={ARENA_POS.create} />
             <div style={{ position: 'absolute', inset: 0, padding: '0 var(--oy-space-4)', display: 'flex', alignItems: 'center', gap: 14 }}>
               <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
                 <span
@@ -969,18 +963,16 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                   Sahayı seç, kadroyu davet et
                 </span>
               </div>
-              {/* Amblem `fill="currentColor"` ile çizilir: rengi ÇAĞIRAN verir.
-                  Burada verilmemişti ve ikon kartın metin renginden BEYAZ
-                  doğuyordu; tasarımda turuncudur (m-create · fill #FF7A00).
-                  Kaleci ve hakem kartlarında renk zaten açıkça veriliyor —
-                  atlanan tek yer burasıydı. */}
-              <IconRing size={66} color="rgba(255,122,0,0.75)">
-                <MatchCreateMark width={28} height={29.3} style={{ color: 'var(--color-cat-create)' }} />
-              </IconRing>
+              {/* Amblem `fill="currentColor"` ile çizilir: rengi ÇAĞIRAN verir;
+                  tasarımda turuncudur (m-create · fill #FF7A00).
+                  HALKASIZ (kullanıcı kararı, 20 Ağu 2026): bu kartta amblem
+                  sağda çıplak durur — kaleci ve hakem kartlarındaki halka ise
+                  yerinde kaldı. */}
+              <MatchCreateMark width={28} height={29.3} style={{ color: 'var(--color-cat-create)' }} />
             </div>
           </Tap>
 
-          {/* KALECİ + HAKEM — yan yana, arena deseninin devamı. */}
+          {/* KALECİ + HAKEM — yan yana. */}
           <div style={{ display: 'flex', gap: 'var(--oy-space-4)' }}>
             <Tap
               onClick={() => onNavigate('MARKETPLACE_GK')}
@@ -992,7 +984,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
               }}
             >
               <Accent from="#39FF14" to="#1a7a20" glow="rgba(57,255,20,0.5)" />
-              <ArenaLayer position={ARENA_POS.keeper} />
               <div style={{ position: 'absolute', inset: 0, padding: '0 13px', display: 'flex', alignItems: 'center', gap: 9 }}>
                 <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 5 }}>
                   <span
@@ -1028,7 +1019,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
               }}
             >
               <Accent from="#60a5fa" to="#2563EB" glow="rgba(96,165,250,0.5)" />
-              <ArenaLayer position={ARENA_POS.ref} />
               <div style={{ position: 'absolute', inset: 0, padding: '0 13px', display: 'flex', alignItems: 'center', gap: 9 }}>
                 <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 5 }}>
                   <span
@@ -1129,20 +1119,6 @@ const IconRing: React.FC<{ size: number; color: string; glow?: string; children:
   >
     {children}
   </div>
-);
-
-/** Arena çizimi katmanı — tek görselin ilgili parçası. */
-const ArenaLayer: React.FC<{ position: string }> = ({ position }) => (
-  <div
-    aria-hidden
-    style={{
-      position: 'absolute', inset: 0, opacity: 0.3,
-      backgroundImage: `url(${arenaLines})`,
-      backgroundRepeat: 'no-repeat',
-      backgroundSize: ARENA_SIZE,
-      backgroundPosition: position,
-    }}
-  />
 );
 
 /** Şeridin yükleniyor hâli — kart ÖLÇÜSÜ değişmez, yalnız içi iskelet olur. */
