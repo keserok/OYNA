@@ -84,3 +84,36 @@ describe('Bölge seçici · aktif bölgeler en üstte', () => {
     expect(govde).toContain('district');
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TELEFON SAĞLAYICISI KAPALIYKEN ÇIKIŞ YOLU (20 Ağustos 2026)
+//
+// Supabase'de Phone sağlayıcısı kapalıyken `signInWithOtp` şunu döndürür:
+//   400 { "error_code": "phone_provider_disabled" }
+// Bu desen haritalanmamıştı; kullanıcı genel yedeği görüyordu:
+//   "Doğrulama kodu gönderilemedi. Lütfen tekrar deneyin."
+// Yani ekran, ASLA çalışmayacak bir eylemi öneriyordu — bölge çıkmazının
+// aynısı. Giriş ekranında Google ve Apple ZATEN birincil düğmeler; hata
+// metni kullanıcıyı oraya yollamalı.
+// ═══════════════════════════════════════════════════════════════════════════
+describe('Giriş · telefon kapalıyken çalışan yolu gösterir', () => {
+  it('phone_provider_disabled ÇIKMAZ metne düşmüyor', () => {
+    const s = oku('utils/errorMap.ts');
+    expect(s).toContain('phone_provider_disabled');
+    // Yorumda da geçiyor; ARANAN, haritadaki kayıt satırı.
+    const bas = s.indexOf('[/phone_provider_disabled');
+    expect(bas, 'harita kaydı bulunamadı').toBeGreaterThan(-1);
+    const kayit = s.slice(bas, bas + 260);
+    expect(kayit, 'kullanıcı çalışan yola yönlendirilmiyor').toMatch(/Google/);
+    expect(kayit).toMatch(/Apple/);
+    expect(kayit, '"tekrar dene" bu hatada yanlış öneri').not.toMatch(/tekrar dene/i);
+  });
+
+  it('sosyal giriş ekranda BİRİNCİL kalıyor — yönlendirme boşa düşmesin', () => {
+    const s = oku('views/AuthScreen.tsx');
+    const sosyal = s.indexOf('Sosyal giriş — BİRİNCİL');
+    const telefon = s.indexOf('veya telefon numaranla');
+    expect(sosyal).toBeGreaterThan(-1);
+    expect(sosyal, 'telefon sosyal girişin üstüne çıkmış').toBeLessThan(telefon);
+  });
+});

@@ -252,6 +252,12 @@ const AUTH_TR: [RegExp, string][] = [
   [/rate limit|too many requests/i, 'Çok fazla deneme yaptın. Biraz bekleyip tekrar dene.'],
   [/user not found/i, 'Bu e-postayla kayıtlı bir hesap bulunamadı.'],
   [/signups? not allowed|signup is disabled/i, 'Kayıt şu an kapalı.'],
+  // Telefon sağlayıcısı kapalıyken Supabase `phone_provider_disabled` döner.
+  // Bu ÇIKMAZ bir hatadır: kullanıcı ne kadar "tekrar dene"rse denesin çalışmaz.
+  // Genel yedek metin ("Doğrulama kodu gönderilemedi. Lütfen tekrar deneyin.")
+  // tam da yapılmaması gerekeni söylüyordu. Yerine ÇALIŞAN yolu gösteriyoruz.
+  [/phone_provider_disabled|unsupported phone provider/i,
+   'Telefonla giriş şu an kapalı. Yukarıdaki Google ya da Apple ile saniyeler içinde girebilirsin.'],
   [/popup closed|cancell?ed|aborted/i, 'İşlem yarıda kaldı.'],
   // ── Sağlayıcı (Google/Apple) tarafı ────────────────────────────────────────
   // Bu satırlar OLMADAN kullanıcı ekranda ya İngilizce ham metin ya da hiçbir
