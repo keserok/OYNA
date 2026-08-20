@@ -19,7 +19,7 @@ import {
 } from '../services/walletService';
 import { validateTrIban } from '../utils/iban';
 import { showToast } from '../components/common/GlobalToast';
-import { startInAppCardPayment, getCardFeePct, computeCardFee, stripServerErrorPrefix } from '../services/paymentService';
+import { startInAppCardPayment, getCardFeePct, computeCardFee, computeCardTotal, stripServerErrorPrefix } from '../services/paymentService';
 import AddCardScreen from '../components/payment/AddCardScreen';
 import CardBrandMark, { brandGradient } from '../components/payment/CardBrandMark';
 import ThreeDSSheet, { ThreeDSOutcome } from '../components/payment/ThreeDSSheet';
@@ -247,6 +247,8 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
   // Kart işlem bedeli (app_config.card_fee_pct; 0 = kapalı) — sunucudaki
   // yuvarlamanın aynısıyla hesaplanır, ekranda yazan toplam çekilenle örtüşür.
   const topupFee = computeCardFee(effectiveTopup, cardFeePct);
+  // Karttan çekilen toplam 10'un katına tamamlanır (kurucu kararı, 19 Ağu 2026).
+  const topupTotal = computeCardTotal(effectiveTopup, cardFeePct);
 
   const pendingPayout = payouts.find(p => p.status === 'PENDING' || p.status === 'PROCESSING') ?? null;
 
@@ -495,7 +497,7 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
                 </div>
                 <div className="flex items-center justify-between text-[0.75rem]">
                   <span className="text-white font-extrabold">Karttan çekilecek</span>
-                  <span className="text-white font-extrabold font-numeric">{money(effectiveTopup + topupFee)}</span>
+                  <span className="text-white font-extrabold font-numeric">{money(topupTotal)}</span>
                 </div>
                 <p className="text-[0.6875rem] text-ink-4 pt-0.5">
                   Bakiyene {money(effectiveTopup)} geçer; bedel ödeme altyapısı komisyonudur.
@@ -615,7 +617,7 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
             {topupBusy
               ? 'YÜKLENİYOR…'
               : topupFee > 0
-                ? `${money(effectiveTopup + topupFee)} ÖDE · ${money(effectiveTopup)} YÜKLE`
+                ? `${money(topupTotal)} ÖDE · ${money(effectiveTopup)} YÜKLE`
                 : `${money(effectiveTopup)} YÜKLE`}
           </button>
           {savedCards.length === 0 && !selectedCard && (
@@ -947,8 +949,8 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
                       diyordu ama oyuncu için böyle bir ekran YOK — yanlış
                       yönlendirmektense dürüst ol. */}
                   <p className="text-[0.75rem] text-gray-300 leading-relaxed">
-                    Güvenliğin için para çekmeden önce bir kez <span className="text-white font-semibold">TC kimlik doğrulaması</span> gerekiyor.
-                    Bu adım henüz açılmadı; destek ekibiyle iletişime geçebilirsin.
+                    Uygulamadan para çekme kapalı: kazançların OYNA tarafından
+                    IBAN'ına ödenir. Kimlik numarası istenmez.
                   </p>
                 </div>
               )}
@@ -1192,7 +1194,7 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
                       {blockedMatchCount > 1
                         ? `${blockedMatchCount} maçın kaporası bekliyor. `
                         : 'Kurduğun maçın kaporası bekliyor. '}
-                      Kadro dolunca payın düşülüp kalanı, dolmazsa tamamı cüzdanına döner.
+                      Kadro dolunca payın düşülüp kalanı, dolmazsa kesinti düşülerek tamamı kartına iade edilir.
                     </p>
                   </div>
                 </div>

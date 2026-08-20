@@ -252,18 +252,15 @@ export const OwnerFinanceView: React.FC<OwnerFinanceViewProps> = ({ pitchId, isD
               <h3 className="text-xs font-extrabold text-gray-400 uppercase flex items-center gap-2">
                 <Coins size={16} className="text-emerald-400" /> OYNA KAZANÇLARIN
               </h3>
-              <button
-                type="button"
-                onClick={() => { if (!readOnly) setWithdrawalOpen(true); }}
-                disabled={readOnly || oynaEarn.available <= 0}
-                className="inline-flex items-center gap-1 text-[10px] font-extrabold text-emerald-400 bg-emerald-500/10 border border-emerald-500/25 px-3 py-1.5 rounded-lg disabled:opacity-40"
-              >
-                ÇEKİM TALEBİ <ArrowUpRight size={12} />
-              </button>
+              {/* ÇEKİM KAPALI (kurucu kararı, 19-20 Ağu 2026): tesis uygulamadan
+                  çekim talebi açamaz; hakedişi OYNA öder. Defter aynen görünür. */}
+              <span className="inline-flex items-center gap-1 text-[10px] font-extrabold text-emerald-400/80 bg-emerald-500/10 border border-emerald-500/25 px-3 py-1.5 rounded-lg">
+                OYNA ÖDER
+              </span>
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <StatTile label="Çekilebilir" value={money(oynaEarn.available)} accent="text-emerald-400" sub="Cüzdan → IBAN'a çek" />
-              <StatTile label="Güvence beklemesinde" value={money(oynaEarn.pending)} accent="text-blue-300" sub="2 hafta sonra çekilebilir" />
+              <StatTile label="Ödenecek" value={money(oynaEarn.available)} accent="text-emerald-400" sub="OYNA tarafından IBAN'ına ödenir" />
+              <StatTile label="Güvence beklemesinde" value={money(oynaEarn.pending)} accent="text-blue-300" sub="2 hafta sonra ödenebilir olur" />
             </div>
             {/* Aylık uygulama kırılımı yalnız GÜNCEL ay için geçerli (RPC'den değil,
                 owner_earnings_summary güncel-ay döner). Geçmiş aya bakınca yanıltmasın. */}

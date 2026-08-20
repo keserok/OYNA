@@ -4,6 +4,9 @@ import type { MatchListing, PositionSlot } from '../../types';
 import type { RahatMatchConfig } from '../../services/rahatMatchService';
 // IP-19: fiyat gösterimi tek kaynaktan (sıfır karşılığını da kendi verir).
 import { formatTRYShort } from '../../utils/formatTRY';
+// Kurucu kararı (20 Ağu 2026): ekranda yazan rakam = karttan çekilecek rakam.
+// Taban + işlem bedeli + 10'a yuvarlama; sunucudaki motorla birebir.
+import { getCardFeePctCached, computeCardTotal } from '../../services/paymentService';
 
 // ════════════════════════════════════════════════════════════════════════
 // E3 · RAHAT KATILIM SAYFASI — akışın kalbi
@@ -49,6 +52,13 @@ export const RahatJoinSheet: React.FC<RahatJoinSheetProps> = ({
   const [qty, setQty] = useState(1);
   const [picks, setPicks] = useState<(Side | null)[]>([null, null, null, null]);
   const [raceErr, setRaceErr] = useState(false);
+  // Karttan çekilecek toplam için oran — bir kez okunur, bellekten döner.
+  const [feePct, setFeePct] = useState(0);
+  useEffect(() => {
+    let alive = true;
+    getCardFeePctCached().then(p => { if (alive) setFeePct(p); }).catch(() => {});
+    return () => { alive = false; };
+  }, []);
 
   const wOpen = useMemo(() => openIds(match.slots), [match.slots]);
   const rOpen = useMemo(() => openIds(match.awaySlots), [match.awaySlots]);
@@ -99,6 +109,9 @@ export const RahatJoinSheet: React.FC<RahatJoinSheetProps> = ({
   const active = picks.slice(0, qty);
   const allPicked = active.every(p => p === 'W' || p === 'R');
   const total = qty * price;
+  // Karttan ÇEKİLECEK toplam (taban + işlem bedeli, 10'a yuvarlı) — ekrandaki
+  // büyük rakam ve CTA budur; sunucu aynı motorla aynı tutarı çeker.
+  const chargedTotal = price === 0 ? 0 : computeCardTotal(total, feePct);
 
   const proceed = () => {
     if (!allPicked || busy) return;
@@ -112,7 +125,7 @@ export const RahatJoinSheet: React.FC<RahatJoinSheetProps> = ({
     onProceed(ids, total);
   };
 
-  const payLabel = price === 0 ? 'YERİ AL · ÜCRETSİZ' : `ÖDEMEYE GEÇ · ${formatTRYShort(total)}`;
+  const payLabel = price === 0 ? 'YERİ AL · ÜCRETSİZ' : `ÖDEMEYE GEÇ · ${formatTRYShort(chargedTotal)}`;
 
   // Satır başına canlı sayaç (tasarım formülü birebir).
   const rows = Array.from({ length: qty }, (_, i) => {
@@ -244,10 +257,10 @@ export const RahatJoinSheet: React.FC<RahatJoinSheetProps> = ({
         {/* ── Tutar ── */}
         <div style={{ padding: '20px 20px 0', textAlign: 'center' }}>
           <p className="font-numeric" style={{ margin: 0, fontSize: 44, fontWeight: 700, letterSpacing: '-0.02em', color: '#FFFFFF', lineHeight: 1 }}>
-            {price === 0 ? 'ÜCRETSİZ' : formatTRYShort(total)}
+            {price === 0 ? 'ÜCRETSİZ' : formatTRYShort(chargedTotal)}
           </p>
           <p style={{ margin: '7px 0 0', fontSize: 12, fontWeight: 600, color: '#9CA3AF' }}>
-            {price === 0 ? `${qty} yer · ödeme alınmaz` : `${qty} yer × ${formatTRYShort(price)}`}
+            {price === 0 ? `${qty} yer · ödeme alınmaz` : `${qty} yer × ${formatTRYShort(price)} · işlem bedeli dahil`}
           </p>
         </div>
 
@@ -256,7 +269,8 @@ export const RahatJoinSheet: React.FC<RahatJoinSheetProps> = ({
           <div style={{ margin: '18px 20px 0', display: 'flex', gap: 10, padding: 13, borderRadius: 16, background: 'rgba(96,165,250,0.08)', border: '1px solid rgba(96,165,250,0.22)' }}>
             <Info size={15} color="#60A5FA" style={{ flexShrink: 0, marginTop: 1 }} />
             <p style={{ margin: 0, fontSize: 12, fontWeight: 600, lineHeight: 1.55, color: '#93c5fd' }}>
-              Kadro dolmazsa veya maç iptal olursa <strong style={{ color: '#FFFFFF', fontWeight: 800 }}>ödediğin tutarın tamamı</strong> cüzdanına döner.
+              Kadro dolmazsa veya maç iptal olursa ödediğin tutar, yalnız ödeme altyapısı
+              kesintisi düşülerek <strong style={{ color: '#FFFFFF', fontWeight: 800 }}>kartına iade edilir</strong>.
               Kendin ayrılırsan iade kademeye tabidir:{' '}
               <span className="font-numeric" style={{ color: '#FFFFFF' }}>{config.refundFullHours}</span> saatten fazla varsa tamamı,{' '}
               <span className="font-numeric" style={{ color: '#FFFFFF' }}>{config.refundHalfHours}–{config.refundFullHours}</span> saat kala{' '}

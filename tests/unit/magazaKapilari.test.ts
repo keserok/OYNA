@@ -52,10 +52,55 @@ describe('Mağaza kapıları · demo girişi', () => {
     expect(g).toMatch(/isNativePlatform\(\)\)\s*return false/);
   });
 
-  it('demo hesap seçici native pakette KAPALI (kill-switch unutulsa bile)', () => {
+  /**
+   * KARAR DEĞİŞTİ (19 Ağustos 2026 — kurucu kararı).
+   *
+   * Seçici artık native'de KOŞULSUZ kapalı değil: mağaza inceleme paketinde
+   * AÇIK. Sebebi somut — incelemecinin Türk numarası yok, telefon kodu ona
+   * ulaşmıyor ve uygulamayı hiç açamıyor; bu, gönderimin en olası ret sebebi.
+   *
+   * Kilit ARTIK ŞUNU KORUYOR: kapı yalnız AYRI ve AÇIKÇA yazılmış bir bayrakla
+   * (`VITE_MAGAZA_INCELEME`) açılabilir. Geliştirme bayrağı `VITE_DEMO_ACCOUNTS`
+   * tek başına native'de seçiciyi AÇAMAZ — yoksa bir .env unutması paketi
+   * demo kimlikleriyle yayına gönderirdi.
+   */
+  it('demo hesap seçici native pakette YALNIZ inceleme bayrağıyla açılır', () => {
     const g = govde('isDemoAccountPickerEnabled');
     expect(g).toContain('Capacitor.isNativePlatform()');
-    expect(g).toMatch(/isNativePlatform\(\)\)\s*return false/);
+    expect(g).toContain('INCELEME_PAKETI');
+
+    // BİÇİM DEĞİL DAVRANIŞ (20 Ağu 2026): bu kilit eskiden tek bir satırın
+    // yazılışını (`isNativePlatform() && !INCELEME_PAKETI`) ezberliyordu. O
+    // yazılışta kapı, inceleme bayrağından SONRA bir de
+    // `VITE_DEMO_ACCOUNTS !== 'false'` arıyordu; mağaza denetimi ise .env'de
+    // `VITE_DEMO_ACCOUNTS=false` olmasını ZORUNLU tutuyor. Sonuç: inceleme
+    // paketi derlense bile seçici KAPALI kalıyordu ve kimse bunu görmüyordu.
+    // Kilit artık üç değişmezi koruyor, satırın şeklini değil:
+    const incelemeIdx = g.indexOf('INCELEME_PAKETI');
+    const nativeIdx = g.indexOf('isNativePlatform');
+
+    // 1) İnceleme bayrağı TEK BAŞINA yeter — seçiciyi açar.
+    expect(g).toMatch(/if\s*\(\s*INCELEME_PAKETI\s*\)\s*return true/);
+    // 2) Karar sırası: inceleme kapısı native kapısından ÖNCE gelir.
+    expect(incelemeIdx).toBeLessThan(nativeIdx);
+    // 3) Bayrak yoksa native pakette seçici KOŞULSUZ kapalıdır — bir .env
+    //    unutması paketi demo kimlikleriyle yayına gönderemez.
+    expect(g).toMatch(/if\s*\(\s*Capacitor\.isNativePlatform\(\)\s*\)\s*return false/);
+  });
+
+  it('inceleme bayrağı ayrı — geliştirme bayrağı tek başına native\'de açamaz', () => {
+    expect(s).toContain("import.meta.env.VITE_MAGAZA_INCELEME === 'true'");
+    // Bayrak adı GELİŞTİRME bayrağından farklı olmalı; aynısı olsaydı mobil
+    // paket bekçisinin engeli anlamsızlaşırdı.
+    expect(s).not.toMatch(/INCELEME_PAKETI\s*=\s*import\.meta\.env\.VITE_DEMO_ACCOUNTS/);
+  });
+
+  it('mobil paket bekçisi inceleme paketini AYIRT EDİYOR', () => {
+    const v = oku('vite.config.ts');
+    // Normal derlemede demo kataloğu hâlâ ENGEL; yalnız beyan edilmiş inceleme
+    // paketinde geçiyor ve o zaman da yüksek sesle uyarıyor.
+    expect(v).toContain("env.VITE_DEMO_ACCOUNTS === 'true' && !incelemePaketi");
+    expect(v).toContain('İNCELEME PAKETİ DERLENİYOR');
   });
 
   it('demo girişi yalnız @oyna.app hesaplarını kabul eder (ikinci emniyet)', () => {
@@ -192,9 +237,15 @@ describe('Mağaza kapıları · demo kimlikleri pakette değil', () => {
     expect(d).toContain("import.meta.env.VITE_DEMO_ACCOUNTS === 'true'");
   });
 
-  it('ortak şifre sabiti üretimde BOŞ (gömülü şifre yok)', () => {
+  it('ortak şifre sabiti NORMAL üretim paketinde BOŞ', () => {
     const s = oku('supabaseAuth.ts');
-    expect(s).toContain("const DEMO_PASSWORD = import.meta.env.VITE_DEMO_ACCOUNTS === 'true'");
+    // Şifre iki bayraktan BİRİ açıkken doluyor: geliştirme (VITE_DEMO_ACCOUNTS)
+    // ya da mağaza inceleme paketi (VITE_MAGAZA_INCELEME). İkisi de yoksa BOŞ —
+    // yani normal yayın paketinde gömülü şifre yok.
+    expect(s).toMatch(
+      /const DEMO_PASSWORD =\s*\n?\s*\(import\.meta\.env\.VITE_DEMO_ACCOUNTS === 'true' \|\| import\.meta\.env\.VITE_MAGAZA_INCELEME === 'true'\)/,
+    );
+    expect(s).toContain("? 'password123' : '';");
     // Ayrıştırıcıdaki yedek sabit de kaldırıldı.
     expect(oku('data/demoAccounts.ts')).not.toMatch(/\|\|\s*'password123'/);
   });
@@ -425,5 +476,184 @@ describe('Mağaza kapıları · beyan ile gerçek davranış uyumu', () => {
     // "Atla" yolu da aynı kapıdan geçer.
     const atla = ob.slice(ob.indexOf('const handleSkip'), ob.indexOf('const aura'));
     expect(atla).toContain('if (ageIndex === null)');
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// GÖNDERİM DENETİMİ BETİĞİ (19 Ağustos 2026)
+//
+// Mağaza reddi çoğu zaman büyük bir hatadan değil, unutulmuş küçük bir
+// dosyadan gelir. `npm run magaza:denetim` bunları mekanik olarak sınar.
+// Buradaki testler betiğin KENDİSİNİ korur: kapılardan biri sessizce
+// silinirse gönderim öncesi kimse fark etmez.
+// ═══════════════════════════════════════════════════════════════════════════
+describe('Mağaza gönderim denetimi betiği', () => {
+  const betik = () => oku('scripts/magaza-denetim.mjs');
+
+  it('yedi denetim başlığının hepsi duruyor', () => {
+    const s = betik();
+    for (const ad of [
+      'Sürüm numaraları', 'Uygulama simgeleri', 'iOS gizlilik ve izinler',
+      'Android gönderim ayarları', 'Yasal sayfalar',
+      'Pakete sızmaması gerekenler', 'Uygulama içi hesap silme',
+    ]) {
+      expect(s, ad).toContain(`denetle('${ad}'`);
+    }
+  });
+
+  it('reddin en sık sebepleri tek tek sınanıyor', () => {
+    const s = betik();
+    // Her biri gerçek bir ret kodu / mağaza kuralıdır.
+    expect(s).toContain('PrivacyInfo.xcprivacy');        // ITMS-91053
+    expect(s).toContain('com.apple.developer.applesignin'); // Apple kuralı 4.8
+    expect(s).toContain('NSCameraUsageDescription');      // izinsiz çökme
+    expect(s).toContain('hesap-silme.html');             // Play hesap silme şartı
+    expect(s).toContain('VITE_DEMO_ACCOUNTS');           // demo kimlik sızıntısı
+    expect(s).toContain('targetSdkVersion');             // Play hedef sürüm şartı
+  });
+
+  it('derlenmiş pakette demo kimliği aranıyor (kill-switch unutulsa bile)', () => {
+    const s = betik();
+    expect(s).toContain('password123');
+    expect(s).toContain('dist/assets');
+  });
+
+  it('engel varsa çıkış kodu 1 — CI takabilsin', () => {
+    expect(betik()).toContain('process.exit(engeller.length > 0 ? 1 : 0)');
+  });
+
+  it('elle tutulan yasal sayfalar üreticiyle karşılaştırılmıyor', () => {
+    // gizlilik.html / hesap-silme.html üreticiden çıkmaz; legalDocs.ts ile
+    // kıyaslamak her yasal düzenlemeden sonra sahte alarm üretirdi.
+    const s = betik();
+    expect(s).toContain('sozlesmeler/oyuncu/01-kullanim-sartlari.md');
+    expect(s).toContain('ELLE');
+  });
+
+  it('sürüm artırma betiği iki platformu BİRLİKTE yükseltiyor', () => {
+    const s = oku('scripts/surum-artir.mjs');
+    expect(s).toContain('CURRENT_PROJECT_VERSION');
+    expect(s).toContain('oynaVersionCode');
+    // Sürüm ADI otomatik artmamalı: kullanıcının gördüğü numaradır.
+    expect(s).toContain('yalnız `--ad` verilirse');
+  });
+
+  it('iki betik de package.json üzerinden çağrılabiliyor', () => {
+    const pkg = JSON.parse(oku('package.json'));
+    expect(pkg.scripts['magaza:denetim']).toBe('node scripts/magaza-denetim.mjs');
+    expect(pkg.scripts['surum:artir']).toBe('node scripts/surum-artir.mjs');
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// İNCELEMECİYE YÖNERGE (19 Ağustos 2026)
+//
+// İncelemecinin Türk numarası yok; SMS kodu ona ulaşmıyor. Ekranda yalnız
+// "numaranı gir" yazsaydı demo düğmesini fark etmeyip uygulamayı "çalışmıyor"
+// diye reddedebilirdi — gönderimin en olası ret sebebi buydu.
+// ═══════════════════════════════════════════════════════════════════════════
+describe('Mağaza incelemecisine yönerge', () => {
+  const ekran = () => oku('views/AuthScreen.tsx');
+
+  it('yönerge YALNIZ inceleme paketinde render ediliyor', () => {
+    const s = ekran();
+    expect(s).toContain('isIncelemePaketi() && showDemoPicker');
+  });
+
+  it('İngilizce yazıyor — incelemecinin Türkçe okuduğu varsayılamaz', () => {
+    const s = ekran();
+    expect(s).toContain('SMS codes are sent to Turkish numbers only');
+    expect(s).toContain('DEMO HESABIYLA GİR');
+  });
+
+  it('ne yapılacağını adım adım söylüyor', () => {
+    const s = ekran();
+    // Onay kutusu şart; söylenmezse incelemeci düğmeye basıp tepki alamaz.
+    expect(s).toContain('tick the consent box');
+    expect(s).toContain('onay kutusunu');
+  });
+
+  it('yönergenin kapısı normal pakette kapalı', () => {
+    const a = oku('supabaseAuth.ts');
+    expect(a).toContain('export const isIncelemePaketi = (): boolean => INCELEME_PAKETI');
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ÖDEME SAĞLAYICISI ÇÖZÜMLEMESİ (19 Ağustos 2026)
+//
+// Sağlayıcı iki yerde tutuluyordu ve canlıda İKİSİ AYRI cevap veriyordu:
+// panel (`app_config.payment_provider`) SIMULATION derken edge fonksiyonu
+// PAYMENT_PROVIDER secret'ı yüzünden IYZICO'ydu. Yani uygulama "ödeyebilirsin"
+// diyor, arkada GERÇEK kart çekimi deneniyordu — incelemecinin hayali kartı
+// reddedilir, gerçek kart giren biri gerçekten öderdi.
+//
+// Kural: PANEL DARALTIR, ASLA GENİŞLETMEZ. Gerçek para için iki tarafın da
+// aynı anda IYZICO demesi şart. Aşağısı bu sınırı kilitler.
+// ═══════════════════════════════════════════════════════════════════════════
+describe('Ödeme sağlayıcısı · panel daraltır, genişletmez', () => {
+  const cozumleyici = () => oku('supabase/functions/_shared/paymentProvider.ts');
+
+  it('IYZICO yalnız İKİSİ birden IYZICO iken seçilir', () => {
+    expect(cozumleyici()).toContain(
+      "if (config === 'IYZICO' && ENV_PROVIDER === 'IYZICO') {");
+  });
+
+  it('secret TEK BAŞINA gerçek para yolunu açamaz — config her zaman okunur', () => {
+    const s = cozumleyici();
+    const govde = s.slice(s.indexOf('export async function resolvePaymentProvider'));
+    // Erken dönüş olmamalı: env'e bakıp config'i atlayan bir kısayol,
+    // panelin daraltma yetkisini yok eder (canlıdaki hata tam buydu).
+    expect(govde).not.toContain('if (ENV_PROVIDER) return ENV_PROVIDER');
+    expect(govde).toContain("p_key: 'payment_provider'");
+  });
+
+  it('SIMULATION için adı konmuş demo anahtarı da şart', () => {
+    expect(cozumleyici()).toContain(
+      "} else if (config === 'SIMULATION' && simCanli.data === true) {");
+    expect(cozumleyici()).toContain("p_key: 'simulation_counts_as_live'");
+  });
+
+  it('başka her hâl DISABLED', () => {
+    expect(cozumleyici()).toContain("} else {\n      sonuc = 'DISABLED'\n    }");
+  });
+
+  it('config okunamazsa: bilinen değer sürer, hiç yoksa DISABLED', () => {
+    const s = cozumleyici();
+    expect(s).toContain('if (onbellek) return onbellek.value');
+    expect(s).toMatch(/if \(onbellek\) return onbellek\.value\n\s*sonuc = 'DISABLED'/);
+  });
+
+  it('iki ödeme fonksiyonu da aynı kaynağı kullanıyor — kopya kural yok', () => {
+    for (const f of ['supabase/functions/create-payment/index.ts',
+                     'supabase/functions/refund-payment/index.ts']) {
+      const s = oku(f);
+      expect(s, `${f} paylaşılan çözümleyiciyi kullanmıyor`)
+        .toContain("import { resolvePaymentProvider } from '../_shared/paymentProvider.ts'");
+      expect(s, `${f} hâlâ kendi env okumasını yapıyor`)
+        .not.toContain("Deno.env.get('PAYMENT_PROVIDER')");
+      expect(s).toContain('await resolvePaymentProvider(admin)');
+    }
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SAHTE İADE KAPISI (19 Ağustos 2026)
+//
+// Kuyruk işlemcisi "sağlayıcı SIMULATION" görünce satırı DONE yazıyordu.
+// Sağlayıcı artık panelden de gelebildiği için, canlıya geçerken demo anahtarı
+// kapatılmayı unutulursa GERÇEK ÇEKİLMİŞ bir tahsilat "iade edildi" diye
+// işaretlenir, müşterinin parası bizde kalırdı.
+// ═══════════════════════════════════════════════════════════════════════════
+describe('İade kuyruğu · sahte iade yalnız sahte tahsilata', () => {
+  const s = () => oku('supabase/functions/refund-payment/index.ts');
+
+  it('DONE yazmak için tahsilatın kendisi de simülasyon olmalı', () => {
+    expect(s()).toContain("const sahteTahsilat = intent?.raw?.simulated === true");
+    expect(s()).toContain("if (PROVIDER === 'SIMULATION' && sahteTahsilat) {");
+  });
+
+  it('gerçek tahsilat + simülasyon modu = sessiz DONE değil, insana kalır', () => {
+    expect(s()).toContain('GERCEK_TAHSILAT_SIM_MODDA');
   });
 });

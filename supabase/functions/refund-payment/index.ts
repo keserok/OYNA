@@ -18,8 +18,10 @@
 //      Auth: x-payment-secret (PAYMENT_EDGE_SECRET) — sistem/admin çağrısı.
 // ═══════════════════════════════════════════════════════════════════════════
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { resolvePaymentProvider } from '../_shared/paymentProvider.ts'
 
-const PROVIDER = Deno.env.get('PAYMENT_PROVIDER') ?? 'DISABLED'
+// Sağlayıcı: panel (app_config) daraltır, secret genişletmez. Kural ve gerekçe
+// _shared/paymentProvider.ts'te.
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': Deno.env.get('ALLOWED_ORIGIN') ?? '*',
@@ -61,6 +63,7 @@ Deno.serve(async (req: Request) => {
   try { payload = await req.json() } catch { return json({ error: 'INVALID_BODY' }, 400) }
 
   const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, { auth: { persistSession: false } })
+  const PROVIDER = await resolvePaymentProvider(admin)
 
   // ── 1) KUYRUK İŞLEMCİSİ ────────────────────────────────────────────────────
   if (payload.action === 'process-queue') {
@@ -85,17 +88,30 @@ Deno.serve(async (req: Request) => {
     let done = 0, failed = 0, retried = 0
     for (const row of rows ?? []) {
       try {
-        if (PROVIDER === 'SIMULATION') {
+        const { data: intent } = await admin
+          .from('payment_intents').select('id, raw, provider_ref').eq('id', row.intent_id).maybeSingle()
+
+        // PARA KAPISI (19 Ağu 2026): "sağlayıcı SIMULATION" tek başına satırı
+        // DONE yazmaya YETMEZ. Sağlayıcı artık env yoksa app_config'ten de
+        // gelebiliyor; canlıya geçilirken `simulation_counts_as_live` kapatılmayı
+        // unutulursa GERÇEK ÇEKİLMİŞ bir tahsilat "iade edildi" diye işaretlenip
+        // müşterinin parası bizde kalırdı. Sahte iade YALNIZ tahsilatın kendisi
+        // de sahteyse (apply_card_payment'ın yazdığı raw.simulated) yapılır.
+        const sahteTahsilat = intent?.raw?.simulated === true
+        if (PROVIDER === 'SIMULATION' && sahteTahsilat) {
           await admin.from('card_refund_queue').update({
             status: 'DONE', provider_ref: `SIM-REFUND-${Date.now()}`, processed_at: new Date().toISOString(),
           }).eq('id', row.id)
           done++
           continue
         }
+        if (PROVIDER === 'SIMULATION') {
+          // Gerçek para çekilmiş ama sağlayıcı simülasyonda: sessizce "iade edildi"
+          // demek yerine satırı insana bırak (kural 7.5).
+          throw new Error('GERCEK_TAHSILAT_SIM_MODDA: bu tahsilat gerçek çekildi, sağlayıcı simülasyonda — elle iade gerekir')
+        }
         if (PROVIDER !== 'IYZICO') throw new Error(`PROVIDER_${PROVIDER}: canlı iade için sağlayıcı IYZICO olmalı`)
 
-        const { data: intent } = await admin
-          .from('payment_intents').select('id, raw, provider_ref').eq('id', row.intent_id).maybeSingle()
         const txId = intent?.raw?.itemTransactions?.[0]?.paymentTransactionId ?? null
         if (!txId) throw new Error('NO_TX_ID: paymentTransactionId yok — eski kayıt, elle iade gerekir')
 

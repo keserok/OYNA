@@ -25,6 +25,9 @@ import {
   type BookableProvider, type PitchPricePreview,
 } from '../services/matchCreateService';
 import { fetchPitchAvailability, buildBusyMap, isSlotBusy, toISODate, type BusyMap } from '../services/playerBookingService';
+// Kurucu kararı (20 Ağu 2026): kapora rakamı karttan ÇEKİLECEK tutardır
+// (taban + işlem bedeli, 10'a yuvarlı) — sunucu motoruyla birebir.
+import { getCardFeePctCached, computeCardTotal } from '../services/paymentService';
 import { getFriends, type FriendRow } from '../services/socialService';
 import { getMyTeams, getTeamSquad, type MyTeamRow } from '../services/teamSocialService';
 import { getMatchDetails } from '../services/matchService';
@@ -146,6 +149,12 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
   const [daysLoaded, setDaysLoaded] = useState(DAY_PREFETCH);
   const [selDay, setSelDay] = useState(0);
   const [selTime, setSelTime] = useState<string | null>(null);
+  const [cardFeePct, setCardFeePct] = useState(0);
+  useEffect(() => {
+    let alive = true;
+    getCardFeePctCached().then(p => { if (alive) setCardFeePct(p); }).catch(() => {});
+    return () => { alive = false; };
+  }, []);
   const [format, setFormat] = useState('7v7');
   const [visibility, setVisibility] = useState<'OPEN' | 'PRIVATE'>('OPEN');
   const [mental, setMental] = useState<string>('Rahat');
@@ -511,7 +520,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
           subtitle: `${venueTxt} · ${whenTxt}`,
           amount: res.deposit,
           amountLabel: 'Ödenecek Kapora',
-          amountHint: `Maç dolunca ${money(Math.max(0, res.deposit - res.perPerson))} iade edilir — yalnız kendi payın (${money(res.perPerson)}) sende kalır`,
+          amountHint: `Maç dolunca ${money(Math.max(0, res.deposit - res.perPerson))} kartına iade edilir — kendi payın (${money(res.perPerson)}) ve işlem bedeli sende kalır`,
           isDeposit: true,
           allowBalance: false,
           successTitle: 'Maçın Yayında!',
@@ -1197,13 +1206,13 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
                 <p className="text-[0.8125rem] font-extrabold">
                   {seeded ? 'Kapora yok — rezervasyon güvencesi zaten ödendi'
                     : deposit == null ? 'Kurallar saat seçince netleşir'
-                    : deposit > 0 ? `Kapora ${money(deposit)} · yayında kartından tahsil edilir`
+                    : deposit > 0 ? `Kapora ${money(computeCardTotal(deposit, cardFeePct))} · yayında kartından tahsil edilir`
                     : 'Kapora alınmıyor — maç doğrudan yayınlanır'}
                 </p>
                 <p className="mt-0.5 text-[0.6875rem] font-bold leading-snug text-[#FACC15]/85">
                   {seeded ? 'Oyuncu payları maç kesinleşince toplanır'
                     : deposit != null && deposit > 0
-                      ? `Maç dolunca ${money(Math.max(0, deposit - (perPerson ?? 0)))} iade · dolmazsa tamamı (kesinti düşülür)`
+                      ? `Maç dolunca ${money(Math.max(0, deposit - (perPerson ?? 0)))} kartına iade · dolmazsa kesinti düşülerek tamamı`
                       : 'Kesinleşme ve iade kuralları için dokun'}
                 </p>
               </div>
@@ -1267,7 +1276,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
           <p className="text-center text-[0.6875rem] font-bold text-white/[0.32] pb-1">
             {publishing ? 'Kapatma — işlem birkaç saniye sürebilir'
               : seeded ? 'Rezervasyonun maça çevrilecek · ek ödeme yok'
-              : deposit != null && deposit > 0 ? `${money(deposit)} kapora kartından tahsil edilir · maç dolmazsa tamamı iade (işlem kesintisi düşülür)`
+              : deposit != null && deposit > 0 ? `${money(computeCardTotal(deposit, cardFeePct))} kapora kartından tahsil edilir · maç dolmazsa kesinti düşülerek iade edilir`
               : deposit === 0 ? 'Kapora yok — yayınla ve kadroyu kurmaya başla'
               : 'Saha ve saat seçince kurallar netleşir'}
           </p>

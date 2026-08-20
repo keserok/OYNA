@@ -33,6 +33,9 @@ import {
   type PitchSortOrder,
 } from '../services/pitchFilterService';
 import { resolveTariffForSlot } from '../services/tariffService';
+// Kurucu kararı (20 Ağu 2026): ekranda yazan kapora = karttan çekilecek tutar
+// (taban + işlem bedeli + 10'a yuvarlama). Oran bir kez okunur.
+import { getCardFeePctCached, computeCardTotal } from '../services/paymentService';
 import {
   DEFAULT_SLOT_MINUTES, activeTariffsFor, normalizeSlotMinutes,
   slotMinutesFromLabel, slotPriceUnitLabel, isSlotWithinListingCutoff,
@@ -725,6 +728,13 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [calendarMonth, setCalendarMonth] = useState(() => ({ y: new Date().getFullYear(), m: new Date().getMonth() }));
   const [timeFilter, setTimeFilter] = useState<'ALL' | 'GUNDUZ' | 'GECE'>('ALL');
+  // Kart işlem bedeli oranı — yapışkan bardaki kapora rakamı ÇEKİLECEK tutardır.
+  const [cardFeePct, setCardFeePct] = useState(0);
+  useEffect(() => {
+    let alive = true;
+    getCardFeePctCached().then(p => { if (alive) setCardFeePct(p); }).catch(() => {});
+    return () => { alive = false; };
+  }, []);
   const [bookings, setBookings] = useState<PitchBookingRow[]>([]);
 
   useEffect(() => {
@@ -1013,6 +1023,23 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
     if (timeFilter === 'GECE') return hour >= 18 || hour < 6;
     return true;
   }), [courtSlots, timeFilter]);
+
+  // Geçmiş saat kapısı (kurucu onayı, 20 Ağu 2026 — canlıda ölçüldü: gece
+  // 23:44'te BUGÜN 09:00 seçilebiliyordu). Başlangıcı geçmiş slot satın
+  // alınamaz; sunucu da aynı kuralı SLOT_IN_PAST ile tutar (prensip 6.1).
+  const isPastSlot = useCallback((startTime: string): boolean => {
+    if (!selectedDateISO) return false;
+    const start = new Date(`${selectedDateISO}T${startTime}:00`);
+    return Number.isFinite(start.getTime()) && start.getTime() <= Date.now();
+  }, [selectedDateISO]);
+
+  // Seçiliyken geçmişe düşen slot (gece yarısı geçişi / uzun süre açık ekran)
+  // sessizce bırakılır — bar "Önce saat seç"e döner, ödeme başlatılamaz.
+  useEffect(() => {
+    if (selectedSlot && isPastSlot(parseSlotLabel(selectedSlot).startTime)) {
+      setSelectedSlot(null);
+    }
+  }, [selectedSlot, isPastSlot]);
 
   const selectedSlotQuote = useMemo(() => {
     if (!selectedPitch || !selectedSlot) return null;
@@ -2092,6 +2119,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
                   {filteredSlots.map(slot => {
                     const isBooked = slot.status === 'booked' || slot.status === 'pending';
                     const isOwnerClosed = slot.status === 'closed' && slot.closedByOwner;
+                    const isPast = !isBooked && !isOwnerClosed && isPastSlot(slot.startTime);
                     const isSelected = selectedSlot === slot.label;
                     // Çalışma saati dışı slotlar listelenmez; sahibin kapattığı
                     // saat ise gri "KAPALI" olarak görünür (tutarlılık: owner takvimiyle aynı).
@@ -2099,7 +2127,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
                     return (
                       <button
                         key={slot.label}
-                        disabled={isBooked || isOwnerClosed || bookingDisabled}
+                        disabled={isBooked || isOwnerClosed || bookingDisabled || isPast}
                         onClick={() => {
                           setSelectedSlot(slot.label);
                         }}
@@ -2108,16 +2136,16 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
                             ? 'bg-[#39FF14] border-[#39FF14] shadow-[0_0_20px_rgba(57,255,20,0.35)]'
                             : isBooked
                               ? 'bg-red-500/[0.08] border-red-500/20 opacity-60 cursor-not-allowed'
-                              : isOwnerClosed
+                              : isOwnerClosed || isPast
                                 ? 'bg-white/[0.02] border-white/[0.05] opacity-50 cursor-not-allowed'
                                 : 'bg-white/[0.03] border-white/[0.07]'
                         }`}
                       >
-                        <span className={`text-sm ${isSelected ? 'font-extrabold text-[#05070b]' : isBooked ? 'font-extrabold text-red-400 line-through' : isOwnerClosed ? 'font-extrabold text-ink-4 line-through' : 'font-extrabold text-white'}`}>
+                        <span className={`text-sm ${isSelected ? 'font-extrabold text-[#05070b]' : isBooked ? 'font-extrabold text-red-400 line-through' : isOwnerClosed || isPast ? 'font-extrabold text-ink-4 line-through' : 'font-extrabold text-white'}`}>
                           {slot.startTime}
                         </span>
-                        <span className={`${isBooked || isOwnerClosed ? 'text-[0.6875rem] tracking-[0.1em]' : 'text-[0.6875rem]'} font-extrabold ${isSelected ? 'text-[#05070b]/70' : isBooked ? 'text-red-400' : isOwnerClosed ? 'text-ink-4' : 'text-[#39FF14]'}`}>
-                          {isBooked ? 'DOLU' : isOwnerClosed ? 'KAPALI' : slot.price != null ? fiyat(slot.price) : ''}
+                        <span className={`${isBooked || isOwnerClosed || isPast ? 'text-[0.6875rem] tracking-[0.1em]' : 'text-[0.6875rem]'} font-extrabold ${isSelected ? 'text-[#05070b]/70' : isBooked ? 'text-red-400' : isOwnerClosed || isPast ? 'text-ink-4' : 'text-[#39FF14]'}`}>
+                          {isBooked ? 'DOLU' : isOwnerClosed ? 'KAPALI' : isPast ? 'GEÇTİ' : slot.price != null ? fiyat(slot.price) : ''}
                         </span>
                       </button>
                     );
@@ -2157,12 +2185,15 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
                   {selectedSlotQuote ? (
                     /* S17: tutarlarda italik yok — italik yalnız skorda kalır.
                        Fiyat birimi slotun GERÇEK süresinden gelir; 90 dakikalık
-                       tarifede "/ saat" yazmak yanlış olurdu. */
+                       tarifede "/ saat" yazmak yanlış olurdu.
+                       Kapora rakamı ÇEKİLECEK tutardır (taban + işlem bedeli,
+                       10'a yuvarlı) — kurucu kararı 20 Ağu 2026: ekranda yazan
+                       rakam karttan çekilen rakamdır. */
                     <div className="text-xl font-extrabold mt-0.5">
                       {isSelectionMode ? (
                         <>{fiyat(selectedSlotQuote.price)}<span className="text-xs font-semibold text-white/50"> {selectedSlotPriceUnit}</span></>
                       ) : (
-                        <>{fiyat(selectedSlotQuote.deposit)}<span className="text-xs font-semibold text-white/50"> / {fiyat(selectedSlotQuote.price)}</span></>
+                        <>{fiyat(computeCardTotal(selectedSlotQuote.deposit, cardFeePct))}<span className="text-xs font-semibold text-white/50"> / {fiyat(selectedSlotQuote.price)}</span></>
                       )}
                     </div>
                   ) : (

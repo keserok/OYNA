@@ -459,7 +459,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
         </section>
 
         <div className="text-center">
-          <p className="text-[0.6875rem] text-ink-4 font-mono">v{APP_VERSION} • Push Notifications Entegre</p>
+          <p className="text-[0.6875rem] text-ink-4 font-mono">OYNA v{APP_VERSION}</p>
         </div>
 
       </main>
