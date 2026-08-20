@@ -326,19 +326,24 @@ export interface HomeBanner {
   scope: 'DISTRICT' | 'CITY' | 'DEFAULT';
 }
 
+/** Ana sayfa bant yuvaları: Saha Kirala + Maç Kur (kurucu kararı, 20 Ağu 2026). */
+export type HomeBannerSlot = 'PITCH_RENT' | 'MATCH_CREATE';
+
 /**
- * "Saha Kirala" bandının görseli.
+ * Ana sayfa kartlarının sağındaki fotoğraf bandı (yuvaya göre).
  * Kademe çözümlemesi SUNUCUDA (ilçe → il → varsayılan); istemci hangi kademede
- * olduğunu bilmek zorunda değil.
+ * olduğunu bilmek zorunda değil. Görsel, yönetici panelindeki "Ana Sayfa
+ * Görselleri" sayfasından yuva + bölge seçilerek atanır.
  */
 export async function fetchHomeBanner(
   city: string | null,
   district: string | null,
+  slot: HomeBannerSlot = 'PITCH_RENT',
 ): Promise<HomeBanner | null> {
   const { data, error } = await supabase.rpc('home_banner_for_region', {
     p_city: city,
     p_district: district,
-    p_slot: 'PITCH_RENT',
+    p_slot: slot,
   });
   if (error) throw error;
 

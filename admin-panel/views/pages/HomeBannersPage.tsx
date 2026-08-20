@@ -1,12 +1,13 @@
 // ════════════════════════════════════════════════════════════════════════════
-// ANA SAYFA BANT GÖRSELİ — bölge bölge yönetim
+// ANA SAYFA GÖRSELLERİ — kart + bölge bölge yönetim
 // ════════════════════════════════════════════════════════════════════════════
 //
-// Oyuncunun ana sayfasında "SAHA KİRALA" kartının sağında duran fotoğraf.
-// Kurucu kararı: temelde TEK bir marka görseli durur, ama bölge bölge
-// (il / ilçe) buradan değiştirilebilir.
+// Oyuncunun ana sayfasındaki iki büyük kartın ("Saha Kirala" ve "Maç Kur" —
+// ikincisi kurucu kararıyla 20 Ağu 2026'da aynı yapıya geçirildi) sağında
+// duran fotoğraf. Önce YUVA (hangi kart) seçilir, sonra bölge; temelde TEK
+// bir marka görseli durur, bölge bölge (il / ilçe) değiştirilebilir.
 //
-// ÇÖZÜMLEME KADEMESİ (sunucuda, `home_banner_for_region`):
+// ÇÖZÜMLEME KADEMESİ (sunucuda, `home_banner_for_region`, yuva başına):
 //     ilçe kaydı  →  il kaydı  →  VARSAYILAN
 // Yani Ordu/Altınordu için görsel koyarsan yalnız orası değişir; Ordu için
 // koyarsan Ordu'nun tamamı; hiçbiri yoksa varsayılan marka görseli görünür.
@@ -21,7 +22,12 @@ import { AlertTriangle, Check, Globe2, Image as ImageIcon, Loader2, RefreshCw, T
 import { supabase } from '../../../supabaseClient';
 import { useImageUpload } from '../../../hooks/useImageUpload';
 
-const SLOT = 'PITCH_RENT';
+/** Ana sayfadaki görsel yuvaları — sıra, ekrandaki kart sırasıyla aynı. */
+const SLOTS = [
+  { value: 'PITCH_RENT', label: 'Saha Kirala kartı' },
+  { value: 'MATCH_CREATE', label: 'Maç Kur kartı' },
+] as const;
+type SlotValue = (typeof SLOTS)[number]['value'];
 
 interface BannerRow {
   id: string;
@@ -62,6 +68,8 @@ export const HomeBannersPage: React.FC = () => {
   const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [target, setTarget] = useState('');
+  const [slot, setSlot] = useState<SlotValue>('PITCH_RENT');
+  const slotLabel = SLOTS.find((s) => s.value === slot)?.label ?? slot;
 
   // Üç boy + LQIP burada üretilir. `pitch-rent-banner` klasörü ayrı: bu
   // görseller bir sahaya değil, BÖLGEYE aittir.
@@ -80,7 +88,7 @@ export const HomeBannersPage: React.FC = () => {
         supabase
           .from('home_banners')
           .select('id, city, district, source_url, storage_path, alt_text, updated_at')
-          .eq('slot', SLOT)
+          .eq('slot', slot)
           .eq('is_active', true)
           .order('city', { nullsFirst: true })
           .order('district', { nullsFirst: true }),
@@ -100,7 +108,7 @@ export const HomeBannersPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [slot]);
 
   useEffect(() => { void load(); }, [load]);
 
@@ -132,13 +140,13 @@ export const HomeBannersPage: React.FC = () => {
         p_source_url: url,
         p_storage_path: storagePath,
         p_alt_text: null,
-        p_slot: SLOT,
+        p_slot: slot,
       });
       if (e) throw e;
       setNotice(
         variantsReady
-          ? `${regionLabel(city, district)} görseli güncellendi.`
-          : `${regionLabel(city, district)} görseli güncellendi — fakat küçük boylar üretilemedi, fotoğraf tek boy gösterilecek.`,
+          ? `${slotLabel} · ${regionLabel(city, district)} görseli güncellendi.`
+          : `${slotLabel} · ${regionLabel(city, district)} görseli güncellendi — fakat küçük boylar üretilemedi, fotoğraf tek boy gösterilecek.`,
       );
       await load();
     } catch (e) {
@@ -152,8 +160,8 @@ export const HomeBannersPage: React.FC = () => {
     // Varsayılan kayıt silinirse hiçbir bölgede görsel kalmaz; ekran o zaman
     // bandı hiç çizmez (kart boş zeminle durur, kırılmaz).
     const soru = row.city
-      ? `${regionLabel(row.city, row.district)} görseli kaldırılsın mı? Bu bölge bir üst kademeye düşer.`
-      : 'Varsayılan görsel kaldırılsın mı? Kendi görseli olmayan bölgelerde bant fotoğrafsız kalır.';
+      ? `${slotLabel} · ${regionLabel(row.city, row.district)} görseli kaldırılsın mı? Bu bölge bir üst kademeye düşer.`
+      : `${slotLabel} varsayılan görseli kaldırılsın mı? Kendi görseli olmayan bölgelerde kart fotoğrafsız kalır.`;
     if (!window.confirm(soru)) return;
     setBusy(true); setError(null); setNotice(null);
     try {
@@ -176,12 +184,13 @@ export const HomeBannersPage: React.FC = () => {
         <div>
           <h1 className="text-xl font-extrabold text-white flex items-center gap-2">
             <ImageIcon size={20} className="text-emerald-400" />
-            Ana Sayfa Bant Görseli
+            Ana Sayfa Görselleri
           </h1>
           <p className="mt-1 text-sm text-gray-400 max-w-2xl">
-            Oyuncunun ana sayfasında “Saha Kirala” kartının sağında duran fotoğraf.
-            Bir bölgeye görsel koyarsan yalnız orası değişir; koymadığın her yer
-            bir üst kademeye düşer: <strong className="text-gray-200">ilçe → il → varsayılan</strong>.
+            Oyuncunun ana sayfasında “Saha Kirala” ve “Maç Kur” kartlarının
+            sağında duran fotoğraflar. Önce kartı, sonra bölgeyi seç; görsel
+            koymadığın her yer bir üst kademeye düşer:{' '}
+            <strong className="text-gray-200">ilçe → il → varsayılan</strong>.
           </p>
         </div>
         <button
@@ -208,9 +217,28 @@ export const HomeBannersPage: React.FC = () => {
         </div>
       )}
 
+      {/* ── Yuva seçimi: hangi kartın görseli? ──────────────────────────── */}
+      <div role="tablist" aria-label="Kart seç" className="inline-flex rounded-xl border border-white/10 bg-black/30 p-1">
+        {SLOTS.map((s) => (
+          <button
+            key={s.value}
+            type="button"
+            role="tab"
+            aria-selected={slot === s.value}
+            disabled={working}
+            onClick={() => setSlot(s.value)}
+            className={`rounded-lg px-4 py-2 text-sm font-bold transition-colors disabled:opacity-50 ${
+              slot === s.value ? 'bg-emerald-500/20 text-emerald-200' : 'text-gray-400 hover:text-gray-200'
+            }`}
+          >
+            {s.label}
+          </button>
+        ))}
+      </div>
+
       {/* ── Yükleme ─────────────────────────────────────────────────────── */}
       <section className="rounded-2xl border border-white/10 bg-black/30 p-4 space-y-3">
-        <h2 className="text-sm font-bold uppercase tracking-wider text-gray-400">Görsel Ata</h2>
+        <h2 className="text-sm font-bold uppercase tracking-wider text-gray-400">Görsel Ata — {slotLabel}</h2>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <select
             value={target}
@@ -249,7 +277,7 @@ export const HomeBannersPage: React.FC = () => {
       {/* ── Mevcut kayıtlar ─────────────────────────────────────────────── */}
       <section className="space-y-2">
         <h2 className="text-sm font-bold uppercase tracking-wider text-gray-400">
-          Tanımlı Görseller ({rows.length})
+          Tanımlı Görseller — {slotLabel} ({rows.length})
         </h2>
 
         {loading ? (

@@ -41,7 +41,9 @@ import {
 } from '../services/dashboardCountsService';
 import { getWalletSummary } from '../services/walletService';
 
-const CACHE_VERSION = 1;
+// v2 (20 Ağu 2026): HomeData'ya matchBanner eklendi — eski önbellek şekli
+// sessizce yok sayılsın diye sürüm atlandı (anahtar değişince eski kayıt okunmaz).
+const CACHE_VERSION = 2;
 const cacheKey = (uid: string) => `oyna.home.v${CACHE_VERSION}.${uid || 'guest'}`;
 
 /** Bu süreden eski önbellek "bayat" sayılır ve çevrimdışı şeridinde söylenir. */
@@ -58,11 +60,13 @@ export interface HomeData {
   goalkeepers: number | null;
   referees: number | null;
   banner: HomeBanner | null;
+  /** "Maç Kur" kartının sağındaki fotoğraf (MATCH_CREATE yuvası). */
+  matchBanner: HomeBanner | null;
 }
 
 const EMPTY: HomeData = {
   profile: null, balance: null, strip: [], matchTotal: null,
-  pitches: null, goalkeepers: null, referees: null, banner: null,
+  pitches: null, goalkeepers: null, referees: null, banner: null, matchBanner: null,
 };
 
 export interface DashboardHome extends HomeData {
@@ -192,6 +196,7 @@ export function useDashboardHome(): DashboardHome {
       hasScope ? countNearbyProviders(centers, searchRadius, 'GK') : Promise.resolve(null),
       hasScope ? countNearbyProviders(centers, searchRadius, 'REF') : Promise.resolve(null),
       fetchHomeBanner(city, district),
+      fetchHomeBanner(city, district, 'MATCH_CREATE'),
     ]).then((r) => {
       if (id !== runId.current || !mounted.current) return;
 
@@ -211,6 +216,7 @@ export function useDashboardHome(): DashboardHome {
         goalkeepers: val<number | null>(4, null),
         referees: val<number | null>(5, null),
         banner: val<HomeBanner | null>(6, null),
+        matchBanner: val<HomeBanner | null>(7, null),
       };
 
       setData(next);
