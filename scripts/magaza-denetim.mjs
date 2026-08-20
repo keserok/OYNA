@@ -85,6 +85,19 @@ denetle('Sürüm numaraları', () => {
     tamam(`Uygulama içi sürüm rozeti de ${pkgAd}`);
   }
 
+  // ── SUNUCUDAKİ EŞİK (bu betik göremez — elle doğrulanmalı) ───────────────
+  // 20 Ağustos 2026'da tam olarak bu yüzden uygulama kendi kendini kilitledi:
+  // sürüm mağaza listelemesiyle hizalanıp 1.0.0'a çekildi, ama `settings`
+  // tablosundaki `minSupportedVersion` eski numaralandırmada (3.0.0) kaldı.
+  // `uygulama_kapisi` 1.0.0 < 3.0.0 görüp KAPATILAMAZ "Güncelle" ekranı açtı;
+  // uygulama açılır açılmaz kullanılamaz hâle geldi.
+  //
+  // Bu betik çevrimdışı çalışır, veritabanına bakamaz. Yapabileceği tek doğru
+  // şey, gönderim hazırlığının tam ortasında bunu HATIRLATMAK.
+  uyari(`Sunucu eşiğini doğrula — paket sürümü ${aVarsayilanAd}`,
+    `settings.minSupportedVersion <= ${aVarsayilanAd} olmalı, yoksa uygulama ` +
+    `açılışta kendini kilitler. SQL: select public.uygulama_kapisi('${aVarsayilanAd}');`);
+
   const iKodBenzersiz = [...new Set(iKod)];
   if (iKodBenzersiz.length > 1) {
     engel('iOS derleme numarası tutarsız', `Farklı CURRENT_PROJECT_VERSION değerleri: ${iKodBenzersiz.join(', ')}`);
