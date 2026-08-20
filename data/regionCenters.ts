@@ -118,6 +118,21 @@ export const DISTRICT_CENTERS: Record<string, Record<string, LatLng>> = {
 /** İl aktif (verisi var) mı? */
 export const isCoveredCity = (city: string): boolean => COVERED_CITIES.has(city);
 
+/**
+ * AKTİF il/ilçe çiftlerinin düz listesi — bölge seçicinin en üstünde
+ * gösterilir. Sıra `DISTRICT_CENTERS`'taki yazım sırasıdır; il merkezi ilk
+ * sıradadır (bkz. ORDU_DISTRICTS).
+ *
+ * NİYE VAR: seçici 81 ili plaka sırasıyla listeliyordu, yani ekranın tepesinde
+ * hep 01 Adana · 02 Adıyaman duruyordu. OYNA'nın gerçekten açık olduğu TEK il
+ * listenin çok aşağısındaydı; ilk kez giren biri (ve mağaza incelemecisi)
+ * içerik olan bölgeyi bulmak için kaydırmak, sonra da ilçeye girmek zorundaydı.
+ */
+export const coveredRegionPairs = (): { city: string; district: string }[] =>
+  [...COVERED_CITIES].flatMap((city) =>
+    Object.keys(DISTRICT_CENTERS[city] ?? {}).map((district) => ({ city, district })),
+  );
+
 /** İl merkez koordinatı (yoksa null). */
 export const provinceCenter = (city: string): LatLng | null => PROVINCE_CENTERS[city] ?? null;
 

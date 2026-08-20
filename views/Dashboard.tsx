@@ -1262,8 +1262,17 @@ const StripEmpty: React.FC<{
           "BU HAFTA" burada anlamsızdı: bölge yokken hangi haftanın hangi
           şehirdeki maçları gösterilecekti? Kullanıcıyı boş bir listeye
           götürüyordu. Yerine eksik olanı tamamlayan düğme kondu.
-        • Bölge seçilmiş, maç yok → MAÇ KUR + BU HAFTA (ikisi de çalışır) */}
-    <div style={{ marginTop: 3, display: 'flex', gap: 9 }}>
+        • Bölge seçilmiş, maç yok → MAÇ KUR + BU HAFTA + BÖLGE DEĞİŞTİR
+
+        BÖLGE DEĞİŞTİR neden eklendi (19 Ağu 2026): kapsam VARKEN de sonuç
+        sıfır olabiliyor — kullanıcı OYNA'nın henüz açılmadığı bir şehirdeyse
+        ekran "BUGÜN YAKININDA MAÇ YOK" deyip onu orada bırakıyordu. İki düğme
+        de aynı boş listeye gidiyordu (BU HAFTA da aynı bölgeye bakar), yani
+        çıkış yolu YOKTU. Bu, konumu açan bir mağaza incelemecisinin göreceği
+        ekranın da ta kendisiydi.
+
+        Düğmeler dar telefonda sarabilir: üç etiket tek satıra sığmıyor. */}
+    <div style={{ marginTop: 3, display: 'flex', gap: 9, flexWrap: 'wrap', justifyContent: 'center' }}>
       {error ? (
         <BosHalDugme onClick={onRetry} label="Tekrar dene">TEKRAR DENE</BosHalDugme>
       ) : (
@@ -1272,7 +1281,10 @@ const StripEmpty: React.FC<{
             {upper(CARD.matchCreate)}
           </BosHalDugme>
           {hasScope ? (
-            <BosHalDugme onClick={onBrowse} label="Bu haftanın maçları">BU HAFTA</BosHalDugme>
+            <>
+              <BosHalDugme onClick={onBrowse} label="Bu haftanın maçları">BU HAFTA</BosHalDugme>
+              <BosHalDugme onClick={onSetLocation} label="Bölgeni değiştir">BÖLGE DEĞİŞTİR</BosHalDugme>
+            </>
           ) : (
             <BosHalDugme onClick={onSetLocation} label="Konumu ayarla">KONUMU AYARLA</BosHalDugme>
           )}
