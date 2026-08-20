@@ -109,8 +109,8 @@ export const RahatJoinSheet: React.FC<RahatJoinSheetProps> = ({
   const active = picks.slice(0, qty);
   const allPicked = active.every(p => p === 'W' || p === 'R');
   const total = qty * price;
-  // Karttan ÇEKİLECEK toplam (taban + işlem bedeli, 10'a yuvarlı) — ekrandaki
-  // büyük rakam ve CTA budur; sunucu aynı motorla aynı tutarı çeker.
+  // Karttan ÇEKİLECEK toplam = adet × slot etiketi, BİREBİR — bedel/yuvarlama
+  // eklenmez (kurucu kararı, 20 Ağu 2026); sunucu aynı motorla aynı tutarı çeker.
   const chargedTotal = price === 0 ? 0 : computeCardTotal(total, feePct);
 
   const proceed = () => {

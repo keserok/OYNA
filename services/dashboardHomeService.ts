@@ -232,9 +232,16 @@ export async function fetchStripMatches(
 // ── SAHA FOTOĞRAFLARI ───────────────────────────────────────────────────────
 
 /**
- * Maç kartının fotoğrafı = O MAÇIN OYNANACAĞI SAHANIN fotoğrafı.
+ * Maç kartının fotoğrafı = O MAÇIN OYNANACAĞI SAHANIN KAPAĞI.
  * Statik/uydurma görsel YOK: saha fotoğrafı yoksa `null` döner ve ekran
  * amblemli yedeğe düşer (brifing · madde 2).
+ *
+ * KAPAK KURALI = sunucudaki `_pitch_image` ile birebir: önce `image`, o boşsa
+ * galerinin ilk karesi (`images[0]`). Eskiden burada yalnız `image` okunuyordu;
+ * keşif kartı (matches.image ← tetikleyici ← _pitch_image) ve rahat lobi
+ * galerisi (`images`) başka kaynaktan beslenince AYNI maç üç ekranda üç farklı
+ * fotoğrafla çıkıyordu — kurucu bunu "fotoğraf bir görünüp bir değişiyor" diye
+ * raporladı (20 Ağu 2026). Tek kural, tek kapak.
  *
  * `get_nearby_matches` sahanın fotoğrafını döndürmüyor; o RPC'nin dönüş
  * tipini değiştirmek (DROP + CREATE) onu kullanan diğer ekranları riske
@@ -249,19 +256,28 @@ export async function fetchPitchPhotos(
 
   const { data, error } = await supabase
     .from('pitches')
-    .select('id, image')
+    .select('id, image, images')
     .in('id', ids);
   if (error) throw error;
 
-  const rows = ((data ?? []) as { id: string; image: string | null }[])
-    .filter((r) => !!r.image?.trim());
+  const rows = ((data ?? []) as { id: string; image: string | null; images: unknown }[])
+    .map((r) => ({ id: r.id, cover: pitchCoverUrl(r.image, r.images) }))
+    .filter((r): r is { id: string; cover: string } => !!r.cover);
 
-  const variants = await fetchVariantsByUrl(rows.map((r) => r.image as string));
+  const variants = await fetchVariantsByUrl(rows.map((r) => r.cover));
   for (const r of rows) {
-    const url = (r.image as string).trim();
-    out.set(r.id, { url, variants: variants.get(url) ?? null });
+    out.set(r.id, { url: r.cover, variants: variants.get(r.cover) ?? null });
   }
   return out;
+}
+
+/** Sahanın kapak görseli — sunucudaki `_pitch_image` kuralının istemci ikizi. */
+export function pitchCoverUrl(image: string | null | undefined, images: unknown): string | null {
+  const tekil = (image ?? '').trim();
+  if (tekil) return tekil;
+  const ilk = Array.isArray(images) ? images[0] : null;
+  const galeri = (typeof ilk === 'string' ? ilk : '').trim();
+  return galeri || null;
 }
 
 /** Genel adresten bucket içi yola: `.../object/public/images/<yol>` → `<yol>`. */

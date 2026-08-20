@@ -2186,9 +2186,9 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
                     /* S17: tutarlarda italik yok — italik yalnız skorda kalır.
                        Fiyat birimi slotun GERÇEK süresinden gelir; 90 dakikalık
                        tarifede "/ saat" yazmak yanlış olurdu.
-                       Kapora rakamı ÇEKİLECEK tutardır (taban + işlem bedeli,
-                       10'a yuvarlı) — kurucu kararı 20 Ağu 2026: ekranda yazan
-                       rakam karttan çekilen rakamdır. */
+                       Kapora rakamı ÇEKİLECEK tutardır ve tarifede yazanın
+                       KENDİSİDİR — kurucu kararı 20 Ağu 2026: ekranda yazan
+                       rakam karttan çekilen rakamdır; bedel/yuvarlama eklenmez. */
                     <div className="text-xl font-extrabold mt-0.5">
                       {isSelectionMode ? (
                         <>{fiyat(selectedSlotQuote.price)}<span className="text-xs font-semibold text-white/50"> {selectedSlotPriceUnit}</span></>

@@ -298,13 +298,12 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
   const cashBooking: boolean = false;
   const onlineBlocked = modeKnown && !onlineAllowed && !cashBooking;
   const needsCard = !cashBooking && amount > 0;
-  // Kart işlem bedeli sunucudaki yuvarlamanın aynısıyla hesaplanır; böylece
-  // burada yazan toplam ile karttan çekilen tutar birebir örtüşür. Tahsilat
-  // olmayan (sahada ödeme / kilitli) durumlarda bedel diye bir şey yoktur.
+  // İşlem bedeli 20 Ağu 2026 kararıyla KALKTI: computeCardFee her zaman 0
+  // döner, computeCardTotal etiketteki tutarın kendisini döner. Çağrılar
+  // duruyor ki tek kaynak (odemeKirilimi) değişirse ekran otomatik uysun.
   const cardFee = needsCard && onlineAllowed ? computeCardFee(amount, cardFeePct) : 0;
-  // Toplam `amount + cardFee` DEĞİLDİR: kurucu kararı gereği karttan çekilen
-  // tutar 10'un katına yukarı tamamlanır (400 + 14 → 420). O farkı yalnız
-  // computeCardTotal biliyor; elle toplarsak ekran ile kart ayrışır.
+  // Toplam = etikette yazan tutar. Buraya el ile bir ek koymak ekran ile
+  // kartı yeniden ayrıştırır — 19 Ağu modelinin (400 → 420) geri gelişi olur.
   const grandTotal = needsCard && onlineAllowed ? computeCardTotal(amount, cardFeePct) : amount;
   const selectedCard = selectedCardId === 'temp'
     ? tempCard

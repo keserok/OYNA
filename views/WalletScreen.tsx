@@ -244,10 +244,10 @@ const WalletScreen: React.FC<WalletScreenProps> = ({ onBack }) => {
   const blockedMatchCount = summary?.blockedMatchCount ?? 0;
 
   const effectiveTopup = isCustom ? Number(customAmount) || 0 : topupAmount;
-  // Kart işlem bedeli (app_config.card_fee_pct; 0 = kapalı) — sunucudaki
-  // yuvarlamanın aynısıyla hesaplanır, ekranda yazan toplam çekilenle örtüşür.
+  // İşlem bedeli 20 Ağu 2026 kararıyla KALKTI (etikette yazan ödenir):
+  // computeCardFee 0, computeCardTotal seçilen tutarın kendisini döner.
   const topupFee = computeCardFee(effectiveTopup, cardFeePct);
-  // Karttan çekilen toplam 10'un katına tamamlanır (kurucu kararı, 19 Ağu 2026).
+  // Karttan çekilen toplam = seçilen yükleme tutarı, birebir.
   const topupTotal = computeCardTotal(effectiveTopup, cardFeePct);
 
   const pendingPayout = payouts.find(p => p.status === 'PENDING' || p.status === 'PROCESSING') ?? null;

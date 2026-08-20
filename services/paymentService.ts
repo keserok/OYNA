@@ -122,22 +122,22 @@ export interface InAppPayInput {
   idempotencyKey?: string;
 }
 
-// ═══ KART İŞLEM BEDELİ ══════════════════════════════════════════════════════
-// Kartla ödemede ödeme altyapısına ödenen komisyon kullanıcıya ayrı satır
-// olarak yansır; cüzdandan ödemede uygulanmaz. Oran app_config.card_fee_pct'tir
-// (panelden yönetilir, 0 = kapalı). Ekranlar oranı BİR KEZ okur ve sunucuyla
-// birebir aynı yuvarlamayla hesaplar; tahsil edilen otoriter tutar yine
-// sunucudan (startInAppCardPayment → cardAmount) döner.
+// ═══ KART İŞLEM BEDELİ — KALDIRILDI ═════════════════════════════════════════
+// KURUCU KARARI (20 Ağustos 2026): "Slotta/etikette kaç lira yazıyorsa kullanıcı
+// ONU öder; ödeme ekranında artmış ücretle asla karşılaşmaz." 19 Ağustos'un
+// %3,5 bedel + 10'a yuvarlama modeli bu kararla İPTAL — sunucu da eklemiyor
+// (aynı tarihli göç: prepare_card_payment ve get_card_fee_quote).
+// Aşağıdaki fonksiyonlar API uyumu için duruyor: bedel HER ZAMAN 0, toplam
+// HER ZAMAN taban döner. Otoriter tutar yine sunucudan (cardAmount) gelir.
 
 /**
  * Yüzdeyi tek çağrıda öğren (100₺ üzerinden sorar).
  *
- * Sunucu cevap veremezse 0 DEĞİL, sunucunun kendi varsayılanı döner. 0 dönmek
- * "bedel yok" demektir ve ekranda sunucunun çekeceğinden DÜŞÜK bir toplam
- * yazdırırdı — kullanıcı 420 ₺ beklerken 410 ₺ görürdü. Panelde oran gerçekten
- * 0'a çekildiyse RPC başarıyla 0 döner ve bu yol hiç çalışmaz.
+ * Sunucu artık her koşulda 0 döner; RPC'ye ulaşılamazsa da 0 varsayılır.
+ * Eski model burada 3,5 varsayıp ekrana ZAM yazdırırdı — yeni kuralda ekrana
+ * etiketten yüksek bir rakam yazmanın hiçbir meşru yolu yoktur.
  */
-const VARSAYILAN_ORAN = 3.5; // sunucudaki get_card_fee_quote ile aynı
+const VARSAYILAN_ORAN = 0;
 
 export async function getCardFeePct(): Promise<number> {
   const { data, error } = await supabase.rpc('get_card_fee_quote', { p_amount: 100 });
@@ -158,15 +158,15 @@ export async function getCardFeePctCached(): Promise<number> {
   return _cardFeePctCache;
 }
 
-/** Yalnız altyapı bedeli. Toplam için computeCardTotal kullanılır. */
+/** İşlem bedeli — 20 Ağu 2026 kararıyla HER ZAMAN 0 (etikette yazan ödenir). */
 export function computeCardFee(base: number, pct: number): number {
   return odemeKirilimi(base, pct).bedel;
 }
 
 /**
- * Karttan ÇEKİLECEK toplam — daima 10'un katı (kurucu kararı, 19 Ağu 2026).
- * Ekranda yazan büyük rakam budur; `computeCardFee` yalnız altyapı bedelini
- * verir ve tek başına toplamı OLUŞTURMAZ (aradaki yuvarlama farkı eksik kalır).
+ * Karttan ÇEKİLECEK toplam = etiketteki taban (kurucu kararı, 20 Ağu 2026).
+ * Ekrandaki büyük rakam budur ve etiketle AYNIDIR; buraya oran/yuvarlama
+ * ekleyen her değişiklik ekran ile kartı yeniden ayrıştırır — yapma.
  */
 export function computeCardTotal(base: number, pct: number): number {
   return odemeKirilimi(base, pct).toplam;

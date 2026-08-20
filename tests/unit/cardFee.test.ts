@@ -1,33 +1,22 @@
 import { describe, it, expect } from 'vitest';
 import { computeCardFee, cardFeeOf } from '../../services/paymentService';
 
-// SÖZLEŞME: kart işlem bedeli YALNIZ karttan çekilen tabana uygulanır ve
-// sunucudaki round(base * pct / 100, 2) ile BİREBİR aynı sonucu vermelidir —
-// aksi halde ekranda yazan toplam ile karttan çekilen tutar ayrışır.
-describe('computeCardFee — ekran/sunucu yuvarlaması aynı', () => {
-  it('yuvarlak tutarlar', () => {
-    expect(computeCardFee(1000, 2.5)).toBe(25);
-    expect(computeCardFee(300, 2.5)).toBe(7.5);
-    expect(computeCardFee(180, 2.5)).toBe(4.5);
-  });
-
-  it('kuruş yuvarlaması 2 haneye iner', () => {
-    expect(computeCardFee(133, 2.5)).toBe(3.33);   // 3.325 → 3.33
-    expect(computeCardFee(99.99, 2.5)).toBe(2.5);  // 2.49975 → 2.50
-  });
-
-  it('oran 0 → özellik kapalı, bedel yok', () => {
+// SÖZLEŞME (kurucu kararı, 20 Ağu 2026): ETİKETTE YAZAN ÖDENİR — kart işlem
+// bedeli tahsilattan kalktı. computeCardFee hangi oran verilirse verilsin 0
+// döner; sunucudaki prepare_card_payment de eklemez. Bu describe eskiden
+// %2,5'lik bedel matematiğini kilitliyordu — o model kaldırıldı.
+describe('computeCardFee — bedel diye bir şey yok', () => {
+  it('hangi oran verilirse verilsin 0', () => {
+    expect(computeCardFee(1000, 2.5)).toBe(0);
+    expect(computeCardFee(300, 2.5)).toBe(0);
+    expect(computeCardFee(1000, 1)).toBe(0);
+    expect(computeCardFee(1000, 3.75)).toBe(0);
     expect(computeCardFee(1000, 0)).toBe(0);
   });
 
-  it('geçersiz/sıfır taban bedel üretmez', () => {
+  it('geçersiz/sıfır taban da bedel üretmez', () => {
     expect(computeCardFee(0, 2.5)).toBe(0);
     expect(computeCardFee(-100, 2.5)).toBe(0);
-  });
-
-  it('farklı oranlar', () => {
-    expect(computeCardFee(1000, 1)).toBe(10);
-    expect(computeCardFee(1000, 3.75)).toBe(37.5);
   });
 });
 

@@ -25,8 +25,8 @@ import {
   type BookableProvider, type PitchPricePreview,
 } from '../services/matchCreateService';
 import { fetchPitchAvailability, buildBusyMap, isSlotBusy, toISODate, type BusyMap } from '../services/playerBookingService';
-// Kurucu kararı (20 Ağu 2026): kapora rakamı karttan ÇEKİLECEK tutardır
-// (taban + işlem bedeli, 10'a yuvarlı) — sunucu motoruyla birebir.
+// Kurucu kararı (20 Ağu 2026): kapora rakamı karttan ÇEKİLECEK tutardır ve
+// etikette yazanın KENDİSİDİR — bedel/yuvarlama eklenmez, sunucu da eklemez.
 import { getCardFeePctCached, computeCardTotal } from '../services/paymentService';
 import { getFriends, type FriendRow } from '../services/socialService';
 import { getMyTeams, getTeamSquad, type MyTeamRow } from '../services/teamSocialService';

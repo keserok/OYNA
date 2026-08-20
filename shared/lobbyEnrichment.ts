@@ -153,3 +153,33 @@ export function resolveGkVisibility(params: {
 export function findHiredGkSlotId(slots: (PositionSlot | null | undefined)[]): string | null {
   return (slots || []).find(s => s && s.status === 'OPEN' && normalizeRole(s.role) === 'GK')?.id ?? null;
 }
+
+// ════════════════════════════════════════════════════════════════════════
+// TARAF NORMALİZASYONU — HAYALET KADRO YASAĞI
+//
+// BULUNAN HATA (20 Ağustos 2026): eski kayıtlarda (ve demo tohumlarında) maçın
+// İKİ TARAFININ slotları tek dizide duruyor: `slots`=10, `awaySlots`=boş.
+// Lobi bunu "10 kişilik EV SAHİBİ" sanıp deplasman için ŞABLONDAN 10 slot
+// uyduruyordu. Sonuç: ana sayfa kartı DB'ye bakıp "6 yer kaldı" derken lobi
+// 20 pozisyonluk saha çizip 14'ünü açık gösteriyordu. Üstelik uydurulan
+// slotların kimliği DB'de OLMADIĞI için satın alma sunucudan dönüyordu —
+// kullanıcıya var olmayan yer satmaya çalışan bir ekran.
+//
+// KURAL: SLOT UYDURULMAZ. Tek dizide gelen çift sayılı kadro İKİYE BÖLÜNÜR
+// (ilk yarı ev sahibi, ikinci yarı deplasman — 10 slotluk 5v5 = 5+5). Tek
+// sayılıysa olduğu gibi kalır ve karşı taraf BOŞ görünür; yanlış kapasite
+// göstermekten iyidir. Kart ile lobi artık aynı diziyi sayar.
+// ════════════════════════════════════════════════════════════════════════
+export function normalizeMatchSides(
+  slots: PositionSlot[] | null | undefined,
+  awaySlots: PositionSlot[] | null | undefined,
+): { home: PositionSlot[]; away: PositionSlot[] } {
+  const home = Array.isArray(slots) ? slots : [];
+  const away = Array.isArray(awaySlots) ? awaySlots : [];
+  if (away.length > 0 || home.length === 0) return { home, away };
+  // Yarım, gerçek bir takım boyu etmiyorsa (en küçük saha formatı 4v4) bu dizi
+  // zaten TEK tarafın kadrosudur — bölmek yeni bir yalan üretirdi.
+  if (home.length % 2 !== 0 || home.length < 8) return { home, away: [] };
+  const yarim = home.length / 2;
+  return { home: home.slice(0, yarim), away: home.slice(yarim) };
+}

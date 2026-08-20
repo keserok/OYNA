@@ -39,7 +39,7 @@ import { hakemSeviyeRozeti } from '../shared/hakemSeviyesi';
 import { playStyleMetaForDifficulty } from './onboarding/onboardingShared';
 import TeamPlanBanner from '../components/social/TeamPlanBanner';
 // Tek kaynak lobi mantığı — admin paneli (MatchLobbyPitch) ile AYNI fonksiyonlar (drift yok).
-import { normalizeRole, inferSquadSize, applyCanonicalCoords, resolveGkVisibility, findHiredGkSlotId } from '../shared/lobbyEnrichment';
+import { normalizeRole, inferSquadSize, applyCanonicalCoords, resolveGkVisibility, findHiredGkSlotId, normalizeMatchSides } from '../shared/lobbyEnrichment';
 import { formatMatchDuration } from '../shared/matchTiming';
 import { PLAY_STYLE_META } from './onboarding/onboardingShared';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
@@ -203,14 +203,22 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
   useEffect(() => { olayYaz('oyuncu_mac_acildi', { tekrarlanabilir: true }); }, []);
   const match = useMemo(() => {
     if (!originalMatch) return null as any;
+    // HAYALET KADRO YASAĞI (20 Ağu 2026): iki tarafı tek dizide taşıyan eski/
+    // demo kayıtlar İKİYE BÖLÜNÜR (normalizeMatchSides). Eskiden boş deplasman
+    // için şablondan 10 slot uyduruluyordu: ana sayfa kartı "6 yer kaldı"
+    // derken lobi 20 pozisyonun 14'ünü açık gösteriyor, üstelik uydurma slotu
+    // satın almak sunucudan dönüyordu. Şablon üretimi YALNIZ hiç slotu olmayan
+    // maçta kalır (takım-maçı gösterimi) — orada da satılık yer çizilmez,
+    // görünüm içindir.
+    const sides = normalizeMatchSides(originalMatch.slots, originalMatch.awaySlots);
     const badgeFormat = originalMatch.badges?.find(b => /^\d+v\d+$/i.test(b.trim()))?.toLowerCase();
-    const slotCountFormat = originalMatch.slots?.length > 0 ? inferSquadSize(originalMatch.slots.length) : null;
+    const slotCountFormat = sides.home.length > 0 ? inferSquadSize(sides.home.length) : null;
     const fmt = originalMatch.format || badgeFormat || slotCountFormat || '7v7';
-    const homeSlots = originalMatch.slots?.length > 0
-      ? originalMatch.slots
+    const homeSlots = sides.home.length > 0
+      ? sides.home
       : generateDefaultSlots(fmt, (originalMatch.id || 'match') + '_home');
-    const awaySlots = originalMatch.awaySlots?.length > 0
-      ? originalMatch.awaySlots
+    const awaySlots = sides.home.length > 0
+      ? sides.away
       : generateDefaultSlots(inferSquadSize(homeSlots.length), (originalMatch.id || 'match') + '_away');
     return { ...originalMatch, slots: homeSlots, awaySlots };
   // eslint-disable-next-line react-hooks/exhaustive-deps

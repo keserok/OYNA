@@ -15,7 +15,7 @@ import { formatMatchDuration } from '../../shared/matchTiming';
 // ("Ücretsiz" karşılığını kendi verir), iade/bakiye bağlamında formatTRYAmount.
 import { formatTRYShort, formatTRYAmount } from '../../utils/formatTRY';
 // Kurucu kararı (20 Ağu 2026): KATIL düğmesindeki rakam karttan ÇEKİLECEK
-// tutardır (tek yer için taban + işlem bedeli, 10'a yuvarlı).
+// tutardır ve slot etiketinin KENDİSİDİR — bedel/yuvarlama eklenmez.
 import { getCardFeePctCached, computeCardTotal } from '../../services/paymentService';
 import {
   getMatchDetails, subscribeToMatchUpdates, getMatchLobbyParticipants,

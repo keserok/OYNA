@@ -24,7 +24,7 @@ import {
 } from '../services/playerBookingService';
 import { formatTRYAmount, formatTRYShort } from '../utils/formatTRY';
 // Kurucu kararı (20 Ağu 2026): ödeme düğmelerindeki rakam karttan ÇEKİLECEK
-// tutardır (taban + işlem bedeli, 10'a yuvarlı) — sunucu motoruyla birebir.
+// tutardır ve etikette yazanın KENDİSİDİR — bedel/yuvarlama eklenmez.
 import { getCardFeePctCached, computeCardTotal } from '../services/paymentService';
 
 // IP-19 — para tek biçimde. `fiyat` FİYAT bağlamı (sıfır = "Ücretsiz"),
