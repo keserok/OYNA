@@ -8,27 +8,56 @@
 
 ---
 
-## 1. İnceleme Hesabı (reviewer login)
+## 1. İnceleme Girişi — uygulama içi DEMO SEÇİCİ (güncel yol)
 
-Uygulama **e-posta + şifre** ile girişi destekler (kayıt-öncelikli akış; mevcut
-hesap için OTP/e-posta doğrulaması gerekmez). İncelemeci için önceden
-oluşturulmuş, e-postası onaylanmış bir **oyuncu** hesabı verilmelidir:
+> **GÜNCELLENDİ (20 Ağu 2026).** E-posta + şifre girişi 17 Ağustos kurucu
+> kararıyla KALDIRILDI; tek yol telefon + OTP (ve Google/Apple). Telefon
+> sağlayıcısı inceleme döneminde kapalı ve incelemecinin Türk numarası yok —
+> bu yüzden inceleme, 19 Ağustos kurucu kararıyla **uygulama içi demo hesap
+> seçicisi** üzerinden yapılır. Ayrı bir kullanıcı adı/şifre VERMEYE GEREK YOK.
 
-- E-posta: `⟨review@oyna.app⟩`
-- Şifre: `⟨sabit-güçlü-şifre⟩`
+**Gönderilecek paket:** `npm run sync:ios:inceleme` (Android:
+`sync:android:inceleme`). Bu komut paketi `VITE_MAGAZA_INCELEME=true` ile
+derler; giriş ekranına iki şey eklenir (normal yayın derlemesinde ikisi de
+yoktur):
 
-> **Kurucu notu:** Bu hesabı Supabase Auth'ta oluştur, `email_confirmed_at`
-> dolu olsun (Auth panelinden "Confirm email"). İstersen içine birkaç örnek
-> rezervasyon/maç ekleyerek incelemeciye zengin bir deneyim sun. `@oyna.app`
-> uzantısı şart değildir; herhangi bir gerçek e-posta olur.
->
-> **Önemli:** Üretimde demo-giriş (şifresiz "demo hesabıyla gir") **kapalıdır**
-> (`isDemoLoginEnabled` yalnız `VITE_DEV_MODE=true`, `?demo=1` veya localhost'ta
-> açılır). Bu yüzden incelemeci için gerçek bir e-posta+şifre hesabı zorunludur;
-> demo akışına güvenme.
+1. **İki dilli yönerge kutusu** ("APP REVIEW · İNCELEME"): kodların yalnız
+   Türk numaralarına gittiğini ve demo düğmesinin kullanılacağını söyler.
+2. **"DEMO HESABIYLA GİR" düğmesi** (ekranın altında): dokununca 29 demo
+   hesap rol gruplarıyla listelenir — 20 oyuncu, 4 saha sahibi, 3 kaleci,
+   2 hakem. Bir hesaba dokunmak şifresiz/tek dokunuş giriş yapar; bölge
+   otomatik Ordu/Altınordu kurulur, ekranlar dolu gelir.
+   İncelemeci numara yazıp KOD GÖNDER'e basarsa da çıkmazda kalmaz:
+   iki dilli mesajla demo seçiciye yönlendirilir ve liste kendiliğinden açılır.
 
-Girişte KVKK/üyelik sözleşmesi onay kutusu işaretlenmelidir (giriş ekranında
-görünür).
+**App Store Connect → App Review Information alanına yapıştırılacak metin
+(İngilizce, hazır):**
+
+```
+Sign-in for review: OYNA uses phone-number OTP sign-in, and SMS codes are
+delivered to Turkish numbers only. For your convenience this build includes
+an in-app review entrance — no separate credentials needed:
+
+1. On the sign-in screen, tick the consent checkbox (KVKK / Terms).
+2. Tap the green "DEMO HESABIYLA GİR" (Sign in with a demo account) button
+   at the bottom of the screen.
+3. Pick any account — one tap signs you in. The list covers all four roles:
+   PLAYER (Oyuncular), FACILITY OWNER (Saha Sahipleri), GOALKEEPER
+   (Kaleciler) and REFEREE (Hakemler). To tour the owner dashboard use
+   "Ahmet Kuru"; for a player use "Emre Kaya".
+
+These demo accounts live in a seeded demo ecosystem (matches, venues,
+wallet history) so every screen shows realistic data. They contain no real
+user data and no real money.
+```
+
+> **Kurucu notu:** Onay kutusu işaretlenmeden hiçbir giriş yolu ilerlemez
+> (kutusuz dokunuşta ekran ne yapılacağını söyler). Demo hesap listesinin tek
+> kaynağı `docs/OYNA_DEMO_HESAPLARI.md`; hesaplar üretim Supabase'inde gerçek
+> kayıt olarak durur ve inceleme sonrası `demo_clean_start_purge.sql` ile
+> topluca silinir. Genel yayına giderken paketi `VITE_MAGAZA_INCELEME`
+> OLMADAN yeniden derle (`npm run sync:ios`) — seçici ve yönerge o pakette
+> hiç yoktur.
 
 ---
 

@@ -62,9 +62,13 @@
 ### Her iki mağaza
 1. **Gizlilik politikası + kullanım şartları PUBLIC URL** (mağaza formları ister).
    Uygulama içi metinler hazır; yayınlanmış bir adres gerekiyor.
-2. **İncelemeci hesabı**: demo girişi artık pakette kapalı olduğundan incelemeciye
-   **gerçek bir e-posta + şifre** verilmeli (ör. `inceleme@oyna.app`, güçlü şifre).
-   Bu hesabın Ordu/Altınordu bölgesinde görebileceği maç ve saha olmalı.
+2. **İncelemeci girişi** *(GÜNCELLENDİ, 20 Ağu 2026)*: ayrı hesap VERİLMEZ.
+   İnceleme paketi (`npm run sync:ios:inceleme` / `sync:android:inceleme`,
+   bayrak `VITE_MAGAZA_INCELEME=true`) giriş ekranının altına **"DEMO
+   HESABIYLA GİR"** seçicisini koyar; incelemeci 29 demo hesaptan birine tek
+   dokunuşla girer (yönerge kutusu ekranda, İngilizce + Türkçe). Konsola
+   yazılacak hazır İngilizce not: `docs/master/APP_REVIEW_NOTLARI.md §1`.
+   Genel yayın paketi bayraksız derlenir; seçici o pakette hiç yoktur.
 3. **Ekran görüntüleri** (telefon boyutları) ve mağaza metinleri.
 4. **Yaş derecelendirmesi** formu (uygulamada reşit olmayan akışı + veli onayı var).
 

@@ -210,6 +210,24 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
     await sendPhoneOtp(phoneCheck.e164!);
   };
 
+  // ─── İnceleme paketinde çıkmaz uç YOK: kod gitmezse DEMO yolu gösterilir ───
+  // İncelemecinin ilk refleksi numara yazıp KOD GÖNDER'e basmak. Telefon
+  // sağlayıcısı inceleme döneminde KAPALI (kurucu kararı, 20 Ağu 2026); o an
+  // yalnız Türkçe bir "Google/Apple ile gir" mesajı, çalışması garantili tek
+  // yolu (alttaki demo seçici) hiç göstermiyordu — üstteki yönerge kutusunu
+  // okumayan incelemeci için hâlâ ret riskiydi. Yalnız inceleme paketinde:
+  // iki dilli yönlendirme yazılır ve seçici KENDİLİĞİNDEN açılır ki incelemeci
+  // hesap listesiyle burun buruna gelsin. Normal pakette davranış değişmez.
+  const incelemeOtpCikmaziniYonet = (): boolean => {
+    if (!(isIncelemePaketi() && showDemoPicker)) return false;
+    setDemoPickerOpen(true);
+    setError(
+      'Phone sign-in is unavailable in this review build — use “DEMO HESABIYLA GİR” below. · '
+      + 'Bu pakette telefonla giriş kapalı; alttaki “DEMO HESABIYLA GİR” listesinden bir hesaba dokun.',
+    );
+    return true;
+  };
+
   const handleSendOtp = async () => {
     // Buton form eksikken de CANLI durur; dokununca eksik olan TEK şeyi söyler.
     // (Sessizce pasif buton, kullanıcıya "bozuk" hissettiriyordu.)
@@ -234,8 +252,10 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
       return;
     }
     // Yurt dışı numara: WhatsApp kanalı açılana dek kod gönderilemiyor.
-    // Ölü uç bırakma — ne yapabileceğini söyle.
+    // Ölü uç bırakma — ne yapabileceğini söyle. (İncelemeci +1 gibi bir kodla
+    // denerse aynı çıkmaz: inceleme paketinde demo yoluna yönlendirilir.)
     if (kanalKapali) {
+      if (incelemeOtpCikmaziniYonet()) return;
       setError('Şu an yalnız Türkiye numaralarına kod gönderebiliyoruz. Google veya Apple ile devam edebilirsin.');
       return;
     }
@@ -247,7 +267,11 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
       setResendIn(60);
     } catch (err: any) {
       console.error('OTP gönderim hatası:', err);
-      setError(mapAuthError(err, 'Doğrulama kodu gönderilemedi. Lütfen tekrar deneyin.'));
+      // İnceleme paketinde HER gönderim hatası aynı kapıya çıkar: incelemecinin
+      // Türk numarası yok, kod ona hiçbir durumda ulaşmayacak — doğru yol demo.
+      if (!incelemeOtpCikmaziniYonet()) {
+        setError(mapAuthError(err, 'Doğrulama kodu gönderilemedi. Lütfen tekrar deneyin.'));
+      }
     } finally {
       setIsLoading(null);
     }

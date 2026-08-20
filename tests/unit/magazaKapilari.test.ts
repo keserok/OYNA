@@ -577,6 +577,28 @@ describe('Mağaza incelemecisine yönerge', () => {
     const a = oku('supabaseAuth.ts');
     expect(a).toContain('export const isIncelemePaketi = (): boolean => INCELEME_PAKETI');
   });
+
+  /**
+   * ÇIKMAZ UÇ KAPISI (20 Ağustos 2026 — canlıda ölçüldü).
+   *
+   * Telefon sağlayıcısı inceleme döneminde KAPALI. İncelemecinin ilk refleksi
+   * numara yazıp KOD GÖNDER'e basmak; o an ekran yalnız Türkçe "Google/Apple
+   * ile gir" diyordu — çalışması garantili tek yolu (demo seçici) göstermeden.
+   * İnceleme paketinde bu çıkmaz, iki dilli yönlendirme + kendiliğinden açılan
+   * seçiciyle kapatılır. Normal paket davranışı DEĞİŞMEZ.
+   */
+  it('kod gönderilemezse incelemeci demo yoluna yönlendirilir', () => {
+    const s = ekran();
+    // Kapı yalnız inceleme paketinde ve seçici gerçekten varken açılır.
+    expect(s).toContain('if (!(isIncelemePaketi() && showDemoPicker)) return false');
+    // Seçici kendiliğinden açılır — incelemeci listeyle burun buruna gelir.
+    const govde = s.slice(s.indexOf('const incelemeOtpCikmaziniYonet'), s.indexOf('const handleSendOtp'));
+    expect(govde).toContain('setDemoPickerOpen(true)');
+    // İngilizce söylenir — incelemecinin Türkçe okuduğu varsayılamaz.
+    expect(govde).toContain('use “DEMO HESABIYLA GİR” below');
+    // İki çıkmaz da (yurt dışı ülke kodu + gönderim hatası) aynı kapıdan geçer.
+    expect((s.match(/incelemeOtpCikmaziniYonet\(\)/g) ?? []).length).toBeGreaterThanOrEqual(2);
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
