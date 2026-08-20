@@ -118,23 +118,32 @@ describe('applyCanonicalCoords', () => {
 
 // ─── avatarFor ────────────────────────────────────────────────────────────────
 
-describe('avatarFor', () => {
-  it('seed + isimden geçerli URL döner', () => {
+describe('avatarFor — yerel ve saydam baş harf (kurucu kararı, 20 Ağu 2026)', () => {
+  it('dış servise gitmez: data-URI SVG döner', () => {
     const url = avatarFor('user123', 'Ali Veli');
-    expect(url).toContain('ui-avatars.com');
-    expect(url).toContain('name=');
-    expect(url).toContain('seed=');
+    expect(url.startsWith('data:image/svg+xml')).toBe(true);
+    expect(url).not.toContain('ui-avatars.com'); // eski dünya geri gelmesin
   });
 
-  it('isim yoksa "Oyuncu" varsayılanı kullanılır', () => {
-    const url = avatarFor('u1');
-    expect(url).toContain(encodeURIComponent('Oyuncu'));
+  it('zemin SAYDAM, harfler opak: dolgu yok, beyaz metin var', () => {
+    const svg = decodeURIComponent(avatarFor('u0', 'Ali Veli'));
+    expect(svg).toContain('fill="none"');      // dairenin içi boş
+    expect(svg).toContain('fill="#FFFFFF"');   // baş harfler opak
+    expect(svg).toContain('>AV<');             // Ali Veli → AV
   });
 
-  it('özel karakterler URL-encode edilir', () => {
-    const url = avatarFor('u2', 'Şafak Öz');
-    // URL içinde encode edilmiş Türkçe karakter olmalı
-    expect(url).toContain('%');
+  it('isim yoksa "Oyuncu" varsayılanının baş harfi kullanılır', () => {
+    const svg = decodeURIComponent(avatarFor('u1'));
+    expect(svg).toContain('>O<');
+  });
+
+  it('Türkçe baş harfler doğru büyütülür (İ/Ş kaybolmaz)', () => {
+    const svg = decodeURIComponent(avatarFor('u2', 'şafak ismail'));
+    expect(svg).toContain('>Şİ<');
+  });
+
+  it('aynı isim her çağrıda aynı yuvarlağı verir (tek görsel dil)', () => {
+    expect(avatarFor('a', 'Ali Veli')).toBe(avatarFor('b', 'Ali Veli'));
   });
 });
 
@@ -170,11 +179,11 @@ describe('enrichSlots', () => {
     expect(taken?.player?.avatar).toBe('https://ali.jpg');
   });
 
-  it('TAKEN slot — kullanıcı listede yoksa avatar oto-üretilir (ui-avatars)', () => {
+  it('TAKEN slot — kullanıcı listede yoksa avatar oto-üretilir (yerel saydam SVG)', () => {
     const slots = makeSlots(7, ['unknown-user']);
     const result = enrichSlots(slots, users, '7v7');
     const taken = result.find(s => s.status === 'TAKEN');
-    expect(taken?.player?.avatar).toContain('ui-avatars.com');
+    expect(taken?.player?.avatar).toContain('data:image/svg');
   });
 
   it('slot sayısı enrichSlots sonrası değişmez', () => {

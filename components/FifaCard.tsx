@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
+import { avatarFor } from '../shared/lobbyEnrichment';
 
 interface FifaCardProps {
     rating: number;
@@ -169,16 +170,20 @@ export const FifaCard: React.FC<FifaCardProps> = ({
                             )}
                         </div>
                         <div className="absolute top-2 right-[-10px] w-[180px] h-[180px] pointer-events-none">
-                            <img 
-                                src={avatar || "https://i.pravatar.cc/300?img=11"} 
-                                alt={name} 
-                                className="w-full h-full object-cover drop-shadow-lg" 
-                                style={{ 
-                                    WebkitMaskImage: 'linear-gradient(to bottom, black 70%, transparent 100%)', 
-                                    maskImage: 'linear-gradient(to bottom, black 70%, transparent 100%)' 
-                                }} 
+                            <img
+                                // Foto yoksa RASTGELE İNSAN FOTOSU (pravatar) basılmaz: kartta
+                                // başkasının yüzü belirirdi. Saydam baş harf SVG'si (20 Ağu 2026).
+                                src={avatar || avatarFor(name || 'oyuncu', name)}
+                                alt={name}
+                                className="w-full h-full object-cover drop-shadow-lg"
+                                style={{
+                                    WebkitMaskImage: 'linear-gradient(to bottom, black 70%, transparent 100%)',
+                                    maskImage: 'linear-gradient(to bottom, black 70%, transparent 100%)'
+                                }}
                                 onError={(e) => {
-                                    (e.target as HTMLImageElement).src = "https://i.pravatar.cc/300?img=11";
+                                    const img = e.target as HTMLImageElement;
+                                    // data-URI hata üretmez; döngü imkânsız ama yine de kapıla.
+                                    if (!img.src.startsWith('data:')) img.src = avatarFor(name || 'oyuncu', name);
                                 }}
                             />
                         </div>

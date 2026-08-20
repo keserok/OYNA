@@ -31,6 +31,17 @@ describe('isDefaultAvatar', () => {
     expect(isDefaultAvatar('https://picsum.photos/200')).toBe(true);
   });
 
+  it('ui-avatars URL → true (demo hesaplardaki mavi disk buradan geliyordu)', () => {
+    // Kurucu kararı (20 Ağu 2026): üreteç PNG'sinin gömülü zemini saydamlık
+    // kuralını deler; böyle adresler fotoğraf sayılmaz, baş harf yedeği çizilir.
+    expect(isDefaultAvatar('https://ui-avatars.com/api/?background=0D8ABC&color=fff&name=Ali')).toBe(true);
+    expect(isDefaultAvatar('https://UI-AVATARS.COM/api/?name=X')).toBe(true);
+  });
+
+  it('yerel baş harf SVG data-URI → true (fotoğraf değildir)', () => {
+    expect(isDefaultAvatar('data:image/svg+xml;utf8,%3Csvg%3E')).toBe(true);
+  });
+
   it('gerçek Supabase Storage URL → false', () => {
     const realUrl = 'https://xyz.supabase.co/storage/v1/object/public/avatars/user.jpg';
     expect(isDefaultAvatar(realUrl)).toBe(false);

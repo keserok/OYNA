@@ -39,7 +39,8 @@ import { hakemSeviyeRozeti } from '../shared/hakemSeviyesi';
 import { playStyleMetaForDifficulty } from './onboarding/onboardingShared';
 import TeamPlanBanner from '../components/social/TeamPlanBanner';
 // Tek kaynak lobi mantığı — admin paneli (MatchLobbyPitch) ile AYNI fonksiyonlar (drift yok).
-import { normalizeRole, inferSquadSize, applyCanonicalCoords, resolveGkVisibility, findHiredGkSlotId, normalizeMatchSides } from '../shared/lobbyEnrichment';
+import { normalizeRole, inferSquadSize, applyCanonicalCoords, resolveGkVisibility, findHiredGkSlotId, normalizeMatchSides, avatarFor } from '../shared/lobbyEnrichment';
+import { isDefaultAvatar } from '../utils/avatarHelper';
 import { formatMatchDuration } from '../shared/matchTiming';
 import { PLAY_STYLE_META } from './onboarding/onboardingShared';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
@@ -130,10 +131,10 @@ const getInitials = (name?: string): string => {
   return raw.toLocaleUpperCase('tr-TR');
 };
 
-// "Gerçek foto" mu? ui-avatars.com / pravatar dış üreteçleri gerçek foto sayılmaz →
-// sahada dış fetch yerine yerel baş harf gösterilir (kullanıcının niyeti).
-const isRealPhoto = (url?: string): boolean =>
-  !!url && !/ui-avatars\.com|pravatar\.cc/i.test(url);
+// "Gerçek foto" mu? Üreteç adresleri (ui-avatars, pravatar, yerel baş harf
+// SVG'si) gerçek foto sayılmaz → sahada yerel baş harf gösterilir. Liste tek
+// kaynaktan: utils/avatarHelper.isDefaultAvatar (kurucu kararı, 20 Ağu 2026).
+const isRealPhoto = (url?: string): boolean => !isDefaultAvatar(url);
 
 // Sağlayıcının TARZLARI — "REFLEKSLER 87 / DALIŞ 84" reyting çubuklarının yerine.
 //
@@ -2774,7 +2775,8 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                   const label = req.providerType === 'GK' ? 'Kaleci' : 'Hakem';
                   return (
                     <div key={req.id} className="p-3 rounded-2xl bg-[#161B22]/80 border border-white/8 flex items-center gap-3">
-                      <img src={applicant?.avatar || `https://i.pravatar.cc/150?u=${req.providerId}`} alt="" className="w-9 h-9 rounded-xl object-cover border border-white/10" />
+                      {/* Foto yoksa RASTGELE İNSAN FOTOSU (pravatar) basılmaz — saydam baş harf (20 Ağu 2026). */}
+                      <img src={applicant?.avatar || avatarFor(req.providerId, applicant?.name)} alt="" className="w-9 h-9 rounded-xl object-cover border border-white/10" />
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-extrabold text-white truncate">{applicant?.name || label}</p>
                         <p className="text-[0.625rem] text-ink-4 font-bold uppercase tracking-wide">{label} · {money(req.fee)} blokaj</p>

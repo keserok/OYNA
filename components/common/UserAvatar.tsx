@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { trInitials } from '../../utils/trUpper';
+import { isDefaultAvatar } from '../../utils/avatarHelper';
 
 /**
  * KİŞİ AVATARI — uygulamadaki TEK görsel dil.
@@ -62,7 +63,12 @@ export const UserAvatar: React.FC<UserAvatarProps> = ({
 }) => {
   const [broken, setBroken] = useState(false);
   useEffect(() => { setBroken(false); }, [avatarUrl]);
-  const showImg = !!avatarUrl && !broken;
+  // ÜRETEÇ ADRESLERİ FOTOĞRAF SAYILMAZ (kurucu kararı, 20 Ağu 2026): ui-avatars
+  // gibi servisler zemini görüntünün İÇİNE boyar — demo hesaplardaki "açık mavi
+  // yuvarlak" saydam zemin kuralını deliyordu. Böyle bir adres gelirse fotoğraf
+  // yok kabul edilir ve aşağıdaki saydam baş harf yedeği çizilir; veri hangi
+  // yoldan tohumlanırsa tohumlansın kural burada da tutulur (prensip 6.1).
+  const showImg = !!avatarUrl && !broken && !isDefaultAvatar(avatarUrl);
 
   if (showImg) {
     return (

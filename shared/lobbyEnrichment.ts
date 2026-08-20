@@ -8,11 +8,32 @@
 // ════════════════════════════════════════════════════════════════════════
 import type { PositionSlot, Player } from '../types';
 import { FORMATIONS, type SquadSize, SQUAD_SIZES } from '../utils/formations';
+import { trInitials } from '../utils/trUpper';
 
-/** Kimlik/foto çözülemeyen oyuncular için nötr, isimden üretilen avatar. */
+/**
+ * Kimlik/foto çözülemeyen kişiler için baş harf avatarı — YEREL ve SAYDAM.
+ *
+ * Kurucu kararı (20 Ağu 2026): "baş harfler opak, arka plan saydam." Eskiden
+ * burası ui-avatars.com'a gidiyordu; o servis zemini PNG'nin İÇİNE boyar
+ * (saydam üretemez), çevrimdışıyken hiç gelmez ve demo hesaplardaki "açık
+ * mavi yuvarlak" tam bu sınıftandı. Artık kendi SVG'mizi data-URI olarak
+ * üretiyoruz: zemin YOK (fill=none), harfler opak beyaz, ince beyaz halka —
+ * components/common/UserAvatar'ın baş harf yedeğiyle aynı dil, her kart
+ * renginin üstünde doğru görünür, ağ gerektirmez.
+ *
+ * `seed` imza uyumu için duruyor (eski çağıranlar konumla geçer); üretimde
+ * kullanılmaz — aynı isim her yerde aynı yuvarlağı verir (kurucu kararı
+ * 2026-08-06: tek görsel dil).
+ */
 export function avatarFor(seed: string, name?: string): string {
-  const label = (name || 'Oyuncu').trim();
-  return `https://ui-avatars.com/api/?background=0D1117&color=39FF14&bold=true&name=${encodeURIComponent(label)}&seed=${encodeURIComponent(seed)}`;
+  void seed;
+  const harfler = trInitials(name || 'Oyuncu', 2, '•');
+  const svg =
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">' +
+    '<circle cx="32" cy="32" r="30.5" fill="none" stroke="rgba(255,255,255,0.22)" stroke-width="2"/>' +
+    `<text x="32" y="33.5" text-anchor="middle" dominant-baseline="central" font-family="ui-sans-serif,system-ui,sans-serif" font-size="23" font-style="italic" font-weight="800" fill="#FFFFFF">${harfler}</text>` +
+    '</svg>';
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 }
 
 const ROLE_SHORT: Record<'GK' | 'DEF' | 'MID' | 'FWD', string> = { GK: 'KL', DEF: 'SAV', MID: 'ORT', FWD: 'HÜC' };

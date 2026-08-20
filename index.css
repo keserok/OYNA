@@ -379,6 +379,26 @@
   --oy-nav-h:      7.5rem;
 }
 
+/* ─── YAZI YAPISI TEK: ANA EKRANIN SESİ HER EKRANDA ──────────────────────────
+   KURUCU KARARI (20 Ağu 2026): "Tüm uygulamanın font yapısını ana ekranla aynı
+   yap." BULUNAN HATA: Tailwind v4 preflight gövde fontunu
+   `var(--default-font-family, ui-sans-serif, …)` diye çözer ve bu değişken
+   HİÇBİR YERDE tanımlı değildi — ana ekran kendi satır içi
+   `var(--font-sans)`'ıyla Inter çizerken, sınıfla yazılmış BÜTÜN diğer
+   ekranlar sessizce SİSTEM fontuna (iOS'ta SF Pro) düşüyordu. Tek satır
+   kapatır: varsayılan aile = --font-sans (Inter).
+
+   İkinci kural, ana ekranın BAŞLIK sesini taşır: vitrin başlıkları/rozetler
+   orada Montserrat 800 italik çizilir (--font-display). Uygulamanın geri
+   kalanında aynı ses `font-extrabold italic` (ya da `font-black italic`)
+   sınıf çiftiyle yazılıyor — o çift artık otomatik display ailesini alır.
+   Satır içi `fontFamily` yazan yerler (ana ekranın kendisi, UserAvatar)
+   zaten doğru aileyi söylüyor; bu kural onlara dokunmaz. Katmansız yazıldı:
+   dosyadaki #root desenleriyle aynı sebep — utilities katmanını ezmesi gerek. */
+:root { --default-font-family: var(--font-sans); }
+#root .font-extrabold.italic,
+#root .font-black.italic { font-family: var(--font-display); }
+
 /* ─── Güvenli alanlar (iOS çentiği + Android 15/16 kenardan kenara) ──────────
    iOS: `env(safe-area-inset-*)` + viewport-fit=cover.
 
@@ -680,7 +700,8 @@ body.offline-banner-on .top-safe      { top: calc(var(--safe-top) + var(--offlin
    tutarlar birbiriyle hizalanır ve sayaç değişirken yatay zıplama olmaz.
    İtalik EKLEME: Space Grotesk'in italik yüzü yok. */
 .font-numeric {
-  font-family: "Space Grotesk", "Inter", ui-monospace, monospace;
+  /* Rakam sesi ana ekranla aynı (20 Ağu 2026); görev yalnız hizalama. */
+  font-family: var(--font-sans);
   font-variant-numeric: tabular-nums;
 }
 

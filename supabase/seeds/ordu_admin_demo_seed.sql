@@ -109,7 +109,9 @@ UPDATE public.profiles p SET
   is_verified  = true,
   is_available = true,
   card_tier    = v.tier,
-  avatar_url   = 'https://ui-avatars.com/api/?background=0D8ABC&color=fff&name=' || replace(v.full_name,' ','+'),
+  -- Kurucu kararı (20 Ağu 2026): renkli üreteç avatarı YOK — avatar boş kalır,
+  -- UserAvatar saydam zemin + opak baş harf yedeğini çizer (tek görsel dil).
+  avatar_url   = NULL,
   last_active_at = now(),
   last_location = jsonb_build_object('lat',40.9839,'lng',37.8764,'city','Ordu','district','Altınordu','label','Altınordu, Ordu')
 FROM (VALUES

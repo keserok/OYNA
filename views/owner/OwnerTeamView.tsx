@@ -17,6 +17,8 @@ import {
 import type { PitchStaffTask } from '../../types';
 import { useOwnerToast } from './components/useOwnerToast';
 import { OwnerDemoDataBar } from './components/OwnerDemoDataBar';
+import { avatarFor as harfAvatari } from '../../shared/lobbyEnrichment';
+import { isDefaultAvatar } from '../../utils/avatarHelper';
 import { BottomSheetModal } from './finance/BottomSheetModal';
 import { expiryText } from '../../shared/staffModel';
 
@@ -44,9 +46,10 @@ const STATUS_META: Record<TeamMember['account_status'], { label: string; cls: st
   ROSTER:  { label: 'Liste',   cls: 'bg-white/5 text-gray-400 border-white/10' },
 };
 
+// Foto yoksa saydam baş harf — renkli disk (indigo/mor ui-avatars) kalktı:
+// kurucu kararı (20 Ağu 2026) "baş harfler opak, arka plan saydam" her ekranda.
 const avatarFor = (m: { name: string; avatar_url?: string | null; staff_role?: StaffRole }) =>
-  m.avatar_url ||
-  `https://ui-avatars.com/api/?name=${encodeURIComponent(m.name)}&background=${m.staff_role === 'MANAGER' ? '6366f1' : '8b5cf6'}&color=fff`;
+  (m.avatar_url && !isDefaultAvatar(m.avatar_url)) ? m.avatar_url : harfAvatari(m.name, m.name);
 
 export const OwnerTeamView: React.FC<OwnerTeamViewProps> = ({
   pitchId, isDemoMode, readOnly = false, maxStaff = 10, accessLevel = 'OWNER',

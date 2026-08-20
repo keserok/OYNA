@@ -289,7 +289,10 @@ const RahatMatchLobby: React.FC<Props> = ({ match: matchProp, onBack }) => {
     if (filled > 0) return [mk('YAYINDA', 'done'), mk('ONAYLANDI', 'active'), mk('KADRO TAM', 'future')];
     return [mk('YAYINDA', 'done'), mk('ONAYLANDI', 'future'), mk('KADRO TAM', 'future')];
   }, [isConfirmed, isFull, filled]);
-  const stepLine = isFull || isConfirmed ? '100%' : filled > 0 ? '50%' : '0%';
+  // İlerleme, UÇ DAİRELERİN MERKEZLERİ arasındaki mesafenin oranıdır (0/0.5/1).
+  // Eskiden kabın yüzdesiydi; çizgi son dairenin merkezini aşıp KADRO TAM
+  // sütununun üzerinden kenara kadar uzuyordu (kurucu bulgusu, 20 Ağu 2026).
+  const stepOran = isFull || isConfirmed ? 1 : filled > 0 ? 0.5 : 0;
 
   // Onay saati — HESAPLANAN değer; hesaplanamazsa cümle hiç çizilmez.
   const decisionAt = config ? quorumDecisionTime(match.startsAt, config) : null;
@@ -491,11 +494,13 @@ const RahatMatchLobby: React.FC<Props> = ({ match: matchProp, onBack }) => {
           )}
           {row.kind === 'player' && (
             <>
+              {/* Zemin SAYDAM (kurucu kararı, 20 Ağu 2026): daire renk katmaz,
+                  varlığını takım rengindeki halka taşır; harfler opak. */}
               {row.avatar ? (
                 <img src={row.avatar} alt={row.name} referrerPolicy="no-referrer"
-                  style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover', background: '#0d1712', border: `1.5px solid ${color}${title === 'BEYAZ TAKIM' ? '8c' : 'bf'}`, flexShrink: 0 }} />
+                  style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover', background: 'transparent', border: `1.5px solid ${color}${title === 'BEYAZ TAKIM' ? '8c' : 'bf'}`, flexShrink: 0 }} />
               ) : (
-                <span style={{ width: 40, height: 40, borderRadius: '50%', background: '#0d1712', border: `1.5px solid ${color}${title === 'BEYAZ TAKIM' ? '8c' : 'bf'}`, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 900, fontStyle: 'italic', color: title === 'BEYAZ TAKIM' ? TEAM_WHITE : '#FFFFFF' }}>
+                <span style={{ width: 40, height: 40, borderRadius: '50%', background: 'transparent', border: `1.5px solid ${color}${title === 'BEYAZ TAKIM' ? '8c' : 'bf'}`, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 900, fontStyle: 'italic', color: title === 'BEYAZ TAKIM' ? TEAM_WHITE : '#FFFFFF' }}>
                   {row.initials}
                 </span>
               )}
@@ -658,13 +663,20 @@ const RahatMatchLobby: React.FC<Props> = ({ match: matchProp, onBack }) => {
                 </div>
               )}
               <div style={{ position: 'relative', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-                <div style={{ position: 'absolute', left: 7, right: 7, top: 7, height: 2, background: 'rgba(255,255,255,0.10)' }} />
-                <div style={{ position: 'absolute', left: 7, top: 7, height: 2, background: '#39FF14', width: stepLine }} />
+                {/* Çizgi yalnız UÇ DAİRELERİN MERKEZLERİ arasında yaşar (42 =
+                    sütun genişliğinin yarısı). Eskiden kenardan kenara uzanıp
+                    uç adımların (KADRO TAM) üzerinden geçiyordu. İlerleme
+                    genişliği de aynı eksende: (kap − iki yarım sütun) × oran. */}
+                <div style={{ position: 'absolute', left: 42, right: 42, top: 7, height: 2, background: 'rgba(255,255,255,0.10)' }} />
+                <div style={{ position: 'absolute', left: 42, top: 7, height: 2, background: '#39FF14', width: `calc((100% - 84px) * ${stepOran})` }} />
+                {/* Dairelerin İÇİ BOŞ (kurucu isteği): zemin sayfa rengi —
+                    opak zemin, arkadan geçen çizgiyi de dairenin içinden
+                    göstermez; durumu halkanın rengi ve ışıması anlatır. */}
                 {steps.map(st => (
                   <div key={st.label} style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', width: 84 }}>
-                    {st.state === 'done' && <span style={{ width: 16, height: 16, borderRadius: '50%', background: '#39FF14', boxShadow: '0 0 12px rgba(57,255,20,0.5)' }} />}
-                    {st.state === 'active' && <span style={{ width: 16, height: 16, borderRadius: '50%', background: '#0A0E14', border: '3px solid #39FF14', boxShadow: '0 0 14px rgba(57,255,20,0.55)' }} />}
-                    {st.state === 'future' && <span style={{ width: 16, height: 16, borderRadius: '50%', background: 'rgba(255,255,255,0.15)' }} />}
+                    {st.state === 'done' && <span style={{ width: 16, height: 16, borderRadius: '50%', background: '#0A0E14', border: '2.5px solid #39FF14', boxSizing: 'border-box', boxShadow: '0 0 12px rgba(57,255,20,0.5)' }} />}
+                    {st.state === 'active' && <span style={{ width: 16, height: 16, borderRadius: '50%', background: '#0A0E14', border: '3px solid #39FF14', boxSizing: 'border-box', boxShadow: '0 0 14px rgba(57,255,20,0.55)' }} />}
+                    {st.state === 'future' && <span style={{ width: 16, height: 16, borderRadius: '50%', background: '#0A0E14', border: '2px solid rgba(255,255,255,0.22)', boxSizing: 'border-box' }} />}
                     <span style={{ marginTop: 9, fontSize: 10, fontWeight: 800, letterSpacing: '.08em', textAlign: 'center', color: st.state === 'future' ? '#6B7280' : '#39FF14' }}>{st.label}</span>
                   </div>
                 ))}
