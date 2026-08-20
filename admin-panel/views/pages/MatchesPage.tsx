@@ -5,7 +5,7 @@ import { PageShell } from '../components/PageShell';
 import { ModuleCrudBar } from '../components/ModuleCrudBar';
 import { AdminSearchBar } from '../components/AdminSearchBar';
 import { AdminFilterChips } from '../components/AdminFilterChips';
-import { MatchFormModal } from '../components/MatchFormModal';
+import { MatchStudio } from '../components/MatchStudio';
 import { MatchDetailDrawer } from '../components/MatchDetailDrawer';
 import { ActionConfirmModal, type ActionConfirmOptions } from '../components/ActionConfirmModal';
 import { StatusBadge } from '../components/StatusBadge';
@@ -265,7 +265,7 @@ export const MatchesPage: React.FC<MatchesPageProps> = ({ onRefresh, onNavigate 
         </div>
       )}
 
-      <MatchFormModal
+      <MatchStudio
         open={formOpen}
         mode={formMode}
         match={editMatch}

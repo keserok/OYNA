@@ -1191,6 +1191,8 @@ export interface GuardianConsentAdminRow {
   status: string;
   consented_at: string;
   revoked_at: string | null;
+  /** 'ADMIN-PANEL-v1' → onay panelden verildi (veli beyanı değil). */
+  consent_text_version: string | null;
 }
 export interface MinorAwaitingRow {
   id: string;
@@ -1198,13 +1200,19 @@ export interface MinorAwaitingRow {
   age_range: string | null;
   guardian_consent_status: string;
   created_at: string;
+  avatar_url: string | null;
+  birthdate: string | null;
+  /** Daha önce bağlanmış (ör. geri alınmış) veli varsa kimliği. */
+  guardian_user_id: string | null;
+  /** Velinin uygulamada gireceği bağlantı kodu — destek aileye okur. */
+  guardian_link_code: string | null;
 }
 
 /** Verilmiş veli muvafakatleri (TC hash'leri SEÇİLMEZ — yalnız ad/durum/tarih). */
 export async function fetchGuardianConsents(limit = 200): Promise<GuardianConsentAdminRow[]> {
   const { data, error } = await supabase
     .from('guardian_consents')
-    .select('id, minor_user_id, guardian_user_id, guardian_full_name, minor_full_name, minor_birthdate, status, consented_at, revoked_at')
+    .select('id, minor_user_id, guardian_user_id, guardian_full_name, minor_full_name, minor_birthdate, status, consented_at, revoked_at, consent_text_version')
     .order('consented_at', { ascending: false })
     .limit(limit);
   if (error) throw new Error(error.message);
@@ -1215,13 +1223,48 @@ export async function fetchGuardianConsents(limit = 200): Promise<GuardianConsen
 export async function fetchMinorsAwaitingConsent(limit = 200): Promise<MinorAwaitingRow[]> {
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, name, age_range, guardian_consent_status, created_at')
+    .select('id, name, age_range, guardian_consent_status, created_at, avatar_url, birthdate, guardian_user_id, guardian_link_code')
     .eq('is_minor', true)
     .neq('guardian_consent_status', 'ACTIVE')
     .order('created_at', { ascending: false })
     .limit(limit);
   if (error) throw new Error(error.message);
   return (data || []) as MinorAwaitingRow[];
+}
+
+/**
+ * Panelden veli onayı verme (20 Ağu 2026 kurucu kararı): zorunlu sebep +
+ * denetim kaydı; kayda 'panelden verildi' işareti düşer (ADMIN-PANEL-v1).
+ * Velinin reşitliği ve tek-aktif-onay kuralları sunucuda doğrulanır.
+ */
+export async function grantGuardianConsentAdmin(
+  minorUserId: string,
+  guardianUserId: string,
+  reason: string,
+): Promise<void> {
+  const { error } = await supabase.rpc('admin_grant_guardian_consent', {
+    p_minor_user_id: minorUserId,
+    p_guardian_user_id: guardianUserId,
+    p_reason: reason,
+  });
+  if (error) {
+    throw new Error(isRpcMissing(error)
+      ? 'admin_grant_guardian_consent RPC deploy edilmedi — supabase/migrations/20260914000000 uygulanmalı'
+      : error.message);
+  }
+}
+
+/** Panelden veli onayını geri alma — zorunlu sebep + denetim kaydı. */
+export async function revokeGuardianConsentAdmin(minorUserId: string, reason: string): Promise<void> {
+  const { error } = await supabase.rpc('admin_revoke_guardian_consent', {
+    p_minor_user_id: minorUserId,
+    p_reason: reason,
+  });
+  if (error) {
+    throw new Error(isRpcMissing(error)
+      ? 'admin_revoke_guardian_consent RPC deploy edilmedi — supabase/migrations/20260914000000 uygulanmalı'
+      : error.message);
+  }
 }
 
 export type BroadcastSegment = 'ALL' | 'OWNER' | 'NEW_USERS' | 'GOALKEEPER' | 'REFEREE';
@@ -2506,6 +2549,13 @@ export interface AdminUserPaymentRecent {
   related_entity_type: string | null;
   created_at: string;
   pitch_name: string | null;
+  // v2 (20260914): işlem satırında "hangi maç, hangi kart" görünür.
+  booking_id: string | null;
+  match_id: string | null;
+  match_title: string | null;
+  /** intent.raw'dan en-iyi-çaba: eski kayıtlarda olmayabilir (null → '—'). */
+  card_last4: string | null;
+  card_brand: string | null;
 }
 
 export interface AdminUserSavedCard {
@@ -2529,8 +2579,11 @@ export interface AdminUserPaymentSummary {
   cards: AdminUserSavedCard[];
 }
 
-export async function fetchUserPaymentSummaryAdmin(userId: string): Promise<AdminUserPaymentSummary> {
-  const { data, error } = await supabase.rpc('admin_user_payment_summary', { p_user_id: userId });
+export async function fetchUserPaymentSummaryAdmin(userId: string, recentLimit = 10): Promise<AdminUserPaymentSummary> {
+  const { data, error } = await supabase.rpc('admin_user_payment_summary', {
+    p_user_id: userId,
+    p_recent_limit: recentLimit,
+  });
   if (error) {
     throw new Error(isRpcMissing(error)
       ? 'admin_user_payment_summary RPC deploy edilmedi'
@@ -2547,6 +2600,98 @@ export async function fetchUserPaymentSummaryAdmin(userId: string): Promise<Admi
     last_paid_at: (d.last_paid_at as string) ?? null,
     recent: (d.recent as AdminUserPaymentRecent[]) ?? [],
     cards: (d.cards as AdminUserSavedCard[]) ?? [],
+  };
+}
+
+// ─── Kullanıcının girdiği maçlar (20 Ağu 2026 kurucu isteği) ────────────────
+// "Kullanıcılar kısmında hangi maçlara girdiğini görebilelim." Kaynak:
+// match_participants (katılımın tek doğruluk kaynağı) + maç başına o
+// kullanıcıdan yapılan tahsilat kırılımı. get_my_match_history auth.uid()'e
+// kilitli olduğundan panelde KULLANILAMAZ (adminin kendi geçmişini döndürür) —
+// bu RPC o hatanın da kalıcı çözümüdür.
+export interface AdminUserMatchRow {
+  match_id: string;
+  title: string | null;
+  location: string | null;
+  date: string | null;
+  time: string | null;
+  starts_at: string | null;
+  status: string | null;
+  format: string | null;
+  price: number | null;
+  is_demo: boolean | null;
+  home_score: number | null;
+  away_score: number | null;
+  score_status: string | null;
+  is_away: boolean;
+  participant_status: string | null;
+  joined_at: string | null;
+  is_buyer: boolean | null;
+  bought_slots: number;
+  paid: number;
+  refunded: number;
+  blocked: number;
+  failed_count: number;
+  intent_count: number;
+  last_status: string | null;
+  card_last4: string | null;
+  card_brand: string | null;
+}
+
+export interface AdminUserMatchesResult {
+  counts: { total: number; upcoming: number; completed: number; cancelled: number };
+  matches: AdminUserMatchRow[];
+}
+
+export async function fetchUserMatchesAdmin(userId: string, limit = 100): Promise<AdminUserMatchesResult> {
+  const { data, error } = await supabase.rpc('admin_user_matches', {
+    p_user_id: userId,
+    p_limit: limit,
+  });
+  if (error) {
+    throw new Error(isRpcMissing(error)
+      ? 'admin_user_matches RPC deploy edilmedi — supabase/migrations/20260914000000 uygulanmalı'
+      : error.message);
+  }
+  const d = (data ?? {}) as Record<string, unknown>;
+  const c = (d.counts ?? {}) as Record<string, unknown>;
+  return {
+    counts: {
+      total: Number(c.total) || 0,
+      upcoming: Number(c.upcoming) || 0,
+      completed: Number(c.completed) || 0,
+      cancelled: Number(c.cancelled) || 0,
+    },
+    matches: Array.isArray(d.matches)
+      ? (d.matches as Array<Record<string, unknown>>).map((r) => ({
+          match_id: String(r.match_id),
+          title: (r.title as string) ?? null,
+          location: (r.location as string) ?? null,
+          date: (r.date as string) ?? null,
+          time: (r.time as string) ?? null,
+          starts_at: (r.starts_at as string) ?? null,
+          status: (r.status as string) ?? null,
+          format: (r.format as string) ?? null,
+          price: r.price == null ? null : Number(r.price),
+          is_demo: (r.is_demo as boolean) ?? null,
+          home_score: r.home_score == null ? null : Number(r.home_score),
+          away_score: r.away_score == null ? null : Number(r.away_score),
+          score_status: (r.score_status as string) ?? null,
+          is_away: !!r.is_away,
+          participant_status: (r.participant_status as string) ?? null,
+          joined_at: (r.joined_at as string) ?? null,
+          is_buyer: (r.is_buyer as boolean) ?? null,
+          bought_slots: Number(r.bought_slots) || 1,
+          paid: Number(r.paid) || 0,
+          refunded: Number(r.refunded) || 0,
+          blocked: Number(r.blocked) || 0,
+          failed_count: Number(r.failed_count) || 0,
+          intent_count: Number(r.intent_count) || 0,
+          last_status: (r.last_status as string) ?? null,
+          card_last4: (r.card_last4 as string) ?? null,
+          card_brand: (r.card_brand as string) ?? null,
+        }))
+      : [],
   };
 }
 

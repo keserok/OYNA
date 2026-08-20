@@ -157,6 +157,9 @@ Deno.serve(async (req: Request) => {
     p_raw: {
       threeds: true, mdStatus, fraudStatus: auth.fraudStatus ?? null,
       itemTransactions: itemTx, psp,
+      // Maskeli kart izi (panel: "hangi ödeme hangi kartla") — PAN asla yazılmaz.
+      card_last4: auth.lastFourDigits ?? null,
+      card_brand: BRAND_MAP[auth.cardAssociation ?? ''] ?? auth.cardAssociation ?? null,
     },
   })
   if (applyErr) {

@@ -47,6 +47,11 @@ const RPC_CHECKS = [
   { name: 'admin_get_my_role', body: {} },
   { name: 'admin_fetch_goalkeepers', body: { p_limit: 1 } },
   { name: 'admin_fetch_pending_verifications', body: {} },
+  // 20260914 — panel kontrol seti: kullanıcı-maç görünürlüğü + veli onayı aksiyonları
+  { name: 'admin_user_matches', body: { p_user_id: '00000000-0000-0000-0000-000000000001', p_limit: 1 } },
+  { name: 'admin_user_payment_summary', body: { p_user_id: '00000000-0000-0000-0000-000000000001', p_recent_limit: 1 } },
+  { name: 'admin_grant_guardian_consent', body: { p_minor_user_id: '00000000-0000-0000-0000-000000000001', p_guardian_user_id: '00000000-0000-0000-0000-000000000002', p_reason: 'kontrol' } },
+  { name: 'admin_revoke_guardian_consent', body: { p_minor_user_id: '00000000-0000-0000-0000-000000000001', p_reason: 'kontrol' } },
 ];
 
 const env = loadEnv();

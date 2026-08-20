@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '../../../supabaseClient';
 import {
-  getFullUserProfile, getMatchHistory,
+  getFullUserProfile,
   type MatchHistorySummary, type OynaUser,
 } from '../../../services/userService';
 import { fetchFriends } from '../../../services/friendService';
@@ -30,7 +30,7 @@ import {
   ageFromBirthdate, formatPosition, trustScoreTo100, winStats,
 } from '../../../shared/profilePresentation';
 import {
-  banUserAdmin, fetchPlayerPeerScoresAdmin, updateUserAppProfileAdmin,
+  banUserAdmin, fetchPlayerPeerScoresAdmin, fetchUserMatchesAdmin, updateUserAppProfileAdmin,
   toTurkishAdminError, type AppProfileAdminFields, type PlayerPeerScores,
 } from '../../services/adminService';
 import { useAdminToast } from '../context/AdminToastContext';
@@ -197,7 +197,32 @@ export const UserProfileMirror: React.FC<Props> = ({ userId, onUpdated }) => {
       // (profiles_select_own_or_admin). Sayaçlar en-iyi-çaba: biri düşerse ayna açılır.
       const [profileData, historyData] = await Promise.all([
         getFullUserProfile(userId),
-        getMatchHistory(userId).catch(() => [] as MatchHistorySummary[]),
+        // DÜZELTME (20 Ağu 2026): eskiden getMatchHistory çağrılıyordu ama o
+        // RPC (get_my_match_history) auth.uid()'e kilitli — panelde HEDEF
+        // kullanıcının değil, oturumdaki ADMİNİN geçmişini döndürüyordu.
+        // admin_user_matches hedef kullanıcıyı okur; eşleme kuralı uygulamadaki
+        // getMatchHistory ile birebir aynıdır (COMPLETED + demo değil).
+        fetchUserMatchesAdmin(userId)
+          .then((res) => res.matches
+            .filter((r) => r.status === 'COMPLETED' && !r.is_demo)
+            .map((r): MatchHistorySummary => {
+              const girildi = r.score_status === 'ENTERED';
+              const ev = r.home_score;
+              const dep = r.away_score;
+              const result: MatchHistorySummary['result'] = !girildi || ev === null || dep === null
+                ? 'NO_SCORE'
+                : ev === dep
+                  ? 'DRAW'
+                  : (r.is_away ? dep > ev : ev > dep) ? 'WIN' : 'LOSS';
+              return {
+                id: r.match_id,
+                date: r.date || '',
+                pitchName: r.location || r.title || 'Saha',
+                score: result === 'NO_SCORE' ? 'Skor yok' : `${ev} - ${dep}`,
+                result,
+              };
+            }))
+          .catch(() => [] as MatchHistorySummary[]),
       ]);
       if (!profileData) {
         setLoadError('Profil yüklenemedi. RLS/yetki veya bağlantı sorunu olabilir.');
