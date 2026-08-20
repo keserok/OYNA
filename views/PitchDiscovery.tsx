@@ -59,6 +59,10 @@ import { trUpper } from '../utils/trUpper';
 import { ActionSheet } from '../components/ui/ActionSheet';
 import { formatTRYShort } from '../utils/formatTRY';
 import { olayYaz } from '../utils/olcum';
+import {
+  buildVisibilityScope, fetchVisibilityRules, isPlaceVisible,
+  UNRESTRICTED_SCOPE, type VisibilityScope,
+} from '../services/regionVisibilityService';
 
 interface MapViewProps {
   pitches: Pitch[];
@@ -701,9 +705,27 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
     fetchPitches();
   }, [fetchPitches]);
 
+  // Bölge görünürlük kuralları (panel → region_visibility_rules): kullanıcının
+  // ilçesi kurallıysa yalnız izinli ilçelerin sahaları listelenir. Kural yoksa
+  // kapsam kısıtsızdır ve bu süzgeç hiçbir sahayı elemez (fail-open).
+  const [visScope, setVisScope] = useState<VisibilityScope>(UNRESTRICTED_SCOPE);
+  useEffect(() => {
+    let cancelled = false;
+    if (selectedRegions.length === 0) {
+      setVisScope(UNRESTRICTED_SCOPE);
+      return;
+    }
+    void fetchVisibilityRules().then((rules) => {
+      if (!cancelled) setVisScope(buildVisibilityScope(selectedRegions, rules));
+    });
+    return () => { cancelled = true; };
+  }, [selectedRegions]);
+
   const sourcePitches = useMemo(
-    () => realPitches.map((p) => ({ ...p, todayAvailableCount: todayAvailability[p.id] })),
-    [realPitches, todayAvailability],
+    () => realPitches
+      .filter((p) => isPlaceVisible(visScope, (p as { city?: string }).city, p.district))
+      .map((p) => ({ ...p, todayAvailableCount: todayAvailability[p.id] })),
+    [realPitches, todayAvailability, visScope],
   );
 
   const [viewMode, setViewMode] = useState<'LIST' | 'MAP'>('LIST');

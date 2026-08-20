@@ -3677,3 +3677,248 @@ export async function updateProviderOpsAdmin(
   });
   if (error) throw new Error(isRpcMissing(error) ? 'admin_update_provider_ops RPC deploy edilmedi' : toTurkishAdminError(error));
 }
+
+// ═══ 20 Ağu 2026 — Bölge görünürlüğü + panel denetim seti ═══════════════════
+
+/** Bölge görünürlük kuralı: (city,district)'teki kullanıcı hedefi GÖREBİLİR. */
+export interface RegionVisibilityRule {
+  id: string;
+  city: string;
+  district: string;
+  visible_city: string;
+  visible_district: string;
+  is_active: boolean;
+}
+
+export async function fetchRegionVisibilityRules(): Promise<RegionVisibilityRule[]> {
+  const { data, error } = await supabase
+    .from('region_visibility_rules')
+    .select('id, city, district, visible_city, visible_district, is_active')
+    .order('city').order('district');
+  if (error) throw new Error(toTurkishAdminError(error));
+  return (data ?? []) as RegionVisibilityRule[];
+}
+
+/**
+ * Bir ilçenin görünürlük setini TEK seferde değiştirir (audit'li RPC).
+ * Boş liste = kural yok = kısıtlama kalkar (yarıçap keşfi aynen çalışır).
+ */
+export async function setRegionVisibilityAdmin(
+  city: string,
+  district: string,
+  visible: Array<{ city: string; district: string }>,
+): Promise<void> {
+  const { error } = await supabase.rpc('admin_set_region_visibility', {
+    p_city: city,
+    p_district: district,
+    p_visible: visible,
+  });
+  if (error) {
+    throw new Error(isRpcMissing(error)
+      ? 'admin_set_region_visibility RPC deploy edilmedi — supabase/migrations/20260915000000 uygulanmalı'
+      : error.message);
+  }
+}
+
+/** region_coverage satırı ekle/etkinleştir (il geneli için district=null). */
+export async function upsertRegionCoverageAdmin(
+  city: string,
+  district: string | null,
+  isActive: boolean,
+): Promise<void> {
+  // Tekillik indeksi COALESCE(district,'') üzerinde — PostgREST upsert bunu
+  // hedefleyemez; önce var mı diye bakılır, varsa güncellenir yoksa eklenir.
+  let query = supabase.from('region_coverage').select('id').eq('city', city).limit(1);
+  query = district === null ? query.is('district', null) : query.eq('district', district);
+  const { data: existing, error: selErr } = await query;
+  if (selErr) throw new Error(toTurkishAdminError(selErr));
+  if (existing && existing.length > 0) {
+    const { error } = await supabase.from('region_coverage')
+      .update({ is_active: isActive })
+      .eq('id', (existing[0] as { id: string }).id);
+    if (error) throw new Error(toTurkishAdminError(error));
+  } else {
+    const { error } = await supabase.from('region_coverage')
+      .insert({ city, district, is_active: isActive });
+    if (error) throw new Error(toTurkishAdminError(error));
+  }
+}
+
+/** Kort müsaitlik kontrolü (Maç Stüdyosu) — çakışan rezervasyon/maç listesi. */
+export interface CourtSlotConflict {
+  kind: 'BOOKING' | 'MATCH';
+  id: string;
+  title: string | null;
+  starts: string | null;
+  ends: string | null;
+  status: string | null;
+}
+
+export interface CourtSlotCheck {
+  available: boolean;
+  starts: string | null;
+  ends: string | null;
+  conflicts: CourtSlotConflict[];
+}
+
+export async function checkCourtSlotAdmin(params: {
+  courtId: string;
+  date: string;
+  time: string;
+  durationMinutes?: number;
+  excludeMatchId?: string;
+}): Promise<CourtSlotCheck> {
+  const { data, error } = await supabase.rpc('admin_court_slot_check', {
+    p_court_id: params.courtId,
+    p_date: params.date,
+    p_time: params.time,
+    p_duration_minutes: params.durationMinutes ?? 60,
+    p_exclude_match_id: params.excludeMatchId ?? null,
+  });
+  if (error) {
+    throw new Error(isRpcMissing(error)
+      ? 'admin_court_slot_check RPC deploy edilmedi — supabase/migrations/20260915000000 uygulanmalı'
+      : error.message);
+  }
+  const d = (data ?? {}) as Record<string, unknown>;
+  return {
+    available: !!d.available,
+    starts: (d.starts as string) ?? null,
+    ends: (d.ends as string) ?? null,
+    conflicts: Array.isArray(d.conflicts) ? (d.conflicts as CourtSlotConflict[]) : [],
+  };
+}
+
+/** Ödeme kuruluşu (iyzico) maliyet özeti — intent.raw->psp kayıtlarından. */
+export interface PspCostTotals {
+  islem: number;
+  gercek_islem: number;
+  simulasyon_islem: number;
+  psp_verili: number;
+  psp_verisiz: number;
+  cekilen: number;
+  psp_kesinti: number;
+  psp_net: number;
+  kart_bedeli: number;
+  fark: number;
+}
+
+export interface PspCostDay {
+  gun: string;
+  islem: number;
+  cekilen: number;
+  psp_kesinti: number;
+  psp_net: number;
+  kart_bedeli: number;
+}
+
+export interface PspCosts {
+  totals: PspCostTotals;
+  days: PspCostDay[];
+  since: string | null;
+}
+
+export async function fetchPspCostsAdmin(days = 30): Promise<PspCosts> {
+  const { data, error } = await supabase.rpc('admin_psp_costs', { p_days: days });
+  if (error) {
+    throw new Error(isRpcMissing(error)
+      ? 'admin_psp_costs RPC deploy edilmedi — supabase/migrations/20260915000000 uygulanmalı'
+      : error.message);
+  }
+  const d = (data ?? {}) as Record<string, unknown>;
+  const t = (d.totals ?? {}) as Record<string, unknown>;
+  const num = (v: unknown) => Number(v) || 0;
+  return {
+    totals: {
+      islem: num(t.islem), gercek_islem: num(t.gercek_islem), simulasyon_islem: num(t.simulasyon_islem),
+      psp_verili: num(t.psp_verili), psp_verisiz: num(t.psp_verisiz),
+      cekilen: num(t.cekilen), psp_kesinti: num(t.psp_kesinti), psp_net: num(t.psp_net),
+      kart_bedeli: num(t.kart_bedeli), fark: num(t.fark),
+    },
+    days: Array.isArray(d.days)
+      ? (d.days as Array<Record<string, unknown>>).map((r) => ({
+          gun: String(r.gun ?? ''), islem: num(r.islem), cekilen: num(r.cekilen),
+          psp_kesinti: num(r.psp_kesinti), psp_net: num(r.psp_net), kart_bedeli: num(r.kart_bedeli),
+        }))
+      : [],
+    since: (d.since as string) ?? null,
+  };
+}
+
+/** Bildirim türü başına gerçek gönderim istatistiği (son N gün). */
+export interface NotificationTypeStat {
+  type_key: string;
+  sent: number;
+  pushed: number;
+  read: number;
+  last_sent_at: string | null;
+}
+
+export async function fetchNotificationTypeStatsAdmin(days = 30): Promise<NotificationTypeStat[]> {
+  const { data, error } = await supabase.rpc('admin_notification_type_stats', { p_days: days });
+  if (error) {
+    throw new Error(isRpcMissing(error)
+      ? 'admin_notification_type_stats RPC deploy edilmedi — supabase/migrations/20260915000000 uygulanmalı'
+      : error.message);
+  }
+  const d = (data ?? {}) as Record<string, unknown>;
+  return Array.isArray(d.rows)
+    ? (d.rows as Array<Record<string, unknown>>).map((r) => ({
+        type_key: String(r.type_key ?? ''),
+        sent: Number(r.sent) || 0,
+        pushed: Number(r.pushed) || 0,
+        read: Number(r.read) || 0,
+        last_sent_at: (r.last_sent_at as string) ?? null,
+      }))
+    : [];
+}
+
+/** Komisyon sağlık raporu — etkin kural + yapılandırma sorunları + para kanıtı. */
+export interface CommissionHealthIssue {
+  code: string;
+  level: 'CRITICAL' | 'WARN' | 'INFO';
+  message: string;
+}
+
+export interface CommissionHealth {
+  etkinGlobal: { rate_pct: number; markup_pct: number; markup_amount: number; notes?: string | null; kaynak?: string };
+  globalAktifAdet: number;
+  sahaKuralAdet: number;
+  sorunlar: CommissionHealthIssue[];
+  kanit: {
+    intentKomisyonToplam: number;
+    intentKomisyonluAdet: number;
+    macDondurulmusAdet: number;
+    macModelDagilimi: Record<string, number>;
+  };
+}
+
+export async function fetchCommissionHealthAdmin(): Promise<CommissionHealth> {
+  const { data, error } = await supabase.rpc('admin_commission_health');
+  if (error) {
+    throw new Error(isRpcMissing(error)
+      ? 'admin_commission_health RPC deploy edilmedi — supabase/migrations/20260915000000 uygulanmalı'
+      : error.message);
+  }
+  const d = (data ?? {}) as Record<string, unknown>;
+  const g = (d.etkin_global ?? {}) as Record<string, unknown>;
+  const k = (d.kanit ?? {}) as Record<string, unknown>;
+  return {
+    etkinGlobal: {
+      rate_pct: Number(g.rate_pct) || 0,
+      markup_pct: Number(g.markup_pct) || 0,
+      markup_amount: Number(g.markup_amount) || 0,
+      notes: (g.notes as string) ?? null,
+      kaynak: (g.kaynak as string) ?? undefined,
+    },
+    globalAktifAdet: Number(d.global_aktif_adet) || 0,
+    sahaKuralAdet: Number(d.saha_kural_adet) || 0,
+    sorunlar: Array.isArray(d.sorunlar) ? (d.sorunlar as CommissionHealthIssue[]) : [],
+    kanit: {
+      intentKomisyonToplam: Number(k.intent_komisyon_toplam) || 0,
+      intentKomisyonluAdet: Number(k.intent_komisyonlu_adet) || 0,
+      macDondurulmusAdet: Number(k.mac_dondurulmus_adet) || 0,
+      macModelDagilimi: (k.mac_model_dagilimi as Record<string, number>) ?? {},
+    },
+  };
+}

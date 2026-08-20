@@ -3,7 +3,13 @@ import { supabase } from '../../../supabaseClient';
 import { PageShell } from '../components/PageShell';
 import { PitchAgreementsPanel } from '../components/PitchAgreementsPanel';
 import { useAdminToast } from '../context/AdminToastContext';
-import { Percent, Plus, RefreshCw, Edit2, Check, X, Trash2 } from 'lucide-react';
+import {
+  Percent, Plus, RefreshCw, Edit2, Check, X, HeartPulse,
+  AlertTriangle, AlertOctagon, Info, Link2,
+} from 'lucide-react';
+import {
+  fetchCommissionHealthAdmin, toTurkishAdminError, type CommissionHealth,
+} from '../../services/adminService';
 
 interface CommissionConfigRow {
   id: string;
@@ -40,23 +46,38 @@ export const CommissionPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [editRow, setEditRow] = useState<EditRow | null>(null);
   const [saving, setSaving]   = useState(false);
+  // Uygulama bağlantısı sağlık raporu (admin_commission_health): etkin kural,
+  // yapılandırma sorunları ve "para gerçekten bu kurallardan mı aktı" kanıtı.
+  const [health, setHealth]   = useState<CommissionHealth | null>(null);
+  const [healthErr, setHealthErr] = useState<string | null>(null);
   const { success, error: toastError } = useAdminToast();
 
   const load = useCallback(async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from('commission_config')
-      .select('*')
-      .order('created_at');
+    const [{ data, error }, healthRes] = await Promise.all([
+      supabase.from('commission_config').select('*').order('created_at'),
+      fetchCommissionHealthAdmin().then((h) => ({ h, e: null as string | null })).catch((e) => ({ h: null, e: toTurkishAdminError(e) })),
+    ]);
     if (error) { toastError(error.message); }
     else { setRows(data as CommissionConfigRow[]); }
+    setHealth(healthRes.h);
+    setHealthErr(healthRes.e);
     setLoading(false);
   }, [toastError]);
 
   useEffect(() => { void load(); }, [load]);
 
+  /** Çift aktif GLOBAL Model A çözücüyü belirsizleştirir — kayıttan önce uyar. */
+  const wouldDuplicateGlobal = (candidate: { scope?: string; model?: string; is_active?: boolean; id?: string }) =>
+    candidate.scope === 'GLOBAL' && (candidate.model ?? 'MODEL_A') === 'MODEL_A' && (candidate.is_active ?? true)
+    && rows.some((r) => r.id !== candidate.id && r.scope === 'GLOBAL' && r.model === 'MODEL_A' && r.is_active);
+
   const handleSave = async () => {
     if (!editRow) return;
+    if (wouldDuplicateGlobal(editRow) && !window.confirm(
+      'DİKKAT: Zaten aktif bir GLOBAL Model A kuralı var. İkincisini aktifleştirmek '
+      + 'çözücüyü belirsizleştirir (uygulama rastgele birini seçer). Yine de kaydedilsin mi?',
+    )) return;
     setSaving(true);
     try {
       if (editRow._isNew) {
@@ -95,12 +116,23 @@ export const CommissionPage: React.FC = () => {
   };
 
   const handleToggleActive = async (row: CommissionConfigRow) => {
+    if (!row.is_active && wouldDuplicateGlobal({ ...row, is_active: true }) && !window.confirm(
+      'DİKKAT: Zaten aktif bir GLOBAL Model A kuralı var. Bunu da aktifleştirmek '
+      + 'çözücüyü belirsizleştirir. Yine de etkinleştirilsin mi?',
+    )) return;
     const { error } = await supabase.from('commission_config')
       .update({ is_active: !row.is_active, updated_at: new Date().toISOString() })
       .eq('id', row.id);
     if (error) { toastError(error.message); }
     else { success(row.is_active ? 'Devre dışı bırakıldı.' : 'Etkinleştirildi.'); void load(); }
   };
+
+  const ISSUE_ICON = { CRITICAL: AlertOctagon, WARN: AlertTriangle, INFO: Info } as const;
+  const ISSUE_CLS = {
+    CRITICAL: 'text-red-300 bg-red-500/[0.07] border-red-500/30',
+    WARN: 'text-amber-300 bg-amber-500/[0.06] border-amber-500/25',
+    INFO: 'text-gray-400 bg-white/[0.03] border-white/10',
+  } as const;
 
   return (
     <PageShell
@@ -121,6 +153,74 @@ export const CommissionPage: React.FC = () => {
         </div>
       }
     >
+      {/* ── UYGULAMA BAĞLANTISI (sağlık) — panel ↔ para yolu kanıtı ──────────
+          Etkin kural sunucudaki _pitch_agreement çözüm sırasının birebir
+          aynısıyla bulunur; sorunlar gerçek yapılandırma hatalarıdır. */}
+      <div className="mb-6 bg-[#10151C] border border-white/[0.06] rounded-2xl p-5 space-y-4">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <p className="text-[10px] font-extrabold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
+            <HeartPulse size={13} className={health && health.sorunlar.some((s) => s.level === 'CRITICAL') ? 'text-red-400' : 'text-[#39FF14]'} />
+            Uygulama Bağlantısı
+          </p>
+          {health && health.sorunlar.length === 0 && (
+            <span className="text-[10px] font-extrabold text-green-400 bg-green-500/10 border border-green-500/25 rounded-lg px-2 py-1 flex items-center gap-1">
+              <Link2 size={11} /> BAĞLANTI SAĞLIKLI — kurallar para yoluna birebir işliyor
+            </span>
+          )}
+        </div>
+
+        {healthErr ? (
+          <p className="text-[11px] text-gray-500">{healthErr}</p>
+        ) : !health ? (
+          <p className="text-[11px] text-gray-600">Sağlık raporu yükleniyor…</p>
+        ) : (
+          <>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
+              <div className="bg-black/25 border border-[#39FF14]/20 rounded-xl p-3.5">
+                <p className="text-[9px] font-bold text-gray-500 uppercase tracking-wider">Uygulamanın Kullandığı Oran</p>
+                <p className="text-lg font-extrabold text-[#39FF14] font-mono mt-0.5">%{health.etkinGlobal.rate_pct}</p>
+                <p className="text-[9px] text-gray-600">
+                  {health.etkinGlobal.kaynak === 'SUNUCU_VARSAYILANI'
+                    ? '⚠ panel kuralı DEĞİL — sunucu varsayılanı'
+                    : `+ fiyat farkı: ${health.etkinGlobal.markup_amount > 0 ? `${health.etkinGlobal.markup_amount}₺ sabit` : `%${health.etkinGlobal.markup_pct}`}`}
+                </p>
+              </div>
+              <div className="bg-black/25 border border-white/[0.05] rounded-xl p-3.5">
+                <p className="text-[9px] font-bold text-gray-500 uppercase tracking-wider">Komisyon Geliri (30g)</p>
+                <p className="text-lg font-extrabold text-white font-mono mt-0.5">₺{health.kanit.intentKomisyonToplam.toLocaleString('tr-TR')}</p>
+                <p className="text-[9px] text-gray-600">{health.kanit.intentKomisyonluAdet} komisyonlu tahsilat</p>
+              </div>
+              <div className="bg-black/25 border border-white/[0.05] rounded-xl p-3.5">
+                <p className="text-[9px] font-bold text-gray-500 uppercase tracking-wider">Orana Bağlanan Maç (30g)</p>
+                <p className="text-lg font-extrabold text-white font-mono mt-0.5">{health.kanit.macDondurulmusAdet}</p>
+                <p className="text-[9px] text-gray-600">kurulurken oran maça donduruldu</p>
+              </div>
+              <div className="bg-black/25 border border-white/[0.05] rounded-xl p-3.5">
+                <p className="text-[9px] font-bold text-gray-500 uppercase tracking-wider">Saha Anlaşması</p>
+                <p className="text-lg font-extrabold text-white font-mono mt-0.5">{health.sahaKuralAdet}</p>
+                <p className="text-[9px] text-gray-600">
+                  model dağılımı (30g): {Object.entries(health.kanit.macModelDagilimi).map(([k, v]) => `${k} ${v}`).join(' · ') || '—'}
+                </p>
+              </div>
+            </div>
+
+            {health.sorunlar.length > 0 && (
+              <div className="space-y-1.5">
+                {health.sorunlar.map((s) => {
+                  const Icon = ISSUE_ICON[s.level] ?? Info;
+                  return (
+                    <div key={s.code} className={`flex items-start gap-2 rounded-xl border px-3 py-2.5 ${ISSUE_CLS[s.level] ?? ISSUE_CLS.INFO}`}>
+                      <Icon size={13} className="shrink-0 mt-0.5" />
+                      <p className="text-[11px] leading-relaxed"><b className="font-mono text-[9px] uppercase mr-1.5">{s.code}</b>{s.message}</p>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
       {/* Global rate highlight */}
       {(() => {
         const global = rows.find(r => r.scope === 'GLOBAL' && r.is_active);

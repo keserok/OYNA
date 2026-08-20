@@ -12,7 +12,11 @@ import { render, screen, fireEvent } from '@testing-library/react';
 //      aynı sözleşmeyi taşır (admin_create_match kırılmaz).
 
 vi.mock('../../../supabaseClient', () => ({
+  // SUPABASE_URL: stüdyonun içe aldığı adminService modülü (kort müsaitlik
+  // kontrolü) supabaseClient'tan bunu da ister — mock'ta tanımlı olmalı.
+  SUPABASE_URL: 'http://localhost:54321',
   supabase: {
+    rpc: async () => ({ data: null, error: null }),
     from: () => ({
       select: () => ({
         eq: () => ({

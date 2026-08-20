@@ -20,7 +20,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   X, Check, UploadCloud, Loader2, Swords, MapPin, CalendarDays, Timer,
   Users, Wallet, EyeOff, Image as ImageIcon, Smartphone, AlertCircle,
+  CalendarCheck2, CalendarX2,
 } from 'lucide-react';
+import {
+  checkCourtSlotAdmin, type CourtSlotCheck,
+} from '../../services/adminService';
 import { useImageUpload } from '../../../hooks/useImageUpload';
 import { useAppStore } from '../../../store';
 import { supabase } from '../../../supabaseClient';
@@ -254,6 +258,47 @@ export const MatchStudio: React.FC<Props> = ({ open, mode, match, onClose, onSav
       setF((prev) => ({ ...prev, format: formatOptions[0] }));
     }
   }, [formatOptions, f.format]);
+
+  // ── Kort müsaitlik kontrolü (kurucu isteği, 20 Ağu 2026) ──────────────────
+  // Kort + tarih + saat seçildikçe çakışan rezervasyon/maç sunucudan sorulur.
+  // Yalnız UYARIDIR: admin bilerek üstüne maç koyabilir (kayıt engellenmez).
+  const [slotCheck, setSlotCheck] = useState<CourtSlotCheck | null>(null);
+  const [slotChecking, setSlotChecking] = useState(false);
+  const studioDurationMin = useMemo(() => {
+    const n = parseInt((f.duration.match(/\d+/) || ['60'])[0], 10);
+    return Number.isFinite(n) ? n : 60;
+  }, [f.duration]);
+
+  useEffect(() => {
+    if (!open || !f.courtId || !/^\d{4}-\d{2}-\d{2}$/.test(f.rawDate) || !/\d{1,2}[:.]\d{2}/.test(f.time)) {
+      setSlotCheck(null);
+      return;
+    }
+    let cancelled = false;
+    setSlotChecking(true);
+    const t = setTimeout(() => {
+      checkCourtSlotAdmin({
+        courtId: f.courtId,
+        date: f.rawDate,
+        time: f.time,
+        durationMinutes: studioDurationMin,
+        excludeMatchId: mode === 'edit' ? match?.id : undefined,
+      })
+        .then((res) => { if (!cancelled) setSlotCheck(res); })
+        .catch(() => { if (!cancelled) setSlotCheck(null); })
+        .finally(() => { if (!cancelled) setSlotChecking(false); });
+    }, 450);
+    return () => { cancelled = true; clearTimeout(t); };
+  }, [open, f.courtId, f.rawDate, f.time, studioDurationMin, mode, match?.id]);
+
+  const fmtConflictRange = (starts: string | null, ends: string | null): string => {
+    const fmt = (s: string | null) => {
+      if (!s) return '?';
+      const d = new Date(s);
+      return Number.isNaN(d.getTime()) ? '?' : d.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+    };
+    return `${fmt(starts)}–${fmt(ends)}`;
+  };
 
   // ── Doğrulama: kaydet tuşunun yanındaki canlı eksik listesi ───────────────
   const eksikler = useMemo(() => {
@@ -551,6 +596,43 @@ export const MatchStudio: React.FC<Props> = ({ open, mode, match, onClose, onSav
                   </div>
                   <p className="text-[9px] text-gray-600 mt-1.5">Skor giriş penceresi ve "maç bitti" anı bu süreden hesaplanır.</p>
                 </Field>
+
+                {/* Kort müsaitliği — kort seçiliyse canlı çakışma kontrolü */}
+                {f.courtId ? (
+                  <div className={`rounded-xl border px-3.5 py-3 ${
+                    slotChecking ? 'border-white/10 bg-black/25'
+                      : slotCheck?.available ? 'border-[#39FF14]/30 bg-[#39FF14]/[0.05]'
+                      : slotCheck ? 'border-red-500/35 bg-red-500/[0.06]'
+                      : 'border-white/10 bg-black/25'
+                  }`}>
+                    {slotChecking ? (
+                      <p className="text-[11px] text-gray-500 flex items-center gap-2"><Loader2 size={12} className="animate-spin" /> Kort müsaitliği kontrol ediliyor…</p>
+                    ) : !slotCheck ? (
+                      <p className="text-[11px] text-gray-600">Müsaitlik okunamadı — kayıt yine de yapılabilir.</p>
+                    ) : slotCheck.available ? (
+                      <p className="text-[11px] font-bold text-[#39FF14] flex items-center gap-2">
+                        <CalendarCheck2 size={13} /> Kort bu saatte MÜSAİT ({f.time} · {studioDurationMin} dk)
+                      </p>
+                    ) : (
+                      <div className="space-y-1.5">
+                        <p className="text-[11px] font-extrabold text-red-300 flex items-center gap-2">
+                          <CalendarX2 size={13} /> DİKKAT — kort bu saatte dolu ({slotCheck.conflicts.length} çakışma)
+                        </p>
+                        {slotCheck.conflicts.slice(0, 4).map((c) => (
+                          <p key={`${c.kind}-${c.id}`} className="text-[10px] text-red-200/80 pl-5">
+                            • {c.kind === 'BOOKING' ? 'Rezervasyon' : 'Maç'}: {c.title || '—'} · {fmtConflictRange(c.starts, c.ends)}
+                            {c.status ? ` (${c.status})` : ''}
+                          </p>
+                        ))}
+                        <p className="text-[9px] text-gray-500 pl-5">
+                          Kayıt engellenmez — bilinçli olarak üstüne yazıyorsan saati/kortu değiştirmeden yayınlayabilirsin.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                ) : f.pitchId ? (
+                  <p className="text-[9px] text-gray-600">Müsaitlik kontrolü için yukarıdan bir <b className="text-gray-400">kort</b> seç.</p>
+                ) : null}
               </Bolum>
 
               <Bolum no="4" icon={<Users size={14} />} title={`Format & Kadro${rangeLabel ? ` — ${selectedCourt ? 'kort' : 'saha'} aralığı: ${rangeLabel}` : ''}`} desc="Kadro seçilen formata göre otomatik kurulur; oyuncular uygulamadan yer satın alır.">
@@ -713,6 +795,14 @@ export const MatchStudio: React.FC<Props> = ({ open, mode, match, onClose, onSav
               <div className="bg-[#10151C] border border-white/[0.06] rounded-2xl p-4 space-y-2.5">
                 <p className="text-[10px] font-extrabold text-gray-400 uppercase tracking-wider">Yayın Özeti</p>
                 <OzetSatiri label="Başlangıç" value={baslangicLabel} />
+                {f.courtId && slotCheck && !slotChecking && (
+                  <div className="flex items-center justify-between gap-2 text-[11px]">
+                    <span className="text-gray-500">Kort müsaitliği</span>
+                    <span className={`font-extrabold ${slotCheck.available ? 'text-[#39FF14]' : 'text-red-400'}`}>
+                      {slotCheck.available ? 'MÜSAİT ✓' : `DOLU — ${slotCheck.conflicts.length} çakışma`}
+                    </span>
+                  </div>
+                )}
                 <OzetSatiri label="Kadro" value={`${f.format} · ${totalSlots} yer (${doluluk} dolu)`} />
                 <OzetSatiri label="Kişi başı ücret" value={`${(Number(f.price) || 0).toLocaleString('tr-TR')}₺`} strong />
                 <OzetSatiri label="Kadro dolarsa toplam" value={`${potansiyel.toLocaleString('tr-TR')}₺`} />

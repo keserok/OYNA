@@ -31,6 +31,10 @@ import { formatMatchDuration, realMatchMinutes, matchStartMs } from '../shared/m
 import { trUpper } from '../utils/trUpper';
 import { formatTRYShort } from '../utils/formatTRY';
 import { olayYaz } from '../utils/olcum';
+import {
+  buildVisibilityScope, fetchVisibilityRules, isPlaceVisible,
+  UNRESTRICTED_SCOPE, type VisibilityScope,
+} from '../services/regionVisibilityService';
 
 // Normalize mentalite ('Ciddi'|'Taktiksel'|'Rahat') → PLAY_STYLE_META anahtarı.
 const MENTALITY_KEY = { Ciddi: 'ciddi', Taktiksel: 'taktiksel', Rahat: 'rahat' } as const;
@@ -165,6 +169,22 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onSelect }) => {
     return () => { cancelled = true; clearTimeout(timer); };
   }, [userLocation, selectedRegions, searchRadius, yenilemeSayaci]);
 
+  // Bölge görünürlük kuralları (panel → region_visibility_rules): Beşiktaş'taki
+  // kullanıcı yalnız izinli ilçelerin maçlarını görür. Kural yoksa kapsam
+  // kısıtsızdır (UNRESTRICTED) ve bu süzgeç hiçbir maçı elemez.
+  const [visScope, setVisScope] = useState<VisibilityScope>(UNRESTRICTED_SCOPE);
+  useEffect(() => {
+    let cancelled = false;
+    if (selectedRegions.length === 0) {
+      setVisScope(UNRESTRICTED_SCOPE);
+      return;
+    }
+    void fetchVisibilityRules().then((rules) => {
+      if (!cancelled) setVisScope(buildVisibilityScope(selectedRegions, rules));
+    });
+    return () => { cancelled = true; };
+  }, [selectedRegions]);
+
   // [P-5 / K-12.1 / S-1] Kapsam yoksa ARTIK ÜLKE GENELİ GÖSTERİLMİYOR.
   // Eskiden bölge de konum da yoksa global adminMatches listesine düşülüyordu;
   // yani Ordu'daki kullanıcıya İstanbul maçı gösteriliyordu — hem işe yaramaz
@@ -181,6 +201,13 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onSelect }) => {
     // Özel maçlar (PRIVATE) vitrinde GÖRÜNMEZ; yalnız kodla erişilir.
     const activeMatches = sourceMatches.filter(
       m => (!m.status || m.status === 'OPEN' || m.status === 'ACTIVE' || m.status === 'LIVE') && m.visibility !== 'PRIVATE'
+        // Bölge görünürlük kuralı: maçın sahasının ilçesi izin listesinde değilse
+        // vitrine çıkmaz. İlçesi bilinmeyen maç GİZLENMEZ (fail-open).
+        && isPlaceVisible(
+          visScope,
+          (m as { pitch_city?: string }).pitch_city,
+          (m as { pitch_district?: string }).pitch_district,
+        )
     );
     return activeMatches.map((m, i) => {
       // Demo price adjustment for index 2 if not set, else keep DB price
@@ -237,7 +264,7 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onSelect }) => {
         distance: m.distance
       };
     });
-  }, [adminMatches, nearbyMatches, userLocation, selectedRegions, kapsamYok]);
+  }, [adminMatches, nearbyMatches, userLocation, selectedRegions, kapsamYok, visScope]);
 
   const activeFilterCount = useMemo(() => countActiveFilters(dna), [dna]);
   const isFilterActive = activeFilterCount > 0;

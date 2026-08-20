@@ -17,7 +17,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Baby, RefreshCw, ShieldCheck, Clock, Eye, Link2, Loader2, Search,
-  ShieldOff, UserCheck, UserRound, X, Copy,
+  ShieldOff, UserCheck, UserRound, X, Copy, Lock, Unlock,
 } from 'lucide-react';
 import { PageShell } from '../components/PageShell';
 import { StatCard } from '../components/StatCard';
@@ -94,6 +94,23 @@ const KisiYuzu: React.FC<{
 const Bag: React.FC<{ aktif?: boolean }> = ({ aktif }) => (
   <div className="shrink-0 flex flex-col items-center justify-center px-1">
     <Link2 size={14} className={aktif ? 'text-green-400' : 'text-gray-600'} />
+  </div>
+);
+
+/**
+ * Ödeme kilidi şeridi — sunucudaki assert_can_transact kuralının aynası:
+ * reşit olmayan hesap, veli onayı AKTİF değilse ödeme yapamaz (maça katılamaz,
+ * saha kiralayamaz). Şerit tek bakışta "bu çocuk şu an ödeme yapabiliyor mu?"
+ * sorusuna cevap verir.
+ */
+const OdemeKilidi: React.FC<{ kilitli: boolean; compact?: boolean }> = ({ kilitli, compact }) => (
+  <div className={`flex items-center gap-2 rounded-lg border ${compact ? 'px-2.5 py-1.5' : 'px-3 py-2'} ${
+    kilitli ? 'bg-red-500/[0.06] border-red-500/25' : 'bg-green-500/[0.06] border-green-500/25'
+  }`}>
+    {kilitli ? <Lock size={compact ? 11 : 13} className="text-red-400 shrink-0" /> : <Unlock size={compact ? 11 : 13} className="text-green-400 shrink-0" />}
+    <p className={`${compact ? 'text-[9px]' : 'text-[10px]'} font-extrabold uppercase tracking-wide ${kilitli ? 'text-red-300' : 'text-green-300'}`}>
+      {kilitli ? 'Ödemeler kilitli — maça katılamaz, kiralayamaz' : 'Ödemeler açık'}
+    </p>
   </div>
 );
 
@@ -407,6 +424,9 @@ const CiftDetayDrawer: React.FC<{ hedef: DetayHedef; onClose: () => void; onGeri
         </div>
 
         <div className="flex-1 overflow-y-auto custom-scrollbar p-5 space-y-4">
+          {/* Ödeme kilidi durumu — çocuk şu an ödeme yapabiliyor mu? */}
+          <OdemeKilidi kilitli={c ? c.status !== 'ACTIVE' : true} />
+
           {/* İki profil YAN YANA */}
           <div className="flex gap-3 items-stretch">
             <ProfilSutunu rol="ÇOCUK" profil={minor} loading={loading} />
@@ -552,6 +572,8 @@ export const GuardianConsentsPage: React.FC = () => {
                       accent="green"
                     />
                   </div>
+                  {/* Onay aktif olmadığı sürece çocuk hesabı ödeme yapamaz. */}
+                  <OdemeKilidi kilitli compact />
                   <div className="flex items-center justify-between gap-2 flex-wrap">
                     <div className="flex items-center gap-2 flex-wrap min-w-0">
                       {durumBadge(m.guardian_consent_status)}
@@ -621,6 +643,8 @@ export const GuardianConsentsPage: React.FC = () => {
                       accent="green"
                     />
                   </div>
+                  {/* Geri alınmış onayda çocuk (hâlâ reşit değilse) sınırlı moddadır. */}
+                  <OdemeKilidi kilitli={c.status !== 'ACTIVE'} compact />
                   <div className="flex items-center justify-between gap-2 flex-wrap">
                     <div className="flex items-center gap-2 flex-wrap min-w-0">
                       {durumBadge(c.status)}
