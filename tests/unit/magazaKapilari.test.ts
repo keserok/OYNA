@@ -68,7 +68,24 @@ describe('Mağaza kapıları · demo girişi', () => {
     const g = govde('isDemoAccountPickerEnabled');
     expect(g).toContain('Capacitor.isNativePlatform()');
     expect(g).toContain('INCELEME_PAKETI');
-    expect(g).toMatch(/isNativePlatform\(\)\s*&&\s*!INCELEME_PAKETI\)\s*return false/);
+
+    // BİÇİM DEĞİL DAVRANIŞ (20 Ağu 2026): bu kilit eskiden tek bir satırın
+    // yazılışını (`isNativePlatform() && !INCELEME_PAKETI`) ezberliyordu. O
+    // yazılışta kapı, inceleme bayrağından SONRA bir de
+    // `VITE_DEMO_ACCOUNTS !== 'false'` arıyordu; mağaza denetimi ise .env'de
+    // `VITE_DEMO_ACCOUNTS=false` olmasını ZORUNLU tutuyor. Sonuç: inceleme
+    // paketi derlense bile seçici KAPALI kalıyordu ve kimse bunu görmüyordu.
+    // Kilit artık üç değişmezi koruyor, satırın şeklini değil:
+    const incelemeIdx = g.indexOf('INCELEME_PAKETI');
+    const nativeIdx = g.indexOf('isNativePlatform');
+
+    // 1) İnceleme bayrağı TEK BAŞINA yeter — seçiciyi açar.
+    expect(g).toMatch(/if\s*\(\s*INCELEME_PAKETI\s*\)\s*return true/);
+    // 2) Karar sırası: inceleme kapısı native kapısından ÖNCE gelir.
+    expect(incelemeIdx).toBeLessThan(nativeIdx);
+    // 3) Bayrak yoksa native pakette seçici KOŞULSUZ kapalıdır — bir .env
+    //    unutması paketi demo kimlikleriyle yayına gönderemez.
+    expect(g).toMatch(/if\s*\(\s*Capacitor\.isNativePlatform\(\)\s*\)\s*return false/);
   });
 
   it('inceleme bayrağı ayrı — geliştirme bayrağı tek başına native\'de açamaz', () => {

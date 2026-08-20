@@ -39,7 +39,10 @@
     "sistem:zaman-deseni": "node scripts/sistem/zaman-deseni.mjs",
     "sistem:surum": "node scripts/sistem/surum.mjs",
     "telefon:dogrula": "node scripts/telefon-girisi-dogrula.mjs",
-    "apple:gizli-anahtar": "node scripts/apple-gizli-anahtar.mjs"
+    "apple:gizli-anahtar": "node scripts/apple-gizli-anahtar.mjs",
+    "build:inceleme": "VITE_MAGAZA_INCELEME=true vite build",
+    "sync:ios:inceleme": "VITE_MAGAZA_INCELEME=true npm run sync:ios",
+    "sync:android:inceleme": "VITE_MAGAZA_INCELEME=true npm run sync:android"
   },
   "dependencies": {
     "@capacitor-community/apple-sign-in": "^7.1.0",

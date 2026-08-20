@@ -553,7 +553,17 @@ export const isDemoAccountPickerEnabled = (): boolean => {
   // Türk numarası olmadığı için telefon kodu ona ulaşmıyor; seçici olmadan
   // uygulamayı hiç açamaz ve "çalışmıyor" diye reddeder. Bayrak YALNIZ
   // inceleme derlemesinde yazılır — normal yayın paketinde tanımsızdır.
-  if (Capacitor.isNativePlatform() && !INCELEME_PAKETI) return false;
+  //
+  // İNCELEME BAYRAĞI TEK BAŞINA YETER (20 Ağu 2026 — bulunan hata): eskiden
+  // bu satırdan sonra `VITE_DEMO_ACCOUNTS !== 'false'` de aranıyordu. Ama
+  // mağaza denetimi `.env`'de `VITE_DEMO_ACCOUNTS=false` olmasını ZORUNLU
+  // tutuyor; yani inceleme paketi derlense bile seçici KAPALI kalıyordu ve
+  // iki bayrağın birlikte yazılması gerektiğini kimse bilmiyordu. İnceleme
+  // bayrağı bilinçli ve tek amaçlıdır: yazıldıysa seçici açıktır, nokta.
+  if (INCELEME_PAKETI) return true;
+  // Yayın paketi: seçici asla yok. (Kill-switch unutulsa bile.)
+  if (Capacitor.isNativePlatform()) return false;
+  // Web/geliştirme: kill-switch ile kapatılabilir.
   return import.meta.env.VITE_DEMO_ACCOUNTS !== 'false';
 };
 

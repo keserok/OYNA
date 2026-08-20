@@ -10,6 +10,7 @@ import {
 } from '../supabaseAuth';
 import { DEMO_ACCOUNT_GROUPS } from '../data/demoAccounts';
 import { useAppStore } from '../store';
+import { makeManualLocation } from '../utils/regionResolver';
 import {
   DEFAULT_DIAL_CODE, checkPhone, formatPhoneInput, formatPhoneDisplay,
   canSendOtpTo, otpChannelFor,
@@ -330,6 +331,24 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
   // Navigasyonu (Google/e-posta girişinde olduğu gibi) App'teki
   // onAuthStateChanged dinleyicisine bırakırız: profildeki GERÇEK role göre
   // doğru panele (oyuncu/tesis/kaleci/hakem) yönlendirir.
+  // DEMO GİRİŞTE BÖLGE HAZIR GELİR (kurucu kararı, 20 Ağu 2026).
+  //
+  // NEDEN: keşif kapsamı (maçlar/sahalar) seçili bölgeden ya da GPS'ten gelir;
+  // ikisi de yoksa ana sayfa "ÖNCE BÖLGENİ SEÇ" der ve ekran BOŞ görünür.
+  // Demo hesapla giren biri — özellikle mağaza incelemecisi — konum iznini
+  // reddederse uygulamayı "içi boş" sanır. Demo ekosistemin tamamı Ordu'da
+  // olduğundan, demo girişinde kapsamı Ordu/Altınordu'ya kurmak ekranı ilk
+  // saniyede dolduruyor.
+  //
+  // YALNIZ BOŞSA yazar: kullanıcı kendi bölgesini seçtiyse ona dokunulmaz.
+  const demoBolgesiniHazirla = () => {
+    const store = useAppStore.getState();
+    if (store.selectedRegions.length > 0) return;
+    const bolge = makeManualLocation('Ordu', 'Altınordu', Date.now());
+    store.addSelectedRegion(bolge);
+    if (bolge.coordinates && !store.userLocation) store.setUserLocation(bolge.coordinates);
+  };
+
   const handleDemoAccountLogin = async (emailAddr: string, pass: string) => {
     if (isLoading || demoLoggingIn) return;
     if (!requireAgreement()) return;
@@ -337,6 +356,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
     setInfo(null);
     setDemoLoggingIn(emailAddr);
     try {
+      demoBolgesiniHazirla();
       await loginDemoAccount(emailAddr, pass);
       // navigasyon auth dinleyicisinde
     } catch (err: any) {
