@@ -33,6 +33,11 @@ scripts/*
 # veriyordu. Gönderimin geçtiği kapı, depoda duran bir kapı olmalı.
 !scripts/magaza-denetim.mjs
 !scripts/surum-artir.mjs
+# Giriş yolu araçları — aynı gerekçe. `telefon:dogrula` mağaza incelemesinin
+# en olası ret sebebini (telefonla giriş çalışmıyor) tek komutla sınar;
+# `apple:gizli-anahtar` Apple özel anahtarını dışarı çıkarmadan jeton üretir.
+!scripts/telefon-girisi-dogrula.mjs
+!scripts/apple-gizli-anahtar.mjs
 !admin-panel/scripts/admin-panel-verify.mjs
 !admin-panel/scripts/admin-supabase-deploy.mjs
 !admin-panel/scripts/start-admin-local.mjs
