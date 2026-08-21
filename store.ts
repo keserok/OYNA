@@ -305,7 +305,6 @@ interface AppState {
   myTeams: Team[];
   addMyTeam: (team: Team) => void;
   loadMyTeams: () => Promise<void>;
-  createTeam: (input: TeamService.NewTeamInput) => Promise<Team>;
 
   // ─── Opponent Finder Ads ─────────────────────────────────────────
   opponentAds: Team[];
@@ -437,7 +436,6 @@ interface AppState {
   // ─── Notifications ─────────────────────────────────────────────
   addNotification: (n: AdminNotification) => void;
   deleteNotification: (id: string) => void;
-  toggleNotification: (id: string) => void;
 
   // ─── Logs ──────────────────────────────────────────────────────
   addAdminLog: (log: Omit<AdminLog, 'id' | 'timestamp'>) => void;
@@ -868,14 +866,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ myTeams: teams, userTeams: teams });
   },
 
-  createTeam: async (input) => {
-    const team = await TeamService.createTeam(input);
-    set((state) => ({
-      myTeams: [team, ...state.myTeams],
-      userTeams: [team, ...state.userTeams],
-    }));
-    return team;
-  },
+  // createTeam SÖKÜLDÜ (20 Ağu 2026): takım kurmanın tek yolu create_team RPC'si.
 
   // Studio Transfer ÖLDÜ (Küme 3): activeStudioTeam → studioContext;
   // teamTactics makinesi → save_team_tactic/approve_tactic/reject_tactic
@@ -1268,10 +1259,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   // Notifications
   addNotification: (n) => FB.fbAddNotification(n),
   deleteNotification: (id) => FB.fbDeleteNotification(id),
-  toggleNotification: (id) => {
-    const notif = get().adminNotifications.find(n => n.id === id);
-    if (notif) FB.fbToggleNotificationAlert(id, !notif.isActive);
-  },
+  // toggleNotification SÖKÜLDÜ (20 Ağu 2026): notifications.isActive kolonu
+  // hiç var olmadı; hiçbir ekran da çağırmıyordu.
 
   loadAdminData: ({ users, settings, auditLogs, stats, texts }) => set((state) => ({
     adminUsers: users,

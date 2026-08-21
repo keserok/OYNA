@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Trash2, Scale, Users2, Trophy, CreditCard, Bell, ScrollText, MessageSquare } from 'lucide-react';
+import { X, Trash2, Scale, Users2, Trophy, CreditCard, Bell, ScrollText, MessageSquare, RefreshCw } from 'lucide-react';
 import { useAppStore } from '../../../store';
 import {
   adminGetMatchAdmin,
@@ -14,6 +14,7 @@ import {
   kickFromSlotAdmin,
   moveSlotTeamAdmin,
   setMatchStatusAdmin,
+  recomputeMatchStatusAdmin,
   overrideMatchScoreAdmin,
   notifyMatchRosterAdmin,
   fetchMatchIntentsAdmin,
@@ -337,6 +338,23 @@ export const MatchDetailDrawer: React.FC<Props> = ({ match, onClose, onUpdated, 
     }
   };
 
+  // Durum takılı kaldıysa (doluluk değişti ama durum eskide kaldı) sunucudaki
+  // kanonik hesabı elle tetikle — slot müdahaleleri bunu zaten içeriden çağırır.
+  const handleRecomputeStatus = async () => {
+    if (!local) return;
+    setBusy(true);
+    try {
+      const yeni = await recomputeMatchStatusAdmin(local.id);
+      setLocal((prev) => (prev ? { ...prev, status: (yeni || prev.status) as MatchListing['status'] } : prev));
+      success(`Durum yeniden hesaplandı: ${yeni || '—'}`);
+      onUpdated();
+    } catch (err) {
+      toastError(toTurkishAdminError(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
   // Lobi Aynası alan kaydı: tek alan → admin_update_match (audit'li) → yerel yama.
   // PRIVATE'a geçişte kod sunucuda üretilebilir → tam satırı yeniden çek.
   // Fonksiyonel setLocal ŞART: açılıştaki tam-satır hidrasyonu uçuştayken kayıt
@@ -551,7 +569,18 @@ export const MatchDetailDrawer: React.FC<Props> = ({ match, onClose, onUpdated, 
                   <p className="font-mono text-red-300">{local.date} {local.time}</p>
                 </div>
                 <div className="bg-black/30 rounded-lg p-2 border border-white/5">
-                  <p className="text-[9px] text-gray-500 uppercase">Durum</p>
+                  <div className="flex items-center justify-between gap-1">
+                    <p className="text-[9px] text-gray-500 uppercase">Durum</p>
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => void handleRecomputeStatus()}
+                      title="Durumu doluluk/eşik kurallarından yeniden hesapla (durum takılı kaldıysa)"
+                      className="w-5 h-5 rounded bg-white/5 border border-white/10 text-gray-500 hover:text-white flex items-center justify-center disabled:opacity-40"
+                    >
+                      <RefreshCw size={9} />
+                    </button>
+                  </div>
                   <p className="font-bold text-[#39FF14]">{local.status || 'ACTIVE'}</p>
                 </div>
                 <div className="bg-black/30 rounded-lg p-2 border border-white/5">

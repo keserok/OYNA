@@ -113,10 +113,27 @@ const fetchPlayerPeerScoresAdmin = vi.fn(async () => ({
   ],
 }));
 const banUserAdmin = vi.fn(async () => undefined);
+// Ayna maç geçmişini artık admin RPC'si besler (get_my_match_history auth.uid'e
+// kilitli olduğundan panelde kullanılamaz) — eski getMatchHistory fixture'ının
+// birebir karşılığı: Arena'da 3-2 kazanılmış tek tamamlanmış maç.
+const fetchUserMatchesAdmin = vi.fn(async () => ({
+  counts: { total: 1, upcoming: 0, completed: 1, cancelled: 0 },
+  matches: [
+    {
+      match_id: 'm1', title: 'Salı Maçı', location: 'Arena', date: '2026-07-20', time: '20:00',
+      starts_at: '2026-07-20T20:00:00Z', status: 'COMPLETED', format: '7v7', price: 120,
+      is_demo: false, home_score: 3, away_score: 2, score_status: 'ENTERED', is_away: false,
+      participant_status: 'ACTIVE', joined_at: '2026-07-19T10:00:00Z', is_buyer: true,
+      bought_slots: 1, paid: 120, refunded: 0, blocked: 0, failed_count: 0, intent_count: 1,
+      last_status: 'PAID', card_last4: '0008', card_brand: 'MASTERCARD',
+    },
+  ],
+}));
 vi.mock('../../../admin-panel/services/adminService', () => ({
   updateUserAppProfileAdmin: (...args: unknown[]) => updateUserAppProfileAdmin(...(args as [])),
   adjustWalletBalanceAdmin: (...args: unknown[]) => adjustWalletBalanceAdmin(...(args as [])),
   fetchPlayerPeerScoresAdmin: (...args: unknown[]) => fetchPlayerPeerScoresAdmin(...(args as [])),
+  fetchUserMatchesAdmin: (...args: unknown[]) => fetchUserMatchesAdmin(...(args as [])),
   banUserAdmin: (...args: unknown[]) => banUserAdmin(...(args as [])),
   toTurkishAdminError: (e: unknown) => String(e),
 }));

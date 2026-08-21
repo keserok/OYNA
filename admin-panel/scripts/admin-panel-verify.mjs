@@ -47,6 +47,19 @@ const RPC_CHECKS = [
   { name: 'admin_get_my_role', body: {} },
   { name: 'admin_fetch_goalkeepers', body: { p_limit: 1 } },
   { name: 'admin_fetch_pending_verifications', body: {} },
+  // 20260914 — panel kontrol seti: kullanıcı-maç görünürlüğü + veli onayı aksiyonları
+  { name: 'admin_user_matches', body: { p_user_id: '00000000-0000-0000-0000-000000000001', p_limit: 1 } },
+  { name: 'admin_user_payment_summary', body: { p_user_id: '00000000-0000-0000-0000-000000000001', p_recent_limit: 1 } },
+  { name: 'admin_grant_guardian_consent', body: { p_minor_user_id: '00000000-0000-0000-0000-000000000001', p_guardian_user_id: '00000000-0000-0000-0000-000000000002', p_reason: 'kontrol' } },
+  { name: 'admin_revoke_guardian_consent', body: { p_minor_user_id: '00000000-0000-0000-0000-000000000001', p_reason: 'kontrol' } },
+  // 20260915 — bölge görünürlüğü + panel denetim seti
+  { name: 'admin_set_region_visibility', body: { p_city: 'İstanbul', p_district: 'Beşiktaş', p_visible: [] } },
+  { name: 'admin_court_slot_check', body: { p_court_id: '00000000-0000-0000-0000-000000000001', p_date: '2026-01-01', p_time: '20:00' } },
+  { name: 'admin_psp_costs', body: { p_days: 1 } },
+  { name: 'admin_notification_type_stats', body: { p_days: 1 } },
+  { name: 'admin_commission_health', body: {} },
+  // 20260915000003 — kokpit "durumu yeniden hesapla" kapısı
+  { name: 'admin_recompute_match_status', body: { p_match_id: '00000000-0000-0000-0000-000000000001' } },
 ];
 
 const env = loadEnv();

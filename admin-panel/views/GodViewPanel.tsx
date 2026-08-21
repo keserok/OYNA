@@ -154,7 +154,7 @@ const GodViewPanelInner: React.FC<Props> = ({
             case 'KULLANICILAR':
             case 'KALECİLER':
             case 'HAKEMLER':
-                return <UsersPage subRoute={subRoute} mode={mode} onRefresh={onRefreshData} />;
+                return <UsersPage subRoute={subRoute} mode={mode} onRefresh={onRefreshData} onNavigate={handleNavigate} />;
             case 'PENDING_VERIFICATIONS':
                 return <PendingVerificationsPage onBadgeCount={setPendingVerifCount} />;
             case 'PROVIDER_IDENTITIES':

@@ -1,7 +1,8 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import { Bell, MessageSquare, Lock, X } from 'lucide-react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import { Bell, MessageSquare, Lock, X, Activity, Clock } from 'lucide-react';
 import { PageShell } from '../components/PageShell';
 import { PageLoadingSkeleton } from '../components/PageLoadingSkeleton';
+import { AdminFilterChips } from '../components/AdminFilterChips';
 import { useAdminToast } from '../context/AdminToastContext';
 import {
   fetchNotificationTemplates,
@@ -9,9 +10,11 @@ import {
   updateNotificationTemplate,
   fetchBildirimSeviyeleri,
   setBildirimSeviyesi,
+  fetchNotificationTypeStatsAdmin,
   toTurkishAdminError,
   type NotificationTemplateRow,
   type BildirimSeviyeRow,
+  type NotificationTypeStat,
 } from '../../services/adminService';
 
 // ─── S2 — Üç mod (4 Ağustos 2026) ────────────────────────────────────────────
@@ -84,6 +87,11 @@ export const NotificationTemplatesPage: React.FC<{ onRefresh?: () => Promise<voi
   const [templates, setTemplates] = useState<NotificationTemplateRow[]>([]);
   // type_key -> seviye/kullanım bilgisi (admin_bildirim_seviyeleri)
   const [seviyeler, setSeviyeler] = useState<Record<string, BildirimSeviyeRow>>({});
+  // type_key -> son 30 gün GERÇEK gönderim istatistiği (admin_notification_type_stats).
+  // "Bildirim, kullanıcının işlemine göre doğru gidiyor mu?" sorusunun kanıtı:
+  // sayı 0'dan büyükse o tür canlıda gerçekten üretiliyor demektir.
+  const [stats, setStats] = useState<Record<string, NotificationTypeStat>>({});
+  const [usageFilter, setUsageFilter] = useState<'all' | 'active' | 'silent'>('all');
   const [seviyeYazan, setSeviyeYazan] = useState<string | null>(null);
   const [draft, setDraft] = useState<EditDraft | null>(null);
   const [saving, setSaving] = useState(false);
@@ -107,14 +115,16 @@ export const NotificationTemplatesPage: React.FC<{ onRefresh?: () => Promise<voi
     setLoading(true);
     setLoadError(null);
     try {
-      const [rows, sev] = await Promise.all([
+      const [rows, sev, statRows] = await Promise.all([
         fetchNotificationTemplates(),
         // Seviye/kullanım bilgisi okunamazsa ekran yine açılsın — metin
         // düzenleme bu bilgiye bağlı değil.
         fetchBildirimSeviyeleri().catch(() => [] as BildirimSeviyeRow[]),
+        fetchNotificationTypeStatsAdmin(30).catch(() => [] as NotificationTypeStat[]),
       ]);
       setTemplates(rows);
       setSeviyeler(Object.fromEntries(sev.map((r) => [r.type_key, r])));
+      setStats(Object.fromEntries(statRows.map((r) => [r.type_key, r])));
     } catch (err) {
       setLoadError(toTurkishAdminError(err));
     } finally {
@@ -185,7 +195,27 @@ export const NotificationTemplatesPage: React.FC<{ onRefresh?: () => Promise<voi
     }
   };
 
-  const grouped = templates.reduce<Record<string, NotificationTemplateRow[]>>((acc, r) => {
+  // Kullanım süzgeci: gerçek gönderim sayısına göre (son 30 gün).
+  const filteredTemplates = useMemo(() => {
+    if (usageFilter === 'all') return templates;
+    return templates.filter((t) => {
+      const sent = stats[t.type_key]?.sent ?? 0;
+      return usageFilter === 'active' ? sent > 0 : sent === 0;
+    });
+  }, [templates, stats, usageFilter]);
+
+  const usageSummary = useMemo(() => {
+    let toplam = 0;
+    let aktifTur = 0;
+    for (const t of templates) {
+      const sent = stats[t.type_key]?.sent ?? 0;
+      toplam += sent;
+      if (sent > 0) aktifTur += 1;
+    }
+    return { toplam, aktifTur, sessiz: templates.length - aktifTur };
+  }, [templates, stats]);
+
+  const grouped = filteredTemplates.reduce<Record<string, NotificationTemplateRow[]>>((acc, r) => {
     const cat = r.category ?? 'GENEL';
     (acc[cat] ||= []).push(r);
     return acc;
@@ -214,6 +244,41 @@ export const NotificationTemplatesPage: React.FC<{ onRefresh?: () => Promise<voi
               Metinlerdeki <code className="text-cyan-200 bg-black/30 px-1 rounded">{'{{degisken}}'}</code> kalıpları
               gönderim sırasında gerçek değerlerle doldurulur — önizlemede örnek değerlerle gösterilir.
             </p>
+          </div>
+
+          {/* Kapsama denetimi: hangi tür GERÇEKTEN gönderiliyor? Sayılar canlı
+              notifications tablosundan gelir — kullanıcı işlemine bağlı türlerin
+              çalıştığının kanıtı budur; 0 kalan tür ya hiç tetiklenmiyor ya da
+              o özellik henüz kullanılmıyor demektir. */}
+          <div className="bg-[#161B22]/60 border border-white/[0.06] rounded-2xl p-4">
+            <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
+              <p className="text-[10px] font-extrabold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
+                <Activity size={12} className="text-cyan-300" /> Gerçek Gönderim Denetimi (son 30 gün)
+              </p>
+              <AdminFilterChips
+                chips={[
+                  { id: 'all', label: `Tümü (${templates.length})` },
+                  { id: 'active', label: `Gönderilen (${usageSummary.aktifTur})` },
+                  { id: 'silent', label: `Sessiz (${usageSummary.sessiz})` },
+                ]}
+                active={usageFilter}
+                onChange={(id) => setUsageFilter(id as typeof usageFilter)}
+              />
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              <div className="bg-black/25 border border-white/[0.05] rounded-xl px-3 py-2 text-center">
+                <p className="text-base font-extrabold text-white font-mono">{usageSummary.toplam.toLocaleString('tr-TR')}</p>
+                <p className="text-[8px] text-gray-500 uppercase font-bold tracking-wider">Toplam gönderim</p>
+              </div>
+              <div className="bg-black/25 border border-white/[0.05] rounded-xl px-3 py-2 text-center">
+                <p className="text-base font-extrabold text-cyan-300 font-mono">{usageSummary.aktifTur}</p>
+                <p className="text-[8px] text-gray-500 uppercase font-bold tracking-wider">Çalışan tür</p>
+              </div>
+              <div className="bg-black/25 border border-white/[0.05] rounded-xl px-3 py-2 text-center">
+                <p className="text-base font-extrabold text-gray-400 font-mono">{usageSummary.sessiz}</p>
+                <p className="text-[8px] text-gray-500 uppercase font-bold tracking-wider">Sessiz tür</p>
+              </div>
+            </div>
           </div>
 
           {templates.length === 0 ? (
@@ -262,7 +327,7 @@ export const NotificationTemplatesPage: React.FC<{ onRefresh?: () => Promise<voi
                         </div>
                       </div>
 
-                      <div className="bg-black/40 border border-white/[0.06] rounded-lg p-3 mb-3 space-y-1">
+                      <div className="bg-black/40 border border-white/[0.06] rounded-lg p-3 mb-2 space-y-1">
                         <p className="text-[11px] font-bold text-white leading-snug">
                           {replacePreviewVars(row.title_tr)}
                         </p>
@@ -270,6 +335,24 @@ export const NotificationTemplatesPage: React.FC<{ onRefresh?: () => Promise<voi
                           {replacePreviewVars(row.body_tr)}
                         </p>
                       </div>
+
+                      {/* Canlı kullanım kanıtı: bu tür son 30 günde gerçekten gitti mi? */}
+                      {(() => {
+                        const s = stats[row.type_key];
+                        return (
+                          <p className={`text-[9px] font-bold mb-3 flex items-center gap-1.5 flex-wrap ${s?.sent ? 'text-cyan-300/90' : 'text-gray-600'}`}>
+                            <Activity size={9} className="shrink-0" />
+                            {s?.sent
+                              ? <>Son 30g: {s.sent.toLocaleString('tr-TR')} gönderim · {s.pushed} push · {s.read} okundu</>
+                              : 'Son 30 günde hiç gönderilmedi'}
+                            {s?.last_sent_at && (
+                              <span className="flex items-center gap-1 text-gray-500 font-normal">
+                                <Clock size={9} /> son: {new Date(s.last_sent_at).toLocaleString('tr-TR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                              </span>
+                            )}
+                          </p>
+                        );
+                      })()}
 
                       {/* S2: hangi modda gideceği — üç seviye */}
                       {seviyeler[row.type_key] && (
