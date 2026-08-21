@@ -2257,17 +2257,9 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
             </div>
           </div>
 
-          {/* Kurallar Butonu */}
-          <button
-            onClick={() => setShowInfoModal(true)}
-            className="w-full flex items-center justify-between gap-2 py-2 px-3 rounded-xl bg-white/4 border border-white/8 hover:border-white/20 transition-all active:scale-[0.98] cursor-pointer"
-          >
-            <div className="flex items-center gap-2">
-              <Info size={11} className="text-ink-4" />
-              <span className="text-[0.625rem] font-extrabold uppercase tracking-widest text-white/50">Maç Kuralları & Finans</span>
-            </div>
-            <ChevronRight size={11} className="text-ink-4" />
-          </button>
+          {/* Kurallar & Finans düğmesi buradan AŞAĞIYA taşındı (kurucu isteği,
+              21 Ağu 2026): artık "Kurallar ve Görevliler" bölümünün ilk kartı.
+              Üst kısım maçın kimliğine odaklanır, başvuru bilgisi altta durur. */}
         </div>
       </header>
 
@@ -2518,15 +2510,11 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                               </>
                             )}
                           </div>
-                          <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-1.5 bg-black/70 px-1.5 py-0.5 rounded-full border border-white/10 max-w-[64px] z-20 pointer-events-none">
-                            <span className={`text-[0.6875rem] font-extrabold uppercase truncate block whitespace-nowrap ${
-                              isSelected ? 'text-[#39FF14]' : 'text-ink-4'
-                            }`}>
-                              {isSelected ? 'SEÇİLDİ' : (
-                                { GOALKEEPER: 'KAL', MIDFIELDER: 'ORT', DEFENDER: 'DEF', FORWARD: 'FOR' }[slot.role] ?? slot.role?.slice(0,3) ?? 'BOŞ'
-                              )}
-                            </span>
-                          </div>
+                          {/* Açık yuvarlağın ALTINA yazı YAZILMAZ (kurucu kararı,
+                              21 Ağu 2026): eski balon İngilizce sözlükten kaçıp
+                              ham rol adını ("FWD" gibi) basıyordu. Pozisyonun
+                              Türkçesi (KL/SAV/ORT/HÜC) zaten yuvarlağın İÇİNDE;
+                              seçim de yeşil daire + üstteki sayaçla anlatılır. */}
                         </motion.div>
                       </button>
                     )
@@ -2822,7 +2810,12 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
           </div>
         )}
 
-        {/* ── MAÇ GÖREVLİLERİ (salt-okunur) ───────────────────────────────────── */}
+        {/* ── KURALLAR VE GÖREVLİLER (salt-okunur) ────────────────────────────── */}
+        {/* Kurucu isteği (21 Ağu 2026): üstteki "Maç Kuralları & Finans" düğmesi
+            bu bölümün İLK kartı oldu ve bölümün adı "Kurallar ve Görevliler"e
+            döndü. Bölüm bu yüzden HER ZAMAN çizilir (eskiden görevli yoksa hiç
+            görünmüyordu — kurallar düğmesi kaybolurdu); görevli kartları yine
+            yalnız atama varsa gelir. */}
         {/* Hakem HERKESE görünür; kiralık kaleci YALNIZ kendi takımının üyelerine. */}
         {/* İki taraflı: ev sahibi + deplasman kalecisi ayrı kartlar (yetki başına). */}
         {(() => {
@@ -2831,7 +2824,6 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
             visibleGks.push({ gk: assignedGoalkeeper, side: 'home', teamName: match.homeTeamName || homeTeam?.name || 'Ev Sahibi' });
           if (assignedAwayGoalkeeper && canSeeAwayGk)
             visibleGks.push({ gk: assignedAwayGoalkeeper, side: 'away', teamName: match.awayTeamName || awayTeam?.name || 'Deplasman' });
-          if (visibleGks.length === 0 && !assignedReferee) return null;
           // F3c: sağlayıcının sunucuya bildirdiği canlı durum (yolda/tesiste) rozeti
           const liveBadge = (providerId: string) => {
             const r = serviceRequests.find(x => x.providerId === providerId
@@ -2846,7 +2838,24 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
           };
           return (
           <div className="space-y-3 mt-6">
-            <p className="text-[0.625rem] font-extrabold text-ink-4 uppercase tracking-[0.2em] ml-1">Maç Görevlileri</p>
+            <p className="text-[0.625rem] font-extrabold text-ink-4 uppercase tracking-[0.2em] ml-1">Kurallar ve Görevliler</p>
+
+            {/* Maç Kuralları & Finans — bölümün sabit ilk kartı */}
+            <button
+              onClick={() => setShowInfoModal(true)}
+              className="w-full p-4 rounded-2xl bg-[#161B22]/80 border border-white/10 flex items-center gap-3 text-left active:scale-[0.99] hover:border-white/25 transition-all"
+            >
+              <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-white/[0.06] border border-white/15 shrink-0">
+                <Info size={18} className="text-ink-3" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h4 className="text-sm font-extrabold text-white uppercase tracking-tight">Maç Kuralları & Finans</h4>
+                <p className="text-[0.625rem] font-extrabold uppercase tracking-widest mt-0.5 text-ink-4">Süre · format · ödeme ve iade koşulları</p>
+              </div>
+              <div className="flex items-center gap-1 text-[0.625rem] font-extrabold uppercase tracking-widest text-ink-4 shrink-0">
+                Detay <ChevronRight size={13} />
+              </div>
+            </button>
 
             {visibleGks.map(({ gk, side, teamName }) => (
               <React.Fragment key={side}>
