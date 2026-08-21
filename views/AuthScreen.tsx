@@ -661,12 +661,13 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
                   </button>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '22px 0' }}>
-                  <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,.07)' }} />
-                  <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: '.18em', textTransform: 'uppercase', color: '#59636e' }}>
-                    veya telefon numaranla
-                  </span>
-                  <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,.07)' }} />
+                {/* AYRAÇ — yazısız (kurucu kararı, 21 Ağu 2026): "veya telefon
+                    numaranla" cümlesi kaldırıldı; hemen altındaki "TELEFON
+                    NUMARAN" alan başlığı zaten aynı şeyi söylüyor. Geriye
+                    sosyal girişle telefon alanını ayıran kısa bir çizgi kalır.
+                    Dekoratif olduğu için ekran okuyucudan gizli. */}
+                <div style={{ display: 'flex', justifyContent: 'center', margin: '22px 0' }}>
+                  <div aria-hidden="true" style={{ width: 32, height: 1, background: 'rgba(255,255,255,.10)' }} />
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 13 }}>

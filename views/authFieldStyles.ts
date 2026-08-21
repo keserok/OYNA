@@ -21,7 +21,10 @@ export const AUTH_FIELD_CSS = `
 /* Metin 16px: iOS'ta bundan küçük yazı alanına dokununca Safari sayfayı
    otomatik yakınlaştırır ve düzen bozulur. Güven veren okunaklılık da bu boyutta. */
 .au-input { flex: 1; min-width: 0; background: transparent; border: none; outline: none; color: #fff; font-size: 16px; font-weight: 600; letter-spacing: -.01em; }
-.au-input::placeholder { color: #4b5563; font-weight: 500; letter-spacing: 0; }
+/* Yer tutucu (ör. "532 123 45 67") BİÇİM İPUCUDUR, veri değil: kurucu
+   isteğiyle (21 Ağu 2026) belirgin griden saydam beyaza indirildi —
+   girilmiş numarayla karışmasın, ekran sakin dursun. */
+.au-input::placeholder { color: rgba(255,255,255,.18); font-weight: 500; letter-spacing: 0; }
 /* Alan başlığı — küçük, harf aralıklı, sakin. Formu "okunur" hâle getirir. */
 .au-label { display: block; margin: 0 0 8px 4px; font-size: 10.5px; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; color: #6b7684; }
 .au-cta { width: 100%; height: 58px; border-radius: 999px; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 9px; font-size: 13px; font-weight: 900; letter-spacing: .1em; transition: box-shadow .35s cubic-bezier(.16,1,.3,1), transform .35s cubic-bezier(.16,1,.3,1); }

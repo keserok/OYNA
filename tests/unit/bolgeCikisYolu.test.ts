@@ -112,8 +112,12 @@ describe('Giriş · telefon kapalıyken çalışan yolu gösterir', () => {
   it('sosyal giriş ekranda BİRİNCİL kalıyor — yönlendirme boşa düşmesin', () => {
     const s = oku('views/AuthScreen.tsx');
     const sosyal = s.indexOf('Sosyal giriş — BİRİNCİL');
-    const telefon = s.indexOf('veya telefon numaranla');
-    expect(sosyal).toBeGreaterThan(-1);
+    // Çapa, telefon ALANININ KENDİSİ: eskiden "veya telefon numaranla" ayraç
+    // yazısıydı, o yazı 21 Ağu 2026'da kaldırıldı ve çapa -1'e düşüp testi
+    // sessizce anlamsızlaştırıyordu. Alan başlığı kalıcıdır.
+    const telefon = s.indexOf('htmlFor="au-phone">Telefon numaran');
+    expect(sosyal, 'sosyal giriş bloğu bulunamadı').toBeGreaterThan(-1);
+    expect(telefon, 'telefon alanı bulunamadı').toBeGreaterThan(-1);
     expect(sosyal, 'telefon sosyal girişin üstüne çıkmış').toBeLessThan(telefon);
   });
 });

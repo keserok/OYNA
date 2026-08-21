@@ -324,14 +324,29 @@ denetle('Pakete sızmaması gerekenler', () => {
 
   // Derlenmiş paket varsa içinde ortak şifre aranır: kill-switch unutulsa bile
   // yakalanır.
+  //
+  // İNCELEME PAKETİ İSTİSNASI (21 Ağu 2026): `npm run build:inceleme` ile
+  // derlenen pakette demo seçici ve ortak şifre BİLEREK bulunur — mağaza
+  // incelemecisinin Türk numarası yok, telefon kodu ona ulaşmıyor (aynı
+  // istisna derleme bekçisinde de var: vite.config.ts · mobilPaketBekcisi).
+  // Denetim bunu "engel" saymaz ama YÜKSEK SESLE söyler: bu paket yalnız
+  // incelemeye gider, genel yayına bayraksız yeniden derlenir. Ayrım şart:
+  // aksi hâlde her inceleme derlemesinde çıkan kırmızı satır alışkanlık olur
+  // ve GERÇEK bir sızıntı aynı satırın içinde gözden kaçar.
   const dist = join(KOK, 'dist/assets');
   if (existsSync(dist)) {
     const js = readdirSync(dist).filter((f) => f.endsWith('.js'));
+    let incelemePaketi = false;
     const sizinti = js.filter((f) => {
       const g = readFileSync(join(dist, f), 'utf8');
+      if (g.includes('DEMO HESABIYLA GİR')) incelemePaketi = true;
       return g.includes('password123') || /oyuncu\d\d@oyna\.app/.test(g);
     });
-    if (sizinti.length) {
+    if (sizinti.length && incelemePaketi) {
+      uyari('İnceleme paketi derlenmiş — demo kimlikleri BİLEREK içeride',
+        'Bu paket YALNIZ mağaza incelemesi içindir. Genel yayına çıkarken '
+        + '`npm run build` (bayraksız) ile yeniden derlenmeli.');
+    } else if (sizinti.length) {
       engel('Demo kimlikleri pakette',
         `Derlenmiş dosyalarda demo e-posta/şifre bulundu: ${sizinti.slice(0, 3).join(', ')}`);
     } else {
