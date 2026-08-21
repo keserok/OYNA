@@ -245,16 +245,22 @@ Deno.serve(async (req: Request) => {
       let newCard: ReturnType<typeof normalizeCard> = null
       let savedToken: string | null = null
       let registerCard = false
+      // Panel görünürlüğü: intent.raw'a maskeli kart izi (son 4 + marka) düşülür —
+      // "hangi ödeme hangi kartla" sorusunun kaynağı. PAN/CVV asla yazılmaz.
+      let savedLast4: string | null = null
+      let savedBrand: string | null = null
       if (payload.savedCardId) {
         const { data: saved } = await userClient
           .from('user_saved_cards')
-          .select('id, provider_card_token, last4')
+          .select('id, provider_card_token, last4, brand')
           .eq('id', payload.savedCardId).maybeSingle()
         if (!saved) return json({ error: 'CARD_NOT_FOUND: Kayıtlı kart bulunamadı.' }, 404)
         if (PROVIDER === 'IYZICO' && !saved.provider_card_token) {
           return json({ error: 'CARD_NEEDS_REVALIDATION: Bu kart eski sistemden; güvenlik için kart bilgilerini bir kez daha girmen gerekiyor.' }, 400)
         }
         savedToken = saved.provider_card_token
+        savedLast4 = saved.last4 ?? null
+        savedBrand = (saved as { brand?: string | null }).brand ?? null
       } else if (payload.card) {
         newCard = normalizeCard(payload.card)
         if (!newCard) return json({ error: 'INVALID_CARD: Kart bilgilerini kontrol et.' }, 400)
@@ -323,7 +329,12 @@ Deno.serve(async (req: Request) => {
         }
         const { data: result, error: applyErr } = await admin.rpc('apply_card_payment', {
           p_intent_id: intentId, p_provider_ref: `SIM-${Date.now()}`,
-          p_raw: { simulated: true, at: new Date().toISOString() },
+          p_raw: {
+            simulated: true, at: new Date().toISOString(),
+            // Maskeli kart izi (panel: "hangi ödeme hangi kartla") — PAN asla.
+            card_last4: newCard ? newCard.number.slice(-4) : savedLast4,
+            card_brand: newCard ? detectBrand(newCard.number) : savedBrand,
+          },
         })
         if (applyErr) return json({ error: applyErr.message }, 400)
         if (registerCard && newCard) {

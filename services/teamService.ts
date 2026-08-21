@@ -8,41 +8,6 @@ import { supabase } from '../supabaseClient';
 import { auth } from '../supabaseAuth';
 import { Team, Player } from '../types';
 
-// TeamCreator'ın ürettiği ham veri
-export interface NewTeamInput {
-  name: string;
-  // Renk: ya tailwind sınıfı (eski TeamCreator) ya da doğrudan hex (wizard)
-  color?: string;
-  color1Hex?: string;
-  color2Hex?: string;
-  shortName?: string;
-  crest?: string;
-  location?: string;
-  communityId?: string | null;
-  formation?: string;
-  playStyle?: string;
-  value?: number;
-  rosterIds?: string[];  // wizard'dan seçilen arkadaş ID'leri
-}
-
-// TeamCreator'daki tailwind renklerinin hex karşılıkları
-const TAILWIND_HEX: Record<string, string> = {
-  'bg-emerald-500': '#10B981',
-  'bg-blue-500': '#3B82F6',
-  'bg-red-500': '#EF4444',
-  'bg-amber-500': '#F59E0B',
-  'bg-purple-500': '#A855F7',
-  'bg-pink-500': '#EC4899',
-  'bg-indigo-500': '#6366F1',
-  'bg-teal-500': '#14B8A6',
-};
-
-const toHex = (twClass: string) => TAILWIND_HEX[twClass] || '#10B981';
-
-const toShortName = (name: string) =>
-  name.replace(/[^A-Za-zÇĞİÖŞÜçğıöşü]/g, '').slice(0, 3).toUpperCase() || 'TKM';
-
-// Kadrodaki oyunculara saha üzerinde varsayılan x/y dağılımı (MyTeam pitch'i için)
 export const withDefaultPositions = (roster: Partial<Player>[]): Player[] => {
   const layout = [
     { x: 50, y: 15 }, { x: 30, y: 40 }, { x: 70, y: 40 },
@@ -69,68 +34,11 @@ const mapRowToTeam = (row: any): Team => ({
   losses: row.losses ?? 0,
 });
 
-export const createTeam = async (input: NewTeamInput): Promise<Team> => {
-  const user = auth.currentUser;
-  if (!user?.uid) throw new Error('Takım kurmak için giriş yapmalısınız.');
-
-  const color1 = input.color1Hex || (input.color ? toHex(input.color) : '#10B981');
-  const color2 = input.color2Hex || '#0A0E14';
-  const resolvedShortName = input.shortName || toShortName(input.name);
-  const resolvedCrest = input.crest || 'shield';
-  // Kurucu kararı (2026-08-06): "+1" dili kaldırıldı — takım kaç kişiyse o
-  // yazılır. Varsayılan eskiden '7+1' idi.
-  const resolvedFormation = input.formation || '7v7';
-
-  const captainPlayer = {
-    id: user.uid,
-    name: user.displayName || 'Kaptan',
-    avatar: user.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.uid}`,
-    position: 'KAPTAN',
-    x: 50, y: 88,
-  };
-
-  const rosterPlayers = withDefaultPositions([
-    captainPlayer,
-    ...(input.rosterIds || []).map(id => ({ id, name: 'Oyuncu', position: 'OYUNCU' })),
-  ]);
-
-  const allPlayerIds = [user.uid, ...(input.rosterIds || [])];
-
-  const { data, error } = await supabase
-    .from('teams')
-    .insert({
-      name: input.name.trim(),
-      shortName: resolvedShortName,
-      color1,
-      color2,
-      colors: [color1, color2],
-      crest: resolvedCrest,
-      location: input.location || null,
-      logo: `https://api.dicebear.com/7.x/shapes/svg?seed=${encodeURIComponent(input.name)}&backgroundColor=${color1.slice(1)}`,
-      formation: { name: resolvedFormation, players: [] },
-      play_style: input.playStyle || null,
-      value: input.value || null,
-      captain: user.uid,
-      captain_id: user.uid,
-      captains: [user.uid],
-      players: allPlayerIds,
-      roster: rosterPlayers,
-      wins: 0,
-      losses: 0,
-    })
-    .select()
-    .single();
-
-  if (error) throw error;
-
-  // Kaptanı üyelik tablosuna da yaz (RLS: user_id = auth.uid() ile izinli)
-  const { error: memberErr } = await supabase
-    .from('team_members')
-    .insert({ team_id: data.id, user_id: user.uid, is_active: true });
-  if (memberErr) console.error('[teamService] Kaptan üyeliği yazılamadı:', memberErr.message);
-
-  return mapRowToTeam(data);
-};
+// ── SÖKÜLDÜ (20 Ağu 2026 çapraz incelemesi) ────────────────────────────────
+// createTeam + NewTeamInput kaldırıldı: hiçbir ekran çağırmıyordu (takım
+// kurma create_team RPC'siyle — teamSocialService) ve insert gövdesi şemada
+// olmayan kolonlara (play_style/value) yazdığı için çağrıldığı gün komple
+// düşecekti. Tek takım kurma yolu: create_team RPC'si.
 
 export const fetchMyTeams = async (uid: string): Promise<Team[]> => {
   // Üyesi olduğum takım id'leri

@@ -24,6 +24,8 @@ interface UsersPageProps {
     subRoute: 'KULLANICILAR' | 'KALECİLER' | 'HAKEMLER';
     mode?: 'embedded' | 'standalone';
     onRefresh?: () => Promise<void>;
+    /** Kullanıcı 360 → Maçları sekmesinden maç kokpitine sıçramak için. */
+    onNavigate?: import('../GodViewPanel').AdminNavigateFn;
 }
 
 const DEMO_MODULE: Record<UsersPageProps['subRoute'], DemoModuleKey | null> = {
@@ -32,7 +34,7 @@ const DEMO_MODULE: Record<UsersPageProps['subRoute'], DemoModuleKey | null> = {
     HAKEMLER: 'referees',
 };
 
-export const UsersPage: React.FC<UsersPageProps> = ({ subRoute, mode = 'embedded', onRefresh }) => {
+export const UsersPage: React.FC<UsersPageProps> = ({ subRoute, mode = 'embedded', onRefresh, onNavigate }) => {
     const adminUsers = useAppStore((s) => s.adminUsers);
     const adminGoalkeepers = useAppStore((s) => s.adminGoalkeepers);
     const adminReferees = useAppStore((s) => s.adminReferees);
@@ -547,6 +549,10 @@ export const UsersPage: React.FC<UsersPageProps> = ({ subRoute, mode = 'embedded
                 }}
                 onGhost={(u) => { setUser360(null); handleImpersonateRequest(u.id); }}
                 onUpdated={() => void refresh()}
+                onOpenMatch={onNavigate ? (matchId) => {
+                    setUser360(null);
+                    onNavigate('MATCHES', { matchId });
+                } : undefined}
             />
         </PageShell>
     );

@@ -52,7 +52,19 @@ const RLS_ICINDE_KULLANILANLAR = [
  *   1) eski düz satır  : REVOKE ALL ON FUNCTION public.foo(uuid) FROM ...
  *   2) yeni dizi girdisi: ['public.foo(uuid)', 'PUBLIC, anon', NULL]
  */
-const kapatilanlar = (): string[] => {
+/**
+ * Sonradan BİLİNÇLİ olarak yeniden açılan kapılar. Buraya ad yazmak yetmez:
+ * gösterilen migration dosyasında o fonksiyon için gerçek bir
+ * `GRANT EXECUTE ... TO authenticated` satırı YOKSA ad kapalı sayılmaya devam
+ * eder ve test yine kırmızı yanar — koruma, kanıtsız gevşetilemez.
+ */
+const YENIDEN_ACILANLAR: Record<string, string> = {
+  // Maç Kokpiti "durumu yeniden hesapla" düğmesi (çapraz inceleme, 20 Ağu 2026).
+  admin_recompute_match_status: 'supabase/migrations/20260915000003_kullanilmayan_admin_rpc_kapilari.sql',
+};
+
+/** Ham ayrıştırma — üç kapatma migration'ındaki TÜM imzalar (dosya sağlığı bekçisi bunu sayar). */
+const hamKapatilanlar = (): string[] => {
   const adlar = new Set<string>();
   for (const dosya of KAPATMA_MIGRATIONLARI) {
     const metin = oku(dosya);
@@ -62,6 +74,20 @@ const kapatilanlar = (): string[] => {
     for (const m of metin.matchAll(/\['public\.([a-z0-9_]+)\s*\(/gi)) {
       adlar.add(m[1]);
     }
+  }
+  return [...adlar].sort();
+};
+
+/** Bugün fiilen kapalı olanlar: ham liste − kanıtlı yeniden açılanlar. */
+const kapatilanlar = (): string[] => {
+  const adlar = new Set(hamKapatilanlar());
+  for (const [ad, dosya] of Object.entries(YENIDEN_ACILANLAR)) {
+    let metin = '';
+    try { metin = oku(dosya); } catch { continue; } // dosya yoksa ad kapalı kalır
+    const acilmis = new RegExp(
+      `GRANT EXECUTE ON FUNCTION public\\.${ad}\\s*\\([^)]*\\)\\s*TO[^;]*authenticated`, 'i',
+    ).test(metin);
+    if (acilmis) adlar.delete(ad);
   }
   return [...adlar].sort();
 };
@@ -98,7 +124,9 @@ const uygulamaninCagirdiklari = (): Set<string> => {
 
 describe('kapatılan fonksiyonlar uygulamadan ÇAĞRILMIYOR', () => {
   it('kapatma listesi boş değil (dosyalar yerinde ve okunuyor)', () => {
-    expect(kapatilanlar().length).toBeGreaterThanOrEqual(71);
+    // Ham sayı: dosyaların yerinde ve ayrıştırmanın çalışır olduğunun kanıtı.
+    // Bilinçli yeniden açılanlar bu sayıyı DÜŞÜRMEZ (onlar ayrı listede).
+    expect(hamKapatilanlar().length).toBeGreaterThanOrEqual(71);
   });
 
   it('kapatılan hiçbir fonksiyon uygulama/panel kodundan rpc ile çağrılmıyor', () => {

@@ -112,75 +112,13 @@ export const fetchPendingRequests = async (userId: string): Promise<FriendReques
   }));
 };
 
-// Arkadaşlık isteği gönder
-export const sendFriendRequest = async (senderId: string, receiverId: string): Promise<void> => {
-  // Zaten var mı kontrol et
-  const { data: existing } = await supabase
-    .from('friendships')
-    .select('id')
-    .or(`and(sender_id.eq.${senderId},receiver_id.eq.${receiverId}),and(sender_id.eq.${receiverId},receiver_id.eq.${senderId})`)
-    .maybeSingle();
-
-  if (existing) return; // zaten var
-
-  const { error } = await supabase
-    .from('friendships')
-    .insert({ sender_id: senderId, receiver_id: receiverId, status: 'PENDING' });
-
-  if (error) throw error;
-};
-
-// İsteği kabul et
-export const acceptFriendRequest = async (friendshipId: string): Promise<void> => {
-  const { error } = await supabase
-    .from('friendships')
-    .update({ status: 'ACCEPTED' })
-    .eq('id', friendshipId);
-
-  if (error) throw error;
-};
-
-// İsteği reddet / arkadaşlığı kaldır
-export const removeFriendship = async (friendshipId: string): Promise<void> => {
-  const { error } = await supabase
-    .from('friendships')
-    .delete()
-    .eq('id', friendshipId);
-
-  if (error) throw error;
-};
-
-// Grubu güncelle
-export const updateFriendGroup = async (
-  friendshipId: string,
-  userId: string,
-  senderId: string,
-  groupName: string | null
-): Promise<void> => {
-  const field = userId === senderId ? 'sender_group' : 'receiver_group';
-  const { error } = await supabase
-    .from('friendships')
-    .update({ [field]: groupName })
-    .eq('id', friendshipId);
-
-  if (error) throw error;
-};
-
-// Favori durumu güncelle
-export const toggleFriendFavorite = async (
-  friendshipId: string,
-  userId: string,
-  senderId: string,
-  value: boolean
-): Promise<void> => {
-  const field = userId === senderId ? 'sender_is_favorite' : 'receiver_is_favorite';
-  const { error } = await supabase
-    .from('friendships')
-    .update({ [field]: value })
-    .eq('id', friendshipId);
-
-  if (error) throw error;
-};
+// ── SÖKÜLDÜ (20 Ağu 2026 çapraz incelemesi) ────────────────────────────────
+// sendFriendRequest / acceptFriendRequest / removeFriendship /
+// updateFriendGroup / toggleFriendFavorite buradan kaldırıldı: hepsi
+// friendships tablosuna DOĞRUDAN yazıyordu ve RLS bunu bilinçli olarak
+// engelliyor (tabloda yalnız SELECT politikası var). Arkadaşlık yazmalarının
+// tek kapısı socialService'teki RPC'lerdir: send_friend_request,
+// respond_friend_request, cancel_friend_request, remove_friend.
 
 // Kullanıcının takımlarını getirir (kaptan veya üye)
 export const fetchUserTeams = async (userId: string) => {
