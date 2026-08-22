@@ -244,6 +244,34 @@ describe('numara adımı atlanabilir, ihtiyaç anında istenir', () => {
     expect(g).toContain("st.navigateTo('PHONE_LINK')");
   });
 
+  /**
+   * TELEFONA BAĞLI ÖZELLİKLER DE KAPANMALI (22 Ağustos 2026).
+   *
+   * Bayrağı kapatmak tek başına yetmiyor: numaraya DAYANAN özellikler açık
+   * kalırsa kullanıcıya çalışmayan vaatler sunuluyor. Denetimde ikisi çıktı.
+   */
+  it('profil, numarası olmayana çözümü olmayan engel göstermiyor', () => {
+    const p = oku('components/settings/ProfileInfoPage.tsx');
+    // Eski metin "Numaranı bağlamadan ödeme yapamaz ve maça katılamazsın"
+    // diyordu. İKİSİ de yanlıştı: ödeme numarasız çalışıyor ve numara
+    // bağlamanın hiçbir yolu yok. İncelemeci bunu "uygulama bozuk" okur.
+    expect(p).not.toContain('Numaranı bağlamadan ödeme yapamaz');
+    // Kart yalnız numarası OLANA ya da telefon yolu AÇIKKEN çizilir.
+    expect(p).toContain('{(identity?.phone || TELEFON_GIRISI_ACIK) && (');
+  });
+
+  it('rehber eşleştirme kapalı — karşılığı olmayan izin istenmiyor', () => {
+    // Eşleşme numara hash\'ine dayanır (match_contacts → profile_contact_hash).
+    // Telefon kapalıyken o tabloya yeni kayıt GİRMEZ; kullanıcıdan tüm
+    // rehberini isteyip hiçbir şey döndürmemek olurdu (App Store 5.1.1:
+    // ihtiyaç duymadığın veriyi isteme).
+    const f = oku('views/social/FriendAddView.tsx');
+    expect(f).toContain("import { TELEFON_GIRISI_ACIK } from '../../shared/phone'");
+    expect(f).toContain('{TELEFON_GIRISI_ACIK && (');
+    // Kart gizlenince ızgara tek sütuna düşmeli — yarısı boş kutu kalmasın.
+    expect(f).toContain("TELEFON_GIRISI_ACIK ? 'grid grid-cols-2 gap-2.5' : 'grid grid-cols-1 gap-2.5'");
+  });
+
   it('atlama işareti kullanıcı bazlı ve depolamasız ortamda çökmüyor', async () => {
     const { numarayiAtla, numaraAtlandiMi, numaraAtlamasiniTemizle } =
       await import('../../shared/numaraKapisi');

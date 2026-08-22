@@ -5,6 +5,7 @@
 // store.myTeams / friendService.fetchUserTeams ikilisinin halefi (G40).
 // ================================================================
 import { supabase } from '../supabaseClient';
+import { uygunsuzMu, UYGUNSUZ_ICERIK_MESAJI } from '../shared/icerikSuzgeci';
 
 export type TeamRole = 'CAPTAIN' | 'ADMIN' | 'MEMBER';
 export type TeamVisibility = 'PUBLIC' | 'PRIVATE';
@@ -228,13 +229,27 @@ export const getTeamSquad = async (teamId: string): Promise<TeamSquadRow[]> => {
 
 // ─── Oluşturma & ayarlar ────────────────────────────────────────
 
+/**
+ * Takım adı ve kısa adı da kullanıcı içeriğidir (Apple 1.2, 22 Ağu 2026):
+ * sohbet listesinde, davetlerde ve rakip bul ekranında başkalarına görünür.
+ * Kapı hem KURARKEN hem SONRADAN DEĞİŞTİRİRKEN çalışmalı — yalnız birine
+ * konsaydı kullanıcı temiz bir adla kurup ertesi gün değiştirirdi.
+ */
+const takimAdiniSuz = (patch: { name?: string; short_name?: string }): void => {
+  for (const metin of [patch.name, patch.short_name]) {
+    if (metin && uygunsuzMu(metin)) throw new Error(UYGUNSUZ_ICERIK_MESAJI);
+  }
+};
+
 export const createTeamRpc = async (payload: CreateTeamPayload): Promise<{ team_id: string; invites_sent: number }> => {
+  takimAdiniSuz(payload);
   const { data, error } = await supabase.rpc('create_team', { p_payload: payload });
   if (error) throw error;
   return data as { team_id: string; invites_sent: number };
 };
 
 export const updateTeamSettings = async (teamId: string, patch: Partial<CreateTeamPayload> & { home_pitch_id?: string }): Promise<void> => {
+  takimAdiniSuz(patch);
   const { error } = await supabase.rpc('update_team_settings_v2', {
     p_team_id: teamId, p_patch: patch,
   });

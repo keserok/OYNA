@@ -1,5 +1,6 @@
 import { supabase } from '../supabaseClient';
 import { User } from '@supabase/supabase-js';
+import { uygunsuzMu, UYGUNSUZ_ICERIK_MESAJI } from '../shared/icerikSuzgeci';
 // Oyuncu istatistiği artık yalnız maç sayısı taşır. Akran-puanı türevleri
 // (skill_rating → kart OVR zinciri) 20260730135953 sökümüyle öldü; kamusal
 // seviye göstergesi profiles.self_skill'dir (OynaUser.selfSkill).
@@ -335,6 +336,14 @@ export const saveProfileEdit = async (
 export const updateProfileName = async (userId: string, fullName: string): Promise<void> => {
   const trimmed = fullName.trim();
   if (!trimmed) throw new Error('İsim boş olamaz.');
+  // İÇERİK SÜZGECİ (22 Ağu 2026 — Apple 1.2 denetimi).
+  // Süzgeç yalnız sohbete uygulanıyordu. Oysa GÖRÜNÜR AD, uygulamadaki en
+  // yaygın kullanıcı metnidir: maç lobisinde, kadroda, sohbet listesinde,
+  // sosyalde herkese görünür. Küfürlü bir ad, engellenemeyen ve bildirilmesi
+  // zor bir taciz yüzeyi oluşturuyordu. App Store Kural 1.2, kullanıcı
+  // içeriği barındıran uygulamadan "uygunsuz içeriğin girmesini engelleyen
+  // bir yöntem" ister — sohbet tek başına yetmez.
+  if (uygunsuzMu(trimmed)) throw new Error(UYGUNSUZ_ICERIK_MESAJI);
   const { error } = await supabase.from('profiles').update({ name: trimmed, full_name: trimmed }).eq('id', userId);
   if (error) throw error;
 };

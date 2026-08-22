@@ -6,6 +6,7 @@
 // sunucudan (get_court_day_quote) gelir; istemci tahmin uydurmaz.
 
 import { supabase } from '../supabaseClient';
+import { uygunsuzMu, UYGUNSUZ_ICERIK_MESAJI } from '../shared/icerikSuzgeci';
 
 // ── Tesis + saha listesi ────────────────────────────────────────────────────
 
@@ -259,6 +260,10 @@ export function parseCreateMatchError(err: unknown): { code: CreateMatchErrorCod
 
 export async function createMatchAtomic(params: AtomicCreateParams): Promise<AtomicCreateResult> {
   const payload: Record<string, unknown> = {};
+  // İÇERİK SÜZGECİ (22 Ağu 2026 — Apple 1.2). Maç başlığı keşif listesinde
+  // HERKESE görünür; süzgeçsiz bırakıldığında uygulamanın en geniş kitleye
+  // ulaşan kullanıcı metniydi.
+  if (params.title && uygunsuzMu(params.title)) throw new Error(UYGUNSUZ_ICERIK_MESAJI);
   if (params.title) payload.title = params.title;
   if (params.gender) payload.gender = params.gender;
   if (params.ageGroup) payload.ageGroup = params.ageGroup;

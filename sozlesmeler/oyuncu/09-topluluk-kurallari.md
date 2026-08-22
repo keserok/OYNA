@@ -94,7 +94,9 @@ Aşağıdaki içerik ve davranışlar — uygulama içi mesajlaşma, takım sohb
 
 8.3. **Katalog nitelikli/ağır suç içeriği** (çocukların cinsel istismarı, terör propagandası, intihara yönlendirme vb.) tespit veya bildirim üzerine derhal kaldırılır ve **yetkili adli/idari mercilere bildirilir** (5651 sayılı Kanun m.8 vd.).
 
-8.4. Bu süreçlere ilişkin taahhütler, OYNA'ya makul olmayan veya bağlayıcı kesin süre yükümlülüğü getirmez; amaç, iyi niyetli ve gecikmesiz bir inceleme sağlamaktır.
+8.4. **Uygunsuz içerik bildirimlerinde 24 saat taahhüdü.** Uygulama içi bildirim/şikâyet araçlarıyla iletilen **uygunsuz içerik** bildirimleri (hakaret, taciz, nefret söylemi, cinsel içerik, şiddet, spam, kimlik taklidi) OYNA tarafından **bildirimden itibaren 24 saat içinde** incelenir; ihlal tespit edilirse içerik kaldırılır ve içeriği üreten kullanıcı hakkında m.9'daki yaptırım skalası uygulanır — ağır hâllerde hesap erişimi derhal kapatılır. Bildirimde bulunan kullanıcı, aynı süre içinde sonuçtan haberdar edilir.
+
+8.5. m.8.4'teki 24 saatlik süre, uygulama içi uygunsuz içerik bildirimlerine ilişkin OYNA'nın kendi taahhüdüdür. Bunun dışındaki bildirimler (üçüncü kişi hak ihlali iddiaları, hukuki uyar-kaldır başvuruları, resmî merci talepleri) m.8.2 ve m.8.3 uyarınca, içeriğin niteliği ve ilgili mevzuatın öngördüğü usul çerçevesinde ele alınır ve bu belgedeki hiçbir hüküm OYNA'ya bu başvurular bakımından makul olmayan bir süre yükümlülüğü getirmez.
 
 ## 9. Moderasyon ve Yaptırım Skalası
 

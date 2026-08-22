@@ -31,7 +31,7 @@ import {
   Mail, Lock, Phone, RefreshCw, Check, AlertCircle, ChevronRight, Plus,
 } from 'lucide-react';
 import { auth, getAuthIdentity, updateUserEmail, AuthIdentityInfo } from '../../supabaseAuth';
-import { formatPhoneDisplay } from '../../shared/phone';
+import { formatPhoneDisplay, TELEFON_GIRISI_ACIK } from '../../shared/phone';
 import {
   getFullUserProfile, getMatchHistory, updateProfileBasics, updateProfileName,
   saveProfileEdit, type MatchHistorySummary, type OynaUser,
@@ -478,7 +478,19 @@ const ProfileInfoPage: React.FC<ProfileInfoPageProps> = ({ open, onClose }) => {
                 Şifre kartı KALDIRILDI (17 Ağu 2026): OYNA'da şifre yok, giriş
                 telefona gelen kodla yapılıyor. Kullanıcının burada görmesi
                 gereken tek kimlik bilgisi doğrulanmış numarasıdır — tesis
-                sahibi ona bu numaradan ulaşır. */}
+                sahibi ona bu numaradan ulaşır.
+
+                KART ARTIK KOŞULLU (22 Ağu 2026). Telefon yolu kapalıyken
+                (shared/phone.ts · SMS_OTP_ENABLED) numarası olmayan kullanıcı
+                — ki Apple/Google ile giren HERKES böyle — burada "Numara bağlı
+                değil" ve "ödeme yapamaz, maça katılamazsın" cümlelerini
+                görüyordu. İkisi de YANLIŞTI: ödeme numarasız çalışıyor ve
+                numara bağlamanın hiçbir yolu yok. Kullanıcıya çözümü olmayan
+                bir engel göstermek, incelemecide "bu uygulama bozuk"
+                izlenimi bırakır (App Store 2.1).
+                Kural: numarası OLANA kart gösterilir (bilgi doğrudur);
+                olmayana yalnız telefon yolu AÇIKSA gösterilir. */}
+            {(identity?.phone || TELEFON_GIRISI_ACIK) && (
             <div className="rounded-[24px] bg-surface-1 p-4">
               <label className="text-[0.6875rem] tracking-[0.14em] text-ink-4 flex items-center gap-1.5 mb-2">
                 <Phone size={12} /> TELEFON
@@ -497,9 +509,10 @@ const ProfileInfoPage: React.FC<ProfileInfoPageProps> = ({ open, onClose }) => {
               <p className="text-[0.6875rem] text-ink-4 mt-1.5 leading-relaxed">
                 {identity?.phone
                   ? 'Girişte kullandığın numara. Değiştirmek için destekle iletişime geç.'
-                  : 'Numaranı bağlamadan ödeme yapamaz ve maça katılamazsın.'}
+                  : 'Maç günü tesis ve kaptan sana bu numaradan ulaşır.'}
               </p>
             </div>
+            )}
           </div>
         )}
       </SettingsSubPage>

@@ -18,6 +18,7 @@ import {
   UserSearchRow, TeammateRow, SuggestionRow, RelationshipState,
 } from '../../services/socialService';
 import { syncContactsAndMatch, isContactsAvailable, ContactSyncResult } from '../../services/contactsService';
+import { TELEFON_GIRISI_ACIK } from '../../shared/phone';
 
 // ================================================================
 // FriendAddView — "Arkadaş Ekle / Keşfet" tam ekran sayfası (Spec §3.2)
@@ -404,8 +405,18 @@ const FriendAddView: React.FC<FriendAddViewProps> = ({ onBack, onNavigate }) => 
         ) : (
           /* ── Keşif kanalları (arama boşken) ── */
           <div className="mt-5">
-            {/* Rehber + QR kartları */}
-            <div className="grid grid-cols-2 gap-2.5">
+            {/* ─── Rehber + davet kartları ─────────────────────────────────
+                REHBER KARTI TELEFON YOLUNA BAĞLI (22 Ağu 2026 — Apple 5.1.1).
+                Rehber eşleştirmesi NUMARA ÜZERİNDEN çalışır: cihazdaki
+                numaraların hash'i `profile_contact_hash` ile karşılaştırılır.
+                Telefonla giriş kapalıyken (shared/phone.ts · SMS_OTP_ENABLED)
+                hiçbir yeni kullanıcının numarası olmuyor, dolayısıyla o tablo
+                büyümüyor ve eşleşme matematiksel olarak imkânsız.
+                Kullanıcıdan TÜM REHBERİNİ isteyip karşılığında hiçbir şey
+                vermek, hem kötü bir takas hem de "ihtiyaç duymadığın veriyi
+                isteme" kuralının ihlali. Kart, bayrak açılınca geri gelir. */}
+            <div className={TELEFON_GIRISI_ACIK ? 'grid grid-cols-2 gap-2.5' : 'grid grid-cols-1 gap-2.5'}>
+              {TELEFON_GIRISI_ACIK && (
               <button
                 onClick={handleContacts}
                 disabled={contactsBusy}
@@ -419,6 +430,7 @@ const FriendAddView: React.FC<FriendAddViewProps> = ({ onBack, onNavigate }) => 
                   {isContactsAvailable() ? 'OYNA\'daki tanıdıklarını bul' : 'Yalnız uygulamada kullanılabilir'}
                 </div>
               </button>
+              )}
               {/* IP-14 · BULGU-024: bu buton "QR ile Ekle" adıyla oyuncuyu TESİS
                   SAHİBİNİN skor giriş ekranına gönderiyordu (başlık: "SKOR GİR"),
                   üstelik orada kamera/QR tarayıcı da yoktu. Artık kullanıcının

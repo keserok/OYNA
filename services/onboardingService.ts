@@ -1,5 +1,6 @@
 import { supabase } from '../supabaseClient';
 import { POSITION_LABEL, OnboardingDraft } from '../views/onboarding/onboardingShared';
+import { uygunsuzMu, UYGUNSUZ_ICERIK_MESAJI } from '../shared/icerikSuzgeci';
 
 // ─── Onboarding kayıt servisi ─────────────────────────────────────
 // Onboarding KAYIT SONRASINDA (kullanıcı girişliyken) çalışır; toplanan
@@ -22,6 +23,14 @@ export const applyOnboarding = async (
   draft: OnboardingDraft,
   completed: boolean = true,
 ): Promise<ApplyOnboardingResult> => {
+  // İÇERİK SÜZGECİ (22 Ağu 2026 — Apple 1.2). Kullanıcının GÖRÜNÜR ADI ilk
+  // kez burada yazılır; kapı yalnız Ayarlar'daki "ismini değiştir" yoluna
+  // (userService · updateProfileName) konsaydı, tanıtımda küfürlü ad giren
+  // kullanıcı süzgece hiç uğramadan uygulamanın her ekranına o adla çıkardı.
+  // İki yazma yolu da aynı kapıdan geçer.
+  for (const ad of [draft.firstName, draft.lastName]) {
+    if (ad && uygunsuzMu(ad)) throw new Error(UYGUNSUZ_ICERIK_MESAJI);
+  }
   const { data, error } = await supabase.rpc('apply_onboarding', {
     p_age_range: draft.ageRange || '',
     p_first_name: draft.firstName || '',
