@@ -56,6 +56,6 @@ sozlesmeler/
 **Miraç Kerem Çürüksulu (OYNA)** — şahıs şirketi
 Kartal Vergi Dairesi – 2650883645
 Cevizli Mahallesi, Zuhal Caddesi, Ritim İstanbul A Ticari Blok No:46 Daire:50 (Mükellef Teknoloji A.Ş. bünyesinde), Kartal/İstanbul
-destek@oyna.app
+mirackeremcuruksulu@gmail.com
 
 > Bu belgeler bir yapay zekâ tarafından koda dayanarak hazırlanmıştır; hukuki danışmanlık yerine geçmez. Yayına almadan önce KVKK/vergi/şirketler hukuku kalemlerinde lisanslı bir avukat/mali müşavir onayı alınmalıdır.

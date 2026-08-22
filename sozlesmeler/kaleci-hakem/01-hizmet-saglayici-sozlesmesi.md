@@ -13,7 +13,7 @@ Bir tarafta;
 **Miraç Kerem Çürüksulu** (bundan böyle kısaca **"OYNA"** olarak anılacaktır; işbu Sözleşme'de zaman zaman kullanılan **"Şirket"** ifadesi yalnızca OYNA'nın işletmeci/tacir sıfatını ifade etmek amacıyla kullanılmıştır ve ayrı bir tüzel kişiliğe atıf teşkil etmez.)
 - Vergi Dairesi/No: Kartal Vergi Dairesi – 2650883645
 - Adres: Cevizli Mahallesi, Zuhal Caddesi, Ritim İstanbul A Ticari Blok No:46 Daire:50, Kartal/İstanbul (İşbu adres, OYNA'nın faaliyet gösterdiği ofis biriminin adresidir. Aynı bina içinde üçüncü kişi gerçek/tüzel kişiliklerin (ör. ofis/bina hizmeti sağlayıcıları) bulunması, işbu Sözleşme'nin tarafının münhasıran yukarıda kimliği belirtilen gerçek kişi olduğu hususunu hiçbir şekilde etkilemez ve OYNA ile başka herhangi bir tüzel kişi arasında ortak taraf sıfatı doğurmaz.)
-- E-posta: destek@oyna.app
+- E-posta: mirackeremcuruksulu@gmail.com
 
 ile diğer tarafta;
 
@@ -155,7 +155,7 @@ Bu kademeler, OYNA'nın Mesafeli Satış ve İptal/İade Koşulları'nda düzenl
 
 &nbsp;&nbsp;b) Geriye dönük 90 (doksan) gün içinde OYNA tarafından incelenip asılsız/kötü niyetli olmadığı doğrulanmış (onaylanmış) 3 (üç) veya daha fazla şikâyetin bulunması.
 
-10.3. Askıya alma bildirimiyle birlikte Hizmet Sağlayıcı'ya 7 (yedi) günlük bir itiraz süresi tanınır. Hizmet Sağlayıcı bu süre içinde destek@oyna.app adresine itirazını ve varsa destekleyici bilgi/belgelerini iletebilir. İtiraz; ilgili Hizmet'e ait mesajlaşma kayıtları, zaman/konum damgası verileri, varsa çoklu Kullanıcı/Oyuncu beyanları ve benzeri objektif veriler esas alınarak OYNA tarafından değerlendirilir.
+10.3. Askıya alma bildirimiyle birlikte Hizmet Sağlayıcı'ya 7 (yedi) günlük bir itiraz süresi tanınır. Hizmet Sağlayıcı bu süre içinde mirackeremcuruksulu@gmail.com adresine itirazını ve varsa destekleyici bilgi/belgelerini iletebilir. İtiraz; ilgili Hizmet'e ait mesajlaşma kayıtları, zaman/konum damgası verileri, varsa çoklu Kullanıcı/Oyuncu beyanları ve benzeri objektif veriler esas alınarak OYNA tarafından değerlendirilir.
 
 10.4. İtiraz süresi sonunda itiraz haksız bulunur veya süresinde itiraz edilmezse, Hizmet Sağlayıcı'nın hesabı kalıcı olarak Platform'dan çıkarılır. İtirazın haklı bulunması hâlinde askı kaldırılır ve hesap yeniden aktif hâle getirilir.
 
@@ -201,7 +201,7 @@ Bu kademeler, OYNA'nın Mesafeli Satış ve İptal/İade Koşulları'nda düzenl
 
 14.1. Taraflar, işbu Sözleşme kapsamında işlenen kişisel verilerin KVKK hükümlerine uygun olarak işleneceğini kabul eder.
 
-14.2. Hizmet Sağlayıcı, kendisine ait kişisel verilerin işlenmesine ilişkin KVKK m. 11 kapsamındaki haklarını destek@oyna.app adresine yapacağı başvuru ile kullanabilir. Hesap silme talepleri, talep tarihinden itibaren 7 (yedi) gün içinde kalıcı olarak yerine getirilir.
+14.2. Hizmet Sağlayıcı, kendisine ait kişisel verilerin işlenmesine ilişkin KVKK m. 11 kapsamındaki haklarını mirackeremcuruksulu@gmail.com adresine yapacağı başvuru ile kullanabilir. Hesap silme talepleri, talep tarihinden itibaren 7 (yedi) gün içinde kalıcı olarak yerine getirilir.
 
 14.3. Ayrıntılar OYNA'nın güncel Aydınlatma Metni ve Gizlilik Politikası'nda yer alır; bu metinler işbu Sözleşme'nin eki ve tamamlayıcı unsuru niteliğindedir.
 
@@ -221,7 +221,7 @@ Bu kademeler, OYNA'nın Mesafeli Satış ve İptal/İade Koşulları'nda düzenl
 
 ## 17. Tebligat
 
-17.1. Taraflar, işbu Sözleşme'de yer alan iletişim bilgilerini (OYNA için destek@oyna.app; Hizmet Sağlayıcı için Platform'a kayıtlı e-posta adresi/telefon numarası) geçerli tebligat adresleri olarak kabul eder. Bu adreslere yapılan bildirimler, gönderildiği tarihten itibaren 1 (bir) iş günü içinde karşı tarafa ulaşmış sayılır. İlgili tarafın, bildirimin kendisine bu süre içinde fiilen ulaşmadığını teknik kayıtlarla (ör. sunucu hata bildirimi, teslim edilememe kaydı, alan adı/numara değişikliği bildirimi) makul bir sürede ispat etmesi hâlinde, söz konusu bildirime bağlı itiraz, cevap veya savunma süreleri, bildirimin fiilen ulaştığı tarihten itibaren yeniden işlemeye başlar.
+17.1. Taraflar, işbu Sözleşme'de yer alan iletişim bilgilerini (OYNA için mirackeremcuruksulu@gmail.com; Hizmet Sağlayıcı için Platform'a kayıtlı e-posta adresi/telefon numarası) geçerli tebligat adresleri olarak kabul eder. Bu adreslere yapılan bildirimler, gönderildiği tarihten itibaren 1 (bir) iş günü içinde karşı tarafa ulaşmış sayılır. İlgili tarafın, bildirimin kendisine bu süre içinde fiilen ulaşmadığını teknik kayıtlarla (ör. sunucu hata bildirimi, teslim edilememe kaydı, alan adı/numara değişikliği bildirimi) makul bir sürede ispat etmesi hâlinde, söz konusu bildirime bağlı itiraz, cevap veya savunma süreleri, bildirimin fiilen ulaştığı tarihten itibaren yeniden işlemeye başlar.
 
 17.2. Taraflar, iletişim bilgilerinde değişiklik olması hâlinde bunu derhal karşı tarafa bildirmekle yükümlüdür. Bildirimi yapılmayan değişiklikler nedeniyle eski adrese yapılan tebligatlar, madde 17.1'deki ispat imkânı saklı kalmak kaydıyla geçerli kabul edilir.
 
@@ -247,7 +247,7 @@ Bu kademeler, OYNA'nın Mesafeli Satış ve İptal/İade Koşulları'nda düzenl
 
 ## İletişim
 
-İşbu Sözleşme ile ilgili her türlü soru, bildirim ve talep için: **destek@oyna.app**
+İşbu Sözleşme ile ilgili her türlü soru, bildirim ve talep için: **mirackeremcuruksulu@gmail.com**
 
 ---
 

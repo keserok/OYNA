@@ -17,7 +17,7 @@ Bu Kullanım Şartları ("Sözleşme"), aşağıda kimliği belirtilen hizmet sa
 **(a) Hizmet Sağlayıcı:** Miraç Kerem Çürüksulu (bundan böyle kısaca **"OYNA"** veya **"Şirket"** olarak anılacaktır).
 - Vergi Dairesi/No: Kartal Vergi Dairesi – 2650883645
 - Adres: Cevizli Mahallesi, Zuhal Caddesi, Ritim İstanbul A Ticari Blok No:46 Daire:50, Kartal/İstanbul. *(İşbu adres yalnızca OYNA'nın tebligat/ofis adresi olarak kullanılmaktadır. Aynı adreste faaliyet gösteren Mükellef Teknoloji A.Ş., işbu Sözleşmenin tarafı değildir; anılan şirket ile OYNA arasında herhangi bir ortaklık, temsil, işverenlik veya birlikte sorumluluk ilişkisi bulunmamaktadır.)*
-- E-posta: destek@oyna.app
+- E-posta: mirackeremcuruksulu@gmail.com
 
 Bu Sözleşmenin devamında, işbu gerçek kişi yalnızca **"OYNA"** veya **"Şirket"** kısa adıyla anılacaktır.
 
@@ -69,7 +69,7 @@ Uygulamaya üye olabilmek için doğru, güncel ve eksiksiz bilgi verilmesi zoru
 - Platforma giriş, Kullanıcının **telefon numarasına gönderilen tek kullanımlık doğrulama koduyla** ya da Kullanıcının tercihine göre **Google/Apple hesabıyla** yapılır; OYNA'nın ayrıca bir şifre sistemi yoktur.
 - Kullanıcı, telefonuna gelen doğrulama kodunun ve giriş için kullandığı Google/Apple hesabının gizliliğinden bizzat sorumludur. Doğrulama kodu hiç kimseyle paylaşılmamalıdır; OYNA hiçbir koşulda Kullanıcıdan bu kodu istemez.
 - Hesap üzerinden gerçekleştirilen tüm işlemler, aksi ispat edilmedikçe hesap sahibi tarafından yapılmış sayılır.
-- Kullanıcı, hesabının yetkisiz kişilerce kullanıldığını fark ettiği anda destek@oyna.app üzerinden OYNA'ya derhal bildirimde bulunmakla yükümlüdür.
+- Kullanıcı, hesabının yetkisiz kişilerce kullanıldığını fark ettiği anda mirackeremcuruksulu@gmail.com üzerinden OYNA'ya derhal bildirimde bulunmakla yükümlüdür.
 - Bildirim yapılana kadar geçen sürede hesap üzerinden gerçekleştirilen yetkisiz işlemlerden Kullanıcının sorumluluğu; OYNA'nın Platformda makul ve sektör standartlarına uygun güvenlik önlemlerini (şifreleme, güvenli oturum yönetimi ve isteğe bağlı çok faktörlü doğrulama imkânı dahil) sunmuş olması ve Kullanıcının kendi ağır kusuru (ör. hesap bilgilerini bilerek üçüncü kişiyle paylaşması) bulunmaması kaydıyla, her hâlükârda ilgili bildirim öncesi dönemde gerçekleşen işlem başına, Kullanıcının o işlem için ödediği bedeli aşmayacak şekilde sınırlıdır. OYNA'nın yukarıda belirtilen makul güvenlik önlemlerini sağlamadığının tespit edilmesi hâlinde, bildirim öncesi yetkisiz işlemlerden doğan sorumluluk Kullanıcıya tam olarak yansıtılamaz; bu durumda sorumluluk taraflar arasında kusur oranına göre paylaştırılır.
 - Kullanıcının hesap bilgilerini kasten üçüncü kişiyle paylaşması veya ağır ihmali hâlinde yukarıdaki sınırlama uygulanmaz ve Kullanıcı, bildirim öncesi dönemde gerçekleşen tüm işlemlerden tam olarak sorumludur.
 
@@ -116,7 +116,7 @@ Sınırlı moddaki hesabın ödeme ve maça katılım işlevlerinin açılabilme
 
 ### 4.5 Onayın Geri Alınması
 
-Veli/vasi, verdiği onayı dilediği zaman **Uygulamadaki Ayarlar → Veli Onayı ekranından** (verdiği onayları yönetme bölümünden) ya da destek@oyna.app adresine yazılı bildirimde bulunarak geri alabilir. Geri alma bildiriminin OYNA'ya ulaşmasından itibaren makul bir süre içinde (en geç 48 saat içinde) hesap yeniden **sınırlı moda** alınır; bu tarihten sonra gerçekleştirilecek ödeme ve maça katılım işlemleri tekrar veli onayına tabi olur. Geri alma, geri alma tarihinden önce usulünce onaylanmış ve tamamlanmış işlemlerin geçerliliğini etkilemez.
+Veli/vasi, verdiği onayı dilediği zaman **Uygulamadaki Ayarlar → Veli Onayı ekranından** (verdiği onayları yönetme bölümünden) ya da mirackeremcuruksulu@gmail.com adresine yazılı bildirimde bulunarak geri alabilir. Geri alma bildiriminin OYNA'ya ulaşmasından itibaren makul bir süre içinde (en geç 48 saat içinde) hesap yeniden **sınırlı moda** alınır; bu tarihten sonra gerçekleştirilecek ödeme ve maça katılım işlemleri tekrar veli onayına tabi olur. Geri alma, geri alma tarihinden önce usulünce onaylanmış ve tamamlanmış işlemlerin geçerliliğini etkilemez.
 
 ### 4.6 Velinin Sorumluluğu
 
@@ -270,7 +270,7 @@ Kullanıcı, Platformu kullanırken aşağıdaki hususları kabul ve taahhüt ed
 
 ### 7.5 İhlal Bildirimi
 
-Kullanıcı, işbu maddede sayılan yükümlülüklerin herhangi bir kullanıcı, Tesis veya Hizmet Sağlayıcı tarafından ihlal edildiğini fark ettiğinde bunu destek@oyna.app üzerinden bildirebilir.
+Kullanıcı, işbu maddede sayılan yükümlülüklerin herhangi bir kullanıcı, Tesis veya Hizmet Sağlayıcı tarafından ihlal edildiğini fark ettiğinde bunu mirackeremcuruksulu@gmail.com üzerinden bildirebilir.
 
 ---
 
@@ -352,7 +352,7 @@ Bu madde uyarınca Kullanıcının sorumluluğu, **yalnızca Kullanıcının ken
 
 ### 11.3 Usul
 
-OYNA, rücu talebini kullanmadan önce Kullanıcıyı yazılı olarak (destek@oyna.app üzerinden veya kayıtlı iletişim bilgisiyle) bilgilendirir ve Kullanıcıya makul bir süre içinde açıklama/itiraz imkânı tanır.
+OYNA, rücu talebini kullanmadan önce Kullanıcıyı yazılı olarak (mirackeremcuruksulu@gmail.com üzerinden veya kayıtlı iletişim bilgisiyle) bilgilendirir ve Kullanıcıya makul bir süre içinde açıklama/itiraz imkânı tanır.
 
 ---
 
@@ -398,7 +398,7 @@ Hesabın askıya alınması veya sonlandırılması, askı/sonlandırma tarihind
 
 ### 13.4 Kullanıcının Hesabını Kapatması
 
-Kullanıcı, dilediği zaman destek@oyna.app üzerinden hesabının silinmesini talep edebilir. Talep üzerine, ilgili mevzuatta öngörülen yasal saklama yükümlülükleri saklı kalmak kaydıyla, hesap ve kişisel veriler **talep tarihinden itibaren 7 (yedi) gün içinde** kalıcı olarak silinir.
+Kullanıcı, dilediği zaman mirackeremcuruksulu@gmail.com üzerinden hesabının silinmesini talep edebilir. Talep üzerine, ilgili mevzuatta öngörülen yasal saklama yükümlülükleri saklı kalmak kaydıyla, hesap ve kişisel veriler **talep tarihinden itibaren 7 (yedi) gün içinde** kalıcı olarak silinir.
 
 ---
 
@@ -424,7 +424,7 @@ Aşağıdaki ağır ihlal kategorileri, madde 13.1'de düzenlenen ihtiyati ve bi
 
 ### 14.3 İtiraz Hakkı
 
-Yaptırıma tabi tutulan Kullanıcı, kararın kendisine bildirilmesinden itibaren makul bir süre içinde destek@oyna.app üzerinden itirazda bulunabilir; OYNA itirazı değerlendirerek Kullanıcıya sonucu bildirir.
+Yaptırıma tabi tutulan Kullanıcı, kararın kendisine bildirilmesinden itibaren makul bir süre içinde mirackeremcuruksulu@gmail.com üzerinden itirazda bulunabilir; OYNA itirazı değerlendirerek Kullanıcıya sonucu bildirir.
 
 ---
 
@@ -432,7 +432,7 @@ Yaptırıma tabi tutulan Kullanıcı, kararın kendisine bildirilmesinden itibar
 
 ### 15.1 İç İtiraz/Çözüm Süreci
 
-Kullanıcı, Platformdan kaynaklanan her türlü şikâyet, itiraz ve talebini, **dilerse** öncelikle destek@oyna.app adresine iletebilir. OYNA, kendisine ulaşan başvuruları makul bir süre içinde inceleyerek Kullanıcıya geri dönüş yapmaya gayret gösterir. İşbu iç itiraz süreci, Kullanıcı için **isteğe bağlı ve resmi başvuru yollarına ek, paralel** bir kanaldır; Kullanıcının madde 15.2'de düzenlenen yasal başvuru haklarını kullanabilmesi için bu iç sürecin işletilmiş veya tüketilmiş olması **ön şart değildir**.
+Kullanıcı, Platformdan kaynaklanan her türlü şikâyet, itiraz ve talebini, **dilerse** öncelikle mirackeremcuruksulu@gmail.com adresine iletebilir. OYNA, kendisine ulaşan başvuruları makul bir süre içinde inceleyerek Kullanıcıya geri dönüş yapmaya gayret gösterir. İşbu iç itiraz süreci, Kullanıcı için **isteğe bağlı ve resmi başvuru yollarına ek, paralel** bir kanaldır; Kullanıcının madde 15.2'de düzenlenen yasal başvuru haklarını kullanabilmesi için bu iç sürecin işletilmiş veya tüketilmiş olması **ön şart değildir**.
 
 ### 15.2 Tüketici Uyuşmazlıkları
 
@@ -468,7 +468,7 @@ OYNA tarafından yapılacak bildirimler, Kullanıcının kayıt sırasında bild
 
 ### 17.2 Kullanıcıdan OYNA'ya Bildirim
 
-Kullanıcı tarafından OYNA'ya yapılacak tüm bildirim, ihbar ve başvurular destek@oyna.app adresine yazılı olarak yapılır.
+Kullanıcı tarafından OYNA'ya yapılacak tüm bildirim, ihbar ve başvurular mirackeremcuruksulu@gmail.com adresine yazılı olarak yapılır.
 
 ### 17.3 Güncel Bilgi Yükümlülüğü
 
@@ -508,7 +508,7 @@ KVKK açık rızası veya pazarlama izni gibi, mevzuat gereği ayrı ve açık o
 
 İşbu Sözleşmeye ilişkin tüm soru, talep ve bildirimler için:
 
-**E-posta:** destek@oyna.app
+**E-posta:** mirackeremcuruksulu@gmail.com
 
 ---
 

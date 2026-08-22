@@ -21,7 +21,7 @@ interface Props {
   onClose: () => void;
 }
 
-const SUPPORT_EMAIL = 'destek@oyna.app';
+const SUPPORT_EMAIL = 'mirackeremcuruksulu@gmail.com';
 
 /** Sunucunun anlamlı Türkçe mesajını ("En fazla 5 açık talebin olabilir" vb.)
  *  jenerik metinle ezme; yalnız kod-benzeri mesajlarda fallback kullan. */

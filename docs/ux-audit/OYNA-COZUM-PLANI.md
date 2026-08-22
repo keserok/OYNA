@@ -1373,7 +1373,7 @@ Uygulamada kip seçimi ne ekran bazlı ne rol bazlı — **aynı dosyada, bazen 
 | `views/OwnerPanel.tsx` | `:590` `...en az bir aktif tarife girmelisin` | `:499` `(kendi tesisiniz değil)`, `:513`, `:520` |
 | `views/PartnerOnboarding.tsx` | `:338` `...Konum'dan işaretleyebilirsin.` | `:386` `Kazancınızı ... IBAN'ınıza aktarabilirsiniz.` |
 | `views/Studio.tsx` | `:1207` `giriş yapmalısın.`, `:3609` `dönebilirsin.` | `:1956` `UYGULA` bloğu çevresi + karışık |
-| `views/LegalScreen.tsx` | `:215` `...destek@oyna.app üzerinden bildirebilirsin.` | `:242`, `:285`, `:291`, `:301`, `:307`, `:310` (tamamı SİZ) |
+| `views/LegalScreen.tsx` | `:215` `...mirackeremcuruksulu@gmail.com üzerinden bildirebilirsin.` | `:242`, `:285`, `:291`, `:301`, `:307`, `:310` (tamamı SİZ) |
 | `components/pitch-editor/PhotoManager.tsx` | — | `:74` `En fazla ${maxPhotos} fotoğraf yükleyebilirsiniz.` (SEN ağırlıklı uygulamada tek SİZ) |
 
 Yanlış pozitif olarak elenen: `components/common/GlobalToast.tsx` — SİZ yalnız `:10` yorum satırında (`BUNU kullanın`), kullanıcıya görünmüyor.
@@ -14479,7 +14479,7 @@ export type OutboxOpType = 'RECORD_PAYMENT' | 'DEBTOR_PAYMENT';
           setPendingPay(null);
           setInlineError('Kartından tahsilat yapılmamış. Ödeme alınmadı — tekrar deneyebilirsin.');
         } else {
-          setInlineError(`İşlem hâlâ bankada sürüyor. 10 dakika sonra "Durumu Kontrol Et" ile tekrar bak. Kartından para çekildiği hâlde cüzdanına geçmediyse ${pendingPay.intentId.slice(0, 8).toUpperCase()} işlem numarasıyla destek@oyna.app adresine yaz.`);
+          setInlineError(`İşlem hâlâ bankada sürüyor. 10 dakika sonra "Durumu Kontrol Et" ile tekrar bak. Kartından para çekildiği hâlde cüzdanına geçmediyse ${pendingPay.intentId.slice(0, 8).toUpperCase()} işlem numarasıyla mirackeremcuruksulu@gmail.com adresine yaz.`);
         }
       } catch {
         setInlineError('Durum sorgulanamadı. Bağlantını kontrol edip tekrar dene.');
@@ -14533,7 +14533,7 @@ export type OutboxOpType = 'RECORD_PAYMENT' | 'DEBTOR_PAYMENT';
 | (yok — yeni alan) | `views/MatchJoin.tsx:636` bağlam nesnesi `infoNote` | `Kadro dolmazsa veya maç iptal olursa ödediğin tutarın tamamı cüzdanına iade kredisi olarak döner. Maçtan kendin ayrılırsan da ödediğin tutar iade kredisi olarak döner. İade kredisi OYNA içindeki ödemelerde kullanılır, banka hesabına aktarılmaz.` |
 | `Banka doğrulaması zaman aşımına uğradı. Ödeme alınmadıysa tekrar deneyebilirsin; alındıysa bakiyen birazdan güncellenir.` | `views/PaymentScreen.tsx:589` | `Banka doğrulaması 5 dakikada tamamlanmadı. Kartından tahsilat yapıldı mı, şimdi kontrol edelim.` |
 | (yok — yeni buton) | `views/PaymentScreen.tsx:834` sonrası | `Durumu Kontrol Et` |
-| (yok — yeni sonuç metni, PAID dışı) | `views/PaymentScreen.tsx` `handleCheckIntentStatus` | FAILED: `Kartından tahsilat yapılmamış. Ödeme alınmadı — tekrar deneyebilirsin.` · PENDING: `İşlem hâlâ bankada sürüyor. 10 dakika sonra "Durumu Kontrol Et" ile tekrar bak. Kartından para çekildiği hâlde cüzdanına geçmediyse {İŞLEMNO} işlem numarasıyla destek@oyna.app adresine yaz.` · Ağ hatası: `Durum sorgulanamadı. Bağlantını kontrol edip tekrar dene.` |
+| (yok — yeni sonuç metni, PAID dışı) | `views/PaymentScreen.tsx` `handleCheckIntentStatus` | FAILED: `Kartından tahsilat yapılmamış. Ödeme alınmadı — tekrar deneyebilirsin.` · PENDING: `İşlem hâlâ bankada sürüyor. 10 dakika sonra "Durumu Kontrol Et" ile tekrar bak. Kartından para çekildiği hâlde cüzdanına geçmediyse {İŞLEMNO} işlem numarasıyla mirackeremcuruksulu@gmail.com adresine yaz.` · Ağ hatası: `Durum sorgulanamadı. Bağlantını kontrol edip tekrar dene.` |
 | `${stripRpcPrefix(raw) \|\| 'Kart ödemesi tamamlanamadı.'} — Farklı bir kart deneyebilir veya kartının internetten ödemeye açık olup olmadığını bankandan öğrenebilirsin.` | `views/PaymentScreen.tsx:116` | `Kartından ödeme alınamadı. Farklı bir kart deneyebilir veya kartının internete açık olup olmadığını bankandan sorabilirsin.` |
 | `Bakiye yalnızca OYNA içindeki saha, maç ve kaleci/hakem hizmet ödemelerinde kullanılır; dijital ürün satın alımında kullanılamaz. Yüklemelerde bonus verilmez.` | `views/WalletScreen.tsx:489-490` | `Bakiye yalnızca OYNA içindeki saha, maç ve kaleci/hakem hizmet ödemelerinde kullanılır; dijital ürün satın alımında kullanılamaz. Yüklemelerde bonus verilmez.` + (çekim açıkken) `Yüklediğin bakiyeyi en az {MIN}₺ olmak üzere IBAN'ına geri çekebilirsin; çekimde %{YÜZDE} ödeme altyapısı kesintisi uygulanır. Maç ve rezervasyon iadelerinden gelen iade kredisi çekilemez, yalnız uygulama içi ödemelerde kullanılır.` + (çekim kapalıyken) `Yüklenen bakiyenin IBAN'a çekimi şu anda kapalı; bakiye yalnız uygulama içi ödemelerde kullanılır.` |
 | `İade kredisi ve kazanç bu tutara dahil değildir.` | `views/WalletScreen.tsx:796` | `İade kredisi ve kazançlar çekilemez; yalnız uygulama içi ödemelerde kullanılır.` |

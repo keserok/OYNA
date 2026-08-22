@@ -14,7 +14,7 @@ OYNA hesabınızı ve hesabınıza bağlı kişisel verilerinizi aşağıdaki yo
 3. **"Hesabımı Sil"** seçeneğine dokunun ve onay adımlarını tamamlayın.
 
 ### E-posta ile
-Uygulamaya erişemiyorsanız, kayıtlı e-posta adresinizden destek@oyna.app adresine "Hesap Silme Talebi" konulu bir e-posta gönderin.
+Uygulamaya erişemiyorsanız, kayıtlı e-posta adresinizden mirackeremcuruksulu@gmail.com adresine "Hesap Silme Talebi" konulu bir e-posta gönderin.
 
 ### Ne silinir, ne kadar sürer?
 - Silme talebiniz alındıktan sonra hesabınız ve profil verileriniz **7 gün içinde** kalıcı olarak silinir.

@@ -469,7 +469,7 @@ Profil'in sağ üstündeki dişliden girersin:
 | **Arama Yarıçapı** | 5–50 km arası keşif çapı. |
 | **Yasal & Sözleşmeler** | Tüm sözleşme ve politikaların tam metni. |
 | **Hesabı Kalıcı Olarak Sil** | Hesabını KVKK kapsamında kalıcı siler — "Bu işlem geri alınamaz". |
-| **Yardım Merkezi** | destek@oyna.app adresine e-posta açar. |
+| **Yardım Merkezi** | mirackeremcuruksulu@gmail.com adresine e-posta açar. |
 | **Çıkış Yap** | Oturumu kapatır. |
 
 ### 13.1 Kaleci, hakem veya tesis olmak istersen

@@ -96,6 +96,42 @@ describe('Kural 1.2 · bildirme ve engelleme yolları duruyor', () => {
    * söylüyordu. İncelemeci sözleşmeyi okur; bu cümle tek başına 1.2 reddi
    * gerekçesidir. Taahhüt eklendi ve hukuki çerçeve m.8.5'e ayrıldı.
    */
+  /**
+   * Kural 1.2 ayrıca YAYIMLANMIŞ VE ÇALIŞAN bir iletişim adresi ister;
+   * incelemeci bu adresi deneyebilir.
+   *
+   * 22 Ağu denetiminde adres `destek@oyna.app`ti ama `oyna.app` alan adında
+   * posta kutusu YOK — o adrese yazan kimseye ulaşamıyordu. Ulaşılamayan bir
+   * adres, hiç olmamasından beterdir. Kurucu kararıyla çalışan bir adrese
+   * geçildi.
+   *
+   * Bu kilit ADRESİN KENDİSİNİ değil TUTARLILIĞI korur: sözleşme kaynağı,
+   * yayımlanan sayfa, uygulama içi metin ve destek ekranı AYNI adresi
+   * göstermeli. Biri güncellenip öteki unutulursa kullanıcı hangisine
+   * yazacağını bilemez ve şikâyet yolu fiilen kapanır.
+   */
+  it('destek adresi dört yüzeyde de AYNI', () => {
+    const adres = (metin: string): string | null =>
+      (metin.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g) ?? [])
+        .find((e) => !e.includes('example.com') && !e.startsWith('no-reply')) ?? null;
+
+    const destek = adres(oku('components/settings/SupportPage.tsx'));
+    expect(destek, 'destek ekranında adres yok').toBeTruthy();
+
+    // Sözleşme KAYNAĞI ve ondan üretilen sayfa.
+    expect(oku('sozlesmeler/oyuncu/09-topluluk-kurallari.md')).toContain(destek!);
+    expect(oku('public/topluluk-kurallari.html')).toContain(destek!);
+    // Uygulama içinde okunan metin.
+    expect(oku('shared/legalDocs.ts')).toContain(destek!);
+
+    // Ulaşılamayan eski adres hiçbir yüzeyde kalmamalı.
+    for (const yol of ['components/settings/SupportPage.tsx', 'shared/legalDocs.ts',
+                       'public/topluluk-kurallari.html', 'public/kullanim-sartlari.html',
+                       'sozlesmeler/oyuncu/09-topluluk-kurallari.md']) {
+      expect(oku(yol), `${yol} hâlâ ulaşılamayan adresi gösteriyor`).not.toContain('destek@oyna.app');
+    }
+  });
+
   it('24 saat taahhüdü HEM yayımlanmış metinde HEM uygulama içinde', () => {
     // Yayımlanan sayfa (mağaza formuna verilen URL bunu açar).
     const kurallar = oku('public/topluluk-kurallari.html').toLocaleLowerCase('tr');

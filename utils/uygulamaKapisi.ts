@@ -55,7 +55,7 @@ export const KAPI_ACIK: KapiDurumu = {
   kayitAcik: true,
   magazaIos: null,
   magazaAndroid: null,
-  destek: 'destek@oyna.app',
+  destek: 'mirackeremcuruksulu@gmail.com',
   sorulamadi: true,
 };
 
@@ -98,7 +98,7 @@ export async function kapiyiSor(surum: string = APP_VERSION): Promise<KapiDurumu
       kayitAcik: d.kayit_acik !== false,
       magazaIos: d.magaza_ios ?? null,
       magazaAndroid: d.magaza_android ?? null,
-      destek: d.destek || 'destek@oyna.app',
+      destek: d.destek || 'mirackeremcuruksulu@gmail.com',
       sorulamadi: false,
     };
   } catch {

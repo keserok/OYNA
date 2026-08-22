@@ -250,7 +250,7 @@ App Store Connect → uygulaman → soldan **App Store** sekmesi → **3.0.0 Pre
    Maç lobisi · Taktik stüdyosu · Maç bileti. iPhone 15/16/17 Pro Max boyutu (6.9") şarttır;
    6.5" istenirse aynı görseller kabul edilir.
 2. **Metinler:** Ek A'daki hazır taslakları yapıştır (Description, Keywords, Promotional Text,
-   Support URL: `https://<alan-adın>` veya `mailto:destek@oyna.app`).
+   Support URL: `https://<alan-adın>` veya `mailto:mirackeremcuruksulu@gmail.com`).
 3. **Build:** "+" ile TestFlight'a yüklediğin derlemeyi seç.
 4. **App Review Information:**
    - Sign-in required → **inceleme hesabı** ver. Oluşturma: Supabase Dashboard → Authentication →
@@ -310,7 +310,7 @@ Rezervasyonun dijital biletle cebinde; girişte okut, oyna.
 Saha sahibi misin? OYNA İşletme paneliyle takvimini, fiyatlarını ve
 rezervasyonlarını tek ekrandan yönet.
 
-Destek: destek@oyna.app
+Destek: mirackeremcuruksulu@gmail.com
 ```
 
 **Keywords (100 karakter, virgülle):**

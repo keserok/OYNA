@@ -20,4 +20,4 @@ Yakınınızdaki sahaları ve maçları gösterebilmemiz için konumunuzu işler
 Fırsat, kampanya ve duyuruları e-posta veya push bildirimi yoluyla almak isterseniz ayrıca onayınız istenir. Bu onay olmasa da hesabınızla ilgili işlem ve güvenlik bildirimlerini almaya devam edersiniz. Vazgeçmek için iletideki bağlantıyı kullanabilir veya Ayarlar → Bildirimler'den kapatabilirsiniz.
 
 ### 4. Rızanın Geri Alınması
-Yukarıdaki izinlerin tamamını veya bir kısmını Ayarlar → Gizlilik ekranından ya da destek@oyna.app adresine yazarak istediğiniz an geri alabilirsiniz. Geri alma, geri alma tarihinden önceki işlemlerin hukuka uygunluğunu etkilemez.
+Yukarıdaki izinlerin tamamını veya bir kısmını Ayarlar → Gizlilik ekranından ya da mirackeremcuruksulu@gmail.com adresine yazarak istediğiniz an geri alabilirsiniz. Geri alma, geri alma tarihinden önceki işlemlerin hukuka uygunluğunu etkilemez.

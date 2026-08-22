@@ -88,7 +88,7 @@ Aşağıdaki içerik ve davranışlar — uygulama içi mesajlaşma, takım sohb
 
 ## 8. Şikâyet, Bildirim ve Uyar-Kaldır Süreci
 
-8.1. Kullanıcılar; bir içeriği, mesajı veya davranışı Uygulama içindeki bildirim/şikâyet ve engelleme araçlarıyla ya da **destek@oyna.app** üzerinden OYNA'ya bildirebilir.
+8.1. Kullanıcılar; bir içeriği, mesajı veya davranışı Uygulama içindeki bildirim/şikâyet ve engelleme araçlarıyla ya da **mirackeremcuruksulu@gmail.com** üzerinden OYNA'ya bildirebilir.
 
 8.2. OYNA, 5651 sayılı İnternet Ortamında Yapılan Yayınların Düzenlenmesi Hakkında Kanun kapsamındaki **yer sağlayıcı** sorumluluğu çerçevesinde, hukuka aykırılığından haberdar olduğu içeriği kaldırmak için gerekli işlemi yapmaya **gayret gösterir**. Değerlendirme ve gerektiğinde kaldırma, içeriğin niteliği ve ağırlığına göre makul sürede yapılır; **acil nitelikteki içerik** (çocuk güvenliği, fiziksel şiddet/tehdit) öncelikli ve hızlandırılmış şekilde ele alınır.
 
@@ -113,7 +113,7 @@ Aşağıdaki içerik ve davranışlar — uygulama içi mesajlaşma, takım sohb
 
 9.3. **Şeffaflık:** OYNA, kötüye kullanımı önlemek amacıyla, kullanıcıya ayrıca bildirimde bulunmaksızın görünürlük kısıtlaması (shadowban) gibi tedbirler uygulayabilir. Kullanıcı, işbu maddeyle bu tür tedbirlerin uygulanabileceğinden genel olarak haberdar edilmiş sayılır.
 
-9.4. **İtiraz:** Yaptırıma tabi tutulan kullanıcı, kararın bildiriminden itibaren makul bir süre içinde **destek@oyna.app** üzerinden itiraz edebilir; OYNA itirazı değerlendirerek sonucu bildirir (Kullanım Şartları m.14.3).
+9.4. **İtiraz:** Yaptırıma tabi tutulan kullanıcı, kararın bildiriminden itibaren makul bir süre içinde **mirackeremcuruksulu@gmail.com** üzerinden itiraz edebilir; OYNA itirazı değerlendirerek sonucu bildirir (Kullanım Şartları m.14.3).
 
 ## 10. Yaptırımın Mali Sonuçları
 

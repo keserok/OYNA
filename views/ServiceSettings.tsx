@@ -15,7 +15,7 @@ import DeleteAccountModal from '../components/common/DeleteAccountModal';
 import NotificationSettingsPage from '../components/settings/NotificationSettingsPage';
 import { showToast } from '../components/common/GlobalToast';
 
-const CONTACT_EMAIL = 'destek@oyna.app';
+const CONTACT_EMAIL = 'mirackeremcuruksulu@gmail.com';
 
 interface ServiceSettingsProps {
   role: UserRole;

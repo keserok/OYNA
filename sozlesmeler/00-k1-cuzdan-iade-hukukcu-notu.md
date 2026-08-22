@@ -140,7 +140,7 @@ talep edebilir" cümlesi eklendi ve md.6.5.7 (bakiye tükenmeden hesap kapatıla
 korundu. Yani sözleşme, otomatik çekim kanalı olmasa da **talep üzerine iade
 yolunu açık bırakıyor.**
 
-**Operasyonel karşılığı yapılmalı:** destek@oyna.app'e gelen "bakiyemi geri
+**Operasyonel karşılığı yapılmalı:** mirackeremcuruksulu@gmail.com'e gelen "bakiyemi geri
 istiyorum" taleplerini elle karşılayacak bir süreç tanımlanmadan lansmana
 çıkılmamalı. Aksi hâlde metindeki taahhüt fiilen karşılıksız kalır.
 

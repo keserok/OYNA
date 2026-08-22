@@ -8,7 +8,7 @@
 > - **Android:** `colors.xml` eklendi (derleme engeli kalktı) · konum/kamera/bildirim izinleri + portre kilidi + `oyna://` intent-filter eklendi · `versionName 3.0.0` · `key.properties` tabanlı koşullu release imzalama · `ic_stat_oyna` bildirim ikonu.
 > - **iOS:** bundle ID `com.oyna.app` yapıldı (pbxproj + Apple Sign-In clientId) · Podfile `node_modules`'a düzeltildi ve 12 pod'un tamamı eklendi · `App.entitlements` (Push + Sign in with Apple) oluşturulup projeye bağlandı · `MARKETING_VERSION 3.0.0` · yalnız iPhone + portre · `armv7→arm64` · `config 2.xml` silindi. (macOS'ta `pod install` + Xcode 26 derlemesi gerektirir.)
 > - **Güvenlik:** `admin-broadcast` fail-closed yapıldı · auth'suz legacy `push-notification` fonksiyonu ve bayat `notifications/edge-function` kopyası silindi (Supabase'den **undeploy KURUCU aksiyonu**) · `IS_LOCAL_DEV` artık yalnızca `VITE_DEV_MODE=true` ile açılıyor.
-> - **Ürün:** Geliştirici Konsolu kaldırıldı · KVKK "6379"→"6698" · hesap silme süresi 7 güne eşitlendi · iletişim `destek@oyna.app`'e birleştirildi · çevrimdışı uyarı şeridi eklendi.
+> - **Ürün:** Geliştirici Konsolu kaldırıldı · KVKK "6379"→"6698" · hesap silme süresi 7 güne eşitlendi · iletişim `mirackeremcuruksulu@gmail.com`'e birleştirildi · çevrimdışı uyarı şeridi eklendi.
 > - **Deep link:** `@capacitor/app` kuruldu, `appUrlOpen` dinleyicisi bağlandı, iOS `CFBundleURLTypes` + Android intent-filter eklendi.
 > - **Marka:** OYNA markalı ikon/splash üretildi ve tüm Android/iOS boyutlarına uygulandı (Capacitor robotu gitti). `assets/` altındaki master'lar tasarımcı tarafından nihai logoyla değiştirilebilir.
 > - **Yasal:** `/gizlilik` ve `/hesap-silme` statik sayfaları eklendi (Vercel'de otomatik yayınlanır) — şirket ünvanı yer tutucusu ve **avukat onayı hâlâ gerekli**.
@@ -122,7 +122,7 @@ Fazlar mümkün olduğunca paralel yürütülür. **[GELİŞTİRİCİ]** = kod i
 - [ ] **Settings'teki "Geliştirici Konsolu"nu kaldır** — tüm kullanıcılara görünüyor, "Seed DB" butonu ölü stub ve metni hâlâ "Firebase bulutuna" diyor (SettingsScreen.tsx:556-576).
 - [ ] **KVKK kanun numarası düzeltmesi:** AuthScreen.tsx:102 "6379 sayılı" → **"6698 sayılı"**.
 - [ ] **Hesap silme süresi tutarsızlığı:** UI "30 gün" diyor, backend varsayılanı 7 gün — tek bir değere eşitle.
-- [ ] İletişim e-postası tutarlılığı: `iletisim@oyna.app` vs `destek@oyna.app` — tek adres seç, alan adı e-postasını gerçekten kur.
+- [ ] İletişim e-postası tutarlılığı: `iletisim@oyna.app` vs `mirackeremcuruksulu@gmail.com` — tek adres seç, alan adı e-postasını gerçekten kur.
 - [ ] Misafir modu RLS zarafeti: oturumsuz gezinmede tüm ekranların hata patlatmadan "kaydol" değer kapısına yönlendirdiğini test et.
 - [ ] Çevrimdışı durumu: en azından `navigator.onLine` dinleyip nazik bir "bağlantı yok" durumu göster (mağaza incelemesinde uçak modu denenir).
 - [ ] Safe-area: çentikli cihazlarda ve home-indicator bölgesinde `env(safe-area-inset-*)` uygulamasını gerçek cihazda doğrula.

@@ -47,7 +47,7 @@ Oturum yönetimi ve tercihleriniz için gerekli teknolojiler kullanılır. Detay
 Veriler şifreli bağlantı (HTTPS) üzerinden iletilir; veritabanı seviyesinde satır bazlı erişim yetkilendirmesi (RLS) uygulanır ve güvenlik kontrolleri düzenli olarak gözden geçirilir.
 
 ### 7. Haklarınız (6698 sayılı KVKK m.11)
-Kişisel verilerinizin işlenip işlenmediğini öğrenme, işlenmişse buna ilişkin bilgi talep etme, işlenme amacını ve amacına uygun kullanılıp kullanılmadığını öğrenme, yurt içinde/yurt dışında aktarıldığı üçüncü kişileri bilme, eksik/yanlış işlenmişse düzeltilmesini isteme, mevzuatta öngörülen şartlarda silinmesini/yok edilmesini isteme, bu işlemlerin aktarılan üçüncü kişilere bildirilmesini isteme, işlenen verilerin münhasıran otomatik sistemlerle analiz edilmesi suretiyle aleyhinize bir sonucun ortaya çıkmasına itiraz etme ve kanuna aykırı işleme nedeniyle zarara uğramanız hâlinde zararın giderilmesini talep etme haklarınızı kullanmak için destek@oyna.app adresine yazılı olarak başvurabilirsiniz.
+Kişisel verilerinizin işlenip işlenmediğini öğrenme, işlenmişse buna ilişkin bilgi talep etme, işlenme amacını ve amacına uygun kullanılıp kullanılmadığını öğrenme, yurt içinde/yurt dışında aktarıldığı üçüncü kişileri bilme, eksik/yanlış işlenmişse düzeltilmesini isteme, mevzuatta öngörülen şartlarda silinmesini/yok edilmesini isteme, bu işlemlerin aktarılan üçüncü kişilere bildirilmesini isteme, işlenen verilerin münhasıran otomatik sistemlerle analiz edilmesi suretiyle aleyhinize bir sonucun ortaya çıkmasına itiraz etme ve kanuna aykırı işleme nedeniyle zarara uğramanız hâlinde zararın giderilmesini talep etme haklarınızı kullanmak için mirackeremcuruksulu@gmail.com adresine yazılı olarak başvurabilirsiniz.
 
 ### 8. Hesap ve Veri Silme
 Hesabınızı uygulama içinden (Ayarlar → Hesabımı Sil) veya [hesap silme sayfamızdaki](07-hesap-silme-bilgilendirmesi.md) adımlarla silebilirsiniz. Silme talebi sonrası hesabınız ve verileriniz 7 gün içinde kalıcı olarak silinir.
@@ -59,4 +59,4 @@ Veriler, hizmetin gerektirdiği ve ilgili mevzuatın öngördüğü süre boyunc
 - **Unvan:** Miraç Kerem Çürüksulu (OYNA)
 - **Vergi Dairesi / Vergi Kimlik No:** Kartal Vergi Dairesi – 2650883645
 - **Adres:** Cevizli Mahallesi, Zuhal Caddesi, Ritim İstanbul A Ticari Blok No:46 Daire:50 (Mükellef Teknoloji A.Ş. bünyesinde), Kartal/İstanbul
-- **E-posta:** destek@oyna.app
+- **E-posta:** mirackeremcuruksulu@gmail.com

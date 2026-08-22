@@ -32,4 +32,4 @@ Bu tedarikçilerin sunucuları yurt dışında olabilir; aktarım koşulları [G
 Tarayıcınızın ayarlarından çerezleri ve site verilerini istediğiniz zaman silebilir veya engelleyebilirsiniz; bu, zorunlu çerezler için oturumunuzun sonlanmasına neden olabilir. Analitik amaçlı depolamayı reddetmeniz, hizmeti kullanmanızı engellemez.
 
 ### 4. Değişiklikler
-Bu politikayı güncelleyebiliriz; önemli değişiklikler bu sayfada yayınlanır. Sorularınız için destek@oyna.app.
+Bu politikayı güncelleyebiliriz; önemli değişiklikler bu sayfada yayınlanır. Sorularınız için mirackeremcuruksulu@gmail.com.

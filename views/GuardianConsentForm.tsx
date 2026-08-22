@@ -18,7 +18,7 @@ const MUVAFAKAT = `Aşağıda kimliği belirtilen veli/vasi olarak;
 2. 18 yaşından büyük olduğumu ve çocuğun velisi/yasal temsilcisi sıfatını taşıdığımı,
 3. Çocuğumun OYNA uygulamasını kullanmasına, halı saha rezervasyonu yapmasına, maçlara katılmasına ve bunlara ilişkin ödemeleri gerçekleştirmesine muvafakat ettiğimi,
 4. Bu muvafakatin, geri almadığım sürece çocuğumun olağan işlemlerini kapsadığını; her işlem için ayrıca onay istenmeyeceğini (Kullanım Şartları md. 4.4),
-5. Muvafakati dilediğim zaman destek@oyna.app üzerinden veya bu ekrandan geri alabileceğimi; geri almanın 48 saat içinde etkili olacağını,
+5. Muvafakati dilediğim zaman mirackeremcuruksulu@gmail.com üzerinden veya bu ekrandan geri alabileceğimi; geri almanın 48 saat içinde etkili olacağını,
 6. T.C. Kimlik numaralarının KVKK'ya uygun biçimde şifrelenerek (hash) yalnızca doğrulama amacıyla saklanacağını, açık biçimde tutulmayacağını
 
 kabul, beyan ve taahhüt ederim.`;

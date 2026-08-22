@@ -129,7 +129,7 @@
 
 ## 9. VERİ İHLALİ BİLDİRİMİ
 
-9.1. Alıcı Taraf; kendisine aktarılan Oyuncu verileriyle ilgili bir veri ihlali/sızıntı hâlinde, bunu öğrendiği andan itibaren gecikmeksizin ve **en geç 24 (yirmidört) saat** içinde OYNA'ya (destek@oyna.app) bildirir; gerektiğinde ilgili mevzuat uyarınca Kişisel Verileri Koruma Kurumu'na bildirimde bulunur.
+9.1. Alıcı Taraf; kendisine aktarılan Oyuncu verileriyle ilgili bir veri ihlali/sızıntı hâlinde, bunu öğrendiği andan itibaren gecikmeksizin ve **en geç 24 (yirmidört) saat** içinde OYNA'ya (mirackeremcuruksulu@gmail.com) bildirir; gerektiğinde ilgili mevzuat uyarınca Kişisel Verileri Koruma Kurumu'na bildirimde bulunur.
 
 9.2. Taraflar, ihlalin etkilerinin sınırlandırılması ve ilgili kişilerin/Kurum'un bilgilendirilmesi konusunda iyi niyetle ve gecikmeksizin işbirliği yapar.
 
@@ -137,7 +137,7 @@
 
 ## 10. OYUNCUNUN HAKLARI VE AYDINLATMA
 
-10.1. Oyuncu, KVKK m.11 kapsamındaki haklarını (bilgi talep etme, düzeltme, silme, aktarıldığı üçüncü kişileri öğrenme, itiraz ve zararın giderilmesini isteme dâhil) **OYNA'ya (destek@oyna.app) başvurarak** kullanır. OYNA, gerektiğinde Alıcı Taraf'ın işbirliğiyle talebi karşılar.
+10.1. Oyuncu, KVKK m.11 kapsamındaki haklarını (bilgi talep etme, düzeltme, silme, aktarıldığı üçüncü kişileri öğrenme, itiraz ve zararın giderilmesini isteme dâhil) **OYNA'ya (mirackeremcuruksulu@gmail.com) başvurarak** kullanır. OYNA, gerektiğinde Alıcı Taraf'ın işbirliğiyle talebi karşılar.
 
 10.2. İşbu Protokol kapsamındaki tüm paylaşım kategorileri (rezervasyon, kamuya açık maç kadrosu, kamuya açık değerlendirme, kaleci/hakem hizmeti), Oyuncu'ya **KVKK Aydınlatma Metni ve Gizlilik Politikası** ile açıkça bildirilir; bu belgeler işbu Protokol ile tutarlı tutulur.
 

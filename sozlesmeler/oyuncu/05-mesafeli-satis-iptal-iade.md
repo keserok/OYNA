@@ -33,4 +33,4 @@ Kapora, uygulama üzerinden güvenli ödeme altyapısı ile tahsil edilir. Kalan
 Belirli bir tarih/saat için yapılan rezervasyonlar, Mesafeli Sözleşmeler Yönetmeliği m.15/1-ğ kapsamında "boş zamanın değerlendirilmesine ilişkin hizmetler" istisnasına tabidir; bu nedenle 14 günlük cayma hakkı uygulanmaz, iptal koşulları yukarıdaki kurallara tabidir.
 
 ### 6. Uyuşmazlık
-Şikayetlerinizde destek@oyna.app ile iletişime geçebilir, çözülemeyen uyuşmazlıklarda Tüketici Hakem Heyetleri'ne başvurabilirsiniz.
+Şikayetlerinizde mirackeremcuruksulu@gmail.com ile iletişime geçebilir, çözülemeyen uyuşmazlıklarda Tüketici Hakem Heyetleri'ne başvurabilirsiniz.

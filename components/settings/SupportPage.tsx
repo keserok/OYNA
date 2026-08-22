@@ -19,7 +19,7 @@ const STATUS_TONE: Record<SupportStatus, string> = {
     CLOSED: 'text-gray-400 bg-white/5 border-white/15',
 };
 
-const CONTACT_EMAIL = 'destek@oyna.app';
+const CONTACT_EMAIL = 'mirackeremcuruksulu@gmail.com';
 
 interface Props {
     open: boolean;

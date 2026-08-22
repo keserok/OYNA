@@ -13,7 +13,7 @@
 **1.1. OYNA:** Miraç Kerem Çürüksulu (bundan böyle kısaca **"OYNA"** olarak anılacaktır; OYNA, işbu Sözleşme kapsamındaki faaliyetini şahıs işletmesi olarak, 6102 sayılı Türk Ticaret Kanunu anlamında tacir sıfatıyla yürütmektedir).
 - Vergi Dairesi/No: Kartal Vergi Dairesi – 2650883645
 - Adres: Cevizli Mahallesi, Zuhal Caddesi, Ritim İstanbul A Ticari Blok No:46 Daire:50, Kartal/İstanbul. (İşbu adres, Mükellef Teknoloji A.Ş. tarafından işletilen paylaşımlı/sanal ofis hizmeti kapsamında kullanılmaktadır; anılan şirket işbu Sözleşme'nin tarafı değildir ve işbu Sözleşme bakımından hiçbir hak ve yükümlülüğe sahip değildir.)
-- E-posta: destek@oyna.app
+- E-posta: mirackeremcuruksulu@gmail.com
 
 **1.2. İşletme:** **[İŞLETME UNVANI / AD SOYAD]** (bundan böyle **"İşletme"** olarak anılacaktır).
 - Vergi Dairesi/No veya T.C. Kimlik No (şahıs işletmesi ise): **[VERGİ NO / T.C. KİMLİK NO]**
@@ -225,7 +225,7 @@ e) İşletme hakkında, işbu Sözleşme konusuyla doğrudan ilgili bir suça il
 
 ## 18. UYUŞMAZLIKLARIN ÇÖZÜMÜ VE YETKİLİ MAHKEME
 
-18.1. Taraflar, işbu Sözleşme'den doğabilecek her türlü uyuşmazlıkta öncelikle iyi niyetle doğrudan görüşme yoluyla çözüm arayacaklarını kabul eder. Bu kapsamda İşletme, şikâyet/itirazını yazılı olarak destek@oyna.app adresine iletir; OYNA, bu başvuruyu **iç itiraz/inceleme süreci** kapsamında en geç **10 (on) iş günü** içinde değerlendirip yazılı olarak yanıtlar.
+18.1. Taraflar, işbu Sözleşme'den doğabilecek her türlü uyuşmazlıkta öncelikle iyi niyetle doğrudan görüşme yoluyla çözüm arayacaklarını kabul eder. Bu kapsamda İşletme, şikâyet/itirazını yazılı olarak mirackeremcuruksulu@gmail.com adresine iletir; OYNA, bu başvuruyu **iç itiraz/inceleme süreci** kapsamında en geç **10 (on) iş günü** içinde değerlendirip yazılı olarak yanıtlar.
 
 18.2. İç itiraz süreci sonucunda uyuşmazlık çözülemezse:
 a) İşletme'nin işbu Sözleşme kapsamında TTK anlamında **tacir** sıfatıyla hareket ettiği hâllerde; madde 2'de belirtildiği üzere İşletme'nin tüketici sıfatını haiz olmadığı ve HMK m.17 uyarınca yetki sözleşmesi akdedebildiği gözetilerek, **İşletme'nin ticari işletmesinin kayıtlı olduğu yer veya OYNA'nın işyeri adresinin bulunduğu yer (İstanbul Anadolu/Kartal) ticaret mahkemeleri ve icra daireleri münhasıran yetkilidir.**
@@ -253,7 +253,7 @@ b) İşletme'nin madde 2.5 kapsamında **esnaf** sıfatıyla hareket ettiği hâ
 
 ## 22. TEBLİGAT
 
-22.1. İşbu Sözleşme kapsamında yapılacak tüm bildirimler; İşletme bakımından madde 1.2'de beyan edilen veya platform üzerinde güncellenmiş e-posta adresine, OYNA bakımından destek@oyna.app adresine yapılır.
+22.1. İşbu Sözleşme kapsamında yapılacak tüm bildirimler; İşletme bakımından madde 1.2'de beyan edilen veya platform üzerinde güncellenmiş e-posta adresine, OYNA bakımından mirackeremcuruksulu@gmail.com adresine yapılır.
 
 22.2. E-posta ile yapılan bildirimler, aksi ispat edilmedikçe, gönderim tarihini takip eden ilk iş günü tebliğ edilmiş sayılır.
 
@@ -261,7 +261,7 @@ b) İşletme'nin madde 2.5 kapsamında **esnaf** sıfatıyla hareket ettiği hâ
 
 ## 23. İLETİŞİM
 
-İşbu Sözleşme kapsamındaki tüm bildirim, talep ve başvurular için: **destek@oyna.app**
+İşbu Sözleşme kapsamındaki tüm bildirim, talep ve başvurular için: **mirackeremcuruksulu@gmail.com**
 
 ---
 ---

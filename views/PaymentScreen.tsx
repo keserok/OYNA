@@ -712,7 +712,7 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
       } else {
         // PENDING veya okunamayan durum: sonucu UYDURMA, dürüst bekleme metni ver.
         setInlineErrorKind('PENDING');
-        setInlineError(`İşlem hâlâ bankada sürüyor. 10 dakika sonra "Durumu Kontrol Et" ile tekrar bak. Kartından para çekildiği hâlde işlemin burada görünmüyorsa ${pendingPay.intentId.slice(0, 8).toUpperCase()} işlem numarasıyla destek@oyna.app adresine yaz.`);
+        setInlineError(`İşlem hâlâ bankada sürüyor. 10 dakika sonra "Durumu Kontrol Et" ile tekrar bak. Kartından para çekildiği hâlde işlemin burada görünmüyorsa ${pendingPay.intentId.slice(0, 8).toUpperCase()} işlem numarasıyla mirackeremcuruksulu@gmail.com adresine yaz.`);
       }
     } catch {
       setInlineErrorKind('PENDING');

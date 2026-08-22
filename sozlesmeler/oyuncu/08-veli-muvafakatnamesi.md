@@ -38,7 +38,7 @@ Veli tarafından beyan edilen çocuk doğum tarihi esas alınarak, çocuk **18 y
 
 ## 5. Onayın Geri Alınması
 
-Veli, verdiği onayı dilediği zaman **Uygulamadaki Ayarlar → Veli Onayı** ekranından (verdiği onayları yönetme bölümünden) veya **destek@oyna.app** adresine yazılı bildirimle geri alabilir. Geri alma en geç **48 saat içinde** etkili olur; bu tarihten sonra hesap yeniden sınırlı moda alınır. Geri alma, daha önce usulünce onaylanmış ve tamamlanmış işlemlerin geçerliliğini etkilemez.
+Veli, verdiği onayı dilediği zaman **Uygulamadaki Ayarlar → Veli Onayı** ekranından (verdiği onayları yönetme bölümünden) veya **mirackeremcuruksulu@gmail.com** adresine yazılı bildirimle geri alabilir. Geri alma en geç **48 saat içinde** etkili olur; bu tarihten sonra hesap yeniden sınırlı moda alınır. Geri alma, daha önce usulünce onaylanmış ve tamamlanmış işlemlerin geçerliliğini etkilemez.
 
 ## 6. Velinin Sorumluluğu
 

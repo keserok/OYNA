@@ -22,7 +22,7 @@ const UPDATED = LEGAL_UPDATED_TR;
 const COMPANY = 'Miraç Kerem Çürüksulu (OYNA)';
 const TAX_INFO = 'Kartal Vergi Dairesi – 2650883645';
 const ADDRESS = 'Cevizli Mahallesi, Zuhal Caddesi, Ritim İstanbul A Ticari Blok No:46 Daire:50 (Mükellef Teknoloji A.Ş. bünyesinde), Kartal/İstanbul';
-export const CONTACT_EMAIL = 'destek@oyna.app';
+export const CONTACT_EMAIL = 'mirackeremcuruksulu@gmail.com';
 
 export const DOCS: Record<LegalDocKey, { title: string; icon: React.ElementType; body: string }> = {
   TERMS: {
@@ -230,10 +230,10 @@ Mazeretsiz gelmeme, tekrarlayan son dakika iptali ve sahte rezervasyon davranı�
 18 yaş altına yönelik uygunsuz iletişim/davranış (istenmeyen mesaj, grooming dahil) sıfır toleransa tabidir; ispatı hâlinde kalıcı kapatma ve gerekirse yetkili mercilere bildirim yapılır.
 
 7. ŞİKÂYET VE UYAR-KALDIR
-İhlalleri uygulama içi bildirim/engelleme araçlarıyla veya destek@oyna.app üzerinden bildirebilirsin. Uygulama içi araçlarla iletilen uygunsuz içerik bildirimleri (hakaret, taciz, nefret söylemi, cinsel içerik, şiddet, spam, kimlik taklidi) 24 SAAT İÇİNDE incelenir; ihlal varsa içerik kaldırılır, içeriği üreten kullanıcıya m.8'deki yaptırım uygulanır ve ağır hâllerde hesap derhal kapatılır. Sonuçtan aynı süre içinde haberdar edilirsin. OYNA ayrıca, 5651 s.K. yer sağlayıcı sorumluluğu çerçevesinde haberdar olduğu hukuka aykırı içeriği kaldırmaya gayret gösterir; acil içerik (çocuk güvenliği, şiddet) öncelikli ele alınır; katalog suç içeriği derhal kaldırılıp yetkili mercilere bildirilir.
+İhlalleri uygulama içi bildirim/engelleme araçlarıyla veya mirackeremcuruksulu@gmail.com üzerinden bildirebilirsin. Uygulama içi araçlarla iletilen uygunsuz içerik bildirimleri (hakaret, taciz, nefret söylemi, cinsel içerik, şiddet, spam, kimlik taklidi) 24 SAAT İÇİNDE incelenir; ihlal varsa içerik kaldırılır, içeriği üreten kullanıcıya m.8'deki yaptırım uygulanır ve ağır hâllerde hesap derhal kapatılır. Sonuçtan aynı süre içinde haberdar edilirsin. OYNA ayrıca, 5651 s.K. yer sağlayıcı sorumluluğu çerçevesinde haberdar olduğu hukuka aykırı içeriği kaldırmaya gayret gösterir; acil içerik (çocuk güvenliği, şiddet) öncelikli ele alınır; katalog suç içeriği derhal kaldırılıp yetkili mercilere bildirilir.
 
 8. YAPTIRIM VE İTİRAZ
-Kademeli yaptırım: uyarı → içerik kaldırma → susturma (mute) → görünürlük kısıtlaması (shadowban) → geçici askı → kalıcı kapatma (Kullanım Şartları m.13-14 ile bütünlük). Kötüye kullanımı önlemek için bazı kısıtlamalar (shadowban) ayrıca bildirilmeksizin uygulanabilir. Karara destek@oyna.app üzerinden itiraz edilebilir. Yaptırım, tamamlanmış işlemleri ve hak edilmiş iadeleri etkilemez.
+Kademeli yaptırım: uyarı → içerik kaldırma → susturma (mute) → görünürlük kısıtlaması (shadowban) → geçici askı → kalıcı kapatma (Kullanım Şartları m.13-14 ile bütünlük). Kötüye kullanımı önlemek için bazı kısıtlamalar (shadowban) ayrıca bildirilmeksizin uygulanabilir. Karara mirackeremcuruksulu@gmail.com üzerinden itiraz edilebilir. Yaptırım, tamamlanmış işlemleri ve hak edilmiş iadeleri etkilemez.
 
 9. YÜRÜRLÜK
 Bu Kurallar Kullanım Şartları'nın ekidir; ayrıca onay gerektirmez. Esaslı değişiklikler önceden duyurulur.`,

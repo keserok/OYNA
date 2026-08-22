@@ -151,7 +151,7 @@ Başvurun incelenirken oyuncu olarak oynamaya devam edebilirsin. Bir tesiste ça
 
 ## 9. Destek ve yasal belgeler
 
-- **Destek:** **Ayarlar → Yardım Merkezi** seni destek e-postasına yönlendirir: `destek@oyna.app`.
+- **Destek:** **Ayarlar → Yardım Merkezi** seni destek e-postasına yönlendirir: `mirackeremcuruksulu@gmail.com`.
 - **Yasal belgeler:** **Ayarlar → Yasal & Sözleşmeler** altında 8 belgenin tam metni vardır: Kullanım Şartları, Topluluk Kuralları, Gizlilik Politikası, KVKK Aydınlatma, KVKK Açık Rıza, Veli Muvafakatnamesi, Çerez Politikası, Mesafeli Satış ve İptal/İade.
 - **Hesap silme:** **Ayarlar → Hesabı Kalıcı Olarak Sil** — bu işlem geri alınamaz.
 
