@@ -95,7 +95,7 @@ const pitchText = (error: boolean, n: number | null, hasScope: boolean): string 
   if (error) return 'Sahalar yüklenemedi · haritada gör';
   if (!hasScope) return 'Yakındaki sahaları gör';
   if (n === null) return '—';
-  return n === 0 ? 'Yakında müsait saha yok' : `Çevrende ${n} halı saha · haritada gör`;
+  return n === 0 ? 'Yakında müsait saha yok' : `Çevrende ${n} saha · haritada gör`;
 };
 
 /** Kaleci/Hakem kartları dar — metin TEK SATIRDA kalmalı. */

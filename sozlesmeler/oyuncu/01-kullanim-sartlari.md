@@ -34,7 +34,7 @@ Bu Sözleşmenin devamında, işbu gerçek kişi yalnızca **"OYNA"** veya **"Ş
 
 ### 1.3 Kapsam ve Kabul
 
-İşbu Sözleşme, OYNA tarafından sunulan; halı saha rezervasyonu, maç/takım oluşturma ve eşleştirme, kaleci/hakem gibi hizmet sağlayıcılarla buluşma işlevlerini içeren aracı platform hizmetinin kullanımına ilişkin şartları düzenler. Kullanıcı, Uygulamaya üye olarak, Uygulamayı indirerek veya kullanmaya devam ederek işbu Sözleşmeyi okuduğunu, anladığını ve tüm hükümleriyle kabul ettiğini beyan eder. Sözleşmeyi kabul etmeyen kullanıcılar Uygulamayı kullanamaz.
+İşbu Sözleşme, OYNA tarafından sunulan; futbol sahası rezervasyonu, maç/takım oluşturma ve eşleştirme, kaleci/hakem gibi hizmet sağlayıcılarla buluşma işlevlerini içeren aracı platform hizmetinin kullanımına ilişkin şartları düzenler. Kullanıcı, Uygulamaya üye olarak, Uygulamayı indirerek veya kullanmaya devam ederek işbu Sözleşmeyi okuduğunu, anladığını ve tüm hükümleriyle kabul ettiğini beyan eder. Sözleşmeyi kabul etmeyen kullanıcılar Uygulamayı kullanamaz.
 
 İşbu Sözleşme; Mesafeli Satış ve İptal/İade Koşulları, KVKK Aydınlatma Metni, KVKK Açık Rıza Metni, Gizlilik Politikası, Çerez Politikası, Topluluk Kuralları ve (reşit olmayan kullanıcılar bakımından) Veli Muvafakatnamesi ile birlikte bir bütün oluşturur ve bu belgeler bu Sözleşmenin ayrılmaz ekleridir.
 
@@ -44,7 +44,7 @@ Bu Sözleşmenin devamında, işbu gerçek kişi yalnızca **"OYNA"** veya **"Ş
 
 ### 2.1 Hizmetin Tanımı
 
-OYNA; oyuncuların (i) halı saha rezervasyonu yapmasına, (ii) maç ve takım oluşturmasına, diğer oyuncularla eşleşmesine ve (iii) kaleci/hakem gibi bağımsız hizmet sağlayıcılarla bir araya gelmesine imkân tanıyan elektronik bir aracı platformdur.
+OYNA; oyuncuların (i) futbol sahası rezervasyonu yapmasına, (ii) maç ve takım oluşturmasına, diğer oyuncularla eşleşmesine ve (iii) kaleci/hakem gibi bağımsız hizmet sağlayıcılarla bir araya gelmesine imkân tanıyan elektronik bir aracı platformdur.
 
 ### 2.2 Aracı Konum
 

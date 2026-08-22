@@ -381,7 +381,7 @@ const FriendsPanel: React.FC<FriendsPanelProps> = ({
             <input
               value={listName}
               onChange={e => setListName(e.target.value.slice(0, 30))}
-              placeholder="Liste adı (ör. Halı Saha Tayfası)"
+              placeholder="Liste adı (ör. Salı Maçı Tayfası)"
               autoFocus
               className="flex-1 h-12 px-4 rounded-2xl bg-white/5 border border-white/10 text-sm font-semibold placeholder:text-ink-4 focus:outline-none focus:border-[#39FF14]/50"
             />

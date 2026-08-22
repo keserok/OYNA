@@ -23,7 +23,7 @@ beyan, kabul ve taahhüt eder.
 
 Veli, bu muvafakatname ile çocuğunun;
 - OYNA Uygulamasını kullanmasına,
-- Uygulama üzerinden halı saha rezervasyonu yapmasına ve maçlara katılmasına,
+- Uygulama üzerinden saha rezervasyonu yapmasına ve maçlara katılmasına,
 - Bu işlemlere ilişkin **kapora/ödeme** işlemlerini gerçekleştirmesine
 
 muvafakat eder. Bu onay, 6098 sayılı Türk Borçlar Kanunu ve 4721 sayılı Türk Medeni Kanunu'nun küçüklerin hukuki işlemlerine ilişkin hükümleri çerçevesinde, küçüğün bu nitelikteki olağan işlemlerine yasal temsilci icazeti/izni niteliğindedir.

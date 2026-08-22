@@ -53,14 +53,14 @@ Bu Sözleşmenin devamında, işbu gerçek kişi yalnızca "OYNA" veya "Şirket"
 - "İçerik": Kullanıcı tarafından Platforma yüklenen profil fotoğrafı, kullanıcı adı, maç yorumu, değerlendirme, taktik paylaşımı, mesaj ve benzeri her türlü veri/materyal.
 
 1.3 Kapsam ve Kabul
-İşbu Sözleşme, OYNA tarafından sunulan; halı saha rezervasyonu, maç/takım oluşturma ve eşleştirme, kaleci/hakem gibi hizmet sağlayıcılarla buluşma işlevlerini içeren aracı platform hizmetinin kullanımına ilişkin şartları düzenler. Kullanıcı, Uygulamaya üye olarak, Uygulamayı indirerek veya kullanmaya devam ederek işbu Sözleşmeyi okuduğunu, anladığını ve tüm hükümleriyle kabul ettiğini beyan eder. Sözleşmeyi kabul etmeyen kullanıcılar Uygulamayı kullanamaz.
+İşbu Sözleşme, OYNA tarafından sunulan; futbol sahası rezervasyonu, maç/takım oluşturma ve eşleştirme, kaleci/hakem gibi hizmet sağlayıcılarla buluşma işlevlerini içeren aracı platform hizmetinin kullanımına ilişkin şartları düzenler. Kullanıcı, Uygulamaya üye olarak, Uygulamayı indirerek veya kullanmaya devam ederek işbu Sözleşmeyi okuduğunu, anladığını ve tüm hükümleriyle kabul ettiğini beyan eder. Sözleşmeyi kabul etmeyen kullanıcılar Uygulamayı kullanamaz.
 
 İşbu Sözleşme; Mesafeli Satış ve İptal/İade Koşulları, KVKK Aydınlatma Metni, KVKK Açık Rıza Metni, Gizlilik Politikası, Çerez Politikası, Topluluk Kuralları ve (reşit olmayan kullanıcılar bakımından) Veli Muvafakatnamesi ile birlikte bir bütün oluşturur ve bu belgeler bu Sözleşmenin ayrılmaz ekleridir.
 
 2. SÖZLEŞMENİN KONUSU VE KAPSAMI; OYNA'NIN ARACI PLATFORM NİTELİĞİ
 
 2.1 Hizmetin Tanımı
-OYNA; oyuncuların (i) halı saha rezervasyonu yapmasına, (ii) maç ve takım oluşturmasına, diğer oyuncularla eşleşmesine ve (iii) kaleci/hakem gibi bağımsız hizmet sağlayıcılarla bir araya gelmesine imkân tanıyan elektronik bir aracı platformdur.
+OYNA; oyuncuların (i) futbol sahası rezervasyonu yapmasına, (ii) maç ve takım oluşturmasına, diğer oyuncularla eşleşmesine ve (iii) kaleci/hakem gibi bağımsız hizmet sağlayıcılarla bir araya gelmesine imkân tanıyan elektronik bir aracı platformdur.
 
 2.2 Aracı Konum
 Saha kiralama hizmeti bizzat ilgili Tesis tarafından sunulur. OYNA, sahanın işletmecisi, kiralayanı veya sahibi değildir; yalnızca Tesis ile Kullanıcı arasındaki rezervasyon sürecini teknik olarak kolaylaştıran ve ödeme tahsilatına aracılık eden platformdur. Kalecilik/hakemlik gibi hizmetler, Platform üzerinde ilan veren bağımsız Hizmet Sağlayıcılar tarafından sunulur. OYNA, bu kişilerin işvereni, temsilcisi veya kefili değildir; yalnızca Kullanıcı ile Hizmet Sağlayıcının bir araya gelmesini sağlayan bir eşleştirme/pazaryeri işlevi görür. Buna göre; sahanın fiziki durumu, zemin/aydınlatma/soyunma odası gibi tesis koşulları, sahada yaşanabilecek kaza/yaralanma olayları ile kaleci/hakemin edimini ifa şekli, bizzat Tesis ve/veya ilgili Hizmet Sağlayıcının sorumluluğundadır. OYNA'nın bu konudaki sorumluluğu, madde 10 (Sorumluluğun Sınırlandırılması) ve madde 9'da (Garanti Reddi) düzenlenen çerçeve ile sınırlıdır.

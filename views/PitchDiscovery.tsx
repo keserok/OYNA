@@ -1462,7 +1462,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
                   <h3 className="text-lg font-extrabold italic text-white">BÖLGENDE HENÜZ SAHA YOK</h3>
                   <p className="text-gray-400 text-[0.8125rem] mt-2 leading-relaxed max-w-xs">
                     Yeni açılıyoruz — bölgende saha eklenince ilk sen haberdar ol.
-                    İyi bir halı saha biliyorsan öner; ekibimiz iletişime geçsin.
+                    İyi bir saha biliyorsan öner; ekibimiz iletişime geçsin.
                   </p>
 
                   {demandDone && (
@@ -2294,7 +2294,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
               <p className="text-[0.8125rem] text-gray-400 leading-relaxed mb-5">
                 {demandModal === 'NOTIFY'
                   ? 'Bölgende saha açılınca sana bildirelim. Şehir/ilçe yazman, doğru bölgeye eklememizi sağlar.'
-                  : 'İyi bir halı saha biliyorsan yaz; ekibimiz iletişime geçip OYNA’ya davet etsin.'}
+                  : 'İyi bir saha biliyorsan yaz; ekibimiz iletişime geçip OYNA’ya davet etsin.'}
               </p>
 
               <div className="flex flex-col gap-3">

@@ -877,7 +877,7 @@ const RahatMatchLobby: React.FC<Props> = ({ match: matchProp, onBack }) => {
                 <div>
                   <p style={{ margin: '0 0 3px', fontSize: 11, fontWeight: 900, letterSpacing: '.14em', color: '#6B7280' }}>AYAKKABI</p>
                   <p style={{ margin: 0, fontSize: 13, fontWeight: 900, letterSpacing: '.06em', color: '#FFFFFF' }}>
-                    {match.footwearRule === 'CLEATS_OK' ? 'KRAMPON SERBEST' : 'HALI SAHA AYAKKABISI'}
+                    {match.footwearRule === 'CLEATS_OK' ? 'KRAMPON SERBEST' : 'KRAMPON YASAK'}
                   </p>
                 </div>
               </div>
