@@ -476,37 +476,22 @@ const DEMO_DOMAIN = '@oyna.app';
 // e-postalarıyla birlikte gerçek hesaplara (saha1..4 = SAHA SAHİBİ) giriş
 // anahtarı oluyordu. Sabit, derleme zamanında çözülür: `VITE_DEMO_ACCOUNTS`
 // açıkça 'true' değilse boş kalır ve demo yolları zaten çalışmaz.
-// MAĞAZA İNCELEME PAKETİ (19 Ağu 2026 — kurucu kararı)
+// İNCELEME PAKETİ KALDIRILDI (22 Ağu 2026 — Apple 5.6 reddi).
 //
-// İncelemecinin Türk numarası yok; telefon kodu ona ulaşmıyor ve uygulamayı
-// açamıyor. Bu, gönderimin en olası ret sebebi. Kurucu kararı: inceleme
-// paketinde demo hesap seçici AÇIK olsun.
+// Buraya bir `VITE_MAGAZA_INCELEME` bayrağı konmuştu: mağaza incelemesi için
+// derlenen pakette demo hesap seçici açılıyor, normal yayın paketinde hiç
+// bulunmuyordu. Niyet iyiydi (incelemecinin Türk numarası yok, kod ona
+// ulaşmıyor) ama Apple bunu Developer Code of Conduct 5.6 kapsamında
+// REDDETTİ: "inceleme sırasında farklı davranan / gizlenmiş özellik".
 //
-// NEDEN AYRI BİR BAYRAK: `VITE_DEMO_ACCOUNTS` geliştirme bayrağıdır ve mobil
-// paket bekçisi onu bilerek engelliyor. Aynı bayrağı zorlamak, o bekçiyi
-// tümüyle devre dışı bırakmak olurdu. `VITE_MAGAZA_INCELEME` YALNIZ inceleme
-// için derlenen pakette yazılır; normal yayın derlemesinde tanımsızdır ve
-// hiçbir şey değişmez.
-//
-// RİSK NE KADAR: seçici yalnız @oyna.app demo hesaplarını açar. Bu hesaplar
-// tohum tesislere sahip, gerçek parası yok ve inceleme bitince silinecek.
-// Platform yöneticisi hesabı bu kadronun DIŞINDA (ayrı bir Google hesabı) ve
-// ortak şifreyi kullanmıyor — seçici onu açmaz.
-const INCELEME_PAKETI = import.meta.env.VITE_MAGAZA_INCELEME === 'true';
-
-/**
- * Bu paket mağaza incelemesi için mi derlendi?
- *
- * Giriş ekranı bunu okuyup incelemeciye NE YAPACAĞINI yazar. İncelemecinin
- * Türk numarası yok; ekranda yalnız "numaranı gir" yazsaydı, demo düğmesini
- * fark etmeyip uygulamayı "çalışmıyor" diye reddedebilirdi. Normal yayın
- * paketinde bu not hiç render edilmez.
- */
-export const isIncelemePaketi = (): boolean => INCELEME_PAKETI;
-
+// KURAL, BİR DAHA DELİNMEMEK ÜZERE: gönderilen paket ile kullanıcının
+// indirdiği paket AYNI olmalıdır. İncelemeciye özel hiçbir kod yolu, hiçbir
+// derleme bayrağı, hiçbir sunucu anahtarı olamaz. İncelemecinin karşılaştığı
+// engel neyse (burada: telefonu doğrulayamamak), o engel HERKES için
+// çözülür — gizli kapıyla atlatılmaz. Çözüm: telefon adımı artık
+// atlanabilir (bkz. App.tsx numara kapısı + PhoneLinkScreen).
 const DEMO_PASSWORD =
-  (import.meta.env.VITE_DEMO_ACCOUNTS === 'true' || import.meta.env.VITE_MAGAZA_INCELEME === 'true')
-    ? 'password123' : '';
+  import.meta.env.VITE_DEMO_ACCOUNTS === 'true' ? 'password123' : '';
 
 /** Girilen değer demo giriş için uygun mu? (tam e-posta ya da bare kullanıcı adı) */
 export const isDemoLoginInput = (raw: string): boolean => {
@@ -549,22 +534,15 @@ export const isDemoAccountPickerEnabled = (): boolean => {
   // Kill-switch'in (VITE_DEMO_ACCOUNTS=false) derleme anında yazılmayı
   // unutulması ihtimaline karşı native'de kod düzeyinde kapatılır.
   //
-  // TEK İSTİSNA (19 Ağu 2026 — kurucu kararı): inceleme paketi. İncelemecinin
-  // Türk numarası olmadığı için telefon kodu ona ulaşmıyor; seçici olmadan
-  // uygulamayı hiç açamaz ve "çalışmıyor" diye reddeder. Bayrak YALNIZ
-  // inceleme derlemesinde yazılır — normal yayın paketinde tanımsızdır.
-  //
-  // İNCELEME BAYRAĞI TEK BAŞINA YETER (20 Ağu 2026 — bulunan hata): eskiden
-  // bu satırdan sonra `VITE_DEMO_ACCOUNTS !== 'false'` de aranıyordu. Ama
-  // mağaza denetimi `.env`'de `VITE_DEMO_ACCOUNTS=false` olmasını ZORUNLU
-  // tutuyor; yani inceleme paketi derlense bile seçici KAPALI kalıyordu ve
-  // iki bayrağın birlikte yazılması gerektiğini kimse bilmiyordu. İnceleme
-  // bayrağı bilinçli ve tek amaçlıdır: yazıldıysa seçici açıktır, nokta.
-  if (INCELEME_PAKETI) return true;
-  // Yayın paketi: seçici asla yok. (Kill-switch unutulsa bile.)
+  // İNCELEME İSTİSNASI KALDIRILDI (21 Ağu 2026 — Apple 5.6 reddi): mağaza
+  // paketine özel hiçbir açma yolu yoktur. Seçici YALNIZ geliştirme
+  // tarayıcısında ve YALNIZ açıkça `VITE_DEMO_ACCOUNTS=true` yazıldığında
+  // vardır; mağaza paketinde katalog derlemeye bile girmez (data/demoAccounts).
   if (Capacitor.isNativePlatform()) return false;
-  // Web/geliştirme: kill-switch ile kapatılabilir.
-  return import.meta.env.VITE_DEMO_ACCOUNTS !== 'false';
+  // FAIL-CLOSED: bayrak açıkça 'true' değilse kapalı. Eskiden `!== 'false'`
+  // idi — yani bayrak hiç yazılmamışsa AÇIK sayılıyordu; yanlış tarafa
+  // devrilen bir varsayılandı.
+  return import.meta.env.VITE_DEMO_ACCOUNTS === 'true';
 };
 
 export const loginDemoAccount = async (email: string, password: string = DEMO_PASSWORD) => {

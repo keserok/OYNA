@@ -18,11 +18,9 @@
 // geliştirici paketlerine girer. Sabit derleme zamanında değişmez bir değere
 // indiği için, üretim derlemesinde aşağıdaki koşul `false` olur ve toplayıcı
 // (Rollup) hem katalogu hem ayrıştırıcıyı ölü kod olarak ATAR.
-// İnceleme paketinde de katalog gerekir: seçici açık ama liste boşsa ekranda
-// hiçbir hesap görünmez ve incelemeci yine giremez (bkz. supabaseAuth.ts).
-const KATALOG_PAKETE_GIRSIN =
-  import.meta.env.VITE_DEMO_ACCOUNTS === 'true'
-  || import.meta.env.VITE_MAGAZA_INCELEME === 'true';
+// İNCELEME İSTİSNASI KALDIRILDI (21 Ağu 2026 — Apple 5.6 reddi): mağaza
+// paketine demo kataloğu GİRMEZ. Tek kapı geliştirme bayrağıdır.
+const KATALOG_PAKETE_GIRSIN = import.meta.env.VITE_DEMO_ACCOUNTS === 'true';
 
 // Not: glob, statik `import ... from` gibi koşulsuz gömme yapmaz; `eager`
 // olsa bile yukarıdaki sabit false iken erişilen hiçbir yer kalmadığından

@@ -8,70 +8,119 @@
 
 ---
 
-## 1. İnceleme Girişi — uygulama içi DEMO SEÇİCİ (güncel yol)
+## 1. İnceleme Girişi — HERKESLE AYNI UYGULAMA
 
-> **GÜNCELLENDİ (20 Ağu 2026).** E-posta + şifre girişi 17 Ağustos kurucu
-> kararıyla KALDIRILDI; tek yol telefon + OTP (ve Google/Apple). Telefon
-> sağlayıcısı inceleme döneminde kapalı ve incelemecinin Türk numarası yok —
-> bu yüzden inceleme, 19 Ağustos kurucu kararıyla **uygulama içi demo hesap
-> seçicisi** üzerinden yapılır. Ayrı bir kullanıcı adı/şifre VERMEYE GEREK YOK.
+> **KARAR (22 Ağustos 2026 — Apple 5.6 reddinden sonra).** Mağaza incelemesi
+> için ayrı paket derleme uygulaması **tamamen kaldırıldı.** 19 Ağustos'ta
+> eklenen `VITE_MAGAZA_INCELEME` bayrağı, incelemeciye özel bir "DEMO
+> HESABIYLA GİR" düğmesi ve iki dilli yönerge kutusu taşıyordu; normal yayın
+> paketinde ikisi de yoktu. Apple bunu **Guideline 5.6 (Developer Code of
+> Conduct)** altında reddetti:
+>
+> > "the app contains features that appear to have been intentionally hidden
+> > during the review process."
+>
+> Haklı bir rettir. Kural, bir daha delinmemek üzere:
+> **gönderilen paket ile kullanıcının indirdiği paket AYNIDIR.** İncelemeciye
+> özel hiçbir kod yolu, derleme bayrağı ya da sunucu anahtarı olamaz.
+> İncelemecinin karşılaştığı engel neyse, o engel HERKES için çözülür.
 
-**Gönderilecek paket:** `npm run sync:ios:inceleme` (Android:
-`sync:android:inceleme`). Bu komut paketi `VITE_MAGAZA_INCELEME=true` ile
-derler; giriş ekranına iki şey eklenir (normal yayın derlemesinde ikisi de
-yoktur):
+### Engeldi: telefon adımı atlanamıyordu
 
-1. **İki dilli yönerge kutusu** ("APP REVIEW · İNCELEME"): kodların yalnız
-   Türk numaralarına gittiğini ve demo düğmesinin kullanılacağını söyler.
-2. **"DEMO HESABIYLA GİR" düğmesi** (ekranın altında): dokununca 29 demo
-   hesap rol gruplarıyla listelenir — 20 oyuncu, 4 saha sahibi, 3 kaleci,
-   2 hakem. Bir hesaba dokunmak şifresiz/tek dokunuş giriş yapar; bölge
-   otomatik Ordu/Altınordu kurulur, ekranlar dolu gelir.
-   İncelemeci numara yazıp KOD GÖNDER'e basarsa da çıkmazda kalmaz:
-   iki dilli mesajla demo seçiciye yönlendirilir ve liste kendiliğinden açılır.
+OYNA'da ana giriş yolu telefon + SMS kodudur ve **SMS yalnız +90 numaralara
+gider.** Google/Apple ile giren kullanıcıdan da numara isteniyordu ve o ekran
+**atlanamıyordu.** Sonuç: yurt dışındaki hiç kimse — mağaza incelemecisi dahil
+— uygulamayı açamıyordu.
 
-**App Store Connect → App Review Information alanına yapıştırılacak metin
-(İngilizce, hazır):**
+### Çözüm: numara adımı artık atlanabilir (herkes için)
+
+- Girişten sonra gelen "Numaranı ekle" ekranında **ŞİMDİLİK ATLA** vardır.
+  Atlayan kullanıcı uygulamayı gezer; bir daha açılışta zorlanmaz.
+- Numara, **gerçekten gerektiği anda** istenir: yer ayırtma / ödeme. Gerekçe
+  orada somuttur (maç günü tesis ve kaptan bu numaradan ulaşır) ve o ekran da
+  **VAZGEÇ** ile kapanır — kullanıcı hiçbir yerde kilitlenmez.
+- Kod: `App.tsx · numaraGerekli`, `shared/numaraKapisi.ts`,
+  `views/PhoneLinkScreen.tsx`, `views/PaymentScreen.tsx · handlePay`.
+  Kilitler: `tests/unit/telefonGirisi.test.ts`,
+  `tests/unit/magazaKapilari.test.ts`.
+
+### İncelemeciye verilecek hesap: SUNUCUDA tanımlı test numarası
+
+Ödeme dahil TÜM akışı denemek için incelemeciye bir hesap gerekir. Bu hesap,
+Apple'ın kendi istediği **App Review Information → Sign-In Information**
+alanından verilir — yani gizli değil, beyan edilmiş bir test kimliğidir.
+
+Uygulamada özel kod YOKTUR. Supabase Auth'ta bir **test telefon numarası**
+tanımlıdır: o numara için SMS gönderilmez, sabit kod kabul edilir. İncelemeci
+normal giriş ekranını, normal akışı kullanır.
+
+| Alan | Değer |
+| --- | --- |
+| Sign-In required | Yes |
+| User Name | `+90 500 000 00 02` |
+| Password | `⟨Supabase panelinde tanımlanan 6 haneli sabit kod⟩` |
+
+**Kurucunun yapması gereken (bir kez):** Supabase → Authentication →
+Sign In / Providers → Phone → **Test OTP** bölümüne `+905000000002` numarası
+ve 6 haneli sabit bir kod eklenir. Bu numara `oyuncu01@oyna.app` (Emre Kaya,
+PLAYER) hesabına bağlıdır ve doğrulanmıştır.
+
+**App Store Connect → App Review Information → Notes alanına yapıştırılacak
+metin (İngilizce, hazır):**
 
 ```
-Sign-in for review: OYNA uses phone-number OTP sign-in, and SMS codes are
-delivered to Turkish numbers only. For your convenience this build includes
-an in-app review entrance — no separate credentials needed:
+SIGN-IN
+OYNA signs in with a phone number and a 6-digit SMS code. Our SMS provider
+delivers to Turkish (+90) numbers only, so we registered a test number for
+you. It works on the normal sign-in screen — there is no special build,
+no hidden entrance, and no review-only code path in this app.
 
-1. On the sign-in screen, tick the consent checkbox (KVKK / Terms).
-2. Tap the green "DEMO HESABIYLA GİR" (Sign in with a demo account) button
-   at the bottom of the screen.
-3. Pick any account — one tap signs you in. The list covers all four roles:
-   PLAYER (Oyuncular), FACILITY OWNER (Saha Sahipleri), GOALKEEPER
-   (Kaleciler) and REFEREE (Hakemler). To tour the owner dashboard use
-   "Ahmet Kuru"; for a player use "Emre Kaya".
+  Phone number : +90 500 000 00 02
+  Code         : ⟨6-digit code⟩
 
-These demo accounts live in a seeded demo ecosystem (matches, venues,
-wallet history) so every screen shows realistic data. They contain no real
-user data and no real money.
+Steps: tick the consent checkbox, type the number above, tap "KOD GÖNDER",
+then enter the code above. You can also sign in with Apple; the phone step
+that follows is optional ("ŞİMDİLİK ATLA" = skip for now), and we ask for a
+number only when you reserve a spot, because the venue and the team captain
+call that number on match day.
+
+PAYMENTS
+Card payments are still in simulation mode for every user, everywhere —
+we have not signed the payment-provider contract yet. No real money moves
+and no real card is charged. The payment screen accepts any test card
+(e.g. 5528 7900 0000 0008, 12/30, CVV 123). This is a global server
+setting, identical for reviewers and users.
+
+WHAT OYNA DOES
+OYNA organises football matches on real pitches: you join an open match,
+reserve your spot, and meet at the venue. Nothing digital is sold in the
+app, so purchases are handled outside IAP (Guideline 3.1.5(a)).
+
+DATA
+The accounts and matches you will see are seeded demo data — no real
+people, no real money.
 ```
 
-> **Kurucu notu:** Onay kutusu işaretlenmeden hiçbir giriş yolu ilerlemez
-> (kutusuz dokunuşta ekran ne yapılacağını söyler). Demo hesap listesinin tek
-> kaynağı `docs/OYNA_DEMO_HESAPLARI.md`; hesaplar üretim Supabase'inde gerçek
-> kayıt olarak durur ve inceleme sonrası `demo_clean_start_purge.sql` ile
-> topluca silinir. Genel yayına giderken paketi `VITE_MAGAZA_INCELEME`
-> OLMADAN yeniden derle (`npm run sync:ios`) — seçici ve yönerge o pakette
-> hiç yoktur.
+> **Kurucu notu:** Onay kutusu (KVKK / Kullanım Şartları) işaretlenmeden
+> hiçbir giriş yolu ilerlemez; kutusuz dokunuşta ekran ne yapılacağını söyler.
+> Demo veri seti üretim Supabase'inde gerçek kayıt olarak durur ve genel
+> yayına çıkarken `demo_clean_start_purge.sql` ile topluca silinir.
 
 ---
 
 ## 2. Uygulama-içi Ödeme ve IAP Muafiyeti (kritik)
 
-OYNA **fiziksel bir hizmet** satar: gerçek dünyadaki bir halı sahanın belirli
-gün/saatte kiralanması ve bu kiralamaya ait kapora tahsilatı. Uygulama-içi
-dijital içerik/abonelik SATMAZ.
+OYNA **fiziksel bir hizmet** satar: gerçek dünyadaki bir futbol sahasının
+belirli gün/saatte kullanılması ve o maça katılım bedelinin tahsili.
+Uygulama-içi dijital içerik/abonelik SATMAZ. (Saha türü kısıtı yoktur —
+kapalı, açık, sentetik ya da çim; OYNA bir futbol organizasyonu uygulamasıdır.)
 
 - **Apple:** App Store Review Guideline **3.1.5(a)** ("Goods and Services
   Outside of the App") ve **3.1.3(e)** kapsamında, fiziksel hizmet/gerçek dünya
   deneyimi bedelinin uygulama dışı ödeme yöntemleriyle (kredi kartı) tahsili
-  serbesttir; **IAP zorunlu değildir.** Halı saha kiralama, Uber/rezervasyon
-  uygulamalarındaki fiziksel hizmet ödemesiyle aynı kategoridedir.
+  serbesttir; **IAP zorunlu değildir.** Saha kullanımı / maça katılım bedeli,
+  Uber ve rezervasyon uygulamalarındaki fiziksel hizmet ödemesiyle aynı
+  kategoridedir.
 - **Google Play:** Play Payments politikası, fiziksel hizmet/gerçek dünya
   işlemlerini Play Billing zorunluluğundan muaf tutar; ödeme lisanslı ödeme
   kuruluşu **iyzico** üzerinden alınır.
@@ -80,11 +129,14 @@ dijital içerik/abonelik SATMAZ.
 iletilir (PCI-DSS: saklama yok, geçiş var). 3DS banka doğrulaması uygulama
 içinde tamamlanır.
 
-> **Kurucu notu:** İncelemeci gerçek ödeme denemesin istiyorsan, ya iyzico
-> sandbox test kartı ver (`⟨sandbox kart no / SKT / CVV⟩`) ya da inceleme
-> hesabında ödeme adımını kapora=0 bir örnek üzerinden gösterilecek şekilde
-> ayarla. Canlı ödeme için `PAYMENT_PROVIDER=IYZICO` + canlı anahtarlar
-> gereklidir (sözleşme sonrası).
+> **Kurucu notu · ödeme modu HERKES İÇİN AYNI (22 Ağu 2026).** Bugün canlı
+> ayar `payment_provider = SIMULATION` + `simulation_counts_as_live = true` +
+> `payment_mode_global = ONLINE_ONLY`. Bu **global** bir sunucu ayarıdır
+> (`resolve_payment_mode`); kullanıcıya, role ya da incelemeciye göre
+> DEĞİŞMEZ — 5.6 açısından kritik olan budur. Gerçek para hareketi yoktur ve
+> bu durum inceleme notunda açıkça yazılır. Canlı ödemeye geçiş
+> `payment_provider = IYZICO` + canlı anahtarlarla olur (sözleşme sonrası) ve
+> yine herkes için aynı anda açılır.
 
 ---
 

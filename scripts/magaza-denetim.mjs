@@ -325,30 +325,23 @@ denetle('Pakete sızmaması gerekenler', () => {
   // Derlenmiş paket varsa içinde ortak şifre aranır: kill-switch unutulsa bile
   // yakalanır.
   //
-  // İNCELEME PAKETİ İSTİSNASI (21 Ağu 2026): `npm run build:inceleme` ile
-  // derlenen pakette demo seçici ve ortak şifre BİLEREK bulunur — mağaza
-  // incelemecisinin Türk numarası yok, telefon kodu ona ulaşmıyor (aynı
-  // istisna derleme bekçisinde de var: vite.config.ts · mobilPaketBekcisi).
-  // Denetim bunu "engel" saymaz ama YÜKSEK SESLE söyler: bu paket yalnız
-  // incelemeye gider, genel yayına bayraksız yeniden derlenir. Ayrım şart:
-  // aksi hâlde her inceleme derlemesinde çıkan kırmızı satır alışkanlık olur
-  // ve GERÇEK bir sızıntı aynı satırın içinde gözden kaçar.
+  // İSTİSNA YOK (22 Ağu 2026 — Apple 5.6): eskiden `build:inceleme` diye bir
+  // inceleme paketi vardı ve demo kimlikleri onda BİLEREK bulunduğu için
+  // denetim bunu uyarıya indiriyordu. O paket söküldü; artık tek paket var.
+  // Demo kimliği ya da demo seçici düğmesi derlenmiş pakette görünürse bu
+  // ENGELDİR — mağazaya giden paket kullanıcının indirdiğiyle aynı olmalı.
   const dist = join(KOK, 'dist/assets');
   if (existsSync(dist)) {
     const js = readdirSync(dist).filter((f) => f.endsWith('.js'));
-    let incelemePaketi = false;
     const sizinti = js.filter((f) => {
       const g = readFileSync(join(dist, f), 'utf8');
-      if (g.includes('DEMO HESABIYLA GİR')) incelemePaketi = true;
-      return g.includes('password123') || /oyuncu\d\d@oyna\.app/.test(g);
+      return g.includes('password123')
+        || /oyuncu\d\d@oyna\.app/.test(g)
+        || g.includes('DEMO HESABIYLA GİR');
     });
-    if (sizinti.length && incelemePaketi) {
-      uyari('İnceleme paketi derlenmiş — demo kimlikleri BİLEREK içeride',
-        'Bu paket YALNIZ mağaza incelemesi içindir. Genel yayına çıkarken '
-        + '`npm run build` (bayraksız) ile yeniden derlenmeli.');
-    } else if (sizinti.length) {
+    if (sizinti.length) {
       engel('Demo kimlikleri pakette',
-        `Derlenmiş dosyalarda demo e-posta/şifre bulundu: ${sizinti.slice(0, 3).join(', ')}`);
+        `Derlenmiş dosyalarda demo e-posta/şifre/seçici bulundu: ${sizinti.slice(0, 3).join(', ')}`);
     } else {
       tamam('Derlenmiş pakette demo kimliği yok');
     }

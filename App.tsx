@@ -27,6 +27,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import SplashScreen from './views/SplashScreen';
 import AuthScreen from './views/AuthScreen';
 import { isOnboardingEnabled, wasOnboardingSkipped } from './views/onboarding/onboardingShared';
+import { numaraAtlandiMi, numarayiAtla, numaraAtlamasiniTemizle } from './shared/numaraKapisi';
 import { recordUserConsents } from './services/consentService';
 
 // Lazy loaded views to reduce initial bundle size
@@ -438,17 +439,28 @@ const App: React.FC = () => {
               // arka-plan yenilemesi onaysız kullanıcıyı panele bounce edemez.
               const providerRole = landingRole === UserRole.GOALKEEPER || landingRole === UserRole.REFEREE;
               const vstatus = (profile.verification_status as string | null) ?? null;
-              // ─── NUMARA KAPISI (17 Ağu 2026 kurucu kararı) ────────────────
-              // Telefon ANA giriş yöntemi olduğu için Google/Apple ile girenden
-              // de numara istenir: tesis sahibi ve kaptan oyuncuya numaradan
-              // ulaşır. Kapı YALNIZ sosyal yollara kurulur —
+              // ─── NUMARA KAPISI ────────────────────────────────────────────
+              // 17 Ağu 2026: telefon ANA giriş yöntemi olduğu için Google/Apple
+              // ile girenden de numara istenir — tesis sahibi ve kaptan oyuncuya
+              // numaradan ulaşır. Kapı YALNIZ sosyal yollara kurulur:
               //   • telefonla girenin numarası zaten doğrulanmıştır,
               //   • 17 Ağu ÖNCESİ e-posta hesapları MUAFTIR (kurucu kararı:
-              //     "onlar kalsınlar, telefon zorunlu tutulmasın") — çalışan bir
-              //     hesabı kilitlemek kabul edilemez.
+              //     "onlar kalsınlar") — çalışan bir hesabı kilitlemek olmaz.
+              //
+              // 22 Ağu 2026 (Apple 5.6 reddi): ekran artık DUVAR DEĞİL. SMS
+              // yalnız +90 numaralara gidiyordu; yurt dışındaki kullanıcı —
+              // mağaza incelemecisi dahil — uygulamayı hiç açamıyordu ve bu,
+              // incelemeye özel bir paket derlenmesine yol açmıştı. Atlayan
+              // kullanıcı bir daha açılışta zorlanmaz; numara ödeme/rezervasyon
+              // anında istenir (PaymentScreen · handlePay).
               const numaraGerekli = (user.provider === 'google' || user.provider === 'apple')
-                && !user.phoneVerified;
+                && !user.phoneVerified
+                && !numaraAtlandiMi(user.uid);
+              // Numarası artık DOĞRULANMIŞSA eski "atladım" işaretini temizle:
+              // ileride numarasını kaldırırsa hatırlatma yeniden çalışsın.
+              if (user.phoneVerified) numaraAtlamasiniTemizle(user.uid);
               if (numaraGerekli) {
+                useAppStore.getState().setPhoneGateReason('LOGIN');
                 resetNavigation('PHONE_LINK');
               } else if (providerRole && (vstatus === 'pending' || vstatus === 'rejected')) {
                 // Tekrar-başvuru akışının doğru rolü hedeflemesi için serviceAppRole'ü kur.
@@ -710,11 +722,37 @@ const App: React.FC = () => {
         />;
       case 'AUTH':
         return <AuthScreen role={role} onSuccess={() => resetNavigation(navigateBasedOnRole(role))} onBack={() => goBack('SPLASH')} />;
-      case 'PHONE_LINK':
-        // Google/Apple ile giren kullanıcının son adımı. Doğrulanınca App'in
-        // auth dinleyicisi yeniden koşar ve doğru panele yönlendirir; burada
-        // elle bir hedef seçmiyoruz (rol-doğru yönlendirmenin tek yeri orası).
-        return <PhoneLinkScreen onLinked={() => resetNavigation(navigateBasedOnRole(role))} />;
+      case 'PHONE_LINK': {
+        // Google/Apple ile girenin numara adımı — ZORUNLU DEĞİL (22 Ağu 2026,
+        // Apple 5.6). İki gerekçeyle açılır ve ikisinde de çıkış yolu var:
+        //   LOGIN   → girişten sonra; "ŞİMDİLİK ATLA" işareti bırakır,
+        //             kullanıcı bir daha açılışta bu ekranı görmez.
+        //   PAYMENT → ödemenin tam ortasında; "VAZGEÇ" işi bırakır ama
+        //             "atladım" işareti YAZMAZ — numara o iş için gerçekten
+        //             gerekiyor, bir dahaki denemede yine sorulur.
+        // Doğrulandığında hedefi burada elle seçmiyoruz: bekleyen niyet varsa
+        // (ödemeden gelindiyse) oraya, yoksa rolün ana ekranına dönülür.
+        const gerekce = useAppStore.getState().phoneGateReason === 'PAYMENT' ? 'odeme' : 'giris';
+        const donusHedefi = () => {
+          const st = useAppStore.getState();
+          const niyet = st.consumePendingIntent();
+          resetNavigation(niyet ? niyet.view : navigateBasedOnRole(st.role));
+        };
+        return (
+          <PhoneLinkScreen
+            gerekce={gerekce}
+            onLinked={donusHedefi}
+            onSkip={() => {
+              const uid = auth.currentUser?.uid;
+              if (gerekce === 'giris' && uid) numarayiAtla(uid);
+              // Vazgeçen kullanıcı yarım kalan işe geri atılmamalı: bekleyen
+              // niyet düşürülür, ana ekrana bırakılır.
+              useAppStore.getState().consumePendingIntent();
+              resetNavigation(navigateBasedOnRole(useAppStore.getState().role));
+            }}
+          />
+        );
+      }
       case 'GUARDIAN_CHILD':
         return <GuardianConsentChild onBack={() => goBack('SETTINGS')} onGoVeliForm={() => navigateTo('GUARDIAN_FORM')} />;
       case 'GUARDIAN_FORM':

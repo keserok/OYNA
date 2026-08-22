@@ -10,27 +10,36 @@ import { useKlavyeOrtusu, klavyeliAltDolgu } from '../components/common/Toast';
 import { AUTH_FIELD_CSS } from './authFieldStyles';
 
 /**
- * NUMARANI BAĞLA — Google/Apple ile girenlerin son adımı
+ * NUMARANI BAĞLA — iki bağlamda açılır, İKİSİNDE DE ÇIKIŞI VAR
  *
- * Kurucu kararı (17 Ağustos 2026): telefon ANA giriş yöntemidir; Google ve
- * Apple ikincil yollardır ve onlarla girenden de numara istenir. Sebep ürünün
- * kendisinde: tesis sahibi rezervasyon sahibine, kaptan kalecisine numaradan
+ * Kurucu kararı (17 Ağustos 2026): telefon ana giriş yöntemidir; sebep ürünün
+ * kendisinde — tesis sahibi rezervasyon sahibine, kaptan kalecisine numaradan
  * ulaşır. Numarası olmayan hesap, maçın ortasında sessiz bir boşluk demektir.
  *
- * KİMDEN İSTENMEZ: eski e-posta hesapları (17 Ağu öncesi kayıtlar). Onlara
- * "numara ver yoksa giremezsin" demek, çalışan bir hesabı kilitlemek olurdu —
- * kurucu kararı gereği muaflar. Kapının ölçüsü App.tsx'te.
+ * ZORUNLULUK KALKTI (22 Ağustos 2026 — Apple 5.6 reddi). Bu ekran atlanamaz
+ * bir duvardı ve SMS yalnız +90 numaralara gidiyor: yurt dışındaki kullanıcı
+ * uygulamayı hiç açamıyordu. Artık iki bağlamı var:
  *
- * ÇIKIŞ YOLU HER ZAMAN AÇIK: kullanıcı vazgeçerse çıkış yapabilir. Kapatılamayan
- * ekran, mağaza incelemesinde de ret sebebidir.
+ *   • gerekce="giris"  → girişten hemen sonra. ATLANABİLİR; "ŞİMDİLİK ATLA"
+ *     kullanıcıyı uygulamaya bırakır ve bir daha açılışta zorlanmaz.
+ *   • gerekce="odeme"  → para ödenen / tesise taahhüt veren işin tam
+ *     ortasında. Burada numara GEREKLİ — ama ekran yine kapatılabilir:
+ *     "VAZGEÇ" işi bırakıp kullanıcıyı geri götürür, kilitlemez.
+ *
+ * KİMDEN HİÇ İSTENMEZ: eski e-posta hesapları (17 Ağu öncesi kayıtlar).
+ * Kapının ölçüsü App.tsx'te (numaraGerekli).
  */
 
 interface PhoneLinkScreenProps {
   /** Numara doğrulandı — App yönlendirmeyi devralır. */
   onLinked: () => void;
+  /** Kullanıcı bu adımı geçti (atladı ya da vazgeçti) — App yönlendirir. */
+  onSkip: () => void;
+  /** Ekran neden açıldı? Metni ve atlama düğmesinin anlamını belirler. */
+  gerekce?: 'giris' | 'odeme';
 }
 
-const PhoneLinkScreen: React.FC<PhoneLinkScreenProps> = ({ onLinked }) => {
+const PhoneLinkScreen: React.FC<PhoneLinkScreenProps> = ({ onLinked, onSkip, gerekce = 'giris' }) => {
   const [dial, setDial] = useState(DEFAULT_DIAL_CODE);
   const [phone, setPhone] = useState('');
   const [otp, setOtp] = useState('');
@@ -42,6 +51,7 @@ const PhoneLinkScreen: React.FC<PhoneLinkScreenProps> = ({ onLinked }) => {
 
   const check = checkPhone(phone, dial);
   const kanalKapali = !!dial && !canSendOtpTo(dial);
+  const odemeIcin = gerekce === 'odeme';
 
   useEffect(() => {
     if (resendIn <= 0) return;
@@ -115,12 +125,19 @@ const PhoneLinkScreen: React.FC<PhoneLinkScreenProps> = ({ onLinked }) => {
         </div>
 
         <h1 style={{ margin: 0, fontSize: 30, lineHeight: 1.12, fontWeight: 800, letterSpacing: '-.035em', color: '#fff' }}>
-          {stage === 'phone' ? 'Son bir adım' : 'Numaranı doğrula'}
+          {stage === 'code'
+            ? 'Numaranı doğrula'
+            : (odemeIcin ? 'Numaran gerekiyor' : 'Numaranı ekle')}
         </h1>
         <p style={{ margin: '10px 0 26px', fontSize: 14, lineHeight: 1.55, fontWeight: 500, color: '#8B949E' }}>
-          {stage === 'phone'
-            ? 'Maç günü tesis ve kaptan sana bu numaradan ulaşacak. Bir kez doğrula, bir daha sorulmasın.'
-            : `${formatPhoneDisplay(check.e164)} numarasına gönderdiğimiz 6 haneli kodu gir.`}
+          {stage === 'code'
+            ? `${formatPhoneDisplay(check.e164)} numarasına gönderdiğimiz 6 haneli kodu gir.`
+            : (odemeIcin
+              // Tam ihtiyaç anı: gerekçe SOMUT, o yüzden burada isteniyor.
+              ? 'Yerini ayırmadan önce numaranı doğrulamamız gerekiyor: maç günü tesis ve kaptan sana bu numaradan ulaşacak.'
+              // Girişte: isteğe bağlı olduğu AÇIKÇA yazılır — kapalı bir kapı
+              // gibi görünmesin, kullanıcı atlayabileceğini bilsin.
+              : 'Maç günü tesis ve kaptan sana bu numaradan ulaşacak. İstersen şimdi ekle, istersen sonra — yerini ayırırken yeniden soracağız.')}
         </p>
 
         {stage === 'phone' ? (
@@ -225,8 +242,21 @@ const PhoneLinkScreen: React.FC<PhoneLinkScreenProps> = ({ onLinked }) => {
               NUMARAYI DEĞİŞTİR
             </button>
           ) : (
-            // Kapatılamayan ekran bırakma: vazgeçen kullanıcı çıkış yapabilmeli.
-            <button type="button" className="au-ghost" onClick={() => { void logout(); }} disabled={busy}>
+            // ÇIKIŞ HER İKİ BAĞLAMDA DA VAR (22 Ağu 2026). Kapatılamayan ekran
+            // hem kullanıcıyı hapseder hem mağaza reddi sebebidir; eskiden tek
+            // çıkış "ÇIKIŞ YAP"tı, yani uygulamadan atılmaktı.
+            <button type="button" className="au-ghost" onClick={onSkip} disabled={busy}>
+              {odemeIcin ? 'VAZGEÇ' : 'ŞİMDİLİK ATLA'}
+            </button>
+          )}
+          {stage === 'phone' && !odemeIcin && (
+            <button
+              type="button"
+              className="au-link"
+              onClick={() => { void logout(); }}
+              disabled={busy}
+              style={{ fontSize: 11, fontWeight: 800, color: '#59636e', letterSpacing: '.06em' }}
+            >
               ÇIKIŞ YAP
             </button>
           )}

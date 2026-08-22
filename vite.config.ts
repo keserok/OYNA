@@ -66,27 +66,19 @@ function mobilPaketBekcisi(): Plugin {
       const env = loadEnv(mode, process.cwd(), '');
       const hatalar: string[] = [];
 
-      // İNCELEME PAKETİ İSTİSNASI (19 Ağu 2026 — kurucu kararı):
-      // Mağaza incelemecisinin Türk numarası yok, telefon kodu ona ulaşmıyor.
-      // `VITE_MAGAZA_INCELEME=true` ile derlenen paket demo seçiciyi taşır.
-      // Bekçi bu paketi ENGELLEMEZ ama YÜKSEK SESLE uyarır: bu paket yayına
-      // gitmemeli. Uyarı derlemeyi durdurmaz çünkü niyet açıkça beyan edilmiş.
-      const incelemePaketi = env.VITE_MAGAZA_INCELEME === 'true';
-
-      if (env.VITE_DEMO_ACCOUNTS === 'true' && !incelemePaketi) {
+      // İSTİSNA YOK (22 Ağu 2026 — Apple 5.6 reddinden sonraki kurucu kararı):
+      // Mağazaya giden paket ile kullanıcının indirdiği paket AYNI olmak
+      // zorunda. Eskiden `VITE_MAGAZA_INCELEME=true` diye bir inceleme paketi
+      // vardı; incelemeciye özel demo seçici taşıyordu ve Apple bunu "inceleme
+      // sırasında gizlenmiş özellik" sayıp uygulamayı reddetti. O bayrak
+      // tamamen söküldü. Demo kataloğu artık mobil pakete HİÇBİR koşulda
+      // giremez — bayrak açıksa derleme DURUR.
+      if (env.VITE_DEMO_ACCOUNTS === 'true') {
         hatalar.push(
           'VITE_DEMO_ACCOUNTS=true — demo hesap kataloğu ve ortak şifre pakete girer. ' +
           '.env dosyasında false yap (ya da satırı sil). ' +
-          'İnceleme paketi derliyorsan VITE_MAGAZA_INCELEME=true yaz.',
-        );
-      }
-
-      if (incelemePaketi) {
-        console.warn(
-          '\n  ⚠  İNCELEME PAKETİ DERLENİYOR\n' +
-          '     Demo hesap seçici bu pakette AÇIK ve ortak şifre içeride.\n' +
-          '     Bu paket YALNIZ mağaza incelemesi içindir; genel yayına\n' +
-          '     VITE_MAGAZA_INCELEME olmadan yeniden derleyip gönder.\n',
+          'Mağaza incelemesi için ayrı paket YOK: incelemeci de kullanıcıyla ' +
+          'aynı paketi görür (Apple 5.6).',
         );
       }
 

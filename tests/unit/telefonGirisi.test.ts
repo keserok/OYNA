@@ -149,6 +149,78 @@ describe('telefon ana yol, Google/Apple ikincil', () => {
   function authService() { return oku('supabaseAuth.ts'); }
 });
 
+// ═══════════════════════════════════════════════════════════════════════════
+// NUMARA ADIMI DUVAR DEĞİL (22 Ağustos 2026 — Apple 5.6 reddi)
+//
+// Ekran atlanamıyordu ve SMS yalnız +90 numaralara gidiyor: yurt dışındaki
+// kullanıcı — mağaza incelemecisi dahil — uygulamayı hiç açamıyordu. Çözüm
+// diye incelemeye özel bir paket derlenmişti; Apple onu "inceleme sırasında
+// gizlenmiş özellik" sayıp reddetti. Doğru çözüm burada: engel HERKES için
+// kalkar, numara yalnız gerçekten gerektiği anda istenir.
+//
+// Bu blok o çözümü koruyor. Kırılırsa aynı ret kapıda demektir.
+// ═══════════════════════════════════════════════════════════════════════════
+describe('numara adımı atlanabilir, ihtiyaç anında istenir', () => {
+  const app = () => oku('App.tsx');
+  const ekran = () => oku('views/PhoneLinkScreen.tsx');
+
+  it('açılış kapısı "atladım" işaretine bakıyor', () => {
+    const a = app();
+    const kapi = a.slice(a.indexOf('const numaraGerekli'), a.indexOf('if (numaraGerekli)'));
+    expect(kapi).toContain('!numaraAtlandiMi(user.uid)');
+  });
+
+  it('numara doğrulanmışsa "atladım" işareti temizleniyor', () => {
+    // Kullanıcı ileride numarasını kaldırırsa açılış hatırlatması yeniden
+    // çalışmalı; işaret ölümsüz kalırsa bir daha hiç sorulmaz.
+    expect(app()).toContain('if (user.phoneVerified) numaraAtlamasiniTemizle(user.uid);');
+  });
+
+  it('ekranın çıkış yolu var ve atlama işareti YALNIZ girişte yazılıyor', () => {
+    const a = app();
+    expect(a).toContain('onSkip=');
+    // Ödeme ortasında "atladım" yazılsaydı numara bir daha hiç istenmezdi.
+    expect(a).toContain("if (gerekce === 'giris' && uid) numarayiAtla(uid);");
+  });
+
+  it('ekran iki bağlamı ayırıyor ve ikisinde de kapanabiliyor', () => {
+    const e = ekran();
+    expect(e).toContain("gerekce = 'giris'");
+    expect(e).toContain("const odemeIcin = gerekce === 'odeme'");
+    // Alt düğme her iki bağlamda da ÇIKIŞ verir; eskiden tek yol "ÇIKIŞ YAP",
+    // yani uygulamadan atılmaktı.
+    expect(e).toContain("{odemeIcin ? 'VAZGEÇ' : 'ŞİMDİLİK ATLA'}");
+    expect(e).toContain('onClick={onSkip}');
+  });
+
+  it('girişteki metin adımın isteğe bağlı olduğunu SÖYLÜYOR', () => {
+    // Yazmazsak kullanıcı yine kapalı kapı sanır ve çıkışı denemez.
+    expect(ekran()).toContain('İstersen şimdi ekle, istersen sonra');
+  });
+
+  it('ödeme numarasız yapılamıyor — kapı tam ihtiyaç anında', () => {
+    const p = oku('views/PaymentScreen.tsx');
+    const g = p.slice(p.indexOf('const handlePay'), p.indexOf('idemKeyRef.current = safeUuid()'));
+    expect(g).toContain('!auth.currentUser.phoneVerified');
+    expect(g).toContain("st.setPhoneGateReason('PAYMENT')");
+    // Ödeme BIRAKILMAZ, ertelenir: numara doğrulanınca kullanıcı geri döner.
+    expect(g).toContain("st.setPendingIntent('PAYMENT')");
+    expect(g).toContain("st.navigateTo('PHONE_LINK')");
+  });
+
+  it('atlama işareti kullanıcı bazlı ve depolamasız ortamda çökmüyor', async () => {
+    const { numarayiAtla, numaraAtlandiMi, numaraAtlamasiniTemizle } =
+      await import('../../shared/numaraKapisi');
+    expect(numaraAtlandiMi('u1')).toBe(false);
+    numarayiAtla('u1');
+    expect(numaraAtlandiMi('u1')).toBe(true);
+    // Başka kullanıcı etkilenmez — ortak cihazda biri diğerinin kapısını açamaz.
+    expect(numaraAtlandiMi('u2')).toBe(false);
+    numaraAtlamasiniTemizle('u1');
+    expect(numaraAtlandiMi('u1')).toBe(false);
+  });
+});
+
 describe('SMS ucu güvenliği', () => {
   const f = oku('supabase/functions/send-sms/index.ts');
 

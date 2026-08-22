@@ -5,7 +5,6 @@ import { UserRole } from '../types';
 import {
   loginWithGoogle, loginWithApple, sendPhoneOtp, verifyPhoneOtp, demoLogin,
   isDemoLoginEnabled, isDemoLoginInput, isDemoAccountPickerEnabled, loginDemoAccount,
-  isIncelemePaketi,
   oauthDonusunuOku,
 } from '../supabaseAuth';
 import { DEMO_ACCOUNT_GROUPS } from '../data/demoAccounts';
@@ -187,7 +186,18 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
   // Dev/demo modunda numara alanına demo hesabın kısa adı ("mirackerem")
   // yazılabilir; prod pakette bu yol kapalıdır (isDemoLoginEnabled).
   const demoMode = isDemoLoginEnabled();
-  const showDemoPicker = isDemoAccountPickerEnabled() && DEMO_ACCOUNT_GROUPS.length > 0;
+  // DERLEME ZAMANI KAPISI (22 Ağu 2026 — Apple 5.6).
+  // `isDemoAccountPickerEnabled()` bir FONKSİYON çağrısıdır; paketleyici onu
+  // katlayamaz ve seçicinin tüm arayüzü — "DEMO HESABIYLA GİR" yazısı dahil —
+  // ölü kod olarak yayın paketine giriyordu. Bir incelemeci paketi açtığında
+  // orada duran bu düğme, 5.6'da "gizlenmiş özellik" iddiasını haklı çıkarır.
+  // `import.meta.env.X` ise derlemede HARFİ HARFİNE değere çevrilir; aşağıdaki
+  // karşılaştırma yayın paketinde `false` sabitine düşer ve Rollup blokla
+  // birlikte katalogu da atar. Ölçüsü: `npm run magaza:denetim` artık pakette
+  // "DEMO HESABIYLA GİR" görürse ENGEL veriyor.
+  const DEMO_SECICI_DERLENSIN = import.meta.env.VITE_DEMO_ACCOUNTS === 'true';
+  const showDemoPicker = DEMO_SECICI_DERLENSIN
+    && isDemoAccountPickerEnabled() && DEMO_ACCOUNT_GROUPS.length > 0;
   const phoneCheck = checkPhone(phone, dial);
   const demoInput = demoMode && isDemoLoginInput(phone);
   const contactValid = phoneCheck.valid || demoInput;
@@ -208,24 +218,6 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
     // Numara E.164'e çevrilmiş hâlde gider (+905321234567). Doğrulama kuralı
     // shared/phone.ts'te; sunucudaki ikizi de aynı biçimi bekler.
     await sendPhoneOtp(phoneCheck.e164!);
-  };
-
-  // ─── İnceleme paketinde çıkmaz uç YOK: kod gitmezse DEMO yolu gösterilir ───
-  // İncelemecinin ilk refleksi numara yazıp KOD GÖNDER'e basmak. Telefon
-  // sağlayıcısı inceleme döneminde KAPALI (kurucu kararı, 20 Ağu 2026); o an
-  // yalnız Türkçe bir "Google/Apple ile gir" mesajı, çalışması garantili tek
-  // yolu (alttaki demo seçici) hiç göstermiyordu — üstteki yönerge kutusunu
-  // okumayan incelemeci için hâlâ ret riskiydi. Yalnız inceleme paketinde:
-  // iki dilli yönlendirme yazılır ve seçici KENDİLİĞİNDEN açılır ki incelemeci
-  // hesap listesiyle burun buruna gelsin. Normal pakette davranış değişmez.
-  const incelemeOtpCikmaziniYonet = (): boolean => {
-    if (!(isIncelemePaketi() && showDemoPicker)) return false;
-    setDemoPickerOpen(true);
-    setError(
-      'Phone sign-in is unavailable in this review build — use “DEMO HESABIYLA GİR” below. · '
-      + 'Bu pakette telefonla giriş kapalı; alttaki “DEMO HESABIYLA GİR” listesinden bir hesaba dokun.',
-    );
-    return true;
   };
 
   const handleSendOtp = async () => {
@@ -252,10 +244,9 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
       return;
     }
     // Yurt dışı numara: WhatsApp kanalı açılana dek kod gönderilemiyor.
-    // Ölü uç bırakma — ne yapabileceğini söyle. (İncelemeci +1 gibi bir kodla
-    // denerse aynı çıkmaz: inceleme paketinde demo yoluna yönlendirilir.)
+    // Ölü uç bırakma — ne yapabileceğini söyle: Google/Apple ile giren
+    // kullanıcı numarasız da uygulamayı gezebilir (telefon adımı atlanabilir).
     if (kanalKapali) {
-      if (incelemeOtpCikmaziniYonet()) return;
       setError('Şu an yalnız Türkiye numaralarına kod gönderebiliyoruz. Google veya Apple ile devam edebilirsin.');
       return;
     }
@@ -267,11 +258,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
       setResendIn(60);
     } catch (err: any) {
       console.error('OTP gönderim hatası:', err);
-      // İnceleme paketinde HER gönderim hatası aynı kapıya çıkar: incelemecinin
-      // Türk numarası yok, kod ona hiçbir durumda ulaşmayacak — doğru yol demo.
-      if (!incelemeOtpCikmaziniYonet()) {
-        setError(mapAuthError(err, 'Doğrulama kodu gönderilemedi. Lütfen tekrar deneyin.'));
-      }
+      setError(mapAuthError(err, 'Doğrulama kodu gönderilemedi. Lütfen tekrar deneyin.'));
     } finally {
       setIsLoading(null);
     }
@@ -773,37 +760,14 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
                   Çıkış yapana kadar oturumun bu cihazda açık kalır.
                 </p>
 
-                {/* ─── Mağaza incelemecisine yönerge ───────────────────────
-                    YALNIZ inceleme paketinde görünür. İncelemecinin Türk
-                    numarası yok; kod ona ulaşmıyor. Bu not olmasaydı demo
-                    düğmesini fark etmeyip uygulamayı "çalışmıyor" diye
-                    reddedebilirdi — gönderimin en olası ret sebebi buydu.
-                    İki dilde: incelemecinin Türkçe okuduğunu varsayamayız. */}
-                {isIncelemePaketi() && showDemoPicker && (
-                  <div
-                    style={{
-                      marginTop: 16, padding: '12px 14px', borderRadius: 14,
-                      border: '1px solid rgba(250,204,21,.28)',
-                      background: 'rgba(250,204,21,.07)',
-                    }}
-                  >
-                    <p style={{ margin: 0, fontSize: 11, fontWeight: 800, letterSpacing: '.06em', color: '#FACC15' }}>
-                      APP REVIEW · İNCELEME
-                    </p>
-                    <p style={{ margin: '6px 0 0', fontSize: 11.5, lineHeight: 1.55, color: 'rgba(255,255,255,.82)' }}>
-                      SMS codes are sent to Turkish numbers only. To review the app,
-                      tick the consent box below and use <b>“DEMO HESABIYLA GİR”</b> —
-                      it opens player, goalkeeper, referee and facility accounts.
-                    </p>
-                    <p style={{ margin: '6px 0 0', fontSize: 11.5, lineHeight: 1.55, color: 'rgba(255,255,255,.6)' }}>
-                      Kod yalnız Türkiye numaralarına gider. İncelemek için onay kutusunu
-                      işaretleyip “DEMO HESABIYLA GİR”i kullan.
-                    </p>
-                  </div>
-                )}
-
-                {/* ─── Demo hesap seçici — GEÇİCİ (sonra kaldırılacak) ─── */}
-                {showDemoPicker && (
+                {/* ─── Demo hesap seçici — YALNIZ GELİŞTİRME ─────────────
+                    `VITE_DEMO_ACCOUNTS=true` ile derlenen yerel/önizleme
+                    paketinde açılır; mağazaya giden pakette bu blok DERLEMEYE
+                    HİÇ GİRMEZ (isDemoAccountPickerEnabled native'de daima
+                    false, bayrak yoksa parola boş). İncelemeciye özel paket
+                    YOK: gönderilen paket ile kullanıcının indirdiği paket
+                    aynıdır (Apple 5.6, 22 Ağu 2026). */}
+                {DEMO_SECICI_DERLENSIN && showDemoPicker && (
                   <div style={{ marginTop: 16 }}>
                     <button
                       type="button"

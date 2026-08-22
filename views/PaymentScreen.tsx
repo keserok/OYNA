@@ -521,6 +521,24 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
       payBusyRef.current = false;
       return;
     }
+    // ─── NUMARA KAPISI · TAM İHTİYAÇ ANI (22 Ağu 2026 — Apple 5.6) ────────
+    // Numara adımı girişte artık atlanabiliyor (App.tsx · numaraGerekli);
+    // eski hâli atlanamaz bir duvardı ve SMS yalnız +90'a gittiği için yurt
+    // dışındaki kullanıcı uygulamayı hiç açamıyordu. Karşılığı burada: para
+    // ödenen / tesise taahhüt veren iş numarasız yapılamaz — maç günü tesis
+    // ve kaptan bu numaradan ulaşacak. Gerekçe burada SOMUT olduğu için
+    // kullanıcı ne için istendiğini görerek verir.
+    //
+    // Ödeme bırakılmaz, ERTELENİR: bekleyen niyet ödeme ekranını işaretler,
+    // numara doğrulanınca kullanıcı buraya geri döner.
+    if (!auth.currentUser.phoneVerified) {
+      payBusyRef.current = false;
+      const st = useAppStore.getState();
+      st.setPhoneGateReason('PAYMENT');
+      st.setPendingIntent('PAYMENT');
+      st.navigateTo('PHONE_LINK');
+      return;
+    }
     // Reşit olmayan ödeme kapısı (UX katmanı): sunucudaki trigger da bunu
     // engelliyor, ancak kullanıcıyı ham hata yerine veli onayı ekranına
     // yönlendirelim. Durum alınamazsa sunucu kapısına güveniriz.

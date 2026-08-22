@@ -47,9 +47,6 @@ vi.mock('../../supabaseAuth', () => ({
   // Sağlayıcı dönüşü okuyucusu (19 Ağu 2026): ekran İLK render'da bunu çağırır.
   // Bu testte OAuth dönüşü yok → null; klavye ölçümleri etkilenmez.
   oauthDonusunuOku: () => null,
-  // İnceleme paketi bayrağı (19 Ağu 2026): bu testte normal paket varsayılır →
-  // incelemeci yönergesi render edilmez, klavye ölçümleri etkilenmez.
-  isIncelemePaketi: () => false,
 }));
 vi.mock('../../store', () => ({
   useAppStore: {

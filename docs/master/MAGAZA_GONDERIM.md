@@ -62,22 +62,26 @@
 ### Her iki mağaza
 1. **Gizlilik politikası + kullanım şartları PUBLIC URL** (mağaza formları ister).
    Uygulama içi metinler hazır; yayınlanmış bir adres gerekiyor.
-2. **İncelemeci girişi** *(GÜNCELLENDİ, 20 Ağu 2026)*: ayrı hesap VERİLMEZ.
-   İnceleme paketi (`npm run sync:ios:inceleme` / `sync:android:inceleme`,
-   bayrak `VITE_MAGAZA_INCELEME=true`) giriş ekranının altına **"DEMO
-   HESABIYLA GİR"** seçicisini koyar; incelemeci 29 demo hesaptan birine tek
-   dokunuşla girer (yönerge kutusu ekranda, İngilizce + Türkçe). Konsola
-   yazılacak hazır İngilizce not: `docs/master/APP_REVIEW_NOTLARI.md §1`.
-   Genel yayın paketi bayraksız derlenir; seçici o pakette hiç yoktur.
+2. **İncelemeci girişi** *(YENİDEN YAZILDI, 22 Ağu 2026 — Apple 5.6 reddi)*:
+   ayrı paket derleme YOK. `VITE_MAGAZA_INCELEME` bayrağı ve incelemeciye özel
+   "DEMO HESABIYLA GİR" düğmesi tamamen söküldü; Apple bunu "inceleme sırasında
+   gizlenmiş özellik" sayıp reddetti. **Gönderilen paket = kullanıcının
+   indirdiği paket.**
+   İncelemeci girişi artık Apple'ın kendi istediği yerden verilir:
+   App Store Connect → App Review Information → **Sign-In Information**
+   (kullanıcı adı = `+90 500 000 00 02`, parola = Supabase'te tanımlı sabit
+   test kodu). Numara adımı zaten herkes için atlanabilir olduğundan
+   incelemeci Apple ile girip uygulamayı hesapsız da gezebilir.
+   Konsola yazılacak hazır İngilizce not: `docs/master/APP_REVIEW_NOTLARI.md §1`.
 3. **Ekran görüntüleri** (telefon boyutları) ve mağaza metinleri.
 4. **Yaş derecelendirmesi** formu (uygulamada reşit olmayan akışı + veli onayı var).
 
 ### App Store'a özel
 5. **App Review notu** (öneri metni):
-   > OYNA, halı saha rezervasyonu ve maç organizasyonu uygulamasıdır. Uygulama
-   > içi ödemeler **fiziksel hizmet** bedelidir (saha kiralama kaporası, maç
-   > katılım payı); dijital ürün veya abonelik satışı yoktur — Kural 3.1.5(a).
-   > Ödeme altyapısı iyzico'dur.
+   > OYNA, futbol maçı organizasyonu ve saha rezervasyonu uygulamasıdır.
+   > Uygulama içi ödemeler **fiziksel hizmet** bedelidir (saha kullanım
+   > kaporası, maça katılım payı); dijital ürün veya abonelik satışı yoktur —
+   > Kural 3.1.5(a). Ödeme altyapısı iyzico'dur.
 6. **Gizlilik etiketleri**: `PrivacyInfo.xcprivacy` içindeki **14 veri türüyle**
    birebir doldurulmalı (dosya kaynak olarak kullanılabilir).
    Sayı 17 Ağu'da 12'ye çıktı: **kesin konum** ve **cihaz kimliği** eklendi.
@@ -93,7 +97,8 @@
     olduğunu hiçbir yerde söylemez. Firebase Console → `com.oyna.app` →
     `google-services.json` indir → `android/app/` altına koy (ya da CI'da
     `GOOGLE_SERVICES_JSON` gizli değişkenine yapıştır) → paketi **yeniden** üret.
-    Bildirim, halı saha uygulamasında kullanıcıyı geri getiren ana mekanizmadır.
+    Bildirim, maç organizasyonu uygulamasında kullanıcıyı geri getiren ana
+    mekanizmadır.
 
 8. **Veri güvenliği (Data Safety) formu** — `PrivacyInfo.xcprivacy` içindeki
    **14 veri türü** ile birebir. Dikkat: **Kişiler (rehber)**, **kesin konum**

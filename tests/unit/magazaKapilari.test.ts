@@ -53,54 +53,49 @@ describe('Mağaza kapıları · demo girişi', () => {
   });
 
   /**
-   * KARAR DEĞİŞTİ (19 Ağustos 2026 — kurucu kararı).
+   * KARAR GERİ ALINDI (22 Ağustos 2026 — Apple 5.6 reddinden sonra).
    *
-   * Seçici artık native'de KOŞULSUZ kapalı değil: mağaza inceleme paketinde
-   * AÇIK. Sebebi somut — incelemecinin Türk numarası yok, telefon kodu ona
-   * ulaşmıyor ve uygulamayı hiç açamıyor; bu, gönderimin en olası ret sebebi.
+   * 19 Ağustos'ta seçici, native'de "mağaza inceleme paketi" bayrağıyla
+   * (`VITE_MAGAZA_INCELEME`) açılabilir hâle getirilmişti: incelemecinin Türk
+   * numarası yok, SMS kodu ona ulaşmıyordu. Apple bu paketi 5.6 (Developer
+   * Code of Conduct) altında REDDETTİ — "app contains features that appear to
+   * have been intentionally hidden during the review process". Haklıydı:
+   * incelemecinin gördüğü paket kullanıcının indirdiğinden farklıydı.
    *
-   * Kilit ARTIK ŞUNU KORUYOR: kapı yalnız AYRI ve AÇIKÇA yazılmış bir bayrakla
-   * (`VITE_MAGAZA_INCELEME`) açılabilir. Geliştirme bayrağı `VITE_DEMO_ACCOUNTS`
-   * tek başına native'de seçiciyi AÇAMAZ — yoksa bir .env unutması paketi
-   * demo kimlikleriyle yayına gönderirdi.
+   * Kilit ARTIK ŞUNU KORUYOR: native pakette seçici KOŞULSUZ kapalı, hiçbir
+   * bayrak açamaz. Gerçek çözüm ürün tarafında — telefon adımı herkes için
+   * atlanabilir (App.tsx · numaraGerekli), incelemeci de normal kullanıcı
+   * gibi Apple ile girip uygulamayı gezer.
    */
-  it('demo hesap seçici native pakette YALNIZ inceleme bayrağıyla açılır', () => {
+  it('demo hesap seçici native pakette KOŞULSUZ kapalı', () => {
     const g = govde('isDemoAccountPickerEnabled');
-    expect(g).toContain('Capacitor.isNativePlatform()');
-    expect(g).toContain('INCELEME_PAKETI');
-
-    // BİÇİM DEĞİL DAVRANIŞ (20 Ağu 2026): bu kilit eskiden tek bir satırın
-    // yazılışını (`isNativePlatform() && !INCELEME_PAKETI`) ezberliyordu. O
-    // yazılışta kapı, inceleme bayrağından SONRA bir de
-    // `VITE_DEMO_ACCOUNTS !== 'false'` arıyordu; mağaza denetimi ise .env'de
-    // `VITE_DEMO_ACCOUNTS=false` olmasını ZORUNLU tutuyor. Sonuç: inceleme
-    // paketi derlense bile seçici KAPALI kalıyordu ve kimse bunu görmüyordu.
-    // Kilit artık üç değişmezi koruyor, satırın şeklini değil:
-    const incelemeIdx = g.indexOf('INCELEME_PAKETI');
-    const nativeIdx = g.indexOf('isNativePlatform');
-
-    // 1) İnceleme bayrağı TEK BAŞINA yeter — seçiciyi açar.
-    expect(g).toMatch(/if\s*\(\s*INCELEME_PAKETI\s*\)\s*return true/);
-    // 2) Karar sırası: inceleme kapısı native kapısından ÖNCE gelir.
-    expect(incelemeIdx).toBeLessThan(nativeIdx);
-    // 3) Bayrak yoksa native pakette seçici KOŞULSUZ kapalıdır — bir .env
-    //    unutması paketi demo kimlikleriyle yayına gönderemez.
+    // 1) Native kapısı KOŞULSUZ: hiçbir bayrak onu geçemez.
     expect(g).toMatch(/if\s*\(\s*Capacitor\.isNativePlatform\(\)\s*\)\s*return false/);
+    // 2) Native kapısından ÖNCE `return true` üreten hiçbir yol olamaz —
+    //    19 Ağu'daki hata tam buydu (inceleme bayrağı native'den önce geliyordu).
+    const nativeIdx = g.indexOf('isNativePlatform');
+    expect(g.slice(0, nativeIdx)).not.toMatch(/return true/);
+    // 3) Geriye kalan tek kapı GELİŞTİRME bayrağı — web önizlemesi için.
+    expect(g).toContain("import.meta.env.VITE_DEMO_ACCOUNTS === 'true'");
   });
 
-  it('inceleme bayrağı ayrı — geliştirme bayrağı tek başına native\'de açamaz', () => {
-    expect(s).toContain("import.meta.env.VITE_MAGAZA_INCELEME === 'true'");
-    // Bayrak adı GELİŞTİRME bayrağından farklı olmalı; aynısı olsaydı mobil
-    // paket bekçisinin engeli anlamsızlaşırdı.
-    expect(s).not.toMatch(/INCELEME_PAKETI\s*=\s*import\.meta\.env\.VITE_DEMO_ACCOUNTS/);
+  it('inceleme paketi bayrağı hiçbir yerde OKUNMUYOR (5.6)', () => {
+    // Bayrak adı YORUMDA geçebilir — "bir daha yapma" kaydı değerli; kilidin
+    // koruduğu şey bayrağın OKUNMASI. `import.meta.env.X` / `env.X` biçimleri
+    // derlemede değere dönüşen tek biçimler.
+    for (const yol of ['supabaseAuth.ts', 'views/AuthScreen.tsx', 'vite.config.ts',
+                       'data/demoAccounts.ts', 'package.json', 'vercel.json']) {
+      expect(oku(yol), `${yol} inceleme bayrağını okuyor`)
+        .not.toMatch(/(import\.meta\.)?env\.VITE_MAGAZA_INCELEME/);
+    }
+    expect(s).not.toContain('isIncelemePaketi');
   });
 
-  it('mobil paket bekçisi inceleme paketini AYIRT EDİYOR', () => {
+  it('mobil paket bekçisi demo kataloğunu İSTİSNASIZ engeller', () => {
     const v = oku('vite.config.ts');
-    // Normal derlemede demo kataloğu hâlâ ENGEL; yalnız beyan edilmiş inceleme
-    // paketinde geçiyor ve o zaman da yüksek sesle uyarıyor.
-    expect(v).toContain("env.VITE_DEMO_ACCOUNTS === 'true' && !incelemePaketi");
-    expect(v).toContain('İNCELEME PAKETİ DERLENİYOR');
+    // İstisna yok: bayrak açıksa mobil derleme DURUR.
+    expect(v).toMatch(/if\s*\(env\.VITE_DEMO_ACCOUNTS === 'true'\)\s*\{\s*\n\s*hatalar\.push/);
+    expect(v).not.toContain('incelemePaketi');
   });
 
   it('demo girişi yalnız @oyna.app hesaplarını kabul eder (ikinci emniyet)', () => {
@@ -239,11 +234,11 @@ describe('Mağaza kapıları · demo kimlikleri pakette değil', () => {
 
   it('ortak şifre sabiti NORMAL üretim paketinde BOŞ', () => {
     const s = oku('supabaseAuth.ts');
-    // Şifre iki bayraktan BİRİ açıkken doluyor: geliştirme (VITE_DEMO_ACCOUNTS)
-    // ya da mağaza inceleme paketi (VITE_MAGAZA_INCELEME). İkisi de yoksa BOŞ —
-    // yani normal yayın paketinde gömülü şifre yok.
+    // Şifreyi dolduran TEK bayrak kaldı: geliştirme (VITE_DEMO_ACCOUNTS).
+    // Mağaza inceleme bayrağı 22 Ağu 2026'da söküldü (Apple 5.6) — yayın
+    // paketinde de, incelemeye giden pakette de gömülü şifre YOK.
     expect(s).toMatch(
-      /const DEMO_PASSWORD =\s*\n?\s*\(import\.meta\.env\.VITE_DEMO_ACCOUNTS === 'true' \|\| import\.meta\.env\.VITE_MAGAZA_INCELEME === 'true'\)/,
+      /const DEMO_PASSWORD =\s*\n?\s*import\.meta\.env\.VITE_DEMO_ACCOUNTS === 'true'/,
     );
     expect(s).toContain("? 'password123' : '';");
     // Ayrıştırıcıdaki yedek sabit de kaldırıldı.
@@ -546,58 +541,58 @@ describe('Mağaza gönderim denetimi betiği', () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
-// İNCELEMECİYE YÖNERGE (19 Ağustos 2026)
+// İNCELEMECİYE ÖZEL YOL YOK (22 Ağustos 2026 — Apple 5.6 reddi)
 //
-// İncelemecinin Türk numarası yok; SMS kodu ona ulaşmıyor. Ekranda yalnız
-// "numaranı gir" yazsaydı demo düğmesini fark etmeyip uygulamayı "çalışmıyor"
-// diye reddedebilirdi — gönderimin en olası ret sebebi buydu.
+// 19 Ağustos'ta giriş ekranına yalnız inceleme paketinde görünen iki dilli bir
+// "APP REVIEW" afişi ve OTP çıkmazını demo seçiciye çeviren bir kapı konmuştu.
+// Apple bunu 5.6 altında reddetti: "features that appear to have been
+// intentionally hidden during the review process". Mağazaya giden paket ile
+// kullanıcının indirdiği paket AYNI olmak zorunda.
+//
+// Bu blok o makinenin geri gelmesini engeller. Gerçek çözüm ürün tarafında:
+// telefon adımı herkes için atlanabilir (App.tsx · numaraGerekli), böylece
+// Türk numarası olmayan incelemeci de Apple ile girip uygulamayı gezebilir.
 // ═══════════════════════════════════════════════════════════════════════════
-describe('Mağaza incelemecisine yönerge', () => {
+describe('İncelemeciye özel yol YOK (Apple 5.6)', () => {
   const ekran = () => oku('views/AuthScreen.tsx');
 
-  it('yönerge YALNIZ inceleme paketinde render ediliyor', () => {
+  it('giriş ekranında incelemeciye özel afiş yok', () => {
     const s = ekran();
-    expect(s).toContain('isIncelemePaketi() && showDemoPicker');
+    expect(s).not.toContain('APP REVIEW');
+    expect(s).not.toContain('SMS codes are sent to Turkish numbers only');
+    expect(s).not.toContain('isIncelemePaketi');
   });
 
-  it('İngilizce yazıyor — incelemecinin Türkçe okuduğu varsayılamaz', () => {
+  it('OTP hatası incelemeciyi demo yoluna çeviren gizli kapı açmıyor', () => {
     const s = ekran();
-    expect(s).toContain('SMS codes are sent to Turkish numbers only');
-    expect(s).toContain('DEMO HESABIYLA GİR');
+    expect(s).not.toContain('incelemeOtpCikmaziniYonet');
+    // Hata yolu HERKES için aynı metni yazar; dallanma yok.
+    expect(s).toContain("setError(mapAuthError(err, 'Doğrulama kodu gönderilemedi. Lütfen tekrar deneyin.'));");
   });
 
-  it('ne yapılacağını adım adım söylüyor', () => {
-    const s = ekran();
-    // Onay kutusu şart; söylenmezse incelemeci düğmeye basıp tepki alamaz.
-    expect(s).toContain('tick the consent box');
-    expect(s).toContain('onay kutusunu');
+  it('inceleme derleme betikleri package.json\'dan silindi', () => {
+    const p = oku('package.json');
+    for (const betik of ['build:inceleme', 'sync:ios:inceleme', 'sync:android:inceleme']) {
+      expect(p, `${betik} hâlâ duruyor`).not.toContain(betik);
+    }
   });
 
-  it('yönergenin kapısı normal pakette kapalı', () => {
-    const a = oku('supabaseAuth.ts');
-    expect(a).toContain('export const isIncelemePaketi = (): boolean => INCELEME_PAKETI');
+  it('web dağıtımı da normal paketi derliyor', () => {
+    // Vercel eskiden `build:inceleme` derliyordu: demo kimlikleri herkese
+    // açık bir adreste yayınlanıyordu. Artık mobille aynı paket.
+    expect(JSON.parse(oku('vercel.json')).buildCommand).toBe('npm run build');
   });
 
-  /**
-   * ÇIKMAZ UÇ KAPISI (20 Ağustos 2026 — canlıda ölçüldü).
-   *
-   * Telefon sağlayıcısı inceleme döneminde KAPALI. İncelemecinin ilk refleksi
-   * numara yazıp KOD GÖNDER'e basmak; o an ekran yalnız Türkçe "Google/Apple
-   * ile gir" diyordu — çalışması garantili tek yolu (demo seçici) göstermeden.
-   * İnceleme paketinde bu çıkmaz, iki dilli yönlendirme + kendiliğinden açılan
-   * seçiciyle kapatılır. Normal paket davranışı DEĞİŞMEZ.
-   */
-  it('kod gönderilemezse incelemeci demo yoluna yönlendirilir', () => {
-    const s = ekran();
-    // Kapı yalnız inceleme paketinde ve seçici gerçekten varken açılır.
-    expect(s).toContain('if (!(isIncelemePaketi() && showDemoPicker)) return false');
-    // Seçici kendiliğinden açılır — incelemeci listeyle burun buruna gelir.
-    const govde = s.slice(s.indexOf('const incelemeOtpCikmaziniYonet'), s.indexOf('const handleSendOtp'));
-    expect(govde).toContain('setDemoPickerOpen(true)');
-    // İngilizce söylenir — incelemecinin Türkçe okuduğu varsayılamaz.
-    expect(govde).toContain('use “DEMO HESABIYLA GİR” below');
-    // İki çıkmaz da (yurt dışı ülke kodu + gönderim hatası) aynı kapıdan geçer.
-    expect((s.match(/incelemeOtpCikmaziniYonet\(\)/g) ?? []).length).toBeGreaterThanOrEqual(2);
+  it('mağaza denetimi pakette demo kimliği görürse ENGEL veriyor', () => {
+    const d = oku('scripts/magaza-denetim.mjs');
+    // İstisna kalktı: "inceleme paketi" diye uyarıya indirilen yol yok.
+    expect(d).not.toContain('İnceleme paketi derlenmiş');
+    expect(d).toContain("g.includes('DEMO HESABIYLA GİR')");
+    const blok = d.slice(d.indexOf('const dist = join(KOK'), d.indexOf('7 · UYGULAMA İÇİ HESAP SİLME'));
+    // Sızıntı bulunduğunda tek çıkış var: engel. Dallanma yok, uyarıya
+    // indirilen bir "ama bu inceleme paketi" yolu yok.
+    expect(blok).toMatch(/if \(sizinti\.length\) \{\s*\n\s*engel\('Demo kimlikleri pakette'/);
+    expect(blok).not.toMatch(/sizinti\.length &&/);
   });
 });
 

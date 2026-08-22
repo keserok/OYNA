@@ -44,12 +44,12 @@ edilmiştir (tüm demo sayaçları → 0, gerçek veri korunur).
 **2) Arayüz — demo giriş seçicisini kapat.**
 Build ortamına `VITE_DEMO_ACCOUNTS=false` ver ve yeniden deploy et. Böylece giriş
 ekranındaki "Demo Hesabıyla Gir" listesi görünmez olur.
-**Vercel notu (20 Ağu 2026):** mağaza incelemesi süresince `vercel.json` içindeki
-`buildCommand` bilerek `npm run build:inceleme` — web de mobil inceleme paketiyle
-birebir aynı görünsün diye (kurucu isteği). Lansman temizliğinde bu satır
-`npm run build`'e GERİ ALINMALI; yoksa web'de seçici ve inceleme yönergesi
-görünmeye devam eder. Mobil tarafında da paket `VITE_MAGAZA_INCELEME`
-olmadan yeniden derlenip gönderilir.
+**Vercel notu (22 Ağu 2026 — GÜNCEL):** `buildCommand` yeniden `npm run build`.
+20 Ağustos'ta inceleme paketini derliyordu; o paket demo kimliklerini herkese
+açık bir adreste yayınlıyordu ve mobil karşılığı Apple tarafından 5.6 altında
+reddedildi. Artık web de mobil de AYNI paketi derler. Demo seçicisini yerel
+geliştirmede görmek için `VITE_DEMO_ACCOUNTS=true` yeterlidir; bu bayrak mobil
+derlemede bekçi tarafından ENGELLENİR (`vite.config.ts · mobilPaketBekcisi`).
 
 > İkisini birlikte yap: önce DB purge, sonra `VITE_DEMO_ACCOUNTS=false` deploy.
 > Seed'i geri yüklemek istersen `supabase/seeds/ordu_admin_demo_seed.sql` +
