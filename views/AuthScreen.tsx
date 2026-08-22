@@ -397,11 +397,17 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
     }
   };
 
-  // Telefon yolu kapalıyken (bkz. shared/phone.ts · SMS_OTP_ENABLED) ekranda
-  // numara alanı ve KOD GÖNDER düğmesi hiç çizilmez; geriye Google/Apple kalır.
-  // Demo kısayolu geliştirme paketinde çalışmaya devam etsin diye `demoInput`
-  // ayrı tutulur — o yol zaten yayın paketinde yok.
-  const telefonYoluVar = TELEFON_GIRISI_ACIK || demoMode;
+  // ─── TELEFON ALANI: TEK ÖLÇÜ, İSTİSNASIZ (22 Ağustos 2026, ikinci tur) ────
+  // Kapı önce `TELEFON_GIRISI_ACIK || demoMode` idi. Hata buydu: `demoMode`
+  // bir GELİŞTİRİCİ bayrağıdır (VITE_DEV_MODE) ve Vercel önizlemesinde açık.
+  // Sonuç, kurucunun bildirdiği hata: önizlemede giriş ekranı hâlâ numara
+  // istiyordu — üstelik o numaraya kod GÖNDERİLEMİYOR (SMS sağlayıcısı yok).
+  //
+  // KURAL: çalışamayacak bir giriş yolu HİÇBİR bayrakla ekrana gelmez.
+  // Geliştirme kolaylığı, kullanıcıya ölü bir alan göstermeyi haklı çıkarmaz.
+  // Demo erişimi ayrı ve doğru kapıdan olur: `VITE_DEMO_ACCOUNTS` ile açılan
+  // demo hesap seçicisi (aşağıda). O seçici gerçek bir yolla giriş yapar.
+  const telefonYoluVar = TELEFON_GIRISI_ACIK;
   const authReady = agreed && contactValid && !kanalKapali;
   const otpReady = otp.length === 6;
   const busy = isLoading !== null || demoLoggingIn !== null;

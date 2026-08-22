@@ -89,7 +89,15 @@ describe('kanal kuralı — yurt dışına SMS YOK', () => {
 
     const auth = oku('views/AuthScreen.tsx');
     // Numara alanı, ayraç ve KOD GÖNDER düğmesi aynı kapıdan geçer.
-    expect(auth).toContain('const telefonYoluVar = TELEFON_GIRISI_ACIK || demoMode');
+    //
+    // KAPIDA İSTİSNA OLAMAZ (22 Ağu 2026, ikinci tur). Önce
+    // `TELEFON_GIRISI_ACIK || demoMode` yazılmıştı; `demoMode` bir GELİŞTİRİCİ
+    // bayrağıdır (VITE_DEV_MODE) ve Vercel önizlemesinde açıktı. Sonuç:
+    // önizlemede giriş ekranı hâlâ numara istiyordu ve o numaraya kod
+    // gönderilemiyordu. Çalışamayacak bir giriş yolu hiçbir bayrakla
+    // ekrana gelmemeli — demo erişimi ayrı kapıdan (VITE_DEMO_ACCOUNTS).
+    expect(auth).toContain('const telefonYoluVar = TELEFON_GIRISI_ACIK;');
+    expect(auth).not.toMatch(/telefonYoluVar\s*=\s*TELEFON_GIRISI_ACIK\s*\|\|/);
     expect((auth.match(/\{telefonYoluVar && \(/g) ?? []).length).toBeGreaterThanOrEqual(3);
 
     // Açılıştaki numara kapısı da bayrağı okur; kod gidemeyen bir ekrana
