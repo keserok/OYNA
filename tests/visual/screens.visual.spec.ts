@@ -42,7 +42,11 @@ const EKRANLAR: Ekran[] = [
     // (4.6). Yeni başlık "Numaranla gir" — çapa da onu arar. Eski çapa
     // kalsaydı test, ekranın açılmadığını değil METNİN değiştiğini bildirirdi.
     ad: '02-giris-auth',
-    capa: /Numaranla gir/i,
+    // Başlık telefon yoluna göre değişir (shared/phone.ts · SMS_OTP_ENABLED):
+    // SMS kapalıyken "Sahaya çık", açıkken "Numaranla gir". Çapa ikisini de
+    // tanır; yoksa bayrak her çevrildiğinde görsel koşu 20 sn bekleyip
+    // başarısız olur.
+    capa: /Sahaya çık|Numaranla gir/i,
     ac: async (page) => {
       await hazirla(page, { oturumsuz: true });
       await ekranaGit(page, 'AUTH');

@@ -24,20 +24,32 @@ const KOK = path.resolve(__dirname, '../..');
 const oku = (rel: string) => readFileSync(path.join(KOK, rel), 'utf-8');
 
 describe('1 · yönlendirmeden önce işaret bırakılır', () => {
-  it('Google web yolu işareti signInWithOAuth çağrısından ÖNCE yazar', () => {
+  /**
+   * DESEN TEK YERE TAŞINDI (22 Ağustos 2026). Google ve Apple web dalları
+   * ayrı ayrı `oauthIsaretiBirak('google'|'apple')` çağırıyordu; ikisi de
+   * artık `webOAuthAc(saglayici)` üzerinden geçiyor. Kilit, iki ayrı satırın
+   * yazılışını değil DEĞİŞMEZİ korur: işaret, sağlayıcıya gitmeden ÖNCE
+   * yazılmalı — sonra yazılsaydı yönlendirme başlamış olurdu ve o satıra
+   * hiç dönülmezdi.
+   */
+  it('işaret, sağlayıcı adresi alınmadan ÖNCE yazılır', () => {
     const s = oku('supabaseAuth.ts');
-    const isaret = s.indexOf("oauthIsaretiBirak('google')");
-    expect(isaret, 'Google web dalında işaret bırakılmıyor').toBeGreaterThan(-1);
-    // İşaretten sonraki ilk signInWithOAuth, google'ın web dalı olmalı.
-    const cagri = s.indexOf('signInWithOAuth', isaret);
-    expect(cagri).toBeGreaterThan(isaret);
+    const govde = s.slice(s.indexOf('const webOAuthAc'), s.indexOf('const webOAuthAc') + 900);
+    const isaret = govde.indexOf('oauthIsaretiBirak(saglayici)');
+    const cagri = govde.indexOf('signInWithOAuth');
+    expect(isaret, 'webOAuthAc işaret bırakmıyor').toBeGreaterThan(-1);
+    expect(cagri, 'webOAuthAc signInWithOAuth çağırmıyor').toBeGreaterThan(-1);
+    expect(isaret, 'işaret çağrıdan SONRA yazılıyor').toBeLessThan(cagri);
   });
 
-  it('Apple web yolu da aynı deseni kullanır', () => {
+  it('her iki sağlayıcının web dalı da AYNI yoldan geçer', () => {
+    // Biri eski tam-sayfa yolunda kalsaydı, kullanıcı sağlayıcıya göre
+    // farklı davranış görürdü.
     const s = oku('supabaseAuth.ts');
-    const isaret = s.indexOf("oauthIsaretiBirak('apple')");
-    expect(isaret, 'Apple web dalında işaret bırakılmıyor').toBeGreaterThan(-1);
-    expect(s.indexOf('signInWithOAuth', isaret)).toBeGreaterThan(isaret);
+    expect(s).toContain("await webOAuthAc('google')");
+    expect(s).toContain("await webOAuthAc('apple')");
+    // Web dallarında artık doğrudan tam-sayfa yönlendirmesi olmamalı.
+    expect(s).not.toMatch(/options: \{ redirectTo: webDonusAdresi\(\) \},\s*\}\);\s*\n\s*if \(error\) throw error;\s*\n\};/);
   });
 
   it('okuyucu işareti TEK KULLANIMLIK yapar (removeItem) ve adresi temizler', () => {

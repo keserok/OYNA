@@ -1,6 +1,7 @@
 import { supabase, setHasAccount } from './supabaseClient';
 import { Capacitor } from '@capacitor/core';
 import { clearPushToken } from './notifications/pushService';
+import { OAUTH_PENCERE_ADI } from './shared/oauthPencere';
 
 // ─── Augmented currentUser — includes roles and verification state ────────────
 export interface OynaCurrentUser {
@@ -104,6 +105,112 @@ supabase.auth.onAuthStateChange((_event, session) => {
 // GEREKLİ PANEL AYARI: Supabase → Auth → URL Configuration → Redirect URLs
 // listesine "oyna://auth-callback" eklenmeli (yoksa Supabase dönüşü reddeder).
 export const OAUTH_NATIVE_REDIRECT = 'oyna://auth-callback';
+
+/**
+ * WEB DÖNÜŞ ADRESİ — SONUNDA EĞİK ÇİZGİ ŞART (22 Ağustos 2026).
+ *
+ * `window.location.origin` sondaki eğik çizgiyi İÇERMEZ:
+ *   "https://oyna-app-git-dal-takim.vercel.app"
+ *
+ * Supabase'in izinli liste (Redirect URLs) eşleşmesi glob'dur ve ayraç
+ * karakterler '.' ile '/'. Önizlemeler için yazılan kalıp
+ *   "https://oyna-app-*.vercel.app/**"
+ * bir YOL bekler; çıplak kaynak adresi bu kalıba TAKILMAZ. Supabase o zaman
+ * redirect_to'yu düşürür ve kullanıcıyı SITE_URL'e — yani BAŞKA bir dağıtıma —
+ * atar. İki sonucu birden doğurur:
+ *   1. kullanıcı bambaşka (çoğu zaman eski) bir paketin ekranında uyanır,
+ *   2. oturum AÇILMAZ; çünkü PKCE doğrulayıcısı girişin başladığı kaynağın
+ *      deposunda kaldı, varılan kaynakta yok — kod bozdurulamaz.
+ * Kurucunun "Google'dan dönünce beni giriş ekranına atıyor" şikâyetinin
+ * mekanizması tam olarak budur.
+ *
+ * Sondaki eğik çizgi hem ".../" hem ".../**" kalıplarını tutturur.
+ */
+export const webDonusAdresi = (): string => {
+  if (typeof window === 'undefined') return '/';
+  return `${window.location.origin}/`;
+};
+
+/**
+ * WEB'DE SAĞLAYICI GİRİŞİ — AÇILIR PENCERE, UYGULAMA TERK EDİLMEZ
+ *
+ * KURUCU KARARI (22 Ağustos 2026): "Kişi Apple/Google hesabını onayladığında
+ * uygulama TEKRAR AÇILMAMALI; kayıtlıysa ana sayfa, değilse onboarding."
+ *
+ * Varsayılan `signInWithOAuth` TAM SAYFA yönlendirmesi yapar — uygulama
+ * kapanır, sağlayıcıya gidilir, dönüşte SIFIRDAN açılır. Kullanıcının
+ * "beni attı, baştan başlattı" dediği şey tam olarak budur ve tek sayfalık
+ * bir düzeltmeyle giderilemez: sayfayı terk etmek akışın kendisidir.
+ *
+ * Bu yol sayfayı HİÇ terk etmez:
+ *   1. `skipBrowserRedirect` ile yalnız sağlayıcı adresi alınır,
+ *   2. adres AÇILIR PENCEREDE açılır — ana sekme canlı kalır,
+ *   3. pencere dönüşte bizim kaynağımıza gelir; orada uygulama çizilmez
+ *      (index.tsx), yalnız kod oturuma bozdurulur ve pencere kapanır,
+ *   4. oturum AYNI kaynağın deposuna yazıldığı için ana sekme onu görür;
+ *      burada yoklanır ve görülünce `onAuthStateChanged` yönlendirmeyi
+ *      devralır (kayıtlı → panel, yeni → onboarding).
+ *
+ * AÇILIR PENCERE ENGELLENİRSE eski davranışa düşülür (tam sayfa). Bu bir
+ * gerileme değil emniyet valfi: engelli tarayıcıda giriş yine çalışır,
+ * yalnız eski his geri gelir.
+ */
+const webOAuthAc = async (saglayici: OAuthSaglayici): Promise<void> => {
+  oauthIsaretiBirak(saglayici);
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: saglayici,
+    options: { redirectTo: webDonusAdresi(), skipBrowserRedirect: true },
+  });
+  if (error) throw error;
+  const adres = data?.url;
+  if (!adres) throw new Error('Giriş adresi alınamadı.');
+
+  const g = Math.min(480, window.screen.width);
+  const y = Math.min(700, window.screen.height);
+  const sol = Math.max(0, (window.screen.width - g) / 2);
+  const ust = Math.max(0, (window.screen.height - y) / 2);
+  let pencere: Window | null = null;
+  try {
+    pencere = window.open(
+      adres,
+      OAUTH_PENCERE_ADI,
+      `popup=yes,width=${g},height=${y},left=${sol},top=${ust}`,
+    );
+  } catch { pencere = null; }
+
+  if (!pencere) {
+    // Engellendi → tam sayfa yolu. Bu satırdan sonrası çalışmaz.
+    window.location.assign(adres);
+    return;
+  }
+
+  // Oturum yazılana kadar bekle. İki bitiş koşulu: oturum geldi ya da
+  // kullanıcı pencereyi kapattı. Zaman aşımı, kilitli kalmayı önler.
+  const BASLANGIC = Date.now();
+  const ZAMAN_ASIMI_MS = 3 * 60 * 1000;
+  for (;;) {
+    await new Promise((coz) => setTimeout(coz, 400));
+    const { data: oturum } = await supabase.auth.getSession();
+    if (oturum.session) {
+      try { pencere.close(); } catch { /* kendi kapanmış olabilir */ }
+      return; // Yönlendirmeyi App'in auth dinleyicisi yapar.
+    }
+    let kapali = false;
+    try { kapali = pencere.closed; } catch { kapali = false; }
+    if (kapali) {
+      // Kullanıcı vazgeçti ya da dönüş tutmadı. Son bir kez bak: pencere
+      // oturumu yazıp kapanmış olabilir, yarış durumunu kaybetmeyelim.
+      await new Promise((coz) => setTimeout(coz, 600));
+      const { data: son } = await supabase.auth.getSession();
+      if (son.session) return;
+      throw new Error('OAUTH_PENCERE_KAPANDI');
+    }
+    if (Date.now() - BASLANGIC > ZAMAN_ASIMI_MS) {
+      try { pencere.close(); } catch { /* yoksay */ }
+      throw new Error('OAUTH_ZAMAN_ASIMI');
+    }
+  }
+};
 
 // ─── WEB'DE SAĞLAYICI DÖNÜŞÜ: "sayfa yenilendi, hiçbir şey olmadı" sorunu ───
 // Web'de Google/Apple girişi TAM SAYFA yönlendirmesidir: tarayıcı OYNA'dan
@@ -304,14 +411,8 @@ export const loginWithGoogle = async (): Promise<void> => {
     await Browser.open({ url: data.url, presentationStyle: 'popover' });
     return; // Oturum, deep link dönüşünde açılır (handleAuthCallbackUrl).
   }
-  // Web — TAM SAYFA yönlendirmesi. İşaret önce bırakılır: yönlendirme
-  // başladıktan sonra bu satırlara dönüş yoktur.
-  oauthIsaretiBirak('google');
-  const { error } = await supabase.auth.signInWithOAuth({
-    provider: 'google',
-    options: { redirectTo: window.location.origin },
-  });
-  if (error) throw error;
+  // Web — açılır pencere; ana sekme terk edilmez (bkz. webOAuthAc).
+  await webOAuthAc('google');
 };
 
 // ─── OAuth deep link dönüşü (native) ─────────────────────────────────────────
@@ -396,16 +497,8 @@ export const loginWithApple = async (): Promise<void> => {
       throw err;
     }
   } else {
-    // Web — OAuth redirect (Google ile aynı işaret deseni)
-    oauthIsaretiBirak('apple');
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'apple',
-      options: { redirectTo: window.location.origin },
-    });
-    if (error) {
-      console.error('[Auth] Apple OAuth hatası:', error.message);
-      throw error;
-    }
+    // Web — Google ile aynı desen: açılır pencere, sayfa terk edilmez.
+    await webOAuthAc('apple');
   }
 };
 
@@ -434,24 +527,39 @@ export const logout = async (): Promise<void> => {
 };
 
 // ─── Auth state listener (Firebase compat API) ───────────────────────────────
+/**
+ * Oturum olayının TÜRÜ de iletilir (22 Ağustos 2026).
+ *
+ * Eskiden yalnız kullanıcı iletiliyordu; App tarafı "kullanıcı yok" gören HER
+ * olayda kullanıcıyı giriş ekranına atıyordu. Oysa oturumsuz olay üç ayrı
+ * şeyden gelebilir: gerçek ÇIKIŞ, açılışta henüz oturum çözülmemiş olması ve
+ * jeton yenileme denemesinin boş dönmesi. Yalnız ilki giriş ekranına düşmeyi
+ * hak eder; ötekiler kullanıcıyı çalışan bir oturumdan atıyordu.
+ *
+ * 'ILK' = abonelikten önce yapılan getSession yanıtı (supabase'in kendi olay
+ * adı değil, bizim işaretimiz).
+ */
+export type AuthOlayi = 'ILK' | 'SIGNED_IN' | 'SIGNED_OUT' | 'TOKEN_REFRESHED'
+  | 'USER_UPDATED' | 'INITIAL_SESSION' | 'PASSWORD_RECOVERY' | 'DIGER';
+
 export const onAuthStateChanged = (
   _authObj: typeof auth,
-  callback: (user: OynaCurrentUser | null) => void,
+  callback: (user: OynaCurrentUser | null, olay?: AuthOlayi) => void,
 ): (() => void) => {
   // Mevcut oturum için hemen tetikle
   supabase.auth.getSession().then(async ({ data: { session } }) => {
     if (session?.user) {
       const user = await buildCurrentUser(session.user);
       auth.currentUser = user;
-      callback(user);
+      callback(user, 'ILK');
     } else {
-      callback(null);
+      callback(null, 'ILK');
     }
   }).catch((err) => {
     // Oturum çözümlemesi hata verirse uygulama açılışı kilitlenmesin:
     // oturumsuz kabul et, dinleyici sonraki durum değişimini yine yakalar.
     console.warn('[supabaseAuth] getSession başarısız:', err);
-    callback(null);
+    callback(null, 'ILK');
   });
 
   const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
@@ -459,13 +567,14 @@ export const onAuthStateChanged = (
     // supabase çağrıları kilit bırakıldıktan sonra yapılır.
     setTimeout(() => {
       void (async () => {
+        const olay = (event as AuthOlayi) ?? 'DIGER';
         if (session?.user) {
           const user = await buildCurrentUser(session.user);
           auth.currentUser = user;
-          callback(user);
+          callback(user, olay);
         } else {
           auth.currentUser = null;
-          callback(null);
+          callback(null, olay);
         }
       })();
     }, 0);
@@ -491,6 +600,19 @@ if (typeof window !== 'undefined') {
 }
 
 export const isDemoLoginEnabled = (): boolean => {
+  // ─── DERLEME ZAMANI KAPISI, HER ŞEYDEN ÖNCE (22 Ağustos 2026) ──────────
+  // Aşağıdaki kapılar ÇALIŞMA ZAMANI: `?demo=1` adres anahtarı ve
+  // `VITE_DEV_MODE`. Bu, canlı web adresinde herhangi birinin adrese
+  // `?demo=1` ekleyip uygulamanın davranışını değiştirebilmesi demekti —
+  // yani paketin içinde, adres çubuğuyla açılan bir yol. Apple'ın 5.6
+  // altında reddettiği desen tam olarak budur: "kullanıcıya görünmeyen,
+  // koşula bağlı davranış".
+  //
+  // Demo yolları artık YALNIZ demo bayrağıyla DERLENMİŞ pakette vardır.
+  // Yayın paketinde bu satır `false` sabitine düşer; altındaki hiçbir kapı
+  // değerlendirilmez ve `?demo=1` hiçbir şey yapmaz.
+  if (import.meta.env.VITE_DEMO_ACCOUNTS !== 'true') return false;
+
   // ── MAĞAZA KAPISI (17 Ağu 2026 — gönderim öncesi denetimde yakalandı) ──────
   // NATIVE derlemede (App Store / Play Store) demo girişi HER DURUMDA kapalıdır.
   //

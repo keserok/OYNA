@@ -337,7 +337,16 @@ denetle('Pakete sızmaması gerekenler', () => {
       const g = readFileSync(join(dist, f), 'utf8');
       return g.includes('password123')
         || /oyuncu\d\d@oyna\.app/.test(g)
-        || g.includes('DEMO HESABIYLA GİR');
+        || g.includes('DEMO HESABIYLA GİR')
+        // Kullanıcıya GÖRÜNEN geliştirici metinleri de sızıntıdır. 22 Ağu
+        // denetiminde "DEMO MODU" ipucu gözden kaçmıştı: aranan desenler
+        // yalnız kimlik bilgileriydi, ekrana basılan yazılar değil.
+        // Desen DAR tutulur: tesis panelindeki "DEMO MODU — Finans verileri
+        // demo tesise ait" uyarısı MEŞRU bir ürün özelliğidir (sahibe demo
+        // veriye baktığını söyler) ve yakalanmamalı. Aranan, giriş ekranındaki
+        // geliştirici ipucudur. ('mirackerem' gibi ölü koddaki kısayol adları
+        //  da aranmaz — ekrana çıkmazlar, her derlemede sahte alarm olurdu.)
+        || g.includes('DEMO MODU: numara yerine');
     });
     if (sizinti.length) {
       engel('Demo kimlikleri pakette',

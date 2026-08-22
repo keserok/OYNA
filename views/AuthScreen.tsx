@@ -304,6 +304,20 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
     return false;
   }
 
+  // Açılır pencere yolunun iki özel sonucu (supabaseAuth · webOAuthAc):
+  //   OAUTH_PENCERE_KAPANDI → kullanıcı vazgeçti. Bu bir HATA DEĞİLDİR;
+  //     kırmızı uyarı basmak, yaptığı şeyi yanlışmış gibi sunmak olur.
+  //   OAUTH_ZAMAN_ASIMI     → pencere açık kaldı ama oturum gelmedi.
+  // Ham kodu ekrana taşımayız; kullanıcı ne yapacağını okur.
+  const saglayiciHatasi = (err: any, saglayici: string): string | null => {
+    const m = String(err?.message ?? err);
+    if (m.includes('OAUTH_PENCERE_KAPANDI')) return null;
+    if (m.includes('OAUTH_ZAMAN_ASIMI')) {
+      return 'Giriş tamamlanmadı. Pencereyi kapatıp tekrar dener misin?';
+    }
+    return mapAuthError(err, `${saglayici} ile giriş başarısız.`);
+  };
+
   const handleGoogleLogin = async () => {
     if (isLoading) return;
     if (!requireAgreement()) return;
@@ -315,7 +329,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
       // navigasyonu global auth dinleyicisi yapar. Web'de sayfa yönlenir.
     } catch (err: any) {
       console.error('[Auth] Google hatası:', err);
-      setError(mapAuthError(err, 'Google ile giriş başarısız.'));
+      setError(saglayiciHatasi(err, 'Google'));
     } finally {
       setIsLoading(null);
     }
@@ -332,7 +346,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
       // onSuccess() burada da çağrılırsa çifte yönlendirme/flaş oluşur.
     } catch (err: any) {
       console.error('[Auth] Apple hatası:', err);
-      setError(mapAuthError(err, 'Apple ile giriş başarısız.'));
+      setError(saglayiciHatasi(err, 'Apple'));
     } finally {
       setIsLoading(null);
     }
@@ -752,7 +766,14 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
                 </div>
                 )}
 
-                {demoMode && (
+                {/* Bu ipucu TELEFON ALANINI anlatır ("numara yerine kısayolu
+                    yaz"). Kapısı yalnız `demoMode` idi ve blok telefon
+                    bloğunun İÇİNDE değil KARDEŞİYDİ: alan çizilmese bile afiş
+                    çiziliyordu. `demoMode` çalışma zamanında `?demo=1` ile de
+                    açıldığından, canlı web adresinde herkese görünebiliyordu —
+                    anlattığı alan ekranda yokken. Kapı artık alanın kapısıyla
+                    aynı: alan yoksa ipucu da yok. */}
+                {DEMO_SECICI_DERLENSIN && telefonYoluVar && demoMode && (
                   <p style={{ margin: '10px 2px 0', fontSize: 10, fontWeight: 700, color: '#39FF14' }}>
                     🧪 DEMO MODU: numara yerine demo kısayolunu yaz, kod gerekmez. Sahip için "mirackerem".
                   </p>

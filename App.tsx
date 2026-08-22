@@ -225,11 +225,43 @@ const App: React.FC = () => {
 
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+    const unsubscribe = onAuthStateChanged(auth, async (user, olay) => {
       try {
         if (user) {
           // Gerçek oturum açıldı → misafir modu biter
           useAppStore.getState().setIsGuest(false);
+          // ─── GİRİŞ ANI ÖLÇÜSÜ, AĞ BEKLEMELERİNDEN ÖNCE ALINIR ───────────
+          // Bu değer aşağıda "açılış rolü override'ı uygulansın mı" kararında
+          // kullanılıyordu ve profil sorgusundan SONRA okunuyordu. Arada 2-4
+          // ağ gidiş-dönüşü var; o sırada açılış ekranı kendi zamanlayıcısıyla
+          // görünümü değiştirebiliyor ve ölçüm 'SPLASH' yerine başka bir şey
+          // görüp giriş-sonrası yönlendirmeyi iptal ediyordu. Kullanıcı
+          // oturumu açılmış hâlde giriş ekranında kalıyordu.
+          const girisAninkiGorunum = useAppStore.getState().view;
+
+          /**
+           * GEÇERLİ OTURUM KAPININ DIŞINDA BIRAKILMAZ (22 Ağustos 2026).
+           *
+           * Bu geri çağrının başarı yolunda üç dal, profil okunamadığında
+           * yalnız bir uyarı basıp çıkıyordu — hiçbir yönlendirme yapmadan.
+           * Kullanıcı Google/Apple düğmesine GİRİŞ EKRANINDAN bastığı için
+           * görünüm hâlâ 'AUTH'tı ve orada kalıyordu: sağlayıcı hesabı
+           * onaylanmış, oturum açılmış, ama uygulama giriş ekranında duruyor.
+           * Kurucunun ekran görüntüsüyle bildirdiği durum buydu.
+           *
+           * Kural: oturum geçerliyse kullanıcı İÇERİ ALINIR. Profil eksikse
+           * varsayılan rolle girer ve bir sonraki auth olayında tazelenir;
+           * onu dışarıda tutmak hiçbir hata için doğru cevap değildir.
+           *
+           * Kullanıcı zaten uygulamanın içindeyse (arka planda jeton
+           * yenilemesi) hiçbir şey yapılmaz — o ekranı çalmak olurdu.
+           */
+          const icerideBirak = (): void => {
+            const st = useAppStore.getState();
+            const disarida = ['SPLASH', 'AUTH', 'ROLE_SELECTION'].includes(st.view);
+            if (!disarida) return;
+            resetNavigation(navigateBasedOnRole(st.role || UserRole.PLAYER));
+          };
           const selectProfile = () => supabase
             .from('profiles')
             .select('role, roles, verification_status, verification_notes, is_admin, wallet_balance, phone, email, full_name, avatar_url, has_completed_onboarding')
@@ -259,9 +291,18 @@ const App: React.FC = () => {
 
           if (!profile && profileErr && profileErr.code !== 'PGRST116') {
             // Hâlâ hata → mevcut kullanıcıyı ASLA "yeni kayıt" sanıp PLAYER'a
-            // düşürme/onboarding'e atma. Oturumu koru, açıkla, çık.
+            // düşürme/onboarding'e atma. Oturumu koru, açıkla — VE İÇERİ AL.
+            //
+            // Bu dal eskiden yalnız uyarı basıp çıkıyordu: hiçbir yönlendirme
+            // yapılmıyordu. Kullanıcı Google/Apple düğmesine GİRİŞ EKRANINDAN
+            // bastığı için görünüm hâlâ 'AUTH'tı ve orada kalıyordu. Sağlayıcı
+            // hesabı onaylanmış, oturum gerçekten açılmış, ama uygulama giriş
+            // ekranında öylece duruyordu — kurucunun ekran görüntüsündeki
+            // durumun ta kendisi. Geçerli oturumu kapının dışında bırakmak
+            // hiçbir hata için doğru cevap değildir.
             captureException(profileErr, { where: 'onAuthStateChanged.profileFetch' });
             showToast('Profil bilgilerin şu an yüklenemedi. Bağlantını kontrol edip tekrar dene.');
+            icerideBirak();
           } else if (!profile) {
             // ─── YENİ KULLANICI (kayıt) — ama önce KESİN doğrula ──────────────
             // Yeni model: KAYIT OLAN HERKES OYUNCU. Kaleci/Hakem/Tesis rolleri
@@ -279,6 +320,13 @@ const App: React.FC = () => {
               id: user.uid,
               email: user.email ?? null,
               phone: user.phone ?? null,
+              // `name` ŞEMADA NOT NULL (eski kolon). Gönderilmediğinde insert
+              // 23502 ile düşüyordu — 23505 DEĞİL. Böyle olunca aşağıdaki
+              // çakışma dalı çalışmıyor, akış "gerçekten yeni kullanıcı"
+              // sanıp profilsiz hâlde onboarding'e gidiyordu. Apple kimlik
+              // jetonu ad İÇERMEZ (yalnız ilk girişte verir), yani bu yol
+              // Apple ile girenler için kuraldı, istisna değil.
+              name: fallbackName || 'Oyuncu',
               full_name: fallbackName,
               role: UserRole.PLAYER,
               roles: [UserRole.PLAYER],
@@ -298,9 +346,18 @@ const App: React.FC = () => {
             }
 
             if (!profile && isConflict) {
-              // Mevcut kullanıcı ama profil şu an okunamadı (ağ) → downgrade YOK;
-              // oturumu koru, açıkla. Bir sonraki auth olayı/yenileme düzeltir.
+              // Mevcut kullanıcı ama profil şu an okunamadı (ağ). Downgrade YOK
+              // — ama kullanıcıyı GİRİŞ EKRANINDA DA BIRAKMA. Oturum geçerli;
+              // onu dışarıda tutmak, "hesabımı onayladım ama uygulama beni
+              // içeri almadı" demektir. Varsayılan rolle içeri al, profil
+              // sonraki auth olayında tazelenir.
               showToast('Profil bilgilerin şu an yüklenemedi. Bağlantını kontrol edip tekrar dene.');
+              icerideBirak();
+            } else if (insertError && !isConflict) {
+              // Insert başka bir sebeple düştü (ör. NOT NULL ihlali). Bu
+              // kullanıcı "yeni" sayılıp ONBOARDING'e GÖNDERİLMEMELİ: profili
+              // yok, onboarding'in yazacağı satır da yok. İçeri al ve söyle.
+              icerideBirak();
             } else if (!profile) {
               // ── GERÇEKTEN yeni kullanıcı (insert başarılı) ──
               // KVKK Aydınlatma + Kullanıcı Sözleşmesi kabulünü sunucuya
@@ -353,8 +410,8 @@ const App: React.FC = () => {
             // YALNIZ uygulamaya giriş anında (splash/auth/…) uygulanır. Aksi halde
             // arka plan token yenilemesi (≈saatlik / sekme odağı), kullanıcının
             // uygulama-içi "Rol Değiştir" ile geçtiği rolü sessizce geri alırdı.
-            const currentView = useAppStore.getState().view;
-            const isEntering = ['SPLASH', 'AUTH', 'ROLE_SELECTION', 'PENDING_VERIFICATION'].includes(currentView);
+            const isEntering = ['SPLASH', 'AUTH', 'ROLE_SELECTION', 'PENDING_VERIFICATION']
+              .includes(girisAninkiGorunum);
             // Admin koruması: aktif rol GEÇİLEBİLİR bir rol değilse (ADMIN/SUPER_ADMIN
             // → normalizeRole null döner), açılış-rolü override'ı UYGULANMAZ. Aksi
             // halde pickLandingRole PLAYER'a düşer ve setActiveRole admin rolünü
@@ -493,6 +550,22 @@ const App: React.FC = () => {
             }
           }
         } else {
+          // ─── OTURUMSUZ OLAY: HEPSİ ÇIKIŞ DEĞİLDİR (22 Ağustos 2026) ──────
+          // Buraya üç ayrı şey düşebiliyordu: gerçek ÇIKIŞ, açılışta oturumun
+          // henüz çözülmemiş olması ve jeton yenilemesinin boş dönmesi. Üçü de
+          // koşulsuz giriş ekranına atıyordu. Bu dal SENKRON, başarı dalı ise
+          // 2-4 ağ gidiş-dönüşü bekliyor: başarılı bir girişten hemen sonra
+          // gelen oturumsuz bir olay, henüz tamamlanmamış yönlendirmenin
+          // üstüne biniyor ve kullanıcıyı giriş ekranına geri atıyordu.
+          //
+          // Artık yalnız GERÇEK çıkış giriş ekranına düşürür. Belirsiz
+          // olaylarda oturum bir kez daha SORULUR; hâlâ yoksa çıkış sayılır.
+          const gercekCikis = olay === 'SIGNED_OUT';
+          if (!gercekCikis && auth.currentUser) {
+            // Elde çalışan bir kullanıcı var — belirsiz bir olay yüzünden
+            // kullanıcıyı uygulamadan atma.
+            return;
+          }
           const prevView = useAppStore.getState().view;
           setRole(UserRole.PLAYER);
           // İlk açılış (oturum yok) SPLASH'te kalır; bir panelden ÇIKIŞ yapıldıysa
@@ -504,7 +577,20 @@ const App: React.FC = () => {
         }
       } catch (error: any) {
         console.error('[App] Auth state error:', error);
-        if (error?.message?.includes('JWT') || error?.message?.includes('Auth') || error?.code === 'PGRST301') {
+        // ÇIKIŞ YALNIZ KESİN SİNYALLE (22 Ağustos 2026).
+        //
+        // Kapı, hata TÜRÜNE değil hata METNİNDE 'Auth' ya da 'JWT' alt dizesi
+        // geçmesine bakıyordu. @supabase/auth-js'in kendi hata sınıfı adı
+        // "AuthApiError", mesajları da sık sık "Auth" içerir — yani geçici bir
+        // ağ/RLS hatası bile kullanıcıyı ÇIKIŞA zorluyordu. Giriş-sonrası
+        // akışta kullanıcıyı otomatik olarak giriş ekranına atan tek yol buydu.
+        //
+        // Artık yalnız jetonun gerçekten geçersiz olduğu durumlar çıkış yapar.
+        const kod = error?.code;
+        const durum = error?.status;
+        const jetonGecersiz = kod === 'PGRST301' || durum === 401
+          || (error?.name === 'AuthApiError' && (durum === 401 || durum === 403));
+        if (jetonGecersiz) {
           logout().catch(e => console.error('[App] Sign out error on invalid session:', e));
           resetNavigation('AUTH');
         }
