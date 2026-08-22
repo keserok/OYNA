@@ -615,28 +615,60 @@ const App: React.FC = () => {
 
   // ─── Deep Link (oyna:// URL açılışları) ────────────────────────────────────
   // Push tıklaması dışındaki gerçek URL açılışları: @capacitor/app appUrlOpen.
+  //
+  // SOĞUK AÇILIŞ DELİĞİ (22 Ağustos 2026 — kurucunun bildirdiği hata).
+  // Bu dinleyici DİNAMİK import ile, yani bir mikro-görev sonrasında takılıyor.
+  // Uygulama arka planda öldürülmüşse (iOS bunu bellek baskısında rutin olarak
+  // yapar; Google/Apple girişi sırasında tarayıcı yaprağı öndeyken çok olası),
+  // sistem uygulamayı `oyna://auth-callback?code=...` ile SIFIRDAN açar ve
+  // `appUrlOpen` olayı dinleyici takılmadan ÖNCE düşer. Sonuç: kod hiç
+  // bozdurulmaz, oturum açılmaz ve kullanıcı Google'dan dönünce kendini
+  // yeniden giriş ekranında bulur — "beni attı, baştan başlattı".
+  //
+  // Çözüm: olayı beklemek yetmez, uygulamanın HANGİ ADRESLE AÇILDIĞI da
+  // sorulur (`getLaunchUrl`). İki yol da aynı işleyiciden geçer; aynı adresin
+  // iki kez işlenmemesi için işlenenler tutulur (kod tek kullanımlıktır,
+  // ikinci bozdurma hata verir ve kullanıcıya yanlışlıkla hata gösterirdi).
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
     let remove: (() => void) | undefined;
+    const islenen = new Set<string>();
+    const adresiIsle = async (url: string) => {
+      if (!url || islenen.has(url)) return;
+      islenen.add(url);
+      // OAuth dönüşü (oyna://auth-callback?code=...) — kodu oturuma bozdur;
+      // navigasyonu onAuthStateChanged üstlenir. Diğer deep link'lere gitmez.
+      const donus = await handleAuthCallbackUrl(url);
+      if (donus) {
+        // Başarılıysa yönlendirmeyi onAuthStateChanged yapar; sessiz kalırız.
+        // Başarısızsa kullanıcı NEDEN giriş ekranında olduğunu bilmeli.
+        if (donus === 'HATA') {
+          showToast('Giriş tamamlanamadı. Lütfen tekrar dene.');
+        }
+        return;
+      }
+      const s = useAppStore.getState();
+      void handleDeepLink(url, (v) => s.navigateTo(v as AppView), {
+        setSelectedMatch: (m) => s.setSelectedMatch(m),
+        setSelectedTeamId: s.setSelectedTeamId,
+        setStudioContext: s.setStudioContext,
+        setSocialTarget: s.setSocialTarget,
+        setSelectedConversationId: s.setSelectedConversationId,
+        setSelectedTeamChatId: s.setSelectedTeamChatId,
+        setTeamInitialTab: s.setTeamInitialTab,
+        showToast, // IP-06: maç çekilemezse sessiz kalma, kullanıcıya söyle
+      });
+    };
+
     import('@capacitor/app').then(({ App: CapApp }) => {
-      CapApp.addListener('appUrlOpen', ({ url }) => {
-        void (async () => {
-          // OAuth dönüşü (oyna://auth-callback?code=...) — kodu oturuma bozdur;
-          // navigasyonu onAuthStateChanged üstlenir. Diğer deep link'lere gitmez.
-          if (await handleAuthCallbackUrl(url)) return;
-          const s = useAppStore.getState();
-          void handleDeepLink(url, (v) => s.navigateTo(v as AppView), {
-            setSelectedMatch: (m) => s.setSelectedMatch(m),
-            setSelectedTeamId: s.setSelectedTeamId,
-            setStudioContext: s.setStudioContext,
-            setSocialTarget: s.setSocialTarget,
-            setSelectedConversationId: s.setSelectedConversationId,
-            setSelectedTeamChatId: s.setSelectedTeamChatId,
-            setTeamInitialTab: s.setTeamInitialTab,
-            showToast, // IP-06: maç çekilemezse sessiz kalma, kullanıcıya söyle
-          });
-        })();
-      }).then((handle) => { remove = () => handle.remove(); });
+      // 1) Uygulama AÇIKKEN gelen adresler.
+      CapApp.addListener('appUrlOpen', ({ url }) => { void adresiIsle(url); })
+        .then((handle) => { remove = () => handle.remove(); });
+      // 2) Uygulamayı AÇAN adres — dinleyici geç takıldıysa tek kurtarma yolu.
+      //    Desteklenmeyen platformda sessizce boş döner.
+      CapApp.getLaunchUrl()
+        .then((res) => { if (res?.url) void adresiIsle(res.url); })
+        .catch(() => { /* açılış adresi okunamadı — dinleyici yolu devrede */ });
     });
     return () => { if (remove) remove(); };
   }, []);

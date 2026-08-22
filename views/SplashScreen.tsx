@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { OynaLogo } from '../components/OynaLogo';
+import { oauthDonusuMu } from '../supabaseAuth';
 
 interface SplashScreenProps {
   onStart: () => void;
@@ -42,21 +43,34 @@ export default function SplashScreen({ onStart, ready = true }: SplashScreenProp
   }, []);
   const canStart = ready || timedOut;
 
-  // Açılış ekranı KENDİNİ TAMAMLASIN diye 2,6 sn beklenir. Ekrandaki en geç
-  // biten öge alt yükleme çizgisidir (0,8 sn gecikme + 1,4 sn süre = 2,2 sn);
-  // slogan 1,7 sn'de, harfler ~1,25 sn'de oturur. 2,6 sn hepsinin bitmesine
-  // izin verir ve üstüne kısa bir duruş bırakır — ekran yarıda kesilmez.
+  // ─── SAĞLAYICI DÖNÜŞÜ: JENERİK OYNATILMAZ (22 Ağustos 2026) ───────────────
+  // Web'de Google/Apple girişi TAM SAYFA yönlendirmesidir: uygulama kapanır,
+  // sağlayıcıya gidilir, geri dönülür ve uygulama SIFIRDAN açılır. Bu ekran
+  // dönüşü normal bir ilk açılıştan ayırt etmiyordu; kullanıcı Google'dan
+  // döner dönmez 2,6 saniyelik marka jeneriğiyle karşılaşıyordu ve bunu
+  // "uygulama beni attı, baştan başlattı" diye okuyordu.
+  //
+  // Dönüşte ekran BEKLETMEZ: oturum çözülür çözülmez geçilir. Tek başına bu
+  // bile hissi düzeltir — kullanıcı jeneriği değil, kaldığı yeri görür.
+  // `useState` ile İLK render'da bir kez ölçülür: sonraki render'larda adres
+  // temizlenmiş olabilir ve süre ortada değişirse ekran zıplardı.
+  const [oauthDonusu] = useState(oauthDonusuMu);
+
+  // Normal açılışta ekran KENDİNİ TAMAMLASIN diye 2,6 sn beklenir. Ekrandaki
+  // en geç biten öge alt yükleme çizgisidir (0,8 sn gecikme + 1,4 sn süre =
+  // 2,2 sn); slogan 1,7 sn'de, harfler ~1,25 sn'de oturur. 2,6 sn hepsinin
+  // bitmesine izin verir ve üstüne kısa bir duruş bırakır.
   //
   // Bu süre aynı zamanda ARKA PLANA yarar: oturum çözümü, ilk veri isteği ve
   // tembel yüklenen ekran parçaları bu sırada iniyor. Eskiden 1,2 sn idi;
   // animasyon bitmeden geçtiği için hem eksik görünüyor hem de sonraki ekran
   // henüz hazır olmayabiliyordu.
-  const ACILIS_SURESI_MS = 2600;
+  const ACILIS_SURESI_MS = oauthDonusu ? 0 : 2600;
   useEffect(() => {
     if (!ready) return; // oturum durumu belli olmadan otomatik geçme
     const timer = setTimeout(onStart, ACILIS_SURESI_MS);
     return () => clearTimeout(timer);
-  }, [onStart, ready]);
+  }, [onStart, ready, ACILIS_SURESI_MS]);
 
   const letters = ['O', 'Y', 'N', 'A'];
 
@@ -142,11 +156,18 @@ export default function SplashScreen({ onStart, ready = true }: SplashScreenProp
             Potansiyel zaferler için
           </motion.p>
 
-          {!canStart && bekleyenGoster && (
+          {/* Dönüşte kullanıcı NE OLDUĞUNU okur: "kontrol ediliyor" değil,
+              başlattığı işin devamı. Bu yazı gecikmesiz çıkar — dönüş
+              beklemesi kısa da olsa boş ekran bırakmayalım. */}
+          {oauthDonusu ? (
+            <p role="status" aria-live="polite" className="mt-2 text-[0.8125rem] font-semibold text-gray-400">
+              Giriş tamamlanıyor…
+            </p>
+          ) : (!canStart && bekleyenGoster && (
             <p role="status" aria-live="polite" className="mt-2 text-[0.8125rem] font-semibold text-gray-400">
               Oturum kontrol ediliyor…
             </p>
-          )}
+          ))}
 
           {/* ── Alt Yükleme Çizgisi ── */}
           <motion.div

@@ -141,6 +141,40 @@ const oauthIsaretiBirak = (saglayici: OAuthSaglayici): void => {
 };
 
 /**
+ * Bu açılış bir SAĞLAYICI DÖNÜŞÜ MÜ? — İŞARETİ TÜKETMEZ (22 Ağustos 2026).
+ *
+ * `oauthDonusunuOku()` işareti okurken SİLER; açılış ekranı onu çağıramaz,
+ * yoksa giriş ekranı dönüş sebebini bir daha göremezdi. Bu yoklama yalnız
+ * BAKAR.
+ *
+ * NİYE GEREKLİ: web'de Google/Apple girişi TAM SAYFA yönlendirmesidir —
+ * uygulama kapanır, sağlayıcıya gidilir, geri dönülür ve uygulama SIFIRDAN
+ * açılır. Dönüşte 2,6 saniyelik marka açılış jeneriği baştan oynuyordu;
+ * kullanıcı "uygulama beni attı ve baştan başlattı" diye okuyordu (kurucunun
+ * bildirdiği hata tam bu). Dönüş tanınırsa açılış ekranı jeneriği ATLAR ve
+ * "Giriş tamamlanıyor…" der.
+ *
+ * İki işaretten biri yeterli:
+ *   · adreste `code`/`error` alanı — sağlayıcı dönüşünün kendi izi,
+ *   · sessionStorage işareti — yönlendirmeden önce biz bıraktık (10 dk ömür).
+ * Adres alanı, işaret yazılamayan ortamlarda (gizli sekme) yedektir.
+ */
+export const oauthDonusuMu = (): boolean => {
+  if (typeof window === 'undefined') return false;
+  try {
+    const sorgu = new URLSearchParams(window.location.search);
+    const capa = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+    if (sorgu.get('code') || sorgu.get('error') || capa.get('code') || capa.get('error')) return true;
+  } catch { /* adres okunamadıysa işarete bak */ }
+  try {
+    const ham = sessionStorage.getItem(OAUTH_ISARET);
+    if (!ham) return false;
+    const isaret = JSON.parse(ham) as { t?: number };
+    return !!isaret?.t && Date.now() - isaret.t <= OAUTH_ISARET_OMRU_MS;
+  } catch { return false; }
+};
+
+/**
  * Bu sayfa açılışı bir OAuth dönüşü mü? Öyleyse kaydı döner ve İZLERİ SİLER
  * (işaret + adresteki hata alanları). Değilse null.
  *
@@ -283,13 +317,23 @@ export const loginWithGoogle = async (): Promise<void> => {
 // ─── OAuth deep link dönüşü (native) ─────────────────────────────────────────
 // appUrlOpen'a gelen oyna://auth-callback?code=... URL'sini işler.
 // Dönüş: true → URL bir OAuth dönüşüydü (başka deep link işleyiciye gitmesin).
-export const handleAuthCallbackUrl = async (url: string): Promise<boolean> => {
+/**
+ * Dönüşün sonucu. `false` = bu adres bir OAuth dönüşü değildi (başka deep link
+ * işleyicisine gitsin). Diğerleri: bu adres bizimdi ve şu oldu.
+ */
+export type OAuthDonusSonucu = false | 'BASARILI' | 'IPTAL' | 'HATA';
+
+export const handleAuthCallbackUrl = async (url: string): Promise<OAuthDonusSonucu> => {
   if (!url.startsWith(OAUTH_NATIVE_REDIRECT)) return false;
   // Sistem tarayıcısı yaprağını kapat (açık değilse sessizce geç).
   try {
     const { Browser } = await import('@capacitor/browser');
     await Browser.close();
   } catch { /* iOS dışında veya kapalıysa */ }
+  // SESSİZ DÜŞÜŞ YOK (22 Ağu 2026): burası eskiden her hatayı konsola yazıp
+  // `true` dönüyordu. Kod bozdurulamadığında kullanıcı hiçbir açıklama
+  // görmeden giriş ekranına düşüyor ve bunu "uygulama beni attı" diye
+  // okuyordu. Sonuç artık çağırana bildirilir; ekranı o gösterir.
   try {
     const parsed = new URL(url);
     const code = parsed.searchParams.get('code');
@@ -298,13 +342,19 @@ export const handleAuthCallbackUrl = async (url: string): Promise<boolean> => {
       const { error } = await supabase.auth.exchangeCodeForSession(code);
       if (error) throw error;
       // Navigasyon App.tsx'teki onAuthStateChanged dinleyicisinde (SIGNED_IN).
-    } else if (oauthError) {
-      console.warn('[Auth] OAuth dönüşü hata ile geldi:', oauthError);
+      return 'BASARILI';
     }
+    if (oauthError) {
+      console.warn('[Auth] OAuth dönüşü hata ile geldi:', oauthError);
+      // Kullanıcının vazgeçmesi hata değildir; ekranda kırmızı uyarı çıkmasın.
+      return /access_denied|user_cancel|cancell?ed/i.test(oauthError) ? 'IPTAL' : 'HATA';
+    }
+    // Ne kod ne hata: beklenmeyen bir dönüş, ama bu adres bizimdi.
+    return 'HATA';
   } catch (err) {
     console.error('[Auth] OAuth dönüş kodu işlenemedi:', err);
+    return 'HATA';
   }
-  return true;
 };
 
 // ─── Apple Sign-In ────────────────────────────────────────────────────────────
