@@ -23,11 +23,46 @@ export const DEFAULT_DIAL_CODE = '90';
 export const SMS_DIAL_CODES = ['90'] as const;
 
 /**
+ * SMS kanalı açık mı? — KURUCU KARARI, 22 Ağustos 2026: KAPALI.
+ *
+ * Bu bayrak "ileride açarız" notu değil, bugünkü GERÇEĞİN karşılığıdır.
+ * 22 Ağustos'ta canlı yapılandırma denetlendi ve şu bulundu:
+ *   · Supabase Auth "Send SMS Hook" KAPALI (hook_send_sms_enabled=false),
+ *   · sms_provider "twilio" ama Twilio hesabı ve anahtarları YOK,
+ *   · send-sms fonksiyonu yüklü ama gizli anahtarı yok (HOOK_NOT_CONFIGURED),
+ *   · auth.users'da telefonla giriş TAMAMLAMIŞ tek kullanıcı yok.
+ * Yani telefonla giriş hiçbir zaman çalışmadı. Netgsm aboneliği ve onaylı
+ * gönderici başlığı henüz alınmadı; kurucu bunu sonraki sürüme bıraktı.
+ *
+ * NİYE BAYRAK, NİYE KODU SİLMEK DEĞİL: telefon akışı (ekran, doğrulama,
+ * sunucu ucu) yazıldı ve test edildi. Silmek onu yeniden yazmak demek olurdu.
+ * Bayrak açıldığı gün akış olduğu gibi geri gelir.
+ *
+ * NİYE EKRANDAN GİZLİYORUZ: çalışmayan bir giriş alanı bırakmak, kullanıcıya
+ * "Doğrulama kodu gönderilemedi" hatasından başka bir şey vermez. Mağaza
+ * incelemesinde bu doğrudan ret sebebidir (App Store Kural 2.1 — uygulama
+ * çalışmıyor). Gizleme HERKES için aynıdır; incelemeciye özel bir yol DEĞİLDİR
+ * (Apple 5.6 dersi, aynı tarih).
+ *
+ * AÇARKEN İKİSİ BİRLİKTE: burayı `true` yapmadan önce Netgsm anahtarları
+ * Supabase'e girilmeli ve Send SMS Hook açılmalı. Yarım açılış, kullanıcıyı
+ * gelmeyecek bir kodla bekletir.
+ */
+export const SMS_OTP_ENABLED = false;
+
+/**
  * WhatsApp kanalı açık mı? Meta WhatsApp Business hesabı + onaylı şablon
  * gerektirir; hesap açılınca burası `true` yapılır ve sunucudaki
  * `WHATSAPP_ENABLED` gizli anahtarı da açılır. İkisi birlikte — yarım açılış yok.
  */
 export const WHATSAPP_OTP_ENABLED = false;
+
+/**
+ * Telefonla giriş/doğrulama BUGÜN mümkün mü? Ekranlar bunu okur: kapalıysa
+ * telefon alanı hiç çizilmez, numara kapıları hiç kurulmaz. Tek kaynak burası —
+ * her ekran kendi kararını verseydi biri açık biri kapalı kalırdı.
+ */
+export const TELEFON_GIRISI_ACIK = SMS_OTP_ENABLED || WHATSAPP_OTP_ENABLED;
 
 export type OtpChannel = 'SMS' | 'WHATSAPP';
 
@@ -37,7 +72,25 @@ export const otpChannelFor = (dialCode: string): OtpChannel =>
 
 /** Bu numaraya bugün kod gönderebiliyor muyuz? */
 export const canSendOtpTo = (dialCode: string): boolean =>
-  otpChannelFor(dialCode) === 'SMS' || WHATSAPP_OTP_ENABLED;
+  otpChannelFor(dialCode) === 'SMS' ? SMS_OTP_ENABLED : WHATSAPP_OTP_ENABLED;
+
+/**
+ * Kod gönderilemiyorsa SEBEBİ — kullanıcıya gösterilecek tek cümle.
+ *
+ * Niye tek yerde: ekranlar bu cümleyi kendileri kuruyordu ve iki ayrı dal
+ * (SMS / WhatsApp) vardı. SMS kanalı 22 Ağu'da kapanınca Türkiye numarası
+ * WhatsApp dalına düşmediği için "Bu ülke kodu şu an desteklenmiyor" yazmaya
+ * başladı — doğru olmayan, kullanıcıyı numarası bozuk sanmaya iten bir cümle.
+ * Sebep artık kanalla birlikte burada kararlaştırılır.
+ *
+ * Kod gönderilebiliyorsa `null` döner.
+ */
+export const otpKapaliSebebi = (dialCode: string): string | null => {
+  if (canSendOtpTo(dialCode)) return null;
+  return otpChannelFor(dialCode) === 'SMS'
+    ? 'Telefonla giriş şu an kapalı — Google veya Apple ile devam edebilirsin.'
+    : 'Yurt dışı numaralara kod gönderimi henüz açık değil — Google veya Apple ile devam edebilirsin.';
+};
 
 const stripNonDigits = (v: string): string => (v ?? '').replace(/\D/g, '');
 

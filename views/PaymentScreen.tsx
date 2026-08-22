@@ -22,6 +22,7 @@ import AddCardScreen, { CollectedCard } from '../components/payment/AddCardScree
 import ThreeDSSheet, { ThreeDSOutcome } from '../components/payment/ThreeDSSheet';
 import type { PaymentContext } from '../types';
 import { formatTRYAmount } from '../utils/formatTRY';
+import { TELEFON_GIRISI_ACIK } from '../shared/phone';
 import { olayYaz } from '../utils/olcum';
 
 // ── ÖLÇÜM · bu ekran ÜÇ huninin de 4. ve 5. adımını taşır ───────────────────
@@ -531,7 +532,12 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
     //
     // Ödeme bırakılmaz, ERTELENİR: bekleyen niyet ödeme ekranını işaretler,
     // numara doğrulanınca kullanıcı buraya geri döner.
-    if (!auth.currentUser.phoneVerified) {
+    // TELEFON KAPALIYKEN BU KAPI KURULMAZ (22 Ağu 2026). Numara doğrulaması
+    // bugün hiç mümkün değil (shared/phone.ts · SMS_OTP_ENABLED); kapıyı açık
+    // bırakmak ödemeyi HERKES için imkânsız kılardı — uygulamanın ana işi
+    // çalışmaz hâle gelirdi. Bayrak açıldığı gün kapı kendiliğinden devreye
+    // girer; tesis ve kaptan numaraya o zaman kavuşur.
+    if (TELEFON_GIRISI_ACIK && !auth.currentUser.phoneVerified) {
       payBusyRef.current = false;
       const st = useAppStore.getState();
       st.setPhoneGateReason('PAYMENT');

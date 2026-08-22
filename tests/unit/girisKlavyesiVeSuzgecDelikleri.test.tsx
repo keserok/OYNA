@@ -31,6 +31,7 @@ import {
   Toast,
 } from '../../components/common/Toast';
 import { uygunsuzMu, ilkUygunsuzKelime } from '../../shared/icerikSuzgeci';
+import { TELEFON_GIRISI_ACIK } from '../../shared/phone';
 
 // AuthScreen'in dış dünyaya bağlı olduğu üç modül taklit edilir; ölçmek
 // istediğimiz şey ağ değil, YERLEŞİM.
@@ -181,12 +182,26 @@ describe('A3 · giriş ekranı klavyenin ARKASINDA kalmıyor (gerçek render)', 
     for (const d of dolgular) expect(d).toContain('max(var(--kb-height, 0px), 0px)');
   });
 
-  it('form alanları gerçekten ekranda (panel açıldı, boş DOM ölçmüyoruz)', () => {
+  it('ekranda GERÇEK bir giriş yolu var (boş DOM ölçmüyoruz)', () => {
     klavyeyiAc(KLAVYE);
     girisFormunuAc();
-    // Tek alan var: telefon numarası (+ ülke kodu). Şifre/e-posta kaldırıldı.
-    expect(screen.getByLabelText('Telefon numarası')).toBeTruthy();
-    expect(screen.getByLabelText('Ülke kodu')).toBeTruthy();
+    // Giriş ekranının hangi yolları göstereceği tek bayrağa bağlı
+    // (shared/phone.ts · SMS_OTP_ENABLED). Bu test o bayrağın İKİ durumunu da
+    // tanır; yoksa bayrak her çevrildiğinde kırmızıya döner ve "testi düzelt"
+    // alışkanlığı doğar.
+    if (TELEFON_GIRISI_ACIK) {
+      // Tek alan var: telefon numarası (+ ülke kodu). Şifre/e-posta kaldırıldı.
+      expect(screen.getByLabelText('Telefon numarası')).toBeTruthy();
+      expect(screen.getByLabelText('Ülke kodu')).toBeTruthy();
+    } else {
+      // SMS kapalıyken numara alanı ÇİZİLMEZ — çalışmayan bir alan bırakmak
+      // kullanıcıya "kod gönderilemedi"den başka bir şey vermez (App Store 2.1).
+      expect(screen.queryByLabelText('Telefon numarası')).toBeNull();
+      expect(screen.queryByLabelText('Ülke kodu')).toBeNull();
+      // Ama ekran BOŞ da kalmaz: iki sosyal yol duruyor olmalı.
+      expect(screen.getByRole('button', { name: 'Google' })).toBeTruthy();
+      expect(screen.getByRole('button', { name: 'Apple' })).toBeTruthy();
+    }
   });
 });
 

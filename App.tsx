@@ -28,6 +28,7 @@ import SplashScreen from './views/SplashScreen';
 import AuthScreen from './views/AuthScreen';
 import { isOnboardingEnabled, wasOnboardingSkipped } from './views/onboarding/onboardingShared';
 import { numaraAtlandiMi, numarayiAtla, numaraAtlamasiniTemizle } from './shared/numaraKapisi';
+import { TELEFON_GIRISI_ACIK } from './shared/phone';
 import { recordUserConsents } from './services/consentService';
 
 // Lazy loaded views to reduce initial bundle size
@@ -453,7 +454,13 @@ const App: React.FC = () => {
               // incelemeye özel bir paket derlenmesine yol açmıştı. Atlayan
               // kullanıcı bir daha açılışta zorlanmaz; numara ödeme/rezervasyon
               // anında istenir (PaymentScreen · handlePay).
-              const numaraGerekli = (user.provider === 'google' || user.provider === 'apple')
+              //
+              // 22 Ağu 2026 · İKİNCİ KAPI: telefon yolu bugün TAMAMEN KAPALI
+              // (shared/phone.ts · SMS_OTP_ENABLED — Netgsm aboneliği yok).
+              // Kod gönderilemeyen bir ekrana kimseyi yönlendirmeyiz; kapı
+              // bayrak açılana dek hiç kurulmaz.
+              const numaraGerekli = TELEFON_GIRISI_ACIK
+                && (user.provider === 'google' || user.provider === 'apple')
                 && !user.phoneVerified
                 && !numaraAtlandiMi(user.uid);
               // Numarası artık DOĞRULANMIŞSA eski "atladım" işaretini temizle:

@@ -3,7 +3,7 @@ import { ArrowRight, Phone, ShieldCheck } from 'lucide-react';
 import { requestPhoneLink, confirmPhoneLink, logout } from '../supabaseAuth';
 import {
   DEFAULT_DIAL_CODE, checkPhone, formatPhoneInput, formatPhoneDisplay,
-  canSendOtpTo, otpChannelFor,
+  canSendOtpTo, otpKapaliSebebi,
 } from '../shared/phone';
 import { mapAuthError } from '../utils/errorMap';
 import { useKlavyeOrtusu, klavyeliAltDolgu } from '../components/common/Toast';
@@ -63,9 +63,7 @@ const PhoneLinkScreen: React.FC<PhoneLinkScreenProps> = ({ onLinked, onSkip, ger
     if (busy) return;
     if (!check.valid) { setError(check.reason ?? 'Telefon numaranı gir.'); return; }
     if (kanalKapali) {
-      setError(otpChannelFor(dial) === 'WHATSAPP'
-        ? 'Yurt dışı numaralara kod gönderimi henüz açık değil.'
-        : 'Bu ülke kodu şu an desteklenmiyor.');
+      setError(otpKapaliSebebi(dial) ?? 'Şu an bu numaraya kod gönderemiyoruz.');
       return;
     }
     setError(null);
@@ -176,7 +174,7 @@ const PhoneLinkScreen: React.FC<PhoneLinkScreenProps> = ({ onLinked, onSkip, ger
             </div>
             {kanalKapali && (
               <p style={{ margin: '6px 2px 0', fontSize: 10, fontWeight: 700, color: '#FBBF24' }}>
-                Yurt dışı numaralara kod gönderimi henüz açık değil.
+                {otpKapaliSebebi(dial)}
               </p>
             )}
           </div>

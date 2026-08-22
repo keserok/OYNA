@@ -12,7 +12,7 @@ import { useAppStore } from '../store';
 import { makeManualLocation } from '../utils/regionResolver';
 import {
   DEFAULT_DIAL_CODE, checkPhone, formatPhoneInput, formatPhoneDisplay,
-  canSendOtpTo, otpChannelFor,
+  canSendOtpTo, otpKapaliSebebi, TELEFON_GIRISI_ACIK,
 } from '../shared/phone';
 // IP-15: yasal belgeler artık ÖZET değil TAM metin (karar 7b) — 39 KB. Statik
 // import edilirse giriş paketine girer ve belgeyi hiç açmayan kullanıcı da
@@ -247,7 +247,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
     // Ölü uç bırakma — ne yapabileceğini söyle: Google/Apple ile giren
     // kullanıcı numarasız da uygulamayı gezebilir (telefon adımı atlanabilir).
     if (kanalKapali) {
-      setError('Şu an yalnız Türkiye numaralarına kod gönderebiliyoruz. Google veya Apple ile devam edebilirsin.');
+      setError(otpKapaliSebebi(dial) ?? 'Şu an bu numaraya kod gönderemiyoruz. Google veya Apple ile devam edebilirsin.');
       return;
     }
     setIsLoading('send');
@@ -397,6 +397,11 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
     }
   };
 
+  // Telefon yolu kapalıyken (bkz. shared/phone.ts · SMS_OTP_ENABLED) ekranda
+  // numara alanı ve KOD GÖNDER düğmesi hiç çizilmez; geriye Google/Apple kalır.
+  // Demo kısayolu geliştirme paketinde çalışmaya devam etsin diye `demoInput`
+  // ayrı tutulur — o yol zaten yayın paketinde yok.
+  const telefonYoluVar = TELEFON_GIRISI_ACIK || demoMode;
   const authReady = agreed && contactValid && !kanalKapali;
   const otpReady = otp.length === 6;
   const busy = isLoading !== null || demoLoggingIn !== null;
@@ -621,16 +626,34 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
                   margin: 0, fontSize: 32, lineHeight: 1.1, fontWeight: 800,
                   letterSpacing: '-.035em', color: '#fff',
                 }}>
-                  Numaranla gir
+                  {telefonYoluVar ? 'Numaranla gir' : 'Sahaya çık'}
                 </h1>
                 <p style={{ margin: '10px 0 0', fontSize: 14, lineHeight: 1.5, fontWeight: 500, color: '#8B949E', letterSpacing: '-.01em' }}>
-                  Sana bir kod göndereceğiz. Şifre yok, uğraş yok.
+                  {telefonYoluVar
+                    ? 'Sana bir kod göndereceğiz. Şifre yok, uğraş yok.'
+                    : 'Apple ya da Google hesabınla tek dokunuşta gir. Şifre yok, uğraş yok.'}
                 </p>
               </div>
 
-              {/* Sosyal giriş — BİRİNCİL (§3.1: Google + Apple) */}
-              <div style={{ display: 'flex', gap: 12 }}>
-                  <button type="button" className="au-social" onClick={handleGoogleLogin} disabled={busy}>
+              {/* ─── Sosyal giriş — BİRİNCİL (§3.1: Google + Apple) ───────
+                  YERLEŞİM TELEFON YOLUNA GÖRE DEĞİŞİR (22 Ağu 2026):
+                  · telefon açıkken → iki düğme YAN YANA, altında numara alanı;
+                  · telefon kapalıyken → tek giriş yolu bunlar olduğu için ALT
+                    ALTA ve tam genişlikte. Yan yana bırakılınca ekranın
+                    ortasında telefon alanından kalan kocaman bir boşluk
+                    kalıyor, ekran "yarım kalmış" görünüyordu.
+                  APPLE ÜSTTE: iOS'ta üçüncü taraf girişi sunan uygulama Apple
+                  ile Giriş'i de en az o kadar öne çıkarmak zorunda (Kural 4.8);
+                  `column-reverse` ile Apple üste, Google alta gelir. */}
+              <div style={{
+                display: 'flex',
+                flexDirection: telefonYoluVar ? 'row' : 'column-reverse',
+                gap: telefonYoluVar ? 12 : 10,
+              }}>
+                  <button
+                    type="button" className="au-social" onClick={handleGoogleLogin} disabled={busy}
+                    style={telefonYoluVar ? undefined : { flex: 'none', width: '100%', height: 56 }}
+                  >
                     {isLoading === 'google' ? spinner : (
                       <svg width="19" height="19" viewBox="0 0 24 24" aria-hidden="true">
                         <path fill="#EA4335" d="M12.24 10.285V14.4h6.887c-.648 2.41-2.519 4.114-5.186 4.114-3.478 0-6.3-2.822-6.3-6.3 0-3.478 2.822-6.3 6.3-6.3 1.636 0 3.109.633 4.2 1.66l3.205-3.205C19.232 2.378 15.932 1 12.24 1 5.86 1 .7 6.16.7 12.54s5.16 11.54 11.54 11.54c6.645 0 11.755-4.664 11.755-11.755 0-.745-.067-1.462-.2-2.04H12.24z" />
@@ -638,7 +661,10 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
                     )}
                     <span>Google</span>
                   </button>
-                  <button type="button" className="au-social" onClick={handleAppleLogin} disabled={busy}>
+                  <button
+                    type="button" className="au-social" onClick={handleAppleLogin} disabled={busy}
+                    style={telefonYoluVar ? undefined : { flex: 'none', width: '100%', height: 56 }}
+                  >
                     {isLoading === 'apple' ? spinner : (
                       <svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                         <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 4.17c.66-.81 1.11-1.93.99-3.06-1 .04-2.22.67-2.94 1.5-.64.73-1.2 1.87-1.05 2.99 1.12.09 2.26-.56 3-1.43z" />
@@ -652,11 +678,15 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
                     numaranla" cümlesi kaldırıldı; hemen altındaki "TELEFON
                     NUMARAN" alan başlığı zaten aynı şeyi söylüyor. Geriye
                     sosyal girişle telefon alanını ayıran kısa bir çizgi kalır.
-                    Dekoratif olduğu için ekran okuyucudan gizli. */}
+                    Dekoratif olduğu için ekran okuyucudan gizli.
+                    Telefon yolu kapalıyken ayıracak bir şey de yok → çizilmez. */}
+                {telefonYoluVar && (
                 <div style={{ display: 'flex', justifyContent: 'center', margin: '22px 0' }}>
                   <div aria-hidden="true" style={{ width: 32, height: 1, background: 'rgba(255,255,255,.10)' }} />
                 </div>
+                )}
 
+                {telefonYoluVar && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 13 }}>
                   <div>
                     <label className="au-label" htmlFor="au-phone">Telefon numaran</label>
@@ -709,13 +739,12 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
                     )}
                     {kanalKapali && (
                       <p style={{ margin: '6px 2px 0', fontSize: 10, fontWeight: 700, color: '#FBBF24' }}>
-                        {otpChannelFor(dial) === 'WHATSAPP'
-                          ? 'Yurt dışı numaralara kod gönderimi henüz açık değil — Google veya Apple ile devam edebilirsin.'
-                          : 'Bu ülke kodu şu an desteklenmiyor.'}
+                        {otpKapaliSebebi(dial)}
                       </p>
                     )}
                   </div>
                 </div>
+                )}
 
                 {demoMode && (
                   <p style={{ margin: '10px 2px 0', fontSize: 10, fontWeight: 700, color: '#39FF14' }}>
@@ -728,7 +757,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
                 )}
 
                 {/* KVKK + Sözleşme onayı */}
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginTop: 15, padding: '0 2px' }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginTop: telefonYoluVar ? 15 : 22, padding: '0 2px' }}>
                   <button
                     id="agreement-checkbox"
                     type="button"
@@ -845,6 +874,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
                     vardı; hepsi tek yola indi. Misafir modu kurucu kararıyla
                     kapatıldı, kayıt/giriş ayrımı da kalktı. */}
                 <div style={{ marginTop: 'auto', paddingTop: 20, display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  {telefonYoluVar && (
                   <button
                     type="button"
                     className="au-cta"
@@ -859,6 +889,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
                       </>
                     )}
                   </button>
+                  )}
 
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, paddingTop: 2 }}>
                     <button type="button" className="au-footlink" onClick={() => setOpenModal('TERMS')}>Kullanım Şartları</button>

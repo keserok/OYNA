@@ -3,7 +3,8 @@ import { readFileSync } from 'fs';
 import path from 'path';
 import {
   DEFAULT_DIAL_CODE, checkPhone, formatPhoneInput, formatPhoneDisplay,
-  canSendOtpTo, otpChannelFor, WHATSAPP_OTP_ENABLED, phoneLast4,
+  canSendOtpTo, otpChannelFor, WHATSAPP_OTP_ENABLED, SMS_OTP_ENABLED,
+  TELEFON_GIRISI_ACIK, phoneLast4,
 } from '../../shared/phone';
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -56,15 +57,50 @@ describe('numara kuralı — tek kaynak', () => {
 });
 
 describe('kanal kuralı — yurt dışına SMS YOK', () => {
-  it('Türkiye SMS kanalındadır', () => {
+  it('Türkiye SMS kanalındadır — gönderim bayrağa bağlı', () => {
+    // Kanal SEÇİMİ ülkeye göre sabittir; GÖNDEREBİLİYOR OLMAK ayrı bir soru.
+    // 22 Ağu 2026'da bu ikisi ayrıldı: Netgsm aboneliği alınmadığı için SMS
+    // kanalı kapatıldı ve `canSendOtpTo` artık bayrağı okuyor. Kanal eşlemesi
+    // yine de doğru kalmalı — bayrak açıldığı gün TR yolu SMS'ten gitmeli.
     expect(otpChannelFor('90')).toBe('SMS');
-    expect(canSendOtpTo('90')).toBe(true);
+    expect(canSendOtpTo('90')).toBe(SMS_OTP_ENABLED);
   });
 
   it('yurt dışı WhatsApp kanalındadır ve bugün KAPALIDIR', () => {
     expect(otpChannelFor('44')).toBe('WHATSAPP');
     expect(WHATSAPP_OTP_ENABLED).toBe(false);
     expect(canSendOtpTo('44')).toBe(false);
+  });
+
+  /**
+   * SMS KAPALI — VE EKRAN BUNU BİLİYOR (22 Ağustos 2026, kurucu kararı)
+   *
+   * Canlı yapılandırma denetlendi: Send SMS Hook kapalı, sms_provider "twilio"
+   * ama Twilio hesabı yok, send-sms fonksiyonu HOOK_NOT_CONFIGURED dönüyor ve
+   * auth.users'da telefonla giriş TAMAMLAMIŞ tek kullanıcı yok. Yani telefon
+   * yolu hiç çalışmadı. Netgsm aboneliği sonraki sürüme bırakıldı.
+   *
+   * Çalışmayan bir giriş alanını ekranda bırakmak, kullanıcıya "Doğrulama kodu
+   * gönderilemedi"den başka bir şey vermez — App Store'da doğrudan ret sebebi
+   * (Kural 2.1). Bu blok, bayrakla ekranın AYNI şeyi söylediğini kilitler.
+   */
+  it('bayrak kapalıyken ekranlar telefon yolunu hiç kurmuyor', () => {
+    expect(TELEFON_GIRISI_ACIK).toBe(SMS_OTP_ENABLED || WHATSAPP_OTP_ENABLED);
+
+    const auth = oku('views/AuthScreen.tsx');
+    // Numara alanı, ayraç ve KOD GÖNDER düğmesi aynı kapıdan geçer.
+    expect(auth).toContain('const telefonYoluVar = TELEFON_GIRISI_ACIK || demoMode');
+    expect((auth.match(/\{telefonYoluVar && \(/g) ?? []).length).toBeGreaterThanOrEqual(3);
+
+    // Açılıştaki numara kapısı da bayrağı okur; kod gidemeyen bir ekrana
+    // kimse yönlendirilmez.
+    const app = oku('App.tsx');
+    expect(app).toContain('const numaraGerekli = TELEFON_GIRISI_ACIK');
+
+    // ÖDEME KAPISI EN KRİTİĞİ: numara doğrulanamazken bu kapı açık kalsaydı
+    // HİÇ KİMSE ödeme yapamazdı — uygulamanın ana işi çalışmaz hâle gelirdi.
+    const pay = oku('views/PaymentScreen.tsx');
+    expect(pay).toContain('if (TELEFON_GIRISI_ACIK && !auth.currentUser.phoneVerified)');
   });
 
   it('sunucu tarafı da yurt dışını kapatıyor (arayüze güvenilmez)', () => {
