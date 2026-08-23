@@ -143,3 +143,56 @@ describe('Sunucu tarafı · incelemeciye özel giriş kapısı yok (Apple 5.6)',
     expect(cfg).toMatch(/\[auth\.sms\][\s\S]*?enable_signup = false/);
   });
 });
+
+describe('Çıkışta bayat paket kalmaz', () => {
+  /**
+   * KURUCU BİLDİRİMİ (23 Ağustos 2026): "Çıkış yaptığım zaman neden hâlâ demo
+   * hesaplı giriş ekranı geliyor?"
+   *
+   * İKİ SEBEP VARDI, ikisi de bu blokta kilitli:
+   *
+   *  1. ÜRETİM ESKİ KODU SERVİS EDİYORDU. `oyna-app.vercel.app`, `main`
+   *     dalından derleniyor; `main` bu düzeltmelerin hiçbirini almamıştı ve
+   *     kendi `views/AuthScreen.tsx` dosyasında "APP REVIEW · İNCELEME" kutusu
+   *     ile "DEMO HESABIYLA GİR" düğmesi harfi harfine duruyordu. Kurucunun
+   *     ekran görüntüsü o paketin çıktısıydı. Çözümü kod değil, birleştirmedir.
+   *
+   *  2. AÇIK SEKME BAYATLIYORDU. Web'de uygulama tek sayfadır: sekme bir kez
+   *     açıldıktan sonra o dağıtımın JavaScript'i bellekte kalır. Çıkış yalnız
+   *     oturumu düşürüp görünümü 'AUTH'a çeviriyordu, yani giriş ekranını
+   *     SEKMENİN AÇILDIĞI GÜNKÜ paketten çiziyordu. Bu, kodda demo ekranı hiç
+   *     kalmasa bile tekrarlardı — düzeltme yayına alınsa dahi.
+   */
+  it('çıkış web sekmesini KÖKTEN yeniden yükler', () => {
+    const auth = oku('supabaseAuth.ts');
+    const govde = auth.slice(auth.indexOf('export const logout ='),
+                             auth.indexOf('const yenidenBaslat'));
+    expect(govde).toContain('signOut()');
+    // Yeniden yükleme çıkışın PARÇASI olmalı; çağıranlara bırakılırsa biri
+    // unutur ve o yol bayat kalır (dört ayrı çağrı yeri var).
+    expect(govde).toContain('yenidenBaslat()');
+    expect(auth).toContain('window.location.replace(`${window.location.origin}/`)');
+    // Native'de bayatlama yok, yeniden yükleme yalnız beyaz ekran getirir.
+    const yeniden = auth.slice(auth.indexOf('const yenidenBaslat'));
+    expect(yeniden.slice(0, 400)).toContain('Capacitor.isNativePlatform()');
+  });
+
+  it('SPA girişi (/) tarayıcıda önbelleğe alınmıyor', () => {
+    // `vercel.json` yalnız "/index.html" için no-cache yazıyordu. Ama
+    // `cleanUrls` + `"/(.*)" -> "/index.html"` yeniden yazımı yüzünden
+    // kullanıcının İSTEDİĞİ yol "/"dur ve başlık kuralları yeniden yazımdan
+    // ÖNCEKİ yola bakar: kural hiç uygulanmıyordu. Yeniden yükleme bile eski
+    // index.html'i diskten alabilirdi — yani 1. sebep kapansa bile 2. sebep
+    // sessizce sürerdi.
+    const v = JSON.parse(oku('vercel.json'));
+    const kural = (yol: string) => v.headers.find((h: any) => h.source === yol);
+    for (const yol of ['/', '/index.html']) {
+      const h = kural(yol);
+      expect(h, `${yol} için önbellek kuralı yok`).toBeTruthy();
+      expect(JSON.stringify(h.headers)).toContain('no-cache');
+    }
+    // Parmak izli varlıklar ise sonsuza kadar önbelleklenebilir: adları
+    // içeriğe göre değiştiği için bayatlayamazlar.
+    expect(JSON.stringify(kural('/assets/(.*)').headers)).toContain('immutable');
+  });
+});

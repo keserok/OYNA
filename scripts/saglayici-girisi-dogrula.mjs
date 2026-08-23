@@ -134,6 +134,9 @@ const arkaUcuTaklitEt = async (baglam, profil) => {
       refresh_token: 'sahte-yenileme', user: KULLANICI }) }));
   await baglam.route('**/auth/v1/user**', (yol) => yol.fulfill({
     status: 200, contentType: 'application/json', body: JSON.stringify(KULLANICI) }));
+  // signOut bu uca POST atar. Taklit edilmezse istek gerçek ağa gider, düşer
+  // ve oturum yerel depoda kalır — çıkış senaryosu sahte bir kırmızı üretir.
+  await baglam.route('**/auth/v1/logout**', (yol) => yol.fulfill({ status: 204, body: '' }));
   // SIRA ÖNEMLİ: Playwright en SON eklenen yolu ÖNCE dener.
   await baglam.route('**/rest/v1/**', (yol) => yol.fulfill({
     status: 200, contentType: 'application/json', body: '[]' }));
@@ -305,14 +308,30 @@ const cikisSonrasi = async (kok) => {
   }
   iddia('önce içeri girildi', /ANA SAYFA|Yakınındaki|MAÇ/i.test(icerde), icerde.slice(0, 60));
 
-  // ÇIKIŞ: `logout()` oturumu düşürür ve AUTH'a döner. Aynı son durumu
-  // depodaki belirteci silip uygulamayı yeniden açarak kuruyoruz.
-  await ana.evaluate(() => {
-    try { localStorage.removeItem('oyna.auth.token'); } catch { /* yoksay */ }
-    try { sessionStorage.clear(); } catch { /* yoksay */ }
-  });
-  await ana.goto(`${kok}/`, { waitUntil: 'domcontentloaded' });
-  if (!(await girisEkraninaGel(ana))) { iddia('çıkıştan sonra giriş ekranı geldi', false); await t.close(); return; }
+  // GERÇEK ÇIKIŞ — ürünün kendi yolundan: Profil → Ayarlar → "Çıkış Yap".
+  // Depoyu elle silmek "çıkış yaptım" DEĞİLDİR; kurucunun yaptığı şey bu üç
+  // dokunuştur ve bayat sekme sorunu da tam burada ortaya çıkıyordu.
+  await ana.locator('[aria-label="Profil"]').first().click();
+  await ana.waitForTimeout(1200);
+  const ayarlar = ana.locator('button:has-text("Ayarlar"), [aria-label="Ayarlar"]').first();
+  iddia('Profil → Ayarlar yolu var', (await ayarlar.count()) > 0);
+  await ayarlar.click();
+  await ana.waitForTimeout(1200);
+  const cikis = ana.locator('button:has-text("Çıkış Yap")').first();
+  iddia('Ayarlar\u2019da "Çıkış Yap" var', (await cikis.count()) > 0);
+  await cikis.click();
+
+  // ÇIKIŞ SEKMEYİ KÖKTEN YENİDEN YÜKLER (23 Ağu 2026). Yükleme gerçekten
+  // oluyor mu ölçülür: olmazsa ekran, sekmenin AÇILDIĞI GÜNKÜ paketten
+  // çizilir ve eski giriş ekranı geri gelir — kurucunun bildirdiği şey buydu.
+  const yuklendi = await ana.waitForEvent('load', { timeout: 15000 }).then(() => true).catch(() => false);
+  iddia('çıkış sekmeyi yeniden yükledi (bayat paket kalmaz)', yuklendi);
+  await ana.waitForTimeout(800);
+  if (!(await girisEkraninaGel(ana))) {
+    iddia('çıkıştan sonra giriş ekranı geldi', false, (await ekran(ana)).slice(0, 90));
+    await t.close();
+    return;
+  }
   const metin = await ekran(ana);
   iddia('çıkıştan sonra gelen ekran "Sahaya çık"', /Sahaya çık/i.test(metin), metin.slice(0, 60));
   for (const iz of ['Numaranla gir', 'TELEFON NUMARAN', 'KOD GÖNDER', 'DEMO HESABIYLA', 'APP REVIEW']) {

@@ -594,17 +594,34 @@ export const loginWithApple = async (): Promise<void> => {
   }
 };
 
-// IP-15 — ölü `loginWithPhone` / `verifyOtp` çifti SİLİNDİ. Hiçbir ekrandan
-// çağrılmıyorlardı ve aşağıdaki `sendPhoneOtp` / `verifyPhoneOtp` ile İKİ
-// paralel telefon yolu oluşturuyorlardı: bakım borcu.
-//
-// Telefonla giriş EKRANI bu pakette YAPILMADI (kullanıcı kararı 10a): Supabase
-// projesinde Phone sağlayıcısının açık olup olmadığı repodan doğrulanamıyor,
-// yani yazılacak ekran test edilemez. Sağlayıcı açıldığında `sendPhoneOtp` /
-// `verifyPhoneOtp` hazır bekliyor; e-posta OTP'siyle aynı yönlendirme yolunu
-// kullanırlar, ek navigasyon kodu gerekmez.
 
-// ─── Logout ───────────────────────────────────────────────────────────────────
+// ─── Çıkış ───────────────────────────────────────────────────────────────────
+/**
+ * ÇIKIŞTA WEB SEKMESİ YENİDEN YÜKLENİR (23 Ağustos 2026).
+ *
+ * KURUCU BİLDİRİMİ: "Çıkış yaptığım zaman neden hâlâ demo hesaplı giriş ekranı
+ * geliyor?"
+ *
+ * MEKANİZMA: web'de uygulama TEK SAYFADIR. Sekme bir kez açıldığında o
+ * dağıtımın JavaScript'i bellekte kalır ve TAM SAYFA YENİLENENE KADAR
+ * değişmez. Çıkış yalnız oturumu düşürüp görünümü 'AUTH'a çeviriyordu — yani
+ * ekranı, sekme AÇILDIĞI GÜNKÜ paketten yeniden çiziyordu. Sekmesi eski bir
+ * dağıtımla açılmış kullanıcı, biz kodu değiştirsek de yayına alsak da,
+ * çıkışta ESKİ giriş ekranını görüyordu. Kurucunun bildirdiği şey buydu ve
+ * kodda demo ekranı hiç kalmasa bile tekrarlardı.
+ *
+ * ÇÖZÜM: çıkış, oturumu düşürdükten sonra sayfayı KÖKTEN yeniden yükler.
+ * Yeniden yükleme her zaman o anki yayındaki paketi getirir; giriş ekranı
+ * artık "sekmenin yaşı"na bağlı olamaz. `replace` kullanılır ki geri tuşu
+ * kullanıcıyı oturum sonrası ekranlara geri atmasın.
+ *
+ * NİYE YALNIZ WEB: native pakette JavaScript uygulamanın İÇİNDEDİR; bayatlama
+ * diye bir şey yoktur. Orada yeniden yükleme yalnız beyaz ekran ve eklenti
+ * yeniden kurulumu getirirdi — bedeli var, karşılığı yok.
+ *
+ * Bu fonksiyon web'de DÖNMEZ: çağıranın ardından yazdığı yönlendirme
+ * çalışmaz, çalışmasına da gerek yoktur (sayfa sıfırdan açılıyor).
+ */
 export const logout = async (): Promise<void> => {
   try {
     const uid = auth.currentUser?.uid;
@@ -616,6 +633,20 @@ export const logout = async (): Promise<void> => {
   } catch (error) {
     console.error('[Auth] Çıkış hatası:', error);
   }
+  yenidenBaslat();
+};
+
+/** Web sekmesini kökten yeniden yükler. Native'de ve test ortamında no-op. */
+const yenidenBaslat = (): void => {
+  if (typeof window === 'undefined') return;
+  try {
+    if (Capacitor.isNativePlatform()) return;
+  } catch { /* Capacitor yoksa web say */ }
+  try {
+    // jsdom `replace`i uygulamaz ve gürültü basar; testlerde atlanır.
+    if (typeof window.location?.replace !== 'function') return;
+    window.location.replace(`${window.location.origin}/`);
+  } catch { /* yönlendirilemediyse akış zaten AUTH'a düşer */ }
 };
 
 // ─── Auth state listener (Firebase compat API) ───────────────────────────────
