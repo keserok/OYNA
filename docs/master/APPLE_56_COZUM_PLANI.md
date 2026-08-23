@@ -161,7 +161,28 @@ paket + sunucunun cevabı.
 
 ---
 
-## 3 · SENİN VERMEN GEREKEN İKİ KARAR
+## 3 · KARARLAR — VERİLDİ (22 Ağu 2026)
+
+> Aşağıdaki iki karar kurucu tarafından verildi. Uygulama talimatı:
+> **`docs/master/APPLE_56_GOREV_TALIMATI.md`**
+>
+> · **KARAR 1 → Pazaryeri mantığı uygulamada KALIR**; demo olarak yer alan
+>   hiçbir şey kalmaz (tümü silinir). Aşağıdaki A/B/C tablosu artık
+>   *tarihçedir* — seçilen yol "demo silinir, pazaryeri durur"dur ve boşalan
+>   vitrin gerçek tesis/sağlayıcı kaydıyla doldurulacaktır.
+> · **KARAR 2 → En kısa yol (B):** `payment_mode_global=CASH_ONLY`,
+>   `simulation_counts_as_live=false`, `match_deposit_enabled=false`.
+>   iyzico canlıya alma 1.1'e bırakıldı.
+>
+> **Sonradan ölçülen ve kararı etkileyen iki şey** (talimatta ayrıntılı):
+> demo silinince 5 sekmeden 4'ü boşalıyor ve maç kurma da ölüyor
+> (`matchCreateService.ts:66` yayında tesis şartı); ayrıca
+> `supabase/config.toml`'da demo hesaba bağlı bir **sabit OTP arka kapısı**
+> bulundu — o da 5.6 kapsamındadır.
+
+### Kararların dayanağı (tarihçe)
+
+#### Seçenek tabloları
 
 Kalan işin tamamı bu iki karara bağlı. Diğer her şeyi ben kapatabilirim.
 
