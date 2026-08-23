@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Bell, Trophy, Shield, AlertCircle, Check, Volume2, ChevronDown } from 'lucide-react';
+import { Bell, Trophy, Shield, AlertCircle, Check, Clock, Volume2, ChevronDown } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
 import { AnimatePresence, motion } from 'framer-motion';
 import { auth } from '../../supabaseAuth';
@@ -14,6 +14,7 @@ import {
   NotificationMode,
 } from '../../notifications/notificationPreferences';
 import type { NotificationPreferences } from '../../notifications/pushService';
+import { pushCanliMi } from '../../notifications/pushCanliMi';
 import SettingsSubPage from '../common/SettingsSubPage';
 
 // ─── Bildirim Ayarları — ÜÇ MOD (S2, 4 Ağustos 2026) ─────────────────────────
@@ -81,6 +82,9 @@ const NotificationSettingsPage: React.FC<NotificationSettingsPageProps> = ({ ope
   const [listeAcik, setListeAcik] = useState(false);
   const [isNative] = useState(() => Capacitor.isNativePlatform());
   const [permissionDenied, setPermissionDenied] = useState(false);
+  // Telefona GERÇEK push gidiyor mu (sunucudaki push_live_enabled)?
+  // Bilinene kadar `null`: ne "gider" ne "gitmez" diyoruz, hiçbir şey çizmiyoruz.
+  const [telefonPushu, setTelefonPushu] = useState<boolean | null>(null);
 
   // Sessiz saatler yerel durumu (backend formatı: {start,end}, HH:mm)
   const initialQuiet = (notificationPreferences as unknown as { quiet_hours?: QuietHours }).quiet_hours;
@@ -92,6 +96,7 @@ const NotificationSettingsPage: React.FC<NotificationSettingsPageProps> = ({ ope
     if (!open) return;
     void fetchNotificationTemplates().then(setTemplates);
     void fetchNotificationMode().then((m) => { setMod(m); setModYuklendi(true); });
+    void pushCanliMi().then(setTelefonPushu);
   }, [open]);
 
   // Sayfa açıldığında sessiz saat durumunu store'dan tazele (tercihler
@@ -162,8 +167,31 @@ const NotificationSettingsPage: React.FC<NotificationSettingsPageProps> = ({ ope
 
   return (
     <SettingsSubPage open={open} onClose={onClose} title="Bildirimler" subtitle="Ne kadar bildirim istersin?">
-      {/* Cihaz izni uyarısı — yalnızca native cihazda izin kapalıysa */}
-      {isNative && permissionDenied && (
+      {/* ─── Telefon bildirimi henüz açık değil ─────────────────────────
+          Sunucudaki `push_live_enabled` kapalıyken send-push her bildirimi
+          "simulated" sayıp erken dönüyor: telefona hiçbir şey gitmiyor.
+          Kullanıcıya bunu SÖYLEMEK zorundayız — aşağıdaki mod seçimi
+          uygulama içi bildirimlerde bugün de geçerli, ama telefonun
+          çalmasını beklememeli. Anahtar panelden açıldığı gün bu şerit
+          kendiliğinden kaybolur. */}
+      {telefonPushu === false && (
+        <div className="mb-5 bg-amber-500/10 border border-amber-500/25 rounded-2xl p-4 flex items-start gap-3">
+          <Clock size={18} className="text-amber-300 shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-bold text-amber-200">Telefon bildirimleri henüz açık değil</p>
+            <p className="text-xs text-amber-100/70 mt-0.5 leading-relaxed">
+              Şu anda bildirimler yalnızca uygulama içinde görünür; telefonun çalmaz.
+              Aşağıdaki seçimin şimdiden geçerli — telefon bildirimlerini açtığımızda
+              aynı seçimle devam edersin.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Cihaz izni uyarısı — yalnızca native cihazda, push CANLIYKEN ve izin kapalıysa.
+          Push kapalıyken "izin kapalı" uyarısı yanıltıcı olurdu: izin açık olsa da
+          bildirim gitmiyor. */}
+      {isNative && telefonPushu === true && permissionDenied && (
         <div className="mb-5 bg-red-500/10 border border-red-500/25 rounded-2xl p-4 flex items-start gap-3">
           <AlertCircle size={18} className="text-red-400 shrink-0 mt-0.5" />
           <div>
@@ -281,7 +309,12 @@ const NotificationSettingsPage: React.FC<NotificationSettingsPageProps> = ({ ope
         </div>
       )}
 
-      {/* ─── Sessiz saatler ─────────────────────────────────────────────── */}
+      {/* ─── Sessiz saatler ───────────────────────────────────────────────
+          YALNIZ telefon bildirimi canlıyken çizilir. Bu kural SADECE
+          `supabase/functions/send-push` içinde uygulanıyor; push kapalıyken o
+          fonksiyon zaten erken dönüyor, yani "bu aralıkta telefonun çalmaz"
+          bugün hiçbir şey yapmayan bir söz olurdu. */}
+      {telefonPushu === true && (
       <div className="mb-5 bg-[#161B22] border border-white/8 rounded-2xl overflow-hidden">
         <div className="flex items-center justify-between p-4">
           <div className="flex items-center gap-3">
@@ -337,6 +370,7 @@ const NotificationSettingsPage: React.FC<NotificationSettingsPageProps> = ({ ope
           )}
         </AnimatePresence>
       </div>
+      )}
 
       <p className="text-[0.6875rem] text-gray-400 leading-relaxed px-1 pb-2">
         Para hareketleri, maç iptali ve sana gelen doğrudan davetler hangi modu

@@ -1,5 +1,6 @@
 import { Capacitor } from '@capacitor/core';
 import { useAppStore } from '../store';
+import { pushCanliMi } from './pushCanliMi';
 
 // ─── D2 — Bildirim iznini DOĞRU ANDA iste ────────────────────────────────────
 //
@@ -44,6 +45,15 @@ export const pushIzniZamaniGeldi = async (): Promise<void> => {
   try {
     if (!Capacitor.isNativePlatform()) return;   // web'de Capacitor push yok
     if (dahaOnceSorulduMu()) return;             // bir kez sorduk, yeter
+
+    // TUTAMAYACAĞIMIZ SÖZÜ VERME (23 Ağustos 2026). Sunucudaki
+    // `push_live_enabled` kapalıyken send-push her bildirimi "simulated"
+    // sayıp erken dönüyor: telefona hiçbir şey gitmiyor. Bu ekran ise
+    // "maçtan 1 saat önce hatırlatırız" diyor ve ardından telefonun izin
+    // kutusunu açıyor. Telefon o kutuyu ÖMÜRDE BİR KEZ gösterir — bugün
+    // sorup hiçbir bildirim göndermezsek kullanıcının tek şansı yanar.
+    // Anahtar panelden açıldığı gün bu kapı kendiliğinden açılır.
+    if (!(await pushCanliMi())) return;
 
     const { PushNotifications } = await import('@capacitor/push-notifications');
     const izin = await PushNotifications.checkPermissions();

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Building2, KeyRound, Mail, RefreshCw, Save, Send, Shield, Dices } from 'lucide-react';
+import { Building2, KeyRound, Mail, RefreshCw, Save, Shield, Dices } from 'lucide-react';
 import {
   listOwnerAccountsForAdmin,
   planTierLabel,
@@ -354,28 +354,20 @@ const OwnerAccountsTab: React.FC = () => {
                             </button>
                           </div>
 
-                          {/* Sıfırlama kodu gönder */}
-                          <div className="sm:col-span-2 flex flex-wrap items-center justify-between gap-2 bg-[#0A0E14] border border-white/5 rounded-xl p-3">
-                            <p className="text-[11px] text-gray-500">
-                              Ya da tesise kendi şifresini belirlemesi için <span className="text-gray-300 font-bold">{row.owner_email ?? 'kayıtlı e-postasına'}</span> sıfırlama kodu gönderin.
-                            </p>
-                            <button
-                              type="button"
-                              disabled={anyBusy || !row.owner_email}
-                              onClick={() =>
-                                runCredAction(
-                                  row.owner_user_id,
-                                  'send_reset_code',
-                                  {},
-                                  'Sıfırlama kodu e-postaya gönderildi',
-                                )
-                              }
-                              className="flex items-center gap-1.5 px-3 py-2 bg-white/5 border border-white/10 hover:bg-white/10 text-gray-200 text-[11px] font-extrabold rounded-lg disabled:opacity-40"
-                            >
-                              <Send size={12} />
-                              {busyFor('send_reset_code') ? 'Gönderiliyor…' : 'Sıfırlama Kodu Gönder'}
-                            </button>
-                          </div>
+                          {/* SIFIRLAMA KODU DÜĞMESİ KALDIRILDI (23 Ağustos 2026).
+                              Düğme, tesis sahibinin e-postasına 6 haneli bir kod
+                              gönderiyordu ve "kodu uygulamaya gir" diyordu — ama
+                              kodun girileceği ekran ne uygulamada ne bu panelde
+                              var. Yani sahibine kullanılamaz bir kod gidiyor,
+                              yönetici de "gönderildi" onayı görüyordu.
+                              Aynı ihtiyacı hemen yukarıdaki "Şifreyi Kaydet"
+                              zaten karşılıyor. Kodu doğrulayan sunucu tarafı
+                              (password-reset-request/confirm) yerinde duruyor;
+                              giriş ekranı yazıldığı gün düğme geri gelir. */}
+                          <p className="sm:col-span-2 text-[11px] text-gray-500 bg-[#0A0E14] border border-white/5 rounded-xl p-3">
+                            Şifreyi burada belirleyip tesise <span className="text-gray-300 font-bold">güvenli bir kanaldan</span> iletin.
+                            Tesisin kendi şifresini belirlemesi için e-posta akışı henüz açık değil.
+                          </p>
                         </div>
                       )}
                     </div>

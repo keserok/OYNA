@@ -69,8 +69,17 @@ const sunucuAc = (kok) => new Promise((coz, red) => {
 });
 
 // ─── Tarayıcı ───────────────────────────────────────────────────────────────
+//
+// Playwright, node_modules'taki sürümüne KİLİTLİ bir tarayıcı derlemesi arar
+// (ör. chromium_headless_shell-1228). Hazır kurulu kutularda çoğu zaman başka
+// bir sürüm bulunur ve komut "npx playwright install" diyerek düşer — oysa
+// çalışan bir Chromium zaten diskte durur. Bulabildiğimizi kullanırız.
+const HAZIR_CHROMIUM = ['/opt/pw-browsers/chromium', '/usr/bin/chromium', '/usr/bin/chromium-browser'];
+const chromiumYolu = () =>
+  process.env.PLAYWRIGHT_CHROMIUM || HAZIR_CHROMIUM.find((y) => existsSync(y)) || undefined;
+
 const tarayiciAc = () => chromium.launch({
-  executablePath: process.env.PLAYWRIGHT_CHROMIUM ?? undefined,
+  executablePath: chromiumYolu(),
   args: [
     // Yayın adresi taklidi 127.0.0.1'e çözülür: /etc/hosts'a dokunmayız.
     `--host-resolver-rules=MAP ${YAYIN_HOST} 127.0.0.1`,

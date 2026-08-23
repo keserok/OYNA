@@ -63,7 +63,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
 
   const {
     setUserLocation, setLocationPermissionStatus, activeRegion, setActiveRegion,
-    selectedRegions, searchRadius, setSearchRadius, notificationPreferences, myRoles,
+    selectedRegions, searchRadius, setSearchRadius, myRoles,
     setStaffPanelContext,
   } = useAppStore();
 
@@ -78,10 +78,6 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
     onNavigate('OWNER_PANEL');
   };
   const hasMultipleRoles = myRoles.length > 1;
-
-  const enabledNotifCount = Object.values(notificationPreferences).filter(
-    (p) => p && typeof p === 'object' && 'enabled' in p && (p as { enabled: boolean }).enabled,
-  ).length;
 
   // Kullanıcının saha sahibi olup olmadığını tespit et (KVKK export bölümü için)
   useEffect(() => {
@@ -309,7 +305,12 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
           <PageButton
             icon={<Bell size={18} />}
             title="Bildirimler"
-            subtitle={`${enabledNotifCount} bildirim açık · sessiz saatler, ön ayarlar`}
+            /* Eski alt yazı "N bildirim açık · sessiz saatler, ön ayarlar" idi.
+               İkisi de artık doğru değil: tür-bazlı açık/kapalı sayacı üç-mod
+               ekranına geçilirken öldü (yeni kullanıcıda "0 bildirim açık"
+               yazıyordu) ve sessiz saatler telefon bildirimi kapalıyken
+               çizilmiyor. Alt sayfanın kendi başlığıyla aynı cümle. */
+            subtitle="Ne kadar bildirim istersin?"
             onClick={() => setSubPage('notifications')}
           />
           <PageButton

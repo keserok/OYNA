@@ -1738,6 +1738,10 @@ export async function createUserAdmin(input: {
 }
 
 /** Saha sahibi hesap yönetimi eylemleri (admin-owner-credentials edge function). */
+// 'send_reset_code' SUNUCUDA duruyor ama panelde ÇAĞIRAN YOK (23 Ağustos 2026):
+// gönderdiği 6 haneli kodun girileceği ekran hiçbir yerde yazılmamıştı, yani
+// tesis sahibine kullanılamaz bir kod gidiyordu. Giriş ekranı yazıldığı gün
+// düğme geri gelsin diye tür burada kalıyor.
 export type OwnerCredentialAction = 'set_email' | 'set_password' | 'send_reset_code';
 
 /**
