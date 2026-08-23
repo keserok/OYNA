@@ -364,6 +364,37 @@ const ensureNativeGoogle = (): Promise<boolean> => {
   return socialLoginInit;
 };
 
+/**
+ * NATIVE'DE SİSTEM TARAYICISI + DEEP LINK (PKCE) — her iki sağlayıcı için.
+ *
+ * Google bu yolu "native hesap seçici kurulamadı" yedeği olarak zaten
+ * kullanıyordu. 22 Ağustos 2026 taramasında Apple'ın ANDROID'de bu yola
+ * hiç sahip olmadığı bulundu: `@capacitor-community/apple-sign-in`
+ * eklentisinin Android sınıfı yalnız `echo` tanımlar, `authorize` YOKTUR.
+ * Buna rağmen `loginWithApple` `isNativePlatform()` ile açılıp Android'i de
+ * o dala sokuyordu — yani Play'den indiren kullanıcı Apple düğmesine
+ * bastığında hata alıp KALIYORDU, yedeksiz.
+ *
+ * Ortak yol buraya alındı: iOS'ta Apple native kalır (Apple'ın kendi kutusu
+ * her zaman daha iyi bir deneyimdir), Android'de ve Google'ın yedeğinde bu
+ * çalışır.
+ */
+const nativeTarayiciOAuth = async (saglayici: OAuthSaglayici): Promise<void> => {
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: saglayici,
+    options: {
+      redirectTo: OAUTH_NATIVE_REDIRECT,
+      skipBrowserRedirect: true,
+      ...(saglayici === 'google' ? { queryParams: { prompt: 'select_account' } } : {}),
+    },
+  });
+  if (error) throw error;
+  if (!data?.url) throw new Error('Giriş adresi alınamadı.');
+  const { Browser } = await import('@capacitor/browser');
+  await Browser.open({ url: data.url, presentationStyle: 'popover' });
+  // Oturum, deep link dönüşünde açılır (handleAuthCallbackUrl).
+};
+
 export const loginWithGoogle = async (): Promise<void> => {
   if (Capacitor.isNativePlatform()) {
     // 1) Native hesap seçici
@@ -397,19 +428,8 @@ export const loginWithGoogle = async (): Promise<void> => {
       }
     }
     // 2) Yedek: sistem tarayıcısı + deep link (PKCE)
-    const { data, error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: OAUTH_NATIVE_REDIRECT,
-        skipBrowserRedirect: true,
-        queryParams: { prompt: 'select_account' },
-      },
-    });
-    if (error) throw error;
-    if (!data?.url) throw new Error('Google giriş adresi alınamadı.');
-    const { Browser } = await import('@capacitor/browser');
-    await Browser.open({ url: data.url, presentationStyle: 'popover' });
-    return; // Oturum, deep link dönüşünde açılır (handleAuthCallbackUrl).
+    await nativeTarayiciOAuth('google');
+    return;
   }
   // Web — açılır pencere; ana sekme terk edilmez (bkz. webOAuthAc).
   await webOAuthAc('google');
@@ -472,6 +492,16 @@ const sha256Hex = async (text: string): Promise<string> => {
 };
 
 export const loginWithApple = async (): Promise<void> => {
+  // ANDROID'DE NATIVE APPLE YOK (22 Ağu 2026 taraması). Eklentinin Android
+  // sınıfı yalnız `echo` tanımlar; `authorize` çağrısı orada hiç yoktur ve
+  // hata fırlatır. Kapı `isNativePlatform()` idi, yani Android de bu dala
+  // giriyor ve yedeksiz kalıyordu: Play'den indiren kullanıcı Apple düğmesine
+  // bastığında ölü uca çarpıyordu. Apple'ın native kutusu YALNIZ Apple
+  // platformlarında var; Android sistem tarayıcısı yolundan gider.
+  if (Capacitor.isNativePlatform() && Capacitor.getPlatform() !== 'ios') {
+    await nativeTarayiciOAuth('apple');
+    return;
+  }
   if (Capacitor.isNativePlatform()) {
     try {
       // Native Apple Sign-In — dinamik import ile bağımlılık opsiyonel tutulur
