@@ -25,86 +25,119 @@
 > özel hiçbir kod yolu, derleme bayrağı ya da sunucu anahtarı olamaz.
 > İncelemecinin karşılaştığı engel neyse, o engel HERKES için çözülür.
 
-### Engeldi: telefon adımı atlanamıyordu
+### Engeldi: telefonla giriş, ve o yol hiç çalışmıyordu
 
-OYNA'da ana giriş yolu telefon + SMS kodudur ve **SMS yalnız +90 numaralara
-gider.** Google/Apple ile giren kullanıcıdan da numara isteniyordu ve o ekran
-**atlanamıyordu.** Sonuç: yurt dışındaki hiç kimse — mağaza incelemecisi dahil
-— uygulamayı açamıyordu.
+OYNA'nın ana giriş yolu telefon + SMS koduydu ve **SMS yalnız +90 numaralara
+gidiyordu.** Google/Apple ile giren kullanıcıdan da numara isteniyor, o ekran
+atlanamıyordu. Sonuç: yurt dışındaki hiç kimse — mağaza incelemecisi dahil —
+uygulamayı açamıyordu. Bu engel, incelemeciye özel bir paket derlenerek
+yamandı ve Apple haklı olarak 5.6 verdi.
 
-### Çözüm: numara adımı artık atlanabilir (herkes için)
+**22 Ağustos ölçümü, canlı yapılandırma üzerinde:** telefonla giriş
+**hiçbir zaman çalışmamıştı.** Supabase Auth "Send SMS Hook" kapalı,
+`sms_provider` "twilio" ama hesap ve anahtar yok, `send-sms` uç fonksiyonu
+`HOOK_NOT_CONFIGURED` dönüyor, `auth.users` içinde telefonla girişi
+tamamlamış **tek kullanıcı yok.** Yani "KOD GÖNDER" düğmesi ekranda duran ölü
+bir yoldu.
 
-- Girişten sonra gelen "Numaranı ekle" ekranında **ŞİMDİLİK ATLA** vardır.
-  Atlayan kullanıcı uygulamayı gezer; bir daha açılışta zorlanmaz.
-- Numara, **gerçekten gerektiği anda** istenir: yer ayırtma / ödeme. Gerekçe
-  orada somuttur (maç günü tesis ve kaptan bu numaradan ulaşır) ve o ekran da
-  **VAZGEÇ** ile kapanır — kullanıcı hiçbir yerde kilitlenmez.
-- Kod: `App.tsx · numaraGerekli`, `shared/numaraKapisi.ts`,
-  `views/PhoneLinkScreen.tsx`, `views/PaymentScreen.tsx · handlePay`.
-  Kilitler: `tests/unit/telefonGirisi.test.ts`,
-  `tests/unit/magazaKapilari.test.ts`.
+### Çözüm: telefon yolu uygulamadan SİLİNDİ — giriş yalnız Apple ve Google
 
-### İncelemeciye verilecek hesap: SUNUCUDA tanımlı test numarası
+Kural (§1): incelemecinin karşılaştığı engel neyse HERKES için çözülür;
+çözülemiyorsa özellik HERKES için kapatılır. SMS sağlayıcısı yok, yani
+çözülemedi → yol **kapatıldı, hem de silinerek** (23 Ağustos 2026).
 
-Ödeme dahil TÜM akışı denemek için incelemeciye bir hesap gerekir. Bu hesap,
-Apple'ın kendi istediği **App Review Information → Sign-In Information**
-alanından verilir — yani gizli değil, beyan edilmiş bir test kimliğidir.
+Silinenler — bayrakla karartma değil, kod kaldırma:
 
-Uygulamada özel kod YOKTUR. Supabase Auth'ta bir **test telefon numarası**
-tanımlıdır: o numara için SMS gönderilmez, sabit kod kabul edilir. İncelemeci
-normal giriş ekranını, normal akışı kullanır.
+| Ne | Nerede |
+| --- | --- |
+| Numara + kod adımları | `views/AuthScreen.tsx` |
+| Numara bağlama ekranı | `views/PhoneLinkScreen.tsx` *(dosya silindi)* |
+| OTP uçları | `supabaseAuth.ts` · `sendPhoneOtp` / `verifyPhoneOtp` / `requestPhoneLink` / `confirmPhoneLink` |
+| Giriş sonrası numara kapısı | `App.tsx` · `numaraGerekli`, `shared/numaraKapisi.ts` *(dosya silindi)* |
+| Ödeme öncesi numara kapısı | `views/PaymentScreen.tsx` |
+| Demo hesap seçici + ortak şifre | `supabaseAuth.ts`, `data/demoAccounts.ts` *(dosya silindi)* |
+| Sabit kodlu test numarası | `supabase/config.toml` · `[auth.sms.test_otp]` |
+
+**Niye bayrak yetmedi:** yol üç kez bayrakla karartıldı
+(`SMS_OTP_ENABLED`, `VITE_DEMO_ACCOUNTS`, `VITE_DEV_MODE`) ve üç kez geri
+geldi — bayraklardan biri yanlış ortama (Vercel) yazılıydı. Bayrak, silinmesi
+gereken bir şeyi gizler.
+
+Kilitler: `tests/unit/tekGirisYolu.test.ts`, `tests/unit/magazaKapilari.test.ts`,
+`tests/unit/signupGateAndLegal.test.ts`. Uçtan uca sürüş: `npm run giris:dogrula`.
+
+### İncelemeciye özel hesap YOK — ve bu bilinçli
+
+> **KALDIRILDI (23 Ağustos 2026).** Burada bir **sabit kodlu test numarası**
+> tarif ediliyordu: `+90 500 000 00 02`, Supabase → Phone → **Test OTP**
+> listesine eklenecek, o numara için SMS üretilmeyecek, yazılı kod kabul
+> edilecekti. Gerekçesi "incelemeci gerçek bir hattı olmadan girebilsin"di.
+>
+> **Bu, 5.6'nın ta kendisidir:** incelemecinin, kullanıcının sahip olmadığı
+> bir kapıdan girmesi. Bir 5.6 reddinden sonra aynı deseni ikinci kez
+> göndermek, reddin gerekçesini kabul etmemek olurdu. Numara `config.toml`dan
+> silindi; **canlı projede de Auth → Providers → Phone → Test OTP listesi elle
+> boşaltılmalıdır** (bu dosya yalnız `supabase config push` ile uygulanır).
+
+İncelemeci **kendi Apple ID'siyle** girer ve gerçek bir kullanıcının gördüğünün
+aynısını görür. İddiamız zaten budur; verilecek her özel hesap onu zayıflatır.
 
 | Alan | Değer |
 | --- | --- |
 | Sign-In required | Yes |
-| User Name | `+90 500 000 00 02` |
-| Password | `⟨Supabase panelinde tanımlanan 6 haneli sabit kod⟩` |
-
-**Kurucunun yapması gereken (bir kez):** Supabase → Authentication →
-Sign In / Providers → Phone → **Test OTP** bölümüne `+905000000002` numarası
-ve 6 haneli sabit bir kod eklenir. Bu numara `oyuncu01@oyna.app` (Emre Kaya,
-PLAYER) hesabına bağlıdır ve doğrulanmıştır.
+| User Name | `Sign in with Apple — use your own Apple ID` |
+| Password | *(boş bırak)* |
 
 **App Store Connect → App Review Information → Notes alanına yapıştırılacak
 metin (İngilizce, hazır):**
 
 ```
-SIGN-IN
-OYNA signs in with a phone number and a 6-digit SMS code. Our SMS provider
-delivers to Turkish (+90) numbers only, so we registered a test number for
-you. It works on the normal sign-in screen — there is no special build,
-no hidden entrance, and no review-only code path in this app.
+ABOUT THIS SUBMISSION
 
-  Phone number : +90 500 000 00 02
-  Code         : ⟨6-digit code⟩
+This build addresses your Guideline 5.6 rejection. You were right: our
+previous submission was compiled with a review-only flag that added a
+"demo account" button and an "APP REVIEW" banner which no downloaded copy
+of the app contained. That machinery is gone.
 
-Steps: tick the consent checkbox, type the number above, tap "KOD GÖNDER",
-then enter the code above. You can also sign in with Apple; the phone step
-that follows is optional ("ŞİMDİLİK ATLA" = skip for now), and we ask for a
-number only when you reserve a spot, because the venue and the team captain
-call that number on match day.
+We went further. The underlying cause was a phone + SMS sign-in whose SMS
+provider was never configured — it could not deliver a code to anyone, and
+it only accepted Turkish numbers by design. Instead of working around it
+for reviewers, we removed the whole path. There is no review-only build,
+no review flag, no test phone number and no review-only server path
+anywhere in this product.
+
+SIGNING IN
+The app signs in with Sign in with Apple or Google only. Please use your
+own Apple ID — you get exactly the same account type, the same permissions
+and the same data any user gets. We are deliberately not providing a
+special reviewer account. No phone number is asked for, at any point.
+
+SEEING CONTENT — PLEASE READ
+OYNA is launching in a single city: Ordu, Türkiye. Content is region-based,
+so the app looks empty from any other location — for you and for any user
+outside Ordu alike.
+On first launch, tap "KONUMU AYARLA" (Set location) on the home screen and
+pick Ordu / Altınordu. Covered regions are pinned to the top of that list.
+Matches and pitches will then load.
 
 PAYMENTS
-Card payments are still in simulation mode for every user, everywhere —
-we have not signed the payment-provider contract yet. No real money moves
-and no real card is charged. The payment screen accepts any test card
-(e.g. 5528 7900 0000 0008, 12/30, CVV 123). This is a global server
-setting, identical for reviewers and users.
+Payments in OYNA are for physical, real-world services only: a deposit for
+renting a football pitch and a share of a match fee. There is no digital
+content, no subscription and no unlockable feature, so In-App Purchase does
+not apply (Guideline 3.1.5(a)).
 
-WHAT OYNA DOES
-OYNA organises football matches on real pitches: you join an open match,
-reserve your spot, and meet at the venue. Nothing digital is sold in the
-app, so purchases are handled outside IAP (Guideline 3.1.5(a)).
+ACCOUNT DELETION
+Settings → Account → "Hesabı Sil" (Delete account), per Guideline 5.1.1(v).
 
-DATA
-The accounts and matches you will see are seeded demo data — no real
-people, no real money.
+Thank you for the review — the 5.6 finding was correct and we fixed the
+cause, not the symptom.
 ```
 
 > **Kurucu notu:** Onay kutusu (KVKK / Kullanım Şartları) işaretlenmeden
 > hiçbir giriş yolu ilerlemez; kutusuz dokunuşta ekran ne yapılacağını söyler.
-> Demo veri seti üretim Supabase'inde gerçek kayıt olarak durur ve genel
-> yayına çıkarken `demo_clean_start_purge.sql` ile topluca silinir.
+> Ödeme bölümündeki beyan, `simulation_counts_as_live` ve `payment_mode_global`
+> kararı uygulandıktan **sonra** gözden geçirilmelidir (bkz. APPLE_56 planı
+> KARAR 2) — bu not simülasyonla gönderim için geçerli değildir.
 
 ---
 

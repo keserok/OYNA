@@ -681,167 +681,34 @@ export const onAuthStateChanged = (
 // "mirackerem" kısayolunu) yazınca OTP olmadan, sabit demo şifresiyle anında
 // giriş yapar. Yalnız @oyna.app demo hesapları — gerçek kullanıcı hesaplarını
 // ASLA etkilemez. Yayın paketinde ve yayın adresinde YOKTUR.
-// `?demo=1` ADRES ANAHTARI KALDIRILDI (23 Ağustos 2026).
-// Adrese `?demo=1` eklemek, HERHANGİ bir alan adında demo yollarını açıyordu:
-// paketin içinde duran, kullanıcıya görünmeyen, yalnız bilenin ulaştığı bir
-// giriş. Apple'ın 5.6 altında reddettiği desen tam olarak budur. Demo yolları
-// artık tek bir yerden kararlıdır (yerelGelistirmeSunucusuMu) ve adres
-// çubuğundan açılamaz. Eskiden bırakılmış anahtarı da temizle.
+// ═══════════════════════════════════════════════════════════════════════════
+// DEMO GİRİŞ YOLLARININ TAMAMI SİLİNDİ (23 Ağustos 2026, kurucu kararı:
+// "Bu ekranı tüm uygulamadan yok etmelisin ve yalnızca Apple ve Google
+// girişinin kalmasını sağlamalısın.")
+//
+// Buradan silinenler: `isDemoLoginEnabled`, `demoLogin`, `isDemoLoginInput`,
+// `isDemoAccountPickerEnabled`, `loginDemoAccount`, ortak demo şifresi ve
+// `data/demoAccounts.ts` kataloğu.
+//
+// NEDEN BAYRAK YETMEDİ: yol üç ayrı bayrakla (`VITE_DEMO_ACCOUNTS`,
+// `VITE_DEV_MODE`, `?demo=1`) kapatılmıştı; her seferinde bir tanesi yanlış
+// ortama yazıldı ve ekran geri geldi. 23 Ağustos'ta kurucu aynı demo ekranını
+// ÜÇÜNCÜ kez bildirdi. Bayrak, silinmesi gereken bir şeyi gizler.
+//
+// APPLE 5.6 KAYDI: reddin cümlesi "features that appear to have been
+// intentionally hidden during the review process" idi. Ortak şifreyle gerçek
+// hesaplara giren, yalnız bilenin ulaştığı bir düğme tam olarak budur. Artık
+// pakette YOK — bayrakla değil, kod olmadığı için.
+//
+// Yerel geliştirmede hesap gerekiyorsa Supabase panelinden bir test kullanıcısı
+// açılır; uygulamada ona giden bir yol BULUNMAZ.
+// ═══════════════════════════════════════════════════════════════════════════
 if (typeof window !== 'undefined') {
+  // Eskiden `?demo=1` bu anahtarı yazıyordu. Anahtar artık okunmuyor; kalıntıyı
+  // kullanıcının cihazından temizle.
   try { sessionStorage.removeItem('oyna_demo'); } catch { /* yok say */ }
 }
 
-/**
- * DEMO YOLLARI YALNIZ YEREL GELİŞTİRME SUNUCUSUNDA (23 Ağustos 2026).
- *
- * KURUCU BİLDİRİMİ: "Bu ekran gözükmemeli, var olmamalı." Demo hesap seçici
- * Vercel önizlemesinde karşısına çıkıyordu. Sebebi kapının YALNIZ derleme
- * bayrağına bakmasıydı: dağıtım ortamında `VITE_DEMO_ACCOUNTS=true` (ya da
- * `VITE_DEV_MODE=true`) yazılıysa yayındaki pakette de açılıyordu — üstelik
- * kimse bunu kodda göremiyordu, çünkü karar env'deydi.
- *
- * Artık kapı ÇİFT: hem paket demo bayrağıyla derlenmiş olacak, hem de sayfa
- * bir YEREL sunucudan servis edilecek. Herkese açık bir adreste (vercel.app,
- * oyna.app) ve mağaza paketinde demo yolları, env ne derse desin, YOKTUR.
- *
- * Apple 5.6 açısından da doğru duruş: yayınlanan adreste "yalnız bilenlerin
- * ulaştığı" bir giriş yolu bırakmıyoruz.
- *
- * `capacitor://localhost` / `https://localhost` tuzağı: Capacitor uygulamayı
- * localhost üzerinden servis eder, yani mağaza paketinde de hostname
- * 'localhost' görünür. Bu yüzden native kapısı ÖNCE gelir ve ayrıca burada
- * protokol de sınanır.
- */
-const yerelGelistirmeSunucusuMu = (): boolean => {
-  if (typeof window === 'undefined') return false;
-  try {
-    if (Capacitor.isNativePlatform()) return false;
-  } catch { /* Capacitor yoksa web sayılır */ }
-  const { hostname, protocol } = window.location;
-  if (protocol !== 'http:' && protocol !== 'https:') return false; // capacitor:, file: …
-  return (
-    hostname === 'localhost' ||
-    hostname === '127.0.0.1' ||
-    hostname === '0.0.0.0' ||
-    hostname === '[::1]' ||
-    hostname.endsWith('.local')
-  );
-};
-
-export const isDemoLoginEnabled = (): boolean => {
-  // ─── DERLEME ZAMANI KAPISI, HER ŞEYDEN ÖNCE (22 Ağustos 2026) ──────────
-  // Demo yolları YALNIZ demo bayrağıyla DERLENMİŞ pakette vardır. Yayın
-  // paketinde bu satır `false` sabitine düşer ve altındaki hiçbir kapı
-  // değerlendirilmez; demo kodu paketten tümüyle silinir.
-  if (import.meta.env.VITE_DEMO_ACCOUNTS !== 'true') return false;
-
-  // ── MAĞAZA KAPISI (17 Ağu 2026 — gönderim öncesi denetimde yakalandı) ──────
-  // NATIVE derlemede (App Store / Play Store) demo girişi HER DURUMDA kapalıdır.
-  // Capacitor uygulamayı Android'de `https://localhost`, iOS'ta
-  // `capacitor://localhost` üzerinden servis eder — yani MAĞAZADAN İNDİRİLEN
-  // uygulamada da hostname 'localhost' görünür. Bu kapı olmasaydı e-posta
-  // alanına "saha1" yazan herkes ŞİFRESİZ olarak gerçek bir SAHA SAHİBİ
-  // hesabına girebilirdi (demoLogin sabit şifreyi kendisi kullanıyor).
-  if (Capacitor.isNativePlatform()) return false;
-
-  // ── YEREL SUNUCU KAPISI (23 Ağu 2026 — kurucunun önizlemede demo ekranı
-  //    görmesi) ────────────────────────────────────────────────────────────
-  // Eski kapılar (`VITE_DEV_MODE`, `?demo=1`) HERHANGİ bir adreste açıyordu;
-  // dağıtım ortamında `VITE_DEV_MODE=true` yazılı olduğu için Vercel
-  // önizlemesinde demo yolları canlıydı. Tek şart kaldı: sayfa yerel
-  // geliştirme sunucusundan gelecek.
-  return yerelGelistirmeSunucusuMu();
-};
-
-const DEMO_DOMAIN = '@oyna.app';
-// ÜRETİM PAKETİNE GİRMEZ (17 Ağu 2026 — mağaza öncesi denetim).
-// Ortak demo şifresi paketin JS'ine harfi harfine gömülüyordu; demo hesap
-// e-postalarıyla birlikte gerçek hesaplara (saha1..4 = SAHA SAHİBİ) giriş
-// anahtarı oluyordu. Sabit, derleme zamanında çözülür: `VITE_DEMO_ACCOUNTS`
-// açıkça 'true' değilse boş kalır ve demo yolları zaten çalışmaz.
-// İNCELEME PAKETİ KALDIRILDI (22 Ağu 2026 — Apple 5.6 reddi).
-//
-// Buraya bir `VITE_MAGAZA_INCELEME` bayrağı konmuştu: mağaza incelemesi için
-// derlenen pakette demo hesap seçici açılıyor, normal yayın paketinde hiç
-// bulunmuyordu. Niyet iyiydi (incelemecinin Türk numarası yok, kod ona
-// ulaşmıyor) ama Apple bunu Developer Code of Conduct 5.6 kapsamında
-// REDDETTİ: "inceleme sırasında farklı davranan / gizlenmiş özellik".
-//
-// KURAL, BİR DAHA DELİNMEMEK ÜZERE: gönderilen paket ile kullanıcının
-// indirdiği paket AYNI olmalıdır. İncelemeciye özel hiçbir kod yolu, hiçbir
-// derleme bayrağı, hiçbir sunucu anahtarı olamaz. İncelemecinin karşılaştığı
-// engel neyse (burada: telefonu doğrulayamamak), o engel HERKES için
-// çözülür — gizli kapıyla atlatılmaz. Çözüm: telefon adımı artık
-// atlanabilir (bkz. App.tsx numara kapısı + PhoneLinkScreen).
-const DEMO_PASSWORD =
-  import.meta.env.VITE_DEMO_ACCOUNTS === 'true' ? 'password123' : '';
-
-/** Girilen değer demo giriş için uygun mu? (tam e-posta ya da bare kullanıcı adı) */
-export const isDemoLoginInput = (raw: string): boolean => {
-  if (!isDemoLoginEnabled()) return false;
-  const key = raw.trim().toLowerCase();
-  if (!key) return false;
-  if (key === 'mirackerem' || key === 'olimpiyat') return true;
-  if (key.endsWith(DEMO_DOMAIN)) return true;
-  // "mehmet.yilmaz" gibi @ içermeyen kısa ad
-  if (!key.includes('@') && /^[a-z0-9._-]+$/.test(key)) return true;
-  return false;
-};
-
-export const demoLogin = async (raw: string) => {
-  if (!isDemoLoginEnabled()) throw new Error('Demo giriş kapalı.');
-  let key = raw.trim().toLowerCase();
-  if (key === 'mirackerem' || key === 'olimpiyat') key = 'mirackerem' + DEMO_DOMAIN;
-  if (!key.includes('@')) key = key + DEMO_DOMAIN; // "mehmet.yilmaz" → tam e-posta
-  if (!key.endsWith(DEMO_DOMAIN)) {
-    throw new Error('Demo giriş yalnızca demo hesaplarında (@oyna.app) geçerlidir.');
-  }
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email: key,
-    password: DEMO_PASSWORD,
-  });
-  if (error) throw error;
-  return data;
-};
-
-// ─── Demo hesap seçici (main'de aktif) ───────────────────────────────────────
-// Giriş ekranındaki tek-dokunuşla "Demo hesapla gir" listesi. Kaynak liste
-// `OYNA_DEMO_HESAPLARI.md` → `data/demoAccounts.ts`. Yukarıdaki dev-mode kapılı
-// `demoLogin`'in aksine bu, standart e-posta+şifre girişini kullanır; demo
-// hesapları üretim Supabase'inde gerçek hesap olarak var olduğundan `main`
-// domain'inde de çalışır. Yalnız @oyna.app demo hesaplarını kabul eder.
-// KILL-SWITCH: build ortamında `VITE_DEMO_ACCOUNTS='false'` → seçici tümüyle
-// kapanır (kod değişikliği gerekmeden lansman öncesi kapatma).
-export const isDemoAccountPickerEnabled = (): boolean => {
-  // MAĞAZA KAPISI (17 Ağu 2026): pakette demo hesap seçici YOKTUR.
-  // Kill-switch'in (VITE_DEMO_ACCOUNTS=false) derleme anında yazılmayı
-  // unutulması ihtimaline karşı native'de kod düzeyinde kapatılır.
-  //
-  // İNCELEME İSTİSNASI KALDIRILDI (21 Ağu 2026 — Apple 5.6 reddi): mağaza
-  // paketine özel hiçbir açma yolu yoktur. Seçici YALNIZ geliştirme
-  // tarayıcısında ve YALNIZ açıkça `VITE_DEMO_ACCOUNTS=true` yazıldığında
-  // vardır; mağaza paketinde katalog derlemeye bile girmez (data/demoAccounts).
-  if (Capacitor.isNativePlatform()) return false;
-  // FAIL-CLOSED: bayrak açıkça 'true' değilse kapalı. Eskiden `!== 'false'`
-  // idi — yani bayrak hiç yazılmamışsa AÇIK sayılıyordu; yanlış tarafa
-  // devrilen bir varsayılandı.
-  if (import.meta.env.VITE_DEMO_ACCOUNTS !== 'true') return false;
-  // YEREL SUNUCU KAPISI (23 Ağu 2026 — kurucunun önizlemede demo ekranı
-  // görmesi): dağıtım ortamına bayrak yazılmış olsa bile herkese açık bir
-  // adreste seçici GÖRÜNMEZ. Bkz. yerelGelistirmeSunucusuMu.
-  return yerelGelistirmeSunucusuMu();
-};
-
-export const loginDemoAccount = async (email: string, password: string = DEMO_PASSWORD) => {
-  const key = email.trim().toLowerCase();
-  if (!key.endsWith(DEMO_DOMAIN)) {
-    throw new Error('Demo giriş yalnızca demo hesaplarında (@oyna.app) geçerlidir.');
-  }
-  const { data, error } = await supabase.auth.signInWithPassword({ email: key, password });
-  if (error) throw error;
-  if (data?.user) auth.currentUser = await buildCurrentUser(data.user);
-  return data;
-};
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TELEFON OTP — ANA GİRİŞ YOLU (kurucu kararı, 17 Ağustos 2026)
@@ -863,46 +730,30 @@ export const loginDemoAccount = async (email: string, password: string = DEMO_PA
 // gönderir (Auth → Hooks → Send SMS). Kanal seçimi orada: Türkiye → SMS,
 // yurt dışı → WhatsApp (bugün kapalı, bkz. shared/phone.ts).
 
-/** E.164 zorunlu: +905321234567. Doğrulaması `shared/phone.ts` içinde. */
-export const sendPhoneOtp = async (phone: string) => {
-  const { error } = await supabase.auth.signInWithOtp({
-    phone,
-    options: { shouldCreateUser: true },
-  });
-  if (error) throw error;
-};
-
-export const verifyPhoneOtp = async (phone: string, token: string) => {
-  const { data, error } = await supabase.auth.verifyOtp({
-    phone,
-    token,
-    type: 'sms',
-  });
-  if (error) throw error;
-  if (data?.user) auth.currentUser = await buildCurrentUser(data.user);
-  return data;
-};
-
-// ─── Google/Apple ile girene numara bağlama ──────────────────────────────────
-// Kurucu kararı: sosyal yolla girenden de numara istenir — tesis sahibinin
-// oyuncuya ulaşabilmesi buna bağlı. Akış oturum AÇIKKEN işler:
-//   updateUser({phone}) → numaraya kod gider → verifyOtp(type:'phone_change')
-// Numara başkasında kayıtlıysa Supabase hata verir; ekran bunu dürüstçe söyler.
-export const requestPhoneLink = async (phone: string): Promise<void> => {
-  const { error } = await supabase.auth.updateUser({ phone });
-  if (error) throw error;
-};
-
-export const confirmPhoneLink = async (phone: string, token: string) => {
-  const { data, error } = await supabase.auth.verifyOtp({
-    phone,
-    token,
-    type: 'phone_change',
-  });
-  if (error) throw error;
-  if (data?.user) auth.currentUser = await buildCurrentUser(data.user);
-  return data;
-};
+// ═══════════════════════════════════════════════════════════════════════════
+// TELEFONLA GİRİŞ VE NUMARA BAĞLAMA UÇLARI SİLİNDİ (23 Ağustos 2026).
+//
+// Silinenler: `sendPhoneOtp`, `verifyPhoneOtp`, `requestPhoneLink`,
+// `confirmPhoneLink` — ve onları çizen iki ekran (AuthScreen'in numara/kod
+// adımları, views/PhoneLinkScreen).
+//
+// SEBEP TEK CÜMLE: bu yol HİÇ ÇALIŞMADI. Supabase projesinde SMS gönderme
+// kancası kapalı (`hook_send_sms_enabled=false`), sağlayıcı yapılandırılmamış;
+// "KOD GÖNDER" düğmesine basan hiç kimse kod almadı. Ekranda duran ölü bir
+// yoldu ve Apple'ın 5.6 reddinin kökü buydu: kod yalnız +90'a gidiyor
+// varsayıldığı için incelemeciye özel bir kapı açılmıştı.
+//
+// KURAL (Apple 5.6 talimatı §2): incelemecinin karşılaştığı engel neyse, o
+// engel HERKES için çözülür; çözülemiyorsa özellik HERKES için kapatılır.
+// Burada çözülemedi (Netgsm aboneliği yok) → kapatıldı, hem de silinerek.
+//
+// GERİ GELECEĞİ GÜN: önce SMS sağlayıcısı yapılandırılır ve `send-sms` uç
+// fonksiyonu gerçekten kod gönderir; ekran ondan SONRA yazılır. Tarih:
+// git history · supabaseAuth.ts + views/PhoneLinkScreen.tsx @ 974402d.
+//
+// ESKİ KULLANICILAR ETKİLENMEZ: telefon kimlikleri auth tarafında duruyor,
+// oturumları açık; yalnız yeni giriş/bağlama yolu sunulmuyor.
+// ═══════════════════════════════════════════════════════════════════════════
 
 /**
  * Oturum sahibinin DOĞRULANMIŞ numarası var mı?

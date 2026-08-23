@@ -39,14 +39,11 @@ const EKRANLAR: Ekran[] = [
     //
     // ÇAPA GÜNCELLENDİ (17 Ağu 2026): "Hesap oluştur"/"Hoş geldin" başlıkları,
     // giriş-kayıt ayrımı kaldırılıp telefon tek akış olunca ekrandan kalktı
-    // (4.6). Yeni başlık "Numaranla gir" — çapa da onu arar. Eski çapa
-    // kalsaydı test, ekranın açılmadığını değil METNİN değiştiğini bildirirdi.
-    ad: '02-giris-auth',
-    // Başlık telefon yoluna göre değişir (shared/phone.ts · SMS_OTP_ENABLED):
-    // SMS kapalıyken "Sahaya çık", açıkken "Numaranla gir". Çapa ikisini de
-    // tanır; yoksa bayrak her çevrildiğinde görsel koşu 20 sn bekleyip
-    // başarısız olur.
-    capa: /Sahaya çık|Numaranla gir/i,
+    // (4.6). 23 Ağu 2026 · TELEFON YOLU KODDAN SİLİNDİ: ekranın tek başlığı
+    // "Sahaya çık", tek giriş yolu Apple · Google. Eski "Numaranla gir"
+    // çapası kaldırıldı — iki durumu birden tanıyan çapa, bayrak çevrildiğinde
+    // testi sessizce anlamsızlaştırıyordu; artık tek doğru var.
+    capa: /Sahaya çık/i,
     ac: async (page) => {
       await hazirla(page, { oturumsuz: true });
       await ekranaGit(page, 'AUTH');

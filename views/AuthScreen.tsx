@@ -1,19 +1,9 @@
 import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
 import { AnimatePresence } from 'framer-motion';
-import { Check, Phone, ArrowRight, ChevronLeft, KeyRound, Users, ChevronDown, CheckCircle2 } from 'lucide-react';
+import { Check, ArrowRight, ChevronLeft } from 'lucide-react';
 import { UserRole } from '../types';
-import {
-  loginWithGoogle, loginWithApple, sendPhoneOtp, verifyPhoneOtp, demoLogin,
-  isDemoLoginEnabled, isDemoLoginInput, isDemoAccountPickerEnabled, loginDemoAccount,
-  oauthDonusunuOku,
-} from '../supabaseAuth';
-import { DEMO_ACCOUNT_GROUPS } from '../data/demoAccounts';
+import { loginWithGoogle, loginWithApple, oauthDonusunuOku } from '../supabaseAuth';
 import { useAppStore } from '../store';
-import { makeManualLocation } from '../utils/regionResolver';
-import {
-  DEFAULT_DIAL_CODE, checkPhone, formatPhoneInput, formatPhoneDisplay,
-  canSendOtpTo, otpKapaliSebebi, TELEFON_GIRISI_ACIK,
-} from '../shared/phone';
 // IP-15: yasal belgeler artık ÖZET değil TAM metin (karar 7b) — 39 KB. Statik
 // import edilirse giriş paketine girer ve belgeyi hiç açmayan kullanıcı da
 // indirir. Modal yalnız bağlantıya dokununca yüklenir; tip import'u derlemede
@@ -21,9 +11,8 @@ import {
 const LegalModal = lazy(() =>
   import('../components/common/LegalModal').then((m) => ({ default: m.LegalModal })));
 import type { LegalModalKind } from '../components/common/LegalModal';
-// Klavye örtüşmesinin TEK kaynağı: ölçüm de kural da orada yazılı, burada
-// ikinci bir ölçüm yapılmaz (bkz. components/common/Toast.tsx).
-import { useKlavyeOrtusu, klavyeliAltDolgu } from '../components/common/Toast';
+// KLAVYE PAYI KALDIRILDI (23 Ağu 2026): bu ekranda artık hiçbir yazı alanı
+// yok — yalnız Apple/Google düğmeleri ve onay kutusu var. Klavye hiç açılmaz.
 import heroEmblem from '../assets/auth/hero-emblem.webp';
 import oynaLogo from '../assets/onboarding/oyna-logo.webp';
 import { mapAuthError, mapOAuthDonusu } from '../utils/errorMap';
@@ -40,18 +29,30 @@ interface AuthScreenProps {
 }
 
 // ─── Akış ────────────────────────────────────────────────────────────────────
-// SPLASH (ilk animasyon) → [intro → input → otp] → ONBOARDING
+// SPLASH (ilk animasyon) → [intro → input] → ONBOARDING
 //   intro : cam amblem perdesi + "İSTEDİĞİN ZAMAN oyna!" tanıtımı
-//   input : TELEFON NUMARASI (+ ikincil yollar: Google · Apple)
-//   otp   : numaraya gelen 6 haneli kod
+//   input : Apple · Google — BAŞKA GİRİŞ YOLU YOK
 //
-// TEK YOL (kurucu kararı, 17 Ağustos 2026): telefon ANA giriş yöntemidir.
-// "Giriş yap / Kayıt ol" ayrımı KALDIRILDI — numarası olmayan biri kod
-// isteyince hesabı zaten açılır; kullanıcıya iki sekme göstermek yapay bir
-// seçim yaratıyordu. Şifre, e-posta ile giriş ve "şifremi unuttum" akışları da
-// kaldırıldı; ad soyad artık onboarding'in kendi adımında sorulur.
-// Misafir gezinme ("önce göz at") de kapatıldı — kurucu kararı.
-type Stage = 'intro' | 'input' | 'otp';
+// ─────────────────────────────────────────────────────────────────────────────
+// TELEFON VE DEMO YOLLARI BU EKRANDAN SİLİNDİ (23 Ağustos 2026, kurucu kararı:
+// "Bu ekranın tüm uygulamadan yok etmelisin ve yalnızca Apple ve Google
+// girişinin kalmasını sağlamalısın.")
+//
+// NEDEN BAYRAK YETMEDİ: telefon alanı, kod ekranı ve demo hesap seçici
+// bayraklarla (TELEFON_GIRISI_ACIK, VITE_DEMO_ACCOUNTS, VITE_DEV_MODE)
+// karartılmıştı — kod yerinde duruyordu. Bir bayrak yanlış ortama yazıldığında
+// ekran geri geliyordu ve kurucu aynı ekranı üç kez bildirdi. Bayrak
+// silinemeyen bir şeyi gizler; burada silinmesi gereken bir şey vardı.
+//
+// SMS ALTYAPISI ZATEN YOK: Supabase projesinde SMS sağlayıcısı yapılandırılmamış
+// (hook_send_sms_enabled=false). Yani "KOD GÖNDER" düğmesi hiçbir zaman
+// çalışmadı; ekranda duran ölü bir yoldu. Apple'ın 5.6 reddinin kökü de buydu.
+// Telefon YENİDEN gerekirse tarih: git history · views/AuthScreen.tsx@974402d.
+//
+// Numara BAĞLAMA ekranı (PhoneLinkScreen) ayrı bir şeydir ve durur: ileride
+// ödeme için numara istenirse oradan istenir. Ama GİRİŞ yolu değildir.
+// ─────────────────────────────────────────────────────────────────────────────
+type Stage = 'intro' | 'input';
 
 // Tanıtım, giriş akışının GİRİŞ KAPISI: uygulama oturumunda AUTH ilk kez
 // göründüğünde (splash'ten hemen sonra) açılır. Aynı oturumda AUTH'a yeniden
@@ -113,8 +114,6 @@ const KEYFRAMES = `
 .au-footlink:hover { color: #8B949E; }
 `;
 
-const isValidEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
-
 // Pendulum: aynı logonun üç kopyası — iki kırınım hayaleti + asıl top.
 const PENDULUM = [
   { delay: '-.26s', opacity: 0.28, filter: 'blur(7px) hue-rotate(-55deg) saturate(2.4)' },
@@ -124,7 +123,6 @@ const PENDULUM = [
 
 const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
   const { color, light } = getTheme(role);
-  const ctaGradient = `linear-gradient(120deg, ${color} 0%, ${light} 100%)`;
 
   // ── Sağlayıcı dönüşü İLK RENDER'DAN ÖNCE okunur ───────────────────────────
   // Web'de Google/Apple girişi tam sayfa yönlendirmesidir; dönüş oturumsuzsa
@@ -156,145 +154,17 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
   // görünümünü değiştirmiyor, ama kapı onu hâlâ yazıyor — okunup TEMİZLENİR ki
   // bir sonraki açılış eski bir niyetle karşılaşmasın.
   useEffect(() => { useAppStore.getState().setAuthStartMode(null); }, []);
-  // Ülke kodu ayrı tutulur: Türkiye varsayılan, diğer ülkeler elle yazılabilir
-  // (bayrak listesi YOK — kurucu kararı: sade kalsın).
-  const [dial, setDial] = useState(DEFAULT_DIAL_CODE);
-  const [phone, setPhone] = useState('');
-  const [otp, setOtp] = useState('');
   // Yasal onay OPT-IN olmalı: kutu önceden işaretli gelemez (KVKK/mağaza incelemesi)
   const [agreed, setAgreed] = useState(false);
-  const [isLoading, setIsLoading] = useState<
-    'send' | 'verify' | 'google' | 'apple' | null
-  >(null);
+  const [isLoading, setIsLoading] = useState<'google' | 'apple' | null>(null);
   const [error, setError] = useState<string | null>(
     oauthDonusu ? mapOAuthDonusu(oauthDonusu.saglayici, oauthDonusu.kod, oauthDonusu.aciklama) : null);
-  const [info, setInfo] = useState<string | null>(null);
-  const [resendIn, setResendIn] = useState(0);
   // IP-15: anahtarlar artık resmi belge anahtarları — modal tam metni
   // shared/legalDocs.ts'ten okur, Ayarlar → Yasal ile birebir aynı.
   const [openModal, setOpenModal] = useState<LegalModalKind | null>(null);
-  // Demo hesap seçici (main'de aktif): açık/kapalı + o an giriş yapılan hesap
-  const [demoPickerOpen, setDemoPickerOpen] = useState(false);
-  const [demoLoggingIn, setDemoLoggingIn] = useState<string | null>(null);
-
-  // Bu ekranın kökü `fixed inset-0` — yani PENCEREYE tutunur, kabuğa (body) DEĞİL.
-  // iOS'ta klavye açılınca body kısalır ve `--kb-height` haklı olarak 0 olur;
-  // pencere kısalmadığı için form alanları klavyenin ARKASINDA kalıyordu.
-  // Doğru pay, --kb-height ile pencereye göre ÖLÇÜLEN örtüşmenin büyüğüdür.
-  const klavyeOrtusu = useKlavyeOrtusu();
-
-  // Dev/demo modunda numara alanına demo hesabın kısa adı ("mirackerem")
-  // yazılabilir; prod pakette bu yol kapalıdır (isDemoLoginEnabled).
-  const demoMode = isDemoLoginEnabled();
-  // DERLEME ZAMANI KAPISI (22 Ağu 2026 — Apple 5.6).
-  // `isDemoAccountPickerEnabled()` bir FONKSİYON çağrısıdır; paketleyici onu
-  // katlayamaz ve seçicinin tüm arayüzü — "DEMO HESABIYLA GİR" yazısı dahil —
-  // ölü kod olarak yayın paketine giriyordu. Bir incelemeci paketi açtığında
-  // orada duran bu düğme, 5.6'da "gizlenmiş özellik" iddiasını haklı çıkarır.
-  // `import.meta.env.X` ise derlemede HARFİ HARFİNE değere çevrilir; aşağıdaki
-  // karşılaştırma yayın paketinde `false` sabitine düşer ve Rollup blokla
-  // birlikte katalogu da atar. Ölçüsü: `npm run magaza:denetim` artık pakette
-  // "DEMO HESABIYLA GİR" görürse ENGEL veriyor.
-  const DEMO_SECICI_DERLENSIN = import.meta.env.VITE_DEMO_ACCOUNTS === 'true';
-  const showDemoPicker = DEMO_SECICI_DERLENSIN
-    && isDemoAccountPickerEnabled() && DEMO_ACCOUNT_GROUPS.length > 0;
-  const phoneCheck = checkPhone(phone, dial);
-  const demoInput = demoMode && isDemoLoginInput(phone);
-  const contactValid = phoneCheck.valid || demoInput;
-  const contactLabel = phoneCheck.e164 ? formatPhoneDisplay(phoneCheck.e164) : 'numaran';
-  // Yurt dışı numara: WhatsApp kanalı açılana dek kod gönderemiyoruz.
-  const kanalKapali = !demoInput && !!dial && !canSendOtpTo(dial);
 
   // Tanıtım bir kez görüldü: aynı oturumda AUTH'a tekrar düşülürse atlanır.
   useEffect(() => { introShownThisSession = true; }, []);
-
-  useEffect(() => {
-    if (resendIn <= 0) return;
-    const t = setInterval(() => setResendIn((s) => (s <= 1 ? 0 : s - 1)), 1000);
-    return () => clearInterval(t);
-  }, [resendIn]);
-
-  const requestOtp = async () => {
-    // Numara E.164'e çevrilmiş hâlde gider (+905321234567). Doğrulama kuralı
-    // shared/phone.ts'te; sunucudaki ikizi de aynı biçimi bekler.
-    await sendPhoneOtp(phoneCheck.e164!);
-  };
-
-  const handleSendOtp = async () => {
-    // Buton form eksikken de CANLI durur; dokununca eksik olan TEK şeyi söyler.
-    // (Sessizce pasif buton, kullanıcıya "bozuk" hissettiriyordu.)
-    if (isLoading) return;
-    if (!contactValid) { setError(phoneCheck.reason ?? 'Telefon numaranı gir.'); return; }
-    if (!requireAgreement()) return;
-    setError(null);
-    // Dev/demo modu: numara alanına demo kısayolu ("mirackerem") yazılırsa
-    // kodsuz anında giriş. onSuccess() ÇAĞIRMA: o anda yerel `role` hâlâ eski
-    // (PLAYER) olduğundan tesis sahibini yanlışlıkla oyuncu ekranına atar.
-    // Navigasyonu App'teki onAuthStateChanged dinleyicisi yapar (gerçek role göre).
-    if (demoInput) {
-      setIsLoading('send');
-      try {
-        await demoLogin(phone.trim());
-        // navigasyonu auth dinleyicisine bırak (rol-doğru yönlendirme)
-      } catch (err: any) {
-        console.error('Demo giriş hatası:', err);
-        setError(mapAuthError(err, 'Demo giriş başarısız.'));
-        setIsLoading(null);
-      }
-      return;
-    }
-    // Yurt dışı numara: WhatsApp kanalı açılana dek kod gönderilemiyor.
-    // Ölü uç bırakma — ne yapabileceğini söyle: Google/Apple ile giren
-    // kullanıcı numarasız da uygulamayı gezebilir (telefon adımı atlanabilir).
-    if (kanalKapali) {
-      setError(otpKapaliSebebi(dial) ?? 'Şu an bu numaraya kod gönderemiyoruz. Google veya Apple ile devam edebilirsin.');
-      return;
-    }
-    setIsLoading('send');
-    try {
-      await requestOtp();
-      setStage('otp');
-      setOtp('');
-      setResendIn(60);
-    } catch (err: any) {
-      console.error('OTP gönderim hatası:', err);
-      setError(mapAuthError(err, 'Doğrulama kodu gönderilemedi. Lütfen tekrar deneyin.'));
-    } finally {
-      setIsLoading(null);
-    }
-  };
-
-  const handleResend = async () => {
-    if (resendIn > 0 || isLoading) return;
-    setError(null);
-    setIsLoading('send');
-    try {
-      await requestOtp();
-      setResendIn(60);
-      setInfo('Yeni kod gönderildi.');
-    } catch (err: any) {
-      setError(mapAuthError(err, 'Kod tekrar gönderilemedi.'));
-    } finally {
-      setIsLoading(null);
-    }
-  };
-
-  const handleVerify = async () => {
-    if (otp.length < 6 || isLoading) return;
-    setError(null);
-    setIsLoading('verify');
-    try {
-      await verifyPhoneOtp(phoneCheck.e164!, otp);
-      // onSuccess() ÇAĞIRMA: yerel `role` hâlâ eski (PLAYER) olduğundan kaleci/
-      // hakem/tesis'i yanlışlıkla oyuncu Dashboard'ına düşürür. Navigasyonu App'teki
-      // onAuthStateChanged dinleyicisine bırak (profildeki GERÇEK role göre yönlendirir).
-      // Spinner, dinleyici doğru panele yönlendirip bu ekranı kaldırana dek döner.
-    } catch (err: any) {
-      console.error('OTP doğrulama hatası:', err);
-      setError(mapAuthError(err, 'Kod hatalı veya süresi dolmuş.'));
-      setIsLoading(null);
-    }
-  };
 
   // KVKK/Sözleşme onayı işaretli değilken butonlar SESSİZCE pasif kalmasın:
   // dokununca ne yapılması gerektiği açıkça söylenir ("hiçbir şey olmuyor" hissi biter).
@@ -352,58 +222,14 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
     }
   };
 
-  // ─── Demo hesabıyla tek-dokunuşla giriş ────────────────────────────────────
-  // Navigasyonu (Google/e-posta girişinde olduğu gibi) App'teki
-  // onAuthStateChanged dinleyicisine bırakırız: profildeki GERÇEK role göre
-  // doğru panele (oyuncu/tesis/kaleci/hakem) yönlendirir.
-  // DEMO GİRİŞTE BÖLGE HAZIR GELİR (kurucu kararı, 20 Ağu 2026).
-  //
-  // NEDEN: keşif kapsamı (maçlar/sahalar) seçili bölgeden ya da GPS'ten gelir;
-  // ikisi de yoksa ana sayfa "ÖNCE BÖLGENİ SEÇ" der ve ekran BOŞ görünür.
-  // Demo hesapla giren biri — özellikle mağaza incelemecisi — konum iznini
-  // reddederse uygulamayı "içi boş" sanır. Demo ekosistemin tamamı Ordu'da
-  // olduğundan, demo girişinde kapsamı Ordu/Altınordu'ya kurmak ekranı ilk
-  // saniyede dolduruyor.
-  //
-  // YALNIZ BOŞSA yazar: kullanıcı kendi bölgesini seçtiyse ona dokunulmaz.
-  const demoBolgesiniHazirla = () => {
-    const store = useAppStore.getState();
-    if (store.selectedRegions.length > 0) return;
-    const bolge = makeManualLocation('Ordu', 'Altınordu', Date.now());
-    store.addSelectedRegion(bolge);
-    if (bolge.coordinates && !store.userLocation) store.setUserLocation(bolge.coordinates);
-  };
-
-  const handleDemoAccountLogin = async (emailAddr: string, pass: string) => {
-    if (isLoading || demoLoggingIn) return;
-    if (!requireAgreement()) return;
-    setError(null);
-    setInfo(null);
-    setDemoLoggingIn(emailAddr);
-    try {
-      demoBolgesiniHazirla();
-      await loginDemoAccount(emailAddr, pass);
-      // navigasyon auth dinleyicisinde
-    } catch (err: any) {
-      console.error('[Auth] Demo hesap girişi hatası:', err);
-      setError(mapAuthError(err, 'Demo hesabıyla giriş başarısız.'));
-      setDemoLoggingIn(null);
-    }
-  };
-
   // MİSAFİR MODU KALDIRILDI (kurucu kararı, 17 Ağu 2026): "önce göz at" yolu
-  // kapatıldı. Uygulamaya girmek için hesap gerekiyor; kayıt zaten tek ekranda
-  // ve numarayla bitiyor, o yüzden ayrı bir "vitrin" moduna gerek kalmadı.
+  // kapatıldı. Uygulamaya girmek için hesap gerekiyor.
 
-  const clearFeedback = () => { setError(null); setInfo(null); };
+  const clearFeedback = () => setError(null);
 
   const handleHeaderBack = () => {
-    if (stage === 'otp') {
-      setStage('input');
-      setOtp('');
-      clearFeedback();
-    } else if (stage === 'input') {
-      // Alt sayfadan tanıtıma dön (tasarımdaki geri davranışı).
+    if (stage === 'input') {
+      // Giriş ekranından tanıtıma dön (tasarımdaki geri davranışı).
       setStage('intro');
       clearFeedback();
     } else {
@@ -411,38 +237,10 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
     }
   };
 
-  // ─── TELEFON ALANI: TEK ÖLÇÜ, İSTİSNASIZ (22 Ağustos 2026, ikinci tur) ────
-  // Kapı önce `TELEFON_GIRISI_ACIK || demoMode` idi. Hata buydu: `demoMode`
-  // bir GELİŞTİRİCİ bayrağıdır (VITE_DEV_MODE) ve Vercel önizlemesinde açık.
-  // Sonuç, kurucunun bildirdiği hata: önizlemede giriş ekranı hâlâ numara
-  // istiyordu — üstelik o numaraya kod GÖNDERİLEMİYOR (SMS sağlayıcısı yok).
-  //
-  // KURAL: çalışamayacak bir giriş yolu HİÇBİR bayrakla ekrana gelmez.
-  // Geliştirme kolaylığı, kullanıcıya ölü bir alan göstermeyi haklı çıkarmaz.
-  // Demo erişimi ayrı ve doğru kapıdan olur: `VITE_DEMO_ACCOUNTS` ile açılan
-  // demo hesap seçicisi (aşağıda). O seçici gerçek bir yolla giriş yapar.
-  const telefonYoluVar = TELEFON_GIRISI_ACIK;
-  const authReady = agreed && contactValid && !kanalKapali;
-  const otpReady = otp.length === 6;
-  const busy = isLoading !== null || demoLoggingIn !== null;
-  const ctaLabel = 'KOD GÖNDER';
-  const ctaBusy = isLoading === 'send';
-  const codeBusy = isLoading === 'verify';
-
-  // Devre dışı görünüm: onay/alanlar eksikken buton sönük ama TIKLANABİLİR kalır
-  // (dokununca eksik olanı söyler). Yükleme sırasında gerçekten kilitlenir.
-  // IP-15: buton SESSİZCE pasif kalmaz. Eskiden form eksikken grileşiyordu ve
-  // dokunulduğunda hiçbir şey söylemiyordu; kullanıcı hangi alanın eksik
-  // olduğunu tahmin etmek zorundaydı. Artık buton canlı görünür, dokununca
-  // handler eksik olan TEK şeyi söyler. `ready` yalnız hafif bir vurgu farkı.
-  const ctaStyle = (ready: boolean): React.CSSProperties => ({
-    background: ctaGradient,
-    color: '#0A0E14',
-    boxShadow: ready
-      ? `0 0 20px 0 ${color}57, inset 0 1px 0 rgba(255,255,255,.28)`
-      : 'inset 0 1px 0 rgba(255,255,255,.28)',
-    opacity: ready ? 1 : 0.72,
-  });
+  // TEK GİRİŞ YOLU: Apple · Google. Başka bir "hazır mı" ölçütü yok — onay
+  // kutusu işaretli değilse düğme yine CANLI durur ve dokununca eksik olan
+  // TEK şeyi söyler (sessizce pasif buton "bozuk" hissettiriyordu).
+  const busy = isLoading !== null;
 
   const spinner = <span className="au-spin" aria-hidden="true" />;
 
@@ -467,7 +265,6 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
       )}
     </div>
   );
-  const sheetHeader = sayfaBasligi(true);
 
   return (
     // Odak halkası ve seçici, rolün marka rengini CSS değişkeninden okur —
@@ -631,7 +428,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
                 // başlıyor; bu dolgu olmazsa başlık şeridin altında kalır.
                 // Hesap: güvenli alan + şeridin 18px üst boşluğu + 40px yüksekliği + nefes payı.
                 paddingTop: 'calc(var(--safe-top, 0px) + 82px)',
-                paddingBottom: klavyeliAltDolgu(klavyeOrtusu, 26),
+                paddingBottom: 26,
               }}
             >
               {/* Başlık — sola hizalı ve sakin. Ortalanmış italik-versal
@@ -646,33 +443,23 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
                   margin: 0, fontSize: 32, lineHeight: 1.1, fontWeight: 800,
                   letterSpacing: '-.035em', color: '#fff',
                 }}>
-                  {telefonYoluVar ? 'Numaranla gir' : 'Sahaya çık'}
+                  Sahaya çık
                 </h1>
                 <p style={{ margin: '10px 0 0', fontSize: 14, lineHeight: 1.5, fontWeight: 500, color: '#8B949E', letterSpacing: '-.01em' }}>
-                  {telefonYoluVar
-                    ? 'Sana bir kod göndereceğiz. Şifre yok, uğraş yok.'
-                    : 'Apple ya da Google hesabınla tek dokunuşta gir. Şifre yok, uğraş yok.'}
+                  Apple ya da Google hesabınla tek dokunuşta gir. Şifre yok, uğraş yok.
                 </p>
               </div>
 
-              {/* ─── Sosyal giriş — BİRİNCİL (§3.1: Google + Apple) ───────
-                  YERLEŞİM TELEFON YOLUNA GÖRE DEĞİŞİR (22 Ağu 2026):
-                  · telefon açıkken → iki düğme YAN YANA, altında numara alanı;
-                  · telefon kapalıyken → tek giriş yolu bunlar olduğu için ALT
-                    ALTA ve tam genişlikte. Yan yana bırakılınca ekranın
-                    ortasında telefon alanından kalan kocaman bir boşluk
-                    kalıyor, ekran "yarım kalmış" görünüyordu.
+              {/* ─── UYGULAMANIN TEK GİRİŞ YOLU: Apple · Google ───────────
+                  Alt alta ve tam genişlikte: başka yol olmadığı için bunlar
+                  ekranın ana eylemidir, ikincil bir şerit değil.
                   APPLE ÜSTTE: iOS'ta üçüncü taraf girişi sunan uygulama Apple
                   ile Giriş'i de en az o kadar öne çıkarmak zorunda (Kural 4.8);
                   `column-reverse` ile Apple üste, Google alta gelir. */}
-              <div style={{
-                display: 'flex',
-                flexDirection: telefonYoluVar ? 'row' : 'column-reverse',
-                gap: telefonYoluVar ? 12 : 10,
-              }}>
+              <div style={{ display: 'flex', flexDirection: 'column-reverse', gap: 10 }}>
                   <button
                     type="button" className="au-social" onClick={handleGoogleLogin} disabled={busy}
-                    style={telefonYoluVar ? undefined : { flex: 'none', width: '100%', height: 56 }}
+                    style={{ flex: 'none', width: '100%', height: 56 }}
                   >
                     {isLoading === 'google' ? spinner : (
                       <svg width="19" height="19" viewBox="0 0 24 24" aria-hidden="true">
@@ -683,7 +470,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
                   </button>
                   <button
                     type="button" className="au-social" onClick={handleAppleLogin} disabled={busy}
-                    style={telefonYoluVar ? undefined : { flex: 'none', width: '100%', height: 56 }}
+                    style={{ flex: 'none', width: '100%', height: 56 }}
                   >
                     {isLoading === 'apple' ? spinner : (
                       <svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -694,97 +481,12 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
                   </button>
                 </div>
 
-                {/* AYRAÇ — yazısız (kurucu kararı, 21 Ağu 2026): "veya telefon
-                    numaranla" cümlesi kaldırıldı; hemen altındaki "TELEFON
-                    NUMARAN" alan başlığı zaten aynı şeyi söylüyor. Geriye
-                    sosyal girişle telefon alanını ayıran kısa bir çizgi kalır.
-                    Dekoratif olduğu için ekran okuyucudan gizli.
-                    Telefon yolu kapalıyken ayıracak bir şey de yok → çizilmez. */}
-                {telefonYoluVar && (
-                <div style={{ display: 'flex', justifyContent: 'center', margin: '22px 0' }}>
-                  <div aria-hidden="true" style={{ width: 32, height: 1, background: 'rgba(255,255,255,.10)' }} />
-                </div>
-                )}
-
-                {telefonYoluVar && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 13 }}>
-                  <div>
-                    <label className="au-label" htmlFor="au-phone">Telefon numaran</label>
-                    {/* Ülke kodu + numara TEK kutuda durur: iki ayrı kutu,
-                        "hangisine yazacağım?" sorusu doğuruyordu. Türkiye
-                        varsayılan seçilidir; başka ülke için kodu elle
-                        değiştirmek yeter (bayrak listesi yok — kurucu kararı). */}
-                    <div className="au-field">
-                      <Phone size={19} color="#6b7280" style={{ flexShrink: 0 }} />
-                      <span style={{ display: 'flex', alignItems: 'center', gap: 2, flexShrink: 0 }}>
-                        <span style={{ color: '#6b7280', fontSize: 16, fontWeight: 600 }}>+</span>
-                        <input
-                          id="au-dial"
-                          type="text"
-                          inputMode="numeric"
-                          aria-label="Ülke kodu"
-                          value={dial}
-                          onChange={(e) => { setDial(e.target.value.replace(/\D/g, '').slice(0, 4)); clearFeedback(); }}
-                          style={{
-                            width: `${Math.max(dial.length, 2)}ch`, minWidth: '2ch', background: 'transparent',
-                            border: 'none', outline: 'none', color: '#fff', fontSize: 16, fontWeight: 600,
-                          }}
-                        />
-                      </span>
-                      <span aria-hidden="true" style={{ width: 1, height: 22, background: 'rgba(255,255,255,.1)', flexShrink: 0 }} />
-                      <input
-                        id="au-phone"
-                        type="tel"
-                        inputMode={demoMode ? 'text' : 'numeric'}
-                        autoComplete="tel-national"
-                        className="au-input"
-                        placeholder={demoMode ? '532 123 45 67 · veya "mirackerem"' : '532 123 45 67'}
-                        aria-label="Telefon numarası"
-                        value={phone}
-                        onChange={(e) => {
-                          const ham = e.target.value;
-                          // Demo kısayolu harf içerir; onu bozmadan geçir.
-                          setPhone(demoMode && /[a-zA-Z@]/.test(ham) ? ham : formatPhoneInput(ham, dial));
-                          clearFeedback();
-                        }}
-                        onKeyDown={(e) => { if (e.key === 'Enter') void handleSendOtp(); }}
-                      />
-                    </div>
-                    {/* Yazarken beliren tek satırlık yardım — hata satırıyla
-                        aynı şeyi iki kez söylemez. */}
-                    {phone.trim().length > 0 && !contactValid && error !== phoneCheck.reason && (
-                      <p style={{ margin: '6px 2px 0', fontSize: 10, fontWeight: 700, color: '#FBBF24' }}>
-                        {phoneCheck.reason}
-                      </p>
-                    )}
-                    {kanalKapali && (
-                      <p style={{ margin: '6px 2px 0', fontSize: 10, fontWeight: 700, color: '#FBBF24' }}>
-                        {otpKapaliSebebi(dial)}
-                      </p>
-                    )}
-                  </div>
-                </div>
-                )}
-
-                {/* Bu ipucu TELEFON ALANINI anlatır ("numara yerine kısayolu
-                    yaz"). Kapısı yalnız `demoMode` idi ve blok telefon
-                    bloğunun İÇİNDE değil KARDEŞİYDİ: alan çizilmese bile afiş
-                    çiziliyordu. `demoMode` çalışma zamanında `?demo=1` ile de
-                    açıldığından, canlı web adresinde herkese görünebiliyordu —
-                    anlattığı alan ekranda yokken. Kapı artık alanın kapısıyla
-                    aynı: alan yoksa ipucu da yok. */}
-                {DEMO_SECICI_DERLENSIN && telefonYoluVar && demoMode && (
-                  <p style={{ margin: '10px 2px 0', fontSize: 10, fontWeight: 700, color: '#39FF14' }}>
-                    🧪 DEMO MODU: numara yerine demo kısayolunu yaz, kod gerekmez. Sahip için "mirackerem".
-                  </p>
-                )}
-
                 {error && (
                   <p role="alert" aria-live="assertive" style={{ margin: '11px 2px 0', fontSize: 11.5, fontWeight: 700, lineHeight: 1.5, color: '#FF4D4D' }}>{error}</p>
                 )}
 
                 {/* KVKK + Sözleşme onayı */}
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginTop: telefonYoluVar ? 15 : 22, padding: '0 2px' }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginTop: 22, padding: '0 2px' }}>
                   <button
                     id="agreement-checkbox"
                     type="button"
@@ -816,108 +518,12 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
                   Çıkış yapana kadar oturumun bu cihazda açık kalır.
                 </p>
 
-                {/* ─── Demo hesap seçici — YALNIZ GELİŞTİRME ─────────────
-                    `VITE_DEMO_ACCOUNTS=true` ile derlenen yerel/önizleme
-                    paketinde açılır; mağazaya giden pakette bu blok DERLEMEYE
-                    HİÇ GİRMEZ (isDemoAccountPickerEnabled native'de daima
-                    false, bayrak yoksa parola boş). İncelemeciye özel paket
-                    YOK: gönderilen paket ile kullanıcının indirdiği paket
-                    aynıdır (Apple 5.6, 22 Ağu 2026). */}
-                {DEMO_SECICI_DERLENSIN && showDemoPicker && (
-                  <div style={{ marginTop: 16 }}>
-                    <button
-                      type="button"
-                      onClick={() => setDemoPickerOpen((v) => !v)}
-                      style={{
-                        width: '100%', height: 48, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                        gap: 8, padding: '0 16px', borderRadius: 999, cursor: 'pointer',
-                        border: '1px solid rgba(57,255,20,.3)', background: 'rgba(57,255,20,.05)', color: '#39FF14',
-                      }}
-                    >
-                      <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, fontWeight: 900, letterSpacing: '.08em' }}>
-                        <Users size={16} /> DEMO HESABIYLA GİR
-                      </span>
-                      <ChevronDown size={18} style={{ transition: 'transform .25s', transform: demoPickerOpen ? 'rotate(180deg)' : 'none' }} />
-                    </button>
-
-                    {demoPickerOpen && (
-                      <div style={{ marginTop: 12, maxHeight: 320, overflowY: 'auto', paddingRight: 4, display: 'flex', flexDirection: 'column', gap: 16 }} className="custom-scrollbar">
-                        {!agreed && (
-                          <p style={{ margin: 0, padding: '0 2px', fontSize: 10, fontWeight: 700, color: 'rgba(250,204,21,.9)' }}>
-                            Giriş için yukarıdaki KVKK ve Kullanım Şartları kutusunu onayla.
-                          </p>
-                        )}
-                        {DEMO_ACCOUNT_GROUPS.map((group) => (
-                          <div key={group.role}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0 2px', marginBottom: 8 }}>
-                              <span style={{ width: 6, height: 6, borderRadius: '50%', background: group.color }} />
-                              <span style={{ fontSize: 10, fontWeight: 900, letterSpacing: '.18em', textTransform: 'uppercase', color: group.color }}>{group.label}</span>
-                              <span style={{ fontSize: 10, fontWeight: 700, color: '#3a434e' }}>{group.accounts.length}</span>
-                            </div>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                              {group.accounts.map((acc) => (
-                                <button
-                                  key={acc.email}
-                                  type="button"
-                                  disabled={busy}
-                                  onClick={() => handleDemoAccountLogin(acc.email, acc.password)}
-                                  style={{
-                                    width: '100%', display: 'flex', alignItems: 'center', gap: 12, textAlign: 'left',
-                                    padding: '10px 12px', borderRadius: 14, background: '#0A0E14',
-                                    border: '1px solid #1f2937', cursor: busy ? 'default' : 'pointer',
-                                    opacity: busy && demoLoggingIn !== acc.email ? 0.5 : 1,
-                                  }}
-                                >
-                                  <span style={{
-                                    width: 32, height: 32, borderRadius: '50%', flexShrink: 0, display: 'flex',
-                                    alignItems: 'center', justifyContent: 'center', background: group.color,
-                                    color: '#0A0E14', fontWeight: 900, fontSize: 12, textTransform: 'uppercase',
-                                  }}>{acc.name.charAt(0)}</span>
-                                  <span style={{ flex: 1, minWidth: 0 }}>
-                                    <span style={{ display: 'block', fontSize: 12, fontWeight: 900, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{acc.name}</span>
-                                    <span style={{ display: 'block', fontSize: 10, color: '#59636e', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                      {acc.email}{acc.note ? ` · ${acc.note}` : ''}
-                                    </span>
-                                  </span>
-                                  {demoLoggingIn === acc.email
-                                    ? <span className="au-spin" style={{ color: '#fff' }} aria-hidden="true" />
-                                    : <ArrowRight size={15} color="#3a434e" style={{ flexShrink: 0 }} />}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                        ))}
-                        <p style={{ margin: 0, padding: '0 2px', fontSize: 10, lineHeight: 1.6, color: '#3a434e' }}>
-                          Tüm demo hesapların şifresi ortaktır; bir hesaba dokununca otomatik giriş yapılır.
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* ─── Aksiyonlar ─── */}
-                {/* TEK BUTON: "kod gönder". Eskiden burada KAYIT OL / GİRİŞ YAP /
-                    KOD İLE GİRİŞ / mod değiştir / MİSAFİR olmak üzere beş yol
-                    vardı; hepsi tek yola indi. Misafir modu kurucu kararıyla
-                    kapatıldı, kayıt/giriş ayrımı da kalktı. */}
+                {/* ─── Yasal bağlantılar ───
+                    Eskiden burada kod gönderme düğmesi vardı; telefon yolu
+                    silindiği için giriş eylemi yukarıdaki Apple/Google
+                    düğmeleridir. Ekranın altında yalnız yasal bağlantılar
+                    kalır. */}
                 <div style={{ marginTop: 'auto', paddingTop: 20, display: 'flex', flexDirection: 'column', gap: 12 }}>
-                  {telefonYoluVar && (
-                  <button
-                    type="button"
-                    className="au-cta"
-                    onClick={handleSendOtp}
-                    disabled={busy}
-                    style={ctaStyle(authReady)}
-                  >
-                    {ctaBusy ? spinner : (
-                      <>
-                        <span>{ctaLabel}</span>
-                        <ArrowRight size={16} strokeWidth={2.8} />
-                      </>
-                    )}
-                  </button>
-                  )}
-
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, paddingTop: 2 }}>
                     <button type="button" className="au-footlink" onClick={() => setOpenModal('TERMS')}>Kullanım Şartları</button>
                     <span style={{ fontSize: 10, color: '#3a434e' }}>|</span>
@@ -925,134 +531,6 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
                   </div>
                 </div>
             </div>
-          </div>
-        )}
-
-        {/* ═══ KOD DOĞRULAMA ═══ */}
-        {stage === 'otp' && (
-          <div style={{ position: 'absolute', inset: 0 }}>
-            <div style={{
-              position: 'absolute', top: 0, left: 0, right: 0, height: CURTAIN,
-              backdropFilter: 'blur(7px) saturate(.95)', WebkitBackdropFilter: 'blur(7px) saturate(.95)',
-              background: 'rgba(10,14,20,.5)', animation: 'auFadeBlur .5s ease-out both', pointerEvents: 'none',
-            }} />
-            {sheetHeader}
-
-            <div style={{
-              position: 'absolute', left: 0, right: 0, bottom: 0,
-              top: 'max(23%, calc(var(--safe-top, 0px) + 128px))',
-              borderRadius: '34px 34px 0 0', background: 'rgba(13,18,26,.9)',
-              backdropFilter: 'blur(28px) saturate(180%)', WebkitBackdropFilter: 'blur(28px) saturate(180%)',
-              border: '1px solid rgba(255,255,255,.08)', borderBottom: 'none',
-              boxShadow: '0 -12px 44px rgba(0,0,0,.5)', display: 'flex', flexDirection: 'column',
-              overflow: 'hidden', animation: 'auSheet .6s cubic-bezier(.22,1,.36,1) both',
-            }}>
-              <div style={{ width: 40, height: 4, borderRadius: 999, background: 'rgba(255,255,255,.18)', margin: '14px auto 16px', flexShrink: 0 }} />
-
-              <div
-                className="custom-scrollbar"
-                style={{
-                  flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden',
-                  display: 'flex', flexDirection: 'column', padding: '0 26px',
-                  paddingBottom: klavyeliAltDolgu(klavyeOrtusu, 30),
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 18 }}>
-                  <div style={{
-                    width: 60, height: 60, borderRadius: 20, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    background: 'rgba(255,255,255,.05)', border: '1px solid rgba(255,255,255,.1)',
-                    boxShadow: `0 0 22px ${color}2e`, color,
-                  }}>
-                    <KeyRound size={26} />
-                  </div>
-                </div>
-
-                <div style={{ textAlign: 'center', marginBottom: 22 }}>
-                  <div style={{ fontSize: 26, lineHeight: 1.1, fontWeight: 900, fontStyle: 'italic', textTransform: 'uppercase', letterSpacing: '-.02em', color: '#fff' }}>
-                    Numaranı doğrula
-                  </div>
-                  <p style={{ margin: '9px 0 0', fontSize: 12.5, lineHeight: 1.55, color: '#8B949E' }}>
-                    {contactLabel} numarasına gönderdiğimiz 6 haneli kodu gir.
-                  </p>
-                </div>
-
-                <label htmlFor="auth-otp-input" style={{ display: 'block', textAlign: 'center', fontSize: 10, fontWeight: 800, letterSpacing: '.22em', textTransform: 'uppercase', color: '#6b7280', marginBottom: 10 }}>
-                  Doğrulama kodu
-                </label>
-                <input
-                  id="auth-otp-input"
-                  type="text"
-                  inputMode="numeric"
-                  autoComplete="one-time-code"
-                  maxLength={6}
-                  placeholder="••••••"
-                  aria-label="6 haneli doğrulama kodu"
-                  value={otp}
-                  autoFocus
-                  onChange={(e) => { setOtp(e.target.value.replace(/\D/g, '').slice(0, 6)); setError(null); }}
-                  style={{
-                    width: '100%', height: 64, boxSizing: 'border-box', borderRadius: 20,
-                    background: '#0A0E14', border: '1px solid #1f2937', outline: 'none', textAlign: 'center',
-                    color: '#fff', fontSize: 30, fontWeight: 900, letterSpacing: '.5em', textIndent: '.5em',
-                  }}
-                />
-
-                {error && (
-                  <p role="alert" aria-live="assertive" style={{ margin: '13px 2px 0', fontSize: 11.5, fontWeight: 700, lineHeight: 1.5, textAlign: 'center', color: '#FF4D4D' }}>{error}</p>
-                )}
-
-                <div style={{ textAlign: 'center', marginTop: 16 }}>
-                  {resendIn > 0 ? (
-                    <span style={{ fontSize: 11.5, fontWeight: 700, color: '#8B949E' }}>Kodu tekrar gönder ({resendIn}s)</span>
-                  ) : (
-                    <button type="button" className="au-link" onClick={handleResend} disabled={busy} style={{ fontSize: 11.5, fontWeight: 900, color }}>
-                      Kodu tekrar gönder
-                    </button>
-                  )}
-                </div>
-
-                <div style={{ marginTop: 'auto', paddingTop: 20, display: 'flex', flexDirection: 'column', gap: 12 }}>
-                  <button
-                    type="button"
-                    className="au-cta"
-                    onClick={handleVerify}
-                    disabled={busy || !otpReady}
-                    style={ctaStyle(otpReady)}
-                  >
-                    {codeBusy ? spinner : (
-                      <>
-                        <span>DOĞRULA VE GİRİŞ YAP</span>
-                        <ArrowRight size={16} strokeWidth={2.8} />
-                      </>
-                    )}
-                  </button>
-                  <button type="button" className="au-ghost" onClick={handleHeaderBack} disabled={busy}>
-                    NUMARAYI DEĞİŞTİR
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ─── Bilgi bildirimi (tasarımdaki üst toast) ───
-            Kendiliğinden kapanmaz: "e-postandaki bağlantıyı onayla" gibi mesajlar
-            okunmadan kaybolmasın. Sonraki yazma/aksiyon temizler; dokunmak da kapatır. */}
-        {info && (
-          <div
-            role="status"
-            onClick={() => setInfo(null)}
-            style={{
-              cursor: 'pointer',
-              position: 'absolute', top: 'calc(var(--safe-top, 0px) + 28px)', left: 22, right: 22, zIndex: 70,
-              display: 'flex', alignItems: 'center', gap: 11, padding: '14px 16px', borderRadius: 18,
-              background: 'rgba(22,27,34,.94)', backdropFilter: 'blur(24px) saturate(180%)',
-              WebkitBackdropFilter: 'blur(24px) saturate(180%)', border: '1px solid rgba(57,255,20,.3)',
-              boxShadow: '0 8px 32px rgba(0,0,0,.45)', animation: 'auToast .45s cubic-bezier(.34,1.56,.64,1) both',
-            }}
-          >
-            <CheckCircle2 size={20} color="#39FF14" style={{ flexShrink: 0 }} />
-            <span style={{ fontSize: 12.5, fontWeight: 700, lineHeight: 1.45, color: '#fff' }}>{info}</span>
           </div>
         )}
 

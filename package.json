@@ -5,7 +5,6 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "dev:demo": "VITE_DEMO_ACCOUNTS=true vite",
     "dev:admin": "node admin-panel/scripts/start-admin-local.mjs",
     "test:unit": "vitest run tests/unit --config vitest.config.ts",
     "test:integration": "bash tests/integration/run.sh",
@@ -20,7 +19,6 @@
     "admin:deploy": "node admin-panel/scripts/admin-supabase-deploy.mjs",
     "admin:deploy:interactive": "bash admin-panel/scripts/supabase-interactive-deploy.sh",
     "build": "vite build",
-    "build:demo": "VITE_DEMO_ACCOUNTS=true vite build",
     "build:mobile": "node scripts/build-mobile.mjs",
     "build:legal": "node scripts/build-legal-pages.mjs",
     "logo:kaynak": "node scripts/logo-kaynak-uret.mjs",

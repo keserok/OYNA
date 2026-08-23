@@ -309,9 +309,9 @@ denetle('Pakete sızmaması gerekenler', () => {
   // hesapları var. Üretim paketine girerse paketi açan herkes o hesaplara girer.
   if (varMi('.env')) {
     const env = oku('.env');
-    if (/^\s*VITE_DEMO_ACCOUNTS\s*=\s*true/m.test(env)) {
+    if (/^\s*VITE_DEMO_ACCOUNTS\s*=/m.test(env)) {
       engel('Demo hesap kataloğu açık',
-        '.env içinde VITE_DEMO_ACCOUNTS=true — katalog ve ortak şifre mağaza paketine girer.');
+        '.env içinde VITE_DEMO_ACCOUNTS tanımlı — demo giriş yolları 23 Ağu 2026\'da koddan SİLİNDİ; ölü bayrağı kaldır.');
     } else {
       tamam('Demo hesap kataloğu pakete girmiyor');
     }

@@ -103,18 +103,21 @@ describe('niyet saklanıyor ve tüketiliyor', () => {
 describe('sessiz pasiflik yok', () => {
   const auth = oku('views/AuthScreen.tsx');
 
-  it('birincil buton form eksikken de canlı görünüyor', () => {
+  it('giriş düğmeleri onay eksikken de CANLI görünüyor', () => {
     // Eskiden zemin rgba(255,255,255,.05), metin rgba(255,255,255,.32) idi:
     // buton ölü görünüyor ama neyin eksik olduğunu söylemiyordu.
     expect(auth).not.toContain("{ background: 'rgba(255,255,255,.05)', color: 'rgba(255,255,255,.32)' }");
-    const govde = auth.slice(auth.indexOf('const ctaStyle'), auth.indexOf('const spinner'));
-    expect(govde).toContain('background: ctaGradient');
+    // 23 Ağu 2026: telefon CTA'sı silindi, geriye Apple/Google düğmeleri kaldı.
+    // İkisi de YALNIZ yükleme sırasında kilitlenir — onay kutusuna göre değil.
+    const kilitler = auth.split('\n').filter((l) => /disabled=\{/.test(l));
+    expect(kilitler.length).toBeGreaterThan(0);
+    for (const l of kilitler) expect(l, `sessiz pasiflik: ${l.trim()}`).toContain('busy');
   });
 
   it('hiçbir handler sessizce dönmüyor — eksik olan söyleniyor', () => {
-    // Tek giriş yolu kaldı: telefon + kod. handlePasswordLogin/handleRegister
-    // (e-posta + şifre) 17 Ağu 2026 kararıyla SİLİNDİ.
-    for (const h of ['handleSendOtp']) {
+    // Tek giriş yolu kaldı: Apple · Google (23 Ağu 2026). Telefon/kod ve demo
+    // yolları koddan silindi; e-posta + şifre 17 Ağu'da silinmişti.
+    for (const h of ['handleGoogleLogin', 'handleAppleLogin']) {
       const i = auth.indexOf(`const ${h} = async`);
       expect(i, h).toBeGreaterThan(0);
       const bas = auth.slice(i, i + 700);
@@ -129,7 +132,8 @@ describe('sessiz pasiflik yok', () => {
   });
 
   it('hata metni ekran okuyucuya duyuruluyor', () => {
-    expect(auth.match(/role="alert" aria-live="assertive"/g)?.length).toBeGreaterThanOrEqual(2);
+    // Tek ekran, tek hata satırı kaldı (kod doğrulama ekranı 23 Ağu'da silindi).
+    expect(auth.match(/role="alert" aria-live="assertive"/g)?.length).toBeGreaterThanOrEqual(1);
   });
 });
 
@@ -248,23 +252,24 @@ describe('splash oturum çözülmeden dokunuşu yutmuyor', () => {
   });
 });
 
-describe('telefon girişi — ölü kod temizlendi, ekran yazılmadı', () => {
+describe('telefon girişi — uygulamadan tümüyle silindi (23 Ağu 2026)', () => {
   const s = oku('supabaseAuth.ts');
 
-  it('paralel ölü telefon çifti silindi', () => {
-    expect(s).not.toContain('export const loginWithPhone');
+  it('telefon giriş/doğrulama uçlarının HİÇBİRİ dışa açık değil', () => {
+    // 22 Ağu ölçümü: SMS kancası kapalı, sağlayıcı yok, telefonla girişi
+    // tamamlamış tek kullanıcı yok — yani bu uçlar hiç çalışmadı. Ekranları
+    // silinince arkalarında bırakmak, "bir gün geri açarız" diye duran ölü
+    // yüzey olurdu; Apple 5.6 tam olarak böyle bir yüzeyden çıktı.
+    for (const ad of ['loginWithPhone', 'sendPhoneOtp', 'verifyPhoneOtp',
+                      'requestPhoneLink', 'confirmPhoneLink']) {
+      expect(s, `${ad} hâlâ dışa açık`).not.toContain(`export const ${ad}`);
+    }
     expect(s).not.toMatch(/export const verifyOtp\b/);
   });
 
-  it('gerçek çift duruyor — sağlayıcı açılınca hazır', () => {
-    expect(s).toContain('export const sendPhoneOtp');
-    expect(s).toContain('export const verifyPhoneOtp');
-  });
-
-  it('neden ekran yazılmadığı kayıtlı', () => {
-    // Supabase Phone sağlayıcısının durumu repodan doğrulanamıyor; test
-    // edilemeyecek ekran yazılmadı (kullanıcı kararı 10a).
-    expect(s).toContain('kullanıcı kararı 10a');
+  it('neden silindiği ve geri geleceği gün kayıtlı', () => {
+    expect(s).toContain('hook_send_sms_enabled=false');
+    expect(s).toContain('git history');
   });
 });
 

@@ -483,11 +483,6 @@ interface AppState {
   pendingIntent: { view: AppView; matchId?: string; ts: number } | null;
   setPendingIntent: (view: AppView, matchId?: string) => void;
   consumePendingIntent: () => { view: AppView; matchId?: string } | null;
-  // Numara ekranı (PHONE_LINK) hangi gerekçeyle açıldı? 22 Ağu 2026 (Apple
-  // 5.6): adım artık girişte ATLANABİLİR; yalnız ödeme/rezervasyon gibi tam
-  // ihtiyaç anında istenir. Ekranın metni ve alt düğmesi buna göre değişir.
-  phoneGateReason: 'LOGIN' | 'PAYMENT';
-  setPhoneGateReason: (r: 'LOGIN' | 'PAYMENT') => void;
   // Kapıdan gelindiğinde AuthScreen'in hangi modda açılacağı.
   authStartMode: 'register' | 'login' | null;
   setAuthStartMode: (m: 'register' | 'login' | null) => void;
@@ -1373,8 +1368,6 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (!rec || typeof rec.ts !== 'number' || Date.now() - rec.ts > PENDING_INTENT_MAX_AGE_MS) return null;
     return { view: rec.view, matchId: rec.matchId };
   },
-  phoneGateReason: 'LOGIN',
-  setPhoneGateReason: (r) => set({ phoneGateReason: r }),
   authStartMode: null,
   setAuthStartMode: (m) => set({ authStartMode: m }),
   currentUserProfile: null,

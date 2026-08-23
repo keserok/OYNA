@@ -109,15 +109,14 @@ describe('Giriş · telefon kapalıyken çalışan yolu gösterir', () => {
     expect(kayit, '"tekrar dene" bu hatada yanlış öneri').not.toMatch(/tekrar dene/i);
   });
 
-  it('sosyal giriş ekranda BİRİNCİL kalıyor — yönlendirme boşa düşmesin', () => {
+  it('sosyal giriş ekranın TEK yolu — yönlendirme boşa düşmesin', () => {
+    // Hata metni kullanıcıyı "Google veya Apple ile devam et" diye yönlendirir.
+    // O cümle ancak ekranda gerçekten o yollar VARSA anlamlıdır.
+    // 23 Ağu 2026: telefon alanı silindi, geriye yalnız bu iki düğme kaldı —
+    // çapa artık düğmelerin kendisi (eskiden telefon alanının konumuydu).
     const s = oku('views/AuthScreen.tsx');
-    const sosyal = s.indexOf('Sosyal giriş — BİRİNCİL');
-    // Çapa, telefon ALANININ KENDİSİ: eskiden "veya telefon numaranla" ayraç
-    // yazısıydı, o yazı 21 Ağu 2026'da kaldırıldı ve çapa -1'e düşüp testi
-    // sessizce anlamsızlaştırıyordu. Alan başlığı kalıcıdır.
-    const telefon = s.indexOf('htmlFor="au-phone">Telefon numaran');
-    expect(sosyal, 'sosyal giriş bloğu bulunamadı').toBeGreaterThan(-1);
-    expect(telefon, 'telefon alanı bulunamadı').toBeGreaterThan(-1);
-    expect(sosyal, 'telefon sosyal girişin üstüne çıkmış').toBeLessThan(telefon);
+    expect(s, 'Google düğmesi yok').toContain('onClick={handleGoogleLogin}');
+    expect(s, 'Apple düğmesi yok').toContain('onClick={handleAppleLogin}');
+    expect(s, 'telefon alanı geri gelmiş').not.toContain('au-phone');
   });
 });

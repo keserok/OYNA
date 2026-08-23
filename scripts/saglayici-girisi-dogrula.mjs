@@ -21,11 +21,10 @@
  *
  * KULLANIM:
  *   npm run build && npm run giris:dogrula
- *   npm run giris:dogrula -- --dizin dist --demo-dizin /tmp/dist-demo
+ *   npm run giris:dogrula -- --dizin dist
  *
- * `--demo-dizin` verilirse (VITE_DEMO_ACCOUNTS=true ile derlenmiş paket) demo
- * kapısı da sınanır: aynı paket yerel sunucuda seçiciyi GÖSTERMELİ, yayın
- * adresinde GÖSTERMEMELİ.
+ * Demo hesap ekranı 23 Ağustos 2026'da KODDAN silindi; betik onun hiçbir
+ * sunucu adında çizilmediğini de doğrular.
  */
 import { createServer } from 'node:http';
 import { createReadStream, existsSync, statSync } from 'node:fs';
@@ -39,7 +38,6 @@ const bayrak = (ad, varsayilan = null) => {
   return i >= 0 && args[i + 1] ? args[i + 1] : varsayilan;
 };
 const DIZIN = resolve(bayrak('--dizin', 'dist'));
-const DEMO_DIZIN = bayrak('--demo-dizin', null);
 /** Yayın adresi taklidi. Chromium'a çözümletiriz; /etc/hosts gerekmez. */
 const YAYIN_HOST = 'oyna-yayin.test';
 const KULLANICI_ID = '11111111-2222-3333-4444-555555555555';
@@ -86,7 +84,7 @@ const girisEkraninaGel = async (sayfa) => {
   for (let i = 0; i < 45; i += 1) {
     await sayfa.waitForTimeout(350);
     const metin = await sayfa.evaluate(() => document.body.innerText).catch(() => '');
-    if (/Sahaya çık|Numaranla gir/i.test(metin)) return true;
+    if (/Sahaya çık/i.test(metin)) return true;
     // Tanıtımdaki ilerletme düğmesi SİMGEDİR (metni yok) — kimlikle aranır.
     const d = sayfa.locator('#intro-continue-button');
     if (await d.count() && await d.isVisible().catch(() => false)) await d.click().catch(() => {});
@@ -282,13 +280,57 @@ const engelliYol = async (kok) => {
   await t.close();
 };
 
+// ─── Senaryo: ÇIKIŞ SONRASI ekran ──────────────────────────────────────────
+// Kurucu 23 Ağu 2026'da şunu bildirdi: "Çıkış yaptığımda da hâlâ bu ekran
+// geliyor" (telefon + demo ekranı). Giriş ekranı tek bir bileşendir; ama
+// iddiayı sözle değil sürüşle kapatıyoruz: oturum düşürülüp uygulama yeniden
+// açıldığında karşımıza çıkan ekran ölçülür.
+const cikisSonrasi = async (kok) => {
+  console.log('\n[1m▸ ÇIKIŞ sonrası karşılama ekranı[0m');
+  const t = await tarayiciAc();
+  const baglam = await baglamAc(t);
+  await arkaUcuTaklitEt(baglam, KAYITLI_PROFIL);
+  const ana = await baglam.newPage();
+  await ana.goto(`${kok}/`, { waitUntil: 'domcontentloaded' });
+  if (!(await girisEkraninaGel(ana))) { iddia('giriş ekranına ulaşıldı', false); await t.close(); return; }
+  await ana.locator('#agreement-checkbox').click();
+  const pencereSozu = baglam.waitForEvent('page', { timeout: 15000 });
+  await ana.locator('button', { hasText: /^Google$/ }).first().click();
+  await pencereSozu.catch(() => null);
+  let icerde = '';
+  for (let i = 0; i < 30; i += 1) {
+    await new Promise((c) => setTimeout(c, 400));
+    icerde = await ekran(ana);
+    if (/ANA SAYFA|Yakınındaki|MAÇ/i.test(icerde)) break;
+  }
+  iddia('önce içeri girildi', /ANA SAYFA|Yakınındaki|MAÇ/i.test(icerde), icerde.slice(0, 60));
+
+  // ÇIKIŞ: `logout()` oturumu düşürür ve AUTH'a döner. Aynı son durumu
+  // depodaki belirteci silip uygulamayı yeniden açarak kuruyoruz.
+  await ana.evaluate(() => {
+    try { localStorage.removeItem('oyna.auth.token'); } catch { /* yoksay */ }
+    try { sessionStorage.clear(); } catch { /* yoksay */ }
+  });
+  await ana.goto(`${kok}/`, { waitUntil: 'domcontentloaded' });
+  if (!(await girisEkraninaGel(ana))) { iddia('çıkıştan sonra giriş ekranı geldi', false); await t.close(); return; }
+  const metin = await ekran(ana);
+  iddia('çıkıştan sonra gelen ekran "Sahaya çık"', /Sahaya çık/i.test(metin), metin.slice(0, 60));
+  for (const iz of ['Numaranla gir', 'TELEFON NUMARAN', 'KOD GÖNDER', 'DEMO HESABIYLA', 'APP REVIEW']) {
+    iddia(`çıkış ekranında "${iz}" YOK`, !metin.includes(iz));
+  }
+  iddia('çıkış ekranında Apple ve Google var',
+    (await ana.locator('button', { hasText: /^Apple$/ }).count()) === 1
+    && (await ana.locator('button', { hasText: /^Google$/ }).count()) === 1);
+  await t.close();
+};
+
 // ─── Senaryo: demo kapısı (aynı paket, iki sunucu adı) ──────────────────────
-const demoKapisi = async (port, yereldeBeklenen) => {
-  console.log(`\n[1m▸ Demo hesap ekranı — ${yereldeBeklenen
-    ? 'demo paketi: yerelde VAR, yayında YOK'
-    : 'yayın paketi: hiçbir yerde YOK'}[0m`);
+const demoKapisi = async (port) => {
+  // Demo yolları koddan silindi: hiçbir bayrak, hiçbir sunucu adı geri
+  // getiremez. İki ayrı adreste de yokluğu doğrulanır.
+  console.log('\n[1m▸ Demo hesap ekranı — hiçbir adreste yok[0m');
   for (const [ad, kok, beklenen] of [
-    ['yerel sunucu (127.0.0.1)', `http://127.0.0.1:${port}`, yereldeBeklenen],
+    ['yerel sunucu (127.0.0.1)', `http://127.0.0.1:${port}`, false],
     [`yayın adresi (${YAYIN_HOST})`, `http://${YAYIN_HOST}:${port}`, false],
   ]) {
     const t = await tarayiciAc();
@@ -319,19 +361,10 @@ try {
   await pencereYolu(KOK, 'KAYITLI kullanıcı · APPLE',
     { profil: KAYITLI_PROFIL, beklenen: /ANA SAYFA|Yakınındaki|MAÇ|KONUM/i, saglayici: 'Apple' });
   await engelliYol(KOK);
-  // Yayın paketinde demo kodu DERLEMEYE bile girmez — iki adreste de yok.
-  await demoKapisi(port, false);
+  await cikisSonrasi(KOK);
+  await demoKapisi(port);
 } finally {
   sunucu.close();
-}
-
-if (DEMO_DIZIN) {
-  const d = await sunucuAc(resolve(DEMO_DIZIN));
-  console.log(`\n[90mDemo paketi: ${resolve(DEMO_DIZIN)}[0m`);
-  try { await demoKapisi(d.port, true); } finally { d.sunucu.close(); }
-} else {
-  console.log('\n[90m(--demo-dizin verilmedi: "yerelde görünüyor mu" ayağı atlandı.'
-    + ' VITE_DEMO_ACCOUNTS=true ile derleyip yolunu geç.)[0m');
 }
 
 const kalan = sonuc.filter((x) => !x).length;

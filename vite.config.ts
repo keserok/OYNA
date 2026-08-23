@@ -66,19 +66,16 @@ function mobilPaketBekcisi(): Plugin {
       const env = loadEnv(mode, process.cwd(), '');
       const hatalar: string[] = [];
 
-      // İSTİSNA YOK (22 Ağu 2026 — Apple 5.6 reddinden sonraki kurucu kararı):
-      // Mağazaya giden paket ile kullanıcının indirdiği paket AYNI olmak
-      // zorunda. Eskiden `VITE_MAGAZA_INCELEME=true` diye bir inceleme paketi
-      // vardı; incelemeciye özel demo seçici taşıyordu ve Apple bunu "inceleme
-      // sırasında gizlenmiş özellik" sayıp uygulamayı reddetti. O bayrak
-      // tamamen söküldü. Demo kataloğu artık mobil pakete HİÇBİR koşulda
-      // giremez — bayrak açıksa derleme DURUR.
-      if (env.VITE_DEMO_ACCOUNTS === 'true') {
+      // DEMO YOLLARI 23 Ağu 2026'da KODDAN SİLİNDİ; `VITE_DEMO_ACCOUNTS` artık
+      // hiçbir yerde okunmuyor. Bekçi yine de bayrağı REDDEDER: bir yapılandırma
+      // dosyasında duran ölü bayrak, ileride birinin "demo modunu açayım" diye
+      // kod yazmasına davetiye çıkarır. Bayrak varsa derleme DURUR ve sebebini
+      // söyler.
+      if (env.VITE_DEMO_ACCOUNTS) {
         hatalar.push(
-          'VITE_DEMO_ACCOUNTS=true — demo hesap kataloğu ve ortak şifre pakete girer. ' +
-          '.env dosyasında false yap (ya da satırı sil). ' +
-          'Mağaza incelemesi için ayrı paket YOK: incelemeci de kullanıcıyla ' +
-          'aynı paketi görür (Apple 5.6).',
+          'VITE_DEMO_ACCOUNTS tanımlı — demo giriş yolları uygulamadan tümüyle ' +
+          'SİLİNDİ (23 Ağu 2026, Apple 5.6). Bu bayrak artık hiçbir şey açmaz; ' +
+          'ortamdan kaldır. Giriş yalnız Apple ve Google ile yapılır.',
         );
       }
 

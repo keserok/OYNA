@@ -150,58 +150,39 @@ describe('A2 · alt dolgu kuralı: TOPLA değil, BÜYÜĞÜNÜ AL', () => {
   });
 });
 
-describe('A3 · giriş ekranı klavyenin ARKASINDA kalmıyor (gerçek render)', () => {
-  it('klavye açıkken alt dolgu ölçülen örtüşmeyi içerir', () => {
+/**
+ * A3 · GİRİŞ EKRANINDA ARTIK YAZI ALANI YOK (23 Ağustos 2026)
+ *
+ * Bu blok eskiden "telefon alanı klavyenin arkasında kalmasın" kusurunu
+ * koruyordu. Telefon ve kod adımları giriş ekranından SİLİNDİ (yalnız Apple
+ * ve Google kaldı), dolayısıyla o ekranda klavye hiç açılmıyor ve ölçülecek
+ * bir örtüşme yok.
+ *
+ * Kilit kaldırılmadı, TERSİNE ÇEVRİLDİ: bir gün ekrana yazı alanı geri
+ * konursa klavye kusuru da geri gelir. O gün bu test kırmızı döner ve
+ * ölçüm kancasının (useKlavyeOrtusu) yeniden bağlanması gerektiğini söyler.
+ */
+describe('A3 · giriş ekranında klavye açan bir alan YOK', () => {
+  it('ekranda hiç yazı alanı çizilmiyor', () => {
     klavyeyiAc(KLAVYE);
     const { container } = girisFormunuAc();
-
-    const dolgular = altDolgular(container);
-    expect(dolgular.length).toBeGreaterThan(0);
+    const alanlar = container.querySelectorAll('input, textarea, [contenteditable="true"]');
     expect(
-      dolgular.some((d) => d.includes(`max(var(--kb-height, 0px), ${KLAVYE}px)`)),
-      `giriş panelinde ölçülen klavye payı yok — bulunanlar: ${JSON.stringify(dolgular)}`,
-    ).toBe(true);
-  });
-
-  it('HİÇBİR alt dolgu yalnız --kb-height okumaz (asıl kusur buydu)', () => {
-    klavyeyiAc(KLAVYE);
-    const { container } = girisFormunuAc();
-
-    for (const d of altDolgular(container)) {
-      if (!d.includes('--kb-height')) continue;
-      expect(d, `bu dolgu yalnız kabuğa göre ölçüyor: ${d}`).toContain('max(');
-    }
-  });
-
-  it('klavye kapalıyken tasarım değişmez (pay 0px)', () => {
-    klavyeyiAc(0);
-    const { container } = girisFormunuAc();
-
-    const dolgular = altDolgular(container).filter((d) => d.includes('--kb-height'));
-    expect(dolgular.length).toBeGreaterThan(0);
-    for (const d of dolgular) expect(d).toContain('max(var(--kb-height, 0px), 0px)');
+      alanlar.length,
+      'giriş ekranına yazı alanı geri geldi — klavye örtüşmesi kilidi (useKlavyeOrtusu) yeniden bağlanmalı',
+    ).toBe(0);
   });
 
   it('ekranda GERÇEK bir giriş yolu var (boş DOM ölçmüyoruz)', () => {
     klavyeyiAc(KLAVYE);
     girisFormunuAc();
-    // Giriş ekranının hangi yolları göstereceği tek bayrağa bağlı
-    // (shared/phone.ts · SMS_OTP_ENABLED). Bu test o bayrağın İKİ durumunu da
-    // tanır; yoksa bayrak her çevrildiğinde kırmızıya döner ve "testi düzelt"
-    // alışkanlığı doğar.
-    if (TELEFON_GIRISI_ACIK) {
-      // Tek alan var: telefon numarası (+ ülke kodu). Şifre/e-posta kaldırıldı.
-      expect(screen.getByLabelText('Telefon numarası')).toBeTruthy();
-      expect(screen.getByLabelText('Ülke kodu')).toBeTruthy();
-    } else {
-      // SMS kapalıyken numara alanı ÇİZİLMEZ — çalışmayan bir alan bırakmak
-      // kullanıcıya "kod gönderilemedi"den başka bir şey vermez (App Store 2.1).
-      expect(screen.queryByLabelText('Telefon numarası')).toBeNull();
-      expect(screen.queryByLabelText('Ülke kodu')).toBeNull();
-      // Ama ekran BOŞ da kalmaz: iki sosyal yol duruyor olmalı.
-      expect(screen.getByRole('button', { name: 'Google' })).toBeTruthy();
-      expect(screen.getByRole('button', { name: 'Apple' })).toBeTruthy();
-    }
+    // TEK YOL: Apple · Google. Telefon alanı 23 Ağu 2026'da silindi; çalışmayan
+    // bir alan bırakmak kullanıcıya "kod gönderilemedi"den başka bir şey
+    // vermiyordu (App Store 2.1) ve Apple 5.6 reddinin kökü buydu.
+    expect(screen.queryByLabelText('Telefon numarası')).toBeNull();
+    expect(screen.queryByLabelText('Ülke kodu')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Google' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Apple' })).toBeTruthy();
   });
 });
 
@@ -223,10 +204,12 @@ describe('A4 · ölçüm TEK kaynaktan gelir', () => {
     expect(oku('views/AuthScreen.tsx')).not.toContain('visualViewport');
   });
 
-  it('giriş ekranı ölçümü paylaşılan kancadan alır', () => {
-    expect(oku('views/AuthScreen.tsx')).toMatch(
-      /import\s*\{[^}]*useKlavyeOrtusu[^}]*\}\s*from\s*['"][^'"]*components\/common\/Toast['"]/,
-    );
+  it('giriş ekranı klavye ölçümünü artık HİÇ yapmıyor (alan kalmadı)', () => {
+    // Kanca 23 Ağu 2026'da kaldırıldı: ekranda yazı alanı yok, klavye açılmıyor.
+    // Alan geri gelirse A3'teki kilit kırmızı döner ve kancayı geri ister.
+    const a = oku('views/AuthScreen.tsx');
+    expect(a).not.toContain('useKlavyeOrtusu');
+    expect(a).not.toContain('klavyeliAltDolgu');
   });
 });
 

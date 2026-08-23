@@ -17,106 +17,36 @@
  *    kill-switch yazmayı unutmak yeterli değildir.
  */
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const oku = (p: string) => readFileSync(join(process.cwd(), p), 'utf8');
 
-describe('Mağaza kapıları · demo girişi', () => {
+/**
+ * DEMO GİRİŞ YOLLARI SİLİNDİ (23 Ağustos 2026) — kapı testi artık YOKLUK testi.
+ *
+ * Bu blok eskiden "demo seçici hangi bayrakla açılır" sorusunu koruyordu:
+ * native'de kapalı, yalnız `VITE_DEMO_ACCOUNTS=true` derlemesinde, yalnız
+ * yerel sunucuda… Üç bayrak, üç kapı — ve üç kez kurucunun karşısına çıktı.
+ * Kapı kalmadı: kod silindi. Ayrıntılı kilit `tekGirisYolu.test.ts` içinde;
+ * burada yalnız mağaza denetimi açısından kritik olan iki şey korunuyor.
+ */
+describe('Mağaza kapıları · demo girişi diye bir şey yok', () => {
   const s = oku('supabaseAuth.ts');
 
-  /**
-   * Fonksiyon gövdesi — YORUMLAR AYIKLANMIŞ.
-   *
-   * Sıra iddiaları KOD sırasına bakmalı: açıklama satırlarında geçen
-   * "hostname" gibi kelimeler kod sanılırsa test yanlış yerden kırılır
-   * (ilk yazımda tam bunu yaptı).
-   */
-  const govde = (ad: string) => {
-    const bas = s.indexOf(`export const ${ad} = (): boolean =>`);
-    expect(bas, `${ad} bulunamadı`).toBeGreaterThan(-1);
-    return s
-      .slice(bas, s.indexOf('\n};', bas))
-      .split('\n')
-      .filter((satir) => !/^\s*(\/\/|\/\*|\*)/.test(satir))
-      .join('\n');
-  };
-
-  it('demo girişi native pakette KAPALI (yerel sunucu kapısından ÖNCE)', () => {
-    const g = govde('isDemoLoginEnabled');
-    expect(g).toContain('Capacitor.isNativePlatform()');
-    // Native kontrolü, sunucu adı kapısından ÖNCE gelmeli: sonra gelirse
-    // localhost eşleşmesi native pakette de açardı (Capacitor uygulamayı
-    // localhost üzerinden servis eder).
-    expect(g.indexOf('isNativePlatform'))
-      .toBeLessThan(g.indexOf('yerelGelistirmeSunucusuMu'));
-    expect(g).toMatch(/isNativePlatform\(\)\)\s*return false/);
+  it('ortak demo şifresi kaynakta HİÇ geçmiyor', () => {
+    // Şifre paketin JS'ine harfi harfine giriyordu ve demo hesapların bir
+    // kısmı GERÇEK saha sahibi hesaplarıydı: paketi açan biri kimlikleri
+    // okuyup web üzerinden o hesaplara girebiliyordu.
+    expect(s).not.toContain('password123');
+    expect(s).not.toContain('DEMO_PASSWORD');
   });
 
-  /**
-   * YAYIN ADRESİNDE DEMO YOLU YOK (23 Ağustos 2026).
-   *
-   * Kurucu, Vercel önizlemesinde demo hesap ekranıyla karşılaşıyordu: kapı
-   * yalnız DERLEME bayrağına bakıyordu ve dağıtım ortamında `VITE_DEV_MODE` /
-   * `VITE_DEMO_ACCOUNTS` açıktı. Karar env'de olduğu için kodu okuyan kimse
-   * göremiyordu. Kilit artık şunu koruyor: demo yolları herkese açık bir
-   * adreste, env ne derse desin, YOKTUR.
-   */
-  it('demo yolları YALNIZ yerel sunucuda; env tek başına açamaz', () => {
-    const g = govde('isDemoLoginEnabled');
-    const p = govde('isDemoAccountPickerEnabled');
-    // Her iki kapı da yerel sunucu şartına bağlı.
-    expect(g).toContain('yerelGelistirmeSunucusuMu()');
-    expect(p).toContain('yerelGelistirmeSunucusuMu()');
-    // İkisi de bu şartı ATLAYAN bir `return true` içermemeli.
-    expect(g).not.toMatch(/return true/);
-    expect(p).not.toMatch(/return true/);
-
-    // Yardımcının kendisi: native ve `capacitor:`/`file:` protokolleri kapalı,
-    // yalnız yerel sunucu adları geçer.
-    const yardimci = s.slice(s.indexOf('const yerelGelistirmeSunucusuMu'));
-    const govdeY = yardimci.slice(0, yardimci.indexOf('\n};'));
-    expect(govdeY).toContain('Capacitor.isNativePlatform()');
-    expect(govdeY).toContain("protocol !== 'http:'");
-    expect(govdeY).toContain("hostname === 'localhost'");
-    expect(govdeY).toContain(".endsWith('.local')");
-  });
-
-  it('`?demo=1` adres anahtarı hiçbir kapıyı açmıyor (5.6)', () => {
-    // Adrese `?demo=1` eklemek her alan adında demo yollarını açıyordu:
-    // pakette duran, kullanıcıya görünmeyen, yalnız bilenin ulaştığı bir yol.
-    // Anahtar okunmuyor; kalıntı yalnız TEMİZLİK için siliniyor.
-    expect(s).not.toMatch(/get\('demo'\)/);
-    expect(s).not.toMatch(/getItem\('oyna_demo'\)/);
-    expect(s).not.toMatch(/setItem\('oyna_demo'/);
-    expect(oku('views/AuthScreen.tsx')).not.toMatch(/oyna_demo/);
-  });
-
-  /**
-   * KARAR GERİ ALINDI (22 Ağustos 2026 — Apple 5.6 reddinden sonra).
-   *
-   * 19 Ağustos'ta seçici, native'de "mağaza inceleme paketi" bayrağıyla
-   * (`VITE_MAGAZA_INCELEME`) açılabilir hâle getirilmişti: incelemecinin Türk
-   * numarası yok, SMS kodu ona ulaşmıyordu. Apple bu paketi 5.6 (Developer
-   * Code of Conduct) altında REDDETTİ — "app contains features that appear to
-   * have been intentionally hidden during the review process". Haklıydı:
-   * incelemecinin gördüğü paket kullanıcının indirdiğinden farklıydı.
-   *
-   * Kilit ARTIK ŞUNU KORUYOR: native pakette seçici KOŞULSUZ kapalı, hiçbir
-   * bayrak açamaz. Gerçek çözüm ürün tarafında — telefon adımı herkes için
-   * atlanabilir (App.tsx · numaraGerekli), incelemeci de normal kullanıcı
-   * gibi Apple ile girip uygulamayı gezer.
-   */
-  it('demo hesap seçici native pakette KOŞULSUZ kapalı', () => {
-    const g = govde('isDemoAccountPickerEnabled');
-    // 1) Native kapısı KOŞULSUZ: hiçbir bayrak onu geçemez.
-    expect(g).toMatch(/if\s*\(\s*Capacitor\.isNativePlatform\(\)\s*\)\s*return false/);
-    // 2) Native kapısından ÖNCE `return true` üreten hiçbir yol olamaz —
-    //    19 Ağu'daki hata tam buydu (inceleme bayrağı native'den önce geliyordu).
-    const nativeIdx = g.indexOf('isNativePlatform');
-    expect(g.slice(0, nativeIdx)).not.toMatch(/return true/);
-    // 3) Derleme bayrağı FAIL-CLOSED: açıkça 'true' değilse kapalı.
-    expect(g).toMatch(/VITE_DEMO_ACCOUNTS !== 'true'\)\s*return false/);
+  it('demo giriş fonksiyonları dışa açılmıyor', () => {
+    for (const ad of ['demoLogin', 'loginDemoAccount', 'isDemoLoginEnabled',
+                      'isDemoAccountPickerEnabled', 'isDemoLoginInput']) {
+      expect(s, `${ad} hâlâ dışa açık`).not.toContain(`export const ${ad}`);
+    }
   });
 
   it('inceleme paketi bayrağı hiçbir yerde OKUNMUYOR (5.6)', () => {
@@ -124,24 +54,20 @@ describe('Mağaza kapıları · demo girişi', () => {
     // koruduğu şey bayrağın OKUNMASI. `import.meta.env.X` / `env.X` biçimleri
     // derlemede değere dönüşen tek biçimler.
     for (const yol of ['supabaseAuth.ts', 'views/AuthScreen.tsx', 'vite.config.ts',
-                       'data/demoAccounts.ts', 'package.json', 'vercel.json']) {
+                       'package.json', 'vercel.json']) {
       expect(oku(yol), `${yol} inceleme bayrağını okuyor`)
         .not.toMatch(/(import\.meta\.)?env\.VITE_MAGAZA_INCELEME/);
     }
     expect(s).not.toContain('isIncelemePaketi');
   });
 
-  it('mobil paket bekçisi demo kataloğunu İSTİSNASIZ engeller', () => {
+  it('mobil paket bekçisi ölü demo bayrağını REDDEDİYOR', () => {
+    // `VITE_DEMO_ACCOUNTS` artık hiçbir şey açmıyor; ama yapılandırmada duran
+    // ölü bir bayrak, ileride birinin "demo modunu açayım" diye kod yazmasına
+    // davetiye çıkarır. Bayrak varsa mobil derleme DURUR.
     const v = oku('vite.config.ts');
-    // İstisna yok: bayrak açıksa mobil derleme DURUR.
-    expect(v).toMatch(/if\s*\(env\.VITE_DEMO_ACCOUNTS === 'true'\)\s*\{\s*\n\s*hatalar\.push/);
+    expect(v).toMatch(/if\s*\(env\.VITE_DEMO_ACCOUNTS\)\s*\{\s*\n\s*hatalar\.push/);
     expect(v).not.toContain('incelemePaketi');
-  });
-
-  it('demo girişi yalnız @oyna.app hesaplarını kabul eder (ikinci emniyet)', () => {
-    expect(s).toContain("const DEMO_DOMAIN = '@oyna.app'");
-    // demoLogin ve loginDemoAccount alan adı dışına çıkamaz.
-    expect((s.match(/Demo giriş yalnızca demo hesaplarında/g) ?? []).length).toBeGreaterThanOrEqual(2);
   });
 });
 
@@ -266,23 +192,17 @@ describe('Mağaza kapıları · dosya kaydetme', () => {
 // geliştirici paketlerine girer.
 
 describe('Mağaza kapıları · demo kimlikleri pakette değil', () => {
-  it('katalog derleme bayrağına bağlı (statik ?raw içe aktarma YOK)', () => {
-    const d = oku('data/demoAccounts.ts');
-    expect(d).not.toMatch(/^import rosterMd from .*\?raw';/m);
-    expect(d).toContain("import.meta.env.VITE_DEMO_ACCOUNTS === 'true'");
+  it('demo hesap kataloğu dosyası SİLİNDİ', () => {
+    // Katalog `VITE_DEMO_ACCOUNTS=true` ile derlenen pakete giriyordu; bayrak
+    // yanlış ortama yazıldığında (Vercel) kimlikler herkese açık bir adreste
+    // yayınlanıyordu. Dosya artık yok.
+    expect(existsSync(join(process.cwd(), 'data/demoAccounts.ts'))).toBe(false);
   });
 
-  it('ortak şifre sabiti NORMAL üretim paketinde BOŞ', () => {
-    const s = oku('supabaseAuth.ts');
-    // Şifreyi dolduran TEK bayrak kaldı: geliştirme (VITE_DEMO_ACCOUNTS).
-    // Mağaza inceleme bayrağı 22 Ağu 2026'da söküldü (Apple 5.6) — yayın
-    // paketinde de, incelemeye giden pakette de gömülü şifre YOK.
-    expect(s).toMatch(
-      /const DEMO_PASSWORD =\s*\n?\s*import\.meta\.env\.VITE_DEMO_ACCOUNTS === 'true'/,
-    );
-    expect(s).toContain("? 'password123' : '';");
-    // Ayrıştırıcıdaki yedek sabit de kaldırıldı.
-    expect(oku('data/demoAccounts.ts')).not.toMatch(/\|\|\s*'password123'/);
+  it('ortak şifre uygulama kaynağının HİÇBİR yerinde yok', () => {
+    for (const yol of ['supabaseAuth.ts', 'views/AuthScreen.tsx', 'App.tsx']) {
+      expect(oku(yol), `${yol} ortak demo şifresini taşıyor`).not.toContain('password123');
+    }
   });
 });
 
@@ -477,7 +397,7 @@ describe('Mağaza kapıları · paket üretimi', () => {
   it('yanlış .env ile mobil paket derlenemez', () => {
     const v = oku('vite.config.ts');
     expect(v).toContain('mobilPaketBekcisi');
-    expect(v).toContain("env.VITE_DEMO_ACCOUNTS === 'true'");
+    expect(v).toContain('env.VITE_DEMO_ACCOUNTS');
     expect(v).toContain('MOBİL PAKET DERLEMESİ DURDURULDU');
   });
 });
@@ -603,11 +523,18 @@ describe('İncelemeciye özel yol YOK (Apple 5.6)', () => {
     expect(s).not.toContain('isIncelemePaketi');
   });
 
-  it('OTP hatası incelemeciyi demo yoluna çeviren gizli kapı açmıyor', () => {
+  it('giriş hatası incelemeciyi başka bir yola çeviren gizli kapı açmıyor', () => {
     const s = ekran();
     expect(s).not.toContain('incelemeOtpCikmaziniYonet');
-    // Hata yolu HERKES için aynı metni yazar; dallanma yok.
-    expect(s).toContain("setError(mapAuthError(err, 'Doğrulama kodu gönderilemedi. Lütfen tekrar deneyin.'));");
+    // 23 Ağu 2026: telefonla giriş ve demo yolu SİLİNDİ; geriye tek hata yolu
+    // kaldı ve HERKES için aynı. Kapının koruduğu şey değişmedi: hata anında
+    // "şu kullanıcıya şunu göster" diye dallanan bir kod olamaz.
+    expect(s).toContain('setError(saglayiciHatasi(err,');
+    expect(s.match(/setError\(saglayiciHatasi\(err,/g)?.length).toBe(2); // Google + Apple
+    // "demo" kelimesi YORUMLARDA geçebilir — silinen şeyin kaydı değerli.
+    // Kilit KODA bakar.
+    const kod = s.split('\n').filter((l) => !/^\s*(\/\/|\/\*|\*)/.test(l)).join('\n');
+    expect(kod).not.toMatch(/demo/i);
   });
 
   it('inceleme derleme betikleri package.json\'dan silindi', () => {

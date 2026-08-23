@@ -255,37 +255,36 @@ otp_expiry = 3600
 # content_path = "./templates/password_changed_notification.html"
 
 [auth.sms]
-# TELEFON ARTIK BİRİNCİL KAYIT YOLU (17 Ağu 2026 kurucu kararı) — bu bayrak
-# `false` kalırsa yeni hiç kimse kayıt olamaz: kod gider, doğrulama "Signups
-# not allowed for otp" ile döner. Şifre/e-posta yolu kaldırıldığı için bu, tek
-# başına bir LANSMAN ENGELİDİR. Panelde de aynı ayar açık olmalı
-# (Auth → Sign In / Providers → Phone → "Allow new users to sign up").
-enable_signup = true
-# If enabled, users need to confirm their phone number before signing in.
+# ─────────────────────────────────────────────────────────────────────────────
+# TELEFONLA GİRİŞ KAPALI (23 Ağustos 2026) — ve SABİT KODLU TEST NUMARASI
+# BURADAN SİLİNDİ.
+#
+# Uygulamada telefonla giriş yolu YOK: giriş yalnız Apple ve Google ile yapılır
+# (bkz. shared/phone.ts başlığı). Bu bölümün açık kalması, panelde yanlışlıkla
+# uygulanırsa uygulamanın sunmadığı bir kayıt yolunu sunucuda açardı.
+#
+# SİLİNEN BLOK — [auth.sms.test_otp] · 905000000000 = "500000"
+# Ne yapıyordu: bu numara için Supabase SMS ÜRETMEZ ve GÖNDERMEZDİ; yalnız
+# yazılı kodu kabul ederdi. Gerekçesi dosyada şöyle yazılıydı: "mağaza
+# incelemecisi ve kurucu, gerçek bir hattı olmadan giriş yapabilir."
+#
+# NİYE SİLİNDİ: bu, Apple'ın 5.6 altında reddettiği desenin ta kendisidir —
+# incelemecinin, kullanıcının sahip olmadığı bir kapıdan girmesi. Reddin
+# cümlesi: "features that appear to have been intentionally hidden during the
+# review process." Kural (APPLE_56 talimatı §2): incelemecinin karşılaştığı
+# engel neyse HERKES için çözülür; çözülemiyorsa özellik HERKES için kapatılır.
+# Burada çözülemedi (SMS sağlayıcısı yok) → yol tümüyle kapatıldı.
+#
+# PANELDE DE SİLİNMELİ: bu dosya yalnız `supabase config push` ile uygulanır.
+# Canlı projede Auth → Sign In / Providers → Phone → "Test OTP" listesi ELLE
+# boşaltılmalıdır. (22 Ağu 2026 ölçümü: Phone sağlayıcısı canlıda zaten
+# kapalı — /auth/v1/settings · external.phone=false — yani liste bugün etkisiz;
+# yine de sağlayıcı bir gün açılırsa arka kapı geri gelmesin.)
+# ─────────────────────────────────────────────────────────────────────────────
+enable_signup = false
 enable_confirmations = false
-# Template for sending OTP to users
 template = "Your code is {{ .Code }}"
-# Aynı numaraya iki SMS arasındaki EN AZ süre. 5 sn, "tekrar gönder"e basılı
-# tutan (ya da betikle basan) birinin kontörümüzü dakikada 12 SMS hızıyla
-# yakmasına izin veriyordu — her SMS'in parayla karşılığı var. 60 sn hem
-# sektör standardı hem de ekrandaki geri sayımla (resendIn) uyumlu.
 max_frequency = "60s"
-
-# ── SABİT KODLU TEST NUMARALARI ───────────────────────────────────────────
-# Buradaki numaralar için Supabase SMS ÜRETMEZ ve GÖNDERMEZ; yalnız yazan kodu
-# kabul eder. İki faydası var: (a) mağaza incelemecisi ve kurucu, gerçek bir
-# hattı olmadan giriş yapabilir, (b) her denemede Netgsm kontörü yanmaz.
-#
-# 500 000 00 00 — kurucunun kaleci+hakem demo hesabı
-# (bkz. migrations/20260910000000_demo_kaleci_hakem_hesabi.sql).
-# 500'lü ön ek Türkiye'de operatörlere tahsis edilmemiştir: gerçek bir
-# kullanıcının numarasıyla ÇAKIŞMAZ.
-#
-# DİKKAT: bu liste yalnız `supabase config push` ile ya da panelden
-# (Auth → Sign In / Providers → Phone → "Test OTP") uygulanır. Panelde yoksa
-# numara çalışmaz — kod bekler, SMS gelmez.
-[auth.sms.test_otp]
-905000000000 = "500000"
 
 # Configure logged in session timeouts.
 # [auth.sessions]

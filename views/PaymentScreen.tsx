@@ -22,7 +22,6 @@ import AddCardScreen, { CollectedCard } from '../components/payment/AddCardScree
 import ThreeDSSheet, { ThreeDSOutcome } from '../components/payment/ThreeDSSheet';
 import type { PaymentContext } from '../types';
 import { formatTRYAmount } from '../utils/formatTRY';
-import { TELEFON_GIRISI_ACIK } from '../shared/phone';
 import { olayYaz } from '../utils/olcum';
 
 // ── ÖLÇÜM · bu ekran ÜÇ huninin de 4. ve 5. adımını taşır ───────────────────
@@ -522,29 +521,11 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
       payBusyRef.current = false;
       return;
     }
-    // ─── NUMARA KAPISI · TAM İHTİYAÇ ANI (22 Ağu 2026 — Apple 5.6) ────────
-    // Numara adımı girişte artık atlanabiliyor (App.tsx · numaraGerekli);
-    // eski hâli atlanamaz bir duvardı ve SMS yalnız +90'a gittiği için yurt
-    // dışındaki kullanıcı uygulamayı hiç açamıyordu. Karşılığı burada: para
-    // ödenen / tesise taahhüt veren iş numarasız yapılamaz — maç günü tesis
-    // ve kaptan bu numaradan ulaşacak. Gerekçe burada SOMUT olduğu için
-    // kullanıcı ne için istendiğini görerek verir.
-    //
-    // Ödeme bırakılmaz, ERTELENİR: bekleyen niyet ödeme ekranını işaretler,
-    // numara doğrulanınca kullanıcı buraya geri döner.
-    // TELEFON KAPALIYKEN BU KAPI KURULMAZ (22 Ağu 2026). Numara doğrulaması
-    // bugün hiç mümkün değil (shared/phone.ts · SMS_OTP_ENABLED); kapıyı açık
-    // bırakmak ödemeyi HERKES için imkânsız kılardı — uygulamanın ana işi
-    // çalışmaz hâle gelirdi. Bayrak açıldığı gün kapı kendiliğinden devreye
-    // girer; tesis ve kaptan numaraya o zaman kavuşur.
-    if (TELEFON_GIRISI_ACIK && !auth.currentUser.phoneVerified) {
-      payBusyRef.current = false;
-      const st = useAppStore.getState();
-      st.setPhoneGateReason('PAYMENT');
-      st.setPendingIntent('PAYMENT');
-      st.navigateTo('PHONE_LINK');
-      return;
-    }
+    // NUMARA KAPISI SİLİNDİ (23 Ağu 2026, kurucu kararı). Ödemeden önce
+    // numara doğrulaması isteniyordu; ama SMS sağlayıcısı hiç yapılandırılmamış
+    // olduğu için o doğrulama HİÇ tamamlanamıyordu — kapı açılsaydı ödeme
+    // herkes için imkânsız olurdu. Numara ekranı uygulamadan tümüyle
+    // kaldırıldı; tesis ve kaptan iletişimi maç lobisi üzerinden yürür.
     // Reşit olmayan ödeme kapısı (UX katmanı): sunucudaki trigger da bunu
     // engelliyor, ancak kullanıcıyı ham hata yerine veli onayı ekranına
     // yönlendirelim. Durum alınamazsa sunucu kapısına güveniriz.
