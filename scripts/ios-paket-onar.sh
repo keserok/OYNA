@@ -28,9 +28,6 @@ uyari()  { printf '  %s!%s %s\n' "$sari" "$sifirla" "$1"; }
 KOK="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$KOK"
 
-# Podfile'daki eklenti sayısı beklenen sayıdır: kilit ona uymak zorunda.
-BEKLENEN=$(grep -c "^  pod '" ios/App/Podfile)
-
 # ─── 0. Ortam ───────────────────────────────────────────────────────────────
 baslik "Ortam denetimi"
 
@@ -101,32 +98,51 @@ baslik "Doğrulama"
 KILIT="ios/App/Podfile.lock"
 [[ -f "$KILIT" ]] || { kotu "$KILIT üretilmemiş."; exit 1; }
 
-# Yalnız PODS: bölümündeki en üst düzey satırları say (DEPENDENCIES ve
-# SPEC CHECKSUMS bölümleri de aynı girintiyi kullanıyor).
+# NEDEN SAYI KARŞILAŞTIRMASI YOK (23 Ağustos 2026, kurucunun ilk koşusu):
+# Betiğin ilk sürümü "kilitteki pod sayısı == Podfile'daki pod satırı" diye
+# bakıyordu ve BAŞARILI bir onarımı hata sandı (40 ≠ 15). İki ayrı sebeple
+# yanlıştı:
+#
+#   · Kilit GEÇİŞLİ bağımlılıkları da taşır. CapacitorPushNotifications
+#     arkasından Firebase'i getiriyor; onun alt bileşenleri de kilide yazılıyor.
+#     Kilidin Podfile'dan uzun olması normaldir, kusur değil.
+#   · `npx cap sync ios` Podfile'ı KENDİSİ yeniden yazıyor (kurulu eklentilere
+#     göre). Sayıyı betiğin başında okumak, sync'ten önceki ESKİ Podfile'ı
+#     ölçmek demekti.
+#
+# Doğru soru sayı değil: "Podfile'da adı geçen HER eklenti kilitte var mı?"
+BEKLENEN=$(grep -c "^ *pod '" ios/App/Podfile)
 BULUNAN=$(sed -n '/^PODS:/,/^DEPENDENCIES:/p' "$KILIT" | grep -c '^  - ' || true)
+printf '  %s·%s Podfile: %s eklenti · kilit: %s satır (geçişli bağımlılıklarla)\n' \
+  "$sari" "$sifirla" "$BEKLENEN" "$BULUNAN"
 
 hata=0
-
-if [[ "$BULUNAN" -eq "$BEKLENEN" ]]; then
-  iyi "eklenti sayısı $BULUNAN/$BEKLENEN"
-else
-  kotu "eklenti sayısı $BULUNAN/$BEKLENEN — EKSİK"
-  hata=1
-fi
+eksik=0
 
 # Podfile'da adı geçen her eklenti kilitte de olmalı; hangisinin düştüğünü söyle.
 while read -r ad; do
-  if grep -q "  - $ad " "$KILIT" || grep -q "  - $ad (" "$KILIT"; then :; else
+  if grep -qE "^  - $ad[ (]" "$KILIT"; then :; else
     kotu "kilitte yok: $ad"
+    eksik=$((eksik + 1))
     hata=1
   fi
-done < <(grep -o "pod '[^']*'" ios/App/Podfile | sed "s/pod '//;s/'//")
+done < <(grep -oE "pod '[^']*'" ios/App/Podfile | sed "s/pod '//;s/'//")
+
+if [[ "$eksik" -eq 0 ]]; then
+  iyi "Podfile'daki $BEKLENEN eklentinin hepsi kilitte"
+fi
 
 # Apple ile Giriş ayrıca ve açıkça: gönderimi tek başına düşüren eklenti bu.
 if grep -q 'CapacitorCommunityAppleSignIn' "$KILIT"; then
   iyi "Apple ile Giriş kilitte"
 else
   kotu "APPLE İLE GİRİŞ KİLİTTE YOK — bu hâliyle arşivleme"
+  hata=1
+fi
+
+# Kilit boş kalmasın: en az Podfile kadar satır taşımalı.
+if [[ "$BULUNAN" -lt "$BEKLENEN" ]]; then
+  kotu "kilit Podfile'dan kısa ($BULUNAN < $BEKLENEN) — kurulum yarım kalmış"
   hata=1
 fi
 
@@ -140,7 +156,8 @@ printf '\n%s%sPAKET ONARILDI.%s\n\n' "$kalin" "$yesil" "$sifirla"
 echo "Sıradaki iki adım:"
 echo
 echo "  1) Kilidi depoya yaz — bir daha aynı duvara çarpma:"
-echo "       git add ios/App/Podfile.lock"
+echo "     (cap sync Podfile'i da guncellemis olabilir; ikisini birden al)"
+echo "       git add ios/App/Podfile ios/App/Podfile.lock"
 echo "       git commit -m 'iOS: Podfile.lock $BEKLENEN eklentiyle yeniden uretildi'"
 echo "       git push origin main"
 echo
