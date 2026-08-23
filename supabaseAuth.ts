@@ -1,7 +1,7 @@
 import { supabase, setHasAccount } from './supabaseClient';
 import { Capacitor } from '@capacitor/core';
 import { clearPushToken } from './notifications/pushService';
-import { OAUTH_PENCERE_ADI } from './shared/oauthPencere';
+import { OAUTH_PENCERE_ADI, donusAdresiniIsaretle } from './shared/oauthPencere';
 
 // ─── Augmented currentUser — includes roles and verification state ────────────
 export interface OynaCurrentUser {
@@ -157,14 +157,19 @@ export const webDonusAdresi = (): string => {
  */
 const webOAuthAc = async (saglayici: OAuthSaglayici): Promise<void> => {
   oauthIsaretiBirak(saglayici);
-  const { data, error } = await supabase.auth.signInWithOAuth({
-    provider: saglayici,
-    options: { redirectTo: webDonusAdresi(), skipBrowserRedirect: true },
-  });
-  if (error) throw error;
-  const adres = data?.url;
-  if (!adres) throw new Error('Giriş adresi alınamadı.');
 
+  // ── 1) PENCERE, TIKLAMANIN AYNI İŞ ADIMINDA AÇILIR ────────────────────────
+  // KRİTİK SIRALAMA (23 Ağustos 2026 — kurucunun "hesabımı seçince uygulama
+  // yeniden başlıyor" bildirimi). Önceki sürüm önce `signInWithOAuth`u
+  // BEKLİYOR, pencereyi ondan SONRA açıyordu. Tarayıcıların açılır pencere
+  // kuralı şudur: `window.open` kullanıcı jestinin İŞ ADIMINDA (task)
+  // çağrılmalıdır. Araya bir `await` girdiğinde Safari (iOS dâhil) jesti
+  // tükenmiş sayar ve pencereyi ENGELLER. Engellenince kod aşağıdaki emniyet
+  // valfine, yani TAM SAYFA yönlendirmesine düşüyordu — kullanıcının gördüğü
+  // "uygulama kapandı, baştan açıldı" davranışının birinci mekanizması tam
+  // olarak buydu ve açılır pencereye geçmek tek başına onu çözmemişti.
+  //
+  // Doğru desen: boş pencereyi HEMEN aç, adres hazır olunca içine yaz.
   const g = Math.min(480, window.screen.width);
   const y = Math.min(700, window.screen.height);
   const sol = Math.max(0, (window.screen.width - g) / 2);
@@ -172,11 +177,51 @@ const webOAuthAc = async (saglayici: OAuthSaglayici): Promise<void> => {
   let pencere: Window | null = null;
   try {
     pencere = window.open(
-      adres,
+      'about:blank',
       OAUTH_PENCERE_ADI,
       `popup=yes,width=${g},height=${y},left=${sol},top=${ust}`,
     );
   } catch { pencere = null; }
+
+  // Boş pencere bembeyaz durmasın; adres birkaç yüz milisaniye sonra gelir.
+  if (pencere) {
+    try {
+      pencere.document.write(
+        '<!doctype html><meta charset="utf-8">' +
+        '<title>OYNA</title>' +
+        '<body style="margin:0;display:grid;place-items:center;height:100vh;' +
+        'font:600 15px system-ui,-apple-system,sans-serif;background:#0B1220;color:#E6EDF7">' +
+        'Giriş açılıyor…</body>',
+      );
+      pencere.document.close();
+    } catch { /* yazamadıysak boş kalır, akış etkilenmez */ }
+  }
+
+  // ── 2) ADRES ──────────────────────────────────────────────────────────────
+  // Dönüş işareti YALNIZ pencere gerçekten açıldıysa eklenir: tam sayfa
+  // yoluna düşersek dönen bağlam ANA SEKMEDİR ve uygulamayı çizmelidir
+  // (bkz. shared/oauthPencere · oauthDonusPenceresiMi).
+  const kokAdres = webDonusAdresi();
+  let data: { url?: string | null } | null = null;
+  try {
+    const sonuc = await supabase.auth.signInWithOAuth({
+      provider: saglayici,
+      options: {
+        redirectTo: pencere ? donusAdresiniIsaretle(kokAdres) : kokAdres,
+        skipBrowserRedirect: true,
+      },
+    });
+    if (sonuc.error) throw sonuc.error;
+    data = sonuc.data;
+  } catch (err) {
+    try { pencere?.close(); } catch { /* yoksay */ }
+    throw err;
+  }
+  const adres = data?.url;
+  if (!adres) {
+    try { pencere?.close(); } catch { /* yoksay */ }
+    throw new Error('Giriş adresi alınamadı.');
+  }
 
   if (!pencere) {
     // Engellendi → tam sayfa yolu. Bu satırdan sonrası çalışmaz.
@@ -184,8 +229,25 @@ const webOAuthAc = async (saglayici: OAuthSaglayici): Promise<void> => {
     return;
   }
 
-  // Oturum yazılana kadar bekle. İki bitiş koşulu: oturum geldi ya da
-  // kullanıcı pencereyi kapattı. Zaman aşımı, kilitli kalmayı önler.
+  // Kullanıcı boş pencereyi biz adresi yazamadan kapattıysa bu bir vazgeçmedir;
+  // arkasından tam sayfa yönlendirmesi başlatmak onu şaşırtır.
+  let erkenKapandi = false;
+  try { erkenKapandi = pencere.closed; } catch { erkenKapandi = false; }
+  if (erkenKapandi) throw new Error('OAUTH_PENCERE_KAPANDI');
+
+  try {
+    pencere.location.replace(adres);
+  } catch {
+    // Pencereye yazamadık (beklenmedik) — girişi öldürmektense tam sayfaya düş.
+    try { pencere.close(); } catch { /* yoksay */ }
+    window.location.assign(adres);
+    return;
+  }
+
+  // ── 3) OTURUMU BEKLE ──────────────────────────────────────────────────────
+  // Pencere dönüşte oturumu AYNI kaynağın localStorage'ına yazar; localStorage
+  // sekmeler arasında ortaktır, `getSession()` her çağrıda oradan okur.
+  // İki bitiş koşulu: oturum geldi ya da kullanıcı pencereyi kapattı.
   const BASLANGIC = Date.now();
   const ZAMAN_ASIMI_MS = 3 * 60 * 1000;
   for (;;) {
@@ -613,63 +675,82 @@ export const onAuthStateChanged = (
   return () => subscription.unsubscribe();
 };
 
-// ─── Demo / dev-mode e-posta girişi ──────────────────────────────────────────
-// SADECE VITE_DEV_MODE='true' iken aktif. Manuel UI testi için: e-posta alanına
-// demo hesabın e-postasını (veya "mirackerem" kısayolunu) yazınca OTP olmadan,
-// sabit demo şifresiyle anında giriş yapar. Yalnız @oyna.app demo hesapları —
-// gerçek kullanıcı hesaplarını ASLA etkilemez. Prod'da kapalıdır.
-// ?demo=1 anahtarını, App.tsx URL'yi temizlemeden ÖNCE (modül yüklenirken) yakala
-// ve oturum boyunca sakla. Böylece herhangi bir domain'de (Vercel dâhil) env
-// değişkeni gerekmeden demo modu açılır:  <url>/?demo=1
+// ─── Demo e-posta girişi (yalnız yerel geliştirme) ───────────────────────────
+// `npm run dev:demo` ile derlenmiş pakette ve YALNIZ yerel sunucuda aktif.
+// Manuel UI testi için: e-posta alanına demo hesabın e-postasını (veya
+// "mirackerem" kısayolunu) yazınca OTP olmadan, sabit demo şifresiyle anında
+// giriş yapar. Yalnız @oyna.app demo hesapları — gerçek kullanıcı hesaplarını
+// ASLA etkilemez. Yayın paketinde ve yayın adresinde YOKTUR.
+// `?demo=1` ADRES ANAHTARI KALDIRILDI (23 Ağustos 2026).
+// Adrese `?demo=1` eklemek, HERHANGİ bir alan adında demo yollarını açıyordu:
+// paketin içinde duran, kullanıcıya görünmeyen, yalnız bilenin ulaştığı bir
+// giriş. Apple'ın 5.6 altında reddettiği desen tam olarak budur. Demo yolları
+// artık tek bir yerden kararlıdır (yerelGelistirmeSunucusuMu) ve adres
+// çubuğundan açılamaz. Eskiden bırakılmış anahtarı da temizle.
 if (typeof window !== 'undefined') {
-  try {
-    if (new URLSearchParams(window.location.search).get('demo') === '1') {
-      sessionStorage.setItem('oyna_demo', '1');
-    }
-  } catch { /* sessionStorage yoksa yok say */ }
+  try { sessionStorage.removeItem('oyna_demo'); } catch { /* yok say */ }
 }
+
+/**
+ * DEMO YOLLARI YALNIZ YEREL GELİŞTİRME SUNUCUSUNDA (23 Ağustos 2026).
+ *
+ * KURUCU BİLDİRİMİ: "Bu ekran gözükmemeli, var olmamalı." Demo hesap seçici
+ * Vercel önizlemesinde karşısına çıkıyordu. Sebebi kapının YALNIZ derleme
+ * bayrağına bakmasıydı: dağıtım ortamında `VITE_DEMO_ACCOUNTS=true` (ya da
+ * `VITE_DEV_MODE=true`) yazılıysa yayındaki pakette de açılıyordu — üstelik
+ * kimse bunu kodda göremiyordu, çünkü karar env'deydi.
+ *
+ * Artık kapı ÇİFT: hem paket demo bayrağıyla derlenmiş olacak, hem de sayfa
+ * bir YEREL sunucudan servis edilecek. Herkese açık bir adreste (vercel.app,
+ * oyna.app) ve mağaza paketinde demo yolları, env ne derse desin, YOKTUR.
+ *
+ * Apple 5.6 açısından da doğru duruş: yayınlanan adreste "yalnız bilenlerin
+ * ulaştığı" bir giriş yolu bırakmıyoruz.
+ *
+ * `capacitor://localhost` / `https://localhost` tuzağı: Capacitor uygulamayı
+ * localhost üzerinden servis eder, yani mağaza paketinde de hostname
+ * 'localhost' görünür. Bu yüzden native kapısı ÖNCE gelir ve ayrıca burada
+ * protokol de sınanır.
+ */
+const yerelGelistirmeSunucusuMu = (): boolean => {
+  if (typeof window === 'undefined') return false;
+  try {
+    if (Capacitor.isNativePlatform()) return false;
+  } catch { /* Capacitor yoksa web sayılır */ }
+  const { hostname, protocol } = window.location;
+  if (protocol !== 'http:' && protocol !== 'https:') return false; // capacitor:, file: …
+  return (
+    hostname === 'localhost' ||
+    hostname === '127.0.0.1' ||
+    hostname === '0.0.0.0' ||
+    hostname === '[::1]' ||
+    hostname.endsWith('.local')
+  );
+};
 
 export const isDemoLoginEnabled = (): boolean => {
   // ─── DERLEME ZAMANI KAPISI, HER ŞEYDEN ÖNCE (22 Ağustos 2026) ──────────
-  // Aşağıdaki kapılar ÇALIŞMA ZAMANI: `?demo=1` adres anahtarı ve
-  // `VITE_DEV_MODE`. Bu, canlı web adresinde herhangi birinin adrese
-  // `?demo=1` ekleyip uygulamanın davranışını değiştirebilmesi demekti —
-  // yani paketin içinde, adres çubuğuyla açılan bir yol. Apple'ın 5.6
-  // altında reddettiği desen tam olarak budur: "kullanıcıya görünmeyen,
-  // koşula bağlı davranış".
-  //
-  // Demo yolları artık YALNIZ demo bayrağıyla DERLENMİŞ pakette vardır.
-  // Yayın paketinde bu satır `false` sabitine düşer; altındaki hiçbir kapı
-  // değerlendirilmez ve `?demo=1` hiçbir şey yapmaz.
+  // Demo yolları YALNIZ demo bayrağıyla DERLENMİŞ pakette vardır. Yayın
+  // paketinde bu satır `false` sabitine düşer ve altındaki hiçbir kapı
+  // değerlendirilmez; demo kodu paketten tümüyle silinir.
   if (import.meta.env.VITE_DEMO_ACCOUNTS !== 'true') return false;
 
   // ── MAĞAZA KAPISI (17 Ağu 2026 — gönderim öncesi denetimde yakalandı) ──────
   // NATIVE derlemede (App Store / Play Store) demo girişi HER DURUMDA kapalıdır.
-  //
-  // NEDEN ŞART: aşağıdaki 3. kapı `window.location.hostname`e bakıyor. Capacitor
-  // uygulamayı Android'de `https://localhost`, iOS'ta `capacitor://localhost`
-  // üzerinden servis eder — yani MAĞAZADAN İNDİRİLEN uygulamada da hostname
-  // 'localhost' görünür ve kapı AÇIK kalırdı. Sonuç: e-posta alanına "saha1"
-  // yazan herkes ŞİFRESİZ olarak gerçek bir SAHA SAHİBİ hesabına girebilirdi
-  // (demoLogin sabit şifreyi kendisi kullanıyor). Hesap ele geçirme sınıfı bir
-  // açık ve mağaza incelemesinde ret sebebi.
-  //
-  // Kural: yalnız TARAYICIDA geliştirme/test için açılır; pakette asla.
+  // Capacitor uygulamayı Android'de `https://localhost`, iOS'ta
+  // `capacitor://localhost` üzerinden servis eder — yani MAĞAZADAN İNDİRİLEN
+  // uygulamada da hostname 'localhost' görünür. Bu kapı olmasaydı e-posta
+  // alanına "saha1" yazan herkes ŞİFRESİZ olarak gerçek bir SAHA SAHİBİ
+  // hesabına girebilirdi (demoLogin sabit şifreyi kendisi kullanıyor).
   if (Capacitor.isNativePlatform()) return false;
 
-  // 1) Açık bayrak (Vercel'de env ile de açılabilir)
-  if (import.meta.env.VITE_DEV_MODE === 'true') return true;
-  if (typeof window !== 'undefined') {
-    // 2) URL anahtarı ?demo=1 → bu oturum boyunca (herhangi bir domain'de test)
-    try { if (sessionStorage.getItem('oyna_demo') === '1') return true; } catch { /* yok say */ }
-    // 3) Yerel geliştirme (localhost) → `npm run dev` için sıfır ayar
-    const h = window.location.hostname;
-    if (h === 'localhost' || h === '127.0.0.1' || h === '0.0.0.0' || h.endsWith('.local')) {
-      return true;
-    }
-  }
-  // Prod domain'de anahtarsız KAPALI; ayrıca demoLogin yalnız @oyna.app kabul eder.
-  return false;
+  // ── YEREL SUNUCU KAPISI (23 Ağu 2026 — kurucunun önizlemede demo ekranı
+  //    görmesi) ────────────────────────────────────────────────────────────
+  // Eski kapılar (`VITE_DEV_MODE`, `?demo=1`) HERHANGİ bir adreste açıyordu;
+  // dağıtım ortamında `VITE_DEV_MODE=true` yazılı olduğu için Vercel
+  // önizlemesinde demo yolları canlıydı. Tek şart kaldı: sayfa yerel
+  // geliştirme sunucusundan gelecek.
+  return yerelGelistirmeSunucusuMu();
 };
 
 const DEMO_DOMAIN = '@oyna.app';
@@ -744,7 +825,11 @@ export const isDemoAccountPickerEnabled = (): boolean => {
   // FAIL-CLOSED: bayrak açıkça 'true' değilse kapalı. Eskiden `!== 'false'`
   // idi — yani bayrak hiç yazılmamışsa AÇIK sayılıyordu; yanlış tarafa
   // devrilen bir varsayılandı.
-  return import.meta.env.VITE_DEMO_ACCOUNTS === 'true';
+  if (import.meta.env.VITE_DEMO_ACCOUNTS !== 'true') return false;
+  // YEREL SUNUCU KAPISI (23 Ağu 2026 — kurucunun önizlemede demo ekranı
+  // görmesi): dağıtım ortamına bayrak yazılmış olsa bile herkese açık bir
+  // adreste seçici GÖRÜNMEZ. Bkz. yerelGelistirmeSunucusuMu.
+  return yerelGelistirmeSunucusuMu();
 };
 
 export const loginDemoAccount = async (email: string, password: string = DEMO_PASSWORD) => {

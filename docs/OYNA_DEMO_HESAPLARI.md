@@ -41,9 +41,20 @@ Script sonunda doğrulama yapar: geriye demo iz kalırsa transaction'ı geri al�
 (kısmi silme olmaz). Üretim şemasına karşı ROLLBACK'li kuru-çalıştırmayla test
 edilmiştir (tüm demo sayaçları → 0, gerçek veri korunur).
 
-**2) Arayüz — demo giriş seçicisini kapat.**
-Build ortamına `VITE_DEMO_ACCOUNTS=false` ver ve yeniden deploy et. Böylece giriş
-ekranındaki "Demo Hesabıyla Gir" listesi görünmez olur.
+**2) Arayüz — demo giriş seçicisi zaten yayın adreslerinde YOK (23 Ağu 2026).**
+Kapı artık ÇİFT: paket `VITE_DEMO_ACCOUNTS=true` ile derlenmiş OLACAK **ve** sayfa
+bir **yerel geliştirme sunucusundan** (`localhost`, `127.0.0.1`, `*.local`) servis
+ediliyor OLACAK. Herkese açık bir adreste (`*.vercel.app`, `oyna.app`) ve mağaza
+paketinde seçici, ortam değişkeni ne derse desin görünmez.
+
+Sebebi kurucunun 23 Ağustos'ta Vercel önizlemesinde demo ekranıyla karşılaşmasıydı:
+kapı yalnız derleme bayrağına bakıyordu, dağıtım ortamında `VITE_DEV_MODE=true`
+yazılıydı ve karar kodda değil env'de olduğu için kimse göremiyordu. Aynı düzeltmede
+`?demo=1` adres anahtarı da tümüyle kaldırıldı — adres çubuğundan davranış
+değiştiren gizli yol, Apple'ın 5.6 altında reddettiği desendi.
+
+Yine de bir yayın derlemesinde bayrağı kapalı tutmak iyi alışkanlık:
+`VITE_DEMO_ACCOUNTS=false`.
 **Vercel notu (22 Ağu 2026 — GÜNCEL):** `buildCommand` yeniden `npm run build`.
 20 Ağustos'ta inceleme paketini derliyordu; o paket demo kimliklerini herkese
 açık bir adreste yayınlıyordu ve mobil karşılığı Apple tarafından 5.6 altında

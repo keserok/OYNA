@@ -38,6 +38,10 @@ scripts/*
 # `apple:gizli-anahtar` Apple özel anahtarını dışarı çıkarmadan jeton üretir.
 !scripts/telefon-girisi-dogrula.mjs
 !scripts/apple-gizli-anahtar.mjs
+# `giris:dogrula` — Google/Apple girişini üretim paketiyle, gerçek tarayıcıda
+# uçtan uca sürer. Kurucunun iki kez bildirdiği "hesabımı seçince uygulama
+# yeniden başlıyor" hatasının kilidi bu betikte; depoda olmazsa kilit yok.
+!scripts/saglayici-girisi-dogrula.mjs
 !admin-panel/scripts/admin-panel-verify.mjs
 !admin-panel/scripts/admin-supabase-deploy.mjs
 !admin-panel/scripts/start-admin-local.mjs

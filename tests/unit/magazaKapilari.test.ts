@@ -42,14 +42,54 @@ describe('Mağaza kapıları · demo girişi', () => {
       .join('\n');
   };
 
-  it('demo girişi native pakette KAPALI (hostname kapısından ÖNCE)', () => {
+  it('demo girişi native pakette KAPALI (yerel sunucu kapısından ÖNCE)', () => {
     const g = govde('isDemoLoginEnabled');
     expect(g).toContain('Capacitor.isNativePlatform()');
-    // Native kontrolü, hostname/env kapılarından ÖNCE gelmeli: sonra gelirse
-    // dev-mode bayrağı ya da localhost eşleşmesi native'de de açardı.
-    expect(g.indexOf('isNativePlatform')).toBeLessThan(g.indexOf('hostname'));
-    expect(g.indexOf('isNativePlatform')).toBeLessThan(g.indexOf('VITE_DEV_MODE'));
+    // Native kontrolü, sunucu adı kapısından ÖNCE gelmeli: sonra gelirse
+    // localhost eşleşmesi native pakette de açardı (Capacitor uygulamayı
+    // localhost üzerinden servis eder).
+    expect(g.indexOf('isNativePlatform'))
+      .toBeLessThan(g.indexOf('yerelGelistirmeSunucusuMu'));
     expect(g).toMatch(/isNativePlatform\(\)\)\s*return false/);
+  });
+
+  /**
+   * YAYIN ADRESİNDE DEMO YOLU YOK (23 Ağustos 2026).
+   *
+   * Kurucu, Vercel önizlemesinde demo hesap ekranıyla karşılaşıyordu: kapı
+   * yalnız DERLEME bayrağına bakıyordu ve dağıtım ortamında `VITE_DEV_MODE` /
+   * `VITE_DEMO_ACCOUNTS` açıktı. Karar env'de olduğu için kodu okuyan kimse
+   * göremiyordu. Kilit artık şunu koruyor: demo yolları herkese açık bir
+   * adreste, env ne derse desin, YOKTUR.
+   */
+  it('demo yolları YALNIZ yerel sunucuda; env tek başına açamaz', () => {
+    const g = govde('isDemoLoginEnabled');
+    const p = govde('isDemoAccountPickerEnabled');
+    // Her iki kapı da yerel sunucu şartına bağlı.
+    expect(g).toContain('yerelGelistirmeSunucusuMu()');
+    expect(p).toContain('yerelGelistirmeSunucusuMu()');
+    // İkisi de bu şartı ATLAYAN bir `return true` içermemeli.
+    expect(g).not.toMatch(/return true/);
+    expect(p).not.toMatch(/return true/);
+
+    // Yardımcının kendisi: native ve `capacitor:`/`file:` protokolleri kapalı,
+    // yalnız yerel sunucu adları geçer.
+    const yardimci = s.slice(s.indexOf('const yerelGelistirmeSunucusuMu'));
+    const govdeY = yardimci.slice(0, yardimci.indexOf('\n};'));
+    expect(govdeY).toContain('Capacitor.isNativePlatform()');
+    expect(govdeY).toContain("protocol !== 'http:'");
+    expect(govdeY).toContain("hostname === 'localhost'");
+    expect(govdeY).toContain(".endsWith('.local')");
+  });
+
+  it('`?demo=1` adres anahtarı hiçbir kapıyı açmıyor (5.6)', () => {
+    // Adrese `?demo=1` eklemek her alan adında demo yollarını açıyordu:
+    // pakette duran, kullanıcıya görünmeyen, yalnız bilenin ulaştığı bir yol.
+    // Anahtar okunmuyor; kalıntı yalnız TEMİZLİK için siliniyor.
+    expect(s).not.toMatch(/get\('demo'\)/);
+    expect(s).not.toMatch(/getItem\('oyna_demo'\)/);
+    expect(s).not.toMatch(/setItem\('oyna_demo'/);
+    expect(oku('views/AuthScreen.tsx')).not.toMatch(/oyna_demo/);
   });
 
   /**
@@ -75,8 +115,8 @@ describe('Mağaza kapıları · demo girişi', () => {
     //    19 Ağu'daki hata tam buydu (inceleme bayrağı native'den önce geliyordu).
     const nativeIdx = g.indexOf('isNativePlatform');
     expect(g.slice(0, nativeIdx)).not.toMatch(/return true/);
-    // 3) Geriye kalan tek kapı GELİŞTİRME bayrağı — web önizlemesi için.
-    expect(g).toContain("import.meta.env.VITE_DEMO_ACCOUNTS === 'true'");
+    // 3) Derleme bayrağı FAIL-CLOSED: açıkça 'true' değilse kapalı.
+    expect(g).toMatch(/VITE_DEMO_ACCOUNTS !== 'true'\)\s*return false/);
   });
 
   it('inceleme paketi bayrağı hiçbir yerde OKUNMUYOR (5.6)', () => {
