@@ -362,3 +362,33 @@ export async function fetchHomeBanner(
     scope: row.scope ?? 'DEFAULT',
   };
 }
+
+/**
+ * ÖRNEK İÇERİK UYARISI — metin SUNUCUDA durur, kodda değil.
+ *
+ * NEDEN (23 Ağustos 2026, kurucu kararı): örnek veri uygulamada kalıyor ve
+ * AÇIKÇA beyan ediliyor. Ama Apple'a söylemek KULLANICIYA söylemiş olmuyor —
+ * bugün uygulamayı indiren biri vitrindeki sahayı gerçek sanıp saat ayırtabilir,
+ * sahaya gider ve rezervasyon bulamaz. Bu, mağaza kuralından önce gerçek bir
+ * zarardır.
+ *
+ * NİYE YAPILANDIRMADA: demo ekosistem silindiği gün anahtar boşaltılır ve uyarı
+ * kendiliğinden kaybolur. Koda gömülseydi yeni paket derlemek, göndermek ve
+ * mağaza incelemesi beklemek gerekirdi — yani uyarı, gerçeği anlatmadığı hâlde
+ * haftalarca ekranda kalırdı.
+ *
+ * BOŞ ya da OKUNAMAZ → null. Uyarı çizilmez, akış bozulmaz.
+ */
+export async function fetchOrnekIcerikUyarisi(): Promise<string | null> {
+  try {
+    const { data, error } = await supabase.rpc('get_config_text', {
+      p_key: 'ornek_icerik_uyarisi',
+      p_default: null,
+    });
+    if (error) return null;
+    const metin = typeof data === 'string' ? data.trim() : '';
+    return metin.length > 0 ? metin : null;
+  } catch {
+    return null;
+  }
+}

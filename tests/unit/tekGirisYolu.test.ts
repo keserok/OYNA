@@ -337,3 +337,75 @@ describe('Çıkış sonsuz yeniden yükleme döngüsüne girmiyor', () => {
     expect(auth).not.toContain("'oyna.auth.token'");
   });
 });
+
+describe('Apple 5.6 · sunucu ve içerik dürüstlüğü', () => {
+  /**
+   * 23 Ağustos 2026 · canlı veritabanı denetiminde bulunan iki ağır bulgu
+   * kapatıldı. İkisi de SUNUCUDAYDI; yeni bir paket göndermek düzeltmiyordu.
+   * Bu kilit, düzeltmelerin depoda da yaşamasını sağlar — canlı ile depo
+   * arasındaki ayrışma zaten bu projenin baş belasıydı.
+   */
+  const gocDizini = join(process.cwd(), 'supabase/migrations');
+  const goc = (ad: string) => readFileSync(join(gocDizini, ad), 'utf8');
+
+  it('incelemeci kapısını söken göç depoda duruyor', () => {
+    const g = goc('20260916000000_odeme_kapatildi_ve_incelemeci_kapisi_sokuldu.sql');
+    // Fonksiyon yeniden yazılıyor ve kapı düşürülüyor.
+    expect(g).toContain('CREATE OR REPLACE FUNCTION public.get_nearby_providers');
+    expect(g).toContain('DROP FUNCTION IF EXISTS public._cagiran_demo_mu()');
+    // Yeni gövde çağırana BAKMAMALI.
+    const govde = g.slice(g.indexOf('CREATE OR REPLACE FUNCTION public.get_nearby_providers'),
+                          g.indexOf('DROP FUNCTION IF EXISTS'));
+    expect(govde).not.toContain('_cagiran_demo_mu');
+    // Göç kendini doğrulamalı: iddia ettiği şeyi kanıtlamadan bitmemeli.
+    expect(g).toContain('DOGRULAMA: get_nearby_providers');
+  });
+
+  it('ödeme anahtarları göçte kapatılıyor', () => {
+    const g = goc('20260916000000_odeme_kapatildi_ve_incelemeci_kapisi_sokuldu.sql');
+    for (const anahtar of ['simulation_counts_as_live', 'match_deposit_enabled', 'payment_mode_global']) {
+      expect(g, `${anahtar} göçte yok`).toContain(anahtar);
+    }
+    // Etkin modun gerçekten CASH_ONLY'ye düştüğü doğrulanmalı.
+    expect(g).toContain("resolve_payment_mode(NULL) ->> 'effective_mode'");
+  });
+
+  it('tesis adı göçü korumayı geri AÇIYOR', () => {
+    // trg_protect_pitch_identity bakım için kapatılıyor; kapalı bırakmak
+    // sessiz bir güvenlik açığı olurdu.
+    const g = goc('20260916000001_ornek_tesis_adlari_uydurma_adlara_cevrildi.sql');
+    expect(g).toContain('DISABLE TRIGGER trg_protect_pitch_identity');
+    expect(g).toContain('ENABLE TRIGGER trg_protect_pitch_identity');
+    expect(g).toContain('geri acilmadi');
+    // Kulüp adı ve gerçek işletme adları çıkarılmış olmalı.
+    for (const ad of ['Orduspor', 'Capo Arena', 'Ahmet Kuru Tesisleri']) {
+      expect(g, `${ad} göçte ele alınmamış`).toContain(ad);
+    }
+  });
+
+  it('örnek içerik uyarısı KODA GÖMÜLÜ değil, sunucudan geliyor', () => {
+    // Demo ekosistem silindiği gün anahtar boşaltılır ve uyarı yeni bir paket
+    // gerekmeden kaybolur. Koda gömülseydi, gerçeği anlatmadığı hâlde mağaza
+    // incelemesi boyunca ekranda kalırdı.
+    const svc = oku('services/dashboardHomeService.ts');
+    expect(svc).toContain('fetchOrnekIcerikUyarisi');
+    expect(svc).toContain("p_key: 'ornek_icerik_uyarisi'");
+    const dash = oku('views/Dashboard.tsx');
+    expect(dash).toContain('fetchOrnekIcerikUyarisi');
+    expect(dash).toContain('{ornekUyarisi && (');
+    // Metnin kendisi kodda GEÇMEMELİ.
+    expect(kodu(dash)).not.toContain('örnek içeriktir');
+  });
+
+  it('inceleme notu "incelemeci için" demiyor', () => {
+    // O cümle 5.6'nın tanımıdır: içeriğin incelemeci için var olduğunu itiraf
+    // eder. Doğru çerçeve: örnek içerik HERKES için var ve uygulama içinde
+    // etiketli.
+    const not = oku('docs/master/APP_REVIEW_NOTLARI.md');
+    const ing = not.slice(not.indexOf('ABOUT THIS SUBMISSION'));
+    expect(ing).not.toMatch(/for the reviewer|so you can test|reviewer-only disclosure is/i);
+    expect(ing).toContain('It is not a reviewer-only disclosure');
+    expect(ing).toContain('SAMPLE CONTENT');
+    expect(ing).toContain('no test phone number');
+  });
+});

@@ -99,38 +99,60 @@ previous submission was compiled with a review-only flag that added a
 "demo account" button and an "APP REVIEW" banner which no downloaded copy
 of the app contained. That machinery is gone.
 
-We went further. The underlying cause was a phone + SMS sign-in whose SMS
-provider was never configured — it could not deliver a code to anyone, and
-it only accepted Turkish numbers by design. Instead of working around it
-for reviewers, we removed the whole path. There is no review-only build,
-no review flag, no test phone number and no review-only server path
-anywhere in this product.
+We went further and audited the backend as well. We found and removed a
+server-side rule that returned different marketplace results depending on
+which account was calling it. There is now no review-only build, no review
+flag, no test phone number and no review-only server path anywhere in this
+product. You and any user receive identical code and identical data.
 
 SIGNING IN
 The app signs in with Sign in with Apple or Google only. Please use your
 own Apple ID — you get exactly the same account type, the same permissions
 and the same data any user gets. We are deliberately not providing a
-special reviewer account. No phone number is asked for, at any point.
+special reviewer account: a reviewer-only account is what caused the 5.6
+finding, and our claim is precisely that no such path exists. No phone
+number is requested at any point.
 
-SEEING CONTENT — PLEASE READ
-OYNA is launching in a single city: Ordu, Türkiye. Content is region-based,
-so the app looks empty from any other location — for you and for any user
-outside Ordu alike.
-On first launch, tap "KONUMU AYARLA" (Set location) on the home screen and
-pick Ordu / Altınordu. Covered regions are pinned to the top of that list.
-Matches and pitches will then load.
+WHAT YOU WILL SEE — PLEASE READ
+OYNA is launching in a single city: Ordu, Türkiye, and it is launching
+now. Most of the pitches, matches and players currently in the app are
+SAMPLE CONTENT that we seeded so the product is not an empty shell on day
+one. This is stated inside the app itself, to every user, on the home
+screen: "Ordu'da yeni açılıyoruz. Şu anda gördüğün sahalar, maçlar ve
+oyuncular örnek içeriktir." The venue names are invented; they do not
+refer to real businesses. As real venues sign up, the sample content is
+removed and that notice disappears.
 
-PAYMENTS
-Payments in OYNA are for physical, real-world services only: a deposit for
-renting a football pitch and a share of a match fee. There is no digital
-content, no subscription and no unlockable feature, so In-App Purchase does
-not apply (Guideline 3.1.5(a)).
+We want to be explicit about this because it is the same information a
+user gets. It is not a reviewer-only disclosure.
+
+SEEING CONTENT
+Content is region-based, so the app looks empty from any location outside
+Ordu — for you and for any user alike. On first launch, tap "KONUMU
+AYARLA" (Set location) on the home screen and pick Ordu / Altınordu.
+Covered regions are pinned to the top of that list. Matches and pitches
+will then load.
+
+PAYMENTS — CURRENTLY DISABLED FOR EVERYONE
+We have not completed our payment provider onboarding yet, so online
+payment is switched OFF platform-wide. The app never asks for card
+details in this build: every booking resolves to "pay at the venue" and
+the app tells the user why ("Ödeme altyapısı henüz canlıya alınmadı").
+No money moves, no card data is collected, and there is no path in this
+build that could take a payment.
+
+When payments go live in a later version they will be for physical,
+real-world services only: a deposit for renting a football pitch and a
+share of a match fee. There is no digital content, no subscription and no
+unlockable feature, so In-App Purchase does not apply (Guideline
+3.1.5(a)).
 
 ACCOUNT DELETION
-Settings → Account → "Hesabı Sil" (Delete account), per Guideline 5.1.1(v).
+Settings → Account → "Hesabı Sil" (Delete account), per Guideline
+5.1.1(v).
 
-Thank you for the review — the 5.6 finding was correct and we fixed the
-cause, not the symptom.
+Thank you for the review — the 5.6 finding was correct, and we fixed the
+cause rather than the symptom.
 ```
 
 > **Kurucu notu:** Onay kutusu (KVKK / Kullanım Şartları) işaretlenmeden

@@ -114,6 +114,9 @@ const KULLANICI = {
   identities: [{ id: KULLANICI_ID, user_id: KULLANICI_ID, provider: 'google',
                  identity_data: { email: 'test@oyna.app', full_name: 'Test Oyuncu' } }],
 };
+/** Sunucudaki `app_config · ornek_icerik_uyarisi` değerinin taklidi. */
+const ORNEK_UYARISI = 'Ordu\u2019da yeni açılıyoruz. Şu anda gördüğün sahalar, maçlar ve oyuncular örnek içeriktir; gerçek tesisler eklendikçe burada görünecek.';
+
 const KAYITLI_PROFIL = {
   role: 'PLAYER', roles: ['PLAYER'], verification_status: null, verification_notes: null,
   is_admin: false, wallet_balance: 0, phone: null, email: 'test@oyna.app',
@@ -162,6 +165,11 @@ const arkaUcuTaklitEt = async (baglam, profil) => {
   });
   await baglam.route('**/functions/v1/**', (yol) => yol.fulfill({
     status: 200, contentType: 'application/json', body: '{}' }));
+  // Örnek içerik uyarısı sunucudan gelir; taklit edilmezse `[]` döner ve şerit
+  // hiç çizilmez — sahte bir yeşil üretirdi.
+  await baglam.route('**/rest/v1/rpc/get_config_text**', (yol) => yol.fulfill({
+    status: 200, contentType: 'application/json',
+    body: JSON.stringify(ORNEK_UYARISI) }));
 };
 
 // ─── Sonuç toplayıcı ────────────────────────────────────────────────────────
@@ -522,6 +530,32 @@ const onaySayfasindaBelge = async (kok) => {
   await t.close();
 };
 
+// ─── Senaryo: ÖRNEK İÇERİK UYARISI ANA EKRANDA ─────────────────────────────
+// Apple'a "içerik örnektir" demek, KULLANICIYA söylemiş olmuyor. Uygulamayı
+// indiren biri vitrindeki sahayı gerçek sanıp saat ayırtabilir. Şeridin
+// gerçekten çizildiği ölçülür.
+const ornekUyarisi = async (kok) => {
+  console.log('\n\x1b[1m▸ Örnek içerik uyarısı ana ekranda\x1b[0m');
+  const t = await tarayiciAc();
+  const baglam = await baglamAc(t);
+  await arkaUcuTaklitEt(baglam, KAYITLI_PROFIL);
+  const ana = await baglam.newPage();
+  await ana.goto(`${kok}/`, { waitUntil: 'domcontentloaded' });
+  if (!(await girisEkraninaGel(ana))) { iddia('giriş ekranına ulaşıldı', false); await t.close(); return; }
+  await ana.locator('#agreement-checkbox').click();
+  const sz = baglam.waitForEvent('page', { timeout: 15000 });
+  await ana.locator('button', { hasText: /^Google$/ }).first().click();
+  await sz.catch(() => null);
+  let metin = '';
+  for (let i = 0; i < 35; i += 1) {
+    await new Promise((c) => setTimeout(c, 400));
+    metin = await ekran(ana);
+    if (/örnek içeriktir/i.test(metin)) break;
+  }
+  iddia('ana ekranda örnek içerik uyarısı çizildi', /örnek içeriktir/i.test(metin), metin.slice(0, 110));
+  await t.close();
+};
+
 // ─── Senaryo: STRES — ardışık 8 tur, hepsi İLK denemede ────────────────────
 // Tek geçiş kararsızlığı yakalamaz. Aynı tarayıcıda arka arkaya giriş turları
 // koşulur; her turda İLK dokunuşun içeri alıp almadığı ölçülür.
@@ -663,6 +697,7 @@ try {
   await kanalsizTarayici(KOK);
   await yavasSaglayici(KOK);
   await onaySayfasindaBelge(KOK);
+  await ornekUyarisi(KOK);
   await stres(KOK, 8);
   await demoKapisi(port);
 } finally {
