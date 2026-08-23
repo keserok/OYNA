@@ -157,9 +157,13 @@ cause rather than the symptom.
 
 > **Kurucu notu:** Onay kutusu (KVKK / Kullanım Şartları) işaretlenmeden
 > hiçbir giriş yolu ilerlemez; kutusuz dokunuşta ekran ne yapılacağını söyler.
-> Ödeme bölümündeki beyan, `simulation_counts_as_live` ve `payment_mode_global`
-> kararı uygulandıktan **sonra** gözden geçirilmelidir (bkz. APPLE_56 planı
-> KARAR 2) — bu not simülasyonla gönderim için geçerli değildir.
+>
+> Yukarıdaki İngilizce metin **yapıştırmaya hazırdır** — düzenlemeden olduğu
+> gibi kullan. Ödeme bölümü 23 Ağustos 2026'da canlı duruma göre yeniden
+> yazıldı ve canlıda doğrulandı: `payment_mode_global = CASH_ONLY`,
+> `simulation_counts_as_live = false`, `match_deposit_enabled = false`,
+> etkin mod `CASH_ONLY` / sebep `PROVIDER_NOT_LIVE`. Bu anahtarlardan biri
+> değişirse metin de gözden geçirilmelidir.
 
 ---
 
