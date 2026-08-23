@@ -283,6 +283,279 @@ const engelliYol = async (kok) => {
   await t.close();
 };
 
+// ─── Senaryo: ONAY VERİLMEMİŞKEN İLK DOKUNUŞ ───────────────────────────────
+// Kurucu: "Tek seferde giremiyorum." Eski akışta sağlayıcıya dokunmak, onay
+// kutusu işaretli değilse KIRMIZI hata basıp işlemi iptal ediyordu — yani her
+// kullanıcının ilk dokunuşu boşa gidiyordu. Ölçülen şey: kutuya HİÇ dokunmadan
+// yapılan TEK dokunuş, kullanıcıyı içeri alıyor mu?
+const onaysizIlkDokunus = async (kok, saglayici) => {
+  console.log(`\n[1m▸ Onay verilmemişken TEK dokunuş · ${saglayici}[0m`);
+  const t = await tarayiciAc();
+  const baglam = await baglamAc(t);
+  await arkaUcuTaklitEt(baglam, KAYITLI_PROFIL);
+  const ana = await baglam.newPage();
+  await ana.goto(`${kok}/`, { waitUntil: 'domcontentloaded' });
+  if (!(await girisEkraninaGel(ana))) { iddia('giriş ekranına ulaşıldı', false); await t.close(); return; }
+
+  // Onay kutusuna DOKUNULMUYOR. Doğrudan sağlayıcıya bir kez dokunulur.
+  await ana.locator('button', { hasText: new RegExp(`^${saglayici}$`) }).first().click();
+  await ana.waitForTimeout(600);
+
+  // Beklenen: kırmızı hata DEĞİL, onay sayfası.
+  const metin = await ekran(ana);
+  iddia('kırmızı "önce onayla" hatası basılmıyor',
+    !/Devam etmek için KVKK Aydınlatma Metni'ni ve Kullanım Şartları'nı onayla/.test(metin));
+  const onaySayfasi = ana.locator('[aria-label="Yasal onay"]');
+  iddia('onay sayfası açıldı', (await onaySayfasi.count()) > 0, metin.slice(0, 80));
+  if (!(await onaySayfasi.count())) { await t.close(); return; }
+
+  // Tek düğme: onayla + gir. Açılır pencere AYNI dokunuşta açılmalı.
+  const pencereSozu = baglam.waitForEvent('page', { timeout: 15000 });
+  await ana.locator('button', { hasText: /ONAYLIYORUM VE DEVAM ET/ }).click();
+  const pencere = await pencereSozu.catch(() => null);
+  iddia('onay düğmesi açılır pencereyi AYNI dokunuşta açtı (engellenmedi)', !!pencere);
+
+  let icerde = '';
+  for (let i = 0; i < 30; i += 1) {
+    await new Promise((c) => setTimeout(c, 400));
+    icerde = await ekran(ana);
+    if (/ANA SAYFA|Yakınındaki|MAÇ/i.test(icerde)) break;
+  }
+  iddia('kutuya hiç dokunmadan, İKİ dokunuşla içeri girildi',
+    /ANA SAYFA|Yakınındaki|MAÇ/i.test(icerde), icerde.slice(0, 70));
+  await t.close();
+};
+
+// ─── Senaryo: KUTU İŞARETLİYKEN TEK DOKUNUŞ ────────────────────────────────
+const onayliTekDokunus = async (kok, saglayici) => {
+  console.log(`\n[1m▸ Onay kutusu işaretli · TEK dokunuş · ${saglayici}[0m`);
+  const t = await tarayiciAc();
+  const baglam = await baglamAc(t);
+  await arkaUcuTaklitEt(baglam, KAYITLI_PROFIL);
+  const ana = await baglam.newPage();
+  await ana.goto(`${kok}/`, { waitUntil: 'domcontentloaded' });
+  if (!(await girisEkraninaGel(ana))) { iddia('giriş ekranına ulaşıldı', false); await t.close(); return; }
+  await ana.locator('#agreement-checkbox').click();
+  const pencereSozu = baglam.waitForEvent('page', { timeout: 15000 });
+  await ana.locator('button', { hasText: new RegExp(`^${saglayici}$`) }).first().click();
+  iddia('tek dokunuş pencereyi açtı', !!(await pencereSozu.catch(() => null)));
+  let icerde = '';
+  for (let i = 0; i < 30; i += 1) {
+    await new Promise((c) => setTimeout(c, 400));
+    icerde = await ekran(ana);
+    if (/ANA SAYFA|Yakınındaki|MAÇ/i.test(icerde)) break;
+  }
+  iddia('TEK dokunuşla içeri girildi', /ANA SAYFA|Yakınındaki|MAÇ/i.test(icerde), icerde.slice(0, 70));
+  iddia('ekranda hata/uyarı satırı yok', !/başarısız|onayla|tamamlanmadı/i.test(icerde));
+  await t.close();
+};
+
+// ─── Senaryo: KULLANICI PENCEREYİ KAPATIRSA ────────────────────────────────
+// Eskiden bu dal ekrana HİÇBİR ŞEY yazmıyordu: kullanıcı "dokundum, bir şey
+// olmadı" görüyor ve tekrar deniyordu. Pencereyi tarayıcı da kapatabiliyor
+// (mobilde arka plan sekmesi tahliyesi), yani sessizlik yanlış cevap.
+const pencereyiKapat = async (kok) => {
+  console.log('\n[1m▸ Kullanıcı giriş penceresini KAPATIRSA[0m');
+  const t = await tarayiciAc();
+  const baglam = await baglamAc(t);
+  // Sağlayıcı ekranında BEKLETİLİR: dönüş gelmeden pencere kapatılacak.
+  await arkaUcuTaklitEt(baglam, KAYITLI_PROFIL);
+  await baglam.route('**/auth/v1/authorize**', (yol) => yol.fulfill({
+    status: 200, contentType: 'text/html', body: '<title>Sağlayıcı</title>bekliyor' }));
+  const ana = await baglam.newPage();
+  await ana.goto(`${kok}/`, { waitUntil: 'domcontentloaded' });
+  if (!(await girisEkraninaGel(ana))) { iddia('giriş ekranına ulaşıldı', false); await t.close(); return; }
+  await ana.locator('#agreement-checkbox').click();
+  const sz = baglam.waitForEvent('page', { timeout: 15000 });
+  await ana.locator('button', { hasText: /^Google$/ }).first().click();
+  const pencere = await sz.catch(() => null);
+  iddia('pencere açıldı', !!pencere);
+  if (!pencere) { await t.close(); return; }
+  await ana.waitForTimeout(1200);
+  await pencere.close();
+
+  let metin = '';
+  for (let i = 0; i < 30; i += 1) {
+    await new Promise((c) => setTimeout(c, 400));
+    metin = await ekran(ana);
+    if (/giriş penceresi kapandı/i.test(metin)) break;
+  }
+  // Not: "Giriş penceresi kapandı" — kalıp "penceresi" ile yazılmalı, yoksa
+  // eşleşmez (ilk yazımda tam bu yüzden yanlış kırmızı verdi).
+  iddia('ekran SESSİZ kalmadı — ne olduğunu söylüyor',
+    /giriş penceresi kapandı/i.test(metin), metin.slice(0, 160));
+  // Ve kullanıcı hâlâ giriş ekranında, tekrar deneyebilir durumda olmalı.
+  iddia('düğmeler yeniden dokunulabilir (kilitli kalmadı)',
+    await ana.locator('button', { hasText: /^Google$/ }).first().isEnabled());
+  await t.close();
+};
+
+// ─── Senaryo: SAĞLAYICI HATA DÖNDÜRÜRSE (kullanıcı Google'da vazgeçti) ─────
+const saglayiciReddi = async (kok) => {
+  console.log('\n[1m▸ Sağlayıcı reddederse (access_denied)[0m');
+  const t = await tarayiciAc();
+  const baglam = await baglamAc(t);
+  await arkaUcuTaklitEt(baglam, KAYITLI_PROFIL);
+  await baglam.route('**/auth/v1/authorize**', (yol) => {
+    const d = new URL(yol.request().url()).searchParams.get('redirect_to');
+    return yol.fulfill({ status: 302, body: '', headers: {
+      location: `${d}${d.includes('?') ? '&' : '?'}error=access_denied&error_description=The+user+denied+the+request` } });
+  });
+  const ana = await baglam.newPage();
+  await ana.goto(`${kok}/`, { waitUntil: 'domcontentloaded' });
+  if (!(await girisEkraninaGel(ana))) { iddia('giriş ekranına ulaşıldı', false); await t.close(); return; }
+  await ana.locator('#agreement-checkbox').click();
+  const sz = baglam.waitForEvent('page', { timeout: 15000 });
+  await ana.locator('button', { hasText: /^Google$/ }).first().click();
+  const pencere = await sz.catch(() => null);
+  // Dönüş penceresi oturum yazamayacak; kendini kapatmalı ya da uygulamayı
+  // çizmeli — ama ANA sekme kilitli kalmamalı ve kullanıcı yeniden deneyebilmeli.
+  if (pencere) { await ana.waitForTimeout(4000); try { await pencere.close(); } catch { /* kapanmış */ } }
+  await ana.waitForTimeout(2500);
+  iddia('ana sekme hâlâ giriş ekranında', /Sahaya çık/i.test(await ekran(ana)));
+  iddia('düğme yeniden dokunulabilir',
+    await ana.locator('button', { hasText: /^Google$/ }).first().isEnabled());
+  await t.close();
+};
+
+// ─── Senaryo: ÇİFT DOKUNUŞ — iki pencere açılmamalı ────────────────────────
+const ciftDokunus = async (kok) => {
+  console.log('\n[1m▸ Hızlı ÇİFT dokunuş[0m');
+  const t = await tarayiciAc();
+  const baglam = await baglamAc(t);
+  await arkaUcuTaklitEt(baglam, KAYITLI_PROFIL);
+  const acilan = [];
+  baglam.on('page', (p) => acilan.push(p));
+  const ana = await baglam.newPage();
+  await ana.goto(`${kok}/`, { waitUntil: 'domcontentloaded' });
+  if (!(await girisEkraninaGel(ana))) { iddia('giriş ekranına ulaşıldı', false); await t.close(); return; }
+  await ana.locator('#agreement-checkbox').click();
+  const dugme = ana.locator('button', { hasText: /^Google$/ }).first();
+  await dugme.click();
+  await dugme.click({ force: true }).catch(() => {});
+  await dugme.click({ force: true }).catch(() => {});
+  let icerde = '';
+  for (let i = 0; i < 30; i += 1) {
+    await new Promise((c) => setTimeout(c, 400));
+    icerde = await ekran(ana);
+    if (/ANA SAYFA|Yakınındaki|MAÇ/i.test(icerde)) break;
+  }
+  iddia('çift dokunuşa rağmen içeri girildi', /ANA SAYFA|Yakınındaki|MAÇ/i.test(icerde), icerde.slice(0, 60));
+  // `oyna-oauth` adı aynı olduğu için ikinci dokunuş yeni sekme AÇMAZ,
+  // mevcut olanı yeniden kullanır. Ana sekme + en fazla bir giriş penceresi.
+  iddia('birden çok giriş penceresi açılmadı', acilan.length <= 2, `${acilan.length} sayfa`);
+  await t.close();
+};
+
+// ─── Senaryo: BroadcastChannel OLMAYAN tarayıcı (Safari 15.4 öncesi) ───────
+// supabase-js oturumu ÖTEKİ sekmeye bu kanalla duyurur. Kanal yoksa ana sekme
+// oturumu göremez ve kullanıcı oturumu açıkken giriş ekranında kalırdı.
+const kanalsizTarayici = async (kok) => {
+  console.log('\n[1m▸ BroadcastChannel OLMAYAN tarayıcı[0m');
+  const t = await tarayiciAc();
+  const baglam = await baglamAc(t);
+  await arkaUcuTaklitEt(baglam, KAYITLI_PROFIL);
+  await baglam.addInitScript(() => {
+    try { delete window.BroadcastChannel; } catch { /* yoksay */ }
+    // @ts-ignore
+    window.BroadcastChannel = undefined;
+  });
+  const ana = await baglam.newPage();
+  await ana.goto(`${kok}/`, { waitUntil: 'domcontentloaded' });
+  if (!(await girisEkraninaGel(ana))) { iddia('giriş ekranına ulaşıldı', false); await t.close(); return; }
+  await ana.locator('#agreement-checkbox').click();
+  await ana.locator('button', { hasText: /^Google$/ }).first().click();
+  let icerde = '';
+  for (let i = 0; i < 40; i += 1) {
+    await new Promise((c) => setTimeout(c, 400));
+    icerde = await ekran(ana);
+    if (/ANA SAYFA|Yakınındaki|MAÇ/i.test(icerde)) break;
+  }
+  iddia('kanal olmadan da içeri girildi', /ANA SAYFA|Yakınındaki|MAÇ/i.test(icerde), icerde.slice(0, 70));
+  await t.close();
+};
+
+// ─── Senaryo: YAVAŞ sağlayıcı (3 sn) ───────────────────────────────────────
+const yavasSaglayici = async (kok) => {
+  console.log('\n[1m▸ Sağlayıcı YAVAŞ (3 sn)[0m');
+  const t = await tarayiciAc();
+  const baglam = await baglamAc(t);
+  await arkaUcuTaklitEt(baglam, KAYITLI_PROFIL);
+  await baglam.route('**/auth/v1/authorize**', async (yol) => {
+    const d = new URL(yol.request().url()).searchParams.get('redirect_to');
+    await new Promise((c) => setTimeout(c, 3000));
+    return yol.fulfill({ status: 302, body: '', headers: {
+      location: `${d}${d.includes('?') ? '&' : '?'}code=SAHTE-KOD` } });
+  });
+  const ana = await baglam.newPage();
+  await ana.goto(`${kok}/`, { waitUntil: 'domcontentloaded' });
+  if (!(await girisEkraninaGel(ana))) { iddia('giriş ekranına ulaşıldı', false); await t.close(); return; }
+  await ana.locator('#agreement-checkbox').click();
+  await ana.locator('button', { hasText: /^Google$/ }).first().click();
+  let icerde = '';
+  for (let i = 0; i < 45; i += 1) {
+    await new Promise((c) => setTimeout(c, 400));
+    icerde = await ekran(ana);
+    if (/ANA SAYFA|Yakınındaki|MAÇ/i.test(icerde)) break;
+  }
+  iddia('yavaş sağlayıcıda da içeri girildi', /ANA SAYFA|Yakınındaki|MAÇ/i.test(icerde), icerde.slice(0, 70));
+  await t.close();
+};
+
+// ─── Senaryo: onay sayfasından belgeyi OKUYABİLME ──────────────────────────
+const onaySayfasindaBelge = async (kok) => {
+  console.log('\n[1m▸ Onay sayfasından yasal belge okunabiliyor mu[0m');
+  const t = await tarayiciAc();
+  const baglam = await baglamAc(t);
+  await arkaUcuTaklitEt(baglam, KAYITLI_PROFIL);
+  const ana = await baglam.newPage();
+  await ana.goto(`${kok}/`, { waitUntil: 'domcontentloaded' });
+  if (!(await girisEkraninaGel(ana))) { iddia('giriş ekranına ulaşıldı', false); await t.close(); return; }
+  await ana.locator('button', { hasText: /^Apple$/ }).first().click();
+  await ana.waitForTimeout(600);
+  await ana.locator('[aria-label="Yasal onay"] button:has-text("KVKK Aydınlatma Metni")').click();
+  await ana.waitForTimeout(1200);
+  const metin = await ekran(ana);
+  // Belge sayfanın ÜSTÜNE açılmalı; altında kalırsa kullanıcı okuyamadan sıkışır.
+  iddia('belge onay sayfasının ÜSTÜNE açıldı', metin.length > 800, `${metin.length} karakter`);
+  iddia('belge gerçekten KVKK metni', /KVKK|kişisel veri/i.test(metin));
+  await t.close();
+};
+
+// ─── Senaryo: STRES — ardışık 8 tur, hepsi İLK denemede ────────────────────
+// Tek geçiş kararsızlığı yakalamaz. Aynı tarayıcıda arka arkaya giriş turları
+// koşulur; her turda İLK dokunuşun içeri alıp almadığı ölçülür.
+const stres = async (kok, tur) => {
+  console.log(`\n[1m▸ STRES · ${tur} ardışık tur, her turda İLK deneme[0m`);
+  const t = await tarayiciAc();
+  const baglam = await baglamAc(t);
+  await arkaUcuTaklitEt(baglam, KAYITLI_PROFIL);
+  let basarili = 0;
+  const suresi = [];
+  for (let i = 0; i < tur; i += 1) {
+    const ana = await baglam.newPage();
+    await ana.goto(`${kok}/`, { waitUntil: 'domcontentloaded' });
+    if (!(await girisEkraninaGel(ana))) { await ana.close(); continue; }
+    await ana.locator('#agreement-checkbox').click();
+    const t0 = Date.now();
+    await ana.locator('button', { hasText: /^Google$/ }).first().click();
+    let oldu = false;
+    for (let j = 0; j < 40; j += 1) {
+      await new Promise((c) => setTimeout(c, 300));
+      if (/ANA SAYFA|Yakınındaki|MAÇ/i.test(await ekran(ana))) { oldu = true; break; }
+    }
+    if (oldu) { basarili += 1; suresi.push(Date.now() - t0); }
+    else console.log(`     tur ${i + 1}: İLK denemede giremedi — ${(await ekran(ana)).slice(0, 70)}`);
+    // Bir sonraki tur temiz başlasın: oturumu ve sekmeyi kapat.
+    await ana.evaluate(() => { try { localStorage.clear(); sessionStorage.clear(); } catch { /* yok */ } });
+    await ana.close();
+  }
+  const ort = suresi.length ? Math.round(suresi.reduce((a, b) => a + b, 0) / suresi.length) : 0;
+  iddia(`${tur} turun ${tur}'i İLK denemede içeri aldı`, basarili === tur,
+    `${basarili}/${tur} · ortalama ${ort} ms`);
+  await t.close();
+};
+
 // ─── Senaryo: ÇIKIŞ SONRASI ekran ──────────────────────────────────────────
 // Kurucu 23 Ağu 2026'da şunu bildirdi: "Çıkış yaptığımda da hâlâ bu ekran
 // geliyor" (telefon + demo ekranı). Giriş ekranı tek bir bileşendir; ama
@@ -379,8 +652,18 @@ try {
     { profil: KAYITLI_PROFIL, beklenen: /ANA SAYFA|Yakınındaki|MAÇ|KONUM/i, kapanmayiEngelle: true });
   await pencereYolu(KOK, 'KAYITLI kullanıcı · APPLE',
     { profil: KAYITLI_PROFIL, beklenen: /ANA SAYFA|Yakınındaki|MAÇ|KONUM/i, saglayici: 'Apple' });
+  await onaysizIlkDokunus(KOK, 'Apple');
+  await onayliTekDokunus(KOK, 'Google');
+  await onayliTekDokunus(KOK, 'Apple');
   await engelliYol(KOK);
   await cikisSonrasi(KOK);
+  await pencereyiKapat(KOK);
+  await saglayiciReddi(KOK);
+  await ciftDokunus(KOK);
+  await kanalsizTarayici(KOK);
+  await yavasSaglayici(KOK);
+  await onaySayfasindaBelge(KOK);
+  await stres(KOK, 8);
   await demoKapisi(port);
 } finally {
   sunucu.close();

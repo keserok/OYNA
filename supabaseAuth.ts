@@ -1,4 +1,4 @@
-import { supabase, setHasAccount } from './supabaseClient';
+import { supabase, setHasAccount, AUTH_DEPO_ANAHTARI } from './supabaseClient';
 import { Capacitor } from '@capacitor/core';
 import { clearPushToken } from './notifications/pushService';
 import { OAUTH_PENCERE_ADI, donusAdresiniIsaretle } from './shared/oauthPencere';
@@ -255,7 +255,11 @@ const webOAuthAc = async (saglayici: OAuthSaglayici): Promise<void> => {
     const { data: oturum } = await supabase.auth.getSession();
     if (oturum.session) {
       try { pencere.close(); } catch { /* kendi kapanmış olabilir */ }
-      return; // Yönlendirmeyi App'in auth dinleyicisi yapar.
+      oauthIsaretiniSil();
+      // Yönlendirmeyi kütüphanenin sekmeler arası olayına BIRAKMA: oturumu
+      // gören yer burası, duyuran da burası olsun (bkz. oturumuDuyur).
+      await oturumuDuyur();
+      return;
     }
     let kapali = false;
     try { kapali = pencere.closed; } catch { kapali = false; }
@@ -264,7 +268,11 @@ const webOAuthAc = async (saglayici: OAuthSaglayici): Promise<void> => {
       // oturumu yazıp kapanmış olabilir, yarış durumunu kaybetmeyelim.
       await new Promise((coz) => setTimeout(coz, 600));
       const { data: son } = await supabase.auth.getSession();
-      if (son.session) return;
+      if (son.session) {
+        oauthIsaretiniSil();
+        await oturumuDuyur();
+        return;
+      }
       throw new Error('OAUTH_PENCERE_KAPANDI');
     }
     if (Date.now() - BASLANGIC > ZAMAN_ASIMI_MS) {
@@ -307,6 +315,20 @@ const oauthIsaretiBirak = (saglayici: OAuthSaglayici): void => {
   try {
     sessionStorage.setItem(OAUTH_ISARET, JSON.stringify({ saglayici, t: Date.now() }));
   } catch { /* özel sekme / kota — işaret olmadan da akış çalışır */ }
+};
+
+/**
+ * İŞARET BAŞARIDA SİLİNİR (23 Ağustos 2026).
+ *
+ * İşaret yalnız BAŞARISIZ dönüşü açıklamak için bırakılır ve 10 dakika yaşar.
+ * Başarıda silinmiyordu; o güne kadar zararsızdı çünkü giriş ekranı bir daha
+ * açılmıyordu. Çıkış artık sayfayı KÖKTEN yeniden yüklediği için (bkz. logout)
+ * giriş ekranı yeniden kuruluyor, taze işareti okuyor ve "giriş tamamlanamadı"
+ * diye KIRMIZI bir hata basıyor — hiçbir şey başarısız olmamışken. Kullanıcı
+ * çıkıştan sonra kendini bir hata mesajının karşısında buluyordu.
+ */
+const oauthIsaretiniSil = (): void => {
+  try { sessionStorage.removeItem(OAUTH_ISARET); } catch { /* yok say */ }
 };
 
 /**
@@ -479,6 +501,7 @@ export const loginWithGoogle = async (): Promise<void> => {
             nonce: rawNonce,
           });
           if (error) throw error;
+          oauthIsaretiniSil();
           return; // Navigasyonu onAuthStateChanged dinleyicisi yapar.
         }
         console.warn('[Auth] Native Google idToken döndürmedi; tarayıcı yoluna düşülüyor.');
@@ -524,7 +547,11 @@ export const handleAuthCallbackUrl = async (url: string): Promise<OAuthDonusSonu
     if (code) {
       const { error } = await supabase.auth.exchangeCodeForSession(code);
       if (error) throw error;
-      // Navigasyon App.tsx'teki onAuthStateChanged dinleyicisinde (SIGNED_IN).
+      oauthIsaretiniSil();
+      // Yönlendirme dinleyicide (SIGNED_IN). Kütüphane olayı bir sebeple
+      // gelmezse kullanıcı oturumu açık hâlde giriş ekranında kalırdı; olayı
+      // burada da duyururuz (bkz. oturumuDuyur).
+      await oturumuDuyur();
       return 'BASARILI';
     }
     if (oauthError) {
@@ -584,6 +611,7 @@ export const loginWithApple = async (): Promise<void> => {
       });
 
       if (error) throw error;
+      oauthIsaretiniSil();
     } catch (err) {
       console.error('[Auth] Native Apple Sign-In hatası:', err);
       throw err;
@@ -633,15 +661,61 @@ export const logout = async (): Promise<void> => {
   } catch (error) {
     console.error('[Auth] Çıkış hatası:', error);
   }
+  await oturumuZorlaSil();
   yenidenBaslat();
 };
 
-/** Web sekmesini kökten yeniden yükler. Native'de ve test ortamında no-op. */
+/**
+ * OTURUM GERÇEKTEN GİTTİ Mİ? — SONSUZ YENİDEN YÜKLEME KİLİDİ (23 Ağustos 2026).
+ *
+ * `signOut()` sunucuya da haber verir. O çağrı 401/403/404 DIŞINDA bir hatayla
+ * düşerse (ağ yok, 500, zaman aşımı) supabase-js erken döner ve YEREL OTURUMU
+ * SİLMEZ — hata da fırlatmaz, `{ error }` döndürür. Çıkış artık sayfayı
+ * yeniden yüklediği için sonucu şu olurdu:
+ *   yükle → jeton hâlâ duruyor → profil 401 → App "jeton geçersiz" der →
+ *   logout → yükle → …  yani KAPANMAYAN bir yeniden yükleme döngüsü.
+ * Kullanıcı uygulamayı hiç açamaz hâle gelirdi.
+ *
+ * Bu yüzden çıkıştan sonra depo BİZZAT kontrol edilir ve gerekirse anahtar
+ * elle silinir. Sunucudaki oturum kalmış olabilir; kullanıcıyı cihazında
+ * kilitli tutmaktansa yerelde temizlemek doğrudur.
+ */
+const oturumuZorlaSil = async (): Promise<void> => {
+  try {
+    const { data } = await supabase.auth.getSession();
+    if (!data.session) return;
+    console.warn('[Auth] signOut oturumu silmedi; yerel anahtar elle temizleniyor.');
+    await supabase.auth.signOut({ scope: 'local' }).catch(() => { /* yine olmazsa aşağısı */ });
+  } catch { /* okunamadıysa yine de anahtarı sil */ }
+  try {
+    window.localStorage.removeItem(AUTH_DEPO_ANAHTARI);
+    window.sessionStorage.removeItem(AUTH_DEPO_ANAHTARI);
+  } catch { /* özel sekme — depo zaten yazılmamış olabilir */ }
+};
+
+/**
+ * Web sekmesini kökten yeniden yükler. Native'de ve test ortamında no-op.
+ *
+ * İKİNCİ KİLİT: aynı sekmede kısa aralıkla ikinci bir yeniden yükleme
+ * isteği gelirse YAPILMAZ. `oturumuZorlaSil` birinci savunmadır; bu, onun da
+ * yetmediği bilinmeyen bir durumda kullanıcının uygulamayı açabilmesini
+ * garanti eder — döngü yerine sıradan giriş ekranına düşülür.
+ */
+const YENIDEN_BASLATMA_ISARETI = 'oyna.cikis.yenidenBaslatildi';
+const YENIDEN_BASLATMA_ARALIGI_MS = 10_000;
 const yenidenBaslat = (): void => {
   if (typeof window === 'undefined') return;
   try {
     if (Capacitor.isNativePlatform()) return;
   } catch { /* Capacitor yoksa web say */ }
+  try {
+    const son = Number(sessionStorage.getItem(YENIDEN_BASLATMA_ISARETI) ?? 0);
+    if (son && Date.now() - son < YENIDEN_BASLATMA_ARALIGI_MS) {
+      console.warn('[Auth] Çıkış yeniden yüklemesi az önce yapıldı; döngüye girmemek için atlanıyor.');
+      return;
+    }
+    sessionStorage.setItem(YENIDEN_BASLATMA_ISARETI, String(Date.now()));
+  } catch { /* işaret yazılamadıysa yeniden yükle — döngü riski depoya bağlı */ }
   try {
     // jsdom `replace`i uygulamaz ve gürültü basar; testlerde atlanır.
     if (typeof window.location?.replace !== 'function') return;
@@ -665,10 +739,49 @@ const yenidenBaslat = (): void => {
 export type AuthOlayi = 'ILK' | 'SIGNED_IN' | 'SIGNED_OUT' | 'TOKEN_REFRESHED'
   | 'USER_UPDATED' | 'INITIAL_SESSION' | 'PASSWORD_RECOVERY' | 'DIGER';
 
+/**
+ * KENDİ DİNLEYİCİ DEFTERİMİZ — "oturum var ama uygulama içeri almıyor" kilidi
+ * (23 Ağustos 2026, kurucunun "tek seferde giremiyorum" bildirimi).
+ *
+ * SORUN: açılır pencere oturumu ORTAK localStorage'a yazar; ana sekme onu
+ * yoklamayla GÖRÜR (webOAuthAc). Ama yönlendirmeyi yapan şey `App.tsx`'in
+ * `onAuthStateChanged` dinleyicisidir ve o dinleyici supabase-js'in kendi
+ * olayına bağlıdır. supabase-js oturumu YAZAN sekmede olay yayar; ÖTEKİ
+ * sekmeye ulaşması iki dolaylı yola bağlıdır:
+ *   · BroadcastChannel (Safari 15.4 öncesinde YOK, bazı gömülü tarayıcılarda
+ *     kapalı),
+ *   · `visibilitychange` → `_recoverAndRefresh` (masaüstünde açılır pencere
+ *     ayrı bir PENCEREdir; ana sekme hiç gizlenmeyebilir, olay hiç gelmez).
+ * İkisi de gelmezse kullanıcı oturumu AÇIK hâlde giriş ekranında kalır. Ekranda
+ * hata yok, hesap açık, ama içeri girilmiyor — "tekrar deneyeyim" dedirten
+ * durum tam budur.
+ *
+ * ÇÖZÜM: oturumu GÖREN yer olayı kendisi duyurur. Kütüphanenin sekmeler arası
+ * sihrine güvenmeyiz; zaten elimizde olan bilgiyi doğrudan iletiriz.
+ */
+type AuthDinleyici = (user: OynaCurrentUser | null, olay?: AuthOlayi) => void;
+const authDinleyiciler = new Set<AuthDinleyici>();
+
+/** Oturumu gören taraf çağırır: dinleyicilere SIGNED_IN olarak duyurulur. */
+const oturumuDuyur = async (): Promise<void> => {
+  try {
+    const { data } = await supabase.auth.getSession();
+    if (!data.session?.user) return;
+    const user = await buildCurrentUser(data.session.user);
+    auth.currentUser = user;
+    authDinleyiciler.forEach((d) => {
+      try { d(user, 'SIGNED_IN'); } catch { /* bir dinleyici ötekini düşürmesin */ }
+    });
+  } catch (err) {
+    console.warn('[Auth] oturum duyurulamadı:', err);
+  }
+};
+
 export const onAuthStateChanged = (
   _authObj: typeof auth,
   callback: (user: OynaCurrentUser | null, olay?: AuthOlayi) => void,
 ): (() => void) => {
+  authDinleyiciler.add(callback);
   // Mevcut oturum için hemen tetikle
   supabase.auth.getSession().then(async ({ data: { session } }) => {
     if (session?.user) {
@@ -703,7 +816,10 @@ export const onAuthStateChanged = (
     }, 0);
   });
 
-  return () => subscription.unsubscribe();
+  return () => {
+    authDinleyiciler.delete(callback);
+    subscription.unsubscribe();
+  };
 };
 
 // ─── Demo e-posta girişi (yalnız yerel geliştirme) ───────────────────────────

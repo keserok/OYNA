@@ -529,8 +529,11 @@ describe('İncelemeciye özel yol YOK (Apple 5.6)', () => {
     // 23 Ağu 2026: telefonla giriş ve demo yolu SİLİNDİ; geriye tek hata yolu
     // kaldı ve HERKES için aynı. Kapının koruduğu şey değişmedi: hata anında
     // "şu kullanıcıya şunu göster" diye dallanan bir kod olamaz.
-    expect(s).toContain('setError(saglayiciHatasi(err,');
-    expect(s.match(/setError\(saglayiciHatasi\(err,/g)?.length).toBe(2); // Google + Apple
+    // 23 Ağu 2026 · ikinci tur: iki sağlayıcı TEK yolda birleşti (girisBaslat).
+    // Kapının koruduğu şey değişmedi: hata anında "şu kullanıcıya şunu göster"
+    // diye dallanan bir kod olamaz — dal yalnız HATA TÜRÜNE bakar.
+    expect(s).toContain('const sonuc = saglayiciHatasi(err,');
+    expect(s.match(/saglayiciHatasi\(err,/g)?.length).toBe(1); // tek yol
     // "demo" kelimesi YORUMLARDA geçebilir — silinen şeyin kaydı değerli.
     // Kilit KODA bakar.
     const kod = s.split('\n').filter((l) => !/^\s*(\/\/|\/\*|\*)/.test(l)).join('\n');

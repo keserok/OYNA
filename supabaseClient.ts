@@ -91,6 +91,14 @@ const isNativePlatform = (() => {
   }
 })();
 
+/**
+ * Oturum belirtecinin depo anahtarı — TEK KAYNAK.
+ * `supabaseAuth · oturumuZorlaSil` çıkışta bu anahtarı elle silebilmek için
+ * okur (signOut ağ hatasında yerel oturumu silmeden dönebiliyor). İki yerde
+ * harfi harfine yazılsaydı biri değişince öteki yanlış anahtarı silerdi.
+ */
+export const AUTH_DEPO_ANAHTARI = 'oyna.auth.token';
+
 const persistentAuthStorage = {
   getItem: async (key: string): Promise<string | null> => {
     if (!hasWindow) return null;
@@ -183,7 +191,7 @@ export const supabase = createClient(
       persistSession: true,
       autoRefreshToken: true,
       storage: persistentAuthStorage,
-      storageKey: 'oyna.auth.token',
+      storageKey: AUTH_DEPO_ANAHTARI,
       // PKCE: OAuth (Google/Apple web) artık ?code= ile döner. Native'de kod,
       // oyna://auth-callback deep link'inden exchangeCodeForSession ile bozdurulur
       // (supabaseAuth.handleAuthCallbackUrl); web'de detectSessionInUrl halleder.

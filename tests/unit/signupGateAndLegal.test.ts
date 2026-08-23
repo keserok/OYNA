@@ -116,14 +116,18 @@ describe('sessiz pasiflik yok', () => {
 
   it('hiçbir handler sessizce dönmüyor — eksik olan söyleniyor', () => {
     // Tek giriş yolu kaldı: Apple · Google (23 Ağu 2026). Telefon/kod ve demo
-    // yolları koddan silindi; e-posta + şifre 17 Ağu'da silinmişti.
-    for (const h of ['handleGoogleLogin', 'handleAppleLogin']) {
-      const i = auth.indexOf(`const ${h} = async`);
-      expect(i, h).toBeGreaterThan(0);
-      const bas = auth.slice(i, i + 700);
-      expect(bas, `${h}: eksik alanı söylemiyor`).toContain('setError(');
-      expect(bas, `${h}: rıza kontrolü yok`).toContain('requireAgreement()');
-    }
+    // yolları koddan silindi; e-posta + şifre 17 Ağu'da silinmişti. İkinci
+    // turda iki sağlayıcı tek işleyicide birleşti (girisBaslat) ve onay artık
+    // dokunuşu İPTAL ETMİYOR — onay sayfasına dönüşüyor (bkz. tekGirisYolu).
+    const i = auth.indexOf('const girisBaslat = async');
+    expect(i, 'girisBaslat').toBeGreaterThan(0);
+    const bas = auth.slice(i, i + 900);
+    expect(bas, 'girisBaslat: hata sessiz geçiliyor').toContain('setError(');
+    expect(bas, 'girisBaslat: sakin durum satırı yok').toContain('setBilgi(');
+    // Onay kapısı: dokunuş sarmalayıcısında ve İPTAL değil, ONAY sayfası.
+    const d = auth.indexOf('const saglayiciyaDokun');
+    expect(d, 'saglayiciyaDokun').toBeGreaterThan(0);
+    expect(auth.slice(d, d + 400)).toContain('setOnayIstenen(saglayici)');
   });
 
   it('pasiflik hesapları "agreed"e bağlı değil', () => {

@@ -196,3 +196,144 @@ describe('Çıkışta bayat paket kalmaz', () => {
     expect(JSON.stringify(kural('/assets/(.*)').headers)).toContain('immutable');
   });
 });
+
+describe('İlk dokunuş boşa gitmiyor', () => {
+  /**
+   * KURUCU BİLDİRİMİ (23 Ağustos 2026): "Tek seferde giremiyorum."
+   *
+   * Sebep koddaydı ve %100 tekrarlanabilirdi: `handleGoogleLogin` ilk iş
+   * olarak `requireAgreement()` çağırıyor, onay kutusu işaretli değilse
+   * KIRMIZI hata basıp DÖNÜYORDU. Kutu ise düğmelerin çok aşağısında,
+   * telefonda çoğu zaman görüş alanının dışındaydı. Yani her kullanıcının
+   * ilk dokunuşu başarısızdı — "bir sürü bug" hissinin birinci kaynağı.
+   *
+   * Yeni davranış: dokunuş iptal edilmez, ONAYA dönüşür. Tek düğme hem onayı
+   * verir hem girişi AYNI DOKUNUŞTA başlatır (araya bir adım daha girseydi
+   * tarayıcı açılır pencereyi engellerdi).
+   */
+  const auth = oku('views/AuthScreen.tsx');
+
+  it('sağlayıcıya dokunmak onay eksikken İPTAL ETMİYOR', () => {
+    // Eski desen: `if (!requireAgreement()) return;` — geri dönüş = boşa dokunuş.
+    expect(kodu(auth)).not.toContain('requireAgreement');
+    const dokun = auth.slice(auth.indexOf('const saglayiciyaDokun'),
+                             auth.indexOf('const handleGoogleLogin'));
+    expect(dokun).toContain('setOnayIstenen(saglayici)');
+    // Onay varsa doğrudan giriş: kutuyu işaretlemiş kullanıcı için TEK dokunuş.
+    expect(dokun).toContain('void girisBaslat(saglayici)');
+  });
+
+  it('onay düğmesi girişi AYNI dokunuşta başlatıyor', () => {
+    // Onay ile giriş arasına bir adım daha girerse (ör. setTimeout, await)
+    // tarayıcı kullanıcı jestini tükenmiş sayar ve pencereyi engeller.
+    const i = auth.indexOf('ONAYLIYORUM VE DEVAM ET');
+    expect(i).toBeGreaterThan(-1);
+    const blok = auth.slice(i - 700, i);
+    expect(blok).toContain('setAgreed(true)');
+    expect(blok).toContain('void girisBaslat(saglayici)');
+    expect(blok).not.toContain('setTimeout');
+    expect(blok).not.toContain('await ');
+  });
+
+  it('onay kutusu HÂLÂ opt-in (önceden işaretli gelmiyor)', () => {
+    // "Devam ederek kabul etmiş sayılırsın" demiyoruz: kullanıcı ya kutuyu
+    // işaretler ya da üstünde "Onaylıyorum" yazan düğmeye basar.
+    expect(auth).toContain('useState(false)');
+    expect(auth).toContain('id="agreement-checkbox"');
+  });
+
+  it('sessiz başarısızlık yok: pencere kapanınca ekran konuşuyor', () => {
+    // `saglayiciHatasi`, `girisBaslat`tan SONRA tanımlı — dilim ileri alınır.
+    const i = auth.indexOf('const saglayiciHatasi');
+    const h = auth.slice(i, auth.indexOf('\n  };', i));
+    expect(h).toContain('OAUTH_PENCERE_KAPANDI');
+    expect(h).toContain('Giriş penceresi kapandı');
+    // Vazgeçmek hata değil → kırmızı değil, sakin durum satırı.
+    expect(h).toMatch(/kirmizi:\s*false/);
+    expect(auth).toContain('role="status"');
+  });
+});
+
+describe('Oturum devri kütüphane olayına bırakılmıyor', () => {
+  const auth = oku('supabaseAuth.ts');
+
+  it('oturumu GÖREN yer olayı KENDİSİ duyuruyor', () => {
+    /**
+     * Açılır pencere oturumu ortak localStorage'a yazar; ana sekme onu
+     * yoklamayla görür. Ama yönlendirmeyi App'in dinleyicisi yapar ve o,
+     * supabase-js'in sekmeler arası olayına bağlıdır: BroadcastChannel
+     * (Safari 15.4 öncesinde YOK) ya da `visibilitychange` (masaüstünde
+     * açılır pencere ayrı bir penceredir; ana sekme hiç gizlenmeyebilir).
+     * İkisi de gelmezse kullanıcı oturumu AÇIK hâlde giriş ekranında kalır.
+     */
+    expect(auth).toContain('const oturumuDuyur');
+    expect(auth).toContain('authDinleyiciler');
+    // Yoklama oturumu gördüğü yerde duyurmalı.
+    const govde = auth.slice(auth.indexOf('const webOAuthAc = async'),
+                             auth.indexOf('// ─── WEB\'DE SAĞLAYICI DÖNÜŞÜ'));
+    expect(govde).toContain('await oturumuDuyur()');
+    // Native deep link dönüşü de aynı garantiyi almalı.
+    const deep = auth.slice(auth.indexOf('export const handleAuthCallbackUrl'));
+    expect(deep.slice(0, 1600)).toContain('await oturumuDuyur()');
+  });
+
+  it('dinleyici defteri abonelik bitince temizleniyor', () => {
+    expect(auth).toContain('authDinleyiciler.add(callback)');
+    expect(auth).toContain('authDinleyiciler.delete(callback)');
+  });
+
+  it('App aynı oturum için açılışı İKİ KEZ koşmuyor', () => {
+    // SIGNED_IN artık iki kaynaktan gelebiliyor; ikisi birden gelirse profil
+    // açılışı eş zamanlı iki kez koşar ve yarış biri ONBOARDING'e öteki ana
+    // sayfaya götürebilir.
+    const app = oku('App.tsx');
+    expect(app).toContain('acilisKoşuyor');
+    expect(app).toMatch(/if \(user && acilisKoşuyor === user\.uid\) return;/);
+    expect(app).toMatch(/if \(user\) acilisKoşuyor = null;/);
+  });
+
+  it('başarılı girişte OAuth işareti siliniyor', () => {
+    // İşaret yalnız BAŞARISIZ dönüşü açıklamak için bırakılır ve 10 dk yaşar.
+    // Çıkış artık sayfayı yeniden yüklediği için, silinmeseydi giriş ekranı
+    // taze işareti okuyup "giriş tamamlanamadı" hatası basardı — hiçbir şey
+    // başarısız olmamışken.
+    expect(auth).toContain('const oauthIsaretiniSil');
+    expect(auth.match(/oauthIsaretiniSil\(\)/g)?.length).toBeGreaterThanOrEqual(4);
+  });
+});
+
+describe('Çıkış sonsuz yeniden yükleme döngüsüne girmiyor', () => {
+  const auth = oku('supabaseAuth.ts');
+
+  it('signOut oturumu silmediyse anahtar ELLE siliniyor', () => {
+    /**
+     * `signOut()` sunucuya da haber verir; o çağrı 401/403/404 DIŞINDA bir
+     * hatayla düşerse supabase-js erken döner ve YEREL OTURUMU SİLMEZ (hata
+     * da fırlatmaz). Çıkış artık sayfayı yeniden yüklediği için sonuç şu
+     * olurdu: yükle → jeton duruyor → 401 → logout → yükle → … kapanmayan
+     * bir döngü ve kullanıcı uygulamayı hiç açamaz.
+     */
+    expect(auth).toContain('const oturumuZorlaSil');
+    expect(auth).toContain('AUTH_DEPO_ANAHTARI');
+    const g = auth.slice(auth.indexOf('const oturumuZorlaSil'), auth.indexOf('const YENIDEN_BASLATMA_ISARETI'));
+    expect(g).toContain("signOut({ scope: 'local' })");
+    expect(g).toContain('localStorage.removeItem(AUTH_DEPO_ANAHTARI)');
+    // logout, yeniden yüklemeden ÖNCE temizliği beklemeli.
+    const l = auth.slice(auth.indexOf('export const logout ='), auth.indexOf('const oturumuZorlaSil'));
+    expect(l.indexOf('await oturumuZorlaSil()')).toBeLessThan(l.indexOf('yenidenBaslat()'));
+  });
+
+  it('ikinci kilit: kısa aralıkta ikinci yeniden yükleme yapılmıyor', () => {
+    const y = auth.slice(auth.indexOf('const YENIDEN_BASLATMA_ISARETI'));
+    expect(y).toContain('YENIDEN_BASLATMA_ARALIGI_MS');
+    expect(y).toMatch(/Date\.now\(\) - son < YENIDEN_BASLATMA_ARALIGI_MS/);
+  });
+
+  it('depo anahtarı TEK yerde tanımlı', () => {
+    const c = oku('supabaseClient.ts');
+    expect(c).toContain("export const AUTH_DEPO_ANAHTARI = 'oyna.auth.token'");
+    expect(c).toContain('storageKey: AUTH_DEPO_ANAHTARI');
+    // supabaseAuth harfi harfine yazmamalı; sabiti içe aktarmalı.
+    expect(auth).not.toContain("'oyna.auth.token'");
+  });
+});

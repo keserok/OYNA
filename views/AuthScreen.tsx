@@ -159,6 +159,11 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
   const [isLoading, setIsLoading] = useState<'google' | 'apple' | null>(null);
   const [error, setError] = useState<string | null>(
     oauthDonusu ? mapOAuthDonusu(oauthDonusu.saglayici, oauthDonusu.kod, oauthDonusu.aciklama) : null);
+  // Kırmızı OLMAYAN durum satırı: "pencereyi kapattın" gibi şeyler hata
+  // değildir ama SESSİZ de kalmamalı (bkz. saglayiciHatasi).
+  const [bilgi, setBilgi] = useState<string | null>(null);
+  // Onay verilmemişken sağlayıcıya dokunulduğunda açılan sayfa. `null` = kapalı.
+  const [onayIstenen, setOnayIstenen] = useState<'google' | 'apple' | null>(null);
   // IP-15: anahtarlar artık resmi belge anahtarları — modal tam metni
   // shared/legalDocs.ts'ten okur, Ayarlar → Yasal ile birebir aynı.
   const [openModal, setOpenModal] = useState<LegalModalKind | null>(null);
@@ -166,66 +171,86 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
   // Tanıtım bir kez görüldü: aynı oturumda AUTH'a tekrar düşülürse atlanır.
   useEffect(() => { introShownThisSession = true; }, []);
 
-  // KVKK/Sözleşme onayı işaretli değilken butonlar SESSİZCE pasif kalmasın:
-  // dokununca ne yapılması gerektiği açıkça söylenir ("hiçbir şey olmuyor" hissi biter).
-  function requireAgreement(): boolean {
-    if (agreed) return true;
-    setError("Devam etmek için KVKK Aydınlatma Metni'ni ve Kullanım Şartları'nı onayla.");
-    return false;
-  }
+  /**
+   * İLK DOKUNUŞ ARTIK BOŞA GİTMİYOR (23 Ağustos 2026).
+   *
+   * KURUCU BİLDİRİMİ: "Tek seferde giremiyorum."
+   *
+   * Eski akış şuydu: kullanıcı Apple'a dokunur → onay kutusu işaretli
+   * olmadığı için KIRMIZI hata basılır ve İŞLEM İPTAL EDİLİR → kullanıcı
+   * kutuyu bulup işaretler → tekrar dokunur. Yani HER kullanıcının ilk
+   * dokunuşu başarısızdı; "tek seferde giremiyorum"un birinci ve kesin
+   * sebebi buydu. Kutu ekranın altında, düğmelerin ÇOK aşağısındaydı;
+   * telefonun küçük ekranında çoğu zaman görüş alanının dışında kalıyordu.
+   *
+   * Yeni akış: dokunuş İPTAL EDİLMEZ, ONAYA DÖNÜŞÜR. Küçük bir sayfa açılır,
+   * iki belge orada yazılıdır ve tek düğme hem onayı verir hem girişi
+   * başlatır. Onay hâlâ AÇIK ve İSTEĞE BAĞLIDIR (kutu önceden işaretli
+   * gelmez, "devam ederek kabul etmiş sayılırsın" demiyoruz): kullanıcı
+   * üzerinde "Onaylıyorum" yazan bir düğmeye basar.
+   *
+   * Kutuyu önceden işaretleyen kullanıcı için hiçbir şey değişmez: sayfa
+   * açılmaz, dokunuş doğrudan girişi başlatır.
+   *
+   * KRİTİK: onay düğmesi girişi AYNI DOKUNUŞTA başlatır. Araya bir adım daha
+   * girseydi tarayıcı, açılır pencereyi "kullanıcı istemedi" sayıp engellerdi.
+   */
+  const girisBaslat = async (saglayici: 'google' | 'apple') => {
+    if (isLoading) return;
+    setError(null);
+    setBilgi(null);
+    setIsLoading(saglayici);
+    try {
+      if (saglayici === 'google') await loginWithGoogle();
+      else await loginWithApple();
+      // Yönlendirmeyi App'teki auth dinleyicisi yapar (profildeki GERÇEK role
+      // göre). Buradan onSuccess() çağrılırsa çifte yönlendirme/flaş olur.
+    } catch (err: any) {
+      console.error(`[Auth] ${saglayici} hatası:`, err);
+      const sonuc = saglayiciHatasi(err, saglayici === 'google' ? 'Google' : 'Apple');
+      if (sonuc.kirmizi) setError(sonuc.metin);
+      else setBilgi(sonuc.metin);
+    } finally {
+      setIsLoading(null);
+    }
+  };
+
+  /** Sağlayıcı düğmesi: onay varsa doğrudan gir, yoksa onay sayfasını aç. */
+  const saglayiciyaDokun = (saglayici: 'google' | 'apple') => {
+    if (isLoading) return;
+    if (!agreed) { setError(null); setOnayIstenen(saglayici); return; }
+    void girisBaslat(saglayici);
+  };
 
   // Açılır pencere yolunun iki özel sonucu (supabaseAuth · webOAuthAc):
   //   OAUTH_PENCERE_KAPANDI → kullanıcı vazgeçti. Bu bir HATA DEĞİLDİR;
   //     kırmızı uyarı basmak, yaptığı şeyi yanlışmış gibi sunmak olur.
   //   OAUTH_ZAMAN_ASIMI     → pencere açık kaldı ama oturum gelmedi.
   // Ham kodu ekrana taşımayız; kullanıcı ne yapacağını okur.
-  const saglayiciHatasi = (err: any, saglayici: string): string | null => {
+  const saglayiciHatasi = (err: any, saglayici: string): { metin: string; kirmizi: boolean } => {
     const m = String(err?.message ?? err);
-    if (m.includes('OAUTH_PENCERE_KAPANDI')) return null;
+    // SESSİZ KALMA (23 Ağu 2026): bu dal eskiden `null` döndürüyor, ekrana
+    // HİÇBİR ŞEY yazılmıyordu. Pencereyi kullanıcı kapattıysa doğruydu; ama
+    // pencereyi TARAYICI da kapatıyor (mobilde arka plan sekmesi tahliye
+    // edilir). O zaman kullanıcı "dokundum, hiçbir şey olmadı" görüyor ve
+    // tekrar deniyor — "tek seferde giremiyorum"un sessiz ayağı buydu.
+    // Vazgeçmek hata değildir, o yüzden KIRMIZI değil: sakin bir durum satırı.
+    if (m.includes('OAUTH_PENCERE_KAPANDI')) {
+      return { metin: `Giriş penceresi kapandı. ${saglayici} ile tekrar deneyebilirsin.`, kirmizi: false };
+    }
     if (m.includes('OAUTH_ZAMAN_ASIMI')) {
-      return 'Giriş tamamlanmadı. Pencereyi kapatıp tekrar dener misin?';
+      return { metin: 'Giriş tamamlanmadı. Pencereyi kapatıp tekrar dener misin?', kirmizi: true };
     }
-    return mapAuthError(err, `${saglayici} ile giriş başarısız.`);
+    return { metin: mapAuthError(err, `${saglayici} ile giriş başarısız.`), kirmizi: true };
   };
 
-  const handleGoogleLogin = async () => {
-    if (isLoading) return;
-    if (!requireAgreement()) return;
-    setError(null);
-    setIsLoading('google');
-    try {
-      await loginWithGoogle();
-      // Native'de sistem tarayıcısı açıldı; oturum deep link dönüşünde açılır ve
-      // navigasyonu global auth dinleyicisi yapar. Web'de sayfa yönlenir.
-    } catch (err: any) {
-      console.error('[Auth] Google hatası:', err);
-      setError(saglayiciHatasi(err, 'Google'));
-    } finally {
-      setIsLoading(null);
-    }
-  };
-
-  const handleAppleLogin = async () => {
-    if (isLoading) return;
-    if (!requireAgreement()) return;
-    setError(null);
-    setIsLoading('apple');
-    try {
-      await loginWithApple();
-      // Navigasyonu global auth listener'a bırak (Google ile aynı yol);
-      // onSuccess() burada da çağrılırsa çifte yönlendirme/flaş oluşur.
-    } catch (err: any) {
-      console.error('[Auth] Apple hatası:', err);
-      setError(saglayiciHatasi(err, 'Apple'));
-    } finally {
-      setIsLoading(null);
-    }
-  };
+  const handleGoogleLogin = () => saglayiciyaDokun('google');
+  const handleAppleLogin = () => saglayiciyaDokun('apple');
 
   // MİSAFİR MODU KALDIRILDI (kurucu kararı, 17 Ağu 2026): "önce göz at" yolu
   // kapatıldı. Uygulamaya girmek için hesap gerekiyor.
 
-  const clearFeedback = () => setError(null);
+  const clearFeedback = () => { setError(null); setBilgi(null); };
 
   const handleHeaderBack = () => {
     if (stage === 'input') {
@@ -485,6 +510,14 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
                   <p role="alert" aria-live="assertive" style={{ margin: '11px 2px 0', fontSize: 11.5, fontWeight: 700, lineHeight: 1.5, color: '#FF4D4D' }}>{error}</p>
                 )}
 
+                {/* DURUM SATIRI — hata değil. "Pencereyi kapattın" gibi
+                    şeyler kırmızıyla yazılırsa kullanıcı yanlış bir şey
+                    yapmış hissederi; sessiz bırakılırsa "dokundum, bir şey
+                    olmadı" der. İkisi de yanlış; sakin bir cümle doğru. */}
+                {!error && bilgi && (
+                  <p role="status" aria-live="polite" style={{ margin: '11px 2px 0', fontSize: 11.5, fontWeight: 700, lineHeight: 1.5, color: '#8B949E' }}>{bilgi}</p>
+                )}
+
                 {/* KVKK + Sözleşme onayı */}
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginTop: 22, padding: '0 2px' }}>
                   <button
@@ -530,6 +563,75 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
                     <button type="button" className="au-footlink" onClick={() => setOpenModal('KVKK')}>KVKK Aydınlatma Metni</button>
                   </div>
                 </div>
+            </div>
+          </div>
+        )}
+
+        {/* ═══ ONAY SAYFASI ═══
+            Sağlayıcıya dokunulduğunda onay yoksa açılır. Tek düğme hem onayı
+            verir hem girişi AYNI DOKUNUŞTA başlatır — araya bir adım daha
+            girseydi tarayıcı açılır pencereyi engellerdi. */}
+        {onayIstenen && (
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Yasal onay"
+            style={{
+              // zIndex 80: yasal belge modalı da 80'de ve DOM'da BUNDAN SONRA
+              // geliyor, yani belgeye dokunulduğunda üste biner. Bu sayfa
+              // 80'in üstüne çıkarılırsa kullanıcı belgeyi okuyamadan sıkışır.
+              position: 'absolute', inset: 0, zIndex: 80, display: 'flex',
+              alignItems: 'flex-end', background: 'rgba(4,7,12,.62)',
+              backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)',
+            }}
+            onClick={() => setOnayIstenen(null)}
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                width: '100%', padding: '22px 24px calc(var(--safe-bottom, 0px) + 26px)',
+                borderRadius: '28px 28px 0 0', background: '#0D121A',
+                border: '1px solid rgba(255,255,255,.08)', borderBottom: 'none',
+                boxShadow: '0 -12px 44px rgba(0,0,0,.5)',
+                animation: 'auSheet .42s cubic-bezier(.22,1,.36,1) both',
+              }}
+            >
+              <div style={{ width: 40, height: 4, borderRadius: 999, background: 'rgba(255,255,255,.18)', margin: '0 auto 18px' }} />
+              <h2 style={{ margin: 0, fontSize: 19, fontWeight: 900, letterSpacing: '-.02em', color: '#fff' }}>
+                Son bir adım
+              </h2>
+              <p style={{ margin: '10px 0 0', fontSize: 12.5, lineHeight: 1.65, fontWeight: 600, color: '#8B949E' }}>
+                Devam etmek için{' '}
+                <button type="button" className="au-link" style={{ color }} onClick={() => setOpenModal('KVKK')}>KVKK Aydınlatma Metni</button>
+                {' '}ve{' '}
+                <button type="button" className="au-link" style={{ color }} onClick={() => setOpenModal('TERMS')}>Kullanım Şartları</button>
+                'nı onayla. İkisini de okuyabilir, sonra devam edebilirsin.
+              </p>
+              <button
+                type="button"
+                className="au-cta"
+                style={{
+                  marginTop: 20, background: `linear-gradient(120deg, ${color} 0%, ${light} 100%)`,
+                  color: '#0A0E14', boxShadow: `0 0 20px 0 ${color}57, inset 0 1px 0 rgba(255,255,255,.28)`,
+                }}
+                onClick={() => {
+                  const saglayici = onayIstenen;
+                  setAgreed(true);
+                  setOnayIstenen(null);
+                  void girisBaslat(saglayici);
+                }}
+              >
+                <Check size={16} strokeWidth={3} />
+                <span>ONAYLIYORUM VE DEVAM ET</span>
+              </button>
+              <button
+                type="button"
+                className="au-ghost"
+                style={{ marginTop: 10 }}
+                onClick={() => setOnayIstenen(null)}
+              >
+                VAZGEÇ
+              </button>
             </div>
           </div>
         )}

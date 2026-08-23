@@ -222,7 +222,23 @@ const App: React.FC = () => {
 
 
   useEffect(() => {
+    /**
+     * AYNI OTURUM İÇİN İKİ KEZ KOŞMA (23 Ağustos 2026).
+     *
+     * SIGNED_IN artık İKİ kaynaktan gelebiliyor: supabase-js'in kendi olayı ve
+     * bizim `oturumuDuyur()` duyurumuz (açılır pencere oturumu yazdığında
+     * kütüphanenin sekmeler arası olayı gelmeyebiliyor — bkz. supabaseAuth).
+     * İkisi birden gelirse aşağıdaki profil açılışı EŞ ZAMANLI iki kez koşar:
+     * iki `insert`, iki yönlendirme kararı. Yarışı biri ONBOARDING'e, öteki
+     * ana sayfaya götürebilir ve kullanıcı ekranın "zıpladığını" görür.
+     *
+     * Kilit uid başına: aynı kullanıcı için bir açılış koşarken ikincisi
+     * sessizce düşer. Farklı kullanıcı (hesap değişimi) engellenmez.
+     */
+    let acilisKoşuyor: string | null = null;
     const unsubscribe = onAuthStateChanged(auth, async (user, olay) => {
+      if (user && acilisKoşuyor === user.uid) return;
+      if (user) acilisKoşuyor = user.uid;
       try {
         if (user) {
           // Gerçek oturum açıldı → misafir modu biter
@@ -585,6 +601,9 @@ const App: React.FC = () => {
           resetNavigation('AUTH');
         }
       } finally {
+        // Kilit BURADA bırakılır: açılış bitmeden ikinci bir SIGNED_IN gelirse
+        // düşer, bittikten sonra gelen (ör. jeton yenileme) yine çalışır.
+        if (user) acilisKoşuyor = null;
         setIsAuthReady(true);
         setAuthResolved(true);
       }
