@@ -15,7 +15,10 @@ interface LegalScreenProps {
 
 
 
-const ORDER: LegalDocKey[] = ['TERMS', 'TOPLULUK', 'PRIVACY', 'KVKK', 'RIZA', 'VELI', 'CEREZ', 'SALES'];
+// HESAP_SILME 24 Ağu 2026'da eklendi: metin repoda ve web'de vardı ama
+// uygulama içi yasal ekranda YOKTU. Listenin SONUNDA duruyor — silme, okunacak
+// son şeydir; üste konsaydı ilk göze çarpan seçenek "hesabını sil" olurdu.
+const ORDER: LegalDocKey[] = ['TERMS', 'TOPLULUK', 'PRIVACY', 'KVKK', 'RIZA', 'VELI', 'CEREZ', 'SALES', 'HESAP_SILME'];
 
 const LegalScreen: React.FC<LegalScreenProps> = ({ onBack, initialDoc }) => {
   const [doc, setDoc] = useState<LegalDocKey | null>(initialDoc ?? null);

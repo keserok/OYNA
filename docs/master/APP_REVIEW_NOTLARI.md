@@ -79,14 +79,32 @@ Kilitler: `tests/unit/tekGirisYolu.test.ts`, `tests/unit/magazaKapilari.test.ts`
 > silindi; **canlı projede de Auth → Providers → Phone → Test OTP listesi elle
 > boşaltılmalıdır** (bu dosya yalnız `supabase config push` ile uygulanır).
 
-İncelemeci **kendi Apple ID'siyle** girer ve gerçek bir kullanıcının gördüğünün
-aynısını görür. İddiamız zaten budur; verilecek her özel hesap onu zayıflatır.
+**24 Ağustos 2026'da DEĞİŞTİ.** Önceki sürüm "hesap vermiyoruz, kendi Apple
+ID'nizle girin" diyordu. Apple buna rağmen Sign-In Information formunu doldurmamızı
+istedi — ve haklı: sağlayıcı girişiyle giren incelemeci, bizim hazırladığımız bir
+hesaba değil BOMBOŞ yeni bir hesaba düşer; kaleci, hakem ve tesis panellerini hiç
+göremez, yani uygulamanın büyük kısmını inceleyemez.
+
+**Ayrım şudur ve önemlidir:** 5.6'nın yasakladığı şey, incelemecinin diğer
+kullanıcılarda olmayan bir yola ya da yetkiye sahip olmasıdır. Aşağıdaki hesaplar
+öyle değildir — herkesin kullandığı aynı e-posta+şifre ekranından girerler, aynı
+yetkileri taşırlar, aynı veriyi görürler. Verdiğimiz şey ayrıcalıklı bir kapı
+değil, sıradan hesapların şifresidir.
 
 | Alan | Değer |
 | --- | --- |
 | Sign-In required | Yes |
-| User Name | `Sign in with Apple — use your own Apple ID` |
-| Password | *(boş bırak)* |
+| User Name | `oyuncu@oyna.app` |
+| Password | `Oyna!Saha2026` |
+
+**Notes alanına eklenecek diğer roller** (aynı şifre — hepsi sıradan hesap):
+
+| Rol | E-posta | Girişte açılan ekran |
+| --- | --- | --- |
+| Oyuncu | `oyuncu@oyna.app` | Ana sayfa |
+| Kaleci | `kaleci@oyna.app` | Kaleci paneli |
+| Hakem | `hakem@oyna.app` | Hakem paneli |
+| Tesis sahibi | `saha1@oyna.app` | İşletme paneli (2 saha) |
 
 **App Store Connect → App Review Information → Notes alanına yapıştırılacak
 metin (İngilizce, hazır):**
@@ -106,12 +124,30 @@ flag, no test phone number and no review-only server path anywhere in this
 product. You and any user receive identical code and identical data.
 
 SIGNING IN
-The app signs in with Sign in with Apple or Google only. Please use your
-own Apple ID — you get exactly the same account type, the same permissions
-and the same data any user gets. We are deliberately not providing a
-special reviewer account: a reviewer-only account is what caused the 5.6
-finding, and our claim is precisely that no such path exists. No phone
-number is requested at any point.
+The app offers three sign-in methods on one screen, available to everyone:
+email + password, Sign in with Apple, and Google. There is no phone number
+step and no test phone number anywhere in the product.
+
+The credentials in the Sign-In Information field belong to ORDINARY accounts.
+They were created through the same public sign-up screen every user sees,
+they carry the same permissions every user gets, and they read the same data
+every user reads. Nothing in this build behaves differently because of who is
+signed in. We are providing credentials rather than asking you to register
+because OYNA has four account types (player, goalkeeper, referee, venue
+owner) and a newly created account only ever shows the first one — you would
+not be able to review three quarters of the product.
+
+Additional accounts, same password (Oyna!Saha2026):
+  oyuncu@oyna.app  - player, opens the player home
+  kaleci@oyna.app  - goalkeeper, opens the goalkeeper panel
+  hakem@oyna.app   - referee, opens the referee panel
+  saha1@oyna.app   - venue owner, opens the business panel (2 venues)
+
+You may also register a new account with any email address; it will open as
+a player account, which is what every new user gets. Goalkeeper and referee
+roles are requested from Settings and granted by us after review; venue
+owner, manager and staff roles are assigned by us only and cannot be
+self-granted from the app.
 
 WHAT YOU WILL SEE — PLEASE READ
 OYNA is launching in a single city: Ordu, Türkiye, and it is launching

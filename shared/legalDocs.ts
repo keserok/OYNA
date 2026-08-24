@@ -13,10 +13,10 @@
 // incelemesi hâlâ önerilir, özellikle KVKK ve mesafeli satış maddeleri için.
 
 import React from 'react';
-import { FileText, Shield, ShieldCheck, Lock, RefreshCw, Cookie, Users, Scale } from 'lucide-react';
+import { FileText, Shield, ShieldCheck, Lock, RefreshCw, Cookie, Users, Scale, Trash2 } from 'lucide-react';
 import { LEGAL_UPDATED_TR } from './legalVersion';
 
-export type LegalDocKey = 'TERMS' | 'TOPLULUK' | 'PRIVACY' | 'KVKK' | 'RIZA' | 'VELI' | 'CEREZ' | 'SALES';
+export type LegalDocKey = 'TERMS' | 'TOPLULUK' | 'PRIVACY' | 'KVKK' | 'RIZA' | 'VELI' | 'CEREZ' | 'SALES' | 'HESAP_SILME';
 
 const UPDATED = LEGAL_UPDATED_TR;
 const COMPANY = 'Miraç Kerem Çürüksulu (OYNA)';
@@ -404,5 +404,41 @@ Belirli bir tarih/saat için yapılan rezervasyonlar, Mesafeli Sözleşmeler Yö
 
 6. UYUŞMAZLIK
 Şikayetlerinizde ${CONTACT_EMAIL} ile iletişime geçebilir, çözülemeyen uyuşmazlıklarda Tüketici Hakem Heyetleri'ne başvurabilirsiniz.`,
+  },
+  // ── HESAP SİLME ──────────────────────────────────────────────────────────
+  // 24 Ağu 2026'da eklendi. Metin `sozlesmeler/oyuncu/07-hesap-silme-bilgilendirmesi.md`
+  // ve `public/hesap-silme.html` olarak VARDI ama uygulama içi yasal ekranda YOKTU:
+  // kullanıcı hesabını nasıl sileceğini yalnız web sayfasından öğrenebiliyordu.
+  // Her iki mağaza da hesap silmenin uygulama İÇİNDEN yapılabilmesini ve
+  // anlatılmasını şart koşar (silme akışının kendisi Ayarlar → Hesabımı Sil'de
+  // zaten çalışıyor; eksik olan BİLGİLENDİRMEYDİ).
+  HESAP_SILME: {
+    title: 'Hesap ve Veri Silme',
+    icon: Trash2,
+    body: `Hesap ve Veri Silme Bilgilendirmesi
+Son güncelleme: ${UPDATED}
+
+OYNA hesabınızı ve hesabınıza bağlı kişisel verilerinizi aşağıdaki yollarla kalıcı olarak silebilirsiniz.
+
+UYGULAMA İÇİNDEN (ÖNERİLEN)
+1. Profil → Ayarlar ekranına gidin.
+2. "Hesabımı Sil" seçeneğine dokunun.
+3. Onay adımlarını tamamlayın.
+
+E-POSTA İLE
+Uygulamaya erişemiyorsanız, kayıtlı e-posta adresinizden ${CONTACT_EMAIL} adresine "Hesap Silme Talebi" konulu bir e-posta gönderin.
+
+NE SİLİNİR, NE KADAR SÜRER?
+- Silme talebiniz alındıktan sonra hesabınız ve profil verileriniz 7 GÜN İÇİNDE kalıcı olarak silinir.
+- Kimlik/iletişim bilgileri, konum verisi, profil fotoğrafı ve cihaz bildirim anahtarları silinir.
+- Yasal yükümlülük gerektiren kayıtlar (ör. ödeme/fatura kayıtları) mevzuatın öngördüğü süre boyunca, yalnızca bu amaçla saklanabilir.
+
+PARAM NE OLUR?
+- OYNA sizin adınıza bakiye (cüzdan) TUTMAZ. Ödemeler işlem başına kartınızdan alınır, iadeler de aynı karta yapılır.
+- Bu nedenle hesabınızın silinmesini engelleyen bir bakiye ya da bekleyen çekim talebi söz konusu değildir.
+- Kullanım Şartları madde 6.5'teki cüzdan ve para çekimi düzenlemesi YÜRÜRLÜKTE DEĞİLDİR.
+- Silme talebiniz sırasında henüz kartınıza yansımamış bir iadeniz varsa, iade süreci hesabınızın silinmesinden etkilenmez ve tamamlanır.
+
+Detaylar için Gizlilik Politikamıza bakabilirsiniz.`,
   },
 };

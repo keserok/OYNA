@@ -190,18 +190,39 @@ describe('yasal metin tek kaynak', () => {
   });
 
   it('belgeler gerçekten dolu (özet değil)', () => {
-    const anahtarlar = Object.keys(DOCS) as LegalDocKey[];
-    expect(anahtarlar.length).toBe(8);
+    // Sayı yerine KÜMEYİ yazıyoruz: "9 tane var" iddiası, bir belge silinip
+    // yerine başkası eklendiğinde sessizce yeşil kalırdı.
+    // HESAP_SILME 24 Ağu 2026'da eklendi — metin repoda ve web'de vardı ama
+    // uygulama içi yasal ekranda yoktu; iki mağaza da hesap silmenin uygulama
+    // İÇİNDEN anlatılmasını şart koşar.
+    const beklenen = ['TERMS', 'TOPLULUK', 'PRIVACY', 'KVKK', 'RIZA', 'VELI',
+                      'CEREZ', 'SALES', 'HESAP_SILME'].sort();
+    const anahtarlar = (Object.keys(DOCS) as LegalDocKey[]).sort();
+    expect(anahtarlar).toEqual(beklenen);
     for (const k of anahtarlar) {
       expect(DOCS[k].body.length, `${k} çok kısa`).toBeGreaterThan(500);
       expect(DOCS[k].body, `${k} tarihsiz`).toContain(LEGAL_UPDATED_TR);
     }
   });
 
-  it('onay kutusundan açılan iki belge de gerçek belge', () => {
-    for (const k of ['KVKK', 'TERMS'] as const) {
+  it('onay kartından açılan ÜÇ belge de gerçek belge', () => {
+    // PRIVACY 24 Ağu 2026'da eklendi: Apple gizlilik politikasının uygulama
+    // İÇİNDEN erişilebilir olmasını şart koşar ve kayıt ekranı o ana kadar
+    // yalnız KVKK+TERMS açabiliyordu (LegalModal tipi öyle daraltılmıştı).
+    for (const k of ['KVKK', 'TERMS', 'PRIVACY'] as const) {
       expect(DOCS[k]).toBeDefined();
       expect(DOCS[k].title.length).toBeGreaterThan(3);
+    }
+  });
+
+  it('yasal ekran TÜM belgeleri listeler — hiçbiri ulaşılamaz kalmaz', () => {
+    // Bir belge DOCS'a eklenip ORDER'a eklenmezse uygulamada GÖRÜNMEZ olur:
+    // HESAP_SILME'nin 24 Ağustos'a kadarki durumu tam olarak buydu.
+    const ekran = readFileSync(join(process.cwd(), 'views/LegalScreen.tsx'), 'utf8');
+    const sira = ekran.match(/const ORDER: LegalDocKey\[\] = \[([^\]]*)\]/);
+    expect(sira, 'LegalScreen ORDER listesi bulunamadı').not.toBeNull();
+    for (const k of Object.keys(DOCS)) {
+      expect(sira![1], `${k} yasal ekranda listelenmiyor`).toContain(`'${k}'`);
     }
   });
 });
