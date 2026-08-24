@@ -215,6 +215,40 @@ describe('yasal metin tek kaynak', () => {
     }
   });
 
+  it('ÜÇ ROLÜN DE yasal ekrana bir yolu var', () => {
+    // 24 Ağu 2026'ya kadar yalnız OYUNCU ayarlarında yasal bağlantı vardı.
+    // Kaleci/hakem (ServiceSettings) ve tesis sahibi (OwnerMenuView) sözleşmelere,
+    // gizlilik politikasına ve hesap silme bilgilendirmesine uygulama içinden
+    // HİÇ ulaşamıyordu. Apple, gizlilik politikasının uygulama İÇİNDEN
+    // erişilebilir olmasını HER kullanıcı için şart koşar; dahası o rollere
+    // ait sözleşmeler de tam o ekranda gösteriliyor.
+    const yollar: [string, RegExp][] = [
+      ['views/SettingsScreen.tsx', /onNavigate\('LEGAL'\)/],
+      ['views/ServiceSettings.tsx', /navigateTo\('LEGAL'\)/],
+      ['views/owner/menu/OwnerMenuView.tsx', /onNavigate\('LEGAL'\)/],
+    ];
+    for (const [dosya, desen] of yollar) {
+      expect(oku(dosya), `${dosya}: yasal ekrana yol yok`).toMatch(desen);
+    }
+  });
+
+  it('sağlayıcı ayarlarında yasal bağlantı KATLANABİLİR kartın içinde değil', () => {
+    // İlk denemede "Destek" kartının içine konmuştu; o kart varsayılan KAPALI
+    // olduğu için bağlantı ekranda hiç görünmüyordu. Erişilebilir olması
+    // gereken bir belgeyi açılıp kapanan bir bölmeye gömmek erişilebilir
+    // kılmak değildir — canlı sürüşte de tam olarak bulunamadı.
+    const s = oku('views/ServiceSettings.tsx');
+    const i = s.indexOf("navigateTo('LEGAL')");
+    expect(i, 'yasal bağlantı yok').toBeGreaterThan(-1);
+    // Bağlantıdan ÖNCEKİ en yakın SectionCard kapanmış olmalı: yani araya
+    // </SectionCard> girmiş olmalı ki bağlantı kartın DIŞINDA kalsın.
+    const oncesi = s.slice(0, i);
+    expect(
+      oncesi.lastIndexOf('</SectionCard>'),
+      'yasal bağlantı bir SectionCard içinde kalmış (kapalıyken görünmez)',
+    ).toBeGreaterThan(oncesi.lastIndexOf('<SectionCard'));
+  });
+
   it('rol sözleşmeleri "bilgi amaçlı örnek" damgası TAŞIYOR', () => {
     // Kaynak markdown'lar kendilerini TASLAK ilan ediyor ve "imza öncesinde
     // lisanslı bir avukat tarafından onaylanmalıdır" diyor; imza alanları da

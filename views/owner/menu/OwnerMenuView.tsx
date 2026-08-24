@@ -328,6 +328,21 @@ export const OwnerMenuView: React.FC<OwnerMenuViewProps> = ({
           >
             <HelpCircle size={18} /> Destek Merkezi
           </button>
+          {/* ─── YASAL — 24 Ağu 2026'da eklendi ────────────────────────────
+              Yukarıdaki "hesabı sil" notunun ikizi bir eksiklik: bu menüde
+              hiç yasal bağlantı YOKTU. Tesis sahibi, gizlilik politikasına
+              ve kullanım şartlarına uygulama içinden HİÇ ulaşamıyordu
+              (yalnız oyuncu ayarlarında vardı). Apple, gizlilik politikasının
+              uygulama İÇİNDEN erişilebilir olmasını her kullanıcı için şart
+              koşar. Ayrıca işletme sözleşmesi de o ekranda gösteriliyor —
+              yani tam bu role ait belge, bu role ulaşmıyordu. */}
+          <button
+            type="button"
+            onClick={() => onNavigate('LEGAL')}
+            className="w-full flex items-center justify-center gap-2 p-4 bg-white/5 border border-white/10 rounded-2xl text-gray-300 font-bold text-sm hover:bg-white/10 transition-colors"
+          >
+            <Shield size={18} /> Yasal &amp; Sözleşmeler
+          </button>
           {/* App Store 5.1.1(v): hesap açabilen kullanıcı hesabını uygulama
               İÇİNDEN silebilmeli. Oyuncu (SettingsScreen) ve kaleci/hakem
               (ServiceSettings) ekranlarında bu giriş vardı, saha sahibi
