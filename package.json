@@ -15,6 +15,7 @@
     "giris:dogrula": "node scripts/saglayici-girisi-dogrula.mjs",
     "magaza:denetim": "node scripts/magaza-denetim.mjs",
     "ios:onar": "bash scripts/ios-paket-onar.sh",
+    "ios:gonder": "bash scripts/ios-gonderim-onucus.sh",
     "surum:artir": "node scripts/surum-artir.mjs",
     "admin:verify": "node admin-panel/scripts/admin-panel-verify.mjs",
     "admin:deploy": "node admin-panel/scripts/admin-supabase-deploy.mjs",

@@ -46,6 +46,7 @@ scripts/*
 # calistirdigi tek komut. Depoda olmazsa `npm run ios:onar` hicbir yerde
 # bulunamaz.
 !scripts/ios-paket-onar.sh
+!scripts/ios-gonderim-onucus.sh
 !admin-panel/scripts/admin-panel-verify.mjs
 !admin-panel/scripts/admin-supabase-deploy.mjs
 !admin-panel/scripts/start-admin-local.mjs
