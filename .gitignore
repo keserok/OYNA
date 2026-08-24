@@ -42,6 +42,16 @@ scripts/*
 # uçtan uca sürer. Kurucunun iki kez bildirdiği "hesabımı seçince uygulama
 # yeniden başlıyor" hatasının kilidi bu betikte; depoda olmazsa kilit yok.
 !scripts/saglayici-girisi-dogrula.mjs
+# `kayit:dogrula` — e-posta+sifre ile KAYIT yolunu ucdan uca surer (kayit →
+# 5 adimli kurulum sihirbazi → temiz tarayicida tekrar giris → yanlis sifre).
+# Apple'in "Sign-In Information" talebinin karsiligi bu yol; kirilirsa magaza
+# incelemesi durur. Sihirbazin uzun-tire/slider gibi tuzaklari da bu betikte
+# yazili — depoda olmazsa her seferinde yeniden kesfedilir.
+!scripts/kayit-akisi-dogrula.mjs
+# `build:legal` bu iki betigi ZINCIR halinde cagirir. build-legal-roles.mjs
+# depoda yoksa temiz bir kopyada `npm run build:legal` ENOENT ile durur ve
+# rol sozlesmeleri hic uretilemez.
+!scripts/build-legal-roles.mjs
 # iOS paket onarimi (Podfile.lock yeniden uretimi) — kurucunun Mac'te
 # calistirdigi tek komut. Depoda olmazsa `npm run ios:onar` hicbir yerde
 # bulunamaz.

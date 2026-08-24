@@ -58,6 +58,37 @@ description: OYNA'yı sandbox'ta canlı Supabase'e karşı Playwright ile sür �
   Ana Sayfa · Oyna · Maçlarım · Saha · Profil.
 - Kalıcı oturum: tarayıcı restartında korunur (persistentAuthStorage).
   Temiz profil kayıt-öncelikli AUTH'a düşer → koşuya giriş prelüdü koy.
+- ⚠️ **TUZAK — auth ekranından ÖNCE tanıtım karuseli var.** Temiz profilde
+  `#auth-tab-kayit` doğrudan aranırsa BULUNAMAZ; ekranda `#intro-continue-button`
+  durur. Karusel bitene dek o düğmeye bas, sonra sekmeleri bekle.
+- ⚠️ **TUZAK — yasal onaysız gönderim hata vermez, PENCERE açar.**
+  "HESAP OLUŞTUR"a onaysız basılırsa
+  `div[role="dialog"][aria-label="Yasal onay"]` gelir; kayıt o pencerenin
+  "ONAYLIYORUM VE DEVAM ET" düğmesiyle tamamlanır. Sayfada gezinen bir
+  `/Devam/i` seçicisi pencerenin ARKASINDAKİ düğmeyi bulup takılır.
+
+## Kayıt sonrası kurulum sihirbazı
+Hazır betik: **`npm run kayit:dogrula`** (`scripts/kayit-akisi-dogrula.mjs`) —
+kayıt → 5 adımlı sihirbaz → temiz tarayıcıda tekrar giriş → yanlış şifre.
+- Kayıttan sonra ANA SAYFA DEĞİL, sihirbaz gelir:
+  KONUM → YAŞ → İSİM → STİL → SEVİYE.
+- ⚠️ **"Atla" her adımı geçmez.** `handleSkip` üç zorunlu kapı tutar: ad-soyad,
+  **yaş** ve **seviye**. Eksikse kullanıcıyı o adıma geri götürür (ekranda
+  "Devam etmek için seviyeni seç." belirir). Bu kilitlenme DEĞİL, karardır —
+  mağazaların yaş derecelendirmesi beyanı buna dayanıyor. Ayrıca "Atla" önce
+  `Kurulumu atla?` penceresini açar; sihirbazı bitiren, O PENCEREDEKİ ikinci
+  "Atla" düğmesidir (`getByRole('button',{name:'Atla',exact:true}).last()`).
+- ⚠️ **Yaş çarkı `<button>` değil tıklanabilir `<div>`** ve etiketlerde kısa
+  çizgi değil **uzun tire** var: `24–30`. `'24-30'` aranırsa hiçbir şey bulunmaz.
+- ⚠️ **Seviye şeridi `role="slider"`** ve `onPointerDown` ile çalışır; öğeye
+  `click()` yetmez, koordinata gerçek fare tıklaması gerekir.
+- ⚠️ **Hata mesajını sayfa metninde ARAMA — sahte yeşil verir.** Giriş ekranının
+  kendi alt yazısı "E-postan ve şifrenle gir…" zaten "şifre" içeriyor. Gerçek
+  hata `[role=alert]` / `.au-alan-hata` içindedir: "E-posta ya da şifre hatalı."
+- Kayıt sunucu ayarına bağımlıdır: **e-posta doğrulaması açıkken** (Dashboard →
+  Authentication → Sign In / Providers → Email → "Confirm email") kayıt olan
+  kimse giriş YAPAMAZ ve ücretsiz plan saatte 2 posta gönderir. 24 Ağu 2026'da
+  kurucu kararıyla KAPATILDI; kayıt anında oturum açıyor.
 
 ## Sürüş notları
 - **Ödemede sandbox kanıtı:** create-payment yanıtındaki `threeDSHtml`'i

@@ -13,6 +13,7 @@
     "test:visual:update": "playwright test --config playwright.visual.config.ts --update-snapshots",
     "test:admin": "playwright test tests/admin.spec.ts",
     "giris:dogrula": "node scripts/saglayici-girisi-dogrula.mjs",
+    "kayit:dogrula": "node scripts/kayit-akisi-dogrula.mjs",
     "magaza:denetim": "node scripts/magaza-denetim.mjs",
     "ios:onar": "bash scripts/ios-paket-onar.sh",
     "ios:gonder": "bash scripts/ios-gonderim-onucus.sh",
