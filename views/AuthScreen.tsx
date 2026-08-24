@@ -640,12 +640,29 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
                 busy={busy}
                 renk={color}
                 light={light}
+                /* ── BENİ HATIRLA + YASAL ONAY — ana düğmenin HEMEN ÜSTÜNDE ──
+                   Ölçtük: 390×844'lük telefonda bu kartlar düğmenin ALTINDAYKEN
+                   görüş alanına hiç girmiyordu. Kurucu isteği "büyük ve görünür
+                   olsun" idi; ekranın altında kalan kart, ne kadar büyük olursa
+                   olsun görünmez. Rıza da gerektirdiği EYLEMİN yanında durmalı. */
+                formAlti={(
+                  <>
+                    <BeniHatirlaAnahtari acik={hatirla} onChange={setHatirla} disabled={busy} />
+                    {/* KAYITTA onay şart (hesap açılıyor); GİRİŞTE istenmez —
+                        kullanıcı o rızayı kaydolurken verdi. Belgeler her iki
+                        kipte de ekranın altındaki satırdan açılabilir. */}
+                    {kip === 'kayit' && (
+                      <YasalOnayKarti
+                        onayli={agreed}
+                        onChange={(v) => { setAgreed(v); setError(null); }}
+                        onBelgeAc={setOpenModal}
+                        renk={color}
+                        disabled={busy}
+                      />
+                    )}
+                  </>
+                )}
               />
-
-              {/* ─── BENİ HATIRLA — büyük anahtar (kurucu isteği) ─────────── */}
-              <div style={{ marginTop: 14 }}>
-                <BeniHatirlaAnahtari acik={hatirla} onChange={setHatirla} disabled={busy} />
-              </div>
 
               {error && (
                 <p role="alert" aria-live="assertive" style={{ margin: '14px 2px 0', fontSize: 12, fontWeight: 700, lineHeight: 1.5, color: '#FF4D4D' }}>{error}</p>
@@ -689,25 +706,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
                   </button>
                 </div>
 
-                {/* ─── YASAL ONAY — büyük kart (kurucu isteği) ──────────────
-                    KAYITTA onay kutusu olarak durur ve şarttır: hesap
-                    açılıyor. GİRİŞTE kutu gösterilmez — kullanıcı o rızayı
-                    kaydolurken verdi; her girişte yeniden sormak ne hukuken
-                    gerekli ne de kullanıcıya saygılıdır. Ama belgeler HER İKİ
-                    kipte de büyük ve erişilebilir kalır (aşağıdaki satır). */}
-                {kip === 'kayit' && (
-                  <div style={{ marginTop: 22 }}>
-                    <YasalOnayKarti
-                      onayli={agreed}
-                      onChange={(v) => { setAgreed(v); setError(null); }}
-                      onBelgeAc={setOpenModal}
-                      renk={color}
-                      disabled={busy}
-                    />
-                  </div>
-                )}
-
-                <p style={{ margin: '14px 2px 0', fontSize: 11.5, lineHeight: 1.6, color: '#59636e' }}>
+                <p style={{ margin: '18px 2px 0', fontSize: 11.5, lineHeight: 1.6, color: '#59636e' }}>
                   {hatirla
                     ? 'Çıkış yapana kadar oturumun bu cihazda açık kalır.'
                     : 'Uygulamayı kapattığında oturumun kapanır.'}

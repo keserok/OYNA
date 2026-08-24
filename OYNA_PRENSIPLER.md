@@ -1,6 +1,6 @@
 # 🏛️ OYNA — MASTER PRENSİPLER
 
-**Yürürlük:** 4 Ağustos 2026 · **Son güncelleme:** 16 Ağustos 2026 (kurucu lansman kararları — §2.10, §2.11, §11) · **Durum:** BAĞLAYICI
+**Yürürlük:** 4 Ağustos 2026 · **Son güncelleme:** 24 Ağustos 2026 (kimlik kararları — §4.6…§4.10) · **Durum:** BAĞLAYICI
 **Kaynak:** Danışma kurulu süreci (7 rol) sonunda alınan K-1…K-17 kararları + 16 Ağustos 2026 kurucu kararları
 
 > Bu dosya, K-6.5 ve K-11.6 gereği **danışma kurulu süreci tamamlandığında** yazıldı ve
@@ -83,11 +83,13 @@ diğer hepsinin üstündedir:
 | 4.3 | **Taktik Stüdyo kalır ama öne çıkarılmaz.** |
 | 4.4 | **Saha değerlendirmesi önce yalnız puandır**; yazılı yorum ikinci aşamadır. |
 | 4.5 | **Bölge de konum da yoksa ülke geneli gösterilmez:** önce konum izni, verilmezse ilçe seçimi. |
-| 4.6 | **Telefon ANA giriş yöntemidir** *(kurucu kararı, 17 Ağu 2026)*. Numara + SMS kodu. Google ve Apple ikincil yollardır; onlarla girenden de numara istenir (tesis ve kaptan oyuncuya numaradan ulaşır). 17 Ağustos ÖNCESİ e-posta hesapları MUAFTIR — çalışan bir hesap kilitlenmez. |
-| 4.7 | **Şifre kavramı YOKTUR** *(kurucu kararı, 17 Ağu 2026)*. E-posta+şifre girişi, kayıt ve "şifremi unuttum" akışları kaldırıldı. Tek kimlik yolu, iki kat saldırı yüzeyinden ve iki kat bakımdan iyidir. |
-| 4.8 | **Oturum çıkış yapılana kadar açıktır** *(kurucu kararı, 17 Ağu 2026)*. Süre sınırı yoktur; belirteç hem tarayıcı deposunda hem telefonun kendi deposunda tutulur ki işletim sistemi depolamayı temizlese de kullanıcı giriş ekranı görmesin. |
-| 4.9 | **Misafir gezinme YOKTUR** *(kurucu kararı, 17 Ağu 2026)*. "Önce göz at" yolu kapatıldı; uygulamaya girmek için hesap gerekir. Kayıt zaten tek ekranda ve numarayla bittiği için ayrı bir vitrin moduna gerek kalmadı. |
-| 4.10 | **Yurt dışı numaraya SMS gönderilmez** *(kurucu kararı, 17 Ağu 2026)*. Türkiye'ye SMS (Netgsm), yurt dışına WhatsApp — WhatsApp Business hesabı açılana dek o kanal KAPALIDIR ve ekran dürüstçe "şu an desteklenmiyor, Google/Apple ile girebilirsin" der. Sessizce "gönderildi" denmez. |
+| 4.6 | ~~Telefon ANA giriş yöntemidir~~ → **DEĞİŞTİ (23 Ağu 2026): telefon/SMS yolu SİLİNDİ.** Altyapısı hiç kurulmadı (SMS sağlayıcısı yok, telefonla girişi tamamlamış tek kullanıcı yok); ekranda duran ölü bir düğmeydi ve Apple'ın 5.6 reddinin kökü buydu. Numara BAĞLAMA ekranı da kaldırıldı. Geri gelmesi için önce sağlayıcının gerçekten kod göndermesi gerekir; ekran ondan SONRA yazılır. |
+| 4.7 | ~~Şifre kavramı YOKTUR~~ → **DEĞİŞTİ (kurucu kararı, 24 Ağu 2026): E-POSTA + ŞİFRE ANA GİRİŞ YOLUDUR.** Google ve Apple yanında durur (Apple üstte, Kural 4.8). **Neden döndü:** Apple App Review "Sign-In Information → User name / Password" istiyor; sağlayıcı girişi bunu karşılamaz — incelemeci kendi kimliğiyle girdiğinde hazırlanmış bir hesaba değil boş bir hesaba düşer ve kaleci/hakem/tesis panellerini hiç göremez. 17 Ağustos'un "tek yol" gerekçesi de düştü: o karar telefonun ana yol olduğu bir dünyada alınmıştı, telefon 23 Ağustos'ta silindi. **Bu bir "incelemeci kapısı" DEĞİLDİR** (5.6 dersi): yol herkese açık ve herkesle aynıdır; incelemeciye verilen şey sıradan bir hesabın bilgisidir. |
+| 4.7.1 | **Kayıt ekranında ROL SEÇİMİ YOKTUR** *(kurucu kararı, 24 Ağu 2026)*. Kaydolan HERKES oyuncudur. Kaleci ve hakem, Ayarlar → Sahada Rolün üzerinden **başvurur**; tesis sahibi, müdürü ve personeli **yalnız yönetici panelinden atanır** ve oyuncu panelinden bunun için başvuru yapılamaz. Gerekçe: rol, para ve slot yetkisi taşır; giriş ekranından seçtirmek yabancı birinin kendini tesis sahibi ilan etmesine kapı açardı (sunucudaki `protect_profile_columns` korumasının etrafından dolaşmak). Tesise personel katılımı bunun istisnası değildir: kod tesis sahibi tarafından üretilir, oyuncu yalnız **kabul eder**. |
+| 4.7.2 | **Atanmış rol, girişte KENDİ arayüzünü açar** *(kurucu kararı, 24 Ağu 2026)*. Kaleci, hakem, tesis sahibi, müdür ve personel giriş yaptığında oyuncu paneline değil kendi paneline düşer (`shared/roles · pickLandingRole`). Onayı bekleyen veya reddedilmiş sağlayıcı ise panele değil bekleme/red ekranına düşer. |
+| 4.8 | **Oturum, kullanıcının seçimine göre açık kalır** *(17 Ağu 2026; 24 Ağu 2026'da güncellendi)*. Varsayılan: çıkış yapılana kadar açık — süre sınırı yoktur, belirteç hem tarayıcı deposunda hem telefonun kendi deposunda tutulur ki işletim sistemi depolamayı temizlese de kullanıcı giriş ekranı görmesin. **"Beni Hatırla" anahtarı 24 Ağustos'ta geri geldi** ve giriş ekranında BÜYÜK durur: kapatılırsa oturum yalnız sekme/uygulama ömrü kadar yaşar. Şifresini yazan kullanıcıya bu soru gerçekten sorulmalıdır — ortak cihazda cevabı hayırdır. Şifre HİÇBİR yerde saklanmaz; hatırlanan tek şey e-posta adresidir. |
+| 4.9 | **Misafir gezinme YOKTUR** *(kurucu kararı, 17 Ağu 2026)*. "Önce göz at" yolu kapatıldı; uygulamaya girmek için hesap gerekir. Kayıt zaten tek ekranda bittiği için ayrı bir vitrin moduna gerek kalmadı. |
+| 4.10 | ~~Yurt dışı numaraya SMS gönderilmez~~ → **KONUSUZ KALDI (23 Ağu 2026)**: SMS yolu tümüyle silindi. Maddenin yaşayan kısmı şudur ve KURAL olarak durur: **çalışmayan bir kanal için sessizce "gönderildi" denmez.** Bugün bu kural şifre sıfırlama e-postasına uygulanır — ekran "gönderildi" değil, "kayıtlıysa gönderildi" der ve e-posta gelmezse çalışan bir çıkış yolu (Google/Apple) gösterir. |
 
 ---
 

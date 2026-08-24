@@ -23,21 +23,35 @@ description: OYNA'yı sandbox'ta canlı Supabase'e karşı Playwright ile sür �
    `args: ['--ssl-version-max=tls1.2']`.
 
 ## Giriş
-- **E-posta + şifre yolu KALDIRILDI** (kurucu kararı 17 Ağu 2026, prensip
-  4.6/4.7). Giriş ekranı tek telefon alanıdır; şifre alanı yoktur.
-- **Telefon + OTP (asıl yol):** `+90 500 000 00 00` · kod `500000`
-  (roller: kaleci + hakem + oyuncu). ÖN KOŞUL: Supabase panelinde
-  Authentication → Sign In / Providers → Phone AÇIK ve Test OTP satırı
-  `905000000000 = 500000` girilmiş olmalı. 19 Ağu 2026 gecesi bu panel ayarı
-  KAPALIYDI (`phone_provider_disabled` dönüyor) — kapalıysa ekran
-  "Doğrulama kodu gönderilemedi" der; bu reçete hatası değil panel eksiğidir.
-- **Demo kısayolu (localhost/dev):** telefon alanına demo hesabın kısa adını
-  yaz (`oyuncu01`, `kaleci1`, `hakem1`, `saha1` …) → KVKK kutusunu işaretle →
-  KOD GÖNDER. Kod istemez; `@oyna.app` + `password123` ile arkada
-  `signInWithPassword` yapar. Yalnız tarayıcıda ve `VITE_DEMO_ACCOUNTS=true`
-  iken çalışır; mağaza paketinde kapalıdır.
-- KVKK kutusu özel buton: koordinatla tıkla (etiketin ~18px solu) ya da
-  `p:has-text("okudum")` kardeş butonu.
+- **E-POSTA + ŞİFRE ASIL YOLDUR** (kurucu kararı 24 Ağu 2026, prensip §4.7).
+  Ekran iki sekmelidir: `#auth-tab-giris` · `#auth-tab-kayit`.
+  Alanlar: `#auth-ad` (yalnız kayıt) · `#auth-eposta` · `#auth-sifre`.
+  Anahtarlar: `#remember-me-toggle` (Beni Hatırla) · `#agreement-checkbox`
+  (yasal onay; yalnız KAYIT kipinde çizilir).
+- **TELEFON/SMS YOLU SİLİNDİ** (23 Ağu 2026) ve demo hesap seçici de yok.
+  Ekranda telefon alanı ararsan bulamazsın — bu hata değil, karardır.
+- **App Review hesapları (canlı, gerçek hesaplar — ayrıcalıklı kapı DEĞİL):**
+  şifre hepsinde `Oyna!Saha2026`
+  | rol | e-posta | girişte açılan ekran |
+  |---|---|---|
+  | oyuncu | `oyuncu@oyna.app` | ANA SAYFA |
+  | kaleci | `kaleci@oyna.app` | KALECİ ANA SAYFA · Profil onaylı |
+  | hakem | `hakem@oyna.app` | HAKEM ANA SAYFA · Profil onaylı |
+  | tesis | `saha1@oyna.app` | OYNA İŞLETME · Ruzgar Arena |
+- ⚠️ **TUZAK — elle açılan auth.users hesabı sessizce BOZUK olur.**
+  `confirmation_token`, `recovery_token`, `email_change`,
+  `email_change_token_new` sütunları NULL kalırsa GoTrue 500
+  `"Database error querying schema"` döndürür ve giriş HİÇ çalışmaz —
+  SQL'de hesap kusursuz görünür. Bu sütunlar `''` (boş dize) olmalıdır.
+  Supabase'in kendi admin API'si bunu yapar; elle INSERT ederken atlanır.
+- ⚠️ **TUZAK — kaleci/hakem panelinde "Profil onayı bekleniyor".**
+  Üç ayrı kayıt gerekir: `profiles.verification_status='approved'`,
+  `goalkeepers`/`referees` tablosunda satır (`verification_status='approved'`)
+  ve `provider_identities` satırı (`status='VERIFIED'`). Biri eksikse panel
+  açılır ama "onay bekleniyor" şeridi kalır.
+- Yasal onay kartının ORTASI bağlı metindir (KVKK/Gizlilik/Şartlar bağlantıları).
+  Kutuyu değiştirmek için `#agreement-checkbox .au-kutu` koordinatına tıkla;
+  kartın ortasına tıklarsan belge modalı açılır.
 - Girişin oturmasını ana sayfa metniyle bekle:
   `/MERHABA|ANA SAYFA|SAHA KİRALA/` (alt nav ana sayfada YOK; 'Sosyal'
   beklemek artık yanlış). Alt nav ancak Keşfet/Maçlarım gibi ekranlarda var:

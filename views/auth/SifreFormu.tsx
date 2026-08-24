@@ -38,13 +38,24 @@ interface Props {
   busy: boolean;
   renk: string;
   light: string;
+  /**
+   * Alanlar ile ana düğme ARASINA çizilir: "Beni hatırla" anahtarı ve yasal
+   * onay kartı buraya geçer.
+   *
+   * NEDEN BURASI: ölçtük — 390×844'lük bir telefonda bu kartlar düğmenin
+   * ALTINDA dururken görüş alanına hiç girmiyordu. Kurucu isteği "büyük ve
+   * görünür olsun" idi; ekranın altında kalan bir kart, ne kadar büyük olursa
+   * olsun görünmez. Ayrıca rıza, gerektirdiği EYLEMİN hemen yanında durmalı:
+   * kullanıcı neye onay verdiğini düğmeye basmadan bir bakışta görür.
+   */
+  formAlti?: React.ReactNode;
 }
 
 const GUC_RENK: Record<string, string> = { zayif: '#FF6B6B', orta: '#FACC15', guclu: '#39FF14' };
 const GUC_METIN: Record<string, string> = { zayif: 'Zayıf', orta: 'Orta', guclu: 'Güçlü' };
 
 const SifreFormu: React.FC<Props> = ({
-  kip, degerler, onChange, onSubmit, onSifremiUnuttum, busy, renk, light,
+  kip, degerler, onChange, onSubmit, onSifremiUnuttum, busy, renk, light, formAlti,
 }) => {
   const [sifreGorunur, setSifreGorunur] = useState(false);
   const [dokunulan, setDokunulan] = useState<Record<string, boolean>>({});
@@ -207,15 +218,18 @@ const SifreFormu: React.FC<Props> = ({
         </div>
       )}
 
+      {/* "Beni hatırla" + yasal onay — ana düğmenin HEMEN ÜSTÜNDE (bkz. formAlti). */}
+      {formAlti && <div style={{ marginTop: 18, display: 'flex', flexDirection: 'column', gap: 10 }}>{formAlti}</div>}
+
       {/* Düğme onay kutusuna BAKMAZ ve pasifleşmez: eksik onayla dokunulduğunda
-          işlem iptal edilmez, onay sayfası açılır (bkz. AuthScreen · girisDene).
+          işlem iptal edilmez, onay sayfası açılır (bkz. AuthScreen · formGonderildi).
           Sessizce ölü bir düğme, kullanıcıya "uygulama bozuk" hissettiriyordu. */}
       <button
         type="submit"
         className="au-cta"
         disabled={busy}
         style={{
-          marginTop: kayit ? 20 : 18,
+          marginTop: 18,
           background: busy
             ? 'rgba(255,255,255,.08)'
             : `linear-gradient(120deg, ${renk} 0%, ${light} 100%)`,
