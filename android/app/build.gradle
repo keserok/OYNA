@@ -11,7 +11,7 @@ if (keystorePropertiesFile.exists()) {
 // Surum numaralari: CI'dan gecilebilir, gecilmezse asagidaki varsayilanlar kullanilir.
 //   ORG_GRADLE_PROJECT_oynaVersionCode / -PoynaVersionCode  -> Play'in her yuklemede
 //   ARTAN olmasini istedigi tam sayi. GitHub Actions bunu otomatik uretir.
-def oynaVersionCode = (project.findProperty('oynaVersionCode') ?: '2').toString().toInteger()
+def oynaVersionCode = (project.findProperty('oynaVersionCode') ?: '3').toString().toInteger()
 def oynaVersionName = (project.findProperty('oynaVersionName') ?: '1.0.0').toString()
 
 android {
