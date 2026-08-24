@@ -18,6 +18,8 @@ const SAFE_FALLBACK: PaymentModeResolution = {
   locked: false,
   provider: 'SIMULATION',
   provider_live: false,
+  // Ağ hatasında online ödeme zaten açılmıyor; uyarı da gösterilmez.
+  simulation: false,
   cash_allowed: true,
   online_allowed: false,
   reason: 'PROVIDER_NOT_LIVE',

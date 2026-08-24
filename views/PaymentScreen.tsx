@@ -1000,6 +1000,40 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
           {ctx.amountHint && <p className="text-[0.6875rem] text-ink-4 mt-2">{ctx.amountHint}</p>}
         </div>
 
+        {/* ═══ TEST ÖDEMESİ UYARISI ═══════════════════════════════════════
+            Kurucu kararı (24 Ağu 2026): iyzico sözleşmesi tamamlanana kadar
+            demo ödemeyle ilerleniyor. Bu ekranda para GERÇEKTEN hareket
+            etmiyor — kullanıcı bunu bilmeden "ödedim" sanarsa sahaya gidip
+            tesisle karşı karşıya kalır.
+
+            KONUM: tutarın hemen ALTINDA, kart seçiminden ÖNCE. İlk denemede
+            ekranın en altına konmuştu ve yapışkan alt çubuk metnin üstüne
+            binip yarısını örtüyordu — görülmeyen uyarı, uyarı değildir.
+            Buradan kullanıcı, kartını seçmeden önce okur.
+
+            Uyarı SUNUCUDAN sürülür (`payMode.simulation`), koda gömülü
+            değildir: `payment_provider = IYZICO` yapıldığı an kendiliğinden
+            kaybolur, yeni paket göndermek gerekmez. Aynı desen örnek içerik
+            uyarısında da kullanıldı. */}
+        {payMode?.simulation === true && onlineAllowed && (
+          <div
+            role="alert"
+            className="mx-5 bg-red-500/12 border border-red-500/40 rounded-2xl p-4 flex gap-3"
+          >
+            <div className="w-9 h-9 rounded-xl bg-red-500/15 flex items-center justify-center text-red-400 shrink-0">
+              <AlertTriangle size={16} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[0.8125rem] font-extrabold text-red-400">Bu bir TEST ödemesidir</p>
+              <p className="text-[0.75rem] text-gray-300 mt-1 leading-relaxed">
+                Kartından para çekilmez ve tesise ödeme geçmez. Ödeme altyapımız
+                henüz canlıya alınmadı; sahaya gitmeden önce tesisle ücreti
+                ayrıca konuşman gerekir.
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Ödeme yöntemi karuseli — tek yöntem KART (cüzdan kapalı).
             Sahada-ödeme ve online-kapalı durumlarında hiç çizilmez. */}
         {needsCard && onlineAllowed && (

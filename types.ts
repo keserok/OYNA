@@ -839,6 +839,16 @@ export interface PaymentModeResolution {
   locked: boolean;
   provider: string;
   provider_live: boolean;
+  /**
+   * Sağlayıcı SİMÜLASYON mu? (24 Ağu 2026 · kurucu kararı: iyzico bağlanana
+   * kadar demo ödemeyle ilerleniyor.)
+   *
+   * Ekranlar bunu okuyup kullanıcıya "bu bir test ödemesidir, kartından para
+   * çekilmez" uyarısını gösterir. Uyarı SUNUCUDAN sürüldüğü için gerçek
+   * ödemeye geçildiği anda kendiliğinden kaybolur — yeni paket gerekmez.
+   * (Aynı desen `ornek_icerik_uyarisi` için de kullanıldı.)
+   */
+  simulation: boolean;
   cash_allowed: boolean;
   online_allowed: boolean;
   reason: PaymentModeReason;

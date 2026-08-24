@@ -135,3 +135,52 @@ describe('Komisyon modeli · kapora markupsız kalır', () => {
     expect(g).toContain('ÜZERİNE HİÇBİR ŞEY EKLENMEZ');
   });
 });
+
+describe('Demo ödeme · kullanıcı yanılmasın', () => {
+  /**
+   * Kurucu kararı (24 Ağu 2026): iyzico sözleşmesi tamamlanana kadar demo
+   * ödemeyle ilerlenir. Bu, sistemin bilinçli bir güvenlik kilidini gevşetir —
+   * `resolve_payment_mode` normalde sağlayıcı canlı değilken online ödemeyi
+   * HİÇ teklif etmez, çünkü simülasyonda kullanıcı "ödedim" sanır ama para
+   * hareket etmez.
+   *
+   * Kilit gevşetildiğine göre yerine DÜRÜSTLÜK konmalı: ekran kullanıcıya
+   * bunun test ödemesi olduğunu söylemek zorunda.
+   */
+  it('ödeme ekranı test uyarısını SUNUCUDAN sürüyor, koda gömmüyor', () => {
+    // Koda gömülseydi iyzico canlıya alındığı gün uyarı ekranda KALIRDI ve
+    // gerçek ödeme yapan kullanıcıya "para çekilmez" denirdi. Sunucudan
+    // sürüldüğü için `payment_provider = IYZICO` olduğu an kendiliğinden
+    // kaybolur — yeni paket gerekmez.
+    const ekran = oku('views/PaymentScreen.tsx');
+    expect(ekran).toContain('payMode?.simulation === true');
+    expect(ekran).toContain('Bu bir TEST ödemesidir');
+    // Uyarı, ödeme modu bilinmeden ya da online kapalıyken çizilmemeli.
+    expect(ekran).toContain('payMode?.simulation === true && onlineAllowed');
+  });
+
+  it('uyarı KART SEÇİMİNDEN ÖNCE çiziliyor', () => {
+    // İlk denemede ekranın en altına konmuştu ve yapışkan alt çubuk metnin
+    // üstüne binip yarısını örtüyordu. Görülmeyen uyarı, uyarı değildir.
+    const ekran = oku('views/PaymentScreen.tsx');
+    const uyari = ekran.indexOf('Bu bir TEST ödemesidir');
+    const kartSecici = ekran.indexOf('Ödeme Yöntemi');
+    expect(uyari).toBeGreaterThan(-1);
+    expect(kartSecici).toBeGreaterThan(-1);
+    expect(uyari, 'uyarı kart seçicisinden SONRA çiziliyor').toBeLessThan(kartSecici);
+  });
+
+  it('simulation alanı tipte tanımlı ve güvenli varsayılanı false', () => {
+    // Ağ hatasında online ödeme zaten açılmaz; uyarı da gösterilmemeli.
+    expect(oku('types.ts')).toContain('simulation: boolean;');
+    expect(oku('services/paymentModeService.ts')).toContain('simulation: false,');
+  });
+
+  it('göç, simulation bayrağının TRUE döndüğünü DOĞRULUYOR', () => {
+    // Anahtarlar açılıp bayrak false dönseydi kullanıcı test ödemesi
+    // yaptığını hiç öğrenmezdi — kararın en tehlikeli hâli.
+    const g = oku('supabase/migrations/20260917000002_demo_odeme_acildi.sql');
+    expect(g).toContain("(v->>'simulation')::boolean IS NOT TRUE");
+    expect(g).toContain('ekran test uyarisini cizemez');
+  });
+});
