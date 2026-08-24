@@ -20,9 +20,12 @@ const oku = (p: string) => readFileSync(join(process.cwd(), p), 'utf8');
 const anlasma = (o: Partial<PitchPricePreview>): PitchPricePreview => ({ ...PITCH_PRICE_FALLBACK, ...o });
 
 describe('Kişi başı tutar — sunucu formülüyle birebir', () => {
-  it('global varsayılan (%5): 2000₺ / 5v5 → 210₺ (bugünkü fiyat korunur)', () => {
-    expect(oyuncuToplami(2000, anlasma({}))).toBe(2100);
-    expect(kisiBasiTutar(2000, 10, anlasma({}))).toBe(210);
+  it('global varsayılan (%10): 2000₺ / 5v5 → 220₺', () => {
+    // 24 Ağu 2026 · kurucu kararı: oyuncunun kişi başı ücretine %10 eklenir
+    // (300 → 330). Varsayılan oran 5'ten 10'a çıktı; formül değişmedi.
+    // Oranın kendisi tests/unit/komisyonModeli.test.ts'te kilitli.
+    expect(oyuncuToplami(2000, anlasma({}))).toBe(2200);
+    expect(kisiBasiTutar(2000, 10, anlasma({}))).toBe(220);
   });
 
   it('sahaya özel %20: 2000₺ / 5v5 → 240₺', () => {
@@ -36,8 +39,10 @@ describe('Kişi başı tutar — sunucu formülüyle birebir', () => {
   });
 
   it('kuruş artığı YUKARI yuvarlanır — kimse eksik ödemez (sunucudaki CEIL)', () => {
-    // 1050 + %5 = 1102.5 → 14 kişi → 78.75 → 79.
-    expect(kisiBasiTutar(1050, 14, anlasma({}))).toBe(79);
+    // 1050 + %10 = 1155 → 14 kişi → 82.5 → 83. (Oran 5'ken 78.75 → 79 idi;
+    // testin amacı oran değil YUVARLAMA yönü, o yüzden kesirli kalan bir
+    // bölme seçildi.)
+    expect(kisiBasiTutar(1050, 14, anlasma({}))).toBe(83);
   });
 
   it('markup sıfırsa oyuncu tam olarak sahanın fiyatını öder', () => {
