@@ -127,21 +127,17 @@ export const isMinorAgeRange = (ageRange: AgeRange | ''): boolean => ageRange ==
  * konum izni SADECE orada istendiği için "yakınındaki maç" vaadi de hiç
  * çalışmıyordu.
  *
- * Ama "Şimdilik Atla" diyen kullanıcı her açılışta aynı ekrana çarpmamalı.
- * Sunucuda karşılığı yok: `apply_onboarding(p_completed=false)` yalnızca
- * `has_completed_onboarding`i false BIRAKIR, "atlandı" diye bir durum yazmaz.
- * Bu yüzden bayrak cihazda tutulur; kurtarma yolu Profil'deki
- * "Profil tamamlanmadı → Tamamla" şeridi olarak kalır.
+ * ─── "ATLANDI" BAYRAĞI KALDIRILDI (24 Ağustos 2026) ─────────────────────────
+ * Burada `markOnboardingSkipped` / `wasOnboardingSkipped` çifti vardı: "Atla"
+ * diyen kullanıcı her açılışta aynı ekrana çarpmasın diye cihazda bir bayrak
+ * tutuluyordu. Kurucu kararıyla atlama yolu kaldırıldı, dolayısıyla bayrağı
+ * YAZAN da onu OKUYAN da yok.
+ *
+ * Silici (`clearOnboardingSkipped`) bilerek DURUYOR: bayrak eski sürümü
+ * kullanmış cihazların localStorage'ında hâlâ yazılı olabilir. Kurulum
+ * tamamlandığında siliniyor ki geride ölü bir kayıt kalmasın.
  */
 const SKIP_KEY = (uid: string) => `oyna.onboarding.skipped.${uid}`;
-
-export const markOnboardingSkipped = (uid: string): void => {
-  try { localStorage.setItem(SKIP_KEY(uid), '1'); } catch { /* depolama yoksa yoksay */ }
-};
-
-export const wasOnboardingSkipped = (uid: string): boolean => {
-  try { return localStorage.getItem(SKIP_KEY(uid)) === '1'; } catch { return false; }
-};
 
 export const clearOnboardingSkipped = (uid: string): void => {
   try { localStorage.removeItem(SKIP_KEY(uid)); } catch { /* yoksay */ }

@@ -439,12 +439,28 @@ describe('Mağaza kapıları · beyan ile gerçek davranış uyumu', () => {
     expect(ld).not.toContain('kesintisiz olarak OYNA cüzdanına iade edilir');
   });
 
-  it('yaş kapısı HER yolda kapalı (Atla dahil)', () => {
+  it('yaş kapısı HER yolda kapalı — ikinci bir yol AÇILMAMIŞ', () => {
+    // Mağazaların yaş derecelendirmesi beyanı tek bir girdiye dayanıyor:
+    // kullanıcının seçtiği yaş aralığı. 15 yaşındaki biri hiçbir şeye
+    // dokunmadan yetişkin olarak kaydedilirse `is_minor` ve veli onayı akışı
+    // HİÇ tetiklenmez.
+    //
+    // Eskiden kapı İKİ yerdeydi: `ctaEnabled` ve `handleSkip`. Atlama yolu
+    // 24 Ağu 2026'da kaldırıldı, kapı tek yere indi. Bu testin işi, ileride
+    // birinin ikinci bir yol açıp bu kapıyı atlamamasını sağlamak.
     const ob = oku('views/Onboarding.tsx');
     expect(ob).toMatch(/case 1: return ageIndex !== null/);
-    // "Atla" yolu da aynı kapıdan geçer.
-    const atla = ob.slice(ob.indexOf('const handleSkip'), ob.indexOf('const aura'));
-    expect(atla).toContain('if (ageIndex === null)');
+
+    // Kurulumu bitiren tek düğme `handleCta`; yaş adımından ilerlemesi
+    // `ctaEnabled`e bağlı.
+    expect(ob).toContain('if (!ctaEnabled) return;');
+
+    // Yaşı sormadan kurulumu bitiren hiçbir yol olmamalı.
+    expect(ob).not.toContain('const handleSkip');
+    expect(ob).not.toContain('setSkipConfirm');
+
+    // Sunucudaki ikizi: istemci kandırılsa bile kapı orada da durur.
+    expect(oku('services/onboardingService.ts')).toContain('ageRange');
   });
 });
 

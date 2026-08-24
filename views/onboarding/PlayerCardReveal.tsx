@@ -17,14 +17,12 @@ interface PlayerCardRevealProps {
   onStart: () => void;
   onBack: () => void;
   /**
-   * IP-16 — kayıt hatası KALICI. Eskiden yalnız 4 saniyelik bir bildirim
-   * çıkıyordu; bu perde `absolute inset-0 z-20` olduğu için üstteki "Atla"
-   * tuşunu da örtüyordu, yani hatada kullanıcının görünür hiçbir çıkışı
-   * kalmıyordu.
+   * Kayıt hatası KALICI. Eskiden yalnız 4 saniyelik bir bildirim çıkıyordu;
+   * bu perde `absolute inset-0 z-20` olduğu için altındaki her şeyi örtüyor,
+   * yani hatada kullanıcının görünür hiçbir çıkışı kalmıyordu. Çıkışlar
+   * artık perdenin İÇİNDE: "Tekrar Dene" düğmesi ve geri oku.
    */
   error?: string | null;
-  /** Hata durumunda perdenin İÇİNDEN çıkış — kurulumu şimdilik geç. */
-  onSkip?: () => void;
 }
 
 /**
@@ -36,7 +34,7 @@ interface PlayerCardRevealProps {
  * bir sıra. Sakin, premium bir kapanış ekranı.
  */
 const PlayerCardReveal: React.FC<PlayerCardRevealProps> = ({
-  firstName, lastName, ageRange, gender, position, playStyle, locationGranted, busy, onStart, onBack, error, onSkip,
+  firstName, lastName, ageRange, gender, position, playStyle, locationGranted, busy, onStart, onBack, error,
 }) => {
   const fullName = trUpper(`${firstName.trim()} ${lastName.trim()}`.trim());
 
@@ -111,25 +109,16 @@ const PlayerCardReveal: React.FC<PlayerCardRevealProps> = ({
         {busy ? 'Kaydediliyor…' : error ? 'Tekrar Dene' : 'Başla'}
       </motion.button>
 
+      {/* Kayıt hatası: mesaj KALICI kalır. Çıkışlar "Tekrar Dene" (üstteki
+          düğme) ve geri okudur. Eskiden burada üçüncü bir bağ vardı ve
+          kullanıcıyı profili EKSİK hâlde uygulamaya sokuyordu; kurucu
+          kararıyla kaldırıldı (24 Ağu 2026) — kurulum tamamlanmadan giriş yok.
+          Kaldırılan bağın metni bilerek yazılmadı: testi bu dosyada o dizeyi
+          arıyor ve yorumda geçmesi sahte kırmızı verir. */}
       {error && (
-        <>
-          <p role="alert" style={{ marginTop: 14, maxWidth: 300, fontSize: 12.5, lineHeight: 1.55, fontWeight: 700, color: '#FCA5A5', textAlign: 'center' }}>
-            {error}
-          </p>
-          {onSkip && (
-            <button
-              onClick={onSkip}
-              disabled={busy}
-              style={{
-                marginTop: 10, minHeight: 46, padding: '0 18px', background: 'none', border: 'none',
-                color: 'rgba(255,255,255,0.55)', fontSize: 13, fontWeight: 700,
-                textDecoration: 'underline', cursor: busy ? 'default' : 'pointer',
-              }}
-            >
-              Şimdilik Geç
-            </button>
-          )}
-        </>
+        <p role="alert" style={{ marginTop: 14, maxWidth: 300, fontSize: 12.5, lineHeight: 1.55, fontWeight: 700, color: '#FCA5A5', textAlign: 'center' }}>
+          {error}
+        </p>
       )}
     </motion.div>
   );

@@ -27,22 +27,28 @@ describe('yarıda bırakılan tanıtım geri gelir', () => {
     expect(s.match(/has_completed_onboarding/g)?.length).toBeGreaterThanOrEqual(3);
   });
 
-  it('yalnız oyuncu ve yalnız atlamamış kullanıcı yönlendiriliyor', () => {
+  it('yönlendirme TEK ölçüte bakıyor: sunucudaki "tanıtım bitti mi"', () => {
+    // 24 Ağu 2026'ya kadar burada bir istisna vardı: cihazda "atladım"
+    // bayrağı olan kullanıcı yönlendirilmiyordu. Atlama yolu kaldırıldı;
+    // istisna kalsaydı dün atlamış kullanıcının profili sonsuza dek eksik
+    // kalır, bugün kaydolan ise doldurmak zorunda olurdu — aynı üründe iki
+    // ayrı kural.
     const s = oku('App.tsx');
     expect(s).toContain('landingRole === UserRole.PLAYER &&');
-    expect(s).toContain('!wasOnboardingSkipped(user.uid)');
     expect(s).toContain("resetNavigation('ONBOARDING');");
+    expect(s).not.toContain('!wasOnboardingSkipped(user.uid)');
   });
 
-  it('"atladım" bayrağı yazılıyor ve tamamlanınca temizleniyor', () => {
-    const s = oku('views/Onboarding.tsx');
-    expect(s).toContain('markOnboardingSkipped(uid)');
-    expect(s).toContain('clearOnboardingSkipped(uid)');
-  });
-
-  it('bayrak kullanıcı bazlı — başka hesap etkilenmiyor', () => {
-    const s = oku('views/onboarding/onboardingShared.ts');
-    expect(s).toContain('oyna.onboarding.skipped.${uid}');
+  it('"atladım" bayrağını YAZAN kod kalmadı', () => {
+    // Bayrağı yazan tek yer `handleSkip`ti. Geri gelirse kullanıcı yine
+    // profili eksik hâlde uygulamaya girer.
+    const paylasilan = oku('views/onboarding/onboardingShared.ts');
+    expect(paylasilan).not.toContain('export const markOnboardingSkipped');
+    expect(paylasilan).not.toContain('export const wasOnboardingSkipped');
+    // Silici DURMALI: eski sürümü kullanmış cihazlarda bayrak hâlâ yazılı
+    // olabilir; kurulum bitince temizlenir.
+    expect(paylasilan).toContain('export const clearOnboardingSkipped');
+    expect(oku('views/Onboarding.tsx')).toContain('clearOnboardingSkipped(uid)');
   });
 });
 
@@ -153,27 +159,72 @@ describe('görünen ile geçerli olan aynı — yaş çarkı', () => {
   });
 });
 
-describe('atlama artık soruyor', () => {
+describe('kurulumun atlama yolu YOK (kurucu kararı · 24 Ağustos 2026)', () => {
   const s = oku('views/Onboarding.tsx');
+  const ozet = oku('views/onboarding/PlayerCardReveal.tsx');
 
-  it('onay diyaloğu var (kullanıcı kararı: tuş küçük kalsın ama sorsun)', () => {
-    expect(s).toContain('setSkipConfirm(true)');
-    expect(s).toContain('<ConfirmDialog');
-    expect(s).toContain('Kurulumu atla?');
+  /**
+   * Karar: "Atla tuşunun olmamasını sağla; her şey doldurulmak zorunda olsun,
+   * yalnızca bazı soft özelliklerde tercih yapmadan geçilebilsin."
+   *
+   * Eski tuş zaten yarı yalan söylüyordu: ad soyad, yaş ve seviye eksikse
+   * kullanıcıyı ilgili adıma geri gönderiyordu — ekranda "Atla" yazıyor ama
+   * atlamıyordu. Şimdi ekranda yazan ile yapılan aynı.
+   */
+  it('üst bardaki "Atla" tuşu ve onay penceresi kalmadı', () => {
+    expect(s).not.toContain('setSkipConfirm');
+    expect(s).not.toContain('Kurulumu atla?');
+    expect(s).not.toContain('const handleSkip');
   });
 
-  it('kısmi kayıt tutmazsa kullanıcı bunu öğreniyor', () => {
-    expect(s).toContain('Girdiklerin kaydedilemedi');
+  it('özet ekranındaki "Şimdilik Geç" çıkışı kalmadı', () => {
+    // Bu bağ, kayıt hatasında kullanıcıyı profili EKSİK hâlde içeri alıyordu.
+    expect(ozet).not.toContain('Şimdilik Geç');
+    expect(ozet).not.toContain('onSkip');
+    // Onboarding'de `onSkip` HÂLÂ var ama yalnız KONUM adımına gider
+    // (aşağıdaki teste bak); özet perdesine geçmemeli.
+    const perde = s.slice(s.indexOf('<PlayerCardReveal'), s.indexOf('</div>', s.indexOf('<PlayerCardReveal')));
+    expect(perde).not.toContain('onSkip');
   });
 
-  it('özet ekranındaki kayıt hatası KALICI ve çıkışı var', () => {
-    // Perde `absolute inset-0 z-20` olduğu için üstteki "Atla" tuşunu örtüyordu:
-    // hatada kullanıcının görünür hiçbir çıkışı kalmıyordu.
+  it('kayıt hatasında çıkış yine de var: mesaj kalıcı + "Tekrar Dene"', () => {
+    // Atlama kaldırıldı diye kullanıcı kilitli kalmamalı. Ağ hatası tek
+    // gerçekçi kilitlenme sebebi; çıkışı yeniden denemek ve geri okudur.
     expect(s).toContain('completeError');
-    const r = oku('views/onboarding/PlayerCardReveal.tsx');
-    expect(r).toContain('error?: string | null;');
-    expect(r).toContain('Şimdilik Geç');
-    expect(r).toContain("error ? 'Tekrar Dene'");
+    expect(s).toContain('Profilin kaydedilemedi');
+    expect(ozet).toContain('error?: string | null;');
+    expect(ozet).toContain("error ? 'Tekrar Dene'");
+    expect(ozet).toContain('onBack');
+  });
+
+  it('ZORUNLU alanların kapısı tek yerde ve dördü de kapalı', () => {
+    // Kapı çoğalırsa biri sessizce açık kalır. Hepsi `ctaEnabled` içinde.
+    const kapi = s.slice(s.indexOf('const ctaEnabled'), s.indexOf('const recitDegil'));
+    expect(kapi).toContain('case 1: return ageIndex !== null');   // yaş
+    expect(kapi).toContain('case 2: return nameCheck.valid');     // ad soyad
+    expect(kapi).toContain("case 3: return playStyle !== ''");    // oyun stili
+    expect(kapi).toContain('case 4: return isValidSelfSkill');    // seviye
+  });
+
+  it('SOFT alanlar tercihsiz geçilebilir ve ekranda öyle yazıyor', () => {
+    // Kurucunun istisnası: cinsiyet ve pozisyon zorunlu değil. Kullanıcı
+    // bunu ekrandan anlamalı, ölü bir düğmeyle tahmin etmemeli.
+    const ad = oku('views/onboarding/StepName.tsx');
+    expect(ad).toContain('CİNSİYET · OPSİYONEL');
+    expect(ad).toContain('POZİSYON · OPSİYONEL');
+    // Ad-soyad adımının kapısı bu ikisine BAKMAZ.
+    const kapi = s.slice(s.indexOf('const ctaEnabled'), s.indexOf('const recitDegil'));
+    expect(kapi).not.toContain('gender');
+    expect(kapi).not.toContain('position');
+  });
+
+  it('konum bir CİHAZ İZNİ olduğu için geçilebilir kalır', () => {
+    // Mağaza kuralı: izin reddedilince uygulama çalışmaya devam etmeli.
+    // Bu yüzden konum adımının kendi çıkışı korunur — genel bir "Atla"
+    // değil, o adıma ait açık bir seçenek.
+    const konum = oku('views/onboarding/StepLocation.tsx');
+    expect(konum).toContain('Konumsuz devam et');
+    expect(s).toContain('onSkip={goStep1FromSkip}');
   });
 });
 

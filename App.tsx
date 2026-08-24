@@ -26,7 +26,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 // Eagerly loaded for immediate display (yalnız ilk boyanan ekranlar)
 import SplashScreen from './views/SplashScreen';
 import AuthScreen from './views/AuthScreen';
-import { isOnboardingEnabled, wasOnboardingSkipped } from './views/onboarding/onboardingShared';
+import { isOnboardingEnabled } from './views/onboarding/onboardingShared';
 import { recordUserConsents } from './services/consentService';
 
 // Lazy loaded views to reduce initial bundle size
@@ -548,16 +548,20 @@ const App: React.FC = () => {
                 useAppStore.getState().setServiceAppRole(landingRole);
                 resetNavigation('PENDING_VERIFICATION');
               } else if (
-                // IP-16 — yarıda bırakılan tanıtım. `has_completed_onboarding`
-                // açılışta HİÇ okunmuyordu: 4 adımın ortasında uygulamayı
+                // Yarıda bırakılan tanıtım. `has_completed_onboarding`
+                // açılışta HİÇ okunmuyordu: adımların ortasında uygulamayı
                 // kapatan kullanıcı bir daha akışa dönmüyor, konum da yalnız
                 // orada istendiği için bir daha hiç sorulmuyordu.
-                // "Şimdilik Atla" diyen zorlanmaz; onun kurtarma yolu
-                // Profil'deki "Profil tamamlanmadı" şeridi.
+                //
+                // Burada eskiden bir `!wasOnboardingSkipped(...)` istisnası
+                // vardı: "Atla" diyen bir daha zorlanmıyordu. Atlama yolu
+                // kaldırıldığı için (24 Ağu 2026) istisnanın kaynağı da yok —
+                // kalsaydı dün atlamış kullanıcı profili sonsuza dek eksik
+                // kalır, bugün kaydolan ise doldurmak zorunda olurdu. Tek
+                // ölçüt sunucudaki `has_completed_onboarding`.
                 landingRole === UserRole.PLAYER &&
                 isOnboardingEnabled() &&
-                (profile as { has_completed_onboarding?: boolean | null }).has_completed_onboarding === false &&
-                !wasOnboardingSkipped(user.uid)
+                (profile as { has_completed_onboarding?: boolean | null }).has_completed_onboarding === false
               ) {
                 resetNavigation('ONBOARDING');
               } else {

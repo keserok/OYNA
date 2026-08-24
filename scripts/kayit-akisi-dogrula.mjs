@@ -17,9 +17,10 @@
 //    `aria-label="Yasal onay"` penceresini açar. Kayıt o pencerenin
 //    "ONAYLIYORUM VE DEVAM ET" düğmesiyle tamamlanır.
 // 3) Kayıttan sonra ANA SAYFA DEĞİL, 5 adımlık kurulum sihirbazı gelir.
-// 4) Sihirbazdaki "Atla" her adımı geçmez: YAŞ ve SEVİYE zorunlu kapılardır
-//    (mağaza yaş derecelendirmesi beyanı bunlara dayanır). "Atla" kullanıcıyı
-//    eksik adıma geri götürür — bu bir kilitlenme değil, bilinçli karardır.
+// 4) Sihirbazın ATLAMA YOLU YOKTUR (kurucu kararı, 24 Ağu 2026). Her adım
+//    doldurulur; tercihe bağlı alanlar (cinsiyet, pozisyon) "OPSİYONEL"
+//    etiketiyle boş bırakılabilir, konum ise cihaz izni olduğu için adımın
+//    kendi "Konumsuz devam et" çıkışıyla geçilir.
 // 5) Yaş çarkının öğeleri <button> değil tıklanabilir <div>'dir ve etiketlerde
 //    kısa çizgi değil UZUN TİRE vardır: '24–30'. '24-30' aranırsa BULUNMAZ.
 // 6) Seviye şeridi `role="slider"` olup `onPointerDown` ile çalışır; öğeye
@@ -65,9 +66,11 @@ const authEkrani = async (p) => {
 };
 
 const CTA = /^(Devam Et|İleri|Profili Tamamla|Konumsuz devam et|Başla|Bitir)$/;
-const GEZINME = ['Atla', 'Geri', 'Kapat', 'Konumu Aç', 'Kuruluma Devam Et'];
+const GEZINME = ['Geri', 'Kapat', 'Konumu Aç'];
 
 /** Kurulum sihirbazını GERÇEK KULLANICI GİBİ doldurur (TUZAK 4-5-6). */
+const atlamaTusuGorundu = [];
+
 const sihirbaziDoldur = async (p) => {
   const gorulen = [];
   for (let i = 0; i < 14; i++) {
@@ -75,6 +78,12 @@ const sihirbaziDoldur = async (p) => {
     const baslik = await p.evaluate(
       () => (document.body.innerText.match(/ADIM\s*\d+[^\n]*/i) || [''])[0].trim());
     if (baslik && gorulen[gorulen.length - 1] !== baslik) { gorulen.push(baslik); log('   · ' + baslik); }
+
+    // Kurucu kararı: hiçbir adımda atlama tuşu OLMAMALI. Geri gelirse
+    // kullanıcı profili eksik hâlde uygulamaya girer.
+    if (await p.getByRole('button', { name: 'Atla', exact: true }).count()) {
+      atlamaTusuGorundu.push(baslik || '(başlıksız)');
+    }
 
     // TUZAK 6: yıldız şeridi gerçek dokunuş ister.
     const kaydirac = p.locator('[role=slider]').first();
@@ -188,6 +197,8 @@ try {
 
   const gorulen = await sihirbaziDoldur(p);
   adim(`Kurulum sihirbazı tamamlandı (${gorulen.length} adım)`, await evde(p), gorulen.join(' → '));
+  adim('Hiçbir adımda "Atla" tuşu YOK', atlamaTusuGorundu.length === 0,
+       atlamaTusuGorundu.length ? 'göründüğü adımlar: ' + atlamaTusuGorundu.join(', ') : '');
   await ctx.close();
 
   // ═══ B · TEMİZ TARAYICIDA TEKRAR GİRİŞ ═══════════════════════════════════
