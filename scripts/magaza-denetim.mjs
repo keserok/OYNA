@@ -14,6 +14,7 @@
  * ÇIKIŞ KODU: bir tane bile ENGEL varsa 1, yoksa 0. CI'a takılabilir.
  */
 import { readFileSync, existsSync, readdirSync, statSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -281,16 +282,39 @@ denetle('Yasal sayfalar', () => {
     ['sozlesmeler/oyuncu/08-veli-muvafakatnamesi.md', 'public/veli-muvafakatnamesi.html'],
     ['sozlesmeler/oyuncu/09-topluluk-kurallari.md', 'public/topluluk-kurallari.html'],
   ];
-  const bayat = uretilenler
-    .filter(([md, html]) => varMi(md) && varMi(html)
-      && statSync(join(KOK, md)).mtimeMs > statSync(join(KOK, html)).mtimeMs)
-    .map(([, html]) => html);
+  // TAZELİK ÖLÇÜSÜ ZAMAN DEĞİL İÇERİKTİR (23 Ağustos 2026, gönderim gecesi).
+  //
+  // Burada eskiden `md.mtime > html.mtime` vardı. Git ZAMAN DAMGASI KORUMAZ:
+  // taze bir klonda ya da `git pull` sonrasında dosyalar rastgele sırayla
+  // yazılır; md html'den sonra yazıldığı anda denetim "bayat" diye bağırıp
+  // GÖNDERİMİ DURDURUYORDU. Kurucunun Mac'inde tam olarak bu oldu — oysa altı
+  // sayfa da baytı baytına güncel, yeniden üretim tek bir baytı bile
+  // değiştirmiyordu. Sahte alarmın bedeli, gerçek alarmın inandırıcılığıdır:
+  // her klonda öten bir alarm bir süre sonra hiç dinlenmez.
+  //
+  // Artık üretici her sayfaya kaynağının sha256 özetini damgalıyor
+  // (`<meta name="oyna-kaynak-ozeti">`), biz de kaynağı yeniden özetleyip
+  // karşılaştırıyoruz. Klonlama, kopyalama, `touch`, saat farkı — hiçbiri
+  // bunu bozamaz; yalnız METİN değişirse bayatlar.
+  const ozetle = (metin) => createHash('sha256').update(metin, 'utf8').digest('hex').slice(0, 16);
+  const bayat = [];
+  const damgasiz = [];
+  for (const [md, html] of uretilenler) {
+    if (!varMi(md) || !varMi(html)) continue;
+    const damga = (oku(html).match(/name="oyna-kaynak-ozeti"\s+content="([0-9a-f]{16})"/) || [])[1];
+    if (!damga) { damgasiz.push(html); continue; }
+    if (damga !== ozetle(oku(md))) bayat.push(html);
+  }
   if (bayat.length) {
     engel('Yasal sayfalar bayat',
       `Kaynak metni değişmiş ama sayfa yeniden üretilmemiş: ${bayat.join(', ')}. ` +
       '`node scripts/build-legal-pages.mjs` ile üret.');
+  } else if (damgasiz.length) {
+    engel('Yasal sayfalarda kaynak damgası yok',
+      `Şu sayfalar damgasız üretilmiş: ${damgasiz.join(', ')}. ` +
+      '`node scripts/build-legal-pages.mjs` ile bir kez yeniden üret.');
   } else {
-    tamam('Üretilen yasal sayfalar kaynaklarıyla güncel');
+    tamam('Üretilen yasal sayfalar kaynaklarıyla güncel (içerik özeti)');
   }
 
   // Elle tutulan sayfalar boş kalmasın — mağaza adresini açıp bakıyor.

@@ -24,6 +24,7 @@
 // İç notların kalıcı yeri: sozlesmeler/ic-notlar/ — bu script o klasörü hiç
 // okumaz; aşağıdaki KAYNAK_DIZIN kontrolü bunu sert biçimde garanti eder.
 import { readFileSync, writeFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -92,7 +93,31 @@ const STYLE = `
     .cards .d { color:#9CA3AF; font-size:.85rem; }
 `;
 
-function pageHtml(title, desc, bodyHtml, withBack = true) {
+/**
+ * KAYNAK ÖZETİ — sayfanın hangi metinden üretildiğini KENDİ İÇİNDE taşır.
+ *
+ * NEDEN (23 Ağustos 2026, gönderim gecesi): `magaza:denetim`, üretilen
+ * sayfanın taze olup olmadığını DOSYA ZAMANINA bakarak ölçüyordu
+ * (md.mtime > html.mtime → "bayat"). Git zaman damgalarını korumaz: taze bir
+ * klonda ya da `git pull` sonrasında dosyalar rastgele sırayla yazılır, md
+ * html'den sonra yazılırsa denetim sahte alarm verir. Kurucunun Mac'inde tam
+ * olarak bu oldu ve gönderimi durdurdu — oysa altı sayfa da baytı baytına
+ * güncel, yeniden üretim TEK BİR baytı değiştirmiyordu.
+ *
+ * Artık ölçüt zaman değil İÇERİK: sayfa, üretildiği markdown'ın sha256
+ * özetini taşır; denetim kaynağın özetini yeniden hesaplayıp karşılaştırır.
+ * Klon, kopyalama, dokunma, saat farkı — hiçbiri bunu bozamaz.
+ *
+ * DAMGA HTML YORUMU DEĞİL, <meta> ETİKETİDİR: tests/unit/yasalMetinHijyeni
+ * yayın sayfalarında hiçbir HTML yorumuna izin vermiyor — çünkü şirketin iç
+ * notları tam olarak yorum yoluyla yayına sızmıştı. O bekçi haklı; damga
+ * ona uyar. <meta> ayrıca açıkça görülebilir, gizli bir şey taşımaz:
+ * içeriği yalnız bir özet, metnin kendisi değil.
+ */
+export const kaynakOzeti = (metin) =>
+  createHash('sha256').update(metin, 'utf8').digest('hex').slice(0, 16);
+
+function pageHtml(title, desc, bodyHtml, withBack = true, ozet = null) {
   const back = withBack ? '<a class="backlink" href="/yasal.html">← Tüm yasal belgeler</a>\n' : '';
   return `<!DOCTYPE html>
 <html lang="tr">
@@ -100,6 +125,7 @@ function pageHtml(title, desc, bodyHtml, withBack = true) {
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>${title} — OYNA</title>
+${ozet ? `  <meta name="oyna-kaynak-ozeti" content="${ozet}" />\n` : ''}
   <meta name="description" content="${desc}" />
   <style>${STYLE}  </style>
 </head>
@@ -335,7 +361,7 @@ for (const d of DOCS) {
     throw new Error(`Yayın kaynağı sozlesmeler/oyuncu dışında: ${d.md} — iç notlar yayınlanamaz.`);
   }
   const md = readFileSync(yol, 'utf8');
-  const out = pageHtml(d.title, d.desc, mdToHtml(md, d.md));
+  const out = pageHtml(d.title, d.desc, mdToHtml(md, d.md), true, kaynakOzeti(md));
   const slug = SLUG_BY_MD[d.md];
   writeFileSync(join(ROOT, 'public', slug + '.html'), out);
   console.log('wrote public/' + slug + '.html (' + out.length + ' bytes)');
