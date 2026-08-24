@@ -181,12 +181,13 @@ Bunlar eksik değil, **karar**dır. Açılma zamanı geldiğinde bilinçli açı
 | Ayar | Durum | Ne zaman açılır |
 |---|---|---|
 | `demo_mode_enabled` | **AÇIK** (vitrinde demo maç var) | Lansman gününün 1. maddesi: **kapatılır** |
-| `payment_mode_global` | **CASH_ONLY** | İlk gerçek kart işlemi denendikten sonra |
+| `payment_mode_global` | **ONLINE_ONLY** (24 Ağu 2026) | — açıldı; kart kaporasız rezervasyon yapılamaz |
+| `simulation_counts_as_live` | **AÇIK — geçici** (24 Ağu 2026) | iyzico canlıya alındığı gün **kapatılır**. Bu anahtar, sağlayıcı canlı değilken online ödemeyi yasaklayan güvenlik kilidinin adı konmuş tek istisnasıdır. Açık kaldığı sürece ödeme ekranı kırmızı **"Bu bir TEST ödemesidir"** uyarısını çizer (uyarı sunucudan sürülür, koda gömülü değildir) |
 | `push_live_enabled` | kapalı | Lansmanda APNs/FCM hazır olunca |
 | `wallet_enabled` | **kapalı — kalıcı karar** (16 Ağu 2026, §2.10) | Ancak lisanslı modelle + kurucu kararıyla; istemci bayrağı (`shared/featureFlags.ts`) ile BİRLİKTE |
 | `wallet_cashout_enabled` | kapalı | Cüzdan kararına bağlı (§2.10) — cüzdan yokken çekim konusu doğmaz |
-| `match_deposit_enabled` | kapalı (16 Ağu 2026) | Kart-kaporası kodu yazılınca (v1.1); o güne dek maçlar kaporasız yayınlanır |
-| `admin_mfa_required` | kapalı | Bir SUPER_ADMIN kurtarma kodlarını indirdikten sonra |
+| `match_deposit_enabled` | **AÇIK** (24 Ağu 2026) | — açıldı; maçlar kaporalı kurulur |
+| `admin_mfa_required` | kapalı — **kurucu kararı 24 Ağu 2026: şimdilik kapalı kalsın** | Bir SUPER_ADMIN kurtarma kodlarını indirdikten sonra |
 | Alarm e-postası | kapalı | Lansmandan önce (kod hazır, Resend anahtarı eksik) |
 | Kayıt | **AÇIK** | — (kurucu kararı, 4 Ağu 2026) |
 
