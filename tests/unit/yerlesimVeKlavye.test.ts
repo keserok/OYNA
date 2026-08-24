@@ -141,14 +141,35 @@ describe('B3 · onay kutusu dokunma hedefi projenin standardıyla (48px) hizalı
   });
 
   it('iki çağrı yeri de yeni sınıfı kullanır', () => {
-    expect(oku('views/AuthScreen.tsx')).toContain('className="dokunma-hedefi"');
+    // ── 24 Ağustos 2026 · MEKANİZMA DEĞİŞTİ, GARANTİ DEĞİŞMEDİ ──
+    // Giriş ekranındaki onay kutusu artık 20px'lik bir kare + görünmez 48px
+    // katman DEĞİL: tam satır kaplayan bir kart (`.au-onay`) ve kartın kendisi
+    // düğme. Aynı şey "Beni hatırla" anahtarı için de geçerli (`.au-hatirla`).
+    // Ölçü yine ELLE YAZILMIYOR, aynı `--oy-tap-min` belirtecinden okunuyor —
+    // korunan şey buydu: tek kaynak + 48px alt sınır.
+    // `dokunma-hedefi` sınıfı ServiceApplication'da AYNEN duruyor ve orada
+    // hâlâ küçük kutu deseni kullanıldığı için kuralı da yerinde kalmalı.
+    const alan = oku('views/authFieldStyles.ts');
+    expect(alan).toContain('min-height: var(--oy-tap-min');
     expect(oku('views/ServiceApplication.tsx')).toContain('className="dokunma-hedefi mt-0.5 w-5 h-5');
   });
 
-  it('GÖRÜNEN kutu 20px kalır — büyüyen yalnız dokunma alanıdır', () => {
-    // AuthScreen kutusu satır içi stille 20×20; ServiceApplication w-5 h-5 (=20px).
-    expect(oku('views/AuthScreen.tsx')).toContain('width: 20, height: 20');
+  it('GÖRÜNEN kutu küçük kalır — büyüyen yalnız dokunma alanıdır', () => {
+    // ServiceApplication eski deseni sürdürüyor: w-5 h-5 (=20px) kutu + görünmez
+    // 48px katman.
     expect(oku('views/ServiceApplication.tsx')).toContain('dokunma-hedefi mt-0.5 w-5 h-5');
+
+    // 24 Ağu 2026 · Giriş ekranı bu deseni BIRAKTI. Onay kutusu artık tam satır
+    // bir kartın içinde (`.au-onay`) ve kutunun kendisi 26px: kart zaten 48px'in
+    // üstünde olduğu için görünmez katmana gerek yok — dokunma alanı ile görünen
+    // alan ARTIK AYNI ŞEY. Kurucu isteği "büyük şekilde yer alsın" idi;
+    // kullanıcının dokunduğu yer ile gördüğü yerin çakışması bunun ta kendisi.
+    const alan = oku('views/authFieldStyles.ts');
+    const kutu = alan.match(/\.au-kutu \{([^}]*)\}/);
+    expect(kutu, '.au-kutu kuralı bulunamadı').not.toBeNull();
+    expect(kutu![1]).toContain('width: 26px');
+    // Kartın kendisi alt sınırı belirteçten okur.
+    expect(alan).toMatch(/\.au-onay \{[^}]*min-height: var\(--oy-tap-min/);
   });
 });
 

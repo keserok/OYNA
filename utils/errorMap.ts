@@ -243,9 +243,9 @@ export const mapErrorOrNull = (err: unknown): string | null => {
 // 'Türkçe yedek'` kalıbı fiilen ölü koddu — yedek hiç devreye girmiyordu.
 const AUTH_TR: [RegExp, string][] = [
   [/invalid login credentials/i, 'E-posta ya da şifre hatalı.'],
-  [/email not confirmed/i, 'E-postanı henüz doğrulamadın. Gelen kutunu kontrol et.'],
+  [/email not confirmed/i, 'E-postanı henüz doğrulamadın. Gelen kutunu (ve spam klasörünü) kontrol et; gelmezse Google ya da Apple ile girebilirsin.'],
   [/user already registered|already registered/i, 'Bu e-posta zaten kayıtlı. Giriş yapmayı dene.'],
-  [/password should be at least/i, 'Şifre en az 6 karakter olmalı.'],
+  [/password should be at least/i, 'Şifre en az 8 karakter olmalı.'],
   [/invalid email|unable to validate email/i, 'E-posta adresi geçersiz.'],
   [/token has expired|otp.*expired|expired/i, 'Kodun süresi doldu. Yeni kod iste.'],
   [/invalid.*(otp|token|code)/i, 'Kod hatalı. Tekrar dene.'],
@@ -253,26 +253,26 @@ const AUTH_TR: [RegExp, string][] = [
   [/user not found/i, 'Bu e-postayla kayıtlı bir hesap bulunamadı.'],
   [/signups? not allowed|signup is disabled/i, 'Kayıt şu an kapalı.'],
   // Telefon sağlayıcısı kapalıyken Supabase `phone_provider_disabled` döner.
-  // Bu ÇIKMAZ bir hatadır: kullanıcı ne kadar "tekrar dene"rse denesin çalışmaz.
-  // Genel yedek metin ("Doğrulama kodu gönderilemedi. Lütfen tekrar deneyin.")
-  // tam da yapılmaması gerekeni söylüyordu. Yerine ÇALIŞAN yolu gösteriyoruz.
+  // Telefon yolu 23 Ağustos'ta uygulamadan SİLİNDİ; bu satır yalnız eski bir
+  // istemci ya da doğrudan API çağrısı bu hatayı üretirse diye duruyor.
+  // ÇALIŞAN yolu gösterir — "tekrar dene" demek çıkmaz sokağı tarif etmektir.
   [/phone_provider_disabled|unsupported phone provider/i,
-   'Telefonla giriş şu an kapalı. Yukarıdaki Google ya da Apple ile saniyeler içinde girebilirsin.'],
+   'Telefonla giriş kullanılmıyor. E-posta ve şifrenle ya da Google/Apple ile girebilirsin.'],
   [/popup closed|cancell?ed|aborted/i, 'İşlem yarıda kaldı.'],
   // ── Sağlayıcı (Google/Apple) tarafı ────────────────────────────────────────
   // Bu satırlar OLMADAN kullanıcı ekranda ya İngilizce ham metin ya da hiçbir
   // şey görüyordu; sayfa yenilenip giriş ekranına döndüğü için de "uygulama
   // beni attı" hissi doğuyordu. Her satır SEBEBİ ve ÇIKIŞI birlikte söyler.
   [/provider is not enabled|unsupported provider|provider.*disabled/i,
-    'Bu giriş yöntemi şu anda kullanılamıyor. Telefon numaranla saniyeler içinde girebilirsin.'],
+    'Bu giriş yöntemi şu anda kullanılamıyor. E-posta ve şifrenle girebilirsin.'],
   [/redirect.*not allowed|invalid.*redirect|requested path is invalid/i,
-    'Giriş dönüşü tamamlanamadı. Telefon numaranla devam edebilirsin.'],
+    'Giriş dönüşü tamamlanamadı. E-posta ve şifrenle devam edebilirsin.'],
   [/access.?denied|user denied|consent.*denied/i,
-    'Giriş iznini vermedin, o yüzden devam edilemedi. İstersen tekrar dene ya da numaranla gir.'],
+    'Giriş iznini vermedin, o yüzden devam edilemedi. Tekrar deneyebilir ya da e-posta ve şifrenle girebilirsin.'],
   [/bad_oauth_state|flow.?state|state.*(expired|not found)/i,
     'Giriş çok uzun sürdüğü için bağlantı düştü. Tekrar dener misin?'],
   [/server_error|temporarily unavailable|upstream/i,
-    'Sağlayıcı şu an cevap vermiyor. Birazdan tekrar dene ya da numaranla gir.'],
+    'Sağlayıcı şu an cevap vermiyor. Birazdan tekrar dene ya da e-posta ve şifrenle gir.'],
 ];
 
 // ── Web'de sağlayıcı dönüşü: ekranda görünecek TEK cümle ────────────────────
@@ -288,9 +288,9 @@ export const mapOAuthDonusu = (
   const ham = `${kod ?? ''} ${aciklama ?? ''}`.trim();
   if (ham) {
     for (const [desen, tr] of AUTH_TR) if (desen.test(ham)) return `${ad} ile giriş tamamlanamadı. ${tr}`;
-    return `${ad} ile giriş tamamlanamadı. Telefon numaranla saniyeler içinde girebilirsin.`;
+    return `${ad} ile giriş tamamlanamadı. E-posta ve şifrenle girebilirsin.`;
   }
-  return `${ad} ile giriş tamamlanmadı — hesabına geçilmedi. Tekrar deneyebilir ya da telefon numaranla girebilirsin.`;
+  return `${ad} ile giriş tamamlanmadı — hesabına geçilmedi. Tekrar deneyebilir ya da e-posta ve şifrenle girebilirsin.`;
 };
 
 export const mapAuthError = (err: unknown, yedek?: string): string => {

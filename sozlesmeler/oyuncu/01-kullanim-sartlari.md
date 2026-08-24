@@ -66,8 +66,10 @@ Uygulamaya üye olabilmek için doğru, güncel ve eksiksiz bilgi verilmesi zoru
 
 ### 3.2 Hesap Güvenliği
 
-- Platforma giriş, Kullanıcının **telefon numarasına gönderilen tek kullanımlık doğrulama koduyla** ya da Kullanıcının tercihine göre **Google/Apple hesabıyla** yapılır; OYNA'nın ayrıca bir şifre sistemi yoktur.
-- Kullanıcı, telefonuna gelen doğrulama kodunun ve giriş için kullandığı Google/Apple hesabının gizliliğinden bizzat sorumludur. Doğrulama kodu hiç kimseyle paylaşılmamalıdır; OYNA hiçbir koşulda Kullanıcıdan bu kodu istemez.
+- Platforma giriş üç yoldan yapılabilir: (i) Kullanıcının belirlediği **e-posta adresi ve şifre** ile, (ii) **Google hesabıyla**, (iii) **Apple hesabıyla**.
+- Kullanıcı, belirlediği şifrenin ve giriş için kullandığı Google/Apple hesabının gizliliğinden bizzat sorumludur. Şifre hiç kimseyle paylaşılmamalıdır; OYNA hiçbir koşulda Kullanıcıdan şifresini istemez.
+- Şifreler OYNA tarafından **geri döndürülemez biçimde (hash'lenerek)** saklanır; OYNA Kullanıcının şifresini göremez. Şifresini unutan Kullanıcı, e-posta adresine gönderilen tek kullanımlık doğrulama koduyla yeni şifre belirleyebilir.
+- Kullanıcı, giriş ekranındaki "Beni hatırla" seçeneğiyle oturumunun cihazda açık kalıp kalmayacağına kendisi karar verir; ortak kullanılan cihazlarda bu seçeneğin kapatılması önerilir.
 - Hesap üzerinden gerçekleştirilen tüm işlemler, aksi ispat edilmedikçe hesap sahibi tarafından yapılmış sayılır.
 - Kullanıcı, hesabının yetkisiz kişilerce kullanıldığını fark ettiği anda mirackeremcuruksulu@gmail.com üzerinden OYNA'ya derhal bildirimde bulunmakla yükümlüdür.
 - Bildirim yapılana kadar geçen sürede hesap üzerinden gerçekleştirilen yetkisiz işlemlerden Kullanıcının sorumluluğu; OYNA'nın Platformda makul ve sektör standartlarına uygun güvenlik önlemlerini (şifreleme, güvenli oturum yönetimi ve isteğe bağlı çok faktörlü doğrulama imkânı dahil) sunmuş olması ve Kullanıcının kendi ağır kusuru (ör. hesap bilgilerini bilerek üçüncü kişiyle paylaşması) bulunmaması kaydıyla, her hâlükârda ilgili bildirim öncesi dönemde gerçekleşen işlem başına, Kullanıcının o işlem için ödediği bedeli aşmayacak şekilde sınırlıdır. OYNA'nın yukarıda belirtilen makul güvenlik önlemlerini sağlamadığının tespit edilmesi hâlinde, bildirim öncesi yetkisiz işlemlerden doğan sorumluluk Kullanıcıya tam olarak yansıtılamaz; bu durumda sorumluluk taraflar arasında kusur oranına göre paylaştırılır.

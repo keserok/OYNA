@@ -1,4 +1,4 @@
-import { supabase, setHasAccount, AUTH_DEPO_ANAHTARI } from './supabaseClient';
+import { supabase, setHasAccount, AUTH_DEPO_ANAHTARI, setBeniHatirla, setSonEposta } from './supabaseClient';
 import { Capacitor } from '@capacitor/core';
 import { clearPushToken } from './notifications/pushService';
 import { OAUTH_PENCERE_ADI, donusAdresiniIsaretle } from './shared/oauthPencere';
@@ -479,7 +479,15 @@ const nativeTarayiciOAuth = async (saglayici: OAuthSaglayici): Promise<void> => 
   // Oturum, deep link dönüşünde açılır (handleAuthCallbackUrl).
 };
 
-export const loginWithGoogle = async (): Promise<void> => {
+/**
+ * `hatirla` — giriş ekranındaki "Beni Hatırla" anahtarı. Sağlayıcı yolları da
+ * bu tercihe uymak zorundadır: kullanıcı anahtarı kapatıp Google'a bastığında
+ * oturumun kalıcı olması, kapattığı şeyin sessizce çalışmaması demek olurdu.
+ * Tercih, sayfayı terk eden web akışında da geçerli kalır — `setBeniHatirla`
+ * onu localStorage'a yazar, dönüşte modül oradan okur.
+ */
+export const loginWithGoogle = async (hatirla = true): Promise<void> => {
+  setBeniHatirla(hatirla);
   if (Capacitor.isNativePlatform()) {
     // 1) Native hesap seçici
     if (await ensureNativeGoogle()) {
@@ -580,7 +588,9 @@ const sha256Hex = async (text: string): Promise<string> => {
   return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, '0')).join('');
 };
 
-export const loginWithApple = async (): Promise<void> => {
+/** `hatirla` — bkz. `loginWithGoogle`; aynı sözleşme. */
+export const loginWithApple = async (hatirla = true): Promise<void> => {
+  setBeniHatirla(hatirla);
   // ANDROID'DE NATIVE APPLE YOK (22 Ağu 2026 taraması). Eklentinin Android
   // sınıfı yalnız `echo` tanımlar; `authorize` çağrısı orada hiç yoktur ve
   // hata fırlatır. Kapı `isNativePlatform()` idi, yani Android de bu dala
@@ -858,24 +868,205 @@ if (typeof window !== 'undefined') {
 
 
 // ═══════════════════════════════════════════════════════════════════════════
-// TELEFON OTP — ANA GİRİŞ YOLU (kurucu kararı, 17 Ağustos 2026)
+// E-POSTA + ŞİFRE — GİRİŞ VE KAYIT (kurucu kararı, 24 Ağustos 2026)
 // ═══════════════════════════════════════════════════════════════════════════
-// Kullanıcı numarasını yazar → SMS ile 6 haneli kod gelir → girer. Şifre YOKTUR.
 //
-// E-POSTA + ŞİFRE YOLU KALDIRILDI. Silinenler: sendEmailOtp / verifyEmailOtp /
-// signInWithEmailPassword / signUpWithPassword / requestPasswordReset /
-// confirmPasswordReset / updateUserPassword. Gerekçe: iki paralel kimlik yolu
-// iki kat saldırı yüzeyi ve iki kat bakım demekti; kurucu kararıyla tek yol
-// kaldı. ESKİ KULLANICILAR ETKİLENMEZ: e-posta kimlikleri auth tarafında
-// duruyor, oturumları açık; yalnız GİRİŞ EKRANINDA o yol artık sunulmuyor.
+// NEDEN GERİ GELDİ: Apple App Review, incelemesini tamamlayabilmek için
+// "Sign-In Information → User name / Password" istiyor. Google ve Apple ile
+// Giriş bu talebi karşılamaz: incelemeci kendi Apple kimliğiyle girdiğinde
+// bizim tarafımızda hazırlanmış bir hesaba değil, bomboş yeni bir hesaba
+// düşer — kaleci, hakem ve tesis panellerini hiç göremez.
 //
-// `shouldCreateUser: true` → numarası olmayan biri ilk kez kod isteyince hesabı
-// açılır. Yani "kayıt" ile "giriş" tek akıştır; kullanıcıya iki ayrı sekme
-// göstermeye gerek kalmaz.
+// BU BİR "İNCELEMECİ KAPISI" DEĞİLDİR (Apple 5.6 dersi). 21 Ağustos'taki ret
+// tam olarak şundan geldi: inceleme paketinde olup indirilen pakette olmayan
+// gizli bir demo yolu vardı. Buradaki yol HERKESE AÇIKTIR: her kullanıcı aynı
+// ekranda e-postasıyla kaydolur ve girer. İncelemeciye verilen şey ayrıcalıklı
+// bir kapı değil, sıradan bir hesabın kullanıcı adı ve şifresidir.
 //
-// SMS'i Supabase kendi sağlayıcısıyla değil, bizim `send-sms` uç fonksiyonumuzla
-// gönderir (Auth → Hooks → Send SMS). Kanal seçimi orada: Türkiye → SMS,
-// yurt dışı → WhatsApp (bugün kapalı, bkz. shared/phone.ts).
+// §4.7 ("şifre kavramı YOKTUR", 17 Ağu 2026) BU KARARLA DEĞİŞTİ. O karar,
+// telefon+SMS'in ana yol olduğu bir dünyada alınmıştı; SMS altyapısı hiç
+// kurulmadı ve telefon yolu 23 Ağustos'ta silindi. Geriye yalnız sağlayıcı
+// girişi kalınca "iki paralel kimlik yolu" gerekçesi de düştü.
+//
+// KAYITTA ROL SEÇİMİ YOKTUR (kurucu kararı, 24 Ağu 2026): kaydolan HERKES
+// oyuncudur. Kaleci ve hakem, Ayarlar → Sahada Rolün üzerinden BAŞVURUR;
+// tesis sahibi, müdür ve personel YALNIZ yönetici panelinden atanır. Bu yüzden
+// aşağıdaki fonksiyonlar sunucuya rol GÖNDERMEZ — `handle_new_user` tetikleyicisi
+// profili PLAYER olarak açar ve `protect_profile_columns` kullanıcının kendi
+// rolünü değiştirmesini zaten engeller.
+
+/** Şifre en az bu kadar uzun olmalı. Sunucu 6 diyor; biz 8 diyoruz (daha katı taraf kazanır). */
+export const MIN_SIFRE_UZUNLUGU = 8;
+
+export type SifreGucu = 'zayif' | 'orta' | 'guclu';
+
+/**
+ * Şifre gücü — ekranda çubuk göstermek için. Sunucuya gönderilmez, KAPI DEĞİLDİR:
+ * tek zorunluluk uzunluktur. Amaç kullanıcıyı reddetmek değil, yönlendirmek.
+ */
+export const sifreGucu = (sifre: string): SifreGucu => {
+  if (sifre.length < MIN_SIFRE_UZUNLUGU) return 'zayif';
+  let puan = 0;
+  if (/[a-z]/.test(sifre)) puan++;
+  if (/[A-Z]/.test(sifre)) puan++;
+  if (/\d/.test(sifre)) puan++;
+  if (/[^A-Za-z0-9]/.test(sifre)) puan++;
+  if (sifre.length >= 12) puan++;
+  if (puan >= 4) return 'guclu';
+  if (puan >= 2) return 'orta';
+  return 'zayif';
+};
+
+/** Sunucuya gitmeden önceki yerel kontrol. Geçerse `null`, değilse Türkçe sebep. */
+export const sifreSebebi = (sifre: string): string | null => {
+  if (!sifre) return 'Şifre gerekli.';
+  if (sifre.length < MIN_SIFRE_UZUNLUGU) return `Şifre en az ${MIN_SIFRE_UZUNLUGU} karakter olmalı.`;
+  return null;
+};
+
+/** Yaygın yazım hatalarını yakalayan sade e-posta kontrolü (RFC değil, kullanıcı dostu). */
+export const epostaGecerliMi = (eposta: string): boolean =>
+  /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(eposta.trim());
+
+/**
+ * Kayıt/giriş sonucunun ekrana söyleyeceği şey.
+ * `ONAY_BEKLIYOR`, sunucuda e-posta doğrulaması AÇIK olduğunda döner: hesap
+ * açıldı ama oturum yok. Bu durumu SESSİZ geçmek, kullanıcıyı "kaydoldum ama
+ * hiçbir şey olmadı" ekranında bırakır — SMS yolunun düştüğü tuzağın aynısı.
+ */
+export type SifreSonucu = 'GIRILDI' | 'ONAY_BEKLIYOR';
+
+/**
+ * E-POSTA + ŞİFRE İLE KAYIT.
+ *
+ * SUNUCU AYARINDAN BAĞIMSIZ ÇALIŞIR (bilerek): projede e-posta doğrulaması
+ * açık da olabilir kapalı da, ve bu ayar uygulama paketinden görülemez.
+ *   • Kapalıysa → signUp oturumu döndürür, kullanıcı anında içeridedir.
+ *   • Açıksa   → signUp oturum döndürmez. O zaman signInWithPassword denenir
+ *     (bazı projelerde doğrulanmamış hesap yine de girebilir); o da olmazsa
+ *     'ONAY_BEKLIYOR' döner ve ekran kullanıcıya gelen kutusuna bakmasını söyler.
+ * Bu ikinci deneme, 17 Ağustos'ta silinen sürümde de vardı ve aynı sebeple
+ * yazılmıştı; onsuz kayıt olan kullanıcı hiçbir geri bildirim almadan asılı kalır.
+ */
+export const signUpWithPassword = async (
+  eposta: string,
+  sifre: string,
+  adSoyad: string,
+  hatirla: boolean,
+): Promise<SifreSonucu> => {
+  const temizEposta = eposta.trim().toLowerCase();
+  // Tercih, signUp'tan ÖNCE yazılır: supabase-js oturumu çağrının içinde
+  // depoya yazar, depo katmanı tercihi o an bilmek zorundadır.
+  setBeniHatirla(hatirla);
+  const { data, error } = await supabase.auth.signUp({
+    email: temizEposta,
+    password: sifre,
+    // `full_name` handle_new_user tetikleyicisinin okuduğu alandır; profil adı
+    // buradan gelir. ROL GÖNDERİLMEZ — kaydolan herkes oyuncudur.
+    options: { data: { full_name: adSoyad.trim() } },
+  });
+  if (error) throw error;
+  setSonEposta(temizEposta, hatirla);
+  if (data.session) return 'GIRILDI';
+
+  const { error: girisHatasi } = await supabase.auth.signInWithPassword({
+    email: temizEposta,
+    password: sifre,
+  });
+  if (!girisHatasi) return 'GIRILDI';
+  return 'ONAY_BEKLIYOR';
+};
+
+/** E-POSTA + ŞİFRE İLE GİRİŞ. Hata Türkçeleştirmesi çağırana bırakılır (errorMap). */
+export const loginWithPassword = async (
+  eposta: string,
+  sifre: string,
+  hatirla: boolean,
+): Promise<void> => {
+  const temizEposta = eposta.trim().toLowerCase();
+  setBeniHatirla(hatirla);
+  const { error } = await supabase.auth.signInWithPassword({
+    email: temizEposta,
+    password: sifre,
+  });
+  if (error) throw error;
+  setSonEposta(temizEposta, hatirla);
+};
+
+// ─── ŞİFREMİ UNUTTUM ─────────────────────────────────────────────────────────
+// İki uç fonksiyon üzerinden yürür (Supabase'in kendi sıfırlama e-postası
+// DEĞİL): `password-reset-request` 6 haneli kod üretip Resend ile yollar,
+// `password-reset-confirm` kodu doğrulayıp yeni şifreyi yazar. Kodun yalnız
+// SHA-256 özeti veritabanında durur.
+//
+// SIRALAMA SIZDIRMAZ: e-posta kayıtlı olsun olmasın sunucu HER ZAMAN başarı
+// döner. Ekran da bu yüzden "kayıtlıysa kod gönderildi" der — "böyle bir hesap
+// yok" demek, saldırgana hangi adreslerin kayıtlı olduğunu tek tek öğretirdi.
+
+/** Uç fonksiyonun `{ ok:false, error:'kod' }` gövdesindeki kodun Türkçe karşılığı. */
+const SIFIRLAMA_HATALARI: Record<string, string> = {
+  invalid_or_expired: 'Kod hatalı ya da süresi dolmuş. Yeni kod iste.',
+  too_many_attempts: 'Çok fazla yanlış deneme yaptın. Yeni bir kod iste.',
+  weak_password: `Şifre en az ${MIN_SIFRE_UZUNLUGU} karakter olmalı.`,
+  invalid_request: 'Kod 6 haneli olmalı.',
+  internal: 'Şifre değiştirilemedi. Birazdan tekrar dene.',
+};
+
+/**
+ * Uç fonksiyonu çağırır ve HATA GÖVDESİNİ OKUR.
+ *
+ * `functions.invoke` 4xx/5xx'te FunctionsHttpError döndürür ve o hatanın
+ * `message` alanı yalnız "Edge Function returned a non-2xx status code"
+ * yazar — yani sebebi SÖYLEMEZ. Gövdedeki kod okunmazsa kullanıcı "kod yanlış"
+ * ile "çok denedin" arasındaki farkı göremez ve ne yapacağını bilemez.
+ */
+const uctanCagir = async (ad: string, govde: unknown): Promise<void> => {
+  const { error } = await supabase.functions.invoke(ad, { body: govde });
+  if (!error) return;
+  const yanit = (error as { context?: Response }).context;
+  if (yanit && typeof yanit.json === 'function') {
+    try {
+      const g = await yanit.json();
+      const kod = String(g?.error ?? '');
+      if (kod && SIFIRLAMA_HATALARI[kod]) throw new Error(SIFIRLAMA_HATALARI[kod]);
+    } catch (e) {
+      // Gövdemizden gelen Türkçe mesajı yukarı taşı; JSON okunamadıysa
+      // aşağıdaki genel hataya düş.
+      if (e instanceof Error && Object.values(SIFIRLAMA_HATALARI).includes(e.message)) throw e;
+    }
+  }
+  throw error;
+};
+
+/**
+ * 1. adım: sıfırlama kodunu iste.
+ *
+ * BAŞARI, KODUN GİTTİĞİ ANLAMINA GELMEZ — iki ayrı sebeple:
+ *   • Sıralama sızdırmamak için sunucu, adres kayıtlı olmasa da başarı döner.
+ *   • Sunucuda RESEND_API_KEY tanımlı değilse fonksiyon SİMÜLASYON çalışır:
+ *     kodu üretir, veritabanına yazar, ama e-posta göndermez ve yine başarı döner.
+ * Bu yüzden ekran "gönderildi" değil, "kayıtlıysa kod gönderildi" demelidir.
+ */
+export const requestPasswordReset = async (eposta: string): Promise<void> => {
+  await uctanCagir('password-reset-request', { email: eposta.trim().toLowerCase() });
+};
+
+/**
+ * 2. adım: kod + yeni şifre. Sunucu kodu doğrular ve şifreyi değiştirir.
+ * Alan adı `newPassword`'dür (uç fonksiyonun sözleşmesi) — `password` gönderilirse
+ * sunucu şifreyi boş sayıp `weak_password` döner.
+ */
+export const confirmPasswordReset = async (
+  eposta: string,
+  kod: string,
+  yeniSifre: string,
+): Promise<void> => {
+  await uctanCagir('password-reset-confirm', {
+    email: eposta.trim().toLowerCase(),
+    code: kod.replace(/\D/g, '').slice(0, 6),
+    newPassword: yeniSifre,
+  });
+};
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TELEFONLA GİRİŞ VE NUMARA BAĞLAMA UÇLARI SİLİNDİ (23 Ağustos 2026).

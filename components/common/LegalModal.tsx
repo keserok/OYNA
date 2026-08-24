@@ -10,9 +10,15 @@ import { DOCS, type LegalDocKey } from '../../shared/legalDocs';
 // artık onay anında TAM belge gösteriliyor ve metin tek kaynaktan
 // (`shared/legalDocs.ts`) geliyor — iki ekran birebir aynı şeyi okur.
 //
-// Onay kutusundan yalnız iki belge açılır; "Kullanıcı Sözleşmesi" adı kalktı,
+// Onay kutusundan açılabilen belgeler; "Kullanıcı Sözleşmesi" adı kalktı,
 // yasal ekrandaki gerçek adı olan "Kullanım Şartları" (TERMS) kullanılıyor.
-export type LegalModalKind = Extract<LegalDocKey, 'KVKK' | 'TERMS'>;
+//
+// PRIVACY (24 Ağu 2026): Gizlilik Politikası bu listeye eklendi. Eskiden
+// `shared/legalDocs.ts` içinde VARDI ama giriş ekranından açılamıyordu —
+// tip yalnız KVKK|TERMS'e izin veriyordu. Apple App Store, gizlilik
+// politikasının uygulama İÇİNDEN erişilebilir olmasını şart koşar; kayıt
+// anında açılamayan bir politika bu şartı yarım karşılar.
+export type LegalModalKind = Extract<LegalDocKey, 'KVKK' | 'TERMS' | 'PRIVACY'>;
 
 interface LegalModalProps {
   openModal: LegalModalKind | null;

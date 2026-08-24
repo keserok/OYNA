@@ -352,8 +352,22 @@ describe('Mağaza kapıları · klavye ve dokunma hedefleri', () => {
     const css = oku('index.css');
     expect(css).toContain('.dokunma-hedefi::before');
     expect(css).toMatch(/\.dokunma-hedefi::before[\s\S]{0,400}var\(--oy-tap-min/);
-    expect(oku('views/AuthScreen.tsx')).toContain('className="dokunma-hedefi"');
     expect(oku('views/ServiceApplication.tsx')).toContain('dokunma-hedefi mt-0.5 w-5 h-5');
+    // ── 24 Ağustos 2026 · MEKANİZMA DEĞİŞTİ, GARANTİ DEĞİŞMEDİ ──
+    // Giriş ekranındaki onay kutusu artık 20px'lik bir kare + görünmez 48px
+    // katman DEĞİL: tam satır kaplayan bir kart (`.au-onay`) ve kartın kendisi
+    // düğme. Aynı şey "Beni hatırla" anahtarı için de geçerli (`.au-hatirla`).
+    // Ölçü yine ELLE YAZILMIYOR, aynı `--oy-tap-min` belirtecinden okunuyor —
+    // korunan şey buydu: tek kaynak + 48px alt sınır.
+    // `dokunma-hedefi` sınıfı ServiceApplication'da AYNEN duruyor ve orada
+    // hâlâ küçük kutu deseni kullanıldığı için kuralı da yerinde kalmalı.
+    const alan = oku('views/authFieldStyles.ts');
+    for (const sinif of ['.au-onay', '.au-hatirla']) {
+      const kural = alan.match(new RegExp(`\\${sinif} \\{([^}]*)\\}`));
+      expect(kural, `${sinif} kuralı bulunamadı`).not.toBeNull();
+      expect(kural![1], `${sinif} dokunma ölçüsünü belirteçten okumuyor`)
+        .toContain('min-height: var(--oy-tap-min');
+    }
   });
 
   it('hareket azaltmada aşağı çekip yenileme ÖLMEZ', () => {
