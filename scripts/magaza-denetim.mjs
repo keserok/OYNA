@@ -482,6 +482,52 @@ await denetleAg('İnceleme notu canlı ödeme ayarıyla uyuşuyor', async () => 
   tamam(`İnceleme notu canlı ödeme ayarıyla uyuşuyor (${mod.effective_mode} · ${mod.provider})`);
 });
 
+
+// ══════════════════════════════════════════════════════════════════════════
+// 9 · İKİLİYE SIZAN ÜÇÜNCÜ TARAF SDK'LARI
+//
+// @capgo/capacitor-social-login podspec'i varsayılan olarak DÖRT sağlayıcının
+// bağımlılığını da ekler. OYNA yalnız Google ve Apple sunuyor, ama Facebook
+// SDK'sı (FBSDKCoreKit + FBSDKLoginKit) iOS ikilisine giriyordu.
+//
+// Apple yüklemede paketteki tüm gizlilik manifestolarını birleştirip Gizlilik
+// Raporu üretir: bizim manifestomuz "izleme yok" derken Facebook SDK'sı kendi
+// manifestosunda izleme beyan ediyor — uygulama kendi beyanını yalanlıyor
+// (Guideline 5.1.1(i)).
+//
+// Çözüm capacitor.config.ts'teki SocialLogin.providers ayarı; bu denetim onun
+// GERÇEKTEN uygulanıp uygulanmadığını Podfile.lock'tan okur. Ayarı yazıp
+// `cap sync` + `pod install` çalıştırmayı unutmak, ayarı hiç yazmamakla aynı.
+// ══════════════════════════════════════════════════════════════════════════
+denetle('Kullanılmayan SDK ikiliye sızmıyor', () => {
+  const cfg = oku('capacitor.config.ts');
+  if (!/facebook:\s*'compileOnly'/.test(cfg)) {
+    engel('Facebook sağlayıcısı kapatılmamış',
+      "capacitor.config.ts → plugins.SocialLogin.providers.facebook 'compileOnly' olmalı. " +
+      'Aksi hâlde FBSDK iOS paketine girer ve gizlilik manifestosuyla çelişir.');
+    return;
+  }
+
+  const kilitYolu = join(KOK, 'ios/App/Podfile.lock');
+  if (!existsSync(kilitYolu)) {
+    uyari('Podfile.lock yok — SDK sızıntısı doğrulanamadı',
+      'Mac üzerinde `npm run sync:ios` ve `pod install` çalıştırdıktan sonra tekrar denetle.');
+    return;
+  }
+  const kilit = readFileSync(kilitYolu, 'utf8');
+  const sizanlar = ['FBSDKCoreKit', 'FBSDKLoginKit', 'FBAEMKit']
+    .filter((ad) => new RegExp(`^\\s*[-]?\\s*${ad}\\b`, 'm').test(kilit));
+
+  if (sizanlar.length) {
+    engel('Facebook SDK hâlâ iOS paketinde',
+      `Podfile.lock içinde ${sizanlar.join(', ')} duruyor. Uygulama Facebook girişi ` +
+      'SUNMUYOR; bu SDK yalnız gizlilik raporunda çelişki üretir (5.1.1(i)). ' +
+      'Mac üzerinde `npm run sync:ios` ve ardından `cd ios/App && pod install` çalıştır.');
+  } else {
+    tamam('Kullanılmayan sosyal SDK yok (Facebook paketten çıkarıldı)');
+  }
+});
+
 console.log('\n  MAĞAZA GÖNDERİM DENETİMİ\n');
 
 for (const t of tamamlar) console.log(`  ${yesil('✓')} ${soluk(t)}`);

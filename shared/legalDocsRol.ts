@@ -33,7 +33,7 @@ Soruların için: mirackeremcuruksulu@gmail.com
 
 OYNA Bağımsız Kaleci / Hakem Hizmet Sağlayıcısı Sözleşmesi
 
-Son güncelleme: 13.07.2026
+Son güncelleme: 24.08.2026
 
 TARAFLAR
 
@@ -162,9 +162,9 @@ Taraflar aşağıdaki hüküm ve koşullar üzerinde anlaşmışlardır:
 
 9.2. Kullanıcı/Oyuncu Tarafının Geç İptali: Kullanıcı/Oyuncu'nun rezervasyon/maç saatine ilişkin geç iptal yapması hâlinde, aşağıdaki iade kademeleri uygulanır:
 
-&nbsp;&nbsp;a) Maç/rezervasyon saatine 24 (yirmi dört) saat veya daha fazla kala yapılan iptallerde: Kullanıcı'ya, yalnızca Ödeme Altyapısı Sağlayıcısı'nın tahsil ettiği işlem bedeli hariç olmak üzere, ödemenin tamamı Kullanıcı'nın OYNA cüzdanına iade edilir.
+&nbsp;&nbsp;a) Maç/rezervasyon saatine 24 (yirmi dört) saat veya daha fazla kala yapılan iptallerde: Kullanıcı'ya, yalnızca Ödeme Altyapısı Sağlayıcısı'nın tahsil ettiği işlem bedeli hariç olmak üzere, ödemenin tamamı Kullanıcı'nın ödemeyi yaptığı karta iade edilir.
 
-&nbsp;&nbsp;b) Maç/rezervasyon saatine 6 (altı) saatten fazla ancak 24 (yirmi dört) saatten az kala yapılan iptallerde: Ödemenin %50'si (yüzde elli), Kullanıcı'nın OYNA cüzdanına iade edilir.
+&nbsp;&nbsp;b) Maç/rezervasyon saatine 6 (altı) saatten fazla ancak 24 (yirmi dört) saatten az kala yapılan iptallerde: Ödemenin %50'si (yüzde elli), Kullanıcı'nın ödemeyi yaptığı karta iade edilir.
 
 &nbsp;&nbsp;c) Maç/rezervasyon saatine 6 (altı) saatten az kala yapılan iptallerde: İade yapılmaz.
 
@@ -296,7 +296,7 @@ Soruların için: mirackeremcuruksulu@gmail.com
 
 OYNA – İşletme (Saha/Tesis Sahibi) Platform Kullanımı ve İşbirliği Sözleşmesi
 
-Son güncelleme: 13.07.2026
+Son güncelleme: 24.08.2026
 
 ────────────────
 
@@ -590,7 +590,7 @@ EK-2: ASGARİ HİZMET STANDARTLARI
 
 2. Onaylanmış Rezervasyonlara Uyma
 
-Platform üzerinden onaylanan rezervasyonlar, mücbir sebep veya haklı teknik/altyapısal arıza hâlleri hariç, İşletme tarafından tek taraflı olarak iptal edilemez veya değiştirilemez. Zorunlu iptallerde oyuncuya en az 24 (yirmidört) saat önceden haber verilir ve durum OYNA'ya bildirilir. Bu süre, OYNA'nın oyuncularla akdettiği Mesafeli Satış ve İptal/İade Koşulları'nda düzenlenen tam iade eşiğiyle (rezervasyon saatinden en az 24 saat önce) uyumlu olup, madde 2.3'te atıf yapılan iptal/iade kademelerinin İşletme kaynaklı iptallerde de gözetilmesini sağlar; İşletme kaynaklı iptallerde oyuncuya her hâlükârda tam iade yapılır; bu iade oyuncunun OYNA cüzdanına işlenir ve oyuncu bu tutarı Kullanım Şartları madde 6.5'teki koşullarla banka hesabına çekebilir. İade tutarı İşletme hakedişinden mahsup edilir.
+Platform üzerinden onaylanan rezervasyonlar, mücbir sebep veya haklı teknik/altyapısal arıza hâlleri hariç, İşletme tarafından tek taraflı olarak iptal edilemez veya değiştirilemez. Zorunlu iptallerde oyuncuya en az 24 (yirmidört) saat önceden haber verilir ve durum OYNA'ya bildirilir. Bu süre, OYNA'nın oyuncularla akdettiği Mesafeli Satış ve İptal/İade Koşulları'nda düzenlenen tam iade eşiğiyle (rezervasyon saatinden en az 24 saat önce) uyumlu olup, madde 2.3'te atıf yapılan iptal/iade kademelerinin İşletme kaynaklı iptallerde de gözetilmesini sağlar; İşletme kaynaklı iptallerde oyuncuya her hâlükârda tam iade yapılır; bu iade oyuncunun ödemeyi yaptığı karta yapılır. İade tutarı İşletme hakedişinden mahsup edilir.
 
 3. Temel Güvenlik Ekipmanı
 

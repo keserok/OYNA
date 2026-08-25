@@ -1,10 +1,10 @@
-> **Durum:** Taslak tamamlandı — yayına hazır · **Son güncelleme:** 15.07.2026 · **Sürüm:** 2026-07-15 · **PR:** —
+> **Durum:** Taslak tamamlandı — yayına hazır · **Son güncelleme:** 24.08.2026 · **Sürüm:** 2026-07-15 · **PR:** —
 > **Uygulandığı yer:** `views/LegalScreen.tsx → TOPLULUK` (uygulama içi) · `sozlesmeler/oyuncu/09-...` (kanonik)
 > **İlişki:** Kullanım Şartları'nın ([md. 7 yükümlülükler](01-kullanim-sartlari.md) ve md. 13–14 yaptırım skalası) ayrılmaz **ekidir**; yaptırım skalasını yeniden tanımlamaz, ona atıf yapar.
 
 # OYNA Topluluk Kuralları ve Kullanıcı Davranış Kuralları
 
-**Son güncelleme: 15.07.2026 · Sürüm: 2026-07-15**
+**Son güncelleme: 24.08.2026 · Sürüm: 2026-07-15**
 
 OYNA; birlikte oynayan, rezervasyon yapan ve buluşan gerçek insanların topluluğudur. Bu kurallar, hem uygulama içinde hem de düzenlenen gerçek maçlarda herkesin güvende ve saygı içinde olmasını sağlamak içindir.
 

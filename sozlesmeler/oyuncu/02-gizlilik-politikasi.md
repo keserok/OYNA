@@ -1,13 +1,13 @@
 # Gizlilik Politikası
 
-> **Durum:** Yayında · **Son güncelleme:** 15.07.2026 · **PR:** #74
+> **Durum:** Yayında · **Son güncelleme:** 24.08.2026 · **PR:** #74
 > **Uygulandığı yerler:** `public/gizlilik.html` (herkese açık — https://oyna.app/gizlilik.html) ve `views/LegalScreen.tsx → PRIVACY` (uygulama içi, aynı içeriğin kısaltılmış hâli)
 >
 > Bu dosya `public/gizlilik.html`'in tam metnidir; bu iki dosya **birlikte** güncellenmelidir.
 
 ---
 
-**Son güncelleme: 15.07.2026 · Veri sorumlusu: Miraç Kerem Çürüksulu (OYNA)**
+**Son güncelleme: 24.08.2026 · Veri sorumlusu: Miraç Kerem Çürüksulu (OYNA)**
 
 ### 1. Toplanan Veriler
 - **Kimlik/iletişim:** ad, e-posta, telefon

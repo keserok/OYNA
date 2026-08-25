@@ -6,5 +6,5 @@
 //
 // Metin değişince BURASI güncellenir; hem ekranda görünen tarih hem sunucuya
 // yazılan damga aynı anda kayar.
-export const LEGAL_UPDATED_TR = '15.07.2026';
-export const LEGAL_UPDATED_ISO = '2026-07-15';
+export const LEGAL_UPDATED_TR = '24.08.2026';
+export const LEGAL_UPDATED_ISO = '2026-08-24';

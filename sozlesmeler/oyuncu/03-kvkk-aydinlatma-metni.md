@@ -1,12 +1,12 @@
 # KVKK Aydınlatma Metni
 
-> **Durum:** Yayında · **Son güncelleme:** 15.07.2026 · **PR:** #74
+> **Durum:** Yayında · **Son güncelleme:** 24.08.2026 · **PR:** #74
 > **Uygulandığı yer:** `views/LegalScreen.tsx → KVKK` (uygulama içi "Yasal" ekranı)
 > **İlgili belge:** Bu metin, 6698 s. KVKK m.10'daki aydınlatma yükümlülüğünü karşılar; [Gizlilik Politikası](02-gizlilik-politikasi.md) ile birlikte okunmalıdır.
 
 ---
 
-**Son güncelleme: 15.07.2026**
+**Son güncelleme: 24.08.2026**
 
 6698 sayılı Kişisel Verilerin Korunması Kanunu ("KVKK") uyarınca, veri sorumlusu sıfatıyla Miraç Kerem Çürüksulu (OYNA) tarafından kişisel verileriniz aşağıda açıklanan kapsamda işlenmektedir.
 

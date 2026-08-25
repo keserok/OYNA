@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
+import { recordUserConsents } from '../services/consentService';
 import { AnimatePresence } from 'framer-motion';
 import { Check, ArrowRight, ChevronLeft, MailCheck } from 'lucide-react';
 import { UserRole } from '../types';
@@ -272,6 +273,12 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
       // sessizce çalışması olurdu.
       if (saglayici === 'google') await loginWithGoogle(hatirla);
       else await loginWithApple(hatirla);
+      // Sağlayıcı yolunda da rıza kaydı: bu düğmeye onay kutusu işaretli
+      // olmadan basılamıyor (yukarıdaki `saglayiciyaDokun` kapısı), dolayısıyla
+      // buraya ulaşan her oturum gerçekten onay verilmiş bir oturumdur.
+      // Native'de akış buraya DÖNER (SocialLogin.login satır içi tamamlanır);
+      // web'de yönlendirme olursa kayıt atlanır — mağaza paketi native'dir.
+      void recordUserConsents(['TERMS', 'KVKK', 'PRIVACY']);
       // Yönlendirmeyi App'teki auth dinleyicisi yapar (profildeki GERÇEK role
       // göre). Buradan onSuccess() çağrılırsa çifte yönlendirme/flaş olur.
     } catch (err: any) {
@@ -299,6 +306,15 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
     try {
       if (kip === 'kayit') {
         const sonuc = await signUpWithPassword(form.eposta, form.sifre, form.adSoyad, hatirla);
+        // KVKK RIZA KAYDI — açık rızanın İSPAT YÜKÜ veri sorumlusundadır
+        // (KVKK m.3/1-a, m.12). 24 Ağu 2026 denetiminde çıktı: ekran
+        // kullanıcıya üç belgeyi onaylatıyordu ama sunucudaki `user_consents`
+        // tablosu 41 kullanıcıya karşılık BOŞTU — bir şikâyette elimizde
+        // hiçbir kanıt yoktu.
+        //
+        // Kayıt best-effort: sunucu yazamazsa kullanıcı içeri girmeye devam
+        // eder. Kaydı bloke etmek, çözdüğünden büyük bir sorun yaratır.
+        if (sonuc === 'GIRILDI') void recordUserConsents(['TERMS', 'KVKK', 'PRIVACY']);
         if (sonuc === 'ONAY_BEKLIYOR') {
           // Hesap açıldı ama oturum yok (sunucuda e-posta doğrulaması açık).
           // Kullanıcı bunu BİLMELİ; sessiz kalırsak ekran hiçbir şey olmamış

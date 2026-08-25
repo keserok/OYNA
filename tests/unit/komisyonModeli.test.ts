@@ -184,3 +184,118 @@ describe('Demo ödeme · kullanıcı yanılmasın', () => {
     expect(g).toContain('ekran test uyarisini cizemez');
   });
 });
+
+describe('Demo ödeme · uyarı akışın TAMAMINDA', () => {
+  /**
+   * 24 Ağustos 2026 denetimi, uyarının yalnız TEK ekranda olduğunu buldu.
+   * Kullanıcı akışta üç ekran görüyor ve ikisinde hiçbir işaret yoktu:
+   *
+   *   1. Ödeme ekranı   → kırmızı uyarı VARDI
+   *   2. Kart formu     → uyarı YOK; üstelik "banka doğrulaması (3D Secure)
+   *                       ile tahsil edilir" diyordu. İkisi de yalandı ve
+   *                       incelemeci gerçek kartını girmeye zorlanıyordu.
+   *   3. Başarı ekranı  → uyarı YOK; işlem numaralı bir makbuz çiziyordu.
+   *
+   * Uyarının tam da "ödendi" iddiasının yapıldığı anda kaybolması, hiç
+   * olmamasından kötüdür: kullanıcı ilkini unutur, makbuzu hatırlar.
+   */
+  it('kart formu simülasyonu BİLİYOR ve yanlış söz vermiyor', () => {
+    const kart = oku('components/payment/AddCardScreen.tsx');
+    expect(kart).toContain('simulation');
+    expect(kart).toContain('Bu bir TEST ödemesidir');
+    // Simülasyonda 3DS/tahsilat sözü SUSTURULMALI.
+    const guvenlikNotu = kart.slice(kart.indexOf('simulation\n'), kart.indexOf('{error && ('));
+    expect(kart).toContain("? 'Test modunda kart bilgilerin hiçbir bankaya");
+    expect(guvenlikNotu.length).toBeGreaterThan(0);
+  });
+
+  it('bayrak ödeme ekranından kart formuna GEÇİRİLİYOR', () => {
+    // Bileşen desteklese de prop bağlanmazsa uyarı hiç çizilmez.
+    expect(oku('views/PaymentScreen.tsx'))
+      .toContain('simulation={payMode?.simulation === true && onlineAllowed}');
+  });
+
+  it('başarı ekranında da uyarı var ve makbuz TEST diye etiketli', () => {
+    const ekran = oku('views/PaymentScreen.tsx');
+    const basari = ekran.slice(ekran.indexOf("if (screen === 'SUCCESS')"));
+    expect(basari).toContain('Bu bir TEST ödemesidir');
+    expect(basari).toContain("payMode?.simulation === true ? 'Test İşlem No' : 'İşlem No'");
+    expect(basari).toContain("'Kart · TEST'");
+  });
+
+  it('ekran KENDİ İÇİNDE çelişmiyor', () => {
+    // Kırmızı "para çekilmez" uyarısının altında yeşil "tamamı karttan tahsil
+    // edilir" kutusu duruyordu. İncelemeci hangisinin doğru olduğunu bilemez.
+    const ekran = oku('views/PaymentScreen.tsx');
+    expect(ekran).toContain("? 'TEST · tahsilat yok'");
+    expect(ekran).toContain('Bu işlemde kartından tahsilat yapılmaz');
+    // Simülasyonda banka doğrulaması HİÇ açılmaz.
+    expect(ekran).toContain("? 'Test işlemi çalıştırılıyor…'");
+  });
+
+  it('kart kaydetme varsayılanı KAPALI', () => {
+    // Kutu açık geliyordu ve kayıtlı kartı silecek bir ekran YOK.
+    expect(oku('components/payment/AddCardScreen.tsx')).toContain('useState(false)');
+  });
+});
+
+describe('Kurulum sihirbazı · kapan değil', () => {
+  it('sihirbazda ÇIKIŞ var — hesap silmeye giden yol açık kalıyor', () => {
+    // "Atla" kaldırıldığında yerine hiçbir şey konmamıştı: hesap kayıtta zaten
+    // açılıyor, kullanıcı her açılışta bu ekrana düşüyor, ama yaşını/adını
+    // vermek istemiyorsa uygulamadan çıkmanın da hesabını silmenin de yolu
+    // yoktu. Apple 5.1.1(v) hesabın uygulama İÇİNDEN silinebilmesini şart
+    // koşar; silme ekranına giden tek yol Ayarlar'dır.
+    const ob = oku('views/Onboarding.tsx');
+    expect(ob).toContain('const cikisYap');
+    expect(ob).toContain('await logout()');
+    expect(ob).toContain('aria-label="Çıkış yap"');
+    // Zorunluluk GEVŞEMEDİ: kapılar hâlâ ctaEnabled içinde.
+    expect(ob).toContain('case 1: return ageIndex !== null');
+    expect(ob).not.toContain('const handleSkip');
+  });
+});
+
+describe('KVKK rıza kaydı · söylediğimizi yazıyoruz', () => {
+  it('kayıt başarılı olduğunda rıza sunucuya yazılıyor', () => {
+    // Ekran üç belgeyi onaylatıyordu ama sunucudaki user_consents tablosu
+    // 41 kullanıcıya karşılık BOŞTU. KVKK'da açık rızanın ispat yükü veri
+    // sorumlusundadır; bir şikâyette elimizde hiçbir kanıt yoktu.
+    const auth = oku('views/AuthScreen.tsx');
+    expect(auth).toContain("recordUserConsents(['TERMS', 'KVKK', 'PRIVACY'])");
+    expect(auth).toContain("from '../services/consentService'");
+    // Hem şifreli kayıtta hem sağlayıcı yolunda çağrılmalı.
+    expect(auth.match(/recordUserConsents\(/g)?.length ?? 0).toBeGreaterThanOrEqual(2);
+  });
+
+  it('rıza kaydı akışı BLOKE ETMİYOR', () => {
+    // Sunucu yazamazsa kullanıcı içeri girmeye devam etmeli; kaydı bloke
+    // etmek, çözdüğünden büyük bir sorun yaratır.
+    expect(oku('views/AuthScreen.tsx')).toContain('void recordUserConsents');
+    expect(oku('services/consentService.ts')).toContain('best-effort');
+  });
+});
+
+describe('Yasal metinler · ürünün bugünkü hâlini anlatıyor', () => {
+  it('iyzico maddesi "bugün geçerli değil" notuyla duruyor', () => {
+    // Ödeme ekranı "bu bir TEST ödemesidir" derken bağlayıcı sözleşme
+    // "ödemeniz lisanslı kuruluş iyzico üzerinden gerçekleşir" diyordu.
+    for (const yol of ['shared/legalDocs.ts', 'sozlesmeler/oyuncu/01-kullanim-sartlari.md']) {
+      expect(oku(yol), yol).toContain('Ödeme altyapısı canlıya alınana kadar uygulama içi ödemeler TEST');
+    }
+  });
+
+  it('rol sözleşmelerinde "cüzdana iade" kalmadı', () => {
+    // Cüzdan kalıcı olarak kapalı (§2.10); iade karta döner.
+    expect(oku('shared/legalDocsRol.ts')).not.toContain('cüzdanına iade');
+  });
+
+  it('iade modeli TEK: kesinti yok', () => {
+    // Aynı belgenin iki maddesi birbirini çürütüyordu: biri "tamamı iade
+    // edilir, işlem bedeli de yansıtılmaz" derken diğeri "yalnızca işlem
+    // bedeli düşülür" diyordu. Canlı ayar card_fee_pct = 0.
+    const ld = oku('shared/legalDocs.ts');
+    expect(ld).not.toContain('YALNIZCA ödeme altyapısının işlem bedeli düşülür');
+    expect(ld).toContain('HİÇBİR KESİNTİ yapılmaz');
+  });
+});

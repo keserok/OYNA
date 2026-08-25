@@ -1,10 +1,10 @@
-> **Durum:** Taslak tamamlandı — adversarial hukuki inceleme (enforceability, tamlık, tutarlılık) geçti · **Son güncelleme:** 15.07.2026 · **PR:** —
+> **Durum:** Taslak tamamlandı — adversarial hukuki inceleme (enforceability, tamlık, tutarlılık) geçti · **Son güncelleme:** 24.08.2026 · **PR:** —
 > **Uygulandığı yer:** `views/LegalScreen.tsx → TERMS` (uygulama içi "Yasal" ekranı)
 > **Not:** Madde 4 (Reşit Olmayan Kullanıcılar ve Veli Onayı) mekanizması — onboarding'de yaş aralığı alınması, sınırlı mod, çocuğun hesabındaki Veli Bağlantı Kodu, velinin kendi hesabından kodu girip kimlik + muvafakat onayı, T.C.'nin hash'lenmesi, 18 yaşında otomatik açılma ve ödeme kapısı — **Uygulamada fiilen inşa edilmiştir** (guardian_consents/apply_onboarding + payment_intents trigger; `views/Onboarding.tsx`, `views/GuardianConsentForm.tsx`, `views/GuardianConsentChild.tsx`). Ekli tam metin: [Veli Muvafakatnamesi](08-veli-muvafakatnamesi.md).
 
 # OYNA Kullanım Şartları / Üyelik Sözleşmesi (Oyuncu)
 
-**Son güncelleme: 15.07.2026**
+**Son güncelleme: 24.08.2026**
 
 Bu Kullanım Şartları ("Sözleşme"), aşağıda kimliği belirtilen hizmet sağlayıcı ile OYNA mobil/web uygulamasını ("Uygulama", "Platform") kayıtlı kullanıcı ("Kullanıcı", "Oyuncu") sıfatıyla kullanan gerçek kişi arasında, Uygulamanın kullanımına ilişkin hak ve yükümlülükleri düzenler.
 
@@ -145,7 +145,7 @@ Kullanıcı, Platform üzerinden bir Tesise ait boş saha/saat seçerek rezervas
 
 ### 5.3 Ödeme Altyapısı
 
-Ödemeler, lisanslı ödeme kuruluşu **iyzico** altyapısı üzerinden gerçekleştirilir. Kart bilgileri OYNA sunucularında saklanmaz; ödeme işlemi doğrudan iyzico'nun güvenli altyapısında gerçekleştirilir. OYNA, iyzico'nun sunduğu ödeme hizmetinin kesintisiz veya hatasız olacağını garanti etmez; bu konudaki sorumluluk madde 12 (Mücbir Sebep) ve madde 10 (Sorumluluğun Sınırlandırılması) çerçevesinde değerlendirilir.
+Ödemeler, lisanslı ödeme kuruluşu **iyzico** altyapısı üzerinden gerçekleştirilir. Ödeme altyapısı canlıya alınana kadar uygulama içi ödemeler TEST modundadır; bu dönemde gerçek bir tahsilat yapılmaz ve ekranda bu durum açıkça belirtilir. Kart bilgileri OYNA sunucularında saklanmaz; ödeme işlemi doğrudan iyzico'nun güvenli altyapısında gerçekleştirilir. OYNA, iyzico'nun sunduğu ödeme hizmetinin kesintisiz veya hatasız olacağını garanti etmez; bu konudaki sorumluluk madde 12 (Mücbir Sebep) ve madde 10 (Sorumluluğun Sınırlandırılması) çerçevesinde değerlendirilir.
 
 ### 5.4 Fatura/Makbuz
 

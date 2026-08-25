@@ -153,6 +153,22 @@ const AddCardScreen: React.FC<AddCardScreenProps> = ({ onBack, onSaved, collectM
       </header>
 
       <main className="flex-1 overflow-y-auto p-5 space-y-5">
+        {/* Uyarı formun EN BAŞINDA: alanların altında dururken kullanıcı
+            kart numarasını çoktan yazmış oluyordu. Uyarının işi, yazmadan
+            ÖNCE durdurmak. */}
+        {simulation && (
+          <div role="alert" className="bg-red-500/12 border border-red-500/40 rounded-2xl p-4 flex gap-3">
+            <AlertTriangle size={18} className="text-red-400 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-[0.8125rem] font-extrabold text-red-400">Bu bir TEST ödemesidir</p>
+              <p className="text-[0.75rem] text-gray-300 mt-1 leading-relaxed">
+                Kartından para çekilmez. Gerçek kartını girmene gerek yok —
+                test kartı: <span className="font-mono">5528 7900 0000 0008</span> · 12/30 · 123
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Canlı kart önizlemesi — markaya özel gradyan + canlı marka logosu */}
         <div
           className={`rounded-[20px] p-5 bg-gradient-to-br ${brandGradient(brand)} border border-white/10 relative overflow-hidden min-h-[168px] flex flex-col justify-between shadow-[0_18px_40px_-12px_rgba(0,0,0,0.6)] transition-[background] duration-500`}
@@ -249,19 +265,6 @@ const AddCardScreen: React.FC<AddCardScreenProps> = ({ onBack, onSaved, collectM
             <p className="text-xs text-red-400 font-bold -mt-2">Son kullanma tarihi geçersiz veya geçmiş.</p>
           )}
         </div>
-
-        {simulation && (
-          <div role="alert" className="bg-red-500/12 border border-red-500/40 rounded-2xl p-4 flex gap-3">
-            <AlertTriangle size={18} className="text-red-400 shrink-0 mt-0.5" />
-            <div>
-              <p className="text-[0.8125rem] font-extrabold text-red-400">Bu bir TEST ödemesidir</p>
-              <p className="text-[0.75rem] text-gray-300 mt-1 leading-relaxed">
-                Kartından para çekilmez. Gerçek kartını girmene gerek yok —
-                test kartı: <span className="font-mono">5528 7900 0000 0008</span> · 12/30 · 123
-              </p>
-            </div>
-          </div>
-        )}
 
         {collectMode && (
           <button onClick={() => setSave(s => !s)} className="flex gap-2.5 items-center px-0.5">

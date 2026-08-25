@@ -114,7 +114,7 @@ Kullanıcı, bir Tesise ait boş saha/saat seçerek rezervasyon talebinde bulunu
 Saha bedeli, kapora tutarı ve ek hizmet bedelleri rezervasyon ekranında, ödeme onayından önce açıkça gösterilir. Kapora, ilgili Tesis tarafından belirlenir ve rezervasyonun teyidi niteliğindedir. Kalan bedelin ödeme şekli Tesise göre değişebilir.
 
 5.3 Ödeme Altyapısı
-Ödemeler, lisanslı ödeme kuruluşu iyzico altyapısı üzerinden gerçekleştirilir. Kart bilgileri OYNA sunucularında saklanmaz. OYNA, iyzico'nun ödeme hizmetinin kesintisiz olacağını garanti etmez; bu konudaki sorumluluk madde 12 (Mücbir Sebep) ve madde 10 (Sorumluluğun Sınırlandırılması) çerçevesinde değerlendirilir.
+Ödemeler, lisanslı ödeme kuruluşu iyzico altyapısı üzerinden gerçekleştirilir. Ödeme altyapısı canlıya alınana kadar uygulama içi ödemeler TEST modundadır; bu dönemde gerçek bir tahsilat yapılmaz ve ekranda bu durum açıkça belirtilir. Kart bilgileri OYNA sunucularında saklanmaz. OYNA, iyzico'nun ödeme hizmetinin kesintisiz olacağını garanti etmez; bu konudaki sorumluluk madde 12 (Mücbir Sebep) ve madde 10 (Sorumluluğun Sınırlandırılması) çerçevesinde değerlendirilir.
 
 5.4 Fatura/Makbuz
 Fatura düzenleme yükümlülüğü, hizmeti fiilen sunan tarafa (Tesis) veya kanunen yükümlü tarafa aittir; OYNA yalnızca ödeme aracılık hizmetine ilişkin belgeleri düzenler.
@@ -122,7 +122,7 @@ Fatura düzenleme yükümlülüğü, hizmeti fiilen sunan tarafa (Tesis) veya ka
 6. İPTAL VE İADE
 
 6.1 Genel Kurallar (Kullanıcı Kaynaklı İptaller)
-- Rezervasyon/maç saatine 24 saat ve üzerinde kala yapılan iptallerde: ödenen tutardan YALNIZCA ödeme altyapısının işlem bedeli düşülür ve kalan tutar ödemenin yapıldığı karta iade edilir. OYNA bu iadeden kendi komisyonunu almaz. İşlem bedelinin oranı ve tutarı, ödeme ekranında ödemeden ÖNCE yazılıdır.
+- Rezervasyon/maç saatine 24 saat ve üzerinde kala yapılan iptallerde: ödenen tutarın TAMAMI, ödemenin yapıldığı karta iade edilir. Ne OYNA komisyonu ne de ödeme altyapısının işlem bedeli iadeden düşülür; o maliyeti OYNA üstlenir.
 - 6-24 saat arasında (6. saat dahil, 24. saat hariç) kala yapılan iptallerde: %50, ödemenin yapıldığı karta iade edilir.
 - 6 saatten az kala yapılan iptallerde: iade yapılmaz.
 İadenin yapılacağı yer: Bu maddedeki tüm iadeler, ödemenin yapıldığı karta işlenir (Mesafeli Sözleşmeler Yönetmeliği m.15/2). OYNA, Kullanıcı adına bakiye tutmaz; iade tutarı Platform içinde harcanmak üzere bir bakiyeye aktarılmaz. Tutarın karta yansıma süresi bankaya bağlıdır.
@@ -396,7 +396,7 @@ Kapora, uygulama üzerinden güvenli ödeme altyapısı ile tahsil edilir. Kalan
 4.1 İADE NEREYE YAPILIR?
 - İade, ödemenin yapıldığı karta yapılır (Mesafeli Sözleşmeler Yönetmeliği m.15/2 uyarınca ödemede kullanılan araca iade esastır).
 - İade talebiniz iptal anında işleme alınır; tutarın kartınıza yansıma süresi bankanıza bağlıdır (genellikle 1-3 iş günü, bazı bankalarda daha uzun sürebilir).
-- İade tutarından YALNIZCA ödeme altyapısının işlem bedeli düşülür; OYNA komisyonu düşülmez. Bu bedel, karttan çekilen TOPLAM tutar üzerinden hesaplanır — kısmi iadede de böyledir, çünkü ödeme kuruluşu komisyonunu iade işleminde geri vermez. Oran ve tutar, ödeme ekranında ödemeden ÖNCE gösterilir (yukarıdaki kademeli oranlar saklıdır).
+- İade tutarından HİÇBİR KESİNTİ yapılmaz: ne OYNA komisyonu ne de ödeme altyapısının işlem bedeli size yansıtılır. Ekranda yazan tutar neyse, kademeye göre hesaplanan kısmı olduğu gibi kartınıza döner.
 - OYNA, kullanıcı adına bakiye (cüzdan) tutmaz; iadeler Platform içinde harcanmak üzere bir bakiyeye DEĞİL, doğrudan ödeme aracınıza döner.
 
 5. CAYMA HAKKI İSTİSNASI
