@@ -66,7 +66,11 @@ const authEkrani = async (p) => {
 };
 
 const CTA = /^(Devam Et|İleri|Profili Tamamla|Konumsuz devam et|Başla|Bitir)$/;
-const GEZINME = ['Geri', 'Kapat', 'Konumu Aç'];
+// 'Çıkış' 25 Ağu 2026'da sihirbazın üst barına eklendi (Apple 5.1.1(v):
+// kayıtta hesap açıldığı için kullanıcının her zaman bir çıkışı olmalı).
+// Listede değilken yürüyücü onu bir SEÇENEK sanıp tıklıyor, oturumu kapatıyor
+// ve sihirbaz ilk adımda takılıyordu.
+const GEZINME = ['Geri', 'Kapat', 'Konumu Aç', 'Çıkış'];
 
 /** Kurulum sihirbazını GERÇEK KULLANICI GİBİ doldurur (TUZAK 4-5-6). */
 const atlamaTusuGorundu = [];

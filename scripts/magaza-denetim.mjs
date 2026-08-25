@@ -528,6 +528,60 @@ denetle('Kullanılmayan SDK ikiliye sızmıyor', () => {
   }
 });
 
+
+// ══════════════════════════════════════════════════════════════════════════
+// 10 · YÖNETİCİ PANELİ MAĞAZA PAKETİNE GİRMESİN
+//
+// `npm run build` (mobil bayrağı OLMADAN) yönetici panelini dist'e koyar —
+// admin.html + assets/admin-*.js. Bu doğru davranıştır: panel web'de yayınlanır.
+//
+// TEHLİKE, `npx cap sync ios` komutunun dist'in TAMAMINI native projeye
+// kopyalamasıdır. `npm run sync:ios` önce build:mobile çalıştırıp paneli
+// dışlar; ama düz `cap sync` çalıştıran biri, arayüzden erişilemeyen AMA
+// dosya olarak pakette duran tam bir yönetim konsolunu kullanıcının
+// telefonuna gönderir — içinde ödeme modu anahtarını çeviren ekranlarla.
+//
+// Uygulama zaten bir kez Guideline 5.6 ile "incelemede gizlenmiş özellik"
+// gerekçesiyle reddedildi. Bu, o tartışmayı yeniden açacak tek dosyadır.
+// ══════════════════════════════════════════════════════════════════════════
+denetle('Yönetici paneli mağaza paketinde değil', () => {
+  const yerler = [
+    ['ios/App/App/public',                    'iOS'],
+    ['android/app/src/main/assets/public',    'Android'],
+  ];
+  let bakilan = 0;
+
+  for (const [yol, platform] of yerler) {
+    const tam = join(KOK, yol);
+    if (!existsSync(tam)) continue;
+    bakilan++;
+
+    const izler = [];
+    if (existsSync(join(tam, 'admin-panel'))) izler.push('admin-panel/');
+    if (existsSync(join(tam, 'admin.html')))  izler.push('admin.html');
+    const varliklar = join(tam, 'assets');
+    if (existsSync(varliklar)) {
+      const admin = readdirSync(varliklar).filter((f) => /^admin-.*\.js$/.test(f));
+      if (admin.length) izler.push(...admin);
+    }
+
+    if (izler.length) {
+      engel(`${platform} paketinde yönetici paneli var`,
+        `${yol} içinde: ${izler.join(', ')} — düz \`npx cap sync\` ile kopyalanmış. ` +
+        `Sil ve \`npm run sync:${platform === 'iOS' ? 'ios' : 'android'}\` ile yeniden üret ` +
+        `(build:mobile paneli dışlar).`);
+      return;
+    }
+  }
+
+  if (bakilan === 0) {
+    uyari('Native paket henüz üretilmemiş',
+      'Gönderim öncesi `npm run sync:ios` çalıştır; bu denetim o zaman anlamlı olur.');
+  } else {
+    tamam('Yönetici paneli native pakete girmemiş');
+  }
+});
+
 console.log('\n  MAĞAZA GÖNDERİM DENETİMİ\n');
 
 for (const t of tamamlar) console.log(`  ${yesil('✓')} ${soluk(t)}`);
