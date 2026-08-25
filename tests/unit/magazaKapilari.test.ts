@@ -868,3 +868,41 @@ describe('Depo temizliği · yanlışlıkla silmiyor', () => {
     expect(JSON.parse(oku('package.json')).scripts['depo:sil']).toContain('depo-temizle.mjs');
   });
 });
+
+/**
+ * Servis anahtarı komut satırına yazdırılmaz (25 Ağustos 2026)
+ *
+ * İlk sürüm anahtarı ortam değişkeninden istiyordu:
+ *     SUPABASE_SERVICE_ROLE_KEY=… npm run depo:sil -- --uygula
+ * Bu, kod tarafı olmayan biri için hem zor hem risklidir: komut satırına
+ * yazılan her şey kabuk geçmişine düşer ve orada KALIR. Tam yetkili bir
+ * anahtarın düz metin olarak diskte durması, silmeye çalıştığımız sorunun
+ * aynısıdır.
+ */
+describe('Depo temizliği · anahtar kabuk geçmişine düşmüyor', () => {
+  const betik = oku('scripts/depo-temizle.mjs');
+
+  it('anahtar ortamda yoksa soruluyor, hata verilmiyor', () => {
+    expect(betik).toContain('sorGizli');
+    expect(betik).toContain('await sorGizli(');
+  });
+
+  it('girilen anahtar ekrana basılmıyor', () => {
+    // readline'ın çıktı yazıcısı susturulmazsa anahtar terminalde görünür ve
+    // omuz üstünden okunabilir; ayrıca terminal kaydı tutan araçlara düşer.
+    expect(betik).toContain('_writeToOutput');
+  });
+
+  it('anahtar biçimi ağa çıkmadan önce denetleniyor', () => {
+    const denetim = betik.indexOf('sb_secret_');
+    const silme   = betik.indexOf("method: 'DELETE'");
+    expect(denetim).toBeGreaterThan(-1);
+    expect(denetim).toBeLessThan(silme);
+  });
+
+  it('kuru çalışma metni artık ortam değişkeni istemiyor', () => {
+    const kuru = betik.slice(betik.indexOf('KURU ÇALIŞMA'), betik.indexOf('KURU ÇALIŞMA') + 400);
+    expect(kuru).not.toContain('SUPABASE_SERVICE_ROLE_KEY=');
+    expect(kuru).toContain('npm run depo:sil -- --uygula');
+  });
+});

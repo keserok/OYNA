@@ -27,6 +27,7 @@
 //   2. Silmeden önce dosyanın hiçbir yerden BAĞLI OLMADIĞI canlıdan doğrulanır;
 //      bağlıysa silinmez, çünkü silinirse uygulamada kırık görsel kalır.
 import { readFileSync } from 'node:fs';
+import { createInterface } from 'node:readline';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -36,7 +37,7 @@ const URL_TABAN = process.env.VITE_SUPABASE_URL || 'https://iikvzgyccvgcybzdfwlv
 const ANON = process.env.VITE_SUPABASE_ANON_KEY
   || readFileSync(join(KOK, 'supabaseClient.ts'), 'utf8')
        .match(/PROD_SUPABASE_ANON_KEY\s*=\s*\n?\s*'([^']+)'/)?.[1] || '';
-const ANAHTAR = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+let ANAHTAR = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 const UYGULA  = process.argv.includes('--uygula');
 
 const yesil=(s)=>`\x1b[32m${s}\x1b[0m`, kirmizi=(s)=>`\x1b[31m${s}\x1b[0m`;
@@ -103,15 +104,50 @@ console.log('');
 
 if (!UYGULA) {
   console.log(`  ${sari('KURU ÇALIŞMA')} — hiçbir şey silinmedi.`);
-  console.log(`  Uygulamak için kasadan servis anahtarını al ve şunu çalıştır:\n`);
-  console.log(`      ${soluk('SUPABASE_SERVICE_ROLE_KEY=… npm run depo:sil -- --uygula')}\n`);
-  console.log(`  ${soluk('Anahtarsız alternatif: Supabase panosu → Storage → images → dosyayı bul → Delete.')}\n`);
+  console.log(`  Silmek için:\n`);
+  console.log(`      ${sari('npm run depo:sil -- --uygula')}`);
+  console.log(`  ${soluk('Servis anahtarını komut satırına yazmana gerek yok; betik soracak.')}\n`);
   process.exit(0);
 }
 
+// ── Anahtar ─────────────────────────────────────────────────────────────────
+// Depolama API'si silme için TAM YETKİLİ anahtar ister; anon anahtar yetmez.
+//
+// Anahtar ortam değişkeninde yoksa SORULUR, komut satırına yazdırılmaz.
+// Sebep: komut satırına yazılan her şey kabuk geçmişine düşer ve orada
+// kalır — tam yetkili bir anahtarın düz metin olarak diskte durması,
+// silmeye çalıştığımız sorunun aynısıdır. Sorulan anahtar hiçbir yere
+// yazılmaz; yalnız bu çalışma boyunca bellekte durur.
+function sorGizli(soru) {
+  return new Promise((cozum) => {
+    if (!process.stdin.isTTY) {          // borulanmış girdi: gizlemeye gerek yok
+      const ara = createInterface({ input: process.stdin });
+      ara.question('', (c) => { ara.close(); cozum(c.trim()); });
+      return;
+    }
+    const ara = createInterface({ input: process.stdin, output: process.stdout, terminal: true });
+    let yazildi = false;
+    ara._writeToOutput = () => {         // tuşlar ekrana BASILMAZ
+      if (!yazildi) { ara.output.write(soru); yazildi = true; }
+    };
+    ara.question(soru, (c) => { ara.close(); process.stdout.write('\n'); cozum(c.trim()); });
+  });
+}
+
 if (!ANAHTAR) {
-  console.log(`  ${kirmizi('✗')} SUPABASE_SERVICE_ROLE_KEY tanımlı değil.`);
-  console.log(`    ${soluk('Depolama API\'si silme için tam yetki ister; anon anahtar yetmez.')}\n`);
+  console.log(`  Servis anahtarı gerekiyor ${soluk('(Supabase → Project Settings → API → service_role)')}`);
+  console.log(`  ${soluk('Yapıştırdığında ekranda görünmeyecek; hiçbir dosyaya da yazılmıyor.')}\n`);
+  ANAHTAR = await sorGizli('  Anahtarı yapıştır ve Enter: ');
+}
+
+if (!ANAHTAR) {
+  console.log(`\n  ${kirmizi('✗')} Anahtar girilmedi — hiçbir şey silinmedi.\n`);
+  process.exit(1);
+}
+if (!/^(eyJ|sb_secret_)/.test(ANAHTAR)) {
+  console.log(`\n  ${kirmizi('✗')} Bu bir servis anahtarına benzemiyor.`);
+  console.log(`    ${soluk('Beklenen biçim: "eyJ…" ile başlayan uzun bir dize ya da "sb_secret_…".')}`);
+  console.log(`    ${soluk('Supabase → Project Settings → API → service_role → Reveal → kopyala.')}\n`);
   process.exit(1);
 }
 
