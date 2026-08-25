@@ -205,6 +205,26 @@ for renting a football pitch and a share of a match fee, both consumed
 outside the app. There is no digital content, no subscription and no
 unlockable feature, so In-App Purchase does not apply (Guideline 3.1.3(e)).
 
+WHAT THE NEXT VERSION CHANGES
+Two things about this version are temporary, and we would rather name them
+than have you find them:
+
+  - The venues, matches and players you see are sample content. The app
+    says so to every user, on the home screen and on both discovery lists.
+  - Payments run in simulation, with a red warning on every payment screen.
+
+Neither is a product decision; both are launch-stage states. The next
+version ships with contracted venues and live payments. When that happens,
+the sample-content notice and the simulation warning each disappear on
+their own, for everyone at once — both are driven by a single server
+setting, not by anything in the app binary, so no new build is required to
+turn them off.
+
+We are submitting now rather than waiting because the product itself is
+complete: every screen, every one of the four account types and every flow
+can be reviewed today. What is not yet real is the inventory, and the app
+discloses that to users rather than to reviewers only.
+
 ACCOUNT DELETION
 Settings → Account → "Hesabı Sil" (Delete account), per Guideline
 5.1.1(v).
