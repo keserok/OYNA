@@ -46,7 +46,9 @@
     "sistem:zaman-deseni": "node scripts/sistem/zaman-deseni.mjs",
     "sistem:surum": "node scripts/sistem/surum.mjs",
     "telefon:dogrula": "node scripts/telefon-girisi-dogrula.mjs",
-    "apple:gizli-anahtar": "node scripts/apple-gizli-anahtar.mjs"
+    "apple:gizli-anahtar": "node scripts/apple-gizli-anahtar.mjs",
+    "vitrin:gorseller": "node scripts/vitrin-gorselleri.mjs",
+    "magaza:ekran": "node scripts/magaza-ekran-goruntuleri.mjs"
   },
   "dependencies": {
     "@capacitor-community/apple-sign-in": "^7.1.0",

@@ -700,3 +700,96 @@ describe('İade kuyruğu · sahte iade yalnız sahte tahsilata', () => {
     expect(s()).toContain('GERCEK_TAHSILAT_SIM_MODDA');
   });
 });
+
+/**
+ * VİTRİN GÖRSELLERİ KAPISI (25 Ağustos 2026)
+ *
+ * App Store ekran görüntüsü çekilirken vitrindeki fotoğraflara ilk kez tek
+ * tek bakıldı. "Saha Kirala" listesinin ilk kartı bir FIFA Dünya Kupası
+ * renderıydı — kaidesinde "FIFA WORLD CUP" okunuyordu; bir kortun iki
+ * fotoğrafı ise tanınabilir kişilerin ve çocukların özel fotoğraflarıydı.
+ * Aylardır canlıdaydılar ve yeşil geçen yirmi denetimin hiçbiri bakmıyordu,
+ * çünkü hepsi DOSYALARA bakıyordu; bunlar VERİDEYDİ.
+ *
+ * Bu blok, 11. kapının kendini yanlış yerde yeşil göstermesini engelleyen üç
+ * özelliğini kilitler. Üçü de kapıyı yazarken bizzat yaşandı.
+ */
+describe('Vitrin görselleri kapısı · yanlış yeşil vermiyor', () => {
+  const kod = oku('scripts/magaza-denetim.mjs');
+  const kapi = kod.slice(kod.indexOf('11 · VİTRİN GÖRSELLERİ'));
+
+  it('kapı gerçekten var ve canlı veriyi okuyor', () => {
+    expect(kapi).toContain('rest/v1/');
+    expect(kapi).toContain('pitches?select=');
+    expect(kapi).toContain('courts?select=');
+  });
+
+  it('adres karşılaştırması ağa BAĞLI DEĞİL — indirme öncesinde yapılıyor', () => {
+    // İçerik karşılaştırması görsel indirilemezse sessizce devre dışı kalır.
+    // Adres karşılaştırması her koşulda çalışmalı; bu yüzden fetch'ten ÖNCE
+    // gelmek zorunda. Canlıdaki gerçek çakışmayı (aynı stok fotoğrafın iki
+    // sahada olması) yakalayan kural buydu.
+    const adresKurali  = kapi.indexOf('adresSahalari');
+    const indirme      = kapi.indexOf('await Promise.all(benzersiz.map');
+    expect(adresKurali).toBeGreaterThan(-1);
+    expect(indirme).toBeGreaterThan(-1);
+    expect(adresKurali).toBeLessThan(indirme);
+  });
+
+  it('hiçbir görsel indirilemediyse TAMAM demiyor', () => {
+    // İlk sürüm "çakışan içerik yok" diye yeşil yandı; oysa dokuz görselin
+    // dokuzu da indirilememişti ve hiçbir karşılaştırma yapılmamıştı.
+    expect(kapi).toContain('dogrulanan === 0');
+    const yesilSatir = kapi.match(/tamam\(`Vitrin görselleri:[^`]*`\)/)?.[0] ?? '';
+    expect(yesilSatir).toContain('dogrulanan');       // kaç tanesi bakıldı, söylüyor
+    expect(yesilSatir).toContain('benzersiz.length'); // kaç tanesi vardı, söylüyor
+  });
+
+  it('maç görselleri kopya kurallarının DIŞINDA', () => {
+    // Maç görseli sahadan türetilir; aynı sahanın onlarca maçında aynı
+    // fotoğrafın görünmesi DOĞRUDUR. İlk sürüm maçları da kapsayınca kapı
+    // üç yanlış engel üretti. Ayrım kalıcı olmalı.
+    expect(kapi).toContain('macGorselleri');
+    const ekleTanimi = kapi.slice(kapi.indexOf('const ekle ='), kapi.indexOf('const ekle =') + 200);
+    expect(ekleTanimi).toContain('gorseller.push');
+    // `gorseller` (tesis kimliği) maç görseli ASLA almamalı:
+    expect(kapi).not.toMatch(/for \(const m of maclar\) ekle\(/);
+  });
+
+  it('üçüncü taraf barındırıcı ENGEL değil UYARI — ağ politikası da 403 döndürebilir', () => {
+    const disBolum = kapi.slice(kapi.indexOf('const disAdres'));
+    expect(disBolum).toContain('uyari(');
+    expect(disBolum.slice(0, disBolum.indexOf('dogrulanan'))).not.toContain('engel(');
+  });
+});
+
+/**
+ * `vitrin:gorseller` — makinenin göremediğini insana gösteren komut.
+ *
+ * Bir fotoğrafın kupa mı, çocuk mu, halı saha mı olduğunu hiçbir denetim
+ * bilemez. 11. kapı ancak kopyayı ve kırık adresi yakalar. Geri kalanı
+ * bakmakla anlaşılır — ve aylarca bakılmamasının sebebi bakmanın zahmetli
+ * olmasıydı: altı saha, kortları, altmış beş maç, hepsi ayrı ekranlarda.
+ */
+describe('vitrin:gorseller · bakmayı tek komuta indiriyor', () => {
+  it('betik depoda (scripts/* kalıbına yutulmamış)', () => {
+    expect(existsSync(join(process.cwd(), 'scripts/vitrin-gorselleri.mjs'))).toBe(true);
+    expect(oku('.gitignore')).toContain('!scripts/vitrin-gorselleri.mjs');
+  });
+
+  it('package.json üzerinden çağrılabiliyor', () => {
+    const p = JSON.parse(oku('package.json'));
+    expect(p.scripts['vitrin:gorseller']).toContain('vitrin-gorselleri.mjs');
+  });
+
+  it('saha, kort ve maç görsellerinin ÜÇÜNÜ de basıyor', () => {
+    const s = oku('scripts/vitrin-gorselleri.mjs');
+    expect(s).toContain('pitches?select=');
+    expect(s).toContain('courts?select=');
+    expect(s).toContain('public_matches?select=');
+  });
+
+  it('11. kapı, bakılacak yeri adıyla gösteriyor', () => {
+    expect(oku('scripts/magaza-denetim.mjs')).toContain('npm run vitrin:gorseller');
+  });
+});

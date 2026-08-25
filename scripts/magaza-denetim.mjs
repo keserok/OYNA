@@ -582,6 +582,202 @@ denetle('Yönetici paneli mağaza paketinde değil', () => {
   }
 });
 
+// ══════════════════════════════════════════════════════════════════════════
+// 11 · VİTRİN GÖRSELLERİ — AYNI FOTOĞRAF İKİ FARKLI SAHADA OLAMAZ
+//
+// 25 Ağustos 2026'da App Store ekran görüntüsü çekilirken vitrindeki
+// fotoğraflara ilk kez tek tek BAKILDI. Çıkan tablo:
+//
+//   · İki sahanın vitrin fotoğrafı FIFA Dünya Kupası kupasının renderıydı —
+//     kaidesinde "FIFA WORLD CUP" yazısı okunuyordu. Tescilli marka
+//     (Apple 5.2) ve "Saha Kirala" listesinin İLK kartıydı.
+//   · Bir kortun iki fotoğrafı, tanınabilir kişilerin ve ÇOCUKLARIN özel
+//     fotoğraflarıydı. KVKK açısından ihlal, Apple 5.1.1 açısından ret.
+//   · Bir sahanın ve üç profilin fotoğrafı uygulamanın kendi logosuydu.
+//
+// Hiçbiri kodda değildi; hepsi CANLI VERİDEYDİ. Yeşil geçen 20 denetimin
+// hiçbiri buna bakmıyordu, çünkü hepsi dosyalara bakıyordu.
+//
+// ─── BU KAPI NEYİ YAKALAR ───────────────────────────────────────────────────
+// Kupa fotoğrafı depoya ÜÇ AYRI ADLA kopyalanmıştı. URL'leri farklı,
+// içerikleri aynı. Bu yüzden kapı adrese değil İÇERİĞE bakar: her görseli
+// indirir, sha256'sını alır ve aynı içeriğin iki FARKLI sahada görünmesini
+// engel sayar. Aynı fotoğrafın iki tesise birden ait olması gerçekte
+// mümkün değildir; olduysa örnek veri kopyalanmış demektir.
+//
+// ─── BU KAPI NEYİ YAKALAYAMAZ (dürüst sınır) ────────────────────────────────
+// Bir fotoğrafın kupa mı, çocuk mu, halı saha mı olduğunu makine bilemez.
+// Tek kullanılan bir özel fotoğraf bu kapıdan sessizce geçer. O yüzden
+// gönderim öncesi `npm run vitrin:gorseller` çalıştırılır: canlıdaki bütün
+// vitrin görsellerini tek sayfada yan yana basar. Bakmak on saniye sürer;
+// bakılmadığı için buraya bir kupa fotoğrafı bir ay boyunca asılı kaldı.
+//
+// Avatarlar RLS arkasında olduğu için anonim okunamaz; bu kapı sahaları,
+// kortları ve maçları kapsar — özel fotoğrafların bulunduğu yer de tam
+// olarak kortlardı.
+// ══════════════════════════════════════════════════════════════════════════
+await denetleAg('Vitrin görselleri: aynı fotoğraf iki sahada değil', async () => {
+  const url  = process.env.VITE_SUPABASE_URL || 'https://iikvzgyccvgcybzdfwlv.supabase.co';
+  const anon = process.env.VITE_SUPABASE_ANON_KEY || GOMULU_ANON;
+  const bizimDepo = `${url}/storage/v1/object/public/`;
+
+  const cek = async (yol) => {
+    const y = await fetch(`${url}/rest/v1/${yol}`, { headers: { apikey: anon } });
+    if (!y.ok) throw new Error(`${yol} → HTTP ${y.status}`);
+    return y.json();
+  };
+
+  const [sahalar, kortlar, maclar] = await Promise.all([
+    cek('pitches?select=id,name,image,images'),
+    cek('courts?select=id,name,images,pitch_id'),
+    cek('public_matches?select=id,image,pitch_id'),
+  ]);
+
+  const sahaAdi = new Map(sahalar.map((s) => [s.id, s.name]));
+
+  // Her görsel, AİT OLDUĞU SAHA ile eşleştirilir. Maçın görseli sahasından
+  // türetildiği için maç–saha eşleşmesi meşrudur; yakalanması gereken,
+  // aynı içeriğin İKİ AYRI sahada görünmesidir.
+  //
+  // TESİS GÖRSELİ ile MAÇ GÖRSELİ arasındaki fark, aşağıdaki kuralların
+  // dayandığı ayrımdır ve deneyerek öğrenildi:
+  //
+  //   · Saha ve kort fotoğrafı bir TESİS KİMLİK İDDİASIDIR. "Bu, o tesisin
+  //     fotoğrafıdır." Aynı fotoğrafın iki tesise ait olması mümkün değildir.
+  //   · Maç görseli ise bir OLAY görselidir. Varsayılanı sahadan türetilir
+  //     (bu yüzden aynı sahanın onlarca maçında aynı fotoğraf görünür ve bu
+  //     doğrudur); elle verilenler de genel futbol görselleridir.
+  //
+  // Kural ilk yazıldığında maçlar da kapsanmıştı ve kapı, sahadan türetilmiş
+  // görselleri "çakışma" sanıp üç yanlış engel üretti. Maçlar kopya
+  // kurallarının DIŞINDA; erişilebilirlik denetimine ise dahil.
+  const gorseller = [];      // tesis kimliği: saha + kort
+  const macGorselleri = [];  // yalnız erişilebilirlik için
+  const ekle = (adres, sahaId, nerede) => {
+    if (typeof adres === 'string' && adres.trim()) gorseller.push({ adres: adres.trim(), sahaId, nerede });
+  };
+
+  for (const s of sahalar) {
+    ekle(s.image, s.id, `saha "${s.name}"`);
+    for (const g of Array.isArray(s.images) ? s.images : []) ekle(g, s.id, `saha "${s.name}"`);
+  }
+  for (const k of kortlar) {
+    for (const g of Array.isArray(k.images) ? k.images : []) {
+      ekle(g, k.pitch_id, `kort "${k.name}" (${sahaAdi.get(k.pitch_id) ?? 'saha?'})`);
+    }
+  }
+  for (const m of maclar) {
+    if (typeof m.image === 'string' && m.image.trim()) macGorselleri.push(m.image.trim());
+  }
+
+  if (gorseller.length === 0 && macGorselleri.length === 0) {
+    tamam('Vitrin görselleri: canlıda hiç saha/kort fotoğrafı yok');
+    return;
+  }
+
+  // ── Kural 0: AYNI ADRES iki farklı sahada → ENGEL ──────────────────────
+  //
+  // Bu kural ağ gerektirmez ve bu yüzden en güvenilir olanıdır. İçerik
+  // karşılaştırması (Kural 1) görsel indirilemezse sessizce devre dışı
+  // kalır; adres karşılaştırması her koşulda çalışır. Nitekim canlıda tam
+  // olarak böyle bir çift vardı: "Ruzgar Arena" ile "Yildiz Vadi Hali Saha"
+  // galerilerinde aynı stok fotoğrafın aynı adresini paylaşıyordu.
+  const adresSahalari = new Map();   // adres → Map(sahaId → nerede)
+  for (const g of gorseller) {
+    if (!adresSahalari.has(g.adres)) adresSahalari.set(g.adres, new Map());
+    adresSahalari.get(g.adres).set(g.sahaId, g.nerede);
+  }
+  const adresCakisan = [...adresSahalari.entries()].filter(([, m]) => m.size > 1);
+  if (adresCakisan.length) {
+    engel(`${adresCakisan.length} fotoğraf adresi birden fazla sahada kullanılmış`,
+      `Birebir aynı adres farklı tesislerde geçiyor — örnek veri kopyalanmış demektir.\n` +
+      adresCakisan.map(([, m]) => `      · ${[...m.values()].join('  ⟷  ')}`).join('\n') + '\n' +
+      `      \`npm run vitrin:gorseller\` ile bak, birinden kaldır.`);
+    return;
+  }
+
+  // Benzersiz adresleri indir; içerik parmak izini çıkar.
+  const benzersiz = [...new Set([...gorseller.map((g) => g.adres), ...macGorselleri])];
+  const parmak = new Map();     // adres → sha256 | null
+  const kirik  = [];            // { adres, sebep, bizim }
+
+  await Promise.all(benzersiz.map(async (adres) => {
+    const bizim = adres.startsWith(bizimDepo);
+    try {
+      const y = await fetch(adres);
+      if (!y.ok) { kirik.push({ adres, sebep: `HTTP ${y.status}`, bizim }); return; }
+      const bayt = Buffer.from(await y.arrayBuffer());
+      parmak.set(adres, createHash('sha256').update(bayt).digest('hex'));
+    } catch (e) {
+      kirik.push({ adres, sebep: e.message, bizim });
+    }
+  }));
+
+  // ── Kural 1: aynı içerik, iki farklı saha → ENGEL ──────────────────────
+  const icerikSahalari = new Map();   // sha → Map(sahaId → nerede)
+  for (const g of gorseller) {
+    const sha = parmak.get(g.adres);
+    if (!sha) continue;
+    if (!icerikSahalari.has(sha)) icerikSahalari.set(sha, new Map());
+    icerikSahalari.get(sha).set(g.sahaId, g.nerede);
+  }
+
+  const cakisan = [...icerikSahalari.values()].filter((m) => m.size > 1);
+  if (cakisan.length) {
+    const dokum = cakisan
+      .map((m) => `      · ${[...m.values()].join('  ⟷  ')}`)
+      .join('\n');
+    engel(`${cakisan.length} fotoğraf birden fazla sahaya ait görünüyor`,
+      `Aynı görsel içeriği farklı tesislerde kullanılmış. Gerçek bir tesis ` +
+      `fotoğrafı iki tesise birden ait olamaz; bu, örnek verinin kopyalandığını ` +
+      `gösterir. 25 Ağustos'ta tam olarak böyle bir kopya — bir FIFA Dünya Kupası ` +
+      `renderı — iki sahanın vitrin fotoğrafıydı.\n${dokum}\n` +
+      `      \`npm run vitrin:gorseller\` ile hepsine bak, sonra ilgilisini temizle.`);
+    return;
+  }
+
+  // ── Kural 2: KENDİ deponuzdaki bir görsel açılmıyorsa → ENGEL ──────────
+  const bizimKirik = kirik.filter((k) => k.bizim);
+  if (bizimKirik.length) {
+    engel(`${bizimKirik.length} vitrin görseli kendi depomuzda açılmıyor`,
+      `İncelemeci bu kartları kırık görselle görür (Apple 2.1).\n` +
+      bizimKirik.map((k) => `      · ${k.sebep} — ${k.adres.slice(bizimDepo.length)}`).join('\n'));
+    return;
+  }
+
+  // ── Kural 3: üçüncü taraf barındırıcı → UYARI ──────────────────────────
+  // Engel değil: bu makinenin ağ politikası da 403 döndürebilir, ki bu
+  // denetimi yazarken tam olarak öyle oldu. Karar kurucunun.
+  const disAdres = benzersiz.filter((a) => !a.startsWith(bizimDepo));
+  const disHost = [...new Set(disAdres.map((a) => {
+    try { return new URL(a).host; } catch { return a; } }))];
+  if (disAdres.length) {
+    const disKirik = kirik.filter((k) => !k.bizim).length;
+    uyari(`${disAdres.length} vitrin görseli üçüncü taraf sunucuda (${disHost.join(', ')})`,
+      `Bu adresler bizim denetimimizde değil; sağlayıcı erişimi kesse veya ` +
+      `fotoğrafı kaldırsa incelemeci kırık kart görür.` +
+      (disKirik ? ` Şu an ${disKirik} tanesine bu makineden ulaşılamadı — ağ ` +
+        `politikası da olabilir, gerçek arıza da; gönderim öncesi bir telefondan doğrula.` : ''));
+  }
+
+  // ── Kaç görsel GERÇEKTEN karşılaştırıldı? ──────────────────────────────
+  //
+  // Parmak izi çıkarılamayan görsel karşılaştırmaya hiç girmez. Hepsi
+  // indirilemediyse "çakışma yok" demek doğru ama ANLAMSIZDIR: kapı hiçbir
+  // şeye bakmamıştır. Bu betiği yazarken tam olarak öyle oldu — vitrindeki
+  // dokuz görselin dokuzu da bu makineden erişilemeyen bir CDN'deydi ve kapı
+  // yeşil yandı. Sayıyı söylemek, o yanlış yeşili imkânsız kılar.
+  const dogrulanan = parmak.size;
+  if (dogrulanan === 0) {
+    uyari('Vitrin görselleri karşılaştırılamadı',
+      `Canlıda ${benzersiz.length} vitrin görseli var ama hiçbiri bu makineden ` +
+      `indirilemedi, dolayısıyla içerik karşılaştırması YAPILMADI. Bu kapı şu an ` +
+      `hiçbir şey garanti etmiyor. Ağa erişebilen bir makinede tekrar çalıştır.`);
+    return;
+  }
+  tamam(`Vitrin görselleri: ${dogrulanan}/${benzersiz.length} görsel karşılaştırıldı, çakışan içerik yok`);
+});
+
 console.log('\n  MAĞAZA GÖNDERİM DENETİMİ\n');
 
 for (const t of tamamlar) console.log(`  ${yesil('✓')} ${soluk(t)}`);

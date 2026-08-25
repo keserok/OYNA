@@ -33,6 +33,15 @@ scripts/*
 # veriyordu. Gönderimin geçtiği kapı, depoda duran bir kapı olmalı.
 !scripts/magaza-denetim.mjs
 !scripts/surum-artir.mjs
+# `vitrin:gorseller` — canlıdaki her saha/kort fotoğrafını tek sayfada basar.
+# 25 Ağu 2026'da vitrinde bir FIFA kupası renderı ve çocuk fotoğrafları
+# bulundu; ikisi de aylardır oradaydı çünkü bakmak zahmetliydi. Bu betik
+# bakmayı on saniyeye indiriyor — depoda olmazsa yine kimse bakmaz.
+!scripts/vitrin-gorselleri.mjs
+# `magaza:ekran` — App Store'un istediği 1290×2796 ölçüsünde ham ekran
+# görüntüsü çeker. Ölçü tutmazsa App Store Connect yüklemeyi reddediyor;
+# ölçüyü akılda tutmak yerine betikte tutuyoruz.
+!scripts/magaza-ekran-goruntuleri.mjs
 # Giriş yolu araçları — aynı gerekçe. `telefon:dogrula` mağaza incelemesinin
 # en olası ret sebebini (telefonla giriş çalışmıyor) tek komutla sınar;
 # `apple:gizli-anahtar` Apple özel anahtarını dışarı çıkarmadan jeton üretir.
@@ -134,3 +143,10 @@ playwright-report/
 # Depoya giren şey yalnız şifreli kasa.age olmalıdır.
 docs/master/KASA/kasa.md
 docs/master/KASA/.dogrulama-*.tmp
+
+# Üretilen mağaza görselleri. Depoya GİRMEZ: her çekimde yeniden üretilir,
+# üstelik saha fotoğrafları üçüncü taraf sunucuda olduğu sürece çekimin
+# yapıldığı makinenin ağına göre farklı çıkar — depoda duran bir kopya
+# "son hâl" sanılır. Üreten betikler depoda; çıktıları değil.
+docs/master/magaza-gorselleri/*.png
+docs/master/magaza-gorselleri/*.html
