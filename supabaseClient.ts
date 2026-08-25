@@ -71,12 +71,67 @@ export const clearHasAccount = (): void => {
   }
 };
 
+// ─── "BENİ HATIRLA" — kullanıcının oturum kalıcılığı tercihi ────────────────
+//
+// KURUCU KARARI (24 Ağustos 2026): şifreli giriş geri geldiği için "Beni
+// Hatırla" da geri geldi ve giriş ekranında BÜYÜK bir anahtar olarak durur.
+//
+// TARİHÇE: 17 Ağustos'ta şifre kaldırılınca bu anahtar da kaldırılmıştı
+// (§4.8 "oturum çıkış yapılana kadar açıktır"). Gerekçe doğruydu: tek giriş
+// yolu Google/Apple iken kullanıcıya sorulacak bir şey yoktu — sağlayıcı
+// zaten cihazda oturumu tutuyordu. Şifreyle giren kullanıcı içinse soru
+// gerçektir: ortak bir bilgisayarda şifresini yazan kişi, oturumun kapanınca
+// düşmesini isteyebilmelidir.
+//
+// ANLAMI (iki kat):
+//   AÇIK  (varsayılan) → belirteç localStorage + native aynada durur; kullanıcı
+//                        çıkış yapana kadar oturum açık kalır (§4.8 davranışı).
+//   KAPALI            → belirteç YALNIZ sessionStorage'da durur; sekme/uygulama
+//                        kapanınca oturum kendiliğinden düşer. Native ayna da
+//                        yazılmaz, yoksa OS deposu tercihi delerdi.
+//
+// Tercihin KENDİSİ her zaman localStorage'da tutulur (oturum değil, ayar) ki
+// giriş ekranı anahtarı kullanıcının bıraktığı konumda gösterebilsin.
+const BENI_HATIRLA_KEY = 'oyna.auth.beniHatirla';
+
+/** Tercih okunamıyorsa varsayılan AÇIK: eski davranış (§4.8) korunur. */
+export const getBeniHatirla = (): boolean => {
+  if (!hasWindow) return true;
+  try {
+    return window.localStorage.getItem(BENI_HATIRLA_KEY) !== 'false';
+  } catch {
+    return true;
+  }
+};
+
+/**
+ * Depo katmanının okuduğu canlı değer. Modül yüklenirken depodan başlatılır:
+ * uygulama yeniden açıldığında kullanıcının bıraktığı tercih geçerli olmalı,
+ * her açılışta sessizce "açık"a dönmemeli.
+ */
+let beniHatirla = getBeniHatirla();
+
+/**
+ * Tercihi yazar. Giriş DENEMESİNDEN ÖNCE çağrılmalıdır: supabase-js oturumu
+ * signIn çağrısının içinde depoya yazar, yani depo katmanı tercihi o an
+ * bilmek zorundadır. Sonradan çağrılırsa ilk yazım yanlış yere gider.
+ */
+export const setBeniHatirla = (deger: boolean): void => {
+  beniHatirla = deger;
+  if (!hasWindow) return;
+  try {
+    window.localStorage.setItem(BENI_HATIRLA_KEY, deger ? 'true' : 'false');
+  } catch {
+    /* depo yoksa bellekteki değer yine de bu oturum için geçerli */
+  }
+};
+
 // ─── Kalıcı oturum deposu ────────────────────────────────────────────────────
-// Oturum HER ZAMAN kalıcıdır: kullanıcı çıkış yapana veya hesabını silene kadar
-// bu cihazda açık kalır ("Beni Hatırla" anahtarı kaldırıldı).
-// - getItem: localStorage'da yoksa sessionStorage'a bakar ve bulursa localStorage'a
-//   TAŞIR — eski sürümde "Beni Hatırla"yı kapatmış kullanıcılar bu geçişte tek bir
-//   oturum kaybı bile yaşamaz. Native'de son çare: Preferences aynasından geri yükle.
+// Oturum, "Beni Hatırla" AÇIKKEN kalıcıdır: kullanıcı çıkış yapana veya hesabını
+// silene kadar bu cihazda açık kalır.
+// - getItem: localStorage'da yoksa sessionStorage'a bakar. Bulursa localStorage'a
+//   YALNIZ tercih açıkken taşır — kapalıyken taşımak, kullanıcının kapattığı şeyi
+//   arkasından geri açmak olurdu. Native'de son çare: Preferences aynasından geri yükle.
 // - setItem: localStorage yazılamıyorsa (ör. Safari gizli sekme) sessionStorage'a
 //   düşer; oturum en azından uygulama ömrü boyunca sürer, hiçbir yol hata fırlatmaz.
 // - Native ayna (iOS UserDefaults / Android SharedPreferences): WebView,
@@ -107,15 +162,22 @@ const persistentAuthStorage = {
       if (stored !== null) return stored;
       const legacy = window.sessionStorage.getItem(key);
       if (legacy !== null) {
-        try {
-          window.localStorage.setItem(key, legacy);
-          window.sessionStorage.removeItem(key);
-        } catch {
-          /* taşıyamazsak sessionStorage kopyasıyla devam */
+        // Tercih KAPALIYKEN taşıma yapılmaz: kullanıcının "bu cihazda kalma"
+        // dediği oturumu kalıcı depoya terfi ettirmek, kapattığı şeyi arkasından
+        // geri açmak olurdu. Açıkken taşıma eski davranıştır ve korunur.
+        if (beniHatirla) {
+          try {
+            window.localStorage.setItem(key, legacy);
+            window.sessionStorage.removeItem(key);
+          } catch {
+            /* taşıyamazsak sessionStorage kopyasıyla devam */
+          }
         }
         return legacy;
       }
-      if (isNativePlatform) {
+      // Native ayna da yalnız tercih açıkken okunur: kapalıyken OS deposunda
+      // kalmış eski bir belirteç, kullanıcıyı istemediği hâlde içeri alırdı.
+      if (isNativePlatform && beniHatirla) {
         try {
           const { value } = await Preferences.get({ key });
           if (value != null) {
@@ -137,6 +199,29 @@ const persistentAuthStorage = {
   },
   setItem: (key: string, value: string): void => {
     if (!hasWindow) return;
+    // ── Tercih KAPALI: oturum yalnız sekme/uygulama ömrü kadar yaşar ──
+    // sessionStorage'a yazılır, kalıcı depolardan TEMİZLENİR. Temizlik şart:
+    // kullanıcı önce "hatırla" ile girip sonra çıkıp anahtarı kapatarak
+    // yeniden girerse, eski kalıcı belirteç orada kalır ve sekme kapansa bile
+    // bir sonraki açılışta getItem onu bulup kullanıcıyı içeri alırdı.
+    if (!beniHatirla) {
+      try {
+        window.sessionStorage.setItem(key, value);
+      } catch {
+        /* sessizce yoksay */
+      }
+      try {
+        window.localStorage.removeItem(key);
+      } catch {
+        /* sessizce yoksay */
+      }
+      if (isNativePlatform) {
+        void Preferences.remove({ key }).catch(() => {
+          /* sessizce yoksay */
+        });
+      }
+      return;
+    }
     try {
       window.localStorage.setItem(key, value);
       window.sessionStorage.removeItem(key);
@@ -173,7 +258,8 @@ const persistentAuthStorage = {
   },
 };
 
-// Eski "Beni Hatırla" tercihi artık okunmuyor; kalan anahtarı temizle.
+// 17 Ağustos öncesi sürümün İngilizce anahtarı. Yeni tercih `oyna.auth.beniHatirla`
+// altında yaşıyor; eskisi okunmuyor, kalıntı bırakmamak için siliniyor.
 if (hasWindow) {
   try {
     window.localStorage.removeItem('oyna.auth.rememberMe');
@@ -181,6 +267,32 @@ if (hasWindow) {
     /* sessizce yoksay */
   }
 }
+
+// ─── Hatırlanan e-posta (yalnız ALAN ön-dolumu) ──────────────────────────────
+// "Beni Hatırla" açıkken kullanıcının girdiği e-posta saklanır ve giriş ekranı
+// alanı bununla dolu gelir. ŞİFRE ASLA SAKLANMAZ — ne burada ne başka yerde.
+// Kullanıcının hatırlaması gereken tek şey şifresidir; e-postayı biz hatırlarız.
+const SON_EPOSTA_KEY = 'oyna.auth.sonEposta';
+
+export const getSonEposta = (): string => {
+  if (!hasWindow) return '';
+  try {
+    return window.localStorage.getItem(SON_EPOSTA_KEY) ?? '';
+  } catch {
+    return '';
+  }
+};
+
+/** Tercih kapalıysa e-posta da saklanmaz ve varsa silinir. */
+export const setSonEposta = (eposta: string, hatirla: boolean): void => {
+  if (!hasWindow) return;
+  try {
+    if (hatirla && eposta.trim()) window.localStorage.setItem(SON_EPOSTA_KEY, eposta.trim());
+    else window.localStorage.removeItem(SON_EPOSTA_KEY);
+  } catch {
+    /* sessizce yoksay */
+  }
+};
 
 export const supabase = createClient(
   SUPABASE_URL,

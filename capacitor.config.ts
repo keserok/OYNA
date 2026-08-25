@@ -12,6 +12,32 @@ const config: CapacitorConfig = {
 
   // ─── Plugins ────────────────────────────────────────────────────
   plugins: {
+    // ── SOSYAL GİRİŞ SAĞLAYICILARI ────────────────────────────────────────
+    // OYNA yalnız Google ve Apple ile giriş sunar. Ama @capgo/capacitor-social-login
+    // podspec'i VARSAYILAN OLARAK dört sağlayıcının hepsini bağımlılık yapar ve
+    // Facebook SDK'sı (FBSDKCoreKit + FBSDKLoginKit) iOS ikilisine giriyordu.
+    //
+    // NEDEN SORUN: Apple yüklemede paketteki TÜM gizlilik manifestolarını
+    // birleştirip Gizlilik Raporu üretir. Bizim manifestomuz "izleme yapmıyorum,
+    // izleme alan adım yok" diyor; Facebook SDK'sı ise kendi manifestosunda
+    // izleme beyan ediyor. Kullanılmayan bir SDK yüzünden uygulama kendi
+    // beyanını yalanlıyordu (Guideline 5.1.1(i)).
+    //
+    // Eklentinin kendi kancası (scripts/configure-dependencies.js) bu ayarı
+    // okuyup podspec'teki satırları yorum satırına çeviriyor. `compileOnly`
+    // = kod derlenir ama SDK bağımlılığı PAKETE GİRMEZ.
+    //
+    // ⚠️ Bu ayar `npx cap sync ios` çalıştırıldığında etkili olur ve ardından
+    // `pod install` gerekir. Gönderim öncesi `npm run magaza:denetim` bunu
+    // Podfile.lock üzerinden mekanik olarak sınar.
+    SocialLogin: {
+      providers: {
+        google: 'implementation',
+        apple: 'implementation',
+        facebook: 'compileOnly',
+        twitter: 'compileOnly',
+      },
+    },
     SignInWithApple: {
       // clientId must match the App Store Bundle ID set in Apple Developer Console
     },

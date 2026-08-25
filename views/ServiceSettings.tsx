@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { UserRole } from '../types';
 import {
   ArrowLeft, Bell, Lock, Moon, Sun, HelpCircle,
-  ChevronRight, LogOut, Star, KeyRound, Trash2, RefreshCw
+  ChevronRight, LogOut, Star, KeyRound, Trash2, RefreshCw, Shield
 } from 'lucide-react';
 import { auth } from '../supabaseAuth';
 import { supabase } from '../supabaseClient';
@@ -436,6 +436,38 @@ const ServiceSettings: React.FC<ServiceSettingsProps> = ({ role, onBack, onLogou
             </div>
           </div>
         </SectionCard>
+
+        {/* ─── YASAL — 24 Ağu 2026'da eklendi ──────────────────────────────
+            Bu ekranda hiç yasal bağlantı YOKTU: kaleci/hakem rolündeki bir
+            kullanıcı sözleşmelere, gizlilik politikasına ve hesap silme
+            bilgilendirmesine uygulama içinden HİÇ ulaşamıyordu (yalnız oyuncu
+            ayarlarında vardı). Apple, gizlilik politikasının uygulama İÇİNDEN
+            erişilebilir olmasını HER kullanıcı için şart koşar. Ayrıca
+            kaleci/hakem hizmet sözleşmesi de yasal ekranda gösteriliyor —
+            yani tam bu role ait belge, bu role ulaşmıyordu.
+
+            ÜST SEVİYEDE, KATLANABİLİR KARTIN İÇİNDE DEĞİL: ilk denemede
+            "Destek" kartının içine konmuştu ve o kart varsayılan olarak
+            KAPALI olduğu için bağlantı ekranda hiç görünmüyordu. Erişilebilir
+            olması gereken bir belgeyi açılıp kapanan bir bölmeye gömmek,
+            erişilebilir kılmak değildir. */}
+        <motion.button
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.12 }}
+          type="button"
+          onClick={() => useAppStore.getState().navigateTo('LEGAL')}
+          className="w-full flex items-center justify-between gap-3 rounded-[24px] p-5 border border-white/10 bg-white/[0.03] text-left hover:bg-white/[0.06] transition-colors"
+        >
+          <div className="flex items-center gap-3 min-w-0">
+            <span className="w-9 h-9 rounded-full bg-white/5 border border-white/10 flex items-center justify-center shrink-0">
+              <Shield size={18} className="text-[var(--ayar-soluk)]" />
+            </span>
+            <div className="min-w-0">
+              <p className="text-sm font-bold">Yasal &amp; Sözleşmeler</p>
+              <p className="text-[0.6875rem] text-[var(--ayar-soluk)]">Gizlilik, kullanım şartları, hizmet sözleşmen</p>
+            </div>
+          </div>
+          <ChevronRight size={16} className="text-[var(--ayar-soluk)] shrink-0" />
+        </motion.button>
 
         {/* Çıkış */}
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.15 }}>

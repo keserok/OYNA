@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import OrnekIcerikSeridi from '../components/common/OrnekIcerikSeridi';
 import {
   MapPin, Clock, Circle,
   ChevronRight, KeyRound, Loader2
@@ -595,6 +596,9 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onSelect }) => {
               dolgu buraya işlemez; son kart alt menünün altında kalmasın diye
               bar payını liste kendisi ayırır (pb-safe-nav: index.css). */}
           <div className="flex-1 overflow-y-auto px-4 pt-6 pb-safe-nav space-y-6 relative z-10 custom-scrollbar">
+            {/* Örnek içerik uyarısı listenin BAŞINDA. Ana ekranda vardı, burada
+                yoktu — oysa örnek maçların asıl görüldüğü yer burası. */}
+            <OrnekIcerikSeridi />
             <>
                 {isFilterActive && (
                   <>

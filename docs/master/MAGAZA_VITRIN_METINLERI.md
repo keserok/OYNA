@@ -49,10 +49,10 @@ TEKRAR YAZMA — Apple ikisini birleştirerek arıyor, tekrar yer israfı olur.
 ## 4. App Store — Tanıtım Metni / Promotional Text (en çok 170 karakter)
 
 ```
-Ordu'da yeni açılıyoruz. Maç kur, eksik oyuncuyu bul, kaleci ve hakem çağır. Vitrindeki içerik şimdilik örnektir; gerçek tesisler katıldıkça yerini alır.
+Türkiye'de yeni başlıyoruz. Maç kur, eksik oyuncuyu bul, kaleci ve hakem çağır. Vitrindeki içerik şimdilik örnektir; gerçek tesisler katıldıkça yerini alır.
 ```
 
-*150 karakter.* **Bu alan yeni sürüm göndermeden değiştirilebilir** — örnek
+*156 karakter.* **Bu alan yeni sürüm göndermeden değiştirilebilir** — örnek
 içerik temizlendiği gün ikinci cümleyi silmek yeterli.
 
 ---
@@ -91,9 +91,10 @@ Düzenli oynadığın kadroyu takım olarak kaydet, maçları takım adına aç,
 sohbetten organize ol.
 
 ÖDEME NASIL
-Şu anda tüm ödemeler SAHADA yapılır. Uygulama içinde kart bilgisi
-istemiyoruz ve çevrimiçi tahsilat yapmıyoruz. Rezervasyonunu OYNA'dan
-yaparsın, ücreti tesise sahada ödersin.
+Rezervasyonunu OYNA'dan yapar, kaporayı kartla ödersin; kalanını sahada
+tesise ödersin. Ödeme altyapımız canlıya alınana kadar uygulama içi
+ödemeler TEST modundadır — ekranda bunu açıkça yazıyoruz ve kartından
+para çekilmiyor.
 
 NEREDE ÇALIŞIYOR
 OYNA şu an yalnız Ordu'da açık. Başka bir şehirdeysen uygulamayı
@@ -101,8 +102,8 @@ kurabilirsin ama maç ve saha göremezsin — şehrine geldiğimizde burada
 olacak.
 
 BAŞLAMAK İÇİN
-Apple ya da Google hesabınla tek dokunuşta gir. Şifre yok, doğrulama kodu
-yok, form yok.
+E-posta ve şifrenle kaydol, ya da Apple veya Google hesabınla tek
+dokunuşta gir. Kaydolan herkes oyuncu olarak başlar.
 
 —
 

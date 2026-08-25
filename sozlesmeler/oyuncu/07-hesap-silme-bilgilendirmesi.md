@@ -1,6 +1,6 @@
 # Hesap ve Veri Silme Bilgilendirmesi
 
-> **Durum:** Yayında · **Son güncelleme:** 15.07.2026 (cüzdan bölümü, Kullanım Şartları md. 6.5'in "yürürlükte değildir" damgasına hizalandı) · İlk inceleme: 12.07.2026
+> **Durum:** Yayında · **Son güncelleme:** 24.08.2026 (cüzdan bölümü, Kullanım Şartları md. 6.5'in "yürürlükte değildir" damgasına hizalandı) · İlk inceleme: 12.07.2026
 > **Uygulandığı yer:** `public/hesap-silme.html` (herkese açık — https://oyna.app/hesap-silme.html; her iki mağazanın da "hesap silme URL'i" şartını karşılar)
 > Bu sayfa şirket/vergi bilgisi içermediği için placeholder doldurma gerektirmedi. 12.07.2026 incelemesinde içerik sağlam bulunmuştu; 17.08.2026'da yalnızca cüzdan bölümü, artık tutulmayan bakiyeyi vaat etmesin diye yeniden yazıldı.
 

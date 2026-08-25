@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { KALECI_HAKEM_KIRALAMA_ACIK } from '../shared/featureFlags';
 import { Spinner } from '../components/ui/Spinner';
 import { useMacParaBilgisi } from '../hooks/useMacParaBilgisi';
 import { useMacSaglayicilari } from '../hooks/useMacSaglayicilari';
@@ -2647,7 +2648,12 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
 
         {/* ── KALECİ & HAKEM (MANAGE + kaptan). İki taraflı: her kaptan KENDİ ─── */}
         {/* tarafının kalecisini yönetir; hakem maç-tekil (her iki kaptan görür). */}
-        {isManageMode && myCaptainSide && (
+        {/* KİRALAMA KAPALIYKEN GİZLİ (24 Ağu 2026 denetimi): bu bölüm, ana
+            ekrandaki pazaryeri kartlarının İKİNCİ giriş noktasıydı ve
+            sağlayıcı listesindeki tuşta düpedüz "YAKINDA" yazıyordu
+            (satır ~1759). Kartları gizleyip burayı açık bırakmak, kapıyı
+            arkadan açık tutmak olurdu. Tek kaynak: shared/featureFlags.ts. */}
+        {KALECI_HAKEM_KIRALAMA_ACIK && isManageMode && myCaptainSide && (
           <div className="space-y-3 mt-6">
             <p className="text-[0.625rem] font-extrabold text-ink-4 uppercase tracking-[0.2em] ml-1">Kaleci & Hakem</p>
 

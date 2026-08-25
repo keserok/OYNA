@@ -1,9 +1,21 @@
 import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
+import { recordUserConsents } from '../services/consentService';
 import { AnimatePresence } from 'framer-motion';
-import { Check, ArrowRight, ChevronLeft } from 'lucide-react';
+import { Check, ArrowRight, ChevronLeft, MailCheck } from 'lucide-react';
 import { UserRole } from '../types';
-import { loginWithGoogle, loginWithApple, oauthDonusunuOku } from '../supabaseAuth';
+import {
+  loginWithGoogle, loginWithApple, oauthDonusunuOku,
+  loginWithPassword, signUpWithPassword,
+} from '../supabaseAuth';
+import { getSonEposta, getBeniHatirla, getHasAccount } from '../supabaseClient';
+import SifreFormu, { type FormKipi, type SifreFormDegerleri } from './auth/SifreFormu';
+import BeniHatirlaAnahtari from './auth/BeniHatirlaAnahtari';
+import YasalOnayKarti from './auth/YasalOnayKarti';
+import { useKlavyeOrtusu } from '../components/common/Toast';
 import { useAppStore } from '../store';
+// Şifre sıfırlama yalnız "Şifremi unuttum"a dokununca yüklenir: giriş
+// paketine iki uç fonksiyon çağrısı ve ikinci bir form için yer açmaya gerek yok.
+const SifremiUnuttum = lazy(() => import('./auth/SifremiUnuttum'));
 // IP-15: yasal belgeler artık ÖZET değil TAM metin (karar 7b) — 39 KB. Statik
 // import edilirse giriş paketine girer ve belgeyi hiç açmayan kullanıcı da
 // indirir. Modal yalnız bağlantıya dokununca yüklenir; tip import'u derlemede
@@ -11,8 +23,8 @@ import { useAppStore } from '../store';
 const LegalModal = lazy(() =>
   import('../components/common/LegalModal').then((m) => ({ default: m.LegalModal })));
 import type { LegalModalKind } from '../components/common/LegalModal';
-// KLAVYE PAYI KALDIRILDI (23 Ağu 2026): bu ekranda artık hiçbir yazı alanı
-// yok — yalnız Apple/Google düğmeleri ve onay kutusu var. Klavye hiç açılmaz.
+// KLAVYE PAYI GERİ GELDİ (24 Ağu 2026): şifre yoluyla birlikte yazı alanları
+// da döndü. Ölçüm `useKlavyeOrtusu` ile yapılır — gerekçe bileşenin içinde.
 import heroEmblem from '../assets/auth/hero-emblem.webp';
 import oynaLogo from '../assets/onboarding/oyna-logo.webp';
 import { mapAuthError, mapOAuthDonusu } from '../utils/errorMap';
@@ -31,28 +43,40 @@ interface AuthScreenProps {
 // ─── Akış ────────────────────────────────────────────────────────────────────
 // SPLASH (ilk animasyon) → [intro → input] → ONBOARDING
 //   intro : cam amblem perdesi + "İSTEDİĞİN ZAMAN oyna!" tanıtımı
-//   input : Apple · Google — BAŞKA GİRİŞ YOLU YOK
+//   input : GİRİŞ YAP / KAYIT OL sekmeleri · e-posta + şifre · Apple · Google
 //
-// ─────────────────────────────────────────────────────────────────────────────
-// TELEFON VE DEMO YOLLARI BU EKRANDAN SİLİNDİ (23 Ağustos 2026, kurucu kararı:
-// "Bu ekranın tüm uygulamadan yok etmelisin ve yalnızca Apple ve Google
-// girişinin kalmasını sağlamalısın.")
+// ═════════════════════════════════════════════════════════════════════════════
+// E-POSTA + ŞİFRE GERİ GELDİ (24 Ağustos 2026, kurucu kararı)
+// ═════════════════════════════════════════════════════════════════════════════
 //
-// NEDEN BAYRAK YETMEDİ: telefon alanı, kod ekranı ve demo hesap seçici
-// bayraklarla (TELEFON_GIRISI_ACIK, VITE_DEMO_ACCOUNTS, VITE_DEV_MODE)
-// karartılmıştı — kod yerinde duruyordu. Bir bayrak yanlış ortama yazıldığında
-// ekran geri geliyordu ve kurucu aynı ekranı üç kez bildirdi. Bayrak
-// silinemeyen bir şeyi gizler; burada silinmesi gereken bir şey vardı.
+// NEDEN: Apple App Review "Sign-In Information → User name / Password" istiyor.
+// Google ve Apple ile Giriş bu talebi KARŞILAMAZ: incelemeci kendi kimliğiyle
+// girdiğinde bizim hazırladığımız hesaba değil, bomboş yeni bir hesaba düşer;
+// kaleci, hakem ve tesis panellerini hiç göremez.
 //
-// SMS ALTYAPISI ZATEN YOK: Supabase projesinde SMS sağlayıcısı yapılandırılmamış
-// (hook_send_sms_enabled=false). Yani "KOD GÖNDER" düğmesi hiçbir zaman
-// çalışmadı; ekranda duran ölü bir yoldu. Apple'ın 5.6 reddinin kökü de buydu.
-// Telefon YENİDEN gerekirse tarih: git history · views/AuthScreen.tsx@974402d.
+// BU BİR "İNCELEMECİ KAPISI" DEĞİLDİR — 5.6'nın dersi tam olarak buydu.
+// 21 Ağustos'taki ret, inceleme paketinde olup indirilen pakette OLMAYAN gizli
+// bir demo yolundan geldi. Buradaki yol HERKESE AÇIK ve HERKESLE AYNI: her
+// kullanıcı aynı sekmede e-postasıyla kaydolur ve girer. İncelemeciye verilen
+// şey ayrıcalıklı bir kapı değil, sıradan bir hesabın e-postası ve şifresidir.
 //
-// Numara BAĞLAMA ekranı (PhoneLinkScreen) ayrı bir şeydir ve durur: ileride
-// ödeme için numara istenirse oradan istenir. Ama GİRİŞ yolu değildir.
-// ─────────────────────────────────────────────────────────────────────────────
+// SİLİNENLER GERİ GELMEDİ: telefon/SMS yolu ve demo hesap seçici bu ekranda
+// hâlâ YOKTUR ve olmayacaktır. O yol, altyapısı (SMS sağlayıcısı) hiç
+// kurulmadığı için ölü bir düğmeydi; şifre yolunun altyapısı ise sunucuda
+// zaten çalışıyor. tests/unit/tekGirisYolu.test.ts bu ayrımı kilitler.
+//
+// KAYITTA ROL SEÇİMİ YOKTUR (kurucu kararı, 24 Ağu 2026): kaydolan HERKES
+// oyuncudur. Kaleci ve hakem, Ayarlar → Sahada Rolün'den BAŞVURUR; tesis
+// sahibi, müdür ve personel YALNIZ yönetici panelinden atanır. Atanmış roller
+// girişte kendi paneline düşer (shared/roles · pickLandingRole).
+//
+// APPLE ÜSTTE KALIR (App Store Kural 4.8): üçüncü taraf girişi sunan uygulama
+// Apple ile Giriş'i en az o kadar öne çıkarmak zorundadır.
+// ═════════════════════════════════════════════════════════════════════════════
 type Stage = 'intro' | 'input';
+
+/** Onay eksikken ertelenen eylem: onaylanınca bu iş yapılır. */
+type BekleyenEylem = 'google' | 'apple' | 'kayit';
 
 // Tanıtım, giriş akışının GİRİŞ KAPISI: uygulama oturumunda AUTH ilk kez
 // göründüğünde (splash'ten hemen sonra) açılır. Aynı oturumda AUTH'a yeniden
@@ -149,24 +173,67 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
     if (gecisSayaci.current) clearTimeout(gecisSayaci.current);
     gecisSayaci.current = setTimeout(() => setPushing(false), gecisSure);
   };
-  // Kayıt/giriş ayrımı KALDIRILDI: telefonla tek akış var. `authStartMode`
-  // bayrağı (kayıt kapısından "kaydol"a mı "giriş"e mi basıldığı) artık ekranın
-  // görünümünü değiştirmiyor, ama kapı onu hâlâ yazıyor — okunup TEMİZLENİR ki
-  // bir sonraki açılış eski bir niyetle karşılaşmasın.
+  // ─── KAYIT / GİRİŞ AYRIMI GERİ GELDİ ──────────────────────────────────────
+  // Telefon yolunda tek akış doğruydu: numarayı yazan kişinin hesabı yoksa
+  // ilk kodda açılıyordu, yani "kayıt" ile "giriş" GERÇEKTEN aynı işti.
+  // Şifreyle aynı şey mümkün değil — kayıt ad ister, giriş istemez; ve
+  // "şifre yanlış" ile "bu e-postayla hesap yok" farkını kullanıcıya
+  // söylemek gerekir. Bu yüzden iki sekme var ve hangisinde olduğu görünür.
+  //
+  // İLK SEKME `authStartMode`tan gelir (kayıt kapısı "kaydol"a mı "giriş"e mi
+  // bastığını yazar); o yoksa cihazda daha önce oturum açılmış mı diye
+  // bakılır — açılmışsa GİRİŞ, açılmamışsa KAYIT. Yeni kullanıcıya "giriş yap"
+  // demek, olmayan bir şifreyi sormaktır.
+  const [kip, setKip] = useState<FormKipi>(() => {
+    const niyet = useAppStore.getState().authStartMode;
+    if (niyet === 'register') return 'kayit';
+    if (niyet === 'login') return 'giris';
+    return getHasAccount() ? 'giris' : 'kayit';
+  });
+  // Niyet okundu → temizlenir ki bir sonraki açılış eski bir niyetle karşılaşmasın.
   useEffect(() => { useAppStore.getState().setAuthStartMode(null); }, []);
+
+  const [form, setForm] = useState<SifreFormDegerleri>(() => ({
+    adSoyad: '',
+    // "Beni hatırla" açıkken saklanan adres — kullanıcı e-postasını yeniden
+    // yazmasın. Şifre ASLA saklanmaz.
+    eposta: getSonEposta(),
+    sifre: '',
+  }));
+  const [hatirla, setHatirla] = useState<boolean>(() => getBeniHatirla());
+  const [unuttumAcik, setUnuttumAcik] = useState(false);
+  // Sunucuda e-posta doğrulaması AÇIKSA kayıt oturum döndürmez. O durumu
+  // sessiz geçmek, kullanıcıyı "kaydoldum ama hiçbir şey olmadı" ekranında
+  // bırakır — bu perde onu açıkça söyler.
+  const [onayBekleyenEposta, setOnayBekleyenEposta] = useState<string | null>(null);
+
   // Yasal onay OPT-IN olmalı: kutu önceden işaretli gelemez (KVKK/mağaza incelemesi)
   const [agreed, setAgreed] = useState(false);
-  const [isLoading, setIsLoading] = useState<'google' | 'apple' | null>(null);
+  const [isLoading, setIsLoading] = useState<'google' | 'apple' | 'sifre' | null>(null);
   const [error, setError] = useState<string | null>(
     oauthDonusu ? mapOAuthDonusu(oauthDonusu.saglayici, oauthDonusu.kod, oauthDonusu.aciklama) : null);
   // Kırmızı OLMAYAN durum satırı: "pencereyi kapattın" gibi şeyler hata
   // değildir ama SESSİZ de kalmamalı (bkz. saglayiciHatasi).
   const [bilgi, setBilgi] = useState<string | null>(null);
-  // Onay verilmemişken sağlayıcıya dokunulduğunda açılan sayfa. `null` = kapalı.
-  const [onayIstenen, setOnayIstenen] = useState<'google' | 'apple' | null>(null);
+  // Onay verilmemişken hesap AÇABİLECEK bir eyleme dokunulduğunda açılan sayfa.
+  // `null` = kapalı. Girişte (mevcut hesap) onay istenmez — kullanıcı o rızayı
+  // kaydolurken zaten verdi; her girişte yeniden sormak ne hukuken gerekli ne
+  // de kullanıcıya saygılıdır.
+  const [onayIstenen, setOnayIstenen] = useState<BekleyenEylem | null>(null);
   // IP-15: anahtarlar artık resmi belge anahtarları — modal tam metni
   // shared/legalDocs.ts'ten okur, Ayarlar → Yasal ile birebir aynı.
   const [openModal, setOpenModal] = useState<LegalModalKind | null>(null);
+
+  // ─── KLAVYE PAYI GERİ GELDİ (24 Ağustos 2026) ─────────────────────────────
+  // 23 Ağustos'ta bu ekranda hiç yazı alanı kalmadığı için klavye ölçümü
+  // sökülmüştü. Şifre yolu geri gelince alanlar da geri geldi ve ölçüm ŞART:
+  // ekranın kökü `fixed inset-0`, yani PENCEREYE tutunur — görsel görünüm
+  // alanına değil. Klavye açıldığında pencere küçülmez, dolayısıyla şifre
+  // alanı ve altındaki düğme klavyenin ARKASINDA kalırdı.
+  // Ölçüm TEK kaynaktan gelir: components/common/Toast · useKlavyeOrtusu.
+  // Bu ekran ölçümü KENDİSİ yapmaz — iki ölçüm olsaydı biri doğru, öteki
+  // yanlış davranırdı (tests/unit/girisKlavyesiVeSuzgecDelikleri · A4).
+  const klavyeOrtusu = useKlavyeOrtusu();
 
   // Tanıtım bir kez görüldü: aynı oturumda AUTH'a tekrar düşülürse atlanır.
   useEffect(() => { introShownThisSession = true; }, []);
@@ -201,8 +268,17 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
     setBilgi(null);
     setIsLoading(saglayici);
     try {
-      if (saglayici === 'google') await loginWithGoogle();
-      else await loginWithApple();
+      // "Beni hatırla" sağlayıcı yolunda da geçerlidir: kullanıcı anahtarı
+      // kapatıp Google'a bastığında oturumun kalıcı olması, kapattığı şeyin
+      // sessizce çalışması olurdu.
+      if (saglayici === 'google') await loginWithGoogle(hatirla);
+      else await loginWithApple(hatirla);
+      // Sağlayıcı yolunda da rıza kaydı: bu düğmeye onay kutusu işaretli
+      // olmadan basılamıyor (yukarıdaki `saglayiciyaDokun` kapısı), dolayısıyla
+      // buraya ulaşan her oturum gerçekten onay verilmiş bir oturumdur.
+      // Native'de akış buraya DÖNER (SocialLogin.login satır içi tamamlanır);
+      // web'de yönlendirme olursa kayıt atlanır — mağaza paketi native'dir.
+      void recordUserConsents(['TERMS', 'KVKK', 'PRIVACY']);
       // Yönlendirmeyi App'teki auth dinleyicisi yapar (profildeki GERÇEK role
       // göre). Buradan onSuccess() çağrılırsa çifte yönlendirme/flaş olur.
     } catch (err: any) {
@@ -215,11 +291,82 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
     }
   };
 
+  /**
+   * E-POSTA + ŞİFRE — giriş ya da kayıt.
+   *
+   * Yönlendirme YAPILMAZ: başarıda App'teki auth dinleyicisi profildeki GERÇEK
+   * role göre yönlendirir (kaleci/hakem/tesis kendi paneline düşer). Buradan
+   * onSuccess() çağrılsaydı hepsi oyuncu paneline giderdi.
+   */
+  const sifreyleDevam = async () => {
+    if (isLoading) return;
+    setError(null);
+    setBilgi(null);
+    setIsLoading('sifre');
+    try {
+      if (kip === 'kayit') {
+        const sonuc = await signUpWithPassword(form.eposta, form.sifre, form.adSoyad, hatirla);
+        // KVKK RIZA KAYDI — açık rızanın İSPAT YÜKÜ veri sorumlusundadır
+        // (KVKK m.3/1-a, m.12). 24 Ağu 2026 denetiminde çıktı: ekran
+        // kullanıcıya üç belgeyi onaylatıyordu ama sunucudaki `user_consents`
+        // tablosu 41 kullanıcıya karşılık BOŞTU — bir şikâyette elimizde
+        // hiçbir kanıt yoktu.
+        //
+        // Kayıt best-effort: sunucu yazamazsa kullanıcı içeri girmeye devam
+        // eder. Kaydı bloke etmek, çözdüğünden büyük bir sorun yaratır.
+        if (sonuc === 'GIRILDI') void recordUserConsents(['TERMS', 'KVKK', 'PRIVACY']);
+        if (sonuc === 'ONAY_BEKLIYOR') {
+          // Hesap açıldı ama oturum yok (sunucuda e-posta doğrulaması açık).
+          // Kullanıcı bunu BİLMELİ; sessiz kalırsak ekran hiçbir şey olmamış
+          // gibi durur ve kullanıcı aynı e-postayla tekrar tekrar dener.
+          setOnayBekleyenEposta(form.eposta.trim().toLowerCase());
+        }
+      } else {
+        await loginWithPassword(form.eposta, form.sifre, hatirla);
+      }
+    } catch (err: any) {
+      console.error(`[Auth] ${kip} hatası:`, err);
+      setError(mapAuthError(err, kip === 'kayit'
+        ? 'Hesap oluşturulamadı. Tekrar dene.'
+        : 'Giriş yapılamadı. Tekrar dene.'));
+    } finally {
+      setIsLoading(null);
+    }
+  };
+
   /** Sağlayıcı düğmesi: onay varsa doğrudan gir, yoksa onay sayfasını aç. */
   const saglayiciyaDokun = (saglayici: 'google' | 'apple') => {
     if (isLoading) return;
     if (!agreed) { setError(null); setOnayIstenen(saglayici); return; }
     void girisBaslat(saglayici);
+  };
+
+  /**
+   * Form gönderimi. KAYIT hesap açar → onay şarttır, eksikse dokunuş iptal
+   * EDİLMEZ, onaya dönüşür (sağlayıcı düğmeleriyle aynı desen). GİRİŞ mevcut
+   * bir hesaba oturur → onay istenmez.
+   */
+  const formGonderildi = () => {
+    if (isLoading) return;
+    if (kip === 'kayit' && !agreed) { setError(null); setOnayIstenen('kayit'); return; }
+    void sifreyleDevam();
+  };
+
+  /** Onay sayfasındaki tek düğme: onayı verir ve bekleyen işi AYNI dokunuşta başlatır. */
+  const onaylaVeDevamEt = () => {
+    const eylem = onayIstenen;
+    setAgreed(true);
+    setOnayIstenen(null);
+    if (eylem === 'kayit') void sifreyleDevam();
+    else if (eylem) void girisBaslat(eylem);
+  };
+
+  /** Sekme değişimi: alanlar korunur ama hata/bilgi satırı temizlenir. */
+  const kipDegistir = (yeni: FormKipi) => {
+    if (yeni === kip) return;
+    setKip(yeni);
+    setError(null);
+    setBilgi(null);
   };
 
   // Açılır pencere yolunun iki özel sonucu (supabaseAuth · webOAuthAc):
@@ -453,31 +600,100 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
                 // başlıyor; bu dolgu olmazsa başlık şeridin altında kalır.
                 // Hesap: güvenli alan + şeridin 18px üst boşluğu + 40px yüksekliği + nefes payı.
                 paddingTop: 'calc(var(--safe-top, 0px) + 82px)',
-                paddingBottom: 26,
+                // Klavye açıkken alt dolgu klavye kadar büyür: odaklanılan alan
+                // ve altındaki düğme klavyenin arkasında kalmaz. Klavye kapalıyken
+                // ölçü 0 döner ve dolgu 26px'e iner (görsel değişiklik yok).
+                paddingBottom: klavyeOrtusu > 0 ? klavyeOrtusu + 26 : 26,
+                transition: 'padding-bottom .18s ease-out',
               }}
             >
               {/* Başlık — sola hizalı ve sakin. Ortalanmış italik-versal
                   başlık "kampanya afişi" hissi veriyordu; giriş ekranında
-                  güven veren şey sadelik.
-
-                  TEK CÜMLE: "giriş" ile "kayıt" ayrımı yok. Numarası olmayan
-                  kişinin hesabı ilk kodda açılır; kullanıcıya iki sekme
-                  göstermek olmayan bir seçim yaratıyordu. */}
-              <div style={{ marginBottom: 26 }}>
+                  güven veren şey sadelik. */}
+              <div style={{ marginBottom: 20 }}>
                 <h1 style={{
                   margin: 0, fontSize: 32, lineHeight: 1.1, fontWeight: 800,
                   letterSpacing: '-.035em', color: '#fff',
                 }}>
-                  Sahaya çık
+                  {kip === 'kayit' ? 'Aramıza katıl' : 'Tekrar hoş geldin'}
                 </h1>
                 <p style={{ margin: '10px 0 0', fontSize: 14, lineHeight: 1.5, fontWeight: 500, color: '#8B949E', letterSpacing: '-.01em' }}>
-                  Apple ya da Google hesabınla tek dokunuşta gir. Şifre yok, uğraş yok.
+                  {kip === 'kayit'
+                    ? 'Hesabını aç, sahaya çık. Kayıt olan herkes oyuncu olarak başlar.'
+                    : 'E-postan ve şifrenle gir ya da Apple/Google hesabını kullan.'}
                 </p>
               </div>
 
-              {/* ─── UYGULAMANIN TEK GİRİŞ YOLU: Apple · Google ───────────
-                  Alt alta ve tam genişlikte: başka yol olmadığı için bunlar
-                  ekranın ana eylemidir, ikincil bir şerit değil.
+              {/* ─── GİRİŞ YAP · KAYIT OL ─────────────────────────────────── */}
+              <div className="au-tabs" role="tablist" aria-label="Giriş ya da kayıt" style={{ marginBottom: 20 }}>
+                <button
+                  type="button" role="tab" id="auth-tab-giris"
+                  aria-selected={kip === 'giris'}
+                  className="au-tab"
+                  onClick={() => kipDegistir('giris')}
+                  disabled={busy}
+                >
+                  GİRİŞ YAP
+                </button>
+                <button
+                  type="button" role="tab" id="auth-tab-kayit"
+                  aria-selected={kip === 'kayit'}
+                  className="au-tab"
+                  onClick={() => kipDegistir('kayit')}
+                  disabled={busy}
+                >
+                  KAYIT OL
+                </button>
+              </div>
+
+              {/* ─── E-posta + şifre formu ─────────────────────────────────── */}
+              <SifreFormu
+                kip={kip}
+                degerler={form}
+                onChange={setForm}
+                onSubmit={formGonderildi}
+                onSifremiUnuttum={() => { setError(null); setUnuttumAcik(true); }}
+                busy={busy}
+                renk={color}
+                light={light}
+                /* ── BENİ HATIRLA + YASAL ONAY — ana düğmenin HEMEN ÜSTÜNDE ──
+                   Ölçtük: 390×844'lük telefonda bu kartlar düğmenin ALTINDAYKEN
+                   görüş alanına hiç girmiyordu. Kurucu isteği "büyük ve görünür
+                   olsun" idi; ekranın altında kalan kart, ne kadar büyük olursa
+                   olsun görünmez. Rıza da gerektirdiği EYLEMİN yanında durmalı. */
+                formAlti={(
+                  <>
+                    <BeniHatirlaAnahtari acik={hatirla} onChange={setHatirla} disabled={busy} />
+                    {/* KAYITTA onay şart (hesap açılıyor); GİRİŞTE istenmez —
+                        kullanıcı o rızayı kaydolurken verdi. Belgeler her iki
+                        kipte de ekranın altındaki satırdan açılabilir. */}
+                    {kip === 'kayit' && (
+                      <YasalOnayKarti
+                        onayli={agreed}
+                        onChange={(v) => { setAgreed(v); setError(null); }}
+                        onBelgeAc={setOpenModal}
+                        renk={color}
+                        disabled={busy}
+                      />
+                    )}
+                  </>
+                )}
+              />
+
+              {error && (
+                <p role="alert" aria-live="assertive" style={{ margin: '14px 2px 0', fontSize: 12, fontWeight: 700, lineHeight: 1.5, color: '#FF4D4D' }}>{error}</p>
+              )}
+
+              {/* DURUM SATIRI — hata değil. "Pencereyi kapattın" gibi şeyler
+                  kırmızıyla yazılırsa kullanıcı yanlış bir şey yapmış hisseder;
+                  sessiz bırakılırsa "dokundum, bir şey olmadı" der. */}
+              {!error && bilgi && (
+                <p role="status" aria-live="polite" style={{ margin: '14px 2px 0', fontSize: 12, fontWeight: 700, lineHeight: 1.5, color: '#8B949E' }}>{bilgi}</p>
+              )}
+
+              <div className="au-ayirici"><span>YA DA</span></div>
+
+              {/* ─── Apple · Google ────────────────────────────────────────
                   APPLE ÜSTTE: iOS'ta üçüncü taraf girişi sunan uygulama Apple
                   ile Giriş'i de en az o kadar öne çıkarmak zorunda (Kural 4.8);
                   `column-reverse` ile Apple üste, Google alta gelir. */}
@@ -491,7 +707,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
                         <path fill="#EA4335" d="M12.24 10.285V14.4h6.887c-.648 2.41-2.519 4.114-5.186 4.114-3.478 0-6.3-2.822-6.3-6.3 0-3.478 2.822-6.3 6.3-6.3 1.636 0 3.109.633 4.2 1.66l3.205-3.205C19.232 2.378 15.932 1 12.24 1 5.86 1 .7 6.16.7 12.54s5.16 11.54 11.54 11.54c6.645 0 11.755-4.664 11.755-11.755 0-.745-.067-1.462-.2-2.04H12.24z" />
                       </svg>
                     )}
-                    <span>Google</span>
+                    <span>Google ile devam et</span>
                   </button>
                   <button
                     type="button" className="au-social" onClick={handleAppleLogin} disabled={busy}
@@ -502,65 +718,30 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
                         <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 4.17c.66-.81 1.11-1.93.99-3.06-1 .04-2.22.67-2.94 1.5-.64.73-1.2 1.87-1.05 2.99 1.12.09 2.26-.56 3-1.43z" />
                       </svg>
                     )}
-                    <span>Apple</span>
+                    <span>Apple ile devam et</span>
                   </button>
                 </div>
 
-                {error && (
-                  <p role="alert" aria-live="assertive" style={{ margin: '11px 2px 0', fontSize: 11.5, fontWeight: 700, lineHeight: 1.5, color: '#FF4D4D' }}>{error}</p>
-                )}
-
-                {/* DURUM SATIRI — hata değil. "Pencereyi kapattın" gibi
-                    şeyler kırmızıyla yazılırsa kullanıcı yanlış bir şey
-                    yapmış hissederi; sessiz bırakılırsa "dokundum, bir şey
-                    olmadı" der. İkisi de yanlış; sakin bir cümle doğru. */}
-                {!error && bilgi && (
-                  <p role="status" aria-live="polite" style={{ margin: '11px 2px 0', fontSize: 11.5, fontWeight: 700, lineHeight: 1.5, color: '#8B949E' }}>{bilgi}</p>
-                )}
-
-                {/* KVKK + Sözleşme onayı */}
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginTop: 22, padding: '0 2px' }}>
-                  <button
-                    id="agreement-checkbox"
-                    type="button"
-                    onClick={() => { setAgreed((v) => !v); setError(null); }}
-                    aria-label="Yasal onay"
-                    aria-pressed={agreed}
-                    /* dokunma-hedefi: görünen kutu 20px kalır, dokunma alanı
-                       48px'e (--oy-tap-min) genişler — index.css */
-                    className="dokunma-hedefi"
-                    style={{
-                      marginTop: 1, width: 20, height: 20, borderRadius: 6, flexShrink: 0,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
-                      transition: 'all .2s', background: agreed ? color : 'transparent',
-                      border: `1px solid ${agreed ? color : 'rgba(255,255,255,0.2)'}`,
-                      boxShadow: agreed ? `0 0 10px ${color}59` : 'none',
-                    }}
-                  >
-                    {agreed && <Check size={12} color="#0A0E14" strokeWidth={3.4} />}
-                  </button>
-                  <p style={{ margin: 0, fontSize: 10, lineHeight: 1.7, fontWeight: 700, letterSpacing: '.01em', color: '#8B949E' }}>
-                    <button type="button" className="au-link" onClick={() => setOpenModal('KVKK')} style={{ color }}>KVKK Aydınlatma Metni</button>
-                    'ni ve{' '}
-                    <button type="button" className="au-link" onClick={() => setOpenModal('TERMS')} style={{ color }}>Kullanım Şartları</button>
-                    'ni okudum, kişisel verilerimin işlenmesini onaylıyorum.
-                  </p>
-                </div>
-
-                <p style={{ margin: '10px 2px 0', fontSize: 10, color: '#59636e' }}>
-                  Çıkış yapana kadar oturumun bu cihazda açık kalır.
+                <p style={{ margin: '18px 2px 0', fontSize: 11.5, lineHeight: 1.6, color: '#59636e' }}>
+                  {hatirla
+                    ? 'Çıkış yapana kadar oturumun bu cihazda açık kalır.'
+                    : 'Uygulamayı kapattığında oturumun kapanır.'}
                 </p>
 
-                {/* ─── Yasal bağlantılar ───
-                    Eskiden burada kod gönderme düğmesi vardı; telefon yolu
-                    silindiği için giriş eylemi yukarıdaki Apple/Google
-                    düğmeleridir. Ekranın altında yalnız yasal bağlantılar
-                    kalır. */}
-                <div style={{ marginTop: 'auto', paddingTop: 20, display: 'flex', flexDirection: 'column', gap: 12 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, paddingTop: 2 }}>
-                    <button type="button" className="au-footlink" onClick={() => setOpenModal('TERMS')}>Kullanım Şartları</button>
-                    <span style={{ fontSize: 10, color: '#3a434e' }}>|</span>
+                {/* ─── Yasal belgeler — her iki kipte de erişilebilir ───────
+                    Kurucu isteği gereği eski 10px soluk satır büyütüldü:
+                    12px, okunur renk, üç belge birden. Apple da gizlilik
+                    politikasının uygulama İÇİNDEN açılmasını şart koşar. */}
+                <div style={{ marginTop: 'auto', paddingTop: 22, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <div style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    gap: 8, flexWrap: 'wrap', paddingTop: 2,
+                  }}>
                     <button type="button" className="au-footlink" onClick={() => setOpenModal('KVKK')}>KVKK Aydınlatma Metni</button>
+                    <span style={{ fontSize: 11, color: '#3a434e' }}>·</span>
+                    <button type="button" className="au-footlink" onClick={() => setOpenModal('PRIVACY')}>Gizlilik Politikası</button>
+                    <span style={{ fontSize: 11, color: '#3a434e' }}>·</span>
+                    <button type="button" className="au-footlink" onClick={() => setOpenModal('TERMS')}>Kullanım Şartları</button>
                   </div>
                 </div>
             </div>
@@ -603,9 +784,11 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
               <p style={{ margin: '10px 0 0', fontSize: 12.5, lineHeight: 1.65, fontWeight: 600, color: '#8B949E' }}>
                 Devam etmek için{' '}
                 <button type="button" className="au-link" style={{ color }} onClick={() => setOpenModal('KVKK')}>KVKK Aydınlatma Metni</button>
-                {' '}ve{' '}
+                {', '}
+                <button type="button" className="au-link" style={{ color }} onClick={() => setOpenModal('PRIVACY')}>Gizlilik Politikası</button>
+                {' ve '}
                 <button type="button" className="au-link" style={{ color }} onClick={() => setOpenModal('TERMS')}>Kullanım Şartları</button>
-                'nı onayla. İkisini de okuyabilir, sonra devam edebilirsin.
+                'nı onayla. Üçünü de okuyabilir, sonra devam edebilirsin.
               </p>
               <button
                 type="button"
@@ -614,12 +797,10 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
                   marginTop: 20, background: `linear-gradient(120deg, ${color} 0%, ${light} 100%)`,
                   color: '#0A0E14', boxShadow: `0 0 20px 0 ${color}57, inset 0 1px 0 rgba(255,255,255,.28)`,
                 }}
-                onClick={() => {
-                  const saglayici = onayIstenen;
-                  setAgreed(true);
-                  setOnayIstenen(null);
-                  void girisBaslat(saglayici);
-                }}
+                /* Onay ile eylem arasına ADIM GİRMEZ: araya setTimeout/await
+                   girseydi tarayıcı kullanıcı jestini tükenmiş sayar ve
+                   Google/Apple açılır penceresini engellerdi. */
+                onClick={onaylaVeDevamEt}
               >
                 <Check size={16} strokeWidth={3} />
                 <span>ONAYLIYORUM VE DEVAM ET</span>
@@ -632,6 +813,89 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
               >
                 VAZGEÇ
               </button>
+            </div>
+          </div>
+        )}
+
+        {/* ═══ ŞİFREMİ UNUTTUM ═══ */}
+        {unuttumAcik && (
+          <Suspense fallback={null}>
+            <SifremiUnuttum
+              baslangicEpostasi={form.eposta}
+              renk={color}
+              light={light}
+              onKapat={() => setUnuttumAcik(false)}
+              onBasarili={(eposta) => {
+                // Şifre değişti: kullanıcıyı giriş kipine, e-postası dolu ve
+                // şifre alanı boş olarak bırak. Otomatik giriş YAPILMAZ —
+                // yeni şifresini bir kez kendi eliyle yazması, onu hatırladığını
+                // hem kendisine hem bize gösterir.
+                setUnuttumAcik(false);
+                setKip('giris');
+                setForm({ adSoyad: '', eposta, sifre: '' });
+                setError(null);
+                setBilgi('Şifren değişti. Yeni şifrenle giriş yapabilirsin.');
+              }}
+            />
+          </Suspense>
+        )}
+
+        {/* ═══ E-POSTA ONAYI BEKLENİYOR ═══
+            Sunucuda e-posta doğrulaması AÇIKSA kayıt oturum döndürmez. Bu
+            perde olmasaydı kullanıcı "kaydoldum ama hiçbir şey olmadı" ekranında
+            kalır ve aynı e-postayla tekrar tekrar denerdi (ikinci denemede de
+            "bu e-posta zaten kayıtlı" hatası alırdı — çıkışsız bir döngü). */}
+        {onayBekleyenEposta && (
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="E-posta onayı bekleniyor"
+            style={{
+              position: 'absolute', inset: 0, zIndex: 82, display: 'flex', alignItems: 'flex-end',
+              background: 'rgba(4,7,12,.72)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)',
+            }}
+          >
+            <div style={{
+              width: '100%', padding: '24px 24px calc(var(--safe-bottom, 0px) + 26px)',
+              borderRadius: '28px 28px 0 0', background: '#0D121A',
+              border: '1px solid rgba(255,255,255,.08)', borderBottom: 'none',
+              animation: 'auSheet .42s cubic-bezier(.22,1,.36,1) both',
+            }}>
+              <div style={{ width: 40, height: 4, borderRadius: 999, background: 'rgba(255,255,255,.18)', margin: '0 auto 18px' }} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <MailCheck size={22} color={color} />
+                <h2 style={{ margin: 0, fontSize: 19, fontWeight: 900, letterSpacing: '-.02em', color: '#fff' }}>
+                  Hesabın açıldı
+                </h2>
+              </div>
+              <p style={{ margin: '12px 0 0', fontSize: 13, lineHeight: 1.65, fontWeight: 600, color: '#8B949E' }}>
+                <strong style={{ color: '#fff' }}>{onayBekleyenEposta}</strong> adresine bir doğrulama
+                bağlantısı gönderdik. Bağlantıya dokunduktan sonra buradan giriş yapabilirsin.
+              </p>
+              <button
+                type="button"
+                className="au-cta"
+                style={{
+                  marginTop: 20, background: `linear-gradient(120deg, ${color} 0%, ${light} 100%)`,
+                  color: '#0A0E14',
+                }}
+                onClick={() => {
+                  // Giriş kipine geç: kullanıcı postayı onayladıktan sonra
+                  // aynı ekrandan devam edebilsin.
+                  setOnayBekleyenEposta(null);
+                  setKip('giris');
+                  setForm((f) => ({ ...f, adSoyad: '', sifre: '' }));
+                }}
+              >
+                <Check size={16} strokeWidth={3} />
+                <span>ONAYLADIM, GİRİŞ YAP</span>
+              </button>
+              {/* HER ZAMAN ÇALIŞAN ÇIKIŞ: posta gelmezse kullanıcı sıkışmasın.
+                  Sağlayıcı girişi sunucudaki e-posta ayarına bağlı değildir. */}
+              <p style={{ margin: '14px 2px 0', fontSize: 11.5, lineHeight: 1.6, color: '#59636e', textAlign: 'center' }}>
+                Posta gelmezse Google ya da Apple hesabınla da girebilirsin —
+                aynı e-postaysa aynı hesaba düşersin.
+              </p>
             </div>
           </div>
         )}

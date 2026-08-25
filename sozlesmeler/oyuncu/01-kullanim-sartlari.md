@@ -1,10 +1,10 @@
-> **Durum:** Taslak tamamlandı — adversarial hukuki inceleme (enforceability, tamlık, tutarlılık) geçti · **Son güncelleme:** 15.07.2026 · **PR:** —
+> **Durum:** Taslak tamamlandı — adversarial hukuki inceleme (enforceability, tamlık, tutarlılık) geçti · **Son güncelleme:** 24.08.2026 · **PR:** —
 > **Uygulandığı yer:** `views/LegalScreen.tsx → TERMS` (uygulama içi "Yasal" ekranı)
 > **Not:** Madde 4 (Reşit Olmayan Kullanıcılar ve Veli Onayı) mekanizması — onboarding'de yaş aralığı alınması, sınırlı mod, çocuğun hesabındaki Veli Bağlantı Kodu, velinin kendi hesabından kodu girip kimlik + muvafakat onayı, T.C.'nin hash'lenmesi, 18 yaşında otomatik açılma ve ödeme kapısı — **Uygulamada fiilen inşa edilmiştir** (guardian_consents/apply_onboarding + payment_intents trigger; `views/Onboarding.tsx`, `views/GuardianConsentForm.tsx`, `views/GuardianConsentChild.tsx`). Ekli tam metin: [Veli Muvafakatnamesi](08-veli-muvafakatnamesi.md).
 
 # OYNA Kullanım Şartları / Üyelik Sözleşmesi (Oyuncu)
 
-**Son güncelleme: 15.07.2026**
+**Son güncelleme: 24.08.2026**
 
 Bu Kullanım Şartları ("Sözleşme"), aşağıda kimliği belirtilen hizmet sağlayıcı ile OYNA mobil/web uygulamasını ("Uygulama", "Platform") kayıtlı kullanıcı ("Kullanıcı", "Oyuncu") sıfatıyla kullanan gerçek kişi arasında, Uygulamanın kullanımına ilişkin hak ve yükümlülükleri düzenler.
 
@@ -66,8 +66,10 @@ Uygulamaya üye olabilmek için doğru, güncel ve eksiksiz bilgi verilmesi zoru
 
 ### 3.2 Hesap Güvenliği
 
-- Platforma giriş, Kullanıcının **telefon numarasına gönderilen tek kullanımlık doğrulama koduyla** ya da Kullanıcının tercihine göre **Google/Apple hesabıyla** yapılır; OYNA'nın ayrıca bir şifre sistemi yoktur.
-- Kullanıcı, telefonuna gelen doğrulama kodunun ve giriş için kullandığı Google/Apple hesabının gizliliğinden bizzat sorumludur. Doğrulama kodu hiç kimseyle paylaşılmamalıdır; OYNA hiçbir koşulda Kullanıcıdan bu kodu istemez.
+- Platforma giriş üç yoldan yapılabilir: (i) Kullanıcının belirlediği **e-posta adresi ve şifre** ile, (ii) **Google hesabıyla**, (iii) **Apple hesabıyla**.
+- Kullanıcı, belirlediği şifrenin ve giriş için kullandığı Google/Apple hesabının gizliliğinden bizzat sorumludur. Şifre hiç kimseyle paylaşılmamalıdır; OYNA hiçbir koşulda Kullanıcıdan şifresini istemez.
+- Şifreler OYNA tarafından **geri döndürülemez biçimde (hash'lenerek)** saklanır; OYNA Kullanıcının şifresini göremez. Şifresini unutan Kullanıcı, e-posta adresine gönderilen tek kullanımlık doğrulama koduyla yeni şifre belirleyebilir.
+- Kullanıcı, giriş ekranındaki "Beni hatırla" seçeneğiyle oturumunun cihazda açık kalıp kalmayacağına kendisi karar verir; ortak kullanılan cihazlarda bu seçeneğin kapatılması önerilir.
 - Hesap üzerinden gerçekleştirilen tüm işlemler, aksi ispat edilmedikçe hesap sahibi tarafından yapılmış sayılır.
 - Kullanıcı, hesabının yetkisiz kişilerce kullanıldığını fark ettiği anda mirackeremcuruksulu@gmail.com üzerinden OYNA'ya derhal bildirimde bulunmakla yükümlüdür.
 - Bildirim yapılana kadar geçen sürede hesap üzerinden gerçekleştirilen yetkisiz işlemlerden Kullanıcının sorumluluğu; OYNA'nın Platformda makul ve sektör standartlarına uygun güvenlik önlemlerini (şifreleme, güvenli oturum yönetimi ve isteğe bağlı çok faktörlü doğrulama imkânı dahil) sunmuş olması ve Kullanıcının kendi ağır kusuru (ör. hesap bilgilerini bilerek üçüncü kişiyle paylaşması) bulunmaması kaydıyla, her hâlükârda ilgili bildirim öncesi dönemde gerçekleşen işlem başına, Kullanıcının o işlem için ödediği bedeli aşmayacak şekilde sınırlıdır. OYNA'nın yukarıda belirtilen makul güvenlik önlemlerini sağlamadığının tespit edilmesi hâlinde, bildirim öncesi yetkisiz işlemlerden doğan sorumluluk Kullanıcıya tam olarak yansıtılamaz; bu durumda sorumluluk taraflar arasında kusur oranına göre paylaştırılır.
@@ -143,7 +145,7 @@ Kullanıcı, Platform üzerinden bir Tesise ait boş saha/saat seçerek rezervas
 
 ### 5.3 Ödeme Altyapısı
 
-Ödemeler, lisanslı ödeme kuruluşu **iyzico** altyapısı üzerinden gerçekleştirilir. Kart bilgileri OYNA sunucularında saklanmaz; ödeme işlemi doğrudan iyzico'nun güvenli altyapısında gerçekleştirilir. OYNA, iyzico'nun sunduğu ödeme hizmetinin kesintisiz veya hatasız olacağını garanti etmez; bu konudaki sorumluluk madde 12 (Mücbir Sebep) ve madde 10 (Sorumluluğun Sınırlandırılması) çerçevesinde değerlendirilir.
+Ödemeler, lisanslı ödeme kuruluşu **iyzico** altyapısı üzerinden gerçekleştirilir. Ödeme altyapısı canlıya alınana kadar uygulama içi ödemeler TEST modundadır; bu dönemde gerçek bir tahsilat yapılmaz ve ekranda bu durum açıkça belirtilir. Kart bilgileri OYNA sunucularında saklanmaz; ödeme işlemi doğrudan iyzico'nun güvenli altyapısında gerçekleştirilir. OYNA, iyzico'nun sunduğu ödeme hizmetinin kesintisiz veya hatasız olacağını garanti etmez; bu konudaki sorumluluk madde 12 (Mücbir Sebep) ve madde 10 (Sorumluluğun Sınırlandırılması) çerçevesinde değerlendirilir.
 
 ### 5.4 Fatura/Makbuz
 

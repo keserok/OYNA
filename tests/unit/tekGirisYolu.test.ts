@@ -1,7 +1,25 @@
 /**
- * TEK GİRİŞ YOLU: APPLE · GOOGLE — SİLİNENLER GERİ GELMESİN
+ * GİRİŞ YOLLARI: E-POSTA+ŞİFRE · APPLE · GOOGLE — SİLİNENLER GERİ GELMESİN
  *
- * KURUCU KARARI (23 Ağustos 2026, üçüncü bildirimden sonra):
+ * ┌─ KURUCU KARARI (24 Ağustos 2026) ─────────────────────────────────────┐
+ * │ Apple App Review "Sign-In Information → User name / Password" istiyor. │
+ * │ Google/Apple ile Giriş bunu karşılamaz: incelemeci kendi kimliğiyle    │
+ * │ girdiğinde hazırlanmış bir hesaba değil, boş bir hesaba düşer ve       │
+ * │ kaleci/hakem/tesis panellerini hiç göremez. Bu yüzden e-posta+şifre    │
+ * │ yolu HERKESE AÇIK olarak geri getirildi.                              │
+ * │                                                                        │
+ * │ BU BİR "İNCELEMECİ KAPISI" DEĞİLDİR — 5.6'nın dersi tam buydu.        │
+ * │ 21 Ağustos'taki ret, inceleme paketinde olup indirilen pakette OLMAYAN │
+ * │ gizli bir demo yolundan geldi. Yeni yol her kullanıcı için AYNIDIR;    │
+ * │ incelemeciye verilen şey sıradan bir hesabın e-postası ve şifresidir.  │
+ * │                                                                        │
+ * │ AYRIM ŞUDUR: telefon/SMS yolunun ALTYAPISI hiç kurulmadı (sağlayıcı    │
+ * │ yok, kimse kod alamadı) → ölü düğmeydi, silindi ve SİLİNİK KALIR.     │
+ * │ Şifre yolunun altyapısı sunucuda ÇALIŞIYOR → yaşayan bir yoldur.      │
+ * └────────────────────────────────────────────────────────────────────────┘
+ *
+ * ÖNCEKİ KARAR (23 Ağustos 2026, üçüncü bildirimden sonra) — hâlâ yürürlükte
+ * olan kısmı: telefon ve demo yolları uygulamadan SİLİNDİ ve geri gelmez.
  *   "Bu ekranın tüm uygulamadan yok etmelisin ve yalnızca Apple ve Google
  *    girişinin kalmasını sağlamalısın."
  *
@@ -37,7 +55,7 @@ const kodu = (metin: string) =>
     .filter((satir) => !/^\s*(\/\/|\/\*|\*)/.test(satir))
     .join('\n');
 
-describe('Giriş ekranı · yalnız Apple ve Google', () => {
+describe('Giriş ekranı · e-posta+şifre, Apple ve Google', () => {
   const ham = oku('views/AuthScreen.tsx');
   const kod = kodu(ham);
 
@@ -80,12 +98,77 @@ describe('Giriş ekranı · yalnız Apple ve Google', () => {
     }
   });
 
-  it('ekranda hiçbir yazı alanı kalmadı (klavye hiç açılmaz)', () => {
-    // Tek "girdi" yasal onay kutusudur ve o bir <button>. Yazı alanı geri
-    // gelirse klavye örtüşmesi sorunu da geri gelir; o zaman ölçüm kancası da
-    // geri gelmeli (bkz. girisKlavyesiVeSuzgecDelikleri).
-    expect(kod).not.toMatch(/<input/);
-    expect(kod).toContain('id="agreement-checkbox"');
+  it('E-POSTA + ŞİFRE formu ekrana bağlı', () => {
+    // Alanların kendisi views/auth/SifreFormu.tsx içinde; bu ekran onu çizer.
+    expect(kod).toContain('<SifreFormu');
+    expect(kod).toContain('loginWithPassword');
+    expect(kod).toContain('signUpWithPassword');
+  });
+
+  it('yazı alanı geldiğine göre KLAVYE ÖLÇÜMÜ de bağlı', () => {
+    // Bu ikisi birbirine bağlıdır: alan varsa klavye örtüşmesi de vardır.
+    // Ölçüm sökülürse şifre alanı ve altındaki düğme klavyenin arkasında kalır
+    // (davranış kilidi: girisKlavyesiVeSuzgecDelikleri · A4).
+    expect(kod).toContain('useKlavyeOrtusu');
+  });
+
+  it('GİRİŞ ile KAYIT ekranda ayrı ayrı görünür', () => {
+    // Telefon yolunda tek akış doğruydu (numarası olmayanın hesabı ilk kodda
+    // açılıyordu). Şifreyle mümkün değil: kayıt ad ister, giriş istemez ve
+    // "şifre yanlış" ile "böyle bir hesap yok" farkı söylenmelidir.
+    expect(kod).toContain('GİRİŞ YAP');
+    expect(kod).toContain('KAYIT OL');
+  });
+
+  it('KAYITTA ROL SEÇİMİ YOK — kaydolan herkes oyuncudur', () => {
+    // Kurucu kararı (24 Ağu 2026): kaleci/hakem Ayarlar'dan BAŞVURUR; tesis
+    // sahibi, müdür ve personel YALNIZ yönetici panelinden atanır. Giriş
+    // ekranından rol seçtirmek, yabancı birinin kendini tesis sahibi ilan
+    // etmesine kapı açardı (sunucudaki protect_profile_columns korumasının
+    // etrafından dolaşmak).
+    // DİKKAT — ayrım önemli: `UserRole.GOALKEEPER` vb. bu ekranda GEÇİYOR ama
+    // rol SEÇİMİ için değil, VURGU RENGİ için (THEMES eşlemesi: sağlayıcı
+    // çıkış yapıp geri geldiğinde kendi rengiyle karşılanır). Yasak olan şey
+    // rol OKUMAK/YAZMAK; rolü renk olarak kullanmak değil.
+    for (const iz of [
+      'ROLE_SELECTION',        // ölü rol seçim ekranına yönlendirme
+      'setServiceAppRole',     // başvuru rolü kurma (Ayarlar'ın işi)
+      'rolSec', 'setRole', 'setMyRoles',
+      'RoleSelection',
+    ]) {
+      expect(kod, `giriş ekranında rol seçimi izi: "${iz}"`).not.toContain(iz);
+    }
+    // Ekran profil tablosuna rol YAZMAMALI.
+    expect(kod).not.toMatch(/from\('profiles'\)/);
+    // THEMES yalnız renk taşımalı: değerlerinde `color`/`light` dışında alan olmamalı.
+    const temalar = kod.slice(kod.indexOf('const THEMES'), kod.indexOf('const getTheme'));
+    expect(temalar).toContain('color:');
+    expect(temalar).not.toMatch(/onClick|navigate|resetNavigation/);
+    // supabaseAuth de sunucuya rol GÖNDERMEMELİ.
+    const kayit = kodu(oku('supabaseAuth.ts'));
+    const govde = kayit.slice(kayit.indexOf('export const signUpWithPassword'),
+                              kayit.indexOf('export const loginWithPassword'));
+    expect(govde).toContain('full_name');
+    expect(govde).not.toMatch(/\brole\b/);
+  });
+
+  it('BENİ HATIRLA anahtarı ekranda ve gerçekten oturuma bağlı', () => {
+    expect(kod).toContain('BeniHatirlaAnahtari');
+    // Anahtar yalnız görsel olmamalı: tercih giriş çağrılarına GEÇMELİ.
+    expect(kod).toMatch(/loginWithPassword\([^)]*hatirla/);
+    expect(kod).toMatch(/loginWithGoogle\(hatirla\)/);
+    expect(kod).toMatch(/loginWithApple\(hatirla\)/);
+  });
+
+  it('KVKK · GİZLİLİK · KULLANIM ŞARTLARI üçü de giriş ekranından açılabilir', () => {
+    // Apple, gizlilik politikasının uygulama İÇİNDEN erişilebilir olmasını
+    // şart koşar. 'PRIVACY' 24 Ağu 2026'da eklendi; öncesinde LegalModal tipi
+    // yalnız KVKK|TERMS'e izin veriyordu.
+    for (const belge of ['KVKK', 'PRIVACY', 'TERMS']) {
+      expect(kod, `${belge} giriş ekranından açılamıyor`).toContain(`setOpenModal('${belge}')`);
+    }
+    expect(oku('components/common/LegalModal.tsx'))
+      .toContain("Extract<LegalDocKey, 'KVKK' | 'TERMS' | 'PRIVACY'>");
   });
 });
 
@@ -223,23 +306,51 @@ describe('İlk dokunuş boşa gitmiyor', () => {
     expect(dokun).toContain('void girisBaslat(saglayici)');
   });
 
-  it('onay düğmesi girişi AYNI dokunuşta başlatıyor', () => {
+  it('onay düğmesi işi AYNI dokunuşta başlatıyor', () => {
     // Onay ile giriş arasına bir adım daha girerse (ör. setTimeout, await)
-    // tarayıcı kullanıcı jestini tükenmiş sayar ve pencereyi engeller.
-    const i = auth.indexOf('ONAYLIYORUM VE DEVAM ET');
-    expect(i).toBeGreaterThan(-1);
-    const blok = auth.slice(i - 700, i);
-    expect(blok).toContain('setAgreed(true)');
-    expect(blok).toContain('void girisBaslat(saglayici)');
-    expect(blok).not.toContain('setTimeout');
-    expect(blok).not.toContain('await ');
+    // tarayıcı kullanıcı jestini tükenmiş sayar ve açılır pencereyi engeller.
+    //
+    // 24 Ağu 2026: satır içi onClick, adlandırılmış `onaylaVeDevamEt`
+    // işleyicisine taşındı (bekleyen eylem artık 'kayit' de olabilir).
+    // KİLİT AYNI ŞEYİ KORUR: gövdede jesti tüketen bir adım olmamalı.
+    expect(auth).toContain('ONAYLIYORUM VE DEVAM ET');
+    expect(auth).toContain('onClick={onaylaVeDevamEt}');
+    const i = auth.indexOf('const onaylaVeDevamEt');
+    expect(i, 'onaylaVeDevamEt tanımı bulunamadı').toBeGreaterThan(-1);
+    const govde = auth.slice(i, auth.indexOf('\n  };', i));
+    expect(govde).toContain('setAgreed(true)');
+    expect(govde).toContain('girisBaslat(eylem)');
+    // Kayıt da aynı dokunuşta başlar.
+    expect(govde).toContain('sifreyleDevam()');
+    expect(govde).not.toContain('setTimeout');
+    expect(govde).not.toContain('await ');
   });
 
   it('onay kutusu HÂLÂ opt-in (önceden işaretli gelmiyor)', () => {
     // "Devam ederek kabul etmiş sayılırsın" demiyoruz: kullanıcı ya kutuyu
     // işaretler ya da üstünde "Onaylıyorum" yazan düğmeye basar.
-    expect(auth).toContain('useState(false)');
-    expect(auth).toContain('id="agreement-checkbox"');
+    // KVKK açık rıza, özgür iradeyle verilmiş olmayı şart koşar; önceden
+    // işaretli bir kutu bunu karşılamaz.
+    expect(auth).toContain('const [agreed, setAgreed] = useState(false)');
+    // 24 Ağu 2026: kutunun kendisi views/auth/YasalOnayKarti.tsx'e taşındı
+    // (büyük kart hâline geldi). Kimliği DEĞİŞMEDİ — ölçüm kancaları ve
+    // erişilebilirlik testleri bu id'ye bakıyor.
+    expect(oku('views/auth/YasalOnayKarti.tsx')).toContain('id="agreement-checkbox"');
+  });
+
+  it('onay KAYITTA şart, GİRİŞTE istenmez', () => {
+    // Girişte mevcut bir hesaba oturuluyor; rıza kaydolurken zaten alındı.
+    // Her girişte yeniden sormak ne hukuken gerekli ne de kullanıcıya saygılı.
+    expect(auth).toContain("if (kip === 'kayit' && !agreed)");
+  });
+
+  it('ŞİFRE hiçbir yerde saklanmıyor', () => {
+    // "Beni hatırla" yalnız OTURUMU ve E-POSTAYI hatırlar. Şifreyi saklamak
+    // (localStorage, Preferences, herhangi bir yer) kabul edilemez.
+    const istemci = oku('supabaseClient.ts');
+    expect(istemci).not.toMatch(/setItem\([^)]*sifre/i);
+    expect(istemci).not.toMatch(/setItem\([^)]*password/i);
+    expect(kodu(oku('views/auth/SifreFormu.tsx'))).not.toContain('localStorage');
   });
 
   it('sessiz başarısızlık yok: pencere kapanınca ekran konuşuyor', () => {
@@ -390,11 +501,21 @@ describe('Apple 5.6 · sunucu ve içerik dürüstlüğü', () => {
     const svc = oku('services/dashboardHomeService.ts');
     expect(svc).toContain('fetchOrnekIcerikUyarisi');
     expect(svc).toContain("p_key: 'ornek_icerik_uyarisi'");
-    const dash = oku('views/Dashboard.tsx');
-    expect(dash).toContain('fetchOrnekIcerikUyarisi');
-    expect(dash).toContain('{ornekUyarisi && (');
-    // Metnin kendisi kodda GEÇMEMELİ.
-    expect(kodu(dash)).not.toContain('örnek içeriktir');
+    // Şerit artık PAYLAŞILAN bileşende; metni yine sunucudan çeker.
+    const serit = oku('components/common/OrnekIcerikSeridi.tsx');
+    expect(serit).toContain('fetchOrnekIcerikUyarisi');
+    expect(kodu(serit)).not.toContain('örnek içeriktir');
+  });
+
+  it('örnek içerik uyarısı ÜÇ ekranda da çiziliyor', () => {
+    // 24 Ağu 2026 denetimi: uyarı YALNIZ ana ekrandaydı. Oysa örnek maçların
+    // ve sahaların asıl görüldüğü yer keşif listeleridir — incelemenin de
+    // merkezi orasıdır. Ana ekranı hızla geçen biri, dolu kadrolar ve
+    // gerçekçi isimler görüp bunları gerçek sanıyordu (Guideline 2.1).
+    for (const yol of ['views/Dashboard.tsx', 'views/MatchDiscovery.tsx', 'views/PitchDiscovery.tsx']) {
+      expect(oku(yol), `${yol} örnek içerik şeridini çizmiyor`).toContain('<OrnekIcerikSeridi');
+      expect(oku(yol), `${yol} şeridi içe aktarmıyor`).toContain('OrnekIcerikSeridi');
+    }
   });
 
   it('inceleme notu "incelemeci için" demiyor', () => {

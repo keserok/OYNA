@@ -190,18 +190,111 @@ describe('yasal metin tek kaynak', () => {
   });
 
   it('belgeler gerçekten dolu (özet değil)', () => {
-    const anahtarlar = Object.keys(DOCS) as LegalDocKey[];
-    expect(anahtarlar.length).toBe(8);
+    // Sayı yerine KÜMEYİ yazıyoruz: "9 tane var" iddiası, bir belge silinip
+    // yerine başkası eklendiğinde sessizce yeşil kalırdı.
+    // HESAP_SILME 24 Ağu 2026'da eklendi — metin repoda ve web'de vardı ama
+    // uygulama içi yasal ekranda yoktu; iki mağaza da hesap silmenin uygulama
+    // İÇİNDEN anlatılmasını şart koşar.
+    const beklenen = ['TERMS', 'TOPLULUK', 'PRIVACY', 'KVKK', 'RIZA', 'VELI',
+                      'CEREZ', 'SALES', 'HESAP_SILME'].sort();
+    const anahtarlar = (Object.keys(DOCS) as LegalDocKey[]).sort();
+    expect(anahtarlar).toEqual(beklenen);
     for (const k of anahtarlar) {
       expect(DOCS[k].body.length, `${k} çok kısa`).toBeGreaterThan(500);
       expect(DOCS[k].body, `${k} tarihsiz`).toContain(LEGAL_UPDATED_TR);
     }
   });
 
-  it('onay kutusundan açılan iki belge de gerçek belge', () => {
-    for (const k of ['KVKK', 'TERMS'] as const) {
+  it('onay kartından açılan ÜÇ belge de gerçek belge', () => {
+    // PRIVACY 24 Ağu 2026'da eklendi: Apple gizlilik politikasının uygulama
+    // İÇİNDEN erişilebilir olmasını şart koşar ve kayıt ekranı o ana kadar
+    // yalnız KVKK+TERMS açabiliyordu (LegalModal tipi öyle daraltılmıştı).
+    for (const k of ['KVKK', 'TERMS', 'PRIVACY'] as const) {
       expect(DOCS[k]).toBeDefined();
       expect(DOCS[k].title.length).toBeGreaterThan(3);
+    }
+  });
+
+  it('ÜÇ ROLÜN DE yasal ekrana bir yolu var', () => {
+    // 24 Ağu 2026'ya kadar yalnız OYUNCU ayarlarında yasal bağlantı vardı.
+    // Kaleci/hakem (ServiceSettings) ve tesis sahibi (OwnerMenuView) sözleşmelere,
+    // gizlilik politikasına ve hesap silme bilgilendirmesine uygulama içinden
+    // HİÇ ulaşamıyordu. Apple, gizlilik politikasının uygulama İÇİNDEN
+    // erişilebilir olmasını HER kullanıcı için şart koşar; dahası o rollere
+    // ait sözleşmeler de tam o ekranda gösteriliyor.
+    const yollar: [string, RegExp][] = [
+      ['views/SettingsScreen.tsx', /onNavigate\('LEGAL'\)/],
+      ['views/ServiceSettings.tsx', /navigateTo\('LEGAL'\)/],
+      ['views/owner/menu/OwnerMenuView.tsx', /onNavigate\('LEGAL'\)/],
+    ];
+    for (const [dosya, desen] of yollar) {
+      expect(oku(dosya), `${dosya}: yasal ekrana yol yok`).toMatch(desen);
+    }
+  });
+
+  it('sağlayıcı ayarlarında yasal bağlantı KATLANABİLİR kartın içinde değil', () => {
+    // İlk denemede "Destek" kartının içine konmuştu; o kart varsayılan KAPALI
+    // olduğu için bağlantı ekranda hiç görünmüyordu. Erişilebilir olması
+    // gereken bir belgeyi açılıp kapanan bir bölmeye gömmek erişilebilir
+    // kılmak değildir — canlı sürüşte de tam olarak bulunamadı.
+    const s = oku('views/ServiceSettings.tsx');
+    const i = s.indexOf("navigateTo('LEGAL')");
+    expect(i, 'yasal bağlantı yok').toBeGreaterThan(-1);
+    // Bağlantıdan ÖNCEKİ en yakın SectionCard kapanmış olmalı: yani araya
+    // </SectionCard> girmiş olmalı ki bağlantı kartın DIŞINDA kalsın.
+    const oncesi = s.slice(0, i);
+    expect(
+      oncesi.lastIndexOf('</SectionCard>'),
+      'yasal bağlantı bir SectionCard içinde kalmış (kapalıyken görünmez)',
+    ).toBeGreaterThan(oncesi.lastIndexOf('<SectionCard'));
+  });
+
+  it('rol sözleşmeleri "bilgi amaçlı örnek" damgası TAŞIYOR', () => {
+    // Kaynak markdown'lar kendilerini TASLAK ilan ediyor ve "imza öncesinde
+    // lisanslı bir avukat tarafından onaylanmalıdır" diyor; imza alanları da
+    // doldurulmamış ([AD SOYAD], [IBAN], B2B'de komisyonda [X]). Damgasız
+    // gösterilirse bağlayıcı bir sözleşme izlenimi verir — kaynak dosyanın
+    // kendi notunun yasakladığı şey budur. Kurucu kararı (24 Ağu 2026):
+    // eklensin ama BAŞINDA damga olsun.
+    const rol = oku('shared/legalDocsRol.ts');
+    for (const anahtar of ['SAGLAYICI', 'ISLETME']) {
+      expect(rol, `${anahtar} yok`).toContain(`${anahtar}: {`);
+    }
+    // Damga her iki belgenin de İÇİNDE (ayrı bir arayüz öğesi değil): belge
+    // başka bir yerde gösterilse de damga metinle birlikte gider.
+    expect(rol.match(/BU METİN BİLGİ AMAÇLI ÖRNEKTİR — BAĞLAYICI DEĞİLDİR/g)?.length).toBe(2);
+  });
+
+  it('rol sözleşmelerine ŞİRKETİN İÇ NOTLARI sızmıyor', () => {
+    // Üreticide `>` blokları varsayılan GİZLİ; bu test o kuralın çıktıda
+    // gerçekten tuttuğunu doğrular. Sızarsa kullanıcı "bu sözleşme henüz
+    // avukat onayından geçmedi" cümlesini okur.
+    const rol = oku('shared/legalDocsRol.ts');
+    for (const iz of ['Durum:', 'Uygulandığı yer:', 'adversarial', 'bir iş kararıdır',
+                      'lisanslı bir avukat']) {
+      expect(rol, `iç not sızdı: "${iz}"`).not.toContain(iz);
+    }
+  });
+
+  it('rol sözleşmeleri AYRI modülde — oyuncu paketine girmiyor', () => {
+    // 60 KB'lık iki sözleşme shared/legalDocs.ts'e konsaydı giriş ekranının
+    // tembel yüklediği yasal paket o kadar büyürdü; oyuncuların neredeyse
+    // hiçbiri bu belgeleri açmaz.
+    expect(oku('shared/legalDocs.ts')).not.toContain('legalDocsRol');
+    const ekran = oku('views/LegalScreen.tsx');
+    // Statik değil, DİNAMİK import olmalı.
+    expect(ekran).toContain("import('../shared/legalDocsRol')");
+    expect(ekran).not.toMatch(/^import \{[^}]*ROL_BELGELERI[^}]*\} from/m);
+  });
+
+  it('yasal ekran TÜM belgeleri listeler — hiçbiri ulaşılamaz kalmaz', () => {
+    // Bir belge DOCS'a eklenip ORDER'a eklenmezse uygulamada GÖRÜNMEZ olur:
+    // HESAP_SILME'nin 24 Ağustos'a kadarki durumu tam olarak buydu.
+    const ekran = readFileSync(join(process.cwd(), 'views/LegalScreen.tsx'), 'utf8');
+    const sira = ekran.match(/const ORDER: LegalDocKey\[\] = \[([^\]]*)\]/);
+    expect(sira, 'LegalScreen ORDER listesi bulunamadı').not.toBeNull();
+    for (const k of Object.keys(DOCS)) {
+      expect(sira![1], `${k} yasal ekranda listelenmiyor`).toContain(`'${k}'`);
     }
   });
 });

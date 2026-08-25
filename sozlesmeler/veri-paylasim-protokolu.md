@@ -1,6 +1,6 @@
 # Veri Paylaşım Protokolü (Oyuncu Kişisel Verileri)
 
-> **Durum:** Taslak · **Son güncelleme:** 15.07.2026
+> **Durum:** Taslak · **Son güncelleme:** 24.08.2026
 > **Taraflar/kapsam:** OYNA ↔ İşletme (Saha Sahibi) ve OYNA ↔ Hizmet Sağlayıcı (Kaleci/Hakem)
 > **İlişkili belgeler:** [İşletme (Saha Sahibi) B2B Sözleşmesi](saha-sahibi/01-isletme-b2b-sozlesmesi.md) Madde 12; [Kaleci/Hakem Hizmet Sağlayıcı Sözleşmesi](kaleci-hakem/01-hizmet-saglayici-sozlesmesi.md) Madde 13–14; [KVKK Aydınlatma Metni](oyuncu/03-kvkk-aydinlatma-metni.md); [Gizlilik Politikası](oyuncu/02-gizlilik-politikasi.md); [Güvenlik Notu — Anonim Veri Görünürlüğü](guvenlik-notu-anon-veri-gorunurlugu.md).
 >

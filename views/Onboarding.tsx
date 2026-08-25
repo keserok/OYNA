@@ -10,12 +10,11 @@ import { isValidSelfSkill } from '../utils/skillBand';
 import PlayerCardReveal from './onboarding/PlayerCardReveal';
 import {
   AGE_RANGES, AgeRange, Gender, OnboardingPosition, PlayStyle, OnboardingDraft,
-  POSITION_CODE, splitFullName, isMinorAgeRange,
-  markOnboardingSkipped, clearOnboardingSkipped,
+  POSITION_CODE, splitFullName, isMinorAgeRange, clearOnboardingSkipped,
 } from './onboarding/onboardingShared';
 import { applyOnboarding } from '../services/onboardingService';
 import { useAppStore } from '../store';
-import { auth } from '../supabaseAuth';
+import { auth, logout } from '../supabaseAuth';
 import { getFullUserProfile } from '../services/userService';
 import { fbUpdateUserLocation } from '../supabaseMutations';
 // IP-16: konum TEK yoldan istenir. Tarayıcının ham konum API'sini doğrudan
@@ -25,10 +24,9 @@ import { fbUpdateUserLocation } from '../supabaseMutations';
 import { detectRegion, getLocationPermission, LocationError, openAppSettings, canOpenAppSettings } from '../services/locationService';
 import { showToast } from '../components/common/GlobalToast';
 import { validateFirstLast } from '../shared/personName';
-import ConfirmDialog from '../components/ui/ConfirmDialog';
 
 interface OnboardingProps {
-  /** Onboarding bitti (TAMAMLANDI veya ATLANDI) → çağıran uygulamaya/profile döner. */
+  /** Onboarding TAMAMLANDI → çağıran uygulamaya/profile döner. Atlama yolu yoktur. */
   onComplete: () => void;
 }
 
@@ -94,12 +92,11 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
   // Beyan edilen seviye (1-10). ZORUNLU: seçilmeden profil tamamlanamaz.
   const [selfSkill, setSelfSkill] = useState<number | null>(null);
   const [locationGranted, setLocationGranted] = useState(false);
-  // IP-16: "Atla" artık onay soruyor (kullanıcı kararı: tuş küçük kalsın ama sorsun).
-  const [skipConfirm, setSkipConfirm] = useState(false);
   // Özet ekranındaki kayıt hatası KALICI olmalı — 4 saniyelik bildirim yetmiyordu.
   const [completeError, setCompleteError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [cikiliyor, setCikiliyor] = useState(false);
   const timers = useRef<number[]>([]);
   const { setUserLocation, setLocationPermissionStatus, setActiveRegion, activeRegion } = useAppStore();
 
@@ -247,57 +244,43 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
       onComplete();
     } catch (e) {
       console.error('[onboarding] tamamlama kaydı başarısız:', e);
-      // IP-16: hata artık ekranda KALIYOR. Eskiden tek geri bildirim 4 saniyede
-      // kaybolan bir bildirimdi ve özet perdesi "Atla" tuşunu örttüğü için
-      // kullanıcının görünür hiçbir çıkışı kalmıyordu.
+      // Hata ekranda KALIR. Eskiden tek geri bildirim 4 saniyede kaybolan bir
+      // bildirimdi. Kullanıcının çıkışı iki tanedir ve ikisi de kalıcı:
+      // "Tekrar Dene" ve geri okuyla son adıma dönmek. Kayıt tutmadan
+      // uygulamaya giriş YOKTUR — profil eksik kalamaz (24 Ağu 2026).
       setCompleteError('Profilin kaydedilemedi. Bağlantını kontrol edip tekrar dene.');
       setSaving(false);
     }
   };
 
-  // ─── ATLA: girilen kısmi veriyi yazar ama "tamamlandı" işaretlemez ───
-  // S8 istisnası: ad soyad atlanamaz. Geçerli ad soyad yoksa "Atla" kullanıcıyı
-  // uygulamaya sokmaz, ad/soyad adımına götürür. Diğer adımlar (yaş, cinsiyet,
-  // pozisyon, oyun stili, konum) opsiyonel kalır.
-  const handleSkip = async () => {
-    if (saving) return;
-    if (!nameCheck.valid) {
-      setStep(2);
-      showToast(nameCheck.reason ?? 'Devam etmek için ad ve soyadını gir.');
-      return;
-    }
-    // Seviye beyanı da atlanamaz (ad-soyad kapısının ikizi). Sunucu ikizi
-    // apply_onboarding'de SELF_SKILL_REQUIRED olarak durur; burada kullanıcıyı
-    // hata yerine doğru adıma göndeririz.
-    if (!isValidSelfSkill(selfSkill)) {
-      setStep(4);
-      showToast('Devam etmek için seviyeni seç.');
-      return;
-    }
-    // YAŞ BEYANI da atlanamaz. Çark "İleri" yolunda kapatılmıştı ama "Atla"
-    // aynı adımı sormadan geçiyordu: 15 yaşındaki kullanıcı yaşını hiç
-    // bildirmeden içeri giriyor, reşit-olmayan akışı (veli onayı, sınırlı
-    // mod) HİÇ tetiklenmiyordu. İki mağazanın da yaş derecelendirme beyanı
-    // bunun üstüne kuruluyor — kapı tek yerde değil, HER yolda olmalı.
-    if (ageIndex === null) {
-      setStep(1);
-      showToast('Devam etmek için yaş aralığını seç.');
-      return;
-    }
-    setSaving(true);
-    // Bilerek atlandı: açılışta bir daha tanıtıma zorlanmaz. Kurtarma yolu
-    // Profil'deki "Profil tamamlanmadı → Tamamla" şeridi olarak kalır.
-    const uid = auth.currentUser?.uid;
-    if (uid) markOnboardingSkipped(uid);
+  // ─── ATLAMA YOLU YOK (kurucu kararı, 24 Ağustos 2026) ────────────────────
+  // Eskiden üst barda bir "Atla" tuşu vardı ve TÜM kurulumu geçiyordu: profil
+  // "tamamlanmadı" kalıyor, oyuncu kartı eksik açılıyordu. Tuş, zorunlu
+  // alanlara (ad soyad · yaş · seviye) takıldığında kullanıcıyı ilgili adıma
+  // geri gönderiyordu — yani ekranda "Atla" yazıyor ama çoğu zaman atlamıyordu.
+  // Görünen söz ile yapılan iş birbirini tutmuyordu.
+  //
+  // Yeni kural: her adım doldurulur. Tercihe bağlı alanlar (cinsiyet, pozisyon)
+  // ekranda "OPSİYONEL" etiketiyle durur ve boş bırakılabilir; konum ise bir
+  // cihaz iznidir, adımın kendi "Konumsuz devam et" çıkışıyla geçilebilir
+  // (mağaza kuralı: izin reddedilince uygulama çalışmaya devam etmeli).
+  //
+  // Zorunlu alanların kapısı TEK yerde: `ctaEnabled`. İkinci bir yol
+  // açılmadığı sürece yaş beyanı da atlanamaz — mağazaların yaş
+  // derecelendirmesi beyanı bu tek girdiye dayanıyor.
+
+  // Kurulumu yarıda bırakıp çıkmak. Profil "tamamlanmadı" kalır; kullanıcı
+  // tekrar girdiğinde buraya döner — ama artık uygulamanın dışına da,
+  // Ayarlar'daki hesap silmeye de ulaşabilir.
+  const cikisYap = async () => {
+    if (saving || cikiliyor) return;
+    setCikiliyor(true);
     try {
-      // best-effort kısmi kayıt: boş alanlar sunucuda mevcut değeri silmez.
-      await applyOnboarding(buildDraft(), false);
+      await logout();
     } catch (e) {
-      console.error('[onboarding] atlama kısmi kaydı başarısız:', e);
-      // Kısmi kayıt tutmadıysa kullanıcı bunu bilsin — sessizce yutmuyoruz.
-      showToast('Girdiklerin kaydedilemedi; profilini sonra Profil ekranından tamamlayabilirsin.');
-    } finally {
-      onComplete();
+      console.error('[onboarding] çıkış başarısız:', e);
+      showToast('Çıkış yapılamadı. Bağlantını kontrol edip tekrar dene.');
+      setCikiliyor(false);
     }
   };
 
@@ -331,12 +314,26 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
               }} />
             ))}
           </div>
-          {/* Atla — TÜM onboarding'i atlar: kısmi veri yazılır, profil
-              "tamamlanmadı" kalır. IP-16 · kullanıcı kararı: tuş KÜÇÜK kalsın
-              ama artık onay sorsun — eskiden tek dokunuşta, hiç sormadan tüm
-              kurulumu bitiriyordu. */}
-          <button onClick={() => setSkipConfirm(true)} disabled={saving} style={{ width: 44, textAlign: 'right', fontSize: 12, fontWeight: 800, color: 'rgba(255,255,255,0.55)', background: 'none', border: 'none', cursor: saving ? 'default' : 'pointer' }}>
-            Atla
+          {/* ÇIKIŞ — "Atla"nın yerinde duran şey bu (24 Ağu 2026 denetimi).
+              "Atla" kaldırılınca yerine hiçbir şey konmamıştı ve kurulum
+              KAPANA dönüşmüştü: hesap kayıtta zaten açılıyor, kullanıcı her
+              açılışta bu ekrana düşüyor, ama yaşını/adını vermek istemiyorsa
+              uygulamadan çıkmanın ya da hesabını silmenin hiçbir yolu yoktu.
+              Apple 5.1.1(v) hesabın uygulama İÇİNDEN silinebilmesini şart
+              koşar; silme ekranına giden tek yol ise Ayarlar'dır.
+              Çıkış, zorunlu alanları GEVŞETMEZ — yalnız kapıyı açık tutar. */}
+          <button
+            onClick={cikisYap}
+            disabled={saving || cikiliyor}
+            aria-label="Çıkış yap"
+            style={{
+              width: 44, textAlign: 'right', fontSize: 12, fontWeight: 800,
+              color: 'rgba(255,255,255,0.55)', background: 'none', border: 'none',
+              cursor: (saving || cikiliyor) ? 'default' : 'pointer', padding: 0,
+              minHeight: 38,
+            }}
+          >
+            {cikiliyor ? '…' : 'Çıkış'}
           </button>
         </div>
 
@@ -407,20 +404,9 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
           onStart={handleComplete}
           onBack={() => setDone(false)}
           error={completeError}
-          onSkip={() => { setCompleteError(null); handleSkip(); }}
         />
       )}
 
-      <ConfirmDialog
-        open={skipConfirm}
-        title="Kurulumu atla?"
-        description="Şimdi atlarsan oyuncu kartın eksik kalır ve yakınındaki maçlar gösterilemez. Profil ekranından istediğin zaman tamamlayabilirsin."
-        confirmLabel="Atla"
-        cancelLabel="Kuruluma Devam Et"
-        danger={false}
-        onConfirm={() => { setSkipConfirm(false); handleSkip(); }}
-        onCancel={() => setSkipConfirm(false)}
-      />
     </div>
   );
 };

@@ -1,10 +1,10 @@
-> **Durum:** Yürürlükte (Uygulamada fiilen alınıyor) · **Son güncelleme:** 15.07.2026 · **Sürüm:** 2026-07-14
+> **Durum:** Yürürlükte (Uygulamada fiilen alınıyor) · **Son güncelleme:** 24.08.2026 · **Sürüm:** 2026-07-14
 > **Uygulandığı yer:** `views/GuardianConsentForm.tsx` (veli onay/beyaz ekran) — özet metin; `views/LegalScreen.tsx → VELI` (uygulama içi tam metin)
 > **İlgili belge:** [Kullanım Şartları md. 4](01-kullanim-sartlari.md) — Reşit Olmayan Kullanıcılar ve Veli Onayı. İşbu muvafakatname o maddenin ekidir.
 
 # OYNA Veli/Vasi Muvafakatnamesi
 
-**Son güncelleme: 15.07.2026 · Sürüm: 2026-07-14**
+**Son güncelleme: 24.08.2026 · Sürüm: 2026-07-14**
 
 Bu muvafakatname, 18 yaşından küçük bir kullanıcının OYNA Platformunu ödeme ve maça katılım dahil tam kapsamıyla kullanabilmesi için, velisi/vasisi tarafından, kendi doğrulanmış OYNA hesabı üzerinden verilen onayı düzenler. Onay veren veli/vasi ("Veli"), aşağıdaki hususları okuduğunu, anladığını ve kabul ettiğini beyan eder.
 

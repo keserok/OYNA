@@ -74,6 +74,12 @@
    incelemeci Apple ile girip uygulamayı hesapsız da gezebilir.
    Konsola yazılacak hazır İngilizce not: `docs/master/APP_REVIEW_NOTLARI.md §1`.
 3. **Ekran görüntüleri** (telefon boyutları) ve mağaza metinleri.
+   - Önce `npm run vitrin:gorseller` — canlıdaki her saha/kort fotoğrafını tek
+     sayfada basar. **Hepsine bak.** 25 Ağu 2026'da bu adım ilk kez yapıldığında
+     vitrinde bir FIFA Dünya Kupası renderı ve çocukların özel fotoğrafları
+     bulundu; ikisi de aylardır oradaydı. Kayıt: `OLAY-2026-08-25-VITRIN-GORSELLERI.md`.
+   - Sonra `npm run dev` + `npm run magaza:ekran` — App Store'un istediği
+     1290×2796 ölçüsünde çeker. Yer tutucu görüyorsan çekim mağazaya konmaz.
 4. **Yaş derecelendirmesi** formu (uygulamada reşit olmayan akışı + veli onayı var).
 
 ### App Store'a özel

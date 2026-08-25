@@ -37,14 +37,25 @@ import { TELEFON_GIRISI_ACIK } from '../../shared/phone';
 // istediğimiz şey ağ değil, YERLEŞİM.
 vi.mock('../../supabaseClient', () => ({
   supabase: { rpc: vi.fn(), auth: {}, from: vi.fn() },
+  // `true` → ekran GİRİŞ kipiyle açılır (cihazda daha önce oturum açılmış).
   getHasAccount: () => true,
+  // 24 Ağu 2026 · "Beni Hatırla" ve hatırlanan e-posta geri geldi.
+  getBeniHatirla: () => true,
+  setBeniHatirla: vi.fn(),
+  getSonEposta: () => '',
+  setSonEposta: vi.fn(),
+  AUTH_DEPO_ANAHTARI: 'oyna.auth.token',
 }));
 vi.mock('../../supabaseAuth', () => ({
   loginWithGoogle: vi.fn(), loginWithApple: vi.fn(),
-  // Telefon ANA giriş yolu (17 Ağu 2026): e-posta/şifre yolları kaldırıldı.
-  sendPhoneOtp: vi.fn(), verifyPhoneOtp: vi.fn(), demoLogin: vi.fn(),
-  isDemoLoginEnabled: () => false, isDemoLoginInput: () => false,
-  isDemoAccountPickerEnabled: () => false, loginDemoAccount: vi.fn(),
+  // 24 Ağu 2026 · e-posta+şifre yolu geri geldi (Apple App Review demo hesabı).
+  loginWithPassword: vi.fn(), signUpWithPassword: vi.fn(),
+  requestPasswordReset: vi.fn(), confirmPasswordReset: vi.fn(),
+  // Saf yardımcılar — form bunları render sırasında çağırır.
+  MIN_SIFRE_UZUNLUGU: 8,
+  sifreGucu: () => 'orta',
+  sifreSebebi: () => null,
+  epostaGecerliMi: () => true,
   // Sağlayıcı dönüşü okuyucusu (19 Ağu 2026): ekran İLK render'da bunu çağırır.
   // Bu testte OAuth dönüşü yok → null; klavye ölçümleri etkilenmez.
   oauthDonusunuOku: () => null,
@@ -162,27 +173,58 @@ describe('A2 · alt dolgu kuralı: TOPLA değil, BÜYÜĞÜNÜ AL', () => {
  * konursa klavye kusuru da geri gelir. O gün bu test kırmızı döner ve
  * ölçüm kancasının (useKlavyeOrtusu) yeniden bağlanması gerektiğini söyler.
  */
-describe('A3 · giriş ekranında klavye açan bir alan YOK', () => {
-  it('ekranda hiç yazı alanı çizilmiyor', () => {
+describe('A3 · giriş ekranında yazı alanı VAR ve klavye telafisi bağlı', () => {
+  /**
+   * 24 Ağustos 2026 · KARAR TERSİNE ÇEVRİLDİ.
+   *
+   * Bu blok eskiden "ekranda hiç yazı alanı YOK" diye kilitliyordu ve kendi
+   * hata mesajı şunu söylüyordu: "yazı alanı geri gelirse klavye örtüşmesi
+   * kilidi (useKlavyeOrtusu) yeniden bağlanmalı." Tam olarak bu oldu:
+   * Apple App Review demo hesap istediği için e-posta+şifre yolu geri geldi.
+   *
+   * Kilit artık YOKLUĞU değil, ŞARTI koruyor: alan varsa telafi de olmalı.
+   */
+  it('e-posta ve şifre alanları çiziliyor', () => {
     klavyeyiAc(KLAVYE);
     const { container } = girisFormunuAc();
-    const alanlar = container.querySelectorAll('input, textarea, [contenteditable="true"]');
-    expect(
-      alanlar.length,
-      'giriş ekranına yazı alanı geri geldi — klavye örtüşmesi kilidi (useKlavyeOrtusu) yeniden bağlanmalı',
-    ).toBe(0);
+    expect(container.querySelector('input#auth-eposta'), 'e-posta alanı yok').toBeTruthy();
+    expect(container.querySelector('input#auth-sifre'), 'şifre alanı yok').toBeTruthy();
   });
 
-  it('ekranda GERÇEK bir giriş yolu var (boş DOM ölçmüyoruz)', () => {
+  it('şifre alanı GERÇEKTEN gizli (type=password) ve otomatik doldurma doğru', () => {
     klavyeyiAc(KLAVYE);
-    girisFormunuAc();
-    // TEK YOL: Apple · Google. Telefon alanı 23 Ağu 2026'da silindi; çalışmayan
-    // bir alan bırakmak kullanıcıya "kod gönderilemedi"den başka bir şey
-    // vermiyordu (App Store 2.1) ve Apple 5.6 reddinin kökü buydu.
+    const { container } = girisFormunuAc();
+    const sifre = container.querySelector<HTMLInputElement>('input#auth-sifre')!;
+    expect(sifre.type).toBe('password');
+    // Girişte 'current-password', kayıtta 'new-password' olmalı; ikisi
+    // karışırsa şifre yöneticileri yanlış kayıt açar.
+    expect(['current-password', 'new-password']).toContain(sifre.getAttribute('autocomplete'));
+  });
+
+  it('iOS otomatik yakınlaştırmasını önleyen 16px kuralı alanlara uygulanır', () => {
+    // .au-input 16px olmazsa iOS alana dokununca sayfayı yakınlaştırır ve
+    // düzen bozulur — B2'deki kusurun giriş ekranındaki ikizi.
+    const alan = readFileSync(path.join(path.resolve(__dirname, '../..'), 'views/authFieldStyles.ts'), 'utf-8');
+    expect(alan).toMatch(/\.au-input \{[^}]*font-size: 16px/);
+  });
+
+  it('SİLİNENLER geri gelmedi: telefon alanı ve demo yolu hâlâ YOK', () => {
+    klavyeyiAc(KLAVYE);
+    const { container } = girisFormunuAc();
+    // Telefon yolu 23 Ağu 2026'da silindi: SMS altyapısı hiç kurulmadı,
+    // "KOD GÖNDER" hiçbir zaman çalışmadı (Apple 5.6 reddinin kökü).
+    // Şifre yolunun altyapısı ise sunucuda çalışıyor — ayrım budur.
     expect(screen.queryByLabelText('Telefon numarası')).toBeNull();
     expect(screen.queryByLabelText('Ülke kodu')).toBeNull();
-    expect(screen.getByRole('button', { name: 'Google' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Apple' })).toBeTruthy();
+    expect(container.querySelector('input[type="tel"]')).toBeNull();
+    expect(container.textContent).not.toContain('DEMO');
+  });
+
+  it('Apple ve Google yolları duruyor (Kural 4.8)', () => {
+    klavyeyiAc(KLAVYE);
+    girisFormunuAc();
+    expect(screen.getByRole('button', { name: /Google/i })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Apple/i })).toBeTruthy();
   });
 });
 
@@ -201,15 +243,33 @@ describe('A4 · ölçüm TEK kaynaktan gelir', () => {
   });
 
   it('giriş ekranı KENDİ ölçümünü yapmaz (ikinci ölçüm yasak)', () => {
+    // Bu kural DEĞİŞMEDİ: ekran visualViewport'u kendisi okumaz, ortak
+    // kancayı çağırır. İki ölçüm olursa biri doğru, öteki yanlış davranır.
     expect(oku('views/AuthScreen.tsx')).not.toContain('visualViewport');
   });
 
-  it('giriş ekranı klavye ölçümünü artık HİÇ yapmıyor (alan kalmadı)', () => {
-    // Kanca 23 Ağu 2026'da kaldırıldı: ekranda yazı alanı yok, klavye açılmıyor.
-    // Alan geri gelirse A3'teki kilit kırmızı döner ve kancayı geri ister.
-    const a = oku('views/AuthScreen.tsx');
-    expect(a).not.toContain('useKlavyeOrtusu');
-    expect(a).not.toContain('klavyeliAltDolgu');
+  it('klavye telafisi GERÇEKTEN bağlı — ortak kanca çağrılıyor', () => {
+    // 23 Ağu 2026'da alan kalmadığı için sökülmüştü; 24 Ağu'da şifre yoluyla
+    // birlikte geri geldi. Kaynak kontrolü, aşağıdaki DOM ölçümünün neden
+    // çalıştığını da açıklar.
+    expect(oku('views/AuthScreen.tsx')).toContain('useKlavyeOrtusu');
+  });
+
+  it('klavye açıkken alt dolgu GERÇEKTEN klavye kadar büyüyor', () => {
+    // ASIL KİLİT — kaynak metnine değil, çizilen DOM'a bakar. Kanca import
+    // edilip kullanılmasa (ya da dönen değer dolguya bağlanmasa) bu test
+    // kırmızı döner: şifre alanı ve altındaki düğme klavyenin arkasında kalır.
+    klavyeyiAc(KLAVYE);
+    const { container } = girisFormunuAc();
+    const dolgular = altDolgular(container as unknown as HTMLElement);
+    const klavyeyiKapsayan = dolgular.some((d) => {
+      const px = parseFloat(d);
+      return Number.isFinite(px) && px >= KLAVYE;
+    });
+    expect(
+      klavyeyiKapsayan,
+      `klavye açıkken (${KLAVYE}px) hiçbir kap klavyeyi kapsayan alt dolgu almadı: ${dolgular.join(', ')}`,
+    ).toBe(true);
   });
 });
 

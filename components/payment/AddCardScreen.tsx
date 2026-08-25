@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Check, Plus, Shield, Wifi } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, Check, Plus, Shield, Wifi } from 'lucide-react';
 import { detectCardBrand, pickCardGradient, SavedCard, listSavedCards } from '../../services/walletService';
 import { registerCardInApp, stripServerErrorPrefix } from '../../services/paymentService';
 import CardBrandMark, { brandGradient, normalizeBrand } from './CardBrandMark';
@@ -38,6 +38,19 @@ interface AddCardScreenProps {
   /** collectMode: form verisini yukarı döndür (ağ çağrısı yok). */
   collectMode?: boolean;
   onCollect?: (card: CollectedCard) => void;
+  /**
+   * Ödeme sağlayıcısı SİMÜLASYONDA mı (`resolve_payment_mode.simulation`).
+   *
+   * Bu ekran tam kart formudur: PAN, son kullanma ve CVV ister. Ödeme
+   * ekranındaki kırmızı "TEST ödemesi" uyarısı BURADA GÖRÜNMEZ — ekran
+   * değişir. 24 Ağu 2026 denetiminde yakalandı: kullanıcı, uyarıyı bir önceki
+   * ekranda görmüş olsa bile kartını girerken hiçbir işaret olmadan
+   * "banka doğrulaması ile tahsil edilir" cümlesini okuyordu. İkisi de yalandı.
+   *
+   * Bayrak sunucudan sürülür; iyzico canlıya alındığı gün kendiliğinden
+   * false döner ve ekran normal diline geri gelir.
+   */
+  simulation?: boolean;
 }
 
 const luhnValid = (num: string) => {
@@ -62,12 +75,15 @@ const expiryValid = (v: string) => {
   return year > now.getFullYear() || (year === now.getFullYear() && month >= now.getMonth() + 1);
 };
 
-const AddCardScreen: React.FC<AddCardScreenProps> = ({ onBack, onSaved, collectMode = false, onCollect }) => {
+const AddCardScreen: React.FC<AddCardScreenProps> = ({ onBack, onSaved, collectMode = false, onCollect, simulation = false }) => {
   const [num, setNum] = useState('');
   const [holder, setHolder] = useState('');
   const [exp, setExp] = useState('');
   const [cvv, setCvv] = useState('');
-  const [save, setSave] = useState(true);
+  // Simülasyonda kart kaydetmek anlamsız: gerçek bir kasa kaydı oluşmaz.
+  // Gerçek modda da varsayılan KAPALI — kullanıcı kendi kartını saklamayı
+  // bilerek seçsin (denetim: kayıtlı kartı silecek ekran henüz yok).
+  const [save, setSave] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
@@ -137,6 +153,22 @@ const AddCardScreen: React.FC<AddCardScreenProps> = ({ onBack, onSaved, collectM
       </header>
 
       <main className="flex-1 overflow-y-auto p-5 space-y-5">
+        {/* Uyarı formun EN BAŞINDA: alanların altında dururken kullanıcı
+            kart numarasını çoktan yazmış oluyordu. Uyarının işi, yazmadan
+            ÖNCE durdurmak. */}
+        {simulation && (
+          <div role="alert" className="bg-red-500/12 border border-red-500/40 rounded-2xl p-4 flex gap-3">
+            <AlertTriangle size={18} className="text-red-400 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-[0.8125rem] font-extrabold text-red-400">Bu bir TEST ödemesidir</p>
+              <p className="text-[0.75rem] text-gray-300 mt-1 leading-relaxed">
+                Kartından para çekilmez. Gerçek kartını girmene gerek yok —
+                test kartı: <span className="font-mono">5528 7900 0000 0008</span> · 12/30 · 123
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Canlı kart önizlemesi — markaya özel gradyan + canlı marka logosu */}
         <div
           className={`rounded-[20px] p-5 bg-gradient-to-br ${brandGradient(brand)} border border-white/10 relative overflow-hidden min-h-[168px] flex flex-col justify-between shadow-[0_18px_40px_-12px_rgba(0,0,0,0.6)] transition-[background] duration-500`}
@@ -246,9 +278,11 @@ const AddCardScreen: React.FC<AddCardScreenProps> = ({ onBack, onSaved, collectM
         <div className="flex items-center gap-2 px-0.5">
           <Shield size={14} className="text-[#39FF14]" />
           <p className="text-[0.6875rem] text-ink-4">
-            {collectMode
-              ? 'Kart bilgilerin şifreli iletilir; banka doğrulaması (3D Secure) ile tahsil edilir.'
-              : 'Kart güvenli ödeme altyapısında saklanır; OYNA yalnız son 4 haneyi görür.'}
+            {simulation
+              ? 'Test modunda kart bilgilerin hiçbir bankaya ya da ödeme kuruluşuna iletilmez.'
+              : collectMode
+                ? 'Kart bilgilerin şifreli iletilir; banka doğrulaması (3D Secure) ile tahsil edilir.'
+                : 'Kart güvenli ödeme altyapısında saklanır; OYNA yalnız son 4 haneyi görür.'}
           </p>
         </div>
 

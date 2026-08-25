@@ -17,7 +17,8 @@
  *    kill-switch yazmayı unutmak yeterli değildir.
  */
 import { describe, it, expect } from 'vitest';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
 import { join } from 'node:path';
 
 const oku = (p: string) => readFileSync(join(process.cwd(), p), 'utf8');
@@ -352,8 +353,22 @@ describe('Mağaza kapıları · klavye ve dokunma hedefleri', () => {
     const css = oku('index.css');
     expect(css).toContain('.dokunma-hedefi::before');
     expect(css).toMatch(/\.dokunma-hedefi::before[\s\S]{0,400}var\(--oy-tap-min/);
-    expect(oku('views/AuthScreen.tsx')).toContain('className="dokunma-hedefi"');
     expect(oku('views/ServiceApplication.tsx')).toContain('dokunma-hedefi mt-0.5 w-5 h-5');
+    // ── 24 Ağustos 2026 · MEKANİZMA DEĞİŞTİ, GARANTİ DEĞİŞMEDİ ──
+    // Giriş ekranındaki onay kutusu artık 20px'lik bir kare + görünmez 48px
+    // katman DEĞİL: tam satır kaplayan bir kart (`.au-onay`) ve kartın kendisi
+    // düğme. Aynı şey "Beni hatırla" anahtarı için de geçerli (`.au-hatirla`).
+    // Ölçü yine ELLE YAZILMIYOR, aynı `--oy-tap-min` belirtecinden okunuyor —
+    // korunan şey buydu: tek kaynak + 48px alt sınır.
+    // `dokunma-hedefi` sınıfı ServiceApplication'da AYNEN duruyor ve orada
+    // hâlâ küçük kutu deseni kullanıldığı için kuralı da yerinde kalmalı.
+    const alan = oku('views/authFieldStyles.ts');
+    for (const sinif of ['.au-onay', '.au-hatirla']) {
+      const kural = alan.match(new RegExp(`\\${sinif} \\{([^}]*)\\}`));
+      expect(kural, `${sinif} kuralı bulunamadı`).not.toBeNull();
+      expect(kural![1], `${sinif} dokunma ölçüsünü belirteçten okumuyor`)
+        .toContain('min-height: var(--oy-tap-min');
+    }
   });
 
   it('hareket azaltmada aşağı çekip yenileme ÖLMEZ', () => {
@@ -411,11 +426,37 @@ describe('Mağaza kapıları · beyan ile gerçek davranış uyumu', () => {
 
   it('kaleci/hakem kiralaması olmayan bir güvence VAAT ETMEZ', () => {
     const mp = oku('views/Marketplace.tsx');
-    expect(mp).toContain('const KIRALAMA_ACIK = false');
-    expect(mp).toContain('Kiralama Çok Yakında');
+    // Ekran hâlâ kilitli — ama artık kilidi PAYLAŞILAN bayrak tutuyor.
+    expect(mp).toContain('const KIRALAMA_ACIK = KALECI_HAKEM_KIRALAMA_ACIK');
+    expect(oku('shared/featureFlags.ts')).toContain('export const KALECI_HAKEM_KIRALAMA_ACIK = false');
     // Şimdiki zamanda "bloke edilir / tahsil edilir" kalmamalı.
     expect(mp).not.toContain('Ücret önce kartında güvenle bloke edilir');
     expect(mp).not.toContain('Ödeme maç kesinleşince tahsil edilir; gelmezse ücretin iade edilir.');
+  });
+
+  it('"YAKINDA" yüzeyine giden HİÇBİR kapı açık kalmadı', () => {
+    // 24 Ağu 2026 denetimi: ekran kilitliydi ama ona giden İKİ kapı açıktı —
+    // ana ekrandaki iki kart ve maç lobisindeki "Kaleci & Hakem" bölümü.
+    // Kullanıcı sonuna kadar gezip "Kiralama Çok Yakında" duvarına tosluyordu.
+    // Apple 2.1, yayınlanmış uygulamada "yakında" yüzeylerini reddediyor.
+    // Kapıyı kilitlemek yetmez; kapıya GİDEN YOLU kapatmak gerekir.
+    const dash = oku('views/Dashboard.tsx');
+    expect(dash).toContain('{KALECI_HAKEM_KIRALAMA_ACIK && (');
+    expect(dash).toContain("KALECI_HAKEM_KIRALAMA_ACIK } from '../shared/featureFlags'");
+
+    const lobi = oku('views/MatchJoin.tsx');
+    expect(lobi).toContain('{KALECI_HAKEM_KIRALAMA_ACIK && isManageMode && myCaptainSide && (');
+  });
+
+  it('tesis menüsünde "Çekim Yakında Açılacak" yüzeyine kapı yok', () => {
+    // Çekim 19 Ağu 2026'da kalıcı kapatıldı ama menü satırı duruyordu:
+    // dokunulunca tutar + IBAN alanları dolu, tam işlevli görünen bir form
+    // açılıyor, sonundaki tuş kilitli kalıyordu. Üstelik bu ekran Apple'a
+    // verilen tesis hesabında üç dokunuş uzaktaydı.
+    const menu = oku('views/owner/menu/OwnerMenuView.tsx');
+    expect(menu).toContain('{isOwnerLvl && CEKIM_UYGULAMADAN_ACIK && (');
+    // Gerekçesiz gri satır da kalmamalı.
+    expect(menu).not.toContain('label="Dil"');
   });
 
   it('yasal metinde olmayan cüzdana para gönderilmez', () => {
@@ -425,12 +466,28 @@ describe('Mağaza kapıları · beyan ile gerçek davranış uyumu', () => {
     expect(ld).not.toContain('kesintisiz olarak OYNA cüzdanına iade edilir');
   });
 
-  it('yaş kapısı HER yolda kapalı (Atla dahil)', () => {
+  it('yaş kapısı HER yolda kapalı — ikinci bir yol AÇILMAMIŞ', () => {
+    // Mağazaların yaş derecelendirmesi beyanı tek bir girdiye dayanıyor:
+    // kullanıcının seçtiği yaş aralığı. 15 yaşındaki biri hiçbir şeye
+    // dokunmadan yetişkin olarak kaydedilirse `is_minor` ve veli onayı akışı
+    // HİÇ tetiklenmez.
+    //
+    // Eskiden kapı İKİ yerdeydi: `ctaEnabled` ve `handleSkip`. Atlama yolu
+    // 24 Ağu 2026'da kaldırıldı, kapı tek yere indi. Bu testin işi, ileride
+    // birinin ikinci bir yol açıp bu kapıyı atlamamasını sağlamak.
     const ob = oku('views/Onboarding.tsx');
     expect(ob).toMatch(/case 1: return ageIndex !== null/);
-    // "Atla" yolu da aynı kapıdan geçer.
-    const atla = ob.slice(ob.indexOf('const handleSkip'), ob.indexOf('const aura'));
-    expect(atla).toContain('if (ageIndex === null)');
+
+    // Kurulumu bitiren tek düğme `handleCta`; yaş adımından ilerlemesi
+    // `ctaEnabled`e bağlı.
+    expect(ob).toContain('if (!ctaEnabled) return;');
+
+    // Yaşı sormadan kurulumu bitiren hiçbir yol olmamalı.
+    expect(ob).not.toContain('const handleSkip');
+    expect(ob).not.toContain('setSkipConfirm');
+
+    // Sunucudaki ikizi: istemci kandırılsa bile kapı orada da durur.
+    expect(oku('services/onboardingService.ts')).toContain('ageRange');
   });
 });
 
@@ -642,5 +699,247 @@ describe('İade kuyruğu · sahte iade yalnız sahte tahsilata', () => {
 
   it('gerçek tahsilat + simülasyon modu = sessiz DONE değil, insana kalır', () => {
     expect(s()).toContain('GERCEK_TAHSILAT_SIM_MODDA');
+  });
+});
+
+/**
+ * VİTRİN GÖRSELLERİ KAPISI (25 Ağustos 2026)
+ *
+ * App Store ekran görüntüsü çekilirken vitrindeki fotoğraflara ilk kez tek
+ * tek bakıldı. "Saha Kirala" listesinin ilk kartı bir FIFA Dünya Kupası
+ * renderıydı — kaidesinde "FIFA WORLD CUP" okunuyordu; bir kortun iki
+ * fotoğrafı ise tanınabilir kişilerin ve çocukların özel fotoğraflarıydı.
+ * Aylardır canlıdaydılar ve yeşil geçen yirmi denetimin hiçbiri bakmıyordu,
+ * çünkü hepsi DOSYALARA bakıyordu; bunlar VERİDEYDİ.
+ *
+ * Bu blok, 11. kapının kendini yanlış yerde yeşil göstermesini engelleyen üç
+ * özelliğini kilitler. Üçü de kapıyı yazarken bizzat yaşandı.
+ */
+describe('Vitrin görselleri kapısı · yanlış yeşil vermiyor', () => {
+  const kod = oku('scripts/magaza-denetim.mjs');
+  const kapi = kod.slice(kod.indexOf('11 · VİTRİN GÖRSELLERİ'));
+
+  it('kapı gerçekten var ve canlı veriyi okuyor', () => {
+    expect(kapi).toContain('rest/v1/');
+    expect(kapi).toContain('pitches?select=');
+    expect(kapi).toContain('courts?select=');
+  });
+
+  it('adres karşılaştırması ağa BAĞLI DEĞİL — indirme öncesinde yapılıyor', () => {
+    // İçerik karşılaştırması görsel indirilemezse sessizce devre dışı kalır.
+    // Adres karşılaştırması her koşulda çalışmalı; bu yüzden fetch'ten ÖNCE
+    // gelmek zorunda. Canlıdaki gerçek çakışmayı (aynı stok fotoğrafın iki
+    // sahada olması) yakalayan kural buydu.
+    const adresKurali  = kapi.indexOf('adresSahalari');
+    const indirme      = kapi.indexOf('await Promise.all(benzersiz.map');
+    expect(adresKurali).toBeGreaterThan(-1);
+    expect(indirme).toBeGreaterThan(-1);
+    expect(adresKurali).toBeLessThan(indirme);
+  });
+
+  it('hiçbir görsel indirilemediyse TAMAM demiyor', () => {
+    // İlk sürüm "çakışan içerik yok" diye yeşil yandı; oysa dokuz görselin
+    // dokuzu da indirilememişti ve hiçbir karşılaştırma yapılmamıştı.
+    expect(kapi).toContain('dogrulanan === 0');
+    const yesilSatir = kapi.match(/tamam\(`Vitrin görselleri:[^`]*`\)/)?.[0] ?? '';
+    expect(yesilSatir).toContain('dogrulanan');       // kaç tanesi bakıldı, söylüyor
+    expect(yesilSatir).toContain('benzersiz.length'); // kaç tanesi vardı, söylüyor
+  });
+
+  it('maç görselleri kopya kurallarının DIŞINDA', () => {
+    // Maç görseli sahadan türetilir; aynı sahanın onlarca maçında aynı
+    // fotoğrafın görünmesi DOĞRUDUR. İlk sürüm maçları da kapsayınca kapı
+    // üç yanlış engel üretti. Ayrım kalıcı olmalı.
+    expect(kapi).toContain('macGorselleri');
+    const ekleTanimi = kapi.slice(kapi.indexOf('const ekle ='), kapi.indexOf('const ekle =') + 200);
+    expect(ekleTanimi).toContain('gorseller.push');
+    // `gorseller` (tesis kimliği) maç görseli ASLA almamalı:
+    expect(kapi).not.toMatch(/for \(const m of maclar\) ekle\(/);
+  });
+
+  it('üçüncü taraf barındırıcı ENGEL değil UYARI — ağ politikası da 403 döndürebilir', () => {
+    const disBolum = kapi.slice(kapi.indexOf('const disAdres'));
+    expect(disBolum).toContain('uyari(');
+    expect(disBolum.slice(0, disBolum.indexOf('dogrulanan'))).not.toContain('engel(');
+  });
+});
+
+/**
+ * `vitrin:gorseller` — makinenin göremediğini insana gösteren komut.
+ *
+ * Bir fotoğrafın kupa mı, çocuk mu, halı saha mı olduğunu hiçbir denetim
+ * bilemez. 11. kapı ancak kopyayı ve kırık adresi yakalar. Geri kalanı
+ * bakmakla anlaşılır — ve aylarca bakılmamasının sebebi bakmanın zahmetli
+ * olmasıydı: altı saha, kortları, altmış beş maç, hepsi ayrı ekranlarda.
+ */
+describe('vitrin:gorseller · bakmayı tek komuta indiriyor', () => {
+  it('betik depoda (scripts/* kalıbına yutulmamış)', () => {
+    expect(existsSync(join(process.cwd(), 'scripts/vitrin-gorselleri.mjs'))).toBe(true);
+    expect(oku('.gitignore')).toContain('!scripts/vitrin-gorselleri.mjs');
+  });
+
+  it('package.json üzerinden çağrılabiliyor', () => {
+    const p = JSON.parse(oku('package.json'));
+    expect(p.scripts['vitrin:gorseller']).toContain('vitrin-gorselleri.mjs');
+  });
+
+  it('saha, kort ve maç görsellerinin ÜÇÜNÜ de basıyor', () => {
+    const s = oku('scripts/vitrin-gorselleri.mjs');
+    expect(s).toContain('pitches?select=');
+    expect(s).toContain('courts?select=');
+    expect(s).toContain('public_matches?select=');
+  });
+
+  it('11. kapı, bakılacak yeri adıyla gösteriyor', () => {
+    expect(oku('scripts/magaza-denetim.mjs')).toContain('npm run vitrin:gorseller');
+  });
+});
+
+/**
+ * DEPO TEMİZLİĞİ (25 Ağustos 2026)
+ *
+ * Açık kovadaki dosyaların veritabanı bağları koparıldı ama dosyaların
+ * KENDİLERİ duruyor: adresini bilen hâlâ açabilir. Kalıcı silme SQL ile
+ * yapılamıyor — Supabase `storage.protect_delete()` ile doğrudan DELETE'i
+ * engelliyor, çünkü satırı silmek S3'teki nesneyi silmez ve erişilemeyen bir
+ * artık bırakır. Silme depolama API'siyle, tam yetkili anahtarla yapılır.
+ *
+ * Silme GERİ ALINAMAZ ve listede kurucunun kendi aile fotoğrafları var.
+ * Bu blok, o dosyaların yanlışlıkla silinmesini önleyen kapıları kilitler.
+ */
+describe('Depo temizliği · yanlışlıkla silmiyor', () => {
+  const liste = JSON.parse(oku('docs/master/depo-silinecekler.json'));
+  const betik = oku('scripts/depo-temizle.mjs');
+
+  it('kişisel fotoğrafların HİÇBİRİ onaylı değil', () => {
+    // Kurucu "önce telifli olanları sil, kişisel olanlara dokunma" dedi:
+    // asıllarının elinde olduğundan emin olmadan silinmemeli.
+    const kisisel = liste.dosyalar.filter((d: any) => d.sinif === 'KISISEL');
+    expect(kisisel.length).toBeGreaterThan(0);
+    expect(kisisel.every((d: any) => d.onaylandi === false)).toBe(true);
+  });
+
+  it('onaylı olanların hepsi TELİF sınıfı', () => {
+    const onayli = liste.dosyalar.filter((d: any) => d.onaylandi);
+    expect(onayli.length).toBeGreaterThan(0);
+    expect([...new Set(onayli.map((d: any) => d.sinif))]).toEqual(['TELIF']);
+  });
+
+  it('her satırda ne olduğu yazılı — yol tek başına hiçbir şey anlatmıyor', () => {
+    for (const d of liste.dosyalar) {
+      expect(typeof d.ne).toBe('string');
+      expect(d.ne.length).toBeGreaterThan(10);
+    }
+  });
+
+  it('varsayılan KURU ÇALIŞMA — --uygula olmadan silmiyor', () => {
+    expect(betik).toContain("process.argv.includes('--uygula')");
+    const kuru = betik.indexOf('if (!UYGULA)');
+    const silme = betik.indexOf("method: 'DELETE'");
+    expect(kuru).toBeGreaterThan(-1);
+    expect(kuru).toBeLessThan(silme);   // çıkış, silmeden ÖNCE
+  });
+
+  it('onaylanmamış dosya silme listesine hiç girmiyor', () => {
+    expect(betik).toContain('hepsi.filter((d) => d.onaylandi)');
+    expect(betik).toContain('const silinir = onayli.filter');
+  });
+
+  it('hâlâ bağlı dosyayı silmiyor', () => {
+    // Bağlı bir dosyayı silmek uygulamada kırık görsel bırakır (Apple 2.1).
+    expect(betik).toContain('bagliMi');
+    expect(betik).toContain('HÂLÂ BAĞLI');
+  });
+
+  it('sildikten sonra adresin GERÇEKTEN kapandığını doğruluyor', () => {
+    // "204 döndü" yetmez; herkese açık adres hâlâ 200 veriyorsa iş bitmemiştir.
+    expect(betik).toContain('object/public/');
+    expect(betik).toContain('kontrol.status === 200');
+  });
+
+  it('servis anahtarı yalnız ortamdan okunuyor, diske yazılmıyor', () => {
+    expect(betik).toContain('process.env.SUPABASE_SERVICE_ROLE_KEY');
+    expect(betik).not.toMatch(/writeFileSync[\s\S]{0,120}ANAHTAR/);
+    expect(betik).not.toMatch(/console\.log\([^)]*ANAHTAR[^)]*\)/);
+  });
+
+  it('betik ve liste depoda', () => {
+    expect(existsSync(join(process.cwd(), 'scripts/depo-temizle.mjs'))).toBe(true);
+    expect(oku('.gitignore')).toContain('!scripts/depo-temizle.mjs');
+    expect(JSON.parse(oku('package.json')).scripts['depo:sil']).toContain('depo-temizle.mjs');
+  });
+});
+
+/**
+ * Servis anahtarı komut satırına yazdırılmaz (25 Ağustos 2026)
+ *
+ * İlk sürüm anahtarı ortam değişkeninden istiyordu:
+ *     SUPABASE_SERVICE_ROLE_KEY=… npm run depo:sil -- --uygula
+ * Bu, kod tarafı olmayan biri için hem zor hem risklidir: komut satırına
+ * yazılan her şey kabuk geçmişine düşer ve orada KALIR. Tam yetkili bir
+ * anahtarın düz metin olarak diskte durması, silmeye çalıştığımız sorunun
+ * aynısıdır.
+ */
+describe('Depo temizliği · anahtar kabuk geçmişine düşmüyor', () => {
+  const betik = oku('scripts/depo-temizle.mjs');
+
+  it('anahtar ortamda yoksa soruluyor, hata verilmiyor', () => {
+    expect(betik).toContain('sorGizli');
+    expect(betik).toContain('await sorGizli(');
+  });
+
+  it('girilen anahtar ekrana basılmıyor', () => {
+    // readline'ın çıktı yazıcısı susturulmazsa anahtar terminalde görünür ve
+    // omuz üstünden okunabilir; ayrıca terminal kaydı tutan araçlara düşer.
+    expect(betik).toContain('_writeToOutput');
+  });
+
+  it('anahtar biçimi ağa çıkmadan önce denetleniyor', () => {
+    const denetim = betik.indexOf('sb_secret_');
+    const silme   = betik.indexOf("method: 'DELETE'");
+    expect(denetim).toBeGreaterThan(-1);
+    expect(denetim).toBeLessThan(silme);
+  });
+
+  it('kuru çalışma metni artık ortam değişkeni istemiyor', () => {
+    const kuru = betik.slice(betik.indexOf('KURU ÇALIŞMA'), betik.indexOf('KURU ÇALIŞMA') + 400);
+    expect(kuru).not.toContain('SUPABASE_SERVICE_ROLE_KEY=');
+    expect(kuru).toContain('npm run depo:sil -- --uygula');
+  });
+});
+
+/**
+ * TESTİN OKUDUĞU HER BETİK DEPODA OLMALI
+ *
+ * `.gitignore` içinde `scripts/*` kalıbı var ve depoda durması gereken her
+ * betik tek tek beyaz listeye ekleniyor. Eklemeyi unutmak sessiz bir
+ * hatadır: dosya kendi diskinde durduğu için testler YEREL'de geçer, CI'da
+ * ise ENOENT verir. Bu oturumda iki kez oldu:
+ *
+ *   · `build-legal-roles.mjs` — temiz kopyada `npm run build:legal` çalışmadı
+ *   · `kasa.mjs` — PR #173'te üç test birden ENOENT ile düştü
+ *
+ * Bu test o boşluğu kapatıyor: bir birim testi hangi betiği okuyorsa, o
+ * betik git tarafından TAKİP EDİLİYOR olmalı. Diskte durması yetmez.
+ */
+describe('Testlerin okuduğu betikler depoda', () => {
+  it('hiçbir test, takip edilmeyen bir betiğe dayanmıyor', () => {
+    const testKlasoru = join(process.cwd(), 'tests/unit');
+    const dosyalar = readdirSync(testKlasoru).filter((f) => f.endsWith('.test.ts'));
+
+    const eksik: string[] = [];
+    for (const dosya of dosyalar) {
+      const icerik = readFileSync(join(testKlasoru, dosya), 'utf8');
+      const yollar = new Set(icerik.match(/scripts\/[A-Za-z0-9_./-]+\.(mjs|js|sh|cjs)/g) ?? []);
+      for (const yol of yollar) {
+        const takipli = spawnSync('git', ['ls-files', '--error-unmatch', yol],
+          { cwd: process.cwd(), stdio: 'ignore' }).status === 0;
+        if (!takipli) eksik.push(`${dosya} → ${yol}`);
+      }
+    }
+
+    expect(eksik, `Bu betikler testlerde okunuyor ama git takip etmiyor — ` +
+      `CI'da ENOENT verirler. .gitignore'a "!<yol>" satırı ekle:\n  ${eksik.join('\n  ')}`)
+      .toEqual([]);
   });
 });

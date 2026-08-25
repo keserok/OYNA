@@ -1,12 +1,12 @@
 # KVKK Açık Rıza Metni
 
-> **Durum:** Yayında · **Son güncelleme:** 15.07.2026 · **PR:** #75
+> **Durum:** Yayında · **Son güncelleme:** 24.08.2026 · **PR:** #75
 > **Uygulandığı yer:** `views/LegalScreen.tsx → RIZA` (uygulama içi "Yasal" ekranı)
 > **İlgili ürün değişikliği:** Rehber eşleştirme özelliği (`views/social/FriendAddView.tsx`), işletim sistemi izin diyaloğundan önce bu metnin özetini gösteren bir uygulama-içi onay adımı ekledi — OS'un genel izin diyaloğu tek başına aşağıdaki aydınlatılmış rızayı karşılamaz.
 
 ---
 
-**Son güncelleme: 15.07.2026**
+**Son güncelleme: 24.08.2026**
 
 6698 sayılı KVKK uyarınca bazı veri işleme faaliyetlerimiz için "açık rızanız" gerekir — yalnızca sizin özgür iradenizle, aşağıdaki bilgilendirmeye dayanarak verdiğiniz onay. Her biri ayrı ayrı verilir ve geri alınabilir; birini reddetmeniz OYNA'nın temel hizmetlerini (saha keşfi, rezervasyon, maç) kullanmanızı engellemez.
 

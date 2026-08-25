@@ -1,10 +1,10 @@
-> **Durum:** Taslak tamamlandı — adversarial hukuki inceleme (enforceability, tamlık, tutarlılık) geçti · **Son güncelleme:** 13.07.2026
+> **Durum:** Taslak tamamlandı — adversarial hukuki inceleme (enforceability, tamlık, tutarlılık) geçti · **Son güncelleme:** 24.08.2026
 > **Uygulandığı yer:** Saha sahibi onboarding/başvuru süreci (henüz uygulama içi kabul ekranına bağlanmadı — bkz. sozlesmeler/README.md "Sıradaki teknik adımlar")
 > **Not:** İmza öncesinde lisanslı bir avukat tarafından, özellikle EK-1'deki komisyon oranları ve [X] ile işaretli alanlar netleştirilerek onaylanmalıdır. Adversarial inceleme sırasında bulunan kritik/orta bulguların tamamı bu sürümde giderilmiştir (adres-vergi dairesi tutarsızlığı, GİK/TBK m.20-25 uyum notu, HMK m.17 tacir/esnaf ayrımı, ödeme askıya alma süresine üst sınır, masumiyet karinesi uyumlu fesih maddesi dahil).
 
 # OYNA – İşletme (Saha/Tesis Sahibi) Platform Kullanımı ve İşbirliği Sözleşmesi
 
-**Son güncelleme: 13.07.2026**
+**Son güncelleme: 24.08.2026**
 
 ---
 
@@ -304,7 +304,7 @@ b) İşletme'nin madde 2.5 kapsamında **esnaf** sıfatıyla hareket ettiği hâ
 
 ### 2. Onaylanmış Rezervasyonlara Uyma
 
-Platform üzerinden onaylanan rezervasyonlar, mücbir sebep veya haklı teknik/altyapısal arıza hâlleri hariç, İşletme tarafından tek taraflı olarak iptal edilemez veya değiştirilemez. Zorunlu iptallerde oyuncuya en az **24 (yirmidört) saat** önceden haber verilir ve durum OYNA'ya bildirilir. Bu süre, OYNA'nın oyuncularla akdettiği Mesafeli Satış ve İptal/İade Koşulları'nda düzenlenen tam iade eşiğiyle (rezervasyon saatinden en az 24 saat önce) uyumlu olup, madde 2.3'te atıf yapılan iptal/iade kademelerinin İşletme kaynaklı iptallerde de gözetilmesini sağlar; İşletme kaynaklı iptallerde oyuncuya her hâlükârda tam iade yapılır; bu iade oyuncunun OYNA cüzdanına işlenir ve oyuncu bu tutarı Kullanım Şartları madde 6.5'teki koşullarla banka hesabına çekebilir. İade tutarı İşletme hakedişinden mahsup edilir.
+Platform üzerinden onaylanan rezervasyonlar, mücbir sebep veya haklı teknik/altyapısal arıza hâlleri hariç, İşletme tarafından tek taraflı olarak iptal edilemez veya değiştirilemez. Zorunlu iptallerde oyuncuya en az **24 (yirmidört) saat** önceden haber verilir ve durum OYNA'ya bildirilir. Bu süre, OYNA'nın oyuncularla akdettiği Mesafeli Satış ve İptal/İade Koşulları'nda düzenlenen tam iade eşiğiyle (rezervasyon saatinden en az 24 saat önce) uyumlu olup, madde 2.3'te atıf yapılan iptal/iade kademelerinin İşletme kaynaklı iptallerde de gözetilmesini sağlar; İşletme kaynaklı iptallerde oyuncuya her hâlükârda tam iade yapılır; bu iade oyuncunun ödemeyi yaptığı karta yapılır. İade tutarı İşletme hakedişinden mahsup edilir.
 
 ### 3. Temel Güvenlik Ekipmanı
 

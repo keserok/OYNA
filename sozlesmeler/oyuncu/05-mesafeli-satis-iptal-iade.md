@@ -1,12 +1,12 @@
 # Mesafeli Satış ve İptal/İade Koşulları
 
-> **Durum:** Yayında · **Son güncelleme:** 15.07.2026 · **PR:** #74
+> **Durum:** Yayında · **Son güncelleme:** 24.08.2026 · **PR:** #74
 > **Uygulandığı yer:** `views/LegalScreen.tsx → SALES` (uygulama içi "Yasal" ekranı)
 > **Kaynak:** İptal/iade kademeleri, `docs/master/OYNA_GO_LIVE_IYZICO.md` §5'te tanımlanan ve migration'larda (000006/000007/000008) kodlanmış gerçek ödeme motoruyla birebir hizalıdır.
 
 ---
 
-**Son güncelleme: 15.07.2026**
+**Son güncelleme: 24.08.2026**
 
 ### 1. Satıcı / Aracı
 Saha kiralama hizmetinin sağlayıcısı ilgili tesistir. Miraç Kerem Çürüksulu (OYNA), ödeme ve rezervasyon sürecinde aracı hizmet sağlayıcıdır.
@@ -26,7 +26,7 @@ Kapora, uygulama üzerinden güvenli ödeme altyapısı ile tahsil edilir. Kalan
 ### 4.1 İade Nereye Yapılır?
 - İade, **ödemenin yapıldığı karta** yapılır (Mesafeli Sözleşmeler Yönetmeliği m.15/2 uyarınca ödemede kullanılan araca iade esastır).
 - İade talebiniz iptal anında işleme alınır; tutarın kartınıza yansıma süresi bankanıza bağlıdır (genellikle 1-3 iş günü, bazı bankalarda daha uzun sürebilir).
-- İade tutarından **yalnızca ödeme altyapısının işlem bedeli** düşülür; **OYNA komisyonu düşülmez**. Bu bedel, karttan çekilen **toplam** tutar üzerinden hesaplanır — kısmi iadede de böyledir, çünkü ödeme kuruluşu komisyonunu iade işleminde geri vermez. Oran ve tutar, ödeme ekranında **ödemeden önce** gösterilir (yukarıdaki kademeli oranlar saklıdır).
+- İade tutarından **hiçbir kesinti yapılmaz**: ne OYNA komisyonu ne de ödeme altyapısının işlem bedeli size yansıtılır — o maliyeti OYNA üstlenir.
 - OYNA, kullanıcı adına bakiye (cüzdan) tutmaz; iadeler Platform içinde harcanmak üzere bir bakiyeye DEĞİL, doğrudan ödeme aracınıza döner.
 
 ### 5. Cayma Hakkı İstisnası

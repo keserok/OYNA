@@ -163,9 +163,22 @@ export interface PitchPricePreview {
   halfPct: number;
 }
 
-/** Sunucu varsayılanları — saha okunamazsa ekran bugünkü davranışı korur. */
+/**
+ * Sunucu varsayılanları — saha okunamazsa ekran bugünkü davranışı korur.
+ *
+ * `markupPct` 24 Ağustos 2026'da 5 → 10 yapıldı (kurucu kararı: oyuncunun
+ * kişi başı ücretine %10 eklenir; 300 → 330). Sunucudaki karşılığı
+ * `commission_config` · GLOBAL/MODEL_A satırıdır ve maç akışı onu okur
+ * (`_pitch_agreement` → `create_match_atomic`).
+ *
+ * BURASI YALNIZ ÖNİZLEME İÇİNDİR: gerçek fiyat her zaman sunucuda hesaplanır
+ * (§2.8 "fiyat sunucuda hesaplanır; istemciden gelen tutara asla güvenilmez").
+ * Yine de bu sayı sunucudan SAPMAMALI — saptığı gün kullanıcı ekranda bir
+ * rakam görüp başka bir rakam öder. Sunucudaki oran değişirse burası da
+ * değişmelidir; `tests/unit/komisyonModeli.test.ts` ikisini karşılaştırır.
+ */
 export const PITCH_PRICE_FALLBACK: PitchPricePreview = {
-  markupPct: 5, markupAmount: 0, fullHours: 24, halfHours: 6, halfPct: 50,
+  markupPct: 10, markupAmount: 0, fullHours: 24, halfHours: 6, halfPct: 50,
 };
 
 export async function fetchPitchPricePreview(pitchId: string | null): Promise<PitchPricePreview | null> {

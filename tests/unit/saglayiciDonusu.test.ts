@@ -85,14 +85,23 @@ describe('3 · ekranda sebep yazar — sessiz dönüş yok', () => {
     const m = mapOAuthDonusu('google', null, null);
     expect(m).toContain('Google');
     expect(m.length).toBeGreaterThan(30);
-    // Kullanıcıya ÇIKIŞ da gösterilmeli: numarayla girme yolu.
-    expect(m.toLowerCase()).toContain('telefon');
+    // Kullanıcıya ÇIKIŞ da gösterilmeli. KORUNAN GARANTİ budur: mesaj yalnız
+    // "olmadı" demez, ÇALIŞAN bir yol tarif eder.
+    //
+    // 24 Ağu 2026: çıkış yolu TELEFON'dan E-POSTA+ŞİFRE'ye geçti. Telefon yolu
+    // 23 Ağustos'ta silindi; o tarihten sonra bu satır kullanıcıyı var olmayan
+    // bir ekrana yönlendiren bir metni "doğru" sayıyordu — test yeşildi ama
+    // kullanıcı çıkmaz sokağa gönderiliyordu. Metin değil, GARANTİ korunur.
+    expect(m.toLowerCase()).toContain('şifre');
+    // Silinen yola bir daha yönlendirilmemeli.
+    expect(m.toLowerCase()).not.toContain('numaran');
   });
 
   it('sağlayıcı kapalıysa sebep ve çıkış birlikte söylenir', () => {
     const m = mapOAuthDonusu('google', 'server_error', 'Unsupported provider: provider is not enabled');
     expect(m).toContain('Google ile giriş tamamlanamadı');
-    expect(m.toLowerCase()).toContain('telefon numaran');
+    expect(m.toLowerCase()).toContain('e-posta');
+    expect(m.toLowerCase()).not.toContain('numaran');
   });
 
   it('kullanıcı izin vermediyse suçlayıcı değil, yol gösterici konuşulur', () => {
