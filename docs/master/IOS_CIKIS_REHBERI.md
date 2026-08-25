@@ -243,12 +243,22 @@ Supabase Dashboard → **Authentication → Sign In / Up → Apple** → **Enabl
 
 ## 8. İncelemeye gönder (~30 dk form doldurma)
 
-App Store Connect → uygulaman → soldan **App Store** sekmesi → **3.0.0 Prepare for Submission**:
+App Store Connect → uygulaman → soldan **App Store** sekmesi → **1.0.0 Prepare for Submission**:
 
-1. **Ekran görüntüleri** (zorunlu): TestFlight'taki uygulamayı telefonunda gez ve en güçlü 5 ekranın
-   görüntüsünü al (yan tuş + ses açma). Önerilen ekranlar: Panel (FUT kartı) · Saha haritası ·
-   Maç lobisi · Taktik stüdyosu · Maç bileti. iPhone 15/16/17 Pro Max boyutu (6.9") şarttır;
-   6.5" istenirse aynı görseller kabul edilir.
+1. **Ekran görüntüleri** (zorunlu). Önce vitrindeki fotoğraflara bak, sonra çek:
+
+   ```
+   npm run vitrin:gorseller   # canlıdaki her saha/kort fotoğrafı tek sayfada
+   npm run dev                # ayrı kabukta
+   npm run magaza:ekran       # 6 ekran · 1290×2796 (Apple'ın istediği ölçü)
+   ```
+
+   `vitrin:gorseller` adımını atlama. 25 Ağu 2026'da ilk kez bakıldığında vitrinde bir FIFA
+   Dünya Kupası renderı ve çocukların özel fotoğrafları bulundu — ikisi de aylardır oradaydı
+   (`OLAY-2026-08-25-VITRIN-GORSELLERI.md`). Yer tutucu görüyorsan çekim mağazaya konmaz;
+   fotoğraflar üçüncü taraf sunucuda olduğu için o sunucuya erişemeyen makinede boş çıkarlar.
+
+   iPhone 6.9" (1290×2796) şarttır; `magaza:ekran` tam o ölçüde üretir.
 2. **Metinler:** Ek A'daki hazır taslakları yapıştır (Description, Keywords, Promotional Text,
    Support URL: `https://<alan-adın>` veya `mailto:mirackeremcuruksulu@gmail.com`).
 3. **Build:** "+" ile TestFlight'a yüklediğin derlemeyi seç.
@@ -258,9 +268,12 @@ App Store Connect → uygulaman → soldan **App Store** sekmesi → **3.0.0 Pre
      işaretli** olsun. Bu e-posta/şifreyi forma yaz. (Ayrıntılı şablon: `docs/master/APP_REVIEW_NOTLARI.md`.)
    - **Notes** alanına Ek B'deki İngilizce notu yapıştır (ödemenin fiziksel hizmet olduğu ve
      IAP muafiyeti — reddedilmemenin anahtarı budur).
-5. **Version Release:** **"Manually release this version"** seç (onaydan sonra yayına NE ZAMAN
+5. **Age Rating ve App Privacy formları:** cevaplar hazır ve koddan çıkarıldı —
+   **`docs/master/APP_STORE_CONNECT_FORMLARI.md`**. Tahminle doldurma: yaş sınırını yanlış
+   vermek 2.3.1, veri beyanını manifestoyla ayrıştırmak 5.1.1(ii) altında ret sebebidir.
+6. **Version Release:** **"Manually release this version"** seç (onaydan sonra yayına NE ZAMAN
    çıkacağına sen karar verirsin).
-6. **Submit for Review**'a bas. 🎉
+7. **Submit for Review**'a bas. 🎉
 
 **Bekleme:** Çoğu inceleme 24–48 saat. Sonuç e-postayla gelir.
 **Reddedilirse:** Panik yok — ilk gönderimlerde yaygındır. Resolution Center'daki mesajın ekran
@@ -273,7 +286,7 @@ görüntüsünü bana getir; cevabını/düzeltmesini birlikte göndeririz.
 - [ ] **Release This Version** ile yayına al (Phased Release açık kalsın — 7 günde kademeli dağıtır).
 - [ ] Lansman anahtarları: `demo_mode_enabled=KAPALI`, demo verisi temiz, `push_live_enabled=AÇIK`.
 - [ ] İlk hafta günlük bak: çökme raporları (Sentry), mağaza yorumları, push teslimat logu.
-- [ ] Ödeme (iyzico) canlıya geçince sürüm 3.0.1 olarak aynı §6–§8 adımlarıyla güncelleme gönderilir.
+- [ ] Ödeme (iyzico) canlıya geçince sürüm 1.0.1 olarak aynı §6–§8 adımlarıyla güncelleme gönderilir.
 
 ---
 
