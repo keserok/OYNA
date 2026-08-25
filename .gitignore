@@ -42,6 +42,10 @@ scripts/*
 # görüntüsü çeker. Ölçü tutmazsa App Store Connect yüklemeyi reddediyor;
 # ölçüyü akılda tutmak yerine betikte tutuyoruz.
 !scripts/magaza-ekran-goruntuleri.mjs
+# `depo:sil` — herkese açık kovadan işaretli dosyaları kalıcı siler. SQL ile
+# yapılamaz (Supabase storage.protect_delete engelliyor); depolama API'si
+# gerekiyor. Silme geri alınamaz, o yüzden kapıları betikte duruyor.
+!scripts/depo-temizle.mjs
 # Giriş yolu araçları — aynı gerekçe. `telefon:dogrula` mağaza incelemesinin
 # en olası ret sebebini (telefonla giriş çalışmıyor) tek komutla sınar;
 # `apple:gizli-anahtar` Apple özel anahtarını dışarı çıkarmadan jeton üretir.

@@ -793,3 +793,78 @@ describe('vitrin:gorseller · bakmayı tek komuta indiriyor', () => {
     expect(oku('scripts/magaza-denetim.mjs')).toContain('npm run vitrin:gorseller');
   });
 });
+
+/**
+ * DEPO TEMİZLİĞİ (25 Ağustos 2026)
+ *
+ * Açık kovadaki dosyaların veritabanı bağları koparıldı ama dosyaların
+ * KENDİLERİ duruyor: adresini bilen hâlâ açabilir. Kalıcı silme SQL ile
+ * yapılamıyor — Supabase `storage.protect_delete()` ile doğrudan DELETE'i
+ * engelliyor, çünkü satırı silmek S3'teki nesneyi silmez ve erişilemeyen bir
+ * artık bırakır. Silme depolama API'siyle, tam yetkili anahtarla yapılır.
+ *
+ * Silme GERİ ALINAMAZ ve listede kurucunun kendi aile fotoğrafları var.
+ * Bu blok, o dosyaların yanlışlıkla silinmesini önleyen kapıları kilitler.
+ */
+describe('Depo temizliği · yanlışlıkla silmiyor', () => {
+  const liste = JSON.parse(oku('docs/master/depo-silinecekler.json'));
+  const betik = oku('scripts/depo-temizle.mjs');
+
+  it('kişisel fotoğrafların HİÇBİRİ onaylı değil', () => {
+    // Kurucu "önce telifli olanları sil, kişisel olanlara dokunma" dedi:
+    // asıllarının elinde olduğundan emin olmadan silinmemeli.
+    const kisisel = liste.dosyalar.filter((d: any) => d.sinif === 'KISISEL');
+    expect(kisisel.length).toBeGreaterThan(0);
+    expect(kisisel.every((d: any) => d.onaylandi === false)).toBe(true);
+  });
+
+  it('onaylı olanların hepsi TELİF sınıfı', () => {
+    const onayli = liste.dosyalar.filter((d: any) => d.onaylandi);
+    expect(onayli.length).toBeGreaterThan(0);
+    expect([...new Set(onayli.map((d: any) => d.sinif))]).toEqual(['TELIF']);
+  });
+
+  it('her satırda ne olduğu yazılı — yol tek başına hiçbir şey anlatmıyor', () => {
+    for (const d of liste.dosyalar) {
+      expect(typeof d.ne).toBe('string');
+      expect(d.ne.length).toBeGreaterThan(10);
+    }
+  });
+
+  it('varsayılan KURU ÇALIŞMA — --uygula olmadan silmiyor', () => {
+    expect(betik).toContain("process.argv.includes('--uygula')");
+    const kuru = betik.indexOf('if (!UYGULA)');
+    const silme = betik.indexOf("method: 'DELETE'");
+    expect(kuru).toBeGreaterThan(-1);
+    expect(kuru).toBeLessThan(silme);   // çıkış, silmeden ÖNCE
+  });
+
+  it('onaylanmamış dosya silme listesine hiç girmiyor', () => {
+    expect(betik).toContain('hepsi.filter((d) => d.onaylandi)');
+    expect(betik).toContain('const silinir = onayli.filter');
+  });
+
+  it('hâlâ bağlı dosyayı silmiyor', () => {
+    // Bağlı bir dosyayı silmek uygulamada kırık görsel bırakır (Apple 2.1).
+    expect(betik).toContain('bagliMi');
+    expect(betik).toContain('HÂLÂ BAĞLI');
+  });
+
+  it('sildikten sonra adresin GERÇEKTEN kapandığını doğruluyor', () => {
+    // "204 döndü" yetmez; herkese açık adres hâlâ 200 veriyorsa iş bitmemiştir.
+    expect(betik).toContain('object/public/');
+    expect(betik).toContain('kontrol.status === 200');
+  });
+
+  it('servis anahtarı yalnız ortamdan okunuyor, diske yazılmıyor', () => {
+    expect(betik).toContain('process.env.SUPABASE_SERVICE_ROLE_KEY');
+    expect(betik).not.toMatch(/writeFileSync[\s\S]{0,120}ANAHTAR/);
+    expect(betik).not.toMatch(/console\.log\([^)]*ANAHTAR[^)]*\)/);
+  });
+
+  it('betik ve liste depoda', () => {
+    expect(existsSync(join(process.cwd(), 'scripts/depo-temizle.mjs'))).toBe(true);
+    expect(oku('.gitignore')).toContain('!scripts/depo-temizle.mjs');
+    expect(JSON.parse(oku('package.json')).scripts['depo:sil']).toContain('depo-temizle.mjs');
+  });
+});

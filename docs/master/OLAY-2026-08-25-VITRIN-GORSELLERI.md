@@ -81,12 +81,38 @@ kaldı.
 Uygulama artık bu görsellerin hiçbirini servis etmiyor; fotoğrafı olmayan saha
 kendi yer tutucusunu, avatarı olmayan profil baş harf rozetini gösteriyor.
 
-### Kalıcı silme — YAPILMADI, bilerek
+### Kalıcı silme — araç hazır, kurucunun elinde
 
 Göçler **hiçbir dosyayı silmedi**. Bağ koptuğunda uygulama görseli servis
 etmeyi bırakır, ama dosya **adresini bilen için erişilebilir kalmaya devam
-eder**. Depodaki nesneyi silmek geri alınamaz ve söz konusu olan kurucunun
-kendi aile fotoğraflarıdır; tek kopya olabilirler. Karar kurucuya bırakıldı.
+eder**.
+
+Silme SQL ile **yapılamıyor**: Supabase, `storage.protect_delete()` tetiğiyle
+`storage.objects` üzerinde doğrudan `DELETE`'i engelliyor. Gerekçesi doğru —
+satırı silmek S3'teki nesneyi silmez, erişilemeyen ama yer kaplayan bir artık
+bırakır. Depolama API'si ikisini birlikte yapar, ve **tam yetkili servis
+anahtarı ister**. O anahtar kasada; kasayı yalnız kurucu açabilir.
+
+Bu yüzden silme işi bir araca bağlandı:
+
+```
+npm run depo:sil                                     # kuru çalışma
+SUPABASE_SERVICE_ROLE_KEY=… npm run depo:sil -- --uygula
+```
+
+Silinecekler `docs/master/depo-silinecekler.json` içinde, **her satırda ne
+olduğu yazılı**. Araç dört kapıdan geçirir:
+
+1. `onaylandi: false` olan satıra dokunmaz.
+2. Dosya canlıda hâlâ bağlıysa silmez — silinirse uygulamada kırık görsel kalır.
+3. `--uygula` verilmedikçe hiçbir şey silmez.
+4. Sildikten sonra **herkese açık adresin gerçekten kapandığını** doğrular;
+   "204 döndü" yetmez.
+
+**Kurucu kararı (25 Ağu 2026):** önce yalnız **telifli 6 dosya** silinsin.
+Kişisel fotoğraflar ve logo dosyaları listede `onaylandi: false` olarak
+bekliyor — kişisel olanlar için kurucu önce kendi kopyalarını alacak, çünkü
+silme geri alınamaz.
 
 **Bu iş bitmiş sayılmaz.** Kişisel fotoğraflar depoda durduğu sürece açık
 kovadan erişilebilirdir.
@@ -123,8 +149,14 @@ gönderimden önce `npm run vitrin:gorseller` çalıştırılır ve **hepsine ba
 
 ## 5 · Kurucuya kalan
 
-1. **Karar:** depodaki kişisel fotoğraflar kalıcı silinsin mi? (Önce kendi
-   kopyanı aldığından emin ol — silme geri alınamaz.)
-2. Aynı karar telif fotoğrafları için de gerekli; onlarda saklanacak bir şey yok.
-3. Saha fotoğrafları bugün `images.unsplash.com` üzerinde. Gerçek tesis
-   fotoğrafları geldiğinde bu bağımlılık kapanmalı.
+1. **Telifli 6 dosyayı sil.** Karar verildi, araç hazır, saklanacak bir şey yok.
+   Kasadan servis anahtarını al ve şunu çalıştır:
+   `SUPABASE_SERVICE_ROLE_KEY=… npm run depo:sil -- --uygula`
+   Anahtarsız alternatif: Supabase panosu → Storage → images → dosyayı bul → Delete.
+2. **Kişisel fotoğraflar için karar ver.** Önce asıllarının telefonunda ya da
+   bilgisayarında durduğundan emin ol; sonra listede `onaylandi: true` yap ve
+   aynı komutu tekrar çalıştır. Bunlar açık kovada durduğu sürece adresini
+   bilen erişebilir.
+3. Saha fotoğrafları bugün `images.unsplash.com` üzerinde — kurucu kararı
+   (25 Ağu): şimdilik dokunulmuyor. Gerçek tesis fotoğrafları geldiğinde bu
+   bağımlılık kapanacak. Denetim bunu her çalışmada uyarı olarak gösteriyor.
