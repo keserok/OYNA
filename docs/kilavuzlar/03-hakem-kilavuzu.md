@@ -1,279 +1,357 @@
 # OYNA Hakem Kılavuzu
 
-_Son güncelleme: 26 Temmuz 2026 · Uygulama sürümü 3.0.0_
+_Son güncelleme: 25 Ağustos 2026 · Panel sürümü 1.0.0_
 
-> Bu kılavuz, OYNA'da ücret karşılığı maç yönetmek isteyen hakemler içindir. Kaleci olarak hizmet vermek istiyorsan [Kaleci Kılavuzu](02-kaleci-kilavuzu.md)'na, oyuncu olarak maç arıyorsan [Oyuncu Kılavuzu](01-oyuncu-kilavuzu.md)'na, uygulamanın genel işleyişi için [Genel Kılavuz](00-genel-kilavuz.md)'a bak.
+> Bu kılavuz, OYNA üzerinden **ücret karşılığı hakemlik** yapanlar içindir.
+> Her ekran görüntüsü ve açıklama, panelin **canlı sürümü sürülerek** doğrulanmıştır.
+> Kaleci tarafı için: [Kaleci Kılavuzu](02-kaleci-kilavuzu.md).
 
-## 1. Giriş
+## İçindekiler
 
-OYNA'da hakemlik bir yan gelir kapısı: profilini açarsın, maç başı ücretini belirlersin, çevrendeki maçlara atanırsın. Maç kaptanları seni uygulama üzerinden bulur, kiralar ve ücretini uygulama içinden öder. Para elden dolaşmaz — kaptan ödemeyi baştan yapar, ücret emanette bekler, maç yönetilince sana geçer.
+1. [Panel ne işe yarar](#panel-ne-i̇şe-yarar)
+2. [Panele nasıl girilir](#panele-nasıl-girilir)
+3. [Kaleci mi, hakem mi — farklar](#kaleci-mi-hakem-mi--farklar)
+4. [Ana Sayfa — kimliğin ve işlerin](#1-ana-sayfa--kimliğin-ve-işlerin)
+5. [İş almanın 3 yolu](#2-iş-almanın-3-yolu)
+6. [Maç günü ve skor](#4-maç-günü-ve-skor)
+7. [Kazançlarım — para nasıl gelir](#5-kazançlarım--para-nasıl-gelir)
+8. [Profilim — ücret, tarz, çalışma alanı](#6-profilim--ücret-tarz-çalışma-alanı)
+9. [Menü ve Ayarlar](#7-menü-ve-ayarlar)
+10. [Hakem paneli — aynı ekranlar, kırmızı tema](#8-hakem-paneli--aynı-ekranlar-kırmızı-tema)
+11. [Sık yapılan hatalar](#sık-yapılan-hatalar)
+12. [Sık sorulan sorular](#sık-sorulan-sorular)
 
-Hakem olarak sana özel bir yetkin var: **resmi skor girişi**. Maç bittiğinde skoru sen girersin ve maç senin girdiğin skorla resmen tamamlanır. Oyuncuların kendi aralarındaki skor onay turlarına gerek kalmaz; sahadaki son söz senindir.
+---
 
-Her maçta tek hakem olursun — kaleciden farklı olarak ev sahibi/deplasman ayrımı yok, iki takım aynı hakemi paylaşır. Panelin kırmızı temalıdır; başvurudan para çekmeye kadar her adımı bu kılavuzda sırasıyla bulacaksın.
+## Panel ne işe yarar
 
-### Bir bakışta: hangi bölüm ne işe yarar
+Hakem paneli, ücret karşılığı sahaya çıkan görevlinin **iş defteridir**. Kaptanlar seni listede görür ve teklif gönderir; sen kabul edersin, maça gidersin, para maç sonrası hesabına geçer. İş beklemek zorunda değilsin — **Maç Bul**'dan kendin de başvurabilirsin.
 
-| Bölüm/Sekme | Ne işe yarar |
+| Sekme | Ne işe yarar |
 |---|---|
-| **Ana Sayfa** | Aktiflik durumun, hakem kimlik kartın, gelen teklif ve talepler, sıradaki maçların. |
-| **Maç Bul** | Hakem arayan açık maçlara kendin başvurursun, bekleyen başvurularını yönetirsin. |
-| **Cüzdan** | Kazancını görürsün, ödeme yöntemi eklersin, para çekme talebi verirsin. |
-| **Menü** | Profilim, Ayarlar, Destek ve Çıkış Yap buradadır. |
-| **Profilim** | Fotoğraf, tanıtım yazısı, ücret, hakemlik tarzı ve hizmet bölgelerini düzenlersin. |
-| **Ayarlar** | Hesap güvenliği, gizlilik ve rol değiştirme (hakem ↔ oyuncu) buradadır. |
+| **Ana Sayfa** | Müsaitlik anahtarın, kimlik kartın, gelen teklif ve talepler, günün özeti. |
+| **Maç Bul** | Bölgende seni arayan maçlar. Kendi ücretini yazıp başvurursun. |
+| **Kazançlarım** | Toplam kazanç, ödenecek tutar, onay bekleyen ve işlem geçmişi. |
+| **Menü** | Profilim (ücret, tarz, çalışma alanı), Ayarlar, Destek, Çıkış. |
 
-## 2. Başlarken
+---
 
-### 2.1 Hakem başvurusuna nereden girilir?
+## Panele nasıl girilir
 
-Üç giriş yolu var:
+Panel, başvurun **OYNA yönetimince onaylandıktan sonra** açılır:
 
-1. **İlk açılışta:** Rol seçim ekranındaki **HAKEM** kartına dokunursun ("HAKEM KİMLİĞİ") — doğrudan başvuru formu açılır.
-2. **Zaten oyuncuysan:** **Ayarlar → Sahada Rolün** ekranından hakem başvurusu başlatırsın.
-3. **Başvurun reddedildiyse:** Bekleme ekranındaki **Tekrar Başvur** ile formu yeniden doldurursun; red gerekçesi formda sana gösterilir.
+1. **Başvur** — Oyuncu tarafında **Ayarlar → Sahada Rolün → Başvur**. Hakem seçip formu doldurursun.
+2. **Onay bekle** — Başvurun incelenirken panel açılmaz. Reddedilirse gerekçe gösterilir ve yeniden başvurabilirsin.
+3. **Profilini doldur** — Onaydan sonra ilk iş: **Menü → Profilim**'den ücret, tarz ve çalışma alanı. Boş profil az teklif alır.
+4. **Aktif ol** — Ana sayfadaki anahtarı **SİSTEMDE AKTİF** konumunda tut; kapalıyken kaptanlar seni göremez.
 
-### 2.2 Başvuru formu
+---
 
-<a href="gorseller/hakem/04-basvuru-formu.png"><img src="gorseller/hakem/04-basvuru-formu.png" alt="Hakem başvuru formu" width="260"></a>
+## Kaleci mi, hakem mi — farklar
 
-_Şekil: Hakem başvuru formu — lisans seviyesi ve deneyim yılı hakemlere özeldir._
+İki rol aynı paneli kullanır; iskelet ve iş akışı birebir aynıdır. Gerçek farklar:
 
-Adım adım:
+| Özellik | Kaleci | Hakem |
+|---|:---:|:---:|
+| Panel sekmeleri (Ana Sayfa · Maç Bul · Kazançlarım · Menü) | ✅ | ✅ |
+| Sistemde aktif / meşgul anahtarı | ✅ | ✅ |
+| Gelen teklifleri kabul / reddetme | ✅ | ✅ |
+| Maç Bul listesinden işe başvurma | ✅ | ✅ |
+| Maç başı ücretini kendin belirleme | ✅ | ✅ |
+| En fazla 2 tarz seçme (profilde) | ✅ | ✅ |
+| Kabul öncesi sözleşme onayı ve 500₺ teminat şartı | ✅ | ❌ |
+| Resmî maç skorunu girme | ❌ | ✅ |
+| Seviye/lisans beyanı (UEFA B, MHK…) | ❌ | ✅ |
+| Kazançlarım: toplam, ödenecek, onay bekleyen | ✅ | ✅ |
+| Çalışma alanı yarıçapı ve konum | ✅ | ✅ |
 
-1. **Ad Soyad** gir (en az 3 karakter).
-2. **Telefon** numaranı gir (ülke kodu + 10 hane).
-3. **Kimlik fotoğrafı**nın ön yüzünü yükle (zorunlu — onay ekibi bununla doğrular).
-4. **Lisans Seviyesi**ni seç: **İl Hakemi**, **Bölgesel**, **Klasman** veya **FIFA Kokart**.
-5. **Deneyim (Yıl)** alanına hakemlik deneyimini gir (0-60 arası tam sayı).
-6. **Maç başı ücret**ini belirle (50₺ – 10.000₺ arası).
-7. **Kısa Tanıtım** yaz (10-280 karakter) — kaptanların kartında göreceği metin.
-8. **Niyet Mektubu** yaz (10-500 karakter) — onay ekibine kendini anlat.
-9. Hakemlik **tarzını** seç: **Otoriter**, **Diyalogcu**, **Teknisyen** veya **Hızlı Karar**.
-10. **Tercih ettiğin bölgeleri** seç (en az 1 ilçe; 81 ilde arama yapabilirsin).
-11. **KVKK onayı** kutusunu işaretle ve gönder.
+> **Üç fark, tek cümlede:** Kaleci kabul ederken **sözleşme onaylar ve 500₺ teminat** bulundurur; hakem maç sonunda **resmî skoru girer** ve kartında **lisans seviyesini** beyan eder. Tema rengi de ayrıdır: kaleci yeşil, hakem kırmızı.
 
-Lisans için belge yüklemen istenmez — yalnızca seviye seçimi ve kimlik fotoğrafı yeterlidir. Yanlış beyan hesabının kapatılmasına yol açabilir, seviyeni doğru seç.
+---
 
-### 2.3 Onay süreci
+## 1. Ana Sayfa — kimliğin ve işlerin
 
-- Başvurun OYNA ekibi tarafından incelenir; ekranda "başvurun ekibimiz tarafından inceleniyor" mesajını görürsün. Onay genellikle **24 saat** içinde gelir.
-- Bekleme ekranını açık tutmana gerek yok — sonuç geldiğinde uygulama seni otomatik yönlendirir ve bildirim alırsın.
-- **Onaylanırsan:** doğrudan kırmızı temalı hakem paneline düşersin ve "Aktif" olarak işaretlenirsin.
-- **Reddedilirsen:** red gerekçesini görürsün; **Tekrar Başvur** ile eksiği düzeltip yeniden gönderirsin.
+Paneli açtığında ilk gördüğün ekran. En üstte **müsaitlik anahtarın**, altında kaptanların gördüğü **kimlik kartın**, sonra sırasıyla gelen teklifler, gelen talepler ve günün özeti gelir.
 
-### 2.4 Yaş şartı
+<a href="gorseller/saglayici/01-gk-ana-ust.webp"><img src="gorseller/saglayici/01-gk-ana-ust.webp" alt="Ana sayfanın üstü — kaleci görünümü (yeşil tema)." width="280"></a>
 
-18 yaşından küçüksen ve veli onayın yoksa başvuru formu kilitlenir; **Veli Onayına Git** butonuyla önce veli onayını tamamlaman gerekir (ayrıntısı için [Oyuncu Kılavuzu](01-oyuncu-kilavuzu.md)'na bak).
+_Ana sayfanın üstü — kaleci görünümü (yeşil tema)._
 
-## 3. Hakem Panelini Tanıyalım
+**1. SİSTEMDE AKTİF** — Müsaitlik anahtarın. Açıkken kaptanlar seni listede görür ve teklif gönderebilir. **Kapattığında yeni teklif gelmez** — kabul ettiğin işler etkilenmez.
+**2. Profil onaylı** — OYNA yönetiminin başvurunu onayladığını gösterir. Onaysız hesap teklif alamaz.
+**3. Kimlik kartın** — Kaptanın seni kiralarken gördüğü kart: adın, tarzın, maç sayın ve puanın. Tarzını Profilim ekranından değiştirirsin.
+**4. MAÇ** — Tamamladığın maç sayısı. Kaptanlar için ilk güven işareti.
+**5. PUAN** — Maç sonrası aldığın 1–10 puanların ortalaması. Yeni hesapta "—" görünür.
+**6. KARİYER KARTI** — Genel reytingin ve sınıfın (A Sınıf gibi). Puanın yükseldikçe sınıf da yükselir.
+**7. Ana Sayfa** — Bulunduğun sekme.
+**8. Maç Bul** — Bölgende seni arayan maçlar — kendin başvurursun.
+**9. Kazançlarım** — Toplam kazanç, ödenecek tutar ve işlem geçmişi.
+**10. Menü** — Profilim, Ayarlar, Destek ve çıkış.
 
-<a href="gorseller/hakem/01-panel-ana-sayfa.png"><img src="gorseller/hakem/01-panel-ana-sayfa.png" alt="Hakem paneli ana sayfası" width="260"></a>
+<a href="gorseller/saglayici/12-pasif.webp"><img src="gorseller/saglayici/12-pasif.webp" alt="Anahtarı kapattığında: "ŞU AN MEŞGUL"." width="280"></a>
 
-_Şekil: Hakem paneli Ana Sayfa — aktiflik, kimlik kartı, gelen teklif ve talepler._
+_Anahtarı kapattığında: "ŞU AN MEŞGUL"._
 
-Panelin altında 4 sekme var: **Ana Sayfa · Maç Bul · Cüzdan · Menü**.
+- **Ne zaman kapatırsın** — Sakatlık, tatil, sınav haftası ya da o gün başka işin varken. Listeden düşersin, boşuna teklif gelmez.
+- **Kabul ettiğin işler durur** — Meşgul moduna geçmek, daha önce kabul ettiğin maçları iptal etmez — onlara gitmek zorundasın.
+- **Geri açmak** — Aynı anahtara tekrar dokunman yeterli; anında listeye dönersin.
 
-**Ana Sayfa**'da yukarıdan aşağıya şunları görürsün:
+<a href="gorseller/saglayici/13-ilk-giris.webp"><img src="gorseller/saglayici/13-ilk-giris.webp" alt="Yeni onaylanmış hesabın ilk hâli." width="280"></a>
 
-- **Aktiflik anahtarı** — **SİSTEMDE AKTİF** / **ŞU AN MEŞGUL**. Meşgule alırsan kaptanların arama sonuçlarında görünmezsin; yeni iş almak istemediğin dönemlerde kapat.
-- **Kimlik doğrulama kartı** — para çekebilmek için TC kimlik doğrulaması gerekir; buradan başlatırsın (bkz. bölüm 6.3).
-- **Hakem kimlik kartın** — yönetim, VAR ve puan istatistiklerinle lisans seviyesi rozetin. Kart, kaptanların seni gördüğü vitrindir; henüz verin yoksa "—" görünür.
-- **Gelen Teklifler** — kaptanların aynı anda birden fazla hakeme gönderdiği teklifler; ilk kabul eden işi alır.
-- **Gelen Talepler** — kaptanın doğrudan sana gönderdiği kiralama talepleri (Yeni / Yaklaşan / Tamamlanan gruplarıyla).
-- **Günlük Özet** — bugünkü kazancın ve sıradaki maçın.
-- **Sıradaki Maçlarım** — atandığın maçlar geri sayımla; maç saati gelince skor girişini de buradan yaparsın.
+_Yeni onaylanmış hesabın ilk hâli._
 
-**Menü** sekmesinde **Profilim**, **Ayarlar**, **Destek** ve **Çıkış Yap** bulunur.
+- **Kart boş görünür** — Maç 0, puan "—", sınıf "YENİ". Uydurma bir puan verilmez; ilk maçından sonra dolmaya başlar.
+- **"Tarzını seç → Bilgilerim"** — İlk iş: Menü → Profilim'den tarzını ve ücretini gir. Tarzsız kart kaptanın gözünde eksik durur.
 
-## 4. İş Alma — Üç Yol
+---
 
-Hepsi aynı kurala bağlanır: maç başına **tek hakem** atanır. Slot dolduysa o maça artık atanamazsın.
+## 2. İş almanın 3 yolu
 
-### 4.1 Yol 1 — Kaptan seni doğrudan kiralar
+Panelde iş üç ayrı kanaldan gelir. İkisi sana gelir (teklif ve talep), üçüncüsünde sen gidersin (Maç Bul). Üçünün de ücreti sabittir — **pazarlık yoktur** ve %10 platform komisyonu bedelin içindedir.
 
-1. Kaptan, vitrinden kartını beğenir ve kiralama talebi gönderir; ücretini uygulamaya baştan öder (para emanette bloke edilir).
-2. Talep, panelinde **Gelen Talepler** altında belirir.
-3. **Kabul Et** veya **Reddet** dersin — kabul için teminat yatırma ya da sözleşme onayı gibi bir ön şart **yoktur**; bu şartlar yalnızca kaleciler içindir.
-4. Kabul edersen maça atanırsın; reddedersen para kaptana anında iade edilir, sana bir yaptırım uygulanmaz.
+<a href="gorseller/saglayici/02-gk-teklif.webp"><img src="gorseller/saglayici/02-gk-teklif.webp" alt="Yol 1 — Gelen Teklifler: aynı anda birkaç kişiye gider." width="280"></a>
 
-Talepler süresizce beklemez: maça 24 saatten fazla varsa 4 saat, daha az varsa 60 dakika içinde yanıt vermezsen talep kendiliğinden düşer ve para kaptana iade edilir. Bu yüzden bildirimleri takip et.
+_Yol 1 — Gelen Teklifler: aynı anda birkaç kişiye gider._
 
-### 4.2 Yol 2 — Çoklu teklif: ilk kabul eden alır
+**1. GELEN TEKLİFLER** — Kaptanın birden fazla sağlayıcıya birden gönderdiği açık teklifler. Yanındaki sayı bekleyen teklif adedidir.
+**2. Teklif türü** — Kalecilik / Hakemlik teklifi olduğunu söyler.
+**3. Yer ve saat** — Maçın nerede ve ne zaman olduğu. **Kabul etmeden önce buraya bak** — yolun uzunluğunu burada görürsün.
+**4. "İlk kabul eden işi alır"** — Bu teklif başkalarına da gitti. Geç kalırsan iş elinden gider; karar süresi kısadır.
+**5. BEDEL** — Maç başı brüt ücret. Eline geçecek net tutar %10 komisyon düşülerek hesaplanır.
+**6. Reddet** — Teklifi kapatır. Puanına zarar vermez, ama sık reddetmek daha az teklif almana yol açar.
+**7. Kabul Et** — İşi alırsın. **Kalecide** önce sözleşme + teminat onayı ekranı açılır; hakemde doğrudan kabul edilir.
 
-1. Kaptan maç kurarken birden fazla hakeme aynı anda teklif gönderebilir.
-2. Teklif, panelinde **Gelen Teklifler** altında görünür ve **24 saat** geçerlidir.
-3. **Kabul Et** dersen ve slot hâlâ boşsa iş senindir; diğer hakemlerin teklifleri otomatik iptal olur.
-4. Senden önce başka bir hakem kabul ettiyse "Bu rol başka bir sağlayıcı tarafından üstlenildi." mesajını görürsün — gecikme aleyhinedir, hızlı davran.
+<a href="gorseller/saglayici/03-gk-talep.webp"><img src="gorseller/saglayici/03-gk-talep.webp" alt="Yol 2 — Gelen Talepler: doğrudan sana yapılan kiralama." width="280"></a>
 
-### 4.3 Yol 3 — Sen başvurursun (Maç Bul)
+_Yol 2 — Gelen Talepler: doğrudan sana yapılan kiralama._
 
-<a href="gorseller/hakem/02-mac-bul.png"><img src="gorseller/hakem/02-mac-bul.png" alt="Maç Bul sekmesi" width="260"></a>
+**1. Talep başlığı** — Kaptanın **doğrudan seni** seçtiği kiralama isteği. Başkasıyla yarışmazsın.
+**2. Maç kodu** — Panelin bu satırda maçın adını değil kod parçasını gösterdiğini unutma — yeri ve saati Maçlarım/detay ekranından teyit et.
+**3. ELİNE GEÇECEK** — Komisyon düşüldükten sonra hesabına yazılacak **net** tutar.
+**4. Net tutar** — Ödemeyi kaptandan değil OYNA'dan alırsın; para maç sonrası serbest bırakılır.
+**5. Brüt ücret** — Kaptanın ödediği toplam. Net ile arasındaki fark %10 platform komisyonudur.
+**6. REDDET** — Talebi geri çevirir.
+**7. KABUL ET** — Kabul edersin; maç "Yaklaşan" listene düşer.
+**8. ONAYLANDI rozeti** — Kabul ettiğin, henüz oynanmamış iş.
+**9. İŞİ BIRAK** — Kabul ettiğin işten çekilirsin. **Dikkat:** maça yakın bırakmak ceza doğurabilir; ekran çekilmeden önce cezayı gösterir.
+**10. ÖDENDİ rozeti** — Tamamlanmış ve parası hesabına geçmiş iş.
+**11. GÜNLÜK ÖZET · KAZANÇ** — Hesabında biriken toplam.
+**12. SIRADAKİ MAÇ** — En yakın maçının saati.
 
-_Şekil: Maç Bul — hakem arayan açık maçlar ve bekleyen başvuruların._
+<a href="gorseller/saglayici/04-gk-mac-bul.webp"><img src="gorseller/saglayici/04-gk-mac-bul.webp" alt="Yol 3 — Maç Bul: sen başvurursun." width="280"></a>
 
-1. **Maç Bul** sekmesini aç; **HAKEM ARAYAN MAÇLAR** listesinde çevrendeki açık maçları gör.
-2. Uygun maçta **BAŞVUR**'a dokun. Başvurun **48 saat** geçerlidir ve maçın iki kaptanına da bildirim gider — hangisi önce kabul ederse maç senindir (iki takım tek hakemi paylaşır).
-3. Başvuruların **BEKLEYEN BAŞVURULARIM** altında listelenir; fikrini değiştirirsen kaptan yanıt vermeden **Geri Çek** ile başvurunu iptal edersin.
-4. Aynı maça ikinci kez başvuramazsın; kendi oynadığın maça hakem olarak başvuramazsın; çakışan saatte başka işin varsa sistem seni uyarır.
+_Yol 3 — Maç Bul: sen başvurursun._
 
-### 4.4 Ücretini belirle
+**1. Seni arayan maçlar** — Bölgendeki, senin rolün boş olan maçlar. Sayı kaç ilan olduğunu gösterir.
+**2. Tarih ve saat** — Maçın günü ve başlangıç saati.
+**3. Ücret** — Maç başı ödenecek tutar. "Standart ücret" yazıyorsa kaptan fiyat belirtmemiştir.
+**4. Aranan rol** — "Kaleci Aranıyor" / "Hakem Aranıyor" — o maçta senin rolün boş.
+**5. BAŞVUR** — Kaptana kendi kartını ve ücret teklifini gönderirsin.
+**6. Başvuruldu** — Zaten başvurduğun ilan. Kaptan onaylayana kadar bekler.
 
-- Ücretin **maç başı sabit ücrettir** (saatlik değil) ve pazarlık yoktur — kaptan, kartında yazan ücreti öder.
-- Değiştirmek için Ana Sayfa'daki **STANDART FİYAT** kartını kullan (hazır 200₺ / 300₺ / 400₺ seçenekleri var) veya **Profilim**'deki ücret alanından serbest tutar gir.
-- Sunucu sınırı: en az **50₺**, en fazla **10.000₺**.
-- Her kazançtan **%10 platform komisyonu** kesilir; panelde "Eline geçecek" ve brüt tutar ayrı ayrı gösterilir, sürpriz yoktur.
+<a href="gorseller/saglayici/05-gk-is-detay.webp"><img src="gorseller/saglayici/05-gk-is-detay.webp" alt="BAŞVUR'a dokununca açılan başvuru ekranı." width="280"></a>
 
-## 5. Maç Günü ve Resmi Skor Girişi
+_BAŞVUR'a dokununca açılan başvuru ekranı._
 
-### 5.1 Maç öncesi
+**1. Fırsat başlığı** — Başvurduğun maçın adı ve saati.
+**2. KAPTANA GİDECEK KARTIN** — Kaptanın göreceği kart: adın, tarzın, puanın ve maç sayın. Kartı güçlendirmek istiyorsan Profilim'i doldur.
+**3. HİZMET ÜCRETİ** — Bu maç için isteyeceğin tutar. Boş bırakırsan profilindeki standart ücret kullanılır.
+**4. Komisyon notu** — "Sabit ücret · pazarlık yok · %10 platform komisyonu bedele dahildir." Yazdığın rakam **brüt**tür.
+**5. TEKLİFİ GÖNDER** — Başvurun kaptana iletilir. Kaptan kabul ederse iş senindir.
 
-Atandığın maç **Sıradaki Maçlarım**'da geri sayımla durur. Maç yeri, saati ve kaptan bilgisi karttadır. Tesise zamanında git — mazeretsiz gitmezsen no-show cezası uygulanır (bkz. bölüm 6.5).
+---
 
-### 5.2 Resmi skor girişi — senin özel yetkin
+## 4. Maç günü ve skor
 
-Maç bittiğinde skoru **sen** girersin ve maç senin girdiğin skorla **resmen tamamlanır**. Oyuncuların skor bildirme/onaylama turu hakemli maçlarda atlanır: hakemin skoru nihaidir. Adım adım:
+Kabul ettiğin maç "Sıradaki Maçlarım" listesine düşer; geri sayım başlar. **Skor girme yetkisi yalnız hakemdedir.**
 
-1. Maç saati geldiğinde **Ana Sayfa → Sıradaki Maçlarım**'daki maç kartında **MAÇI BİTİR** butonuna dokun.
-2. **MAÇ SONU RAPORU** ekranı açılır; üstte "Resmi Maç Skorunu Gir" yazar.
-3. **Maç Skoru** alanına ev sahibi ve deplasman skorlarını gir (her biri 0-99 arası). Alanın altındaki uyarıyı gör: "Resmi hakem skoru — maç bu skorla tamamlanır".
-4. **SKORU KAYDET VE BİTİR**'e dokun.
-5. Başarılıysa "Maç skoru resmi olarak kaydedildi" onayını görürsün; maç bu andan itibaren uygulamada tamamlanmış sayılır ve skor herkese bu şekilde görünür.
+<a href="gorseller/saglayici/16-ref-skor-bekliyor.webp"><img src="gorseller/saglayici/16-ref-skor-bekliyor.webp" alt="Hakem görünümü (kırmızı tema) — skor bekleyen maç ve sıradaki maçlar." width="280"></a>
 
-Dikkat etmen gerekenler:
+_Hakem görünümü (kırmızı tema) — skor bekleyen maç ve sıradaki maçlar._
 
-- Skoru girmeden önce iki kez kontrol et — kaydettikten sonra uygulama içinden düzeltme akışı yok.
-- Kaydetme başarısız olursa ekranda dürüst bir hata mesajı görürsün; ekran kapanmaz, tekrar denersin.
-- Skor girişi maçı resmen bitirir ama ödemeni tek başına serbest bırakmaz — ödeme için bir adım daha var (aşağıda).
+**1. SKOR BEKLİYOR** — Oynanmış ama skoru girilmemiş maçların. **Yalnız hakemde görünür.**
+**2. SKOR GİR** — Resmî skor giriş ekranını açar.
+**3. SIRADAKİ MAÇLARIM** — Kabul ettiğin, henüz oynanmamış maçlar.
+**4. KALAN SÜRE** — Maça kalan geri sayım.
+**5. YOLA ÇIKTIM** — Kaptana canlı durumunu bildirir — lobide "yolda" rozeti görünür. Geç kalma endişesini ortadan kaldırır.
+**6. DETAYLAR** — Maçın sahası, saati ve kadro bilgisi.
 
-### 5.3 Ödemenin serbest kalması: iki taraflı onay
+<a href="gorseller/saglayici/17-ref-skor-gir.webp"><img src="gorseller/saglayici/17-ref-skor-gir.webp" alt="Maç Sonu Raporu — resmî skor girişi." width="280"></a>
 
-Ücretin, maç sonunda iki tarafın da "maç yönetildi" demesiyle çekilebilir hale gelir:
+_Maç Sonu Raporu — resmî skor girişi._
 
-1. Sen **Gelen Talepler**'deki ilgili iş kartında **Maçı Oynadım · Onayla** dersin. Onay verdiğinde kartta "Onayladın · Kaptan onayı bekleniyor" yazar.
-2. Kaptan da kendi tarafından senin geldiğini onaylar.
-3. İki onay tamamlanınca kazancın **Cüzdan**'da "Çekilebilir" durumuna geçer.
+- **Resmî skor** — Hakemin girdiği skor maçın resmî sonucudur; maç bu skorla tamamlanır.
+- **Geri alınamaz** — Kaydettikten sonra skor kilitlenir — yanlış girersen destekten düzeltme istemen gerekir.
+- **Neden önemli** — Skor, oyuncuların istatistiklerine ve maç geçmişine işler. Girilmeyen skor maçı yarım bırakır.
 
-### 5.4 Maç sonunda seni puanlarlar
+---
 
-- Maça katılan oyuncular maç sonu değerlendirmesinde hakeme **1-10 arası puan** verebilir (vermek zorunda değiller, atlanabilir).
-- Puanların ortalaması kimlik kartındaki puanın olur ve sıralamanı belirler: kaptanlara önerilen listelerde yüksek puanlı hakemler üstte çıkar.
-- Kart sınıfın puanına göre değişir: ortalama 8 ve üzeri **A SINIF**, 6 ve üzeri **B**, daha düşük **C**, hiç puan yoksa **YENİ**.
-- İstersen puanını kartında gizleyebilirsin (gizlilik ayarlarından) — ama gizlemek sıralamadaki etkisini kaldırmaz.
+## 5. Kazançlarım — para nasıl gelir
 
-## 6. Para İşleri
+Ücretini kaptandan elden almazsın. Para **OYNA tarafından** tutulur ve maç tamamlandıktan sonra hesabına geçer.
 
-### 6.1 Kazanç akışı özet
+<a href="gorseller/saglayici/07-kazanclarim.webp"><img src="gorseller/saglayici/07-kazanclarim.webp" alt="Kazançlarım sekmesi." width="280"></a>
 
-1. Kaptan ücretini öder → para **emanette** bloke edilir (kaptan vazgeçerse veya süre dolarsa ona iade edilir, senden bir şey çıkmaz).
-2. Maç kesinleşir → ücret senin adına ayrılır, cüzdanında "Bekliyor" görünür.
-3. Maç sonu iki taraflı onay tamamlanır → kazanç **Çekilebilir** olur.
-4. Sen para çekme talebi verirsin → OYNA yönetimi onaylar → para hesabına geçer.
+_Kazançlarım sekmesi._
 
-### 6.2 Cüzdan sekmesi
+**1. TOPLAM KAZANÇ** — Bugüne kadar biriken tüm net kazancın.
+**2. ÖDENECEK** — Hesabında duran, sana ait tutar.
+**3. ONAY BEKLEYEN** — Kabul ettiğin ama henüz tamamlanmamış işlerin tutarı. Maç oynanınca "ödenecek"e geçer.
+**4. Ödeme notu** — "Kazancın OYNA tarafından hesabına aktarılır. Maç oynandıktan sonra ödemen yapılır — **uygulamadan çekim talebi açmana gerek yok.**"
+**5. İŞLEM GEÇMİŞİ** — Her maçın kazancı ve yapılan aktarımlar tek tek listelenir.
 
-<a href="gorseller/hakem/03-cuzdan.png"><img src="gorseller/hakem/03-cuzdan.png" alt="Cüzdan sekmesi" width="260"></a>
+---
 
-_Şekil: Cüzdan — toplam kazanç, çekilebilir bakiye ve işlem geçmişi._
+## 6. Profilim — ücret, tarz, çalışma alanı
 
-- **Toplam Kazanç** en üsttedir; altında **Çekilebilir** ve **Çekim Bekleyen** ayrımı gösterilir.
-- **Ödeme yöntemleri:** IBAN veya kart ekleyebilirsin; çekimler kayıtlı yöntemine yapılır.
-- **İşlem geçmişi:** her kazanç, kesinti ve çekim satır satır listelenir ("Onaylandı" / "Bekliyor" durumlarıyla).
+Kaptanın gördüğü kartını burada yönetirsin: **Menü → Profilim**. Ücretin, tarzların ve çalışma yarıçapın kaç teklif aldığını doğrudan etkiler.
 
-### 6.3 TC kimlik doğrulama (çekim şartı)
+<a href="gorseller/saglayici/09-gk-profil.webp"><img src="gorseller/saglayici/09-gk-profil.webp" alt="Kaleci profili." width="280"></a>
 
-İlk para çekiminden önce TC kimlik doğrulaması yapman zorunludur:
+_Kaleci profili._
 
-1. Ana Sayfa'daki kimlik kartından veya Cüzdan'daki uyarıdan **Kimlik Doğrula**'ya dokun.
-2. **11 haneli TC kimlik numaranı** gir ve gönder.
-3. Talebin incelenir; onaylanınca kartında "Kimlik doğrulandı" rozeti görünür ve çekim açılır. Reddedilirse "Kimlik doğrulaması reddedildi" uyarısıyla yeniden başvurabilirsin.
+**1. KAYDET** — Değişiklikleri yazar. Kaydetmeden çıkarsan eski değerler kalır.
+**2. HAKKIMDA** — Kaptanın okuduğu kısa tanıtım. Tecrübeni ve müsait olduğun saatleri yazmak teklif sayısını artırır.
+**3. MAÇ BAŞI STANDART ÜCRET** — Varsayılan ücretin. Hazır kısayollar (200/300/400/500₺) ya da elle giriş. Başvuruda ayrı ücret yazmazsan bu kullanılır.
+**4. TARZIM** — Kalecide "Kaleci Tarzım", hakemde "Yönetim Tarzım". Listeden seçersin — sana özel bir etiket üretilmez.
+**5. 2/2 sınırı** — **En fazla iki tarz** seçebilirsin. Seçtiklerin ana ekranındaki kartında ve kaptanın gördüğü profilde görünür.
 
-### 6.4 Para çekme
+<a href="gorseller/saglayici/10-gk-profil-tarz.webp"><img src="gorseller/saglayici/10-gk-profil-tarz.webp" alt="Profilin alt kısmı: tarz listesi ve çalışma alanı." width="280"></a>
 
-1. **Cüzdan** sekmesinde ödeme yöntemini seç.
-2. **PARAYI ÇEK**'e dokun; "TALEP ALINDI" onayını gör.
-3. Talebin OYNA yönetimi tarafından onaylanınca para hesabına aktarılır.
+_Profilin alt kısmı: tarz listesi ve çalışma alanı._
 
-Kurallar: aynı anda yalnızca **bir bekleyen çekim talebin** olabilir; asgari çekim tutarı yoktur; kimlik doğrulaması yoksa çekim başlatılamaz.
+- **Tarz listesi** — Kaleci: Çizgi Kalecisi, Gezici Kaleci, Oyun Kurucu, Hava Hakimiyeti, Birebir Uzmanı, Savunma Komutanı, Soğukkanlı. Hakem: Disiplinci, Oyunu Akıtan, VAR Uzmanı, Kuralcı, İletişimci, Soğukkanlı.
+- **ÇALIŞMA ALANI (YARIÇAP)** — 5–50 km arası. Yarıçapı büyütmek daha çok maç görmeni sağlar, ama yol da uzar.
+- **Harita ve LOKASYONU KAYDET** — Haritayı hareket ettirip merkezini belirlersin. Yakınındaki maçlar bu merkeze göre listelenir.
 
-### 6.5 İptal, no-show ve 48 saat itiraz
+<a href="gorseller/saglayici/20-ref-profil.webp"><img src="gorseller/saglayici/20-ref-profil.webp" alt="Hakem profili — aynı ekran, iki fark var." width="280"></a>
 
-| Durum | Ne olur |
-|---|---|
-| Talebi reddedersin | Para kaptana iade edilir, sana yaptırım yok. |
-| Talep süresi dolar | Talep düşer, para kaptana iade edilir, iki tarafa bildirim gider. |
-| Maç iptal olur | İş iptal edilir, bekleyen kazancın silinir, kaptana iadesi yapılır. |
-| Kaptan "hakem gelmedi" bildirir | Bekleyen kazancın iptal olur, kaptana iadesi yapılır ve maçın hakem ücreti kadar **ceza** bakiyenden kaptana aktarılır. |
+_Hakem profili — aynı ekran, iki fark var._
 
-No-show bildirimi haksızsa itiraz hakkın var:
+- **Seviye beyanı** — Kartında "BEYAN: UEFA B" gibi lisans seviyen görünür. Bu **senin beyanındır**; belge doğrulaması OYNA yönetimindedir.
+- **Yönetim tarzı** — Kaleci tarzları yerine hakem tarzları listelenir.
+- **Teminat yok** — Hakemde 500₺ teminat şartı ve sözleşme onay ekranı yoktur.
 
-1. Ana Sayfa **Gelen Talepler**'de ilgili işte kırmızı **No-show Bildirimi** kartını görürsün.
-2. **48 saat içinde** **İtiraz Et**'e dokun.
-3. "İtirazın alındı" onayını görürsün; durum OYNA yönetiminin incelemesine girer ve karar bildirimle sana döner (haklı bulunursan ceza iade edilir, ücretin ödenir). 48 saati kaçırırsan ceza kesinleşir.
+---
 
-Önemli: kabul ettiğin bir işe gidemeyeceğini anlarsan şu an uygulama içinden işi bırakma imkânı yok — bu yüzden yalnızca gerçekten gidebileceğin işleri kabul et.
+## 7. Menü ve Ayarlar
 
-## 7. Profilin ve Ayarların
+Panelin dördüncü sekmesi. Sade tutulmuştur: profil, ayarlar, destek ve çıkış.
 
-**Menü → Profilim**'den şunları düzenlersin:
+<a href="gorseller/saglayici/08-menu.webp"><img src="gorseller/saglayici/08-menu.webp" alt="Menü sekmesi." width="280"></a>
 
-- **Profil fotoğrafı** ve **tanıtım yazısı** (kaptanların gördüğü kart).
-- **Maç başı ücretin** (50₺ – 10.000₺).
-- **Hakemlik tarzın** (Otoriter / Diyalogcu / Teknisyen / Hızlı Karar).
-- **Hizmet bölgen** — harita üzerinden merkez nokta ve 5-50 km yarıçap.
+_Menü sekmesi._
 
-**Menü → Ayarlar**'da gizlilik, görünüm ve güvenlik ayarları ile **rol değiştirici** vardır — hakemliğe ara verip oyuncu moduna buradan geçersin; hakem profilin silinmez, döndüğünde kaldığın yerden devam edersin.
+- **Profilim** — Fotoğraf, açıklama, ücret, tarz ve çalışma alanı.
+- **Ayarlar** — Bildirim, gizlilik, görünüm ve hesap güvenliği.
+- **Destek** — SSS, canlı destek ve hata bildirimi.
+- **Çıkış Yap** — Oturumu kapatır.
 
-## Sık Sorulan Sorular
+<a href="gorseller/saglayici/11-ayarlar.webp"><img src="gorseller/saglayici/11-ayarlar.webp" alt="Ayarlar ekranı." width="280"></a>
 
-**Lisans belgemi yüklemem gerekiyor mu?**
-Hayır. Başvuruda yalnızca lisans seviyeni seçersin (İl Hakemi / Bölgesel / Klasman / FIFA Kokart) ve kimlik fotoğrafı yüklersin; ayrıca belge istenmez.
+_Ayarlar ekranı._
 
-**Başvurum ne kadar sürede onaylanır?**
-Genellikle 24 saat içinde. Sonuç bildirimle gelir; reddedilirsen gerekçeyi görür ve **Tekrar Başvur** ile yeniden gönderirsin.
+- **Oyuncu Moduna Geç** — Aynı hesapla oyuncu arayüzüne dönersin — kendi maçını kurmak ya da maça katılmak için.
+- **Bildirim Tercihleri** — Teklif, hatırlatma, ödeme ve kampanya bildirimleri. **Teklif bildirimini kapatma** — "ilk kabul eden alır" tekliflerini kaçırırsın.
+- **Gizlilik** — Profil görünürlük ayarları.
+- **Hesap Güvenliği** — Oturum yönetimi ve hesap silme.
 
-**Teminat yatırmam gerekiyor mu?**
-Hayır. Teminat ve sözleşme onayı şartı yalnızca kaleciler içindir; hakem olarak talepleri ek şart olmadan kabul edersin.
+---
 
-**Ücretimi kim belirliyor, pazarlık var mı?**
-Ücretini sen belirlersin (50₺ – 10.000₺ arası, maç başı sabit). Pazarlık yoktur; kaptan kartında yazan ücreti öder.
+## 8. Hakem paneli — aynı ekranlar, kırmızı tema
 
-**Kazancımdan kesinti oluyor mu?**
-Evet, her kazançtan %10 platform komisyonu kesilir. Panelde eline geçecek net tutar her zaman ayrıca gösterilir.
+Hakem panelinin iskeleti kaleciyle birebir aynıdır; tema rengi kırmızıdır ve rol adları değişir. Aşağıda hakem gözünden aynı ekranlar var.
 
-**Param ne zaman çekilebilir oluyor?**
-Maç sonunda sen **Maçı Oynadım · Onayla** dedikten ve kaptan da onayladıktan sonra kazanç "Çekilebilir" olur; sonra **PARAYI ÇEK** ile talep verirsin.
+<a href="gorseller/saglayici/14-ref-ana-ust.webp"><img src="gorseller/saglayici/14-ref-ana-ust.webp" alt="Hakem ana sayfası — kimlik kartında "BEYAN: UEFA B" seviyesi görünür." width="280"></a>
 
-**Skoru yanlış girersem düzeltebilir miyim?**
-Hayır, şu an uygulama içinden girilen skoru düzeltme akışı yok — **SKORU KAYDET VE BİTİR** demeden önce iki kez kontrol et.
+_Hakem ana sayfası — kimlik kartında "BEYAN: UEFA B" seviyesi görünür._
 
-**Kabul ettiğim maça gidemeyeceğim, ne yapmalıyım?**
-Uygulama içinden kabul edilmiş bir işi bırakma imkânı şu an yok; gidemezsen kaptan no-show bildirebilir ve maç ücreti kadar ceza uygulanır. Bu yüzden yalnızca kesin gidebileceğin işleri kabul et.
+- **Kariyer performansı** — Genel reyting, maç puanı ortalaması ve yönetim değeri.
+- **Seviye beyanı** — Kartın üstündeki "BEYAN:" etiketi lisans seviyeni gösterir — belge doğrulaması yönetimdedir.
 
-**Maç iptal olursa param ne olur?**
-İş iptal edilir ve bekleyen kazancın silinir; kaptanın ödediği para kaptana iade edilir. Oynanmamış maçtan kazanç doğmaz.
+<a href="gorseller/saglayici/15-ref-ana-teklifler.webp"><img src="gorseller/saglayici/15-ref-ana-teklifler.webp" alt="Hakemlik teklifi kartı — kalecideki akışın aynısı." width="280"></a>
 
-**Kaptan gelmediğimi bildirdi ama ben oradaydım, ne yapabilirim?**
-Panelindeki **No-show Bildirimi** kartından 48 saat içinde **İtiraz Et**'e dokun; itirazın OYNA yönetiminin incelemesine alınır. 48 saati geçirirsen ceza kesinleşir.
+_Hakemlik teklifi kartı — kalecideki akışın aynısı._
 
-**Aynı saatte iki maç kabul edebilir miyim?**
-Hayır — sistem çakışan saatlerdeki başvuru ve talepleri engeller.
+- **Fark yok** — Kabul/Reddet mantığı ve "ilk kabul eden alır" kuralı kalecidekiyle aynıdır; hakemde kabulde sözleşme ekranı açılmaz.
 
-**Hem hakem hem oyuncu olabilir miyim?**
-Evet. **Ayarlar**'daki rol değiştiriciyle oyuncu moduna geçip maçlara oyuncu olarak katılabilir, istediğinde hakem paneline dönebilirsin. Yalnızca kendi oynadığın maça hakem olamazsın.
+<a href="gorseller/saglayici/18-ref-mac-bul.webp"><img src="gorseller/saglayici/18-ref-mac-bul.webp" alt="Maç Bul — "Hakem Aranıyor" ilanları." width="280"></a>
 
-**Puanımı kim veriyor?**
-Maça katılan oyuncular, maç sonunda hakeme 1-10 arası puan verebilir; ortalaması kartındaki puanın olur ve önerilen listelerdeki sıranı belirler.
+_Maç Bul — "Hakem Aranıyor" ilanları._
 
-**Çekim için asgari tutar var mı?**
-Hayır, asgari tutar yok; ama TC kimlik doğrulaman tamamlanmış olmalı ve aynı anda tek bekleyen çekim talebin olabilir.
+- **Rol süzgeci** — Listede yalnız hakemi boş olan maçlar görünür.
 
-## Bilinen Sınırlamalar
+<a href="gorseller/saglayici/19-ref-is-detay.webp"><img src="gorseller/saglayici/19-ref-is-detay.webp" alt="Hakemlik fırsatı — başvuru ekranı." width="280"></a>
 
-- Ücret pazarlığı yoktur: teklif ekranında ücret sabittir ve salt-okunur gösterilir.
-- Komisyon her kazançta **%10**'dur (bedele dahildir).
-- Profilinde "hazır fotoğraf" seçeneği yoktur; avatar olarak yalnız kendi yüklediğin fotoğraf kullanılır.
-- Maç detayında tesis özellikleri listesi ve mesafe bilgisi gösterilmez; yol tarifi sahanın konumuyla harita uygulamasında açılır.
-- Profilindeki hizmet yarıçapı ayarı eşleştirmede henüz dikkate alınmıyor.
-- Telefon (push) bildirimleri platform genelinde henüz açık değildir; bildirimler uygulama içinde görünür.
-- Girilen resmi skoru sonradan düzeltmenin uygulama içinde bir yolu yok.
+_Hakemlik fırsatı — başvuru ekranı._
+
+- **Kart ve ücret** — Kaptana giden kartında seviyen ve puanın yer alır; ücret alanı boş bırakılırsa profildeki standart ücret gider.
+
+<a href="gorseller/saglayici/21-ref-kazanclarim.webp"><img src="gorseller/saglayici/21-ref-kazanclarim.webp" alt="Kazançlarım — hakem görünümü." width="280"></a>
+
+_Kazançlarım — hakem görünümü._
+
+- **Aynı kurallar** — Ödeme maç sonrası serbest bırakılır; çekim talebi gerekmez.
+
+<a href="gorseller/saglayici/22-ref-menu.webp"><img src="gorseller/saglayici/22-ref-menu.webp" alt="Menü — hakem görünümü." width="280"></a>
+
+_Menü — hakem görünümü._
+
+- **Aynı dört satır** — Profilim, Ayarlar, Destek, Çıkış.
+
+<a href="gorseller/saglayici/23-ref-ayarlar.webp"><img src="gorseller/saglayici/23-ref-ayarlar.webp" alt="Ayarlar — "HAKEM HESABI" başlığıyla." width="280"></a>
+
+_Ayarlar — "HAKEM HESABI" başlığıyla._
+
+- **Oyuncu moduna geçiş** — Hakem de aynı hesapla oyuncu tarafına geçebilir.
+
+---
+
+## Sık yapılan hatalar
+
+- **Teklif bildirimini kapatma** — "İlk kabul eden alır" teklifleri dakikalar içinde kapanır; bildirim kapalıysa haberin olmaz.
+- **Kalecide 500₺ teminatı düşürme** — Bakiye 500₺'nin altına inerse yeni iş kabul edemezsin.
+- **Gelen talepte maç yerini teyit et** — Talep kartı maçın adını değil kod parçasını gösterir; yeri ve saati kabul etmeden önce doğrula.
+- **Meşgul modu işleri iptal etmez** — Anahtarı kapatmak yalnız yeni teklifleri durdurur; kabul ettiğin maça gitmek zorundasın.
+
+---
+
+## Sık sorulan sorular
+
+**Kaleci ile hakem paneli arasındaki fark ne?**
+
+İskelet aynı: 4 sekme, aynı iş akışı. Üç fark var — **kaleci** kabul ederken sözleşme onaylar ve hesabında 500₺ teminat bulundurur; **hakem** maç sonunda resmî skoru girer ve kartında lisans seviyesini beyan eder. Bir de tema rengi: kaleci yeşil, hakem kırmızı.
+
+**"İlk kabul eden işi alır" ne demek?**
+
+O teklif aynı anda birkaç kaleciye/hakeme gönderilmiştir. Kabul eden ilk kişi işi alır, diğerlerinin ekranından teklif düşer. Bildirimleri açık tutmak bu yüzden önemlidir.
+
+**Ücretimi pazarlık edebilir miyim?**
+
+Hayır. Ücret sabittir: ya profildeki standart ücretin ya da başvururken yazdığın tutar geçerlidir. %10 platform komisyonu bu bedelin içinden düşülür.
+
+**Param ne zaman hesabıma geçer?**
+
+Maç tamamlandıktan sonra. O ana kadar tutar "Onay Bekleyen" olarak görünür. Çekim talebi açmana gerek yoktur; aktarım OYNA tarafından yapılır.
+
+**Kabul ettiğim işi bırakabilir miyim?**
+
+Evet, "İŞİ BIRAK" ile. Ancak maça yakın bırakmak ceza doğurabilir — ekran çekilmeden önce uygulanacak cezayı gösterir. Kalecide ayrıca no-show cezası sözleşmeye bağlıdır.
+
+**Teklif gelmiyor, ne yapmalıyım?**
+
+Sırayla kontrol et: (1) "Sistemde aktif" anahtarı açık mı, (2) profilinde tarz ve ücret girili mi, (3) çalışma yarıçapın çok mu dar, (4) bildirim izinleri kapalı mı. Dördü de tamamsa Maç Bul'dan kendin başvur.
+
+**Skoru yanlış girdim.**
+
+Skor kaydedildikten sonra kilitlenir. Menü → Destek üzerinden düzeltme talebi açman gerekir.
+
+**Profil onayım ne kadar sürer?**
+
+Başvurun OYNA yönetimine gider; onaylanana kadar panel açılmaz. Reddedilirse ret gerekçesi gösterilir ve yeniden başvurabilirsin.
+
+---
+
+## Bu kılavuz nasıl hazırlandı
+
+Ekran görüntüleri, panelin canlı sürümü telefon görünümünde (390×844) sürülerek alınmıştır. Arayüzde bir etiket, akış veya kural değiştiğinde ilgili bölüm aynı değişiklikte güncellenmelidir. Takıldığın yerde **Menü → Destek**'ten talep açabilirsin.
