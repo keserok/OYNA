@@ -127,3 +127,10 @@ scratchpad/
 # Ajan gecici sinama dosyalari
 *.tmp.mjs
 playwright-report/
+
+# ── KASA — ÇÖZÜLMÜŞ DÜZ METİN ASLA COMMIT EDİLMEZ ───────────────────────────
+# `npm run kasa:ac` bu dosyayı geçici olarak açar; içinde iyzico anahtarları,
+# Apple .p8 içeriği ve service role key gibi GERÇEK sırlar bulunur.
+# Depoya giren şey yalnız şifreli kasa.age olmalıdır.
+docs/master/KASA/kasa.md
+docs/master/KASA/.dogrulama-*.tmp
