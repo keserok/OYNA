@@ -14,7 +14,7 @@ import {
 } from './onboarding/onboardingShared';
 import { applyOnboarding } from '../services/onboardingService';
 import { useAppStore } from '../store';
-import { auth } from '../supabaseAuth';
+import { auth, logout } from '../supabaseAuth';
 import { getFullUserProfile } from '../services/userService';
 import { fbUpdateUserLocation } from '../supabaseMutations';
 // IP-16: konum TEK yoldan istenir. Tarayıcının ham konum API'sini doğrudan
@@ -96,6 +96,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
   const [completeError, setCompleteError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [cikiliyor, setCikiliyor] = useState(false);
   const timers = useRef<number[]>([]);
   const { setUserLocation, setLocationPermissionStatus, setActiveRegion, activeRegion } = useAppStore();
 
@@ -268,6 +269,21 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
   // açılmadığı sürece yaş beyanı da atlanamaz — mağazaların yaş
   // derecelendirmesi beyanı bu tek girdiye dayanıyor.
 
+  // Kurulumu yarıda bırakıp çıkmak. Profil "tamamlanmadı" kalır; kullanıcı
+  // tekrar girdiğinde buraya döner — ama artık uygulamanın dışına da,
+  // Ayarlar'daki hesap silmeye de ulaşabilir.
+  const cikisYap = async () => {
+    if (saving || cikiliyor) return;
+    setCikiliyor(true);
+    try {
+      await logout();
+    } catch (e) {
+      console.error('[onboarding] çıkış başarısız:', e);
+      showToast('Çıkış yapılamadı. Bağlantını kontrol edip tekrar dene.');
+      setCikiliyor(false);
+    }
+  };
+
   const aura = AURAS[step];
 
   return (
@@ -298,10 +314,27 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
               }} />
             ))}
           </div>
-          {/* Eskiden burada "Atla" tuşu vardı; kurucu kararıyla kaldırıldı
-              (24 Ağu 2026). Boşluk BİLEREK duruyor: geri okundaki 38px'in
-              dengi olmasa ilerleme noktaları ortadan kayardı. */}
-          <span aria-hidden="true" style={{ width: 44 }} />
+          {/* ÇIKIŞ — "Atla"nın yerinde duran şey bu (24 Ağu 2026 denetimi).
+              "Atla" kaldırılınca yerine hiçbir şey konmamıştı ve kurulum
+              KAPANA dönüşmüştü: hesap kayıtta zaten açılıyor, kullanıcı her
+              açılışta bu ekrana düşüyor, ama yaşını/adını vermek istemiyorsa
+              uygulamadan çıkmanın ya da hesabını silmenin hiçbir yolu yoktu.
+              Apple 5.1.1(v) hesabın uygulama İÇİNDEN silinebilmesini şart
+              koşar; silme ekranına giden tek yol ise Ayarlar'dır.
+              Çıkış, zorunlu alanları GEVŞETMEZ — yalnız kapıyı açık tutar. */}
+          <button
+            onClick={cikisYap}
+            disabled={saving || cikiliyor}
+            aria-label="Çıkış yap"
+            style={{
+              width: 44, textAlign: 'right', fontSize: 12, fontWeight: 800,
+              color: 'rgba(255,255,255,0.55)', background: 'none', border: 'none',
+              cursor: (saving || cikiliyor) ? 'default' : 'pointer', padding: 0,
+              minHeight: 38,
+            }}
+          >
+            {cikiliyor ? '…' : 'Çıkış'}
+          </button>
         </div>
 
         {/* Kicker + başlık */}

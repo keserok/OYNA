@@ -49,3 +49,24 @@ export const cekimUygulamadanAcikMi = (): boolean => CEKIM_UYGULAMADAN_ACIK;
 /** Çekim kapalıyken ekranlarda gösterilecek TEK cümle. */
 export const CEKIM_KAPALI_ACIKLAMA =
   'Kazancın OYNA tarafından hesabına aktarılır. Maç oynandıktan sonra ödemen yapılır — uygulamadan çekim talebi açmana gerek yok.';
+
+// ════════════════════════════════════════════════════════════════════════════
+// KALECİ / HAKEM KİRALAMA
+//
+// KURUCU KARARI (24 Ağustos 2026): kaleci ve hakem kiralamasının teminatı
+// KARTTAN BLOKE ile alınır. Blokaj gerçek bir ödeme sağlayıcısı ister; iyzico
+// sözleşmesi tamamlanmadığı için akış v1'e yetişmiyor.
+//
+// ─── NEDEN GİRİŞ NOKTASI KAPANIYOR, EKRAN DEĞİL ─────────────────────────────
+// Ekran (views/Marketplace.tsx) sonuna kadar geziliyordu ama tek eylem tuşu
+// kodda sabit kapalıydı ve üstünde "Kiralama Çok Yakında" yazıyordu. Apple,
+// yayınlanmış bir uygulamada "yakında" yüzeylerini Guideline 2.1 altında
+// reddediyor: kullanıcı sonuna kadar gidip hiçbir zaman tamamlayamıyor.
+//
+// Bu yüzden ekranı silmiyoruz — ONA GİDEN KAPIYI kapatıyoruz. Kod yerinde
+// durur, blokaj akışı yazıldığı gün bu sabit true olur ve kartlar geri gelir.
+// Yarım açılış yok: bu sabit ancak teminat akışı UÇTAN UCA çalıştığında açılır.
+export const KALECI_HAKEM_KIRALAMA_ACIK = false;
+
+/** Kaleci/hakem pazaryeri kullanıcıya gösterilsin mi? */
+export const kaleciHakemKiralamaAcikMi = (): boolean => KALECI_HAKEM_KIRALAMA_ACIK;

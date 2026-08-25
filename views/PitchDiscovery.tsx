@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import OrnekIcerikSeridi from '../components/common/OrnekIcerikSeridi';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft, Search, MapPin, Star,
@@ -1420,6 +1421,9 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
       <main className="flex-1 overflow-y-auto px-6 pb-safe-nav custom-scrollbar">
         {viewMode === 'LIST' ? (
           <div>
+            {/* Örnek içerik uyarısı listenin BAŞINDA — vitrindeki sahaların
+                gerçek tesisler olmadığını burada da söylüyoruz. */}
+            <OrnekIcerikSeridi style={{ marginTop: '0.75rem', marginBottom: '1rem' }} />
             <div className="flex justify-between items-center mb-5 mt-1">
               <h2 className="text-xs font-extrabold text-ink-4 uppercase tracking-[0.2em]">
                 {favOnly ? `${filteredPitches.length} FAVORİ SAHA` : `${filteredPitches.length} TESİS BULUNDU`}

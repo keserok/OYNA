@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { CEKIM_UYGULAMADAN_ACIK } from '../../../shared/featureFlags';
 import { AnimatePresence } from 'framer-motion';
 import {
   Banknote,
@@ -7,7 +8,6 @@ import {
   ChevronRight,
   Clock,
   CreditCard,
-  Globe,
   Handshake,
   HelpCircle,
   LayoutDashboard,
@@ -253,7 +253,17 @@ export const OwnerMenuView: React.FC<OwnerMenuViewProps> = ({
                 onClick={onBankAccounts}
               />
             )}
-            {isOwnerLvl && (
+            {/* PARA ÇEKME satırı GİZLİ (24 Ağu 2026 denetimi). Çekim
+                uygulamadan kalıcı olarak kapalı (CEKIM_UYGULAMADAN_ACIK=false,
+                kurucu kararı 19 Ağu) ama satır duruyordu: dokunulunca tutar ve
+                IBAN alanları dolu, tam işlevli görünen bir form açılıyor,
+                sonundaki tuşta "Çekim Yakında Açılacak" yazıyordu.
+                Apple 2.1, yayınlanmış uygulamada "yakında" yüzeylerini ret
+                sebebi sayıyor — üstelik bu ekran Apple'a verilen tesis
+                hesabında (saha1@oyna.app) üç dokunuş uzaktaydı.
+                Hakediş defteri Finans ekranında aynen duruyor; kapanan tek şey
+                çekim talebi açma yüzeyi. Çekim açıldığı gün bayrak true olur. */}
+            {isOwnerLvl && CEKIM_UYGULAMADAN_ACIK && (
               <MenuRow
                 icon={<Banknote size={18} />}
                 label="Para Çekme"
@@ -311,12 +321,6 @@ export const OwnerMenuView: React.FC<OwnerMenuViewProps> = ({
             <MenuRow icon={<LayoutDashboard size={18} />} label="Özet Widgetları" onClick={onWidgetSettings} />
             <MenuRow icon={<Bell size={18} />} label="Bildirimler" onClick={onNotifications} />
             <MenuRow icon={<Shield size={18} />} label="Güvenlik & Şifre" onClick={onSecurity} />
-            <MenuRow
-              icon={<Globe size={18} />}
-              label="Dil"
-              badge={<StatusBadge label="Türkçe" tone="neutral" />}
-              disabled
-            />
           </div>
         </section>
 

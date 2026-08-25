@@ -312,11 +312,18 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
     ? true
     : amount > 0 && onlineAllowed && (!needsCard || !!selectedCard);
 
+  // Simülasyonda "Tamamı karttan" demek, iki satır yukarıdaki kırmızı
+  // "kartından para çekilmez" uyarısını çürütür. Ekranın kendi içinde
+  // çelişmesi, uyarının hiç olmamasından daha kafa karıştırıcıdır.
+  const simule = payMode?.simulation === true && onlineAllowed;
+
   const breakdown = cashBooking
     ? 'Ödeme tesiste yapılır'
     : onlineBlocked
       ? 'Online ödeme kapalı'
-      : 'Tamamı karttan';
+      : simule
+        ? 'TEST · tahsilat yok'
+        : 'Tamamı karttan';
 
   const noteText = cashBooking
     ? 'Şu an uygulama içinde ödeme alınmıyor. Rezervasyonun kaydedilir; ücreti sahaya gittiğinde tesise ödersin.'
@@ -327,7 +334,9 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
           // online ödeme açık olacağı için kullanıcı bunu normalde görmez.
           ? 'Uygulamadan rezervasyon kartla kapora ödenerek yapılır. Bu tesiste uygulama içi ödeme şu anda kapalı.'
           : (paymentModeReasonText(payMode!) ?? 'Online ödeme şu anda kapalı.'))
-      : 'Yukarıdaki tutarın tamamı seçtiğin karttan tek seferde tahsil edilir.';
+      : simule
+        ? 'Ödeme altyapımız henüz canlıya alınmadı. Bu işlemde kartından tahsilat yapılmaz; akışın çalıştığını görmen için simülasyon çalışır.'
+        : 'Yukarıdaki tutarın tamamı seçtiğin karttan tek seferde tahsil edilir.';
 
   // Lobi state'ini tazele (lost-update önleme — sunucu SSOT).
   // KN-3: taze veri YERELE uygulanır, DB'ye GERİ YAZILMAZ (eski updateMatch
@@ -760,6 +769,7 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
     return (
       <AddCardScreen
         collectMode
+        simulation={payMode?.simulation === true && onlineAllowed}
         onBack={() => setScreen('PAY')}
         onCollect={(card) => {
           // Kart yalnız bellekte tutulur; ödeme anında edge'e gider.
@@ -798,7 +808,13 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
         </p>
         <p className="text-[0.8125rem] text-ink-4 mt-2.5 flex items-center gap-1.5">
           <Shield size={13} className="text-[#39FF14] animate-pulse" />
-          {cashBooking ? 'Tesise iletiliyor…' : 'Banka doğrulaması hazırlanıyor…'}
+          {cashBooking
+            ? 'Tesise iletiliyor…'
+            : simule
+              // Simülasyonda banka doğrulaması HİÇ açılmaz; "hazırlanıyor" demek
+              // olmayacak bir adımı vaat etmektir.
+              ? 'Test işlemi çalıştırılıyor…'
+              : 'Banka doğrulaması hazırlanıyor…'}
         </p>
         {/* Banka SMS doğrulaması — uygulama içinde tam ekran (Uber standardı) */}
         {threeDS && (
@@ -835,16 +851,36 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
             className="text-[0.8125rem] text-[#39FF14] font-bold mt-2 uppercase tracking-[0.14em]">
             {money(result ? result.cardAmount : grandTotal)} · {cashBooking ? 'Ödeme tesiste' : ctx.successSubtitle}
           </motion.p>
+          {/* Uyarı BURADA DA olmalı: 24 Ağu 2026 denetimi, uyarının tam da
+              "ödendi" iddiasının yapıldığı anda kaybolduğunu yakaladı —
+              kullanıcı işlem numaralı bir makbuz görüyor ama para hareket
+              etmiyordu. Sahte makbuz, uyarısız ödeme ekranından daha kötüdür. */}
+          {payMode?.simulation === true && onlineAllowed && (
+            <motion.div role="alert" initial={{ y: 14, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.2 }}
+              className="w-full mt-6 bg-red-500/12 border border-red-500/40 rounded-2xl p-4 flex gap-3">
+              <AlertTriangle size={18} className="text-red-400 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-[0.8125rem] font-extrabold text-red-400">Bu bir TEST ödemesidir</p>
+                <p className="text-[0.75rem] text-gray-300 mt-1 leading-relaxed">
+                  Kartından para çekilmedi ve tesise ödeme geçmedi. Bu ekran gerçek
+                  bir tahsilatı değil, akışın çalıştığını gösterir.
+                </p>
+              </div>
+            </motion.div>
+          )}
+
           <motion.div initial={{ y: 14, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.24 }}
             className="w-full bg-[#161B22] border border-white/8 rounded-3xl p-5 mt-8 space-y-3">
             <SummaryRow label={ctx.kind === 'MATCH_JOIN' ? 'Maç' : 'Saha'} value={ctx.title} />
             <SummaryRow label="Yer & Saat" value={ctx.subtitle} />
-            <SummaryRow label="Ödeme" value={cashBooking ? 'Tesiste ödenecek' : 'Kart'} />
+            <SummaryRow label="Ödeme" value={cashBooking ? 'Tesiste ödenecek' : (payMode?.simulation === true ? 'Kart · TEST' : 'Kart')} />
             {/* Kart işlem bedeli satırı KALDIRILDI (17 Ağu 2026): kullanıcı tek
                 rakam görür, bedel fiyatın içindedir. Kırılım yönetici panelinde
                 (Finans → tahsilat kırılımı) durmaya devam eder. */}
             <div className="h-px bg-white/8" />
-            <SummaryRow label="İşlem No" value={(result?.intentId ?? '').slice(0, 8).toUpperCase() || '—'} dim mono />
+            <SummaryRow
+              label={payMode?.simulation === true ? 'Test İşlem No' : 'İşlem No'}
+              value={(result?.intentId ?? '').slice(0, 8).toUpperCase() || '—'} dim mono />
           </motion.div>
           {/* S3 — onay sayfasında iptal/iade koşulu (tesis politikasıyla birebir) */}
           {ctx.isDeposit && refundTierText && (

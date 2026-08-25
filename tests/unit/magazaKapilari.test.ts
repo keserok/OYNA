@@ -425,11 +425,37 @@ describe('Mağaza kapıları · beyan ile gerçek davranış uyumu', () => {
 
   it('kaleci/hakem kiralaması olmayan bir güvence VAAT ETMEZ', () => {
     const mp = oku('views/Marketplace.tsx');
-    expect(mp).toContain('const KIRALAMA_ACIK = false');
-    expect(mp).toContain('Kiralama Çok Yakında');
+    // Ekran hâlâ kilitli — ama artık kilidi PAYLAŞILAN bayrak tutuyor.
+    expect(mp).toContain('const KIRALAMA_ACIK = KALECI_HAKEM_KIRALAMA_ACIK');
+    expect(oku('shared/featureFlags.ts')).toContain('export const KALECI_HAKEM_KIRALAMA_ACIK = false');
     // Şimdiki zamanda "bloke edilir / tahsil edilir" kalmamalı.
     expect(mp).not.toContain('Ücret önce kartında güvenle bloke edilir');
     expect(mp).not.toContain('Ödeme maç kesinleşince tahsil edilir; gelmezse ücretin iade edilir.');
+  });
+
+  it('"YAKINDA" yüzeyine giden HİÇBİR kapı açık kalmadı', () => {
+    // 24 Ağu 2026 denetimi: ekran kilitliydi ama ona giden İKİ kapı açıktı —
+    // ana ekrandaki iki kart ve maç lobisindeki "Kaleci & Hakem" bölümü.
+    // Kullanıcı sonuna kadar gezip "Kiralama Çok Yakında" duvarına tosluyordu.
+    // Apple 2.1, yayınlanmış uygulamada "yakında" yüzeylerini reddediyor.
+    // Kapıyı kilitlemek yetmez; kapıya GİDEN YOLU kapatmak gerekir.
+    const dash = oku('views/Dashboard.tsx');
+    expect(dash).toContain('{KALECI_HAKEM_KIRALAMA_ACIK && (');
+    expect(dash).toContain("KALECI_HAKEM_KIRALAMA_ACIK } from '../shared/featureFlags'");
+
+    const lobi = oku('views/MatchJoin.tsx');
+    expect(lobi).toContain('{KALECI_HAKEM_KIRALAMA_ACIK && isManageMode && myCaptainSide && (');
+  });
+
+  it('tesis menüsünde "Çekim Yakında Açılacak" yüzeyine kapı yok', () => {
+    // Çekim 19 Ağu 2026'da kalıcı kapatıldı ama menü satırı duruyordu:
+    // dokunulunca tutar + IBAN alanları dolu, tam işlevli görünen bir form
+    // açılıyor, sonundaki tuş kilitli kalıyordu. Üstelik bu ekran Apple'a
+    // verilen tesis hesabında üç dokunuş uzaktaydı.
+    const menu = oku('views/owner/menu/OwnerMenuView.tsx');
+    expect(menu).toContain('{isOwnerLvl && CEKIM_UYGULAMADAN_ACIK && (');
+    // Gerekçesiz gri satır da kalmamalı.
+    expect(menu).not.toContain('label="Dil"');
   });
 
   it('yasal metinde olmayan cüzdana para gönderilmez', () => {

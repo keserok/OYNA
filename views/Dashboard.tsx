@@ -32,6 +32,8 @@
 // ════════════════════════════════════════════════════════════════════════════
 
 import React from 'react';
+import OrnekIcerikSeridi from '../components/common/OrnekIcerikSeridi';
+import { KALECI_HAKEM_KIRALAMA_ACIK } from '../shared/featureFlags';
 import { Bell, ChevronRight, CircleAlert, CloudOff, Info, MapPin } from 'lucide-react';
 import { AppView } from '../types';
 import { useAppStore } from '../store';
@@ -39,7 +41,6 @@ import { auth } from '../supabaseAuth';
 import { UserAvatar } from '../components/common/UserAvatar';
 import TeamCrest from '../components/social/TeamCrest';
 import { useDashboardHome } from '../hooks/useDashboardHome';
-import { fetchOrnekIcerikUyarisi } from '../services/dashboardHomeService';
 import { useAsagiCekYenile } from '../hooks/useAsagiCekYenile';
 import { YenileniyorSeridi } from '../components/common/YenileniyorSeridi';
 import { useMyMatches, parseMatchDate } from '../hooks/useMyMatches';
@@ -171,15 +172,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
   const adminMatches = useAppStore((s) => s.adminMatches);
 
   const home = useDashboardHome();
-  // ÖRNEK İÇERİK UYARISI — metin sunucudan gelir (app_config · ornek_icerik_uyarisi).
-  // Boşsa hiç çizilmez; demo ekosistem silindiği gün anahtar boşaltılır ve uyarı
-  // yeni bir paket gerekmeden kaybolur. Bkz. dashboardHomeService.
-  const [ornekUyarisi, setOrnekUyarisi] = React.useState<string | null>(null);
-  React.useEffect(() => {
-    let iptal = false;
-    void fetchOrnekIcerikUyarisi().then((m) => { if (!iptal) setOrnekUyarisi(m); });
-    return () => { iptal = true; };
-  }, []);
   // AŞAĞI ÇEKİP YENİLE (kullanıcı kararı): tasarımdaki "Yenileniyor" modu
   // artık gerçek bir jestle tetiklenir. Önceden yalnız hata şeridindeki
   // "Tekrar Dene" düğmesi vardı — yani hata YOKKEN kullanıcının sayfayı
@@ -381,23 +373,9 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
           bulamaz — kural ihlalinden önce GERÇEK bir zarar.
           Metin sunucudan gelir; gerçek tesisler girildiğinde anahtar
           boşaltılır ve bu şerit kendiliğinden kaybolur. */}
-      {ornekUyarisi && (
-        <div
-          role="status"
-          style={{
-            flex: 'none', margin: `0 ${PAGE_X} var(--oy-space-2)`,
-            padding: '9px 12px', borderRadius: 'var(--oy-radius-sm)',
-            background: 'var(--color-info-bg, rgba(255,255,255,0.05))',
-            border: '1px solid var(--color-info-line, rgba(255,255,255,0.12))',
-            display: 'flex', alignItems: 'flex-start', gap: 9,
-          }}
-        >
-          <Info size={15} color="var(--color-ink-3)" style={{ flex: 'none', marginTop: 1 }} aria-hidden />
-          <span style={{ flex: 1, minWidth: 0, fontSize: px('footnote'), lineHeight: 1.5, color: 'var(--color-ink-2)' }}>
-            {ornekUyarisi}
-          </span>
-        </div>
-      )}
+      {/* Ortak bileşen: aynı şerit "Maç Bul" ve "Saha Kirala" listelerinde de
+          çiziliyor. Metin sunucudan gelir; kopyası burada durmaz. */}
+      <OrnekIcerikSeridi style={{ margin: `0 ${PAGE_X} var(--oy-space-2)` }} />
 
       {/* HATA ŞERİDİ YOK — bilinçli.
           Tasarımın "Hata" ekranında üstte ayrı bir uyarı kutusu YOKTUR; hata
@@ -1026,8 +1004,13 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
             </div>
           </Tap>
 
-          {/* KALECİ + HAKEM — yan yana. Arkadaki arena çizimi kaldırıldı
-              (kurucu kararı, 20 Ağu 2026): kartlar düz zeminde durur. */}
+          {/* KALECİ + HAKEM — kiralama teminatı (karttan bloke) v1'e
+              yetişmediği için giriş kartları GİZLİ (kurucu kararı, 24 Ağu 2026).
+              Ekran duruyor; yalnız kapısı kapalı. Tek kaynak:
+              shared/featureFlags.ts · KALECI_HAKEM_KIRALAMA_ACIK.
+              Bayrakla karartma değil — kart hiç çizilmiyor, çünkü sonuna kadar
+              gezilip tamamlanamayan bir akış Apple 2.1 altında ret sebebi. */}
+          {KALECI_HAKEM_KIRALAMA_ACIK && (
           <div style={{ display: 'flex', gap: 'var(--oy-space-4)' }}>
             <Tap
               onClick={() => onNavigate('MARKETPLACE_GK')}
@@ -1099,6 +1082,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
               </div>
             </Tap>
           </div>
+          )}
 
           {/* TAKTİK STÜDYO — ikon yok, yuvarlak yok, ok yok. Yazı ortalı.
               Ekranın en altında tek başına durduğu için ayrı bir ses tonu

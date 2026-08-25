@@ -1,5 +1,6 @@
 
 import { LAUNCH_CITY } from '../utils/orduData';
+import { KALECI_HAKEM_KIRALAMA_ACIK } from '../shared/featureFlags';
 import { districtsOfCity } from '../data/turkeyRegions';
 import { getHaversineDistance } from '../utils/geo';
 import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
@@ -370,7 +371,10 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect, onCre
     // karar verirse ekran "talep gönder" der, tıklayınca hata çıkar.
     // Kart altyapısı canlıya alınınca burası true olur (ve handleConfirmMatch
     // gerçek akışa döner) — iki satır, tek yerde.
-    const KIRALAMA_ACIK = false;
+    // Tek kaynak: shared/featureFlags.ts. Eskiden burada yerel bir `false`
+    // duruyordu ve ana ekrandaki giriş kartları bundan habersizdi — ekran
+    // kapalıyken kapı açık kalıyordu.
+    const KIRALAMA_ACIK = KALECI_HAKEM_KIRALAMA_ACIK;
 
     // FAZ 8A kiralama LANSMANDA KAPALI (MatchJoin ile parite): eski akış
     // emaneti cüzdandan fonluyordu, cüzdan artık yok (shared/featureFlags.ts).

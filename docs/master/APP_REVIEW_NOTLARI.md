@@ -128,14 +128,21 @@ The app offers three sign-in methods on one screen, available to everyone:
 email + password, Sign in with Apple, and Google. There is no phone number
 step and no test phone number anywhere in the product.
 
-The credentials in the Sign-In Information field belong to ORDINARY accounts.
-They were created through the same public sign-up screen every user sees,
-they carry the same permissions every user gets, and they read the same data
-every user reads. Nothing in this build behaves differently because of who is
-signed in. We are providing credentials rather than asking you to register
-because OYNA has four account types (player, goalkeeper, referee, venue
-owner) and a newly created account only ever shows the first one — you would
-not be able to review three quarters of the product.
+The credentials in the Sign-In Information field are for accounts we
+provisioned ourselves, so that all four account types can be reviewed. We
+are giving you credentials rather than asking you to register because OYNA
+has four account types (player, goalkeeper, referee, venue owner) and a
+newly created account only ever shows the first one — you would not be able
+to review three quarters of the product.
+
+They sign in through the same email + password screen every user sees, they
+carry the same permissions every user gets, and they read the same data
+every user reads. Nothing in this build behaves differently because of who
+is signed in. One internal detail we would rather state than have you
+discover: addresses at our own @oyna.app domain are tagged in our database
+as sample data, so activity on them is excluded from our business metrics.
+That tag changes no screen, no permission and no content — it only keeps our
+own reporting clean.
 
 Additional accounts, same password (Oyna!Saha2026):
   oyuncu@oyna.app  - player, opens the player home
@@ -169,19 +176,34 @@ AYARLA" (Set location) on the home screen and pick Ordu / Altınordu.
 Covered regions are pinned to the top of that list. Matches and pitches
 will then load.
 
-PAYMENTS — CURRENTLY DISABLED FOR EVERYONE
-We have not completed our payment provider onboarding yet, so online
-payment is switched OFF platform-wide. The app never asks for card
-details in this build: every booking resolves to "pay at the venue" and
-the app tells the user why ("Ödeme altyapısı henüz canlıya alınmadı").
-No money moves, no card data is collected, and there is no path in this
-build that could take a payment.
+PAYMENTS — RUNNING IN SIMULATION, AND THE APP SAYS SO ON SCREEN
+Our payment provider onboarding is not finished yet. Rather than hide the
+payment flow, we run it in SIMULATION mode so the product can be reviewed
+end to end. Please read this carefully, because the screens do collect a
+card number:
 
-When payments go live in a later version they will be for physical,
-real-world services only: a deposit for renting a football pitch and a
-share of a match fee. There is no digital content, no subscription and no
-unlockable feature, so In-App Purchase does not apply (Guideline
-3.1.5(a)).
+  - Online payment is ENABLED platform-wide. The booking flow opens a card
+    form and asks for a card number, expiry and CVV.
+  - NO money is captured. No charge reaches any card, no funds reach any
+    venue, and no card data is passed to a payment processor.
+  - The app states this to the user, in red, directly above the card
+    selector and again on the receipt: "Bu bir TEST ödemesidir — kartından
+    para çekilmez ve tesise ödeme geçmez." ("This is a TEST payment — no
+    money is taken from your card and none reaches the venue.")
+  - Please do not enter a personal card. Use this test number, which the
+    simulation accepts:
+        5528 7900 0000 0008   expiry 12/30   CVV 123   any name
+
+This is one global server setting (resolve_payment_mode). It does not vary
+by user, by role, or by who is signed in — the same simulation and the same
+red warning are shown to every person using the app today. When our
+provider goes live we flip that one setting and the warning disappears by
+itself, for everyone at once.
+
+Payments, once live, are for physical, real-world services only: a deposit
+for renting a football pitch and a share of a match fee, both consumed
+outside the app. There is no digital content, no subscription and no
+unlockable feature, so In-App Purchase does not apply (Guideline 3.1.3(e)).
 
 ACCOUNT DELETION
 Settings → Account → "Hesabı Sil" (Delete account), per Guideline
@@ -195,11 +217,17 @@ cause rather than the symptom.
 > hiçbir giriş yolu ilerlemez; kutusuz dokunuşta ekran ne yapılacağını söyler.
 >
 > Yukarıdaki İngilizce metin **yapıştırmaya hazırdır** — düzenlemeden olduğu
-> gibi kullan. Ödeme bölümü 23 Ağustos 2026'da canlı duruma göre yeniden
-> yazıldı ve canlıda doğrulandı: `payment_mode_global = CASH_ONLY`,
-> `simulation_counts_as_live = false`, `match_deposit_enabled = false`,
-> etkin mod `CASH_ONLY` / sebep `PROVIDER_NOT_LIVE`. Bu anahtarlardan biri
-> değişirse metin de gözden geçirilmelidir.
+> gibi kullan. Ödeme bölümü **24 Ağustos 2026'da** canlı duruma göre yeniden
+> yazıldı ve canlıda doğrulandı: `payment_mode_global = ONLINE_ONLY`,
+> `payment_provider = SIMULATION`, `simulation_counts_as_live = true`,
+> `match_deposit_enabled = true`; `resolve_payment_mode(NULL)` →
+> `online_allowed = true`, `simulation = true`.
+>
+> **Bu dört anahtardan biri değişirse metin YALAN olur.** 23 Ağustos'ta
+> bölüm "ödeme herkes için kapalı, kart bilgisi hiç istenmiyor" diyordu;
+> 24 Ağustos'ta demo ödeme açıldı ve metin bir gün boyunca gerçeği
+> anlatmadı. `npm run magaza:denetim` artık bu dört anahtarı canlıdan okuyup
+> metinle karşılaştırıyor — gönderim öncesi mutlaka çalıştır.
 
 ---
 
@@ -210,8 +238,8 @@ belirli gün/saatte kullanılması ve o maça katılım bedelinin tahsili.
 Uygulama-içi dijital içerik/abonelik SATMAZ. (Saha türü kısıtı yoktur —
 kapalı, açık, sentetik ya da çim; OYNA bir futbol organizasyonu uygulamasıdır.)
 
-- **Apple:** App Store Review Guideline **3.1.5(a)** ("Goods and Services
-  Outside of the App") ve **3.1.3(e)** kapsamında, fiziksel hizmet/gerçek dünya
+- **Apple:** App Store Review Guideline **3.1.3(e)** ("Goods and Services
+  Outside of the App") kapsamında, fiziksel hizmet/gerçek dünya
   deneyimi bedelinin uygulama dışı ödeme yöntemleriyle (kredi kartı) tahsili
   serbesttir; **IAP zorunlu değildir.** Saha kullanımı / maça katılım bedeli,
   Uber ve rezervasyon uygulamalarındaki fiziksel hizmet ödemesiyle aynı
@@ -220,9 +248,14 @@ kapalı, açık, sentetik ya da çim; OYNA bir futbol organizasyonu uygulamasıd
   işlemlerini Play Billing zorunluluğundan muaf tutar; ödeme lisanslı ödeme
   kuruluşu **iyzico** üzerinden alınır.
 
-Ödeme altyapısı: kart verisi OYNA sunucularında **saklanmaz**; yalnız iyzico'ya
-iletilir (PCI-DSS: saklama yok, geçiş var). 3DS banka doğrulaması uygulama
-içinde tamamlanır.
+Ödeme altyapısı (sağlayıcı canlıya alındığında): kart verisi OYNA
+sunucularında **saklanmaz**; yalnız iyzico'ya iletilir (PCI-DSS: saklama yok,
+geçiş var) ve 3DS banka doğrulaması uygulama içinde tamamlanır.
+
+> **BUGÜN GEÇERLİ DEĞİL.** `payment_provider = SIMULATION` olduğu sürece
+> iyzico devrede değildir, 3DS akışı çalışmaz ve hiçbir tahsilat yapılmaz.
+> Ekran bunu kullanıcıya kırmızı uyarıyla söyler. Yukarıdaki cümle
+> `payment_provider = IYZICO` yapıldığı gün yürürlüğe girer.
 
 > **Kurucu notu · ödeme modu HERKES İÇİN AYNI (22 Ağu 2026).** Bugün canlı
 > ayar `payment_provider = SIMULATION` + `simulation_counts_as_live = true` +

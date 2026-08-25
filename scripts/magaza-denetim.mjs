@@ -27,6 +27,11 @@ const engeller = [];
 const uyarilar = [];
 const tamamlar = [];
 
+// İstemciye gömülü olanla AYNI açık anahtar (anon/publishable). Herkese
+// açıktır ve RLS ile korunur; buradaki tek işi resolve_payment_mode'u okumak.
+const GOMULU_ANON = readFileSync(join(KOK, 'supabaseClient.ts'), 'utf8')
+  .match(/PROD_SUPABASE_ANON_KEY\s*=\s*\n?\s*'([^']+)'/)?.[1] ?? '';
+
 const engel = (baslik, aciklama) => engeller.push({ baslik, aciklama });
 const uyari = (baslik, aciklama) => uyarilar.push({ baslik, aciklama });
 const tamam = (baslik) => tamamlar.push(baslik);
@@ -35,6 +40,14 @@ const tamam = (baslik) => tamamlar.push(baslik);
 function denetle(ad, fn) {
   try { fn(); } catch (e) {
     engel(ad, `Denetim çalıştırılamadı: ${e.message}`);
+  }
+}
+
+/** Ağ gerektiren denetim. Ağ yoksa ENGEL değil UYARI üretir — çevrimdışı
+ *  bir makinede gönderim hazırlığını durdurmak doğru olmaz. */
+async function denetleAg(ad, fn) {
+  try { await fn(); } catch (e) {
+    uyari(`${ad} — doğrulanamadı`, `Canlıya ulaşılamadı (${e.message}). Ağ varken tekrar çalıştır.`);
   }
 }
 
@@ -407,6 +420,67 @@ const yesil = (t) => `\x1b[32m${t}\x1b[0m`;
 const kirmizi = (t) => `\x1b[31m${t}\x1b[0m`;
 const sari = (t) => `\x1b[33m${t}\x1b[0m`;
 const soluk = (t) => `\x1b[90m${t}\x1b[0m`;
+
+
+// ══════════════════════════════════════════════════════════════════════════
+// 8 · İNCELEME NOTU CANLI ÖDEME AYARIYLA UYUŞUYOR MU
+//
+// 24 Ağustos 2026'da tam olarak bu ayrıştı: demo ödeme açıldı ama
+// APP_REVIEW_NOTLARI.md bir gün boyunca "kart bilgisi hiç istenmiyor, ödeme
+// yolu yok" demeye devam etti. Apple'a giden metin canlı sistemin tersini
+// söylüyordu — üstelik uygulama bir kez zaten Guideline 5.6 (dürüstlük) ile
+// reddedilmişti.
+//
+// Bu denetim o ayrışmayı mekanik olarak yakalar: canlı `resolve_payment_mode`
+// yanıtını okur ve inceleme notunun ödeme bölümüyle karşılaştırır.
+// ══════════════════════════════════════════════════════════════════════════
+await denetleAg('İnceleme notu canlı ödeme ayarıyla uyuşuyor', async () => {
+  const url  = process.env.VITE_SUPABASE_URL || 'https://iikvzgyccvgcybzdfwlv.supabase.co';
+  const anon = process.env.VITE_SUPABASE_ANON_KEY || GOMULU_ANON;
+
+  const yanit = await fetch(`${url}/rest/v1/rpc/resolve_payment_mode`, {
+    method: 'POST',
+    headers: { apikey: anon, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ p_pitch_id: null }),
+  });
+  if (!yanit.ok) throw new Error(`HTTP ${yanit.status}`);
+  const mod = await yanit.json();
+
+  const not = oku('docs/master/APP_REVIEW_NOTLARI.md');
+  const ing = not.slice(not.indexOf('ABOUT THIS SUBMISSION'));
+
+  const simulasyon  = mod.simulation === true;
+  const onlineAcik  = mod.online_allowed === true;
+
+  // Notun ödeme bölümü ne iddia ediyor?
+  const notKartIstemiyor = /never asks for card details|no card data is collected/i.test(ing);
+  const notSimulasyon    = /SIMULATION/i.test(ing);
+
+  if (onlineAcik && notKartIstemiyor) {
+    engel('İnceleme notu YANLIŞ: "kart bilgisi istenmiyor" diyor',
+      `Canlı ayar online ödemeyi AÇIK tutuyor (effective_mode=${mod.effective_mode}), yani ` +
+      `uygulama kart bilgisi İSTİYOR. Apple'a giden metin bunun tersini söylüyor — ` +
+      `Guideline 5.6 (dürüstlük) altında ikinci ret sebebi. ` +
+      `docs/master/APP_REVIEW_NOTLARI.md · PAYMENTS bölümünü düzelt.`);
+    return;
+  }
+  if (simulasyon && !notSimulasyon) {
+    engel('İnceleme notu simülasyondan hiç söz etmiyor',
+      `Canlı sağlayıcı ${mod.provider} ve simulation=true; incelemeci ekranda ` +
+      `"Bu bir TEST ödemesidir" uyarısını görecek. Not bunu açıklamıyorsa incelemeci ` +
+      `yarım bırakılmış bir ödeme akışıyla karşılaştığını düşünür (2.1).`);
+    return;
+  }
+  if (!simulasyon && notSimulasyon) {
+    engel('İnceleme notu ESKİMİŞ: simülasyon anlatıyor ama sağlayıcı canlı',
+      `Canlı sağlayıcı ${mod.provider}. Nottaki simülasyon/test kartı paragrafı ` +
+      `kaldırılmalı, yoksa gerçek tahsilat yapan bir uygulama için "para çekilmez" ` +
+      `denmiş olur.`);
+    return;
+  }
+
+  tamam(`İnceleme notu canlı ödeme ayarıyla uyuşuyor (${mod.effective_mode} · ${mod.provider})`);
+});
 
 console.log('\n  MAĞAZA GÖNDERİM DENETİMİ\n');
 

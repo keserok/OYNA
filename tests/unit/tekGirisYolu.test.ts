@@ -501,11 +501,21 @@ describe('Apple 5.6 · sunucu ve içerik dürüstlüğü', () => {
     const svc = oku('services/dashboardHomeService.ts');
     expect(svc).toContain('fetchOrnekIcerikUyarisi');
     expect(svc).toContain("p_key: 'ornek_icerik_uyarisi'");
-    const dash = oku('views/Dashboard.tsx');
-    expect(dash).toContain('fetchOrnekIcerikUyarisi');
-    expect(dash).toContain('{ornekUyarisi && (');
-    // Metnin kendisi kodda GEÇMEMELİ.
-    expect(kodu(dash)).not.toContain('örnek içeriktir');
+    // Şerit artık PAYLAŞILAN bileşende; metni yine sunucudan çeker.
+    const serit = oku('components/common/OrnekIcerikSeridi.tsx');
+    expect(serit).toContain('fetchOrnekIcerikUyarisi');
+    expect(kodu(serit)).not.toContain('örnek içeriktir');
+  });
+
+  it('örnek içerik uyarısı ÜÇ ekranda da çiziliyor', () => {
+    // 24 Ağu 2026 denetimi: uyarı YALNIZ ana ekrandaydı. Oysa örnek maçların
+    // ve sahaların asıl görüldüğü yer keşif listeleridir — incelemenin de
+    // merkezi orasıdır. Ana ekranı hızla geçen biri, dolu kadrolar ve
+    // gerçekçi isimler görüp bunları gerçek sanıyordu (Guideline 2.1).
+    for (const yol of ['views/Dashboard.tsx', 'views/MatchDiscovery.tsx', 'views/PitchDiscovery.tsx']) {
+      expect(oku(yol), `${yol} örnek içerik şeridini çizmiyor`).toContain('<OrnekIcerikSeridi');
+      expect(oku(yol), `${yol} şeridi içe aktarmıyor`).toContain('OrnekIcerikSeridi');
+    }
   });
 
   it('inceleme notu "incelemeci için" demiyor', () => {
