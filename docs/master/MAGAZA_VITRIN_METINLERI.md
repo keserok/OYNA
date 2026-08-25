@@ -49,10 +49,10 @@ TEKRAR YAZMA — Apple ikisini birleştirerek arıyor, tekrar yer israfı olur.
 ## 4. App Store — Tanıtım Metni / Promotional Text (en çok 170 karakter)
 
 ```
-Ordu'da yeni açılıyoruz. Maç kur, eksik oyuncuyu bul, kaleci ve hakem çağır. Vitrindeki içerik şimdilik örnektir; gerçek tesisler katıldıkça yerini alır.
+Türkiye'de yeni başlıyoruz. Maç kur, eksik oyuncuyu bul, kaleci ve hakem çağır. Vitrindeki içerik şimdilik örnektir; gerçek tesisler katıldıkça yerini alır.
 ```
 
-*150 karakter.* **Bu alan yeni sürüm göndermeden değiştirilebilir** — örnek
+*156 karakter.* **Bu alan yeni sürüm göndermeden değiştirilebilir** — örnek
 içerik temizlendiği gün ikinci cümleyi silmek yeterli.
 
 ---

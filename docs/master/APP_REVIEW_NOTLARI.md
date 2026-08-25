@@ -157,14 +157,14 @@ owner, manager and staff roles are assigned by us only and cannot be
 self-granted from the app.
 
 WHAT YOU WILL SEE — PLEASE READ
-OYNA is launching in a single city: Ordu, Türkiye, and it is launching
-now. Most of the pitches, matches and players currently in the app are
+OYNA is launching now, and its first covered area is Ordu, Türkiye.
+Most of the pitches, matches and players currently in the app are
 SAMPLE CONTENT that we seeded so the product is not an empty shell on day
 one. This is stated inside the app itself, to every user, on the home
-screen: "Ordu'da yeni açılıyoruz. Şu anda gördüğün sahalar, maçlar ve
-oyuncular örnek içeriktir." The venue names are invented; they do not
-refer to real businesses. As real venues sign up, the sample content is
-removed and that notice disappears.
+screen and again on both discovery lists: "Türkiye'de yeni başlıyoruz. Şu
+anda gördüğün sahalar, maçlar ve oyuncular örnek içeriktir." The venue
+names are invented; they do not refer to real businesses. As real venues
+sign up, the sample content is removed and that notice disappears.
 
 We want to be explicit about this because it is the same information a
 user gets. It is not a reviewer-only disclosure.
