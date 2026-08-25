@@ -17,7 +17,8 @@
  *    kill-switch yazmayı unutmak yeterli değildir.
  */
 import { describe, it, expect } from 'vitest';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
 import { join } from 'node:path';
 
 const oku = (p: string) => readFileSync(join(process.cwd(), p), 'utf8');
@@ -904,5 +905,41 @@ describe('Depo temizliği · anahtar kabuk geçmişine düşmüyor', () => {
     const kuru = betik.slice(betik.indexOf('KURU ÇALIŞMA'), betik.indexOf('KURU ÇALIŞMA') + 400);
     expect(kuru).not.toContain('SUPABASE_SERVICE_ROLE_KEY=');
     expect(kuru).toContain('npm run depo:sil -- --uygula');
+  });
+});
+
+/**
+ * TESTİN OKUDUĞU HER BETİK DEPODA OLMALI
+ *
+ * `.gitignore` içinde `scripts/*` kalıbı var ve depoda durması gereken her
+ * betik tek tek beyaz listeye ekleniyor. Eklemeyi unutmak sessiz bir
+ * hatadır: dosya kendi diskinde durduğu için testler YEREL'de geçer, CI'da
+ * ise ENOENT verir. Bu oturumda iki kez oldu:
+ *
+ *   · `build-legal-roles.mjs` — temiz kopyada `npm run build:legal` çalışmadı
+ *   · `kasa.mjs` — PR #173'te üç test birden ENOENT ile düştü
+ *
+ * Bu test o boşluğu kapatıyor: bir birim testi hangi betiği okuyorsa, o
+ * betik git tarafından TAKİP EDİLİYOR olmalı. Diskte durması yetmez.
+ */
+describe('Testlerin okuduğu betikler depoda', () => {
+  it('hiçbir test, takip edilmeyen bir betiğe dayanmıyor', () => {
+    const testKlasoru = join(process.cwd(), 'tests/unit');
+    const dosyalar = readdirSync(testKlasoru).filter((f) => f.endsWith('.test.ts'));
+
+    const eksik: string[] = [];
+    for (const dosya of dosyalar) {
+      const icerik = readFileSync(join(testKlasoru, dosya), 'utf8');
+      const yollar = new Set(icerik.match(/scripts\/[A-Za-z0-9_./-]+\.(mjs|js|sh|cjs)/g) ?? []);
+      for (const yol of yollar) {
+        const takipli = spawnSync('git', ['ls-files', '--error-unmatch', yol],
+          { cwd: process.cwd(), stdio: 'ignore' }).status === 0;
+        if (!takipli) eksik.push(`${dosya} → ${yol}`);
+      }
+    }
+
+    expect(eksik, `Bu betikler testlerde okunuyor ama git takip etmiyor — ` +
+      `CI'da ENOENT verirler. .gitignore'a "!<yol>" satırı ekle:\n  ${eksik.join('\n  ')}`)
+      .toEqual([]);
   });
 });

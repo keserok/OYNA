@@ -46,6 +46,11 @@ scripts/*
 # yapılamaz (Supabase storage.protect_delete engelliyor); depolama API'si
 # gerekiyor. Silme geri alınamaz, o yüzden kapıları betikte duruyor.
 !scripts/depo-temizle.mjs
+# `kasa` — anahtar kasasının kapısı. 25 Ağu 2026'da CI'da ENOENT verdi:
+# tests/unit/kasa.test.ts bu dosyayı okuyor ama `scripts/*` kalıbı onu
+# yutmuştu, yani test yalnız benim diskimde geçiyordu. Kasanın VERİSİ
+# (kasa.md) yok sayılmaya devam ediyor; depoya giren yalnız araç.
+!scripts/kasa.mjs
 # Giriş yolu araçları — aynı gerekçe. `telefon:dogrula` mağaza incelemesinin
 # en olası ret sebebini (telefonla giriş çalışmıyor) tek komutla sınar;
 # `apple:gizli-anahtar` Apple özel anahtarını dışarı çıkarmadan jeton üretir.
