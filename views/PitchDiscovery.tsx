@@ -312,18 +312,14 @@ const MapViewComponent = ({
         dragRotate={false}
         pitchWithRotate={false}
         touchZoomRotate={true}
-        // PARMAK PAYLAŞIMI: harita sayfanın ortasında büyük bir alan kaplıyor.
-        // Tek parmağı kendine alırsa kullanıcı bu bölgeden sayfayı kaydıramaz.
-        // `cooperativeGestures` ile tek parmak SAYFAYI kaydırır, iki parmak
-        // haritayı gezdirir/yakınlaştırır; tek parmakla denenince MapLibre
-        // aşağıdaki Türkçe ipucunu gösterir. (Leaflet haritaları için aynı
-        // davranış components/map/mapBase.ts içinde kuruluyor.)
-        cooperativeGestures
-        locale={{
-          'CooperativeGesturesHandler.MobileHelpText': 'Haritayı gezdirmek için iki parmak kullan',
-          'CooperativeGesturesHandler.WindowsHelpText': 'Yakınlaştırmak için Ctrl + tekerlek',
-          'CooperativeGesturesHandler.MacHelpText': 'Yakınlaştırmak için ⌘ + tekerlek',
-        }}
+        // TEK PARMAK HARİTAYA AİTTİR (kurucu, 26 Ağu 2026). Bu harita
+        // `absolute inset-0` ile TÜM ekranı kaplar — altında kaydırılacak
+        // sayfa yok, yani `cooperativeGestures`in koruduğu şey burada mevcut
+        // değil. Eski "iki parmakla gezdir" kuralı yalnız sürtünme üretiyordu;
+        // Google Maps dinamiği geçerli: tek parmak gezdirir, iki parmak
+        // yakınlaştırır. Sayfa İÇİNE gömülü mini haritalarda (Leaflet,
+        // components/map/mapBase.ts) iki parmak kuralı BİLEREK duruyor —
+        // orada tek parmak haritaya verilirse kullanıcı sayfayı kaydıramaz.
         style={{ width: '100%', height: '100%' }}
         onClick={() => onPitchSelect(null)}
         onZoom={(e) => handleZoomChange(e.viewState.zoom)}

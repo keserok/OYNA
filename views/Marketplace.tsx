@@ -201,16 +201,29 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect, onCre
 
     const applyFilters = useCallback((list: (Goalkeeper | Referee)[], f: FilterState, q: string) => {
         const query = q.trim().toLocaleLowerCase('tr-TR');
+        // Bölge adları BİREBİR karşılaştırılmaz (26 Ağu 2026'da öğrenildi):
+        // canlıda sağlayıcı bölgeleri "altinordu" (küçük, aksansız) yazılmıştı,
+        // süzgeç "Altınordu" arıyordu ve vitrin başlığı "3 onaylı kaleci"
+        // derken liste 1 sonuç basıyordu. Ad karşılaştırması Türkçe harfe ve
+        // aksana duyarsız yapılır: NFD ayrıştırıp aksan imlerini at, 'ı/I'
+        // tuzağı için Türkçe yerel ayarla küçült. Veri düzeltilse bile kural
+        // kalır — bölge adı kullanıcı girdisidir, aynı özensizlik yine gelir.
+        const bolgeAnahtari = (x: string) =>
+            x.trim().toLocaleLowerCase('tr-TR').normalize('NFD').replace(/\p{M}/gu, '').replace(/ı/g, 'i');
+        const kapsamIller = scopeCities.map(bolgeAnahtari);
+        const kapsamIlceler = cityDistricts.map(bolgeAnahtari);
         return list.filter(p => {
             // Seçili bölge kapsamı: sağlayıcının hizmet bölgeleri seçili illerden
             // biriyle ilgili mi? (bölgesizler hariç tutulmaz)
             const matchesRegion = scopeCities.length === 0 || !p.preferredZones || p.preferredZones.length === 0 ||
                 p.preferredZones.some(z => {
-                    const parts = z.split('/').map(s => s.trim());
-                    return scopeCities.includes(parts[0]) || scopeCities.includes(z) || cityDistricts.includes(parts[parts.length - 1]);
+                    const parts = z.split('/').map(s => bolgeAnahtari(s));
+                    return kapsamIller.includes(parts[0]) || kapsamIller.includes(bolgeAnahtari(z)) || kapsamIlceler.includes(parts[parts.length - 1]);
                 });
             // "İl / İlçe" ve düz "İlçe" formatlarının ikisini de yakala.
-            const matchesDistrict = f.district === 'Tümü' || (!!p.preferredZones && p.preferredZones.some(z => z === f.district || z.split('/').pop()?.trim() === f.district));
+            const matchesDistrict = f.district === 'Tümü' || (!!p.preferredZones && p.preferredZones.some(z =>
+                bolgeAnahtari(z) === bolgeAnahtari(f.district) ||
+                bolgeAnahtari(z.split('/').pop() ?? '') === bolgeAnahtari(f.district)));
             // Gün/saat bilgisi girmemiş sağlayıcı "bilinmiyor" sayılır ve listede kalır
             // (bilinmiyor ≠ müsait değil; likidite ilkesi — Plan §0).
             const matchesDay = f.day === 'Tümü' || !p.workingHours?.activeDays?.length || p.workingHours.activeDays.includes(f.day);
@@ -366,8 +379,7 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect, onCre
         }
     };
 
-    // KİRALAMA AÇIK MI? Tek kaynak: aşağıdaki handleConfirmMatch zaten
-    // "çok yakında" diyor. Arayüz bu bayrağı okur; ikisi ayrı yerlerden
+    // KİRALAMA AÇIK MI? Arayüz bu bayrağı okur; ikisi ayrı yerlerden
     // karar verirse ekran "talep gönder" der, tıklayınca hata çıkar.
     // Kart altyapısı canlıya alınınca burası true olur (ve handleConfirmMatch
     // gerçek akışa döner) — iki satır, tek yerde.
@@ -383,7 +395,7 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect, onCre
     const handleConfirmMatch = async (match: any) => {
         if (!selectedProfile || isHiring) return;
         setSelectedMatchForHire(match);
-        setHireError('Kaleci/hakem kiralama çok yakında: online ödeme altyapısı canlıya alınınca açılacak.');
+        setHireError('Kaleci/hakem kiralama şu anda kapalı.');
     };
 
     // ─── Detay için türetilmiş veriler ────────────────────────────────────────
@@ -799,8 +811,8 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect, onCre
                                                 <span className="text-xl font-extrabold font-numeric text-white">{formatTRYShort(detail.fee)}</span>
                                             </div>
                                             <p className="text-[0.6875rem] font-semibold text-ink-4 mt-2 leading-relaxed">
-                                                Kiralama açıldığında onayladığın bedel <span className="text-white font-bold">emanete alınacak</span> — {roleLabel.toLocaleLowerCase('tr-TR')} kabul edip
-                                                maç kesinleşince sağlayıcıya aktarılacak, gelmezse iade edilecek. Sabit ücret; %10 platform komisyonu bedele dahil olacak.
+                                                Onayladığın bedel <span className="text-white font-bold">emanete alınır</span> — {roleLabel.toLocaleLowerCase('tr-TR')} kabul edip
+                                                maç kesinleşince sağlayıcıya aktarılır, gelmezse iade edilir. Sabit ücret; %10 platform komisyonu bedele dahildir.
                                             </p>
                                         </div>
 
@@ -1226,10 +1238,7 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect, onCre
                                                 ))}
                                             </div>
                                             <p className="text-[0.6875rem] font-bold text-ink-4 mt-4 pt-3 border-t border-white/[0.06]">
-                                                Sabit ücret · Pazarlık yok · %10 platform komisyonu şeffaf olacak
-                                            </p>
-                                            <p className="text-[0.6875rem] font-extrabold mt-2" style={{ color: theme.accent }}>
-                                                Kiralama çok yakında açılıyor. Şimdilik profilleri inceleyebilirsin.
+                                                Sabit ücret · Pazarlık yok · %10 platform komisyonu bedele dahildir
                                             </p>
                                         </div>
                                     </div>
@@ -1242,24 +1251,28 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect, onCre
                                         <span className="text-xl font-extrabold text-white font-numeric leading-tight">{formatTRYShort(detail.fee)}</span>
                                         <span className="text-[0.6875rem] font-bold text-ink-4">maç başı</span>
                                     </div>
-                                    {/* Kiralama kapalıyken kullanıcıyı 4 adım yürütüp sonunda
-                                        hata ekranına çarpmıyoruz: durum EN BAŞTA söyleniyor. */}
+                                    {/* Kiralama kapalıyken tuş HİÇ ÇİZİLMEZ (kurucu, 26 Ağu 2026).
+                                        Eski hâli gri bir "yakında" tuşuydu — tam da bayrağın kapatılma
+                                        gerekçesi olan Apple 2.1 vaadi. Tuşsuz vitrinde vaat yok: ücret
+                                        bilgi olarak durur, işlem sözü verilmez. (Bekçi: magazaKapilari
+                                        testi bu dosyada o vaat metnini birebir arar; yorumda bile
+                                        geçmemeli.) */}
+                                    {KIRALAMA_ACIK && (
                                     <button
                                         onClick={openHireFlow}
-                                        disabled={detailUnavailable || !KIRALAMA_ACIK}
+                                        disabled={detailUnavailable}
                                         className="flex-1 h-14 rounded-2xl font-extrabold text-xs uppercase tracking-widest flex items-center justify-center gap-1.5 transition-all active:scale-[0.97] disabled:active:scale-100"
-                                        style={(detailUnavailable || !KIRALAMA_ACIK)
+                                        style={detailUnavailable
                                             ? { backgroundColor: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.3)' }
                                             : { backgroundColor: theme.accent, color: '#0A0E14', boxShadow: `0 8px 24px ${theme.accent}30` }}
                                     >
-                                        {!KIRALAMA_ACIK ? (
-                                            <><Hourglass size={14} /> Kiralama Çok Yakında</>
-                                        ) : detailUnavailable ? (
+                                        {detailUnavailable ? (
                                             'Şu An Müsait Değil'
                                         ) : (
                                             <><Zap size={14} /> Maç Seç ve Talep Gönder</>
                                         )}
                                     </button>
+                                    )}
                                 </div>
                             </>
                         )}

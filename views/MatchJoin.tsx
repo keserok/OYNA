@@ -135,6 +135,19 @@ const getInitials = (name?: string): string => {
   return raw.toLocaleUpperCase('tr-TR');
 };
 
+/**
+ * Diziliş balonundaki İLK İSİM her zaman TAM görünür (kurucu, 26 Ağu 2026).
+ * Eski hâli `max-w-[64px] truncate` idi ve "GÖRKEM" bile "GÖRK…" oluyordu.
+ * Kesme tamamen kalktı; taşma yerine uzun adda yazı BİR kademe küçülür ki
+ * 7v7 gibi sık dizilişlerde komşu balonlar üst üste binmesin: 390px ekranda
+ * sıra başına ~97px düşer, 10px puntoda 14 harfli ad ~82px'te kalır.
+ * İki kademeden fazlası yok — IP-08 punto tabanı 0.625rem (10px), altına
+ * inilmez (tests/unit/typographyGuard.test.ts bunu kilitler; ilk sürüm
+ * 9px'lik üçüncü kademe denedi ve bekçiye takıldı).
+ */
+const adBalonYazisi = (ad: string): string =>
+  ad.length <= 8 ? 'text-[0.6875rem]' : 'text-[0.625rem]';
+
 // "Gerçek foto" mu? Üreteç adresleri (ui-avatars, pravatar, yerel baş harf
 // SVG'si) gerçek foto sayılmaz → sahada yerel baş harf gösterilir. Liste tek
 // kaynaktan: utils/avatarHelper.isDefaultAvatar (kurucu kararı, 20 Ağu 2026).
@@ -2429,8 +2442,8 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                         <div className="absolute -top-1 -right-1 p-0.5 rounded-md bg-[#FF9F43] border border-black z-20 pointer-events-none">
                           <Hand size={9} className="text-on-primary" />
                         </div>
-                        <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-1.5 bg-black/90 backdrop-blur-sm px-2 py-0.5 rounded-full border border-[#FF9F43]/40 shadow-md max-w-[64px] z-20 pointer-events-none">
-                          <span className="text-[0.6875rem] font-extrabold text-[#FF9F43] whitespace-nowrap uppercase truncate block">
+                        <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-1.5 bg-black/90 backdrop-blur-sm px-2 py-0.5 rounded-full border border-[#FF9F43]/40 shadow-md z-20 pointer-events-none">
+                          <span className={`${adBalonYazisi((viewGoalkeeper.name || 'Kaleci').split(' ')[0])} font-extrabold text-[#FF9F43] whitespace-nowrap uppercase block`}>
                             {(viewGoalkeeper.name || 'Kaleci').split(' ')[0]}
                           </span>
                         </div>
@@ -2477,8 +2490,8 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                             <span className="text-[0.6875rem] font-extrabold text-[#0A0E14] leading-none">₺</span>
                           </div>
                         )}
-                        <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-1.5 bg-black/90 backdrop-blur-sm px-2 py-0.5 rounded-full border border-white/10 shadow-md max-w-[64px] z-20 pointer-events-none">
-                          <span className="text-[0.6875rem] font-extrabold text-white whitespace-nowrap uppercase truncate block">
+                        <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-1.5 bg-black/90 backdrop-blur-sm px-2 py-0.5 rounded-full border border-white/10 shadow-md z-20 pointer-events-none">
+                          <span className={`${adBalonYazisi(isMyOwnSlot ? 'SEN' : (player.name || 'Oyuncu').split(' ')[0])} font-extrabold text-white whitespace-nowrap uppercase block`}>
                             {isMyOwnSlot ? 'SEN' : (player.name || 'Oyuncu').split(' ')[0]}
                           </span>
                         </div>
@@ -2595,7 +2608,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                         {idx + 1}
                       </div>
                     </div>
-                    <span className="text-[0.6875rem] font-bold text-white/70 truncate max-w-[65px]">{player.name.split(' ')[0]}</span>
+                    <span className={`${adBalonYazisi(player.name.split(' ')[0])} font-bold text-white/70 whitespace-nowrap`}>{player.name.split(' ')[0]}</span>
                   </div>
                 ))}
               </div>
