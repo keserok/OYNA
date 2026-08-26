@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { X, User, Phone, RefreshCw } from 'lucide-react';
+import { useBackDismiss } from '../../hooks/useBackDismiss';
 import { addSubscription, toTurkishError } from '../../services/pitchOwnerService';
 import { formatCapacityRange } from '../../shared/pitchShowcaseMapper';
 import type { PitchCourt } from '../../types';
@@ -42,6 +43,10 @@ export const OwnerSubscriptionModal: React.FC<OwnerSubscriptionModalProps> = ({
   const [autoRenew, setAutoRenew] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Android geri tuşu + Esc modalı kapatır (koşullu mount: görünürken hep açık).
+  // Kayıt sürerken kapanmaz — yarım işlem bırakılmasın.
+  useBackDismiss(true, () => { if (!saving) onClose(); }, 'abonman-modali', 0);
 
   const handleTimeChange = (t: string) => {
     setTimeSlot(t);
@@ -99,7 +104,7 @@ export const OwnerSubscriptionModal: React.FC<OwnerSubscriptionModalProps> = ({
       <div className="bg-[#161B22] w-full max-w-md rounded-[40px] border border-white/10 p-8 animate-in zoom-in duration-300 max-h-[90vh] overflow-y-auto custom-scrollbar">
         <div className="flex justify-between items-center mb-8">
           <h3 className="text-2xl font-extrabold text-white italic tracking-tight">YENİ ABONMAN</h3>
-          <button type="button" onClick={onClose} className="p-2 bg-white/5 rounded-full text-gray-400 hover:text-white">
+          <button type="button" onClick={onClose} aria-label="Kapat" className="p-2 bg-white/5 rounded-full text-gray-400 hover:text-white">
             <X size={20} />
           </button>
         </div>

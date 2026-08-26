@@ -5,6 +5,7 @@
 // doğrudan tablo yazma RLS ile kapalıdır.
 
 import { supabase } from '../supabaseClient';
+import { clearTicketCache } from '../utils/ticketCache';
 // Çakışma kuralı tek kaynaktan: ızgara ile aynı modül.
 import { bookingCoversSlot, hmToMinutes, minutesToHM } from '../shared/slotGrid';
 
@@ -240,6 +241,11 @@ export async function cancelMyBooking(bookingId: string, reason?: string): Promi
     p_reason: reason ?? null,
   });
   if (error) throw error;
+  // İptal edilen biletin çevrimdışı kopyası cihazda yaşamaya devam etmesin:
+  // kapıda "çalışan QR" yanılsaması üretiyordu (26 Ağu 2026). Servis katmanında
+  // duruyor ki bileti hangi ekran iptal ederse etsin kopya silinsin.
+  // (ticketCache window yokken sessiz no-op — test/SSR güvenli.)
+  clearTicketCache(bookingId);
   return data as CancelResult;
 }
 

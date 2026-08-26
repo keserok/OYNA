@@ -171,7 +171,13 @@ describe('Studio — temizle sayfası seçerek silme', () => {
     fireEvent.click(screen.getByRole('button', { name: /Sadece rakipler/ }));
     expect(screen.getByTestId('clear-pick-list')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Geri' }));
+    // Studio'nun ekran-geneli geri butonu da artık erişilebilir adla ("Geri",
+    // 26 Ağu erişilebilirlik süprümü) — seçim listesinin KENDİ geri düğmesini
+    // stüdyo başlığındakinden ayırarak tıkla.
+    const geriDugmeleri = screen.getAllByRole('button', { name: 'Geri' });
+    const listeGeri = geriDugmeleri.find((b) => b.id !== 'studio-back-button');
+    expect(listeGeri).toBeTruthy();
+    fireEvent.click(listeGeri!);
     expect(screen.queryByTestId('clear-pick-list')).not.toBeInTheDocument();
     expect(screen.getByText('Neyi temizleyelim?')).toBeInTheDocument();
   });

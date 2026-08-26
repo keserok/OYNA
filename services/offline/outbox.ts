@@ -1,4 +1,5 @@
 import { supabase } from '../../supabaseClient';
+import { auth } from '../../supabaseAuth';
 import {
   classifyOutboxError, parseOutbox, serializeOutbox,
   OUTBOX_MAX_ITEMS, type OutboxItem, type OutboxOpType,
@@ -16,7 +17,38 @@ import {
 // para işleminde sonsuz sessiz tekrar YOK.
 // ════════════════════════════════════════════════════════════════════════
 
-const STORAGE_KEY = 'oyna_owner_outbox_v1';
+// KUYRUK KULLANICIYA BAĞLI (26 Ağu 2026). Eski tek anahtar 'oyna_owner_outbox_v1'
+// uid içermiyordu: personel A'nın çevrimdışı aldığı nakit, cihazı sonra açan
+// personel B'nin OTURUMUYLA sunucuya gidiyor ve B'nin üzerine kaydoluyordu.
+// Anahtar artık uid'li; oturum yokken kuyruk OKUNMAZ ve YAZILMAZ.
+const STORAGE_KEY_BASE = 'oyna_owner_outbox_v1';
+const aktifUid = (): string | null => auth.currentUser?.uid ?? null;
+const storageKey = (): string | null => {
+  const uid = aktifUid();
+  return uid ? `${STORAGE_KEY_BASE}.${uid}` : null;
+};
+
+/** Eski uid'siz anahtarda kalan kuyruk KİMSENİN oturumuyla gönderilmez —
+ *  kime ait olduğu bilinemez. Karantinaya taşınır (veri silinmez; para izi
+ *  gerekirse elle sunucu kayıtlarıyla karşılaştırılır). */
+function eskiKuyruguKarantinayaAl(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    const eski = localStorage.getItem(STORAGE_KEY_BASE);
+    if (eski === null) return;
+    const karantina = `${STORAGE_KEY_BASE}.sahipsiz`;
+    // Karantina doluysa ÜZERİNE YAZMA da SİLME de yok — iki liste BİRLEŞİR
+    // (eski paketli açık bir sekme base anahtarı yeniden doldurabilir; para
+    // kaydı hiçbir dalda kaybolmaz).
+    const birlesik = [
+      ...parseOutbox(localStorage.getItem(karantina)),
+      ...parseOutbox(eski),
+    ];
+    localStorage.setItem(karantina, serializeOutbox(birlesik));
+    localStorage.removeItem(STORAGE_KEY_BASE);
+    console.warn('[Outbox] Eski uid\'siz kuyruk karantinaya taşındı (gönderilmeyecek):', karantina);
+  } catch { /* depo erişilemedi — sonraki açılışta yeniden denenir */ }
+}
 
 type Listener = (items: OutboxItem[]) => void;
 const listeners = new Set<Listener>();
@@ -28,12 +60,16 @@ export function setOutboxDropNotifier(fn: DropNotifier | null) { dropNotifier = 
 
 function readQueue(): OutboxItem[] {
   if (typeof window === 'undefined') return [];
-  try { return parseOutbox(localStorage.getItem(STORAGE_KEY)); } catch { return []; }
+  const key = storageKey();
+  if (!key) return [];
+  try { return parseOutbox(localStorage.getItem(key)); } catch { return []; }
 }
 
 function writeQueue(items: OutboxItem[]) {
   if (typeof window === 'undefined') return;
-  try { localStorage.setItem(STORAGE_KEY, serializeOutbox(items)); } catch { /* dolu/kapalı → kuyruk RAM'de kalır */ }
+  const key = storageKey();
+  if (!key) return;
+  try { localStorage.setItem(key, serializeOutbox(items)); } catch { /* dolu/kapalı → kuyruk RAM'de kalır */ }
   listeners.forEach((l) => { try { l(items); } catch { /* dinleyici hatası akışı bozmasın */ } });
 }
 
@@ -90,12 +126,16 @@ export async function enqueueOrRun(
     type, payload, label,
     createdAt: new Date().toISOString(),
     tries: 0,
+    ownerUid: aktifUid() ?? undefined,
   };
   try {
     await executeOp(item);
     return { queued: false };
   } catch (err) {
     if (classifyOutboxError(err) === 'NETWORK') {
+      // Oturum yokken kuyruk YAZILAMAZ; "kuyruğa alındı" yalanı söylemek
+      // yerine dürüst hata fırlat — para kaydı hiçbir yerde tutulmayacaktı.
+      if (!storageKey()) throw new Error('Oturum doğrulanamadı — işlem KAYDEDİLMEDİ. Yeniden giriş yapıp tekrar dene.');
       const q = readQueue();
       if (q.length >= OUTBOX_MAX_ITEMS) throw new Error('Bekleyen işlem kuyruğu dolu. Bağlantıyı düzeltin.');
       item.tries = 1;
@@ -120,6 +160,10 @@ export async function flushOutbox(): Promise<{ sent: number; dropped: number; re
       const q = readQueue();
       const head = q[0];
       if (!head) break;
+      // İkinci kemer: öğe başka kullanıcıya aitse GÖNDERME ve DÜŞÜRME —
+      // kuyruk yerinde kalır, sahibi girince gönderilir. (uid'li anahtar
+      // sayesinde normalde bu dala düşülmez; eski/elle taşınmış veri içindir.)
+      if (head.ownerUid && head.ownerUid !== aktifUid()) break;
       try {
         await executeOp(head);
         sent += 1;
@@ -158,11 +202,18 @@ function scheduleFlushSoon() {
 
 /** Uygulama açılışında bir kez kur: online/görünürlük tetikleri + kalan kuyruk. */
 export function installOutboxAutoFlush() {
-  if (installed || typeof window === 'undefined') return;
-  installed = true;
-  window.addEventListener('online', () => { void flushOutbox(); });
-  document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible' && getOutboxCount() > 0) void flushOutbox();
-  });
+  if (typeof window === 'undefined') return;
+  eskiKuyruguKarantinayaAl();
+  if (!installed) {
+    installed = true;
+    window.addEventListener('online', () => { void flushOutbox(); });
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && getOutboxCount() > 0) void flushOutbox();
+    });
+  }
+  // Açılış tekmesi HER panel girişinde çalışır ('installed' tekilliği yalnız
+  // dinleyiciler içindir): kuyruk uid'li olduğundan, kuyruğu bekleyen kullanıcı
+  // aynı cihazda yeniden giriş yaptığında bekleyen para kayıtları ilk fırsatta
+  // gönderilmeli — 'online' olayı o sırada gelmeyebilir (26 Ağu inceleme).
   if (getOutboxCount() > 0) { scheduleFlushSoon(); void flushOutbox(); }
 }

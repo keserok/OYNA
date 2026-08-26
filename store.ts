@@ -243,6 +243,11 @@ interface AppState {
   setImpersonatedUser: (user: AdminUser | null) => void;
   adminSession: AdminSession | null;
   setAdminSession: (session: AdminSession | null) => void;
+  // Çıkışta KULLANICIYA AİT her bellek alanını sıfırlar (26 Ağu 2026).
+  // Native'de çıkış sayfayı yeniden YÜKLEMEZ (supabaseAuth · yenidenBaslat
+  // bilinçli erken döner); bu çağrı olmasaydı önceki kullanıcının maçları,
+  // bildirimleri ve admin oturumu bellekten sonraki kullanıcıya sızardı.
+  resetUserScopedState: () => void;
   originalRole: UserRole | null;
   setOriginalRole: (role: UserRole | null) => void;
 
@@ -740,6 +745,55 @@ export const useAppStore = create<AppState>((set, get) => ({
   setImpersonatedUser: (impersonatedUser) => set({ impersonatedUser }),
   adminSession: null,
   setAdminSession: (adminSession) => set({ adminSession }),
+  // Alan listesi başlangıç değerleriyle birebir — yeni kullanıcıya ait alan
+  // eklerken buraya da ekle (kalite kapısı: oturumTemizligi.test.ts).
+  resetUserScopedState: () => set({
+    currentUserProfile: null,
+    myMatches: [],
+    myTeams: [],
+    userTeams: [],
+    userNotifications: [],
+    unreadNotificationsCount: 0,
+    adminSession: null,
+    savedCards: [],
+    pushToken: null,
+    myRoles: [],
+    notificationPreferences: DEFAULT_NOTIFICATION_PREFERENCES,
+    reliabilityScore: 100,
+    banExpiresAt: null,
+    impersonatedUser: null,
+    originalRole: null,
+    selectedMatch: null,
+    selectedFriendsForTeam: [],
+    opponentAds: [],
+    ticketBookingId: null,
+    bookingPitch: null,
+    bookingCourt: null,
+    bookingDate: null,
+    bookingSlot: null,
+    bookingPrice: null,
+    bookingDeposit: null,
+    walletInitialTab: 'MAIN',
+    walletPendingDeposit: false,
+    paymentContext: null,
+    lastPaymentError: null,
+    staffPanelContext: null,
+    ownerActivePitchId: null,
+    serviceAppRole: null,
+    studioContext: null,
+    selectedTeamId: null,
+    selectedTeamChatId: null,
+    selectedConversationId: null,
+    selectedDiaryId: null,
+    matchCreateSeed: null,
+    socialTarget: null,
+    selectedGk: null,
+    selectedRef: null,
+    // Ham GPS konumu kullanıcıya aittir; seçili bölge (ilçe etiketi) cihaz
+    // tercihi sayılır ve kalır — sonraki giriş bölge seçimini yeniden istemez.
+    userLocation: null,
+    pendingIntent: null,
+  }),
   originalRole: null,
   setOriginalRole: (originalRole) => set({ originalRole }),
   globalTexts: {

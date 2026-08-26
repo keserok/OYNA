@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, Plus, Image as ImageIcon, Trash2, Edit3, Save, BadgeCheck, Clock, RotateCcw, Camera, AlertCircle, X, Tag } from 'lucide-react';
 import { PitchCourt } from '../../types';
 import { formatTRYShort } from '../../utils/formatTRY';
@@ -10,6 +10,7 @@ import { COURT_FEATURES, normalizeCourtFeatures } from '../../shared/courtFeatur
 import { SURFACE_LABELS, SURFACE_OPTIONS } from '../../shared/courtSurface';
 import { formatCapacityRange } from '../../shared/pitchShowcaseMapper';
 import { useConfirmSheet } from '../../views/owner/components/useConfirmSheet';
+import { useBackDismiss } from '../../hooks/useBackDismiss';
 import { canPublishCourt, COURT_TARIFF_REQUIRED_MESSAGE } from '../../shared/courtTariffGate';
 import { OwnerPricingPolicyModal } from '../../views/owner/menu/OwnerPricingPolicyModal';
 
@@ -60,6 +61,9 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
     const [editingPitch, setEditingPitch] = useState<PitchCourt | null>(null);
     // Format aralığı + rozet — kort seçilen maçlarda format listesini daraltır.
     const [editCaps, setEditCaps] = useState<{ min: number; max: number; sizeLabel: string }>({ min: 5, max: 7, sizeLabel: '' });
+    /** Düzenlemeye GİRİŞTEKİ form anlık görüntüsü (editingPitch + editCaps, JSON) —
+     *  geri çıkarken kirlilik denetiminin kıyas tabanı. */
+    const editSnapshotRef = useRef<string | null>(null);
     const [isSaving, setIsSaving] = useState(false);
     const [saveError, setSaveError] = useState<string | null>(null);
     /** Düzenlenen kortun hiç fotoğrafı yok mu — uyarı bunu okur.
@@ -152,14 +156,17 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
     const handleEdit = (pitch: PitchCourt) => {
         if (readOnly) return;
         setWasActive(pitch.is_active !== false);
-        setEditingPitch({ ...pitch });
+        const nextPitch = { ...pitch };
+        setEditingPitch(nextPitch);
         // Mevcut kortun format aralığı + rozetiyle doldur (yoksa varsayılan 5v5–7v7).
         const ext = pitch as PitchCourt & CourtFormatExtras;
-        setEditCaps({
+        const nextCaps = {
             min: ext.min_capacity ?? 5,
             max: ext.max_capacity ?? 7,
             sizeLabel: ext.size_label ?? '',
-        });
+        };
+        setEditCaps(nextCaps);
+        editSnapshotRef.current = JSON.stringify({ pitch: nextPitch, caps: nextCaps });
         setSaveError(null);
     };
 
@@ -195,7 +202,9 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
         };
         setWasActive(false);
         setEditingPitch(newPitch);
-        setEditCaps({ min: 5, max: 7, sizeLabel: '' }); // yeni kort varsayılanı
+        const nextCaps = { min: 5, max: 7, sizeLabel: '' }; // yeni kort varsayılanı
+        setEditCaps(nextCaps);
+        editSnapshotRef.current = JSON.stringify({ pitch: newPitch, caps: nextCaps });
         setSaveError(null);
     };
 
@@ -300,6 +309,31 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
         }
     };
 
+    /** Form girişten beri değişti mi? (JSON kıyası, anlık görüntüye karşı.)
+     *  Fotoğraflar bu hesaba GİRMEZ: PhotoManager fotoğrafları anında sunucuya
+     *  işler (commit), yani geri çıkınca kaybolacak bir fotoğraf değişikliği olmaz. */
+    const editorKirli =
+        !!editingPitch &&
+        JSON.stringify({ pitch: editingPitch, caps: editCaps }) !== editSnapshotRef.current;
+
+    /** Geri oku + donanım geri tuşu: kirli formda önce "bırak?" onayı ister. */
+    const korumaliKapat = async () => {
+        if (editorKirli) {
+            const ok = await confirm({
+                title: 'Değişiklikleri bırak?',
+                message: 'Kaydedilmemiş değişiklikler var. Çıkarsan bu değişiklikler kaybolur.',
+                confirmLabel: 'Bırak',
+                destructive: true,
+            });
+            if (!ok) return;
+        }
+        setEditingPitch(null);
+    };
+
+    // Editör açıkken donanım geri tuşu + Esc korumalı kapatmadan geçer
+    // (async confirm'li kapatma void ile sarılır; hook senkron callback bekler).
+    useBackDismiss(!!editingPitch, () => { void korumaliKapat(); }, 'saha-editoru', 0);
+
     /** Saha bazlı fiyat politikası ekranı — hem düzenleme hem liste görünümünde. */
     const pricingModal = pricingCourt && facilityId ? (
         <OwnerPricingPolicyModal
@@ -321,7 +355,7 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
             <div className="flex flex-col h-full bg-[#0A0E14] animate-in slide-in-from-right-8 duration-300">
                 <div className="bg-[#161B22] p-4 flex justify-between items-center border-b border-white/5 safe-area-top shadow-lg z-10">
                     <div className="flex items-center gap-3">
-                        <button onClick={() => setEditingPitch(null)} className="p-2 rounded-full bg-white/5 hover:bg-white/10 text-white transition-colors">
+                        <button onClick={() => { void korumaliKapat(); }} aria-label="Geri" className="p-2 rounded-full bg-white/5 hover:bg-white/10 text-white transition-colors">
                             <ArrowLeft size={20} />
                         </button>
                         <h2 className="text-white font-bold text-lg">{editingPitch.id ? 'Sahayı Düzenle' : 'Yeni Saha Ekle'}</h2>
@@ -727,6 +761,10 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
                     </div>
                 </div>
                 {pricingModal}
+                {/* Onay sheet'i editör dalında da render edilmeli — yoksa geri
+                    okundaki confirm() çağrılır ama sheet görünmez ve Promise
+                    hiç çözülmezdi. */}
+                {confirmElement}
             </div>
         );
     }
@@ -736,7 +774,7 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
             <div className="bg-[#161B22] p-4 flex justify-between items-center border-b border-white/5 safe-area-top shadow-lg z-10">
                 <div className="flex items-center gap-3">
                     {showBack && (
-                        <button onClick={onBack} className="p-2 rounded-full bg-white/5 hover:bg-white/10 text-white transition-colors">
+                        <button onClick={onBack} aria-label="Geri" className="p-2 rounded-full bg-white/5 hover:bg-white/10 text-white transition-colors">
                             <ArrowLeft size={20} />
                         </button>
                     )}
@@ -828,6 +866,7 @@ export const PitchManager: React.FC<PitchManagerProps> = ({
                                     </button>
                                     <button
                                         onClick={() => handleDelete(pitch.id)}
+                                        aria-label="Sahayı sil"
                                         className="p-3 bg-red-500/10 text-red-400 font-bold text-xs rounded-xl flex items-center justify-center hover:bg-red-500/20 transition-colors"
                                     >
                                         <Trash2 size={16} />

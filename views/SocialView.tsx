@@ -158,7 +158,7 @@ const SocialView: React.FC<SocialViewProps> = ({ onBack, onNavigate }) => {
       setSelectedConversationId(conversationId);
       onNavigate('MESSAGES');
     } catch (e: any) {
-      console.error('[SocialView] konuşma açılamadı', e?.message || e);
+      console.error('[SocialView] konuşma açılamadı', e);
       showToast('Konuşma açılamadı');
     } finally {
       setMessagingId(null);

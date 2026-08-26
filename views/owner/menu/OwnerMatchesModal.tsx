@@ -122,6 +122,7 @@ export const OwnerMatchesModal: React.FC<{
           </div>
           <button
             onClick={load}
+            aria-label="Yenile"
             className="p-2 rounded-lg bg-white/5 border border-white/10 text-gray-400 hover:text-white"
             title="Yenile"
           >

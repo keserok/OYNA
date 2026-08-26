@@ -10,6 +10,7 @@ import TeamCrest from './TeamCrest';
 import { isUserOnline } from '../../utils/lastSeen';
 import { getFriends, FriendRow } from '../../services/socialService';
 import { getMyTeams, MyTeamRow, formatLabel } from '../../services/teamSocialService';
+import { useBackDismiss } from '../../hooks/useBackDismiss';
 
 // ════════════════════════════════════════════════════════════════════════
 // MatchSquadPicker — maç oluşturmada kadro kurma seçicisi (SOSYAL stilli).
@@ -41,6 +42,9 @@ type Tab = 'FRIENDS' | 'TEAMS';
 const MatchSquadPicker: React.FC<MatchSquadPickerProps> = ({
   onClose, onAddFriends, onPickTeam, onToast, assignedIds = [], openSlotCount, onGoToTeamCreate,
 }) => {
+  // Parent yalnız seçici açıkken mount ediyor → open sabit true. Geri tuşu +
+  // Esc yalnız bu seçiciyi kapatır, arkadaki ekran DEĞİŞMEZ (BULGU-020).
+  useBackDismiss(true, onClose, 'match-squad-picker');
   const [tab, setTab] = useState<Tab>('FRIENDS');
 
   // ── Arkadaş verisi ──

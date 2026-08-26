@@ -6,6 +6,7 @@ import { POSITION_LABEL, POSITION_ABBR, PLAY_STYLE_META, GENDER_LABEL } from '..
 import { skillBand, SELF_SKILL_MAX } from '../../utils/skillBand';
 import { BirthdatePicker, AYLAR, parseISODate } from './BirthdatePicker';
 import { useBackDismiss } from '../../hooks/useBackDismiss';
+import { mapError } from '../../utils/errorMap';
 import { UserAvatar } from '../common/UserAvatar';
 import profileAmbient from '../../assets/profile/profile-ambient.png';
 
@@ -164,9 +165,10 @@ export const ProfileEditSheet: React.FC<ProfileEditSheetProps> = ({
             setAvatar(url);
         } catch (err: any) {
             // D5: eskiden yalnız console.error → kullanıcı neden yüklenmediğini
-            // bilmiyordu. imageCompression açıklayıcı mesaj verir (HEIC/boyut/…).
+            // bilmiyordu. imageCompression açıklayıcı mesaj verir (HEIC/boyut/…);
+            // mapError Türkçe açıklamayı geçirir, ham İngilizce metni yedeğe çevirir.
             console.error('Fotoğraf yükleme hatası:', err);
-            setPhotoError(err?.message || 'Fotoğraf yüklenemedi. Farklı bir görsel dene (JPG/PNG, en fazla 10MB).');
+            setPhotoError(mapError(err, 'Fotoğraf yüklenemedi. Farklı bir görsel dene (JPG/PNG, en fazla 10MB).'));
         } finally {
             if (fileInputRef.current) fileInputRef.current.value = '';
         }

@@ -374,8 +374,9 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect, onCre
             setTimeout(() => setShareCopied(false), 1800);
         } catch (e: any) {
             if (e?.name === 'AbortError') return; // kullanıcı vazgeçti
+            // Hata KENDİLİĞİNDEN KAYBOLMAZ: kullanıcı X ile kapatana kadar durur
+            // (bkz. PaymentScreen inlineError deseni — 4 sn'de kaybolan hata okunamıyordu).
             setPaylasHatasi('Bu cihazda paylaşılamadı — bilgileri ekrandan okuyabilirsin.');
-            setTimeout(() => setPaylasHatasi(null), 4000);
         }
     };
 
@@ -973,8 +974,15 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect, onCre
                                     hiçbir şey olmuyor, hiçbir şey söylenmiyordu. */}
                                 {paylasHatasi && (
                                     <div role="status"
-                                        className="absolute top-16 left-4 right-4 z-30 px-3 py-2 rounded-xl bg-red-950/90 border border-red-500/40 text-red-300 text-[0.6875rem] font-bold text-center backdrop-blur-md">
-                                        {paylasHatasi}
+                                        className="absolute top-16 left-4 right-4 z-30 px-3 py-2 rounded-xl bg-red-950/90 border border-red-500/40 text-red-300 text-[0.6875rem] font-bold backdrop-blur-md flex items-center gap-2">
+                                        <span className="flex-1 text-center">{paylasHatasi}</span>
+                                        <button
+                                            onClick={() => setPaylasHatasi(null)}
+                                            aria-label="Hata mesajını kapat"
+                                            className="shrink-0 -m-1 p-1 text-red-300 hover:text-white"
+                                        >
+                                            <X size={14} />
+                                        </button>
                                     </div>
                                 )}
 

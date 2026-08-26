@@ -197,7 +197,7 @@ const persistentAuthStorage = {
       return null;
     }
   },
-  setItem: (key: string, value: string): void => {
+  setItem: async (key: string, value: string): Promise<void> => {
     if (!hasWindow) return;
     // ── Tercih KAPALI: oturum yalnız sekme/uygulama ömrü kadar yaşar ──
     // sessionStorage'a yazılır, kalıcı depolardan TEMİZLENİR. Temizlik şart:
@@ -216,9 +216,13 @@ const persistentAuthStorage = {
         /* sessizce yoksay */
       }
       if (isNativePlatform) {
-        void Preferences.remove({ key }).catch(() => {
+        // await: atele-unut kalsaydı "hatırlama" tercihiyle girişte OS
+        // aynasındaki eski belirteç yarışı kazanıp yaşamaya devam edebilirdi.
+        try {
+          await Preferences.remove({ key });
+        } catch {
           /* sessizce yoksay */
-        });
+        }
       }
       return;
     }
@@ -238,7 +242,12 @@ const persistentAuthStorage = {
       });
     }
   },
-  removeItem: (key: string): void => {
+  // ÇIKIŞ GÜVENLİĞİ (26 Ağu 2026): removeItem artık ASENKRON ve telefon
+  // kopyasını (Preferences) BEKLEYEREK siler. Eskiden ateşle-unut çağrılıyordu:
+  // signOut "sildim" derken OS aynası duruyor, bir sonraki açılışta getItem
+  // (yukarıda, beniHatirla açıkken) silinmiş sanılan oturumu diriltiyordu.
+  // Ortak cihazda (tesis tableti) bu, önceki kullanıcının hesabı demek.
+  removeItem: async (key: string): Promise<void> => {
     if (!hasWindow) return;
     try {
       window.localStorage.removeItem(key);
@@ -251,9 +260,11 @@ const persistentAuthStorage = {
       /* sessizce yoksay */
     }
     if (isNativePlatform) {
-      void Preferences.remove({ key }).catch(() => {
+      try {
+        await Preferences.remove({ key });
+      } catch {
         /* sessizce yoksay */
-      });
+      }
     }
   },
 };

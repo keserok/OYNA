@@ -7,6 +7,7 @@ import {
   getExpenseTemplates, createExpenseTemplate, deleteExpenseTemplate, applyExpenseTemplate,
   updateExpense, deleteExpense, type ExpenseTemplate,
 } from '../../../services/financeService';
+import { toTurkishError } from '../../../services/pitchOwnerService';
 import { parseTRYAmount } from '../../../shared/financeModel';
 import { localDateISO } from '../ownerCalendarHelpers';
 import { money, BreakdownList } from './financeUi';
@@ -76,8 +77,8 @@ export const FinanceExpenseTab: React.FC<Props> = ({
         setAddOpen(false);
       }
       setForm(emptyForm);
-    } catch (e: any) {
-      notify(e?.message || 'Kaydedilemedi.', 'error');
+    } catch (e) {
+      notify(toTurkishError(e, 'Kaydedilemedi.'), 'error');
     } finally { setBusy(false); }
   };
 
@@ -85,7 +86,15 @@ export const FinanceExpenseTab: React.FC<Props> = ({
     if (readOnly) return;
     if (!(await confirm({ title: 'Gideri sil?', message: `"${e.title}" gideri silinecek.`, confirmLabel: 'Sil', destructive: true }))) return;
     try { await deleteExpense(e.id); onChanged(); notify('Gider silindi.', 'success'); }
-    catch (err: any) { notify(err?.message || 'Silinemedi.', 'error'); }
+    catch (err) { notify(toTurkishError(err, 'Silinemedi.'), 'error'); }
+  };
+
+  // Şablon silme de gider silmeyle AYNI kalıptan geçer: önce onay, sonra
+  // görünür hata (eskiden hata boş catch ile sessizce yutuluyordu).
+  const removeTemplate = async (t: ExpenseTemplate) => {
+    if (!(await confirm({ title: 'Şablonu sil?', message: `"${t.title}" sabit gider şablonu silinecek.`, confirmLabel: 'Sil', destructive: true }))) return;
+    try { await deleteExpenseTemplate(t.id); loadTemplates(); notify('Şablon silindi.', 'success'); }
+    catch (err) { notify(toTurkishError(err, 'Şablon silinemedi.'), 'error'); }
   };
 
   const applyAll = async () => {
@@ -93,7 +102,7 @@ export const FinanceExpenseTab: React.FC<Props> = ({
     let ok = 0;
     for (const t of unapplied) {
       try { await applyExpenseTemplate(pitchId, t, defaultDate()); ok += 1; }
-      catch (e: any) { notify(e?.message || 'Eklenemedi.', 'error'); }
+      catch (e) { notify(toTurkishError(e, 'Eklenemedi.'), 'error'); }
     }
     if (ok > 0) { notify(`${ok} sabit gider eklendi.`, 'success'); onChanged(); }
     setBusy(false);
@@ -102,7 +111,7 @@ export const FinanceExpenseTab: React.FC<Props> = ({
   const applyOne = async (t: ExpenseTemplate) => {
     setBusy(true);
     try { await applyExpenseTemplate(pitchId, t, defaultDate()); notify('Eklendi.', 'success'); onChanged(); }
-    catch (e: any) { notify(e?.message || 'Eklenemedi.', 'error'); }
+    catch (e) { notify(toTurkishError(e, 'Eklenemedi.'), 'error'); }
     finally { setBusy(false); }
   };
 
@@ -114,7 +123,7 @@ export const FinanceExpenseTab: React.FC<Props> = ({
       await createExpenseTemplate(pitchId, { title: tplForm.title.trim(), category: tplForm.category, amount: tplAmt });
       setTplForm({ title: '', amount: '', category: 'Kira' });
       loadTemplates();
-    } catch (e: any) { notify(e?.message || 'Şablon eklenemedi.', 'error'); }
+    } catch (e) { notify(toTurkishError(e, 'Şablon eklenemedi.'), 'error'); }
     finally { setBusy(false); }
   };
 
@@ -164,7 +173,7 @@ export const FinanceExpenseTab: React.FC<Props> = ({
       <div className="space-y-3">
         <div className="flex justify-between items-center px-1">
           <h3 className="text-[10px] font-extrabold text-gray-500 uppercase">Gider Kayıtları</h3>
-          <button type="button" onClick={openAdd} disabled={readOnly} className="p-2 bg-white/5 rounded-xl text-white disabled:opacity-40">
+          <button type="button" onClick={openAdd} disabled={readOnly} aria-label="Gider ekle" className="p-2 bg-white/5 rounded-xl text-white disabled:opacity-40">
             <Plus size={18} />
           </button>
         </div>
@@ -186,8 +195,8 @@ export const FinanceExpenseTab: React.FC<Props> = ({
                   <span className="text-red-400 font-extrabold tabular-nums">{money(e.amount ?? 0)}</span>
                   {!readOnly && (
                     <>
-                      <button type="button" onClick={() => openEdit(e)} className="p-1.5 text-gray-400 hover:text-white"><Pencil size={14} /></button>
-                      <button type="button" onClick={() => removeExpense(e)} className="p-1.5 text-red-500/70 hover:text-red-400"><Trash2 size={14} /></button>
+                      <button type="button" onClick={() => openEdit(e)} aria-label="Gideri düzenle" className="p-1.5 text-gray-400 hover:text-white"><Pencil size={14} /></button>
+                      <button type="button" onClick={() => removeExpense(e)} aria-label="Gideri sil" className="p-1.5 text-red-500/70 hover:text-red-400"><Trash2 size={14} /></button>
                     </>
                   )}
                 </div>
@@ -223,7 +232,7 @@ export const FinanceExpenseTab: React.FC<Props> = ({
             ) : templates.map((t) => (
               <div key={t.id} className="flex items-center justify-between bg-white/[0.03] border border-white/5 rounded-xl px-3 py-2">
                 <div className="min-w-0"><p className="text-sm font-bold text-white truncate">{t.title}</p><p className="text-[10px] text-gray-500">{t.category} · {money(t.amount)}</p></div>
-                <button type="button" onClick={() => { deleteExpenseTemplate(t.id).then(loadTemplates).catch(() => {}); }} className="p-1.5 text-red-500/70 hover:text-red-400"><Trash2 size={14} /></button>
+                <button type="button" onClick={() => removeTemplate(t)} aria-label="Şablonu sil" className="w-11 h-11 flex items-center justify-center text-red-500/70 hover:text-red-400"><Trash2 size={14} /></button>
               </div>
             ))}
           </div>

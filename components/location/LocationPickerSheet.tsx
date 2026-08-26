@@ -6,6 +6,7 @@ import { TURKEY_REGIONS, districtsOfCity } from '../../data/turkeyRegions';
 import { isCoveredCity } from '../../data/regionCenters';
 import { makeManualLocation } from '../../utils/regionResolver';
 import { detectRegion } from '../../services/locationService';
+import { useBackDismiss } from '../../hooks/useBackDismiss';
 
 interface LocationPickerSheetProps {
   open: boolean;
@@ -64,6 +65,10 @@ const LocationPickerSheet: React.FC<LocationPickerSheetProps> = ({
     // sheet kapandıktan sonra durumu sıfırla (animasyon bitince)
     setTimeout(reset, 250);
   };
+
+  // Geri tuşu + Esc sheet'i kapatır (durum sıfırlamasıyla birlikte), arkadaki
+  // ekran DEĞİŞMEZ (BULGU-020).
+  useBackDismiss(open, close, 'location-picker');
 
   const handleGps = async () => {
     setGpsLoading(true);

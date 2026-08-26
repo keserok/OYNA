@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { TrendingUp, X } from 'lucide-react';
+import { useBackDismiss } from '../../hooks/useBackDismiss';
 import { upsertSpecialSlotTariff, toTurkishError } from '../../services/pitchOwnerService';
 import { resolveHourlyPrice } from './ownerCalendarHelpers';
 import { money } from './finance/financeUi';
@@ -33,6 +34,10 @@ export const OwnerSpecialPriceModal: React.FC<OwnerSpecialPriceModalProps> = ({
   const [customPrice, setCustomPrice] = useState(() => String(Math.round(standardPrice * 1.25)));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Android geri tuşu + Esc modalı kapatır (koşullu mount: görünürken hep açık).
+  // Kayıt sürerken kapanmaz — yarım işlem bırakılmasın.
+  useBackDismiss(true, () => { if (!saving) onClose(); }, 'ozel-fiyat-modali', 0);
 
   const newPrice = parseInt(customPrice, 10) || 0;
 
@@ -80,7 +85,7 @@ export const OwnerSpecialPriceModal: React.FC<OwnerSpecialPriceModalProps> = ({
               {timeKey} • Standart: {money(standardPrice)}
             </p>
           </div>
-          <button type="button" onClick={onClose} className="p-2 bg-white/5 rounded-full text-gray-400 hover:text-white">
+          <button type="button" onClick={onClose} aria-label="Kapat" className="p-2 bg-white/5 rounded-full text-gray-400 hover:text-white">
             <X size={20} />
           </button>
         </div>

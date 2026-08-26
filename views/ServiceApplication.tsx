@@ -11,6 +11,8 @@ import { supabase } from '../supabaseClient';
 import { submitServiceApplication, ServiceApplicationData } from '../services/serviceProviderService';
 import { uploadProviderIdPhoto, submitProviderApplication } from '../services/serviceRequestService';
 import { getMyGuardianState } from '../services/guardianService';
+import { isOnline } from '../shared/submitGuard';
+import { mapError } from '../utils/errorMap';
 import { useAppStore } from '../store';
 import { PageLayout } from '../components/common/PageLayout';
 import { AnimatedButton } from '../components/AnimatedButton';
@@ -44,6 +46,13 @@ const THEME = {
 } as const;
 
 const REF_LEVELS = ['İl Hakemi', 'Bölgesel', 'Klasman', 'FIFA Kokart'];
+
+// Yerel başvuru taslağı: 13 alanlık formu dolduran kullanıcı, uygulamadan
+// çıkınca (veya uygulama arka planda ölünce) her şeyi kaybediyordu. Metin ve
+// seçim alanları ~400ms debounce ile bu anahtara yazılır; başarılı gönderimde
+// silinir. Kimlik fotoğrafı (File) taslağa BİLEREK girmez: dosya nesnesi
+// serileştirilemez ve kimlik görseli localStorage'da tutulmamalı.
+const TASLAK_ANAHTARI = 'oyna.basvuru.taslak.v1';
 
 const COUNTRY_CODES = [
   { code: '+90', flag: '🇹🇷' },
@@ -120,6 +129,48 @@ const ServiceApplication: React.FC<ServiceApplicationProps> = ({ role, onSubmitt
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [submitAttempted, setSubmitAttempted] = useState(false);
 
+  // Taslağı geri yükle (mount'ta bir kez). Bozuk/eksik JSON sessizce yok
+  // sayılır — form boş başlar, kullanıcıya hata gösterilmez.
+  useEffect(() => {
+    try {
+      const ham = localStorage.getItem(TASLAK_ANAHTARI);
+      if (!ham) return;
+      const t = JSON.parse(ham);
+      if (!t || typeof t !== 'object') return;
+      if (typeof t.fullName === 'string' && t.fullName) setFullName(t.fullName);
+      if (typeof t.countryCode === 'string' && t.countryCode) setCountryCode(t.countryCode);
+      if (typeof t.phoneDigits === 'string') setPhoneDigits(t.phoneDigits);
+      if (typeof t.fee === 'string') setFee(t.fee);
+      if (typeof t.bio === 'string') setBio(t.bio);
+      if (typeof t.style === 'string') setStyle(t.style);
+      if (Array.isArray(t.zones)) setZones(t.zones.filter((z: unknown): z is string => typeof z === 'string'));
+      if (typeof t.activeCity === 'string' && t.activeCity) setActiveCity(t.activeCity);
+      if (typeof t.height === 'string') setHeight(t.height);
+      if (typeof t.age === 'string') setAge(t.age);
+      if (typeof t.level === 'string') setLevel(t.level);
+      if (typeof t.experienceYears === 'string') setExperienceYears(t.experienceYears);
+    } catch {
+      // localStorage kapalı / JSON bozuk → taslaksız devam.
+    }
+  }, []);
+
+  // Debounce'lu taslak yazımı (~400ms): her tuş vuruşunda değil, yazma
+  // durulunca. KVKK onayı ve kimlik fotoğrafı taslağa girmez: açık rıza her
+  // gönderimde yeniden verilmeli, File ise serileştirilemez.
+  useEffect(() => {
+    const sayac = setTimeout(() => {
+      try {
+        localStorage.setItem(TASLAK_ANAHTARI, JSON.stringify({
+          fullName, countryCode, phoneDigits, fee, bio, style, zones,
+          activeCity, height, age, level, experienceYears,
+        }));
+      } catch {
+        // Depolama dolu/kapalı → taslak yazılamaz; form yine de çalışır.
+      }
+    }, 400);
+    return () => clearTimeout(sayac);
+  }, [fullName, countryCode, phoneDigits, fee, bio, style, zones, activeCity, height, age, level, experienceYears]);
+
   // KA-5/KA-6 ön-kontrol (mount'ta sunucudan): onaylıyken tekrar başvuru sessizce
   // pending'e düşürürdü (KA-5); reşit-olmayan veli onayı olmadan sağlayıcı olamaz
   // (KA-6, karar: başvuruda blokla). null = henüz yükleniyor.
@@ -194,6 +245,12 @@ const ServiceApplication: React.FC<ServiceApplicationProps> = ({ role, onSubmitt
 
   const handleSubmit = async () => {
     if (submitting) return;
+    // Gönderim öncesi bağlantı kapısı (PaymentScreen/MatchCreate ile aynı desen):
+    // çevrimdışıyken istek hiç yola çıkmaz, kullanıcı süresiz spinner'a düşmez.
+    if (!isOnline()) {
+      setError('Bağlantın yok. Başvuru gönderilmedi — bağlanınca tekrar dene.');
+      return;
+    }
     // KA-5: onaylıyken tekrar başvuru sunucuda pending'e düşürüp ikinci kayıt açardı.
     if (preflight?.alreadyApproved) {
       setError('Bu rol için başvurun zaten onaylı — yeniden başvuru gerekmiyor.');
@@ -262,10 +319,13 @@ const ServiceApplication: React.FC<ServiceApplicationProps> = ({ role, onSubmitt
       }
       if (queueErr) throw queueErr;
 
+      // Başarılı gönderim: yerel taslak artık gereksiz — silinir.
+      try { localStorage.removeItem(TASLAK_ANAHTARI); } catch { /* depolama yoksa sorun değil */ }
+
       onSubmitted();
     } catch (err: any) {
       console.error('[ServiceApplication] başvuru hatası:', err);
-      setError(err?.message || 'Başvuru gönderilemedi. Lütfen tekrar dene.');
+      setError(mapError(err, 'Başvuru gönderilemedi. Lütfen tekrar dene.'));
     } finally {
       setSubmitting(false);
     }

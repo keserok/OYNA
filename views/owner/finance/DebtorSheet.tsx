@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Loader2, MessageCircle, ArrowDownCircle, ArrowUpCircle } from 'lucide-react';
 import { getDebtorEntries, debtorAddPayment, markDebtorReminded, type DebtorEntry } from '../../../services/financeService';
+import { toTurkishError } from '../../../services/pitchOwnerService';
 import type { PitchDebtor } from '../../../types';
 import { parseTRYAmount, methodLabel } from '../../../shared/financeModel';
 import { money } from './financeUi';
@@ -65,8 +66,8 @@ export const DebtorSheet: React.FC<Props> = ({ debtor, readOnly, onClose, onChan
         onChanged();
         notify(newBal <= 0 ? 'Veresiye kapandı.' : 'Ödeme alındı.', 'success');
       }
-    } catch (e: any) {
-      notify(e?.message || 'Ödeme alınamadı.', 'error');
+    } catch (e) {
+      notify(toTurkishError(e, 'Ödeme alınamadı.'), 'error');
     } finally { setBusy(false); }
   };
 

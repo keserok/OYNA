@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Lock, Check, X, ShieldCheck, LogOut, Mail } from 'lucide-react';
 import { supabase } from '../../../supabaseClient';
+import { auth, cikisIstemliIsaretle } from '../../../supabaseAuth';
+import { kullaniciVerisiniTemizle } from '../../../utils/kullaniciVerisiTemizligi';
 import { toTurkishError } from '../../../services/pitchOwnerService';
 import { useOwnerToast } from '../components/useOwnerToast';
 import { useConfirmSheet } from '../components/useConfirmSheet';
@@ -103,6 +105,11 @@ export const OwnerSecurityModal: React.FC<Props> = ({ onClose }) => {
     if (!(await askConfirm({ title: 'Tüm oturumları kapat?', message: 'Tüm cihazlardaki oturumlar kapatılacak; yeniden giriş yapmanız gerekir.', confirmLabel: 'Kapat', destructive: true }))) return;
     setSigningOutAll(true);
     try {
+      // Bu bir İSTEMLİ çıkıştır: işaret konmazsa App'in SIGNED_OUT dalı bunu
+      // "oturum kendiliğinden düştü" sanıp yanlış uyarı basar (26 Ağu 2026).
+      // Cihazdaki kullanıcı artıkları da normal çıkıştaki gibi silinir.
+      cikisIstemliIsaretle();
+      await kullaniciVerisiniTemizle(auth.currentUser?.uid, 'cikis').catch(() => { /* temizlik çıkışı engellemez */ });
       const { error } = await supabase.auth.signOut({ scope: 'global' });
       if (error) throw error;
       notify('Tüm cihazlardan çıkış yapıldı.', 'success');

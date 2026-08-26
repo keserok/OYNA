@@ -23,6 +23,7 @@ import { ORDU_DISTRICTS } from '../utils/orduData';
 import { supabase } from '../supabaseClient';
 import { auth } from '../supabaseAuth';
 import { LoadingState, ErrorState } from '../components/common/StatusState';
+// Ham sunucu hatası ekrana sızmaz — tek sözlükten Türkçe mesaj (utils/errorMap).
 import { Toast } from '../components/common/Toast';
 import { fetchPitchBookings, computeAvailability, subscribeToPitchBookings, todayISO, fetchShowcaseAvailability, type ShowcaseAvailabilityRow } from '../services/pitchBookingService';
 import { PitchBookingRow, toISODate, parseSlotLabel, generateSlotRanges } from '../services/availabilityService';
@@ -231,7 +232,14 @@ const MapViewComponent = ({
       isFlyingRef.current = true;
       mapRef.current?.flyTo({ center: [coords.lng, coords.lat], zoom: 15, duration: 800 });
     } catch (e) {
-      onLocateError((e as { message?: string })?.message || 'Konum alınamadı. Konum iznini kontrol et.');
+      // Konum hatası CİHAZ hatasıdır (izin reddi / GPS zaman aşımı), sunucu
+      // değil: mapError "zaman aşımı"nı ağ hatası sanıp "internet bağlantın
+      // yok" derdi (26 Ağu inceleme bulgusu). locationService mesajları zaten
+      // bizim yazdığımız Türkçe metinler — aynen göster, boşsa yedeğe düş.
+      const yerelMesaj = e instanceof Error && e.message.trim()
+        ? e.message
+        : 'Konum alınamadı. Konum iznini kontrol et.';
+      onLocateError(yerelMesaj);
     } finally {
       setLocating(false);
     }
@@ -552,9 +560,10 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
   const [actionError, setActionError] = useState<string | null>(null);
   const [todayAvailability, setTodayAvailability] = useState<Record<string, number>>({});
 
+  // Hata KENDİLİĞİNDEN KAYBOLMAZ: kullanıcı X ile kapatana kadar durur
+  // (bkz. PaymentScreen inlineError deseni — 4 sn'de kaybolan hata okunamıyordu).
   const showActionError = (msg: string) => {
     setActionError(msg);
-    setTimeout(() => setActionError(null), 4000);
   };
 
   const fetchPitches = useCallback(async () => {
@@ -1387,6 +1396,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
           <button
             onClick={() => setFavOnly(v => !v)}
             title={favOnly ? 'Tüm sahaları göster' : 'Favori sahaları göster'}
+            aria-label={favOnly ? 'Tüm sahaları göster' : 'Favori sahaları göster'}
             aria-pressed={favOnly}
             className={`relative w-12 h-12 shrink-0 rounded-2xl flex items-center justify-center transition-all border ${
               favOnly
@@ -2051,6 +2061,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
                                 setCalendarMonth(({ y, m }) => m === 0 ? { y: y - 1, m: 11 } : { y, m: m - 1 });
                               }
                             }}
+                            aria-label="Önceki ay"
                             className={`w-[34px] h-[34px] rounded-[11px] bg-white/5 border border-white/10 flex items-center justify-center ${calMonthIdx > currentMonthIdx ? '' : 'opacity-30'}`}
                           >
                             <ChevronLeft size={16} />
@@ -2064,6 +2075,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
                                 setCalendarMonth(({ y, m }) => m === 11 ? { y: y + 1, m: 0 } : { y, m: m + 1 });
                               }
                             }}
+                            aria-label="Sonraki ay"
                             className={`w-[34px] h-[34px] rounded-[11px] bg-white/5 border border-white/10 flex items-center justify-center ${calMonthIdx < maxMonthIdx ? '' : 'opacity-30'}`}
                           >
                             <ChevronRight size={16} />
@@ -2350,7 +2362,8 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
       </AnimatePresence>
 
       <AnimatePresence>
-        {actionError && <Toast message={actionError} variant="error" />}
+        {/* Hata kalıcı: onClose verildiği için X ile kapatılana dek ekranda kalır. */}
+        {actionError && <Toast message={actionError} variant="error" onClose={() => setActionError(null)} />}
       </AnimatePresence>
 
       {/* IP-23 — içerik bildirimi. `window.prompt` yerine klavye-farkındalıklı

@@ -33,6 +33,11 @@ scripts/*
 # veriyordu. Gönderimin geçtiği kapı, depoda duran bir kapı olmalı.
 !scripts/magaza-denetim.mjs
 !scripts/surum-artir.mjs
+# Mekanizma betikleri (PRENSİPLER §9) — `npm run etki` buradan çalışır.
+# İKİ satır ŞART: `scripts/*` dizini yok saydığında git içine inmez,
+# tek başına dosya istisnası ölü kalır (kilavuz-gorselleri emsali).
+!scripts/sistem/
+!scripts/sistem/**
 # `vitrin:gorseller` — canlıdaki her saha/kort fotoğrafını tek sayfada basar.
 # 25 Ağu 2026'da vitrinde bir FIFA kupası renderı ve çocuk fotoğrafları
 # bulundu; ikisi de aylardır oradaydı çünkü bakmak zahmetliydi. Bu betik

@@ -7,6 +7,7 @@ import { formatTRYShort } from '../../utils/formatTRY';
 // Kurucu kararı (20 Ağu 2026): ekranda yazan rakam = karttan çekilecek rakam.
 // Taban + işlem bedeli + 10'a yuvarlama; sunucudaki motorla birebir.
 import { getCardFeePctCached, computeCardTotal } from '../../services/paymentService';
+import { useBackDismiss } from '../../hooks/useBackDismiss';
 
 // ════════════════════════════════════════════════════════════════════════
 // E3 · RAHAT KATILIM SAYFASI — akışın kalbi
@@ -49,6 +50,9 @@ const takenCount = (slots: PositionSlot[] | undefined): number =>
 export const RahatJoinSheet: React.FC<RahatJoinSheetProps> = ({
   open, match, summary, config, busy, onClose, onProceed,
 }) => {
+  // Geri tuşu + Esc sheet'i kapatır, arkadaki lobi ekranı DEĞİŞMEZ (BULGU-020).
+  // Ödeme akışı sürerken (busy) kapatma kilitli — yarım işlem bırakılmasın.
+  useBackDismiss(open, () => { if (!busy) onClose(); }, 'rahat-join-sheet');
   const [qty, setQty] = useState(1);
   const [picks, setPicks] = useState<(Side | null)[]>([null, null, null, null]);
   const [raceErr, setRaceErr] = useState(false);

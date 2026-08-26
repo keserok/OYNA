@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { X, Lock } from 'lucide-react';
+import { useBackDismiss } from '../../hooks/useBackDismiss';
 import { closeSlot, toTurkishError } from '../../services/pitchOwnerService';
 import { slotKeyToTime } from './ownerCalendarHelpers';
 
@@ -37,6 +38,10 @@ export const OwnerCloseSlotModal: React.FC<OwnerCloseSlotModalProps> = ({
   const [closeFullDay, setCloseFullDay] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Android geri tuşu + Esc modalı kapatır (koşullu mount: görünürken hep açık).
+  // Kapatma işlemi sürerken kapanmaz — yarım işlem bırakılmasın.
+  useBackDismiss(true, () => { if (!saving) onClose(); }, 'slot-kapat-modali', 0);
 
   const startTime = slotKeyToTime(timeKey);
   const hour = parseInt(startTime.split(':')[0], 10);
@@ -76,7 +81,7 @@ export const OwnerCloseSlotModal: React.FC<OwnerCloseSlotModalProps> = ({
               {courtName ?? 'Saha'} • {bookingDate} • {closeFullDay ? 'Tüm gün' : `${timeKey} - ${endTime.replace(':', '.')}`}
             </p>
           </div>
-          <button type="button" onClick={onClose} className="p-2 bg-white/5 rounded-full text-gray-400 hover:text-white">
+          <button type="button" onClick={onClose} aria-label="Kapat" className="p-2 bg-white/5 rounded-full text-gray-400 hover:text-white">
             <X size={20} />
           </button>
         </div>
@@ -118,6 +123,7 @@ export const OwnerCloseSlotModal: React.FC<OwnerCloseSlotModalProps> = ({
             <button
               type="button"
               onClick={() => setCloseFullDay(!closeFullDay)}
+              aria-label="Tüm günü kapat"
               className={`w-12 h-6 rounded-full relative transition-all duration-300 ${closeFullDay ? 'bg-red-500' : 'bg-white/10'}`}
             >
               <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full transition-all duration-300 ${closeFullDay ? 'right-0.5' : 'left-0.5'}`} />

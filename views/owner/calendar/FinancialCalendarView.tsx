@@ -573,6 +573,7 @@ export const FinancialCalendarView: React.FC<{
                                 <div className="flex items-center gap-2">
                                     <button
                                         onClick={() => setMonthCursor(({ y, m }) => m === 0 ? { y: y - 1, m: 11 } : { y, m: m - 1 })}
+                                        aria-label="Önceki ay"
                                         className="w-11 h-11 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-gray-400 hover:text-white"
                                     >
                                         <ChevronLeft size={16} />
@@ -582,6 +583,7 @@ export const FinancialCalendarView: React.FC<{
                                     </h3>
                                     <button
                                         onClick={() => setMonthCursor(({ y, m }) => m === 11 ? { y: y + 1, m: 0 } : { y, m: m + 1 })}
+                                        aria-label="Sonraki ay"
                                         className="w-11 h-11 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-gray-400 hover:text-white"
                                     >
                                         <ChevronRight size={16} />
@@ -877,6 +879,7 @@ export const FinancialCalendarView: React.FC<{
                                               setSpecialPriceModalOpen(time);
                                             }}
                                             disabled={!selectedCourtId || readOnly}
+                                            aria-label="Özel fiyat (prime time)"
                                             className="w-14 rounded-xl border border-white/5 bg-[#161B22] text-gray-500 hover:text-amber-400 hover:border-amber-500/30 flex items-center justify-center transition-all"
                                             title="Özel fiyat (prime time)"
                                         >
@@ -889,6 +892,7 @@ export const FinancialCalendarView: React.FC<{
                                               setCloseSlotModalOpen(time);
                                             }}
                                             disabled={!selectedCourtId || readOnly}
+                                            aria-label="Slotu kapat"
                                             className="w-14 rounded-xl border border-white/5 bg-[#161B22] text-gray-500 hover:text-red-400 hover:border-red-500/30 flex items-center justify-center transition-all"
                                             title="Slotu kapat"
                                         >

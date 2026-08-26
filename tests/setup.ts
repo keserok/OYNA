@@ -120,6 +120,11 @@ let mockStoreState = {
   resetUnderHome: vi.fn((view: string) => {
     mockStoreState.view = view;
   }),
+  // 26 Ağu 2026 — çıkış temizliği: App.tsx SIGNED_OUT dalı bunları çağırır;
+  // mock'ta olmazlarsa App'e dokunan her test "not a function" ile patlar.
+  resetUserScopedState: vi.fn(),
+  setPendingIntent: vi.fn(),
+  setCurrentUserProfile: vi.fn(),
 };
 
 const useAppStoreMock = (selector?: (s: typeof mockStoreState) => any) => {

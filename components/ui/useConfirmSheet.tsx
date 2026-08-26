@@ -1,5 +1,6 @@
 import React, { useCallback, useState } from 'react';
 import { ConfirmSheet } from './ConfirmSheet';
+import { useBackDismiss } from '../../hooks/useBackDismiss';
 
 /**
  * FAZ0: `window.confirm` için promise-tabanlı, markalı drop-in.
@@ -38,6 +39,11 @@ export function useConfirmSheet() {
       }),
     []
   );
+
+  // Donanım geri tuşu + Esc, açık onay sheet'ini İPTAL sayar (Promise false
+  // ile çözülür — sözleşme bozulmaz). Öncelik 10: ConfirmDialog emsali; alttaki
+  // sheet/modal'dan ÖNCE bu kapanır.
+  useBackDismiss(!!state, () => settle(false), 'confirm-sheet', 10);
 
   const confirmElement = (
     <ConfirmSheet

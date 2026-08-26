@@ -2,8 +2,11 @@ import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { X, AlertTriangle, ShieldAlert, Wallet } from 'lucide-react';
 import { supabase, clearHasAccount } from '../../supabaseClient';
+import { auth } from '../../supabaseAuth';
+import { kullaniciVerisiniTemizle } from '../../utils/kullaniciVerisiTemizligi';
 import { MODAL_BACKDROP, MODAL_CARD } from './motion';
 import { mapError } from '../../utils/errorMap';
+import { useBackDismiss } from '../../hooks/useBackDismiss';
 
 // ─── İki adımlı hesap silme modal — hangi rolden açılırsa açılsın aynı akış ────
 // Tek yerde tanımlı: Oyuncu (SettingsScreen) ve Kaleci/Hakem (ServiceSettings)
@@ -35,6 +38,17 @@ const DeleteAccountModal: React.FC<{
   const [preview, setPreview] = useState<DeletionPreview | null>(null);
   const [previewLoading, setPreviewLoading] = useState(true);
   const [toast, setToast] = useState<{ message: string; variant: 'success' | 'error' } | null>(null);
+
+  // Yıkıcı onay akışı: modal yalnız açıkken mount → open sabit true; priority 10
+  // ile geri tuşu önce bunu kapatır, alttaki ayarlar ekranı DEĞİŞMEZ (BULGU-020).
+  // Silme isteği işlenirken (loading) ve başarı mesajı onConfirmed'i beklerken
+  // kapatma kilitli — yarım kalan talep izlenimi doğmasın (ProfileEditSheet kalıbı).
+  useBackDismiss(
+    true,
+    () => { if (!loading && toast?.variant !== 'success') onClose(); },
+    'delete-account-modal',
+    10,
+  );
 
   useEffect(() => {
     let alive = true;
@@ -74,6 +88,11 @@ const DeleteAccountModal: React.FC<{
     // Cihaz-hesap bayrağını temizle: bu cihaz artık kayıt-öncelikli auth ekranı
     // görür. (Çıkışta temizlenmez; yalnızca silme talebinde.)
     clearHasAccount();
+    // KVKK (26 Ağu 2026): hesabı silinen kullanıcının cihazda İZİ kalmamalı —
+    // yalnız bayrak değil, her şey: son e-posta, bölge/GPS kayıtları, taslaklar,
+    // bilet görüntüleri, ana sayfa önbelleği, tahsilat kuyruğu. 'hesap-silme'
+    // modu çıkış modundan geniştir (utils/kullaniciVerisiTemizligi).
+    await kullaniciVerisiniTemizle(auth.currentUser?.uid, 'hesap-silme').catch(() => { /* temizlik akışı bozmaz */ });
     setToast({ message: `Silme talebin alındı. ${waitDays} gün içinde hesabın silinecek.`, variant: 'success' });
     setTimeout(() => { onConfirmed(); }, 2000);
   };

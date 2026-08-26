@@ -25,6 +25,8 @@ import { supabase } from '../supabaseClient';
 import { useAppStore } from '../store';
 import TeamCrest from '../components/social/TeamCrest';
 import { UserAvatar } from '../components/common/UserAvatar';
+import { ErrorState } from '../components/common/StatusState';
+import { mapError } from '../utils/errorMap';
 
 // ================================================================
 // MessagesView — BİRLEŞİK gelen kutusu (Spec §3.10 / N90):
@@ -126,15 +128,23 @@ type InboxItem =
 const InboxList: React.FC<{
   items: InboxItem[];
   loading: boolean;
+  /** Yükleme hatası — boş durumun YERİNE çizilir (Notifications deseniyle aynı sıra). */
+  error?: string | null;
+  /** Hata durumunda "Tekrar Dene" — gelen kutusunu yeniden yükler. */
+  onRetry?: () => void;
   onSelect: (item: InboxItem) => void;
   /** Boş gelen kutusundan çıkış — IP-12 · BULGU-066. */
   onFindFriends: () => void;
-}> = ({ items, loading, onSelect, onFindFriends }) => {
+}> = ({ items, loading, error, onRetry, onSelect, onFindFriends }) => {
   if (loading) return (
     <div className="flex items-center justify-center py-20">
       <Spinner size={28} color="#34D399" />
     </div>
   );
+
+  // Dal sırası: yükleniyor → hata → boş → liste. Eskiden hata üstte banner,
+  // altta "Henüz mesajın yok" + "Arkadaş Bul" birlikte çıkıyordu — yanıltıcı.
+  if (error) return <ErrorState message={error} onRetry={onRetry} />;
 
   if (items.length === 0) return (
     <div className="text-center py-16">
@@ -248,6 +258,12 @@ const ChatView: React.FC<{
   const [sending, setSending] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // İlk yükleme hatası eylem hatalarından (gönder/engelle/şikayet) AYRI tutulur:
+  // eskiden aynı `error` state'ini paylaşıyorlardı ve yükleme çökünce alt bantta
+  // hata + akışta "Henüz mesaj yok" AYNI anda görünüyordu.
+  const [loadError, setLoadError] = useState<string | null>(null);
+  // "Tekrar Dene" ilk yükleme efektini yeniden tetikler.
+  const [loadAttempt, setLoadAttempt] = useState(0);
   const [actionInfo, setActionInfo] = useState<string | null>(null);
   const [blocked, setBlocked] = useState(false); // F1: bu kullanıcıyı engelledim
 
@@ -272,6 +288,7 @@ const ChatView: React.FC<{
   useEffect(() => {
     let active = true;
     setLoading(true);
+    setLoadError(null);
     seenIdsRef.current = new Set();
     (async () => {
       try {
@@ -282,13 +299,13 @@ const ChatView: React.FC<{
         scrollToBottom();
         await markConversationRead(conversation.id);
       } catch (e: any) {
-        if (active) setError(e?.message || 'Mesajlar yüklenemedi.');
+        if (active) setLoadError(mapError(e, 'Mesajlar yüklenemedi.'));
       } finally {
         if (active) setLoading(false);
       }
     })();
     return () => { active = false; };
-  }, [conversation.id, scrollToBottom]);
+  }, [conversation.id, scrollToBottom, loadAttempt]);
 
   useEffect(() => {
     const unsubscribe = subscribeToConversation(conversation.id, (m) => {
@@ -322,7 +339,7 @@ const ChatView: React.FC<{
       setDraft('');
       scrollToBottom(true);
     } catch (e: any) {
-      setError(e?.message || 'Mesaj gönderilemedi.');
+      setError(mapError(e, 'Mesaj gönderilemedi.'));
     } finally {
       setSending(false);
     }
@@ -338,7 +355,7 @@ const ChatView: React.FC<{
       setBlocked(true);
       setActionInfo(`${name} engellendi. Artık mesajlaşamazsın.`);
     } catch (e: any) {
-      setError(e?.message || 'Kullanıcı engellenemedi.');
+      setError(mapError(e, 'Kullanıcı engellenemedi.'));
     }
   }, [conversation.otherId, name, myUid]);
 
@@ -352,7 +369,7 @@ const ChatView: React.FC<{
       await reportUser(myUid, conversation.otherId, 'HARASSMENT');
       setActionInfo('Şikayetin alındı, ekibimiz inceleyecek.');
     } catch (e: any) {
-      setError(e?.message || 'Şikayet gönderilemedi.');
+      setError(mapError(e, 'Şikayet gönderilemedi.'));
     }
   }, [conversation.otherId, myUid]);
 
@@ -417,6 +434,13 @@ const ChatView: React.FC<{
           <div className="flex items-center justify-center py-20">
             <Spinner size={24} color="#34D399" />
           </div>
+        ) : loadError ? (
+          // Yükleme hatası akışın YERİNE geçer — boş durumla asla birlikte çizilmez
+          // (dal sırası Notifications ile aynı: yükleniyor → hata → boş → liste).
+          <ErrorState
+            message={loadError}
+            onRetry={() => setLoadAttempt(n => n + 1)}
+          />
         ) : messages.length === 0 ? (
           <div className="text-center py-16 text-ink-4 text-sm">
             Henüz mesaj yok. İlk mesajı sen yaz.
@@ -574,7 +598,7 @@ const TeamChatView: React.FC<{
         scrollToBottom();
         await markTeamChatRead(team.team_id);
       } catch (e: any) {
-        if (active) setError(e?.message || 'Mesajlar yüklenemedi.');
+        if (active) setError(mapError(e, 'Mesajlar yüklenemedi.'));
       } finally {
         if (active) setLoading(false);
       }
@@ -611,7 +635,7 @@ const TeamChatView: React.FC<{
       setDraft('');
       scrollToBottom(true);
     } catch (e: any) {
-      setError(e?.message || 'Mesaj gönderilemedi.');
+      setError(mapError(e, 'Mesaj gönderilemedi.'));
     } finally {
       setSending(false);
     }
@@ -623,7 +647,7 @@ const TeamChatView: React.FC<{
       await setTeamChatMuted(team.team_id, !muted);
       setMuted(m => !m);
     } catch (e: any) {
-      setError(e?.message || 'Ayar kaydedilemedi.');
+      setError(mapError(e, 'Ayar kaydedilemedi.'));
     }
   }, [team.team_id, muted]);
 
@@ -669,7 +693,7 @@ const TeamChatView: React.FC<{
       setActionInfo(`${modTarget.name} engellendi. Mesajları artık sana görünmeyecek.`);
       setModTarget(null);
     } catch (e: any) {
-      setError(e?.message || 'Kullanıcı engellenemedi.');
+      setError(mapError(e, 'Kullanıcı engellenemedi.'));
     } finally { setModBusy(false); }
   }, [modTarget, myUid]);
 
@@ -681,7 +705,7 @@ const TeamChatView: React.FC<{
       setActionInfo('Şikayetin alındı. Ekibimiz 24 saat içinde inceleyecek.');
       setModTarget(null);
     } catch (e: any) {
-      setError(e?.message || 'Şikayet gönderilemedi.');
+      setError(mapError(e, 'Şikayet gönderilemedi.'));
     } finally { setModBusy(false); }
   }, [modTarget, myUid]);
 
@@ -1007,7 +1031,7 @@ const MessagesView: React.FC<MessagesViewProps> = ({
       setTeamChats(teams);
       return { dms, teams };
     } catch (e: any) {
-      setListError(e?.message || 'Konuşmalar yüklenemedi.');
+      setListError(mapError(e, 'Konuşmalar yüklenemedi.'));
       return { dms: [], teams: [] };
     } finally {
       setLoading(false);
@@ -1084,14 +1108,13 @@ const MessagesView: React.FC<MessagesViewProps> = ({
 
       {/* ── İçerik ── */}
       <div className="flex-1 overflow-y-auto px-5 pt-2 custom-scrollbar">
-        {listError && (
-          <div className="mb-3 px-3.5 py-2 rounded-xl text-xs font-semibold bg-red-500/10 border border-red-500/30 text-red-300">
-            {listError}
-          </div>
-        )}
+        {/* Hata artık listenin üstünde banner değil, InboxList'in kendi hata
+            dalında çiziliyor — banner + boş durum ikilemesi kalktı. */}
         <InboxList
           items={items}
           loading={loading}
+          error={listError}
+          onRetry={loadInbox}
           onFindFriends={onFindFriends}
           onSelect={item => {
             setActive(item.kind === 'DM' ? { kind: 'DM', dm: item.dm } : { kind: 'TEAM', team: item.team });

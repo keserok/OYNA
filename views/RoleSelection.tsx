@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { UserRole, AppView } from '../types';
 import { Shield, Scale, Building2, ArrowRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -74,6 +74,16 @@ const RoleHeroCard: React.FC<{
   const [isEntering, setIsEntering] = useState(false);
   const [progress, setProgress] = useState(0);
   const [isHovered, setIsHovered] = useState(false);
+  // Sayaçlar ref'te: unmount'ta temizlenmezse kaldırılmış bileşende setState
+  // ve geç kalmış bir onComplete (fazladan gezinme) çalışabiliyordu.
+  const ivRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const completeRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Unmount temizliği: bekleyen interval + timeout iptal edilir.
+  useEffect(() => () => {
+    if (ivRef.current) clearInterval(ivRef.current);
+    if (completeRef.current) clearTimeout(completeRef.current);
+  }, []);
 
   const getRoleLabel = (r: UserRole) => {
     if (r === UserRole.PLAYER) return 'OYUNCU KİMLİĞİ';
@@ -87,11 +97,13 @@ const RoleHeroCard: React.FC<{
     if (isEntering) return;
     setIsEntering(true);
     let p = 0;
-    const iv = setInterval(() => {
+    ivRef.current = setInterval(() => {
       p += Math.random() * 22 + 12;
       if (p >= 100) {
-        p = 100; clearInterval(iv); setProgress(100);
-        setTimeout(onComplete, 280);
+        p = 100;
+        if (ivRef.current) clearInterval(ivRef.current);
+        setProgress(100);
+        completeRef.current = setTimeout(onComplete, 280);
       } else { setProgress(p); }
     }, 35);
   };

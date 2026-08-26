@@ -17,6 +17,8 @@ import { auth } from '../supabaseAuth';
 import { supabase } from '../supabaseClient';
 import { useAppStore } from '../store';
 import { FORMATIONS as FORMATIONS_SSOT, resolveFormation } from '../utils/formations';
+// Ham sunucu hatası ekrana sızmaz — tek sözlükten Türkçe mesaj (utils/errorMap).
+import { mapError } from '../utils/errorMap';
 import { useConfirmSheet } from '../components/ui/useConfirmSheet';
 // Küme 3 köprüsü: kanonik takım/kadro okumaları + tek kayıt kapısı
 import {
@@ -656,7 +658,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
             if (sonuc === 'PAYLASILDI') showToast('Taktik görseli paylaşıma hazır.');
             else if (sonuc === 'INDIRILDI') showToast('Taktik görseli indirildi.');
             else if (sonuc === 'DESTEKLENMIYOR') showToast('Görsel bu cihazda kaydedilemedi.', 'error');
-        } catch (e) { showToast((e as Error)?.message || 'Görsel üretilemedi.', 'error'); }
+        } catch (e) { showToast(mapError(e, 'Görsel üretilemedi.'), 'error'); }
     };
     const handleCopyLink = async () => {
         const url = await getSavedShareUrl();
@@ -703,7 +705,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                 }
             }
         } catch (e) {
-            if ((e as Error)?.name !== 'AbortError') showToast((e as Error)?.message || 'Paylaşılamadı.', 'error');
+            if ((e as Error)?.name !== 'AbortError') showToast(mapError(e, 'Paylaşılamadı.'), 'error');
         }
     };
 
@@ -1038,7 +1040,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
             setDbTactics(prev => prev.filter(t => t.id !== entry.id));
             showToast('Taktik silindi.');
         } catch (e) {
-            showToast((e as Error)?.message || 'Taktik silinemedi.', 'error');
+            showToast(mapError(e, 'Taktik silinemedi.'), 'error');
         } finally {
             setDeletingTacticId(null);
         }
@@ -1329,7 +1331,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                 await assignMatchTactic(nextMatch.id, res.tacticId);
                 assignedNote = ` "${nextMatch.opponentName}" maçına atandı.`;
             } catch (e) {
-                showToast((e as Error)?.message || 'Kayıt tamam ama maça atanamadı.', 'error');
+                showToast(mapError(e, 'Kayıt tamam ama maça atanamadı.'), 'error');
             }
         }
         showToast(res.status === 'PENDING_APPROVAL'
@@ -1361,14 +1363,14 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                 return;
             }
             console.error("Error saving tactic:", error);
-            showToast((error as Error)?.message || "Taktik kaydedilirken bir hata oluştu.", 'error');
+            showToast(mapError(error, "Taktik kaydedilirken bir hata oluştu."), 'error');
         }
     };
 
     // Çakışma diyaloğu: "Üzerine yaz" (force) / "Yenile" (sunucudaki sürümü al)
     const overwriteConflict = async () => {
         try { await doSaveTactic(true); }
-        catch (e) { showToast((e as Error)?.message || 'Kaydedilemedi.', 'error'); }
+        catch (e) { showToast(mapError(e, 'Kaydedilemedi.'), 'error'); }
     };
     const reloadConflict = async () => {
         if (!activeTactic.id) { setConflictOpen(false); return; }
@@ -1422,7 +1424,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                 showToast("Öneri reddedildi; yazarın kişisel kütüphanesine kopyalandı.");
             }
         } catch (e) {
-            showToast((e as Error)?.message || 'İşlem tamamlanamadı.', 'error');
+            showToast(mapError(e, 'İşlem tamamlanamadı.'), 'error');
         } finally {
             setDecidingProposal(false);
         }
@@ -1908,7 +1910,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                         {/* Header */}
                         <header className="px-6 pt-safe-baslik pb-4 flex justify-between items-center gap-3 sticky top-0 bg-[#050812]/90 backdrop-blur-xl z-30 border-b border-white/5">
                             <div className="flex items-center gap-3 min-w-0">
-                                <button id="studio-back-button" onClick={handleBack} className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-white hover:bg-white/10 shrink-0">
+                                <button id="studio-back-button" onClick={handleBack} aria-label="Geri" className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-white hover:bg-white/10 shrink-0">
                                     <ChevronLeft size={20} />
                                 </button>
                                 <div className="min-w-0">
@@ -2032,10 +2034,10 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                     <div className="flex items-center gap-1">
                                         {isActive && editingPlanIndex !== index && (
                                             <>
-                                                <button onClick={(e) => { e.stopPropagation(); handleRenamePlan(index); }} className="p-1 cursor-pointer text-gray-300 hover:text-white transition-colors" title="İsmi Değiştir"><PenTool size={12}/></button>
-                                                <button onClick={(e) => { e.stopPropagation(); handleDuplicatePlan(index); }} className="p-1 cursor-pointer text-gray-300 hover:text-white transition-colors" title="Planı Kopyala"><Copy size={12}/></button>
+                                                <button onClick={(e) => { e.stopPropagation(); handleRenamePlan(index); }} aria-label="İsmi değiştir" className="p-1 cursor-pointer text-gray-300 hover:text-white transition-colors" title="İsmi Değiştir"><PenTool size={12}/></button>
+                                                <button onClick={(e) => { e.stopPropagation(); handleDuplicatePlan(index); }} aria-label="Planı kopyala" className="p-1 cursor-pointer text-gray-300 hover:text-white transition-colors" title="Planı Kopyala"><Copy size={12}/></button>
                                                 {plans.length > 1 && (
-                                                    <button onClick={(e) => { e.stopPropagation(); handleDeletePlan(index); }} className="p-1 cursor-pointer text-gray-300 hover:text-red-500 transition-colors" title="Planı Sil"><Trash2 size={12}/></button>
+                                                    <button onClick={(e) => { e.stopPropagation(); handleDeletePlan(index); }} aria-label="Planı sil" className="p-1 cursor-pointer text-gray-300 hover:text-red-500 transition-colors" title="Planı Sil"><Trash2 size={12}/></button>
                                                 )}
                                             </>
                                         )}
@@ -2906,21 +2908,24 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                     
                                     <div className="flex items-center gap-2">
                                         {item.type === 'slot' && (
-                                            <button 
+                                            <button
                                                 onClick={() => handleSetCaptain(item.player!.id)}
+                                                aria-label="Kaptan yap"
                                                 className={`p-2 rounded-lg transition-all ${activeTactic.captainId === item.player?.id ? 'bg-yellow-400/20 text-yellow-400' : 'bg-white/5 text-gray-400 hover:text-white'}`}
                                             >
                                                 <Star size={16} className={activeTactic.captainId === item.player?.id ? 'fill-current' : ''} />
                                             </button>
                                         )}
-                                        <button 
+                                        <button
                                             onClick={() => item.type === 'slot' ? setSelectedSlotForArchetype(item.id) : setInstructionModal({ type: item.type, id: item.id })}
+                                            aria-label={item.type === 'slot' ? 'Rol ata' : 'Görev ver'}
                                             className={`p-2 rounded-lg transition-all ${((item.type === 'slot' && item.archetype && item.archetype !== 'NONE') || (item.type !== 'slot' && item.instruction)) ? 'bg-[#39FF14]/20 text-[#39FF14]' : 'bg-white/5 text-gray-400 hover:text-white'}`}
                                         >
                                             {item.type === 'slot' ? <Brain size={16} /> : <MessageSquare size={16} />}
                                         </button>
-                                        <button 
+                                        <button
                                             onClick={() => item.type === 'slot' ? handleRemovePlayer(item.id) : handleRemoveOpponent(item.id)}
+                                            aria-label="Oyuncuyu çıkar"
                                             className="p-2 bg-red-500/10 text-red-500 rounded-lg hover:bg-red-500/20 transition-all"
                                         >
                                             <Trash2 size={16} />
@@ -2987,7 +2992,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                             <h3 className="text-lg font-extrabold text-white uppercase tracking-widest flex items-center gap-2">
                                 <Brain size={20} className="text-purple-400" /> ROL ATA
                             </h3>
-                            <button onClick={() => setSelectedSlotForArchetype(null)} className="p-2 text-gray-400 hover:text-white"><X size={20} /></button>
+                            <button onClick={() => setSelectedSlotForArchetype(null)} aria-label="Kapat" className="p-2 text-gray-400 hover:text-white"><X size={20} /></button>
                         </div>
                         <div className="grid grid-cols-1 gap-3 max-h-[60vh] overflow-y-auto no-scrollbar pb-4">
                             {Object.entries(ARCHETYPES).map(([key, arch]) => (
@@ -3038,7 +3043,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                         >
                             <div className="flex justify-between items-center mb-6">
                                 <h3 className="text-lg font-extrabold text-white uppercase tracking-widest">Görev Ver</h3>
-                                <button onClick={() => setInstructionModal(null)} className="text-gray-400 hover:text-white">
+                                <button onClick={() => setInstructionModal(null)} aria-label="Kapat" className="text-gray-400 hover:text-white">
                                     <X size={20} />
                                 </button>
                             </div>
@@ -3315,8 +3320,9 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                 `top-safe`: başlık yapışkan; kaydırınca ekranın tepesine yapışıp
                                 yine çentiğin altına giriyordu — artık güvenli alana yapışır. */}
                             <div className="w-full max-w-sm flex items-center justify-between mb-8 sticky top-safe z-10 py-2">
-                                <button 
-                                    onClick={() => setShowExportModal(false)} 
+                                <button
+                                    onClick={() => setShowExportModal(false)}
+                                    aria-label="Geri"
                                     className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white hover:bg-white/10 transition-all active:scale-90"
                                 >
                                     <ChevronLeft size={24} />
@@ -3491,7 +3497,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                                 showToast('Taktik takım sohbetine gönderildi 💬');
                                                 setShowExportModal(false);
                                             } catch (e) {
-                                                showToast((e as Error)?.message || 'Gönderilemedi.', 'error');
+                                                showToast(mapError(e, 'Gönderilemedi.'), 'error');
                                             }
                                         }}
                                         className="w-full py-4 bg-white/8 border border-white/12 text-white font-extrabold rounded-[20px] text-xs tracking-widest uppercase hover:bg-white/12 transition-all flex items-center justify-center gap-2"
@@ -3665,7 +3671,7 @@ const Studio: React.FC<StudioProps> = ({ onBack, onNavigate }) => {
                                 <h3 className="text-lg font-extrabold text-white uppercase tracking-widest flex items-center gap-2">
                                     <Save size={20} className="text-[#39FF14]" /> TAKTİĞİ KAYDET
                                 </h3>
-                                <button onClick={() => setShowSaveModal(false)} className="p-2 text-gray-400 hover:text-white transition-colors"><X size={20} /></button>
+                                <button onClick={() => setShowSaveModal(false)} aria-label="Kapat" className="p-2 text-gray-400 hover:text-white transition-colors"><X size={20} /></button>
                             </div>
                             
                             <div className="space-y-4 mb-8">

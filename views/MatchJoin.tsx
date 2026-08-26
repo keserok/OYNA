@@ -13,7 +13,11 @@ import {
   Megaphone, Flag, Ban
 } from 'lucide-react';
 import { broadcastOpenSlot, blockUserFully, reportUser } from '../services/socialService';
-import { isOnline, OFFLINE_JOIN } from '../shared/submitGuard';
+import {
+  isOnline, OFFLINE_JOIN, withSubmitTimeout, SubmitTimeoutError,
+  RPC_TIMEOUT_MS, TIMEOUT_JOIN,
+} from '../shared/submitGuard';
+import { useBackDismiss } from '../hooks/useBackDismiss';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MatchListing, PositionSlot, UserRole, Player, Team, ProviderType, ProviderSuggestion, ServiceRequest } from '../types';
 import { useAppStore } from '../store';
@@ -258,9 +262,11 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
   // Aksiyon hatası/başarı toast'ı
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
+  // Kurucu kararı (26 Ağu 2026): HATA kendiliğinden kaybolmaz — kullanıcı
+  // X ile kapatana kadar durur (4 sn'de silinen hata okunamıyordu). Başarı
+  // mesajı bilgi niteliğinde, 4 sn'lik kendiliğinden kapanışı korur.
   const showActionError = (msg: string) => {
     setActionError(msg);
-    setTimeout(() => setActionError(null), 4000);
   };
   const showActionSuccess = (msg: string) => {
     setActionSuccess(msg);
@@ -332,6 +338,24 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
 
   const [showMapModal, setShowMapModal] = useState(false);
   const [pitchCoordinates, setPitchCoordinates] = useState<[number, number] | null>(null);
+
+  // ── Donanım geri tuşu kayıtları ──────────────────────────────────────────
+  // Bu ekrandaki 12 elle çizilmiş tam ekran katmanın HİÇBİRİ overlay yığınına
+  // kayıtlı değildi: Android geri tuşu "Maçtan ayrıl?" onayını kapatmak yerine
+  // arkadaki ekranı değiştiriyordu. Sözleşme (hooks/useBackDismiss): onay
+  // diyalogları priority 10, sheet/kart 0; işlem sürerken kapatma korunur.
+  useBackDismiss(!!activePlayerSlotId, () => setActivePlayerSlotId(null), 'oyuncu-karti');
+  useBackDismiss(showLeaveConfirm, () => { if (!isProcessing) setShowLeaveConfirm(false); }, 'mactan-ayril-onay', 10);
+  useBackDismiss(showCancelConfirm, () => { if (!isProcessing) setShowCancelConfirm(false); }, 'mac-iptal-onay', 10);
+  useBackDismiss(!!removeConfirmSlot, () => { if (!isProcessing) setRemoveConfirmSlot(null); }, 'oyuncu-cikar-onay', 10);
+  useBackDismiss(!!fillSlot, () => setFillSlot(null), 'slot-doldur');
+  useBackDismiss(showTacticPicker, () => setShowTacticPicker(false), 'taktik-oner');
+  useBackDismiss(!!providerModalType, () => setProviderModalType(null), 'saglayici-sec');
+  useBackDismiss(!!marketDetailProvider, () => { if (!providerSubmittingId) setMarketDetailProvider(null); }, 'pazar-saglayici-detay');
+  useBackDismiss(!!providerDetail, () => setProviderDetail(null), 'atanmis-saglayici-detay');
+  useBackDismiss(showNoShowConfirm, () => { if (!isProcessing) setShowNoShowConfirm(false); }, 'kaleci-gelmedi-onay', 10);
+  useBackDismiss(showMapModal, () => setShowMapModal(false), 'harita-modal');
+  useBackDismiss(showInfoModal, () => setShowInfoModal(false), 'mac-bilgi');
 
   // ── Store ─────────────────────────────────────────────────────────────────
   const {
@@ -807,11 +831,17 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
     // geri alınır, realtime (subscribeToMatchUpdates) zaten yakınsar.
     const geriAl = optimistikDoldur();
     try {
-      const { error } = await supabase.rpc('player_buy_slots_v2', {
+      // Yanıt penceresi: veri akmayan bağlantıda "ÖDENİYOR…" sonsuza dek
+      // dönmesin. İstek iptal edilmez — aynı slotlar ikinci kez satılamaz
+      // (sunucu slot sahipliğini tek otorite olarak kilitler), bu yüzden
+      // tekrar deneme güvenlidir (TIMEOUT_JOIN metniyle uyumlu).
+      // Promise.resolve: supabase.rpc thenable döndürür, withSubmitTimeout
+      // gerçek Promise (finally) bekler.
+      const { error } = await withSubmitTimeout(Promise.resolve(supabase.rpc('player_buy_slots_v2', {
         p_match_id: match.id,
         p_slot_ids: selectedSlotIds,
         p_use_balance: true,
-      });
+      })), RPC_TIMEOUT_MS);
       if (error) throw error;
 
       // Escrow: eşik (toplam−2) dolduysa maçı LIVE yap + kaporayı capture et (best-effort).
@@ -828,6 +858,11 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
       showActionSuccess('Slotların rezerve edildi — kendini veya arkadaşlarını ekle.');
     } catch (e: any) {
       geriAl?.();
+      if (e instanceof SubmitTimeoutError) {
+        // İyimser dolgu geri alındı; gerçek durum ekran yenilenince yakınsar.
+        showActionError(TIMEOUT_JOIN);
+        return;
+      }
       console.error('Buy slots error:', e);
       const msg = e?.message || '';
       showActionError(msg.includes('Yetersiz') ? 'Ödeme alınamadı. Lütfen tekrar dene.' : 'Slot satın alınamadı. Lütfen tekrar dene.');
@@ -3244,7 +3279,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
       </AnimatePresence>
 
       <AnimatePresence>
-        {actionError && <Toast message={actionError} variant="error" />}
+        {actionError && <Toast message={actionError} variant="error" onClose={() => setActionError(null)} />}
         {actionSuccess && <Toast message={actionSuccess} variant="success" />}
       </AnimatePresence>
 

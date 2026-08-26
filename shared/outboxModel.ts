@@ -19,6 +19,10 @@ export interface OutboxItem {
   createdAt: string; // ISO
   tries: number;
   lastError?: string;
+  /** İşlemi kuyruğa yazan kullanıcı (26 Ağu 2026). Kuyruk anahtarı zaten
+   *  uid'li; bu alan ikinci kemer — başka kullanıcının oturumuyla ASLA
+   *  gönderilmez (personel A'nın nakiti personel B'ye yazılıyordu). */
+  ownerUid?: string;
 }
 
 /** Hata sınıfı: NETWORK = bağlantı yok, kuyruğa al + sonra dene;
