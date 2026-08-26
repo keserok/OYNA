@@ -21,7 +21,7 @@ const letterVariants = {
       type: 'spring' as const,
       stiffness: 400,
       damping: 20,
-      delay: 0.5 + i * 0.08,
+      delay: 0.2 + i * 0.05,
     },
   }),
 };
@@ -56,16 +56,19 @@ export default function SplashScreen({ onStart, ready = true }: SplashScreenProp
   // temizlenmiş olabilir ve süre ortada değişirse ekran zıplardı.
   const [oauthDonusu] = useState(oauthDonusuMu);
 
-  // Normal açılışta ekran KENDİNİ TAMAMLASIN diye 2,6 sn beklenir. Ekrandaki
-  // en geç biten öge alt yükleme çizgisidir (0,8 sn gecikme + 1,4 sn süre =
-  // 2,2 sn); slogan 1,7 sn'de, harfler ~1,25 sn'de oturur. 2,6 sn hepsinin
-  // bitmesine izin verir ve üstüne kısa bir duruş bırakır.
+  // Kurucu kararı (26 Ağu 2026): açılış ~1 sn'de bitsin — jenerik değil eşik.
   //
-  // Bu süre aynı zamanda ARKA PLANA yarar: oturum çözümü, ilk veri isteği ve
-  // tembel yüklenen ekran parçaları bu sırada iniyor. Eskiden 1,2 sn idi;
-  // animasyon bitmeden geçtiği için hem eksik görünüyor hem de sonraki ekran
-  // henüz hazır olmayabiliyordu.
-  const ACILIS_SURESI_MS = oauthDonusu ? 0 : 2600;
+  // Buradaki tarihi ders hâlâ geçerli: süre bir kez 1,2 sn'ye indirilmişti
+  // ama animasyon SIKIŞTIRILMADAN indirildiği için ekran yarıda kesiliyordu.
+  // Kural şu: BU SAYI TEK BAŞINA DEĞİŞTİRİLMEZ. Süre ile koreografi birlikte
+  // oynar. Bugünkü hizalama: harfler ~0,65 sn'de oturur, slogan 0,8 sn'de,
+  // yükleme çizgisi 0,9 sn'de biter; 1,0 sn hepsine yetip kısa bir duruş
+  // bırakır. Bir öğe eklersen önce onun bitiş anını hesapla.
+  //
+  // Arka plan yükü (oturum çözümü, ilk veri, tembel parçalar) endişe değil:
+  // aşağıdaki geçiş `ready`yi bekliyor — oturum 1 sn'den geç çözülürse ekran
+  // kendiliğinden o kadar kalır. Süreyi kısaltmak o güvenceyi değiştirmez.
+  const ACILIS_SURESI_MS = oauthDonusu ? 0 : 1000;
   useEffect(() => {
     if (!ready) return; // oturum durumu belli olmadan otomatik geçme
     const timer = setTimeout(onStart, ACILIS_SURESI_MS);
@@ -150,7 +153,7 @@ export default function SplashScreen({ onStart, ready = true }: SplashScreenProp
           <motion.p
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 1.2, duration: 0.5 }}
+            transition={{ delay: 0.45, duration: 0.35 }}
             className="mt-3 text-[0.625rem] font-bold tracking-[0.4em] text-[#39FF14]/70 uppercase"
           >
             Potansiyel zaferler için
@@ -173,7 +176,7 @@ export default function SplashScreen({ onStart, ready = true }: SplashScreenProp
           <motion.div
             initial={{ width: 0 }}
             animate={{ width: '120px' }}
-            transition={{ delay: 0.8, duration: 1.4, ease: 'easeOut' }}
+            transition={{ delay: 0.35, duration: 0.55, ease: 'easeOut' }}
             className="mt-8 h-[2px] bg-gradient-to-r from-transparent via-[#39FF14] to-transparent rounded-full"
           />
         </motion.div>

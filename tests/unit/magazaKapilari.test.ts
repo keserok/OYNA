@@ -435,15 +435,26 @@ describe('Mağaza kapıları · beyan ile gerçek davranış uyumu', () => {
   });
 
   it('"YAKINDA" yüzeyine giden HİÇBİR kapı açık kalmadı', () => {
-    // 24 Ağu 2026 denetimi: ekran kilitliydi ama ona giden İKİ kapı açıktı —
-    // ana ekrandaki iki kart ve maç lobisindeki "Kaleci & Hakem" bölümü.
-    // Kullanıcı sonuna kadar gezip "Kiralama Çok Yakında" duvarına tosluyordu.
+    // 24 Ağu 2026 denetimi: ekran kilitliydi ama ona giden İKİ kapı açıktı ve
+    // kullanıcı sonuna kadar gezip "Kiralama Çok Yakında" duvarına tosluyordu.
     // Apple 2.1, yayınlanmış uygulamada "yakında" yüzeylerini reddediyor.
-    // Kapıyı kilitlemek yetmez; kapıya GİDEN YOLU kapatmak gerekir.
-    const dash = oku('views/Dashboard.tsx');
-    expect(dash).toContain('{KALECI_HAKEM_KIRALAMA_ACIK && (');
-    expect(dash).toContain("KALECI_HAKEM_KIRALAMA_ACIK } from '../shared/featureFlags'");
+    //
+    // 26 Ağu 2026'da değişmez EVRİLDİ, gevşemedi: kurucu vitrini geri istedi
+    // ve sorunlu olan DUVARIN KENDİSİ silindi — kiralama kapalıyken tuş hiç
+    // çizilmiyor. Kapı artık vaatsiz bir vitrine açılıyor; yasak olan kapı
+    // değil, kapının ardındaki "yakında" vaadi. Bu test o vaadin üç parçasını
+    // birden kilitler: duvar metni yok, kiralama tuşu bayrağa sarılı, lobi
+    // kiralama bölümü işlem bayrağına bağlı.
+    const mp = oku('views/Marketplace.tsx');
+    expect(mp).not.toContain('Kiralama Çok Yakında');
+    expect(mp).toContain('{KIRALAMA_ACIK && (');
 
+    // Ana ekran kartları VİTRİN bayrağına bağlı — işlem bayrağına değil.
+    const dash = oku('views/Dashboard.tsx');
+    expect(dash).toContain('{KALECI_HAKEM_VITRIN_ACIK && (');
+    expect(dash).toContain("KALECI_HAKEM_VITRIN_ACIK } from '../shared/featureFlags'");
+
+    // Lobideki kiralama bölümü İŞLEMDİR, vitrin değil: kapalı kalır.
     const lobi = oku('views/MatchJoin.tsx');
     expect(lobi).toContain('{KALECI_HAKEM_KIRALAMA_ACIK && isManageMode && myCaptainSide && (');
   });

@@ -588,6 +588,10 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onNavigate }) => {
         <div className="px-4 py-3 flex items-center justify-between gap-3">
           {/* IP-14: Maçlarım artık alt menünün orta tuşu — sekme kökünde
               geri oku olmaz. */}
+          {/* Sağdaki yenile tuşunun (w-11) yatay dengesi: bu görünmez eş
+              olmadan "ortalı" başlık ekranın gerçek ortasından sola kayıyordu
+              (kurucu bildirimi, 26 Ağu 2026). Tuşla birebir aynı genişlikte. */}
+          <div className="w-11 shrink-0" aria-hidden="true" />
           <div className="text-center flex-1 min-w-0">
             <h1 className="text-lg font-extrabold text-white italic uppercase tracking-tighter leading-[1.2] truncate">Maçlarım</h1>
             <p className="font-numeric text-[0.625rem] text-ink-4 uppercase tracking-widest mt-1 truncate">

@@ -99,7 +99,7 @@ describe('3 · dönüşte açılış ekranı kendini tanıyor', () => {
   it('dönüşte jenerik beklemesi sıfırlanıyor ve metin değişiyor', () => {
     const s = oku('views/SplashScreen.tsx');
     expect(s).toContain('const [oauthDonusu] = useState(oauthDonusuMu)');
-    expect(s).toContain('const ACILIS_SURESI_MS = oauthDonusu ? 0 : 2600');
+    expect(s).toContain('const ACILIS_SURESI_MS = oauthDonusu ? 0 : 1000');
     expect(s).toContain('Giriş tamamlanıyor…');
     // Ölçüm İLK render'da bir kez alınmalı: adres sonradan temizlenince
     // süre ortada değişir ve ekran zıplardı.

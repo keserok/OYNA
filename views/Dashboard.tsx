@@ -33,7 +33,7 @@
 
 import React from 'react';
 import OrnekIcerikSeridi from '../components/common/OrnekIcerikSeridi';
-import { KALECI_HAKEM_KIRALAMA_ACIK } from '../shared/featureFlags';
+import { KALECI_HAKEM_VITRIN_ACIK } from '../shared/featureFlags';
 import { Bell, ChevronRight, CircleAlert, CloudOff, Info, MapPin } from 'lucide-react';
 import { AppView } from '../types';
 import { useAppStore } from '../store';
@@ -1004,13 +1004,12 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
             </div>
           </Tap>
 
-          {/* KALECİ + HAKEM — kiralama teminatı (karttan bloke) v1'e
-              yetişmediği için giriş kartları GİZLİ (kurucu kararı, 24 Ağu 2026).
-              Ekran duruyor; yalnız kapısı kapalı. Tek kaynak:
-              shared/featureFlags.ts · KALECI_HAKEM_KIRALAMA_ACIK.
-              Bayrakla karartma değil — kart hiç çizilmiyor, çünkü sonuna kadar
-              gezilip tamamlanamayan bir akış Apple 2.1 altında ret sebebi. */}
-          {KALECI_HAKEM_KIRALAMA_ACIK && (
+          {/* KALECİ + HAKEM — kartlar VİTRİN bayrağına bağlı (kurucu, 26 Ağu):
+              listeleme ve profil açık, kiralama tuşu ekranda HİÇ yok.
+              İşlemin kendisi hâlâ KALECI_HAKEM_KIRALAMA_ACIK ile kapalı ve
+              teminat akışı uçtan uca çalışana dek öyle kalır — gerekçeler
+              shared/featureFlags.ts içinde. */}
+          {KALECI_HAKEM_VITRIN_ACIK && (
           <div style={{ display: 'flex', gap: 'var(--oy-space-4)' }}>
             <Tap
               onClick={() => onNavigate('MARKETPLACE_GK')}

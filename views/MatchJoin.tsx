@@ -135,6 +135,19 @@ const getInitials = (name?: string): string => {
   return raw.toLocaleUpperCase('tr-TR');
 };
 
+/**
+ * Diziliş balonundaki İLK İSİM her zaman TAM görünür (kurucu, 26 Ağu 2026).
+ * Eski hâli `max-w-[64px] truncate` idi ve "GÖRKEM" bile "GÖRK…" oluyordu.
+ * Kesme tamamen kalktı; taşma yerine uzun adda yazı BİR kademe küçülür ki
+ * 7v7 gibi sık dizilişlerde komşu balonlar üst üste binmesin: 390px ekranda
+ * sıra başına ~97px düşer, 10px puntoda 14 harfli ad ~82px'te kalır.
+ * İki kademeden fazlası yok — IP-08 punto tabanı 0.625rem (10px), altına
+ * inilmez (tests/unit/typographyGuard.test.ts bunu kilitler; ilk sürüm
+ * 9px'lik üçüncü kademe denedi ve bekçiye takıldı).
+ */
+const adBalonYazisi = (ad: string): string =>
+  ad.length <= 8 ? 'text-[0.6875rem]' : 'text-[0.625rem]';
+
 // "Gerçek foto" mu? Üreteç adresleri (ui-avatars, pravatar, yerel baş harf
 // SVG'si) gerçek foto sayılmaz → sahada yerel baş harf gösterilir. Liste tek
 // kaynaktan: utils/avatarHelper.isDefaultAvatar (kurucu kararı, 20 Ağu 2026).
@@ -2429,8 +2442,8 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                         <div className="absolute -top-1 -right-1 p-0.5 rounded-md bg-[#FF9F43] border border-black z-20 pointer-events-none">
                           <Hand size={9} className="text-on-primary" />
                         </div>
-                        <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-1.5 bg-black/90 backdrop-blur-sm px-2 py-0.5 rounded-full border border-[#FF9F43]/40 shadow-md max-w-[64px] z-20 pointer-events-none">
-                          <span className="text-[0.6875rem] font-extrabold text-[#FF9F43] whitespace-nowrap uppercase truncate block">
+                        <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-1.5 bg-black/90 backdrop-blur-sm px-2 py-0.5 rounded-full border border-[#FF9F43]/40 shadow-md z-20 pointer-events-none">
+                          <span className={`${adBalonYazisi((viewGoalkeeper.name || 'Kaleci').split(' ')[0])} font-extrabold text-[#FF9F43] whitespace-nowrap uppercase block`}>
                             {(viewGoalkeeper.name || 'Kaleci').split(' ')[0]}
                           </span>
                         </div>
@@ -2477,8 +2490,8 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                             <span className="text-[0.6875rem] font-extrabold text-[#0A0E14] leading-none">₺</span>
                           </div>
                         )}
-                        <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-1.5 bg-black/90 backdrop-blur-sm px-2 py-0.5 rounded-full border border-white/10 shadow-md max-w-[64px] z-20 pointer-events-none">
-                          <span className="text-[0.6875rem] font-extrabold text-white whitespace-nowrap uppercase truncate block">
+                        <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-1.5 bg-black/90 backdrop-blur-sm px-2 py-0.5 rounded-full border border-white/10 shadow-md z-20 pointer-events-none">
+                          <span className={`${adBalonYazisi(isMyOwnSlot ? 'SEN' : (player.name || 'Oyuncu').split(' ')[0])} font-extrabold text-white whitespace-nowrap uppercase block`}>
                             {isMyOwnSlot ? 'SEN' : (player.name || 'Oyuncu').split(' ')[0]}
                           </span>
                         </div>
@@ -2595,7 +2608,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                         {idx + 1}
                       </div>
                     </div>
-                    <span className="text-[0.6875rem] font-bold text-white/70 truncate max-w-[65px]">{player.name.split(' ')[0]}</span>
+                    <span className={`${adBalonYazisi(player.name.split(' ')[0])} font-bold text-white/70 whitespace-nowrap`}>{player.name.split(' ')[0]}</span>
                   </div>
                 ))}
               </div>
@@ -2835,18 +2848,10 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
             visibleGks.push({ gk: assignedGoalkeeper, side: 'home', teamName: match.homeTeamName || homeTeam?.name || 'Ev Sahibi' });
           if (assignedAwayGoalkeeper && canSeeAwayGk)
             visibleGks.push({ gk: assignedAwayGoalkeeper, side: 'away', teamName: match.awayTeamName || awayTeam?.name || 'Deplasman' });
-          // F3c: sağlayıcının sunucuya bildirdiği canlı durum (yolda/tesiste) rozeti
-          const liveBadge = (providerId: string) => {
-            const r = serviceRequests.find(x => x.providerId === providerId
-              && (x.status === 'ACCEPTED' || x.status === 'CAPTURED'));
-            if (!r?.liveStatus || r.liveStatus === 'PENDING' || r.liveStatus === 'FINISHED') return null;
-            const arrived = r.liveStatus === 'ARRIVED';
-            return (
-              <span className={`shrink-0 px-1.5 py-0.5 rounded text-[0.625rem] font-extrabold uppercase tracking-wider border ${arrived ? 'bg-green-500/15 text-green-400 border-green-500/30' : 'bg-blue-500/15 text-blue-400 border-blue-500/30'}`}>
-                {arrived ? 'Tesiste' : 'Yolda'}
-              </span>
-            );
-          };
+          // "Yolda/Tesiste" rozeti kurucu kararıyla kaldırıldı (26 Ağu 2026):
+          // isim satırı sadeleşti, canlı durum sağlayıcı DETAY sayfasında
+          // yaşamaya devam ediyor. Rozet geri istenirse git geçmişinde
+          // `liveBadge` olarak duruyor.
           return (
           <div className="space-y-3 mt-6">
             <p className="text-[0.625rem] font-extrabold text-ink-4 uppercase tracking-[0.2em] ml-1">Kurallar ve Görevliler</p>
@@ -2872,8 +2877,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
               <React.Fragment key={side}>
               <button
                 onClick={() => setProviderDetail({ p: gk, isRef: false })}
-                className="w-full p-4 rounded-2xl bg-[#161B22]/80 border border-[#FF9F43]/30 flex items-center gap-3 text-left relative overflow-hidden active:scale-[0.99] transition-transform">
-                <div className="absolute top-0 right-0 w-16 h-16 pointer-events-none" style={{ background: 'linear-gradient(to bottom left, rgba(255,159,67,0.14), transparent)' }} />
+                className="w-full p-4 rounded-2xl bg-[#161B22] border border-white/10 flex items-center gap-3 text-left relative overflow-hidden active:scale-[0.99] transition-transform">
                 <div className="relative shrink-0">
                   {isRealPhoto(gk.avatar) ? (
                     <img src={gk.avatar!} alt={gk.name} className="w-12 h-12 rounded-2xl object-cover border border-[#FF9F43]/50" />
@@ -2889,18 +2893,16 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <h4 className="text-sm font-extrabold text-white uppercase tracking-tight truncate">{gk.name}</h4>
-                    {gk.isElite && <Award size={12} className="text-[#FACC15] shrink-0" />}
-                    {liveBadge(gk.id)}
+                    {gk.rating != null && (
+                      <span className="flex items-center gap-1 text-sm font-extrabold text-yellow-400 shrink-0"><Star size={14} fill="currentColor" />{gk.rating.toFixed(1)}</span>
+                    )}
                   </div>
                   <p className="text-[0.625rem] font-extrabold uppercase tracking-widest mt-0.5 text-[#FF9F43]">Kiralık Kaleci · {teamName}</p>
-                  <div className="flex items-center gap-3 mt-1.5">
-                    {gk.rating != null && (
-                      <span className="flex items-center gap-1 text-[0.6875rem] font-extrabold text-yellow-400"><Star size={10} fill="currentColor" />{gk.rating.toFixed(1)}</span>
-                    )}
-                    {gk.fee != null && (
+                  {gk.fee != null && (
+                    <div className="flex items-center gap-3 mt-1.5">
                       <span className="text-[0.6875rem] font-extrabold text-white/70">{money(gk.fee)}</span>
-                    )}
-                  </div>
+                    </div>
+                  )}
                 </div>
                 <div className="flex items-center gap-1 text-[0.625rem] font-extrabold uppercase tracking-widest text-ink-4 shrink-0">
                   Detay <ChevronRight size={13} />
@@ -2921,8 +2923,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
             {assignedReferee && (
               <button
                 onClick={() => setProviderDetail({ p: assignedReferee, isRef: true })}
-                className="w-full p-4 rounded-2xl bg-[#161B22]/80 border border-[#A78BFA]/30 flex items-center gap-3 text-left relative overflow-hidden active:scale-[0.99] transition-transform">
-                <div className="absolute top-0 right-0 w-16 h-16 pointer-events-none" style={{ background: 'linear-gradient(to bottom left, rgba(167,139,250,0.14), transparent)' }} />
+                className="w-full p-4 rounded-2xl bg-[#161B22] border border-white/10 flex items-center gap-3 text-left relative overflow-hidden active:scale-[0.99] transition-transform">
                 <div className="relative shrink-0">
                   {isRealPhoto(assignedReferee.avatar) ? (
                     <img src={assignedReferee.avatar!} alt={assignedReferee.name} className="w-12 h-12 rounded-2xl object-cover border border-[#A78BFA]/50" />
@@ -2938,8 +2939,9 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <h4 className="text-sm font-extrabold text-white uppercase tracking-tight truncate">{assignedReferee.name}</h4>
-                    {assignedReferee.isElite && <Award size={12} className="text-[#FACC15] shrink-0" />}
-                    {liveBadge(assignedReferee.id)}
+                    {assignedReferee.rating != null && (
+                      <span className="flex items-center gap-1 text-sm font-extrabold text-yellow-400 shrink-0"><Star size={14} fill="currentColor" />{assignedReferee.rating.toFixed(1)}</span>
+                    )}
                   </div>
                   <p className="text-[0.625rem] font-extrabold uppercase tracking-widest mt-0.5 text-[#A78BFA]">Atanan Hakem</p>
                   {/* B11 — ham "FIFA Kokart" yerine "BEYAN: FIFA KOKARTI" (ortak
@@ -2947,9 +2949,6 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
                       `truncate` taşıyor: uzayan metin "BEYAN: FIFA K…" diye
                       kesilirdi. `flex-wrap` ile kesilmek yerine alt satıra iniyor. */}
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5">
-                    {assignedReferee.rating != null && (
-                      <span className="flex items-center gap-1 text-[0.6875rem] font-extrabold text-yellow-400"><Star size={10} fill="currentColor" />{assignedReferee.rating.toFixed(1)}</span>
-                    )}
                     {assignedReferee.fee != null && (
                       <span className="text-[0.6875rem] font-extrabold text-white/70">{money(assignedReferee.fee)}</span>
                     )}
@@ -2971,7 +2970,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
 
       {/* ── DİNAMİK NEON AKSİYON BARI ─────────────────────────────────── */}
       <div className="fixed bottom-0 left-0 w-full z-30 pointer-events-none">
-        <div className="pointer-events-auto bg-gradient-to-t from-[#000] via-[#000]/96 to-transparent pt-14 pb-safe pb-4 px-5 border-t border-white/5">
+        <div className="pointer-events-auto bg-gradient-to-t from-[#000] via-[#000]/96 to-transparent pt-14 pb-safe px-5">
           <div className="max-w-md mx-auto w-full">
 
             {(() => {

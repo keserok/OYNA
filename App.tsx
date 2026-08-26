@@ -134,6 +134,30 @@ const App: React.FC = () => {
   // son konumlar eleman başına tutulur.
   const [navHidden, setNavHidden] = React.useState(false);
   const navScrollMemo = React.useRef(new WeakMap<Element, number>());
+  // Boş gün tuzağı (kurucu bildirimi, 26 Ağu 2026): kullanıcı dolu bir günde
+  // aşağı kaydırıp barı gizliyor, sonra MAÇI OLMAYAN bir güne geçiyor. Boş
+  // durum ekranı kaydırılamadığı için scroll olayı hiç doğmuyor ve bar
+  // sonsuza dek gizli kalıyor — başka sekmeye geçilemiyor. Çözüm scroll'a
+  // değil DOKUNUŞA bakar: bar gizliyken, kaydırılamayan bir yüzeyde dikeyde
+  // belirgin bir parmak hareketi barı geri getirir. Kaydırılabilir yüzeyler
+  // bilerek dışarıda — orada karar scroll dinleyicisinin, ikisi çelişmesin.
+  const navTouchBasi = React.useRef<number | null>(null);
+  const handleNavTouchStart = React.useCallback((e: React.TouchEvent<HTMLElement>) => {
+    navTouchBasi.current = e.touches[0]?.clientY ?? null;
+  }, []);
+  const handleNavTouchMove = React.useCallback((e: React.TouchEvent<HTMLElement>) => {
+    if (!navHidden || navTouchBasi.current == null) return;
+    const y = e.touches[0]?.clientY;
+    if (y == null || Math.abs(y - navTouchBasi.current) < 24) return;
+    // Dokunulan noktadan yukarı çık: kaydırılabilir bir ata var mı?
+    let el = e.target as HTMLElement | null;
+    let kaydirilabilir = false;
+    while (el && el !== e.currentTarget) {
+      if (el.scrollHeight - el.clientHeight >= 60) { kaydirilabilir = true; break; }
+      el = el.parentElement;
+    }
+    if (!kaydirilabilir) { setNavHidden(false); navTouchBasi.current = null; }
+  }, [navHidden]);
   const handleNavScrollCapture = React.useCallback((e: React.UIEvent<HTMLElement>) => {
     const t = e.target as Element | null;
     if (!(t instanceof HTMLElement)) return;
@@ -1094,6 +1118,8 @@ const App: React.FC = () => {
           key={view}
           {...PAGE_TRANSITION}
           onScrollCapture={showBottomNav ? handleNavScrollCapture : undefined}
+          onTouchStartCapture={showBottomNav ? handleNavTouchStart : undefined}
+          onTouchMoveCapture={showBottomNav ? handleNavTouchMove : undefined}
           // Görünüm kaydırıcısının işareti. İki yerden okunur:
           //  • index.css — ekranların "tam ekran" ölçüsünü VİEWPORT yerine bu
           //    kabın iç yüksekliğine bağlayan tek ortak kural.

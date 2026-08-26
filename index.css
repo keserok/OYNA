@@ -448,7 +448,14 @@
 /* Yardımcı sınıflar — BottomNav ve Header'da kullanılır */
 .safe-top    { padding-top:    var(--safe-top); }
 .safe-bottom { padding-bottom: var(--safe-bottom); }
-.pb-safe     { padding-bottom: calc(var(--safe-bottom) + 1rem); }
+/* Kurucu kararı (26 Ağu 2026): alt barların altındaki boşluk daraltıldı.
+   Eski değer güvenli alan + 1rem'di; çentikli telefonda 50px'lik "anlamsız
+   boşluk" olarak görünüyordu. Güvenli alanın kendisi (ana ekran çubuğu)
+   KISILAMAZ — buton iOS çubuğunun altında kalır — ama üstüne binen 1rem
+   yastık 0.25rem'e indi. Çentiksiz cihazda taban 0.75rem: parmak payı
+   korunur, bar ekranın dibine yapışmaz. 20 ekranın alt barı bu tek sınıftan
+   beslenir; simetri istenirse BURADAN oynanır, ekran ekran değil. */
+.pb-safe     { padding-bottom: max(0.75rem, calc(var(--safe-bottom) + 0.25rem)); }
 /* Alt menü çubuğu (components/BottomNav.tsx) ekranın altıyla BİRLEŞİK olduğu
    için güvenli alan payını çubuğun KENDİSİ taşır. `pb-safe`nin 1rem'i burada
    fazla gelirdi: çubuk zaten kendi `pt-2`siyle nefes alıyor ve altında boşluk

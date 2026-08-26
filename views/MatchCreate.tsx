@@ -328,13 +328,13 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
           const seedFac = facs.find(f => f.id === seed.pitchId);
           const seedCourt = seedFac?.courts.find(c => c.id === seed.courtId);
           if (seedCourt) setFormat(`${seedCourt.minCapacity}v${seedCourt.minCapacity}`);
-        } else if (facs.length > 0) {
-          const first = facs[0];
-          setSelFacId(first.id);
-          const c0 = first.courts[0];
-          setSelCourtId(c0.id);
-          setFormat(`${c0.minCapacity}v${c0.minCapacity}`);
         }
+        // Kurucu kararı (26 Ağu 2026): ekran SEÇİMSİZ açılır. Eskiden ilk
+        // tesis + ilk kort kendiliğinden seçili geliyordu ve üstteki özet
+        // "Ruzgar Arena · 1. Saha · 15:00" diye dolu açılıyordu — kullanıcı
+        // hiçbir şey seçmeden ekran onun adına karar vermiş görünüyordu.
+        // Özet artık kullanıcı SEÇTİKÇE dolar; tek istisna rezervasyondan
+        // çevirme (yukarıdaki seed yolu), orada saha+saat bilinçli kilitli.
       } catch (e) {
         console.error('Maç Kur verisi yüklenemedi:', e);
         showToast('Sahalar yüklenemedi. Bağlantını kontrol et.', 'error');
@@ -404,11 +404,16 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
 
   useEffect(() => {
     if (seeded || !dayQuote) return;
-    // Çakışma banner'ı açıkken otomatik seçim YAPILMAZ: kullanıcı "X'e geç"
-    // önerisini görür; sessizce günün ilk saatine kaydırılmaz.
+    // Çakışma banner'ı açıkken dokunulmaz: kullanıcı "X'e geç" önerisini görür.
     if (conflict) return;
-    if (!selTime || !visibleHours.some(h => h.time === selTime && h.tariffOk && !hourBlocked(h.time, h.endTime))) {
-      setSelTime(firstFree() ?? null);
+    // Kurucu kararı (26 Ağu 2026): saat KENDİLİĞİNDEN SEÇİLMEZ. Eskiden gün
+    // fiyatı gelir gelmez ilk boş saat atanıyordu ve özet kullanıcı hiç
+    // dokunmadan "· 15:00" ile doluyordu. Bu etki artık yalnız TEMİZLİK
+    // yapar: kullanıcının seçtiği saat (gün değişince, biri kapınca ya da
+    // tarife dışı kalınca) geçersizleşirse boşaltılır — sessizce başka bir
+    // saate KAYDIRILMAZ, özet boşalır ve seçim kullanıcıya döner.
+    if (selTime && !visibleHours.some(h => h.time === selTime && h.tariffOk && !hourBlocked(h.time, h.endTime))) {
+      setSelTime(null);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dayQuote, selDay, selCourtId, busyMaps, localBusy, conflict]);
@@ -426,9 +431,13 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
   const pickFacility = (f: CreateFacility) => {
     if (f.id === selFacId) return;
     setSelFacId(f.id);
-    const c0 = f.courts[0];
-    setSelCourtId(c0?.id ?? null);
-    if (c0) setFormat(`${c0.minCapacity}v${c0.minCapacity}`);
+    // Kort seçimini kullanıcı yapar; tek kortlu tesiste seçilecek başka şey
+    // olmadığı için o tek kort doğrudan alınır — bu ön-seçim değil, tek
+    // seçeneğin kendisidir.
+    const tekKort = f.courts.length === 1 ? f.courts[0] : null;
+    setSelCourtId(tekKort?.id ?? null);
+    if (tekKort) setFormat(`${tekKort.minCapacity}v${tekKort.minCapacity}`);
+    setSelTime(null);
     setConflict(null);
   };
   const pickCourt = (c: CreateCourt) => {
@@ -856,8 +865,10 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-baseline gap-2">
-                    <span className="text-[1.4375rem] font-extrabold italic tracking-tight">{format}</span>
-                    <span className="text-[0.6875rem] font-extrabold text-[#FACC15]">{per * 2} oyuncu</span>
+                    <span className="text-[1.4375rem] font-extrabold italic tracking-tight">{court || seeded ? format : '—'}</span>
+                    {(court || seeded) && (
+                      <span className="text-[0.6875rem] font-extrabold text-[#FACC15]">{per * 2} oyuncu</span>
+                    )}
                   </div>
                   <p className="mt-1 text-[0.8125rem] font-extrabold truncate">{venueTxt}</p>
                   <p className="mt-0.5 text-[0.75rem] font-semibold text-ink-4">{whenTxt}</p>
@@ -1036,7 +1047,9 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
 
                 {/* Saat şeridi — dolu saatler görünür ama seçilemez */}
                 <div className="flex gap-2 overflow-x-auto -mx-4 px-4 pt-2 pb-1" style={{ scrollbarWidth: 'none' }}>
-                  {!dayQuote ? (
+                  {!selCourtId ? (
+                    <p className="text-xs font-semibold text-ink-4 py-3">Saatleri görmek için önce saha seç.</p>
+                  ) : !dayQuote ? (
                     [0, 1, 2, 3, 4].map(i => <div key={i} className="shrink-0 min-w-[70px] h-[46px] rounded-[14px] bg-white/[0.04] animate-pulse" />)
                   ) : visibleHours.length === 0 ? (
                     <p className="text-xs font-semibold text-ink-4 py-3">Bu gün için müsait saat yok.</p>
