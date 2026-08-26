@@ -15,6 +15,8 @@ import SegmentedTabs from '../../components/ui/SegmentedTabs';
 import BottomSheet from '../../components/ui/BottomSheet';
 import EmptyState from '../../components/ui/EmptyState';
 import SkeletonList from '../../components/ui/SkeletonList';
+import { ErrorState } from '../../components/common/StatusState';
+import { mapError } from '../../utils/errorMap';
 import Avatar from '../../components/ui/Avatar';
 import {
   MyTeamRow, TeamSquadRow, getMyTeams, getTeamSquad, formatLabel,
@@ -113,7 +115,7 @@ const ScoreSheet: React.FC<{
       onToast(res.finalized ? 'Skor kesinleşti 🎉' : `Öneri gönderildi (${res.approvals}/${res.needed} onay)`);
       onDone(); onClose();
     } catch (e) {
-      onToast((e as Error)?.message || 'Skor önerilemedi.');
+      onToast(mapError(e, 'Skor önerilemedi.'));
     } finally { setBusy(false); }
   };
 
@@ -125,7 +127,7 @@ const ScoreSheet: React.FC<{
       onToast(res.finalized ? 'Skor kesinleşti 🎉' : `Onayın alındı (${res.approvals}/${res.needed})`);
       onDone(); onClose();
     } catch (e) {
-      onToast((e as Error)?.message || 'Onaylanamadı.');
+      onToast(mapError(e, 'Onaylanamadı.'));
     } finally { setBusy(false); }
   };
 
@@ -352,6 +354,9 @@ const TeamDetailView: React.FC<TeamDetailViewProps> = ({ onBack, onNavigate }) =
   const [squadLoading, setSquadLoading] = useState(true);
   const [nextMatch, setNextMatch] = useState<TeamMatchRow | null>(null);
   const [history, setHistory] = useState<TeamMatchRow[] | null>(null);
+  // Geçmiş yüklenemedi mi? null = sorun yok. Dolu ise Türkçe mesaj taşır;
+  // eldeki liste SİLİNMEZ (history null semantiği bozulmaz).
+  const [historyError, setHistoryError] = useState<string | null>(null);
   const [tactics, setTactics] = useState<TacticShowcaseItem[] | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
@@ -395,9 +400,11 @@ const TeamDetailView: React.FC<TeamDetailViewProps> = ({ onBack, onNavigate }) =
         fetchTeamMatchHistory(teamId, 20),
       ]);
       setNextMatch(next); setHistory(hist);
+      setHistoryError(null);
     } catch (e) {
       console.error('[TeamDetail] maçlar yüklenemedi', e);
-      setHistory([]);
+      // Eldeki geçmişi SİLME — boşaltmak hatayı "maç yok" gibi gösteriyordu.
+      setHistoryError(mapError(e, 'Maç geçmişi yüklenemedi.'));
     }
   }, [teamId]);
 
@@ -458,7 +465,7 @@ const TeamDetailView: React.FC<TeamDetailViewProps> = ({ onBack, onNavigate }) =
       await setActiveTactic(t.id);
       setTactics(prev => (prev ?? []).map(x => ({ ...x, is_active: x.id === t.id })));
       showToast(`"${t.name || 'Taktik'}" aktif taktik oldu`);
-    } catch (e) { showToast((e as Error)?.message || 'Aktif taktik ayarlanamadı.'); }
+    } catch (e) { showToast(mapError(e, 'Aktif taktik ayarlanamadı.')); }
     finally { setTacticBusy(null); }
   };
 
@@ -468,7 +475,7 @@ const TeamDetailView: React.FC<TeamDetailViewProps> = ({ onBack, onNavigate }) =
       setTactics(prev => (prev ?? []).map(x => x.id === t.id
         ? { ...x, i_favorited: nowFav, fav_count: x.fav_count + (nowFav ? 1 : -1) }
         : x));
-    } catch (e) { showToast((e as Error)?.message || 'Favori güncellenemedi.'); }
+    } catch (e) { showToast(mapError(e, 'Favori güncellenemedi.')); }
   };
 
   // S36: hızlı yüzde oyu (Zayıf %25 / İyi %60 / Efsane %90) — optimistik ortalama.
@@ -484,7 +491,7 @@ const TeamDetailView: React.FC<TeamDetailViewProps> = ({ onBack, onNavigate }) =
         const newSum = hadVote ? (sumBefore - (prevMine as number) + percent) : (sumBefore + percent);
         return { ...x, my_vote: percent, vote_count: newCount, avg_vote: newCount ? newSum / newCount : percent };
       }));
-    } catch (e) { showToast((e as Error)?.message || 'Oy verilemedi.'); }
+    } catch (e) { showToast(mapError(e, 'Oy verilemedi.')); }
   };
 
   // S35: kaptan/yönetici satır-içi onay/ret (öneri akışı).
@@ -494,7 +501,7 @@ const TeamDetailView: React.FC<TeamDetailViewProps> = ({ onBack, onNavigate }) =
       await approveTacticRpc(t.id);
       setTactics(prev => (prev ?? []).map(x => x.id === t.id ? { ...x, status: 'APPROVED' } : x));
       showToast(`"${t.name || 'Taktik'}" onaylandı`);
-    } catch (e) { showToast((e as Error)?.message || 'Onaylanamadı.'); }
+    } catch (e) { showToast(mapError(e, 'Onaylanamadı.')); }
     finally { setTacticBusy(null); }
   };
   const rejectT = async (t: TacticShowcaseItem) => {
@@ -503,7 +510,7 @@ const TeamDetailView: React.FC<TeamDetailViewProps> = ({ onBack, onNavigate }) =
       await rejectTacticRpc(t.id);
       setTactics(prev => (prev ?? []).filter(x => x.id !== t.id));
       showToast('Taktik reddedildi');
-    } catch (e) { showToast((e as Error)?.message || 'Reddedilemedi.'); }
+    } catch (e) { showToast(mapError(e, 'Reddedilemedi.')); }
     finally { setTacticBusy(null); }
   };
 
@@ -870,7 +877,16 @@ const TeamDetailView: React.FC<TeamDetailViewProps> = ({ onBack, onNavigate }) =
               {/* ═══ MAÇLAR — zaman akışı + gömülü skor onayı (Spec §3.8) ═══ */}
               {tab === 'MACLAR' && (
                 history === null ? (
-                  <SkeletonList rows={4} />
+                  // Hiç veri gelmedi: hata varsa hatayı söyle, yoksa yükleniyor.
+                  historyError ? (
+                    <ErrorState
+                      title="Maçlar yüklenemedi"
+                      message={historyError}
+                      onRetry={() => void loadMatches()}
+                    />
+                  ) : (
+                    <SkeletonList rows={4} />
+                  )
                 ) : (
                   <div className="space-y-4">
                     {nextMatch && (
@@ -929,14 +945,35 @@ const TeamDetailView: React.FC<TeamDetailViewProps> = ({ onBack, onNavigate }) =
                     )}
 
                     {history.length === 0 ? (
-                      <EmptyState
-                        icon={Swords}
-                        title="Henüz oynanmış maç yok"
-                        description="İlk maçını kur; sonuçlar ve form buraya işlenir."
-                        actions={[{ label: 'Maç Kur', onClick: () => onNavigate('MATCH_CREATE'), primary: true }]}
-                      />
+                      historyError ? (
+                        // Liste boş VE hata var: "maç yok" demek yanıltır — hatayı göster.
+                        <ErrorState
+                          title="Maçlar yüklenemedi"
+                          message={historyError}
+                          onRetry={() => void loadMatches()}
+                        />
+                      ) : (
+                        <EmptyState
+                          icon={Swords}
+                          title="Henüz oynanmış maç yok"
+                          description="İlk maçını kur; sonuçlar ve form buraya işlenir."
+                          actions={[{ label: 'Maç Kur', onClick: () => onNavigate('MATCH_CREATE'), primary: true }]}
+                        />
+                      )
                     ) : (
                       <div>
+                        {/* Eldeki liste duruyor ama tazeleme başarısız: küçük şeritle uyar. */}
+                        {historyError && (
+                          <div role="alert" className="flex items-center gap-2 rounded-xl bg-red-500/10 border border-red-500/20 px-3 py-2 mb-2">
+                            <span className="flex-1 text-[0.6875rem] font-bold text-red-200">Geçmiş güncellenemedi</span>
+                            <button
+                              onClick={() => void loadMatches()}
+                              className="text-[0.6875rem] font-extrabold text-red-300 underline active:opacity-70 shrink-0"
+                            >
+                              Yeniden dene
+                            </button>
+                          </div>
+                        )}
                         <h3 className="text-[0.625rem] font-extrabold uppercase tracking-widest text-ink-4 mb-2">
                           Geçmiş
                         </h3>
@@ -1071,7 +1108,7 @@ const TeamDetailView: React.FC<TeamDetailViewProps> = ({ onBack, onNavigate }) =
                                   setAssignOpen(false);
                                   showToast('Maç planı atandı — takım bilgilendirildi 📋');
                                 } catch (e) {
-                                  showToast((e as Error)?.message || 'Taktik atanamadı.');
+                                  showToast(mapError(e, 'Taktik atanamadı.'));
                                 } finally { setAssignBusy(null); }
                               }}
                               className={`w-full flex items-center gap-3 rounded-2xl border p-3 text-left active:scale-[0.99] disabled:opacity-60 ${

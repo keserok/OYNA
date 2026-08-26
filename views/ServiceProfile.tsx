@@ -26,6 +26,8 @@ import 'leaflet/dist/leaflet.css';
 import { MapContainer, TileLayer, Circle, Marker, useMapEvents } from 'react-leaflet';
 import { OYNA_TILE_URL, oynaTileProps, oynaMapProps, OYNA_MAP_CSS } from '../components/map/mapBase';
 import { formatTRYShort } from '../utils/formatTRY';
+// Ham sunucu hatası ekrana sızmaz — tek sözlükten Türkçe mesaj (utils/errorMap).
+import { mapError } from '../utils/errorMap';
 
 // Fix leaflet default icon path issues
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -180,7 +182,7 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
       onBack();
     } catch (err: any) {
       console.error('Profil kaydetme hatası:', err);
-      setSaveError(err?.message || 'Profil kaydedilemedi. Lütfen tekrar dene.');
+      setSaveError(mapError(err, 'Profil kaydedilemedi. Lütfen tekrar dene.'));
     } finally {
       setSaving(false);
     }
@@ -198,7 +200,7 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
       setShowPhotoPicker(false);
     } catch (err: any) {
       console.error('Foto yükleme hatası:', err);
-      showToast(err?.message || 'Fotoğraf yüklenemedi. JPG/PNG dene (en fazla ~10MB).');
+      showToast(mapError(err, 'Fotoğraf yüklenemedi. JPG/PNG dene (en fazla ~10MB).'));
     } finally {
       if (e.target) e.target.value = '';
     }
@@ -265,7 +267,7 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
 
       {/* Header */}
       <div className="sticky top-0 z-30 px-4 pt-[max(3rem,calc(var(--safe-top)+1rem))] pb-4 flex items-center justify-between bg-[#060A12]/80 backdrop-blur-xl border-b border-white/5">
-        <button onClick={onBack} className="p-2.5 rounded-2xl bg-white/5 border border-white/10">
+        <button onClick={onBack} aria-label="Geri" className="p-2.5 rounded-2xl bg-white/5 border border-white/10">
           <ArrowLeft size={20} />
         </button>
         <h1 className="text-sm font-extrabold uppercase tracking-widest" style={{ color: accentColor }}>
@@ -346,6 +348,7 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
                   </div>
                   <button
                     onClick={() => setShowPhotoPicker(true)}
+                    aria-label="Profil fotoğrafını değiştir"
                     className="absolute -bottom-2 -right-2 w-8 h-8 rounded-full flex items-center justify-center text-black font-extrabold shadow-lg"
                     style={{ background: accentColor }}
                   >
@@ -365,6 +368,7 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
                       />
                       <button
                         onClick={() => { setDisplayName(tempName); setEditingName(false); }}
+                        aria-label="Adı kaydet"
                         className="p-1.5 rounded-lg text-black"
                         style={{ background: accentColor }}
                       >
@@ -374,7 +378,7 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
                   ) : (
                     <div className="flex items-center gap-2">
                       <h2 className="text-2xl font-extrabold text-white tracking-tight">{displayName}</h2>
-                      <button onClick={() => setEditingName(true)} className="text-ink-4 hover:text-white">
+                      <button onClick={() => setEditingName(true)} aria-label="Adı düzenle" className="text-ink-4 hover:text-white">
                         <Edit3 size={14} />
                       </button>
                     </div>
@@ -452,7 +456,7 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
             <h3 className="text-[0.625rem] font-extrabold uppercase tracking-widest" style={{ color: accentColor }}>
               Hakkımda
             </h3>
-            <button onClick={() => { setTempBio(bio); setEditingBio(true); }} className="text-ink-4 hover:text-white p-1">
+            <button onClick={() => { setTempBio(bio); setEditingBio(true); }} aria-label="Hakkımda yazısını düzenle" className="text-ink-4 hover:text-white p-1">
               <Edit3 size={14} />
             </button>
           </div>
@@ -513,6 +517,7 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
                   />
                   <button
                     onClick={() => setEditingFee(false)}
+                    aria-label="Ücreti kaydet"
                     className="p-2 rounded-xl text-black"
                     style={{ background: accentColor }}
                   >
@@ -522,7 +527,7 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
               ) : (
                 <div className="flex items-center gap-2">
                   <span className="text-4xl font-extrabold text-white">{formatTRYShort(fee)}</span>
-                  <button onClick={() => setEditingFee(true)} className="text-ink-4 hover:text-white p-1">
+                  <button onClick={() => setEditingFee(true)} aria-label="Ücreti düzenle" className="text-ink-4 hover:text-white p-1">
                     <Edit3 size={14} />
                   </button>
                 </div>
@@ -663,7 +668,7 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
                         });
                         setSaveError(null);
                     } catch (err: any) {
-                        setSaveError(err?.message || 'Lokasyon kaydedilemedi.');
+                        setSaveError(mapError(err, 'Lokasyon kaydedilemedi.'));
                     }
                 }
             }}
@@ -703,7 +708,7 @@ const ServiceProfile: React.FC<ServiceProfileProps> = ({ role, onBack }) => {
                   <h3 className="font-extrabold text-white text-lg">Profil Fotoğrafı</h3>
                   <p className="text-[0.6875rem] text-ink-4 mt-0.5">Bir fotoğraf seç veya cihazından yükle</p>
                 </div>
-                <button onClick={() => setShowPhotoPicker(false)} className="p-2 bg-white/5 rounded-xl text-gray-400">
+                <button onClick={() => setShowPhotoPicker(false)} aria-label="Kapat" className="p-2 bg-white/5 rounded-xl text-gray-400">
                   <X size={18} />
                 </button>
               </div>

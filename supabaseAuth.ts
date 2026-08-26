@@ -1,6 +1,8 @@
 import { supabase, setHasAccount, AUTH_DEPO_ANAHTARI, setBeniHatirla, setSonEposta } from './supabaseClient';
 import { Capacitor } from '@capacitor/core';
+import { Preferences } from '@capacitor/preferences';
 import { clearPushToken } from './notifications/pushService';
+import { kullaniciVerisiniTemizle } from './utils/kullaniciVerisiTemizligi';
 import { OAUTH_PENCERE_ADI, donusAdresiniIsaretle } from './shared/oauthPencere';
 
 // ─── Augmented currentUser — includes roles and verification state ────────────
@@ -660,11 +662,24 @@ export const loginWithApple = async (hatirla = true): Promise<void> => {
  * Bu fonksiyon web'de DÖNMEZ: çağıranın ardından yazdığı yönlendirme
  * çalışmaz, çalışmasına da gerek yoktur (sayfa sıfırdan açılıyor).
  */
-export const logout = async (): Promise<void> => {
+export const logout = async (sebep: 'kullanici' | 'oturum-gecersiz' = 'kullanici'): Promise<void> => {
+  // İSTEMLİ çıkış işareti (26 Ağu 2026): SIGNED_OUT olayı jeton yenilemesi
+  // çöktüğünde de yayınlanır; App bu bayrağa bakarak "kullanıcı çıkış tuşuna
+  // bastı" ile "oturum kendiliğinden düştü"yü ayırır (App.tsx · SIGNED_OUT).
+  // 'oturum-gecersiz' (App'in 401/PGRST301 yakalayıcısı) İSTEMSİZDİR: bayrak
+  // kurulmaz ki kullanıcı "oturumun yenilenemedi" dürüst mesajını görsün;
+  // cihaz verisi de silinmez — aynı kullanıcı birazdan yeniden girecek.
+  if (sebep === 'kullanici') sonCikisIstemli = true;
   try {
     const uid = auth.currentUser?.uid;
     if (uid) {
       await clearPushToken(uid);
+    }
+    // Cihazda kalan kullanıcı artıkları (bölge/GPS, taslaklar, bilet
+    // görüntüleri, ana sayfa önbelleği…) signOut'tan ÖNCE silinir — ana sayfa
+    // önbelleği uid'li anahtarda yaşar, uid çıkıştan sonra elde olmaz.
+    if (sebep === 'kullanici') {
+      await kullaniciVerisiniTemizle(auth.currentUser?.uid, 'cikis').catch(() => { /* temizlik çıkışı engellemez */ });
     }
     await supabase.auth.signOut();
     auth.currentUser = null;
@@ -673,6 +688,29 @@ export const logout = async (): Promise<void> => {
   }
   await oturumuZorlaSil();
   yenidenBaslat();
+};
+
+/**
+ * logout() DIŞINDA bir yoldan istemli çıkış yapan akışlar için (26 Ağu 2026):
+ * ör. Güvenlik ekranındaki "Tüm oturumları kapat" doğrudan
+ * supabase.auth.signOut({scope:'global'}) çağırır. İşaret konmazsa App bu
+ * SIGNED_OUT'u "oturum kendiliğinden düştü" sanıp yanlış uyarı basar.
+ * signOut çağrısından HEMEN ÖNCE çağır.
+ */
+export const cikisIstemliIsaretle = (): void => {
+  sonCikisIstemli = true;
+};
+
+/**
+ * SIGNED_OUT olayının istemli bir çıkıştan mı geldiğini söyler ve işareti
+ * TÜKETİR (tek kullanımlık — sonraki olay yeniden karar verir). Yalnız
+ * App.tsx'in oturum dinleyicisi çağırır.
+ */
+let sonCikisIstemli = false;
+export const cikisIstemliMiVeTuket = (): boolean => {
+  const istemli = sonCikisIstemli;
+  sonCikisIstemli = false;
+  return istemli;
 };
 
 /**
@@ -701,6 +739,15 @@ const oturumuZorlaSil = async (): Promise<void> => {
     window.localStorage.removeItem(AUTH_DEPO_ANAHTARI);
     window.sessionStorage.removeItem(AUTH_DEPO_ANAHTARI);
   } catch { /* özel sekme — depo zaten yazılmamış olabilir */ }
+  // Telefon kopyası da BURADA silinmeli (26 Ağu 2026): bu yol tam da signOut'un
+  // başarısız olduğu durum için var; native aynayı (Preferences) atlarsak
+  // supabaseClient.getItem bir sonraki açılışta "silinmiş" oturumu oradan
+  // diriltir — ortak cihazda önceki kullanıcının hesabı demek.
+  try {
+    if (Capacitor.isNativePlatform()) {
+      await Preferences.remove({ key: AUTH_DEPO_ANAHTARI });
+    }
+  } catch { /* native depo erişilemedi — localStorage temizliği yeter */ }
 };
 
 /**

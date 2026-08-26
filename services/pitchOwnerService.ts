@@ -138,8 +138,11 @@ async function getCurrentUserId(): Promise<string> {
   return data.user.id;
 }
 
-/** Supabase/Postgres hatalarını kullanıcı dostu Türkçe mesaja çevirir. */
-export function toTurkishError(error: unknown): string {
+/** Supabase/Postgres hatalarını kullanıcı dostu Türkçe mesaja çevirir.
+ *  `yedek` (26 Ağu 2026): mesajı BOŞ hatalarda genel "Beklenmeyen bir hata"
+ *  yerine işleme özgü metin gösterebilmek için — çağıran "Tahsilat
+ *  kaydedilemedi." gibi bağlam verir, davranışın kalanı değişmez. */
+export function toTurkishError(error: unknown, yedek?: string): string {
   const raw =
     (typeof error === 'object' && error !== null && 'message' in error
       ? String((error as { message: unknown }).message)
@@ -178,7 +181,7 @@ export function toTurkishError(error: unknown): string {
   if (raw.includes('Failed to fetch') || raw.includes('NetworkError'))
     return 'Bağlantı hatası. İnternetinizi kontrol edin.';
   if (raw.includes('Oturum')) return raw;
-  return raw || 'Beklenmeyen bir hata oluştu.';
+  return raw || yedek || 'Beklenmeyen bir hata oluştu.';
 }
 
 /** 'YYYY-MM' formatındaki ayın bir sonraki ayının ilk gününü döndürür. */

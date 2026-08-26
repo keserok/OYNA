@@ -361,7 +361,8 @@ const MatchTicket: React.FC<MatchTicketProps> = ({ onBack }) => {
             {fromCache !== null && (
               <div className="mt-3 flex items-center justify-between gap-2">
                 <p className="text-[0.6875rem] font-bold text-gray-600">
-                  Çevrimdışı kopya — son güncelleme{' '}
+                  Çevrimdışı kopya — kapıda doğrulanamayabilir; bağlanınca yenile.
+                  Son güncelleme{' '}
                   {new Date(fromCache).toLocaleString('tr-TR', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}
                 </p>
                 <button onClick={() => setReloadKey(k => k + 1)}

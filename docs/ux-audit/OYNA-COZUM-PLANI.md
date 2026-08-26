@@ -12932,12 +12932,12 @@ Paketler aşağıdaki sıraya göre uygulanır. Her paket **bağımsız gönderi
 | 5 | **IP-05** | Maç sonu değerlendirme veri doğruluğu ve puan gizliliği | **P0** | yok | M | 4 |
 | 6 | **IP-06** | Bildirim merkezi, derin bağlantı ve bildirim üretimi | **P0** | yok | M | 4 |
 | 7 | **IP-07** | Tesis sahibi para dürüstlüğü: yıkıcı aksiyon onayı, kapora tutarı, kuyruk görünürlüğü | **P0** | yok | M | 4 |
-| 8 | **IP-10** | Dokunma hedefi, basma geri bildirimi ve buton erişilebilirliği | **P0** | yok | L | 8 |
+| 8 | **IP-10** | Dokunma hedefi, basma geri bildirimi ve buton erişilebilirliği *(kaçaklar: aria-label süprümü IP-26 ile kapandı; 44px/IconButton taşıma görsel onay bekliyor)* | **P0** | yok | L | 8 |
 | 9 | **IP-20** | Bilet (MATCH_TICKET) güvenilirliği ve çevrimdışı dayanıklılık | **P0** | yok | S | 4 |
-| 10 | **IP-08** | Tasarım sistemi tabanı: tipografi ölçeği, kontrast ve font yükleme | **P1** | yok | L | 12 |
+| 10 | **IP-08** | Tasarım sistemi tabanı: tipografi ölçeği, kontrast ve font yükleme *(kaçak: 269 text-gray-500/600 — tamamı tesis paneli+MatchTicket; IP-26 kapısı büyümeyi kilitledi, süpürme görsel onay bekliyor)* | **P1** | yok | L | 12 |
 | 11 | **IP-09** | Renk sistemi ve marka kimliği: tek aksan, anlam ayrımı | **P1** | IP-08 | M | 6 |
 | 12 | **IP-11** | Hareket, pil ve algılanan hız | **P1** | yok | M | 7 |
-| 13 | **IP-12** | Hata ve boş durum sistemi: Türkçe eşleme, sessiz hata, çıkış aksiyonu | **P1** | yok | M | 9 |
+| 13 | **IP-12** | Hata ve boş durum sistemi: Türkçe eşleme, sessiz hata, çıkış aksiyonu *(kaçaklar IP-24/IP-26 ile kapandı: hata≠boş durum + `?.message ||` süprümü + kalıcı hata şeritleri)* | **P1** | yok | M | 9 |
 | 14 | **IP-13** | Türkçe metin, ton ve adlandırma tekliği | **P1** | yok | L | 7 |
 | 15 | **IP-14** | Bilgi mimarisi: alt menü, ölü ekranlar ve erişilemez özellikler | **P1** | IP-01 | M | 10 |
 | 16 | **IP-15** | Kayıt kapısı, oturum ve yasal onay akışı | **P1** | yok | M | 7 |
@@ -12948,6 +12948,10 @@ Paketler aşağıdaki sıraya göre uygulanır. Her paket **bağımsız gönderi
 | 21 | **IP-21** | Tesis sahibi takvim ve rezervasyon yönetimi eksikleri | **P1** | yok | L | 5 |
 | 22 | **IP-22** | Tesis sahibi durum göstergeleri ve ayarların tek evi | **P1** | yok | S | 3 |
 | 23 | **IP-23** | Taktik Stüdyo, formasyon verisi ve yerel diyalogların kaldırılması | **P1** | yok | M | 3 |
+| 24 | **IP-24** | Davranış hataları kapanışı: hata≠boş durum, geri tuşu kayıtları, gönderim korumaları *(26 Ağu 2026 — ✅ uygulandı)* | **P0** | yok | L | — |
+| 25 | **IP-25** | Oturum ve cihaz gizliliği: çıkış temizliği, istemli/istemsiz ayrımı, kuyruk uid'i *(26 Ağu 2026 — ✅ uygulandı; admin ayrı istemci hariç)* | **P0** | yok | M | — |
+| 26 | **IP-26** | Mekanik süpürmeler: Türkçe hata tekliği ✅ · push dinleyici ✅ · aria-label ✅ · kontrast/44px taşıma ⏸ görsel onay bekliyor | **P1** | yok | M | — |
+| 27 | **IP-27** | Ölçülebilir performans: sızan interval ✅ · store seçicileri/debounce/paket ⏸ ölçümlü, lansman sonrası | **P2** | yok | M | — |
 
 **Sıra mantığı:** 1–9 P0 paketleridir (para, güven, kırık akış) ve tasarım sistemini beklemez. 10–11 tasarım sistemi temelidir. 12+ kalan P1 paketleridir ve IP-08'in token'larını kullanır.
 
@@ -25247,3 +25251,64 @@ Bu tablo, **boşta kalan bulgu veya karşılıksız iş paketi kalmadığının 
 ---
 
 *Bu plan OYNA kod tabanının `b964b71` commit'i üzerinde üretilmiştir. Bir paketi uygulamadan önce ilgili "Mevcut durum" bölümünü kodda doğrula.*
+
+---
+
+# EK — 26 Ağustos 2026 · UI/UX kapanış paketi (IP-24 … IP-27)
+
+> Kaynak: 26 Ağu uçtan uca denetimin arayüz/frontend bulgularını taşıyan devir
+> promptu (kurucu bu paketi "kesin faydalı olanları ayır ve uygula" talimatıyla
+> verdi). Her iddia uygulamadan ÖNCE güncel koda karşı yeniden doğrulandı;
+> satır çapaları o günkü öğlen merge'iyle kaymıştı, aşağıdaki kayıtlar
+> doğrulanmış hâlidir. Tamamı `claude/login-screen-user-accounts-mzh6hr`
+> dalındaki tek pakette uygulandı; her düzeltmenin yanında onu koruyan test var
+> (`tests/unit/kalite-kapilari.test.ts` + 7 yeni kaynak-asert dosyası).
+
+### IP-24 — Davranış hataları kapanışı ✅
+
+| Madde | Dosya | Durum |
+|---|---|---|
+| Hata ≠ boş durum (sohbet + gelen kutusu) | `views/MessagesView.tsx` — loadError ayrıldı, InboxList error prop'u, StatusState.ErrorState bağlandı (yenisi YAZILMADI — bileşen zaten vardı, prompt 0.2 bu noktada yanlıştı) | ✅ |
+| Takım maç geçmişi hatada silinmiyor | `views/social/TeamDetailView.tsx` — historyError; catch'te `setHistory([])` kaldırıldı | ✅ |
+| Donanım geri tuşu kayıtları | `views/MatchJoin.tsx` 12 katman (onaylar priority 10) · RahatMatchLobby · RahatJoinSheet · MatchSquadPicker · ProviderOfferPicker · LocationPickerSheet · DeleteAccountModal · 4 owner takvim modalı · `useConfirmSheet` (10) | ✅ |
+| Saha formunda uyarısız veri kaybı | `views/owner/PitchManager.tsx` — kirlilik anlık görüntüsü + "Değişiklikleri bırak?" onayı + editör dalına `{confirmElement}` + geri tuşu kaydı | ✅ |
+| Sonsuz spinner koruması | `views/MatchCreate.tsx` yayınlama (isOnline + 12 sn pencere; idem anahtarı timeout'ta KORUNUR) · `views/MatchJoin.tsx` ücretsiz slot alma | ✅ |
+| Bayat arama yanıtı | `views/social/FriendAddView.tsx` — alive kalıbı | ✅ |
+| Başvuru taslağı + çevrimiçi kapısı | `views/ServiceApplication.tsx` — `oyna.basvuru.taslak.v1` (File hariç), isOnline kapısı | ✅ |
+| Şablon silme koruması | `views/owner/finance/FinanceExpenseTab.tsx` — onay + hata bildirimi + 44px + aria-label | ✅ |
+| İptal edilen biletin çevrimdışı QR'ı | `utils/ticketCache.ts` 30 gün→48 saat · `cancelMyBooking` başarıda `clearTicketCache` · damga "kapıda doğrulanamayabilir" | ✅ |
+| Sızan interval | `views/RoleSelection.tsx` — ref + unmount temizliği | ✅ |
+| `npm run etki` (§9.2) | `scripts/sistem/etki.mjs` yazıldı + .gitignore çift satır allowlist (diğer 4 sistem komutu bilinçli kapsam dışı) | ✅ |
+
+### IP-25 — Oturum ve cihaz gizliliği ✅ (bir istisna)
+
+| Madde | Durum |
+|---|---|
+| Çıkışta belirtecin telefon kopyası (`Preferences`) silinir — adaptör async, acil yol dahil | ✅ |
+| İstemli/istemsiz çıkış ayrımı — istemsizde pendingIntent + dürüst mesaj | ✅ |
+| Çıkışta store sıfırlama (`resetUserScopedState`, 40+ alan) | ✅ |
+| Tahsilat kuyruğu uid'li anahtar + `ownerUid` kemeri + sahipsiz kuyruk karantinası (para SİLİNMEZ) | ✅ |
+| Cihaz artıkları: `utils/kullaniciVerisiTemizligi.ts` — çıkışta kullanıcı verisi, hesap silmede her şey | ✅ |
+| Admin hareketsizlik sayacı kalıcı | ✅ (`useAdminSessionGuard`) |
+| Admin paneline AYRI istemci (`oyna.admin.token`) | ⏸ **ERTELENDİ — kanıtlı**: adminService dışında 23 panel dosyası paylaşılan istemciyi DOĞRUDAN import ediyor + 15 dosya oyuncu store'u kullanıyor; "yalnız anahtar değişsin" yarım yapılırsa iki oturum KARIŞIR (bugünkünden kötü). Ayrı iş olarak, 24 dosyalık taşıma + MFA yeniden testiyle yapılmalı. CSP başlığı da (karar gereği) bu pakette yok. |
+
+### IP-26 — Mekanik süpürmeler (yarısı ✅, yarısı görsel onay kapısında ⏸)
+
+- ✅ `?.message || 'yedek'` GÖSTERİM kalıbı 0'a indi (17 dosya; oyuncu yüzeyi `mapError`, tesis yüzeyi `toTurkishError`; kod-koklama `|| ''` kalıpları bilinçli DOKUNULMADI). Kapı: kalite-kapilari.
+- ✅ 4 sn'de kaybolan HATA mesajları kalıcı + X'li (MatchJoin, ServiceDashboard, PitchDiscovery, Marketplace, GuardianConsentChild; QRScannerView kamera akışı bilinçli hariç; BAŞARI mesajları 4 sn kaldı).
+- ✅ Push dinleyici birikmesi: `initPushNotifications` idempotent, `clearPushToken` temizliği koşulsuz.
+- ✅ Etiketsiz salt-ikon butonlara Türkçe aria-label (≈60 buton; kalan 2'si dokunulmayan WalletScreen'de). Kapı: tavan 2.
+- ⏸ Kontrast süpürmesi (269 kullanım — TAMAMI tesis paneli + MatchTicket; oyuncu tarafı TEMİZ) ve IconButton/44px taşıma: **öncesi/sonrası görselle kurucu onayı bekliyor** (kurucunun kendi kararı). Büyüme kapıyla kilitli.
+
+### IP-27 — Performans (yalnız kanıtlı kaçak ✅)
+
+- ✅ RoleSelection interval sızıntısı.
+- ⏸ 4.1 App.tsx seçicisiz store aboneliği (34 alan; store'da 149 `set(`) · 4.2 arama debounce + `.limit()` · 4.3 ServiceDashboard 1 sn sayacı · 4.4 framer-motion statik importu — hepsi DOĞRULANDI ama kurucunun kendi ölçüsüyle ("performans bugün kimseyi yakmıyor; veri kaybı ve akış kilitlenmesi yakıyor", 9 gerçek kullanıcı) gönderim eşiğinde risk/kazanç oranı ters. Ölçüm-öncesi/sonrası şartıyla ayrı paket.
+
+### AÇIK BORÇ (bu pakette bilinçli YAPILMAYANLAR)
+
+1. `views/WalletScreen.tsx` — iki uyuyan kusur (çekimde çift-tık kilidi yok; kart silmede onay yok + hata yutuluyor). Ekran bugün ERİŞİLEMEZ (`App.tsx` WALLET → Dashboard). **Cüzdan açılmadan önce düzeltilecek.**
+2. Admin paneli: ayrı istemci/`oyna.admin.token` + CSP başlığı + (istenirse) ayrı alan adı — yukarıdaki kanıtla ayrı iş.
+3. Gerçek push gönderimi (APNs/FCM anahtarları kurucuda).
+4. `components/common/VirtualList.tsx` bağlanmadı (import 0); bağlanacaksa `key={originalIndex}` kararlı kimliğe çevrilmeli.
+5. Kontrast + IconButton taşıma: görsel onay sonrası IP-26'nın ikinci yarısı.

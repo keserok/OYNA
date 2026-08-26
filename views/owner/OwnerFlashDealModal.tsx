@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { X, Zap, Percent, RefreshCw } from 'lucide-react';
+import { useBackDismiss } from '../../hooks/useBackDismiss';
 import {
   createFlashDeal,
   deleteFlashDeal,
@@ -37,6 +38,10 @@ export const OwnerFlashDealModal: React.FC<OwnerFlashDealModalProps> = ({
   );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Android geri tuşu + Esc modalı kapatır (koşullu mount: görünürken hep açık).
+  // Kayıt/silme sürerken kapanmaz — yarım işlem bırakılmasın.
+  useBackDismiss(true, () => { if (!saving) onClose(); }, 'flash-deal-modali', 0);
 
   const newPrice = parseInt(customPrice, 10) || 0;
   const discountPercent =
@@ -105,7 +110,7 @@ export const OwnerFlashDealModal: React.FC<OwnerFlashDealModalProps> = ({
               {timeKey} • Standart: {money(standardPrice)}
             </p>
           </div>
-          <button type="button" onClick={onClose} className="p-2 bg-white/5 rounded-full text-gray-400 hover:text-white">
+          <button type="button" onClick={onClose} aria-label="Kapat" className="p-2 bg-white/5 rounded-full text-gray-400 hover:text-white">
             <X size={20} />
           </button>
         </div>

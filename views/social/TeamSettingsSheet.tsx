@@ -173,7 +173,8 @@ const TeamSettingsSheet: React.FC<TeamSettingsSheetProps> = ({
       // sunucudan sapmışsa kaptan "Ayrıl" derse sunucu CAPTAIN_MUST_TRANSFER
       // döndürür. Ham hata yerine devir akışına yönlendir (captainMustTransfer
       // ön-kapısı squad'a dayandığından bu, tek gerçek doğruluk kaynağıdır).
-      const msg = (e as { message?: string })?.message || '';
+      // Ham metin EKRANA çıkmaz — yalnız CAPTAIN_MUST_TRANSFER ayrımı için okunur.
+      const msg = (e as { message?: string })?.message ?? '';
       if (msg.includes('CAPTAIN_MUST_TRANSFER')) {
         setConfirm(null);
         setTransferOpen(true);
@@ -312,6 +313,7 @@ const TeamSettingsSheet: React.FC<TeamSettingsSheetProps> = ({
               <button
                 role="switch"
                 aria-checked={recruiting}
+                aria-label="Oyuncu arıyoruz"
                 onClick={() => setRecruiting(v => !v)}
                 className={`w-12 h-7 rounded-full p-0.5 transition-colors ${recruiting ? 'bg-[#39FF14]' : 'bg-white/10'}`}
               >

@@ -32,6 +32,7 @@ import { getFriends } from '../../services/socialService';
 import RahatJoinSheet from '../../components/match/RahatJoinSheet';
 import MatchSquadPicker from '../../components/social/MatchSquadPicker';
 import PhotoCarousel from '../../components/common/PhotoCarousel';
+import { useBackDismiss } from '../../hooks/useBackDismiss';
 
 // ════════════════════════════════════════════════════════════════════════
 // E2/E4/E5/E6 · RAHAT MAÇ LOBİSİ — pozisyonsuz katılım yüzeyi
@@ -145,6 +146,12 @@ const RahatMatchLobby: React.FC<Props> = ({ match: matchProp, onBack }) => {
 
   const [tab, setTab] = useState<'durum' | 'hakkinda'>('durum');
   const [sheet, setSheet] = useState<'' | 'join' | 'reserve' | 'leave'>('');
+  // Geri tuşu + Esc elle çizilmiş katmanları kapatsın, arkadaki ekran DEĞİŞMESİN
+  // (BULGU-020). 'join' RahatJoinSheet'in, kadro seçici MatchSquadPicker'ın
+  // kendi içinde kayıtlı — burada yalnız yerel katmanlar kayda yazılır.
+  useBackDismiss(sheet === 'reserve', () => setSheet(''), 'rahat-reserve-sheet');
+  // 'leave' bir ONAY diyaloğu: sheet üstünde açıksa geri tuşu önce onu kapatır.
+  useBackDismiss(sheet === 'leave', () => setSheet(''), 'rahat-leave-confirm', 10);
   const [cardFeePct, setCardFeePct] = useState(0);
   useEffect(() => {
     let alive = true;

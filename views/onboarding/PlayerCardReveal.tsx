@@ -54,7 +54,7 @@ const PlayerCardReveal: React.FC<PlayerCardRevealProps> = ({
       className="absolute inset-0 z-20 flex flex-col items-center justify-center px-10"
       style={{ background: 'rgba(6,9,14,0.92)', backdropFilter: 'blur(12px)' }}
     >
-      <button onClick={onBack} disabled={busy} className="absolute top-6 left-6 w-[38px] h-[38px] rounded-full flex items-center justify-center" style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)', cursor: busy ? 'default' : 'pointer' }}>
+      <button onClick={onBack} disabled={busy} aria-label="Geri" className="absolute top-6 left-6 w-[38px] h-[38px] rounded-full flex items-center justify-center" style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)', cursor: busy ? 'default' : 'pointer' }}>
         <ArrowLeft size={18} color="#fff" />
       </button>
 

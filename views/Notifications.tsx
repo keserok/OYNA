@@ -18,6 +18,8 @@ import { getMatchDetails } from '../services/matchService';
 import { declineMatchListInvite } from '../services/socialService';
 import { showToast } from '../components/common/GlobalToast';
 import { openAppSettings, canOpenAppSettings } from '../services/locationService';
+// Ham sunucu hatası ekrana sızmaz — tek sözlükten Türkçe mesaj (utils/errorMap).
+import { mapError } from '../utils/errorMap';
 
 interface NotificationsProps {
   onBack: () => void;
@@ -171,7 +173,7 @@ const Notifications: React.FC<NotificationsProps> = ({ onBack, role }) => {
       const data = await fetchNotifications(50);
       setNotifs(data);
     } catch (e: any) {
-      setError(e?.message || 'Bildirimler yüklenemedi.');
+      setError(mapError(e, 'Bildirimler yüklenemedi.'));
     } finally {
       setLoading(false);
     }
@@ -569,6 +571,7 @@ const Notifications: React.FC<NotificationsProps> = ({ onBack, role }) => {
                     katman z-[110] ile şeridin (z-[100]) ÜSTÜNDE çizilir.) */}
                 <button
                   onClick={() => setSelectedInvite(null)}
+                  aria-label="Kapat"
                   className="absolute top-[max(3rem,calc(var(--safe-top)+1rem))] right-5 w-10 h-10 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center text-white border border-white/20"
                 >
                   <X size={20} />

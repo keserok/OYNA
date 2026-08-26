@@ -1,7 +1,7 @@
 import React, { useEffect, Suspense, lazy } from 'react';
 import { AnimatePresence, motion, MotionConfig } from 'framer-motion';
 import { UserRole, AppView, MatchListing, Goalkeeper, Referee } from './types';
-import { auth, onAuthStateChanged, logout, handleAuthCallbackUrl } from './supabaseAuth';
+import { auth, onAuthStateChanged, logout, handleAuthCallbackUrl, cikisIstemliMiVeTuket } from './supabaseAuth';
 import { supabase } from './supabaseClient';
 import { useAppStore } from './store';
 import { bolgeyiBildir } from './utils/olcum';
@@ -611,13 +611,40 @@ const App: React.FC = () => {
             // kullanıcıyı uygulamadan atma.
             return;
           }
-          const prevView = useAppStore.getState().view;
+          // İSTEMLİ mi İSTEMSİZ mi? (26 Ağu 2026) — SIGNED_OUT'u kütüphane,
+          // jeton yenilemesi geçersizleştiğinde de yayınlar. Kullanıcı form
+          // doldururken uyarısız giriş ekranında uyanıyordu. İstemsiz düşüşte
+          // kaldığı yer pendingIntent'e yazılır (girişte consumePendingIntent
+          // zaten geri götürür) ve durum kendisine söylenir.
+          const istemli = cikisIstemliMiVeTuket();
+          const storeSnap = useAppStore.getState();
+          const prevView = storeSnap.view;
+          if (gercekCikis && !istemli && prevView !== 'SPLASH' && prevView !== 'AUTH') {
+            // Niyet YALNIZ girişten sonra anlamlıca geri yüklenebilen ekran
+            // için saklanır: bugün bu, maç lobisi (niyetiTuket matchId ile maçı
+            // yeniden yükler). Diğer ekranların bağlamı (bilet id, ödeme
+            // bağlamı…) hemen aşağıda güvenlik gereği sıfırlanır — oraya
+            // "dönmek" boş ekran açardı; OWNER/ADMIN panellerine niyet yazmak
+            // ise ortak cihazda 30 dk içinde giren BAŞKA kullanıcıya taşınırdı.
+            if (prevView === 'MATCH_JOIN' && storeSnap.selectedMatch?.id) {
+              storeSnap.setPendingIntent(prevView, storeSnap.selectedMatch.id);
+              showToast('Oturumun yenilenemedi. Tekrar giriş yapınca kaldığın yerden devam edeceksin.', 'error');
+            } else {
+              showToast('Oturumun sonlandı — devam etmek için tekrar giriş yap.', 'error');
+            }
+          }
           setRole(UserRole.PLAYER);
           // İlk açılış (oturum yok) SPLASH'te kalır; bir panelden ÇIKIŞ yapıldıysa
           // doğrudan giriş (AUTH) ekranına düşülür.
           resetNavigation(prevView === 'SPLASH' ? 'SPLASH' : 'AUTH');
           resetUser(); // FAZ 7.4: çıkışta analitik/hata kullanıcı bağlamını temizle
-          useAppStore.getState().setCurrentUserProfile(null); // KN-2: kimlik temizlenir
+          // Kullanıcıya ait TÜM bellek alanları sıfırlanır (26 Ağu 2026):
+          // native'de çıkış sayfayı yeniden yüklemez; maçlar/bildirimler/
+          // adminSession bellekte kalıp sonraki kullanıcıya sızıyordu.
+          // (resetUserScopedState pendingIntent'in BELLEK kopyasını da siler;
+          // yukarıda yazılan niyet localStorage'da yaşar, consumePendingIntent
+          // oradan okur — sıra bilinçli: önce yaz, sonra sıfırla.)
+          useAppStore.getState().resetUserScopedState();
           stopPresenceHeartbeat(); // çıkışta heartbeat durur (Spec F34)
         }
       } catch (error: any) {
@@ -636,7 +663,9 @@ const App: React.FC = () => {
         const jetonGecersiz = kod === 'PGRST301' || durum === 401
           || (error?.name === 'AuthApiError' && (durum === 401 || durum === 403));
         if (jetonGecersiz) {
-          logout().catch(e => console.error('[App] Sign out error on invalid session:', e));
+          // 'oturum-gecersiz': istemli işaret KONMAZ — SIGNED_OUT dalı bunu
+          // istemsiz düşüş sayar, kullanıcıya dürüst mesaj + niyet kaydı düşer.
+          logout('oturum-gecersiz').catch(e => console.error('[App] Sign out error on invalid session:', e));
           resetNavigation('AUTH');
         }
       } finally {

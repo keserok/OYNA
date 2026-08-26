@@ -307,6 +307,14 @@ export const initPushNotifications = async (
   }
 
   try {
+    // 0. İdempotentlik: izin modalı yolu (App.tsx → pushKurulumRef) bu
+    // fonksiyonu İKİNCİ kez çağırır. Eski dinleyiciler sökülmeden yenileri
+    // eklenirse her olay iki kez işlenir (çift toast, çift navigasyon) —
+    // bu yüzden her çağrıda önce KOŞULSUZ temizlik yapılır.
+    try {
+      await PushNotifications.removeAllListeners();
+    } catch (_) { /* Ignore */ }
+
     // 1. Mevcut izin durumunu kontrol et
     let permission = await PushNotifications.checkPermissions();
 
@@ -388,7 +396,7 @@ export const initPushNotifications = async (
 
 // ─── Push Token Temizleme (Çıkış Yapınca) ───────────────────────
 export const clearPushToken = async (userId: string) => {
-  const { error } = await supabase
+  await supabase
     .from('profiles')
     .update({
       push_token: null,
@@ -396,11 +404,12 @@ export const clearPushToken = async (userId: string) => {
     })
     .eq('id', userId);
 
-  if (!error) {
-    try {
-      await PushNotifications.removeAllListeners();
-    } catch (_) { /* Ignore */ }
-  }
+  // Dinleyiciler HER durumda sökülür — profiles güncellemesi başarısız olsa
+  // bile (çevrimdışı çıkış) dinleyiciler takılı kalmasın; token temizliği
+  // bir sonraki çevrimiçi girişte zaten üzerine yazılır.
+  try {
+    await PushNotifications.removeAllListeners();
+  } catch (_) { /* Ignore */ }
 };
 
 // ─── Supabase Realtime: In-App Bildirimleri Dinle ───────────────

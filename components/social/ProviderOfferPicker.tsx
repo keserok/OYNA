@@ -6,6 +6,7 @@ import { UserRole } from '../../types';
 import { showToast } from '../common/GlobalToast';
 import type { DeferredProvider } from '../../services/matchLifecycleService';
 import { formatTRYShort } from '../../utils/formatTRY';
+import { useBackDismiss } from '../../hooks/useBackDismiss';
 
 // ════════════════════════════════════════════════════════════════════════════
 // ProviderOfferPicker — maç oluşturmada kaleci/hakem TEKLİF seçici (marketplace).
@@ -30,6 +31,9 @@ interface ProviderOfferPickerProps {
 type Tab = 'GK' | 'REF';
 
 const ProviderOfferPicker: React.FC<ProviderOfferPickerProps> = ({ onClose, onConfirm, initial = [], onApplyAsProvider }) => {
+  // MatchCreate yalnız seçici açıkken mount ediyor → open sabit true. Geri tuşu +
+  // Esc yalnız bu seçiciyi kapatır, arkadaki create akışı DEĞİŞMEZ (BULGU-020).
+  useBackDismiss(true, onClose, 'provider-offer-picker');
   const { adminGoalkeepers, adminReferees } = useAppStore();
 
   const init = (t: Tab) => initial.find(o => o.type === t);

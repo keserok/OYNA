@@ -49,6 +49,8 @@ import { APP_VERSION } from '../utils/appVersion';
 import { LoadingState, ErrorState } from '../components/common/StatusState';
 import { Toast } from '../components/common/Toast';
 import { trUpper } from '../utils/trUpper';
+// Ham sunucu hatası ekrana sızmaz — tek sözlükten Türkçe mesaj (utils/errorMap).
+import { mapError } from '../utils/errorMap';
 import { cekimUygulamadanAcikMi, CEKIM_KAPALI_ACIKLAMA } from '../shared/featureFlags';
 
 interface ServiceDashboardProps {
@@ -186,9 +188,10 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
   // FAZ 5 — Kazanç bakiyesi (get_wallet_summary → earnings_balance)
   const [earningsBalance, setEarningsBalance] = useState(0);
 
+  // Hata KENDİLİĞİNDEN KAYBOLMAZ: kullanıcı X ile kapatana kadar durur
+  // (bkz. PaymentScreen inlineError deseni — 4 sn'de kaybolan hata okunamıyordu).
   const showActionError = (msg: string) => {
       setActionError(msg);
-      setTimeout(() => setActionError(null), 4000);
   };
 
   const showActionSuccess = (msg: string) => {
@@ -549,7 +552,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
       await Promise.all([fetchMatchOffers(), fetchIncomingRequests(), fetchEarnings()]);
     } catch (err: any) {
       console.error('handleRespondMatchOffer:', err);
-      showActionError(err?.message || 'İşlem tamamlanamadı. Lütfen tekrar dene.');
+      showActionError(mapError(err, 'İşlem tamamlanamadı. Lütfen tekrar dene.'));
     } finally {
       setRespondingOfferId(null);
     }
@@ -586,7 +589,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
       await fetchIncomingRequests();
     } catch (err: any) {
       console.error('handleRespondRequest:', err);
-      showActionError(err?.message || 'İşlem tamamlanamadı. Lütfen tekrar dene.');
+      showActionError(mapError(err, 'İşlem tamamlanamadı. Lütfen tekrar dene.'));
     } finally {
       setRespondingId(null);
     }
@@ -610,7 +613,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
       showActionSuccess('İtirazın alındı — durum OYNA yönetimi tarafından incelenecek.');
       await fetchIncomingRequests();
     } catch (err: any) {
-      showActionError(err?.message || 'İtiraz gönderilemedi.');
+      showActionError(mapError(err, 'İtiraz gönderilemedi.'));
     } finally {
       setRespondingId(null);
     }
@@ -625,7 +628,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
       await fetchIncomingRequests();
     } catch (err: any) {
       console.error('handleReportAttendance:', err);
-      showActionError(err?.message || 'Bildirim gönderilemedi. Lütfen tekrar dene.');
+      showActionError(mapError(err, 'Bildirim gönderilemedi. Lütfen tekrar dene.'));
     } finally {
       setReportingId(null);
     }
@@ -694,7 +697,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
               await updateOwnProvider(providerKind, { id: userProfile.uid, isAvailable: status });
           } catch (err: any) {
               setIsAvailable(!status);
-              showActionError(err?.message || 'Müsaitlik durumu kaydedilemedi.');
+              showActionError(mapError(err, 'Müsaitlik durumu kaydedilemedi.'));
           }
       }
   };
@@ -710,7 +713,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
               await updateOwnProvider(providerKind, { id: userProfile.id, workingHours, isAvailable: true });
               showActionSuccess('Aktiflik ayarların kaydedildi.');
           } catch (err: any) {
-              showActionError(err?.message || 'Aktiflik ayarları kaydedilemedi.');
+              showActionError(mapError(err, 'Aktiflik ayarları kaydedilemedi.'));
               return;
           }
       }
@@ -742,7 +745,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
           await Promise.all([fetchEarnings(), fetchPayoutData(), fetchWalletHistory()]);
       } catch (err: any) {
           console.error('Transfer error:', err);
-          showActionError(err?.message || 'Çekim talebi oluşturulamadı. Lütfen tekrar dene.');
+          showActionError(mapError(err, 'Çekim talebi oluşturulamadı. Lütfen tekrar dene.'));
       } finally {
           setIsTransferring(false);
       }
@@ -841,7 +844,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
           }, 1800);
       } catch (error: any) {
           console.error("Error submitting application:", error);
-          showActionError(error?.message || 'Başvuru yapılırken bir hata oluştu. Lütfen tekrar dene.');
+          showActionError(mapError(error, 'Başvuru yapılırken bir hata oluştu. Lütfen tekrar dene.'));
       } finally {
           setIsTransferring(false);
       }
@@ -855,7 +858,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
           showActionSuccess('Başvuru geri çekildi.');
           await fetchIncomingRequests();
       } catch (err: any) {
-          showActionError(err?.message || 'Başvuru geri çekilemedi.');
+          showActionError(mapError(err, 'Başvuru geri çekilemedi.'));
       } finally {
           setWithdrawingId(null);
       }
@@ -874,7 +877,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
               showActionError('Bu maç için aktif talep bulunamadı — durum yalnız cihazında işaretlendi.');
           }
       } catch (err: any) {
-          showActionError(err?.message || 'Durum bildirilemedi.');
+          showActionError(mapError(err, 'Durum bildirilemedi.'));
       }
   };
 
@@ -889,7 +892,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
           }
           setCancelPreview({ reqId: requestId, penalty: p.penalty, hoursLeft: p.hoursLeft });
       } catch (err: any) {
-          showActionError(err?.message || 'İptal önizlemesi alınamadı.');
+          showActionError(mapError(err, 'İptal önizlemesi alınamadı.'));
       } finally {
           setCancellingId(null);
       }
@@ -907,7 +910,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
               : 'İşi cezasız bıraktın. Kaptana haber verildi.');
           await Promise.all([fetchIncomingRequests(), fetchEarnings()]);
       } catch (err: any) {
-          showActionError(err?.message || 'İş bırakılamadı.');
+          showActionError(mapError(err, 'İş bırakılamadı.'));
       } finally {
           setCancellingId(null);
       }
@@ -921,7 +924,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
           showActionSuccess('Maçı onayladın. Kaptan da onaylayınca ücret cüzdanına geçer.');
           await Promise.all([fetchIncomingRequests(), fetchEarnings()]);
       } catch (err: any) {
-          showActionError(err?.message || 'Onay kaydedilemedi.');
+          showActionError(mapError(err, 'Onay kaydedilemedi.'));
       } finally {
           setConfirmingId(null);
       }
@@ -1269,7 +1272,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                       <span className={`text-[0.6875rem] font-bold px-2 py-0.5 rounded-full border ${isRef ? 'bg-red-500/15 border-red-500/30 text-red-400' : 'bg-green-500/15 border-green-500/30 text-green-400'}`}>{newRequests.length}</span>
                   )}
               </div>
-              <button onClick={fetchIncomingRequests} className="text-ink-4 hover:text-white transition-colors">
+              <button onClick={fetchIncomingRequests} aria-label="Talepleri yenile" className="text-ink-4 hover:text-white transition-colors">
                   <RefreshCcw size={14} />
               </button>
           </div>
@@ -2216,8 +2219,9 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                        </div>
                    ) : (
                        <>
-                           <button 
+                           <button
                             onClick={() => { setSelectedJob(null); setSelectedOffer(null); }}
+                            aria-label="Kapat"
                             className="absolute top-4 right-4 text-ink-4 hover:text-white"
                            >
                                <X size={20} />
@@ -2288,7 +2292,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                   {/* Header */}
                   <div className="p-6 border-b border-white/5 flex justify-between items-center bg-[#0A0E14]">
                       <h3 className="text-lg font-extrabold text-white uppercase tracking-wide">Maç Detayı</h3>
-                      <button onClick={() => setSelectedUpcomingJob(null)} className="p-2 bg-white/5 rounded-full text-gray-400 hover:text-white">
+                      <button onClick={() => setSelectedUpcomingJob(null)} aria-label="Kapat" className="p-2 bg-white/5 rounded-full text-gray-400 hover:text-white">
                           <X size={20} />
                       </button>
                   </div>
@@ -2336,7 +2340,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
               <div className="bg-[#161B22] w-full max-w-md rounded-t-[32px] border-t border-white/10 p-6 shadow-2xl relative animate-in slide-in-from-bottom duration-300 max-h-[90vh] overflow-y-auto custom-scrollbar">
                   <div className="flex justify-between items-center mb-6">
                       <h3 className="text-xl font-extrabold text-white uppercase tracking-wide">AKTİFLİK AYARLARI</h3>
-                      <button onClick={() => setShowOnlineSetupModal(false)} className="p-2 bg-white/5 rounded-full text-gray-400 hover:text-white"><X size={20} /></button>
+                      <button onClick={() => setShowOnlineSetupModal(false)} aria-label="Kapat" className="p-2 bg-white/5 rounded-full text-gray-400 hover:text-white"><X size={20} /></button>
                   </div>
                   
                   <div className="space-y-6 mb-8">
@@ -2418,7 +2422,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                           <h3 className="text-xl font-extrabold text-white">Ödeme Yöntemlerim</h3>
                           <p className="text-[0.6875rem] text-ink-4 mt-0.5">Kazancın varsayılan yönteme aktarılır</p>
                       </div>
-                      <button onClick={() => setShowCardOptions(false)} className="p-2 bg-white/5 rounded-xl text-gray-400"><X size={18} /></button>
+                      <button onClick={() => setShowCardOptions(false)} aria-label="Kapat" className="p-2 bg-white/5 rounded-xl text-gray-400"><X size={18} /></button>
                   </div>
                   <div className="space-y-3 mb-4 max-h-[40vh] overflow-y-auto">
                       {payoutMethods.length === 0 ? (
@@ -2431,7 +2435,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                               <button
                                   onClick={async () => {
                                       try { await setDefaultPayoutMethod(m.id); await fetchPayoutData(); }
-                                      catch (err: any) { showActionError(err?.message || 'İşlem başarısız.'); }
+                                      catch (err: any) { showActionError(mapError(err, 'İşlem başarısız.')); }
                                   }}
                                   className="flex-1 text-left"
                               >
@@ -2443,8 +2447,9 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                               <button
                                   onClick={async () => {
                                       try { await deletePayoutMethod(m.id); await fetchPayoutData(); }
-                                      catch (err: any) { showActionError(err?.message || 'Yöntem silinemedi.'); }
+                                      catch (err: any) { showActionError(mapError(err, 'Yöntem silinemedi.')); }
                                   }}
+                                  aria-label="Ödeme yöntemini sil"
                                   className="p-2 bg-white/5 rounded-xl text-ink-4 hover:text-red-400 transition-colors"
                               >
                                   <X size={14} />
@@ -2474,7 +2479,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                   <div className="w-10 h-1 bg-white/20 rounded-full mx-auto" />
                   <div className="flex justify-between items-center">
                       <h3 className="text-xl font-extrabold text-white">Yeni Ödeme Yöntemi</h3>
-                      <button onClick={() => setShowAddCard(false)} className="p-2 bg-white/5 rounded-xl text-gray-400"><X size={18} /></button>
+                      <button onClick={() => setShowAddCard(false)} aria-label="Kapat" className="p-2 bg-white/5 rounded-xl text-gray-400"><X size={18} /></button>
                   </div>
                   <div className="bg-[#0A0E14] p-1.5 rounded-2xl flex border border-white/5">
                       <button
@@ -2538,7 +2543,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                               await fetchPayoutData();
                               showActionSuccess('Ödeme yöntemi kaydedildi.');
                           } catch (err: any) {
-                              showActionError(err?.message || 'Ödeme yöntemi eklenemedi.');
+                              showActionError(mapError(err, 'Ödeme yöntemi eklenemedi.'));
                           } finally {
                               setAddingMethod(false);
                           }
@@ -2670,7 +2675,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
                         setRefScore({ home: '', away: '' });
                         showActionSuccess(`Maç skoru resmi olarak kaydedildi: ${home}–${away}.`);
                       } catch (e: any) {
-                        showActionError(e?.message || 'Skor kaydedilemedi. Tekrar dene.');
+                        showActionError(mapError(e, 'Skor kaydedilemedi. Tekrar dene.'));
                       } finally {
                         setSubmittingScore(false);
                       }
@@ -2778,6 +2783,7 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
               </div>
               <label className="flex items-start gap-2.5 mt-4 cursor-pointer select-none">
                 <button onClick={() => setContractChecked(v => !v)}
+                  aria-label="Sözleşmeyi kabul ediyorum"
                   className={`mt-0.5 w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-colors ${contractChecked ? 'bg-green-500 border-green-500' : 'border-white/25 bg-white/5'}`}>
                   {contractChecked && <Check size={13} className="text-black" strokeWidth={3} />}
                 </button>
@@ -2798,7 +2804,8 @@ const ServiceDashboard: React.FC<ServiceDashboardProps> = ({ role, onBack, onNav
       </AnimatePresence>
 
       <AnimatePresence>
-        {actionError && <Toast message={actionError} variant="error" />}
+        {/* Hata kalıcı: onClose verildiği için X ile kapatılana dek ekranda kalır. */}
+        {actionError && <Toast message={actionError} variant="error" onClose={() => setActionError(null)} />}
         {actionSuccess && <Toast message={actionSuccess} variant="success" />}
       </AnimatePresence>
     </div>

@@ -346,7 +346,8 @@ const PostMatchEval: React.FC<PostMatchEvalProps> = ({ onBack, onComplete }) => 
       }
     } catch (err) {
       console.warn('[PostMatchEval] Oyuncu değerlendirmesi kaydedilemedi:', err);
-      const em = String((err as any)?.message || '');
+      // Ham metin EKRANA çıkmaz — yalnız "zaten değerlendirilmiş" ayrımı için okunur.
+      const em = String((err as any)?.message ?? '');
       if (/already|zaten|duplicate/i.test(em)) {
         showInfo('Bu maçı zaten değerlendirdin.');
       } else {

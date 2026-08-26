@@ -1143,6 +1143,51 @@ kırar, (c) skor kapısında boşluk açar.
 
 ---
 
+# Bölüm 13 — 26 Ağustos 2026 · UI/UX kapanış paketi kararları
+
+> Kaynak: kurucunun bu tarihte yapıştırdığı devir promptu ("KOPYALANACAK
+> PROMPT") + "uygulamanın faydasına olacağından **emin olduklarını ayır ve
+> uygula**" talimatı. Prompttaki "Kullanıcı kararı" ibareli maddeler kurucu
+> kararı olarak buraya işlendi. Uygulama durumu: plan EK bölümü (IP-24…IP-27).
+
+### K13-1 — Bilet çevrimdışı önbelleği 48 saat
+Önbellek ömrü 30 gün → **48 saat**; önbellekten çizilen bilete "kapıda
+doğrulanamayabilir" damgası; iptal akışında `clearTicketCache`. ✅ Uygulandı.
+
+### K13-2 — Çevrimdışı taslak, kuyruk DEĞİL
+Bağlantı yokken maça katılma / diziliş / profil güncelleme **engellenmeye
+devam eder** (kuyruğa alınmaz); girilen veri yerel taslak olarak saklanır.
+`services/offline/outbox.ts` genişletilmez. ✅ Başvuru formu taslağı eklendi;
+diziliş taslağı zaten vardı (`oyna_studio_draft_v1`).
+
+### K13-3 — Admin: şimdilik YALNIZ ayrı belirteç anahtarı; CSP bu pakette YOK
+CSP kararı aynen uygulandı (eklenmedi). Ayrı anahtar ise uygulama sırasında
+kanıtla ERTELENDİ: 23 panel dosyası istemciyi doğrudan import ediyor, yarım
+dönüşüm iki oturumu karıştırır — kurucuya ayrı iş olarak sunuldu (plan EK,
+IP-25 tablosu). Hareketsizlik sayacının kalıcılaştırılması ✅ uygulandı.
+
+### K13-4 — `views/WalletScreen.tsx` dokunulmaz
+Ekran erişilemez; kusurları borç listesinde, **cüzdan açılmadan önce**
+düzeltilecek. ✅ Uyuldu (aria süprümünde bile atlandı).
+
+### K13-5 — IP-17 (sosyal davet) ve IP-21 (tesis takvimi) kapalı kalır
+✅ Dokunulmadı.
+
+### K13-6 — FAZ 3 görsel değişiklikleri ÖNCE öncesi/sonrası onayı ister
+Kontrast süpürmesi ve IconButton/44px taşıma bu yüzden UYGULANMADI —
+kurucu onayı bekliyor. Büyüme kalite kapılarıyla kilitlendi.
+
+### K13-7 — FAZ 4 performans yalnız ölçümle
+"Performans bugün kimseyi yakmıyor; veri kaybı ve akış kilitlenmesi yakıyor."
+Yalnız kanıtlı sızıntı (RoleSelection interval) düzeltildi; kalanı ölçüm
+şartıyla ayrı paket.
+
+### K13-8 — Hata mesajı kullanıcı kapatana kadar durur
+4 sn'de kaybolan HATA kalıbı kaldırıldı (başarı mesajları 4 sn kalabilir).
+✅ Uygulandı (QRScannerView kamera akışı bilinçli istisna).
+
+---
+
 # Ek — Bu belgeyi kullanan oturum için 6 kural
 
 1. **Bu belgedeki karar, plan metninden üstündür.** `OYNA-COZUM-PLANI.md` 25.000 satır ve

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowLeft, Copy, Check, ShieldCheck, Clock, Info } from 'lucide-react';
+import { ArrowLeft, Copy, Check, ShieldCheck, Clock, Info, X } from 'lucide-react';
 import {
   getMyGuardianState, getOrCreateGuardianLinkCode, GuardianConsentStatus,
 } from '../services/guardianService';
@@ -56,8 +56,9 @@ const GuardianConsentChild: React.FC<GuardianConsentChildProps> = ({ onBack, onG
       setCopied(true);
       setTimeout(() => setCopied(false), 1800);
     } catch {
+      // Hata KENDİLİĞİNDEN KAYBOLMAZ: kullanıcı X ile kapatana kadar durur
+      // (bkz. PaymentScreen inlineError deseni — 4 sn'de kaybolan hata okunamıyordu).
       setKopyaHatasi(true);
-      setTimeout(() => setKopyaHatasi(false), 4000);
     }
   };
 
@@ -131,8 +132,15 @@ const GuardianConsentChild: React.FC<GuardianConsentChildProps> = ({ onBack, onG
               {/* Kopyalanamadıysa kullanıcı bunu GÖRÜR ve ne yapacağını bilir:
                   kod zaten yukarıda büyük yazıyor, elle yazabilir. */}
               {kopyaHatasi && (
-                <p role="status" className="mt-2 text-center text-[0.6875rem] font-bold text-red-400">
-                  Bu cihazda kopyalanamadı — kodu yukarıdan elle yazabilirsin.
+                <p role="status" className="mt-2 flex items-center justify-center gap-2 text-center text-[0.6875rem] font-bold text-red-400">
+                  <span>Bu cihazda kopyalanamadı — kodu yukarıdan elle yazabilirsin.</span>
+                  <button
+                    onClick={() => setKopyaHatasi(false)}
+                    aria-label="Hata mesajını kapat"
+                    className="shrink-0 -m-1 p-1 text-red-400 hover:text-white"
+                  >
+                    <X size={12} />
+                  </button>
                 </p>
               )}
             </div>

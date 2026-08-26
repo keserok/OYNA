@@ -32,7 +32,10 @@ import { getFriends, type FriendRow } from '../services/socialService';
 import { getMyTeams, getTeamSquad, type MyTeamRow } from '../services/teamSocialService';
 import { getMatchDetails } from '../services/matchService';
 import { fetchMyFavoritePitchIds } from '../services/pitchFavoritesService';
-import { safeUuid } from '../shared/submitGuard';
+import {
+  safeUuid, isOnline, withSubmitTimeout, SubmitTimeoutError,
+  RPC_TIMEOUT_MS, OFFLINE_PUBLISH, TIMEOUT_PUBLISH,
+} from '../shared/submitGuard';
 import { trUpper } from '../utils/trUpper';
 import { auth } from '../supabaseAuth';
 import { formatTRYAmount } from '../utils/formatTRY';
@@ -465,6 +468,12 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
       s.setIsSignupGateOpen(true);
       return;
     }
+    // Veri akmayan bağlantıda "Yayınla" sonsuza dek dönmesin: kapı burada,
+    // kilit alınmadan ÖNCE — dönerken kilidi geri bırakma derdi olmaz.
+    if (!isOnline()) {
+      showToast(OFFLINE_PUBLISH, 'error');
+      return;
+    }
     // StrictMode/eşzamanlı render'da çift tetiklenmeye karşı kilit
     if (publishBusyRef.current) return;
     publishBusyRef.current = true;
@@ -481,7 +490,11 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
     try {
       const effVisibility = teamInvite ? 'PRIVATE' : visibility;
       if (!publishIdemRef.current) publishIdemRef.current = safeUuid();
-      const res = await createMatchAtomic({
+      // Yanıt penceresi: RPC bu süre içinde dönmezse SubmitTimeoutError düşer.
+      // İstek iptal EDİLMEZ (sunucuda tamamlanmış olabilir) — bu yüzden
+      // publishIdemRef timeout dalında sıfırlanmaz; tekrar deneme aynı
+      // anahtarla gider, create_match_atomic ikinci maç üretmez.
+      const res = await withSubmitTimeout(createMatchAtomic({
         courtId: seeded ? null : selCourtId,
         dateISO: seeded ? null : dateISO,
         time: seeded ? null : selTime,
@@ -496,7 +509,7 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
         deferredProviders: offers.map(o => ({ type: o.type, providerIds: o.all ? [] : o.providerIds })),
         seedBookingId: seeded ? seed?.bookingId : null,
         clientRequestId: publishIdemRef.current,
-      });
+      }), RPC_TIMEOUT_MS);
       // Yayın tamam: anahtar tüketildi, bir sonraki maç yeni anahtarla kurulur.
       publishIdemRef.current = null;
       setPubStep(3);
@@ -549,6 +562,11 @@ const MatchCreate: React.FC<MatchCreateProps> = ({ onBack, onNavigate }) => {
       olayYaz('kaptan_mac_yayinda');
       setSheet('SUCCESS');
     } catch (err) {
+      if (err instanceof SubmitTimeoutError) {
+        // Anahtar bilerek korunur (yukarıdaki not): retry aynı anahtarla gider.
+        showToast(TIMEOUT_PUBLISH, 'error');
+        return;
+      }
       const { code, message } = parseCreateMatchError(err);
       if (code === 'SLOT_TAKEN' && selCourtId && selTime) {
         // Saat "Dolu"ya döner, banner en yakın saati önerir — form korunur.

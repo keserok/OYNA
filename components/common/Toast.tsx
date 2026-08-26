@@ -1,10 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { XCircle, CheckCircle2 } from 'lucide-react';
+import { XCircle, CheckCircle2, X } from 'lucide-react';
 
 interface ToastProps {
   message: string;
   variant?: 'error' | 'success';
+  /** Verilirse balona X kapatma düğmesi çizilir ve mesaj KENDİLİĞİNDEN
+   *  KAYBOLMAZ varsayımıyla kullanılır: hata, kullanıcı kapatana kadar durur
+   *  (kurucu kararı 26 Ağu 2026 — 4 sn'de kaybolan hata okunamıyordu). */
+  onClose?: () => void;
 }
 
 /** Cihaz pikseli yuvarlamaları "1px örtülü" yanılsaması yapmasın diye pay (px). */
@@ -93,7 +97,7 @@ const VARIANT_STYLES = {
   },
 };
 
-export const Toast: React.FC<ToastProps> = ({ message, variant = 'error' }) => {
+export const Toast: React.FC<ToastProps> = ({ message, variant = 'error', onClose }) => {
   const { container, icon: Icon, iconColor, text } = VARIANT_STYLES[variant];
   const klavyeOrtusu = useKlavyeOrtusu();
   return (
@@ -116,6 +120,16 @@ export const Toast: React.FC<ToastProps> = ({ message, variant = 'error' }) => {
     >
       <Icon size={18} className={`${iconColor} mt-0.5 shrink-0`} />
       <p className={`text-xs leading-relaxed flex-1 ${text}`}>{message}</p>
+      {onClose && (
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Mesajı kapat"
+          className={`shrink-0 -m-2 p-2 ${text} opacity-70 hover:opacity-100`}
+        >
+          <X size={16} />
+        </button>
+      )}
     </motion.div>
   );
 };

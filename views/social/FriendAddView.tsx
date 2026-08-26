@@ -212,7 +212,11 @@ const FriendAddView: React.FC<FriendAddViewProps> = ({ onBack, onNavigate }) => 
   }, []);
 
   // Debounce'lu arama (300ms, ≥2 karakter)
+  // `alive` kalıbı (yukarıdaki kanallar efektiyle aynı): temizlik yalnız sayacı
+  // durduruyordu, UÇUŞTAKİ searchUsers dönünce sonucu koşulsuz yazıyordu —
+  // yavaş gelen bayat yanıt, yeni sorgunun sonucunu ezebiliyordu.
   useEffect(() => {
+    let alive = true;
     if (debounceRef.current) clearTimeout(debounceRef.current);
     const q = query.trim();
     if (q.replace(/^@/, '').length < 2) { setResults([]); setSearching(false); return; }
@@ -220,6 +224,7 @@ const FriendAddView: React.FC<FriendAddViewProps> = ({ onBack, onNavigate }) => 
     debounceRef.current = setTimeout(async () => {
       try {
         const rows = await searchUsers(q, 20, 0);
+        if (!alive) return;
         setResults(rows.map(r => ({
           ...r,
           meta: r.mutual_friends > 0 ? `${r.mutual_friends} ortak arkadaş` : undefined,
@@ -227,10 +232,14 @@ const FriendAddView: React.FC<FriendAddViewProps> = ({ onBack, onNavigate }) => 
       } catch (e) {
         console.error('[FriendAdd] arama hatası', e);
       } finally {
-        setSearching(false);
+        // Spinner'ı yalnız GÜNCEL istek kapatır; bayat istek dokunmaz.
+        if (alive) setSearching(false);
       }
     }, 300);
-    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+    return () => {
+      alive = false;
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
   }, [query]);
 
   // Tek aksiyon işleyici — üç listeyi de aynı kural günceller

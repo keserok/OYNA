@@ -80,23 +80,23 @@ describe('writeTicketCache / readTicketCache', () => {
   });
 });
 
-describe('yaş sınırı (30 gün)', () => {
-  it('30 günden eski kayıt okunmaz ve silinir', () => {
+describe('yaş sınırı (48 saat — kurucu kararı 26 Ağu 2026)', () => {
+  it('48 saatten eski kayıt okunmaz ve silinir', () => {
     writeTicketCache(ROW);
     const key = 'oyna.ticket.bk-1';
     const snap = JSON.parse(localStorage.getItem(key)!);
-    snap.savedAt = Date.now() - (31 * 24 * 60 * 60 * 1000);
+    snap.savedAt = Date.now() - (49 * 60 * 60 * 1000);
     localStorage.setItem(key, JSON.stringify(snap));
 
     expect(readTicketCache('bk-1')).toBeNull();
     expect(localStorage.getItem(key)).toBeNull(); // temizlendi
   });
 
-  it('29 günlük kayıt hâlâ okunur', () => {
+  it('47 saatlik kayıt hâlâ okunur', () => {
     writeTicketCache(ROW);
     const key = 'oyna.ticket.bk-1';
     const snap = JSON.parse(localStorage.getItem(key)!);
-    snap.savedAt = Date.now() - (29 * 24 * 60 * 60 * 1000);
+    snap.savedAt = Date.now() - (47 * 60 * 60 * 1000);
     localStorage.setItem(key, JSON.stringify(snap));
     expect(readTicketCache('bk-1')).not.toBeNull();
   });

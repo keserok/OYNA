@@ -919,6 +919,7 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
     <div lang="tr" className="h-full bg-[#0A0E14] flex flex-col font-sans">
       <header className="px-5 pt-safe-baslik pb-4 flex items-center gap-4 border-b border-white/5 sticky top-0 bg-[#0A0E14]/90 backdrop-blur-xl z-20">
         <button onClick={() => { setPaymentContext(null); onBack(); }}
+          aria-label="Geri"
           className="w-11 h-11 flex items-center justify-center bg-[#161B22] rounded-full border border-white/5 text-white active:scale-95 transition-all shrink-0">
           <ArrowLeft size={20} />
         </button>
@@ -981,7 +982,7 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
                 )}
               </div>
             </div>
-            <button onClick={() => setInlineError('')} className="text-ink-4 shrink-0 self-start"><X size={15} /></button>
+            <button onClick={() => setInlineError('')} aria-label="Hata mesajını kapat" className="text-ink-4 shrink-0 self-start"><X size={15} /></button>
           </div>
         )}
 

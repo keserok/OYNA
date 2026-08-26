@@ -51,7 +51,11 @@ export interface TicketCacheInput {
 }
 
 const KEY_PREFIX = 'oyna.ticket.';
-const MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000; // 30 gün
+// Kurucu kararı (26 Ağu 2026): 30 gün → 48 saat. İptal edilen rezervasyonun
+// çevrimdışı kopyası kapıda ÇALIŞAN bir QR gibi görünebiliyordu; kısa ömür +
+// iptalde clearTicketCache (playerBookingService) bu pencereyi kapatır.
+// 48 saat, "maça giderken çekmişti, sahada internet yok" senaryosunu korur.
+const MAX_AGE_MS = 48 * 60 * 60 * 1000; // 48 saat
 
 const store = (): Storage | null => {
   try {

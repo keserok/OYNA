@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { HandCoins } from 'lucide-react';
-import { recordBookingPayment, type PaymentMethod } from '../../../services/pitchOwnerService';
+import { recordBookingPayment, toTurkishError, type PaymentMethod } from '../../../services/pitchOwnerService';
 import { bookingToDebtor, type PendingBooking } from '../../../services/financeService';
 import { parseTRYAmount } from '../../../shared/financeModel';
 import { money } from './financeUi';
@@ -39,8 +39,8 @@ export const CollectModal: React.FC<Props> = ({ booking, onClose, onChanged, not
         ? 'İnternet yok — tahsilat kuyruğa alındı, bağlantı gelince otomatik işlenecek.'
         : 'Tahsilat kaydedildi.', queued ? 'warning' : 'success');
       onChanged(); onClose();
-    } catch (e: any) {
-      notify(e?.message || 'Tahsilat kaydedilemedi.', 'error');
+    } catch (e) {
+      notify(toTurkishError(e, 'Tahsilat kaydedilemedi.'), 'error');
     } finally { setBusy(null); }
   };
 
@@ -50,8 +50,8 @@ export const CollectModal: React.FC<Props> = ({ booking, onClose, onChanged, not
       await bookingToDebtor(booking.id);
       notify('Bakiye veresiyeye yazıldı.', 'success');
       onChanged(); onClose();
-    } catch (e: any) {
-      notify(e?.message || 'Veresiyeye yazılamadı.', 'error');
+    } catch (e) {
+      notify(toTurkishError(e, 'Veresiyeye yazılamadı.'), 'error');
     } finally { setBusy(null); }
   };
 

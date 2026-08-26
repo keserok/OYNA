@@ -307,6 +307,11 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onNavigate }) => {
   const [cancelTarget, setCancelTarget] = useState<MyBooking | null>(null);
   const [cancelling, setCancelling] = useState(false);
   const [cancelResult, setCancelResult] = useState<CancelResult | null>(null);
+  // İptal SUNUCUDA başarılı olduğu hâlde listeyi tazeleme çağrısı düşerse
+  // liste bayat (CONFIRMED) kalır; "Bileti Göster" o bayat kayıttan iptal
+  // edilmiş rezervasyonun çevrimdışı kopyasını YENİDEN yazardı (26 Ağu
+  // inceleme bulgusu). Bu küme, bu oturumda iptal edilenleri yerelde işaretler.
+  const [iptalEdilenIdler, setIptalEdilenIdler] = useState<ReadonlySet<string>>(new Set());
   const [cancelError, setCancelError] = useState<string | null>(null);
   const [cancelPreview, setCancelPreview] = useState<CancelPreview | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
@@ -330,9 +335,14 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onNavigate }) => {
     setCancelError(null);
     try {
       const result = await cancelMyBooking(cancelTarget.id);
+      const iptalId = cancelTarget.id;
+      setIptalEdilenIdler(prev => new Set(prev).add(iptalId));
       setCancelResult(result);
       setCancelTarget(null);
-      await refetchBookings();
+      // Tazeleme hatası İPTAL hatası DEĞİLDİR: iptal sunucuda tamamlandı.
+      // Liste tazelenemezse yerel işaret (iptalEdilenIdler) bilet düğmesini
+      // zaten gizler; hatayı iptal hatası gibi göstermek yanıltıcı olurdu.
+      await refetchBookings().catch(() => { /* sonraki yenilemede yakınsar */ });
     } catch (err) {
       setCancelError(toPlayerErrorMessage(err));
     } finally {
@@ -901,7 +911,7 @@ const MyMatchesHub: React.FC<MyMatchesHubProps> = ({ onNavigate }) => {
               )}
 
               {/* F4.1: QR maç bileti — tesise girişte okutulan bilet ekranı */}
-              {sheetBooking.status !== 'CANCELLED' && (
+              {sheetBooking.status !== 'CANCELLED' && !iptalEdilenIdler.has(sheetBooking.id) && (
                 <button
                   onClick={() => {
                     const id = sheetBooking.id;
