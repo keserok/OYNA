@@ -165,12 +165,30 @@ denetle('Uygulama simgeleri', () => {
 denetle('iOS gizlilik ve izinler', () => {
   const plist = oku('ios/App/App/Info.plist');
 
-  // Her izin açıklaması, o izni GERÇEKTEN kullanan koda karşılık gelmeli.
-  // Eksikse uygulama izin isterken ÇÖKER; fazlaysa inceleme "niye istiyorsun?"
-  // diye sorar.
+  // Bu liste 26 Ağustos 2026'da bir ders sonucu genişledi.
+  //
+  // Kapı eskiden "KODUMUZ neyi çağırıyor" diye soruyordu ve beş anahtar
+  // arıyordu. Beşi de yerindeydi, kapı yeşil yandı, Xcode arşivi aldı — ve
+  // yükleme Apple'ın doğrulamasında ITMS-90683 ile döndü:
+  //
+  //   "Missing purpose string … NSLocationAlwaysAndWhenInUseUsageDescription
+  //    … If you're using external libraries or SDKs, they may reference APIs
+  //    that require a purpose string. While your app might not use these
+  //    APIs, a purpose string is still required."
+  //
+  // Apple'ın sorusu farklıydı: "İKİLİ neyi REFERANS ediyor." Uygulama
+  // arka planda konum almıyor (UIBackgroundModes yok, kod yalnız
+  // getCurrentPosition çağırıyor) ama @capacitor/geolocation eklentisi
+  // always-authorization API'sini referans ettiği için metin şart.
+  //
+  // Ders: bu listeye giren anahtar "kullanıyor muyuz" ile değil, "paketteki
+  // herhangi bir şey referans ediyor mu" ile belirlenir. Eklenti eklendiğinde
+  // buraya da bakılmalı — yoksa hata Xcode'da değil, yükleme ekranında çıkar.
   const izinler = [
     ['NSCameraUsageDescription', 'kamera'],
     ['NSLocationWhenInUseUsageDescription', 'konum'],
+    // Kullanılmıyor; eklenti referansı yüzünden Apple zorunlu tutuyor.
+    ['NSLocationAlwaysAndWhenInUseUsageDescription', 'konum (always — SDK referansı)'],
     ['NSPhotoLibraryUsageDescription', 'fotoğraf okuma'],
     ['NSPhotoLibraryAddUsageDescription', 'fotoğrafa yazma'],
     ['NSContactsUsageDescription', 'rehber'],
@@ -181,7 +199,7 @@ denetle('iOS gizlilik ve izinler', () => {
     }
   }
   if (izinler.every(([a]) => plist.includes(`<key>${a}</key>`))) {
-    tamam('Beş izin açıklaması da tanımlı');
+    tamam(`${izinler.length} izin açıklamasının hepsi tanımlı`);
   }
 
   // Açıklamalar boş olmamalı ve Türkçe olmalı.
