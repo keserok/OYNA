@@ -133,6 +133,33 @@ const KULLANILAN_IZINLER = [
 ] as const;
 
 /**
+ * KULLANMADIĞIMIZ ama Apple'ın ZORUNLU TUTTUĞU izinler.
+ *
+ * 26 Ağustos 2026'da öğrenildi. Beş izin metni de yerindeydi, denetim yeşildi,
+ * Xcode arşivi aldı — ve yükleme Apple'ın doğrulamasında döndü:
+ *
+ *   ITMS-90683: Missing purpose string …
+ *   NSLocationAlwaysAndWhenInUseUsageDescription … "If you're using external
+ *   libraries or SDKs, they may reference APIs that require a purpose string.
+ *   While your app might not use these APIs, a purpose string is still
+ *   required."
+ *
+ * Bu dosyanın kuralı "KODUMUZ ne çağırıyor" idi ve doğruydu. Apple'ın kuralı
+ * farklı: "İKİLİ neyi REFERANS ediyor." @capacitor/geolocation eklentisi
+ * always-authorization API'sini referans ediyor; biz hiç çağırmasak da metin
+ * şart.
+ *
+ * Buraya anahtar eklemek UCUZ DEĞİLDİR: beyan edilen her izin incelemede
+ * "niye istiyorsunuz?" sorusunu davet eder. O yüzden aşağıdaki metin testi,
+ * gerekçenin arka plan takibi YAPILMADIĞINI açıkça söylemesini şart koşar.
+ */
+const SDK_ZORUNLU_IZINLER = [
+  // Kod yalnız getCurrentPosition çağırıyor; UIBackgroundModes tanımlı değil.
+  // Kullanıcı bu izin ekranını hiç görmeyecek.
+  'NSLocationAlwaysAndWhenInUseUsageDescription',
+] as const;
+
+/**
  * Kodda hiçbir çağrısı OLMAYAN izinler. Buraya bir anahtar eklenirse Apple
  * "neden istiyorsunuz?" diye sorar ve gizlilik formuyla çelişki doğar.
  */
@@ -150,9 +177,10 @@ const KULLANILMAYAN_IZINLER = [
   'NSHealthShareUsageDescription',
   'NSHealthUpdateUsageDescription',
   'NSLocalNetworkUsageDescription',
-  // Arka planda konum ALINMIYOR; "Always" istemek incelemede ağır sorulur.
+  // Arka planda konum ALINMIYOR. Bu ESKİ anahtar (iOS 10 dönemi) Apple
+  // tarafından istenmedi ve istenmiyor — gereksiz yere eklemek, beyan
+  // yüzeyini boş yere büyütür. AlwaysAndWhenInUse ise SDK_ZORUNLU_IZINLER'de.
   'NSLocationAlwaysUsageDescription',
-  'NSLocationAlwaysAndWhenInUseUsageDescription',
 ] as const;
 
 describe('Info.plist · izin beyanları gerçek kullanımla eşleşir', () => {
@@ -175,9 +203,26 @@ describe('Info.plist · izin beyanları gerçek kullanımla eşleşir', () => {
     expect(anahtarlar).not.toContain(anahtar);
   });
 
-  it('beyan edilen izin listesi tam olarak kanıtlanan listedir — fazlası yok', () => {
+  it.each(SDK_ZORUNLU_IZINLER)('%s BEYAN EDİLMİŞ (Apple zorunlu tutuyor)', (anahtar) => {
+    expect(anahtarlar).toContain(anahtar);
+    expect(String(info[anahtar]).trim().length).toBeGreaterThan(20);
+  });
+
+  it('kullanmadığımız izinlerin metni arka plan takibi OLMADIĞINI söylüyor', () => {
+    // Beyan edilen ama çağrılmayan bir izin, incelemede "niye istiyorsunuz?"
+    // sorusunu davet eder. Cevap metnin İÇİNDE olmalı; incelemecinin sorması
+    // gerekmemeli.
+    for (const anahtar of SDK_ZORUNLU_IZINLER) {
+      const metin = String(info[anahtar]);
+      expect(metin).toMatch(/arka planda/i);
+      expect(metin).toMatch(/yapmaz|almaz|edilmez|okunmaz/i);
+    }
+  });
+
+  it('beyan edilen izin listesi tam olarak kanıtlanan + zorunlu listedir — fazlası yok', () => {
     // Yeni bir izin eklenirse bu test kırılır ve ekleyeni KANIT yazmaya zorlar.
-    expect([...izinler].sort()).toEqual([...KULLANILAN_IZINLER].sort());
+    expect([...izinler].sort())
+      .toEqual([...KULLANILAN_IZINLER, ...SDK_ZORUNLU_IZINLER].sort());
   });
 });
 

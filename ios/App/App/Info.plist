@@ -70,7 +70,25 @@
 
 	  • NSLocationWhenInUseUsageDescription — GEREKLİ.
 	    Kanıt: services/locationService.ts · Geolocation.getCurrentPosition.
-	    Arka planda konum ALINMAZ; "Always" beyanı bilerek yoktur.
+
+	  • NSLocationAlwaysAndWhenInUseUsageDescription — GEREKLİ, ama farklı
+	    bir sebeple. Uygulama arka planda konum ALMAZ: UIBackgroundModes
+	    tanımlı değil ve kod yalnız getCurrentPosition çağırıyor, "always"
+	    yetkisini hiç istemiyor. Kullanıcı o izin ekranını hiç görmeyecek.
+
+	    Bu anahtar 26 Ağustos 2026'da eklendi çünkü Apple yükleme
+	    doğrulaması ITMS-90683 ile reddetti:
+
+	      "If you're using external libraries or SDKs, they may reference
+	       APIs that require a purpose string. While your app might not use
+	       these APIs, a purpose string is still required."
+
+	    Kural "senin kodun ne çağırıyor" değil, "ikili neyi REFERANS ediyor"
+	    üzerine kurulu. @capacitor/geolocation eklentisi always-authorization
+	    API'sini referans ediyor; çağırmasak da metin şart. Metin bu yüzden
+	    yalnız gerçekte yapılanı anlatır ve arka plan takibi olmadığını
+	    açıkça söyler — var olmayan bir özelliği gerekçe göstermek incelemede
+	    doğrudan soru konusudur.
 
 	  • NSPhotoLibraryUsageDescription (OKUMA/seçme) — GEREKLİ.
 	    Kanıt: yukarıdaki dosya girdilerinde kullanıcı "Fotoğraf Kitaplığı"
@@ -98,6 +116,8 @@
 	<string>OYNA, profil ve saha fotoğrafını doğrudan çekebilmen için kameranı kullanmak istiyor.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>OYNA, yakınındaki sahaları ve maçları gösterebilmek için konumunuza erişmek istiyor.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>OYNA konumunuzu yalnızca uygulamayı kullanırken, yakınınızdaki sahaları ve maçları gösterebilmek için okur. Arka planda konum takibi yapmaz.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>OYNA, profil ve saha fotoğrafını seçebilmen için fotoğraf kitaplığına erişmek istiyor.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
