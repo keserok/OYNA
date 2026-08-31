@@ -22,15 +22,6 @@ import {
 const money = formatTRYAmount;
 const delay = (ms: number) => new Promise<void>(r => setTimeout(r, ms));
 
-// flow: 'MATCH_DEPOSIT'
-// computeCardFee(amount, cardFeePct)
-// computeCardTotal(amount, cardFeePct)
-// getIntentStatus
-// s?.status === 'PAID'
-// s?.status === 'FAILED'
-// 'İşlem hâlâ bankada sürüyor'
-// s?.status === 'PAID' && s.resultReason
-
 const OLCUM_EKRAN: Record<PaymentContext['kind'], string> = {
   MATCH_JOIN:           'oyuncu_odeme_ekrani',
   MATCH_CREATE_DEPOSIT: 'kaptan_kapora_ekrani',
@@ -85,8 +76,8 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
         isDeposit: true,
         allowBalance: false,
         successTitle: 'Rezervasyon Kaydedildi!',
-        successSubtitle: 'Rezervasyonunuz güvende',
-        infoNote: 'Ödemenizi IBAN adresine yapabilir veya saha girişinde tesise ödeyebilirsiniz.',
+        successSubtitle: 'Rezervasyonun güvende',
+        infoNote: 'Ödemeni IBAN adresine yapabilir veya saha girişinde tesise ödeyebilirsin.',
       } satisfies PaymentContext;
     }
     return null;
@@ -134,7 +125,6 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
 
   const pitchBookingIdRef = useRef<string | null>(null);
   const payBusyRef = useRef(false);
-  const cashBooking: boolean = false; // Nakit rezervasyon kapalı (2.12) / IBAN veya Sahada Ödeme seçeneği
 
   // Sahanın banka hesaplarını çek
   useEffect(() => {
@@ -180,7 +170,6 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
 
     switch (ctx.kind) {
       case 'MATCH_JOIN': {
-        // Maç katılım kaydı
         if (ctx.matchId) {
           const fresh = await getMatchDetails(ctx.matchId);
           if (fresh) useAppStore.getState().applyMatchLocal(fresh as any);
@@ -317,7 +306,7 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
     return (
       <div className="h-full bg-[#0A0E14] flex flex-col items-center justify-center gap-4 p-6">
         <AlertTriangle size={32} className="text-yellow-400" />
-        <p className="text-gray-400 text-sm text-center">Ödeme bağlamı bulunamadı. Lütfen geri dönün.</p>
+        <p className="text-gray-400 text-sm text-center">Ödeme bağlamı bulunamadı. Lütfen geri dön.</p>
         <button onClick={onBack} className="px-6 py-3 bg-[#161B22] border border-white/10 text-white font-bold rounded-2xl">Geri Dön</button>
       </div>
     );
@@ -332,7 +321,7 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
           </div>
         </div>
         <p className="text-lg font-extrabold uppercase tracking-[0.16em] text-white">
-          Rezervasyonunuz İşleniyor
+          Rezervasyonun İşleniyor
         </p>
         <p className="text-[0.8125rem] text-ink-4 mt-2.5 flex items-center gap-1.5">
           <Shield size={13} className="text-emerald-400 animate-pulse" />
@@ -392,8 +381,8 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
               <p className="text-xs font-extrabold text-emerald-400 flex items-center gap-1.5">
                 <Building2 size={14} /> IBAN Havale Bilgileri
               </p>
-              <p className="text-[11px] text-gray-300 leading-relaxed">
-                Lütfen <span className="font-bold text-white">{money(activePayAmount)}</span> tutarını <span className="font-mono text-emerald-300">{activeBank.iban}</span> hesabına aktarırken açıklama kısmına <span className="font-mono font-bold text-amber-300">{refCode}</span> kodunu ekleyiniz.
+              <p className="text-[0.6875rem] text-gray-300 leading-relaxed">
+                <span className="font-bold text-white">{money(activePayAmount)}</span> tutarını <span className="font-mono text-emerald-300">{activeBank.iban}</span> hesabına aktarırken açıklama kısmına <span className="font-mono font-bold text-amber-300">{refCode}</span> kodunu ekle.
               </p>
             </motion.div>
           )}
@@ -402,7 +391,7 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
             <motion.div initial={{ y: 14, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.28 }}
               className="w-full mt-4 bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4">
               <p className="text-xs text-amber-300 leading-relaxed">
-                Ödemenizi maça/sahaya gittiğinizde tesis yetkilisine nakit veya pos cihazı ile yapabilirsiniz.
+                Ödemeni maça/sahaya gittiğinde tesis yetkilisine nakit veya pos cihazı ile yapabilirsin.
               </p>
             </motion.div>
           )}
@@ -498,7 +487,7 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
         {/* Ödeme Modu Seçimi (IBAN vs CASH) */}
         <div>
           <p className="text-[0.6875rem] font-extrabold uppercase tracking-[0.14em] text-gray-400 mb-2.5">
-            Ödeme Yöntemi Seçin
+            Ödeme Yöntemi Seç
           </p>
           <div className="grid grid-cols-2 gap-3">
             <button
@@ -516,7 +505,7 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
               </div>
               <div>
                 <p className="text-xs font-extrabold text-white">IBAN ile Öde</p>
-                <p className="text-[10px] text-gray-400">Havale / EFT / FAST</p>
+                <p className="text-[0.625rem] text-gray-400">Havale / EFT / FAST</p>
               </div>
             </button>
 
@@ -535,7 +524,7 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
               </div>
               <div>
                 <p className="text-xs font-extrabold text-white">Sahada Öde</p>
-                <p className="text-[10px] text-gray-400">Tesiste Nakit / POS</p>
+                <p className="text-[0.625rem] text-gray-400">Tesiste Nakit / POS</p>
               </div>
             </button>
           </div>
@@ -582,15 +571,15 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
             <div className="flex items-center justify-between border-b border-white/5 pb-3">
               <div>
                 <p className="text-xs font-extrabold text-white">{activeBank.bank_name}</p>
-                <p className="text-[11px] text-gray-400">{activeBank.account_holder}</p>
+                <p className="text-[0.6875rem] text-gray-400">{activeBank.account_holder}</p>
               </div>
-              <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded-md">TR IBAN</span>
+              <span className="text-[0.625rem] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded-md">TR IBAN</span>
             </div>
 
             {/* IBAN Kopyalama */}
             <div className="bg-[#0A0E14] border border-white/5 p-3 rounded-xl flex items-center justify-between gap-2">
               <div className="min-w-0">
-                <p className="text-[10px] text-gray-400 uppercase tracking-wider font-bold">IBAN Numarası</p>
+                <p className="text-[0.625rem] text-gray-400 uppercase tracking-wider font-bold">IBAN Numarası</p>
                 <p className="text-xs font-mono text-emerald-400 font-bold tracking-wider truncate">{activeBank.iban}</p>
               </div>
               <button
@@ -605,7 +594,7 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
             {/* Referans Kodu Kopyalama */}
             <div className="bg-[#0A0E14] border border-white/5 p-3 rounded-xl flex items-center justify-between gap-2">
               <div className="min-w-0">
-                <p className="text-[10px] text-gray-400 uppercase tracking-wider font-bold">Açıklama / Referans Kodu</p>
+                <p className="text-[0.625rem] text-gray-400 uppercase tracking-wider font-bold">Açıklama / Referans Kodu</p>
                 <p className="text-xs font-mono text-amber-400 font-bold tracking-wider">{refCode}</p>
               </div>
               <button
@@ -619,8 +608,8 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
 
             <div className="flex gap-2 items-start bg-amber-400/8 border border-amber-400/20 rounded-xl p-3">
               <Info size={14} className="text-amber-400 shrink-0 mt-0.5" />
-              <p className="text-[11px] text-amber-200/90 leading-relaxed">
-                Havale yaparken lütfen Açıklama kısmına <span className="font-mono font-bold text-amber-400">{refCode}</span> kodunu yazmayı unutmayınız.
+              <p className="text-[0.6875rem] text-amber-200/90 leading-relaxed">
+                Havale yaparken Açıklama kısmına <span className="font-mono font-bold text-amber-400">{refCode}</span> kodunu yazmayı unutma.
               </p>
             </div>
           </div>
@@ -635,18 +624,18 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
               </div>
               <div>
                 <p className="text-xs font-bold text-white">Tesis Kapısında Ödeme</p>
-                <p className="text-[11px] text-gray-400">Nakit veya Kredi Kartı POS</p>
+                <p className="text-[0.6875rem] text-gray-400">Nakit veya Kredi Kartı POS</p>
               </div>
             </div>
             <p className="text-xs text-gray-300 leading-relaxed bg-[#0A0E14] p-3 rounded-xl border border-white/5">
-              Rezervasyonunuz doğrudan tesisin takvimine işlenecektir. Tutarın tamamını maça/sahaya gittiğinizde tesis görevlisine ödeyebilirsiniz.
+              Rezervasyonun doğrudan tesisin takvimine işlenecektir. Tutarın tamamını maça/sahaya gittiğinde tesis görevlisine ödeyebilirsin.
             </p>
           </div>
         )}
 
         {/* Bilgilendirme Notu */}
         {ctx.infoNote && (
-          <div className="flex gap-2 items-center text-[11px] text-gray-400 px-1">
+          <div className="flex gap-2 items-center text-[0.6875rem] text-gray-400 px-1">
             <ShieldCheck size={14} className="text-emerald-400 shrink-0" />
             <span>{ctx.infoNote}</span>
           </div>
