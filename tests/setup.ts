@@ -8,6 +8,31 @@ afterEach(() => {
   cleanup();
 });
 
+// Node 22 experimental localStorage global shadow fix for Vitest jsdom
+if (typeof globalThis.localStorage === 'undefined' || !globalThis.localStorage || typeof globalThis.localStorage.setItem !== 'function') {
+  let store: Record<string, string> = {};
+  const localStorageMock = {
+    getItem: (key: string) => store[key] ?? null,
+    setItem: (key: string, value: string) => { store[key] = String(value); },
+    removeItem: (key: string) => { delete store[key]; },
+    clear: () => { store = {}; },
+    key: (index: number) => Object.keys(store)[index] ?? null,
+    get length() { return Object.keys(store).length; },
+  };
+  Object.defineProperty(globalThis, 'localStorage', {
+    value: localStorageMock,
+    writable: true,
+    configurable: true,
+  });
+  if (typeof window !== 'undefined') {
+    Object.defineProperty(window, 'localStorage', {
+      value: localStorageMock,
+      writable: true,
+      configurable: true,
+    });
+  }
+}
+
 // Stüdyo ilk-kullanım turu varsayılan olarak KAPALI (bileşen testlerini örtmesin).
 // İlgili test dosyası ilk açılışı simüle etmek için localStorage'ı temizler.
 try { localStorage.setItem('oyna_studio_onboarded_v1', '1'); } catch { /* localStorage yok */ }

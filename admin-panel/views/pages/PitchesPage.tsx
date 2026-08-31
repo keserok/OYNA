@@ -8,7 +8,7 @@ import { ModuleCrudBar } from '../components/ModuleCrudBar';
 import { PageShell } from '../components/PageShell';
 import { StatusBadge } from '../components/StatusBadge';
 import { useAdminToast } from '../context/AdminToastContext';
-import { MapPin, Edit2, Trash2, Zap, Star, Eye, EyeOff, Percent, Clock } from 'lucide-react';
+import { MapPin, Edit2, Trash2, Zap, Star, Eye, EyeOff, Percent, Clock, Building2 } from 'lucide-react';
 import { fetchPitchesAdmin, toTurkishAdminError } from '../../services/adminService';
 import { setPitchPublished, setPitchShowcaseFlags } from '../../../services/pitchContentService';
 import { supabase } from '../../../supabaseClient';
@@ -16,6 +16,7 @@ import { mapAdminPitchRowToUi, PITCH_STATUS_FILTERS, type PitchStatusFilter } fr
 import { useAppStore } from '../../../store';
 import type { Pitch } from '../../../types';
 import { useDebouncedValue } from '../hooks/useDebouncedValue';
+import { OwnerBankAccountsModal } from '../../../views/owner/OwnerBankAccountsModal';
 
 interface PitchesPageProps {
     onRefresh?: () => Promise<void>;
@@ -36,6 +37,7 @@ export const PitchesPage: React.FC<PitchesPageProps> = ({ onRefresh }) => {
     const [confirmModal, setConfirmModal] = useState<ActionConfirmOptions | null>(null);
     // Saha Kurulum Merkezi: null → kapalı; {pitchId:null} → yeni tesis; {pitchId} → düzenle
     const [studio, setStudio] = useState<{ pitchId: string | null } | null>(null);
+    const [bankModalPitchId, setBankModalPitchId] = useState<string | null>(null);
     // Vitrin bayrakları (Karar #23, #28 + rozet yetkisi): admin RPC bu kolonları
     // dönmediği için ayrı çekilir. featured/flash/availability admin-only (DB trigger).
     type ShowcaseFlags = { published: boolean; featured: boolean; flash: boolean; availability: boolean };
@@ -250,6 +252,14 @@ export const PitchesPage: React.FC<PitchesPageProps> = ({ onRefresh }) => {
                 <div className="flex gap-2">
                     <button
                         type="button"
+                        onClick={() => setBankModalPitchId(p.id)}
+                        title="Banka / IBAN hesaplarını yönet"
+                        className="p-1.5 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 rounded-lg border border-emerald-500/20"
+                    >
+                        <Building2 size={14} />
+                    </button>
+                    <button
+                        type="button"
                         onClick={() => setStudio({ pitchId: p.id })}
                         title="Kurulum Merkezi'nde düzenle"
                         className="p-1.5 bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 rounded-lg border border-blue-500/20"
@@ -306,6 +316,12 @@ export const PitchesPage: React.FC<PitchesPageProps> = ({ onRefresh }) => {
                     pitchId={studio.pitchId}
                     onClose={() => { setStudio(null); void load(); }}
                     onSaved={() => void load()}
+                />
+            )}
+            {bankModalPitchId && (
+                <OwnerBankAccountsModal
+                    pitchId={bankModalPitchId}
+                    onClose={() => setBankModalPitchId(null)}
                 />
             )}
         </PageShell>

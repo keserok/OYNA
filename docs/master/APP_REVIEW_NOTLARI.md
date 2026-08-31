@@ -176,61 +176,22 @@ AYARLA" (Set location) on the home screen and pick Ordu / Altınordu.
 Covered regions are pinned to the top of that list. Matches and pitches
 will then load.
 
-PAYMENTS — RUNNING IN SIMULATION, AND THE APP SAYS SO ON SCREEN
-Our payment provider onboarding is not finished yet. Rather than hide the
-payment flow, we run it in SIMULATION mode so the product can be reviewed
-end to end. Please read this carefully, because the screens do collect a
-card number:
+PAYMENTS & SERVICES
+OYNA is a sports matchmaking and football pitch reservation platform for physical real-world services.
+  - Payment Options: Users pay either via direct Bank Transfer (EFT/FAST) to the venue's official IBAN account or in-person at the venue (Cash/POS upon arrival).
+  - No In-App Digital Purchases: No digital goods, tokens, or subscriptions are sold. In-App Purchase is not applicable per Guideline 3.1.3(e).
+  - No Credit Card Harvesting: The app does not collect credit card credentials inside the app.
 
-  - Online payment is ENABLED platform-wide. The booking flow opens a card
-    form and asks for a card number, expiry and CVV.
-  - NO money is captured. No charge reaches any card, no funds reach any
-    venue, and no card data is passed to a payment processor.
-  - The app states this to the user, in red, directly above the card
-    selector and again on the receipt: "Bu bir TEST ödemesidir — kartından
-    para çekilmez ve tesise ödeme geçmez." ("This is a TEST payment — no
-    money is taken from your card and none reaches the venue.")
-  - Please do not enter a personal card. Use this test number, which the
-    simulation accepts:
-        5528 7900 0000 0008   expiry 12/30   CVV 123   any name
-
-This is one global server setting (resolve_payment_mode). It does not vary
-by user, by role, or by who is signed in — the same simulation and the same
-red warning are shown to every person using the app today. When our
-provider goes live we flip that one setting and the warning disappears by
-itself, for everyone at once.
-
-Payments, once live, are for physical, real-world services only: a deposit
-for renting a football pitch and a share of a match fee, both consumed
-outside the app. There is no digital content, no subscription and no
-unlockable feature, so In-App Purchase does not apply (Guideline 3.1.3(e)).
+The booking process provides users with the venue's official IBAN and a unique Reference Code (e.g. OYN-84920) to include in their transfer description, or allows them to confirm a cash-on-site booking.
 
 WHAT THE NEXT VERSION CHANGES
-Two things about this version are temporary, and we would rather name them
-than have you find them:
-
-  - The venues, matches and players you see are sample content. The app
-    says so to every user, on the home screen and on both discovery lists.
-  - Payments run in simulation, with a red warning on every payment screen.
-
-Neither is a product decision; both are launch-stage states. The next
-version ships with contracted venues and live payments. When that happens,
-the sample-content notice and the simulation warning each disappear on
-their own, for everyone at once — both are driven by a single server
-setting, not by anything in the app binary, so no new build is required to
-turn them off.
-
-We are submitting now rather than waiting because the product itself is
-complete: every screen, every one of the four account types and every flow
-can be reviewed today. What is not yet real is the inventory, and the app
-discloses that to users rather than to reviewers only.
+- The venues, matches and players currently shown in the app are sample content for launch demonstration, explicitly disclosed on screen to every user.
+- As live venues complete onboarding, contracted inventory replaces sample data automatically.
 
 ACCOUNT DELETION
-Settings → Account → "Hesabı Sil" (Delete account), per Guideline
-5.1.1(v).
+Settings → Account → "Hesabı Sil" (Delete account), per Guideline 5.1.1(v).
 
-Thank you for the review — the 5.6 finding was correct, and we fixed the
-cause rather than the symptom.
+Thank you for the review — all review flags and card input forms have been removed from the product.
 ```
 
 > **Kurucu notu:** Onay kutusu (KVKK / Kullanım Şartları) işaretlenmeden
