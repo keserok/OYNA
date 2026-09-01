@@ -95,8 +95,6 @@ let mockStoreState = {
   selectedMatch: null,
   selectedDiaryId: null,
   selectedConversationId: null,
-  impersonatedUser: null,
-  originalRole: null,
   setRole: vi.fn((role: string) => {
     mockStoreState.role = role;
   }),

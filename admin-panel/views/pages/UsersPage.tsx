@@ -8,7 +8,7 @@ import { AdminFilterChips } from '../components/AdminFilterChips';
 import { Users, Shield, Scale, PlayCircle, Trash2, Eye, Edit3, Ban, ShieldCheck, BadgeCheck } from 'lucide-react';
 import { startGhostSession, fetchAdminProfiles, toTurkishAdminError } from '../../services/adminService';
 import { useDebouncedValue } from '../hooks/useDebouncedValue';
-import { openGhostInConsumerApp } from '../../../utils/ghostDeepLink';
+import { openGhostInConsumerApp } from '../../utils/ghostDeepLink';
 import { maskEmail } from '../../utils/pii';
 import { ProviderDetailPanel } from '../components/ProviderDetailPanel';
 import { User360Drawer } from '../components/User360Drawer';

@@ -193,10 +193,6 @@ const App: React.FC = () => {
     setSelectedConversationId,
     setSelectedGk,
     setSelectedRef,
-    impersonatedUser,
-    setImpersonatedUser,
-    originalRole,
-    setOriginalRole,
     isNotificationsOpen,
     setIsNotificationsOpen,
     isRoleSwitcherOpen,
@@ -479,52 +475,6 @@ const App: React.FC = () => {
             // Oturum kalıcı → tekrar giriş YOK. Yalnız girişte yönlendir; oturum
             // içindeki token yenilemesi kullanıcıyı bulunduğu ekrandan KOPARMAZ.
             if (isEntering) {
-              // ─── GHOST MODE DEEP-LINK YETKİLENDİRME KONTROLÜ ─────────────────
-              // Sadece profiles.is_admin=true veya SUPER_ADMIN yetkisine sahip kullanıcılar
-              // başka kullanıcıları taklit edebilir. Yetkisiz girişler engellenir.
-              const params = new URLSearchParams(window.location.search);
-              const ghostId = params.get('ghost');
-              if (ghostId) {
-                const isAdmin = profile.is_admin === true ||
-                                primaryRole === UserRole.SUPER_ADMIN ||
-                                (Array.isArray(profile.roles) && profile.roles.includes(UserRole.SUPER_ADMIN));
-                if (isAdmin) {
-                  const ghostName = params.get('name') || 'Kullanıcı';
-                  void (async () => {
-                    // [PANEL-AYRIMI] Eskiden burada admin-panel/services/adminService
-                    // (3400 satır) import ediliyordu; tek bu bağlantı yüzünden panel
-                    // kodu oyuncu paketine giriyordu. Aynı iki iş artık uygulamanın
-                    // kendi servisinde — yetki kapısı yine sunucuda.
-                    const { taklitProfiliGetir, taklidiKaydet } = await import('./services/ghostModeService');
-                    try {
-                      await taklidiKaydet(ghostId);
-                    } catch (e) {
-                      console.error('[Ghost Mode] Impersonation audit log failed:', e);
-                    }
-                    const ghostProfile = await taklitProfiliGetir(ghostId);
-                    setOriginalRole(landingRole);
-                    setImpersonatedUser(ghostProfile ?? {
-                      id: ghostId,
-                      name: ghostName,
-                      email: '',
-                      avatar: '',
-                      role: UserRole.PLAYER,
-                      isVerified: false,
-                      isBanned: false,
-                      joinDate: new Date().toISOString(),
-                      matchCount: 0,
-                    });
-                    resetNavigation('DASHBOARD');
-                    window.history.replaceState({}, '', window.location.pathname);
-                  })();
-                  return; // Normal yönlendirme zincirini atla
-                } else {
-                  console.warn('[Security Warning] Normal user tried to access ghost mode:', user.uid);
-                  showToast('Ghost Mode için admin yetkiniz bulunmamaktadır.');
-                  window.history.replaceState({}, '', window.location.pathname);
-                }
-              }
-
               // KA-1/KA-2: Sağlayıcı (kaleci/hakem) rolü ONAYLANMADIYSA panele
               // DEĞİL bekleme/red ekranına yönlendir. verification_status SELECT
               // ediliyordu ama landing'de hiç okunmuyordu → onaysız/red sağlayıcı
@@ -1236,44 +1186,6 @@ const App: React.FC = () => {
               }}
             />
           </Suspense>
-        )}
-      </AnimatePresence>
-
-      {/* Impersonation Ghost Mode Banner */}
-      <AnimatePresence>
-        {impersonatedUser && (
-          <motion.div
-            initial={{ opacity: 0, y: 50 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 50 }}
-            className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-black/90 backdrop-blur-xl border-2 border-red-500/40 rounded-full px-6 py-3.5 shadow-[0_0_30px_rgba(239,68,68,0.25)] z-50 flex items-center gap-4 shrink-0"
-          >
-            <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping" />
-              <span className="w-2.5 h-2.5 rounded-full bg-red-500 absolute" />
-              <p className="text-[0.6875rem] font-extrabold uppercase tracking-wider text-white">
-                GHOST MODE: <span className="text-red-400">{impersonatedUser.name}</span> TAKLİT EDİLİYOR
-              </p>
-            </div>
-            <div className="w-px h-4 bg-white/10" />
-            <button
-              onClick={() => {
-                if (originalRole) {
-                  setRole(originalRole);
-                }
-                setImpersonatedUser(null);
-                setOriginalRole(null);
-                // [PANEL-AYRIMI] Eskiden burada uygulama İÇİNDE panel açılıyordu
-                // (resetNavigation('ADMIN_PANEL')). O rota kaldırıldı: panel
-                // artık yalnız kendi sayfasında yaşıyor. Taklit bitince yönetici
-                // panel sayfasına DÖNDÜRÜLÜR.
-                window.location.href = '/admin.html';
-              }}
-              className="px-3.5 py-1.5 bg-red-500 hover:bg-red-600 text-white text-[0.625rem] font-extrabold tracking-widest uppercase rounded-full transition-all"
-            >
-              Taklidi Bitir
-            </button>
-          </motion.div>
         )}
       </AnimatePresence>
     </div>

@@ -239,8 +239,6 @@ interface AppState {
   banExpiresAt: string | null;
   setReliabilityScore: (score: number) => void;
   setBanExpiresAt: (dateStr: string | null) => void;
-  impersonatedUser: AdminUser | null;
-  setImpersonatedUser: (user: AdminUser | null) => void;
   adminSession: AdminSession | null;
   setAdminSession: (session: AdminSession | null) => void;
   // Çıkışta KULLANICIYA AİT her bellek alanını sıfırlar (26 Ağu 2026).
@@ -248,8 +246,6 @@ interface AppState {
   // bilinçli erken döner); bu çağrı olmasaydı önceki kullanıcının maçları,
   // bildirimleri ve admin oturumu bellekten sonraki kullanıcıya sızardı.
   resetUserScopedState: () => void;
-  originalRole: UserRole | null;
-  setOriginalRole: (role: UserRole | null) => void;
 
   // Global text overrides
   globalTexts: Record<string, string>;
@@ -741,8 +737,6 @@ export const useAppStore = create<AppState>((set, get) => ({
   banExpiresAt: null,
   setReliabilityScore: (score) => set({ reliabilityScore: score }),
   setBanExpiresAt: (banExpiresAt) => set({ banExpiresAt }),
-  impersonatedUser: null,
-  setImpersonatedUser: (impersonatedUser) => set({ impersonatedUser }),
   adminSession: null,
   setAdminSession: (adminSession) => set({ adminSession }),
   // Alan listesi başlangıç değerleriyle birebir — yeni kullanıcıya ait alan
@@ -761,8 +755,6 @@ export const useAppStore = create<AppState>((set, get) => ({
     notificationPreferences: DEFAULT_NOTIFICATION_PREFERENCES,
     reliabilityScore: 100,
     banExpiresAt: null,
-    impersonatedUser: null,
-    originalRole: null,
     selectedMatch: null,
     selectedFriendsForTeam: [],
     opponentAds: [],
@@ -794,8 +786,6 @@ export const useAppStore = create<AppState>((set, get) => ({
     userLocation: null,
     pendingIntent: null,
   }),
-  originalRole: null,
-  setOriginalRole: (originalRole) => set({ originalRole }),
   globalTexts: {
     dashboardTitle: 'ANA SAYFA',
     dashboardSubtitle: "OYNA'YA HOŞ GELDİN",

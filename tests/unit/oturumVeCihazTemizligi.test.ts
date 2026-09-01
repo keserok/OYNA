@@ -66,7 +66,7 @@ describe('2.3 · çıkışta store sıfırlanır', () => {
       'myMatches: []', 'userNotifications: []', 'unreadNotificationsCount: 0',
       'adminSession: null', 'savedCards: []', 'pushToken: null',
       'currentUserProfile: null', 'paymentContext: null', 'userLocation: null',
-      'staffPanelContext: null', 'impersonatedUser: null',
+      'staffPanelContext: null',
     ]) {
       expect(blok, `resetUserScopedState '${alan}' içermeli`).toContain(alan);
     }

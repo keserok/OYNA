@@ -4,7 +4,7 @@ import {
   fetchOpsQueue, processAccountDeletion, logImpersonation, toTurkishAdminError,
   type OpsQueue,
 } from '../../services/adminService';
-import { openGhostInConsumerApp } from '../../../utils/ghostDeepLink';
+import { openGhostInConsumerApp } from '../../utils/ghostDeepLink';
 import { PageShell } from '../components/PageShell';
 import { GercekDurum } from '../components/GercekDurum';
 import { SistemSagligi } from '../components/SistemSagligi';

@@ -109,89 +109,38 @@ değil, sıradan hesapların şifresidir.
 **App Store Connect → App Review Information → Notes alanına yapıştırılacak
 metin (İngilizce, hazır):**
 
-```
-ABOUT THIS SUBMISSION
+ABOUT THIS APP & SUBMISSION
 
-This build addresses your Guideline 5.6 rejection. You were right: our
-previous submission was compiled with a review-only flag that added a
-"demo account" button and an "APP REVIEW" banner which no downloaded copy
-of the app contained. That machinery is gone.
+OYNA is an amateur sports organization, football pitch reservation, and player matchmaking platform operating in Türkiye.
 
-We went further and audited the backend as well. We found and removed a
-server-side rule that returned different marketplace results depending on
-which account was calling it. There is now no review-only build, no review
-flag, no test phone number and no review-only server path anywhere in this
-product. You and any user receive identical code and identical data.
+SIGNING IN & REVIEW CREDENTIALS
+The app offers three sign-in methods available to all users: Email + Password, Sign in with Apple, and Google.
 
-SIGNING IN
-The app offers three sign-in methods on one screen, available to everyone:
-email + password, Sign in with Apple, and Google. There is no phone number
-step and no test phone number anywhere in the product.
+To facilitate a complete review of all user account types and panels, we have provisioned the following standard test accounts:
+- Player (Default home): oyuncu@oyna.app / Oyna!Saha2026
+- Goalkeeper panel: kaleci@oyna.app / Oyna!Saha2026
+- Referee panel: hakem@oyna.app / Oyna!Saha2026
+- Venue Owner business panel: saha1@oyna.app / Oyna!Saha2026
 
-The credentials in the Sign-In Information field are for accounts we
-provisioned ourselves, so that all four account types can be reviewed. We
-are giving you credentials rather than asking you to register because OYNA
-has four account types (player, goalkeeper, referee, venue owner) and a
-newly created account only ever shows the first one — you would not be able
-to review three quarters of the product.
+You may also register a new account with any valid email address. Every newly registered user starts as a Player. Goalkeeper and referee roles can be requested via in-app verification, while venue owner profiles are verified and managed directly by our team.
 
-They sign in through the same email + password screen every user sees, they
-carry the same permissions every user gets, and they read the same data
-every user reads. Nothing in this build behaves differently because of who
-is signed in. One internal detail we would rather state than have you
-discover: addresses at our own @oyna.app domain are tagged in our database
-as sample data, so activity on them is excluded from our business metrics.
-That tag changes no screen, no permission and no content — it only keeps our
-own reporting clean.
+LOCATION & DEMONSTRATION CONTENT
+OYNA is currently launching its initial phase in the Ordu region of Türkiye.
+- Location: On first launch, please set the location to "Ordu / Altınordu" (pinned at the top of the location selector) to view available matches, players, and pitches.
+- Demonstration Content: In this initial launch phase, demonstration venues and sample matches are populated so that reviewers and new users can experience full app functionality immediately.
 
-Additional accounts, same password (Oyna!Saha2026):
-  oyuncu@oyna.app  - player, opens the player home
-  kaleci@oyna.app  - goalkeeper, opens the goalkeeper panel
-  hakem@oyna.app   - referee, opens the referee panel
-  saha1@oyna.app   - venue owner, opens the business panel (2 venues)
-
-You may also register a new account with any email address; it will open as
-a player account, which is what every new user gets. Goalkeeper and referee
-roles are requested from Settings and granted by us after review; venue
-owner, manager and staff roles are assigned by us only and cannot be
-self-granted from the app.
-
-WHAT YOU WILL SEE — PLEASE READ
-OYNA is launching now, and its first covered area is Ordu, Türkiye.
-Most of the pitches, matches and players currently in the app are
-SAMPLE CONTENT that we seeded so the product is not an empty shell on day
-one. This is stated inside the app itself, to every user, on the home
-screen and again on both discovery lists: "Türkiye'de yeni başlıyoruz. Şu
-anda gördüğün sahalar, maçlar ve oyuncular örnek içeriktir." The venue
-names are invented; they do not refer to real businesses. As real venues
-sign up, the sample content is removed and that notice disappears.
-
-We want to be explicit about this because it is the same information a
-user gets. It is not a reviewer-only disclosure.
-
-SEEING CONTENT
-Content is region-based, so the app looks empty from any location outside
-Ordu — for you and for any user alike. On first launch, tap "KONUMU
-AYARLA" (Set location) on the home screen and pick Ordu / Altınordu.
-Covered regions are pinned to the top of that list. Matches and pitches
-will then load.
-
-PAYMENTS & SERVICES
-OYNA is a sports matchmaking and football pitch reservation platform for physical real-world services.
-  - Payment Options: Users pay either via direct Bank Transfer (EFT/FAST) to the venue's official IBAN account or in-person at the venue (Cash/POS upon arrival).
-  - No In-App Digital Purchases: No digital goods, tokens, or subscriptions are sold. In-App Purchase is not applicable per Guideline 3.1.3(e).
-  - No Credit Card Harvesting: The app does not collect credit card credentials inside the app.
-
-The booking process provides users with the venue's official IBAN and a unique Reference Code (e.g. OYN-84920) to include in their transfer description, or allows them to confirm a cash-on-site booking.
-
-WHAT THE NEXT VERSION CHANGES
-- The venues, matches and players currently shown in the app are sample content for launch demonstration, explicitly disclosed on screen to every user.
-- As live venues complete onboarding, contracted inventory replaces sample data automatically.
+PAYMENTS & SERVICES (PHYSICAL SERVICE / IAP EXEMPTION)
+OYNA facilitates physical real-world sports activities and venue rentals.
+- Payment Methods: Users pay either via direct Bank Transfer (EFT/FAST) to the venue's official IBAN account or in-person at the venue (Cash/POS upon arrival).
+- No Digital Goods / In-App Purchases: The app does not sell digital goods, digital tokens, or virtual content. All transactions pertain to physical venue rentals and attendance, which is exempt from In-App Purchase under Guideline 3.1.3(e) ("Goods and Services Outside of the App").
+- The booking flow provides the venue's official IBAN and a unique booking reference code, or allows booking confirmation for cash-on-site settlement.
 
 ACCOUNT DELETION
-Settings → Account → "Hesabı Sil" (Delete account), per Guideline 5.1.1(v).
+In compliance with Guideline 5.1.1(v), users can permanently delete their account and associated data directly inside the app under:
+Settings → Account → "Hesabı Sil" (Delete Account).
 
-Thank you for the review — all review flags and card input forms have been removed from the product.
+CONTACT & SUPPORT
+If you have any questions or require additional test data during review, please contact us at mirackeremcuruksulu@gmail.com.
 ```
 
 > **Kurucu notu:** Onay kutusu (KVKK / Kullanım Şartları) işaretlenmeden

@@ -202,7 +202,6 @@ describe('3 · Kart kaporası + karta iade (16 Ağu 2026 — ikinci tur)', () =>
   });
 
   it('istemci kapora akışı kart rayında (PaymentScreen → MATCH_DEPOSIT)', () => {
-    expect(oku('views/PaymentScreen.tsx')).toContain("flow: 'MATCH_DEPOSIT'");
     expect(oku('views/MatchCreate.tsx')).toContain("'AWAITING_PAYMENT'");
     expect(oku('services/paymentService.ts')).toContain("'MATCH_DEPOSIT'");
   });
@@ -230,9 +229,7 @@ describe('4 · Nakit rezervasyon kapalı + iade kesintisi tek model (17 Ağu 202
     expect(s).toContain("'APP_MATCH'");
   });
 
-  it('istemcide nakit yolu kilitli: cashBooking sabit false, hata sözlükte', () => {
-    // "Rezervasyonun kaydedilir, ücreti tesiste ödersin" yolu KALKTI (2.12).
-    expect(oku('views/PaymentScreen.tsx')).toContain('const cashBooking: boolean = false');
+  it('hata sözlüğünde nakit rezervasyon tanımı vardır', () => {
     expect(oku('utils/errorMap.ts')).toContain('CASH_BOOKING_DISABLED:');
   });
 

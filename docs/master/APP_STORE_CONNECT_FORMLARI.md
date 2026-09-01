@@ -5,7 +5,7 @@
 > beyanla gerçeğin uyuşmaması). Bu dosyadaki cevaplar **koddan ve canlı
 > veritabanından çıkarıldı**, tahmin değil. Nereden geldiği her satırda yazılı.
 
-**Uygulama:** OYNA · `com.oyna.app` · sürüm **1.0.0** · derleme **3**
+**Uygulama:** OYNA · `com.oyna.app` · sürüm **1.0.0** · derleme **5**
 
 ---
 
