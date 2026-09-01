@@ -465,8 +465,6 @@ await denetleAg('İnceleme notu canlı ödeme ayarıyla uyuşuyor', async () => 
   const mod = await yanit.json();
 
   const not = oku('docs/master/APP_REVIEW_NOTLARI.md');
-  const ing = not.slice(not.indexOf('ABOUT THIS'));
-
   tamam(`İnceleme notu fiziksel hizmet ve IBAN/Sahada ödeme modeliyle uyumlu`);
 });
 
