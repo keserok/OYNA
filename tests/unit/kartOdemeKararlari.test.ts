@@ -42,7 +42,14 @@ describe('B4 · kart bedeli fiyatın içinde', () => {
   });
 
   it('hesap yine de sunucunun ikizidir — ekrandaki rakam çekilenle aynı', () => {
-    // 20 Ağu 2026: ETİKETTE YAZAN ÖDENİR.
+    // Kırılımı gizlemek, YANLIŞ rakam göstermek demek değildir.
+    expect(odemeEkrani()).toContain('computeCardFee(amount, cardFeePct)');
+    // 20 Ağu 2026: ETİKETTE YAZAN ÖDENİR. 19 Ağu'nun bedel + 10'a yuvarlama
+    // modeli kaldırıldı; computeCardTotal etiketteki tutarın kendisini döner.
+    // Ekran yine de tek kaynaktan (computeCardTotal) okur ki kural bir daha
+    // değişirse rakam tek yerden değişsin — elle toplama geri gelmesin.
+    expect(odemeEkrani()).toContain('computeCardTotal(amount, cardFeePct)');
+    expect(odemeEkrani()).not.toContain('const grandTotal = amount + cardFee');
     expect(computeCardFee(1000, 2.5)).toBe(0); // bedel diye bir şey kalmadı
   });
 });

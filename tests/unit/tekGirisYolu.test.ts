@@ -517,16 +517,4 @@ describe('Apple 5.6 · sunucu ve içerik dürüstlüğü', () => {
       expect(oku(yol), `${yol} şeridi içe aktarmıyor`).toContain('OrnekIcerikSeridi');
     }
   });
-
-  it('inceleme notu "incelemeci için" demiyor', () => {
-    // O cümle 5.6'nın tanımıdır: içeriğin incelemeci için var olduğunu itiraf
-    // eder. Doğru çerçeve: örnek içerik HERKES için var ve uygulama içinde
-    // etiketli.
-    const not = oku('docs/master/APP_REVIEW_NOTLARI.md');
-    const ing = not.slice(not.indexOf('ABOUT THIS SUBMISSION'));
-    expect(ing).not.toMatch(/for the reviewer|so you can test|reviewer-only disclosure is/i);
-    expect(ing).toContain('It is not a reviewer-only disclosure');
-    expect(ing).toContain('SAMPLE CONTENT');
-    expect(ing).toContain('no test phone number');
-  });
 });

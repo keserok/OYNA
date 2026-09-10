@@ -147,16 +147,27 @@ describe('Demo ödeme · kullanıcı yanılmasın', () => {
    * Kilit gevşetildiğine göre yerine DÜRÜSTLÜK konmalı: ekran kullanıcıya
    * bunun test ödemesi olduğunu söylemek zorunda.
    */
-  it('ödeme ekranı IBAN ve Sahada Ödeme seçeneklerini açıkça sunar', () => {
+  it('ödeme ekranı test uyarısını SUNUCUDAN sürüyor, koda gömmüyor', () => {
+    // Koda gömülseydi iyzico canlıya alındığı gün uyarı ekranda KALIRDI ve
+    // gerçek ödeme yapan kullanıcıya "para çekilmez" denirdi. Sunucudan
+    // sürüldüğü için `payment_provider = IYZICO` olduğu an kendiliğinden
+    // kaybolur — yeni paket gerekmez.
     const ekran = oku('views/PaymentScreen.tsx');
-    expect(ekran).toContain('IBAN ile Öde');
-    expect(ekran).toContain('Sahada Öde');
+    expect(ekran).toContain('payMode?.simulation === true');
+    expect(ekran).toContain('Bu bir TEST ödemesidir');
+    // Uyarı, ödeme modu bilinmeden ya da online kapalıyken çizilmemeli.
+    expect(ekran).toContain('payMode?.simulation === true && onlineAllowed');
   });
 
-  it('ödeme ekranında IBAN kopyalama ve referans kodu mevcut', () => {
+  it('uyarı KART SEÇİMİNDEN ÖNCE çiziliyor', () => {
+    // İlk denemede ekranın en altına konmuştu ve yapışkan alt çubuk metnin
+    // üstüne binip yarısını örtüyordu. Görülmeyen uyarı, uyarı değildir.
     const ekran = oku('views/PaymentScreen.tsx');
-    expect(ekran).toContain('copyToClipboard');
-    expect(ekran).toContain('refCode');
+    const uyari = ekran.indexOf('Bu bir TEST ödemesidir');
+    const kartSecici = ekran.indexOf('Ödeme Yöntemi');
+    expect(uyari).toBeGreaterThan(-1);
+    expect(kartSecici).toBeGreaterThan(-1);
+    expect(uyari, 'uyarı kart seçicisinden SONRA çiziliyor').toBeLessThan(kartSecici);
   });
 
   it('simulation alanı tipte tanımlı ve güvenli varsayılanı false', () => {
@@ -198,10 +209,28 @@ describe('Demo ödeme · uyarı akışın TAMAMINDA', () => {
     expect(guvenlikNotu.length).toBeGreaterThan(0);
   });
 
-  it('IBAN ve Sahada Ödeme seçenekleri mevcut', () => {
+  it('bayrak ödeme ekranından kart formuna GEÇİRİLİYOR', () => {
+    // Bileşen desteklese de prop bağlanmazsa uyarı hiç çizilmez.
+    expect(oku('views/PaymentScreen.tsx'))
+      .toContain('simulation={payMode?.simulation === true && onlineAllowed}');
+  });
+
+  it('başarı ekranında da uyarı var ve makbuz TEST diye etiketli', () => {
     const ekran = oku('views/PaymentScreen.tsx');
-    expect(ekran).toContain('IBAN ile Öde');
-    expect(ekran).toContain('Sahada Öde');
+    const basari = ekran.slice(ekran.indexOf("if (screen === 'SUCCESS')"));
+    expect(basari).toContain('Bu bir TEST ödemesidir');
+    expect(basari).toContain("payMode?.simulation === true ? 'Test İşlem No' : 'İşlem No'");
+    expect(basari).toContain("'Kart · TEST'");
+  });
+
+  it('ekran KENDİ İÇİNDE çelişmiyor', () => {
+    // Kırmızı "para çekilmez" uyarısının altında yeşil "tamamı karttan tahsil
+    // edilir" kutusu duruyordu. İncelemeci hangisinin doğru olduğunu bilemez.
+    const ekran = oku('views/PaymentScreen.tsx');
+    expect(ekran).toContain("? 'TEST · tahsilat yok'");
+    expect(ekran).toContain('Bu işlemde kartından tahsilat yapılmaz');
+    // Simülasyonda banka doğrulaması HİÇ açılmaz.
+    expect(ekran).toContain("? 'Test işlemi çalıştırılıyor…'");
   });
 
   it('kart kaydetme varsayılanı KAPALI', () => {

@@ -176,22 +176,45 @@ describe('Maça katılım ödemesinde iade cümlesi (BULGU-083)', () => {
   });
 });
 
-describe('Ödeme ekranı — IBAN ve Sahada Ödeme şeffaflığı', () => {
+describe('3DS kurtarma — Durumu Kontrol Et (BULGU-093)', () => {
   const payment = oku('views/PaymentScreen.tsx');
 
   it('kapalı süpürücüye bağımlı vaat metni kaldırıldı', () => {
     expect(payment).not.toContain('bakiyen birazdan güncellenir');
   });
 
-  it('IBAN ve Sahada ödeme seçenekleri vardır', () => {
-    expect(payment).toContain("payMethod === 'IBAN'");
-    expect(payment).toContain("payMethod === 'CASH'");
-    expect(payment).toContain('activeBank.iban');
+  it('durum sorgulama düğmesi ve işleyicisi vardır', () => {
+    expect(payment).toContain('Durumu Kontrol Et');
+    expect(payment).toContain('handleCheckIntentStatus');
+    expect(payment).toContain('getIntentStatus');
   });
 
-  it('referans kodu ve kopyalama desteği vardır', () => {
-    expect(payment).toContain('refCode');
-    expect(payment).toContain('copyToClipboard');
+  it('her sunucu durumu için ayrı sonuç vardır (uydurma durum yok)', () => {
+    expect(payment).toContain("s?.status === 'PAID'");
+    expect(payment).toContain("s?.status === 'FAILED'");
+    expect(payment).toContain('İşlem hâlâ bankada sürüyor');
+    // PAID ama tutar cüzdana geri yazılmışsa "başarı" GÖSTERİLMEZ.
+    expect(payment).toContain("s?.status === 'PAID' && s.resultReason");
+  });
+
+  it('zaman aşımı VE kullanıcı çıkışı askıda niyeti işaretler', () => {
+    const kacKez = payment.match(/setPendingPay\(\{/g) ?? [];
+    expect(kacKez.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('sonuç bilinmiyorken şerit "başarısız" DEMEZ', () => {
+    expect(payment).toContain("'Ödemenin durumu belirsiz'");
+    expect(payment).toContain("setInlineErrorKind('PENDING')");
+  });
+
+  it('para düğmeleri en az 44px dokunma hedefi taşır (IP10-2b)', () => {
+    const bas = payment.indexOf('{inlineError && (');
+    const son = payment.lastIndexOf('Durumu Kontrol Et'); // JSX'teki buton (yorumlar değil)
+    expect(bas).toBeGreaterThan(0);
+    expect(son).toBeGreaterThan(bas);
+    const serit = payment.slice(bas, son);
+    // Hata şeridindeki iki para düğmesi (Tekrar Dene + Durumu Kontrol Et).
+    expect((serit.match(/min-h-\[44px\]/g) ?? []).length).toBe(2);
   });
 });
 
