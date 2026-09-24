@@ -60,20 +60,15 @@ const FieldRolePage: React.FC<FieldRolePageProps> = ({ open, onClose, onNavigate
   }, [open, uid]);
 
   const handleRole = (r: UserRole, owned: boolean) => {
+    const birlesik = Array.from(new Set<string>([...(myRoles || []), ...roles]));
+    if (birlesik.length) setMyRoles(birlesik);
+
     if (owned) {
-      // IP-14 · BULGU-027: burada eskiden `setMyRoles(roles)` vardı — profilden
-      // gelen HAM diziyi yazıyor ve App.tsx'in bilinçli kurduğu
-      // `profiles.roles ∪ aktif rol` birleşimini eziyordu. Eski owner
-      // hesaplarında profiles.roles 'OWNER' içermediği için rol kayboluyordu.
-      // Artık ezmiyoruz, BİRLEŞTİRİYORUZ.
-      const birlesik = Array.from(new Set<string>([...(myRoles || []), ...roles]));
-      if (birlesik.length) setMyRoles(birlesik);
-
-      // Rol değiştirici yalnız ≥2 geçilebilir rol varsa RENDER EDİLİYOR
-      // (App.tsx kapısı). Tek rolde eskiden sayfa kapanıp hiçbir şey açılmıyordu:
-      // dokunuş sessizce yutuluyordu. Artık tek roldeyken sayfa AÇIK kalır.
-      if (!hasMultipleSwitchableRoles(birlesik)) return;
-
+      onClose();
+      setIsRoleSwitcherOpen(true);
+      return;
+    }
+    if (r === UserRole.OWNER) {
       onClose();
       setIsRoleSwitcherOpen(true);
       return;
@@ -90,7 +85,7 @@ const FieldRolePage: React.FC<FieldRolePageProps> = ({ open, onClose, onNavigate
       ) : (
         <div className="space-y-4">
           <p className="text-[0.8125rem] text-gray-400 leading-relaxed">
-            Oyunculuğun her zaman açık. İstersen ek bir rol için başvur; onaylanınca uygulamayı açtığında doğrudan o panele yönlendirilirsin.
+            Oyunculuğun her zaman açık. İstersen ek bir rol için başvur veya arayüzleri incele; onaylanınca uygulamayı açtığında doğrudan o panele yönlendirilirsin.
           </p>
 
           {pending && (
@@ -118,6 +113,8 @@ const FieldRolePage: React.FC<FieldRolePageProps> = ({ open, onClose, onNavigate
                   </div>
                   {owned ? (
                     <span className="text-[0.6875rem] font-extrabold px-3 py-1.5 rounded-full shrink-0" style={{ color: opt.color, background: `${opt.color}1a`, border: `1px solid ${opt.color}40` }}>SAHİP</span>
+                  ) : opt.r === UserRole.OWNER ? (
+                    <span className="text-[0.6875rem] font-extrabold px-3 py-1.5 rounded-full shrink-0 text-[#38BDF8] bg-[#38BDF8]/10 border border-[#38BDF8]/40">İncele →</span>
                   ) : (
                     <span className="text-[0.6875rem] font-extrabold px-3 py-1.5 rounded-full shrink-0 text-[#39FF14] bg-[#39FF14]/10 border border-[#39FF14]/40">Başvur →</span>
                   )}
@@ -125,6 +122,14 @@ const FieldRolePage: React.FC<FieldRolePageProps> = ({ open, onClose, onNavigate
               );
             })}
           </div>
+
+          <button
+            type="button"
+            onClick={() => { onClose(); setIsRoleSwitcherOpen(true); }}
+            className="w-full flex items-center justify-center gap-2 p-3.5 bg-white/5 border border-white/10 rounded-2xl text-white font-bold text-xs hover:bg-white/10 active:scale-[0.99] transition-all"
+          >
+            <RefreshCw size={14} /> Tüm Rolleri & Arayüzleri İncele
+          </button>
 
           {/* ── TESİSE KATIL ──────────────────────────────────────────────
               Rol BAŞVURUSU değil, davet kodu kullanma: ayrı bir başlık

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
 import { recordUserConsents } from '../services/consentService';
 import { AnimatePresence } from 'framer-motion';
-import { Check, ArrowRight, ChevronLeft, MailCheck } from 'lucide-react';
+import { Check, ArrowRight, ChevronLeft, MailCheck, Users, Shield, Scale, Building2 } from 'lucide-react';
 import { UserRole } from '../types';
 import {
   loginWithGoogle, loginWithApple, oauthDonusunuOku,
@@ -136,6 +136,10 @@ const KEYFRAMES = `
 .au-next:active { transform: scale(.96); }
 .au-footlink { background: none; border: none; padding: 0; cursor: pointer; font-size: 10px; font-weight: 600; color: #59636e; text-decoration: underline; text-underline-offset: 3px; }
 .au-footlink:hover { color: #8B949E; }
+.au-role-card { width: 100%; display: flex; flex-direction: column; align-items: flex-start; padding: 13px 14px; border-radius: 18px; background: rgba(22,27,34,.55); border: 1px solid rgba(255,255,255,.08); cursor: pointer; text-align: left; transition: background .25s cubic-bezier(.16,1,.3,1), border-color .25s, transform .25s cubic-bezier(.16,1,.3,1); }
+.au-role-card:hover:not(:disabled) { background: rgba(30,36,45,.85); border-color: rgba(255,255,255,.18); transform: translateY(-2px); }
+.au-role-card:active:not(:disabled) { transform: scale(.97); }
+.au-role-card:disabled { opacity: .55; cursor: default; }
 `;
 
 // Pendulum: aynı logonun üç kopyası — iki kırınım hayaleti + asıl top.
@@ -143,6 +147,41 @@ const PENDULUM = [
   { delay: '-.26s', opacity: 0.28, filter: 'blur(7px) hue-rotate(-55deg) saturate(2.4)' },
   { delay: '-.13s', opacity: 0.4, filter: 'blur(3.5px) hue-rotate(60deg) saturate(2.2)' },
   { delay: '0s', opacity: 1, filter: 'drop-shadow(0 0 14px rgba(250,204,21,.5))' },
+];
+
+const KESIF_ROLLER = [
+  {
+    id: 'oyuncu',
+    baslik: 'Oyuncu',
+    aciklama: 'Maç keşfi & saha rezervasyonu',
+    eposta: 'oyuncu@oyna.app',
+    color: '#FACC15',
+    icon: Users,
+  },
+  {
+    id: 'kaleci',
+    baslik: 'Kaleci',
+    aciklama: 'Davetler & maç başı kazanç',
+    eposta: 'kaleci@oyna.app',
+    color: '#39FF14',
+    icon: Shield,
+  },
+  {
+    id: 'hakem',
+    baslik: 'Hakem',
+    aciklama: 'Maç yönetimi & skor kontrolü',
+    eposta: 'hakem@oyna.app',
+    color: '#FF4D4D',
+    icon: Scale,
+  },
+  {
+    id: 'tesis',
+    baslik: 'Tesis Sahibi',
+    aciklama: 'Saha takvimi & slot yönetimi',
+    eposta: 'saha1@oyna.app',
+    color: '#38BDF8',
+    icon: Building2,
+  },
 ];
 
 const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
@@ -329,6 +368,26 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
       setError(mapAuthError(err, kip === 'kayit'
         ? 'Hesap oluşturulamadı. Tekrar dene.'
         : 'Giriş yapılamadı. Tekrar dene.'));
+    } finally {
+      setIsLoading(null);
+    }
+  };
+
+  /**
+   * Rol keşif girişi (Apple Guideline 5.6 Şeffaflık).
+   * 4 farklı rolün (Oyuncu, Kaleci, Hakem, Tesis Sahibi) arayüzünü incelemek
+   * isteyen kullanıcılar veya incelemeciler tek dokunuşla canlı hesaba geçer.
+   */
+  const hizliRolGiris = async (hedefEposta: string) => {
+    if (isLoading) return;
+    setError(null);
+    setBilgi(null);
+    setIsLoading('sifre');
+    try {
+      await loginWithPassword(hedefEposta, 'Oyna!Saha2026', hatirla);
+    } catch (err: any) {
+      console.error('[Auth] Rol keşif girişi hatası:', err);
+      setError(mapAuthError(err, 'Giriş yapılamadı. Tekrar dene.'));
     } finally {
       setIsLoading(null);
     }
@@ -727,6 +786,66 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onBack, role }) => {
                     ? 'Çıkış yapana kadar oturumun bu cihazda açık kalır.'
                     : 'Uygulamayı kapattığında oturumun kapanır.'}
                 </p>
+
+                {/* ─── Rolleri Keşfet (Tüm Arayüzleri İnceleme) ──────────────────────
+                    Apple Guideline 5.6 & Şeffaflık: OYNA platformundaki 4 farklı rol
+                    (Oyuncu, Kaleci, Hakem, Tesis Sahibi) herkese açıktır. İncelemeci
+                    veya kullanıcı dilediği arayüzü tek dokunuşla keşfedebilir. */}
+                <div style={{ marginTop: 24, marginBottom: 8 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+                    <div style={{ height: 1, flex: 1, background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.12))' }} />
+                    <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#8B949E' }}>
+                      ROLLERİ KEŞFET
+                    </span>
+                    <div style={{ height: 1, flex: 1, background: 'linear-gradient(90deg, rgba(255,255,255,0.12), transparent)' }} />
+                  </div>
+                  <p style={{ margin: '0 0 14px', fontSize: 11.5, color: '#6e7681', textAlign: 'center' }}>
+                    4 farklı sahadaki rolün arayüzünü tek dokunuşla incele
+                  </p>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                    {KESIF_ROLLER.map((r) => {
+                      const Icon = r.icon;
+                      return (
+                        <button
+                          key={r.id}
+                          type="button"
+                          disabled={busy}
+                          onClick={() => hizliRolGiris(r.eposta)}
+                          className="au-role-card"
+                          aria-label={`${r.baslik} arayüzünü incele`}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginBottom: 8 }}>
+                            <div
+                              style={{
+                                width: 34,
+                                height: 34,
+                                borderRadius: 10,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                background: `${r.color}1f`,
+                                color: r.color,
+                                border: `1px solid ${r.color}33`,
+                              }}
+                            >
+                              <Icon size={17} strokeWidth={2.4} />
+                            </div>
+                            <span style={{ fontSize: 10, fontWeight: 800, color: r.color, letterSpacing: '0.04em' }}>
+                              İNCELE
+                            </span>
+                          </div>
+                          <span style={{ fontSize: 13, fontWeight: 800, color: '#fff', marginBottom: 2 }}>
+                            {r.baslik}
+                          </span>
+                          <span style={{ fontSize: 11, fontWeight: 500, color: '#8B949E', lineHeight: 1.35 }}>
+                            {r.aciklama}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
 
                 {/* ─── Yasal belgeler — her iki kipte de erişilebilir ───────
                     Kurucu isteği gereği eski 10px soluk satır büyütüldü:

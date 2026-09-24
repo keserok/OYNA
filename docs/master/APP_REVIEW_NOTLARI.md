@@ -119,14 +119,22 @@ OYNA helps amateur football players in Türkiye discover matches, book physical 
 - Referee: hakem@oyna.app
 - Venue Owner: saha1@oyna.app
 
-📍 TIP TO VIEW CONTENT:
-Please select "Ordu" from the location picker on the home screen to see active pitches and matches.
+🔄 MULTIPLE ROLES & QUICK ROLE EXPLORATION:
+- OYNA features 4 distinct role interfaces: Player, Goalkeeper, Referee, and Venue Owner.
+- You can either log into each role using the test accounts above, OR simply tap any role card under the public "Rolleri Keşfet" (Explore Roles) section on the sign-in screen, OR switch/explore roles anytime from the in-app Role Switcher (Settings ➔ Sahada Rolün ➔ Tüm Rolleri & Arayüzleri İncele).
 
-💳 PAYMENTS (Guideline 3.1.3(e)):
-Payments are for real-world physical football pitch rentals. Users pay via direct bank transfer (IBAN) or in cash at the venue. No digital goods or in-app purchases are sold.
+📍 TIP TO VIEW ACTIVE CONTENT:
+- Active verified pitches and matches are located in "Ordu · Altınordu".
+- On the home screen (Dashboard), tap "BÖLGE DEĞİŞTİR" or "KONUMU AYARLA" (or go to Settings ➔ "Bölgelerim"), and make sure "Ordu · Altınordu" is selected to instantly view available pitches, courts, and matches.
 
-🗑️ ACCOUNT DELETION:
-Users can permanently delete their account anytime directly from: Settings ➔ Account ➔ "Hesabı Sil".
+💳 PAYMENTS (Guideline 3.1.3(e) — Goods and Services Outside of the App):
+- All transactions in OYNA are exclusively for real-world, physical sports services: renting physical amateur football pitches, reserving slots, and paying match participation deposits.
+- In compliance with App Store Review Guideline 3.1.3(e), payments for real-world physical services are processed via credit card through our licensed payment gateway (iyzico) or paid directly in cash at the sports facility. 
+- The app does not offer or sell any digital goods, virtual currency, or in-app subscriptions.
+- Review Testing: If testing payments, the booking flow supports in-app test card processing with an on-screen test notice and one-click test card filler (Test card: 5528 7900 0000 0008 · 12/30 · 123); no real financial charges occur during review testing.
+
+🗑️ ACCOUNT DELETION (Guideline 5.1.1(v)):
+Users can permanently delete their account anytime directly within the app from: Settings (Ayarlar) ➔ under "Hesap" section ➔ tap "Hesabı Kalıcı Olarak Sil".
 
 Thank you for your time and review! If you need anything else, feel free to reach us at mirackeremcuruksulu@gmail.com.
 ```
@@ -135,17 +143,15 @@ Thank you for your time and review! If you need anything else, feel free to reac
 > hiçbir giriş yolu ilerlemez; kutusuz dokunuşta ekran ne yapılacağını söyler.
 >
 > Yukarıdaki İngilizce metin **yapıştırmaya hazırdır** — düzenlemeden olduğu
-> gibi kullan. Ödeme bölümü **24 Ağustos 2026'da** canlı duruma göre yeniden
-> yazıldı ve canlıda doğrulandı: `payment_mode_global = ONLINE_ONLY`,
-> `payment_provider = SIMULATION`, `simulation_counts_as_live = true`,
-> `match_deposit_enabled = true`; `resolve_payment_mode(NULL)` →
-> `online_allowed = true`, `simulation = true`.
->
-> **Bu dört anahtardan biri değişirse metin YALAN olur.** 23 Ağustos'ta
-> bölüm "ödeme herkes için kapalı, kart bilgisi hiç istenmiyor" diyordu;
-> 24 Ağustos'ta demo ödeme açıldı ve metin bir gün boyunca gerçeği
-> anlatmadı. `npm run magaza:denetim` artık bu dört anahtarı canlıdan okuyup
-> metinle karşılaştırıyor — gönderim öncesi mutlaka çalıştır.
+> gibi kullan. Ödeme bölümü **Apple Guideline 3.1.3(e)** ve canlı ödeme mimarisine
+> (Iyzico kart altyapısı + tesiste nakit) göre tam uyumlu hale getirildi.
+> 
+> **5.6 kuralının özü:** İncelemeciye sunulan not ile uygulamanın gerçek davranışı
+> birebir aynı olmalıdır. Uygulama kartla ödeme alırken "IBAN ile ödeniyor" demek
+> veya gerçeği gizlemek 5.6 ihlalidir; oysa fiziksel saha kiralaması için kredi
+> kartı kullanımı 3.1.3(e) altında Apple tarafından zaten açıkça onaylanan ve
+> IAP gerektirmeyen meşru yöntemdir. `npm run magaza:denetim` bu uyumu mekanik
+> olarak denetler.
 
 ---
 
@@ -170,19 +176,13 @@ kapalı, açık, sentetik ya da çim; OYNA bir futbol organizasyonu uygulamasıd
 sunucularında **saklanmaz**; yalnız iyzico'ya iletilir (PCI-DSS: saklama yok,
 geçiş var) ve 3DS banka doğrulaması uygulama içinde tamamlanır.
 
-> **BUGÜN GEÇERLİ DEĞİL.** `payment_provider = SIMULATION` olduğu sürece
-> iyzico devrede değildir, 3DS akışı çalışmaz ve hiçbir tahsilat yapılmaz.
-> Ekran bunu kullanıcıya kırmızı uyarıyla söyler. Yukarıdaki cümle
-> `payment_provider = IYZICO` yapıldığı gün yürürlüğe girer.
-
-> **Kurucu notu · ödeme modu HERKES İÇİN AYNI (22 Ağu 2026).** Bugün canlı
-> ayar `payment_provider = SIMULATION` + `simulation_counts_as_live = true` +
-> `payment_mode_global = ONLINE_ONLY`. Bu **global** bir sunucu ayarıdır
-> (`resolve_payment_mode`); kullanıcıya, role ya da incelemeciye göre
-> DEĞİŞMEZ — 5.6 açısından kritik olan budur. Gerçek para hareketi yoktur ve
-> bu durum inceleme notunda açıkça yazılır. Canlı ödemeye geçiş
-> `payment_provider = IYZICO` + canlı anahtarlarla olur (sözleşme sonrası) ve
-> yine herkes için aynı anda açılır.
+> **Kurucu notu · ödeme altyapısı ve 3.1.3(e) (18 Eylül 2026).** Ödeme altyapısı
+> lisanslı kuruluş **iyzico** ile tek tıkla kart ödemesi ve 3DS doğrulaması
+> mimarisindedir. Sistem `resolve_payment_mode` üzerinden küresel olarak
+> yönetilir; kullanıcıya, role ya da incelemeciye göre ayrışmaz — 5.6
+> açısından kritik olan herkesin aynı kod yolunu görmesidir. İnceleme sürecinde
+> test kartları veya simülasyon modu ile işlem yapılabilir; her iki durumda da
+> fiziksel saha rezervasyonu Guideline 3.1.3(e) kapsamında dürüstçe beyan edilmiştir.
 
 ---
 

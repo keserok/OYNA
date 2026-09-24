@@ -12,7 +12,7 @@
 
 | Konu | Durum |
 |---|---|
-| Uygulama kimliği (`com.oyna.app`), sürüm 3.0.0, yalnız iPhone + dikey mod | ✅ |
+| Uygulama kimliği (`com.oyna.app`), sürüm 1.0.0, yalnız iPhone + dikey mod | ✅ |
 | OYNA markalı uygulama ikonu (1024×1024) ve açılış ekranı görselleri | ✅ |
 | Türkçe izin açıklamaları: konum, kamera, fotoğraflar, **rehber** (bu oturumda eklendi) | ✅ |
 | Push bildirim altyapısı (APNs token köprüsü **bu oturumda onarıldı** — eksik olsaydı push hiç çalışmayacaktı) | ✅ |

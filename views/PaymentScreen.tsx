@@ -1063,9 +1063,9 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
             <div className="flex-1 min-w-0">
               <p className="text-[0.8125rem] font-extrabold text-red-400">Bu bir TEST ödemesidir</p>
               <p className="text-[0.75rem] text-gray-300 mt-1 leading-relaxed">
-                Kartından para çekilmez ve tesise ödeme geçmez. Ödeme altyapımız
-                henüz canlıya alınmadı; sahaya gitmeden önce tesisle ücreti
-                ayrıca konuşman gerekir.
+                Kartından para çekilmez ve tesise ödeme geçmez. Test kartı ile
+                rezervasyon akışını doğrudan deneyimleyebilirsin:
+                <span className="font-mono text-white font-bold ml-1">5528 7900 0000 0008 · 12/30 · 123</span>
               </p>
             </div>
           </div>

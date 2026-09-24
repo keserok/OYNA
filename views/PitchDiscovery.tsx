@@ -368,7 +368,7 @@ const MapViewComponent = ({
       <button
         onClick={handleLocate}
         aria-label="Konumuma dön"
-        className={`absolute right-4 z-[500] w-12 h-12 rounded-full bg-[#0D111A]/90 border border-white/10 backdrop-blur-md flex items-center justify-center text-[#00D8FF] shadow-[0_6px_24px_rgba(0,0,0,0.6)] active:scale-90 transition-all duration-300 ${showCarousel ? 'bottom-[9.5rem]' : 'bottom-4'}`}
+        className={`absolute right-4 z-[500] w-12 h-12 rounded-full bg-[#0D111A]/90 border border-white/10 backdrop-blur-md flex items-center justify-center text-[#00D8FF] shadow-[0_6px_24px_rgba(0,0,0,0.6)] active:scale-90 transition-all duration-300 ${showCarousel ? 'bottom-[11.5rem]' : 'bottom-6'}`}
       >
         {locating ? <Loader2 size={20} className="animate-spin" /> : <LocateFixed size={20} />}
       </button>
@@ -411,14 +411,26 @@ const MapViewComponent = ({
                       <div className="flex-1 min-w-0 py-0.5">
                         <div className="flex items-start justify-between gap-2">
                           <h4 className="text-[0.75rem] font-extrabold italic uppercase text-white truncate">{p.name}</h4>
-                          {/* B1 (4 Ağustos 2026): değerlendirilmemiş saha "★ 0" gösteriyordu —
-                              "sıfır puan almış" gibi okunuyordu. PitchShowcaseCard'daki
-                              V-2 kuralı buraya da uygulandı: gerçek oy yoksa "Yeni". */}
-                          {(p.ratingCount > 0 || p.googleReviews > 0) ? (
-                            <span className="flex items-center gap-0.5 text-[0.6875rem] font-extrabold text-[#FACC15] shrink-0">★ {p.rating.toFixed(1)}</span>
-                          ) : (
-                            <span className="text-[0.625rem] font-extrabold uppercase tracking-wide text-ink-4 shrink-0">Yeni</span>
-                          )}
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            {/* B1 (4 Ağustos 2026): değerlendirilmemiş saha "★ 0" gösteriyordu —
+                                "sıfır puan almış" gibi okunuyordu. PitchShowcaseCard'daki
+                                V-2 kuralı buraya da uygulandı: gerçek oy yoksa "Yeni". */}
+                            {(p.ratingCount > 0 || p.googleReviews > 0) ? (
+                              <span className="flex items-center gap-0.5 text-[0.6875rem] font-extrabold text-[#FACC15] shrink-0">★ {p.rating.toFixed(1)}</span>
+                            ) : (
+                              <span className="text-[0.625rem] font-extrabold uppercase tracking-wide text-ink-4 shrink-0">Yeni</span>
+                            )}
+                            {isSel && (
+                              <button
+                                type="button"
+                                onClick={(e) => { e.stopPropagation(); onPitchSelect(null); }}
+                                aria-label="Kapat"
+                                className="w-5 h-5 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white/60 hover:text-white transition-colors"
+                              >
+                                <X size={11} />
+                              </button>
+                            )}
+                          </div>
                         </div>
                         <div className="flex items-center gap-2 mt-1 text-[0.6875rem] font-bold text-white/50">
                           <span className="truncate">{p.district}</span>
@@ -1541,7 +1553,7 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
             ) : null}
           </div>
         ) : (
-          <div className="w-full h-[calc(100vh-250px)] relative rounded-[40px] overflow-hidden border border-white/5 shadow-2xl">
+          <div className="w-full h-[calc(100dvh-220px)] min-h-[500px] relative rounded-[32px] overflow-hidden border border-white/10 shadow-2xl">
             <MapViewComponent
               pitches={mapPins}
               selectedPitch={selectedPitch}
@@ -2399,6 +2411,47 @@ const PitchDiscovery: React.FC<PitchDiscoveryProps> = ({ onBack, isSelectionMode
         />
         <p className="text-[0.6875rem] text-ink-4 mt-2 text-right">{reportText.trim().length}/500</p>
       </ActionSheet>
+
+      {/* ── Floating Map/List Switcher Pill (Airbnb Style) ── */}
+      {!isDetailOpen && !showFilters && !reportOpen && (
+        <div
+          className={`fixed left-1/2 -translate-x-1/2 z-40 transition-all duration-300 pointer-events-auto ${
+            viewMode === 'MAP' && selectedPitch
+              ? 'bottom-36'
+              : 'bottom-20 sm:bottom-24'
+          }`}
+        >
+          <div className="flex items-center p-1 bg-[#121721]/95 backdrop-blur-xl border border-white/15 rounded-full shadow-[0_8px_32px_rgba(0,0,0,0.7),0_0_20px_rgba(57,255,20,0.15)] gap-1">
+            <button
+              type="button"
+              onClick={() => {
+                setViewMode('LIST');
+                if (selectedPitch) setSelectedPitch(null);
+              }}
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-extrabold tracking-wide transition-all ${
+                viewMode === 'LIST'
+                  ? 'bg-[#39FF14] text-[#0A0E14] shadow-[0_0_14px_rgba(57,255,20,0.4)]'
+                  : 'text-white/60 hover:text-white active:scale-95'
+              }`}
+            >
+              <LayoutGrid size={13} strokeWidth={2.5} />
+              <span>LİSTE</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('MAP')}
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-extrabold tracking-wide transition-all ${
+                viewMode === 'MAP'
+                  ? 'bg-[#39FF14] text-[#0A0E14] shadow-[0_0_14px_rgba(57,255,20,0.4)]'
+                  : 'text-white/60 hover:text-white active:scale-95'
+              }`}
+            >
+              <MapIcon size={13} strokeWidth={2.5} />
+              <span>HARİTA</span>
+            </button>
+          </div>
+        </div>
+      )}
 
     </div>
   );

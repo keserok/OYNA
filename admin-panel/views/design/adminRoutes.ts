@@ -53,6 +53,7 @@ export const ADMIN_ROUTES: AdminRouteDef[] = [
 
   // ── Operasyon ────────────────────────────────────────────────────────────
   { route: 'SAHALAR', title: 'Sahalar', label: 'Sahalar', description: 'Tesis envanteri, vitrin kurulumu ve onay durumları.', group: 'Operasyon', sidebarGroup: 'OPERASYON', accent: 'green', icon: MapPin, inPalette: true, badge: 'pitches' },
+  { route: 'ANTREMAN', title: 'Antreman Yönetimi', label: 'Antreman Yönetimi', description: 'Sahaların antreman slotlarını yönetin.', group: 'Operasyon', sidebarGroup: 'OPERASYON', accent: 'cyan', icon: Zap, inPalette: true },
   { route: 'KULLANICILAR', title: 'Kullanıcılar', label: 'Kullanıcılar', description: 'Oyuncu profilleri, ban ve rol yönetimi.', group: 'Operasyon', sidebarGroup: 'OPERASYON', accent: 'blue', icon: Users, inPalette: true, badge: 'users' },
   { route: 'VERIFICATION', title: 'Doğrulama Merkezi', label: 'Doğrulama', description: 'Kaleci/hakem başvuruları, kimlik doğrulama ve tesis onayları tek ekranda.', group: 'Operasyon', sidebarGroup: 'OPERASYON', accent: 'yellow', icon: ShieldCheck, inPalette: true, badge: 'verification', activeAlso: ['PENDING_VERIFICATIONS', 'PROVIDER_IDENTITIES', 'MODERATION'] },
   // F5.5: MODERATION sidebar'dan düşürüldü — Doğrulama Merkezi'nin "Tesis

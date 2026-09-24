@@ -1172,9 +1172,9 @@ const App: React.FC = () => {
         )}
       </AnimatePresence>
 
-      {/* FAZ 7.5: Çoklu rol geçişi — rol değiştirici sheet (yalnızca >1 rol varsa açılabilir) */}
+      {/* FAZ 7.5: Çoklu rol geçişi ve arayüz keşfi — rol değiştirici sheet */}
       <AnimatePresence>
-        {isRoleSwitcherOpen && hasMultipleSwitchableRoles(myRoles) && (
+        {isRoleSwitcherOpen && (
           <Suspense fallback={null}>
             <RoleSwitcher
               roles={myRoles}

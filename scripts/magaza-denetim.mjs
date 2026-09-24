@@ -465,7 +465,26 @@ await denetleAg('İnceleme notu canlı ödeme ayarıyla uyuşuyor', async () => 
   const mod = await yanit.json();
 
   const not = oku('docs/master/APP_REVIEW_NOTLARI.md');
-  tamam(`İnceleme notu fiziksel hizmet ve IBAN/Sahada ödeme modeliyle uyumlu`);
+  
+  if (not.includes('direct bank transfer (IBAN)')) {
+    engel('İnceleme notunda eski IBAN ifadesi kalmış',
+      'Uygulama kartla ödeme alırken notta IBAN yazması Apple 5.6 (Bait-and-Switch) riskidir.');
+    return;
+  }
+
+  if (!not.includes('3.1.3(e)')) {
+    engel('İnceleme notunda Guideline 3.1.3(e) beyanı eksik',
+      'Fiziksel halı saha rezervasyonunun IAP muafiyeti 3.1.3(e) ile gerekçelendirilmelidir.');
+    return;
+  }
+
+  if (!not.includes('iyzico') && !not.includes('credit card')) {
+    engel('İnceleme notunda kart/sağlayıcı beyanı eksik',
+      'Ödeme altyapısı kart ile çalışırken notun bunu gizlemesi 5.6 riskidir.');
+    return;
+  }
+
+  tamam(`İnceleme notu fiziksel hizmet (3.1.3(e)) ve lisanslı kart ödeme altyapısıyla uyumlu`);
 });
 
 

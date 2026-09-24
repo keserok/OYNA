@@ -58,11 +58,19 @@ const initialsOf = (n: string) =>
   n.split(' ').filter(Boolean).map(w => w[0]).join('').slice(0, 2).toLocaleUpperCase('tr-TR');
 
 const CARD: React.CSSProperties = {
-  background: '#161B22', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 20,
+  background: '#161B22',
+  border: '1px solid rgba(255,255,255,0.08)',
+  borderRadius: 24,
+  boxShadow: '0 8px 32px rgba(0,0,0,0.35)',
 };
 
 const SECTION_LABEL: React.CSSProperties = {
-  margin: '0 0 12px', fontSize: 11, fontWeight: 900, letterSpacing: '.14em', color: '#6B7280',
+  margin: '0 0 12px',
+  fontSize: 11,
+  fontWeight: 800,
+  letterSpacing: '.18em',
+  color: 'rgba(255,255,255,0.5)',
+  textTransform: 'uppercase',
 };
 
 // ─── Kadro satırı: bir "yer"in beş görsel durumu (tek tanım) ────────────────
@@ -477,66 +485,130 @@ const RahatMatchLobby: React.FC<Props> = ({ match: matchProp, onBack }) => {
   const RosterCard: React.FC<{
     title: string; color: string; rows: RosterRow[]; filledLabel: string;
   }> = ({ title, color, rows, filledLabel }) => (
-    <div style={{ ...CARD, padding: '13px 15px 6px', marginBottom: 10, boxShadow: '0 10px 24px rgba(0,0,0,0.30)' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingBottom: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-        <Shirt size={15} color={color} strokeWidth={1.8} style={{ flexShrink: 0 }} />
-        <span style={{ flex: 1, fontSize: 11, fontWeight: 900, letterSpacing: '.12em', color: title === 'BEYAZ TAKIM' ? TEAM_WHITE : '#FFFFFF' }}>{title}</span>
-        <span className="font-numeric" style={{ fontSize: 12, fontWeight: 600, color: '#9CA3AF' }}>{filledLabel}</span>
-      </div>
-      {rows.map(row => (
-        <div key={row.key} style={{ display: 'flex', alignItems: 'center', gap: 12, minHeight: 56, borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-          {row.kind === 'open' && (
-            <>
-              <span style={{ width: 40, height: 40, borderRadius: '50%', border: '1.5px dashed rgba(255,255,255,0.16)', flexShrink: 0 }} />
-              <span style={{ flex: 1, fontSize: 13, fontWeight: 700, color: '#4B5563' }}>+ Boş yer</span>
-            </>
-          )}
-          {row.kind === 'lock' && (
-            <>
-              <span style={{ width: 40, height: 40, borderRadius: '50%', background: 'rgba(255,255,255,0.04)', border: `1px solid ${color}47`, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Lock size={15} color="#9CA3AF" />
-              </span>
-              <span style={{ flex: 1, fontSize: 13, fontWeight: 700, color: '#9CA3AF' }}>{row.lockText}</span>
-            </>
-          )}
-          {row.kind === 'player' && (
-            <>
-              {/* Zemin SAYDAM (kurucu kararı, 20 Ağu 2026): daire renk katmaz,
-                  varlığını takım rengindeki halka taşır; harfler opak. */}
-              {row.avatar ? (
-                <img src={row.avatar} alt={row.name} referrerPolicy="no-referrer"
-                  style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover', background: 'transparent', border: `1.5px solid ${color}${title === 'BEYAZ TAKIM' ? '8c' : 'bf'}`, flexShrink: 0 }} />
-              ) : (
-                <span style={{ width: 40, height: 40, borderRadius: '50%', background: 'transparent', border: `1.5px solid ${color}${title === 'BEYAZ TAKIM' ? '8c' : 'bf'}`, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 900, fontStyle: 'italic', color: title === 'BEYAZ TAKIM' ? TEAM_WHITE : '#FFFFFF' }}>
-                  {row.initials}
-                </span>
-              )}
-              <span style={{ flex: 1, minWidth: 0, fontSize: 14, fontWeight: 800, color: '#FFFFFF', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{row.name}</span>
-              <BandChip value={row.selfSkill} />
-              {row.isFriend && (
-                <span style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 3, fontSize: 10, fontWeight: 900, letterSpacing: '.06em', color: '#60A5FA' }}>
-                  <Users size={10} strokeWidth={2.4} /> ARKADAŞ
-                </span>
-              )}
-              {row.isInvited && (
-                <span style={{ flexShrink: 0, fontSize: 10, fontWeight: 900, letterSpacing: '.06em', color: '#9CA3AF', background: 'rgba(255,255,255,0.05)', borderRadius: 9999, padding: '3px 7px' }}>DAVETLİ</span>
-              )}
-              {row.isMe && (
-                <span style={{ flexShrink: 0, fontSize: 10, fontWeight: 900, letterSpacing: '.08em', color: '#0A0E14', background: '#39FF14', borderRadius: 9999, padding: '3px 8px' }}>SEN</span>
-              )}
-            </>
-          )}
-          <span style={{ width: 8, flexShrink: 0 }} />
+    <div className="bg-[#121721]/90 backdrop-blur-xl border border-white/10 rounded-[28px] p-4 mb-4 shadow-[0_12px_36px_rgba(0,0,0,0.45)]">
+      <div className="flex items-center justify-between pb-3 mb-1 border-b border-white/10">
+        <div className="flex items-center gap-2.5">
+          <div
+            className="w-7 h-7 rounded-xl flex items-center justify-center border"
+            style={{
+              background: title === 'BEYAZ TAKIM' ? 'rgba(255,255,255,0.1)' : 'rgba(239,68,68,0.15)',
+              borderColor: title === 'BEYAZ TAKIM' ? 'rgba(255,255,255,0.25)' : 'rgba(239,68,68,0.35)',
+            }}
+          >
+            <Shirt size={15} color={color} strokeWidth={2.2} />
+          </div>
+          <span className="text-xs font-extrabold tracking-widest text-white uppercase italic">
+            {title}
+          </span>
         </div>
-      ))}
+        <span className="font-numeric text-xs font-bold text-white/60 bg-white/5 border border-white/10 px-2.5 py-1 rounded-full">
+          {filledLabel}
+        </span>
+      </div>
+      <div className="space-y-1.5 pt-1">
+        {rows.map(row => (
+          <div
+            key={row.key}
+            className={`flex items-center gap-3 min-h-[56px] px-3 rounded-2xl transition-all ${
+              row.kind === 'open'
+                ? 'bg-white/[0.02] border border-dashed border-white/15 hover:border-[#39FF14]/40 hover:bg-[#39FF14]/[0.02] cursor-pointer'
+                : row.isMe
+                ? 'bg-[#39FF14]/[0.08] border border-[#39FF14]/30'
+                : 'bg-black/25 border border-white/5'
+            }`}
+            onClick={() => {
+              if (row.kind === 'open' && !isJoined && !isFull) {
+                setSheet('join');
+              }
+            }}
+          >
+            {row.kind === 'open' && (
+              <>
+                <div className="w-10 h-10 rounded-full border-2 border-dashed border-white/20 flex items-center justify-center shrink-0">
+                  <UserPlus size={16} className="text-white/60" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <span className="text-sm font-bold text-white/70 tracking-wide block">+ Boş yer</span>
+                  <span className="text-[0.6875rem] font-semibold text-white/60">Dokun ve yerini ayırt</span>
+                </div>
+                <span className="text-[0.6875rem] font-extrabold text-[#39FF14] bg-[#39FF14]/10 border border-[#39FF14]/30 px-3 py-1.5 rounded-full uppercase tracking-wider shrink-0">
+                  KATIL
+                </span>
+              </>
+            )}
+            {row.kind === 'lock' && (
+              <>
+                <div className="w-10 h-10 rounded-full bg-white/[0.04] border border-white/15 flex items-center justify-center shrink-0">
+                  <Lock size={16} className="text-white/60" />
+                </div>
+                <span className="flex-1 text-xs font-bold text-white/60 truncate">{row.lockText}</span>
+              </>
+            )}
+            {row.kind === 'player' && (
+              <>
+                <div className="relative shrink-0">
+                  {row.avatar ? (
+                    <img
+                      src={row.avatar}
+                      alt={row.name}
+                      referrerPolicy="no-referrer"
+                      className="w-10 h-10 rounded-full object-cover border-2"
+                      style={{ borderColor: title === 'BEYAZ TAKIM' ? 'rgba(255,255,255,0.7)' : '#EF4444' }}
+                    />
+                  ) : (
+                    <div
+                      className="w-10 h-10 rounded-full flex items-center justify-center text-xs font-extrabold border-2"
+                      style={{
+                        background: 'rgba(255,255,255,0.06)',
+                        borderColor: title === 'BEYAZ TAKIM' ? 'rgba(255,255,255,0.7)' : '#EF4444',
+                        color: title === 'BEYAZ TAKIM' ? TEAM_WHITE : '#FFFFFF',
+                      }}
+                    >
+                      {row.initials}
+                    </div>
+                  )}
+                  {row.isMe && (
+                    <span className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-[#39FF14] border-2 border-[#161B22] flex items-center justify-center">
+                      <Check size={9} className="text-black" strokeWidth={3} />
+                    </span>
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <span className="block text-sm font-extrabold text-white truncate leading-tight">
+                    {row.name}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  {row.isFriend && (
+                    <span className="text-[0.625rem] font-extrabold tracking-wider text-blue-400 bg-blue-400/10 border border-blue-400/30 px-2 py-1 rounded-full uppercase">
+                      ARKADAŞ
+                    </span>
+                  )}
+                  <BandChip value={row.selfSkill} />
+                  {row.isInvited && (
+                    <span className="text-[0.625rem] font-extrabold tracking-wider text-white/60 bg-white/5 border border-white/10 px-2 py-1 rounded-full uppercase">
+                      DAVETLİ
+                    </span>
+                  )}
+                  {row.isMe && (
+                    <span className="text-[0.625rem] font-extrabold tracking-wider text-[#0A0E14] bg-[#39FF14] px-2.5 py-1 rounded-full uppercase">
+                      SEN
+                    </span>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+        ))}
+      </div>
     </div>
   );
 
   const InfoTile: React.FC<{ icon: React.ReactNode; label: string; value: string; numeric?: boolean }> = ({ icon, label, value, numeric }) => (
-    <div style={{ background: '#0f1419', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 16, padding: '13px 14px' }}>
-      {icon}
-      <p style={{ margin: '9px 0 3px', fontSize: 10, fontWeight: 900, letterSpacing: '.12em', color: '#6B7280' }}>{label}</p>
-      <p className={numeric ? 'font-numeric' : undefined} style={{ margin: 0, fontSize: numeric ? 14 : 13, fontWeight: numeric ? 600 : 700, color: '#FFFFFF' }}>{value}</p>
+    <div className="bg-[#121721]/90 backdrop-blur-md border border-white/10 rounded-2xl p-3.5 shadow-md">
+      <div className="text-white/60">{icon}</div>
+      <p className="mt-2 mb-0.5 text-[0.625rem] font-extrabold tracking-widest text-white/50 uppercase">{label}</p>
+      <p className={`m-0 text-sm font-extrabold text-white truncate ${numeric ? 'font-numeric' : ''}`}>{value}</p>
     </div>
   );
 
@@ -588,30 +660,54 @@ const RahatMatchLobby: React.FC<Props> = ({ match: matchProp, onBack }) => {
           </div>
         )}
 
-        {/* ── Tesis kimliği ──
-            Baş harf kutusu KALDIRILDI (kullanıcı kararı): tesis adının solunda
-            duran 46px'lik kutu, adın kendisiyle aynı bilgiyi tekrar ediyordu ve
-            başlığı sağa itiyordu. Artık ad doğrudan kenar boşluğundan başlar. */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '16px 20px 14px' }}>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <h1 style={{ margin: 0, fontSize: 20, fontWeight: 900, letterSpacing: '-0.02em', lineHeight: 1.15, color: '#FFFFFF', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{facilityName}</h1>
-            {courtName && <p style={{ margin: '3px 0 0', fontSize: 12, fontWeight: 600, color: '#9CA3AF' }}>@{courtName}</p>}
+        {/* ── Tesis kimliği ── */}
+        <div className="flex items-center justify-between gap-3 px-5 pt-4 pb-3">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1.5">
+              <span className="text-[0.625rem] font-extrabold tracking-widest text-[#10b981] bg-[#10b981]/10 border border-[#10b981]/30 px-2.5 py-0.5 rounded-full uppercase">
+                RAHAT MAÇ
+              </span>
+              {match.format && (
+                <span className="text-[0.625rem] font-bold text-white/50 bg-white/5 border border-white/10 px-2 py-0.5 rounded-full">
+                  {match.format}
+                </span>
+              )}
+            </div>
+            <h1 className="text-xl font-extrabold text-white tracking-tight truncate leading-tight">
+              {facilityName}
+            </h1>
+            {courtName && (
+              <p className="text-xs font-semibold text-white/60 mt-0.5 truncate">
+                @{courtName}
+              </p>
+            )}
           </div>
           {isFull ? (
-            <span style={{ flexShrink: 0, fontSize: 13, fontWeight: 800, letterSpacing: '.04em', color: '#39FF14' }}>KADRO TAM</span>
+            <span className="shrink-0 text-xs font-extrabold tracking-wider text-[#39FF14] bg-[#39FF14]/10 border border-[#39FF14]/30 px-3 py-1.5 rounded-full">
+              KADRO TAM
+            </span>
           ) : remain > 0 && remain <= 3 ? (
-            <span style={{ flexShrink: 0, fontSize: 13, fontWeight: 800, color: '#F87171' }}>{remain} yer kaldı</span>
+            <span className="shrink-0 text-xs font-extrabold tracking-wider text-[#F87171] bg-[#F87171]/10 border border-[#F87171]/30 px-3 py-1.5 rounded-full animate-pulse">
+              {remain} YER KALDI
+            </span>
           ) : null}
         </div>
 
         {/* ── Sekmeler ── */}
-        <div style={{ display: 'flex', gap: 26, padding: '0 20px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+        <div className="flex items-center gap-6 px-5 border-b border-white/[0.08]">
           {(['durum', 'hakkinda'] as const).map(t => (
-            <button key={t} type="button" onClick={() => setTab(t)} style={{ position: 'relative', padding: '0 0 11px', background: 'none', border: 'none', cursor: 'pointer' }}>
-              <span style={{ display: 'block', fontSize: 12, fontWeight: 900, letterSpacing: '.16em', color: tab === t ? '#FFFFFF' : '#6B7280' }}>
+            <button
+              key={t}
+              type="button"
+              onClick={() => setTab(t)}
+              className="relative py-3.5 bg-transparent border-0 cursor-pointer focus:outline-none transition-colors"
+            >
+              <span className={`text-xs font-extrabold tracking-[0.16em] uppercase transition-colors ${tab === t ? 'text-white' : 'text-white/60 hover:text-white'}`}>
                 {t === 'durum' ? 'DURUM' : 'HAKKINDA'}
               </span>
-              {tab === t && <span style={{ position: 'absolute', left: 0, right: 0, bottom: -1, height: 2, background: '#39FF14', borderRadius: 2 }} />}
+              {tab === t && (
+                <div className="absolute left-0 right-0 -bottom-[1px] h-0.5 bg-[#39FF14] rounded-full shadow-[0_0_12px_rgba(57,255,20,0.8)]" />
+              )}
             </button>
           ))}
         </div>
@@ -949,42 +1045,56 @@ const RahatMatchLobby: React.FC<Props> = ({ match: matchProp, onBack }) => {
 
       {/* ═══ Sabit alt CTA ═══ */}
       {!isCancelled && (
-        <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 10, padding: '14px 20px 30px', background: 'linear-gradient(180deg, rgba(10,14,20,0) 0%, rgba(10,14,20,0.92) 34%, #0A0E14 100%)' }}>
+        <div className="fixed bottom-0 left-0 right-0 z-40 p-4 pb-8 sm:pb-6 bg-gradient-to-t from-[#0A0E14] via-[#0A0E14]/95 to-transparent backdrop-blur-md">
           {isConfirmed ? (
-            <div style={{ width: '100%', height: 54, borderRadius: 16, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <span style={{ fontSize: 13, fontWeight: 900, letterSpacing: '.1em', color: '#4B5563' }}>MAÇ ONAYLANDI — KADRO KİLİTLİ</span>
+            <div className="w-full h-14 rounded-2xl bg-white/[0.04] border border-white/10 flex items-center justify-center">
+              <span className="text-xs font-extrabold tracking-widest text-white/60 uppercase">MAÇ ONAYLANDI — KADRO KİLİTLİ</span>
             </div>
           ) : isJoined ? (
-            <>
+            <div className="space-y-2">
               {myUnfilled.length > 0 ? (
-                <button type="button" onClick={() => { setTab('durum'); squadRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }); }}
-                  style={{ width: '100%', height: 54, borderRadius: 16, background: 'rgba(57,255,20,0.08)', border: '1.5px solid rgba(57,255,20,0.55)', color: '#39FF14', fontSize: 14, fontWeight: 900, letterSpacing: '.1em', cursor: 'pointer' }}>
+                <button
+                  type="button"
+                  onClick={() => { setTab('durum'); squadRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }); }}
+                  className="w-full h-14 rounded-2xl bg-[#39FF14]/10 border border-[#39FF14]/50 text-[#39FF14] text-xs font-extrabold tracking-widest flex items-center justify-center gap-2 active:scale-[0.98] transition-transform shadow-[0_0_20px_rgba(57,255,20,0.15)]"
+                >
+                  <UserPlus size={16} />
                   YERLERİ DOLDUR ({myUnfilled.length})
                 </button>
               ) : (
-                <div style={{ width: '100%', height: 54, borderRadius: 16, background: 'rgba(57,255,20,0.06)', border: '1.5px solid rgba(57,255,20,0.30)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9 }}>
-                  <Check size={15} color="#39FF14" strokeWidth={2.2} />
-                  <span style={{ fontSize: 13, fontWeight: 900, letterSpacing: '.08em', color: '#39FF14' }}>KADRODASIN</span>
+                <div className="w-full h-14 rounded-2xl bg-[#39FF14]/10 border border-[#39FF14]/30 flex items-center justify-center gap-2">
+                  <Check size={16} className="text-[#39FF14]" strokeWidth={2.5} />
+                  <span className="text-xs font-extrabold tracking-wider text-[#39FF14] uppercase">KADRODASIN</span>
                 </div>
               )}
-              <button type="button" onClick={openLeave}
-                style={{ display: 'block', width: '100%', marginTop: 11, padding: 0, background: 'none', border: 'none', fontSize: 12, fontWeight: 700, color: '#9CA3AF', cursor: 'pointer' }}>
+              <button
+                type="button"
+                onClick={openLeave}
+                className="w-full py-2 min-h-[44px] flex items-center justify-center text-xs font-bold text-white/60 hover:text-red-400 transition-colors"
+              >
                 Maçtan ayrıl
               </button>
-            </>
+            </div>
           ) : onReserveList ? (
-            <div style={{ width: '100%', height: 54, borderRadius: 16, background: 'rgba(250,204,21,0.06)', border: '1.5px solid rgba(250,204,21,0.30)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9 }}>
-              <Hourglass size={15} color="#FACC15" strokeWidth={2} />
-              <span style={{ fontSize: 13, fontWeight: 900, letterSpacing: '.08em', color: '#FACC15' }}>YEDEK LİSTESİNDESİN · {myReserveIdx + 1}. SIRA</span>
+            <div className="w-full h-14 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center gap-2">
+              <Hourglass size={16} className="text-amber-400" strokeWidth={2} />
+              <span className="text-xs font-extrabold tracking-wider text-amber-400 uppercase">YEDEK LİSTESİNDESİN · {myReserveIdx + 1}. SIRA</span>
             </div>
           ) : isFull ? (
-            <button type="button" onClick={() => setSheet('reserve')}
-              style={{ width: '100%', height: 54, borderRadius: 16, background: 'rgba(250,204,21,0.08)', border: '1.5px solid rgba(250,204,21,0.55)', color: '#FACC15', fontSize: 14, fontWeight: 900, letterSpacing: '.1em', cursor: 'pointer' }}>
+            <button
+              type="button"
+              onClick={() => setSheet('reserve')}
+              className="w-full h-14 rounded-2xl bg-amber-500/10 border border-amber-500/50 text-amber-400 text-xs font-extrabold tracking-widest flex items-center justify-center gap-2 active:scale-[0.98] transition-transform shadow-[0_0_20px_rgba(245,158,11,0.15)]"
+            >
+              <Hourglass size={16} />
               YEDEK LİSTESİNE GİR
             </button>
           ) : (
-            <button type="button" onClick={() => setSheet('join')}
-              style={{ width: '100%', height: 54, borderRadius: 16, border: 'none', background: '#39FF14', color: '#0A0E14', fontSize: 14, fontWeight: 900, letterSpacing: '.1em', cursor: 'pointer', boxShadow: '0 0 28px rgba(57,255,20,0.26)' }}>
+            <button
+              type="button"
+              onClick={() => setSheet('join')}
+              className="w-full h-14 rounded-2xl bg-[#39FF14] text-[#0A0E14] text-xs font-extrabold tracking-widest uppercase flex items-center justify-center gap-2 active:scale-[0.98] transition-transform shadow-[0_0_28px_rgba(57,255,20,0.3)]"
+            >
               {price === 0 ? 'KATIL · ÜCRETSİZ' : `KATIL · ${formatTRYShort(computeCardTotal(price, cardFeePct))}`}
             </button>
           )}

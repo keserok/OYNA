@@ -95,6 +95,13 @@ const AddCardScreen: React.FC<AddCardScreenProps> = ({ onBack, onSaved, collectM
   const holderOk = holder.trim().length >= 3;
   const valid = numberOk && expOk && cvvOk && holderOk;
 
+  const testKartiDoldur = () => {
+    setNum('5528 7900 0000 0008');
+    setHolder('TEST OYUNCU');
+    setExp('12/30');
+    setCvv('123');
+  };
+
   const handleSubmit = async () => {
     if (!valid || busy) return;
     setError('');
@@ -158,15 +165,24 @@ const AddCardScreen: React.FC<AddCardScreenProps> = ({ onBack, onSaved, collectM
             kart numarasını çoktan yazmış oluyordu. Uyarının işi, yazmadan
             ÖNCE durdurmak. */}
         {simulation && (
-          <div role="alert" className="bg-red-500/12 border border-red-500/40 rounded-2xl p-4 flex gap-3">
-            <AlertTriangle size={18} className="text-red-400 shrink-0 mt-0.5" />
-            <div>
-              <p className="text-[0.8125rem] font-extrabold text-red-400">Bu bir TEST ödemesidir</p>
-              <p className="text-[0.75rem] text-gray-300 mt-1 leading-relaxed">
-                Kartından para çekilmez. Gerçek kartını girmene gerek yok —
-                test kartı: <span className="font-mono">5528 7900 0000 0008</span> · 12/30 · 123
-              </p>
+          <div role="alert" className="bg-red-500/12 border border-red-500/40 rounded-2xl p-4 flex flex-col gap-2.5">
+            <div className="flex gap-3">
+              <AlertTriangle size={18} className="text-red-400 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-[0.8125rem] font-extrabold text-red-400">Bu bir TEST ödemesidir</p>
+                <p className="text-[0.75rem] text-gray-300 mt-1 leading-relaxed">
+                  Kartından para çekilmez. Gerçek kartını girmene gerek yok —
+                  test kartı: <span className="font-mono text-white">5528 7900 0000 0008</span> · 12/30 · 123
+                </p>
+              </div>
             </div>
+            <button
+              type="button"
+              onClick={testKartiDoldur}
+              className="self-start text-[0.6875rem] font-extrabold px-3 py-1.5 rounded-xl bg-red-500/20 hover:bg-red-500/30 text-red-300 border border-red-500/40 active:scale-95 transition-all"
+            >
+              Test Kartı Bilgilerini Otomatik Doldur ⚡
+            </button>
           </div>
         )}
 

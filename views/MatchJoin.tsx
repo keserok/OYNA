@@ -103,12 +103,15 @@ const FORMATIONS = FORMATIONS_SSOT as Record<string, Record<string, { x: number;
 
 // ─── Difficulty Badge Renk Sistemi — TEK KAYNAK: PLAY_STYLE_META ────────────
 // Glow, kanonik renkten %40 alfa ile türetilir (yeni renk kopyası üretmez).
-const difficultyConfig: Record<string, { color: string; glow: string; label: string }> = Object.fromEntries(
-  (['Ciddi', 'Taktiksel', 'Rahat'] as const).map((d) => {
-    const meta = playStyleMetaForDifficulty(d)!;
-    return [d, { color: meta.color, glow: `${meta.color}66`, label: meta.label.toLocaleUpperCase('tr-TR') }];
-  }),
-);
+const difficultyConfig: Record<string, { color: string; glow: string; label: string }> = {
+  ...Object.fromEntries(
+    (['Ciddi', 'Taktiksel', 'Rahat'] as const).map((d) => {
+      const meta = playStyleMetaForDifficulty(d)!;
+      return [d, { color: meta.color, glow: `${meta.color}66`, label: meta.label.toLocaleUpperCase('tr-TR') }];
+    })
+  ),
+  Antreman: { color: '#06b6d4', glow: '#06b6d466', label: 'ANTREMAN' }
+};
 
 const getQualityGrade = (score: number): string => {
   if (score >= 95) return 'A+';
@@ -2215,7 +2218,8 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
 
         {/* ── Minimalist Maç Başlığı ── */}
         <div className="px-4 pb-3">
-          {/* VS Şeridi */}
+          {/* VS Şeridi (Antreman ise gizle) */}
+          {match.difficulty !== 'Antreman' && (
           <div className="flex items-stretch gap-1.5 mb-2">
             {/* Ev Sahibi — aktifken yavaş nabız (index.css team-pulse-active; reduce-motion'da durur) */}
             <button
@@ -2273,6 +2277,7 @@ const MatchJoin: React.FC<MatchJoinProps> = ({ match: originalMatch, onBack, onJ
             </button>
           </div>
 
+)}
           {/* Bilgi + Badge Şeridi */}
           <div className="flex items-center gap-2 mb-2">
             <button onClick={() => setShowMapModal(true)}

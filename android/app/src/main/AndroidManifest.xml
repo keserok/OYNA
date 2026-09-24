@@ -59,13 +59,16 @@
         -->
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_icon"
-            android:resource="@drawable/ic_stat_oyna" />
+            android:resource="@drawable/ic_stat_oyna"
+        />
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_color"
-            android:resource="@color/oyna_bildirim" />
+            android:resource="@color/oyna_bildirim"
+        />
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_channel_id"
-            android:value="oyna_main" />
+            android:value="oyna_main"
+        />
 
         <provider
             android:name="androidx.core.content.FileProvider"

@@ -447,7 +447,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
             <SettingItem
               icon={<Repeat size={20} />}
               title="Sahada Rolün"
-              value={hasMultipleRoles ? 'Rol değiştir' : 'Başvur'}
+              value="Roller & Başvuru"
               onClick={() => setSubPage('role')}
             />
             <button

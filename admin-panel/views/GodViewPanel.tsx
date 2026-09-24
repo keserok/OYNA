@@ -40,6 +40,7 @@ const DeletionQueuePage = lazy(() => import('./pages/DeletionQueuePage').then(m 
 const RegionCoveragePage = lazy(() => import('./pages/RegionCoveragePage').then(m => ({ default: m.RegionCoveragePage })));
 const HomeBannersPage = lazy(() => import('./pages/HomeBannersPage').then(m => ({ default: m.HomeBannersPage })));
 const SupportTicketsPage = lazy(() => import('./pages/SupportTicketsPage').then(m => ({ default: m.SupportTicketsPage })));
+const AntremanPage = lazy(() => import('./pages/AntremanPage').then(m => ({ default: m.AntremanPage })));
 
 export type GodViewSubRoute =
   | 'GENEL' | 'CONTROL' | 'SAHALAR' | 'KULLANICILAR' | 'KALECİLER' | 'HAKEMLER'
@@ -48,7 +49,7 @@ export type GodViewSubRoute =
   | 'SERVICE_DISPUTES' | 'MODERATION' | 'DELETION_QUEUE'
   | 'OWNER_ACCOUNTS' | 'AUDIT_LOG' | 'FINANCE' | 'COMMISSION' | 'DISPUTES' | 'PROMO_CODES' | 'ACL'
   | 'SYSTEM_PARAMS' | 'VERIFICATION' | 'NOTIFICATION_TEMPLATES' | 'REGION_COVERAGE'
-  | 'GUARDIAN_CONSENTS' | 'SUPPORT_TICKETS' | 'HOME_BANNERS';
+  | 'GUARDIAN_CONSENTS' | 'SUPPORT_TICKETS' | 'HOME_BANNERS' | 'ANTREMAN';
 
 export type AdminNavigateFn = (route: GodViewSubRoute, params?: AdminNavParams) => void;
 
@@ -201,6 +202,8 @@ const GodViewPanelInner: React.FC<Props> = ({
                 return <HomeBannersPage />;
             case 'SUPPORT_TICKETS':
                 return <SupportTicketsPage />;
+            case 'ANTREMAN':
+                return <AntremanPage />;
             default:
                 return <DashboardPage onRefresh={onRefreshData} onNavigate={handleNavigate} />;
         }

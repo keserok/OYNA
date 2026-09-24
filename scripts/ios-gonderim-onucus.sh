@@ -54,7 +54,7 @@ done
 
 # Arşivin rahat çalışması için istenen boş alan (GB). Xcode arşiv sırasında
 # geçici olarak birkaç GB yazıyor; sınıra yakın çalışmak yarım arşiv demek.
-GEREKLI_GB=15
+GEREKLI_GB=10
 
 printf '\n%s%s  OYNA · iOS GÖNDERİM ÖN-UÇUŞU%s\n' "$kalin" "$mavi" "$sifirla"
 

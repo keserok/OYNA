@@ -551,7 +551,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
               17 Ağu 2026).
 
               KUTU HER ZAMAN ÇİZİLİR; iki durumu vardır:
-                • Yaklaşan maç VAR → "MAÇ YAKLAŞIYOR" + gün/saat + geri sayım
+                • Yaklaşan maç VAR → "{closest?.difficulty === 'Antreman' ? 'ANTREMAN YAKLAŞIYOR' : 'MAÇ YAKLAŞIYOR'}" + gün/saat + geri sayım
                   (başlık sarı: ekranda ilk yakalanan şey bu olsun).
                 • Maç YOK          → "MAÇ YOK" + tek satırlık çıkış yolu.
               Önceden maç yokken kutu hiç çizilmiyordu; kullanıcı "maçım var mı

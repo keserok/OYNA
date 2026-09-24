@@ -218,8 +218,10 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onSelect }) => {
       // normalize et ki hem kartta görünen rozet hem de MENTALİTE filtresi
       // tutarlı ve doğru çalışsın.
       const diffStr = (m.difficulty || '').toLowerCase().trim();
-      let normalizedMentality: 'Ciddi' | 'Taktiksel' | 'Rahat';
-      if (diffStr.includes('ciddi') || diffStr.includes('zor') || diffStr === 'hard') {
+      let normalizedMentality: 'Ciddi' | 'Taktiksel' | 'Rahat' | 'Antreman';
+      if (diffStr.includes('antreman')) {
+        normalizedMentality = 'Antreman';
+      } else if (diffStr.includes('ciddi') || diffStr.includes('zor') || diffStr === 'hard') {
         normalizedMentality = 'Ciddi';
       } else if (diffStr.includes('taktik') || diffStr.includes('orta') || diffStr === 'medium') {
         normalizedMentality = 'Taktiksel';
@@ -228,11 +230,17 @@ const MatchDiscovery: React.FC<MatchDiscoveryProps> = ({ onSelect }) => {
       } else {
         normalizedMentality = 'Taktiksel';
       }
-      // Mentalite kimliği TEK KAYNAKTAN (PLAY_STYLE_META) — altı ayrı renk
-      // kopyası vardı ve birbirinden sapmıştı (BULGU-006 sınıfı drift).
-      const mentalityMeta = PLAY_STYLE_META[MENTALITY_KEY[normalizedMentality]];
-      const matchMentality = mentalityMeta.label.toLocaleUpperCase('tr-TR');
-      const mentalityColor = mentalityMeta.color;
+      
+      let matchMentality = '';
+      let mentalityColor = '';
+      if (normalizedMentality === 'Antreman') {
+        matchMentality = 'ANTREMAN';
+        mentalityColor = '#06b6d4'; // Cyan 500
+      } else {
+        const mentalityMeta = PLAY_STYLE_META[MENTALITY_KEY[normalizedMentality]];
+        matchMentality = mentalityMeta.label.toLocaleUpperCase('tr-TR');
+        mentalityColor = mentalityMeta.color;
+      }
 
       const format = m.format || '7v7';
       // MAÇ SÜRESİ — GERÇEK VERİ (matches.duration_minutes, tarifeden türetilir).
@@ -913,7 +921,7 @@ const MatchCard: React.FC<{
       {/* ── ARANAN OYUNCU — tek dil: iki tarafın açık slot toplamı.
            Rahat maçta kalan ≤3 ise aciliyet dili: kırmızı 'N YER KALDI' (E1). ── */}
       <div className="flex flex-col gap-2.5 items-start">
-        {(() => {
+        {match.difficulty !== 'Antreman' && (() => {
           const acik = Number(match.openCount);
           const rahatAz = match.difficulty === 'Rahat' && acik > 0 && acik <= 3;
           const cizgi = rahatAz ? '#F87171' : acik > 0 ? '#39FF14' : '#FACC15';
@@ -975,6 +983,13 @@ const MatchCard: React.FC<{
               const altSatir = ilce && ilce !== baslik ? ilce : null;
               return (
                 <div className="mb-2">
+                  {match.difficulty === 'Antreman' && (
+                    <div className="inline-flex items-center gap-1.5 px-2 py-0.5 mb-1.5 rounded bg-[#06b6d4]/20 border border-[#06b6d4]/40">
+                      <span className="text-[0.625rem] font-extrabold text-[#06b6d4] uppercase tracking-widest drop-shadow-[0_0_8px_rgba(6,182,212,0.8)]">
+                        ANTREMAN
+                      </span>
+                    </div>
+                  )}
                   <h3 className="text-xl font-extrabold text-white italic uppercase leading-tight tracking-tighter drop-shadow-[0_4px_15px_rgba(0,0,0,1)] break-words">
                     {trUpper(baslik)}
                   </h3>
@@ -1006,34 +1021,36 @@ const MatchCard: React.FC<{
               )}
             </div>
             
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="px-2 py-0.5 rounded text-[0.625rem] font-extrabold uppercase tracking-widest backdrop-blur-sm"
-                style={{
-                  border: `1px solid ${match.mentalityColor}66`,
-                  backgroundColor: `${match.mentalityColor}22`,
-                  color: match.mentalityColor,
-                  textShadow: `0 0 6px ${match.mentalityColor}55`
-                }}>
-                {match.matchMentality}
-              </span>
-              <span className="px-2 py-0.5 rounded border border-white/10 bg-white/5 text-[0.625rem] font-extrabold text-white/80 uppercase tracking-widest backdrop-blur-sm">
-                {match.format}
-              </span>
-              {/* MAÇ SÜRESİ — gerçek veri (duration_minutes). Yoksa hiç çizilmez. */}
-              {match.durationLabel && (
-                <span className="px-2 py-0.5 rounded border border-[#39FF14]/25 bg-[#39FF14]/10 text-[0.625rem] font-extrabold text-[#39FF14] uppercase tracking-widest backdrop-blur-sm">
-                  {match.durationLabel}
+            {match.difficulty !== 'Antreman' && (
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="px-2 py-0.5 rounded text-[0.625rem] font-extrabold uppercase tracking-widest backdrop-blur-sm"
+                  style={{
+                    border: `1px solid ${match.mentalityColor}66`,
+                    backgroundColor: `${match.mentalityColor}22`,
+                    color: match.mentalityColor,
+                    textShadow: `0 0 6px ${match.mentalityColor}55`
+                  }}>
+                  {match.matchMentality}
                 </span>
-              )}
-              <span className="px-2 py-0.5 rounded border border-white/10 bg-white/5 text-[0.625rem] font-extrabold text-white/80 uppercase tracking-widest backdrop-blur-sm">
-                {match.gender}
-              </span>
-              {match.ageGroup && match.ageGroup !== 'Tümü' && (
                 <span className="px-2 py-0.5 rounded border border-white/10 bg-white/5 text-[0.625rem] font-extrabold text-white/80 uppercase tracking-widest backdrop-blur-sm">
-                  {match.ageGroup} Yaş
+                  {match.format}
                 </span>
-              )}
-            </div>
+                {/* MAÇ SÜRESİ — gerçek veri (duration_minutes). Yoksa hiç çizilmez. */}
+                {match.durationLabel && (
+                  <span className="px-2 py-0.5 rounded border border-[#39FF14]/25 bg-[#39FF14]/10 text-[0.625rem] font-extrabold text-[#39FF14] uppercase tracking-widest backdrop-blur-sm">
+                    {match.durationLabel}
+                  </span>
+                )}
+                <span className="px-2 py-0.5 rounded border border-white/10 bg-white/5 text-[0.625rem] font-extrabold text-white/80 uppercase tracking-widest backdrop-blur-sm">
+                  {match.gender}
+                </span>
+                {match.ageGroup && match.ageGroup !== 'Tümü' && (
+                  <span className="px-2 py-0.5 rounded border border-white/10 bg-white/5 text-[0.625rem] font-extrabold text-white/80 uppercase tracking-widest backdrop-blur-sm">
+                    {match.ageGroup} Yaş
+                  </span>
+                )}
+              </div>
+            )}
           </div>
  
           {/* Fiyat (Sağ Altta) & Katıl Aksiyon Butonu */}

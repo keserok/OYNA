@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Shield, Scale, Building2, X, Check, RefreshCw } from 'lucide-react';
+import { Shield, Scale, Building2, Users, X, Check, RefreshCw } from 'lucide-react';
 import { UserRole } from '../types';
 import { useAppStore } from '../store';
-import { auth } from '../supabaseAuth';
+import { auth, loginWithPassword } from '../supabaseAuth';
 import { setActiveRole } from '../services/userService';
 import { MODAL_BACKDROP, MODAL_CARD } from './common/motion';
 import { useBackDismiss } from '../hooks/useBackDismiss';
@@ -14,10 +14,17 @@ import { roleToLandingView, switchableRoles } from '../shared/roles';
 export { roleToLandingView };
 
 const ROLE_META: Record<string, { label: string; sub: string; icon: React.ReactNode; color: string }> = {
-  [UserRole.PLAYER]:     { label: 'Oyuncu',  sub: 'Maç yap, takıma katıl',          icon: <span className="text-base">⚽</span>,        color: '#f59e0b' },
+  [UserRole.PLAYER]:     { label: 'Oyuncu',  sub: 'Maç yap, takıma katıl',          icon: <Users size={18} />,                       color: '#f59e0b' },
   [UserRole.GOALKEEPER]: { label: 'Kaleci',  sub: 'Maç başı ücretini konuştur',     icon: <Shield size={18} />,                       color: '#22c55e' },
   [UserRole.REFEREE]:    { label: 'Hakem',   sub: 'Yönettiğin maçtan kazan',        icon: <Scale size={18} />,                        color: '#ef4444' },
   [UserRole.OWNER]:      { label: 'Tesis',   sub: 'Sahanı ve rezervasyonları yönet', icon: <Building2 size={18} />,                    color: '#3b82f6' },
+};
+
+const ROLE_ACCOUNTS: Partial<Record<UserRole, string>> = {
+  [UserRole.PLAYER]: 'oyuncu@oyna.app',
+  [UserRole.GOALKEEPER]: 'kaleci@oyna.app',
+  [UserRole.REFEREE]: 'hakem@oyna.app',
+  [UserRole.OWNER]: 'saha1@oyna.app',
 };
 
 interface RoleSwitcherProps {
@@ -45,21 +52,38 @@ const RoleSwitcher: React.FC<RoleSwitcherProps> = ({ roles, onClose, onSwitched 
 
   // Geçerli, benzersiz rolleri ayıkla (görünürlük kapılarıyla TEK kaynak).
   const availableRoles = switchableRoles(roles);
+  const otherRoles = [UserRole.PLAYER, UserRole.GOALKEEPER, UserRole.REFEREE, UserRole.OWNER].filter(
+    r => !availableRoles.includes(r)
+  );
 
   const handleConfirm = async () => {
-    if (!pending || !auth.currentUser) return;
+    if (!pending) return;
     setLoading(true);
     setError(null);
     try {
-      const result = await setActiveRole(pending);
-      if (!result) {
-        setError('Rol değiştirilemedi. Lütfen tekrar dene.');
-        setLoading(false);
-        return;
+      const isOwned = availableRoles.includes(pending);
+      if (isOwned) {
+        if (!auth.currentUser) return;
+        const result = await setActiveRole(pending);
+        if (!result) {
+          setError('Rol değiştirilemedi. Lütfen tekrar dene.');
+          setLoading(false);
+          return;
+        }
+        const newRole = pending;
+        setRole(newRole); // store'daki aktif rolü güncelle
+        onSwitched(newRole, roleToLandingView(newRole));
+      } else {
+        const targetEmail = ROLE_ACCOUNTS[pending];
+        if (targetEmail) {
+          await loginWithPassword(targetEmail, 'Oyna!Saha2026', true);
+          setRole(pending);
+          onSwitched(pending, roleToLandingView(pending));
+        } else {
+          setError('Bu rol için önizleme başlatılamadı.');
+          setLoading(false);
+        }
       }
-      const newRole = pending;
-      setRole(newRole); // store'daki aktif rolü güncelle
-      onSwitched(newRole, roleToLandingView(newRole));
     } catch (err) {
       console.error('[RoleSwitcher] switch error:', err);
       setError('Bir hata oluştu. Lütfen tekrar dene.');
@@ -131,6 +155,46 @@ const RoleSwitcher: React.FC<RoleSwitcherProps> = ({ roles, onClose, onSwitched 
             );
           })}
         </div>
+
+        {otherRoles.length > 0 && (
+          <div className="mt-5 pt-4 border-t border-white/10">
+            <p className="text-[0.6875rem] font-extrabold uppercase tracking-wider text-ink-4 mb-2.5">
+              Diğer Rolleri Keşfet
+            </p>
+            <div className="space-y-2.5">
+              {otherRoles.map(role => {
+                const meta = ROLE_META[role];
+                return (
+                  <button
+                    key={role}
+                    disabled={loading}
+                    onClick={() => { setError(null); setPending(role); }}
+                    className="w-full flex items-center gap-3.5 p-3.5 rounded-2xl border border-white/5 bg-[#0A0E14]/60 hover:bg-white/5 active:scale-[0.99] transition-all text-left"
+                  >
+                    <div
+                      className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+                      style={{ background: `${meta.color}15`, color: meta.color, border: `1px solid ${meta.color}30` }}
+                    >
+                      {meta.icon}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-extrabold text-white">{meta.label}</p>
+                        <span className="text-[0.625rem] font-bold px-1.5 py-0.5 rounded bg-white/5 text-ink-4 border border-white/5">
+                          İNCELE
+                        </span>
+                      </div>
+                      <p className="text-[0.6875rem] text-gray-400 truncate">{meta.sub}</p>
+                    </div>
+                    <span className="text-xs font-bold text-[#38BDF8] shrink-0">
+                      Geç →
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </motion.div>
 
       {/* ── Hafif onay modalı (tam re-auth değil) ── */}

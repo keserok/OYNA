@@ -46,8 +46,6 @@ export const UsersPage: React.FC<UsersPageProps> = ({ subRoute, mode = 'embedded
     const verifyUser = useAppStore((s) => s.verifyUser);
     const deleteGoalkeeper = useAppStore((s) => s.deleteGoalkeeper);
     const deleteReferee = useAppStore((s) => s.deleteReferee);
-    const setImpersonatedUser = useAppStore((s) => s.setImpersonatedUser);
-    const setOriginalRole = useAppStore((s) => s.setOriginalRole);
     const setRole = useAppStore((s) => s.setRole);
     const resetNavigation = useAppStore((s) => s.resetNavigation);
     const role = useAppStore((s) => s.role);
@@ -136,20 +134,8 @@ export const UsersPage: React.FC<UsersPageProps> = ({ subRoute, mode = 'embedded
                 details: `Sebep: ${ghostReason.trim()} · oturum ${expiresLabel}'e kadar`,
                 adminId: adminSession?.userId || 'system',
             });
-            if (mode === 'standalone') {
-                openGhostInConsumerApp(ghostTarget.id, ghostTarget.name);
-                notify(`🕵️ ${ghostTarget.name} — consumer app'te açılıyor (oturum ${expiresLabel}'e kadar)`);
-            } else {
-                const targetUser = (subRoute === 'KALECİLER' ? adminGoalkeepers : subRoute === 'HAKEMLER' ? adminReferees : adminUsers)
-                    .find(u => u.id === ghostTarget.id);
-                setOriginalRole(role);
-                setImpersonatedUser(targetUser as any);
-                setRole((targetUser as any)?.role || 'PLAYER');
-                if ((targetUser as any)?.role === 'OWNER') resetNavigation('OWNER_PANEL');
-                else if (subRoute === 'HAKEMLER' || subRoute === 'KALECİLER') resetNavigation('SERVICE_DASHBOARD');
-                else resetNavigation('DASHBOARD');
-                notify(`🕵️ Ghost Mode: ${ghostTarget.name} (oturum ${expiresLabel}'e kadar)`);
-            }
+            openGhostInConsumerApp(ghostTarget.id, ghostTarget.name);
+            notify(`🕵️ ${ghostTarget.name} — consumer app'te açılıyor (oturum ${expiresLabel}'e kadar)`);
             setGhostTarget(null);
             setGhostReason('');
         } catch (err) {
