@@ -295,7 +295,6 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ onBack, onNavigate }) =
             {/* Profili düzenlemenin TEK kapısı burası (kullanıcı kararı,
                 2026-08). Profil ekranındaki "Düzenle" düğmesi kaldırıldı. */}
             <SettingItem icon={<User size={20} />} title="Bilgilerim" value="Düzenle" onClick={() => setSubPage('profile')} />
-            <SettingItem icon={<ShieldCheck size={20} />} title="Veli Onayı" value="" onClick={() => onNavigate('GUARDIAN_CHILD')} />
             <SettingItem icon={<Shield size={20} />} title="Yasal & Sözleşmeler" value="" onClick={() => onNavigate('LEGAL')} />
           </div>
         </section>

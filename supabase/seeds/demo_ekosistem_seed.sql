@@ -225,7 +225,7 @@ BEGIN
       pl.id, pl.id, v_sahalar[i], true,
       'OPEN',
       now() - make_interval(hours => v_saat_once),
-      'https://images.unsplash.com/photo-1575361204480-aadea2559ee2?q=80&w=600',
+      'https://images.unsplash.com/photo-1575361204480-aadea25e6e68?q=80&w=600',
       v_ev, v_dep, 'ENTERED',
       now() - make_interval(hours => v_saat_once) + interval '2 hours',
       true

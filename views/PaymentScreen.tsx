@@ -535,17 +535,9 @@ const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack }) => {
     // olduğu için o doğrulama HİÇ tamamlanamıyordu — kapı açılsaydı ödeme
     // herkes için imkânsız olurdu. Numara ekranı uygulamadan tümüyle
     // kaldırıldı; tesis ve kaptan iletişimi maç lobisi üzerinden yürür.
-    // Reşit olmayan ödeme kapısı (UX katmanı): sunucudaki trigger da bunu
-    // engelliyor, ancak kullanıcıyı ham hata yerine veli onayı ekranına
-    // yönlendirelim. Durum alınamazsa sunucu kapısına güveniriz.
-    try {
-      const gstate = await getMyGuardianState();
-      if (gstate && gstate.isMinor && gstate.status !== 'ACTIVE') {
-        payBusyRef.current = false;
-        useAppStore.getState().navigateTo('GUARDIAN_CHILD');
-        return;
-      }
-    } catch { /* durum alınamadı → sunucu kapısı devrede */ }
+    // Apple Guideline 5.1.1(v) & 2.3.6: yaş/doğum tarihi toplama kaldırıldığı ve
+    // mağaza yaş sınırı beyanında "Parental Controls = None" seçildiği için
+    // istemci tarafında GUARDIAN_CHILD yönlendirmesi devre dışıdır.
     // C1 — bu ödeme denemesi için stabil idempotency anahtarı (retry'da aynı kalır).
     if (!idemKeyRef.current) idemKeyRef.current = safeUuid();
     setInlineError('');

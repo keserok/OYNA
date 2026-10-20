@@ -81,7 +81,7 @@ BEGIN
     150, 'Taktiksel', 'ACTIVE', '7v7', '60 Dakika', 'Karma', '18-35', 0, '["7v7"]'::jsonb, '[]'::jsonb,
     v_slots, v_away, u2, u2, v_pitch, true, 'OPEN',
     ((current_date+1) + time '21:00')::timestamptz,
-    'https://images.unsplash.com/photo-1575361204480-aadea2559ee2?q=80&w=600');
+    'https://images.unsplash.com/photo-1575361204480-aadea25e6e68?q=80&w=600');
 
   INSERT INTO public.match_participants (match_id, user_id, role, status, is_buyer, bought_slots) VALUES
     (mid, u2, 'home', 'creator', true, 2),

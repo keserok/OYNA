@@ -668,7 +668,7 @@ await denetleAg('Vitrin görselleri: aynı fotoğraf iki sahada değil', async (
   const [sahalar, kortlar, maclar] = await Promise.all([
     cek('pitches?select=id,name,image,images'),
     cek('courts?select=id,name,images,pitch_id'),
-    cek('public_matches?select=id,image,pitch_id'),
+    cek('public_matches?select=id,image,pitch_id&status=in.(ACTIVE,CONFIRMED)'),
   ]);
 
   const sahaAdi = new Map(sahalar.map((s) => [s.id, s.name]));

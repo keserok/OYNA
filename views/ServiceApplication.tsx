@@ -186,7 +186,7 @@ const ServiceApplication: React.FC<ServiceApplicationProps> = ({ role, onSubmitt
           getMyGuardianState().catch(() => null),
         ]);
         const alreadyApproved = prof?.role === role && prof?.verification_status === 'approved';
-        const minorBlocked = !!guardian?.isMinor && guardian.status !== 'ACTIVE';
+        const minorBlocked = false;
         if (alive) setPreflight({ alreadyApproved, minorBlocked });
       } catch {
         if (alive) setPreflight({ alreadyApproved: false, minorBlocked: false });
@@ -503,8 +503,8 @@ const ServiceApplication: React.FC<ServiceApplicationProps> = ({ role, onSubmitt
 
           {/* Role-specific */}
           {isGk ? (
-            <div className="grid grid-cols-2 gap-3">
-              <Field label="Boy" icon={<Ruler size={20} />} color={color} error={visibleError('height')}>
+            <div>
+              <Field label="Boy (isteğe bağlı)" icon={<Ruler size={20} />} color={color} error={visibleError('height')}>
                 <input
                   type="number"
                   inputMode="numeric"
@@ -515,17 +515,6 @@ const ServiceApplication: React.FC<ServiceApplicationProps> = ({ role, onSubmitt
                   placeholder="188"
                 />
                 <span className="text-[0.6875rem] text-ink-4 font-bold shrink-0">cm</span>
-              </Field>
-              <Field label="Yaş" icon={<Calendar size={20} />} color={color} error={visibleError('age')}>
-                <input
-                  type="number"
-                  inputMode="numeric"
-                  value={age}
-                  onChange={(e) => setAge(e.target.value)}
-                  onBlur={() => markTouched('age')}
-                  className="bg-transparent w-full outline-none text-white font-bold placeholder:text-ink-4 text-sm"
-                  placeholder="25"
-                />
               </Field>
             </div>
           ) : (

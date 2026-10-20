@@ -1087,9 +1087,9 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect, onCre
                                         />
                                         {type === 'GK' ? (
                                             <StatTile
-                                                label="Yaş"
-                                                value={(detail as Goalkeeper).age ?? '—'}
-                                                sub={(detail as Goalkeeper).height || undefined}
+                                                label="Boy"
+                                                value={(detail as Goalkeeper).height || '—'}
+                                                sub="fiziksel profil"
                                             />
                                         ) : (
                                             /* B11 — burada eskiden ham `level` ("FIFA Kokart")
