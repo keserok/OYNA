@@ -186,13 +186,9 @@ describe('Kullanıcı Profili Aynası (admin)', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /Düzenle/ }));
     // Uygulamadaki düzenleme ekranının alanları (tek kaynak bileşen).
-    // Tasarım 4c: numaralı bölümler + "Doğum tarihi" satırı.
-    expect(await screen.findByText('Doğum tarihi')).toBeInTheDocument();
-    expect(screen.getByText('01 — Kimlik')).toBeInTheDocument();
+    expect(await screen.findByText('01 — Kimlik')).toBeInTheDocument();
     expect(screen.getByText('02 — Oyun')).toBeInTheDocument();
-    // "03 — Tanıtım" onaylı tasarımla KALDIRILDI (tanıtım yalnız
-    // kaleci/hakem kartında görünür ve orada düzenlenir). Kayıtlı değer
-    // silinmez: aşağıdaki `fields` denetiminde bio olduğu gibi geçer.
+    expect(screen.queryByText('Doğum tarihi')).not.toBeInTheDocument();
     expect(screen.queryByText('03 — Tanıtım')).not.toBeInTheDocument();
     // Seviye, oyuncunun kendi beyanı — admin aynasında salt-okunur.
     expect(screen.getByText(/değiştirilemez/)).toBeInTheDocument();

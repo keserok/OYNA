@@ -196,11 +196,13 @@ geçiş var) ve 3DS banka doğrulaması uygulama içinde tamamlanır.
 
 ---
 
-## 4. Yaş Sınırı ve Reşit Olmayan Kullanıcılar
+## 4. Yaş Sınırı (Age Rating) ve Guideline 2.3.6 Uyumu
 
-Asgari yaş 13. 18 yaş altı hesaplar "sınırlı mod"da açılır: ödeme gerektiren
-işlemler veli onayı tamamlanana kadar kapalıdır (Kullanım Şartları m.4).
-İncelemeci yetişkin hesabıyla test etmelidir.
+- **App Store Connect → General → App Information → Age Rating:**
+  - **In-App Controls → Parental Controls:** **`None`** (Hayır / Yok) olarak seçilmelidir.
+  - **Age Assurance:** **`None`** olarak seçilmelidir.
+  - Uygulama içinde ebeveyn kontrolü veya yaş doğrulama bariyeri bulunmadığından bu seçeneklerin işaretlenmesi **Guideline 2.3.6 (Accurate Metadata)** reddine yol açar.
+- Uygulama içi kurulum (onboarding) ve profil düzenleme ekranlarında kullanıcılardan **yaş (doğum tarihi)** veya **cinsiyet** bilgisi **istenmez** (**Guideline 5.1.1(v)** veri minimizasyonu uyumu).
 
 ---
 
@@ -229,3 +231,32 @@ silinebilir (`request_account_deletion`). Ayrıca genel bilgilendirme:
 
 > Bu HTML dosyaları repo'da `public/` altında hazırdır; kurucu bunları canlı
 > public URL'de yayınlamalı (her iki mağaza konsolu da erişilebilir URL ister).
+
+---
+
+## 8. App Store Connect — Son Ret (Submission ID: 7b40836b-99cd-4519-8c1b-7484bfe3470e) Yanıt Metni
+
+App Store Connect'te **Age Rating → Parental Controls = "None"** olarak güncelledikten ve yeni derlemeyi ekledikten sonra **Resolution Center / App Review yanıt kutusuna** aşağıdaki metni doğrudan yapıştırabilirsiniz:
+
+```text
+Hello App Review Team,
+
+Thank you for your detailed feedback. We have resolved all four issues in this new build and updated our App Store Connect metadata:
+
+1. Guideline 5.1.1(iv) - Location Pre-Permission Button Wording:
+- We replaced the "Konumu Aç" ("Turn On Location") button on the location pre-permission screen (and all other pre-permission modals) with a neutral "Devam Et" ("Continue") button.
+- Users can freely proceed whether they grant or decline location access.
+
+2. Guideline 4 - Sign in with Apple:
+- We updated our Sign in with Apple implementation to automatically capture and persist the user's `givenName`, `familyName`, and `email` directly from the `ASAuthorizationAppleIDCredential` response (`SignInWithApple.authorize`).
+- We removed the name/surname input fields from the post-login onboarding flow so users authenticating via Sign in with Apple are never asked to re-enter their name or email address.
+
+3. Guideline 5.1.1(v) - Data Minimization (Age & Gender):
+- We completely removed the Age (`StepAge` / Birthdate) and Gender fields from the onboarding flow as well as the profile editing screens. Users are never required or prompted to provide their age or gender.
+
+4. Guideline 2.3.6 - Accurate Metadata (Age Rating / Parental Controls):
+- We updated our Age Rating selections in App Store Connect under App Information and set "Parental Controls" (In-App Controls) to "None".
+
+Thank you again for your guidance and review!
+```
+

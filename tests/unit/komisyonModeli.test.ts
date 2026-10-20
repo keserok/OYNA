@@ -251,7 +251,7 @@ describe('Kurulum sihirbazı · kapan değil', () => {
     expect(ob).toContain('await logout()');
     expect(ob).toContain('aria-label="Çıkış yap"');
     // Zorunluluk GEVŞEMEDİ: kapılar hâlâ ctaEnabled içinde.
-    expect(ob).toContain('case 1: return ageIndex !== null');
+    expect(ob).toContain("case 2: return playStyle !== ''");
     expect(ob).not.toContain('const handleSkip');
   });
 });

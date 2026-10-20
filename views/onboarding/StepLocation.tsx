@@ -15,7 +15,7 @@ export type LocState =
 
 interface StepLocationProps {
   state: LocState;
-  onScan: () => void;      // "Konumu Aç" — CTA'dan da tetiklenebilir
+  onScan: () => void;      // "Devam Et" — CTA'dan da tetiklenebilir
   onSkip: () => void;
   /** Daha önce kaydedilmiş bölge — konum kapalıyken bunu hatırlatırız. */
   hatirlananBolge?: string | null;
@@ -32,7 +32,7 @@ const DURUM_METNI: Record<LocState, { baslik: string; alt: string }> = {
   denied:      { baslik: 'Konum izni verilmedi',
                  alt: 'İzin vermeden de devam edebilirsin; bölgeni sonra elle seçersin.' },
   blocked:     { baslik: 'Konum izni kapalı',
-                 alt: 'Bu izin telefon ayarlarından kapatılmış. Buradan tekrar denemek işe yaramaz — ayarlardan açman gerekiyor.' },
+                 alt: 'Bu izin telefon ayarlarından kapatılmış. Buradan tekrar denemek işe yaramaz — dilersen ayarlardan değiştirebilir veya konumsuz devam edebilirsin.' },
   timeout:     { baslik: 'Konum alınamadı',
                  alt: 'Telefonun konumu zamanında veremedi. Açık alanda tekrar deneyebilirsin.' },
   unavailable: { baslik: 'Bu cihazda konum yok',

@@ -217,29 +217,38 @@ describe('Mağaza kapıları · demo kimlikleri pakette değil', () => {
 // uygulamanın kendi veli onayı akışı ÖLÜ kalıyordu. Mağaza yaş derecelendirmesi
 // ve çocuk koruması açısından engelleyici.
 
-describe('Mağaza kapıları · yaş beyanı', () => {
+describe('Mağaza kapıları · Apple 4, 5.1.1(iv) ve 5.1.1(v) uyumu', () => {
   const ob = oku('views/Onboarding.tsx');
+  const sn = oku('views/onboarding/StepName.tsx');
+  const auth = oku('supabaseAuth.ts');
 
-  it('yaş seçimi NÖTR başlar (varsayılan aralık yok)', () => {
-    expect(ob).toContain('useState<number | null>(null)');
-    expect(ob).toContain('const [ageTouched, setAgeTouched] = useState(false)');
+  it('konum izin öncesi ekranda "Konumu Aç" yerine nötr "Devam Et" kullanılır (Apple 5.1.1(iv))', () => {
+    expect(ob).not.toContain("'Konumu Aç'");
+    expect(ob).toContain("case 0: return phase === 'scanning' ? 'Taranıyor…' : 'Devam Et'");
+    expect(oku('views/LocationPrompt.tsx')).not.toContain('RADARI AÇ');
+    expect(oku('components/common/PushIzniModal.tsx')).not.toContain('Bildirimlere izin ver');
+    expect(oku('views/social/FriendAddView.tsx')).not.toContain('İzin Ver ve Devam Et');
   });
 
-  it('yaş seçilmeden ilerlenemez', () => {
-    expect(ob).toMatch(/case 1: return ageIndex !== null/);
+  it('Apple ile Girişten gelen givenName ve familyName kaydedilir (Apple Guideline 4)', () => {
+    expect(auth).toContain('result.response.givenName');
+    expect(auth).toContain('result.response.familyName');
+    expect(auth).toContain('writeCachedAppleName');
   });
 
-  it('seçilmemiş yaş profile YAZILMAZ', () => {
-    expect(ob).toContain("ageRange: ageIndex === null ? '' : AGE_RANGES[ageIndex]");
+  it('kurulumda yaş, cinsiyet veya tekrar ad/soyad zorunluluğu YOKTUR (Apple 4 & 5.1.1(v))', () => {
+    expect(ob).not.toContain('StepAge');
+    expect(ob).toContain("ageRange: ''");
+    expect(ob).toContain("gender: ''");
+    expect(sn).not.toContain('Adın *');
+    expect(sn).not.toContain('Soyadın *');
+    expect(sn).not.toContain('CİNSİYET');
   });
 
-  it('çark seçim yokken hiçbir aralığı "seçili" göstermez', () => {
-    const sa = oku('views/onboarding/StepAge.tsx');
-    expect(sa).toContain('index: number | null');
-    expect(sa).toContain('const secildi = index !== null');
-    expect(sa).toContain('secildi && Math.round(cur) === i');
-    // Ölü düğme bırakmayız: ekran neden pasif olduğunu söyler.
-    expect(sa).toContain('Devam etmek için yaş aralığını seç');
+  it('profil düzenlemede yaş ve cinsiyet sorulmaz (Apple 5.1.1(v))', () => {
+    const info = oku('components/settings/ProfileInfoPage.tsx');
+    expect(info).not.toContain('label="Yaş"');
+    expect(info).not.toContain('label="Cinsiyet"');
   });
 });
 
@@ -477,28 +486,20 @@ describe('Mağaza kapıları · beyan ile gerçek davranış uyumu', () => {
     expect(ld).not.toContain('kesintisiz olarak OYNA cüzdanına iade edilir');
   });
 
-  it('yaş kapısı HER yolda kapalı — ikinci bir yol AÇILMAMIŞ', () => {
-    // Mağazaların yaş derecelendirmesi beyanı tek bir girdiye dayanıyor:
-    // kullanıcının seçtiği yaş aralığı. 15 yaşındaki biri hiçbir şeye
-    // dokunmadan yetişkin olarak kaydedilirse `is_minor` ve veli onayı akışı
-    // HİÇ tetiklenmez.
-    //
-    // Eskiden kapı İKİ yerdeydi: `ctaEnabled` ve `handleSkip`. Atlama yolu
-    // 24 Ağu 2026'da kaldırıldı, kapı tek yere indi. Bu testin işi, ileride
-    // birinin ikinci bir yol açıp bu kapıyı atlamamasını sağlamak.
+  it('kurulum kapısı HER yolda ctaEnabled üzerinden geçer — ikinci bir atlama yolu AÇILMAMIŞ', () => {
     const ob = oku('views/Onboarding.tsx');
-    expect(ob).toMatch(/case 1: return ageIndex !== null/);
+    expect(ob).toContain("case 2: return playStyle !== ''");
+    expect(ob).toContain('case 3: return isValidSelfSkill(selfSkill)');
 
-    // Kurulumu bitiren tek düğme `handleCta`; yaş adımından ilerlemesi
-    // `ctaEnabled`e bağlı.
+    // Kurulumu bitiren tek düğme `handleCta`; ilerlemesi `ctaEnabled`e bağlı.
     expect(ob).toContain('if (!ctaEnabled) return;');
 
-    // Yaşı sormadan kurulumu bitiren hiçbir yol olmamalı.
+    // Kurulumu atlayan hiçbir yol olmamalı.
     expect(ob).not.toContain('const handleSkip');
     expect(ob).not.toContain('setSkipConfirm');
 
-    // Sunucudaki ikizi: istemci kandırılsa bile kapı orada da durur.
-    expect(oku('services/onboardingService.ts')).toContain('ageRange');
+    // Sunucudaki ikizi: istemci kandırılsa bile seviye kapısı orada da durur.
+    expect(oku('services/onboardingService.ts')).toContain('p_self_skill');
   });
 });
 

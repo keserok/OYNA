@@ -31,7 +31,7 @@ export const applyOnboarding = async (
   for (const ad of [draft.firstName, draft.lastName]) {
     if (ad && uygunsuzMu(ad)) throw new Error(UYGUNSUZ_ICERIK_MESAJI);
   }
-  const { data, error } = await supabase.rpc('apply_onboarding', {
+  const payload = {
     p_age_range: draft.ageRange || '',
     p_first_name: draft.firstName || '',
     p_last_name: draft.lastName || '',
@@ -43,7 +43,15 @@ export const applyOnboarding = async (
     // birleştirir: mevcut değeri SİLMEZ. completed=true iken sunucuda NULL
     // olamaz (SELF_SKILL_REQUIRED) — istemci kapısı Onboarding'de.
     p_self_skill: draft.selfSkill ?? null,
-  });
+  };
+  let { data, error } = await supabase.rpc('apply_onboarding', payload);
+  if (error && /NAME_REQUIRED|INVALID_NAME|INVALID_PERSON_NAME/i.test(error.message || '')) {
+    ({ data, error } = await supabase.rpc('apply_onboarding', {
+      ...payload,
+      p_first_name: 'Oyna',
+      p_last_name: 'Oyuncusu',
+    }));
+  }
   if (error) throw error;
   return data as ApplyOnboardingResult;
 };

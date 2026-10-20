@@ -1060,8 +1060,12 @@ const Marketplace: React.FC<MarketplaceProps> = ({ type, onBack, onSelect, onCre
                                                 <MapPin size={12} className="text-ink-4" />
                                                 {detail.preferredZones?.[0] || zoneCity}
                                             </span>
-                                            <span className="text-ink-4">·</span>
-                                            <span>{detailDistance != null ? `${detailDistance.toFixed(1)} km yakında` : 'Konumunu aç'}</span>
+                                            {detailDistance != null && (
+                                                <>
+                                                    <span className="text-ink-4">·</span>
+                                                    <span>{`${detailDistance.toFixed(1)} km yakında`}</span>
+                                                </>
+                                            )}
                                         </div>
                                     </div>
 

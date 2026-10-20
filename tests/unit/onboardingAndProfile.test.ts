@@ -127,29 +127,18 @@ describe('konum reddi ekranda kalıcı', () => {
   });
 });
 
-describe('görünen ile geçerli olan aynı — yaş çarkı', () => {
+describe('Apple 4 & 5.1.1(v) — kurulumda yaş, cinsiyet ve zorunlu ad-soyad yok', () => {
   const s = oku('views/Onboarding.tsx');
 
-  it('varsayılan yaş YOK — beyan zorunlu (4b geçersiz, 17 Ağu 2026)', () => {
-    // ESKİ KURAL (karar 4b): çark "24-30"da başlar ve DOKUNULMADAN seçili
-    // sayılırdı; gerekçesi "Devam Et ölü kalmasın" idi. Mağaza öncesi
-    // denetimde bunun bedeli görüldü: 15 yaşındaki kullanıcı hiçbir şeye
-    // dokunmadan YETİŞKİN kaydediliyor, sunucudaki reşit-olmayan kuralı
-    // ('13-17') ve veli onayı akışı HİÇ tetiklenmiyordu.
-    //
-    // YENİ KURAL: seçim nötr başlar, seçilmeden ilerlenemez. 4b'nin UX
-    // kaygısı ölü düğmeyle değil, ekrandaki yönlendirmeyle karşılanır.
-    expect(s).toContain('useState<number | null>(null)');
-    expect(s).toContain('const [ageTouched, setAgeTouched] = useState(false)');
-    expect(s).toMatch(/case 1: return ageIndex !== null/);
-    expect(s).not.toContain('case 1: return true;');
-    // Ekran, Devam Et'in neden pasif olduğunu SÖYLER.
-    expect(oku('views/onboarding/StepAge.tsx')).toContain('Devam etmek için yaş aralığını seç');
+  it('kurulum sihirbazı yaş ve cinsiyet sormaz', () => {
+    expect(s).not.toContain('StepAge');
+    expect(s).toContain("ageRange: ''");
+    expect(s).toContain("gender: ''");
   });
 
-  it('18 yaş altı seçimi ekranda söyleniyor', () => {
-    expect(s).toContain('isMinorAgeRange');
-    expect(s).toContain('veli onayı gerekiyor');
+  it('konum adımı yönlendirici "Konumu Aç" yerine nötr "Devam Et" kullanır (Apple 5.1.1(iv))', () => {
+    expect(s).not.toContain("'Konumu Aç'");
+    expect(s).toContain("case 0: return phase === 'scanning' ? 'Taranıyor…' : 'Devam Et'");
   });
 
   it('her adım verinin niye istendiğini yazıyor', () => {
@@ -163,14 +152,6 @@ describe('kurulumun atlama yolu YOK (kurucu kararı · 24 Ağustos 2026)', () =>
   const s = oku('views/Onboarding.tsx');
   const ozet = oku('views/onboarding/PlayerCardReveal.tsx');
 
-  /**
-   * Karar: "Atla tuşunun olmamasını sağla; her şey doldurulmak zorunda olsun,
-   * yalnızca bazı soft özelliklerde tercih yapmadan geçilebilsin."
-   *
-   * Eski tuş zaten yarı yalan söylüyordu: ad soyad, yaş ve seviye eksikse
-   * kullanıcıyı ilgili adıma geri gönderiyordu — ekranda "Atla" yazıyor ama
-   * atlamıyordu. Şimdi ekranda yazan ile yapılan aynı.
-   */
   it('üst bardaki "Atla" tuşu ve onay penceresi kalmadı', () => {
     expect(s).not.toContain('setSkipConfirm');
     expect(s).not.toContain('Kurulumu atla?');
@@ -178,18 +159,13 @@ describe('kurulumun atlama yolu YOK (kurucu kararı · 24 Ağustos 2026)', () =>
   });
 
   it('özet ekranındaki "Şimdilik Geç" çıkışı kalmadı', () => {
-    // Bu bağ, kayıt hatasında kullanıcıyı profili EKSİK hâlde içeri alıyordu.
     expect(ozet).not.toContain('Şimdilik Geç');
     expect(ozet).not.toContain('onSkip');
-    // Onboarding'de `onSkip` HÂLÂ var ama yalnız KONUM adımına gider
-    // (aşağıdaki teste bak); özet perdesine geçmemeli.
-    const perde = s.slice(s.indexOf('<PlayerCardReveal'), s.indexOf('</div>', s.indexOf('<PlayerCardReveal')));
+    const perde = s.slice(s.indexOf('<PlayerCardReveal'), s.indexOf('/>', s.indexOf('<PlayerCardReveal')) + 2);
     expect(perde).not.toContain('onSkip');
   });
 
   it('kayıt hatasında çıkış yine de var: mesaj kalıcı + "Tekrar Dene"', () => {
-    // Atlama kaldırıldı diye kullanıcı kilitli kalmamalı. Ağ hatası tek
-    // gerçekçi kilitlenme sebebi; çıkışı yeniden denemek ve geri okudur.
     expect(s).toContain('completeError');
     expect(s).toContain('Profilin kaydedilemedi');
     expect(ozet).toContain('error?: string | null;');
@@ -197,31 +173,26 @@ describe('kurulumun atlama yolu YOK (kurucu kararı · 24 Ağustos 2026)', () =>
     expect(ozet).toContain('onBack');
   });
 
-  it('ZORUNLU alanların kapısı tek yerde ve dördü de kapalı', () => {
-    // Kapı çoğalırsa biri sessizce açık kalır. Hepsi `ctaEnabled` içinde.
-    const kapi = s.slice(s.indexOf('const ctaEnabled'), s.indexOf('const recitDegil'));
-    expect(kapi).toContain('case 1: return ageIndex !== null');   // yaş
-    expect(kapi).toContain('case 2: return nameCheck.valid');     // ad soyad
-    expect(kapi).toContain("case 3: return playStyle !== ''");    // oyun stili
-    expect(kapi).toContain('case 4: return isValidSelfSkill');    // seviye
+  it('ZORUNLU oyun alanlarının kapısı tek yerde (ctaEnabled)', () => {
+    const kapi = s.slice(s.indexOf('const ctaEnabled'), s.indexOf('const ctaLabel'));
+    expect(kapi).toContain('case 0: return phase !== \'scanning\'');
+    expect(kapi).toContain('case 1: return true');                 // mevki opsiyonel
+    expect(kapi).toContain("case 2: return playStyle !== ''");     // oyun stili
+    expect(kapi).toContain('case 3: return isValidSelfSkill');     // seviye
   });
 
-  it('SOFT alanlar tercihsiz geçilebilir ve ekranda öyle yazıyor', () => {
-    // Kurucunun istisnası: cinsiyet ve pozisyon zorunlu değil. Kullanıcı
-    // bunu ekrandan anlamalı, ölü bir düğmeyle tahmin etmemeli.
+  it('mevki alanı tercihsiz geçilebilir ve ekranda OPSİYONEL yazıyor', () => {
     const ad = oku('views/onboarding/StepName.tsx');
-    expect(ad).toContain('CİNSİYET · OPSİYONEL');
     expect(ad).toContain('POZİSYON · OPSİYONEL');
-    // Ad-soyad adımının kapısı bu ikisine BAKMAZ.
-    const kapi = s.slice(s.indexOf('const ctaEnabled'), s.indexOf('const recitDegil'));
+    expect(ad).not.toContain('CİNSİYET');
+    expect(ad).not.toContain('Adın *');
+    expect(ad).not.toContain('Soyadın *');
+    const kapi = s.slice(s.indexOf('const ctaEnabled'), s.indexOf('const ctaLabel'));
     expect(kapi).not.toContain('gender');
     expect(kapi).not.toContain('position');
   });
 
   it('konum bir CİHAZ İZNİ olduğu için geçilebilir kalır', () => {
-    // Mağaza kuralı: izin reddedilince uygulama çalışmaya devam etmeli.
-    // Bu yüzden konum adımının kendi çıkışı korunur — genel bir "Atla"
-    // değil, o adıma ait açık bir seçenek.
     const konum = oku('views/onboarding/StepLocation.tsx');
     expect(konum).toContain('Konumsuz devam et');
     expect(s).toContain('onSkip={goStep1FromSkip}');

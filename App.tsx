@@ -341,9 +341,11 @@ const App: React.FC = () => {
             // Yeni model: KAYIT OLAN HERKES OYUNCU. Kaleci/Hakem/Tesis rolleri
             // sonradan Profil'den opt-in başvuru + admin onayı ile eklenir; kayıt
             // öncesinde rol seçimi yoktur.
-            const fallbackName = user.displayName
-              || (user.email ? user.email.split('@')[0] : '')
-              || (user.phone ? user.phone : '');
+            const emailPrefix =
+              user.email && !user.email.toLowerCase().endsWith('@privaterelay.appleid.com') && user.provider !== 'apple'
+                ? user.email.split('@')[0]
+                : '';
+            const fallbackName = (user.displayName || emailPrefix || 'Oyuncu').trim();
             // KA-4: `.insert()` hata FIRLATMAZ, `{error}` döndürür (eski try/catch
             // etkisizdi). Sonuç, "yeni mi mevcut mu" sorusunun KESİN kaynağıdır:
             // başarılı insert = gerçekten yeni; çakışma (23505) = satır ZATEN VAR =
@@ -360,7 +362,7 @@ const App: React.FC = () => {
               // jetonu ad İÇERMEZ (yalnız ilk girişte verir), yani bu yol
               // Apple ile girenler için kuraldı, istisna değil.
               name: fallbackName || 'Oyuncu',
-              full_name: fallbackName,
+              full_name: fallbackName || 'Oyuncu',
               role: UserRole.PLAYER,
               roles: [UserRole.PLAYER],
               verification_status: 'approved',

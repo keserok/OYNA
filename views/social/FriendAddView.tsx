@@ -576,7 +576,7 @@ const FriendAddView: React.FC<FriendAddViewProps> = ({ onBack, onNavigate }) => 
                 onClick={runContactsSync}
                 className="w-full h-12 rounded-2xl font-extrabold text-sm bg-[#39FF14] text-black active:scale-95 transition-all"
               >
-                İzin Ver ve Devam Et
+                Devam Et
               </button>
               <button
                 onClick={() => setShowContactsConsent(false)}

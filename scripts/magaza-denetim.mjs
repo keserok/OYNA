@@ -245,6 +245,38 @@ denetle('iOS gizlilik ve izinler', () => {
   } else {
     tamam('Apple ile giriş yetkisi tanımlı');
   }
+
+  // Apple Guideline 5.1.1(iv): izin öncesi ekranlarda "Konumu Aç" / "İzin Ver"
+  // gibi yönlendirici düğmeler yasaktır; nötr "Devam Et" kullanılmalıdır.
+  const obKaynak = oku('views/Onboarding.tsx');
+  const lpKaynak = oku('views/LocationPrompt.tsx');
+  const pushKaynak = oku('components/common/PushIzniModal.tsx');
+  const friendKaynak = oku('views/social/FriendAddView.tsx');
+  if (
+    obKaynak.includes("'Konumu Aç'") ||
+    lpKaynak.includes('RADARI AÇ') ||
+    pushKaynak.includes('Bildirimlere izin ver') ||
+    friendKaynak.includes('İzin Ver ve Devam Et')
+  ) {
+    engel('İzin öncesi ekranda yönlendirici düğme metni var (Apple 5.1.1(iv))',
+      'İzin öncesi ekranlarda "Konumu Aç", "RADARI AÇ" veya "İzin Ver" yerine nötr "Devam Et" kullanılmalıdır.');
+  } else {
+    tamam('İzin öncesi ekran düğmeleri nötr ("Devam Et" · Apple 5.1.1(iv))');
+  }
+
+  // Apple Guideline 4 & 5.1.1(v): Apple ile Giriş sonrası tekrar ad/soyad ve
+  // yaş/cinsiyet zorunluluğu olmamalıdır.
+  const authKaynak = oku('supabaseAuth.ts');
+  const snKaynak = oku('views/onboarding/StepName.tsx');
+  if (!authKaynak.includes('result.response.givenName') || !authKaynak.includes('result.response.familyName')) {
+    engel('Apple Sign-In givenName/familyName yakalanmıyor (Apple Guideline 4)',
+      'supabaseAuth.ts içinde result.response.givenName ve familyName kaydedilmelidir.');
+  } else if (obKaynak.includes('StepAge') || snKaynak.includes('Adın *') || snKaynak.includes('CİNSİYET')) {
+    engel('Kurulumda yaş/cinsiyet veya zorunlu ad alanı var (Apple 4 & 5.1.1(v))',
+      'Onboarding akışında yaş, cinsiyet ve zorunlu ad/soyad alanları bulunmamalıdır.');
+  } else {
+    tamam('Apple Sign-In ad aktarımı ve veri minimizasyonu uyumlu (Apple 4 & 5.1.1(v))');
+  }
 });
 
 // ══════════════════════════════════════════════════════════════════════════

@@ -97,8 +97,8 @@ const LocationPrompt: React.FC<LocationPromptProps> = ({ onPermissionGranted, on
               </h2>
               <p className="text-gray-400 text-sm leading-relaxed max-w-xs mx-auto">
                   {status === 'DENIED' 
-                    ? 'Konum izni verilmedi. Maçları manuel araman gerekecek.' 
-                    : 'Yakınındaki maçları ve boş sahaları listelemek için radarını aç.'}
+                    ? 'Konum izni verilmedi. Maçları bölge seçerek arayabilirsin.' 
+                    : 'Yakınındaki maçları ve boş sahaları listelemek için konum bilgin kullanılır.'}
               </p>
           </div>
 
@@ -111,7 +111,7 @@ const LocationPrompt: React.FC<LocationPromptProps> = ({ onPermissionGranted, on
                 onClick={handleSkip}
                 className="w-full h-14 bg-[#161B22] text-white font-bold rounded-2xl border border-white/10 hover:bg-white/5 transition-colors"
               >
-                  MANUEL DEVAM ET
+                  DEVAM ET
               </button>
           ) : (
               <div className="space-y-3">
@@ -120,7 +120,7 @@ const LocationPrompt: React.FC<LocationPromptProps> = ({ onPermissionGranted, on
                     disabled={status !== 'IDLE'}
                     className={`w-full h-16 rounded-2xl font-extrabold text-lg flex items-center justify-center gap-2 transition-all ${status === 'IDLE' ? 'bg-[#39FF14] text-black hover:scale-[1.02] shadow-[0_0_30px_rgba(57,255,20,0.2)]' : 'bg-gray-800 text-ink-4 cursor-not-allowed'}`}
                   >
-                      {status === 'IDLE' ? <><Navigation size={20} fill="black" /> RADARI AÇ</> : 'BEKLEYİNİZ…'}
+                      {status === 'IDLE' ? <><Navigation size={20} fill="black" /> DEVAM ET</> : 'BEKLEYİNİZ…'}
                   </button>
                   {status === 'IDLE' && (
                       <button onClick={handleSkip} className="w-full py-3 text-xs font-bold text-ink-4 hover:text-white transition-colors">

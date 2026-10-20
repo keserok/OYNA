@@ -25,6 +25,43 @@ export const auth: { currentUser: OynaCurrentUser | null } = {
   currentUser: null,
 };
 
+const APPLE_NAME_CACHE_KEY = 'oyna.apple.name';
+
+function readCachedAppleName(): { givenName: string; familyName: string; fullName: string } | null {
+  try {
+    if (typeof localStorage === 'undefined') return null;
+    const raw = localStorage.getItem(APPLE_NAME_CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed.fullName === 'string' && parsed.fullName.trim()) {
+      return {
+        givenName: String(parsed.givenName ?? '').trim(),
+        familyName: String(parsed.familyName ?? '').trim(),
+        fullName: parsed.fullName.trim(),
+      };
+    }
+  } catch {
+    // ignore storage errors
+  }
+  return null;
+}
+
+function writeCachedAppleName(givenName: string, familyName: string): { givenName: string; familyName: string; fullName: string } | null {
+  const g = givenName.trim();
+  const f = familyName.trim();
+  const fullName = [g, f].filter(Boolean).join(' ').trim();
+  if (!fullName) return readCachedAppleName();
+  const payload = { givenName: g, familyName: f, fullName };
+  try {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(APPLE_NAME_CACHE_KEY, JSON.stringify(payload));
+    }
+  } catch {
+    // ignore storage errors
+  }
+  return payload;
+}
+
 // ─── Build currentUser from session + profiles row ────────────────────────────
 async function buildCurrentUser(user: {
   id: string;
@@ -35,13 +72,22 @@ async function buildCurrentUser(user: {
   app_metadata?: Record<string, any>;
   user_metadata?: Record<string, any>;
 }): Promise<OynaCurrentUser> {
+  const provider = String(user.app_metadata?.provider ?? 'unknown');
+  const cachedApple = provider === 'apple' ? readCachedAppleName() : null;
+  const metaName =
+    user.user_metadata?.full_name ||
+    user.user_metadata?.name ||
+    [user.user_metadata?.given_name, user.user_metadata?.family_name].filter(Boolean).join(' ').trim() ||
+    cachedApple?.fullName ||
+    '';
+
   const base: OynaCurrentUser = {
     uid: user.id,
     email: user.email ?? null,
     phone: user.phone ?? null,
     phoneVerified: !!user.phone && (user.phone_confirmed_at != null || user.confirmed_at != null),
-    provider: String(user.app_metadata?.provider ?? 'unknown'),
-    displayName: user.user_metadata?.full_name || user.user_metadata?.name || '',
+    provider,
+    displayName: metaName,
     photoURL: user.user_metadata?.avatar_url || user.user_metadata?.picture || '',
     roles: ['PLAYER'],
     verificationStatus: 'approved',
@@ -51,7 +97,7 @@ async function buildCurrentUser(user: {
   try {
     const { data: profile } = await supabase
       .from('profiles')
-      .select('roles, verification_status, is_admin')
+      .select('roles, verification_status, is_admin, full_name, name')
       .eq('id', user.id)
       .single();
 
@@ -59,6 +105,9 @@ async function buildCurrentUser(user: {
       base.roles = profile.roles ?? ['PLAYER'];
       base.verificationStatus = profile.verification_status ?? 'approved';
       base.isAdmin = profile.is_admin ?? false;
+      if (!base.displayName && (profile.full_name || profile.name)) {
+        base.displayName = profile.full_name || profile.name || '';
+      }
     }
   } catch {
     // Profile henüz oluşturulmamış olabilir; varsayılanlarla devam
@@ -616,13 +665,54 @@ export const loginWithApple = async (hatirla = true): Promise<void> => {
         nonce: await sha256Hex(rawNonce),
       });
 
-      const { error } = await supabase.auth.signInWithIdToken({
+      // Apple Authentication Services YALNIZ İLK GİRİŞTE givenName / familyName
+      // döndürür; identityToken (JWT) içinde ad bilgisi asla yer almaz (Apple Guideline 4).
+      // İlk girişte gelen adı hem yerel önbelleğe hem de Supabase user_metadata + profiles
+      // tablosuna kaydederek kullanıcının tekrar ad/e-posta girmek zorunda kalmasını önlüyoruz.
+      const appleName = writeCachedAppleName(
+        result.response.givenName ?? '',
+        result.response.familyName ?? '',
+      );
+
+      const { data: signInData, error } = await supabase.auth.signInWithIdToken({
         provider: 'apple',
         token: result.response.identityToken,
         nonce: rawNonce,
       });
 
       if (error) throw error;
+
+      if (appleName?.fullName) {
+        if (auth.currentUser) {
+          auth.currentUser.displayName = appleName.fullName;
+        }
+        try {
+          await supabase.auth.updateUser({
+            data: {
+              full_name: appleName.fullName,
+              name: appleName.fullName,
+              given_name: appleName.givenName || undefined,
+              family_name: appleName.familyName || undefined,
+            },
+          });
+        } catch {
+          // user_metadata güncellemesi başarısız olsa da oturum açık kalmalı
+        }
+        const uid = signInData?.user?.id || auth.currentUser?.uid;
+        if (uid) {
+          try {
+            await supabase
+              .from('profiles')
+              .update({
+                name: appleName.fullName,
+                full_name: appleName.fullName,
+              })
+              .eq('id', uid);
+          } catch {
+            // profiles satırı henüz oluşmamışsa App.tsx / apply_onboarding tamamlar
+          }
+        }
+      }
       oauthIsaretiniSil();
     } catch (err) {
       console.error('[Auth] Native Apple Sign-In hatası:', err);

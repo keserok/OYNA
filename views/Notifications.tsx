@@ -405,7 +405,7 @@ const Notifications: React.FC<NotificationsProps> = ({ onBack, role }) => {
               <div className="min-w-0">
                 <p className="text-[0.8125rem] font-extrabold text-warning">Konum izni kapalı</p>
                 <p className="text-[0.6875rem] text-gray-300 leading-relaxed mt-1">
-                  Yakınındaki maçları ve sahaları görebilmek için konum iznini açman gerekiyor.
+                  Yakınındaki maçları ve sahaları mesafeye göre sıralamak için konum bilgisi kullanılır.
                   {aktifBolge?.label ? ` Şimdilik kayıtlı bölgen kullanılıyor: ${aktifBolge.label}.` : ''}
                 </p>
                 {canOpenAppSettings() ? (

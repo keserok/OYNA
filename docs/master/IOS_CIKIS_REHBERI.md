@@ -196,7 +196,7 @@ Supabase Dashboard → **Authentication → Sign In / Up → Apple** → **Enabl
    Primary Language **Turkish** · Bundle ID listeden **com.oyna.app** · SKU `oyna-app` → **Create**.
 3. **App Information:** Category **Sports** (ikincil: Social Networking). Content rights: üçüncü taraf içerik yok.
 4. **Age Rating** anketi: dürüst cevapla — kullanıcılar arası **mesajlaşma VAR**, konum paylaşımı VAR,
-   şiddet/kumar YOK → sonuç genelde **12+** çıkar.
+   şiddet/kumar YOK → sonuç genelde **12+** çıkar. **ÖNEMLİ (Guideline 2.3.6):** "In-App Controls / Parental Controls" ve "Age Assurance" sorularını kesinlikle **"None" (Yok / Hayır)** olarak işaretle! (Aksi halde Apple, uygulama içinde ebeveyn kontrolü bulamadığı için 2.3.6 reddi verir.)
 5. **App Privacy** → Privacy Policy URL: `https://<alan-adın>/gizlilik` (uygulamanın Vercel yayını bu
    sayfayı otomatik sunar; alan adın yoksa Vercel'in verdiği `https://….vercel.app/gizlilik` adresi de geçerlidir).
    Veri beyanı (Data Collection) — şunları "Yes, we collect" olarak işaretle, tümü **App Functionality**

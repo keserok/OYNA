@@ -63,11 +63,9 @@ export const ProfileIdentityCard: React.FC<ProfileIdentityCardProps> = ({
   const showImg = !!avatarUrl;
 
   const styleMeta = playStyle ? PLAY_STYLE_META[playStyle as keyof typeof PLAY_STYLE_META] : undefined;
-  const ageText = age != null ? `${age}` : (ageRange ? ageRange.replace('-', '–') : null);
-  const genderText = gender === 'kadin' || gender === 'erkek' ? GENDER_LABEL[gender] : null;
 
-  // Satır 1: mevki · cinsiyet · yaş — Satır 2: oyun stili · seviye
-  const line1 = [formatPosition(position), genderText, ageText].filter(Boolean).join(' · ');
+  // Satır 1: mevki — Satır 2: oyun stili · seviye (Apple 5.1.1(v) gereği yaş ve cinsiyet gösterilmez)
+  const line1 = [formatPosition(position)].filter(Boolean).join(' · ');
   const line2 = [styleMeta?.label, selfSkill != null ? `Seviye ${selfSkill}` : null]
     .filter(Boolean).join(' · ');
   const bosKunye = !line1 && !line2;

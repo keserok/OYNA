@@ -269,39 +269,10 @@ export const ProfileEditSheet: React.FC<ProfileEditSheetProps> = ({
                     </p>
                 )}
 
-                {/* Doğum tarihi — yerleşik `<input type="date">` KALDIRILDI.
-                    O girdi her platformda başka bir şey çiziyordu ve doğum
-                    tarihi için en kötüsü takvimdi: kullanıcı 1998'e ulaşmak
-                    için aylarca geri basıyordu. Yerine üç tekerlekli kendi
-                    seçicimiz açılıyor (BirthdatePicker). */}
-                <button
-                    type="button"
-                    onClick={() => setTarihAcik(true)}
-                    className="mt-3.5 w-full bg-surface-1 border border-white/[0.08] rounded-[14px] px-4 py-[11px] min-h-12 flex items-center justify-between gap-3 hover:bg-white/[0.05] transition-colors active:scale-[0.99]"
-                >
-                    <span className="text-xs text-[#F5F3EE]/[0.6] shrink-0">Doğum tarihi</span>
-                    <span className={`flex items-center gap-[9px] text-sm ${birthdate ? 'text-white' : 'text-[#F5F3EE]/[0.45]'}`}>
-                        {tarihMetni(birthdate) ?? 'Ekle'}
-                        <ChevronRight size={15} className="text-[#F5F3EE]/[0.5] shrink-0" />
-                    </span>
-                </button>
-
-                <div className="mt-2.5 flex gap-2">
-                    {GENDER_ORDER.map((g) => {
-                        const sel = gender === g;
-                        return (
-                            <button
-                                key={g}
-                                type="button"
-                                onClick={() => setGender(sel ? '' : g)}
-                                aria-pressed={sel}
-                                className={`flex-1 h-12 text-xs ${secimSinifi(sel)}`}
-                            >
-                                {GENDER_SYMBOL[g]} {GENDER_LABEL[g]}
-                            </button>
-                        );
-                    })}
-                </div>
+                {/* Apple Guideline 5.1.1(v) (Data Minimization): yaş (doğum tarihi) ve
+                    cinsiyet alanları uygulamanın temel işlevi için gerekli olmadığından
+                    profil düzenleme arayüzünden kaldırılmıştır. Mevcut veriler silinmez,
+                    kaydet sırasında olduğu gibi korunur. */}
 
                 {/* ─── 02 — OYUN ─── */}
                 <Bolum no="02" ad="Oyun" />

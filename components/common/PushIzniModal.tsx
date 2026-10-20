@@ -63,7 +63,7 @@ const PushIzniModal: React.FC<Props> = ({ onIzinIste }) => {
               Maçın saatinde hatırlatalım mı?
             </h3>
             <p className="text-[0.8125rem] text-gray-400 leading-relaxed mt-2">
-              Kadroya girdin. Bildirimlere izin verirsen şunları kaçırmazsın:
+              Kadroya girdin. Bildirimlerle şunları anında takip edebilirsin:
             </p>
 
             <div className="mt-4 space-y-2.5">
@@ -87,7 +87,7 @@ const PushIzniModal: React.FC<Props> = ({ onIzinIste }) => {
                 disabled={bekliyor}
                 className="w-full py-3.5 rounded-2xl font-extrabold text-[0.8125rem] uppercase tracking-widest text-black bg-[#39FF14] active:scale-[0.98] transition-all disabled:opacity-50"
               >
-                {bekliyor ? 'Bir saniye…' : 'Bildirimlere izin ver'}
+                {bekliyor ? 'Bir saniye…' : 'Devam Et'}
               </button>
               <button
                 onClick={kapat}

@@ -336,13 +336,6 @@ const ProfileInfoPage: React.FC<ProfileInfoPageProps> = ({ open, onClose }) => {
                 panelindeki ayna da onu kullanır). */}
             <div className="rounded-[24px] bg-surface-1 overflow-hidden">
               <InfoRow label="Mevki" value={formatPosition(profile?.position)} emptyText="Ekle" onClick={acEdit} />
-              <InfoRow label="Cinsiyet" value={genderText} emptyText="Ekle" onClick={acEdit} />
-              <InfoRow
-                label="Yaş"
-                value={age != null ? `${age}` : (profile?.ageRange ? profile.ageRange.replace('-', '–') : null)}
-                emptyText="Ekle"
-                onClick={acEdit}
-              />
               <InfoRow label="Oyun stili" value={styleMeta?.label ?? null} emptyText="Ekle" onClick={acEdit} />
               <InfoRow
                 label="Seviye"
