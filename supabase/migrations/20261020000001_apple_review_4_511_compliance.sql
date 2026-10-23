@@ -141,3 +141,18 @@ $function$;
 
 REVOKE ALL ON FUNCTION public.apply_onboarding(text, text, text, text, text, text, boolean, smallint) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.apply_onboarding(text, text, text, text, text, text, boolean, smallint) TO authenticated;
+
+-- 3) Guideline 2.3.6 & 5.1.1(v) — Mevcut profillerde reşit-olmama / veli onayı
+--    kilidi kalmışsa (ör. önceki incelemede 13-17 seçilmiş incelemeci hesabı)
+--    tümünü temizle:
+UPDATE public.profiles
+SET is_minor = false,
+    guardian_consent_status = 'NONE'
+WHERE is_minor = true
+   OR guardian_consent_status IS DISTINCT FROM 'NONE';
+
+-- 4) Eski maç kayıtlarındaki 404 dönen Unsplash görselini çalışan URL ile güncelle:
+UPDATE public.matches
+SET image = 'https://images.unsplash.com/photo-1575361204480-aadea25e6e68?q=80&w=600'
+WHERE image LIKE '%photo-1575361204480-aadea2559ee2%';
+
