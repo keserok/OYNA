@@ -112,8 +112,8 @@ const StepLocation: React.FC<StepLocationProps> = ({ state, onSkip, onScan, hati
         )}
       </div>
 
-      <div style={{ textAlign: 'center', minHeight: 22, padding: '0 24px' }} role={hata ? 'alert' : undefined}>
-        <p style={{ margin: 0, fontSize: 13, fontWeight: hata ? 700 : 400, color: hata ? '#FCA5A5' : 'rgba(255,255,255,0.62)' }}>
+      <div style={{ textAlign: 'center', minHeight: 22, padding: '0 24px' }} role={hata ? 'status' : undefined}>
+        <p style={{ margin: 0, fontSize: 13, fontWeight: hata ? 700 : 400, color: hata ? 'rgba(255,255,255,0.82)' : 'rgba(255,255,255,0.62)' }}>
           {DURUM_METNI[state].baslik}
         </p>
         {DURUM_METNI[state].alt && (
@@ -130,13 +130,14 @@ const StepLocation: React.FC<StepLocationProps> = ({ state, onSkip, onScan, hati
 
       {/* Kalıcı engelde "Tekrar Dene" ÇALIŞMAZ, o yüzden çizilmez. Tek gerçek
           çıkış ayarlara gitmek. Tuş yalnız AÇILABİLDİĞİ cihazlarda çizilir —
-          web'de uygulama ayarları ekranı yoktur, orada metin yol gösterir. */}
+          web'de uygulama ayarları ekranı yoktur, orada metin yol gösterir.
+          Apple 5.1.1(iv) uyumu: ikincil/nötr görünüm, kullanıcıyı zorlamaz. */}
       {state === 'blocked' && onOpenSettings && (
         <button
           onClick={onOpenSettings}
           style={{
-            minHeight: 46, padding: '0 22px', borderRadius: 14, background: '#39FF14',
-            border: 'none', color: '#0A0E14', fontSize: 13, fontWeight: 800, cursor: 'pointer',
+            minHeight: 46, padding: '0 22px', borderRadius: 14, background: 'rgba(255,255,255,0.06)',
+            border: '1px solid rgba(255,255,255,0.16)', color: 'rgba(255,255,255,0.85)', fontSize: 13, fontWeight: 800, cursor: 'pointer',
           }}
         >
           Ayarları Aç
@@ -155,7 +156,7 @@ const StepLocation: React.FC<StepLocationProps> = ({ state, onSkip, onScan, hati
         </button>
       )}
 
-      {(phase === 'idle' || hata) && (
+      {hata && (
         <button
           onClick={onSkip}
           className="text-[0.8125rem]"

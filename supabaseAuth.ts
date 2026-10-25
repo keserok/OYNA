@@ -706,6 +706,8 @@ export const loginWithApple = async (hatirla = true): Promise<void> => {
               .update({
                 name: appleName.fullName,
                 full_name: appleName.fullName,
+                ...(appleName.givenName ? { first_name: appleName.givenName } : {}),
+                ...(appleName.familyName ? { last_name: appleName.familyName } : {}),
               })
               .eq('id', uid);
           } catch {

@@ -98,10 +98,14 @@ const ServiceApplication: React.FC<ServiceApplicationProps> = ({ role, onSubmitt
   const { color, glow } = theme;
   const isGk = role === UserRole.GOALKEEPER;
 
-  // KA-M4: yalnız GERÇEK görünen ad ön-doldurulur. E-posta ön-eki (ör. "kaleci1")
-  // gerçek ad gibi görünüp değiştirilmezse profiles.full_name / goalkeepers.name'e
-  // sızıyordu — artık ad yoksa alan boş kalır, kullanıcı kendi adını girer.
-  const seedName = useMemo(() => auth.currentUser?.displayName || '', []);
+  // KA-M4: yalnız GERÇEK görünen ad ön-doldurulur; Apple Sign-In kullanıcısında
+  // ikinci girişte ad dönmediyse profildeki ad veya varsayılan kullanılır (Guideline 4).
+  const seedName = useMemo(() => {
+    const profileName = useAppStore.getState().currentUserProfile?.name || '';
+    const display = auth.currentUser?.displayName || profileName;
+    if (display && display !== 'Oyuncu') return display;
+    return auth.currentUser?.provider === 'apple' ? (display || 'Oyna Oyuncusu') : '';
+  }, []);
 
   const [fullName, setFullName] = useState(seedName);
   const [countryCode, setCountryCode] = useState('+90');

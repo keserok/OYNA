@@ -41,8 +41,6 @@ const PlayerCardReveal: React.FC<PlayerCardRevealProps> = ({
   // Değerlerin tamamı beyaz: bu ekran bir gösterge paneli değil, bir kapanış
   // özeti. Ayrım rengi değil, etiket/değer hiyerarşisi taşır.
   const rows: { label: string; value: string }[] = [];
-  if (ageRange) rows.push({ label: 'YAŞ', value: ageRange.replace('-', '–') });
-  if (gender) rows.push({ label: 'CİNSİYET', value: gender === 'kadin' ? '♀ Kadın' : '♂ Erkek' });
   if (playStyle) rows.push({ label: 'OYUN STİLİ', value: PLAY_STYLE_META[playStyle].label });
   if (locationGranted) rows.push({ label: 'KONUM', value: 'Onaylı' });
   if (position) rows.push({ label: 'POZİSYON', value: POSITION_LABEL[position] });

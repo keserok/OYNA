@@ -127,6 +127,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
       if (kod === 'denied') {
         const izin = await getLocationPermission().catch(() => 'denied' as const);
         setPhase(izin === 'blocked' ? 'blocked' : 'denied');
+        timers.current.push(window.setTimeout(() => setStep((s) => (s === 0 ? 1 : s)), 650));
       } else if (kod === 'timeout') setPhase('timeout');
       else setPhase('unavailable');
     }
